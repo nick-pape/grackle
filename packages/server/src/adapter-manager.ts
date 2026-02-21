@@ -2,6 +2,8 @@ import type { EnvironmentAdapter, SidecarConnection } from "./adapters/adapter.j
 import * as envRegistry from "./env-registry.js";
 import { logger } from "./logger.js";
 
+const HEARTBEAT_INTERVAL_MS = 30_000;
+
 const adapters = new Map<string, EnvironmentAdapter>();
 const connections = new Map<string, SidecarConnection>();
 let heartbeatInterval: ReturnType<typeof setInterval> | null = null;
@@ -51,7 +53,7 @@ export function startHeartbeat(onDisconnect: (envId: string) => void): void {
         onDisconnect(envId);
       }
     }
-  }, 30_000);
+  }, HEARTBEAT_INTERVAL_MS);
 }
 
 export function stopHeartbeat(): void {

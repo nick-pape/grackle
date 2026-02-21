@@ -7,13 +7,22 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
 
+const DOCKER_PULL_TIMEOUT_MS = 120_000;
+const GIT_CLONE_TIMEOUT_MS = 120_000;
+const GIT_PULL_TIMEOUT_MS = 60_000;
+const CONTAINER_POLL_DELAY_MS = 1_000;
+const CONTAINER_POLL_MAX_ATTEMPTS = 30;
+const CONNECT_RETRY_DELAY_MS = 1_500;
+const CONNECT_MAX_RETRIES = 10;
+const WORKSPACE_PATH = "/workspace";
+
 interface DockerConfig {
   image: string;
   containerName?: string;
   localPort?: number;
   volumes?: string[];
   env?: Record<string, string>;
-  repo?: string; // Git repo URL to clone into /workspace
+  repo?: string; // Git repo URL to clone into WORKSPACE_PATH
 }
 
 const containerPorts = new Map<string, number>();
@@ -30,7 +39,7 @@ export class DockerAdapter implements EnvironmentAdapter {
     yield { stage: "creating", message: `Pulling image ${image}...`, progress: 0.1 };
 
     try {
-      await exec("docker", ["pull", image], { timeout: 120_000 });
+      await exec("docker", ["pull", image], { timeout: DOCKER_PULL_TIMEOUT_MS });
     } catch {
       yield { stage: "creating", message: "Pull failed, trying local image...", progress: 0.15 };
     }
@@ -100,27 +109,27 @@ export class DockerAdapter implements EnvironmentAdapter {
     yield { stage: "starting", message: "Waiting for container...", progress: 0.5 };
 
     // Poll until running
-    for (let i = 0; i < 30; i++) {
+    for (let i = 0; i < CONTAINER_POLL_MAX_ATTEMPTS; i++) {
       try {
         const { stdout } = await exec("docker", ["inspect", "-f", "{{.State.Running}}", containerName]);
         if (stdout === "true") break;
       } catch { /* retry */ }
-      await new Promise((r) => setTimeout(r, 1000));
+      await new Promise((r) => setTimeout(r, CONTAINER_POLL_DELAY_MS));
     }
 
-    // Clone repo into /workspace if configured
+    // Clone repo if configured
     if (cfg.repo) {
       yield { stage: "cloning", message: `Cloning ${cfg.repo}...`, progress: 0.6 };
       // Check if already cloned
       try {
         const { stdout } = await exec("docker", [
-          "exec", containerName, "bash", "-c", "ls /workspace/.git 2>/dev/null && echo exists",
+          "exec", containerName, "bash", "-c", `ls ${WORKSPACE_PATH}/.git 2>/dev/null && echo exists`,
         ]);
         if (stdout.includes("exists")) {
           yield { stage: "cloning", message: "Repo already cloned, pulling latest...", progress: 0.65 };
           await exec("docker", [
-            "exec", "-w", "/workspace", containerName, "git", "pull", "--ff-only",
-          ], { timeout: 60_000 }).catch(() => { /* pull may fail on detached HEAD etc */ });
+            "exec", "-w", WORKSPACE_PATH, containerName, "git", "pull", "--ff-only",
+          ], { timeout: GIT_PULL_TIMEOUT_MS }).catch(() => { /* pull may fail on detached HEAD etc */ });
         } else {
           throw new Error("not cloned");
         }
@@ -138,8 +147,8 @@ export class DockerAdapter implements EnvironmentAdapter {
             "credential.helper", `!f() { echo "username=x-access-token"; echo "password=${ghToken}"; }; f`,
           ]);
           await exec("docker", [
-            "exec", containerName, "git", "clone", cloneUrl, "/workspace",
-          ], { timeout: 120_000 });
+            "exec", containerName, "git", "clone", cloneUrl, WORKSPACE_PATH,
+          ], { timeout: GIT_CLONE_TIMEOUT_MS });
           // Remove the credential helper so token isn't persisted
           await exec("docker", [
             "exec", containerName, "git", "config", "--global", "--unset", "credential.helper",
@@ -147,8 +156,8 @@ export class DockerAdapter implements EnvironmentAdapter {
         } else {
           // No token — try cloning anyway (works for public repos)
           await exec("docker", [
-            "exec", containerName, "git", "clone", cloneUrl, "/workspace",
-          ], { timeout: 120_000 });
+            "exec", containerName, "git", "clone", cloneUrl, WORKSPACE_PATH,
+          ], { timeout: GIT_CLONE_TIMEOUT_MS });
         }
       }
       yield { stage: "cloning", message: "Repo ready", progress: 0.75 };
@@ -165,17 +174,17 @@ export class DockerAdapter implements EnvironmentAdapter {
 
     // Retry ping — container may still be starting
     let lastErr: unknown;
-    for (let attempt = 0; attempt < 10; attempt++) {
+    for (let attempt = 0; attempt < CONNECT_MAX_RETRIES; attempt++) {
       try {
         await client.ping({});
         return { client, envId, port: localPort };
       } catch (err) {
         lastErr = err;
-        await new Promise((r) => setTimeout(r, 1500));
+        await new Promise((r) => setTimeout(r, CONNECT_RETRY_DELAY_MS));
       }
     }
 
-    throw new Error(`Could not reach sidecar after 10 attempts: ${lastErr}`);
+    throw new Error(`Could not reach sidecar after ${CONNECT_MAX_RETRIES} attempts: ${lastErr}`);
   }
 
   async disconnect(envId: string): Promise<void> {

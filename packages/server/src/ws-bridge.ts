@@ -14,6 +14,9 @@ import { GRACKLE_DIR, LOGS_DIR, DEFAULT_RUNTIME } from "@grackle/common";
 import * as logWriter from "./log-writer.js";
 import { writeTranscript } from "./transcript.js";
 
+const WS_PING_INTERVAL_MS = 30_000;
+const WS_CLOSE_UNAUTHORIZED = 4001;
+
 interface WsMessage {
   type: string;
   payload?: Record<string, unknown>;
@@ -28,7 +31,7 @@ export function createWsBridge(httpServer: HttpServer, verifyApiKey: (token: str
     const url = new URL(req.url || "/", "http://localhost");
     const token = url.searchParams.get("token") || "";
     if (!verifyApiKey(token)) {
-      ws.close(4001, "Unauthorized");
+      ws.close(WS_CLOSE_UNAUTHORIZED, "Unauthorized");
       return;
     }
 
@@ -50,7 +53,7 @@ export function createWsBridge(httpServer: HttpServer, verifyApiKey: (token: str
     // Ping/pong keepalive
     const pingInterval = setInterval(() => {
       if (ws.readyState === WebSocket.OPEN) ws.ping();
-    }, 30_000);
+    }, WS_PING_INTERVAL_MS);
 
     ws.on("close", () => clearInterval(pingInterval));
   });

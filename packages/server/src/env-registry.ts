@@ -2,6 +2,8 @@ import db from "./db.js";
 import { randomBytes } from "node:crypto";
 import type { EnvironmentStatus } from "@grackle/common";
 
+const SIDECAR_TOKEN_BYTE_LENGTH = 32;
+
 export interface EnvironmentRow {
   id: string;
   display_name: string;
@@ -44,7 +46,7 @@ export function addEnvironment(
   adapterConfig: string,
   defaultRuntime: string
 ): void {
-  const sidecarToken = randomBytes(32).toString("hex");
+  const sidecarToken = randomBytes(SIDECAR_TOKEN_BYTE_LENGTH).toString("hex");
   stmts.insert.run(id, displayName, adapterType, adapterConfig, defaultRuntime, sidecarToken);
 }
 

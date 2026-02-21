@@ -5,6 +5,8 @@ import { join } from "node:path";
 import { GRACKLE_DIR, API_KEY_FILENAME } from "@grackle/common";
 import { logger } from "./logger.js";
 
+const API_KEY_BYTE_LENGTH = 32;
+
 const grackleDir = join(homedir(), GRACKLE_DIR);
 const keyPath = join(grackleDir, API_KEY_FILENAME);
 
@@ -23,7 +25,7 @@ export function loadApiKey(): string {
   }
 
   // Generate a new key
-  cachedKey = randomBytes(32).toString("hex");
+  cachedKey = randomBytes(API_KEY_BYTE_LENGTH).toString("hex");
 
   mkdirSync(grackleDir, { recursive: true });
   writeFileSync(keyPath, cachedKey + "\n", { mode: 0o600 });

@@ -30,6 +30,8 @@ interface WsMessage {
   payload?: Record<string, unknown>;
 }
 
+const WS_RECONNECT_DELAY_MS = 3_000;
+
 // Declare the injected API key from server-side HTML injection
 declare global {
   interface Window {
@@ -122,7 +124,7 @@ export function useGrackleSocket(url?: string) {
       ws.onclose = () => {
         setConnected(false);
         wsRef.current = null;
-        reconnectTimer = setTimeout(connect, 3000);
+        reconnectTimer = setTimeout(connect, WS_RECONNECT_DELAY_MS);
       };
 
       ws.onerror = () => {

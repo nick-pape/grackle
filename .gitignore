@@ -2,6 +2,7 @@ node_modules/
 dist/
 common/temp/
 common/autoinstallers/
+packages/*/pnpm-lock.yaml
 .rush/
 .grackle/
 *.tsbuildinfo
