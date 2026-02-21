@@ -1,5 +1,8 @@
 import { randomBytes, createCipheriv, createDecipheriv, pbkdf2Sync } from "node:crypto";
-import { hostname, userInfo } from "node:os";
+import { readFileSync, writeFileSync, existsSync, mkdirSync, chmodSync } from "node:fs";
+import { join } from "node:path";
+import { grackleHome } from "./paths.js";
+import { logger } from "./logger.js";
 
 const ALGORITHM = "aes-256-gcm";
 const IV_LENGTH = 12;
@@ -7,10 +10,52 @@ const TAG_LENGTH = 16;
 const SALT_LENGTH = 16;
 const KEY_LENGTH = 32;
 const ITERATIONS = 100_000;
+const MASTER_KEY_BYTE_LENGTH = 32;
+const MASTER_KEY_FILENAME = "master-key";
+
+/**
+ * Load or generate the master key for token encryption. Priority:
+ * 1. `GRACKLE_MASTER_KEY` env var
+ * 2. Persisted random key at `$GRACKLE_HOME/.grackle/master-key`
+ * 3. Generate and persist a new random key
+ */
+function loadMasterKey(): string {
+  if (process.env.GRACKLE_MASTER_KEY) {
+    return process.env.GRACKLE_MASTER_KEY;
+  }
+
+  const keyPath = join(grackleHome, MASTER_KEY_FILENAME);
+
+  if (existsSync(keyPath)) {
+    const key = readFileSync(keyPath, "utf8").trim();
+    if (key.length > 0) {
+      return key;
+    }
+  }
+
+  // Generate and persist a random key
+  const key = randomBytes(MASTER_KEY_BYTE_LENGTH).toString("hex");
+  mkdirSync(grackleHome, { recursive: true });
+  writeFileSync(keyPath, key + "\n", { mode: 0o600 });
+  try {
+    chmodSync(keyPath, 0o600);
+  } catch { /* Windows may not support this */ }
+  logger.warn("Generated new master key for token encryption. Set GRACKLE_MASTER_KEY env var for explicit control.");
+
+  return key;
+}
+
+let cachedMasterKey: string | null = null;
+
+function getMasterKey(): string {
+  if (!cachedMasterKey) {
+    cachedMasterKey = loadMasterKey();
+  }
+  return cachedMasterKey;
+}
 
 function deriveKey(salt: Buffer): Buffer {
-  const masterKey = process.env.GRACKLE_MASTER_KEY || `${hostname()}:${userInfo().username}:grackle`;
-  return pbkdf2Sync(masterKey, salt, ITERATIONS, KEY_LENGTH, "sha256");
+  return pbkdf2Sync(getMasterKey(), salt, ITERATIONS, KEY_LENGTH, "sha256");
 }
 
 /** Encrypt a plaintext string using AES-256-GCM with a PBKDF2-derived key. */
