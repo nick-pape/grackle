@@ -1,0 +1,30 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/rush/v5/rush.schema.json",
+  "rushVersion": "5.158.1",
+  "pnpmVersion": "10.11.0",
+  "nodeSupportedVersionRange": ">=22.0.0",
+  "projectFolderMinDepth": 2,
+  "projectFolderMaxDepth": 2,
+  "projects": [
+    {
+      "packageName": "@grackle/common",
+      "projectFolder": "packages/common"
+    },
+    {
+      "packageName": "@grackle/powerline",
+      "projectFolder": "packages/powerline"
+    },
+    {
+      "packageName": "@grackle/server",
+      "projectFolder": "packages/server"
+    },
+    {
+      "packageName": "@grackle/cli",
+      "projectFolder": "packages/cli"
+    },
+    {
+      "packageName": "@grackle/web",
+      "projectFolder": "packages/web"
+    }
+  ]
+}

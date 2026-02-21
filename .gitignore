@@ -1,0 +1,28 @@
+node_modules/
+dist/
+common/temp/
+common/autoinstallers/
+packages/*/pnpm-lock.yaml
+.rush/
+.grackle/
+*.tsbuildinfo
+rush-logs/
+
+# Generated proto files
+packages/common/src/gen/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+
+# Environment
+.env
+.env.local
+
+# Playwright
+packages/web/test-results/
+

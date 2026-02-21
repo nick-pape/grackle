@@ -1,0 +1,10 @@
+version: v2
+clean: true
+inputs:
+  - directory: src/proto
+plugins:
+  - local: protoc-gen-es
+    out: src/gen
+    opt:
+      - target=ts
+      - import_extension=.js

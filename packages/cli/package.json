@@ -1,0 +1,30 @@
+{
+  "name": "@grackle/cli",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "grackle": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@connectrpc/connect": "^2.0.0",
+    "@connectrpc/connect-node": "^2.0.0",
+    "@grackle/common": "0.0.1",
+    "@grackle/server": "0.0.1",
+    "chalk": "^5.6.2",
+    "cli-table3": "^0.6.0",
+    "commander": "^13.0.0",
+    "ora": "^8.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "~5.7.0"
+  }
+}

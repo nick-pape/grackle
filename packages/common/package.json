@@ -1,0 +1,22 @@
+{
+  "name": "@grackle/common",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "npx buf generate && tsc",
+    "lint:proto": "npx buf lint",
+    "clean": "rm -rf dist src/gen"
+  },
+  "dependencies": {
+    "@bufbuild/protobuf": "^2.5.0",
+    "@connectrpc/connect": "^2.0.0"
+  },
+  "devDependencies": {
+    "@bufbuild/buf": "^1.50.0",
+    "@bufbuild/protoc-gen-es": "^2.5.0",
+    "typescript": "~5.7.0"
+  }
+}

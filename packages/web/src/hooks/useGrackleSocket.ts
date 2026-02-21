@@ -1,0 +1,209 @@
+import { useState, useEffect, useCallback, useRef } from "react";
+
+export interface Environment {
+  id: string;
+  displayName: string;
+  adapterType: string;
+  defaultRuntime: string;
+  status: string;
+  bootstrapped: boolean;
+}
+
+export interface Session {
+  id: string;
+  envId: string;
+  runtime: string;
+  status: string;
+  prompt: string;
+  startedAt: string;
+}
+
+export interface SessionEvent {
+  sessionId: string;
+  eventType: string;
+  timestamp: string;
+  content: string;
+}
+
+interface WsMessage {
+  type: string;
+  payload?: Record<string, unknown>;
+}
+
+const WS_RECONNECT_DELAY_MS = 3_000;
+const ENV_POLL_INTERVAL_MS = 10_000;
+
+// Declare the injected API key from server-side HTML injection
+declare global {
+  interface Window {
+    __GRACKLE_API_KEY__?: string;
+  }
+}
+
+export function useGrackleSocket(url?: string) {
+  const apiKey = typeof window !== "undefined" ? window.__GRACKLE_API_KEY__ || "" : "";
+  const wsUrl = url || (typeof window !== "undefined"
+    ? `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}?token=${encodeURIComponent(apiKey)}`
+    : "ws://localhost:3000");
+
+  const wsRef = useRef<WebSocket | null>(null);
+  const [connected, setConnected] = useState(false);
+  const [environments, setEnvironments] = useState<Environment[]>([]);
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [events, setEvents] = useState<SessionEvent[]>([]);
+  const [lastSpawnedId, setLastSpawnedId] = useState<string | null>(null);
+
+  const send = useCallback((msg: WsMessage) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify(msg));
+    }
+  }, []);
+
+  useEffect(() => {
+    let ws: WebSocket;
+    let reconnectTimer: ReturnType<typeof setTimeout>;
+    let envPollTimer: ReturnType<typeof setInterval>;
+
+    function connect() {
+      ws = new WebSocket(wsUrl);
+      wsRef.current = ws;
+
+      ws.onopen = () => {
+        setConnected(true);
+        send({ type: "list_environments" });
+        send({ type: "list_sessions" });
+        send({ type: "subscribe_all" });
+        // Periodically refresh environments to catch CLI-driven changes
+        clearInterval(envPollTimer);
+        envPollTimer = setInterval(() => {
+          send({ type: "list_environments" });
+        }, ENV_POLL_INTERVAL_MS);
+      };
+
+      ws.onmessage = (e) => {
+        const msg = JSON.parse(e.data) as WsMessage;
+        switch (msg.type) {
+          case "environments":
+            setEnvironments((msg.payload?.environments as Environment[]) || []);
+            break;
+          case "sessions":
+            setSessions((msg.payload?.sessions as Session[]) || []);
+            break;
+          case "session_event": {
+            const event = msg.payload as unknown as SessionEvent;
+            setEvents((prev) => [...prev, event]);
+            // Update session status when status events arrive
+            if (event.eventType === "status") {
+              setSessions((prev) =>
+                prev.map((s) =>
+                  s.id === event.sessionId
+                    ? { ...s, status: event.content }
+                    : s
+                )
+              );
+            }
+            break;
+          }
+          case "session_events": {
+            const replayEvents = msg.payload?.events as SessionEvent[] | undefined;
+            const replaySessionId = msg.payload?.sessionId as string;
+            if (replayEvents && replaySessionId) {
+              setEvents((prev) => {
+                // Remove any existing events for this session, then add the replayed ones
+                const without = prev.filter((e) => e.sessionId !== replaySessionId);
+                return [...without, ...replayEvents];
+              });
+            }
+            break;
+          }
+          case "spawned": {
+            const spawnedId = msg.payload?.sessionId as string;
+            if (spawnedId) {
+              setLastSpawnedId(spawnedId);
+            }
+            send({ type: "list_sessions" });
+            send({ type: "list_environments" });
+            break;
+          }
+          case "error":
+            console.error("[ws]", msg.payload?.message);
+            break;
+        }
+      };
+
+      ws.onclose = () => {
+        setConnected(false);
+        wsRef.current = null;
+        clearInterval(envPollTimer);
+        clearTimeout(reconnectTimer);
+        reconnectTimer = setTimeout(connect, WS_RECONNECT_DELAY_MS);
+      };
+
+      ws.onerror = () => {
+        ws.close();
+      };
+    }
+
+    connect();
+
+    return () => {
+      clearInterval(envPollTimer);
+      clearTimeout(reconnectTimer);
+      ws?.close();
+    };
+  }, [wsUrl, send]);
+
+  const spawn = useCallback(
+    (envId: string, prompt: string, model?: string, runtime?: string) => {
+      send({
+        type: "spawn",
+        payload: { envId, prompt, model: model || "", runtime: runtime || "" },
+      });
+    },
+    [send]
+  );
+
+  const sendInput = useCallback(
+    (sessionId: string, text: string) => {
+      send({ type: "send_input", payload: { sessionId, text } });
+    },
+    [send]
+  );
+
+  const kill = useCallback(
+    (sessionId: string) => {
+      send({ type: "kill", payload: { sessionId } });
+    },
+    [send]
+  );
+
+  const refresh = useCallback(() => {
+    send({ type: "list_environments" });
+    send({ type: "list_sessions" });
+  }, [send]);
+
+  const loadSessionEvents = useCallback(
+    (sessionId: string) => {
+      send({ type: "get_session_events", payload: { sessionId } });
+    },
+    [send]
+  );
+
+  const clearEvents = useCallback(() => {
+    setEvents([]);
+  }, []);
+
+  return {
+    connected,
+    environments,
+    sessions,
+    events,
+    lastSpawnedId,
+    spawn,
+    sendInput,
+    kill,
+    refresh,
+    loadSessionEvents,
+    clearEvents,
+  };
+}
