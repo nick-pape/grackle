@@ -6,7 +6,10 @@ import { join } from "node:path";
 import { homedir } from "node:os";
 
 function loadApiKey(): string {
-  const keyPath = join(homedir(), GRACKLE_DIR, API_KEY_FILENAME);
+  const grackleHome = process.env.GRACKLE_HOME
+    ? join(process.env.GRACKLE_HOME, GRACKLE_DIR)
+    : join(homedir(), GRACKLE_DIR);
+  const keyPath = join(grackleHome, API_KEY_FILENAME);
   try {
     return readFileSync(keyPath, "utf8").trim();
   } catch {

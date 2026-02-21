@@ -1,14 +1,13 @@
 import { randomBytes } from "node:crypto";
 import { readFileSync, writeFileSync, existsSync, mkdirSync, chmodSync } from "node:fs";
-import { homedir } from "node:os";
 import { join } from "node:path";
-import { GRACKLE_DIR, API_KEY_FILENAME } from "@grackle/common";
+import { API_KEY_FILENAME } from "@grackle/common";
 import { logger } from "./logger.js";
+import { grackleHome } from "./paths.js";
 
 const API_KEY_BYTE_LENGTH = 32;
 
-const grackleDir = join(homedir(), GRACKLE_DIR);
-const keyPath = join(grackleDir, API_KEY_FILENAME);
+const keyPath = join(grackleHome, API_KEY_FILENAME);
 
 let cachedKey: string | null = null;
 
@@ -27,7 +26,7 @@ export function loadApiKey(): string {
   // Generate a new key
   cachedKey = randomBytes(API_KEY_BYTE_LENGTH).toString("hex");
 
-  mkdirSync(grackleDir, { recursive: true });
+  mkdirSync(grackleHome, { recursive: true });
   writeFileSync(keyPath, cachedKey + "\n", { mode: 0o600 });
 
   // Ensure permissions on Windows (best-effort)

@@ -1,13 +1,12 @@
 import Database, { type Database as DatabaseType } from "better-sqlite3";
-import { homedir } from "node:os";
 import { join } from "node:path";
 import { mkdirSync } from "node:fs";
-import { GRACKLE_DIR, DB_FILENAME } from "@grackle/common";
+import { DB_FILENAME } from "@grackle/common";
+import { grackleHome } from "./paths.js";
 
-const grackleDir = join(homedir(), GRACKLE_DIR);
-mkdirSync(grackleDir, { recursive: true });
+mkdirSync(grackleHome, { recursive: true });
 
-const dbPath = join(grackleDir, DB_FILENAME);
+const dbPath = join(grackleHome, DB_FILENAME);
 const db: DatabaseType = new Database(dbPath);
 
 // Enable WAL mode for better concurrent read performance

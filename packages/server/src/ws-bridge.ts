@@ -8,9 +8,9 @@ import * as sessionStore from "./session-store.js";
 import * as adapterManager from "./adapter-manager.js";
 import * as streamHub from "./stream-hub.js";
 import { v4 as uuid } from "uuid";
-import { homedir } from "node:os";
 import { join } from "node:path";
-import { GRACKLE_DIR, LOGS_DIR, DEFAULT_RUNTIME, DEFAULT_MODEL } from "@grackle/common";
+import { LOGS_DIR, DEFAULT_RUNTIME, DEFAULT_MODEL } from "@grackle/common";
+import { grackleHome } from "./paths.js";
 import * as logWriter from "./log-writer.js";
 import { writeTranscript } from "./transcript.js";
 
@@ -200,7 +200,7 @@ async function handleMessage(
       const sessionId = uuid();
       const sessionRuntime = runtime || env.default_runtime || DEFAULT_RUNTIME;
       const sessionModel = model || DEFAULT_MODEL;
-      const logPath = join(homedir(), GRACKLE_DIR, LOGS_DIR, sessionId);
+      const logPath = join(grackleHome, LOGS_DIR, sessionId);
 
       sessionStore.createSession(sessionId, envId, sessionRuntime, prompt, sessionModel, logPath);
       logWriter.initLog(logPath);
