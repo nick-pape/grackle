@@ -8,8 +8,9 @@ interface Props {
 }
 
 export function SessionPanel({ sessionId }: Props) {
-  const { events, sessions } = useGrackle();
+  const { events, sessions, loadSessionEvents } = useGrackle();
   const scrollRef = useRef<HTMLDivElement>(null);
+  const loadedRef = useRef<string | null>(null);
 
   const sessionEvents = sessionId
     ? events.filter((e) => e.sessionId === sessionId)
@@ -18,6 +19,15 @@ export function SessionPanel({ sessionId }: Props) {
   const session = sessionId
     ? sessions.find((s) => s.id === sessionId)
     : null;
+
+  // Load historical events when selecting a session with no in-memory events
+  useEffect(() => {
+    if (sessionId && sessionId !== loadedRef.current) {
+      loadedRef.current = sessionId;
+      // Always request log replay — server will return whatever is on disk
+      loadSessionEvents(sessionId);
+    }
+  }, [sessionId, loadSessionEvents]);
 
   // Auto-scroll to bottom
   useEffect(() => {

@@ -288,6 +288,13 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       }
 
       sessionStore.updateSession(req.id, "killed");
+      streamHub.publish(create(grackle.SessionEventSchema, {
+        sessionId: req.id,
+        type: "status",
+        timestamp: new Date().toISOString(),
+        content: "killed",
+        raw: "",
+      }));
       return create(grackle.EmptySchema, {});
     },
 

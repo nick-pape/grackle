@@ -93,6 +93,25 @@ async function handleMessage(
       break;
     }
 
+    case "get_session_events": {
+      const sessionId = msg.payload?.sessionId as string;
+      if (!sessionId) return;
+
+      const session = sessionStore.getSession(sessionId);
+      if (!session || !session.log_path) return;
+
+      const entries = logWriter.readLog(session.log_path);
+      const events = entries.map((e) => ({
+        sessionId: e.session_id,
+        eventType: e.type,
+        timestamp: e.timestamp,
+        content: e.content,
+      }));
+
+      sendWs(ws, { type: "session_events", payload: { sessionId, events } });
+      break;
+    }
+
     case "subscribe": {
       const sessionId = msg.payload?.sessionId as string;
       if (!sessionId) return;
@@ -247,6 +266,13 @@ async function handleMessage(
         await conn.client.kill(create(sidecar.SessionIdSchema, { id: sessionId }));
       }
       sessionStore.updateSession(sessionId, "killed");
+      streamHub.publish(create(grackle.SessionEventSchema, {
+        sessionId,
+        type: "status",
+        timestamp: new Date().toISOString(),
+        content: "killed",
+        raw: "",
+      }));
       break;
     }
   }

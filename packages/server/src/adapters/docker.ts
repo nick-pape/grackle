@@ -55,15 +55,26 @@ export class DockerAdapter implements EnvironmentAdapter {
     runArgs.push(image);
 
     // Check if container already exists
+    let actualPort = localPort;
     try {
       await exec("docker", ["inspect", containerName]);
       yield { stage: "starting", message: "Container exists, starting...", progress: 0.4 };
       await exec("docker", ["start", containerName]);
+      // Discover the actual host port from the existing container
+      try {
+        const { stdout } = await exec("docker", [
+          "inspect", "-f",
+          `{{(index (index .NetworkSettings.Ports "${DEFAULT_SIDECAR_PORT}/tcp") 0).HostPort}}`,
+          containerName,
+        ]);
+        const parsed = parseInt(stdout, 10);
+        if (!isNaN(parsed)) actualPort = parsed;
+      } catch { /* fall back to localPort */ }
     } catch {
       await exec("docker", runArgs);
     }
 
-    containerPorts.set(envId, localPort);
+    containerPorts.set(envId, actualPort);
 
     yield { stage: "starting", message: "Waiting for container...", progress: 0.5 };
 
@@ -76,7 +87,7 @@ export class DockerAdapter implements EnvironmentAdapter {
       await new Promise((r) => setTimeout(r, 1000));
     }
 
-    yield { stage: "connecting", message: `Connecting on port ${localPort}...`, progress: 0.8 };
+    yield { stage: "connecting", message: `Connecting on port ${actualPort}...`, progress: 0.8 };
   }
 
   async connect(envId: string, config: Record<string, unknown>): Promise<SidecarConnection> {

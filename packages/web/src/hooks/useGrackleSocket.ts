@@ -87,6 +87,18 @@ export function useGrackleSocket(url?: string) {
             }
             break;
           }
+          case "session_events": {
+            const replayEvents = msg.payload?.events as SessionEvent[] | undefined;
+            const replaySessionId = msg.payload?.sessionId as string;
+            if (replayEvents && replaySessionId) {
+              setEvents((prev) => {
+                // Remove any existing events for this session, then add the replayed ones
+                const without = prev.filter((e) => e.sessionId !== replaySessionId);
+                return [...without, ...replayEvents];
+              });
+            }
+            break;
+          }
           case "spawned": {
             const spawnedId = msg.payload?.sessionId as string;
             if (spawnedId) setLastSpawnedId(spawnedId);
@@ -147,6 +159,13 @@ export function useGrackleSocket(url?: string) {
     send({ type: "list_sessions" });
   }, [send]);
 
+  const loadSessionEvents = useCallback(
+    (sessionId: string) => {
+      send({ type: "get_session_events", payload: { sessionId } });
+    },
+    [send]
+  );
+
   const clearEvents = useCallback(() => {
     setEvents([]);
   }, []);
@@ -161,6 +180,7 @@ export function useGrackleSocket(url?: string) {
     sendInput,
     kill,
     refresh,
+    loadSessionEvents,
     clearEvents,
   };
 }
