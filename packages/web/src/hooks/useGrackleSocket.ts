@@ -188,11 +188,13 @@ export function useGrackleSocket(url?: string) {
           case "task_started": {
             const tp = msg.payload as Record<string, unknown>;
             if (tp.sessionId) {
-              setLastSpawnedId(tp.sessionId as string);
               send({ type: "list_sessions" });
             }
-            // Refresh tasks — find the task to get its project
-            if (tp.taskId) {
+            // Refresh tasks for the project
+            const startedPid = tp.projectId as string | undefined;
+            if (startedPid) {
+              send({ type: "list_tasks", payload: { projectId: startedPid } });
+            } else if (tp.taskId) {
               setTasks((prev) => {
                 const found = prev.find((t) => t.id === tp.taskId);
                 if (found) send({ type: "list_tasks", payload: { projectId: found.projectId } });

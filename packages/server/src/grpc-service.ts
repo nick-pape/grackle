@@ -545,6 +545,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       sessionStore.createSession(sessionId, envId, runtime, task.title, model, logPath);
       taskStore.setTaskSession(task.id, sessionId);
       taskStore.markTaskStarted(task.id);
+      broadcast({ type: "task_started", payload: { taskId: task.id, sessionId, projectId: task.project_id } });
 
       spawnOnSidecar(conn, sessionId, runtime, task.title, model, logPath,
         task.branch, systemContext, task.project_id, task.id,
