@@ -1,6 +1,11 @@
 import { test, expect } from "./fixtures.js";
 
 test.describe("Environment Display", () => {
+  test.beforeEach(async ({ appPage }) => {
+    // Stage2 sidebar defaults to "Projects" tab — switch to "Environments"
+    await appPage.locator("button", { hasText: "Environments" }).click();
+  });
+
   test("environment card renders with name", async ({ appPage }) => {
     await expect(appPage.locator("text=test-local")).toBeVisible();
   });
