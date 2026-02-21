@@ -4,6 +4,7 @@ import type { EnvironmentStatus } from "@grackle/common";
 
 const SIDECAR_TOKEN_BYTE_LENGTH = 32;
 
+/** Row shape for an environment record in the SQLite database. */
 export interface EnvironmentRow {
   id: string;
   display_name: string;
@@ -31,14 +32,17 @@ const stmts = {
   setEnvInfo: db.prepare("UPDATE environments SET env_info = ? WHERE id = ?"),
 };
 
+/** Return all registered environments. */
 export function listEnvironments(): EnvironmentRow[] {
   return stmts.list.all() as EnvironmentRow[];
 }
 
+/** Retrieve a single environment by ID. */
 export function getEnvironment(id: string): EnvironmentRow | undefined {
   return stmts.get.get(id) as EnvironmentRow | undefined;
 }
 
+/** Insert a new environment record with a randomly-generated sidecar token. */
 export function addEnvironment(
   id: string,
   displayName: string,
@@ -50,18 +54,22 @@ export function addEnvironment(
   stmts.insert.run(id, displayName, adapterType, adapterConfig, defaultRuntime, sidecarToken);
 }
 
+/** Delete an environment record from the database. */
 export function removeEnvironment(id: string): void {
   stmts.remove.run(id);
 }
 
+/** Update an environment's connection status and touch `last_seen`. */
 export function updateEnvironmentStatus(id: string, status: EnvironmentStatus): void {
   stmts.updateStatus.run(status, id);
 }
 
+/** Mark an environment as having completed first-time bootstrap. */
 export function markBootstrapped(id: string): void {
   stmts.markBootstrapped.run(id);
 }
 
+/** Store serialized environment info (e.g. OS, node version) from the sidecar. */
 export function setEnvInfo(id: string, info: string): void {
   stmts.setEnvInfo.run(info, id);
 }

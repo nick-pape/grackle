@@ -5,10 +5,12 @@ import { logger } from "./logger.js";
 
 const envTokens = new Map<string, string>();
 
+/** Return the map of environment variable tokens that have been written to `process.env`. */
 export function getEnvTokens(): Map<string, string> {
   return envTokens;
 }
 
+/** Apply a batch of tokens by setting env vars or writing files under the user's home directory. */
 export async function writeTokens(
   tokens: Array<{ name: string; type: string; envVar: string; filePath: string; value: string }>
 ): Promise<void> {

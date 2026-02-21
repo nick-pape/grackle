@@ -172,6 +172,7 @@ class ClaudeCodeSession implements AgentSession {
   }
 }
 
+/** Runtime that delegates to the Claude Code SDK (`@anthropic-ai/claude-agent-sdk`). */
 export class ClaudeCodeRuntime implements AgentRuntime {
   name = "claude-code";
 

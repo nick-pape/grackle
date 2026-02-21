@@ -1,3 +1,4 @@
+/** A simple async queue that implements `AsyncIterable`, allowing consumers to `for await` over pushed items. */
 export class AsyncQueue<T> {
   private queue: T[] = [];
   private waiters: Array<(value: T | undefined) => void> = [];

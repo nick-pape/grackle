@@ -13,6 +13,7 @@ function deriveKey(salt: Buffer): Buffer {
   return pbkdf2Sync(masterKey, salt, ITERATIONS, KEY_LENGTH, "sha256");
 }
 
+/** Encrypt a plaintext string using AES-256-GCM with a PBKDF2-derived key. */
 export function encrypt(plaintext: string): string {
   const salt = randomBytes(SALT_LENGTH);
   const key = deriveKey(salt);
@@ -26,6 +27,7 @@ export function encrypt(plaintext: string): string {
   return [salt, iv, tag, encrypted].map((b) => b.toString("base64")).join(":");
 }
 
+/** Decrypt an AES-256-GCM ciphertext string produced by {@link encrypt}. */
 export function decrypt(ciphertext: string): string {
   const parts = ciphertext.split(":");
   if (parts.length !== 4) throw new Error("Invalid encrypted format");

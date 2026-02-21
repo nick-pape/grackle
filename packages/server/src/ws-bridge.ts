@@ -23,6 +23,7 @@ interface WsMessage {
   id?: string;
 }
 
+/** Create a WebSocket server on top of an HTTP server that bridges JSON messages to gRPC operations. */
 export function createWsBridge(httpServer: HttpServer, verifyApiKey: (token: string) => boolean): WebSocketServer {
   const wss = new WebSocketServer({ server: httpServer });
 

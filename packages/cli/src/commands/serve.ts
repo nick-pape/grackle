@@ -1,5 +1,6 @@
 import type { Command } from "commander";
 
+/** Register the `serve` command that starts the Grackle server and web UI. */
 export function registerServeCommand(program: Command): void {
   program
     .command("serve")

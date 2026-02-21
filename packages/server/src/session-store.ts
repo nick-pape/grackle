@@ -1,6 +1,7 @@
 import db from "./db.js";
 import type { SessionStatus } from "@grackle/common";
 
+/** Row shape for a session record in the SQLite database. */
 export interface SessionRow {
   id: string;
   env_id: string;
@@ -34,6 +35,7 @@ const stmts = {
   incrementTurns: db.prepare("UPDATE sessions SET turns = turns + 1 WHERE id = ?"),
 };
 
+/** Insert a new session record into the database. */
 export function createSession(
   id: string,
   envId: string,
@@ -45,20 +47,24 @@ export function createSession(
   stmts.create.run(id, envId, runtime, prompt, model, logPath);
 }
 
+/** Retrieve a single session by ID. */
 export function getSession(id: string): SessionRow | undefined {
   return stmts.get.get(id) as SessionRow | undefined;
 }
 
+/** List sessions, optionally filtered by environment and/or status. */
 export function listSessions(envId?: string, status?: string): SessionRow[] {
   const e = envId || "";
   const s = status || "";
   return stmts.listFiltered.all(e, e, s, s) as SessionRow[];
 }
 
+/** List all sessions belonging to a specific environment. */
 export function listByEnv(envId: string): SessionRow[] {
   return stmts.listByEnv.all(envId) as SessionRow[];
 }
 
+/** Update a session's status, runtime session ID, and error; auto-sets `ended_at` for terminal states. */
 export function updateSession(
   id: string,
   status: SessionStatus,
@@ -71,14 +77,17 @@ export function updateSession(
   stmts.update.run(status, runtimeSessionId || null, ended, error || null, id);
 }
 
+/** Update only the status column of a session. */
 export function updateSessionStatus(id: string, status: SessionStatus): void {
   stmts.updateStatus.run(status, id);
 }
 
+/** Get the currently active (pending/running/waiting_input) session for an environment, if any. */
 export function getActiveForEnv(envId: string): SessionRow | undefined {
   return stmts.getActiveForEnv.get(envId) as SessionRow | undefined;
 }
 
+/** Increment the turn counter for a session. */
 export function incrementTurns(id: string): void {
   stmts.incrementTurns.run(id);
 }

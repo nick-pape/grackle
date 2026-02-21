@@ -8,6 +8,7 @@ import os from "node:os";
 
 const startTime = Date.now();
 
+/** Register all sidecar gRPC service handlers on the given ConnectRPC router. */
 export function registerSidecarRoutes(router: ConnectRouter): void {
   router.service(sidecar.GrackleSidecar, {
     async getInfo() {

@@ -10,6 +10,7 @@ interface LocalConfig {
   host?: string;
 }
 
+/** Environment adapter that connects to a locally-running sidecar process. */
 export class LocalAdapter implements EnvironmentAdapter {
   type = "local";
 

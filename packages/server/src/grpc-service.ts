@@ -46,6 +46,7 @@ function sessionRowToProto(row: sessionStore.SessionRow): grackle.Session {
   });
 }
 
+/** Register all Grackle gRPC service handlers on the given ConnectRPC router. */
 export function registerGrackleRoutes(router: ConnectRouter): void {
   router.service(grackle.Grackle, {
     async listEnvironments() {

@@ -21,6 +21,7 @@ const stmts = {
   remove: db.prepare("DELETE FROM tokens WHERE id = ?"),
 };
 
+/** Encrypt and store a token, then auto-push to all connected environments. */
 export async function setToken(entry: TokenConfig): Promise<void> {
   const encrypted: TokenConfig = {
     ...entry,
@@ -32,6 +33,7 @@ export async function setToken(entry: TokenConfig): Promise<void> {
   await pushToAll();
 }
 
+/** List all stored tokens (values are omitted for security). */
 export function listTokens(): Array<{ name: string; type: string; envVar?: string; filePath?: string; expiresAt?: string }> {
   const rows = stmts.list.all() as Array<{ id: string; config: string }>;
   return rows.map((row) => {
@@ -46,6 +48,7 @@ export function listTokens(): Array<{ name: string; type: string; envVar?: strin
   });
 }
 
+/** Build a decrypted token bundle suitable for pushing to a sidecar. */
 export function getBundle(): sidecar.TokenBundle {
   const rows = stmts.list.all() as Array<{ id: string; config: string }>;
   const tokens = rows.map((row) => {
@@ -62,6 +65,7 @@ export function getBundle(): sidecar.TokenBundle {
   return create(sidecar.TokenBundleSchema, { tokens });
 }
 
+/** Push the current token bundle to a single connected environment. */
 export async function pushToEnv(envId: string): Promise<void> {
   const conn = adapterManager.getConnection(envId);
   if (!conn) return;
@@ -72,6 +76,7 @@ export async function pushToEnv(envId: string): Promise<void> {
   await conn.client.pushTokens(bundle);
 }
 
+/** Push the current token bundle to all connected environments in parallel. */
 export async function pushToAll(): Promise<void> {
   const connections = adapterManager.listConnections();
   const promises: Promise<void>[] = [];

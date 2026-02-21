@@ -27,6 +27,7 @@ interface DockerConfig {
 
 const containerPorts = new Map<string, number>();
 
+/** Environment adapter that provisions and manages Docker containers running the sidecar. */
 export class DockerAdapter implements EnvironmentAdapter {
   type = "docker";
 

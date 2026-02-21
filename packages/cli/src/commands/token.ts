@@ -4,6 +4,7 @@ import Table from "cli-table3";
 import { readFileSync } from "node:fs";
 import { createInterface } from "node:readline";
 
+/** Register the `token set` and `token list` subcommands on the CLI program. */
 export function registerTokenCommands(program: Command): void {
   const token = program.command("token").description("Manage auth tokens");
 

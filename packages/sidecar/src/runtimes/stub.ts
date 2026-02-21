@@ -75,6 +75,7 @@ class StubSession implements AgentSession {
   }
 }
 
+/** A mock runtime that echoes prompts and waits for one round of user input. Useful for testing. */
 export class StubRuntime implements AgentRuntime {
   name = "stub";
 

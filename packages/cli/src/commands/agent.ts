@@ -3,6 +3,7 @@ import chalk from "chalk";
 import { createGrackleClient } from "../client.js";
 import Table from "cli-table3";
 
+/** Register agent-related commands: `spawn`, `resume`, `status`, `kill`, and `attach`. */
 export function registerAgentCommands(program: Command): void {
   program
     .command("spawn <env-id> <prompt>")
