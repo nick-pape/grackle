@@ -61,6 +61,7 @@ export function registerEnvCommands(program: Command): void {
         if (opts.user) config.user = opts.user;
       } else {
         if (opts.image) config.image = opts.image;
+        if (opts.repo) config.repo = opts.repo;
       }
 
       const env = await client.addEnvironment({

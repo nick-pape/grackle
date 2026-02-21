@@ -14,6 +14,7 @@ interface DockerConfig {
   localPort?: number;
   volumes?: string[];
   env?: Record<string, string>;
+  repo?: string; // Git repo URL to clone into /workspace
 }
 
 const containerPorts = new Map<string, number>();
@@ -102,6 +103,52 @@ export class DockerAdapter implements EnvironmentAdapter {
       await new Promise((r) => setTimeout(r, 1000));
     }
 
+    // Clone repo into /workspace if configured
+    if (cfg.repo) {
+      yield { stage: "cloning", message: `Cloning ${cfg.repo}...`, progress: 0.6 };
+      // Check if already cloned
+      try {
+        const { stdout } = await exec("docker", [
+          "exec", containerName, "bash", "-c", "ls /workspace/.git 2>/dev/null && echo exists",
+        ]);
+        if (stdout.includes("exists")) {
+          yield { stage: "cloning", message: "Repo already cloned, pulling latest...", progress: 0.65 };
+          await exec("docker", [
+            "exec", "-w", "/workspace", containerName, "git", "pull", "--ff-only",
+          ], { timeout: 60_000 }).catch(() => { /* pull may fail on detached HEAD etc */ });
+        } else {
+          throw new Error("not cloned");
+        }
+      } catch {
+        // Clone fresh — use git credential helper with ephemeral token
+        const ghToken = await getGitHubToken();
+        const cloneUrl = cfg.repo.startsWith("https://")
+          ? cfg.repo
+          : `https://github.com/${cfg.repo}.git`;
+
+        if (ghToken) {
+          // Configure one-shot credential helper, clone, then remove the helper
+          await exec("docker", [
+            "exec", containerName, "git", "config", "--global",
+            "credential.helper", `!f() { echo "username=x-access-token"; echo "password=${ghToken}"; }; f`,
+          ]);
+          await exec("docker", [
+            "exec", containerName, "git", "clone", cloneUrl, "/workspace",
+          ], { timeout: 120_000 });
+          // Remove the credential helper so token isn't persisted
+          await exec("docker", [
+            "exec", containerName, "git", "config", "--global", "--unset", "credential.helper",
+          ]).catch(() => {});
+        } else {
+          // No token — try cloning anyway (works for public repos)
+          await exec("docker", [
+            "exec", containerName, "git", "clone", cloneUrl, "/workspace",
+          ], { timeout: 120_000 });
+        }
+      }
+      yield { stage: "cloning", message: "Repo ready", progress: 0.75 };
+    }
+
     yield { stage: "connecting", message: `Connecting on port ${actualPort}...`, progress: 0.8 };
   }
 
@@ -159,6 +206,16 @@ export class DockerAdapter implements EnvironmentAdapter {
     } catch {
       return false;
     }
+  }
+}
+
+/** Get a GitHub token from the local `gh` CLI for private repo cloning. */
+async function getGitHubToken(): Promise<string | undefined> {
+  try {
+    const { stdout } = await exec("gh", ["auth", "token"]);
+    return stdout || undefined;
+  } catch {
+    return undefined;
   }
 }
 

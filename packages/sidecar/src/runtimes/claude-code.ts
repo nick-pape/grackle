@@ -1,6 +1,7 @@
 import type { AgentRuntime, AgentSession, AgentEvent, SpawnOpts, ResumeOpts } from "./runtime.js";
 import type { SessionStatus } from "@grackle/common";
 import { AsyncQueue } from "../utils/async-queue.js";
+import { existsSync, readdirSync } from "node:fs";
 
 // Dynamic import — try @anthropic-ai/claude-agent-sdk first, then @anthropic-ai/claude-code
 type QueryFn = (opts: Record<string, unknown>) => Promise<unknown>;
@@ -99,10 +100,16 @@ class ClaudeCodeSession implements AgentSession {
     yield { type: "system", timestamp: ts(), content: "Starting Claude Code runtime..." };
 
     try {
+      // Use /workspace as cwd if it exists and has content (i.e. a repo was cloned)
+      const workspacePath = "/workspace";
+      const useWorkspace = existsSync(workspacePath) &&
+        readdirSync(workspacePath).length > 0;
+
       const options: Record<string, unknown> = {
         prompt: this.prompt,
         model: this.model,
         abortController: new AbortController(),
+        ...(useWorkspace ? { cwd: workspacePath } : {}),
       };
 
       if (this.maxTurns > 0) {
