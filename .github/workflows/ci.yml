@@ -27,5 +27,9 @@ jobs:
       - name: Rush build
         run: node common/scripts/install-run-rush.js build
 
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+        working-directory: packages/web
+
       - name: Run tests
         run: node common/scripts/install-run-rush.js test --verbose
