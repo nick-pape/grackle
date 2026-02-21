@@ -2,7 +2,8 @@ import { useGrackle } from "../context/GrackleContext.js";
 
 export function StatusBar() {
   const { connected, environments, sessions } = useGrackle();
-  const connectedCount = environments.filter((e) => e.status === "connected").length;
+  const totalEnvs = environments.length;
+  const connectedEnvs = environments.filter((e) => e.status === "connected").length;
   const activeCount = sessions.filter((s) => ["running", "waiting_input"].includes(s.status)).length;
 
   return (
@@ -23,7 +24,7 @@ export function StatusBar() {
           <span style={{ color: connected ? "#4ecca3" : "#e94560" }}>●</span>
           {" "}{connected ? "Connected" : "Disconnected"}
         </span>
-        <span>{connectedCount} env{connectedCount !== 1 ? "s" : ""}</span>
+        <span>{connectedEnvs}/{totalEnvs} env{totalEnvs !== 1 ? "s" : ""}</span>
         <span>{activeCount} active</span>
       </div>
     </div>

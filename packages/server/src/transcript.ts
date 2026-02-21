@@ -1,6 +1,6 @@
 import { readLog, type LogEntry } from "./log-writer.js";
-import { writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { writeFileSync, mkdirSync } from "node:fs";
+import { join, dirname } from "node:path";
 
 function renderEntry(entry: LogEntry): string {
   switch (entry.type) {
@@ -27,6 +27,7 @@ function renderEntry(entry: LogEntry): string {
   }
 }
 
+/** Generate a Markdown transcript from a session's JSONL log. */
 export function generateTranscript(logPath: string): string {
   const entries = readLog(logPath);
   if (entries.length === 0) return "*(empty session)*\n";
@@ -45,7 +46,10 @@ export function generateTranscript(logPath: string): string {
   return lines.join("\n");
 }
 
+/** Generate and write a Markdown transcript file alongside the session log. */
 export function writeTranscript(logPath: string): void {
   const md = generateTranscript(logPath);
-  writeFileSync(join(logPath, "transcript.md"), md);
+  const transcriptPath = join(logPath, "transcript.md");
+  mkdirSync(dirname(transcriptPath), { recursive: true });
+  writeFileSync(transcriptPath, md, "utf8");
 }

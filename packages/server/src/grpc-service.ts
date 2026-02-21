@@ -1,7 +1,9 @@
 import type { ConnectRouter } from "@connectrpc/connect";
 import { create } from "@bufbuild/protobuf";
-import { grackle, sidecar } from "@grackle/common";
+import { grackle, powerline } from "@grackle/common";
 import { v4 as uuid } from "uuid";
+import type { EnvironmentRow } from "./schema.js";
+import type { SessionRow } from "./schema.js";
 import * as envRegistry from "./env-registry.js";
 import * as sessionStore from "./session-store.js";
 import * as adapterManager from "./adapter-manager.js";
@@ -13,43 +15,43 @@ import * as taskStore from "./task-store.js";
 import * as findingStore from "./finding-store.js";
 import { writeTranscript } from "./transcript.js";
 import { broadcast } from "./ws-bridge.js";
-import { homedir } from "node:os";
 import { join } from "node:path";
-import { GRACKLE_DIR, LOGS_DIR, DEFAULT_RUNTIME } from "@grackle/common";
+import { LOGS_DIR, DEFAULT_RUNTIME, DEFAULT_MODEL } from "@grackle/common";
+import { grackleHome } from "./paths.js";
 
 function slugify(text: string): string {
   return text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40);
 }
 
-function envRowToProto(row: envRegistry.EnvironmentRow): grackle.Environment {
+function envRowToProto(row: EnvironmentRow): grackle.Environment {
   return create(grackle.EnvironmentSchema, {
     id: row.id,
-    displayName: row.display_name,
-    adapterType: row.adapter_type,
-    adapterConfig: row.adapter_config,
-    defaultRuntime: row.default_runtime,
-    bootstrapped: row.bootstrapped === 1,
+    displayName: row.displayName,
+    adapterType: row.adapterType,
+    adapterConfig: row.adapterConfig,
+    defaultRuntime: row.defaultRuntime,
+    bootstrapped: row.bootstrapped,
     status: row.status,
-    lastSeen: row.last_seen || "",
-    envInfo: row.env_info || "",
-    createdAt: row.created_at,
+    lastSeen: row.lastSeen || "",
+    envInfo: row.envInfo || "",
+    createdAt: row.createdAt,
   });
 }
 
-function sessionRowToProto(row: sessionStore.SessionRow): grackle.Session {
+function sessionRowToProto(row: SessionRow): grackle.Session {
   return create(grackle.SessionSchema, {
     id: row.id,
-    envId: row.env_id,
+    envId: row.envId,
     runtime: row.runtime,
-    runtimeSessionId: row.runtime_session_id || "",
+    runtimeSessionId: row.runtimeSessionId || "",
     prompt: row.prompt,
     model: row.model,
     status: row.status,
-    logPath: row.log_path || "",
+    logPath: row.logPath || "",
     turns: row.turns,
-    startedAt: row.started_at,
-    suspendedAt: row.suspended_at || "",
-    endedAt: row.ended_at || "",
+    startedAt: row.startedAt,
+    suspendedAt: row.suspendedAt || "",
+    endedAt: row.endedAt || "",
     error: row.error || "",
   });
 }
@@ -102,8 +104,8 @@ function findingRowToProto(row: findingStore.FindingRow): grackle.Finding {
   });
 }
 
-/** Spawn an agent session on a sidecar, piping events to the stream hub. Returns the session ID. */
-function spawnOnSidecar(
+/** Spawn an agent session on a PowerLine, piping events to the stream hub. Returns the session ID. */
+function spawnOnPowerLine(
   conn: ReturnType<typeof adapterManager.getConnection> & {},
   sessionId: string,
   runtime: string,
@@ -116,7 +118,7 @@ function spawnOnSidecar(
   taskId: string,
   onComplete?: () => void,
 ): void {
-  const sidecarReq = create(sidecar.SpawnRequestSchema, {
+  const powerlineReq = create(powerline.SpawnRequestSchema, {
     sessionId,
     runtime,
     prompt,
@@ -134,7 +136,7 @@ function spawnOnSidecar(
   (async () => {
     try {
       sessionStore.updateSession(sessionId, "running");
-      for await (const event of conn.client.spawn(sidecarReq)) {
+      for await (const event of conn.client.spawn(powerlineReq)) {
         const sessionEvent = create(grackle.SessionEventSchema, {
           sessionId,
           type: event.type,
@@ -165,6 +167,10 @@ function spawnOnSidecar(
             sessionStore.updateSessionStatus(sessionId, "running");
           } else if (event.content === "completed") {
             sessionStore.updateSession(sessionId, "completed");
+          } else if (event.content === "failed") {
+            sessionStore.updateSession(sessionId, "failed");
+          } else if (event.content === "killed") {
+            sessionStore.updateSession(sessionId, "killed");
           }
         }
       }
@@ -175,6 +181,14 @@ function spawnOnSidecar(
       }
     } catch (err) {
       sessionStore.updateSession(sessionId, "failed", undefined, String(err));
+      // Publish a failure event so streaming clients are notified
+      streamHub.publish(create(grackle.SessionEventSchema, {
+        sessionId,
+        type: "status",
+        timestamp: new Date().toISOString(),
+        content: "failed",
+        raw: String(err),
+      }));
     } finally {
       logWriter.endSession(logPath);
       try { writeTranscript(logPath); } catch { /* non-critical */ }
@@ -183,6 +197,7 @@ function spawnOnSidecar(
   })();
 }
 
+/** Register all Grackle gRPC service handlers on the given ConnectRPC router. */
 export function registerGrackleRoutes(router: ConnectRouter): void {
   router.service(grackle.Grackle, {
     async listEnvironments() {
@@ -216,11 +231,11 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         return;
       }
 
-      const adapter = adapterManager.getAdapter(env.adapter_type);
+      const adapter = adapterManager.getAdapter(env.adapterType);
       if (!adapter) {
         yield create(grackle.ProvisionEventSchema, {
           stage: "error",
-          message: `No adapter for type: ${env.adapter_type}`,
+          message: `No adapter for type: ${env.adapterType}`,
           progress: 0,
         });
         return;
@@ -228,9 +243,9 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
 
       envRegistry.updateEnvironmentStatus(req.id, "connecting");
 
-      const config = JSON.parse(env.adapter_config);
-      const sidecarToken = env.sidecar_token || "";
-      for await (const event of adapter.provision(req.id, config, sidecarToken)) {
+      const config = JSON.parse(env.adapterConfig);
+      const powerlineToken = env.powerlineToken || "";
+      for await (const event of adapter.provision(req.id, config, powerlineToken)) {
         yield create(grackle.ProvisionEventSchema, {
           stage: event.stage,
           message: event.message,
@@ -239,7 +254,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       }
 
       try {
-        const conn = await adapter.connect(req.id, config, sidecarToken);
+        const conn = await adapter.connect(req.id, config, powerlineToken);
         adapterManager.setConnection(req.id, conn);
         envRegistry.updateEnvironmentStatus(req.id, "connected");
 
@@ -260,11 +275,13 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
 
     async stopEnvironment(req) {
       const env = envRegistry.getEnvironment(req.id);
-      if (!env) throw new Error(`Environment not found: ${req.id}`);
+      if (!env) {
+        throw new Error(`Environment not found: ${req.id}`);
+      }
 
-      const adapter = adapterManager.getAdapter(env.adapter_type);
+      const adapter = adapterManager.getAdapter(env.adapterType);
       if (adapter) {
-        await adapter.stop(req.id, JSON.parse(env.adapter_config));
+        await adapter.stop(req.id, JSON.parse(env.adapterConfig));
       }
       adapterManager.removeConnection(req.id);
       envRegistry.updateEnvironmentStatus(req.id, "disconnected");
@@ -273,11 +290,13 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
 
     async destroyEnvironment(req) {
       const env = envRegistry.getEnvironment(req.id);
-      if (!env) throw new Error(`Environment not found: ${req.id}`);
+      if (!env) {
+        throw new Error(`Environment not found: ${req.id}`);
+      }
 
-      const adapter = adapterManager.getAdapter(env.adapter_type);
+      const adapter = adapterManager.getAdapter(env.adapterType);
       if (adapter) {
-        await adapter.destroy(req.id, JSON.parse(env.adapter_config));
+        await adapter.destroy(req.id, JSON.parse(env.adapterConfig));
       }
       adapterManager.removeConnection(req.id);
       envRegistry.updateEnvironmentStatus(req.id, "disconnected");
@@ -286,18 +305,22 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
 
     async spawnAgent(req) {
       const env = envRegistry.getEnvironment(req.envId);
-      if (!env) throw new Error(`Environment not found: ${req.envId}`);
+      if (!env) {
+        throw new Error(`Environment not found: ${req.envId}`);
+      }
 
       const conn = adapterManager.getConnection(req.envId);
-      if (!conn) throw new Error(`Environment ${req.envId} not connected`);
+      if (!conn) {
+        throw new Error(`Environment ${req.envId} not connected`);
+      }
 
       const sessionId = uuid();
-      const runtime = req.runtime || env.default_runtime;
-      const model = req.model || "claude-sonnet-4-5-20250514";
-      const logPath = join(homedir(), GRACKLE_DIR, LOGS_DIR, sessionId);
+      const runtime = req.runtime || env.defaultRuntime;
+      const model = req.model || process.env.GRACKLE_DEFAULT_MODEL || DEFAULT_MODEL;
+      const logPath = join(grackleHome, LOGS_DIR, sessionId);
 
       sessionStore.createSession(sessionId, req.envId, runtime, req.prompt, model, logPath);
-      spawnOnSidecar(conn, sessionId, runtime, req.prompt, model, logPath,
+      spawnOnPowerLine(conn, sessionId, runtime, req.prompt, model, logPath,
         req.branch || "", req.systemContext || "", "", "");
 
       const row = sessionStore.getSession(sessionId);
@@ -306,21 +329,25 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
 
     async resumeAgent(req) {
       const session = sessionStore.getSession(req.sessionId);
-      if (!session) throw new Error(`Session not found: ${req.sessionId}`);
+      if (!session) {
+        throw new Error(`Session not found: ${req.sessionId}`);
+      }
 
-      const conn = adapterManager.getConnection(session.env_id);
-      if (!conn) throw new Error(`Environment ${session.env_id} not connected`);
+      const conn = adapterManager.getConnection(session.envId);
+      if (!conn) {
+        throw new Error(`Environment ${session.envId} not connected`);
+      }
 
-      const sidecarReq = create(sidecar.ResumeRequestSchema, {
+      const powerlineReq = create(powerline.ResumeRequestSchema, {
         sessionId: session.id,
-        runtimeSessionId: session.runtime_session_id || "",
+        runtimeSessionId: session.runtimeSessionId || "",
         runtime: session.runtime,
       });
 
       (async () => {
         try {
           sessionStore.updateSession(session.id, "running");
-          for await (const event of conn.client.resume(sidecarReq)) {
+          for await (const event of conn.client.resume(powerlineReq)) {
             const sessionEvent = create(grackle.SessionEventSchema, {
               sessionId: session.id,
               type: event.type,
@@ -341,16 +368,20 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
 
     async sendInput(req) {
       const session = sessionStore.getSession(req.sessionId);
-      if (!session) throw new Error(`Session not found: ${req.sessionId}`);
+      if (!session) {
+        throw new Error(`Session not found: ${req.sessionId}`);
+      }
       if (session.status !== "waiting_input") {
         throw new Error(`Session ${req.sessionId} is not waiting for input (status: ${session.status})`);
       }
 
-      const conn = adapterManager.getConnection(session.env_id);
-      if (!conn) throw new Error(`Environment ${session.env_id} not connected`);
+      const conn = adapterManager.getConnection(session.envId);
+      if (!conn) {
+        throw new Error(`Environment ${session.envId} not connected`);
+      }
 
       await conn.client.sendInput(
-        create(sidecar.InputMessageSchema, {
+        create(powerline.InputMessageSchema, {
           sessionId: req.sessionId,
           text: req.text,
         })
@@ -361,12 +392,14 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
 
     async killAgent(req) {
       const session = sessionStore.getSession(req.id);
-      if (!session) throw new Error(`Session not found: ${req.id}`);
+      if (!session) {
+        throw new Error(`Session not found: ${req.id}`);
+      }
 
-      const conn = adapterManager.getConnection(session.env_id);
+      const conn = adapterManager.getConnection(session.envId);
       if (conn) {
         await conn.client.kill(
-          create(sidecar.SessionIdSchema, { id: req.id })
+          create(powerline.SessionIdSchema, { id: req.id })
         );
       }
 
@@ -423,9 +456,9 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
     },
 
     async listTokens() {
-      const tokens = tokenBroker.listTokens();
+      const items = tokenBroker.listTokens();
       return create(grackle.TokenListSchema, {
-        tokens: tokens.map((t) =>
+        tokens: items.map((t) =>
           create(grackle.TokenInfoSchema, {
             name: t.name,
             type: t.type,
@@ -531,8 +564,8 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
 
       const sessionId = uuid();
       const runtime = req.runtime || "claude-code";
-      const model = req.model || "claude-sonnet-4-5-20250514";
-      const logPath = join(homedir(), GRACKLE_DIR, LOGS_DIR, sessionId);
+      const model = req.model || process.env.GRACKLE_DEFAULT_MODEL || DEFAULT_MODEL;
+      const logPath = join(grackleHome, LOGS_DIR, sessionId);
 
       // Build system context: task info + review notes + MCP tool instructions
       const systemContext = [
@@ -552,7 +585,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       taskStore.markTaskStarted(task.id);
       broadcast({ type: "task_started", payload: { taskId: task.id, sessionId, projectId: task.project_id } });
 
-      spawnOnSidecar(conn, sessionId, runtime, task.title, model, logPath,
+      spawnOnPowerLine(conn, sessionId, runtime, task.title, model, logPath,
         task.branch, systemContext, task.project_id, task.id,
         () => {
           // On completion, auto-move task to review
@@ -657,7 +690,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       if (!conn) throw new Error(`Environment ${envId} not connected`);
 
       const diffResp = await conn.client.getDiff(
-        create(sidecar.DiffRequestSchema, {
+        create(powerline.DiffRequestSchema, {
           branch: task.branch,
           baseBranch: "main",
           worktreeBasePath: "/workspace",

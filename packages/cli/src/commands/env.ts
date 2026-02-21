@@ -1,7 +1,10 @@
 import type { Command } from "commander";
+import chalk from "chalk";
 import { createGrackleClient } from "../client.js";
+import type { AdapterType } from "@grackle/common";
 import Table from "cli-table3";
 
+/** Register environment management commands: `env list`, `add`, `provision`, `stop`, `destroy`, `remove`, `wake`. */
 export function registerEnvCommands(program: Command): void {
   const env = program.command("env").description("Manage environments");
 
@@ -19,10 +22,10 @@ export function registerEnvCommands(program: Command): void {
         head: ["ID", "Type", "Runtime", "Status", "Bootstrapped"],
       });
       for (const e of res.environments) {
-        const status = e.status === "connected" ? "\x1b[32m●\x1b[0m " + e.status :
-                       e.status === "sleeping" ? "\x1b[33m●\x1b[0m " + e.status :
-                       e.status === "error" ? "\x1b[31m●\x1b[0m " + e.status :
-                       "\x1b[90m●\x1b[0m " + e.status;
+        const status = e.status === "connected" ? chalk.green("●") + " " + e.status :
+                       e.status === "sleeping" ? chalk.yellow("●") + " " + e.status :
+                       e.status === "error" ? chalk.red("●") + " " + e.status :
+                       chalk.gray("●") + " " + e.status;
         table.push([e.id, e.adapterType, e.defaultRuntime, status, e.bootstrapped ? "yes" : "no"]);
       }
       console.log(table.toString());
@@ -34,17 +37,17 @@ export function registerEnvCommands(program: Command): void {
     .option("--codespace", "Codespace adapter")
     .option("--docker", "Docker adapter")
     .option("--ssh", "SSH adapter")
-    .option("--local", "Local sidecar adapter")
+    .option("--local", "Local PowerLine adapter")
     .option("--repo <repo>", "GitHub repo (codespace)")
     .option("--machine <machine>", "Machine type (codespace)")
     .option("--image <image>", "Docker image")
     .option("--host <host>", "SSH host / local host")
-    .option("--port <port>", "Sidecar port (local adapter)")
+    .option("--port <port>", "PowerLine port (local adapter)")
     .option("--user <user>", "SSH user")
     .option("--runtime <runtime>", "Default runtime", "claude-code")
     .action(async (name: string, opts) => {
       const client = createGrackleClient();
-      let adapterType = "docker";
+      let adapterType: AdapterType = "docker";
       const config: Record<string, unknown> = {};
 
       if (opts.local) {

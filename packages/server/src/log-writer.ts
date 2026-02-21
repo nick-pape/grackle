@@ -4,6 +4,7 @@ import type { grackle } from "@grackle/common";
 
 const openStreams = new Map<string, WriteStream>();
 
+/** Initialize a JSONL log stream for a session at the given directory path. */
 export function initLog(logPath: string): void {
   mkdirSync(logPath, { recursive: true });
   const streamPath = join(logPath, "stream.jsonl");
@@ -11,6 +12,7 @@ export function initLog(logPath: string): void {
   openStreams.set(logPath, ws);
 }
 
+/** Append a session event as a JSON line to the session's log file. */
 export function writeEvent(logPath: string, event: grackle.SessionEvent): void {
   const ws = openStreams.get(logPath);
   if (!ws) return;
@@ -26,6 +28,7 @@ export function writeEvent(logPath: string, event: grackle.SessionEvent): void {
   ws.write(line + "\n");
 }
 
+/** Close the write stream for a session log. */
 export function endSession(logPath: string): void {
   const ws = openStreams.get(logPath);
   if (ws) {
@@ -34,6 +37,7 @@ export function endSession(logPath: string): void {
   }
 }
 
+/** Deserialized shape of a single line in a session's `stream.jsonl` log. */
 export interface LogEntry {
   session_id: string;
   type: string;
@@ -42,6 +46,7 @@ export interface LogEntry {
   raw?: string;
 }
 
+/** Read and parse all log entries from a session's JSONL log file. */
 export function readLog(logPath: string): LogEntry[] {
   const streamPath = join(logPath, "stream.jsonl");
   if (!existsSync(streamPath)) return [];

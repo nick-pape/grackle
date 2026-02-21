@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useState, useEffect, type FormEvent } from "react";
 import { useGrackle } from "../context/GrackleContext.js";
 import type { ViewMode } from "../App.js";
 
@@ -7,6 +7,28 @@ interface Props {
   setViewMode: (mode: ViewMode) => void;
 }
 
+// --- Subcomponents ---
+
+interface RuntimeSelectorProps {
+  value: string;
+  onChange: (value: string) => void;
+}
+
+function RuntimeSelector({ value, onChange }: RuntimeSelectorProps) {
+  return (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      style={selectStyle}
+    >
+      <option value="claude-code">claude-code</option>
+      <option value="stub">stub</option>
+    </select>
+  );
+}
+
+// --- Main component ---
+
 export function UnifiedBar({ viewMode, setViewMode }: Props) {
   const {
     spawn, sendInput, kill, sessions, tasks, environments,
@@ -14,11 +36,19 @@ export function UnifiedBar({ viewMode, setViewMode }: Props) {
   } = useGrackle();
 
   const [text, setText] = useState("");
-  const [runtime, setRuntime] = useState("claude-code");
+  const [runtime, setRuntime] = useState(
+    viewMode.kind === "new_chat" ? viewMode.runtime : "claude-code"
+  );
   const [taskTitle, setTaskTitle] = useState("");
   const [taskDesc, setTaskDesc] = useState("");
   const [taskEnvId, setTaskEnvId] = useState("");
   const [rejectNotes, setRejectNotes] = useState("");
+
+  useEffect(() => {
+    if (viewMode.kind === "new_chat") {
+      setRuntime(viewMode.runtime);
+    }
+  }, [viewMode]);
 
   const session = viewMode.kind === "session"
     ? sessions.find((s) => s.id === viewMode.sessionId)
@@ -299,10 +329,7 @@ export function UnifiedBar({ viewMode, setViewMode }: Props) {
           autoFocus
           style={inputStyle}
         />
-        <select value={runtime} onChange={(e) => setRuntime(e.target.value)} style={selectStyle}>
-          <option value="claude-code">claude-code</option>
-          <option value="stub">stub</option>
-        </select>
+        <RuntimeSelector value={runtime} onChange={setRuntime} />
         <button
           type="submit"
           disabled={!text.trim()}
@@ -370,6 +397,8 @@ export function UnifiedBar({ viewMode, setViewMode }: Props) {
     </div>
   );
 }
+
+// --- Shared styles ---
 
 const barStyle: React.CSSProperties = {
   display: "flex",

@@ -1,31 +1,33 @@
 import Database, { type Database as DatabaseType } from "better-sqlite3";
-import { homedir } from "node:os";
+import { drizzle } from "drizzle-orm/better-sqlite3";
 import { join } from "node:path";
 import { mkdirSync } from "node:fs";
-import { GRACKLE_DIR, DB_FILENAME } from "@grackle/common";
+import { DB_FILENAME } from "@grackle/common";
+import { grackleHome } from "./paths.js";
+import * as schema from "./schema.js";
 
-const grackleDir = join(homedir(), GRACKLE_DIR);
-mkdirSync(grackleDir, { recursive: true });
+mkdirSync(grackleHome, { recursive: true });
 
-const dbPath = join(grackleDir, DB_FILENAME);
-const db: DatabaseType = new Database(dbPath);
+const dbPath = join(grackleHome, DB_FILENAME);
+const sqlite = new Database(dbPath);
 
 // Enable WAL mode for better concurrent read performance
-db.pragma("journal_mode = WAL");
+sqlite.pragma("journal_mode = WAL");
 
-// Create tables
-db.exec(`
+// Create tables — idempotent, safe to run every startup
+sqlite.exec(`
   CREATE TABLE IF NOT EXISTS environments (
     id            TEXT PRIMARY KEY,
     display_name  TEXT NOT NULL,
     adapter_type  TEXT NOT NULL,
     adapter_config TEXT NOT NULL,
-    default_runtime TEXT DEFAULT 'claude-code',
-    bootstrapped  INTEGER DEFAULT 0,
-    status        TEXT DEFAULT 'disconnected',
+    default_runtime TEXT NOT NULL DEFAULT 'claude-code',
+    bootstrapped  INTEGER NOT NULL DEFAULT 0,
+    status        TEXT NOT NULL DEFAULT 'disconnected',
     last_seen     TEXT,
     env_info      TEXT,
-    created_at    TEXT DEFAULT (datetime('now'))
+    created_at    TEXT NOT NULL DEFAULT (datetime('now')),
+    powerline_token TEXT NOT NULL DEFAULT ''
   );
 
   CREATE TABLE IF NOT EXISTS sessions (
@@ -35,10 +37,10 @@ db.exec(`
     runtime_session_id TEXT,
     prompt        TEXT NOT NULL,
     model         TEXT NOT NULL,
-    status        TEXT DEFAULT 'pending',
+    status        TEXT NOT NULL DEFAULT 'pending',
     log_path      TEXT,
-    turns         INTEGER DEFAULT 0,
-    started_at    TEXT DEFAULT (datetime('now')),
+    turns         INTEGER NOT NULL DEFAULT 0,
+    started_at    TEXT NOT NULL DEFAULT (datetime('now')),
     suspended_at  TEXT,
     ended_at      TEXT,
     error         TEXT
@@ -47,7 +49,7 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS tokens (
     id            TEXT PRIMARY KEY,
     config        TEXT NOT NULL,
-    created_at    TEXT DEFAULT (datetime('now'))
+    created_at    TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
   CREATE TABLE IF NOT EXISTS projects (
@@ -95,9 +97,20 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_findings_project ON findings(project_id);
 `);
 
-// Migration: add sidecar_token column if missing
+// Migration: add powerline_token column if missing (older databases)
 try {
-  db.exec("ALTER TABLE environments ADD COLUMN sidecar_token TEXT DEFAULT ''");
+  sqlite.exec("ALTER TABLE environments ADD COLUMN powerline_token TEXT NOT NULL DEFAULT ''");
 } catch { /* column already exists */ }
+
+// Migration: rename sidecar_token → powerline_token (from older databases)
+try {
+  sqlite.exec("ALTER TABLE environments RENAME COLUMN sidecar_token TO powerline_token");
+} catch { /* column already renamed or doesn't exist */ }
+
+/** Drizzle ORM instance wrapping the SQLite database. */
+const db = drizzle(sqlite, { schema });
+
+/** Raw better-sqlite3 instance for stores not yet migrated to Drizzle. */
+export const rawDb: DatabaseType = sqlite;
 
 export default db;

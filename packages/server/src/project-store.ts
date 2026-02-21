@@ -1,4 +1,4 @@
-import db from "./db.js";
+import { rawDb as db } from "./db.js";
 
 export interface ProjectRow {
   id: string;

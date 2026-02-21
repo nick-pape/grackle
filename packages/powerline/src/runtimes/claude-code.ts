@@ -1,4 +1,4 @@
-import type { AgentRuntime, AgentSession, AgentEvent, SpawnOpts, ResumeOpts } from "./runtime.js";
+import type { AgentRuntime, AgentSession, AgentEvent, SpawnOptions, ResumeOptions } from "./runtime.js";
 import type { SessionStatus } from "@grackle/common";
 import { AsyncQueue } from "../utils/async-queue.js";
 import { existsSync, readdirSync } from "node:fs";
@@ -78,6 +78,7 @@ function mapMessage(msg: Record<string, unknown>): AgentEvent[] {
 
 class ClaudeCodeSession implements AgentSession {
   id: string;
+  runtimeName = "claude-code";
   runtimeSessionId: string;
   status: SessionStatus = "running";
   private inputQueue = new AsyncQueue<string>();
@@ -189,10 +190,11 @@ class ClaudeCodeSession implements AgentSession {
   }
 }
 
+/** Runtime that delegates to the Claude Code SDK (`@anthropic-ai/claude-agent-sdk`). */
 export class ClaudeCodeRuntime implements AgentRuntime {
   name = "claude-code";
 
-  spawn(opts: SpawnOpts): AgentSession {
+  spawn(opts: SpawnOptions): AgentSession {
     return new ClaudeCodeSession(
       opts.sessionId,
       opts.prompt,
@@ -205,7 +207,7 @@ export class ClaudeCodeRuntime implements AgentRuntime {
     );
   }
 
-  resume(opts: ResumeOpts): AgentSession {
+  resume(opts: ResumeOptions): AgentSession {
     return new ClaudeCodeSession(
       opts.sessionId,
       "(resumed)",

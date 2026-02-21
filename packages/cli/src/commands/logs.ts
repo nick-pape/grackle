@@ -1,6 +1,7 @@
 import type { Command } from "commander";
 import { createGrackleClient } from "../client.js";
 
+/** Register the `logs` command for viewing session logs, transcripts, and live tailing. */
 export function registerLogCommands(program: Command): void {
   program
     .command("logs <session-id>")

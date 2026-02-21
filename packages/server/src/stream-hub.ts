@@ -6,6 +6,7 @@ type Subscriber = (event: SessionEvent) => void;
 const sessionSubs = new Map<string, Set<Subscriber>>();
 const globalSubs = new Set<Subscriber>();
 
+/** Broadcast a session event to all session-specific and global subscribers. */
 export function publish(event: SessionEvent): void {
   // Notify session-specific subscribers
   const subs = sessionSubs.get(event.sessionId);
@@ -16,6 +17,7 @@ export function publish(event: SessionEvent): void {
   for (const sub of globalSubs) sub(event);
 }
 
+/** Create a cancellable async iterable that yields events for a specific session. */
 export function createStream(sessionId: string): AsyncIterable<SessionEvent> & { cancel(): void } {
   const queue: SessionEvent[] = [];
   let resolve: (() => void) | null = null;
@@ -62,6 +64,7 @@ export function createStream(sessionId: string): AsyncIterable<SessionEvent> & {
   return stream;
 }
 
+/** Create a cancellable async iterable that yields events from all sessions. */
 export function createGlobalStream(): AsyncIterable<SessionEvent> & { cancel(): void } {
   const queue: SessionEvent[] = [];
   let resolve: (() => void) | null = null;

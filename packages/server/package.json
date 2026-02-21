@@ -12,18 +12,20 @@
   },
   "dependencies": {
     "@bufbuild/protobuf": "^2.5.0",
-    "@grackle/common": "0.0.1",
     "@connectrpc/connect": "^2.0.0",
     "@connectrpc/connect-node": "^2.0.0",
+    "@grackle/common": "0.0.1",
     "better-sqlite3": "^11.0.0",
+    "drizzle-orm": "^0.38.0",
+    "pino": "^10.3.1",
     "uuid": "^11.0.0",
     "ws": "^8.0.0"
   },
   "devDependencies": {
-    "typescript": "~5.7.0",
-    "@types/node": "^22.0.0",
     "@types/better-sqlite3": "^7.6.0",
+    "@types/node": "^22.0.0",
     "@types/uuid": "^10.0.0",
-    "@types/ws": "^8.0.0"
+    "@types/ws": "^8.0.0",
+    "typescript": "~5.7.0"
   }
 }

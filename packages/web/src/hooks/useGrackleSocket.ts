@@ -77,6 +77,10 @@ interface WsMessage {
   payload?: Record<string, unknown>;
 }
 
+const WS_RECONNECT_DELAY_MS = 3_000;
+const ENV_POLL_INTERVAL_MS = 10_000;
+
+// Declare the injected API key from server-side HTML injection
 declare global {
   interface Window {
     __GRACKLE_API_KEY__?: string;
@@ -86,7 +90,7 @@ declare global {
 export function useGrackleSocket(url?: string) {
   const apiKey = typeof window !== "undefined" ? window.__GRACKLE_API_KEY__ || "" : "";
   const wsUrl = url || (typeof window !== "undefined"
-    ? `ws://${window.location.hostname}:3000?token=${encodeURIComponent(apiKey)}`
+    ? `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}?token=${encodeURIComponent(apiKey)}`
     : "ws://localhost:3000");
 
   const wsRef = useRef<WebSocket | null>(null);
@@ -109,6 +113,7 @@ export function useGrackleSocket(url?: string) {
   useEffect(() => {
     let ws: WebSocket;
     let reconnectTimer: ReturnType<typeof setTimeout>;
+    let envPollTimer: ReturnType<typeof setInterval>;
 
     function connect() {
       ws = new WebSocket(wsUrl);
@@ -120,6 +125,11 @@ export function useGrackleSocket(url?: string) {
         send({ type: "list_sessions" });
         send({ type: "list_projects" });
         send({ type: "subscribe_all" });
+        // Periodically refresh environments to catch CLI-driven changes
+        clearInterval(envPollTimer);
+        envPollTimer = setInterval(() => {
+          send({ type: "list_environments" });
+        }, ENV_POLL_INTERVAL_MS);
       };
 
       ws.onmessage = (e) => {
@@ -156,8 +166,11 @@ export function useGrackleSocket(url?: string) {
           }
           case "spawned": {
             const spawnedId = msg.payload?.sessionId as string;
-            if (spawnedId) setLastSpawnedId(spawnedId);
+            if (spawnedId) {
+              setLastSpawnedId(spawnedId);
+            }
             send({ type: "list_sessions" });
+            send({ type: "list_environments" });
             break;
           }
           case "projects":
@@ -241,7 +254,9 @@ export function useGrackleSocket(url?: string) {
       ws.onclose = () => {
         setConnected(false);
         wsRef.current = null;
-        reconnectTimer = setTimeout(connect, 3000);
+        clearInterval(envPollTimer);
+        clearTimeout(reconnectTimer);
+        reconnectTimer = setTimeout(connect, WS_RECONNECT_DELAY_MS);
       };
 
       ws.onerror = () => {
@@ -252,6 +267,7 @@ export function useGrackleSocket(url?: string) {
     connect();
 
     return () => {
+      clearInterval(envPollTimer);
       clearTimeout(reconnectTimer);
       ws?.close();
     };

@@ -1,5 +1,6 @@
 import { createServer } from "node:net";
 
+/** Find and return an available TCP port by briefly binding to port 0. */
 export function findFreePort(): Promise<number> {
   return new Promise((resolve, reject) => {
     const server = createServer();

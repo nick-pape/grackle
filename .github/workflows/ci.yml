@@ -4,7 +4,6 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
 
 jobs:
   build:
@@ -22,14 +21,15 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
 
-      - name: Install Rush
-        run: npm install -g @microsoft/rush
-
       - name: Rush install
-        run: rush install
+        run: node common/scripts/install-run-rush.js install
 
       - name: Rush build
-        run: rush build
+        run: node common/scripts/install-run-rush.js build
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+        working-directory: packages/web
 
       - name: Run tests
-        run: rush test --verbose || true
+        run: node common/scripts/install-run-rush.js test --verbose

@@ -1,8 +1,8 @@
-import { WebSocketServer, type WebSocket } from "ws";
+import { WebSocketServer, WebSocket } from "ws";
 import type { Server as HttpServer } from "node:http";
 import type { IncomingMessage } from "node:http";
 import { create } from "@bufbuild/protobuf";
-import { grackle, sidecar } from "@grackle/common";
+import { grackle, powerline } from "@grackle/common";
 import * as envRegistry from "./env-registry.js";
 import * as sessionStore from "./session-store.js";
 import * as adapterManager from "./adapter-manager.js";
@@ -11,11 +11,14 @@ import * as projectStore from "./project-store.js";
 import * as taskStore from "./task-store.js";
 import * as findingStore from "./finding-store.js";
 import { v4 as uuid } from "uuid";
-import { homedir } from "node:os";
 import { join } from "node:path";
-import { GRACKLE_DIR, LOGS_DIR, DEFAULT_RUNTIME } from "@grackle/common";
+import { LOGS_DIR, DEFAULT_RUNTIME, DEFAULT_MODEL } from "@grackle/common";
+import { grackleHome } from "./paths.js";
 import * as logWriter from "./log-writer.js";
 import { writeTranscript } from "./transcript.js";
+
+const WS_PING_INTERVAL_MS = 30_000;
+const WS_CLOSE_UNAUTHORIZED = 4001;
 
 interface WsMessage {
   type: string;
@@ -29,7 +32,7 @@ function slugify(text: string): string {
 
 let wssInstance: WebSocketServer | null = null;
 
-/** Broadcast a message to all connected WS clients */
+/** Broadcast a message to all connected WS clients. */
 export function broadcast(msg: { type: string; payload?: Record<string, unknown> }): void {
   if (!wssInstance) return;
   const data = JSON.stringify(msg);
@@ -40,6 +43,7 @@ export function broadcast(msg: { type: string; payload?: Record<string, unknown>
   }
 }
 
+/** Create a WebSocket server on top of an HTTP server that bridges JSON messages to gRPC operations. */
 export function createWsBridge(httpServer: HttpServer, verifyApiKey: (token: string) => boolean): WebSocketServer {
   const wss = new WebSocketServer({ server: httpServer });
   wssInstance = wss;
@@ -48,11 +52,11 @@ export function createWsBridge(httpServer: HttpServer, verifyApiKey: (token: str
     const url = new URL(req.url || "/", "http://localhost");
     const token = url.searchParams.get("token") || "";
     if (!verifyApiKey(token)) {
-      ws.close(4001, "Unauthorized");
+      ws.close(WS_CLOSE_UNAUTHORIZED, "Unauthorized");
       return;
     }
 
-    const subscriptions: Array<{ cancel(): void }> = [];
+    const subscriptions = new Map<string, { cancel(): void }>();
 
     ws.on("message", async (data: Buffer) => {
       try {
@@ -64,12 +68,16 @@ export function createWsBridge(httpServer: HttpServer, verifyApiKey: (token: str
     });
 
     ws.on("close", () => {
-      for (const sub of subscriptions) sub.cancel();
+      for (const sub of subscriptions.values()) {
+        sub.cancel();
+      }
     });
 
     const pingInterval = setInterval(() => {
-      if (ws.readyState === ws.OPEN) ws.ping();
-    }, 30_000);
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.ping();
+      }
+    }, WS_PING_INTERVAL_MS);
 
     ws.on("close", () => clearInterval(pingInterval));
   });
@@ -80,7 +88,7 @@ export function createWsBridge(httpServer: HttpServer, verifyApiKey: (token: str
 async function handleMessage(
   ws: WebSocket,
   msg: WsMessage,
-  subscriptions: Array<{ cancel(): void }>
+  subscriptions: Map<string, { cancel(): void }>,
 ): Promise<void> {
   switch (msg.type) {
     case "list_environments": {
@@ -90,11 +98,11 @@ async function handleMessage(
         payload: {
           environments: rows.map((r) => ({
             id: r.id,
-            displayName: r.display_name,
-            adapterType: r.adapter_type,
-            defaultRuntime: r.default_runtime,
+            displayName: r.displayName,
+            adapterType: r.adapterType,
+            defaultRuntime: r.defaultRuntime,
             status: r.status,
-            bootstrapped: r.bootstrapped === 1,
+            bootstrapped: r.bootstrapped,
           })),
         },
       });
@@ -110,11 +118,11 @@ async function handleMessage(
         payload: {
           sessions: rows.map((r) => ({
             id: r.id,
-            envId: r.env_id,
+            envId: r.envId,
             runtime: r.runtime,
             status: r.status,
             prompt: r.prompt,
-            startedAt: r.started_at,
+            startedAt: r.startedAt,
           })),
         },
       });
@@ -123,12 +131,16 @@ async function handleMessage(
 
     case "get_session_events": {
       const sessionId = msg.payload?.sessionId as string;
-      if (!sessionId) return;
+      if (!sessionId) {
+        return;
+      }
 
       const session = sessionStore.getSession(sessionId);
-      if (!session || !session.log_path) return;
+      if (!session || !session.logPath) {
+        return;
+      }
 
-      const entries = logWriter.readLog(session.log_path);
+      const entries = logWriter.readLog(session.logPath);
       const events = entries.map((e) => ({
         sessionId: e.session_id,
         eventType: e.type,
@@ -142,10 +154,20 @@ async function handleMessage(
 
     case "subscribe": {
       const sessionId = msg.payload?.sessionId as string;
-      if (!sessionId) return;
+      if (!sessionId) {
+        return;
+      }
+
+      // Cancel any existing subscription for this session
+      const subKey = `session:${sessionId}`;
+      const existing = subscriptions.get(subKey);
+      if (existing) {
+        subscriptions.delete(subKey);
+        existing.cancel();
+      }
 
       const stream = streamHub.createStream(sessionId);
-      subscriptions.push(stream);
+      subscriptions.set(subKey, stream);
 
       (async () => {
         for await (const event of stream) {
@@ -164,8 +186,15 @@ async function handleMessage(
     }
 
     case "subscribe_all": {
+      // Cancel any existing global subscription
+      const existingGlobal = subscriptions.get("global");
+      if (existingGlobal) {
+        subscriptions.delete("global");
+        existingGlobal.cancel();
+      }
+
       const stream = streamHub.createGlobalStream();
-      subscriptions.push(stream);
+      subscriptions.set("global", stream);
 
       (async () => {
         for await (const event of stream) {
@@ -209,16 +238,17 @@ async function handleMessage(
       }
 
       const sessionId = uuid();
-      const sessionRuntime = runtime || env.default_runtime || DEFAULT_RUNTIME;
-      const sessionModel = model || "claude-sonnet-4-5-20250514";
-      const logPath = join(homedir(), GRACKLE_DIR, LOGS_DIR, sessionId);
+      const sessionRuntime = runtime || env.defaultRuntime || DEFAULT_RUNTIME;
+      const sessionModel = model || process.env.GRACKLE_DEFAULT_MODEL || DEFAULT_MODEL;
+      const logPath = join(grackleHome, LOGS_DIR, sessionId);
 
       sessionStore.createSession(sessionId, envId, sessionRuntime, prompt, sessionModel, logPath);
       logWriter.initLog(logPath);
 
       sendWs(ws, { type: "spawned", payload: { sessionId } });
 
-      const sidecarReq = create(sidecar.SpawnRequestSchema, {
+      // Fire PowerLine spawn in background
+      const powerlineReq = create(powerline.SpawnRequestSchema, {
         sessionId,
         runtime: sessionRuntime,
         prompt,
@@ -232,7 +262,7 @@ async function handleMessage(
       (async () => {
         try {
           sessionStore.updateSession(sessionId, "running");
-          for await (const event of conn.client.spawn(sidecarReq)) {
+          for await (const event of conn.client.spawn(powerlineReq)) {
             const sessionEvent = create(grackle.SessionEventSchema, {
               sessionId,
               type: event.type,
@@ -244,9 +274,17 @@ async function handleMessage(
             streamHub.publish(sessionEvent);
 
             if (event.type === "status") {
-              if (event.content === "waiting_input") sessionStore.updateSessionStatus(sessionId, "waiting_input");
-              else if (event.content === "running") sessionStore.updateSessionStatus(sessionId, "running");
-              else if (event.content === "completed") sessionStore.updateSession(sessionId, "completed");
+              if (event.content === "waiting_input") {
+                sessionStore.updateSessionStatus(sessionId, "waiting_input");
+              } else if (event.content === "running") {
+                sessionStore.updateSessionStatus(sessionId, "running");
+              } else if (event.content === "completed") {
+                sessionStore.updateSession(sessionId, "completed");
+              } else if (event.content === "failed") {
+                sessionStore.updateSession(sessionId, "failed");
+              } else if (event.content === "killed") {
+                sessionStore.updateSession(sessionId, "killed");
+              }
             }
           }
           const current = sessionStore.getSession(sessionId);
@@ -255,9 +293,22 @@ async function handleMessage(
           }
         } catch (err) {
           sessionStore.updateSession(sessionId, "failed", undefined, String(err));
+          sendWs(ws, {
+            type: "session_event",
+            payload: {
+              sessionId,
+              eventType: "error",
+              timestamp: new Date().toISOString(),
+              content: `Spawn failed: ${err}`,
+            },
+          });
         } finally {
           logWriter.endSession(logPath);
-          try { writeTranscript(logPath); } catch { /* non-critical */ }
+          try {
+            writeTranscript(logPath);
+          } catch {
+            /* non-critical */
+          }
         }
       })();
       break;
@@ -266,30 +317,45 @@ async function handleMessage(
     case "send_input": {
       const sessionId = msg.payload?.sessionId as string;
       const text = msg.payload?.text as string;
-      if (!sessionId || !text) return;
+      if (!sessionId || !text) {
+        return;
+      }
 
       const session = sessionStore.getSession(sessionId);
-      if (!session) return;
+      if (!session) {
+        return;
+      }
 
-      const conn = adapterManager.getConnection(session.env_id);
-      if (!conn) return;
+      const conn = adapterManager.getConnection(session.envId);
+      if (!conn) {
+        return;
+      }
 
       await conn.client.sendInput(
-        create(sidecar.InputMessageSchema, { sessionId, text })
+        create(powerline.InputMessageSchema, { sessionId, text })
       );
       break;
     }
 
     case "kill": {
       const sessionId = msg.payload?.sessionId as string;
-      if (!sessionId) return;
+      if (!sessionId) {
+        return;
+      }
 
       const session = sessionStore.getSession(sessionId);
-      if (!session) return;
+      if (!session) {
+        return;
+      }
 
-      const conn = adapterManager.getConnection(session.env_id);
+      const conn = adapterManager.getConnection(session.envId);
       if (conn) {
-        await conn.client.kill(create(sidecar.SessionIdSchema, { id: sessionId }));
+        try {
+          await conn.client.kill(create(powerline.SessionIdSchema, { id: sessionId }));
+        } catch (err) {
+          sendWs(ws, { type: "error", payload: { message: `Kill failed: ${err}` } });
+          return;
+        }
       }
       sessionStore.updateSession(sessionId, "killed");
       streamHub.publish(create(grackle.SessionEventSchema, {
@@ -435,8 +501,8 @@ async function handleMessage(
 
       const sessionId = uuid();
       const runtime = (msg.payload?.runtime as string) || "claude-code";
-      const model = (msg.payload?.model as string) || "claude-sonnet-4-5-20250514";
-      const logPath = join(homedir(), GRACKLE_DIR, LOGS_DIR, sessionId);
+      const model = (msg.payload?.model as string) || process.env.GRACKLE_DEFAULT_MODEL || DEFAULT_MODEL;
+      const logPath = join(grackleHome, LOGS_DIR, sessionId);
 
       const systemContext = [
         `## Task: ${task.title}`,
@@ -457,7 +523,7 @@ async function handleMessage(
 
       sendWs(ws, { type: "task_started", payload: { taskId: task.id, sessionId } });
 
-      const sidecarReq = create(sidecar.SpawnRequestSchema, {
+      const powerlineReq = create(powerline.SpawnRequestSchema, {
         sessionId,
         runtime,
         prompt: task.title,
@@ -473,7 +539,7 @@ async function handleMessage(
       (async () => {
         try {
           sessionStore.updateSession(sessionId, "running");
-          for await (const event of conn.client.spawn(sidecarReq)) {
+          for await (const event of conn.client.spawn(powerlineReq)) {
             const sessionEvent = create(grackle.SessionEventSchema, {
               sessionId,
               type: event.type,
@@ -633,7 +699,7 @@ async function handleMessage(
 
       try {
         const diffResp = await conn.client.getDiff(
-          create(sidecar.DiffRequestSchema, {
+          create(powerline.DiffRequestSchema, {
             branch: task.branch,
             baseBranch: "main",
             worktreeBasePath: "/workspace",
@@ -659,7 +725,7 @@ async function handleMessage(
 }
 
 function sendWs(ws: WebSocket, msg: { type: string; payload?: Record<string, unknown> }): void {
-  if (ws.readyState === ws.OPEN) {
+  if (ws.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify(msg));
   }
 }

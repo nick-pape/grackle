@@ -1,7 +1,9 @@
 import type { Command } from "commander";
+import chalk from "chalk";
 import { createGrackleClient } from "../client.js";
 import Table from "cli-table3";
 
+/** Register agent-related commands: `spawn`, `resume`, `status`, `kill`, and `attach`. */
 export function registerAgentCommands(program: Command): void {
   program
     .command("spawn <env-id> <prompt>")
@@ -45,7 +47,7 @@ export function registerAgentCommands(program: Command): void {
       const client = createGrackleClient();
       const res = await client.listSessions({
         envId: opts.env || "",
-        status: opts.all ? "" : "",
+        status: opts.all ? "" : "active",
       });
       if (res.sessions.length === 0) {
         console.log("No sessions.");
@@ -102,22 +104,22 @@ function printEvent(event: { type: string; content: string; timestamp: string })
   const time = new Date(event.timestamp).toLocaleTimeString();
   switch (event.type) {
     case "system":
-      console.log(`\x1b[90m[${time}] ${event.content}\x1b[0m`);
+      console.log(chalk.gray(`[${time}] ${event.content}`));
       break;
     case "text":
       console.log(event.content);
       break;
     case "tool_use":
-      console.log(`\x1b[34m> ${event.content}\x1b[0m`);
+      console.log(chalk.blue(`> ${event.content}`));
       break;
     case "tool_result":
-      console.log(`\x1b[90m${event.content}\x1b[0m`);
+      console.log(chalk.gray(event.content));
       break;
     case "error":
-      console.log(`\x1b[31m[ERROR] ${event.content}\x1b[0m`);
+      console.log(chalk.red(`[ERROR] ${event.content}`));
       break;
     case "status":
-      console.log(`\x1b[33m--- ${event.content} ---\x1b[0m`);
+      console.log(chalk.yellow(`--- ${event.content} ---`));
       break;
   }
 }
