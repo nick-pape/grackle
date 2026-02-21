@@ -40,6 +40,7 @@ export function useGrackleSocket(url?: string) {
   const [environments, setEnvironments] = useState<Environment[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [events, setEvents] = useState<SessionEvent[]>([]);
+  const [lastSpawnedId, setLastSpawnedId] = useState<string | null>(null);
 
   const send = useCallback((msg: WsMessage) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -86,9 +87,12 @@ export function useGrackleSocket(url?: string) {
             }
             break;
           }
-          case "spawned":
+          case "spawned": {
+            const spawnedId = msg.payload?.sessionId as string;
+            if (spawnedId) setLastSpawnedId(spawnedId);
             send({ type: "list_sessions" });
             break;
+          }
           case "error":
             console.error("[ws]", msg.payload?.message);
             break;
@@ -152,6 +156,7 @@ export function useGrackleSocket(url?: string) {
     environments,
     sessions,
     events,
+    lastSpawnedId,
     spawn,
     sendInput,
     kill,

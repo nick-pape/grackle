@@ -2,22 +2,25 @@ import type { AgentRuntime, AgentSession, AgentEvent, SpawnOpts, ResumeOpts } fr
 import type { SessionStatus } from "@grackle/common";
 import { AsyncQueue } from "../utils/async-queue.js";
 
-// Dynamic import — @anthropic-ai/claude-code may not be installed
+// Dynamic import — try @anthropic-ai/claude-agent-sdk first, then @anthropic-ai/claude-code
 type QueryFn = (opts: Record<string, unknown>) => Promise<unknown>;
 let queryFn: QueryFn | null = null;
 
 async function getQuery(): Promise<QueryFn> {
   if (queryFn) return queryFn;
-  try {
-    // @ts-expect-error — dynamic import may not resolve at compile time
-    const mod = await import("@anthropic-ai/claude-code");
-    queryFn = (mod as Record<string, unknown>).query as QueryFn;
-    return queryFn;
-  } catch {
-    throw new Error(
-      "Claude Code SDK not installed. Run: npm install @anthropic-ai/claude-code"
-    );
+  // Try the agent SDK first (the proper library package)
+  for (const pkg of ["@anthropic-ai/claude-agent-sdk", "@anthropic-ai/claude-code"]) {
+    try {
+      const mod = await import(pkg);
+      if (typeof mod.query === "function") {
+        queryFn = mod.query as QueryFn;
+        return queryFn;
+      }
+    } catch { /* try next */ }
   }
+  throw new Error(
+    "Claude Agent SDK not installed. Run: npm install @anthropic-ai/claude-agent-sdk"
+  );
 }
 
 function mapMessage(msg: Record<string, unknown>): AgentEvent | null {
