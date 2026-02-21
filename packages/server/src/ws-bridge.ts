@@ -503,6 +503,7 @@ async function handleMessage(
             } else if (sess?.status === "failed") {
               taskStore.markTaskCompleted(task.id, "failed");
             }
+            broadcast({ type: "task_updated", payload: { taskId: task.id, projectId: task.project_id } });
           }
         }
       })();
