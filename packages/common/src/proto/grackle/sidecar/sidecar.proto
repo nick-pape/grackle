@@ -2,6 +2,24 @@ syntax = "proto3";
 
 package grackle.sidecar;
 
+// ─── Enums ──────────────────────────────────────────────────
+
+enum AgentEventType {
+  AGENT_EVENT_TYPE_UNSPECIFIED = 0;
+  AGENT_EVENT_TYPE_TEXT = 1;
+  AGENT_EVENT_TYPE_TOOL_USE = 2;
+  AGENT_EVENT_TYPE_TOOL_RESULT = 3;
+  AGENT_EVENT_TYPE_ERROR = 4;
+  AGENT_EVENT_TYPE_STATUS = 5;
+  AGENT_EVENT_TYPE_SYSTEM = 6;
+}
+
+enum TokenType {
+  TOKEN_TYPE_UNSPECIFIED = 0;
+  TOKEN_TYPE_ENV_VAR = 1;
+  TOKEN_TYPE_FILE = 2;
+}
+
 // ─── Types ──────────────────────────────────────────────────
 
 message Empty {}
@@ -10,7 +28,7 @@ message SessionId {
   string id = 1;
 }
 
-message EnvInfo {
+message EnvironmentInfo {
   string hostname = 1;
   string os = 2;
   string node_version = 3;
@@ -43,7 +61,7 @@ message InputMessage {
 
 message AgentEvent {
   string session_id = 1;
-  string type = 2;               // "text" | "tool_use" | "tool_result" | "error" | "status" | "system"
+  string type = 2;
   string timestamp = 3;
   string content = 4;
   string raw = 5;                // JSON, optional
@@ -63,7 +81,7 @@ message SessionList {
 
 message TokenItem {
   string name = 1;
-  string type = 2;               // "env_var" | "file"
+  string type = 2;
   string env_var = 3;
   string file_path = 4;
   string value = 5;
@@ -76,7 +94,7 @@ message TokenBundle {
 // ─── Service ────────────────────────────────────────────────
 
 service GrackleSidecar {
-  rpc GetInfo(Empty) returns (EnvInfo);
+  rpc GetInfo(Empty) returns (EnvironmentInfo);
   rpc Spawn(SpawnRequest) returns (stream AgentEvent);
   rpc Resume(ResumeRequest) returns (stream AgentEvent);
   rpc SendInput(InputMessage) returns (Empty);

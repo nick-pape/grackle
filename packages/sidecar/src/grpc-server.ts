@@ -11,7 +11,7 @@ const startTime = Date.now();
 export function registerSidecarRoutes(router: ConnectRouter): void {
   router.service(sidecar.GrackleSidecar, {
     async getInfo() {
-      return create(sidecar.EnvInfoSchema, {
+      return create(sidecar.EnvironmentInfoSchema, {
         hostname: os.hostname(),
         os: `${os.platform()} ${os.release()}`,
         nodeVersion: process.version,
