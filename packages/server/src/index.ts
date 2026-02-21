@@ -5,8 +5,6 @@ import { registerGrackleRoutes } from "./grpc-service.js";
 import { registerAdapter, startHeartbeat } from "./adapter-manager.js";
 import { updateEnvironmentStatus } from "./env-registry.js";
 import { DockerAdapter } from "./adapters/docker.js";
-import { CodespaceAdapter } from "./adapters/codespace.js";
-import { SshAdapter } from "./adapters/ssh.js";
 import { LocalAdapter } from "./adapters/local.js";
 import { createWsBridge } from "./ws-bridge.js";
 import { DEFAULT_SERVER_PORT, DEFAULT_WEB_PORT } from "@grackle/common";
@@ -26,8 +24,6 @@ const apiKey = loadApiKey();
 
 // Register adapters
 registerAdapter(new DockerAdapter());
-registerAdapter(new CodespaceAdapter());
-registerAdapter(new SshAdapter());
 registerAdapter(new LocalAdapter());
 
 // Start heartbeat
