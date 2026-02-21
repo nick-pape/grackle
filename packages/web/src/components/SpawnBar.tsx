@@ -5,6 +5,7 @@ export function SpawnBar() {
   const { environments, spawn } = useGrackle();
   const [prompt, setPrompt] = useState("");
   const [envId, setEnvId] = useState("");
+  const [runtime, setRuntime] = useState("claude-code");
 
   const connectedEnvs = environments.filter((e) => e.status === "connected");
 
@@ -12,7 +13,7 @@ export function SpawnBar() {
     e.preventDefault();
     const targetEnv = envId || connectedEnvs[0]?.id;
     if (!targetEnv || !prompt.trim()) return;
-    spawn(targetEnv, prompt);
+    spawn(targetEnv, prompt, undefined, runtime);
     setPrompt("");
   };
 
@@ -65,6 +66,22 @@ export function SpawnBar() {
             {env.displayName || env.id}
           </option>
         ))}
+      </select>
+      <select
+        value={runtime}
+        onChange={(e) => setRuntime(e.target.value)}
+        style={{
+          background: "#0f3460",
+          border: "1px solid #333",
+          color: "#e0e0e0",
+          padding: "6px 8px",
+          borderRadius: "4px",
+          fontFamily: "monospace",
+          fontSize: "12px",
+        }}
+      >
+        <option value="claude-code">claude-code</option>
+        <option value="stub">stub</option>
       </select>
       <button
         type="submit"
