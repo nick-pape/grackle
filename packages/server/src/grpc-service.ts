@@ -217,9 +217,21 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
           }
         } catch (err) {
           sessionStore.updateSession(sessionId, "failed", undefined, String(err));
+          // Publish a failure event so streaming clients are notified
+          streamHub.publish(create(grackle.SessionEventSchema, {
+            sessionId,
+            type: "status",
+            timestamp: new Date().toISOString(),
+            content: "failed",
+            raw: String(err),
+          }));
         } finally {
           logWriter.endSession(logPath);
-          try { writeTranscript(logPath); } catch { /* non-critical */ }
+          try {
+            writeTranscript(logPath);
+          } catch {
+            /* non-critical */
+          }
         }
       })();
 

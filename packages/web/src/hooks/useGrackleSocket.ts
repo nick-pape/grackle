@@ -124,6 +124,7 @@ export function useGrackleSocket(url?: string) {
       ws.onclose = () => {
         setConnected(false);
         wsRef.current = null;
+        clearTimeout(reconnectTimer);
         reconnectTimer = setTimeout(connect, WS_RECONNECT_DELAY_MS);
       };
 

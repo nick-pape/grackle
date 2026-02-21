@@ -23,7 +23,6 @@ Thumbs.db
 .env
 .env.local
 
-# Playwright MCP artifacts
-.playwright-mcp/
-*.png
+# Playwright
+packages/web/test-results/
 

@@ -36,7 +36,7 @@ export function createWsBridge(httpServer: HttpServer, verifyApiKey: (token: str
       return;
     }
 
-    const subscriptions: Array<{ cancel(): void }> = [];
+    const subscriptions = new Map<string, { cancel(): void }>();
 
     ws.on("message", async (data: Buffer) => {
       try {
@@ -48,7 +48,9 @@ export function createWsBridge(httpServer: HttpServer, verifyApiKey: (token: str
     });
 
     ws.on("close", () => {
-      for (const sub of subscriptions) sub.cancel();
+      for (const sub of subscriptions.values()) {
+        sub.cancel();
+      }
     });
 
     // Ping/pong keepalive
@@ -65,7 +67,7 @@ export function createWsBridge(httpServer: HttpServer, verifyApiKey: (token: str
 async function handleMessage(
   ws: WebSocket,
   msg: WsMessage,
-  subscriptions: Array<{ cancel(): void }>
+  subscriptions: Map<string, { cancel(): void }>
 ): Promise<void> {
   switch (msg.type) {
     case "list_environments": {
@@ -127,10 +129,19 @@ async function handleMessage(
 
     case "subscribe": {
       const sessionId = msg.payload?.sessionId as string;
-      if (!sessionId) return;
+      if (!sessionId) {
+        return;
+      }
+
+      // Cancel any existing subscription for this session
+      const subKey = `session:${sessionId}`;
+      const existing = subscriptions.get(subKey);
+      if (existing) {
+        existing.cancel();
+      }
 
       const stream = streamHub.createStream(sessionId);
-      subscriptions.push(stream);
+      subscriptions.set(subKey, stream);
 
       (async () => {
         for await (const event of stream) {
@@ -149,8 +160,14 @@ async function handleMessage(
     }
 
     case "subscribe_all": {
+      // Cancel any existing global subscription
+      const existingGlobal = subscriptions.get("global");
+      if (existingGlobal) {
+        existingGlobal.cancel();
+      }
+
       const stream = streamHub.createGlobalStream();
-      subscriptions.push(stream);
+      subscriptions.set("global", stream);
 
       (async () => {
         for await (const event of stream) {
@@ -250,9 +267,22 @@ async function handleMessage(
           }
         } catch (err) {
           sessionStore.updateSession(sessionId, "failed", undefined, String(err));
+          sendWs(ws, {
+            type: "session_event",
+            payload: {
+              sessionId,
+              eventType: "error",
+              timestamp: new Date().toISOString(),
+              content: `Spawn failed: ${err}`,
+            },
+          });
         } finally {
           logWriter.endSession(logPath);
-          try { writeTranscript(logPath); } catch { /* non-critical */ }
+          try {
+            writeTranscript(logPath);
+          } catch {
+            /* non-critical */
+          }
         }
       })();
       break;
@@ -277,14 +307,23 @@ async function handleMessage(
 
     case "kill": {
       const sessionId = msg.payload?.sessionId as string;
-      if (!sessionId) return;
+      if (!sessionId) {
+        return;
+      }
 
       const session = sessionStore.getSession(sessionId);
-      if (!session) return;
+      if (!session) {
+        return;
+      }
 
       const conn = adapterManager.getConnection(session.env_id);
       if (conn) {
-        await conn.client.kill(create(sidecar.SessionIdSchema, { id: sessionId }));
+        try {
+          await conn.client.kill(create(sidecar.SessionIdSchema, { id: sessionId }));
+        } catch (err) {
+          sendWs(ws, { type: "error", payload: { message: `Kill failed: ${err}` } });
+          return;
+        }
       }
       sessionStore.updateSession(sessionId, "killed");
       streamHub.publish(create(grackle.SessionEventSchema, {
