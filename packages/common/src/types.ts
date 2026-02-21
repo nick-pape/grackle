@@ -28,7 +28,7 @@ export type AgentEventType =
   | "system";
 
 /** Supported environment adapter backends. */
-export type AdapterType = "docker" | "local";
+export type AdapterType = "docker" | "local" | "codespace" | "ssh";
 
 /** Supported agent runtime implementations. */
 export type RuntimeName = "claude-code" | "stub";

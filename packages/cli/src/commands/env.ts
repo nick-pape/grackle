@@ -1,6 +1,7 @@
 import type { Command } from "commander";
 import chalk from "chalk";
 import { createGrackleClient } from "../client.js";
+import type { AdapterType } from "@grackle/common";
 import Table from "cli-table3";
 
 /** Register environment management commands: `env list`, `add`, `provision`, `stop`, `destroy`, `remove`, `wake`. */
@@ -46,7 +47,7 @@ export function registerEnvCommands(program: Command): void {
     .option("--runtime <runtime>", "Default runtime", "claude-code")
     .action(async (name: string, opts) => {
       const client = createGrackleClient();
-      let adapterType = "docker";
+      let adapterType: AdapterType = "docker";
       const config: Record<string, unknown> = {};
 
       if (opts.local) {
