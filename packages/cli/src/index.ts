@@ -1,0 +1,26 @@
+#!/usr/bin/env node
+
+import { Command } from "commander";
+import { registerEnvCommands } from "./commands/env.js";
+import { registerAgentCommands } from "./commands/agent.js";
+import { registerTokenCommands } from "./commands/token.js";
+import { registerLogCommands } from "./commands/logs.js";
+import { registerServeCommand } from "./commands/serve.js";
+
+const program = new Command();
+
+program
+  .name("grackle")
+  .description("Multiplexed interface for AI coding agent sessions")
+  .version("0.0.1");
+
+registerEnvCommands(program);
+registerAgentCommands(program);
+registerTokenCommands(program);
+registerLogCommands(program);
+registerServeCommand(program);
+
+program.parseAsync(process.argv).catch((err) => {
+  console.error(err.message || err);
+  process.exit(1);
+});

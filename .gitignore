@@ -1,0 +1,23 @@
+node_modules/
+dist/
+common/temp/
+common/autoinstallers/
+.rush/
+.grackle/
+*.tsbuildinfo
+rush-logs/
+
+# Generated proto files
+packages/common/src/gen/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+
+# Environment
+.env
+.env.local

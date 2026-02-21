@@ -1,0 +1,152 @@
+syntax = "proto3";
+
+package grackle;
+
+// ─── Common Types ───────────────────────────────────────────
+
+message Empty {}
+
+message EnvId {
+  string id = 1;
+}
+
+message SessionId {
+  string id = 1;
+}
+
+// ─── Environment ────────────────────────────────────────────
+
+message Environment {
+  string id = 1;
+  string display_name = 2;
+  string adapter_type = 3;       // "codespace" | "docker" | "ssh"
+  string adapter_config = 4;     // JSON
+  string default_runtime = 5;
+  bool bootstrapped = 6;
+  string status = 7;             // "disconnected" | "connecting" | "connected" | "sleeping" | "error"
+  string last_seen = 8;
+  string env_info = 9;           // JSON from sidecar GetInfo
+  string created_at = 10;
+}
+
+message EnvironmentList {
+  repeated Environment environments = 1;
+}
+
+message AddEnvRequest {
+  string display_name = 1;
+  string adapter_type = 2;
+  string adapter_config = 3;     // JSON
+  string default_runtime = 4;
+}
+
+message ProvisionEvent {
+  string stage = 1;              // "creating" | "starting" | "bootstrapping" | "tunneling" | "connecting" | "pushing_tokens" | "ready" | "error"
+  string message = 2;
+  double progress = 3;           // 0.0 - 1.0
+}
+
+// ─── Session ────────────────────────────────────────────────
+
+message Session {
+  string id = 1;
+  string env_id = 2;
+  string runtime = 3;
+  string runtime_session_id = 4;
+  string prompt = 5;
+  string model = 6;
+  string status = 7;             // "pending" | "running" | "waiting_input" | "suspended" | "completed" | "failed" | "killed"
+  string log_path = 8;
+  int32 turns = 9;
+  string started_at = 10;
+  string suspended_at = 11;
+  string ended_at = 12;
+  string error = 13;
+}
+
+message SessionList {
+  repeated Session sessions = 1;
+}
+
+message SessionFilter {
+  string env_id = 1;             // empty = all
+  string status = 2;             // empty = all
+}
+
+message SpawnRequest {
+  string env_id = 1;
+  string prompt = 2;
+  string model = 3;
+  int32 max_turns = 4;
+  string runtime = 5;            // empty = use env default
+}
+
+message ResumeRequest {
+  string session_id = 1;
+}
+
+message InputMessage {
+  string session_id = 1;
+  string text = 2;
+}
+
+// ─── Streaming Events ───────────────────────────────────────
+
+message SessionEvent {
+  string session_id = 1;
+  string type = 2;               // "text" | "tool_use" | "tool_result" | "error" | "status" | "system"
+  string timestamp = 3;
+  string content = 4;
+  string raw = 5;                // JSON, optional original payload
+}
+
+// ─── Tokens ─────────────────────────────────────────────────
+
+message TokenEntry {
+  string name = 1;
+  string type = 2;               // "env_var" | "file"
+  string env_var = 3;
+  string file_path = 4;
+  string value = 5;
+  string expires_at = 6;
+}
+
+message TokenList {
+  repeated TokenInfo tokens = 1;
+}
+
+message TokenInfo {
+  string name = 1;
+  string type = 2;
+  string env_var = 3;
+  string file_path = 4;
+  string expires_at = 5;
+  // No value — never expose to clients
+}
+
+// ─── Service ────────────────────────────────────────────────
+
+service Grackle {
+  // Environment management
+  rpc ListEnvironments(Empty) returns (EnvironmentList);
+  rpc AddEnvironment(AddEnvRequest) returns (Environment);
+  rpc RemoveEnvironment(EnvId) returns (Empty);
+  rpc ProvisionEnvironment(EnvId) returns (stream ProvisionEvent);
+  rpc StopEnvironment(EnvId) returns (Empty);
+  rpc DestroyEnvironment(EnvId) returns (Empty);
+
+  // Agent sessions
+  rpc SpawnAgent(SpawnRequest) returns (Session);
+  rpc ResumeAgent(ResumeRequest) returns (Session);
+  rpc SendInput(InputMessage) returns (Empty);
+  rpc KillAgent(SessionId) returns (Empty);
+  rpc ListSessions(SessionFilter) returns (SessionList);
+
+  // Streaming
+  rpc StreamSession(SessionId) returns (stream SessionEvent);
+  rpc StreamAll(Empty) returns (stream SessionEvent);
+
+  // Token management
+  rpc SetToken(TokenEntry) returns (Empty);
+  rpc ListTokens(Empty) returns (TokenList);
+}
