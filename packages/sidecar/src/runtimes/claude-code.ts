@@ -1,4 +1,4 @@
-import type { AgentRuntime, AgentSession, AgentEvent, SpawnOpts, ResumeOpts } from "./runtime.js";
+import type { AgentRuntime, AgentSession, AgentEvent, SpawnOptions, ResumeOptions } from "./runtime.js";
 import type { SessionStatus } from "@grackle/common";
 import { AsyncQueue } from "../utils/async-queue.js";
 import { existsSync, readdirSync } from "node:fs";
@@ -175,11 +175,11 @@ class ClaudeCodeSession implements AgentSession {
 export class ClaudeCodeRuntime implements AgentRuntime {
   name = "claude-code";
 
-  spawn(opts: SpawnOpts): AgentSession {
+  spawn(opts: SpawnOptions): AgentSession {
     return new ClaudeCodeSession(opts.sessionId, opts.prompt, opts.model, opts.maxTurns);
   }
 
-  resume(opts: ResumeOpts): AgentSession {
+  resume(opts: ResumeOptions): AgentSession {
     return new ClaudeCodeSession(
       opts.sessionId,
       "(resumed)",

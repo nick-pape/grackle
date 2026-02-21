@@ -1,5 +1,6 @@
 import { writeFile, mkdir } from "node:fs/promises";
-import { dirname } from "node:path";
+import { dirname, resolve, normalize } from "node:path";
+import { homedir } from "node:os";
 import { logger } from "./logger.js";
 
 const envTokens = new Map<string, string>();
@@ -17,7 +18,13 @@ export async function writeTokens(
       envTokens.set(token.envVar, token.value);
       logger.info({ envVar: token.envVar }, "Set env var %s", token.envVar);
     } else if (token.type === "file" && token.filePath) {
-      const resolvedPath = token.filePath.replace(/^~/, process.env.HOME || "");
+      const home = homedir();
+      const resolvedPath = resolve(normalize(token.filePath.replace(/^~/, home)));
+      // Only allow writing under the user's home directory
+      if (!resolvedPath.startsWith(home)) {
+        logger.warn({ filePath: resolvedPath }, "Refusing to write token outside home directory");
+        continue;
+      }
       await mkdir(dirname(resolvedPath), { recursive: true });
       await writeFile(resolvedPath, token.value, { mode: 0o600 });
       logger.info({ filePath: resolvedPath }, "Wrote file %s", resolvedPath);

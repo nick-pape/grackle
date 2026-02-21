@@ -1,5 +1,5 @@
 import { EventEmitter } from "node:events";
-import type { AgentRuntime, AgentSession, AgentEvent, SpawnOpts, ResumeOpts } from "./runtime.js";
+import type { AgentRuntime, AgentSession, AgentEvent, SpawnOptions, ResumeOptions } from "./runtime.js";
 import type { SessionStatus } from "@grackle/common";
 
 class StubSession implements AgentSession {
@@ -78,11 +78,11 @@ class StubSession implements AgentSession {
 export class StubRuntime implements AgentRuntime {
   name = "stub";
 
-  spawn(opts: SpawnOpts): AgentSession {
+  spawn(opts: SpawnOptions): AgentSession {
     return new StubSession(opts.sessionId, opts.prompt);
   }
 
-  resume(opts: ResumeOpts): AgentSession {
+  resume(opts: ResumeOptions): AgentSession {
     return new StubSession(opts.sessionId, "(resumed session)");
   }
 }

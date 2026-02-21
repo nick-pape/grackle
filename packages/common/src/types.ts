@@ -50,3 +50,4 @@ export const GRACKLE_DIR = ".grackle";
 export const DB_FILENAME = "grackle.db";
 export const LOGS_DIR = "logs";
 export const API_KEY_FILENAME = "api-key";
+export const DEFAULT_MODEL = "claude-sonnet-4-5-20250514";

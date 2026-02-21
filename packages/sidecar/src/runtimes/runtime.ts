@@ -7,14 +7,14 @@ export interface AgentEvent {
   raw?: unknown;
 }
 
-export interface SpawnOpts {
+export interface SpawnOptions {
   sessionId: string;
   prompt: string;
   model: string;
   maxTurns: number;
 }
 
-export interface ResumeOpts {
+export interface ResumeOptions {
   sessionId: string;
   runtimeSessionId: string;
 }
@@ -31,6 +31,6 @@ export interface AgentSession {
 
 export interface AgentRuntime {
   name: string;
-  spawn(opts: SpawnOpts): AgentSession;
-  resume(opts: ResumeOpts): AgentSession;
+  spawn(opts: SpawnOptions): AgentSession;
+  resume(opts: ResumeOptions): AgentSession;
 }

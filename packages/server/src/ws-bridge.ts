@@ -10,7 +10,7 @@ import * as streamHub from "./stream-hub.js";
 import { v4 as uuid } from "uuid";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { GRACKLE_DIR, LOGS_DIR, DEFAULT_RUNTIME } from "@grackle/common";
+import { GRACKLE_DIR, LOGS_DIR, DEFAULT_RUNTIME, DEFAULT_MODEL } from "@grackle/common";
 import * as logWriter from "./log-writer.js";
 import { writeTranscript } from "./transcript.js";
 
@@ -198,7 +198,7 @@ async function handleMessage(
 
       const sessionId = uuid();
       const sessionRuntime = runtime || env.default_runtime || DEFAULT_RUNTIME;
-      const sessionModel = model || "claude-sonnet-4-5-20250514";
+      const sessionModel = model || DEFAULT_MODEL;
       const logPath = join(homedir(), GRACKLE_DIR, LOGS_DIR, sessionId);
 
       sessionStore.createSession(sessionId, envId, sessionRuntime, prompt, sessionModel, logPath);
