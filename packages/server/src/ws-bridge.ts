@@ -2,7 +2,7 @@ import { WebSocketServer, WebSocket } from "ws";
 import type { Server as HttpServer } from "node:http";
 import type { IncomingMessage } from "node:http";
 import { create } from "@bufbuild/protobuf";
-import { grackle, sidecar } from "@grackle/common";
+import { grackle, powerline } from "@grackle/common";
 import * as envRegistry from "./env-registry.js";
 import * as sessionStore from "./session-store.js";
 import * as adapterManager from "./adapter-manager.js";
@@ -55,7 +55,9 @@ export function createWsBridge(httpServer: HttpServer, verifyApiKey: (token: str
 
     // Ping/pong keepalive
     const pingInterval = setInterval(() => {
-      if (ws.readyState === WebSocket.OPEN) ws.ping();
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.ping();
+      }
     }, WS_PING_INTERVAL_MS);
 
     ws.on("close", () => clearInterval(pingInterval));
@@ -67,7 +69,7 @@ export function createWsBridge(httpServer: HttpServer, verifyApiKey: (token: str
 async function handleMessage(
   ws: WebSocket,
   msg: WsMessage,
-  subscriptions: Map<string, { cancel(): void }>
+  subscriptions: Map<string, { cancel(): void }>,
 ): Promise<void> {
   switch (msg.type) {
     case "list_environments": {
@@ -77,11 +79,11 @@ async function handleMessage(
         payload: {
           environments: rows.map((r) => ({
             id: r.id,
-            displayName: r.display_name,
-            adapterType: r.adapter_type,
-            defaultRuntime: r.default_runtime,
+            displayName: r.displayName,
+            adapterType: r.adapterType,
+            defaultRuntime: r.defaultRuntime,
             status: r.status,
-            bootstrapped: r.bootstrapped === 1,
+            bootstrapped: r.bootstrapped,
           })),
         },
       });
@@ -97,11 +99,11 @@ async function handleMessage(
         payload: {
           sessions: rows.map((r) => ({
             id: r.id,
-            envId: r.env_id,
+            envId: r.envId,
             runtime: r.runtime,
             status: r.status,
             prompt: r.prompt,
-            startedAt: r.started_at,
+            startedAt: r.startedAt,
           })),
         },
       });
@@ -110,12 +112,16 @@ async function handleMessage(
 
     case "get_session_events": {
       const sessionId = msg.payload?.sessionId as string;
-      if (!sessionId) return;
+      if (!sessionId) {
+        return;
+      }
 
       const session = sessionStore.getSession(sessionId);
-      if (!session || !session.log_path) return;
+      if (!session || !session.logPath) {
+        return;
+      }
 
-      const entries = logWriter.readLog(session.log_path);
+      const entries = logWriter.readLog(session.logPath);
       const events = entries.map((e) => ({
         sessionId: e.session_id,
         eventType: e.type,
@@ -137,6 +143,7 @@ async function handleMessage(
       const subKey = `session:${sessionId}`;
       const existing = subscriptions.get(subKey);
       if (existing) {
+        subscriptions.delete(subKey);
         existing.cancel();
       }
 
@@ -163,6 +170,7 @@ async function handleMessage(
       // Cancel any existing global subscription
       const existingGlobal = subscriptions.get("global");
       if (existingGlobal) {
+        subscriptions.delete("global");
         existingGlobal.cancel();
       }
 
@@ -215,8 +223,8 @@ async function handleMessage(
       }
 
       const sessionId = uuid();
-      const sessionRuntime = runtime || env.default_runtime || DEFAULT_RUNTIME;
-      const sessionModel = model || DEFAULT_MODEL;
+      const sessionRuntime = runtime || env.defaultRuntime || DEFAULT_RUNTIME;
+      const sessionModel = model || process.env.GRACKLE_DEFAULT_MODEL || DEFAULT_MODEL;
       const logPath = join(grackleHome, LOGS_DIR, sessionId);
 
       sessionStore.createSession(sessionId, envId, sessionRuntime, prompt, sessionModel, logPath);
@@ -224,8 +232,8 @@ async function handleMessage(
 
       sendWs(ws, { type: "spawned", payload: { sessionId } });
 
-      // Fire sidecar spawn in background
-      const sidecarReq = create(sidecar.SpawnRequestSchema, {
+      // Fire PowerLine spawn in background
+      const powerlineReq = create(powerline.SpawnRequestSchema, {
         sessionId,
         runtime: sessionRuntime,
         prompt,
@@ -236,7 +244,7 @@ async function handleMessage(
       (async () => {
         try {
           sessionStore.updateSession(sessionId, "running");
-          for await (const event of conn.client.spawn(sidecarReq)) {
+          for await (const event of conn.client.spawn(powerlineReq)) {
             const sessionEvent = create(grackle.SessionEventSchema, {
               sessionId,
               type: event.type,
@@ -291,16 +299,22 @@ async function handleMessage(
     case "send_input": {
       const sessionId = msg.payload?.sessionId as string;
       const text = msg.payload?.text as string;
-      if (!sessionId || !text) return;
+      if (!sessionId || !text) {
+        return;
+      }
 
       const session = sessionStore.getSession(sessionId);
-      if (!session) return;
+      if (!session) {
+        return;
+      }
 
-      const conn = adapterManager.getConnection(session.env_id);
-      if (!conn) return;
+      const conn = adapterManager.getConnection(session.envId);
+      if (!conn) {
+        return;
+      }
 
       await conn.client.sendInput(
-        create(sidecar.InputMessageSchema, { sessionId, text })
+        create(powerline.InputMessageSchema, { sessionId, text })
       );
       break;
     }
@@ -316,10 +330,10 @@ async function handleMessage(
         return;
       }
 
-      const conn = adapterManager.getConnection(session.env_id);
+      const conn = adapterManager.getConnection(session.envId);
       if (conn) {
         try {
-          await conn.client.kill(create(sidecar.SessionIdSchema, { id: sessionId }));
+          await conn.client.kill(create(powerline.SessionIdSchema, { id: sessionId }));
         } catch (err) {
           sendWs(ws, { type: "error", payload: { message: `Kill failed: ${err}` } });
           return;

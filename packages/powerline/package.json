@@ -1,12 +1,12 @@
 {
-  "name": "@grackle/sidecar",
+  "name": "@grackle/powerline",
   "version": "0.0.1",
   "private": true,
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
-    "grackle-sidecar": "dist/index.js"
+    "grackle-powerline": "dist/index.js"
   },
   "scripts": {
     "build": "tsc",

@@ -57,7 +57,7 @@ message Environment {
   bool bootstrapped = 6;
   string status = 7;
   string last_seen = 8;
-  string env_info = 9;           // JSON from sidecar GetInfo
+  string env_info = 9;           // JSON from PowerLine GetInfo
   string created_at = 10;
 }
 

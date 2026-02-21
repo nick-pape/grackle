@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package grackle.sidecar;
+package grackle.powerline;
 
 // ─── Enums ──────────────────────────────────────────────────
 
@@ -93,7 +93,7 @@ message TokenBundle {
 
 // ─── Service ────────────────────────────────────────────────
 
-service GrackleSidecar {
+service GracklePowerLine {
   rpc GetInfo(Empty) returns (EnvironmentInfo);
   rpc Spawn(SpawnRequest) returns (stream AgentEvent);
   rpc Resume(ResumeRequest) returns (stream AgentEvent);

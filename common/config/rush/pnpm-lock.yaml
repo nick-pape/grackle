@@ -34,12 +34,12 @@ importers:
       '@rush-temp/common':
         specifier: file:./projects/common.tgz
         version: file:projects/common.tgz
+      '@rush-temp/powerline':
+        specifier: file:./projects/powerline.tgz
+        version: file:projects/powerline.tgz
       '@rush-temp/server':
         specifier: file:./projects/server.tgz
-        version: file:projects/server.tgz
-      '@rush-temp/sidecar':
-        specifier: file:./projects/sidecar.tgz
-        version: file:projects/sidecar.tgz
+        version: file:projects/server.tgz(@types/react@19.2.14)(react@19.2.4)
       '@rush-temp/web':
         specifier: file:./projects/web.tgz
         version: file:projects/web.tgz(@types/node@22.19.11)
@@ -76,6 +76,9 @@ importers:
       commander:
         specifier: ^13.0.0
         version: 13.1.0
+      drizzle-orm:
+        specifier: ^0.38.0
+        version: 0.38.4(@types/better-sqlite3@7.6.13)(@types/react@19.2.14)(better-sqlite3@11.10.0)(react@19.2.4)
       ora:
         specifier: ^8.0.0
         version: 8.2.0
@@ -581,12 +584,12 @@ packages:
     resolution: {integrity: sha512-gdCSAwGBDg9DDQBdrBANSFjdh61i7m0OHwVxh/ucYZGzad00Jf0HNG89X2Ny5KCmghri4fBT3kK6D0UpqzuaBw==, tarball: file:projects/common.tgz}
     version: 0.0.0
 
-  '@rush-temp/server@file:projects/server.tgz':
-    resolution: {integrity: sha512-+jt7jigcum0Swe9o1GXlfEeifR0gaknJCUqqua6heyvNBHTT+tXJVk6UA7p+O8hkulne1v9gxxafi+P7QF5vzQ==, tarball: file:projects/server.tgz}
+  '@rush-temp/powerline@file:projects/powerline.tgz':
+    resolution: {integrity: sha512-Rlr5MBzbjYoWLAs69bExoEbEGCb+VD3zpCwJS8lgmV9tv1zvxYHa7RUeb3r6XSawxGznw5uzeAHxgVMVR9+VDg==, tarball: file:projects/powerline.tgz}
     version: 0.0.0
 
-  '@rush-temp/sidecar@file:projects/sidecar.tgz':
-    resolution: {integrity: sha512-kxTPZ2aZ+wbCy1oktuWusRQYpmN5vyZwihg3R+chtzTWcu/II2zewNNoEDcQ3GGWTz2fpSSLNv+cdohDAyYTyQ==, tarball: file:projects/sidecar.tgz}
+  '@rush-temp/server@file:projects/server.tgz':
+    resolution: {integrity: sha512-POqagnnnho1BZVzJLZZWG/VfBceYHIHoVRe6rET/EcovTx5yYrwj9a1KiwBfBCpmA0xH8cLle9wakm4Y3PBMTw==, tarball: file:projects/server.tgz}
     version: 0.0.0
 
   '@rush-temp/web@file:projects/web.tgz':
@@ -728,6 +731,98 @@ packages:
   detect-libc@2.1.2:
     resolution: {integrity: sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ==}
     engines: {node: '>=8'}
+
+  drizzle-orm@0.38.4:
+    resolution: {integrity: sha512-s7/5BpLKO+WJRHspvpqTydxFob8i1vo2rEx4pY6TGY7QSMuUfWUuzaY0DIpXCkgHOo37BaFC+SJQb99dDUXT3Q==}
+    peerDependencies:
+      '@aws-sdk/client-rds-data': '>=3'
+      '@cloudflare/workers-types': '>=4'
+      '@electric-sql/pglite': '>=0.2.0'
+      '@libsql/client': '>=0.10.0'
+      '@libsql/client-wasm': '>=0.10.0'
+      '@neondatabase/serverless': '>=0.10.0'
+      '@op-engineering/op-sqlite': '>=2'
+      '@opentelemetry/api': ^1.4.1
+      '@planetscale/database': '>=1'
+      '@prisma/client': '*'
+      '@tidbcloud/serverless': '*'
+      '@types/better-sqlite3': '*'
+      '@types/pg': '*'
+      '@types/react': '>=18'
+      '@types/sql.js': '*'
+      '@vercel/postgres': '>=0.8.0'
+      '@xata.io/client': '*'
+      better-sqlite3: '>=7'
+      bun-types: '*'
+      expo-sqlite: '>=14.0.0'
+      knex: '*'
+      kysely: '*'
+      mysql2: '>=2'
+      pg: '>=8'
+      postgres: '>=3'
+      prisma: '*'
+      react: '>=18'
+      sql.js: '>=1'
+      sqlite3: '>=5'
+    peerDependenciesMeta:
+      '@aws-sdk/client-rds-data':
+        optional: true
+      '@cloudflare/workers-types':
+        optional: true
+      '@electric-sql/pglite':
+        optional: true
+      '@libsql/client':
+        optional: true
+      '@libsql/client-wasm':
+        optional: true
+      '@neondatabase/serverless':
+        optional: true
+      '@op-engineering/op-sqlite':
+        optional: true
+      '@opentelemetry/api':
+        optional: true
+      '@planetscale/database':
+        optional: true
+      '@prisma/client':
+        optional: true
+      '@tidbcloud/serverless':
+        optional: true
+      '@types/better-sqlite3':
+        optional: true
+      '@types/pg':
+        optional: true
+      '@types/react':
+        optional: true
+      '@types/sql.js':
+        optional: true
+      '@vercel/postgres':
+        optional: true
+      '@xata.io/client':
+        optional: true
+      better-sqlite3:
+        optional: true
+      bun-types:
+        optional: true
+      expo-sqlite:
+        optional: true
+      knex:
+        optional: true
+      kysely:
+        optional: true
+      mysql2:
+        optional: true
+      pg:
+        optional: true
+      postgres:
+        optional: true
+      prisma:
+        optional: true
+      react:
+        optional: true
+      sql.js:
+        optional: true
+      sqlite3:
+        optional: true
 
   electron-to-chromium@1.5.302:
     resolution: {integrity: sha512-sM6HAN2LyK82IyPBpznDRqlTQAtuSaO+ShzFiWTvoMJLHyZ+Y39r8VMfHzwbU8MVBzQ4Wdn85+wlZl2TLGIlwg==}
@@ -1509,7 +1604,17 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@rush-temp/server@file:projects/server.tgz':
+  '@rush-temp/powerline@file:projects/powerline.tgz':
+    dependencies:
+      '@bufbuild/protobuf': 2.11.0
+      '@connectrpc/connect': 2.1.1(@bufbuild/protobuf@2.11.0)
+      '@connectrpc/connect-node': 2.1.1(@bufbuild/protobuf@2.11.0)(@connectrpc/connect@2.1.1(@bufbuild/protobuf@2.11.0))
+      '@types/node': 22.19.11
+      commander: 13.1.0
+      pino: 10.3.1
+      typescript: 5.7.3
+
+  '@rush-temp/server@file:projects/server.tgz(@types/react@19.2.14)(react@19.2.4)':
     dependencies:
       '@bufbuild/protobuf': 2.11.0
       '@connectrpc/connect': 2.1.1(@bufbuild/protobuf@2.11.0)
@@ -1519,23 +1624,41 @@ snapshots:
       '@types/uuid': 10.0.0
       '@types/ws': 8.18.1
       better-sqlite3: 11.10.0
+      drizzle-orm: 0.38.4(@types/better-sqlite3@7.6.13)(@types/react@19.2.14)(better-sqlite3@11.10.0)(react@19.2.4)
       pino: 10.3.1
       typescript: 5.7.3
       uuid: 11.1.0
       ws: 8.19.0
     transitivePeerDependencies:
+      - '@aws-sdk/client-rds-data'
+      - '@cloudflare/workers-types'
+      - '@electric-sql/pglite'
+      - '@libsql/client'
+      - '@libsql/client-wasm'
+      - '@neondatabase/serverless'
+      - '@op-engineering/op-sqlite'
+      - '@opentelemetry/api'
+      - '@planetscale/database'
+      - '@prisma/client'
+      - '@tidbcloud/serverless'
+      - '@types/pg'
+      - '@types/react'
+      - '@types/sql.js'
+      - '@vercel/postgres'
+      - '@xata.io/client'
       - bufferutil
+      - bun-types
+      - expo-sqlite
+      - knex
+      - kysely
+      - mysql2
+      - pg
+      - postgres
+      - prisma
+      - react
+      - sql.js
+      - sqlite3
       - utf-8-validate
-
-  '@rush-temp/sidecar@file:projects/sidecar.tgz':
-    dependencies:
-      '@bufbuild/protobuf': 2.11.0
-      '@connectrpc/connect': 2.1.1(@bufbuild/protobuf@2.11.0)
-      '@connectrpc/connect-node': 2.1.1(@bufbuild/protobuf@2.11.0)(@connectrpc/connect@2.1.1(@bufbuild/protobuf@2.11.0))
-      '@types/node': 22.19.11
-      commander: 13.1.0
-      pino: 10.3.1
-      typescript: 5.7.3
 
   '@rush-temp/web@file:projects/web.tgz(@types/node@22.19.11)':
     dependencies:
@@ -1698,6 +1821,13 @@ snapshots:
   deep-extend@0.6.0: {}
 
   detect-libc@2.1.2: {}
+
+  drizzle-orm@0.38.4(@types/better-sqlite3@7.6.13)(@types/react@19.2.14)(better-sqlite3@11.10.0)(react@19.2.4):
+    optionalDependencies:
+      '@types/better-sqlite3': 7.6.13
+      '@types/react': 19.2.14
+      better-sqlite3: 11.10.0
+      react: 19.2.4
 
   electron-to-chromium@1.5.302: {}
 

@@ -6,7 +6,7 @@ import type { FullConfig } from "@playwright/test";
 const STATE_FILE = join(tmpdir(), "grackle-e2e-state.json");
 
 export default async function globalTeardown(_config: FullConfig): Promise<void> {
-  let state: { grackleHome: string; sidecarPid: number; serverPid: number };
+  let state: { grackleHome: string; powerlinePid: number; serverPid: number };
 
   try {
     state = JSON.parse(readFileSync(STATE_FILE, "utf8"));
@@ -15,8 +15,8 @@ export default async function globalTeardown(_config: FullConfig): Promise<void>
     return;
   }
 
-  // Kill server + sidecar
-  for (const pid of [state.serverPid, state.sidecarPid]) {
+  // Kill server + PowerLine
+  for (const pid of [state.serverPid, state.powerlinePid]) {
     try {
       process.kill(pid, "SIGTERM");
       console.log(`[e2e] Killed process ${pid}`);

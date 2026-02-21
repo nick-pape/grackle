@@ -8,7 +8,7 @@ const STATE_FILE = join(tmpdir(), "grackle-e2e-state.json");
 interface E2EState {
   grackleHome: string;
   apiKey: string;
-  sidecarPid: number;
+  powerlinePid: number;
   serverPid: number;
 }
 

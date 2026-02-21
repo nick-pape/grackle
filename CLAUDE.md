@@ -17,7 +17,7 @@ npx buf generate
 
 Rush monorepo with 5 packages under `packages/`:
 - `@grackle/common` — Proto definitions, generated code, shared types
-- `@grackle/sidecar` — gRPC sidecar server (ConnectRPC on HTTP/2)
+- `@grackle/powerline` — gRPC PowerLine server (ConnectRPC on HTTP/2)
 - `@grackle/server` — Central gRPC server, SQLite, WebSocket bridge
 - `@grackle/cli` — Commander-based CLI client
 - `@grackle/web` — React + Vite web UI
@@ -35,13 +35,13 @@ Rush monorepo with 5 packages under `packages/`:
 ### Proto
 - Message names: full English (e.g., `EnvironmentId`, `AddEnvironmentRequest`)
 - Enums: use proto enums with `UPPER_SNAKE_CASE` values prefixed by type name
-- Services: `Grackle` and `GrackleSidecar` (no `*Service` suffix)
-- Generated code: `import { grackle, sidecar } from "@grackle/common"`
+- Services: `Grackle` and `GracklePowerLine` (no `*Service` suffix)
+- Generated code: `import { grackle, powerline } from "@grackle/common"`
 
 ### Logging
-- Server/sidecar: use `pino` structured logger (`import { logger } from "./logger.js"`)
+- Server/PowerLine: use `pino` structured logger (`import { logger } from "./logger.js"`)
 - CLI: use `chalk` for colored output, `console.log` for user-facing messages
-- Never use `console.log` in server or sidecar packages
+- Never use `console.log` in server or PowerLine packages
 
 ### Security
 - Validate file paths to prevent path traversal (token-writer, file operations)
@@ -58,6 +58,6 @@ Rush monorepo with 5 packages under `packages/`:
 
 | Service | Port | Constant |
 |---------|------|----------|
-| Sidecar | 7433 | `DEFAULT_SIDECAR_PORT` |
+| PowerLine | 7433 | `DEFAULT_POWERLINE_PORT` |
 | Server gRPC | 7434 | `DEFAULT_SERVER_PORT` |
 | Web UI + WS | 3000 | `DEFAULT_WEB_PORT` |

@@ -11,7 +11,7 @@ import { createWsBridge } from "./ws-bridge.js";
 import { DEFAULT_SERVER_PORT, DEFAULT_WEB_PORT } from "@grackle/common";
 import { readFileSync, existsSync } from "node:fs";
 import { join, extname } from "node:path";
-import { loadApiKey, verifyApiKey } from "./api-key.js";
+import { loadOrCreateApiKey, verifyApiKey } from "./api-key.js";
 import { logger } from "./logger.js";
 
 // Import db to ensure tables are created
@@ -74,7 +74,7 @@ function main(): void {
   resetAllStatuses();
 
   // Load (or generate) the API key on startup
-  const apiKey = loadApiKey();
+  const apiKey = loadOrCreateApiKey();
 
   // Register adapters
   registerAdapter(new DockerAdapter());

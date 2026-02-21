@@ -11,7 +11,7 @@ const POLL_TIMEOUT_MS = 15_000;
 interface E2EState {
   grackleHome: string;
   apiKey: string;
-  sidecarPid: number;
+  powerlinePid: number;
   serverPid: number;
 }
 
@@ -47,18 +47,18 @@ export default async function globalSetup(_config: FullConfig): Promise<void> {
 
   const repoRoot = join(import.meta.dirname, "../../..");
 
-  // 2. Start sidecar (no --token = no auth)
-  const sidecar: ChildProcess = spawn(
+  // 2. Start PowerLine (no --token = no auth)
+  const powerline: ChildProcess = spawn(
     process.execPath,
-    [join(repoRoot, "packages/sidecar/dist/index.js"), "--port", "7433"],
+    [join(repoRoot, "packages/powerline/dist/index.js"), "--port", "7433"],
     {
       env: { ...process.env, GRACKLE_HOME: grackleHome },
       stdio: "pipe",
     },
   );
 
-  sidecar.stderr?.on("data", (d: Buffer) => process.stderr.write(`[sidecar] ${d}`));
-  sidecar.stdout?.on("data", (d: Buffer) => process.stdout.write(`[sidecar] ${d}`));
+  powerline.stderr?.on("data", (d: Buffer) => process.stderr.write(`[powerline] ${d}`));
+  powerline.stdout?.on("data", (d: Buffer) => process.stdout.write(`[powerline] ${d}`));
 
   // 3. Start server
   const server: ChildProcess = spawn(
@@ -80,7 +80,7 @@ export default async function globalSetup(_config: FullConfig): Promise<void> {
   server.stdout?.on("data", (d: Buffer) => process.stdout.write(`[server] ${d}`));
 
   // 4. Wait for both ports
-  console.log("[e2e] Waiting for sidecar on :7433...");
+  console.log("[e2e] Waiting for PowerLine on :7433...");
   await waitForPort(7433, POLL_TIMEOUT_MS);
   console.log("[e2e] Waiting for server on :3000...");
   await waitForPort(3000, POLL_TIMEOUT_MS);
@@ -114,7 +114,7 @@ export default async function globalSetup(_config: FullConfig): Promise<void> {
   const state: E2EState = {
     grackleHome,
     apiKey,
-    sidecarPid: sidecar.pid!,
+    powerlinePid: powerline.pid!,
     serverPid: server.pid!,
   };
   writeFileSync(STATE_FILE, JSON.stringify(state));

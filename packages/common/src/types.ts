@@ -33,7 +33,7 @@ export type AdapterType = "docker" | "local" | "codespace" | "ssh";
 /** Supported agent runtime implementations. */
 export type RuntimeName = "claude-code" | "stub";
 
-/** How a token is delivered to the sidecar: as an env var or written to a file. */
+/** How a token is delivered to the PowerLine: as an env var or written to a file. */
 export type TokenType = "env_var" | "file";
 
 /** Stages reported during environment provisioning. */
@@ -49,8 +49,8 @@ export type ProvisionStage =
 
 // ─── Constants ──────────────────────────────────────────────
 
-/** Default port the sidecar gRPC server listens on. */
-export const DEFAULT_SIDECAR_PORT = 7433;
+/** Default port the PowerLine gRPC server listens on. */
+export const DEFAULT_POWERLINE_PORT = 7433;
 /** Default port the central Grackle gRPC server listens on. */
 export const DEFAULT_SERVER_PORT = 7434;
 /** Default port for the web UI and WebSocket bridge. */

@@ -11,8 +11,8 @@
       "projectFolder": "packages/common"
     },
     {
-      "packageName": "@grackle/sidecar",
-      "projectFolder": "packages/sidecar"
+      "packageName": "@grackle/powerline",
+      "projectFolder": "packages/powerline"
     },
     {
       "packageName": "@grackle/server",

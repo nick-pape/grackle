@@ -63,10 +63,16 @@ function SessionHeader({ sessionId, session, isActive, onKill }: SessionHeaderPr
 
 interface EventListProps {
   sessionEvents: SessionEvent[];
+  session: Session | null;
   scrollRef: React.RefObject<HTMLDivElement | null>;
 }
 
-function EventList({ sessionEvents, scrollRef }: EventListProps) {
+function EventList({ sessionEvents, session, scrollRef }: EventListProps) {
+  const isTerminal = session && ["completed", "failed", "killed"].includes(session.status);
+  const emptyMessage = isTerminal
+    ? `Session ${session.status} with no events recorded.`
+    : "Waiting for events...";
+
   return (
     <div
       ref={scrollRef}
@@ -77,7 +83,7 @@ function EventList({ sessionEvents, scrollRef }: EventListProps) {
       }}
     >
       {sessionEvents.length === 0 && (
-        <div style={{ color: "#666" }}>Waiting for events...</div>
+        <div style={{ color: isTerminal ? "#e94560" : "#666" }}>{emptyMessage}</div>
       )}
       {sessionEvents.map((event, i) => (
         <EventRenderer key={i} event={event} />
@@ -165,6 +171,7 @@ export function SessionPanel({ viewMode }: Props) {
       />
       <EventList
         sessionEvents={sessionEvents}
+        session={session}
         scrollRef={scrollRef}
       />
     </div>

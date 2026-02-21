@@ -1,7 +1,9 @@
 import db from "./db.js";
+import { tokens, type TokenRow } from "./schema.js";
+import { eq } from "drizzle-orm";
 import { encrypt, decrypt } from "./crypto.js";
 import { create } from "@bufbuild/protobuf";
-import { sidecar } from "@grackle/common";
+import { powerline } from "@grackle/common";
 import * as adapterManager from "./adapter-manager.js";
 import { logger } from "./logger.js";
 
@@ -14,20 +16,19 @@ interface TokenConfig {
   expiresAt?: string;
 }
 
-const stmts = {
-  upsert: db.prepare("INSERT OR REPLACE INTO tokens (id, config) VALUES (?, ?)"),
-  get: db.prepare("SELECT * FROM tokens WHERE id = ?"),
-  list: db.prepare("SELECT * FROM tokens"),
-  remove: db.prepare("DELETE FROM tokens WHERE id = ?"),
-};
-
 /** Encrypt and store a token, then auto-push to all connected environments. */
 export async function setToken(entry: TokenConfig): Promise<void> {
   const encrypted: TokenConfig = {
     ...entry,
     value: encrypt(entry.value),
   };
-  stmts.upsert.run(entry.name, JSON.stringify(encrypted));
+  db.insert(tokens)
+    .values({ id: entry.name, config: JSON.stringify(encrypted) })
+    .onConflictDoUpdate({
+      target: tokens.id,
+      set: { config: JSON.stringify(encrypted) },
+    })
+    .run();
 
   // Auto-push to all connected environments
   await pushToAll();
@@ -35,8 +36,8 @@ export async function setToken(entry: TokenConfig): Promise<void> {
 
 /** List all stored tokens (values are omitted for security). */
 export function listTokens(): Array<{ name: string; type: string; envVar?: string; filePath?: string; expiresAt?: string }> {
-  const rows = stmts.list.all() as Array<{ id: string; config: string }>;
-  return rows.map((row) => {
+  const rows = db.select().from(tokens).all();
+  return rows.map((row: TokenRow) => {
     const cfg = JSON.parse(row.config) as TokenConfig;
     return {
       name: cfg.name,
@@ -48,12 +49,12 @@ export function listTokens(): Array<{ name: string; type: string; envVar?: strin
   });
 }
 
-/** Build a decrypted token bundle suitable for pushing to a sidecar. */
-export function getBundle(): sidecar.TokenBundle {
-  const rows = stmts.list.all() as Array<{ id: string; config: string }>;
-  const tokens = rows.map((row) => {
+/** Build a decrypted token bundle suitable for pushing to a PowerLine. */
+export function getBundle(): powerline.TokenBundle {
+  const rows = db.select().from(tokens).all();
+  const items = rows.map((row: TokenRow) => {
     const cfg = JSON.parse(row.config) as TokenConfig;
-    return create(sidecar.TokenItemSchema, {
+    return create(powerline.TokenItemSchema, {
       name: cfg.name,
       type: cfg.type,
       envVar: cfg.envVar || "",
@@ -62,16 +63,20 @@ export function getBundle(): sidecar.TokenBundle {
     });
   });
 
-  return create(sidecar.TokenBundleSchema, { tokens });
+  return create(powerline.TokenBundleSchema, { tokens: items });
 }
 
 /** Push the current token bundle to a single connected environment. */
 export async function pushToEnv(envId: string): Promise<void> {
   const conn = adapterManager.getConnection(envId);
-  if (!conn) return;
+  if (!conn) {
+    return;
+  }
 
   const bundle = getBundle();
-  if (bundle.tokens.length === 0) return;
+  if (bundle.tokens.length === 0) {
+    return;
+  }
 
   await conn.client.pushTokens(bundle);
 }

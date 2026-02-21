@@ -14,8 +14,8 @@ export function registerTokenCommands(program: Command): void {
     .option("--file <path>", "Read value from file")
     .option("--env <var>", "Read value from environment variable")
     .option("--type <type>", "Token type: env_var or file", "env_var")
-    .option("--env-var <name>", "Environment variable name to set on sidecar")
-    .option("--file-path <path>", "File path to write on sidecar")
+    .option("--env-var <name>", "Environment variable name to set on PowerLine")
+    .option("--file-path <path>", "File path to write on PowerLine")
     .action(async (name: string, opts) => {
       const client = createGrackleClient();
       let value: string;

@@ -1,6 +1,6 @@
 import type { ConnectRouter } from "@connectrpc/connect";
 import { create } from "@bufbuild/protobuf";
-import { sidecar } from "@grackle/common";
+import { powerline } from "@grackle/common";
 import { getRuntime, listRuntimes } from "./runtime-registry.js";
 import { addSession, getSession, listAllSessions } from "./session-mgr.js";
 import { writeTokens } from "./token-writer.js";
@@ -8,11 +8,11 @@ import os from "node:os";
 
 const startTime = Date.now();
 
-/** Register all sidecar gRPC service handlers on the given ConnectRPC router. */
-export function registerSidecarRoutes(router: ConnectRouter): void {
-  router.service(sidecar.GrackleSidecar, {
+/** Register all PowerLine gRPC service handlers on the given ConnectRPC router. */
+export function registerPowerLineRoutes(router: ConnectRouter): void {
+  router.service(powerline.GracklePowerLine, {
     async getInfo() {
-      return create(sidecar.EnvironmentInfoSchema, {
+      return create(powerline.EnvironmentInfoSchema, {
         hostname: os.hostname(),
         os: `${os.platform()} ${os.release()}`,
         nodeVersion: process.version,
@@ -24,7 +24,7 @@ export function registerSidecarRoutes(router: ConnectRouter): void {
     async *spawn(req) {
       const runtime = getRuntime(req.runtime);
       if (!runtime) {
-        yield create(sidecar.AgentEventSchema, {
+        yield create(powerline.AgentEventSchema, {
           sessionId: req.sessionId,
           type: "error",
           timestamp: new Date().toISOString(),
@@ -43,7 +43,7 @@ export function registerSidecarRoutes(router: ConnectRouter): void {
       addSession(session);
 
       for await (const event of session.stream()) {
-        yield create(sidecar.AgentEventSchema, {
+        yield create(powerline.AgentEventSchema, {
           sessionId: req.sessionId,
           type: event.type,
           timestamp: event.timestamp,
@@ -56,7 +56,7 @@ export function registerSidecarRoutes(router: ConnectRouter): void {
     async *resume(req) {
       const runtime = getRuntime(req.runtime);
       if (!runtime) {
-        yield create(sidecar.AgentEventSchema, {
+        yield create(powerline.AgentEventSchema, {
           sessionId: req.sessionId,
           type: "error",
           timestamp: new Date().toISOString(),
@@ -73,7 +73,7 @@ export function registerSidecarRoutes(router: ConnectRouter): void {
       addSession(session);
 
       for await (const event of session.stream()) {
-        yield create(sidecar.AgentEventSchema, {
+        yield create(powerline.AgentEventSchema, {
           sessionId: req.sessionId,
           type: event.type,
           timestamp: event.timestamp,
@@ -89,7 +89,7 @@ export function registerSidecarRoutes(router: ConnectRouter): void {
         throw new Error(`Session not found: ${req.sessionId}`);
       }
       session.sendInput(req.text);
-      return create(sidecar.EmptySchema, {});
+      return create(powerline.EmptySchema, {});
     },
 
     async kill(req) {
@@ -98,14 +98,14 @@ export function registerSidecarRoutes(router: ConnectRouter): void {
         throw new Error(`Session not found: ${req.id}`);
       }
       session.kill();
-      return create(sidecar.EmptySchema, {});
+      return create(powerline.EmptySchema, {});
     },
 
     async listSessions() {
       const sessions = listAllSessions();
-      return create(sidecar.SessionListSchema, {
+      return create(powerline.SessionListSchema, {
         sessions: sessions.map((s) =>
-          create(sidecar.SessionInfoSchema, {
+          create(powerline.SessionInfoSchema, {
             sessionId: s.id,
             runtime: s.runtimeName,
             status: s.status,
@@ -115,14 +115,14 @@ export function registerSidecarRoutes(router: ConnectRouter): void {
     },
 
     async ping() {
-      return create(sidecar.PongSchema, {
+      return create(powerline.PongSchema, {
         timestamp: BigInt(Date.now()),
       });
     },
 
     async pushTokens(req) {
       await writeTokens(req.tokens);
-      return create(sidecar.EmptySchema, {});
+      return create(powerline.EmptySchema, {});
     },
   });
 }

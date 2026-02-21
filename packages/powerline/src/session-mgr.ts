@@ -17,7 +17,7 @@ export function removeSession(id: string): void {
   sessions.delete(id);
 }
 
-/** Return all sessions currently tracked by the sidecar. */
+/** Return all sessions currently tracked by the PowerLine. */
 export function listAllSessions(): AgentSession[] {
   return Array.from(sessions.values());
 }

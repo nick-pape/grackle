@@ -2,17 +2,17 @@ FROM node:22-slim
 
 RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
 
-# Create non-root user for running the sidecar
+# Create non-root user for running the PowerLine
 RUN groupadd -r grackle && useradd -r -g grackle -m grackle
 
 WORKDIR /app
 
-# Create a standalone package that combines common + sidecar
+# Create a standalone package that combines common + powerline
 COPY packages/common/dist/ /app/node_modules/@grackle/common/dist/
 COPY packages/common/package.json /app/node_modules/@grackle/common/package.json
 
-COPY packages/sidecar/dist/ /app/dist/
-COPY packages/sidecar/package.json /app/package.json
+COPY packages/powerline/dist/ /app/dist/
+COPY packages/powerline/package.json /app/package.json
 
 # Install runtime dependencies (not from Rush — standalone npm install)
 RUN npm install --omit=dev \
@@ -28,7 +28,7 @@ EXPOSE 7433
 
 USER grackle
 
-# Run sidecar from /app so node_modules resolve correctly
+# Run PowerLine from /app so node_modules resolve correctly
 # Agents will use /workspace as their cwd
 WORKDIR /app
 CMD ["node", "dist/index.js", "--port=7433"]

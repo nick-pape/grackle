@@ -31,6 +31,7 @@ interface WsMessage {
 }
 
 const WS_RECONNECT_DELAY_MS = 3_000;
+const ENV_POLL_INTERVAL_MS = 10_000;
 
 // Declare the injected API key from server-side HTML injection
 declare global {
@@ -61,6 +62,7 @@ export function useGrackleSocket(url?: string) {
   useEffect(() => {
     let ws: WebSocket;
     let reconnectTimer: ReturnType<typeof setTimeout>;
+    let envPollTimer: ReturnType<typeof setInterval>;
 
     function connect() {
       ws = new WebSocket(wsUrl);
@@ -71,6 +73,11 @@ export function useGrackleSocket(url?: string) {
         send({ type: "list_environments" });
         send({ type: "list_sessions" });
         send({ type: "subscribe_all" });
+        // Periodically refresh environments to catch CLI-driven changes
+        clearInterval(envPollTimer);
+        envPollTimer = setInterval(() => {
+          send({ type: "list_environments" });
+        }, ENV_POLL_INTERVAL_MS);
       };
 
       ws.onmessage = (e) => {
@@ -111,8 +118,11 @@ export function useGrackleSocket(url?: string) {
           }
           case "spawned": {
             const spawnedId = msg.payload?.sessionId as string;
-            if (spawnedId) setLastSpawnedId(spawnedId);
+            if (spawnedId) {
+              setLastSpawnedId(spawnedId);
+            }
             send({ type: "list_sessions" });
+            send({ type: "list_environments" });
             break;
           }
           case "error":
@@ -124,6 +134,7 @@ export function useGrackleSocket(url?: string) {
       ws.onclose = () => {
         setConnected(false);
         wsRef.current = null;
+        clearInterval(envPollTimer);
         clearTimeout(reconnectTimer);
         reconnectTimer = setTimeout(connect, WS_RECONNECT_DELAY_MS);
       };
@@ -136,6 +147,7 @@ export function useGrackleSocket(url?: string) {
     connect();
 
     return () => {
+      clearInterval(envPollTimer);
       clearTimeout(reconnectTimer);
       ws?.close();
     };
