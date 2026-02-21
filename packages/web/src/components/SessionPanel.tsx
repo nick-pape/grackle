@@ -1,18 +1,39 @@
 import { useGrackle } from "../context/GrackleContext.js";
 import { EventRenderer } from "./EventRenderer.js";
-import { useEffect, useRef } from "react";
+import { DiffViewer } from "./DiffViewer.js";
+import { FindingsPanel } from "./FindingsPanel.js";
+import { useEffect, useRef, useState } from "react";
 import type { ViewMode } from "../App.js";
 
 interface Props {
   viewMode: ViewMode;
+  setViewMode: (mode: ViewMode) => void;
 }
 
-export function SessionPanel({ viewMode }: Props) {
-  const { events, sessions, loadSessionEvents, kill } = useGrackle();
+type TaskTab = "stream" | "diff" | "findings";
+
+export function SessionPanel({ viewMode, setViewMode }: Props) {
+  const { events, sessions, tasks, findings, taskDiff, loadSessionEvents, loadFindings, loadTaskDiff, kill } = useGrackle();
   const scrollRef = useRef<HTMLDivElement>(null);
   const loadedRef = useRef<string | null>(null);
+  const [activeTaskTab, setActiveTaskTab] = useState<TaskTab>("stream");
 
-  const sessionId = viewMode.kind === "session" ? viewMode.sessionId : null;
+  // Determine session context
+  let sessionId: string | null = null;
+  let task: ReturnType<typeof tasks.find> = undefined;
+  let projectId: string | null = null;
+
+  if (viewMode.kind === "session") {
+    sessionId = viewMode.sessionId;
+  } else if (viewMode.kind === "task") {
+    task = tasks.find((t) => t.id === viewMode.taskId);
+    sessionId = task?.sessionId || null;
+    projectId = task?.projectId || null;
+    // Use the tab from viewMode if specified
+    if (viewMode.tab && viewMode.tab !== activeTaskTab) {
+      // Will be set via effect
+    }
+  }
 
   const sessionEvents = sessionId
     ? events.filter((e) => e.sessionId === sessionId)
@@ -22,7 +43,21 @@ export function SessionPanel({ viewMode }: Props) {
     ? sessions.find((s) => s.id === sessionId)
     : null;
 
-  // Load historical events when selecting a session with no in-memory events
+  // Auto-switch to diff tab when task enters review
+  useEffect(() => {
+    if (task?.status === "review") {
+      setActiveTaskTab("diff");
+    }
+  }, [task?.status]);
+
+  // Sync tab from viewMode
+  useEffect(() => {
+    if (viewMode.kind === "task" && viewMode.tab) {
+      setActiveTaskTab(viewMode.tab);
+    }
+  }, [viewMode]);
+
+  // Load historical events when selecting a session
   useEffect(() => {
     if (sessionId && sessionId !== loadedRef.current) {
       loadedRef.current = sessionId;
@@ -30,26 +65,28 @@ export function SessionPanel({ viewMode }: Props) {
     }
   }, [sessionId, loadSessionEvents]);
 
+  // Load findings/diff when switching tabs
+  useEffect(() => {
+    if (activeTaskTab === "findings" && projectId) {
+      loadFindings(projectId);
+    }
+    if (activeTaskTab === "diff" && task?.id) {
+      loadTaskDiff(task.id);
+    }
+  }, [activeTaskTab, projectId, task?.id]);
+
   // Auto-scroll to bottom
   useEffect(() => {
-    if (scrollRef.current) {
+    if (scrollRef.current && activeTaskTab === "stream") {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [sessionEvents.length]);
+  }, [sessionEvents.length, activeTaskTab]);
 
   // --- empty mode ---
   if (viewMode.kind === "empty") {
     return (
-      <div
-        style={{
-          flex: 1,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          color: "#666",
-        }}
-      >
-        Select a session or click + to start
+      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "#666" }}>
+        Select a session, project, or task to get started
       </div>
     );
   }
@@ -57,26 +94,133 @@ export function SessionPanel({ viewMode }: Props) {
   // --- new_chat mode ---
   if (viewMode.kind === "new_chat") {
     return (
-      <div
-        style={{
-          flex: 1,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          color: "#666",
-        }}
-      >
+      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "#666" }}>
         Enter a prompt below to start a new session
       </div>
     );
   }
 
-  // --- session mode ---
+  // --- project mode ---
+  if (viewMode.kind === "project") {
+    const projectTasks = tasks.filter((t) => t.projectId === viewMode.projectId);
+    const done = projectTasks.filter((t) => t.status === "done").length;
+    const total = projectTasks.length;
+    return (
+      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "#666", flexDirection: "column", gap: "8px" }}>
+        <span style={{ fontSize: "16px" }}>
+          {total > 0 ? `${done}/${total} tasks complete` : "No tasks yet"}
+        </span>
+        <span style={{ fontSize: "12px" }}>Select a task or click + to create one</span>
+      </div>
+    );
+  }
+
+  // --- new_task mode ---
+  if (viewMode.kind === "new_task") {
+    return (
+      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "#666" }}>
+        Fill in the task details below
+      </div>
+    );
+  }
+
+  // --- task mode ---
+  if (viewMode.kind === "task") {
+    const isActive = session?.status === "running" || session?.status === "waiting_input";
+
+    return (
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+        {/* Task header */}
+        <div
+          style={{
+            padding: "6px 12px",
+            borderBottom: "1px solid #0f3460",
+            fontSize: "12px",
+            color: "#a0a0a0",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <span>
+            Task: {task?.title || viewMode.taskId}
+            {task && ` | ${task.status}`}
+            {task?.branch && ` | ${task.branch}`}
+          </span>
+          {isActive && (
+            <button
+              onClick={() => sessionId && kill(sessionId)}
+              title="Stop session"
+              style={{
+                background: "none",
+                border: "1px solid #e94560",
+                color: "#e94560",
+                borderRadius: "3px",
+                cursor: "pointer",
+                fontSize: "11px",
+                padding: "1px 6px",
+                fontFamily: "monospace",
+              }}
+            >
+              ×
+            </button>
+          )}
+        </div>
+
+        {/* Tab bar */}
+        <div style={{ display: "flex", borderBottom: "1px solid #0f3460" }}>
+          <TaskTabButton active={activeTaskTab === "stream"} onClick={() => setActiveTaskTab("stream")}>
+            Stream
+          </TaskTabButton>
+          <TaskTabButton active={activeTaskTab === "diff"} onClick={() => setActiveTaskTab("diff")}>
+            Diff
+          </TaskTabButton>
+          <TaskTabButton active={activeTaskTab === "findings"} onClick={() => setActiveTaskTab("findings")}>
+            Findings
+          </TaskTabButton>
+        </div>
+
+        {/* Tab content */}
+        {activeTaskTab === "stream" && (
+          <div ref={scrollRef} style={{ flex: 1, overflow: "auto", padding: "12px" }}>
+            {!sessionId && (
+              <div style={{ color: "#666" }}>Task has not been started yet</div>
+            )}
+            {sessionId && sessionEvents.length === 0 && (
+              <div style={{ color: "#666" }}>Waiting for events...</div>
+            )}
+            {sessionEvents.map((event, i) => (
+              <EventRenderer key={i} event={event} />
+            ))}
+          </div>
+        )}
+
+        {activeTaskTab === "diff" && (
+          <div style={{ flex: 1, overflow: "auto" }}>
+            <DiffViewer diff={taskDiff} />
+          </div>
+        )}
+
+        {activeTaskTab === "findings" && (
+          <div style={{ flex: 1, overflow: "auto" }}>
+            {projectId ? (
+              <FindingsPanel projectId={projectId} />
+            ) : (
+              <div style={{ padding: "24px", color: "#666", textAlign: "center" }}>
+                No project context
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // --- session mode (legacy/direct) ---
   const isActive = session?.status === "running" || session?.status === "waiting_input";
 
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-      {/* Session header */}
       <div
         style={{
           padding: "6px 12px",
@@ -117,15 +261,7 @@ export function SessionPanel({ viewMode }: Props) {
         </span>
       </div>
 
-      {/* Event stream */}
-      <div
-        ref={scrollRef}
-        style={{
-          flex: 1,
-          overflow: "auto",
-          padding: "12px",
-        }}
-      >
+      <div ref={scrollRef} style={{ flex: 1, overflow: "auto", padding: "12px" }}>
         {sessionEvents.length === 0 && (
           <div style={{ color: "#666" }}>Waiting for events...</div>
         )}
@@ -134,5 +270,25 @@ export function SessionPanel({ viewMode }: Props) {
         ))}
       </div>
     </div>
+  );
+}
+
+function TaskTabButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        padding: "4px 12px",
+        background: active ? "#0f3460" : "transparent",
+        border: "none",
+        color: active ? "#4ecca3" : "#888",
+        cursor: "pointer",
+        fontFamily: "monospace",
+        fontSize: "11px",
+        borderBottom: active ? "2px solid #4ecca3" : "2px solid transparent",
+      }}
+    >
+      {children}
+    </button>
   );
 }

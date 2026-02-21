@@ -8,10 +8,17 @@ import * as adapterManager from "./adapter-manager.js";
 import * as streamHub from "./stream-hub.js";
 import * as tokenBroker from "./token-broker.js";
 import * as logWriter from "./log-writer.js";
+import * as projectStore from "./project-store.js";
+import * as taskStore from "./task-store.js";
+import * as findingStore from "./finding-store.js";
 import { writeTranscript } from "./transcript.js";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { GRACKLE_DIR, LOGS_DIR, DEFAULT_RUNTIME } from "@grackle/common";
+
+function slugify(text: string): string {
+  return text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40);
+}
 
 function envRowToProto(row: envRegistry.EnvironmentRow): grackle.Environment {
   return create(grackle.EnvironmentSchema, {
@@ -44,6 +51,135 @@ function sessionRowToProto(row: sessionStore.SessionRow): grackle.Session {
     endedAt: row.ended_at || "",
     error: row.error || "",
   });
+}
+
+function projectRowToProto(row: projectStore.ProjectRow): grackle.Project {
+  return create(grackle.ProjectSchema, {
+    id: row.id,
+    name: row.name,
+    description: row.description,
+    repoUrl: row.repo_url,
+    defaultEnvId: row.default_env_id,
+    status: row.status,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  });
+}
+
+function taskRowToProto(row: taskStore.TaskRow): grackle.Task {
+  return create(grackle.TaskSchema, {
+    id: row.id,
+    projectId: row.project_id,
+    title: row.title,
+    description: row.description,
+    status: row.status,
+    branch: row.branch,
+    envId: row.env_id,
+    sessionId: row.session_id,
+    dependsOn: JSON.parse(row.depends_on),
+    assignedAt: row.assigned_at || "",
+    startedAt: row.started_at || "",
+    completedAt: row.completed_at || "",
+    reviewNotes: row.review_notes,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    sortOrder: row.sort_order,
+  });
+}
+
+function findingRowToProto(row: findingStore.FindingRow): grackle.Finding {
+  return create(grackle.FindingSchema, {
+    id: row.id,
+    projectId: row.project_id,
+    taskId: row.task_id,
+    sessionId: row.session_id,
+    category: row.category,
+    title: row.title,
+    content: row.content,
+    tags: JSON.parse(row.tags),
+    createdAt: row.created_at,
+  });
+}
+
+/** Spawn an agent session on a sidecar, piping events to the stream hub. Returns the session ID. */
+function spawnOnSidecar(
+  conn: ReturnType<typeof adapterManager.getConnection> & {},
+  sessionId: string,
+  runtime: string,
+  prompt: string,
+  model: string,
+  logPath: string,
+  branch: string,
+  systemContext: string,
+  projectId: string,
+  taskId: string,
+  onComplete?: () => void,
+): void {
+  const sidecarReq = create(sidecar.SpawnRequestSchema, {
+    sessionId,
+    runtime,
+    prompt,
+    model,
+    maxTurns: 0,
+    branch,
+    worktreeBasePath: branch ? "/workspace" : "",
+    systemContext,
+    projectId,
+    taskId,
+  });
+
+  logWriter.initLog(logPath);
+
+  (async () => {
+    try {
+      sessionStore.updateSession(sessionId, "running");
+      for await (const event of conn.client.spawn(sidecarReq)) {
+        const sessionEvent = create(grackle.SessionEventSchema, {
+          sessionId,
+          type: event.type,
+          timestamp: event.timestamp,
+          content: event.content,
+          raw: event.raw,
+        });
+        logWriter.writeEvent(logPath, sessionEvent);
+
+        // Intercept finding events
+        if (event.type === "finding" && projectId) {
+          try {
+            const data = JSON.parse(event.content);
+            findingStore.postFinding(
+              uuid(), projectId, taskId, sessionId,
+              data.category || "general", data.title || "Untitled",
+              data.content || "", data.tags || [],
+            );
+          } catch { /* ignore parse errors */ }
+        }
+
+        streamHub.publish(sessionEvent);
+
+        if (event.type === "status") {
+          if (event.content === "waiting_input") {
+            sessionStore.updateSessionStatus(sessionId, "waiting_input");
+          } else if (event.content === "running") {
+            sessionStore.updateSessionStatus(sessionId, "running");
+          } else if (event.content === "completed") {
+            sessionStore.updateSession(sessionId, "completed");
+          }
+        }
+      }
+
+      const current = sessionStore.getSession(sessionId);
+      if (current && !["completed", "failed", "killed"].includes(current.status)) {
+        sessionStore.updateSession(sessionId, "completed");
+      }
+    } catch (err) {
+      sessionStore.updateSession(sessionId, "failed", undefined, String(err));
+    } finally {
+      logWriter.endSession(logPath);
+      try { writeTranscript(logPath); } catch { /* non-critical */ }
+      onComplete?.();
+    }
+  })();
 }
 
 export function registerGrackleRoutes(router: ConnectRouter): void {
@@ -160,60 +296,8 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       const logPath = join(homedir(), GRACKLE_DIR, LOGS_DIR, sessionId);
 
       sessionStore.createSession(sessionId, req.envId, runtime, req.prompt, model, logPath);
-
-      // Start streaming from sidecar in background
-      const sidecarReq = create(sidecar.SpawnRequestSchema, {
-        sessionId,
-        runtime,
-        prompt: req.prompt,
-        model,
-        maxTurns: req.maxTurns || 0,
-        branch: req.branch || "",
-        worktreeBasePath: req.branch ? "/workspace" : "",
-        systemContext: req.systemContext || "",
-      });
-
-      // Initialize log writer
-      logWriter.initLog(logPath);
-
-      // Fire off sidecar stream and pipe to stream hub + log writer
-      (async () => {
-        try {
-          sessionStore.updateSession(sessionId, "running");
-          for await (const event of conn.client.spawn(sidecarReq)) {
-            const sessionEvent = create(grackle.SessionEventSchema, {
-              sessionId,
-              type: event.type,
-              timestamp: event.timestamp,
-              content: event.content,
-              raw: event.raw,
-            });
-            logWriter.writeEvent(logPath, sessionEvent);
-            streamHub.publish(sessionEvent);
-
-            if (event.type === "status") {
-              if (event.content === "waiting_input") {
-                sessionStore.updateSessionStatus(sessionId, "waiting_input");
-              } else if (event.content === "running") {
-                sessionStore.updateSessionStatus(sessionId, "running");
-              } else if (event.content === "completed") {
-                sessionStore.updateSession(sessionId, "completed");
-              }
-            }
-          }
-
-          // Stream ended — mark completed if not already
-          const current = sessionStore.getSession(sessionId);
-          if (current && !["completed", "failed", "killed"].includes(current.status)) {
-            sessionStore.updateSession(sessionId, "completed");
-          }
-        } catch (err) {
-          sessionStore.updateSession(sessionId, "failed", undefined, String(err));
-        } finally {
-          logWriter.endSession(logPath);
-          try { writeTranscript(logPath); } catch { /* non-critical */ }
-        }
-      })();
+      spawnOnSidecar(conn, sessionId, runtime, req.prompt, model, logPath,
+        req.branch || "", req.systemContext || "", "", "");
 
       const row = sessionStore.getSession(sessionId);
       return sessionRowToProto(row!);
@@ -349,6 +433,229 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
             expiresAt: t.expiresAt || "",
           })
         ),
+      });
+    },
+
+    // ─── Projects ────────────────────────────────────────────
+
+    async listProjects() {
+      const rows = projectStore.listProjects();
+      return create(grackle.ProjectListSchema, {
+        projects: rows.map(projectRowToProto),
+      });
+    },
+
+    async createProject(req) {
+      const id = slugify(req.name) || uuid().slice(0, 8);
+      projectStore.createProject(id, req.name, req.description, req.repoUrl, req.defaultEnvId);
+      const row = projectStore.getProject(id);
+      return projectRowToProto(row!);
+    },
+
+    async getProject(req) {
+      const row = projectStore.getProject(req.id);
+      if (!row) throw new Error(`Project not found: ${req.id}`);
+      return projectRowToProto(row);
+    },
+
+    async archiveProject(req) {
+      projectStore.archiveProject(req.id);
+      return create(grackle.EmptySchema, {});
+    },
+
+    // ─── Tasks ───────────────────────────────────────────────
+
+    async listTasks(req) {
+      const rows = taskStore.listTasks(req.id);
+      return create(grackle.TaskListSchema, {
+        tasks: rows.map(taskRowToProto),
+      });
+    },
+
+    async createTask(req) {
+      const project = projectStore.getProject(req.projectId);
+      if (!project) throw new Error(`Project not found: ${req.projectId}`);
+
+      const id = uuid().slice(0, 8);
+      const envId = req.envId || project.default_env_id;
+      taskStore.createTask(id, req.projectId, req.title, req.description, envId, [...req.dependsOn], slugify(project.name));
+      const row = taskStore.getTask(id);
+      return taskRowToProto(row!);
+    },
+
+    async getTask(req) {
+      const row = taskStore.getTask(req.id);
+      if (!row) throw new Error(`Task not found: ${req.id}`);
+      return taskRowToProto(row);
+    },
+
+    async updateTask(req) {
+      const existing = taskStore.getTask(req.id);
+      if (!existing) throw new Error(`Task not found: ${req.id}`);
+
+      taskStore.updateTask(
+        req.id,
+        req.title || existing.title,
+        req.description || existing.description,
+        req.status || existing.status,
+        req.envId || existing.env_id,
+        req.dependsOn.length > 0 ? [...req.dependsOn] : JSON.parse(existing.depends_on),
+        req.reviewNotes || existing.review_notes,
+      );
+      const row = taskStore.getTask(req.id);
+      return taskRowToProto(row!);
+    },
+
+    async startTask(req) {
+      const task = taskStore.getTask(req.taskId);
+      if (!task) throw new Error(`Task not found: ${req.taskId}`);
+      if (!["pending", "assigned"].includes(task.status)) {
+        throw new Error(`Task ${req.taskId} cannot be started (status: ${task.status})`);
+      }
+      if (!taskStore.areDependenciesMet(req.taskId)) {
+        throw new Error(`Task ${req.taskId} has unmet dependencies`);
+      }
+
+      const project = projectStore.getProject(task.project_id);
+      if (!project) throw new Error(`Project not found: ${task.project_id}`);
+
+      const envId = task.env_id || project.default_env_id;
+      if (!envId) throw new Error("No environment specified for task or project");
+
+      const conn = adapterManager.getConnection(envId);
+      if (!conn) throw new Error(`Environment ${envId} not connected`);
+
+      const sessionId = uuid();
+      const runtime = req.runtime || "claude-code";
+      const model = req.model || "claude-sonnet-4-5-20250514";
+      const logPath = join(homedir(), GRACKLE_DIR, LOGS_DIR, sessionId);
+
+      // Build system context with task description + findings
+      const findingsContext = findingStore.buildFindingsContext(task.project_id);
+      const systemContext = [
+        `## Task: ${task.title}`,
+        task.description,
+        findingsContext,
+      ].filter(Boolean).join("\n\n");
+
+      sessionStore.createSession(sessionId, envId, runtime, task.title, model, logPath);
+      taskStore.setTaskSession(task.id, sessionId);
+      taskStore.markTaskStarted(task.id);
+
+      spawnOnSidecar(conn, sessionId, runtime, task.title, model, logPath,
+        task.branch, systemContext, task.project_id, task.id,
+        () => {
+          // On completion, auto-move task to review
+          const t = taskStore.getTask(task.id);
+          if (t && t.status === "in_progress") {
+            const sess = sessionStore.getSession(sessionId);
+            if (sess?.status === "completed") {
+              taskStore.markTaskCompleted(task.id, "review");
+            } else if (sess?.status === "failed") {
+              taskStore.markTaskCompleted(task.id, "failed");
+            }
+          }
+        },
+      );
+
+      const row = sessionStore.getSession(sessionId);
+      return sessionRowToProto(row!);
+    },
+
+    async approveTask(req) {
+      const task = taskStore.getTask(req.id);
+      if (!task) throw new Error(`Task not found: ${req.id}`);
+
+      taskStore.markTaskCompleted(task.id, "done");
+
+      // Check for newly unblocked tasks
+      const unblocked = taskStore.checkAndUnblock(task.project_id);
+      // Publish task events for each unblocked task
+      for (const t of unblocked) {
+        streamHub.publish(create(grackle.SessionEventSchema, {
+          sessionId: "",
+          type: "system",
+          timestamp: new Date().toISOString(),
+          content: JSON.stringify({ type: "task_unblocked", taskId: t.id, title: t.title }),
+          raw: "",
+        }));
+      }
+
+      const row = taskStore.getTask(task.id);
+      return taskRowToProto(row!);
+    },
+
+    async rejectTask(req) {
+      const task = taskStore.getTask(req.id);
+      if (!task) throw new Error(`Task not found: ${req.id}`);
+
+      taskStore.updateTask(
+        task.id, task.title, task.description, "assigned",
+        task.env_id, JSON.parse(task.depends_on), req.reviewNotes || "",
+      );
+
+      const row = taskStore.getTask(task.id);
+      return taskRowToProto(row!);
+    },
+
+    async deleteTask(req) {
+      taskStore.deleteTask(req.id);
+      return create(grackle.EmptySchema, {});
+    },
+
+    // ─── Findings ────────────────────────────────────────────
+
+    async postFinding(req) {
+      const id = uuid().slice(0, 8);
+      findingStore.postFinding(
+        id, req.projectId, req.taskId, req.sessionId,
+        req.category, req.title, req.content, [...req.tags],
+      );
+      const rows = findingStore.queryFindings(req.projectId);
+      const row = rows.find((r) => r.id === id);
+      return findingRowToProto(row!);
+    },
+
+    async queryFindings(req) {
+      const rows = findingStore.queryFindings(
+        req.projectId,
+        req.categories.length > 0 ? [...req.categories] : undefined,
+        req.tags.length > 0 ? [...req.tags] : undefined,
+        req.limit || undefined,
+      );
+      return create(grackle.FindingListSchema, {
+        findings: rows.map(findingRowToProto),
+      });
+    },
+
+    // ─── Diff ────────────────────────────────────────────────
+
+    async getTaskDiff(req) {
+      const task = taskStore.getTask(req.taskId);
+      if (!task) throw new Error(`Task not found: ${req.taskId}`);
+      if (!task.branch) throw new Error("Task has no branch");
+
+      const envId = task.env_id || projectStore.getProject(task.project_id)?.default_env_id;
+      if (!envId) throw new Error("No environment for task");
+
+      const conn = adapterManager.getConnection(envId);
+      if (!conn) throw new Error(`Environment ${envId} not connected`);
+
+      const diffResp = await conn.client.getDiff(
+        create(sidecar.DiffRequestSchema, {
+          branch: task.branch,
+          baseBranch: "main",
+          worktreeBasePath: "/workspace",
+        })
+      );
+
+      return create(grackle.TaskDiffSchema, {
+        taskId: task.id,
+        branch: task.branch,
+        diff: diffResp.diff,
+        changedFiles: [...diffResp.changedFiles],
+        additions: diffResp.additions,
+        deletions: diffResp.deletions,
       });
     },
   });
