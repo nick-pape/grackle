@@ -2,6 +2,9 @@ FROM node:22-slim
 
 RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
 
+# Create non-root user for running the sidecar
+RUN groupadd -r grackle && useradd -r -g grackle -m grackle
+
 WORKDIR /app
 
 # Create a standalone package that combines common + sidecar
@@ -16,12 +19,14 @@ RUN npm install --omit=dev \
     @bufbuild/protobuf@^2.5.0 \
     @connectrpc/connect@^2.0.0 \
     @connectrpc/connect-node@^2.0.0 \
-    @anthropic-ai/claude-agent-sdk@latest
+    @anthropic-ai/claude-agent-sdk@0.2.50
 
 # Workspace for agent operations — mount your repo here
-RUN mkdir -p /workspace
+RUN mkdir -p /workspace && chown grackle:grackle /workspace
 
 EXPOSE 7433
+
+USER grackle
 
 # Run sidecar from /app so node_modules resolve correctly
 # Agents will use /workspace as their cwd

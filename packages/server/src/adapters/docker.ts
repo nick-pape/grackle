@@ -70,7 +70,7 @@ export class DockerAdapter implements EnvironmentAdapter {
     const hostCredsPath = join(homedir(), ".claude", ".credentials.json");
     try {
       readFileSync(hostCredsPath); // verify it exists
-      runArgs.push("-v", `${hostCredsPath}:/root/.claude/.credentials.json:ro`);
+      runArgs.push("-v", `${hostCredsPath}:/home/grackle/.claude/.credentials.json:ro`);
     } catch { /* no credentials file */ }
 
     runArgs.push(image);
