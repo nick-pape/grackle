@@ -534,12 +534,17 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       const model = req.model || "claude-sonnet-4-5-20250514";
       const logPath = join(homedir(), GRACKLE_DIR, LOGS_DIR, sessionId);
 
-      // Build system context with task description + findings
-      const findingsContext = findingStore.buildFindingsContext(task.project_id);
+      // Build system context: task info + review notes + MCP tool instructions
       const systemContext = [
         `## Task: ${task.title}`,
         task.description,
-        findingsContext,
+        task.review_notes ? `## Review Feedback (from previous attempt)\n${task.review_notes}` : "",
+        `## Grackle Tools (MCP)`,
+        `You have access to Grackle MCP tools for coordinating with other agents:`,
+        `- **grackle_post_finding**: Share discoveries (architecture decisions, bugs, patterns) with other agents working on this project. Use categories: architecture, api, bug, decision, dependency, pattern, general.`,
+        `- **grackle_query_findings**: Query findings posted by other agents. Filter by category or tags.`,
+        `- **grackle_get_task**: Get details about your current task.`,
+        `- **grackle_list_tasks**: See other tasks in the project and their status.`,
       ].filter(Boolean).join("\n\n");
 
       sessionStore.createSession(sessionId, envId, runtime, task.title, model, logPath);
