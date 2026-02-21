@@ -1,8 +1,9 @@
 import { useGrackle } from "../context/GrackleContext.js";
+import type { ViewMode } from "../App.js";
 
 interface Props {
-  selectedSession: string | null;
-  onSelectSession: (id: string | null) => void;
+  viewMode: ViewMode;
+  setViewMode: (mode: ViewMode) => void;
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -13,8 +14,11 @@ const STATUS_COLORS: Record<string, string> = {
   connecting: "#70a1ff",
 };
 
-export function EnvironmentList({ selectedSession, onSelectSession }: Props) {
+export function EnvironmentList({ viewMode, setViewMode }: Props) {
   const { environments, sessions } = useGrackle();
+
+  const selectedSessionId = viewMode.kind === "session" ? viewMode.sessionId : null;
+  const newChatEnvId = viewMode.kind === "new_chat" ? viewMode.envId : null;
 
   return (
     <div
@@ -40,6 +44,8 @@ export function EnvironmentList({ selectedSession, onSelectSession }: Props) {
       {environments.map((env) => {
         const envSessions = sessions.filter((s) => s.envId === env.id);
         const statusColor = STATUS_COLORS[env.status] || "#666";
+        const isConnected = env.status === "connected";
+        const isNewChatTarget = newChatEnvId === env.id;
 
         return (
           <div key={env.id}>
@@ -50,25 +56,47 @@ export function EnvironmentList({ selectedSession, onSelectSession }: Props) {
                 display: "flex",
                 alignItems: "center",
                 gap: "6px",
+                background: isNewChatTarget ? "#0f3460" : "transparent",
               }}
             >
               <span style={{ color: statusColor }}>●</span>
               <span>{env.displayName || env.id}</span>
-              {envSessions.length === 0 && (
-                <span style={{ fontSize: "11px", color: "#666", marginLeft: "auto" }}>(idle)</span>
-              )}
+              <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "4px" }}>
+                {envSessions.length === 0 && !isNewChatTarget && (
+                  <span style={{ fontSize: "11px", color: "#666" }}>(idle)</span>
+                )}
+                {isConnected && (
+                  <button
+                    onClick={() => setViewMode({ kind: "new_chat", envId: env.id, runtime: env.defaultRuntime || "claude-code" })}
+                    title="New chat"
+                    style={{
+                      background: "none",
+                      border: "1px solid #4ecca3",
+                      color: "#4ecca3",
+                      borderRadius: "3px",
+                      cursor: "pointer",
+                      fontSize: "12px",
+                      lineHeight: "1",
+                      padding: "1px 5px",
+                      fontFamily: "monospace",
+                    }}
+                  >
+                    +
+                  </button>
+                )}
+              </span>
             </div>
 
             {envSessions.map((session) => (
               <div
                 key={session.id}
-                onClick={() => onSelectSession(session.id)}
+                onClick={() => setViewMode({ kind: "session", sessionId: session.id })}
                 style={{
                   padding: "4px 12px 4px 28px",
                   fontSize: "12px",
                   cursor: "pointer",
-                  background: selectedSession === session.id ? "#0f3460" : "transparent",
-                  color: selectedSession === session.id ? "#e0e0e0" : "#a0a0a0",
+                  background: selectedSessionId === session.id ? "#0f3460" : "transparent",
+                  color: selectedSessionId === session.id ? "#e0e0e0" : "#a0a0a0",
                 }}
               >
                 <SessionStatusDot status={session.status} />

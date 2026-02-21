@@ -1,4 +1,5 @@
 import db from "./db.js";
+import { randomBytes } from "node:crypto";
 import type { EnvironmentStatus } from "@grackle/common";
 
 export interface EnvironmentRow {
@@ -12,14 +13,15 @@ export interface EnvironmentRow {
   last_seen: string | null;
   env_info: string | null;
   created_at: string;
+  sidecar_token: string;
 }
 
 const stmts = {
   list: db.prepare("SELECT * FROM environments"),
   get: db.prepare("SELECT * FROM environments WHERE id = ?"),
   insert: db.prepare(`
-    INSERT INTO environments (id, display_name, adapter_type, adapter_config, default_runtime)
-    VALUES (?, ?, ?, ?, ?)
+    INSERT INTO environments (id, display_name, adapter_type, adapter_config, default_runtime, sidecar_token)
+    VALUES (?, ?, ?, ?, ?, ?)
   `),
   remove: db.prepare("DELETE FROM environments WHERE id = ?"),
   updateStatus: db.prepare("UPDATE environments SET status = ?, last_seen = datetime('now') WHERE id = ?"),
@@ -42,7 +44,8 @@ export function addEnvironment(
   adapterConfig: string,
   defaultRuntime: string
 ): void {
-  stmts.insert.run(id, displayName, adapterType, adapterConfig, defaultRuntime);
+  const sidecarToken = randomBytes(32).toString("hex");
+  stmts.insert.run(id, displayName, adapterType, adapterConfig, defaultRuntime, sidecarToken);
 }
 
 export function removeEnvironment(id: string): void {

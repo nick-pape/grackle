@@ -1,7 +1,6 @@
-import { createClient } from "@connectrpc/connect";
-import { createGrpcTransport } from "@connectrpc/connect-node";
-import { sidecar, DEFAULT_SIDECAR_PORT } from "@grackle/common";
+import { DEFAULT_SIDECAR_PORT } from "@grackle/common";
 import type { EnvironmentAdapter, SidecarConnection, ProvisionEvent } from "./adapter.js";
+import { createSidecarClient } from "./sidecar-transport.js";
 import { exec } from "../utils/exec.js";
 import { findFreePort } from "../utils/ports.js";
 import { spawn as spawnProcess, type ChildProcess } from "node:child_process";
@@ -32,7 +31,7 @@ function sshArgs(config: SshConfig): string[] {
 export class SshAdapter implements EnvironmentAdapter {
   type = "ssh";
 
-  async *provision(envId: string, config: Record<string, unknown>): AsyncGenerator<ProvisionEvent> {
+  async *provision(envId: string, config: Record<string, unknown>, sidecarToken: string): AsyncGenerator<ProvisionEvent> {
     const cfg = config as unknown as SshConfig;
     const target = sshTarget(cfg);
 
@@ -50,9 +49,11 @@ export class SshAdapter implements EnvironmentAdapter {
 
     yield { stage: "bootstrapping", message: "Starting sidecar...", progress: 0.4 };
 
+    // Pass sidecar token as env var when starting the sidecar
+    const tokenEnv = sidecarToken ? `GRACKLE_SIDECAR_TOKEN=${sidecarToken} ` : "";
     await exec("ssh", [
       ...sshArgs(cfg), target,
-      `nohup grackle-sidecar --port=${DEFAULT_SIDECAR_PORT} > /tmp/grackle-sidecar.log 2>&1 &`,
+      `nohup ${tokenEnv}grackle-sidecar --port=${DEFAULT_SIDECAR_PORT} > /tmp/grackle-sidecar.log 2>&1 &`,
     ], { timeout: 30_000 });
 
     yield { stage: "tunneling", message: "Setting up reverse tunnel...", progress: 0.6 };
@@ -79,15 +80,11 @@ export class SshAdapter implements EnvironmentAdapter {
     yield { stage: "connecting", message: `Connecting on port ${localPort}...`, progress: 0.8 };
   }
 
-  async connect(envId: string, _config: Record<string, unknown>): Promise<SidecarConnection> {
+  async connect(envId: string, _config: Record<string, unknown>, sidecarToken: string): Promise<SidecarConnection> {
     const localPort = localPorts.get(envId);
     if (!localPort) throw new Error(`No port mapping for ${envId}`);
 
-    const transport = createGrpcTransport({
-      baseUrl: `http://localhost:${localPort}`,
-    });
-
-    const client = createClient(sidecar.GrackleSidecar, transport);
+    const client = createSidecarClient(`http://localhost:${localPort}`, sidecarToken);
     await client.ping({});
 
     return { client, envId, port: localPort };

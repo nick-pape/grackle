@@ -1,7 +1,6 @@
-import { createClient } from "@connectrpc/connect";
-import { createGrpcTransport } from "@connectrpc/connect-node";
-import { sidecar, DEFAULT_SIDECAR_PORT } from "@grackle/common";
+import { DEFAULT_SIDECAR_PORT } from "@grackle/common";
 import type { EnvironmentAdapter, SidecarConnection, ProvisionEvent } from "./adapter.js";
+import { createSidecarClient } from "./sidecar-transport.js";
 
 interface LocalConfig {
   port?: number;
@@ -11,18 +10,14 @@ interface LocalConfig {
 export class LocalAdapter implements EnvironmentAdapter {
   type = "local";
 
-  async *provision(envId: string, config: Record<string, unknown>): AsyncGenerator<ProvisionEvent> {
+  async *provision(envId: string, config: Record<string, unknown>, sidecarToken: string): AsyncGenerator<ProvisionEvent> {
     const cfg = config as unknown as LocalConfig;
     const port = cfg.port || DEFAULT_SIDECAR_PORT;
     const host = cfg.host || "localhost";
 
     yield { stage: "connecting", message: `Connecting to sidecar at ${host}:${port}...`, progress: 0.5 };
 
-    // Just verify the sidecar is reachable
-    const transport = createGrpcTransport({
-      baseUrl: `http://${host}:${port}`,
-    });
-    const client = createClient(sidecar.GrackleSidecar, transport);
+    const client = createSidecarClient(`http://${host}:${port}`, sidecarToken);
 
     let lastErr: unknown;
     for (let attempt = 0; attempt < 5; attempt++) {
@@ -40,16 +35,12 @@ export class LocalAdapter implements EnvironmentAdapter {
     yield { stage: "error", message: `Could not reach sidecar: ${lastErr}`, progress: 0 };
   }
 
-  async connect(envId: string, config: Record<string, unknown>): Promise<SidecarConnection> {
+  async connect(envId: string, config: Record<string, unknown>, sidecarToken: string): Promise<SidecarConnection> {
     const cfg = config as unknown as LocalConfig;
     const port = cfg.port || DEFAULT_SIDECAR_PORT;
     const host = cfg.host || "localhost";
 
-    const transport = createGrpcTransport({
-      baseUrl: `http://${host}:${port}`,
-    });
-
-    const client = createClient(sidecar.GrackleSidecar, transport);
+    const client = createSidecarClient(`http://${host}:${port}`, sidecarToken);
     await client.ping({});
 
     return { client, envId, port };

@@ -1,5 +1,6 @@
 import { WebSocketServer, type WebSocket } from "ws";
 import type { Server as HttpServer } from "node:http";
+import type { IncomingMessage } from "node:http";
 import { create } from "@bufbuild/protobuf";
 import { grackle, sidecar } from "@grackle/common";
 import * as envRegistry from "./env-registry.js";
@@ -19,10 +20,18 @@ interface WsMessage {
   id?: string;
 }
 
-export function createWsBridge(httpServer: HttpServer): WebSocketServer {
+export function createWsBridge(httpServer: HttpServer, verifyApiKey: (token: string) => boolean): WebSocketServer {
   const wss = new WebSocketServer({ server: httpServer });
 
-  wss.on("connection", (ws: WebSocket) => {
+  wss.on("connection", (ws: WebSocket, req: IncomingMessage) => {
+    // Authenticate via query parameter: ws://host:port?token=<key>
+    const url = new URL(req.url || "/", "http://localhost");
+    const token = url.searchParams.get("token") || "";
+    if (!verifyApiKey(token)) {
+      ws.close(4001, "Unauthorized");
+      return;
+    }
+
     const subscriptions: Array<{ cancel(): void }> = [];
 
     ws.on("message", async (data: Buffer) => {

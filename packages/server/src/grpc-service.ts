@@ -92,7 +92,8 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       envRegistry.updateEnvironmentStatus(req.id, "connecting");
 
       const config = JSON.parse(env.adapter_config);
-      for await (const event of adapter.provision(req.id, config)) {
+      const sidecarToken = env.sidecar_token || "";
+      for await (const event of adapter.provision(req.id, config, sidecarToken)) {
         yield create(grackle.ProvisionEventSchema, {
           stage: event.stage,
           message: event.message,
@@ -101,7 +102,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       }
 
       try {
-        const conn = await adapter.connect(req.id, config);
+        const conn = await adapter.connect(req.id, config, sidecarToken);
         adapterManager.setConnection(req.id, conn);
         envRegistry.updateEnvironmentStatus(req.id, "connected");
 

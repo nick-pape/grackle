@@ -51,4 +51,9 @@ db.exec(`
   );
 `);
 
+// Migration: add sidecar_token column if missing
+try {
+  db.exec("ALTER TABLE environments ADD COLUMN sidecar_token TEXT DEFAULT ''");
+} catch { /* column already exists */ }
+
 export default db;

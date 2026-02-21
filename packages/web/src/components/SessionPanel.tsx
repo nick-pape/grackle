@@ -1,16 +1,18 @@
 import { useGrackle } from "../context/GrackleContext.js";
 import { EventRenderer } from "./EventRenderer.js";
-import { InputBar } from "./InputBar.js";
 import { useEffect, useRef } from "react";
+import type { ViewMode } from "../App.js";
 
 interface Props {
-  sessionId: string | null;
+  viewMode: ViewMode;
 }
 
-export function SessionPanel({ sessionId }: Props) {
-  const { events, sessions, loadSessionEvents } = useGrackle();
+export function SessionPanel({ viewMode }: Props) {
+  const { events, sessions, loadSessionEvents, kill } = useGrackle();
   const scrollRef = useRef<HTMLDivElement>(null);
   const loadedRef = useRef<string | null>(null);
+
+  const sessionId = viewMode.kind === "session" ? viewMode.sessionId : null;
 
   const sessionEvents = sessionId
     ? events.filter((e) => e.sessionId === sessionId)
@@ -24,7 +26,6 @@ export function SessionPanel({ sessionId }: Props) {
   useEffect(() => {
     if (sessionId && sessionId !== loadedRef.current) {
       loadedRef.current = sessionId;
-      // Always request log replay — server will return whatever is on disk
       loadSessionEvents(sessionId);
     }
   }, [sessionId, loadSessionEvents]);
@@ -36,7 +37,8 @@ export function SessionPanel({ sessionId }: Props) {
     }
   }, [sessionEvents.length]);
 
-  if (!sessionId) {
+  // --- empty mode ---
+  if (viewMode.kind === "empty") {
     return (
       <div
         style={{
@@ -47,10 +49,30 @@ export function SessionPanel({ sessionId }: Props) {
           color: "#666",
         }}
       >
-        Select a session or spawn a new agent
+        Select a session or click + to start
       </div>
     );
   }
+
+  // --- new_chat mode ---
+  if (viewMode.kind === "new_chat") {
+    return (
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: "#666",
+        }}
+      >
+        Enter a prompt below to start a new session
+      </div>
+    );
+  }
+
+  // --- session mode ---
+  const isActive = session?.status === "running" || session?.status === "waiting_input";
 
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
@@ -63,15 +85,36 @@ export function SessionPanel({ sessionId }: Props) {
           color: "#a0a0a0",
           display: "flex",
           justifyContent: "space-between",
+          alignItems: "center",
         }}
       >
         <span>
-          Session: {sessionId.slice(0, 8)}
+          Session: {sessionId!.slice(0, 8)}
           {session && ` | ${session.runtime} | ${session.status}`}
         </span>
-        {session && (
-          <span>{session.prompt.length > 60 ? session.prompt.slice(0, 60) + "..." : session.prompt}</span>
-        )}
+        <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          {session && (
+            <span>{session.prompt.length > 60 ? session.prompt.slice(0, 60) + "..." : session.prompt}</span>
+          )}
+          {isActive && (
+            <button
+              onClick={() => kill(sessionId!)}
+              title="Stop session"
+              style={{
+                background: "none",
+                border: "1px solid #e94560",
+                color: "#e94560",
+                borderRadius: "3px",
+                cursor: "pointer",
+                fontSize: "11px",
+                padding: "1px 6px",
+                fontFamily: "monospace",
+              }}
+            >
+              ×
+            </button>
+          )}
+        </span>
       </div>
 
       {/* Event stream */}
@@ -90,11 +133,6 @@ export function SessionPanel({ sessionId }: Props) {
           <EventRenderer key={i} event={event} />
         ))}
       </div>
-
-      {/* Input bar */}
-      {session?.status === "waiting_input" && (
-        <InputBar sessionId={sessionId} />
-      )}
     </div>
   );
 }

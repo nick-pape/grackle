@@ -1,7 +1,6 @@
-import { createClient } from "@connectrpc/connect";
-import { createGrpcTransport } from "@connectrpc/connect-node";
-import { sidecar, DEFAULT_SIDECAR_PORT } from "@grackle/common";
+import { DEFAULT_SIDECAR_PORT } from "@grackle/common";
 import type { EnvironmentAdapter, SidecarConnection, ProvisionEvent } from "./adapter.js";
+import { createSidecarClient } from "./sidecar-transport.js";
 import { exec } from "../utils/exec.js";
 import { findFreePort } from "../utils/ports.js";
 import { readFileSync } from "node:fs";
@@ -22,7 +21,7 @@ const containerPorts = new Map<string, number>();
 export class DockerAdapter implements EnvironmentAdapter {
   type = "docker";
 
-  async *provision(envId: string, config: Record<string, unknown>): AsyncGenerator<ProvisionEvent> {
+  async *provision(envId: string, config: Record<string, unknown>, sidecarToken: string): AsyncGenerator<ProvisionEvent> {
     const cfg = config as unknown as DockerConfig;
     const image = cfg.image || "grackle-sidecar:latest";
     const containerName = cfg.containerName || `grackle-${envId}`;
@@ -41,7 +40,8 @@ export class DockerAdapter implements EnvironmentAdapter {
     const runArgs = [
       "run", "-d",
       "--name", containerName,
-      "-p", `${localPort}:${DEFAULT_SIDECAR_PORT}`,
+      // Bind to 127.0.0.1 only — prevents network exposure
+      "-p", `127.0.0.1:${localPort}:${DEFAULT_SIDECAR_PORT}`,
     ];
 
     if (cfg.volumes) {
@@ -59,6 +59,11 @@ export class DockerAdapter implements EnvironmentAdapter {
     // Forward ANTHROPIC_API_KEY if set on host
     if (process.env.ANTHROPIC_API_KEY && !cfg.env?.ANTHROPIC_API_KEY) {
       runArgs.push("-e", `ANTHROPIC_API_KEY=${process.env.ANTHROPIC_API_KEY}`);
+    }
+
+    // Pass sidecar token for authentication
+    if (sidecarToken) {
+      runArgs.push("-e", `GRACKLE_SIDECAR_TOKEN=${sidecarToken}`);
     }
 
     // Mount Claude Code credentials for subscription auth
@@ -152,15 +157,11 @@ export class DockerAdapter implements EnvironmentAdapter {
     yield { stage: "connecting", message: `Connecting on port ${actualPort}...`, progress: 0.8 };
   }
 
-  async connect(envId: string, config: Record<string, unknown>): Promise<SidecarConnection> {
+  async connect(envId: string, config: Record<string, unknown>, sidecarToken: string): Promise<SidecarConnection> {
     const cfg = config as unknown as DockerConfig;
     const localPort = containerPorts.get(envId) || cfg.localPort || DEFAULT_SIDECAR_PORT;
 
-    const transport = createGrpcTransport({
-      baseUrl: `http://127.0.0.1:${localPort}`,
-    });
-
-    const client = createClient(sidecar.GrackleSidecar, transport);
+    const client = createSidecarClient(`http://127.0.0.1:${localPort}`, sidecarToken);
 
     // Retry ping — container may still be starting
     let lastErr: unknown;
@@ -218,4 +219,3 @@ async function getGitHubToken(): Promise<string | undefined> {
     return undefined;
   }
 }
-

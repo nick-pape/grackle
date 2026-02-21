@@ -18,8 +18,8 @@ export interface ProvisionEvent {
 export interface EnvironmentAdapter {
   type: string;
 
-  provision(envId: string, config: Record<string, unknown>): AsyncGenerator<ProvisionEvent>;
-  connect(envId: string, config: Record<string, unknown>): Promise<SidecarConnection>;
+  provision(envId: string, config: Record<string, unknown>, sidecarToken: string): AsyncGenerator<ProvisionEvent>;
+  connect(envId: string, config: Record<string, unknown>, sidecarToken: string): Promise<SidecarConnection>;
   disconnect(envId: string): Promise<void>;
   stop(envId: string, config: Record<string, unknown>): Promise<void>;
   destroy(envId: string, config: Record<string, unknown>): Promise<void>;
