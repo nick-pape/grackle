@@ -23,14 +23,14 @@ async function getQuery(): Promise<QueryFn> {
   );
 }
 
-function mapMessage(msg: Record<string, unknown>): AgentEvent | null {
+function mapMessage(msg: Record<string, unknown>): AgentEvent[] {
   const ts = new Date().toISOString();
-  const role = msg.role as string | undefined;
   const type = msg.type as string | undefined;
 
-  if (role === "assistant") {
-    // SDKAssistantMessage — may have content blocks
-    const content = msg.content;
+  // SDK streaming format: { type: "assistant", message: { role, content: [...] } }
+  if (type === "assistant") {
+    const inner = msg.message as Record<string, unknown> | undefined;
+    const content = inner?.content;
     if (Array.isArray(content)) {
       const events: AgentEvent[] = [];
       for (const block of content) {
@@ -53,39 +53,25 @@ function mapMessage(msg: Record<string, unknown>): AgentEvent | null {
           });
         }
       }
-      return events.length > 0 ? events[0] : null;
+      return events;
     }
-    return { type: "text", timestamp: ts, content: String(content || ""), raw: msg };
-  }
-
-  if (role === "user" && type === "tool_result") {
-    return {
-      type: "tool_result",
-      timestamp: ts,
-      content: typeof msg.content === "string" ? msg.content : JSON.stringify(msg.content),
-      raw: msg,
-    };
+    return [];
   }
 
   if (type === "result") {
-    return {
-      type: "status",
-      timestamp: ts,
-      content: "completed",
-      raw: msg,
-    };
+    // result messages are handled in stream() for error checking; skip here
+    return [];
   }
 
   if (type === "system") {
-    return {
-      type: "system",
-      timestamp: ts,
-      content: String((msg as Record<string, unknown>).message || ""),
-      raw: msg,
-    };
+    const subtype = msg.subtype as string | undefined;
+    if (subtype === "init") {
+      return [{ type: "system", timestamp: ts, content: `Session initialized (${msg.model || "unknown model"})`, raw: msg }];
+    }
+    return [];
   }
 
-  return null;
+  return [];
 }
 
 class ClaudeCodeSession implements AgentSession {
@@ -128,21 +114,34 @@ class ClaudeCodeSession implements AgentSession {
         options.resume = true;
       }
 
-      const result = await query(options) as Record<string, unknown>;
+      // query() returns an async iterable, not a Promise (despite the type signature)
+      const conversation = query(options) as unknown as AsyncIterable<Record<string, unknown>>;
+      let messageCount = 0;
 
-      // Process messages from result
-      const messages = result.messages as Array<Record<string, unknown>> | undefined;
-      if (messages) {
-        for (const msg of messages) {
-          if (this.killed) break;
-          const event = mapMessage(msg);
-          if (event) yield event;
+      for await (const msg of conversation) {
+        if (this.killed) break;
+
+        // Extract session ID from system init message
+        if (msg.type === "system" && msg.session_id) {
+          this.runtimeSessionId = msg.session_id as string;
+        }
+
+        // Check for result errors (e.g. invalid API key)
+        if (msg.type === "result" && msg.is_error) {
+          const errorMsg = (msg.result as string) || "Claude Code returned an error";
+          yield { type: "error", timestamp: ts(), content: errorMsg, raw: msg };
+          continue;
+        }
+
+        const events = mapMessage(msg);
+        for (const event of events) {
+          messageCount++;
+          yield event;
         }
       }
 
-      // Store runtime session ID for resume
-      if (result.sessionId) {
-        this.runtimeSessionId = result.sessionId as string;
+      if (messageCount === 0) {
+        yield { type: "error", timestamp: ts(), content: "Claude Code returned no messages. Is ANTHROPIC_API_KEY set or ~/.claude/.credentials.json mounted?" };
       }
 
       this.status = "completed";

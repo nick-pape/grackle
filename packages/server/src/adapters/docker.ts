@@ -4,6 +4,9 @@ import { sidecar, DEFAULT_SIDECAR_PORT } from "@grackle/common";
 import type { EnvironmentAdapter, SidecarConnection, ProvisionEvent } from "./adapter.js";
 import { exec } from "../utils/exec.js";
 import { findFreePort } from "../utils/ports.js";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { homedir } from "node:os";
 
 interface DockerConfig {
   image: string;
@@ -51,6 +54,18 @@ export class DockerAdapter implements EnvironmentAdapter {
         runArgs.push("-e", `${key}=${val}`);
       }
     }
+
+    // Forward ANTHROPIC_API_KEY if set on host
+    if (process.env.ANTHROPIC_API_KEY && !cfg.env?.ANTHROPIC_API_KEY) {
+      runArgs.push("-e", `ANTHROPIC_API_KEY=${process.env.ANTHROPIC_API_KEY}`);
+    }
+
+    // Mount Claude Code credentials for subscription auth
+    const hostCredsPath = join(homedir(), ".claude", ".credentials.json");
+    try {
+      readFileSync(hostCredsPath); // verify it exists
+      runArgs.push("-v", `${hostCredsPath}:/root/.claude/.credentials.json:ro`);
+    } catch { /* no credentials file */ }
 
     runArgs.push(image);
 
@@ -146,3 +161,4 @@ export class DockerAdapter implements EnvironmentAdapter {
     }
   }
 }
+
