@@ -7,6 +7,7 @@ import { updateEnvironmentStatus } from "./env-registry.js";
 import { DockerAdapter } from "./adapters/docker.js";
 import { CodespaceAdapter } from "./adapters/codespace.js";
 import { SshAdapter } from "./adapters/ssh.js";
+import { LocalAdapter } from "./adapters/local.js";
 import { createWsBridge } from "./ws-bridge.js";
 import { DEFAULT_SERVER_PORT, DEFAULT_WEB_PORT } from "@grackle/common";
 import { readFileSync, existsSync } from "node:fs";
@@ -19,6 +20,7 @@ import "./db.js";
 registerAdapter(new DockerAdapter());
 registerAdapter(new CodespaceAdapter());
 registerAdapter(new SshAdapter());
+registerAdapter(new LocalAdapter());
 
 // Start heartbeat
 startHeartbeat((envId) => {

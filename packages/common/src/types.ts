@@ -24,7 +24,7 @@ export type AgentEventType =
   | "status"
   | "system";
 
-export type AdapterType = "codespace" | "docker" | "ssh";
+export type AdapterType = "codespace" | "docker" | "ssh" | "local";
 
 export type RuntimeName = "claude-code" | "stub";
 

@@ -34,10 +34,12 @@ export function registerEnvCommands(program: Command): void {
     .option("--codespace", "Codespace adapter")
     .option("--docker", "Docker adapter")
     .option("--ssh", "SSH adapter")
+    .option("--local", "Local sidecar adapter")
     .option("--repo <repo>", "GitHub repo (codespace)")
     .option("--machine <machine>", "Machine type (codespace)")
     .option("--image <image>", "Docker image")
-    .option("--host <host>", "SSH host")
+    .option("--host <host>", "SSH host / local host")
+    .option("--port <port>", "Sidecar port (local adapter)")
     .option("--user <user>", "SSH user")
     .option("--runtime <runtime>", "Default runtime", "claude-code")
     .action(async (name: string, opts) => {
@@ -45,7 +47,11 @@ export function registerEnvCommands(program: Command): void {
       let adapterType = "docker";
       const config: Record<string, unknown> = {};
 
-      if (opts.codespace) {
+      if (opts.local) {
+        adapterType = "local";
+        if (opts.host) config.host = opts.host;
+        if (opts.port) config.port = parseInt(opts.port, 10);
+      } else if (opts.codespace) {
         adapterType = "codespace";
         if (opts.repo) config.repo = opts.repo;
         if (opts.machine) config.machine = opts.machine;
@@ -106,7 +112,6 @@ export function registerEnvCommands(program: Command): void {
 
   env
     .command("wake <id>")
-    .alias("provision")
     .description("Wake a sleeping environment")
     .action(async (id: string) => {
       const client = createGrackleClient();

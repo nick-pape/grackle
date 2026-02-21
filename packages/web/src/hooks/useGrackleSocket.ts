@@ -71,9 +71,21 @@ export function useGrackleSocket(url?: string) {
           case "sessions":
             setSessions((msg.payload?.sessions as Session[]) || []);
             break;
-          case "session_event":
-            setEvents((prev) => [...prev, msg.payload as unknown as SessionEvent]);
+          case "session_event": {
+            const event = msg.payload as unknown as SessionEvent;
+            setEvents((prev) => [...prev, event]);
+            // Update session status when status events arrive
+            if (event.eventType === "status") {
+              setSessions((prev) =>
+                prev.map((s) =>
+                  s.id === event.sessionId
+                    ? { ...s, status: event.content }
+                    : s
+                )
+              );
+            }
             break;
+          }
           case "spawned":
             send({ type: "list_sessions" });
             break;
