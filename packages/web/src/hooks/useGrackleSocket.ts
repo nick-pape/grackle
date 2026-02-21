@@ -42,7 +42,7 @@ declare global {
 export function useGrackleSocket(url?: string) {
   const apiKey = typeof window !== "undefined" ? window.__GRACKLE_API_KEY__ || "" : "";
   const wsUrl = url || (typeof window !== "undefined"
-    ? `ws://${window.location.hostname}:3000?token=${encodeURIComponent(apiKey)}`
+    ? `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}?token=${encodeURIComponent(apiKey)}`
     : "ws://localhost:3000");
 
   const wsRef = useRef<WebSocket | null>(null);
