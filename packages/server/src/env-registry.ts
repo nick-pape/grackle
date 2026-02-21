@@ -63,3 +63,8 @@ export function markBootstrapped(id: string): void {
 export function setEnvInfo(id: string, info: string): void {
   stmts.setEnvInfo.run(info, id);
 }
+
+/** Reset all environment statuses to disconnected on server startup. */
+export function resetAllStatuses(): void {
+  db.prepare("UPDATE environments SET status = 'disconnected'").run();
+}

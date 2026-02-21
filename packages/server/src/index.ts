@@ -16,6 +16,10 @@ import { loadApiKey, verifyApiKey } from "./api-key.js";
 
 // Import db to ensure tables are created
 import "./db.js";
+import { resetAllStatuses } from "./env-registry.js";
+
+// Reset all environment statuses on startup — in-memory connections are lost
+resetAllStatuses();
 
 // Load (or generate) the API key on startup
 const apiKey = loadApiKey();
