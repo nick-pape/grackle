@@ -169,9 +169,16 @@ export function useGrackleSocket(url?: string) {
           case "project_archived":
             send({ type: "list_projects" });
             break;
-          case "tasks":
-            setTasks((msg.payload?.tasks as TaskData[]) || []);
+          case "tasks": {
+            const incoming = (msg.payload?.tasks as TaskData[]) || [];
+            const pid = (msg.payload?.projectId as string) || (incoming.length > 0 ? incoming[0].projectId : "");
+            if (!pid) { setTasks(incoming); break; }
+            setTasks((prev) => [
+              ...prev.filter((t) => t.projectId !== pid),
+              ...incoming,
+            ]);
             break;
+          }
           case "task_created": {
             const taskData = (msg.payload?.task as Record<string, unknown>) || {};
             const pid = (taskData.project_id || taskData.projectId) as string;
@@ -196,9 +203,13 @@ export function useGrackleSocket(url?: string) {
           }
           case "task_approved":
           case "task_rejected":
-          case "task_deleted": {
+          case "task_deleted":
+          case "task_updated": {
             const tp2 = msg.payload as Record<string, unknown>;
-            if (tp2.taskId) {
+            const pid = tp2.projectId as string | undefined;
+            if (pid) {
+              send({ type: "list_tasks", payload: { projectId: pid } });
+            } else if (tp2.taskId) {
               setTasks((prev) => {
                 const found = prev.find((t) => t.id === tp2.taskId);
                 if (found) send({ type: "list_tasks", payload: { projectId: found.projectId } });

@@ -27,8 +27,22 @@ function slugify(text: string): string {
   return text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40);
 }
 
+let wssInstance: WebSocketServer | null = null;
+
+/** Broadcast a message to all connected WS clients */
+export function broadcast(msg: { type: string; payload?: Record<string, unknown> }): void {
+  if (!wssInstance) return;
+  const data = JSON.stringify(msg);
+  for (const client of wssInstance.clients) {
+    if (client.readyState === 1 /* OPEN */) {
+      client.send(data);
+    }
+  }
+}
+
 export function createWsBridge(httpServer: HttpServer, verifyApiKey: (token: string) => boolean): WebSocketServer {
   const wss = new WebSocketServer({ server: httpServer });
+  wssInstance = wss;
 
   wss.on("connection", (ws: WebSocket, req: IncomingMessage) => {
     const url = new URL(req.url || "/", "http://localhost");

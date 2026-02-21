@@ -12,6 +12,7 @@ import * as projectStore from "./project-store.js";
 import * as taskStore from "./task-store.js";
 import * as findingStore from "./finding-store.js";
 import { writeTranscript } from "./transcript.js";
+import { broadcast } from "./ws-bridge.js";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { GRACKLE_DIR, LOGS_DIR, DEFAULT_RUNTIME } from "@grackle/common";
@@ -448,6 +449,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
     async createProject(req) {
       const id = slugify(req.name) || uuid().slice(0, 8);
       projectStore.createProject(id, req.name, req.description, req.repoUrl, req.defaultEnvId);
+      broadcast({ type: "project_created", payload: { projectId: id } });
       const row = projectStore.getProject(id);
       return projectRowToProto(row!);
     },
@@ -460,6 +462,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
 
     async archiveProject(req) {
       projectStore.archiveProject(req.id);
+      broadcast({ type: "project_archived", payload: { projectId: req.id } });
       return create(grackle.EmptySchema, {});
     },
 
@@ -480,6 +483,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       const envId = req.envId || project.default_env_id;
       taskStore.createTask(id, req.projectId, req.title, req.description, envId, [...req.dependsOn], slugify(project.name));
       const row = taskStore.getTask(id);
+      broadcast({ type: "task_created", payload: { task: row ? { ...row, projectId: row.project_id } : null } });
       return taskRowToProto(row!);
     },
 
@@ -554,6 +558,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
             } else if (sess?.status === "failed") {
               taskStore.markTaskCompleted(task.id, "failed");
             }
+            broadcast({ type: "task_updated", payload: { taskId: task.id, projectId: task.project_id } });
           }
         },
       );
@@ -570,7 +575,6 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
 
       // Check for newly unblocked tasks
       const unblocked = taskStore.checkAndUnblock(task.project_id);
-      // Publish task events for each unblocked task
       for (const t of unblocked) {
         streamHub.publish(create(grackle.SessionEventSchema, {
           sessionId: "",
@@ -581,6 +585,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         }));
       }
 
+      broadcast({ type: "task_approved", payload: { taskId: task.id, projectId: task.project_id } });
       const row = taskStore.getTask(task.id);
       return taskRowToProto(row!);
     },
@@ -594,12 +599,15 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         task.env_id, JSON.parse(task.depends_on), req.reviewNotes || "",
       );
 
+      broadcast({ type: "task_rejected", payload: { taskId: task.id, projectId: task.project_id } });
       const row = taskStore.getTask(task.id);
       return taskRowToProto(row!);
     },
 
     async deleteTask(req) {
+      const task = taskStore.getTask(req.id);
       taskStore.deleteTask(req.id);
+      broadcast({ type: "task_deleted", payload: { taskId: req.id, projectId: task?.project_id } });
       return create(grackle.EmptySchema, {});
     },
 
@@ -611,6 +619,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         id, req.projectId, req.taskId, req.sessionId,
         req.category, req.title, req.content, [...req.tags],
       );
+      broadcast({ type: "finding_posted", payload: { projectId: req.projectId, findingId: id } });
       const rows = findingStore.queryFindings(req.projectId);
       const row = rows.find((r) => r.id === id);
       return findingRowToProto(row!);
