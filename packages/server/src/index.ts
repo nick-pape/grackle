@@ -12,6 +12,7 @@ import { DEFAULT_SERVER_PORT, DEFAULT_WEB_PORT } from "@grackle/common";
 import { readFileSync, existsSync } from "node:fs";
 import { join, extname } from "node:path";
 import { loadApiKey, verifyApiKey } from "./api-key.js";
+import { logger } from "./logger.js";
 
 // Import db to ensure tables are created
 import "./db.js";
@@ -51,7 +52,7 @@ const grpcHandler = connectNodeAdapter({
 const grpcServer = http2.createServer(grpcHandler);
 
 grpcServer.listen(grpcPort, "127.0.0.1", () => {
-  console.log(`Grackle gRPC server listening on http://127.0.0.1:${grpcPort}`);
+  logger.info({ port: grpcPort }, "gRPC server listening on http://127.0.0.1:%d", grpcPort);
 });
 
 // --- Web + WebSocket server (HTTP/1.1) ---
@@ -112,12 +113,12 @@ const webServer = http.createServer((req, res) => {
 createWsBridge(webServer, verifyApiKey);
 
 webServer.listen(webPort, "127.0.0.1", () => {
-  console.log(`Grackle web UI + WebSocket on http://127.0.0.1:${webPort}`);
+  logger.info({ port: webPort }, "Web UI + WebSocket on http://127.0.0.1:%d", webPort);
 });
 
 // Graceful shutdown
 function shutdown(): void {
-  console.log("\nShutting down...");
+  logger.info("Shutting down...");
   grpcServer.close();
   webServer.close();
   process.exit(0);

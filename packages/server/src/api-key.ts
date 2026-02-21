@@ -3,6 +3,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync, chmodSync } from "n
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { GRACKLE_DIR, API_KEY_FILENAME } from "@grackle/common";
+import { logger } from "./logger.js";
 
 const grackleDir = join(homedir(), GRACKLE_DIR);
 const keyPath = join(grackleDir, API_KEY_FILENAME);
@@ -32,7 +33,7 @@ export function loadApiKey(): string {
     chmodSync(keyPath, 0o600);
   } catch { /* Windows may not support this */ }
 
-  console.log(`Generated new API key at ${keyPath}`);
+  logger.info({ keyPath }, "Generated new API key");
   return cachedKey;
 }
 

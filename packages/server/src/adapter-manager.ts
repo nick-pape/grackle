@@ -1,5 +1,6 @@
 import type { EnvironmentAdapter, SidecarConnection } from "./adapters/adapter.js";
 import * as envRegistry from "./env-registry.js";
+import { logger } from "./logger.js";
 
 const adapters = new Map<string, EnvironmentAdapter>();
 const connections = new Map<string, SidecarConnection>();
@@ -42,11 +43,11 @@ export function startHeartbeat(onDisconnect: (envId: string) => void): void {
       try {
         const ok = await adapter.healthCheck(conn);
         if (!ok) {
-          console.log(`[heartbeat] Health check failed for ${envId}`);
+          logger.warn({ envId }, "Health check failed");
           onDisconnect(envId);
         }
       } catch {
-        console.log(`[heartbeat] Connection lost for ${envId}`);
+        logger.warn({ envId }, "Connection lost");
         onDisconnect(envId);
       }
     }

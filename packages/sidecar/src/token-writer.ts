@@ -1,5 +1,6 @@
 import { writeFile, mkdir } from "node:fs/promises";
 import { dirname } from "node:path";
+import { logger } from "./logger.js";
 
 const envTokens = new Map<string, string>();
 
@@ -14,12 +15,12 @@ export async function writeTokens(
     if (token.type === "env_var" && token.envVar) {
       process.env[token.envVar] = token.value;
       envTokens.set(token.envVar, token.value);
-      console.log(`[token-writer] Set env var ${token.envVar}`);
+      logger.info({ envVar: token.envVar }, "Set env var %s", token.envVar);
     } else if (token.type === "file" && token.filePath) {
       const resolvedPath = token.filePath.replace(/^~/, process.env.HOME || "");
       await mkdir(dirname(resolvedPath), { recursive: true });
       await writeFile(resolvedPath, token.value, { mode: 0o600 });
-      console.log(`[token-writer] Wrote file ${resolvedPath}`);
+      logger.info({ filePath: resolvedPath }, "Wrote file %s", resolvedPath);
     }
   }
 }

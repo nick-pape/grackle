@@ -3,6 +3,7 @@ import { encrypt, decrypt } from "./crypto.js";
 import { create } from "@bufbuild/protobuf";
 import { sidecar } from "@grackle/common";
 import * as adapterManager from "./adapter-manager.js";
+import { logger } from "./logger.js";
 
 interface TokenConfig {
   name: string;
@@ -77,7 +78,7 @@ export async function pushToAll(): Promise<void> {
 
   for (const [envId] of connections) {
     promises.push(pushToEnv(envId).catch((err) => {
-      console.error(`[token-broker] Failed to push to ${envId}:`, err);
+      logger.error({ envId, err }, "Failed to push tokens");
     }));
   }
 

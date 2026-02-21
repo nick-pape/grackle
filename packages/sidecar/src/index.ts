@@ -8,6 +8,7 @@ import { registerRuntime } from "./runtime-registry.js";
 import { StubRuntime } from "./runtimes/stub.js";
 import { ClaudeCodeRuntime } from "./runtimes/claude-code.js";
 import { DEFAULT_SIDECAR_PORT } from "@grackle/common";
+import { logger } from "./logger.js";
 
 // Parse CLI args
 const portArg = process.argv.find((a) => a.startsWith("--port="));
@@ -42,12 +43,12 @@ const server = http2.createServer(handler);
 
 server.listen(port, () => {
   const authStatus = sidecarToken ? "authenticated" : "NO AUTH (development only)";
-  console.log(`Grackle sidecar listening on http://localhost:${port} [${authStatus}]`);
+  logger.info({ port, authStatus }, "Sidecar listening on http://localhost:%d [%s]", port, authStatus);
 });
 
 // Graceful shutdown
 process.on("SIGINT", () => {
-  console.log("\nShutting down sidecar...");
+  logger.info("Shutting down sidecar...");
   server.close();
   process.exit(0);
 });
