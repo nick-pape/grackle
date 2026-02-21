@@ -77,6 +77,7 @@ function mapMessage(msg: Record<string, unknown>): AgentEvent[] {
 
 class ClaudeCodeSession implements AgentSession {
   id: string;
+  runtimeName = "claude-code";
   runtimeSessionId: string;
   status: SessionStatus = "running";
   private inputQueue = new AsyncQueue<string>();

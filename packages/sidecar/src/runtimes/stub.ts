@@ -4,6 +4,7 @@ import type { SessionStatus } from "@grackle/common";
 
 class StubSession implements AgentSession {
   id: string;
+  runtimeName = "stub";
   runtimeSessionId: string;
   status: SessionStatus = "running";
 

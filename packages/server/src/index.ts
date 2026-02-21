@@ -1,4 +1,5 @@
 import { connectNodeAdapter } from "@connectrpc/connect-node";
+import { ConnectError, Code } from "@connectrpc/connect";
 import http2 from "node:http2";
 import http from "node:http";
 import { registerGrackleRoutes } from "./grpc-service.js";
@@ -41,7 +42,7 @@ const grpcHandler = connectNodeAdapter({
       const authHeader = req.header.get("authorization") || "";
       const token = authHeader.replace(/^Bearer\s+/i, "");
       if (!verifyApiKey(token)) {
-        throw new Error("Unauthorized: invalid or missing API key");
+        throw new ConnectError("Unauthorized", Code.Unauthenticated);
       }
       return next(req);
     },

@@ -45,7 +45,7 @@ export function registerAgentCommands(program: Command): void {
       const client = createGrackleClient();
       const res = await client.listSessions({
         envId: opts.env || "",
-        status: opts.all ? "" : "",
+        status: opts.all ? "" : "active",
       });
       if (res.sessions.length === 0) {
         console.log("No sessions.");

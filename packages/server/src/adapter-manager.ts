@@ -1,4 +1,5 @@
 import type { EnvironmentAdapter, SidecarConnection } from "./adapters/adapter.js";
+import * as envRegistry from "./env-registry.js";
 
 const adapters = new Map<string, EnvironmentAdapter>();
 const connections = new Map<string, SidecarConnection>();
@@ -33,7 +34,9 @@ export function startHeartbeat(onDisconnect: (envId: string) => void): void {
 
   heartbeatInterval = setInterval(async () => {
     for (const [envId, conn] of connections) {
-      const adapter = adapters.get(conn.envId);
+      const env = envRegistry.getEnvironment(envId);
+      if (!env) continue;
+      const adapter = adapters.get(env.adapter_type);
       if (!adapter) continue;
 
       try {

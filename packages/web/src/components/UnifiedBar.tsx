@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useState, useEffect, type FormEvent } from "react";
 import { useGrackle } from "../context/GrackleContext.js";
 import type { ViewMode } from "../App.js";
 
@@ -10,7 +10,15 @@ interface Props {
 export function UnifiedBar({ viewMode, setViewMode }: Props) {
   const { spawn, sendInput, kill, sessions } = useGrackle();
   const [text, setText] = useState("");
-  const [runtime, setRuntime] = useState("claude-code");
+  const [runtime, setRuntime] = useState(
+    viewMode.kind === "new_chat" ? viewMode.runtime : "claude-code"
+  );
+
+  useEffect(() => {
+    if (viewMode.kind === "new_chat") {
+      setRuntime(viewMode.runtime);
+    }
+  }, [viewMode]);
 
   const session = viewMode.kind === "session"
     ? sessions.find((s) => s.id === viewMode.sessionId)

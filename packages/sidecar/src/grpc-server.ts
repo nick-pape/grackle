@@ -106,7 +106,7 @@ export function registerSidecarRoutes(router: ConnectRouter): void {
         sessions: sessions.map((s) =>
           create(sidecar.SessionInfoSchema, {
             sessionId: s.id,
-            runtime: s.runtimeSessionId,
+            runtime: s.runtimeName,
             status: s.status,
           })
         ),

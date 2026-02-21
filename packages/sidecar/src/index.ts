@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { connectNodeAdapter } from "@connectrpc/connect-node";
+import { ConnectError, Code } from "@connectrpc/connect";
 import http2 from "node:http2";
 import { registerSidecarRoutes } from "./grpc-server.js";
 import { registerRuntime } from "./runtime-registry.js";
@@ -29,7 +30,7 @@ const handler = connectNodeAdapter({
           const authHeader = req.header.get("authorization") || "";
           const token = authHeader.replace(/^Bearer\s+/i, "");
           if (token !== sidecarToken) {
-            throw new Error("Unauthorized: invalid sidecar token");
+            throw new ConnectError("Unauthorized", Code.Unauthenticated);
           }
           return next(req);
         },

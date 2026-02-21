@@ -1,6 +1,6 @@
 export class AsyncQueue<T> {
   private queue: T[] = [];
-  private waiters: Array<(value: T) => void> = [];
+  private waiters: Array<(value: T | undefined) => void> = [];
   private closed = false;
 
   push(item: T): void {
@@ -18,16 +18,15 @@ export class AsyncQueue<T> {
       return this.queue.shift();
     }
     if (this.closed) return undefined;
-    return new Promise<T>((resolve) => {
+    return new Promise<T | undefined>((resolve) => {
       this.waiters.push(resolve);
     });
   }
 
   close(): void {
     this.closed = true;
-    // Resolve all pending waiters with undefined
     for (const waiter of this.waiters) {
-      waiter(undefined as unknown as T);
+      waiter(undefined);
     }
     this.waiters.length = 0;
   }

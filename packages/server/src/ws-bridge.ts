@@ -1,4 +1,4 @@
-import { WebSocketServer, type WebSocket } from "ws";
+import { WebSocketServer, WebSocket } from "ws";
 import type { Server as HttpServer } from "node:http";
 import type { IncomingMessage } from "node:http";
 import { create } from "@bufbuild/protobuf";
@@ -49,7 +49,7 @@ export function createWsBridge(httpServer: HttpServer, verifyApiKey: (token: str
 
     // Ping/pong keepalive
     const pingInterval = setInterval(() => {
-      if (ws.readyState === ws.OPEN) ws.ping();
+      if (ws.readyState === WebSocket.OPEN) ws.ping();
     }, 30_000);
 
     ws.on("close", () => clearInterval(pingInterval));
@@ -227,9 +227,17 @@ async function handleMessage(
             streamHub.publish(sessionEvent);
 
             if (event.type === "status") {
-              if (event.content === "waiting_input") sessionStore.updateSessionStatus(sessionId, "waiting_input");
-              else if (event.content === "running") sessionStore.updateSessionStatus(sessionId, "running");
-              else if (event.content === "completed") sessionStore.updateSession(sessionId, "completed");
+              if (event.content === "waiting_input") {
+                sessionStore.updateSessionStatus(sessionId, "waiting_input");
+              } else if (event.content === "running") {
+                sessionStore.updateSessionStatus(sessionId, "running");
+              } else if (event.content === "completed") {
+                sessionStore.updateSession(sessionId, "completed");
+              } else if (event.content === "failed") {
+                sessionStore.updateSession(sessionId, "failed");
+              } else if (event.content === "killed") {
+                sessionStore.updateSession(sessionId, "killed");
+              }
             }
           }
           const current = sessionStore.getSession(sessionId);
@@ -288,7 +296,7 @@ async function handleMessage(
 }
 
 function sendWs(ws: WebSocket, msg: { type: string; payload?: Record<string, unknown> }): void {
-  if (ws.readyState === ws.OPEN) {
+  if (ws.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify(msg));
   }
 }

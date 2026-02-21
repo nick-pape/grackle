@@ -201,6 +201,10 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
                 sessionStore.updateSessionStatus(sessionId, "running");
               } else if (event.content === "completed") {
                 sessionStore.updateSession(sessionId, "completed");
+              } else if (event.content === "failed") {
+                sessionStore.updateSession(sessionId, "failed");
+              } else if (event.content === "killed") {
+                sessionStore.updateSession(sessionId, "killed");
               }
             }
           }

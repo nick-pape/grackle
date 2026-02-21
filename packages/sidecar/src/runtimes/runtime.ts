@@ -21,6 +21,7 @@ export interface ResumeOpts {
 
 export interface AgentSession {
   id: string;
+  runtimeName: string;
   runtimeSessionId: string;
   status: SessionStatus;
   stream(): AsyncIterable<AgentEvent>;
