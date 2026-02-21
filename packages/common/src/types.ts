@@ -22,7 +22,12 @@ export type AgentEventType =
   | "tool_result"
   | "error"
   | "status"
-  | "system";
+  | "system"
+  | "finding";
+
+export type TaskStatus = "pending" | "assigned" | "in_progress" | "review" | "done" | "failed";
+export type ProjectStatus = "active" | "archived";
+export type FindingCategory = "architecture" | "api" | "bug" | "decision" | "dependency" | "pattern" | "general";
 
 export type AdapterType = "codespace" | "docker" | "ssh" | "local";
 

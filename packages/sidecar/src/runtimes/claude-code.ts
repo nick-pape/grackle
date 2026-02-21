@@ -2,6 +2,7 @@ import type { AgentRuntime, AgentSession, AgentEvent, SpawnOpts, ResumeOpts } fr
 import type { SessionStatus } from "@grackle/common";
 import { AsyncQueue } from "../utils/async-queue.js";
 import { existsSync, readdirSync } from "node:fs";
+import { ensureWorktree } from "../worktree.js";
 
 // Dynamic import — try @anthropic-ai/claude-agent-sdk first, then @anthropic-ai/claude-code
 type QueryFn = (opts: Record<string, unknown>) => Promise<unknown>;
@@ -87,7 +88,10 @@ class ClaudeCodeSession implements AgentSession {
     private prompt: string,
     private model: string,
     private maxTurns: number,
-    private resumeSessionId?: string
+    private resumeSessionId?: string,
+    private branch?: string,
+    private worktreeBasePath?: string,
+    private systemContext?: string,
   ) {
     this.id = id;
     this.runtimeSessionId = resumeSessionId || "";
@@ -100,16 +104,30 @@ class ClaudeCodeSession implements AgentSession {
     yield { type: "system", timestamp: ts(), content: "Starting Claude Code runtime..." };
 
     try {
-      // Use /workspace as cwd if it exists and has content (i.e. a repo was cloned)
-      const workspacePath = "/workspace";
-      const useWorkspace = existsSync(workspacePath) &&
-        readdirSync(workspacePath).length > 0;
+      // Determine cwd: worktree > /workspace > default
+      let cwd: string | undefined;
+
+      if (this.branch && this.worktreeBasePath) {
+        const wt = await ensureWorktree(this.worktreeBasePath, this.branch);
+        cwd = wt.worktreePath;
+        yield { type: "system", timestamp: ts(), content: `Worktree ready: ${wt.worktreePath} (branch: ${this.branch}, created: ${wt.created})` };
+      } else {
+        const workspacePath = "/workspace";
+        const useWorkspace = existsSync(workspacePath) &&
+          readdirSync(workspacePath).length > 0;
+        if (useWorkspace) cwd = workspacePath;
+      }
+
+      // Build final prompt with system context
+      const finalPrompt = this.systemContext
+        ? `${this.systemContext}\n\n---\n\n${this.prompt}`
+        : this.prompt;
 
       const options: Record<string, unknown> = {
-        prompt: this.prompt,
+        prompt: finalPrompt,
         model: this.model,
         abortController: new AbortController(),
-        ...(useWorkspace ? { cwd: workspacePath } : {}),
+        ...(cwd ? { cwd } : {}),
       };
 
       if (this.maxTurns > 0) {
@@ -175,7 +193,16 @@ export class ClaudeCodeRuntime implements AgentRuntime {
   name = "claude-code";
 
   spawn(opts: SpawnOpts): AgentSession {
-    return new ClaudeCodeSession(opts.sessionId, opts.prompt, opts.model, opts.maxTurns);
+    return new ClaudeCodeSession(
+      opts.sessionId,
+      opts.prompt,
+      opts.model,
+      opts.maxTurns,
+      undefined,
+      opts.branch,
+      opts.worktreeBasePath,
+      opts.systemContext,
+    );
   }
 
   resume(opts: ResumeOpts): AgentSession {

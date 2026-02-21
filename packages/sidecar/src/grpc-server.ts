@@ -4,7 +4,12 @@ import { sidecar } from "@grackle/common";
 import { getRuntime, listRuntimes } from "./runtime-registry.js";
 import { addSession, getSession, listAllSessions } from "./session-mgr.js";
 import { writeTokens } from "./token-writer.js";
+import { removeWorktree } from "./worktree.js";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import os from "node:os";
+
+const execAsync = promisify(execFile);
 
 const startTime = Date.now();
 
@@ -37,6 +42,11 @@ export function registerSidecarRoutes(router: ConnectRouter): void {
         prompt: req.prompt,
         model: req.model,
         maxTurns: req.maxTurns,
+        branch: req.branch || undefined,
+        worktreeBasePath: req.worktreeBasePath || undefined,
+        systemContext: req.systemContext || undefined,
+        projectId: req.projectId || undefined,
+        taskId: req.taskId || undefined,
       });
 
       addSession(session);
@@ -122,6 +132,56 @@ export function registerSidecarRoutes(router: ConnectRouter): void {
     async pushTokens(req) {
       await writeTokens(req.tokens);
       return create(sidecar.EmptySchema, {});
+    },
+
+    async cleanupWorktree(req) {
+      if (req.branch && req.worktreeBasePath) {
+        await removeWorktree(req.worktreeBasePath, req.branch);
+      }
+      return create(sidecar.EmptySchema, {});
+    },
+
+    async getDiff(req) {
+      const baseBranch = req.baseBranch || "main";
+      const basePath = req.worktreeBasePath || "/workspace";
+
+      try {
+        // Get the diff
+        const { stdout: diff } = await execAsync(
+          "git", ["diff", `${baseBranch}...${req.branch}`],
+          { cwd: basePath, maxBuffer: 10 * 1024 * 1024 }
+        );
+
+        // Get changed files
+        const { stdout: filesOut } = await execAsync(
+          "git", ["diff", "--name-only", `${baseBranch}...${req.branch}`],
+          { cwd: basePath }
+        );
+        const changedFiles = filesOut.trim().split("\n").filter(Boolean);
+
+        // Get stat
+        const { stdout: statOut } = await execAsync(
+          "git", ["diff", "--stat", `${baseBranch}...${req.branch}`],
+          { cwd: basePath }
+        );
+        const statMatch = statOut.match(/(\d+) insertion.+?(\d+) deletion/);
+        const additions = statMatch ? parseInt(statMatch[1], 10) : 0;
+        const deletions = statMatch ? parseInt(statMatch[2], 10) : 0;
+
+        return create(sidecar.DiffResponseSchema, {
+          diff,
+          changedFiles,
+          additions,
+          deletions,
+        });
+      } catch (err) {
+        return create(sidecar.DiffResponseSchema, {
+          diff: `Error getting diff: ${err}`,
+          changedFiles: [],
+          additions: 0,
+          deletions: 0,
+        });
+      }
     },
   });
 }

@@ -28,6 +28,11 @@ message SpawnRequest {
   string prompt = 3;
   string model = 4;
   int32 max_turns = 5;
+  string branch = 6;              // Branch for worktree (empty = skip)
+  string worktree_base_path = 7;  // Repo root, e.g. "/workspace"
+  string system_context = 8;      // Prepended to prompt (task desc + findings)
+  string project_id = 9;          // So MCP server knows which project
+  string task_id = 10;            // So MCP server knows which task
 }
 
 message ResumeRequest {
@@ -73,6 +78,28 @@ message TokenBundle {
   repeated TokenItem tokens = 1;
 }
 
+// ─── Worktree ──────────────────────────────────────────────
+
+message WorktreeCleanupRequest {
+  string branch = 1;
+  string worktree_base_path = 2;
+}
+
+// ─── Diff ──────────────────────────────────────────────────
+
+message DiffRequest {
+  string branch = 1;
+  string base_branch = 2;
+  string worktree_base_path = 3;
+}
+
+message DiffResponse {
+  string diff = 1;
+  repeated string changed_files = 2;
+  int32 additions = 3;
+  int32 deletions = 4;
+}
+
 // ─── Service ────────────────────────────────────────────────
 
 service GrackleSidecar {
@@ -84,4 +111,6 @@ service GrackleSidecar {
   rpc ListSessions(Empty) returns (SessionList);
   rpc Ping(Empty) returns (Pong);
   rpc PushTokens(TokenBundle) returns (Empty);
+  rpc CleanupWorktree(WorktreeCleanupRequest) returns (Empty);
+  rpc GetDiff(DiffRequest) returns (DiffResponse);
 }

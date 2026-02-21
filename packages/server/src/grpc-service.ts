@@ -151,12 +151,6 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       const env = envRegistry.getEnvironment(req.envId);
       if (!env) throw new Error(`Environment not found: ${req.envId}`);
 
-      // One agent per env (V0)
-      const active = sessionStore.getActiveForEnv(req.envId);
-      if (active) {
-        throw new Error(`Environment ${req.envId} already has an active session: ${active.id}`);
-      }
-
       const conn = adapterManager.getConnection(req.envId);
       if (!conn) throw new Error(`Environment ${req.envId} not connected`);
 
@@ -174,6 +168,9 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         prompt: req.prompt,
         model,
         maxTurns: req.maxTurns || 0,
+        branch: req.branch || "",
+        worktreeBasePath: req.branch ? "/workspace" : "",
+        systemContext: req.systemContext || "",
       });
 
       // Initialize log writer

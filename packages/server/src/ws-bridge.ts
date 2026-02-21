@@ -169,6 +169,8 @@ async function handleMessage(
       const prompt = msg.payload?.prompt as string;
       const model = (msg.payload?.model as string) || "";
       const runtime = (msg.payload?.runtime as string) || "";
+      const branch = (msg.payload?.branch as string) || "";
+      const systemContext = (msg.payload?.systemContext as string) || "";
 
       if (!envId || !prompt) {
         sendWs(ws, { type: "error", payload: { message: "envId and prompt required" } });
@@ -178,12 +180,6 @@ async function handleMessage(
       const env = envRegistry.getEnvironment(envId);
       if (!env) {
         sendWs(ws, { type: "error", payload: { message: `Environment not found: ${envId}` } });
-        return;
-      }
-
-      const active = sessionStore.getActiveForEnv(envId);
-      if (active) {
-        sendWs(ws, { type: "error", payload: { message: `Env already has active session: ${active.id}` } });
         return;
       }
 
@@ -210,6 +206,9 @@ async function handleMessage(
         prompt,
         model: sessionModel,
         maxTurns: 0,
+        branch,
+        worktreeBasePath: branch ? "/workspace" : "",
+        systemContext,
       });
 
       (async () => {

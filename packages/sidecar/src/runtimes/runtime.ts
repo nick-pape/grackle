@@ -12,6 +12,11 @@ export interface SpawnOpts {
   prompt: string;
   model: string;
   maxTurns: number;
+  branch?: string;
+  worktreeBasePath?: string;
+  systemContext?: string;
+  projectId?: string;
+  taskId?: string;
 }
 
 export interface ResumeOpts {
