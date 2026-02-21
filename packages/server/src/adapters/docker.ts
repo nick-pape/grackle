@@ -84,15 +84,24 @@ export class DockerAdapter implements EnvironmentAdapter {
     const localPort = containerPorts.get(envId) || cfg.localPort || DEFAULT_SIDECAR_PORT;
 
     const transport = createGrpcTransport({
-      baseUrl: `http://localhost:${localPort}`,
+      baseUrl: `http://127.0.0.1:${localPort}`,
     });
 
     const client = createClient(sidecar.GrackleSidecar, transport);
 
-    // Verify connection with a ping
-    await client.ping({});
+    // Retry ping — container may still be starting
+    let lastErr: unknown;
+    for (let attempt = 0; attempt < 10; attempt++) {
+      try {
+        await client.ping({});
+        return { client, envId, port: localPort };
+      } catch (err) {
+        lastErr = err;
+        await new Promise((r) => setTimeout(r, 1500));
+      }
+    }
 
-    return { client, envId, port: localPort };
+    throw new Error(`Could not reach sidecar after 10 attempts: ${lastErr}`);
   }
 
   async disconnect(envId: string): Promise<void> {

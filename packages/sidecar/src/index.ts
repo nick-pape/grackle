@@ -5,6 +5,7 @@ import http2 from "node:http2";
 import { registerSidecarRoutes } from "./grpc-server.js";
 import { registerRuntime } from "./runtime-registry.js";
 import { StubRuntime } from "./runtimes/stub.js";
+import { ClaudeCodeRuntime } from "./runtimes/claude-code.js";
 import { DEFAULT_SIDECAR_PORT } from "@grackle/common";
 
 // Parse port from CLI args
@@ -13,6 +14,7 @@ const port = portArg ? parseInt(portArg.split("=")[1], 10) : DEFAULT_SIDECAR_POR
 
 // Register runtimes
 registerRuntime(new StubRuntime());
+registerRuntime(new ClaudeCodeRuntime());
 
 // Start HTTP/2 server
 const handler = connectNodeAdapter({ routes: registerSidecarRoutes });
