@@ -26,5 +26,3 @@ Thumbs.db
 .playwright-mcp/
 *.png
 
-# MCP config (local)
-.mcp.json
