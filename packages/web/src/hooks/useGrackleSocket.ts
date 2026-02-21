@@ -172,25 +172,38 @@ export function useGrackleSocket(url?: string) {
           case "tasks":
             setTasks((msg.payload?.tasks as TaskData[]) || []);
             break;
-          case "task_created":
-          case "task_started":
+          case "task_created": {
+            const taskData = (msg.payload?.task as Record<string, unknown>) || {};
+            const pid = (taskData.project_id || taskData.projectId) as string;
+            if (pid) send({ type: "list_tasks", payload: { projectId: pid } });
+            break;
+          }
+          case "task_started": {
+            const tp = msg.payload as Record<string, unknown>;
+            if (tp.sessionId) {
+              setLastSpawnedId(tp.sessionId as string);
+              send({ type: "list_sessions" });
+            }
+            // Refresh tasks — find the task to get its project
+            if (tp.taskId) {
+              setTasks((prev) => {
+                const found = prev.find((t) => t.id === tp.taskId);
+                if (found) send({ type: "list_tasks", payload: { projectId: found.projectId } });
+                return prev;
+              });
+            }
+            break;
+          }
           case "task_approved":
           case "task_rejected":
           case "task_deleted": {
-            // Refresh tasks for the relevant project
-            const taskPayload = msg.payload as Record<string, unknown>;
-            // Refresh the task list — we need to know which project
-            // Try to find the project from current tasks state
-            if (taskPayload.taskId) {
-              const existing = tasks.find((t) => t.id === taskPayload.taskId);
-              if (existing) {
-                send({ type: "list_tasks", payload: { projectId: existing.projectId } });
-              }
-            }
-            // Also handle task_started which includes sessionId
-            if (msg.type === "task_started" && taskPayload.sessionId) {
-              setLastSpawnedId(taskPayload.sessionId as string);
-              send({ type: "list_sessions" });
+            const tp2 = msg.payload as Record<string, unknown>;
+            if (tp2.taskId) {
+              setTasks((prev) => {
+                const found = prev.find((t) => t.id === tp2.taskId);
+                if (found) send({ type: "list_tasks", payload: { projectId: found.projectId } });
+                return prev;
+              });
             }
             break;
           }
