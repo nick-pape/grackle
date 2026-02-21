@@ -40,6 +40,7 @@ export type TokenType = "env_var" | "file";
 export type ProvisionStage =
   | "creating"
   | "starting"
+  | "cloning"
   | "bootstrapping"
   | "tunneling"
   | "connecting"

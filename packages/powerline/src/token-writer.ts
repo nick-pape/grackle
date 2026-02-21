@@ -47,20 +47,20 @@ export async function writeTokens(
         continue;
       }
       await mkdir(dirname(resolvedPath), { recursive: true });
-      await writeFile(resolvedPath, token.value, { mode: 0o600 });
 
-      // After writing, verify the real path is still under home (catches symlink attacks)
+      // Resolve symlinks on the parent directory BEFORE writing to prevent symlink-based traversal
       try {
-        const realWrittenPath = await realpath(resolvedPath);
-        if (!isUnderHome(realWrittenPath, home)) {
-          logger.warn({ filePath: realWrittenPath }, "Token file resolved outside home via symlink — removing");
-          const { unlink } = await import("node:fs/promises");
-          await unlink(resolvedPath);
+        const realParent = await realpath(dirname(resolvedPath));
+        if (!isUnderHome(realParent, home)) {
+          logger.warn({ filePath: resolvedPath, realParent }, "Parent directory resolves outside home via symlink");
           continue;
         }
       } catch {
-        // File may not resolve if path components don't exist; allow it since we verified pre-write
+        logger.warn({ filePath: resolvedPath }, "Cannot resolve parent directory real path");
+        continue;
       }
+
+      await writeFile(resolvedPath, token.value, { mode: 0o600 });
 
       logger.info({ filePath: resolvedPath }, "Wrote file %s", resolvedPath);
     }
