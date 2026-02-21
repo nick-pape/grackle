@@ -7,6 +7,28 @@ interface Props {
   setViewMode: (mode: ViewMode) => void;
 }
 
+// --- Subcomponents ---
+
+interface RuntimeSelectorProps {
+  value: string;
+  onChange: (value: string) => void;
+}
+
+function RuntimeSelector({ value, onChange }: RuntimeSelectorProps) {
+  return (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      style={selectStyle}
+    >
+      <option value="claude-code">claude-code</option>
+      <option value="stub">stub</option>
+    </select>
+  );
+}
+
+// --- Main component ---
+
 export function UnifiedBar({ viewMode, setViewMode }: Props) {
   const { spawn, sendInput, kill, sessions } = useGrackle();
   const [text, setText] = useState("");
@@ -71,14 +93,7 @@ export function UnifiedBar({ viewMode, setViewMode }: Props) {
           autoFocus
           style={inputStyle}
         />
-        <select
-          value={runtime}
-          onChange={(e) => setRuntime(e.target.value)}
-          style={selectStyle}
-        >
-          <option value="claude-code">claude-code</option>
-          <option value="stub">stub</option>
-        </select>
+        <RuntimeSelector value={runtime} onChange={setRuntime} />
         <button
           type="submit"
           disabled={!text.trim()}
@@ -181,6 +196,8 @@ export function UnifiedBar({ viewMode, setViewMode }: Props) {
     </div>
   );
 }
+
+// --- Shared styles ---
 
 const barStyle: React.CSSProperties = {
   display: "flex",
