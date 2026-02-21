@@ -9,9 +9,9 @@ import * as streamHub from "./stream-hub.js";
 import * as tokenBroker from "./token-broker.js";
 import * as logWriter from "./log-writer.js";
 import { writeTranscript } from "./transcript.js";
-import { homedir } from "node:os";
 import { join } from "node:path";
-import { GRACKLE_DIR, LOGS_DIR, DEFAULT_RUNTIME, DEFAULT_MODEL } from "@grackle/common";
+import { LOGS_DIR, DEFAULT_RUNTIME, DEFAULT_MODEL } from "@grackle/common";
+import { grackleHome } from "./paths.js";
 
 function envRowToProto(row: envRegistry.EnvironmentRow): grackle.Environment {
   return create(grackle.EnvironmentSchema, {
@@ -164,7 +164,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       const sessionId = uuid();
       const runtime = req.runtime || env.default_runtime;
       const model = req.model || DEFAULT_MODEL;
-      const logPath = join(homedir(), GRACKLE_DIR, LOGS_DIR, sessionId);
+      const logPath = join(grackleHome, LOGS_DIR, sessionId);
 
       sessionStore.createSession(sessionId, req.envId, runtime, req.prompt, model, logPath);
 
