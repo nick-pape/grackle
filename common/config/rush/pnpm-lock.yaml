@@ -578,7 +578,7 @@ packages:
     version: 0.0.0
 
   '@rush-temp/sidecar@file:projects/sidecar.tgz':
-    resolution: {integrity: sha512-2G8g2bNw5V/290TSTNJ2UgqvEKG6E5Xi0ygErolJuBI7TBoMG7xcFCAQU10XJOdjVqnkDQ25WV/Jqr2MylTccA==, tarball: file:projects/sidecar.tgz}
+    resolution: {integrity: sha512-kxTPZ2aZ+wbCy1oktuWusRQYpmN5vyZwihg3R+chtzTWcu/II2zewNNoEDcQ3GGWTz2fpSSLNv+cdohDAyYTyQ==, tarball: file:projects/sidecar.tgz}
     version: 0.0.0
 
   '@rush-temp/web@file:projects/web.tgz':
@@ -1506,6 +1506,7 @@ snapshots:
       '@connectrpc/connect': 2.1.1(@bufbuild/protobuf@2.11.0)
       '@connectrpc/connect-node': 2.1.1(@bufbuild/protobuf@2.11.0)(@connectrpc/connect@2.1.1(@bufbuild/protobuf@2.11.0))
       '@types/node': 22.19.11
+      commander: 13.1.0
       pino: 10.3.1
       typescript: 5.7.3
 
