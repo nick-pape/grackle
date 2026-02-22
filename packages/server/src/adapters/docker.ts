@@ -293,6 +293,9 @@ export class DockerAdapter implements EnvironmentAdapter {
       logger.debug("No Claude credentials file found, skipping mount");
     }
 
+    // Chromium needs >64MB shared memory for rendering
+    args.push("--shm-size=1gb");
+
     args.push(image);
     return args;
   }

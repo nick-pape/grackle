@@ -1,0 +1,70 @@
+# Demo Recorder: Playwright base + Xvfb + PulseAudio + ffmpeg + PocketTTS + PowerLine + MCP
+# Base image includes Ubuntu 24.04, Node 22, and Chromium
+FROM mcr.microsoft.com/playwright:v1.50.1-noble
+
+USER root
+
+# ── System packages ─────────────────────────────────────────
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    xvfb \
+    fluxbox \
+    pulseaudio \
+    ffmpeg \
+    python3 \
+    python3-pip \
+    python3-venv \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# ── PocketTTS (neural TTS engine) ──────────────────────────
+RUN python3 -m venv /opt/pockettts \
+    && /opt/pockettts/bin/pip install --no-cache-dir pocket-tts
+
+# ── Non-root user ───────────────────────────────────────────
+RUN groupadd -r grackle 2>/dev/null || true \
+    && useradd -r -g grackle -m grackle 2>/dev/null || true
+
+WORKDIR /app
+
+# ── PowerLine application ──────────────────────────────────
+COPY packages/common/dist/ /app/node_modules/@grackle/common/dist/
+COPY packages/common/package.json /app/node_modules/@grackle/common/package.json
+
+COPY packages/powerline/dist/ /app/dist/
+COPY packages/powerline/package.json /app/package.json
+
+# Runtime dependencies (standalone npm install, not Rush)
+RUN npm install --omit=dev \
+    @bufbuild/protobuf@^2.5.0 \
+    @connectrpc/connect@^2.0.0 \
+    @connectrpc/connect-node@^2.0.0 \
+    @anthropic-ai/claude-agent-sdk@0.2.50
+
+# ── MCP: PocketTTS wrapper ─────────────────────────────────
+COPY tools/demo-recorder/mcp-pockettts/ /app/mcp-pockettts/
+RUN cd /app/mcp-pockettts && npm install --omit=dev
+
+# ── MCP: Playwright (installed globally) ───────────────────
+RUN npm install -g @playwright/mcp@latest
+
+# ── Pre-install Chrome for Playwright MCP (must run as root) ──
+RUN npx playwright install --with-deps chromium \
+    && chmod -R o+rx /ms-playwright || true
+
+# ── MCP config ──────────────────────────────────────────────
+COPY tools/demo-recorder/mcp-config.json /app/mcp-config.json
+ENV GRACKLE_MCP_CONFIG=/app/mcp-config.json
+
+# ── Workspace & credentials ────────────────────────────────
+RUN mkdir -p /workspace && chown grackle:grackle /workspace
+RUN mkdir -p /home/grackle/.claude/debug && chown -R grackle:grackle /home/grackle/.claude
+
+# ── Entrypoint ──────────────────────────────────────────────
+COPY tools/demo-recorder/entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
+EXPOSE 7433
+
+USER grackle
+WORKDIR /app
+CMD ["/app/entrypoint.sh"]

@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "playwright": {
+      "command": "npx",
+      "args": ["@playwright/mcp@latest", "--viewport-size=1920x1080", "--executable-path=/ms-playwright/chromium-1208/chrome-linux64/chrome", "--no-sandbox"],
+      "env": { "DISPLAY": ":99" }
+    },
+    "pockettts": {
+      "command": "node",
+      "args": ["/app/mcp-pockettts/index.js"],
+      "env": {
+        "POCKETTTS_URL": "http://localhost:8890",
+        "DISPLAY": ":99"
+      }
+    }
+  }
+}
