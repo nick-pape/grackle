@@ -20,17 +20,24 @@ const VOICE_MAP = {
 };
 
 // ── Synthesis-wait, playback-async architecture ─────────────
-// v0.5.0: speak() awaits full synthesis (downloads entire WAV),
+// v0.5.1: speak() awaits full synthesis (downloads entire WAV),
 // then enqueues for background playback via ffplay. Returns to
 // agent after synthesis completes — even if audio is still playing.
 // This ties agent pacing to synthesis speed naturally.
+
+// Per-voice playback speed (atempo filter). Lower = slower.
+const VOICE_TEMPO = {
+  snoop: 0.92,
+  avasarala: 0.95,
+  default: 0.95,
+};
 
 const playbackQueue = [];
 let playbackRunning = false;
 
 /** Enqueue a WAV buffer for background playback. */
-function enqueuePlayback(wavBuffer) {
-  playbackQueue.push(wavBuffer);
+function enqueuePlayback(wavBuffer, voice) {
+  playbackQueue.push({ buffer: wavBuffer, voice });
   if (!playbackRunning) {
     drainPlayback();
   }
@@ -40,14 +47,15 @@ function enqueuePlayback(wavBuffer) {
 async function drainPlayback() {
   playbackRunning = true;
   while (playbackQueue.length > 0) {
-    const buffer = playbackQueue.shift();
+    const { buffer, voice } = playbackQueue.shift();
+    const tempo = VOICE_TEMPO[voice] || VOICE_TEMPO.default;
     const wavPath = join(tmpdir(), `tts-${randomUUID()}.wav`);
     try {
       await writeFile(wavPath, buffer);
       await new Promise((resolve, reject) => {
         execFile(
           "ffplay",
-          ["-nodisp", "-autoexit", "-loglevel", "quiet", wavPath],
+          ["-nodisp", "-autoexit", "-loglevel", "quiet", "-af", `atempo=${tempo}`, wavPath],
           { timeout: 120_000 },
           (err) => (err ? reject(err) : resolve()),
         );
@@ -107,7 +115,8 @@ server.tool(
   },
   async ({ text, voice }) => {
     const formData = new FormData();
-    formData.append("text", text);
+    // Prepend "..." to avoid garbled start (known PocketTTS issue with first syllable)
+    formData.append("text", `... ${text}`);
     if (voice && VOICE_MAP[voice]) {
       formData.append("voice_url", VOICE_MAP[voice]);
     }
@@ -132,8 +141,8 @@ server.tool(
 
       // Await full synthesis (download entire WAV)
       const buffer = Buffer.from(await response.arrayBuffer());
-      // Enqueue for background playback
-      enqueuePlayback(buffer);
+      // Enqueue for background playback (with voice for per-voice tempo)
+      enqueuePlayback(buffer, voice);
     } catch (err) {
       return {
         content: [
@@ -155,13 +164,22 @@ server.tool(
 
 server.tool(
   "stop_recording",
-  "Stop the screen recording. Creates the stop signal file so ffmpeg finalizes the MP4 cleanly. Call this as your LAST action when the demo is complete.",
+  "Stop the screen recording. Waits for all queued audio to finish playing, then signals ffmpeg to finalize the MP4. Call this as your LAST action when the demo is complete.",
   {},
   async () => {
+    // Wait for playback queue to drain so all audio is captured in the recording
+    const drainStart = Date.now();
+    while ((playbackQueue.length > 0 || playbackRunning) && Date.now() - drainStart < 60_000) {
+      await new Promise((r) => setTimeout(r, 500));
+    }
+
+    // Extra buffer for final audio to reach PulseAudio sink
+    await new Promise((r) => setTimeout(r, 2000));
+
     try {
       await writeFile("/workspace/stop-recording", "");
       return {
-        content: [{ type: "text", text: "Recording stop signal sent. MP4 is being finalized." }],
+        content: [{ type: "text", text: "Audio drained and recording stopped. MP4 is being finalized." }],
       };
     } catch (err) {
       return {

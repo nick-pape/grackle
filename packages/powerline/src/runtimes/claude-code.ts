@@ -25,6 +25,9 @@ async function getQuery(): Promise<QueryFn> {
   );
 }
 
+/** Path to the Grackle MCP server script bundled in the container image. */
+const GRACKLE_MCP_SCRIPT = "/app/mcp-grackle/index.js";
+
 function mapMessage(msg: Record<string, unknown>): AgentEvent[] {
   const ts = new Date().toISOString();
   const type = msg.type as string | undefined;
@@ -46,6 +49,24 @@ function mapMessage(msg: Record<string, unknown>): AgentEvent[] {
             content: JSON.stringify({ tool: b.name, args: b.input }),
             raw: b,
           });
+          // Intercept finding tool calls and emit a "finding" event for the server
+          const toolName = b.name as string;
+          if (toolName === "mcp__grackle__post_finding" || toolName === "post_finding") {
+            const args = b.input as Record<string, unknown> | undefined;
+            if (args) {
+              events.push({
+                type: "finding",
+                timestamp: ts,
+                content: JSON.stringify({
+                  title: args.title || "Untitled",
+                  content: args.content || "",
+                  category: args.category || "general",
+                  tags: args.tags || [],
+                }),
+                raw: b,
+              });
+            }
+          }
         } else if (b.type === "tool_result") {
           events.push({
             type: "tool_result",
@@ -132,10 +153,19 @@ class ClaudeCodeSession implements AgentSession {
         : this.prompt;
 
       // SDK query() expects { prompt, options: { model, mcpServers, ... } }
+      // Both permissionMode AND allowDangerouslySkipPermissions are needed for full bypass.
+      // Built-in tools must also be in allowedTools explicitly — the SDK treats allowedTools
+      // as a whitelist that overrides permissionMode for tool-level checks.
+      const builtinTools = [
+        "Bash", "Read", "Write", "Edit", "Glob", "Grep",
+        "WebSearch", "WebFetch", "Task", "NotebookEdit",
+      ];
       const sdkOptions: Record<string, unknown> = {
         model: this.model,
         abortController: new AbortController(),
+        permissionMode: "bypassPermissions",
         allowDangerouslySkipPermissions: true,
+        allowedTools: [...builtinTools],
         ...(cwd ? { cwd } : {}),
       };
 
@@ -156,11 +186,23 @@ class ClaudeCodeSession implements AgentSession {
         sdkOptions.mcpServers = { ...(sdkOptions.mcpServers as Record<string, unknown> || {}), ...this.mcpServers };
       }
 
-      // Auto-allow all MCP tools (allowDangerouslySkipPermissions only covers built-in tools)
+      // Auto-inject Grackle coordination MCP server if the script is bundled
+      if (existsSync(GRACKLE_MCP_SCRIPT)) {
+        const mcpServers = (sdkOptions.mcpServers || {}) as Record<string, unknown>;
+        if (!mcpServers.grackle) {
+          mcpServers.grackle = {
+            command: "node",
+            args: [GRACKLE_MCP_SCRIPT],
+          };
+          sdkOptions.mcpServers = mcpServers;
+        }
+      }
+
+      // Add MCP tool patterns to allowedTools
       if (sdkOptions.mcpServers) {
         const mcpServerNames = Object.keys(sdkOptions.mcpServers as Record<string, unknown>);
-        const allowedTools = mcpServerNames.map(name => `mcp__${name}__*`);
-        sdkOptions.allowedTools = allowedTools;
+        const mcpTools = mcpServerNames.map(name => `mcp__${name}__*`);
+        (sdkOptions.allowedTools as string[]).push(...mcpTools);
       }
 
       if (this.maxTurns > 0) {

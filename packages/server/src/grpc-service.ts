@@ -146,15 +146,17 @@ function spawnOnPowerLine(
         });
         logWriter.writeEvent(logPath, sessionEvent);
 
-        // Intercept finding events
+        // Intercept finding events and store + broadcast them
         if (event.type === "finding" && projectId) {
           try {
             const data = JSON.parse(event.content);
+            const findingId = uuid();
             findingStore.postFinding(
-              uuid(), projectId, taskId, sessionId,
+              findingId, projectId, taskId, sessionId,
               data.category || "general", data.title || "Untitled",
               data.content || "", data.tags || [],
             );
+            broadcast({ type: "finding_posted", payload: { projectId, findingId } });
           } catch { /* ignore parse errors */ }
         }
 
@@ -577,11 +579,10 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         task.description,
         task.review_notes ? `## Review Feedback (from previous attempt)\n${task.review_notes}` : "",
         `## Grackle Tools (MCP)`,
-        `You have access to Grackle MCP tools for coordinating with other agents:`,
-        `- **grackle_post_finding**: Share discoveries (architecture decisions, bugs, patterns) with other agents working on this project. Use categories: architecture, api, bug, decision, dependency, pattern, general.`,
-        `- **grackle_query_findings**: Query findings posted by other agents. Filter by category or tags.`,
-        `- **grackle_get_task**: Get details about your current task.`,
-        `- **grackle_list_tasks**: See other tasks in the project and their status.`,
+        `You have a "grackle" MCP server with tools for coordinating with other agents:`,
+        `- **mcp__grackle__post_finding**: Share discoveries (architecture decisions, bugs, patterns) with other agents working on this project. Parameters: title (string), content (string), category (optional: architecture|api|bug|decision|dependency|pattern|general), tags (optional: string[]).`,
+        `- **mcp__grackle__query_findings**: Query findings posted by other agents. Findings from previous tasks are also in your system context above.`,
+        `IMPORTANT: When you complete your task, post at least one finding summarizing what you did and any key decisions made.`,
       ].filter(Boolean).join("\n\n");
 
       sessionStore.createSession(sessionId, envId, runtime, task.title, model, logPath);

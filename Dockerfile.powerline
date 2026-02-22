@@ -21,6 +21,10 @@ RUN npm install --omit=dev \
     @connectrpc/connect-node@^2.0.0 \
     @anthropic-ai/claude-agent-sdk@0.2.50
 
+# MCP: Grackle coordination tools (post_finding, query_findings)
+COPY packages/powerline/mcp-grackle/ /app/mcp-grackle/
+RUN cd /app/mcp-grackle && npm install --omit=dev
+
 # Workspace for agent operations — mount your repo here
 RUN mkdir -p /workspace && chown grackle:grackle /workspace
 

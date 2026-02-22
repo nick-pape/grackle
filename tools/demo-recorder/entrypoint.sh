@@ -6,12 +6,24 @@ Xvfb :99 -screen 0 1920x1080x24 -ac &
 export DISPLAY=:99
 sleep 1
 
-# 2. Start window manager (maximizes browser window)
+# 2. Start window manager (maximizes browser window, no decorations)
+mkdir -p ~/.fluxbox
+cat > ~/.fluxbox/apps <<'FLUXEOF'
+[app] (.*)
+  [Deco] {NONE}
+  [Maximized] {yes}
+[end]
+FLUXEOF
 fluxbox &
 sleep 1
 
 # 3. Start PulseAudio with virtual sink
 pulseaudio --start --exit-idle-time=-1
+# Wait for PulseAudio to be ready (daemonizes asynchronously)
+for i in $(seq 1 10); do
+  pactl info >/dev/null 2>&1 && break
+  sleep 0.5
+done
 pactl load-module module-null-sink sink_name=virtual_speaker
 pactl set-default-sink virtual_speaker
 pactl set-default-source virtual_speaker.monitor

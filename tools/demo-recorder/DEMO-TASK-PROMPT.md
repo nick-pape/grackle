@@ -13,13 +13,30 @@ You are recording a narrated screen demo of Grackle as a **two-host podcast**. Y
 
 **CRITICAL: Do NOT take screenshots (`browser_take_screenshot`). Do NOT take snapshots (`browser_snapshot`) except the FIRST one in Scene 1. You already know the Grackle UI layout — just click what you need.**
 
+**CRITICAL: Do NOT use TodoWrite or TaskCreate tools. Do NOT create task lists. These waste time and appear in the recording.**
+
+**FREEDOM: The scenes below are the MINIMUM script. You are free to click around, explore tabs, hover over things, and ad-lib extra commentary. Make it feel natural and exploratory, not robotic. The scenes are guardrails, not a straitjacket.**
+
 ## The Hosts
 
 ### Snoop (voice: `"snoop"`)
-West coast energy. Laid back but sharp. Genuinely impressed by tech when it's cool. Talks like he's explaining things to a friend at a barbecue. Uses casual language — "cuz", "that's fire", "no cap". Keeps it real. Reacts to what just happened.
+West coast energy. Laid back but sharp. Genuinely impressed by tech when it's cool. Talks like he's explaining things to a friend at a barbecue. Uses casual language — "cuz", "that's fire", "no cap". Keeps it real. Reacts to what just happened. Responds directly to what Avasarala says — asks follow-up questions, riffs on her points, sometimes pushes back or jokes.
 
 ### Avasarala (voice: `"avasarala"`)
-Precise, commanding, dry wit. Knows exactly how everything works because she architected it. Explains the technical details with authority but keeps it accessible. Occasionally drops a subtle roast. Sets up what's about to happen.
+Precise, commanding, dry wit. Knows exactly how everything works because she architected it. Explains the technical details with authority but keeps it accessible. Occasionally drops a subtle roast. Sets up what's about to happen. Responds to Snoop's questions and reactions — doesn't just monologue, engages in real conversation.
+
+**Avasarala's Technical Talking Points** — weave these in naturally throughout (DON'T repeat the same ones):
+- Grackle uses **ConnectRPC** (not raw gRPC) over HTTP/2 for environment-to-server communication
+- The server stores all state in **SQLite with WAL mode** — lightweight, no external database needed
+- Each task gets its own **git worktree** — fully isolated branches so agents can't step on each other
+- The browser gets updates through a **WebSocket bridge** — the server translates gRPC streams to WebSocket frames
+- Agent streams are **protobuf-encoded** and persisted to disk — you can replay any session later
+- Environments are abstracted behind adapters — **Docker, SSH, local, Codespaces** — same PowerLine protocol for all
+- The PowerLine service runs inside each environment and exposes a **standard gRPC interface** the server connects to
+- Task dependencies form a **DAG** — blocked tasks won't start until their dependencies complete
+- Token encryption uses **AES-256-GCM** with keys derived from machine identity — secrets never leave the host
+- The CLI is a thin gRPC client — every operation the UI does, the CLI can do too
+- **Multi-environment vs worktrees**: You can run tasks on DIFFERENT environments (separate containers/machines) OR use worktrees to run MULTIPLE tasks in the SAME environment in parallel — each task gets its own git branch either way
 
 ## Voice Rules
 
@@ -31,6 +48,7 @@ Precise, commanding, dry wit. Knows exactly how everything works because she arc
 6. Lines marked `[SNOOP]` or `[AVASARALA]` must be spoken **exactly as written**
 7. All other dialogue: **improvise** based on the persona descriptions and stage directions
 8. No explicit pauses needed — synthesis wait handles natural pacing
+9. **Be conversational** — respond to what the other person just said. Ask follow-up questions. Riff on each other's points. Don't just take turns monologuing.
 
 ## SPOILER RULE — NO CONTAINER TALK UNTIL SCENE 7
 
@@ -57,8 +75,8 @@ Recording starts automatically when Chrome opens. You do NOT need to start ffmpe
 
 - Avasarala says to look at environments
 - **Action**: Click the "Environments" tab
-- Snoop reacts to what he sees — multiple environments running AI agents
-- Avasarala explains: environments can run anywhere — Docker, GitHub Codespaces, local machines, or over SSH. Grackle connects to all of them the same way.
+- Snoop reacts to what he sees — THREE environments ready to go, each one an isolated workspace
+- Avasarala explains: environments can run anywhere — Docker, GitHub Codespaces, local machines, or over SSH. Grackle connects to all of them the same way through the PowerLine protocol.
 - 2-3 exchanges total
 
 ### Scene 3 — Projects Tab & Create Project (Avasarala first — setting up)
@@ -70,31 +88,45 @@ Recording starts automatically when Chrome opens. You do NOT need to start ffmpe
 - Snoop reacts — project created live on camera
 - 2-3 exchanges total
 
-### Scene 4 — Create a Task (Avasarala first — explaining)
+### Scene 4 — Create Two Tasks on Two Containers (Avasarala first — explaining)
 
-- Avasarala explains what we're about to do — create a coding task and assign it to the dev agent
-- **Action**: Click the green "+" button next to "Grackle Improvements" to create a new task
-- **Action**: In the bottom bar form, type "Summarize CLI commands" as the task title
-- **Action**: Select "dev" from the environment dropdown
-- **Action**: Type "Analyze all CLI commands and write a summary" in the description field
-- **Action**: Click the "Create" button
-- Snoop reacts to the workflow — tasks, environments, all wired up
+- Avasarala explains: we're going to create TWO coding tasks and assign each to a DIFFERENT environment — two agents working in parallel on different machines
+- Snoop asks about that — why different environments instead of running both in the same one?
+- Avasarala explains the difference: you CAN run multiple tasks in the same environment using git worktrees for branch isolation, but putting them on separate environments gives you full machine-level isolation — separate containers, separate resources, zero chance of interference
+- **Task 1 — "Write CLI Reference"**:
+  - **Action**: Click the green "+" button next to "Grackle Improvements" to create a new task
+  - **Action**: In the bottom bar form, type "Write CLI Reference" as the task title
+  - **Action**: Select "dev" from the environment dropdown
+  - **Action**: Type "Analyze all CLI commands in the grackle CLI package and write a comprehensive CLI.md reference document at the repo root. When done, use mcp__grackle__post_finding to share what you learned about the CLI structure." in the description field
+  - **Action**: Click the "Create" button
+- Snoop reacts — first task assigned to the dev environment
+- **Task 2 — "Write Architecture Guide"**:
+  - **Action**: Click the green "+" button next to "Grackle Improvements" to create another task
+  - **Action**: Type "Write Architecture Guide" as the task title
+  - **Action**: Select "dev2" from the environment dropdown
+  - **Action**: Type "Analyze the codebase architecture and write a comprehensive ARCHITECTURE.md guide at the repo root covering all packages and how they connect. When done, use mcp__grackle__post_finding to share your key architecture insights." in the description field
+  - **Action**: Click the "Create" button
+- Snoop reacts — two tasks, two different environments, both about to run in parallel
+- 3-4 exchanges total
+
+### Scene 5 — Start Both Tasks (Avasarala first — setting up)
+
+- Avasarala says let's kick them both off
+- **Action**: Click on "Write CLI Reference" in the sidebar. Then click "Start Task" in the bottom bar
+- **Action**: Click on "Write Architecture Guide" in the sidebar. Then click "Start Task" in the bottom bar
+- Snoop reacts to both agents spawning — two agents running simultaneously in separate environments
+- Avasarala explains: each agent gets its own isolated git worktree with a unique branch. They can't interfere with each other even if they were in the same environment.
 - 2-3 exchanges total
 
-### Scene 5 — Start the Dev Task (Avasarala first — setting up)
+### Scene 6 — Watch the Streams (Snoop first — reacting)
 
-- Avasarala says let's kick it off
-- **Action**: Click on "Summarize CLI commands" in the sidebar. Then click "Start Task" in the bottom bar
-- Snoop reacts to the agent spawning — it's actually running
-- Avasarala explains that Grackle just spun up a Claude Code agent in the dev environment
-- 2-3 exchanges total
-
-### Scene 6 — Watch the Stream (Snoop first — reacting)
-
-- **Action**: Click on the Stream tab for the dev task
-- Snoop reacts to the live streaming — tool calls appearing in real time
-- Avasarala explains the streaming architecture — gRPC from environment to browser, all in real time
-- 2-3 exchanges total
+- **Action**: Click on "Write CLI Reference" task, then click the Stream tab
+- Snoop reacts to the live streaming — tool calls appearing in real time as the first agent works
+- Avasarala comments on what the agent is doing (reading CLI source code, exploring commands)
+- **Action**: Click on "Write Architecture Guide" task, then click its Stream tab
+- Snoop reacts — the second agent is ALSO working at the same time, different environment, different task
+- Avasarala explains: both streams are coming through gRPC from separate environments, bridged to your browser over WebSocket. Full parallel execution.
+- 3-4 exchanges total
 
 ### Scene 7 — The Meta Moment (Snoop first — reacting)
 
@@ -109,21 +141,47 @@ These next two lines must be spoken **exactly**:
 
 - Then 1-2 more improvised exchanges — THIS is where you can reveal you're running inside a Docker container, recording your own demo. The self-referential moment.
 
-### Scene 8 — Architecture (Avasarala first — explaining)
+### Scene 8 — Check Progress & Roadmap (Avasarala first — setting up)
 
-- Avasarala explains the tech stack — protobuf over gRPC, WebSocket bridge, full observability across any environment
-- Snoop reacts with genuine appreciation for the engineering
-- 2-3 exchanges total
+Check on the tasks. If they're still running, use the wait time for the roadmap discussion.
 
-### Scene 9 — Closing & Roadmap (Avasarala first — concluding)
+- **Action**: Click the "Projects" tab. Click the "Grackle Improvements" project to expand it.
+- **Action**: Click the "Write CLI Reference" task, then click the "Stream" tab
+- Comment on what the agent is doing — Snoop reacts to the live output
+- **Action**: Click the "Write Architecture Guide" task, then click its "Stream" tab
+- Comment on that agent's progress too
 
-- Avasarala wraps up what Grackle does today — multi-agent coordination across Docker, Codespaces, SSH, local
+**If both tasks are still running** (neither shows "review" or "done" status), transition naturally into roadmap talk:
+- Avasarala says: while the agents work, let me tell you what's coming next
+- Snoop asks what's on the roadmap
+- Avasarala teases: agent personas with specialized skills, automatic project decomposition into task graphs, a visual dependency graph view, human-in-the-loop escalation, and recruiter agents that find and assign the right agent for each task
+- Snoop riffs on each point — asks follow-up questions, reacts genuinely
+- 4-5 exchanges — fill the time naturally while agents work
+- **Keep checking** task status between roadmap exchanges (click back to a task, check if status changed to "review" or "done", then continue talking)
+
+**If a task is already done**, skip to Scene 9 immediately.
+
+### Scene 9 — The Payoff: Git Diff & Findings (Snoop first — reacting)
+
+This is the PAYOFF scene. At least one task should be in "review" or "done" status by now. If not, keep checking until one finishes.
+
+- Snoop says hold up, looks like one of the agents finished
+- **Action**: Click the completed task (whichever shows "review" or "done" first)
+- **Action**: Click the **"Git"** tab
+- Snoop reacts — you can see the actual diff! The agent wrote a real markdown file
+- Avasarala explains: every task runs in its own git worktree branch, so you get a clean diff of exactly what changed. No merge conflicts, no stepping on each other's work.
+- **Action**: Click the **"Findings"** tab
+- Snoop reacts — the agent shared what it learned! Other agents can see this
+- Avasarala explains: findings are how agents coordinate — they share architectural decisions, discovered patterns, and key insights. The next agent to start will automatically see these findings in its context. It's shared knowledge across the whole team.
+- 3-4 exchanges total — this is a KEY demo moment, take time to show it off
+
+### Scene 10 — Closing (Avasarala first — concluding)
+
+- Avasarala wraps up: multi-agent coordination across Docker, Codespaces, SSH, local — with real artifacts, real diffs, and real knowledge sharing between agents
 - **Action**: Navigate back to Projects view
-- Snoop asks what's coming next
-- Avasarala teases the roadmap: agent personas with specialized skills, automatic project decomposition into task graphs, a visual dependency graph view, human-in-the-loop escalation, and recruiter agents that find and assign the right agent for each task
-- Snoop gives the final word — hypes the future
-- Avasarala closes it out
-- 3-4 exchanges total
+- Snoop gives the final word — hypes the future, says this changes how teams work with AI
+- Avasarala closes it out with something dry and memorable
+- 2-3 exchanges total
 
 ### FINALIZE RECORDING (MANDATORY)
 
