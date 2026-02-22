@@ -59,9 +59,10 @@ ENV GRACKLE_MCP_CONFIG=/app/mcp-config.json
 RUN mkdir -p /workspace && chown grackle:grackle /workspace
 RUN mkdir -p /home/grackle/.claude/debug && chown -R grackle:grackle /home/grackle/.claude
 
-# ── Entrypoint ──────────────────────────────────────────────
+# ── Recording control & entrypoint ────────────────────────
+COPY tools/demo-recorder/recording-ctl.sh /app/recording-ctl.sh
 COPY tools/demo-recorder/entrypoint.sh /app/entrypoint.sh
-RUN chmod +x /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh /app/recording-ctl.sh
 
 EXPOSE 7433
 

@@ -147,6 +147,9 @@ class ClaudeCodeSession implements AgentSession {
           if (mcpConfig.mcpServers) {
             sdkOptions.mcpServers = mcpConfig.mcpServers;
           }
+          if (Array.isArray(mcpConfig.disallowedTools)) {
+            sdkOptions.disallowedTools = mcpConfig.disallowedTools;
+          }
         } catch { /* ignore malformed config */ }
       }
       if (this.mcpServers) {

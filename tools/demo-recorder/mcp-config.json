@@ -1,4 +1,5 @@
 {
+  "disallowedTools": ["mcp__playwright__browser_install"],
   "mcpServers": {
     "playwright": {
       "command": "npx",

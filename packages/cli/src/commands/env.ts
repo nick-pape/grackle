@@ -44,6 +44,7 @@ export function registerEnvCommands(program: Command): void {
     .option("--host <host>", "SSH host / local host")
     .option("--port <port>", "PowerLine port (local adapter)")
     .option("--user <user>", "SSH user")
+    .option("--volume <volumes...>", "Docker volume mounts (format: host:container[:ro])")
     .option("--runtime <runtime>", "Default runtime", "claude-code")
     .action(async (name: string, opts) => {
       const client = createGrackleClient();
@@ -65,6 +66,7 @@ export function registerEnvCommands(program: Command): void {
       } else {
         if (opts.image) config.image = opts.image;
         if (opts.repo) config.repo = opts.repo;
+        if (opts.volume) config.volumes = opts.volume;
       }
 
       const env = await client.addEnvironment({
