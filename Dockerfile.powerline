@@ -24,6 +24,9 @@ RUN npm install --omit=dev \
 # Workspace for agent operations — mount your repo here
 RUN mkdir -p /workspace && chown grackle:grackle /workspace
 
+# Claude Agent SDK expects ~/.claude/debug to exist for logging
+RUN mkdir -p /home/grackle/.claude/debug && chown -R grackle:grackle /home/grackle/.claude
+
 EXPOSE 7433
 
 USER grackle

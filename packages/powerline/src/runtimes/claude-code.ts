@@ -128,6 +128,7 @@ class ClaudeCodeSession implements AgentSession {
         prompt: finalPrompt,
         model: this.model,
         abortController: new AbortController(),
+        dangerouslySkipPermissions: true,
         ...(cwd ? { cwd } : {}),
       };
 

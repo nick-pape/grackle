@@ -530,7 +530,7 @@ async function handleMessage(
         model,
         maxTurns: 0,
         branch: task.branch,
-        worktreeBasePath: task.branch ? "/workspace" : "",
+        worktreeBasePath: task.branch ? (process.env.GRACKLE_WORKTREE_BASE || "/workspace") : "",
         systemContext,
         projectId: task.project_id,
         taskId: task.id,

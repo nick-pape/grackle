@@ -3,7 +3,14 @@ import { promisify } from "node:util";
 import { existsSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 
-const exec = promisify(execFile);
+const execRaw = promisify(execFile);
+
+/** Wrapper that uses a shell so `git` resolves via PATH on all platforms. */
+async function exec(cmd: string, args: string[], opts: { cwd: string }): Promise<{ stdout: string; stderr: string }> {
+  const shell = process.env.SHELL || true;
+  const result = await execRaw(cmd, args, { ...opts, shell });
+  return { stdout: String(result.stdout), stderr: String(result.stderr) };
+}
 
 export interface WorktreeResult {
   worktreePath: string;
@@ -18,6 +25,12 @@ function sanitizeBranch(branch: string): string {
 function worktreeDir(basePath: string, branch: string): string {
   const sanitized = sanitizeBranch(branch).replace(/\//g, "-");
   const parent = dirname(basePath);
+  // When repo is at a root-level path (e.g. /workspace in Docker),
+  // dirname returns "/" which is typically not writable. Fall back to $HOME.
+  if (parent === "/" || parent === "\\") {
+    const home = process.env.HOME || process.env.USERPROFILE || basePath;
+    return resolve(home, ".grackle-worktrees", sanitized);
+  }
   return resolve(parent, ".grackle-worktrees", sanitized);
 }
 
