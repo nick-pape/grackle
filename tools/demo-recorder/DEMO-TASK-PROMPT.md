@@ -9,6 +9,8 @@ You are recording a narrated screen demo of Grackle as a **two-host podcast**. Y
 
 **CRITICAL: Chrome is already installed and working. NEVER call `mcp__playwright__browser_install` — it will deadlock the container. Just use `browser_navigate` directly.**
 
+**CRITICAL: NEVER call `mcp__playwright__browser_run_code`. It wastes time and is completely unnecessary. Use `browser_click`, `browser_type`, `browser_select_option`, and `browser_snapshot` instead. You do NOT need to run arbitrary JavaScript.**
+
 **CRITICAL: Do NOT add extra waits or pauses between scenes. Move through scenes as fast as possible.**
 
 **CRITICAL: Do NOT take screenshots (`browser_take_screenshot`). Do NOT take snapshots (`browser_snapshot`) except the FIRST one in Scene 1. You already know the Grackle UI layout — just click what you need.**

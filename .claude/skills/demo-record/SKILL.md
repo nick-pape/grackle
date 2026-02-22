@@ -32,64 +32,60 @@ docker build -f Dockerfile.demo-recorder -t grackle-demo-recorder .
 docker build -f Dockerfile.powerline -t grackle-powerline .
 ```
 
-### 3. Clean old state via CLI
+### 3. Nuke database and restart server
 
-Archive any existing projects and delete their tasks:
-
-```bash
-# List projects, then for each:
-grackle project list
-# Archive each project: grackle project archive <project-id>
-# List tasks: grackle task list <project-id>
-# Delete each task: grackle task delete <task-id>
-```
-
-Kill any running agents:
+The demo must start with a completely clean database — no leftover projects, tasks, or findings from previous runs. Stale data causes the demo agent to see pre-existing tasks instead of creating them fresh on camera.
 
 ```bash
-# List running agents, kill each
-grackle agent list
-grackle kill <session-id>
+# Kill the grackle server (it holds the DB lock)
+# Find PID: wmic process where "name='node.exe'" get processid,commandline | grep server
+taskkill /PID <SERVER_PID> /F
+
+# Delete the database
+rm -f ~/.grackle/grackle.db ~/.grackle/grackle.db-wal ~/.grackle/grackle.db-shm
+
+# Restart the server
+node packages/server/dist/index.js --port=7434 --web-port=3000 &
 ```
 
-### 4. Provision environments
+Also stop and remove any existing containers:
 
-If environments don't exist yet, add them:
+```bash
+docker stop grackle-demo-recorder grackle-dev grackle-dev2 2>/dev/null
+docker rm grackle-demo-recorder grackle-dev grackle-dev2 2>/dev/null
+```
+
+### 4. Add and provision environments
+
+Since the DB was nuked, environments must be re-added and provisioned:
 
 ```bash
 # Demo recorder with the full AV stack
 grackle env add demo-recorder --docker --image grackle-demo-recorder --runtime claude-code
 
-# Dev environment with repo clone (for the "summarize CLI" task)
+# Dev environments with repo clone (the demo agent creates tasks on these live)
 grackle env add dev --docker --image grackle-powerline --runtime claude-code --repo nick-pape/grackle
-```
+grackle env add dev2 --docker --image grackle-powerline --runtime claude-code --repo nick-pape/grackle
 
-Stop and remove old containers, then re-provision:
-
-```bash
-docker stop grackle-demo-recorder grackle-dev 2>/dev/null
-docker rm grackle-demo-recorder grackle-dev 2>/dev/null
+# Provision all three
 grackle env provision demo-recorder
 grackle env provision dev
+grackle env provision dev2
 ```
 
-Verify both show "connected":
+Verify all three show "connected":
 
 ```bash
 grackle env list
 ```
 
-### 5. Create project and tasks
+### 5. Create project and recording task
+
+The demo agent creates its own project and dev tasks live on camera (Scenes 3-4). Only pre-create the "Grackle Demo" project and the recording task.
 
 ```bash
 grackle project create "Grackle Demo"
 # Note the project ID from output
-```
-
-Create the dev task (runs on the dev container):
-
-```bash
-grackle task create <PROJECT_ID> "Summarize CLI commands" --env dev --desc "Read the Grackle CLI source code and write a summary of all available commands and their options to SUMMARY.md."
 ```
 
 Create the demo recording task using the scene script:
@@ -107,26 +103,23 @@ grackle task start <RECORDING_TASK_ID> --model haiku
 
 **Important**: Use `--model haiku` to keep the demo fast and cheap.
 
-### 7. Monitor
+### 7. Monitor and extract
 
-Watch the agent's progress:
+After starting the task, monitor the session and automatically extract the video when it completes.
+
+Poll the task status until it leaves `in_progress`. Then copy the MP4 out:
 
 ```bash
-grackle logs <SESSION_ID>
+# Poll task status every 30s until done
+grackle task list <PROJECT_ID>
+# When task status is "review" or "done":
+docker cp grackle-demo-recorder:/workspace/grackle-demo.mp4 ./grackle-demo-podcast-vN.mp4
 ```
 
-Check ffmpeg recording status:
+Also check ffmpeg recording status if needed:
 
 ```bash
 docker exec grackle-demo-recorder bash -c "ls -lh /workspace/grackle-demo.mp4 2>&1"
-```
-
-### 8. Extract video
-
-After the task completes:
-
-```bash
-docker cp grackle-demo-recorder:/workspace/grackle-demo.mp4 ./grackle-demo.mp4
 ```
 
 ## GPU Acceleration (Optional)

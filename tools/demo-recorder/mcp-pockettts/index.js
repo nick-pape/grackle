@@ -25,10 +25,20 @@ const VOICE_MAP = {
 // agent after synthesis completes — even if audio is still playing.
 // This ties agent pacing to synthesis speed naturally.
 
+// Per-voice text prefix to avoid garbled first syllable (PocketTTS known issue).
+// "... " works for snoop but causes a "tuh" artifact on cumberbatch.
+const VOICE_PREFIX = {
+  snoop: "... ",
+  cumberbatch: "",
+  default: "",
+};
+
 // Per-voice playback speed (atempo filter). Lower = slower.
+// NOTE: Source WAVs are pre-normalized (loudnorm/compression applied before Docker build).
+// Only atempo is applied at playback — rich filter chains cause ffplay to exit early.
 const VOICE_TEMPO = {
-  snoop: 0.89,
-  cumberbatch: 0.98,
+  snoop: 0.90,
+  cumberbatch: 1.00,
   default: 0.95,
 };
 
@@ -115,8 +125,8 @@ server.tool(
   },
   async ({ text, voice }) => {
     const formData = new FormData();
-    // Prepend "..." to avoid garbled start (known PocketTTS issue with first syllable)
-    formData.append("text", `... ${text}`);
+    const prefix = VOICE_PREFIX[voice] || VOICE_PREFIX.default;
+    formData.append("text", `${prefix}${text}`);
     if (voice && VOICE_MAP[voice]) {
       formData.append("voice_url", VOICE_MAP[voice]);
     }
