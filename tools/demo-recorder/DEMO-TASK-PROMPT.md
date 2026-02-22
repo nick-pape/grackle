@@ -16,13 +16,15 @@ Call `mcp__pockettts__speak` DIRECTLY (not via Task tool). Wait for it to finish
 
 ## Recording
 
-Recording starts automatically when you open the browser. You do NOT need to start or stop ffmpeg. Just execute the scenes.
+Recording starts automatically when Chrome opens. You do NOT need to start or stop ffmpeg.
+
+**IMPORTANT: Navigate to the browser FIRST before speaking. The recording begins when Chrome launches. If you speak before navigating, the audio won't be captured.**
 
 ## Execute Scenes
 
 ### Scene 1 — Opening
-- Speak: "What you're watching right now is being recorded live by Claude Code — an AI agent running inside a Docker container. I'm controlling this browser, narrating with neural text-to-speech, and recording my own screen. No human is driving this. This is Grackle — a multi-agent coordination platform."
-- Action: Navigate to `http://host.docker.internal:3000`. Take a snapshot.
+- Action FIRST: Navigate to `http://host.docker.internal:3000`. Take a snapshot. (This triggers the recording to start.)
+- Speak AFTER navigation: "What you're watching right now is being recorded live by Claude Code — an AI agent running inside a Docker container. I'm controlling this browser, narrating with neural text-to-speech, and recording my own screen. No human is driving this. This is Grackle — a multi-agent coordination platform."
 
 ### Scene 2 — Environments Tab
 - Speak: "Let's look at environments. Each one is a Docker container running an AI agent. We have a dev environment for coding tasks and a demo-recorder — that's where I'm running right now."
@@ -33,12 +35,12 @@ Recording starts automatically when you open the browser. You do NOT need to sta
 - Action: Click the "Projects" tab. Take a snapshot.
 
 ### Scene 4 — Create a Project
-- Speak: "I'll create a project called API Refactor."
-- Action: Click the "+" button. Fill in "API Refactor" and submit. Take a snapshot.
+- Speak: "I'll create a project called Grackle Improvements."
+- Action: Click the "+" button. Fill in "Grackle Improvements" and submit. Take a snapshot.
 
 ### Scene 5 — Create a Task
 - Speak: "Now I'll add a task. I'll ask another AI agent to summarize the Grackle CLI commands, running on the dev environment."
-- Action: Expand "API Refactor". Click "Add Task" or "+". Fill in title "Summarize CLI commands". Select environment "dev". For description type "Read the Grackle CLI source code and write a summary of all available commands and their options to SUMMARY.md." Submit. Take a snapshot.
+- Action: Expand "Grackle Improvements". Click "Add Task" or "+". Fill in title "Summarize CLI commands". Select environment "dev". For description type "Read the Grackle CLI source code and write a summary of all available commands and their options to SUMMARY.md." Submit. Take a snapshot.
 
 ### Scene 6 — Start the Task
 - Speak: "When I click start, Grackle spawns a Claude Code agent inside the dev container. Every tool call streams back in real time."
