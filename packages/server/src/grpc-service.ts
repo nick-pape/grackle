@@ -480,7 +480,11 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
     },
 
     async createProject(req) {
-      const id = slugify(req.name) || uuid().slice(0, 8);
+      let id = slugify(req.name) || uuid().slice(0, 8);
+      // If slug already exists (e.g. archived project), append a short suffix
+      if (projectStore.getProject(id)) {
+        id = `${id}-${uuid().slice(0, 4)}`;
+      }
       projectStore.createProject(id, req.name, req.description, req.repoUrl, req.defaultEnvId);
       broadcast({ type: "project_created", payload: { projectId: id } });
       const row = projectStore.getProject(id);

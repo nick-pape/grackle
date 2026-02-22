@@ -2,52 +2,79 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { execFile, spawn } from "node:child_process";
-import { writeFile, unlink } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { randomUUID } from "node:crypto";
+import { spawn } from "node:child_process";
 
 const POCKETTTS_PORT = process.env.POCKETTTS_PORT || "8890";
 const POCKETTTS_URL = process.env.POCKETTTS_URL || `http://localhost:${POCKETTTS_PORT}`;
 
-// ── Playback queue ──────────────────────────────────────────
-// Audio files queue up and play one at a time via ffplay.
-// speak() returns immediately after synthesis — playback is async.
-const playbackQueue = [];
-let isPlaying = false;
+// ── Streaming speech pipeline ───────────────────────────────
+// v0.4.0: Fully streaming. Synthesis chunks pipe directly to
+// ffplay stdin — first audio plays in ~200ms, not after full
+// synthesis completes. Queue ensures sequential playback.
+// speak() returns INSTANTLY in all cases.
 
-async function enqueuePlayback(wavPath) {
-  playbackQueue.push(wavPath);
-  if (!isPlaying) {
-    drainQueue();
+const speechQueue = [];   // Queue of { text, id }
+let pipelineRunning = false;
+let speechCounter = 0;
+
+/** Add text to the speech pipeline. Returns immediately. */
+function enqueueSpeech(text) {
+  const id = ++speechCounter;
+  speechQueue.push({ text, id });
+  if (!pipelineRunning) {
+    drainSpeechPipeline();
   }
+  return id;
 }
 
-async function drainQueue() {
-  isPlaying = true;
-  while (playbackQueue.length > 0) {
-    const wavPath = playbackQueue.shift();
+/** Process speech queue: stream synthesis directly to ffplay, one at a time. */
+async function drainSpeechPipeline() {
+  pipelineRunning = true;
+  while (speechQueue.length > 0) {
+    const { text, id } = speechQueue.shift();
     try {
-      await new Promise((resolve, reject) => {
-        execFile(
-          "ffplay",
-          ["-nodisp", "-autoexit", "-loglevel", "quiet", wavPath],
-          { timeout: 120000 },
-          (err) => {
-            if (err) reject(err);
-            else resolve();
+      // Start synthesis (PocketTTS returns Transfer-Encoding: chunked WAV)
+      const formData = new FormData();
+      formData.append("text", text);
+      const response = await fetch(`${POCKETTTS_URL}/tts`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        process.stderr.write(`[mcp-pockettts] Synthesis error for #${id}: ${response.status}\n`);
+        continue;
+      }
+
+      // Pipe streaming response directly to ffplay stdin
+      const ffplay = spawn("ffplay", ["-nodisp", "-autoexit", "-loglevel", "quiet", "-i", "pipe:0"], {
+        stdio: ["pipe", "ignore", "ignore"],
+      });
+
+      const reader = response.body.getReader();
+      let done = false;
+      while (!done) {
+        const result = await reader.read();
+        done = result.done;
+        if (result.value) {
+          // Write chunk to ffplay stdin as it arrives from synthesis
+          if (!ffplay.stdin.destroyed) {
+            ffplay.stdin.write(result.value);
           }
-        );
+        }
+      }
+      ffplay.stdin.end();
+
+      // Wait for ffplay to finish playing the audio
+      await new Promise((resolve) => {
+        ffplay.on("close", resolve);
+        ffplay.on("error", resolve);
       });
     } catch (err) {
-      // Log but don't crash — keep draining
-      process.stderr.write(`[mcp-pockettts] Playback error: ${err.message}\n`);
-    } finally {
-      await unlink(wavPath).catch(() => {});
+      process.stderr.write(`[mcp-pockettts] Pipeline error for #${id}: ${err.message}\n`);
     }
   }
-  isPlaying = false;
+  pipelineRunning = false;
 }
 
 // ── PocketTTS server management ─────────────────────────────
@@ -87,7 +114,7 @@ await ensurePocketTTS();
 
 const server = new McpServer({
   name: "mcp-pockettts",
-  version: "0.2.0",
+  version: "0.4.0",
 });
 
 server.tool(
@@ -95,34 +122,10 @@ server.tool(
   "Speak text out loud using PocketTTS. Use this to communicate verbally with the user.",
   { text: z.string().describe("The text to speak aloud") },
   async ({ text }) => {
-    try {
-      // Synthesize audio (blocks until TTS server returns the WAV)
-      const formData = new FormData();
-      formData.append("text", text);
-
-      const response = await fetch(`${POCKETTTS_URL}/tts`, {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!response.ok) {
-        return { content: [{ type: "text", text: `TTS error: ${response.status} ${response.statusText}` }] };
-      }
-
-      // Save to temp WAV file
-      const wavPath = join(tmpdir(), `tts-${randomUUID()}.wav`);
-      const buffer = Buffer.from(await response.arrayBuffer());
-      await writeFile(wavPath, buffer);
-
-      // Queue for playback (non-blocking — returns immediately)
-      enqueuePlayback(wavPath);
-
-      const queued = playbackQueue.length;
-      const status = queued > 0 ? ` (${queued} queued)` : "";
-      return { content: [{ type: "text", text: `Spoke: "${text}"${status}` }] };
-    } catch (err) {
-      return { content: [{ type: "text", text: `TTS failed: ${err.message}` }] };
-    }
+    const id = enqueueSpeech(text);
+    const pending = speechQueue.length;
+    const status = pending > 0 ? ` (${pending} queued ahead)` : "";
+    return { content: [{ type: "text", text: `Queued speech #${id}: "${text}"${status}` }] };
   }
 );
 

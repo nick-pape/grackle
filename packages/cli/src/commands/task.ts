@@ -77,6 +77,15 @@ export function registerTaskCommands(program: Command): void {
     });
 
   task
+    .command("delete <task-id>")
+    .description("Delete a task")
+    .action(async (taskId: string) => {
+      const client = createGrackleClient();
+      await client.deleteTask({ id: taskId });
+      console.log(`Deleted: ${taskId}`);
+    });
+
+  task
     .command("approve <task-id>")
     .description("Approve a task in review")
     .action(async (taskId: string) => {

@@ -20,6 +20,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN python3 -m venv /opt/pockettts \
     && /opt/pockettts/bin/pip install --no-cache-dir pocket-tts
 
+# Pre-download TTS model weights during build (avoids 30-60s first-run delay)
+RUN /opt/pockettts/bin/pocket-tts generate --text "warmup" -q \
+    && rm -f generated_speech.wav
+
 # ── Non-root user ───────────────────────────────────────────
 RUN groupadd -r grackle 2>/dev/null || true \
     && useradd -r -g grackle -m grackle 2>/dev/null || true
