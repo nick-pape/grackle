@@ -20,9 +20,22 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN python3 -m venv /opt/pockettts \
     && /opt/pockettts/bin/pip install --no-cache-dir pocket-tts
 
+# Install CUDA-enabled PyTorch (replaces CPU-only torch bundled with pocket-tts)
+RUN /opt/pockettts/bin/pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cu124
+
 # Pre-download TTS model weights during build (avoids 30-60s first-run delay)
 RUN /opt/pockettts/bin/pocket-tts generate --text "warmup" -q \
     && rm -f generated_speech.wav
+
+# Voice cloning: export voices to safetensors (requires HF_TOKEN for gated model)
+# Uses --mount=type=secret to avoid leaking token into image layers
+COPY tools/demo-recorder/voices/ /app/voices/
+RUN --mount=type=secret,id=hf_token \
+    mkdir -p /root/.cache/huggingface \
+    && cp /run/secrets/hf_token /root/.cache/huggingface/token \
+    && /opt/pockettts/bin/pocket-tts export-voice /app/voices/snoop.wav /app/voices/snoop.safetensors -q \
+    && /opt/pockettts/bin/pocket-tts export-voice /app/voices/avasarala.wav /app/voices/avasarala.safetensors -q \
+    && rm -f /root/.cache/huggingface/token
 
 # ── Non-root user ───────────────────────────────────────────
 RUN groupadd -r grackle 2>/dev/null || true \
@@ -66,6 +79,7 @@ RUN mkdir -p /home/grackle/.claude/debug && chown -R grackle:grackle /home/grack
 # ── Recording control & entrypoint ────────────────────────
 COPY tools/demo-recorder/recording-ctl.sh /app/recording-ctl.sh
 COPY tools/demo-recorder/entrypoint.sh /app/entrypoint.sh
+COPY tools/demo-recorder/pockettts-gpu-serve.py /app/pockettts-gpu-serve.py
 RUN chmod +x /app/entrypoint.sh /app/recording-ctl.sh
 
 EXPOSE 7433

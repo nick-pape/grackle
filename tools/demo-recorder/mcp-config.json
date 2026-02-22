@@ -11,6 +11,7 @@
       "args": ["/app/mcp-pockettts/index.js"],
       "env": {
         "POCKETTTS_URL": "http://localhost:8890",
+        "VOICE_SERVER_PORT": "8891",
         "DISPLAY": ":99"
       }
     }
