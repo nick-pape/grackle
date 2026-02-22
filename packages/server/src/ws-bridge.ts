@@ -403,14 +403,14 @@ async function handleMessage(
         (msg.payload?.defaultEnvId as string) || "",
       );
       const row = projectStore.getProject(id);
-      sendWs(ws, { type: "project_created", payload: { project: row } });
+      broadcast({ type: "project_created", payload: { project: row } });
       break;
     }
 
     case "archive_project": {
       const projectId = msg.payload?.projectId as string;
       if (projectId) projectStore.archiveProject(projectId);
-      sendWs(ws, { type: "project_archived", payload: { projectId } });
+      broadcast({ type: "project_archived", payload: { projectId } });
       break;
     }
 
@@ -464,7 +464,7 @@ async function handleMessage(
         slugify(project.name),
       );
       const row = taskStore.getTask(id);
-      sendWs(ws, { type: "task_created", payload: { task: row ? { ...row, dependsOn: JSON.parse(row.depends_on) } : null } });
+      broadcast({ type: "task_created", payload: { task: row ? { ...row, dependsOn: JSON.parse(row.depends_on) } : null } });
       break;
     }
 
@@ -509,11 +509,10 @@ async function handleMessage(
         task.description,
         task.review_notes ? `## Review Feedback (from previous attempt)\n${task.review_notes}` : "",
         `## Grackle Tools (MCP)`,
-        `You have access to Grackle MCP tools for coordinating with other agents:`,
-        `- **grackle_post_finding**: Share discoveries (architecture decisions, bugs, patterns) with other agents working on this project. Use categories: architecture, api, bug, decision, dependency, pattern, general.`,
-        `- **grackle_query_findings**: Query findings posted by other agents. Filter by category or tags.`,
-        `- **grackle_get_task**: Get details about your current task.`,
-        `- **grackle_list_tasks**: See other tasks in the project and their status.`,
+        `You have a "grackle" MCP server with tools for coordinating with other agents:`,
+        `- **mcp__grackle__post_finding**: Share discoveries (architecture decisions, bugs, patterns) with other agents working on this project. Parameters: title (string), content (string), category (optional: architecture|api|bug|decision|dependency|pattern|general), tags (optional: string[]).`,
+        `- **mcp__grackle__query_findings**: Query findings posted by other agents. Findings from previous tasks are also in your system context above.`,
+        `IMPORTANT: When you complete your task, post at least one finding summarizing what you did and any key decisions made.`,
       ].filter(Boolean).join("\n\n");
 
       sessionStore.createSession(sessionId, envId, runtime, task.title, model, logPath);
@@ -521,7 +520,7 @@ async function handleMessage(
       taskStore.markTaskStarted(task.id);
       logWriter.initLog(logPath);
 
-      sendWs(ws, { type: "task_started", payload: { taskId: task.id, sessionId } });
+      broadcast({ type: "task_started", payload: { taskId: task.id, sessionId, projectId: task.project_id } });
 
       const powerlineReq = create(powerline.SpawnRequestSchema, {
         sessionId,
@@ -549,6 +548,23 @@ async function handleMessage(
             });
             logWriter.writeEvent(logPath, sessionEvent);
             streamHub.publish(sessionEvent);
+
+            // Intercept finding events and store + broadcast them
+            if (event.type === "finding" && task.project_id) {
+              try {
+                const data = JSON.parse(event.content);
+                const findingId = uuid();
+                findingStore.postFinding(
+                  findingId, task.project_id, task.id, sessionId,
+                  data.category || "general", data.title || "Untitled",
+                  data.content || "", data.tags || [],
+                );
+                broadcast({ type: "finding_posted", payload: { projectId: task.project_id, findingId } });
+                process.stderr.write(`[finding] Stored: ${findingId} "${data.title}" in ${task.project_id}\n`);
+              } catch (err) {
+                process.stderr.write(`[finding] ERROR: ${err} (project=${task.project_id} task=${task.id})\n`);
+              }
+            }
 
             if (event.type === "status") {
               if (event.content === "waiting_input") sessionStore.updateSessionStatus(sessionId, "waiting_input");
@@ -610,14 +626,14 @@ async function handleMessage(
           task.env_id, JSON.parse(task.depends_on), reviewNotes,
         );
       }
-      sendWs(ws, { type: "task_rejected", payload: { taskId } });
+      broadcast({ type: "task_rejected", payload: { taskId } });
       break;
     }
 
     case "delete_task": {
       const taskId = msg.payload?.taskId as string;
       if (taskId) taskStore.deleteTask(taskId);
-      sendWs(ws, { type: "task_deleted", payload: { taskId } });
+      broadcast({ type: "task_deleted", payload: { taskId } });
       break;
     }
 

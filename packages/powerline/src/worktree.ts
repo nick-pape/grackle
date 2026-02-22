@@ -35,6 +35,20 @@ function worktreeDir(basePath: string, branch: string): string {
 }
 
 export async function ensureWorktree(basePath: string, branch: string): Promise<WorktreeResult> {
+  // Pre-check: verify basePath is a git repository
+  try {
+    await exec("git", ["rev-parse", "--git-dir"], { cwd: basePath });
+  } catch {
+    throw new Error(`Not a git repository: ${basePath}`);
+  }
+
+  // Pre-check: verify the git repo is writable (worktrees modify .git internals)
+  try {
+    await exec("git", ["status", "--porcelain"], { cwd: basePath });
+  } catch (err) {
+    throw new Error(`Git repo not writable: ${basePath} (${err})`);
+  }
+
   const wtPath = worktreeDir(basePath, branch);
 
   if (existsSync(wtPath)) {

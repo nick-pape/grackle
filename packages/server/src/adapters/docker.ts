@@ -27,6 +27,8 @@ export interface DockerEnvironmentConfig extends BaseEnvironmentConfig {
   env?: Record<string, string>;
   /** Git repo URL to clone into the container workspace. */
   repo?: string;
+  /** Enable GPU passthrough (e.g. "all" for --gpus all). */
+  gpus?: string;
 }
 
 const containerPorts = new Map<string, number>();
@@ -291,6 +293,14 @@ export class DockerAdapter implements EnvironmentAdapter {
       args.push("-v", `${hostCredsPath}:/home/grackle/.claude/.credentials.json:ro`);
     } catch {
       logger.debug("No Claude credentials file found, skipping mount");
+    }
+
+    // Chromium needs >64MB shared memory for rendering
+    args.push("--shm-size=1gb");
+
+    // GPU passthrough for accelerated inference (e.g. TTS, ML models)
+    if (cfg.gpus) {
+      args.push("--gpus", cfg.gpus);
     }
 
     args.push(image);

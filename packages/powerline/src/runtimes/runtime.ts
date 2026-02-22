@@ -19,6 +19,8 @@ export interface SpawnOptions {
   systemContext?: string;
   projectId?: string;
   taskId?: string;
+  /** MCP server configurations to pass to the agent SDK. */
+  mcpServers?: Record<string, unknown>;
 }
 
 /** Parameters for resuming an existing agent session. */

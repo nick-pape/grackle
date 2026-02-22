@@ -147,23 +147,53 @@ export function registerPowerLineRoutes(router: ConnectRouter): void {
       const basePath = req.worktreeBasePath || "/workspace";
 
       try {
-        // Get the diff
+        // Resolve worktree path for the branch (may differ from basePath)
+        let diffCwd = basePath;
+        try {
+          const { stdout: wtList } = await execAsync(
+            "git", ["worktree", "list", "--porcelain"],
+            { cwd: basePath }
+          );
+          for (const block of wtList.split("\n\n")) {
+            if (block.includes(`branch refs/heads/${req.branch}`)) {
+              const pathMatch = block.match(/^worktree (.+)$/m);
+              if (pathMatch) {
+                diffCwd = pathMatch[1];
+              }
+              break;
+            }
+          }
+        } catch { /* fall back to basePath */ }
+
+        // Include both committed AND uncommitted changes vs base branch.
+        // First add all untracked files so they appear in the diff.
+        try {
+          await execAsync("git", ["add", "-N", "."], { cwd: diffCwd });
+        } catch { /* ignore */ }
+
+        // Diff against the merge base (includes uncommitted working tree changes)
+        const { stdout: mergeBase } = await execAsync(
+          "git", ["merge-base", baseBranch, "HEAD"],
+          { cwd: diffCwd }
+        );
+        const base = mergeBase.trim();
+
         const { stdout: diff } = await execAsync(
-          "git", ["diff", `${baseBranch}...${req.branch}`],
-          { cwd: basePath, maxBuffer: 10 * 1024 * 1024 }
+          "git", ["diff", base],
+          { cwd: diffCwd, maxBuffer: 10 * 1024 * 1024 }
         );
 
         // Get changed files
         const { stdout: filesOut } = await execAsync(
-          "git", ["diff", "--name-only", `${baseBranch}...${req.branch}`],
-          { cwd: basePath }
+          "git", ["diff", "--name-only", base],
+          { cwd: diffCwd }
         );
         const changedFiles = filesOut.trim().split("\n").filter(Boolean);
 
         // Get stat
         const { stdout: statOut } = await execAsync(
-          "git", ["diff", "--stat", `${baseBranch}...${req.branch}`],
-          { cwd: basePath }
+          "git", ["diff", "--stat", base],
+          { cwd: diffCwd }
         );
         const statMatch = statOut.match(/(\d+) insertion.+?(\d+) deletion/);
         const additions = statMatch ? parseInt(statMatch[1], 10) : 0;
