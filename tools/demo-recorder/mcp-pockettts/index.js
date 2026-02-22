@@ -16,7 +16,7 @@ const VOICE_SERVER_PORT = process.env.VOICE_SERVER_PORT || "8891";
 // PocketTTS voice_url only accepts http://, https://, or hf:// — not local paths.
 const VOICE_MAP = {
   snoop: `http://localhost:${VOICE_SERVER_PORT}/snoop.safetensors`,
-  avasarala: `http://localhost:${VOICE_SERVER_PORT}/avasarala.safetensors`,
+  cumberbatch: `http://localhost:${VOICE_SERVER_PORT}/cumberbatch.safetensors`,
 };
 
 // ── Synthesis-wait, playback-async architecture ─────────────
@@ -28,7 +28,7 @@ const VOICE_MAP = {
 // Per-voice playback speed (atempo filter). Lower = slower.
 const VOICE_TEMPO = {
   snoop: 0.92,
-  avasarala: 0.95,
+  cumberbatch: 0.95,
   default: 0.95,
 };
 
@@ -109,7 +109,7 @@ server.tool(
   {
     text: z.string().describe("The text to speak aloud"),
     voice: z
-      .enum(["snoop", "avasarala"])
+      .enum(["snoop", "cumberbatch"])
       .optional()
       .describe("Voice clone to use. Omit for default voice."),
   },

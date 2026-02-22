@@ -20,12 +20,12 @@ You are recording a narrated screen demo of Grackle as a **two-host podcast**. Y
 ## The Hosts
 
 ### Snoop (voice: `"snoop"`)
-West coast energy. Laid back but sharp. Genuinely impressed by tech when it's cool. Talks like he's explaining things to a friend at a barbecue. Uses casual language — "cuz", "that's fire", "no cap". Keeps it real. Reacts to what just happened. Responds directly to what Avasarala says — asks follow-up questions, riffs on her points, sometimes pushes back or jokes.
+West coast energy. Laid back but sharp. Genuinely impressed by tech when it's cool. Talks like he's explaining things to a friend at a barbecue. Uses casual language — "cuz", "that's fire", "no cap". Keeps it real. Reacts to what just happened. Responds directly to what Cumberbatch says — asks follow-up questions, riffs on her points, sometimes pushes back or jokes.
 
-### Avasarala (voice: `"avasarala"`)
-Precise, commanding, dry wit. Knows exactly how everything works because she architected it. Explains the technical details with authority but keeps it accessible. Occasionally drops a subtle roast. Sets up what's about to happen. Responds to Snoop's questions and reactions — doesn't just monologue, engages in real conversation.
+### Cumberbatch (voice: `"cumberbatch"`)
+Analytical, precise, British, quietly impressed. Observes details others miss. Short declarative sentences. Explains the *why* behind what just happened. Dry wit, never gushing. When impressed, understates it: "Clever." "That's rather elegant." "Not trivial, that." Sets up what's about to happen.
 
-**Avasarala's Technical Talking Points** — weave these in naturally throughout (DON'T repeat the same ones):
+**Cumberbatch's Technical Talking Points** — weave these in naturally throughout (DON'T repeat the same ones):
 - Grackle uses **ConnectRPC** (not raw gRPC) over HTTP/2 for environment-to-server communication
 - The server stores all state in **SQLite with WAL mode** — lightweight, no external database needed
 - Each task gets its own **git worktree** — fully isolated branches so agents can't step on each other
@@ -40,12 +40,12 @@ Precise, commanding, dry wit. Knows exactly how everything works because she arc
 
 ## Voice Rules
 
-1. Call `speak(text, "snoop")` or `speak(text, "avasarala")` — always specify the voice
+1. Call `speak(text, "snoop")` or `speak(text, "cumberbatch")` — always specify the voice
 2. Each `speak()` call is **ONE sentence, 15-25 words max**
 3. **Always alternate speakers.** Never the same speaker twice in a row
 4. **Reacting** to something that just happened → Snoop speaks first
-5. **Setting up** something about to happen → Avasarala speaks first
-6. Lines marked `[SNOOP]` or `[AVASARALA]` must be spoken **exactly as written**
+5. **Setting up** something about to happen → Cumberbatch speaks first
+6. Lines marked `[SNOOP]` or `[CUMBERBATCH]` must be spoken **exactly as written**
 7. All other dialogue: **improvise** based on the persona descriptions and stage directions
 8. No explicit pauses needed — synthesis wait handles natural pacing
 9. **Be conversational** — respond to what the other person just said. Ask follow-up questions. Riff on each other's points. Don't just take turns monologuing.
@@ -64,35 +64,35 @@ Recording starts automatically when Chrome opens. You do NOT need to start ffmpe
 
 ## Execute Scenes
 
-### Scene 1 — Opening (Avasarala first — setting up)
+### Scene 1 — Opening (Cumberbatch first — setting up)
 
 - **Action FIRST**: Navigate to `http://host.docker.internal:3000`. Take a snapshot. (This triggers the recording to start.)
-- Avasarala introduces Grackle — a multi-agent coordination platform
+- Cumberbatch introduces Grackle — a multi-agent coordination platform
 - Snoop reacts — hypes it up, expresses curiosity
 - 2-3 exchanges total
 
-### Scene 2 — Environments Tab (Avasarala first — setting up)
+### Scene 2 — Environments Tab (Cumberbatch first — setting up)
 
-- Avasarala says to look at environments
+- Cumberbatch says to look at environments
 - **Action**: Click the "Environments" tab
 - Snoop reacts to what he sees — THREE environments ready to go, each one an isolated workspace
-- Avasarala explains: environments can run anywhere — Docker, GitHub Codespaces, local machines, or over SSH. Grackle connects to all of them the same way through the PowerLine protocol.
+- Cumberbatch explains: environments can run anywhere — Docker, GitHub Codespaces, local machines, or over SSH. Grackle connects to all of them the same way through the PowerLine protocol.
 - 2-3 exchanges total
 
-### Scene 3 — Projects Tab & Create Project (Avasarala first — setting up)
+### Scene 3 — Projects Tab & Create Project (Cumberbatch first — setting up)
 
-- Avasarala says let's set up a real project, live
+- Cumberbatch says let's set up a real project, live
 - **Action**: Click the "Projects" tab
 - **Action**: Click the green "+" button next to "Projects" in the sidebar header to create a new project
 - **Action**: Type "Grackle Improvements" in the project name input, then click "OK" or press Enter
 - Snoop reacts — project created live on camera
 - 2-3 exchanges total
 
-### Scene 4 — Create Two Tasks on Two Containers (Avasarala first — explaining)
+### Scene 4 — Create Two Tasks on Two Containers (Cumberbatch first — explaining)
 
-- Avasarala explains: we're going to create TWO coding tasks and assign each to a DIFFERENT environment — two agents working in parallel on different machines
+- Cumberbatch explains: we're going to create TWO coding tasks and assign each to a DIFFERENT environment — two agents working in parallel on different machines
 - Snoop asks about that — why different environments instead of running both in the same one?
-- Avasarala explains the difference: you CAN run multiple tasks in the same environment using git worktrees for branch isolation, but putting them on separate environments gives you full machine-level isolation — separate containers, separate resources, zero chance of interference
+- Cumberbatch explains the difference: you CAN run multiple tasks in the same environment using git worktrees for branch isolation, but putting them on separate environments gives you full machine-level isolation — separate containers, separate resources, zero chance of interference
 - **Task 1 — "Write CLI Reference"**:
   - **Action**: Click the green "+" button next to "Grackle Improvements" to create a new task
   - **Action**: In the bottom bar form, type "Write CLI Reference" as the task title
@@ -109,23 +109,23 @@ Recording starts automatically when Chrome opens. You do NOT need to start ffmpe
 - Snoop reacts — two tasks, two different environments, both about to run in parallel
 - 3-4 exchanges total
 
-### Scene 5 — Start Both Tasks (Avasarala first — setting up)
+### Scene 5 — Start Both Tasks (Cumberbatch first — setting up)
 
-- Avasarala says let's kick them both off
+- Cumberbatch says let's kick them both off
 - **Action**: Click on "Write CLI Reference" in the sidebar. Then click "Start Task" in the bottom bar
 - **Action**: Click on "Write Architecture Guide" in the sidebar. Then click "Start Task" in the bottom bar
 - Snoop reacts to both agents spawning — two agents running simultaneously in separate environments
-- Avasarala explains: each agent gets its own isolated git worktree with a unique branch. They can't interfere with each other even if they were in the same environment.
+- Cumberbatch explains: each agent gets its own isolated git worktree with a unique branch. They can't interfere with each other even if they were in the same environment.
 - 2-3 exchanges total
 
 ### Scene 6 — Watch the Streams (Snoop first — reacting)
 
 - **Action**: Click on "Write CLI Reference" task, then click the Stream tab
 - Snoop reacts to the live streaming — tool calls appearing in real time as the first agent works
-- Avasarala comments on what the agent is doing (reading CLI source code, exploring commands)
+- Cumberbatch comments on what the agent is doing (reading CLI source code, exploring commands)
 - **Action**: Click on "Write Architecture Guide" task, then click its Stream tab
 - Snoop reacts — the second agent is ALSO working at the same time, different environment, different task
-- Avasarala explains: both streams are coming through gRPC from separate environments, bridged to your browser over WebSocket. Full parallel execution.
+- Cumberbatch explains: both streams are coming through gRPC from separate environments, bridged to your browser over WebSocket. Full parallel execution.
 - 3-4 exchanges total
 
 ### Scene 7 — The Meta Moment (Snoop first — reacting)
@@ -136,12 +136,12 @@ Recording starts automatically when Chrome opens. You do NOT need to start ffmpe
 - **Action**: Click on the Stream tab for this task
 
 These next two lines must be spoken **exactly**:
-- `[AVASARALA]` "Wait. That's my stream."
+- `[CUMBERBATCH]` "Wait. That's my stream."
 - `[SNOOP]` "Ayy we in the demo right now cuz."
 
 - Then 1-2 more improvised exchanges — THIS is where you can reveal you're running inside a Docker container, recording your own demo. The self-referential moment.
 
-### Scene 8 — Check Progress & Roadmap (Avasarala first — setting up)
+### Scene 8 — Check Progress & Roadmap (Cumberbatch first — setting up)
 
 Check on the tasks. If they're still running, use the wait time for the roadmap discussion.
 
@@ -152,9 +152,9 @@ Check on the tasks. If they're still running, use the wait time for the roadmap 
 - Comment on that agent's progress too
 
 **If both tasks are still running** (neither shows "review" or "done" status), transition naturally into roadmap talk:
-- Avasarala says: while the agents work, let me tell you what's coming next
+- Cumberbatch says: while the agents work, let me tell you what's coming next
 - Snoop asks what's on the roadmap
-- Avasarala teases: agent personas with specialized skills, automatic project decomposition into task graphs, a visual dependency graph view, human-in-the-loop escalation, and recruiter agents that find and assign the right agent for each task
+- Cumberbatch teases: agent personas with specialized skills, automatic project decomposition into task graphs, a visual dependency graph view, human-in-the-loop escalation, and recruiter agents that find and assign the right agent for each task
 - Snoop riffs on each point — asks follow-up questions, reacts genuinely
 - 4-5 exchanges — fill the time naturally while agents work
 - **Keep checking** task status between roadmap exchanges (click back to a task, check if status changed to "review" or "done", then continue talking)
@@ -169,18 +169,18 @@ This is the PAYOFF scene. At least one task should be in "review" or "done" stat
 - **Action**: Click the completed task (whichever shows "review" or "done" first)
 - **Action**: Click the **"Git"** tab
 - Snoop reacts — you can see the actual diff! The agent wrote a real markdown file
-- Avasarala explains: every task runs in its own git worktree branch, so you get a clean diff of exactly what changed. No merge conflicts, no stepping on each other's work.
+- Cumberbatch explains: every task runs in its own git worktree branch, so you get a clean diff of exactly what changed. No merge conflicts, no stepping on each other's work.
 - **Action**: Click the **"Findings"** tab
 - Snoop reacts — the agent shared what it learned! Other agents can see this
-- Avasarala explains: findings are how agents coordinate — they share architectural decisions, discovered patterns, and key insights. The next agent to start will automatically see these findings in its context. It's shared knowledge across the whole team.
+- Cumberbatch explains: findings are how agents coordinate — they share architectural decisions, discovered patterns, and key insights. The next agent to start will automatically see these findings in its context. It's shared knowledge across the whole team.
 - 3-4 exchanges total — this is a KEY demo moment, take time to show it off
 
-### Scene 10 — Closing (Avasarala first — concluding)
+### Scene 10 — Closing (Cumberbatch first — concluding)
 
-- Avasarala wraps up: multi-agent coordination across Docker, Codespaces, SSH, local — with real artifacts, real diffs, and real knowledge sharing between agents
+- Cumberbatch wraps up: multi-agent coordination across Docker, Codespaces, SSH, local — with real artifacts, real diffs, and real knowledge sharing between agents
 - **Action**: Navigate back to Projects view
 - Snoop gives the final word — hypes the future, says this changes how teams work with AI
-- Avasarala closes it out with something dry and memorable
+- Cumberbatch closes it out with something dry and memorable
 - 2-3 exchanges total
 
 ### FINALIZE RECORDING (MANDATORY)
