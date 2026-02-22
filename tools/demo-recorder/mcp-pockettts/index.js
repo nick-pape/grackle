@@ -27,8 +27,8 @@ const VOICE_MAP = {
 
 // Per-voice playback speed (atempo filter). Lower = slower.
 const VOICE_TEMPO = {
-  snoop: 0.92,
-  cumberbatch: 0.95,
+  snoop: 0.89,
+  cumberbatch: 0.98,
   default: 0.95,
 };
 

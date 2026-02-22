@@ -157,7 +157,10 @@ function spawnOnPowerLine(
               data.content || "", data.tags || [],
             );
             broadcast({ type: "finding_posted", payload: { projectId, findingId } });
-          } catch { /* ignore parse errors */ }
+            process.stderr.write(`[finding] Stored: ${findingId} "${data.title}" in ${projectId}\n`);
+          } catch (err) {
+            process.stderr.write(`[finding] ERROR: ${err} (project=${projectId} task=${taskId})\n`);
+          }
         }
 
         streamHub.publish(sessionEvent);
