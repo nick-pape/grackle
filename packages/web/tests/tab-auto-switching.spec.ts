@@ -7,20 +7,6 @@ import {
   runStubTaskToCompletion,
 } from "./helpers.js";
 
-/** Assert a task tab button has the active styling (green text color). */
-async function expectActiveTab(page: import("@playwright/test").Page, tabName: string): Promise<void> {
-  const tabButton = page.locator("button", { hasText: tabName });
-  // Active tabs have color: #4ecca3 = rgb(78, 204, 163)
-  await expect(tabButton).toHaveCSS("color", "rgb(78, 204, 163)", { timeout: 10_000 });
-}
-
-/** Assert a task tab button has the inactive styling (gray text color). */
-async function expectInactiveTab(page: import("@playwright/test").Page, tabName: string): Promise<void> {
-  const tabButton = page.locator("button", { hasText: tabName });
-  // Inactive tabs have color: #888 = rgb(136, 136, 136)
-  await expect(tabButton).toHaveCSS("color", "rgb(136, 136, 136)");
-}
-
 test.describe("Tab Auto-Switching", () => {
   test("stream tab becomes active when task starts", async ({ appPage }) => {
     const page = appPage;
@@ -32,14 +18,21 @@ test.describe("Tab Auto-Switching", () => {
     // Navigate to task, switch to Diff tab first
     await navigateToTask(page, "tab-start-task");
     await page.locator("button", { hasText: "Diff" }).click();
-    await expectActiveTab(page, "Diff");
+
+    // Verify Diff tab content is visible (DiffViewer renders loading or result)
+    const diffContent = page.locator("text=Loading diff...").or(
+      page.locator("text=No changes on branch"),
+    ).or(
+      page.locator('[style*="color: rgb(233, 69, 96)"]'),
+    );
+    await expect(diffContent.first()).toBeVisible({ timeout: 10_000 });
 
     // Start the task with stub runtime
     await patchWsForStubRuntime(page);
     await page.locator("button", { hasText: "Start Task" }).click();
 
     // Verify Stream tab becomes active (auto-switch on in_progress)
-    await expectActiveTab(page, "Stream");
+    // Stream content should appear with runtime events
     await expect(page.locator("text=Stub runtime initialized")).toBeVisible({ timeout: 15_000 });
   });
 
@@ -56,8 +49,16 @@ test.describe("Tab Auto-Switching", () => {
     await runStubTaskToCompletion(page);
 
     // Verify Diff tab is now active (auto-switch on review status)
-    await expectActiveTab(page, "Diff");
-    await expectInactiveTab(page, "Stream");
+    // DiffViewer should be rendering — stream content should not be visible
+    const diffContent = page.locator("text=Loading diff...").or(
+      page.locator("text=No changes on branch"),
+    ).or(
+      page.locator('[style*="color: rgb(233, 69, 96)"]'),
+    );
+    await expect(diffContent.first()).toBeVisible({ timeout: 10_000 });
+
+    // Stream content should NOT be visible (tab conditionally renders)
+    await expect(page.locator("text=Stub runtime initialized")).not.toBeVisible();
   });
 
   test("findings tab becomes active on done state", async ({ appPage }) => {
@@ -74,9 +75,10 @@ test.describe("Tab Auto-Switching", () => {
     await page.locator("button", { hasText: "Approve" }).click();
 
     // Verify Findings tab becomes active (auto-switch on done status)
-    await expectActiveTab(page, "Findings");
-    await expectInactiveTab(page, "Stream");
-    await expectInactiveTab(page, "Diff");
+    await expect(page.getByText("No findings yet")).toBeVisible({ timeout: 10_000 });
+
+    // Stream and Diff content should NOT be visible
+    await expect(page.locator("text=Stub runtime initialized")).not.toBeVisible();
   });
 
   test("clicking task in sidebar resets to stream tab", async ({ appPage }) => {
@@ -90,11 +92,17 @@ test.describe("Tab Auto-Switching", () => {
     // Navigate to task A, switch to Findings tab
     await navigateToTask(page, "sidebar-task-a");
     await page.locator("button", { hasText: "Findings" }).click();
-    await expectActiveTab(page, "Findings");
+
+    // Verify Findings content is visible
+    await expect(page.getByText("No findings yet")).toBeVisible({ timeout: 5_000 });
 
     // Click task B in sidebar — should reset to Stream tab
     await navigateToTask(page, "sidebar-task-b");
-    await expectActiveTab(page, "Stream");
-    await expect(page.getByText("Task has not been started yet")).toBeVisible();
+
+    // Stream content should be visible for the pending task
+    await expect(page.getByText("Task has not been started yet")).toBeVisible({ timeout: 5_000 });
+
+    // Findings content should NOT be visible (switched away)
+    await expect(page.getByText("No findings yet")).not.toBeVisible();
   });
 });

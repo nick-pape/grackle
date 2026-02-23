@@ -46,7 +46,7 @@ test.describe("Multi-Task", () => {
     // Navigate to task B (pending)
     await navigateToTask(page, "preserve-task-b");
     await expect(page.getByText("Task: preserve-task-b")).toBeVisible();
-    await expect(page.getByText("Task has not been started yet")).toBeVisible();
+    await expect(page.getByText("Task has not been started yet")).toBeVisible({ timeout: 5_000 });
 
     // Navigate back to task A — should still show review state with Approve button
     await navigateToTask(page, "preserve-task-a");
