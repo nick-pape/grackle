@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import type { ViewMode } from "../App.js";
 import type { Session, SessionEvent } from "../hooks/useGrackleSocket.js";
 
+/** Props for the SessionPanel component. */
 interface Props {
   viewMode: ViewMode;
   setViewMode: (mode: ViewMode) => void;
@@ -13,6 +14,7 @@ interface Props {
 
 // --- Subcomponents ---
 
+/** Props for the SessionHeader subcomponent. */
 interface SessionHeaderProps {
   sessionId: string;
   session: Session | null;
@@ -20,6 +22,7 @@ interface SessionHeaderProps {
   onKill: (sessionId: string) => void;
 }
 
+/** Displays session metadata and a kill button for active sessions. */
 function SessionHeader({ sessionId, session, isActive, onKill }: SessionHeaderProps) {
   return (
     <div
@@ -64,12 +67,14 @@ function SessionHeader({ sessionId, session, isActive, onKill }: SessionHeaderPr
   );
 }
 
+/** Props for the EventList subcomponent. */
 interface EventListProps {
   sessionEvents: SessionEvent[];
   session: Session | null;
   scrollRef: React.RefObject<HTMLDivElement | null>;
 }
 
+/** Scrollable list of session events with empty-state messaging. */
 function EventList({ sessionEvents, session, scrollRef }: EventListProps) {
   const isTerminal = session && ["completed", "failed", "killed"].includes(session.status);
   const emptyMessage = isTerminal
@@ -99,11 +104,13 @@ function EventList({ sessionEvents, session, scrollRef }: EventListProps) {
 
 type TaskTab = "stream" | "diff" | "findings";
 
+/** Main content panel that renders session streams, task views, project summaries, or empty states based on the current view mode. */
 export function SessionPanel({ viewMode, setViewMode }: Props) {
   const { events, sessions, tasks, findings, taskDiff, loadSessionEvents, loadFindings, loadTaskDiff, kill } = useGrackle();
   const scrollRef = useRef<HTMLDivElement>(null);
   const loadedRef = useRef<string | null>(null);
   const [activeTaskTab, setActiveTaskTab] = useState<TaskTab>("stream");
+  const prevTaskStatusRef = useRef<string | undefined>(undefined);
 
   // Determine session context
   let sessionId: string | null = null;
@@ -116,9 +123,21 @@ export function SessionPanel({ viewMode, setViewMode }: Props) {
     task = tasks.find((t) => t.id === viewMode.taskId);
     sessionId = task?.sessionId || null;
     projectId = task?.projectId || null;
-    // Use the tab from viewMode if specified
-    if (viewMode.tab && viewMode.tab !== activeTaskTab) {
-      // Will be set via effect
+  }
+
+  // Auto-switch tab synchronously during render (not via effect) so the
+  // correct tab is committed in the same frame as the status change.
+  // React supports calling setState during render as a getDerivedStateFromProps
+  // replacement — it re-renders immediately without committing the stale frame.
+  if (task?.status !== prevTaskStatusRef.current) {
+    prevTaskStatusRef.current = task?.status;
+    const newTab: TaskTab | undefined =
+      task?.status === "in_progress" ? "stream"
+      : task?.status === "review" ? "diff"
+      : task?.status === "done" ? "findings"
+      : undefined;
+    if (newTab && newTab !== activeTaskTab) {
+      setActiveTaskTab(newTab);
     }
   }
 
@@ -129,20 +148,6 @@ export function SessionPanel({ viewMode, setViewMode }: Props) {
   const session = sessionId
     ? sessions.find((s) => s.id === sessionId) ?? null
     : null;
-
-  // Auto-switch to diff tab when task enters review
-  useEffect(() => {
-    if (task?.status === "review") {
-      setActiveTaskTab("diff");
-    }
-  }, [task?.status]);
-
-  // Sync tab from viewMode
-  useEffect(() => {
-    if (viewMode.kind === "task" && viewMode.tab) {
-      setActiveTaskTab(viewMode.tab);
-    }
-  }, [viewMode]);
 
   // Load historical events when selecting a session
   useEffect(() => {
@@ -323,6 +328,7 @@ export function SessionPanel({ viewMode, setViewMode }: Props) {
   );
 }
 
+/** Tab button for switching between stream, diff, and findings views within a task. */
 function TaskTabButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
     <button
