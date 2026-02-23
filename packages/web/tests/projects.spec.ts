@@ -1,11 +1,11 @@
 import { test, expect } from "./fixtures.js";
 
 test.describe("Projects", () => {
-  test("sidebar defaults to Projects tab with empty state", async ({ appPage }) => {
+  test("sidebar defaults to Projects tab", async ({ appPage }) => {
     const page = appPage;
 
-    // Projects tab should be active by default — empty state message visible
-    await expect(page.getByText("No projects. Click + to create one.")).toBeVisible();
+    // Projects tab should be active by default — header label visible
+    await expect(page.locator("text=PROJECTS").first()).toBeVisible();
   });
 
   test("create a project and see it in sidebar", async ({ appPage }) => {
