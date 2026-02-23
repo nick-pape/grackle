@@ -6,6 +6,9 @@ import { registerAgentCommands } from "./commands/agent.js";
 import { registerTokenCommands } from "./commands/token.js";
 import { registerLogCommands } from "./commands/logs.js";
 import { registerServeCommand } from "./commands/serve.js";
+import { registerProjectCommands } from "./commands/project.js";
+import { registerTaskCommands } from "./commands/task.js";
+import { registerFindingCommands } from "./commands/findings.js";
 
 const program = new Command();
 
@@ -19,6 +22,9 @@ registerAgentCommands(program);
 registerTokenCommands(program);
 registerLogCommands(program);
 registerServeCommand(program);
+registerProjectCommands(program);
+registerTaskCommands(program);
+registerFindingCommands(program);
 
 program.parseAsync(process.argv).catch((err) => {
   console.error(err.message || err);

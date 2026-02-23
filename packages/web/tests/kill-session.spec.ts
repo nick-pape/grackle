@@ -4,6 +4,9 @@ test.describe("Kill Session", () => {
   test("kill during waiting_input", async ({ appPage }) => {
     const page = appPage;
 
+    // Stage2 sidebar defaults to "Projects" tab — switch to "Environments"
+    await page.locator("button", { hasText: "Environments" }).click();
+
     // Start a stub session
     await page.locator("button", { hasText: "+" }).click();
     const runtimeSelect = page.locator("select");

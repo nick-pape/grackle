@@ -111,6 +111,8 @@ message SpawnRequest {
   string model = 3;
   int32 max_turns = 4;
   string runtime = 5;            // empty = use env default
+  string branch = 6;             // Branch for worktree (empty = skip)
+  string system_context = 7;     // Prepended to prompt (task desc + findings)
 }
 
 message ResumeRequest {
@@ -126,7 +128,7 @@ message InputMessage {
 
 message SessionEvent {
   string session_id = 1;
-  string type = 2;
+  string type = 2;               // "text" | "tool_use" | "tool_result" | "error" | "status" | "system" | "finding"
   string timestamp = 3;
   string content = 4;
   string raw = 5;                // JSON, optional original payload
@@ -156,6 +158,137 @@ message TokenInfo {
   // No value — never expose to clients
 }
 
+// ─── Projects ──────────────────────────────────────────────
+
+message Project {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  string repo_url = 4;
+  string default_env_id = 5;
+  string status = 6;
+  string created_at = 7;
+  string updated_at = 8;
+}
+
+message ProjectList {
+  repeated Project projects = 1;
+}
+
+message CreateProjectRequest {
+  string name = 1;
+  string description = 2;
+  string repo_url = 3;
+  string default_env_id = 4;
+}
+
+message ProjectId {
+  string id = 1;
+}
+
+// ─── Tasks ─────────────────────────────────────────────────
+
+message Task {
+  string id = 1;
+  string project_id = 2;
+  string title = 3;
+  string description = 4;
+  string status = 5;
+  string branch = 6;
+  string env_id = 7;
+  string session_id = 8;
+  repeated string depends_on = 9;
+  string assigned_at = 10;
+  string started_at = 11;
+  string completed_at = 12;
+  string review_notes = 13;
+  string created_at = 14;
+  string updated_at = 15;
+  int32 sort_order = 16;
+}
+
+message TaskList {
+  repeated Task tasks = 1;
+}
+
+message CreateTaskRequest {
+  string project_id = 1;
+  string title = 2;
+  string description = 3;
+  string env_id = 4;
+  repeated string depends_on = 5;
+}
+
+message TaskId {
+  string id = 1;
+}
+
+message UpdateTaskRequest {
+  string id = 1;
+  string title = 2;
+  string description = 3;
+  string status = 4;
+  string env_id = 5;
+  repeated string depends_on = 6;
+  string review_notes = 7;
+}
+
+message StartTaskRequest {
+  string task_id = 1;
+  string runtime = 2;
+  string model = 3;
+}
+
+// ─── Findings ──────────────────────────────────────────────
+
+message Finding {
+  string id = 1;
+  string project_id = 2;
+  string task_id = 3;
+  string session_id = 4;
+  string category = 5;
+  string title = 6;
+  string content = 7;
+  repeated string tags = 8;
+  string created_at = 9;
+}
+
+message FindingList {
+  repeated Finding findings = 1;
+}
+
+message PostFindingRequest {
+  string project_id = 1;
+  string task_id = 2;
+  string session_id = 3;
+  string category = 4;
+  string title = 5;
+  string content = 6;
+  repeated string tags = 7;
+}
+
+message QueryFindingsRequest {
+  string project_id = 1;
+  repeated string categories = 2;
+  repeated string tags = 3;
+  int32 limit = 4;
+}
+
+// ─── Task Diff ─────────────────────────────────────────────
+
+message GetTaskDiffRequest {
+  string task_id = 1;
+}
+
+message TaskDiff {
+  string task_id = 1;
+  string branch = 2;
+  string diff = 3;
+  repeated string changed_files = 4;
+  int32 additions = 5;
+  int32 deletions = 6;
+}
+
 // ─── Service ────────────────────────────────────────────────
 
 service Grackle {
@@ -181,4 +314,27 @@ service Grackle {
   // Token management
   rpc SetToken(TokenEntry) returns (Empty);
   rpc ListTokens(Empty) returns (TokenList);
+
+  // Projects
+  rpc ListProjects(Empty) returns (ProjectList);
+  rpc CreateProject(CreateProjectRequest) returns (Project);
+  rpc GetProject(ProjectId) returns (Project);
+  rpc ArchiveProject(ProjectId) returns (Empty);
+
+  // Tasks
+  rpc ListTasks(ProjectId) returns (TaskList);
+  rpc CreateTask(CreateTaskRequest) returns (Task);
+  rpc GetTask(TaskId) returns (Task);
+  rpc UpdateTask(UpdateTaskRequest) returns (Task);
+  rpc StartTask(StartTaskRequest) returns (Session);
+  rpc ApproveTask(TaskId) returns (Task);
+  rpc RejectTask(UpdateTaskRequest) returns (Task);
+  rpc DeleteTask(TaskId) returns (Empty);
+
+  // Findings
+  rpc PostFinding(PostFindingRequest) returns (Finding);
+  rpc QueryFindings(QueryFindingsRequest) returns (FindingList);
+
+  // Diff
+  rpc GetTaskDiff(GetTaskDiffRequest) returns (TaskDiff);
 }

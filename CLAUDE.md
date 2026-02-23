@@ -54,6 +54,10 @@ Rush monorepo with 5 packages under `packages/`:
 - `@bufbuild/protobuf` must be a direct dependency in any package using `create()`
 - Pin specific versions for runtime SDKs (not `@latest`)
 
+### Database
+- **Never access SQLite directly** — always go through the CLI (`grackle` commands)
+- If the CLI is missing a needed operation, add it to `@grackle/cli` rather than using raw SQL
+
 ## Ports
 
 | Service | Port | Constant |

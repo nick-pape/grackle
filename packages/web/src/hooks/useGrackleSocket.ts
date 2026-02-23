@@ -25,6 +25,53 @@ export interface SessionEvent {
   content: string;
 }
 
+export interface Project {
+  id: string;
+  name: string;
+  description: string;
+  repoUrl: string;
+  defaultEnvId: string;
+  status: string;
+  createdAt: string;
+}
+
+export interface TaskData {
+  id: string;
+  projectId: string;
+  title: string;
+  description: string;
+  status: string;
+  branch: string;
+  envId: string;
+  sessionId: string;
+  dependsOn: string[];
+  reviewNotes: string;
+  sortOrder: number;
+  createdAt: string;
+}
+
+export interface FindingData {
+  id: string;
+  projectId: string;
+  taskId: string;
+  sessionId: string;
+  category: string;
+  title: string;
+  content: string;
+  tags: string[];
+  createdAt: string;
+}
+
+export interface TaskDiffData {
+  taskId: string;
+  branch?: string;
+  diff?: string;
+  changedFiles?: string[];
+  additions?: number;
+  deletions?: number;
+  error?: string;
+}
+
 interface WsMessage {
   type: string;
   payload?: Record<string, unknown>;
@@ -52,6 +99,10 @@ export function useGrackleSocket(url?: string) {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [events, setEvents] = useState<SessionEvent[]>([]);
   const [lastSpawnedId, setLastSpawnedId] = useState<string | null>(null);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [tasks, setTasks] = useState<TaskData[]>([]);
+  const [findings, setFindings] = useState<FindingData[]>([]);
+  const [taskDiff, setTaskDiff] = useState<TaskDiffData | null>(null);
 
   const send = useCallback((msg: WsMessage) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -72,6 +123,7 @@ export function useGrackleSocket(url?: string) {
         setConnected(true);
         send({ type: "list_environments" });
         send({ type: "list_sessions" });
+        send({ type: "list_projects" });
         send({ type: "subscribe_all" });
         // Periodically refresh environments to catch CLI-driven changes
         clearInterval(envPollTimer);
@@ -92,13 +144,10 @@ export function useGrackleSocket(url?: string) {
           case "session_event": {
             const event = msg.payload as unknown as SessionEvent;
             setEvents((prev) => [...prev, event]);
-            // Update session status when status events arrive
             if (event.eventType === "status") {
               setSessions((prev) =>
                 prev.map((s) =>
-                  s.id === event.sessionId
-                    ? { ...s, status: event.content }
-                    : s
+                  s.id === event.sessionId ? { ...s, status: event.content } : s
                 )
               );
             }
@@ -109,7 +158,6 @@ export function useGrackleSocket(url?: string) {
             const replaySessionId = msg.payload?.sessionId as string;
             if (replayEvents && replaySessionId) {
               setEvents((prev) => {
-                // Remove any existing events for this session, then add the replayed ones
                 const without = prev.filter((e) => e.sessionId !== replaySessionId);
                 return [...without, ...replayEvents];
               });
@@ -125,6 +173,78 @@ export function useGrackleSocket(url?: string) {
             send({ type: "list_environments" });
             break;
           }
+          case "projects":
+            setProjects((msg.payload?.projects as Project[]) || []);
+            break;
+          case "project_created":
+            send({ type: "list_projects" });
+            break;
+          case "project_archived":
+            send({ type: "list_projects" });
+            break;
+          case "tasks": {
+            const incoming = (msg.payload?.tasks as TaskData[]) || [];
+            const pid = (msg.payload?.projectId as string) || (incoming.length > 0 ? incoming[0].projectId : "");
+            if (!pid) { setTasks(incoming); break; }
+            setTasks((prev) => [
+              ...prev.filter((t) => t.projectId !== pid),
+              ...incoming,
+            ]);
+            break;
+          }
+          case "task_created": {
+            const taskData = (msg.payload?.task as Record<string, unknown>) || {};
+            const pid = (taskData.project_id || taskData.projectId) as string;
+            if (pid) send({ type: "list_tasks", payload: { projectId: pid } });
+            break;
+          }
+          case "task_started": {
+            const tp = msg.payload as Record<string, unknown>;
+            if (tp.sessionId) {
+              send({ type: "list_sessions" });
+            }
+            // Refresh tasks for the project
+            const startedPid = tp.projectId as string | undefined;
+            if (startedPid) {
+              send({ type: "list_tasks", payload: { projectId: startedPid } });
+            } else if (tp.taskId) {
+              setTasks((prev) => {
+                const found = prev.find((t) => t.id === tp.taskId);
+                if (found) send({ type: "list_tasks", payload: { projectId: found.projectId } });
+                return prev;
+              });
+            }
+            break;
+          }
+          case "task_approved":
+          case "task_rejected":
+          case "task_deleted":
+          case "task_updated": {
+            const tp2 = msg.payload as Record<string, unknown>;
+            const pid = tp2.projectId as string | undefined;
+            if (pid) {
+              send({ type: "list_tasks", payload: { projectId: pid } });
+            } else if (tp2.taskId) {
+              setTasks((prev) => {
+                const found = prev.find((t) => t.id === tp2.taskId);
+                if (found) send({ type: "list_tasks", payload: { projectId: found.projectId } });
+                return prev;
+              });
+            }
+            break;
+          }
+          case "findings":
+            setFindings((msg.payload?.findings as FindingData[]) || []);
+            break;
+          case "finding_posted":
+            // Refresh findings
+            if (msg.payload?.projectId) {
+              send({ type: "list_findings", payload: { projectId: msg.payload.projectId } });
+            }
+            break;
+          case "task_diff":
+            setTaskDiff(msg.payload as unknown as TaskDiffData);
+            break;
           case "error":
             console.error("[ws]", msg.payload?.message);
             break;
@@ -180,6 +300,7 @@ export function useGrackleSocket(url?: string) {
   const refresh = useCallback(() => {
     send({ type: "list_environments" });
     send({ type: "list_sessions" });
+    send({ type: "list_projects" });
   }, [send]);
 
   const loadSessionEvents = useCallback(
@@ -193,17 +314,136 @@ export function useGrackleSocket(url?: string) {
     setEvents([]);
   }, []);
 
+  // ─── Project methods ──────────────────────────────
+
+  const createProject = useCallback(
+    (name: string, description?: string, repoUrl?: string, defaultEnvId?: string) => {
+      send({
+        type: "create_project",
+        payload: { name, description: description || "", repoUrl: repoUrl || "", defaultEnvId: defaultEnvId || "" },
+      });
+    },
+    [send]
+  );
+
+  const archiveProject = useCallback(
+    (projectId: string) => {
+      send({ type: "archive_project", payload: { projectId } });
+    },
+    [send]
+  );
+
+  const loadTasks = useCallback(
+    (projectId: string) => {
+      send({ type: "list_tasks", payload: { projectId } });
+    },
+    [send]
+  );
+
+  // ─── Task methods ─────────────────────────────────
+
+  const createTask = useCallback(
+    (projectId: string, title: string, description?: string, envId?: string, dependsOn?: string[]) => {
+      send({
+        type: "create_task",
+        payload: {
+          projectId,
+          title,
+          description: description || "",
+          envId: envId || "",
+          dependsOn: dependsOn || [],
+        },
+      });
+    },
+    [send]
+  );
+
+  const startTask = useCallback(
+    (taskId: string, runtime?: string, model?: string) => {
+      send({
+        type: "start_task",
+        payload: { taskId, runtime: runtime || "", model: model || "" },
+      });
+    },
+    [send]
+  );
+
+  const approveTask = useCallback(
+    (taskId: string) => {
+      send({ type: "approve_task", payload: { taskId } });
+    },
+    [send]
+  );
+
+  const rejectTask = useCallback(
+    (taskId: string, reviewNotes: string) => {
+      send({ type: "reject_task", payload: { taskId, reviewNotes } });
+    },
+    [send]
+  );
+
+  const deleteTask = useCallback(
+    (taskId: string) => {
+      send({ type: "delete_task", payload: { taskId } });
+    },
+    [send]
+  );
+
+  // ─── Findings methods ─────────────────────────────
+
+  const loadFindings = useCallback(
+    (projectId: string) => {
+      send({ type: "list_findings", payload: { projectId } });
+    },
+    [send]
+  );
+
+  const postFinding = useCallback(
+    (projectId: string, title: string, content: string, category?: string, tags?: string[]) => {
+      send({
+        type: "post_finding",
+        payload: { projectId, title, content, category: category || "general", tags: tags || [] },
+      });
+    },
+    [send]
+  );
+
+  // ─── Diff methods ─────────────────────────────────
+
+  const loadTaskDiff = useCallback(
+    (taskId: string) => {
+      setTaskDiff(null);
+      send({ type: "get_task_diff", payload: { taskId } });
+    },
+    [send]
+  );
+
   return {
     connected,
     environments,
     sessions,
     events,
     lastSpawnedId,
+    projects,
+    tasks,
+    findings,
+    taskDiff,
     spawn,
     sendInput,
     kill,
     refresh,
     loadSessionEvents,
     clearEvents,
+    createProject,
+    archiveProject,
+    loadTasks,
+    createTask,
+    startTask,
+    approveTask,
+    rejectTask,
+    deleteTask,
+    loadFindings,
+    postFinding,
+    loadTaskDiff,
   };
 }

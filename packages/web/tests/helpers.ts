@@ -1,0 +1,210 @@
+import type { Page } from "@playwright/test";
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type WsPayload = Record<string, any>;
+
+/**
+ * Open a second WebSocket from the page context, send a message, and wait for
+ * a response matching the given type. Resolves with the full response object.
+ */
+export async function sendWsAndWaitFor(
+  page: Page,
+  message: WsPayload,
+  responseType: string,
+  timeoutMs = 10_000,
+): Promise<WsPayload> {
+  return page.evaluate(
+    async ({ msg, respType, timeout }) => {
+      return new Promise<WsPayload>((resolve, reject) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const apiKey = (window as any).__GRACKLE_API_KEY__ || "";
+        const ws = new WebSocket(
+          `ws://${window.location.host}?token=${encodeURIComponent(apiKey)}`,
+        );
+        const timer = setTimeout(() => {
+          ws.close();
+          reject(new Error(`WS timeout waiting for "${respType}"`));
+        }, timeout);
+        ws.onmessage = (e: MessageEvent) => {
+          const data = JSON.parse(e.data);
+          if (data.type === respType) {
+            clearTimeout(timer);
+            ws.close();
+            resolve(data);
+          }
+        };
+        ws.onerror = () => {
+          clearTimeout(timer);
+          ws.close();
+          reject(new Error("WS connection error"));
+        };
+        ws.onopen = () => {
+          ws.send(JSON.stringify(msg));
+        };
+      });
+    },
+    { msg: message, respType: responseType, timeout: timeoutMs },
+  );
+}
+
+/**
+ * Send a WS message without waiting for a specific response.
+ * Opens a second WS, sends the message, waits briefly for server processing, then closes.
+ */
+export async function sendWsMessage(
+  page: Page,
+  message: WsPayload,
+): Promise<void> {
+  await page.evaluate(async (msg) => {
+    return new Promise<void>((resolve, reject) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const apiKey = (window as any).__GRACKLE_API_KEY__ || "";
+      const ws = new WebSocket(
+        `ws://${window.location.host}?token=${encodeURIComponent(apiKey)}`,
+      );
+      ws.onerror = () => {
+        ws.close();
+        reject(new Error("WS error"));
+      };
+      ws.onopen = () => {
+        ws.send(JSON.stringify(msg));
+        setTimeout(() => {
+          ws.close();
+          resolve();
+        }, 500);
+      };
+    });
+  }, message);
+}
+
+/** Retrieve the project ID for a project with the given name. */
+export async function getProjectId(page: Page, projectName: string): Promise<string> {
+  const response = await sendWsAndWaitFor(
+    page,
+    { type: "list_projects" },
+    "projects",
+  );
+  const projects = (response.payload?.projects || []) as Array<{ id: string; name: string }>;
+  const project = projects.find((p) => p.name === projectName);
+  if (!project) {
+    throw new Error(`Project "${projectName}" not found`);
+  }
+  return project.id;
+}
+
+/** Retrieve the task ID for a task with the given title under a project. */
+export async function getTaskId(
+  page: Page,
+  projectId: string,
+  taskTitle: string,
+): Promise<string> {
+  const response = await sendWsAndWaitFor(
+    page,
+    { type: "list_tasks", payload: { projectId } },
+    "tasks",
+  );
+  const tasks = (response.payload?.tasks || []) as Array<{ id: string; title: string }>;
+  const task = tasks.find((t) => t.title === taskTitle);
+  if (!task) {
+    throw new Error(`Task "${taskTitle}" not found in project ${projectId}`);
+  }
+  return task.id;
+}
+
+/** Create a project via the UI and wait for it to appear in the sidebar. */
+export async function createProject(page: Page, name: string): Promise<void> {
+  await page.locator("button", { hasText: "+" }).first().click();
+  const nameInput = page.locator('input[placeholder="Project name..."]');
+  await nameInput.fill(name);
+  await page.locator("button", { hasText: "OK" }).click();
+  await page.getByText(name).waitFor({ timeout: 5_000 });
+}
+
+/** Create a task under a project via the UI and wait for it to appear. */
+export async function createTask(
+  page: Page,
+  projectName: string,
+  title: string,
+  envName?: string,
+): Promise<void> {
+  // Click "New task" button (uses stopPropagation, doesn't toggle expansion)
+  await page.getByText(projectName).locator("..").locator('button[title="New task"]').click();
+
+  // Fill in task details
+  await page.locator('input[placeholder="Task title..."]').fill(title);
+  if (envName) {
+    await page.locator("select").selectOption(envName);
+  }
+  await page.locator("button", { hasText: "Create" }).click();
+
+  // After "Create", viewMode goes to project → auto-expand. Wait for task in sidebar.
+  await page.getByText(title).waitFor({ timeout: 5_000 });
+}
+
+/** Navigate to a task view by clicking its name in the sidebar. */
+export async function navigateToTask(page: Page, taskTitle: string): Promise<void> {
+  await page.getByText(taskTitle).first().click();
+  await page.getByText(`Task: ${taskTitle}`).waitFor({ timeout: 5_000 });
+}
+
+/** Monkey-patch WebSocket.prototype.send to force stub runtime on start_task messages. */
+export async function patchWsForStubRuntime(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const origSend = WebSocket.prototype.send;
+    WebSocket.prototype.send = function (data: string | ArrayBuffer | Blob | ArrayBufferView) {
+      if (typeof data === "string") {
+        try {
+          const msg = JSON.parse(data);
+          if (msg.type === "start_task") {
+            msg.payload.runtime = "stub";
+            data = JSON.stringify(msg);
+          }
+        } catch {
+          /* not JSON, pass through */
+        }
+      }
+      return origSend.call(this, data);
+    };
+  });
+}
+
+/**
+ * Run a stub task through its full lifecycle: start → in_progress → waiting_input → send input → review.
+ * Requires patchWsForStubRuntime to have been called on the page beforehand.
+ */
+export async function runStubTaskToCompletion(page: Page): Promise<void> {
+  await page.locator("button", { hasText: "Start Task" }).click();
+
+  // Wait for waiting_input state
+  const inputField = page.locator('input[placeholder="Type a message..."]');
+  await inputField.waitFor({ timeout: 15_000 });
+  await inputField.fill("continue");
+  await page.locator("button", { hasText: "Send" }).click();
+
+  // Wait for session to complete and task to move to review
+  await page.locator("button", { hasText: "Approve" }).waitFor({ timeout: 15_000 });
+}
+
+/** Create a task via WebSocket with custom options (e.g., dependsOn). Returns the created task data. */
+export async function createTaskViaWs(
+  page: Page,
+  projectId: string,
+  title: string,
+  options?: { envId?: string; dependsOn?: string[]; description?: string },
+): Promise<WsPayload> {
+  const response = await sendWsAndWaitFor(
+    page,
+    {
+      type: "create_task",
+      payload: {
+        projectId,
+        title,
+        description: options?.description || "",
+        envId: options?.envId || "",
+        dependsOn: options?.dependsOn || [],
+      },
+    },
+    "task_created",
+  );
+  return response.payload?.task as WsPayload;
+}

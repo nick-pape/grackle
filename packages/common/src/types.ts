@@ -25,7 +25,12 @@ export type AgentEventType =
   | "tool_result"
   | "error"
   | "status"
-  | "system";
+  | "system"
+  | "finding";
+
+export type TaskStatus = "pending" | "assigned" | "in_progress" | "review" | "done" | "failed";
+export type ProjectStatus = "active" | "archived";
+export type FindingCategory = "architecture" | "api" | "bug" | "decision" | "dependency" | "pattern" | "general";
 
 /** Supported environment adapter backends. */
 export type AdapterType = "docker" | "local" | "codespace" | "ssh";
@@ -67,4 +72,4 @@ export const LOGS_DIR = "logs";
 /** Filename for the locally-stored API key. */
 export const API_KEY_FILENAME = "api-key";
 /** Default LLM model identifier for new sessions. */
-export const DEFAULT_MODEL = "claude-sonnet-4-5-20250514";
+export const DEFAULT_MODEL = "sonnet";
