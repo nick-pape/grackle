@@ -8,14 +8,22 @@ Grackle lets you break a project into tasks, dispatch each to a Claude Code agen
 
 ```mermaid
 graph LR
-    UI["Web UI<br/>(React)"]
-    Server["Server<br/>(SQLite)"]
-    PL["PowerLine<br/>(per-environment)"]
-    Agent["Claude Code<br/>Agent (SDK)"]
+    UI["Web UI :3000"]
+    Server["Server :7434"]
 
-    UI -- "WebSocket :3000" --> Server
-    Server -- "gRPC :7434" --> PL
-    PL -- ":7433" --> Agent
+    Docker["🐳 Docker"]
+    Local["💻 Local"]
+    SSH["🔒 SSH"]
+    CS["☁️ Codespace"]
+
+    UI -- WebSocket --> Server
+    Server -- gRPC --> Docker
+    Server -- gRPC --> Local
+    Server -. gRPC .-> SSH
+    Server -. gRPC .-> CS
+
+    Docker --- Agent1["Claude Code Agent"]
+    Local --- Agent2["Claude Code Agent"]
 ```
 
 **Server** — Central hub. Manages projects, tasks, environments, and sessions. Persists state in SQLite. Bridges gRPC and WebSocket so the UI stays live.
@@ -25,6 +33,19 @@ graph LR
 **Web UI** — Real-time dashboard. Stream agent output, review diffs, browse findings. Dark-themed, keyboard-friendly.
 
 **CLI** — Thin gRPC client. Everything you can do in the UI you can script from the terminal.
+
+## Environments
+
+Each agent runs inside an isolated environment. Connect one or many:
+
+| Adapter | Status | Command |
+|---------|--------|---------|
+| **Docker** | Available | `grackle env add my-env --docker` |
+| **Local** | Available | `grackle env add my-env --local` |
+| **SSH** | Planned | `grackle env add my-env --ssh --host ...` |
+| **Codespace** | Planned | `grackle env add my-env --codespace --repo ...` |
+
+Docker spins up a container with PowerLine pre-installed. Local connects to a PowerLine already running on your machine. SSH and Codespace adapters are on the roadmap.
 
 ## Quick Start
 
