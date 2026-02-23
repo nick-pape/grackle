@@ -19,7 +19,7 @@ export function registerProjectCommands(program: Command): void {
         head: ["ID", "Name", "Env", "Status", "Created"],
       });
       for (const p of res.projects) {
-        table.push([p.id, p.name, p.defaultEnvId || "-", p.status, p.createdAt]);
+        table.push([p.id, p.name, p.defaultEnvironmentId || "-", p.status, p.createdAt]);
       }
       console.log(table.toString());
     });
@@ -36,7 +36,7 @@ export function registerProjectCommands(program: Command): void {
         name,
         description: opts.desc || "",
         repoUrl: opts.repo || "",
-        defaultEnvId: opts.env || "",
+        defaultEnvironmentId: opts.env || "",
       });
       console.log(`Created project: ${p.id} (${p.name})`);
     });

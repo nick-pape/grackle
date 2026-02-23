@@ -8,13 +8,13 @@ export type { SessionRow };
 /** Insert a new session record into the database. */
 export function createSession(
   id: string,
-  envId: string,
+  environmentId: string,
   runtime: string,
   prompt: string,
   model: string,
   logPath: string,
 ): void {
-  db.insert(sessions).values({ id, envId, runtime, prompt, model, logPath }).run();
+  db.insert(sessions).values({ id, environmentId, runtime, prompt, model, logPath }).run();
 }
 
 /** Retrieve a single session by ID. */
@@ -23,10 +23,10 @@ export function getSession(id: string): SessionRow | undefined {
 }
 
 /** List sessions, optionally filtered by environment and/or status. */
-export function listSessions(envId?: string, status?: string): SessionRow[] {
+export function listSessions(environmentId?: string, status?: string): SessionRow[] {
   const conditions = [];
-  if (envId) {
-    conditions.push(eq(sessions.envId, envId));
+  if (environmentId) {
+    conditions.push(eq(sessions.environmentId, environmentId));
   }
   if (status) {
     conditions.push(eq(sessions.status, status));
@@ -40,9 +40,9 @@ export function listSessions(envId?: string, status?: string): SessionRow[] {
 }
 
 /** List all sessions belonging to a specific environment. */
-export function listByEnv(envId: string): SessionRow[] {
+export function listByEnv(environmentId: string): SessionRow[] {
   return db.select().from(sessions)
-    .where(eq(sessions.envId, envId))
+    .where(eq(sessions.environmentId, environmentId))
     .orderBy(desc(sessions.startedAt))
     .all();
 }
@@ -77,11 +77,11 @@ export function updateSessionStatus(id: string, status: SessionStatus): void {
 }
 
 /** Get the currently active (pending/running/waiting_input) session for an environment, if any. */
-export function getActiveForEnv(envId: string): SessionRow | undefined {
+export function getActiveForEnv(environmentId: string): SessionRow | undefined {
   return db.select().from(sessions)
     .where(
       and(
-        eq(sessions.envId, envId),
+        eq(sessions.environmentId, environmentId),
         inArray(sessions.status, ["pending", "running", "waiting_input"]),
       ),
     )

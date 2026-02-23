@@ -27,7 +27,7 @@ export type NewEnvironment = typeof environments.$inferInsert;
 
 export const sessions = sqliteTable("sessions", {
   id: text("id").primaryKey(),
-  envId: text("env_id").notNull().references(() => environments.id),
+  environmentId: text("env_id").notNull().references(() => environments.id),
   runtime: text("runtime").notNull(),
   runtimeSessionId: text("runtime_session_id"),
   prompt: text("prompt").notNull(),

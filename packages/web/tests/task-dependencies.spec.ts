@@ -24,7 +24,7 @@ test.describe("Task Dependencies", () => {
 
     // Create a dependent task via WS with dependsOn
     await createTaskViaWs(page, projectId, "blocked-beta", {
-      envId: "test-local",
+      environmentId: "test-local",
       dependsOn: [blockerTaskId],
     });
 
@@ -55,7 +55,7 @@ test.describe("Task Dependencies", () => {
     const blockerTaskId = await getTaskId(page, projectId, "unblock-blocker");
 
     await createTaskViaWs(page, projectId, "unblock-dependent", {
-      envId: "test-local",
+      environmentId: "test-local",
       dependsOn: [blockerTaskId],
     });
     await page.getByText("unblock-dependent").waitFor({ timeout: 5_000 });
@@ -90,7 +90,7 @@ test.describe("Task Dependencies", () => {
 
     // Create task C dependent on both A and B
     await createTaskViaWs(page, projectId, "multi-dependent-c", {
-      envId: "test-local",
+      environmentId: "test-local",
       dependsOn: [taskAId, taskBId],
     });
     await page.getByText("multi-dependent-c").waitFor({ timeout: 5_000 });

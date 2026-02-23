@@ -15,7 +15,7 @@ export function createTask(
   projectId: string,
   title: string,
   description: string,
-  envId: string,
+  environmentId: string,
   dependsOn: string[],
   projectSlug: string,
 ): void {
@@ -32,7 +32,7 @@ export function createTask(
     title,
     description,
     branch,
-    environmentId: envId,
+    environmentId,
     dependsOn: depsJson,
     sortOrder,
   }).run();
@@ -57,7 +57,7 @@ export function updateTask(
   title: string,
   description: string,
   status: string,
-  envId: string,
+  environmentId: string,
   dependsOn: string[],
   reviewNotes: string,
 ): void {
@@ -65,7 +65,7 @@ export function updateTask(
     title,
     description,
     status,
-    environmentId: envId,
+    environmentId,
     dependsOn: JSON.stringify(dependsOn),
     reviewNotes,
     updatedAt: sql`datetime('now')`,

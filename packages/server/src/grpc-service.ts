@@ -40,68 +40,31 @@ function envRowToProto(row: EnvironmentRow): grackle.Environment {
 
 function sessionRowToProto(row: SessionRow): grackle.Session {
   return create(grackle.SessionSchema, {
-    id: row.id,
-    envId: row.envId,
-    runtime: row.runtime,
-    runtimeSessionId: row.runtimeSessionId || "",
-    prompt: row.prompt,
-    model: row.model,
-    status: row.status,
-    logPath: row.logPath || "",
-    turns: row.turns,
-    startedAt: row.startedAt,
-    suspendedAt: row.suspendedAt || "",
-    endedAt: row.endedAt || "",
-    error: row.error || "",
+    ...row,
+    runtimeSessionId: row.runtimeSessionId ?? "",
+    logPath: row.logPath ?? "",
+    suspendedAt: row.suspendedAt ?? "",
+    endedAt: row.endedAt ?? "",
+    error: row.error ?? "",
   });
 }
 
 function projectRowToProto(row: projectStore.ProjectRow): grackle.Project {
-  return create(grackle.ProjectSchema, {
-    id: row.id,
-    name: row.name,
-    description: row.description,
-    repoUrl: row.repoUrl,
-    defaultEnvId: row.defaultEnvironmentId,
-    status: row.status,
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
-  });
+  return create(grackle.ProjectSchema, { ...row });
 }
 
 function taskRowToProto(row: taskStore.TaskRow): grackle.Task {
   return create(grackle.TaskSchema, {
-    id: row.id,
-    projectId: row.projectId,
-    title: row.title,
-    description: row.description,
-    status: row.status,
-    branch: row.branch,
-    envId: row.environmentId,
-    sessionId: row.sessionId,
+    ...row,
     dependsOn: JSON.parse(row.dependsOn),
-    assignedAt: row.assignedAt || "",
-    startedAt: row.startedAt || "",
-    completedAt: row.completedAt || "",
-    reviewNotes: row.reviewNotes,
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
-    sortOrder: row.sortOrder,
+    assignedAt: row.assignedAt ?? "",
+    startedAt: row.startedAt ?? "",
+    completedAt: row.completedAt ?? "",
   });
 }
 
 function findingRowToProto(row: findingStore.FindingRow): grackle.Finding {
-  return create(grackle.FindingSchema, {
-    id: row.id,
-    projectId: row.projectId,
-    taskId: row.taskId,
-    sessionId: row.sessionId,
-    category: row.category,
-    title: row.title,
-    content: row.content,
-    tags: JSON.parse(row.tags),
-    createdAt: row.createdAt,
-  });
+  return create(grackle.FindingSchema, { ...row, tags: JSON.parse(row.tags) });
 }
 
 /** Spawn an agent session on a PowerLine, piping events to the stream hub. Returns the session ID. */
@@ -309,14 +272,14 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
     },
 
     async spawnAgent(req) {
-      const env = envRegistry.getEnvironment(req.envId);
+      const env = envRegistry.getEnvironment(req.environmentId);
       if (!env) {
-        throw new Error(`Environment not found: ${req.envId}`);
+        throw new Error(`Environment not found: ${req.environmentId}`);
       }
 
-      const conn = adapterManager.getConnection(req.envId);
+      const conn = adapterManager.getConnection(req.environmentId);
       if (!conn) {
-        throw new Error(`Environment ${req.envId} not connected`);
+        throw new Error(`Environment ${req.environmentId} not connected`);
       }
 
       const sessionId = uuid();
@@ -324,7 +287,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       const model = req.model || process.env.GRACKLE_DEFAULT_MODEL || DEFAULT_MODEL;
       const logPath = join(grackleHome, LOGS_DIR, sessionId);
 
-      sessionStore.createSession(sessionId, req.envId, runtime, req.prompt, model, logPath);
+      sessionStore.createSession(sessionId, req.environmentId, runtime, req.prompt, model, logPath);
       spawnOnPowerLine(conn, sessionId, runtime, req.prompt, model, logPath,
         req.branch || "", req.systemContext || "", "", "");
 
@@ -338,9 +301,9 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         throw new Error(`Session not found: ${req.sessionId}`);
       }
 
-      const conn = adapterManager.getConnection(session.envId);
+      const conn = adapterManager.getConnection(session.environmentId);
       if (!conn) {
-        throw new Error(`Environment ${session.envId} not connected`);
+        throw new Error(`Environment ${session.environmentId} not connected`);
       }
 
       const powerlineReq = create(powerline.ResumeRequestSchema, {
@@ -380,9 +343,9 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         throw new Error(`Session ${req.sessionId} is not waiting for input (status: ${session.status})`);
       }
 
-      const conn = adapterManager.getConnection(session.envId);
+      const conn = adapterManager.getConnection(session.environmentId);
       if (!conn) {
-        throw new Error(`Environment ${session.envId} not connected`);
+        throw new Error(`Environment ${session.environmentId} not connected`);
       }
 
       await conn.client.sendInput(
@@ -401,7 +364,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         throw new Error(`Session not found: ${req.id}`);
       }
 
-      const conn = adapterManager.getConnection(session.envId);
+      const conn = adapterManager.getConnection(session.environmentId);
       if (conn) {
         await conn.client.kill(
           create(powerline.SessionIdSchema, { id: req.id })
@@ -420,7 +383,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
     },
 
     async listSessions(req) {
-      const rows = sessionStore.listSessions(req.envId, req.status);
+      const rows = sessionStore.listSessions(req.environmentId, req.status);
       return create(grackle.SessionListSchema, {
         sessions: rows.map(sessionRowToProto),
       });
@@ -490,7 +453,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       if (projectStore.getProject(id)) {
         id = `${id}-${uuid().slice(0, 4)}`;
       }
-      projectStore.createProject(id, req.name, req.description, req.repoUrl, req.defaultEnvId);
+      projectStore.createProject(id, req.name, req.description, req.repoUrl, req.defaultEnvironmentId);
       broadcast({ type: "project_created", payload: { projectId: id } });
       const row = projectStore.getProject(id);
       return projectRowToProto(row!);
@@ -522,8 +485,8 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       if (!project) throw new Error(`Project not found: ${req.projectId}`);
 
       const id = uuid().slice(0, 8);
-      const envId = req.envId || project.defaultEnvironmentId;
-      taskStore.createTask(id, req.projectId, req.title, req.description, envId, [...req.dependsOn], slugify(project.name));
+      const environmentId = req.environmentId || project.defaultEnvironmentId;
+      taskStore.createTask(id, req.projectId, req.title, req.description, environmentId, [...req.dependsOn], slugify(project.name));
       const row = taskStore.getTask(id);
       broadcast({ type: "task_created", payload: { task: row ? { ...row } : null } });
       return taskRowToProto(row!);
@@ -544,7 +507,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         req.title || existing.title,
         req.description || existing.description,
         req.status || existing.status,
-        req.envId || existing.environmentId,
+        req.environmentId || existing.environmentId,
         req.dependsOn.length > 0 ? [...req.dependsOn] : JSON.parse(existing.dependsOn),
         req.reviewNotes || existing.reviewNotes,
       );
@@ -565,11 +528,11 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       const project = projectStore.getProject(task.projectId);
       if (!project) throw new Error(`Project not found: ${task.projectId}`);
 
-      const envId = task.environmentId || project.defaultEnvironmentId;
-      if (!envId) throw new Error("No environment specified for task or project");
+      const environmentId = task.environmentId || project.defaultEnvironmentId;
+      if (!environmentId) throw new Error("No environment specified for task or project");
 
-      const conn = adapterManager.getConnection(envId);
-      if (!conn) throw new Error(`Environment ${envId} not connected`);
+      const conn = adapterManager.getConnection(environmentId);
+      if (!conn) throw new Error(`Environment ${environmentId} not connected`);
 
       const sessionId = uuid();
       const runtime = req.runtime || "claude-code";
@@ -588,7 +551,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         `IMPORTANT: When you complete your task, post at least one finding summarizing what you did and any key decisions made.`,
       ].filter(Boolean).join("\n\n");
 
-      sessionStore.createSession(sessionId, envId, runtime, task.title, model, logPath);
+      sessionStore.createSession(sessionId, environmentId, runtime, task.title, model, logPath);
       taskStore.setTaskSession(task.id, sessionId);
       taskStore.markTaskStarted(task.id);
       broadcast({ type: "task_started", payload: { taskId: task.id, sessionId, projectId: task.projectId } });
@@ -691,11 +654,11 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       if (!task) throw new Error(`Task not found: ${req.taskId}`);
       if (!task.branch) throw new Error("Task has no branch");
 
-      const envId = task.environmentId || projectStore.getProject(task.projectId)?.defaultEnvironmentId;
-      if (!envId) throw new Error("No environment for task");
+      const environmentId = task.environmentId || projectStore.getProject(task.projectId)?.defaultEnvironmentId;
+      if (!environmentId) throw new Error("No environment for task");
 
-      const conn = adapterManager.getConnection(envId);
-      if (!conn) throw new Error(`Environment ${envId} not connected`);
+      const conn = adapterManager.getConnection(environmentId);
+      if (!conn) throw new Error(`Environment ${environmentId} not connected`);
 
       const diffResp = await conn.client.getDiff(
         create(powerline.DiffRequestSchema, {

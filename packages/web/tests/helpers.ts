@@ -190,7 +190,7 @@ export async function createTaskViaWs(
   page: Page,
   projectId: string,
   title: string,
-  options?: { envId?: string; dependsOn?: string[]; description?: string },
+  options?: { environmentId?: string; dependsOn?: string[]; description?: string },
 ): Promise<WsPayload> {
   const response = await sendWsAndWaitFor(
     page,
@@ -200,7 +200,7 @@ export async function createTaskViaWs(
         projectId,
         title,
         description: options?.description || "",
-        envId: options?.envId || "",
+        environmentId: options?.environmentId || "",
         dependsOn: options?.dependsOn || [],
       },
     },

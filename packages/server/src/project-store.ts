@@ -5,13 +5,13 @@ import { eq, desc, sql } from "drizzle-orm";
 export type { ProjectRow };
 
 /** Insert a new project record. */
-export function createProject(id: string, name: string, description: string, repoUrl: string, defaultEnvId: string): void {
+export function createProject(id: string, name: string, description: string, repoUrl: string, defaultEnvironmentId: string): void {
   db.insert(projects).values({
     id,
     name,
     description,
     repoUrl,
-    defaultEnvironmentId: defaultEnvId,
+    defaultEnvironmentId,
   }).run();
 }
 

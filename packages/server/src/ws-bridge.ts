@@ -110,15 +110,15 @@ async function handleMessage(
     }
 
     case "list_sessions": {
-      const envId = (msg.payload?.envId as string) || "";
+      const environmentId = (msg.payload?.environmentId as string) || "";
       const status = (msg.payload?.status as string) || "";
-      const rows = sessionStore.listSessions(envId, status);
+      const rows = sessionStore.listSessions(environmentId, status);
       sendWs(ws, {
         type: "sessions",
         payload: {
           sessions: rows.map((r) => ({
             id: r.id,
-            envId: r.envId,
+            environmentId: r.environmentId,
             runtime: r.runtime,
             status: r.status,
             prompt: r.prompt,
@@ -213,27 +213,27 @@ async function handleMessage(
     }
 
     case "spawn": {
-      const envId = msg.payload?.envId as string;
+      const environmentId = msg.payload?.environmentId as string;
       const prompt = msg.payload?.prompt as string;
       const model = (msg.payload?.model as string) || "";
       const runtime = (msg.payload?.runtime as string) || "";
       const branch = (msg.payload?.branch as string) || "";
       const systemContext = (msg.payload?.systemContext as string) || "";
 
-      if (!envId || !prompt) {
-        sendWs(ws, { type: "error", payload: { message: "envId and prompt required" } });
+      if (!environmentId || !prompt) {
+        sendWs(ws, { type: "error", payload: { message: "environmentId and prompt required" } });
         return;
       }
 
-      const env = envRegistry.getEnvironment(envId);
+      const env = envRegistry.getEnvironment(environmentId);
       if (!env) {
-        sendWs(ws, { type: "error", payload: { message: `Environment not found: ${envId}` } });
+        sendWs(ws, { type: "error", payload: { message: `Environment not found: ${environmentId}` } });
         return;
       }
 
-      const conn = adapterManager.getConnection(envId);
+      const conn = adapterManager.getConnection(environmentId);
       if (!conn) {
-        sendWs(ws, { type: "error", payload: { message: `Environment not connected: ${envId}` } });
+        sendWs(ws, { type: "error", payload: { message: `Environment not connected: ${environmentId}` } });
         return;
       }
 
@@ -242,7 +242,7 @@ async function handleMessage(
       const sessionModel = model || process.env.GRACKLE_DEFAULT_MODEL || DEFAULT_MODEL;
       const logPath = join(grackleHome, LOGS_DIR, sessionId);
 
-      sessionStore.createSession(sessionId, envId, sessionRuntime, prompt, sessionModel, logPath);
+      sessionStore.createSession(sessionId, environmentId, sessionRuntime, prompt, sessionModel, logPath);
       logWriter.initLog(logPath);
 
       sendWs(ws, { type: "spawned", payload: { sessionId } });
@@ -326,7 +326,7 @@ async function handleMessage(
         return;
       }
 
-      const conn = adapterManager.getConnection(session.envId);
+      const conn = adapterManager.getConnection(session.environmentId);
       if (!conn) {
         return;
       }
@@ -348,7 +348,7 @@ async function handleMessage(
         return;
       }
 
-      const conn = adapterManager.getConnection(session.envId);
+      const conn = adapterManager.getConnection(session.environmentId);
       if (conn) {
         try {
           await conn.client.kill(create(powerline.SessionIdSchema, { id: sessionId }));
@@ -380,7 +380,7 @@ async function handleMessage(
             name: r.name,
             description: r.description,
             repoUrl: r.repoUrl,
-            defaultEnvId: r.defaultEnvironmentId,
+            defaultEnvironmentId: r.defaultEnvironmentId,
             status: r.status,
             createdAt: r.createdAt,
           })),
@@ -400,7 +400,7 @@ async function handleMessage(
         id, name,
         (msg.payload?.description as string) || "",
         (msg.payload?.repoUrl as string) || "",
-        (msg.payload?.defaultEnvId as string) || "",
+        (msg.payload?.defaultEnvironmentId as string) || "",
       );
       const row = projectStore.getProject(id);
       broadcast({ type: "project_created", payload: { project: row } });
@@ -431,7 +431,7 @@ async function handleMessage(
             description: r.description,
             status: r.status,
             branch: r.branch,
-            envId: r.environmentId,
+            environmentId: r.environmentId,
             sessionId: r.sessionId,
             dependsOn: JSON.parse(r.dependsOn),
             reviewNotes: r.reviewNotes,
@@ -459,7 +459,7 @@ async function handleMessage(
       taskStore.createTask(
         id, projectId, title,
         (msg.payload?.description as string) || "",
-        (msg.payload?.envId as string) || project.defaultEnvironmentId,
+        (msg.payload?.environmentId as string) || project.defaultEnvironmentId,
         (msg.payload?.dependsOn as string[]) || [],
         slugify(project.name),
       );
@@ -492,10 +492,10 @@ async function handleMessage(
         return;
       }
 
-      const envId = task.environmentId || project.defaultEnvironmentId;
-      const conn = adapterManager.getConnection(envId);
+      const environmentId = task.environmentId || project.defaultEnvironmentId;
+      const conn = adapterManager.getConnection(environmentId);
       if (!conn) {
-        sendWs(ws, { type: "error", payload: { message: `Environment ${envId} not connected` } });
+        sendWs(ws, { type: "error", payload: { message: `Environment ${environmentId} not connected` } });
         return;
       }
 
@@ -515,7 +515,7 @@ async function handleMessage(
         `IMPORTANT: When you complete your task, post at least one finding summarizing what you did and any key decisions made.`,
       ].filter(Boolean).join("\n\n");
 
-      sessionStore.createSession(sessionId, envId, runtime, task.title, model, logPath);
+      sessionStore.createSession(sessionId, environmentId, runtime, task.title, model, logPath);
       taskStore.setTaskSession(task.id, sessionId);
       taskStore.markTaskStarted(task.id);
       logWriter.initLog(logPath);
@@ -701,13 +701,13 @@ async function handleMessage(
         return;
       }
 
-      const envId = task.environmentId || projectStore.getProject(task.projectId)?.defaultEnvironmentId;
-      if (!envId) {
+      const environmentId = task.environmentId || projectStore.getProject(task.projectId)?.defaultEnvironmentId;
+      if (!environmentId) {
         sendWs(ws, { type: "task_diff", payload: { taskId, error: "No environment" } });
         return;
       }
 
-      const conn = adapterManager.getConnection(envId);
+      const conn = adapterManager.getConnection(environmentId);
       if (!conn) {
         sendWs(ws, { type: "task_diff", payload: { taskId, error: "Environment not connected" } });
         return;

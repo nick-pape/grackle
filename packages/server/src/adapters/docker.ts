@@ -161,10 +161,10 @@ async function getGitHubToken(): Promise<string | undefined> {
 export class DockerAdapter implements EnvironmentAdapter {
   type = "docker";
 
-  async *provision(envId: string, config: Record<string, unknown>, powerlineToken: string): AsyncGenerator<ProvisionEvent> {
+  async *provision(environmentId: string, config: Record<string, unknown>, powerlineToken: string): AsyncGenerator<ProvisionEvent> {
     const cfg = config as unknown as DockerEnvironmentConfig;
     const image = cfg.image || "grackle-powerline:latest";
-    const containerName = cfg.containerName || `grackle-${envId}`;
+    const containerName = cfg.containerName || `grackle-${environmentId}`;
     const localPort = cfg.localPort || await findFreePort();
 
     yield { stage: "creating", message: `Pulling image ${image}...`, progress: 0.1 };
@@ -181,7 +181,7 @@ export class DockerAdapter implements EnvironmentAdapter {
       actualPort = await discoverHostPort(containerName, DEFAULT_POWERLINE_PORT, localPort);
     }
 
-    containerPorts.set(envId, actualPort);
+    containerPorts.set(environmentId, actualPort);
 
     yield { stage: "starting", message: "Waiting for container...", progress: 0.5 };
     await waitForContainerRunning(containerName);
@@ -195,9 +195,9 @@ export class DockerAdapter implements EnvironmentAdapter {
     yield { stage: "connecting", message: `Connecting on port ${actualPort}...`, progress: 0.8 };
   }
 
-  async connect(envId: string, config: Record<string, unknown>, powerlineToken: string): Promise<PowerLineConnection> {
+  async connect(environmentId: string, config: Record<string, unknown>, powerlineToken: string): Promise<PowerLineConnection> {
     const cfg = config as unknown as DockerEnvironmentConfig;
-    const localPort = containerPorts.get(envId) || cfg.localPort || DEFAULT_POWERLINE_PORT;
+    const localPort = containerPorts.get(environmentId) || cfg.localPort || DEFAULT_POWERLINE_PORT;
 
     const client = createPowerLineClient(`http://127.0.0.1:${localPort}`, powerlineToken);
 
@@ -205,7 +205,7 @@ export class DockerAdapter implements EnvironmentAdapter {
     for (let attempt = 0; attempt < CONNECT_MAX_RETRIES; attempt++) {
       try {
         await client.ping({});
-        return { client, envId, port: localPort };
+        return { client, environmentId, port: localPort };
       } catch (err) {
         lastErr = err;
         await sleep(CONNECT_RETRY_DELAY_MS);
@@ -215,30 +215,30 @@ export class DockerAdapter implements EnvironmentAdapter {
     throw new Error(`Could not reach PowerLine after ${CONNECT_MAX_RETRIES} attempts: ${lastErr}`);
   }
 
-  async disconnect(envId: string): Promise<void> {
-    containerPorts.delete(envId);
+  async disconnect(environmentId: string): Promise<void> {
+    containerPorts.delete(environmentId);
   }
 
-  async stop(envId: string, config: Record<string, unknown>): Promise<void> {
+  async stop(environmentId: string, config: Record<string, unknown>): Promise<void> {
     const cfg = config as unknown as DockerEnvironmentConfig;
-    const containerName = cfg.containerName || `grackle-${envId}`;
+    const containerName = cfg.containerName || `grackle-${environmentId}`;
     try {
       await exec("docker", ["stop", containerName]);
     } catch (err) {
-      logger.debug({ envId, err }, "Container may already be stopped");
+      logger.debug({ environmentId, err }, "Container may already be stopped");
     }
-    containerPorts.delete(envId);
+    containerPorts.delete(environmentId);
   }
 
-  async destroy(envId: string, config: Record<string, unknown>): Promise<void> {
+  async destroy(environmentId: string, config: Record<string, unknown>): Promise<void> {
     const cfg = config as unknown as DockerEnvironmentConfig;
-    const containerName = cfg.containerName || `grackle-${envId}`;
+    const containerName = cfg.containerName || `grackle-${environmentId}`;
     try {
       await exec("docker", ["rm", "-f", containerName]);
     } catch (err) {
-      logger.debug({ envId, err }, "Container may not exist");
+      logger.debug({ environmentId, err }, "Container may not exist");
     }
-    containerPorts.delete(envId);
+    containerPorts.delete(environmentId);
   }
 
   async healthCheck(connection: PowerLineConnection): Promise<boolean> {

@@ -15,7 +15,7 @@ export interface LocalEnvironmentConfig extends BaseEnvironmentConfig {
 export class LocalAdapter implements EnvironmentAdapter {
   type = "local";
 
-  async *provision(envId: string, config: Record<string, unknown>, powerlineToken: string): AsyncGenerator<ProvisionEvent> {
+  async *provision(environmentId: string, config: Record<string, unknown>, powerlineToken: string): AsyncGenerator<ProvisionEvent> {
     const cfg = config as unknown as LocalEnvironmentConfig;
     const port = cfg.port || DEFAULT_POWERLINE_PORT;
     const host = cfg.host || "localhost";
@@ -40,7 +40,7 @@ export class LocalAdapter implements EnvironmentAdapter {
     yield { stage: "error", message: `Could not reach PowerLine: ${lastErr}`, progress: 0 };
   }
 
-  async connect(envId: string, config: Record<string, unknown>, powerlineToken: string): Promise<PowerLineConnection> {
+  async connect(environmentId: string, config: Record<string, unknown>, powerlineToken: string): Promise<PowerLineConnection> {
     const cfg = config as unknown as LocalEnvironmentConfig;
     const port = cfg.port || DEFAULT_POWERLINE_PORT;
     const host = cfg.host || "localhost";
@@ -48,7 +48,7 @@ export class LocalAdapter implements EnvironmentAdapter {
     const client = createPowerLineClient(`http://${host}:${port}`, powerlineToken);
     await client.ping({});
 
-    return { client, envId, port };
+    return { client, environmentId, port };
   }
 
   async disconnect(): Promise<void> {
