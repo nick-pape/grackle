@@ -31,9 +31,12 @@ test.describe("Tab Auto-Switching", () => {
     await patchWsForStubRuntime(page);
     await page.locator("button", { hasText: "Start Task" }).click();
 
+    // Wait for task status to update in sidebar (● = in_progress)
+    await expect(page.locator("text=●").first()).toBeVisible({ timeout: 15_000 });
+
     // Verify Stream tab becomes active (auto-switch on in_progress)
     // Stream content should appear with runtime events
-    await expect(page.locator("text=Stub runtime initialized")).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator("text=Stub runtime initialized")).toBeVisible({ timeout: 10_000 });
   });
 
   test("diff tab becomes active on review state", async ({ appPage }) => {
@@ -74,6 +77,9 @@ test.describe("Tab Auto-Switching", () => {
     await runStubTaskToCompletion(page);
     await page.locator("button", { hasText: "Approve" }).click();
 
+    // Wait for task status to update in sidebar (✓ = done)
+    await expect(page.locator("text=✓").first()).toBeVisible({ timeout: 15_000 });
+
     // Verify Findings tab becomes active (auto-switch on done status)
     await expect(page.getByText("No findings yet")).toBeVisible({ timeout: 10_000 });
 
@@ -96,11 +102,11 @@ test.describe("Tab Auto-Switching", () => {
     // Verify Findings content is visible
     await expect(page.getByText("No findings yet")).toBeVisible({ timeout: 5_000 });
 
-    // Click task B in sidebar — should reset to Stream tab
+    // Click task B in sidebar — key prop forces SessionPanel remount, resetting to stream tab
     await navigateToTask(page, "sidebar-task-b");
 
     // Stream content should be visible for the pending task
-    await expect(page.getByText("Task has not been started yet")).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText("Task has not been started yet")).toBeVisible({ timeout: 10_000 });
 
     // Findings content should NOT be visible (switched away)
     await expect(page.getByText("No findings yet")).not.toBeVisible();

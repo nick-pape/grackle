@@ -31,7 +31,11 @@ function AppContent() {
       <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
         <Sidebar viewMode={viewMode} setViewMode={setViewMode} />
         <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-          <SessionPanel viewMode={viewMode} setViewMode={setViewMode} />
+          <SessionPanel
+            key={viewMode.kind === "task" ? viewMode.taskId : viewMode.kind === "session" ? viewMode.sessionId : viewMode.kind}
+            viewMode={viewMode}
+            setViewMode={setViewMode}
+          />
           <UnifiedBar viewMode={viewMode} setViewMode={setViewMode} />
         </div>
       </div>
