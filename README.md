@@ -6,16 +6,16 @@ Grackle lets you break a project into tasks, dispatch each to a Claude Code agen
 
 ## Architecture
 
-```
-┌─────────────┐       ┌──────────────┐       ┌─────────────────┐
-│  Web UI :3000│◄─ws──►│  Server :7434 │◄─gRPC─►│ PowerLine :7433 │
-│  (React)     │       │  (SQLite)     │       │ (per-environment)│
-└─────────────┘       └──────────────┘       └────────┬────────┘
-                                                      │
-                                              ┌───────▼───────┐
-                                              │  Claude Code   │
-                                              │  Agent (SDK)   │
-                                              └───────────────┘
+```mermaid
+graph LR
+    UI["Web UI<br/>(React)"]
+    Server["Server<br/>(SQLite)"]
+    PL["PowerLine<br/>(per-environment)"]
+    Agent["Claude Code<br/>Agent (SDK)"]
+
+    UI -- "WebSocket :3000" --> Server
+    Server -- "gRPC :7434" --> PL
+    PL -- ":7433" --> Agent
 ```
 
 **Server** — Central hub. Manages projects, tasks, environments, and sessions. Persists state in SQLite. Bridges gRPC and WebSocket so the UI stays live.
@@ -36,11 +36,10 @@ rush update && rush build
 # 2. Start the server (gRPC + Web UI + WebSocket)
 node packages/server/dist/index.js
 
-# 3. Open the dashboard
-open http://localhost:3000
+# 3. Open the dashboard at http://localhost:3000
 
-# 4. Add an environment and start working
-grackle env add my-env --adapter local
+# 4. Add a Docker environment and start working
+node packages/cli/dist/index.js env add my-env --docker
 ```
 
 ## Requirements
