@@ -1,26 +1,10 @@
-import { rawDb as db } from "./db.js";
+import db from "./db.js";
+import { findings, type FindingRow } from "./schema.js";
+import { eq, desc, sql, and } from "drizzle-orm";
 
-export interface FindingRow {
-  id: string;
-  project_id: string;
-  task_id: string;
-  session_id: string;
-  category: string;
-  title: string;
-  content: string;
-  tags: string; // JSON array
-  created_at: string;
-}
+export type { FindingRow };
 
-const stmts = {
-  insert: db.prepare(`
-    INSERT INTO findings (id, project_id, task_id, session_id, category, title, content, tags)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `),
-  queryByProject: db.prepare("SELECT * FROM findings WHERE project_id = ? ORDER BY created_at DESC LIMIT ?"),
-  queryByCategory: db.prepare("SELECT * FROM findings WHERE project_id = ? AND category IN (SELECT value FROM json_each(?)) ORDER BY created_at DESC LIMIT ?"),
-};
-
+/** Insert a new finding record. */
 export function postFinding(
   id: string,
   projectId: string,
@@ -31,9 +15,19 @@ export function postFinding(
   content: string,
   tags: string[],
 ): void {
-  stmts.insert.run(id, projectId, taskId, sessionId, category, title, content, JSON.stringify(tags));
+  db.insert(findings).values({
+    id,
+    projectId,
+    taskId,
+    sessionId,
+    category,
+    title,
+    content,
+    tags: JSON.stringify(tags),
+  }).run();
 }
 
+/** Query findings for a project, optionally filtering by categories and tags. */
 export function queryFindings(
   projectId: string,
   categories?: string[],
@@ -44,9 +38,20 @@ export function queryFindings(
 
   let results: FindingRow[];
   if (categories && categories.length > 0) {
-    results = stmts.queryByCategory.all(projectId, JSON.stringify(categories), maxResults) as FindingRow[];
+    results = db.select().from(findings)
+      .where(and(
+        eq(findings.projectId, projectId),
+        sql`${findings.category} IN (SELECT value FROM json_each(${JSON.stringify(categories)}))`,
+      ))
+      .orderBy(desc(findings.createdAt))
+      .limit(maxResults)
+      .all();
   } else {
-    results = stmts.queryByProject.all(projectId, maxResults) as FindingRow[];
+    results = db.select().from(findings)
+      .where(eq(findings.projectId, projectId))
+      .orderBy(desc(findings.createdAt))
+      .limit(maxResults)
+      .all();
   }
 
   // Client-side tag filtering (simple approach)
@@ -60,21 +65,26 @@ export function queryFindings(
   return results;
 }
 
+/** Build a summarized text context of recent findings for a project. */
 export function buildFindingsContext(projectId: string): string {
-  const findings = queryFindings(projectId, undefined, undefined, 20);
-  if (findings.length === 0) return "";
+  const allFindings = queryFindings(projectId, undefined, undefined, 20);
+  if (allFindings.length === 0) {
+    return "";
+  }
 
   const lines = ["## Project Findings (shared knowledge from other agents)\n"];
   let totalChars = lines[0].length;
   const MAX_CHARS = 8000;
   const MAX_PER_FINDING = 500;
 
-  for (const f of findings) {
+  for (const f of allFindings) {
     const content = f.content.length > MAX_PER_FINDING
       ? f.content.slice(0, MAX_PER_FINDING) + "..."
       : f.content;
     const entry = `### [${f.category}] ${f.title}\n${content}\n`;
-    if (totalChars + entry.length > MAX_CHARS) break;
+    if (totalChars + entry.length > MAX_CHARS) {
+      break;
+    }
     lines.push(entry);
     totalChars += entry.length;
   }

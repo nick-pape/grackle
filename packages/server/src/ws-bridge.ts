@@ -379,10 +379,10 @@ async function handleMessage(
             id: r.id,
             name: r.name,
             description: r.description,
-            repoUrl: r.repo_url,
-            defaultEnvId: r.default_env_id,
+            repoUrl: r.repoUrl,
+            defaultEnvId: r.defaultEnvironmentId,
             status: r.status,
-            createdAt: r.created_at,
+            createdAt: r.createdAt,
           })),
         },
       });
@@ -426,17 +426,17 @@ async function handleMessage(
           projectId,
           tasks: rows.map((r) => ({
             id: r.id,
-            projectId: r.project_id,
+            projectId: r.projectId,
             title: r.title,
             description: r.description,
             status: r.status,
             branch: r.branch,
-            envId: r.env_id,
-            sessionId: r.session_id,
-            dependsOn: JSON.parse(r.depends_on),
-            reviewNotes: r.review_notes,
-            sortOrder: r.sort_order,
-            createdAt: r.created_at,
+            envId: r.environmentId,
+            sessionId: r.sessionId,
+            dependsOn: JSON.parse(r.dependsOn),
+            reviewNotes: r.reviewNotes,
+            sortOrder: r.sortOrder,
+            createdAt: r.createdAt,
           })),
         },
       });
@@ -459,12 +459,12 @@ async function handleMessage(
       taskStore.createTask(
         id, projectId, title,
         (msg.payload?.description as string) || "",
-        (msg.payload?.envId as string) || project.default_env_id,
+        (msg.payload?.envId as string) || project.defaultEnvironmentId,
         (msg.payload?.dependsOn as string[]) || [],
         slugify(project.name),
       );
       const row = taskStore.getTask(id);
-      broadcast({ type: "task_created", payload: { task: row ? { ...row, dependsOn: JSON.parse(row.depends_on) } : null } });
+      broadcast({ type: "task_created", payload: { task: row ? { ...row, dependsOn: JSON.parse(row.dependsOn) } : null } });
       break;
     }
 
@@ -486,13 +486,13 @@ async function handleMessage(
         return;
       }
 
-      const project = projectStore.getProject(task.project_id);
+      const project = projectStore.getProject(task.projectId);
       if (!project) {
-        sendWs(ws, { type: "error", payload: { message: `Project not found: ${task.project_id}` } });
+        sendWs(ws, { type: "error", payload: { message: `Project not found: ${task.projectId}` } });
         return;
       }
 
-      const envId = task.env_id || project.default_env_id;
+      const envId = task.environmentId || project.defaultEnvironmentId;
       const conn = adapterManager.getConnection(envId);
       if (!conn) {
         sendWs(ws, { type: "error", payload: { message: `Environment ${envId} not connected` } });
@@ -507,7 +507,7 @@ async function handleMessage(
       const systemContext = [
         `## Task: ${task.title}`,
         task.description,
-        task.review_notes ? `## Review Feedback (from previous attempt)\n${task.review_notes}` : "",
+        task.reviewNotes ? `## Review Feedback (from previous attempt)\n${task.reviewNotes}` : "",
         `## Grackle Tools (MCP)`,
         `You have a "grackle" MCP server with tools for coordinating with other agents:`,
         `- **mcp__grackle__post_finding**: Share discoveries (architecture decisions, bugs, patterns) with other agents working on this project. Parameters: title (string), content (string), category (optional: architecture|api|bug|decision|dependency|pattern|general), tags (optional: string[]).`,
@@ -520,7 +520,7 @@ async function handleMessage(
       taskStore.markTaskStarted(task.id);
       logWriter.initLog(logPath);
 
-      broadcast({ type: "task_started", payload: { taskId: task.id, sessionId, projectId: task.project_id } });
+      broadcast({ type: "task_started", payload: { taskId: task.id, sessionId, projectId: task.projectId } });
 
       const powerlineReq = create(powerline.SpawnRequestSchema, {
         sessionId,
@@ -531,7 +531,7 @@ async function handleMessage(
         branch: task.branch,
         worktreeBasePath: task.branch ? (process.env.GRACKLE_WORKTREE_BASE || "/workspace") : "",
         systemContext,
-        projectId: task.project_id,
+        projectId: task.projectId,
         taskId: task.id,
       });
 
@@ -550,19 +550,19 @@ async function handleMessage(
             streamHub.publish(sessionEvent);
 
             // Intercept finding events and store + broadcast them
-            if (event.type === "finding" && task.project_id) {
+            if (event.type === "finding" && task.projectId) {
               try {
                 const data = JSON.parse(event.content);
                 const findingId = uuid();
                 findingStore.postFinding(
-                  findingId, task.project_id, task.id, sessionId,
+                  findingId, task.projectId, task.id, sessionId,
                   data.category || "general", data.title || "Untitled",
                   data.content || "", data.tags || [],
                 );
-                broadcast({ type: "finding_posted", payload: { projectId: task.project_id, findingId } });
-                process.stderr.write(`[finding] Stored: ${findingId} "${data.title}" in ${task.project_id}\n`);
+                broadcast({ type: "finding_posted", payload: { projectId: task.projectId, findingId } });
+                process.stderr.write(`[finding] Stored: ${findingId} "${data.title}" in ${task.projectId}\n`);
               } catch (err) {
-                process.stderr.write(`[finding] ERROR: ${err} (project=${task.project_id} task=${task.id})\n`);
+                process.stderr.write(`[finding] ERROR: ${err} (project=${task.projectId} task=${task.id})\n`);
               }
             }
 
@@ -590,7 +590,7 @@ async function handleMessage(
             } else if (sess?.status === "failed") {
               taskStore.markTaskCompleted(task.id, "failed");
             }
-            broadcast({ type: "task_updated", payload: { taskId: task.id, projectId: task.project_id } });
+            broadcast({ type: "task_updated", payload: { taskId: task.id, projectId: task.projectId } });
           }
         }
       })();
@@ -603,7 +603,7 @@ async function handleMessage(
 
       taskStore.markTaskCompleted(taskId, "done");
       const task = taskStore.getTask(taskId);
-      const unblocked = task ? taskStore.checkAndUnblock(task.project_id) : [];
+      const unblocked = task ? taskStore.checkAndUnblock(task.projectId) : [];
       sendWs(ws, {
         type: "task_approved",
         payload: {
@@ -623,7 +623,7 @@ async function handleMessage(
       if (task) {
         taskStore.updateTask(
           task.id, task.title, task.description, "assigned",
-          task.env_id, JSON.parse(task.depends_on), reviewNotes,
+          task.environmentId, JSON.parse(task.dependsOn), reviewNotes,
         );
       }
       broadcast({ type: "task_rejected", payload: { taskId } });
@@ -654,14 +654,14 @@ async function handleMessage(
           projectId,
           findings: rows.map((r) => ({
             id: r.id,
-            projectId: r.project_id,
-            taskId: r.task_id,
-            sessionId: r.session_id,
+            projectId: r.projectId,
+            taskId: r.taskId,
+            sessionId: r.sessionId,
             category: r.category,
             title: r.title,
             content: r.content,
             tags: JSON.parse(r.tags),
-            createdAt: r.created_at,
+            createdAt: r.createdAt,
           })),
         },
       });
@@ -701,7 +701,7 @@ async function handleMessage(
         return;
       }
 
-      const envId = task.env_id || projectStore.getProject(task.project_id)?.default_env_id;
+      const envId = task.environmentId || projectStore.getProject(task.projectId)?.defaultEnvironmentId;
       if (!envId) {
         sendWs(ws, { type: "task_diff", payload: { taskId, error: "No environment" } });
         return;

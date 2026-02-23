@@ -1,4 +1,4 @@
-import Database, { type Database as DatabaseType } from "better-sqlite3";
+import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { join } from "node:path";
 import { mkdirSync } from "node:fs";
@@ -118,8 +118,5 @@ initDatabase();
 
 /** Drizzle ORM instance wrapping the SQLite database. */
 const db = drizzle(sqlite, { schema });
-
-/** Raw better-sqlite3 instance for stores not yet migrated to Drizzle. */
-export const rawDb: DatabaseType = sqlite;
 
 export default db;

@@ -61,46 +61,46 @@ function projectRowToProto(row: projectStore.ProjectRow): grackle.Project {
     id: row.id,
     name: row.name,
     description: row.description,
-    repoUrl: row.repo_url,
-    defaultEnvId: row.default_env_id,
+    repoUrl: row.repoUrl,
+    defaultEnvId: row.defaultEnvironmentId,
     status: row.status,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
   });
 }
 
 function taskRowToProto(row: taskStore.TaskRow): grackle.Task {
   return create(grackle.TaskSchema, {
     id: row.id,
-    projectId: row.project_id,
+    projectId: row.projectId,
     title: row.title,
     description: row.description,
     status: row.status,
     branch: row.branch,
-    envId: row.env_id,
-    sessionId: row.session_id,
-    dependsOn: JSON.parse(row.depends_on),
-    assignedAt: row.assigned_at || "",
-    startedAt: row.started_at || "",
-    completedAt: row.completed_at || "",
-    reviewNotes: row.review_notes,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-    sortOrder: row.sort_order,
+    envId: row.environmentId,
+    sessionId: row.sessionId,
+    dependsOn: JSON.parse(row.dependsOn),
+    assignedAt: row.assignedAt || "",
+    startedAt: row.startedAt || "",
+    completedAt: row.completedAt || "",
+    reviewNotes: row.reviewNotes,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+    sortOrder: row.sortOrder,
   });
 }
 
 function findingRowToProto(row: findingStore.FindingRow): grackle.Finding {
   return create(grackle.FindingSchema, {
     id: row.id,
-    projectId: row.project_id,
-    taskId: row.task_id,
-    sessionId: row.session_id,
+    projectId: row.projectId,
+    taskId: row.taskId,
+    sessionId: row.sessionId,
     category: row.category,
     title: row.title,
     content: row.content,
     tags: JSON.parse(row.tags),
-    createdAt: row.created_at,
+    createdAt: row.createdAt,
   });
 }
 
@@ -522,10 +522,10 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       if (!project) throw new Error(`Project not found: ${req.projectId}`);
 
       const id = uuid().slice(0, 8);
-      const envId = req.envId || project.default_env_id;
+      const envId = req.envId || project.defaultEnvironmentId;
       taskStore.createTask(id, req.projectId, req.title, req.description, envId, [...req.dependsOn], slugify(project.name));
       const row = taskStore.getTask(id);
-      broadcast({ type: "task_created", payload: { task: row ? { ...row, projectId: row.project_id } : null } });
+      broadcast({ type: "task_created", payload: { task: row ? { ...row } : null } });
       return taskRowToProto(row!);
     },
 
@@ -544,9 +544,9 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         req.title || existing.title,
         req.description || existing.description,
         req.status || existing.status,
-        req.envId || existing.env_id,
-        req.dependsOn.length > 0 ? [...req.dependsOn] : JSON.parse(existing.depends_on),
-        req.reviewNotes || existing.review_notes,
+        req.envId || existing.environmentId,
+        req.dependsOn.length > 0 ? [...req.dependsOn] : JSON.parse(existing.dependsOn),
+        req.reviewNotes || existing.reviewNotes,
       );
       const row = taskStore.getTask(req.id);
       return taskRowToProto(row!);
@@ -562,10 +562,10 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         throw new Error(`Task ${req.taskId} has unmet dependencies`);
       }
 
-      const project = projectStore.getProject(task.project_id);
-      if (!project) throw new Error(`Project not found: ${task.project_id}`);
+      const project = projectStore.getProject(task.projectId);
+      if (!project) throw new Error(`Project not found: ${task.projectId}`);
 
-      const envId = task.env_id || project.default_env_id;
+      const envId = task.environmentId || project.defaultEnvironmentId;
       if (!envId) throw new Error("No environment specified for task or project");
 
       const conn = adapterManager.getConnection(envId);
@@ -580,7 +580,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       const systemContext = [
         `## Task: ${task.title}`,
         task.description,
-        task.review_notes ? `## Review Feedback (from previous attempt)\n${task.review_notes}` : "",
+        task.reviewNotes ? `## Review Feedback (from previous attempt)\n${task.reviewNotes}` : "",
         `## Grackle Tools (MCP)`,
         `You have a "grackle" MCP server with tools for coordinating with other agents:`,
         `- **mcp__grackle__post_finding**: Share discoveries (architecture decisions, bugs, patterns) with other agents working on this project. Parameters: title (string), content (string), category (optional: architecture|api|bug|decision|dependency|pattern|general), tags (optional: string[]).`,
@@ -591,10 +591,10 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       sessionStore.createSession(sessionId, envId, runtime, task.title, model, logPath);
       taskStore.setTaskSession(task.id, sessionId);
       taskStore.markTaskStarted(task.id);
-      broadcast({ type: "task_started", payload: { taskId: task.id, sessionId, projectId: task.project_id } });
+      broadcast({ type: "task_started", payload: { taskId: task.id, sessionId, projectId: task.projectId } });
 
       spawnOnPowerLine(conn, sessionId, runtime, task.title, model, logPath,
-        task.branch, systemContext, task.project_id, task.id,
+        task.branch, systemContext, task.projectId, task.id,
         () => {
           // On completion, auto-move task to review
           const t = taskStore.getTask(task.id);
@@ -605,7 +605,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
             } else if (sess?.status === "failed") {
               taskStore.markTaskCompleted(task.id, "failed");
             }
-            broadcast({ type: "task_updated", payload: { taskId: task.id, projectId: task.project_id } });
+            broadcast({ type: "task_updated", payload: { taskId: task.id, projectId: task.projectId } });
           }
         },
       );
@@ -621,7 +621,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       taskStore.markTaskCompleted(task.id, "done");
 
       // Check for newly unblocked tasks
-      const unblocked = taskStore.checkAndUnblock(task.project_id);
+      const unblocked = taskStore.checkAndUnblock(task.projectId);
       for (const t of unblocked) {
         streamHub.publish(create(grackle.SessionEventSchema, {
           sessionId: "",
@@ -632,7 +632,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         }));
       }
 
-      broadcast({ type: "task_approved", payload: { taskId: task.id, projectId: task.project_id } });
+      broadcast({ type: "task_approved", payload: { taskId: task.id, projectId: task.projectId } });
       const row = taskStore.getTask(task.id);
       return taskRowToProto(row!);
     },
@@ -643,10 +643,10 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
 
       taskStore.updateTask(
         task.id, task.title, task.description, "assigned",
-        task.env_id, JSON.parse(task.depends_on), req.reviewNotes || "",
+        task.environmentId, JSON.parse(task.dependsOn), req.reviewNotes || "",
       );
 
-      broadcast({ type: "task_rejected", payload: { taskId: task.id, projectId: task.project_id } });
+      broadcast({ type: "task_rejected", payload: { taskId: task.id, projectId: task.projectId } });
       const row = taskStore.getTask(task.id);
       return taskRowToProto(row!);
     },
@@ -654,7 +654,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
     async deleteTask(req) {
       const task = taskStore.getTask(req.id);
       taskStore.deleteTask(req.id);
-      broadcast({ type: "task_deleted", payload: { taskId: req.id, projectId: task?.project_id } });
+      broadcast({ type: "task_deleted", payload: { taskId: req.id, projectId: task?.projectId } });
       return create(grackle.EmptySchema, {});
     },
 
@@ -691,7 +691,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       if (!task) throw new Error(`Task not found: ${req.taskId}`);
       if (!task.branch) throw new Error("Task has no branch");
 
-      const envId = task.env_id || projectStore.getProject(task.project_id)?.default_env_id;
+      const envId = task.environmentId || projectStore.getProject(task.projectId)?.defaultEnvironmentId;
       if (!envId) throw new Error("No environment for task");
 
       const conn = adapterManager.getConnection(envId);
