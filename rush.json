@@ -7,6 +7,10 @@
   "projectFolderMaxDepth": 2,
   "projects": [
     {
+      "packageName": "@grackle/heft-rig",
+      "projectFolder": "rigs/heft-rig"
+    },
+    {
       "packageName": "@grackle/common",
       "projectFolder": "packages/common"
     },

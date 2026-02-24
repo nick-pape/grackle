@@ -9,7 +9,7 @@
     "grackle-powerline": "dist/index.js"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "heft build --clean",
     "start": "node dist/index.js",
     "clean": "rm -rf dist"
   },
@@ -23,7 +23,7 @@
     "pino": "^10.3.1"
   },
   "devDependencies": {
-    "@types/node": "^22.0.0",
-    "typescript": "~5.7.0"
+    "@grackle/heft-rig": "0.0.1",
+    "@types/node": "^22.0.0"
   }
 }

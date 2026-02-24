@@ -6,7 +6,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "npx buf generate && tsc",
+    "build": "npx buf generate && heft build --clean",
     "lint:proto": "npx buf lint",
     "clean": "rm -rf dist src/gen"
   },
@@ -17,6 +17,6 @@
   "devDependencies": {
     "@bufbuild/buf": "^1.50.0",
     "@bufbuild/protoc-gen-es": "^2.5.0",
-    "typescript": "~5.7.0"
+    "@grackle/heft-rig": "0.0.1"
   }
 }
