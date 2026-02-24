@@ -43,10 +43,10 @@ Analytical and precise. Observes details others miss. Short declarative sentence
 ## Voice Rules
 
 1. Call `speak(text, "male")` or `speak(text, "female")` — always specify the voice
-2. Each `speak()` call is **ONE sentence, 8-15 words max** — short punchy lines, not monologues
+2. Each `speak()` call is **1-3 sentences, 15-40 words** — let each host make a complete point before handing off. Longer lines sound better with streaming TTS.
 3. **Always alternate speakers.** Never the same speaker twice in a row
-4. Lines marked `[MALE]` or `[FEMALE]` must be spoken **exactly as written**
-5. All other dialogue: **improvise** based on the persona descriptions and the beats listed in each scene
+4. **1-2 exchanges per scene** — each host gets one meaty turn, maybe two. Don't ping-pong.
+5. All dialogue: **improvise** based on the persona descriptions and the beats listed in each scene
 6. `speak()` returns immediately with a speech **ID**. Use `await_speech(id=N)` at scene boundaries to sync audio with actions.
 
 ## Pronunciation Guide
@@ -82,11 +82,11 @@ TTS reads technical terms literally. **Always use phonetic spelling** in `speak(
 
 ## Pacing & Improvisation
 
-Dead air is the enemy, rambling is the other enemy. 2-4 exchanges per scene max. Short punchy lines: 8-15 words. If you can cut a word, cut it. Target: under 6 minutes total.
+Dead air is the enemy, rambling is the other enemy. **1-2 exchanges per scene** — each host makes a substantive point in 1-3 sentences, then hand off. Fewer turns, more substance per turn. Target: under 6 minutes total.
 
 **Pre-queue the next scene's opening.** Before calling `await_speech(id)`, always queue 1-2 lines for what comes next. This eliminates gaps between scenes.
 
-Male reacts, Female sets up. Alternate every line. Be conversational. Weave technical talking points in naturally. The scenes give you actions and beats — everything else is yours.
+Male reacts, Female sets up. Let each host finish a complete thought. Be conversational. Weave technical talking points in naturally. The scenes give you actions and beats — everything else is yours.
 
 ## SPOILER RULE — NO CONTAINER TALK UNTIL SCENE 7
 
@@ -159,14 +159,13 @@ Recording starts automatically when Chrome opens. You do NOT need to start ffmpe
 
 ### Scene 7 — The Meta Moment
 
+**Do this scene EARLY — right after Scene 6.** Don't delay.
+
 - **Action**: Click the "Projects" tab in the sidebar. Find the "Grackle Demo" project and expand it. Click the "Record Demo Video" task
 - **Action**: Click on the Stream tab for this task
-
-These next two lines must be spoken **exactly**:
-- `[FEMALE]` "Wait. That's my stream."
-- `[MALE]` "We're watching ourselves record this demo right now."
-
-- The reveal: you're running inside a Docker container, recording your own demo. Riff on the self-referential moment.
+- **Action**: **Stay on this stream for at least 15-20 seconds.** Let the audience see the live tool calls scrolling. Don't click away immediately.
+- Both hosts react with genuine shock — they realize they're watching their OWN stream, live. Improvise the reaction naturally. Be surprised, amused, meta.
+- The reveal: you're running inside a Docker container, recording your own demo. Riff on the self-referential moment while staying on the stream view.
 - **Action**: `await_speech()`
 
 ### Scene 8 — Check Progress & Roadmap

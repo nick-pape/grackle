@@ -20,9 +20,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN python3 -m venv /opt/pockettts \
     && /opt/pockettts/bin/pip install --no-cache-dir pocket-tts fastmcp
 
-# Install CUDA-enabled PyTorch (replaces CPU-only torch bundled with pocket-tts)
-RUN /opt/pockettts/bin/pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cu124
-
 # Pre-download TTS model weights during build (avoids 30-60s first-run delay)
 RUN /opt/pockettts/bin/pocket-tts generate --text "warmup" -q \
     && rm -f generated_speech.wav

@@ -123,16 +123,6 @@ Also check ffmpeg recording status if needed:
 docker exec grackle-demo-recorder bash -c "ls -lh /workspace/grackle-demo.mp4 2>&1"
 ```
 
-## GPU Acceleration (Optional)
-
-For faster TTS synthesis, add the demo-recorder with GPU passthrough:
-
-```bash
-grackle env add demo-recorder --docker --image grackle-demo-recorder --runtime claude-code --gpu
-```
-
-Requires NVIDIA Docker runtime and drivers on the host.
-
 ## Troubleshooting
 
 - **Chrome deadlock**: Never call `mcp__playwright__browser_install` — Chrome is pre-installed

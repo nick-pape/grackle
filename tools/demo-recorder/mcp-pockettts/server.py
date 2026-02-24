@@ -1,7 +1,7 @@
 """PocketTTS MCP server — in-process streaming TTS via FastMCP.
 
-Loads the PocketTTS model directly (GPU if available), streams PCM chunks
-to ffplay as they're generated. No HTTP server, no temp files.
+Loads the PocketTTS model on CPU, streams PCM chunks to ffplay as
+they're generated. No HTTP server, no temp files.
 """
 
 import asyncio
@@ -13,7 +13,6 @@ from pathlib import Path
 from typing import Optional
 
 import numpy as np
-import torch
 from fastmcp import FastMCP
 from pocket_tts import TTSModel
 
@@ -30,8 +29,8 @@ VOICE_PREFIX = {
 }
 
 VOICE_TEMPO = {
-    "male": 0.9,
-    "female": 0.9,
+    "male": 1.0,
+    "female": 1.0,
 }
 
 DEFAULT_VOICE = "male"
@@ -41,15 +40,7 @@ DEFAULT_VOICE = "male"
 print("[mcp-pockettts] Loading TTS model...", file=sys.stderr, flush=True)
 model = TTSModel.load_model(eos_threshold=-4.0, lsd_decode_steps=1, temp=0.8)
 
-if torch.cuda.is_available():
-    print(
-        f"[mcp-pockettts] GPU detected: {torch.cuda.get_device_name(0)}",
-        file=sys.stderr,
-        flush=True,
-    )
-    model = model.to("cuda")
-else:
-    print("[mcp-pockettts] Using CPU", file=sys.stderr, flush=True)
+print("[mcp-pockettts] Using CPU", file=sys.stderr, flush=True)
 
 sample_rate = model.sample_rate
 
@@ -107,7 +98,7 @@ def _play_streaming(text: str, voice_name: str) -> None:
             model_state=state,
             text_to_generate=f"{prefix}{text}",
             copy_state=True,
-            frames_after_eos=3,
+            frames_after_eos=6,
         ):
             pcm = (np.clip(chunk.numpy(), -1.0, 1.0) * 32767).astype(np.int16)
             proc.stdin.write(pcm.tobytes())

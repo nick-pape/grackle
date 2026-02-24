@@ -7,8 +7,7 @@
     "pockettts": {
       "command": "uv",
       "args": ["run",
-               "--extra-index-url", "https://download.pytorch.org/whl/cu124",
-               "--with", "fastmcp", "--with", "pocket-tts", "--with", "torch",
+               "--with", "fastmcp", "--with", "pocket-tts",
                "C:/Users/nickp/src/grackle2/tools/demo-recorder/mcp-pockettts/server.py"]
     }
   }
