@@ -1,5 +1,5 @@
 import { execSync, spawn, type ChildProcess } from "node:child_process";
-import { mkdtempSync, writeFileSync, readFileSync } from "node:fs";
+import { mkdtempSync, writeFileSync, readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import type { FullConfig } from "@playwright/test";
@@ -86,8 +86,16 @@ export default async function globalSetup(_config: FullConfig): Promise<void> {
   await waitForPort(3000, POLL_TIMEOUT_MS);
   console.log("[e2e] Both servers ready");
 
-  // 5. Read the auto-generated API key
-  const apiKey = readFileSync(join(grackleHome, ".grackle", "api-key"), "utf8").trim();
+  // 5. Read the auto-generated API key (may not exist immediately after port opens)
+  const apiKeyPath = join(grackleHome, ".grackle", "api-key");
+  const keyDeadline = Date.now() + POLL_TIMEOUT_MS;
+  while (!existsSync(apiKeyPath)) {
+    if (Date.now() > keyDeadline) {
+      throw new Error(`Timeout waiting for API key file: ${apiKeyPath}`);
+    }
+    await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
+  }
+  const apiKey = readFileSync(apiKeyPath, "utf8").trim();
   console.log(`[e2e] API key loaded (${apiKey.length} chars)`);
 
   // 6. Seed an environment via CLI
@@ -96,6 +104,7 @@ export default async function globalSetup(_config: FullConfig): Promise<void> {
     ...process.env,
     GRACKLE_HOME: grackleHome,
     GRACKLE_URL: "http://localhost:7434",
+    GRACKLE_API_KEY: apiKey,
   };
 
   execSync(`node "${cliPath}" env add test-local --local --runtime stub`, {

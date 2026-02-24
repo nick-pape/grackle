@@ -185,6 +185,74 @@ export async function runStubTaskToCompletion(page: Page): Promise<void> {
   await page.locator("button", { hasText: "Approve" }).waitFor({ timeout: 15_000 });
 }
 
+/**
+ * Send a WS message and wait for an "error" response.
+ * Convenience wrapper around sendWsAndWaitFor for error-path testing.
+ */
+export async function sendWsAndWaitForError(
+  page: Page,
+  message: WsPayload,
+  timeoutMs = 10_000,
+): Promise<WsPayload> {
+  return sendWsAndWaitFor(page, message, "error", timeoutMs);
+}
+
+/**
+ * Inject a fake WS message into the app's existing WebSocket connection.
+ * Calls the onmessage handler directly on the first OPEN tracked WebSocket.
+ * Requires installWsTracker to have been called via addInitScript before page.goto.
+ */
+export async function injectWsMessage(
+  page: Page,
+  message: WsPayload,
+): Promise<void> {
+  await page.evaluate((msg) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const sockets = (window as any).__grackle_ws_instances__ as WebSocket[] | undefined;
+    if (!sockets) {
+      throw new Error("WS tracker not installed — call installWsTracker before page.goto");
+    }
+    // Find the app's socket (first OPEN one — helper sockets are already closed)
+    const ws = sockets.find((s) => s.readyState === WebSocket.OPEN);
+    if (!ws) {
+      throw new Error(`No OPEN WebSocket found (tracked: ${sockets.length})`);
+    }
+    // The app uses ws.onmessage (not addEventListener), so call it directly
+    if (ws.onmessage) {
+      ws.onmessage(new MessageEvent("message", {
+        data: JSON.stringify(msg),
+      }));
+    }
+  }, message);
+}
+
+/**
+ * Install a hook via addInitScript that records all WebSocket instances opened by the app.
+ * Must be called BEFORE page.goto so the script runs before app JavaScript.
+ * Used by injectWsMessage to find the app's active socket.
+ */
+export async function installWsTracker(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (window as any).__grackle_ws_instances__ = [];
+    const OrigWs = window.WebSocket;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (window as any).__OrigWebSocket__ = OrigWs;
+    // @ts-expect-error — we're wrapping the constructor
+    window.WebSocket = function (...args: ConstructorParameters<typeof WebSocket>) {
+      const ws = new OrigWs(...args);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (window as any).__grackle_ws_instances__.push(ws);
+      return ws;
+    } as unknown as typeof WebSocket;
+    window.WebSocket.prototype = OrigWs.prototype;
+    Object.defineProperty(window.WebSocket, "CONNECTING", { value: OrigWs.CONNECTING });
+    Object.defineProperty(window.WebSocket, "OPEN", { value: OrigWs.OPEN });
+    Object.defineProperty(window.WebSocket, "CLOSING", { value: OrigWs.CLOSING });
+    Object.defineProperty(window.WebSocket, "CLOSED", { value: OrigWs.CLOSED });
+  });
+}
+
 /** Create a task via WebSocket with custom options (e.g., dependsOn). Returns the created task data. */
 export async function createTaskViaWs(
   page: Page,
