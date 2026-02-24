@@ -9,58 +9,78 @@ import { tmpdir } from "node:os";
 import { randomUUID } from "node:crypto";
 
 const POCKETTTS_URL = process.env.POCKETTTS_URL || "http://localhost:8890";
-const VOICE_SERVER_PORT = process.env.VOICE_SERVER_PORT || "8891";
 
-// ── Voice URL mapping ───────────────────────────────────────
-// Maps short voice names to HTTP URLs serving pre-exported safetensors.
-// PocketTTS voice_url only accepts http://, https://, or hf:// — not local paths.
+// ── Voice mapping ───────────────────────────────────────────
+// Maps short voice names to PocketTTS built-in voice names.
 const VOICE_MAP = {
-  snoop: `http://localhost:${VOICE_SERVER_PORT}/snoop.safetensors`,
-  cumberbatch: `http://localhost:${VOICE_SERVER_PORT}/cumberbatch.safetensors`,
+  male: "marius",
+  female: "alba",
 };
 
-// ── Synthesis-wait, playback-async architecture ─────────────
-// v0.5.1: speak() awaits full synthesis (downloads entire WAV),
-// then enqueues for background playback via ffplay. Returns to
-// agent after synthesis completes — even if audio is still playing.
-// This ties agent pacing to synthesis speed naturally.
+// ── Fire-and-forget synthesis, ordered playback ──────────────
+// v0.6.0: speak() returns immediately — synthesis runs in the background.
+// A speechQueue holds { promise, voice, wordCount } entries in order. drainPlayback()
+// awaits each promise then plays, so playback order matches enqueue order
+// even though synthesis may complete out of order. speech_status() returns
+// queue depth and estimated seconds for self-pacing. The agent calls
+// await_speech() at scene boundaries to sync audio with browser actions.
 
 // Per-voice text prefix to avoid garbled first syllable (PocketTTS known issue).
-// "... " works for snoop but causes a "tuh" artifact on cumberbatch.
 const VOICE_PREFIX = {
-  snoop: "... ",
-  cumberbatch: "",
+  male: "... ",
+  female: "",
   default: "",
 };
 
 // Per-voice playback speed (atempo filter). Lower = slower.
-// NOTE: Source WAVs are pre-normalized (loudnorm/compression applied before Docker build).
 // Only atempo is applied at playback — rich filter chains cause ffplay to exit early.
 const VOICE_TEMPO = {
-  snoop: 0.90,
-  cumberbatch: 1.00,
+  male: 0.90,
+  female: 1.00,
   default: 0.95,
 };
 
-const playbackQueue = [];
+const speechQueue = [];
+let queuedWordCount = 0;
 let playbackRunning = false;
 
-/** Enqueue a WAV buffer for background playback. */
-function enqueuePlayback(wavBuffer, voice) {
-  playbackQueue.push({ buffer: wavBuffer, voice });
+/** Enqueue a synthesis promise for ordered background playback. */
+function enqueueSpeech(synthesisPromise, voice, wordCount) {
+  speechQueue.push({ promise: synthesisPromise, voice, wordCount });
+  queuedWordCount += wordCount;
   if (!playbackRunning) {
     drainPlayback();
   }
 }
 
-/** Process playback queue: write to temp file, play with ffplay, clean up. */
+/** Synthesize text to a WAV buffer via PocketTTS. Returns Promise<Buffer>. */
+function synthesize(text, voice) {
+  const formData = new FormData();
+  const prefix = VOICE_PREFIX[voice] || VOICE_PREFIX.default;
+  formData.append("text", `${prefix}${text}`);
+  if (voice && VOICE_MAP[voice]) {
+    formData.append("voice", VOICE_MAP[voice]);
+  }
+  return fetch(`${POCKETTTS_URL}/tts`, { method: "POST", body: formData })
+    .then(async (response) => {
+      if (!response.ok) {
+        const errText = await response.text().catch(() => "");
+        throw new Error(`TTS error ${response.status}: ${errText}`);
+      }
+      return Buffer.from(await response.arrayBuffer());
+    });
+}
+
+/** Process speech queue: await synthesis, write to temp file, play with ffplay, clean up. */
 async function drainPlayback() {
   playbackRunning = true;
-  while (playbackQueue.length > 0) {
-    const { buffer, voice } = playbackQueue.shift();
+  while (speechQueue.length > 0) {
+    const { promise, voice, wordCount } = speechQueue.shift();
+    queuedWordCount -= wordCount;
     const tempo = VOICE_TEMPO[voice] || VOICE_TEMPO.default;
     const wavPath = join(tmpdir(), `tts-${randomUUID()}.wav`);
     try {
+      const buffer = await promise;
       await writeFile(wavPath, buffer);
       await new Promise((resolve, reject) => {
         execFile(
@@ -110,7 +130,7 @@ await ensurePocketTTS();
 
 const server = new McpServer({
   name: "mcp-pockettts",
-  version: "0.5.0",
+  version: "0.6.0",
 });
 
 server.tool(
@@ -119,55 +139,48 @@ server.tool(
   {
     text: z.string().describe("The text to speak aloud"),
     voice: z
-      .enum(["snoop", "cumberbatch"])
+      .enum(["male", "female"])
       .optional()
-      .describe("Voice clone to use. Omit for default voice."),
+      .describe("Voice to use. Omit for default voice."),
   },
   async ({ text, voice }) => {
-    const formData = new FormData();
-    const prefix = VOICE_PREFIX[voice] || VOICE_PREFIX.default;
-    formData.append("text", `${prefix}${text}`);
-    if (voice && VOICE_MAP[voice]) {
-      formData.append("voice_url", VOICE_MAP[voice]);
-    }
-
-    try {
-      const response = await fetch(`${POCKETTTS_URL}/tts`, {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const errText = await response.text().catch(() => "");
-        return {
-          content: [
-            {
-              type: "text",
-              text: `TTS error ${response.status}: ${errText}`,
-            },
-          ],
-        };
-      }
-
-      // Await full synthesis (download entire WAV)
-      const buffer = Buffer.from(await response.arrayBuffer());
-      // Enqueue for background playback (with voice for per-voice tempo)
-      enqueuePlayback(buffer, voice);
-    } catch (err) {
-      return {
-        content: [
-          { type: "text", text: `TTS fetch error: ${err.message}` },
-        ],
-      };
-    }
-
+    const wordCount = text.split(/\s+/).length;
+    const promise = synthesize(text, voice);
+    enqueueSpeech(promise, voice, wordCount);
     return {
-      content: [
-        {
-          type: "text",
-          text: `Speaking [${voice || "default"}]: "${text}"`,
-        },
-      ],
+      content: [{ type: "text", text: `Queued [${voice || "default"}]: "${text}"` }],
+    };
+  },
+);
+
+server.tool(
+  "speech_status",
+  "Check how much audio is queued. Returns instantly. Use this to decide whether to queue more speech, do browser actions, or wait.",
+  {},
+  async () => {
+    const pending = speechQueue.length;
+    const estimatedSeconds = Math.round(queuedWordCount / 2.5);
+    const playing = playbackRunning;
+    return {
+      content: [{
+        type: "text",
+        text: `Pending: ${pending} items (~${estimatedSeconds}s). ${playing ? "Playing now." : "Silent."}`,
+      }],
+    };
+  },
+);
+
+server.tool(
+  "await_speech",
+  "Block until all queued speech has finished synthesizing and playing. Call this at scene boundaries to sync audio with browser actions.",
+  {},
+  async () => {
+    const start = Date.now();
+    while ((speechQueue.length > 0 || playbackRunning) && Date.now() - start < 120_000) {
+      await new Promise((r) => setTimeout(r, 200));
+    }
+    return {
+      content: [{ type: "text", text: "All speech finished." }],
     };
   },
 );
@@ -179,7 +192,7 @@ server.tool(
   async () => {
     // Wait for playback queue to drain so all audio is captured in the recording
     const drainStart = Date.now();
-    while ((playbackQueue.length > 0 || playbackRunning) && Date.now() - drainStart < 60_000) {
+    while ((speechQueue.length > 0 || playbackRunning) && Date.now() - drainStart < 60_000) {
       await new Promise((r) => setTimeout(r, 500));
     }
 
