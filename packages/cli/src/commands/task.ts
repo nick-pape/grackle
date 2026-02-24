@@ -38,7 +38,7 @@ export function registerTaskCommands(program: Command): void {
         projectId,
         title,
         description: opts.desc || "",
-        envId: opts.env || "",
+        environmentId: opts.env || "",
         dependsOn,
       });
       console.log(`Created task: ${t.id} (${t.title}) branch: ${t.branch}`);
@@ -54,7 +54,7 @@ export function registerTaskCommands(program: Command): void {
       console.log(`Title:       ${t.title}`);
       console.log(`Status:      ${t.status}`);
       console.log(`Branch:      ${t.branch}`);
-      console.log(`Env:         ${t.envId || "-"}`);
+      console.log(`Env:         ${t.environmentId || "-"}`);
       console.log(`Session:     ${t.sessionId || "-"}`);
       console.log(`Depends On:  ${t.dependsOn.length > 0 ? t.dependsOn.join(", ") : "none"}`);
       if (t.description) console.log(`Description: ${t.description}`);
@@ -105,7 +105,7 @@ export function registerTaskCommands(program: Command): void {
         title: "",
         description: "",
         status: "",
-        envId: "",
+        environmentId: "",
         dependsOn: [],
         reviewNotes: opts.notes,
       });

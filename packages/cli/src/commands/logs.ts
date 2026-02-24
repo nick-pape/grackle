@@ -22,7 +22,7 @@ export function registerLogCommands(program: Command): void {
       }
 
       // Get session info for log path
-      const sessions = await client.listSessions({ envId: "", status: "" });
+      const sessions = await client.listSessions({ environmentId: "", status: "" });
       const session = sessions.sessions.find((s) => s.id === sessionId || s.id.startsWith(sessionId));
 
       if (!session) {

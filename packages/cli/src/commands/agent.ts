@@ -11,10 +11,10 @@ export function registerAgentCommands(program: Command): void {
     .option("--model <model>", "Model to use")
     .option("--max-turns <n>", "Maximum turns", parseInt)
     .option("--runtime <runtime>", "Agent runtime")
-    .action(async (envId: string, prompt: string, opts) => {
+    .action(async (environmentId: string, prompt: string, opts) => {
       const client = createGrackleClient();
       const session = await client.spawnAgent({
-        envId,
+        environmentId,
         prompt,
         model: opts.model || "",
         maxTurns: opts.maxTurns || 0,
@@ -46,7 +46,7 @@ export function registerAgentCommands(program: Command): void {
     .action(async (opts) => {
       const client = createGrackleClient();
       const res = await client.listSessions({
-        envId: opts.env || "",
+        environmentId: opts.env || "",
         status: opts.all ? "" : "active",
       });
       if (res.sessions.length === 0) {
@@ -58,7 +58,7 @@ export function registerAgentCommands(program: Command): void {
       });
       for (const s of res.sessions) {
         const prompt = s.prompt.length > 40 ? s.prompt.slice(0, 40) + "..." : s.prompt;
-        table.push([s.id.slice(0, 8), s.envId, s.runtime, s.status, prompt, s.startedAt]);
+        table.push([s.id.slice(0, 8), s.environmentId, s.runtime, s.status, prompt, s.startedAt]);
       }
       console.log(table.toString());
     });

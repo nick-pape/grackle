@@ -81,8 +81,8 @@ function main(): void {
   registerAdapter(new LocalAdapter());
 
   // Start heartbeat
-  startHeartbeat((envId) => {
-    updateEnvironmentStatus(envId, "disconnected");
+  startHeartbeat((environmentId) => {
+    updateEnvironmentStatus(environmentId, "disconnected");
   });
 
   // --- gRPC server (HTTP/2) ---

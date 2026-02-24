@@ -11,7 +11,7 @@ export interface Environment {
 
 export interface Session {
   id: string;
-  envId: string;
+  environmentId: string;
   runtime: string;
   status: string;
   prompt: string;
@@ -30,7 +30,7 @@ export interface Project {
   name: string;
   description: string;
   repoUrl: string;
-  defaultEnvId: string;
+  defaultEnvironmentId: string;
   status: string;
   createdAt: string;
 }
@@ -42,7 +42,7 @@ export interface TaskData {
   description: string;
   status: string;
   branch: string;
-  envId: string;
+  environmentId: string;
   sessionId: string;
   dependsOn: string[];
   reviewNotes: string;
@@ -274,10 +274,10 @@ export function useGrackleSocket(url?: string) {
   }, [wsUrl, send]);
 
   const spawn = useCallback(
-    (envId: string, prompt: string, model?: string, runtime?: string) => {
+    (environmentId: string, prompt: string, model?: string, runtime?: string) => {
       send({
         type: "spawn",
-        payload: { envId, prompt, model: model || "", runtime: runtime || "" },
+        payload: { environmentId, prompt, model: model || "", runtime: runtime || "" },
       });
     },
     [send]
@@ -317,10 +317,10 @@ export function useGrackleSocket(url?: string) {
   // ─── Project methods ──────────────────────────────
 
   const createProject = useCallback(
-    (name: string, description?: string, repoUrl?: string, defaultEnvId?: string) => {
+    (name: string, description?: string, repoUrl?: string, defaultEnvironmentId?: string) => {
       send({
         type: "create_project",
-        payload: { name, description: description || "", repoUrl: repoUrl || "", defaultEnvId: defaultEnvId || "" },
+        payload: { name, description: description || "", repoUrl: repoUrl || "", defaultEnvironmentId: defaultEnvironmentId || "" },
       });
     },
     [send]
@@ -343,14 +343,14 @@ export function useGrackleSocket(url?: string) {
   // ─── Task methods ─────────────────────────────────
 
   const createTask = useCallback(
-    (projectId: string, title: string, description?: string, envId?: string, dependsOn?: string[]) => {
+    (projectId: string, title: string, description?: string, environmentId?: string, dependsOn?: string[]) => {
       send({
         type: "create_task",
         payload: {
           projectId,
           title,
           description: description || "",
-          envId: envId || "",
+          environmentId: environmentId || "",
           dependsOn: dependsOn || [],
         },
       });

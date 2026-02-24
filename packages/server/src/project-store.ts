@@ -1,40 +1,37 @@
-import { rawDb as db } from "./db.js";
+import db from "./db.js";
+import { projects, type ProjectRow } from "./schema.js";
+import { eq, desc, sql } from "drizzle-orm";
 
-export interface ProjectRow {
-  id: string;
-  name: string;
-  description: string;
-  repo_url: string;
-  default_env_id: string;
-  status: string;
-  created_at: string;
-  updated_at: string;
+export type { ProjectRow };
+
+/** Insert a new project record. */
+export function createProject(id: string, name: string, description: string, repoUrl: string, defaultEnvironmentId: string): void {
+  db.insert(projects).values({
+    id,
+    name,
+    description,
+    repoUrl,
+    defaultEnvironmentId,
+  }).run();
 }
 
-const stmts = {
-  create: db.prepare(`
-    INSERT INTO projects (id, name, description, repo_url, default_env_id)
-    VALUES (?, ?, ?, ?, ?)
-  `),
-  get: db.prepare("SELECT * FROM projects WHERE id = ?"),
-  list: db.prepare("SELECT * FROM projects WHERE status = 'active' ORDER BY created_at DESC"),
-  listAll: db.prepare("SELECT * FROM projects ORDER BY created_at DESC"),
-  archive: db.prepare("UPDATE projects SET status = 'archived', updated_at = datetime('now') WHERE id = ?"),
-  update: db.prepare("UPDATE projects SET name = ?, description = ?, repo_url = ?, default_env_id = ?, updated_at = datetime('now') WHERE id = ?"),
-};
-
-export function createProject(id: string, name: string, description: string, repoUrl: string, defaultEnvId: string): void {
-  stmts.create.run(id, name, description, repoUrl, defaultEnvId);
-}
-
+/** Retrieve a single project by ID. */
 export function getProject(id: string): ProjectRow | undefined {
-  return stmts.get.get(id) as ProjectRow | undefined;
+  return db.select().from(projects).where(eq(projects.id, id)).get();
 }
 
+/** Return all active projects, newest first. */
 export function listProjects(): ProjectRow[] {
-  return stmts.list.all() as ProjectRow[];
+  return db.select().from(projects)
+    .where(eq(projects.status, "active"))
+    .orderBy(desc(projects.createdAt))
+    .all();
 }
 
+/** Mark a project as archived. */
 export function archiveProject(id: string): void {
-  stmts.archive.run(id);
+  db.update(projects)
+    .set({ status: "archived", updatedAt: sql`datetime('now')` })
+    .where(eq(projects.id, id))
+    .run();
 }

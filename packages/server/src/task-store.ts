@@ -1,110 +1,128 @@
-import { rawDb as db } from "./db.js";
+import db from "./db.js";
+import { tasks, type TaskRow } from "./schema.js";
+import { eq, sql, asc } from "drizzle-orm";
 import type { TaskStatus } from "@grackle/common";
+import { safeParseJsonArray } from "./json-helpers.js";
 
-export interface TaskRow {
-  id: string;
-  project_id: string;
-  title: string;
-  description: string;
-  status: string;
-  branch: string;
-  env_id: string;
-  session_id: string;
-  depends_on: string; // JSON array of task IDs
-  assigned_at: string | null;
-  started_at: string | null;
-  completed_at: string | null;
-  review_notes: string;
-  created_at: string;
-  updated_at: string;
-  sort_order: number;
-}
-
-const stmts = {
-  create: db.prepare(`
-    INSERT INTO tasks (id, project_id, title, description, branch, env_id, depends_on, sort_order)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `),
-  get: db.prepare("SELECT * FROM tasks WHERE id = ?"),
-  listByProject: db.prepare("SELECT * FROM tasks WHERE project_id = ? ORDER BY sort_order, created_at"),
-  update: db.prepare(`
-    UPDATE tasks SET title = ?, description = ?, status = ?, env_id = ?, depends_on = ?,
-    review_notes = ?, updated_at = datetime('now') WHERE id = ?
-  `),
-  updateStatus: db.prepare("UPDATE tasks SET status = ?, updated_at = datetime('now') WHERE id = ?"),
-  setSession: db.prepare("UPDATE tasks SET session_id = ?, updated_at = datetime('now') WHERE id = ?"),
-  setStarted: db.prepare("UPDATE tasks SET status = 'in_progress', started_at = datetime('now'), updated_at = datetime('now') WHERE id = ?"),
-  setCompleted: db.prepare("UPDATE tasks SET status = ?, completed_at = datetime('now'), updated_at = datetime('now') WHERE id = ?"),
-  delete: db.prepare("DELETE FROM tasks WHERE id = ?"),
-  maxSortOrder: db.prepare("SELECT MAX(sort_order) as max_order FROM tasks WHERE project_id = ?"),
-};
+export type { TaskRow };
 
 function slugify(text: string): string {
   return text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40);
 }
 
+/** Insert a new task with auto-generated branch name and sort order. */
 export function createTask(
   id: string,
   projectId: string,
   title: string,
   description: string,
-  envId: string,
+  environmentId: string,
   dependsOn: string[],
   projectSlug: string,
 ): void {
   const branch = `${projectSlug}/${slugify(title)}`;
   const depsJson = JSON.stringify(dependsOn);
-  const maxRow = stmts.maxSortOrder.get(projectId) as { max_order: number | null } | undefined;
-  const sortOrder = (maxRow?.max_order ?? -1) + 1;
-  stmts.create.run(id, projectId, title, description, branch, envId, depsJson, sortOrder);
+  const maxRow = db.select({ maxOrder: sql<number>`max(sort_order)` })
+    .from(tasks)
+    .where(eq(tasks.projectId, projectId))
+    .get();
+  const sortOrder = (maxRow?.maxOrder ?? -1) + 1;
+  db.insert(tasks).values({
+    id,
+    projectId,
+    title,
+    description,
+    branch,
+    environmentId,
+    dependsOn: depsJson,
+    sortOrder,
+  }).run();
 }
 
+/** Retrieve a single task by ID. */
 export function getTask(id: string): TaskRow | undefined {
-  return stmts.get.get(id) as TaskRow | undefined;
+  return db.select().from(tasks).where(eq(tasks.id, id)).get();
 }
 
+/** Return all tasks for a project, ordered by sort_order then created_at. */
 export function listTasks(projectId: string): TaskRow[] {
-  return stmts.listByProject.all(projectId) as TaskRow[];
+  return db.select().from(tasks)
+    .where(eq(tasks.projectId, projectId))
+    .orderBy(asc(tasks.sortOrder), asc(tasks.createdAt))
+    .all();
 }
 
+/** Update multiple task fields at once. */
 export function updateTask(
   id: string,
   title: string,
   description: string,
   status: string,
-  envId: string,
+  environmentId: string,
   dependsOn: string[],
   reviewNotes: string,
 ): void {
-  stmts.update.run(title, description, status, envId, JSON.stringify(dependsOn), reviewNotes, id);
+  db.update(tasks).set({
+    title,
+    description,
+    status,
+    environmentId,
+    dependsOn: JSON.stringify(dependsOn),
+    reviewNotes,
+    updatedAt: sql`datetime('now')`,
+  }).where(eq(tasks.id, id)).run();
 }
 
+/** Update only the task status. */
 export function updateTaskStatus(id: string, status: TaskStatus): void {
-  stmts.updateStatus.run(status, id);
+  db.update(tasks).set({
+    status,
+    updatedAt: sql`datetime('now')`,
+  }).where(eq(tasks.id, id)).run();
 }
 
+/** Set the session ID for a task. */
 export function setTaskSession(id: string, sessionId: string): void {
-  stmts.setSession.run(sessionId, id);
+  db.update(tasks).set({
+    sessionId,
+    updatedAt: sql`datetime('now')`,
+  }).where(eq(tasks.id, id)).run();
 }
 
+/** Mark a task as in_progress with a started_at timestamp. */
 export function markTaskStarted(id: string): void {
-  stmts.setStarted.run(id);
+  db.update(tasks).set({
+    status: "in_progress",
+    startedAt: sql`datetime('now')`,
+    updatedAt: sql`datetime('now')`,
+  }).where(eq(tasks.id, id)).run();
 }
 
+/** Mark a task as completed (review, done, or failed) with a completed_at timestamp. */
 export function markTaskCompleted(id: string, status: "review" | "done" | "failed"): void {
-  stmts.setCompleted.run(status, id);
+  db.update(tasks).set({
+    status,
+    completedAt: sql`datetime('now')`,
+    updatedAt: sql`datetime('now')`,
+  }).where(eq(tasks.id, id)).run();
 }
 
+/** Delete a task by ID. */
 export function deleteTask(id: string): void {
-  stmts.delete.run(id);
+  db.delete(tasks).where(eq(tasks.id, id)).run();
 }
 
+/** Return all pending tasks whose dependencies are fully met. */
 export function getUnblockedTasks(projectId: string): TaskRow[] {
   const all = listTasks(projectId);
   return all.filter((task) => {
-    if (task.status !== "pending") return false;
-    const deps = JSON.parse(task.depends_on) as string[];
-    if (deps.length === 0) return true;
+    if (task.status !== "pending") {
+      return false;
+    }
+    const deps = safeParseJsonArray(task.dependsOn);
+    if (deps.length === 0) {
+      return true;
+    }
     return deps.every((depId) => {
       const dep = all.find((t) => t.id === depId);
       return dep?.status === "done";
@@ -112,15 +130,21 @@ export function getUnblockedTasks(projectId: string): TaskRow[] {
   });
 }
 
+/** Alias for getUnblockedTasks — check which pending tasks are now unblocked. */
 export function checkAndUnblock(projectId: string): TaskRow[] {
   return getUnblockedTasks(projectId);
 }
 
+/** Check whether all dependencies of a task are in "done" status. */
 export function areDependenciesMet(taskId: string): boolean {
   const task = getTask(taskId);
-  if (!task) return false;
-  const deps = JSON.parse(task.depends_on) as string[];
-  if (deps.length === 0) return true;
+  if (!task) {
+    return false;
+  }
+  const deps = safeParseJsonArray(task.dependsOn);
+  if (deps.length === 0) {
+    return true;
+  }
   return deps.every((depId) => {
     const dep = getTask(depId);
     return dep?.status === "done";

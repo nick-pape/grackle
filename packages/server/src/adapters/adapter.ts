@@ -7,7 +7,7 @@ export type PowerLineClient = Client<typeof powerline.GracklePowerLine>;
 /** An active connection to a PowerLine, including the gRPC client and port info. */
 export interface PowerLineConnection {
   client: PowerLineClient;
-  envId: string;
+  environmentId: string;
   port: number;
 }
 
@@ -31,15 +31,15 @@ export interface EnvironmentAdapter {
   type: string;
 
   /** Provision infrastructure and yield progress events. */
-  provision(envId: string, config: Record<string, unknown>, powerlineToken: string): AsyncGenerator<ProvisionEvent>;
+  provision(environmentId: string, config: Record<string, unknown>, powerlineToken: string): AsyncGenerator<ProvisionEvent>;
   /** Establish a gRPC connection to the PowerLine running in the environment. */
-  connect(envId: string, config: Record<string, unknown>, powerlineToken: string): Promise<PowerLineConnection>;
+  connect(environmentId: string, config: Record<string, unknown>, powerlineToken: string): Promise<PowerLineConnection>;
   /** Release resources associated with a connection without stopping the environment. */
-  disconnect(envId: string): Promise<void>;
+  disconnect(environmentId: string): Promise<void>;
   /** Stop the environment's underlying compute (e.g. stop a Docker container). */
-  stop(envId: string, config: Record<string, unknown>): Promise<void>;
+  stop(environmentId: string, config: Record<string, unknown>): Promise<void>;
   /** Permanently destroy the environment's underlying compute. */
-  destroy(envId: string, config: Record<string, unknown>): Promise<void>;
+  destroy(environmentId: string, config: Record<string, unknown>): Promise<void>;
   /** Return true if the PowerLine is reachable via ping. */
   healthCheck(connection: PowerLineConnection): Promise<boolean>;
 }

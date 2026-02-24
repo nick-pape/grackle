@@ -67,8 +67,8 @@ export function getBundle(): powerline.TokenBundle {
 }
 
 /** Push the current token bundle to a single connected environment. */
-export async function pushToEnv(envId: string): Promise<void> {
-  const conn = adapterManager.getConnection(envId);
+export async function pushToEnv(environmentId: string): Promise<void> {
+  const conn = adapterManager.getConnection(environmentId);
   if (!conn) {
     return;
   }
@@ -86,9 +86,9 @@ export async function pushToAll(): Promise<void> {
   const connections = adapterManager.listConnections();
   const promises: Promise<void>[] = [];
 
-  for (const [envId] of connections) {
-    promises.push(pushToEnv(envId).catch((err) => {
-      logger.error({ envId, err }, "Failed to push tokens");
+  for (const [environmentId] of connections) {
+    promises.push(pushToEnv(environmentId).catch((err) => {
+      logger.error({ environmentId, err }, "Failed to push tokens");
     }));
   }
 

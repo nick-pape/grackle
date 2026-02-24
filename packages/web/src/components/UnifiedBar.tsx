@@ -312,7 +312,7 @@ export function UnifiedBar({ viewMode, setViewMode }: Props) {
     const handleSpawn = (e: FormEvent) => {
       e.preventDefault();
       if (!text.trim()) return;
-      spawn(viewMode.envId, text, undefined, runtime);
+      spawn(viewMode.environmentId, text, undefined, runtime);
       setText("");
     };
 
@@ -382,7 +382,7 @@ export function UnifiedBar({ viewMode, setViewMode }: Props) {
       return (
         <div style={barStyle}>
           <span style={{ color: "#666", fontSize: "13px", flex: 1 }}>Session {session.status}</span>
-          <button onClick={() => setViewMode({ kind: "new_chat", envId: session.envId, runtime: session.runtime })} style={btnStyle}>
+          <button onClick={() => setViewMode({ kind: "new_chat", environmentId: session.environmentId, runtime: session.runtime })} style={btnStyle}>
             + New Chat
           </button>
         </div>

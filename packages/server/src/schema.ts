@@ -27,7 +27,7 @@ export type NewEnvironment = typeof environments.$inferInsert;
 
 export const sessions = sqliteTable("sessions", {
   id: text("id").primaryKey(),
-  envId: text("env_id").notNull().references(() => environments.id),
+  environmentId: text("env_id").notNull().references(() => environments.id),
   runtime: text("runtime").notNull(),
   runtimeSessionId: text("runtime_session_id"),
   prompt: text("prompt").notNull(),
@@ -57,3 +57,69 @@ export const tokens = sqliteTable("tokens", {
 
 /** Row shape returned by a SELECT on the tokens table. */
 export type TokenRow = typeof tokens.$inferSelect;
+
+// ─── Projects ─────────────────────────────────────────────
+
+export const projects = sqliteTable("projects", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description").notNull().default(""),
+  repoUrl: text("repo_url").notNull().default(""),
+  defaultEnvironmentId: text("default_env_id").notNull().default(""),
+  status: text("status").notNull().default("active"),
+  createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
+  updatedAt: text("updated_at").notNull().default(sql`(datetime('now'))`),
+});
+
+/** Row shape returned by a SELECT on the projects table. */
+export type ProjectRow = typeof projects.$inferSelect;
+
+/** Shape accepted by INSERT into the projects table. */
+export type NewProject = typeof projects.$inferInsert;
+
+// ─── Tasks ────────────────────────────────────────────────
+
+export const tasks = sqliteTable("tasks", {
+  id: text("id").primaryKey(),
+  projectId: text("project_id").notNull().references(() => projects.id),
+  title: text("title").notNull(),
+  description: text("description").notNull().default(""),
+  status: text("status").notNull().default("pending"),
+  branch: text("branch").notNull().default(""),
+  environmentId: text("env_id").notNull().default(""),
+  sessionId: text("session_id").notNull().default(""),
+  dependsOn: text("depends_on").notNull().default("[]"),
+  assignedAt: text("assigned_at"),
+  startedAt: text("started_at"),
+  completedAt: text("completed_at"),
+  reviewNotes: text("review_notes").notNull().default(""),
+  createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
+  updatedAt: text("updated_at").notNull().default(sql`(datetime('now'))`),
+  sortOrder: integer("sort_order").notNull().default(0),
+});
+
+/** Row shape returned by a SELECT on the tasks table. */
+export type TaskRow = typeof tasks.$inferSelect;
+
+/** Shape accepted by INSERT into the tasks table. */
+export type NewTask = typeof tasks.$inferInsert;
+
+// ─── Findings ─────────────────────────────────────────────
+
+export const findings = sqliteTable("findings", {
+  id: text("id").primaryKey(),
+  projectId: text("project_id").notNull().references(() => projects.id),
+  taskId: text("task_id").notNull().default(""),
+  sessionId: text("session_id").notNull().default(""),
+  category: text("category").notNull().default("general"),
+  title: text("title").notNull(),
+  content: text("content").notNull(),
+  tags: text("tags").notNull().default("[]"),
+  createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
+});
+
+/** Row shape returned by a SELECT on the findings table. */
+export type FindingRow = typeof findings.$inferSelect;
+
+/** Shape accepted by INSERT into the findings table. */
+export type NewFinding = typeof findings.$inferInsert;

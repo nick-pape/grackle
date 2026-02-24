@@ -66,7 +66,7 @@ function EnvironmentCard({
           )}
           {isConnected && (
             <button
-              onClick={() => setViewMode({ kind: "new_chat", envId: env.id, runtime: env.defaultRuntime || "claude-code" })}
+              onClick={() => setViewMode({ kind: "new_chat", environmentId: env.id, runtime: env.defaultRuntime || "claude-code" })}
               title="New chat"
               style={{
                 background: "none",
@@ -113,7 +113,7 @@ export function EnvironmentList({ viewMode, setViewMode }: Props) {
   const { environments, sessions } = useGrackle();
 
   const selectedSessionId = viewMode.kind === "session" ? viewMode.sessionId : null;
-  const newChatEnvId = viewMode.kind === "new_chat" ? viewMode.envId : null;
+  const newChatEnvId = viewMode.kind === "new_chat" ? viewMode.environmentId : null;
 
   return (
     <div
@@ -137,7 +137,7 @@ export function EnvironmentList({ viewMode, setViewMode }: Props) {
       )}
 
       {environments.map((env) => {
-        const envSessions = sessions.filter((s) => s.envId === env.id);
+        const envSessions = sessions.filter((s) => s.environmentId === env.id);
         return (
           <EnvironmentCard
             key={env.id}

@@ -8,7 +8,7 @@ import { useGrackle } from "./context/GrackleContext.js";
 
 export type ViewMode =
   | { kind: "empty" }
-  | { kind: "new_chat"; envId: string; runtime: string }
+  | { kind: "new_chat"; environmentId: string; runtime: string }
   | { kind: "session"; sessionId: string }
   | { kind: "project"; projectId: string }
   | { kind: "new_task"; projectId: string }
