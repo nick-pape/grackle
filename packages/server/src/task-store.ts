@@ -2,6 +2,7 @@ import db from "./db.js";
 import { tasks, type TaskRow } from "./schema.js";
 import { eq, sql, asc } from "drizzle-orm";
 import type { TaskStatus } from "@grackle/common";
+import { safeParseJsonArray } from "./json-helpers.js";
 
 export type { TaskRow };
 
@@ -118,7 +119,7 @@ export function getUnblockedTasks(projectId: string): TaskRow[] {
     if (task.status !== "pending") {
       return false;
     }
-    const deps = JSON.parse(task.dependsOn) as string[];
+    const deps = safeParseJsonArray(task.dependsOn);
     if (deps.length === 0) {
       return true;
     }
@@ -140,7 +141,7 @@ export function areDependenciesMet(taskId: string): boolean {
   if (!task) {
     return false;
   }
-  const deps = JSON.parse(task.dependsOn) as string[];
+  const deps = safeParseJsonArray(task.dependsOn);
   if (deps.length === 0) {
     return true;
   }

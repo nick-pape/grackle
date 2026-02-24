@@ -18,6 +18,7 @@ import { broadcast } from "./ws-bridge.js";
 import { join } from "node:path";
 import { LOGS_DIR, DEFAULT_RUNTIME, DEFAULT_MODEL } from "@grackle/common";
 import { grackleHome } from "./paths.js";
+import { safeParseJsonArray } from "./json-helpers.js";
 
 function slugify(text: string): string {
   return text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40);
@@ -56,7 +57,7 @@ function projectRowToProto(row: projectStore.ProjectRow): grackle.Project {
 function taskRowToProto(row: taskStore.TaskRow): grackle.Task {
   return create(grackle.TaskSchema, {
     ...row,
-    dependsOn: JSON.parse(row.dependsOn),
+    dependsOn: safeParseJsonArray(row.dependsOn),
     assignedAt: row.assignedAt ?? "",
     startedAt: row.startedAt ?? "",
     completedAt: row.completedAt ?? "",
@@ -64,7 +65,7 @@ function taskRowToProto(row: taskStore.TaskRow): grackle.Task {
 }
 
 function findingRowToProto(row: findingStore.FindingRow): grackle.Finding {
-  return create(grackle.FindingSchema, { ...row, tags: JSON.parse(row.tags) });
+  return create(grackle.FindingSchema, { ...row, tags: safeParseJsonArray(row.tags) });
 }
 
 /** Spawn an agent session on a PowerLine, piping events to the stream hub. Returns the session ID. */
@@ -508,7 +509,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         req.description || existing.description,
         req.status || existing.status,
         req.environmentId || existing.environmentId,
-        req.dependsOn.length > 0 ? [...req.dependsOn] : JSON.parse(existing.dependsOn),
+        req.dependsOn.length > 0 ? [...req.dependsOn] : safeParseJsonArray(existing.dependsOn),
         req.reviewNotes || existing.reviewNotes,
       );
       const row = taskStore.getTask(req.id);
@@ -606,7 +607,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
 
       taskStore.updateTask(
         task.id, task.title, task.description, "assigned",
-        task.environmentId, JSON.parse(task.dependsOn), req.reviewNotes || "",
+        task.environmentId, safeParseJsonArray(task.dependsOn), req.reviewNotes || "",
       );
 
       broadcast({ type: "task_rejected", payload: { taskId: task.id, projectId: task.projectId } });

@@ -60,43 +60,43 @@ export function initDatabase(): void {
     CREATE TABLE IF NOT EXISTS projects (
       id            TEXT PRIMARY KEY,
       name          TEXT NOT NULL,
-      description   TEXT DEFAULT '',
-      repo_url      TEXT DEFAULT '',
-      default_env_id TEXT DEFAULT '',
-      status        TEXT DEFAULT 'active',
-      created_at    TEXT DEFAULT (datetime('now')),
-      updated_at    TEXT DEFAULT (datetime('now'))
+      description   TEXT NOT NULL DEFAULT '',
+      repo_url      TEXT NOT NULL DEFAULT '',
+      default_env_id TEXT NOT NULL DEFAULT '',
+      status        TEXT NOT NULL DEFAULT 'active',
+      created_at    TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at    TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
     CREATE TABLE IF NOT EXISTS tasks (
       id            TEXT PRIMARY KEY,
       project_id    TEXT NOT NULL REFERENCES projects(id),
       title         TEXT NOT NULL,
-      description   TEXT DEFAULT '',
-      status        TEXT DEFAULT 'pending',
-      branch        TEXT DEFAULT '',
-      env_id        TEXT DEFAULT '',
-      session_id    TEXT DEFAULT '',
-      depends_on    TEXT DEFAULT '[]',
+      description   TEXT NOT NULL DEFAULT '',
+      status        TEXT NOT NULL DEFAULT 'pending',
+      branch        TEXT NOT NULL DEFAULT '',
+      env_id        TEXT NOT NULL DEFAULT '',
+      session_id    TEXT NOT NULL DEFAULT '',
+      depends_on    TEXT NOT NULL DEFAULT '[]',
       assigned_at   TEXT,
       started_at    TEXT,
       completed_at  TEXT,
-      review_notes  TEXT DEFAULT '',
-      created_at    TEXT DEFAULT (datetime('now')),
-      updated_at    TEXT DEFAULT (datetime('now')),
-      sort_order    INTEGER DEFAULT 0
+      review_notes  TEXT NOT NULL DEFAULT '',
+      created_at    TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at    TEXT NOT NULL DEFAULT (datetime('now')),
+      sort_order    INTEGER NOT NULL DEFAULT 0
     );
 
     CREATE TABLE IF NOT EXISTS findings (
       id            TEXT PRIMARY KEY,
       project_id    TEXT NOT NULL REFERENCES projects(id),
-      task_id       TEXT DEFAULT '',
-      session_id    TEXT DEFAULT '',
-      category      TEXT DEFAULT 'general',
+      task_id       TEXT NOT NULL DEFAULT '',
+      session_id    TEXT NOT NULL DEFAULT '',
+      category      TEXT NOT NULL DEFAULT 'general',
       title         TEXT NOT NULL,
       content       TEXT NOT NULL,
-      tags          TEXT DEFAULT '[]',
-      created_at    TEXT DEFAULT (datetime('now'))
+      tags          TEXT NOT NULL DEFAULT '[]',
+      created_at    TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
     CREATE INDEX IF NOT EXISTS idx_findings_project ON findings(project_id);
@@ -111,6 +111,33 @@ export function initDatabase(): void {
   try {
     sqlite.exec("ALTER TABLE environments RENAME COLUMN sidecar_token TO powerline_token");
   } catch { /* column already renamed or doesn't exist */ }
+
+  // Migration: backfill NULLs in stage-2 tables from older schemas that lacked NOT NULL
+  sqlite.exec(`
+    UPDATE projects SET description = '' WHERE description IS NULL;
+    UPDATE projects SET repo_url = '' WHERE repo_url IS NULL;
+    UPDATE projects SET default_env_id = '' WHERE default_env_id IS NULL;
+    UPDATE projects SET status = 'active' WHERE status IS NULL;
+    UPDATE projects SET created_at = datetime('now') WHERE created_at IS NULL;
+    UPDATE projects SET updated_at = datetime('now') WHERE updated_at IS NULL;
+
+    UPDATE tasks SET description = '' WHERE description IS NULL;
+    UPDATE tasks SET status = 'pending' WHERE status IS NULL;
+    UPDATE tasks SET branch = '' WHERE branch IS NULL;
+    UPDATE tasks SET env_id = '' WHERE env_id IS NULL;
+    UPDATE tasks SET session_id = '' WHERE session_id IS NULL;
+    UPDATE tasks SET depends_on = '[]' WHERE depends_on IS NULL;
+    UPDATE tasks SET review_notes = '' WHERE review_notes IS NULL;
+    UPDATE tasks SET created_at = datetime('now') WHERE created_at IS NULL;
+    UPDATE tasks SET updated_at = datetime('now') WHERE updated_at IS NULL;
+    UPDATE tasks SET sort_order = 0 WHERE sort_order IS NULL;
+
+    UPDATE findings SET task_id = '' WHERE task_id IS NULL;
+    UPDATE findings SET session_id = '' WHERE session_id IS NULL;
+    UPDATE findings SET category = 'general' WHERE category IS NULL;
+    UPDATE findings SET tags = '[]' WHERE tags IS NULL;
+    UPDATE findings SET created_at = datetime('now') WHERE created_at IS NULL;
+  `);
 }
 
 // Run init immediately for backwards compatibility — stores import db at module load

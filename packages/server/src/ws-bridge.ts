@@ -16,6 +16,7 @@ import { LOGS_DIR, DEFAULT_RUNTIME, DEFAULT_MODEL } from "@grackle/common";
 import { grackleHome } from "./paths.js";
 import * as logWriter from "./log-writer.js";
 import { writeTranscript } from "./transcript.js";
+import { safeParseJsonArray } from "./json-helpers.js";
 
 const WS_PING_INTERVAL_MS = 30_000;
 const WS_CLOSE_UNAUTHORIZED = 4001;
@@ -433,7 +434,7 @@ async function handleMessage(
             branch: r.branch,
             environmentId: r.environmentId,
             sessionId: r.sessionId,
-            dependsOn: JSON.parse(r.dependsOn),
+            dependsOn: safeParseJsonArray(r.dependsOn),
             reviewNotes: r.reviewNotes,
             sortOrder: r.sortOrder,
             createdAt: r.createdAt,
@@ -464,7 +465,7 @@ async function handleMessage(
         slugify(project.name),
       );
       const row = taskStore.getTask(id);
-      broadcast({ type: "task_created", payload: { task: row ? { ...row, dependsOn: JSON.parse(row.dependsOn) } : null } });
+      broadcast({ type: "task_created", payload: { task: row ? { ...row, dependsOn: safeParseJsonArray(row.dependsOn) } : null } });
       break;
     }
 
@@ -623,7 +624,7 @@ async function handleMessage(
       if (task) {
         taskStore.updateTask(
           task.id, task.title, task.description, "assigned",
-          task.environmentId, JSON.parse(task.dependsOn), reviewNotes,
+          task.environmentId, safeParseJsonArray(task.dependsOn), reviewNotes,
         );
       }
       broadcast({ type: "task_rejected", payload: { taskId } });
@@ -660,7 +661,7 @@ async function handleMessage(
             category: r.category,
             title: r.title,
             content: r.content,
-            tags: JSON.parse(r.tags),
+            tags: safeParseJsonArray(r.tags),
             createdAt: r.createdAt,
           })),
         },

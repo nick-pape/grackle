@@ -1,6 +1,7 @@
 import db from "./db.js";
 import { findings, type FindingRow } from "./schema.js";
 import { eq, desc, sql, and } from "drizzle-orm";
+import { safeParseJsonArray } from "./json-helpers.js";
 
 export type { FindingRow };
 
@@ -57,7 +58,7 @@ export function queryFindings(
   // Client-side tag filtering (simple approach)
   if (tags && tags.length > 0) {
     results = results.filter((r) => {
-      const rowTags = JSON.parse(r.tags) as string[];
+      const rowTags = safeParseJsonArray(r.tags);
       return tags.some((t) => rowTags.includes(t));
     });
   }
