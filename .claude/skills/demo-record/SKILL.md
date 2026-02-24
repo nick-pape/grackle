@@ -26,6 +26,7 @@ rush build
 
 ```bash
 # Demo recorder image (Playwright + Xvfb + PulseAudio + ffmpeg + PocketTTS)
+# No --secret needed: uses PocketTTS built-in voices (no HF_TOKEN required)
 docker build -f Dockerfile.demo-recorder -t grackle-demo-recorder .
 
 # Dev environment image (standard PowerLine)

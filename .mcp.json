@@ -5,11 +5,11 @@
       "args": ["@playwright/mcp@latest"]
     },
     "pockettts": {
-      "command": "node",
-      "args": ["C:/Users/nickp/src/mcp-pockettts/index.js"],
-      "env": {
-        "POCKETTTS_URL": "http://localhost:8890"
-      }
+      "command": "uv",
+      "args": ["run",
+               "--extra-index-url", "https://download.pytorch.org/whl/cu124",
+               "--with", "fastmcp", "--with", "pocket-tts", "--with", "torch",
+               "C:/Users/nickp/src/grackle2/tools/demo-recorder/mcp-pockettts/server.py"]
     }
   }
 }
