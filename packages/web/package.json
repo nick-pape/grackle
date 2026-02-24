@@ -5,10 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "heft build --clean && vite build",
+    "build": "heft build --clean",
     "preview": "vite preview",
-    "clean": "rm -rf dist",
-    "test": "npx playwright test"
+    "clean": "heft clean",
+    "test": "heft test"
   },
   "dependencies": {
     "react": "^19.0.0",
@@ -16,6 +16,8 @@
   },
   "devDependencies": {
     "@grackle/heft-rig": "0.0.1",
+    "@grackle/heft-vite-plugin": "0.0.1",
+    "@rushstack/heft-typescript-plugin": "1.2.4",
     "@vitejs/plugin-react": "^4.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",

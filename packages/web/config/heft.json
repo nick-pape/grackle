@@ -1,0 +1,38 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/heft/v0/heft.schema.json",
+  "phasesByName": {
+    "build": {
+      "cleanFiles": [
+        { "sourcePath": "dist" }
+      ],
+      "tasksByName": {
+        "typescript": {
+          "taskPlugin": {
+            "pluginPackage": "@rushstack/heft-typescript-plugin"
+          }
+        },
+        "vite-build": {
+          "taskDependencies": ["typescript"],
+          "taskPlugin": {
+            "pluginPackage": "@grackle/heft-vite-plugin",
+            "pluginName": "vite-build-plugin"
+          }
+        }
+      }
+    },
+    "test": {
+      "phaseDependencies": ["build"],
+      "tasksByName": {
+        "playwright": {
+          "taskPlugin": {
+            "pluginPackage": "@rushstack/heft",
+            "pluginName": "run-script-plugin",
+            "options": {
+              "scriptPath": "config/heft-scripts/playwright-test.cjs"
+            }
+          }
+        }
+      }
+    }
+  }
+}

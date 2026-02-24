@@ -1,0 +1,18 @@
+{
+  "name": "@grackle/heft-vite-plugin",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Heft task plugin that runs Vite build",
+  "main": "lib/ViteBuildPlugin.js",
+  "scripts": {
+    "build": "tsc"
+  },
+  "peerDependencies": {
+    "@rushstack/heft": "1.2.4"
+  },
+  "devDependencies": {
+    "@rushstack/heft": "1.2.4",
+    "typescript": "~5.7.0",
+    "vite": "^6.0.0"
+  }
+}
