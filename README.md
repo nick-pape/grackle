@@ -10,26 +10,82 @@ Grackle is a multi-agent coordination platform. Break a project into tasks, disp
 
 Docker, Codespaces, SSH, local — it shouldn't matter where an agent runs. Grackle treats environments as interchangeable compute behind a single protocol. Same interface, same results, regardless of where the work happens.
 
+```mermaid
+graph LR
+    subgraph "Same PowerLine protocol"
+        D["🐳 Docker"] ~~~ L["💻 Local"] ~~~ S["🔒 SSH"] ~~~ C["☁️ Codespaces"]
+    end
+    D --> PL["⚡ PowerLine gRPC"]
+    L --> PL
+    S --> PL
+    C --> PL
+```
+
 ### 🔄 Runtime agnostic by design
 
 The agent loop landscape is wildly unstable. Claude Code, Copilot, Codex, Goose — whatever ships next month. Grackle wraps them all behind a standard interface so you can swap runtimes without changing your workflow. Your orchestration layer shouldn't be coupled to whichever vendor is winning this quarter.
+
+```mermaid
+graph LR
+    PL["⚡ PowerLine"]
+    PL --> CC["Claude Code"]
+    PL --> CP["GitHub Copilot"]
+    PL --> CX["OpenAI Codex"]
+    PL --> G["Goose"]
+    PL --> Q["???"]
+    style Q fill:#333,stroke:#666,stroke-dasharray: 5 5
+```
 
 ### 📈 Scales from remote control to swarms
 
 Most tools force a choice: run one agent manually, or build a bespoke swarm framework from scratch. Grackle covers the whole spectrum:
 
-| | Mode | What it looks like |
-|---|---|---|
-| 🎮 | **Remote control** | Manage a single agent in a remote environment |
-| ⛓️ | **Workflow** | Chain tasks with dependencies, review artifacts at each step |
-| 👥 | **Team** | Multiple agents in parallel, coordinating through findings |
-| 🐝 | **Swarm** | Autonomous task decomposition, agent recruitment, knowledge sharing |
+```mermaid
+graph TD
+    subgraph "🎮 Remote Control"
+        RC_S["Server"] --> RC_E["Environment"]
+        RC_E --- RC_A["🤖 Agent"]
+    end
+
+    subgraph "⛓️ Workflow"
+        WF_T1["Task 1"] --> WF_T2["Task 2"] --> WF_T3["Task 3"]
+        WF_T1 -.- WF_R1["✅ Review"]
+        WF_T2 -.- WF_R2["✅ Review"]
+        WF_T3 -.- WF_R3["✅ Review"]
+    end
+
+    subgraph "👥 Team"
+        TM_P["Project"]
+        TM_P --> TM_A1["🤖 Agent A"]
+        TM_P --> TM_A2["🤖 Agent B"]
+        TM_P --> TM_A3["🤖 Agent C"]
+        TM_A1 <-. "findings" .-> TM_A2
+        TM_A2 <-. "findings" .-> TM_A3
+    end
+
+    subgraph "🐝 Swarm"
+        SW_G["Goal"] --> SW_D["Decompose"]
+        SW_D --> SW_T1["🤖"] & SW_T2["🤖"] & SW_T3["🤖"] & SW_T4["🤖"]
+        SW_T1 & SW_T2 & SW_T3 & SW_T4 --> SW_K["🧠 Knowledge Graph"]
+        SW_K --> SW_N["🤖 ..."]
+    end
+```
 
 No other tool gives you this gradient. Start simple, scale up.
 
 ### 🔍 Auditable artifacts, not magic
 
 Every agent produces real, reviewable output: git diffs, markdown reports, PR comments, findings. Nothing happens in a black box. Git branches and tags provide natural coordination points — not a proprietary state machine. If you can read a diff, you can audit a swarm.
+
+```mermaid
+graph LR
+    A["🤖 Agent"] --> D["📝 Git Diff"]
+    A --> F["💬 Findings"]
+    A --> R["📄 Reports"]
+    D --> Rev["👀 Human Review"]
+    F --> Ctx["🧠 Shared Context"]
+    Ctx --> A2["🤖 Next Agent"]
+```
 
 ### 🧠 Agents that actually coordinate
 
