@@ -12,7 +12,7 @@ Docker, Codespaces, SSH, local — it shouldn't matter where an agent runs. Grac
 
 ### 🔄 Runtime agnostic by design
 
-The agent loop landscape is wildly unstable. Claude Code, Copilot, Codex, Goose — whatever ships next month. Grackle wraps them all behind a standard interface so you can swap runtimes without changing your workflow. Your orchestration layer shouldn't be coupled to whichever vendor is winning this quarter.
+The agent loop landscape is wildly unstable. Claude Code, Copilot\*, Codex\*, Goose\* — whatever ships next month. Grackle wraps them all behind a standard interface so you can swap runtimes without changing your workflow. Your orchestration layer shouldn't be coupled to whichever vendor is winning this quarter.
 
 ### 📈 Scales from remote control to swarms
 
@@ -50,7 +50,7 @@ graph TD
     F -. context .-> A1 & A2 & A3
 ```
 
-#### 🐝 Swarm
+#### 🐝 Swarm\*
 
 Autonomous task decomposition, agent recruitment, knowledge sharing.
 
@@ -69,7 +69,7 @@ Every agent produces real, reviewable output: git diffs, markdown reports, PR co
 
 ### 🧠 Agents that actually coordinate
 
-Agents don't just run in parallel — they share knowledge. One agent's architectural insight becomes another agent's context through findings and the knowledge graph. Agent personas with tool allowlists keep specialists focused. The coordination primitives are the ones engineers already use: git, diffs, code review.
+Agents don't just run in parallel — they share knowledge. One agent's architectural insight becomes another agent's context through findings and the knowledge graph\*. Agent personas\* with tool allowlists keep specialists focused. The coordination primitives are the ones engineers already use: git, diffs, code review.
 
 ## 🏗️ Architecture
 
@@ -119,9 +119,11 @@ graph LR
 | 📡 | **Real-time streaming** | Watch agent tool calls and output as they happen, bridged from gRPC to WebSocket |
 | 🌳 | **Git worktree isolation** | Every task gets its own branch in its own worktree — zero interference between agents |
 | 💬 | **Findings & knowledge sharing** | Agents post discoveries that become context for other agents |
-| 🔄 | **Multi-runtime support** | Claude Code today, Copilot and others on the roadmap |
+| 🔄 | **Multi-runtime support** | Claude Code today, Copilot\* and others on the roadmap |
 | 🔗 | **Task dependencies** | DAG-based task ordering — blocked tasks wait for their dependencies |
 | ✅ | **Diff review** | See exactly what each agent changed, approve or reject per-task |
+| 🧠 | **Knowledge graph**\* | Structured knowledge sharing across agents — beyond flat findings |
+| 🎭 | **Agent personas**\* | Specialized agents with tool allowlists and focused system prompts |
 
 ## 🌍 Environments
 
@@ -159,3 +161,7 @@ node packages/cli/dist/index.js env add my-env --docker
 ## 📄 License
 
 MIT
+
+---
+
+_**\* Coming soon** — tracked on the [v1.0.0 milestone](https://github.com/nick-pape/grackle/milestone/1)._
