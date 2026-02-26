@@ -74,35 +74,28 @@ Agents don't just run in parallel — they share knowledge. One agent's architec
 ## 🏗️ Architecture
 
 ```mermaid
-graph LR
-    UI["🌐 Web UI :3000"]
-    CLI["⌨️ CLI"]
-    Server["⚡ Server :7434"]
+graph TD
+    S["⚡ Grackle Server"]
 
-    UI -- WebSocket --> Server
-    CLI -- gRPC --> Server
-
-    subgraph "Environments"
-        Docker["🐳 Docker"]
-        SSH["🔒 SSH"]
-        CS["☁️ Codespace"]
+    subgraph D1["🐳 Docker"]
+        D1A["🤖 Claude Code"]
+        D1B["🤖 Claude Code"]
     end
 
-    Server -- gRPC --> Docker
-    Server -. gRPC .-> SSH & CS
-
-    subgraph "Inside each environment"
-        PL["⚡ PowerLine"]
-        PL --> CC["Claude Code"]
-        PL --> More["..."]
+    subgraph D2["🐳 Docker"]
+        D2A["🤖 Copilot"]
     end
 
-    Docker --- PL
-    SSH -.- PL
-    CS -.- PL
-    style More fill:#333,stroke:#666,stroke-dasharray: 5 5
-    style SSH fill:#333,stroke:#666,stroke-dasharray: 5 5
-    style CS fill:#333,stroke:#666,stroke-dasharray: 5 5
+    subgraph CS1["☁️ Codespace"]
+        CS1A["🤖 Claude Code"]
+        CS1B["🤖 Codex"]
+    end
+
+    subgraph CS2["☁️ Codespace"]
+        CS2A["🤖 Claude Code"]
+    end
+
+    S --- D1 & D2 & CS1 & CS2
 ```
 
 
