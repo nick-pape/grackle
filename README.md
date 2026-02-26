@@ -46,7 +46,12 @@ Multiple agents working in parallel on a shared project, coordinating through fi
 graph TD
     P["📁 Project"]
     P --> A1["🤖 Agent A"] & A2["🤖 Agent B"] & A3["🤖 Agent C"]
-    A1 & A2 & A3 <-.-> F["💬 Shared Findings"]
+    A1 -.-> F["💬 Shared Findings"]
+    A2 -.-> F
+    A3 -.-> F
+    F -.-> A1
+    F -.-> A2
+    F -.-> A3
 ```
 
 #### 🐝 Swarm [⭐#38](https://github.com/nick-pape/grackle/issues/38)
