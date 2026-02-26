@@ -67,7 +67,7 @@ graph TD
 
 ### 🔍 Auditable artifacts, not magic ⭐
 
-Every agent produces real, reviewable output: git diffs, markdown reports, PR comments, findings. The full conversation thread is stored in the central server database — every tool call, every decision, fully replayable. Nothing happens in a black box. Git branches and tags provide natural coordination points — not a proprietary state machine. If you can read a diff, you can audit a swarm.
+Every agent produces real, reviewable output: git diffs, markdown reports, PR comments, findings. The full conversation thread is stored in the central server database — every tool call, every decision, fully auditable. Nothing happens in a black box. Git branches and tags provide natural coordination points — not a proprietary state machine. If you can read a diff, you can audit a swarm.
 
 ### 🧠 Agents that actually coordinate
 
