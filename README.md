@@ -105,12 +105,6 @@ graph LR
     style CS fill:#333,stroke:#666,stroke-dasharray: 5 5
 ```
 
-| Component | Description |
-|-----------|-------------|
-| **Server** | Central hub. Projects, tasks, environments, sessions. SQLite with WAL mode. Bridges gRPC streams to WebSocket so the UI stays live. |
-| **PowerLine** | Runs inside each environment. Spawns agent runtimes, streams events to the server, isolates work in git worktrees. Same gRPC interface whether it's in a container or on bare metal. |
-| **Web UI** | Real-time dashboard. Stream agent output, review diffs, browse findings, manage tasks. Dark-themed, keyboard-friendly. |
-| **CLI** | Thin gRPC client. Everything the UI does, you can script from the terminal. |
 
 ## ✨ Features
 
