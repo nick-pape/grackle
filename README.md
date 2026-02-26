@@ -8,7 +8,7 @@ Grackle is a multi-agent coordination platform. Break a project into tasks, disp
 
 ### 🔌 Environments are just compute
 
-Docker and local today, SSH ⭐[#30](https://github.com/nick-pape/grackle/issues/30) and Codespaces [#31](https://github.com/nick-pape/grackle/issues/31) on the roadmap — it shouldn't matter where an agent runs. Grackle treats environments as interchangeable compute behind a single protocol. Same interface, same results, regardless of where the work happens.
+Docker and local today, SSH ⭐[#30](https://github.com/nick-pape/grackle/issues/30) and Codespaces 🔜[#31](https://github.com/nick-pape/grackle/issues/31) on the roadmap — it shouldn't matter where an agent runs. Grackle treats environments as interchangeable compute behind a single protocol. Same interface, same results, regardless of where the work happens.
 
 ### 🔄 Runtime agnostic by design
 
@@ -105,7 +105,7 @@ graph TD
 | 📡 | **Real-time streaming** | Watch agent tool calls and output as they happen, bridged from gRPC to WebSocket |
 | 🌳 | **Git worktree isolation** | Every task gets its own branch in its own worktree — zero interference between agents |
 | 💬 | **Findings & knowledge sharing** | Agents post discoveries that become context for other agents |
-| 🔄 | **Multi-runtime support** | Claude Code today, Copilot [#26](https://github.com/nick-pape/grackle/issues/26) and others on the roadmap |
+| 🔄 | **Multi-runtime support** | Claude Code today, Copilot 🔜[#26](https://github.com/nick-pape/grackle/issues/26) and others on the roadmap |
 | 🔗 | **Task dependencies** | Dependency gating — blocked tasks wait for their dependencies to complete |
 | ✅ | **Diff review** | See exactly what each agent changed, approve or reject per-task |
 | 🧠 | **Knowledge graph** ⭐[#13](https://github.com/nick-pape/grackle/issues/13) | Structured knowledge sharing across agents — beyond flat findings |
