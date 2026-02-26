@@ -59,6 +59,7 @@ graph TD
     D --> T1["🤖"] & T2["🤖"] & T3["🤖"] & T4["🤖"]
     T1 & T2 & T3 & T4 --> K["🧠 Knowledge Graph"]
     K --> N["🤖 ...more agents"]
+    N -.-> D
     style N fill:#333,stroke:#666,stroke-dasharray: 5 5
 ```
 
