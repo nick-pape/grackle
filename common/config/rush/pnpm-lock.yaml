@@ -37,9 +37,18 @@ importers:
       '@rush-temp/common':
         specifier: file:./projects/common.tgz
         version: file:projects/common.tgz
+      '@rush-temp/heft-buf-plugin':
+        specifier: file:./projects/heft-buf-plugin.tgz
+        version: file:projects/heft-buf-plugin.tgz(@types/node@22.19.11)
+      '@rush-temp/heft-playwright-plugin':
+        specifier: file:./projects/heft-playwright-plugin.tgz
+        version: file:projects/heft-playwright-plugin.tgz(@types/node@22.19.11)
       '@rush-temp/heft-rig':
         specifier: file:./projects/heft-rig.tgz
         version: file:projects/heft-rig.tgz(@types/node@22.19.11)
+      '@rush-temp/heft-vite-plugin':
+        specifier: file:./projects/heft-vite-plugin.tgz
+        version: file:projects/heft-vite-plugin.tgz(@types/node@22.19.11)
       '@rush-temp/powerline':
         specifier: file:./projects/powerline.tgz
         version: file:projects/powerline.tgz
@@ -712,11 +721,23 @@ packages:
     version: 0.0.0
 
   '@rush-temp/common@file:projects/common.tgz':
-    resolution: {integrity: sha512-KoxRrn4kSopDw8p/UxelUSbjzk1Fp9Shanp8XhHZyj8ZiVt3TW8Rug6uLFeFoXKFgWFOwBX2aqnuydkESm2qrQ==, tarball: file:projects/common.tgz}
+    resolution: {integrity: sha512-Bddu51ZRX7R/Qh3mRMQ5Ov5IgnZ4xt5nIJS2hVb7XYwiqMldv64WtqNu1Kme56K1VCNi2qMQqNJ+6KLS8yAGdA==, tarball: file:projects/common.tgz}
+    version: 0.0.0
+
+  '@rush-temp/heft-buf-plugin@file:projects/heft-buf-plugin.tgz':
+    resolution: {integrity: sha512-4cB2J3gfydXExZDzCG6n90IbPVOin5Vdiaet0T+/HLTujOs5S6XHWLzOjUK0RwllVmDMZ57xtfjGTgv9F3s11A==, tarball: file:projects/heft-buf-plugin.tgz}
+    version: 0.0.0
+
+  '@rush-temp/heft-playwright-plugin@file:projects/heft-playwright-plugin.tgz':
+    resolution: {integrity: sha512-GCXiPUNE34i2LVwPUnmOFZTgq05NznRP/WE8+d5pJdRJnmV0x92DMw7klLQhqN+hTDIMf+KEPpy0TPPAgWmyrA==, tarball: file:projects/heft-playwright-plugin.tgz}
     version: 0.0.0
 
   '@rush-temp/heft-rig@file:projects/heft-rig.tgz':
-    resolution: {integrity: sha512-+6A/npg+uHv8E08f0NjvFzB4CvaYhRJRoFyDO+ZTRclkh3H7l2xVQbTrvP+jhOGcXS9D1Pa2B8PEXWBlpjpcNA==, tarball: file:projects/heft-rig.tgz}
+    resolution: {integrity: sha512-HbjMgaHuXyLlJJ0+sVF51RmLryZI1l92tp5aN+O4jdsBjNh5DT9NCoEtsyVQavgIsmGQgZumksYCzHgGQytPmw==, tarball: file:projects/heft-rig.tgz}
+    version: 0.0.0
+
+  '@rush-temp/heft-vite-plugin@file:projects/heft-vite-plugin.tgz':
+    resolution: {integrity: sha512-LFxAWxOHSwf/Jsff7dmR3Kru5/gYkMgxE+ow/0eDBxbWa/CCuZpTnCt/uPTIS9A0viBpFAiNGgKoWSJBb0bZOg==, tarball: file:projects/heft-vite-plugin.tgz}
     version: 0.0.0
 
   '@rush-temp/powerline@file:projects/powerline.tgz':
@@ -2086,6 +2107,22 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  '@rush-temp/heft-buf-plugin@file:projects/heft-buf-plugin.tgz(@types/node@22.19.11)':
+    dependencies:
+      '@bufbuild/buf': 1.65.0
+      '@rushstack/heft': 1.2.4(@types/node@22.19.11)
+      typescript: 5.7.3
+    transitivePeerDependencies:
+      - '@types/node'
+
+  '@rush-temp/heft-playwright-plugin@file:projects/heft-playwright-plugin.tgz(@types/node@22.19.11)':
+    dependencies:
+      '@playwright/test': 1.58.2
+      '@rushstack/heft': 1.2.4(@types/node@22.19.11)
+      typescript: 5.7.3
+    transitivePeerDependencies:
+      - '@types/node'
+
   '@rush-temp/heft-rig@file:projects/heft-rig.tgz(@types/node@22.19.11)':
     dependencies:
       '@rushstack/heft': 1.2.4(@types/node@22.19.11)
@@ -2093,6 +2130,24 @@ snapshots:
       typescript: 5.7.3
     transitivePeerDependencies:
       - '@types/node'
+
+  '@rush-temp/heft-vite-plugin@file:projects/heft-vite-plugin.tgz(@types/node@22.19.11)':
+    dependencies:
+      '@rushstack/heft': 1.2.4(@types/node@22.19.11)
+      typescript: 5.7.3
+      vite: 6.4.1(@types/node@22.19.11)
+    transitivePeerDependencies:
+      - '@types/node'
+      - jiti
+      - less
+      - lightningcss
+      - sass
+      - sass-embedded
+      - stylus
+      - sugarss
+      - terser
+      - tsx
+      - yaml
 
   '@rush-temp/powerline@file:projects/powerline.tgz':
     dependencies:

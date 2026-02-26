@@ -1,0 +1,19 @@
+{
+  "name": "@grackle/heft-buf-plugin",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Heft task plugin that runs buf generate",
+  "main": "lib/BufGeneratePlugin.js",
+  "scripts": {
+    "build": "tsc"
+  },
+  "peerDependencies": {
+    "@rushstack/heft": "1.2.4",
+    "@bufbuild/buf": "^1.50.0"
+  },
+  "devDependencies": {
+    "@bufbuild/buf": "^1.50.0",
+    "@rushstack/heft": "1.2.4",
+    "typescript": "~5.7.0"
+  }
+}
