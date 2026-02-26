@@ -9,9 +9,9 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import os from "node:os";
 
-const execAsync = promisify(execFile);
+const execAsync: typeof execFile.__promisify__ = promisify(execFile);
 
-const startTime = Date.now();
+const startTime: number = Date.now();
 
 /** Register all PowerLine gRPC service handlers on the given ConnectRPC router. */
 export function registerPowerLineRoutes(router: ConnectRouter): void {
@@ -26,7 +26,7 @@ export function registerPowerLineRoutes(router: ConnectRouter): void {
       });
     },
 
-    async *spawn(req) {
+    async *spawn(req: powerline.SpawnRequest) {
       const runtime = getRuntime(req.runtime);
       if (!runtime) {
         yield create(powerline.AgentEventSchema, {
@@ -63,7 +63,7 @@ export function registerPowerLineRoutes(router: ConnectRouter): void {
       }
     },
 
-    async *resume(req) {
+    async *resume(req: powerline.ResumeRequest) {
       const runtime = getRuntime(req.runtime);
       if (!runtime) {
         yield create(powerline.AgentEventSchema, {
@@ -93,7 +93,7 @@ export function registerPowerLineRoutes(router: ConnectRouter): void {
       }
     },
 
-    async sendInput(req) {
+    async sendInput(req: powerline.InputMessage) {
       const session = getSession(req.sessionId);
       if (!session) {
         throw new Error(`Session not found: ${req.sessionId}`);
@@ -102,7 +102,7 @@ export function registerPowerLineRoutes(router: ConnectRouter): void {
       return create(powerline.EmptySchema, {});
     },
 
-    async kill(req) {
+    async kill(req: powerline.SessionId) {
       const session = getSession(req.id);
       if (!session) {
         throw new Error(`Session not found: ${req.id}`);
@@ -130,19 +130,19 @@ export function registerPowerLineRoutes(router: ConnectRouter): void {
       });
     },
 
-    async pushTokens(req) {
+    async pushTokens(req: powerline.TokenBundle) {
       await writeTokens(req.tokens);
       return create(powerline.EmptySchema, {});
     },
 
-    async cleanupWorktree(req) {
+    async cleanupWorktree(req: powerline.WorktreeCleanupRequest) {
       if (req.branch && req.worktreeBasePath) {
         await removeWorktree(req.worktreeBasePath, req.branch);
       }
       return create(powerline.EmptySchema, {});
     },
 
-    async getDiff(req) {
+    async getDiff(req: powerline.DiffRequest) {
       const baseBranch = req.baseBranch || "main";
       const basePath = req.worktreeBasePath || "/workspace";
 

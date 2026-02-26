@@ -10,7 +10,7 @@ import { registerProjectCommands } from "./commands/project.js";
 import { registerTaskCommands } from "./commands/task.js";
 import { registerFindingCommands } from "./commands/findings.js";
 
-const program = new Command();
+const program: Command = new Command();
 
 program
   .name("grackle")

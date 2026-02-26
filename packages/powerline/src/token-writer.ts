@@ -4,7 +4,7 @@ import { homedir } from "node:os";
 import { realpathSync } from "node:fs";
 import { logger } from "./logger.js";
 
-const envTokens = new Map<string, string>();
+const envTokens: Map<string, string> = new Map<string, string>();
 
 /** Return the map of environment variable tokens that have been written to `process.env`. */
 export function getEnvTokens(): Map<string, string> {

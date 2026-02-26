@@ -9,14 +9,14 @@ import { join } from "node:path";
 import { homedir } from "node:os";
 import { logger } from "../logger.js";
 
-const DOCKER_PULL_TIMEOUT_MS = 120_000;
-const GIT_CLONE_TIMEOUT_MS = 120_000;
-const GIT_PULL_TIMEOUT_MS = 60_000;
-const CONTAINER_POLL_DELAY_MS = 1_000;
-const CONTAINER_POLL_MAX_ATTEMPTS = 30;
-const CONNECT_RETRY_DELAY_MS = 1_500;
-const CONNECT_MAX_RETRIES = 10;
-const WORKSPACE_PATH = "/workspace";
+const DOCKER_PULL_TIMEOUT_MS: number = 120_000;
+const GIT_CLONE_TIMEOUT_MS: number = 120_000;
+const GIT_PULL_TIMEOUT_MS: number = 60_000;
+const CONTAINER_POLL_DELAY_MS: number = 1_000;
+const CONTAINER_POLL_MAX_ATTEMPTS: number = 30;
+const CONNECT_RETRY_DELAY_MS: number = 1_500;
+const CONNECT_MAX_RETRIES: number = 10;
+const WORKSPACE_PATH: string = "/workspace";
 
 /** Docker-specific environment configuration. */
 export interface DockerEnvironmentConfig extends BaseEnvironmentConfig {
@@ -31,7 +31,7 @@ export interface DockerEnvironmentConfig extends BaseEnvironmentConfig {
   gpus?: string;
 }
 
-const containerPorts = new Map<string, number>();
+const containerPorts: Map<string, number> = new Map<string, number>();
 
 // ─── Docker CLI Helpers ────────────────────────────────────
 
@@ -136,7 +136,7 @@ async function ensureRepoInContainer(containerName: string, repo: string): Promi
 }
 
 /** Validate that a token contains only safe characters (alphanumeric, underscore, hyphen). */
-const SAFE_TOKEN_PATTERN = /^[a-zA-Z0-9_\-]+$/;
+const SAFE_TOKEN_PATTERN: RegExp = /^[a-zA-Z0-9_\-]+$/;
 
 /** Get a GitHub token from the local `gh` CLI for private repo cloning. */
 async function getGitHubToken(): Promise<string | undefined> {
@@ -159,9 +159,9 @@ async function getGitHubToken(): Promise<string | undefined> {
 
 /** Environment adapter that provisions and manages Docker containers running the PowerLine. */
 export class DockerAdapter implements EnvironmentAdapter {
-  type = "docker";
+  public type: string = "docker";
 
-  async *provision(environmentId: string, config: Record<string, unknown>, powerlineToken: string): AsyncGenerator<ProvisionEvent> {
+  public async *provision(environmentId: string, config: Record<string, unknown>, powerlineToken: string): AsyncGenerator<ProvisionEvent> {
     const cfg = config as unknown as DockerEnvironmentConfig;
     const image = cfg.image || "grackle-powerline:latest";
     const containerName = cfg.containerName || `grackle-${environmentId}`;
@@ -195,7 +195,7 @@ export class DockerAdapter implements EnvironmentAdapter {
     yield { stage: "connecting", message: `Connecting on port ${actualPort}...`, progress: 0.8 };
   }
 
-  async connect(environmentId: string, config: Record<string, unknown>, powerlineToken: string): Promise<PowerLineConnection> {
+  public async connect(environmentId: string, config: Record<string, unknown>, powerlineToken: string): Promise<PowerLineConnection> {
     const cfg = config as unknown as DockerEnvironmentConfig;
     const localPort = containerPorts.get(environmentId) || cfg.localPort || DEFAULT_POWERLINE_PORT;
 
@@ -215,11 +215,11 @@ export class DockerAdapter implements EnvironmentAdapter {
     throw new Error(`Could not reach PowerLine after ${CONNECT_MAX_RETRIES} attempts: ${lastErr}`);
   }
 
-  async disconnect(environmentId: string): Promise<void> {
+  public async disconnect(environmentId: string): Promise<void> {
     containerPorts.delete(environmentId);
   }
 
-  async stop(environmentId: string, config: Record<string, unknown>): Promise<void> {
+  public async stop(environmentId: string, config: Record<string, unknown>): Promise<void> {
     const cfg = config as unknown as DockerEnvironmentConfig;
     const containerName = cfg.containerName || `grackle-${environmentId}`;
     try {
@@ -230,7 +230,7 @@ export class DockerAdapter implements EnvironmentAdapter {
     containerPorts.delete(environmentId);
   }
 
-  async destroy(environmentId: string, config: Record<string, unknown>): Promise<void> {
+  public async destroy(environmentId: string, config: Record<string, unknown>): Promise<void> {
     const cfg = config as unknown as DockerEnvironmentConfig;
     const containerName = cfg.containerName || `grackle-${environmentId}`;
     try {
@@ -241,7 +241,7 @@ export class DockerAdapter implements EnvironmentAdapter {
     containerPorts.delete(environmentId);
   }
 
-  async healthCheck(connection: PowerLineConnection): Promise<boolean> {
+  public async healthCheck(connection: PowerLineConnection): Promise<boolean> {
     try {
       await connection.client.ping({});
       return true;

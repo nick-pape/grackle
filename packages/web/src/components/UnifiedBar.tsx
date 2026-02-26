@@ -1,4 +1,4 @@
-import { useState, useEffect, type FormEvent } from "react";
+import React, { useState, useEffect, type FormEvent, type JSX } from "react";
 import { useGrackle } from "../context/GrackleContext.js";
 import type { ViewMode } from "../App.js";
 
@@ -7,6 +7,63 @@ interface Props {
   setViewMode: (mode: ViewMode) => void;
 }
 
+// --- Shared styles ---
+
+const barStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: "8px",
+  padding: "8px 12px",
+  borderTop: "1px solid #0f3460",
+  background: "#16213e",
+};
+
+const inputStyle: React.CSSProperties = {
+  flex: 1,
+  background: "#0f3460",
+  border: "1px solid #333",
+  color: "#e0e0e0",
+  padding: "6px 10px",
+  borderRadius: "4px",
+  outline: "none",
+  fontFamily: "monospace",
+  fontSize: "13px",
+};
+
+const selectStyle: React.CSSProperties = {
+  background: "#0f3460",
+  border: "1px solid #333",
+  color: "#e0e0e0",
+  padding: "6px 8px",
+  borderRadius: "4px",
+  fontFamily: "monospace",
+  fontSize: "12px",
+};
+
+const btnStyle: React.CSSProperties = {
+  background: "#4ecca3",
+  border: "none",
+  color: "#1a1a2e",
+  padding: "6px 16px",
+  borderRadius: "4px",
+  cursor: "pointer",
+  fontWeight: "bold",
+  fontFamily: "monospace",
+  fontSize: "13px",
+};
+
+const stopBtnStyle: React.CSSProperties = {
+  background: "#e94560",
+  border: "none",
+  color: "#fff",
+  padding: "6px 12px",
+  borderRadius: "4px",
+  cursor: "pointer",
+  fontWeight: "bold",
+  fontFamily: "monospace",
+  fontSize: "13px",
+};
+
 // --- Subcomponents ---
 
 interface RuntimeSelectorProps {
@@ -14,7 +71,7 @@ interface RuntimeSelectorProps {
   onChange: (value: string) => void;
 }
 
-function RuntimeSelector({ value, onChange }: RuntimeSelectorProps) {
+function RuntimeSelector({ value, onChange }: RuntimeSelectorProps): JSX.Element {
   return (
     <select
       value={value}
@@ -29,7 +86,7 @@ function RuntimeSelector({ value, onChange }: RuntimeSelectorProps) {
 
 // --- Main component ---
 
-export function UnifiedBar({ viewMode, setViewMode }: Props) {
+export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
   const {
     spawn, sendInput, kill, sessions, tasks, environments,
     createTask, startTask, approveTask, rejectTask,
@@ -52,15 +109,15 @@ export function UnifiedBar({ viewMode, setViewMode }: Props) {
 
   const session = viewMode.kind === "session"
     ? sessions.find((s) => s.id === viewMode.sessionId)
-    : null;
+    : undefined;
 
   // Task context
   const task = viewMode.kind === "task"
     ? tasks.find((t) => t.id === viewMode.taskId)
-    : null;
+    : undefined;
   const taskSession = task?.sessionId
     ? sessions.find((s) => s.id === task.sessionId)
-    : null;
+    : undefined;
 
   // Check if task is blocked
   const isTaskBlocked = task
@@ -94,7 +151,7 @@ export function UnifiedBar({ viewMode, setViewMode }: Props) {
 
   // --- new_task mode ---
   if (viewMode.kind === "new_task") {
-    const handleCreate = (andStart: boolean) => {
+    const handleCreate = (andStart: boolean): void => {
       if (!taskTitle.trim()) return;
       createTask(viewMode.projectId, taskTitle.trim(), taskDesc, taskEnvId);
       // TODO: if andStart, we'd need to wait for the task to be created
@@ -188,7 +245,7 @@ export function UnifiedBar({ viewMode, setViewMode }: Props) {
       const isWaiting = taskSession?.status === "waiting_input";
 
       if (isWaiting) {
-        const handleSend = (e: FormEvent) => {
+        const handleSend = (e: FormEvent): void => {
           e.preventDefault();
           if (!text.trim() || !task.sessionId) return;
           sendInput(task.sessionId, text);
@@ -309,7 +366,7 @@ export function UnifiedBar({ viewMode, setViewMode }: Props) {
 
   // --- new_chat mode ---
   if (viewMode.kind === "new_chat") {
-    const handleSpawn = (e: FormEvent) => {
+    const handleSpawn = (e: FormEvent): void => {
       e.preventDefault();
       if (!text.trim()) return;
       spawn(viewMode.environmentId, text, undefined, runtime);
@@ -345,7 +402,7 @@ export function UnifiedBar({ viewMode, setViewMode }: Props) {
   if (viewMode.kind === "session") {
     const isRunning = session?.status === "running";
     const isWaiting = session?.status === "waiting_input";
-    const isEnded = session != null && ["completed", "failed", "killed"].includes(session.status);
+    const isEnded = session !== undefined && ["completed", "failed", "killed"].includes(session.status);
 
     if (isRunning) {
       return (
@@ -359,7 +416,7 @@ export function UnifiedBar({ viewMode, setViewMode }: Props) {
     }
 
     if (isWaiting) {
-      const handleSend = (e: FormEvent) => {
+      const handleSend = (e: FormEvent): void => {
         e.preventDefault();
         if (!text.trim()) return;
         sendInput(viewMode.sessionId, text);
@@ -397,60 +454,3 @@ export function UnifiedBar({ viewMode, setViewMode }: Props) {
     </div>
   );
 }
-
-// --- Shared styles ---
-
-const barStyle: React.CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  gap: "8px",
-  padding: "8px 12px",
-  borderTop: "1px solid #0f3460",
-  background: "#16213e",
-};
-
-const inputStyle: React.CSSProperties = {
-  flex: 1,
-  background: "#0f3460",
-  border: "1px solid #333",
-  color: "#e0e0e0",
-  padding: "6px 10px",
-  borderRadius: "4px",
-  outline: "none",
-  fontFamily: "monospace",
-  fontSize: "13px",
-};
-
-const selectStyle: React.CSSProperties = {
-  background: "#0f3460",
-  border: "1px solid #333",
-  color: "#e0e0e0",
-  padding: "6px 8px",
-  borderRadius: "4px",
-  fontFamily: "monospace",
-  fontSize: "12px",
-};
-
-const btnStyle: React.CSSProperties = {
-  background: "#4ecca3",
-  border: "none",
-  color: "#1a1a2e",
-  padding: "6px 16px",
-  borderRadius: "4px",
-  cursor: "pointer",
-  fontWeight: "bold",
-  fontFamily: "monospace",
-  fontSize: "13px",
-};
-
-const stopBtnStyle: React.CSSProperties = {
-  background: "#e94560",
-  border: "none",
-  color: "#fff",
-  padding: "6px 12px",
-  borderRadius: "4px",
-  cursor: "pointer",
-  fontWeight: "bold",
-  fontFamily: "monospace",
-  fontSize: "13px",
-};

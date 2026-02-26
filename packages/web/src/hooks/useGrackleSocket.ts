@@ -77,8 +77,8 @@ interface WsMessage {
   payload?: Record<string, unknown>;
 }
 
-const WS_RECONNECT_DELAY_MS = 3_000;
-const ENV_POLL_INTERVAL_MS = 10_000;
+const WS_RECONNECT_DELAY_MS: number = 3_000;
+const ENV_POLL_INTERVAL_MS: number = 10_000;
 
 // Declare the injected API key from server-side HTML injection
 declare global {
@@ -87,21 +87,56 @@ declare global {
   }
 }
 
-export function useGrackleSocket(url?: string) {
+/** Return type for the useGrackleSocket hook. */
+export interface UseGrackleSocketResult {
+  connected: boolean;
+  environments: Environment[];
+  sessions: Session[];
+  events: SessionEvent[];
+  // eslint-disable-next-line @rushstack/no-new-null
+  lastSpawnedId: string | null;
+  projects: Project[];
+  tasks: TaskData[];
+  findings: FindingData[];
+  // eslint-disable-next-line @rushstack/no-new-null
+  taskDiff: TaskDiffData | null;
+  spawn: (environmentId: string, prompt: string, model?: string, runtime?: string) => void;
+  sendInput: (sessionId: string, text: string) => void;
+  kill: (sessionId: string) => void;
+  refresh: () => void;
+  loadSessionEvents: (sessionId: string) => void;
+  clearEvents: () => void;
+  createProject: (name: string, description?: string, repoUrl?: string, defaultEnvironmentId?: string) => void;
+  archiveProject: (projectId: string) => void;
+  loadTasks: (projectId: string) => void;
+  createTask: (projectId: string, title: string, description?: string, environmentId?: string, dependsOn?: string[]) => void;
+  startTask: (taskId: string, runtime?: string, model?: string) => void;
+  approveTask: (taskId: string) => void;
+  rejectTask: (taskId: string, reviewNotes: string) => void;
+  deleteTask: (taskId: string) => void;
+  loadFindings: (projectId: string) => void;
+  postFinding: (projectId: string, title: string, content: string, category?: string, tags?: string[]) => void;
+  loadTaskDiff: (taskId: string) => void;
+}
+
+export function useGrackleSocket(url?: string): UseGrackleSocketResult {
   const apiKey = typeof window !== "undefined" ? window.__GRACKLE_API_KEY__ || "" : "";
   const wsUrl = url || (typeof window !== "undefined"
     ? `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}?token=${encodeURIComponent(apiKey)}`
     : "ws://localhost:3000");
 
+  // eslint-disable-next-line @rushstack/no-new-null
   const wsRef = useRef<WebSocket | null>(null);
   const [connected, setConnected] = useState(false);
   const [environments, setEnvironments] = useState<Environment[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [events, setEvents] = useState<SessionEvent[]>([]);
+  // eslint-disable-next-line @rushstack/no-new-null
   const [lastSpawnedId, setLastSpawnedId] = useState<string | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [tasks, setTasks] = useState<TaskData[]>([]);
   const [findings, setFindings] = useState<FindingData[]>([]);
+  // eslint-disable-next-line @rushstack/no-new-null
   const [taskDiff, setTaskDiff] = useState<TaskDiffData | null>(null);
 
   const send = useCallback((msg: WsMessage) => {
@@ -115,7 +150,7 @@ export function useGrackleSocket(url?: string) {
     let reconnectTimer: ReturnType<typeof setTimeout>;
     let envPollTimer: ReturnType<typeof setInterval>;
 
-    function connect() {
+    function connect(): void {
       ws = new WebSocket(wsUrl);
       wsRef.current = ws;
 
@@ -253,6 +288,7 @@ export function useGrackleSocket(url?: string) {
 
       ws.onclose = () => {
         setConnected(false);
+        // eslint-disable-next-line @rushstack/no-new-null
         wsRef.current = null;
         clearInterval(envPollTimer);
         clearTimeout(reconnectTimer);
@@ -412,6 +448,7 @@ export function useGrackleSocket(url?: string) {
 
   const loadTaskDiff = useCallback(
     (taskId: string) => {
+      // eslint-disable-next-line @rushstack/no-new-null
       setTaskDiff(null);
       send({ type: "get_task_diff", payload: { taskId } });
     },

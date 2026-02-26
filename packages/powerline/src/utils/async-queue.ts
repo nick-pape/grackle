@@ -2,9 +2,9 @@
 export class AsyncQueue<T> {
   private queue: T[] = [];
   private waiters: Array<(value: T | undefined) => void> = [];
-  private closed = false;
+  private closed: boolean = false;
 
-  push(item: T): void {
+  public push(item: T): void {
     if (this.closed) return;
     if (this.waiters.length > 0) {
       const waiter = this.waiters.shift()!;
@@ -14,7 +14,7 @@ export class AsyncQueue<T> {
     }
   }
 
-  async shift(): Promise<T | undefined> {
+  public async shift(): Promise<T | undefined> {
     if (this.queue.length > 0) {
       return this.queue.shift();
     }
@@ -24,7 +24,7 @@ export class AsyncQueue<T> {
     });
   }
 
-  close(): void {
+  public close(): void {
     this.closed = true;
     for (const waiter of this.waiters) {
       waiter(undefined);
@@ -32,7 +32,7 @@ export class AsyncQueue<T> {
     this.waiters.length = 0;
   }
 
-  async *[Symbol.asyncIterator](): AsyncIterableIterator<T> {
+  public async *[Symbol.asyncIterator](): AsyncIterableIterator<T> {
     while (true) {
       const item = await this.shift();
       if (item === undefined && this.closed) return;

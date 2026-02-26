@@ -1,6 +1,6 @@
 import type { AgentSession } from "./runtimes/runtime.js";
 
-const sessions = new Map<string, AgentSession>();
+const sessions: Map<string, AgentSession> = new Map<string, AgentSession>();
 
 /** Track an active agent session in the in-memory store. */
 export function addSession(session: AgentSession): void {

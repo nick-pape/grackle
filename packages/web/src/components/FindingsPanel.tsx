@@ -1,3 +1,4 @@
+import type { JSX } from "react";
 import { useGrackle } from "../context/GrackleContext.js";
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -14,7 +15,7 @@ interface Props {
   projectId: string;
 }
 
-export function FindingsPanel({ projectId }: Props) {
+export function FindingsPanel({ projectId }: Props): JSX.Element {
   const { findings } = useGrackle();
 
   const projectFindings = findings.filter((f) => f.projectId === projectId);

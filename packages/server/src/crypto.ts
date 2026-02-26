@@ -4,14 +4,14 @@ import { join } from "node:path";
 import { grackleHome } from "./paths.js";
 import { logger } from "./logger.js";
 
-const ALGORITHM = "aes-256-gcm";
-const IV_LENGTH = 12;
-const TAG_LENGTH = 16;
-const SALT_LENGTH = 16;
-const KEY_LENGTH = 32;
-const ITERATIONS = 100_000;
-const MASTER_KEY_BYTE_LENGTH = 32;
-const MASTER_KEY_FILENAME = "master-key";
+const ALGORITHM: "aes-256-gcm" = "aes-256-gcm";
+const IV_LENGTH: number = 12;
+const TAG_LENGTH: number = 16;
+const SALT_LENGTH: number = 16;
+const KEY_LENGTH: number = 32;
+const ITERATIONS: number = 100_000;
+const MASTER_KEY_BYTE_LENGTH: number = 32;
+const MASTER_KEY_FILENAME: string = "master-key";
 
 /**
  * Load or generate the master key for token encryption. Priority:
@@ -45,7 +45,7 @@ function loadMasterKey(): string {
   return key;
 }
 
-let cachedMasterKey: string | null = null;
+let cachedMasterKey: string | undefined = undefined;
 
 function getMasterKey(): string {
   if (!cachedMasterKey) {

@@ -3,6 +3,7 @@
  * Returns the parsed array on success, or an empty array if the value is
  * null, undefined, empty, or contains malformed JSON.
  */
+// eslint-disable-next-line @rushstack/no-new-null
 export function safeParseJsonArray(value: string | null | undefined): string[] {
   if (!value) {
     return [];

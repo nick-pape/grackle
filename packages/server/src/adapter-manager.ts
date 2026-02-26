@@ -2,11 +2,11 @@ import type { EnvironmentAdapter, PowerLineConnection } from "./adapters/adapter
 import * as envRegistry from "./env-registry.js";
 import { logger } from "./logger.js";
 
-const HEARTBEAT_INTERVAL_MS = 30_000;
+const HEARTBEAT_INTERVAL_MS: number = 30_000;
 
-const adapters = new Map<string, EnvironmentAdapter>();
-const connections = new Map<string, PowerLineConnection>();
-let heartbeatInterval: ReturnType<typeof setInterval> | null = null;
+const adapters: Map<string, EnvironmentAdapter> = new Map<string, EnvironmentAdapter>();
+const connections: Map<string, PowerLineConnection> = new Map<string, PowerLineConnection>();
+let heartbeatInterval: ReturnType<typeof setInterval> | undefined = undefined;
 
 /** Register an environment adapter so it can be looked up by type. */
 export function registerAdapter(adapter: EnvironmentAdapter): void {
@@ -40,7 +40,7 @@ export function listConnections(): Map<string, PowerLineConnection> {
 
 /** Start a periodic health-check loop that calls `onDisconnect` when a PowerLine becomes unreachable. */
 export function startHeartbeat(onDisconnect: (environmentId: string) => void): void {
-  if (heartbeatInterval) {
+  if (heartbeatInterval !== undefined) {
     return;
   }
 
@@ -71,8 +71,8 @@ export function startHeartbeat(onDisconnect: (environmentId: string) => void): v
 
 /** Stop the periodic health-check loop. */
 export function stopHeartbeat(): void {
-  if (heartbeatInterval) {
+  if (heartbeatInterval !== undefined) {
     clearInterval(heartbeatInterval);
-    heartbeatInterval = null;
+    heartbeatInterval = undefined;
   }
 }

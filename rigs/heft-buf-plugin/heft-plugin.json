@@ -4,6 +4,10 @@
     {
       "pluginName": "buf-generate-plugin",
       "entryPoint": "./lib/BufGeneratePlugin.js"
+    },
+    {
+      "pluginName": "buf-lint-plugin",
+      "entryPoint": "./lib/BufLintPlugin.js"
     }
   ]
 }

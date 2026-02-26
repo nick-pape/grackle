@@ -7,7 +7,6 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "heft build --clean",
-    "lint:proto": "npx buf lint",
     "clean": "heft clean"
   },
   "dependencies": {

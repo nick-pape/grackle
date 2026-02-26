@@ -3,7 +3,7 @@ import { promisify } from "node:util";
 import { existsSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 
-const execRaw = promisify(execFile);
+const execRaw: typeof execFile.__promisify__ = promisify(execFile);
 
 /** Wrapper that uses a shell so `git` resolves via PATH on all platforms. */
 async function exec(cmd: string, args: string[], opts: { cwd: string }): Promise<{ stdout: string; stderr: string }> {

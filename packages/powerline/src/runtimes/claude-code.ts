@@ -6,7 +6,7 @@ import { ensureWorktree } from "../worktree.js";
 
 // Dynamic import — try @anthropic-ai/claude-agent-sdk first, then @anthropic-ai/claude-code
 type QueryFn = (opts: Record<string, unknown>) => Promise<unknown>;
-let queryFn: QueryFn | null = null;
+let queryFn: QueryFn | undefined = undefined;
 
 async function getQuery(): Promise<QueryFn> {
   if (queryFn) return queryFn;
@@ -26,7 +26,7 @@ async function getQuery(): Promise<QueryFn> {
 }
 
 /** Path to the Grackle MCP server script bundled in the container image. */
-const GRACKLE_MCP_SCRIPT = "/app/mcp-grackle/index.js";
+const GRACKLE_MCP_SCRIPT: string = "/app/mcp-grackle/index.js";
 
 function mapMessage(msg: Record<string, unknown>): AgentEvent[] {
   const ts = new Date().toISOString();
@@ -98,31 +98,47 @@ function mapMessage(msg: Record<string, unknown>): AgentEvent[] {
 }
 
 class ClaudeCodeSession implements AgentSession {
-  id: string;
-  runtimeName = "claude-code";
-  runtimeSessionId: string;
-  status: SessionStatus = "running";
-  private inputQueue = new AsyncQueue<string>();
-  private killed = false;
+  public id: string;
+  public runtimeName: string = "claude-code";
+  public runtimeSessionId: string;
+  public status: SessionStatus = "running";
+  private inputQueue: AsyncQueue<string> = new AsyncQueue<string>();
+  private killed: boolean = false;
+  private prompt: string;
+  private model: string;
+  private maxTurns: number;
+  private resumeSessionId?: string;
+  private branch?: string;
+  private worktreeBasePath?: string;
+  private systemContext?: string;
+  private mcpServers?: Record<string, unknown>;
 
-  constructor(
+  public constructor(
     id: string,
-    private prompt: string,
-    private model: string,
-    private maxTurns: number,
-    private resumeSessionId?: string,
-    private branch?: string,
-    private worktreeBasePath?: string,
-    private systemContext?: string,
-    private mcpServers?: Record<string, unknown>,
+    prompt: string,
+    model: string,
+    maxTurns: number,
+    resumeSessionId?: string,
+    branch?: string,
+    worktreeBasePath?: string,
+    systemContext?: string,
+    mcpServers?: Record<string, unknown>,
   ) {
     this.id = id;
+    this.prompt = prompt;
+    this.model = model;
+    this.maxTurns = maxTurns;
+    this.resumeSessionId = resumeSessionId;
+    this.branch = branch;
+    this.worktreeBasePath = worktreeBasePath;
+    this.systemContext = systemContext;
+    this.mcpServers = mcpServers;
     this.runtimeSessionId = resumeSessionId || "";
   }
 
-  async *stream(): AsyncIterable<AgentEvent> {
-    const query = await getQuery();
-    const ts = () => new Date().toISOString();
+  public async *stream(): AsyncIterable<AgentEvent> {
+    const query: QueryFn = await getQuery();
+    const ts: () => string = () => new Date().toISOString();
 
     yield { type: "system", timestamp: ts(), content: "Starting Claude Code runtime..." };
 
@@ -257,11 +273,11 @@ class ClaudeCodeSession implements AgentSession {
     }
   }
 
-  sendInput(text: string): void {
+  public sendInput(text: string): void {
     this.inputQueue.push(text);
   }
 
-  kill(): void {
+  public kill(): void {
     this.killed = true;
     this.status = "killed";
     this.inputQueue.close();
@@ -270,9 +286,9 @@ class ClaudeCodeSession implements AgentSession {
 
 /** Runtime that delegates to the Claude Code SDK (`@anthropic-ai/claude-agent-sdk`). */
 export class ClaudeCodeRuntime implements AgentRuntime {
-  name = "claude-code";
+  public name: string = "claude-code";
 
-  spawn(opts: SpawnOptions): AgentSession {
+  public spawn(opts: SpawnOptions): AgentSession {
     return new ClaudeCodeSession(
       opts.sessionId,
       opts.prompt,
@@ -286,7 +302,7 @@ export class ClaudeCodeRuntime implements AgentRuntime {
     );
   }
 
-  resume(opts: ResumeOptions): AgentSession {
+  public resume(opts: ResumeOptions): AgentSession {
     return new ClaudeCodeSession(
       opts.sessionId,
       "(resumed)",

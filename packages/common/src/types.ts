@@ -56,20 +56,20 @@ export type ProvisionStage =
 // ─── Constants ──────────────────────────────────────────────
 
 /** Default port the PowerLine gRPC server listens on. */
-export const DEFAULT_POWERLINE_PORT = 7433;
+export const DEFAULT_POWERLINE_PORT: number = 7433;
 /** Default port the central Grackle gRPC server listens on. */
-export const DEFAULT_SERVER_PORT = 7434;
+export const DEFAULT_SERVER_PORT: number = 7434;
 /** Default port for the web UI and WebSocket bridge. */
-export const DEFAULT_WEB_PORT = 3000;
+export const DEFAULT_WEB_PORT: number = 3000;
 /** Default agent runtime used when none is specified. */
 export const DEFAULT_RUNTIME: RuntimeName = "claude-code";
 /** Name of the Grackle config directory under the user's home. */
-export const GRACKLE_DIR = ".grackle";
+export const GRACKLE_DIR: string = ".grackle";
 /** SQLite database filename. */
-export const DB_FILENAME = "grackle.db";
+export const DB_FILENAME: string = "grackle.db";
 /** Subdirectory for session log files. */
-export const LOGS_DIR = "logs";
+export const LOGS_DIR: string = "logs";
 /** Filename for the locally-stored API key. */
-export const API_KEY_FILENAME = "api-key";
+export const API_KEY_FILENAME: string = "api-key";
 /** Default LLM model identifier for new sessions. */
-export const DEFAULT_MODEL = "sonnet";
+export const DEFAULT_MODEL: string = "sonnet";

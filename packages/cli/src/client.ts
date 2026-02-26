@@ -1,4 +1,4 @@
-import { createClient } from "@connectrpc/connect";
+import { createClient, type Client } from "@connectrpc/connect";
 import { createGrpcTransport } from "@connectrpc/connect-node";
 import { grackle, DEFAULT_SERVER_PORT, GRACKLE_DIR, API_KEY_FILENAME } from "@grackle/common";
 import { readFileSync } from "node:fs";
@@ -19,7 +19,7 @@ function loadApiKey(): string {
 }
 
 /** Create an authenticated ConnectRPC client for the central Grackle server. */
-export function createGrackleClient(serverUrl?: string) {
+export function createGrackleClient(serverUrl?: string): Client<typeof grackle.Grackle> {
   const url = serverUrl || process.env.GRACKLE_URL || `http://localhost:${DEFAULT_SERVER_PORT}`;
   const apiKey = process.env.GRACKLE_API_KEY || loadApiKey();
   const transport = createGrpcTransport({
