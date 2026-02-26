@@ -8,11 +8,11 @@ Grackle is a multi-agent coordination platform. Break a project into tasks, disp
 
 ### 🔌 Environments are just compute
 
-Docker and local today, SSH ⭐[#30](https://github.com/nick-pape/grackle/issues/30) and Codespaces 🔜[#31](https://github.com/nick-pape/grackle/issues/31) on the roadmap — it shouldn't matter where an agent runs. Grackle treats environments as interchangeable compute behind a single protocol. Same interface, same results, regardless of where the work happens.
+Docker and local today, SSH [⭐#30](https://github.com/nick-pape/grackle/issues/30) and Codespaces [🔜#31](https://github.com/nick-pape/grackle/issues/31) on the roadmap — it shouldn't matter where an agent runs. Grackle treats environments as interchangeable compute behind a single protocol. Same interface, same results, regardless of where the work happens.
 
 ### 🔄 Runtime agnostic by design
 
-The agent loop landscape is wildly unstable. Claude Code, Copilot 🔜[#26](https://github.com/nick-pape/grackle/issues/26), Codex ⭐[#27](https://github.com/nick-pape/grackle/issues/27), Goose ⭐[#29](https://github.com/nick-pape/grackle/issues/29) — whatever ships next month. Grackle wraps them all behind a standard interface so you can swap runtimes without changing your workflow. Your orchestration layer shouldn't be coupled to whichever vendor is winning this quarter.
+The agent loop landscape is wildly unstable. Claude Code, Copilot [🔜#26](https://github.com/nick-pape/grackle/issues/26), Codex [⭐#27](https://github.com/nick-pape/grackle/issues/27), Goose [⭐#29](https://github.com/nick-pape/grackle/issues/29) — whatever ships next month. Grackle wraps them all behind a standard interface so you can swap runtimes without changing your workflow. Your orchestration layer shouldn't be coupled to whichever vendor is winning this quarter.
 
 ### 📈 Scales from remote control to swarms
 
@@ -38,7 +38,7 @@ graph LR
     T1["📋 Task 1"] --> R1["✅ Review"] --> T2["📋 Task 2"] --> R2["✅ Review"] --> T3["📋 Task 3"] --> R3["✅ Review"]
 ```
 
-#### 👥 Team ⭐[#37](https://github.com/nick-pape/grackle/issues/37)
+#### 👥 Team [⭐#37](https://github.com/nick-pape/grackle/issues/37)
 
 Multiple agents working in parallel on a shared project, coordinating through findings.
 
@@ -49,7 +49,7 @@ graph TD
     A1 & A2 & A3 <-.-> F["💬 Shared Findings"]
 ```
 
-#### 🐝 Swarm ⭐[#38](https://github.com/nick-pape/grackle/issues/38)
+#### 🐝 Swarm [⭐#38](https://github.com/nick-pape/grackle/issues/38)
 
 Autonomous task decomposition, agent recruitment, knowledge sharing.
 
@@ -69,7 +69,7 @@ Every agent produces real, reviewable output: git diffs, markdown reports, PR co
 
 ### 🧠 Agents that actually coordinate
 
-Agents don't just run in parallel — they share knowledge. One agent's architectural insight becomes another agent's context through findings and the knowledge graph ⭐[#13](https://github.com/nick-pape/grackle/issues/13). Agent personas ⭐[#11](https://github.com/nick-pape/grackle/issues/11) with tool allowlists keep specialists focused. The coordination primitives are the ones engineers already use: git, diffs, code review.
+Agents don't just run in parallel — they share knowledge. One agent's architectural insight becomes another agent's context through findings and the knowledge graph [⭐#13](https://github.com/nick-pape/grackle/issues/13). Agent personas [⭐#11](https://github.com/nick-pape/grackle/issues/11) with tool allowlists keep specialists focused. The coordination primitives are the ones engineers already use: git, diffs, code review.
 
 ## 🏗️ Example Topology
 
@@ -105,11 +105,11 @@ graph TD
 | 📡 | **Real-time streaming** | Watch agent tool calls and output as they happen, bridged from gRPC to WebSocket |
 | 🌳 | **Git worktree isolation** | Every task gets its own branch in its own worktree — zero interference between agents |
 | 💬 | **Findings & knowledge sharing** | Agents post discoveries that become context for other agents |
-| 🔄 | **Multi-runtime support** | Claude Code today, Copilot 🔜[#26](https://github.com/nick-pape/grackle/issues/26) and others on the roadmap |
+| 🔄 | **Multi-runtime support** | Claude Code today, Copilot [🔜#26](https://github.com/nick-pape/grackle/issues/26) and others on the roadmap |
 | 🔗 | **Task dependencies** | Dependency gating — blocked tasks wait for their dependencies to complete |
 | ✅ | **Diff review** | See exactly what each agent changed, approve or reject per-task |
-| 🧠 | **Knowledge graph** ⭐[#13](https://github.com/nick-pape/grackle/issues/13) | Structured knowledge sharing across agents — beyond flat findings |
-| 🎭 | **Agent personas** ⭐[#11](https://github.com/nick-pape/grackle/issues/11) | Specialized agents with tool allowlists and focused system prompts |
+| 🧠 | **Knowledge graph** [⭐#13](https://github.com/nick-pape/grackle/issues/13) | Structured knowledge sharing across agents — beyond flat findings |
+| 🎭 | **Agent personas** [⭐#11](https://github.com/nick-pape/grackle/issues/11) | Specialized agents with tool allowlists and focused system prompts |
 
 ## 🌍 Environments
 
