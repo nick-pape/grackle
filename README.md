@@ -1,8 +1,37 @@
 # Grackle
 
-Orchestrate multiple AI coding agents across isolated environments from a single dashboard.
+**Orchestrate AI coding agents across any environment, with any runtime, at any scale.**
 
-Grackle lets you break a project into tasks, dispatch each to a Claude Code agent running in its own Docker container (or local worktree), and watch them all work in real time. When a task finishes, you review the diff, approve or reject, and move on. Findings from one agent are shared with the others so work doesn't get duplicated.
+Grackle is a multi-agent coordination platform. Break a project into tasks, dispatch each to an agent running in its own isolated environment, and watch them work in real time. Review real diffs, share knowledge between agents, and scale from one agent to a swarm — without rewriting your setup.
+
+## Philosophy
+
+### Environments are just compute
+
+Docker, Codespaces, SSH, local — it shouldn't matter where an agent runs. Grackle treats environments as interchangeable compute behind a single protocol. Same interface, same results, regardless of where the work happens.
+
+### Runtime agnostic by design
+
+The agent loop landscape is wildly unstable. Claude Code, Copilot, Codex, Goose — whatever ships next month. Grackle wraps them all behind a standard interface so you can swap runtimes without changing your workflow. Your orchestration layer shouldn't be coupled to whichever vendor is winning this quarter.
+
+### Scales from remote control to swarms
+
+Most tools force a choice: run one agent manually, or build a bespoke swarm framework from scratch. Grackle covers the whole spectrum:
+
+- **Remote control** — manage a single agent in a remote environment
+- **Workflow** — chain tasks with dependencies, review artifacts at each step
+- **Team** — multiple agents in parallel on a shared project, coordinating through findings
+- **Swarm** — autonomous task decomposition, agent recruitment, knowledge sharing
+
+No other tool gives you this gradient. Start simple, scale up.
+
+### Auditable artifacts, not magic
+
+Every agent produces real, reviewable output: git diffs, markdown reports, PR comments, findings. Nothing happens in a black box. Git branches and tags provide natural coordination points — not a proprietary state machine. If you can read a diff, you can audit a swarm.
+
+### Agents that actually coordinate
+
+Agents don't just run in parallel — they share knowledge. One agent's architectural insight becomes another agent's context through findings and the knowledge graph. Agent personas with tool allowlists keep specialists focused. The coordination primitives are the ones engineers already use: git, diffs, code review.
 
 ## Architecture
 
@@ -22,17 +51,26 @@ graph LR
     Server -. gRPC .-> SSH
     Server -. gRPC .-> CS
 
-    Docker --- Agent1["Claude Code Agent"]
-    Local --- Agent2["Claude Code Agent"]
+    Docker --- Agent1["Agent Runtime"]
+    Local --- Agent2["Agent Runtime"]
 ```
 
-**Server** — Central hub. Manages projects, tasks, environments, and sessions. Persists state in SQLite. Bridges gRPC and WebSocket so the UI stays live.
+**Server** — Central hub. Projects, tasks, environments, sessions. SQLite with WAL mode. Bridges gRPC streams to WebSocket so the UI stays live.
 
-**PowerLine** — Runs inside each environment (Docker container or local). Spawns Claude Code agents, streams events back to the server, and isolates work in git worktrees.
+**PowerLine** — Runs inside each environment. Spawns agent runtimes, streams events to the server, isolates work in git worktrees. Same gRPC interface whether it's in a container or on bare metal.
 
-**Web UI** — Real-time dashboard. Stream agent output, review diffs, browse findings. Dark-themed, keyboard-friendly.
+**Web UI** — Real-time dashboard. Stream agent output, review diffs, browse findings, manage tasks. Dark-themed, keyboard-friendly.
 
-**CLI** — Thin gRPC client. Everything you can do in the UI you can script from the terminal.
+**CLI** — Thin gRPC client. Everything the UI does, you can script from the terminal.
+
+## Features
+
+- **Real-time streaming** — watch agent tool calls and output as they happen, bridged from gRPC to WebSocket
+- **Git worktree isolation** — every task gets its own branch in its own worktree, zero interference between agents
+- **Findings & knowledge sharing** — agents post discoveries that become context for other agents
+- **Multi-runtime support** — Claude Code today, Copilot and others on the roadmap
+- **Task dependencies** — DAG-based task ordering, blocked tasks wait for their dependencies
+- **Diff review** — see exactly what each agent changed, approve or reject per-task
 
 ## Environments
 
@@ -44,8 +82,6 @@ Each agent runs inside an isolated environment. Connect one or many:
 | **Local** | Available | `grackle env add my-env --local` |
 | **SSH** | Planned | `grackle env add my-env --ssh --host ...` |
 | **Codespace** | Planned | `grackle env add my-env --codespace --repo ...` |
-
-Docker spins up a container with PowerLine pre-installed. Local connects to a PowerLine already running on your machine. SSH and Codespace adapters are on the roadmap.
 
 ## Quick Start
 
