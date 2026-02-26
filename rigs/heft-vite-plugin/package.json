@@ -8,7 +8,8 @@
     "build": "tsc"
   },
   "peerDependencies": {
-    "@rushstack/heft": "1.2.4"
+    "@rushstack/heft": "1.2.4",
+    "vite": "^6.0.0"
   },
   "devDependencies": {
     "@rushstack/heft": "1.2.4",
