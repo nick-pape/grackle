@@ -8,7 +8,7 @@ Grackle is a multi-agent coordination platform. Break a project into tasks, disp
 
 ### 🔌 Environments are just compute
 
-Docker, Codespaces, SSH, local — it shouldn't matter where an agent runs. Grackle treats environments as interchangeable compute behind a single protocol. Same interface, same results, regardless of where the work happens.
+Docker and local today, SSH and Codespaces\* on the roadmap — it shouldn't matter where an agent runs. Grackle treats environments as interchangeable compute behind a single protocol. Same interface, same results, regardless of where the work happens.
 
 ### 🔄 Runtime agnostic by design
 
@@ -120,7 +120,7 @@ graph LR
 | 🌳 | **Git worktree isolation** | Every task gets its own branch in its own worktree — zero interference between agents |
 | 💬 | **Findings & knowledge sharing** | Agents post discoveries that become context for other agents |
 | 🔄 | **Multi-runtime support** | Claude Code today, Copilot\* and others on the roadmap |
-| 🔗 | **Task dependencies** | DAG-based task ordering — blocked tasks wait for their dependencies |
+| 🔗 | **Task dependencies** | Dependency gating — blocked tasks wait for their dependencies to complete |
 | ✅ | **Diff review** | See exactly what each agent changed, approve or reject per-task |
 | 🧠 | **Knowledge graph**\* | Structured knowledge sharing across agents — beyond flat findings |
 | 🎭 | **Agent personas**\* | Specialized agents with tool allowlists and focused system prompts |
@@ -135,6 +135,8 @@ Each agent runs inside an isolated environment. Connect one or many:
 | 💻 **Local** | ✅ Available | `grackle env add my-env --local` |
 | 🔒 **SSH** | 🔜 Planned | `grackle env add my-env --ssh --host ...` |
 | ☁️ **Codespace** | 🔜 Planned | `grackle env add my-env --codespace --repo ...` |
+
+Docker spins up a container with PowerLine pre-installed. Local connects to a PowerLine instance already running on your machine.
 
 ## 🚀 Quick Start
 
