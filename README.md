@@ -76,7 +76,8 @@ Agents don't just run in parallel — they share knowledge. One agent's architec
 ```mermaid
 graph TD
     UI["🌐 Web UI"]
-    UI --- S["⚡ Grackle Server"]
+    CLI["⌨️ CLI"]
+    UI & CLI --- S["⚡ Grackle Server"]
 
     subgraph D1["🐳 Docker"]
         D1A["🤖 Claude"] & D1B["🤖 Claude"] & D1C["🤖 Copilot"] & D1D["..."]
