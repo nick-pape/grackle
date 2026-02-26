@@ -25,11 +25,8 @@
       "tasksByName": {
         "playwright": {
           "taskPlugin": {
-            "pluginPackage": "@rushstack/heft",
-            "pluginName": "run-script-plugin",
-            "options": {
-              "scriptPath": "config/heft-scripts/playwright-test.cjs"
-            }
+            "pluginPackage": "@grackle/heft-playwright-plugin",
+            "pluginName": "playwright-test-plugin"
           }
         }
       }
