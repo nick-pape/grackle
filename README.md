@@ -10,68 +10,58 @@ Grackle is a multi-agent coordination platform. Break a project into tasks, disp
 
 Docker, Codespaces, SSH, local — it shouldn't matter where an agent runs. Grackle treats environments as interchangeable compute behind a single protocol. Same interface, same results, regardless of where the work happens.
 
-```mermaid
-graph LR
-    subgraph "Same PowerLine protocol"
-        D["🐳 Docker"] ~~~ L["💻 Local"] ~~~ S["🔒 SSH"] ~~~ C["☁️ Codespaces"]
-    end
-    D --> PL["⚡ PowerLine gRPC"]
-    L --> PL
-    S --> PL
-    C --> PL
-```
-
 ### 🔄 Runtime agnostic by design
 
 The agent loop landscape is wildly unstable. Claude Code, Copilot, Codex, Goose — whatever ships next month. Grackle wraps them all behind a standard interface so you can swap runtimes without changing your workflow. Your orchestration layer shouldn't be coupled to whichever vendor is winning this quarter.
 
-```mermaid
-graph LR
-    PL["⚡ PowerLine"]
-    PL --> CC["Claude Code"]
-    PL --> CP["GitHub Copilot"]
-    PL --> CX["OpenAI Codex"]
-    PL --> G["Goose"]
-    PL --> Q["???"]
-    style Q fill:#333,stroke:#666,stroke-dasharray: 5 5
-```
-
 ### 📈 Scales from remote control to swarms
 
-Most tools force a choice: run one agent manually, or build a bespoke swarm framework from scratch. Grackle covers the whole spectrum:
+Most tools force a choice: run one agent manually, or build a bespoke swarm framework from scratch. Grackle covers the whole spectrum. No other tool gives you this gradient — start simple, scale up.
+
+#### 🎮 Remote Control
+
+Manage a single agent in a remote environment.
+
+```mermaid
+graph LR
+    You["👤 You"] --> S["⚡ Server"]
+    S -- gRPC --> E["🐳 Environment"]
+    E --- A["🤖 Agent"]
+```
+
+#### ⛓️ Workflow
+
+Chain tasks with dependencies. Review artifacts at each step.
+
+```mermaid
+graph LR
+    T1["📋 Task 1"] --> R1["✅ Review"] --> T2["📋 Task 2"] --> R2["✅ Review"] --> T3["📋 Task 3"] --> R3["✅ Review"]
+```
+
+#### 👥 Team
+
+Multiple agents working in parallel on a shared project, coordinating through findings.
 
 ```mermaid
 graph TD
-    subgraph "🎮 Remote Control"
-        RC_S["Server"] --> RC_E["Environment"]
-        RC_E --- RC_A["🤖 Agent"]
-    end
-
-    subgraph "⛓️ Workflow"
-        WF_T1["Task 1"] --> WF_T2["Task 2"] --> WF_T3["Task 3"]
-        WF_T1 -.- WF_R1["✅ Review"]
-        WF_T2 -.- WF_R2["✅ Review"]
-        WF_T3 -.- WF_R3["✅ Review"]
-    end
-
-    subgraph "👥 Team"
-        TM_P["Project"]
-        TM_P --> TM_A1["🤖 Agent A"]
-        TM_P --> TM_A2["🤖 Agent B"]
-        TM_P --> TM_A3["🤖 Agent C"]
-        TM_A1 <-. "findings" .-> TM_A2
-        TM_A2 <-. "findings" .-> TM_A3
-    end
-
-    subgraph "🐝 Swarm"
-        SW_G["Goal"] --> SW_D["Decompose"]
-        SW_D --> SW_T1["🤖"] & SW_T2["🤖"] & SW_T3["🤖"] & SW_T4["🤖"]
-        SW_T1 & SW_T2 & SW_T3 & SW_T4 --> SW_K["🧠 Knowledge Graph"]
-        SW_K --> SW_N["🤖 ..."]
-    end
+    P["📁 Project"]
+    P --> A1["🤖 Agent A"] & A2["🤖 Agent B"] & A3["🤖 Agent C"]
+    A1 & A2 & A3 --> F["💬 Shared Findings"]
+    F -. context .-> A1 & A2 & A3
 ```
 
-No other tool gives you this gradient. Start simple, scale up.
+#### 🐝 Swarm
+
+Autonomous task decomposition, agent recruitment, knowledge sharing.
+
+```mermaid
+graph TD
+    G["🎯 Goal"] --> D["Decompose"]
+    D --> T1["🤖"] & T2["🤖"] & T3["🤖"] & T4["🤖"]
+    T1 & T2 & T3 & T4 --> K["🧠 Knowledge Graph"]
+    K --> N["🤖 ...more agents"]
+    style N fill:#333,stroke:#666,stroke-dasharray: 5 5
+```
 
 ### 🔍 Auditable artifacts, not magic
 
@@ -96,21 +86,33 @@ Agents don't just run in parallel — they share knowledge. One agent's architec
 ```mermaid
 graph LR
     UI["🌐 Web UI :3000"]
+    CLI["⌨️ CLI"]
     Server["⚡ Server :7434"]
 
-    Docker["🐳 Docker"]
-    Local["💻 Local"]
-    SSH["🔒 SSH"]
-    CS["☁️ Codespace"]
-
     UI -- WebSocket --> Server
-    Server -- gRPC --> Docker
-    Server -- gRPC --> Local
-    Server -. gRPC .-> SSH
-    Server -. gRPC .-> CS
+    CLI -- gRPC --> Server
 
-    Docker --- Agent1["🤖 Agent Runtime"]
-    Local --- Agent2["🤖 Agent Runtime"]
+    subgraph "Environments"
+        Docker["🐳 Docker"]
+        Local["💻 Local"]
+        SSH["🔒 SSH"]
+        CS["☁️ Codespace"]
+    end
+
+    Server -- gRPC --> Docker & Local
+    Server -. gRPC .-> SSH & CS
+
+    subgraph "Inside each environment"
+        PL["⚡ PowerLine"]
+        PL -. spawns .-> CC["Claude Code"]
+        PL -. spawns .-> CP["Copilot"]
+        PL -. spawns .-> More["..."]
+    end
+
+    Docker & Local --- PL
+    style More fill:#333,stroke:#666,stroke-dasharray: 5 5
+    style SSH fill:#333,stroke:#666,stroke-dasharray: 5 5
+    style CS fill:#333,stroke:#666,stroke-dasharray: 5 5
 ```
 
 | Component | Description |
