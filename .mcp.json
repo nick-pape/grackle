@@ -3,13 +3,6 @@
     "playwright": {
       "command": "npx",
       "args": ["@playwright/mcp@latest"]
-    },
-    "pockettts": {
-      "command": "node",
-      "args": ["C:/Users/nickp/src/mcp-pockettts/index.js"],
-      "env": {
-        "POCKETTTS_URL": "http://localhost:8890"
-      }
     }
   }
 }

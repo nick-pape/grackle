@@ -7,13 +7,12 @@
       "env": { "DISPLAY": ":99" }
     },
     "pockettts": {
-      "command": "node",
-      "args": ["/app/mcp-pockettts/index.js"],
-      "env": {
-        "POCKETTTS_URL": "http://localhost:8890",
-        "VOICE_SERVER_PORT": "8891",
-        "DISPLAY": ":99"
-      }
+      "command": "/opt/pockettts/bin/pocket-tts-mcp",
+      "env": { "DISPLAY": ":99" }
+    },
+    "recording": {
+      "command": "/opt/pockettts/bin/python",
+      "args": ["/app/mcp-recording/server.py"]
     }
   }
 }

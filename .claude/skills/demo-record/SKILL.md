@@ -26,6 +26,7 @@ rush build
 
 ```bash
 # Demo recorder image (Playwright + Xvfb + PulseAudio + ffmpeg + PocketTTS)
+# No --secret needed: uses PocketTTS built-in voices (no HF_TOKEN required)
 docker build -f Dockerfile.demo-recorder -t grackle-demo-recorder .
 
 # Dev environment image (standard PowerLine)
@@ -121,16 +122,6 @@ Also check ffmpeg recording status if needed:
 ```bash
 docker exec grackle-demo-recorder bash -c "ls -lh /workspace/grackle-demo.mp4 2>&1"
 ```
-
-## GPU Acceleration (Optional)
-
-For faster TTS synthesis, add the demo-recorder with GPU passthrough:
-
-```bash
-grackle env add demo-recorder --docker --image grackle-demo-recorder --runtime claude-code --gpu
-```
-
-Requires NVIDIA Docker runtime and drivers on the host.
 
 ## Troubleshooting
 
