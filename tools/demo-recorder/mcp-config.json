@@ -7,9 +7,12 @@
       "env": { "DISPLAY": ":99" }
     },
     "pockettts": {
-      "command": "/opt/pockettts/bin/python",
-      "args": ["/app/mcp-pockettts/server.py"],
+      "command": "/opt/pockettts/bin/pocket-tts-mcp",
       "env": { "DISPLAY": ":99" }
+    },
+    "recording": {
+      "command": "/opt/pockettts/bin/python",
+      "args": ["/app/mcp-recording/server.py"]
     }
   }
 }

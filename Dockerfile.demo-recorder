@@ -18,7 +18,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # ── PocketTTS (neural TTS engine) ──────────────────────────
 RUN python3 -m venv /opt/pockettts \
-    && /opt/pockettts/bin/pip install --no-cache-dir pocket-tts fastmcp
+    && /opt/pockettts/bin/pip install --no-cache-dir \
+       pocket-tts-mcp fastmcp
 
 # Pre-download TTS model weights during build (avoids 30-60s first-run delay)
 RUN /opt/pockettts/bin/pocket-tts generate --text "warmup" -q \
@@ -48,8 +49,8 @@ RUN npm install --omit=dev \
 COPY packages/powerline/mcp-grackle/ /app/mcp-grackle/
 RUN cd /app/mcp-grackle && npm install --omit=dev
 
-# ── MCP: PocketTTS wrapper ─────────────────────────────────
-COPY tools/demo-recorder/mcp-pockettts/server.py /app/mcp-pockettts/server.py
+# ── MCP: Recording control ─────────────────────────────────
+COPY tools/demo-recorder/mcp-recording/server.py /app/mcp-recording/server.py
 
 # ── MCP: Playwright (installed globally) ───────────────────
 RUN npm install -g @playwright/mcp@latest

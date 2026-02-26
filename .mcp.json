@@ -3,12 +3,6 @@
     "playwright": {
       "command": "npx",
       "args": ["@playwright/mcp@latest"]
-    },
-    "pockettts": {
-      "command": "uv",
-      "args": ["run",
-               "--with", "fastmcp", "--with", "pocket-tts",
-               "C:/Users/nickp/src/grackle2/tools/demo-recorder/mcp-pockettts/server.py"]
     }
   }
 }

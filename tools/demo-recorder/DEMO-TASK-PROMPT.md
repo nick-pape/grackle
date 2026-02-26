@@ -98,7 +98,7 @@ Recording starts automatically when Chrome opens. You do NOT need to start ffmpe
 
 **IMPORTANT: Navigate to the browser FIRST before speaking. The recording begins when Chrome launches. If you speak before navigating, the audio won't be captured.**
 
-**CRITICAL: When you are completely done with all scenes, you MUST call `mcp__pockettts__stop_recording` to finalize the MP4. If you skip this, the video file will be corrupted. This is MANDATORY as your very last action.**
+**CRITICAL: When you are completely done with all scenes, you MUST call `mcp__recording__stop_recording` to finalize the MP4. If you skip this, the video file will be corrupted. This is MANDATORY as your very last action.**
 
 ## Execute Scenes
 
@@ -206,7 +206,7 @@ At least one task should be in "review" or "done" status by now. If not, keep ch
 
 After all scenes are done, you MUST stop the recording:
 
-1. Call `mcp__pockettts__stop_recording` — this signals ffmpeg to finalize the MP4
+1. Call `mcp__recording__stop_recording` — this signals ffmpeg to finalize the MP4
 2. Wait 3 seconds: `browser_wait_for({ time: 3 })`
 
 **Do NOT skip this. The MP4 will be corrupted without it.**
