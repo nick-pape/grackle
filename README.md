@@ -65,17 +65,7 @@ graph TD
 
 ### 🔍 Auditable artifacts, not magic
 
-Every agent produces real, reviewable output: git diffs, markdown reports, PR comments, findings. Nothing happens in a black box. Git branches and tags provide natural coordination points — not a proprietary state machine. If you can read a diff, you can audit a swarm.
-
-```mermaid
-graph LR
-    A["🤖 Agent"] --> D["📝 Git Diff"]
-    A --> F["💬 Findings"]
-    A --> R["📄 Reports"]
-    D --> Rev["👀 Human Review"]
-    F --> Ctx["🧠 Shared Context"]
-    Ctx --> A2["🤖 Next Agent"]
-```
+Every agent produces real, reviewable output: git diffs, markdown reports, PR comments, findings. The full conversation thread is stored in the central server database — every tool call, every decision, fully replayable. Nothing happens in a black box. Git branches and tags provide natural coordination points — not a proprietary state machine. If you can read a diff, you can audit a swarm.
 
 ### 🧠 Agents that actually coordinate
 
