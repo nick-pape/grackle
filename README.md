@@ -25,7 +25,7 @@ Manage a single agent in a remote environment.
 ```mermaid
 graph LR
     You["👤 You"] --> S["⚡ Server"]
-    S -- gRPC --> E["🐳 Environment"]
+    S -- PowerLine --> E["🐳 Environment"]
     E --- A["🤖 Agent"]
 ```
 
