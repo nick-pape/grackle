@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type JSX } from "react";
 import { EnvironmentList } from "./EnvironmentList.js";
 import { ProjectList } from "./ProjectList.js";
 import type { ViewMode } from "../App.js";
@@ -10,7 +10,7 @@ interface Props {
 
 type SidebarTab = "projects" | "environments";
 
-export function Sidebar({ viewMode, setViewMode }: Props) {
+export function Sidebar({ viewMode, setViewMode }: Props): JSX.Element {
   const [tab, setTab] = useState<SidebarTab>("projects");
 
   return (
@@ -46,7 +46,7 @@ export function Sidebar({ viewMode, setViewMode }: Props) {
   );
 }
 
-function TabButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+function TabButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }): JSX.Element {
   return (
     <button
       onClick={onClick}

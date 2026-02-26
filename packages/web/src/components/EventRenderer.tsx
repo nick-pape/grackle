@@ -1,3 +1,4 @@
+import type { JSX } from "react";
 import type { SessionEvent } from "../hooks/useGrackleSocket.js";
 
 interface Props {
@@ -6,7 +7,7 @@ interface Props {
 
 // --- Individual event type renderers ---
 
-function SystemEvent({ time, content }: { time: string; content: string }) {
+function SystemEvent({ time, content }: { time: string; content: string }): JSX.Element {
   return (
     <div style={{ color: "#888", fontStyle: "italic", fontSize: "12px", padding: "2px 0" }}>
       <span style={{ color: "#666" }}>[{time}]</span> {content}
@@ -14,7 +15,7 @@ function SystemEvent({ time, content }: { time: string; content: string }) {
   );
 }
 
-function TextEvent({ content }: { content: string }) {
+function TextEvent({ content }: { content: string }): JSX.Element {
   return (
     <div style={{ padding: "4px 0", whiteSpace: "pre-wrap", lineHeight: "1.4" }}>
       {content}
@@ -22,7 +23,7 @@ function TextEvent({ content }: { content: string }) {
   );
 }
 
-function ToolUseEvent({ content }: { content: string }) {
+function ToolUseEvent({ content }: { content: string }): JSX.Element {
   let display = content;
   try {
     const parsed = JSON.parse(content);
@@ -46,7 +47,7 @@ function ToolUseEvent({ content }: { content: string }) {
   );
 }
 
-function ToolResultEvent({ content }: { content: string }) {
+function ToolResultEvent({ content }: { content: string }): JSX.Element {
   return (
     <details style={{ margin: "2px 0", fontSize: "12px" }}>
       <summary style={{ cursor: "pointer", color: "#888" }}>Tool output</summary>
@@ -67,7 +68,7 @@ function ToolResultEvent({ content }: { content: string }) {
   );
 }
 
-function ErrorEvent({ content }: { content: string }) {
+function ErrorEvent({ content }: { content: string }): JSX.Element {
   return (
     <div style={{ color: "#e94560", fontWeight: "bold", padding: "4px 0" }}>
       Error: {content}
@@ -75,7 +76,7 @@ function ErrorEvent({ content }: { content: string }) {
   );
 }
 
-function StatusEvent({ content }: { content: string }) {
+function StatusEvent({ content }: { content: string }): JSX.Element {
   return (
     <div
       style={{
@@ -92,7 +93,7 @@ function StatusEvent({ content }: { content: string }) {
   );
 }
 
-function DefaultEvent({ content }: { content: string }) {
+function DefaultEvent({ content }: { content: string }): JSX.Element {
   return (
     <div style={{ padding: "2px 0", color: "#ccc" }}>{content}</div>
   );
@@ -100,7 +101,7 @@ function DefaultEvent({ content }: { content: string }) {
 
 // --- Main component ---
 
-export function EventRenderer({ event }: Props) {
+export function EventRenderer({ event }: Props): JSX.Element {
   const time = new Date(event.timestamp).toLocaleTimeString();
 
   switch (event.eventType) {

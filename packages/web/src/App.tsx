@@ -3,7 +3,7 @@ import { StatusBar } from "./components/StatusBar.js";
 import { Sidebar } from "./components/Sidebar.js";
 import { SessionPanel } from "./components/SessionPanel.js";
 import { UnifiedBar } from "./components/UnifiedBar.js";
-import { useState, useEffect } from "react";
+import { useState, useEffect, type JSX } from "react";
 import { useGrackle } from "./context/GrackleContext.js";
 
 export type ViewMode =
@@ -14,7 +14,7 @@ export type ViewMode =
   | { kind: "new_task"; projectId: string }
   | { kind: "task"; taskId: string; tab?: "stream" | "diff" | "findings" };
 
-function AppContent() {
+function AppContent(): JSX.Element {
   const [viewMode, setViewMode] = useState<ViewMode>({ kind: "empty" });
   const { lastSpawnedId } = useGrackle();
 
@@ -43,7 +43,7 @@ function AppContent() {
   );
 }
 
-export default function App() {
+export default function App(): JSX.Element {
   return (
     <GrackleProvider>
       <AppContent />

@@ -2,7 +2,7 @@ import { createWriteStream, mkdirSync, readFileSync, existsSync, type WriteStrea
 import { join } from "node:path";
 import type { grackle } from "@grackle/common";
 
-const openStreams = new Map<string, WriteStream>();
+const openStreams: Map<string, WriteStream> = new Map<string, WriteStream>();
 
 /** Initialize a JSONL log stream for a session at the given directory path. */
 export function initLog(logPath: string): void {

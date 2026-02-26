@@ -8,6 +8,10 @@ packages/*/pnpm-lock.yaml
 *.tsbuildinfo
 rush-logs/
 
+# Heft build outputs
+rigs/*/lib/
+packages/*/temp/
+
 # Generated proto files
 packages/common/src/gen/
 

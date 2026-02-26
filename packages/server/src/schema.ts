@@ -3,6 +3,7 @@ import { sql } from "drizzle-orm";
 
 // ─── Environments ──────────────────────────────────────────
 
+/* eslint-disable @rushstack/typedef-var -- Drizzle table types are inferred from sqliteTable() */
 export const environments = sqliteTable("environments", {
   id: text("id").primaryKey(),
   displayName: text("display_name").notNull(),

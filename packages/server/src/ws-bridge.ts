@@ -18,8 +18,8 @@ import * as logWriter from "./log-writer.js";
 import { writeTranscript } from "./transcript.js";
 import { safeParseJsonArray } from "./json-helpers.js";
 
-const WS_PING_INTERVAL_MS = 30_000;
-const WS_CLOSE_UNAUTHORIZED = 4001;
+const WS_PING_INTERVAL_MS: number = 30_000;
+const WS_CLOSE_UNAUTHORIZED: number = 4001;
 
 interface WsMessage {
   type: string;
@@ -31,7 +31,7 @@ function slugify(text: string): string {
   return text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40);
 }
 
-let wssInstance: WebSocketServer | null = null;
+let wssInstance: WebSocketServer | undefined = undefined;
 
 /** Broadcast a message to all connected WS clients. */
 export function broadcast(msg: { type: string; payload?: Record<string, unknown> }): void {
@@ -170,6 +170,7 @@ async function handleMessage(
       const stream = streamHub.createStream(sessionId);
       subscriptions.set(subKey, stream);
 
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
       (async () => {
         for await (const event of stream) {
           sendWs(ws, {
@@ -197,6 +198,7 @@ async function handleMessage(
       const stream = streamHub.createGlobalStream();
       subscriptions.set("global", stream);
 
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
       (async () => {
         for await (const event of stream) {
           sendWs(ws, {
@@ -260,6 +262,7 @@ async function handleMessage(
         systemContext,
       });
 
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
       (async () => {
         try {
           sessionStore.updateSession(sessionId, "running");
@@ -536,6 +539,7 @@ async function handleMessage(
         taskId: task.id,
       });
 
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
       (async () => {
         try {
           sessionStore.updateSession(sessionId, "running");

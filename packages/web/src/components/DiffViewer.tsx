@@ -1,10 +1,12 @@
+import type { JSX } from "react";
 import type { TaskDiffData } from "../hooks/useGrackleSocket.js";
 
 interface Props {
+  // eslint-disable-next-line @rushstack/no-new-null
   diff: TaskDiffData | null;
 }
 
-export function DiffViewer({ diff }: Props) {
+export function DiffViewer({ diff }: Props): JSX.Element {
   if (!diff) {
     return (
       <div style={{ padding: "24px", color: "#666", textAlign: "center" }}>

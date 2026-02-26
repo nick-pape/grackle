@@ -5,21 +5,21 @@ import { API_KEY_FILENAME } from "@grackle/common";
 import { logger } from "./logger.js";
 import { grackleHome } from "./paths.js";
 
-const API_KEY_BYTE_LENGTH = 32;
+const API_KEY_BYTE_LENGTH: number = 32;
 
-const keyPath = join(grackleHome, API_KEY_FILENAME);
+const keyPath: string = join(grackleHome, API_KEY_FILENAME);
 
-let cachedKey: string | null = null;
+let cachedKey: string | undefined = undefined;
 
-/** Attempt to read an existing API key from disk. Returns null if none exists. */
-function tryLoadApiKey(): string | null {
+/** Attempt to read an existing API key from disk. Returns undefined if none exists. */
+function tryLoadApiKey(): string | undefined {
   if (existsSync(keyPath)) {
     const content = readFileSync(keyPath, "utf8").trim();
     if (content.length > 0) {
       return content;
     }
   }
-  return null;
+  return undefined;
 }
 
 /** Generate a new random API key, write it to disk with 0600 permissions, and return it. */
@@ -60,6 +60,7 @@ export function verifyApiKey(token: string): boolean {
   }
   let result = 0;
   for (let i = 0; i < key.length; i++) {
+    // eslint-disable-next-line no-bitwise
     result |= token.charCodeAt(i) ^ key.charCodeAt(i);
   }
   return result === 0;

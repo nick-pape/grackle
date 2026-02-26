@@ -27,7 +27,7 @@ const MIME_TYPES: Record<string, string> = {
   ".ico": "image/x-icon",
 };
 
-function createWebHandler(apiKey: string) {
+function createWebHandler(apiKey: string): (req: http.IncomingMessage, res: http.ServerResponse) => void {
   return (req: http.IncomingMessage, res: http.ServerResponse) => {
     const webDistDir = process.env.GRACKLE_WEB_DIR || join(import.meta.dirname, "../../web/dist");
 

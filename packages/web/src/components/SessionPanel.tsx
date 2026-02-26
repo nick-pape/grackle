@@ -2,7 +2,7 @@ import { useGrackle } from "../context/GrackleContext.js";
 import { EventRenderer } from "./EventRenderer.js";
 import { DiffViewer } from "./DiffViewer.js";
 import { FindingsPanel } from "./FindingsPanel.js";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type JSX } from "react";
 import type { ViewMode } from "../App.js";
 import type { Session, SessionEvent } from "../hooks/useGrackleSocket.js";
 
@@ -17,13 +17,13 @@ interface Props {
 /** Props for the SessionHeader subcomponent. */
 interface SessionHeaderProps {
   sessionId: string;
-  session: Session | null;
+  session: Session | undefined;
   isActive: boolean;
   onKill: (sessionId: string) => void;
 }
 
 /** Displays session metadata and a kill button for active sessions. */
-function SessionHeader({ sessionId, session, isActive, onKill }: SessionHeaderProps) {
+function SessionHeader({ sessionId, session, isActive, onKill }: SessionHeaderProps): JSX.Element {
   return (
     <div
       style={{
@@ -70,12 +70,13 @@ function SessionHeader({ sessionId, session, isActive, onKill }: SessionHeaderPr
 /** Props for the EventList subcomponent. */
 interface EventListProps {
   sessionEvents: SessionEvent[];
-  session: Session | null;
+  session: Session | undefined;
+  // eslint-disable-next-line @rushstack/no-new-null
   scrollRef: React.RefObject<HTMLDivElement | null>;
 }
 
 /** Scrollable list of session events with empty-state messaging. */
-function EventList({ sessionEvents, session, scrollRef }: EventListProps) {
+function EventList({ sessionEvents, session, scrollRef }: EventListProps): JSX.Element {
   const isTerminal = session && ["completed", "failed", "killed"].includes(session.status);
   const emptyMessage = isTerminal
     ? `Session ${session.status} with no events recorded.`
@@ -105,24 +106,26 @@ function EventList({ sessionEvents, session, scrollRef }: EventListProps) {
 type TaskTab = "stream" | "diff" | "findings";
 
 /** Main content panel that renders session streams, task views, project summaries, or empty states based on the current view mode. */
-export function SessionPanel({ viewMode, setViewMode }: Props) {
-  const { events, sessions, tasks, findings, taskDiff, loadSessionEvents, loadFindings, loadTaskDiff, kill } = useGrackle();
+export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
+  const { events, sessions, tasks, taskDiff, loadSessionEvents, loadFindings, loadTaskDiff, kill } = useGrackle();
+  // eslint-disable-next-line @rushstack/no-new-null
   const scrollRef = useRef<HTMLDivElement>(null);
+  // eslint-disable-next-line @rushstack/no-new-null
   const loadedRef = useRef<string | null>(null);
   const [activeTaskTab, setActiveTaskTab] = useState<TaskTab>("stream");
   const prevTaskStatusRef = useRef<string | undefined>(undefined);
 
   // Determine session context
-  let sessionId: string | null = null;
+  let sessionId: string | undefined = undefined;
   let task: ReturnType<typeof tasks.find> = undefined;
-  let projectId: string | null = null;
+  let projectId: string | undefined = undefined;
 
   if (viewMode.kind === "session") {
     sessionId = viewMode.sessionId;
   } else if (viewMode.kind === "task") {
     task = tasks.find((t) => t.id === viewMode.taskId);
-    sessionId = task?.sessionId || null;
-    projectId = task?.projectId || null;
+    sessionId = task?.sessionId || undefined;
+    projectId = task?.projectId || undefined;
   }
 
   // Auto-switch tab synchronously during render (not via effect) so the
@@ -146,8 +149,8 @@ export function SessionPanel({ viewMode, setViewMode }: Props) {
     : [];
 
   const session = sessionId
-    ? sessions.find((s) => s.id === sessionId) ?? null
-    : null;
+    ? sessions.find((s) => s.id === sessionId) ?? undefined
+    : undefined;
 
   // Load historical events when selecting a session
   useEffect(() => {
@@ -329,7 +332,7 @@ export function SessionPanel({ viewMode, setViewMode }: Props) {
 }
 
 /** Tab button for switching between stream, diff, and findings views within a task. */
-function TaskTabButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+function TaskTabButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }): JSX.Element {
   return (
     <button
       onClick={onClick}

@@ -1,6 +1,7 @@
+import type { JSX } from "react";
 import { useGrackle } from "../context/GrackleContext.js";
 
-export function StatusBar() {
+export function StatusBar(): JSX.Element {
   const { connected, environments, sessions } = useGrackle();
   const totalEnvs = environments.length;
   const connectedEnvs = environments.filter((e) => e.status === "connected").length;

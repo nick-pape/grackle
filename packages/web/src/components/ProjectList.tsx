@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState, type JSX } from "react";
 import { useGrackle } from "../context/GrackleContext.js";
 import type { ViewMode } from "../App.js";
 
@@ -16,7 +16,19 @@ const TASK_STATUS_STYLES: Record<string, { color: string; icon: string }> = {
   failed: { color: "#e94560", icon: "✗" },
 };
 
-export function ProjectList({ viewMode, setViewMode }: Props) {
+const smallBtnStyle: React.CSSProperties = {
+  background: "#4ecca3",
+  border: "none",
+  color: "#1a1a2e",
+  padding: "3px 8px",
+  borderRadius: "3px",
+  cursor: "pointer",
+  fontFamily: "monospace",
+  fontSize: "11px",
+  fontWeight: "bold",
+};
+
+export function ProjectList({ viewMode, setViewMode }: Props): JSX.Element {
   const { projects, tasks, loadTasks, createProject } = useGrackle();
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -25,7 +37,7 @@ export function ProjectList({ viewMode, setViewMode }: Props) {
   const selectedProjectId = viewMode.kind === "project" ? viewMode.projectId : null;
   const selectedTaskId = viewMode.kind === "task" ? viewMode.taskId : null;
 
-  const toggleExpand = (projectId: string) => {
+  const toggleExpand = (projectId: string): void => {
     setExpanded((prev) => {
       const next = new Set(prev);
       if (next.has(projectId)) {
@@ -46,7 +58,7 @@ export function ProjectList({ viewMode, setViewMode }: Props) {
     }
   }, [selectedProjectId]);
 
-  const handleCreateProject = () => {
+  const handleCreateProject = (): void => {
     if (!newProjectName.trim()) return;
     createProject(newProjectName.trim());
     setNewProjectName("");
@@ -203,15 +215,3 @@ export function ProjectList({ viewMode, setViewMode }: Props) {
     </div>
   );
 }
-
-const smallBtnStyle: React.CSSProperties = {
-  background: "#4ecca3",
-  border: "none",
-  color: "#1a1a2e",
-  padding: "3px 8px",
-  borderRadius: "3px",
-  cursor: "pointer",
-  fontFamily: "monospace",
-  fontSize: "11px",
-  fontWeight: "bold",
-};

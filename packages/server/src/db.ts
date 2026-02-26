@@ -8,8 +8,8 @@ import * as schema from "./schema.js";
 
 mkdirSync(grackleHome, { recursive: true });
 
-const dbPath = join(grackleHome, DB_FILENAME);
-const sqlite = new Database(dbPath);
+const dbPath: string = join(grackleHome, DB_FILENAME);
+const sqlite: InstanceType<typeof Database> = new Database(dbPath);
 
 // Enable WAL mode for better concurrent read performance
 sqlite.pragma("journal_mode = WAL");
@@ -144,6 +144,7 @@ export function initDatabase(): void {
 initDatabase();
 
 /** Drizzle ORM instance wrapping the SQLite database. */
-const db = drizzle(sqlite, { schema });
+import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
+const db: BetterSQLite3Database<typeof schema> & { $client: InstanceType<typeof Database> } = drizzle(sqlite, { schema });
 
 export default db;

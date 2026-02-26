@@ -1,3 +1,4 @@
+import type { JSX } from "react";
 import { useGrackle } from "../context/GrackleContext.js";
 import type { ViewMode } from "../App.js";
 import type { Environment, Session } from "../hooks/useGrackleSocket.js";
@@ -17,7 +18,7 @@ const STATUS_COLORS: Record<string, string> = {
 
 // --- Subcomponents ---
 
-function SessionStatusDot({ status }: { status: string }) {
+function SessionStatusDot({ status }: { status: string }): JSX.Element {
   const color =
     status === "running" ? "#4ecca3" :
     status === "waiting_input" ? "#f0c040" :
@@ -31,7 +32,7 @@ function SessionStatusDot({ status }: { status: string }) {
 interface EnvironmentCardProps {
   env: Environment;
   envSessions: Session[];
-  selectedSessionId: string | null;
+  selectedSessionId: string | undefined;
   isNewChatTarget: boolean;
   setViewMode: (mode: ViewMode) => void;
 }
@@ -42,7 +43,7 @@ function EnvironmentCard({
   selectedSessionId,
   isNewChatTarget,
   setViewMode,
-}: EnvironmentCardProps) {
+}: EnvironmentCardProps): JSX.Element {
   const statusColor = STATUS_COLORS[env.status] || "#666";
   const isConnected = env.status === "connected";
 
@@ -109,11 +110,11 @@ function EnvironmentCard({
 
 // --- Main component ---
 
-export function EnvironmentList({ viewMode, setViewMode }: Props) {
+export function EnvironmentList({ viewMode, setViewMode }: Props): JSX.Element {
   const { environments, sessions } = useGrackle();
 
-  const selectedSessionId = viewMode.kind === "session" ? viewMode.sessionId : null;
-  const newChatEnvId = viewMode.kind === "new_chat" ? viewMode.environmentId : null;
+  const selectedSessionId = viewMode.kind === "session" ? viewMode.sessionId : undefined;
+  const newChatEnvId = viewMode.kind === "new_chat" ? viewMode.environmentId : undefined;
 
   return (
     <div

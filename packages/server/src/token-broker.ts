@@ -1,6 +1,5 @@
 import db from "./db.js";
 import { tokens, type TokenRow } from "./schema.js";
-import { eq } from "drizzle-orm";
 import { encrypt, decrypt } from "./crypto.js";
 import { create } from "@bufbuild/protobuf";
 import { powerline } from "@grackle/common";

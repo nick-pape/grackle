@@ -7,7 +7,14 @@
         { "sourcePath": "src/gen" }
       ],
       "tasksByName": {
+        "buf-lint": {
+          "taskPlugin": {
+            "pluginPackage": "@grackle/heft-buf-plugin",
+            "pluginName": "buf-lint-plugin"
+          }
+        },
         "buf-generate": {
+          "taskDependencies": ["buf-lint"],
           "taskPlugin": {
             "pluginPackage": "@grackle/heft-buf-plugin",
             "pluginName": "buf-generate-plugin"
@@ -17,6 +24,12 @@
           "taskDependencies": ["buf-generate"],
           "taskPlugin": {
             "pluginPackage": "@rushstack/heft-typescript-plugin"
+          }
+        },
+        "lint": {
+          "taskDependencies": ["typescript"],
+          "taskPlugin": {
+            "pluginPackage": "@rushstack/heft-lint-plugin"
           }
         }
       }
