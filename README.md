@@ -71,7 +71,7 @@ Every agent produces real, reviewable output: git diffs, markdown reports, PR co
 
 Agents don't just run in parallel — they share knowledge. One agent's architectural insight becomes another agent's context through findings and the knowledge graph ⭐[#13](https://github.com/nick-pape/grackle/issues/13). Agent personas ⭐[#11](https://github.com/nick-pape/grackle/issues/11) with tool allowlists keep specialists focused. The coordination primitives are the ones engineers already use: git, diffs, code review.
 
-## 🏗️ Architecture
+## 🏗️ Example Topology
 
 ```mermaid
 graph TD
