@@ -100,6 +100,8 @@ graph LR
     end
 
     Docker --- PL
+    SSH -.- PL
+    CS -.- PL
     style More fill:#333,stroke:#666,stroke-dasharray: 5 5
     style SSH fill:#333,stroke:#666,stroke-dasharray: 5 5
     style CS fill:#333,stroke:#666,stroke-dasharray: 5 5
@@ -160,4 +162,4 @@ MIT
 
 ---
 
-_⭐ = **Planned post v1.0** — tracked on the [roadmap](https://github.com/nick-pape/grackle/milestone/1)._
+_🔜 = **Planned for [v1.0.0](https://github.com/nick-pape/grackle/milestone/1)** · ⭐ = **Post v1.0**_
