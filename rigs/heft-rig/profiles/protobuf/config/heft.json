@@ -9,11 +9,8 @@
       "tasksByName": {
         "buf-generate": {
           "taskPlugin": {
-            "pluginPackage": "@rushstack/heft",
-            "pluginName": "run-script-plugin",
-            "options": {
-              "scriptPath": "config/heft-scripts/buf-generate.cjs"
-            }
+            "pluginPackage": "@grackle/heft-buf-plugin",
+            "pluginName": "buf-generate-plugin"
           }
         },
         "typescript": {

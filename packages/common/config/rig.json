@@ -1,3 +1,4 @@
 {
-  "rigPackageName": "@grackle/heft-rig"
+  "rigPackageName": "@grackle/heft-rig",
+  "rigProfile": "protobuf"
 }

@@ -11,6 +11,10 @@
       "projectFolder": "rigs/heft-rig"
     },
     {
+      "packageName": "@grackle/heft-buf-plugin",
+      "projectFolder": "rigs/heft-buf-plugin"
+    },
+    {
       "packageName": "@grackle/heft-vite-plugin",
       "projectFolder": "rigs/heft-vite-plugin"
     },

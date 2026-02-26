@@ -36,7 +36,10 @@ importers:
         version: file:projects/cli.tgz(@bufbuild/protobuf@2.11.0)
       '@rush-temp/common':
         specifier: file:./projects/common.tgz
-        version: file:projects/common.tgz(@rushstack/heft@1.2.4(@types/node@22.19.11))(@types/node@22.19.11)
+        version: file:projects/common.tgz
+      '@rush-temp/heft-buf-plugin':
+        specifier: file:./projects/heft-buf-plugin.tgz
+        version: file:projects/heft-buf-plugin.tgz(@types/node@22.19.11)
       '@rush-temp/heft-rig':
         specifier: file:./projects/heft-rig.tgz
         version: file:projects/heft-rig.tgz(@types/node@22.19.11)
@@ -715,11 +718,15 @@ packages:
     version: 0.0.0
 
   '@rush-temp/common@file:projects/common.tgz':
-    resolution: {integrity: sha512-2ysJkfPcpt37yRZ1hvlqq3SAv3pxGh7skPZh/ZK2Z5Z8moTaQ/jTNGx/H/Nv5p+Bfhn7WEEAksdVQMAZXpjlAw==, tarball: file:projects/common.tgz}
+    resolution: {integrity: sha512-Bddu51ZRX7R/Qh3mRMQ5Ov5IgnZ4xt5nIJS2hVb7XYwiqMldv64WtqNu1Kme56K1VCNi2qMQqNJ+6KLS8yAGdA==, tarball: file:projects/common.tgz}
+    version: 0.0.0
+
+  '@rush-temp/heft-buf-plugin@file:projects/heft-buf-plugin.tgz':
+    resolution: {integrity: sha512-4cB2J3gfydXExZDzCG6n90IbPVOin5Vdiaet0T+/HLTujOs5S6XHWLzOjUK0RwllVmDMZ57xtfjGTgv9F3s11A==, tarball: file:projects/heft-buf-plugin.tgz}
     version: 0.0.0
 
   '@rush-temp/heft-rig@file:projects/heft-rig.tgz':
-    resolution: {integrity: sha512-+6A/npg+uHv8E08f0NjvFzB4CvaYhRJRoFyDO+ZTRclkh3H7l2xVQbTrvP+jhOGcXS9D1Pa2B8PEXWBlpjpcNA==, tarball: file:projects/heft-rig.tgz}
+    resolution: {integrity: sha512-6zwpIZnPwZVlfE5e6awJDaxjEhN8HPKDL1hJmEuxQWbLJe1wqgRC+0VMQkKA9FyZIF77RskVpYp1zkcrK7or5w==, tarball: file:projects/heft-rig.tgz}
     version: 0.0.0
 
   '@rush-temp/heft-vite-plugin@file:projects/heft-vite-plugin.tgz':
@@ -2084,17 +2091,22 @@ snapshots:
     transitivePeerDependencies:
       - '@bufbuild/protobuf'
 
-  '@rush-temp/common@file:projects/common.tgz(@rushstack/heft@1.2.4(@types/node@22.19.11))(@types/node@22.19.11)':
+  '@rush-temp/common@file:projects/common.tgz':
     dependencies:
       '@bufbuild/buf': 1.65.0
       '@bufbuild/protobuf': 2.11.0
       '@bufbuild/protoc-gen-es': 2.11.0(@bufbuild/protobuf@2.11.0)
       '@connectrpc/connect': 2.1.1(@bufbuild/protobuf@2.11.0)
-      '@rushstack/heft-typescript-plugin': 1.2.4(@rushstack/heft@1.2.4(@types/node@22.19.11))(@types/node@22.19.11)
     transitivePeerDependencies:
-      - '@rushstack/heft'
-      - '@types/node'
       - supports-color
+
+  '@rush-temp/heft-buf-plugin@file:projects/heft-buf-plugin.tgz(@types/node@22.19.11)':
+    dependencies:
+      '@bufbuild/buf': 1.65.0
+      '@rushstack/heft': 1.2.4(@types/node@22.19.11)
+      typescript: 5.7.3
+    transitivePeerDependencies:
+      - '@types/node'
 
   '@rush-temp/heft-rig@file:projects/heft-rig.tgz(@types/node@22.19.11)':
     dependencies:
