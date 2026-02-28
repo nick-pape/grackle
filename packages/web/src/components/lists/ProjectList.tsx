@@ -49,7 +49,7 @@ export function ProjectList({ viewMode, setViewMode }: Props): JSX.Element {
       setExpanded((prev) => new Set(prev).add(selectedProjectId));
       loadTasks(selectedProjectId);
     }
-  }, [selectedProjectId]);
+  }, [selectedProjectId, expanded, loadTasks]);
 
   const handleCreateProject = (): void => {
     if (!newProjectName.trim()) {
