@@ -5,6 +5,8 @@ import { FindingsPanel } from "./FindingsPanel.js";
 import { useEffect, useRef, useState, type JSX } from "react";
 import type { ViewMode } from "../App.js";
 import type { Session, SessionEvent } from "../hooks/useGrackleSocket.js";
+import { AnimatePresence, motion } from "motion/react";
+import styles from "./SessionPanel.module.scss";
 
 /** Props for the SessionPanel component. */
 interface Props {
@@ -25,22 +27,12 @@ interface SessionHeaderProps {
 /** Displays session metadata and a kill button for active sessions. */
 function SessionHeader({ sessionId, session, isActive, onKill }: SessionHeaderProps): JSX.Element {
   return (
-    <div
-      style={{
-        padding: "6px 12px",
-        borderBottom: "1px solid #0f3460",
-        fontSize: "12px",
-        color: "#a0a0a0",
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-      }}
-    >
+    <div className={styles.header}>
       <span>
         Session: {sessionId.slice(0, 8)}
         {session && ` | ${session.runtime} | ${session.status}`}
       </span>
-      <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+      <span className={styles.headerInfo}>
         {session && (
           <span>{session.prompt.length > 60 ? session.prompt.slice(0, 60) + "..." : session.prompt}</span>
         )}
@@ -48,18 +40,9 @@ function SessionHeader({ sessionId, session, isActive, onKill }: SessionHeaderPr
           <button
             onClick={() => onKill(sessionId)}
             title="Stop session"
-            style={{
-              background: "none",
-              border: "1px solid #e94560",
-              color: "#e94560",
-              borderRadius: "3px",
-              cursor: "pointer",
-              fontSize: "11px",
-              padding: "1px 6px",
-              fontFamily: "monospace",
-            }}
+            className={styles.killButton}
           >
-            ×
+            {"\u00D7"}
           </button>
         )}
       </span>
@@ -83,16 +66,9 @@ function EventList({ sessionEvents, session, scrollRef }: EventListProps): JSX.E
     : "Waiting for events...";
 
   return (
-    <div
-      ref={scrollRef}
-      style={{
-        flex: 1,
-        overflow: "auto",
-        padding: "12px",
-      }}
-    >
+    <div ref={scrollRef} className={styles.eventScroll}>
       {sessionEvents.length === 0 && (
-        <div style={{ color: isTerminal ? "#e94560" : "#666" }}>{emptyMessage}</div>
+        <div className={isTerminal ? styles.errorMessage : styles.waitingMessage}>{emptyMessage}</div>
       )}
       {sessionEvents.map((event, i) => (
         <EventRenderer key={i} event={event} />
@@ -180,7 +156,7 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
   // --- empty mode ---
   if (viewMode.kind === "empty") {
     return (
-      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "#666" }}>
+      <div className={styles.emptyState}>
         Select a session, project, or task to get started
       </div>
     );
@@ -189,7 +165,7 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
   // --- new_chat mode ---
   if (viewMode.kind === "new_chat") {
     return (
-      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "#666" }}>
+      <div className={styles.emptyState}>
         Enter a prompt below to start a new session
       </div>
     );
@@ -201,11 +177,11 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
     const done = projectTasks.filter((t) => t.status === "done").length;
     const total = projectTasks.length;
     return (
-      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "#666", flexDirection: "column", gap: "8px" }}>
-        <span style={{ fontSize: "16px" }}>
+      <div className={styles.projectSummary}>
+        <span className={styles.projectSummaryTitle}>
           {total > 0 ? `${done}/${total} tasks complete` : "No tasks yet"}
         </span>
-        <span style={{ fontSize: "12px" }}>Select a task or click + to create one</span>
+        <span className={styles.projectSummarySubtitle}>Select a task or click + to create one</span>
       </div>
     );
   }
@@ -213,7 +189,7 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
   // --- new_task mode ---
   if (viewMode.kind === "new_task") {
     return (
-      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "#666" }}>
+      <div className={styles.emptyState}>
         Fill in the task details below
       </div>
     );
@@ -224,19 +200,9 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
     const isActive = session?.status === "running" || session?.status === "waiting_input";
 
     return (
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+      <div className={styles.panelContainer}>
         {/* Task header */}
-        <div
-          style={{
-            padding: "6px 12px",
-            borderBottom: "1px solid #0f3460",
-            fontSize: "12px",
-            color: "#a0a0a0",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
+        <div className={styles.header}>
           <span>
             Task: {task?.title || viewMode.taskId}
             {task && ` | ${task.status}`}
@@ -246,67 +212,91 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
             <button
               onClick={() => sessionId && kill(sessionId)}
               title="Stop session"
-              style={{
-                background: "none",
-                border: "1px solid #e94560",
-                color: "#e94560",
-                borderRadius: "3px",
-                cursor: "pointer",
-                fontSize: "11px",
-                padding: "1px 6px",
-                fontFamily: "monospace",
-              }}
+              className={styles.killButton}
             >
-              ×
+              {"\u00D7"}
             </button>
           )}
         </div>
 
         {/* Tab bar */}
-        <div style={{ display: "flex", borderBottom: "1px solid #0f3460" }}>
-          <TaskTabButton active={activeTaskTab === "stream"} onClick={() => setActiveTaskTab("stream")}>
+        <div className={styles.tabBar}>
+          <button
+            className={`${styles.tab} ${activeTaskTab === "stream" ? styles.active : ""}`}
+            onClick={() => setActiveTaskTab("stream")}
+          >
             Stream
-          </TaskTabButton>
-          <TaskTabButton active={activeTaskTab === "diff"} onClick={() => setActiveTaskTab("diff")}>
+          </button>
+          <button
+            className={`${styles.tab} ${activeTaskTab === "diff" ? styles.active : ""}`}
+            onClick={() => setActiveTaskTab("diff")}
+          >
             Diff
-          </TaskTabButton>
-          <TaskTabButton active={activeTaskTab === "findings"} onClick={() => setActiveTaskTab("findings")}>
+          </button>
+          <button
+            className={`${styles.tab} ${activeTaskTab === "findings" ? styles.active : ""}`}
+            onClick={() => setActiveTaskTab("findings")}
+          >
             Findings
-          </TaskTabButton>
+          </button>
         </div>
 
-        {/* Tab content */}
-        {activeTaskTab === "stream" && (
-          <div ref={scrollRef} style={{ flex: 1, overflow: "auto", padding: "12px" }}>
-            {!sessionId && (
-              <div style={{ color: "#666" }}>Task has not been started yet</div>
-            )}
-            {sessionId && sessionEvents.length === 0 && (
-              <div style={{ color: "#666" }}>Waiting for events...</div>
-            )}
-            {sessionEvents.map((event, i) => (
-              <EventRenderer key={i} event={event} />
-            ))}
-          </div>
-        )}
+        {/* Tab content with animation */}
+        <AnimatePresence mode="wait">
+          {activeTaskTab === "stream" && (
+            <motion.div
+              key="stream"
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.15 }}
+              ref={scrollRef}
+              className={styles.eventScroll}
+            >
+              {!sessionId && (
+                <div className={styles.waitingMessage}>Task has not been started yet</div>
+              )}
+              {sessionId && sessionEvents.length === 0 && (
+                <div className={styles.waitingMessage}>Waiting for events...</div>
+              )}
+              {sessionEvents.map((event, i) => (
+                <EventRenderer key={i} event={event} />
+              ))}
+            </motion.div>
+          )}
 
-        {activeTaskTab === "diff" && (
-          <div style={{ flex: 1, overflow: "auto" }}>
-            <DiffViewer diff={taskDiff} />
-          </div>
-        )}
+          {activeTaskTab === "diff" && (
+            <motion.div
+              key="diff"
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.15 }}
+              className={styles.tabContent}
+            >
+              <DiffViewer diff={taskDiff} />
+            </motion.div>
+          )}
 
-        {activeTaskTab === "findings" && (
-          <div style={{ flex: 1, overflow: "auto" }}>
-            {projectId ? (
-              <FindingsPanel projectId={projectId} />
-            ) : (
-              <div style={{ padding: "24px", color: "#666", textAlign: "center" }}>
-                No project context
-              </div>
-            )}
-          </div>
-        )}
+          {activeTaskTab === "findings" && (
+            <motion.div
+              key="findings"
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.15 }}
+              className={styles.tabContent}
+            >
+              {projectId ? (
+                <FindingsPanel projectId={projectId} />
+              ) : (
+                <div className={styles.noContext}>
+                  No project context
+                </div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     );
   }
@@ -315,7 +305,7 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
   const isActive = session?.status === "running" || session?.status === "waiting_input";
 
   return (
-    <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+    <div className={styles.panelContainer}>
       <SessionHeader
         sessionId={sessionId!}
         session={session}
@@ -328,26 +318,5 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
         scrollRef={scrollRef}
       />
     </div>
-  );
-}
-
-/** Tab button for switching between stream, diff, and findings views within a task. */
-function TaskTabButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }): JSX.Element {
-  return (
-    <button
-      onClick={onClick}
-      style={{
-        padding: "4px 12px",
-        background: active ? "#0f3460" : "transparent",
-        border: "none",
-        color: active ? "#4ecca3" : "#888",
-        cursor: "pointer",
-        fontFamily: "monospace",
-        fontSize: "11px",
-        borderBottom: active ? "2px solid #4ecca3" : "2px solid transparent",
-      }}
-    >
-      {children}
-    </button>
   );
 }

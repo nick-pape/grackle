@@ -1,0 +1,135 @@
+@use '../styles/mixins' as *;
+
+.container {
+  padding: var(--space-sm) 0;
+}
+
+.header {
+  @include section-label;
+  padding: var(--space-xs) var(--space-md);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.addButton {
+  @include btn-ghost;
+  font-size: var(--font-size-sm);
+  line-height: 1;
+  padding: 1px 5px;
+}
+
+.createForm {
+  padding: var(--space-xs) var(--space-md);
+  display: flex;
+  gap: var(--space-xs);
+}
+
+.createInput {
+  @include input-field;
+  flex: 1;
+  font-size: 11px;
+  padding: 3px var(--space-sm);
+}
+
+.createButton {
+  @include btn-primary;
+  padding: 3px var(--space-sm);
+  font-size: 11px;
+}
+
+.emptyState {
+  padding: var(--space-md);
+  color: var(--text-tertiary);
+  font-size: var(--font-size-sm);
+}
+
+.projectRow {
+  @include hover-lift;
+  padding: var(--space-sm) var(--space-md);
+  font-size: var(--font-size-md);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  margin: 0 var(--space-xs);
+
+  &.selected {
+    background: var(--bg-overlay);
+    border: 1px solid var(--border-primary);
+  }
+}
+
+.expandArrow {
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+  width: 12px;
+  display: inline-block;
+  transition: transform var(--transition-fast);
+
+  &.expanded {
+    transform: rotate(90deg);
+  }
+}
+
+.projectName {
+  flex: 1;
+}
+
+.taskCount {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+.newTaskButton {
+  @include btn-ghost;
+  font-size: var(--font-size-xs);
+  line-height: 1;
+  padding: 1px var(--space-xs);
+}
+
+.taskRow {
+  @include hover-lift;
+  padding: 3px var(--space-md) 3px 34px;
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  border-radius: var(--radius-sm);
+  margin: 0 var(--space-xs);
+  animation: fadeIn 200ms ease forwards;
+
+  &.selected {
+    background: var(--bg-overlay);
+    color: var(--text-primary);
+  }
+}
+
+.taskStatusIcon {
+  font-size: 11px;
+}
+
+.taskTitle {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dependencyBadge {
+  font-size: 9px;
+  color: var(--text-tertiary);
+  background: var(--bg-elevated);
+  border-radius: var(--radius-full);
+  padding: 1px var(--space-xs);
+}
+
+.emptyTasks {
+  padding: 3px var(--space-md) 3px 34px;
+  font-size: 11px;
+  color: var(--text-tertiary);
+}

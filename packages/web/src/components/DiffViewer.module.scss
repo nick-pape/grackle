@@ -1,0 +1,102 @@
+@use '../styles/mixins' as *;
+
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.emptyState {
+  padding: var(--space-xl);
+  color: var(--text-tertiary);
+  text-align: center;
+}
+
+.errorState {
+  padding: var(--space-xl);
+  color: var(--accent-red);
+  text-align: center;
+}
+
+.statsBar {
+  @include glass-panel;
+  padding: var(--space-sm) var(--space-md);
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: var(--font-size-sm);
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  color: var(--text-secondary);
+}
+
+.branchName {
+  color: var(--accent-green);
+  font-weight: var(--font-weight-bold);
+}
+
+.additions {
+  color: var(--accent-green);
+}
+
+.deletions {
+  color: var(--accent-red);
+}
+
+.fileList {
+  padding: var(--space-xs) var(--space-md);
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 11px;
+  color: var(--text-secondary);
+  display: flex;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+
+.fileName {
+  color: var(--accent-blue);
+  @include hover-lift;
+  padding: 1px var(--space-xs);
+  border-radius: var(--radius-sm);
+  cursor: default;
+}
+
+.diffContent {
+  flex: 1;
+  overflow: auto;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height);
+}
+
+.diffLine {
+  padding: 0 var(--space-md);
+  white-space: pre;
+  min-height: 18px;
+  transition: background var(--transition-fast);
+
+  &:hover {
+    filter: brightness(1.3);
+  }
+
+  &.added {
+    background: var(--accent-green-dim);
+    color: var(--accent-green);
+  }
+
+  &.removed {
+    background: var(--accent-red-dim);
+    color: var(--accent-red);
+  }
+
+  &.hunk {
+    color: var(--accent-blue);
+  }
+
+  &.meta {
+    color: var(--text-tertiary);
+  }
+
+  &.context {
+    color: var(--text-secondary);
+  }
+}

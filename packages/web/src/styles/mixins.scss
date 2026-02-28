@@ -1,0 +1,138 @@
+// Glass panel effect
+@mixin glass-panel {
+  background: var(--bg-surface);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+}
+
+// Elevated glass card
+@mixin glass-card {
+  background: var(--bg-elevated);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+}
+
+// Interactive hover lift
+@mixin hover-lift {
+  transition: background var(--transition-fast),
+              box-shadow var(--transition-fast),
+              border-color var(--transition-fast);
+
+  &:hover {
+    background: var(--bg-overlay);
+    box-shadow: var(--shadow-sm);
+  }
+}
+
+// Primary button
+@mixin btn-primary {
+  background: var(--accent-green);
+  border: none;
+  color: var(--bg-base);
+  padding: var(--space-sm) var(--space-lg);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  transition: background var(--transition-fast),
+              box-shadow var(--transition-fast),
+              transform var(--transition-fast);
+
+  &:hover {
+    box-shadow: var(--shadow-glow-green);
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+
+  &:disabled {
+    background: var(--text-disabled);
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
+  }
+}
+
+// Danger button
+@mixin btn-danger {
+  @include btn-primary;
+  background: var(--accent-red);
+
+  &:hover {
+    box-shadow: var(--shadow-glow-red);
+  }
+}
+
+// Ghost/outline button (for + and x buttons)
+@mixin btn-ghost($color: var(--accent-green)) {
+  background: none;
+  border: 1px solid $color;
+  color: $color;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  transition: background var(--transition-fast),
+              border-color var(--transition-fast);
+
+  &:hover {
+    background: rgba(78, 204, 163, 0.08);
+  }
+}
+
+// Text input
+@mixin input-field {
+  background: var(--bg-input);
+  border: 1px solid var(--border-input);
+  color: var(--text-primary);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-md);
+  outline: none;
+  transition: border-color var(--transition-fast),
+              box-shadow var(--transition-fast);
+
+  &:focus {
+    border-color: var(--accent-green);
+    box-shadow: 0 0 0 3px rgba(78, 204, 163, 0.1);
+  }
+
+  &::placeholder {
+    color: var(--text-tertiary);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}
+
+// Select dropdown
+@mixin select-field {
+  @include input-field;
+  font-size: var(--font-size-sm);
+  padding: var(--space-sm);
+}
+
+// Section label (uppercase small text)
+@mixin section-label {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  font-weight: var(--font-weight-medium);
+}
+
+// Staggered fade-in for list items (CSS only)
+@mixin stagger-children($count: 20, $delay: 30ms) {
+  @for $i from 1 through $count {
+    &:nth-child(#{$i}) {
+      animation-delay: #{$i * $delay};
+    }
+  }
+}

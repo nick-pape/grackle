@@ -1,15 +1,35 @@
 import type { JSX } from "react";
 import type { TaskDiffData } from "../hooks/useGrackleSocket.js";
+import styles from "./DiffViewer.module.scss";
 
+/** Props for the DiffViewer component. */
 interface Props {
   // eslint-disable-next-line @rushstack/no-new-null
   diff: TaskDiffData | null;
 }
 
+/** Classifies a diff line for styling purposes. */
+function getDiffLineClass(line: string): string {
+  if (line.startsWith("+") && !line.startsWith("+++")) {
+    return styles.added;
+  }
+  if (line.startsWith("-") && !line.startsWith("---")) {
+    return styles.removed;
+  }
+  if (line.startsWith("@@")) {
+    return styles.hunk;
+  }
+  if (line.startsWith("diff ") || line.startsWith("index ")) {
+    return styles.meta;
+  }
+  return styles.context;
+}
+
+/** Displays a unified diff with stats bar, file list, and colored line-by-line output. */
 export function DiffViewer({ diff }: Props): JSX.Element {
   if (!diff) {
     return (
-      <div style={{ padding: "24px", color: "#666", textAlign: "center" }}>
+      <div className={styles.emptyState}>
         Loading diff...
       </div>
     );
@@ -17,7 +37,7 @@ export function DiffViewer({ diff }: Props): JSX.Element {
 
   if (diff.error) {
     return (
-      <div style={{ padding: "24px", color: "#e94560", textAlign: "center" }}>
+      <div className={styles.errorState}>
         {diff.error}
       </div>
     );
@@ -25,7 +45,7 @@ export function DiffViewer({ diff }: Props): JSX.Element {
 
   if (!diff.diff || diff.diff.trim() === "") {
     return (
-      <div style={{ padding: "24px", color: "#666", textAlign: "center" }}>
+      <div className={styles.emptyState}>
         No changes on branch {diff.branch}
       </div>
     );
@@ -34,85 +54,34 @@ export function DiffViewer({ diff }: Props): JSX.Element {
   const lines = diff.diff.split("\n");
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+    <div className={styles.container}>
       {/* Stats bar */}
-      <div
-        style={{
-          padding: "8px 12px",
-          borderBottom: "1px solid #0f3460",
-          fontSize: "12px",
-          display: "flex",
-          alignItems: "center",
-          gap: "12px",
-          color: "#a0a0a0",
-        }}
-      >
-        <span>Branch: <b style={{ color: "#4ecca3" }}>{diff.branch}</b></span>
+      <div className={styles.statsBar}>
+        <span>Branch: <b className={styles.branchName}>{diff.branch}</b></span>
         <span>Files: <b>{diff.changedFiles?.length || 0}</b></span>
-        <span style={{ color: "#4ecca3" }}>+{diff.additions || 0}</span>
-        <span style={{ color: "#e94560" }}>-{diff.deletions || 0}</span>
+        <span className={styles.additions}>+{diff.additions || 0}</span>
+        <span className={styles.deletions}>-{diff.deletions || 0}</span>
       </div>
 
       {/* File list */}
       {diff.changedFiles && diff.changedFiles.length > 0 && (
-        <div
-          style={{
-            padding: "4px 12px",
-            borderBottom: "1px solid #0f3460",
-            fontSize: "11px",
-            color: "#888",
-            display: "flex",
-            gap: "8px",
-            flexWrap: "wrap",
-          }}
-        >
+        <div className={styles.fileList}>
           {diff.changedFiles.map((f) => (
-            <span key={f} style={{ color: "#70a1ff" }}>{f}</span>
+            <span key={f} className={styles.fileName}>{f}</span>
           ))}
         </div>
       )}
 
       {/* Diff content */}
-      <div
-        style={{
-          flex: 1,
-          overflow: "auto",
-          fontFamily: "monospace",
-          fontSize: "12px",
-          lineHeight: "1.5",
-        }}
-      >
-        {lines.map((line, i) => {
-          let bg = "transparent";
-          let color = "#a0a0a0";
-
-          if (line.startsWith("+") && !line.startsWith("+++")) {
-            bg = "rgba(78, 204, 163, 0.1)";
-            color = "#4ecca3";
-          } else if (line.startsWith("-") && !line.startsWith("---")) {
-            bg = "rgba(233, 69, 96, 0.1)";
-            color = "#e94560";
-          } else if (line.startsWith("@@")) {
-            color = "#70a1ff";
-          } else if (line.startsWith("diff ") || line.startsWith("index ")) {
-            color = "#888";
-          }
-
-          return (
-            <div
-              key={i}
-              style={{
-                padding: "0 12px",
-                background: bg,
-                color,
-                whiteSpace: "pre",
-                minHeight: "18px",
-              }}
-            >
-              {line}
-            </div>
-          );
-        })}
+      <div className={styles.diffContent}>
+        {lines.map((line, i) => (
+          <div
+            key={i}
+            className={`${styles.diffLine} ${getDiffLineClass(line)}`}
+          >
+            {line}
+          </div>
+        ))}
       </div>
     </div>
   );

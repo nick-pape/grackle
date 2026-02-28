@@ -1,0 +1,82 @@
+@use '../styles/mixins' as *;
+
+.bar {
+  @include glass-panel;
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.barColumn {
+  @include glass-panel;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.barRow {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: center;
+}
+
+.input {
+  @include input-field;
+  flex: 1;
+}
+
+.inputSmall {
+  @include input-field;
+  flex: 1;
+  font-size: 11px;
+}
+
+.select {
+  @include select-field;
+}
+
+.btnPrimary {
+  @include btn-primary;
+}
+
+.btnDanger {
+  @include btn-danger;
+}
+
+.badge {
+  background: var(--accent-green-dim);
+  color: var(--accent-green);
+  border-radius: var(--radius-full);
+  padding: 3px var(--space-md);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+}
+
+.statusText {
+  font-size: var(--font-size-md);
+  flex: 1;
+}
+
+.statusCompleted {
+  color: var(--accent-green);
+}
+
+.statusFailed {
+  color: var(--accent-red);
+}
+
+.statusBlocked {
+  color: var(--accent-yellow);
+  font-size: var(--font-size-sm);
+}
+
+.hintText {
+  color: var(--text-tertiary);
+  font-size: var(--font-size-md);
+}

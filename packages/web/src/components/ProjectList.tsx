@@ -1,33 +1,26 @@
-import React, { useEffect, useState, type JSX } from "react";
+import { useEffect, useState, type JSX } from "react";
 import { useGrackle } from "../context/GrackleContext.js";
 import type { ViewMode } from "../App.js";
+import { AnimatePresence, motion } from "motion/react";
+import styles from "./ProjectList.module.scss";
 
+/** Props for the ProjectList component. */
 interface Props {
   viewMode: ViewMode;
   setViewMode: (mode: ViewMode) => void;
 }
 
+/** Task status visual indicators using CSS custom property colors. */
 const TASK_STATUS_STYLES: Record<string, { color: string; icon: string }> = {
-  pending: { color: "#666", icon: "○" },
-  assigned: { color: "#70a1ff", icon: "◎" },
-  in_progress: { color: "#4ecca3", icon: "●" },
-  review: { color: "#f0c040", icon: "◉" },
-  done: { color: "#4ecca3", icon: "✓" },
-  failed: { color: "#e94560", icon: "✗" },
+  pending: { color: "var(--text-tertiary)", icon: "\u25CB" },
+  assigned: { color: "var(--accent-blue)", icon: "\u25CE" },
+  in_progress: { color: "var(--accent-green)", icon: "\u25CF" },
+  review: { color: "var(--accent-yellow)", icon: "\u25C9" },
+  done: { color: "var(--accent-green)", icon: "\u2713" },
+  failed: { color: "var(--accent-red)", icon: "\u2717" },
 };
 
-const smallBtnStyle: React.CSSProperties = {
-  background: "#4ecca3",
-  border: "none",
-  color: "#1a1a2e",
-  padding: "3px 8px",
-  borderRadius: "3px",
-  cursor: "pointer",
-  fontFamily: "monospace",
-  fontSize: "11px",
-  fontWeight: "bold",
-};
-
+/** Sidebar project tree with expandable task lists. */
 export function ProjectList({ viewMode, setViewMode }: Props): JSX.Element {
   const { projects, tasks, loadTasks, createProject } = useGrackle();
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -59,36 +52,28 @@ export function ProjectList({ viewMode, setViewMode }: Props): JSX.Element {
   }, [selectedProjectId]);
 
   const handleCreateProject = (): void => {
-    if (!newProjectName.trim()) return;
+    if (!newProjectName.trim()) {
+      return;
+    }
     createProject(newProjectName.trim());
     setNewProjectName("");
     setShowCreateForm(false);
   };
 
   return (
-    <div style={{ padding: "8px 0" }}>
-      <div style={{ padding: "4px 12px", fontSize: "11px", color: "#888", textTransform: "uppercase", letterSpacing: "1px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+    <div className={styles.container}>
+      <div className={styles.header}>
         <span>Projects</span>
         <button
+          className={styles.addButton}
           onClick={() => setShowCreateForm(!showCreateForm)}
-          style={{
-            background: "none",
-            border: "1px solid #4ecca3",
-            color: "#4ecca3",
-            borderRadius: "3px",
-            cursor: "pointer",
-            fontSize: "12px",
-            lineHeight: "1",
-            padding: "1px 5px",
-            fontFamily: "monospace",
-          }}
         >
           +
         </button>
       </div>
 
       {showCreateForm && (
-        <div style={{ padding: "4px 12px", display: "flex", gap: "4px" }}>
+        <div className={styles.createForm}>
           <input
             type="text"
             value={newProjectName}
@@ -96,25 +81,16 @@ export function ProjectList({ viewMode, setViewMode }: Props): JSX.Element {
             onKeyDown={(e) => e.key === "Enter" && handleCreateProject()}
             placeholder="Project name..."
             autoFocus
-            style={{
-              flex: 1,
-              background: "#0f3460",
-              border: "1px solid #333",
-              color: "#e0e0e0",
-              padding: "3px 6px",
-              borderRadius: "3px",
-              fontFamily: "monospace",
-              fontSize: "11px",
-            }}
+            className={styles.createInput}
           />
-          <button onClick={handleCreateProject} style={smallBtnStyle}>
+          <button onClick={handleCreateProject} className={styles.createButton}>
             OK
           </button>
         </div>
       )}
 
       {projects.length === 0 && !showCreateForm && (
-        <div style={{ padding: "12px", color: "#666", fontSize: "12px" }}>
+        <div className={styles.emptyState}>
           No projects. Click + to create one.
         </div>
       )}
@@ -131,21 +107,13 @@ export function ProjectList({ viewMode, setViewMode }: Props): JSX.Element {
                 toggleExpand(project.id);
                 setViewMode({ kind: "project", projectId: project.id });
               }}
-              style={{
-                padding: "6px 12px",
-                fontSize: "13px",
-                display: "flex",
-                alignItems: "center",
-                gap: "6px",
-                cursor: "pointer",
-                background: isSelected ? "#0f3460" : "transparent",
-              }}
+              className={`${styles.projectRow} ${isSelected ? styles.selected : ""}`}
             >
-              <span style={{ color: "#888", fontSize: "10px", width: "12px" }}>
-                {isExpanded ? "▾" : "▸"}
+              <span className={`${styles.expandArrow} ${isExpanded ? styles.expanded : ""}`}>
+                {"\u25B8"}
               </span>
-              <span>{project.name}</span>
-              <span style={{ marginLeft: "auto", fontSize: "11px", color: "#666" }}>
+              <span className={styles.projectName}>{project.name}</span>
+              <span className={styles.taskCount}>
                 {projectTasks.length > 0 && `${projectTasks.filter((t) => t.status === "done").length}/${projectTasks.length}`}
               </span>
               <button
@@ -154,61 +122,57 @@ export function ProjectList({ viewMode, setViewMode }: Props): JSX.Element {
                   setViewMode({ kind: "new_task", projectId: project.id });
                 }}
                 title="New task"
-                style={{
-                  background: "none",
-                  border: "1px solid #4ecca3",
-                  color: "#4ecca3",
-                  borderRadius: "3px",
-                  cursor: "pointer",
-                  fontSize: "10px",
-                  lineHeight: "1",
-                  padding: "1px 4px",
-                  fontFamily: "monospace",
-                }}
+                className={styles.newTaskButton}
               >
                 +
               </button>
             </div>
 
-            {isExpanded && projectTasks.map((task) => {
-              const statusStyle = TASK_STATUS_STYLES[task.status] || TASK_STATUS_STYLES.pending;
-              const isTaskSelected = selectedTaskId === task.id;
-
-              return (
-                <div
-                  key={task.id}
-                  onClick={() => setViewMode({ kind: "task", taskId: task.id })}
-                  style={{
-                    padding: "3px 12px 3px 34px",
-                    fontSize: "12px",
-                    cursor: "pointer",
-                    background: isTaskSelected ? "#0f3460" : "transparent",
-                    color: isTaskSelected ? "#e0e0e0" : "#a0a0a0",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "6px",
-                  }}
+            <AnimatePresence>
+              {isExpanded && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2, ease: "easeInOut" }}
+                  style={{ overflow: "hidden" }}
                 >
-                  <span style={{ color: statusStyle.color, fontSize: "11px" }}>
-                    {statusStyle.icon}
-                  </span>
-                  <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {task.title}
-                  </span>
-                  {task.dependsOn.length > 0 && (
-                    <span style={{ fontSize: "9px", color: "#666" }} title={`Depends on: ${task.dependsOn.join(", ")}`}>
-                      dep
-                    </span>
-                  )}
-                </div>
-              );
-            })}
+                  {projectTasks.map((task, index) => {
+                    const statusStyle = TASK_STATUS_STYLES[task.status] || TASK_STATUS_STYLES.pending;
+                    const isTaskSelected = selectedTaskId === task.id;
 
-            {isExpanded && projectTasks.length === 0 && (
-              <div style={{ padding: "3px 12px 3px 34px", fontSize: "11px", color: "#555" }}>
-                No tasks yet
-              </div>
-            )}
+                    return (
+                      <motion.div
+                        key={task.id}
+                        initial={{ opacity: 0, y: 4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.03, duration: 0.2 }}
+                        onClick={() => setViewMode({ kind: "task", taskId: task.id })}
+                        className={`${styles.taskRow} ${isTaskSelected ? styles.selected : ""}`}
+                      >
+                        <span className={styles.taskStatusIcon} style={{ color: statusStyle.color }}>
+                          {statusStyle.icon}
+                        </span>
+                        <span className={styles.taskTitle}>
+                          {task.title}
+                        </span>
+                        {task.dependsOn.length > 0 && (
+                          <span className={styles.dependencyBadge} title={`Depends on: ${task.dependsOn.join(", ")}`}>
+                            dep
+                          </span>
+                        )}
+                      </motion.div>
+                    );
+                  })}
+
+                  {projectTasks.length === 0 && (
+                    <div className={styles.emptyTasks}>
+                      No tasks yet
+                    </div>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         );
       })}

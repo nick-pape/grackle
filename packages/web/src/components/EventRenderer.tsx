@@ -1,28 +1,33 @@
 import type { JSX } from "react";
 import type { SessionEvent } from "../hooks/useGrackleSocket.js";
+import styles from "./EventRenderer.module.scss";
 
+/** Props for the EventRenderer component. */
 interface Props {
   event: SessionEvent;
 }
 
 // --- Individual event type renderers ---
 
+/** Renders a system-level event with timestamp. */
 function SystemEvent({ time, content }: { time: string; content: string }): JSX.Element {
   return (
-    <div style={{ color: "#888", fontStyle: "italic", fontSize: "12px", padding: "2px 0" }}>
-      <span style={{ color: "#666" }}>[{time}]</span> {content}
+    <div className={styles.systemEvent}>
+      <span className={styles.systemTimestamp}>[{time}]</span> {content}
     </div>
   );
 }
 
+/** Renders an assistant text output event. */
 function TextEvent({ content }: { content: string }): JSX.Element {
   return (
-    <div style={{ padding: "4px 0", whiteSpace: "pre-wrap", lineHeight: "1.4" }}>
+    <div className={styles.textEvent}>
       {content}
     </div>
   );
 }
 
+/** Renders a tool invocation event with parsed arguments. */
 function ToolUseEvent({ content }: { content: string }): JSX.Element {
   let display = content;
   try {
@@ -30,77 +35,52 @@ function ToolUseEvent({ content }: { content: string }): JSX.Element {
     display = `${parsed.tool}: ${JSON.stringify(parsed.args, null, 2)}`;
   } catch { /* use raw */ }
   return (
-    <div
-      style={{
-        background: "#0f3460",
-        borderLeft: "3px solid #70a1ff",
-        padding: "6px 10px",
-        margin: "4px 0",
-        fontSize: "12px",
-        fontFamily: "monospace",
-        whiteSpace: "pre-wrap",
-        borderRadius: "2px",
-      }}
-    >
-      <span style={{ color: "#70a1ff" }}>&gt;</span> {display}
+    <div className={styles.toolUseEvent}>
+      <span className={styles.toolUsePrefix}>&gt;</span> {display}
     </div>
   );
 }
 
+/** Renders a collapsible tool result event. */
 function ToolResultEvent({ content }: { content: string }): JSX.Element {
   return (
-    <details style={{ margin: "2px 0", fontSize: "12px" }}>
-      <summary style={{ cursor: "pointer", color: "#888" }}>Tool output</summary>
-      <pre
-        style={{
-          background: "#111",
-          padding: "8px",
-          margin: "4px 0",
-          overflow: "auto",
-          maxHeight: "200px",
-          fontSize: "11px",
-          borderRadius: "2px",
-        }}
-      >
+    <details className={styles.toolResultEvent}>
+      <summary className={styles.toolResultSummary}>Tool output</summary>
+      <pre className={styles.toolResultPre}>
         {content}
       </pre>
     </details>
   );
 }
 
+/** Renders an error event with red styling. */
 function ErrorEvent({ content }: { content: string }): JSX.Element {
   return (
-    <div style={{ color: "#e94560", fontWeight: "bold", padding: "4px 0" }}>
+    <div className={styles.errorEvent}>
       Error: {content}
     </div>
   );
 }
 
+/** Renders a status change event with separator lines. */
 function StatusEvent({ content }: { content: string }): JSX.Element {
   return (
-    <div
-      style={{
-        color: "#f0c040",
-        fontSize: "11px",
-        padding: "4px 0",
-        borderTop: "1px solid #333",
-        borderBottom: "1px solid #333",
-        margin: "4px 0",
-      }}
-    >
+    <div className={styles.statusEvent}>
       --- {content} ---
     </div>
   );
 }
 
+/** Renders an unrecognized event type. */
 function DefaultEvent({ content }: { content: string }): JSX.Element {
   return (
-    <div style={{ padding: "2px 0", color: "#ccc" }}>{content}</div>
+    <div className={styles.defaultEvent}>{content}</div>
   );
 }
 
 // --- Main component ---
 
+/** Renders a single session event, dispatching to the appropriate type-specific renderer. */
 export function EventRenderer({ event }: Props): JSX.Element {
   const time = new Date(event.timestamp).toLocaleTimeString();
 

@@ -1,82 +1,29 @@
-import React, { useState, useEffect, type FormEvent, type JSX } from "react";
+import { useState, useEffect, type FormEvent, type JSX } from "react";
 import { useGrackle } from "../context/GrackleContext.js";
 import type { ViewMode } from "../App.js";
+import styles from "./UnifiedBar.module.scss";
 
+/** Props for the UnifiedBar component. */
 interface Props {
   viewMode: ViewMode;
   setViewMode: (mode: ViewMode) => void;
 }
 
-// --- Shared styles ---
-
-const barStyle: React.CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  gap: "8px",
-  padding: "8px 12px",
-  borderTop: "1px solid #0f3460",
-  background: "#16213e",
-};
-
-const inputStyle: React.CSSProperties = {
-  flex: 1,
-  background: "#0f3460",
-  border: "1px solid #333",
-  color: "#e0e0e0",
-  padding: "6px 10px",
-  borderRadius: "4px",
-  outline: "none",
-  fontFamily: "monospace",
-  fontSize: "13px",
-};
-
-const selectStyle: React.CSSProperties = {
-  background: "#0f3460",
-  border: "1px solid #333",
-  color: "#e0e0e0",
-  padding: "6px 8px",
-  borderRadius: "4px",
-  fontFamily: "monospace",
-  fontSize: "12px",
-};
-
-const btnStyle: React.CSSProperties = {
-  background: "#4ecca3",
-  border: "none",
-  color: "#1a1a2e",
-  padding: "6px 16px",
-  borderRadius: "4px",
-  cursor: "pointer",
-  fontWeight: "bold",
-  fontFamily: "monospace",
-  fontSize: "13px",
-};
-
-const stopBtnStyle: React.CSSProperties = {
-  background: "#e94560",
-  border: "none",
-  color: "#fff",
-  padding: "6px 12px",
-  borderRadius: "4px",
-  cursor: "pointer",
-  fontWeight: "bold",
-  fontFamily: "monospace",
-  fontSize: "13px",
-};
-
 // --- Subcomponents ---
 
+/** Props for the RuntimeSelector subcomponent. */
 interface RuntimeSelectorProps {
   value: string;
   onChange: (value: string) => void;
 }
 
+/** Dropdown for selecting the session runtime. */
 function RuntimeSelector({ value, onChange }: RuntimeSelectorProps): JSX.Element {
   return (
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      style={selectStyle}
+      className={styles.select}
     >
       <option value="claude-code">claude-code</option>
       <option value="stub">stub</option>
@@ -86,6 +33,7 @@ function RuntimeSelector({ value, onChange }: RuntimeSelectorProps): JSX.Element
 
 // --- Main component ---
 
+/** Contextual action bar that adapts to the current view mode and session/task state. */
 export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
   const {
     spawn, sendInput, kill, sessions, tasks, environments,
@@ -130,8 +78,8 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
   // --- empty mode ---
   if (viewMode.kind === "empty") {
     return (
-      <div style={barStyle}>
-        <span style={{ color: "#666", fontSize: "13px" }}>
+      <div className={styles.bar}>
+        <span className={styles.hintText}>
           Select a session or click + to start
         </span>
       </div>
@@ -141,8 +89,8 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
   // --- project mode (no specific task) ---
   if (viewMode.kind === "project") {
     return (
-      <div style={barStyle}>
-        <span style={{ color: "#666", fontSize: "13px" }}>
+      <div className={styles.bar}>
+        <span className={styles.hintText}>
           Select a task or click + to create one
         </span>
       </div>
@@ -151,11 +99,11 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
 
   // --- new_task mode ---
   if (viewMode.kind === "new_task") {
-    const handleCreate = (andStart: boolean): void => {
-      if (!taskTitle.trim()) return;
+    const handleCreate = (_andStart: boolean): void => {
+      if (!taskTitle.trim()) {
+        return;
+      }
       createTask(viewMode.projectId, taskTitle.trim(), taskDesc, taskEnvId);
-      // TODO: if andStart, we'd need to wait for the task to be created
-      // For now, just create it
       setTaskTitle("");
       setTaskDesc("");
       setTaskEnvId("");
@@ -163,9 +111,9 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
     };
 
     return (
-      <div style={{ ...barStyle, flexDirection: "column", alignItems: "stretch", gap: "6px" }}>
-        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-          <span style={{ fontSize: "11px", color: "#4ecca3", background: "#0f3460", padding: "3px 8px", borderRadius: "3px", whiteSpace: "nowrap" }}>
+      <div className={styles.barColumn}>
+        <div className={styles.barRow}>
+          <span className={styles.badge}>
             new task
           </span>
           <input
@@ -174,12 +122,12 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
             onChange={(e) => setTaskTitle(e.target.value)}
             placeholder="Task title..."
             autoFocus
-            style={inputStyle}
+            className={styles.input}
           />
           <select
             value={taskEnvId}
             onChange={(e) => setTaskEnvId(e.target.value)}
-            style={selectStyle}
+            className={styles.select}
           >
             <option value="">Default env</option>
             {environments.map((env) => (
@@ -189,11 +137,7 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
           <button
             onClick={() => handleCreate(false)}
             disabled={!taskTitle.trim()}
-            style={{
-              ...btnStyle,
-              background: taskTitle.trim() ? "#4ecca3" : "#333",
-              cursor: taskTitle.trim() ? "pointer" : "not-allowed",
-            }}
+            className={styles.btnPrimary}
           >
             Create
           </button>
@@ -203,7 +147,7 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
           value={taskDesc}
           onChange={(e) => setTaskDesc(e.target.value)}
           placeholder="Description (optional)..."
-          style={{ ...inputStyle, fontSize: "11px" }}
+          className={styles.inputSmall}
         />
       </div>
     );
@@ -218,8 +162,8 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
         .filter((t) => t && t.status !== "done")
         .map((t) => t!.title);
       return (
-        <div style={barStyle}>
-          <span style={{ color: "#f0c040", fontSize: "12px" }}>
+        <div className={styles.bar}>
+          <span className={styles.statusBlocked}>
             Blocked by: {blockerNames.join(", ")}
           </span>
         </div>
@@ -229,10 +173,10 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
     // Pending + unblocked
     if (task.status === "pending" || task.status === "assigned") {
       return (
-        <div style={barStyle}>
+        <div className={styles.bar}>
           <button
             onClick={() => startTask(task.id)}
-            style={btnStyle}
+            className={styles.btnPrimary}
           >
             Start Task
           </button>
@@ -247,31 +191,33 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
       if (isWaiting) {
         const handleSend = (e: FormEvent): void => {
           e.preventDefault();
-          if (!text.trim() || !task.sessionId) return;
+          if (!text.trim() || !task.sessionId) {
+            return;
+          }
           sendInput(task.sessionId, text);
           setText("");
         };
         return (
-          <form onSubmit={handleSend} style={barStyle}>
+          <form onSubmit={handleSend} className={styles.bar}>
             <input
               type="text"
               value={text}
               onChange={(e) => setText(e.target.value)}
               placeholder="Type a message..."
               autoFocus
-              style={inputStyle}
+              className={styles.input}
             />
             <button
               type="submit"
               disabled={!text.trim()}
-              style={{ ...btnStyle, background: text.trim() ? "#4ecca3" : "#333", cursor: text.trim() ? "pointer" : "not-allowed" }}
+              className={styles.btnPrimary}
             >
               Send
             </button>
             <button
               type="button"
               onClick={() => task.sessionId && kill(task.sessionId)}
-              style={stopBtnStyle}
+              className={styles.btnDanger}
             >
               Stop
             </button>
@@ -280,16 +226,16 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
       }
 
       return (
-        <div style={barStyle}>
+        <div className={styles.bar}>
           <input
             type="text"
             disabled
             placeholder="Agent is working..."
-            style={{ ...inputStyle, opacity: 0.5, cursor: "not-allowed" }}
+            className={styles.input}
           />
           <button
             onClick={() => task.sessionId && kill(task.sessionId)}
-            style={stopBtnStyle}
+            className={styles.btnDanger}
           >
             Stop
           </button>
@@ -300,19 +246,19 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
     // Review
     if (task.status === "review") {
       return (
-        <div style={barStyle}>
+        <div className={styles.bar}>
           <input
             type="text"
             value={rejectNotes}
             onChange={(e) => setRejectNotes(e.target.value)}
             placeholder="Rejection notes (optional)..."
-            style={inputStyle}
+            className={styles.input}
           />
           <button
             onClick={() => {
               approveTask(task.id);
             }}
-            style={{ ...btnStyle, background: "#4ecca3" }}
+            className={styles.btnPrimary}
           >
             Approve
           </button>
@@ -321,7 +267,7 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
               rejectTask(task.id, rejectNotes);
               setRejectNotes("");
             }}
-            style={stopBtnStyle}
+            className={styles.btnDanger}
           >
             Reject
           </button>
@@ -332,13 +278,13 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
     // Done
     if (task.status === "done") {
       return (
-        <div style={barStyle}>
-          <span style={{ color: "#4ecca3", fontSize: "13px", flex: 1 }}>
+        <div className={styles.bar}>
+          <span className={`${styles.statusText} ${styles.statusCompleted}`}>
             Task completed
           </span>
           <button
             onClick={() => setViewMode({ kind: "new_task", projectId: task.projectId })}
-            style={btnStyle}
+            className={styles.btnPrimary}
           >
             + New Task
           </button>
@@ -349,13 +295,13 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
     // Failed
     if (task.status === "failed") {
       return (
-        <div style={barStyle}>
-          <span style={{ color: "#e94560", fontSize: "13px", flex: 1 }}>
+        <div className={styles.bar}>
+          <span className={`${styles.statusText} ${styles.statusFailed}`}>
             Task failed
           </span>
           <button
             onClick={() => startTask(task.id)}
-            style={btnStyle}
+            className={styles.btnPrimary}
           >
             Retry
           </button>
@@ -368,14 +314,16 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
   if (viewMode.kind === "new_chat") {
     const handleSpawn = (e: FormEvent): void => {
       e.preventDefault();
-      if (!text.trim()) return;
+      if (!text.trim()) {
+        return;
+      }
       spawn(viewMode.environmentId, text, undefined, runtime);
       setText("");
     };
 
     return (
-      <form onSubmit={handleSpawn} style={barStyle}>
-        <span style={{ fontSize: "11px", color: "#4ecca3", background: "#0f3460", padding: "3px 8px", borderRadius: "3px", whiteSpace: "nowrap" }}>
+      <form onSubmit={handleSpawn} className={styles.bar}>
+        <span className={styles.badge}>
           new chat
         </span>
         <input
@@ -384,13 +332,13 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
           onChange={(e) => setText(e.target.value)}
           placeholder="Enter prompt..."
           autoFocus
-          style={inputStyle}
+          className={styles.input}
         />
         <RuntimeSelector value={runtime} onChange={setRuntime} />
         <button
           type="submit"
           disabled={!text.trim()}
-          style={{ ...btnStyle, background: text.trim() ? "#4ecca3" : "#333", cursor: text.trim() ? "pointer" : "not-allowed" }}
+          className={styles.btnPrimary}
         >
           Go
         </button>
@@ -406,9 +354,9 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
 
     if (isRunning) {
       return (
-        <div style={barStyle}>
-          <input type="text" disabled placeholder="Agent is working..." style={{ ...inputStyle, opacity: 0.5, cursor: "not-allowed" }} />
-          <button onClick={() => kill(viewMode.sessionId)} style={stopBtnStyle} title="Stop session">
+        <div className={styles.bar}>
+          <input type="text" disabled placeholder="Agent is working..." className={styles.input} />
+          <button onClick={() => kill(viewMode.sessionId)} className={styles.btnDanger} title="Stop session">
             Stop
           </button>
         </div>
@@ -418,17 +366,19 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
     if (isWaiting) {
       const handleSend = (e: FormEvent): void => {
         e.preventDefault();
-        if (!text.trim()) return;
+        if (!text.trim()) {
+          return;
+        }
         sendInput(viewMode.sessionId, text);
         setText("");
       };
       return (
-        <form onSubmit={handleSend} style={barStyle}>
-          <input type="text" value={text} onChange={(e) => setText(e.target.value)} placeholder="Type a message..." autoFocus style={inputStyle} />
-          <button type="submit" disabled={!text.trim()} style={{ ...btnStyle, background: text.trim() ? "#4ecca3" : "#333", cursor: text.trim() ? "pointer" : "not-allowed" }}>
+        <form onSubmit={handleSend} className={styles.bar}>
+          <input type="text" value={text} onChange={(e) => setText(e.target.value)} placeholder="Type a message..." autoFocus className={styles.input} />
+          <button type="submit" disabled={!text.trim()} className={styles.btnPrimary}>
             Send
           </button>
-          <button type="button" onClick={() => kill(viewMode.sessionId)} style={stopBtnStyle} title="Stop session">
+          <button type="button" onClick={() => kill(viewMode.sessionId)} className={styles.btnDanger} title="Stop session">
             Stop
           </button>
         </form>
@@ -437,9 +387,9 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
 
     if (isEnded && session) {
       return (
-        <div style={barStyle}>
-          <span style={{ color: "#666", fontSize: "13px", flex: 1 }}>Session {session.status}</span>
-          <button onClick={() => setViewMode({ kind: "new_chat", environmentId: session.environmentId, runtime: session.runtime })} style={btnStyle}>
+        <div className={styles.bar}>
+          <span className={`${styles.statusText} ${styles.hintText}`}>Session {session.status}</span>
+          <button onClick={() => setViewMode({ kind: "new_chat", environmentId: session.environmentId, runtime: session.runtime })} className={styles.btnPrimary}>
             + New Chat
           </button>
         </div>
@@ -449,8 +399,8 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
 
   // fallback
   return (
-    <div style={barStyle}>
-      <span style={{ color: "#666", fontSize: "13px" }}>Loading...</span>
+    <div className={styles.bar}>
+      <span className={styles.hintText}>Loading...</span>
     </div>
   );
 }
