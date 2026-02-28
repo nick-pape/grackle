@@ -10,7 +10,7 @@ const CATEGORY_COLORS: Record<string, { text: string; bg: string }> = {
   bug: { text: "var(--accent-red)", bg: "var(--accent-red-dim)" },
   decision: { text: "var(--accent-yellow)", bg: "var(--accent-yellow-dim)" },
   dependency: { text: "var(--accent-purple)", bg: "var(--accent-purple-dim)" },
-  pattern: { text: "var(--text-secondary)", bg: "var(--bg-elevated)" },
+  pattern: { text: "var(--accent-cyan)", bg: "var(--accent-cyan-dim)" },
   general: { text: "var(--text-secondary)", bg: "var(--bg-elevated)" },
 };
 
