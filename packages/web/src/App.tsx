@@ -1,9 +1,7 @@
 import { GrackleProvider } from "./context/GrackleContext.js";
 import { MockGrackleProvider } from "./mocks/MockGrackleProvider.js";
-import { StatusBar } from "./components/StatusBar.js";
-import { Sidebar } from "./components/Sidebar.js";
-import { SessionPanel } from "./components/SessionPanel.js";
-import { UnifiedBar } from "./components/UnifiedBar.js";
+import { StatusBar, Sidebar, UnifiedBar } from "./components/layout/index.js";
+import { SessionPanel } from "./components/panels/index.js";
 import { useState, useEffect, type JSX } from "react";
 import { useGrackle } from "./context/GrackleContext.js";
 import styles from "./App.module.scss";

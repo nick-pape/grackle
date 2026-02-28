@@ -1,7 +1,7 @@
 import { useState, type JSX } from "react";
-import { EnvironmentList } from "./EnvironmentList.js";
-import { ProjectList } from "./ProjectList.js";
-import type { ViewMode } from "../App.js";
+import { EnvironmentList } from "../lists/EnvironmentList.js";
+import { ProjectList } from "../lists/ProjectList.js";
+import type { ViewMode } from "../../App.js";
 import styles from "./Sidebar.module.scss";
 
 /** Props for the Sidebar component. */

@@ -1,5 +1,5 @@
 import type { JSX } from "react";
-import { useGrackle } from "../context/GrackleContext.js";
+import { useGrackle } from "../../context/GrackleContext.js";
 import { motion } from "motion/react";
 import styles from "./FindingsPanel.module.scss";
 
@@ -68,7 +68,11 @@ export function FindingsPanel({ projectId }: Props): JSX.Element {
             {f.tags.length > 0 && (
               <div className={styles.tags}>
                 {f.tags.map((tag) => (
-                  <span key={tag} className={styles.tag}>
+                  <span
+                    key={tag}
+                    className={styles.tag}
+                    style={{ color: categoryColor.text, textShadow: `0 0 8px ${categoryColor.text}` }}
+                  >
                     {tag}
                   </span>
                 ))}

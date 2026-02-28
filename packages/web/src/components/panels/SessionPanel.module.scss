@@ -1,4 +1,8 @@
-@use '../styles/mixins' as *;
+@use '../../styles/mixins' as *;
+
+// =============================================================================
+// Session Panel — main content area (session stream, task tabs, empty states)
+// =============================================================================
 
 .panelContainer {
   flex: 1;
@@ -35,6 +39,10 @@
   font-size: var(--font-size-sm);
 }
 
+// ---------------------------------------------------------------------------
+// Header bar
+// ---------------------------------------------------------------------------
+
 .header {
   @include glass-panel;
   padding: var(--space-sm) var(--space-md);
@@ -63,6 +71,10 @@
   }
 }
 
+// ---------------------------------------------------------------------------
+// Tab bar (Stream / Diff / Findings)
+// ---------------------------------------------------------------------------
+
 .tabBar {
   display: flex;
   border-bottom: 1px solid var(--border-subtle);
@@ -77,10 +89,15 @@
   font-family: var(--font-mono);
   font-size: 11px;
   border-bottom: 2px solid transparent;
-  transition: all var(--transition-fast);
+  transition: all var(--transition-fast),
+              backdrop-filter var(--transition-fast);
 
   &:hover {
     color: var(--text-secondary);
+    background: var(--bg-overlay);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    box-shadow: inset 0 1px 0 0 var(--glass-highlight);
   }
 
   &.active {
@@ -88,6 +105,10 @@
     border-bottom-color: var(--accent-green);
   }
 }
+
+// ---------------------------------------------------------------------------
+// Content areas
+// ---------------------------------------------------------------------------
 
 .eventScroll {
   flex: 1;

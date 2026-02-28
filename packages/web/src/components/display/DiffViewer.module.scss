@@ -1,4 +1,8 @@
-@use '../styles/mixins' as *;
+@use '../../styles/mixins' as *;
+
+// =============================================================================
+// Diff Viewer — unified diff display with stats bar and colored lines
+// =============================================================================
 
 .container {
   display: flex;
@@ -60,12 +64,18 @@
   cursor: default;
 }
 
+// Recessed inset background for the diff scroll area
 .diffContent {
+  @include glass-inset;
   flex: 1;
   overflow: auto;
   font-family: var(--font-mono);
   font-size: var(--font-size-sm);
   line-height: var(--line-height);
+  border-radius: 0;
+  border: none;
+  border-top: none;
+  box-shadow: none;
 }
 
 .diffLine {

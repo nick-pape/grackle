@@ -1,6 +1,6 @@
 import { useEffect, useState, type JSX } from "react";
-import { useGrackle } from "../context/GrackleContext.js";
-import type { ViewMode } from "../App.js";
+import { useGrackle } from "../../context/GrackleContext.js";
+import type { ViewMode } from "../../App.js";
 import { AnimatePresence, motion } from "motion/react";
 import styles from "./ProjectList.module.scss";
 

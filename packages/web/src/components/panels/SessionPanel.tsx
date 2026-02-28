@@ -1,10 +1,10 @@
-import { useGrackle } from "../context/GrackleContext.js";
-import { EventRenderer } from "./EventRenderer.js";
-import { DiffViewer } from "./DiffViewer.js";
+import { useGrackle } from "../../context/GrackleContext.js";
+import { EventRenderer } from "../display/EventRenderer.js";
+import { DiffViewer } from "../display/DiffViewer.js";
 import { FindingsPanel } from "./FindingsPanel.js";
 import { useEffect, useRef, useState, type JSX } from "react";
-import type { ViewMode } from "../App.js";
-import type { Session, SessionEvent } from "../hooks/useGrackleSocket.js";
+import type { ViewMode } from "../../App.js";
+import type { Session, SessionEvent } from "../../hooks/useGrackleSocket.js";
 import { AnimatePresence, motion } from "motion/react";
 import styles from "./SessionPanel.module.scss";
 

@@ -1,5 +1,5 @@
 import type { JSX } from "react";
-import type { SessionEvent } from "../hooks/useGrackleSocket.js";
+import type { SessionEvent } from "../../hooks/useGrackleSocket.js";
 import styles from "./EventRenderer.module.scss";
 
 /** Props for the EventRenderer component. */

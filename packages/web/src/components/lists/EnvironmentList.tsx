@@ -1,7 +1,7 @@
 import type { JSX } from "react";
-import { useGrackle } from "../context/GrackleContext.js";
-import type { ViewMode } from "../App.js";
-import type { Environment, Session } from "../hooks/useGrackleSocket.js";
+import { useGrackle } from "../../context/GrackleContext.js";
+import type { ViewMode } from "../../App.js";
+import type { Environment, Session } from "../../hooks/useGrackleSocket.js";
 import styles from "./EnvironmentList.module.scss";
 
 /** Props for the EnvironmentList component. */

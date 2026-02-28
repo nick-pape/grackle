@@ -1,4 +1,8 @@
-@use '../styles/mixins' as *;
+@use '../../styles/mixins' as *;
+
+// =============================================================================
+// Event Renderer — individual session event styles
+// =============================================================================
 
 .systemEvent {
   color: var(--text-secondary);
@@ -44,21 +48,28 @@
 .toolResultSummary {
   cursor: pointer;
   color: var(--text-secondary);
-  transition: color var(--transition-fast);
+  padding: 2px var(--space-xs);
+  border-radius: var(--radius-sm);
+  transition: color var(--transition-fast),
+              background var(--transition-fast),
+              backdrop-filter var(--transition-fast);
 
   &:hover {
     color: var(--text-primary);
+    background: var(--bg-overlay);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
   }
 }
 
+// Recessed frosted inset for code output — third glass tier
 .toolResultPre {
-  background: rgba(0, 0, 0, 0.3);
+  @include glass-inset;
   padding: var(--space-sm);
   margin: var(--space-xs) 0;
   overflow: auto;
   max-height: 200px;
   font-size: 11px;
-  border-radius: var(--radius-sm);
 }
 
 .errorEvent {

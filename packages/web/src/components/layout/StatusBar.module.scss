@@ -1,4 +1,8 @@
-@use '../styles/mixins' as *;
+@use '../../styles/mixins' as *;
+
+// =============================================================================
+// Status Bar — top bar with brand name, connection indicator, and env count
+// =============================================================================
 
 .container {
   @include glass-panel;

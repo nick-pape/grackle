@@ -1,4 +1,8 @@
-@use '../styles/mixins' as *;
+@use '../../styles/mixins' as *;
+
+// =============================================================================
+// Findings Panel — project findings cards with staggered animation
+// =============================================================================
 
 .container {
   padding: var(--space-md);
@@ -15,7 +19,7 @@
 
 .card {
   @include glass-card;
-  @include hover-lift;
+  @include glass-hover;
   padding: var(--space-md);
 }
 
@@ -58,10 +62,11 @@
   gap: var(--space-xs);
 }
 
+// Frosted inset chip for tags — third glass tier with category-tinted border
 .tag {
-  font-size: 9px;
+  @include glass-inset;
+  font-size: 10px;
   padding: 1px var(--space-xs);
   border-radius: var(--radius-full);
-  background: var(--bg-surface);
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
 }

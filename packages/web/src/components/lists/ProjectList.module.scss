@@ -1,4 +1,8 @@
-@use '../styles/mixins' as *;
+@use '../../styles/mixins' as *;
+
+// =============================================================================
+// Project List — expandable project tree with tasks
+// =============================================================================
 
 .container {
   padding: var(--space-sm) 0;
@@ -58,6 +62,8 @@
   &.selected {
     background: var(--bg-overlay);
     border: 1px solid var(--border-primary);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
   }
 }
 
@@ -106,6 +112,8 @@
   &.selected {
     background: var(--bg-overlay);
     color: var(--text-primary);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
   }
 }
 
@@ -120,10 +128,11 @@
   white-space: nowrap;
 }
 
+// Frosted inset chip for dependency count — third glass tier
 .dependencyBadge {
-  font-size: 9px;
+  @include glass-inset;
+  font-size: 10px;
   color: var(--text-tertiary);
-  background: var(--bg-elevated);
   border-radius: var(--radius-full);
   padding: 1px var(--space-xs);
 }

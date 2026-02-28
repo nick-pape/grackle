@@ -1,5 +1,5 @@
 import type { JSX } from "react";
-import { useGrackle } from "../context/GrackleContext.js";
+import { useGrackle } from "../../context/GrackleContext.js";
 import styles from "./StatusBar.module.scss";
 
 /** Top status bar showing connection state, environment counts, and active session count. */

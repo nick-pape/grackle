@@ -1,32 +1,114 @@
-// Glass panel effect
+// ============================================================================
+// Mixins — Grackle Web UI
+// ============================================================================
+// Reusable style patterns consumed by component .module.scss files via:
+//   @use '../styles/mixins' as *;
+//
+// Glass hierarchy (blur cascades from structural to nested):
+//   glass-panel  (16px blur) — top-level layout shells (StatusBar, Sidebar, bars)
+//   glass-card   (8px blur)  — floating content cards (events, findings)
+//   glass-inset  (4px blur)  — recessed elements inside cards (code blocks, tags)
+// ============================================================================
+
+// =============================================================================
+// Glass Surfaces
+// =============================================================================
+
+/// Structural glass panel — used for layout shells (StatusBar, Sidebar, bars).
+/// Highest blur tier with subtle top-edge refraction highlight.
 @mixin glass-panel {
   background: var(--bg-surface);
   backdrop-filter: blur(var(--glass-blur));
   -webkit-backdrop-filter: blur(var(--glass-blur));
   border: 1px solid var(--glass-border);
-}
+  box-shadow: inset 0 1px 0 0 var(--glass-highlight);
+  position: relative;
 
-// Elevated glass card
-@mixin glass-card {
-  background: var(--bg-elevated);
-  backdrop-filter: blur(8px);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-md);
-}
-
-// Interactive hover lift
-@mixin hover-lift {
-  transition: background var(--transition-fast),
-              box-shadow var(--transition-fast),
-              border-color var(--transition-fast);
-
-  &:hover {
-    background: var(--bg-overlay);
-    box-shadow: var(--shadow-sm);
+  // Inner glow — a faint top-to-bottom gradient that fades after ~40px,
+  // simulating light diffusing through the top edge of a frosted pane.
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      180deg,
+      var(--glass-highlight) 0%,
+      transparent 40px
+    );
+    pointer-events: none;
+    border-radius: inherit;
   }
 }
 
-// Primary button
+/// Elevated glass card — used for floating content (tool events, findings).
+/// Mid-tier blur with slightly stronger refraction.
+@mixin glass-card {
+  background: var(--bg-elevated);
+  backdrop-filter: blur(var(--glass-blur-card));
+  -webkit-backdrop-filter: blur(var(--glass-blur-card));
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  box-shadow: inset 0 1px 0 0 var(--glass-highlight-strong);
+}
+
+/// Recessed glass inset — used for nested elements inside cards (code blocks,
+/// tags, badges). Lowest blur tier with the most subtle border.
+@mixin glass-inset {
+  background: var(--bg-inset);
+  backdrop-filter: blur(var(--glass-blur-inset));
+  -webkit-backdrop-filter: blur(var(--glass-blur-inset));
+  border: 1px solid var(--glass-border-inset);
+  border-radius: var(--radius-sm);
+  box-shadow: inset 0 1px 0 0 var(--glass-highlight);
+}
+
+// =============================================================================
+// Hover & Focus
+// =============================================================================
+
+/// Interactive hover lift — frosted glass effect that materialises on hover.
+/// Use on list rows, file names, and other clickable surfaces.
+@mixin hover-lift {
+  transition: background var(--transition-fast),
+              box-shadow var(--transition-fast),
+              border-color var(--transition-fast),
+              backdrop-filter var(--transition-fast);
+
+  &:hover {
+    background: var(--bg-overlay);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow:
+      var(--shadow-sm),
+      inset 0 1px 0 0 var(--glass-highlight-strong);
+    border-color: var(--glass-border-hover);
+  }
+}
+
+/// Glass-aware hover — for elements that already have glass effects applied
+/// (e.g. glass-card). Increases opacity and border brightness on hover.
+@mixin glass-hover {
+  transition: background var(--transition-fast),
+              box-shadow var(--transition-fast),
+              border-color var(--transition-fast),
+              backdrop-filter var(--transition-fast);
+
+  &:hover {
+    background: rgba(24, 30, 52, 0.82);
+    border-color: var(--glass-border-hover);
+    box-shadow:
+      var(--shadow-md),
+      inset 0 1px 0 0 var(--glass-highlight-strong);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+}
+
+// =============================================================================
+// Buttons
+// =============================================================================
+
+/// Primary action button (green).
 @mixin btn-primary {
   background: var(--accent-green);
   border: none;
@@ -58,7 +140,7 @@
   }
 }
 
-// Danger button
+/// Danger action button (red).
 @mixin btn-danger {
   @include btn-primary;
   background: var(--accent-red);
@@ -68,7 +150,7 @@
   }
 }
 
-// Ghost/outline button (for + and x buttons)
+/// Ghost / outline button (for +, x, and other subtle actions).
 @mixin btn-ghost($color: var(--accent-green)) {
   background: none;
   border: 1px solid $color;
@@ -80,11 +162,15 @@
               border-color var(--transition-fast);
 
   &:hover {
-    background: rgba(78, 204, 163, 0.08);
+    background: var(--accent-green-subtle);
   }
 }
 
-// Text input
+// =============================================================================
+// Form Controls
+// =============================================================================
+
+/// Text input field with frosted focus state.
 @mixin input-field {
   background: var(--bg-input);
   border: 1px solid var(--border-input);
@@ -95,11 +181,16 @@
   font-size: var(--font-size-md);
   outline: none;
   transition: border-color var(--transition-fast),
-              box-shadow var(--transition-fast);
+              box-shadow var(--transition-fast),
+              backdrop-filter var(--transition-fast);
 
   &:focus {
     border-color: var(--accent-green);
-    box-shadow: 0 0 0 3px rgba(78, 204, 163, 0.1);
+    box-shadow:
+      0 0 0 3px var(--accent-green-focus),
+      inset 0 1px 0 0 var(--glass-highlight-strong);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
   }
 
   &::placeholder {
@@ -112,14 +203,18 @@
   }
 }
 
-// Select dropdown
+/// Select dropdown (inherits input-field, smaller sizing).
 @mixin select-field {
   @include input-field;
   font-size: var(--font-size-sm);
   padding: var(--space-sm);
 }
 
-// Section label (uppercase small text)
+// =============================================================================
+// Typography
+// =============================================================================
+
+/// Uppercase section label (e.g. "PROJECTS", "ENVIRONMENTS").
 @mixin section-label {
   font-size: var(--font-size-xs);
   color: var(--text-tertiary);
@@ -128,7 +223,11 @@
   font-weight: var(--font-weight-medium);
 }
 
-// Staggered fade-in for list items (CSS only)
+// =============================================================================
+// Animation Helpers
+// =============================================================================
+
+/// Staggered fade-in for list children (CSS only, no JS needed).
 @mixin stagger-children($count: 20, $delay: 30ms) {
   @for $i from 1 through $count {
     &:nth-child(#{$i}) {

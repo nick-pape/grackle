@@ -1,6 +1,6 @@
 import { useState, useEffect, type FormEvent, type JSX } from "react";
-import { useGrackle } from "../context/GrackleContext.js";
-import type { ViewMode } from "../App.js";
+import { useGrackle } from "../../context/GrackleContext.js";
+import type { ViewMode } from "../../App.js";
 import styles from "./UnifiedBar.module.scss";
 
 /** Props for the UnifiedBar component. */

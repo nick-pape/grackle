@@ -1,4 +1,8 @@
-@use '../styles/mixins' as *;
+@use '../../styles/mixins' as *;
+
+// =============================================================================
+// Environment List — environment cards with nested session rows
+// =============================================================================
 
 .container {
   padding: var(--space-sm) 0;
@@ -70,9 +74,11 @@
   &.selected {
     background: var(--bg-overlay);
     color: var(--text-primary);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
   }
 }
 
 .sessionDot {
-  font-size: 8px;
+  font-size: 10px;
 }

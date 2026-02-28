@@ -1,5 +1,5 @@
 import type { JSX } from "react";
-import type { TaskDiffData } from "../hooks/useGrackleSocket.js";
+import type { TaskDiffData } from "../../hooks/useGrackleSocket.js";
 import styles from "./DiffViewer.module.scss";
 
 /** Props for the DiffViewer component. */
