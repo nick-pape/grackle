@@ -67,6 +67,8 @@ export function ProjectList({ viewMode, setViewMode }: Props): JSX.Element {
         <button
           className={styles.addButton}
           onClick={() => setShowCreateForm(!showCreateForm)}
+          aria-label="Create project"
+          title="Create project"
         >
           +
         </button>
