@@ -27,8 +27,8 @@ test.describe("Diff Viewer", () => {
     const diffContent = page.locator("text=Loading diff...").or(
       page.locator("text=No changes on branch"),
     ).or(
-      // Error state — any red text in the diff viewer area
-      page.locator('[style*="color: rgb(233, 69, 96)"]'),
+      // Error state — DiffViewer renders errors with the errorState CSS module class
+      page.locator('[class*="errorState"]'),
     );
 
     // Verify SOME diff state renders (not stuck with no content)
@@ -51,7 +51,8 @@ test.describe("Diff Viewer", () => {
     const loadingOrResult = page.locator("text=Loading diff...").or(
       page.locator("text=No changes on branch"),
     ).or(
-      page.locator('[style*="color: rgb(233, 69, 96)"]'),
+      // Error state — DiffViewer renders errors with the errorState CSS module class
+      page.locator('[class*="errorState"]'),
     );
     await expect(loadingOrResult.first()).toBeVisible({ timeout: 10_000 });
   });

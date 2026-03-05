@@ -23,7 +23,8 @@ test.describe("Tab Auto-Switching", () => {
     const diffContent = page.locator("text=Loading diff...").or(
       page.locator("text=No changes on branch"),
     ).or(
-      page.locator('[style*="color: rgb(233, 69, 96)"]'),
+      // Error state — DiffViewer renders errors with the errorState CSS module class
+      page.locator('[class*="errorState"]'),
     );
     await expect(diffContent.first()).toBeVisible({ timeout: 10_000 });
 
@@ -56,7 +57,8 @@ test.describe("Tab Auto-Switching", () => {
     const diffContent = page.locator("text=Loading diff...").or(
       page.locator("text=No changes on branch"),
     ).or(
-      page.locator('[style*="color: rgb(233, 69, 96)"]'),
+      // Error state — DiffViewer renders errors with the errorState CSS module class
+      page.locator('[class*="errorState"]'),
     );
     await expect(diffContent.first()).toBeVisible({ timeout: 10_000 });
 

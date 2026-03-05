@@ -138,7 +138,8 @@ export async function createTask(
   await page.locator("button", { hasText: "Create" }).click();
 
   // After "Create", viewMode goes to project → auto-expand. Wait for task in sidebar.
-  await page.getByText(title).waitFor({ timeout: 5_000 });
+  // Use exact match to avoid matching the SessionPanel header ("Task: <title> | status | branch").
+  await page.getByText(title, { exact: true }).waitFor({ timeout: 5_000 });
 }
 
 /** Navigate to a task view by clicking its name in the sidebar. */
