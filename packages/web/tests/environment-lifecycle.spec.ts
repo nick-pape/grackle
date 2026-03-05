@@ -134,9 +134,8 @@ test.describe("Environment Lifecycle — WebSocket Handlers", () => {
       payload: { environmentId: "test-local" },
     });
 
-    // Wait for status to update — the dot should change from green
-    // The environment should now show as disconnected
-    await page.waitForTimeout(1_000);
+    // Wait for the dot to change from green (connected) to non-green (disconnected)
+    await expect(dot).not.toHaveCSS("color", "rgb(78, 204, 163)", { timeout: 5_000 });
 
     // Expand to see the Connect button (indicates disconnected)
     await page.getByText("test-local").click();
@@ -162,8 +161,7 @@ test.describe("Environment Lifecycle — WebSocket Handlers", () => {
       payload: { environmentId: "test-local" },
     });
 
-    // Wait for disconnected state
-    await page.waitForTimeout(1_000);
+    // Wait for disconnected state — expand and wait for Connect button
     await page.getByText("test-local").click();
     await expect(page.locator("button", { hasText: "Connect" })).toBeVisible({ timeout: 5_000 });
 
@@ -193,9 +191,8 @@ test.describe("Environment Lifecycle — WebSocket Handlers", () => {
       type: "stop_environment",
       payload: { environmentId: "test-local" },
     });
-    await page.waitForTimeout(1_000);
 
-    // Expand the environment
+    // Expand the environment and wait for it to show as disconnected
     await page.getByText("test-local").click();
     await expect(page.locator("button", { hasText: "Connect" })).toBeVisible({ timeout: 5_000 });
 
@@ -290,7 +287,6 @@ test.describe("Environment Lifecycle — WebSocket Handlers", () => {
       type: "stop_environment",
       payload: { environmentId: "test-local" },
     });
-    await page.waitForTimeout(1_000);
 
     // Verify environment is disconnected — expand and check for Connect button
     await page.getByText("test-local").click();

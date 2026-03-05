@@ -6,6 +6,7 @@ import { grackle, powerline } from "@grackle/common";
 import * as envRegistry from "./env-registry.js";
 import * as sessionStore from "./session-store.js";
 import * as adapterManager from "./adapter-manager.js";
+import type { PowerLineConnection } from "./adapters/adapter.js";
 import * as streamHub from "./stream-hub.js";
 import * as projectStore from "./project-store.js";
 import * as taskStore from "./task-store.js";
@@ -119,6 +120,65 @@ function safeParseAdapterConfig(raw: string, environmentId: string): Record<stri
   } catch (err) {
     logger.warn({ environmentId, raw, err }, "Failed to parse adapterConfig, using empty config");
     return {};
+  }
+}
+
+/**
+ * Auto-provisions and connects an environment if it is not already connected.
+ * Sends provision progress events over the WebSocket and updates the environment
+ * registry status. Returns the connection on success, or undefined on failure.
+ */
+async function autoProvisionEnvironment(
+  ws: WebSocket,
+  environmentId: string,
+  env: envRegistry.EnvironmentRow,
+  logContext: Record<string, string>,
+): Promise<PowerLineConnection | undefined> {
+  let conn = adapterManager.getConnection(environmentId);
+  if (conn) {
+    return conn;
+  }
+
+  const adapter = adapterManager.getAdapter(env.adapterType);
+  if (!adapter) {
+    sendWs(ws, { type: "error", payload: { message: `No adapter for type: ${env.adapterType}` } });
+    return undefined;
+  }
+
+  logger.info({ environmentId, ...logContext }, "Auto-provisioning environment");
+  envRegistry.updateEnvironmentStatus(environmentId, "connecting");
+  broadcastEnvironments();
+
+  try {
+    const config = safeParseAdapterConfig(env.adapterConfig, environmentId);
+    const powerlineToken = env.powerlineToken || "";
+    for await (const provEvent of adapter.provision(environmentId, config, powerlineToken)) {
+      logger.info({ environmentId, stage: provEvent.stage, ...logContext }, "Auto-provision progress");
+      sendWs(ws, {
+        type: "provision_progress",
+        payload: { environmentId, stage: provEvent.stage, message: provEvent.message, progress: provEvent.progress },
+      });
+    }
+    conn = await adapter.connect(environmentId, config, powerlineToken);
+    adapterManager.setConnection(environmentId, conn);
+    envRegistry.updateEnvironmentStatus(environmentId, "connected");
+    broadcastEnvironments();
+    logger.info({ environmentId, ...logContext }, "Auto-provision complete");
+    sendWs(ws, {
+      type: "provision_progress",
+      payload: { environmentId, stage: "ready", message: "Environment connected", progress: 1 },
+    });
+    return conn;
+  } catch (err) {
+    logger.error({ environmentId, ...logContext, err }, "Auto-provision failed");
+    envRegistry.updateEnvironmentStatus(environmentId, "error");
+    broadcastEnvironments();
+    sendWs(ws, {
+      type: "provision_progress",
+      payload: { environmentId, stage: "error", message: `Auto-provision failed: ${err}`, progress: 0 },
+    });
+    sendWs(ws, { type: "error", payload: { message: `Failed to auto-connect environment ${environmentId}: ${err}` } });
+    return undefined;
   }
 }
 
@@ -262,48 +322,9 @@ async function handleMessage(
       }
 
       // Auto-provision the environment if not already connected
-      let conn = adapterManager.getConnection(environmentId);
+      const conn = await autoProvisionEnvironment(ws, environmentId, env, {});
       if (!conn) {
-        const adapter = adapterManager.getAdapter(env.adapterType);
-        if (!adapter) {
-          sendWs(ws, { type: "error", payload: { message: `No adapter for type: ${env.adapterType}` } });
-          return;
-        }
-
-        logger.info({ environmentId }, "Auto-provisioning environment for spawn");
-        envRegistry.updateEnvironmentStatus(environmentId, "connecting");
-        broadcastEnvironments();
-
-        try {
-          const config = safeParseAdapterConfig(env.adapterConfig, environmentId);
-          const powerlineToken = env.powerlineToken || "";
-          for await (const provEvent of adapter.provision(environmentId, config, powerlineToken)) {
-            logger.info({ environmentId, stage: provEvent.stage }, "Auto-provision progress");
-            sendWs(ws, {
-              type: "provision_progress",
-              payload: { environmentId, stage: provEvent.stage, message: provEvent.message, progress: provEvent.progress },
-            });
-          }
-          conn = await adapter.connect(environmentId, config, powerlineToken); // eslint-disable-line require-atomic-updates
-          adapterManager.setConnection(environmentId, conn);
-          envRegistry.updateEnvironmentStatus(environmentId, "connected");
-          broadcastEnvironments();
-          logger.info({ environmentId }, "Auto-provision complete for spawn");
-          sendWs(ws, {
-            type: "provision_progress",
-            payload: { environmentId, stage: "ready", message: "Environment connected", progress: 1 },
-          });
-        } catch (err) {
-          logger.error({ environmentId, err }, "Auto-provision for spawn failed");
-          envRegistry.updateEnvironmentStatus(environmentId, "error");
-          broadcastEnvironments();
-          sendWs(ws, {
-            type: "provision_progress",
-            payload: { environmentId, stage: "error", message: `Auto-provision failed: ${err}`, progress: 0 },
-          });
-          sendWs(ws, { type: "error", payload: { message: `Failed to auto-connect environment ${environmentId}: ${err}` } });
-          return;
-        }
+        return;
       }
 
       const sessionId = uuid();
@@ -570,48 +591,9 @@ async function handleMessage(
       }
 
       // Auto-provision the environment if not already connected
-      let conn = adapterManager.getConnection(environmentId);
+      const conn = await autoProvisionEnvironment(ws, environmentId, env, { taskId });
       if (!conn) {
-        const adapter = adapterManager.getAdapter(env.adapterType);
-        if (!adapter) {
-          sendWs(ws, { type: "error", payload: { message: `No adapter for type: ${env.adapterType}` } });
-          return;
-        }
-
-        logger.info({ environmentId, taskId }, "Auto-provisioning environment for task start");
-        envRegistry.updateEnvironmentStatus(environmentId, "connecting");
-        broadcastEnvironments();
-
-        try {
-          const config = safeParseAdapterConfig(env.adapterConfig, environmentId);
-          const powerlineToken = env.powerlineToken || "";
-          for await (const provEvent of adapter.provision(environmentId, config, powerlineToken)) {
-            logger.info({ environmentId, stage: provEvent.stage }, "Auto-provision progress");
-            sendWs(ws, {
-              type: "provision_progress",
-              payload: { environmentId, stage: provEvent.stage, message: provEvent.message, progress: provEvent.progress },
-            });
-          }
-          conn = await adapter.connect(environmentId, config, powerlineToken); // eslint-disable-line require-atomic-updates
-          adapterManager.setConnection(environmentId, conn);
-          envRegistry.updateEnvironmentStatus(environmentId, "connected");
-          broadcastEnvironments();
-          logger.info({ environmentId, taskId }, "Auto-provision complete");
-          sendWs(ws, {
-            type: "provision_progress",
-            payload: { environmentId, stage: "ready", message: "Environment connected", progress: 1 },
-          });
-        } catch (err) {
-          logger.error({ environmentId, taskId, err }, "Auto-provision for task failed");
-          envRegistry.updateEnvironmentStatus(environmentId, "error");
-          broadcastEnvironments();
-          sendWs(ws, {
-            type: "provision_progress",
-            payload: { environmentId, stage: "error", message: `Auto-provision failed: ${err}`, progress: 0 },
-          });
-          sendWs(ws, { type: "error", payload: { message: `Failed to auto-connect environment ${environmentId}: ${err}` } });
-          return;
-        }
+        return;
       }
 
       const sessionId = uuid();

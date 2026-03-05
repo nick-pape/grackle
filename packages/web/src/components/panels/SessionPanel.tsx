@@ -137,14 +137,12 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
     }
   }
 
-  const sessionEvents = sessionId
-    ? events.filter((e) => e.sessionId === sessionId)
-    : [];
-
-  const groupedEvents = useMemo(
-    () => groupConsecutiveTextEvents(sessionEvents),
-    [sessionEvents]
-  );
+  const groupedEvents = useMemo(() => {
+    const filtered = sessionId
+      ? events.filter((e) => e.sessionId === sessionId)
+      : [];
+    return groupConsecutiveTextEvents(filtered);
+  }, [events, sessionId]);
 
   const session = sessionId
     ? sessions.find((s) => s.id === sessionId) ?? undefined
@@ -173,7 +171,7 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
     if (scrollRef.current && activeTaskTab === "stream") {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [sessionEvents.length, activeTaskTab]);
+  }, [groupedEvents.length, activeTaskTab]);
 
   // --- empty mode ---
   if (viewMode.kind === "empty") {

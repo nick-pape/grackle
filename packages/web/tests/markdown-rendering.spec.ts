@@ -25,41 +25,8 @@ test.describe("Markdown Rendering in EventRenderer", () => {
     // Wait for session to start
     await expect(page.locator("text=Stub runtime initialized")).toBeVisible({ timeout: 10_000 });
 
-    // Inject a text event containing markdown
-    const markdownContent = [
-      "## Analysis Complete",
-      "",
-      "The code has **two issues**:",
-      "",
-      "1. Missing null check",
-      "2. Incorrect return type",
-      "",
-      "See [docs](https://example.com) for details.",
-    ].join("\n");
-
-    await injectWsMessage(page, {
-      type: "session_event",
-      payload: {
-        sessionId: await page.evaluate(() => {
-          // Get the session ID from the current URL or app state
-          const text = document.body.innerText;
-          return text; // fallback, we'll use a different approach
-        }),
-        event: {
-          sessionId: "inject",
-          eventType: "text",
-          content: markdownContent,
-          timestamp: new Date().toISOString(),
-        },
-      },
-    });
-
-    // The stub runtime itself sends text events — look at those rendered as markdown.
-    // The stub echo contains "Echo: md test" which is plain text.
-    // Instead of injecting (which requires matching the internal event format),
-    // verify that the textEvent div renders markdown for the stub's own output.
-
-    // Verify the text event container exists and uses the textEvent class
+    // Verify that the stub runtime's text events render inside textEvent divs
+    // using the Markdown component (react-markdown).
     const textEventDivs = page.locator('div[class*="textEvent"]');
     await expect(textEventDivs.first()).toBeVisible({ timeout: 5_000 });
   });
@@ -125,7 +92,7 @@ test.describe("Markdown Rendering in EventRenderer", () => {
     const textEventDivs = page.locator('div[class*="textEvent"]');
     const count = await textEventDivs.count();
     // The stub emits one text event, so we expect exactly 1 textEvent div
-    expect(count).toBeGreaterThanOrEqual(1);
+    expect(count).toBe(1);
   });
 
   test("markdown tables render with proper structure", async ({ page }) => {
