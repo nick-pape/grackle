@@ -19,9 +19,10 @@ test.describe("Session Lifecycle (stub runtime)", () => {
     const runtimeSelect = page.locator("select");
     await expect(runtimeSelect).toBeVisible();
     const options = runtimeSelect.locator("option");
-    await expect(options).toHaveCount(2);
+    await expect(options).toHaveCount(3);
     await expect(options.nth(0)).toHaveText("claude-code");
-    await expect(options.nth(1)).toHaveText("stub");
+    await expect(options.nth(1)).toHaveText("copilot");
+    await expect(options.nth(2)).toHaveText("stub");
 
     // Go button disabled when no text
     await expect(goButton).toBeDisabled();
