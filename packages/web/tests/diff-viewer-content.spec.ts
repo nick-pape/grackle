@@ -78,9 +78,9 @@ test.describe("Diff Viewer Content", () => {
     await expect(page.getByText("+7", { exact: true })).toBeVisible();
     await expect(page.getByText("-1", { exact: true })).toBeVisible();
 
-    // Target diff line elements specifically (they have white-space: pre)
+    // Target diff line elements specifically (they use the diffLine CSS module class)
     const diffLine = (text: string) =>
-      page.locator('div[style*="white-space"]').filter({ hasText: text });
+      page.locator('div[class*="diffLine"]').filter({ hasText: text });
 
     // Verify added lines have green color (#4ecca3 = rgb(78, 204, 163))
     const addedLine = diffLine("+    return { value:");

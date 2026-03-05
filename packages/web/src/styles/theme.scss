@@ -1,0 +1,133 @@
+// ============================================================================
+// Design Tokens — Grackle Web UI
+// ============================================================================
+// All visual constants live here as CSS custom properties on :root.
+// Component styles consume these via var(--token-name).
+// High-contrast overrides are in global.scss.
+// ============================================================================
+
+:root {
+  // ---------------------------------------------------------------------------
+  // Backgrounds
+  // ---------------------------------------------------------------------------
+  // Layered from deepest (base) to shallowest (input).
+  // Semi-transparent values let backdrop-filter blur show through.
+  --bg-base: #0a0c14;
+  --bg-surface: rgba(16, 20, 34, 0.82);
+  --bg-elevated: rgba(24, 30, 52, 0.72);
+  --bg-overlay: rgba(15, 52, 96, 0.35);
+  --bg-input: rgba(20, 26, 46, 0.85);
+  --bg-inset: rgba(10, 14, 28, 0.55);
+
+  // ---------------------------------------------------------------------------
+  // Glass
+  // ---------------------------------------------------------------------------
+  // Three blur tiers create depth: panel (16) > card (8) > inset (4).
+  --glass-blur: 16px;
+  --glass-blur-card: 8px;
+  --glass-blur-inset: 4px;
+
+  // Border: subtle white edge that catches simulated light.
+  --glass-border: rgba(255, 255, 255, 0.10);
+  --glass-border-hover: rgba(255, 255, 255, 0.16);
+  --glass-border-inset: rgba(255, 255, 255, 0.05);
+
+  // Highlight: top-edge refraction line simulating light hitting glass.
+  --glass-highlight: rgba(255, 255, 255, 0.03);
+  --glass-highlight-strong: rgba(255, 255, 255, 0.06);
+
+  // ---------------------------------------------------------------------------
+  // Text
+  // ---------------------------------------------------------------------------
+  --text-primary: #e2e8f0;
+  --text-secondary: #94a3b8;
+  --text-tertiary: #6b7a8d;
+  --text-disabled: #475569;
+
+  // ---------------------------------------------------------------------------
+  // Accent Colors
+  // ---------------------------------------------------------------------------
+  // Green — primary accent (actions, success, brand)
+  --accent-green: #4ecca3;
+  --accent-green-dim: rgba(78, 204, 163, 0.18);
+  --accent-green-subtle: rgba(78, 204, 163, 0.08);
+  --accent-green-focus: rgba(78, 204, 163, 0.1);
+  --accent-green-selection: rgba(78, 204, 163, 0.25);
+
+  // Red — danger, errors
+  --accent-red: #e94560;
+  --accent-red-dim: rgba(233, 69, 96, 0.18);
+
+  // Yellow — warnings, attention
+  --accent-yellow: #f0c040;
+  --accent-yellow-dim: rgba(240, 192, 64, 0.18);
+
+  // Blue — info, tool use
+  --accent-blue: #70a1ff;
+  --accent-blue-dim: rgba(112, 161, 255, 0.18);
+
+  // Purple — secondary accent
+  --accent-purple: #a855f7;
+  --accent-purple-dim: rgba(168, 85, 247, 0.18);
+
+  // Cyan — patterns, structure
+  --accent-cyan: #22d3ee;
+  --accent-cyan-dim: rgba(34, 211, 238, 0.18);
+
+  // ---------------------------------------------------------------------------
+  // Borders
+  // ---------------------------------------------------------------------------
+  --border-primary: rgba(78, 204, 163, 0.18);
+  --border-subtle: rgba(255, 255, 255, 0.10);
+  --border-input: rgba(255, 255, 255, 0.14);
+
+  // ---------------------------------------------------------------------------
+  // Spacing
+  // ---------------------------------------------------------------------------
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+
+  // ---------------------------------------------------------------------------
+  // Border Radii
+  // ---------------------------------------------------------------------------
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-full: 9999px;
+
+  // ---------------------------------------------------------------------------
+  // Shadows
+  // ---------------------------------------------------------------------------
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.4);
+  --shadow-glow-green: 0 0 16px rgba(78, 204, 163, 0.15);
+  --shadow-glow-red: 0 0 16px rgba(233, 69, 96, 0.15);
+
+  // ---------------------------------------------------------------------------
+  // Typography
+  // ---------------------------------------------------------------------------
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+  --font-size-xs: 11px;
+  --font-size-sm: 12px;
+  --font-size-md: 13px;
+  --font-size-lg: 15px;
+  --font-size-xl: 18px;
+  --font-weight-light: 300;
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-bold: 700;
+  --font-weight-heavy: 800;
+  --line-height: 1.5;
+
+  // ---------------------------------------------------------------------------
+  // Transitions
+  // ---------------------------------------------------------------------------
+  --transition-fast: 150ms ease;
+  --transition-base: 250ms ease;
+  --transition-slow: 400ms cubic-bezier(0.16, 1, 0.3, 1);
+}

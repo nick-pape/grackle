@@ -1,10 +1,14 @@
 import { GrackleProvider } from "./context/GrackleContext.js";
-import { StatusBar } from "./components/StatusBar.js";
-import { Sidebar } from "./components/Sidebar.js";
-import { SessionPanel } from "./components/SessionPanel.js";
-import { UnifiedBar } from "./components/UnifiedBar.js";
+import { MockGrackleProvider } from "./mocks/MockGrackleProvider.js";
+import { StatusBar, Sidebar, UnifiedBar } from "./components/layout/index.js";
+import { SessionPanel } from "./components/panels/index.js";
 import { useState, useEffect, type JSX } from "react";
 import { useGrackle } from "./context/GrackleContext.js";
+import styles from "./App.module.scss";
+
+/** Whether the app is running in mock mode (`?mock` query parameter). */
+const IS_MOCK_MODE: boolean =
+  typeof window !== "undefined" && new URLSearchParams(window.location.search).has("mock");
 
 export type ViewMode =
   | { kind: "empty" }
@@ -14,6 +18,7 @@ export type ViewMode =
   | { kind: "new_task"; projectId: string }
   | { kind: "task"; taskId: string; tab?: "stream" | "diff" | "findings" };
 
+/** Main application content with layout and view routing. */
 function AppContent(): JSX.Element {
   const [viewMode, setViewMode] = useState<ViewMode>({ kind: "empty" });
   const { lastSpawnedId } = useGrackle();
@@ -26,11 +31,11 @@ function AppContent(): JSX.Element {
   }, [lastSpawnedId]);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100vh", fontFamily: "monospace", color: "#e0e0e0", background: "#1a1a2e" }}>
+    <div className={styles.root}>
       <StatusBar />
-      <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
+      <div className={styles.body}>
         <Sidebar viewMode={viewMode} setViewMode={setViewMode} />
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+        <div className={styles.main}>
           <SessionPanel
             key={viewMode.kind === "task" ? viewMode.taskId : viewMode.kind === "session" ? viewMode.sessionId : viewMode.kind}
             viewMode={viewMode}
@@ -43,10 +48,12 @@ function AppContent(): JSX.Element {
   );
 }
 
+/** Root application component with context provider. Uses MockGrackleProvider when `?mock` is present. */
 export default function App(): JSX.Element {
+  const Provider = IS_MOCK_MODE ? MockGrackleProvider : GrackleProvider;
   return (
-    <GrackleProvider>
+    <Provider>
       <AppContent />
-    </GrackleProvider>
+    </Provider>
   );
 }

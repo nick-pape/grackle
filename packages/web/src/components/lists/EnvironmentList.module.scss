@@ -1,0 +1,84 @@
+@use '../../styles/mixins' as *;
+
+// =============================================================================
+// Environment List — environment cards with nested session rows
+// =============================================================================
+
+.container {
+  padding: var(--space-sm) 0;
+}
+
+.header {
+  @include section-label;
+  padding: var(--space-xs) var(--space-md);
+}
+
+.emptyState {
+  padding: var(--space-md);
+  color: var(--text-tertiary);
+  font-size: var(--font-size-sm);
+}
+
+.envRow {
+  padding: var(--space-sm) var(--space-md);
+  font-size: var(--font-size-md);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+
+  &.targeted {
+    background: var(--bg-overlay);
+  }
+}
+
+.statusDot {
+  font-size: var(--font-size-sm);
+
+  &.pulse {
+    animation: pulse 2s ease-in-out infinite;
+  }
+}
+
+.envName {
+  flex: 1;
+}
+
+.envActions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.idleLabel {
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+.newChatButton {
+  @include btn-ghost;
+  font-size: var(--font-size-sm);
+  line-height: 1;
+  padding: 1px 5px;
+}
+
+.sessionRow {
+  @include hover-lift;
+  padding: var(--space-xs) var(--space-md) var(--space-xs) 28px;
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  color: var(--text-secondary);
+  border-radius: var(--radius-sm);
+  margin: 0 var(--space-xs);
+
+  &.selected {
+    background: var(--bg-overlay);
+    color: var(--text-primary);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+}
+
+.sessionDot {
+  font-size: 10px;
+}

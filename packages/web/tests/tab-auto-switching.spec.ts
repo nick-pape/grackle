@@ -2,6 +2,7 @@ import { test, expect } from "./fixtures.js";
 import {
   createProject,
   createTask,
+  diffViewerLocator,
   navigateToTask,
   patchWsForStubRuntime,
   runStubTaskToCompletion,
@@ -19,13 +20,8 @@ test.describe("Tab Auto-Switching", () => {
     await navigateToTask(page, "tab-start-task");
     await page.locator("button", { hasText: "Diff" }).click();
 
-    // Verify Diff tab content is visible (DiffViewer renders loading or result)
-    const diffContent = page.locator("text=Loading diff...").or(
-      page.locator("text=No changes on branch"),
-    ).or(
-      page.locator('[style*="color: rgb(233, 69, 96)"]'),
-    );
-    await expect(diffContent.first()).toBeVisible({ timeout: 10_000 });
+    // Verify Diff tab content is visible (DiffViewer renders in any state)
+    await expect(diffViewerLocator(page).first()).toBeVisible({ timeout: 10_000 });
 
     // Start the task with stub runtime
     await patchWsForStubRuntime(page);
@@ -53,12 +49,7 @@ test.describe("Tab Auto-Switching", () => {
 
     // Verify Diff tab is now active (auto-switch on review status)
     // DiffViewer should be rendering — stream content should not be visible
-    const diffContent = page.locator("text=Loading diff...").or(
-      page.locator("text=No changes on branch"),
-    ).or(
-      page.locator('[style*="color: rgb(233, 69, 96)"]'),
-    );
-    await expect(diffContent.first()).toBeVisible({ timeout: 10_000 });
+    await expect(diffViewerLocator(page).first()).toBeVisible({ timeout: 10_000 });
 
     // Stream content should NOT be visible (tab conditionally renders)
     await expect(page.locator("text=Stub runtime initialized")).not.toBeVisible();

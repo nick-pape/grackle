@@ -93,13 +93,11 @@ export interface UseGrackleSocketResult {
   environments: Environment[];
   sessions: Session[];
   events: SessionEvent[];
-  // eslint-disable-next-line @rushstack/no-new-null
-  lastSpawnedId: string | null;
+  lastSpawnedId: string | undefined;
   projects: Project[];
   tasks: TaskData[];
   findings: FindingData[];
-  // eslint-disable-next-line @rushstack/no-new-null
-  taskDiff: TaskDiffData | null;
+  taskDiff: TaskDiffData | undefined;
   spawn: (environmentId: string, prompt: string, model?: string, runtime?: string) => void;
   sendInput: (sessionId: string, text: string) => void;
   kill: (sessionId: string) => void;
@@ -125,19 +123,16 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
     ? `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}?token=${encodeURIComponent(apiKey)}`
     : "ws://localhost:3000");
 
-  // eslint-disable-next-line @rushstack/no-new-null
-  const wsRef = useRef<WebSocket | null>(null);
+  const wsRef = useRef<WebSocket | undefined>(undefined);
   const [connected, setConnected] = useState(false);
   const [environments, setEnvironments] = useState<Environment[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [events, setEvents] = useState<SessionEvent[]>([]);
-  // eslint-disable-next-line @rushstack/no-new-null
-  const [lastSpawnedId, setLastSpawnedId] = useState<string | null>(null);
+  const [lastSpawnedId, setLastSpawnedId] = useState<string | undefined>(undefined);
   const [projects, setProjects] = useState<Project[]>([]);
   const [tasks, setTasks] = useState<TaskData[]>([]);
   const [findings, setFindings] = useState<FindingData[]>([]);
-  // eslint-disable-next-line @rushstack/no-new-null
-  const [taskDiff, setTaskDiff] = useState<TaskDiffData | null>(null);
+  const [taskDiff, setTaskDiff] = useState<TaskDiffData | undefined>(undefined);
 
   const send = useCallback((msg: WsMessage) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -288,8 +283,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
 
       ws.onclose = () => {
         setConnected(false);
-        // eslint-disable-next-line @rushstack/no-new-null
-        wsRef.current = null;
+        wsRef.current = undefined;
         clearInterval(envPollTimer);
         clearTimeout(reconnectTimer);
         reconnectTimer = setTimeout(connect, WS_RECONNECT_DELAY_MS);
@@ -448,8 +442,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
 
   const loadTaskDiff = useCallback(
     (taskId: string) => {
-      // eslint-disable-next-line @rushstack/no-new-null
-      setTaskDiff(null);
+      setTaskDiff(undefined);
       send({ type: "get_task_diff", payload: { taskId } });
     },
     [send]
