@@ -281,6 +281,20 @@ export class DockerAdapter implements EnvironmentAdapter {
       args.push("-e", `ANTHROPIC_API_KEY=${process.env.ANTHROPIC_API_KEY}`);
     }
 
+    // Forward GitHub tokens for Copilot runtime
+    for (const tokenVar of ["GITHUB_TOKEN", "GH_TOKEN", "COPILOT_GITHUB_TOKEN"]) {
+      if (process.env[tokenVar] && !cfg.env?.[tokenVar]) {
+        args.push("-e", `${tokenVar}=${process.env[tokenVar]}`);
+      }
+    }
+
+    // Forward Copilot-specific configuration environment variables
+    for (const envVar of ["COPILOT_CLI_URL", "COPILOT_CLI_PATH", "COPILOT_PROVIDER_CONFIG"]) {
+      if (process.env[envVar] && !cfg.env?.[envVar]) {
+        args.push("-e", `${envVar}=${process.env[envVar]}`);
+      }
+    }
+
     // Pass PowerLine token for authentication
     if (powerlineToken) {
       args.push("-e", `GRACKLE_POWERLINE_TOKEN=${powerlineToken}`);
