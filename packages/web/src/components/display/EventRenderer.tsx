@@ -1,4 +1,7 @@
 import type { JSX } from "react";
+import Markdown from "react-markdown";
+import rehypePrismPlus from "rehype-prism-plus/common";
+import remarkGfm from "remark-gfm";
 import type { SessionEvent } from "../../hooks/useGrackleSocket.js";
 import styles from "./EventRenderer.module.scss";
 
@@ -18,11 +21,13 @@ function SystemEvent({ time, content }: { time: string; content: string }): JSX.
   );
 }
 
-/** Renders an assistant text output event. */
+/** Renders an assistant text output event with markdown formatting. */
 function TextEvent({ content }: { content: string }): JSX.Element {
   return (
     <div className={styles.textEvent}>
-      {content}
+      <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypePrismPlus]}>
+        {content}
+      </Markdown>
     </div>
   );
 }

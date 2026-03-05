@@ -95,3 +95,8 @@ export function incrementTurns(id: string): void {
     .where(eq(sessions.id, id))
     .run();
 }
+
+/** Delete all sessions belonging to a specific environment. */
+export function deleteByEnvironment(environmentId: string): void {
+  db.delete(sessions).where(eq(sessions.environmentId, environmentId)).run();
+}
