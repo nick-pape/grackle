@@ -36,4 +36,5 @@ packages/web/test-results/
 *.mp4
 tools/demo-recorder/test-output/
 tools/demo-recorder/voices/*.bak
-
+nul
+*.log
