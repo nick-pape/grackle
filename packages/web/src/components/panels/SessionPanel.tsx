@@ -2,7 +2,7 @@ import { useGrackle } from "../../context/GrackleContext.js";
 import { EventRenderer } from "../display/EventRenderer.js";
 import { DiffViewer } from "../display/DiffViewer.js";
 import { FindingsPanel } from "./FindingsPanel.js";
-import { useEffect, useRef, useState, type JSX } from "react";
+import { useEffect, useMemo, useRef, useState, type JSX } from "react";
 import type { ViewMode } from "../../App.js";
 import type { Session, SessionEvent } from "../../hooks/useGrackleSocket.js";
 import { AnimatePresence, motion } from "motion/react";
@@ -77,6 +77,24 @@ function EventList({ sessionEvents, session, scrollRef }: EventListProps): JSX.E
   );
 }
 
+/**
+ * Merges consecutive "text" events into single entries with concatenated content.
+ * This prevents streaming deltas from rendering as one token per line, producing
+ * coherent text blocks that can be displayed as markdown.
+ */
+function groupConsecutiveTextEvents(events: SessionEvent[]): SessionEvent[] {
+  const result: SessionEvent[] = [];
+  for (const event of events) {
+    const previous = result[result.length - 1];
+    if (event.eventType === "text" && previous?.eventType === "text") {
+      result[result.length - 1] = { ...previous, content: previous.content + event.content };
+    } else {
+      result.push(event);
+    }
+  }
+  return result;
+}
+
 // --- Main component ---
 
 type TaskTab = "stream" | "diff" | "findings";
@@ -122,6 +140,11 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
   const sessionEvents = sessionId
     ? events.filter((e) => e.sessionId === sessionId)
     : [];
+
+  const groupedEvents = useMemo(
+    () => groupConsecutiveTextEvents(sessionEvents),
+    [sessionEvents]
+  );
 
   const session = sessionId
     ? sessions.find((s) => s.id === sessionId) ?? undefined
@@ -255,10 +278,10 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
               {!sessionId && (
                 <div className={styles.waitingMessage}>Task has not been started yet</div>
               )}
-              {sessionId && sessionEvents.length === 0 && (
+              {sessionId && groupedEvents.length === 0 && (
                 <div className={styles.waitingMessage}>Waiting for events...</div>
               )}
-              {sessionEvents.map((event, i) => (
+              {groupedEvents.map((event, i) => (
                 <EventRenderer key={i} event={event} />
               ))}
             </motion.div>
@@ -312,7 +335,7 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
         onKill={kill}
       />
       <EventList
-        sessionEvents={sessionEvents}
+        sessionEvents={groupedEvents}
         session={session}
         scrollRef={scrollRef}
       />

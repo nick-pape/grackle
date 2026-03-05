@@ -1,0 +1,169 @@
+// ============================================================================
+// Prism Syntax Highlighting Theme — Grackle Web UI
+// ============================================================================
+// Custom token colors derived from the Grackle design tokens (theme.scss).
+// Applied globally to code blocks rendered by rehype-prism-plus inside
+// react-markdown. Token class names follow the Prism / refractor convention.
+// ============================================================================
+
+// ---------------------------------------------------------------------------
+// Base code block styles (applied via rehype-prism-plus class injection)
+// ---------------------------------------------------------------------------
+
+code[class*='language-'],
+pre[class*='language-'] {
+  color: var(--text-primary);
+  text-align: left;
+  white-space: pre;
+  word-spacing: normal;
+  word-break: normal;
+  word-wrap: normal;
+  tab-size: 2;
+  hyphens: none;
+}
+
+// ---------------------------------------------------------------------------
+// Token Colors
+// ---------------------------------------------------------------------------
+// Palette mapping:
+//   green  (#4ecca3) — keywords, tags, important
+//   blue   (#70a1ff) — functions, attributes, selectors
+//   cyan   (#22d3ee) — strings, inserted
+//   purple (#a855f7) — numbers, booleans, constants
+//   yellow (#f0c040) — class names, types, annotations
+//   red    (#e94560) — deleted, regex, operator-keyword
+//   secondary text   — comments, punctuation
+// ---------------------------------------------------------------------------
+
+// --- Comments & documentation ---
+.token.comment,
+.token.prolog,
+.token.doctype,
+.token.cdata {
+  color: var(--text-tertiary);
+  font-style: italic;
+}
+
+// --- Punctuation & plain structure ---
+.token.punctuation {
+  color: var(--text-secondary);
+}
+
+.token.namespace {
+  opacity: 0.8;
+}
+
+// --- Strings & inserted text ---
+.token.string,
+.token.attr-value,
+.token.template-string,
+.token.template-punctuation,
+.token.inserted {
+  color: var(--accent-cyan);
+}
+
+// --- Numbers, booleans, constants ---
+.token.number,
+.token.boolean,
+.token.constant,
+.token.symbol {
+  color: var(--accent-purple);
+}
+
+// --- Keywords, control flow ---
+.token.keyword,
+.token.tag,
+.token.important {
+  color: var(--accent-green);
+}
+
+// --- Functions, methods ---
+.token.function,
+.token.builtin {
+  color: var(--accent-blue);
+}
+
+// --- Selectors, attributes ---
+.token.selector,
+.token.attr-name,
+.token.char {
+  color: var(--accent-blue);
+}
+
+// --- Class names, types, annotations ---
+.token.class-name,
+.token.maybe-class-name {
+  color: var(--accent-yellow);
+}
+
+// --- Regex, deleted text ---
+.token.regex,
+.token.deleted {
+  color: var(--accent-red);
+}
+
+// --- Operators ---
+.token.operator,
+.token.entity,
+.token.url {
+  color: var(--accent-green);
+}
+
+// --- Variables, properties ---
+.token.variable,
+.token.property {
+  color: var(--text-primary);
+}
+
+// --- Atrule (CSS @rules), keyword-adjacent ---
+.token.atrule {
+  color: var(--accent-yellow);
+}
+
+// ---------------------------------------------------------------------------
+// Modifiers
+// ---------------------------------------------------------------------------
+
+.token.bold {
+  font-weight: var(--font-weight-bold);
+}
+
+.token.italic {
+  font-style: italic;
+}
+
+.token.entity {
+  cursor: help;
+}
+
+// ---------------------------------------------------------------------------
+// Line highlighting (rehype-prism-plus)
+// ---------------------------------------------------------------------------
+// When using `{1,3-5}` syntax on fenced code blocks, highlighted lines
+// receive the `.highlight-line` class.
+
+.highlight-line {
+  background: var(--accent-green-subtle);
+  border-left: 3px solid var(--accent-green);
+  margin-left: -3px;
+}
+
+// ---------------------------------------------------------------------------
+// Line numbers (rehype-prism-plus `showLineNumbers`)
+// ---------------------------------------------------------------------------
+
+.code-line {
+  display: block;
+  padding-left: var(--space-xs);
+  padding-right: var(--space-xs);
+}
+
+.line-number::before {
+  content: attr(line);
+  display: inline-block;
+  width: 2em;
+  margin-right: var(--space-sm);
+  text-align: right;
+  color: var(--text-tertiary);
+  user-select: none;
+}
