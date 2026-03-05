@@ -12,7 +12,7 @@ importers:
     dependencies:
       '@anthropic-ai/claude-agent-sdk':
         specifier: ^0.2.50
-        version: 0.2.50
+        version: 0.2.50(zod@4.3.6)
       '@bufbuild/buf':
         specifier: ^1.50.0
         version: 1.65.0
@@ -28,6 +28,9 @@ importers:
       '@connectrpc/connect-node':
         specifier: ^2.0.0
         version: 2.1.1(@bufbuild/protobuf@2.11.0)(@connectrpc/connect@2.1.1(@bufbuild/protobuf@2.11.0))
+      '@github/copilot-sdk':
+        specifier: ^0.1.29
+        version: 0.1.30
       '@playwright/test':
         specifier: ^1.49.0
         version: 1.58.2
@@ -51,7 +54,7 @@ importers:
         version: file:projects/heft-vite-plugin.tgz(@types/node@22.19.11)(sass@1.97.3)
       '@rush-temp/powerline':
         specifier: file:./projects/powerline.tgz
-        version: file:projects/powerline.tgz
+        version: file:projects/powerline.tgz(zod@4.3.6)
       '@rush-temp/server':
         specifier: file:./projects/server.tgz
         version: file:projects/server.tgz(@types/react@19.2.14)(react@19.2.4)
@@ -484,6 +487,50 @@ packages:
     resolution: {integrity: sha512-d9zaMRSTIKDLhctzH12MtXvJKSSUhaHcjV+2Z+GK+EEY7XKpP5yR4x+N3TAcHTcu963nIr+TMcCb4DBCYX1z6Q==}
     engines: {node: ^12.22.0 || ^14.17.0 || >=16.0.0}
 
+  '@github/copilot-darwin-arm64@0.0.420':
+    resolution: {integrity: sha512-sj8Oxcf3oKDbeUotm2gtq5YU1lwCt3QIzbMZioFD/PMLOeqSX/wrecI+c0DDYXKofFhALb0+DxxnWgbEs0mnkQ==}
+    cpu: [arm64]
+    os: [darwin]
+    hasBin: true
+
+  '@github/copilot-darwin-x64@0.0.420':
+    resolution: {integrity: sha512-2acA93IqXz1uuz3TVUm0Y7BVrBr0MySh1kQa8LqMILhTsG0YHRMm8ybzTp2HA7Mi1tl5CjqMSk163kkS7OzfUA==}
+    cpu: [x64]
+    os: [darwin]
+    hasBin: true
+
+  '@github/copilot-linux-arm64@0.0.420':
+    resolution: {integrity: sha512-h/IvEryTOYm1HzR2GNq8s2aDtN4lvT4MxldfZuS42CtWJDOfVG2jLLsoHWU1T3QV8j1++PmDgE//HX0JLpLMww==}
+    cpu: [arm64]
+    os: [linux]
+    hasBin: true
+
+  '@github/copilot-linux-x64@0.0.420':
+    resolution: {integrity: sha512-iL2NpZvXIDZ+3lw7sO2fo5T0nKmP5dZbU2gdYcv+SFBm/ONhCxIY5VRX4yN/9VkFaa9ePv5JzCnsl3vZINiDxg==}
+    cpu: [x64]
+    os: [linux]
+    hasBin: true
+
+  '@github/copilot-sdk@0.1.30':
+    resolution: {integrity: sha512-Stg+h8xsPRR0TNGBQfd9laxhJfWZ6DsdpbowcKIZoyKxZvMAbjnY0zyDeOpewJbxWBTJVhBZb5okOq6iaPNMZw==}
+    engines: {node: '>=20.0.0'}
+
+  '@github/copilot-win32-arm64@0.0.420':
+    resolution: {integrity: sha512-Njlc2j9vYSBAL+lC6FIEhQ3C+VxO3xavwKnw0ecVRiNLcGLyPrTdzPfPQOmEjC63gpVCqLabikoDGv8fuLPA2w==}
+    cpu: [arm64]
+    os: [win32]
+    hasBin: true
+
+  '@github/copilot-win32-x64@0.0.420':
+    resolution: {integrity: sha512-rZlH35oNehAP2DvQbu4vQFVNeCh/1p3rUjafBYaEY0Nkhx7RmdrYBileL5U3PtRPPRsBPaq3Qp+pVIrGoCDLzQ==}
+    cpu: [x64]
+    os: [win32]
+    hasBin: true
+
+  '@github/copilot@0.0.420':
+    resolution: {integrity: sha512-UpPuSjxUxQ+j02WjZEFffWf0scLb23LvuGHzMFtaSsweR+P/BdbtDUI5ZDIA6T0tVyyt6+X1/vgfsJiRqd6jig==}
+    hasBin: true
+
   '@humanwhocodes/config-array@0.13.0':
     resolution: {integrity: sha512-DZLEEqFWQFiyK6h5YIeynKx7JlvCYWL0cImfSRXZ9l4Sg2efkFGTuFf6vzXjK1cq6IYkU+Eg/JizXw+TD2vRNw==}
     engines: {node: '>=10.10.0'}
@@ -875,7 +922,7 @@ packages:
     version: 0.0.0
 
   '@rush-temp/powerline@file:projects/powerline.tgz':
-    resolution: {integrity: sha512-Px+8LJvQ1X5jPASeD7Lr2w1RgdvabMw+udFTaUn6+umxCaPH3qqBjetu6Ll8o0YBZIng+4Ai/+ss2gd0yqUjgg==, tarball: file:projects/powerline.tgz}
+    resolution: {integrity: sha512-2Hh1O+cwgS6tkmOG5pr7Uc9pXjx/X2TBJ8Q4APHuZOb7XshK4LNwjz18vd7tD94hnHdAIOcj2PJqREaUJKidtg==, tarball: file:projects/powerline.tgz}
     version: 0.0.0
 
   '@rush-temp/server@file:projects/server.tgz':
@@ -2611,6 +2658,10 @@ packages:
       yaml:
         optional: true
 
+  vscode-jsonrpc@8.2.1:
+    resolution: {integrity: sha512-kdjOSJ2lLIn7r1rtrMbbNCHjyMPfRnowdKjBQ+mGq6NAW5QY2bEZC/khaC5OR8svbbjvLEaIXkOq45e2X9BIbQ==}
+    engines: {node: '>=14.0.0'}
+
   watchpack@2.4.0:
     resolution: {integrity: sha512-Lcvm7MGST/4fup+ifyKi2hjyIAwcdI4HRgtvTpIUxBRhB+RFtUh8XtDOxUfctVCnhVi+QQj49i91OyvzkJl6cg==}
     engines: {node: '>=10.13.0'}
@@ -2665,9 +2716,14 @@ packages:
     resolution: {integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==}
     engines: {node: '>=10'}
 
+  zod@4.3.6:
+    resolution: {integrity: sha512-rftlrkhHZOcjDwkGlnUtZZkvaPHCsDATp4pGpuOOMDaTdDDXF91wuVDJoWoPsKX/3YPQ5fHuF3STjcYyKr+Qhg==}
+
 snapshots:
 
-  '@anthropic-ai/claude-agent-sdk@0.2.50':
+  '@anthropic-ai/claude-agent-sdk@0.2.50(zod@4.3.6)':
+    dependencies:
+      zod: 4.3.6
     optionalDependencies:
       '@img/sharp-darwin-arm64': 0.34.5
       '@img/sharp-darwin-x64': 0.34.5
@@ -2952,6 +3008,39 @@ snapshots:
       - supports-color
 
   '@eslint/js@8.57.1': {}
+
+  '@github/copilot-darwin-arm64@0.0.420':
+    optional: true
+
+  '@github/copilot-darwin-x64@0.0.420':
+    optional: true
+
+  '@github/copilot-linux-arm64@0.0.420':
+    optional: true
+
+  '@github/copilot-linux-x64@0.0.420':
+    optional: true
+
+  '@github/copilot-sdk@0.1.30':
+    dependencies:
+      '@github/copilot': 0.0.420
+      vscode-jsonrpc: 8.2.1
+      zod: 4.3.6
+
+  '@github/copilot-win32-arm64@0.0.420':
+    optional: true
+
+  '@github/copilot-win32-x64@0.0.420':
+    optional: true
+
+  '@github/copilot@0.0.420':
+    optionalDependencies:
+      '@github/copilot-darwin-arm64': 0.0.420
+      '@github/copilot-darwin-x64': 0.0.420
+      '@github/copilot-linux-arm64': 0.0.420
+      '@github/copilot-linux-x64': 0.0.420
+      '@github/copilot-win32-arm64': 0.0.420
+      '@github/copilot-win32-x64': 0.0.420
 
   '@humanwhocodes/config-array@0.13.0':
     dependencies:
@@ -3286,12 +3375,13 @@ snapshots:
       - tsx
       - yaml
 
-  '@rush-temp/powerline@file:projects/powerline.tgz':
+  '@rush-temp/powerline@file:projects/powerline.tgz(zod@4.3.6)':
     dependencies:
-      '@anthropic-ai/claude-agent-sdk': 0.2.50
+      '@anthropic-ai/claude-agent-sdk': 0.2.50(zod@4.3.6)
       '@bufbuild/protobuf': 2.11.0
       '@connectrpc/connect': 2.1.1(@bufbuild/protobuf@2.11.0)
       '@connectrpc/connect-node': 2.1.1(@bufbuild/protobuf@2.11.0)(@connectrpc/connect@2.1.1(@bufbuild/protobuf@2.11.0))
+      '@github/copilot-sdk': 0.1.30
       '@types/node': 22.19.11
       commander: 13.1.0
       pino: 10.3.1
@@ -5330,6 +5420,8 @@ snapshots:
       fsevents: 2.3.3
       sass: 1.97.3
 
+  vscode-jsonrpc@8.2.1: {}
+
   watchpack@2.4.0:
     dependencies:
       glob-to-regexp: 0.4.1
@@ -5391,3 +5483,5 @@ snapshots:
   yallist@4.0.0: {}
 
   yocto-queue@0.1.0: {}
+
+  zod@4.3.6: {}
