@@ -86,8 +86,7 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
   const { events, sessions, tasks, taskDiff, loadSessionEvents, loadFindings, loadTaskDiff, kill } = useGrackle();
   // eslint-disable-next-line @rushstack/no-new-null
   const scrollRef = useRef<HTMLDivElement>(null);
-  // eslint-disable-next-line @rushstack/no-new-null
-  const loadedRef = useRef<string | null>(null);
+  const loadedRef = useRef<string | undefined>(undefined);
   const [activeTaskTab, setActiveTaskTab] = useState<TaskTab>("stream");
   const prevTaskStatusRef = useRef<string | undefined>(undefined);
 

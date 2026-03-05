@@ -8,8 +8,7 @@ export type { UseGrackleSocketResult };
 /** Alias for the context value type. */
 export type GrackleContextType = UseGrackleSocketResult;
 
-// eslint-disable-next-line @rushstack/no-new-null
-const GrackleContext: React.Context<GrackleContextType | null> = createContext<GrackleContextType | null>(null);
+const GrackleContext: React.Context<GrackleContextType | undefined> = createContext<GrackleContextType | undefined>(undefined);
 
 /** Exported raw context for use by MockGrackleProvider and tests. */
 export { GrackleContext };

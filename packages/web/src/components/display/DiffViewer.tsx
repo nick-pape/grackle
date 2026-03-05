@@ -4,8 +4,7 @@ import styles from "./DiffViewer.module.scss";
 
 /** Props for the DiffViewer component. */
 interface Props {
-  // eslint-disable-next-line @rushstack/no-new-null
-  diff: TaskDiffData | null;
+  diff: TaskDiffData | undefined;
 }
 
 /** Classifies a diff line for styling purposes. */

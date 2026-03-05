@@ -65,13 +65,11 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
   // ── State ─────────────────────────────────────────
   const [sessions, setSessions] = useState<Session[]>(MOCK_SESSIONS);
   const [events, setEvents] = useState<SessionEvent[]>(MOCK_EVENTS);
-  // eslint-disable-next-line @rushstack/no-new-null
-  const [lastSpawnedId, setLastSpawnedId] = useState<string | null>(null);
+  const [lastSpawnedId, setLastSpawnedId] = useState<string | undefined>(undefined);
   const [projects, setProjects] = useState<Project[]>(MOCK_PROJECTS);
   const [tasks, setTasks] = useState<TaskData[]>(MOCK_TASKS);
   const [findings, setFindings] = useState<FindingData[]>(MOCK_FINDINGS);
-  // eslint-disable-next-line @rushstack/no-new-null
-  const [taskDiff, setTaskDiff] = useState<TaskDiffData | null>(MOCK_TASK_DIFF);
+  const [taskDiff, setTaskDiff] = useState<TaskDiffData | undefined>(MOCK_TASK_DIFF);
 
   // ── Refs ──────────────────────────────────────────
   /** Auto-incrementing counter for generating unique mock IDs. */
@@ -692,8 +690,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       // eslint-disable-next-line no-console
       console.log("[MockGrackle] loadTaskDiff", taskId);
 
-      // eslint-disable-next-line @rushstack/no-new-null
-      setTaskDiff(null);
+      setTaskDiff(undefined);
 
       const handle = setTimeout(() => {
         timersRef.current.delete(handle);
