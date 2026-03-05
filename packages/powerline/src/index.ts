@@ -6,6 +6,7 @@ import { registerPowerLineRoutes } from "./grpc-server.js";
 import { registerRuntime } from "./runtime-registry.js";
 import { StubRuntime } from "./runtimes/stub.js";
 import { ClaudeCodeRuntime } from "./runtimes/claude-code.js";
+import { CopilotRuntime } from "./runtimes/copilot.js";
 import { DEFAULT_POWERLINE_PORT } from "@grackle/common";
 import { logger } from "./logger.js";
 
@@ -25,6 +26,7 @@ function main(): void {
       // Register runtimes
       registerRuntime(new StubRuntime());
       registerRuntime(new ClaudeCodeRuntime());
+      registerRuntime(new CopilotRuntime());
 
       // Start HTTP/2 server with optional auth
       const handler = connectNodeAdapter({

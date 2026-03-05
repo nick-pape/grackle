@@ -17,6 +17,7 @@ import { grackleHome } from "./paths.js";
 import * as logWriter from "./log-writer.js";
 import { writeTranscript } from "./transcript.js";
 import { safeParseJsonArray } from "./json-helpers.js";
+import { logger } from "./logger.js";
 
 const WS_PING_INTERVAL_MS: number = 30_000;
 const WS_CLOSE_UNAUTHORIZED: number = 4001;
@@ -86,6 +87,41 @@ export function createWsBridge(httpServer: HttpServer, verifyApiKey: (token: str
   return wss;
 }
 
+/** Map a database environment row to the WebSocket payload shape. */
+function envRowToWs(r: ReturnType<typeof envRegistry.listEnvironments>[number]): Record<string, unknown> {
+  return {
+    id: r.id,
+    displayName: r.displayName,
+    adapterType: r.adapterType,
+    defaultRuntime: r.defaultRuntime,
+    status: r.status,
+    bootstrapped: r.bootstrapped,
+  };
+}
+
+/** Broadcast the current environment list to all connected WebSocket clients. */
+function broadcastEnvironments(): void {
+  broadcast({
+    type: "environments",
+    payload: { environments: envRegistry.listEnvironments().map(envRowToWs) },
+  });
+}
+
+/** Safely parse an adapter config string, returning an empty object on failure. */
+function safeParseAdapterConfig(raw: string, environmentId: string): Record<string, unknown> {
+  try {
+    const parsed: unknown = JSON.parse(raw || "{}");
+    if (typeof parsed === "object" && parsed !== null) {
+      return parsed as Record<string, unknown>;
+    }
+    logger.warn({ environmentId, raw }, "adapterConfig is not an object, using empty config");
+    return {};
+  } catch (err) {
+    logger.warn({ environmentId, raw, err }, "Failed to parse adapterConfig, using empty config");
+    return {};
+  }
+}
+
 async function handleMessage(
   ws: WebSocket,
   msg: WsMessage,
@@ -96,16 +132,7 @@ async function handleMessage(
       const rows = envRegistry.listEnvironments();
       sendWs(ws, {
         type: "environments",
-        payload: {
-          environments: rows.map((r) => ({
-            id: r.id,
-            displayName: r.displayName,
-            adapterType: r.adapterType,
-            defaultRuntime: r.defaultRuntime,
-            status: r.status,
-            bootstrapped: r.bootstrapped,
-          })),
-        },
+        payload: { environments: rows.map(envRowToWs) },
       });
       break;
     }
@@ -234,10 +261,49 @@ async function handleMessage(
         return;
       }
 
-      const conn = adapterManager.getConnection(environmentId);
+      // Auto-provision the environment if not already connected
+      let conn = adapterManager.getConnection(environmentId);
       if (!conn) {
-        sendWs(ws, { type: "error", payload: { message: `Environment not connected: ${environmentId}` } });
-        return;
+        const adapter = adapterManager.getAdapter(env.adapterType);
+        if (!adapter) {
+          sendWs(ws, { type: "error", payload: { message: `No adapter for type: ${env.adapterType}` } });
+          return;
+        }
+
+        logger.info({ environmentId }, "Auto-provisioning environment for spawn");
+        envRegistry.updateEnvironmentStatus(environmentId, "connecting");
+        broadcastEnvironments();
+
+        try {
+          const config = safeParseAdapterConfig(env.adapterConfig, environmentId);
+          const powerlineToken = env.powerlineToken || "";
+          for await (const provEvent of adapter.provision(environmentId, config, powerlineToken)) {
+            logger.info({ environmentId, stage: provEvent.stage }, "Auto-provision progress");
+            sendWs(ws, {
+              type: "provision_progress",
+              payload: { environmentId, stage: provEvent.stage, message: provEvent.message, progress: provEvent.progress },
+            });
+          }
+          conn = await adapter.connect(environmentId, config, powerlineToken); // eslint-disable-line require-atomic-updates
+          adapterManager.setConnection(environmentId, conn);
+          envRegistry.updateEnvironmentStatus(environmentId, "connected");
+          broadcastEnvironments();
+          logger.info({ environmentId }, "Auto-provision complete for spawn");
+          sendWs(ws, {
+            type: "provision_progress",
+            payload: { environmentId, stage: "ready", message: "Environment connected", progress: 1 },
+          });
+        } catch (err) {
+          logger.error({ environmentId, err }, "Auto-provision for spawn failed");
+          envRegistry.updateEnvironmentStatus(environmentId, "error");
+          broadcastEnvironments();
+          sendWs(ws, {
+            type: "provision_progress",
+            payload: { environmentId, stage: "error", message: `Auto-provision failed: ${err}`, progress: 0 },
+          });
+          sendWs(ws, { type: "error", payload: { message: `Failed to auto-connect environment ${environmentId}: ${err}` } });
+          return;
+        }
       }
 
       const sessionId = uuid();
@@ -497,14 +563,59 @@ async function handleMessage(
       }
 
       const environmentId = task.environmentId || project.defaultEnvironmentId;
-      const conn = adapterManager.getConnection(environmentId);
-      if (!conn) {
-        sendWs(ws, { type: "error", payload: { message: `Environment ${environmentId} not connected` } });
+      const env = envRegistry.getEnvironment(environmentId);
+      if (!env) {
+        sendWs(ws, { type: "error", payload: { message: `Environment not found: ${environmentId}` } });
         return;
       }
 
+      // Auto-provision the environment if not already connected
+      let conn = adapterManager.getConnection(environmentId);
+      if (!conn) {
+        const adapter = adapterManager.getAdapter(env.adapterType);
+        if (!adapter) {
+          sendWs(ws, { type: "error", payload: { message: `No adapter for type: ${env.adapterType}` } });
+          return;
+        }
+
+        logger.info({ environmentId, taskId }, "Auto-provisioning environment for task start");
+        envRegistry.updateEnvironmentStatus(environmentId, "connecting");
+        broadcastEnvironments();
+
+        try {
+          const config = safeParseAdapterConfig(env.adapterConfig, environmentId);
+          const powerlineToken = env.powerlineToken || "";
+          for await (const provEvent of adapter.provision(environmentId, config, powerlineToken)) {
+            logger.info({ environmentId, stage: provEvent.stage }, "Auto-provision progress");
+            sendWs(ws, {
+              type: "provision_progress",
+              payload: { environmentId, stage: provEvent.stage, message: provEvent.message, progress: provEvent.progress },
+            });
+          }
+          conn = await adapter.connect(environmentId, config, powerlineToken); // eslint-disable-line require-atomic-updates
+          adapterManager.setConnection(environmentId, conn);
+          envRegistry.updateEnvironmentStatus(environmentId, "connected");
+          broadcastEnvironments();
+          logger.info({ environmentId, taskId }, "Auto-provision complete");
+          sendWs(ws, {
+            type: "provision_progress",
+            payload: { environmentId, stage: "ready", message: "Environment connected", progress: 1 },
+          });
+        } catch (err) {
+          logger.error({ environmentId, taskId, err }, "Auto-provision for task failed");
+          envRegistry.updateEnvironmentStatus(environmentId, "error");
+          broadcastEnvironments();
+          sendWs(ws, {
+            type: "provision_progress",
+            payload: { environmentId, stage: "error", message: `Auto-provision failed: ${err}`, progress: 0 },
+          });
+          sendWs(ws, { type: "error", payload: { message: `Failed to auto-connect environment ${environmentId}: ${err}` } });
+          return;
+        }
+      }
+
       const sessionId = uuid();
-      const runtime = (msg.payload?.runtime as string) || "claude-code";
+      const runtime = (msg.payload?.runtime as string) || env.defaultRuntime || DEFAULT_RUNTIME;
       const model = (msg.payload?.model as string) || process.env.GRACKLE_DEFAULT_MODEL || DEFAULT_MODEL;
       const logPath = join(grackleHome, LOGS_DIR, sessionId);
 
@@ -740,6 +851,115 @@ async function handleMessage(
       } catch (err) {
         sendWs(ws, { type: "task_diff", payload: { taskId, error: String(err) } });
       }
+      break;
+    }
+
+    case "provision_environment": {
+      const environmentId = msg.payload?.environmentId as string;
+      if (!environmentId) {
+        sendWs(ws, { type: "error", payload: { message: "environmentId required" } });
+        return;
+      }
+
+      const env = envRegistry.getEnvironment(environmentId);
+      if (!env) {
+        sendWs(ws, { type: "error", payload: { message: `Environment not found: ${environmentId}` } });
+        return;
+      }
+
+      const adapter = adapterManager.getAdapter(env.adapterType);
+      if (!adapter) {
+        sendWs(ws, { type: "error", payload: { message: `No adapter for type: ${env.adapterType}` } });
+        return;
+      }
+
+      logger.info({ environmentId, adapterType: env.adapterType }, "Provisioning environment");
+      envRegistry.updateEnvironmentStatus(environmentId, "connecting");
+      broadcastEnvironments();
+
+      // Run provision in background, streaming progress to the requesting client
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
+      (async () => {
+        try {
+          const config = safeParseAdapterConfig(env.adapterConfig, environmentId);
+          const powerlineToken = env.powerlineToken || "";
+          logger.info({ environmentId, config }, "Starting adapter.provision");
+          for await (const event of adapter.provision(environmentId, config, powerlineToken)) {
+            logger.info({ environmentId, stage: event.stage, message: event.message }, "Provision progress");
+            sendWs(ws, {
+              type: "provision_progress",
+              payload: { environmentId, stage: event.stage, message: event.message, progress: event.progress },
+            });
+          }
+          logger.info({ environmentId }, "Provision complete, calling adapter.connect");
+          const conn = await adapter.connect(environmentId, config, powerlineToken);
+          adapterManager.setConnection(environmentId, conn);
+          envRegistry.updateEnvironmentStatus(environmentId, "connected");
+          logger.info({ environmentId }, "Environment connected");
+          sendWs(ws, {
+            type: "provision_progress",
+            payload: { environmentId, stage: "ready", message: "Environment connected", progress: 1 },
+          });
+        } catch (err) {
+          logger.error({ environmentId, err }, "Provision failed");
+          envRegistry.updateEnvironmentStatus(environmentId, "error");
+          sendWs(ws, {
+            type: "provision_progress",
+            payload: { environmentId, stage: "error", message: `Connection failed: ${err}`, progress: 0 },
+          });
+        }
+        broadcastEnvironments();
+      })();
+      break;
+    }
+
+    case "stop_environment": {
+      const environmentId = msg.payload?.environmentId as string;
+      if (!environmentId) {
+        sendWs(ws, { type: "error", payload: { message: "environmentId required" } });
+        return;
+      }
+
+      const env = envRegistry.getEnvironment(environmentId);
+      if (!env) {
+        sendWs(ws, { type: "error", payload: { message: `Environment not found: ${environmentId}` } });
+        return;
+      }
+
+      const adapter = adapterManager.getAdapter(env.adapterType);
+      if (adapter) {
+        const config = safeParseAdapterConfig(env.adapterConfig, environmentId);
+        await adapter.stop(environmentId, config);
+      }
+      adapterManager.removeConnection(environmentId);
+      envRegistry.updateEnvironmentStatus(environmentId, "disconnected");
+      logger.info({ environmentId }, "Environment stopped");
+      broadcastEnvironments();
+      break;
+    }
+
+    case "remove_environment": {
+      const environmentId = msg.payload?.environmentId as string;
+      if (!environmentId) {
+        sendWs(ws, { type: "error", payload: { message: "environmentId required" } });
+        return;
+      }
+
+      const env = envRegistry.getEnvironment(environmentId);
+      if (env) {
+        const adapter = adapterManager.getAdapter(env.adapterType);
+        if (adapter) {
+          const config = safeParseAdapterConfig(env.adapterConfig, environmentId);
+          try { await adapter.destroy(environmentId, config); } catch { /* best-effort */ }
+          try { await adapter.disconnect(environmentId); } catch { /* best-effort */ }
+        }
+      }
+      adapterManager.removeConnection(environmentId);
+      sessionStore.deleteByEnvironment(environmentId);
+      envRegistry.removeEnvironment(environmentId);
+      logger.info({ environmentId }, "Environment removed");
+      broadcast({ type: "environment_removed", payload: { environmentId } });
+      broadcastEnvironments();
       break;
     }
   }

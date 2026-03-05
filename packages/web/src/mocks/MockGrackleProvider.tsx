@@ -750,6 +750,10 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       loadFindings,
       postFinding,
       loadTaskDiff,
+      provisionStatus: {},
+      provisionEnvironment: () => {},
+      stopEnvironment: () => {},
+      removeEnvironment: () => {},
     }),
     [
       sessions,

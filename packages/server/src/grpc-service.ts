@@ -186,7 +186,21 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
     },
 
     async removeEnvironment(req: grackle.EnvironmentId) {
+      // Disconnect the adapter if currently connected
+      const env = envRegistry.getEnvironment(req.id);
+      if (env) {
+        const adapter = adapterManager.getAdapter(env.adapterType);
+        if (adapter) {
+          try {
+            await adapter.disconnect(req.id);
+          } catch { /* best-effort */ }
+        }
+      }
+      adapterManager.removeConnection(req.id);
+      // Delete sessions referencing this environment (FK constraint)
+      sessionStore.deleteByEnvironment(req.id);
       envRegistry.removeEnvironment(req.id);
+      broadcast({ type: "environment_removed", payload: { environmentId: req.id } });
       return create(grackle.EmptySchema, {});
     },
 
@@ -537,8 +551,9 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       const conn = adapterManager.getConnection(environmentId);
       if (!conn) throw new Error(`Environment ${environmentId} not connected`);
 
+      const env = envRegistry.getEnvironment(environmentId);
       const sessionId = uuid();
-      const runtime = req.runtime || "claude-code";
+      const runtime = req.runtime || env?.defaultRuntime || DEFAULT_RUNTIME;
       const model = req.model || process.env.GRACKLE_DEFAULT_MODEL || DEFAULT_MODEL;
       const logPath = join(grackleHome, LOGS_DIR, sessionId);
 
