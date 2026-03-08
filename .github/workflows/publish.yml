@@ -42,10 +42,23 @@ jobs:
       - name: Bump versions
         id: bump
         run: |
-          output=$(node common/scripts/install-run-rush.js version --bump --target-branch main 2>&1) || true
+          set +e
+          output=$(node common/scripts/install-run-rush.js version --bump --target-branch main 2>&1)
+          status=$?
+          set -e
+
           echo "$output"
 
-          branch=$(echo "$output" | grep -oP 'version/bump-\d+' | head -1)
+          if [ "$status" -ne 0 ]; then
+            if echo "$output" | grep -q 'GH013'; then
+              echo "rush version failed due to protected branch; proceeding with PR-based merge."
+            else
+              echo "rush version failed with status $status"
+              exit "$status"
+            fi
+          fi
+
+          branch=$(echo "$output" | grep -oE 'version/bump-[0-9]+' | head -1)
           if [ -n "$branch" ]; then
             echo "branch=$branch" >> "$GITHUB_OUTPUT"
             echo "has_bump=true" >> "$GITHUB_OUTPUT"
