@@ -58,6 +58,34 @@ Rush monorepo with 5 packages under `packages/`:
 - **Never access SQLite directly** — always go through the CLI (`grackle` commands)
 - If the CLI is missing a needed operation, add it to `@grackle-ai/cli` rather than using raw SQL
 
+## Change Files (Rush Change)
+
+Every PR must include a change file. CI enforces this with `rush change --verify`.
+
+**Publishable packages** (lockstep versioning — all share one version):
+- `@grackle-ai/cli`, `@grackle-ai/common`, `@grackle-ai/powerline`, `@grackle-ai/server`
+
+**Not publishable** (private — never need change files):
+- `@grackle-ai/web`, `@grackle-ai/heft-rig`, `@grackle-ai/heft-buf-plugin`, `@grackle-ai/heft-playwright-plugin`, `@grackle-ai/heft-vite-plugin`
+
+**When to create a change file**: If the PR has a diff in any publishable package. If only private packages or non-package files (workflows, docs, config) changed, no change file is needed.
+
+**Command** (non-interactive, from repo root):
+```bash
+node common/scripts/install-run-rush.js change --bulk \
+  --message "Description of the change" \
+  --bump-type patch \
+  --email "5674316+nick-pape@users.noreply.github.com"
+```
+
+**Bump types**:
+- `patch` — bug fixes, internal changes
+- `minor` — new features, backwards-compatible additions
+- `none` — no version bump (infra, tooling, docs touching a publishable package)
+- **Never use `major`** — CI blocks major bumps (we're pre-1.0)
+
+**What the command does**: Creates a JSON file in `common/changes/` named after the branch. The file is committed to the PR branch. One change file per PR is sufficient — it covers all publishable packages via lockstep versioning.
+
 ## Ports
 
 | Service | Port | Constant |
