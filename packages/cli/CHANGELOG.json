@@ -1,0 +1,17 @@
+{
+  "name": "@grackle-ai/cli",
+  "entries": [
+    {
+      "version": "0.0.2",
+      "tag": "@grackle-ai/cli_v0.0.2",
+      "date": "Sun, 08 Mar 2026 05:58:05 GMT",
+      "comments": {
+        "none": [
+          {
+            "comment": "Rename npm scope from @grackle to @grackle-ai"
+          }
+        ]
+      }
+    }
+  ]
+}
