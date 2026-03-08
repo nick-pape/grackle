@@ -38,6 +38,7 @@ jobs:
       # rush version --bump creates a temp branch, pushes it, then tries to
       # fast-forward main directly. The direct push fails due to branch
       # protection, so we let it fail and merge via PR instead.
+      # If there are no change files, the bump is skipped entirely.
       - name: Bump versions
         id: bump
         run: |
@@ -45,13 +46,16 @@ jobs:
           echo "$output"
 
           branch=$(echo "$output" | grep -oP 'version/bump-\d+' | head -1)
-          if [ -z "$branch" ]; then
-            echo "::error::Failed to extract version bump branch name"
-            exit 1
+          if [ -n "$branch" ]; then
+            echo "branch=$branch" >> "$GITHUB_OUTPUT"
+            echo "has_bump=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "No version bump needed"
+            echo "has_bump=false" >> "$GITHUB_OUTPUT"
           fi
-          echo "branch=$branch" >> "$GITHUB_OUTPUT"
 
       - name: Merge version bump into main
+        if: steps.bump.outputs.has_bump == 'true'
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
@@ -64,6 +68,7 @@ jobs:
           gh pr merge "$pr_url" --squash --admin --delete-branch
 
       - name: Checkout updated main
+        if: steps.bump.outputs.has_bump == 'true'
         run: git checkout main && git pull origin main
 
       - name: Build
