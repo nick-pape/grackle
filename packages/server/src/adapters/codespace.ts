@@ -1,5 +1,5 @@
 import type { EnvironmentAdapter, BaseEnvironmentConfig, PowerLineConnection, ProvisionEvent } from "./adapter.js";
-import { DEFAULT_POWERLINE_PORT } from "@grackle/common";
+import { DEFAULT_POWERLINE_PORT } from "@grackle-ai/common";
 import {
   type RemoteExecutor,
   ProcessTunnel,
@@ -164,7 +164,9 @@ export class CodespaceAdapter implements EnvironmentAdapter {
     const executor = new CodespaceExecutor(cfg.codespaceName);
 
     try {
-      await executor.exec(`${buildRemoteKillCommand()}; rm -rf ${REMOTE_POWERLINE_DIRECTORY}`);
+      await executor.exec(
+        `${buildRemoteKillCommand()}; rm -f ~/.claude/.credentials.json; rm -rf ${REMOTE_POWERLINE_DIRECTORY}`,
+      );
     } catch (err) {
       logger.debug({ environmentId, err }, "Failed to clean up remote PowerLine artifacts");
     }

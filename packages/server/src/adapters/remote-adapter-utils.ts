@@ -1,4 +1,4 @@
-import { DEFAULT_POWERLINE_PORT } from "@grackle/common";
+import { DEFAULT_POWERLINE_PORT } from "@grackle-ai/common";
 import type { PowerLineConnection, ProvisionEvent } from "./adapter.js";
 import { createPowerLineClient } from "./powerline-transport.js";
 import { findFreePort } from "../utils/ports.js";
@@ -154,6 +154,9 @@ export abstract class ProcessTunnel implements RemoteTunnel {
 
 // ─── Bootstrap PowerLine ────────────────────────────────────
 
+/** Regex for valid POSIX environment variable names. */
+const ENV_VAR_NAME_PATTERN: RegExp = /^[A-Za-z_][A-Za-z0-9_]*$/;
+
 /** Environment variables to forward to the remote PowerLine process. */
 const FORWARDED_ENV_VARS: string[] = [
   "ANTHROPIC_API_KEY",
@@ -282,13 +285,29 @@ export async function* bootstrapPowerLine(
     `${REMOTE_POWERLINE_DIRECTORY}/node_modules/@grackle/common/package.json`,
   );
 
-  // 7. Copy Claude Code credentials for subscription auth (if present on host)
+  // 7. Copy Claude Code credentials for subscription auth (if present on host).
+  //    Stored under the PowerLine directory so destroy() cleans them up.
   const hostCredsPath = join(homedir(), ".claude", ".credentials.json");
   if (existsSync(hostCredsPath)) {
     yield { stage: "pushing_tokens", message: "Copying Claude credentials...", progress: 0.57 };
     try {
-      await executor.exec("mkdir -p ~/.claude", { timeout: REMOTE_EXEC_DEFAULT_TIMEOUT_MS });
-      await executor.copyTo(hostCredsPath, "~/.claude/.credentials.json");
+      await executor.exec(
+        `mkdir -p ${REMOTE_POWERLINE_DIRECTORY}/.claude`,
+        { timeout: REMOTE_EXEC_DEFAULT_TIMEOUT_MS },
+      );
+      await executor.copyTo(
+        hostCredsPath,
+        `${REMOTE_POWERLINE_DIRECTORY}/.claude/.credentials.json`,
+      );
+      await executor.exec(
+        `chmod 600 ${REMOTE_POWERLINE_DIRECTORY}/.claude/.credentials.json`,
+        { timeout: REMOTE_EXEC_DEFAULT_TIMEOUT_MS },
+      );
+      // Symlink so Claude Code finds it at the expected ~/.claude path
+      await executor.exec(
+        `mkdir -p ~/.claude && ln -sf ${REMOTE_POWERLINE_DIRECTORY}/.claude/.credentials.json ~/.claude/.credentials.json`,
+        { timeout: REMOTE_EXEC_DEFAULT_TIMEOUT_MS },
+      );
     } catch (err) {
       logger.warn({ err }, "Failed to copy Claude credentials (agent may need manual login)");
     }
@@ -317,6 +336,10 @@ export async function* bootstrapPowerLine(
   }
   if (extraEnv) {
     for (const [key, value] of Object.entries(extraEnv)) {
+      if (!ENV_VAR_NAME_PATTERN.test(key)) {
+        logger.warn({ key }, "Skipping invalid env var name");
+        continue;
+      }
       envLines.push(`export ${key}='${shellEscape(value)}'`);
     }
   }
@@ -325,7 +348,11 @@ export async function* bootstrapPowerLine(
     const envFileContent = envLines.join("\n") + "\n";
     const envFileContentBase64 = Buffer.from(envFileContent, "utf8").toString("base64");
     await executor.exec(
-      `printf '%s' '${shellEscape(envFileContentBase64)}' | base64 -d > ${REMOTE_POWERLINE_DIRECTORY}/.env.sh`,
+      `node -e "require('fs').writeFileSync('${REMOTE_POWERLINE_DIRECTORY}/.env.sh',Buffer.from(process.argv[1],'base64').toString('utf8'))" '${shellEscape(envFileContentBase64)}'`,
+      { timeout: REMOTE_EXEC_DEFAULT_TIMEOUT_MS },
+    );
+    await executor.exec(
+      `chmod 600 ${REMOTE_POWERLINE_DIRECTORY}/.env.sh`,
       { timeout: REMOTE_EXEC_DEFAULT_TIMEOUT_MS },
     );
   }
