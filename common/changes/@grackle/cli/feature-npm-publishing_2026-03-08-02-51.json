@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Set_up_npm_publishing",
+      "type": "none",
+      "packageName": "@grackle/cli"
+    }
+  ],
+  "packageName": "@grackle/cli",
+  "email": "nick@example.com"
+}
