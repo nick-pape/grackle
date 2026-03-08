@@ -8,7 +8,7 @@ import { spawn, type ChildProcess } from "node:child_process";
 import { createConnection } from "node:net";
 import { join, resolve } from "node:path";
 import { homedir } from "node:os";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 
 // ─── Constants ──────────────────────────────────────────────
 
@@ -32,6 +32,27 @@ const TUNNEL_KILL_GRACE_MS: number = 1_000;
 const SSH_CONNECTIVITY_TIMEOUT_MS: number = 15_000;
 /** Remote directory where PowerLine artifacts are installed. */
 const REMOTE_POWERLINE_DIRECTORY: string = "~/.grackle/powerline";
+
+// ─── Dev vs Production Mode ─────────────────────────────────
+
+/**
+ * Check if we are running from a monorepo source checkout.
+ * When running from the monorepo, sibling `powerline/dist/index.js` exists
+ * relative to the server's dist/adapters directory.
+ */
+export function isDevMode(): boolean {
+  return existsSync(resolve(import.meta.dirname, "../../../powerline/dist/index.js"));
+}
+
+/**
+ * Read the lockstep version from the server's own package.json.
+ * import.meta.dirname = dist/adapters, so ../../package.json = server's package.json.
+ */
+function getPackageVersion(): string {
+  const packageJsonPath = resolve(import.meta.dirname, "../../package.json");
+  const pkg = JSON.parse(readFileSync(packageJsonPath, "utf8")) as { version: string };
+  return pkg.version;
+}
 
 // ─── Interfaces ─────────────────────────────────────────────
 
@@ -225,65 +246,84 @@ export async function* bootstrapPowerLine(
     throw new Error("git is not installed on the remote host. Install git and try again.");
   }
 
-  // 3. Create remote directory structure
-  yield { stage: "bootstrapping", message: "Creating remote directories...", progress: 0.20 };
-  await executor.exec(
-    `mkdir -p ${REMOTE_POWERLINE_DIRECTORY}/node_modules/@grackle/common`,
-    { timeout: REMOTE_EXEC_DEFAULT_TIMEOUT_MS },
-  );
+  // 3. Install PowerLine — dev mode (copy artifacts) vs production (npm install)
+  const devMode = isDevMode();
+  let entryPoint: string;
 
-  // 4. Copy artifacts — powerline dist + package.json first, then npm install,
-  //    then copy @grackle/common into node_modules (npm install would wipe it).
-  yield { stage: "bootstrapping", message: "Copying PowerLine artifacts to remote host...", progress: 0.25 };
+  if (devMode) {
+    // ── Dev mode: copy local monorepo artifacts ──
+    entryPoint = "dist/index.js";
 
-  // Resolve local artifact paths relative to server's built location.
-  // import.meta.dirname = packages/server/dist/adapters, so we go up 3 levels
-  // to reach packages/, then into common/ or powerline/.
-  const serverDistDir = resolve(import.meta.dirname);
-  const commonPackageDir = resolve(serverDistDir, "../../../common");
-  const powerlinePackageDir = resolve(serverDistDir, "../../../powerline");
+    yield { stage: "bootstrapping", message: "Creating remote directories...", progress: 0.20 };
+    await executor.exec(
+      `mkdir -p ${REMOTE_POWERLINE_DIRECTORY}/node_modules/@grackle-ai/common`,
+      { timeout: REMOTE_EXEC_DEFAULT_TIMEOUT_MS },
+    );
 
-  // Copy powerline package (dist + package.json)
-  yield { stage: "bootstrapping", message: "Copying @grackle/powerline...", progress: 0.30 };
-  await executor.copyTo(
-    join(powerlinePackageDir, "dist"),
-    `${REMOTE_POWERLINE_DIRECTORY}/dist`,
-  );
-  await executor.copyTo(
-    join(powerlinePackageDir, "package.json"),
-    `${REMOTE_POWERLINE_DIRECTORY}/package.json`,
-  );
+    // Resolve local artifact paths relative to server's built location.
+    // import.meta.dirname = packages/server/dist/adapters → up 3 levels → packages/
+    const serverDistDir = resolve(import.meta.dirname);
+    const commonPackageDir = resolve(serverDistDir, "../../../common");
+    const powerlinePackageDir = resolve(serverDistDir, "../../../powerline");
 
-  // 5. Strip @grackle/* deps from package.json (they'll be copied manually)
-  //    and run npm install for the remaining public dependencies.
-  yield { stage: "bootstrapping", message: "Installing dependencies on remote host...", progress: 0.40 };
-  await executor.exec(
-    `cd ${REMOTE_POWERLINE_DIRECTORY} && node -e "`
-    + `const p=JSON.parse(require('fs').readFileSync('package.json','utf8'));`
-    + `for(const k of Object.keys(p.dependencies||{})){if(k.startsWith('@grackle/'))delete p.dependencies[k];}`
-    + `for(const k of Object.keys(p.devDependencies||{})){if(k.startsWith('@grackle/'))delete p.devDependencies[k];}`
-    + `require('fs').writeFileSync('package.json',JSON.stringify(p,null,2));"`,
-    { timeout: REMOTE_EXEC_DEFAULT_TIMEOUT_MS },
-  );
-  await executor.exec(
-    `cd ${REMOTE_POWERLINE_DIRECTORY} && npm install --omit=dev`,
-    { timeout: BOOTSTRAP_NPM_INSTALL_TIMEOUT_MS },
-  );
+    yield { stage: "bootstrapping", message: "Copying PowerLine artifacts...", progress: 0.25 };
+    await executor.copyTo(
+      join(powerlinePackageDir, "dist"),
+      `${REMOTE_POWERLINE_DIRECTORY}/dist`,
+    );
+    await executor.copyTo(
+      join(powerlinePackageDir, "package.json"),
+      `${REMOTE_POWERLINE_DIRECTORY}/package.json`,
+    );
 
-  // 6. Copy @grackle/common into node_modules AFTER npm install (npm would wipe it)
-  yield { stage: "bootstrapping", message: "Copying @grackle/common...", progress: 0.55 };
-  await executor.exec(
-    `mkdir -p ${REMOTE_POWERLINE_DIRECTORY}/node_modules/@grackle/common`,
-    { timeout: REMOTE_EXEC_DEFAULT_TIMEOUT_MS },
-  );
-  await executor.copyTo(
-    join(commonPackageDir, "dist"),
-    `${REMOTE_POWERLINE_DIRECTORY}/node_modules/@grackle/common/dist`,
-  );
-  await executor.copyTo(
-    join(commonPackageDir, "package.json"),
-    `${REMOTE_POWERLINE_DIRECTORY}/node_modules/@grackle/common/package.json`,
-  );
+    // Strip @grackle-ai/* deps (they'll be copied manually) and npm install the rest
+    yield { stage: "bootstrapping", message: "Installing dependencies on remote host...", progress: 0.40 };
+    await executor.exec(
+      `cd ${REMOTE_POWERLINE_DIRECTORY} && node -e "`
+      + `const p=JSON.parse(require('fs').readFileSync('package.json','utf8'));`
+      + `for(const k of Object.keys(p.dependencies||{})){if(k.startsWith('@grackle-ai/'))delete p.dependencies[k];}`
+      + `for(const k of Object.keys(p.devDependencies||{})){if(k.startsWith('@grackle-ai/'))delete p.devDependencies[k];}`
+      + `require('fs').writeFileSync('package.json',JSON.stringify(p,null,2));"`,
+      { timeout: REMOTE_EXEC_DEFAULT_TIMEOUT_MS },
+    );
+    await executor.exec(
+      `cd ${REMOTE_POWERLINE_DIRECTORY} && npm install --omit=dev`,
+      { timeout: BOOTSTRAP_NPM_INSTALL_TIMEOUT_MS },
+    );
+
+    // Copy @grackle-ai/common into node_modules AFTER npm install (npm would wipe it)
+    yield { stage: "bootstrapping", message: "Copying @grackle-ai/common...", progress: 0.55 };
+    await executor.exec(
+      `mkdir -p ${REMOTE_POWERLINE_DIRECTORY}/node_modules/@grackle-ai/common`,
+      { timeout: REMOTE_EXEC_DEFAULT_TIMEOUT_MS },
+    );
+    await executor.copyTo(
+      join(commonPackageDir, "dist"),
+      `${REMOTE_POWERLINE_DIRECTORY}/node_modules/@grackle-ai/common/dist`,
+    );
+    await executor.copyTo(
+      join(commonPackageDir, "package.json"),
+      `${REMOTE_POWERLINE_DIRECTORY}/node_modules/@grackle-ai/common/package.json`,
+    );
+  } else {
+    // ── Production mode: npm install from registry ──
+    entryPoint = "node_modules/@grackle-ai/powerline/dist/index.js";
+    const version = getPackageVersion();
+
+    yield { stage: "bootstrapping", message: "Creating remote directories...", progress: 0.20 };
+    await executor.exec(
+      `mkdir -p ${REMOTE_POWERLINE_DIRECTORY}`,
+      { timeout: REMOTE_EXEC_DEFAULT_TIMEOUT_MS },
+    );
+
+    yield { stage: "bootstrapping", message: `Installing @grackle-ai/powerline@${version}...`, progress: 0.25 };
+    await executor.exec(
+      `cd ${REMOTE_POWERLINE_DIRECTORY} && npm init -y && npm install @grackle-ai/powerline@${version} --omit=dev`,
+      { timeout: BOOTSTRAP_NPM_INSTALL_TIMEOUT_MS },
+    );
+  }
+
+  logger.info({ devMode, entryPoint }, "PowerLine bootstrap mode");
 
   // 7. Copy Claude Code credentials for subscription auth (if present on host).
   //    Stored under the PowerLine directory so destroy() cleans them up.
@@ -348,7 +388,7 @@ export async function* bootstrapPowerLine(
     const envFileContent = envLines.join("\n") + "\n";
     const envFileContentBase64 = Buffer.from(envFileContent, "utf8").toString("base64");
     await executor.exec(
-      `node -e "require('fs').writeFileSync('${REMOTE_POWERLINE_DIRECTORY}/.env.sh',Buffer.from(process.argv[1],'base64').toString('utf8'))" '${shellEscape(envFileContentBase64)}'`,
+      `cd ${REMOTE_POWERLINE_DIRECTORY} && node -e "require('fs').writeFileSync('.env.sh',Buffer.from(process.argv[1],'base64').toString('utf8'))" '${shellEscape(envFileContentBase64)}'`,
       { timeout: REMOTE_EXEC_DEFAULT_TIMEOUT_MS },
     );
     await executor.exec(
@@ -366,7 +406,7 @@ export async function* bootstrapPowerLine(
     : "";
   const startScript =
     `cd ${REMOTE_POWERLINE_DIRECTORY}`
-    + ` && ${sourceEnv}nohup node dist/index.js --port=${DEFAULT_POWERLINE_PORT}`
+    + ` && ${sourceEnv}nohup node ${entryPoint} --port=${DEFAULT_POWERLINE_PORT}`
     + ` > ~/.grackle/powerline.log 2>&1 &`;
 
   try {
