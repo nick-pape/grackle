@@ -8,8 +8,8 @@ RUN groupadd -r grackle && useradd -r -g grackle -m grackle
 WORKDIR /app
 
 # Create a standalone package that combines common + powerline
-COPY packages/common/dist/ /app/node_modules/@grackle/common/dist/
-COPY packages/common/package.json /app/node_modules/@grackle/common/package.json
+COPY packages/common/dist/ /app/node_modules/@grackle-ai/common/dist/
+COPY packages/common/package.json /app/node_modules/@grackle-ai/common/package.json
 
 COPY packages/powerline/dist/ /app/dist/
 COPY packages/powerline/package.json /app/package.json

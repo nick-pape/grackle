@@ -1,13 +1,22 @@
 {
-  "name": "@grackle/cli",
-  "version": "0.0.1",
-  "private": true,
+  "name": "@grackle-ai/cli",
+  "version": "0.0.2",
+  "description": "Command-line interface for managing Grackle environments and agents",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nick-pape/grackle.git",
+    "directory": "packages/cli"
+  },
+  "keywords": ["grackle", "cli", "grpc", "ai-agents"],
+  "engines": { "node": ">=22.0.0" },
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
     "grackle": "dist/index.js"
   },
+  "files": ["dist/"],
   "scripts": {
     "build": "heft build --clean",
     "start": "node dist/index.js",
@@ -16,15 +25,15 @@
   "dependencies": {
     "@connectrpc/connect": "^2.0.0",
     "@connectrpc/connect-node": "^2.0.0",
-    "@grackle/common": "0.0.1",
-    "@grackle/server": "0.0.1",
+    "@grackle-ai/common": "0.0.2",
+    "@grackle-ai/server": "0.0.2",
     "@rushstack/ts-command-line": "5.3.2",
     "chalk": "^5.6.2",
     "cli-table3": "^0.6.0",
     "ora": "^8.0.0"
   },
   "devDependencies": {
-    "@grackle/heft-rig": "0.0.1",
+    "@grackle-ai/heft-rig": "0.0.1",
     "@types/node": "^22.0.0"
   }
 }

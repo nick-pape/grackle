@@ -34,6 +34,6 @@ export class ServeAction extends CommandLineAction {
     console.log(`Web UI will be available at http://localhost:${this._webPort.value}`);
 
     // Dynamic import to start the server
-    await import("@grackle/server");
+    await import("@grackle-ai/server");
   }
 }

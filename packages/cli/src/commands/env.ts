@@ -1,7 +1,7 @@
 import { CommandLineAction, type CommandLineFlagParameter, type CommandLineStringParameter } from "@rushstack/ts-command-line";
 import chalk from "chalk";
 import { createGrackleClient } from "../client.js";
-import type { AdapterType } from "@grackle/common";
+import type { AdapterType } from "@grackle-ai/common";
 import Table from "cli-table3";
 
 /** Action: `env:list` — list all environments. */

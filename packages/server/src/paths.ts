@@ -1,6 +1,6 @@
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { GRACKLE_DIR } from "@grackle/common";
+import { GRACKLE_DIR } from "@grackle-ai/common";
 
 /**
  * Resolve the root Grackle data directory. Uses `GRACKLE_HOME` env var if set,

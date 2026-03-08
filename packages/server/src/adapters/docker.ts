@@ -1,4 +1,4 @@
-import { DEFAULT_POWERLINE_PORT } from "@grackle/common";
+import { DEFAULT_POWERLINE_PORT } from "@grackle-ai/common";
 import type { EnvironmentAdapter, BaseEnvironmentConfig, PowerLineConnection, ProvisionEvent } from "./adapter.js";
 import { createPowerLineClient } from "./powerline-transport.js";
 import { exec } from "../utils/exec.js";

@@ -1,1 +1,1 @@
-// @grackle/web entry point — implemented in Step 11
+// @grackle-ai/web entry point — implemented in Step 11
