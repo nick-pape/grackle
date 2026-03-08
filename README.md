@@ -141,6 +141,73 @@ node packages/server/dist/index.js
 node packages/cli/dist/index.js env add my-env --docker
 ```
 
+## 📱 Connecting from a Remote Device (e.g. Android over VPN)
+
+Grackle's Web UI and WebSocket API are accessible from any device on the same network — handy if you're on VPN and want to monitor or control agents from a phone, tablet, or any browser.
+
+### 1. Start the server bound to the network interface
+
+By default the server binds to `127.0.0.1` (loopback only). Pass `--host 0.0.0.0` to accept connections on all interfaces:
+
+```bash
+node packages/cli/dist/index.js serve --host 0.0.0.0
+```
+
+Or restrict to a specific interface (e.g. your VPN IP `10.8.0.1`):
+
+```bash
+node packages/cli/dist/index.js serve --host 10.8.0.1
+```
+
+> **Security note:** Only expose Grackle on trusted networks (VPN, private LAN). Anyone who can reach the server URL will receive the API key embedded in the web page.
+
+### 2. Find your API key
+
+The API key is stored at `~/.grackle/api-key`:
+
+```bash
+cat ~/.grackle/api-key
+```
+
+### 3. Connect from your device
+
+| Client | How to connect |
+|--------|----------------|
+| **Browser** | Navigate to `http://<server-ip>:3000` — the API key is injected automatically |
+| **Android (WebSocket)** | Connect to `ws://<server-ip>:3000?token=<api-key>` |
+
+#### Android WebSocket Protocol
+
+An Android app (Kotlin + OkHttp) can talk to Grackle using the same JSON-over-WebSocket protocol the web UI uses:
+
+```kotlin
+val client = OkHttpClient.Builder()
+    .pingInterval(30, TimeUnit.SECONDS)
+    .build()
+
+val request = Request.Builder()
+    .url("ws://<server-ip>:3000?token=<api-key>")
+    .build()
+
+client.newWebSocket(request, object : WebSocketListener() {
+    override fun onOpen(ws: WebSocket, response: Response) {
+        ws.send("""{"type":"list_environments"}""")
+        ws.send("""{"type":"list_sessions"}""")
+        ws.send("""{"type":"subscribe_all"}""")
+    }
+
+    override fun onMessage(ws: WebSocket, text: String) {
+        val msg = JSONObject(text)
+        when (msg.getString("type")) {
+            "environments" -> { /* update UI */ }
+            "session_event" -> { /* stream output */ }
+        }
+    }
+})
+```
+
+The full message protocol is documented by the [WebSocket bridge](packages/server/src/ws-bridge.ts).
+
 ## 📋 Requirements
 
 - Node.js >= 22

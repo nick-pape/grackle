@@ -50,7 +50,10 @@ function createWebHandler(apiKey: string): (req: http.IncomingMessage, res: http
     try {
       let content = readFileSync(filePath);
 
-      // Inject API key into HTML pages — safe because only localhost can access
+      // Inject API key into HTML pages so the web UI can authenticate automatically.
+      // When the server is bound to a non-loopback address, ensure access is
+      // restricted to trusted networks (e.g. VPN) — anyone who can load the page
+      // will receive the key.
       if (ext === ".html") {
         const html = content.toString("utf8");
         const injected = html.replace(
@@ -85,6 +88,10 @@ function main(): void {
     updateEnvironmentStatus(environmentId, "disconnected");
   });
 
+  // Bind address — defaults to localhost-only; set GRACKLE_HOST=0.0.0.0 (or
+  // pass --host to the CLI) to allow connections from other devices (e.g. over VPN).
+  const host = process.env.GRACKLE_HOST || "127.0.0.1";
+
   // --- gRPC server (HTTP/2) ---
   const grpcPort = parseInt(process.env.GRACKLE_PORT || String(DEFAULT_SERVER_PORT), 10);
   const grpcHandler = connectNodeAdapter({
@@ -102,8 +109,8 @@ function main(): void {
   });
   const grpcServer = http2.createServer(grpcHandler);
 
-  grpcServer.listen(grpcPort, "127.0.0.1", () => {
-    logger.info({ port: grpcPort }, "gRPC server listening on http://127.0.0.1:%d", grpcPort);
+  grpcServer.listen(grpcPort, host, () => {
+    logger.info({ port: grpcPort, host }, "gRPC server listening on %s:%d", host, grpcPort);
   });
 
   // --- Web + WebSocket server (HTTP/1.1) ---
@@ -112,8 +119,8 @@ function main(): void {
 
   createWsBridge(webServer, verifyApiKey);
 
-  webServer.listen(webPort, "127.0.0.1", () => {
-    logger.info({ port: webPort }, "Web UI + WebSocket on http://127.0.0.1:%d", webPort);
+  webServer.listen(webPort, host, () => {
+    logger.info({ port: webPort, host }, "Web UI + WebSocket on http://%s:%d", host, webPort);
   });
 
   // Graceful shutdown
