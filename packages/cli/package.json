@@ -1,6 +1,6 @@
 {
   "name": "@grackle/cli",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Command-line interface for managing Grackle environments and agents",
   "license": "MIT",
   "repository": {
@@ -25,8 +25,8 @@
   "dependencies": {
     "@connectrpc/connect": "^2.0.0",
     "@connectrpc/connect-node": "^2.0.0",
-    "@grackle/common": "0.0.1",
-    "@grackle/server": "0.0.1",
+    "@grackle/common": "0.0.2",
+    "@grackle/server": "0.0.2",
     "chalk": "^5.6.2",
     "cli-table3": "^0.6.0",
     "commander": "^13.0.0",
