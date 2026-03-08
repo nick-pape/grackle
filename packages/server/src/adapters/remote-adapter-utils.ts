@@ -7,6 +7,8 @@ import { logger } from "../logger.js";
 import { spawn, type ChildProcess } from "node:child_process";
 import { createConnection } from "node:net";
 import { join, resolve } from "node:path";
+import { homedir } from "node:os";
+import { existsSync } from "node:fs";
 
 // ─── Constants ──────────────────────────────────────────────
 
@@ -245,7 +247,19 @@ export async function* bootstrapPowerLine(
     `${REMOTE_POWERLINE_DIRECTORY}/node_modules/@grackle/common/package.json`,
   );
 
-  // 7. Kill any existing PowerLine process using fuser on the port
+  // 7. Copy Claude Code credentials for subscription auth (if present on host)
+  const hostCredsPath = join(homedir(), ".claude", ".credentials.json");
+  if (existsSync(hostCredsPath)) {
+    yield { stage: "pushing_tokens", message: "Copying Claude credentials...", progress: 0.57 };
+    try {
+      await executor.exec("mkdir -p ~/.claude", { timeout: REMOTE_EXEC_DEFAULT_TIMEOUT_MS });
+      await executor.copyTo(hostCredsPath, "~/.claude/.credentials.json");
+    } catch (err) {
+      logger.warn({ err }, "Failed to copy Claude credentials (agent may need manual login)");
+    }
+  }
+
+  // 8. Kill any existing PowerLine process using fuser on the port
   yield { stage: "bootstrapping", message: "Stopping any existing PowerLine process...", progress: 0.60 };
   try {
     await executor.exec(
@@ -257,7 +271,7 @@ export async function* bootstrapPowerLine(
     // Ignore — no process to kill
   }
 
-  // 8. Build env var string for the remote process
+  // 9. Build env var string for the remote process
   const envParts: string[] = [];
   if (powerlineToken) {
     envParts.push(`GRACKLE_POWERLINE_TOKEN='${powerlineToken}'`);
@@ -270,7 +284,7 @@ export async function* bootstrapPowerLine(
   }
   const envPrefix = envParts.length > 0 ? envParts.join(" ") + " " : "";
 
-  // 9. Start PowerLine via bash -c to ensure proper backgrounding.
+  // 10. Start PowerLine via bash -c to ensure proper backgrounding.
   //    We avoid capturing $! because some transports (gh codespace ssh) exit
   //    with code 255 when the shell backgrounds a process.
   yield { stage: "bootstrapping", message: "Starting PowerLine on remote host...", progress: 0.65 };
@@ -287,7 +301,7 @@ export async function* bootstrapPowerLine(
     logger.debug({ err }, "Start command returned non-zero (expected with background process)");
   }
 
-  // 10. Wait for process to stabilize, then verify via pgrep
+  // 11. Wait for process to stabilize, then verify port is listening
   yield { stage: "bootstrapping", message: "Waiting for PowerLine to start...", progress: 0.70 };
   await sleep(POWERLINE_STARTUP_DELAY_MS);
 
