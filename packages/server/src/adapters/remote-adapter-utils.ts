@@ -192,27 +192,19 @@ export async function* bootstrapPowerLine(
     { timeout: REMOTE_EXEC_DEFAULT_TIMEOUT_MS },
   );
 
-  // 4. Copy artifacts
+  // 4. Copy artifacts — powerline dist + package.json first, then npm install,
+  //    then copy @grackle/common into node_modules (npm install would wipe it).
   yield { stage: "bootstrapping", message: "Copying PowerLine artifacts to remote host...", progress: 0.25 };
 
-  // Resolve local artifact paths relative to server's built location
+  // Resolve local artifact paths relative to server's built location.
+  // import.meta.dirname = packages/server/dist/adapters, so we go up 3 levels
+  // to reach packages/, then into common/ or powerline/.
   const serverDistDir = resolve(import.meta.dirname);
-  const commonPackageDir = resolve(serverDistDir, "../../common");
-  const powerlinePackageDir = resolve(serverDistDir, "../../powerline");
+  const commonPackageDir = resolve(serverDistDir, "../../../common");
+  const powerlinePackageDir = resolve(serverDistDir, "../../../powerline");
 
-  // Copy common package
-  yield { stage: "bootstrapping", message: "Copying @grackle/common...", progress: 0.30 };
-  await executor.copyTo(
-    join(commonPackageDir, "dist"),
-    `${REMOTE_POWERLINE_DIRECTORY}/node_modules/@grackle/common/dist`,
-  );
-  await executor.copyTo(
-    join(commonPackageDir, "package.json"),
-    `${REMOTE_POWERLINE_DIRECTORY}/node_modules/@grackle/common/package.json`,
-  );
-
-  // Copy powerline package
-  yield { stage: "bootstrapping", message: "Copying @grackle/powerline...", progress: 0.40 };
+  // Copy powerline package (dist + package.json)
+  yield { stage: "bootstrapping", message: "Copying @grackle/powerline...", progress: 0.30 };
   await executor.copyTo(
     join(powerlinePackageDir, "dist"),
     `${REMOTE_POWERLINE_DIRECTORY}/dist`,
@@ -222,25 +214,50 @@ export async function* bootstrapPowerLine(
     `${REMOTE_POWERLINE_DIRECTORY}/package.json`,
   );
 
-  // 5. npm install
-  yield { stage: "bootstrapping", message: "Installing dependencies on remote host...", progress: 0.50 };
+  // 5. Strip @grackle/* deps from package.json (they'll be copied manually)
+  //    and run npm install for the remaining public dependencies.
+  yield { stage: "bootstrapping", message: "Installing dependencies on remote host...", progress: 0.40 };
+  await executor.exec(
+    `cd ${REMOTE_POWERLINE_DIRECTORY} && node -e "`
+    + `const p=JSON.parse(require('fs').readFileSync('package.json','utf8'));`
+    + `for(const k of Object.keys(p.dependencies||{})){if(k.startsWith('@grackle/'))delete p.dependencies[k];}`
+    + `for(const k of Object.keys(p.devDependencies||{})){if(k.startsWith('@grackle/'))delete p.devDependencies[k];}`
+    + `require('fs').writeFileSync('package.json',JSON.stringify(p,null,2));"`,
+    { timeout: REMOTE_EXEC_DEFAULT_TIMEOUT_MS },
+  );
   await executor.exec(
     `cd ${REMOTE_POWERLINE_DIRECTORY} && npm install --omit=dev`,
     { timeout: BOOTSTRAP_NPM_INSTALL_TIMEOUT_MS },
   );
 
-  // 6. Kill any existing PowerLine process
+  // 6. Copy @grackle/common into node_modules AFTER npm install (npm would wipe it)
+  yield { stage: "bootstrapping", message: "Copying @grackle/common...", progress: 0.55 };
+  await executor.exec(
+    `mkdir -p ${REMOTE_POWERLINE_DIRECTORY}/node_modules/@grackle/common`,
+    { timeout: REMOTE_EXEC_DEFAULT_TIMEOUT_MS },
+  );
+  await executor.copyTo(
+    join(commonPackageDir, "dist"),
+    `${REMOTE_POWERLINE_DIRECTORY}/node_modules/@grackle/common/dist`,
+  );
+  await executor.copyTo(
+    join(commonPackageDir, "package.json"),
+    `${REMOTE_POWERLINE_DIRECTORY}/node_modules/@grackle/common/package.json`,
+  );
+
+  // 7. Kill any existing PowerLine process using fuser on the port
   yield { stage: "bootstrapping", message: "Stopping any existing PowerLine process...", progress: 0.60 };
   try {
     await executor.exec(
-      `pkill -f 'node.*grackle/powerline' || true`,
+      `fuser -k ${DEFAULT_POWERLINE_PORT}/tcp 2>/dev/null || true`,
       { timeout: REMOTE_EXEC_DEFAULT_TIMEOUT_MS },
     );
+    await sleep(1_000);
   } catch {
     // Ignore — no process to kill
   }
 
-  // 7. Build env var string for the remote process
+  // 8. Build env var string for the remote process
   const envParts: string[] = [];
   if (powerlineToken) {
     envParts.push(`GRACKLE_POWERLINE_TOKEN='${powerlineToken}'`);
@@ -253,29 +270,36 @@ export async function* bootstrapPowerLine(
   }
   const envPrefix = envParts.length > 0 ? envParts.join(" ") + " " : "";
 
-  // 8. Start PowerLine
+  // 9. Start PowerLine via bash -c to ensure proper backgrounding.
+  //    We avoid capturing $! because some transports (gh codespace ssh) exit
+  //    with code 255 when the shell backgrounds a process.
   yield { stage: "bootstrapping", message: "Starting PowerLine on remote host...", progress: 0.65 };
-  const startCommand = [
-    `cd ${REMOTE_POWERLINE_DIRECTORY}`,
-    `${envPrefix}nohup node dist/index.js --port=${DEFAULT_POWERLINE_PORT}`,
-    `> ~/.grackle/powerline.log 2>&1 & echo $!`,
-  ].join(" && ");
+  const innerCommand =
+    `cd ${REMOTE_POWERLINE_DIRECTORY}`
+    + ` && ${envPrefix}nohup node dist/index.js --port=${DEFAULT_POWERLINE_PORT}`
+    + ` > ~/.grackle/powerline.log 2>&1 &`;
 
-  const pidOutput = await executor.exec(startCommand, { timeout: REMOTE_EXEC_DEFAULT_TIMEOUT_MS });
-  const remotePid = parseInt(pidOutput.trim(), 10);
-  if (isNaN(remotePid)) {
-    logger.warn({ pidOutput }, "Could not parse remote PowerLine PID");
-  } else {
-    logger.info({ remotePid }, "Remote PowerLine started");
+  try {
+    await executor.exec(`bash -c '${innerCommand}'`, { timeout: REMOTE_EXEC_DEFAULT_TIMEOUT_MS });
+  } catch (err) {
+    // Some SSH transports return non-zero when the session ends after backgrounding.
+    // We'll verify the process is running below — only log the error.
+    logger.debug({ err }, "Start command returned non-zero (expected with background process)");
   }
 
-  // 9. Wait for process to stabilize
+  // 10. Wait for process to stabilize, then verify via pgrep
   yield { stage: "bootstrapping", message: "Waiting for PowerLine to start...", progress: 0.70 };
   await sleep(POWERLINE_STARTUP_DELAY_MS);
 
-  // Verify the process is running
+  // Verify the port is listening using a Node.js one-liner (pgrep may not be in PATH)
   try {
-    await executor.exec(`kill -0 ${remotePid}`, { timeout: REMOTE_EXEC_DEFAULT_TIMEOUT_MS });
+    await executor.exec(
+      `node -e "const s=require('net').createConnection(${DEFAULT_POWERLINE_PORT},'127.0.0.1');\
+s.on('connect',()=>{s.destroy();process.exit(0)});\
+s.on('error',()=>process.exit(1))"`,
+      { timeout: REMOTE_EXEC_DEFAULT_TIMEOUT_MS },
+    );
+    logger.info("Remote PowerLine is listening on port %d", DEFAULT_POWERLINE_PORT);
   } catch {
     throw new Error(
       "PowerLine process died immediately after starting. Check ~/.grackle/powerline.log on the remote host.",

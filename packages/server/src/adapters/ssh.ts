@@ -180,7 +180,7 @@ export class SshAdapter implements EnvironmentAdapter {
     const executor = new SshExecutor(cfg);
 
     try {
-      await executor.exec("pkill -f 'node.*grackle/powerline' || true");
+      await executor.exec("fuser -k 7433/tcp 2>/dev/null || true");
     } catch (err) {
       logger.debug({ environmentId, err }, "Failed to kill remote PowerLine (may already be stopped)");
     }
@@ -193,7 +193,7 @@ export class SshAdapter implements EnvironmentAdapter {
     const executor = new SshExecutor(cfg);
 
     try {
-      await executor.exec(`pkill -f 'node.*grackle/powerline' || true; rm -rf ${REMOTE_POWERLINE_DIRECTORY}`);
+      await executor.exec(`fuser -k 7433/tcp 2>/dev/null || true; rm -rf ${REMOTE_POWERLINE_DIRECTORY}`);
     } catch (err) {
       logger.debug({ environmentId, err }, "Failed to clean up remote PowerLine artifacts");
     }

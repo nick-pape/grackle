@@ -71,9 +71,10 @@ class CodespaceTunnel extends ProcessTunnel {
 
   /** Return the gh command and arguments for the port-forward process. */
   protected spawnArgs(): { command: string; args: string[] } {
+    // gh codespace ports forward uses <remote>:<local> order (opposite of SSH -L)
     const args = [
       "codespace", "ports", "forward",
-      `${this.localPort}:7433`,
+      `7433:${this.localPort}`,
       "-c", this.codespaceName,
     ];
     return { command: "gh", args };
@@ -145,7 +146,7 @@ export class CodespaceAdapter implements EnvironmentAdapter {
     const executor = new CodespaceExecutor(cfg.codespaceName);
 
     try {
-      await executor.exec("pkill -f 'node.*grackle/powerline' || true");
+      await executor.exec("fuser -k 7433/tcp 2>/dev/null || true");
     } catch (err) {
       logger.debug({ environmentId, err }, "Failed to kill remote PowerLine (may already be stopped)");
     }
@@ -161,7 +162,7 @@ export class CodespaceAdapter implements EnvironmentAdapter {
     const executor = new CodespaceExecutor(cfg.codespaceName);
 
     try {
-      await executor.exec(`pkill -f 'node.*grackle/powerline' || true; rm -rf ${REMOTE_POWERLINE_DIRECTORY}`);
+      await executor.exec(`fuser -k 7433/tcp 2>/dev/null || true; rm -rf ${REMOTE_POWERLINE_DIRECTORY}`);
     } catch (err) {
       logger.debug({ environmentId, err }, "Failed to clean up remote PowerLine artifacts");
     }
