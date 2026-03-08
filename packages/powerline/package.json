@@ -1,13 +1,22 @@
 {
   "name": "@grackle/powerline",
   "version": "0.0.1",
-  "private": true,
+  "description": "gRPC PowerLine server for Grackle AI agent integration",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nick-pape/grackle.git",
+    "directory": "packages/powerline"
+  },
+  "keywords": ["grackle", "grpc", "powerline", "ai-agents"],
+  "engines": { "node": ">=22.0.0" },
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
     "grackle-powerline": "dist/index.js"
   },
+  "files": ["dist/"],
   "scripts": {
     "build": "heft build --clean",
     "start": "node dist/index.js",

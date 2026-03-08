@@ -1,0 +1,52 @@
+name: Publish to npm
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          # GH_PAT is required to push version bumps back to main
+          # (GITHUB_TOKEN cannot bypass branch protection rules)
+          token: ${{ secrets.GH_PAT }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      # Checkout main so version bumps apply on top of the latest commit,
+      # avoiding non-fast-forward errors if main advanced after the release tag
+      - name: Checkout main
+        run: git checkout main && git pull origin main
+
+      - name: Install
+        run: node common/scripts/install-run-rush.js install
+
+      - name: Bump versions
+        run: node common/scripts/install-run-rush.js version --bump --target-branch main
+
+      - name: Build
+        run: node common/scripts/install-run-rush.js build
+
+      - name: Publish to npm
+        run: node common/scripts/install-run-rush.js publish --include-all --publish --set-access-level public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Push version changes
+        run: git push origin HEAD:main --follow-tags
