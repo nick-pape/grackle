@@ -2,10 +2,10 @@
   "changes": [
     {
       "comment": "Add CLI options for SSH and Codespace environment adapters.",
-      "type": "none",
+      "type": "minor",
       "packageName": "@grackle/cli"
     }
   ],
   "packageName": "@grackle/cli",
-  "email": "nick@example.com"
+  "email": "5674316+nick-pape@users.noreply.github.com"
 }
