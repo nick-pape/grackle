@@ -44,8 +44,7 @@
     },
     {
       "packageName": "@grackle/web",
-      "projectFolder": "packages/web",
-      "versionPolicyName": "grackle"
+      "projectFolder": "packages/web"
     }
   ]
 }
