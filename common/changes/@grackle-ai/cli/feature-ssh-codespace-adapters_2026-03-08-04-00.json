@@ -3,9 +3,9 @@
     {
       "comment": "Add CLI options for SSH and Codespace environment adapters.",
       "type": "minor",
-      "packageName": "@grackle/cli"
+      "packageName": "@grackle-ai/cli"
     }
   ],
-  "packageName": "@grackle/cli",
+  "packageName": "@grackle-ai/cli",
   "email": "5674316+nick-pape@users.noreply.github.com"
 }
