@@ -1,7 +1,7 @@
 import db from "./db.js";
 import { tasks, type TaskRow } from "./schema.js";
 import { eq, sql, asc } from "drizzle-orm";
-import type { TaskStatus } from "@grackle/common";
+import type { TaskStatus } from "@grackle-ai/common";
 import { safeParseJsonArray } from "./json-helpers.js";
 
 export type { TaskRow };

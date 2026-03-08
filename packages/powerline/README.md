@@ -1,4 +1,4 @@
-# @grackle/powerline
+# @grackle-ai/powerline
 
 gRPC PowerLine server for Grackle AI agent integration (Claude, Copilot).
 

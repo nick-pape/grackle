@@ -1,7 +1,7 @@
 import type { Command } from "commander";
 import chalk from "chalk";
 import { createGrackleClient } from "../client.js";
-import type { AdapterType } from "@grackle/common";
+import type { AdapterType } from "@grackle-ai/common";
 import Table from "cli-table3";
 
 /** Register environment management commands: `env list`, `add`, `provision`, `stop`, `destroy`, `remove`, `wake`. */

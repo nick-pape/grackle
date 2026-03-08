@@ -1,4 +1,4 @@
-# @grackle/common
+# @grackle-ai/common
 
 Proto definitions, generated code, and shared types for the Grackle platform.
 

@@ -8,7 +8,7 @@ import { updateEnvironmentStatus, resetAllStatuses } from "./env-registry.js";
 import { DockerAdapter } from "./adapters/docker.js";
 import { LocalAdapter } from "./adapters/local.js";
 import { createWsBridge } from "./ws-bridge.js";
-import { DEFAULT_SERVER_PORT, DEFAULT_WEB_PORT } from "@grackle/common";
+import { DEFAULT_SERVER_PORT, DEFAULT_WEB_PORT } from "@grackle-ai/common";
 import { readFileSync, existsSync } from "node:fs";
 import { join, extname } from "node:path";
 import { loadOrCreateApiKey, verifyApiKey } from "./api-key.js";

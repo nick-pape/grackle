@@ -1,5 +1,5 @@
 import type { Client } from "@connectrpc/connect";
-import type { powerline } from "@grackle/common";
+import type { powerline } from "@grackle-ai/common";
 
 /** Type-safe ConnectRPC client for the PowerLine gRPC service. */
 export type PowerLineClient = Client<typeof powerline.GracklePowerLine>;
