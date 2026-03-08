@@ -80,9 +80,12 @@ jobs:
 
           gh pr merge "$pr_url" --squash --admin --delete-branch
 
+      # After squash-merge, local main has diverged from origin/main
+      # (rush merged the temp branch locally, but the PR was squash-merged).
+      # Reset to origin/main to get the squashed result.
       - name: Checkout updated main
         if: steps.bump.outputs.has_bump == 'true'
-        run: git checkout main && git pull origin main
+        run: git fetch origin main && git checkout -B main origin/main
 
       - name: Build
         run: node common/scripts/install-run-rush.js build
