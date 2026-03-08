@@ -44,6 +44,9 @@ export function registerEnvCommands(program: Command): void {
     .option("--host <host>", "SSH host / local host")
     .option("--port <port>", "PowerLine port (local adapter)")
     .option("--user <user>", "SSH user")
+    .option("--ssh-port <sshPort>", "SSH port (default: 22)")
+    .option("--identity-file <path>", "SSH identity file (private key)")
+    .option("--codespace-name <name>", "Codespace name (from `gh codespace list`)")
     .option("--runtime <runtime>", "Default runtime", "claude-code")
     .action(async (name: string, opts) => {
       const client = createGrackleClient();
@@ -56,12 +59,22 @@ export function registerEnvCommands(program: Command): void {
         if (opts.port) config.port = parseInt(opts.port, 10);
       } else if (opts.codespace) {
         adapterType = "codespace";
-        if (opts.repo) config.repo = opts.repo;
-        if (opts.machine) config.machine = opts.machine;
+        if (opts.codespaceName) {
+          config.codespaceName = opts.codespaceName;
+        } else {
+          console.error("Error: --codespace requires --codespace-name <name>");
+          process.exit(1);
+        }
       } else if (opts.ssh) {
         adapterType = "ssh";
-        if (opts.host) config.host = opts.host;
+        if (!opts.host) {
+          console.error("Error: --ssh requires --host <host>");
+          process.exit(1);
+        }
+        config.host = opts.host;
         if (opts.user) config.user = opts.user;
+        if (opts.sshPort) config.sshPort = parseInt(opts.sshPort, 10);
+        if (opts.identityFile) config.identityFile = opts.identityFile;
       } else {
         if (opts.image) config.image = opts.image;
         if (opts.repo) config.repo = opts.repo;
