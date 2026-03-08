@@ -343,9 +343,10 @@ export async function* bootstrapPowerLine(
         `chmod 600 ${REMOTE_POWERLINE_DIRECTORY}/.claude/.credentials.json`,
         { timeout: REMOTE_EXEC_DEFAULT_TIMEOUT_MS },
       );
-      // Symlink so Claude Code finds it at the expected ~/.claude path
+      // Symlink so Claude Code finds it at the expected ~/.claude path.
+      // Only create if no credentials file already exists (avoid clobbering user's own setup).
       await executor.exec(
-        `mkdir -p ~/.claude && ln -sf ${REMOTE_POWERLINE_DIRECTORY}/.claude/.credentials.json ~/.claude/.credentials.json`,
+        `mkdir -p ~/.claude && if [ ! -e ~/.claude/.credentials.json ]; then ln -s ${REMOTE_POWERLINE_DIRECTORY}/.claude/.credentials.json ~/.claude/.credentials.json; fi`,
         { timeout: REMOTE_EXEC_DEFAULT_TIMEOUT_MS },
       );
     } catch (err) {
@@ -407,7 +408,7 @@ export async function* bootstrapPowerLine(
   const startScript =
     `cd ${REMOTE_POWERLINE_DIRECTORY}`
     + ` && ${sourceEnv}nohup node ${entryPoint} --port=${DEFAULT_POWERLINE_PORT}`
-    + ` > ~/.grackle/powerline.log 2>&1 &`;
+    + ` > ~/.grackle/powerline.log 2>&1 & echo $! > ${REMOTE_POWERLINE_DIRECTORY}/powerline.pid`;
 
   try {
     await executor.exec(`bash -c '${shellEscape(startScript)}'`, { timeout: REMOTE_EXEC_DEFAULT_TIMEOUT_MS });
@@ -505,14 +506,29 @@ export async function waitForLocalPort(port: number): Promise<void> {
 // ─── Remote Process Kill ────────────────────────────────────
 
 /**
- * Build a shell command that kills the process listening on the PowerLine port.
- * Uses fuser as primary, with lsof and pkill as fallbacks.
+ * Build a shell command that kills the remote PowerLine process.
+ * Prefers killing by tracked PID (written at startup) to avoid terminating
+ * unrelated services on the same port. Falls back to port-based kill.
  */
 export function buildRemoteKillCommand(): string {
-  return `fuser -k ${DEFAULT_POWERLINE_PORT}/tcp 2>/dev/null`
+  const pidfile = `${REMOTE_POWERLINE_DIRECTORY}/powerline.pid`;
+
+  // Try pidfile-based kill first (safe — only kills what we started)
+  const pidfileKill = [
+    `[ -f "${pidfile}" ]`,
+    `PID=$(cat "${pidfile}" 2>/dev/null)`,
+    `[ -n "$PID" ]`,
+    `kill "$PID" 2>/dev/null`,
+    `rm -f "${pidfile}"`,
+  ].join(" && ");
+
+  // Fallback: port-based kill (for upgrades from before pidfile support)
+  const portKill =
+    `fuser -k ${DEFAULT_POWERLINE_PORT}/tcp 2>/dev/null`
     + ` || lsof -ti:${DEFAULT_POWERLINE_PORT} | xargs kill 2>/dev/null`
-    + ` || pkill -f "powerline.*${DEFAULT_POWERLINE_PORT}" 2>/dev/null`
-    + ` || true`;
+    + ` || pkill -f "powerline.*${DEFAULT_POWERLINE_PORT}" 2>/dev/null`;
+
+  return `(${pidfileKill}) || (${portKill}) || true`;
 }
 
 // ─── Exports for Adapter Use ────────────────────────────────

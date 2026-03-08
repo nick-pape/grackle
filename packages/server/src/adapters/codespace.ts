@@ -165,7 +165,10 @@ export class CodespaceAdapter implements EnvironmentAdapter {
 
     try {
       await executor.exec(
-        `${buildRemoteKillCommand()}; rm -f ~/.claude/.credentials.json; rm -rf ${REMOTE_POWERLINE_DIRECTORY}`,
+        `${buildRemoteKillCommand()}; `
+        + 'CRED="$HOME/.claude/.credentials.json"; '
+        + `if [ -L "$CRED" ]; then case "$(readlink "$CRED" 2>/dev/null)" in ${REMOTE_POWERLINE_DIRECTORY}/*) rm -f "$CRED";; esac; fi; `
+        + `rm -rf ${REMOTE_POWERLINE_DIRECTORY}`,
       );
     } catch (err) {
       logger.debug({ environmentId, err }, "Failed to clean up remote PowerLine artifacts");
