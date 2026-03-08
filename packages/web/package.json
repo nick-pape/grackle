@@ -1,8 +1,17 @@
 {
   "name": "@grackle/web",
   "version": "0.0.1",
-  "private": true,
+  "description": "React web UI for Grackle",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nick-pape/grackle.git",
+    "directory": "packages/web"
+  },
+  "keywords": ["grackle", "web", "react", "ui"],
+  "engines": { "node": ">=22.0.0" },
   "type": "module",
+  "files": ["dist/"],
   "scripts": {
     "dev": "vite",
     "build": "heft build --clean",

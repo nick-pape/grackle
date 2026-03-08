@@ -24,23 +24,28 @@
     },
     {
       "packageName": "@grackle/common",
-      "projectFolder": "packages/common"
+      "projectFolder": "packages/common",
+      "versionPolicyName": "grackle"
     },
     {
       "packageName": "@grackle/powerline",
-      "projectFolder": "packages/powerline"
+      "projectFolder": "packages/powerline",
+      "versionPolicyName": "grackle"
     },
     {
       "packageName": "@grackle/server",
-      "projectFolder": "packages/server"
+      "projectFolder": "packages/server",
+      "versionPolicyName": "grackle"
     },
     {
       "packageName": "@grackle/cli",
-      "projectFolder": "packages/cli"
+      "projectFolder": "packages/cli",
+      "versionPolicyName": "grackle"
     },
     {
       "packageName": "@grackle/web",
-      "projectFolder": "packages/web"
+      "projectFolder": "packages/web",
+      "versionPolicyName": "grackle"
     }
   ]
 }
