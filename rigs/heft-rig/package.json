@@ -1,5 +1,5 @@
 {
-  "name": "@grackle/heft-rig",
+  "name": "@grackle-ai/heft-rig",
   "version": "0.0.1",
   "private": true,
   "description": "Shared Heft rig for Grackle packages",
@@ -7,9 +7,9 @@
     "build": ""
   },
   "dependencies": {
-    "@grackle/heft-buf-plugin": "0.0.1",
-    "@grackle/heft-playwright-plugin": "0.0.1",
-    "@grackle/heft-vite-plugin": "0.0.1",
+    "@grackle-ai/heft-buf-plugin": "0.0.1",
+    "@grackle-ai/heft-playwright-plugin": "0.0.1",
+    "@grackle-ai/heft-vite-plugin": "0.0.1",
     "@rushstack/eslint-config": "4.6.4",
     "@rushstack/heft": "1.2.4",
     "@rushstack/heft-lint-plugin": "1.2.6",

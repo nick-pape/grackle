@@ -1,4 +1,4 @@
-# @grackle/server
+# @grackle-ai/server
 
 Central gRPC server with SQLite storage and WebSocket bridge for Grackle.
 

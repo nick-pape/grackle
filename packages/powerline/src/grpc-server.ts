@@ -1,6 +1,6 @@
 import type { ConnectRouter } from "@connectrpc/connect";
 import { create } from "@bufbuild/protobuf";
-import { powerline } from "@grackle/common";
+import { powerline } from "@grackle-ai/common";
 import { getRuntime, listRuntimes } from "./runtime-registry.js";
 import { addSession, getSession, listAllSessions } from "./session-mgr.js";
 import { writeTokens } from "./token-writer.js";

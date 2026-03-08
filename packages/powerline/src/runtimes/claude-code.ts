@@ -1,5 +1,5 @@
 import type { AgentRuntime, AgentSession, AgentEvent, SpawnOptions, ResumeOptions } from "./runtime.js";
-import type { SessionStatus } from "@grackle/common";
+import type { SessionStatus } from "@grackle-ai/common";
 import { AsyncQueue } from "../utils/async-queue.js";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { ensureWorktree } from "../worktree.js";

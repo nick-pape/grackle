@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { readFileSync, writeFileSync, existsSync, mkdirSync, chmodSync } from "node:fs";
 import { join } from "node:path";
-import { API_KEY_FILENAME } from "@grackle/common";
+import { API_KEY_FILENAME } from "@grackle-ai/common";
 import { logger } from "./logger.js";
 import { grackleHome } from "./paths.js";
 

@@ -1,4 +1,4 @@
-# @grackle/cli
+# @grackle-ai/cli
 
 Command-line interface for managing Grackle environments and agents.
 

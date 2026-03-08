@@ -7,7 +7,7 @@
 rush update && rush build
 
 # Build a single package
-rush build -t @grackle/<package>
+rush build -t @grackle-ai/<package>
 
 # Run proto codegen (from packages/common)
 npx buf generate
@@ -16,11 +16,11 @@ npx buf generate
 ## Project Structure
 
 Rush monorepo with 5 packages under `packages/`:
-- `@grackle/common` — Proto definitions, generated code, shared types
-- `@grackle/powerline` — gRPC PowerLine server (ConnectRPC on HTTP/2)
-- `@grackle/server` — Central gRPC server, SQLite, WebSocket bridge
-- `@grackle/cli` — Commander-based CLI client
-- `@grackle/web` — React + Vite web UI
+- `@grackle-ai/common` — Proto definitions, generated code, shared types
+- `@grackle-ai/powerline` — gRPC PowerLine server (ConnectRPC on HTTP/2)
+- `@grackle-ai/server` — Central gRPC server, SQLite, WebSocket bridge
+- `@grackle-ai/cli` — Commander-based CLI client
+- `@grackle-ai/web` — React + Vite web UI
 
 ## Code Style
 
@@ -36,7 +36,7 @@ Rush monorepo with 5 packages under `packages/`:
 - Message names: full English (e.g., `EnvironmentId`, `AddEnvironmentRequest`)
 - Enums: use proto enums with `UPPER_SNAKE_CASE` values prefixed by type name
 - Services: `Grackle` and `GracklePowerLine` (no `*Service` suffix)
-- Generated code: `import { grackle, powerline } from "@grackle/common"`
+- Generated code: `import { grackle, powerline } from "@grackle-ai/common"`
 
 ### Logging
 - Server/PowerLine: use `pino` structured logger (`import { logger } from "./logger.js"`)
@@ -56,7 +56,7 @@ Rush monorepo with 5 packages under `packages/`:
 
 ### Database
 - **Never access SQLite directly** — always go through the CLI (`grackle` commands)
-- If the CLI is missing a needed operation, add it to `@grackle/cli` rather than using raw SQL
+- If the CLI is missing a needed operation, add it to `@grackle-ai/cli` rather than using raw SQL
 
 ## Ports
 

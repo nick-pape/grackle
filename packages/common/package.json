@@ -1,6 +1,6 @@
 {
-  "name": "@grackle/common",
-  "version": "0.0.1",
+  "name": "@grackle-ai/common",
+  "version": "0.0.2",
   "description": "Proto definitions, generated code, and shared types for Grackle",
   "license": "MIT",
   "repository": {
@@ -25,7 +25,7 @@
   "devDependencies": {
     "@bufbuild/buf": "^1.50.0",
     "@bufbuild/protoc-gen-es": "^2.5.0",
-    "@grackle/heft-buf-plugin": "0.0.1",
-    "@grackle/heft-rig": "0.0.1"
+    "@grackle-ai/heft-buf-plugin": "0.0.1",
+    "@grackle-ai/heft-rig": "0.0.1"
   }
 }

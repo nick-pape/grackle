@@ -1,4 +1,4 @@
-import type { AgentEventType, SessionStatus } from "@grackle/common";
+import type { AgentEventType, SessionStatus } from "@grackle-ai/common";
 
 /** A single event emitted by an agent during execution. */
 export interface AgentEvent {

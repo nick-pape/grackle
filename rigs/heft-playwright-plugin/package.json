@@ -1,5 +1,5 @@
 {
-  "name": "@grackle/heft-playwright-plugin",
+  "name": "@grackle-ai/heft-playwright-plugin",
   "version": "0.0.1",
   "private": true,
   "description": "Heft task plugin that runs Playwright tests",

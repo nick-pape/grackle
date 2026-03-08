@@ -1,6 +1,6 @@
 import { createWriteStream, mkdirSync, readFileSync, existsSync, type WriteStream } from "node:fs";
 import { join } from "node:path";
-import type { grackle } from "@grackle/common";
+import type { grackle } from "@grackle-ai/common";
 
 const openStreams: Map<string, WriteStream> = new Map<string, WriteStream>();
 
