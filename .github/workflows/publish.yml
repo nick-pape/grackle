@@ -29,6 +29,11 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
+      # Checkout main so version bumps apply on top of the latest commit,
+      # avoiding non-fast-forward errors if main advanced after the release tag
+      - name: Checkout main
+        run: git checkout main && git pull origin main
+
       - name: Install
         run: node common/scripts/install-run-rush.js install
 
