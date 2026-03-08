@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Set up npm publishing pipeline.",
+      "type": "none",
+      "packageName": "@grackle/cli"
+    }
+  ],
+  "packageName": "@grackle/cli",
+  "email": "nick@example.com"
+}

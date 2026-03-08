@@ -1,10 +1,19 @@
 {
   "name": "@grackle/server",
   "version": "0.0.1",
-  "private": true,
+  "description": "Central gRPC server with SQLite storage and WebSocket bridge for Grackle",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nick-pape/grackle.git",
+    "directory": "packages/server"
+  },
+  "keywords": ["grackle", "grpc", "server", "sqlite", "websocket"],
+  "engines": { "node": ">=22.0.0" },
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "files": ["dist/"],
   "scripts": {
     "build": "heft build --clean",
     "start": "node dist/index.js",
