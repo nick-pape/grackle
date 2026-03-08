@@ -1,7 +1,7 @@
 import db from "./db.js";
 import { sessions, type SessionRow } from "./schema.js";
 import { eq, and, inArray, desc, sql } from "drizzle-orm";
-import type { SessionStatus } from "@grackle/common";
+import type { SessionStatus } from "@grackle-ai/common";
 
 export type { SessionRow };
 

@@ -2,7 +2,7 @@ import db from "./db.js";
 import { tokens, type TokenRow } from "./schema.js";
 import { encrypt, decrypt } from "./crypto.js";
 import { create } from "@bufbuild/protobuf";
-import { powerline } from "@grackle/common";
+import { powerline } from "@grackle-ai/common";
 import * as adapterManager from "./adapter-manager.js";
 import { logger } from "./logger.js";
 

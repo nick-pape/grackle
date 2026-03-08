@@ -1,6 +1,6 @@
 import { EventEmitter } from "node:events";
 import type { AgentRuntime, AgentSession, AgentEvent, SpawnOptions, ResumeOptions } from "./runtime.js";
-import type { SessionStatus } from "@grackle/common";
+import type { SessionStatus } from "@grackle-ai/common";
 
 class StubSession implements AgentSession {
   public id: string;

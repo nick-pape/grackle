@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Rename npm scope from @grackle to @grackle-ai",
+      "type": "none",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}

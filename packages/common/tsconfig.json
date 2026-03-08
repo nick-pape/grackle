@@ -1,5 +1,5 @@
 {
-  "extends": "./node_modules/@grackle/heft-rig/profiles/protobuf/tsconfig-base.json",
+  "extends": "./node_modules/@grackle-ai/heft-rig/profiles/protobuf/tsconfig-base.json",
   "compilerOptions": {
     "outDir": "dist",
     "rootDir": "src"
