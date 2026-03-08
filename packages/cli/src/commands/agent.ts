@@ -1,6 +1,7 @@
 import type { Command } from "commander";
 import chalk from "chalk";
 import { createGrackleClient } from "../client.js";
+import { grackle, sessionStatusToString } from "@grackle/common";
 import Table from "cli-table3";
 
 /** Register agent-related commands: `spawn`, `resume`, `status`, `kill`, and `attach`. */
@@ -47,7 +48,7 @@ export function registerAgentCommands(program: Command): void {
       const client = createGrackleClient();
       const res = await client.listSessions({
         environmentId: opts.env || "",
-        status: opts.all ? "" : "active",
+        status: grackle.SessionStatus.UNSPECIFIED,
       });
       if (res.sessions.length === 0) {
         console.log("No sessions.");
@@ -58,7 +59,7 @@ export function registerAgentCommands(program: Command): void {
       });
       for (const s of res.sessions) {
         const prompt = s.prompt.length > 40 ? s.prompt.slice(0, 40) + "..." : s.prompt;
-        table.push([s.id.slice(0, 8), s.environmentId, s.runtime, s.status, prompt, s.startedAt]);
+        table.push([s.id.slice(0, 8), s.environmentId, s.runtime, sessionStatusToString(s.status), prompt, s.startedAt]);
       }
       console.log(table.toString());
     });
@@ -87,7 +88,7 @@ export function registerAgentCommands(program: Command): void {
       const streamPromise = (async () => {
         for await (const event of client.streamSession({ id: sessionId })) {
           printEvent(event);
-          if (event.type === "status" && event.content === "waiting_input") {
+          if (event.type === grackle.EventType.STATUS && event.content === "waiting_input") {
             rl.question("> ", async (answer) => {
               await client.sendInput({ sessionId, text: answer });
             });
@@ -100,25 +101,25 @@ export function registerAgentCommands(program: Command): void {
     });
 }
 
-function printEvent(event: { type: string; content: string; timestamp: string }): void {
+function printEvent(event: { type: grackle.EventType; content: string; timestamp: string }): void {
   const time = new Date(event.timestamp).toLocaleTimeString();
   switch (event.type) {
-    case "system":
+    case grackle.EventType.SYSTEM:
       console.log(chalk.gray(`[${time}] ${event.content}`));
       break;
-    case "text":
+    case grackle.EventType.TEXT:
       console.log(event.content);
       break;
-    case "tool_use":
+    case grackle.EventType.TOOL_USE:
       console.log(chalk.blue(`> ${event.content}`));
       break;
-    case "tool_result":
+    case grackle.EventType.TOOL_RESULT:
       console.log(chalk.gray(event.content));
       break;
-    case "error":
+    case grackle.EventType.ERROR:
       console.log(chalk.red(`[ERROR] ${event.content}`));
       break;
-    case "status":
+    case grackle.EventType.STATUS:
       console.log(chalk.yellow(`--- ${event.content} ---`));
       break;
   }

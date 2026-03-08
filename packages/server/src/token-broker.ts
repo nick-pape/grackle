@@ -2,7 +2,7 @@ import db from "./db.js";
 import { tokens, type TokenRow } from "./schema.js";
 import { encrypt, decrypt } from "./crypto.js";
 import { create } from "@bufbuild/protobuf";
-import { powerline } from "@grackle-ai/common";
+import { powerline, tokenTypeToEnum } from "@grackle-ai/common";
 import * as adapterManager from "./adapter-manager.js";
 import { logger } from "./logger.js";
 
@@ -55,7 +55,7 @@ export function getBundle(): powerline.TokenBundle {
     const cfg = JSON.parse(row.config) as TokenConfig;
     return create(powerline.TokenItemSchema, {
       name: cfg.name,
-      type: cfg.type,
+      type: tokenTypeToEnum(cfg.type),
       envVar: cfg.envVar || "",
       filePath: cfg.filePath || "",
       value: decrypt(cfg.value),

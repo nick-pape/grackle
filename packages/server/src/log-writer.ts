@@ -1,6 +1,6 @@
 import { createWriteStream, mkdirSync, readFileSync, existsSync, type WriteStream } from "node:fs";
 import { join } from "node:path";
-import type { grackle } from "@grackle-ai/common";
+import { type grackle, eventTypeToString } from "@grackle-ai/common";
 
 const openStreams: Map<string, WriteStream> = new Map<string, WriteStream>();
 
@@ -19,7 +19,7 @@ export function writeEvent(logPath: string, event: grackle.SessionEvent): void {
 
   const line = JSON.stringify({
     session_id: event.sessionId,
-    type: event.type,
+    type: eventTypeToString(event.type),
     timestamp: event.timestamp,
     content: event.content,
     raw: event.raw || undefined,

@@ -16,7 +16,12 @@ import * as findingStore from "./finding-store.js";
 import { writeTranscript } from "./transcript.js";
 import { broadcast } from "./ws-bridge.js";
 import { join } from "node:path";
-import { LOGS_DIR, DEFAULT_RUNTIME, DEFAULT_MODEL } from "@grackle-ai/common";
+import {
+  LOGS_DIR, DEFAULT_RUNTIME, DEFAULT_MODEL,
+  environmentStatusToEnum, sessionStatusToEnum, sessionStatusToString,
+  tokenTypeToEnum, tokenTypeToString,
+  taskStatusToEnum, taskStatusToString, projectStatusToEnum,
+} from "@grackle-ai/common";
 import { grackleHome } from "./paths.js";
 import { safeParseJsonArray } from "./json-helpers.js";
 
@@ -32,7 +37,7 @@ function envRowToProto(row: EnvironmentRow): grackle.Environment {
     adapterConfig: row.adapterConfig,
     defaultRuntime: row.defaultRuntime,
     bootstrapped: row.bootstrapped,
-    status: row.status,
+    status: environmentStatusToEnum(row.status),
     lastSeen: row.lastSeen || "",
     envInfo: row.envInfo || "",
     createdAt: row.createdAt,
@@ -41,9 +46,16 @@ function envRowToProto(row: EnvironmentRow): grackle.Environment {
 
 function sessionRowToProto(row: SessionRow): grackle.Session {
   return create(grackle.SessionSchema, {
-    ...row,
+    id: row.id,
+    environmentId: row.environmentId,
+    runtime: row.runtime,
     runtimeSessionId: row.runtimeSessionId ?? "",
+    prompt: row.prompt,
+    model: row.model,
+    status: sessionStatusToEnum(row.status),
     logPath: row.logPath ?? "",
+    turns: row.turns,
+    startedAt: row.startedAt,
     suspendedAt: row.suspendedAt ?? "",
     endedAt: row.endedAt ?? "",
     error: row.error ?? "",
@@ -51,16 +63,36 @@ function sessionRowToProto(row: SessionRow): grackle.Session {
 }
 
 function projectRowToProto(row: projectStore.ProjectRow): grackle.Project {
-  return create(grackle.ProjectSchema, { ...row });
+  return create(grackle.ProjectSchema, {
+    id: row.id,
+    name: row.name,
+    description: row.description,
+    repoUrl: row.repoUrl,
+    defaultEnvironmentId: row.defaultEnvironmentId,
+    status: projectStatusToEnum(row.status),
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  });
 }
 
 function taskRowToProto(row: taskStore.TaskRow): grackle.Task {
   return create(grackle.TaskSchema, {
-    ...row,
+    id: row.id,
+    projectId: row.projectId,
+    title: row.title,
+    description: row.description,
+    status: taskStatusToEnum(row.status),
+    branch: row.branch,
+    environmentId: row.environmentId,
+    sessionId: row.sessionId,
     dependsOn: safeParseJsonArray(row.dependsOn),
     assignedAt: row.assignedAt ?? "",
     startedAt: row.startedAt ?? "",
     completedAt: row.completedAt ?? "",
+    reviewNotes: row.reviewNotes,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+    sortOrder: row.sortOrder,
   });
 }
 
@@ -104,7 +136,7 @@ function spawnOnPowerLine(
       for await (const event of conn.client.spawn(powerlineReq)) {
         const sessionEvent = create(grackle.SessionEventSchema, {
           sessionId,
-          type: event.type,
+          type: event.type as number as grackle.EventType,
           timestamp: event.timestamp,
           content: event.content,
           raw: event.raw,
@@ -112,7 +144,7 @@ function spawnOnPowerLine(
         logWriter.writeEvent(logPath, sessionEvent);
 
         // Intercept finding events and store + broadcast them
-        if (event.type === "finding" && projectId) {
+        if (event.type === powerline.AgentEventType.FINDING && projectId) {
           try {
             const data = JSON.parse(event.content);
             const findingId = uuid();
@@ -130,7 +162,7 @@ function spawnOnPowerLine(
 
         streamHub.publish(sessionEvent);
 
-        if (event.type === "status") {
+        if (event.type === powerline.AgentEventType.STATUS) {
           if (event.content === "waiting_input") {
             sessionStore.updateSessionStatus(sessionId, "waiting_input");
           } else if (event.content === "running") {
@@ -154,7 +186,7 @@ function spawnOnPowerLine(
       // Publish a failure event so streaming clients are notified
       streamHub.publish(create(grackle.SessionEventSchema, {
         sessionId,
-        type: "status",
+        type: grackle.EventType.STATUS,
         timestamp: new Date().toISOString(),
         content: "failed",
         raw: String(err),
@@ -335,7 +367,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
           for await (const event of conn.client.resume(powerlineReq)) {
             const sessionEvent = create(grackle.SessionEventSchema, {
               sessionId: session.id,
-              type: event.type,
+              type: event.type as number as grackle.EventType,
               timestamp: event.timestamp,
               content: event.content,
               raw: event.raw,
@@ -391,7 +423,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       sessionStore.updateSession(req.id, "killed");
       streamHub.publish(create(grackle.SessionEventSchema, {
         sessionId: req.id,
-        type: "status",
+        type: grackle.EventType.STATUS,
         timestamp: new Date().toISOString(),
         content: "killed",
         raw: "",
@@ -400,7 +432,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
     },
 
     async listSessions(req: grackle.SessionFilter) {
-      const rows = sessionStore.listSessions(req.environmentId, req.status);
+      const rows = sessionStore.listSessions(req.environmentId, sessionStatusToString(req.status));
       return create(grackle.SessionListSchema, {
         sessions: rows.map(sessionRowToProto),
       });
@@ -431,7 +463,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
     async setToken(req: grackle.TokenEntry) {
       await tokenBroker.setToken({
         name: req.name,
-        type: req.type,
+        type: tokenTypeToString(req.type),
         envVar: req.envVar,
         filePath: req.filePath,
         value: req.value,
@@ -446,7 +478,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         tokens: items.map((t) =>
           create(grackle.TokenInfoSchema, {
             name: t.name,
-            type: t.type,
+            type: tokenTypeToEnum(t.type),
             envVar: t.envVar || "",
             filePath: t.filePath || "",
             expiresAt: t.expiresAt || "",
@@ -519,11 +551,15 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       const existing = taskStore.getTask(req.id);
       if (!existing) throw new Error(`Task not found: ${req.id}`);
 
+      const reqStatus = req.status !== grackle.TaskStatus.UNSPECIFIED
+        ? taskStatusToString(req.status)
+        : existing.status;
+
       taskStore.updateTask(
         req.id,
         req.title || existing.title,
         req.description || existing.description,
-        req.status || existing.status,
+        reqStatus,
         req.environmentId || existing.environmentId,
         req.dependsOn.length > 0 ? [...req.dependsOn] : safeParseJsonArray(existing.dependsOn),
         req.reviewNotes || existing.reviewNotes,
@@ -606,7 +642,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       for (const t of unblocked) {
         streamHub.publish(create(grackle.SessionEventSchema, {
           sessionId: "",
-          type: "system",
+          type: grackle.EventType.SYSTEM,
           timestamp: new Date().toISOString(),
           content: JSON.stringify({ type: "task_unblocked", taskId: t.id, title: t.title }),
           raw: "",
