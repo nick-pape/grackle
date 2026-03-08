@@ -183,13 +183,35 @@ export async function* bootstrapPowerLine(
   powerlineToken: string,
   extraEnv?: Record<string, string>,
 ): AsyncGenerator<ProvisionEvent> {
-  // 1. Check Node.js
+  // 1. Check Node.js (PowerLine requires >= 22)
   yield { stage: "bootstrapping", message: "Checking Node.js on remote host...", progress: 0.10 };
   try {
-    const nodeVersion = await executor.exec("node --version", { timeout: SSH_CONNECTIVITY_TIMEOUT_MS });
+    const nodeVersionOutput = await executor.exec("node --version", { timeout: SSH_CONNECTIVITY_TIMEOUT_MS });
+    const nodeVersion = String(nodeVersionOutput).trim();
     logger.info({ nodeVersion }, "Remote Node.js version");
-  } catch {
-    throw new Error("Node.js is not installed on the remote host. Install Node.js >= 18 and try again.");
+
+    const versionMatch = nodeVersion.match(/^v?(\d+)\./);
+    if (!versionMatch) {
+      throw new Error(
+        `Unable to parse Node.js version "${nodeVersion}" on remote host. Install Node.js >= 22 and try again.`,
+      );
+    }
+
+    const majorVersion = parseInt(versionMatch[1]!, 10);
+    if (isNaN(majorVersion) || majorVersion < 22) {
+      throw new Error(
+        `Unsupported Node.js version "${nodeVersion}" on remote host. PowerLine requires Node.js >= 22.`,
+      );
+    }
+  } catch (error) {
+    if (error instanceof Error
+      && (error.message.startsWith("Unable to parse Node.js version")
+        || error.message.startsWith("Unsupported Node.js version"))) {
+      throw error;
+    }
+    throw new Error(
+      "Node.js is not installed or not accessible on the remote host. Install Node.js >= 22 and try again.",
+    );
   }
 
   // 2. Check git
@@ -300,9 +322,10 @@ export async function* bootstrapPowerLine(
   }
 
   if (envLines.length > 0) {
-    const envFileContent = envLines.join("\\n");
+    const envFileContent = envLines.join("\n") + "\n";
+    const envFileContentBase64 = Buffer.from(envFileContent, "utf8").toString("base64");
     await executor.exec(
-      `printf '%b\\n' '${shellEscape(envFileContent)}' > ${REMOTE_POWERLINE_DIRECTORY}/.env.sh`,
+      `printf '%s' '${shellEscape(envFileContentBase64)}' | base64 -d > ${REMOTE_POWERLINE_DIRECTORY}/.env.sh`,
       { timeout: REMOTE_EXEC_DEFAULT_TIMEOUT_MS },
     );
   }
@@ -373,6 +396,13 @@ export async function connectThroughTunnel(
     }
   }
 
+  // Clean up the tunnel so we don't leak background processes on connect failure
+  try {
+    await closeTunnel(environmentId);
+  } catch (err) {
+    logger.error({ environmentId, err }, "Failed to close tunnel after connect failure");
+  }
+
   throw new Error(`Could not reach PowerLine after ${CONNECT_MAX_RETRIES} attempts: ${lastError}`);
 }
 
@@ -409,12 +439,12 @@ export async function waitForLocalPort(port: number): Promise<void> {
 
 /**
  * Build a shell command that kills the process listening on the PowerLine port.
- * Uses fuser as primary, with lsof and a Node.js one-liner as fallbacks.
+ * Uses fuser as primary, with lsof and pkill as fallbacks.
  */
 export function buildRemoteKillCommand(): string {
   return `fuser -k ${DEFAULT_POWERLINE_PORT}/tcp 2>/dev/null`
     + ` || lsof -ti:${DEFAULT_POWERLINE_PORT} | xargs kill 2>/dev/null`
-    + ` || node -e "require('http').get('http://127.0.0.1:${DEFAULT_POWERLINE_PORT}',()=>{}).on('error',()=>{})" 2>/dev/null`
+    + ` || pkill -f "powerline.*${DEFAULT_POWERLINE_PORT}" 2>/dev/null`
     + ` || true`;
 }
 
