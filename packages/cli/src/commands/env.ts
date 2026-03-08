@@ -38,8 +38,7 @@ export function registerEnvCommands(program: Command): void {
     .option("--docker", "Docker adapter")
     .option("--ssh", "SSH adapter")
     .option("--local", "Local PowerLine adapter")
-    .option("--repo <repo>", "GitHub repo (codespace)")
-    .option("--machine <machine>", "Machine type (codespace)")
+    .option("--repo <repo>", "GitHub repo to clone (docker)")
     .option("--image <image>", "Docker image")
     .option("--host <host>", "SSH host / local host")
     .option("--port <port>", "PowerLine port (local adapter)")
@@ -73,7 +72,14 @@ export function registerEnvCommands(program: Command): void {
         }
         config.host = opts.host;
         if (opts.user) config.user = opts.user;
-        if (opts.sshPort) config.sshPort = parseInt(opts.sshPort, 10);
+        if (opts.sshPort) {
+          const port = parseInt(opts.sshPort, 10);
+          if (isNaN(port) || port < 1 || port > 65535) {
+            console.error("Error: --ssh-port must be a number between 1 and 65535");
+            process.exit(1);
+          }
+          config.sshPort = port;
+        }
         if (opts.identityFile) config.identityFile = opts.identityFile;
       } else {
         if (opts.image) config.image = opts.image;

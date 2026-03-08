@@ -1,4 +1,5 @@
 import type { EnvironmentAdapter, BaseEnvironmentConfig, PowerLineConnection, ProvisionEvent } from "./adapter.js";
+import { DEFAULT_POWERLINE_PORT } from "@grackle/common";
 import {
   type RemoteExecutor,
   ProcessTunnel,
@@ -8,6 +9,7 @@ import {
   getTunnel,
   closeTunnel,
   findFreePort,
+  buildRemoteKillCommand,
   SSH_CONNECTIVITY_TIMEOUT_MS,
   REMOTE_EXEC_DEFAULT_TIMEOUT_MS,
   REMOTE_POWERLINE_DIRECTORY,
@@ -74,7 +76,7 @@ class CodespaceTunnel extends ProcessTunnel {
     // gh codespace ports forward uses <remote>:<local> order (opposite of SSH -L)
     const args = [
       "codespace", "ports", "forward",
-      `7433:${this.localPort}`,
+      `${DEFAULT_POWERLINE_PORT}:${this.localPort}`,
       "-c", this.codespaceName,
     ];
     return { command: "gh", args };
@@ -109,7 +111,7 @@ export class CodespaceAdapter implements EnvironmentAdapter {
     }
 
     // Bootstrap PowerLine on the codespace
-    yield* bootstrapPowerLine(executor, powerlineToken);
+    yield* bootstrapPowerLine(executor, powerlineToken, cfg.env);
 
     // Open port-forward tunnel
     const localPort = cfg.localPort || await findFreePort();
@@ -146,7 +148,7 @@ export class CodespaceAdapter implements EnvironmentAdapter {
     const executor = new CodespaceExecutor(cfg.codespaceName);
 
     try {
-      await executor.exec("fuser -k 7433/tcp 2>/dev/null || true");
+      await executor.exec(buildRemoteKillCommand());
     } catch (err) {
       logger.debug({ environmentId, err }, "Failed to kill remote PowerLine (may already be stopped)");
     }
@@ -162,7 +164,7 @@ export class CodespaceAdapter implements EnvironmentAdapter {
     const executor = new CodespaceExecutor(cfg.codespaceName);
 
     try {
-      await executor.exec(`fuser -k 7433/tcp 2>/dev/null || true; rm -rf ${REMOTE_POWERLINE_DIRECTORY}`);
+      await executor.exec(`${buildRemoteKillCommand()}; rm -rf ${REMOTE_POWERLINE_DIRECTORY}`);
     } catch (err) {
       logger.debug({ environmentId, err }, "Failed to clean up remote PowerLine artifacts");
     }

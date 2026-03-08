@@ -122,9 +122,9 @@ function main(): void {
   });
 
   // Graceful shutdown
-  function shutdown(): void {
+  async function shutdown(): Promise<void> {
     logger.info("Shutting down...");
-    closeAllTunnels().catch((err) => logger.error({ err }, "Error closing tunnels during shutdown"));
+    await closeAllTunnels();
     grpcServer.close();
     webServer.close();
     process.exit(0);

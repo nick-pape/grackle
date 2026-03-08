@@ -59,7 +59,6 @@ export interface RemoteTunnel {
 
 interface TunnelState {
   tunnel: RemoteTunnel;
-  remotePowerLinePid?: number;
 }
 
 const tunnelMap: Map<string, TunnelState> = new Map<string, TunnelState>();
@@ -87,7 +86,11 @@ export async function closeTunnel(environmentId: string): Promise<void> {
 export async function closeAllTunnels(): Promise<void> {
   const ids = [...tunnelMap.keys()];
   for (const id of ids) {
-    await closeTunnel(id);
+    try {
+      await closeTunnel(id);
+    } catch (err) {
+      logger.error({ environmentId: id, err }, "Failed to close tunnel during shutdown");
+    }
   }
 }
 
@@ -114,7 +117,7 @@ export abstract class ProcessTunnel implements RemoteTunnel {
     logger.info({ command, args }, "Opening tunnel");
 
     this.process = spawn(command, args, {
-      stdio: ["ignore", "pipe", "pipe"],
+      stdio: ["ignore", "ignore", "pipe"],
       detached: false,
     });
 
@@ -163,12 +166,22 @@ const FORWARDED_ENV_VARS: string[] = [
 ];
 
 /**
+ * Escape a value for safe use inside a shell single-quoted string.
+ * Replaces each `'` with `'\''` (end quote, escaped quote, start quote).
+ */
+function shellEscape(value: string): string {
+  return value.replace(/'/g, "'\\''");
+}
+
+/**
  * Bootstrap the PowerLine on a remote host via the given executor.
  * Yields progress events for each stage of the process.
+ * @param extraEnv - Additional env vars to forward (from adapter config).
  */
 export async function* bootstrapPowerLine(
   executor: RemoteExecutor,
   powerlineToken: string,
+  extraEnv?: Record<string, string>,
 ): AsyncGenerator<ProvisionEvent> {
   // 1. Check Node.js
   yield { stage: "bootstrapping", message: "Checking Node.js on remote host...", progress: 0.10 };
@@ -259,42 +272,55 @@ export async function* bootstrapPowerLine(
     }
   }
 
-  // 8. Kill any existing PowerLine process using fuser on the port
+  // 8. Kill any existing PowerLine process on the port (with fallbacks)
   yield { stage: "bootstrapping", message: "Stopping any existing PowerLine process...", progress: 0.60 };
   try {
-    await executor.exec(
-      `fuser -k ${DEFAULT_POWERLINE_PORT}/tcp 2>/dev/null || true`,
-      { timeout: REMOTE_EXEC_DEFAULT_TIMEOUT_MS },
-    );
+    await executor.exec(buildRemoteKillCommand(), { timeout: REMOTE_EXEC_DEFAULT_TIMEOUT_MS });
     await sleep(1_000);
   } catch {
     // Ignore — no process to kill
   }
 
-  // 9. Build env var string for the remote process
-  const envParts: string[] = [];
+  // 9. Write env vars to a file on the remote host, then source it at startup.
+  //    This avoids shell injection from values containing quotes or special chars.
+  const envLines: string[] = [];
   if (powerlineToken) {
-    envParts.push(`GRACKLE_POWERLINE_TOKEN='${powerlineToken}'`);
+    envLines.push(`export GRACKLE_POWERLINE_TOKEN='${shellEscape(powerlineToken)}'`);
   }
   for (const varName of FORWARDED_ENV_VARS) {
     const value = process.env[varName];
     if (value) {
-      envParts.push(`${varName}='${value}'`);
+      envLines.push(`export ${varName}='${shellEscape(value)}'`);
     }
   }
-  const envPrefix = envParts.length > 0 ? envParts.join(" ") + " " : "";
+  if (extraEnv) {
+    for (const [key, value] of Object.entries(extraEnv)) {
+      envLines.push(`export ${key}='${shellEscape(value)}'`);
+    }
+  }
 
-  // 10. Start PowerLine via bash -c to ensure proper backgrounding.
-  //    We avoid capturing $! because some transports (gh codespace ssh) exit
-  //    with code 255 when the shell backgrounds a process.
+  if (envLines.length > 0) {
+    const envFileContent = envLines.join("\\n");
+    await executor.exec(
+      `printf '%b\\n' '${shellEscape(envFileContent)}' > ${REMOTE_POWERLINE_DIRECTORY}/.env.sh`,
+      { timeout: REMOTE_EXEC_DEFAULT_TIMEOUT_MS },
+    );
+  }
+
+  // 10. Start PowerLine by sourcing the env file and backgrounding.
+  //     We avoid capturing $! because some transports (gh codespace ssh) exit
+  //     with code 255 when the shell backgrounds a process.
   yield { stage: "bootstrapping", message: "Starting PowerLine on remote host...", progress: 0.65 };
-  const innerCommand =
+  const sourceEnv = envLines.length > 0
+    ? `. ${REMOTE_POWERLINE_DIRECTORY}/.env.sh && `
+    : "";
+  const startScript =
     `cd ${REMOTE_POWERLINE_DIRECTORY}`
-    + ` && ${envPrefix}nohup node dist/index.js --port=${DEFAULT_POWERLINE_PORT}`
+    + ` && ${sourceEnv}nohup node dist/index.js --port=${DEFAULT_POWERLINE_PORT}`
     + ` > ~/.grackle/powerline.log 2>&1 &`;
 
   try {
-    await executor.exec(`bash -c '${innerCommand}'`, { timeout: REMOTE_EXEC_DEFAULT_TIMEOUT_MS });
+    await executor.exec(`bash -c '${shellEscape(startScript)}'`, { timeout: REMOTE_EXEC_DEFAULT_TIMEOUT_MS });
   } catch (err) {
     // Some SSH transports return non-zero when the session ends after backgrounding.
     // We'll verify the process is running below — only log the error.
@@ -377,6 +403,19 @@ export async function waitForLocalPort(port: number): Promise<void> {
   }
 
   throw new Error(`Local port ${port} did not become reachable after ${TUNNEL_PORT_POLL_MAX_ATTEMPTS} attempts`);
+}
+
+// ─── Remote Process Kill ────────────────────────────────────
+
+/**
+ * Build a shell command that kills the process listening on the PowerLine port.
+ * Uses fuser as primary, with lsof and a Node.js one-liner as fallbacks.
+ */
+export function buildRemoteKillCommand(): string {
+  return `fuser -k ${DEFAULT_POWERLINE_PORT}/tcp 2>/dev/null`
+    + ` || lsof -ti:${DEFAULT_POWERLINE_PORT} | xargs kill 2>/dev/null`
+    + ` || node -e "require('http').get('http://127.0.0.1:${DEFAULT_POWERLINE_PORT}',()=>{}).on('error',()=>{})" 2>/dev/null`
+    + ` || true`;
 }
 
 // ─── Exports for Adapter Use ────────────────────────────────

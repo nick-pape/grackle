@@ -1,4 +1,5 @@
 import type { EnvironmentAdapter, BaseEnvironmentConfig, PowerLineConnection, ProvisionEvent } from "./adapter.js";
+import { DEFAULT_POWERLINE_PORT } from "@grackle/common";
 import {
   type RemoteExecutor,
   ProcessTunnel,
@@ -8,6 +9,7 @@ import {
   getTunnel,
   closeTunnel,
   findFreePort,
+  buildRemoteKillCommand,
   SSH_CONNECTIVITY_TIMEOUT_MS,
   REMOTE_EXEC_DEFAULT_TIMEOUT_MS,
   REMOTE_POWERLINE_DIRECTORY,
@@ -104,7 +106,7 @@ class SshTunnel extends ProcessTunnel {
     const flags = buildSshFlags(this.cfg);
     const args = [
       "-N",
-      "-L", `${this.localPort}:127.0.0.1:7433`,
+      "-L", `${this.localPort}:127.0.0.1:${DEFAULT_POWERLINE_PORT}`,
       "-o", "ExitOnForwardFailure=yes",
       "-o", "ServerAliveInterval=15",
       "-o", "ServerAliveCountMax=3",
@@ -143,7 +145,7 @@ export class SshAdapter implements EnvironmentAdapter {
     }
 
     // Bootstrap PowerLine on the remote host
-    yield* bootstrapPowerLine(executor, powerlineToken);
+    yield* bootstrapPowerLine(executor, powerlineToken, cfg.env);
 
     // Open SSH tunnel
     const localPort = cfg.localPort || await findFreePort();
@@ -180,7 +182,7 @@ export class SshAdapter implements EnvironmentAdapter {
     const executor = new SshExecutor(cfg);
 
     try {
-      await executor.exec("fuser -k 7433/tcp 2>/dev/null || true");
+      await executor.exec(buildRemoteKillCommand());
     } catch (err) {
       logger.debug({ environmentId, err }, "Failed to kill remote PowerLine (may already be stopped)");
     }
@@ -193,7 +195,7 @@ export class SshAdapter implements EnvironmentAdapter {
     const executor = new SshExecutor(cfg);
 
     try {
-      await executor.exec(`fuser -k 7433/tcp 2>/dev/null || true; rm -rf ${REMOTE_POWERLINE_DIRECTORY}`);
+      await executor.exec(`${buildRemoteKillCommand()}; rm -rf ${REMOTE_POWERLINE_DIRECTORY}`);
     } catch (err) {
       logger.debug({ environmentId, err }, "Failed to clean up remote PowerLine artifacts");
     }
