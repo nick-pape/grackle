@@ -103,3 +103,14 @@ jobs:
         run: node common/scripts/install-run-rush.js publish --include-all --publish --set-access-level public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Create GitHub Release
+        if: steps.bump.outputs.has_bump == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        run: |
+          version=$(node -p "require('./packages/cli/package.json').version")
+          gh release create "v${version}" \
+            --target main \
+            --title "v${version}" \
+            --generate-notes
