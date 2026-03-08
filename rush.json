@@ -7,39 +7,43 @@
   "projectFolderMaxDepth": 2,
   "projects": [
     {
-      "packageName": "@grackle/heft-rig",
+      "packageName": "@grackle-ai/heft-rig",
       "projectFolder": "rigs/heft-rig"
     },
     {
-      "packageName": "@grackle/heft-buf-plugin",
+      "packageName": "@grackle-ai/heft-buf-plugin",
       "projectFolder": "rigs/heft-buf-plugin"
     },
     {
-      "packageName": "@grackle/heft-playwright-plugin",
+      "packageName": "@grackle-ai/heft-playwright-plugin",
       "projectFolder": "rigs/heft-playwright-plugin"
     },
     {
-      "packageName": "@grackle/heft-vite-plugin",
+      "packageName": "@grackle-ai/heft-vite-plugin",
       "projectFolder": "rigs/heft-vite-plugin"
     },
     {
-      "packageName": "@grackle/common",
-      "projectFolder": "packages/common"
+      "packageName": "@grackle-ai/common",
+      "projectFolder": "packages/common",
+      "versionPolicyName": "grackle"
     },
     {
-      "packageName": "@grackle/powerline",
-      "projectFolder": "packages/powerline"
+      "packageName": "@grackle-ai/powerline",
+      "projectFolder": "packages/powerline",
+      "versionPolicyName": "grackle"
     },
     {
-      "packageName": "@grackle/server",
-      "projectFolder": "packages/server"
+      "packageName": "@grackle-ai/server",
+      "projectFolder": "packages/server",
+      "versionPolicyName": "grackle"
     },
     {
-      "packageName": "@grackle/cli",
-      "projectFolder": "packages/cli"
+      "packageName": "@grackle-ai/cli",
+      "projectFolder": "packages/cli",
+      "versionPolicyName": "grackle"
     },
     {
-      "packageName": "@grackle/web",
+      "packageName": "@grackle-ai/web",
       "projectFolder": "packages/web"
     }
   ]

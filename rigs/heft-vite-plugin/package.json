@@ -1,5 +1,5 @@
 {
-  "name": "@grackle/heft-vite-plugin",
+  "name": "@grackle-ai/heft-vite-plugin",
   "version": "0.0.1",
   "private": true,
   "description": "Heft task plugin that runs Vite build",

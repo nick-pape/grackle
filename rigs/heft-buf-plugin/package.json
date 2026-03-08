@@ -1,5 +1,5 @@
 {
-  "name": "@grackle/heft-buf-plugin",
+  "name": "@grackle-ai/heft-buf-plugin",
   "version": "0.0.1",
   "private": true,
   "description": "Heft task plugin that runs buf generate",

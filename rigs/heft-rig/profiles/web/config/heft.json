@@ -20,7 +20,7 @@
         "vite-build": {
           "taskDependencies": ["typescript"],
           "taskPlugin": {
-            "pluginPackage": "@grackle/heft-vite-plugin",
+            "pluginPackage": "@grackle-ai/heft-vite-plugin",
             "pluginName": "vite-build-plugin"
           }
         }
@@ -31,7 +31,7 @@
       "tasksByName": {
         "playwright": {
           "taskPlugin": {
-            "pluginPackage": "@grackle/heft-playwright-plugin",
+            "pluginPackage": "@grackle-ai/heft-playwright-plugin",
             "pluginName": "playwright-test-plugin"
           }
         }

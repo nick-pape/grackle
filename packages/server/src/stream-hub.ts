@@ -1,4 +1,4 @@
-import type { grackle } from "@grackle/common";
+import type { grackle } from "@grackle-ai/common";
 
 type SessionEvent = grackle.SessionEvent;
 type Subscriber = (event: SessionEvent) => void;

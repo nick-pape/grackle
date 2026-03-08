@@ -1,5 +1,5 @@
 {
-  "name": "@grackle/web",
+  "name": "@grackle-ai/web",
   "version": "0.0.1",
   "private": true,
   "type": "module",
@@ -19,7 +19,7 @@
     "remark-gfm": "^4.0.0"
   },
   "devDependencies": {
-    "@grackle/heft-rig": "0.0.1",
+    "@grackle-ai/heft-rig": "0.0.1",
     "@vitejs/plugin-react": "^4.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",

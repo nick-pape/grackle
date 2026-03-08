@@ -1,6 +1,6 @@
 import type { ConnectRouter } from "@connectrpc/connect";
 import { create } from "@bufbuild/protobuf";
-import { grackle, powerline } from "@grackle/common";
+import { grackle, powerline } from "@grackle-ai/common";
 import { v4 as uuid } from "uuid";
 import type { EnvironmentRow } from "./schema.js";
 import type { SessionRow } from "./schema.js";
@@ -16,7 +16,7 @@ import * as findingStore from "./finding-store.js";
 import { writeTranscript } from "./transcript.js";
 import { broadcast } from "./ws-bridge.js";
 import { join } from "node:path";
-import { LOGS_DIR, DEFAULT_RUNTIME, DEFAULT_MODEL } from "@grackle/common";
+import { LOGS_DIR, DEFAULT_RUNTIME, DEFAULT_MODEL } from "@grackle-ai/common";
 import { grackleHome } from "./paths.js";
 import { safeParseJsonArray } from "./json-helpers.js";
 

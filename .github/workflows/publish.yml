@@ -1,0 +1,96 @@
+name: Publish to npm
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          # GH_PAT is required to create PRs and merge them
+          token: ${{ secrets.GH_PAT }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      # Checkout main so version bumps apply on top of the latest commit
+      - name: Checkout main
+        run: git checkout main && git pull origin main
+
+      - name: Install
+        run: node common/scripts/install-run-rush.js install
+
+      # rush version --bump creates a temp branch, pushes it, then tries to
+      # fast-forward main directly. The direct push fails due to branch
+      # protection, so we let it fail and merge via PR instead.
+      # If there are no change files, the bump is skipped entirely.
+      - name: Bump versions
+        id: bump
+        run: |
+          set +e
+          output=$(node common/scripts/install-run-rush.js version --bump --target-branch main 2>&1)
+          status=$?
+          set -e
+
+          echo "$output"
+
+          if [ "$status" -ne 0 ]; then
+            if echo "$output" | grep -q 'GH013'; then
+              echo "rush version failed due to protected branch; proceeding with PR-based merge."
+            else
+              echo "rush version failed with status $status"
+              exit "$status"
+            fi
+          fi
+
+          branch=$(echo "$output" | grep -oE 'version/bump-[0-9]+' | head -1)
+          if [ -n "$branch" ]; then
+            echo "branch=$branch" >> "$GITHUB_OUTPUT"
+            echo "has_bump=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "No version bump needed"
+            echo "has_bump=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Merge version bump into main
+        if: steps.bump.outputs.has_bump == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        run: |
+          pr_url=$(gh pr create \
+            --base main \
+            --head "${{ steps.bump.outputs.branch }}" \
+            --title "chore: bump versions [skip ci]" \
+            --body "Automated version bump from publish workflow.")
+
+          gh pr merge "$pr_url" --squash --admin --delete-branch
+
+      # After squash-merge, local main has diverged from origin/main
+      # (rush merged the temp branch locally, but the PR was squash-merged).
+      # Reset to origin/main to get the squashed result.
+      - name: Checkout updated main
+        if: steps.bump.outputs.has_bump == 'true'
+        run: git fetch origin main && git checkout -B main origin/main
+
+      - name: Build
+        run: node common/scripts/install-run-rush.js build
+
+      - name: Publish to npm
+        run: node common/scripts/install-run-rush.js publish --include-all --publish --set-access-level public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
