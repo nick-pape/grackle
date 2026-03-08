@@ -1,7 +1,7 @@
 import type { Command } from "commander";
 import chalk from "chalk";
 import { createGrackleClient } from "../client.js";
-import { grackle, sessionStatusToString } from "@grackle/common";
+import { grackle, sessionStatusToString } from "@grackle-ai/common";
 import Table from "cli-table3";
 
 /** Register agent-related commands: `spawn`, `resume`, `status`, `kill`, and `attach`. */

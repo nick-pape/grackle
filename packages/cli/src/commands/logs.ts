@@ -1,6 +1,6 @@
 import type { Command } from "commander";
 import { createGrackleClient } from "../client.js";
-import { grackle, eventTypeToString } from "@grackle/common";
+import { grackle, eventTypeToString } from "@grackle-ai/common";
 
 /** Register the `logs` command for viewing session logs, transcripts, and live tailing. */
 export function registerLogCommands(program: Command): void {

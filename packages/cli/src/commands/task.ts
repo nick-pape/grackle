@@ -1,6 +1,6 @@
 import type { Command } from "commander";
 import { createGrackleClient } from "../client.js";
-import { grackle, taskStatusToString } from "@grackle/common";
+import { grackle, taskStatusToString } from "@grackle-ai/common";
 import Table from "cli-table3";
 
 export function registerTaskCommands(program: Command): void {

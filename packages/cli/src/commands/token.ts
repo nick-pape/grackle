@@ -1,6 +1,6 @@
 import type { Command } from "commander";
 import { createGrackleClient } from "../client.js";
-import { grackle, tokenTypeToEnum, tokenTypeToString } from "@grackle/common";
+import { grackle, tokenTypeToEnum, tokenTypeToString } from "@grackle-ai/common";
 import Table from "cli-table3";
 import { readFileSync } from "node:fs";
 import { createInterface } from "node:readline";
