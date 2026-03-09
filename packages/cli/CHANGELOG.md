@@ -1,6 +1,11 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Mon, 09 Mar 2026 14:40:59 GMT and should not be manually modified.
+This log was last generated on Mon, 09 Mar 2026 23:17:39 GMT and should not be manually modified.
+
+## 0.0.4
+Mon, 09 Mar 2026 23:17:39 GMT
+
+_Version update only_
 
 ## 0.0.3
 Mon, 09 Mar 2026 14:40:59 GMT
