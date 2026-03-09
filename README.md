@@ -4,11 +4,13 @@
 
 Grackle is a multi-agent coordination platform. Break a project into tasks, dispatch each to an agent running in its own isolated environment, and watch them work in real time. Review real diffs, share knowledge between agents, and scale from one agent to a swarm — without rewriting your setup.
 
+![Dashboard — projects, tasks, and live agent output](docs/screenshots/dashboard-projects-tasks.png)
+
 ## 💡 Philosophy
 
 ### 🔌 Environments are just compute
 
-Docker and local today, SSH [⭐#30](https://github.com/nick-pape/grackle/issues/30) and Codespaces [🔜#31](https://github.com/nick-pape/grackle/issues/31) on the roadmap — it shouldn't matter where an agent runs. Grackle treats environments as interchangeable compute behind a single protocol. Same interface, same results, regardless of where the work happens.
+Docker, local, SSH, and GitHub Codespaces — it shouldn't matter where an agent runs. Grackle treats environments as interchangeable compute behind a single protocol. Same interface, same results, regardless of where the work happens.
 
 ### 🔄 Runtime agnostic by design
 
@@ -67,9 +69,13 @@ graph TD
 
 Every agent produces real, reviewable output: git diffs, markdown reports, PR comments, findings. The full conversation thread is stored in the central server database — every tool call, every decision, fully auditable. Nothing happens in a black box. Git branches and tags provide natural coordination points — not a proprietary state machine. If you can read a diff, you can audit a swarm.
 
+![Diff review — see exactly what each agent changed](docs/screenshots/diff-review.png)
+
 ### 🧠 Agents that actually coordinate
 
 Agents don't just run in parallel — they share knowledge. One agent's architectural insight becomes another agent's context through findings and the knowledge graph [⭐#13](https://github.com/nick-pape/grackle/issues/13). Agent personas [⭐#11](https://github.com/nick-pape/grackle/issues/11) with tool allowlists keep specialists focused. The coordination primitives are the ones engineers already use: git, diffs, code review.
+
+![Findings — categorized discoveries shared across agents](docs/screenshots/findings-panel.png)
 
 ## 🏗️ Example Topology
 
@@ -120,10 +126,12 @@ Each agent runs inside an isolated environment. Connect one or many:
 |---------|--------|---------|
 | 🐳 **Docker** | ✅ Available | `grackle env add my-env --docker` |
 | 💻 **Local** | ✅ Available | `grackle env add my-env --local` |
-| 🔒 **SSH** | ⭐ Post v1.0 [#30](https://github.com/nick-pape/grackle/issues/30) | `grackle env add my-env --ssh --host ...` |
-| ☁️ **Codespace** | 🔜 Planned [#31](https://github.com/nick-pape/grackle/issues/31) | `grackle env add my-env --codespace --repo ...` |
+| 🔒 **SSH** | ✅ Available [#30](https://github.com/nick-pape/grackle/issues/30) | `grackle env add my-env --ssh --host ...` |
+| ☁️ **Codespace** | ✅ Available [#31](https://github.com/nick-pape/grackle/issues/31) | `grackle env add my-env --codespace --repo ...` |
 
-Docker spins up a container with PowerLine pre-installed. Local connects to a PowerLine instance already running on your machine.
+![Environments — manage agents across local, Docker, Codespace, and SSH](docs/screenshots/agent-session-stream.png)
+
+Docker spins up a container with PowerLine pre-installed. Local connects to a PowerLine instance already running on your machine. SSH connects to any remote host via OpenSSH. Codespace creates or reuses a GitHub Codespace for the given repository.
 
 ## 🚀 Quick Start
 
