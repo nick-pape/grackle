@@ -31,7 +31,7 @@ const TUNNEL_KILL_GRACE_MS: number = 1_000;
 /** Timeout for the initial SSH connectivity test. */
 const SSH_CONNECTIVITY_TIMEOUT_MS: number = 15_000;
 /** Remote directory where PowerLine artifacts are installed. */
-const REMOTE_POWERLINE_DIRECTORY: string = "~/.grackle/powerline";
+const REMOTE_POWERLINE_DIRECTORY: string = "$HOME/.grackle/powerline";
 
 // ─── Dev vs Production Mode ─────────────────────────────────
 
