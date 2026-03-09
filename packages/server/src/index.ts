@@ -7,6 +7,9 @@ import { registerAdapter, startHeartbeat } from "./adapter-manager.js";
 import { updateEnvironmentStatus, resetAllStatuses } from "./env-registry.js";
 import { DockerAdapter } from "./adapters/docker.js";
 import { LocalAdapter } from "./adapters/local.js";
+import { SshAdapter } from "./adapters/ssh.js";
+import { CodespaceAdapter } from "./adapters/codespace.js";
+import { closeAllTunnels } from "./adapters/remote-adapter-utils.js";
 import { createWsBridge } from "./ws-bridge.js";
 import { DEFAULT_SERVER_PORT, DEFAULT_WEB_PORT } from "@grackle-ai/common";
 import { readFileSync, existsSync } from "node:fs";
@@ -79,6 +82,8 @@ function main(): void {
   // Register adapters
   registerAdapter(new DockerAdapter());
   registerAdapter(new LocalAdapter());
+  registerAdapter(new SshAdapter());
+  registerAdapter(new CodespaceAdapter());
 
   // Start heartbeat
   startHeartbeat((environmentId) => {
@@ -117,8 +122,9 @@ function main(): void {
   });
 
   // Graceful shutdown
-  function shutdown(): void {
+  async function shutdown(): Promise<void> {
     logger.info("Shutting down...");
+    await closeAllTunnels();
     grpcServer.close();
     webServer.close();
     process.exit(0);
