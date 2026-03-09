@@ -127,11 +127,11 @@ Each agent runs inside an isolated environment. Connect one or many:
 | 🐳 **Docker** | ✅ Available | `grackle env add my-env --docker` |
 | 💻 **Local** | ✅ Available | `grackle env add my-env --local` |
 | 🔒 **SSH** | ✅ Available [#30](https://github.com/nick-pape/grackle/issues/30) | `grackle env add my-env --ssh --host ...` |
-| ☁️ **Codespace** | ✅ Available [#31](https://github.com/nick-pape/grackle/issues/31) | `grackle env add my-env --codespace --repo ...` |
+| ☁️ **Codespace** | ✅ Available [#31](https://github.com/nick-pape/grackle/issues/31) | `grackle env add my-env --codespace --codespace-name <name>` |
 
 ![Environments — manage agents across local, Docker, Codespace, and SSH](docs/screenshots/agent-session-stream.png)
 
-Docker spins up a container with PowerLine pre-installed. Local connects to a PowerLine instance already running on your machine. SSH connects to any remote host via OpenSSH. Codespace creates or reuses a GitHub Codespace for the given repository.
+Docker spins up a container with PowerLine pre-installed. Local connects to a PowerLine instance already running on your machine. SSH connects to any remote host via OpenSSH. Codespace connects to an existing GitHub Codespace by name (use `gh codespace list` to find the name).
 
 ## 🚀 Quick Start
 
