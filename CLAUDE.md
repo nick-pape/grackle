@@ -60,7 +60,7 @@ Rush monorepo with 5 packages under `packages/`:
 
 ## Change Files (Rush Change)
 
-Every PR must include a change file. CI enforces this with `rush change --verify`.
+PRs that modify publishable packages must include a change file. CI enforces this with `rush change --verify`.
 
 **Publishable packages** (lockstep versioning — all share one version):
 - `@grackle-ai/cli`, `@grackle-ai/common`, `@grackle-ai/powerline`, `@grackle-ai/server`
