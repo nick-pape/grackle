@@ -65,7 +65,7 @@ graph TD
 
 **dependsOn** represents sequencing: "this task can't start until that task finishes." Dependencies can exist between siblings but not across branches of the tree.
 
-The parent sets up dependencies between its children, since the parent has the birds-eye view of its own decomposition. Children don't know about or negotiate with their siblings directly.
+The parent sets up dependencies between its children, since the parent has the bird's-eye view of its own decomposition. Children don't know about or negotiate with their siblings directly.
 
 ### Decomposition Rights
 
@@ -91,7 +91,7 @@ The invocation mode is determined by the **trigger**, not the persona. The same 
 Every task invocation receives:
 
 1. **System prompt** — from the persona definition
-2. **Project state** — current tasks, statuses, relevant findings (injected, similar to today's `buildSystemContext`)
+2. **Project state** — current tasks, statuses, relevant findings (injected, similar to the inline system-context assembly in `packages/server/src/grpc-service.ts` and `packages/server/src/ws-bridge.ts`)
 3. **Trigger context** — what caused this invocation (task completed, escalation received, scheduled tick, human request)
 4. **Conversation history** — for resume mode; potentially windowed or summarized for long-running tasks
 
