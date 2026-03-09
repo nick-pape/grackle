@@ -2,6 +2,12 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.0.4",
+      "tag": "@grackle-ai/cli_v0.0.4",
+      "date": "Mon, 09 Mar 2026 23:17:39 GMT",
+      "comments": {}
+    },
+    {
       "version": "0.0.3",
       "tag": "@grackle-ai/cli_v0.0.3",
       "date": "Mon, 09 Mar 2026 14:40:59 GMT",
