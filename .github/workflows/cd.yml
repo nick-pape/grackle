@@ -1,8 +1,8 @@
-name: Publish to npm
+name: CD
 
 on:
-  release:
-    types: [published]
+  push:
+    branches: [main]
 
 permissions:
   contents: write
@@ -15,7 +15,6 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          # GH_PAT is required to create PRs and merge them
           token: ${{ secrets.GH_PAT }}
 
       - uses: actions/setup-node@v4
@@ -28,12 +27,18 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      # Checkout main so version bumps apply on top of the latest commit
-      - name: Checkout main
-        run: git checkout main && git pull origin main
-
       - name: Install
         run: node common/scripts/install-run-rush.js install
+
+      - name: Build
+        run: node common/scripts/install-run-rush.js build
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+        working-directory: packages/web
+
+      - name: Run tests
+        run: node common/scripts/install-run-rush.js test --verbose
 
       # rush version --bump creates a temp branch, pushes it, then tries to
       # fast-forward main directly. The direct push fails due to branch
@@ -87,10 +92,25 @@ jobs:
         if: steps.bump.outputs.has_bump == 'true'
         run: git fetch origin main && git checkout -B main origin/main
 
-      - name: Build
-        run: node common/scripts/install-run-rush.js build
+      - name: Rebuild with bumped versions
+        if: steps.bump.outputs.has_bump == 'true'
+        run: |
+          node common/scripts/install-run-rush.js install
+          node common/scripts/install-run-rush.js build
 
       - name: Publish to npm
+        if: steps.bump.outputs.has_bump == 'true'
         run: node common/scripts/install-run-rush.js publish --include-all --publish --set-access-level public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Create GitHub Release
+        if: steps.bump.outputs.has_bump == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        run: |
+          version=$(node -p "require('./packages/cli/package.json').version")
+          gh release create "v${version}" \
+            --target main \
+            --title "v${version}" \
+            --generate-notes
