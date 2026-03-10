@@ -1,6 +1,18 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Tue, 10 Mar 2026 08:23:27 GMT and should not be manually modified.
+This log was last generated on Tue, 10 Mar 2026 14:35:26 GMT and should not be manually modified.
+
+## 0.11.1
+Tue, 10 Mar 2026 14:35:26 GMT
+
+### Patches
+
+- Extract shared processEventStream to deduplicate event-processing loops
+- Extract BaseAgentSession abstract class from ClaudeCodeSession and CodexSession to consolidate shared session lifecycle
+
+### Updates
+
+- Add unit tests for powerline package
 
 ## 0.11.0
 Tue, 10 Mar 2026 08:23:27 GMT
