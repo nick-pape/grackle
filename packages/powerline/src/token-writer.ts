@@ -1,7 +1,7 @@
 import { writeFile, mkdir, realpath } from "node:fs/promises";
 import { dirname, resolve, normalize } from "node:path";
 import { homedir } from "node:os";
-import { realpathSync } from "node:fs";
+import { realpathSync, existsSync } from "node:fs";
 import { logger } from "./logger.js";
 
 /**
@@ -45,13 +45,18 @@ export async function writeTokens(
         logger.warn({ filePath: resolvedPath }, "Refusing to write token outside home directory");
         continue;
       }
-      await mkdir(dirname(resolvedPath), { recursive: true });
 
-      // Resolve symlinks on the parent directory BEFORE writing to prevent symlink-based traversal
+      // Resolve symlinks on the nearest existing ancestor BEFORE creating directories
+      // to prevent symlink-based traversal that could escape home
       try {
-        const realParent = await realpath(dirname(resolvedPath));
-        if (!isUnderHome(realParent, home)) {
-          logger.warn({ filePath: resolvedPath, realParent }, "Parent directory resolves outside home via symlink");
+        let checkPath = dirname(resolvedPath);
+        // Walk up until we find an existing ancestor to realpath-check
+        while (!existsSync(checkPath) && checkPath !== dirname(checkPath)) {
+          checkPath = dirname(checkPath);
+        }
+        const realAncestor = await realpath(checkPath);
+        if (!isUnderHome(realAncestor, home)) {
+          logger.warn({ filePath: resolvedPath, realAncestor }, "Parent directory resolves outside home via symlink");
           continue;
         }
       } catch {
@@ -59,6 +64,7 @@ export async function writeTokens(
         continue;
       }
 
+      await mkdir(dirname(resolvedPath), { recursive: true });
       await writeFile(resolvedPath, token.value, { mode: 0o600 });
 
       logger.info({ filePath: resolvedPath }, "Wrote file %s", resolvedPath);

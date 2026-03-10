@@ -20,6 +20,7 @@ vi.mock("node:fs/promises", () => ({
 
 vi.mock("node:fs", () => ({
   realpathSync: vi.fn((p: string) => p),
+  existsSync: vi.fn(() => true),
 }));
 
 vi.mock("node:os", () => ({
@@ -138,14 +139,15 @@ describe("writeTokens", () => {
 
   it("detects symlink traversal and refuses write", async () => {
     const filePath = homeFile("link", "file");
-    // realpath resolves the parent to a path outside home
+    // realpath resolves the nearest existing ancestor to a path outside home
     vi.mocked(realpath).mockResolvedValueOnce(resolve("/etc/evil"));
 
     await writeTokens([
       { name: "test", type: "file", envVar: "", filePath, value: "data" },
     ]);
 
-    // mkdir gets called before the symlink check, but writeFile should NOT be called
+    // When symlink traversal is detected, no directories should be created and no file written
+    expect(mkdir).not.toHaveBeenCalled();
     expect(writeFile).not.toHaveBeenCalled();
     expect(logger.warn).toHaveBeenCalled();
   });

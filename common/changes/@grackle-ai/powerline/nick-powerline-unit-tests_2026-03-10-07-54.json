@@ -3,9 +3,9 @@
     {
       "comment": "Add unit tests for powerline package",
       "type": "none",
-      "packageName": "@grackle-ai/cli"
+      "packageName": "@grackle-ai/powerline"
     }
   ],
-  "packageName": "@grackle-ai/cli",
+  "packageName": "@grackle-ai/powerline",
   "email": "5674316+nick-pape@users.noreply.github.com"
 }
