@@ -10,7 +10,7 @@ test.describe("Settings Page", () => {
 
     // Settings page should be visible
     await expect(page.getByText("Settings")).toBeVisible({ timeout: 5_000 });
-    await expect(page.getByText("Tokens")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Tokens" })).toBeVisible();
   });
 
   test("settings page shows empty state when no tokens exist", async ({ appPage }) => {
@@ -21,7 +21,7 @@ test.describe("Settings Page", () => {
 
     // Should show empty message or the token list
     // (may or may not be empty depending on test ordering, but the page renders)
-    await expect(page.getByText("Tokens")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Tokens" })).toBeVisible();
   });
 
   test("add token via settings form", async ({ appPage }) => {
@@ -132,7 +132,7 @@ test.describe("Settings Page", () => {
     await page.locator("button", { hasText: "Add Token" }).click();
 
     // Wait for token to appear in list
-    await expect(page.getByText("clear-test-token")).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText("clear-test-token", { exact: true })).toBeVisible({ timeout: 5_000 });
 
     // Form fields should be cleared
     await expect(nameInput).toHaveValue("");

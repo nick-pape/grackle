@@ -37,7 +37,7 @@ test.describe("Settings Page (Mock Mode)", () => {
 
     // Settings heading should appear
     await expect(page.getByText("Settings")).toBeVisible({ timeout: 5_000 });
-    await expect(page.getByText("Tokens")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Tokens" })).toBeVisible();
   });
 
   test("mock tokens are displayed in settings", async ({ mockPage }) => {
@@ -47,8 +47,8 @@ test.describe("Settings Page (Mock Mode)", () => {
     await expect(page.getByText("Settings")).toBeVisible({ timeout: 5_000 });
 
     // MOCK_TOKENS has 3 tokens: anthropic, github, gcp-service-account
-    await expect(page.getByText("anthropic")).toBeVisible({ timeout: 5_000 });
-    await expect(page.getByText("github")).toBeVisible();
+    await expect(page.getByText("anthropic", { exact: true })).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText("github", { exact: true })).toBeVisible();
     await expect(page.getByText("gcp-service-account")).toBeVisible();
 
     // Check targets are shown
@@ -86,17 +86,17 @@ test.describe("Settings Page (Mock Mode)", () => {
     await expect(page.getByText("Settings")).toBeVisible({ timeout: 5_000 });
 
     // anthropic token should be visible
-    await expect(page.getByText("anthropic")).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText("anthropic", { exact: true })).toBeVisible({ timeout: 5_000 });
 
     // Accept the confirm dialog
     page.on("dialog", (dialog) => dialog.accept());
 
     // Click delete on the anthropic token
-    const tokenRow = page.getByText("anthropic").locator("..");
+    const tokenRow = page.getByText("anthropic", { exact: true }).locator("..");
     await tokenRow.locator('button[title="Delete anthropic"]').click();
 
     // Should be gone
-    await expect(page.getByText("anthropic")).not.toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText("anthropic", { exact: true })).not.toBeVisible({ timeout: 5_000 });
   });
 
   test("type selector switches between env_var and file", async ({ mockPage }) => {
@@ -140,7 +140,7 @@ test.describe("Settings Page (Mock Mode)", () => {
     await page.locator("button", { hasText: "Add Token" }).click();
 
     // Wait for token to appear
-    await expect(page.getByText("clear-test")).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText("clear-test", { exact: true })).toBeVisible({ timeout: 5_000 });
 
     // Fields should be cleared
     await expect(nameInput).toHaveValue("");
