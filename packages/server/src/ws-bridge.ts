@@ -25,6 +25,7 @@ import { logger } from "./logger.js";
 import { buildTaskSystemContext } from "./utils/system-context.js";
 import { slugify } from "./utils/slugify.js";
 import { processEventStream } from "./event-processor.js";
+import { broadcast, setWssInstance } from "./ws-broadcast.js";
 
 const WS_PING_INTERVAL_MS: number = 30_000;
 const WS_CLOSE_UNAUTHORIZED: number = 4001;
@@ -35,23 +36,10 @@ interface WsMessage {
   id?: string;
 }
 
-let wssInstance: WebSocketServer | undefined = undefined;
-
-/** Broadcast a message to all connected WS clients. */
-export function broadcast(msg: { type: string; payload?: Record<string, unknown> }): void {
-  if (!wssInstance) return;
-  const data = JSON.stringify(msg);
-  for (const client of wssInstance.clients) {
-    if (client.readyState === 1 /* OPEN */) {
-      client.send(data);
-    }
-  }
-}
-
 /** Create a WebSocket server on top of an HTTP server that bridges JSON messages to gRPC operations. */
 export function createWsBridge(httpServer: HttpServer, verifyApiKey: (token: string) => boolean): WebSocketServer {
   const wss = new WebSocketServer({ server: httpServer });
-  wssInstance = wss;
+  setWssInstance(wss);
 
   wss.on("connection", (ws: WebSocket, req: IncomingMessage) => {
     const url = new URL(req.url || "/", "http://localhost");

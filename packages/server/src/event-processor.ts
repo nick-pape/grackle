@@ -7,7 +7,7 @@ import * as streamHub from "./stream-hub.js";
 import * as logWriter from "./log-writer.js";
 import * as findingStore from "./finding-store.js";
 import { writeTranscript } from "./transcript.js";
-import { broadcast } from "./ws-bridge.js";
+import { broadcast } from "./ws-broadcast.js";
 import { logger } from "./logger.js";
 
 /** Terminal session statuses that indicate the session has already ended. */
@@ -36,12 +36,11 @@ export function processEventStream(
 ): void {
   const { sessionId, logPath, projectId, taskId, onComplete, onError } = options;
 
-  logWriter.initLog(logPath);
-
   // eslint-disable-next-line @typescript-eslint/no-floating-promises
   (async () => {
     try {
-      sessionStore.updateSession(sessionId, "running");
+      logWriter.initLog(logPath);
+      sessionStore.updateSessionStatus(sessionId, "running");
 
       for await (const event of events) {
         const sessionEvent = create(grackle.SessionEventSchema, {

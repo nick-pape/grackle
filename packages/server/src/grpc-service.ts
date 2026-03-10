@@ -12,7 +12,7 @@ import * as tokenBroker from "./token-broker.js";
 import * as projectStore from "./project-store.js";
 import * as taskStore from "./task-store.js";
 import * as findingStore from "./finding-store.js";
-import { broadcast } from "./ws-bridge.js";
+import { broadcast } from "./ws-broadcast.js";
 import { processEventStream } from "./event-processor.js";
 import { join } from "node:path";
 import {
