@@ -59,7 +59,12 @@ jobs:
           fi
           echo "has_changefiles=true" >> "$GITHUB_OUTPUT"
 
-          # Determine the highest bump type across all changefiles
+          # Determine the highest bump type across all changefiles.
+          # Major bumps are blocked by CI, but fail loudly here too just in case.
+          if grep -rq '"type":[[:space:]]*"major"' common/changes/; then
+            echo "::error::Major version bump found in changefiles — blocked by policy"
+            exit 1
+          fi
           highest="patch"
           if grep -rq '"type":[[:space:]]*"minor"' common/changes/; then
             highest="minor"

@@ -13,7 +13,7 @@ import { closeAllTunnels } from "./adapters/remote-adapter-utils.js";
 import { createWsBridge } from "./ws-bridge.js";
 import { DEFAULT_SERVER_PORT, DEFAULT_WEB_PORT } from "@grackle-ai/common";
 import { readFileSync, existsSync } from "node:fs";
-import { join, dirname, extname, normalize, resolve } from "node:path";
+import { join, dirname, extname, normalize, resolve, relative } from "node:path";
 import { createRequire } from "node:module";
 import { loadOrCreateApiKey, verifyApiKey } from "./api-key.js";
 import { logger } from "./logger.js";
@@ -33,8 +33,10 @@ const MIME_TYPES: Record<string, string> = {
 
 /** Resolve the web UI dist directory once at module load time. */
 const esmRequire: NodeRequire = createRequire(import.meta.url);
-const WEB_DIST_DIR: string = process.env.GRACKLE_WEB_DIR
-  || join(dirname(esmRequire.resolve("@grackle-ai/web/package.json")), "dist");
+const WEB_DIST_DIR: string = resolve(
+  process.env.GRACKLE_WEB_DIR
+    || join(dirname(esmRequire.resolve("@grackle-ai/web/package.json")), "dist"),
+);
 
 function createWebHandler(apiKey: string): (req: http.IncomingMessage, res: http.ServerResponse) => void {
   return (req: http.IncomingMessage, res: http.ServerResponse) => {
@@ -42,7 +44,8 @@ function createWebHandler(apiKey: string): (req: http.IncomingMessage, res: http
     let filePath = resolve(WEB_DIST_DIR, urlPath === "/" ? "index.html" : `.${urlPath}`);
 
     // Prevent path traversal — resolved path must stay within the dist directory
-    if (!filePath.startsWith(WEB_DIST_DIR)) {
+    const rel = relative(WEB_DIST_DIR, filePath);
+    if (rel.startsWith("..") || resolve(WEB_DIST_DIR, rel) !== filePath) {
       res.writeHead(403);
       res.end("Forbidden");
       return;
