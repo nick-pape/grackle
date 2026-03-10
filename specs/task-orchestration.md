@@ -7,6 +7,26 @@
 
 This document captures the design thinking for Grackle's task orchestration model. The goal is a unified architecture that supports workflows, teams, swarms, scheduled automation, and human-in-the-loop oversight — all through the same set of primitives.
 
+## Prior Art
+
+Two existing systems informed this design. Neither does what Grackle needs, but both validated key ideas and revealed pitfalls.
+
+**OpenAI Symphony** (March 2026) is a scheduler/runner that turns Linear tickets into isolated Codex coding sessions. It runs one agent type per repo (defined in a `WORKFLOW.md` file), with no agent-to-agent communication — each agent works on one issue in an isolated workspace. A central poll-dispatch-reconcile loop handles concurrency. Symphony proves that a simple centralized scheduler with periodic reconciliation can reliably manage 10+ concurrent agent sessions, and that version-controlled workflow definitions (YAML + prompt template in the repo) are a powerful pattern. Its main limitation is that agents are fully isolated — no decomposition, no collaboration, no shared knowledge. It's a parallel task runner, not an orchestrator.
+
+**Claude Agent Teams** (February 2026) adds multi-session coordination to Claude Code. A "team lead" spawns independent teammates that coordinate through a shared task list and file-based mailbox. Teammates self-claim unblocked tasks and can message each other directly. Key insight from Anthropic's own research: **context-centric decomposition beats role-centric decomposition** — dividing work by "planner, implementer, tester" creates a telephone game where agents spend more tokens on coordination than on work. Dividing by context boundaries (the agent doing a feature also does its tests) is more efficient. Agent Teams is limited to a single machine, one level of delegation (no nesting), and no persistent team state across sessions.
+
+**Where Grackle differs from both:**
+
+| | Symphony | Agent Teams | Grackle |
+|---|---|---|---|
+| Agent-to-agent collaboration | None | Direct messaging | Hierarchical only (parent/child + findings) |
+| Task decomposition | None | One level (lead → teammates) | Arbitrary depth (with decomposition rights) |
+| Agent specialization | One agent type | Per-teammate definitions | Persona roster |
+| State | In-memory, no DB | File-system JSON | SQLite + gRPC |
+| Coordination | Issue tracker state | Shared task list + mailbox | Orchestrator-driven task tree |
+| Multi-machine | No | No | Yes (PowerLine architecture) |
+
+
 ## Core Principles
 
 1. **Roster, not pipeline.** There is a pool of agent personas. Work gets routed to the right persona based on the task, not a fixed sequence. The roster is a living thing — personas can be created at runtime (eventually by a "recruiter" agent).
@@ -75,6 +95,7 @@ A parent decides whether each child task is allowed to further decompose. This p
 - When creating a child, the parent explicitly grants or withholds decomposition rights
 - Leaf work ("write this function," "review this PR") is typically created without decomposition rights
 - Planning/architectural tasks may receive decomposition rights
+- A global maximum depth (e.g., 5 levels) acts as a hard safety cap regardless of granted rights
 
 ### Invocation Modes
 
@@ -135,6 +156,17 @@ New additions:
 - **Waiting**: a parent task that has created children and is waiting for them to complete. Not consuming an environment — will be resumed when children finish.
 - The transition from `waiting → in_progress` happens when a trigger resumes the task (child completed, escalation received).
 
+### Reconciliation
+
+The server runs a periodic **reconciliation loop** (inspired by Symphony's poll-dispatch-reconcile pattern) in addition to event-driven triggers. On each tick:
+
+1. **Stall detection** — identify tasks that haven't produced events within a timeout window
+2. **State consistency** — verify that in-progress tasks still have live environments, that waiting tasks still have pending children, and that dependency chains are consistent
+3. **Dispatch** — assign pending tasks to available environments, respecting concurrency limits (global and per-persona)
+
+This prevents the system from silently drifting — a crashed environment, a missed event, or a stuck agent gets caught on the next tick rather than waiting for a human to notice.
+
+
 ## What This Architecture Supports
 
 | Pattern | How It Works |
@@ -162,4 +194,6 @@ New additions:
 
 6. **Observability.** What does the web UI look like for this? A tree view of tasks? A Gantt chart? How does a human monitor 50 concurrent agents without being overwhelmed?
 
-7. **Artifacts and handoff.** When a child completes, what exactly does the parent receive? The full output? A summary? Specific artifacts (files changed, spec document, test results)? This determines how efficiently information flows up the tree.
+7. **Artifacts and handoff.** When a child completes, what exactly does the parent receive? The full output? A summary? Specific artifacts (files changed, spec document, test results)? This determines how efficiently information flows up the tree. Symphony's "workpad" pattern — a persistent, structured scratchpad that evolves across invocations — is worth considering. Each task could maintain a workpad (plan, status, notes, open questions) that serves as the primary handoff artifact, rather than relying on conversation output alone.
+
+8. **Decomposition heuristics.** Multi-agent systems consume 3-10x more tokens than single-agent approaches (per Anthropic's own measurements). The orchestrator needs effort-scaling guidance: a simple bug fix should not spawn 5 sub-tasks. Similarly, decomposition should favor context boundaries over role boundaries — the agent implementing a feature should also write its tests, rather than handing off to a separate "tester" persona.
