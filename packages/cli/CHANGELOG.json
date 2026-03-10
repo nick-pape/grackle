@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.13.1",
+      "tag": "@grackle-ai/cli_v0.13.1",
+      "date": "Tue, 10 Mar 2026 20:44:05 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Fix bugs from live testing: Codex SDK async, Windows paths, Dockerfile ESM flag, child task UI, task deletion"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.13.0",
       "tag": "@grackle-ai/cli_v0.13.0",
       "date": "Tue, 10 Mar 2026 20:25:56 GMT",
