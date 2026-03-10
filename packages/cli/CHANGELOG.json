@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.3.0",
+      "tag": "@grackle-ai/cli_v0.3.0",
+      "date": "Tue, 10 Mar 2026 06:33:40 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Code quality sweep: constant-time auth, deduplicate slugify, fix updateTask field clearing, remove dead exports"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.2.0",
       "tag": "@grackle-ai/cli_v0.2.0",
       "date": "Tue, 10 Mar 2026 06:13:42 GMT",
