@@ -52,4 +52,48 @@ test.describe("Task Deletion", () => {
     // Verify task disappears from sidebar
     await expect(page.getByText("active-task")).not.toBeVisible({ timeout: 5_000 });
   });
+
+  test("UI delete button shows confirm dialog and removes task on accept", async ({ appPage }) => {
+    const page = appPage;
+
+    await createProject(page, "tdel-confirm");
+    await createTask(page, "tdel-confirm", "tdel-accept-task", "test-local");
+
+    await navigateToTask(page, "tdel-accept-task");
+
+    await expect(page.locator("button", { hasText: "Delete" })).toBeVisible({ timeout: 5_000 });
+
+    page.once("dialog", async (dialog) => {
+      expect(dialog.type()).toBe("confirm");
+      expect(dialog.message()).toContain("tdel-accept-task");
+      await dialog.accept();
+    });
+
+    await page.locator("button", { hasText: "Delete" }).click();
+
+    const sidebarTask = page.locator('[class*="taskTitle"]', { hasText: "tdel-accept-task" });
+    await expect(sidebarTask).not.toBeVisible({ timeout: 5_000 });
+  });
+
+  test("UI delete confirm dialog can be dismissed to cancel deletion", async ({ appPage }) => {
+    const page = appPage;
+
+    await createProject(page, "tdel-dismiss");
+    await createTask(page, "tdel-dismiss", "tdel-dismiss-task", "test-local");
+
+    await navigateToTask(page, "tdel-dismiss-task");
+
+    page.once("dialog", async (dialog) => {
+      expect(dialog.type()).toBe("confirm");
+      expect(dialog.message()).toContain("tdel-dismiss-task");
+      await dialog.dismiss();
+    });
+
+    await page.locator("button", { hasText: "Delete" }).click();
+
+    const sidebarTask = page.locator('[class*="taskTitle"]', { hasText: "tdel-dismiss-task" });
+    await expect(sidebarTask).toBeVisible({ timeout: 5_000 });
+
+    await expect(page.getByText("Task: tdel-dismiss-task")).toBeVisible({ timeout: 5_000 });
+  });
 });

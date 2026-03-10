@@ -2,7 +2,7 @@
   "changes": [
     {
       "comment": "Review-fixes-and-test-coverage",
-      "type": "none",
+      "type": "patch",
       "packageName": "@grackle-ai/cli"
     }
   ],
