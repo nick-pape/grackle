@@ -16,15 +16,15 @@ import { v4 as uuid } from "uuid";
 import { join } from "node:path";
 import {
   LOGS_DIR, DEFAULT_RUNTIME, DEFAULT_MODEL,
-  eventTypeToString, agentEventTypeToEventType,
+  eventTypeToString,
 } from "@grackle-ai/common";
 import { grackleHome } from "./paths.js";
 import * as logWriter from "./log-writer.js";
-import { writeTranscript } from "./transcript.js";
 import { safeParseJsonArray } from "./json-helpers.js";
 import { logger } from "./logger.js";
 import { buildTaskSystemContext } from "./utils/system-context.js";
 import { slugify } from "./utils/slugify.js";
+import { processEventStream } from "./event-processor.js";
 
 const WS_PING_INTERVAL_MS: number = 30_000;
 const WS_CLOSE_UNAUTHORIZED: number = 4001;
@@ -335,11 +335,9 @@ async function handleMessage(
       const logPath = join(grackleHome, LOGS_DIR, sessionId);
 
       sessionStore.createSession(sessionId, environmentId, sessionRuntime, prompt, sessionModel, logPath);
-      logWriter.initLog(logPath);
 
       sendWs(ws, { type: "spawned", payload: { sessionId } });
 
-      // Fire PowerLine spawn in background
       const powerlineReq = create(powerline.SpawnRequestSchema, {
         sessionId,
         runtime: sessionRuntime,
@@ -351,41 +349,10 @@ async function handleMessage(
         systemContext,
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-floating-promises
-      (async () => {
-        try {
-          sessionStore.updateSession(sessionId, "running");
-          for await (const event of conn.client.spawn(powerlineReq)) {
-            const sessionEvent = create(grackle.SessionEventSchema, {
-              sessionId,
-              type: agentEventTypeToEventType(event.type),
-              timestamp: event.timestamp,
-              content: event.content,
-              raw: event.raw,
-            });
-            logWriter.writeEvent(logPath, sessionEvent);
-            streamHub.publish(sessionEvent);
-
-            if (event.type === powerline.AgentEventType.STATUS) {
-              if (event.content === "waiting_input") {
-                sessionStore.updateSessionStatus(sessionId, "waiting_input");
-              } else if (event.content === "running") {
-                sessionStore.updateSessionStatus(sessionId, "running");
-              } else if (event.content === "completed") {
-                sessionStore.updateSession(sessionId, "completed");
-              } else if (event.content === "failed") {
-                sessionStore.updateSession(sessionId, "failed");
-              } else if (event.content === "killed") {
-                sessionStore.updateSession(sessionId, "killed");
-              }
-            }
-          }
-          const current = sessionStore.getSession(sessionId);
-          if (current && !["completed", "failed", "killed"].includes(current.status)) {
-            sessionStore.updateSession(sessionId, "completed");
-          }
-        } catch (err) {
-          sessionStore.updateSession(sessionId, "failed", undefined, String(err));
+      processEventStream(conn.client.spawn(powerlineReq), {
+        sessionId,
+        logPath,
+        onError: (err) => {
           sendWs(ws, {
             type: "session_event",
             payload: {
@@ -395,15 +362,8 @@ async function handleMessage(
               content: `Spawn failed: ${err}`,
             },
           });
-        } finally {
-          logWriter.endSession(logPath);
-          try {
-            writeTranscript(logPath);
-          } catch {
-            /* non-critical */
-          }
-        }
-      })();
+        },
+      });
       break;
     }
 
@@ -611,7 +571,6 @@ async function handleMessage(
       sessionStore.createSession(sessionId, environmentId, runtime, task.title, model, logPath);
       taskStore.setTaskSession(task.id, sessionId);
       taskStore.markTaskStarted(task.id);
-      logWriter.initLog(logPath);
 
       broadcast({ type: "task_started", payload: { taskId: task.id, sessionId, projectId: task.projectId } });
 
@@ -628,61 +587,12 @@ async function handleMessage(
         taskId: task.id,
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-floating-promises
-      (async () => {
-        try {
-          sessionStore.updateSession(sessionId, "running");
-          for await (const event of conn.client.spawn(powerlineReq)) {
-            const sessionEvent = create(grackle.SessionEventSchema, {
-              sessionId,
-              type: agentEventTypeToEventType(event.type),
-              timestamp: event.timestamp,
-              content: event.content,
-              raw: event.raw,
-            });
-            logWriter.writeEvent(logPath, sessionEvent);
-            streamHub.publish(sessionEvent);
-
-            // Intercept finding events and store + broadcast them
-            if (event.type === powerline.AgentEventType.FINDING && task.projectId) {
-              try {
-                const data = JSON.parse(event.content);
-                const findingId = uuid();
-                findingStore.postFinding(
-                  findingId, task.projectId, task.id, sessionId,
-                  data.category || "general", data.title || "Untitled",
-                  data.content || "", data.tags || [],
-                );
-                broadcast({ type: "finding_posted", payload: { projectId: task.projectId, findingId } });
-                logger.info({ findingId, projectId: task.projectId, title: data.title }, "Finding stored");
-              } catch (err) {
-                logger.error({ err, projectId: task.projectId, taskId: task.id }, "Failed to store finding");
-              }
-            }
-
-            if (event.type === powerline.AgentEventType.STATUS) {
-              if (event.content === "waiting_input") {
-                sessionStore.updateSessionStatus(sessionId, "waiting_input");
-              } else if (event.content === "running") {
-                sessionStore.updateSessionStatus(sessionId, "running");
-              } else if (event.content === "completed") {
-                sessionStore.updateSession(sessionId, "completed");
-              } else if (event.content === "failed") {
-                sessionStore.updateSession(sessionId, "failed");
-              } else if (event.content === "killed") {
-                sessionStore.updateSession(sessionId, "killed");
-              }
-            }
-          }
-          const current = sessionStore.getSession(sessionId);
-          if (current && !["completed", "failed", "killed"].includes(current.status)) {
-            sessionStore.updateSession(sessionId, "completed");
-          }
-        } catch (err) {
-          sessionStore.updateSession(sessionId, "failed", undefined, String(err));
-        } finally {
-          logWriter.endSession(logPath);
-          try { writeTranscript(logPath); } catch { /* non-critical */ }
+      processEventStream(conn.client.spawn(powerlineReq), {
+        sessionId,
+        logPath,
+        projectId: task.projectId,
+        taskId: task.id,
+        onComplete: () => {
           // Auto-move task to review on completion
           const t = taskStore.getTask(task.id);
           if (t && t.status === "in_progress") {
@@ -694,8 +604,8 @@ async function handleMessage(
             }
             broadcast({ type: "task_updated", payload: { taskId: task.id, projectId: task.projectId } });
           }
-        }
-      })();
+        },
+      });
       break;
     }
 
