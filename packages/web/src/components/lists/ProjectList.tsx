@@ -88,7 +88,17 @@ function TaskTreeNode({
         {hasChildren && (
           <span
             className={`${styles.expandArrow} ${isExpanded ? styles.expanded : ""}`}
+            role="button"
+            tabIndex={0}
+            aria-label={isExpanded ? "Collapse task" : "Expand task"}
             onClick={(e) => { e.stopPropagation(); toggleTask(node.id); }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                e.stopPropagation();
+                toggleTask(node.id);
+              }
+            }}
           >
             {"\u25B8"}
           </span>

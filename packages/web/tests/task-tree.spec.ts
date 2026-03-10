@@ -57,7 +57,8 @@ test.describe("Task tree hierarchy", () => {
     await createTaskViaWs(page, projectId, "badge-child-3", { parentTaskId: parentId });
 
     // Parent should show a child count badge "0/3" (0 done out of 3)
-    const badge = page.locator('[class*="childCountBadge"]').first();
+    const parentRow = page.locator(`[data-task-id="${parentId}"]`);
+    const badge = parentRow.locator('[class*="childCountBadge"]');
     await expect(badge).toBeVisible({ timeout: 5_000 });
     await expect(badge).toHaveText("0/3");
   });

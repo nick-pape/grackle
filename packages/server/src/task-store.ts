@@ -194,16 +194,30 @@ export function getChildren(taskId: string): TaskRow[] {
     .all();
 }
 
-/** Get all descendants of a task (full subtree) via iterative BFS. */
+/** Get all descendants of a task (full subtree) via in-memory BFS. Fetches all project tasks once to avoid N+1 queries. */
 export function getDescendants(taskId: string): TaskRow[] {
+  const task = getTask(taskId);
+  if (!task) {
+    return [];
+  }
+  const allRows = listTasks(task.projectId);
+  const childIdsMap = buildChildIdsMap(allRows);
+  const rowById = new Map<string, TaskRow>(allRows.map(r => [r.id, r]));
+
   const result: TaskRow[] = [];
   const queue: string[] = [taskId];
   for (let i = 0; i < queue.length; i++) {
     const currentId = queue[i]!;
-    const children = getChildren(currentId);
-    for (const child of children) {
-      result.push(child);
-      queue.push(child.id);
+    const childIds = childIdsMap.get(currentId);
+    if (!childIds) {
+      continue;
+    }
+    for (const childId of childIds) {
+      const child = rowById.get(childId);
+      if (child) {
+        result.push(child);
+        queue.push(child.id);
+      }
     }
   }
   return result;
