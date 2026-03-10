@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Tue, 10 Mar 2026 06:59:12 GMT and should not be manually modified.
+This log was last generated on Tue, 10 Mar 2026 07:13:31 GMT and should not be manually modified.
+
+## 0.6.0
+Tue, 10 Mar 2026 07:13:31 GMT
+
+### Patches
+
+- Code quality sweep 4: SessionPanel stable keys, null guard, useEffect deps, mock state read via ref, shared remote adapter helpers
 
 ## 0.5.0
 Tue, 10 Mar 2026 06:59:12 GMT
