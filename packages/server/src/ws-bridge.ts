@@ -485,6 +485,7 @@ async function handleMessage(
             parentTaskId: r.parentTaskId,
             depth: r.depth,
             childTaskIds: childIdsMap.get(r.id) ?? [],
+            canDecompose: r.canDecompose,
           })),
         },
       });
@@ -504,6 +505,9 @@ async function handleMessage(
         return;
       }
       const parentTaskId = (msg.payload?.parentTaskId as string) || "";
+      const rawCanDecompose = msg.payload?.canDecompose;
+      const canDecompose = typeof rawCanDecompose === "boolean" ? rawCanDecompose : undefined;
+
       const id = uuid().slice(0, 8);
       taskStore.createTask(
         id, projectId, title,
@@ -512,6 +516,7 @@ async function handleMessage(
         (msg.payload?.dependsOn as string[]) || [],
         slugify(project.name),
         parentTaskId,
+        canDecompose,
       );
       const row = taskStore.getTask(id);
       broadcast({ type: "task_created", payload: { task: row ? { ...row, dependsOn: safeParseJsonArray(row.dependsOn) } : null } });

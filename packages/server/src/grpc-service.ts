@@ -93,6 +93,7 @@ function taskRowToProto(row: taskStore.TaskRow, childIds?: string[]): grackle.Ta
     parentTaskId: row.parentTaskId,
     depth: row.depth,
     childTaskIds: childIds ?? taskStore.getChildren(row.id).map(c => c.id),
+    canDecompose: row.canDecompose,
   });
 }
 
@@ -440,6 +441,9 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       if (req.parentTaskId) {
         const parent = taskStore.getTask(req.parentTaskId);
         if (!parent) throw new Error(`Parent task not found: ${req.parentTaskId}`);
+        if (!parent.canDecompose) {
+          throw new Error(`Parent task "${parent.title}" (${req.parentTaskId}) does not have decomposition rights`);
+        }
         if (parent.depth + 1 > MAX_TASK_DEPTH) {
           throw new Error(`Task depth would exceed maximum of ${MAX_TASK_DEPTH}`);
         }
@@ -447,7 +451,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
 
       const id = uuid().slice(0, 8);
       const environmentId = req.environmentId || project.defaultEnvironmentId;
-      taskStore.createTask(id, req.projectId, req.title, req.description, environmentId, [...req.dependsOn], slugify(project.name), req.parentTaskId);
+      taskStore.createTask(id, req.projectId, req.title, req.description, environmentId, [...req.dependsOn], slugify(project.name), req.parentTaskId, req.canDecompose);
       const row = taskStore.getTask(id);
       broadcast({ type: "task_created", payload: { task: row ? { ...row } : null } });
       return taskRowToProto(row!);

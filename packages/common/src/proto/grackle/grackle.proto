@@ -235,6 +235,7 @@ message Task {
   string parent_task_id = 17;        // empty for root tasks
   int32 depth = 18;                  // 0 for root, parent.depth + 1
   repeated string child_task_ids = 19;  // populated by server on read
+  bool can_decompose = 20;
 }
 
 message TaskList {
@@ -248,6 +249,7 @@ message CreateTaskRequest {
   string environment_id = 4;
   repeated string depends_on = 5;
   string parent_task_id = 6;
+  optional bool can_decompose = 7;
 }
 
 message TaskId {

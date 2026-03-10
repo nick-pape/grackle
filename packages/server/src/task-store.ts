@@ -18,6 +18,7 @@ export function createTask(
   dependsOn: string[],
   projectSlug: string,
   parentTaskId: string = "",
+  canDecompose?: boolean,
 ): void {
   let depth = 0;
   let branch: string;
@@ -27,6 +28,9 @@ export function createTask(
     if (!parent) {
       throw new Error(`Parent task not found: ${parentTaskId}`);
     }
+    if (!parent.canDecompose) {
+      throw new Error(`Parent task "${parent.title}" (${parentTaskId}) does not have decomposition rights`);
+    }
     depth = parent.depth + 1;
     if (depth > MAX_TASK_DEPTH) {
       throw new Error(`Task depth would exceed maximum of ${MAX_TASK_DEPTH}`);
@@ -35,6 +39,9 @@ export function createTask(
   } else {
     branch = `${projectSlug}/${slugify(title)}`;
   }
+
+  // Derive canDecompose when not explicitly set: root=true, child=false
+  const resolvedCanDecompose = canDecompose ?? !parentTaskId;
 
   const depsJson = JSON.stringify(dependsOn);
   const maxRow = db.select({ maxOrder: sql<number>`max(sort_order)` })
@@ -53,6 +60,7 @@ export function createTask(
     sortOrder,
     parentTaskId,
     depth,
+    canDecompose: resolvedCanDecompose,
   }).run();
 }
 

@@ -51,6 +51,7 @@ export interface TaskData {
   parentTaskId: string;
   depth: number;
   childTaskIds: string[];
+  canDecompose: boolean;
 }
 
 export interface FindingData {
