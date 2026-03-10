@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.5.0",
+      "tag": "@grackle-ai/cli_v0.5.0",
+      "date": "Tue, 10 Mar 2026 06:59:12 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Code quality sweep 3: attach race fix, resume event logging, WS status handling, systemContext dedup, events cap"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.4.0",
       "tag": "@grackle-ai/cli_v0.4.0",
       "date": "Tue, 10 Mar 2026 06:41:29 GMT",
