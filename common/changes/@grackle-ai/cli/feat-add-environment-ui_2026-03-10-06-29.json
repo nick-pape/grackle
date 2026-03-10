@@ -1,8 +1,8 @@
 {
   "changes": [
     {
-      "comment": "Add-environment-creation-UI",
-      "type": "none",
+      "comment": "Add environment creation UI to web app",
+      "type": "minor",
       "packageName": "@grackle-ai/cli"
     }
   ],

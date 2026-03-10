@@ -604,15 +604,15 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
       adapterConfig?: Record<string, unknown>,
       defaultRuntime?: string,
     ) => {
-      send({
-        type: "add_environment",
-        payload: {
-          displayName,
-          adapterType,
-          adapterConfig: adapterConfig || {},
-          defaultRuntime: defaultRuntime || "",
-        },
-      });
+      const payload: Record<string, unknown> = {
+        displayName,
+        adapterType,
+        adapterConfig: adapterConfig || {},
+      };
+      if (defaultRuntime) {
+        payload.defaultRuntime = defaultRuntime;
+      }
+      send({ type: "add_environment", payload });
     },
     [send],
   );

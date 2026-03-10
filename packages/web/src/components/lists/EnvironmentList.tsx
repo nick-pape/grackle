@@ -180,6 +180,7 @@ export function EnvironmentList({ viewMode, setViewMode }: Props): JSX.Element {
           className={styles.addButton}
           onClick={() => setViewMode({ kind: "new_environment" })}
           title="Add environment"
+          aria-label="Add environment"
         >
           +
         </button>

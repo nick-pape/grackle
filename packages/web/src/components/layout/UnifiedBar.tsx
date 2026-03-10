@@ -125,7 +125,10 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
           config.host = envHost.trim();
         }
         if (envPort.trim()) {
-          config.port = Number(envPort);
+          const parsed = parseInt(envPort, 10);
+          if (Number.isFinite(parsed)) {
+            config.port = parsed;
+          }
         }
       } else if (envAdapterType === "ssh") {
         config.host = envHost.trim();
@@ -133,7 +136,10 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
           config.user = envUser.trim();
         }
         if (envPort.trim()) {
-          config.sshPort = Number(envPort);
+          const parsed = parseInt(envPort, 10);
+          if (Number.isFinite(parsed)) {
+            config.sshPort = parsed;
+          }
         }
         if (envIdentityFile.trim()) {
           config.identityFile = envIdentityFile.trim();
