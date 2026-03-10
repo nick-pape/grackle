@@ -309,6 +309,9 @@ class CodexSession implements AgentSession {
       const messageCount = await this.consumeStream(this.thread.runStreamed(finalPrompt));
 
       if (this.killed) {
+        // Terminal state (e.g. maxTurns reached) — close the queue so stream() exits.
+        this.cleanup();
+        this.eventQueue.close();
         return;
       }
 
