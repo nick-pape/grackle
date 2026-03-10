@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Tue, 10 Mar 2026 20:25:56 GMT and should not be manually modified.
+This log was last generated on Tue, 10 Mar 2026 20:40:21 GMT and should not be manually modified.
+
+## 0.13.1
+Tue, 10 Mar 2026 20:40:21 GMT
+
+### Patches
+
+- Fix bugs from live testing: Codex SDK async, Windows paths, Dockerfile ESM flag, child task UI, task deletion
 
 ## 0.13.0
 Tue, 10 Mar 2026 20:25:56 GMT
