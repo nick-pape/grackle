@@ -1,15 +1,18 @@
 import { DEFAULT_POWERLINE_PORT } from "@grackle-ai/common";
 import type { EnvironmentAdapter, BaseEnvironmentConfig, PowerLineConnection, ProvisionEvent } from "./adapter.js";
 import { createPowerLineClient } from "./powerline-transport.js";
+import { isDevMode } from "./remote-adapter-utils.js";
 import { exec } from "../utils/exec.js";
 import { findFreePort } from "../utils/ports.js";
 import { sleep } from "../utils/sleep.js";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { readFileSync, existsSync } from "node:fs";
+import { join, resolve } from "node:path";
 import { homedir } from "node:os";
 import { logger } from "../logger.js";
 
 const DOCKER_PULL_TIMEOUT_MS: number = 120_000;
+/** Timeout for `docker build` when building the dev image from local artifacts. */
+const DOCKER_BUILD_TIMEOUT_MS: number = 300_000;
 const GIT_CLONE_TIMEOUT_MS: number = 120_000;
 const GIT_PULL_TIMEOUT_MS: number = 60_000;
 const CONTAINER_POLL_DELAY_MS: number = 1_000;
@@ -17,6 +20,8 @@ const CONTAINER_POLL_MAX_ATTEMPTS: number = 30;
 const CONNECT_RETRY_DELAY_MS: number = 1_500;
 const CONNECT_MAX_RETRIES: number = 10;
 const WORKSPACE_PATH: string = "/workspace";
+/** Default image name used when no custom image is specified. */
+const DEFAULT_IMAGE: string = "grackle-powerline:latest";
 
 /** Docker-specific environment configuration. */
 export interface DockerEnvironmentConfig extends BaseEnvironmentConfig {
@@ -155,6 +160,22 @@ async function getGitHubToken(): Promise<string | undefined> {
   }
 }
 
+/**
+ * Build the PowerLine Docker image from local monorepo artifacts using the dev target.
+ * Resolves the monorepo root from import.meta.dirname (dist/adapters → 4 levels up).
+ */
+async function buildDevImage(tag: string): Promise<void> {
+  const monorepoRoot = resolve(import.meta.dirname, "../../../../");
+  logger.info({ tag, monorepoRoot }, "Building dev PowerLine image from local artifacts");
+  await exec("docker", [
+    "build",
+    "--target", "dev",
+    "-f", resolve(monorepoRoot, "Dockerfile.powerline"),
+    "-t", tag,
+    monorepoRoot,
+  ], { timeout: DOCKER_BUILD_TIMEOUT_MS });
+}
+
 // ─── Docker Adapter ────────────────────────────────────────
 
 /** Environment adapter that provisions and manages Docker containers running the PowerLine. */
@@ -163,12 +184,19 @@ export class DockerAdapter implements EnvironmentAdapter {
 
   public async *provision(environmentId: string, config: Record<string, unknown>, powerlineToken: string): AsyncGenerator<ProvisionEvent> {
     const cfg = config as unknown as DockerEnvironmentConfig;
-    const image = cfg.image || "grackle-powerline:latest";
+    const image = cfg.image || DEFAULT_IMAGE;
     const containerName = cfg.containerName || `grackle-${environmentId}`;
     const localPort = cfg.localPort || await findFreePort();
 
-    yield { stage: "creating", message: `Pulling image ${image}...`, progress: 0.1 };
-    await pullImage(image);
+    const isDefault = image === DEFAULT_IMAGE;
+    const dockerfilePath = resolve(import.meta.dirname, "../../../../Dockerfile.powerline");
+    if (isDevMode() && isDefault && existsSync(dockerfilePath)) {
+      yield { stage: "creating", message: "Building PowerLine image from local artifacts...", progress: 0.1 };
+      await buildDevImage(image);
+    } else {
+      yield { stage: "creating", message: `Pulling image ${image}...`, progress: 0.1 };
+      await pullImage(image);
+    }
 
     yield { stage: "creating", message: `Creating container ${containerName}...`, progress: 0.3 };
 

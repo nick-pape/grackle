@@ -26,6 +26,7 @@ Two existing systems informed this design. Neither does what Grackle needs, but 
 | Coordination | Issue tracker state | Shared task list + mailbox | Orchestrator-driven task tree |
 | Multi-machine | No | No | Yes (PowerLine architecture) |
 
+
 ## Core Principles
 
 1. **Roster, not pipeline.** There is a pool of agent personas. Work gets routed to the right persona based on the task, not a fixed sequence. The roster is a living thing — personas can be created at runtime (eventually by a "recruiter" agent).
@@ -164,6 +165,7 @@ The server runs a periodic **reconciliation loop** (inspired by Symphony's poll-
 3. **Dispatch** — assign pending tasks to available environments, respecting concurrency limits (global and per-persona)
 
 This prevents the system from silently drifting — a crashed environment, a missed event, or a stuck agent gets caught on the next tick rather than waiting for a human to notice.
+
 
 ## What This Architecture Supports
 
