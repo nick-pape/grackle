@@ -125,8 +125,25 @@ function main(): void {
   async function shutdown(): Promise<void> {
     logger.info("Shutting down...");
     await closeAllTunnels();
-    grpcServer.close();
-    webServer.close();
+
+    await new Promise<void>((resolve) => {
+      grpcServer.close((err?: Error) => {
+        if (err) {
+          logger.error({ err }, "Error while closing gRPC server");
+        }
+        resolve();
+      });
+    });
+
+    await new Promise<void>((resolve) => {
+      webServer.close((err?: Error) => {
+        if (err) {
+          logger.error({ err }, "Error while closing web server");
+        }
+        resolve();
+      });
+    });
+
     process.exit(0);
   }
 
