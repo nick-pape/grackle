@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Tue, 10 Mar 2026 06:01:07 GMT and should not be manually modified.
+This log was last generated on Tue, 10 Mar 2026 06:04:37 GMT and should not be manually modified.
+
+## 0.1.0
+Tue, 10 Mar 2026 06:04:37 GMT
+
+### Minor changes
+
+- Add CLI options for SSH and Codespace environment adapters.
 
 ## 0.0.6
 Tue, 10 Mar 2026 06:01:07 GMT
