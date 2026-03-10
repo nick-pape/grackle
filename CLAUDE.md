@@ -1,5 +1,10 @@
 # Grackle Development Guidelines
 
+## Git Workflow
+
+- **Never rebase or force-push.** Use `git merge origin/main` to sync with main, not `git rebase`. Rebase rewrites history and requires force-push.
+- **Never merge PRs** unless the user explicitly tells you to merge. Other agents may be coordinating merge order.
+
 ## Build & Test
 
 ```bash
