@@ -1,8 +1,8 @@
-import type { AgentRuntime, AgentSession, AgentEvent, SpawnOptions, ResumeOptions } from "./runtime.js";
+import type { AgentSession, AgentEvent } from "./runtime.js";
 import type { SessionStatus } from "@grackle-ai/common";
+import { BaseAgentRuntime } from "./base-runtime.js";
 import { AsyncQueue } from "../utils/async-queue.js";
-import { existsSync, readFileSync } from "node:fs";
-import { ensureWorktree } from "../worktree.js";
+import { resolveWorkingDirectory, resolveMcpServers, buildFindingEvent } from "./runtime-utils.js";
 import { logger } from "../logger.js";
 
 // ─── Environment variable names ────────────────────────────
@@ -17,8 +17,6 @@ const ENV_COPILOT_CLI_URL: string = "COPILOT_CLI_URL";
 const ENV_COPILOT_PROVIDER_CONFIG: string = "COPILOT_PROVIDER_CONFIG";
 /** GitHub token environment variables checked in priority order. */
 const GITHUB_TOKEN_ENV_VARS: readonly string[] = ["COPILOT_GITHUB_TOKEN", "GH_TOKEN", "GITHUB_TOKEN"];
-/** Path to the Grackle MCP server script bundled in the container image. */
-const GRACKLE_MCP_SCRIPT: string = "/app/mcp-grackle/index.js";
 
 // ─── Dynamic import ────────────────────────────────────────
 
@@ -90,38 +88,9 @@ export function resolveProviderConfig(): Record<string, unknown> | undefined {
   }
 }
 
-/** @internal Load MCP server configurations from the shared GRACKLE_MCP_CONFIG file and spawn options. */
-export function resolveMcpServers(spawnMcpServers?: Record<string, unknown>): Record<string, unknown> | undefined {
-  let servers: Record<string, unknown> = {};
-
-  // Load from shared config file
-  const mcpConfigPath = process.env.GRACKLE_MCP_CONFIG;
-  if (mcpConfigPath && existsSync(mcpConfigPath)) {
-    try {
-      const mcpConfig = JSON.parse(readFileSync(mcpConfigPath, "utf8")) as Record<string, unknown>;
-      if (mcpConfig.mcpServers && typeof mcpConfig.mcpServers === "object") {
-        servers = { ...servers, ...(mcpConfig.mcpServers as Record<string, unknown>) };
-      }
-    } catch { /* ignore malformed config */ }
-  }
-
-  // Merge spawn-level MCP servers
-  if (spawnMcpServers) {
-    servers = { ...servers, ...spawnMcpServers };
-  }
-
-  // Auto-inject Grackle coordination MCP server if the script is bundled
-  // MCPLocalServerConfig requires a tools field (string array of tool names)
-  if (existsSync(GRACKLE_MCP_SCRIPT) && !servers.grackle) {
-    servers.grackle = {
-      command: "node",
-      args: [GRACKLE_MCP_SCRIPT],
-      tools: ["post_finding", "get_task_context", "update_task_status"],
-    };
-  }
-
-  return Object.keys(servers).length > 0 ? servers : undefined;
-}
+// Re-export resolveMcpServers so existing imports from this module continue to work.
+// Note: the return type is now ResolvedMcpConfig (from runtime-utils) instead of Record<string, unknown> | undefined.
+export { resolveMcpServers } from "./runtime-utils.js";
 
 /** @internal Build a `post_finding` tool definition for the Copilot session, so findings can be emitted. */
 export function buildFindingTool(defineTool: (name: string, opts: Record<string, unknown>) => unknown, eventQueue: AsyncQueue<AgentEvent>): unknown {
@@ -138,18 +107,7 @@ export function buildFindingTool(defineTool: (name: string, opts: Record<string,
       required: ["title", "content"],
     },
     handler: async (args: Record<string, unknown>) => {
-      const ts = new Date().toISOString();
-      eventQueue.push({
-        type: "finding",
-        timestamp: ts,
-        content: JSON.stringify({
-          title: args.title || "Untitled",
-          content: args.content || "",
-          category: args.category || "general",
-          tags: args.tags || [],
-        }),
-        raw: args,
-      });
+      eventQueue.push(buildFindingEvent(args, args));
       return { status: "finding_posted", title: args.title };
     },
   });
@@ -229,26 +187,11 @@ class CopilotSession implements AgentSession {
       const { CopilotClient, defineTool, approveAll } = await getCopilotSdk();
 
       // ── Resolve working directory ──
-      let workingDirectory: string | undefined;
-
-      if (this.branch && this.worktreeBasePath) {
-        try {
-          const wt = await ensureWorktree(this.worktreeBasePath, this.branch);
-          workingDirectory = wt.worktreePath;
-          this.eventQueue.push({ type: "system", timestamp: ts(), content: `Worktree ready: ${wt.worktreePath} (branch: ${this.branch}, created: ${wt.created})` });
-        } catch (wtErr) {
-          this.eventQueue.push({ type: "system", timestamp: ts(), content: `Worktree setup skipped (${wtErr}), falling back to workspace` });
-          const workspacePath = "/workspace";
-          if (existsSync(workspacePath)) {
-            workingDirectory = workspacePath;
-          }
-        }
-      } else {
-        const workspacePath = "/workspace";
-        if (existsSync(workspacePath)) {
-          workingDirectory = workspacePath;
-        }
-      }
+      const workingDirectory = await resolveWorkingDirectory({
+        branch: this.branch,
+        worktreeBasePath: this.worktreeBasePath,
+        eventQueue: this.eventQueue,
+      });
 
       // ── Create CopilotClient ──
       const clientOptions: Record<string, unknown> = {
@@ -303,9 +246,9 @@ class CopilotSession implements AgentSession {
       }
 
       // MCP servers
-      const mcpServers = resolveMcpServers(this.mcpServers);
-      if (mcpServers) {
-        sessionConfig.mcpServers = mcpServers;
+      const mcpConfig = resolveMcpServers(this.mcpServers);
+      if (mcpConfig.servers) {
+        sessionConfig.mcpServers = mcpConfig.servers;
       }
 
       // Note: Copilot SDK does not have a maxTurns config option.
@@ -392,17 +335,7 @@ class CopilotSession implements AgentSession {
           // Intercept finding tool calls (in case they come via MCP rather than custom tool)
           if (toolName === "mcp__grackle__post_finding" || toolName === "post_finding") {
             const args = toolArgs as Record<string, unknown>;
-            this.eventQueue.push({
-              type: "finding",
-              timestamp: ts(),
-              content: JSON.stringify({
-                title: args.title || "Untitled",
-                content: args.content || "",
-                category: args.category || "general",
-                tags: args.tags || [],
-              }),
-              raw: event,
-            });
+            this.eventQueue.push(buildFindingEvent(args, event));
           }
         });
 
@@ -514,32 +447,21 @@ class CopilotSession implements AgentSession {
 // ─── Runtime ───────────────────────────────────────────────
 
 /** Runtime that delegates to the GitHub Copilot SDK (`@github/copilot-sdk`). */
-export class CopilotRuntime implements AgentRuntime {
+export class CopilotRuntime extends BaseAgentRuntime {
   public name: string = "copilot";
+  protected resumePrompt: string = "(resumed)";
 
-  /** Create and start a new Copilot agent session. */
-  public spawn(opts: SpawnOptions): AgentSession {
-    return new CopilotSession(
-      opts.sessionId,
-      opts.prompt,
-      opts.model,
-      opts.maxTurns,
-      undefined,
-      opts.branch,
-      opts.worktreeBasePath,
-      opts.systemContext,
-      opts.mcpServers,
-    );
-  }
-
-  /** Resume a previously suspended Copilot session. */
-  public resume(opts: ResumeOptions): AgentSession {
-    return new CopilotSession(
-      opts.sessionId,
-      "(resumed)",
-      "",
-      0,
-      opts.runtimeSessionId,
-    );
+  protected createSession(
+    id: string,
+    prompt: string,
+    model: string,
+    maxTurns: number,
+    resumeSessionId?: string,
+    branch?: string,
+    worktreeBasePath?: string,
+    systemContext?: string,
+    mcpServers?: Record<string, unknown>,
+  ): AgentSession {
+    return new CopilotSession(id, prompt, model, maxTurns, resumeSessionId, branch, worktreeBasePath, systemContext, mcpServers);
   }
 }

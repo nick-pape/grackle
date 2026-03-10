@@ -1,7 +1,7 @@
-import type { AgentRuntime, AgentEvent, SpawnOptions, ResumeOptions } from "./runtime.js";
+import type { AgentEvent, AgentSession } from "./runtime.js";
 import { BaseAgentSession } from "./base-session.js";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { ensureWorktree } from "../worktree.js";
+import { BaseAgentRuntime } from "./base-runtime.js";
+import { resolveWorkingDirectory, resolveMcpServers, buildFindingEvent } from "./runtime-utils.js";
 
 // Dynamic import — try @anthropic-ai/claude-agent-sdk first, then @anthropic-ai/claude-code
 type QueryFn = (opts: Record<string, unknown>) => Promise<unknown>;
@@ -23,9 +23,6 @@ async function getQuery(): Promise<QueryFn> {
     "Claude Agent SDK not installed. Run: npm install @anthropic-ai/claude-agent-sdk"
   );
 }
-
-/** Path to the Grackle MCP server script bundled in the container image. */
-const GRACKLE_MCP_SCRIPT: string = "/app/mcp-grackle/index.js";
 
 /** @internal Map a raw Claude Agent SDK message to Grackle AgentEvent(s). Exported for testing. */
 export function mapMessage(msg: Record<string, unknown>): AgentEvent[] {
@@ -54,17 +51,7 @@ export function mapMessage(msg: Record<string, unknown>): AgentEvent[] {
           if (toolName === "mcp__grackle__post_finding" || toolName === "post_finding") {
             const args = b.input as Record<string, unknown> | undefined;
             if (args) {
-              events.push({
-                type: "finding",
-                timestamp: ts,
-                content: JSON.stringify({
-                  title: args.title || "Untitled",
-                  content: args.content || "",
-                  category: args.category || "general",
-                  tags: args.tags || [],
-                }),
-                raw: b,
-              });
+              events.push(buildFindingEvent(args, b));
             }
           }
         } else if (b.type === "tool_result") {
@@ -118,31 +105,13 @@ class ClaudeCodeSession extends BaseAgentSession {
   // ─── BaseAgentSession hooks ──────────────────────────────
 
   protected async setupSdk(): Promise<void> {
-    const ts: () => string = () => new Date().toISOString();
-
     // Determine cwd: worktree > /workspace > default
-    let cwd: string | undefined;
-
-    if (this.branch && this.worktreeBasePath) {
-      try {
-        const wt = await ensureWorktree(this.worktreeBasePath, this.branch);
-        cwd = wt.worktreePath;
-        this.eventQueue.push({ type: "system", timestamp: ts(), content: `Worktree ready: ${wt.worktreePath} (branch: ${this.branch}, created: ${wt.created})` });
-      } catch (wtErr) {
-        this.eventQueue.push({ type: "system", timestamp: ts(), content: `Worktree setup skipped (${wtErr}), falling back to workspace` });
-        const workspacePath = "/workspace";
-        if (existsSync(workspacePath)) {
-          cwd = workspacePath;
-        }
-      }
-    } else {
-      const workspacePath = "/workspace";
-      const useWorkspace = existsSync(workspacePath) &&
-        readdirSync(workspacePath).length > 0;
-      if (useWorkspace) {
-        cwd = workspacePath;
-      }
-    }
+    const cwd = await resolveWorkingDirectory({
+      branch: this.branch,
+      worktreeBasePath: this.worktreeBasePath,
+      eventQueue: this.eventQueue,
+      requireNonEmpty: true,
+    });
 
     // SDK query() expects { prompt, options: { model, mcpServers, ... } }
     // Both permissionMode AND allowDangerouslySkipPermissions are needed for full bypass.
@@ -156,33 +125,16 @@ class ClaudeCodeSession extends BaseAgentSession {
       ...(cwd ? { cwd } : {}),
     };
 
-    // Load MCP server config from env var or SpawnOptions
-    const mcpConfigPath = process.env.GRACKLE_MCP_CONFIG;
-    if (mcpConfigPath && existsSync(mcpConfigPath)) {
-      try {
-        const mcpConfig = JSON.parse(readFileSync(mcpConfigPath, "utf8"));
-        if (mcpConfig.mcpServers) {
-          sdkOptions.mcpServers = mcpConfig.mcpServers;
-        }
-        if (Array.isArray(mcpConfig.disallowedTools)) {
-          sdkOptions.disallowedTools = mcpConfig.disallowedTools;
-        }
-      } catch { /* ignore malformed config */ }
+    // Load MCP server config from env var or SpawnOptions.
+    // resolveMcpServers() adds a `tools` field to the grackle server entry (used by
+    // Codex/Copilot SDKs). The Claude Agent SDK ignores unknown fields in MCP server
+    // configs — it only reads `command`, `args`, and `env` to spawn the process.
+    const mcpConfig = resolveMcpServers(this.mcpServers);
+    if (mcpConfig.servers) {
+      sdkOptions.mcpServers = mcpConfig.servers;
     }
-    if (this.mcpServers) {
-      sdkOptions.mcpServers = { ...(sdkOptions.mcpServers as Record<string, unknown> || {}), ...this.mcpServers };
-    }
-
-    // Auto-inject Grackle coordination MCP server if the script is bundled
-    if (existsSync(GRACKLE_MCP_SCRIPT)) {
-      const mcpServers = (sdkOptions.mcpServers || {}) as Record<string, unknown>;
-      if (!mcpServers.grackle) {
-        mcpServers.grackle = {
-          command: "node",
-          args: [GRACKLE_MCP_SCRIPT],
-        };
-        sdkOptions.mcpServers = mcpServers;
-      }
+    if (mcpConfig.disallowedTools.length > 0) {
+      sdkOptions.disallowedTools = mcpConfig.disallowedTools;
     }
 
     // Add MCP tool patterns to allowedTools
@@ -276,31 +228,20 @@ class ClaudeCodeSession extends BaseAgentSession {
 }
 
 /** Runtime that delegates to the Claude Code SDK (`@anthropic-ai/claude-agent-sdk`). */
-export class ClaudeCodeRuntime implements AgentRuntime {
+export class ClaudeCodeRuntime extends BaseAgentRuntime {
   public name: string = "claude-code";
 
-  public spawn(opts: SpawnOptions): ClaudeCodeSession {
-    return new ClaudeCodeSession(
-      opts.sessionId,
-      opts.prompt,
-      opts.model,
-      opts.maxTurns,
-      undefined,
-      opts.branch,
-      opts.worktreeBasePath,
-      opts.systemContext,
-      opts.mcpServers,
-    );
-  }
-
-  /** Resume a previously suspended Claude Code session. */
-  public resume(opts: ResumeOptions): ClaudeCodeSession {
-    return new ClaudeCodeSession(
-      opts.sessionId,
-      "",
-      "",
-      0,
-      opts.runtimeSessionId,
-    );
+  protected createSession(
+    id: string,
+    prompt: string,
+    model: string,
+    maxTurns: number,
+    resumeSessionId?: string,
+    branch?: string,
+    worktreeBasePath?: string,
+    systemContext?: string,
+    mcpServers?: Record<string, unknown>,
+  ): AgentSession {
+    return new ClaudeCodeSession(id, prompt, model, maxTurns, resumeSessionId, branch, worktreeBasePath, systemContext, mcpServers);
   }
 }
