@@ -8,6 +8,7 @@ export default defineConfig({
       output: {
         manualChunks: {
           markdown: ["react-markdown", "remark-gfm", "rehype-prism-plus"],
+          dagview: ["@xyflow/react", "@dagrejs/dagre"],
         },
       },
     },

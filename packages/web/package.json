@@ -20,6 +20,8 @@
     "test": "heft test"
   },
   "dependencies": {
+    "@dagrejs/dagre": "^2.0.4",
+    "@xyflow/react": "^12.10.0",
     "motion": "^11.18.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

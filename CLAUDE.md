@@ -71,11 +71,20 @@ PRs that modify publishable packages must include a change file. CI enforces thi
 **When to create a change file**: If the PR has a diff in any publishable package. If only private packages or non-package files (workflows, docs, config) changed, no change file is needed.
 
 **Command** (non-interactive, from repo root):
+
+> **Known issue:** `install-run-rush.js` splits `--message` values on spaces.
+> Use a single hyphenated word for the message, then edit the generated JSON
+> file to fix the comment text and bump type.
+
 ```bash
+# Step 1: Generate the change file (use a single-word placeholder message)
 node common/scripts/install-run-rush.js change --bulk \
-  --message "Description of the change" \
+  --message "placeholder" \
   --bump-type patch \
   --email "5674316+nick-pape@users.noreply.github.com"
+
+# Step 2: Edit the generated JSON in common/changes/@grackle-ai/*/
+# Fix the "comment" field to the real description and "type" to the correct bump type
 ```
 
 **Bump types**:
@@ -85,6 +94,31 @@ node common/scripts/install-run-rush.js change --bulk \
 - **Never use `major`** — CI blocks major bumps (we're pre-1.0)
 
 **What the command does**: Creates a JSON file in `common/changes/` named after the branch. The file is committed to the PR branch. One change file per PR is sufficient — it covers all publishable packages via lockstep versioning.
+
+## PR Workflow: CI & Copilot Review
+
+Every push to a PR branch triggers both **CI** and a **GitHub Copilot code review**. Both must pass before a PR is ready.
+
+### CI
+- CI runs `rush build` and `rush test` (Playwright e2e tests).
+- If CI fails, read the failed log with `gh run view <id> --log-failed`, fix the issue, and push again.
+- Common CI failures: chunk size warnings (add to `manualChunks` in `vite.config.ts`), Playwright strict mode violations (duplicate text from sidebar + new components).
+
+### Copilot Review
+- **Every push triggers a new Copilot review** — previous review comments may become outdated but new ones appear.
+- When asked to "deal with Copilot" or "address Copilot comments":
+  1. **Read** all comments: `gh api repos/nick-pape/grackle/pulls/<PR>/comments`
+  2. **Fix** the code issues Copilot identified
+  3. **Reply** to each comment explaining what was done: `gh api repos/nick-pape/grackle/pulls/<PR>/comments/<id>/replies -f body="..."`
+  4. **Resolve** each conversation thread
+  5. **Push** the fixes — this triggers another Copilot review
+  6. **Wait** for the new review and repeat until all comments are resolved
+
+### PR Completion Checklist
+Before considering a PR "done", always verify:
+- [ ] CI is green (build + tests pass)
+- [ ] All Copilot review comments are addressed and resolved
+- [ ] No new Copilot comments from the latest push
 
 ## Ports
 
