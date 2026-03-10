@@ -388,6 +388,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
           parentTaskId: parentTaskId || "",
           depth,
           childTaskIds: [],
+          canDecompose: !parentTaskId,
         };
 
         return [...prev, newTask];

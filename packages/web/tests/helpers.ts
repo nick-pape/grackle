@@ -260,20 +260,24 @@ export async function createTaskViaWs(
   page: Page,
   projectId: string,
   title: string,
-  options?: { environmentId?: string; dependsOn?: string[]; description?: string; parentTaskId?: string },
+  options?: { environmentId?: string; dependsOn?: string[]; description?: string; parentTaskId?: string; canDecompose?: boolean },
 ): Promise<WsPayload> {
+  const payload: WsPayload = {
+    projectId,
+    title,
+    description: options?.description || "",
+    environmentId: options?.environmentId || "",
+    dependsOn: options?.dependsOn || [],
+    parentTaskId: options?.parentTaskId || "",
+  };
+  if (options?.canDecompose !== undefined) {
+    payload.canDecompose = options.canDecompose;
+  }
   const response = await sendWsAndWaitFor(
     page,
     {
       type: "create_task",
-      payload: {
-        projectId,
-        title,
-        description: options?.description || "",
-        environmentId: options?.environmentId || "",
-        dependsOn: options?.dependsOn || [],
-        parentTaskId: options?.parentTaskId || "",
-      },
+      payload,
     },
     "task_created",
   );

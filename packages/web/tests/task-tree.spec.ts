@@ -72,8 +72,8 @@ test.describe("Task tree hierarchy", () => {
     const projectId = await getProjectId(page, "tree-multi");
     const level0Id = await getTaskId(page, projectId, "level-0");
 
-    // Create child and grandchild via WS
-    const level1 = await createTaskViaWs(page, projectId, "level-1", { parentTaskId: level0Id });
+    // Create child and grandchild via WS (level-1 needs canDecompose to allow level-2)
+    const level1 = await createTaskViaWs(page, projectId, "level-1", { parentTaskId: level0Id, canDecompose: true });
     const level1Id = level1.id as string;
     await createTaskViaWs(page, projectId, "level-2", { parentTaskId: level1Id });
 
