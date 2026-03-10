@@ -4,7 +4,7 @@ test.describe("Copilot Runtime Option", () => {
   test.beforeEach(async ({ appPage }) => {
     // Switch to Environments tab and enter new_chat mode
     await appPage.locator("button", { hasText: "Environments" }).click();
-    await appPage.locator("button", { hasText: "+" }).click();
+    await appPage.locator('button[title="New chat"]').click();
     await expect(appPage.locator("text=new chat")).toBeVisible();
   });
 

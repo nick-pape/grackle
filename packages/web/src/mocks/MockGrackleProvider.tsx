@@ -683,6 +683,20 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
     [nextId],
   );
 
+  /** Logs an add-environment call (mock does not persist). */
+  const addEnvironment: UseGrackleSocketResult["addEnvironment"] = useCallback(
+    (
+      displayName: string,
+      adapterType: string,
+      adapterConfig?: Record<string, unknown>,
+      defaultRuntime?: string,
+    ) => {
+      // eslint-disable-next-line no-console
+      console.log("[MockGrackle] addEnvironment", { displayName, adapterType, adapterConfig, defaultRuntime });
+    },
+    [],
+  );
+
   /** Simulates async loading of task diff data with a short delay. */
   const loadTaskDiff: UseGrackleSocketResult["loadTaskDiff"] = useCallback(
     (taskId: string) => {
@@ -781,6 +795,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       loadFindings,
       postFinding,
       loadTaskDiff,
+      addEnvironment,
       loadTokens,
       setToken: mockSetToken,
       deleteToken: mockDeleteToken,
@@ -815,6 +830,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       loadFindings,
       postFinding,
       loadTaskDiff,
+      addEnvironment,
       loadTokens,
       mockSetToken,
       mockDeleteToken,

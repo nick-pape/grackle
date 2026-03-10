@@ -921,6 +921,32 @@ async function handleMessage(
       break;
     }
 
+    case "add_environment": {
+      const displayName = (msg.payload?.displayName as string) || "";
+      const adapterType = (msg.payload?.adapterType as string) || "";
+      if (!displayName || !adapterType) {
+        sendWs(ws, { type: "error", payload: { message: "displayName and adapterType required" } });
+        return;
+      }
+      if (!adapterManager.getAdapter(adapterType)) {
+        sendWs(ws, { type: "error", payload: { message: `Unknown adapter type: ${adapterType}` } });
+        return;
+      }
+      let id = slugify(displayName) || uuid().slice(0, 8);
+      if (envRegistry.getEnvironment(id)) {
+        id = `${id}-${uuid().slice(0, 4)}`;
+      }
+      const adapterConfig = msg.payload?.adapterConfig
+        ? JSON.stringify(msg.payload.adapterConfig)
+        : "{}";
+      const defaultRuntime = (msg.payload?.defaultRuntime as string) || DEFAULT_RUNTIME;
+      envRegistry.addEnvironment(id, displayName, adapterType, adapterConfig, defaultRuntime);
+      logger.info({ id, displayName, adapterType }, "Environment added via WebSocket");
+      broadcast({ type: "environment_added", payload: { environmentId: id } });
+      broadcastEnvironments();
+      break;
+    }
+
     case "remove_environment": {
       const environmentId = msg.payload?.environmentId as string;
       if (!environmentId) {

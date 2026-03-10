@@ -17,6 +17,7 @@ export type ViewMode =
   | { kind: "project"; projectId: string }
   | { kind: "new_task"; projectId: string }
   | { kind: "task"; taskId: string; tab?: "stream" | "diff" | "findings" }
+  | { kind: "new_environment" }
   | { kind: "settings" };
 
 /** Main application content with layout and view routing. */
