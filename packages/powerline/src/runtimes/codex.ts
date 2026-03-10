@@ -156,11 +156,11 @@ class CodexSession extends BaseAgentSession {
       content: `Codex thread started (model: ${this.model || "default"})`,
     });
 
-    return this.consumeStream(this.thread.runStreamed(prompt));
+    return this.consumeStream(await this.thread.runStreamed(prompt));
   }
 
   protected async executeFollowUp(text: string): Promise<void> {
-    const streamResult = this.thread.runStreamed(text);
+    const streamResult = await this.thread.runStreamed(text);
     await this.consumeStream(streamResult);
   }
 

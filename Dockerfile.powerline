@@ -24,7 +24,9 @@ RUN npm init -y && npm install @grackle-ai/powerline@${POWERLINE_VERSION} --omit
 
 # Chromium needs >64MB shared memory for rendering
 USER grackle
-CMD ["node", "node_modules/@grackle-ai/powerline/dist/index.js", "--port=7433"]
+# --experimental-specifier-resolution=node works around vscode-jsonrpc missing .js
+# in ESM imports, required by @github/copilot-sdk (upstream bug in vscode-jsonrpc@8.x)
+CMD ["node", "--experimental-specifier-resolution=node", "node_modules/@grackle-ai/powerline/dist/index.js", "--port=7433"]
 
 # ─── Dev: copy local monorepo artifacts ─────────────────────
 FROM base AS dev
@@ -51,4 +53,6 @@ USER grackle
 
 # Run PowerLine from /app so node_modules resolve correctly
 # Agents will use /workspace as their cwd
-CMD ["node", "dist/index.js", "--port=7433"]
+# --experimental-specifier-resolution=node works around vscode-jsonrpc missing .js
+# in ESM imports, required by @github/copilot-sdk (upstream bug in vscode-jsonrpc@8.x)
+CMD ["node", "--experimental-specifier-resolution=node", "dist/index.js", "--port=7433"]

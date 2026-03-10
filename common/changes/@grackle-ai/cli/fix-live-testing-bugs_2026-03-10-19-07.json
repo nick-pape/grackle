@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Fix bugs from live testing: Codex SDK async, Windows paths, Dockerfile ESM flag, child task UI, task deletion",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}

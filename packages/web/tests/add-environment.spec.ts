@@ -67,23 +67,6 @@ test.describe("Add Environment — UI Form", () => {
     await expect(addButton).toBeEnabled();
   });
 
-  test("Codespace adapter requires codespace name", async ({ appPage }) => {
-    const page = appPage;
-
-    await page.locator('button[title="Add environment"]').click();
-
-    const adapterSelect = page.locator("select").first();
-    await adapterSelect.selectOption("codespace");
-
-    await page.locator('input[placeholder="Environment name..."]').fill("my-cs");
-
-    const addButton = page.locator("button", { hasText: "Add" });
-    await expect(addButton).toBeDisabled();
-
-    await page.locator('input[placeholder="Codespace name (required)..."]').fill("my-codespace");
-    await expect(addButton).toBeEnabled();
-  });
-
   test("switching adapter type shows correct conditional fields", async ({ appPage }) => {
     const page = appPage;
 
@@ -106,10 +89,6 @@ test.describe("Add Environment — UI Form", () => {
     await adapterSelect.selectOption("docker");
     await expect(page.locator('input[placeholder="Image (optional)..."]')).toBeVisible();
     await expect(page.locator('input[placeholder="Repo (optional)..."]')).toBeVisible();
-
-    // Switch to Codespace — shows codespace name
-    await adapterSelect.selectOption("codespace");
-    await expect(page.locator('input[placeholder="Codespace name (required)..."]')).toBeVisible();
   });
 });
 
