@@ -45,6 +45,8 @@ class StubSession implements AgentSession {
     this.status = "waiting_input";
     yield { type: "status", timestamp: ts(), content: "waiting_input" };
 
+    if (this.killed) return;
+
     const input = await this.waitForInput();
     if (this.killed) return;
 

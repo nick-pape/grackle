@@ -65,8 +65,8 @@ function getCopilotSdk(): Promise<CopilotSdkModule> {
 
 // ─── Helpers ───────────────────────────────────────────────
 
-/** Resolve a GitHub token from well-known environment variables. Returns undefined if none set. */
-function resolveGithubToken(): string | undefined {
+/** @internal Resolve a GitHub token from well-known environment variables. Returns undefined if none set. */
+export function resolveGithubToken(): string | undefined {
   for (const varName of GITHUB_TOKEN_ENV_VARS) {
     const value = process.env[varName];
     if (value) {
@@ -76,8 +76,8 @@ function resolveGithubToken(): string | undefined {
   return undefined;
 }
 
-/** Parse BYOK provider config from environment variable. Returns undefined if not set or malformed. */
-function resolveProviderConfig(): Record<string, unknown> | undefined {
+/** @internal Parse BYOK provider config from environment variable. Returns undefined if not set or malformed. */
+export function resolveProviderConfig(): Record<string, unknown> | undefined {
   const raw = process.env[ENV_COPILOT_PROVIDER_CONFIG];
   if (!raw) {
     return undefined;
@@ -90,8 +90,8 @@ function resolveProviderConfig(): Record<string, unknown> | undefined {
   }
 }
 
-/** Load MCP server configurations from the shared GRACKLE_MCP_CONFIG file and spawn options. */
-function resolveMcpServers(spawnMcpServers?: Record<string, unknown>): Record<string, unknown> | undefined {
+/** @internal Load MCP server configurations from the shared GRACKLE_MCP_CONFIG file and spawn options. */
+export function resolveMcpServers(spawnMcpServers?: Record<string, unknown>): Record<string, unknown> | undefined {
   let servers: Record<string, unknown> = {};
 
   // Load from shared config file
@@ -123,8 +123,8 @@ function resolveMcpServers(spawnMcpServers?: Record<string, unknown>): Record<st
   return Object.keys(servers).length > 0 ? servers : undefined;
 }
 
-/** Build a `post_finding` tool definition for the Copilot session, so findings can be emitted. */
-function buildFindingTool(defineTool: (name: string, opts: Record<string, unknown>) => unknown, eventQueue: AsyncQueue<AgentEvent>): unknown {
+/** @internal Build a `post_finding` tool definition for the Copilot session, so findings can be emitted. */
+export function buildFindingTool(defineTool: (name: string, opts: Record<string, unknown>) => unknown, eventQueue: AsyncQueue<AgentEvent>): unknown {
   return defineTool("post_finding", {
     description: "Post a finding discovered during the task. Findings are observations about code, architecture, bugs, patterns, or decisions.",
     parameters: {
