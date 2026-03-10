@@ -71,7 +71,7 @@ function EventList({ sessionEvents, session, scrollRef }: EventListProps): JSX.E
         <div className={isTerminal ? styles.errorMessage : styles.waitingMessage}>{emptyMessage}</div>
       )}
       {sessionEvents.map((event, i) => (
-        <EventRenderer key={i} event={event} />
+        <EventRenderer key={`${event.sessionId}-${event.timestamp}-${i}`} event={event} />
       ))}
     </div>
   );
@@ -164,7 +164,7 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
     if (activeTaskTab === "diff" && task?.id) {
       loadTaskDiff(task.id);
     }
-  }, [activeTaskTab, projectId, task?.id]);
+  }, [activeTaskTab, projectId, task?.id, loadFindings, loadTaskDiff]);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -289,7 +289,7 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
                 <div className={styles.waitingMessage}>Waiting for events...</div>
               )}
               {groupedEvents.map((event, i) => (
-                <EventRenderer key={i} event={event} />
+                <EventRenderer key={`${event.sessionId}-${event.timestamp}-${i}`} event={event} />
               ))}
             </motion.div>
           )}
@@ -331,12 +331,20 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
   }
 
   // --- session mode (legacy/direct) ---
+  if (!sessionId) {
+    return (
+      <div className={styles.emptyState}>
+        No session selected
+      </div>
+    );
+  }
+
   const isActive = session?.status === "running" || session?.status === "waiting_input";
 
   return (
     <div className={styles.panelContainer}>
       <SessionHeader
-        sessionId={sessionId!}
+        sessionId={sessionId}
         session={session}
         isActive={isActive}
         onKill={kill}

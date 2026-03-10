@@ -80,6 +80,9 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
   const timersRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
   /** Per-session timeout tracking for selective cancellation (kill). */
   const sessionTimersRef = useRef<Map<string, Set<ReturnType<typeof setTimeout>>>>(new Map());
+  /** Ref mirror of tasks state for reading current values without triggering re-renders. */
+  const tasksRef = useRef<TaskData[]>(tasks);
+  tasksRef.current = tasks;
   /** Resume steps keyed by sessionId, stored when a scenario pauses for input. */
   const pendingResumeRef = useRef<Map<string, MockStreamStep[]>>(new Map());
   /**
@@ -397,16 +400,9 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       console.log("[MockGrackle] startTask", { taskId, runtime });
 
       // Find the task to get its metadata
-      let taskEnvironmentId = "";
-      let taskTitle = "";
-      setTasks((prev) => {
-        const target = prev.find((t) => t.id === taskId);
-        if (target) {
-          taskEnvironmentId = target.environmentId;
-          taskTitle = target.title;
-        }
-        return prev;
-      });
+      const target = tasksRef.current.find((t) => t.id === taskId);
+      const taskEnvironmentId = target?.environmentId ?? "";
+      const taskTitle = target?.title ?? "";
 
       const sessionId = nextId("sess");
       const newSession: Session = {
