@@ -20,6 +20,7 @@ import { LOGS_DIR, DEFAULT_RUNTIME, DEFAULT_MODEL } from "@grackle-ai/common";
 import { grackleHome } from "./paths.js";
 import { safeParseJsonArray } from "./json-helpers.js";
 import { slugify } from "./utils/slugify.js";
+import { logger } from "./logger.js";
 
 function envRowToProto(row: EnvironmentRow): grackle.Environment {
   return create(grackle.EnvironmentSchema, {
@@ -119,9 +120,9 @@ function spawnOnPowerLine(
               data.content || "", data.tags || [],
             );
             broadcast({ type: "finding_posted", payload: { projectId, findingId } });
-            process.stderr.write(`[finding] Stored: ${findingId} "${data.title}" in ${projectId}\n`);
+            logger.info({ findingId, projectId, title: data.title }, "Finding stored");
           } catch (err) {
-            process.stderr.write(`[finding] ERROR: ${err} (project=${projectId} task=${taskId})\n`);
+            logger.error({ err, projectId, taskId }, "Failed to store finding");
           }
         }
 

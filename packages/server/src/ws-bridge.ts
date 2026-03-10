@@ -483,7 +483,10 @@ async function handleMessage(
         sendWs(ws, { type: "error", payload: { message: "name required" } });
         return;
       }
-      const id = slugify(name) || uuid().slice(0, 8);
+      let id = slugify(name) || uuid().slice(0, 8);
+      if (projectStore.getProject(id)) {
+        id = `${id}-${uuid().slice(0, 4)}`;
+      }
       projectStore.createProject(
         id, name,
         (msg.payload?.description as string) || "",
@@ -655,9 +658,9 @@ async function handleMessage(
                   data.content || "", data.tags || [],
                 );
                 broadcast({ type: "finding_posted", payload: { projectId: task.projectId, findingId } });
-                process.stderr.write(`[finding] Stored: ${findingId} "${data.title}" in ${task.projectId}\n`);
+                logger.info({ findingId, projectId: task.projectId, title: data.title }, "Finding stored");
               } catch (err) {
-                process.stderr.write(`[finding] ERROR: ${err} (project=${task.projectId} task=${task.id})\n`);
+                logger.error({ err, projectId: task.projectId, taskId: task.id }, "Failed to store finding");
               }
             }
 
