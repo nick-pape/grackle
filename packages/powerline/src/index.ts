@@ -7,6 +7,7 @@ import { registerRuntime } from "./runtime-registry.js";
 import { StubRuntime } from "./runtimes/stub.js";
 import { ClaudeCodeRuntime } from "./runtimes/claude-code.js";
 import { CopilotRuntime } from "./runtimes/copilot.js";
+import { CodexRuntime } from "./runtimes/codex.js";
 import { DEFAULT_POWERLINE_PORT } from "@grackle-ai/common";
 import { logger } from "./logger.js";
 
@@ -27,6 +28,7 @@ function main(): void {
       registerRuntime(new StubRuntime());
       registerRuntime(new ClaudeCodeRuntime());
       registerRuntime(new CopilotRuntime());
+      registerRuntime(new CodexRuntime());
 
       // Start HTTP/2 server with optional auth
       const handler = connectNodeAdapter({

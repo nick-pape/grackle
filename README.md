@@ -14,7 +14,7 @@ Docker, local, SSH, and GitHub Codespaces — it shouldn't matter where an agent
 
 ### 🔄 Runtime agnostic by design
 
-The agent loop landscape is wildly unstable. Claude Code, Copilot [🔜#26](https://github.com/nick-pape/grackle/issues/26), Codex [⭐#27](https://github.com/nick-pape/grackle/issues/27), Goose [⭐#29](https://github.com/nick-pape/grackle/issues/29) — whatever ships next month. Grackle wraps them all behind a standard interface so you can swap runtimes without changing your workflow. Your orchestration layer shouldn't be coupled to whichever vendor is winning this quarter.
+The agent loop landscape is wildly unstable. Claude Code, Copilot, Codex, Goose [⭐#29](https://github.com/nick-pape/grackle/issues/29) — whatever ships next month. Grackle wraps them all behind a standard interface so you can swap runtimes without changing your workflow. Your orchestration layer shouldn't be coupled to whichever vendor is winning this quarter.
 
 ### 📈 Scales from remote control to swarms
 
@@ -112,7 +112,7 @@ graph TD
 | 📡 | **Real-time streaming** | Watch agent tool calls and output as they happen, bridged from gRPC to WebSocket |
 | 🌳 | **Git worktree isolation** | Every task gets its own branch in its own worktree — zero interference between agents |
 | 💬 | **Findings & knowledge sharing** | Agents post discoveries that become context for other agents |
-| 🔄 | **Multi-runtime support** | Claude Code today, Copilot [🔜#26](https://github.com/nick-pape/grackle/issues/26) and others on the roadmap |
+| 🔄 | **Multi-runtime support** | Claude Code, Copilot, and Codex — with more on the roadmap |
 | 🔗 | **Task dependencies** | Dependency gating — blocked tasks wait for their dependencies to complete |
 | ✅ | **Diff review** | See exactly what each agent changed, approve or reject per-task |
 | 🧠 | **Knowledge graph** [⭐#13](https://github.com/nick-pape/grackle/issues/13) | Structured knowledge sharing across agents — beyond flat findings |

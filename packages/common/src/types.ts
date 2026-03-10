@@ -36,7 +36,7 @@ export type FindingCategory = "architecture" | "api" | "bug" | "decision" | "dep
 export type AdapterType = "docker" | "local" | "codespace" | "ssh";
 
 /** Supported agent runtime implementations. */
-export type RuntimeName = "claude-code" | "copilot" | "stub";
+export type RuntimeName = "claude-code" | "copilot" | "codex" | "stub";
 
 /** How a token is delivered to the PowerLine: as an env var or written to a file. */
 export type TokenType = "env_var" | "file";

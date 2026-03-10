@@ -26,6 +26,7 @@ function RuntimeSelector({ value, onChange }: RuntimeSelectorProps): JSX.Element
       className={styles.select}
     >
       <option value="claude-code">claude-code</option>
+      <option value="codex">codex</option>
       <option value="copilot">copilot</option>
       <option value="stub">stub</option>
     </select>
