@@ -9,24 +9,21 @@ import * as sessionStore from "./session-store.js";
 import * as adapterManager from "./adapter-manager.js";
 import * as streamHub from "./stream-hub.js";
 import * as tokenBroker from "./token-broker.js";
-import * as logWriter from "./log-writer.js";
 import * as projectStore from "./project-store.js";
 import * as taskStore from "./task-store.js";
 import * as findingStore from "./finding-store.js";
-import { writeTranscript } from "./transcript.js";
-import { broadcast } from "./ws-bridge.js";
+import { broadcast } from "./ws-broadcast.js";
+import { processEventStream } from "./event-processor.js";
 import { join } from "node:path";
 import {
   LOGS_DIR, DEFAULT_RUNTIME, DEFAULT_MODEL,
   environmentStatusToEnum, sessionStatusToEnum, sessionStatusToString,
   tokenTypeToEnum, tokenTypeToString,
   taskStatusToEnum, taskStatusToString, projectStatusToEnum,
-  agentEventTypeToEventType,
 } from "@grackle-ai/common";
 import { grackleHome } from "./paths.js";
 import { safeParseJsonArray } from "./json-helpers.js";
 import { slugify } from "./utils/slugify.js";
-import { logger } from "./logger.js";
 import { buildTaskSystemContext } from "./utils/system-context.js";
 
 function envRowToProto(row: EnvironmentRow): grackle.Environment {
@@ -98,105 +95,6 @@ function taskRowToProto(row: taskStore.TaskRow): grackle.Task {
 
 function findingRowToProto(row: findingStore.FindingRow): grackle.Finding {
   return create(grackle.FindingSchema, { ...row, tags: safeParseJsonArray(row.tags) });
-}
-
-/** Spawn an agent session on a PowerLine, piping events to the stream hub. Returns the session ID. */
-function spawnOnPowerLine(
-  conn: ReturnType<typeof adapterManager.getConnection> & {},
-  sessionId: string,
-  runtime: string,
-  prompt: string,
-  model: string,
-  logPath: string,
-  branch: string,
-  systemContext: string,
-  projectId: string,
-  taskId: string,
-  onComplete?: () => void,
-): void {
-  const powerlineReq = create(powerline.SpawnRequestSchema, {
-    sessionId,
-    runtime,
-    prompt,
-    model,
-    maxTurns: 0,
-    branch,
-    worktreeBasePath: branch ? "/workspace" : "",
-    systemContext,
-    projectId,
-    taskId,
-  });
-
-  logWriter.initLog(logPath);
-
-  // eslint-disable-next-line @typescript-eslint/no-floating-promises
-  (async () => {
-    try {
-      sessionStore.updateSession(sessionId, "running");
-      for await (const event of conn.client.spawn(powerlineReq)) {
-        const sessionEvent = create(grackle.SessionEventSchema, {
-          sessionId,
-          type: agentEventTypeToEventType(event.type),
-          timestamp: event.timestamp,
-          content: event.content,
-          raw: event.raw,
-        });
-        logWriter.writeEvent(logPath, sessionEvent);
-
-        // Intercept finding events and store + broadcast them
-        if (event.type === powerline.AgentEventType.FINDING && projectId) {
-          try {
-            const data = JSON.parse(event.content);
-            const findingId = uuid();
-            findingStore.postFinding(
-              findingId, projectId, taskId, sessionId,
-              data.category || "general", data.title || "Untitled",
-              data.content || "", data.tags || [],
-            );
-            broadcast({ type: "finding_posted", payload: { projectId, findingId } });
-            logger.info({ findingId, projectId, title: data.title }, "Finding stored");
-          } catch (err) {
-            logger.error({ err, projectId, taskId }, "Failed to store finding");
-          }
-        }
-
-        streamHub.publish(sessionEvent);
-
-        if (event.type === powerline.AgentEventType.STATUS) {
-          if (event.content === "waiting_input") {
-            sessionStore.updateSessionStatus(sessionId, "waiting_input");
-          } else if (event.content === "running") {
-            sessionStore.updateSessionStatus(sessionId, "running");
-          } else if (event.content === "completed") {
-            sessionStore.updateSession(sessionId, "completed");
-          } else if (event.content === "failed") {
-            sessionStore.updateSession(sessionId, "failed");
-          } else if (event.content === "killed") {
-            sessionStore.updateSession(sessionId, "killed");
-          }
-        }
-      }
-
-      const current = sessionStore.getSession(sessionId);
-      if (current && !["completed", "failed", "killed"].includes(current.status)) {
-        sessionStore.updateSession(sessionId, "completed");
-      }
-    } catch (err) {
-      sessionStore.updateSession(sessionId, "failed", undefined, String(err));
-      // Publish a failure event so streaming clients are notified
-      streamHub.publish(create(grackle.SessionEventSchema, {
-        sessionId,
-        type: grackle.EventType.STATUS,
-        timestamp: new Date().toISOString(),
-        content: "failed",
-        raw: String(err),
-      }));
-    } finally {
-      logWriter.endSession(logPath);
-      try { writeTranscript(logPath); } catch { /* non-critical */ }
-      onComplete?.();
-    }
-  })();
 }
 
 /** Register all Grackle gRPC service handlers on the given ConnectRPC router. */
@@ -336,8 +234,19 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       const logPath = join(grackleHome, LOGS_DIR, sessionId);
 
       sessionStore.createSession(sessionId, req.environmentId, runtime, req.prompt, model, logPath);
-      spawnOnPowerLine(conn, sessionId, runtime, req.prompt, model, logPath,
-        req.branch || "", req.systemContext || "", "", "");
+
+      const powerlineReq = create(powerline.SpawnRequestSchema, {
+        sessionId,
+        runtime,
+        prompt: req.prompt,
+        model,
+        maxTurns: 0,
+        branch: req.branch || "",
+        worktreeBasePath: req.branch ? "/workspace" : "",
+        systemContext: req.systemContext || "",
+      });
+
+      processEventStream(conn.client.spawn(powerlineReq), { sessionId, logPath });
 
       const row = sessionStore.getSession(sessionId);
       return sessionRowToProto(row!);
@@ -362,44 +271,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
 
       const logPath = session.logPath || join(grackleHome, LOGS_DIR, session.id);
 
-      // eslint-disable-next-line @typescript-eslint/no-floating-promises
-      (async () => {
-        try {
-          sessionStore.updateSession(session.id, "running");
-          for await (const event of conn.client.resume(powerlineReq)) {
-            const sessionEvent = create(grackle.SessionEventSchema, {
-              sessionId: session.id,
-              type: agentEventTypeToEventType(event.type),
-              timestamp: event.timestamp,
-              content: event.content,
-              raw: event.raw,
-            });
-            logWriter.writeEvent(logPath, sessionEvent);
-            streamHub.publish(sessionEvent);
-
-            if (event.type === powerline.AgentEventType.STATUS) {
-              if (event.content === "waiting_input") {
-                sessionStore.updateSessionStatus(session.id, "waiting_input");
-              } else if (event.content === "running") {
-                sessionStore.updateSessionStatus(session.id, "running");
-              } else if (event.content === "completed") {
-                sessionStore.updateSession(session.id, "completed");
-              } else if (event.content === "failed") {
-                sessionStore.updateSession(session.id, "failed");
-              } else if (event.content === "killed") {
-                sessionStore.updateSession(session.id, "killed");
-              }
-            }
-          }
-
-          const current = sessionStore.getSession(session.id);
-          if (current && !["completed", "failed", "killed"].includes(current.status)) {
-            sessionStore.updateSession(session.id, "completed");
-          }
-        } catch (err) {
-          sessionStore.updateSession(session.id, "failed", undefined, String(err));
-        }
-      })();
+      processEventStream(conn.client.resume(powerlineReq), { sessionId: session.id, logPath });
 
       const row = sessionStore.getSession(session.id);
       return sessionRowToProto(row!);
@@ -632,9 +504,25 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       taskStore.markTaskStarted(task.id);
       broadcast({ type: "task_started", payload: { taskId: task.id, sessionId, projectId: task.projectId } });
 
-      spawnOnPowerLine(conn, sessionId, runtime, task.title, model, logPath,
-        task.branch, systemContext, task.projectId, task.id,
-        () => {
+      const powerlineReq = create(powerline.SpawnRequestSchema, {
+        sessionId,
+        runtime,
+        prompt: task.title,
+        model,
+        maxTurns: 0,
+        branch: task.branch,
+        worktreeBasePath: task.branch ? "/workspace" : "",
+        systemContext,
+        projectId: task.projectId,
+        taskId: task.id,
+      });
+
+      processEventStream(conn.client.spawn(powerlineReq), {
+        sessionId,
+        logPath,
+        projectId: task.projectId,
+        taskId: task.id,
+        onComplete: () => {
           // On completion, auto-move task to review
           const t = taskStore.getTask(task.id);
           if (t && t.status === "in_progress") {
@@ -647,7 +535,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
             broadcast({ type: "task_updated", payload: { taskId: task.id, projectId: task.projectId } });
           }
         },
-      );
+      });
 
       const row = sessionStore.getSession(sessionId);
       return sessionRowToProto(row!);
