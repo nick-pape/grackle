@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.1.0",
+      "tag": "@grackle-ai/cli_v0.1.0",
+      "date": "Tue, 10 Mar 2026 06:04:37 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Add CLI options for SSH and Codespace environment adapters."
+          }
+        ]
+      }
+    },
+    {
       "version": "0.0.6",
       "tag": "@grackle-ai/cli_v0.0.6",
       "date": "Tue, 10 Mar 2026 06:01:07 GMT",
