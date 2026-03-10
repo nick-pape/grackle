@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Tue, 10 Mar 2026 07:31:32 GMT and should not be manually modified.
+This log was last generated on Tue, 10 Mar 2026 07:36:11 GMT and should not be manually modified.
+
+## 0.8.0
+Tue, 10 Mar 2026 07:36:11 GMT
+
+### Minor changes
+
+- Add token management UI with settings page
 
 ## 0.7.0
 Tue, 10 Mar 2026 07:31:32 GMT
