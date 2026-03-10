@@ -3,12 +3,9 @@ import { tasks, type TaskRow } from "./schema.js";
 import { eq, sql, asc } from "drizzle-orm";
 import type { TaskStatus } from "@grackle-ai/common";
 import { safeParseJsonArray } from "./json-helpers.js";
+import { slugify } from "./utils/slugify.js";
 
 export type { TaskRow };
-
-function slugify(text: string): string {
-  return text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40);
-}
 
 /** Insert a new task with auto-generated branch name and sort order. */
 export function createTask(

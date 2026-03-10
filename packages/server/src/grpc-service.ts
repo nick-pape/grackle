@@ -19,10 +19,7 @@ import { join } from "node:path";
 import { LOGS_DIR, DEFAULT_RUNTIME, DEFAULT_MODEL } from "@grackle-ai/common";
 import { grackleHome } from "./paths.js";
 import { safeParseJsonArray } from "./json-helpers.js";
-
-function slugify(text: string): string {
-  return text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40);
-}
+import { slugify } from "./utils/slugify.js";
 
 function envRowToProto(row: EnvironmentRow): grackle.Environment {
   return create(grackle.EnvironmentSchema, {
@@ -521,12 +518,12 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
 
       taskStore.updateTask(
         req.id,
-        req.title || existing.title,
-        req.description || existing.description,
-        req.status || existing.status,
-        req.environmentId || existing.environmentId,
+        req.title !== "" ? req.title : existing.title,
+        req.description !== "" ? req.description : existing.description,
+        req.status !== "" ? req.status : existing.status,
+        req.environmentId !== "" ? req.environmentId : existing.environmentId,
         req.dependsOn.length > 0 ? [...req.dependsOn] : safeParseJsonArray(existing.dependsOn),
-        req.reviewNotes || existing.reviewNotes,
+        req.reviewNotes !== "" ? req.reviewNotes : existing.reviewNotes,
       );
       const row = taskStore.getTask(req.id);
       return taskRowToProto(row!);

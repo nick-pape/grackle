@@ -29,8 +29,6 @@ export type AgentEventType =
   | "finding";
 
 export type TaskStatus = "pending" | "assigned" | "in_progress" | "review" | "done" | "failed";
-export type ProjectStatus = "active" | "archived";
-export type FindingCategory = "architecture" | "api" | "bug" | "decision" | "dependency" | "pattern" | "general";
 
 /** Supported environment adapter backends. */
 export type AdapterType = "docker" | "local" | "codespace" | "ssh";
@@ -40,18 +38,6 @@ export type RuntimeName = "claude-code" | "copilot" | "codex" | "stub";
 
 /** How a token is delivered to the PowerLine: as an env var or written to a file. */
 export type TokenType = "env_var" | "file";
-
-/** Stages reported during environment provisioning. */
-export type ProvisionStage =
-  | "creating"
-  | "starting"
-  | "cloning"
-  | "bootstrapping"
-  | "tunneling"
-  | "connecting"
-  | "pushing_tokens"
-  | "ready"
-  | "error";
 
 // ─── Constants ──────────────────────────────────────────────
 
