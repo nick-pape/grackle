@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Tue, 10 Mar 2026 07:13:31 GMT and should not be manually modified.
+This log was last generated on Tue, 10 Mar 2026 07:31:32 GMT and should not be manually modified.
+
+## 0.7.0
+Tue, 10 Mar 2026 07:31:32 GMT
+
+### Patches
+
+- Fix Codex runtime: sendInput race condition, resume sends junk prompt, resource leak on kill, disallowedTools ignored
 
 ## 0.6.0
 Tue, 10 Mar 2026 07:13:31 GMT
