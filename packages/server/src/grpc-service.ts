@@ -72,7 +72,7 @@ function projectRowToProto(row: projectStore.ProjectRow): grackle.Project {
   });
 }
 
-function taskRowToProto(row: taskStore.TaskRow): grackle.Task {
+function taskRowToProto(row: taskStore.TaskRow, childIds?: string[]): grackle.Task {
   return create(grackle.TaskSchema, {
     id: row.id,
     projectId: row.projectId,
@@ -92,7 +92,7 @@ function taskRowToProto(row: taskStore.TaskRow): grackle.Task {
     sortOrder: row.sortOrder,
     parentTaskId: row.parentTaskId,
     depth: row.depth,
-    childTaskIds: taskStore.getChildren(row.id).map(c => c.id),
+    childTaskIds: childIds ?? taskStore.getChildren(row.id).map(c => c.id),
   });
 }
 
@@ -426,8 +426,9 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
 
     async listTasks(req: grackle.ProjectId) {
       const rows = taskStore.listTasks(req.id);
+      const childIdsMap = taskStore.buildChildIdsMap(rows);
       return create(grackle.TaskListSchema, {
-        tasks: rows.map(taskRowToProto),
+        tasks: rows.map(r => taskRowToProto(r, childIdsMap.get(r.id) ?? [])),
       });
     },
 

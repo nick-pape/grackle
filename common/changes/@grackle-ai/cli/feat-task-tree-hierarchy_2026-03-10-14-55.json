@@ -2,7 +2,7 @@
   "changes": [
     {
       "comment": "Add task tree hierarchy",
-      "type": "none",
+      "type": "minor",
       "packageName": "@grackle-ai/cli"
     }
   ],

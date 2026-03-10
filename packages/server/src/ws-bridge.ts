@@ -464,6 +464,7 @@ async function handleMessage(
       const projectId = msg.payload?.projectId as string;
       if (!projectId) return;
       const rows = taskStore.listTasks(projectId);
+      const childIdsMap = taskStore.buildChildIdsMap(rows);
       sendWs(ws, {
         type: "tasks",
         payload: {
@@ -483,7 +484,7 @@ async function handleMessage(
             createdAt: r.createdAt,
             parentTaskId: r.parentTaskId,
             depth: r.depth,
-            childTaskIds: taskStore.getChildren(r.id).map(c => c.id),
+            childTaskIds: childIdsMap.get(r.id) ?? [],
           })),
         },
       });

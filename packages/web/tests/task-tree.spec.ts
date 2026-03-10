@@ -24,8 +24,9 @@ test.describe("Task tree hierarchy", () => {
     // Create a child task via WS
     await createTaskViaWs(page, projectId, "child-task", { parentTaskId: rootTaskId });
 
-    // The parent should have an expand arrow — look for the triangle character
-    const expandArrow = page.locator('[class*="expandArrow"]').first();
+    // Scope expand arrow to the task row containing "root-task" to avoid matching project toggle
+    const rootRow = page.getByText("root-task").locator("..");
+    const expandArrow = rootRow.locator('[class*="expandArrow"]').first();
     await expect(expandArrow).toBeVisible({ timeout: 5_000 });
 
     // Click expand arrow to show children
@@ -70,17 +71,18 @@ test.describe("Task tree hierarchy", () => {
     const level1 = await createTaskViaWs(page, projectId, "level-1", { parentTaskId: level0Id });
     await createTaskViaWs(page, projectId, "level-2", { parentTaskId: level1.id as string });
 
-    // Expand level-0 to see level-1
-    const expandArrow0 = page.locator('[class*="expandArrow"]').first();
+    // Expand level-0 by clicking its row's expand arrow
+    const level0Row = page.getByText("level-0").locator("..");
+    const expandArrow0 = level0Row.locator('[class*="expandArrow"]').first();
     await expect(expandArrow0).toBeVisible({ timeout: 5_000 });
     await expandArrow0.click();
     await expect(page.getByText("level-1")).toBeVisible({ timeout: 5_000 });
 
-    // Expand level-1 to see level-2
-    // There should now be a second expand arrow for level-1
-    const expandArrows = page.locator('[class*="expandArrow"]');
-    await expect(expandArrows).toHaveCount(2, { timeout: 5_000 });
-    await expandArrows.nth(1).click();
+    // Expand level-1 by clicking its row's expand arrow
+    const level1Row = page.getByText("level-1").locator("..");
+    const expandArrow1 = level1Row.locator('[class*="expandArrow"]').first();
+    await expect(expandArrow1).toBeVisible({ timeout: 5_000 });
+    await expandArrow1.click();
     await expect(page.getByText("level-2")).toBeVisible({ timeout: 5_000 });
   });
 

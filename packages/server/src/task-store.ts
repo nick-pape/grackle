@@ -170,6 +170,22 @@ export function areDependenciesMet(taskId: string): boolean {
 
 // ─── Tree Queries ────────────────────────────────────
 
+/** Build a map from parentTaskId to child IDs from a pre-fetched list of rows. Avoids N+1 queries. */
+export function buildChildIdsMap(rows: TaskRow[]): Map<string, string[]> {
+  const map = new Map<string, string[]>();
+  for (const row of rows) {
+    if (row.parentTaskId) {
+      const siblings = map.get(row.parentTaskId);
+      if (siblings) {
+        siblings.push(row.id);
+      } else {
+        map.set(row.parentTaskId, [row.id]);
+      }
+    }
+  }
+  return map;
+}
+
 /** Get direct children of a task, ordered by sort_order. */
 export function getChildren(taskId: string): TaskRow[] {
   return db.select().from(tasks)
@@ -182,8 +198,8 @@ export function getChildren(taskId: string): TaskRow[] {
 export function getDescendants(taskId: string): TaskRow[] {
   const result: TaskRow[] = [];
   const queue: string[] = [taskId];
-  while (queue.length > 0) {
-    const currentId = queue.shift()!;
+  for (let i = 0; i < queue.length; i++) {
+    const currentId = queue[i]!;
     const children = getChildren(currentId);
     for (const child of children) {
       result.push(child);
