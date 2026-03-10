@@ -51,6 +51,15 @@ export function registerTokenCommands(program: Command): void {
     });
 
   token
+    .command("delete <name>")
+    .description("Delete a token")
+    .action(async (name: string) => {
+      const client = createGrackleClient();
+      await client.deleteToken({ name });
+      console.log(`Token deleted: ${name}`);
+    });
+
+  token
     .command("list")
     .description("List configured tokens")
     .action(async () => {

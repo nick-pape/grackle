@@ -2,6 +2,7 @@ import { useGrackle } from "../../context/GrackleContext.js";
 import { EventRenderer } from "../display/EventRenderer.js";
 import { DiffViewer } from "../display/DiffViewer.js";
 import { FindingsPanel } from "./FindingsPanel.js";
+import { SettingsPanel } from "./SettingsPanel.js";
 import { useEffect, useMemo, useRef, useState, type JSX } from "react";
 import type { ViewMode } from "../../App.js";
 import type { Session, SessionEvent } from "../../hooks/useGrackleSocket.js";
@@ -172,6 +173,11 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [groupedEvents.length, activeTaskTab]);
+
+  // --- settings mode ---
+  if (viewMode.kind === "settings") {
+    return <SettingsPanel />;
+  }
 
   // --- empty mode ---
   if (viewMode.kind === "empty") {
