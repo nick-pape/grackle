@@ -13,7 +13,8 @@ import { closeAllTunnels } from "./adapters/remote-adapter-utils.js";
 import { createWsBridge } from "./ws-bridge.js";
 import { DEFAULT_SERVER_PORT, DEFAULT_WEB_PORT } from "@grackle-ai/common";
 import { readFileSync, existsSync } from "node:fs";
-import { join, extname } from "node:path";
+import { join, dirname, extname } from "node:path";
+import { createRequire } from "node:module";
 import { loadOrCreateApiKey, verifyApiKey } from "./api-key.js";
 import { logger } from "./logger.js";
 
@@ -32,7 +33,9 @@ const MIME_TYPES: Record<string, string> = {
 
 function createWebHandler(apiKey: string): (req: http.IncomingMessage, res: http.ServerResponse) => void {
   return (req: http.IncomingMessage, res: http.ServerResponse) => {
-    const webDistDir = process.env.GRACKLE_WEB_DIR || join(import.meta.dirname, "../../web/dist");
+    const require = createRequire(import.meta.url);
+    const webDistDir = process.env.GRACKLE_WEB_DIR
+      || join(dirname(require.resolve("@grackle-ai/web/package.json")), "dist");
 
     let filePath = join(webDistDir, req.url === "/" ? "index.html" : (req.url || "index.html").split("?")[0]);
 
