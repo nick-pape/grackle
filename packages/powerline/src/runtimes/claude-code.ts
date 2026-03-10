@@ -3,6 +3,7 @@ import type { SessionStatus } from "@grackle-ai/common";
 import { AsyncQueue } from "../utils/async-queue.js";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { ensureWorktree } from "../worktree.js";
+import { logger } from "../logger.js";
 
 // Dynamic import — try @anthropic-ai/claude-agent-sdk first, then @anthropic-ai/claude-code
 type QueryFn = (opts: Record<string, unknown>) => Promise<unknown>;
@@ -28,6 +29,7 @@ async function getQuery(): Promise<QueryFn> {
 /** Path to the Grackle MCP server script bundled in the container image. */
 const GRACKLE_MCP_SCRIPT: string = "/app/mcp-grackle/index.js";
 
+/** Map a raw Claude Agent SDK message to Grackle AgentEvent(s). */
 function mapMessage(msg: Record<string, unknown>): AgentEvent[] {
   const ts = new Date().toISOString();
   const type = msg.type as string | undefined;
@@ -82,7 +84,7 @@ function mapMessage(msg: Record<string, unknown>): AgentEvent[] {
   }
 
   if (type === "result") {
-    // result messages are handled in stream() for error checking; skip here
+    // result messages are handled in consumeQuery() for error checking; skip here
     return [];
   }
 
@@ -97,12 +99,19 @@ function mapMessage(msg: Record<string, unknown>): AgentEvent[] {
   return [];
 }
 
+/** Built-in Claude Code tools that must be explicitly listed in allowedTools. */
+const BUILTIN_TOOLS: string[] = [
+  "Bash", "Read", "Write", "Edit", "Glob", "Grep",
+  "WebSearch", "WebFetch", "Task", "NotebookEdit",
+];
+
 class ClaudeCodeSession implements AgentSession {
   public id: string;
   public runtimeName: string = "claude-code";
   public runtimeSessionId: string;
   public status: SessionStatus = "running";
-  private inputQueue: AsyncQueue<string> = new AsyncQueue<string>();
+
+  private eventQueue: AsyncQueue<AgentEvent> = new AsyncQueue<AgentEvent>();
   private killed: boolean = false;
   private prompt: string;
   private model: string;
@@ -112,6 +121,10 @@ class ClaudeCodeSession implements AgentSession {
   private worktreeBasePath?: string;
   private systemContext?: string;
   private mcpServers?: Record<string, unknown>;
+  /** The active AbortController for the current query(), used to cancel on kill. */
+  private activeAbort?: AbortController;
+  /** Cached SDK options built once during runSession(), reused for follow-up queries. */
+  private cachedSdkOptions?: Record<string, unknown>;
 
   public constructor(
     id: string,
@@ -137,30 +150,171 @@ class ClaudeCodeSession implements AgentSession {
   }
 
   public async *stream(): AsyncIterable<AgentEvent> {
-    const query: QueryFn = await getQuery();
     const ts: () => string = () => new Date().toISOString();
 
     yield { type: "system", timestamp: ts(), content: "Starting Claude Code runtime..." };
 
-    try {
-      // Determine cwd: worktree > /workspace > default
-      let cwd: string | undefined;
+    // Drive the session in the background; events are pushed to the queue
+    // and yielded from this generator.
+    this.runSession().catch((err) => {
+      this.eventQueue.push({ type: "error", timestamp: ts(), content: String(err) });
+      this.eventQueue.push({ type: "status", timestamp: ts(), content: "failed" });
+      this.status = "failed";
+      this.eventQueue.close();
+    });
 
-      if (this.branch && this.worktreeBasePath) {
-        try {
-          const wt = await ensureWorktree(this.worktreeBasePath, this.branch);
-          cwd = wt.worktreePath;
-          yield { type: "system", timestamp: ts(), content: `Worktree ready: ${wt.worktreePath} (branch: ${this.branch}, created: ${wt.created})` };
-        } catch (wtErr) {
-          yield { type: "system", timestamp: ts(), content: `Worktree setup skipped (${wtErr}), falling back to workspace` };
-          const workspacePath = "/workspace";
-          if (existsSync(workspacePath)) cwd = workspacePath;
-        }
-      } else {
+    for await (const event of this.eventQueue) {
+      yield event;
+    }
+  }
+
+  /** Build the SDK options object. Called once during initial setup, cached for follow-ups. */
+  private async buildSdkOptions(): Promise<Record<string, unknown>> {
+    // Determine cwd: worktree > /workspace > default
+    let cwd: string | undefined;
+    const ts: () => string = () => new Date().toISOString();
+
+    if (this.branch && this.worktreeBasePath) {
+      try {
+        const wt = await ensureWorktree(this.worktreeBasePath, this.branch);
+        cwd = wt.worktreePath;
+        this.eventQueue.push({ type: "system", timestamp: ts(), content: `Worktree ready: ${wt.worktreePath} (branch: ${this.branch}, created: ${wt.created})` });
+      } catch (wtErr) {
+        this.eventQueue.push({ type: "system", timestamp: ts(), content: `Worktree setup skipped (${wtErr}), falling back to workspace` });
         const workspacePath = "/workspace";
-        const useWorkspace = existsSync(workspacePath) &&
-          readdirSync(workspacePath).length > 0;
-        if (useWorkspace) cwd = workspacePath;
+        if (existsSync(workspacePath)) {
+          cwd = workspacePath;
+        }
+      }
+    } else {
+      const workspacePath = "/workspace";
+      const useWorkspace = existsSync(workspacePath) &&
+        readdirSync(workspacePath).length > 0;
+      if (useWorkspace) {
+        cwd = workspacePath;
+      }
+    }
+
+    // SDK query() expects { prompt, options: { model, mcpServers, ... } }
+    // Both permissionMode AND allowDangerouslySkipPermissions are needed for full bypass.
+    // Built-in tools must also be in allowedTools explicitly — the SDK treats allowedTools
+    // as a whitelist that overrides permissionMode for tool-level checks.
+    const sdkOptions: Record<string, unknown> = {
+      model: this.model,
+      permissionMode: "bypassPermissions",
+      allowDangerouslySkipPermissions: true,
+      allowedTools: [...BUILTIN_TOOLS],
+      ...(cwd ? { cwd } : {}),
+    };
+
+    // Load MCP server config from env var or SpawnOptions
+    const mcpConfigPath = process.env.GRACKLE_MCP_CONFIG;
+    if (mcpConfigPath && existsSync(mcpConfigPath)) {
+      try {
+        const mcpConfig = JSON.parse(readFileSync(mcpConfigPath, "utf8"));
+        if (mcpConfig.mcpServers) {
+          sdkOptions.mcpServers = mcpConfig.mcpServers;
+        }
+        if (Array.isArray(mcpConfig.disallowedTools)) {
+          sdkOptions.disallowedTools = mcpConfig.disallowedTools;
+        }
+      } catch { /* ignore malformed config */ }
+    }
+    if (this.mcpServers) {
+      sdkOptions.mcpServers = { ...(sdkOptions.mcpServers as Record<string, unknown> || {}), ...this.mcpServers };
+    }
+
+    // Auto-inject Grackle coordination MCP server if the script is bundled
+    if (existsSync(GRACKLE_MCP_SCRIPT)) {
+      const mcpServers = (sdkOptions.mcpServers || {}) as Record<string, unknown>;
+      if (!mcpServers.grackle) {
+        mcpServers.grackle = {
+          command: "node",
+          args: [GRACKLE_MCP_SCRIPT],
+        };
+        sdkOptions.mcpServers = mcpServers;
+      }
+    }
+
+    // Add MCP tool patterns to allowedTools
+    if (sdkOptions.mcpServers) {
+      const mcpServerNames = Object.keys(sdkOptions.mcpServers as Record<string, unknown>);
+      const mcpTools = mcpServerNames.map(name => `mcp__${name}__*`);
+      (sdkOptions.allowedTools as string[]).push(...mcpTools);
+    }
+
+    if (this.maxTurns > 0) {
+      sdkOptions.maxTurns = this.maxTurns;
+    }
+
+    return sdkOptions;
+  }
+
+  /**
+   * Consume all messages from a query() conversation, pushing events to the queue.
+   * Returns the number of meaningful messages processed.
+   */
+  private async consumeQuery(prompt: string, sdkOptions: Record<string, unknown>): Promise<number> {
+    const query: QueryFn = await getQuery();
+    const ts: () => string = () => new Date().toISOString();
+
+    // Each query gets its own AbortController
+    const abort = new AbortController();
+    this.activeAbort = abort;
+
+    const queryInput: Record<string, unknown> = {
+      prompt,
+      options: { ...sdkOptions, abortController: abort },
+    };
+    const conversation = query(queryInput) as unknown as AsyncIterable<Record<string, unknown>>;
+    let messageCount = 0;
+
+    for await (const msg of conversation) {
+      if (this.killed) {
+        break;
+      }
+
+      // Extract session ID from system init message
+      if (msg.type === "system" && msg.session_id) {
+        this.runtimeSessionId = msg.session_id as string;
+      }
+
+      // Check for result errors (e.g. invalid API key)
+      if (msg.type === "result" && msg.is_error) {
+        const errorMsg = (msg.result as string) || "Claude Code returned an error";
+        this.eventQueue.push({ type: "error", timestamp: ts(), content: errorMsg, raw: msg });
+        continue;
+      }
+
+      const events = mapMessage(msg);
+      for (const event of events) {
+        messageCount++;
+        this.eventQueue.push(event);
+      }
+    }
+
+    return messageCount;
+  }
+
+  /** Core session logic: build options, run initial query, transition to waiting_input. */
+  private async runSession(): Promise<void> {
+    const ts: () => string = () => new Date().toISOString();
+
+    try {
+      const sdkOptions = await this.buildSdkOptions();
+      this.cachedSdkOptions = sdkOptions;
+
+      // For resumed sessions, don't send a new prompt — wait for real input via sendInput().
+      if (this.resumeSessionId) {
+        sdkOptions.resume = this.resumeSessionId;
+        this.eventQueue.push({
+          type: "system",
+          timestamp: ts(),
+          content: `Session resumed (id: ${this.resumeSessionId})`,
+        });
+        this.status = "waiting_input";
+        this.eventQueue.push({ type: "status", timestamp: ts(), content: "waiting_input" });
+        return;
       }
 
       // Build final prompt with system context
@@ -168,119 +322,64 @@ class ClaudeCodeSession implements AgentSession {
         ? `${this.systemContext}\n\n---\n\n${this.prompt}`
         : this.prompt;
 
-      // SDK query() expects { prompt, options: { model, mcpServers, ... } }
-      // Both permissionMode AND allowDangerouslySkipPermissions are needed for full bypass.
-      // Built-in tools must also be in allowedTools explicitly — the SDK treats allowedTools
-      // as a whitelist that overrides permissionMode for tool-level checks.
-      const builtinTools = [
-        "Bash", "Read", "Write", "Edit", "Glob", "Grep",
-        "WebSearch", "WebFetch", "Task", "NotebookEdit",
-      ];
-      const sdkOptions: Record<string, unknown> = {
-        model: this.model,
-        abortController: new AbortController(),
-        permissionMode: "bypassPermissions",
-        allowDangerouslySkipPermissions: true,
-        allowedTools: [...builtinTools],
-        ...(cwd ? { cwd } : {}),
-      };
+      const messageCount = await this.consumeQuery(finalPrompt, sdkOptions);
 
-      // Load MCP server config from env var or SpawnOptions
-      const mcpConfigPath = process.env.GRACKLE_MCP_CONFIG;
-      if (mcpConfigPath && existsSync(mcpConfigPath)) {
-        try {
-          const mcpConfig = JSON.parse(readFileSync(mcpConfigPath, "utf8"));
-          if (mcpConfig.mcpServers) {
-            sdkOptions.mcpServers = mcpConfig.mcpServers;
-          }
-          if (Array.isArray(mcpConfig.disallowedTools)) {
-            sdkOptions.disallowedTools = mcpConfig.disallowedTools;
-          }
-        } catch { /* ignore malformed config */ }
-      }
-      if (this.mcpServers) {
-        sdkOptions.mcpServers = { ...(sdkOptions.mcpServers as Record<string, unknown> || {}), ...this.mcpServers };
-      }
-
-      // Auto-inject Grackle coordination MCP server if the script is bundled
-      if (existsSync(GRACKLE_MCP_SCRIPT)) {
-        const mcpServers = (sdkOptions.mcpServers || {}) as Record<string, unknown>;
-        if (!mcpServers.grackle) {
-          mcpServers.grackle = {
-            command: "node",
-            args: [GRACKLE_MCP_SCRIPT],
-          };
-          sdkOptions.mcpServers = mcpServers;
-        }
-      }
-
-      // Add MCP tool patterns to allowedTools
-      if (sdkOptions.mcpServers) {
-        const mcpServerNames = Object.keys(sdkOptions.mcpServers as Record<string, unknown>);
-        const mcpTools = mcpServerNames.map(name => `mcp__${name}__*`);
-        (sdkOptions.allowedTools as string[]).push(...mcpTools);
-      }
-
-      if (this.maxTurns > 0) {
-        sdkOptions.maxTurns = this.maxTurns;
-      }
-
-      if (this.resumeSessionId) {
-        sdkOptions.sessionId = this.resumeSessionId;
-        sdkOptions.resume = true;
-      }
-
-      // query() returns an async iterable, not a Promise (despite the type signature)
-      const queryInput: Record<string, unknown> = {
-        prompt: finalPrompt,
-        options: sdkOptions,
-      };
-      const conversation = query(queryInput) as unknown as AsyncIterable<Record<string, unknown>>;
-      let messageCount = 0;
-
-      for await (const msg of conversation) {
-        if (this.killed) break;
-
-        // Extract session ID from system init message
-        if (msg.type === "system" && msg.session_id) {
-          this.runtimeSessionId = msg.session_id as string;
-        }
-
-        // Check for result errors (e.g. invalid API key)
-        if (msg.type === "result" && msg.is_error) {
-          const errorMsg = (msg.result as string) || "Claude Code returned an error";
-          yield { type: "error", timestamp: ts(), content: errorMsg, raw: msg };
-          continue;
-        }
-
-        const events = mapMessage(msg);
-        for (const event of events) {
-          messageCount++;
-          yield event;
-        }
+      if (this.killed) {
+        this.eventQueue.close();
+        return;
       }
 
       if (messageCount === 0) {
-        yield { type: "error", timestamp: ts(), content: "Claude Code returned no messages. Is ANTHROPIC_API_KEY set or ~/.claude/.credentials.json mounted?" };
+        this.eventQueue.push({
+          type: "error",
+          timestamp: ts(),
+          content: "Claude Code returned no messages. Is ANTHROPIC_API_KEY set or ~/.claude/.credentials.json mounted?",
+        });
       }
 
-      this.status = "completed";
-      yield { type: "status", timestamp: ts(), content: "completed" };
+      // Session is idle — ready for follow-up input via sendInput().
+      // The queue stays open so sendInput() can push more events.
+      this.status = "waiting_input";
+      this.eventQueue.push({ type: "status", timestamp: ts(), content: "waiting_input" });
     } catch (err) {
       this.status = "failed";
-      yield { type: "error", timestamp: ts(), content: String(err) };
-      yield { type: "status", timestamp: ts(), content: "failed" };
+      this.eventQueue.push({ type: "error", timestamp: ts(), content: String(err) });
+      this.eventQueue.push({ type: "status", timestamp: ts(), content: "failed" });
+      this.eventQueue.close();
     }
   }
 
+  /** Send follow-up input by starting a new resumed query on the same session. */
   public sendInput(text: string): void {
-    this.inputQueue.push(text);
+    if (!this.runtimeSessionId || this.killed || !this.cachedSdkOptions) {
+      return;
+    }
+    const ts: () => string = () => new Date().toISOString();
+    this.status = "running";
+    this.eventQueue.push({ type: "status", timestamp: ts(), content: "running" });
+
+    // Start a new query that resumes the existing session with the user's input as prompt
+    const resumeOptions = { ...this.cachedSdkOptions, resume: this.runtimeSessionId };
+    this.consumeQuery(text, resumeOptions)
+      .then(() => {
+        if (!this.killed) {
+          this.status = "waiting_input";
+          this.eventQueue.push({ type: "status", timestamp: ts(), content: "waiting_input" });
+        }
+      })
+      .catch((err: unknown) => {
+        logger.warn({ err }, "Failed to process follow-up input in Claude Code session");
+        this.eventQueue.push({ type: "error", timestamp: ts(), content: String(err) });
+      });
   }
 
   public kill(): void {
     this.killed = true;
     this.status = "killed";
-    this.inputQueue.close();
+    if (this.activeAbort) {
+      this.activeAbort.abort();
+    }
+    this.eventQueue.close();
   }
 }
 
@@ -302,13 +401,14 @@ export class ClaudeCodeRuntime implements AgentRuntime {
     );
   }
 
+  /** Resume a previously suspended Claude Code session. */
   public resume(opts: ResumeOptions): AgentSession {
     return new ClaudeCodeSession(
       opts.sessionId,
-      "(resumed)",
+      "",
       "",
       0,
-      opts.runtimeSessionId
+      opts.runtimeSessionId,
     );
   }
 }
