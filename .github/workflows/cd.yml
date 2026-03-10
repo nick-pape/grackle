@@ -66,9 +66,7 @@ jobs:
           echo "Found ${#changefiles[@]} changefile(s)"
 
           # Determine the highest bump type across all changefiles.
-          # Priority: major (blocked) > minor > patch > none.
-          # If only "none" changefiles exist, we still default to patch so the
-          # version bump commit consumes them (otherwise they'd accumulate).
+          # Priority: major (blocked) > minor > patch > none (skip).
           if grep -rq '"type":[[:space:]]*"major"' common/changes/; then
             echo "::error::Major version bump found in changefiles — blocked by policy"
             exit 1
@@ -80,9 +78,11 @@ jobs:
           if grep -rq '"type":[[:space:]]*"minor"' common/changes/; then
             highest="minor"
           fi
-          # "none" isn't a valid nextBump value — fall back to patch
+          # All changefiles are "none" — nothing to publish
           if [ "$highest" = "none" ]; then
-            highest="patch"
+            echo "All changefiles are type \"none\", skipping version bump"
+            echo "has_changefiles=false" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
 
           # Consolidate non-mainProject changefiles into the cli directory
