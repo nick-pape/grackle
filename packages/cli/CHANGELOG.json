@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.0.6",
+      "tag": "@grackle-ai/cli_v0.0.6",
+      "date": "Tue, 10 Mar 2026 06:01:07 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Publish @grackle-ai/web and bundle it with the server so the web UI is available out of the box."
+          }
+        ]
+      }
+    },
+    {
       "version": "0.0.5",
       "tag": "@grackle-ai/cli_v0.0.5",
       "date": "Tue, 10 Mar 2026 02:21:30 GMT",
