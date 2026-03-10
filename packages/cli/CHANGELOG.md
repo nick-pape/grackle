@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Tue, 10 Mar 2026 18:09:01 GMT and should not be manually modified.
+This log was last generated on Tue, 10 Mar 2026 20:25:56 GMT and should not be manually modified.
+
+## 0.13.0
+Tue, 10 Mar 2026 20:25:56 GMT
+
+### Minor changes
+
+- Add interactive DAG visualization for task dependency graphs
 
 ## 0.12.0
 Tue, 10 Mar 2026 18:09:01 GMT
