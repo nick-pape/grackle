@@ -44,6 +44,29 @@ enum EventType {
   EVENT_TYPE_ERROR = 4;
   EVENT_TYPE_STATUS = 5;
   EVENT_TYPE_SYSTEM = 6;
+  EVENT_TYPE_FINDING = 7;
+}
+
+enum TaskStatus {
+  TASK_STATUS_UNSPECIFIED = 0;
+  TASK_STATUS_PENDING = 1;
+  TASK_STATUS_ASSIGNED = 2;
+  TASK_STATUS_IN_PROGRESS = 3;
+  TASK_STATUS_REVIEW = 4;
+  TASK_STATUS_DONE = 5;
+  TASK_STATUS_FAILED = 6;
+}
+
+enum ProjectStatus {
+  PROJECT_STATUS_UNSPECIFIED = 0;
+  PROJECT_STATUS_ACTIVE = 1;
+  PROJECT_STATUS_ARCHIVED = 2;
+}
+
+enum TokenType {
+  TOKEN_TYPE_UNSPECIFIED = 0;
+  TOKEN_TYPE_ENV_VAR = 1;
+  TOKEN_TYPE_FILE = 2;
 }
 
 // ─── Environment ────────────────────────────────────────────
@@ -55,7 +78,7 @@ message Environment {
   string adapter_config = 4;     // JSON
   string default_runtime = 5;
   bool bootstrapped = 6;
-  string status = 7;
+  EnvironmentStatus status = 7;
   string last_seen = 8;
   string env_info = 9;           // JSON from PowerLine GetInfo
   string created_at = 10;
@@ -87,7 +110,7 @@ message Session {
   string runtime_session_id = 4;
   string prompt = 5;
   string model = 6;
-  string status = 7;
+  SessionStatus status = 7;
   string log_path = 8;
   int32 turns = 9;
   string started_at = 10;
@@ -102,7 +125,7 @@ message SessionList {
 
 message SessionFilter {
   string environment_id = 1;     // empty = all
-  string status = 2;             // empty = all
+  SessionStatus status = 2;      // UNSPECIFIED = all
 }
 
 message SpawnRequest {
@@ -128,7 +151,7 @@ message InputMessage {
 
 message SessionEvent {
   string session_id = 1;
-  string type = 2;               // "text" | "tool_use" | "tool_result" | "error" | "status" | "system" | "finding"
+  EventType type = 2;
   string timestamp = 3;
   string content = 4;
   string raw = 5;                // JSON, optional original payload
@@ -138,7 +161,7 @@ message SessionEvent {
 
 message TokenEntry {
   string name = 1;
-  string type = 2;
+  TokenType type = 2;
   string env_var = 3;
   string file_path = 4;
   string value = 5;
@@ -151,7 +174,7 @@ message TokenList {
 
 message TokenInfo {
   string name = 1;
-  string type = 2;
+  TokenType type = 2;
   string env_var = 3;
   string file_path = 4;
   string expires_at = 5;
@@ -170,7 +193,7 @@ message Project {
   string description = 3;
   string repo_url = 4;
   string default_environment_id = 5;
-  string status = 6;
+  ProjectStatus status = 6;
   string created_at = 7;
   string updated_at = 8;
 }
@@ -197,7 +220,7 @@ message Task {
   string project_id = 2;
   string title = 3;
   string description = 4;
-  string status = 5;
+  TaskStatus status = 5;
   string branch = 6;
   string environment_id = 7;
   string session_id = 8;
@@ -231,7 +254,7 @@ message UpdateTaskRequest {
   string id = 1;
   string title = 2;
   string description = 3;
-  string status = 4;
+  TaskStatus status = 4;
   string environment_id = 5;
   repeated string depends_on = 6;
   string review_notes = 7;

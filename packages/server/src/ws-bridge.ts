@@ -14,7 +14,10 @@ import * as taskStore from "./task-store.js";
 import * as findingStore from "./finding-store.js";
 import { v4 as uuid } from "uuid";
 import { join } from "node:path";
-import { LOGS_DIR, DEFAULT_RUNTIME, DEFAULT_MODEL } from "@grackle-ai/common";
+import {
+  LOGS_DIR, DEFAULT_RUNTIME, DEFAULT_MODEL,
+  eventTypeToString, agentEventTypeToEventType,
+} from "@grackle-ai/common";
 import { grackleHome } from "./paths.js";
 import * as logWriter from "./log-writer.js";
 import { writeTranscript } from "./transcript.js";
@@ -263,7 +266,7 @@ async function handleMessage(
             type: "session_event",
             payload: {
               sessionId: event.sessionId,
-              eventType: event.type,
+              eventType: eventTypeToString(event.type),
               timestamp: event.timestamp,
               content: event.content,
             },
@@ -291,7 +294,7 @@ async function handleMessage(
             type: "session_event",
             payload: {
               sessionId: event.sessionId,
-              eventType: event.type,
+              eventType: eventTypeToString(event.type),
               timestamp: event.timestamp,
               content: event.content,
             },
@@ -355,7 +358,7 @@ async function handleMessage(
           for await (const event of conn.client.spawn(powerlineReq)) {
             const sessionEvent = create(grackle.SessionEventSchema, {
               sessionId,
-              type: event.type,
+              type: agentEventTypeToEventType(event.type),
               timestamp: event.timestamp,
               content: event.content,
               raw: event.raw,
@@ -363,7 +366,7 @@ async function handleMessage(
             logWriter.writeEvent(logPath, sessionEvent);
             streamHub.publish(sessionEvent);
 
-            if (event.type === "status") {
+            if (event.type === powerline.AgentEventType.STATUS) {
               if (event.content === "waiting_input") {
                 sessionStore.updateSessionStatus(sessionId, "waiting_input");
               } else if (event.content === "running") {
@@ -450,7 +453,7 @@ async function handleMessage(
       sessionStore.updateSession(sessionId, "killed");
       streamHub.publish(create(grackle.SessionEventSchema, {
         sessionId,
-        type: "status",
+        type: grackle.EventType.STATUS,
         timestamp: new Date().toISOString(),
         content: "killed",
         raw: "",
@@ -632,7 +635,7 @@ async function handleMessage(
           for await (const event of conn.client.spawn(powerlineReq)) {
             const sessionEvent = create(grackle.SessionEventSchema, {
               sessionId,
-              type: event.type,
+              type: agentEventTypeToEventType(event.type),
               timestamp: event.timestamp,
               content: event.content,
               raw: event.raw,
@@ -641,7 +644,7 @@ async function handleMessage(
             streamHub.publish(sessionEvent);
 
             // Intercept finding events and store + broadcast them
-            if (event.type === "finding" && task.projectId) {
+            if (event.type === powerline.AgentEventType.FINDING && task.projectId) {
               try {
                 const data = JSON.parse(event.content);
                 const findingId = uuid();
@@ -657,7 +660,7 @@ async function handleMessage(
               }
             }
 
-            if (event.type === "status") {
+            if (event.type === powerline.AgentEventType.STATUS) {
               if (event.content === "waiting_input") {
                 sessionStore.updateSessionStatus(sessionId, "waiting_input");
               } else if (event.content === "running") {

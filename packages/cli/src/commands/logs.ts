@@ -1,5 +1,6 @@
 import type { Command } from "commander";
 import { createGrackleClient } from "../client.js";
+import { grackle, eventTypeToString } from "@grackle-ai/common";
 
 /** Register the `logs` command for viewing session logs, transcripts, and live tailing. */
 export function registerLogCommands(program: Command): void {
@@ -16,13 +17,13 @@ export function registerLogCommands(program: Command): void {
         console.log(`Streaming session ${sessionId}...\n`);
         for await (const event of client.streamSession({ id: sessionId })) {
           const time = new Date(event.timestamp).toLocaleTimeString();
-          console.log(`[${time}] ${event.type}: ${event.content}`);
+          console.log(`[${time}] ${eventTypeToString(event.type)}: ${event.content}`);
         }
         return;
       }
 
       // Get session info for log path
-      const sessions = await client.listSessions({ environmentId: "", status: "" });
+      const sessions = await client.listSessions({ environmentId: "", status: grackle.SessionStatus.UNSPECIFIED });
       const session = sessions.sessions.find((s) => s.id === sessionId || s.id.startsWith(sessionId));
 
       if (!session) {

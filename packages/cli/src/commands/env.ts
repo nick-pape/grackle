@@ -1,7 +1,7 @@
 import type { Command } from "commander";
 import chalk from "chalk";
 import { createGrackleClient } from "../client.js";
-import type { AdapterType } from "@grackle-ai/common";
+import { grackle, environmentStatusToString, type AdapterType } from "@grackle-ai/common";
 import Table from "cli-table3";
 
 /** Register environment management commands: `env list`, `add`, `provision`, `stop`, `destroy`, `remove`, `wake`. */
@@ -22,10 +22,11 @@ export function registerEnvCommands(program: Command): void {
         head: ["ID", "Type", "Runtime", "Status", "Bootstrapped"],
       });
       for (const e of res.environments) {
-        const status = e.status === "connected" ? chalk.green("●") + " " + e.status :
-                       e.status === "sleeping" ? chalk.yellow("●") + " " + e.status :
-                       e.status === "error" ? chalk.red("●") + " " + e.status :
-                       chalk.gray("●") + " " + e.status;
+        const statusStr = environmentStatusToString(e.status);
+        const status = e.status === grackle.EnvironmentStatus.CONNECTED ? chalk.green("●") + " " + statusStr :
+                       e.status === grackle.EnvironmentStatus.SLEEPING ? chalk.yellow("●") + " " + statusStr :
+                       e.status === grackle.EnvironmentStatus.ERROR ? chalk.red("●") + " " + statusStr :
+                       chalk.gray("●") + " " + statusStr;
         table.push([e.id, e.adapterType, e.defaultRuntime, status, e.bootstrapped ? "yes" : "no"]);
       }
       console.log(table.toString());

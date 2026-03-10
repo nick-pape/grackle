@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package grackle.powerline;
 
+import "grackle/grackle.proto";
+
 // ─── Enums ──────────────────────────────────────────────────
 
 enum AgentEventType {
@@ -12,12 +14,7 @@ enum AgentEventType {
   AGENT_EVENT_TYPE_ERROR = 4;
   AGENT_EVENT_TYPE_STATUS = 5;
   AGENT_EVENT_TYPE_SYSTEM = 6;
-}
-
-enum TokenType {
-  TOKEN_TYPE_UNSPECIFIED = 0;
-  TOKEN_TYPE_ENV_VAR = 1;
-  TOKEN_TYPE_FILE = 2;
+  AGENT_EVENT_TYPE_FINDING = 7;
 }
 
 // ─── Types ──────────────────────────────────────────────────
@@ -66,7 +63,7 @@ message InputMessage {
 
 message AgentEvent {
   string session_id = 1;
-  string type = 2;
+  AgentEventType type = 2;
   string timestamp = 3;
   string content = 4;
   string raw = 5;                // JSON, optional
@@ -75,7 +72,7 @@ message AgentEvent {
 message SessionInfo {
   string session_id = 1;
   string runtime = 2;
-  string status = 3;
+  grackle.SessionStatus status = 3;
 }
 
 message SessionList {
@@ -86,7 +83,7 @@ message SessionList {
 
 message TokenItem {
   string name = 1;
-  string type = 2;
+  grackle.TokenType type = 2;
   string env_var = 3;
   string file_path = 4;
   string value = 5;
