@@ -12,7 +12,7 @@ test.describe("Add Environment — UI Form", () => {
     await page.locator('button[title="Add environment"]').click();
 
     // UnifiedBar should show the "new env" badge and form elements
-    await expect(page.locator("text=new env")).toBeVisible();
+    await expect(page.getByText("new env", { exact: true })).toBeVisible();
     await expect(page.locator('input[placeholder="Environment name..."]')).toBeVisible();
     await expect(page.locator("button", { hasText: "Add" })).toBeVisible();
   });
