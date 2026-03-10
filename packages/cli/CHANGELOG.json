@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.11.2",
+      "tag": "@grackle-ai/cli_v0.11.2",
+      "date": "Tue, 10 Mar 2026 15:57:59 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Extract shared runtime utilities and BaseAgentRuntime to deduplicate PowerLine runtimes"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.11.1",
       "tag": "@grackle-ai/cli_v0.11.1",
       "date": "Tue, 10 Mar 2026 14:35:26 GMT",
