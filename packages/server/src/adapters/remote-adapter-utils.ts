@@ -159,8 +159,13 @@ export abstract class ProcessTunnel implements RemoteTunnel {
       logger.debug({ stderr: data.toString() }, "Tunnel stderr");
     });
 
-    // Wait for the local port to become reachable
-    await waitForLocalPort(this.localPort);
+    // Wait for the local port to become reachable. Kill the process if it fails.
+    try {
+      await waitForLocalPort(this.localPort);
+    } catch (err) {
+      await this.close();
+      throw err;
+    }
   }
 
   /** Close the tunnel by killing the background process. */

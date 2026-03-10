@@ -1,8 +1,6 @@
 name: CI
 
 on:
-  push:
-    branches: [main]
   pull_request:
 
 jobs:
@@ -23,8 +21,14 @@ jobs:
         run: node common/scripts/install-run-rush.js install
 
       - name: Verify change logs
-        if: github.event_name == 'pull_request'
         run: node common/scripts/install-run-rush.js change --verify
+
+      - name: Block major version bumps
+        run: |
+          if grep -r '"type": "major"' common/changes/ 2>/dev/null; then
+            echo "::error::Major version bumps are blocked. Use patch or minor."
+            exit 1
+          fi
 
       - name: Rush build
         run: node common/scripts/install-run-rush.js build
