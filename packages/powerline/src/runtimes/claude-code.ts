@@ -1,9 +1,7 @@
-import type { AgentRuntime, AgentSession, AgentEvent, SpawnOptions, ResumeOptions } from "./runtime.js";
-import type { SessionStatus } from "@grackle-ai/common";
-import { AsyncQueue } from "../utils/async-queue.js";
+import type { AgentRuntime, AgentEvent, SpawnOptions, ResumeOptions } from "./runtime.js";
+import { BaseAgentSession } from "./base-session.js";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { ensureWorktree } from "../worktree.js";
-import { logger } from "../logger.js";
 
 // Dynamic import — try @anthropic-ai/claude-agent-sdk first, then @anthropic-ai/claude-code
 type QueryFn = (opts: Record<string, unknown>) => Promise<unknown>;
@@ -105,74 +103,25 @@ const BUILTIN_TOOLS: string[] = [
   "WebSearch", "WebFetch", "Task", "NotebookEdit",
 ];
 
-class ClaudeCodeSession implements AgentSession {
-  public id: string;
+/** Agent session backed by the Claude Agent SDK (`@anthropic-ai/claude-agent-sdk`). */
+class ClaudeCodeSession extends BaseAgentSession {
   public runtimeName: string = "claude-code";
-  public runtimeSessionId: string;
-  public status: SessionStatus = "running";
+  protected readonly runtimeDisplayName: string = "Claude Code";
+  protected readonly noMessagesError: string =
+    "Claude Code returned no messages. Is ANTHROPIC_API_KEY set or ~/.claude/.credentials.json mounted?";
 
-  private eventQueue: AsyncQueue<AgentEvent> = new AsyncQueue<AgentEvent>();
-  private killed: boolean = false;
-  private prompt: string;
-  private model: string;
-  private maxTurns: number;
-  private resumeSessionId?: string;
-  private branch?: string;
-  private worktreeBasePath?: string;
-  private systemContext?: string;
-  private mcpServers?: Record<string, unknown>;
   /** The active AbortController for the current query(), used to cancel on kill. */
   private activeAbort?: AbortController;
-  /** Cached SDK options built once during runSession(), reused for follow-up queries. */
+  /** Cached SDK options built once during setupSdk(), reused for follow-up queries. */
   private cachedSdkOptions?: Record<string, unknown>;
 
-  public constructor(
-    id: string,
-    prompt: string,
-    model: string,
-    maxTurns: number,
-    resumeSessionId?: string,
-    branch?: string,
-    worktreeBasePath?: string,
-    systemContext?: string,
-    mcpServers?: Record<string, unknown>,
-  ) {
-    this.id = id;
-    this.prompt = prompt;
-    this.model = model;
-    this.maxTurns = maxTurns;
-    this.resumeSessionId = resumeSessionId;
-    this.branch = branch;
-    this.worktreeBasePath = worktreeBasePath;
-    this.systemContext = systemContext;
-    this.mcpServers = mcpServers;
-    this.runtimeSessionId = resumeSessionId || "";
-  }
+  // ─── BaseAgentSession hooks ──────────────────────────────
 
-  public async *stream(): AsyncIterable<AgentEvent> {
+  protected async setupSdk(): Promise<void> {
     const ts: () => string = () => new Date().toISOString();
 
-    yield { type: "system", timestamp: ts(), content: "Starting Claude Code runtime..." };
-
-    // Drive the session in the background; events are pushed to the queue
-    // and yielded from this generator.
-    this.runSession().catch((err) => {
-      this.eventQueue.push({ type: "error", timestamp: ts(), content: String(err) });
-      this.eventQueue.push({ type: "status", timestamp: ts(), content: "failed" });
-      this.status = "failed";
-      this.eventQueue.close();
-    });
-
-    for await (const event of this.eventQueue) {
-      yield event;
-    }
-  }
-
-  /** Build the SDK options object. Called once during initial setup, cached for follow-ups. */
-  private async buildSdkOptions(): Promise<Record<string, unknown>> {
     // Determine cwd: worktree > /workspace > default
     let cwd: string | undefined;
-    const ts: () => string = () => new Date().toISOString();
 
     if (this.branch && this.worktreeBasePath) {
       try {
@@ -247,8 +196,37 @@ class ClaudeCodeSession implements AgentSession {
       sdkOptions.maxTurns = this.maxTurns;
     }
 
-    return sdkOptions;
+    this.cachedSdkOptions = sdkOptions;
   }
+
+  protected async setupForResume(): Promise<void> {
+    this.eventQueue.push({
+      type: "system",
+      timestamp: new Date().toISOString(),
+      content: `Session resumed (id: ${this.resumeSessionId})`,
+    });
+  }
+
+  protected async runInitialQuery(prompt: string): Promise<number> {
+    return this.consumeQuery(prompt, this.cachedSdkOptions!);
+  }
+
+  protected async executeFollowUp(text: string): Promise<void> {
+    const resumeOptions = { ...this.cachedSdkOptions!, resume: this.runtimeSessionId };
+    await this.consumeQuery(text, resumeOptions);
+  }
+
+  protected canAcceptInput(): boolean {
+    return !!this.runtimeSessionId && !!this.cachedSdkOptions;
+  }
+
+  protected abortActive(): void {
+    if (this.activeAbort) {
+      this.activeAbort.abort();
+    }
+  }
+
+  // ─── Claude-specific internals ───────────────────────────
 
   /**
    * Consume all messages from a query() conversation, pushing events to the queue.
@@ -295,99 +273,13 @@ class ClaudeCodeSession implements AgentSession {
 
     return messageCount;
   }
-
-  /** Core session logic: build options, run initial query, transition to waiting_input. */
-  private async runSession(): Promise<void> {
-    const ts: () => string = () => new Date().toISOString();
-
-    try {
-      const sdkOptions = await this.buildSdkOptions();
-      this.cachedSdkOptions = sdkOptions;
-
-      // For resumed sessions, don't send a new prompt — wait for real input via sendInput().
-      // The resume option is set per-query in sendInput(), not on the cached options.
-      if (this.resumeSessionId) {
-        this.eventQueue.push({
-          type: "system",
-          timestamp: ts(),
-          content: `Session resumed (id: ${this.resumeSessionId})`,
-        });
-        this.status = "waiting_input";
-        this.eventQueue.push({ type: "status", timestamp: ts(), content: "waiting_input" });
-        return;
-      }
-
-      // Build final prompt with system context
-      const finalPrompt = this.systemContext
-        ? `${this.systemContext}\n\n---\n\n${this.prompt}`
-        : this.prompt;
-
-      const messageCount = await this.consumeQuery(finalPrompt, sdkOptions);
-
-      if (this.killed) {
-        this.eventQueue.close();
-        return;
-      }
-
-      if (messageCount === 0) {
-        this.eventQueue.push({
-          type: "error",
-          timestamp: ts(),
-          content: "Claude Code returned no messages. Is ANTHROPIC_API_KEY set or ~/.claude/.credentials.json mounted?",
-        });
-      }
-
-      // Session is idle — ready for follow-up input via sendInput().
-      // The queue stays open so sendInput() can push more events.
-      this.status = "waiting_input";
-      this.eventQueue.push({ type: "status", timestamp: ts(), content: "waiting_input" });
-    } catch (err) {
-      this.status = "failed";
-      this.eventQueue.push({ type: "error", timestamp: ts(), content: String(err) });
-      this.eventQueue.push({ type: "status", timestamp: ts(), content: "failed" });
-      this.eventQueue.close();
-    }
-  }
-
-  /** Send follow-up input by starting a new resumed query on the same session. */
-  public sendInput(text: string): void {
-    if (!this.runtimeSessionId || this.killed || !this.cachedSdkOptions) {
-      return;
-    }
-    const ts: () => string = () => new Date().toISOString();
-    this.status = "running";
-    this.eventQueue.push({ type: "status", timestamp: ts(), content: "running" });
-
-    // Start a new query that resumes the existing session with the user's input as prompt
-    const resumeOptions = { ...this.cachedSdkOptions, resume: this.runtimeSessionId };
-    this.consumeQuery(text, resumeOptions)
-      .then(() => {
-        if (!this.killed) {
-          this.status = "waiting_input";
-          this.eventQueue.push({ type: "status", timestamp: ts(), content: "waiting_input" });
-        }
-      })
-      .catch((err: unknown) => {
-        logger.warn({ err }, "Failed to process follow-up input in Claude Code session");
-        this.eventQueue.push({ type: "error", timestamp: ts(), content: String(err) });
-      });
-  }
-
-  public kill(): void {
-    this.killed = true;
-    this.status = "killed";
-    if (this.activeAbort) {
-      this.activeAbort.abort();
-    }
-    this.eventQueue.close();
-  }
 }
 
 /** Runtime that delegates to the Claude Code SDK (`@anthropic-ai/claude-agent-sdk`). */
 export class ClaudeCodeRuntime implements AgentRuntime {
   public name: string = "claude-code";
 
-  public spawn(opts: SpawnOptions): AgentSession {
+  public spawn(opts: SpawnOptions): ClaudeCodeSession {
     return new ClaudeCodeSession(
       opts.sessionId,
       opts.prompt,
@@ -402,7 +294,7 @@ export class ClaudeCodeRuntime implements AgentRuntime {
   }
 
   /** Resume a previously suspended Claude Code session. */
-  public resume(opts: ResumeOptions): AgentSession {
+  public resume(opts: ResumeOptions): ClaudeCodeSession {
     return new ClaudeCodeSession(
       opts.sessionId,
       "",
