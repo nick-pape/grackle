@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.7.0",
+      "tag": "@grackle-ai/cli_v0.7.0",
+      "date": "Tue, 10 Mar 2026 07:31:32 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Fix Codex runtime: sendInput race condition, resume sends junk prompt, resource leak on kill, disallowedTools ignored"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.6.0",
       "tag": "@grackle-ai/cli_v0.6.0",
       "date": "Tue, 10 Mar 2026 07:13:31 GMT",

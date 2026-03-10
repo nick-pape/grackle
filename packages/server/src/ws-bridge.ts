@@ -8,6 +8,7 @@ import * as sessionStore from "./session-store.js";
 import * as adapterManager from "./adapter-manager.js";
 import type { PowerLineConnection } from "./adapters/adapter.js";
 import * as streamHub from "./stream-hub.js";
+import * as tokenBroker from "./token-broker.js";
 import * as projectStore from "./project-store.js";
 import * as taskStore from "./task-store.js";
 import * as findingStore from "./finding-store.js";
@@ -968,6 +969,55 @@ async function handleMessage(
       logger.info({ environmentId }, "Environment removed");
       broadcast({ type: "environment_removed", payload: { environmentId } });
       broadcastEnvironments();
+      break;
+    }
+
+    // ─── Tokens ───────────────────────────────────────────
+
+    case "list_tokens": {
+      const items = tokenBroker.listTokens();
+      sendWs(ws, {
+        type: "tokens",
+        payload: {
+          tokens: items.map((t) => ({
+            name: t.name,
+            tokenType: t.type,
+            envVar: t.envVar || "",
+            filePath: t.filePath || "",
+            expiresAt: t.expiresAt || "",
+          })),
+        },
+      });
+      break;
+    }
+
+    case "set_token": {
+      const name = msg.payload?.name as string;
+      const value = msg.payload?.value as string;
+      if (!name || !value) {
+        sendWs(ws, { type: "error", payload: { message: "name and value required" } });
+        return;
+      }
+      await tokenBroker.setToken({
+        name,
+        type: (msg.payload?.tokenType as string) || "env_var",
+        envVar: (msg.payload?.envVar as string) || "",
+        filePath: (msg.payload?.filePath as string) || "",
+        value,
+        expiresAt: (msg.payload?.expiresAt as string) || "",
+      });
+      broadcast({ type: "token_changed" });
+      break;
+    }
+
+    case "delete_token": {
+      const tokenName = msg.payload?.name as string;
+      if (!tokenName) {
+        sendWs(ws, { type: "error", payload: { message: "name required" } });
+        return;
+      }
+      await tokenBroker.deleteToken(tokenName);
+      broadcast({ type: "token_changed" });
       break;
     }
   }

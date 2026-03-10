@@ -476,6 +476,11 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       });
     },
 
+    async deleteToken(req: grackle.TokenName) {
+      await tokenBroker.deleteToken(req.name);
+      return create(grackle.EmptySchema, {});
+    },
+
     // ─── Projects ────────────────────────────────────────────
 
     async listProjects() {

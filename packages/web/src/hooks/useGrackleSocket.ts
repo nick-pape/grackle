@@ -62,6 +62,14 @@ export interface FindingData {
   createdAt: string;
 }
 
+export interface TokenInfo {
+  name: string;
+  tokenType: string;
+  envVar: string;
+  filePath: string;
+  expiresAt: string;
+}
+
 export interface TaskDiffData {
   taskId: string;
   branch?: string;
@@ -106,6 +114,7 @@ export interface UseGrackleSocketResult {
   projects: Project[];
   tasks: TaskData[];
   findings: FindingData[];
+  tokens: TokenInfo[];
   taskDiff: TaskDiffData | undefined;
   spawn: (
     environmentId: string,
@@ -152,6 +161,15 @@ export interface UseGrackleSocketResult {
     adapterConfig?: Record<string, unknown>,
     defaultRuntime?: string,
   ) => void;
+  loadTokens: () => void;
+  setToken: (
+    name: string,
+    value: string,
+    tokenType: string,
+    envVar: string,
+    filePath: string,
+  ) => void;
+  deleteToken: (name: string) => void;
   provisionStatus: Record<string, ProvisionStatus>;
   provisionEnvironment: (environmentId: string) => void;
   stopEnvironment: (environmentId: string) => void;
@@ -178,6 +196,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
   const [projects, setProjects] = useState<Project[]>([]);
   const [tasks, setTasks] = useState<TaskData[]>([]);
   const [findings, setFindings] = useState<FindingData[]>([]);
+  const [tokens, setTokens] = useState<TokenInfo[]>([]);
   const [taskDiff, setTaskDiff] = useState<TaskDiffData | undefined>(undefined);
   const [provisionStatus, setProvisionStatus] = useState<Record<string, ProvisionStatus>>({});
 
@@ -201,6 +220,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
         send({ type: "list_environments" });
         send({ type: "list_sessions" });
         send({ type: "list_projects" });
+        send({ type: "list_tokens" });
         send({ type: "subscribe_all" });
         // Periodically refresh environments to catch CLI-driven changes
         clearInterval(envPollTimer);
@@ -345,6 +365,12 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
               });
             }
             break;
+          case "tokens":
+            setTokens((msg.payload?.tokens as TokenInfo[]) || []);
+            break;
+          case "token_changed":
+            send({ type: "list_tokens" });
+            break;
           case "task_diff":
             setTaskDiff(msg.payload as unknown as TaskDiffData);
             break;
@@ -450,6 +476,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
     send({ type: "list_environments" });
     send({ type: "list_sessions" });
     send({ type: "list_projects" });
+    send({ type: "list_tokens" });
   }, [send]);
 
   const loadSessionEvents = useCallback(
@@ -595,6 +622,35 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
     [send],
   );
 
+  // ─── Token methods ──────────────────────────────────
+
+  const loadTokens = useCallback(() => {
+    send({ type: "list_tokens" });
+  }, [send]);
+
+  const setToken = useCallback(
+    (
+      name: string,
+      value: string,
+      tokenType: string,
+      envVar: string,
+      filePath: string,
+    ) => {
+      send({
+        type: "set_token",
+        payload: { name, value, tokenType, envVar, filePath },
+      });
+    },
+    [send],
+  );
+
+  const deleteToken = useCallback(
+    (name: string) => {
+      send({ type: "delete_token", payload: { name } });
+    },
+    [send],
+  );
+
   // ─── Environment lifecycle methods ────────────────
 
   const addEnvironment = useCallback(
@@ -647,6 +703,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
     projects,
     tasks,
     findings,
+    tokens,
     taskDiff,
     spawn,
     sendInput,
@@ -666,6 +723,9 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
     postFinding,
     loadTaskDiff,
     addEnvironment,
+    loadTokens,
+    setToken,
+    deleteToken,
     provisionStatus,
     provisionEnvironment,
     stopEnvironment,

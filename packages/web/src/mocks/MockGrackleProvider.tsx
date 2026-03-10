@@ -27,6 +27,7 @@ import type {
   TaskData,
   TaskDiffData,
   Project,
+  TokenInfo,
 } from "../hooks/useGrackleSocket.js";
 import {
   MOCK_ENVIRONMENTS,
@@ -35,6 +36,7 @@ import {
   MOCK_PROJECTS,
   MOCK_TASKS,
   MOCK_FINDINGS,
+  MOCK_TOKENS,
   MOCK_TASK_DIFF,
   MOCK_STREAM_SCENARIOS,
   type MockStreamStep,
@@ -69,6 +71,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
   const [projects, setProjects] = useState<Project[]>(MOCK_PROJECTS);
   const [tasks, setTasks] = useState<TaskData[]>(MOCK_TASKS);
   const [findings, setFindings] = useState<FindingData[]>(MOCK_FINDINGS);
+  const [tokens, setTokens] = useState<TokenInfo[]>(MOCK_TOKENS);
   const [taskDiff, setTaskDiff] = useState<TaskDiffData | undefined>(MOCK_TASK_DIFF);
 
   // ── Refs ──────────────────────────────────────────
@@ -718,6 +721,37 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
     [],
   );
 
+  // ── Token methods ──────────────────────────────────
+
+  /** No-op — tokens are already in state from initial load. */
+  const loadTokens: UseGrackleSocketResult["loadTokens"] = useCallback(() => {
+    // eslint-disable-next-line no-console
+    console.log("[MockGrackle] loadTokens");
+  }, []);
+
+  /** Adds or replaces a token in state. */
+  const mockSetToken: UseGrackleSocketResult["setToken"] = useCallback(
+    (name: string, _value: string, tokenType: string, envVar: string, filePath: string) => {
+      // eslint-disable-next-line no-console
+      console.log("[MockGrackle] setToken", { name, tokenType });
+      setTokens((prev) => {
+        const without = prev.filter((t) => t.name !== name);
+        return [...without, { name, tokenType, envVar, filePath, expiresAt: "" }];
+      });
+    },
+    [],
+  );
+
+  /** Removes a token from state. */
+  const mockDeleteToken: UseGrackleSocketResult["deleteToken"] = useCallback(
+    (name: string) => {
+      // eslint-disable-next-line no-console
+      console.log("[MockGrackle] deleteToken", name);
+      setTokens((prev) => prev.filter((t) => t.name !== name));
+    },
+    [],
+  );
+
   // ── Cleanup ───────────────────────────────────────
 
   useEffect(() => {
@@ -740,6 +774,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       projects,
       tasks,
       findings,
+      tokens,
       taskDiff,
 
       // Actions
@@ -761,6 +796,9 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       postFinding,
       loadTaskDiff,
       addEnvironment,
+      loadTokens,
+      setToken: mockSetToken,
+      deleteToken: mockDeleteToken,
       provisionStatus: {},
       provisionEnvironment: () => {},
       stopEnvironment: () => {},
@@ -773,6 +811,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       projects,
       tasks,
       findings,
+      tokens,
       taskDiff,
       spawn,
       sendInput,
@@ -792,6 +831,9 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       postFinding,
       loadTaskDiff,
       addEnvironment,
+      loadTokens,
+      mockSetToken,
+      mockDeleteToken,
     ],
   );
 
