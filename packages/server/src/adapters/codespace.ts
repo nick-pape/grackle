@@ -9,13 +9,13 @@ import {
   getTunnel,
   closeTunnel,
   findFreePort,
-  buildRemoteKillCommand,
+  remoteStop,
+  remoteDestroy,
+  remoteHealthCheck,
   SSH_CONNECTIVITY_TIMEOUT_MS,
   REMOTE_EXEC_DEFAULT_TIMEOUT_MS,
-  REMOTE_POWERLINE_DIRECTORY,
 } from "./remote-adapter-utils.js";
 import { exec } from "../utils/exec.js";
-import { logger } from "../logger.js";
 
 const REMOTE_COPY_TIMEOUT_MS: number = 120_000;
 
@@ -145,14 +145,7 @@ export class CodespaceAdapter implements EnvironmentAdapter {
   /** Stop the remote PowerLine process and close the tunnel. */
   public async stop(environmentId: string, config: Record<string, unknown>): Promise<void> {
     const cfg = config as unknown as CodespaceEnvironmentConfig;
-    const executor = new CodespaceExecutor(cfg.codespaceName);
-
-    try {
-      await executor.exec(buildRemoteKillCommand());
-    } catch (err) {
-      logger.debug({ environmentId, err }, "Failed to kill remote PowerLine (may already be stopped)");
-    }
-    await closeTunnel(environmentId);
+    await remoteStop(environmentId, new CodespaceExecutor(cfg.codespaceName));
   }
 
   /**
@@ -161,32 +154,11 @@ export class CodespaceAdapter implements EnvironmentAdapter {
    */
   public async destroy(environmentId: string, config: Record<string, unknown>): Promise<void> {
     const cfg = config as unknown as CodespaceEnvironmentConfig;
-    const executor = new CodespaceExecutor(cfg.codespaceName);
-
-    try {
-      await executor.exec(
-        `${buildRemoteKillCommand()}; `
-        + 'CRED="$HOME/.claude/.credentials.json"; '
-        + `if [ -L "$CRED" ]; then case "$(readlink "$CRED" 2>/dev/null)" in ${REMOTE_POWERLINE_DIRECTORY}/*) rm -f "$CRED";; esac; fi; `
-        + `rm -rf ${REMOTE_POWERLINE_DIRECTORY}`,
-      );
-    } catch (err) {
-      logger.debug({ environmentId, err }, "Failed to clean up remote PowerLine artifacts");
-    }
-    await closeTunnel(environmentId);
+    await remoteDestroy(environmentId, new CodespaceExecutor(cfg.codespaceName));
   }
 
   /** Check that the tunnel is alive and the PowerLine responds to a ping. */
   public async healthCheck(connection: PowerLineConnection): Promise<boolean> {
-    const state = getTunnel(connection.environmentId);
-    if (!state || !state.tunnel.isAlive()) {
-      return false;
-    }
-    try {
-      await connection.client.ping({});
-      return true;
-    } catch {
-      return false;
-    }
+    return remoteHealthCheck(connection);
   }
 }
