@@ -370,6 +370,11 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
         const projectTasks = prev.filter((t) => t.projectId === projectId);
         const maxSort = projectTasks.reduce((max, t) => Math.max(max, t.sortOrder), 0);
         const parent = parentTaskId ? prev.find((t) => t.id === parentTaskId) : undefined;
+        if (parentTaskId && !parent) {
+          // eslint-disable-next-line no-console
+          console.warn("[MockGrackle] Parent task not found:", parentTaskId);
+          return prev;
+        }
         if (parent && !parent.canDecompose) {
           // eslint-disable-next-line no-console
           console.warn("[MockGrackle] Parent task does not have decomposition rights:", parentTaskId);
