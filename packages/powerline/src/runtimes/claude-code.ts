@@ -305,8 +305,8 @@ class ClaudeCodeSession implements AgentSession {
       this.cachedSdkOptions = sdkOptions;
 
       // For resumed sessions, don't send a new prompt — wait for real input via sendInput().
+      // The resume option is set per-query in sendInput(), not on the cached options.
       if (this.resumeSessionId) {
-        sdkOptions.resume = this.resumeSessionId;
         this.eventQueue.push({
           type: "system",
           timestamp: ts(),
