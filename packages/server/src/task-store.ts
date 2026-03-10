@@ -2,6 +2,7 @@ import db from "./db.js";
 import { tasks, type TaskRow } from "./schema.js";
 import { eq, sql, asc } from "drizzle-orm";
 import type { TaskStatus } from "@grackle-ai/common";
+import { MAX_TASK_DEPTH } from "@grackle-ai/common";
 import { safeParseJsonArray } from "./json-helpers.js";
 import { slugify } from "./utils/slugify.js";
 
@@ -16,8 +17,25 @@ export function createTask(
   environmentId: string,
   dependsOn: string[],
   projectSlug: string,
+  parentTaskId: string = "",
 ): void {
-  const branch = `${projectSlug}/${slugify(title)}`;
+  let depth = 0;
+  let branch: string;
+
+  if (parentTaskId) {
+    const parent = getTask(parentTaskId);
+    if (!parent) {
+      throw new Error(`Parent task not found: ${parentTaskId}`);
+    }
+    depth = parent.depth + 1;
+    if (depth > MAX_TASK_DEPTH) {
+      throw new Error(`Task depth would exceed maximum of ${MAX_TASK_DEPTH}`);
+    }
+    branch = `${parent.branch}/${slugify(title)}`;
+  } else {
+    branch = `${projectSlug}/${slugify(title)}`;
+  }
+
   const depsJson = JSON.stringify(dependsOn);
   const maxRow = db.select({ maxOrder: sql<number>`max(sort_order)` })
     .from(tasks)
@@ -33,6 +51,8 @@ export function createTask(
     environmentId,
     dependsOn: depsJson,
     sortOrder,
+    parentTaskId,
+    depth,
   }).run();
 }
 
@@ -146,4 +166,54 @@ export function areDependenciesMet(taskId: string): boolean {
     const dep = getTask(depId);
     return dep?.status === "done";
   });
+}
+
+// ─── Tree Queries ────────────────────────────────────
+
+/** Get direct children of a task, ordered by sort_order. */
+export function getChildren(taskId: string): TaskRow[] {
+  return db.select().from(tasks)
+    .where(eq(tasks.parentTaskId, taskId))
+    .orderBy(asc(tasks.sortOrder), asc(tasks.createdAt))
+    .all();
+}
+
+/** Get all descendants of a task (full subtree) via iterative BFS. */
+export function getDescendants(taskId: string): TaskRow[] {
+  const result: TaskRow[] = [];
+  const queue: string[] = [taskId];
+  while (queue.length > 0) {
+    const currentId = queue.shift()!;
+    const children = getChildren(currentId);
+    for (const child of children) {
+      result.push(child);
+      queue.push(child.id);
+    }
+  }
+  return result;
+}
+
+/** Get ancestor chain from task up to root, ordered root-first. */
+export function getAncestors(taskId: string): TaskRow[] {
+  const ancestors: TaskRow[] = [];
+  let current = getTask(taskId);
+  while (current && current.parentTaskId) {
+    const parent = getTask(current.parentTaskId);
+    if (!parent) {
+      break;
+    }
+    ancestors.unshift(parent);
+    current = parent;
+  }
+  return ancestors;
+}
+
+/** Count children by status for a parent task. */
+export function getChildStatusCounts(taskId: string): Record<string, number> {
+  const children = getChildren(taskId);
+  const counts: Record<string, number> = {};
+  for (const child of children) {
+    counts[child.status] = (counts[child.status] ?? 0) + 1;
+  }
+  return counts;
 }

@@ -361,13 +361,16 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       description?: string,
       environmentId?: string,
       dependsOn?: string[],
+      parentTaskId?: string,
     ) => {
       // eslint-disable-next-line no-console
-      console.log("[MockGrackle] createTask", { projectId, title });
+      console.log("[MockGrackle] createTask", { projectId, title, parentTaskId });
 
       setTasks((prev) => {
         const projectTasks = prev.filter((t) => t.projectId === projectId);
         const maxSort = projectTasks.reduce((max, t) => Math.max(max, t.sortOrder), 0);
+        const parent = parentTaskId ? prev.find((t) => t.id === parentTaskId) : undefined;
+        const depth = parent ? parent.depth + 1 : 0;
 
         const newTask: TaskData = {
           id: nextId("task"),
@@ -382,6 +385,9 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
           reviewNotes: "",
           sortOrder: maxSort + 1,
           createdAt: new Date().toISOString(),
+          parentTaskId: parentTaskId || "",
+          depth,
+          childTaskIds: [],
         };
 
         return [...prev, newTask];

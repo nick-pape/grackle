@@ -84,7 +84,9 @@ export function initDatabase(): void {
       review_notes  TEXT NOT NULL DEFAULT '',
       created_at    TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at    TEXT NOT NULL DEFAULT (datetime('now')),
-      sort_order    INTEGER NOT NULL DEFAULT 0
+      sort_order    INTEGER NOT NULL DEFAULT 0,
+      parent_task_id TEXT NOT NULL DEFAULT '',
+      depth         INTEGER NOT NULL DEFAULT 0
     );
 
     CREATE TABLE IF NOT EXISTS findings (
@@ -138,6 +140,14 @@ export function initDatabase(): void {
     UPDATE findings SET tags = '[]' WHERE tags IS NULL;
     UPDATE findings SET created_at = datetime('now') WHERE created_at IS NULL;
   `);
+
+  // Migration: add parent_task_id and depth columns if missing (older databases)
+  try {
+    sqlite.exec("ALTER TABLE tasks ADD COLUMN parent_task_id TEXT NOT NULL DEFAULT ''");
+  } catch { /* column already exists */ }
+  try {
+    sqlite.exec("ALTER TABLE tasks ADD COLUMN depth INTEGER NOT NULL DEFAULT 0");
+  } catch { /* column already exists */ }
 }
 
 // Run init immediately for backwards compatibility — stores import db at module load

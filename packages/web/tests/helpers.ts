@@ -255,12 +255,12 @@ export async function installWsTracker(page: Page): Promise<void> {
   });
 }
 
-/** Create a task via WebSocket with custom options (e.g., dependsOn). Returns the created task data. */
+/** Create a task via WebSocket with custom options (e.g., dependsOn, parentTaskId). Returns the created task data. */
 export async function createTaskViaWs(
   page: Page,
   projectId: string,
   title: string,
-  options?: { environmentId?: string; dependsOn?: string[]; description?: string },
+  options?: { environmentId?: string; dependsOn?: string[]; description?: string; parentTaskId?: string },
 ): Promise<WsPayload> {
   const response = await sendWsAndWaitFor(
     page,
@@ -272,6 +272,7 @@ export async function createTaskViaWs(
         description: options?.description || "",
         environmentId: options?.environmentId || "",
         dependsOn: options?.dependsOn || [],
+        parentTaskId: options?.parentTaskId || "",
       },
     },
     "task_created",

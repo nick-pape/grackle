@@ -60,7 +60,7 @@ importers:
         version: file:projects/powerline.tgz(@types/debug@4.1.12)(sass@1.97.3)(zod@4.3.6)
       '@rush-temp/server':
         specifier: file:./projects/server.tgz
-        version: file:projects/server.tgz(@types/react@19.2.14)(react@19.2.4)
+        version: file:projects/server.tgz(@types/debug@4.1.12)(@types/react@19.2.14)(react@19.2.4)(sass@1.97.3)
       '@rush-temp/web':
         specifier: file:./projects/web.tgz
         version: file:projects/web.tgz(@types/node@22.19.11)
@@ -958,7 +958,7 @@ packages:
     os: [win32]
 
   '@rush-temp/cli@file:projects/cli.tgz':
-    resolution: {integrity: sha512-sSX5IkR/K4e5GimBQi/R47M/d0ioDEEWO7Pov4hXB6+8JUI75AV0xpleAhhvT+9YGQjlx/pIfUlBEjNNxDpM9A==, tarball: file:projects/cli.tgz}
+    resolution: {integrity: sha512-AWAYM6zE/xiYbvN8Bu8Xh4eh3fK1L7kXQVBUJ6wZ1Wd7DoQjaLlnhl+FUU7/nESQ/Jl5TlLKHTya026/BU/cKQ==, tarball: file:projects/cli.tgz}
     version: 0.0.0
 
   '@rush-temp/common@file:projects/common.tgz':
@@ -982,11 +982,11 @@ packages:
     version: 0.0.0
 
   '@rush-temp/powerline@file:projects/powerline.tgz':
-    resolution: {integrity: sha512-SwMQ3QfVa8N6ZR/0PLisS8qMWZxm+hLj4RM5lZxXloxx6VkNCRYqt2jg8SzemS1RWlyy8mNXYS/3vXHW1WPagQ==, tarball: file:projects/powerline.tgz}
+    resolution: {integrity: sha512-pYkalObmoaI01vm8S/jIO8rjK+myfLqBZijtM4iscBPl4OgmUO4GT5w236gFN971bi+e+TwPvre5NKISsYyI4w==, tarball: file:projects/powerline.tgz}
     version: 0.0.0
 
   '@rush-temp/server@file:projects/server.tgz':
-    resolution: {integrity: sha512-M5AYfaBew25AEpbDeFpkZVDWnJygsBktSXunOThvieHxXcuQJSV8S2gilRxFOz43zEyzRfQsLUoFU40/5gKv8g==, tarball: file:projects/server.tgz}
+    resolution: {integrity: sha512-ltoEWtqLGEgu3ZtuPXy3IJ1J2tH7ot6RqB3vlmbrcV6DCmUPcwL8WWUCuw4T0fY4wgCIR+jThDVQSK1OCP6/eQ==, tarball: file:projects/server.tgz}
     version: 0.0.0
 
   '@rush-temp/web@file:projects/web.tgz':
@@ -3988,7 +3988,7 @@ snapshots:
       - yaml
       - zod
 
-  '@rush-temp/server@file:projects/server.tgz(@types/react@19.2.14)(react@19.2.4)':
+  '@rush-temp/server@file:projects/server.tgz(@types/debug@4.1.12)(@types/react@19.2.14)(react@19.2.4)(sass@1.97.3)':
     dependencies:
       '@bufbuild/protobuf': 2.11.0
       '@connectrpc/connect': 2.1.1(@bufbuild/protobuf@2.11.0)
@@ -4001,10 +4001,12 @@ snapshots:
       drizzle-orm: 0.38.4(@types/better-sqlite3@7.6.13)(@types/react@19.2.14)(better-sqlite3@11.10.0)(react@19.2.4)
       pino: 10.3.1
       uuid: 11.1.0
+      vitest: 3.2.4(@types/debug@4.1.12)(@types/node@22.19.11)(sass@1.97.3)
       ws: 8.19.0
     transitivePeerDependencies:
       - '@aws-sdk/client-rds-data'
       - '@cloudflare/workers-types'
+      - '@edge-runtime/vm'
       - '@electric-sql/pglite'
       - '@libsql/client'
       - '@libsql/client-wasm'
@@ -4014,24 +4016,41 @@ snapshots:
       - '@planetscale/database'
       - '@prisma/client'
       - '@tidbcloud/serverless'
+      - '@types/debug'
       - '@types/pg'
       - '@types/react'
       - '@types/sql.js'
       - '@vercel/postgres'
+      - '@vitest/browser'
+      - '@vitest/ui'
       - '@xata.io/client'
       - bufferutil
       - bun-types
       - expo-sqlite
+      - happy-dom
+      - jiti
+      - jsdom
       - knex
       - kysely
+      - less
+      - lightningcss
+      - msw
       - mysql2
       - pg
       - postgres
       - prisma
       - react
+      - sass
+      - sass-embedded
       - sql.js
       - sqlite3
+      - stylus
+      - sugarss
+      - supports-color
+      - terser
+      - tsx
       - utf-8-validate
+      - yaml
 
   '@rush-temp/web@file:projects/web.tgz(@types/node@22.19.11)':
     dependencies:

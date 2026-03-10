@@ -16,7 +16,7 @@ import { broadcast } from "./ws-broadcast.js";
 import { processEventStream } from "./event-processor.js";
 import { join } from "node:path";
 import {
-  LOGS_DIR, DEFAULT_RUNTIME, DEFAULT_MODEL,
+  LOGS_DIR, DEFAULT_RUNTIME, DEFAULT_MODEL, MAX_TASK_DEPTH,
   environmentStatusToEnum, sessionStatusToEnum, sessionStatusToString,
   tokenTypeToEnum, tokenTypeToString,
   taskStatusToEnum, taskStatusToString, projectStatusToEnum,
@@ -90,6 +90,9 @@ function taskRowToProto(row: taskStore.TaskRow): grackle.Task {
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
     sortOrder: row.sortOrder,
+    parentTaskId: row.parentTaskId,
+    depth: row.depth,
+    childTaskIds: taskStore.getChildren(row.id).map(c => c.id),
   });
 }
 
@@ -432,9 +435,18 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       const project = projectStore.getProject(req.projectId);
       if (!project) throw new Error(`Project not found: ${req.projectId}`);
 
+      // Validate parent task if specified
+      if (req.parentTaskId) {
+        const parent = taskStore.getTask(req.parentTaskId);
+        if (!parent) throw new Error(`Parent task not found: ${req.parentTaskId}`);
+        if (parent.depth + 1 > MAX_TASK_DEPTH) {
+          throw new Error(`Task depth would exceed maximum of ${MAX_TASK_DEPTH}`);
+        }
+      }
+
       const id = uuid().slice(0, 8);
       const environmentId = req.environmentId || project.defaultEnvironmentId;
-      taskStore.createTask(id, req.projectId, req.title, req.description, environmentId, [...req.dependsOn], slugify(project.name));
+      taskStore.createTask(id, req.projectId, req.title, req.description, environmentId, [...req.dependsOn], slugify(project.name), req.parentTaskId);
       const row = taskStore.getTask(id);
       broadcast({ type: "task_created", payload: { task: row ? { ...row } : null } });
       return taskRowToProto(row!);
@@ -580,6 +592,10 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
 
     async deleteTask(req: grackle.TaskId) {
       const task = taskStore.getTask(req.id);
+      const children = taskStore.getChildren(req.id);
+      if (children.length > 0) {
+        throw new Error("Cannot delete task with children. Delete children first.");
+      }
       taskStore.deleteTask(req.id);
       broadcast({ type: "task_deleted", payload: { taskId: req.id, projectId: task?.projectId } });
       return create(grackle.EmptySchema, {});

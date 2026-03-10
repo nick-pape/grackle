@@ -137,6 +137,19 @@
   padding: 1px var(--space-xs);
 }
 
+.leafSpacer {
+  width: 12px;
+  display: inline-block;
+}
+
+.childCountBadge {
+  @include glass-inset;
+  font-size: 10px;
+  color: var(--text-tertiary);
+  border-radius: var(--radius-full);
+  padding: 1px var(--space-xs);
+}
+
 .emptyTasks {
   padding: 3px var(--space-md) 3px 34px;
   font-size: 11px;

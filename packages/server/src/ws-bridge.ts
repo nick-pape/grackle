@@ -481,6 +481,9 @@ async function handleMessage(
             reviewNotes: r.reviewNotes,
             sortOrder: r.sortOrder,
             createdAt: r.createdAt,
+            parentTaskId: r.parentTaskId,
+            depth: r.depth,
+            childTaskIds: taskStore.getChildren(r.id).map(c => c.id),
           })),
         },
       });
@@ -499,6 +502,7 @@ async function handleMessage(
         sendWs(ws, { type: "error", payload: { message: `Project not found: ${projectId}` } });
         return;
       }
+      const parentTaskId = (msg.payload?.parentTaskId as string) || "";
       const id = uuid().slice(0, 8);
       taskStore.createTask(
         id, projectId, title,
@@ -506,6 +510,7 @@ async function handleMessage(
         (msg.payload?.environmentId as string) || project.defaultEnvironmentId,
         (msg.payload?.dependsOn as string[]) || [],
         slugify(project.name),
+        parentTaskId,
       );
       const row = taskStore.getTask(id);
       broadcast({ type: "task_created", payload: { task: row ? { ...row, dependsOn: safeParseJsonArray(row.dependsOn) } : null } });
@@ -632,8 +637,15 @@ async function handleMessage(
 
     case "delete_task": {
       const taskId = msg.payload?.taskId as string;
-      if (taskId) taskStore.deleteTask(taskId);
-      broadcast({ type: "task_deleted", payload: { taskId } });
+      if (!taskId) return;
+      const children = taskStore.getChildren(taskId);
+      if (children.length > 0) {
+        sendWs(ws, { type: "error", payload: { message: "Cannot delete task with children. Delete children first." } });
+        return;
+      }
+      const deletedTask = taskStore.getTask(taskId);
+      taskStore.deleteTask(taskId);
+      broadcast({ type: "task_deleted", payload: { taskId, projectId: deletedTask?.projectId } });
       break;
     }
 

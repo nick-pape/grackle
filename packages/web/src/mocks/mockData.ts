@@ -204,8 +204,9 @@ export const MOCK_PROJECTS: Project[] = [
 
 // ─── Tasks ──────────────────────────────────────────
 
-/** Sample tasks demonstrating every status in the lifecycle. */
+/** Sample tasks demonstrating every status in the lifecycle, including parent/child hierarchy. */
 export const MOCK_TASKS: TaskData[] = [
+  // ── Root tasks for proj-alpha ──────────────────────
   {
     id: "task-001",
     projectId: "proj-alpha",
@@ -219,7 +220,63 @@ export const MOCK_TASKS: TaskData[] = [
     reviewNotes: "",
     sortOrder: 1,
     createdAt: "2026-02-25T10:00:00Z",
+    parentTaskId: "",
+    depth: 0,
+    childTaskIds: ["task-001a", "task-001b", "task-001c"],
   },
+  // ── Children of task-001 ───────────────────────────
+  {
+    id: "task-001a",
+    projectId: "proj-alpha",
+    title: "Design token schema",
+    description: "Define JWT payload structure, expiry, and refresh token strategy",
+    status: "done",
+    branch: "feat/jwt-auth/design-token-schema",
+    environmentId: "env-local-01",
+    sessionId: "",
+    dependsOn: [],
+    reviewNotes: "",
+    sortOrder: 1,
+    createdAt: "2026-02-25T10:10:00Z",
+    parentTaskId: "task-001",
+    depth: 1,
+    childTaskIds: [],
+  },
+  {
+    id: "task-001b",
+    projectId: "proj-alpha",
+    title: "Implement auth middleware",
+    description: "Build Express middleware that verifies JWT Bearer tokens",
+    status: "in_progress",
+    branch: "feat/jwt-auth/implement-auth-middleware",
+    environmentId: "env-local-01",
+    sessionId: "sess-001",
+    dependsOn: [],
+    reviewNotes: "",
+    sortOrder: 2,
+    createdAt: "2026-02-25T10:15:00Z",
+    parentTaskId: "task-001",
+    depth: 1,
+    childTaskIds: [],
+  },
+  {
+    id: "task-001c",
+    projectId: "proj-alpha",
+    title: "Write auth integration tests",
+    description: "End-to-end tests for login flow, token refresh, and protected route access",
+    status: "pending",
+    branch: "",
+    environmentId: "env-local-01",
+    sessionId: "",
+    dependsOn: ["task-001b"],
+    reviewNotes: "",
+    sortOrder: 3,
+    createdAt: "2026-02-25T10:20:00Z",
+    parentTaskId: "task-001",
+    depth: 1,
+    childTaskIds: [],
+  },
+  // ── Remaining root tasks for proj-alpha ────────────
   {
     id: "task-002",
     projectId: "proj-alpha",
@@ -233,6 +290,9 @@ export const MOCK_TASKS: TaskData[] = [
     reviewNotes: "",
     sortOrder: 2,
     createdAt: "2026-02-25T10:05:00Z",
+    parentTaskId: "",
+    depth: 0,
+    childTaskIds: [],
   },
   {
     id: "task-003",
@@ -247,6 +307,9 @@ export const MOCK_TASKS: TaskData[] = [
     reviewNotes: "",
     sortOrder: 3,
     createdAt: "2026-02-24T16:00:00Z",
+    parentTaskId: "",
+    depth: 0,
+    childTaskIds: [],
   },
   {
     id: "task-004",
@@ -261,6 +324,9 @@ export const MOCK_TASKS: TaskData[] = [
     reviewNotes: "LGTM — pool size and idle timeout values are sensible.",
     sortOrder: 4,
     createdAt: "2026-02-23T11:00:00Z",
+    parentTaskId: "",
+    depth: 0,
+    childTaskIds: [],
   },
   {
     id: "task-005",
@@ -275,7 +341,11 @@ export const MOCK_TASKS: TaskData[] = [
     reviewNotes: "The fix breaks pagination — cursor should reference the joined table, not the subquery.",
     sortOrder: 5,
     createdAt: "2026-02-22T09:30:00Z",
+    parentTaskId: "",
+    depth: 0,
+    childTaskIds: [],
   },
+  // ── Tasks for proj-beta ────────────────────────────
   {
     id: "task-006",
     projectId: "proj-beta",
@@ -289,6 +359,9 @@ export const MOCK_TASKS: TaskData[] = [
     reviewNotes: "",
     sortOrder: 1,
     createdAt: "2026-02-26T08:00:00Z",
+    parentTaskId: "",
+    depth: 0,
+    childTaskIds: [],
   },
   {
     id: "task-007",
@@ -303,6 +376,9 @@ export const MOCK_TASKS: TaskData[] = [
     reviewNotes: "",
     sortOrder: 2,
     createdAt: "2026-02-26T08:30:00Z",
+    parentTaskId: "",
+    depth: 0,
+    childTaskIds: [],
   },
 ];
 

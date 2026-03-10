@@ -48,6 +48,9 @@ export interface TaskData {
   reviewNotes: string;
   sortOrder: number;
   createdAt: string;
+  parentTaskId: string;
+  depth: number;
+  childTaskIds: string[];
 }
 
 export interface FindingData {
@@ -141,6 +144,7 @@ export interface UseGrackleSocketResult {
     description?: string,
     environmentId?: string,
     dependsOn?: string[],
+    parentTaskId?: string,
   ) => void;
   startTask: (taskId: string, runtime?: string, model?: string) => void;
   approveTask: (taskId: string) => void;
@@ -535,6 +539,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
       description?: string,
       environmentId?: string,
       dependsOn?: string[],
+      parentTaskId?: string,
     ) => {
       send({
         type: "create_task",
@@ -544,6 +549,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
           description: description || "",
           environmentId: environmentId || "",
           dependsOn: dependsOn || [],
+          parentTaskId: parentTaskId || "",
         },
       });
     },
