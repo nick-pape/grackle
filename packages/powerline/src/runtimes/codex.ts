@@ -50,16 +50,16 @@ function getCodexSdk(): Promise<CodexSdkModule> {
 // ─── Helpers ───────────────────────────────────────────────
 
 /** Resolved MCP configuration returned by resolveMcpServers. */
-interface ResolvedMcpConfig {
+export interface ResolvedMcpConfig {
   servers: Record<string, unknown> | undefined;
   disallowedTools: string[];
 }
 
 /**
- * Load MCP server configurations from the shared GRACKLE_MCP_CONFIG file and spawn options.
+ * @internal Load MCP server configurations from the shared GRACKLE_MCP_CONFIG file and spawn options.
  * Also reads `disallowedTools` and filters matching tools from MCP server configs.
  */
-function resolveMcpServers(spawnMcpServers?: Record<string, unknown>): ResolvedMcpConfig {
+export function resolveMcpServers(spawnMcpServers?: Record<string, unknown>): ResolvedMcpConfig {
   let servers: Record<string, unknown> = {};
   let disallowedTools: string[] = [];
 
@@ -125,11 +125,11 @@ function resolveMcpServers(spawnMcpServers?: Record<string, unknown>): ResolvedM
 }
 
 /**
- * Extract the `type` discriminator from a ThreadItem.
+ * @internal Extract the `type` discriminator from a ThreadItem.
  *
  * ThreadItem is a union of objects like `{ type: "command_execution", ... }`.
  */
-function itemType(item: Record<string, unknown>): string {
+export function itemType(item: Record<string, unknown>): string {
   return (item.type ?? "unknown") as string;
 }
 

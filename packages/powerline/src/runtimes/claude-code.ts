@@ -28,7 +28,8 @@ async function getQuery(): Promise<QueryFn> {
 /** Path to the Grackle MCP server script bundled in the container image. */
 const GRACKLE_MCP_SCRIPT: string = "/app/mcp-grackle/index.js";
 
-function mapMessage(msg: Record<string, unknown>): AgentEvent[] {
+/** @internal Map a raw SDK message to zero or more AgentEvents. Exported for testing. */
+export function mapMessage(msg: Record<string, unknown>): AgentEvent[] {
   const ts = new Date().toISOString();
   const type = msg.type as string | undefined;
 

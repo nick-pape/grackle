@@ -5,14 +5,21 @@ import { realpathSync } from "node:fs";
 import { logger } from "./logger.js";
 
 /**
- * Verify that a resolved file path is under the user's home directory,
+ * @internal Verify that a resolved file path is under the user's home directory,
  * accounting for symlinks and case-insensitive filesystems.
+ * Exported for testing.
  */
-function isUnderHome(resolvedPath: string, home: string): boolean {
+export function isUnderHome(resolvedPath: string, home: string): boolean {
   // Normalize case for case-insensitive filesystems (Windows, macOS default)
-  const normalizedPath = resolvedPath.toLowerCase();
-  const normalizedHome = home.toLowerCase();
-  return normalizedPath.startsWith(normalizedHome);
+  // Also normalize separators to forward slashes for consistent comparison
+  const normalizedPath = resolvedPath.toLowerCase().replace(/\\/g, "/");
+  const normalizedHome = home.toLowerCase().replace(/\\/g, "/");
+  // Ensure the home prefix is followed by a separator (or is an exact match)
+  // to prevent prefix-collision (e.g. /home/user vs /home/username)
+  const homeWithSep = normalizedHome.endsWith("/")
+    ? normalizedHome
+    : normalizedHome + "/";
+  return normalizedPath.startsWith(homeWithSep) || normalizedPath === normalizedHome;
 }
 
 /** Apply a batch of tokens by setting env vars or writing files under the user's home directory. */

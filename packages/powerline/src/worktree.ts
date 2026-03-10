@@ -18,11 +18,13 @@ export interface WorktreeResult {
   created: boolean;
 }
 
-function sanitizeBranch(branch: string): string {
+/** @internal Sanitize a branch name for use in file paths. Exported for testing. */
+export function sanitizeBranch(branch: string): string {
   return branch.replace(/[^a-zA-Z0-9/_-]/g, "-");
 }
 
-function worktreeDir(basePath: string, branch: string): string {
+/** @internal Compute the worktree directory path for a given branch. Exported for testing. */
+export function worktreeDir(basePath: string, branch: string): string {
   const sanitized = sanitizeBranch(branch).replace(/\//g, "-");
   const parent = dirname(basePath);
   // When repo is at a root-level path (e.g. /workspace in Docker),
