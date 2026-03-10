@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Tue, 10 Mar 2026 15:57:59 GMT and should not be manually modified.
+This log was last generated on Tue, 10 Mar 2026 18:09:01 GMT and should not be manually modified.
+
+## 0.12.0
+Tue, 10 Mar 2026 18:09:01 GMT
+
+### Minor changes
+
+- Add task tree hierarchy
 
 ## 0.11.2
 Tue, 10 Mar 2026 15:57:59 GMT
