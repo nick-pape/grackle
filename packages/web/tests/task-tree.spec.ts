@@ -24,18 +24,22 @@ test.describe("Task tree hierarchy", () => {
     // Create a child task via WS
     await createTaskViaWs(page, projectId, "child-task", { parentTaskId: rootTaskId });
 
-    // Scope expand arrow to the task row containing "root-task" to avoid matching project toggle
-    const rootRow = page.getByText("root-task").locator("..");
-    const expandArrow = rootRow.locator('[class*="expandArrow"]').first();
+    // Scope expand arrow to the task row using data-task-id attribute
+    const rootRow = page.locator(`[data-task-id="${rootTaskId}"]`);
+    const expandArrow = rootRow.locator('[class*="expandArrow"]');
     await expect(expandArrow).toBeVisible({ timeout: 5_000 });
 
-    // Click expand arrow to show children
-    await expandArrow.click();
+    // Click expand arrow to show children (auto-expand may already have opened it)
+    // First ensure child is visible
     await expect(page.getByText("child-task")).toBeVisible({ timeout: 5_000 });
 
-    // Click expand arrow again to collapse
+    // Click expand arrow to collapse
     await expandArrow.click();
     await expect(page.getByText("child-task")).not.toBeVisible({ timeout: 5_000 });
+
+    // Click expand arrow again to re-expand
+    await expandArrow.click();
+    await expect(page.getByText("child-task")).toBeVisible({ timeout: 5_000 });
   });
 
   test("shows child count badge on parent tasks", async ({ appPage }) => {
@@ -69,21 +73,24 @@ test.describe("Task tree hierarchy", () => {
 
     // Create child and grandchild via WS
     const level1 = await createTaskViaWs(page, projectId, "level-1", { parentTaskId: level0Id });
-    await createTaskViaWs(page, projectId, "level-2", { parentTaskId: level1.id as string });
+    const level1Id = level1.id as string;
+    await createTaskViaWs(page, projectId, "level-2", { parentTaskId: level1Id });
 
-    // Expand level-0 by clicking its row's expand arrow
-    const level0Row = page.getByText("level-0").locator("..");
-    const expandArrow0 = level0Row.locator('[class*="expandArrow"]').first();
-    await expect(expandArrow0).toBeVisible({ timeout: 5_000 });
-    await expandArrow0.click();
+    // Auto-expand should show level-1 already; verify it's visible
     await expect(page.getByText("level-1")).toBeVisible({ timeout: 5_000 });
 
-    // Expand level-1 by clicking its row's expand arrow
-    const level1Row = page.getByText("level-1").locator("..");
-    const expandArrow1 = level1Row.locator('[class*="expandArrow"]').first();
-    await expect(expandArrow1).toBeVisible({ timeout: 5_000 });
-    await expandArrow1.click();
+    // level-1 should auto-expand too; verify level-2 is visible
     await expect(page.getByText("level-2")).toBeVisible({ timeout: 5_000 });
+
+    // Collapse level-0 to hide both descendants
+    const level0Row = page.locator(`[data-task-id="${level0Id}"]`);
+    await level0Row.locator('[class*="expandArrow"]').click();
+    await expect(page.getByText("level-1")).not.toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText("level-2")).not.toBeVisible({ timeout: 5_000 });
+
+    // Re-expand level-0
+    await level0Row.locator('[class*="expandArrow"]').click();
+    await expect(page.getByText("level-1")).toBeVisible({ timeout: 5_000 });
   });
 
   test("prevents deletion of parent tasks with children", async ({ appPage }) => {

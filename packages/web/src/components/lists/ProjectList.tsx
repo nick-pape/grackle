@@ -83,6 +83,7 @@ function TaskTreeNode({
         onClick={() => setViewMode({ kind: "task", taskId: node.id })}
         className={`${styles.taskRow} ${isSelected ? styles.selected : ""}`}
         style={{ paddingLeft: indent }}
+        data-task-id={node.id}
       >
         {hasChildren && (
           <span
@@ -141,6 +142,7 @@ export function ProjectList({ viewMode, setViewMode }: Props): JSX.Element {
   const { projects, tasks, loadTasks, createProject } = useGrackle();
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
+  const [manuallyCollapsed, setManuallyCollapsed] = useState<Set<string>>(new Set());
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newProjectName, setNewProjectName] = useState("");
 
@@ -165,14 +167,20 @@ export function ProjectList({ viewMode, setViewMode }: Props): JSX.Element {
       const next = new Set(prev);
       if (next.has(taskId)) {
         next.delete(taskId);
+        setManuallyCollapsed((mc) => new Set(mc).add(taskId));
       } else {
         next.add(taskId);
+        setManuallyCollapsed((mc) => {
+          const updated = new Set(mc);
+          updated.delete(taskId);
+          return updated;
+        });
       }
       return next;
     });
   };
 
-  // Auto-expand parent tasks that have children
+  // Auto-expand parent tasks that have children (skip manually collapsed ones)
   useEffect(() => {
     const parentIds = new Set(
       tasks.filter(t => t.parentTaskId).map(t => t.parentTaskId),
@@ -181,12 +189,14 @@ export function ProjectList({ viewMode, setViewMode }: Props): JSX.Element {
       setExpandedTasks((prev) => {
         const next = new Set(prev);
         for (const pid of parentIds) {
-          next.add(pid);
+          if (!manuallyCollapsed.has(pid)) {
+            next.add(pid);
+          }
         }
         return next;
       });
     }
-  }, [tasks]);
+  }, [tasks, manuallyCollapsed]);
 
   // Auto-expand a project when selected
   useEffect(() => {
