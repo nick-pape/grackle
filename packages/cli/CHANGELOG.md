@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Tue, 10 Mar 2026 07:45:46 GMT and should not be manually modified.
+This log was last generated on Tue, 10 Mar 2026 07:50:14 GMT and should not be manually modified.
+
+## 0.10.0
+Tue, 10 Mar 2026 07:50:14 GMT
+
+### Patches
+
+- Fix ClaudeCodeSession.sendInput to use eventQueue and resumed query pattern
 
 ## 0.9.0
 Tue, 10 Mar 2026 07:45:46 GMT
