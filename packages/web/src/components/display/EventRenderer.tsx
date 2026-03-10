@@ -93,6 +93,7 @@ export function EventRenderer({ event }: Props): JSX.Element {
     case "system":
       return <SystemEvent time={time} content={event.content} />;
     case "text":
+    case "output":
       return <TextEvent content={event.content} />;
     case "tool_use":
       return <ToolUseEvent content={event.content} />;

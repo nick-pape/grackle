@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 
 import { Command } from "commander";
+import { ConnectError, Code } from "@connectrpc/connect";
 import { createRequire } from "node:module";
+import chalk from "chalk";
 import { registerEnvCommands } from "./commands/env.js";
 import { registerAgentCommands } from "./commands/agent.js";
 import { registerTokenCommands } from "./commands/token.js";
@@ -30,7 +32,16 @@ registerProjectCommands(program);
 registerTaskCommands(program);
 registerFindingCommands(program);
 
-program.parseAsync(process.argv).catch((err) => {
-  console.error(err.message || err);
+program.parseAsync(process.argv).catch((err: unknown) => {
+  if (err instanceof ConnectError) {
+    console.error(chalk.red(`gRPC error [${Code[err.code]}]: ${err.rawMessage}`));
+    if (err.code === Code.Unavailable) {
+      console.error("Is the Grackle server running? Start it with: grackle serve");
+    }
+  } else if (err instanceof Error) {
+    console.error(chalk.red(err.message));
+  } else {
+    console.error(chalk.red(String(err)));
+  }
   process.exit(1);
 });
