@@ -4,7 +4,7 @@ import { DiffViewer } from "../display/DiffViewer.js";
 import { FindingsPanel } from "./FindingsPanel.js";
 import { SettingsPanel } from "./SettingsPanel.js";
 import { DagView } from "../dag/DagView.js";
-import { useEffect, useMemo, useRef, useState, type JSX } from "react";
+import { useEffect, useMemo, useRef, useState, type JSX, type RefObject } from "react";
 import type { ViewMode } from "../../App.js";
 import type { Session, SessionEvent } from "../../hooks/useGrackleSocket.js";
 import { AnimatePresence, motion } from "motion/react";
@@ -57,7 +57,7 @@ interface EventListProps {
   sessionEvents: SessionEvent[];
   session: Session | undefined;
   // eslint-disable-next-line @rushstack/no-new-null
-  scrollRef: React.RefObject<HTMLDivElement | null>;
+  scrollRef: RefObject<HTMLDivElement | null>;
 }
 
 /** Scrollable list of session events with empty-state messaging. */

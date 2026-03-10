@@ -80,7 +80,6 @@ export function DagView({ projectId, setViewMode }: Props): JSX.Element {
         fitViewOptions={{ padding: 0.2 }}
         minZoom={0.3}
         maxZoom={2}
-        proOptions={{ hideAttribution: true }}
       >
         <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="rgba(255,255,255,0.05)" />
         <Controls showInteractive={false} />
