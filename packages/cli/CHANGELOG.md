@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Tue, 10 Mar 2026 06:41:29 GMT and should not be manually modified.
+This log was last generated on Tue, 10 Mar 2026 06:59:12 GMT and should not be manually modified.
+
+## 0.5.0
+Tue, 10 Mar 2026 06:59:12 GMT
+
+### Patches
+
+- Code quality sweep 3: attach race fix, resume event logging, WS status handling, systemContext dedup, events cap
 
 ## 0.4.0
 Tue, 10 Mar 2026 06:41:29 GMT
