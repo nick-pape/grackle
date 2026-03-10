@@ -2,6 +2,26 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.11.1",
+      "tag": "@grackle-ai/cli_v0.11.1",
+      "date": "Tue, 10 Mar 2026 14:35:26 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Extract shared processEventStream to deduplicate event-processing loops"
+          },
+          {
+            "comment": "Extract BaseAgentSession abstract class from ClaudeCodeSession and CodexSession to consolidate shared session lifecycle"
+          }
+        ],
+        "none": [
+          {
+            "comment": "Add unit tests for powerline package"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.11.0",
       "tag": "@grackle-ai/cli_v0.11.0",
       "date": "Tue, 10 Mar 2026 08:23:27 GMT",
