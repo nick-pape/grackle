@@ -25,7 +25,7 @@ interface CodexSdkModule {
 /** Promise for the one-time SDK import, cached to avoid race conditions. */
 let sdkPromise: Promise<CodexSdkModule> | undefined;
 
-/** Dynamically import the Codex SDK so the module is optional at install time. */
+/** Lazily import the Codex SDK to avoid loading it until first use. */
 function getCodexSdk(): Promise<CodexSdkModule> {
   if (!sdkPromise) {
     sdkPromise = (async (): Promise<CodexSdkModule> => {
@@ -111,7 +111,9 @@ class CodexSession implements AgentSession {
   private codexInstance?: any;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private thread?: any;
-  private abortController: AbortController = new AbortController();
+  /** The active `runStreamed()` result, kept for abort on kill. */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private activeStream?: any;
 
   public constructor(
     id: string,
@@ -253,6 +255,7 @@ class CodexSession implements AgentSession {
       const maxTurns = this.maxTurns;
 
       const streamResult = this.thread.runStreamed(finalPrompt);
+      this.activeStream = streamResult;
 
       for await (const event of streamResult.events) {
         if (this.killed) {
@@ -390,7 +393,7 @@ class CodexSession implements AgentSession {
             turnCount++;
             if (maxTurns > 0 && turnCount >= maxTurns) {
               logger.info({ turnCount, maxTurns }, "Codex max turns reached, stopping session");
-              break;
+              this.killed = true;
             }
             break;
           }
@@ -412,6 +415,10 @@ class CodexSession implements AgentSession {
             // Ignore unrecognised events (item.updated, turn.started, etc.)
             break;
         }
+      }
+
+      if (this.killed) {
+        return;
       }
 
       if (messageCount === 0) {
@@ -478,7 +485,10 @@ class CodexSession implements AgentSession {
   public kill(): void {
     this.killed = true;
     this.status = "killed";
-    this.abortController.abort();
+    // Abort the active streamed run if one is in progress
+    if (this.activeStream && typeof this.activeStream.abort === "function") {
+      this.activeStream.abort();
+    }
     this.eventQueue.close();
   }
 }
