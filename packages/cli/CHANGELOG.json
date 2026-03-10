@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.13.2",
+      "tag": "@grackle-ai/cli_v0.13.2",
+      "date": "Tue, 10 Mar 2026 21:27:27 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Add decomposition rights to task model"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.13.1",
       "tag": "@grackle-ai/cli_v0.13.1",
       "date": "Tue, 10 Mar 2026 20:40:21 GMT",
