@@ -523,7 +523,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         req.status !== "" ? req.status : existing.status,
         req.environmentId !== "" ? req.environmentId : existing.environmentId,
         req.dependsOn.length > 0 ? [...req.dependsOn] : safeParseJsonArray(existing.dependsOn),
-        req.reviewNotes !== undefined ? req.reviewNotes : existing.reviewNotes,
+        req.reviewNotes !== "" ? req.reviewNotes : existing.reviewNotes,
       );
       const row = taskStore.getTask(req.id);
       return taskRowToProto(row!);
