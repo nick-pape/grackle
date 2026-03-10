@@ -88,7 +88,8 @@ export function resolveProviderConfig(): Record<string, unknown> | undefined {
   }
 }
 
-// Re-export resolveMcpServers for backwards compatibility
+// Re-export resolveMcpServers so existing imports from this module continue to work.
+// Note: the return type is now ResolvedMcpConfig (from runtime-utils) instead of Record<string, unknown> | undefined.
 export { resolveMcpServers } from "./runtime-utils.js";
 
 /** @internal Build a `post_finding` tool definition for the Copilot session, so findings can be emitted. */

@@ -125,7 +125,10 @@ class ClaudeCodeSession extends BaseAgentSession {
       ...(cwd ? { cwd } : {}),
     };
 
-    // Load MCP server config from env var or SpawnOptions
+    // Load MCP server config from env var or SpawnOptions.
+    // resolveMcpServers() adds a `tools` field to the grackle server entry (used by
+    // Codex/Copilot SDKs). The Claude Agent SDK ignores unknown fields in MCP server
+    // configs — it only reads `command`, `args`, and `env` to spawn the process.
     const mcpConfig = resolveMcpServers(this.mcpServers);
     if (mcpConfig.servers) {
       sdkOptions.mcpServers = mcpConfig.servers;
