@@ -136,12 +136,37 @@ function main(): void {
     logger.info({ port: webPort }, "Web UI + WebSocket on http://127.0.0.1:%d", webPort);
   });
 
-  // Graceful shutdown
+  // Graceful shutdown with a hard timeout so upgraded WS connections don't block exit.
+  const SHUTDOWN_TIMEOUT_MS: number = 5_000;
+
   async function shutdown(): Promise<void> {
     logger.info("Shutting down...");
+    const forceExit = setTimeout(() => {
+      logger.warn("Shutdown timed out, forcing exit");
+      process.exit(1);
+    }, SHUTDOWN_TIMEOUT_MS);
+
     await closeAllTunnels();
-    grpcServer.close();
-    webServer.close();
+
+    await new Promise<void>((resolve) => {
+      grpcServer.close((err?: Error) => {
+        if (err) {
+          logger.error({ err }, "Error while closing gRPC server");
+        }
+        resolve();
+      });
+    });
+
+    await new Promise<void>((resolve) => {
+      webServer.close((err?: Error) => {
+        if (err) {
+          logger.error({ err }, "Error while closing web server");
+        }
+        resolve();
+      });
+    });
+
+    clearTimeout(forceExit);
     process.exit(0);
   }
 

@@ -30,18 +30,21 @@ const POWERLINE_STARTUP_DELAY_MS: number = 2_000;
 const TUNNEL_KILL_GRACE_MS: number = 1_000;
 /** Timeout for the initial SSH connectivity test. */
 const SSH_CONNECTIVITY_TIMEOUT_MS: number = 15_000;
-/** Remote directory where PowerLine artifacts are installed. */
-const REMOTE_POWERLINE_DIRECTORY: string = "~/.grackle/powerline";
+/** Remote directory where PowerLine artifacts are installed. Uses $HOME (not ~) so it expands inside double-quoted shell strings. */
+const REMOTE_POWERLINE_DIRECTORY: string = "$HOME/.grackle/powerline";
 
 // ─── Dev vs Production Mode ─────────────────────────────────
 
 /**
  * Check if we are running from a monorepo source checkout.
- * When running from the monorepo, sibling `powerline/dist/index.js` exists
- * relative to the server's dist/adapters directory.
+ * We detect this by checking for `rush.json` at the repo root,
+ * computed relative to this file's compiled location (packages/server/dist/adapters → 4 levels up).
+ * The old approach (checking for a sibling powerline dist) would false-positive when
+ * `@grackle-ai/powerline` is installed alongside the server in node_modules.
  */
 export function isDevMode(): boolean {
-  return existsSync(resolve(import.meta.dirname, "../../../powerline/dist/index.js"));
+  const repoRoot = resolve(import.meta.dirname, "../../../../");
+  return existsSync(join(repoRoot, "rush.json"));
 }
 
 /**
@@ -84,8 +87,14 @@ interface TunnelState {
 
 const tunnelMap: Map<string, TunnelState> = new Map<string, TunnelState>();
 
-/** Register an active tunnel for an environment. */
+/** Register an active tunnel for an environment, closing any existing tunnel first. */
 export function registerTunnel(environmentId: string, state: TunnelState): void {
+  const existing = tunnelMap.get(environmentId);
+  if (existing) {
+    existing.tunnel.close().catch((err) => {
+      logger.warn({ err, environmentId }, "Failed to close existing tunnel before registering new one");
+    });
+  }
   tunnelMap.set(environmentId, state);
 }
 
@@ -150,8 +159,13 @@ export abstract class ProcessTunnel implements RemoteTunnel {
       logger.debug({ stderr: data.toString() }, "Tunnel stderr");
     });
 
-    // Wait for the local port to become reachable
-    await waitForLocalPort(this.localPort);
+    // Wait for the local port to become reachable. Kill the process if it fails.
+    try {
+      await waitForLocalPort(this.localPort);
+    } catch (err) {
+      await this.close();
+      throw err;
+    }
   }
 
   /** Close the tunnel by killing the background process. */

@@ -5,7 +5,7 @@ import { isDevMode } from "./remote-adapter-utils.js";
 import { exec } from "../utils/exec.js";
 import { findFreePort } from "../utils/ports.js";
 import { sleep } from "../utils/sleep.js";
-import { readFileSync } from "node:fs";
+import { readFileSync, existsSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { homedir } from "node:os";
 import { logger } from "../logger.js";
@@ -189,7 +189,8 @@ export class DockerAdapter implements EnvironmentAdapter {
     const localPort = cfg.localPort || await findFreePort();
 
     const isDefault = image === DEFAULT_IMAGE;
-    if (isDevMode() && isDefault) {
+    const dockerfilePath = resolve(import.meta.dirname, "../../../../Dockerfile.powerline");
+    if (isDevMode() && isDefault && existsSync(dockerfilePath)) {
       yield { stage: "creating", message: "Building PowerLine image from local artifacts...", progress: 0.1 };
       await buildDevImage(image);
     } else {

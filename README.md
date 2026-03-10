@@ -10,7 +10,7 @@ Grackle is a multi-agent coordination platform. Break a project into tasks, disp
 
 ### 🔌 Environments are just compute
 
-Docker and local today, SSH [⭐#30](https://github.com/nick-pape/grackle/issues/30) and Codespaces [🔜#31](https://github.com/nick-pape/grackle/issues/31) on the roadmap — it shouldn't matter where an agent runs. Grackle treats environments as interchangeable compute behind a single protocol. Same interface, same results, regardless of where the work happens.
+Docker, local, SSH, and GitHub Codespaces — it shouldn't matter where an agent runs. Grackle treats environments as interchangeable compute behind a single protocol. Same interface, same results, regardless of where the work happens.
 
 ### 🔄 Runtime agnostic by design
 
@@ -126,12 +126,12 @@ Each agent runs inside an isolated environment. Connect one or many:
 |---------|--------|---------|
 | 🐳 **Docker** | ✅ Available | `grackle env add my-env --docker` |
 | 💻 **Local** | ✅ Available | `grackle env add my-env --local` |
-| 🔒 **SSH** | ⭐ Post v1.0 [#30](https://github.com/nick-pape/grackle/issues/30) | `grackle env add my-env --ssh --host ...` |
-| ☁️ **Codespace** | 🔜 Planned [#31](https://github.com/nick-pape/grackle/issues/31) | `grackle env add my-env --codespace --repo ...` |
+| 🔒 **SSH** | ✅ Available [#30](https://github.com/nick-pape/grackle/issues/30) | `grackle env add my-env --ssh --host ...` |
+| ☁️ **Codespace** | ✅ Available [#31](https://github.com/nick-pape/grackle/issues/31) | `grackle env add my-env --codespace --codespace-name <name>` |
 
 ![Environments — manage agents across local, Docker, Codespace, and SSH](docs/screenshots/agent-session-stream.png)
 
-Docker spins up a container with PowerLine pre-installed. Local connects to a PowerLine instance already running on your machine.
+Docker spins up a container with PowerLine pre-installed. Local connects to a PowerLine instance already running on your machine. SSH connects to any remote host via OpenSSH. Codespace connects to an existing GitHub Codespace by name (use `gh codespace list` to find it).
 
 ## 🚀 Quick Start
 
