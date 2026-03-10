@@ -545,6 +545,53 @@ export function buildRemoteKillCommand(): string {
   return `(${pidfileKill}) || (${portKill}) || true`;
 }
 
+// ─── Shared Adapter Operations ──────────────────────────────
+
+/**
+ * Stop the remote PowerLine process and close the tunnel.
+ * Shared by SSH and Codespace adapters.
+ */
+export async function remoteStop(environmentId: string, executor: RemoteExecutor): Promise<void> {
+  try {
+    await executor.exec(buildRemoteKillCommand());
+  } catch (err) {
+    logger.debug({ environmentId, err }, "Failed to kill remote PowerLine (may already be stopped)");
+  }
+  await closeTunnel(environmentId);
+}
+
+/**
+ * Stop the remote PowerLine, remove artifacts, and close the tunnel.
+ * Shared by SSH and Codespace adapters.
+ */
+export async function remoteDestroy(environmentId: string, executor: RemoteExecutor): Promise<void> {
+  try {
+    await executor.exec(
+      `${buildRemoteKillCommand()}; `
+      + 'CRED="$HOME/.claude/.credentials.json"; '
+      + `if [ -L "$CRED" ]; then case "$(readlink "$CRED" 2>/dev/null)" in ${REMOTE_POWERLINE_DIRECTORY}/*) rm -f "$CRED";; esac; fi; `
+      + `rm -rf ${REMOTE_POWERLINE_DIRECTORY}`,
+    );
+  } catch (err) {
+    logger.debug({ environmentId, err }, "Failed to clean up remote PowerLine artifacts");
+  }
+  await closeTunnel(environmentId);
+}
+
+/** Check that the tunnel is alive and the PowerLine responds to a ping. */
+export async function remoteHealthCheck(connection: PowerLineConnection): Promise<boolean> {
+  const state = getTunnel(connection.environmentId);
+  if (!state || !state.tunnel.isAlive()) {
+    return false;
+  }
+  try {
+    await connection.client.ping({});
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 // ─── Exports for Adapter Use ────────────────────────────────
 
 export { findFreePort, REMOTE_POWERLINE_DIRECTORY, SSH_CONNECTIVITY_TIMEOUT_MS, REMOTE_EXEC_DEFAULT_TIMEOUT_MS };
