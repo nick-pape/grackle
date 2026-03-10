@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Tue, 10 Mar 2026 02:21:30 GMT and should not be manually modified.
+This log was last generated on Tue, 10 Mar 2026 06:01:07 GMT and should not be manually modified.
+
+## 0.0.6
+Tue, 10 Mar 2026 06:01:07 GMT
+
+### Patches
+
+- Publish @grackle-ai/web and bundle it with the server so the web UI is available out of the box.
 
 ## 0.0.5
 Tue, 10 Mar 2026 02:21:30 GMT
