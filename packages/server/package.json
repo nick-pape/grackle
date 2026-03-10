@@ -24,6 +24,7 @@
     "@connectrpc/connect": "^2.0.0",
     "@connectrpc/connect-node": "^2.0.0",
     "@grackle-ai/common": "0.0.5",
+    "@grackle-ai/web": "0.0.5",
     "better-sqlite3": "^11.0.0",
     "drizzle-orm": "^0.38.0",
     "pino": "^10.3.1",

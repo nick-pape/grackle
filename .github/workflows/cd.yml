@@ -40,12 +40,55 @@ jobs:
       - name: Run tests
         run: node common/scripts/install-run-rush.js test --verbose
 
+      # In lockStepVersion mode, `rush version --bump` ALWAYS bumps using the
+      # `nextBump` field from version-policies.json — even without changefiles.
+      # This causes two bugs:
+      #   1. Phantom bumps: pushes with no changefiles still increment the version
+      #   2. Ignored changefile type: nextBump overrides the changefile's "type"
+      #      (e.g. changefile says "minor" but nextBump:"patch" → patch bump)
+      #
+      # Fix: skip the bump when no changefiles exist, and sync nextBump to the
+      # highest changefile type before bumping.
+      - name: Check changefiles and sync nextBump
+        id: changefile_check
+        run: |
+          if ! find common/changes/ -name '*.json' 2>/dev/null | grep -q .; then
+            echo "No changefiles found, skipping version bump"
+            echo "has_changefiles=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "has_changefiles=true" >> "$GITHUB_OUTPUT"
+
+          # Determine the highest bump type across all changefiles.
+          # Major bumps are blocked by CI, but fail loudly here too just in case.
+          if grep -rq '"type":[[:space:]]*"major"' common/changes/; then
+            echo "::error::Major version bump found in changefiles — blocked by policy"
+            exit 1
+          fi
+          highest="patch"
+          if grep -rq '"type":[[:space:]]*"minor"' common/changes/; then
+            highest="minor"
+          fi
+
+          # Update nextBump in version-policies.json so the actual semver
+          # increment matches what the changefiles requested
+          node -e "
+            const fs = require('fs');
+            const p = 'common/config/rush/version-policies.json';
+            const v = JSON.parse(fs.readFileSync(p, 'utf8'));
+            const policy = v.find(pol => pol.policyName === 'grackle');
+            if (!policy) { console.error('Policy \"grackle\" not found in ' + p); process.exit(1); }
+            policy.nextBump = '${highest}';
+            fs.writeFileSync(p, JSON.stringify(v, null, 2) + '\n');
+          "
+          echo "Set nextBump to $highest"
+
       # rush version --bump creates a temp branch, pushes it, then tries to
       # fast-forward main directly. The direct push fails due to branch
       # protection, so we let it fail and merge via PR instead.
-      # If there are no change files, the bump is skipped entirely.
       - name: Bump versions
         id: bump
+        if: steps.changefile_check.outputs.has_changefiles == 'true'
         run: |
           set +e
           output=$(node common/scripts/install-run-rush.js version --bump --target-branch main 2>&1)

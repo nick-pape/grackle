@@ -13,7 +13,8 @@ import { closeAllTunnels } from "./adapters/remote-adapter-utils.js";
 import { createWsBridge } from "./ws-bridge.js";
 import { DEFAULT_SERVER_PORT, DEFAULT_WEB_PORT } from "@grackle-ai/common";
 import { readFileSync, existsSync } from "node:fs";
-import { join, extname } from "node:path";
+import { join, dirname, extname, normalize, resolve, relative } from "node:path";
+import { createRequire } from "node:module";
 import { loadOrCreateApiKey, verifyApiKey } from "./api-key.js";
 import { logger } from "./logger.js";
 
@@ -30,15 +31,29 @@ const MIME_TYPES: Record<string, string> = {
   ".ico": "image/x-icon",
 };
 
+/** Resolve the web UI dist directory once at module load time. */
+const esmRequire: NodeRequire = createRequire(import.meta.url);
+const WEB_DIST_DIR: string = resolve(
+  process.env.GRACKLE_WEB_DIR
+    || join(dirname(esmRequire.resolve("@grackle-ai/web/package.json")), "dist"),
+);
+
 function createWebHandler(apiKey: string): (req: http.IncomingMessage, res: http.ServerResponse) => void {
   return (req: http.IncomingMessage, res: http.ServerResponse) => {
-    const webDistDir = process.env.GRACKLE_WEB_DIR || join(import.meta.dirname, "../../web/dist");
+    const urlPath = normalize(decodeURIComponent((req.url || "/").split("?")[0]));
+    let filePath = resolve(WEB_DIST_DIR, urlPath === "/" ? "index.html" : `.${urlPath}`);
 
-    let filePath = join(webDistDir, req.url === "/" ? "index.html" : (req.url || "index.html").split("?")[0]);
+    // Prevent path traversal — resolved path must stay within the dist directory
+    const rel = relative(WEB_DIST_DIR, filePath);
+    if (rel.startsWith("..") || resolve(WEB_DIST_DIR, rel) !== filePath) {
+      res.writeHead(403);
+      res.end("Forbidden");
+      return;
+    }
 
     if (!existsSync(filePath)) {
       // SPA fallback
-      filePath = join(webDistDir, "index.html");
+      filePath = join(WEB_DIST_DIR, "index.html");
     }
 
     if (!existsSync(filePath)) {
