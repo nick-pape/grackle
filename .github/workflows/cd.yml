@@ -61,7 +61,7 @@ jobs:
 
           # Determine the highest bump type across all changefiles
           highest="patch"
-          if grep -rq '"type":\s*"minor"' common/changes/; then
+          if grep -rq '"type":[[:space:]]*"minor"' common/changes/; then
             highest="minor"
           fi
 
@@ -71,7 +71,9 @@ jobs:
             const fs = require('fs');
             const p = 'common/config/rush/version-policies.json';
             const v = JSON.parse(fs.readFileSync(p, 'utf8'));
-            v[0].nextBump = '${highest}';
+            const policy = v.find(pol => pol.policyName === 'grackle');
+            if (!policy) { console.error('Policy \"grackle\" not found in ' + p); process.exit(1); }
+            policy.nextBump = '${highest}';
             fs.writeFileSync(p, JSON.stringify(v, null, 2) + '\n');
           "
           echo "Set nextBump to $highest"
