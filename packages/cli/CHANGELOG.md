@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Tue, 10 Mar 2026 06:33:40 GMT and should not be manually modified.
+This log was last generated on Tue, 10 Mar 2026 06:41:29 GMT and should not be manually modified.
+
+## 0.4.0
+Tue, 10 Mar 2026 06:41:29 GMT
+
+### Patches
+
+- Code quality sweep 2: fail-fast API key, gRPC error handling, session cleanup, structured logging, slug collision fix, output event rendering
 
 ## 0.3.0
 Tue, 10 Mar 2026 06:33:40 GMT
