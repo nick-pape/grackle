@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { Command } from "commander";
+import { createRequire } from "node:module";
 import { registerEnvCommands } from "./commands/env.js";
 import { registerAgentCommands } from "./commands/agent.js";
 import { registerTokenCommands } from "./commands/token.js";
@@ -10,12 +11,15 @@ import { registerProjectCommands } from "./commands/project.js";
 import { registerTaskCommands } from "./commands/task.js";
 import { registerFindingCommands } from "./commands/findings.js";
 
+const esmRequire: NodeRequire = createRequire(import.meta.url);
+const { version } = esmRequire("../package.json") as { version: string };
+
 const program: Command = new Command();
 
 program
   .name("grackle")
   .description("Multiplexed interface for AI coding agent sessions")
-  .version("0.0.1");
+  .version(version);
 
 registerEnvCommands(program);
 registerAgentCommands(program);

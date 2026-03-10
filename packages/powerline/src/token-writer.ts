@@ -4,13 +4,6 @@ import { homedir } from "node:os";
 import { realpathSync } from "node:fs";
 import { logger } from "./logger.js";
 
-const envTokens: Map<string, string> = new Map<string, string>();
-
-/** Return the map of environment variable tokens that have been written to `process.env`. */
-export function getEnvTokens(): Map<string, string> {
-  return envTokens;
-}
-
 /**
  * Verify that a resolved file path is under the user's home directory,
  * accounting for symlinks and case-insensitive filesystems.
@@ -37,7 +30,6 @@ export async function writeTokens(
   for (const token of tokens) {
     if (token.type === "env_var" && token.envVar) {
       process.env[token.envVar] = token.value;
-      envTokens.set(token.envVar, token.value);
       logger.info({ envVar: token.envVar }, "Set env var %s", token.envVar);
     } else if (token.type === "file" && token.filePath) {
       const resolvedPath = resolve(normalize(token.filePath.replace(/^~/, home)));

@@ -19,6 +19,7 @@ import * as logWriter from "./log-writer.js";
 import { writeTranscript } from "./transcript.js";
 import { safeParseJsonArray } from "./json-helpers.js";
 import { logger } from "./logger.js";
+import { slugify } from "./utils/slugify.js";
 
 const WS_PING_INTERVAL_MS: number = 30_000;
 const WS_CLOSE_UNAUTHORIZED: number = 4001;
@@ -27,10 +28,6 @@ interface WsMessage {
   type: string;
   payload?: Record<string, unknown>;
   id?: string;
-}
-
-function slugify(text: string): string {
-  return text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40);
 }
 
 let wssInstance: WebSocketServer | undefined = undefined;
