@@ -53,8 +53,17 @@ jobs:
       - name: Consolidate changefiles and sync nextBump
         id: changefile_check
         run: |
-          MAIN_DIR="common/changes/@grackle-ai/cli"
-          MAIN_PKG_DIR=$(basename "$MAIN_DIR")
+          # Read mainProject from version-policies.json (single source of truth)
+          POLICY_FILE="common/config/rush/version-policies.json"
+          MAIN_PROJECT=$(node -p "
+            const v = JSON.parse(require('fs').readFileSync('$POLICY_FILE', 'utf8'));
+            const p = v.find(pol => pol.policyName === 'grackle');
+            if (!p) { console.error('Policy not found'); process.exit(1); }
+            p.mainProject;
+          ")
+          # e.g. "@grackle-ai/cli" → "cli"
+          MAIN_PKG_DIR=$(echo "$MAIN_PROJECT" | sed 's|.*/||')
+          MAIN_DIR="common/changes/$MAIN_PROJECT"
 
           mapfile -t changefiles < <(find common/changes/ -name '*.json' 2>/dev/null)
           if [ ${#changefiles[@]} -eq 0 ]; then
@@ -62,7 +71,6 @@ jobs:
             echo "has_changefiles=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          echo "has_changefiles=true" >> "$GITHUB_OUTPUT"
           echo "Found ${#changefiles[@]} changefile(s)"
 
           # Determine the highest bump type across all changefiles.
@@ -85,19 +93,22 @@ jobs:
             exit 0
           fi
 
-          # Consolidate non-mainProject changefiles into the cli directory
-          # so rush version --bump actually consumes them.
+          echo "has_changefiles=true" >> "$GITHUB_OUTPUT"
+
+          # Consolidate non-mainProject changefiles into the mainProject
+          # directory so rush version --bump actually consumes them.
           mkdir -p "$MAIN_DIR"
           for f in "${changefiles[@]}"; do
             pkg_dir=$(basename "$(dirname "$f")")
             if [ "$pkg_dir" != "$MAIN_PKG_DIR" ]; then
               echo "Consolidating $(basename "$f") from $pkg_dir → $MAIN_PKG_DIR"
-              CHANGEFILE="$f" node -e "
+              CHANGEFILE="$f" MAIN_PROJECT="$MAIN_PROJECT" node -e "
                 const fs = require('fs');
                 const filePath = process.env.CHANGEFILE;
+                const mainProject = process.env.MAIN_PROJECT;
                 const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-                data.packageName = '@grackle-ai/cli';
-                for (const c of data.changes) { c.packageName = '@grackle-ai/cli'; }
+                data.packageName = mainProject;
+                for (const c of data.changes) { c.packageName = mainProject; }
                 fs.writeFileSync(filePath, JSON.stringify(data, null, 2) + '\n');
               "
               mv_dest="$MAIN_DIR/${pkg_dir}_$(basename "$f")"
@@ -114,13 +125,13 @@ jobs:
 
           # Update nextBump in version-policies.json so the actual semver
           # increment matches what the changefiles requested.
-          node -e "
+          HIGHEST="$highest" node -e "
             const fs = require('fs');
-            const p = 'common/config/rush/version-policies.json';
+            const p = '$POLICY_FILE';
             const v = JSON.parse(fs.readFileSync(p, 'utf8'));
             const policy = v.find(pol => pol.policyName === 'grackle');
-            if (!policy) { console.error('Policy \"grackle\" not found in ' + p); process.exit(1); }
-            policy.nextBump = '${highest}';
+            if (!policy) { console.error('Policy not found in ' + p); process.exit(1); }
+            policy.nextBump = process.env.HIGHEST;
             fs.writeFileSync(p, JSON.stringify(v, null, 2) + '\n');
           "
           echo "Set nextBump to $highest"
