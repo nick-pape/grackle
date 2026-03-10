@@ -2,7 +2,7 @@
 
 ## Git Workflow
 
-- **Never rebase or force-push.** Use `git merge origin/main` to sync with main, not `git rebase`. Rebase rewrites history and requires force-push.
+- **Never rebase or force-push.** To sync with `main`, first run `git fetch origin` and then use `git merge origin/main` instead of `git rebase`. Rebasing published branches rewrites history and typically requires a force-push, which we do not allow.
 - **Never merge PRs** unless the user explicitly tells you to merge. Other agents may be coordinating merge order.
 
 ## Build & Test
