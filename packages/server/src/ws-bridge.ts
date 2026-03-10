@@ -657,11 +657,17 @@ async function handleMessage(
             }
 
             if (event.type === "status") {
-              if (event.content === "waiting_input") sessionStore.updateSessionStatus(sessionId, "waiting_input");
-              else if (event.content === "running") sessionStore.updateSessionStatus(sessionId, "running");
-              else if (event.content === "completed") sessionStore.updateSession(sessionId, "completed");
-              else if (event.content === "failed") sessionStore.updateSession(sessionId, "failed");
-              else if (event.content === "killed") sessionStore.updateSession(sessionId, "killed");
+              if (event.content === "waiting_input") {
+                sessionStore.updateSessionStatus(sessionId, "waiting_input");
+              } else if (event.content === "running") {
+                sessionStore.updateSessionStatus(sessionId, "running");
+              } else if (event.content === "completed") {
+                sessionStore.updateSession(sessionId, "completed");
+              } else if (event.content === "failed") {
+                sessionStore.updateSession(sessionId, "failed");
+              } else if (event.content === "killed") {
+                sessionStore.updateSession(sessionId, "killed");
+              }
             }
           }
           const current = sessionStore.getSession(sessionId);

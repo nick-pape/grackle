@@ -82,11 +82,19 @@ export function registerAgentCommands(program: Command): void {
       const readline = await import("node:readline");
       const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 
+      let prompting = false;
+
       /** Prompt for input once and send the response. */
       function promptForInput(): void {
+        if (prompting) {
+          return;
+        }
+        prompting = true;
         rl.question("> ", (answer) => {
+          prompting = false;
           client.sendInput({ sessionId, text: answer }).catch((err: unknown) => {
-            console.error(`Failed to send input: ${err}`);
+            const message = err instanceof Error ? err.message : String(err);
+            console.error(`Failed to send input for session ${sessionId}: ${message}`);
           });
         });
       }
