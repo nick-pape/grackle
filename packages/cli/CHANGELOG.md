@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Tue, 10 Mar 2026 07:36:11 GMT and should not be manually modified.
+This log was last generated on Tue, 10 Mar 2026 07:45:46 GMT and should not be manually modified.
+
+## 0.9.0
+Tue, 10 Mar 2026 07:45:46 GMT
+
+### Minor changes
+
+- Add environment creation UI to web app
 
 ## 0.8.0
 Tue, 10 Mar 2026 07:36:11 GMT
