@@ -108,7 +108,7 @@ test.describe("Task tree hierarchy", () => {
     await parentRow.hover();
 
     // Click the add-child button
-    const addChildButton = parentRow.locator('button[title="Add child task"]');
+    const addChildButton = parentRow.locator('[aria-label="Add child task"]');
     await expect(addChildButton).toBeVisible({ timeout: 5_000 });
     await addChildButton.click();
 

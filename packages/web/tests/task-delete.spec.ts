@@ -19,7 +19,11 @@ test.describe("Task deletion via UI", () => {
     await expect(page.locator("button", { hasText: "Delete" })).toBeVisible({ timeout: 5_000 });
 
     // Set up dialog handler to accept the confirm
-    page.once("dialog", (dialog) => dialog.accept());
+    page.once("dialog", (dialog) => {
+      expect(dialog.type()).toBe("confirm");
+      expect(dialog.message()).toContain("pending-task");
+      return dialog.accept();
+    });
 
     // Click delete
     await page.locator("button", { hasText: "Delete" }).click();
@@ -40,7 +44,11 @@ test.describe("Task deletion via UI", () => {
     await navigateToTask(page, "cancel-task");
 
     // Dismiss the confirm dialog
-    page.once("dialog", (dialog) => dialog.dismiss());
+    page.once("dialog", (dialog) => {
+      expect(dialog.type()).toBe("confirm");
+      expect(dialog.message()).toContain("cancel-task");
+      return dialog.dismiss();
+    });
 
     await page.locator("button", { hasText: "Delete" }).click();
 
