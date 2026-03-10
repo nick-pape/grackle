@@ -11,6 +11,16 @@
 .header {
   @include section-label;
   padding: var(--space-xs) var(--space-md);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.addButton {
+  @include btn-ghost;
+  font-size: var(--font-size-sm);
+  line-height: 1;
+  padding: 1px 5px;
 }
 
 .emptyState {

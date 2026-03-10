@@ -176,11 +176,18 @@ export function EnvironmentList({ viewMode, setViewMode }: Props): JSX.Element {
     <div className={styles.container}>
       <div className={styles.header}>
         Environments
+        <button
+          className={styles.addButton}
+          onClick={() => setViewMode({ kind: "new_environment" })}
+          title="Add environment"
+        >
+          +
+        </button>
       </div>
 
       {environments.length === 0 && (
         <div className={styles.emptyState}>
-          No environments. Use the CLI to add one.
+          No environments. Click + to add one.
         </div>
       )}
 

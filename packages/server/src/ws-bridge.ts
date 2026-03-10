@@ -920,6 +920,25 @@ async function handleMessage(
       break;
     }
 
+    case "add_environment": {
+      const displayName = (msg.payload?.displayName as string) || "";
+      const adapterType = (msg.payload?.adapterType as string) || "";
+      if (!displayName || !adapterType) {
+        sendWs(ws, { type: "error", payload: { message: "displayName and adapterType required" } });
+        return;
+      }
+      const id = slugify(displayName) || uuid().slice(0, 8);
+      const adapterConfig = msg.payload?.adapterConfig
+        ? JSON.stringify(msg.payload.adapterConfig)
+        : "{}";
+      const defaultRuntime = (msg.payload?.defaultRuntime as string) || "";
+      envRegistry.addEnvironment(id, displayName, adapterType, adapterConfig, defaultRuntime);
+      logger.info({ id, displayName, adapterType }, "Environment added via WebSocket");
+      broadcast({ type: "environment_added", payload: { environmentId: id } });
+      broadcastEnvironments();
+      break;
+    }
+
     case "remove_environment": {
       const environmentId = msg.payload?.environmentId as string;
       if (!environmentId) {
