@@ -4,6 +4,10 @@ on:
   push:
     branches: [main]
 
+concurrency:
+  group: cd-publish
+  cancel-in-progress: false
+
 permissions:
   contents: write
 
@@ -40,45 +44,94 @@ jobs:
       - name: Run tests
         run: node common/scripts/install-run-rush.js test --verbose
 
-      # In lockStepVersion mode, `rush version --bump` ALWAYS bumps using the
-      # `nextBump` field from version-policies.json — even without changefiles.
-      # This causes two bugs:
-      #   1. Phantom bumps: pushes with no changefiles still increment the version
-      #   2. Ignored changefile type: nextBump overrides the changefile's "type"
-      #      (e.g. changefile says "minor" but nextBump:"patch" → patch bump)
-      #
-      # Fix: skip the bump when no changefiles exist, and sync nextBump to the
-      # highest changefile type before bumping.
-      - name: Check changefiles and sync nextBump
+      # In lockStepVersion mode, `rush version --bump` only consumes changefiles
+      # for the mainProject (@grackle-ai/cli). Changefiles targeting other
+      # lockstep packages (e.g. @grackle-ai/powerline) survive indefinitely,
+      # forcing every bump to match their type. Fix: consolidate all changefiles
+      # into the mainProject directory before bumping, and sync nextBump to the
+      # highest requested type.
+      - name: Consolidate changefiles and sync nextBump
         id: changefile_check
         run: |
-          if ! find common/changes/ -name '*.json' 2>/dev/null | grep -q .; then
+          # Read mainProject from version-policies.json (single source of truth)
+          POLICY_FILE="common/config/rush/version-policies.json"
+          MAIN_PROJECT=$(node -p "
+            const v = JSON.parse(require('fs').readFileSync('$POLICY_FILE', 'utf8'));
+            const p = v.find(pol => pol.policyName === 'grackle');
+            if (!p) { console.error('Policy not found'); process.exit(1); }
+            p.mainProject;
+          ")
+          # e.g. "@grackle-ai/cli" → "cli"
+          MAIN_PKG_DIR=$(echo "$MAIN_PROJECT" | sed 's|.*/||')
+          MAIN_DIR="common/changes/$MAIN_PROJECT"
+
+          mapfile -t changefiles < <(find common/changes/ -name '*.json' 2>/dev/null)
+          if [ ${#changefiles[@]} -eq 0 ]; then
             echo "No changefiles found, skipping version bump"
             echo "has_changefiles=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          echo "has_changefiles=true" >> "$GITHUB_OUTPUT"
+          echo "Found ${#changefiles[@]} changefile(s)"
 
           # Determine the highest bump type across all changefiles.
-          # Major bumps are blocked by CI, but fail loudly here too just in case.
+          # Priority: major (blocked) > minor > patch > none (skip).
           if grep -rq '"type":[[:space:]]*"major"' common/changes/; then
             echo "::error::Major version bump found in changefiles — blocked by policy"
             exit 1
           fi
-          highest="patch"
+          highest="none"
+          if grep -rq '"type":[[:space:]]*"patch"' common/changes/; then
+            highest="patch"
+          fi
           if grep -rq '"type":[[:space:]]*"minor"' common/changes/; then
             highest="minor"
           fi
+          # All changefiles are "none" — nothing to publish
+          if [ "$highest" = "none" ]; then
+            echo "All changefiles are type \"none\", skipping version bump"
+            echo "has_changefiles=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "has_changefiles=true" >> "$GITHUB_OUTPUT"
+
+          # Consolidate non-mainProject changefiles into the mainProject
+          # directory so rush version --bump actually consumes them.
+          mkdir -p "$MAIN_DIR"
+          for f in "${changefiles[@]}"; do
+            pkg_dir=$(basename "$(dirname "$f")")
+            if [ "$pkg_dir" != "$MAIN_PKG_DIR" ]; then
+              echo "Consolidating $(basename "$f") from $pkg_dir → $MAIN_PKG_DIR"
+              CHANGEFILE="$f" MAIN_PROJECT="$MAIN_PROJECT" node -e "
+                const fs = require('fs');
+                const filePath = process.env.CHANGEFILE;
+                const mainProject = process.env.MAIN_PROJECT;
+                const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+                data.packageName = mainProject;
+                for (const c of data.changes) { c.packageName = mainProject; }
+                fs.writeFileSync(filePath, JSON.stringify(data, null, 2) + '\n');
+              "
+              mv_dest="$MAIN_DIR/${pkg_dir}_$(basename "$f")"
+              if [ -e "$mv_dest" ]; then
+                echo "::error::Destination changefile $mv_dest already exists; refusing to overwrite"
+                exit 1
+              fi
+              mv "$f" "$mv_dest"
+              # Remove empty parent directories
+              parent=$(dirname "$f")
+              rmdir --ignore-fail-on-non-empty -p "$parent" 2>/dev/null || true
+            fi
+          done
 
           # Update nextBump in version-policies.json so the actual semver
-          # increment matches what the changefiles requested
-          node -e "
+          # increment matches what the changefiles requested.
+          HIGHEST="$highest" node -e "
             const fs = require('fs');
-            const p = 'common/config/rush/version-policies.json';
+            const p = '$POLICY_FILE';
             const v = JSON.parse(fs.readFileSync(p, 'utf8'));
             const policy = v.find(pol => pol.policyName === 'grackle');
-            if (!policy) { console.error('Policy \"grackle\" not found in ' + p); process.exit(1); }
-            policy.nextBump = '${highest}';
+            if (!policy) { console.error('Policy not found in ' + p); process.exit(1); }
+            policy.nextBump = process.env.HIGHEST;
             fs.writeFileSync(p, JSON.stringify(v, null, 2) + '\n');
           "
           echo "Set nextBump to $highest"
