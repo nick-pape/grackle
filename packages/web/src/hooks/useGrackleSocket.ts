@@ -378,7 +378,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
             break;
           }
           case "environment_added":
-            send({ type: "list_environments" });
+            // Server already broadcasts updated environment list via broadcastEnvironments()
             break;
           case "environment_removed":
             send({ type: "list_environments" });
