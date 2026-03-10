@@ -54,6 +54,7 @@ jobs:
         id: changefile_check
         run: |
           MAIN_DIR="common/changes/@grackle-ai/cli"
+          MAIN_PKG_DIR=$(basename "$MAIN_DIR")
 
           mapfile -t changefiles < <(find common/changes/ -name '*.json' 2>/dev/null)
           if [ ${#changefiles[@]} -eq 0 ]; then
@@ -65,14 +66,23 @@ jobs:
           echo "Found ${#changefiles[@]} changefile(s)"
 
           # Determine the highest bump type across all changefiles.
-          # Major bumps are blocked by CI, but fail loudly here too just in case.
+          # Priority: major (blocked) > minor > patch > none.
+          # If only "none" changefiles exist, we still default to patch so the
+          # version bump commit consumes them (otherwise they'd accumulate).
           if grep -rq '"type":[[:space:]]*"major"' common/changes/; then
             echo "::error::Major version bump found in changefiles — blocked by policy"
             exit 1
           fi
-          highest="patch"
+          highest="none"
+          if grep -rq '"type":[[:space:]]*"patch"' common/changes/; then
+            highest="patch"
+          fi
           if grep -rq '"type":[[:space:]]*"minor"' common/changes/; then
             highest="minor"
+          fi
+          # "none" isn't a valid nextBump value — fall back to patch
+          if [ "$highest" = "none" ]; then
+            highest="patch"
           fi
 
           # Consolidate non-mainProject changefiles into the cli directory
@@ -80,16 +90,22 @@ jobs:
           mkdir -p "$MAIN_DIR"
           for f in "${changefiles[@]}"; do
             pkg_dir=$(basename "$(dirname "$f")")
-            if [ "$pkg_dir" != "cli" ]; then
-              echo "Consolidating $(basename "$f") from $pkg_dir → cli"
-              node -e "
+            if [ "$pkg_dir" != "$MAIN_PKG_DIR" ]; then
+              echo "Consolidating $(basename "$f") from $pkg_dir → $MAIN_PKG_DIR"
+              CHANGEFILE="$f" node -e "
                 const fs = require('fs');
-                const data = JSON.parse(fs.readFileSync('$f', 'utf8'));
+                const filePath = process.env.CHANGEFILE;
+                const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
                 data.packageName = '@grackle-ai/cli';
                 for (const c of data.changes) { c.packageName = '@grackle-ai/cli'; }
-                fs.writeFileSync('$f', JSON.stringify(data, null, 2) + '\n');
+                fs.writeFileSync(filePath, JSON.stringify(data, null, 2) + '\n');
               "
-              mv "$f" "$MAIN_DIR/$(basename "$f")"
+              mv_dest="$MAIN_DIR/${pkg_dir}_$(basename "$f")"
+              if [ -e "$mv_dest" ]; then
+                echo "::error::Destination changefile $mv_dest already exists; refusing to overwrite"
+                exit 1
+              fi
+              mv "$f" "$mv_dest"
               # Remove empty parent directories
               parent=$(dirname "$f")
               rmdir --ignore-fail-on-non-empty -p "$parent" 2>/dev/null || true
