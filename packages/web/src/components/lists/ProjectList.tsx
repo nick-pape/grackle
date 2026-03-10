@@ -52,7 +52,7 @@ const TASK_BASE_INDENT_PX: number = 34;
 /** Additional left-padding per depth level. */
 const TASK_DEPTH_INDENT_PX: number = 16;
 
-/** Maximum nesting depth for child tasks. */
+/** Maximum nesting depth for child tasks. Mirrors MAX_TASK_DEPTH from @grackle-ai/common. */
 const MAX_TASK_DEPTH: number = 5;
 
 /** Props for the recursive TaskTreeNode component. */
@@ -123,13 +123,14 @@ function TaskTreeNode({
             dep
           </span>
         )}
-        {depth < MAX_TASK_DEPTH - 1 && (
+        {depth < MAX_TASK_DEPTH && (
           <button
             onClick={(e) => {
               e.stopPropagation();
               setViewMode({ kind: "new_task", projectId, parentTaskId: node.id });
             }}
             title="Add child task"
+            aria-label="Add child task"
             className={styles.addChildButton}
           >
             +

@@ -364,6 +364,9 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
           </span>
           <button
             onClick={() => {
+              if (!window.confirm(`Delete task "${task.title}"?`)) {
+                return;
+              }
               deleteTask(task.id);
               setViewMode({ kind: "project", projectId: task.projectId });
             }}
@@ -387,6 +390,9 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
           </button>
           <button
             onClick={() => {
+              if (!window.confirm(`Delete task "${task.title}"?`)) {
+                return;
+              }
               deleteTask(task.id);
               setViewMode({ kind: "project", projectId: task.projectId });
             }}
@@ -504,6 +510,9 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
           </button>
           <button
             onClick={() => {
+              if (!window.confirm(`Delete task "${task.title}"?`)) {
+                return;
+              }
               deleteTask(task.id);
               setViewMode({ kind: "project", projectId: task.projectId });
             }}
@@ -530,6 +539,9 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
           </button>
           <button
             onClick={() => {
+              if (!window.confirm(`Delete task "${task.title}"?`)) {
+                return;
+              }
               deleteTask(task.id);
               setViewMode({ kind: "project", projectId: task.projectId });
             }}

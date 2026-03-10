@@ -40,7 +40,14 @@ const WEB_DIST_DIR: string = resolve(
 
 function createWebHandler(apiKey: string): (req: http.IncomingMessage, res: http.ServerResponse) => void {
   return (req: http.IncomingMessage, res: http.ServerResponse) => {
-    const rawPath = decodeURIComponent((req.url || "/").split("?")[0]);
+    let rawPath: string;
+    try {
+      rawPath = decodeURIComponent((req.url || "/").split("?")[0]);
+    } catch {
+      res.writeHead(400);
+      res.end("Bad Request");
+      return;
+    }
     // URL paths are POSIX-style; use posix separator to detect root, then resolve safely
     const isRoot = rawPath === "/" || rawPath === "";
     let filePath = isRoot

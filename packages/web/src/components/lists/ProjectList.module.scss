@@ -161,6 +161,14 @@
   .taskRow:hover & {
     opacity: 1;
   }
+
+  .taskRow:focus-within & {
+    opacity: 1;
+  }
+
+  &:focus-visible {
+    opacity: 1;
+  }
 }
 
 .emptyTasks {
