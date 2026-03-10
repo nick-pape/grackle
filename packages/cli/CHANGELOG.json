@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.6.0",
+      "tag": "@grackle-ai/cli_v0.6.0",
+      "date": "Tue, 10 Mar 2026 07:13:31 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Code quality sweep 4: SessionPanel stable keys, null guard, useEffect deps, mock state read via ref, shared remote adapter helpers"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.5.0",
       "tag": "@grackle-ai/cli_v0.5.0",
       "date": "Tue, 10 Mar 2026 06:59:12 GMT",
