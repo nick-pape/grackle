@@ -18,6 +18,7 @@ export function createTask(
   dependsOn: string[],
   projectSlug: string,
   parentTaskId: string = "",
+  canDecompose: boolean = false,
 ): void {
   let depth = 0;
   let branch: string;
@@ -26,6 +27,9 @@ export function createTask(
     const parent = getTask(parentTaskId);
     if (!parent) {
       throw new Error(`Parent task not found: ${parentTaskId}`);
+    }
+    if (!parent.canDecompose) {
+      throw new Error(`Parent task "${parent.title}" (${parentTaskId}) does not have decomposition rights`);
     }
     depth = parent.depth + 1;
     if (depth > MAX_TASK_DEPTH) {
@@ -53,6 +57,7 @@ export function createTask(
     sortOrder,
     parentTaskId,
     depth,
+    canDecompose,
   }).run();
 }
 

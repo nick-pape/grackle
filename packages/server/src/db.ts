@@ -148,6 +148,11 @@ export function initDatabase(): void {
   try {
     sqlite.exec("ALTER TABLE tasks ADD COLUMN depth INTEGER NOT NULL DEFAULT 0");
   } catch { /* column already exists */ }
+
+  // Migration: add can_decompose column if missing (older databases)
+  try {
+    sqlite.exec("ALTER TABLE tasks ADD COLUMN can_decompose INTEGER NOT NULL DEFAULT 0");
+  } catch { /* column already exists */ }
 }
 
 // Run init immediately for backwards compatibility — stores import db at module load
