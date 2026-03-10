@@ -33,12 +33,17 @@ graph LR
 
 #### ⛓️ Workflow
 
-Chain tasks with dependencies. Review artifacts at each step.
+Decompose work into task trees with parent/child hierarchy. Chain siblings with dependencies. Review artifacts at each step.
 
 ```mermaid
-graph LR
-    T1["📋 Task 1"] --> R1["✅ Review"] --> T2["📋 Task 2"] --> R2["✅ Review"] --> T3["📋 Task 3"] --> R3["✅ Review"]
+graph TD
+    Root["📋 Implement Auth"] --> A["✅ Design token schema"]
+    Root --> B["🔄 Implement middleware"]
+    Root --> C["⏳ Write integration tests"]
+    B --> C
 ```
+
+![Task tree — hierarchical tasks with status indicators and expand/collapse](docs/screenshots/task-tree-hierarchy.png)
 
 #### 👥 Team [⭐#37](https://github.com/nick-pape/grackle/issues/37)
 
@@ -113,6 +118,7 @@ graph TD
 | 🌳 | **Git worktree isolation** | Every task gets its own branch in its own worktree — zero interference between agents |
 | 💬 | **Findings & knowledge sharing** | Agents post discoveries that become context for other agents |
 | 🔄 | **Multi-runtime support** | Claude Code, Copilot, and Codex — with more on the roadmap |
+| 🌲 | **Task tree hierarchy** | Decompose tasks into parent/child subtrees up to 5 levels deep — with recursive tree view, expand/collapse, and progress badges |
 | 🔗 | **Task dependencies** | Dependency gating — blocked tasks wait for their dependencies to complete |
 | ✅ | **Diff review** | See exactly what each agent changed, approve or reject per-task |
 | 🧠 | **Knowledge graph** [⭐#13](https://github.com/nick-pape/grackle/issues/13) | Structured knowledge sharing across agents — beyond flat findings |

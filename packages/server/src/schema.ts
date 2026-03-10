@@ -97,6 +97,8 @@ export const tasks = sqliteTable("tasks", {
   createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
   updatedAt: text("updated_at").notNull().default(sql`(datetime('now'))`),
   sortOrder: integer("sort_order").notNull().default(0),
+  parentTaskId: text("parent_task_id").notNull().default(""),
+  depth: integer("depth").notNull().default(0),
 });
 
 /** Row shape returned by a SELECT on the tasks table. */
