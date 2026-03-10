@@ -45,6 +45,8 @@ graph TD
 
 ![Task tree — hierarchical tasks with status indicators and expand/collapse](docs/screenshots/task-tree-hierarchy.png)
 
+![DAG visualization — interactive dependency graph with hierarchy and dependency edges](docs/screenshots/dag-visualization.png)
+
 #### 👥 Team [⭐#37](https://github.com/nick-pape/grackle/issues/37)
 
 Multiple agents working in parallel on a shared project, coordinating through findings.

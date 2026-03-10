@@ -3,7 +3,8 @@ import { EventRenderer } from "../display/EventRenderer.js";
 import { DiffViewer } from "../display/DiffViewer.js";
 import { FindingsPanel } from "./FindingsPanel.js";
 import { SettingsPanel } from "./SettingsPanel.js";
-import { useEffect, useMemo, useRef, useState, type JSX } from "react";
+import { DagView } from "../dag/DagView.js";
+import { useEffect, useMemo, useRef, useState, type JSX, type RefObject } from "react";
 import type { ViewMode } from "../../App.js";
 import type { Session, SessionEvent } from "../../hooks/useGrackleSocket.js";
 import { AnimatePresence, motion } from "motion/react";
@@ -56,7 +57,7 @@ interface EventListProps {
   sessionEvents: SessionEvent[];
   session: Session | undefined;
   // eslint-disable-next-line @rushstack/no-new-null
-  scrollRef: React.RefObject<HTMLDivElement | null>;
+  scrollRef: RefObject<HTMLDivElement | null>;
 }
 
 /** Scrollable list of session events with empty-state messaging. */
@@ -99,6 +100,7 @@ function groupConsecutiveTextEvents(events: SessionEvent[]): SessionEvent[] {
 // --- Main component ---
 
 type TaskTab = "stream" | "diff" | "findings";
+type ProjectTab = "tasks" | "graph";
 
 /** Main content panel that renders session streams, task views, project summaries, or empty states based on the current view mode. */
 export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
@@ -107,6 +109,7 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
   const scrollRef = useRef<HTMLDivElement>(null);
   const loadedRef = useRef<string | undefined>(undefined);
   const [activeTaskTab, setActiveTaskTab] = useState<TaskTab>("stream");
+  const [projectTab, setProjectTab] = useState<ProjectTab>("tasks");
   const prevTaskStatusRef = useRef<string | undefined>(undefined);
 
   // Determine session context
@@ -203,11 +206,36 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
     const done = projectTasks.filter((t) => t.status === "done").length;
     const total = projectTasks.length;
     return (
-      <div className={styles.projectSummary}>
-        <span className={styles.projectSummaryTitle}>
-          {total > 0 ? `${done}/${total} tasks complete` : "No tasks yet"}
-        </span>
-        <span className={styles.projectSummarySubtitle}>Select a task or click + to create one</span>
+      <div className={styles.panelContainer}>
+        <div className={styles.tabBar} role="tablist" aria-label="Project view">
+          <button
+            role="tab"
+            aria-selected={projectTab === "graph"}
+            className={`${styles.tab} ${projectTab === "graph" ? styles.active : ""}`}
+            onClick={() => setProjectTab("graph")}
+          >
+            Graph
+          </button>
+          <button
+            role="tab"
+            aria-selected={projectTab === "tasks"}
+            className={`${styles.tab} ${projectTab === "tasks" ? styles.active : ""}`}
+            onClick={() => setProjectTab("tasks")}
+          >
+            Tasks
+          </button>
+        </div>
+        {projectTab === "tasks" && (
+          <div className={styles.projectSummary}>
+            <span className={styles.projectSummaryTitle}>
+              {total > 0 ? `${done}/${total} tasks complete` : "No tasks yet"}
+            </span>
+            <span className={styles.projectSummarySubtitle}>Select a task or click + to create one</span>
+          </div>
+        )}
+        {projectTab === "graph" && (
+          <DagView projectId={viewMode.projectId} setViewMode={setViewMode} />
+        )}
       </div>
     );
   }
