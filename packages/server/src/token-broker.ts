@@ -1,3 +1,4 @@
+import { eq } from "drizzle-orm";
 import db from "./db.js";
 import { tokens, type TokenRow } from "./schema.js";
 import { encrypt, decrypt } from "./crypto.js";
@@ -30,6 +31,12 @@ export async function setToken(entry: TokenConfig): Promise<void> {
     .run();
 
   // Auto-push to all connected environments
+  await pushToAll();
+}
+
+/** Delete a token by name and re-push the updated bundle to all environments. */
+export async function deleteToken(name: string): Promise<void> {
+  db.delete(tokens).where(eq(tokens.id, name)).run();
   await pushToAll();
 }
 

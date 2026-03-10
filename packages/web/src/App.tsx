@@ -16,7 +16,9 @@ export type ViewMode =
   | { kind: "session"; sessionId: string }
   | { kind: "project"; projectId: string }
   | { kind: "new_task"; projectId: string }
-  | { kind: "task"; taskId: string; tab?: "stream" | "diff" | "findings" };
+  | { kind: "task"; taskId: string; tab?: "stream" | "diff" | "findings" }
+  | { kind: "new_environment" }
+  | { kind: "settings" };
 
 /** Main application content with layout and view routing. */
 function AppContent(): JSX.Element {
@@ -32,7 +34,7 @@ function AppContent(): JSX.Element {
 
   return (
     <div className={styles.root}>
-      <StatusBar />
+      <StatusBar setViewMode={setViewMode} />
       <div className={styles.body}>
         <Sidebar viewMode={viewMode} setViewMode={setViewMode} />
         <div className={styles.main}>

@@ -1,6 +1,6 @@
 import type { Command } from "commander";
 import { createGrackleClient } from "../client.js";
-import { grackle, taskStatusToString } from "@grackle-ai/common";
+import { taskStatusToString } from "@grackle-ai/common";
 import Table from "cli-table3";
 
 export function registerTaskCommands(program: Command): void {
@@ -103,11 +103,6 @@ export function registerTaskCommands(program: Command): void {
       const client = createGrackleClient();
       const t = await client.rejectTask({
         id: taskId,
-        title: "",
-        description: "",
-        status: grackle.TaskStatus.UNSPECIFIED,
-        environmentId: "",
-        dependsOn: [],
         reviewNotes: opts.notes,
       });
       console.log(`Rejected: ${t.id} → ${taskStatusToString(t.status)}`);

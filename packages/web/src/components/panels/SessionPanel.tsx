@@ -2,6 +2,7 @@ import { useGrackle } from "../../context/GrackleContext.js";
 import { EventRenderer } from "../display/EventRenderer.js";
 import { DiffViewer } from "../display/DiffViewer.js";
 import { FindingsPanel } from "./FindingsPanel.js";
+import { SettingsPanel } from "./SettingsPanel.js";
 import { useEffect, useMemo, useRef, useState, type JSX } from "react";
 import type { ViewMode } from "../../App.js";
 import type { Session, SessionEvent } from "../../hooks/useGrackleSocket.js";
@@ -71,7 +72,7 @@ function EventList({ sessionEvents, session, scrollRef }: EventListProps): JSX.E
         <div className={isTerminal ? styles.errorMessage : styles.waitingMessage}>{emptyMessage}</div>
       )}
       {sessionEvents.map((event, i) => (
-        <EventRenderer key={i} event={event} />
+        <EventRenderer key={`${event.sessionId}-${event.timestamp}-${i}`} event={event} />
       ))}
     </div>
   );
@@ -164,7 +165,7 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
     if (activeTaskTab === "diff" && task?.id) {
       loadTaskDiff(task.id);
     }
-  }, [activeTaskTab, projectId, task?.id]);
+  }, [activeTaskTab, projectId, task?.id, loadFindings, loadTaskDiff]);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -172,6 +173,11 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [groupedEvents.length, activeTaskTab]);
+
+  // --- settings mode ---
+  if (viewMode.kind === "settings") {
+    return <SettingsPanel />;
+  }
 
   // --- empty mode ---
   if (viewMode.kind === "empty") {
@@ -202,6 +208,15 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
           {total > 0 ? `${done}/${total} tasks complete` : "No tasks yet"}
         </span>
         <span className={styles.projectSummarySubtitle}>Select a task or click + to create one</span>
+      </div>
+    );
+  }
+
+  // --- new_environment mode ---
+  if (viewMode.kind === "new_environment") {
+    return (
+      <div className={styles.emptyState}>
+        Configure the new environment below
       </div>
     );
   }
@@ -280,7 +295,7 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
                 <div className={styles.waitingMessage}>Waiting for events...</div>
               )}
               {groupedEvents.map((event, i) => (
-                <EventRenderer key={i} event={event} />
+                <EventRenderer key={`${event.sessionId}-${event.timestamp}-${i}`} event={event} />
               ))}
             </motion.div>
           )}
@@ -322,12 +337,20 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
   }
 
   // --- session mode (legacy/direct) ---
+  if (!sessionId) {
+    return (
+      <div className={styles.emptyState}>
+        No session selected
+      </div>
+    );
+  }
+
   const isActive = session?.status === "running" || session?.status === "waiting_input";
 
   return (
     <div className={styles.panelContainer}>
       <SessionHeader
-        sessionId={sessionId!}
+        sessionId={sessionId}
         session={session}
         isActive={isActive}
         onKill={kill}

@@ -50,14 +50,23 @@ export function registerAgentCommands(program: Command): void {
         environmentId: opts.env || "",
         status: grackle.SessionStatus.UNSPECIFIED,
       });
-      if (res.sessions.length === 0) {
+      const activeStatuses = new Set([
+        grackle.SessionStatus.PENDING,
+        grackle.SessionStatus.RUNNING,
+        grackle.SessionStatus.WAITING_INPUT,
+        grackle.SessionStatus.SUSPENDED,
+      ]);
+      const sessions = opts.all
+        ? res.sessions
+        : res.sessions.filter((s) => activeStatuses.has(s.status));
+      if (sessions.length === 0) {
         console.log("No sessions.");
         return;
       }
       const table = new Table({
         head: ["ID", "Env", "Runtime", "Status", "Prompt", "Started"],
       });
-      for (const s of res.sessions) {
+      for (const s of sessions) {
         const prompt = s.prompt.length > 40 ? s.prompt.slice(0, 40) + "..." : s.prompt;
         table.push([s.id.slice(0, 8), s.environmentId, s.runtime, sessionStatusToString(s.status), prompt, s.startedAt]);
       }
@@ -80,23 +89,33 @@ export function registerAgentCommands(program: Command): void {
       const client = createGrackleClient();
       console.log(`Attached to ${sessionId} (Ctrl+C to detach)\n`);
 
-      // Set up stdin for input
       const readline = await import("node:readline");
       const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 
-      // Stream events
-      const streamPromise = (async () => {
-        for await (const event of client.streamSession({ id: sessionId })) {
-          printEvent(event);
-          if (event.type === grackle.EventType.STATUS && event.content === "waiting_input") {
-            rl.question("> ", async (answer) => {
-              await client.sendInput({ sessionId, text: answer });
-            });
-          }
-        }
-      })();
+      let prompting = false;
 
-      await streamPromise;
+      /** Prompt for input once and send the response. */
+      function promptForInput(): void {
+        if (prompting) {
+          return;
+        }
+        prompting = true;
+        rl.question("> ", (answer) => {
+          prompting = false;
+          client.sendInput({ sessionId, text: answer }).catch((err: unknown) => {
+            const message = err instanceof Error ? err.message : String(err);
+            console.error(`Failed to send input for session ${sessionId}: ${message}`);
+          });
+        });
+      }
+
+      for await (const event of client.streamSession({ id: sessionId })) {
+        printEvent(event);
+        if (event.type === grackle.EventType.STATUS && event.content === "waiting_input") {
+          promptForInput();
+        }
+      }
+
       rl.close();
     });
 }

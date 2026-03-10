@@ -1,9 +1,15 @@
 import type { JSX } from "react";
 import { useGrackle } from "../../context/GrackleContext.js";
+import type { ViewMode } from "../../App.js";
 import styles from "./StatusBar.module.scss";
 
+/** Props for the StatusBar component. */
+interface StatusBarProps {
+  setViewMode?: (mode: ViewMode) => void;
+}
+
 /** Top status bar showing connection state, environment counts, and active session count. */
-export function StatusBar(): JSX.Element {
+export function StatusBar({ setViewMode }: StatusBarProps): JSX.Element {
   const { connected, environments, sessions } = useGrackle();
   const totalEnvs = environments.length;
   const connectedEnvs = environments.filter((e) => e.status === "connected").length;
@@ -21,6 +27,15 @@ export function StatusBar(): JSX.Element {
         </span>
         <span>{connectedEnvs}/{totalEnvs} env{totalEnvs !== 1 ? "s" : ""}</span>
         <span>{activeCount} active</span>
+        {setViewMode && (
+          <button
+            className={styles.settingsButton}
+            onClick={() => setViewMode({ kind: "settings" })}
+            title="Settings"
+          >
+            {"\u2699"}
+          </button>
+        )}
       </div>
     </div>
   );

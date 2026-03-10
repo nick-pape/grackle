@@ -26,6 +26,7 @@ function RuntimeSelector({ value, onChange }: RuntimeSelectorProps): JSX.Element
       className={styles.select}
     >
       <option value="claude-code">claude-code</option>
+      <option value="codex">codex</option>
       <option value="copilot">copilot</option>
       <option value="stub">stub</option>
     </select>
@@ -38,7 +39,7 @@ function RuntimeSelector({ value, onChange }: RuntimeSelectorProps): JSX.Element
 export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
   const {
     spawn, sendInput, kill, sessions, tasks, environments,
-    createTask, startTask, approveTask, rejectTask,
+    createTask, startTask, approveTask, rejectTask, addEnvironment,
   } = useGrackle();
 
   const [text, setText] = useState("");
@@ -49,6 +50,18 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
   const [taskDesc, setTaskDesc] = useState("");
   const [taskEnvId, setTaskEnvId] = useState("");
   const [rejectNotes, setRejectNotes] = useState("");
+
+  // ─── New environment form state ─────────────────
+  const [envName, setEnvName] = useState("");
+  const [envAdapterType, setEnvAdapterType] = useState("local");
+  const [envRuntime, setEnvRuntime] = useState("claude-code");
+  const [envHost, setEnvHost] = useState("");
+  const [envPort, setEnvPort] = useState("");
+  const [envUser, setEnvUser] = useState("");
+  const [envImage, setEnvImage] = useState("");
+  const [envRepo, setEnvRepo] = useState("");
+  const [envCodespaceName, setEnvCodespaceName] = useState("");
+  const [envIdentityFile, setEnvIdentityFile] = useState("");
 
   useEffect(() => {
     if (viewMode.kind === "new_chat") {
@@ -83,6 +96,188 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
         <span className={styles.hintText}>
           Select a session or click + to start
         </span>
+      </div>
+    );
+  }
+
+  // --- new_environment mode ---
+  if (viewMode.kind === "new_environment") {
+    const isEnvValid = (): boolean => {
+      if (!envName.trim()) {
+        return false;
+      }
+      if (envAdapterType === "ssh" && !envHost.trim()) {
+        return false;
+      }
+      if (envAdapterType === "codespace" && !envCodespaceName.trim()) {
+        return false;
+      }
+      return true;
+    };
+
+    const handleAddEnvironment = (): void => {
+      if (!isEnvValid()) {
+        return;
+      }
+      const config: Record<string, unknown> = {};
+      if (envAdapterType === "local") {
+        if (envHost.trim()) {
+          config.host = envHost.trim();
+        }
+        if (envPort.trim()) {
+          const parsed = parseInt(envPort, 10);
+          if (Number.isFinite(parsed)) {
+            config.port = parsed;
+          }
+        }
+      } else if (envAdapterType === "ssh") {
+        config.host = envHost.trim();
+        if (envUser.trim()) {
+          config.user = envUser.trim();
+        }
+        if (envPort.trim()) {
+          const parsed = parseInt(envPort, 10);
+          if (Number.isFinite(parsed)) {
+            config.sshPort = parsed;
+          }
+        }
+        if (envIdentityFile.trim()) {
+          config.identityFile = envIdentityFile.trim();
+        }
+      } else if (envAdapterType === "docker") {
+        if (envImage.trim()) {
+          config.image = envImage.trim();
+        }
+        if (envRepo.trim()) {
+          config.repo = envRepo.trim();
+        }
+      } else if (envAdapterType === "codespace") {
+        config.codespaceName = envCodespaceName.trim();
+      }
+      addEnvironment(envName.trim(), envAdapterType, config, envRuntime);
+      setEnvName("");
+      setEnvAdapterType("local");
+      setEnvRuntime("claude-code");
+      setEnvHost("");
+      setEnvPort("");
+      setEnvUser("");
+      setEnvImage("");
+      setEnvRepo("");
+      setEnvCodespaceName("");
+      setEnvIdentityFile("");
+      setViewMode({ kind: "empty" });
+    };
+
+    return (
+      <div className={styles.barColumn}>
+        <div className={styles.barRow}>
+          <span className={styles.badge}>new env</span>
+          <input
+            type="text"
+            value={envName}
+            onChange={(e) => setEnvName(e.target.value)}
+            placeholder="Environment name..."
+            autoFocus
+            className={styles.input}
+          />
+          <select
+            value={envAdapterType}
+            onChange={(e) => setEnvAdapterType(e.target.value)}
+            className={styles.select}
+          >
+            <option value="local">local</option>
+            <option value="ssh">ssh</option>
+            <option value="docker">docker</option>
+            <option value="codespace">codespace</option>
+          </select>
+          <RuntimeSelector value={envRuntime} onChange={setEnvRuntime} />
+          <button
+            onClick={handleAddEnvironment}
+            disabled={!isEnvValid()}
+            className={styles.btnPrimary}
+          >
+            Add
+          </button>
+        </div>
+        <div className={styles.barRow}>
+          {envAdapterType === "local" && (
+            <>
+              <input
+                type="text"
+                value={envHost}
+                onChange={(e) => setEnvHost(e.target.value)}
+                placeholder="Host (optional)..."
+                className={styles.inputSmall}
+              />
+              <input
+                type="text"
+                value={envPort}
+                onChange={(e) => setEnvPort(e.target.value)}
+                placeholder="Port (optional)..."
+                className={styles.inputSmall}
+              />
+            </>
+          )}
+          {envAdapterType === "ssh" && (
+            <>
+              <input
+                type="text"
+                value={envHost}
+                onChange={(e) => setEnvHost(e.target.value)}
+                placeholder="Host (required)..."
+                className={styles.inputSmall}
+              />
+              <input
+                type="text"
+                value={envUser}
+                onChange={(e) => setEnvUser(e.target.value)}
+                placeholder="User (optional)..."
+                className={styles.inputSmall}
+              />
+              <input
+                type="text"
+                value={envPort}
+                onChange={(e) => setEnvPort(e.target.value)}
+                placeholder="SSH port (optional)..."
+                className={styles.inputSmall}
+              />
+              <input
+                type="text"
+                value={envIdentityFile}
+                onChange={(e) => setEnvIdentityFile(e.target.value)}
+                placeholder="Identity file (optional)..."
+                className={styles.inputSmall}
+              />
+            </>
+          )}
+          {envAdapterType === "docker" && (
+            <>
+              <input
+                type="text"
+                value={envImage}
+                onChange={(e) => setEnvImage(e.target.value)}
+                placeholder="Image (optional)..."
+                className={styles.inputSmall}
+              />
+              <input
+                type="text"
+                value={envRepo}
+                onChange={(e) => setEnvRepo(e.target.value)}
+                placeholder="Repo (optional)..."
+                className={styles.inputSmall}
+              />
+            </>
+          )}
+          {envAdapterType === "codespace" && (
+            <input
+              type="text"
+              value={envCodespaceName}
+              onChange={(e) => setEnvCodespaceName(e.target.value)}
+              placeholder="Codespace name (required)..."
+              className={styles.inputSmall}
+            />
+          )}
+        </div>
       </div>
     );
   }

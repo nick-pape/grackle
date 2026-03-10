@@ -15,7 +15,7 @@ test.describe("Markdown Rendering in EventRenderer", () => {
 
     // Switch to Environments tab, start a new chat
     await page.locator("button", { hasText: "Environments" }).click();
-    await page.locator("button", { hasText: "+" }).click();
+    await page.locator('button[title="New chat"]').click();
     const runtimeSelect = page.locator("select");
     await runtimeSelect.selectOption("stub");
     const promptInput = page.locator('input[placeholder="Enter prompt..."]');
@@ -41,7 +41,7 @@ test.describe("Markdown Rendering in EventRenderer", () => {
 
     // Switch to Environments, start a stub session
     await page.locator("button", { hasText: "Environments" }).click();
-    await page.locator("button", { hasText: "+" }).click();
+    await page.locator('button[title="New chat"]').click();
     await page.locator("select").selectOption("stub");
     await page.locator('input[placeholder="Enter prompt..."]').fill("code test");
     await page.locator("button", { hasText: "Go" }).click();
@@ -72,7 +72,7 @@ test.describe("Markdown Rendering in EventRenderer", () => {
 
     // Switch to Environments, start a stub session
     await page.locator("button", { hasText: "Environments" }).click();
-    await page.locator("button", { hasText: "+" }).click();
+    await page.locator('button[title="New chat"]').click();
     await page.locator("select").selectOption("stub");
     await page.locator('input[placeholder="Enter prompt..."]').fill("group test");
     await page.locator("button", { hasText: "Go" }).click();
@@ -105,7 +105,7 @@ test.describe("Markdown Rendering in EventRenderer", () => {
 
     // Start a stub session to get a session context
     await page.locator("button", { hasText: "Environments" }).click();
-    await page.locator("button", { hasText: "+" }).click();
+    await page.locator('button[title="New chat"]').click();
     await page.locator("select").selectOption("stub");
     await page.locator('input[placeholder="Enter prompt..."]').fill("table test");
     await page.locator("button", { hasText: "Go" }).click();

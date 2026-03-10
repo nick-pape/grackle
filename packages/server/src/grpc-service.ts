@@ -21,13 +21,13 @@ import {
   environmentStatusToEnum, sessionStatusToEnum, sessionStatusToString,
   tokenTypeToEnum, tokenTypeToString,
   taskStatusToEnum, taskStatusToString, projectStatusToEnum,
+  agentEventTypeToEventType,
 } from "@grackle-ai/common";
 import { grackleHome } from "./paths.js";
 import { safeParseJsonArray } from "./json-helpers.js";
-
-function slugify(text: string): string {
-  return text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40);
-}
+import { slugify } from "./utils/slugify.js";
+import { logger } from "./logger.js";
+import { buildTaskSystemContext } from "./utils/system-context.js";
 
 function envRowToProto(row: EnvironmentRow): grackle.Environment {
   return create(grackle.EnvironmentSchema, {
@@ -136,7 +136,7 @@ function spawnOnPowerLine(
       for await (const event of conn.client.spawn(powerlineReq)) {
         const sessionEvent = create(grackle.SessionEventSchema, {
           sessionId,
-          type: event.type as number as grackle.EventType,
+          type: agentEventTypeToEventType(event.type),
           timestamp: event.timestamp,
           content: event.content,
           raw: event.raw,
@@ -154,9 +154,9 @@ function spawnOnPowerLine(
               data.content || "", data.tags || [],
             );
             broadcast({ type: "finding_posted", payload: { projectId, findingId } });
-            process.stderr.write(`[finding] Stored: ${findingId} "${data.title}" in ${projectId}\n`);
+            logger.info({ findingId, projectId, title: data.title }, "Finding stored");
           } catch (err) {
-            process.stderr.write(`[finding] ERROR: ${err} (project=${projectId} task=${taskId})\n`);
+            logger.error({ err, projectId, taskId }, "Failed to store finding");
           }
         }
 
@@ -360,6 +360,8 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         runtime: session.runtime,
       });
 
+      const logPath = session.logPath || join(grackleHome, LOGS_DIR, session.id);
+
       // eslint-disable-next-line @typescript-eslint/no-floating-promises
       (async () => {
         try {
@@ -367,12 +369,32 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
           for await (const event of conn.client.resume(powerlineReq)) {
             const sessionEvent = create(grackle.SessionEventSchema, {
               sessionId: session.id,
-              type: event.type as number as grackle.EventType,
+              type: agentEventTypeToEventType(event.type),
               timestamp: event.timestamp,
               content: event.content,
               raw: event.raw,
             });
+            logWriter.writeEvent(logPath, sessionEvent);
             streamHub.publish(sessionEvent);
+
+            if (event.type === powerline.AgentEventType.STATUS) {
+              if (event.content === "waiting_input") {
+                sessionStore.updateSessionStatus(session.id, "waiting_input");
+              } else if (event.content === "running") {
+                sessionStore.updateSessionStatus(session.id, "running");
+              } else if (event.content === "completed") {
+                sessionStore.updateSession(session.id, "completed");
+              } else if (event.content === "failed") {
+                sessionStore.updateSession(session.id, "failed");
+              } else if (event.content === "killed") {
+                sessionStore.updateSession(session.id, "killed");
+              }
+            }
+          }
+
+          const current = sessionStore.getSession(session.id);
+          if (current && !["completed", "failed", "killed"].includes(current.status)) {
+            sessionStore.updateSession(session.id, "completed");
           }
         } catch (err) {
           sessionStore.updateSession(session.id, "failed", undefined, String(err));
@@ -487,6 +509,11 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       });
     },
 
+    async deleteToken(req: grackle.TokenName) {
+      await tokenBroker.deleteToken(req.name);
+      return create(grackle.EmptySchema, {});
+    },
+
     // ─── Projects ────────────────────────────────────────────
 
     async listProjects() {
@@ -557,12 +584,12 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
 
       taskStore.updateTask(
         req.id,
-        req.title || existing.title,
-        req.description || existing.description,
+        req.title !== "" ? req.title : existing.title,
+        req.description !== "" ? req.description : existing.description,
         reqStatus,
-        req.environmentId || existing.environmentId,
+        req.environmentId !== "" ? req.environmentId : existing.environmentId,
         req.dependsOn.length > 0 ? [...req.dependsOn] : safeParseJsonArray(existing.dependsOn),
-        req.reviewNotes || existing.reviewNotes,
+        req.reviewNotes !== "" ? req.reviewNotes : existing.reviewNotes,
       );
       const row = taskStore.getTask(req.id);
       return taskRowToProto(row!);
@@ -593,17 +620,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       const model = req.model || process.env.GRACKLE_DEFAULT_MODEL || DEFAULT_MODEL;
       const logPath = join(grackleHome, LOGS_DIR, sessionId);
 
-      // Build system context: task info + review notes + MCP tool instructions
-      const systemContext = [
-        `## Task: ${task.title}`,
-        task.description,
-        task.reviewNotes ? `## Review Feedback (from previous attempt)\n${task.reviewNotes}` : "",
-        `## Grackle Tools (MCP)`,
-        `You have a "grackle" MCP server with tools for coordinating with other agents:`,
-        `- **mcp__grackle__post_finding**: Share discoveries (architecture decisions, bugs, patterns) with other agents working on this project. Parameters: title (string), content (string), category (optional: architecture|api|bug|decision|dependency|pattern|general), tags (optional: string[]).`,
-        `- **mcp__grackle__query_findings**: Query findings posted by other agents. Findings from previous tasks are also in your system context above.`,
-        `IMPORTANT: When you complete your task, post at least one finding summarizing what you did and any key decisions made.`,
-      ].filter(Boolean).join("\n\n");
+      const systemContext = buildTaskSystemContext(task.title, task.description, task.reviewNotes);
 
       sessionStore.createSession(sessionId, environmentId, runtime, task.title, model, logPath);
       taskStore.setTaskSession(task.id, sessionId);

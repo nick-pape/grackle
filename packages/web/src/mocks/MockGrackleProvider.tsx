@@ -27,6 +27,7 @@ import type {
   TaskData,
   TaskDiffData,
   Project,
+  TokenInfo,
 } from "../hooks/useGrackleSocket.js";
 import {
   MOCK_ENVIRONMENTS,
@@ -35,6 +36,7 @@ import {
   MOCK_PROJECTS,
   MOCK_TASKS,
   MOCK_FINDINGS,
+  MOCK_TOKENS,
   MOCK_TASK_DIFF,
   MOCK_STREAM_SCENARIOS,
   type MockStreamStep,
@@ -69,6 +71,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
   const [projects, setProjects] = useState<Project[]>(MOCK_PROJECTS);
   const [tasks, setTasks] = useState<TaskData[]>(MOCK_TASKS);
   const [findings, setFindings] = useState<FindingData[]>(MOCK_FINDINGS);
+  const [tokens, setTokens] = useState<TokenInfo[]>(MOCK_TOKENS);
   const [taskDiff, setTaskDiff] = useState<TaskDiffData | undefined>(MOCK_TASK_DIFF);
 
   // ── Refs ──────────────────────────────────────────
@@ -80,6 +83,9 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
   const timersRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
   /** Per-session timeout tracking for selective cancellation (kill). */
   const sessionTimersRef = useRef<Map<string, Set<ReturnType<typeof setTimeout>>>>(new Map());
+  /** Ref mirror of tasks state for reading current values without triggering re-renders. */
+  const tasksRef = useRef<TaskData[]>(tasks);
+  tasksRef.current = tasks;
   /** Resume steps keyed by sessionId, stored when a scenario pauses for input. */
   const pendingResumeRef = useRef<Map<string, MockStreamStep[]>>(new Map());
   /**
@@ -397,16 +403,9 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       console.log("[MockGrackle] startTask", { taskId, runtime });
 
       // Find the task to get its metadata
-      let taskEnvironmentId = "";
-      let taskTitle = "";
-      setTasks((prev) => {
-        const target = prev.find((t) => t.id === taskId);
-        if (target) {
-          taskEnvironmentId = target.environmentId;
-          taskTitle = target.title;
-        }
-        return prev;
-      });
+      const target = tasksRef.current.find((t) => t.id === taskId);
+      const taskEnvironmentId = target?.environmentId ?? "";
+      const taskTitle = target?.title ?? "";
 
       const sessionId = nextId("sess");
       const newSession: Session = {
@@ -684,6 +683,20 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
     [nextId],
   );
 
+  /** Logs an add-environment call (mock does not persist). */
+  const addEnvironment: UseGrackleSocketResult["addEnvironment"] = useCallback(
+    (
+      displayName: string,
+      adapterType: string,
+      adapterConfig?: Record<string, unknown>,
+      defaultRuntime?: string,
+    ) => {
+      // eslint-disable-next-line no-console
+      console.log("[MockGrackle] addEnvironment", { displayName, adapterType, adapterConfig, defaultRuntime });
+    },
+    [],
+  );
+
   /** Simulates async loading of task diff data with a short delay. */
   const loadTaskDiff: UseGrackleSocketResult["loadTaskDiff"] = useCallback(
     (taskId: string) => {
@@ -704,6 +717,37 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
         }
       }, LOAD_DIFF_DELAY_MS);
       timersRef.current.add(handle);
+    },
+    [],
+  );
+
+  // ── Token methods ──────────────────────────────────
+
+  /** No-op — tokens are already in state from initial load. */
+  const loadTokens: UseGrackleSocketResult["loadTokens"] = useCallback(() => {
+    // eslint-disable-next-line no-console
+    console.log("[MockGrackle] loadTokens");
+  }, []);
+
+  /** Adds or replaces a token in state. */
+  const mockSetToken: UseGrackleSocketResult["setToken"] = useCallback(
+    (name: string, _value: string, tokenType: string, envVar: string, filePath: string) => {
+      // eslint-disable-next-line no-console
+      console.log("[MockGrackle] setToken", { name, tokenType });
+      setTokens((prev) => {
+        const without = prev.filter((t) => t.name !== name);
+        return [...without, { name, tokenType, envVar, filePath, expiresAt: "" }];
+      });
+    },
+    [],
+  );
+
+  /** Removes a token from state. */
+  const mockDeleteToken: UseGrackleSocketResult["deleteToken"] = useCallback(
+    (name: string) => {
+      // eslint-disable-next-line no-console
+      console.log("[MockGrackle] deleteToken", name);
+      setTokens((prev) => prev.filter((t) => t.name !== name));
     },
     [],
   );
@@ -730,6 +774,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       projects,
       tasks,
       findings,
+      tokens,
       taskDiff,
 
       // Actions
@@ -750,6 +795,10 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       loadFindings,
       postFinding,
       loadTaskDiff,
+      addEnvironment,
+      loadTokens,
+      setToken: mockSetToken,
+      deleteToken: mockDeleteToken,
       provisionStatus: {},
       provisionEnvironment: () => {},
       stopEnvironment: () => {},
@@ -762,6 +811,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       projects,
       tasks,
       findings,
+      tokens,
       taskDiff,
       spawn,
       sendInput,
@@ -780,6 +830,10 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       loadFindings,
       postFinding,
       loadTaskDiff,
+      addEnvironment,
+      loadTokens,
+      mockSetToken,
+      mockDeleteToken,
     ],
   );
 

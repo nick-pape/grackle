@@ -5,16 +5,35 @@ import {
   agentEventTypeToEnum, sessionStatusToEnum, tokenTypeToString,
 } from "@grackle-ai/common";
 import { getRuntime, listRuntimes } from "./runtime-registry.js";
-import { addSession, getSession, listAllSessions } from "./session-mgr.js";
+import { addSession, getSession, removeSession, listAllSessions } from "./session-mgr.js";
 import { writeTokens } from "./token-writer.js";
 import { removeWorktree } from "./worktree.js";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import os from "node:os";
+import type { AgentSession } from "./runtimes/runtime.js";
 
 const execAsync: typeof execFile.__promisify__ = promisify(execFile);
 
 const startTime: number = Date.now();
+
+/** Stream events from an agent session as proto messages, cleaning up the session when done. */
+async function *streamSession(sessionId: string, session: AgentSession): AsyncGenerator<powerline.AgentEvent> {
+  addSession(session);
+  try {
+    for await (const event of session.stream()) {
+      yield create(powerline.AgentEventSchema, {
+        sessionId,
+        type: agentEventTypeToEnum(event.type),
+        timestamp: event.timestamp,
+        content: event.content,
+        raw: event.raw ? JSON.stringify(event.raw) : "",
+      });
+    }
+  } finally {
+    removeSession(sessionId);
+  }
+}
 
 /** Register all PowerLine gRPC service handlers on the given ConnectRPC router. */
 export function registerPowerLineRoutes(router: ConnectRouter): void {
@@ -53,17 +72,7 @@ export function registerPowerLineRoutes(router: ConnectRouter): void {
         taskId: req.taskId || undefined,
       });
 
-      addSession(session);
-
-      for await (const event of session.stream()) {
-        yield create(powerline.AgentEventSchema, {
-          sessionId: req.sessionId,
-          type: agentEventTypeToEnum(event.type),
-          timestamp: event.timestamp,
-          content: event.content,
-          raw: event.raw ? JSON.stringify(event.raw) : "",
-        });
-      }
+      yield* streamSession(req.sessionId, session);
     },
 
     async *resume(req: powerline.ResumeRequest) {
@@ -83,17 +92,7 @@ export function registerPowerLineRoutes(router: ConnectRouter): void {
         runtimeSessionId: req.runtimeSessionId,
       });
 
-      addSession(session);
-
-      for await (const event of session.stream()) {
-        yield create(powerline.AgentEventSchema, {
-          sessionId: req.sessionId,
-          type: agentEventTypeToEnum(event.type),
-          timestamp: event.timestamp,
-          content: event.content,
-          raw: event.raw ? JSON.stringify(event.raw) : "",
-        });
-      }
+      yield* streamSession(req.sessionId, session);
     },
 
     async sendInput(req: powerline.InputMessage) {

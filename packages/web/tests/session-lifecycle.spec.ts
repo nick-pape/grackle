@@ -7,8 +7,8 @@ test.describe("Session Lifecycle (stub runtime)", () => {
     // Stage2 sidebar defaults to "Projects" tab — switch to "Environments"
     await page.locator("button", { hasText: "Environments" }).click();
 
-    // Click "+" to enter new_chat mode
-    await page.locator("button", { hasText: "+" }).click();
+    // Click "+" on the environment card to enter new_chat mode
+    await page.locator('button[title="New chat"]').click();
 
     // UnifiedBar shows prompt input, runtime selector, and Go button
     await expect(page.locator("text=new chat")).toBeVisible();
@@ -19,10 +19,11 @@ test.describe("Session Lifecycle (stub runtime)", () => {
     const runtimeSelect = page.locator("select");
     await expect(runtimeSelect).toBeVisible();
     const options = runtimeSelect.locator("option");
-    await expect(options).toHaveCount(3);
+    await expect(options).toHaveCount(4);
     await expect(options.nth(0)).toHaveText("claude-code");
-    await expect(options.nth(1)).toHaveText("copilot");
-    await expect(options.nth(2)).toHaveText("stub");
+    await expect(options.nth(1)).toHaveText("codex");
+    await expect(options.nth(2)).toHaveText("copilot");
+    await expect(options.nth(3)).toHaveText("stub");
 
     // Go button disabled when no text
     await expect(goButton).toBeDisabled();

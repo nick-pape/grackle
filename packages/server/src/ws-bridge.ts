@@ -8,6 +8,7 @@ import * as sessionStore from "./session-store.js";
 import * as adapterManager from "./adapter-manager.js";
 import type { PowerLineConnection } from "./adapters/adapter.js";
 import * as streamHub from "./stream-hub.js";
+import * as tokenBroker from "./token-broker.js";
 import * as projectStore from "./project-store.js";
 import * as taskStore from "./task-store.js";
 import * as findingStore from "./finding-store.js";
@@ -15,13 +16,15 @@ import { v4 as uuid } from "uuid";
 import { join } from "node:path";
 import {
   LOGS_DIR, DEFAULT_RUNTIME, DEFAULT_MODEL,
-  eventTypeToString,
+  eventTypeToString, agentEventTypeToEventType,
 } from "@grackle-ai/common";
 import { grackleHome } from "./paths.js";
 import * as logWriter from "./log-writer.js";
 import { writeTranscript } from "./transcript.js";
 import { safeParseJsonArray } from "./json-helpers.js";
 import { logger } from "./logger.js";
+import { buildTaskSystemContext } from "./utils/system-context.js";
+import { slugify } from "./utils/slugify.js";
 
 const WS_PING_INTERVAL_MS: number = 30_000;
 const WS_CLOSE_UNAUTHORIZED: number = 4001;
@@ -30,10 +33,6 @@ interface WsMessage {
   type: string;
   payload?: Record<string, unknown>;
   id?: string;
-}
-
-function slugify(text: string): string {
-  return text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40);
 }
 
 let wssInstance: WebSocketServer | undefined = undefined;
@@ -359,7 +358,7 @@ async function handleMessage(
           for await (const event of conn.client.spawn(powerlineReq)) {
             const sessionEvent = create(grackle.SessionEventSchema, {
               sessionId,
-              type: event.type as number as grackle.EventType,
+              type: agentEventTypeToEventType(event.type),
               timestamp: event.timestamp,
               content: event.content,
               raw: event.raw,
@@ -489,7 +488,10 @@ async function handleMessage(
         sendWs(ws, { type: "error", payload: { message: "name required" } });
         return;
       }
-      const id = slugify(name) || uuid().slice(0, 8);
+      let id = slugify(name) || uuid().slice(0, 8);
+      if (projectStore.getProject(id)) {
+        id = `${id}-${uuid().slice(0, 4)}`;
+      }
       projectStore.createProject(
         id, name,
         (msg.payload?.description as string) || "",
@@ -604,16 +606,7 @@ async function handleMessage(
       const model = (msg.payload?.model as string) || process.env.GRACKLE_DEFAULT_MODEL || DEFAULT_MODEL;
       const logPath = join(grackleHome, LOGS_DIR, sessionId);
 
-      const systemContext = [
-        `## Task: ${task.title}`,
-        task.description,
-        task.reviewNotes ? `## Review Feedback (from previous attempt)\n${task.reviewNotes}` : "",
-        `## Grackle Tools (MCP)`,
-        `You have a "grackle" MCP server with tools for coordinating with other agents:`,
-        `- **mcp__grackle__post_finding**: Share discoveries (architecture decisions, bugs, patterns) with other agents working on this project. Parameters: title (string), content (string), category (optional: architecture|api|bug|decision|dependency|pattern|general), tags (optional: string[]).`,
-        `- **mcp__grackle__query_findings**: Query findings posted by other agents. Findings from previous tasks are also in your system context above.`,
-        `IMPORTANT: When you complete your task, post at least one finding summarizing what you did and any key decisions made.`,
-      ].filter(Boolean).join("\n\n");
+      const systemContext = buildTaskSystemContext(task.title, task.description, task.reviewNotes);
 
       sessionStore.createSession(sessionId, environmentId, runtime, task.title, model, logPath);
       taskStore.setTaskSession(task.id, sessionId);
@@ -642,7 +635,7 @@ async function handleMessage(
           for await (const event of conn.client.spawn(powerlineReq)) {
             const sessionEvent = create(grackle.SessionEventSchema, {
               sessionId,
-              type: event.type as number as grackle.EventType,
+              type: agentEventTypeToEventType(event.type),
               timestamp: event.timestamp,
               content: event.content,
               raw: event.raw,
@@ -661,16 +654,24 @@ async function handleMessage(
                   data.content || "", data.tags || [],
                 );
                 broadcast({ type: "finding_posted", payload: { projectId: task.projectId, findingId } });
-                process.stderr.write(`[finding] Stored: ${findingId} "${data.title}" in ${task.projectId}\n`);
+                logger.info({ findingId, projectId: task.projectId, title: data.title }, "Finding stored");
               } catch (err) {
-                process.stderr.write(`[finding] ERROR: ${err} (project=${task.projectId} task=${task.id})\n`);
+                logger.error({ err, projectId: task.projectId, taskId: task.id }, "Failed to store finding");
               }
             }
 
             if (event.type === powerline.AgentEventType.STATUS) {
-              if (event.content === "waiting_input") sessionStore.updateSessionStatus(sessionId, "waiting_input");
-              else if (event.content === "running") sessionStore.updateSessionStatus(sessionId, "running");
-              else if (event.content === "completed") sessionStore.updateSession(sessionId, "completed");
+              if (event.content === "waiting_input") {
+                sessionStore.updateSessionStatus(sessionId, "waiting_input");
+              } else if (event.content === "running") {
+                sessionStore.updateSessionStatus(sessionId, "running");
+              } else if (event.content === "completed") {
+                sessionStore.updateSession(sessionId, "completed");
+              } else if (event.content === "failed") {
+                sessionStore.updateSession(sessionId, "failed");
+              } else if (event.content === "killed") {
+                sessionStore.updateSession(sessionId, "killed");
+              }
             }
           }
           const current = sessionStore.getSession(sessionId);
@@ -923,6 +924,32 @@ async function handleMessage(
       break;
     }
 
+    case "add_environment": {
+      const displayName = (msg.payload?.displayName as string) || "";
+      const adapterType = (msg.payload?.adapterType as string) || "";
+      if (!displayName || !adapterType) {
+        sendWs(ws, { type: "error", payload: { message: "displayName and adapterType required" } });
+        return;
+      }
+      if (!adapterManager.getAdapter(adapterType)) {
+        sendWs(ws, { type: "error", payload: { message: `Unknown adapter type: ${adapterType}` } });
+        return;
+      }
+      let id = slugify(displayName) || uuid().slice(0, 8);
+      if (envRegistry.getEnvironment(id)) {
+        id = `${id}-${uuid().slice(0, 4)}`;
+      }
+      const adapterConfig = msg.payload?.adapterConfig
+        ? JSON.stringify(msg.payload.adapterConfig)
+        : "{}";
+      const defaultRuntime = (msg.payload?.defaultRuntime as string) || DEFAULT_RUNTIME;
+      envRegistry.addEnvironment(id, displayName, adapterType, adapterConfig, defaultRuntime);
+      logger.info({ id, displayName, adapterType }, "Environment added via WebSocket");
+      broadcast({ type: "environment_added", payload: { environmentId: id } });
+      broadcastEnvironments();
+      break;
+    }
+
     case "remove_environment": {
       const environmentId = msg.payload?.environmentId as string;
       if (!environmentId) {
@@ -945,6 +972,55 @@ async function handleMessage(
       logger.info({ environmentId }, "Environment removed");
       broadcast({ type: "environment_removed", payload: { environmentId } });
       broadcastEnvironments();
+      break;
+    }
+
+    // ─── Tokens ───────────────────────────────────────────
+
+    case "list_tokens": {
+      const items = tokenBroker.listTokens();
+      sendWs(ws, {
+        type: "tokens",
+        payload: {
+          tokens: items.map((t) => ({
+            name: t.name,
+            tokenType: t.type,
+            envVar: t.envVar || "",
+            filePath: t.filePath || "",
+            expiresAt: t.expiresAt || "",
+          })),
+        },
+      });
+      break;
+    }
+
+    case "set_token": {
+      const name = msg.payload?.name as string;
+      const value = msg.payload?.value as string;
+      if (!name || !value) {
+        sendWs(ws, { type: "error", payload: { message: "name and value required" } });
+        return;
+      }
+      await tokenBroker.setToken({
+        name,
+        type: (msg.payload?.tokenType as string) || "env_var",
+        envVar: (msg.payload?.envVar as string) || "",
+        filePath: (msg.payload?.filePath as string) || "",
+        value,
+        expiresAt: (msg.payload?.expiresAt as string) || "",
+      });
+      broadcast({ type: "token_changed" });
+      break;
+    }
+
+    case "delete_token": {
+      const tokenName = msg.payload?.name as string;
+      if (!tokenName) {
+        sendWs(ws, { type: "error", payload: { message: "name required" } });
+        return;
+      }
+      await tokenBroker.deleteToken(tokenName);
+      broadcast({ type: "token_changed" });
       break;
     }
   }

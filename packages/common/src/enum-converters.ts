@@ -144,6 +144,11 @@ export function agentEventTypeToString(e: AgentEventType): string {
   return agentEventTypeToStringMap[e] ?? "";
 }
 
+/** Convert a PowerLine AgentEventType to a Grackle EventType via string mapping. */
+export function agentEventTypeToEventType(agentType: AgentEventType): EventType {
+  return eventTypeToEnum(agentEventTypeToString(agentType));
+}
+
 // ─── TokenType ──────────────────────────────────────────────
 
 const tokenTypeToEnumMap: Record<string, TokenType> = {
