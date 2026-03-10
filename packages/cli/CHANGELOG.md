@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Tue, 10 Mar 2026 06:04:37 GMT and should not be manually modified.
+This log was last generated on Tue, 10 Mar 2026 06:13:42 GMT and should not be manually modified.
+
+## 0.2.0
+Tue, 10 Mar 2026 06:13:42 GMT
+
+### Updates
+
+- Add "codex" to RuntimeName type
 
 ## 0.1.0
 Tue, 10 Mar 2026 06:04:37 GMT
