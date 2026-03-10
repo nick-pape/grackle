@@ -122,7 +122,7 @@ test.describe("Settings Page (Mock Mode)", () => {
     await expect(page.getByText("Settings")).toBeVisible({ timeout: 5_000 });
 
     await expect(
-      page.getByText("API tokens are auto-pushed to environments on connect"),
+      page.getByText("API tokens are auto-pushed to environments when set or updated"),
     ).toBeVisible();
   });
 

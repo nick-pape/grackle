@@ -13,15 +13,17 @@ test.describe("Settings Page", () => {
     await expect(page.getByRole("heading", { name: "Tokens" })).toBeVisible();
   });
 
-  test("settings page shows empty state when no tokens exist", async ({ appPage }) => {
+  test("settings page renders token section", async ({ appPage }) => {
     const page = appPage;
 
     await page.locator('button[title="Settings"]').click();
     await expect(page.getByText("Settings")).toBeVisible({ timeout: 5_000 });
 
-    // Should show empty message or the token list
-    // (may or may not be empty depending on test ordering, but the page renders)
+    // Token section heading and description should render
     await expect(page.getByRole("heading", { name: "Tokens" })).toBeVisible();
+    await expect(
+      page.getByText("API tokens are auto-pushed to environments"),
+    ).toBeVisible();
   });
 
   test("add token via settings form", async ({ appPage }) => {
@@ -154,7 +156,7 @@ test.describe("Settings Page", () => {
 
     // Description text should be visible
     await expect(
-      page.getByText("API tokens are auto-pushed to environments on connect"),
+      page.getByText("API tokens are auto-pushed to environments when set or updated"),
     ).toBeVisible();
   });
 });

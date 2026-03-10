@@ -2,7 +2,7 @@ import { test, expect } from "./fixtures.js";
 import { sendWsAndWaitFor, sendWsAndWaitForError } from "./helpers.js";
 
 test.describe("Token Management (WebSocket)", () => {
-  test("list_tokens returns empty array initially", async ({ appPage }) => {
+  test("list_tokens returns a valid token array", async ({ appPage }) => {
     const page = appPage;
 
     const response = await sendWsAndWaitFor(

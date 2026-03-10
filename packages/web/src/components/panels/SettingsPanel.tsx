@@ -43,7 +43,7 @@ export function SettingsPanel(): JSX.Element {
       <section className={styles.section}>
         <h3 className={styles.sectionTitle}>Tokens</h3>
         <p className={styles.sectionDescription}>
-          API tokens are auto-pushed to environments on connect. Values are write-only.
+          API tokens are auto-pushed to environments when set or updated. Values are write-only.
         </p>
 
         {tokens.length === 0 ? (
