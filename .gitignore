@@ -33,6 +33,7 @@ packages/web/test-results/
 
 # Demo artifacts
 *.png
+!docs/screenshots/*.png
 *.mp4
 tools/demo-recorder/test-output/
 tools/demo-recorder/voices/*.bak
