@@ -180,7 +180,12 @@ export abstract class BaseAgentSession implements AgentSession {
 
     this.executeFollowUp(text)
       .then(() => {
-        if (!this.killed) {
+        if (this.killed) {
+          // Session was terminated during follow-up (e.g. maxTurns reached).
+          // Release resources and close the queue so stream() callers don't hang.
+          this.releaseResources();
+          this.eventQueue.close();
+        } else {
           this.status = "waiting_input";
           this.eventQueue.push({ type: "status", timestamp: ts(), content: "waiting_input" });
         }
