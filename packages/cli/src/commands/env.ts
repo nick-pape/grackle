@@ -98,13 +98,7 @@ export function registerEnvCommands(program: Command): void {
   env
     .command("provision <id>")
     .description("Provision and connect an environment")
-    .action(async (id: string) => {
-      const client = createGrackleClient();
-      for await (const event of client.provisionEnvironment({ id })) {
-        const pct = Math.round(event.progress * 100);
-        console.log(`[${pct}%] ${event.stage}: ${event.message}`);
-      }
-    });
+    .action(provisionAction);
 
   env
     .command("stop <id>")
@@ -133,14 +127,17 @@ export function registerEnvCommands(program: Command): void {
       console.log(`Removed: ${id}`);
     });
 
+  /** Shared action for provisioning / waking an environment. */
+  async function provisionAction(id: string): Promise<void> {
+    const client = createGrackleClient();
+    for await (const event of client.provisionEnvironment({ id })) {
+      const pct = Math.round(event.progress * 100);
+      console.log(`[${pct}%] ${event.stage}: ${event.message}`);
+    }
+  }
+
   env
     .command("wake <id>")
     .description("Wake a sleeping environment")
-    .action(async (id: string) => {
-      const client = createGrackleClient();
-      for await (const event of client.provisionEnvironment({ id })) {
-        const pct = Math.round(event.progress * 100);
-        console.log(`[${pct}%] ${event.stage}: ${event.message}`);
-      }
-    });
+    .action(provisionAction);
 }

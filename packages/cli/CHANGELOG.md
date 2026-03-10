@@ -1,6 +1,34 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Tue, 10 Mar 2026 06:04:37 GMT and should not be manually modified.
+This log was last generated on Tue, 10 Mar 2026 06:59:12 GMT and should not be manually modified.
+
+## 0.5.0
+Tue, 10 Mar 2026 06:59:12 GMT
+
+### Patches
+
+- Code quality sweep 3: attach race fix, resume event logging, WS status handling, systemContext dedup, events cap
+
+## 0.4.0
+Tue, 10 Mar 2026 06:41:29 GMT
+
+### Patches
+
+- Code quality sweep 2: fail-fast API key, gRPC error handling, session cleanup, structured logging, slug collision fix, output event rendering
+
+## 0.3.0
+Tue, 10 Mar 2026 06:33:40 GMT
+
+### Patches
+
+- Code quality sweep: constant-time auth, deduplicate slugify, fix updateTask field clearing, remove dead exports
+
+## 0.2.0
+Tue, 10 Mar 2026 06:13:42 GMT
+
+### Updates
+
+- Add "codex" to RuntimeName type
 
 ## 0.1.0
 Tue, 10 Mar 2026 06:04:37 GMT

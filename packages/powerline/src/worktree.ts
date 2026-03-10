@@ -79,14 +79,3 @@ export async function removeWorktree(basePath: string, branch: string): Promise<
   }
 }
 
-export async function listWorktrees(basePath: string): Promise<string[]> {
-  try {
-    const { stdout } = await exec("git", ["worktree", "list", "--porcelain"], { cwd: basePath });
-    return stdout
-      .split("\n")
-      .filter((line) => line.startsWith("worktree "))
-      .map((line) => line.replace("worktree ", ""));
-  } catch {
-    return [];
-  }
-}

@@ -19,6 +19,8 @@ import * as logWriter from "./log-writer.js";
 import { writeTranscript } from "./transcript.js";
 import { safeParseJsonArray } from "./json-helpers.js";
 import { logger } from "./logger.js";
+import { buildTaskSystemContext } from "./utils/system-context.js";
+import { slugify } from "./utils/slugify.js";
 
 const WS_PING_INTERVAL_MS: number = 30_000;
 const WS_CLOSE_UNAUTHORIZED: number = 4001;
@@ -27,10 +29,6 @@ interface WsMessage {
   type: string;
   payload?: Record<string, unknown>;
   id?: string;
-}
-
-function slugify(text: string): string {
-  return text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40);
 }
 
 let wssInstance: WebSocketServer | undefined = undefined;
@@ -486,7 +484,10 @@ async function handleMessage(
         sendWs(ws, { type: "error", payload: { message: "name required" } });
         return;
       }
-      const id = slugify(name) || uuid().slice(0, 8);
+      let id = slugify(name) || uuid().slice(0, 8);
+      if (projectStore.getProject(id)) {
+        id = `${id}-${uuid().slice(0, 4)}`;
+      }
       projectStore.createProject(
         id, name,
         (msg.payload?.description as string) || "",
@@ -601,16 +602,7 @@ async function handleMessage(
       const model = (msg.payload?.model as string) || process.env.GRACKLE_DEFAULT_MODEL || DEFAULT_MODEL;
       const logPath = join(grackleHome, LOGS_DIR, sessionId);
 
-      const systemContext = [
-        `## Task: ${task.title}`,
-        task.description,
-        task.reviewNotes ? `## Review Feedback (from previous attempt)\n${task.reviewNotes}` : "",
-        `## Grackle Tools (MCP)`,
-        `You have a "grackle" MCP server with tools for coordinating with other agents:`,
-        `- **mcp__grackle__post_finding**: Share discoveries (architecture decisions, bugs, patterns) with other agents working on this project. Parameters: title (string), content (string), category (optional: architecture|api|bug|decision|dependency|pattern|general), tags (optional: string[]).`,
-        `- **mcp__grackle__query_findings**: Query findings posted by other agents. Findings from previous tasks are also in your system context above.`,
-        `IMPORTANT: When you complete your task, post at least one finding summarizing what you did and any key decisions made.`,
-      ].filter(Boolean).join("\n\n");
+      const systemContext = buildTaskSystemContext(task.title, task.description, task.reviewNotes);
 
       sessionStore.createSession(sessionId, environmentId, runtime, task.title, model, logPath);
       taskStore.setTaskSession(task.id, sessionId);
@@ -658,16 +650,24 @@ async function handleMessage(
                   data.content || "", data.tags || [],
                 );
                 broadcast({ type: "finding_posted", payload: { projectId: task.projectId, findingId } });
-                process.stderr.write(`[finding] Stored: ${findingId} "${data.title}" in ${task.projectId}\n`);
+                logger.info({ findingId, projectId: task.projectId, title: data.title }, "Finding stored");
               } catch (err) {
-                process.stderr.write(`[finding] ERROR: ${err} (project=${task.projectId} task=${task.id})\n`);
+                logger.error({ err, projectId: task.projectId, taskId: task.id }, "Failed to store finding");
               }
             }
 
             if (event.type === "status") {
-              if (event.content === "waiting_input") sessionStore.updateSessionStatus(sessionId, "waiting_input");
-              else if (event.content === "running") sessionStore.updateSessionStatus(sessionId, "running");
-              else if (event.content === "completed") sessionStore.updateSession(sessionId, "completed");
+              if (event.content === "waiting_input") {
+                sessionStore.updateSessionStatus(sessionId, "waiting_input");
+              } else if (event.content === "running") {
+                sessionStore.updateSessionStatus(sessionId, "running");
+              } else if (event.content === "completed") {
+                sessionStore.updateSession(sessionId, "completed");
+              } else if (event.content === "failed") {
+                sessionStore.updateSession(sessionId, "failed");
+              } else if (event.content === "killed") {
+                sessionStore.updateSession(sessionId, "killed");
+              }
             }
           }
           const current = sessionStore.getSession(sessionId);

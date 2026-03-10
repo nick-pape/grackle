@@ -2,6 +2,7 @@ import { Command } from "commander";
 import { connectNodeAdapter } from "@connectrpc/connect-node";
 import { ConnectError, Code } from "@connectrpc/connect";
 import http2 from "node:http2";
+import { timingSafeEqual } from "node:crypto";
 import { registerPowerLineRoutes } from "./grpc-server.js";
 import { registerRuntime } from "./runtime-registry.js";
 import { StubRuntime } from "./runtimes/stub.js";
@@ -9,7 +10,11 @@ import { ClaudeCodeRuntime } from "./runtimes/claude-code.js";
 import { CopilotRuntime } from "./runtimes/copilot.js";
 import { CodexRuntime } from "./runtimes/codex.js";
 import { DEFAULT_POWERLINE_PORT } from "@grackle-ai/common";
+import { createRequire } from "node:module";
 import { logger } from "./logger.js";
+
+const esmRequire: NodeRequire = createRequire(import.meta.url);
+const { version } = esmRequire("../package.json") as { version: string };
 
 function main(): void {
   const program = new Command();
@@ -17,7 +22,7 @@ function main(): void {
   program
     .name("grackle-powerline")
     .description("Grackle PowerLine agent runtime")
-    .version("0.0.1")
+    .version(version)
     .option("--port <port>", "Port to listen on", String(DEFAULT_POWERLINE_PORT))
     .option("--token <token>", "Authentication token")
     .action((opts: { port: string; token?: string }) => {
@@ -38,7 +43,9 @@ function main(): void {
               (next) => async (req) => {
                 const authHeader = req.header.get("authorization") || "";
                 const token = authHeader.replace(/^Bearer\s+/i, "");
-                if (token !== powerlineToken) {
+                const a = Buffer.from(token);
+                const b = Buffer.from(powerlineToken);
+                if (a.length !== b.length || !timingSafeEqual(a, b)) {
                   throw new ConnectError("Unauthorized", Code.Unauthenticated);
                 }
                 return next(req);

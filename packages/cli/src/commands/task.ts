@@ -102,11 +102,6 @@ export function registerTaskCommands(program: Command): void {
       const client = createGrackleClient();
       const t = await client.rejectTask({
         id: taskId,
-        title: "",
-        description: "",
-        status: "",
-        environmentId: "",
-        dependsOn: [],
         reviewNotes: opts.notes,
       });
       console.log(`Rejected: ${t.id} → ${t.status}`);

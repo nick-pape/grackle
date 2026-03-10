@@ -2,6 +2,54 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.5.0",
+      "tag": "@grackle-ai/cli_v0.5.0",
+      "date": "Tue, 10 Mar 2026 06:59:12 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Code quality sweep 3: attach race fix, resume event logging, WS status handling, systemContext dedup, events cap"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.4.0",
+      "tag": "@grackle-ai/cli_v0.4.0",
+      "date": "Tue, 10 Mar 2026 06:41:29 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Code quality sweep 2: fail-fast API key, gRPC error handling, session cleanup, structured logging, slug collision fix, output event rendering"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.3.0",
+      "tag": "@grackle-ai/cli_v0.3.0",
+      "date": "Tue, 10 Mar 2026 06:33:40 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Code quality sweep: constant-time auth, deduplicate slugify, fix updateTask field clearing, remove dead exports"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.2.0",
+      "tag": "@grackle-ai/cli_v0.2.0",
+      "date": "Tue, 10 Mar 2026 06:13:42 GMT",
+      "comments": {
+        "none": [
+          {
+            "comment": "Add \"codex\" to RuntimeName type"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.1.0",
       "tag": "@grackle-ai/cli_v0.1.0",
       "date": "Tue, 10 Mar 2026 06:04:37 GMT",

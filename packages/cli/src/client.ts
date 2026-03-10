@@ -11,10 +11,15 @@ function loadApiKey(): string {
     : join(homedir(), GRACKLE_DIR);
   const keyPath = join(grackleHome, API_KEY_FILENAME);
   try {
-    return readFileSync(keyPath, "utf8").trim();
+    const key = readFileSync(keyPath, "utf8").trim();
+    if (!key) {
+      console.error(`Error: API key file is empty: ${keyPath}\nRun "grackle serve" first to generate a key.`);
+      process.exit(1);
+    }
+    return key;
   } catch {
-    console.error(`Warning: Could not read API key from ${keyPath}`);
-    return "";
+    console.error(`Error: Could not read API key from ${keyPath}\nRun "grackle serve" first to generate a key, or set GRACKLE_API_KEY.`);
+    process.exit(1);
   }
 }
 

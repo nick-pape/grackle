@@ -79,6 +79,8 @@ interface WsMessage {
 
 const WS_RECONNECT_DELAY_MS: number = 3_000;
 const ENV_POLL_INTERVAL_MS: number = 10_000;
+/** Maximum number of events kept in memory per hook instance. Older events are dropped. */
+const MAX_EVENTS: number = 5_000;
 
 // Declare the injected API key from server-side HTML injection
 declare global {
@@ -218,7 +220,10 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
             break;
           case "session_event": {
             const event = msg.payload as unknown as SessionEvent;
-            setEvents((prev) => [...prev, event]);
+            setEvents((prev) => {
+              const next = [...prev, event];
+              return next.length > MAX_EVENTS ? next.slice(-MAX_EVENTS) : next;
+            });
             if (event.eventType === "status") {
               setSessions((prev) =>
                 prev.map((s) =>
