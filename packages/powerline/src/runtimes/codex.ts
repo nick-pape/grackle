@@ -1,7 +1,7 @@
-import type { AgentRuntime, SpawnOptions, ResumeOptions } from "./runtime.js";
+import type { AgentSession } from "./runtime.js";
 import { BaseAgentSession } from "./base-session.js";
-import { existsSync, readFileSync } from "node:fs";
-import { ensureWorktree } from "../worktree.js";
+import { BaseAgentRuntime } from "./base-runtime.js";
+import { resolveWorkingDirectory, resolveMcpServers, buildFindingEvent } from "./runtime-utils.js";
 import { logger } from "../logger.js";
 
 // ─── Environment variable names ────────────────────────────
@@ -10,8 +10,6 @@ import { logger } from "../logger.js";
 
 /** Path to the Codex CLI binary. Overrides default PATH resolution. */
 const ENV_CODEX_CLI_PATH: string = "CODEX_CLI_PATH";
-/** Path to the Grackle MCP server script bundled in the container image. */
-const GRACKLE_MCP_SCRIPT: string = "/app/mcp-grackle/index.js";
 
 // ─── Dynamic import ────────────────────────────────────────
 
@@ -48,80 +46,9 @@ function getCodexSdk(): Promise<CodexSdkModule> {
 
 // ─── Helpers ───────────────────────────────────────────────
 
-/** Resolved MCP configuration returned by resolveMcpServers. */
-export interface ResolvedMcpConfig {
-  servers: Record<string, unknown> | undefined;
-  disallowedTools: string[];
-}
-
-/**
- * @internal Load MCP server configurations from the shared GRACKLE_MCP_CONFIG file and spawn options.
- * Also reads `disallowedTools` and filters matching tools from MCP server configs.
- */
-export function resolveMcpServers(spawnMcpServers?: Record<string, unknown>): ResolvedMcpConfig {
-  let servers: Record<string, unknown> = {};
-  let disallowedTools: string[] = [];
-
-  const mcpConfigPath = process.env.GRACKLE_MCP_CONFIG;
-  if (mcpConfigPath && existsSync(mcpConfigPath)) {
-    try {
-      const mcpConfig = JSON.parse(readFileSync(mcpConfigPath, "utf8")) as Record<string, unknown>;
-      if (mcpConfig.mcpServers && typeof mcpConfig.mcpServers === "object") {
-        servers = { ...servers, ...(mcpConfig.mcpServers as Record<string, unknown>) };
-      }
-      if (Array.isArray(mcpConfig.disallowedTools)) {
-        disallowedTools = mcpConfig.disallowedTools.filter(
-          (t): t is string => typeof t === "string",
-        );
-      }
-    } catch { /* ignore malformed config */ }
-  }
-
-  if (spawnMcpServers) {
-    servers = { ...servers, ...spawnMcpServers };
-  }
-
-  // Auto-inject Grackle coordination MCP server if the script is bundled
-  if (existsSync(GRACKLE_MCP_SCRIPT) && !servers.grackle) {
-    servers.grackle = {
-      command: "node",
-      args: [GRACKLE_MCP_SCRIPT],
-      tools: ["post_finding", "get_task_context", "update_task_status"],
-    };
-  }
-
-  // Filter disallowed tools from MCP server configs. The disallowedTools list
-  // uses the format "mcp__<serverName>__<toolName>", matching Claude Code's convention.
-  if (disallowedTools.length > 0) {
-    for (const [serverName, serverConfig] of Object.entries(servers)) {
-      if (typeof serverConfig !== "object" || serverConfig === null) {
-        continue;
-      }
-      const cfg = serverConfig as Record<string, unknown>;
-      if (!Array.isArray(cfg.tools)) {
-        continue;
-      }
-      const prefix = `mcp__${serverName}__`;
-      const blocked = new Set(
-        disallowedTools.filter((t) => t.startsWith(prefix)).map((t) => t.slice(prefix.length)),
-      );
-      if (blocked.size > 0) {
-        cfg.tools = (cfg.tools as string[]).filter((t) => !blocked.has(t));
-        if ((cfg.tools as string[]).length === 0) {
-          delete servers[serverName];
-          logger.info({ serverName, blocked: [...blocked] }, "Removed MCP server (all tools disallowed)");
-        } else {
-          logger.info({ serverName, blocked: [...blocked] }, "Filtered disallowed tools from MCP server");
-        }
-      }
-    }
-  }
-
-  return {
-    servers: Object.keys(servers).length > 0 ? servers : undefined,
-    disallowedTools,
-  };
-}
+// Re-export resolveMcpServers and ResolvedMcpConfig for backwards compatibility
+export { resolveMcpServers } from "./runtime-utils.js";
+export type { ResolvedMcpConfig } from "./runtime-utils.js";
 
 /**
  * @internal Extract the `type` discriminator from a ThreadItem.
@@ -159,26 +86,11 @@ class CodexSession extends BaseAgentSession {
     const { Codex } = await getCodexSdk();
 
     // ── Resolve working directory ──
-    let workingDirectory: string | undefined;
-
-    if (this.branch && this.worktreeBasePath) {
-      try {
-        const wt = await ensureWorktree(this.worktreeBasePath, this.branch);
-        workingDirectory = wt.worktreePath;
-        this.eventQueue.push({ type: "system", timestamp: ts(), content: `Worktree ready: ${wt.worktreePath} (branch: ${this.branch}, created: ${wt.created})` });
-      } catch (wtErr) {
-        this.eventQueue.push({ type: "system", timestamp: ts(), content: `Worktree setup skipped (${wtErr}), falling back to workspace` });
-        const workspacePath = "/workspace";
-        if (existsSync(workspacePath)) {
-          workingDirectory = workspacePath;
-        }
-      }
-    } else {
-      const workspacePath = "/workspace";
-      if (existsSync(workspacePath)) {
-        workingDirectory = workspacePath;
-      }
-    }
+    const workingDirectory = await resolveWorkingDirectory({
+      branch: this.branch,
+      worktreeBasePath: this.worktreeBasePath,
+      eventQueue: this.eventQueue,
+    });
 
     // ── Create Codex instance ──
     const codexOptions: Record<string, unknown> = {};
@@ -387,17 +299,7 @@ class CodexSession extends BaseAgentSession {
             const qualifiedName = `mcp__${serverName}__${toolName}`;
             if (toolName === "post_finding" || qualifiedName === "mcp__grackle__post_finding") {
               const args = (item.arguments ?? {}) as Record<string, unknown>;
-              this.eventQueue.push({
-                type: "finding",
-                timestamp: ts(),
-                content: JSON.stringify({
-                  title: args.title || "Untitled",
-                  content: args.content || "",
-                  category: args.category || "general",
-                  tags: args.tags || [],
-                }),
-                raw: event,
-              });
+              this.eventQueue.push(buildFindingEvent(args, event));
             }
           } else if (type === "reasoning") {
             messageCount++;
@@ -452,32 +354,20 @@ class CodexSession extends BaseAgentSession {
 // ─── Runtime ───────────────────────────────────────────────
 
 /** Runtime that delegates to the OpenAI Codex SDK (`@openai/codex-sdk`). */
-export class CodexRuntime implements AgentRuntime {
+export class CodexRuntime extends BaseAgentRuntime {
   public name: string = "codex";
 
-  /** Create and start a new Codex agent session. */
-  public spawn(opts: SpawnOptions): CodexSession {
-    return new CodexSession(
-      opts.sessionId,
-      opts.prompt,
-      opts.model,
-      opts.maxTurns,
-      undefined,
-      opts.branch,
-      opts.worktreeBasePath,
-      opts.systemContext,
-      opts.mcpServers,
-    );
-  }
-
-  /** Resume a previously suspended Codex session. */
-  public resume(opts: ResumeOptions): CodexSession {
-    return new CodexSession(
-      opts.sessionId,
-      "",
-      "",
-      0,
-      opts.runtimeSessionId,
-    );
+  protected createSession(
+    id: string,
+    prompt: string,
+    model: string,
+    maxTurns: number,
+    resumeSessionId?: string,
+    branch?: string,
+    worktreeBasePath?: string,
+    systemContext?: string,
+    mcpServers?: Record<string, unknown>,
+  ): AgentSession {
+    return new CodexSession(id, prompt, model, maxTurns, resumeSessionId, branch, worktreeBasePath, systemContext, mcpServers);
   }
 }

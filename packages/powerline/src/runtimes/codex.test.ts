@@ -9,7 +9,8 @@ vi.mock("node:fs", () => ({
   readFileSync: vi.fn(() => "{}"),
 }));
 
-import { itemType, resolveMcpServers, CodexRuntime } from "./codex.js";
+import { itemType, CodexRuntime } from "./codex.js";
+import { resolveMcpServers } from "./runtime-utils.js";
 import { existsSync, readFileSync } from "node:fs";
 
 describe("itemType", () => {

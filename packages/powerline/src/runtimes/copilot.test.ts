@@ -9,8 +9,7 @@ vi.mock("node:fs", () => ({
   readFileSync: vi.fn(() => "{}"),
 }));
 
-import { resolveGithubToken, resolveProviderConfig, resolveMcpServers, buildFindingTool, CopilotRuntime } from "./copilot.js";
-import { existsSync, readFileSync } from "node:fs";
+import { resolveGithubToken, resolveProviderConfig, buildFindingTool, CopilotRuntime } from "./copilot.js";
 import { AsyncQueue } from "../utils/async-queue.js";
 import type { AgentEvent } from "./runtime.js";
 
@@ -70,76 +69,6 @@ describe("resolveProviderConfig", () => {
   it("returns undefined for malformed JSON", () => {
     vi.stubEnv("COPILOT_PROVIDER_CONFIG", "not-json{");
     expect(resolveProviderConfig()).toBeUndefined();
-  });
-});
-
-describe("resolveMcpServers", () => {
-  afterEach(() => {
-    vi.unstubAllEnvs();
-    vi.mocked(existsSync).mockReturnValue(false);
-  });
-
-  it("loads servers from config file", () => {
-    vi.stubEnv("GRACKLE_MCP_CONFIG", "/tmp/mcp.json");
-    vi.mocked(existsSync).mockReturnValue(true);
-    vi.mocked(readFileSync).mockReturnValue(
-      JSON.stringify({
-        mcpServers: {
-          myServer: { command: "node", args: ["server.js"] },
-        },
-      }),
-    );
-
-    const result = resolveMcpServers();
-    expect(result).toBeDefined();
-    expect(result!.myServer).toEqual({ command: "node", args: ["server.js"] });
-  });
-
-  it("merges spawn servers with config file servers", () => {
-    vi.stubEnv("GRACKLE_MCP_CONFIG", "/tmp/mcp.json");
-    vi.mocked(existsSync).mockReturnValue(true);
-    vi.mocked(readFileSync).mockReturnValue(
-      JSON.stringify({
-        mcpServers: { fileServer: { command: "a" } },
-      }),
-    );
-
-    const result = resolveMcpServers({ spawnServer: { command: "b" } });
-    expect(result).toBeDefined();
-    expect(result!.fileServer).toEqual({ command: "a" });
-    expect(result!.spawnServer).toEqual({ command: "b" });
-  });
-
-  it("auto-injects grackle server when script exists", () => {
-    vi.stubEnv("GRACKLE_MCP_CONFIG", "");
-    // existsSync returns true for the GRACKLE_MCP_SCRIPT path
-    vi.mocked(existsSync).mockImplementation((p) => {
-      return String(p) === "/app/mcp-grackle/index.js";
-    });
-
-    const result = resolveMcpServers();
-    expect(result).toBeDefined();
-    expect(result!.grackle).toEqual({
-      command: "node",
-      args: ["/app/mcp-grackle/index.js"],
-      tools: ["post_finding", "get_task_context", "update_task_status"],
-    });
-  });
-
-  it("ignores malformed config file", () => {
-    vi.stubEnv("GRACKLE_MCP_CONFIG", "/tmp/bad.json");
-    vi.mocked(existsSync).mockImplementation((p) => String(p) === "/tmp/bad.json");
-    vi.mocked(readFileSync).mockReturnValue("not valid json");
-
-    const result = resolveMcpServers();
-    expect(result).toBeUndefined();
-  });
-
-  it("returns undefined when no servers configured and script not present", () => {
-    vi.stubEnv("GRACKLE_MCP_CONFIG", "");
-    vi.mocked(existsSync).mockReturnValue(false);
-
-    expect(resolveMcpServers()).toBeUndefined();
   });
 });
 
