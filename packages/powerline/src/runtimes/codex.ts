@@ -394,6 +394,11 @@ class CodexSession implements AgentSession {
             if (maxTurns > 0 && turnCount >= maxTurns) {
               logger.info({ turnCount, maxTurns }, "Codex max turns reached, stopping session");
               this.killed = true;
+              this.status = "completed";
+              this.eventQueue.push({ type: "status", timestamp: ts(), content: "completed" });
+              if (this.activeStream && typeof this.activeStream.abort === "function") {
+                this.activeStream.abort();
+              }
             }
             break;
           }
@@ -444,6 +449,7 @@ class CodexSession implements AgentSession {
     if (this.thread && !this.killed) {
       // Start a new streamed run on the same thread for follow-up input
       const streamResult = this.thread.runStreamed(text);
+      this.activeStream = streamResult;
       this.consumeFollowUp(streamResult).catch((err: unknown) => {
         logger.warn({ err }, "Failed to process follow-up input in Codex session");
       });
