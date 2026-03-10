@@ -155,6 +155,12 @@ export interface UseGrackleSocketResult {
     tags?: string[],
   ) => void;
   loadTaskDiff: (taskId: string) => void;
+  addEnvironment: (
+    displayName: string,
+    adapterType: string,
+    adapterConfig?: Record<string, unknown>,
+    defaultRuntime?: string,
+  ) => void;
   loadTokens: () => void;
   setToken: (
     name: string,
@@ -397,6 +403,9 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
             }
             break;
           }
+          case "environment_added":
+            // Server already broadcasts updated environment list via broadcastEnvironments()
+            break;
           case "environment_removed":
             send({ type: "list_environments" });
             send({ type: "list_sessions" });
@@ -644,6 +653,26 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
 
   // ─── Environment lifecycle methods ────────────────
 
+  const addEnvironment = useCallback(
+    (
+      displayName: string,
+      adapterType: string,
+      adapterConfig?: Record<string, unknown>,
+      defaultRuntime?: string,
+    ) => {
+      const payload: Record<string, unknown> = {
+        displayName,
+        adapterType,
+        adapterConfig: adapterConfig || {},
+      };
+      if (defaultRuntime) {
+        payload.defaultRuntime = defaultRuntime;
+      }
+      send({ type: "add_environment", payload });
+    },
+    [send],
+  );
+
   const provisionEnvironment = useCallback(
     (environmentId: string) => {
       send({ type: "provision_environment", payload: { environmentId } });
@@ -693,6 +722,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
     loadFindings,
     postFinding,
     loadTaskDiff,
+    addEnvironment,
     loadTokens,
     setToken,
     deleteToken,
