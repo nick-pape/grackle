@@ -19,6 +19,7 @@ import * as logWriter from "./log-writer.js";
 import { writeTranscript } from "./transcript.js";
 import { safeParseJsonArray } from "./json-helpers.js";
 import { logger } from "./logger.js";
+import { buildTaskSystemContext } from "./utils/system-context.js";
 import { slugify } from "./utils/slugify.js";
 
 const WS_PING_INTERVAL_MS: number = 30_000;
@@ -601,16 +602,7 @@ async function handleMessage(
       const model = (msg.payload?.model as string) || process.env.GRACKLE_DEFAULT_MODEL || DEFAULT_MODEL;
       const logPath = join(grackleHome, LOGS_DIR, sessionId);
 
-      const systemContext = [
-        `## Task: ${task.title}`,
-        task.description,
-        task.reviewNotes ? `## Review Feedback (from previous attempt)\n${task.reviewNotes}` : "",
-        `## Grackle Tools (MCP)`,
-        `You have a "grackle" MCP server with tools for coordinating with other agents:`,
-        `- **mcp__grackle__post_finding**: Share discoveries (architecture decisions, bugs, patterns) with other agents working on this project. Parameters: title (string), content (string), category (optional: architecture|api|bug|decision|dependency|pattern|general), tags (optional: string[]).`,
-        `- **mcp__grackle__query_findings**: Query findings posted by other agents. Findings from previous tasks are also in your system context above.`,
-        `IMPORTANT: When you complete your task, post at least one finding summarizing what you did and any key decisions made.`,
-      ].filter(Boolean).join("\n\n");
+      const systemContext = buildTaskSystemContext(task.title, task.description, task.reviewNotes);
 
       sessionStore.createSession(sessionId, environmentId, runtime, task.title, model, logPath);
       taskStore.setTaskSession(task.id, sessionId);
@@ -665,9 +657,17 @@ async function handleMessage(
             }
 
             if (event.type === "status") {
-              if (event.content === "waiting_input") sessionStore.updateSessionStatus(sessionId, "waiting_input");
-              else if (event.content === "running") sessionStore.updateSessionStatus(sessionId, "running");
-              else if (event.content === "completed") sessionStore.updateSession(sessionId, "completed");
+              if (event.content === "waiting_input") {
+                sessionStore.updateSessionStatus(sessionId, "waiting_input");
+              } else if (event.content === "running") {
+                sessionStore.updateSessionStatus(sessionId, "running");
+              } else if (event.content === "completed") {
+                sessionStore.updateSession(sessionId, "completed");
+              } else if (event.content === "failed") {
+                sessionStore.updateSession(sessionId, "failed");
+              } else if (event.content === "killed") {
+                sessionStore.updateSession(sessionId, "killed");
+              }
             }
           }
           const current = sessionStore.getSession(sessionId);

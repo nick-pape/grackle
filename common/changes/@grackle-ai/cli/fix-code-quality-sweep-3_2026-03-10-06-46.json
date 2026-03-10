@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Code quality sweep 3: attach race fix, resume event logging, WS status handling, systemContext dedup, events cap",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}

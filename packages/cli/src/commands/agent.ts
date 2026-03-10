@@ -79,23 +79,33 @@ export function registerAgentCommands(program: Command): void {
       const client = createGrackleClient();
       console.log(`Attached to ${sessionId} (Ctrl+C to detach)\n`);
 
-      // Set up stdin for input
       const readline = await import("node:readline");
       const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 
-      // Stream events
-      const streamPromise = (async () => {
-        for await (const event of client.streamSession({ id: sessionId })) {
-          printEvent(event);
-          if (event.type === "status" && event.content === "waiting_input") {
-            rl.question("> ", async (answer) => {
-              await client.sendInput({ sessionId, text: answer });
-            });
-          }
-        }
-      })();
+      let prompting = false;
 
-      await streamPromise;
+      /** Prompt for input once and send the response. */
+      function promptForInput(): void {
+        if (prompting) {
+          return;
+        }
+        prompting = true;
+        rl.question("> ", (answer) => {
+          prompting = false;
+          client.sendInput({ sessionId, text: answer }).catch((err: unknown) => {
+            const message = err instanceof Error ? err.message : String(err);
+            console.error(`Failed to send input for session ${sessionId}: ${message}`);
+          });
+        });
+      }
+
+      for await (const event of client.streamSession({ id: sessionId })) {
+        printEvent(event);
+        if (event.type === "status" && event.content === "waiting_input") {
+          promptForInput();
+        }
+      }
+
       rl.close();
     });
 }
