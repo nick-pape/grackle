@@ -52,6 +52,9 @@ const TASK_BASE_INDENT_PX: number = 34;
 /** Additional left-padding per depth level. */
 const TASK_DEPTH_INDENT_PX: number = 16;
 
+/** Maximum nesting depth for child tasks. */
+const MAX_TASK_DEPTH: number = 5;
+
 /** Props for the recursive TaskTreeNode component. */
 interface TaskTreeNodeProps {
   node: TaskNode;
@@ -60,6 +63,7 @@ interface TaskTreeNodeProps {
   toggleTask: (taskId: string) => void;
   selectedTaskId: string | undefined;
   setViewMode: (mode: ViewMode) => void;
+  projectId: string;
 }
 
 /** Renders a single task tree node with optional children. */
@@ -70,6 +74,7 @@ function TaskTreeNode({
   toggleTask,
   selectedTaskId,
   setViewMode,
+  projectId,
 }: TaskTreeNodeProps): JSX.Element {
   const statusStyle = TASK_STATUS_STYLES[node.status] || TASK_STATUS_STYLES.pending;
   const isExpanded = expandedTasks.has(node.id);
@@ -118,6 +123,18 @@ function TaskTreeNode({
             dep
           </span>
         )}
+        {depth < MAX_TASK_DEPTH - 1 && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setViewMode({ kind: "new_task", projectId, parentTaskId: node.id });
+            }}
+            title="Add child task"
+            className={styles.addChildButton}
+          >
+            +
+          </button>
+        )}
       </div>
 
       <AnimatePresence>
@@ -138,6 +155,7 @@ function TaskTreeNode({
                 toggleTask={toggleTask}
                 selectedTaskId={selectedTaskId}
                 setViewMode={setViewMode}
+                projectId={projectId}
               />
             ))}
           </motion.div>
@@ -314,6 +332,7 @@ export function ProjectList({ viewMode, setViewMode }: Props): JSX.Element {
                       toggleTask={toggleTask}
                       selectedTaskId={selectedTaskId}
                       setViewMode={setViewMode}
+                      projectId={project.id}
                     />
                   ))}
 

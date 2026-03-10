@@ -40,8 +40,12 @@ const WEB_DIST_DIR: string = resolve(
 
 function createWebHandler(apiKey: string): (req: http.IncomingMessage, res: http.ServerResponse) => void {
   return (req: http.IncomingMessage, res: http.ServerResponse) => {
-    const urlPath = normalize(decodeURIComponent((req.url || "/").split("?")[0]));
-    let filePath = resolve(WEB_DIST_DIR, urlPath === "/" ? "index.html" : `.${urlPath}`);
+    const rawPath = decodeURIComponent((req.url || "/").split("?")[0]);
+    // URL paths are POSIX-style; use posix separator to detect root, then resolve safely
+    const isRoot = rawPath === "/" || rawPath === "";
+    let filePath = isRoot
+      ? join(WEB_DIST_DIR, "index.html")
+      : resolve(WEB_DIST_DIR, normalize(`.${rawPath}`));
 
     // Prevent path traversal — resolved path must stay within the dist directory
     const rel = relative(WEB_DIST_DIR, filePath);

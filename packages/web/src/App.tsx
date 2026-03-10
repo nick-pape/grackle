@@ -15,7 +15,7 @@ export type ViewMode =
   | { kind: "new_chat"; environmentId: string; runtime: string }
   | { kind: "session"; sessionId: string }
   | { kind: "project"; projectId: string }
-  | { kind: "new_task"; projectId: string }
+  | { kind: "new_task"; projectId: string; parentTaskId?: string }
   | { kind: "task"; taskId: string; tab?: "stream" | "diff" | "findings" }
   | { kind: "new_environment" }
   | { kind: "settings" };

@@ -39,7 +39,7 @@ function RuntimeSelector({ value, onChange }: RuntimeSelectorProps): JSX.Element
 export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
   const {
     spawn, sendInput, kill, sessions, tasks, environments,
-    createTask, startTask, approveTask, rejectTask, addEnvironment,
+    createTask, startTask, approveTask, rejectTask, deleteTask, addEnvironment,
   } = useGrackle();
 
   const [text, setText] = useState("");
@@ -188,7 +188,7 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
             <option value="local">local</option>
             <option value="ssh">ssh</option>
             <option value="docker">docker</option>
-            <option value="codespace">codespace</option>
+            {/* codespace disabled: provisioning errors are not surfaced to the UI yet */}
           </select>
           <RuntimeSelector value={envRuntime} onChange={setEnvRuntime} />
           <button
@@ -299,7 +299,7 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
       if (!taskTitle.trim()) {
         return;
       }
-      createTask(viewMode.projectId, taskTitle.trim(), taskDesc, taskEnvId);
+      createTask(viewMode.projectId, taskTitle.trim(), taskDesc, taskEnvId, undefined, viewMode.parentTaskId);
       setTaskTitle("");
       setTaskDesc("");
       setTaskEnvId("");
@@ -310,7 +310,7 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
       <div className={styles.barColumn}>
         <div className={styles.barRow}>
           <span className={styles.badge}>
-            new task
+            {viewMode.parentTaskId ? "child task" : "new task"}
           </span>
           <input
             type="text"
@@ -362,6 +362,15 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
           <span className={styles.statusBlocked}>
             Blocked by: {blockerNames.join(", ")}
           </span>
+          <button
+            onClick={() => {
+              deleteTask(task.id);
+              setViewMode({ kind: "project", projectId: task.projectId });
+            }}
+            className={styles.btnDanger}
+          >
+            Delete
+          </button>
         </div>
       );
     }
@@ -375,6 +384,15 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
             className={styles.btnPrimary}
           >
             Start Task
+          </button>
+          <button
+            onClick={() => {
+              deleteTask(task.id);
+              setViewMode({ kind: "project", projectId: task.projectId });
+            }}
+            className={styles.btnDanger}
+          >
+            Delete
           </button>
         </div>
       );
@@ -484,6 +502,15 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
           >
             + New Task
           </button>
+          <button
+            onClick={() => {
+              deleteTask(task.id);
+              setViewMode({ kind: "project", projectId: task.projectId });
+            }}
+            className={styles.btnDanger}
+          >
+            Delete
+          </button>
         </div>
       );
     }
@@ -500,6 +527,15 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
             className={styles.btnPrimary}
           >
             Retry
+          </button>
+          <button
+            onClick={() => {
+              deleteTask(task.id);
+              setViewMode({ kind: "project", projectId: task.projectId });
+            }}
+            className={styles.btnDanger}
+          >
+            Delete
           </button>
         </div>
       );

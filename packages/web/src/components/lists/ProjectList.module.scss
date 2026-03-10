@@ -150,6 +150,19 @@
   padding: 1px var(--space-xs);
 }
 
+.addChildButton {
+  @include btn-ghost;
+  font-size: var(--font-size-xs);
+  line-height: 1;
+  padding: 1px var(--space-xs);
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+
+  .taskRow:hover & {
+    opacity: 1;
+  }
+}
+
 .emptyTasks {
   padding: 3px var(--space-md) 3px 34px;
   font-size: 11px;
