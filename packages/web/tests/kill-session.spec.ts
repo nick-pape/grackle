@@ -8,7 +8,7 @@ test.describe("Kill Session", () => {
     await page.locator("button", { hasText: "Environments" }).click();
 
     // Start a stub session
-    await page.locator("button", { hasText: "+" }).click();
+    await page.locator('button[title="New chat"]').click();
     const runtimeSelect = page.locator("select");
     await runtimeSelect.selectOption("stub");
     const promptInput = page.locator('input[placeholder="Enter prompt..."]');

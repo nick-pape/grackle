@@ -7,8 +7,8 @@ test.describe("Session Lifecycle (stub runtime)", () => {
     // Stage2 sidebar defaults to "Projects" tab — switch to "Environments"
     await page.locator("button", { hasText: "Environments" }).click();
 
-    // Click "+" to enter new_chat mode
-    await page.locator("button", { hasText: "+" }).click();
+    // Click "+" on the environment card to enter new_chat mode
+    await page.locator('button[title="New chat"]').click();
 
     // UnifiedBar shows prompt input, runtime selector, and Go button
     await expect(page.locator("text=new chat")).toBeVisible();
