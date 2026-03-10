@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.4.0",
+      "tag": "@grackle-ai/cli_v0.4.0",
+      "date": "Tue, 10 Mar 2026 06:41:29 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Code quality sweep 2: fail-fast API key, gRPC error handling, session cleanup, structured logging, slug collision fix, output event rendering"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.3.0",
       "tag": "@grackle-ai/cli_v0.3.0",
       "date": "Tue, 10 Mar 2026 06:33:40 GMT",
