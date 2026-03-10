@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Tue, 10 Mar 2026 14:35:26 GMT and should not be manually modified.
+This log was last generated on Tue, 10 Mar 2026 15:57:59 GMT and should not be manually modified.
+
+## 0.11.2
+Tue, 10 Mar 2026 15:57:59 GMT
+
+### Patches
+
+- Extract shared runtime utilities and BaseAgentRuntime to deduplicate PowerLine runtimes
 
 ## 0.11.1
 Tue, 10 Mar 2026 14:35:26 GMT
