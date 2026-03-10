@@ -206,6 +206,15 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
     );
   }
 
+  // --- new_environment mode ---
+  if (viewMode.kind === "new_environment") {
+    return (
+      <div className={styles.emptyState}>
+        Configure the new environment below
+      </div>
+    );
+  }
+
   // --- new_task mode ---
   if (viewMode.kind === "new_task") {
     return (
