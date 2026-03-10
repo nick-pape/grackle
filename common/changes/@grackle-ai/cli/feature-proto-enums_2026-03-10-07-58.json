@@ -2,7 +2,7 @@
   "changes": [
     {
       "comment": "Wire-proto-enums-to-message-fields",
-      "type": "none",
+      "type": "patch",
       "packageName": "@grackle-ai/cli"
     }
   ],

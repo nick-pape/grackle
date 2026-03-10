@@ -40,6 +40,12 @@ export function registerTokenCommands(program: Command): void {
         });
       }
 
+      const validTokenTypes = ["env_var", "file"];
+      if (!validTokenTypes.includes(opts.type)) {
+        console.error(`Invalid token type: ${opts.type}. Must be one of: ${validTokenTypes.join(", ")}`);
+        process.exit(1);
+      }
+
       await client.setToken({
         name,
         type: tokenTypeToEnum(opts.type),

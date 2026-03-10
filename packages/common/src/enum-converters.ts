@@ -1,6 +1,9 @@
 /**
  * Bidirectional converters between string values (used in SQLite/WS) and
  * protobuf enum values (used in gRPC messages).
+ *
+ * String-keyed maps use null-prototype objects to prevent prototype pollution
+ * when indexing with untrusted strings (CLI flags, WS payloads, DB contents).
  */
 import {
   EnvironmentStatus,
@@ -14,14 +17,14 @@ import { AgentEventType } from "./gen/grackle/powerline/powerline_pb.js";
 
 // ─── EnvironmentStatus ──────────────────────────────────────
 
-const environmentStatusToEnumMap: Record<string, EnvironmentStatus> = {
+const environmentStatusToEnumMap: Record<string, EnvironmentStatus> = Object.assign(Object.create(null), {
   "": EnvironmentStatus.UNSPECIFIED,
   "disconnected": EnvironmentStatus.DISCONNECTED,
   "connecting": EnvironmentStatus.CONNECTING,
   "connected": EnvironmentStatus.CONNECTED,
   "sleeping": EnvironmentStatus.SLEEPING,
   "error": EnvironmentStatus.ERROR,
-};
+});
 
 const environmentStatusToStringMap: Record<number, string> = {
   [EnvironmentStatus.UNSPECIFIED]: "",
@@ -44,7 +47,7 @@ export function environmentStatusToString(e: EnvironmentStatus): string {
 
 // ─── SessionStatus ──────────────────────────────────────────
 
-const sessionStatusToEnumMap: Record<string, SessionStatus> = {
+const sessionStatusToEnumMap: Record<string, SessionStatus> = Object.assign(Object.create(null), {
   "": SessionStatus.UNSPECIFIED,
   "pending": SessionStatus.PENDING,
   "running": SessionStatus.RUNNING,
@@ -53,7 +56,7 @@ const sessionStatusToEnumMap: Record<string, SessionStatus> = {
   "completed": SessionStatus.COMPLETED,
   "failed": SessionStatus.FAILED,
   "killed": SessionStatus.KILLED,
-};
+});
 
 const sessionStatusToStringMap: Record<number, string> = {
   [SessionStatus.UNSPECIFIED]: "",
@@ -78,7 +81,7 @@ export function sessionStatusToString(e: SessionStatus): string {
 
 // ─── EventType ──────────────────────────────────────────────
 
-const eventTypeToEnumMap: Record<string, EventType> = {
+const eventTypeToEnumMap: Record<string, EventType> = Object.assign(Object.create(null), {
   "": EventType.UNSPECIFIED,
   "text": EventType.TEXT,
   "tool_use": EventType.TOOL_USE,
@@ -87,7 +90,7 @@ const eventTypeToEnumMap: Record<string, EventType> = {
   "status": EventType.STATUS,
   "system": EventType.SYSTEM,
   "finding": EventType.FINDING,
-};
+});
 
 const eventTypeToStringMap: Record<number, string> = {
   [EventType.UNSPECIFIED]: "",
@@ -112,7 +115,7 @@ export function eventTypeToString(e: EventType): string {
 
 // ─── AgentEventType ─────────────────────────────────────────
 
-const agentEventTypeToEnumMap: Record<string, AgentEventType> = {
+const agentEventTypeToEnumMap: Record<string, AgentEventType> = Object.assign(Object.create(null), {
   "": AgentEventType.UNSPECIFIED,
   "text": AgentEventType.TEXT,
   "tool_use": AgentEventType.TOOL_USE,
@@ -121,7 +124,7 @@ const agentEventTypeToEnumMap: Record<string, AgentEventType> = {
   "status": AgentEventType.STATUS,
   "system": AgentEventType.SYSTEM,
   "finding": AgentEventType.FINDING,
-};
+});
 
 const agentEventTypeToStringMap: Record<number, string> = {
   [AgentEventType.UNSPECIFIED]: "",
@@ -151,11 +154,11 @@ export function agentEventTypeToEventType(agentType: AgentEventType): EventType 
 
 // ─── TokenType ──────────────────────────────────────────────
 
-const tokenTypeToEnumMap: Record<string, TokenType> = {
+const tokenTypeToEnumMap: Record<string, TokenType> = Object.assign(Object.create(null), {
   "": TokenType.UNSPECIFIED,
   "env_var": TokenType.ENV_VAR,
   "file": TokenType.FILE,
-};
+});
 
 const tokenTypeToStringMap: Record<number, string> = {
   [TokenType.UNSPECIFIED]: "",
@@ -175,7 +178,7 @@ export function tokenTypeToString(e: TokenType): string {
 
 // ─── TaskStatus ─────────────────────────────────────────────
 
-const taskStatusToEnumMap: Record<string, TaskStatus> = {
+const taskStatusToEnumMap: Record<string, TaskStatus> = Object.assign(Object.create(null), {
   "": TaskStatus.UNSPECIFIED,
   "pending": TaskStatus.PENDING,
   "assigned": TaskStatus.ASSIGNED,
@@ -183,7 +186,7 @@ const taskStatusToEnumMap: Record<string, TaskStatus> = {
   "review": TaskStatus.REVIEW,
   "done": TaskStatus.DONE,
   "failed": TaskStatus.FAILED,
-};
+});
 
 const taskStatusToStringMap: Record<number, string> = {
   [TaskStatus.UNSPECIFIED]: "",
@@ -207,11 +210,11 @@ export function taskStatusToString(e: TaskStatus): string {
 
 // ─── ProjectStatus ──────────────────────────────────────────
 
-const projectStatusToEnumMap: Record<string, ProjectStatus> = {
+const projectStatusToEnumMap: Record<string, ProjectStatus> = Object.assign(Object.create(null), {
   "": ProjectStatus.UNSPECIFIED,
   "active": ProjectStatus.ACTIVE,
   "archived": ProjectStatus.ARCHIVED,
-};
+});
 
 const projectStatusToStringMap: Record<number, string> = {
   [ProjectStatus.UNSPECIFIED]: "",

@@ -578,9 +578,14 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       const existing = taskStore.getTask(req.id);
       if (!existing) throw new Error(`Task not found: ${req.id}`);
 
-      const reqStatus = req.status !== grackle.TaskStatus.UNSPECIFIED
-        ? taskStatusToString(req.status)
-        : existing.status;
+      let reqStatus = existing.status;
+      if (req.status !== grackle.TaskStatus.UNSPECIFIED) {
+        const converted = taskStatusToString(req.status);
+        if (!converted) {
+          throw new Error(`Unknown task status enum value: ${req.status}`);
+        }
+        reqStatus = converted;
+      }
 
       taskStore.updateTask(
         req.id,
