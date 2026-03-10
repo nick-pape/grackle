@@ -15,6 +15,7 @@ import type {
   TaskData,
   FindingData,
   TaskDiffData,
+  TokenInfo,
 } from "../hooks/useGrackleSocket.js";
 
 // ─── Environments ───────────────────────────────────
@@ -392,6 +393,33 @@ export const MOCK_FINDINGS: FindingData[] = [
       "The incremental load watermarks are currently stored in a local SQLite file. For production multi-worker scenarios, this needs to be backed by a shared store (Redis or Postgres).",
     tags: ["architecture", "pipeline", "scalability"],
     createdAt: "2026-02-27T09:05:00Z",
+  },
+];
+
+// ─── Tokens ──────────────────────────────────────────
+
+/** Sample tokens for the settings panel. */
+export const MOCK_TOKENS: TokenInfo[] = [
+  {
+    name: "anthropic",
+    tokenType: "env_var",
+    envVar: "ANTHROPIC_API_KEY",
+    filePath: "",
+    expiresAt: "",
+  },
+  {
+    name: "github",
+    tokenType: "env_var",
+    envVar: "GITHUB_TOKEN",
+    filePath: "",
+    expiresAt: "2026-12-31T23:59:59Z",
+  },
+  {
+    name: "gcp-service-account",
+    tokenType: "file",
+    envVar: "",
+    filePath: "/home/user/.config/gcloud/credentials.json",
+    expiresAt: "",
   },
 ];
 

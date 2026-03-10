@@ -158,6 +158,10 @@ message TokenInfo {
   // No value — never expose to clients
 }
 
+message TokenName {
+  string name = 1;
+}
+
 // ─── Projects ──────────────────────────────────────────────
 
 message Project {
@@ -314,6 +318,7 @@ service Grackle {
   // Token management
   rpc SetToken(TokenEntry) returns (Empty);
   rpc ListTokens(Empty) returns (TokenList);
+  rpc DeleteToken(TokenName) returns (Empty);
 
   // Projects
   rpc ListProjects(Empty) returns (ProjectList);
