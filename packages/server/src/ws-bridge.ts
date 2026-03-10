@@ -505,12 +505,8 @@ async function handleMessage(
         return;
       }
       const parentTaskId = (msg.payload?.parentTaskId as string) || "";
-
-      // Determine canDecompose: explicit value honored, otherwise root=true, child=false
       const rawCanDecompose = msg.payload?.canDecompose;
-      const canDecompose = typeof rawCanDecompose === "boolean"
-        ? rawCanDecompose
-        : !parentTaskId;
+      const canDecompose = typeof rawCanDecompose === "boolean" ? rawCanDecompose : undefined;
 
       const id = uuid().slice(0, 8);
       taskStore.createTask(

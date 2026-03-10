@@ -449,17 +449,9 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         }
       }
 
-      // Determine canDecompose: explicit value honored, otherwise root=true, child=false
-      let canDecompose: boolean;
-      if (req.canDecompose !== undefined) {
-        canDecompose = req.canDecompose;
-      } else {
-        canDecompose = !req.parentTaskId;
-      }
-
       const id = uuid().slice(0, 8);
       const environmentId = req.environmentId || project.defaultEnvironmentId;
-      taskStore.createTask(id, req.projectId, req.title, req.description, environmentId, [...req.dependsOn], slugify(project.name), req.parentTaskId, canDecompose);
+      taskStore.createTask(id, req.projectId, req.title, req.description, environmentId, [...req.dependsOn], slugify(project.name), req.parentTaskId, req.canDecompose);
       const row = taskStore.getTask(id);
       broadcast({ type: "task_created", payload: { task: row ? { ...row } : null } });
       return taskRowToProto(row!);

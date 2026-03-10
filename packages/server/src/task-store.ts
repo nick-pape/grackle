@@ -18,7 +18,7 @@ export function createTask(
   dependsOn: string[],
   projectSlug: string,
   parentTaskId: string = "",
-  canDecompose: boolean = false,
+  canDecompose?: boolean,
 ): void {
   let depth = 0;
   let branch: string;
@@ -40,6 +40,9 @@ export function createTask(
     branch = `${projectSlug}/${slugify(title)}`;
   }
 
+  // Derive canDecompose when not explicitly set: root=true, child=false
+  const resolvedCanDecompose = canDecompose ?? !parentTaskId;
+
   const depsJson = JSON.stringify(dependsOn);
   const maxRow = db.select({ maxOrder: sql<number>`max(sort_order)` })
     .from(tasks)
@@ -57,7 +60,7 @@ export function createTask(
     sortOrder,
     parentTaskId,
     depth,
-    canDecompose,
+    canDecompose: resolvedCanDecompose,
   }).run();
 }
 

@@ -260,10 +260,17 @@ describe("task-store tree operations", () => {
       }).toThrow("depth would exceed maximum");
     });
 
-    it("defaults canDecompose to false when not specified", () => {
+    it("defaults canDecompose to true for root tasks when not specified", () => {
       taskStore.createTask("t1", "test-proj", "Task", "desc", "", [], "proj");
       const task = taskStore.getTask("t1");
-      expect(task!.canDecompose).toBe(false);
+      expect(task!.canDecompose).toBe(true);
+    });
+
+    it("defaults canDecompose to false for child tasks when not specified", () => {
+      taskStore.createTask("t1", "test-proj", "Parent", "desc", "", [], "proj", "", true);
+      taskStore.createTask("t2", "test-proj", "Child", "desc", "", [], "proj", "t1");
+      const child = taskStore.getTask("t2");
+      expect(child!.canDecompose).toBe(false);
     });
   });
 });
