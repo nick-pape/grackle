@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Tue, 10 Mar 2026 07:50:14 GMT and should not be manually modified.
+This log was last generated on Tue, 10 Mar 2026 08:23:27 GMT and should not be manually modified.
+
+## 0.11.0
+Tue, 10 Mar 2026 08:23:27 GMT
+
+### Patches
+
+- Wire-proto-enums-to-message-fields
 
 ## 0.10.0
 Tue, 10 Mar 2026 07:50:14 GMT
