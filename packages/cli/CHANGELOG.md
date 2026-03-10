@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Tue, 10 Mar 2026 06:13:42 GMT and should not be manually modified.
+This log was last generated on Tue, 10 Mar 2026 06:33:40 GMT and should not be manually modified.
+
+## 0.3.0
+Tue, 10 Mar 2026 06:33:40 GMT
+
+### Patches
+
+- Code quality sweep: constant-time auth, deduplicate slugify, fix updateTask field clearing, remove dead exports
 
 ## 0.2.0
 Tue, 10 Mar 2026 06:13:42 GMT
