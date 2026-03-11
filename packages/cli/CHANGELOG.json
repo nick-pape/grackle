@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.13.4",
+      "tag": "@grackle-ai/cli_v0.13.4",
+      "date": "Wed, 11 Mar 2026 05:34:23 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Handle port conflicts gracefully with controlled shutdown instead of hard exit"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.13.3",
       "tag": "@grackle-ai/cli_v0.13.3",
       "date": "Wed, 11 Mar 2026 04:13:07 GMT",

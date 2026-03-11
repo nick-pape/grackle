@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Wed, 11 Mar 2026 04:13:07 GMT and should not be manually modified.
+This log was last generated on Wed, 11 Mar 2026 05:34:23 GMT and should not be manually modified.
+
+## 0.13.4
+Wed, 11 Mar 2026 05:34:23 GMT
+
+### Patches
+
+- Handle port conflicts gracefully with controlled shutdown instead of hard exit
 
 ## 0.13.3
 Wed, 11 Mar 2026 04:13:07 GMT
