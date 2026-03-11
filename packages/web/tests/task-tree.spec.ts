@@ -94,6 +94,40 @@ test.describe("Task tree hierarchy", () => {
     await expect(page.getByText("level-1")).toBeVisible({ timeout: 5_000 });
   });
 
+  test("add child task button creates a nested child via UI", async ({ appPage }) => {
+    const page = appPage;
+
+    await createProject(page, "tree-add-child");
+    await createTask(page, "tree-add-child", "ac-parent", "test-local");
+
+    const projectId = await getProjectId(page, "tree-add-child");
+    const parentId = await getTaskId(page, projectId, "ac-parent");
+
+    // Hover over the parent task row to reveal the add-child "+" button
+    const parentRow = page.locator(`[data-task-id="${parentId}"]`);
+    await parentRow.hover();
+
+    // Click the add-child button
+    const addChildButton = parentRow.locator('[aria-label="Add child task"]');
+    await expect(addChildButton).toBeVisible({ timeout: 5_000 });
+    await addChildButton.click();
+
+    // UnifiedBar should show "child task" badge
+    await expect(page.getByText("child task", { exact: true })).toBeVisible({ timeout: 5_000 });
+
+    // Fill in child task title and create
+    await page.locator('input[placeholder="Task title..."]').fill("ac-child");
+    await page.locator("button", { hasText: "Create" }).click();
+
+    // Child should appear in the sidebar under the parent
+    await expect(page.getByText("ac-child")).toBeVisible({ timeout: 5_000 });
+
+    // Parent should now have an expand arrow and child count badge
+    const badge = parentRow.locator('[class*="childCountBadge"]');
+    await expect(badge).toBeVisible({ timeout: 5_000 });
+    await expect(badge).toHaveText("0/1");
+  });
+
   test("prevents deletion of parent tasks with children", async ({ appPage }) => {
     const page = appPage;
 
