@@ -163,11 +163,12 @@ async function autoProvisionEnvironment(
     logger.error({ environmentId, ...logContext, err }, "Auto-provision failed");
     envRegistry.updateEnvironmentStatus(environmentId, "error");
     broadcastEnvironments();
+    const errorMessage = err instanceof Error ? err.message : String(err);
     broadcast({
       type: "provision_progress",
-      payload: { environmentId, stage: "error", message: `Auto-provision failed: ${err}`, progress: 0 },
+      payload: { environmentId, stage: "error", message: `Auto-provision failed: ${errorMessage}`, progress: 0 },
     });
-    sendWs(ws, { type: "error", payload: { message: `Failed to auto-connect environment ${environmentId}: ${err}` } });
+    sendWs(ws, { type: "error", payload: { message: `Failed to auto-connect environment ${environmentId}: ${errorMessage}` } });
     return undefined;
   }
 }
@@ -779,7 +780,7 @@ async function handleMessage(
       envRegistry.updateEnvironmentStatus(environmentId, "connecting");
       broadcastEnvironments();
 
-      // Run provision in background, streaming progress to the requesting client
+      // Run provision in background, broadcasting progress to all connected clients
       // eslint-disable-next-line @typescript-eslint/no-floating-promises
       (async () => {
         try {
@@ -805,9 +806,10 @@ async function handleMessage(
         } catch (err) {
           logger.error({ environmentId, err }, "Provision failed");
           envRegistry.updateEnvironmentStatus(environmentId, "error");
+          const errorMessage = err instanceof Error ? err.message : String(err);
           broadcast({
             type: "provision_progress",
-            payload: { environmentId, stage: "error", message: `Connection failed: ${err}`, progress: 0 },
+            payload: { environmentId, stage: "error", message: `Connection failed: ${errorMessage}`, progress: 0 },
           });
         }
         broadcastEnvironments();
