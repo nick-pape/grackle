@@ -1,11 +1,17 @@
 import type { AgentEvent, AgentSession } from "./runtime.js";
+import { existsSync } from "node:fs";
 import { BaseAgentSession } from "./base-session.js";
 import { BaseAgentRuntime } from "./base-runtime.js";
-import { resolveWorkingDirectory, resolveMcpServers, buildFindingEvent } from "./runtime-utils.js";
+import { resolveWorkingDirectory, resolveMcpServers, buildFindingEvent, GRACKLE_MCP_SCRIPT } from "./runtime-utils.js";
+import { logger } from "../logger.js";
 
 // Dynamic import — try @anthropic-ai/claude-agent-sdk first, then @anthropic-ai/claude-code
 type QueryFn = (opts: Record<string, unknown>) => Promise<unknown>;
+type ToolFn = (name: string, description: string, schema: Record<string, unknown>, handler: (args: Record<string, unknown>) => Promise<unknown>) => unknown;
+type CreateSdkMcpServerFn = (opts: Record<string, unknown>) => unknown;
 let queryFn: QueryFn | undefined = undefined;
+let toolFn: ToolFn | undefined = undefined;
+let createSdkMcpServerFn: CreateSdkMcpServerFn | undefined = undefined;
 
 async function getQuery(): Promise<QueryFn> {
   if (queryFn) return queryFn;
@@ -15,6 +21,13 @@ async function getQuery(): Promise<QueryFn> {
       const mod = await import(pkg);
       if (typeof mod.query === "function") {
         queryFn = mod.query as QueryFn;
+        // Also cache tool() and createSdkMcpServer() if available
+        if (typeof mod.tool === "function") {
+          toolFn = mod.tool as ToolFn;
+        }
+        if (typeof mod.createSdkMcpServer === "function") {
+          createSdkMcpServerFn = mod.createSdkMcpServer as CreateSdkMcpServerFn;
+        }
         return queryFn;
       }
     } catch { /* try next */ }
@@ -90,6 +103,70 @@ const BUILTIN_TOOLS: string[] = [
   "WebSearch", "WebFetch", "Task", "NotebookEdit",
 ];
 
+/**
+ * Create an in-process Grackle MCP server using the Claude Agent SDK's `createSdkMcpServer`.
+ *
+ * This is used as a fallback when the external MCP script (`/app/mcp-grackle/index.js`)
+ * is not available (e.g. in codespace or local environments). The `post_finding` tool
+ * call is intercepted by `mapMessage()` to emit a "finding" event, so the in-process
+ * handler just returns a confirmation message.
+ *
+ * Returns undefined if the SDK does not expose `tool` or `createSdkMcpServer`.
+ */
+async function createInProcessGrackleMcpServer(): Promise<unknown | undefined> {
+  // Ensure the SDK functions have been cached by getQuery()
+  await getQuery();
+
+  if (!toolFn || !createSdkMcpServerFn) {
+    logger.warn("Claude Agent SDK does not expose tool() or createSdkMcpServer(); cannot create in-process finding server");
+    return undefined;
+  }
+
+  // Dynamically import zod — the Claude Agent SDK lists it as a dependency,
+  // so it is available at runtime even though powerline does not declare it directly.
+  // Use a variable-based import path to prevent TypeScript from resolving the module.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let z: any;
+  try {
+    const zodPackage = "zod";
+    const zodModule = await import(/* webpackIgnore: true */ zodPackage);
+    z = zodModule.z || zodModule;
+  } catch {
+    logger.warn("Could not import zod for in-process finding server; post_finding will not be available");
+    return undefined;
+  }
+
+  const postFindingTool = toolFn(
+    "post_finding",
+    "Share a discovery with other agents working on this project. Use this for architecture decisions, bugs found, API patterns, dependency notes, or any insight that would help other agents.",
+    {
+      title: (z.string as () => unknown)(),
+      content: (z.string as () => unknown)(),
+      category: z.enum(["architecture", "api", "bug", "decision", "dependency", "pattern", "general"]).optional(),
+      tags: z.array(z.string()).optional(),
+    } as Record<string, unknown>,
+    async (args: Record<string, unknown>) => {
+      const category = (args.category as string) || "general";
+      const tags = (args.tags as string[]) || [];
+      const tagString = tags.length > 0 ? ` [${tags.join(", ")}]` : "";
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: `Finding posted (${category}${tagString}): ${args.title as string}`,
+          },
+        ],
+      };
+    },
+  );
+
+  return createSdkMcpServerFn({
+    name: "grackle",
+    version: "0.1.0",
+    tools: [postFindingTool],
+  });
+}
+
 /** Agent session backed by the Claude Agent SDK (`@anthropic-ai/claude-agent-sdk`). */
 class ClaudeCodeSession extends BaseAgentSession {
   public runtimeName: string = "claude-code";
@@ -135,6 +212,19 @@ class ClaudeCodeSession extends BaseAgentSession {
     }
     if (mcpConfig.disallowedTools.length > 0) {
       sdkOptions.disallowedTools = mcpConfig.disallowedTools;
+    }
+
+    // When the external Grackle MCP script is not available (non-Docker environments
+    // like codespaces), create an in-process SDK MCP server so agents can still call
+    // post_finding. The tool call is intercepted by mapMessage() to emit finding events.
+    const servers = (sdkOptions.mcpServers || {}) as Record<string, unknown>;
+    if (!servers.grackle && !existsSync(GRACKLE_MCP_SCRIPT)) {
+      const inProcessServer = await createInProcessGrackleMcpServer();
+      if (inProcessServer) {
+        servers.grackle = inProcessServer;
+        sdkOptions.mcpServers = servers;
+        logger.info("Injected in-process Grackle MCP server (post_finding tool available)");
+      }
     }
 
     // Add MCP tool patterns to allowedTools

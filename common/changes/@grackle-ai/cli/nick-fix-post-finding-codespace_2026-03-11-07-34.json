@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Make post_finding tool available in non-Docker environments via in-process SDK MCP server",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
