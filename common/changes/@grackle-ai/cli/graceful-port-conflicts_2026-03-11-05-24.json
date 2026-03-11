@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Handle port conflicts gracefully with controlled shutdown instead of hard exit",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
