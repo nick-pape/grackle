@@ -127,6 +127,59 @@
   text-align: center;
 }
 
+// ---------------------------------------------------------------------------
+// Overview tab
+// ---------------------------------------------------------------------------
+
+.overviewContent {
+  flex: 1;
+  overflow: auto;
+  padding: var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.overviewSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.overviewLabel {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.overviewDescription {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+}
+
+.depList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.depItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: var(--font-size-sm);
+}
+
+.depBlocked {
+  color: var(--accent-yellow, #e5c07b);
+}
+
+.depDone {
+  color: var(--accent-green);
+}
+
 .waitingMessage {
   color: var(--text-tertiary);
 }

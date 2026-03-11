@@ -78,7 +78,7 @@ test.describe("Tab Auto-Switching", () => {
     await expect(page.locator("text=Stub runtime initialized")).not.toBeVisible();
   });
 
-  test("clicking task in sidebar resets to stream tab", async ({ appPage }) => {
+  test("clicking task in sidebar resets to overview tab for pending tasks", async ({ appPage }) => {
     const page = appPage;
 
     // Create project with two tasks
@@ -93,11 +93,12 @@ test.describe("Tab Auto-Switching", () => {
     // Verify Findings content is visible
     await expect(page.getByText("No findings yet")).toBeVisible({ timeout: 5_000 });
 
-    // Click task B in sidebar — key prop forces SessionPanel remount, resetting to stream tab
+    // Click task B in sidebar — key prop forces SessionPanel remount, resetting to overview tab
     await navigateToTask(page, "sidebar-task-b");
 
-    // Stream content should be visible for the pending task
-    await expect(page.getByText("Task has not been started yet")).toBeVisible({ timeout: 10_000 });
+    // Overview tab should be active for the pending task (not stream)
+    const overviewTab = page.locator("button", { hasText: "Overview" });
+    await expect(overviewTab).toHaveAttribute("class", /active/, { timeout: 10_000 });
 
     // Findings content should NOT be visible (switched away)
     await expect(page.getByText("No findings yet")).not.toBeVisible();
