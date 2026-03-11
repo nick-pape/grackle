@@ -56,6 +56,15 @@ function main(): void {
 
       const server = http2.createServer(handler);
 
+      server.on("error", (err: NodeJS.ErrnoException) => {
+        if (err.code === "EADDRINUSE") {
+          logger.fatal({ port }, "Port %d is already in use. Is another PowerLine running?", port);
+          process.exit(1);
+        }
+        logger.fatal({ err }, "PowerLine server error");
+        process.exit(1);
+      });
+
       server.listen(port, () => {
         const authStatus = powerlineToken ? "authenticated" : "NO AUTH (development only)";
         logger.info({ port, authStatus }, "PowerLine listening on http://localhost:%d [%s]", port, authStatus);

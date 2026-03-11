@@ -133,6 +133,15 @@ function main(): void {
   });
   const grpcServer = http2.createServer(grpcHandler);
 
+  grpcServer.on("error", (err: NodeJS.ErrnoException) => {
+    if (err.code === "EADDRINUSE") {
+      logger.fatal({ port: grpcPort }, "Port %d is already in use. Is another Grackle server running?", grpcPort);
+      process.exit(1);
+    }
+    logger.fatal({ err }, "gRPC server error");
+    process.exit(1);
+  });
+
   grpcServer.listen(grpcPort, "127.0.0.1", () => {
     logger.info({ port: grpcPort }, "gRPC server listening on http://127.0.0.1:%d", grpcPort);
   });
@@ -142,6 +151,15 @@ function main(): void {
   const webServer = http.createServer(createWebHandler(apiKey));
 
   createWsBridge(webServer, verifyApiKey);
+
+  webServer.on("error", (err: NodeJS.ErrnoException) => {
+    if (err.code === "EADDRINUSE") {
+      logger.fatal({ port: webPort }, "Port %d is already in use. Is another Grackle server running?", webPort);
+      process.exit(1);
+    }
+    logger.fatal({ err }, "Web server error");
+    process.exit(1);
+  });
 
   webServer.listen(webPort, "127.0.0.1", () => {
     logger.info({ port: webPort }, "Web UI + WebSocket on http://127.0.0.1:%d", webPort);
