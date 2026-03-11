@@ -1,8 +1,8 @@
 {
   "changes": [
     {
-      "comment": "Add codespace environment picker, create-from-repo flow, and working directory detection",
-      "type": "minor",
+      "comment": "No functional changes (merge commit artifact)",
+      "type": "none",
       "packageName": "@grackle-ai/cli"
     }
   ],

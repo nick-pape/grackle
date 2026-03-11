@@ -7,10 +7,13 @@
 .container {
   @include glass-panel;
   width: 260px;
-  min-width: 260px;
+  min-width: 180px;
+  max-width: 500px;
   border-right: 1px solid var(--border-subtle);
   display: flex;
   flex-direction: column;
+  resize: horizontal;
+  overflow: hidden;
 }
 
 .tabBar {
