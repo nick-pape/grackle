@@ -125,19 +125,11 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
     projectId = task?.projectId || undefined;
   }
 
-  // Auto-switch tab synchronously during render (not via effect) so the
-  // correct tab is committed in the same frame as the status change.
-  // React supports calling setState during render as a getDerivedStateFromProps
-  // replacement — it re-renders immediately without committing the stale frame.
-  if (task?.status !== prevTaskStatusRef.current) {
-    prevTaskStatusRef.current = task?.status;
-    const newTab: TaskTab | undefined =
-      task?.status === "in_progress" ? "stream"
-      : task?.status === "review" ? "diff"
-      : task?.status === "done" ? "findings"
-      : undefined;
-    if (newTab && newTab !== activeTaskTab) {
-      setActiveTaskTab(newTab);
+  // Reset to stream tab when switching to a different task.
+  if (task?.id !== prevTaskStatusRef.current) {
+    prevTaskStatusRef.current = task?.id;
+    if (activeTaskTab !== "stream") {
+      setActiveTaskTab("stream");
     }
   }
 
