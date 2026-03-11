@@ -20,8 +20,8 @@ import { existsSync, readdirSync } from "node:fs";
 import { ensureWorktree } from "../worktree.js";
 
 describe("GRACKLE_MCP_SCRIPT", () => {
-  it("points to the expected path", () => {
-    expect(GRACKLE_MCP_SCRIPT).toBe("/app/mcp-grackle/index.js");
+  it("resolves to mcp-grackle/index.js within the powerline package", () => {
+    expect(GRACKLE_MCP_SCRIPT).toMatch(/mcp-grackle[\\/]index\.js$/);
   });
 });
 

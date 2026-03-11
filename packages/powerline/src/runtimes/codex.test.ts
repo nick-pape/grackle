@@ -90,15 +90,13 @@ describe("resolveMcpServers", () => {
 
   it("auto-injects grackle server when script exists", () => {
     vi.stubEnv("GRACKLE_MCP_CONFIG", "");
-    vi.mocked(existsSync).mockImplementation((p) => {
-      return String(p) === "/app/mcp-grackle/index.js";
-    });
+    vi.mocked(existsSync).mockImplementation(() => true);
 
     const result = resolveMcpServers();
     expect(result.servers).toBeDefined();
     expect(result.servers!.grackle).toEqual({
       command: "node",
-      args: ["/app/mcp-grackle/index.js"],
+      args: [expect.stringMatching(/mcp-grackle[\\/]index\.js$/)],
       tools: ["post_finding", "create_subtask", "get_task_context", "update_task_status", "query_findings"],
     });
   });

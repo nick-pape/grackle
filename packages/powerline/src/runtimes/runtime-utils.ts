@@ -1,13 +1,17 @@
 import type { AgentEvent } from "./runtime.js";
 import type { AsyncQueue } from "../utils/async-queue.js";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
 import { ensureWorktree } from "../worktree.js";
 import { logger } from "../logger.js";
 
 // ─── Shared constants ──────────────────────────────────────
 
-/** Path to the Grackle MCP server script bundled in the container image. */
-export const GRACKLE_MCP_SCRIPT: string = "/app/mcp-grackle/index.js";
+const __dirname: string = dirname(fileURLToPath(import.meta.url));
+
+/** Path to the Grackle MCP server script, resolved relative to the PowerLine package. */
+export const GRACKLE_MCP_SCRIPT: string = join(__dirname, "../../mcp-grackle/index.js");
 
 // ─── Finding construction ──────────────────────────────────
 
