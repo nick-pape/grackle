@@ -1,22 +1,27 @@
-import { DEFAULT_POWERLINE_PORT } from "@grackle/common";
+import { DEFAULT_POWERLINE_PORT } from "@grackle-ai/common";
 import type { EnvironmentAdapter, BaseEnvironmentConfig, PowerLineConnection, ProvisionEvent } from "./adapter.js";
 import { createPowerLineClient } from "./powerline-transport.js";
+import { isDevMode } from "./remote-adapter-utils.js";
 import { exec } from "../utils/exec.js";
 import { findFreePort } from "../utils/ports.js";
 import { sleep } from "../utils/sleep.js";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { readFileSync, existsSync } from "node:fs";
+import { join, resolve } from "node:path";
 import { homedir } from "node:os";
 import { logger } from "../logger.js";
 
-const DOCKER_PULL_TIMEOUT_MS = 120_000;
-const GIT_CLONE_TIMEOUT_MS = 120_000;
-const GIT_PULL_TIMEOUT_MS = 60_000;
-const CONTAINER_POLL_DELAY_MS = 1_000;
-const CONTAINER_POLL_MAX_ATTEMPTS = 30;
-const CONNECT_RETRY_DELAY_MS = 1_500;
-const CONNECT_MAX_RETRIES = 10;
-const WORKSPACE_PATH = "/workspace";
+const DOCKER_PULL_TIMEOUT_MS: number = 120_000;
+/** Timeout for `docker build` when building the dev image from local artifacts. */
+const DOCKER_BUILD_TIMEOUT_MS: number = 300_000;
+const GIT_CLONE_TIMEOUT_MS: number = 120_000;
+const GIT_PULL_TIMEOUT_MS: number = 60_000;
+const CONTAINER_POLL_DELAY_MS: number = 1_000;
+const CONTAINER_POLL_MAX_ATTEMPTS: number = 30;
+const CONNECT_RETRY_DELAY_MS: number = 1_500;
+const CONNECT_MAX_RETRIES: number = 10;
+const WORKSPACE_PATH: string = "/workspace";
+/** Default image name used when no custom image is specified. */
+const DEFAULT_IMAGE: string = "grackle-powerline:latest";
 
 /** Docker-specific environment configuration. */
 export interface DockerEnvironmentConfig extends BaseEnvironmentConfig {
@@ -31,7 +36,7 @@ export interface DockerEnvironmentConfig extends BaseEnvironmentConfig {
   gpus?: string;
 }
 
-const containerPorts = new Map<string, number>();
+const containerPorts: Map<string, number> = new Map<string, number>();
 
 // ─── Docker CLI Helpers ────────────────────────────────────
 
@@ -136,7 +141,7 @@ async function ensureRepoInContainer(containerName: string, repo: string): Promi
 }
 
 /** Validate that a token contains only safe characters (alphanumeric, underscore, hyphen). */
-const SAFE_TOKEN_PATTERN = /^[a-zA-Z0-9_\-]+$/;
+const SAFE_TOKEN_PATTERN: RegExp = /^[a-zA-Z0-9_\-]+$/;
 
 /** Get a GitHub token from the local `gh` CLI for private repo cloning. */
 async function getGitHubToken(): Promise<string | undefined> {
@@ -155,20 +160,43 @@ async function getGitHubToken(): Promise<string | undefined> {
   }
 }
 
+/**
+ * Build the PowerLine Docker image from local monorepo artifacts using the dev target.
+ * Resolves the monorepo root from import.meta.dirname (dist/adapters → 4 levels up).
+ */
+async function buildDevImage(tag: string): Promise<void> {
+  const monorepoRoot = resolve(import.meta.dirname, "../../../../");
+  logger.info({ tag, monorepoRoot }, "Building dev PowerLine image from local artifacts");
+  await exec("docker", [
+    "build",
+    "--target", "dev",
+    "-f", resolve(monorepoRoot, "Dockerfile.powerline"),
+    "-t", tag,
+    monorepoRoot,
+  ], { timeout: DOCKER_BUILD_TIMEOUT_MS });
+}
+
 // ─── Docker Adapter ────────────────────────────────────────
 
 /** Environment adapter that provisions and manages Docker containers running the PowerLine. */
 export class DockerAdapter implements EnvironmentAdapter {
-  type = "docker";
+  public type: string = "docker";
 
-  async *provision(envId: string, config: Record<string, unknown>, powerlineToken: string): AsyncGenerator<ProvisionEvent> {
+  public async *provision(environmentId: string, config: Record<string, unknown>, powerlineToken: string): AsyncGenerator<ProvisionEvent> {
     const cfg = config as unknown as DockerEnvironmentConfig;
-    const image = cfg.image || "grackle-powerline:latest";
-    const containerName = cfg.containerName || `grackle-${envId}`;
+    const image = cfg.image || DEFAULT_IMAGE;
+    const containerName = cfg.containerName || `grackle-${environmentId}`;
     const localPort = cfg.localPort || await findFreePort();
 
-    yield { stage: "creating", message: `Pulling image ${image}...`, progress: 0.1 };
-    await pullImage(image);
+    const isDefault = image === DEFAULT_IMAGE;
+    const dockerfilePath = resolve(import.meta.dirname, "../../../../Dockerfile.powerline");
+    if (isDevMode() && isDefault && existsSync(dockerfilePath)) {
+      yield { stage: "creating", message: "Building PowerLine image from local artifacts...", progress: 0.1 };
+      await buildDevImage(image);
+    } else {
+      yield { stage: "creating", message: `Pulling image ${image}...`, progress: 0.1 };
+      await pullImage(image);
+    }
 
     yield { stage: "creating", message: `Creating container ${containerName}...`, progress: 0.3 };
 
@@ -181,7 +209,7 @@ export class DockerAdapter implements EnvironmentAdapter {
       actualPort = await discoverHostPort(containerName, DEFAULT_POWERLINE_PORT, localPort);
     }
 
-    containerPorts.set(envId, actualPort);
+    containerPorts.set(environmentId, actualPort);
 
     yield { stage: "starting", message: "Waiting for container...", progress: 0.5 };
     await waitForContainerRunning(containerName);
@@ -195,9 +223,9 @@ export class DockerAdapter implements EnvironmentAdapter {
     yield { stage: "connecting", message: `Connecting on port ${actualPort}...`, progress: 0.8 };
   }
 
-  async connect(envId: string, config: Record<string, unknown>, powerlineToken: string): Promise<PowerLineConnection> {
+  public async connect(environmentId: string, config: Record<string, unknown>, powerlineToken: string): Promise<PowerLineConnection> {
     const cfg = config as unknown as DockerEnvironmentConfig;
-    const localPort = containerPorts.get(envId) || cfg.localPort || DEFAULT_POWERLINE_PORT;
+    const localPort = containerPorts.get(environmentId) || cfg.localPort || DEFAULT_POWERLINE_PORT;
 
     const client = createPowerLineClient(`http://127.0.0.1:${localPort}`, powerlineToken);
 
@@ -205,7 +233,7 @@ export class DockerAdapter implements EnvironmentAdapter {
     for (let attempt = 0; attempt < CONNECT_MAX_RETRIES; attempt++) {
       try {
         await client.ping({});
-        return { client, envId, port: localPort };
+        return { client, environmentId, port: localPort };
       } catch (err) {
         lastErr = err;
         await sleep(CONNECT_RETRY_DELAY_MS);
@@ -215,33 +243,33 @@ export class DockerAdapter implements EnvironmentAdapter {
     throw new Error(`Could not reach PowerLine after ${CONNECT_MAX_RETRIES} attempts: ${lastErr}`);
   }
 
-  async disconnect(envId: string): Promise<void> {
-    containerPorts.delete(envId);
+  public async disconnect(environmentId: string): Promise<void> {
+    containerPorts.delete(environmentId);
   }
 
-  async stop(envId: string, config: Record<string, unknown>): Promise<void> {
+  public async stop(environmentId: string, config: Record<string, unknown>): Promise<void> {
     const cfg = config as unknown as DockerEnvironmentConfig;
-    const containerName = cfg.containerName || `grackle-${envId}`;
+    const containerName = cfg.containerName || `grackle-${environmentId}`;
     try {
       await exec("docker", ["stop", containerName]);
     } catch (err) {
-      logger.debug({ envId, err }, "Container may already be stopped");
+      logger.debug({ environmentId, err }, "Container may already be stopped");
     }
-    containerPorts.delete(envId);
+    containerPorts.delete(environmentId);
   }
 
-  async destroy(envId: string, config: Record<string, unknown>): Promise<void> {
+  public async destroy(environmentId: string, config: Record<string, unknown>): Promise<void> {
     const cfg = config as unknown as DockerEnvironmentConfig;
-    const containerName = cfg.containerName || `grackle-${envId}`;
+    const containerName = cfg.containerName || `grackle-${environmentId}`;
     try {
       await exec("docker", ["rm", "-f", containerName]);
     } catch (err) {
-      logger.debug({ envId, err }, "Container may not exist");
+      logger.debug({ environmentId, err }, "Container may not exist");
     }
-    containerPorts.delete(envId);
+    containerPorts.delete(environmentId);
   }
 
-  async healthCheck(connection: PowerLineConnection): Promise<boolean> {
+  public async healthCheck(connection: PowerLineConnection): Promise<boolean> {
     try {
       await connection.client.ping({});
       return true;
@@ -279,6 +307,20 @@ export class DockerAdapter implements EnvironmentAdapter {
     // Forward ANTHROPIC_API_KEY if set on host
     if (process.env.ANTHROPIC_API_KEY && !cfg.env?.ANTHROPIC_API_KEY) {
       args.push("-e", `ANTHROPIC_API_KEY=${process.env.ANTHROPIC_API_KEY}`);
+    }
+
+    // Forward GitHub tokens for Copilot runtime
+    for (const tokenVar of ["GITHUB_TOKEN", "GH_TOKEN", "COPILOT_GITHUB_TOKEN"]) {
+      if (process.env[tokenVar] && !cfg.env?.[tokenVar]) {
+        args.push("-e", `${tokenVar}=${process.env[tokenVar]}`);
+      }
+    }
+
+    // Forward Copilot-specific configuration environment variables
+    for (const envVar of ["COPILOT_CLI_URL", "COPILOT_CLI_PATH", "COPILOT_PROVIDER_CONFIG"]) {
+      if (process.env[envVar] && !cfg.env?.[envVar]) {
+        args.push("-e", `${envVar}=${process.env[envVar]}`);
+      }
     }
 
     // Pass PowerLine token for authentication

@@ -1,0 +1,13 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/heft/v0/heft-plugin.schema.json",
+  "taskPlugins": [
+    {
+      "pluginName": "buf-generate-plugin",
+      "entryPoint": "./lib/BufGeneratePlugin.js"
+    },
+    {
+      "pluginName": "buf-lint-plugin",
+      "entryPoint": "./lib/BufLintPlugin.js"
+    }
+  ]
+}

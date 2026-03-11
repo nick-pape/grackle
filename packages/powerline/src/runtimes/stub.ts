@@ -1,24 +1,26 @@
 import { EventEmitter } from "node:events";
 import type { AgentRuntime, AgentSession, AgentEvent, SpawnOptions, ResumeOptions } from "./runtime.js";
-import type { SessionStatus } from "@grackle/common";
+import type { SessionStatus } from "@grackle-ai/common";
 
 class StubSession implements AgentSession {
-  id: string;
-  runtimeName = "stub";
-  runtimeSessionId: string;
-  status: SessionStatus = "running";
+  public id: string;
+  public runtimeName: string = "stub";
+  public runtimeSessionId: string;
+  public status: SessionStatus = "running";
 
-  private emitter = new EventEmitter();
+  private emitter: EventEmitter = new EventEmitter();
   private inputResolve: ((text: string) => void) | null = null;
-  private killed = false;
+  private killed: boolean = false;
+  private prompt: string;
 
-  constructor(id: string, private prompt: string) {
+  public constructor(id: string, prompt: string) {
     this.id = id;
+    this.prompt = prompt;
     this.runtimeSessionId = `stub-${id}`;
   }
 
-  async *stream(): AsyncIterable<AgentEvent> {
-    const ts = () => new Date().toISOString();
+  public async *stream(): AsyncIterable<AgentEvent> {
+    const ts: () => string = () => new Date().toISOString();
 
     yield { type: "system", timestamp: ts(), content: "Stub runtime initialized" };
     yield { type: "text", timestamp: ts(), content: `Echo: ${this.prompt}` };
@@ -43,6 +45,8 @@ class StubSession implements AgentSession {
     this.status = "waiting_input";
     yield { type: "status", timestamp: ts(), content: "waiting_input" };
 
+    if (this.killed) return;
+
     const input = await this.waitForInput();
     if (this.killed) return;
 
@@ -62,11 +66,11 @@ class StubSession implements AgentSession {
     });
   }
 
-  sendInput(text: string): void {
+  public sendInput(text: string): void {
     this.emitter.emit("input", text);
   }
 
-  kill(): void {
+  public kill(): void {
     this.killed = true;
     this.status = "killed";
     if (this.inputResolve) {
@@ -77,13 +81,13 @@ class StubSession implements AgentSession {
 
 /** A mock runtime that echoes prompts and waits for one round of user input. Useful for testing. */
 export class StubRuntime implements AgentRuntime {
-  name = "stub";
+  public name: string = "stub";
 
-  spawn(opts: SpawnOptions): AgentSession {
+  public spawn(opts: SpawnOptions): AgentSession {
     return new StubSession(opts.sessionId, opts.prompt);
   }
 
-  resume(opts: ResumeOptions): AgentSession {
+  public resume(opts: ResumeOptions): AgentSession {
     return new StubSession(opts.sessionId, "(resumed session)");
   }
 }

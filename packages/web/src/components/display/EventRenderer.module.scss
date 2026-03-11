@@ -1,0 +1,183 @@
+@use '../../styles/mixins' as *;
+
+// =============================================================================
+// Event Renderer — individual session event styles
+// =============================================================================
+
+.systemEvent {
+  color: var(--text-secondary);
+  font-style: italic;
+  font-size: var(--font-size-sm);
+  padding: 2px 0;
+  animation: fadeIn 200ms ease forwards;
+}
+
+.systemTimestamp {
+  color: var(--text-tertiary);
+}
+
+.textEvent {
+  padding: var(--space-xs) 0;
+  padding-left: var(--space-xs);
+  line-height: var(--line-height);
+  animation: fadeIn 200ms ease forwards;
+
+  // --- Markdown element styles ---
+
+  h1, h2, h3, h4, h5, h6 {
+    margin: var(--space-sm) 0 var(--space-xs);
+    font-weight: var(--font-weight-bold);
+  }
+
+  h1 { font-size: 1.4em; }
+  h2 { font-size: 1.2em; }
+  h3 { font-size: 1.1em; }
+
+  p {
+    margin: var(--space-xs) 0;
+  }
+
+  pre {
+    @include glass-inset;
+    padding: var(--space-sm);
+    margin: var(--space-xs) 0;
+    overflow: auto;
+    font-size: 11px;
+    white-space: pre-wrap;
+  }
+
+  code {
+    font-family: var(--font-mono);
+    font-size: 0.9em;
+    background: var(--bg-overlay);
+    padding: 1px 4px;
+    border-radius: var(--radius-sm);
+  }
+
+  pre code {
+    background: none;
+    padding: 0;
+  }
+
+  table {
+    border-collapse: collapse;
+    margin: var(--space-xs) 0;
+    font-size: var(--font-size-sm);
+    width: 100%;
+  }
+
+  th, td {
+    border: 1px solid var(--border-subtle);
+    padding: var(--space-xs) var(--space-sm);
+    text-align: left;
+  }
+
+  th {
+    background: var(--bg-overlay);
+    font-weight: var(--font-weight-bold);
+  }
+
+  ul, ol {
+    padding-left: var(--space-lg);
+    margin: var(--space-xs) 0;
+  }
+
+  li {
+    margin: 2px 0;
+  }
+
+  strong {
+    font-weight: var(--font-weight-bold);
+  }
+
+  a {
+    color: var(--accent-blue);
+    text-decoration: underline;
+  }
+
+  hr {
+    border: none;
+    border-top: 1px solid var(--border-subtle);
+    margin: var(--space-sm) 0;
+  }
+
+  blockquote {
+    border-left: 3px solid var(--border-subtle);
+    padding-left: var(--space-sm);
+    margin: var(--space-xs) 0;
+    color: var(--text-secondary);
+  }
+}
+
+.toolUseEvent {
+  @include glass-card;
+  border-left: 3px solid var(--accent-blue);
+  padding: var(--space-sm) var(--space-md);
+  margin: var(--space-xs) 0;
+  font-size: var(--font-size-sm);
+  font-family: var(--font-mono);
+  white-space: pre-wrap;
+  animation: fadeIn 200ms ease forwards;
+}
+
+.toolUsePrefix {
+  color: var(--accent-blue);
+}
+
+.toolResultEvent {
+  margin: 2px 0;
+  font-size: var(--font-size-sm);
+  animation: fadeIn 200ms ease forwards;
+}
+
+.toolResultSummary {
+  cursor: pointer;
+  color: var(--text-secondary);
+  padding: 2px var(--space-xs);
+  border-radius: var(--radius-sm);
+  transition: color var(--transition-fast),
+              background var(--transition-fast),
+              backdrop-filter var(--transition-fast);
+
+  &:hover {
+    color: var(--text-primary);
+    background: var(--bg-overlay);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+}
+
+// Recessed frosted inset for code output — third glass tier
+.toolResultPre {
+  @include glass-inset;
+  padding: var(--space-sm);
+  margin: var(--space-xs) 0;
+  overflow: auto;
+  max-height: 200px;
+  font-size: 11px;
+}
+
+.errorEvent {
+  color: var(--accent-red);
+  font-weight: var(--font-weight-bold);
+  padding: var(--space-xs) 0;
+  border-left: 3px solid var(--accent-red);
+  padding-left: var(--space-sm);
+  animation: fadeIn 200ms ease forwards;
+}
+
+.statusEvent {
+  color: var(--accent-yellow);
+  font-size: 11px;
+  padding: var(--space-xs) 0;
+  border-top: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--border-subtle);
+  margin: var(--space-xs) 0;
+  animation: fadeIn 200ms ease forwards;
+}
+
+.defaultEvent {
+  padding: 2px 0;
+  color: var(--text-secondary);
+  animation: fadeIn 200ms ease forwards;
+}

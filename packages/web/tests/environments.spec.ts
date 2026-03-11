@@ -17,13 +17,20 @@ test.describe("Environment Display", () => {
     await expect(dot).toHaveCSS("color", "rgb(78, 204, 163)"); // #4ecca3
   });
 
-  test("+ button is visible and enabled", async ({ appPage }) => {
-    const plusButton = appPage.locator("button", { hasText: "+" });
+  test("add environment + button is visible and enabled", async ({ appPage }) => {
+    const plusButton = appPage.locator('button[title="Add environment"]');
     await expect(plusButton).toBeVisible();
     await expect(plusButton).toBeEnabled();
   });
 
-  test("(idle) shown when no sessions", async ({ appPage }) => {
-    await expect(appPage.getByText("(idle)")).toBeVisible();
+  test("new chat + button is visible and enabled for connected environment", async ({ appPage }) => {
+    const plusButton = appPage.locator('button[title="New chat"]');
+    await expect(plusButton).toBeVisible();
+    await expect(plusButton).toBeEnabled();
+  });
+
+  test("environment card is visible in list", async ({ appPage }) => {
+    // Verify the environment entry renders (may show "(idle)" or session count)
+    await expect(appPage.getByText("test-local")).toBeVisible();
   });
 });

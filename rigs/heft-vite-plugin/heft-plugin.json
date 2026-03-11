@@ -1,0 +1,9 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/heft/v0/heft-plugin.schema.json",
+  "taskPlugins": [
+    {
+      "pluginName": "vite-build-plugin",
+      "entryPoint": "./lib/ViteBuildPlugin.js"
+    }
+  ]
+}

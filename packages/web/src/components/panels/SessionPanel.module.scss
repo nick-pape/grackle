@@ -1,0 +1,136 @@
+@use '../../styles/mixins' as *;
+
+// =============================================================================
+// Session Panel — main content area (session stream, task tabs, empty states)
+// =============================================================================
+
+.panelContainer {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.emptyState {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-tertiary);
+  animation: fadeIn 300ms ease;
+}
+
+.projectSummary {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-tertiary);
+  flex-direction: column;
+  gap: var(--space-sm);
+  animation: fadeIn 300ms ease;
+}
+
+.projectSummaryTitle {
+  font-size: var(--font-size-xl);
+}
+
+.projectSummarySubtitle {
+  font-size: var(--font-size-sm);
+}
+
+// ---------------------------------------------------------------------------
+// Header bar
+// ---------------------------------------------------------------------------
+
+.header {
+  @include glass-panel;
+  padding: var(--space-sm) var(--space-md);
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.headerInfo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.killButton {
+  @include btn-ghost(var(--accent-red));
+  font-size: 11px;
+  padding: 1px var(--space-sm);
+
+  &:hover {
+    background: var(--accent-red-dim);
+    box-shadow: var(--shadow-glow-red);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Tab bar (Stream / Diff / Findings)
+// ---------------------------------------------------------------------------
+
+.tabBar {
+  display: flex;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.tab {
+  padding: var(--space-xs) var(--space-md);
+  background: transparent;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  border-bottom: 2px solid transparent;
+  transition: all var(--transition-fast),
+              backdrop-filter var(--transition-fast);
+
+  &:hover {
+    color: var(--text-secondary);
+    background: var(--bg-overlay);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    box-shadow: inset 0 1px 0 0 var(--glass-highlight);
+  }
+
+  &.active {
+    color: var(--accent-green);
+    border-bottom-color: var(--accent-green);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Content areas
+// ---------------------------------------------------------------------------
+
+.eventScroll {
+  flex: 1;
+  overflow: auto;
+  padding: var(--space-md);
+}
+
+.tabContent {
+  flex: 1;
+  overflow: auto;
+}
+
+.noContext {
+  padding: var(--space-xl);
+  color: var(--text-tertiary);
+  text-align: center;
+}
+
+.waitingMessage {
+  color: var(--text-tertiary);
+}
+
+.errorMessage {
+  color: var(--accent-red);
+}

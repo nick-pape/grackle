@@ -1,5 +1,6 @@
 import type { Command } from "commander";
 import { createGrackleClient } from "../client.js";
+import { taskStatusToString } from "@grackle-ai/common";
 import Table from "cli-table3";
 
 export function registerTaskCommands(program: Command): void {
@@ -20,7 +21,7 @@ export function registerTaskCommands(program: Command): void {
       });
       for (const t of res.tasks) {
         const deps = t.dependsOn.length > 0 ? t.dependsOn.join(",") : "-";
-        table.push([t.id, t.title.slice(0, 30), t.status, t.branch.slice(0, 30), deps, t.sessionId?.slice(0, 8) || "-"]);
+        table.push([t.id, t.title.slice(0, 30), taskStatusToString(t.status), t.branch.slice(0, 30), deps, t.sessionId?.slice(0, 8) || "-"]);
       }
       console.log(table.toString());
     });
@@ -38,7 +39,7 @@ export function registerTaskCommands(program: Command): void {
         projectId,
         title,
         description: opts.desc || "",
-        envId: opts.env || "",
+        environmentId: opts.env || "",
         dependsOn,
       });
       console.log(`Created task: ${t.id} (${t.title}) branch: ${t.branch}`);
@@ -52,9 +53,9 @@ export function registerTaskCommands(program: Command): void {
       const t = await client.getTask({ id: taskId });
       console.log(`ID:          ${t.id}`);
       console.log(`Title:       ${t.title}`);
-      console.log(`Status:      ${t.status}`);
+      console.log(`Status:      ${taskStatusToString(t.status)}`);
       console.log(`Branch:      ${t.branch}`);
-      console.log(`Env:         ${t.envId || "-"}`);
+      console.log(`Env:         ${t.environmentId || "-"}`);
       console.log(`Session:     ${t.sessionId || "-"}`);
       console.log(`Depends On:  ${t.dependsOn.length > 0 ? t.dependsOn.join(", ") : "none"}`);
       if (t.description) console.log(`Description: ${t.description}`);
@@ -91,7 +92,7 @@ export function registerTaskCommands(program: Command): void {
     .action(async (taskId: string) => {
       const client = createGrackleClient();
       const t = await client.approveTask({ id: taskId });
-      console.log(`Approved: ${t.id} → ${t.status}`);
+      console.log(`Approved: ${t.id} → ${taskStatusToString(t.status)}`);
     });
 
   task
@@ -102,13 +103,8 @@ export function registerTaskCommands(program: Command): void {
       const client = createGrackleClient();
       const t = await client.rejectTask({
         id: taskId,
-        title: "",
-        description: "",
-        status: "",
-        envId: "",
-        dependsOn: [],
         reviewNotes: opts.notes,
       });
-      console.log(`Rejected: ${t.id} → ${t.status}`);
+      console.log(`Rejected: ${t.id} → ${taskStatusToString(t.status)}`);
     });
 }

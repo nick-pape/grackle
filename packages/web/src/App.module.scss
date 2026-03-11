@@ -1,0 +1,22 @@
+// =============================================================================
+// App — root layout (flex column: StatusBar / body / UnifiedBar)
+// =============================================================================
+
+.root {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}

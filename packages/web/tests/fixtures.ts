@@ -17,10 +17,10 @@ function loadState(): E2EState {
 }
 
 /** Extended Playwright test fixture that provides the Grackle API key and navigates to the app. */
-export const test = base.extend<{ grackle: { apiKey: string; baseURL: string }; appPage: Page }>({
+export const test = base.extend<{ grackle: { apiKey: string; baseURL: string; wsUrl: string }; appPage: Page }>({
   grackle: async ({}, use) => {
     const state = loadState();
-    await use({ apiKey: state.apiKey, baseURL: "http://127.0.0.1:3000" });
+    await use({ apiKey: state.apiKey, baseURL: "http://127.0.0.1:3000", wsUrl: "ws://127.0.0.1:3000" });
   },
 
   appPage: async ({ page }, use) => {

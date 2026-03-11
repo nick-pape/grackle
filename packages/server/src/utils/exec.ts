@@ -1,10 +1,10 @@
 import { execFile as _execFile } from "node:child_process";
 import { promisify } from "node:util";
 
-const execFileAsync = promisify(_execFile);
+const execFileAsync: typeof _execFile.__promisify__ = promisify(_execFile);
 
-const DEFAULT_EXEC_TIMEOUT_MS = 60_000;
-const EXEC_MAX_BUFFER_BYTES = 10 * 1024 * 1024;
+const DEFAULT_EXEC_TIMEOUT_MS: number = 60_000;
+const EXEC_MAX_BUFFER_BYTES: number = 10 * 1024 * 1024;
 
 /** Trimmed stdout/stderr from a child process execution. */
 export interface ExecResult {

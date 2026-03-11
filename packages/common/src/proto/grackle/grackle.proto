@@ -44,6 +44,29 @@ enum EventType {
   EVENT_TYPE_ERROR = 4;
   EVENT_TYPE_STATUS = 5;
   EVENT_TYPE_SYSTEM = 6;
+  EVENT_TYPE_FINDING = 7;
+}
+
+enum TaskStatus {
+  TASK_STATUS_UNSPECIFIED = 0;
+  TASK_STATUS_PENDING = 1;
+  TASK_STATUS_ASSIGNED = 2;
+  TASK_STATUS_IN_PROGRESS = 3;
+  TASK_STATUS_REVIEW = 4;
+  TASK_STATUS_DONE = 5;
+  TASK_STATUS_FAILED = 6;
+}
+
+enum ProjectStatus {
+  PROJECT_STATUS_UNSPECIFIED = 0;
+  PROJECT_STATUS_ACTIVE = 1;
+  PROJECT_STATUS_ARCHIVED = 2;
+}
+
+enum TokenType {
+  TOKEN_TYPE_UNSPECIFIED = 0;
+  TOKEN_TYPE_ENV_VAR = 1;
+  TOKEN_TYPE_FILE = 2;
 }
 
 // ─── Environment ────────────────────────────────────────────
@@ -55,7 +78,7 @@ message Environment {
   string adapter_config = 4;     // JSON
   string default_runtime = 5;
   bool bootstrapped = 6;
-  string status = 7;
+  EnvironmentStatus status = 7;
   string last_seen = 8;
   string env_info = 9;           // JSON from PowerLine GetInfo
   string created_at = 10;
@@ -82,12 +105,12 @@ message ProvisionEvent {
 
 message Session {
   string id = 1;
-  string env_id = 2;
+  string environment_id = 2;
   string runtime = 3;
   string runtime_session_id = 4;
   string prompt = 5;
   string model = 6;
-  string status = 7;
+  SessionStatus status = 7;
   string log_path = 8;
   int32 turns = 9;
   string started_at = 10;
@@ -101,12 +124,12 @@ message SessionList {
 }
 
 message SessionFilter {
-  string env_id = 1;             // empty = all
-  string status = 2;             // empty = all
+  string environment_id = 1;     // empty = all
+  SessionStatus status = 2;      // UNSPECIFIED = all
 }
 
 message SpawnRequest {
-  string env_id = 1;
+  string environment_id = 1;
   string prompt = 2;
   string model = 3;
   int32 max_turns = 4;
@@ -128,7 +151,7 @@ message InputMessage {
 
 message SessionEvent {
   string session_id = 1;
-  string type = 2;               // "text" | "tool_use" | "tool_result" | "error" | "status" | "system" | "finding"
+  EventType type = 2;
   string timestamp = 3;
   string content = 4;
   string raw = 5;                // JSON, optional original payload
@@ -138,7 +161,7 @@ message SessionEvent {
 
 message TokenEntry {
   string name = 1;
-  string type = 2;
+  TokenType type = 2;
   string env_var = 3;
   string file_path = 4;
   string value = 5;
@@ -151,11 +174,15 @@ message TokenList {
 
 message TokenInfo {
   string name = 1;
-  string type = 2;
+  TokenType type = 2;
   string env_var = 3;
   string file_path = 4;
   string expires_at = 5;
   // No value — never expose to clients
+}
+
+message TokenName {
+  string name = 1;
 }
 
 // ─── Projects ──────────────────────────────────────────────
@@ -165,8 +192,8 @@ message Project {
   string name = 2;
   string description = 3;
   string repo_url = 4;
-  string default_env_id = 5;
-  string status = 6;
+  string default_environment_id = 5;
+  ProjectStatus status = 6;
   string created_at = 7;
   string updated_at = 8;
 }
@@ -179,7 +206,7 @@ message CreateProjectRequest {
   string name = 1;
   string description = 2;
   string repo_url = 3;
-  string default_env_id = 4;
+  string default_environment_id = 4;
 }
 
 message ProjectId {
@@ -193,9 +220,9 @@ message Task {
   string project_id = 2;
   string title = 3;
   string description = 4;
-  string status = 5;
+  TaskStatus status = 5;
   string branch = 6;
-  string env_id = 7;
+  string environment_id = 7;
   string session_id = 8;
   repeated string depends_on = 9;
   string assigned_at = 10;
@@ -205,6 +232,10 @@ message Task {
   string created_at = 14;
   string updated_at = 15;
   int32 sort_order = 16;
+  string parent_task_id = 17;        // empty for root tasks
+  int32 depth = 18;                  // 0 for root, parent.depth + 1
+  repeated string child_task_ids = 19;  // populated by server on read
+  bool can_decompose = 20;
 }
 
 message TaskList {
@@ -215,8 +246,10 @@ message CreateTaskRequest {
   string project_id = 1;
   string title = 2;
   string description = 3;
-  string env_id = 4;
+  string environment_id = 4;
   repeated string depends_on = 5;
+  string parent_task_id = 6;
+  optional bool can_decompose = 7;
 }
 
 message TaskId {
@@ -227,8 +260,8 @@ message UpdateTaskRequest {
   string id = 1;
   string title = 2;
   string description = 3;
-  string status = 4;
-  string env_id = 5;
+  TaskStatus status = 4;
+  string environment_id = 5;
   repeated string depends_on = 6;
   string review_notes = 7;
 }
@@ -314,6 +347,7 @@ service Grackle {
   // Token management
   rpc SetToken(TokenEntry) returns (Empty);
   rpc ListTokens(Empty) returns (TokenList);
+  rpc DeleteToken(TokenName) returns (Empty);
 
   // Projects
   rpc ListProjects(Empty) returns (ProjectList);

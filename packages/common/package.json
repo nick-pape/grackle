@@ -1,14 +1,22 @@
 {
-  "name": "@grackle/common",
-  "version": "0.0.1",
-  "private": true,
+  "name": "@grackle-ai/common",
+  "version": "0.13.2",
+  "description": "Proto definitions, generated code, and shared types for Grackle",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nick-pape/grackle.git",
+    "directory": "packages/common"
+  },
+  "keywords": ["grackle", "grpc", "protobuf", "connectrpc"],
+  "engines": { "node": ">=22.0.0" },
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "files": ["dist/"],
   "scripts": {
-    "build": "npx buf generate && tsc",
-    "lint:proto": "npx buf lint",
-    "clean": "rm -rf dist src/gen"
+    "build": "heft build --clean",
+    "clean": "heft clean"
   },
   "dependencies": {
     "@bufbuild/protobuf": "^2.5.0",
@@ -17,6 +25,7 @@
   "devDependencies": {
     "@bufbuild/buf": "^1.50.0",
     "@bufbuild/protoc-gen-es": "^2.5.0",
-    "typescript": "~5.7.0"
+    "@grackle-ai/heft-buf-plugin": "0.0.1",
+    "@grackle-ai/heft-rig": "0.0.1"
   }
 }

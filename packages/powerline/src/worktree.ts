@@ -3,7 +3,7 @@ import { promisify } from "node:util";
 import { existsSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 
-const execRaw = promisify(execFile);
+const execRaw: typeof execFile.__promisify__ = promisify(execFile);
 
 /** Wrapper that uses a shell so `git` resolves via PATH on all platforms. */
 async function exec(cmd: string, args: string[], opts: { cwd: string }): Promise<{ stdout: string; stderr: string }> {
@@ -18,11 +18,13 @@ export interface WorktreeResult {
   created: boolean;
 }
 
-function sanitizeBranch(branch: string): string {
+/** @internal Sanitize a branch name for use in file paths. Exported for testing. */
+export function sanitizeBranch(branch: string): string {
   return branch.replace(/[^a-zA-Z0-9/_-]/g, "-");
 }
 
-function worktreeDir(basePath: string, branch: string): string {
+/** @internal Compute the worktree directory path for a given branch. Exported for testing. */
+export function worktreeDir(basePath: string, branch: string): string {
   const sanitized = sanitizeBranch(branch).replace(/\//g, "-");
   const parent = dirname(basePath);
   // When repo is at a root-level path (e.g. /workspace in Docker),
@@ -79,14 +81,3 @@ export async function removeWorktree(basePath: string, branch: string): Promise<
   }
 }
 
-export async function listWorktrees(basePath: string): Promise<string[]> {
-  try {
-    const { stdout } = await exec("git", ["worktree", "list", "--porcelain"], { cwd: basePath });
-    return stdout
-      .split("\n")
-      .filter((line) => line.startsWith("worktree "))
-      .map((line) => line.replace("worktree ", ""));
-  } catch {
-    return [];
-  }
-}

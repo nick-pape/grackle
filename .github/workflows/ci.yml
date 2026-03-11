@@ -1,28 +1,34 @@
 name: CI
 
 on:
-  push:
-    branches: [main]
   pull_request:
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        node-version: [22]
-
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Use Node.js ${{ matrix.node-version }}
+      - name: Use Node.js 22
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: 22
 
       - name: Rush install
         run: node common/scripts/install-run-rush.js install
+
+      - name: Verify change logs
+        run: node common/scripts/install-run-rush.js change --verify
+
+      - name: Block major version bumps
+        run: |
+          if grep -r '"type": "major"' common/changes/ 2>/dev/null; then
+            echo "::error::Major version bumps are blocked. Use patch or minor."
+            exit 1
+          fi
 
       - name: Rush build
         run: node common/scripts/install-run-rush.js build

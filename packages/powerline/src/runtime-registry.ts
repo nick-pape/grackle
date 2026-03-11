@@ -1,6 +1,6 @@
 import type { AgentRuntime } from "./runtimes/runtime.js";
 
-const runtimes = new Map<string, AgentRuntime>();
+const runtimes: Map<string, AgentRuntime> = new Map<string, AgentRuntime>();
 
 /** Register an agent runtime so it can be looked up by name. */
 export function registerRuntime(runtime: AgentRuntime): void {

@@ -1,5 +1,10 @@
 # Grackle Development Guidelines
 
+## Git Workflow
+
+- **Never rebase or force-push.** To sync with `main`, first run `git fetch origin` and then use `git merge origin/main` instead of `git rebase`. Rebasing published branches rewrites history and typically requires a force-push, which we do not allow.
+- **Never merge PRs** unless the user explicitly tells you to merge. Other agents may be coordinating merge order.
+
 ## Build & Test
 
 ```bash
@@ -7,7 +12,7 @@
 rush update && rush build
 
 # Build a single package
-rush build -t @grackle/<package>
+rush build -t @grackle-ai/<package>
 
 # Run proto codegen (from packages/common)
 npx buf generate
@@ -16,11 +21,11 @@ npx buf generate
 ## Project Structure
 
 Rush monorepo with 5 packages under `packages/`:
-- `@grackle/common` — Proto definitions, generated code, shared types
-- `@grackle/powerline` — gRPC PowerLine server (ConnectRPC on HTTP/2)
-- `@grackle/server` — Central gRPC server, SQLite, WebSocket bridge
-- `@grackle/cli` — Commander-based CLI client
-- `@grackle/web` — React + Vite web UI
+- `@grackle-ai/common` — Proto definitions, generated code, shared types
+- `@grackle-ai/powerline` — gRPC PowerLine server (ConnectRPC on HTTP/2)
+- `@grackle-ai/server` — Central gRPC server, SQLite, WebSocket bridge
+- `@grackle-ai/cli` — Commander-based CLI client
+- `@grackle-ai/web` — React + Vite web UI
 
 ## Code Style
 
@@ -36,7 +41,7 @@ Rush monorepo with 5 packages under `packages/`:
 - Message names: full English (e.g., `EnvironmentId`, `AddEnvironmentRequest`)
 - Enums: use proto enums with `UPPER_SNAKE_CASE` values prefixed by type name
 - Services: `Grackle` and `GracklePowerLine` (no `*Service` suffix)
-- Generated code: `import { grackle, powerline } from "@grackle/common"`
+- Generated code: `import { grackle, powerline } from "@grackle-ai/common"`
 
 ### Logging
 - Server/PowerLine: use `pino` structured logger (`import { logger } from "./logger.js"`)
@@ -56,7 +61,69 @@ Rush monorepo with 5 packages under `packages/`:
 
 ### Database
 - **Never access SQLite directly** — always go through the CLI (`grackle` commands)
-- If the CLI is missing a needed operation, add it to `@grackle/cli` rather than using raw SQL
+- If the CLI is missing a needed operation, add it to `@grackle-ai/cli` rather than using raw SQL
+
+## Change Files (Rush Change)
+
+PRs that modify publishable packages must include a change file. CI enforces this with `rush change --verify`.
+
+**Publishable packages** (lockstep versioning — all share one version):
+- `@grackle-ai/cli`, `@grackle-ai/common`, `@grackle-ai/powerline`, `@grackle-ai/server`
+
+**Not publishable** (private — never need change files):
+- `@grackle-ai/web`, `@grackle-ai/heft-rig`, `@grackle-ai/heft-buf-plugin`, `@grackle-ai/heft-playwright-plugin`, `@grackle-ai/heft-vite-plugin`
+
+**When to create a change file**: If the PR has a diff in any publishable package. If only private packages or non-package files (workflows, docs, config) changed, no change file is needed.
+
+**Command** (non-interactive, from repo root):
+
+> **Known issue:** `install-run-rush.js` splits `--message` values on spaces.
+> Use a single hyphenated word for the message, then edit the generated JSON
+> file to fix the comment text and bump type.
+
+```bash
+# Step 1: Generate the change file (use a single-word placeholder message)
+node common/scripts/install-run-rush.js change --bulk \
+  --message "placeholder" \
+  --bump-type patch \
+  --email "5674316+nick-pape@users.noreply.github.com"
+
+# Step 2: Edit the generated JSON in common/changes/@grackle-ai/*/
+# Fix the "comment" field to the real description and "type" to the correct bump type
+```
+
+**Bump types**:
+- `patch` — bug fixes, internal changes
+- `minor` — new features, backwards-compatible additions
+- `none` — no version bump (infra, tooling, docs touching a publishable package)
+- **Never use `major`** — CI blocks major bumps (we're pre-1.0)
+
+**What the command does**: Creates a JSON file in `common/changes/` named after the branch. The file is committed to the PR branch. One change file per PR is sufficient — it covers all publishable packages via lockstep versioning.
+
+## PR Workflow: CI & Copilot Review
+
+Every push to a PR branch triggers both **CI** and a **GitHub Copilot code review**. Both must pass before a PR is ready.
+
+### CI
+- CI runs `rush build` and `rush test` (Playwright e2e tests).
+- If CI fails, read the failed log with `gh run view <id> --log-failed`, fix the issue, and push again.
+- Common CI failures: chunk size warnings (add to `manualChunks` in `vite.config.ts`), Playwright strict mode violations (duplicate text from sidebar + new components).
+
+### Copilot Review
+- **Every push triggers a new Copilot review** — previous review comments may become outdated but new ones appear.
+- When asked to "deal with Copilot" or "address Copilot comments":
+  1. **Read** all comments: `gh api repos/nick-pape/grackle/pulls/<PR>/comments`
+  2. **Fix** the code issues Copilot identified
+  3. **Reply** to each comment explaining what was done: `gh api repos/nick-pape/grackle/pulls/<PR>/comments/<id>/replies -f body="..."`
+  4. **Resolve** each conversation thread
+  5. **Push** the fixes — this triggers another Copilot review
+  6. **Wait** for the new review and repeat until all comments are resolved
+
+### PR Completion Checklist
+Before considering a PR "done", always verify:
+- [ ] CI is green (build + tests pass)
+- [ ] All Copilot review comments are addressed and resolved
+- [ ] No new Copilot comments from the latest push
 
 ## Ports
 

@@ -2,9 +2,9 @@ import db from "./db.js";
 import { environments, type EnvironmentRow } from "./schema.js";
 import { eq, sql } from "drizzle-orm";
 import { randomBytes } from "node:crypto";
-import type { EnvironmentStatus } from "@grackle/common";
+import type { EnvironmentStatus } from "@grackle-ai/common";
 
-const POWERLINE_TOKEN_BYTE_LENGTH = 32;
+const POWERLINE_TOKEN_BYTE_LENGTH: number = 32;
 
 export type { EnvironmentRow };
 

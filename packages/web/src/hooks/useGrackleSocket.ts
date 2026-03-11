@@ -11,7 +11,7 @@ export interface Environment {
 
 export interface Session {
   id: string;
-  envId: string;
+  environmentId: string;
   runtime: string;
   status: string;
   prompt: string;
@@ -30,7 +30,7 @@ export interface Project {
   name: string;
   description: string;
   repoUrl: string;
-  defaultEnvId: string;
+  defaultEnvironmentId: string;
   status: string;
   createdAt: string;
 }
@@ -42,12 +42,16 @@ export interface TaskData {
   description: string;
   status: string;
   branch: string;
-  envId: string;
+  environmentId: string;
   sessionId: string;
   dependsOn: string[];
   reviewNotes: string;
   sortOrder: number;
   createdAt: string;
+  parentTaskId: string;
+  depth: number;
+  childTaskIds: string[];
+  canDecompose: boolean;
 }
 
 export interface FindingData {
@@ -60,6 +64,14 @@ export interface FindingData {
   content: string;
   tags: string[];
   createdAt: string;
+}
+
+export interface TokenInfo {
+  name: string;
+  tokenType: string;
+  envVar: string;
+  filePath: string;
+  expiresAt: string;
 }
 
 export interface TaskDiffData {
@@ -77,8 +89,10 @@ interface WsMessage {
   payload?: Record<string, unknown>;
 }
 
-const WS_RECONNECT_DELAY_MS = 3_000;
-const ENV_POLL_INTERVAL_MS = 10_000;
+const WS_RECONNECT_DELAY_MS: number = 3_000;
+const ENV_POLL_INTERVAL_MS: number = 10_000;
+/** Maximum number of events kept in memory per hook instance. Older events are dropped. */
+const MAX_EVENTS: number = 5_000;
 
 // Declare the injected API key from server-side HTML injection
 declare global {
@@ -87,22 +101,109 @@ declare global {
   }
 }
 
-export function useGrackleSocket(url?: string) {
-  const apiKey = typeof window !== "undefined" ? window.__GRACKLE_API_KEY__ || "" : "";
-  const wsUrl = url || (typeof window !== "undefined"
-    ? `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}?token=${encodeURIComponent(apiKey)}`
-    : "ws://localhost:3000");
+/** Provisioning progress state for a single environment. */
+export interface ProvisionStatus {
+  stage: string;
+  message: string;
+  progress: number;
+}
 
-  const wsRef = useRef<WebSocket | null>(null);
+/** Return type for the useGrackleSocket hook. */
+export interface UseGrackleSocketResult {
+  connected: boolean;
+  environments: Environment[];
+  sessions: Session[];
+  events: SessionEvent[];
+  lastSpawnedId: string | undefined;
+  projects: Project[];
+  tasks: TaskData[];
+  findings: FindingData[];
+  tokens: TokenInfo[];
+  taskDiff: TaskDiffData | undefined;
+  spawn: (
+    environmentId: string,
+    prompt: string,
+    model?: string,
+    runtime?: string,
+  ) => void;
+  sendInput: (sessionId: string, text: string) => void;
+  kill: (sessionId: string) => void;
+  refresh: () => void;
+  loadSessionEvents: (sessionId: string) => void;
+  clearEvents: () => void;
+  createProject: (
+    name: string,
+    description?: string,
+    repoUrl?: string,
+    defaultEnvironmentId?: string,
+  ) => void;
+  archiveProject: (projectId: string) => void;
+  loadTasks: (projectId: string) => void;
+  createTask: (
+    projectId: string,
+    title: string,
+    description?: string,
+    environmentId?: string,
+    dependsOn?: string[],
+    parentTaskId?: string,
+  ) => void;
+  startTask: (taskId: string, runtime?: string, model?: string) => void;
+  approveTask: (taskId: string) => void;
+  rejectTask: (taskId: string, reviewNotes: string) => void;
+  deleteTask: (taskId: string) => void;
+  loadFindings: (projectId: string) => void;
+  postFinding: (
+    projectId: string,
+    title: string,
+    content: string,
+    category?: string,
+    tags?: string[],
+  ) => void;
+  loadTaskDiff: (taskId: string) => void;
+  addEnvironment: (
+    displayName: string,
+    adapterType: string,
+    adapterConfig?: Record<string, unknown>,
+    defaultRuntime?: string,
+  ) => void;
+  loadTokens: () => void;
+  setToken: (
+    name: string,
+    value: string,
+    tokenType: string,
+    envVar: string,
+    filePath: string,
+  ) => void;
+  deleteToken: (name: string) => void;
+  provisionStatus: Record<string, ProvisionStatus>;
+  provisionEnvironment: (environmentId: string) => void;
+  stopEnvironment: (environmentId: string) => void;
+  removeEnvironment: (environmentId: string) => void;
+}
+
+export function useGrackleSocket(url?: string): UseGrackleSocketResult {
+  const apiKey =
+    typeof window !== "undefined" ? window.__GRACKLE_API_KEY__ || "" : "";
+  const wsUrl =
+    url ||
+    (typeof window !== "undefined"
+      ? `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}?token=${encodeURIComponent(apiKey)}`
+      : "ws://localhost:3000");
+
+  const wsRef = useRef<WebSocket | undefined>(undefined);
   const [connected, setConnected] = useState(false);
   const [environments, setEnvironments] = useState<Environment[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [events, setEvents] = useState<SessionEvent[]>([]);
-  const [lastSpawnedId, setLastSpawnedId] = useState<string | null>(null);
+  const [lastSpawnedId, setLastSpawnedId] = useState<string | undefined>(
+    undefined,
+  );
   const [projects, setProjects] = useState<Project[]>([]);
   const [tasks, setTasks] = useState<TaskData[]>([]);
   const [findings, setFindings] = useState<FindingData[]>([]);
-  const [taskDiff, setTaskDiff] = useState<TaskDiffData | null>(null);
+  const [tokens, setTokens] = useState<TokenInfo[]>([]);
+  const [taskDiff, setTaskDiff] = useState<TaskDiffData | undefined>(undefined);
+  const [provisionStatus, setProvisionStatus] = useState<Record<string, ProvisionStatus>>({});
 
   const send = useCallback((msg: WsMessage) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -115,7 +216,7 @@ export function useGrackleSocket(url?: string) {
     let reconnectTimer: ReturnType<typeof setTimeout>;
     let envPollTimer: ReturnType<typeof setInterval>;
 
-    function connect() {
+    function connect(): void {
       ws = new WebSocket(wsUrl);
       wsRef.current = ws;
 
@@ -124,6 +225,7 @@ export function useGrackleSocket(url?: string) {
         send({ type: "list_environments" });
         send({ type: "list_sessions" });
         send({ type: "list_projects" });
+        send({ type: "list_tokens" });
         send({ type: "subscribe_all" });
         // Periodically refresh environments to catch CLI-driven changes
         clearInterval(envPollTimer);
@@ -143,22 +245,31 @@ export function useGrackleSocket(url?: string) {
             break;
           case "session_event": {
             const event = msg.payload as unknown as SessionEvent;
-            setEvents((prev) => [...prev, event]);
+            setEvents((prev) => {
+              const next = [...prev, event];
+              return next.length > MAX_EVENTS ? next.slice(-MAX_EVENTS) : next;
+            });
             if (event.eventType === "status") {
               setSessions((prev) =>
                 prev.map((s) =>
-                  s.id === event.sessionId ? { ...s, status: event.content } : s
-                )
+                  s.id === event.sessionId
+                    ? { ...s, status: event.content }
+                    : s,
+                ),
               );
             }
             break;
           }
           case "session_events": {
-            const replayEvents = msg.payload?.events as SessionEvent[] | undefined;
+            const replayEvents = msg.payload?.events as
+              | SessionEvent[]
+              | undefined;
             const replaySessionId = msg.payload?.sessionId as string;
             if (replayEvents && replaySessionId) {
               setEvents((prev) => {
-                const without = prev.filter((e) => e.sessionId !== replaySessionId);
+                const without = prev.filter(
+                  (e) => e.sessionId !== replaySessionId,
+                );
                 return [...without, ...replayEvents];
               });
             }
@@ -184,8 +295,13 @@ export function useGrackleSocket(url?: string) {
             break;
           case "tasks": {
             const incoming = (msg.payload?.tasks as TaskData[]) || [];
-            const pid = (msg.payload?.projectId as string) || (incoming.length > 0 ? incoming[0].projectId : "");
-            if (!pid) { setTasks(incoming); break; }
+            const pid =
+              (msg.payload?.projectId as string) ||
+              (incoming.length > 0 ? incoming[0].projectId : "");
+            if (!pid) {
+              setTasks(incoming);
+              break;
+            }
             setTasks((prev) => [
               ...prev.filter((t) => t.projectId !== pid),
               ...incoming,
@@ -193,7 +309,8 @@ export function useGrackleSocket(url?: string) {
             break;
           }
           case "task_created": {
-            const taskData = (msg.payload?.task as Record<string, unknown>) || {};
+            const taskData =
+              (msg.payload?.task as Record<string, unknown>) || {};
             const pid = (taskData.project_id || taskData.projectId) as string;
             if (pid) send({ type: "list_tasks", payload: { projectId: pid } });
             break;
@@ -210,7 +327,11 @@ export function useGrackleSocket(url?: string) {
             } else if (tp.taskId) {
               setTasks((prev) => {
                 const found = prev.find((t) => t.id === tp.taskId);
-                if (found) send({ type: "list_tasks", payload: { projectId: found.projectId } });
+                if (found)
+                  send({
+                    type: "list_tasks",
+                    payload: { projectId: found.projectId },
+                  });
                 return prev;
               });
             }
@@ -227,7 +348,11 @@ export function useGrackleSocket(url?: string) {
             } else if (tp2.taskId) {
               setTasks((prev) => {
                 const found = prev.find((t) => t.id === tp2.taskId);
-                if (found) send({ type: "list_tasks", payload: { projectId: found.projectId } });
+                if (found)
+                  send({
+                    type: "list_tasks",
+                    payload: { projectId: found.projectId },
+                  });
                 return prev;
               });
             }
@@ -239,11 +364,56 @@ export function useGrackleSocket(url?: string) {
           case "finding_posted":
             // Refresh findings
             if (msg.payload?.projectId) {
-              send({ type: "list_findings", payload: { projectId: msg.payload.projectId } });
+              send({
+                type: "list_findings",
+                payload: { projectId: msg.payload.projectId },
+              });
             }
+            break;
+          case "tokens":
+            setTokens((msg.payload?.tokens as TokenInfo[]) || []);
+            break;
+          case "token_changed":
+            send({ type: "list_tokens" });
             break;
           case "task_diff":
             setTaskDiff(msg.payload as unknown as TaskDiffData);
+            break;
+          case "provision_progress": {
+            const pp = msg.payload as unknown as ProvisionStatus & {
+              environmentId: string;
+            };
+            if (pp.environmentId) {
+              setProvisionStatus((prev) => ({
+                ...prev,
+                [pp.environmentId]: {
+                  stage: pp.stage,
+                  message: pp.message,
+                  progress: pp.progress,
+                },
+              }));
+              // Auto-clear provision status after completion or error
+              if (pp.stage === "ready" || pp.stage === "error") {
+                const PROVISION_STATUS_CLEAR_DELAY_MS: number = 5_000;
+                setTimeout(() => {
+                  setProvisionStatus((prev) => {
+                    const next = { ...prev };
+                    // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+                    delete next[pp.environmentId];
+                    return next;
+                  });
+                }, PROVISION_STATUS_CLEAR_DELAY_MS);
+              }
+              send({ type: "list_environments" });
+            }
+            break;
+          }
+          case "environment_added":
+            // Server already broadcasts updated environment list via broadcastEnvironments()
+            break;
+          case "environment_removed":
+            send({ type: "list_environments" });
+            send({ type: "list_sessions" });
             break;
           case "error":
             console.error("[ws]", msg.payload?.message);
@@ -253,7 +423,7 @@ export function useGrackleSocket(url?: string) {
 
       ws.onclose = () => {
         setConnected(false);
-        wsRef.current = null;
+        wsRef.current = undefined;
         clearInterval(envPollTimer);
         clearTimeout(reconnectTimer);
         reconnectTimer = setTimeout(connect, WS_RECONNECT_DELAY_MS);
@@ -274,40 +444,51 @@ export function useGrackleSocket(url?: string) {
   }, [wsUrl, send]);
 
   const spawn = useCallback(
-    (envId: string, prompt: string, model?: string, runtime?: string) => {
+    (
+      environmentId: string,
+      prompt: string,
+      model?: string,
+      runtime?: string,
+    ) => {
       send({
         type: "spawn",
-        payload: { envId, prompt, model: model || "", runtime: runtime || "" },
+        payload: {
+          environmentId,
+          prompt,
+          model: model || "",
+          runtime: runtime || "",
+        },
       });
     },
-    [send]
+    [send],
   );
 
   const sendInput = useCallback(
     (sessionId: string, text: string) => {
       send({ type: "send_input", payload: { sessionId, text } });
     },
-    [send]
+    [send],
   );
 
   const kill = useCallback(
     (sessionId: string) => {
       send({ type: "kill", payload: { sessionId } });
     },
-    [send]
+    [send],
   );
 
   const refresh = useCallback(() => {
     send({ type: "list_environments" });
     send({ type: "list_sessions" });
     send({ type: "list_projects" });
+    send({ type: "list_tokens" });
   }, [send]);
 
   const loadSessionEvents = useCallback(
     (sessionId: string) => {
       send({ type: "get_session_events", payload: { sessionId } });
     },
-    [send]
+    [send],
   );
 
   const clearEvents = useCallback(() => {
@@ -317,45 +498,63 @@ export function useGrackleSocket(url?: string) {
   // ─── Project methods ──────────────────────────────
 
   const createProject = useCallback(
-    (name: string, description?: string, repoUrl?: string, defaultEnvId?: string) => {
+    (
+      name: string,
+      description?: string,
+      repoUrl?: string,
+      defaultEnvironmentId?: string,
+    ) => {
       send({
         type: "create_project",
-        payload: { name, description: description || "", repoUrl: repoUrl || "", defaultEnvId: defaultEnvId || "" },
+        payload: {
+          name,
+          description: description || "",
+          repoUrl: repoUrl || "",
+          defaultEnvironmentId: defaultEnvironmentId || "",
+        },
       });
     },
-    [send]
+    [send],
   );
 
   const archiveProject = useCallback(
     (projectId: string) => {
       send({ type: "archive_project", payload: { projectId } });
     },
-    [send]
+    [send],
   );
 
   const loadTasks = useCallback(
     (projectId: string) => {
       send({ type: "list_tasks", payload: { projectId } });
     },
-    [send]
+    [send],
   );
 
   // ─── Task methods ─────────────────────────────────
 
   const createTask = useCallback(
-    (projectId: string, title: string, description?: string, envId?: string, dependsOn?: string[]) => {
+    (
+      projectId: string,
+      title: string,
+      description?: string,
+      environmentId?: string,
+      dependsOn?: string[],
+      parentTaskId?: string,
+    ) => {
       send({
         type: "create_task",
         payload: {
           projectId,
           title,
           description: description || "",
-          envId: envId || "",
+          environmentId: environmentId || "",
           dependsOn: dependsOn || [],
+          parentTaskId: parentTaskId || "",
         },
       });
     },
-    [send]
+    [send],
   );
 
   const startTask = useCallback(
@@ -365,28 +564,28 @@ export function useGrackleSocket(url?: string) {
         payload: { taskId, runtime: runtime || "", model: model || "" },
       });
     },
-    [send]
+    [send],
   );
 
   const approveTask = useCallback(
     (taskId: string) => {
       send({ type: "approve_task", payload: { taskId } });
     },
-    [send]
+    [send],
   );
 
   const rejectTask = useCallback(
     (taskId: string, reviewNotes: string) => {
       send({ type: "reject_task", payload: { taskId, reviewNotes } });
     },
-    [send]
+    [send],
   );
 
   const deleteTask = useCallback(
     (taskId: string) => {
       send({ type: "delete_task", payload: { taskId } });
     },
-    [send]
+    [send],
   );
 
   // ─── Findings methods ─────────────────────────────
@@ -395,27 +594,111 @@ export function useGrackleSocket(url?: string) {
     (projectId: string) => {
       send({ type: "list_findings", payload: { projectId } });
     },
-    [send]
+    [send],
   );
 
   const postFinding = useCallback(
-    (projectId: string, title: string, content: string, category?: string, tags?: string[]) => {
+    (
+      projectId: string,
+      title: string,
+      content: string,
+      category?: string,
+      tags?: string[],
+    ) => {
       send({
         type: "post_finding",
-        payload: { projectId, title, content, category: category || "general", tags: tags || [] },
+        payload: {
+          projectId,
+          title,
+          content,
+          category: category || "general",
+          tags: tags || [],
+        },
       });
     },
-    [send]
+    [send],
   );
 
   // ─── Diff methods ─────────────────────────────────
 
   const loadTaskDiff = useCallback(
     (taskId: string) => {
-      setTaskDiff(null);
+      setTaskDiff(undefined);
       send({ type: "get_task_diff", payload: { taskId } });
     },
-    [send]
+    [send],
+  );
+
+  // ─── Token methods ──────────────────────────────────
+
+  const loadTokens = useCallback(() => {
+    send({ type: "list_tokens" });
+  }, [send]);
+
+  const setToken = useCallback(
+    (
+      name: string,
+      value: string,
+      tokenType: string,
+      envVar: string,
+      filePath: string,
+    ) => {
+      send({
+        type: "set_token",
+        payload: { name, value, tokenType, envVar, filePath },
+      });
+    },
+    [send],
+  );
+
+  const deleteToken = useCallback(
+    (name: string) => {
+      send({ type: "delete_token", payload: { name } });
+    },
+    [send],
+  );
+
+  // ─── Environment lifecycle methods ────────────────
+
+  const addEnvironment = useCallback(
+    (
+      displayName: string,
+      adapterType: string,
+      adapterConfig?: Record<string, unknown>,
+      defaultRuntime?: string,
+    ) => {
+      const payload: Record<string, unknown> = {
+        displayName,
+        adapterType,
+        adapterConfig: adapterConfig || {},
+      };
+      if (defaultRuntime) {
+        payload.defaultRuntime = defaultRuntime;
+      }
+      send({ type: "add_environment", payload });
+    },
+    [send],
+  );
+
+  const provisionEnvironment = useCallback(
+    (environmentId: string) => {
+      send({ type: "provision_environment", payload: { environmentId } });
+    },
+    [send],
+  );
+
+  const stopEnvironment = useCallback(
+    (environmentId: string) => {
+      send({ type: "stop_environment", payload: { environmentId } });
+    },
+    [send],
+  );
+
+  const removeEnvironment = useCallback(
+    (environmentId: string) => {
+      send({ type: "remove_environment", payload: { environmentId } });
+    },
+    [send],
   );
 
   return {
@@ -427,6 +710,7 @@ export function useGrackleSocket(url?: string) {
     projects,
     tasks,
     findings,
+    tokens,
     taskDiff,
     spawn,
     sendInput,
@@ -445,5 +729,13 @@ export function useGrackleSocket(url?: string) {
     loadFindings,
     postFinding,
     loadTaskDiff,
+    addEnvironment,
+    loadTokens,
+    setToken,
+    deleteToken,
+    provisionStatus,
+    provisionEnvironment,
+    stopEnvironment,
+    removeEnvironment,
   };
 }
