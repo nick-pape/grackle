@@ -107,12 +107,15 @@ function EnvironmentCard({
               {provisionProgress.message}
             </span>
           )}
+          {env.status === "error" && provisionProgress?.stage === "error" && (
+            <span className={styles.errorMessage}>{provisionProgress.message}</span>
+          )}
           {isDisconnected && (
             <button
               onClick={(e) => { e.stopPropagation(); onProvision(env.id); }}
               className={styles.connectButton}
             >
-              Connect
+              {env.status === "error" ? "Retry" : "Connect"}
             </button>
           )}
           {isConnected && (

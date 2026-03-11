@@ -144,7 +144,7 @@ async function autoProvisionEnvironment(
     const powerlineToken = env.powerlineToken || "";
     for await (const provEvent of adapter.provision(environmentId, config, powerlineToken)) {
       logger.info({ environmentId, stage: provEvent.stage, ...logContext }, "Auto-provision progress");
-      sendWs(ws, {
+      broadcast({
         type: "provision_progress",
         payload: { environmentId, stage: provEvent.stage, message: provEvent.message, progress: provEvent.progress },
       });
@@ -154,7 +154,7 @@ async function autoProvisionEnvironment(
     envRegistry.updateEnvironmentStatus(environmentId, "connected");
     broadcastEnvironments();
     logger.info({ environmentId, ...logContext }, "Auto-provision complete");
-    sendWs(ws, {
+    broadcast({
       type: "provision_progress",
       payload: { environmentId, stage: "ready", message: "Environment connected", progress: 1 },
     });
@@ -163,7 +163,7 @@ async function autoProvisionEnvironment(
     logger.error({ environmentId, ...logContext, err }, "Auto-provision failed");
     envRegistry.updateEnvironmentStatus(environmentId, "error");
     broadcastEnvironments();
-    sendWs(ws, {
+    broadcast({
       type: "provision_progress",
       payload: { environmentId, stage: "error", message: `Auto-provision failed: ${err}`, progress: 0 },
     });
@@ -788,7 +788,7 @@ async function handleMessage(
           logger.info({ environmentId, config }, "Starting adapter.provision");
           for await (const event of adapter.provision(environmentId, config, powerlineToken)) {
             logger.info({ environmentId, stage: event.stage, message: event.message }, "Provision progress");
-            sendWs(ws, {
+            broadcast({
               type: "provision_progress",
               payload: { environmentId, stage: event.stage, message: event.message, progress: event.progress },
             });
@@ -798,14 +798,14 @@ async function handleMessage(
           adapterManager.setConnection(environmentId, conn);
           envRegistry.updateEnvironmentStatus(environmentId, "connected");
           logger.info({ environmentId }, "Environment connected");
-          sendWs(ws, {
+          broadcast({
             type: "provision_progress",
             payload: { environmentId, stage: "ready", message: "Environment connected", progress: 1 },
           });
         } catch (err) {
           logger.error({ environmentId, err }, "Provision failed");
           envRegistry.updateEnvironmentStatus(environmentId, "error");
-          sendWs(ws, {
+          broadcast({
             type: "provision_progress",
             payload: { environmentId, stage: "error", message: `Connection failed: ${err}`, progress: 0 },
           });

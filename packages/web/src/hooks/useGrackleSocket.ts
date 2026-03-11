@@ -392,8 +392,9 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
                   progress: pp.progress,
                 },
               }));
-              // Auto-clear provision status after completion or error
-              if (pp.stage === "ready" || pp.stage === "error") {
+              // Auto-clear provision status after successful completion only;
+              // errors persist until the user retries or removes the environment
+              if (pp.stage === "ready") {
                 const PROVISION_STATUS_CLEAR_DELAY_MS: number = 5_000;
                 setTimeout(() => {
                   setProvisionStatus((prev) => {
