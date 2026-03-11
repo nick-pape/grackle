@@ -1,9 +1,17 @@
 # Grackle Development Guidelines
 
+## Self-Updating Documentation
+
+When you encounter unexpected issues, workarounds, or non-obvious behavior (CI quirks, tooling gotchas, environment-specific problems), **update this CLAUDE.md** with the finding so future sessions don't repeat the investigation. Add the note to the most relevant existing section, or create a new one if needed.
+
 ## Git Workflow
 
 - **Never rebase or force-push.** To sync with `main`, first run `git fetch origin` and then use `git merge origin/main` instead of `git rebase`. Rebasing published branches rewrites history and typically requires a force-push, which we do not allow.
 - **Never merge PRs** unless the user explicitly tells you to merge. Other agents may be coordinating merge order.
+
+## Planning
+
+- **Always plan tests**: Every implementation plan must include a section for tests (E2E Playwright specs for `@grackle-ai/web`, unit/integration tests for other packages). If the change is purely cosmetic or untestable, explicitly note why tests are skipped.
 
 ## Build & Test
 
@@ -100,6 +108,8 @@ node common/scripts/install-run-rush.js change --bulk \
 
 **What the command does**: Creates a JSON file in `common/changes/` named after the branch. The file is committed to the PR branch. One change file per PR is sufficient — it covers all publishable packages via lockstep versioning.
 
+**Merge commit false positives**: When a branch has merge commits from `origin/main`, Rush's change detection sees files from those merges as "changed" — even if the final `git diff` against main is clean. This commonly flags `@grackle-ai/cli` or other publishable packages as needing change files when only private packages were actually modified. **Fix**: add a `none` bump change file for the falsely flagged package. The change file must be **committed** (not just staged) for `rush change --verify` to detect it.
+
 ## PR Workflow: CI & Copilot Review
 
 Every push to a PR branch triggers both **CI** and a **GitHub Copilot code review**. Both must pass before a PR is ready.
@@ -111,7 +121,8 @@ Every push to a PR branch triggers both **CI** and a **GitHub Copilot code revie
 
 ### Copilot Review
 - **Every push triggers a new Copilot review** — previous review comments may become outdated but new ones appear.
-- When asked to "deal with Copilot" or "address Copilot comments":
+- **Automated**: Use `/pr-fixup` to run the full loop automatically — syncs with main, addresses all Copilot comments, and waits for CI. See `.claude/skills/pr-fixup/SKILL.md`.
+- When asked to "deal with Copilot" or "address Copilot comments" manually:
   1. **Read** all comments: `gh api repos/nick-pape/grackle/pulls/<PR>/comments`
   2. **Fix** the code issues Copilot identified
   3. **Reply** to each comment explaining what was done: `gh api repos/nick-pape/grackle/pulls/<PR>/comments/<id>/replies -f body="..."`
@@ -119,11 +130,18 @@ Every push to a PR branch triggers both **CI** and a **GitHub Copilot code revie
   5. **Push** the fixes — this triggers another Copilot review
   6. **Wait** for the new review and repeat until all comments are resolved
 
+### PR Screenshots
+- When opening a PR that includes **visual/UI changes**, take a Playwright screenshot of the affected area and include it in the PR description.
+- Use `mcp__playwright__browser_take_screenshot` (or Playwright's `page.screenshot()` in test code) to capture the screenshot.
+- Embed screenshots in the PR body as markdown images: `![description](url)`. Upload via `gh` or attach inline.
+- This helps reviewers quickly see what changed without running the app locally.
+
 ### PR Completion Checklist
 Before considering a PR "done", always verify:
 - [ ] CI is green (build + tests pass)
 - [ ] All Copilot review comments are addressed and resolved
 - [ ] No new Copilot comments from the latest push
+- [ ] PR description includes screenshots for any visual/UI changes
 
 ## Ports
 

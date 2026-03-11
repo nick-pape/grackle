@@ -174,6 +174,8 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       try {
         const conn = await adapter.connect(req.id, config, powerlineToken);
         adapterManager.setConnection(req.id, conn);
+        // Push stored tokens to newly connected environment
+        await tokenBroker.pushToEnv(req.id);
         envRegistry.updateEnvironmentStatus(req.id, "connected");
 
         yield create(grackle.ProvisionEventSchema, {

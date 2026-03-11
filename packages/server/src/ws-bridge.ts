@@ -26,6 +26,11 @@ import { buildTaskSystemContext } from "./utils/system-context.js";
 import { slugify } from "./utils/slugify.js";
 import { processEventStream } from "./event-processor.js";
 import { broadcast, setWssInstance } from "./ws-broadcast.js";
+import { exec } from "./utils/exec.js";
+
+const GH_CODESPACE_LIST_TIMEOUT_MS: number = 30_000;
+const GH_CODESPACE_CREATE_TIMEOUT_MS: number = 300_000;
+const GH_CODESPACE_LIST_LIMIT: number = 50;
 
 const WS_PING_INTERVAL_MS: number = 30_000;
 const WS_CLOSE_UNAUTHORIZED: number = 4001;
@@ -144,17 +149,19 @@ async function autoProvisionEnvironment(
     const powerlineToken = env.powerlineToken || "";
     for await (const provEvent of adapter.provision(environmentId, config, powerlineToken)) {
       logger.info({ environmentId, stage: provEvent.stage, ...logContext }, "Auto-provision progress");
-      sendWs(ws, {
+      broadcast({
         type: "provision_progress",
         payload: { environmentId, stage: provEvent.stage, message: provEvent.message, progress: provEvent.progress },
       });
     }
     conn = await adapter.connect(environmentId, config, powerlineToken);
     adapterManager.setConnection(environmentId, conn);
+    // Push stored tokens to newly connected environment
+    await tokenBroker.pushToEnv(environmentId);
     envRegistry.updateEnvironmentStatus(environmentId, "connected");
     broadcastEnvironments();
     logger.info({ environmentId, ...logContext }, "Auto-provision complete");
-    sendWs(ws, {
+    broadcast({
       type: "provision_progress",
       payload: { environmentId, stage: "ready", message: "Environment connected", progress: 1 },
     });
@@ -163,11 +170,12 @@ async function autoProvisionEnvironment(
     logger.error({ environmentId, ...logContext, err }, "Auto-provision failed");
     envRegistry.updateEnvironmentStatus(environmentId, "error");
     broadcastEnvironments();
-    sendWs(ws, {
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    broadcast({
       type: "provision_progress",
-      payload: { environmentId, stage: "error", message: `Auto-provision failed: ${err}`, progress: 0 },
+      payload: { environmentId, stage: "error", message: `Auto-provision failed: ${errorMessage}`, progress: 0 },
     });
-    sendWs(ws, { type: "error", payload: { message: `Failed to auto-connect environment ${environmentId}: ${err}` } });
+    sendWs(ws, { type: "error", payload: { message: `Failed to auto-connect environment ${environmentId}: ${errorMessage}` } });
     return undefined;
   }
 }
@@ -779,7 +787,7 @@ async function handleMessage(
       envRegistry.updateEnvironmentStatus(environmentId, "connecting");
       broadcastEnvironments();
 
-      // Run provision in background, streaming progress to the requesting client
+      // Run provision in background, broadcasting progress to all connected clients
       // eslint-disable-next-line @typescript-eslint/no-floating-promises
       (async () => {
         try {
@@ -788,7 +796,7 @@ async function handleMessage(
           logger.info({ environmentId, config }, "Starting adapter.provision");
           for await (const event of adapter.provision(environmentId, config, powerlineToken)) {
             logger.info({ environmentId, stage: event.stage, message: event.message }, "Provision progress");
-            sendWs(ws, {
+            broadcast({
               type: "provision_progress",
               payload: { environmentId, stage: event.stage, message: event.message, progress: event.progress },
             });
@@ -796,18 +804,21 @@ async function handleMessage(
           logger.info({ environmentId }, "Provision complete, calling adapter.connect");
           const conn = await adapter.connect(environmentId, config, powerlineToken);
           adapterManager.setConnection(environmentId, conn);
+          // Push stored tokens to newly connected environment
+          await tokenBroker.pushToEnv(environmentId);
           envRegistry.updateEnvironmentStatus(environmentId, "connected");
           logger.info({ environmentId }, "Environment connected");
-          sendWs(ws, {
+          broadcast({
             type: "provision_progress",
             payload: { environmentId, stage: "ready", message: "Environment connected", progress: 1 },
           });
         } catch (err) {
           logger.error({ environmentId, err }, "Provision failed");
           envRegistry.updateEnvironmentStatus(environmentId, "error");
-          sendWs(ws, {
+          const errorMessage = err instanceof Error ? err.message : String(err);
+          broadcast({
             type: "provision_progress",
-            payload: { environmentId, stage: "error", message: `Connection failed: ${err}`, progress: 0 },
+            payload: { environmentId, stage: "error", message: `Connection failed: ${errorMessage}`, progress: 0 },
           });
         }
         broadcastEnvironments();
@@ -888,6 +899,49 @@ async function handleMessage(
       logger.info({ environmentId }, "Environment removed");
       broadcast({ type: "environment_removed", payload: { environmentId } });
       broadcastEnvironments();
+      break;
+    }
+
+    // ─── Codespaces ─────────────────────────────────────
+
+    case "list_codespaces": {
+      try {
+        const result = await exec("gh", [
+          "codespace", "list",
+          "--json", "name,repository,state,gitStatus",
+          "--limit", String(GH_CODESPACE_LIST_LIMIT),
+        ], { timeout: GH_CODESPACE_LIST_TIMEOUT_MS });
+        const codespaces = JSON.parse(result.stdout || "[]") as Array<Record<string, unknown>>;
+        sendWs(ws, { type: "codespaces_list", payload: { codespaces } });
+      } catch (err) {
+        logger.warn({ err }, "Failed to list codespaces");
+        sendWs(ws, { type: "codespaces_list", payload: { codespaces: [], error: String(err) } });
+      }
+      break;
+    }
+
+    case "create_codespace": {
+      const repo = msg.payload?.repo;
+      if (typeof repo !== "string" || repo.trim().length === 0) {
+        sendWs(ws, { type: "codespace_create_error", payload: { message: "repo required" } });
+        return;
+      }
+      const trimmedRepo = repo.trim();
+      try {
+        const result = await exec("gh", [
+          "codespace", "create",
+          "--repo", trimmedRepo,
+          "--machine", "basicLinux32gb",
+        ], { timeout: GH_CODESPACE_CREATE_TIMEOUT_MS });
+        const codespaceName = result.stdout.trim();
+        sendWs(ws, {
+          type: "codespace_created",
+          payload: { name: codespaceName, repository: trimmedRepo },
+        });
+      } catch (err) {
+        logger.error({ err, repo }, "Failed to create codespace");
+        sendWs(ws, { type: "codespace_create_error", payload: { message: String(err) } });
+      }
       break;
     }
 

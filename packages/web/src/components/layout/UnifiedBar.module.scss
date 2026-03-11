@@ -44,6 +44,15 @@
   font-size: 11px;
 }
 
+.textarea {
+  @include input-field;
+  flex: 1;
+  font-size: 11px;
+  resize: vertical;
+  min-height: 60px;
+  font-family: inherit;
+}
+
 .select {
   @include select-field;
 }
@@ -58,6 +67,10 @@
 
 .btnDanger {
   @include btn-danger;
+}
+
+.btnGhost {
+  @include btn-ghost;
 }
 
 // ---------------------------------------------------------------------------
@@ -95,4 +108,16 @@
 .hintText {
   color: var(--text-tertiary);
   font-size: var(--font-size-md);
+}
+
+.creatingHint {
+  color: var(--accent-blue);
+  font-size: 11px;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.errorHint {
+  color: var(--accent-red);
+  font-size: 11px;
+  word-break: break-word;
 }

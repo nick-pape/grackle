@@ -1,6 +1,46 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Wed, 11 Mar 2026 04:13:07 GMT and should not be manually modified.
+This log was last generated on Wed, 11 Mar 2026 07:56:50 GMT and should not be manually modified.
+
+## 0.14.1
+Wed, 11 Mar 2026 07:56:50 GMT
+
+### Patches
+
+- Resolve MCP script path relative to PowerLine package instead of hardcoded Docker path
+
+### Updates
+
+- No CLI changes — merge commit false positive
+- No functional changes to CLI (merge commit false positive)
+- No functional changes to CLI (merge commit false positive)
+- No functional changes (merge commit artifact)
+
+## 0.14.0
+Wed, 11 Mar 2026 06:40:03 GMT
+
+### Minor changes
+
+- Add codespace environment picker, create-from-repo flow, and working directory detection
+
+### Updates
+
+- Demo recorder pipeline: self-recording podcast with Playwright, PocketTTS, and ffmpeg
+- No changes (merge commit false positive)
+
+## 0.13.5
+Wed, 11 Mar 2026 06:21:02 GMT
+
+### Patches
+
+- Broadcast provision progress to all WS clients; persist provisioning errors in UI
+
+## 0.13.4
+Wed, 11 Mar 2026 05:34:23 GMT
+
+### Patches
+
+- Handle port conflicts gracefully with controlled shutdown instead of hard exit
 
 ## 0.13.3
 Wed, 11 Mar 2026 04:13:07 GMT

@@ -220,6 +220,7 @@ export async function* bootstrapPowerLine(
   executor: RemoteExecutor,
   powerlineToken: string,
   extraEnv?: Record<string, string>,
+  workingDirectory?: string,
 ): AsyncGenerator<ProvisionEvent> {
   // 1. Check Node.js (PowerLine requires >= 22)
   yield { stage: "bootstrapping", message: "Checking Node.js on remote host...", progress: 0.10 };
@@ -419,9 +420,11 @@ export async function* bootstrapPowerLine(
   const sourceEnv = envLines.length > 0
     ? `. ${REMOTE_POWERLINE_DIRECTORY}/.env.sh && `
     : "";
+  const startDir = workingDirectory || REMOTE_POWERLINE_DIRECTORY;
+  const absoluteEntryPoint = `${REMOTE_POWERLINE_DIRECTORY}/${entryPoint}`;
   const startScript =
-    `cd ${REMOTE_POWERLINE_DIRECTORY}`
-    + ` && ${sourceEnv}nohup node ${entryPoint} --port=${DEFAULT_POWERLINE_PORT}`
+    `cd ${startDir}`
+    + ` && ${sourceEnv}nohup node ${absoluteEntryPoint} --port=${DEFAULT_POWERLINE_PORT}`
     + ` > ~/.grackle/powerline.log 2>&1 & echo $! > ${REMOTE_POWERLINE_DIRECTORY}/powerline.pid`;
 
   try {

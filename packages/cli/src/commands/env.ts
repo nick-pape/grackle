@@ -44,6 +44,8 @@ export function registerEnvCommands(program: Command): void {
     .option("--host <host>", "SSH host / local host")
     .option("--port <port>", "PowerLine port (local adapter)")
     .option("--user <user>", "SSH user")
+    .option("--volume <volumes...>", "Docker volume mounts (format: host:container[:ro])")
+    .option("--gpu [gpus]", "Enable GPU passthrough (default: all)")
     .option("--ssh-port <sshPort>", "SSH port (default: 22)")
     .option("--identity-file <path>", "SSH identity file (private key)")
     .option("--codespace-name <name>", "Codespace name (from `gh codespace list`)")
@@ -85,6 +87,8 @@ export function registerEnvCommands(program: Command): void {
       } else {
         if (opts.image) config.image = opts.image;
         if (opts.repo) config.repo = opts.repo;
+        if (opts.volume) config.volumes = opts.volume;
+        if (opts.gpu) config.gpus = opts.gpu === true ? "all" : opts.gpu;
       }
 
       const env = await client.addEnvironment({
