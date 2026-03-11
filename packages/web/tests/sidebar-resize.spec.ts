@@ -3,7 +3,7 @@ import { test, expect } from "./fixtures.js";
 test.describe("Sidebar Resize", () => {
   test("sidebar renders with default width", async ({ appPage }) => {
     const page = appPage;
-    const sidebar = page.locator('[class*="container"]').first();
+    const sidebar = page.locator('[data-testid="sidebar"]');
     const box = await sidebar.boundingBox();
     expect(box).toBeTruthy();
     // Default width is 260px (allow small tolerance for borders/padding)
@@ -13,22 +13,28 @@ test.describe("Sidebar Resize", () => {
 
   test("sidebar has CSS resize: horizontal", async ({ appPage }) => {
     const page = appPage;
-    const sidebar = page.locator('[class*="container"]').first();
+    const sidebar = page.locator('[data-testid="sidebar"]');
     const resize = await sidebar.evaluate((el) => getComputedStyle(el).resize);
     expect(resize).toBe("horizontal");
   });
 
   test("sidebar width persists to localStorage after resize", async ({ appPage }) => {
     const page = appPage;
-    const sidebar = page.locator('[class*="container"]').first();
+    const sidebar = page.locator('[data-testid="sidebar"]');
 
-    // Simulate a resize by setting the width directly and dispatching a resize
+    // Simulate a resize by setting the width directly
     await sidebar.evaluate((el) => {
       el.style.width = "350px";
     });
 
-    // Give the ResizeObserver time to fire
-    await page.waitForTimeout(200);
+    // Wait for ResizeObserver to persist to localStorage
+    await page.waitForFunction(
+      () => {
+        const v = localStorage.getItem("grackle-sidebar-width");
+        return v !== null && Number(v) >= 300;
+      },
+      { timeout: 5_000 },
+    );
 
     const stored = await page.evaluate(() => localStorage.getItem("grackle-sidebar-width"));
     expect(stored).toBeTruthy();
@@ -50,7 +56,7 @@ test.describe("Sidebar Resize", () => {
       { timeout: 10_000 },
     );
 
-    const sidebar = page.locator('[class*="container"]').first();
+    const sidebar = page.locator('[data-testid="sidebar"]');
     const box = await sidebar.boundingBox();
     expect(box).toBeTruthy();
     expect(box!.width).toBeGreaterThanOrEqual(390);
@@ -72,7 +78,7 @@ test.describe("Sidebar Resize", () => {
       { timeout: 10_000 },
     );
 
-    const sidebar = page.locator('[class*="container"]').first();
+    const sidebar = page.locator('[data-testid="sidebar"]');
     const box = await sidebar.boundingBox();
     expect(box).toBeTruthy();
     // Should fall back to default 260px
@@ -95,7 +101,7 @@ test.describe("Sidebar Resize", () => {
       { timeout: 10_000 },
     );
 
-    const sidebar = page.locator('[class*="container"]').first();
+    const sidebar = page.locator('[data-testid="sidebar"]');
     const box = await sidebar.boundingBox();
     expect(box).toBeTruthy();
     // Should fall back to default 260px (50 is below MIN_SIDEBAR_WIDTH)
@@ -108,7 +114,7 @@ test.describe("Sidebar Resize", () => {
 
   test("sidebar respects min-width constraint", async ({ appPage }) => {
     const page = appPage;
-    const sidebar = page.locator('[class*="container"]').first();
+    const sidebar = page.locator('[data-testid="sidebar"]');
 
     // Try to set width below minimum
     await sidebar.evaluate((el) => {
@@ -123,7 +129,7 @@ test.describe("Sidebar Resize", () => {
 
   test("sidebar respects max-width constraint", async ({ appPage }) => {
     const page = appPage;
-    const sidebar = page.locator('[class*="container"]').first();
+    const sidebar = page.locator('[data-testid="sidebar"]');
 
     // Try to set width above maximum
     await sidebar.evaluate((el) => {

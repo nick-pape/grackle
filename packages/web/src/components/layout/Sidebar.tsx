@@ -49,6 +49,7 @@ type SidebarTab = "projects" | "environments";
 /** Left sidebar with tabbed navigation between projects and environments. */
 export function Sidebar({ viewMode, setViewMode }: Props): JSX.Element {
   const [tab, setTab] = useState<SidebarTab>("projects");
+  const [width] = useState<number>(loadWidth);
   const containerRef = useRef<HTMLDivElement>(null);
 
   /** Observe container resizes and persist width to localStorage. */
@@ -60,9 +61,12 @@ export function Sidebar({ viewMode, setViewMode }: Props): JSX.Element {
 
     const observer = new ResizeObserver((entries) => {
       for (const entry of entries) {
-        const width = Math.round(entry.contentRect.width);
-        if (width >= MIN_SIDEBAR_WIDTH && width <= MAX_SIDEBAR_WIDTH) {
-          saveWidth(width);
+        const borderBox = entry.borderBoxSize[0];
+        if (borderBox) {
+          const boxWidth = Math.round(borderBox.inlineSize);
+          if (boxWidth >= MIN_SIDEBAR_WIDTH && boxWidth <= MAX_SIDEBAR_WIDTH) {
+            saveWidth(boxWidth);
+          }
         }
       }
     });
@@ -72,7 +76,7 @@ export function Sidebar({ viewMode, setViewMode }: Props): JSX.Element {
   }, []);
 
   return (
-    <div className={styles.container} ref={containerRef} style={{ width: loadWidth() }}>
+    <div className={styles.container} ref={containerRef} data-testid="sidebar" style={{ width }}>
       {/* Tab bar */}
       <div className={styles.tabBar}>
         <button
