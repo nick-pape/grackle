@@ -24,7 +24,10 @@ for i in $(seq 1 10); do
   pactl info >/dev/null 2>&1 && break
   sleep 0.5
 done
-pactl load-module module-null-sink sink_name=virtual_speaker
+# Load virtual sink (idempotent — skip if already loaded)
+if ! pactl list short modules 2>/dev/null | grep -q "module-null-sink.*sink_name=virtual_speaker"; then
+  pactl load-module module-null-sink sink_name=virtual_speaker
+fi
 pactl set-default-sink virtual_speaker
 pactl set-default-source virtual_speaker.monitor
 
@@ -38,3 +41,9 @@ POWERLINE_PID=$!
 
 # Wait for PowerLine to exit (keeps container alive and preserves all children)
 wait $POWERLINE_PID
+POWERLINE_EXIT=$?
+
+# Wait for recording controller to finalize (ffmpeg writes moov atom on shutdown)
+wait $RECORDING_CTL_PID 2>/dev/null || true
+
+exit $POWERLINE_EXIT

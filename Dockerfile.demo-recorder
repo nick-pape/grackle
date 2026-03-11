@@ -19,7 +19,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # ── PocketTTS (neural TTS engine) ──────────────────────────
 RUN python3 -m venv /opt/pockettts \
     && /opt/pockettts/bin/pip install --no-cache-dir \
-       pocket-tts-mcp fastmcp
+       pocket-tts-mcp==0.1.2
 
 # Pre-download TTS model weights during build (avoids 30-60s first-run delay)
 RUN /opt/pockettts/bin/pocket-tts generate --text "warmup" -q \
@@ -53,7 +53,7 @@ RUN cd /app/mcp-grackle && npm install --omit=dev
 COPY tools/demo-recorder/mcp-recording/server.py /app/mcp-recording/server.py
 
 # ── MCP: Playwright (installed globally) ───────────────────
-RUN npm install -g @playwright/mcp@latest
+RUN npm install -g @playwright/mcp@0.0.23
 
 # ── Pre-install Chrome for Playwright MCP (must run as root) ──
 RUN npx playwright install --with-deps chromium \

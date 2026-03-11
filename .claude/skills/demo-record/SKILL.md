@@ -39,8 +39,9 @@ The demo must start with a completely clean database — no leftover projects, t
 
 ```bash
 # Kill the grackle server (it holds the DB lock)
-# Find PID: wmic process where "name='node.exe'" get processid,commandline | grep server
-taskkill /PID <SERVER_PID> /F
+# Windows (Git Bash): find PID with `wmic process where "name='node.exe'" get processid,commandline | grep server`
+# then: taskkill /PID <SERVER_PID> /F
+# Linux/Mac: kill $(pgrep -f "node.*server/dist/index.js")
 
 # Delete the database
 rm -f ~/.grackle/grackle.db ~/.grackle/grackle.db-wal ~/.grackle/grackle.db-shm

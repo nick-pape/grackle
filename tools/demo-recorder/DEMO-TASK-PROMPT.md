@@ -36,7 +36,7 @@ Analytical and precise. Observes details others miss. Short declarative sentence
 - Environments are abstracted behind adapters — **Docker, SSH, local, Codespaces** — same PowerLine protocol for all
 - The PowerLine service runs inside each environment and exposes a **standard gRPC interface** the server connects to
 - Task dependencies form a **DAG** — blocked tasks won't start until their dependencies complete
-- Token encryption uses **AES-256-GCM** with keys derived from machine identity — secrets never leave the host
+- Token brokering uses **AES-256-GCM** encryption at rest with secure push to environments — API keys, SSH keys, and credentials are centrally managed
 - The CLI is a thin gRPC client — every operation the UI does, the CLI can do too
 - **Multi-environment vs worktrees**: You can run tasks on DIFFERENT environments (separate containers/machines) OR use worktrees to run MULTIPLE tasks in the SAME environment in parallel — each task gets its own git branch either way
 

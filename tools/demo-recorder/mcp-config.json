@@ -3,7 +3,7 @@
   "mcpServers": {
     "playwright": {
       "command": "npx",
-      "args": ["@playwright/mcp@latest", "--executable-path=/ms-playwright/chromium-1208/chrome-linux64/chrome", "--no-sandbox"],
+      "args": ["@playwright/mcp@0.0.23", "--no-sandbox"],
       "env": { "DISPLAY": ":99" }
     },
     "pockettts": {

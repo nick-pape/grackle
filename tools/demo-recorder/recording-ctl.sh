@@ -6,8 +6,15 @@ OUTFILE="/workspace/grackle-demo.mp4"
 
 echo "[recording-ctl] Waiting for Chrome to launch..."
 
-# Wait for Playwright's Chrome to appear (reliable detection of agent starting)
+# Wait for Playwright's Chrome to appear (timeout after 120s)
+CHROME_WAIT_TIMEOUT="${CHROME_WAIT_TIMEOUT:-120}"
+start_time=$(date +%s)
 while ! pgrep -f "chrome.*remote-debugging" > /dev/null 2>&1; do
+  elapsed=$(( $(date +%s) - start_time ))
+  if [ "$elapsed" -ge "$CHROME_WAIT_TIMEOUT" ]; then
+    echo "[recording-ctl] ERROR: Chrome not detected within ${CHROME_WAIT_TIMEOUT}s. Aborting." >&2
+    exit 1
+  fi
   sleep 0.5
 done
 
@@ -17,7 +24,8 @@ sleep 2
 echo "[recording-ctl] Chrome detected. Starting ffmpeg recording -> $OUTFILE"
 
 # Start ffmpeg with stdin from a named pipe for graceful 'q' shutdown
-mkfifo /tmp/ffmpeg-input 2>/dev/null || true
+rm -f /tmp/ffmpeg-input
+mkfifo /tmp/ffmpeg-input
 ffmpeg -f x11grab -video_size 1920x1080 -framerate 30 -i :99 \
   -f pulse -i default \
   -c:v libx264 -preset ultrafast -pix_fmt yuv420p \
