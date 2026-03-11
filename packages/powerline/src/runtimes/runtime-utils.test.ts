@@ -77,13 +77,13 @@ describe("buildSubtaskCreateEvent", () => {
     expect(parsed.can_decompose).toBe(true);
   });
 
-  it("applies defaults for missing fields", () => {
+  it("applies defaults for missing fields (local_id left empty)", () => {
     const event = buildSubtaskCreateEvent({}, { raw: true });
     const parsed = JSON.parse(event.content);
 
     expect(parsed.title).toBe("Untitled subtask");
     expect(parsed.description).toBe("");
-    expect(parsed.local_id).toMatch(/^subtask-\d+$/);
+    expect(parsed.local_id).toBe("");
     expect(parsed.depends_on).toEqual([]);
     expect(parsed.can_decompose).toBe(false);
   });

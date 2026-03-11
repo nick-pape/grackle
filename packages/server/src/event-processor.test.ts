@@ -310,6 +310,94 @@ describe("event-processor SUBTASK_CREATE handling", () => {
     );
   });
 
+  it("rejects subtask with empty title or description", async () => {
+    taskStore.createTask("parent1", "proj1", "Parent Task", "desc", "env1", [], "test-project", "", true);
+    sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
+
+    const subtaskEvent = create(powerline.AgentEventSchema, {
+      sessionId: "sess1",
+      type: powerline.AgentEventType.SUBTASK_CREATE,
+      timestamp: new Date().toISOString(),
+      content: JSON.stringify({
+        title: "",
+        description: "Has no title",
+      }),
+    });
+
+    await waitForProcessing([subtaskEvent], {
+      sessionId: "sess1",
+      logPath: "/tmp/log",
+      projectId: "proj1",
+      taskId: "parent1",
+    });
+
+    const children = taskStore.getChildren("parent1");
+    expect(children).toHaveLength(0);
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.objectContaining({ taskId: "parent1" }),
+      "Subtask creation failed: invalid title or description",
+    );
+  });
+
+  it("detects duplicate local_id and keeps existing mapping", async () => {
+    taskStore.createTask("parent1", "proj1", "Parent Task", "desc", "env1", [], "test-project", "", true);
+    sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
+
+    const event1 = create(powerline.AgentEventSchema, {
+      sessionId: "sess1",
+      type: powerline.AgentEventType.SUBTASK_CREATE,
+      timestamp: new Date().toISOString(),
+      content: JSON.stringify({
+        title: "First",
+        description: "First subtask",
+        local_id: "dupe",
+      }),
+    });
+
+    const event2 = create(powerline.AgentEventSchema, {
+      sessionId: "sess1",
+      type: powerline.AgentEventType.SUBTASK_CREATE,
+      timestamp: new Date().toISOString(),
+      content: JSON.stringify({
+        title: "Second",
+        description: "Second subtask with same local_id",
+        local_id: "dupe",
+      }),
+    });
+
+    const event3 = create(powerline.AgentEventSchema, {
+      sessionId: "sess1",
+      type: powerline.AgentEventType.SUBTASK_CREATE,
+      timestamp: new Date().toISOString(),
+      content: JSON.stringify({
+        title: "Third",
+        description: "Depends on dupe",
+        depends_on: ["dupe"],
+      }),
+    });
+
+    await waitForProcessing([event1, event2, event3], {
+      sessionId: "sess1",
+      logPath: "/tmp/log",
+      projectId: "proj1",
+      taskId: "parent1",
+    });
+
+    const children = taskStore.getChildren("parent1");
+    expect(children).toHaveLength(3);
+
+    // The third task should depend on the FIRST task (existing mapping kept)
+    const first = children.find(c => c.title === "First")!;
+    const third = children.find(c => c.title === "Third")!;
+    const thirdDeps = JSON.parse(third.dependsOn);
+    expect(thirdDeps).toContain(first.id);
+
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.objectContaining({ localId: "dupe" }),
+      "Duplicate subtask local_id encountered; keeping existing mapping",
+    );
+  });
+
   it("does not crash the stream on malformed SUBTASK_CREATE content", async () => {
     taskStore.createTask("parent1", "proj1", "Parent Task", "desc", "env1", [], "test-project", "", true);
     sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");

@@ -130,8 +130,11 @@ export function buildSubtaskCreateTool(defineTool: (name: string, opts: Record<s
     },
     handler: async (args: Record<string, unknown>) => {
       eventQueue.push(buildSubtaskCreateEvent(args, args));
-      const localId = args.local_id || `subtask-${Date.now()}`;
-      return { status: "subtask_queued", local_id: localId, title: args.title };
+      const result: Record<string, unknown> = { status: "subtask_queued", title: args.title };
+      if (args.local_id) {
+        result.local_id = args.local_id;
+      }
+      return result;
     },
   });
 }

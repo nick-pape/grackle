@@ -169,8 +169,10 @@ describe("buildSubtaskCreateTool", () => {
       title: "Build Auth",
       description: "Implement authentication",
       local_id: "auth",
-    });
-    expect(result).toEqual({ status: "subtask_queued", local_id: "auth", title: "Build Auth" });
+    }) as Record<string, unknown>;
+    expect(result.status).toBe("subtask_queued");
+    expect(result.local_id).toBe("auth");
+    expect(result.title).toBe("Build Auth");
 
     const event = await queue.shift();
     expect(event).toBeDefined();
@@ -187,7 +189,7 @@ describe("buildSubtaskCreateTool", () => {
     queue.close();
   });
 
-  it("handler auto-generates local_id when not provided", async () => {
+  it("handler omits local_id from result when not provided", async () => {
     const queue = new AsyncQueue<AgentEvent>();
     let handler: (args: Record<string, unknown>) => Promise<unknown> = async () => ({});
     const mockDefineTool = (_name: string, opts: Record<string, unknown>): unknown => {
@@ -198,7 +200,7 @@ describe("buildSubtaskCreateTool", () => {
     buildSubtaskCreateTool(mockDefineTool, queue);
 
     const result = await handler({ title: "Task", description: "Do it" }) as Record<string, unknown>;
-    expect((result.local_id as string)).toMatch(/^subtask-\d+$/);
+    expect(result.local_id).toBeUndefined();
 
     queue.close();
   });

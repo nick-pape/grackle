@@ -301,8 +301,8 @@ class CodexSession extends BaseAgentSession {
               const args = (item.arguments ?? {}) as Record<string, unknown>;
               this.eventQueue.push(buildFindingEvent(args, event));
             }
-            // Intercept subtask creation tool calls
-            if (toolName === "create_subtask" || qualifiedName === "mcp__grackle__create_subtask") {
+            // Intercept subtask creation tool calls only on successful invocation
+            if (!error && (toolName === "create_subtask" || qualifiedName === "mcp__grackle__create_subtask")) {
               const args = (item.arguments ?? {}) as Record<string, unknown>;
               this.eventQueue.push(buildSubtaskCreateEvent(args, event));
             }

@@ -72,12 +72,15 @@ server.tool(
   async ({ title, description, local_id, depends_on, can_decompose }) => {
     // The runtime intercepts this tool_use event and emits a "subtask_create"
     // event in the stream. We just return a confirmation here.
-    const localId = local_id || `subtask-${Date.now()}`;
+    const response = { status: "subtask_queued", title };
+    if (local_id) {
+      response.local_id = local_id;
+    }
     return {
       content: [
         {
           type: "text",
-          text: JSON.stringify({ status: "subtask_queued", local_id: localId, title }),
+          text: JSON.stringify(response),
         },
       ],
     };

@@ -98,42 +98,65 @@ export function processEventStream(
               if (!project) {
                 logger.warn({ projectId: parentTask.projectId }, "Subtask creation failed: project not found");
               } else {
-                // Resolve depends_on local IDs to real task IDs
-                const resolvedDeps: string[] = [];
-                for (const localDep of (data.depends_on || [])) {
-                  const realId = subtaskLocalIdMap.get(localDep);
-                  if (realId) {
-                    resolvedDeps.push(realId);
-                  } else {
-                    logger.warn({ localDep, taskId }, "Subtask dependency local_id not found, skipping");
+                // Validate required fields
+                const title = typeof data.title === "string" ? data.title.trim() : "";
+                const description = typeof data.description === "string" ? data.description.trim() : "";
+
+                if (!title || !description) {
+                  logger.warn(
+                    { taskId, rawTitle: data.title, rawDescription: data.description },
+                    "Subtask creation failed: invalid title or description",
+                  );
+                } else {
+                  // Resolve depends_on local IDs to real task IDs
+                  const resolvedDeps: string[] = [];
+                  for (const localDep of (data.depends_on || [])) {
+                    const realId = subtaskLocalIdMap.get(localDep);
+                    if (realId) {
+                      resolvedDeps.push(realId);
+                    } else {
+                      logger.warn({ localDep, taskId }, "Subtask dependency local_id not found, skipping");
+                    }
                   }
+
+                  const subtaskId = uuid().slice(0, 8);
+                  const environmentId = parentTask.environmentId || project.defaultEnvironmentId;
+                  taskStore.createTask(
+                    subtaskId,
+                    parentTask.projectId,
+                    title,
+                    description,
+                    environmentId,
+                    resolvedDeps,
+                    slugify(project.name),
+                    taskId,
+                    data.can_decompose,
+                  );
+
+                  // Record the local_id → real ID mapping, detecting duplicates
+                  if (data.local_id) {
+                    if (subtaskLocalIdMap.has(data.local_id)) {
+                      logger.warn(
+                        {
+                          localId: data.local_id,
+                          existingSubtaskId: subtaskLocalIdMap.get(data.local_id),
+                          newSubtaskId: subtaskId,
+                          parentTaskId: taskId,
+                        },
+                        "Duplicate subtask local_id encountered; keeping existing mapping",
+                      );
+                    } else {
+                      subtaskLocalIdMap.set(data.local_id, subtaskId);
+                    }
+                  }
+
+                  const row = taskStore.getTask(subtaskId);
+                  broadcast({
+                    type: "task_created",
+                    payload: { task: row ? { ...row, dependsOn: safeParseJsonArray(row.dependsOn) } : null },
+                  });
+                  logger.info({ subtaskId, parentTaskId: taskId, title }, "Subtask created");
                 }
-
-                const subtaskId = uuid().slice(0, 8);
-                const environmentId = parentTask.environmentId || project.defaultEnvironmentId;
-                taskStore.createTask(
-                  subtaskId,
-                  parentTask.projectId,
-                  data.title,
-                  data.description,
-                  environmentId,
-                  resolvedDeps,
-                  slugify(project.name),
-                  taskId,
-                  data.can_decompose,
-                );
-
-                // Record the local_id → real ID mapping
-                if (data.local_id) {
-                  subtaskLocalIdMap.set(data.local_id, subtaskId);
-                }
-
-                const row = taskStore.getTask(subtaskId);
-                broadcast({
-                  type: "task_created",
-                  payload: { task: row ? { ...row, dependsOn: safeParseJsonArray(row.dependsOn) } : null },
-                });
-                logger.info({ subtaskId, parentTaskId: taskId, title: data.title }, "Subtask created");
               }
             }
           } catch (err) {

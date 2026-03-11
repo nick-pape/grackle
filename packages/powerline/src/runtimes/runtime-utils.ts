@@ -35,7 +35,9 @@ export function buildFindingEvent(args: Record<string, unknown>, raw: unknown): 
 /**
  * Build a normalized "subtask_create" AgentEvent from a `create_subtask` tool call.
  *
- * Applies defaults: local_id auto-generated, depends_on [], can_decompose false.
+ * Does not auto-generate `local_id` — the caller is responsible for providing one
+ * if dependency resolution via `depends_on` is needed. This avoids mismatches
+ * between the event payload and tool result.
  */
 export function buildSubtaskCreateEvent(args: Record<string, unknown>, raw: unknown): AgentEvent {
   return {
@@ -44,7 +46,7 @@ export function buildSubtaskCreateEvent(args: Record<string, unknown>, raw: unkn
     content: JSON.stringify({
       title: args.title || "Untitled subtask",
       description: args.description || "",
-      local_id: args.local_id || `subtask-${Date.now()}`,
+      local_id: args.local_id || "",
       depends_on: args.depends_on || [],
       can_decompose: args.can_decompose ?? false,
     }),
