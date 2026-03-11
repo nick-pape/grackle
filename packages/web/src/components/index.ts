@@ -1,0 +1,16 @@
+/**
+ * Component exports organized by category.
+ * @module components
+ */
+
+// Layout components - application shell structure
+export { StatusBar, Sidebar, UnifiedBar } from "./layout/index.js";
+
+// Panel components - main content areas
+export { SessionPanel, FindingsPanel } from "./panels/index.js";
+
+// List components - sidebar navigation
+export { EnvironmentList, ProjectList } from "./lists/index.js";
+
+// Display components - content rendering
+export { EventRenderer, DiffViewer } from "./display/index.js";

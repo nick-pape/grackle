@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type WsPayload = Record<string, any>;
@@ -138,7 +138,9 @@ export async function createTask(
   await page.locator("button", { hasText: "Create" }).click();
 
   // After "Create", viewMode goes to project → auto-expand. Wait for task in sidebar.
-  await page.getByText(title).waitFor({ timeout: 5_000 });
+  // Use .first() because AnimatePresence may briefly keep an exiting copy alongside the
+  // entering copy, causing two <span class="taskTitle"> elements with the same text.
+  await page.getByText(title, { exact: true }).first().waitFor({ timeout: 5_000 });
 }
 
 /** Navigate to a task view by clicking its name in the sidebar. */
@@ -185,26 +187,120 @@ export async function runStubTaskToCompletion(page: Page): Promise<void> {
   await page.locator("button", { hasText: "Approve" }).waitFor({ timeout: 15_000 });
 }
 
-/** Create a task via WebSocket with custom options (e.g., dependsOn). Returns the created task data. */
+/**
+ * Send a WS message and wait for an "error" response.
+ * Convenience wrapper around sendWsAndWaitFor for error-path testing.
+ */
+export async function sendWsAndWaitForError(
+  page: Page,
+  message: WsPayload,
+  timeoutMs = 10_000,
+): Promise<WsPayload> {
+  return sendWsAndWaitFor(page, message, "error", timeoutMs);
+}
+
+/**
+ * Inject a fake WS message into the app's existing WebSocket connection.
+ * Calls the onmessage handler directly on the first OPEN tracked WebSocket.
+ * Requires installWsTracker to have been called via addInitScript before page.goto.
+ */
+export async function injectWsMessage(
+  page: Page,
+  message: WsPayload,
+): Promise<void> {
+  await page.evaluate((msg) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const sockets = (window as any).__grackle_ws_instances__ as WebSocket[] | undefined;
+    if (!sockets) {
+      throw new Error("WS tracker not installed — call installWsTracker before page.goto");
+    }
+    // Find the app's socket (first OPEN one — helper sockets are already closed)
+    const ws = sockets.find((s) => s.readyState === WebSocket.OPEN);
+    if (!ws) {
+      throw new Error(`No OPEN WebSocket found (tracked: ${sockets.length})`);
+    }
+    // The app uses ws.onmessage (not addEventListener), so call it directly
+    if (ws.onmessage) {
+      ws.onmessage(new MessageEvent("message", {
+        data: JSON.stringify(msg),
+      }));
+    }
+  }, message);
+}
+
+/**
+ * Install a hook via addInitScript that records all WebSocket instances opened by the app.
+ * Must be called BEFORE page.goto so the script runs before app JavaScript.
+ * Used by injectWsMessage to find the app's active socket.
+ */
+export async function installWsTracker(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (window as any).__grackle_ws_instances__ = [];
+    const OrigWs = window.WebSocket;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (window as any).__OrigWebSocket__ = OrigWs;
+    // @ts-expect-error — we're wrapping the constructor
+    window.WebSocket = function (...args: ConstructorParameters<typeof WebSocket>) {
+      const ws = new OrigWs(...args);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (window as any).__grackle_ws_instances__.push(ws);
+      return ws;
+    } as unknown as typeof WebSocket;
+    window.WebSocket.prototype = OrigWs.prototype;
+    Object.defineProperty(window.WebSocket, "CONNECTING", { value: OrigWs.CONNECTING });
+    Object.defineProperty(window.WebSocket, "OPEN", { value: OrigWs.OPEN });
+    Object.defineProperty(window.WebSocket, "CLOSING", { value: OrigWs.CLOSING });
+    Object.defineProperty(window.WebSocket, "CLOSED", { value: OrigWs.CLOSED });
+  });
+}
+
+/** Create a task via WebSocket with custom options (e.g., dependsOn, parentTaskId). Returns the created task data. */
 export async function createTaskViaWs(
   page: Page,
   projectId: string,
   title: string,
-  options?: { envId?: string; dependsOn?: string[]; description?: string },
+  options?: { environmentId?: string; dependsOn?: string[]; description?: string; parentTaskId?: string; canDecompose?: boolean },
 ): Promise<WsPayload> {
+  const payload: WsPayload = {
+    projectId,
+    title,
+    description: options?.description || "",
+    environmentId: options?.environmentId || "",
+    dependsOn: options?.dependsOn || [],
+    parentTaskId: options?.parentTaskId || "",
+  };
+  if (options?.canDecompose !== undefined) {
+    payload.canDecompose = options.canDecompose;
+  }
   const response = await sendWsAndWaitFor(
     page,
     {
       type: "create_task",
-      payload: {
-        projectId,
-        title,
-        description: options?.description || "",
-        envId: options?.envId || "",
-        dependsOn: options?.dependsOn || [],
-      },
+      payload,
     },
     "task_created",
   );
   return response.payload?.task as WsPayload;
+}
+
+/**
+ * Build a locator that matches the DiffViewer in any rendered state.
+ *
+ * The DiffViewer component renders one of four states, each identifiable by
+ * its CSS module class:
+ *  - Loading:  `.emptyState` containing "Loading diff..."
+ *  - Empty:    `.emptyState` containing "No changes on branch ..."
+ *  - Error:    `.errorState` containing the error message
+ *  - Content:  `.container` with a `.statsBar` and `.diffContent`
+ *
+ * CSS module hashes preserve the original class name (e.g. `_emptyState_1e9es_7`),
+ * so `[class*="<name>"]` attribute selectors reliably match them.
+ */
+export function diffViewerLocator(page: Page): Locator {
+  return page.locator('[class*="emptyState"]').or(
+    page.locator('[class*="errorState"]'),
+  ).or(
+    page.locator('[class*="statsBar"]'),
+  );
 }

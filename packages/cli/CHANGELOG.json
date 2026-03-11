@@ -1,0 +1,289 @@
+{
+  "name": "@grackle-ai/cli",
+  "entries": [
+    {
+      "version": "0.13.4",
+      "tag": "@grackle-ai/cli_v0.13.4",
+      "date": "Wed, 11 Mar 2026 05:34:23 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Handle port conflicts gracefully with controlled shutdown instead of hard exit"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.13.3",
+      "tag": "@grackle-ai/cli_v0.13.3",
+      "date": "Wed, 11 Mar 2026 04:13:07 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Review-fixes-and-test-coverage"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.13.2",
+      "tag": "@grackle-ai/cli_v0.13.2",
+      "date": "Tue, 10 Mar 2026 21:27:27 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Add decomposition rights to task model"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.13.1",
+      "tag": "@grackle-ai/cli_v0.13.1",
+      "date": "Tue, 10 Mar 2026 20:40:21 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Fix bugs from live testing: Codex SDK async, Windows paths, Dockerfile ESM flag, child task UI, task deletion"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.13.0",
+      "tag": "@grackle-ai/cli_v0.13.0",
+      "date": "Tue, 10 Mar 2026 20:25:56 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Add interactive DAG visualization for task dependency graphs"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.12.0",
+      "tag": "@grackle-ai/cli_v0.12.0",
+      "date": "Tue, 10 Mar 2026 18:09:01 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Add task tree hierarchy"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.11.2",
+      "tag": "@grackle-ai/cli_v0.11.2",
+      "date": "Tue, 10 Mar 2026 15:57:59 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Extract shared runtime utilities and BaseAgentRuntime to deduplicate PowerLine runtimes"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.11.1",
+      "tag": "@grackle-ai/cli_v0.11.1",
+      "date": "Tue, 10 Mar 2026 14:35:26 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Extract shared processEventStream to deduplicate event-processing loops"
+          },
+          {
+            "comment": "Extract BaseAgentSession abstract class from ClaudeCodeSession and CodexSession to consolidate shared session lifecycle"
+          }
+        ],
+        "none": [
+          {
+            "comment": "Add unit tests for powerline package"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.11.0",
+      "tag": "@grackle-ai/cli_v0.11.0",
+      "date": "Tue, 10 Mar 2026 08:23:27 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Wire-proto-enums-to-message-fields"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.10.0",
+      "tag": "@grackle-ai/cli_v0.10.0",
+      "date": "Tue, 10 Mar 2026 07:50:14 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Fix ClaudeCodeSession.sendInput to use eventQueue and resumed query pattern"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.9.0",
+      "tag": "@grackle-ai/cli_v0.9.0",
+      "date": "Tue, 10 Mar 2026 07:45:46 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Add environment creation UI to web app"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.8.0",
+      "tag": "@grackle-ai/cli_v0.8.0",
+      "date": "Tue, 10 Mar 2026 07:36:11 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Add token management UI with settings page"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.7.0",
+      "tag": "@grackle-ai/cli_v0.7.0",
+      "date": "Tue, 10 Mar 2026 07:31:32 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Fix Codex runtime: sendInput race condition, resume sends junk prompt, resource leak on kill, disallowedTools ignored"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.6.0",
+      "tag": "@grackle-ai/cli_v0.6.0",
+      "date": "Tue, 10 Mar 2026 07:13:31 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Code quality sweep 4: SessionPanel stable keys, null guard, useEffect deps, mock state read via ref, shared remote adapter helpers"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.5.0",
+      "tag": "@grackle-ai/cli_v0.5.0",
+      "date": "Tue, 10 Mar 2026 06:59:12 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Code quality sweep 3: attach race fix, resume event logging, WS status handling, systemContext dedup, events cap"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.4.0",
+      "tag": "@grackle-ai/cli_v0.4.0",
+      "date": "Tue, 10 Mar 2026 06:41:29 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Code quality sweep 2: fail-fast API key, gRPC error handling, session cleanup, structured logging, slug collision fix, output event rendering"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.3.0",
+      "tag": "@grackle-ai/cli_v0.3.0",
+      "date": "Tue, 10 Mar 2026 06:33:40 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Code quality sweep: constant-time auth, deduplicate slugify, fix updateTask field clearing, remove dead exports"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.2.0",
+      "tag": "@grackle-ai/cli_v0.2.0",
+      "date": "Tue, 10 Mar 2026 06:13:42 GMT",
+      "comments": {
+        "none": [
+          {
+            "comment": "Add \"codex\" to RuntimeName type"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.1.0",
+      "tag": "@grackle-ai/cli_v0.1.0",
+      "date": "Tue, 10 Mar 2026 06:04:37 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Add CLI options for SSH and Codespace environment adapters."
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.0.6",
+      "tag": "@grackle-ai/cli_v0.0.6",
+      "date": "Tue, 10 Mar 2026 06:01:07 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Publish @grackle-ai/web and bundle it with the server so the web UI is available out of the box."
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.0.5",
+      "tag": "@grackle-ai/cli_v0.0.5",
+      "date": "Tue, 10 Mar 2026 02:21:30 GMT",
+      "comments": {}
+    },
+    {
+      "version": "0.0.4",
+      "tag": "@grackle-ai/cli_v0.0.4",
+      "date": "Mon, 09 Mar 2026 23:17:39 GMT",
+      "comments": {}
+    },
+    {
+      "version": "0.0.3",
+      "tag": "@grackle-ai/cli_v0.0.3",
+      "date": "Mon, 09 Mar 2026 14:40:59 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Add CLI options for SSH and Codespace environment adapters."
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.0.2",
+      "tag": "@grackle-ai/cli_v0.0.2",
+      "date": "Sun, 08 Mar 2026 05:58:05 GMT",
+      "comments": {
+        "none": [
+          {
+            "comment": "Rename npm scope from @grackle to @grackle-ai"
+          }
+        ]
+      }
+    }
+  ]
+}

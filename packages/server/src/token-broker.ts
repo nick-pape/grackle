@@ -1,9 +1,9 @@
+import { eq } from "drizzle-orm";
 import db from "./db.js";
 import { tokens, type TokenRow } from "./schema.js";
-import { eq } from "drizzle-orm";
 import { encrypt, decrypt } from "./crypto.js";
 import { create } from "@bufbuild/protobuf";
-import { powerline } from "@grackle/common";
+import { powerline, tokenTypeToEnum } from "@grackle-ai/common";
 import * as adapterManager from "./adapter-manager.js";
 import { logger } from "./logger.js";
 
@@ -34,6 +34,12 @@ export async function setToken(entry: TokenConfig): Promise<void> {
   await pushToAll();
 }
 
+/** Delete a token by name and re-push the updated bundle to all environments. */
+export async function deleteToken(name: string): Promise<void> {
+  db.delete(tokens).where(eq(tokens.id, name)).run();
+  await pushToAll();
+}
+
 /** List all stored tokens (values are omitted for security). */
 export function listTokens(): Array<{ name: string; type: string; envVar?: string; filePath?: string; expiresAt?: string }> {
   const rows = db.select().from(tokens).all();
@@ -56,7 +62,7 @@ export function getBundle(): powerline.TokenBundle {
     const cfg = JSON.parse(row.config) as TokenConfig;
     return create(powerline.TokenItemSchema, {
       name: cfg.name,
-      type: cfg.type,
+      type: tokenTypeToEnum(cfg.type),
       envVar: cfg.envVar || "",
       filePath: cfg.filePath || "",
       value: decrypt(cfg.value),
@@ -67,8 +73,8 @@ export function getBundle(): powerline.TokenBundle {
 }
 
 /** Push the current token bundle to a single connected environment. */
-export async function pushToEnv(envId: string): Promise<void> {
-  const conn = adapterManager.getConnection(envId);
+export async function pushToEnv(environmentId: string): Promise<void> {
+  const conn = adapterManager.getConnection(environmentId);
   if (!conn) {
     return;
   }
@@ -86,9 +92,9 @@ export async function pushToAll(): Promise<void> {
   const connections = adapterManager.listConnections();
   const promises: Promise<void>[] = [];
 
-  for (const [envId] of connections) {
-    promises.push(pushToEnv(envId).catch((err) => {
-      logger.error({ envId, err }, "Failed to push tokens");
+  for (const [environmentId] of connections) {
+    promises.push(pushToEnv(environmentId).catch((err) => {
+      logger.error({ environmentId, err }, "Failed to push tokens");
     }));
   }
 

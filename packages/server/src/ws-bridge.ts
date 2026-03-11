@@ -2,23 +2,33 @@ import { WebSocketServer, WebSocket } from "ws";
 import type { Server as HttpServer } from "node:http";
 import type { IncomingMessage } from "node:http";
 import { create } from "@bufbuild/protobuf";
-import { grackle, powerline } from "@grackle/common";
+import { grackle, powerline } from "@grackle-ai/common";
 import * as envRegistry from "./env-registry.js";
 import * as sessionStore from "./session-store.js";
 import * as adapterManager from "./adapter-manager.js";
+import type { PowerLineConnection } from "./adapters/adapter.js";
 import * as streamHub from "./stream-hub.js";
+import * as tokenBroker from "./token-broker.js";
 import * as projectStore from "./project-store.js";
 import * as taskStore from "./task-store.js";
 import * as findingStore from "./finding-store.js";
 import { v4 as uuid } from "uuid";
 import { join } from "node:path";
-import { LOGS_DIR, DEFAULT_RUNTIME, DEFAULT_MODEL } from "@grackle/common";
+import {
+  LOGS_DIR, DEFAULT_RUNTIME, DEFAULT_MODEL,
+  eventTypeToString,
+} from "@grackle-ai/common";
 import { grackleHome } from "./paths.js";
 import * as logWriter from "./log-writer.js";
-import { writeTranscript } from "./transcript.js";
+import { safeParseJsonArray } from "./json-helpers.js";
+import { logger } from "./logger.js";
+import { buildTaskSystemContext } from "./utils/system-context.js";
+import { slugify } from "./utils/slugify.js";
+import { processEventStream } from "./event-processor.js";
+import { broadcast, setWssInstance } from "./ws-broadcast.js";
 
-const WS_PING_INTERVAL_MS = 30_000;
-const WS_CLOSE_UNAUTHORIZED = 4001;
+const WS_PING_INTERVAL_MS: number = 30_000;
+const WS_CLOSE_UNAUTHORIZED: number = 4001;
 
 interface WsMessage {
   type: string;
@@ -26,27 +36,10 @@ interface WsMessage {
   id?: string;
 }
 
-function slugify(text: string): string {
-  return text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40);
-}
-
-let wssInstance: WebSocketServer | null = null;
-
-/** Broadcast a message to all connected WS clients. */
-export function broadcast(msg: { type: string; payload?: Record<string, unknown> }): void {
-  if (!wssInstance) return;
-  const data = JSON.stringify(msg);
-  for (const client of wssInstance.clients) {
-    if (client.readyState === 1 /* OPEN */) {
-      client.send(data);
-    }
-  }
-}
-
 /** Create a WebSocket server on top of an HTTP server that bridges JSON messages to gRPC operations. */
 export function createWsBridge(httpServer: HttpServer, verifyApiKey: (token: string) => boolean): WebSocketServer {
   const wss = new WebSocketServer({ server: httpServer });
-  wssInstance = wss;
+  setWssInstance(wss);
 
   wss.on("connection", (ws: WebSocket, req: IncomingMessage) => {
     const url = new URL(req.url || "/", "http://localhost");
@@ -85,6 +78,100 @@ export function createWsBridge(httpServer: HttpServer, verifyApiKey: (token: str
   return wss;
 }
 
+/** Map a database environment row to the WebSocket payload shape. */
+function envRowToWs(r: ReturnType<typeof envRegistry.listEnvironments>[number]): Record<string, unknown> {
+  return {
+    id: r.id,
+    displayName: r.displayName,
+    adapterType: r.adapterType,
+    defaultRuntime: r.defaultRuntime,
+    status: r.status,
+    bootstrapped: r.bootstrapped,
+  };
+}
+
+/** Broadcast the current environment list to all connected WebSocket clients. */
+function broadcastEnvironments(): void {
+  broadcast({
+    type: "environments",
+    payload: { environments: envRegistry.listEnvironments().map(envRowToWs) },
+  });
+}
+
+/** Safely parse an adapter config string, returning an empty object on failure. */
+function safeParseAdapterConfig(raw: string, environmentId: string): Record<string, unknown> {
+  try {
+    const parsed: unknown = JSON.parse(raw || "{}");
+    if (typeof parsed === "object" && parsed !== null) {
+      return parsed as Record<string, unknown>;
+    }
+    logger.warn({ environmentId, raw }, "adapterConfig is not an object, using empty config");
+    return {};
+  } catch (err) {
+    logger.warn({ environmentId, raw, err }, "Failed to parse adapterConfig, using empty config");
+    return {};
+  }
+}
+
+/**
+ * Auto-provisions and connects an environment if it is not already connected.
+ * Sends provision progress events over the WebSocket and updates the environment
+ * registry status. Returns the connection on success, or undefined on failure.
+ */
+async function autoProvisionEnvironment(
+  ws: WebSocket,
+  environmentId: string,
+  env: envRegistry.EnvironmentRow,
+  logContext: Record<string, string>,
+): Promise<PowerLineConnection | undefined> {
+  let conn = adapterManager.getConnection(environmentId);
+  if (conn) {
+    return conn;
+  }
+
+  const adapter = adapterManager.getAdapter(env.adapterType);
+  if (!adapter) {
+    sendWs(ws, { type: "error", payload: { message: `No adapter for type: ${env.adapterType}` } });
+    return undefined;
+  }
+
+  logger.info({ environmentId, ...logContext }, "Auto-provisioning environment");
+  envRegistry.updateEnvironmentStatus(environmentId, "connecting");
+  broadcastEnvironments();
+
+  try {
+    const config = safeParseAdapterConfig(env.adapterConfig, environmentId);
+    const powerlineToken = env.powerlineToken || "";
+    for await (const provEvent of adapter.provision(environmentId, config, powerlineToken)) {
+      logger.info({ environmentId, stage: provEvent.stage, ...logContext }, "Auto-provision progress");
+      sendWs(ws, {
+        type: "provision_progress",
+        payload: { environmentId, stage: provEvent.stage, message: provEvent.message, progress: provEvent.progress },
+      });
+    }
+    conn = await adapter.connect(environmentId, config, powerlineToken);
+    adapterManager.setConnection(environmentId, conn);
+    envRegistry.updateEnvironmentStatus(environmentId, "connected");
+    broadcastEnvironments();
+    logger.info({ environmentId, ...logContext }, "Auto-provision complete");
+    sendWs(ws, {
+      type: "provision_progress",
+      payload: { environmentId, stage: "ready", message: "Environment connected", progress: 1 },
+    });
+    return conn;
+  } catch (err) {
+    logger.error({ environmentId, ...logContext, err }, "Auto-provision failed");
+    envRegistry.updateEnvironmentStatus(environmentId, "error");
+    broadcastEnvironments();
+    sendWs(ws, {
+      type: "provision_progress",
+      payload: { environmentId, stage: "error", message: `Auto-provision failed: ${err}`, progress: 0 },
+    });
+    sendWs(ws, { type: "error", payload: { message: `Failed to auto-connect environment ${environmentId}: ${err}` } });
+    return undefined;
+  }
+}
+
 async function handleMessage(
   ws: WebSocket,
   msg: WsMessage,
@@ -95,30 +182,21 @@ async function handleMessage(
       const rows = envRegistry.listEnvironments();
       sendWs(ws, {
         type: "environments",
-        payload: {
-          environments: rows.map((r) => ({
-            id: r.id,
-            displayName: r.displayName,
-            adapterType: r.adapterType,
-            defaultRuntime: r.defaultRuntime,
-            status: r.status,
-            bootstrapped: r.bootstrapped,
-          })),
-        },
+        payload: { environments: rows.map(envRowToWs) },
       });
       break;
     }
 
     case "list_sessions": {
-      const envId = (msg.payload?.envId as string) || "";
+      const environmentId = (msg.payload?.environmentId as string) || "";
       const status = (msg.payload?.status as string) || "";
-      const rows = sessionStore.listSessions(envId, status);
+      const rows = sessionStore.listSessions(environmentId, status);
       sendWs(ws, {
         type: "sessions",
         payload: {
           sessions: rows.map((r) => ({
             id: r.id,
-            envId: r.envId,
+            environmentId: r.environmentId,
             runtime: r.runtime,
             status: r.status,
             prompt: r.prompt,
@@ -169,13 +247,14 @@ async function handleMessage(
       const stream = streamHub.createStream(sessionId);
       subscriptions.set(subKey, stream);
 
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
       (async () => {
         for await (const event of stream) {
           sendWs(ws, {
             type: "session_event",
             payload: {
               sessionId: event.sessionId,
-              eventType: event.type,
+              eventType: eventTypeToString(event.type),
               timestamp: event.timestamp,
               content: event.content,
             },
@@ -196,13 +275,14 @@ async function handleMessage(
       const stream = streamHub.createGlobalStream();
       subscriptions.set("global", stream);
 
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
       (async () => {
         for await (const event of stream) {
           sendWs(ws, {
             type: "session_event",
             payload: {
               sessionId: event.sessionId,
-              eventType: event.type,
+              eventType: eventTypeToString(event.type),
               timestamp: event.timestamp,
               content: event.content,
             },
@@ -213,27 +293,27 @@ async function handleMessage(
     }
 
     case "spawn": {
-      const envId = msg.payload?.envId as string;
+      const environmentId = msg.payload?.environmentId as string;
       const prompt = msg.payload?.prompt as string;
       const model = (msg.payload?.model as string) || "";
       const runtime = (msg.payload?.runtime as string) || "";
       const branch = (msg.payload?.branch as string) || "";
       const systemContext = (msg.payload?.systemContext as string) || "";
 
-      if (!envId || !prompt) {
-        sendWs(ws, { type: "error", payload: { message: "envId and prompt required" } });
+      if (!environmentId || !prompt) {
+        sendWs(ws, { type: "error", payload: { message: "environmentId and prompt required" } });
         return;
       }
 
-      const env = envRegistry.getEnvironment(envId);
+      const env = envRegistry.getEnvironment(environmentId);
       if (!env) {
-        sendWs(ws, { type: "error", payload: { message: `Environment not found: ${envId}` } });
+        sendWs(ws, { type: "error", payload: { message: `Environment not found: ${environmentId}` } });
         return;
       }
 
-      const conn = adapterManager.getConnection(envId);
+      // Auto-provision the environment if not already connected
+      const conn = await autoProvisionEnvironment(ws, environmentId, env, {});
       if (!conn) {
-        sendWs(ws, { type: "error", payload: { message: `Environment not connected: ${envId}` } });
         return;
       }
 
@@ -242,12 +322,10 @@ async function handleMessage(
       const sessionModel = model || process.env.GRACKLE_DEFAULT_MODEL || DEFAULT_MODEL;
       const logPath = join(grackleHome, LOGS_DIR, sessionId);
 
-      sessionStore.createSession(sessionId, envId, sessionRuntime, prompt, sessionModel, logPath);
-      logWriter.initLog(logPath);
+      sessionStore.createSession(sessionId, environmentId, sessionRuntime, prompt, sessionModel, logPath);
 
       sendWs(ws, { type: "spawned", payload: { sessionId } });
 
-      // Fire PowerLine spawn in background
       const powerlineReq = create(powerline.SpawnRequestSchema, {
         sessionId,
         runtime: sessionRuntime,
@@ -259,40 +337,10 @@ async function handleMessage(
         systemContext,
       });
 
-      (async () => {
-        try {
-          sessionStore.updateSession(sessionId, "running");
-          for await (const event of conn.client.spawn(powerlineReq)) {
-            const sessionEvent = create(grackle.SessionEventSchema, {
-              sessionId,
-              type: event.type,
-              timestamp: event.timestamp,
-              content: event.content,
-              raw: event.raw,
-            });
-            logWriter.writeEvent(logPath, sessionEvent);
-            streamHub.publish(sessionEvent);
-
-            if (event.type === "status") {
-              if (event.content === "waiting_input") {
-                sessionStore.updateSessionStatus(sessionId, "waiting_input");
-              } else if (event.content === "running") {
-                sessionStore.updateSessionStatus(sessionId, "running");
-              } else if (event.content === "completed") {
-                sessionStore.updateSession(sessionId, "completed");
-              } else if (event.content === "failed") {
-                sessionStore.updateSession(sessionId, "failed");
-              } else if (event.content === "killed") {
-                sessionStore.updateSession(sessionId, "killed");
-              }
-            }
-          }
-          const current = sessionStore.getSession(sessionId);
-          if (current && !["completed", "failed", "killed"].includes(current.status)) {
-            sessionStore.updateSession(sessionId, "completed");
-          }
-        } catch (err) {
-          sessionStore.updateSession(sessionId, "failed", undefined, String(err));
+      processEventStream(conn.client.spawn(powerlineReq), {
+        sessionId,
+        logPath,
+        onError: (err) => {
           sendWs(ws, {
             type: "session_event",
             payload: {
@@ -302,15 +350,8 @@ async function handleMessage(
               content: `Spawn failed: ${err}`,
             },
           });
-        } finally {
-          logWriter.endSession(logPath);
-          try {
-            writeTranscript(logPath);
-          } catch {
-            /* non-critical */
-          }
-        }
-      })();
+        },
+      });
       break;
     }
 
@@ -326,7 +367,7 @@ async function handleMessage(
         return;
       }
 
-      const conn = adapterManager.getConnection(session.envId);
+      const conn = adapterManager.getConnection(session.environmentId);
       if (!conn) {
         return;
       }
@@ -348,7 +389,7 @@ async function handleMessage(
         return;
       }
 
-      const conn = adapterManager.getConnection(session.envId);
+      const conn = adapterManager.getConnection(session.environmentId);
       if (conn) {
         try {
           await conn.client.kill(create(powerline.SessionIdSchema, { id: sessionId }));
@@ -360,7 +401,7 @@ async function handleMessage(
       sessionStore.updateSession(sessionId, "killed");
       streamHub.publish(create(grackle.SessionEventSchema, {
         sessionId,
-        type: "status",
+        type: grackle.EventType.STATUS,
         timestamp: new Date().toISOString(),
         content: "killed",
         raw: "",
@@ -379,10 +420,10 @@ async function handleMessage(
             id: r.id,
             name: r.name,
             description: r.description,
-            repoUrl: r.repo_url,
-            defaultEnvId: r.default_env_id,
+            repoUrl: r.repoUrl,
+            defaultEnvironmentId: r.defaultEnvironmentId,
             status: r.status,
-            createdAt: r.created_at,
+            createdAt: r.createdAt,
           })),
         },
       });
@@ -395,12 +436,15 @@ async function handleMessage(
         sendWs(ws, { type: "error", payload: { message: "name required" } });
         return;
       }
-      const id = slugify(name) || uuid().slice(0, 8);
+      let id = slugify(name) || uuid().slice(0, 8);
+      if (projectStore.getProject(id)) {
+        id = `${id}-${uuid().slice(0, 4)}`;
+      }
       projectStore.createProject(
         id, name,
         (msg.payload?.description as string) || "",
         (msg.payload?.repoUrl as string) || "",
-        (msg.payload?.defaultEnvId as string) || "",
+        (msg.payload?.defaultEnvironmentId as string) || "",
       );
       const row = projectStore.getProject(id);
       broadcast({ type: "project_created", payload: { project: row } });
@@ -420,23 +464,28 @@ async function handleMessage(
       const projectId = msg.payload?.projectId as string;
       if (!projectId) return;
       const rows = taskStore.listTasks(projectId);
+      const childIdsMap = taskStore.buildChildIdsMap(rows);
       sendWs(ws, {
         type: "tasks",
         payload: {
           projectId,
           tasks: rows.map((r) => ({
             id: r.id,
-            projectId: r.project_id,
+            projectId: r.projectId,
             title: r.title,
             description: r.description,
             status: r.status,
             branch: r.branch,
-            envId: r.env_id,
-            sessionId: r.session_id,
-            dependsOn: JSON.parse(r.depends_on),
-            reviewNotes: r.review_notes,
-            sortOrder: r.sort_order,
-            createdAt: r.created_at,
+            environmentId: r.environmentId,
+            sessionId: r.sessionId,
+            dependsOn: safeParseJsonArray(r.dependsOn),
+            reviewNotes: r.reviewNotes,
+            sortOrder: r.sortOrder,
+            createdAt: r.createdAt,
+            parentTaskId: r.parentTaskId,
+            depth: r.depth,
+            childTaskIds: childIdsMap.get(r.id) ?? [],
+            canDecompose: r.canDecompose,
           })),
         },
       });
@@ -455,16 +504,22 @@ async function handleMessage(
         sendWs(ws, { type: "error", payload: { message: `Project not found: ${projectId}` } });
         return;
       }
+      const parentTaskId = (msg.payload?.parentTaskId as string) || "";
+      const rawCanDecompose = msg.payload?.canDecompose;
+      const canDecompose = typeof rawCanDecompose === "boolean" ? rawCanDecompose : undefined;
+
       const id = uuid().slice(0, 8);
       taskStore.createTask(
         id, projectId, title,
         (msg.payload?.description as string) || "",
-        (msg.payload?.envId as string) || project.default_env_id,
+        (msg.payload?.environmentId as string) || project.defaultEnvironmentId,
         (msg.payload?.dependsOn as string[]) || [],
         slugify(project.name),
+        parentTaskId,
+        canDecompose,
       );
       const row = taskStore.getTask(id);
-      broadcast({ type: "task_created", payload: { task: row ? { ...row, dependsOn: JSON.parse(row.depends_on) } : null } });
+      broadcast({ type: "task_created", payload: { task: row ? { ...row, dependsOn: safeParseJsonArray(row.dependsOn) } : null } });
       break;
     }
 
@@ -486,41 +541,37 @@ async function handleMessage(
         return;
       }
 
-      const project = projectStore.getProject(task.project_id);
+      const project = projectStore.getProject(task.projectId);
       if (!project) {
-        sendWs(ws, { type: "error", payload: { message: `Project not found: ${task.project_id}` } });
+        sendWs(ws, { type: "error", payload: { message: `Project not found: ${task.projectId}` } });
         return;
       }
 
-      const envId = task.env_id || project.default_env_id;
-      const conn = adapterManager.getConnection(envId);
+      const environmentId = task.environmentId || project.defaultEnvironmentId;
+      const env = envRegistry.getEnvironment(environmentId);
+      if (!env) {
+        sendWs(ws, { type: "error", payload: { message: `Environment not found: ${environmentId}` } });
+        return;
+      }
+
+      // Auto-provision the environment if not already connected
+      const conn = await autoProvisionEnvironment(ws, environmentId, env, { taskId });
       if (!conn) {
-        sendWs(ws, { type: "error", payload: { message: `Environment ${envId} not connected` } });
         return;
       }
 
       const sessionId = uuid();
-      const runtime = (msg.payload?.runtime as string) || "claude-code";
+      const runtime = (msg.payload?.runtime as string) || env.defaultRuntime || DEFAULT_RUNTIME;
       const model = (msg.payload?.model as string) || process.env.GRACKLE_DEFAULT_MODEL || DEFAULT_MODEL;
       const logPath = join(grackleHome, LOGS_DIR, sessionId);
 
-      const systemContext = [
-        `## Task: ${task.title}`,
-        task.description,
-        task.review_notes ? `## Review Feedback (from previous attempt)\n${task.review_notes}` : "",
-        `## Grackle Tools (MCP)`,
-        `You have a "grackle" MCP server with tools for coordinating with other agents:`,
-        `- **mcp__grackle__post_finding**: Share discoveries (architecture decisions, bugs, patterns) with other agents working on this project. Parameters: title (string), content (string), category (optional: architecture|api|bug|decision|dependency|pattern|general), tags (optional: string[]).`,
-        `- **mcp__grackle__query_findings**: Query findings posted by other agents. Findings from previous tasks are also in your system context above.`,
-        `IMPORTANT: When you complete your task, post at least one finding summarizing what you did and any key decisions made.`,
-      ].filter(Boolean).join("\n\n");
+      const systemContext = buildTaskSystemContext(task.title, task.description, task.reviewNotes);
 
-      sessionStore.createSession(sessionId, envId, runtime, task.title, model, logPath);
+      sessionStore.createSession(sessionId, environmentId, runtime, task.title, model, logPath);
       taskStore.setTaskSession(task.id, sessionId);
       taskStore.markTaskStarted(task.id);
-      logWriter.initLog(logPath);
 
-      broadcast({ type: "task_started", payload: { taskId: task.id, sessionId, projectId: task.project_id } });
+      broadcast({ type: "task_started", payload: { taskId: task.id, sessionId, projectId: task.projectId } });
 
       const powerlineReq = create(powerline.SpawnRequestSchema, {
         sessionId,
@@ -531,56 +582,16 @@ async function handleMessage(
         branch: task.branch,
         worktreeBasePath: task.branch ? (process.env.GRACKLE_WORKTREE_BASE || "/workspace") : "",
         systemContext,
-        projectId: task.project_id,
+        projectId: task.projectId,
         taskId: task.id,
       });
 
-      (async () => {
-        try {
-          sessionStore.updateSession(sessionId, "running");
-          for await (const event of conn.client.spawn(powerlineReq)) {
-            const sessionEvent = create(grackle.SessionEventSchema, {
-              sessionId,
-              type: event.type,
-              timestamp: event.timestamp,
-              content: event.content,
-              raw: event.raw,
-            });
-            logWriter.writeEvent(logPath, sessionEvent);
-            streamHub.publish(sessionEvent);
-
-            // Intercept finding events and store + broadcast them
-            if (event.type === "finding" && task.project_id) {
-              try {
-                const data = JSON.parse(event.content);
-                const findingId = uuid();
-                findingStore.postFinding(
-                  findingId, task.project_id, task.id, sessionId,
-                  data.category || "general", data.title || "Untitled",
-                  data.content || "", data.tags || [],
-                );
-                broadcast({ type: "finding_posted", payload: { projectId: task.project_id, findingId } });
-                process.stderr.write(`[finding] Stored: ${findingId} "${data.title}" in ${task.project_id}\n`);
-              } catch (err) {
-                process.stderr.write(`[finding] ERROR: ${err} (project=${task.project_id} task=${task.id})\n`);
-              }
-            }
-
-            if (event.type === "status") {
-              if (event.content === "waiting_input") sessionStore.updateSessionStatus(sessionId, "waiting_input");
-              else if (event.content === "running") sessionStore.updateSessionStatus(sessionId, "running");
-              else if (event.content === "completed") sessionStore.updateSession(sessionId, "completed");
-            }
-          }
-          const current = sessionStore.getSession(sessionId);
-          if (current && !["completed", "failed", "killed"].includes(current.status)) {
-            sessionStore.updateSession(sessionId, "completed");
-          }
-        } catch (err) {
-          sessionStore.updateSession(sessionId, "failed", undefined, String(err));
-        } finally {
-          logWriter.endSession(logPath);
-          try { writeTranscript(logPath); } catch { /* non-critical */ }
+      processEventStream(conn.client.spawn(powerlineReq), {
+        sessionId,
+        logPath,
+        projectId: task.projectId,
+        taskId: task.id,
+        onComplete: () => {
           // Auto-move task to review on completion
           const t = taskStore.getTask(task.id);
           if (t && t.status === "in_progress") {
@@ -590,10 +601,10 @@ async function handleMessage(
             } else if (sess?.status === "failed") {
               taskStore.markTaskCompleted(task.id, "failed");
             }
-            broadcast({ type: "task_updated", payload: { taskId: task.id, projectId: task.project_id } });
+            broadcast({ type: "task_updated", payload: { taskId: task.id, projectId: task.projectId } });
           }
-        }
-      })();
+        },
+      });
       break;
     }
 
@@ -603,7 +614,7 @@ async function handleMessage(
 
       taskStore.markTaskCompleted(taskId, "done");
       const task = taskStore.getTask(taskId);
-      const unblocked = task ? taskStore.checkAndUnblock(task.project_id) : [];
+      const unblocked = task ? taskStore.checkAndUnblock(task.projectId) : [];
       sendWs(ws, {
         type: "task_approved",
         payload: {
@@ -623,7 +634,7 @@ async function handleMessage(
       if (task) {
         taskStore.updateTask(
           task.id, task.title, task.description, "assigned",
-          task.env_id, JSON.parse(task.depends_on), reviewNotes,
+          task.environmentId, safeParseJsonArray(task.dependsOn), reviewNotes,
         );
       }
       broadcast({ type: "task_rejected", payload: { taskId } });
@@ -632,8 +643,15 @@ async function handleMessage(
 
     case "delete_task": {
       const taskId = msg.payload?.taskId as string;
-      if (taskId) taskStore.deleteTask(taskId);
-      broadcast({ type: "task_deleted", payload: { taskId } });
+      if (!taskId) return;
+      const children = taskStore.getChildren(taskId);
+      if (children.length > 0) {
+        sendWs(ws, { type: "error", payload: { message: "Cannot delete task with children. Delete children first." } });
+        return;
+      }
+      const deletedTask = taskStore.getTask(taskId);
+      taskStore.deleteTask(taskId);
+      broadcast({ type: "task_deleted", payload: { taskId, projectId: deletedTask?.projectId } });
       break;
     }
 
@@ -654,14 +672,14 @@ async function handleMessage(
           projectId,
           findings: rows.map((r) => ({
             id: r.id,
-            projectId: r.project_id,
-            taskId: r.task_id,
-            sessionId: r.session_id,
+            projectId: r.projectId,
+            taskId: r.taskId,
+            sessionId: r.sessionId,
             category: r.category,
             title: r.title,
             content: r.content,
-            tags: JSON.parse(r.tags),
-            createdAt: r.created_at,
+            tags: safeParseJsonArray(r.tags),
+            createdAt: r.createdAt,
           })),
         },
       });
@@ -701,13 +719,13 @@ async function handleMessage(
         return;
       }
 
-      const envId = task.env_id || projectStore.getProject(task.project_id)?.default_env_id;
-      if (!envId) {
+      const environmentId = task.environmentId || projectStore.getProject(task.projectId)?.defaultEnvironmentId;
+      if (!environmentId) {
         sendWs(ws, { type: "task_diff", payload: { taskId, error: "No environment" } });
         return;
       }
 
-      const conn = adapterManager.getConnection(envId);
+      const conn = adapterManager.getConnection(environmentId);
       if (!conn) {
         sendWs(ws, { type: "task_diff", payload: { taskId, error: "Environment not connected" } });
         return;
@@ -735,6 +753,190 @@ async function handleMessage(
       } catch (err) {
         sendWs(ws, { type: "task_diff", payload: { taskId, error: String(err) } });
       }
+      break;
+    }
+
+    case "provision_environment": {
+      const environmentId = msg.payload?.environmentId as string;
+      if (!environmentId) {
+        sendWs(ws, { type: "error", payload: { message: "environmentId required" } });
+        return;
+      }
+
+      const env = envRegistry.getEnvironment(environmentId);
+      if (!env) {
+        sendWs(ws, { type: "error", payload: { message: `Environment not found: ${environmentId}` } });
+        return;
+      }
+
+      const adapter = adapterManager.getAdapter(env.adapterType);
+      if (!adapter) {
+        sendWs(ws, { type: "error", payload: { message: `No adapter for type: ${env.adapterType}` } });
+        return;
+      }
+
+      logger.info({ environmentId, adapterType: env.adapterType }, "Provisioning environment");
+      envRegistry.updateEnvironmentStatus(environmentId, "connecting");
+      broadcastEnvironments();
+
+      // Run provision in background, streaming progress to the requesting client
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
+      (async () => {
+        try {
+          const config = safeParseAdapterConfig(env.adapterConfig, environmentId);
+          const powerlineToken = env.powerlineToken || "";
+          logger.info({ environmentId, config }, "Starting adapter.provision");
+          for await (const event of adapter.provision(environmentId, config, powerlineToken)) {
+            logger.info({ environmentId, stage: event.stage, message: event.message }, "Provision progress");
+            sendWs(ws, {
+              type: "provision_progress",
+              payload: { environmentId, stage: event.stage, message: event.message, progress: event.progress },
+            });
+          }
+          logger.info({ environmentId }, "Provision complete, calling adapter.connect");
+          const conn = await adapter.connect(environmentId, config, powerlineToken);
+          adapterManager.setConnection(environmentId, conn);
+          envRegistry.updateEnvironmentStatus(environmentId, "connected");
+          logger.info({ environmentId }, "Environment connected");
+          sendWs(ws, {
+            type: "provision_progress",
+            payload: { environmentId, stage: "ready", message: "Environment connected", progress: 1 },
+          });
+        } catch (err) {
+          logger.error({ environmentId, err }, "Provision failed");
+          envRegistry.updateEnvironmentStatus(environmentId, "error");
+          sendWs(ws, {
+            type: "provision_progress",
+            payload: { environmentId, stage: "error", message: `Connection failed: ${err}`, progress: 0 },
+          });
+        }
+        broadcastEnvironments();
+      })();
+      break;
+    }
+
+    case "stop_environment": {
+      const environmentId = msg.payload?.environmentId as string;
+      if (!environmentId) {
+        sendWs(ws, { type: "error", payload: { message: "environmentId required" } });
+        return;
+      }
+
+      const env = envRegistry.getEnvironment(environmentId);
+      if (!env) {
+        sendWs(ws, { type: "error", payload: { message: `Environment not found: ${environmentId}` } });
+        return;
+      }
+
+      const adapter = adapterManager.getAdapter(env.adapterType);
+      if (adapter) {
+        const config = safeParseAdapterConfig(env.adapterConfig, environmentId);
+        await adapter.stop(environmentId, config);
+      }
+      adapterManager.removeConnection(environmentId);
+      envRegistry.updateEnvironmentStatus(environmentId, "disconnected");
+      logger.info({ environmentId }, "Environment stopped");
+      broadcastEnvironments();
+      break;
+    }
+
+    case "add_environment": {
+      const displayName = (msg.payload?.displayName as string) || "";
+      const adapterType = (msg.payload?.adapterType as string) || "";
+      if (!displayName || !adapterType) {
+        sendWs(ws, { type: "error", payload: { message: "displayName and adapterType required" } });
+        return;
+      }
+      if (!adapterManager.getAdapter(adapterType)) {
+        sendWs(ws, { type: "error", payload: { message: `Unknown adapter type: ${adapterType}` } });
+        return;
+      }
+      let id = slugify(displayName) || uuid().slice(0, 8);
+      if (envRegistry.getEnvironment(id)) {
+        id = `${id}-${uuid().slice(0, 4)}`;
+      }
+      const adapterConfig = msg.payload?.adapterConfig
+        ? JSON.stringify(msg.payload.adapterConfig)
+        : "{}";
+      const defaultRuntime = (msg.payload?.defaultRuntime as string) || DEFAULT_RUNTIME;
+      envRegistry.addEnvironment(id, displayName, adapterType, adapterConfig, defaultRuntime);
+      logger.info({ id, displayName, adapterType }, "Environment added via WebSocket");
+      broadcast({ type: "environment_added", payload: { environmentId: id } });
+      broadcastEnvironments();
+      break;
+    }
+
+    case "remove_environment": {
+      const environmentId = msg.payload?.environmentId as string;
+      if (!environmentId) {
+        sendWs(ws, { type: "error", payload: { message: "environmentId required" } });
+        return;
+      }
+
+      const env = envRegistry.getEnvironment(environmentId);
+      if (env) {
+        const adapter = adapterManager.getAdapter(env.adapterType);
+        if (adapter) {
+          const config = safeParseAdapterConfig(env.adapterConfig, environmentId);
+          try { await adapter.destroy(environmentId, config); } catch { /* best-effort */ }
+          try { await adapter.disconnect(environmentId); } catch { /* best-effort */ }
+        }
+      }
+      adapterManager.removeConnection(environmentId);
+      sessionStore.deleteByEnvironment(environmentId);
+      envRegistry.removeEnvironment(environmentId);
+      logger.info({ environmentId }, "Environment removed");
+      broadcast({ type: "environment_removed", payload: { environmentId } });
+      broadcastEnvironments();
+      break;
+    }
+
+    // ─── Tokens ───────────────────────────────────────────
+
+    case "list_tokens": {
+      const items = tokenBroker.listTokens();
+      sendWs(ws, {
+        type: "tokens",
+        payload: {
+          tokens: items.map((t) => ({
+            name: t.name,
+            tokenType: t.type,
+            envVar: t.envVar || "",
+            filePath: t.filePath || "",
+            expiresAt: t.expiresAt || "",
+          })),
+        },
+      });
+      break;
+    }
+
+    case "set_token": {
+      const name = msg.payload?.name as string;
+      const value = msg.payload?.value as string;
+      if (!name || !value) {
+        sendWs(ws, { type: "error", payload: { message: "name and value required" } });
+        return;
+      }
+      await tokenBroker.setToken({
+        name,
+        type: (msg.payload?.tokenType as string) || "env_var",
+        envVar: (msg.payload?.envVar as string) || "",
+        filePath: (msg.payload?.filePath as string) || "",
+        value,
+        expiresAt: (msg.payload?.expiresAt as string) || "",
+      });
+      broadcast({ type: "token_changed" });
+      break;
+    }
+
+    case "delete_token": {
+      const tokenName = msg.payload?.name as string;
+      if (!tokenName) {
+        sendWs(ws, { type: "error", payload: { message: "name required" } });
+        return;
+      }
+      await tokenBroker.deleteToken(tokenName);
+      broadcast({ type: "token_changed" });
       break;
     }
   }

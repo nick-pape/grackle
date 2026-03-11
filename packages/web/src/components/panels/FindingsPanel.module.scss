@@ -1,0 +1,72 @@
+@use '../../styles/mixins' as *;
+
+// =============================================================================
+// Findings Panel — project findings cards with staggered animation
+// =============================================================================
+
+.container {
+  padding: var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.emptyState {
+  padding: var(--space-xl);
+  color: var(--text-tertiary);
+  text-align: center;
+}
+
+.card {
+  @include glass-card;
+  @include glass-hover;
+  padding: var(--space-md);
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-xs);
+}
+
+.categoryBadge {
+  border-radius: var(--radius-full);
+  padding: 2px var(--space-md);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  text-transform: uppercase;
+}
+
+.findingTitle {
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+  font-size: var(--font-size-md);
+}
+
+.findingDate {
+  margin-left: auto;
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+}
+
+.findingContent {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+}
+
+.tags {
+  margin-top: var(--space-xs);
+  display: flex;
+  gap: var(--space-xs);
+}
+
+// Frosted inset chip for tags — third glass tier with category-tinted border
+.tag {
+  @include glass-inset;
+  font-size: 10px;
+  padding: 1px var(--space-xs);
+  border-radius: var(--radius-full);
+  color: var(--text-secondary);
+}

@@ -1,0 +1,149 @@
+@use '../../styles/mixins' as *;
+
+// =============================================================================
+// Environment List — environment cards with nested session rows
+// =============================================================================
+
+.container {
+  padding: var(--space-sm) 0;
+}
+
+.header {
+  @include section-label;
+  padding: var(--space-xs) var(--space-md);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.addButton {
+  @include btn-ghost;
+  font-size: var(--font-size-sm);
+  line-height: 1;
+  padding: 1px 5px;
+}
+
+.emptyState {
+  padding: var(--space-md);
+  color: var(--text-tertiary);
+  font-size: var(--font-size-sm);
+}
+
+.envRow {
+  padding: var(--space-sm) var(--space-md);
+  font-size: var(--font-size-md);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  margin: 0 var(--space-xs);
+  transition: background var(--transition-fast);
+
+  &:hover {
+    background: var(--bg-overlay);
+  }
+
+  &.targeted {
+    background: var(--bg-overlay);
+  }
+
+  &.expanded {
+    background: var(--bg-overlay);
+  }
+}
+
+.statusDot {
+  font-size: var(--font-size-sm);
+
+  &.pulse {
+    animation: pulse 2s ease-in-out infinite;
+  }
+}
+
+.envName {
+  flex: 1;
+}
+
+.envActions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.idleLabel {
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+.newChatButton {
+  @include btn-ghost;
+  font-size: var(--font-size-sm);
+  line-height: 1;
+  padding: 1px 5px;
+}
+
+// --- Expandable environment action row ---
+
+.envActionsRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-xs) var(--space-md) var(--space-sm) 28px;
+  animation: fadeIn 150ms ease forwards;
+}
+
+.connectButton {
+  @include btn-ghost(var(--accent-green));
+  font-size: var(--font-size-sm);
+  padding: 2px 8px;
+}
+
+.stopButton {
+  @include btn-ghost(var(--accent-yellow));
+  font-size: var(--font-size-sm);
+  padding: 2px 8px;
+}
+
+.deleteButton {
+  @include btn-ghost(var(--accent-red));
+  font-size: var(--font-size-sm);
+  padding: 2px 8px;
+  margin-left: auto;
+}
+
+.provisionMessage {
+  font-size: 11px;
+  color: var(--accent-blue);
+  flex: 1;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+// --- Session rows ---
+
+.sessionRow {
+  @include hover-lift;
+  padding: var(--space-xs) var(--space-md) var(--space-xs) 28px;
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  color: var(--text-secondary);
+  border-radius: var(--radius-sm);
+  margin: 0 var(--space-xs);
+
+  &.selected {
+    background: var(--bg-overlay);
+    color: var(--text-primary);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+}
+
+.sessionDot {
+  font-size: 10px;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}

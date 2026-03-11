@@ -1,6 +1,6 @@
 import { createClient } from "@connectrpc/connect";
 import { createGrpcTransport } from "@connectrpc/connect-node";
-import { powerline } from "@grackle/common";
+import { powerline } from "@grackle-ai/common";
 import type { PowerLineClient } from "./adapter.js";
 
 /**

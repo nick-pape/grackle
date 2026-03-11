@@ -8,6 +8,10 @@ packages/*/pnpm-lock.yaml
 *.tsbuildinfo
 rush-logs/
 
+# Heft build outputs
+rigs/*/lib/
+packages/*/temp/
+
 # Generated proto files
 packages/common/src/gen/
 
@@ -29,7 +33,9 @@ packages/web/test-results/
 
 # Demo artifacts
 *.png
+!docs/screenshots/*.png
 *.mp4
 tools/demo-recorder/test-output/
 tools/demo-recorder/voices/*.bak
-
+nul
+*.log

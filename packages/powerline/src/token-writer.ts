@@ -1,25 +1,25 @@
 import { writeFile, mkdir, realpath } from "node:fs/promises";
 import { dirname, resolve, normalize } from "node:path";
 import { homedir } from "node:os";
-import { realpathSync } from "node:fs";
+import { realpathSync, existsSync } from "node:fs";
 import { logger } from "./logger.js";
 
-const envTokens = new Map<string, string>();
-
-/** Return the map of environment variable tokens that have been written to `process.env`. */
-export function getEnvTokens(): Map<string, string> {
-  return envTokens;
-}
-
 /**
- * Verify that a resolved file path is under the user's home directory,
+ * @internal Verify that a resolved file path is under the user's home directory,
  * accounting for symlinks and case-insensitive filesystems.
+ * Exported for testing.
  */
-function isUnderHome(resolvedPath: string, home: string): boolean {
+export function isUnderHome(resolvedPath: string, home: string): boolean {
   // Normalize case for case-insensitive filesystems (Windows, macOS default)
-  const normalizedPath = resolvedPath.toLowerCase();
-  const normalizedHome = home.toLowerCase();
-  return normalizedPath.startsWith(normalizedHome);
+  // Also normalize separators to forward slashes for consistent comparison
+  const normalizedPath = resolvedPath.toLowerCase().replace(/\\/g, "/");
+  const normalizedHome = home.toLowerCase().replace(/\\/g, "/");
+  // Ensure the home prefix is followed by a separator (or is an exact match)
+  // to prevent prefix-collision (e.g. /home/user vs /home/username)
+  const homeWithSep = normalizedHome.endsWith("/")
+    ? normalizedHome
+    : normalizedHome + "/";
+  return normalizedPath.startsWith(homeWithSep) || normalizedPath === normalizedHome;
 }
 
 /** Apply a batch of tokens by setting env vars or writing files under the user's home directory. */
@@ -37,7 +37,6 @@ export async function writeTokens(
   for (const token of tokens) {
     if (token.type === "env_var" && token.envVar) {
       process.env[token.envVar] = token.value;
-      envTokens.set(token.envVar, token.value);
       logger.info({ envVar: token.envVar }, "Set env var %s", token.envVar);
     } else if (token.type === "file" && token.filePath) {
       const resolvedPath = resolve(normalize(token.filePath.replace(/^~/, home)));
@@ -46,13 +45,18 @@ export async function writeTokens(
         logger.warn({ filePath: resolvedPath }, "Refusing to write token outside home directory");
         continue;
       }
-      await mkdir(dirname(resolvedPath), { recursive: true });
 
-      // Resolve symlinks on the parent directory BEFORE writing to prevent symlink-based traversal
+      // Resolve symlinks on the nearest existing ancestor BEFORE creating directories
+      // to prevent symlink-based traversal that could escape home
       try {
-        const realParent = await realpath(dirname(resolvedPath));
-        if (!isUnderHome(realParent, home)) {
-          logger.warn({ filePath: resolvedPath, realParent }, "Parent directory resolves outside home via symlink");
+        let checkPath = dirname(resolvedPath);
+        // Walk up until we find an existing ancestor to realpath-check
+        while (!existsSync(checkPath) && checkPath !== dirname(checkPath)) {
+          checkPath = dirname(checkPath);
+        }
+        const realAncestor = await realpath(checkPath);
+        if (!isUnderHome(realAncestor, home)) {
+          logger.warn({ filePath: resolvedPath, realAncestor }, "Parent directory resolves outside home via symlink");
           continue;
         }
       } catch {
@@ -60,6 +64,7 @@ export async function writeTokens(
         continue;
       }
 
+      await mkdir(dirname(resolvedPath), { recursive: true });
       await writeFile(resolvedPath, token.value, { mode: 0o600 });
 
       logger.info({ filePath: resolvedPath }, "Wrote file %s", resolvedPath);

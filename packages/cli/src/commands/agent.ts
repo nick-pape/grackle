@@ -1,6 +1,7 @@
 import type { Command } from "commander";
 import chalk from "chalk";
 import { createGrackleClient } from "../client.js";
+import { grackle, sessionStatusToString } from "@grackle-ai/common";
 import Table from "cli-table3";
 
 /** Register agent-related commands: `spawn`, `resume`, `status`, `kill`, and `attach`. */
@@ -11,10 +12,10 @@ export function registerAgentCommands(program: Command): void {
     .option("--model <model>", "Model to use")
     .option("--max-turns <n>", "Maximum turns", parseInt)
     .option("--runtime <runtime>", "Agent runtime")
-    .action(async (envId: string, prompt: string, opts) => {
+    .action(async (environmentId: string, prompt: string, opts) => {
       const client = createGrackleClient();
       const session = await client.spawnAgent({
-        envId,
+        environmentId,
         prompt,
         model: opts.model || "",
         maxTurns: opts.maxTurns || 0,
@@ -46,19 +47,28 @@ export function registerAgentCommands(program: Command): void {
     .action(async (opts) => {
       const client = createGrackleClient();
       const res = await client.listSessions({
-        envId: opts.env || "",
-        status: opts.all ? "" : "active",
+        environmentId: opts.env || "",
+        status: grackle.SessionStatus.UNSPECIFIED,
       });
-      if (res.sessions.length === 0) {
+      const activeStatuses = new Set([
+        grackle.SessionStatus.PENDING,
+        grackle.SessionStatus.RUNNING,
+        grackle.SessionStatus.WAITING_INPUT,
+        grackle.SessionStatus.SUSPENDED,
+      ]);
+      const sessions = opts.all
+        ? res.sessions
+        : res.sessions.filter((s) => activeStatuses.has(s.status));
+      if (sessions.length === 0) {
         console.log("No sessions.");
         return;
       }
       const table = new Table({
         head: ["ID", "Env", "Runtime", "Status", "Prompt", "Started"],
       });
-      for (const s of res.sessions) {
+      for (const s of sessions) {
         const prompt = s.prompt.length > 40 ? s.prompt.slice(0, 40) + "..." : s.prompt;
-        table.push([s.id.slice(0, 8), s.envId, s.runtime, s.status, prompt, s.startedAt]);
+        table.push([s.id.slice(0, 8), s.environmentId, s.runtime, sessionStatusToString(s.status), prompt, s.startedAt]);
       }
       console.log(table.toString());
     });
@@ -79,46 +89,56 @@ export function registerAgentCommands(program: Command): void {
       const client = createGrackleClient();
       console.log(`Attached to ${sessionId} (Ctrl+C to detach)\n`);
 
-      // Set up stdin for input
       const readline = await import("node:readline");
       const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 
-      // Stream events
-      const streamPromise = (async () => {
-        for await (const event of client.streamSession({ id: sessionId })) {
-          printEvent(event);
-          if (event.type === "status" && event.content === "waiting_input") {
-            rl.question("> ", async (answer) => {
-              await client.sendInput({ sessionId, text: answer });
-            });
-          }
-        }
-      })();
+      let prompting = false;
 
-      await streamPromise;
+      /** Prompt for input once and send the response. */
+      function promptForInput(): void {
+        if (prompting) {
+          return;
+        }
+        prompting = true;
+        rl.question("> ", (answer) => {
+          prompting = false;
+          client.sendInput({ sessionId, text: answer }).catch((err: unknown) => {
+            const message = err instanceof Error ? err.message : String(err);
+            console.error(`Failed to send input for session ${sessionId}: ${message}`);
+          });
+        });
+      }
+
+      for await (const event of client.streamSession({ id: sessionId })) {
+        printEvent(event);
+        if (event.type === grackle.EventType.STATUS && event.content === "waiting_input") {
+          promptForInput();
+        }
+      }
+
       rl.close();
     });
 }
 
-function printEvent(event: { type: string; content: string; timestamp: string }): void {
+function printEvent(event: { type: grackle.EventType; content: string; timestamp: string }): void {
   const time = new Date(event.timestamp).toLocaleTimeString();
   switch (event.type) {
-    case "system":
+    case grackle.EventType.SYSTEM:
       console.log(chalk.gray(`[${time}] ${event.content}`));
       break;
-    case "text":
+    case grackle.EventType.TEXT:
       console.log(event.content);
       break;
-    case "tool_use":
+    case grackle.EventType.TOOL_USE:
       console.log(chalk.blue(`> ${event.content}`));
       break;
-    case "tool_result":
+    case grackle.EventType.TOOL_RESULT:
       console.log(chalk.gray(event.content));
       break;
-    case "error":
+    case grackle.EventType.ERROR:
       console.log(chalk.red(`[ERROR] ${event.content}`));
       break;
-    case "status":
+    case grackle.EventType.STATUS:
       console.log(chalk.yellow(`--- ${event.content} ---`));
       break;
   }

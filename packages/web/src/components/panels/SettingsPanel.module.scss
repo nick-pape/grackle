@@ -1,0 +1,131 @@
+@use '../../styles/mixins' as *;
+
+// =============================================================================
+// Settings Panel — token management and future settings
+// =============================================================================
+
+.container {
+  padding: var(--space-lg);
+  overflow-y: auto;
+  height: 100%;
+}
+
+.heading {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-heavy);
+  color: var(--text-primary);
+  margin: 0 0 var(--space-lg);
+}
+
+.section {
+  @include glass-card;
+  padding: var(--space-lg);
+  margin-bottom: var(--space-lg);
+}
+
+.sectionTitle {
+  @include section-label;
+  margin: 0 0 var(--space-xs);
+}
+
+.sectionDescription {
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+  margin: 0 0 var(--space-lg);
+}
+
+.emptyState {
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+  padding: var(--space-lg) 0;
+  text-align: center;
+}
+
+// ─── Token List ─────────────────────────────────────
+
+.tokenList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  margin-bottom: var(--space-lg);
+}
+
+.tokenRow {
+  @include glass-inset;
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+}
+
+.tokenBadge {
+  @include glass-inset;
+  font-size: var(--font-size-xs);
+  padding: 2px var(--space-sm);
+  color: var(--accent-cyan);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.tokenName {
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  min-width: 100px;
+}
+
+.tokenTarget {
+  flex: 1;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.deleteButton {
+  background: none;
+  border: none;
+  color: var(--text-tertiary);
+  font-size: var(--font-size-lg);
+  cursor: pointer;
+  padding: 0 var(--space-xs);
+  line-height: 1;
+  transition: color var(--transition-fast);
+
+  &:hover {
+    color: var(--accent-red);
+  }
+}
+
+// ─── Add Form ───────────────────────────────────────
+
+.addForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.formRow {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: center;
+}
+
+.input {
+  @include input-field;
+  flex: 1;
+  font-size: var(--font-size-sm);
+}
+
+.select {
+  @include select-field;
+  flex: 0 0 auto;
+  min-width: 160px;
+}
+
+.addButton {
+  @include btn-primary;
+  white-space: nowrap;
+}

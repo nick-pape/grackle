@@ -1,0 +1,19 @@
+{
+  "name": "@grackle-ai/heft-playwright-plugin",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Heft task plugin that runs Playwright tests",
+  "main": "lib/PlaywrightTestPlugin.js",
+  "scripts": {
+    "build": "tsc"
+  },
+  "peerDependencies": {
+    "@rushstack/heft": "1.2.4",
+    "@playwright/test": "^1.49.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0",
+    "@rushstack/heft": "1.2.4",
+    "typescript": "~5.7.0"
+  }
+}

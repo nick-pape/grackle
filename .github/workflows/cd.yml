@@ -1,0 +1,212 @@
+name: CD
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: cd-publish
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GH_PAT }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Install
+        run: node common/scripts/install-run-rush.js install
+
+      - name: Build
+        run: node common/scripts/install-run-rush.js build
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+        working-directory: packages/web
+
+      - name: Run tests
+        run: node common/scripts/install-run-rush.js test --verbose
+
+      # In lockStepVersion mode, `rush version --bump` only consumes changefiles
+      # for the mainProject (@grackle-ai/cli). Changefiles targeting other
+      # lockstep packages (e.g. @grackle-ai/powerline) survive indefinitely,
+      # forcing every bump to match their type. Fix: consolidate all changefiles
+      # into the mainProject directory before bumping, and sync nextBump to the
+      # highest requested type.
+      - name: Consolidate changefiles and sync nextBump
+        id: changefile_check
+        run: |
+          # Read mainProject from version-policies.json (single source of truth)
+          POLICY_FILE="common/config/rush/version-policies.json"
+          MAIN_PROJECT=$(node -p "
+            const v = JSON.parse(require('fs').readFileSync('$POLICY_FILE', 'utf8'));
+            const p = v.find(pol => pol.policyName === 'grackle');
+            if (!p) { console.error('Policy not found'); process.exit(1); }
+            p.mainProject;
+          ")
+          # e.g. "@grackle-ai/cli" → "cli"
+          MAIN_PKG_DIR=$(echo "$MAIN_PROJECT" | sed 's|.*/||')
+          MAIN_DIR="common/changes/$MAIN_PROJECT"
+
+          mapfile -t changefiles < <(find common/changes/ -name '*.json' 2>/dev/null)
+          if [ ${#changefiles[@]} -eq 0 ]; then
+            echo "No changefiles found, skipping version bump"
+            echo "has_changefiles=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "Found ${#changefiles[@]} changefile(s)"
+
+          # Determine the highest bump type across all changefiles.
+          # Priority: major (blocked) > minor > patch > none (skip).
+          if grep -rq '"type":[[:space:]]*"major"' common/changes/; then
+            echo "::error::Major version bump found in changefiles — blocked by policy"
+            exit 1
+          fi
+          highest="none"
+          if grep -rq '"type":[[:space:]]*"patch"' common/changes/; then
+            highest="patch"
+          fi
+          if grep -rq '"type":[[:space:]]*"minor"' common/changes/; then
+            highest="minor"
+          fi
+          # All changefiles are "none" — nothing to publish
+          if [ "$highest" = "none" ]; then
+            echo "All changefiles are type \"none\", skipping version bump"
+            echo "has_changefiles=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "has_changefiles=true" >> "$GITHUB_OUTPUT"
+
+          # Consolidate non-mainProject changefiles into the mainProject
+          # directory so rush version --bump actually consumes them.
+          mkdir -p "$MAIN_DIR"
+          for f in "${changefiles[@]}"; do
+            pkg_dir=$(basename "$(dirname "$f")")
+            if [ "$pkg_dir" != "$MAIN_PKG_DIR" ]; then
+              echo "Consolidating $(basename "$f") from $pkg_dir → $MAIN_PKG_DIR"
+              CHANGEFILE="$f" MAIN_PROJECT="$MAIN_PROJECT" node -e "
+                const fs = require('fs');
+                const filePath = process.env.CHANGEFILE;
+                const mainProject = process.env.MAIN_PROJECT;
+                const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+                data.packageName = mainProject;
+                for (const c of data.changes) { c.packageName = mainProject; }
+                fs.writeFileSync(filePath, JSON.stringify(data, null, 2) + '\n');
+              "
+              mv_dest="$MAIN_DIR/${pkg_dir}_$(basename "$f")"
+              if [ -e "$mv_dest" ]; then
+                echo "::error::Destination changefile $mv_dest already exists; refusing to overwrite"
+                exit 1
+              fi
+              mv "$f" "$mv_dest"
+              # Remove empty parent directories
+              parent=$(dirname "$f")
+              rmdir --ignore-fail-on-non-empty -p "$parent" 2>/dev/null || true
+            fi
+          done
+
+          # Update nextBump in version-policies.json so the actual semver
+          # increment matches what the changefiles requested.
+          HIGHEST="$highest" node -e "
+            const fs = require('fs');
+            const p = '$POLICY_FILE';
+            const v = JSON.parse(fs.readFileSync(p, 'utf8'));
+            const policy = v.find(pol => pol.policyName === 'grackle');
+            if (!policy) { console.error('Policy not found in ' + p); process.exit(1); }
+            policy.nextBump = process.env.HIGHEST;
+            fs.writeFileSync(p, JSON.stringify(v, null, 2) + '\n');
+          "
+          echo "Set nextBump to $highest"
+
+      # rush version --bump creates a temp branch, pushes it, then tries to
+      # fast-forward main directly. The direct push fails due to branch
+      # protection, so we let it fail and merge via PR instead.
+      - name: Bump versions
+        id: bump
+        if: steps.changefile_check.outputs.has_changefiles == 'true'
+        run: |
+          set +e
+          output=$(node common/scripts/install-run-rush.js version --bump --target-branch main 2>&1)
+          status=$?
+          set -e
+
+          echo "$output"
+
+          if [ "$status" -ne 0 ]; then
+            if echo "$output" | grep -q 'GH013'; then
+              echo "rush version failed due to protected branch; proceeding with PR-based merge."
+            else
+              echo "rush version failed with status $status"
+              exit "$status"
+            fi
+          fi
+
+          branch=$(echo "$output" | grep -oE 'version/bump-[0-9]+' | head -1)
+          if [ -n "$branch" ]; then
+            echo "branch=$branch" >> "$GITHUB_OUTPUT"
+            echo "has_bump=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "No version bump needed"
+            echo "has_bump=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Merge version bump into main
+        if: steps.bump.outputs.has_bump == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        run: |
+          pr_url=$(gh pr create \
+            --base main \
+            --head "${{ steps.bump.outputs.branch }}" \
+            --title "chore: bump versions [skip ci]" \
+            --body "Automated version bump from publish workflow.")
+
+          gh pr merge "$pr_url" --squash --admin --delete-branch
+
+      # After squash-merge, local main has diverged from origin/main
+      # (rush merged the temp branch locally, but the PR was squash-merged).
+      # Reset to origin/main to get the squashed result.
+      - name: Checkout updated main
+        if: steps.bump.outputs.has_bump == 'true'
+        run: git fetch origin main && git checkout -B main origin/main
+
+      - name: Rebuild with bumped versions
+        if: steps.bump.outputs.has_bump == 'true'
+        run: |
+          node common/scripts/install-run-rush.js install
+          node common/scripts/install-run-rush.js build
+
+      - name: Publish to npm
+        if: steps.bump.outputs.has_bump == 'true'
+        run: node common/scripts/install-run-rush.js publish --include-all --publish --set-access-level public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Create GitHub Release
+        if: steps.bump.outputs.has_bump == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        run: |
+          version=$(node -p "require('./packages/cli/package.json').version")
+          gh release create "v${version}" \
+            --target main \
+            --title "v${version}" \
+            --generate-notes

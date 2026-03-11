@@ -1,0 +1,172 @@
+# 🐦‍⬛ Grackle
+
+**Orchestrate AI coding agents across any environment, with any runtime, at any scale.**
+
+Grackle is a multi-agent coordination platform. Break a project into tasks, dispatch each to an agent running in its own isolated environment, and watch them work in real time. Review real diffs, share knowledge between agents, and scale from one agent to a swarm — without rewriting your setup.
+
+![Dashboard — projects, tasks, and live agent output](docs/screenshots/dashboard-projects-tasks.png)
+
+## 💡 Philosophy
+
+### 🔌 Environments are just compute
+
+Docker, local, SSH, and GitHub Codespaces — it shouldn't matter where an agent runs. Grackle treats environments as interchangeable compute behind a single protocol. Same interface, same results, regardless of where the work happens.
+
+### 🔄 Runtime agnostic by design
+
+The agent loop landscape is wildly unstable. Claude Code, Copilot, Codex, Goose [⭐#29](https://github.com/nick-pape/grackle/issues/29) — whatever ships next month. Grackle wraps them all behind a standard interface so you can swap runtimes without changing your workflow. Your orchestration layer shouldn't be coupled to whichever vendor is winning this quarter.
+
+### 📈 Scales from remote control to swarms
+
+Most tools force a choice: run one agent manually, or build a bespoke swarm framework from scratch. Grackle covers the whole spectrum. No other tool gives you this gradient — start simple, scale up.
+
+#### 🎮 Remote Control
+
+Manage a single agent in a remote environment.
+
+```mermaid
+graph LR
+    You["👤 You"] --> S["⚡ Server"]
+    S -- PowerLine --> E["🐳 Environment"]
+    E --- A["🤖 Agent"]
+```
+
+#### ⛓️ Workflow
+
+Decompose work into task trees with parent/child hierarchy. Chain siblings with dependencies. Review artifacts at each step.
+
+```mermaid
+graph TD
+    Root["📋 Implement Auth"] --> A["✅ Design token schema"]
+    Root --> B["🔄 Implement middleware"]
+    Root --> C["⏳ Write integration tests"]
+    B --> C
+```
+
+![Task tree — hierarchical tasks with status indicators and expand/collapse](docs/screenshots/task-tree-hierarchy.png)
+
+![DAG visualization — interactive dependency graph with hierarchy and dependency edges](docs/screenshots/dag-visualization.png)
+
+#### 👥 Team [⭐#37](https://github.com/nick-pape/grackle/issues/37)
+
+Multiple agents working in parallel on a shared project, coordinating through findings.
+
+```mermaid
+graph TD
+    P["📁 Project"]
+    P --> A1["🤖 Agent A"] & A2["🤖 Agent B"] & A3["🤖 Agent C"]
+    A1 & A2 & A3 <-.-> F["💬 Shared Findings"]
+```
+
+#### 🐝 Swarm [⭐#38](https://github.com/nick-pape/grackle/issues/38)
+
+Autonomous task decomposition, agent recruitment, knowledge sharing.
+
+```mermaid
+graph TD
+    G["🎯 Goal"] --> D["Decompose"]
+    D --> T1["🤖"] & T2["🤖"] & T3["🤖"] & T4["🤖"]
+    T1 & T2 & T3 & T4 --> K["🧠 Knowledge Graph"]
+    K --> N["🤖 ...more agents"]
+    N -.-> D
+    style N fill:#333,stroke:#666,stroke-dasharray: 5 5
+```
+
+### 🔍 Auditable artifacts, not magic ⭐
+
+Every agent produces real, reviewable output: git diffs, markdown reports, PR comments, findings. The full conversation thread is stored in the central server database — every tool call, every decision, fully auditable. Nothing happens in a black box. Git branches and tags provide natural coordination points — not a proprietary state machine. If you can read a diff, you can audit a swarm.
+
+![Diff review — see exactly what each agent changed](docs/screenshots/diff-review.png)
+
+### 🧠 Agents that actually coordinate
+
+Agents don't just run in parallel — they share knowledge. One agent's architectural insight becomes another agent's context through findings and the knowledge graph [⭐#13](https://github.com/nick-pape/grackle/issues/13). Agent personas [⭐#11](https://github.com/nick-pape/grackle/issues/11) with tool allowlists keep specialists focused. The coordination primitives are the ones engineers already use: git, diffs, code review.
+
+![Findings — categorized discoveries shared across agents](docs/screenshots/findings-panel.png)
+
+## 🏗️ Example Topology
+
+```mermaid
+graph TD
+    UI["🌐 Web UI"]
+    CLI["⌨️ CLI"]
+    UI & CLI --- S["⚡ Grackle Server"]
+
+    subgraph D1["🐳 Docker"]
+        D1A["🤖 Claude"] & D1B["🤖 Claude"] & D1C["🤖 Copilot"] & D1D["..."]
+    end
+
+    subgraph D2["🐳 Docker"]
+        D2A["🤖 Copilot"] & D2B["🤖 Codex"] & D2C["..."]
+    end
+
+    subgraph CS1["☁️ Codespace"]
+        CS1A["🤖 Claude"] & CS1B["🤖 Copilot"] & CS1C["..."]
+    end
+
+    subgraph CS2["☁️ Codespace"]
+        CS2A["🤖 Claude"] & CS2B["🤖 Claude"] & CS2C["..."]
+    end
+
+    S --- D1 & D2 & CS1 & CS2
+```
+
+
+## ✨ Features
+
+| | Feature | Description |
+|---|---|---|
+| 📡 | **Real-time streaming** | Watch agent tool calls and output as they happen, bridged from gRPC to WebSocket |
+| 🌳 | **Git worktree isolation** | Every task gets its own branch in its own worktree — zero interference between agents |
+| 💬 | **Findings & knowledge sharing** | Agents post discoveries that become context for other agents |
+| 🔄 | **Multi-runtime support** | Claude Code, Copilot, and Codex — with more on the roadmap |
+| 🌲 | **Task tree hierarchy** | Decompose tasks into parent/child subtrees up to 5 levels deep — with recursive tree view, expand/collapse, and progress badges |
+| 🔗 | **Task dependencies** | Dependency gating — blocked tasks wait for their dependencies to complete |
+| ✅ | **Diff review** | See exactly what each agent changed, approve or reject per-task |
+| 🧠 | **Knowledge graph** [⭐#13](https://github.com/nick-pape/grackle/issues/13) | Structured knowledge sharing across agents — beyond flat findings |
+| 🎭 | **Agent personas** [⭐#11](https://github.com/nick-pape/grackle/issues/11) | Specialized agents with tool allowlists and focused system prompts |
+
+## 🌍 Environments
+
+Each agent runs inside an isolated environment. Connect one or many:
+
+| Adapter | Status | Command |
+|---------|--------|---------|
+| 🐳 **Docker** | ✅ Available | `grackle env add my-env --docker` |
+| 💻 **Local** | ✅ Available | `grackle env add my-env --local` |
+| 🔒 **SSH** | ✅ Available [#30](https://github.com/nick-pape/grackle/issues/30) | `grackle env add my-env --ssh --host ...` |
+| ☁️ **Codespace** | ✅ Available [#31](https://github.com/nick-pape/grackle/issues/31) | `grackle env add my-env --codespace --codespace-name <name>` |
+
+![Environments — manage agents across local, Docker, Codespace, and SSH](docs/screenshots/agent-session-stream.png)
+
+Docker spins up a container with PowerLine pre-installed. Local connects to a PowerLine instance already running on your machine. SSH connects to any remote host via OpenSSH. Codespace connects to an existing GitHub Codespace by name (use `gh codespace list` to find it).
+
+## 🚀 Quick Start
+
+```bash
+# 1. Install and build
+npm install -g @microsoft/rush
+rush update && rush build
+
+# 2. Start the server (gRPC + Web UI + WebSocket)
+node packages/server/dist/index.js
+
+# 3. Open the dashboard at http://localhost:3000
+
+# 4. Add a Docker environment and start working
+node packages/cli/dist/index.js env add my-env --docker
+```
+
+## 📋 Requirements
+
+- Node.js >= 22
+- pnpm 10+
+- Docker (for containerized environments)
+
+## 📄 License
+
+MIT
+
+---
+
+_🔜 = **Planned for [v1.0.0](https://github.com/nick-pape/grackle/milestone/1)** · ⭐ = **Post v1.0**_

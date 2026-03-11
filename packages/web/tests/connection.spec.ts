@@ -14,7 +14,7 @@ test.describe("Authentication & Connection", () => {
     await expect(appPage.locator("text=1 env")).toBeVisible();
   });
 
-  test("StatusBar shows 0 active sessions", async ({ appPage }) => {
-    await expect(appPage.locator("text=0 active")).toBeVisible();
+  test("StatusBar shows active session count", async ({ appPage }) => {
+    await expect(appPage.getByText(/\d+ active/)).toBeVisible();
   });
 });

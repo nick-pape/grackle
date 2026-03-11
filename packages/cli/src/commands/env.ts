@@ -1,7 +1,7 @@
 import type { Command } from "commander";
 import chalk from "chalk";
 import { createGrackleClient } from "../client.js";
-import type { AdapterType } from "@grackle/common";
+import { grackle, environmentStatusToString, type AdapterType } from "@grackle-ai/common";
 import Table from "cli-table3";
 
 /** Register environment management commands: `env list`, `add`, `provision`, `stop`, `destroy`, `remove`, `wake`. */
@@ -22,10 +22,11 @@ export function registerEnvCommands(program: Command): void {
         head: ["ID", "Type", "Runtime", "Status", "Bootstrapped"],
       });
       for (const e of res.environments) {
-        const status = e.status === "connected" ? chalk.green("●") + " " + e.status :
-                       e.status === "sleeping" ? chalk.yellow("●") + " " + e.status :
-                       e.status === "error" ? chalk.red("●") + " " + e.status :
-                       chalk.gray("●") + " " + e.status;
+        const statusStr = environmentStatusToString(e.status);
+        const status = e.status === grackle.EnvironmentStatus.CONNECTED ? chalk.green("●") + " " + statusStr :
+                       e.status === grackle.EnvironmentStatus.SLEEPING ? chalk.yellow("●") + " " + statusStr :
+                       e.status === grackle.EnvironmentStatus.ERROR ? chalk.red("●") + " " + statusStr :
+                       chalk.gray("●") + " " + statusStr;
         table.push([e.id, e.adapterType, e.defaultRuntime, status, e.bootstrapped ? "yes" : "no"]);
       }
       console.log(table.toString());
@@ -38,14 +39,16 @@ export function registerEnvCommands(program: Command): void {
     .option("--docker", "Docker adapter")
     .option("--ssh", "SSH adapter")
     .option("--local", "Local PowerLine adapter")
-    .option("--repo <repo>", "GitHub repo (codespace)")
-    .option("--machine <machine>", "Machine type (codespace)")
+    .option("--repo <repo>", "GitHub repo to clone (docker)")
     .option("--image <image>", "Docker image")
     .option("--host <host>", "SSH host / local host")
     .option("--port <port>", "PowerLine port (local adapter)")
     .option("--user <user>", "SSH user")
     .option("--volume <volumes...>", "Docker volume mounts (format: host:container[:ro])")
     .option("--gpu [gpus]", "Enable GPU passthrough (default: all)")
+    .option("--ssh-port <sshPort>", "SSH port (default: 22)")
+    .option("--identity-file <path>", "SSH identity file (private key)")
+    .option("--codespace-name <name>", "Codespace name (from `gh codespace list`)")
     .option("--runtime <runtime>", "Default runtime", "claude-code")
     .action(async (name: string, opts) => {
       const client = createGrackleClient();
@@ -58,12 +61,29 @@ export function registerEnvCommands(program: Command): void {
         if (opts.port) config.port = parseInt(opts.port, 10);
       } else if (opts.codespace) {
         adapterType = "codespace";
-        if (opts.repo) config.repo = opts.repo;
-        if (opts.machine) config.machine = opts.machine;
+        if (opts.codespaceName) {
+          config.codespaceName = opts.codespaceName;
+        } else {
+          console.error("Error: --codespace requires --codespace-name <name>");
+          process.exit(1);
+        }
       } else if (opts.ssh) {
         adapterType = "ssh";
-        if (opts.host) config.host = opts.host;
+        if (!opts.host) {
+          console.error("Error: --ssh requires --host <host>");
+          process.exit(1);
+        }
+        config.host = opts.host;
         if (opts.user) config.user = opts.user;
+        if (opts.sshPort) {
+          const port = parseInt(opts.sshPort, 10);
+          if (isNaN(port) || port < 1 || port > 65535) {
+            console.error("Error: --ssh-port must be a number between 1 and 65535");
+            process.exit(1);
+          }
+          config.sshPort = port;
+        }
+        if (opts.identityFile) config.identityFile = opts.identityFile;
       } else {
         if (opts.image) config.image = opts.image;
         if (opts.repo) config.repo = opts.repo;
@@ -83,13 +103,7 @@ export function registerEnvCommands(program: Command): void {
   env
     .command("provision <id>")
     .description("Provision and connect an environment")
-    .action(async (id: string) => {
-      const client = createGrackleClient();
-      for await (const event of client.provisionEnvironment({ id })) {
-        const pct = Math.round(event.progress * 100);
-        console.log(`[${pct}%] ${event.stage}: ${event.message}`);
-      }
-    });
+    .action(provisionAction);
 
   env
     .command("stop <id>")
@@ -118,14 +132,17 @@ export function registerEnvCommands(program: Command): void {
       console.log(`Removed: ${id}`);
     });
 
+  /** Shared action for provisioning / waking an environment. */
+  async function provisionAction(id: string): Promise<void> {
+    const client = createGrackleClient();
+    for await (const event of client.provisionEnvironment({ id })) {
+      const pct = Math.round(event.progress * 100);
+      console.log(`[${pct}%] ${event.stage}: ${event.message}`);
+    }
+  }
+
   env
     .command("wake <id>")
     .description("Wake a sleeping environment")
-    .action(async (id: string) => {
-      const client = createGrackleClient();
-      for await (const event of client.provisionEnvironment({ id })) {
-        const pct = Math.round(event.progress * 100);
-        console.log(`[${pct}%] ${event.stage}: ${event.message}`);
-      }
-    });
+    .action(provisionAction);
 }

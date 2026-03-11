@@ -1,0 +1,164 @@
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { resolve, normalize, dirname } from "node:path";
+
+/**
+ * Compute a platform-appropriate fake home directory.
+ * On Windows, resolve() needs a drive letter to produce an absolute path.
+ */
+const FAKE_HOME: string = resolve("/fakehome/testuser");
+
+// Mock dependencies before importing
+vi.mock("./logger.js", () => ({
+  logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
+}));
+
+vi.mock("node:fs/promises", () => ({
+  writeFile: vi.fn(async () => {}),
+  mkdir: vi.fn(async () => {}),
+  realpath: vi.fn(async (p: string) => p),
+}));
+
+vi.mock("node:fs", () => ({
+  realpathSync: vi.fn((p: string) => p),
+  existsSync: vi.fn(() => true),
+}));
+
+vi.mock("node:os", () => ({
+  homedir: vi.fn(() => FAKE_HOME),
+}));
+
+import { isUnderHome, writeTokens } from "./token-writer.js";
+import { writeFile, mkdir, realpath } from "node:fs/promises";
+import { logger } from "./logger.js";
+
+describe("isUnderHome", () => {
+  it("returns true for paths under home", () => {
+    expect(isUnderHome("/home/user/.config/file.txt", "/home/user")).toBe(true);
+  });
+
+  it("returns true for deeply nested paths", () => {
+    expect(isUnderHome("/home/user/a/b/c/d", "/home/user")).toBe(true);
+  });
+
+  it("returns false for paths outside home", () => {
+    expect(isUnderHome("/etc/passwd", "/home/user")).toBe(false);
+  });
+
+  it("returns false for sibling directories", () => {
+    expect(isUnderHome("/home/other/.config", "/home/user")).toBe(false);
+  });
+
+  it("is case-insensitive", () => {
+    expect(isUnderHome("/HOME/USER/file.txt", "/home/user")).toBe(true);
+    expect(isUnderHome("/Home/User/File.txt", "/home/user")).toBe(true);
+  });
+
+  it("handles prefix-collision correctly", () => {
+    // /home/username should NOT be under /home/user
+    expect(isUnderHome("/home/username/.config", "/home/user")).toBe(false);
+  });
+
+  it("handles home with trailing separator", () => {
+    expect(isUnderHome("/home/user/file.txt", "/home/user/")).toBe(true);
+  });
+
+  it("returns true when path equals home exactly", () => {
+    expect(isUnderHome("/home/user", "/home/user")).toBe(true);
+  });
+});
+
+describe("writeTokens", () => {
+  /** Compute a path under the fake home so resolve() produces consistent results. */
+  function homeFile(...segments: string[]): string {
+    return resolve(FAKE_HOME, ...segments);
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // Default realpath mock: return the path as-is
+    vi.mocked(realpath).mockImplementation(async (p: string) => p);
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("sets env var for env_var type tokens", async () => {
+    await writeTokens([
+      { name: "test", type: "env_var", envVar: "MY_TOKEN", filePath: "", value: "secret123" },
+    ]);
+
+    expect(process.env.MY_TOKEN).toBe("secret123");
+    // Clean up
+    delete process.env.MY_TOKEN;
+  });
+
+  it("writes file under home directory", async () => {
+    const filePath = homeFile(".config", "token");
+
+    await writeTokens([
+      { name: "test", type: "file", envVar: "", filePath, value: "filedata" },
+    ]);
+
+    expect(mkdir).toHaveBeenCalledWith(dirname(filePath), { recursive: true });
+    expect(writeFile).toHaveBeenCalledWith(filePath, "filedata", { mode: 0o600 });
+  });
+
+  it("refuses to write files outside home directory", async () => {
+    // Use a path that resolve() will produce as absolute but outside FAKE_HOME
+    const outsidePath = resolve("/etc/passwd");
+
+    await writeTokens([
+      { name: "test", type: "file", envVar: "", filePath: outsidePath, value: "bad" },
+    ]);
+
+    expect(writeFile).not.toHaveBeenCalled();
+    expect(logger.warn).toHaveBeenCalled();
+  });
+
+  it("creates parent directories with recursive option", async () => {
+    const filePath = homeFile("deep", "nested", "dir", "file");
+
+    await writeTokens([
+      { name: "test", type: "file", envVar: "", filePath, value: "data" },
+    ]);
+
+    expect(mkdir).toHaveBeenCalledWith(dirname(filePath), { recursive: true });
+  });
+
+  it("resolves ~ to home directory", async () => {
+    await writeTokens([
+      { name: "test", type: "file", envVar: "", filePath: "~/.config/token", value: "data" },
+    ]);
+
+    expect(writeFile).toHaveBeenCalled();
+    // The resolved path should contain the fake home directory
+    const writtenPath = vi.mocked(writeFile).mock.calls[0][0] as string;
+    expect(normalize(writtenPath)).toContain("testuser");
+  });
+
+  it("detects symlink traversal and refuses write", async () => {
+    const filePath = homeFile("link", "file");
+    // realpath resolves the nearest existing ancestor to a path outside home
+    vi.mocked(realpath).mockResolvedValueOnce(resolve("/etc/evil"));
+
+    await writeTokens([
+      { name: "test", type: "file", envVar: "", filePath, value: "data" },
+    ]);
+
+    // When symlink traversal is detected, no directories should be created and no file written
+    expect(mkdir).not.toHaveBeenCalled();
+    expect(writeFile).not.toHaveBeenCalled();
+    expect(logger.warn).toHaveBeenCalled();
+  });
+
+  it("writes file with mode 0o600", async () => {
+    const filePath = homeFile(".token");
+
+    await writeTokens([
+      { name: "test", type: "file", envVar: "", filePath, value: "secret" },
+    ]);
+
+    expect(writeFile).toHaveBeenCalledWith(filePath, "secret", { mode: 0o600 });
+  });
+});

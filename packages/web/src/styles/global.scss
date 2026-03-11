@@ -1,0 +1,179 @@
+// ============================================================================
+// Global Styles — Grackle Web UI
+// ============================================================================
+// Reset, base styles, scrollbars, keyframe animations, and accessibility
+// overrides. Imported once in main.tsx; theme tokens come from theme.scss.
+// ============================================================================
+
+@use './theme.scss';
+@use './prism-theme.scss';
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700;800&display=swap');
+
+// =============================================================================
+// Reset
+// =============================================================================
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+// =============================================================================
+// Selection
+// =============================================================================
+
+::selection {
+  background: var(--accent-green-selection);
+  color: var(--text-primary);
+}
+
+// =============================================================================
+// Scrollbars
+// =============================================================================
+
+// WebKit (Chrome, Edge, Safari)
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-full);
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.14);
+  }
+}
+
+// Firefox
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
+}
+
+// =============================================================================
+// Focus Ring (Accessibility)
+// =============================================================================
+
+:focus-visible {
+  outline: 2px solid var(--accent-green);
+  outline-offset: 2px;
+}
+
+// =============================================================================
+// Keyframe Animations
+// =============================================================================
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+// =============================================================================
+// Accessibility: High Contrast
+// =============================================================================
+// Override glass tokens so panels become opaque and refraction is disabled.
+
+@media (prefers-contrast: more) {
+  :root {
+    // Text — raise contrast
+    --text-secondary: #b0bec5;
+    --text-tertiary: #90a4ae;
+    --text-disabled: #607d8b;
+
+    // Glass — disable blur and make surfaces opaque
+    --glass-blur: 0px;
+    --glass-blur-card: 0px;
+    --glass-blur-inset: 0px;
+    --glass-border: rgba(255, 255, 255, 0.20);
+    --glass-border-hover: rgba(255, 255, 255, 0.30);
+    --glass-border-inset: rgba(255, 255, 255, 0.15);
+    --glass-highlight: transparent;
+    --glass-highlight-strong: transparent;
+
+    // Surfaces — raise alpha to near-opaque
+    --bg-surface: rgba(16, 20, 34, 0.95);
+    --bg-elevated: rgba(24, 30, 52, 0.95);
+    --bg-inset: rgba(10, 14, 28, 0.90);
+
+    // Borders
+    --border-subtle: rgba(255, 255, 255, 0.20);
+    --border-input: rgba(255, 255, 255, 0.25);
+  }
+}
+
+// =============================================================================
+// Accessibility: Reduced Motion
+// =============================================================================
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

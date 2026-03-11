@@ -15,6 +15,6 @@ export function registerServeCommand(program: Command): void {
       console.log(`Web UI will be available at http://localhost:${opts.webPort}`);
 
       // Dynamic import to start the server
-      await import("@grackle/server");
+      await import("@grackle-ai/server");
     });
 }

@@ -1,5 +1,6 @@
 import type { Command } from "commander";
 import { createGrackleClient } from "../client.js";
+import { grackle, tokenTypeToEnum, tokenTypeToString } from "@grackle-ai/common";
 import Table from "cli-table3";
 import { readFileSync } from "node:fs";
 import { createInterface } from "node:readline";
@@ -39,15 +40,30 @@ export function registerTokenCommands(program: Command): void {
         });
       }
 
+      const validTokenTypes = ["env_var", "file"];
+      if (!validTokenTypes.includes(opts.type)) {
+        console.error(`Invalid token type: ${opts.type}. Must be one of: ${validTokenTypes.join(", ")}`);
+        process.exit(1);
+      }
+
       await client.setToken({
         name,
-        type: opts.type,
+        type: tokenTypeToEnum(opts.type),
         envVar: opts.envVar || name.toUpperCase() + "_TOKEN",
         filePath: opts.filePath || "",
         value,
         expiresAt: "",
       });
       console.log(`Token set: ${name}`);
+    });
+
+  token
+    .command("delete <name>")
+    .description("Delete a token")
+    .action(async (name: string) => {
+      const client = createGrackleClient();
+      await client.deleteToken({ name });
+      console.log(`Token deleted: ${name}`);
     });
 
   token
@@ -64,8 +80,8 @@ export function registerTokenCommands(program: Command): void {
         head: ["Name", "Type", "Target", "Expires"],
       });
       for (const t of res.tokens) {
-        const target = t.type === "env_var" ? t.envVar : t.filePath;
-        table.push([t.name, t.type, target, t.expiresAt || "never"]);
+        const target = t.type === grackle.TokenType.ENV_VAR ? t.envVar : t.filePath;
+        table.push([t.name, tokenTypeToString(t.type), target, t.expiresAt || "never"]);
       }
       console.log(table.toString());
     });
