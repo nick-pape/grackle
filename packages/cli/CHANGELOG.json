@@ -2,6 +2,23 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.15.0",
+      "tag": "@grackle-ai/cli_v0.15.0",
+      "date": "Wed, 11 Mar 2026 17:04:52 GMT",
+      "comments": {
+        "none": [
+          {
+            "comment": "Add TSDoc comment to slugify utility (docs only, no functional change)"
+          }
+        ],
+        "minor": [
+          {
+            "comment": "Add import-github command to bulk import GitHub issues as Grackle tasks"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.14.1",
       "tag": "@grackle-ai/cli_v0.14.1",
       "date": "Wed, 11 Mar 2026 07:56:50 GMT",

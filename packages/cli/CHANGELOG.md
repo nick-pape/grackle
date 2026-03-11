@@ -1,6 +1,17 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Wed, 11 Mar 2026 07:56:50 GMT and should not be manually modified.
+This log was last generated on Wed, 11 Mar 2026 17:04:52 GMT and should not be manually modified.
+
+## 0.15.0
+Wed, 11 Mar 2026 17:04:52 GMT
+
+### Minor changes
+
+- Add import-github command to bulk import GitHub issues as Grackle tasks
+
+### Updates
+
+- Add TSDoc comment to slugify utility (docs only, no functional change)
 
 ## 0.14.1
 Wed, 11 Mar 2026 07:56:50 GMT
