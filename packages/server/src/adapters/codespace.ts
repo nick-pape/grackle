@@ -50,11 +50,17 @@ class CodespaceExecutor implements RemoteExecutor {
 
   /** Copy a local file or directory into the codespace via `gh codespace cp`. */
   public async copyTo(localPath: string, remotePath: string): Promise<void> {
+    // Resolve $HOME since gh codespace cp uses SCP, which doesn't expand shell variables
+    let resolvedPath = remotePath;
+    if (resolvedPath.includes("$HOME")) {
+      const home = (await this.exec("echo $HOME")).trim();
+      resolvedPath = resolvedPath.replace(/\$HOME/g, home);
+    }
     const args = [
       "codespace", "cp", "-r", "-e",
       "-c", this.codespaceName,
       localPath,
-      `remote:${remotePath}`,
+      `remote:${resolvedPath}`,
     ];
     await exec("gh", args, { timeout: REMOTE_COPY_TIMEOUT_MS });
   }
@@ -110,8 +116,22 @@ export class CodespaceAdapter implements EnvironmentAdapter {
       throw new Error(`Cannot reach codespace '${cfg.codespaceName}' via gh CLI: ${err}`);
     }
 
+    // Detect the repo working directory (codespaces clone to /workspaces/<name>)
+    let workingDirectory: string | undefined;
+    try {
+      const workspaceDir = (await executor.exec(
+        "ls -d /workspaces/*/ 2>/dev/null | head -1",
+        { timeout: SSH_CONNECTIVITY_TIMEOUT_MS },
+      )).trim().replace(/\/$/, "");
+      if (workspaceDir) {
+        workingDirectory = workspaceDir;
+      }
+    } catch {
+      // Non-fatal — fall back to PowerLine directory
+    }
+
     // Bootstrap PowerLine on the codespace
-    yield* bootstrapPowerLine(executor, powerlineToken, cfg.env);
+    yield* bootstrapPowerLine(executor, powerlineToken, cfg.env, workingDirectory);
 
     // Open port-forward tunnel
     const localPort = cfg.localPort || await findFreePort();
