@@ -152,7 +152,7 @@ export function registerTaskCommands(program: Command): void {
             maxBuffer: MAX_BUFFER_BYTES,
           });
         } catch (err) {
-          console.error("Failed to run `gh issue list`. Is the GitHub CLI installed and authenticated?");
+          console.error(`Failed to run \`gh issue list\` for repo ${opts.repo} (state=${opts.state}).`);
           console.error(err);
           process.exit(1);
         }
