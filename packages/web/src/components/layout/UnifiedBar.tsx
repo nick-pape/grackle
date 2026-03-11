@@ -297,7 +297,7 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
                   }
                 }}
                 disabled={codespaceCreating}
-                className={styles.inputSmall}
+                className={styles.select}
               >
                 <option value="">Select a codespace...</option>
                 {codespaces.map((cs) => (
