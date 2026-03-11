@@ -195,7 +195,8 @@ jobs:
           echo "Waiting for CI on bump PR #${pr_number}..."
           timeout 600 gh pr checks "$pr_number" --watch --fail-fast
 
-          gh pr merge "$pr_url" --squash --admin --delete-branch
+          gh pr merge "$pr_url" --squash --admin --delete-branch \
+            --subject "chore: bump versions [skip ci]"
 
       # After squash-merge, local main has diverged from origin/main
       # (rush merged the temp branch locally, but the PR was squash-merged).
