@@ -17,10 +17,11 @@ gh pr view --json number --jq '.number'
 
 If this fails, the current branch has no open PR — tell the user and stop.
 
-Store the PR number in a variable for all subsequent commands. Also fetch the repo owner/name:
+Store the PR number in a variable for all subsequent commands. Also fetch the repo owner and name separately:
 
 ```bash
-gh repo view --json nameWithOwner --jq '.nameWithOwner'
+OWNER=$(gh repo view --json owner --jq '.owner.login')
+REPO=$(gh repo view --json name --jq '.name')
 ```
 
 ## Step 1: Sync with Main
@@ -84,7 +85,7 @@ query($owner: String!, $repo: String!, $pr: Int!) {
           path
           line
           startLine
-          comments(first: 10) {
+          comments(last: 1) {
             nodes {
               id
               author { login }
@@ -106,8 +107,7 @@ Replace `OWNER`, `REPO`, and `PR_NUMBER` with the actual values.
 From the response, select threads where ALL of:
 - `isResolved` is `false`
 - `isOutdated` is `false`
-- At least one comment has `author.login` equal to `"Copilot"` (case-sensitive)
-- The Copilot comment is the **last** comment in the thread (no human/bot reply after it)
+- The last comment (from the `comments(last: 1)` query) has `author.login` equal to `"copilot-pull-request-reviewer"`
 
 If no threads match, the loop may be done — skip to step 4f.
 
@@ -125,9 +125,9 @@ For each actionable Copilot thread:
    gh api repos/OWNER/REPO/pulls/PR_NUMBER/comments/COMMENT_ID/replies -f body="MESSAGE"
    ```
    Where `COMMENT_ID` is the `id` (numeric REST ID) of the Copilot comment, and `MESSAGE` explains what was done.
-   **Important**: The REST API needs numeric comment IDs, not GraphQL node IDs. Fetch the numeric IDs with:
+   **Important**: The REST API needs numeric comment IDs, not GraphQL node IDs. Fetch the numeric IDs (and their `node_id` for joining with GraphQL results) with:
    ```bash
-   gh api repos/OWNER/REPO/pulls/PR_NUMBER/comments --jq '.[] | select(.user.login == "Copilot") | {id, path, line, body}'
+   gh api repos/OWNER/REPO/pulls/PR_NUMBER/comments --jq '.[] | select(.user.login == "Copilot") | {id, node_id, path, line, body}'
    ```
 5. **Resolve the thread** using the GraphQL mutation with the thread's GraphQL node ID:
    ```bash
@@ -165,19 +165,15 @@ Re-run the GraphQL query from step 4b. If still zero unresolved Copilot threads,
 
 ## Step 5: Wait for CI
 
-Poll CI status every 30 seconds, with a timeout of 15 minutes:
+Poll CI status with a 15-minute timeout. Use `--watch` with a timeout wrapper:
 
 ```bash
-gh pr checks PR_NUMBER --watch --fail-fast
+timeout 900 gh pr checks PR_NUMBER --watch --fail-fast
 ```
 
-If `--watch` is not available, poll manually:
+If `--watch` or `timeout` is not available, poll manually — run `gh pr checks PR_NUMBER` every 30 seconds, tracking elapsed time. Stop after 15 minutes (30 iterations) and report a timeout.
 
-```bash
-gh pr checks PR_NUMBER
-```
-
-Check every 30 seconds. CI is done when all required checks show a conclusion (pass or fail). If any check fails:
+CI is done when all required checks show a conclusion (pass or fail). If any check fails:
 
 1. Read the failed log:
    ```bash
@@ -197,7 +193,7 @@ When everything is green, summarize:
 ## Important Notes
 
 - **Repo name**: Use `gh repo view` to get the owner/repo dynamically — do not hardcode
-- **Copilot login**: Filter comments by `author.login == "Copilot"` (exact, case-sensitive) for GraphQL or `user.login == "Copilot"` for REST
+- **Copilot login**: GraphQL uses `author.login == "copilot-pull-request-reviewer"`, REST uses `user.login == "Copilot"` — they differ
 - **Thread resolution**: Always reply BEFORE resolving — resolving without a reply looks dismissive
 - **Batch commits**: Group all fixes from one review round into a single commit
 - **CLAUDE.md compliance**: When fixing code, follow all project conventions in CLAUDE.md (TSDoc, full braces, no magic numbers, etc.)
