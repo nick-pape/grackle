@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Demo recorder pipeline: self-recording podcast with Playwright, PocketTTS, and ffmpeg",
+      "type": "none",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}

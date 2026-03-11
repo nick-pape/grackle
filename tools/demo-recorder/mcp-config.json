@@ -1,0 +1,18 @@
+{
+  "disallowedTools": ["mcp__playwright__browser_install"],
+  "mcpServers": {
+    "playwright": {
+      "command": "npx",
+      "args": ["@playwright/mcp@0.0.23", "--no-sandbox"],
+      "env": { "DISPLAY": ":99" }
+    },
+    "pockettts": {
+      "command": "/opt/pockettts/bin/pocket-tts-mcp",
+      "env": { "DISPLAY": ":99" }
+    },
+    "recording": {
+      "command": "/opt/pockettts/bin/python",
+      "args": ["/app/mcp-recording/server.py"]
+    }
+  }
+}
