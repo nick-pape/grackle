@@ -9,7 +9,7 @@ vi.mock("node:fs", () => ({
   readFileSync: vi.fn(() => "{}"),
 }));
 
-import { resolveGithubToken, resolveProviderConfig, buildFindingTool, CopilotRuntime } from "./copilot.js";
+import { resolveGithubToken, resolveProviderConfig, buildFindingTool, buildSubtaskCreateTool, CopilotRuntime } from "./copilot.js";
 import { AsyncQueue } from "../utils/async-queue.js";
 import type { AgentEvent } from "./runtime.js";
 
@@ -122,6 +122,83 @@ describe("buildFindingTool", () => {
     expect(finding.category).toBe("general"); // default
     expect(finding.tags).toEqual([]); // default
     expect(event!.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+
+    queue.close();
+  });
+});
+
+describe("buildSubtaskCreateTool", () => {
+  it("returns tool with correct structure", () => {
+    const queue = new AsyncQueue<AgentEvent>();
+    let capturedName = "";
+    let capturedOpts: Record<string, unknown> = {};
+    const mockDefineTool = (name: string, opts: Record<string, unknown>): unknown => {
+      capturedName = name;
+      capturedOpts = opts;
+      return { name, ...opts };
+    };
+
+    buildSubtaskCreateTool(mockDefineTool, queue);
+    expect(capturedName).toBe("create_subtask");
+    expect(capturedOpts.description).toBeDefined();
+    expect(capturedOpts.parameters).toBeDefined();
+
+    const params = capturedOpts.parameters as Record<string, unknown>;
+    expect(params.type).toBe("object");
+    const properties = params.properties as Record<string, unknown>;
+    expect(properties.title).toBeDefined();
+    expect(properties.description).toBeDefined();
+    expect(properties.local_id).toBeDefined();
+    expect(properties.depends_on).toBeDefined();
+    expect(properties.can_decompose).toBeDefined();
+
+    queue.close();
+  });
+
+  it("handler pushes subtask_create event to queue", async () => {
+    const queue = new AsyncQueue<AgentEvent>();
+    let handler: (args: Record<string, unknown>) => Promise<unknown> = async () => ({});
+    const mockDefineTool = (_name: string, opts: Record<string, unknown>): unknown => {
+      handler = opts.handler as typeof handler;
+      return {};
+    };
+
+    buildSubtaskCreateTool(mockDefineTool, queue);
+
+    const result = await handler({
+      title: "Build Auth",
+      description: "Implement authentication",
+      local_id: "auth",
+    });
+    expect(result).toEqual({ status: "subtask_queued", local_id: "auth", title: "Build Auth" });
+
+    const event = await queue.shift();
+    expect(event).toBeDefined();
+    expect(event!.type).toBe("subtask_create");
+
+    const subtask = JSON.parse(event!.content);
+    expect(subtask.title).toBe("Build Auth");
+    expect(subtask.description).toBe("Implement authentication");
+    expect(subtask.local_id).toBe("auth");
+    expect(subtask.depends_on).toEqual([]);
+    expect(subtask.can_decompose).toBe(false);
+    expect(event!.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+
+    queue.close();
+  });
+
+  it("handler auto-generates local_id when not provided", async () => {
+    const queue = new AsyncQueue<AgentEvent>();
+    let handler: (args: Record<string, unknown>) => Promise<unknown> = async () => ({});
+    const mockDefineTool = (_name: string, opts: Record<string, unknown>): unknown => {
+      handler = opts.handler as typeof handler;
+      return {};
+    };
+
+    buildSubtaskCreateTool(mockDefineTool, queue);
+
+    const result = await handler({ title: "Task", description: "Do it" }) as Record<string, unknown>;
+    expect((result.local_id as string)).toMatch(/^subtask-\d+$/);
 
     queue.close();
   });

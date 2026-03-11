@@ -30,6 +30,28 @@ export function buildFindingEvent(args: Record<string, unknown>, raw: unknown): 
   };
 }
 
+// ─── Subtask creation ─────────────────────────────────────
+
+/**
+ * Build a normalized "subtask_create" AgentEvent from a `create_subtask` tool call.
+ *
+ * Applies defaults: local_id auto-generated, depends_on [], can_decompose false.
+ */
+export function buildSubtaskCreateEvent(args: Record<string, unknown>, raw: unknown): AgentEvent {
+  return {
+    type: "subtask_create",
+    timestamp: new Date().toISOString(),
+    content: JSON.stringify({
+      title: args.title || "Untitled subtask",
+      description: args.description || "",
+      local_id: args.local_id || `subtask-${Date.now()}`,
+      depends_on: args.depends_on || [],
+      can_decompose: args.can_decompose ?? false,
+    }),
+    raw,
+  };
+}
+
 // ─── Working directory resolution ──────────────────────────
 
 /** Options for resolving the working directory. */
@@ -124,7 +146,7 @@ export function resolveMcpServers(spawnMcpServers?: Record<string, unknown>): Re
     servers.grackle = {
       command: "node",
       args: [GRACKLE_MCP_SCRIPT],
-      tools: ["post_finding", "get_task_context", "update_task_status"],
+      tools: ["post_finding", "create_subtask", "get_task_context", "update_task_status"],
     };
   }
 

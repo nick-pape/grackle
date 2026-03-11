@@ -571,7 +571,7 @@ async function handleMessage(
       const model = (msg.payload?.model as string) || process.env.GRACKLE_DEFAULT_MODEL || DEFAULT_MODEL;
       const logPath = join(grackleHome, LOGS_DIR, sessionId);
 
-      const systemContext = buildTaskSystemContext(task.title, task.description, task.reviewNotes);
+      const systemContext = buildTaskSystemContext(task.title, task.description, task.reviewNotes, task.canDecompose);
 
       sessionStore.createSession(sessionId, environmentId, runtime, task.title, model, logPath);
       taskStore.setTaskSession(task.id, sessionId);

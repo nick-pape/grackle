@@ -45,6 +45,7 @@ enum EventType {
   EVENT_TYPE_STATUS = 5;
   EVENT_TYPE_SYSTEM = 6;
   EVENT_TYPE_FINDING = 7;
+  EVENT_TYPE_SUBTASK_CREATE = 8;
 }
 
 enum TaskStatus {

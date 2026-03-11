@@ -26,7 +26,8 @@ export type AgentEventType =
   | "error"
   | "status"
   | "system"
-  | "finding";
+  | "finding"
+  | "subtask_create";
 
 export type TaskStatus = "pending" | "assigned" | "in_progress" | "review" | "done" | "failed";
 

@@ -6,8 +6,12 @@ import * as sessionStore from "./session-store.js";
 import * as streamHub from "./stream-hub.js";
 import * as logWriter from "./log-writer.js";
 import * as findingStore from "./finding-store.js";
+import * as taskStore from "./task-store.js";
+import * as projectStore from "./project-store.js";
+import { slugify } from "./utils/slugify.js";
 import { writeTranscript } from "./transcript.js";
 import { broadcast } from "./ws-broadcast.js";
+import { safeParseJsonArray } from "./json-helpers.js";
 import { logger } from "./logger.js";
 
 /** Terminal session statuses that indicate the session has already ended. */
@@ -38,6 +42,9 @@ export function processEventStream(
 
   // eslint-disable-next-line @typescript-eslint/no-floating-promises
   (async () => {
+    /** Maps local_id strings (assigned by the agent) to real task IDs, scoped to this stream. */
+    const subtaskLocalIdMap = new Map<string, string>();
+
     try {
       logWriter.initLog(logPath);
       sessionStore.updateSessionStatus(sessionId, "running");
@@ -67,6 +74,70 @@ export function processEventStream(
             logger.info({ findingId, projectId, title: data.title }, "Finding stored");
           } catch (err) {
             logger.error({ err, projectId, taskId }, "Failed to store finding");
+          }
+        }
+
+        // Intercept subtask creation events and create child tasks
+        if (event.type === powerline.AgentEventType.SUBTASK_CREATE && taskId) {
+          try {
+            const data = JSON.parse(event.content) as {
+              title: string;
+              description: string;
+              local_id?: string;
+              depends_on?: string[];
+              can_decompose?: boolean;
+            };
+
+            const parentTask = taskStore.getTask(taskId);
+            if (!parentTask) {
+              logger.warn({ taskId }, "Subtask creation failed: parent task not found");
+            } else if (!parentTask.canDecompose) {
+              logger.warn({ taskId }, "Subtask creation failed: parent task cannot decompose");
+            } else {
+              const project = projectStore.getProject(parentTask.projectId);
+              if (!project) {
+                logger.warn({ projectId: parentTask.projectId }, "Subtask creation failed: project not found");
+              } else {
+                // Resolve depends_on local IDs to real task IDs
+                const resolvedDeps: string[] = [];
+                for (const localDep of (data.depends_on || [])) {
+                  const realId = subtaskLocalIdMap.get(localDep);
+                  if (realId) {
+                    resolvedDeps.push(realId);
+                  } else {
+                    logger.warn({ localDep, taskId }, "Subtask dependency local_id not found, skipping");
+                  }
+                }
+
+                const subtaskId = uuid().slice(0, 8);
+                const environmentId = parentTask.environmentId || project.defaultEnvironmentId;
+                taskStore.createTask(
+                  subtaskId,
+                  parentTask.projectId,
+                  data.title,
+                  data.description,
+                  environmentId,
+                  resolvedDeps,
+                  slugify(project.name),
+                  taskId,
+                  data.can_decompose,
+                );
+
+                // Record the local_id → real ID mapping
+                if (data.local_id) {
+                  subtaskLocalIdMap.set(data.local_id, subtaskId);
+                }
+
+                const row = taskStore.getTask(subtaskId);
+                broadcast({
+                  type: "task_created",
+                  payload: { task: row ? { ...row, dependsOn: safeParseJsonArray(row.dependsOn) } : null },
+                });
+                logger.info({ subtaskId, parentTaskId: taskId, title: data.title }, "Subtask created");
+              }
+            }
+          } catch (err) {
+            logger.error({ err, taskId }, "Failed to create subtask");
           }
         }
 

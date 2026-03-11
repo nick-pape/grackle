@@ -2,7 +2,7 @@ import type { AgentSession, AgentEvent } from "./runtime.js";
 import type { SessionStatus } from "@grackle-ai/common";
 import { BaseAgentRuntime } from "./base-runtime.js";
 import { AsyncQueue } from "../utils/async-queue.js";
-import { resolveWorkingDirectory, resolveMcpServers, buildFindingEvent } from "./runtime-utils.js";
+import { resolveWorkingDirectory, resolveMcpServers, buildFindingEvent, buildSubtaskCreateEvent } from "./runtime-utils.js";
 import { logger } from "../logger.js";
 
 // ─── Environment variable names ────────────────────────────
@@ -109,6 +109,29 @@ export function buildFindingTool(defineTool: (name: string, opts: Record<string,
     handler: async (args: Record<string, unknown>) => {
       eventQueue.push(buildFindingEvent(args, args));
       return { status: "finding_posted", title: args.title };
+    },
+  });
+}
+
+/** @internal Build a `create_subtask` tool definition for the Copilot session, so subtask creation events can be emitted. */
+export function buildSubtaskCreateTool(defineTool: (name: string, opts: Record<string, unknown>) => unknown, eventQueue: AsyncQueue<AgentEvent>): unknown {
+  return defineTool("create_subtask", {
+    description: "Delegate work to another agent by creating a child task. Use this when work is too large or complex for you to complete alone.",
+    parameters: {
+      type: "object",
+      properties: {
+        title: { type: "string", description: "Short title for the subtask" },
+        description: { type: "string", description: "Detailed description of what to do" },
+        local_id: { type: "string", description: "Local ID for referencing in depends_on" },
+        depends_on: { type: "array", items: { type: "string" }, description: "Local IDs of sibling subtasks that must finish first" },
+        can_decompose: { type: "boolean", description: "Whether the subtask may create further subtasks" },
+      },
+      required: ["title", "description"],
+    },
+    handler: async (args: Record<string, unknown>) => {
+      eventQueue.push(buildSubtaskCreateEvent(args, args));
+      const localId = args.local_id || `subtask-${Date.now()}`;
+      return { status: "subtask_queued", local_id: localId, title: args.title };
     },
   });
 }
@@ -257,10 +280,11 @@ class CopilotSession implements AgentSession {
         logger.info({ maxTurns: this.maxTurns }, "maxTurns requested but Copilot SDK does not support turn limits — session will run until idle");
       }
 
-      // Custom tools: inject post_finding tool so the agent can emit findings
+      // Custom tools: inject post_finding and create_subtask tools
       const tools: unknown[] = [];
       if (defineTool) {
         tools.push(buildFindingTool(defineTool, this.eventQueue));
+        tools.push(buildSubtaskCreateTool(defineTool, this.eventQueue));
       }
       if (tools.length > 0) {
         sessionConfig.tools = tools;
@@ -336,6 +360,11 @@ class CopilotSession implements AgentSession {
           if (toolName === "mcp__grackle__post_finding" || toolName === "post_finding") {
             const args = toolArgs as Record<string, unknown>;
             this.eventQueue.push(buildFindingEvent(args, event));
+          }
+          // Intercept subtask creation tool calls
+          if (toolName === "mcp__grackle__create_subtask" || toolName === "create_subtask") {
+            const args = toolArgs as Record<string, unknown>;
+            this.eventQueue.push(buildSubtaskCreateEvent(args, event));
           }
         });
 
