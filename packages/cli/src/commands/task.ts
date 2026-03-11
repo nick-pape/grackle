@@ -1,6 +1,6 @@
 import type { Command } from "commander";
 import { createGrackleClient } from "../client.js";
-import { taskStatusToString } from "@grackle-ai/common";
+import { grackle, taskStatusToString, taskStatusToEnum } from "@grackle-ai/common";
 import Table from "cli-table3";
 
 export function registerTaskCommands(program: Command): void {
@@ -32,6 +32,7 @@ export function registerTaskCommands(program: Command): void {
     .option("--desc <text>", "Task description")
     .option("--env <env-id>", "Environment ID")
     .option("--depends-on <ids>", "Comma-separated dependency task IDs")
+    .option("--parent <task-id>", "Parent task ID")
     .action(async (projectId: string, title: string, opts) => {
       const client = createGrackleClient();
       const dependsOn = opts.dependsOn ? opts.dependsOn.split(",") : [];
@@ -41,6 +42,7 @@ export function registerTaskCommands(program: Command): void {
         description: opts.desc || "",
         environmentId: opts.env || "",
         dependsOn,
+        parentTaskId: opts.parent || "",
       });
       console.log(`Created task: ${t.id} (${t.title}) branch: ${t.branch}`);
     });
@@ -84,6 +86,23 @@ export function registerTaskCommands(program: Command): void {
       const client = createGrackleClient();
       await client.deleteTask({ id: taskId });
       console.log(`Deleted: ${taskId}`);
+    });
+
+  task
+    .command("set-status <task-id> <status>")
+    .description("Set task status (pending, assigned, in_progress, review, done, failed)")
+    .action(async (taskId: string, status: string) => {
+      const statusEnum = taskStatusToEnum(status);
+      if (statusEnum === grackle.TaskStatus.UNSPECIFIED) {
+        console.error(`Invalid status: ${status}. Valid: pending, assigned, in_progress, review, done, failed`);
+        process.exit(1);
+      }
+      const client = createGrackleClient();
+      const t = await client.updateTask({
+        id: taskId,
+        status: statusEnum,
+      });
+      console.log(`Updated: ${t.id} → ${taskStatusToString(t.status)}`);
     });
 
   task

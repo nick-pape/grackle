@@ -1,6 +1,6 @@
 ---
 name: demo-record
-description: Launch the self-recording Grackle demo. Builds Docker images, cleans state, provisions environments, creates project/task, and starts the demo recording agent.
+description: Launch the self-recording Grackle demo. Builds Docker images, cleans state, provisions environments, creates project/task tree, and starts the demo recording agent.
 disable-model-invocation: true
 ---
 
@@ -60,7 +60,7 @@ If environments don't exist yet, add them:
 # Demo recorder with the full AV stack
 grackle env add demo-recorder --docker --image grackle-demo-recorder --runtime claude-code
 
-# Dev environment with repo clone (for the "summarize CLI" task)
+# Dev environment with repo clone (for the coding tasks)
 grackle env add dev --docker --image grackle-powerline --runtime claude-code --repo nick-pape/grackle
 ```
 
@@ -79,27 +79,50 @@ Verify both show "connected":
 grackle env list
 ```
 
-### 5. Create project and tasks
+### 5. Create project and task tree
 
 ```bash
-grackle project create "Grackle Demo"
-# Note the project ID from output
+grackle project create "API Gateway Refactor"
+# Note the project ID from output (e.g. "api-gateway-refactor")
 ```
 
-Create the dev task (runs on the dev container):
+Create the task tree with parent/child relationships and dependencies:
 
 ```bash
-grackle task create <PROJECT_ID> "Summarize CLI commands" --env dev --desc "Read the Grackle CLI source code and write a summary of all available commands and their options to SUMMARY.md."
-```
+# Root parent task (will be pre-completed)
+grackle task create <PROJECT_ID> "Design API Schema" --desc "Design the REST API schema including endpoints, request/response types, and error contracts."
+# Note the task ID → DESIGN_ID
 
-Create the demo recording task using the scene script:
+# Child tasks under Design API Schema (will be pre-completed)
+grackle task create <PROJECT_ID> "Define REST endpoints" --parent <DESIGN_ID> --desc "Define all REST endpoint paths, methods, and response schemas."
+grackle task create <PROJECT_ID> "Define error contracts" --parent <DESIGN_ID> --desc "Define standard error response format and error codes."
 
-```bash
+# Dev tasks that depend on design being done
+grackle task create <PROJECT_ID> "Implement rate limiter" --env dev --depends-on <DESIGN_ID> --desc "Implement token bucket rate limiting middleware for the API gateway."
+# Note the task ID → RATE_LIMITER_ID
+
+grackle task create <PROJECT_ID> "Add auth middleware" --env dev --depends-on <DESIGN_ID> --desc "Add JWT-based authentication middleware to the API gateway."
+# Note the task ID → AUTH_ID
+
+# Integration tests depend on both dev tasks
+grackle task create <PROJECT_ID> "Write integration tests" --env dev --depends-on <RATE_LIMITER_ID>,<AUTH_ID> --desc "Write end-to-end integration tests for rate limiting and auth middleware."
+
+# The demo recording task (this is the self-referential one)
 DEMO_DESC=$(cat tools/demo-recorder/DEMO-TASK-PROMPT.md)
 grackle task create <PROJECT_ID> "Record Demo Video" --env demo-recorder --desc "$DEMO_DESC"
 ```
 
-### 6. Start the recording task
+### 6. Pre-complete design tasks
+
+Use `set-status` to mark the design tasks as done before starting:
+
+```bash
+grackle task set-status <DESIGN_ID> done
+grackle task set-status <DEFINE_ENDPOINTS_ID> done
+grackle task set-status <DEFINE_ERRORS_ID> done
+```
+
+### 7. Start the recording task
 
 ```bash
 grackle task start <RECORDING_TASK_ID> --model haiku
@@ -107,7 +130,7 @@ grackle task start <RECORDING_TASK_ID> --model haiku
 
 **Important**: Use `--model haiku` to keep the demo fast and cheap.
 
-### 7. Monitor
+### 8. Monitor
 
 Watch the agent's progress:
 
@@ -121,7 +144,7 @@ Check ffmpeg recording status:
 docker exec grackle-demo-recorder bash -c "ls -lh /workspace/grackle-demo.mp4 2>&1"
 ```
 
-### 8. Extract video
+### 9. Extract video
 
 After the task completes:
 

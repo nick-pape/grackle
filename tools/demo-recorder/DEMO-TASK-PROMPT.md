@@ -24,70 +24,100 @@ Recording starts automatically when Chrome opens. You do NOT need to start or st
 
 ## Execute Scenes
 
-### Scene 1 — Opening
+### Scene 1 — Opening + Hook
 - Action FIRST: Navigate to `http://host.docker.internal:3000`. Take a snapshot. (This triggers the recording to start.)
 - Speak AFTER navigation (one sentence per call):
-  - "What you're watching right now is being recorded live by Claude Code."
-  - "An AI agent running inside a Docker container."
-  - "I'm controlling this browser, narrating with neural text-to-speech, and recording my own screen."
-  - "No human is driving this."
-  - "This is Grackle, a multi-agent coordination platform."
+  - "...This is Grackle, a multi-agent coordination platform."
+  - "...What you're watching right now is being recorded live by an AI agent."
+  - "...Let me show you what it can do."
 
-### Scene 2 — Environments Tab
-- Speak: "Let's look at environments."
-- Action: Click the "Environments" tab.
-- Speak: "Each one is a Docker container running an AI agent."
-- Speak: "We have a dev environment for coding tasks, and a demo-recorder. That's where I'm running right now."
+### Scene 2 — Problem Statement
+- Action: Click on the "Projects" tab in the sidebar. Click on "API Gateway Refactor" to expand it.
+- Speak:
+  - "...Modern software projects are too complex for a single AI agent."
+  - "...Grackle lets you break work into a task graph with dependencies."
+  - "...And assign each task to an isolated agent in its own container."
 
-### Scene 3 — Projects Tab
-- Speak: "Projects organize work into task graphs with dependencies."
-- Action: Click the "Projects" tab.
-- Speak: "There's already a project set up called Grackle Improvements."
+### Scene 3 — Task Tree
+- Speak:
+  - "...Here's our project. A tree of tasks with parent-child relationships."
+  - "...Design API Schema is already done, shown with the green badge."
+  - "...Its subtasks, define REST endpoints and define error contracts, are also complete."
+  - "...The remaining tasks are blocked until their dependencies finish."
 
-### Scene 4 — Expand the Project
-- Speak: "It has two tasks."
-- Action: Click on "Grackle Improvements" to expand it.
-- Speak: "One is a dev task to summarize the CLI commands."
-- Speak: "The other is this recording session itself."
+### Scene 4 — DAG Visualization
+- Action: Click the "Graph" tab (DAG view for the project).
+- Speak:
+  - "...This is the dependency graph."
+  - "...Each node is a task. Edges show what depends on what."
+  - "...Done tasks are green. Pending tasks are gray."
+  - "...You can see the diamond pattern. Rate limiter and auth middleware can run in parallel."
+  - "...But integration tests won't start until both are done."
 
-### Scene 5 — Start the Dev Task
-- Speak: "Let's kick off the dev task."
-- Action: Click on "Summarize CLI commands". Then click "Start Task".
-- Speak: "Grackle just spawned a Claude Code agent inside the dev container."
-- Speak: "Every tool call streams back in real time."
+### Scene 5 — Start Dev Task
+- Action: Go back to the task list. Click on "Implement rate limiter". Click "Start Task".
+- Speak:
+  - "...Let's kick off a real task."
+  - "...Grackle spawns a Claude Code agent inside a Docker container."
+  - "...It gets a worktree on a fresh branch with the task description as its prompt."
 
-### Scene 6 — Watch the Dev Agent Stream
-- Speak: "There it goes."
-- Action: Click on the Stream tab for the dev task.
-- Speak: "The agent is reading code, analyzing commands, writing its summary."
-- Speak: "All streaming over gRPC from the container to this browser."
+### Scene 6 — Live Stream
+- Speak:
+  - "...Every tool call streams back in real time."
+  - "...The agent is reading code, planning its approach, writing files."
+  - "...All flowing over gRPC from the container to this browser."
+- Action: Wait a moment to let some events stream in visually.
 
-### Scene 7 — The Meta Moment
-- Speak: "Wait. Let me check something."
-- Action: Go back to Projects tab. Find the "Record Demo Video" task (that's YOUR task). Click on it.
-- Speak: "There are two tasks running right now."
+### Scene 7 — Meta Moment
+- Action: Navigate back to the project task list. Click on "Record Demo Video" (that's YOUR task).
+- Speak:
+  - "...Wait. Look at this."
+  - "...This is my task. The one I'm running right now."
+  - "...These are my tool calls. My narration. My browser clicks."
+  - "...I'm watching my own live stream."
 
-### Scene 8 — The Realization
-- Speak: "These are my tool calls."
-- Speak: "This is my narration."
-- Speak: "I'm watching my own live stream right now."
-- Speak: "I'm an AI agent recording a demo of the platform I'm running on."
-- Speak: "It's completely self-referential."
+### Scene 8 — Blocked Task
+- Action: Click on "Write integration tests" in the task list.
+- Speak:
+  - "...This task is blocked."
+  - "...It depends on both the rate limiter and auth middleware."
+  - "...Grackle tracks these dependencies automatically."
+  - "...When both finish and pass review, this task unlocks."
 
-### Scene 9 — Back to Dev Agent
-- Speak: "Let me check on our dev agent."
-- Action: Go back to Projects. Click the "Summarize CLI commands" task.
+### Scene 9 — Environments
+- Action: Click the "Environments" tab in the sidebar.
+- Speak:
+  - "...Each agent runs in its own isolated environment."
+  - "...Right now we have two Docker containers."
+  - "...The dev container for coding tasks, and the demo recorder where I'm running."
 
-### Scene 10 — Architecture
-- Speak: "Under the hood, every event flows as protobuf over gRPC from the container to the server."
-- Speak: "Then over WebSocket to this UI."
-- Speak: "No polling. Full observability across multiple agents in parallel."
+### Scene 10 — Check Dev Progress
+- Action: Navigate back to Projects. Click "API Gateway Refactor". Click on "Implement rate limiter".
+- Speak:
+  - "...Let's check on our dev agent."
+  - "...It's been working while we've been talking."
 
-### Scene 11 — Closing
-- Speak: "That's Grackle."
-- Speak: "Multi-agent coordination with real-time streaming and full task isolation."
-- Action: Navigate back to Projects view.
-- Speak: "The future of software engineering is many agents, working together."
-- Speak: "Thanks for watching."
+### Scene 11 — Diff Viewer
+- Action: Click the "Diff" tab for the rate limiter task.
+- Speak:
+  - "...The diff tab shows every change the agent has made."
+  - "...When the agent finishes, the task moves to review."
+  - "...A human or another agent can approve or reject with feedback."
+
+### Scene 12 — Findings
+- Action: Click the "Findings" tab.
+- Speak:
+  - "...Agents can share discoveries with each other through findings."
+  - "...Architecture decisions, bugs found, API patterns."
+  - "...This is how multiple agents build shared context across a project."
+
+### Scene 13 — DAG + Closing
+- Action: Click the "Graph" tab to show the DAG again.
+- Speak:
+  - "...That's Grackle."
+  - "...Task graphs with real dependencies. Isolated containers. Live streaming."
+  - "...Review gates so humans stay in control."
+  - "...The future of software engineering is multiple agents, working together, coordinated."
+  - "...Thanks for watching."
 
 Done! The recording stops automatically when you finish.
