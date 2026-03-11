@@ -1,4 +1,4 @@
-import { useEffect, useState, type JSX } from "react";
+import { useEffect, useMemo, useState, type JSX } from "react";
 import { useGrackle } from "../../context/GrackleContext.js";
 import type { ViewMode } from "../../App.js";
 import type { TaskData } from "../../hooks/useGrackleSocket.js";
@@ -64,7 +64,7 @@ interface TaskTreeNodeProps {
   selectedTaskId: string | undefined;
   setViewMode: (mode: ViewMode) => void;
   projectId: string;
-  allTasks: TaskData[];
+  taskStatusById: Map<string, string>;
 }
 
 /** Renders a single task tree node with optional children. */
@@ -76,14 +76,11 @@ function TaskTreeNode({
   selectedTaskId,
   setViewMode,
   projectId,
-  allTasks,
+  taskStatusById,
 }: TaskTreeNodeProps): JSX.Element {
   const statusStyle = TASK_STATUS_STYLES[node.status] || TASK_STATUS_STYLES.pending;
   const isBlocked = node.dependsOn.length > 0 &&
-    node.dependsOn.some((depId) => {
-      const dep = allTasks.find((t) => t.id === depId);
-      return !dep || dep.status !== "done";
-    });
+    node.dependsOn.some((depId) => taskStatusById.get(depId) !== "done");
   const isExpanded = expandedTasks.has(node.id);
   const hasChildren = node.children.length > 0;
   const isSelected = selectedTaskId === node.id;
@@ -167,7 +164,7 @@ function TaskTreeNode({
                 selectedTaskId={selectedTaskId}
                 setViewMode={setViewMode}
                 projectId={projectId}
-                allTasks={allTasks}
+                taskStatusById={taskStatusById}
               />
             ))}
           </motion.div>
@@ -188,6 +185,10 @@ export function ProjectList({ viewMode, setViewMode }: Props): JSX.Element {
 
   const selectedProjectId = viewMode.kind === "project" ? viewMode.projectId : undefined;
   const selectedTaskId = viewMode.kind === "task" ? viewMode.taskId : undefined;
+  const taskStatusById = useMemo(
+    () => new Map(tasks.map((t) => [t.id, t.status])),
+    [tasks],
+  );
 
   const toggleExpand = (projectId: string): void => {
     setExpanded((prev) => {
@@ -345,7 +346,7 @@ export function ProjectList({ viewMode, setViewMode }: Props): JSX.Element {
                       selectedTaskId={selectedTaskId}
                       setViewMode={setViewMode}
                       projectId={project.id}
-                      allTasks={tasks}
+                      taskStatusById={taskStatusById}
                     />
                   ))}
 

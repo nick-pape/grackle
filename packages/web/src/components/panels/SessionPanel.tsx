@@ -150,6 +150,11 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
     return groupConsecutiveTextEvents(filtered);
   }, [events, sessionId]);
 
+  const tasksById = useMemo(
+    () => new Map(tasks.map((t) => [t.id, t])),
+    [tasks],
+  );
+
   const session = sessionId
     ? sessions.find((s) => s.id === sessionId) ?? undefined
     : undefined;
@@ -285,26 +290,34 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
         </div>
 
         {/* Tab bar */}
-        <div className={styles.tabBar}>
+        <div className={styles.tabBar} role="tablist" aria-label="Task view">
           <button
+            role="tab"
+            aria-selected={activeTaskTab === "overview"}
             className={`${styles.tab} ${activeTaskTab === "overview" ? styles.active : ""}`}
             onClick={() => setActiveTaskTab("overview")}
           >
             Overview
           </button>
           <button
+            role="tab"
+            aria-selected={activeTaskTab === "stream"}
             className={`${styles.tab} ${activeTaskTab === "stream" ? styles.active : ""}`}
             onClick={() => setActiveTaskTab("stream")}
           >
             Stream
           </button>
           <button
+            role="tab"
+            aria-selected={activeTaskTab === "diff"}
             className={`${styles.tab} ${activeTaskTab === "diff" ? styles.active : ""}`}
             onClick={() => setActiveTaskTab("diff")}
           >
             Diff
           </button>
           <button
+            role="tab"
+            aria-selected={activeTaskTab === "findings"}
             className={`${styles.tab} ${activeTaskTab === "findings" ? styles.active : ""}`}
             onClick={() => setActiveTaskTab("findings")}
           >
@@ -344,7 +357,7 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
                   <div className={styles.overviewLabel}>Dependencies</div>
                   <div className={styles.depList}>
                     {task.dependsOn.map((depId) => {
-                      const dep = tasks.find((t) => t.id === depId);
+                      const dep = tasksById.get(depId);
                       const isDone = dep?.status === "done";
                       return (
                         <div
