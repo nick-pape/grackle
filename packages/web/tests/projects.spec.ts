@@ -102,13 +102,14 @@ test.describe("Projects", () => {
     await expect(page.getByText("Task: my task")).toBeVisible({ timeout: 5_000 });
     await expect(page.getByText("pending")).toBeVisible();
 
-    // Tab bar should show Stream, Diff, Findings
+    // Tab bar should show Overview, Stream, Diff, Findings
+    await expect(page.locator("button", { hasText: "Overview" })).toBeVisible();
     await expect(page.locator("button", { hasText: "Stream" })).toBeVisible();
     await expect(page.locator("button", { hasText: "Diff" })).toBeVisible();
     await expect(page.locator("button", { hasText: "Findings" })).toBeVisible();
 
-    // Stream tab (default) shows "Task has not been started yet"
-    await expect(page.getByText("Task has not been started yet")).toBeVisible();
+    // Overview tab (default for pending) should be active
+    await expect(page.locator("button", { hasText: "Overview" })).toHaveAttribute("class", /active/);
 
     // UnifiedBar shows "Start Task" button
     await expect(page.locator("button", { hasText: "Start Task" })).toBeVisible();

@@ -820,6 +820,11 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       provisionEnvironment: () => {},
       stopEnvironment: () => {},
       removeEnvironment: () => {},
+      codespaces: [],
+      codespaceError: "",
+      codespaceCreating: false,
+      listCodespaces: () => {},
+      createCodespace: () => {},
     }),
     [
       sessions,
