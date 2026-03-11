@@ -193,7 +193,7 @@ jobs:
 
           pr_number=$(gh pr view "$pr_url" --json number --jq '.number')
           echo "Waiting for CI on bump PR #${pr_number}..."
-          timeout 600 gh pr checks "$pr_number" --watch --fail-fast
+          timeout 1800 gh pr checks "$pr_number" --watch --fail-fast
 
           gh pr merge "$pr_url" --squash --admin --delete-branch \
             --subject "chore: bump versions [skip ci]"
