@@ -40,6 +40,7 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
   const {
     spawn, sendInput, kill, sessions, tasks, environments,
     createTask, startTask, approveTask, rejectTask, deleteTask, addEnvironment,
+    codespaces, codespaceError, codespaceCreating, listCodespaces, createCodespace,
   } = useGrackle();
 
   const [text, setText] = useState("");
@@ -62,6 +63,8 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
   const [envRepo, setEnvRepo] = useState("");
   const [envCodespaceName, setEnvCodespaceName] = useState("");
   const [envIdentityFile, setEnvIdentityFile] = useState("");
+  const [envCreateRepo, setEnvCreateRepo] = useState("");
+  const [envCodespaceMode, setEnvCodespaceMode] = useState<"pick" | "create">("pick");
 
   useEffect(() => {
     if (viewMode.kind === "new_chat") {
@@ -165,6 +168,8 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
       setEnvRepo("");
       setEnvCodespaceName("");
       setEnvIdentityFile("");
+      setEnvCreateRepo("");
+      setEnvCodespaceMode("pick");
       setViewMode({ kind: "empty" });
     };
 
@@ -182,13 +187,20 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
           />
           <select
             value={envAdapterType}
-            onChange={(e) => setEnvAdapterType(e.target.value)}
+            onChange={(e) => {
+              setEnvAdapterType(e.target.value);
+              if (e.target.value === "codespace") {
+                listCodespaces();
+                setEnvCodespaceMode("pick");
+                setEnvCodespaceName("");
+              }
+            }}
             className={styles.select}
           >
             <option value="local">local</option>
             <option value="ssh">ssh</option>
             <option value="docker">docker</option>
-            {/* codespace disabled: provisioning errors are not surfaced to the UI yet */}
+            <option value="codespace">codespace</option>
           </select>
           <RuntimeSelector value={envRuntime} onChange={setEnvRuntime} />
           <button
@@ -268,14 +280,73 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
               />
             </>
           )}
-          {envAdapterType === "codespace" && (
-            <input
-              type="text"
-              value={envCodespaceName}
-              onChange={(e) => setEnvCodespaceName(e.target.value)}
-              placeholder="Codespace name (required)..."
-              className={styles.inputSmall}
-            />
+          {envAdapterType === "codespace" && envCodespaceMode === "pick" && (
+            <>
+              <select
+                value={envCodespaceName}
+                onChange={(e) => {
+                  if (e.target.value === "__create__") {
+                    setEnvCodespaceMode("create");
+                    setEnvCodespaceName("");
+                  } else {
+                    setEnvCodespaceName(e.target.value);
+                    // Auto-fill environment name from codespace name
+                    if (e.target.value && !envName.trim()) {
+                      setEnvName(e.target.value);
+                    }
+                  }
+                }}
+                disabled={codespaceCreating}
+                className={styles.select}
+              >
+                <option value="">Select a codespace...</option>
+                {codespaces.map((cs) => (
+                  <option key={cs.name} value={cs.name}>
+                    {cs.name} ({cs.repository}) — {cs.state}
+                  </option>
+                ))}
+                <option value="__create__">Create new from repo...</option>
+              </select>
+              {codespaceCreating && (
+                <span className={styles.creatingHint}>Creating codespace...</span>
+              )}
+              {codespaceError && (
+                <span className={styles.errorHint}>{codespaceError}</span>
+              )}
+            </>
+          )}
+          {envAdapterType === "codespace" && envCodespaceMode === "create" && (
+            <>
+              <input
+                type="text"
+                value={envCreateRepo}
+                onChange={(e) => setEnvCreateRepo(e.target.value)}
+                placeholder="owner/repo"
+                className={styles.inputSmall}
+              />
+              <button
+                onClick={() => {
+                  if (envCreateRepo.trim()) {
+                    createCodespace(envCreateRepo.trim());
+                    setEnvCodespaceMode("pick");
+                    setEnvCreateRepo("");
+                  }
+                }}
+                disabled={!envCreateRepo.trim()}
+                className={styles.btnPrimary}
+              >
+                Create
+              </button>
+              <button
+                onClick={() => {
+                  setEnvCodespaceMode("pick");
+                  setEnvCreateRepo("");
+                }}
+                className={styles.btnGhost}
+              >
+                Cancel
+              </button>
+            </>
           )}
         </div>
       </div>

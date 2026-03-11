@@ -135,6 +135,11 @@
   color: var(--text-tertiary);
   border-radius: var(--radius-full);
   padding: 1px var(--space-xs);
+
+  &.blockedBadge {
+    color: var(--accent-yellow, #e5c07b);
+    border-color: var(--accent-yellow, #e5c07b);
+  }
 }
 
 .leafSpacer {

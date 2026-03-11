@@ -84,6 +84,14 @@ export interface TaskDiffData {
   error?: string;
 }
 
+/** A GitHub Codespace returned from `gh codespace list`. */
+export interface Codespace {
+  name: string;
+  repository: string;
+  state: string;
+  gitStatus: string;
+}
+
 interface WsMessage {
   type: string;
   payload?: Record<string, unknown>;
@@ -179,6 +187,11 @@ export interface UseGrackleSocketResult {
   provisionEnvironment: (environmentId: string) => void;
   stopEnvironment: (environmentId: string) => void;
   removeEnvironment: (environmentId: string) => void;
+  codespaces: Codespace[];
+  codespaceError: string;
+  codespaceCreating: boolean;
+  listCodespaces: () => void;
+  createCodespace: (repo: string) => void;
 }
 
 export function useGrackleSocket(url?: string): UseGrackleSocketResult {
@@ -204,6 +217,9 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
   const [tokens, setTokens] = useState<TokenInfo[]>([]);
   const [taskDiff, setTaskDiff] = useState<TaskDiffData | undefined>(undefined);
   const [provisionStatus, setProvisionStatus] = useState<Record<string, ProvisionStatus>>({});
+  const [codespaces, setCodespaces] = useState<Codespace[]>([]);
+  const [codespaceError, setCodespaceError] = useState("");
+  const [codespaceCreating, setCodespaceCreating] = useState(false);
 
   const send = useCallback((msg: WsMessage) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -429,6 +445,25 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
             send({ type: "list_environments" });
             send({ type: "list_sessions" });
             break;
+          case "codespaces_list": {
+            const list = (msg.payload?.codespaces as Codespace[]) || [];
+            const listError = (msg.payload?.error as string) || "";
+            setCodespaces(list);
+            setCodespaceError(listError);
+            break;
+          }
+          case "codespace_created": {
+            setCodespaceCreating(false);
+            // Refresh list to include the newly created codespace
+            send({ type: "list_codespaces" });
+            break;
+          }
+          case "codespace_create_error": {
+            setCodespaceCreating(false);
+            const createError = (msg.payload?.message as string) || "Failed to create codespace";
+            setCodespaceError(createError);
+            break;
+          }
           case "error":
             console.error("[ws]", msg.payload?.message);
             break;
@@ -715,6 +750,25 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
     [send],
   );
 
+  // ─── Codespace methods ─────────────────────────────
+
+  const listCodespaces = useCallback(() => {
+    send({ type: "list_codespaces" });
+  }, [send]);
+
+  const createCodespace = useCallback(
+    (repo: string) => {
+      if (!connected) {
+        setCodespaceError("Not connected to server. Please try again once the connection is restored.");
+        return;
+      }
+      setCodespaceCreating(true);
+      setCodespaceError("");
+      send({ type: "create_codespace", payload: { repo } });
+    },
+    [send, connected],
+  );
+
   return {
     connected,
     environments,
@@ -751,5 +805,10 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
     provisionEnvironment,
     stopEnvironment,
     removeEnvironment,
+    codespaces,
+    codespaceError,
+    codespaceCreating,
+    listCodespaces,
+    createCodespace,
   };
 }

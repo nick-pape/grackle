@@ -60,6 +60,10 @@
   @include btn-danger;
 }
 
+.btnGhost {
+  @include btn-ghost;
+}
+
 // ---------------------------------------------------------------------------
 // Status indicators
 // ---------------------------------------------------------------------------
@@ -95,4 +99,16 @@
 .hintText {
   color: var(--text-tertiary);
   font-size: var(--font-size-md);
+}
+
+.creatingHint {
+  color: var(--accent-blue);
+  font-size: 11px;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.errorHint {
+  color: var(--accent-red);
+  font-size: 11px;
+  word-break: break-word;
 }

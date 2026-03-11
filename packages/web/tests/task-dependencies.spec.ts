@@ -31,8 +31,8 @@ test.describe("Task Dependencies", () => {
     // Wait for the dependent task to appear in sidebar
     await page.getByText("blocked-beta").waitFor({ timeout: 5_000 });
 
-    // Verify the "dep" indicator is visible in the sidebar
-    await expect(page.locator('span[title^="Depends on:"]')).toBeVisible();
+    // Verify the "blocked" indicator is visible in the sidebar (blocker is incomplete)
+    await expect(page.locator('span[title^="Depends on:"]')).toHaveText("blocked");
 
     // Navigate to the blocked task
     await navigateToTask(page, "blocked-beta");

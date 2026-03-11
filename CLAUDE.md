@@ -9,6 +9,10 @@ When you encounter unexpected issues, workarounds, or non-obvious behavior (CI q
 - **Never rebase or force-push.** To sync with `main`, first run `git fetch origin` and then use `git merge origin/main` instead of `git rebase`. Rebasing published branches rewrites history and typically requires a force-push, which we do not allow.
 - **Never merge PRs** unless the user explicitly tells you to merge. Other agents may be coordinating merge order.
 
+## Planning
+
+- **Always plan tests**: Every implementation plan must include a section for tests (E2E Playwright specs for `@grackle-ai/web`, unit/integration tests for other packages). If the change is purely cosmetic or untestable, explicitly note why tests are skipped.
+
 ## Build & Test
 
 ```bash
