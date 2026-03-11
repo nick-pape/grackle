@@ -15,7 +15,7 @@ mcp = FastMCP("mcp-recording")
 
 @mcp.tool()
 async def stop_recording() -> str:
-    """Stop the screen recording. Waits for all queued audio to finish playing, then signals ffmpeg to finalize the MP4. Call this as your LAST action when the demo is complete."""
+    """Stop the screen recording. Waits a fixed 2 seconds for final audio to reach PulseAudio, then signals ffmpeg to finalize the MP4. Call this as your LAST action when the demo is complete."""
     # Extra buffer for final audio to reach PulseAudio sink
     await asyncio.sleep(2.0)
 

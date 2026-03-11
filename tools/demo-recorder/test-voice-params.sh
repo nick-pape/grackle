@@ -43,11 +43,11 @@ for voice_name in male female; do
     outfile="${OUTDIR}/${voice_name}_prefix-${prefix_name}.wav"
     full_text="${prefix}${TEST_TEXT}"
     echo "  ${voice_name} / prefix=${prefix_name} -> $(basename "$outfile")"
-    curl -s -X POST "${POCKETTTS_URL}/tts" \
+    curl -sf -X POST "${POCKETTTS_URL}/tts" \
       -F "text=${full_text}" \
       -F "voice_url=${voice}" \
       -o "$outfile" \
-      -w "    [%{http_code} %{size_download}B]\n" || echo "    FAILED"
+      -w "    [%{http_code} %{size_download}B]\n" || { rm -f "$outfile"; echo "    FAILED"; }
   done
 done
 

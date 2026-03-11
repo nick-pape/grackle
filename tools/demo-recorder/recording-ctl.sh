@@ -16,6 +16,11 @@ while ! pgrep -f "chrome.*remote-debugging" > /dev/null 2>&1; do
     echo "[recording-ctl] ERROR: Chrome not detected within ${CHROME_WAIT_TIMEOUT}s. Aborting." >&2
     exit 1
   fi
+  # Abort early if PowerLine has already exited (Chrome will never launch)
+  if ! pgrep -f "node.*dist/index.js" > /dev/null 2>&1; then
+    echo "[recording-ctl] ERROR: PowerLine exited before Chrome launched. Aborting." >&2
+    exit 1
+  fi
   sleep 0.5
 done
 
