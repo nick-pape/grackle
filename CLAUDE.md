@@ -121,7 +121,8 @@ Every push to a PR branch triggers both **CI** and a **GitHub Copilot code revie
 
 ### Copilot Review
 - **Every push triggers a new Copilot review** — previous review comments may become outdated but new ones appear.
-- When asked to "deal with Copilot" or "address Copilot comments":
+- **Automated**: Use `/pr-fixup` to run the full loop automatically — syncs with main, addresses all Copilot comments, and waits for CI. See `.claude/skills/pr-fixup/SKILL.md`.
+- When asked to "deal with Copilot" or "address Copilot comments" manually:
   1. **Read** all comments: `gh api repos/nick-pape/grackle/pulls/<PR>/comments`
   2. **Fix** the code issues Copilot identified
   3. **Reply** to each comment explaining what was done: `gh api repos/nick-pape/grackle/pulls/<PR>/comments/<id>/replies -f body="..."`
