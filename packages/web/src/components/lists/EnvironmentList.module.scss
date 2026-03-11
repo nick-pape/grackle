@@ -120,6 +120,13 @@
   animation: pulse 2s ease-in-out infinite;
 }
 
+.errorMessage {
+  font-size: 11px;
+  color: var(--accent-red);
+  flex: 1;
+  word-break: break-word;
+}
+
 // --- Session rows ---
 
 .sessionRow {
