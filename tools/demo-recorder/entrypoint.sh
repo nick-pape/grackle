@@ -44,6 +44,10 @@ wait $POWERLINE_PID
 POWERLINE_EXIT=$?
 
 # Wait for recording controller to finalize (ffmpeg writes moov atom on shutdown)
-wait $RECORDING_CTL_PID 2>/dev/null || true
+wait $RECORDING_CTL_PID 2>/dev/null
+RECORDING_EXIT=$?
+if [ "$RECORDING_EXIT" -ne 0 ]; then
+  echo "[entrypoint] WARNING: recording-ctl exited with status $RECORDING_EXIT — MP4 may be missing or corrupt" >&2
+fi
 
 exit $POWERLINE_EXIT

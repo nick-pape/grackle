@@ -76,4 +76,4 @@ echo ""
 echo "=== Done. Test files in ${OUTDIR}/ ==="
 echo "Listen and pick: (a) best prefix per voice, (b) best female tempo"
 echo ""
-ls -lhS "$OUTDIR"/*.wav 2>/dev/null
+ls -lhS "$OUTDIR"/*.wav 2>/dev/null || echo "(no WAV files generated)"

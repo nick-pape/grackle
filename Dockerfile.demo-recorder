@@ -19,7 +19,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # ── PocketTTS (neural TTS engine) ──────────────────────────
 RUN python3 -m venv /opt/pockettts \
     && /opt/pockettts/bin/pip install --no-cache-dir \
-       pocket-tts-mcp==0.1.2
+       pocket-tts-mcp==0.1.2 \
+       fastmcp
 
 # Pre-download TTS model weights during build (avoids 30-60s first-run delay)
 RUN /opt/pockettts/bin/pocket-tts generate --text "warmup" -q \
@@ -32,8 +33,8 @@ RUN groupadd -r grackle 2>/dev/null || true \
 WORKDIR /app
 
 # ── PowerLine application ──────────────────────────────────
-COPY packages/common/dist/ /app/node_modules/@grackle/common/dist/
-COPY packages/common/package.json /app/node_modules/@grackle/common/package.json
+COPY packages/common/dist/ /app/node_modules/@grackle-ai/common/dist/
+COPY packages/common/package.json /app/node_modules/@grackle-ai/common/package.json
 
 COPY packages/powerline/dist/ /app/dist/
 COPY packages/powerline/package.json /app/package.json

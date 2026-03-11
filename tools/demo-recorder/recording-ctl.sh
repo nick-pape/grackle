@@ -1,4 +1,5 @@
 #!/bin/bash
+set -uo pipefail
 # Recording controller daemon — auto-starts recording when Chrome launches.
 # Stops when the Claude Code session ends (PowerLine exits or stop signal).
 

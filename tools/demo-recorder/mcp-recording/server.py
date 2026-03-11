@@ -1,7 +1,8 @@
 """Recording control MCP server — stop_recording tool for demo-recorder.
 
 Signals the recording-ctl.sh script to finalize the MP4 by writing a
-sentinel file. Waits for any queued PocketTTS audio to drain first.
+sentinel file. Includes a fixed 2-second delay for final audio to reach
+the PulseAudio sink before stopping.
 """
 
 import asyncio
@@ -22,7 +23,7 @@ async def stop_recording() -> str:
         Path("/workspace/stop-recording").write_text("")
         return "Recording stopped. MP4 is being finalized."
     except Exception as exc:
-        return f"Failed to stop recording: {exc}"
+        raise RuntimeError(f"Failed to stop recording: {exc}") from exc
 
 
 if __name__ == "__main__":
