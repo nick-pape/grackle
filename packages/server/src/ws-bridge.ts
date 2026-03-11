@@ -156,6 +156,8 @@ async function autoProvisionEnvironment(
     }
     conn = await adapter.connect(environmentId, config, powerlineToken);
     adapterManager.setConnection(environmentId, conn);
+    // Push stored tokens to newly connected environment
+    await tokenBroker.pushToEnv(environmentId);
     envRegistry.updateEnvironmentStatus(environmentId, "connected");
     broadcastEnvironments();
     logger.info({ environmentId, ...logContext }, "Auto-provision complete");
@@ -802,6 +804,8 @@ async function handleMessage(
           logger.info({ environmentId }, "Provision complete, calling adapter.connect");
           const conn = await adapter.connect(environmentId, config, powerlineToken);
           adapterManager.setConnection(environmentId, conn);
+          // Push stored tokens to newly connected environment
+          await tokenBroker.pushToEnv(environmentId);
           envRegistry.updateEnvironmentStatus(environmentId, "connected");
           logger.info({ environmentId }, "Environment connected");
           broadcast({
