@@ -14,7 +14,7 @@
  * slugify("Hello World!")        // "hello-world"
  * slugify("  My New Task  ")     // "my-new-task"
  * slugify("A very long title that exceeds the forty character limit")
- * // "a-very-long-title-that-exceeds-the-fort"
+ * // "a-very-long-title-that-exceeds-the-forty"
  */
 export function slugify(text: string): string {
   return text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40);
