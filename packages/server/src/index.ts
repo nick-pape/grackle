@@ -136,10 +136,11 @@ function main(): void {
   grpcServer.on("error", (err: NodeJS.ErrnoException) => {
     if (err.code === "EADDRINUSE") {
       logger.fatal({ port: grpcPort }, "Port %d is already in use. Is another Grackle server running?", grpcPort);
-      process.exit(1);
+    } else {
+      logger.fatal({ err }, "gRPC server error");
     }
-    logger.fatal({ err }, "gRPC server error");
-    process.exit(1);
+    process.exitCode = 1;
+    shutdown().catch(() => { process.exit(1); });
   });
 
   grpcServer.listen(grpcPort, "127.0.0.1", () => {
@@ -155,10 +156,11 @@ function main(): void {
   webServer.on("error", (err: NodeJS.ErrnoException) => {
     if (err.code === "EADDRINUSE") {
       logger.fatal({ port: webPort }, "Port %d is already in use. Is another Grackle server running?", webPort);
-      process.exit(1);
+    } else {
+      logger.fatal({ err }, "Web server error");
     }
-    logger.fatal({ err }, "Web server error");
-    process.exit(1);
+    process.exitCode = 1;
+    shutdown().catch(() => { process.exit(1); });
   });
 
   webServer.listen(webPort, "127.0.0.1", () => {
@@ -196,7 +198,7 @@ function main(): void {
     });
 
     clearTimeout(forceExit);
-    process.exit(0);
+    process.exit(process.exitCode || 0);
   }
 
   process.on("SIGINT", shutdown);

@@ -59,10 +59,11 @@ function main(): void {
       server.on("error", (err: NodeJS.ErrnoException) => {
         if (err.code === "EADDRINUSE") {
           logger.fatal({ port }, "Port %d is already in use. Is another PowerLine running?", port);
-          process.exit(1);
+        } else {
+          logger.fatal({ err }, "PowerLine server error");
         }
-        logger.fatal({ err }, "PowerLine server error");
-        process.exit(1);
+        process.exitCode = 1;
+        shutdown();
       });
 
       server.listen(port, () => {
@@ -73,8 +74,9 @@ function main(): void {
       // Graceful shutdown
       function shutdown(): void {
         logger.info("Shutting down PowerLine...");
-        server.close();
-        process.exit(0);
+        server.close(() => {
+          process.exit(process.exitCode || 0);
+        });
       }
 
       process.on("SIGINT", shutdown);
