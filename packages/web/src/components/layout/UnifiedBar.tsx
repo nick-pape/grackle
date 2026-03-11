@@ -409,12 +409,12 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
             Create
           </button>
         </div>
-        <input
-          type="text"
+        <textarea
           value={taskDesc}
           onChange={(e) => setTaskDesc(e.target.value)}
           placeholder="Description (optional)..."
-          className={styles.inputSmall}
+          className={styles.textarea}
+          rows={3}
         />
       </div>
     );

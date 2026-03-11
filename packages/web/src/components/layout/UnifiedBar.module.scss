@@ -44,6 +44,15 @@
   font-size: 11px;
 }
 
+.textarea {
+  @include input-field;
+  flex: 1;
+  font-size: 11px;
+  resize: vertical;
+  min-height: 60px;
+  font-family: inherit;
+}
+
 .select {
   @include select-field;
 }

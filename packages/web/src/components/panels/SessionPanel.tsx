@@ -110,6 +110,7 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
   const loadedRef = useRef<string | undefined>(undefined);
   const [activeTaskTab, setActiveTaskTab] = useState<TaskTab>("overview");
   const [projectTab, setProjectTab] = useState<ProjectTab>("tasks");
+  const prevTaskIdRef = useRef<string | undefined>(undefined);
   const prevTaskStatusRef = useRef<string | undefined>(undefined);
 
   // Determine session context
@@ -123,6 +124,14 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
     task = tasks.find((t) => t.id === viewMode.taskId);
     sessionId = task?.sessionId || undefined;
     projectId = task?.projectId || undefined;
+  }
+
+  // Reset to overview tab when switching to a different task.
+  if (viewMode.kind === "task" && task?.id !== prevTaskIdRef.current) {
+    prevTaskIdRef.current = task?.id;
+    if (activeTaskTab !== "overview") {
+      setActiveTaskTab("overview");
+    }
   }
 
   // Auto-switch tab synchronously during render (not via effect) so the

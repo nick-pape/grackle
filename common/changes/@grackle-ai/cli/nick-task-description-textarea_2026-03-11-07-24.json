@@ -1,7 +1,7 @@
 {
   "changes": [
     {
-      "comment": "Demo recorder pipeline: self-recording podcast with Playwright, PocketTTS, and ffmpeg",
+      "comment": "No functional changes to CLI (merge commit false positive)",
       "type": "none",
       "packageName": "@grackle-ai/cli"
     }
