@@ -108,7 +108,7 @@ Grackle is a Rush monorepo with pnpm, containing 5 main packages:
 The contract layer. Everything starts here.
 
 **Proto services defined:**
-- `Grackle` — 26 RPCs for the central server (environments, sessions, projects, tasks, findings, tokens)
+- `Grackle` — 31 RPCs for the central server (environments, sessions, projects, tasks, findings, tokens)
 - `GracklePowerLine` — 10 RPCs for the remote environment agent host
 
 **Shared exports:**
@@ -244,7 +244,7 @@ A real-time dashboard for monitoring and controlling agents.
 
 ## 4. The gRPC API Surface
 
-### Central Server — `Grackle` Service (26 RPCs)
+### Central Server — `Grackle` Service (31 RPCs)
 
 #### Environment Management
 | RPC | Type | Description |
@@ -408,7 +408,7 @@ Connects to remote machines via SSH tunneling.
 8. Open SSH tunnel on auto-discovered free port
 9. Verify connectivity
 
-**Security:** `BatchMode=yes`, `StrictHostKeyChecking=accept-new`, `ServerAliveInterval=15`, `ServerAliveCountMax=3`, `ExitOnForwardFailure=yes`
+**Security:** `BatchMode=yes`, `StrictHostKeyChecking=accept-new` (first-connect convenience; use `yes` with managed `known_hosts` in production), `ServerAliveInterval=15`, `ServerAliveCountMax=3`, `ExitOnForwardFailure=yes`
 
 ### 5.3 Codespace Adapter
 
@@ -778,10 +778,11 @@ Triggered on push to `main`:
 - `@grackle-ai/powerline` — Remote agent host (binary: `grackle-powerline`)
 - `@grackle-ai/server` — Central server
 - `@grackle-ai/cli` — CLI client (binary: `grackle`)
+- `@grackle-ai/web` — Web UI / frontend
 
 **Docker image:** Built from `Dockerfile.powerline` for containerized environments.
 
-**Lockstep versioning:** All 4 publishable packages share one version (currently 0.13.0).
+**Lockstep versioning:** All 5 publishable packages share one version (currently 0.13.2).
 
 ---
 
