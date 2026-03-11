@@ -2,6 +2,32 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.14.1",
+      "tag": "@grackle-ai/cli_v0.14.1",
+      "date": "Wed, 11 Mar 2026 07:56:50 GMT",
+      "comments": {
+        "none": [
+          {
+            "comment": "No CLI changes — merge commit false positive"
+          },
+          {
+            "comment": "No functional changes to CLI (merge commit false positive)"
+          },
+          {
+            "comment": "No functional changes to CLI (merge commit false positive)"
+          },
+          {
+            "comment": "No functional changes (merge commit artifact)"
+          }
+        ],
+        "patch": [
+          {
+            "comment": "Resolve MCP script path relative to PowerLine package instead of hardcoded Docker path"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.14.0",
       "tag": "@grackle-ai/cli_v0.14.0",
       "date": "Wed, 11 Mar 2026 06:40:03 GMT",

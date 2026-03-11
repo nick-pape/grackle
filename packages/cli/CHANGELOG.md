@@ -1,6 +1,20 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Wed, 11 Mar 2026 06:40:03 GMT and should not be manually modified.
+This log was last generated on Wed, 11 Mar 2026 07:56:50 GMT and should not be manually modified.
+
+## 0.14.1
+Wed, 11 Mar 2026 07:56:50 GMT
+
+### Patches
+
+- Resolve MCP script path relative to PowerLine package instead of hardcoded Docker path
+
+### Updates
+
+- No CLI changes — merge commit false positive
+- No functional changes to CLI (merge commit false positive)
+- No functional changes to CLI (merge commit false positive)
+- No functional changes (merge commit artifact)
 
 ## 0.14.0
 Wed, 11 Mar 2026 06:40:03 GMT
