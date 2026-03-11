@@ -148,7 +148,7 @@ export function resolveMcpServers(spawnMcpServers?: Record<string, unknown>): Re
     servers.grackle = {
       command: "node",
       args: [GRACKLE_MCP_SCRIPT],
-      tools: ["post_finding", "create_subtask", "get_task_context", "update_task_status"],
+      tools: ["post_finding", "create_subtask", "get_task_context", "update_task_status", "query_findings"],
     };
   }
 
