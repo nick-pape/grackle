@@ -63,6 +63,10 @@ test.describe("Projects", () => {
     await expect(page.getByText("new task")).toBeVisible();
     await expect(page.locator('input[placeholder="Task title..."]')).toBeVisible();
 
+    // Description field should be a multi-line textarea
+    const descriptionField = page.locator('textarea[placeholder="Description (optional)..."]');
+    await expect(descriptionField).toBeVisible();
+
     // Main panel shows task creation prompt
     await expect(page.getByText("Fill in the task details below")).toBeVisible();
 
