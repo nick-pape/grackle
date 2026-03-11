@@ -110,7 +110,7 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
   const loadedRef = useRef<string | undefined>(undefined);
   const [activeTaskTab, setActiveTaskTab] = useState<TaskTab>("stream");
   const [projectTab, setProjectTab] = useState<ProjectTab>("tasks");
-  const prevTaskStatusRef = useRef<string | undefined>(undefined);
+  const prevTaskIdRef = useRef<string | undefined>(undefined);
 
   // Determine session context
   let sessionId: string | undefined = undefined;
@@ -126,8 +126,8 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
   }
 
   // Reset to stream tab when switching to a different task.
-  if (task?.id !== prevTaskStatusRef.current) {
-    prevTaskStatusRef.current = task?.id;
+  if (viewMode.kind === "task" && task?.id !== prevTaskIdRef.current) {
+    prevTaskIdRef.current = task?.id;
     if (activeTaskTab !== "stream") {
       setActiveTaskTab("stream");
     }
