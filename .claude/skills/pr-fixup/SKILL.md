@@ -173,6 +173,8 @@ Poll CI status with a 15-minute timeout. Use `--watch` with a timeout wrapper:
 timeout 900 gh pr checks "$PR_NUMBER" --watch --fail-fast
 ```
 
+Note: `timeout` returns exit code 124 on timeout, while `gh pr checks --fail-fast` returns a non-zero code on check failure. Distinguish between them — a timeout means CI is still running (report it as a timeout), while a non-124 failure means a check actually failed.
+
 If `--watch` or `timeout` is not available, poll manually — run `gh pr checks "$PR_NUMBER"` every 30 seconds, tracking elapsed time. Stop after 15 minutes (30 iterations) and report a timeout.
 
 CI is done when all required checks show a conclusion (pass or fail). If any check fails:
@@ -195,7 +197,7 @@ When everything is green, summarize:
 ## Important Notes
 
 - **Repo name**: Use `gh repo view` to get the owner/repo dynamically — do not hardcode
-- **Copilot login**: GraphQL uses `author.login == "copilot-pull-request-reviewer"`, REST uses `user.login == "Copilot"` — they differ
+- **Copilot identification**: Use the GraphQL comment `id` / REST `node_id` join as the source of truth when correlating comments across APIs. For filtering, GraphQL uses `author.login == "copilot-pull-request-reviewer"` and REST uses `user.login == "Copilot"`
 - **Thread resolution**: Always reply BEFORE resolving — resolving without a reply looks dismissive
 - **Batch commits**: Group all fixes from one review round into a single commit
 - **CLAUDE.md compliance**: When fixing code, follow all project conventions in CLAUDE.md (TSDoc, full braces, no magic numbers, etc.)
