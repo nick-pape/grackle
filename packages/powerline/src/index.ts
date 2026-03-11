@@ -56,6 +56,16 @@ function main(): void {
 
       const server = http2.createServer(handler);
 
+      server.on("error", (err: NodeJS.ErrnoException) => {
+        if (err.code === "EADDRINUSE") {
+          logger.fatal({ port }, "Port %d is already in use. Is another PowerLine running?", port);
+        } else {
+          logger.fatal({ err }, "PowerLine server error");
+        }
+        process.exitCode = 1;
+        shutdown();
+      });
+
       server.listen(port, () => {
         const authStatus = powerlineToken ? "authenticated" : "NO AUTH (development only)";
         logger.info({ port, authStatus }, "PowerLine listening on http://localhost:%d [%s]", port, authStatus);
@@ -64,8 +74,9 @@ function main(): void {
       // Graceful shutdown
       function shutdown(): void {
         logger.info("Shutting down PowerLine...");
-        server.close();
-        process.exit(0);
+        server.close(() => {
+          process.exit(process.exitCode || 0);
+        });
       }
 
       process.on("SIGINT", shutdown);
