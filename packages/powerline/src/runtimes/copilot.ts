@@ -359,13 +359,13 @@ class CopilotSession implements AgentSession {
             raw: event,
           });
 
-          // Intercept finding tool calls (in case they come via MCP rather than custom tool)
-          if (toolName === "mcp__grackle__post_finding" || toolName === "post_finding") {
+          // Intercept MCP finding tool calls (custom tool handler covers non-MCP path)
+          if (toolName === "mcp__grackle__post_finding") {
             const args = toolArgs as Record<string, unknown>;
             this.eventQueue.push(buildFindingEvent(args, event));
           }
-          // Intercept subtask creation tool calls
-          if (toolName === "mcp__grackle__create_subtask" || toolName === "create_subtask") {
+          // Intercept MCP subtask creation tool calls (custom tool handler covers non-MCP path)
+          if (toolName === "mcp__grackle__create_subtask") {
             const args = toolArgs as Record<string, unknown>;
             this.eventQueue.push(buildSubtaskCreateEvent(args, event));
           }

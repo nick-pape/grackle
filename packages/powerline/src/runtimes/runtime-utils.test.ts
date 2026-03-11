@@ -81,7 +81,7 @@ describe("buildSubtaskCreateEvent", () => {
     const event = buildSubtaskCreateEvent({}, { raw: true });
     const parsed = JSON.parse(event.content);
 
-    expect(parsed.title).toBe("Untitled subtask");
+    expect(parsed.title).toBe("");
     expect(parsed.description).toBe("");
     expect(parsed.local_id).toBe("");
     expect(parsed.depends_on).toEqual([]);

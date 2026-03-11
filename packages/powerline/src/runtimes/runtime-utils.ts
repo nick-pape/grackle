@@ -44,8 +44,8 @@ export function buildSubtaskCreateEvent(args: Record<string, unknown>, raw: unkn
     type: "subtask_create",
     timestamp: new Date().toISOString(),
     content: JSON.stringify({
-      title: args.title || "Untitled subtask",
-      description: args.description || "",
+      title: typeof args.title === "string" ? args.title : "",
+      description: typeof args.description === "string" ? args.description : "",
       local_id: args.local_id || "",
       depends_on: args.depends_on || [],
       can_decompose: args.can_decompose ?? false,

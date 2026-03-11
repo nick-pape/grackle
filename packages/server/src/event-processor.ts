@@ -108,9 +108,16 @@ export function processEventStream(
                     "Subtask creation failed: invalid title or description",
                   );
                 } else {
+                  // Normalize and validate depends_on, local_id, and can_decompose
+                  const dependsOn = Array.isArray(data.depends_on)
+                    ? data.depends_on.filter((d): d is string => typeof d === "string").map(d => d.trim()).filter(Boolean)
+                    : [];
+                  const localId = typeof data.local_id === "string" ? data.local_id.trim() : "";
+                  const canDecompose = typeof data.can_decompose === "boolean" ? data.can_decompose : false;
+
                   // Resolve depends_on local IDs to real task IDs
                   const resolvedDeps: string[] = [];
-                  for (const localDep of (data.depends_on || [])) {
+                  for (const localDep of dependsOn) {
                     const realId = subtaskLocalIdMap.get(localDep);
                     if (realId) {
                       resolvedDeps.push(realId);
@@ -130,23 +137,23 @@ export function processEventStream(
                     resolvedDeps,
                     slugify(project.name),
                     taskId,
-                    data.can_decompose,
+                    canDecompose,
                   );
 
                   // Record the local_id → real ID mapping, detecting duplicates
-                  if (data.local_id) {
-                    if (subtaskLocalIdMap.has(data.local_id)) {
+                  if (localId) {
+                    if (subtaskLocalIdMap.has(localId)) {
                       logger.warn(
                         {
-                          localId: data.local_id,
-                          existingSubtaskId: subtaskLocalIdMap.get(data.local_id),
+                          localId,
+                          existingSubtaskId: subtaskLocalIdMap.get(localId),
                           newSubtaskId: subtaskId,
                           parentTaskId: taskId,
                         },
                         "Duplicate subtask local_id encountered; keeping existing mapping",
                       );
                     } else {
-                      subtaskLocalIdMap.set(data.local_id, subtaskId);
+                      subtaskLocalIdMap.set(localId, subtaskId);
                     }
                   }
 
