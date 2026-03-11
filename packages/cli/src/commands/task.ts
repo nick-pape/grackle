@@ -2,6 +2,8 @@ import type { Command } from "commander";
 import { createGrackleClient } from "../client.js";
 import { taskStatusToString } from "@grackle-ai/common";
 import Table from "cli-table3";
+import chalk from "chalk";
+import { execFileSync } from "node:child_process";
 
 export function registerTaskCommands(program: Command): void {
   const task = program.command("task").description("Manage tasks");
@@ -107,4 +109,94 @@ export function registerTaskCommands(program: Command): void {
       });
       console.log(`Rejected: ${t.id} → ${taskStatusToString(t.status)}`);
     });
+
+  task
+    .command("import-github <project-id>")
+    .description("Bulk import GitHub issues as tasks")
+    .requiredOption("--repo <owner/repo>", "GitHub repository (owner/repo)")
+    .option("--label <label>", "Filter issues by label name")
+    .option("--state <state>", "Issue state to fetch", "open")
+    .option("--env <env-id>", "Environment ID to assign to created tasks")
+    .action(
+      /**
+       * Fetches GitHub issues via the `gh` CLI, deduplicates against existing
+       * tasks (matched by title prefix `#<number>:`), and bulk-creates any
+       * issues that have not yet been imported into the given project.
+       *
+       * @param projectId - The Grackle project ID to import tasks into.
+       * @param opts - Parsed CLI options (repo, label, state, env).
+       */
+      async (projectId: string, opts: { repo: string; label?: string; state: string; env?: string }) => {
+        // 1. Fetch issues from GitHub CLI
+        const ghArgs = [
+          "issue",
+          "list",
+          "--repo",
+          opts.repo,
+          "--state",
+          opts.state,
+          "--json",
+          "number,title,body,labels",
+          "--limit",
+          "200",
+        ];
+        let ghOutput: string;
+        try {
+          ghOutput = execFileSync("gh", ghArgs, { encoding: "utf8" });
+        } catch (err) {
+          console.error("Failed to run `gh issue list`. Is the GitHub CLI installed and authenticated?");
+          console.error(err);
+          process.exit(1);
+        }
+
+        interface GitHubLabel {
+          name: string;
+        }
+        interface GitHubIssue {
+          number: number;
+          title: string;
+          body: string;
+          labels: GitHubLabel[];
+        }
+
+        let issues: GitHubIssue[] = JSON.parse(ghOutput);
+
+        // 2. Optionally filter by label
+        if (opts.label) {
+          const filterLabel = opts.label;
+          issues = issues.filter((issue) =>
+            issue.labels.some((l) => l.name === filterLabel)
+          );
+        }
+
+        // 3. Fetch existing tasks for deduplication
+        const client = createGrackleClient();
+        const res = await client.listTasks({ id: projectId });
+        const existingTitles = new Set(res.tasks.map((t) => t.title));
+
+        // 4. Create tasks for issues not already imported
+        let imported = 0;
+        let skipped = 0;
+        for (const issue of issues) {
+          const title = `#${issue.number}: ${issue.title}`;
+          if (existingTitles.has(title)) {
+            skipped++;
+            continue;
+          }
+          await client.createTask({
+            projectId,
+            title,
+            description: issue.body ?? "",
+            environmentId: opts.env ?? "",
+            dependsOn: [],
+          });
+          imported++;
+        }
+
+        // 5. Print summary
+        console.log(
+          `Imported ${chalk.green(imported)} tasks (skipped ${skipped} already imported)`
+        );
+      }
+    );
 }
