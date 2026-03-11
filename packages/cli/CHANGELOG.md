@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Wed, 11 Mar 2026 05:34:23 GMT and should not be manually modified.
+This log was last generated on Wed, 11 Mar 2026 06:21:02 GMT and should not be manually modified.
+
+## 0.13.5
+Wed, 11 Mar 2026 06:21:02 GMT
+
+### Patches
+
+- Broadcast provision progress to all WS clients; persist provisioning errors in UI
 
 ## 0.13.4
 Wed, 11 Mar 2026 05:34:23 GMT
