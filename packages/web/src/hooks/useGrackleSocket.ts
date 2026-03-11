@@ -758,11 +758,15 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
 
   const createCodespace = useCallback(
     (repo: string) => {
+      if (!connected) {
+        setCodespaceError("Not connected to server. Please try again once the connection is restored.");
+        return;
+      }
       setCodespaceCreating(true);
       setCodespaceError("");
       send({ type: "create_codespace", payload: { repo } });
     },
-    [send],
+    [send, connected],
   );
 
   return {

@@ -917,21 +917,22 @@ async function handleMessage(
     }
 
     case "create_codespace": {
-      const repo = msg.payload?.repo as string;
-      if (!repo) {
+      const repo = msg.payload?.repo;
+      if (typeof repo !== "string" || repo.trim().length === 0) {
         sendWs(ws, { type: "codespace_create_error", payload: { message: "repo required" } });
         return;
       }
+      const trimmedRepo = repo.trim();
       try {
         const result = await exec("gh", [
           "codespace", "create",
-          "--repo", repo,
+          "--repo", trimmedRepo,
           "--machine", "basicLinux32gb",
         ], { timeout: GH_CODESPACE_CREATE_TIMEOUT_MS });
         const codespaceName = result.stdout.trim();
         sendWs(ws, {
           type: "codespace_created",
-          payload: { name: codespaceName, repository: repo },
+          payload: { name: codespaceName, repository: trimmedRepo },
         });
       } catch (err) {
         logger.error({ err, repo }, "Failed to create codespace");
