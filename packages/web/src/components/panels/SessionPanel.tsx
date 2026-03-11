@@ -99,16 +99,16 @@ function groupConsecutiveTextEvents(events: SessionEvent[]): SessionEvent[] {
 
 // --- Main component ---
 
-type TaskTab = "stream" | "diff" | "findings";
+type TaskTab = "overview" | "stream" | "diff" | "findings";
 type ProjectTab = "tasks" | "graph";
 
 /** Main content panel that renders session streams, task views, project summaries, or empty states based on the current view mode. */
 export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
-  const { events, sessions, tasks, taskDiff, loadSessionEvents, loadFindings, loadTaskDiff, kill } = useGrackle();
+  const { events, sessions, tasks, environments, taskDiff, loadSessionEvents, loadFindings, loadTaskDiff, kill } = useGrackle();
   // eslint-disable-next-line @rushstack/no-new-null
   const scrollRef = useRef<HTMLDivElement>(null);
   const loadedRef = useRef<string | undefined>(undefined);
-  const [activeTaskTab, setActiveTaskTab] = useState<TaskTab>("stream");
+  const [activeTaskTab, setActiveTaskTab] = useState<TaskTab>("overview");
   const [projectTab, setProjectTab] = useState<ProjectTab>("tasks");
   const prevTaskStatusRef = useRef<string | undefined>(undefined);
 
@@ -132,7 +132,9 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
   if (task?.status !== prevTaskStatusRef.current) {
     prevTaskStatusRef.current = task?.status;
     const newTab: TaskTab | undefined =
-      task?.status === "in_progress" ? "stream"
+      task?.status === "pending" ? "overview"
+      : task?.status === "assigned" ? "overview"
+      : task?.status === "in_progress" ? "stream"
       : task?.status === "review" ? "diff"
       : task?.status === "done" ? "findings"
       : undefined;
@@ -285,6 +287,12 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
         {/* Tab bar */}
         <div className={styles.tabBar}>
           <button
+            className={`${styles.tab} ${activeTaskTab === "overview" ? styles.active : ""}`}
+            onClick={() => setActiveTaskTab("overview")}
+          >
+            Overview
+          </button>
+          <button
             className={`${styles.tab} ${activeTaskTab === "stream" ? styles.active : ""}`}
             onClick={() => setActiveTaskTab("stream")}
           >
@@ -306,6 +314,58 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
 
         {/* Tab content with animation */}
         <AnimatePresence mode="wait">
+          {activeTaskTab === "overview" && (
+            <motion.div
+              key="overview"
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.15 }}
+              className={styles.overviewContent}
+            >
+              {task?.description && (
+                <div className={styles.overviewSection}>
+                  <div className={styles.overviewLabel}>Description</div>
+                  <div className={styles.overviewDescription}>{task.description}</div>
+                </div>
+              )}
+
+              {task?.environmentId && (
+                <div className={styles.overviewSection}>
+                  <div className={styles.overviewLabel}>Environment</div>
+                  <div className={styles.overviewDescription}>
+                    {environments.find((e) => e.id === task.environmentId)?.displayName ?? task.environmentId}
+                  </div>
+                </div>
+              )}
+
+              {task && task.dependsOn.length > 0 && (
+                <div className={styles.overviewSection}>
+                  <div className={styles.overviewLabel}>Dependencies</div>
+                  <div className={styles.depList}>
+                    {task.dependsOn.map((depId) => {
+                      const dep = tasks.find((t) => t.id === depId);
+                      const isDone = dep?.status === "done";
+                      return (
+                        <div
+                          key={depId}
+                          className={`${styles.depItem} ${isDone ? styles.depDone : styles.depBlocked}`}
+                        >
+                          <span>{isDone ? "\u2713" : "\u25CB"}</span>
+                          <span>{dep?.title ?? depId}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {task && task.dependsOn.length === 0 && !task.description && (
+                <div className={styles.waitingMessage}>No additional details</div>
+              )}
+            </motion.div>
+          )}
+
           {activeTaskTab === "stream" && (
             <motion.div
               key="stream"

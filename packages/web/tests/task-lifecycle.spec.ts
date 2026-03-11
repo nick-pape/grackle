@@ -23,7 +23,8 @@ test.describe("Task Lifecycle (stub runtime)", () => {
     await page.getByText("test task").click();
     await expect(page.getByText("Task: test task")).toBeVisible({ timeout: 5_000 });
     await expect(page.getByText("pending")).toBeVisible();
-    await expect(page.getByText("Task has not been started yet")).toBeVisible();
+    // Overview tab should be active for pending task
+    await expect(page.locator("button", { hasText: "Overview" })).toHaveAttribute("class", /active/);
 
     // --- Step 4: Monkey-patch WS to force stub runtime on start_task ---
     await page.evaluate(() => {

@@ -64,6 +64,7 @@ interface TaskTreeNodeProps {
   selectedTaskId: string | undefined;
   setViewMode: (mode: ViewMode) => void;
   projectId: string;
+  allTasks: TaskData[];
 }
 
 /** Renders a single task tree node with optional children. */
@@ -75,8 +76,14 @@ function TaskTreeNode({
   selectedTaskId,
   setViewMode,
   projectId,
+  allTasks,
 }: TaskTreeNodeProps): JSX.Element {
   const statusStyle = TASK_STATUS_STYLES[node.status] || TASK_STATUS_STYLES.pending;
+  const isBlocked = node.dependsOn.length > 0 &&
+    node.dependsOn.some((depId) => {
+      const dep = allTasks.find((t) => t.id === depId);
+      return !dep || dep.status !== "done";
+    });
   const isExpanded = expandedTasks.has(node.id);
   const hasChildren = node.children.length > 0;
   const isSelected = selectedTaskId === node.id;
@@ -119,8 +126,11 @@ function TaskTreeNode({
           </span>
         )}
         {node.dependsOn.length > 0 && (
-          <span className={styles.dependencyBadge} title={`Depends on: ${node.dependsOn.join(", ")}`}>
-            dep
+          <span
+            className={`${styles.dependencyBadge} ${isBlocked ? styles.blockedBadge : ""}`}
+            title={`Depends on: ${node.dependsOn.join(", ")}`}
+          >
+            {isBlocked ? "blocked" : "dep"}
           </span>
         )}
         {depth < MAX_TASK_DEPTH && (
@@ -157,6 +167,7 @@ function TaskTreeNode({
                 selectedTaskId={selectedTaskId}
                 setViewMode={setViewMode}
                 projectId={projectId}
+                allTasks={allTasks}
               />
             ))}
           </motion.div>
@@ -334,6 +345,7 @@ export function ProjectList({ viewMode, setViewMode }: Props): JSX.Element {
                       selectedTaskId={selectedTaskId}
                       setViewMode={setViewMode}
                       projectId={project.id}
+                      allTasks={tasks}
                     />
                   ))}
 
