@@ -421,7 +421,10 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
                   });
                 }, PROVISION_STATUS_CLEAR_DELAY_MS);
               }
-              send({ type: "list_environments" });
+              // Only refresh environment list on terminal stages to avoid redundant traffic
+              if (pp.stage === "ready" || pp.stage === "error") {
+                send({ type: "list_environments" });
+              }
             }
             break;
           }
@@ -429,6 +432,16 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
             // Server already broadcasts updated environment list via broadcastEnvironments()
             break;
           case "environment_removed":
+            // Clean up stale provision status for the removed environment
+            if (msg.payload?.environmentId) {
+              const removedId = msg.payload.environmentId as string;
+              setProvisionStatus((prev) => {
+                const next = { ...prev };
+                // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+                delete next[removedId];
+                return next;
+              });
+            }
             send({ type: "list_environments" });
             send({ type: "list_sessions" });
             break;
