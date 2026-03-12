@@ -98,10 +98,11 @@ function formatError(err: unknown): string {
  * @returns Array of parsed GitHub issues.
  */
 export async function fetchGitHubIssues(repo: string, state: string, label?: string): Promise<GitHubIssue[]> {
-  const [owner, repoName] = repo.split("/");
-  if (!owner || !repoName) {
+  const segments = repo.split("/");
+  if (segments.length !== 2 || !segments[0] || !segments[1]) {
     throw new Error(`repo must be in "owner/repo" format (received: "${repo}")`);
   }
+  const [owner, repoName] = segments;
 
   const upper = state.toUpperCase();
   if (upper !== "OPEN" && upper !== "CLOSED") {
