@@ -1,4 +1,4 @@
-import { type JSX } from "react";
+import { useId, type JSX } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import styles from "./ConfirmDialog.module.scss";
 
@@ -32,6 +32,9 @@ export function ConfirmDialog({
   onConfirm,
   onCancel,
 }: ConfirmDialogProps): JSX.Element {
+  const titleId = useId();
+  const descriptionId = useId();
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -42,10 +45,11 @@ export function ConfirmDialog({
           exit={{ opacity: 0 }}
           transition={{ duration: 0.15 }}
           onClick={onCancel}
-          // Trap keyboard focus within the dialog
+          onKeyDown={(e) => { if (e.key === "Escape") onCancel(); }}
           role="dialog"
           aria-modal="true"
-          aria-labelledby="confirm-dialog-title"
+          aria-labelledby={titleId}
+          aria-describedby={description ? descriptionId : undefined}
         >
           <motion.div
             className={styles.dialog}
@@ -55,12 +59,13 @@ export function ConfirmDialog({
             transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 id="confirm-dialog-title" className={styles.title}>{title}</h3>
+            <h3 id={titleId} className={styles.title}>{title}</h3>
             {description && (
-              <p className={styles.description}>{description}</p>
+              <p id={descriptionId} className={styles.description}>{description}</p>
             )}
             <div className={styles.actions}>
               <button
+                type="button"
                 className={styles.cancelButton}
                 onClick={onCancel}
                 autoFocus
@@ -68,6 +73,7 @@ export function ConfirmDialog({
                 Cancel
               </button>
               <button
+                type="button"
                 className={styles.confirmButton}
                 onClick={onConfirm}
               >

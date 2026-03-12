@@ -424,6 +424,17 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
 
   // --- task modes ---
   if (viewMode.kind === "task" && task) {
+    // Single shared ConfirmDialog for all task states that support deletion.
+    const confirmDialog = (
+      <ConfirmDialog
+        isOpen={showDeleteTaskConfirm}
+        title="Delete Task?"
+        description={`"${task.title}" will be permanently removed.`}
+        onConfirm={() => { deleteTask(task.id); setViewMode({ kind: "project", projectId: task.projectId }); setShowDeleteTaskConfirm(false); }}
+        onCancel={() => setShowDeleteTaskConfirm(false)}
+      />
+    );
+
     // Pending + blocked
     if (task.status === "pending" && isTaskBlocked) {
       const blockerNames = task.dependsOn
@@ -432,13 +443,7 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
         .map((t) => t!.title);
       return (
         <>
-          <ConfirmDialog
-            isOpen={showDeleteTaskConfirm}
-            title="Delete Task?"
-            description={`"${task.title}" will be permanently removed.`}
-            onConfirm={() => { deleteTask(task.id); setViewMode({ kind: "project", projectId: task.projectId }); setShowDeleteTaskConfirm(false); }}
-            onCancel={() => setShowDeleteTaskConfirm(false)}
-          />
+          {confirmDialog}
           <div className={styles.bar}>
             <span className={styles.statusBlocked}>
               Blocked by: {blockerNames.join(", ")}
@@ -458,13 +463,7 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
     if (task.status === "pending" || task.status === "assigned") {
       return (
         <>
-          <ConfirmDialog
-            isOpen={showDeleteTaskConfirm}
-            title="Delete Task?"
-            description={`"${task.title}" will be permanently removed.`}
-            onConfirm={() => { deleteTask(task.id); setViewMode({ kind: "project", projectId: task.projectId }); setShowDeleteTaskConfirm(false); }}
-            onCancel={() => setShowDeleteTaskConfirm(false)}
-          />
+          {confirmDialog}
           <div className={styles.bar}>
             <button
               onClick={() => startTask(task.id)}
@@ -578,13 +577,7 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
     if (task.status === "done") {
       return (
         <>
-          <ConfirmDialog
-            isOpen={showDeleteTaskConfirm}
-            title="Delete Task?"
-            description={`"${task.title}" will be permanently removed.`}
-            onConfirm={() => { deleteTask(task.id); setViewMode({ kind: "project", projectId: task.projectId }); setShowDeleteTaskConfirm(false); }}
-            onCancel={() => setShowDeleteTaskConfirm(false)}
-          />
+          {confirmDialog}
           <div className={styles.bar}>
             <span className={`${styles.statusText} ${styles.statusCompleted}`}>
               Task completed
@@ -610,13 +603,7 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
     if (task.status === "failed") {
       return (
         <>
-          <ConfirmDialog
-            isOpen={showDeleteTaskConfirm}
-            title="Delete Task?"
-            description={`"${task.title}" will be permanently removed.`}
-            onConfirm={() => { deleteTask(task.id); setViewMode({ kind: "project", projectId: task.projectId }); setShowDeleteTaskConfirm(false); }}
-            onCancel={() => setShowDeleteTaskConfirm(false)}
-          />
+          {confirmDialog}
           <div className={styles.bar}>
             <span className={`${styles.statusText} ${styles.statusFailed}`}>
               Task failed
