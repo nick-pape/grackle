@@ -681,6 +681,8 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
       ws.onclose = () => {
         setConnected(false);
         wsRef.current = undefined;
+        setProjectCreating(false);
+        setTaskStartingId(undefined);
         clearInterval(envPollTimer);
         clearTimeout(reconnectTimer);
         reconnectTimer = setTimeout(connect, WS_RECONNECT_DELAY_MS);

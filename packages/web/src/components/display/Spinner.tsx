@@ -12,18 +12,21 @@ interface Props {
   className?: string;
   /** Accessible label for screen readers. Defaults to "Loading". */
   label?: string;
+  /** Whether this spinner is the primary live region. Defaults to false to avoid multiple live regions. */
+  liveRegion?: boolean;
 }
 
 /**
  * Inline spinning loader that inherits the current text color.
  * Use alongside disabled buttons or hint text to signal in-flight async operations.
  */
-export function Spinner({ size = "md", className, label = "Loading" }: Props): JSX.Element {
+export function Spinner({ size = "md", className, label = "Loading", liveRegion = false }: Props): JSX.Element {
   return (
     <span
       className={`${styles.spinner} ${styles[size]} ${className ?? ""}`}
-      role="status"
+      role={liveRegion ? "status" : undefined}
       aria-label={label}
+      aria-hidden={liveRegion ? undefined : true}
     />
   );
 }
