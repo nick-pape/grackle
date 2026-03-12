@@ -147,18 +147,40 @@ async function autoProvisionEnvironment(
   try {
     const config = safeParseAdapterConfig(env.adapterConfig, environmentId);
     const powerlineToken = env.powerlineToken || "";
-    for await (const provEvent of adapter.provision(environmentId, config, powerlineToken)) {
-      logger.info({ environmentId, stage: provEvent.stage, ...logContext }, "Auto-provision progress");
-      broadcast({
-        type: "provision_progress",
-        payload: { environmentId, stage: provEvent.stage, message: provEvent.message, progress: provEvent.progress },
-      });
+
+    // Try fast reconnect if the environment was previously bootstrapped
+    let reconnected = false;
+    if (env.bootstrapped && adapter.reconnect) {
+      try {
+        for await (const provEvent of adapter.reconnect(environmentId, config, powerlineToken)) {
+          logger.info({ environmentId, stage: provEvent.stage, ...logContext }, "Auto-reconnect progress");
+          broadcast({
+            type: "provision_progress",
+            payload: { environmentId, stage: provEvent.stage, message: provEvent.message, progress: provEvent.progress },
+          });
+        }
+        reconnected = true;
+      } catch (err) {
+        logger.info({ environmentId, ...logContext, err }, "Reconnect failed, falling back to full provision");
+      }
     }
+
+    if (!reconnected) {
+      for await (const provEvent of adapter.provision(environmentId, config, powerlineToken)) {
+        logger.info({ environmentId, stage: provEvent.stage, ...logContext }, "Auto-provision progress");
+        broadcast({
+          type: "provision_progress",
+          payload: { environmentId, stage: provEvent.stage, message: provEvent.message, progress: provEvent.progress },
+        });
+      }
+    }
+
     conn = await adapter.connect(environmentId, config, powerlineToken);
     adapterManager.setConnection(environmentId, conn);
     // Push stored tokens to newly connected environment
     await tokenBroker.pushToEnv(environmentId);
     envRegistry.updateEnvironmentStatus(environmentId, "connected");
+    envRegistry.markBootstrapped(environmentId);
     broadcastEnvironments();
     logger.info({ environmentId, ...logContext }, "Auto-provision complete");
     broadcast({
@@ -793,20 +815,43 @@ async function handleMessage(
         try {
           const config = safeParseAdapterConfig(env.adapterConfig, environmentId);
           const powerlineToken = env.powerlineToken || "";
-          logger.info({ environmentId, config }, "Starting adapter.provision");
-          for await (const event of adapter.provision(environmentId, config, powerlineToken)) {
-            logger.info({ environmentId, stage: event.stage, message: event.message }, "Provision progress");
-            broadcast({
-              type: "provision_progress",
-              payload: { environmentId, stage: event.stage, message: event.message, progress: event.progress },
-            });
+
+          // Try fast reconnect if the environment was previously bootstrapped
+          let reconnected = false;
+          if (env.bootstrapped && adapter.reconnect) {
+            try {
+              logger.info({ environmentId }, "Attempting fast reconnect");
+              for await (const event of adapter.reconnect(environmentId, config, powerlineToken)) {
+                logger.info({ environmentId, stage: event.stage, message: event.message }, "Reconnect progress");
+                broadcast({
+                  type: "provision_progress",
+                  payload: { environmentId, stage: event.stage, message: event.message, progress: event.progress },
+                });
+              }
+              reconnected = true;
+            } catch (err) {
+              logger.info({ environmentId, err }, "Reconnect failed, falling back to full provision");
+            }
           }
+
+          if (!reconnected) {
+            logger.info({ environmentId, config }, "Starting adapter.provision");
+            for await (const event of adapter.provision(environmentId, config, powerlineToken)) {
+              logger.info({ environmentId, stage: event.stage, message: event.message }, "Provision progress");
+              broadcast({
+                type: "provision_progress",
+                payload: { environmentId, stage: event.stage, message: event.message, progress: event.progress },
+              });
+            }
+          }
+
           logger.info({ environmentId }, "Provision complete, calling adapter.connect");
           const conn = await adapter.connect(environmentId, config, powerlineToken);
           adapterManager.setConnection(environmentId, conn);
           // Push stored tokens to newly connected environment
           await tokenBroker.pushToEnv(environmentId);
           envRegistry.updateEnvironmentStatus(environmentId, "connected");
+          envRegistry.markBootstrapped(environmentId);
           logger.info({ environmentId }, "Environment connected");
           broadcast({
             type: "provision_progress",

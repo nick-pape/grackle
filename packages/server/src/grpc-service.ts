@@ -14,6 +14,7 @@ import * as taskStore from "./task-store.js";
 import * as findingStore from "./finding-store.js";
 import { broadcast } from "./ws-broadcast.js";
 import { processEventStream } from "./event-processor.js";
+import { logger } from "./logger.js";
 import { join } from "node:path";
 import {
   LOGS_DIR, DEFAULT_RUNTIME, DEFAULT_MODEL, MAX_TASK_DEPTH,
@@ -163,12 +164,32 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
 
       const config = JSON.parse(env.adapterConfig);
       const powerlineToken = env.powerlineToken || "";
-      for await (const event of adapter.provision(req.id, config, powerlineToken)) {
-        yield create(grackle.ProvisionEventSchema, {
-          stage: event.stage,
-          message: event.message,
-          progress: event.progress,
-        });
+
+      // Try fast reconnect if the environment was previously bootstrapped
+      let reconnected = false;
+      if (env.bootstrapped && adapter.reconnect) {
+        try {
+          for await (const event of adapter.reconnect(req.id, config, powerlineToken)) {
+            yield create(grackle.ProvisionEventSchema, {
+              stage: event.stage,
+              message: event.message,
+              progress: event.progress,
+            });
+          }
+          reconnected = true;
+        } catch (err) {
+          logger.info({ environmentId: req.id, err }, "Reconnect failed, falling back to full provision");
+        }
+      }
+
+      if (!reconnected) {
+        for await (const event of adapter.provision(req.id, config, powerlineToken)) {
+          yield create(grackle.ProvisionEventSchema, {
+            stage: event.stage,
+            message: event.message,
+            progress: event.progress,
+          });
+        }
       }
 
       try {
@@ -177,6 +198,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         // Push stored tokens to newly connected environment
         await tokenBroker.pushToEnv(req.id);
         envRegistry.updateEnvironmentStatus(req.id, "connected");
+        envRegistry.markBootstrapped(req.id);
 
         yield create(grackle.ProvisionEventSchema, {
           stage: "ready",

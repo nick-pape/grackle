@@ -42,4 +42,6 @@ export interface EnvironmentAdapter {
   destroy(environmentId: string, config: Record<string, unknown>): Promise<void>;
   /** Return true if the PowerLine is reachable via ping. */
   healthCheck(connection: PowerLineConnection): Promise<boolean>;
+  /** Attempt fast reconnect without re-bootstrapping. Throws if PowerLine cannot be restarted. */
+  reconnect?(environmentId: string, config: Record<string, unknown>, powerlineToken: string): AsyncGenerator<ProvisionEvent>;
 }
