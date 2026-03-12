@@ -498,7 +498,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
     async startTask(req: grackle.StartTaskRequest) {
       const task = taskStore.getTask(req.taskId);
       if (!task) throw new Error(`Task not found: ${req.taskId}`);
-      if (!["pending", "assigned"].includes(task.status)) {
+      if (!["pending", "assigned", "failed"].includes(task.status)) {
         throw new Error(`Task ${req.taskId} cannot be started (status: ${task.status})`);
       }
       if (!taskStore.areDependenciesMet(req.taskId)) {
