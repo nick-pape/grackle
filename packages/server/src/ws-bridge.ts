@@ -456,22 +456,35 @@ async function handleMessage(
       const sessionId = msg.payload?.sessionId as string;
       const text = msg.payload?.text as string;
       if (!sessionId || !text) {
+        sendWs(ws, { type: "error", payload: { message: "sessionId and text required" } });
         return;
       }
 
       const session = sessionStore.getSession(sessionId);
       if (!session) {
+        sendWs(ws, { type: "error", payload: { message: `Session not found: ${sessionId}` } });
+        return;
+      }
+
+      if (session.status !== "waiting_input") {
+        sendWs(ws, { type: "error", payload: { message: `Session ${sessionId} is not currently waiting for input (status: ${session.status})` } });
         return;
       }
 
       const conn = adapterManager.getConnection(session.environmentId);
       if (!conn) {
+        sendWs(ws, { type: "error", payload: { message: `Environment ${session.environmentId} is not connected` } });
         return;
       }
 
-      await conn.client.sendInput(
-        create(powerline.InputMessageSchema, { sessionId, text })
-      );
+      try {
+        await conn.client.sendInput(
+          create(powerline.InputMessageSchema, { sessionId, text })
+        );
+      } catch (err) {
+        const errMessage = err instanceof Error ? err.message : String(err);
+        sendWs(ws, { type: "error", payload: { message: `Failed to send input: ${errMessage}` } });
+      }
       break;
     }
 
