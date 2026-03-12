@@ -140,6 +140,90 @@
   gap: var(--space-md);
 }
 
+// ---------------------------------------------------------------------------
+// Overview Dashboard
+// ---------------------------------------------------------------------------
+
+.overviewDashboard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.overviewHero {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+
+// Status badge
+.statusBadge {
+  display: inline-block;
+  padding: var(--space-xs) var(--space-md);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-mono);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border: 1px solid currentColor;
+}
+
+.statusPending {
+  color: var(--text-tertiary);
+  background: rgba(107, 122, 141, 0.12);
+}
+
+.statusAssigned {
+  color: var(--accent-yellow);
+  background: var(--accent-yellow-dim);
+}
+
+.statusInProgress {
+  color: var(--accent-blue);
+  background: var(--accent-blue-dim);
+}
+
+.statusReview {
+  color: var(--accent-purple);
+  background: var(--accent-purple-dim);
+}
+
+.statusDone {
+  color: var(--accent-green);
+  background: var(--accent-green-dim);
+}
+
+.statusFailed {
+  color: var(--accent-red);
+  background: var(--accent-red-dim);
+}
+
+// Branch pill
+.overviewBranchPill {
+  @include glass-inset;
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--space-sm);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+}
+
+.branchLink {
+  color: var(--accent-blue);
+  text-decoration: none;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+
+  &:hover {
+    text-decoration: underline;
+    color: var(--accent-cyan);
+  }
+}
+
+// Sections
 .overviewSection {
   display: flex;
   flex-direction: column;
@@ -153,12 +237,78 @@
   letter-spacing: 0.05em;
 }
 
-.overviewDescription {
+.overviewValue {
   font-size: var(--font-size-sm);
   color: var(--text-secondary);
-  white-space: pre-wrap;
 }
 
+.overviewMuted {
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+  font-style: italic;
+}
+
+// Markdown description
+.overviewMarkdown {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  line-height: 1.6;
+
+  p { margin: 0 0 var(--space-sm) 0; }
+  p:last-child { margin-bottom: 0; }
+  ul, ol { margin: 0 0 var(--space-sm) var(--space-lg); padding: 0; }
+  li { margin-bottom: var(--space-xs); }
+  code {
+    @include glass-inset;
+    padding: 1px var(--space-xs);
+    font-family: var(--font-mono);
+    font-size: 0.9em;
+    color: var(--accent-cyan);
+  }
+  pre {
+    @include glass-inset;
+    padding: var(--space-sm) var(--space-md);
+    overflow: auto;
+    margin: var(--space-xs) 0;
+    code { background: none; border: none; padding: 0; color: inherit; }
+  }
+  blockquote {
+    border-left: 3px solid var(--border-primary);
+    margin: 0 0 var(--space-sm) 0;
+    padding-left: var(--space-md);
+    color: var(--text-tertiary);
+  }
+  h1, h2, h3, h4, h5, h6 {
+    color: var(--text-primary);
+    margin: var(--space-sm) 0 var(--space-xs) 0;
+    font-size: var(--font-size-sm);
+  }
+  strong { color: var(--text-primary); }
+  a { color: var(--accent-blue); text-decoration: none;
+    &:hover { text-decoration: underline; }
+  }
+}
+
+// Environment row with status dot
+.envRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.envDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.envDotGreen  { background: var(--accent-green); box-shadow: 0 0 4px var(--accent-green); }
+.envDotYellow { background: var(--accent-yellow); box-shadow: 0 0 4px var(--accent-yellow); }
+.envDotRed    { background: var(--accent-red); box-shadow: 0 0 4px var(--accent-red); }
+.envDotGray   { background: var(--text-disabled); }
+
+// Dependencies
 .depList {
   display: flex;
   flex-direction: column;
@@ -178,6 +328,57 @@
 
 .depDone {
   color: var(--accent-green);
+}
+
+// Timeline
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.timelineRow {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-sm);
+  font-size: var(--font-size-sm);
+}
+
+.timelineKey {
+  color: var(--text-tertiary);
+  min-width: 72px;
+  flex-shrink: 0;
+}
+
+.timelineValue {
+  color: var(--text-secondary);
+}
+
+.timelineDelta {
+  color: var(--text-tertiary);
+  font-size: 11px;
+
+  &::before { content: "("; }
+  &::after  { content: ")"; }
+}
+
+// Review notes
+.reviewNotes {
+  font-size: var(--font-size-sm);
+  color: var(--accent-yellow);
+  background: var(--accent-yellow-dim);
+  border: 1px solid rgba(240, 192, 64, 0.25);
+  border-radius: var(--radius-sm);
+  padding: var(--space-sm) var(--space-md);
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+
+// Legacy alias (kept for backward compatibility with existing overviewDescription usages)
+.overviewDescription {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  white-space: pre-wrap;
 }
 
 .waitingMessage {

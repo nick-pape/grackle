@@ -48,6 +48,9 @@ export interface TaskData {
   reviewNotes: string;
   sortOrder: number;
   createdAt: string;
+  assignedAt?: string;
+  startedAt?: string;
+  completedAt?: string;
   parentTaskId: string;
   depth: number;
   childTaskIds: string[];

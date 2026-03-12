@@ -5,8 +5,10 @@ import { SettingsPanel } from "./SettingsPanel.js";
 import { DagView } from "../dag/DagView.js";
 import { useEffect, useMemo, useRef, useState, type JSX, type RefObject } from "react";
 import type { ViewMode } from "../../App.js";
-import type { Session, SessionEvent } from "../../hooks/useGrackleSocket.js";
+import type { Session, SessionEvent, TaskData, Environment, Project } from "../../hooks/useGrackleSocket.js";
 import { AnimatePresence, motion } from "motion/react";
+import Markdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import styles from "./SessionPanel.module.scss";
 
 /** Props for the SessionPanel component. */
@@ -94,6 +96,223 @@ function groupConsecutiveTextEvents(events: SessionEvent[]): SessionEvent[] {
     }
   }
   return result;
+}
+
+// --- Overview helpers ---
+
+/** Formats an ISO timestamp into a human-readable local date/time string. */
+function formatDate(iso: string | undefined): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "—";
+  return d.toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+/** Returns a human-readable duration string between two ISO timestamps, or undefined if not computable. */
+function formatDuration(start: string | undefined, end: string | undefined): string | undefined {
+  if (!start || !end) return undefined;
+  const ms = new Date(end).getTime() - new Date(start).getTime();
+  if (isNaN(ms) || ms < 0) return undefined;
+  const mins = Math.floor(ms / 60000);
+  const secs = Math.floor((ms % 60000) / 1000);
+  if (mins === 0) return `${secs}s`;
+  const hours = Math.floor(mins / 60);
+  const remMins = mins % 60;
+  if (hours === 0) return `${mins}m ${secs}s`;
+  return `${hours}h ${remMins}m`;
+}
+
+/** Derives a color class for an environment status string. */
+function envStatusClass(status: string): string {
+  const s = status.toLowerCase();
+  if (s === "ready" || s === "running" || s === "available" || s === "connected") return styles.envDotGreen;
+  if (s === "provisioning" || s === "starting" || s === "pending" || s === "connecting") return styles.envDotYellow;
+  if (s === "error" || s === "failed" || s === "disconnected") return styles.envDotRed;
+  return styles.envDotGray;
+}
+
+/** Props for the TaskStatusBadge component. */
+interface TaskStatusBadgeProps {
+  status: string;
+}
+
+/** Large colored badge displaying the current task status. */
+function TaskStatusBadge({ status }: TaskStatusBadgeProps): JSX.Element {
+  const labelMap: Record<string, string> = {
+    pending: "Pending",
+    assigned: "Assigned",
+    in_progress: "In Progress",
+    review: "Review",
+    done: "Done",
+    failed: "Failed",
+  };
+  const colorClassMap: Record<string, string> = {
+    pending: styles.statusPending,
+    assigned: styles.statusAssigned,
+    in_progress: styles.statusInProgress,
+    review: styles.statusReview,
+    done: styles.statusDone,
+    failed: styles.statusFailed,
+  };
+  return (
+    <span className={`${styles.statusBadge} ${colorClassMap[status] ?? styles.statusPending}`}>
+      {labelMap[status] ?? status}
+    </span>
+  );
+}
+
+/** Props for the TaskOverview component. */
+interface TaskOverviewProps {
+  task: TaskData;
+  tasksById: Map<string, TaskData>;
+  environments: Environment[];
+  projects: Project[];
+}
+
+/** Enriched overview dashboard for a task: status, branch, description, environment, deps, timeline, review notes. */
+function TaskOverview({ task, tasksById, environments, projects }: TaskOverviewProps): JSX.Element {
+  const env = environments.find((e) => e.id === task.environmentId);
+  const project = projects.find((p) => p.id === task.projectId);
+
+  // Build GitHub branch URL if the project has a repoUrl; encode the full
+  // branch name so special characters (spaces, %, etc.) are safe in the URL.
+  const branchUrl = task.branch && project?.repoUrl
+    ? `${project.repoUrl.replace(/\/$/, "")}/tree/${encodeURIComponent(task.branch)}`
+    : undefined;
+
+  return (
+    <div className={styles.overviewDashboard}>
+      {/* Hero: status badge */}
+      <div className={styles.overviewHero}>
+        <TaskStatusBadge status={task.status} />
+        {task.branch && (
+          <span className={styles.overviewBranchPill}>
+            {branchUrl ? (
+              <a href={branchUrl} target="_blank" rel="noreferrer noopener" className={styles.branchLink}>
+                {"\u{1F517}"} {task.branch}
+              </a>
+            ) : (
+              <span>{"\u{1F517}"} {task.branch}</span>
+            )}
+          </span>
+        )}
+      </div>
+
+      {/* Description */}
+      {typeof task.description === "string" && task.description && (
+        <div className={styles.overviewSection}>
+          <div className={styles.overviewLabel}>Description</div>
+          <div className={styles.overviewMarkdown}>
+            <Markdown remarkPlugins={[remarkGfm]}>{task.description}</Markdown>
+          </div>
+        </div>
+      )}
+
+      {/* Environment */}
+      {task.environmentId && (
+        <div className={styles.overviewSection}>
+          <div className={styles.overviewLabel}>Environment</div>
+          <div className={styles.envRow}>
+            {env && (
+              <span
+                className={`${styles.envDot} ${envStatusClass(env.status)}`}
+                title={env.status}
+                aria-label={`Status: ${env.status}`}
+                role="img"
+              />
+            )}
+            <span className={styles.overviewValue}>
+              {env?.displayName ?? task.environmentId}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Dependencies — always shown */}
+      <div className={styles.overviewSection}>
+        <div className={styles.overviewLabel}>Dependencies</div>
+        {task.dependsOn.length === 0 ? (
+          <div className={styles.overviewMuted}>None</div>
+        ) : (
+          <div className={styles.depList}>
+            {task.dependsOn.map((depId) => {
+              const dep = tasksById.get(depId);
+              const isDone = dep?.status === "done";
+              return (
+                <div
+                  key={depId}
+                  className={`${styles.depItem} ${isDone ? styles.depDone : styles.depBlocked}`}
+                >
+                  <span>{isDone ? "\u2713" : "\u25CB"}</span>
+                  <span>{dep?.title ?? depId}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Timeline */}
+      <div className={styles.overviewSection}>
+        <div className={styles.overviewLabel}>Timeline</div>
+        <div className={styles.timeline}>
+          {task.createdAt && (
+            <div className={styles.timelineRow}>
+              <span className={styles.timelineKey}>Created</span>
+              <span className={styles.timelineValue}>{formatDate(task.createdAt)}</span>
+            </div>
+          )}
+          {task.assignedAt && (() => {
+            const delta = formatDuration(task.createdAt, task.assignedAt);
+            return (
+              <div className={styles.timelineRow}>
+                <span className={styles.timelineKey}>Assigned</span>
+                <span className={styles.timelineValue}>{formatDate(task.assignedAt)}</span>
+                {delta !== undefined && <span className={styles.timelineDelta}>{delta}</span>}
+              </div>
+            );
+          })()}
+          {task.startedAt && (() => {
+            const delta = formatDuration(task.assignedAt ?? task.createdAt, task.startedAt);
+            return (
+              <div className={styles.timelineRow}>
+                <span className={styles.timelineKey}>Started</span>
+                <span className={styles.timelineValue}>{formatDate(task.startedAt)}</span>
+                {delta !== undefined && <span className={styles.timelineDelta}>{delta}</span>}
+              </div>
+            );
+          })()}
+          {task.completedAt && (() => {
+            const delta = formatDuration(task.startedAt, task.completedAt);
+            return (
+              <div className={styles.timelineRow}>
+                <span className={styles.timelineKey}>Completed</span>
+                <span className={styles.timelineValue}>{formatDate(task.completedAt)}</span>
+                {delta !== undefined && <span className={styles.timelineDelta}>{delta}</span>}
+              </div>
+            );
+          })()}
+          {!task.createdAt && !task.assignedAt && !task.startedAt && !task.completedAt && (
+            <div className={styles.overviewMuted}>No timing data</div>
+          )}
+        </div>
+      </div>
+
+      {/* Review notes */}
+      {task.reviewNotes && (
+        <div className={styles.overviewSection}>
+          <div className={styles.overviewLabel}>Review Notes</div>
+          <div className={styles.reviewNotes}>{task.reviewNotes}</div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 // --- Main component ---
@@ -367,55 +586,15 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
               transition={{ duration: 0.15 }}
               className={styles.overviewContent}
             >
-              {task?.description && (
-                <div className={styles.overviewSection}>
-                  <div className={styles.overviewLabel}>Description</div>
-                  <div className={styles.overviewDescription}>{task.description}</div>
-                </div>
-              )}
-
-              {task?.environmentId && (
-                <div className={styles.overviewSection}>
-                  <div className={styles.overviewLabel}>Environment</div>
-                  <div className={styles.overviewDescription}>
-                    {environments.find((e) => e.id === task.environmentId)?.displayName ?? task.environmentId}
-                  </div>
-                </div>
-              )}
-
-              {task && task.dependsOn.length > 0 && (
-                <div className={styles.overviewSection}>
-                  <div className={styles.overviewLabel}>Dependencies</div>
-                  <div className={styles.depList}>
-                    {task.dependsOn.map((depId) => {
-                      const dep = tasksById.get(depId);
-                      const isDone = dep?.status === "done";
-                      return (
-                        <div
-                          key={depId}
-                          className={`${styles.depItem} ${isDone ? styles.depDone : styles.depBlocked}`}
-                        >
-                          <span>{isDone ? "\u2713" : "\u25CB"}</span>
-                          <span>{dep?.title ?? depId}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {task && task.dependsOn.length === 0 && !task.description && (
-                <div className={styles.emptyCta}>
-                  <button
-                    className={styles.ctaLink}
-                    onClick={() => setActiveTaskTab("stream")}
-                  >
-                    Add Task Details
-                  </button>
-                  <div className={styles.ctaDescription}>
-                    Switch to the Stream tab to add a description and dependencies
-                  </div>
-                </div>
+              {task ? (
+                <TaskOverview
+                  task={task}
+                  tasksById={tasksById}
+                  environments={environments}
+                  projects={projects}
+                />
+              ) : (
+                <div className={styles.waitingMessage}>No additional details</div>
               )}
             </motion.div>
           )}
