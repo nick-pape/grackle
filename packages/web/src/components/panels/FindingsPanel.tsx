@@ -2,6 +2,7 @@ import type { JSX } from "react";
 import { useGrackle } from "../../context/GrackleContext.js";
 import { motion } from "motion/react";
 import styles from "./FindingsPanel.module.scss";
+import { formatRelativeTime } from "../../utils/time.js";
 
 /** Category color mapping using CSS custom property values. */
 const CATEGORY_COLORS: Record<string, { text: string; bg: string }> = {
@@ -58,8 +59,8 @@ export function FindingsPanel({ projectId }: Props): JSX.Element {
               <span className={styles.findingTitle}>
                 {f.title}
               </span>
-              <span className={styles.findingDate}>
-                {f.createdAt}
+              <span className={styles.findingDate} title={f.createdAt}>
+                {formatRelativeTime(f.createdAt)}
               </span>
             </div>
             <div className={styles.findingContent}>
