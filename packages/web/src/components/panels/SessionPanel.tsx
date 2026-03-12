@@ -284,7 +284,7 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
         <div className={styles.header}>
           <span>
             Task: {task?.title || viewMode.taskId}
-            {task && ` | ${task.status}`}
+            {task && <span data-testid="task-status"> | {task.status}</span>}
             {task?.branch && ` | ${task.branch}`}
           </span>
           {isActive && (

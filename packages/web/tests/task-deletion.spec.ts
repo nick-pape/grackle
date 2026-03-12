@@ -42,7 +42,7 @@ test.describe("Task Deletion", () => {
     await page.locator("button", { hasText: "Start Task" }).click();
 
     // Wait for in_progress state
-    await expect(page.getByText("in_progress")).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('[data-testid="task-status"]')).toContainText("in_progress", { timeout: 15_000 });
 
     // Delete the task via WS while it's running
     const projectId = await getProjectId(page, "del-active");
