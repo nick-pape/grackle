@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.14.9",
+      "tag": "@grackle-ai/cli_v0.14.9",
+      "date": "Thu, 12 Mar 2026 15:30:40 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Auto-retry task on rejection with review notes"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.14.8",
       "tag": "@grackle-ai/cli_v0.14.8",
       "date": "Thu, 12 Mar 2026 15:00:24 GMT",
