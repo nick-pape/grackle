@@ -1,6 +1,14 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Thu, 12 Mar 2026 05:17:32 GMT and should not be manually modified.
+This log was last generated on Thu, 12 Mar 2026 06:04:15 GMT and should not be manually modified.
+
+## 0.14.3
+Thu, 12 Mar 2026 06:04:15 GMT
+
+### Patches
+
+- Move import-github logic from CLI to server; CLI is now a thin RPC wrapper
+- Fix false task failures when session disconnects while idle
 
 ## 0.14.2
 Thu, 12 Mar 2026 05:17:32 GMT

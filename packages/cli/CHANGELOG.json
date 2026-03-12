@@ -2,6 +2,21 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.14.3",
+      "tag": "@grackle-ai/cli_v0.14.3",
+      "date": "Thu, 12 Mar 2026 06:04:15 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Move import-github logic from CLI to server; CLI is now a thin RPC wrapper"
+          },
+          {
+            "comment": "Fix false task failures when session disconnects while idle"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.14.2",
       "tag": "@grackle-ai/cli_v0.14.2",
       "date": "Thu, 12 Mar 2026 05:17:32 GMT",
