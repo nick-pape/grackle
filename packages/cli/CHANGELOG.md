@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Thu, 12 Mar 2026 07:09:34 GMT and should not be manually modified.
+This log was last generated on Thu, 12 Mar 2026 08:11:55 GMT and should not be manually modified.
+
+## 0.14.6
+Thu, 12 Mar 2026 08:11:55 GMT
+
+### Patches
+
+- Harden add_environment input validation: port range [1,65535], adapterConfig double-encoding fix, ID collision retry loop
 
 ## 0.14.5
 Thu, 12 Mar 2026 07:09:34 GMT

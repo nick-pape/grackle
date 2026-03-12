@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.14.6",
+      "tag": "@grackle-ai/cli_v0.14.6",
+      "date": "Thu, 12 Mar 2026 08:11:55 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Harden add_environment input validation: port range [1,65535], adapterConfig double-encoding fix, ID collision retry loop"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.14.5",
       "tag": "@grackle-ai/cli_v0.14.5",
       "date": "Thu, 12 Mar 2026 07:09:34 GMT",
