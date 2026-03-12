@@ -3,6 +3,7 @@ import { useGrackle } from "../../context/GrackleContext.js";
 import type { ViewMode } from "../../App.js";
 import type { TaskData } from "../../hooks/useGrackleSocket.js";
 import { AnimatePresence, motion } from "motion/react";
+import { MAX_TASK_DEPTH } from "@grackle-ai/common";
 import styles from "./ProjectList.module.scss";
 
 /** Props for the ProjectList component. */
@@ -52,8 +53,6 @@ const TASK_BASE_INDENT_PX: number = 34;
 /** Additional left-padding per depth level. */
 const TASK_DEPTH_INDENT_PX: number = 16;
 
-/** Maximum nesting depth for child tasks. Mirrors MAX_TASK_DEPTH from @grackle-ai/common. */
-const MAX_TASK_DEPTH: number = 5;
 
 /** Props for the recursive TaskTreeNode component. */
 interface TaskTreeNodeProps {

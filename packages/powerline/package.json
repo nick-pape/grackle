@@ -30,12 +30,13 @@
     "@bufbuild/protobuf": "^2.5.0",
     "@connectrpc/connect": "^2.0.0",
     "@connectrpc/connect-node": "^2.0.0",
-    "@grackle-ai/common": "0.14.1",
+    "@grackle-ai/common": "workspace:*",
     "commander": "^13.0.0",
     "pino": "^10.3.1"
   },
   "devDependencies": {
-    "@grackle-ai/heft-rig": "0.0.1",
+    "@grackle-ai/heft-rig": "workspace:*",
+    "@rushstack/heft": "1.2.4",
     "@types/node": "^22.0.0",
     "vitest": "^3.1.1"
   }

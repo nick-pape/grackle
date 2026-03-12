@@ -20,6 +20,7 @@
     "test": "heft test"
   },
   "dependencies": {
+    "@grackle-ai/common": "workspace:*",
     "@dagrejs/dagre": "^2.0.4",
     "@xyflow/react": "^12.10.0",
     "motion": "^11.18.0",
@@ -30,7 +31,8 @@
     "remark-gfm": "^4.0.0"
   },
   "devDependencies": {
-    "@grackle-ai/heft-rig": "0.0.1",
+    "@grackle-ai/heft-rig": "workspace:*",
+    "@rushstack/heft": "1.2.4",
     "@vitejs/plugin-react": "^4.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
