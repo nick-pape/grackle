@@ -6,7 +6,7 @@ import { grackle, powerline } from "@grackle-ai/common";
 import * as envRegistry from "./env-registry.js";
 import * as sessionStore from "./session-store.js";
 import * as adapterManager from "./adapter-manager.js";
-import type { PowerLineConnection } from "./adapters/adapter.js";
+import { type PowerLineConnection, reconnectOrProvision } from "./adapters/adapter.js";
 import * as streamHub from "./stream-hub.js";
 import * as tokenBroker from "./token-broker.js";
 import * as projectStore from "./project-store.js";
@@ -147,18 +147,21 @@ async function autoProvisionEnvironment(
   try {
     const config = safeParseAdapterConfig(env.adapterConfig, environmentId);
     const powerlineToken = env.powerlineToken || "";
-    for await (const provEvent of adapter.provision(environmentId, config, powerlineToken)) {
+
+    for await (const provEvent of reconnectOrProvision(environmentId, adapter, config, powerlineToken, !!env.bootstrapped)) {
       logger.info({ environmentId, stage: provEvent.stage, ...logContext }, "Auto-provision progress");
       broadcast({
         type: "provision_progress",
         payload: { environmentId, stage: provEvent.stage, message: provEvent.message, progress: provEvent.progress },
       });
     }
+
     conn = await adapter.connect(environmentId, config, powerlineToken);
     adapterManager.setConnection(environmentId, conn);
     // Push stored tokens to newly connected environment
     await tokenBroker.pushToEnv(environmentId);
     envRegistry.updateEnvironmentStatus(environmentId, "connected");
+    envRegistry.markBootstrapped(environmentId);
     broadcastEnvironments();
     logger.info({ environmentId, ...logContext }, "Auto-provision complete");
     broadcast({
@@ -793,20 +796,22 @@ async function handleMessage(
         try {
           const config = safeParseAdapterConfig(env.adapterConfig, environmentId);
           const powerlineToken = env.powerlineToken || "";
-          logger.info({ environmentId, config }, "Starting adapter.provision");
-          for await (const event of adapter.provision(environmentId, config, powerlineToken)) {
+
+          for await (const event of reconnectOrProvision(environmentId, adapter, config, powerlineToken, !!env.bootstrapped)) {
             logger.info({ environmentId, stage: event.stage, message: event.message }, "Provision progress");
             broadcast({
               type: "provision_progress",
               payload: { environmentId, stage: event.stage, message: event.message, progress: event.progress },
             });
           }
+
           logger.info({ environmentId }, "Provision complete, calling adapter.connect");
           const conn = await adapter.connect(environmentId, config, powerlineToken);
           adapterManager.setConnection(environmentId, conn);
           // Push stored tokens to newly connected environment
           await tokenBroker.pushToEnv(environmentId);
           envRegistry.updateEnvironmentStatus(environmentId, "connected");
+          envRegistry.markBootstrapped(environmentId);
           logger.info({ environmentId }, "Environment connected");
           broadcast({
             type: "provision_progress",

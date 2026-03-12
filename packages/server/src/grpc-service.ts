@@ -7,6 +7,7 @@ import type { SessionRow } from "./schema.js";
 import * as envRegistry from "./env-registry.js";
 import * as sessionStore from "./session-store.js";
 import * as adapterManager from "./adapter-manager.js";
+import { reconnectOrProvision } from "./adapters/adapter.js";
 import * as streamHub from "./stream-hub.js";
 import * as tokenBroker from "./token-broker.js";
 import * as projectStore from "./project-store.js";
@@ -164,7 +165,8 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
 
       const config = JSON.parse(env.adapterConfig);
       const powerlineToken = env.powerlineToken || "";
-      for await (const event of adapter.provision(req.id, config, powerlineToken)) {
+
+      for await (const event of reconnectOrProvision(req.id, adapter, config, powerlineToken, !!env.bootstrapped)) {
         yield create(grackle.ProvisionEventSchema, {
           stage: event.stage,
           message: event.message,
@@ -178,6 +180,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         // Push stored tokens to newly connected environment
         await tokenBroker.pushToEnv(req.id);
         envRegistry.updateEnvironmentStatus(req.id, "connected");
+        envRegistry.markBootstrapped(req.id);
 
         yield create(grackle.ProvisionEventSchema, {
           stage: "ready",

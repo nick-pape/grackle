@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Fast reconnect: restart remote PowerLine (~8s) instead of full reprovision (~3min) when the process has stopped",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
