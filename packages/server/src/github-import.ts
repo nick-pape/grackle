@@ -19,7 +19,7 @@ const GH_CLI_TIMEOUT_MS: number = 5 * 60 * 1000;
 function execFileAsync(
   command: string,
   args: string[],
-  options: { encoding: string; maxBuffer: number; timeout?: number },
+  options: { encoding: BufferEncoding; maxBuffer: number; timeout?: number },
 ): Promise<string> {
   const timeout = options.timeout ?? GH_CLI_TIMEOUT_MS;
   return new Promise((resolve, reject) => {
