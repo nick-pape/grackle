@@ -1,6 +1,5 @@
 import { create } from "@bufbuild/protobuf";
-import { grackle, powerline } from "@grackle-ai/common";
-import { agentEventTypeToEventType } from "@grackle-ai/common";
+import { grackle, powerline, eventTypeToEnum } from "@grackle-ai/common";
 import { v4 as uuid } from "uuid";
 import * as sessionStore from "./session-store.js";
 import * as streamHub from "./stream-hub.js";
@@ -52,7 +51,7 @@ export function processEventStream(
       for await (const event of events) {
         const sessionEvent = create(grackle.SessionEventSchema, {
           sessionId,
-          type: agentEventTypeToEventType(event.type),
+          type: eventTypeToEnum(event.type),
           timestamp: event.timestamp,
           content: event.content,
           raw: event.raw,
@@ -61,7 +60,7 @@ export function processEventStream(
         streamHub.publish(sessionEvent);
 
         // Intercept finding events and store + broadcast them
-        if (event.type === powerline.AgentEventType.FINDING && projectId) {
+        if (event.type === "finding" && projectId) {
           try {
             const data = JSON.parse(event.content);
             const findingId = uuid();
@@ -78,7 +77,7 @@ export function processEventStream(
         }
 
         // Intercept subtask creation events and create child tasks
-        if (event.type === powerline.AgentEventType.SUBTASK_CREATE && taskId) {
+        if (event.type === "subtask_create" && taskId) {
           try {
             const data = JSON.parse(event.content) as {
               title: string;
@@ -171,7 +170,7 @@ export function processEventStream(
           }
         }
 
-        if (event.type === powerline.AgentEventType.STATUS) {
+        if (event.type === "status") {
           if (event.content === "waiting_input") {
             sessionStore.updateSessionStatus(sessionId, "waiting_input");
           } else if (event.content === "running") {

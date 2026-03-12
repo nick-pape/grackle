@@ -1,6 +1,38 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Thu, 12 Mar 2026 06:27:52 GMT and should not be manually modified.
+This log was last generated on Thu, 12 Mar 2026 15:00:24 GMT and should not be manually modified.
+
+## 0.14.8
+Thu, 12 Mar 2026 15:00:24 GMT
+
+### Patches
+
+- Auto-detect git repo path for worktrees, add task update CLI, capture codespace git credentials
+
+## 0.14.7
+Thu, 12 Mar 2026 11:30:47 GMT
+
+### Patches
+
+- Remove proto enums that shadow hand-written string union types
+
+### Updates
+
+- No actual changes to this package
+
+## 0.14.6
+Thu, 12 Mar 2026 08:11:55 GMT
+
+### Patches
+
+- Harden add_environment input validation: port range [1,65535], adapterConfig double-encoding fix, ID collision retry loop
+
+## 0.14.5
+Thu, 12 Mar 2026 07:09:34 GMT
+
+### Patches
+
+- Allow retrying failed tasks by adding 'failed' to allowed start statuses
 
 ## 0.14.4
 Thu, 12 Mar 2026 06:27:52 GMT
