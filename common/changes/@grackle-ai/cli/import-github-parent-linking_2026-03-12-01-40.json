@@ -1,7 +1,7 @@
 {
   "changes": [
     {
-      "comment": "Import GitHub parent-child issue relationships via GraphQL with topological sort",
+      "comment": "Move import-github logic from CLI to server; CLI is now a thin RPC wrapper",
       "type": "patch",
       "packageName": "@grackle-ai/cli"
     }

@@ -25,6 +25,7 @@ import { grackleHome } from "./paths.js";
 import { safeParseJsonArray } from "./json-helpers.js";
 import { slugify } from "./utils/slugify.js";
 import { buildTaskSystemContext } from "./utils/system-context.js";
+import { importGitHubIssues } from "./github-import.js";
 
 function envRowToProto(row: EnvironmentRow): grackle.Environment {
   return create(grackle.EnvironmentSchema, {
@@ -632,6 +633,23 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       return create(grackle.FindingListSchema, {
         findings: rows.map(findingRowToProto),
       });
+    },
+
+    // ─── GitHub Import ────────────────────────────────────────
+
+    async importGitHubIssues(req: grackle.ImportGitHubIssuesRequest) {
+      const project = projectStore.getProject(req.projectId);
+      if (!project) throw new Error(`Project not found: ${req.projectId}`);
+
+      const result = importGitHubIssues(
+        req.projectId,
+        req.repo,
+        req.state || "open",
+        req.label || undefined,
+        req.environmentId || project.defaultEnvironmentId,
+      );
+
+      return create(grackle.ImportGitHubIssuesResponseSchema, result);
     },
 
     // ─── Diff ────────────────────────────────────────────────

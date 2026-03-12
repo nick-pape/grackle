@@ -307,6 +307,22 @@ message QueryFindingsRequest {
   int32 limit = 4;
 }
 
+// ─── GitHub Import ────────────────────────────────────
+
+message ImportGitHubIssuesRequest {
+  string project_id = 1;
+  string repo = 2;           // "owner/repo"
+  string label = 3;          // optional label filter
+  string state = 4;          // "open" or "closed"
+  string environment_id = 5; // optional env to assign
+}
+
+message ImportGitHubIssuesResponse {
+  int32 imported = 1;
+  int32 linked = 2;
+  int32 skipped = 3;
+}
+
 // ─── Task Diff ─────────────────────────────────────────────
 
 message GetTaskDiffRequest {
@@ -368,6 +384,9 @@ service Grackle {
   // Findings
   rpc PostFinding(PostFindingRequest) returns (Finding);
   rpc QueryFindings(QueryFindingsRequest) returns (FindingList);
+
+  // GitHub Import
+  rpc ImportGitHubIssues(ImportGitHubIssuesRequest) returns (ImportGitHubIssuesResponse);
 
   // Diff
   rpc GetTaskDiff(GetTaskDiffRequest) returns (TaskDiff);

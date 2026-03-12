@@ -12,6 +12,7 @@ When you encounter unexpected issues, workarounds, or non-obvious behavior (CI q
 ## Planning
 
 - **Always plan tests**: Every implementation plan must include a section for tests (E2E Playwright specs for `@grackle-ai/web`, unit/integration tests for other packages). If the change is purely cosmetic or untestable, explicitly note why tests are skipped.
+- **Open a PR as the final step**: When the user assigns a GitHub issue and the work goes through a full plan, the plan must include opening a PR as its last step. The PR body must link back to the issue (e.g., `Closes #<number>` or `Fixes #<number>`).
 
 ## Build & Test
 
