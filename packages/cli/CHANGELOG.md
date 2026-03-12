@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Thu, 12 Mar 2026 15:00:24 GMT and should not be manually modified.
+This log was last generated on Thu, 12 Mar 2026 15:30:40 GMT and should not be manually modified.
+
+## 0.14.9
+Thu, 12 Mar 2026 15:30:40 GMT
+
+### Patches
+
+- Auto-retry task on rejection with review notes
 
 ## 0.14.8
 Thu, 12 Mar 2026 15:00:24 GMT
