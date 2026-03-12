@@ -3,6 +3,7 @@ name: CD
 on:
   push:
     branches: [main]
+  workflow_dispatch:
 
 concurrency:
   group: cd-publish
@@ -174,6 +175,7 @@ jobs:
       - name: Trigger CI on bump branch
         if: steps.bump.outputs.has_bump == 'true'
         run: |
+          git fetch origin "${{ steps.bump.outputs.branch }}"
           git checkout "${{ steps.bump.outputs.branch }}"
           git commit --allow-empty -m "chore: trigger CI for version bump"
           git push origin "${{ steps.bump.outputs.branch }}"
