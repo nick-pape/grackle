@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Thu, 12 Mar 2026 02:00:22 GMT and should not be manually modified.
+This log was last generated on Thu, 12 Mar 2026 05:17:32 GMT and should not be manually modified.
+
+## 0.14.2
+Thu, 12 Mar 2026 05:17:32 GMT
+
+### Patches
+
+- Migrate cross-package dependencies to workspace:* protocol; bump MAX_TASK_DEPTH to 8; import shared constants from @grackle-ai/common instead of duplicating
 
 ## 0.14.1
 Thu, 12 Mar 2026 02:00:22 GMT

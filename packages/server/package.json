@@ -1,6 +1,6 @@
 {
   "name": "@grackle-ai/server",
-  "version": "0.14.1",
+  "version": "0.14.2",
   "description": "Central gRPC server with SQLite storage and WebSocket bridge for Grackle",
   "license": "MIT",
   "repository": {
@@ -24,8 +24,8 @@
     "@bufbuild/protobuf": "^2.5.0",
     "@connectrpc/connect": "^2.0.0",
     "@connectrpc/connect-node": "^2.0.0",
-    "@grackle-ai/common": "0.14.1",
-    "@grackle-ai/web": "0.14.1",
+    "@grackle-ai/common": "workspace:*",
+    "@grackle-ai/web": "workspace:*",
     "better-sqlite3": "^11.0.0",
     "drizzle-orm": "^0.38.0",
     "pino": "^10.3.1",
@@ -33,7 +33,8 @@
     "ws": "^8.0.0"
   },
   "devDependencies": {
-    "@grackle-ai/heft-rig": "0.0.1",
+    "@grackle-ai/heft-rig": "workspace:*",
+    "@rushstack/heft": "1.2.4",
     "@types/better-sqlite3": "^7.6.0",
     "@types/node": "^22.0.0",
     "@types/uuid": "^10.0.0",
