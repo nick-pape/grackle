@@ -1,6 +1,5 @@
 import { useGrackle } from "../../context/GrackleContext.js";
 import { EventRenderer } from "../display/EventRenderer.js";
-import { DiffViewer } from "../display/DiffViewer.js";
 import { FindingsPanel } from "./FindingsPanel.js";
 import { SettingsPanel } from "./SettingsPanel.js";
 import { DagView } from "../dag/DagView.js";
@@ -99,12 +98,12 @@ function groupConsecutiveTextEvents(events: SessionEvent[]): SessionEvent[] {
 
 // --- Main component ---
 
-type TaskTab = "overview" | "stream" | "diff" | "findings";
+type TaskTab = "overview" | "stream" | "findings";
 type ProjectTab = "tasks" | "graph";
 
 /** Main content panel that renders session streams, task views, project summaries, or empty states based on the current view mode. */
 export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
-  const { events, sessions, tasks, environments, taskDiff, loadSessionEvents, loadFindings, loadTaskDiff, kill } = useGrackle();
+  const { events, sessions, tasks, environments, loadSessionEvents, loadFindings, kill } = useGrackle();
   // eslint-disable-next-line @rushstack/no-new-null
   const scrollRef = useRef<HTMLDivElement>(null);
   const loadedRef = useRef<string | undefined>(undefined);
@@ -144,7 +143,7 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
       task?.status === "pending" ? "overview"
       : task?.status === "assigned" ? "overview"
       : task?.status === "in_progress" ? "stream"
-      : task?.status === "review" ? "diff"
+      : task?.status === "review" ? "stream"
       : task?.status === "done" ? "findings"
       : undefined;
     if (newTab && newTab !== activeTaskTab) {
@@ -176,15 +175,12 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
     }
   }, [sessionId, loadSessionEvents]);
 
-  // Load findings/diff when switching tabs
+  // Load findings when switching to findings tab
   useEffect(() => {
     if (activeTaskTab === "findings" && projectId) {
       loadFindings(projectId);
     }
-    if (activeTaskTab === "diff" && task?.id) {
-      loadTaskDiff(task.id);
-    }
-  }, [activeTaskTab, projectId, task?.id, loadFindings, loadTaskDiff]);
+  }, [activeTaskTab, projectId, loadFindings]);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -318,14 +314,6 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
           </button>
           <button
             role="tab"
-            aria-selected={activeTaskTab === "diff"}
-            className={`${styles.tab} ${activeTaskTab === "diff" ? styles.active : ""}`}
-            onClick={() => setActiveTaskTab("diff")}
-          >
-            Diff
-          </button>
-          <button
-            role="tab"
             aria-selected={activeTaskTab === "findings"}
             className={`${styles.tab} ${activeTaskTab === "findings" ? styles.active : ""}`}
             onClick={() => setActiveTaskTab("findings")}
@@ -407,19 +395,6 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
               {groupedEvents.map((event, i) => (
                 <EventRenderer key={`${event.sessionId}-${event.timestamp}-${i}`} event={event} />
               ))}
-            </motion.div>
-          )}
-
-          {activeTaskTab === "diff" && (
-            <motion.div
-              key="diff"
-              initial={{ opacity: 0, y: 4 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -4 }}
-              transition={{ duration: 0.15 }}
-              className={styles.tabContent}
-            >
-              <DiffViewer diff={taskDiff} />
             </motion.div>
           )}
 
