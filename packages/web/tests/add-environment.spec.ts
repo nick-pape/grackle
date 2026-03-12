@@ -67,6 +67,37 @@ test.describe("Add Environment — UI Form", () => {
     await expect(addButton).toBeEnabled();
   });
 
+  test("Add button is disabled when port is out of range", async ({ appPage }) => {
+    const page = appPage;
+
+    await page.locator('button[title="Add environment"]').click();
+
+    // Fill a valid name so that only port invalidity blocks the button
+    await page.locator('input[placeholder="Environment name..."]').fill("port-test");
+
+    const portInput = page.locator('input[placeholder="Port (optional)..."]');
+    const addButton = page.locator("button", { hasText: "Add" });
+
+    // Out-of-range low value
+    await portInput.fill("0");
+    await expect(addButton).toBeDisabled();
+
+    // Out-of-range high value
+    await portInput.fill("99999");
+    await expect(addButton).toBeDisabled();
+
+    // Valid boundary values should re-enable the button
+    await portInput.fill("1");
+    await expect(addButton).toBeEnabled();
+
+    await portInput.fill("65535");
+    await expect(addButton).toBeEnabled();
+
+    // Clearing port (optional) keeps the button enabled
+    await portInput.fill("");
+    await expect(addButton).toBeEnabled();
+  });
+
   test("switching adapter type shows correct conditional fields", async ({ appPage }) => {
     const page = appPage;
 
@@ -156,6 +187,88 @@ test.describe("Add Environment — WebSocket Handler", () => {
     );
 
     expect(response.payload?.message).toContain("displayName and adapterType required");
+  });
+
+  test("add_environment accepts pre-serialized adapterConfig string without double-encoding", async ({ appPage }) => {
+    const page = appPage;
+
+    // Send adapterConfig as an already-serialized JSON string
+    const response = await sendWsAndWaitFor(
+      page,
+      {
+        type: "add_environment",
+        payload: {
+          displayName: "ws-string-config-env",
+          adapterType: "local",
+          adapterConfig: '{"host":"localhost","port":1234}',
+          defaultRuntime: "stub",
+        },
+      },
+      "environment_added",
+    );
+
+    const environmentId = response.payload?.environmentId as string;
+    expect(environmentId).toBeTruthy();
+
+    // Fetch the environment list and verify the config was stored as-is (not double-encoded)
+    const listResponse = await sendWsAndWaitFor(
+      page,
+      { type: "list_environments" },
+      "environments",
+    );
+    const envs = (listResponse.payload?.environments || []) as Array<{
+      id: string;
+      displayName: string;
+      adapterConfig: string;
+    }>;
+    const added = envs.find((e) => e.displayName === "ws-string-config-env");
+    expect(added).toBeTruthy();
+    // adapterConfig must equal the original string, not a double-encoded version
+    expect(added!.adapterConfig).toBe('{"host":"localhost","port":1234}');
+
+    // Clean up
+    await sendWsMessage(page, {
+      type: "remove_environment",
+      payload: { environmentId },
+    });
+  });
+
+  test("add_environment rejects adapterConfig of invalid type", async ({ appPage }) => {
+    const page = appPage;
+
+    const response = await sendWsAndWaitFor(
+      page,
+      {
+        type: "add_environment",
+        payload: {
+          displayName: "ws-bad-config-env",
+          adapterType: "local",
+          adapterConfig: 42,
+        },
+      },
+      "error",
+    );
+
+    expect(response.payload?.message).toContain("adapterConfig must be an object or JSON string");
+  });
+
+  test("add_environment rejects adapterConfig string that is not valid JSON", async ({ appPage }) => {
+    const page = appPage;
+
+    const response = await sendWsAndWaitFor(
+      page,
+      {
+        type: "add_environment",
+        payload: {
+          displayName: "ws-invalid-json-env",
+          adapterType: "local",
+          adapterConfig: "not-valid-json",
+        },
+      },
+      "error",
+    );
+
+    expect(response.payload?.message).toContain("adapterConfig string is not valid JSON");
   });
 
   test("add environment via UI form creates environment in server", async ({ appPage }) => {

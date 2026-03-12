@@ -5,11 +5,11 @@ import type { ViewMode } from "../../App.js";
 import styles from "./Sidebar.module.scss";
 
 /** Default sidebar width in pixels. */
-const DEFAULT_SIDEBAR_WIDTH: number = 260;
+const DEFAULT_SIDEBAR_WIDTH: number = 320;
 /** Minimum sidebar width in pixels. */
-const MIN_SIDEBAR_WIDTH: number = 180;
+const MIN_SIDEBAR_WIDTH: number = 220;
 /** Maximum sidebar width in pixels. */
-const MAX_SIDEBAR_WIDTH: number = 500;
+const MAX_SIDEBAR_WIDTH: number = 600;
 /** localStorage key for persisted sidebar width. */
 const STORAGE_KEY: string = "grackle-sidebar-width";
 
