@@ -6,7 +6,7 @@ import { grackle, powerline } from "@grackle-ai/common";
 import * as envRegistry from "./env-registry.js";
 import * as sessionStore from "./session-store.js";
 import * as adapterManager from "./adapter-manager.js";
-import type { PowerLineConnection } from "./adapters/adapter.js";
+import { type PowerLineConnection, reconnectOrProvision } from "./adapters/adapter.js";
 import * as streamHub from "./stream-hub.js";
 import * as tokenBroker from "./token-broker.js";
 import * as projectStore from "./project-store.js";
@@ -119,39 +119,6 @@ function safeParseAdapterConfig(raw: string, environmentId: string): Record<stri
 }
 
 /**
- * Try fast reconnect, falling back to full provision.
- *
- * Centralizes the reconnect-or-provision logic used by both
- * {@link autoProvisionEnvironment} and the `provision_environment` handler.
- */
-async function reconnectOrProvision(
-  environmentId: string,
-  adapter: ReturnType<typeof adapterManager.getAdapter> & object,
-  config: Record<string, unknown>,
-  powerlineToken: string,
-  env: ReturnType<typeof envRegistry.getEnvironment> & object,
-  onProgress: (event: { stage: string; message: string; progress: number }) => void,
-): Promise<void> {
-  let reconnected = false;
-  if (env.bootstrapped && adapter.reconnect) {
-    try {
-      for await (const event of adapter.reconnect(environmentId, config, powerlineToken)) {
-        onProgress(event);
-      }
-      reconnected = true;
-    } catch (err) {
-      logger.info({ environmentId, err }, "Reconnect failed, falling back to full provision");
-    }
-  }
-
-  if (!reconnected) {
-    for await (const event of adapter.provision(environmentId, config, powerlineToken)) {
-      onProgress(event);
-    }
-  }
-}
-
-/**
  * Auto-provisions and connects an environment if it is not already connected.
  * Sends provision progress events over the WebSocket and updates the environment
  * registry status. Returns the connection on success, or undefined on failure.
@@ -181,13 +148,13 @@ async function autoProvisionEnvironment(
     const config = safeParseAdapterConfig(env.adapterConfig, environmentId);
     const powerlineToken = env.powerlineToken || "";
 
-    await reconnectOrProvision(environmentId, adapter, config, powerlineToken, env, (provEvent) => {
+    for await (const provEvent of reconnectOrProvision(environmentId, adapter, config, powerlineToken, !!env.bootstrapped)) {
       logger.info({ environmentId, stage: provEvent.stage, ...logContext }, "Auto-provision progress");
       broadcast({
         type: "provision_progress",
         payload: { environmentId, stage: provEvent.stage, message: provEvent.message, progress: provEvent.progress },
       });
-    });
+    }
 
     conn = await adapter.connect(environmentId, config, powerlineToken);
     adapterManager.setConnection(environmentId, conn);
@@ -830,13 +797,13 @@ async function handleMessage(
           const config = safeParseAdapterConfig(env.adapterConfig, environmentId);
           const powerlineToken = env.powerlineToken || "";
 
-          await reconnectOrProvision(environmentId, adapter, config, powerlineToken, env, (event) => {
+          for await (const event of reconnectOrProvision(environmentId, adapter, config, powerlineToken, !!env.bootstrapped)) {
             logger.info({ environmentId, stage: event.stage, message: event.message }, "Provision progress");
             broadcast({
               type: "provision_progress",
               payload: { environmentId, stage: event.stage, message: event.message, progress: event.progress },
             });
-          });
+          }
 
           logger.info({ environmentId }, "Provision complete, calling adapter.connect");
           const conn = await adapter.connect(environmentId, config, powerlineToken);

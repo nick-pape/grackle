@@ -213,7 +213,7 @@ function shellEscape(value: string): string {
 
 /**
  * Build the list of env-file lines for the PowerLine process.
- * Pure helper used by both {@link writeRemoteEnvFile} and {@link bootstrapPowerLine}.
+ * Pure helper used by both {@link writeRemoteEnvFile} and {@link startRemotePowerLine}.
  */
 function writeRemoteEnvFileLines(
   powerlineToken: string,

@@ -1,5 +1,6 @@
 import type { Client } from "@connectrpc/connect";
 import type { powerline } from "@grackle-ai/common";
+import { logger } from "../logger.js";
 
 /** Type-safe ConnectRPC client for the PowerLine gRPC service. */
 export type PowerLineClient = Client<typeof powerline.GracklePowerLine>;
@@ -44,4 +45,32 @@ export interface EnvironmentAdapter {
   healthCheck(connection: PowerLineConnection): Promise<boolean>;
   /** Attempt fast reconnect without re-bootstrapping. Throws if PowerLine cannot be restarted. */
   reconnect?(environmentId: string, config: Record<string, unknown>, powerlineToken: string): AsyncGenerator<ProvisionEvent>;
+}
+
+/**
+ * Try fast reconnect if the adapter supports it and the environment was
+ * previously bootstrapped, falling back to full provision on any error.
+ *
+ * Yields {@link ProvisionEvent}s from whichever path runs, allowing callers
+ * (gRPC streaming and WebSocket broadcast) to forward them uniformly.
+ */
+export async function* reconnectOrProvision(
+  environmentId: string,
+  adapter: EnvironmentAdapter,
+  config: Record<string, unknown>,
+  powerlineToken: string,
+  bootstrapped: boolean,
+): AsyncGenerator<ProvisionEvent> {
+  let reconnected = false;
+  if (bootstrapped && adapter.reconnect) {
+    try {
+      yield* adapter.reconnect(environmentId, config, powerlineToken);
+      reconnected = true;
+    } catch (err) {
+      logger.info({ environmentId, err }, "Reconnect failed, falling back to full provision");
+    }
+  }
+  if (!reconnected) {
+    yield* adapter.provision(environmentId, config, powerlineToken);
+  }
 }

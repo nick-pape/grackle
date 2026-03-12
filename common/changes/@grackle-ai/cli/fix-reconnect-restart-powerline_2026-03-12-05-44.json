@@ -1,8 +1,8 @@
 {
   "changes": [
     {
-      "comment": "Merge commit false positive — no actual CLI changes",
-      "type": "none",
+      "comment": "Fast reconnect: restart remote PowerLine (~8s) instead of full reprovision (~3min) when the process has stopped",
+      "type": "patch",
       "packageName": "@grackle-ai/cli"
     }
   ],
