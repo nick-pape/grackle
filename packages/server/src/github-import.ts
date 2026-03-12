@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+import { execFile } from "node:child_process";
 import { v4 as uuid } from "uuid";
 import * as taskStore from "./task-store.js";
 import * as projectStore from "./project-store.js";
@@ -6,11 +6,40 @@ import { broadcast } from "./ws-broadcast.js";
 import { slugify } from "./utils/slugify.js";
 import { logger } from "./logger.js";
 
+/** Promise wrapper around `execFile` that resolves with stdout as a string. */
+function execFileAsync(command: string, args: string[], options: { encoding: string; maxBuffer: number }): Promise<string> {
+  return new Promise((resolve, reject) => {
+    execFile(command, args, options, (err, stdout) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(String(stdout));
+      }
+    });
+  });
+}
+
 /** Maximum buffer size for `gh` CLI output (50 MB). */
 const MAX_BUFFER_BYTES: number = 50 * 1024 * 1024;
 
 /** Number of issues fetched per GraphQL page. */
 const ISSUES_PER_PAGE: number = 100;
+
+/** Simple concurrency guard — only one import runs at a time. */
+const importLock: { active: boolean } = { active: false };
+
+/** Acquire the import lock. Throws if already held. */
+function acquireImportLock(): void {
+  if (importLock.active) {
+    throw new Error("An import is already in progress. Please wait for it to complete.");
+  }
+  importLock.active = true;
+}
+
+/** Release the import lock. */
+function releaseImportLock(): void {
+  importLock.active = false;
+}
 
 /** Shape of a GitHub issue as returned by the GraphQL query. */
 export interface GitHubIssue {
@@ -29,6 +58,16 @@ export interface ImportResult {
 }
 
 /**
+ * Extracts a human-readable message from an unknown error value.
+ *
+ * @param err - The caught error value.
+ * @returns A string suitable for logging or re-throwing.
+ */
+function formatError(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}
+
+/**
  * Fetches GitHub issues from a repository via the `gh` CLI GraphQL API.
  * Paginates automatically and includes parent sub-issue information.
  *
@@ -37,7 +76,7 @@ export interface ImportResult {
  * @param label - Optional label to filter issues by (client-side).
  * @returns Array of parsed GitHub issues.
  */
-export function fetchGitHubIssues(repo: string, state: string, label?: string): GitHubIssue[] {
+export async function fetchGitHubIssues(repo: string, state: string, label?: string): Promise<GitHubIssue[]> {
   const [owner, repoName] = repo.split("/");
   if (!owner || !repoName) {
     throw new Error("--repo must be in owner/repo format.");
@@ -46,7 +85,7 @@ export function fetchGitHubIssues(repo: string, state: string, label?: string): 
   const stateEnum = state.toUpperCase() === "CLOSED" ? "CLOSED" : "OPEN";
   const issues: GitHubIssue[] = [];
   let cursor: string | undefined;
-  let hasNextPage = true;
+  let hasNextPage: boolean = true;
 
   while (hasNextPage) {
     const query = `
@@ -77,24 +116,24 @@ export function fetchGitHubIssues(repo: string, state: string, label?: string): 
 
     let ghOutput: string;
     try {
-      ghOutput = execFileSync("gh", ghArgs, {
+      ghOutput = await execFileAsync("gh", ghArgs, {
         encoding: "utf8",
         maxBuffer: MAX_BUFFER_BYTES,
       });
     } catch (err) {
-      throw new Error(`Failed to fetch issues via GraphQL for ${repo} (state=${state}): ${err}`);
+      throw new Error(`Failed to fetch issues via GraphQL for ${repo} (state=${state}): ${formatError(err)}`);
     }
 
     let parsed: {
       data: {
         repository: {
           issues: {
-            pageInfo: { hasNextPage: boolean; endCursor: string | undefined };
+            pageInfo: { hasNextPage: boolean; endCursor: string | null };
             nodes: {
               number: number;
               title: string;
               body: string;
-              parent: { number: number } | undefined;
+              parent: { number: number } | null;
               labels: { nodes: { name: string }[] };
             }[];
           };
@@ -104,7 +143,7 @@ export function fetchGitHubIssues(repo: string, state: string, label?: string): 
     try {
       parsed = JSON.parse(ghOutput);
     } catch (err) {
-      throw new Error(`Failed to parse GraphQL response: ${err}`);
+      throw new Error(`Failed to parse GraphQL response: ${formatError(err)}`);
     }
 
     const issuesPage = parsed.data.repository.issues;
@@ -119,7 +158,7 @@ export function fetchGitHubIssues(repo: string, state: string, label?: string): 
     }
 
     hasNextPage = issuesPage.pageInfo.hasNextPage;
-    cursor = issuesPage.pageInfo.endCursor;
+    cursor = issuesPage.pageInfo.endCursor ?? undefined;
   }
 
   // Filter by label client-side (GraphQL filterBy labels requires exact match array)
@@ -182,6 +221,8 @@ export function topologicalSortIssues<T extends { number: number; parentNumber: 
  * Orchestrates: fetch issues → dedup against existing tasks → topological sort →
  * create tasks with parent linking → broadcast updates → return summary.
  *
+ * Only one import may run at a time; concurrent calls are rejected.
+ *
  * @param projectId - The Grackle project ID to import tasks into.
  * @param repo - Repository in "owner/repo" format.
  * @param state - Issue state filter ("open" or "closed").
@@ -189,13 +230,38 @@ export function topologicalSortIssues<T extends { number: number; parentNumber: 
  * @param environmentId - Optional environment ID to assign to created tasks.
  * @returns Summary of imported, linked, and skipped issues.
  */
-export function importGitHubIssues(
+export async function importGitHubIssues(
   projectId: string,
   repo: string,
   state: string,
   label?: string,
   environmentId?: string,
-): ImportResult {
+): Promise<ImportResult> {
+  acquireImportLock();
+  try {
+    return await doImport(projectId, repo, state, label, environmentId);
+  } finally {
+    releaseImportLock();
+  }
+}
+
+/**
+ * Internal import implementation, called under the concurrency guard.
+ *
+ * @param projectId - The Grackle project ID to import tasks into.
+ * @param repo - Repository in "owner/repo" format.
+ * @param state - Issue state filter ("open" or "closed").
+ * @param label - Optional label to filter issues by.
+ * @param environmentId - Optional environment ID to assign to created tasks.
+ * @returns Summary of imported, linked, and skipped issues.
+ */
+async function doImport(
+  projectId: string,
+  repo: string,
+  state: string,
+  label?: string,
+  environmentId?: string,
+): Promise<ImportResult> {
   const project = projectStore.getProject(projectId);
   if (!project) {
     throw new Error(`Project not found: ${projectId}`);
@@ -205,12 +271,12 @@ export function importGitHubIssues(
   const projectSlug = slugify(project.name);
 
   // 1. Fetch issues from GitHub
-  const issues = fetchGitHubIssues(repo, state, label);
+  const issues = await fetchGitHubIssues(repo, state, label);
   logger.info({ repo, state, label, count: issues.length }, "Fetched GitHub issues");
 
   // 2. Fetch existing tasks for deduplication and parent linking
   const existingTasks = taskStore.listTasks(projectId);
-  const issueNumberPattern = /^#(\d+):/;
+  const issueNumberPattern: RegExp = /^#(\d+):/;
 
   /** Maps GitHub issue number → Grackle task ID (for both existing and newly created tasks). */
   const issueNumberToTaskId = new Map<number, string>();
@@ -230,9 +296,9 @@ export function importGitHubIssues(
   const sorted = topologicalSortIssues(issues, issueSet);
 
   // 4. Create tasks in topological order with parent linking
-  let imported = 0;
-  let skipped = 0;
-  let linked = 0;
+  let imported: number = 0;
+  let skipped: number = 0;
+  let linked: number = 0;
 
   for (const issue of sorted) {
     if (existingIssueNumbers.has(issue.number)) {
@@ -241,7 +307,7 @@ export function importGitHubIssues(
     }
 
     const title = `#${issue.number}: ${issue.title}`;
-    let parentTaskId = "";
+    let parentTaskId: string = "";
     if (issue.parentNumber !== undefined) {
       const resolvedParentId = issueNumberToTaskId.get(issue.parentNumber);
       if (resolvedParentId) {
@@ -260,6 +326,7 @@ export function importGitHubIssues(
       [],
       projectSlug,
       parentTaskId,
+      true,
     );
 
     const row = taskStore.getTask(id);

@@ -638,15 +638,13 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
     // ─── GitHub Import ────────────────────────────────────────
 
     async importGitHubIssues(req: grackle.ImportGitHubIssuesRequest) {
-      const project = projectStore.getProject(req.projectId);
-      if (!project) throw new Error(`Project not found: ${req.projectId}`);
-
-      const result = importGitHubIssues(
+      const stateStr = req.state === grackle.IssueState.CLOSED ? "closed" : "open";
+      const result = await importGitHubIssues(
         req.projectId,
         req.repo,
-        req.state || "open",
-        req.label || undefined,
-        req.environmentId || project.defaultEnvironmentId,
+        stateStr,
+        req.label ?? undefined,
+        req.environmentId ?? undefined,
       );
 
       return create(grackle.ImportGitHubIssuesResponseSchema, result);

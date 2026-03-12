@@ -1,6 +1,6 @@
 import type { Command } from "commander";
 import { createGrackleClient } from "../client.js";
-import { taskStatusToString } from "@grackle-ai/common";
+import { taskStatusToString, issueStateToEnum } from "@grackle-ai/common";
 import Table from "cli-table3";
 import chalk from "chalk";
 
@@ -121,9 +121,9 @@ export function registerTaskCommands(program: Command): void {
       const res = await client.importGitHubIssues({
         projectId,
         repo: opts.repo,
-        label: opts.label ?? "",
-        state: opts.state,
-        environmentId: opts.env ?? "",
+        label: opts.label,
+        state: issueStateToEnum(opts.state),
+        environmentId: opts.env,
       });
       const parts = [`Imported ${chalk.green(res.imported)} tasks`];
       if (res.linked > 0) {

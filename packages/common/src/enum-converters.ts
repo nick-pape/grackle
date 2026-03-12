@@ -12,6 +12,7 @@ import {
   TaskStatus,
   ProjectStatus,
   TokenType,
+  IssueState,
 } from "./gen/grackle/grackle_pb.js";
 import { AgentEventType } from "./gen/grackle/powerline/powerline_pb.js";
 
@@ -234,4 +235,28 @@ export function projectStatusToEnum(s: string): ProjectStatus {
 /** Convert a proto enum project status to its string value. */
 export function projectStatusToString(e: ProjectStatus): string {
   return projectStatusToStringMap[e] ?? "";
+}
+
+// ─── IssueState ─────────────────────────────────────────────
+
+const issueStateToEnumMap: Record<string, IssueState> = Object.assign(Object.create(null), {
+  "": IssueState.UNSPECIFIED,
+  "open": IssueState.OPEN,
+  "closed": IssueState.CLOSED,
+});
+
+const issueStateToStringMap: Record<number, string> = {
+  [IssueState.UNSPECIFIED]: "",
+  [IssueState.OPEN]: "open",
+  [IssueState.CLOSED]: "closed",
+};
+
+/** Convert a string issue state to its proto enum value. */
+export function issueStateToEnum(s: string): IssueState {
+  return issueStateToEnumMap[s] ?? IssueState.UNSPECIFIED;
+}
+
+/** Convert a proto enum issue state to its string value. */
+export function issueStateToString(e: IssueState): string {
+  return issueStateToStringMap[e] ?? "";
 }

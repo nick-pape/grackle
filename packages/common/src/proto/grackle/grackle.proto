@@ -64,6 +64,12 @@ enum ProjectStatus {
   PROJECT_STATUS_ARCHIVED = 2;
 }
 
+enum IssueState {
+  ISSUE_STATE_UNSPECIFIED = 0;
+  ISSUE_STATE_OPEN = 1;
+  ISSUE_STATE_CLOSED = 2;
+}
+
 enum TokenType {
   TOKEN_TYPE_UNSPECIFIED = 0;
   TOKEN_TYPE_ENV_VAR = 1;
@@ -312,10 +318,10 @@ message QueryFindingsRequest {
 
 message ImportGitHubIssuesRequest {
   string project_id = 1;
-  string repo = 2;           // "owner/repo"
-  string label = 3;          // optional label filter
-  string state = 4;          // "open" or "closed"
-  string environment_id = 5; // optional env to assign
+  string repo = 2;                    // "owner/repo"
+  optional string label = 3;          // label filter (omit for all)
+  IssueState state = 4;               // OPEN or CLOSED
+  optional string environment_id = 5; // env to assign (omit for project default)
 }
 
 message ImportGitHubIssuesResponse {
