@@ -88,12 +88,13 @@ test.describe("Settings Page (Mock Mode)", () => {
     // anthropic token should be visible
     await expect(page.getByText("anthropic", { exact: true })).toBeVisible({ timeout: 5_000 });
 
-    // Accept the confirm dialog
-    page.on("dialog", (dialog) => dialog.accept());
-
     // Click delete on the anthropic token
     const tokenRow = page.getByText("anthropic", { exact: true }).locator("..");
     await tokenRow.locator('button[title="Delete anthropic"]').click();
+
+    // Confirm via the in-app ConfirmDialog
+    await expect(page.getByText("Delete Token?")).toBeVisible({ timeout: 5_000 });
+    await page.locator('[role="dialog"] button', { hasText: "Delete" }).click();
 
     // Should be gone
     await expect(page.getByText("anthropic", { exact: true })).not.toBeVisible({ timeout: 5_000 });
