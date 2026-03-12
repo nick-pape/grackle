@@ -187,3 +187,86 @@
 .errorMessage {
   color: var(--accent-red);
 }
+
+// ---------------------------------------------------------------------------
+// Empty state CTAs
+// ---------------------------------------------------------------------------
+
+.emptyCta {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-md);
+  padding: var(--space-xl);
+  text-align: center;
+  animation: fadeIn 300ms ease;
+}
+
+.ctaTitle {
+  font-size: var(--font-size-lg);
+  color: var(--text-secondary);
+  font-weight: var(--font-weight-bold);
+}
+
+.ctaDescription {
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+  max-width: 320px;
+  line-height: var(--line-height);
+}
+
+.ctaButton {
+  @include btn-primary;
+  padding: var(--space-sm) var(--space-xl);
+  font-size: var(--font-size-md);
+}
+
+.ctaLink {
+  background: none;
+  border: none;
+  color: var(--accent-green);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+
+  &:hover {
+    color: var(--text-primary);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Diff error callout
+// ---------------------------------------------------------------------------
+
+.errorCallout {
+  margin: var(--space-lg);
+  padding: var(--space-md) var(--space-lg);
+  border: 1px solid var(--accent-red);
+  border-radius: var(--radius-md);
+  background: var(--accent-red-dim);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-md);
+}
+
+.errorCalloutText {
+  flex: 1;
+  color: var(--accent-red);
+  font-size: var(--font-size-sm);
+}
+
+.retryButton {
+  @include btn-ghost(var(--accent-red));
+  font-size: var(--font-size-sm);
+  padding: 2px var(--space-md);
+  white-space: nowrap;
+
+  &:hover {
+    background: var(--accent-red-dim);
+    box-shadow: var(--shadow-glow-red);
+  }
+}

@@ -5,6 +5,7 @@ import styles from "./DiffViewer.module.scss";
 /** Props for the DiffViewer component. */
 interface Props {
   diff: TaskDiffData | undefined;
+  onRetry?: () => void;
 }
 
 /** Classifies a diff line for styling purposes. */
@@ -25,7 +26,7 @@ function getDiffLineClass(line: string): string {
 }
 
 /** Displays a unified diff with stats bar, file list, and colored line-by-line output. */
-export function DiffViewer({ diff }: Props): JSX.Element {
+export function DiffViewer({ diff, onRetry }: Props): JSX.Element {
   if (!diff) {
     return (
       <div className={styles.emptyState}>
@@ -36,8 +37,13 @@ export function DiffViewer({ diff }: Props): JSX.Element {
 
   if (diff.error) {
     return (
-      <div className={styles.errorState}>
-        {diff.error}
+      <div className={styles.errorCallout}>
+        <span className={styles.errorCalloutText}>{diff.error}</span>
+        {onRetry && (
+          <button className={styles.retryButton} onClick={onRetry}>
+            Retry
+          </button>
+        )}
       </div>
     );
   }
@@ -45,7 +51,8 @@ export function DiffViewer({ diff }: Props): JSX.Element {
   if (!diff.diff || diff.diff.trim() === "") {
     return (
       <div className={styles.emptyState}>
-        No changes on branch {diff.branch}
+        The agent completed this task without modifying files
+        {diff.branch && <span style={{ color: "var(--text-tertiary)", display: "block", fontSize: "var(--font-size-xs)", marginTop: "var(--space-xs)" }}>Branch: {diff.branch}</span>}
       </div>
     );
   }

@@ -171,9 +171,9 @@ test.describe("Diff Viewer Content", () => {
       },
     });
 
-    // Verify "No changes on branch" message
+    // Verify "no changes" empty state message
     await expect(
-      page.getByText("No changes on branch diff-empty/diff-nochange"),
+      page.getByText("The agent completed this task without modifying files"),
     ).toBeVisible({ timeout: 5_000 });
   });
 });

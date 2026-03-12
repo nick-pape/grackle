@@ -287,8 +287,16 @@ export function ProjectList({ viewMode, setViewMode }: Props): JSX.Element {
       )}
 
       {projects.length === 0 && !showCreateForm && (
-        <div className={styles.emptyState}>
-          No projects. Click + to create one.
+        <div className={styles.emptyCta}>
+          <button
+            className={styles.ctaButton}
+            onClick={() => setShowCreateForm(true)}
+          >
+            Create Project
+          </button>
+          <div className={styles.ctaDescription}>
+            Organize your work into projects
+          </div>
         </div>
       )}
 
@@ -350,8 +358,13 @@ export function ProjectList({ viewMode, setViewMode }: Props): JSX.Element {
                   ))}
 
                   {projectTasks.length === 0 && (
-                    <div className={styles.emptyTasks}>
-                      No tasks yet
+                    <div className={styles.emptyTaskCta}>
+                      <button
+                        className={styles.createTaskLink}
+                        onClick={() => setViewMode({ kind: "new_task", projectId: project.id })}
+                      >
+                        + Create Task
+                      </button>
                     </div>
                   )}
                 </motion.div>

@@ -299,7 +299,7 @@ export async function createTaskViaWs(
  */
 export function diffViewerLocator(page: Page): Locator {
   return page.locator('[class*="emptyState"]').or(
-    page.locator('[class*="errorState"]'),
+    page.locator('[class*="errorState"]').or(page.locator('[class*="errorCallout"]')),
   ).or(
     page.locator('[class*="statsBar"]'),
   );
