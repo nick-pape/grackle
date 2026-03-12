@@ -1,6 +1,18 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Thu, 12 Mar 2026 15:30:40 GMT and should not be manually modified.
+This log was last generated on Thu, 12 Mar 2026 17:36:37 GMT and should not be manually modified.
+
+## 0.14.10
+Thu, 12 Mar 2026 17:36:37 GMT
+
+### Patches
+
+- Add error handling to SendInput WebSocket handler: validate session existence and active status, check environment connection, and send descriptive error messages to the client instead of silently dropping input.
+
+### Updates
+
+- No changes (merge commit false positive)
+- No changes (merge commit false positive)
 
 ## 0.14.9
 Thu, 12 Mar 2026 15:30:40 GMT
