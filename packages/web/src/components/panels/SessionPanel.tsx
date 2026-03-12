@@ -131,9 +131,9 @@ function formatDuration(start: string | undefined, end: string | undefined): str
 /** Derives a color class for an environment status string. */
 function envStatusClass(status: string): string {
   const s = status.toLowerCase();
-  if (s === "ready" || s === "running" || s === "available") return styles.envDotGreen;
-  if (s === "provisioning" || s === "starting" || s === "pending") return styles.envDotYellow;
-  if (s === "error" || s === "failed") return styles.envDotRed;
+  if (s === "ready" || s === "running" || s === "available" || s === "connected") return styles.envDotGreen;
+  if (s === "provisioning" || s === "starting" || s === "pending" || s === "connecting") return styles.envDotYellow;
+  if (s === "error" || s === "failed" || s === "disconnected") return styles.envDotRed;
   return styles.envDotGray;
 }
 
@@ -180,10 +180,10 @@ function TaskOverview({ task, tasksById, environments, projects }: TaskOverviewP
   const env = environments.find((e) => e.id === task.environmentId);
   const project = projects.find((p) => p.id === task.projectId);
 
-  // Build GitHub branch URL if the project has a repoUrl; encode the branch
-  // segment so names like "feature/foo" or those with special chars are safe.
+  // Build GitHub branch URL if the project has a repoUrl; encode the full
+  // branch name so special characters (spaces, %, etc.) are safe in the URL.
   const branchUrl = task.branch && project?.repoUrl
-    ? `${project.repoUrl.replace(/\/$/, "")}/tree/${task.branch.split("/").map(encodeURIComponent).join("/")}`
+    ? `${project.repoUrl.replace(/\/$/, "")}/tree/${encodeURIComponent(task.branch)}`
     : undefined;
 
   return (
@@ -205,7 +205,7 @@ function TaskOverview({ task, tasksById, environments, projects }: TaskOverviewP
       </div>
 
       {/* Description */}
-      {task.description && (
+      {typeof task.description === "string" && task.description && (
         <div className={styles.overviewSection}>
           <div className={styles.overviewLabel}>Description</div>
           <div className={styles.overviewMarkdown}>
@@ -274,7 +274,7 @@ function TaskOverview({ task, tasksById, environments, projects }: TaskOverviewP
               <div className={styles.timelineRow}>
                 <span className={styles.timelineKey}>Assigned</span>
                 <span className={styles.timelineValue}>{formatDate(task.assignedAt)}</span>
-                {delta && <span className={styles.timelineDelta}>{delta}</span>}
+                {delta !== undefined && <span className={styles.timelineDelta}>{delta}</span>}
               </div>
             );
           })()}
@@ -284,7 +284,7 @@ function TaskOverview({ task, tasksById, environments, projects }: TaskOverviewP
               <div className={styles.timelineRow}>
                 <span className={styles.timelineKey}>Started</span>
                 <span className={styles.timelineValue}>{formatDate(task.startedAt)}</span>
-                {delta && <span className={styles.timelineDelta}>{delta}</span>}
+                {delta !== undefined && <span className={styles.timelineDelta}>{delta}</span>}
               </div>
             );
           })()}
@@ -294,7 +294,7 @@ function TaskOverview({ task, tasksById, environments, projects }: TaskOverviewP
               <div className={styles.timelineRow}>
                 <span className={styles.timelineKey}>Completed</span>
                 <span className={styles.timelineValue}>{formatDate(task.completedAt)}</span>
-                {delta && <span className={styles.timelineDelta}>{delta}</span>}
+                {delta !== undefined && <span className={styles.timelineDelta}>{delta}</span>}
               </div>
             );
           })()}
