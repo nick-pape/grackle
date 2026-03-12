@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Thu, 12 Mar 2026 11:30:47 GMT and should not be manually modified.
+This log was last generated on Thu, 12 Mar 2026 15:00:24 GMT and should not be manually modified.
+
+## 0.14.8
+Thu, 12 Mar 2026 15:00:24 GMT
+
+### Patches
+
+- Auto-detect git repo path for worktrees, add task update CLI, capture codespace git credentials
 
 ## 0.14.7
 Thu, 12 Mar 2026 11:30:47 GMT

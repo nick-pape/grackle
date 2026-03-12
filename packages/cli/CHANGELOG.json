@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.14.8",
+      "tag": "@grackle-ai/cli_v0.14.8",
+      "date": "Thu, 12 Mar 2026 15:00:24 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Auto-detect git repo path for worktrees, add task update CLI, capture codespace git credentials"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.14.7",
       "tag": "@grackle-ai/cli_v0.14.7",
       "date": "Thu, 12 Mar 2026 11:30:47 GMT",
