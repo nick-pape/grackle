@@ -2,6 +2,91 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.14.10",
+      "tag": "@grackle-ai/cli_v0.14.10",
+      "date": "Thu, 12 Mar 2026 17:36:37 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Add error handling to SendInput WebSocket handler: validate session existence and active status, check environment connection, and send descriptive error messages to the client instead of silently dropping input."
+          }
+        ],
+        "none": [
+          {
+            "comment": "No changes (merge commit false positive)"
+          },
+          {
+            "comment": "No changes (merge commit false positive)"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.14.9",
+      "tag": "@grackle-ai/cli_v0.14.9",
+      "date": "Thu, 12 Mar 2026 15:30:40 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Auto-retry task on rejection with review notes"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.14.8",
+      "tag": "@grackle-ai/cli_v0.14.8",
+      "date": "Thu, 12 Mar 2026 15:00:24 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Auto-detect git repo path for worktrees, add task update CLI, capture codespace git credentials"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.14.7",
+      "tag": "@grackle-ai/cli_v0.14.7",
+      "date": "Thu, 12 Mar 2026 11:30:47 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Remove proto enums that shadow hand-written string union types"
+          }
+        ],
+        "none": [
+          {
+            "comment": "No actual changes to this package"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.14.6",
+      "tag": "@grackle-ai/cli_v0.14.6",
+      "date": "Thu, 12 Mar 2026 08:11:55 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Harden add_environment input validation: port range [1,65535], adapterConfig double-encoding fix, ID collision retry loop"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.14.5",
+      "tag": "@grackle-ai/cli_v0.14.5",
+      "date": "Thu, 12 Mar 2026 07:09:34 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Allow retrying failed tasks by adding 'failed' to allowed start statuses"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.14.4",
       "tag": "@grackle-ai/cli_v0.14.4",
       "date": "Thu, 12 Mar 2026 06:27:52 GMT",

@@ -1,6 +1,7 @@
 import { useState, useEffect, type FormEvent, type JSX } from "react";
 import { useGrackle } from "../../context/GrackleContext.js";
 import type { ViewMode } from "../../App.js";
+import { ConfirmDialog } from "../display/index.js";
 import styles from "./UnifiedBar.module.scss";
 
 /** Props for the UnifiedBar component. */
@@ -51,6 +52,7 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
   const [taskDesc, setTaskDesc] = useState("");
   const [taskEnvId, setTaskEnvId] = useState("");
   const [rejectNotes, setRejectNotes] = useState("");
+  const [showDeleteTaskConfirm, setShowDeleteTaskConfirm] = useState(false);
 
   // ─── New environment form state ─────────────────
   const [envName, setEnvName] = useState("");
@@ -105,6 +107,15 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
 
   // --- new_environment mode ---
   if (viewMode.kind === "new_environment") {
+    /** Returns true if portStr is empty (optional) or a valid integer in [1, 65535]. */
+    const isPortValid = (portStr: string): boolean => {
+      if (!portStr.trim()) {
+        return true;
+      }
+      const n = Number(portStr);
+      return Number.isInteger(n) && n >= 1 && n <= 65535;
+    };
+
     const isEnvValid = (): boolean => {
       if (!envName.trim()) {
         return false;
@@ -113,6 +124,9 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
         return false;
       }
       if (envAdapterType === "codespace" && !envCodespaceName.trim()) {
+        return false;
+      }
+      if ((envAdapterType === "local" || envAdapterType === "ssh") && !isPortValid(envPort)) {
         return false;
       }
       return true;
@@ -128,9 +142,9 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
           config.host = envHost.trim();
         }
         if (envPort.trim()) {
-          const parsed = parseInt(envPort, 10);
-          if (Number.isFinite(parsed)) {
-            config.port = parsed;
+          const n = Number(envPort);
+          if (Number.isInteger(n)) {
+            config.port = n;
           }
         }
       } else if (envAdapterType === "ssh") {
@@ -139,9 +153,9 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
           config.user = envUser.trim();
         }
         if (envPort.trim()) {
-          const parsed = parseInt(envPort, 10);
-          if (Number.isFinite(parsed)) {
-            config.sshPort = parsed;
+          const n = Number(envPort);
+          if (Number.isInteger(n)) {
+            config.sshPort = n;
           }
         }
         if (envIdentityFile.trim()) {
@@ -222,7 +236,9 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
                 className={styles.inputSmall}
               />
               <input
-                type="text"
+                type="number"
+                min={1}
+                max={65535}
                 value={envPort}
                 onChange={(e) => setEnvPort(e.target.value)}
                 placeholder="Port (optional)..."
@@ -247,7 +263,9 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
                 className={styles.inputSmall}
               />
               <input
-                type="text"
+                type="number"
+                min={1}
+                max={65535}
                 value={envPort}
                 onChange={(e) => setEnvPort(e.target.value)}
                 placeholder="SSH port (optional)..."
@@ -422,6 +440,17 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
 
   // --- task modes ---
   if (viewMode.kind === "task" && task) {
+    // Single shared ConfirmDialog for all task states that support deletion.
+    const confirmDialog = (
+      <ConfirmDialog
+        isOpen={showDeleteTaskConfirm}
+        title="Delete Task?"
+        description={`"${task.title}" will be permanently removed.`}
+        onConfirm={() => { deleteTask(task.id); setViewMode({ kind: "project", projectId: task.projectId }); setShowDeleteTaskConfirm(false); }}
+        onCancel={() => setShowDeleteTaskConfirm(false)}
+      />
+    );
+
     // Pending + blocked
     if (task.status === "pending" && isTaskBlocked) {
       const blockerNames = task.dependsOn
@@ -429,49 +458,43 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
         .filter((t) => t && t.status !== "done")
         .map((t) => t!.title);
       return (
-        <div className={styles.bar}>
-          <span className={styles.statusBlocked}>
-            Blocked by: {blockerNames.join(", ")}
-          </span>
-          <button
-            onClick={() => {
-              if (!window.confirm(`Delete task "${task.title}"?`)) {
-                return;
-              }
-              deleteTask(task.id);
-              setViewMode({ kind: "project", projectId: task.projectId });
-            }}
-            className={styles.btnDanger}
-          >
-            Delete
-          </button>
-        </div>
+        <>
+          {confirmDialog}
+          <div className={styles.bar}>
+            <span className={styles.statusBlocked}>
+              Blocked by: {blockerNames.join(", ")}
+            </span>
+            <button
+              onClick={() => setShowDeleteTaskConfirm(true)}
+              className={styles.btnDanger}
+            >
+              Delete
+            </button>
+          </div>
+        </>
       );
     }
 
     // Pending + unblocked
     if (task.status === "pending" || task.status === "assigned") {
       return (
-        <div className={styles.bar}>
-          <button
-            onClick={() => startTask(task.id)}
-            className={styles.btnPrimary}
-          >
-            Start Task
-          </button>
-          <button
-            onClick={() => {
-              if (!window.confirm(`Delete task "${task.title}"?`)) {
-                return;
-              }
-              deleteTask(task.id);
-              setViewMode({ kind: "project", projectId: task.projectId });
-            }}
-            className={styles.btnDanger}
-          >
-            Delete
-          </button>
-        </div>
+        <>
+          {confirmDialog}
+          <div className={styles.bar}>
+            <button
+              onClick={() => startTask(task.id)}
+              className={styles.btnPrimary}
+            >
+              Start Task
+            </button>
+            <button
+              onClick={() => setShowDeleteTaskConfirm(true)}
+              className={styles.btnDanger}
+            >
+              Delete
+            </button>
+          </div>
+        </>
       );
     }
 
@@ -520,6 +543,8 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
         <div className={styles.bar}>
           <input
             type="text"
+            value=""
+            readOnly
             disabled
             placeholder="Agent is working..."
             className={styles.input}
@@ -569,58 +594,52 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
     // Done
     if (task.status === "done") {
       return (
-        <div className={styles.bar}>
-          <span className={`${styles.statusText} ${styles.statusCompleted}`}>
-            Task completed
-          </span>
-          <button
-            onClick={() => setViewMode({ kind: "new_task", projectId: task.projectId })}
-            className={styles.btnPrimary}
-          >
-            + New Task
-          </button>
-          <button
-            onClick={() => {
-              if (!window.confirm(`Delete task "${task.title}"?`)) {
-                return;
-              }
-              deleteTask(task.id);
-              setViewMode({ kind: "project", projectId: task.projectId });
-            }}
-            className={styles.btnDanger}
-          >
-            Delete
-          </button>
-        </div>
+        <>
+          {confirmDialog}
+          <div className={styles.bar}>
+            <span className={`${styles.statusText} ${styles.statusCompleted}`}>
+              Task completed
+            </span>
+            <button
+              onClick={() => setViewMode({ kind: "new_task", projectId: task.projectId })}
+              className={styles.btnPrimary}
+            >
+              + New Task
+            </button>
+            <button
+              onClick={() => setShowDeleteTaskConfirm(true)}
+              className={styles.btnDanger}
+            >
+              Delete
+            </button>
+          </div>
+        </>
       );
     }
 
     // Failed
     if (task.status === "failed") {
       return (
-        <div className={styles.bar}>
-          <span className={`${styles.statusText} ${styles.statusFailed}`}>
-            Task failed
-          </span>
-          <button
-            onClick={() => startTask(task.id)}
-            className={styles.btnPrimary}
-          >
-            Retry
-          </button>
-          <button
-            onClick={() => {
-              if (!window.confirm(`Delete task "${task.title}"?`)) {
-                return;
-              }
-              deleteTask(task.id);
-              setViewMode({ kind: "project", projectId: task.projectId });
-            }}
-            className={styles.btnDanger}
-          >
-            Delete
-          </button>
-        </div>
+        <>
+          {confirmDialog}
+          <div className={styles.bar}>
+            <span className={`${styles.statusText} ${styles.statusFailed}`}>
+              Task failed
+            </span>
+            <button
+              onClick={() => startTask(task.id)}
+              className={styles.btnPrimary}
+            >
+              Retry
+            </button>
+            <button
+              onClick={() => setShowDeleteTaskConfirm(true)}
+              className={styles.btnDanger}
+            >
+              Delete
+            </button>
+          </div>
+        </>
       );
     }
   }
@@ -670,7 +689,7 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
     if (isRunning) {
       return (
         <div className={styles.bar}>
-          <input type="text" disabled placeholder="Agent is working..." className={styles.input} />
+          <input type="text" value="" readOnly disabled placeholder="Agent is working..." className={styles.input} />
           <button onClick={() => kill(viewMode.sessionId)} className={styles.btnDanger} title="Stop session">
             Stop
           </button>

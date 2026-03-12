@@ -1,5 +1,6 @@
 import { useState, type JSX, type FormEvent } from "react";
 import { useGrackle } from "../../context/GrackleContext.js";
+import { ConfirmDialog } from "../display/index.js";
 import styles from "./SettingsPanel.module.scss";
 
 /** Token type options for the add form. */
@@ -16,6 +17,7 @@ export function SettingsPanel(): JSX.Element {
   const [value, setValue] = useState("");
   const [tokenType, setTokenType] = useState("env_var");
   const [target, setTarget] = useState("");
+  const [confirmDeleteToken, setConfirmDeleteToken] = useState<string | null>(null);
 
   const handleSubmit = (e: FormEvent): void => {
     e.preventDefault();
@@ -31,13 +33,25 @@ export function SettingsPanel(): JSX.Element {
   };
 
   const handleDelete = (tokenName: string): void => {
-    if (window.confirm(`Delete token "${tokenName}"?`)) {
-      deleteToken(tokenName);
+    setConfirmDeleteToken(tokenName);
+  };
+
+  const handleConfirmDelete = (): void => {
+    if (confirmDeleteToken) {
+      deleteToken(confirmDeleteToken);
     }
+    setConfirmDeleteToken(null);
   };
 
   return (
     <div className={styles.container}>
+      <ConfirmDialog
+        isOpen={confirmDeleteToken !== null}
+        title="Delete Token?"
+        description={confirmDeleteToken ? `"${confirmDeleteToken}" will be permanently removed.` : undefined}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setConfirmDeleteToken(null)}
+      />
       <h2 className={styles.heading}>Settings</h2>
 
       <section className={styles.section}>
