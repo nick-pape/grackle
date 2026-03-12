@@ -2,7 +2,6 @@ import type { ConnectRouter } from "@connectrpc/connect";
 import { create } from "@bufbuild/protobuf";
 import {
   powerline,
-  agentEventTypeToEnum, sessionStatusToEnum, tokenTypeToString,
 } from "@grackle-ai/common";
 import { getRuntime, listRuntimes } from "./runtime-registry.js";
 import { addSession, getSession, removeSession, listAllSessions } from "./session-mgr.js";
@@ -24,7 +23,7 @@ async function *streamSession(sessionId: string, session: AgentSession): AsyncGe
     for await (const event of session.stream()) {
       yield create(powerline.AgentEventSchema, {
         sessionId,
-        type: agentEventTypeToEnum(event.type),
+        type: event.type,
         timestamp: event.timestamp,
         content: event.content,
         raw: event.raw ? JSON.stringify(event.raw) : "",
@@ -53,7 +52,7 @@ export function registerPowerLineRoutes(router: ConnectRouter): void {
       if (!runtime) {
         yield create(powerline.AgentEventSchema, {
           sessionId: req.sessionId,
-          type: powerline.AgentEventType.ERROR,
+          type: "error",
           timestamp: new Date().toISOString(),
           content: `Unknown runtime: ${req.runtime}`,
         });
@@ -80,7 +79,7 @@ export function registerPowerLineRoutes(router: ConnectRouter): void {
       if (!runtime) {
         yield create(powerline.AgentEventSchema, {
           sessionId: req.sessionId,
-          type: powerline.AgentEventType.ERROR,
+          type: "error",
           timestamp: new Date().toISOString(),
           content: `Unknown runtime: ${req.runtime}`,
         });
@@ -120,7 +119,7 @@ export function registerPowerLineRoutes(router: ConnectRouter): void {
           create(powerline.SessionInfoSchema, {
             sessionId: s.id,
             runtime: s.runtimeName,
-            status: sessionStatusToEnum(s.status),
+            status: s.status,
           })
         ),
       });
@@ -135,7 +134,7 @@ export function registerPowerLineRoutes(router: ConnectRouter): void {
     async pushTokens(req: powerline.TokenBundle) {
       const tokens = req.tokens.map((t) => ({
         name: t.name,
-        type: tokenTypeToString(t.type),
+        type: t.type,
         envVar: t.envVar,
         filePath: t.filePath,
         value: t.value,

@@ -28,6 +28,15 @@ rush build -t @grackle-ai/<package>
 npx buf generate
 ```
 
+## Manual Testing
+
+**After finishing code changes, always manually test if the change is testable.** Don't rely solely on unit tests — unit tests mock everything and only verify wiring, not real behavior.
+
+- **Web UI changes**: Use the Playwright MCP (`mcp__playwright__*`) to launch a browser, navigate the web UI, and verify visually that the feature works as expected.
+- **Server / adapter changes** (e.g. SSH, Codespace): Start the server (`grackle serve`), add an environment (`grackle env add`), and exercise the relevant flow (provision, stop, reconnect, etc.) against a real target. Use `gh codespace list` to find an available codespace for Codespace adapter testing.
+- **CLI changes**: Run the CLI commands manually and verify the output matches expectations.
+- If you cannot manually test (e.g. no codespace available, or the change is purely internal refactoring with no observable behavior), explicitly state why manual testing was skipped.
+
 ## Project Structure
 
 Rush monorepo with 5 packages under `packages/`:

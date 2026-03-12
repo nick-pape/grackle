@@ -64,7 +64,7 @@ test.describe("Task Lifecycle (stub runtime)", () => {
 
     // --- Step 8: Session completes -> task auto-moves to review ---
     // The stub runtime completes quickly after input, auto-moving to review.
-    // The SessionPanel auto-switches to the Diff tab on review, so we check
+    // The SessionPanel auto-switches to the Stream tab on review, so we check
     // for the Approve button rather than stream content.
     await expect(page.locator("button", { hasText: "Approve" })).toBeVisible({ timeout: 15_000 });
 

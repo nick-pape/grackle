@@ -6,7 +6,7 @@ import { grackle, powerline } from "@grackle-ai/common";
 import * as envRegistry from "./env-registry.js";
 import * as sessionStore from "./session-store.js";
 import * as adapterManager from "./adapter-manager.js";
-import type { PowerLineConnection } from "./adapters/adapter.js";
+import { type PowerLineConnection, reconnectOrProvision } from "./adapters/adapter.js";
 import * as streamHub from "./stream-hub.js";
 import * as tokenBroker from "./token-broker.js";
 import * as projectStore from "./project-store.js";
@@ -89,6 +89,7 @@ function envRowToWs(r: ReturnType<typeof envRegistry.listEnvironments>[number]):
     id: r.id,
     displayName: r.displayName,
     adapterType: r.adapterType,
+    adapterConfig: r.adapterConfig,
     defaultRuntime: r.defaultRuntime,
     status: r.status,
     bootstrapped: r.bootstrapped,
@@ -147,18 +148,21 @@ async function autoProvisionEnvironment(
   try {
     const config = safeParseAdapterConfig(env.adapterConfig, environmentId);
     const powerlineToken = env.powerlineToken || "";
-    for await (const provEvent of adapter.provision(environmentId, config, powerlineToken)) {
+
+    for await (const provEvent of reconnectOrProvision(environmentId, adapter, config, powerlineToken, !!env.bootstrapped)) {
       logger.info({ environmentId, stage: provEvent.stage, ...logContext }, "Auto-provision progress");
       broadcast({
         type: "provision_progress",
         payload: { environmentId, stage: provEvent.stage, message: provEvent.message, progress: provEvent.progress },
       });
     }
+
     conn = await adapter.connect(environmentId, config, powerlineToken);
     adapterManager.setConnection(environmentId, conn);
     // Push stored tokens to newly connected environment
     await tokenBroker.pushToEnv(environmentId);
     envRegistry.updateEnvironmentStatus(environmentId, "connected");
+    envRegistry.markBootstrapped(environmentId);
     broadcastEnvironments();
     logger.info({ environmentId, ...logContext }, "Auto-provision complete");
     broadcast({
@@ -524,9 +528,13 @@ async function handleMessage(
         sendWs(ws, { type: "error", payload: { message: "name required" } });
         return;
       }
-      let id = slugify(name) || uuid().slice(0, 8);
+      const baseProjectId = slugify(name) || uuid().slice(0, 8);
+      let id = baseProjectId;
+      for (let attempt = 0; attempt < 10 && projectStore.getProject(id); attempt++) {
+        id = `${baseProjectId}-${uuid().slice(0, 4)}`;
+      }
       if (projectStore.getProject(id)) {
-        id = `${id}-${uuid().slice(0, 4)}`;
+        id = uuid();
       }
       projectStore.createProject(
         id, name,
@@ -620,7 +628,7 @@ async function handleMessage(
         sendWs(ws, { type: "error", payload: { message: `Task not found: ${taskId}` } });
         return;
       }
-      if (!["pending", "assigned"].includes(task.status)) {
+      if (!["pending", "assigned", "failed"].includes(task.status)) {
         sendWs(ws, { type: "error", payload: { message: `Task cannot be started (status: ${task.status})` } });
         return;
       }
@@ -826,20 +834,22 @@ async function handleMessage(
         try {
           const config = safeParseAdapterConfig(env.adapterConfig, environmentId);
           const powerlineToken = env.powerlineToken || "";
-          logger.info({ environmentId, config }, "Starting adapter.provision");
-          for await (const event of adapter.provision(environmentId, config, powerlineToken)) {
+
+          for await (const event of reconnectOrProvision(environmentId, adapter, config, powerlineToken, !!env.bootstrapped)) {
             logger.info({ environmentId, stage: event.stage, message: event.message }, "Provision progress");
             broadcast({
               type: "provision_progress",
               payload: { environmentId, stage: event.stage, message: event.message, progress: event.progress },
             });
           }
+
           logger.info({ environmentId }, "Provision complete, calling adapter.connect");
           const conn = await adapter.connect(environmentId, config, powerlineToken);
           adapterManager.setConnection(environmentId, conn);
           // Push stored tokens to newly connected environment
           await tokenBroker.pushToEnv(environmentId);
           envRegistry.updateEnvironmentStatus(environmentId, "connected");
+          envRegistry.markBootstrapped(environmentId);
           logger.info({ environmentId }, "Environment connected");
           broadcast({
             type: "provision_progress",
@@ -895,13 +905,33 @@ async function handleMessage(
         sendWs(ws, { type: "error", payload: { message: `Unknown adapter type: ${adapterType}` } });
         return;
       }
-      let id = slugify(displayName) || uuid().slice(0, 8);
-      if (envRegistry.getEnvironment(id)) {
-        id = `${id}-${uuid().slice(0, 4)}`;
+      const baseEnvId = slugify(displayName) || uuid().slice(0, 8);
+      let id = baseEnvId;
+      for (let attempt = 0; attempt < 10 && envRegistry.getEnvironment(id); attempt++) {
+        id = `${baseEnvId}-${uuid().slice(0, 4)}`;
       }
-      const adapterConfig = msg.payload?.adapterConfig
-        ? JSON.stringify(msg.payload.adapterConfig)
-        : "{}";
+      if (envRegistry.getEnvironment(id)) {
+        id = uuid();
+      }
+      const rawAdapterConfig = msg.payload?.adapterConfig;
+      let adapterConfig: string;
+      if (rawAdapterConfig === undefined || rawAdapterConfig === null) {
+        adapterConfig = "{}";
+      } else if (typeof rawAdapterConfig === "string") {
+        const normalized = rawAdapterConfig.trim() === "" ? "{}" : rawAdapterConfig;
+        try {
+          JSON.parse(normalized);
+        } catch {
+          sendWs(ws, { type: "error", payload: { message: "adapterConfig string is not valid JSON" } });
+          return;
+        }
+        adapterConfig = normalized;
+      } else if (typeof rawAdapterConfig === "object") {
+        adapterConfig = JSON.stringify(rawAdapterConfig);
+      } else {
+        sendWs(ws, { type: "error", payload: { message: "adapterConfig must be an object or JSON string" } });
+        return;
+      }
       const defaultRuntime = (msg.payload?.defaultRuntime as string) || DEFAULT_RUNTIME;
       envRegistry.addEnvironment(id, displayName, adapterType, adapterConfig, defaultRuntime);
       logger.info({ id, displayName, adapterType }, "Environment added via WebSocket");
