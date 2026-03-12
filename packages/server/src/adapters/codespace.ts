@@ -12,6 +12,7 @@ import {
   remoteStop,
   remoteDestroy,
   remoteHealthCheck,
+  startRemotePowerLine,
   SSH_CONNECTIVITY_TIMEOUT_MS,
   REMOTE_EXEC_DEFAULT_TIMEOUT_MS,
 } from "./remote-adapter-utils.js";
@@ -142,6 +143,54 @@ export class CodespaceAdapter implements EnvironmentAdapter {
     registerTunnel(environmentId, { tunnel });
 
     yield { stage: "connecting", message: `Tunnel open, connecting on port ${localPort}...`, progress: 0.90 };
+  }
+
+  /**
+   * Attempt fast reconnect: probe PowerLine, restart if needed, re-open tunnel.
+   *
+   * Any failure (SSH unreachable, PowerLine won't start, tunnel error) throws
+   * and falls through to the caller, which should trigger a full provision.
+   *
+   * Minimizes SSH round trips — probe and conditional restart run in a single
+   * SSH call via `startRemotePowerLine({ probeFirst: true })`.
+   */
+  public async *reconnect(
+    environmentId: string,
+    config: Record<string, unknown>,
+    powerlineToken: string,
+  ): AsyncGenerator<ProvisionEvent> {
+    const cfg = config as unknown as CodespaceEnvironmentConfig;
+    if (!cfg.codespaceName) {
+      throw new Error("Codespace adapter requires a 'codespaceName' in the configuration");
+    }
+
+    const executor = new CodespaceExecutor(cfg.codespaceName);
+
+    // 1. Close any stale tunnel
+    yield { stage: "reconnecting", message: "Closing stale tunnel...", progress: 0.10 };
+    await closeTunnel(environmentId);
+
+    // 2. Probe + conditional restart in a single SSH call.
+    //    probeFirst checks if PowerLine is already listening; if not, writes
+    //    env vars, detects workspace, starts the process, and re-probes.
+    yield { stage: "reconnecting", message: `Checking PowerLine on ${cfg.codespaceName}...`, progress: 0.30 };
+    const { alreadyRunning } = await startRemotePowerLine(executor, powerlineToken, {
+      extraEnv: cfg.env,
+      autoDetectWorkspace: true,
+      probeFirst: true,
+    });
+    if (!alreadyRunning) {
+      yield { stage: "reconnecting", message: "PowerLine restarted", progress: 0.50 };
+    }
+
+    // 3. Open new port-forward tunnel
+    const localPort = cfg.localPort || await findFreePort();
+    yield { stage: "reconnecting", message: `Forwarding local port ${localPort} to codespace...`, progress: 0.70 };
+    const tunnel = new CodespaceTunnel(localPort, cfg.codespaceName);
+    await tunnel.open();
+    registerTunnel(environmentId, { tunnel });
+
+    yield { stage: "reconnecting", message: "Reconnected to codespace", progress: 0.90 };
   }
 
   /** Connect to the PowerLine through the port-forward tunnel. */

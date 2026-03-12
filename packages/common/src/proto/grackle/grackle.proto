@@ -16,26 +16,6 @@ message SessionId {
 
 // ─── Enums ──────────────────────────────────────────────────
 
-enum EnvironmentStatus {
-  ENVIRONMENT_STATUS_UNSPECIFIED = 0;
-  ENVIRONMENT_STATUS_DISCONNECTED = 1;
-  ENVIRONMENT_STATUS_CONNECTING = 2;
-  ENVIRONMENT_STATUS_CONNECTED = 3;
-  ENVIRONMENT_STATUS_SLEEPING = 4;
-  ENVIRONMENT_STATUS_ERROR = 5;
-}
-
-enum SessionStatus {
-  SESSION_STATUS_UNSPECIFIED = 0;
-  SESSION_STATUS_PENDING = 1;
-  SESSION_STATUS_RUNNING = 2;
-  SESSION_STATUS_WAITING_INPUT = 3;
-  SESSION_STATUS_SUSPENDED = 4;
-  SESSION_STATUS_COMPLETED = 5;
-  SESSION_STATUS_FAILED = 6;
-  SESSION_STATUS_KILLED = 7;
-}
-
 enum EventType {
   EVENT_TYPE_UNSPECIFIED = 0;
   EVENT_TYPE_TEXT = 1;
@@ -64,10 +44,10 @@ enum ProjectStatus {
   PROJECT_STATUS_ARCHIVED = 2;
 }
 
-enum TokenType {
-  TOKEN_TYPE_UNSPECIFIED = 0;
-  TOKEN_TYPE_ENV_VAR = 1;
-  TOKEN_TYPE_FILE = 2;
+enum IssueState {
+  ISSUE_STATE_UNSPECIFIED = 0;
+  ISSUE_STATE_OPEN = 1;
+  ISSUE_STATE_CLOSED = 2;
 }
 
 // ─── Environment ────────────────────────────────────────────
@@ -79,7 +59,7 @@ message Environment {
   string adapter_config = 4; // JSON
   string default_runtime = 5;
   bool bootstrapped = 6;
-  EnvironmentStatus status = 7;
+  string status = 7;
   string last_seen = 8;
   string env_info = 9; // JSON from PowerLine GetInfo
   string created_at = 10;
@@ -111,7 +91,7 @@ message Session {
   string runtime_session_id = 4;
   string prompt = 5;
   string model = 6;
-  SessionStatus status = 7;
+  string status = 7;
   string log_path = 8;
   int32 turns = 9;
   string started_at = 10;
@@ -125,8 +105,8 @@ message SessionList {
 }
 
 message SessionFilter {
-  string environment_id = 1; // empty = all
-  SessionStatus status = 2; // UNSPECIFIED = all
+  string environment_id = 1;     // empty = all
+  string status = 2;             // empty = all
 }
 
 message SpawnRequest {
@@ -163,7 +143,7 @@ message SessionEvent {
 
 message TokenEntry {
   string name = 1;
-  TokenType type = 2;
+  string type = 2;
   string env_var = 3;
   string file_path = 4;
   string value = 5;
@@ -176,7 +156,7 @@ message TokenList {
 
 message TokenInfo {
   string name = 1;
-  TokenType type = 2;
+  string type = 2;
   string env_var = 3;
   string file_path = 4;
   string expires_at = 5;
@@ -312,6 +292,22 @@ message QueryFindingsRequest {
   int32 limit = 4;
 }
 
+// ─── GitHub Import ────────────────────────────────────
+
+message ImportGitHubIssuesRequest {
+  string project_id = 1;
+  string repo = 2;                    // "owner/repo"
+  optional string label = 3;          // label filter (omit for all)
+  IssueState state = 4;               // OPEN or CLOSED
+  optional string environment_id = 5; // env to assign (omit for project default)
+}
+
+message ImportGitHubIssuesResponse {
+  int32 imported = 1;
+  int32 linked = 2;
+  int32 skipped = 3;
+}
+
 // ─── Task Diff ─────────────────────────────────────────────
 
 message GetTaskDiffRequest {
@@ -439,6 +435,9 @@ service Grackle {
   // Findings
   rpc PostFinding(PostFindingRequest) returns (Finding);
   rpc QueryFindings(QueryFindingsRequest) returns (FindingList);
+
+  // GitHub Import
+  rpc ImportGitHubIssues(ImportGitHubIssuesRequest) returns (ImportGitHubIssuesResponse);
 
   // Diff
   rpc GetTaskDiff(GetTaskDiffRequest) returns (TaskDiff);

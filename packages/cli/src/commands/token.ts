@@ -1,6 +1,5 @@
 import type { Command } from "commander";
 import { createGrackleClient } from "../client.js";
-import { grackle, tokenTypeToEnum, tokenTypeToString } from "@grackle-ai/common";
 import Table from "cli-table3";
 import { readFileSync } from "node:fs";
 import { createInterface } from "node:readline";
@@ -48,7 +47,7 @@ export function registerTokenCommands(program: Command): void {
 
       await client.setToken({
         name,
-        type: tokenTypeToEnum(opts.type),
+        type: opts.type,
         envVar: opts.envVar || name.toUpperCase() + "_TOKEN",
         filePath: opts.filePath || "",
         value,
@@ -80,8 +79,8 @@ export function registerTokenCommands(program: Command): void {
         head: ["Name", "Type", "Target", "Expires"],
       });
       for (const t of res.tokens) {
-        const target = t.type === grackle.TokenType.ENV_VAR ? t.envVar : t.filePath;
-        table.push([t.name, tokenTypeToString(t.type), target, t.expiresAt || "never"]);
+        const target = t.type === "env_var" ? t.envVar : t.filePath;
+        table.push([t.name, t.type, target, t.expiresAt || "never"]);
       }
       console.log(table.toString());
     });

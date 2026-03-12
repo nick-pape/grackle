@@ -145,7 +145,7 @@ describe("event-processor SUBTASK_CREATE handling", () => {
 
     const subtaskEvent = create(powerline.AgentEventSchema, {
       sessionId: "sess1",
-      type: powerline.AgentEventType.SUBTASK_CREATE,
+      type: "subtask_create",
       timestamp: new Date().toISOString(),
       content: JSON.stringify({
         title: "Design API",
@@ -184,7 +184,7 @@ describe("event-processor SUBTASK_CREATE handling", () => {
 
     const event1 = create(powerline.AgentEventSchema, {
       sessionId: "sess1",
-      type: powerline.AgentEventType.SUBTASK_CREATE,
+      type: "subtask_create",
       timestamp: new Date().toISOString(),
       content: JSON.stringify({
         title: "Research",
@@ -196,7 +196,7 @@ describe("event-processor SUBTASK_CREATE handling", () => {
 
     const event2 = create(powerline.AgentEventSchema, {
       sessionId: "sess1",
-      type: powerline.AgentEventType.SUBTASK_CREATE,
+      type: "subtask_create",
       timestamp: new Date().toISOString(),
       content: JSON.stringify({
         title: "Implement",
@@ -230,7 +230,7 @@ describe("event-processor SUBTASK_CREATE handling", () => {
 
     const subtaskEvent = create(powerline.AgentEventSchema, {
       sessionId: "sess1",
-      type: powerline.AgentEventType.SUBTASK_CREATE,
+      type: "subtask_create",
       timestamp: new Date().toISOString(),
       content: JSON.stringify({
         title: "Should Not Create",
@@ -258,7 +258,7 @@ describe("event-processor SUBTASK_CREATE handling", () => {
 
     const subtaskEvent = create(powerline.AgentEventSchema, {
       sessionId: "sess1",
-      type: powerline.AgentEventType.SUBTASK_CREATE,
+      type: "subtask_create",
       timestamp: new Date().toISOString(),
       content: JSON.stringify({
         title: "No Parent",
@@ -284,7 +284,7 @@ describe("event-processor SUBTASK_CREATE handling", () => {
 
     const subtaskEvent = create(powerline.AgentEventSchema, {
       sessionId: "sess1",
-      type: powerline.AgentEventType.SUBTASK_CREATE,
+      type: "subtask_create",
       timestamp: new Date().toISOString(),
       content: JSON.stringify({
         title: "Has Bad Dep",
@@ -317,7 +317,7 @@ describe("event-processor SUBTASK_CREATE handling", () => {
 
     const subtaskEvent = create(powerline.AgentEventSchema, {
       sessionId: "sess1",
-      type: powerline.AgentEventType.SUBTASK_CREATE,
+      type: "subtask_create",
       timestamp: new Date().toISOString(),
       content: JSON.stringify({
         title: "",
@@ -346,7 +346,7 @@ describe("event-processor SUBTASK_CREATE handling", () => {
 
     const event1 = create(powerline.AgentEventSchema, {
       sessionId: "sess1",
-      type: powerline.AgentEventType.SUBTASK_CREATE,
+      type: "subtask_create",
       timestamp: new Date().toISOString(),
       content: JSON.stringify({
         title: "First",
@@ -357,7 +357,7 @@ describe("event-processor SUBTASK_CREATE handling", () => {
 
     const event2 = create(powerline.AgentEventSchema, {
       sessionId: "sess1",
-      type: powerline.AgentEventType.SUBTASK_CREATE,
+      type: "subtask_create",
       timestamp: new Date().toISOString(),
       content: JSON.stringify({
         title: "Second",
@@ -368,7 +368,7 @@ describe("event-processor SUBTASK_CREATE handling", () => {
 
     const event3 = create(powerline.AgentEventSchema, {
       sessionId: "sess1",
-      type: powerline.AgentEventType.SUBTASK_CREATE,
+      type: "subtask_create",
       timestamp: new Date().toISOString(),
       content: JSON.stringify({
         title: "Third",
@@ -405,14 +405,14 @@ describe("event-processor SUBTASK_CREATE handling", () => {
 
     const badEvent = create(powerline.AgentEventSchema, {
       sessionId: "sess1",
-      type: powerline.AgentEventType.SUBTASK_CREATE,
+      type: "subtask_create",
       timestamp: new Date().toISOString(),
       content: "not valid json",
     });
 
     const goodEvent = create(powerline.AgentEventSchema, {
       sessionId: "sess1",
-      type: powerline.AgentEventType.STATUS,
+      type: "status",
       timestamp: new Date().toISOString(),
       content: "completed",
     });
@@ -431,6 +431,148 @@ describe("event-processor SUBTASK_CREATE handling", () => {
     );
 
     // Session should still complete normally
+    const session = sessionStore.getSession("sess1");
+    expect(session?.status).toBe("completed");
+  });
+});
+
+describe("stream error handling", () => {
+  beforeEach(() => {
+    sqlite.exec("DROP TABLE IF EXISTS findings");
+    sqlite.exec("DROP TABLE IF EXISTS tasks");
+    sqlite.exec("DROP TABLE IF EXISTS sessions");
+    sqlite.exec("DROP TABLE IF EXISTS projects");
+    applySchema();
+    vi.clearAllMocks();
+
+    projectStore.createProject("proj1", "Test Project", "desc", "", "env1");
+  });
+
+  /** Create an async iterable that yields events, then throws an error. */
+  async function* throwingStream(
+    events: powerline.AgentEvent[],
+    error: Error,
+  ): AsyncIterable<powerline.AgentEvent> {
+    for (const event of events) {
+      yield event;
+    }
+    throw error;
+  }
+
+  it("marks session completed when stream errors during waiting_input", async () => {
+    sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
+
+    const waitingEvent = create(powerline.AgentEventSchema, {
+      sessionId: "sess1",
+      type: "status",
+      timestamp: new Date().toISOString(),
+      content: "waiting_input",
+    });
+
+    let onErrorCalled = false;
+    let onCompleteCalled = false;
+
+    await new Promise<void>((resolve) => {
+      processEventStream(
+        throwingStream([waitingEvent], new Error("transport closed")),
+        {
+          sessionId: "sess1",
+          logPath: "/tmp/log",
+          onComplete: () => {
+            onCompleteCalled = true;
+            resolve();
+          },
+          onError: () => {
+            onErrorCalled = true;
+          },
+        },
+      );
+    });
+
+    const session = sessionStore.getSession("sess1");
+    expect(session?.status).toBe("completed");
+    expect(onErrorCalled).toBe(false);
+    expect(onCompleteCalled).toBe(true);
+    expect(logger.info).toHaveBeenCalledWith(
+      expect.objectContaining({ sessionId: "sess1" }),
+      "Stream ended while session idle — marking completed",
+    );
+  });
+
+  it("marks session failed when stream errors during running", async () => {
+    sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
+
+    const textEvent = create(powerline.AgentEventSchema, {
+      sessionId: "sess1",
+      type: "text",
+      timestamp: new Date().toISOString(),
+      content: "some output",
+    });
+
+    let onErrorCalled = false;
+
+    await new Promise<void>((resolve) => {
+      processEventStream(
+        throwingStream([textEvent], new Error("connection reset")),
+        {
+          sessionId: "sess1",
+          logPath: "/tmp/log",
+          onComplete: resolve,
+          onError: () => {
+            onErrorCalled = true;
+          },
+        },
+      );
+    });
+
+    const session = sessionStore.getSession("sess1");
+    expect(session?.status).toBe("failed");
+    expect(onErrorCalled).toBe(true);
+  });
+
+  it("task moves to review when session completes via idle disconnect", async () => {
+    sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
+    taskStore.createTask("task1", "proj1", "Test Task", "desc", "env1", [], "test-project");
+
+    // Simulate task in_progress
+    taskStore.setTaskSession("task1", "sess1");
+    taskStore.markTaskStarted("task1");
+
+    const waitingEvent = create(powerline.AgentEventSchema, {
+      sessionId: "sess1",
+      type: "status",
+      timestamp: new Date().toISOString(),
+      content: "waiting_input",
+    });
+
+    await new Promise<void>((resolve) => {
+      processEventStream(
+        throwingStream([waitingEvent], new Error("transport closed")),
+        {
+          sessionId: "sess1",
+          logPath: "/tmp/log",
+          projectId: "proj1",
+          taskId: "task1",
+          onComplete: () => {
+            // Replicate the onComplete logic from ws-bridge.ts
+            const t = taskStore.getTask("task1");
+            if (t && t.status === "in_progress") {
+              const sess = sessionStore.getSession("sess1");
+              if (sess?.status === "completed") {
+                taskStore.markTaskCompleted("task1", "review");
+              } else if (sess?.status === "failed") {
+                taskStore.markTaskCompleted("task1", "failed");
+              }
+            }
+            resolve();
+          },
+        },
+      );
+    });
+
+    const task = taskStore.getTask("task1");
+    expect(task?.status).toBe("review");
+
     const session = sessionStore.getSession("sess1");
     expect(session?.status).toBe("completed");
   });

@@ -105,6 +105,15 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
 
   // --- new_environment mode ---
   if (viewMode.kind === "new_environment") {
+    /** Returns true if portStr is empty (optional) or a valid integer in [1, 65535]. */
+    const isPortValid = (portStr: string): boolean => {
+      if (!portStr.trim()) {
+        return true;
+      }
+      const n = Number(portStr);
+      return Number.isInteger(n) && n >= 1 && n <= 65535;
+    };
+
     const isEnvValid = (): boolean => {
       if (!envName.trim()) {
         return false;
@@ -113,6 +122,9 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
         return false;
       }
       if (envAdapterType === "codespace" && !envCodespaceName.trim()) {
+        return false;
+      }
+      if ((envAdapterType === "local" || envAdapterType === "ssh") && !isPortValid(envPort)) {
         return false;
       }
       return true;
@@ -128,9 +140,9 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
           config.host = envHost.trim();
         }
         if (envPort.trim()) {
-          const parsed = parseInt(envPort, 10);
-          if (Number.isFinite(parsed)) {
-            config.port = parsed;
+          const n = Number(envPort);
+          if (Number.isInteger(n)) {
+            config.port = n;
           }
         }
       } else if (envAdapterType === "ssh") {
@@ -139,9 +151,9 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
           config.user = envUser.trim();
         }
         if (envPort.trim()) {
-          const parsed = parseInt(envPort, 10);
-          if (Number.isFinite(parsed)) {
-            config.sshPort = parsed;
+          const n = Number(envPort);
+          if (Number.isInteger(n)) {
+            config.sshPort = n;
           }
         }
         if (envIdentityFile.trim()) {
@@ -222,7 +234,9 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
                 className={styles.inputSmall}
               />
               <input
-                type="text"
+                type="number"
+                min={1}
+                max={65535}
                 value={envPort}
                 onChange={(e) => setEnvPort(e.target.value)}
                 placeholder="Port (optional)..."
@@ -247,7 +261,9 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
                 className={styles.inputSmall}
               />
               <input
-                type="text"
+                type="number"
+                min={1}
+                max={65535}
                 value={envPort}
                 onChange={(e) => setEnvPort(e.target.value)}
                 placeholder="SSH port (optional)..."
@@ -520,6 +536,8 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
         <div className={styles.bar}>
           <input
             type="text"
+            value=""
+            readOnly
             disabled
             placeholder="Agent is working..."
             className={styles.input}
@@ -670,7 +688,7 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
     if (isRunning) {
       return (
         <div className={styles.bar}>
-          <input type="text" disabled placeholder="Agent is working..." className={styles.input} />
+          <input type="text" value="" readOnly disabled placeholder="Agent is working..." className={styles.input} />
           <button onClick={() => kill(viewMode.sessionId)} className={styles.btnDanger} title="Stop session">
             Stop
           </button>

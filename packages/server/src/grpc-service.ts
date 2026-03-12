@@ -7,6 +7,7 @@ import type { SessionRow } from "./schema.js";
 import * as envRegistry from "./env-registry.js";
 import * as sessionStore from "./session-store.js";
 import * as adapterManager from "./adapter-manager.js";
+import { reconnectOrProvision } from "./adapters/adapter.js";
 import * as streamHub from "./stream-hub.js";
 import * as tokenBroker from "./token-broker.js";
 import * as projectStore from "./project-store.js";
@@ -17,23 +18,14 @@ import { broadcast } from "./ws-broadcast.js";
 import { processEventStream } from "./event-processor.js";
 import { join } from "node:path";
 import {
-  LOGS_DIR,
-  DEFAULT_RUNTIME,
-  DEFAULT_MODEL,
-  MAX_TASK_DEPTH,
-  environmentStatusToEnum,
-  sessionStatusToEnum,
-  sessionStatusToString,
-  tokenTypeToEnum,
-  tokenTypeToString,
-  taskStatusToEnum,
-  taskStatusToString,
-  projectStatusToEnum,
+  LOGS_DIR, DEFAULT_RUNTIME, DEFAULT_MODEL, MAX_TASK_DEPTH,
+  taskStatusToEnum, taskStatusToString, projectStatusToEnum,
 } from "@grackle-ai/common";
 import { grackleHome } from "./paths.js";
 import { safeParseJsonArray } from "./json-helpers.js";
 import { slugify } from "./utils/slugify.js";
 import { buildTaskSystemContext } from "./utils/system-context.js";
+import { importGitHubIssues as executeGitHubImport } from "./github-import.js";
 
 function envRowToProto(row: EnvironmentRow): grackle.Environment {
   return create(grackle.EnvironmentSchema, {
@@ -43,7 +35,7 @@ function envRowToProto(row: EnvironmentRow): grackle.Environment {
     adapterConfig: row.adapterConfig,
     defaultRuntime: row.defaultRuntime,
     bootstrapped: row.bootstrapped,
-    status: environmentStatusToEnum(row.status),
+    status: row.status,
     lastSeen: row.lastSeen || "",
     envInfo: row.envInfo || "",
     createdAt: row.createdAt,
@@ -58,7 +50,7 @@ function sessionRowToProto(row: SessionRow): grackle.Session {
     runtimeSessionId: row.runtimeSessionId ?? "",
     prompt: row.prompt,
     model: row.model,
-    status: sessionStatusToEnum(row.status),
+    status: row.status,
     logPath: row.logPath ?? "",
     turns: row.turns,
     startedAt: row.startedAt,
@@ -297,11 +289,8 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
 
       const config = JSON.parse(env.adapterConfig);
       const powerlineToken = env.powerlineToken || "";
-      for await (const event of adapter.provision(
-        req.id,
-        config,
-        powerlineToken,
-      )) {
+
+      for await (const event of reconnectOrProvision(req.id, adapter, config, powerlineToken, !!env.bootstrapped)) {
         yield create(grackle.ProvisionEventSchema, {
           stage: event.stage,
           message: event.message,
@@ -315,6 +304,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         // Push stored tokens to newly connected environment
         await tokenBroker.pushToEnv(req.id);
         envRegistry.updateEnvironmentStatus(req.id, "connected");
+        envRegistry.markBootstrapped(req.id);
 
         yield create(grackle.ProvisionEventSchema, {
           stage: "ready",
@@ -509,10 +499,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
     },
 
     async listSessions(req: grackle.SessionFilter) {
-      const rows = sessionStore.listSessions(
-        req.environmentId,
-        sessionStatusToString(req.status),
-      );
+      const rows = sessionStore.listSessions(req.environmentId, req.status);
       return create(grackle.SessionListSchema, {
         sessions: rows.map(sessionRowToProto),
       });
@@ -543,7 +530,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
     async setToken(req: grackle.TokenEntry) {
       await tokenBroker.setToken({
         name: req.name,
-        type: tokenTypeToString(req.type),
+        type: req.type,
         envVar: req.envVar,
         filePath: req.filePath,
         value: req.value,
@@ -558,7 +545,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         tokens: items.map((t) =>
           create(grackle.TokenInfoSchema, {
             name: t.name,
-            type: tokenTypeToEnum(t.type),
+            type: t.type,
             envVar: t.envVar || "",
             filePath: t.filePath || "",
             expiresAt: t.expiresAt || "",
@@ -701,10 +688,8 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
     async startTask(req: grackle.StartTaskRequest) {
       const task = taskStore.getTask(req.taskId);
       if (!task) throw new Error(`Task not found: ${req.taskId}`);
-      if (!["pending", "assigned"].includes(task.status)) {
-        throw new Error(
-          `Task ${req.taskId} cannot be started (status: ${task.status})`,
-        );
+      if (!["pending", "assigned", "failed"].includes(task.status)) {
+        throw new Error(`Task ${req.taskId} cannot be started (status: ${task.status})`);
       }
       if (!taskStore.areDependenciesMet(req.taskId)) {
         throw new Error(`Task ${req.taskId} has unmet dependencies`);
@@ -1036,6 +1021,24 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       return create(grackle.FindingListSchema, {
         findings: rows.map(findingRowToProto),
       });
+    },
+
+    // ─── GitHub Import ────────────────────────────────────────
+
+    async importGitHubIssues(req: grackle.ImportGitHubIssuesRequest) {
+      if (req.state === grackle.IssueState.UNSPECIFIED) {
+        throw new Error("state must be OPEN or CLOSED");
+      }
+      const stateStr = req.state === grackle.IssueState.CLOSED ? "closed" : "open";
+      const result = await executeGitHubImport(
+        req.projectId,
+        req.repo,
+        stateStr,
+        req.label ?? undefined,
+        req.environmentId ?? undefined,
+      );
+
+      return create(grackle.ImportGitHubIssuesResponseSchema, result);
     },
 
     // ─── Diff ────────────────────────────────────────────────
