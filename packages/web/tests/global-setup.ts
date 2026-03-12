@@ -36,6 +36,22 @@ async function findAvailablePort(): Promise<number> {
   });
 }
 
+const MAX_PORT_RETRIES = 10;
+
+/** Find N distinct available ports, retrying if the OS returns duplicates. */
+async function findDistinctPorts(count: number): Promise<number[]> {
+  const ports = new Set<number>();
+  let retries = 0;
+  while (ports.size < count) {
+    if (retries++ > MAX_PORT_RETRIES) {
+      throw new Error(`Failed to find ${count} distinct ports after ${MAX_PORT_RETRIES} retries`);
+    }
+    const port = await findAvailablePort();
+    ports.add(port);
+  }
+  return [...ports];
+}
+
 /** Wait until a TCP port accepts connections on 127.0.0.1. */
 async function waitForPort(port: number, timeoutMs: number): Promise<void> {
   const { createConnection } = await import("node:net");
@@ -68,10 +84,8 @@ export default async function globalSetup(_config: FullConfig): Promise<void> {
 
   const repoRoot = join(import.meta.dirname, "../../..");
 
-  // 2. Find available ports
-  const powerlinePort = await findAvailablePort();
-  const serverPort = await findAvailablePort();
-  const webPort = await findAvailablePort();
+  // 2. Find available ports (guaranteed distinct)
+  const [powerlinePort, serverPort, webPort] = await findDistinctPorts(3);
   console.log(`[e2e] Ports: powerline=${powerlinePort}, server=${serverPort}, web=${webPort}`);
 
   // 3. Start PowerLine (no --token = no auth)
