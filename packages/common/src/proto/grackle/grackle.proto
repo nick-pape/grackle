@@ -16,26 +16,6 @@ message SessionId {
 
 // ─── Enums ──────────────────────────────────────────────────
 
-enum EnvironmentStatus {
-  ENVIRONMENT_STATUS_UNSPECIFIED = 0;
-  ENVIRONMENT_STATUS_DISCONNECTED = 1;
-  ENVIRONMENT_STATUS_CONNECTING = 2;
-  ENVIRONMENT_STATUS_CONNECTED = 3;
-  ENVIRONMENT_STATUS_SLEEPING = 4;
-  ENVIRONMENT_STATUS_ERROR = 5;
-}
-
-enum SessionStatus {
-  SESSION_STATUS_UNSPECIFIED = 0;
-  SESSION_STATUS_PENDING = 1;
-  SESSION_STATUS_RUNNING = 2;
-  SESSION_STATUS_WAITING_INPUT = 3;
-  SESSION_STATUS_SUSPENDED = 4;
-  SESSION_STATUS_COMPLETED = 5;
-  SESSION_STATUS_FAILED = 6;
-  SESSION_STATUS_KILLED = 7;
-}
-
 enum EventType {
   EVENT_TYPE_UNSPECIFIED = 0;
   EVENT_TYPE_TEXT = 1;
@@ -70,12 +50,6 @@ enum IssueState {
   ISSUE_STATE_CLOSED = 2;
 }
 
-enum TokenType {
-  TOKEN_TYPE_UNSPECIFIED = 0;
-  TOKEN_TYPE_ENV_VAR = 1;
-  TOKEN_TYPE_FILE = 2;
-}
-
 // ─── Environment ────────────────────────────────────────────
 
 message Environment {
@@ -85,7 +59,7 @@ message Environment {
   string adapter_config = 4;     // JSON
   string default_runtime = 5;
   bool bootstrapped = 6;
-  EnvironmentStatus status = 7;
+  string status = 7;
   string last_seen = 8;
   string env_info = 9;           // JSON from PowerLine GetInfo
   string created_at = 10;
@@ -117,7 +91,7 @@ message Session {
   string runtime_session_id = 4;
   string prompt = 5;
   string model = 6;
-  SessionStatus status = 7;
+  string status = 7;
   string log_path = 8;
   int32 turns = 9;
   string started_at = 10;
@@ -132,7 +106,7 @@ message SessionList {
 
 message SessionFilter {
   string environment_id = 1;     // empty = all
-  SessionStatus status = 2;      // UNSPECIFIED = all
+  string status = 2;             // empty = all
 }
 
 message SpawnRequest {
@@ -168,7 +142,7 @@ message SessionEvent {
 
 message TokenEntry {
   string name = 1;
-  TokenType type = 2;
+  string type = 2;
   string env_var = 3;
   string file_path = 4;
   string value = 5;
@@ -181,7 +155,7 @@ message TokenList {
 
 message TokenInfo {
   string name = 1;
-  TokenType type = 2;
+  string type = 2;
   string env_var = 3;
   string file_path = 4;
   string expires_at = 5;
