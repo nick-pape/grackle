@@ -29,6 +29,7 @@ import { buildTaskSystemContext } from "./utils/system-context.js";
 import { slugify } from "./utils/slugify.js";
 import { processEventStream } from "./event-processor.js";
 import { broadcast, setWssInstance } from "./ws-broadcast.js";
+import { buildMcpServersJson } from "./grpc-service.js";
 import { exec } from "./utils/exec.js";
 
 const GH_CODESPACE_LIST_TIMEOUT_MS: number = 30_000;
@@ -759,15 +760,7 @@ async function handleMessage(
           );
         }
         if (mcpServers.length > 0) {
-          const obj: Record<string, unknown> = {};
-          for (const s of mcpServers) {
-            obj[s.name] = {
-              command: s.command,
-              args: s.args || [],
-              ...(s.tools && s.tools.length > 0 ? { tools: s.tools } : {}),
-            };
-          }
-          mcpServersJson = JSON.stringify(obj);
+          mcpServersJson = buildMcpServersJson(mcpServers);
         }
       }
 

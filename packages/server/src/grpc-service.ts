@@ -201,6 +201,13 @@ function personaMcpServersToJson(row: personaStore.PersonaRow): string {
   if (mcpServers.length === 0) {
     return "";
   }
+  return buildMcpServersJson(mcpServers);
+}
+
+/** Build a JSON string of MCP server configs for the PowerLine SpawnRequest. */
+export function buildMcpServersJson(
+  mcpServers: { name: string; command: string; args?: string[]; tools?: string[] }[],
+): string {
   const obj: Record<string, unknown> = {};
   for (const s of mcpServers) {
     obj[s.name] = {
@@ -713,6 +720,9 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       const persona = personaId
         ? personaStore.getPersona(personaId)
         : undefined;
+      if (personaId && !persona) {
+        throw new Error(`Persona not found: ${personaId}`);
+      }
 
       const env = envRegistry.getEnvironment(environmentId);
       const sessionId = uuid();
@@ -958,6 +968,9 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
 
       // Treat empty string / 0 as "not set" and keep existing value
       const name = req.name || existing.name;
+      if (name !== existing.name && personaStore.getPersonaByName(name)) {
+        throw new Error(`Persona with name "${name}" already exists`);
+      }
       const description = req.description || existing.description;
       const systemPrompt = req.systemPrompt || existing.systemPrompt;
       const runtime = req.runtime || existing.runtime;

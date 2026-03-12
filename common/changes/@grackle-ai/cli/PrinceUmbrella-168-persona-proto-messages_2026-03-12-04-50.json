@@ -3,7 +3,7 @@
     {
       "packageName": "@grackle-ai/cli",
       "comment": "Implements the Persona system foundation — proto definitions (#168), database schema + store (#170), and gRPC/WebSocket service handlers with spawn integration (#171). Personas are reusable agent templates containing system prompt, runtime/model config, tool config, and MCP server definitions.",
-      "type": "none"
+      "type": "minor"
     }
   ],
   "packageName": "@grackle-ai/cli"
