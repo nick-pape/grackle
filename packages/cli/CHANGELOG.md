@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Thu, 12 Mar 2026 06:27:52 GMT and should not be manually modified.
+This log was last generated on Thu, 12 Mar 2026 07:09:34 GMT and should not be manually modified.
+
+## 0.14.5
+Thu, 12 Mar 2026 07:09:34 GMT
+
+### Patches
+
+- Allow retrying failed tasks by adding 'failed' to allowed start statuses
 
 ## 0.14.4
 Thu, 12 Mar 2026 06:27:52 GMT
