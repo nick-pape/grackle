@@ -410,10 +410,10 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
                     className={styles.ctaLink}
                     onClick={() => setActiveTaskTab("stream")}
                   >
-                    Edit Task
+                    Add Task Details
                   </button>
                   <div className={styles.ctaDescription}>
-                    Add a description and dependencies using the form below
+                    Switch to the Stream tab to add a description and dependencies
                   </div>
                 </div>
               )}
