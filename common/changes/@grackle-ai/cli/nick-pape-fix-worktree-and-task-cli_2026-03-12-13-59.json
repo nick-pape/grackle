@@ -1,0 +1,10 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/rush/v5/rush-change.schema.json",
+  "changes": [
+    {
+      "packageName": "@grackle-ai/cli",
+      "comment": "Auto-detect git repo path for worktrees, add task update CLI, capture codespace git credentials",
+      "type": "patch"
+    }
+  ]
+}
