@@ -90,6 +90,7 @@ const eventTypeToEnumMap: Record<string, EventType> = Object.assign(Object.creat
   "status": EventType.STATUS,
   "system": EventType.SYSTEM,
   "finding": EventType.FINDING,
+  "subtask_create": EventType.SUBTASK_CREATE,
 });
 
 const eventTypeToStringMap: Record<number, string> = {
@@ -101,6 +102,7 @@ const eventTypeToStringMap: Record<number, string> = {
   [EventType.STATUS]: "status",
   [EventType.SYSTEM]: "system",
   [EventType.FINDING]: "finding",
+  [EventType.SUBTASK_CREATE]: "subtask_create",
 };
 
 /** Convert a string event type to its proto enum value. */
@@ -124,6 +126,7 @@ const agentEventTypeToEnumMap: Record<string, AgentEventType> = Object.assign(Ob
   "status": AgentEventType.STATUS,
   "system": AgentEventType.SYSTEM,
   "finding": AgentEventType.FINDING,
+  "subtask_create": AgentEventType.SUBTASK_CREATE,
 });
 
 const agentEventTypeToStringMap: Record<number, string> = {
@@ -135,6 +138,7 @@ const agentEventTypeToStringMap: Record<number, string> = {
   [AgentEventType.STATUS]: "status",
   [AgentEventType.SYSTEM]: "system",
   [AgentEventType.FINDING]: "finding",
+  [AgentEventType.SUBTASK_CREATE]: "subtask_create",
 };
 
 /** Convert a string agent event type to its proto enum value. */

@@ -3,6 +3,7 @@ name: CD
 on:
   push:
     branches: [main]
+  workflow_dispatch:
 
 concurrency:
   group: cd-publish
@@ -136,57 +137,33 @@ jobs:
           "
           echo "Set nextBump to $highest"
 
-      # rush version --bump creates a temp branch, pushes it, then tries to
-      # fast-forward main directly. The direct push fails due to branch
-      # protection, so we let it fail and merge via PR instead.
+      # Run rush version --bump WITHOUT --target-branch so it only modifies
+      # files on disk (no branch creation, no commits, no push). We handle
+      # the git operations ourselves to avoid Rush's [skip ci] commits and
+      # temp branch workflow that conflicts with branch protection rulesets.
       - name: Bump versions
         id: bump
         if: steps.changefile_check.outputs.has_changefiles == 'true'
         run: |
-          set +e
-          output=$(node common/scripts/install-run-rush.js version --bump --target-branch main 2>&1)
-          status=$?
-          set -e
+          node common/scripts/install-run-rush.js version --bump
 
-          echo "$output"
-
-          if [ "$status" -ne 0 ]; then
-            if echo "$output" | grep -q 'GH013'; then
-              echo "rush version failed due to protected branch; proceeding with PR-based merge."
-            else
-              echo "rush version failed with status $status"
-              exit "$status"
-            fi
-          fi
-
-          branch=$(echo "$output" | grep -oE 'version/bump-[0-9]+' | head -1)
-          if [ -n "$branch" ]; then
-            echo "branch=$branch" >> "$GITHUB_OUTPUT"
-            echo "has_bump=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "No version bump needed"
+          # Check if rush actually changed anything
+          if git diff --quiet && git diff --cached --quiet; then
+            echo "No version changes detected"
             echo "has_bump=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_bump=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Merge version bump into main
+      # Commit and push the version bump directly to main. The GH_PAT from
+      # checkout belongs to an admin who can bypass the branch ruleset.
+      # [skip ci] prevents an infinite CD trigger loop.
+      - name: Push version bump
         if: steps.bump.outputs.has_bump == 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
-          pr_url=$(gh pr create \
-            --base main \
-            --head "${{ steps.bump.outputs.branch }}" \
-            --title "chore: bump versions [skip ci]" \
-            --body "Automated version bump from publish workflow.")
-
-          gh pr merge "$pr_url" --squash --admin --delete-branch
-
-      # After squash-merge, local main has diverged from origin/main
-      # (rush merged the temp branch locally, but the PR was squash-merged).
-      # Reset to origin/main to get the squashed result.
-      - name: Checkout updated main
-        if: steps.bump.outputs.has_bump == 'true'
-        run: git fetch origin main && git checkout -B main origin/main
+          git add -A
+          git commit -m "chore: bump versions [skip ci]"
+          git push origin main
 
       - name: Rebuild with bumped versions
         if: steps.bump.outputs.has_bump == 'true'

@@ -1,20 +1,21 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Wed, 11 Mar 2026 17:04:52 GMT and should not be manually modified.
+This log was last generated on Thu, 12 Mar 2026 02:00:22 GMT and should not be manually modified.
 
-## 0.15.0
-Wed, 11 Mar 2026 17:04:52 GMT
+## 0.14.1
+Thu, 12 Mar 2026 02:00:22 GMT
+
+### Patches
+
+- Fix CD pipeline: rewrite version bump to push directly to main instead of creating temp branches and PRs
+
+## 0.14.0
+Thu, 12 Mar 2026 00:56:21 GMT
 
 ### Minor changes
 
-- Add import-github command to bulk import GitHub issues as Grackle tasks
-
-### Updates
-
-- Add TSDoc comment to slugify utility (docs only, no functional change)
-
-## 0.14.1
-Wed, 11 Mar 2026 07:56:50 GMT
+- Add agent-initiated subtask creation via create_subtask MCP tool
+- Unpublished changes from 0.13.1-0.15.0: import-github command, codespace environment picker, MCP script path fix, port conflict handling, decomposition rights, provision progress broadcast, bug fixes from live testing, review fixes
 
 ### Patches
 
@@ -26,53 +27,6 @@ Wed, 11 Mar 2026 07:56:50 GMT
 - No functional changes to CLI (merge commit false positive)
 - No functional changes to CLI (merge commit false positive)
 - No functional changes (merge commit artifact)
-
-## 0.14.0
-Wed, 11 Mar 2026 06:40:03 GMT
-
-### Minor changes
-
-- Add codespace environment picker, create-from-repo flow, and working directory detection
-
-### Updates
-
-- Demo recorder pipeline: self-recording podcast with Playwright, PocketTTS, and ffmpeg
-- No changes (merge commit false positive)
-
-## 0.13.5
-Wed, 11 Mar 2026 06:21:02 GMT
-
-### Patches
-
-- Broadcast provision progress to all WS clients; persist provisioning errors in UI
-
-## 0.13.4
-Wed, 11 Mar 2026 05:34:23 GMT
-
-### Patches
-
-- Handle port conflicts gracefully with controlled shutdown instead of hard exit
-
-## 0.13.3
-Wed, 11 Mar 2026 04:13:07 GMT
-
-### Patches
-
-- Review-fixes-and-test-coverage
-
-## 0.13.2
-Tue, 10 Mar 2026 21:27:27 GMT
-
-### Patches
-
-- Add decomposition rights to task model
-
-## 0.13.1
-Tue, 10 Mar 2026 20:40:21 GMT
-
-### Patches
-
-- Fix bugs from live testing: Codex SDK async, Windows paths, Dockerfile ESM flag, child task UI, task deletion
 
 ## 0.13.0
 Tue, 10 Mar 2026 20:25:56 GMT
