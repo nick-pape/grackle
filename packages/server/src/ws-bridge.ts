@@ -89,6 +89,7 @@ function envRowToWs(r: ReturnType<typeof envRegistry.listEnvironments>[number]):
     id: r.id,
     displayName: r.displayName,
     adapterType: r.adapterType,
+    adapterConfig: r.adapterConfig,
     defaultRuntime: r.defaultRuntime,
     status: r.status,
     bootstrapped: r.bootstrapped,
@@ -884,7 +885,14 @@ async function handleMessage(
       if (rawAdapterConfig === undefined || rawAdapterConfig === null) {
         adapterConfig = "{}";
       } else if (typeof rawAdapterConfig === "string") {
-        adapterConfig = rawAdapterConfig;
+        const normalized = rawAdapterConfig.trim() === "" ? "{}" : rawAdapterConfig;
+        try {
+          JSON.parse(normalized);
+        } catch {
+          sendWs(ws, { type: "error", payload: { message: "adapterConfig string is not valid JSON" } });
+          return;
+        }
+        adapterConfig = normalized;
       } else if (typeof rawAdapterConfig === "object") {
         adapterConfig = JSON.stringify(rawAdapterConfig);
       } else {

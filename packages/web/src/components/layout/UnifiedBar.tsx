@@ -110,8 +110,8 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
       if (!portStr.trim()) {
         return true;
       }
-      const parsed = parseInt(portStr, 10);
-      return Number.isFinite(parsed) && parsed >= 1 && parsed <= 65535;
+      const n = Number(portStr);
+      return Number.isInteger(n) && n >= 1 && n <= 65535;
     };
 
     const isEnvValid = (): boolean => {
@@ -124,7 +124,7 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
       if (envAdapterType === "codespace" && !envCodespaceName.trim()) {
         return false;
       }
-      if (!isPortValid(envPort)) {
+      if ((envAdapterType === "local" || envAdapterType === "ssh") && !isPortValid(envPort)) {
         return false;
       }
       return true;
@@ -140,9 +140,9 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
           config.host = envHost.trim();
         }
         if (envPort.trim()) {
-          const parsed = parseInt(envPort, 10);
-          if (Number.isFinite(parsed)) {
-            config.port = parsed;
+          const n = Number(envPort);
+          if (Number.isInteger(n)) {
+            config.port = n;
           }
         }
       } else if (envAdapterType === "ssh") {
@@ -151,9 +151,9 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
           config.user = envUser.trim();
         }
         if (envPort.trim()) {
-          const parsed = parseInt(envPort, 10);
-          if (Number.isFinite(parsed)) {
-            config.sshPort = parsed;
+          const n = Number(envPort);
+          if (Number.isInteger(n)) {
+            config.sshPort = n;
           }
         }
         if (envIdentityFile.trim()) {

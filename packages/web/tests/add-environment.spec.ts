@@ -216,8 +216,15 @@ test.describe("Add Environment — WebSocket Handler", () => {
       { type: "list_environments" },
       "environments",
     );
-    const envs = (listResponse.payload?.environments || []) as Array<{ id: string; displayName: string }>;
-    expect(envs.some((e) => e.displayName === "ws-string-config-env")).toBe(true);
+    const envs = (listResponse.payload?.environments || []) as Array<{
+      id: string;
+      displayName: string;
+      adapterConfig: string;
+    }>;
+    const added = envs.find((e) => e.displayName === "ws-string-config-env");
+    expect(added).toBeTruthy();
+    // adapterConfig must equal the original string, not a double-encoded version
+    expect(added!.adapterConfig).toBe('{"host":"localhost","port":1234}');
 
     // Clean up
     await sendWsMessage(page, {
@@ -243,6 +250,25 @@ test.describe("Add Environment — WebSocket Handler", () => {
     );
 
     expect(response.payload?.message).toContain("adapterConfig must be an object or JSON string");
+  });
+
+  test("add_environment rejects adapterConfig string that is not valid JSON", async ({ appPage }) => {
+    const page = appPage;
+
+    const response = await sendWsAndWaitFor(
+      page,
+      {
+        type: "add_environment",
+        payload: {
+          displayName: "ws-invalid-json-env",
+          adapterType: "local",
+          adapterConfig: "not-valid-json",
+        },
+      },
+      "error",
+    );
+
+    expect(response.payload?.message).toContain("adapterConfig string is not valid JSON");
   });
 
   test("add environment via UI form creates environment in server", async ({ appPage }) => {
