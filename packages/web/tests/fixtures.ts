@@ -1,15 +1,15 @@
 import { test as base, type Page } from "@playwright/test";
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
-import { tmpdir } from "node:os";
-
-const STATE_FILE = join(tmpdir(), "grackle-e2e-state.json");
+import { STATE_FILE } from "./state-file.js";
 
 interface E2EState {
   grackleHome: string;
   apiKey: string;
   powerlinePid: number;
   serverPid: number;
+  powerlinePort: number;
+  serverPort: number;
+  webPort: number;
 }
 
 function loadState(): E2EState {
@@ -18,9 +18,16 @@ function loadState(): E2EState {
 
 /** Extended Playwright test fixture that provides the Grackle API key and navigates to the app. */
 export const test = base.extend<{ grackle: { apiKey: string; baseURL: string; wsUrl: string }; appPage: Page }>({
-  grackle: async ({}, use) => {
+  // Override Playwright's built-in baseURL so page.goto("/") resolves to the dynamic port
+  baseURL: async ({}, use) => {
     const state = loadState();
-    await use({ apiKey: state.apiKey, baseURL: "http://127.0.0.1:3000", wsUrl: "ws://127.0.0.1:3000" });
+    await use(`http://127.0.0.1:${state.webPort}`);
+  },
+
+  grackle: async ({ baseURL }, use) => {
+    const state = loadState();
+    const wsUrl = `ws://127.0.0.1:${state.webPort}`;
+    await use({ apiKey: state.apiKey, baseURL: baseURL!, wsUrl });
   },
 
   appPage: async ({ page }, use) => {
