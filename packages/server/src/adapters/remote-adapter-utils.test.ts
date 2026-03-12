@@ -142,7 +142,7 @@ describe("startRemotePowerLine", () => {
     }
   });
 
-  it("batches env file, start, and probe into a single compound command", async () => {
+  it("batches env file, spawn, and probe into a single compound command", async () => {
     const executor = createMockExecutor();
     const result = await startRemotePowerLine(executor, "test-token");
 
@@ -159,14 +159,15 @@ describe("startRemotePowerLine", () => {
     expect(command).toContain("writeFileSync");
     expect(command).toContain(".env.sh");
     expect(command).toContain("chmod 600");
-    // PowerLine start
-    expect(command).toContain("nohup node");
-    expect(command).toContain("--port=");
+    // PowerLine spawn (detached, via Node child_process)
+    expect(command).toContain("spawn");
+    expect(command).toContain("detached:true");
+    expect(command).toContain("unref");
     // Probe (TCP connect check)
     expect(command).toContain("createConnection");
   });
 
-  it("throws when compound command and fallback probe both fail", async () => {
+  it("throws when compound command fails", async () => {
     const executor = createMockExecutor({
       exec: vi.fn().mockRejectedValue(new Error("port not listening")),
     });
@@ -174,11 +175,10 @@ describe("startRemotePowerLine", () => {
     await expect(startRemotePowerLine(executor, "test-token"))
       .rejects.toThrow("PowerLine process died immediately after starting");
 
-    // Should have tried compound command, then fallback probe
+    // Single attempt — no fallback
     const calls = (executor.exec as ReturnType<typeof vi.fn>).mock.calls;
-    expect(calls).toHaveLength(2);
+    expect(calls).toHaveLength(1);
     expect(calls[0][0]).toContain("bash -c");
-    expect(calls[1][0]).toContain("createConnection");
   });
 
   it("uses workingDirectory when provided", async () => {
@@ -218,22 +218,4 @@ describe("startRemotePowerLine", () => {
     expect(command).toContain("exit 0");
   });
 
-  it("falls back to separate probe when compound command fails but PowerLine starts", async () => {
-    let callCount = 0;
-    const executor = createMockExecutor({
-      exec: vi.fn().mockImplementation(() => {
-        callCount++;
-        // First call (compound) fails — simulates SSH exit 255 on backgrounding
-        if (callCount === 1) {
-          return Promise.reject(new Error("exit code 255"));
-        }
-        // Second call (fallback probe) succeeds
-        return Promise.resolve("");
-      }),
-    });
-
-    const result = await startRemotePowerLine(executor, "tok");
-    expect(result.alreadyRunning).toBe(false);
-    expect(callCount).toBe(2);
-  });
 });

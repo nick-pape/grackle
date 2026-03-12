@@ -300,12 +300,39 @@ interface StartRemotePowerLineOptions {
 }
 
 /**
+ * Node.js one-liner that spawns a fully detached child process.
+ *
+ * Uses `child_process.spawn()` with `detached: true` and `unref()` so the
+ * parent Node process exits immediately. This is the only reliable way to
+ * background a process through `gh codespace ssh` — the relay waits for EOF
+ * on all inherited FDs, and even `nohup ... < /dev/null > log 2>&1 &` leaves
+ * the SSH session hanging because the bash subshell created by `&` holds
+ * references to the SSH transport's pipes.
+ *
+ * Takes three positional arguments (passed by bash, allowing `$HOME` / `$WD`
+ * expansion): argv[1] = entryPoint, argv[2] = pidFilePath, argv[3] = logFile.
+ * Uses `process.cwd()` as the working directory (caller must `cd` first).
+ */
+const SPAWN_SCRIPT: string =
+  `node -e "`
+  + `const fs=require('fs');`
+  + `const {spawn}=require('child_process');`
+  + `const out=fs.openSync(process.argv[3],'w');`
+  + `const c=spawn('node',[process.argv[1],'--port=${DEFAULT_POWERLINE_PORT}'],`
+  + `{cwd:process.cwd(),detached:true,stdio:['ignore',out,out]});`
+  + `fs.writeFileSync(process.argv[2],String(c.pid));`
+  + `c.unref();"`;
+
+/**
  * Ensure the remote PowerLine process is running.
  *
  * Batches env-var write, process start, and port probe into a **single SSH
- * call** to avoid per-call latency (each `gh codespace ssh` round trip takes
- * ~10-15 s through GitHub's relay). If the transport drops during
- * backgrounding (exit 255), falls back to one separate probe call.
+ * call** to minimize per-call latency (each `gh codespace ssh` round trip
+ * takes ~10-15 s through GitHub's relay).
+ *
+ * Uses Node's `spawn({ detached: true })` to properly daemonize the
+ * PowerLine process, avoiding the SSH-hanging issue where `nohup ... &`
+ * keeps the session alive through GitHub's codespace relay.
  *
  * When `probeFirst` is true the script begins with a TCP port check and
  * returns immediately if PowerLine is already listening, combining the
@@ -327,16 +354,18 @@ export async function startRemotePowerLine(
     ? "dist/index.js"
     : "node_modules/@grackle-ai/powerline/dist/index.js";
   const absoluteEntryPoint = `${REMOTE_POWERLINE_DIRECTORY}/${entryPoint}`;
+  const logFilePath = "$HOME/.grackle/powerline.log";
+  const pidFilePath = `${REMOTE_POWERLINE_DIRECTORY}/powerline.pid`;
 
   // Build a compound script that runs in a single SSH call:
   //   0. (Optional) Probe — exit early if already listening
   //   1. Write env file (base64 → file)
   //   2. Detect working directory (optional)
-  //   3. Start PowerLine (nohup + background)
+  //   3. Source env + spawn PowerLine (detached, exits immediately)
   //   4. Brief sleep + probe
   const parts: string[] = [];
 
-  // 0. Early-exit probe (saves a full SSH round trip during reconnect).
+  // 0. Early-exit probe (saves work when PowerLine is already running).
   //    Uses `; ` (not `&&`) to separate from the start logic so that a
   //    failed probe doesn't short-circuit the rest of the script.
   //    `exit 0` exits the top-level bash -c, not a subshell.
@@ -374,18 +403,20 @@ export async function startRemotePowerLine(
     startDirExpr = REMOTE_POWERLINE_DIRECTORY;
   }
 
-  // 3. Start PowerLine
+  // 3. Source env vars and spawn PowerLine as a detached process.
+  //    Paths are passed as bash arguments (not embedded in the Node script)
+  //    so that shell variables like $HOME and $WD are expanded by bash.
+  //    The spawn script exits immediately — no SSH hanging.
   const sourceEnv = envLines.length > 0
     ? `. ${REMOTE_POWERLINE_DIRECTORY}/.env.sh && `
     : "";
   parts.push(
-    `cd ${startDirExpr}`
-    + ` && ${sourceEnv}nohup node ${absoluteEntryPoint} --port=${DEFAULT_POWERLINE_PORT}`
-    + ` < /dev/null > ~/.grackle/powerline.log 2>&1 & echo $! > ${REMOTE_POWERLINE_DIRECTORY}/powerline.pid`,
+    `cd ${startDirExpr} && ${sourceEnv}`
+    + `${SPAWN_SCRIPT} ${absoluteEntryPoint} ${pidFilePath} ${logFilePath}`,
   );
 
   // 4. Probe (after a brief pause for the port to bind)
-  parts.push(`sleep 1 && ${PROBE_SCRIPT}`);
+  parts.push(`sleep ${POWERLINE_STARTUP_DELAY_MS / 1000} && ${PROBE_SCRIPT}`);
 
   const compoundScript = probeFirstPrefix + parts.join(" && ");
 
@@ -398,18 +429,6 @@ export async function startRemotePowerLine(
       logger.info("Remote PowerLine was already running on port %d", DEFAULT_POWERLINE_PORT);
       return { alreadyRunning: true };
     }
-    logger.info("Remote PowerLine is listening on port %d", DEFAULT_POWERLINE_PORT);
-    return { alreadyRunning: false };
-  } catch (err) {
-    // Some SSH transports (gh codespace ssh) exit 255 when the session
-    // backgrounded a process. The PowerLine may still be starting up.
-    logger.debug({ err }, "Compound start command returned non-zero, probing separately");
-  }
-
-  // Fallback: transport dropped during backgrounding — probe separately
-  await sleep(POWERLINE_STARTUP_DELAY_MS);
-  try {
-    await probeRemotePowerLine(executor);
     logger.info("Remote PowerLine is listening on port %d", DEFAULT_POWERLINE_PORT);
     return { alreadyRunning: false };
   } catch {
