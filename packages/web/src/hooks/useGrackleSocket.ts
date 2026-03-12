@@ -451,15 +451,22 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
               break;
             }
             const event: SessionEvent = msg.payload;
+            /* Track drops outside the updater to avoid impure side-effects
+               inside React state updaters (StrictMode may invoke updaters
+               more than once). The closure variable is assigned (not accumulated),
+               so repeated invocations with the same prev yield the same value. */
+            let dropped = 0;
             setEvents((prev) => {
               const next = [...prev, event];
               if (next.length > MAX_EVENTS) {
-                const dropped = next.length - MAX_EVENTS;
-                setEventsDropped((n) => n + dropped);
+                dropped = next.length - MAX_EVENTS;
                 return next.slice(-MAX_EVENTS);
               }
               return next;
             });
+            if (dropped > 0) {
+              setEventsDropped((n) => n + dropped);
+            }
             if (event.eventType === "status") {
               setSessions((prev) =>
                 prev.map((s) =>
@@ -484,12 +491,21 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
               break;
             }
             if (replayEvents.length > 0 || replaySessionId) {
+              let replayDropped = 0;
               setEvents((prev) => {
                 const without = prev.filter(
                   (e) => e.sessionId !== replaySessionId,
                 );
-                return [...without, ...replayEvents];
+                const merged = [...without, ...replayEvents];
+                if (merged.length > MAX_EVENTS) {
+                  replayDropped = merged.length - MAX_EVENTS;
+                  return merged.slice(-MAX_EVENTS);
+                }
+                return merged;
               });
+              if (replayDropped > 0) {
+                setEventsDropped((n) => n + replayDropped);
+              }
             }
             break;
           }

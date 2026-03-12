@@ -53,6 +53,18 @@ function SessionHeader({ sessionId, session, isActive, onKill }: SessionHeaderPr
   );
 }
 
+/** Overflow warning banner shown when events exceed the in-memory cap. */
+function EventOverflowBanner({ eventsDropped }: { eventsDropped: number }): JSX.Element | null {
+  if (eventsDropped <= 0) {
+    return null;
+  }
+  return (
+    <div className={styles.eventOverflowWarning}>
+      ⚠ {eventsDropped.toLocaleString()} older event{eventsDropped === 1 ? "" : "s"} were dropped — only the most recent 5,000 are shown. Full history is available in the session log.
+    </div>
+  );
+}
+
 /** Props for the EventList subcomponent. */
 interface EventListProps {
   sessionEvents: SessionEvent[];
@@ -74,11 +86,7 @@ function EventList({ sessionEvents, session, eventsDropped, scrollRef }: EventLi
       {sessionEvents.length === 0 && (
         <div className={isTerminal ? styles.errorMessage : styles.waitingMessage}>{emptyMessage}</div>
       )}
-      {eventsDropped > 0 && (
-        <div className={styles.eventOverflowWarning}>
-          ⚠ {eventsDropped.toLocaleString()} older event{eventsDropped === 1 ? "" : "s"} were dropped — only the most recent 5,000 are shown. Full history is available in the session log.
-        </div>
-      )}
+      <EventOverflowBanner eventsDropped={eventsDropped} />
       {sessionEvents.map((event, i) => (
         <EventRenderer key={`${event.sessionId}-${event.timestamp}-${i}`} event={event} />
       ))}
@@ -631,11 +639,7 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
               {sessionId && groupedEvents.length === 0 && (
                 <div className={styles.waitingMessage}>Waiting for events...</div>
               )}
-              {eventsDropped > 0 && (
-                <div className={styles.eventOverflowWarning}>
-                  ⚠ {eventsDropped.toLocaleString()} older event{eventsDropped === 1 ? "" : "s"} were dropped — only the most recent 5,000 are shown. Full history is available in the session log.
-                </div>
-              )}
+              <EventOverflowBanner eventsDropped={eventsDropped} />
               {groupedEvents.map((event, i) => (
                 <EventRenderer key={`${event.sessionId}-${event.timestamp}-${i}`} event={event} />
               ))}
