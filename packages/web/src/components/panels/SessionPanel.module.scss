@@ -187,3 +187,21 @@
 .errorMessage {
   color: var(--accent-red);
 }
+
+// ---------------------------------------------------------------------------
+// Event overflow warning (shown when events exceed the 5,000 in-memory cap)
+// ---------------------------------------------------------------------------
+
+.eventOverflowWarning {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-xs) var(--space-sm);
+  margin-bottom: var(--space-sm);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--accent-yellow, #e5c07b) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent-yellow, #e5c07b) 35%, transparent);
+  color: var(--accent-yellow, #e5c07b);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-mono);
+}

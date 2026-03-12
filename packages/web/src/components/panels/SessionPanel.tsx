@@ -56,12 +56,13 @@ function SessionHeader({ sessionId, session, isActive, onKill }: SessionHeaderPr
 interface EventListProps {
   sessionEvents: SessionEvent[];
   session: Session | undefined;
+  eventsDropped: number;
   // eslint-disable-next-line @rushstack/no-new-null
   scrollRef: RefObject<HTMLDivElement | null>;
 }
 
 /** Scrollable list of session events with empty-state messaging. */
-function EventList({ sessionEvents, session, scrollRef }: EventListProps): JSX.Element {
+function EventList({ sessionEvents, session, eventsDropped, scrollRef }: EventListProps): JSX.Element {
   const isTerminal = session && ["completed", "failed", "killed"].includes(session.status);
   const emptyMessage = isTerminal
     ? `Session ${session.status} with no events recorded.`
@@ -71,6 +72,11 @@ function EventList({ sessionEvents, session, scrollRef }: EventListProps): JSX.E
     <div ref={scrollRef} className={styles.eventScroll}>
       {sessionEvents.length === 0 && (
         <div className={isTerminal ? styles.errorMessage : styles.waitingMessage}>{emptyMessage}</div>
+      )}
+      {eventsDropped > 0 && (
+        <div className={styles.eventOverflowWarning}>
+          ⚠ {eventsDropped.toLocaleString()} older event{eventsDropped === 1 ? "" : "s"} were dropped — only the most recent 5,000 are shown. Full history is available in the session log.
+        </div>
       )}
       {sessionEvents.map((event, i) => (
         <EventRenderer key={`${event.sessionId}-${event.timestamp}-${i}`} event={event} />
@@ -104,7 +110,7 @@ type ProjectTab = "tasks" | "graph";
 
 /** Main content panel that renders session streams, task views, project summaries, or empty states based on the current view mode. */
 export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
-  const { events, sessions, tasks, environments, taskDiff, loadSessionEvents, loadFindings, loadTaskDiff, kill } = useGrackle();
+  const { events, eventsDropped, sessions, tasks, environments, taskDiff, loadSessionEvents, loadFindings, loadTaskDiff, kill } = useGrackle();
   // eslint-disable-next-line @rushstack/no-new-null
   const scrollRef = useRef<HTMLDivElement>(null);
   const loadedRef = useRef<string | undefined>(undefined);
@@ -404,6 +410,11 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
               {sessionId && groupedEvents.length === 0 && (
                 <div className={styles.waitingMessage}>Waiting for events...</div>
               )}
+              {eventsDropped > 0 && (
+                <div className={styles.eventOverflowWarning}>
+                  ⚠ {eventsDropped.toLocaleString()} older event{eventsDropped === 1 ? "" : "s"} were dropped — only the most recent 5,000 are shown. Full history is available in the session log.
+                </div>
+              )}
               {groupedEvents.map((event, i) => (
                 <EventRenderer key={`${event.sessionId}-${event.timestamp}-${i}`} event={event} />
               ))}
@@ -468,6 +479,7 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
       <EventList
         sessionEvents={groupedEvents}
         session={session}
+        eventsDropped={eventsDropped}
         scrollRef={scrollRef}
       />
     </div>

@@ -99,7 +99,11 @@ interface WsMessage {
 
 const WS_RECONNECT_DELAY_MS: number = 3_000;
 const ENV_POLL_INTERVAL_MS: number = 10_000;
-/** Maximum number of events kept in memory per hook instance. Older events are dropped. */
+/**
+ * Maximum number of events kept in memory per hook instance.
+ * When exceeded, the oldest events are removed and eventsDropped is incremented
+ * so the UI can warn the user about data loss.
+ */
 const MAX_EVENTS: number = 5_000;
 
 // Declare the injected API key from server-side HTML injection
@@ -122,6 +126,13 @@ export interface UseGrackleSocketResult {
   environments: Environment[];
   sessions: Session[];
   events: SessionEvent[];
+  /**
+   * The total number of events that have been silently dropped due to the
+   * MAX_EVENTS in-memory cap. A non-zero value means the user is only seeing
+   * the most-recent slice of a long session; older events are still available
+   * in the server-side JSONL log.
+   */
+  eventsDropped: number;
   lastSpawnedId: string | undefined;
   projects: Project[];
   tasks: TaskData[];
@@ -208,6 +219,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
   const [environments, setEnvironments] = useState<Environment[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [events, setEvents] = useState<SessionEvent[]>([]);
+  const [eventsDropped, setEventsDropped] = useState<number>(0);
   const [lastSpawnedId, setLastSpawnedId] = useState<string | undefined>(
     undefined,
   );
@@ -263,7 +275,12 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
             const event = msg.payload as unknown as SessionEvent;
             setEvents((prev) => {
               const next = [...prev, event];
-              return next.length > MAX_EVENTS ? next.slice(-MAX_EVENTS) : next;
+              if (next.length > MAX_EVENTS) {
+                const dropped = next.length - MAX_EVENTS;
+                setEventsDropped((n) => n + dropped);
+                return next.slice(-MAX_EVENTS);
+              }
+              return next;
             });
             if (event.eventType === "status") {
               setSessions((prev) =>
@@ -542,6 +559,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
 
   const clearEvents = useCallback(() => {
     setEvents([]);
+    setEventsDropped(0);
   }, []);
 
   // ─── Project methods ──────────────────────────────
@@ -774,6 +792,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
     environments,
     sessions,
     events,
+    eventsDropped,
     lastSpawnedId,
     projects,
     tasks,
