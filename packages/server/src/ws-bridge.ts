@@ -466,8 +466,8 @@ async function handleMessage(
         return;
       }
 
-      if (["completed", "failed", "killed"].includes(session.status)) {
-        sendWs(ws, { type: "error", payload: { message: `Session ${sessionId} is not active (status: ${session.status})` } });
+      if (session.status !== "waiting_input") {
+        sendWs(ws, { type: "error", payload: { message: `Session ${sessionId} is not currently waiting for input (status: ${session.status})` } });
         return;
       }
 

@@ -226,7 +226,7 @@ describe("ws-bridge send_input error handling", () => {
     ws.close();
 
     expect(msg.type).toBe("error");
-    expect((msg.payload as Record<string, unknown>).message).toMatch(/not active.*completed/i);
+    expect((msg.payload as Record<string, unknown>).message).toMatch(/not currently waiting for input.*completed/i);
   });
 
   it("returns error when session is failed", async () => {
@@ -242,7 +242,7 @@ describe("ws-bridge send_input error handling", () => {
     ws.close();
 
     expect(msg.type).toBe("error");
-    expect((msg.payload as Record<string, unknown>).message).toMatch(/not active.*failed/i);
+    expect((msg.payload as Record<string, unknown>).message).toMatch(/not currently waiting for input.*failed/i);
   });
 
   it("returns error when session is killed", async () => {
@@ -258,7 +258,7 @@ describe("ws-bridge send_input error handling", () => {
     ws.close();
 
     expect(msg.type).toBe("error");
-    expect((msg.payload as Record<string, unknown>).message).toMatch(/not active.*killed/i);
+    expect((msg.payload as Record<string, unknown>).message).toMatch(/not currently waiting for input.*killed/i);
   });
 
   it("returns error when environment is not connected", async () => {
@@ -318,19 +318,24 @@ describe("ws-bridge send_input error handling", () => {
 
     const ws = await connectWs(port);
 
+    const receivedMessages: { type: string }[] = [];
+    ws.on("message", (data) => {
+      try {
+        const parsed = JSON.parse(data.toString()) as { type: string };
+        receivedMessages.push(parsed);
+      } catch {
+        // Ignore malformed messages for this test
+      }
+    });
+
     ws.send(JSON.stringify({ type: "send_input", payload: { sessionId: "sess-ok", text: "hello" } }));
 
-    // Wait briefly and assert no error arrived
+    // Wait briefly to observe any potential error response
     await new Promise((r) => setTimeout(r, 200));
-
-    let receivedError = false;
-    ws.on("message", (data) => {
-      const parsed = JSON.parse(data.toString()) as { type: string };
-      if (parsed.type === "error") receivedError = true;
-    });
 
     ws.close();
 
+    const receivedError = receivedMessages.some((msg) => msg.type === "error");
     expect(receivedError).toBe(false);
     expect(mockConn.client.sendInput).toHaveBeenCalledOnce();
   });
