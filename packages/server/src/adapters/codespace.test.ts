@@ -79,7 +79,7 @@ describe("CodespaceAdapter.reconnect()", () => {
   it("yields reconnecting progress events on happy path", async () => {
     const events = await collectEvents(adapter.reconnect!(envId, config as Record<string, unknown>, token));
 
-    expect(events.length).toBeGreaterThanOrEqual(4);
+    expect(events.length).toBeGreaterThanOrEqual(3);
     expect(events.every((e) => e.stage === "reconnecting")).toBe(true);
     expect(events[events.length - 1].message).toContain("Reconnected");
   });
@@ -89,7 +89,8 @@ describe("CodespaceAdapter.reconnect()", () => {
 
     expect(mocks.closeTunnel).toHaveBeenCalledWith(envId);
     expect(mocks.probeRemotePowerLine).toHaveBeenCalledOnce();
-    expect(mocks.writeRemoteEnvFile).toHaveBeenCalledOnce();
+    // env file is NOT written on happy path — only on restart
+    expect(mocks.startRemotePowerLine).not.toHaveBeenCalled();
     expect(mocks.registerTunnel).toHaveBeenCalledWith(envId, expect.objectContaining({
       tunnel: expect.objectContaining({ localPort: 9999 }),
     }));
@@ -118,8 +119,11 @@ describe("CodespaceAdapter.reconnect()", () => {
       .rejects.toThrow("PowerLine process died immediately after starting");
   });
 
-  it("propagates error when SSH is unreachable", async () => {
-    mockExec.mockRejectedValueOnce(new Error("ssh connection refused"));
+  it("propagates error when SSH is unreachable (probe and restart both fail)", async () => {
+    // Probe fails due to SSH being down
+    mocks.probeRemotePowerLine.mockRejectedValueOnce(new Error("ssh connection refused"));
+    // Restart also fails because SSH is still down
+    mocks.startRemotePowerLine.mockRejectedValueOnce(new Error("ssh connection refused"));
 
     await expect(collectEvents(adapter.reconnect!(envId, config as Record<string, unknown>, token)))
       .rejects.toThrow("ssh connection refused");
