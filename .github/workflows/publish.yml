@@ -1,4 +1,4 @@
-name: CD
+name: Publish
 
 on:
   push:
@@ -32,25 +32,9 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Install
-        run: node common/scripts/install-run-rush.js install
-
-      - name: Build
-        run: node common/scripts/install-run-rush.js build
-
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
-        working-directory: packages/web
-
-      - name: Run tests
-        run: node common/scripts/install-run-rush.js test --verbose
-
-      # In lockStepVersion mode, `rush version --bump` only consumes changefiles
-      # for the mainProject (@grackle-ai/cli). Changefiles targeting other
-      # lockstep packages (e.g. @grackle-ai/powerline) survive indefinitely,
-      # forcing every bump to match their type. Fix: consolidate all changefiles
-      # into the mainProject directory before bumping, and sync nextBump to the
-      # highest requested type.
+      # Check for publishable changefiles BEFORE building. CI already
+      # validates the build on push to main, so there's no point running
+      # a full build+test cycle here if there's nothing to publish.
       - name: Consolidate changefiles and sync nextBump
         id: changefile_check
         run: |
@@ -68,7 +52,7 @@ jobs:
 
           mapfile -t changefiles < <(find common/changes/ -name '*.json' 2>/dev/null)
           if [ ${#changefiles[@]} -eq 0 ]; then
-            echo "No changefiles found, skipping version bump"
+            echo "No changefiles found, nothing to publish"
             echo "has_changefiles=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -89,7 +73,7 @@ jobs:
           fi
           # All changefiles are "none" — nothing to publish
           if [ "$highest" = "none" ]; then
-            echo "All changefiles are type \"none\", skipping version bump"
+            echo "All changefiles are type \"none\", nothing to publish"
             echo "has_changefiles=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -137,6 +121,12 @@ jobs:
           "
           echo "Set nextBump to $highest"
 
+      # Only build if we have something to publish. CI on main already
+      # validates the build, so this is purely to produce dist/ for publishing.
+      - name: Build and test
+        if: steps.changefile_check.outputs.has_changefiles == 'true'
+        uses: ./.github/actions/build-and-test
+
       # Run rush version --bump WITHOUT --target-branch so it only modifies
       # files on disk (no branch creation, no commits, no push). We handle
       # the git operations ourselves to avoid Rush's [skip ci] commits and
@@ -165,12 +155,8 @@ jobs:
           git commit -m "chore: bump versions [skip ci]"
           git push origin main
 
-      - name: Rebuild with bumped versions
-        if: steps.bump.outputs.has_bump == 'true'
-        run: |
-          node common/scripts/install-run-rush.js install
-          node common/scripts/install-run-rush.js build
-
+      # No rebuild needed — rush publish packages the existing dist/ output
+      # with the bumped package.json version. Compiled JS is version-independent.
       - name: Publish to npm
         if: steps.bump.outputs.has_bump == 'true'
         run: node common/scripts/install-run-rush.js publish --include-all --publish --set-access-level public

@@ -1,0 +1,22 @@
+name: Build and Test
+description: Shared install → build → Playwright → test steps
+
+runs:
+  using: composite
+  steps:
+    - name: Rush install
+      shell: bash
+      run: node common/scripts/install-run-rush.js install
+
+    - name: Rush build
+      shell: bash
+      run: node common/scripts/install-run-rush.js build
+
+    - name: Install Playwright browsers
+      shell: bash
+      run: npx playwright install --with-deps chromium
+      working-directory: packages/web
+
+    - name: Run tests
+      shell: bash
+      run: node common/scripts/install-run-rush.js test --verbose

@@ -42,6 +42,7 @@ Rush monorepo with 5 packages under `packages/`:
 ### TypeScript
 - **TSDoc**: All exported functions, interfaces, types, and classes must have TSDoc comments
 - **No magic numbers**: Extract numeric constants (timeouts, retries, byte lengths) into named constants at module scope
+- **DRY**: Don't duplicate constants, types, or logic across packages. If a value is defined in `@grackle-ai/common` (or another shared package), import it — never copy it with a "mirrors X" comment. Large blocks of near-identical code should be extracted into shared helpers.
 - **Full braces**: Always use braces on if/else/for blocks, even single-line
 - **Explicit types**: Prefer explicit return types on exported functions
 - **Full English names**: Use `EnvironmentId` not `EnvId`, `SpawnOptions` not `SpawnOpts`
@@ -65,7 +66,7 @@ Rush monorepo with 5 packages under `packages/`:
 - Bind servers to `127.0.0.1` only
 
 ### Dependencies
-- Cross-package deps use version `"0.0.1"` (Rush doesn't support `workspace:*`)
+- Cross-package deps use `"workspace:*"` (pnpm rewrites to real versions at publish time)
 - `@bufbuild/protobuf` must be a direct dependency in any package using `create()`
 - Pin specific versions for runtime SDKs (not `@latest`)
 

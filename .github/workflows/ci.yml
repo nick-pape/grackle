@@ -1,6 +1,8 @@
 name: CI
 
 on:
+  push:
+    branches: [main]
   pull_request:
 
 jobs:
@@ -17,25 +19,17 @@ jobs:
         with:
           node-version: 22
 
-      - name: Rush install
-        run: node common/scripts/install-run-rush.js install
-
       - name: Verify change logs
+        if: github.event_name == 'pull_request'
         run: node common/scripts/install-run-rush.js change --verify
 
       - name: Block major version bumps
+        if: github.event_name == 'pull_request'
         run: |
           if grep -r '"type": "major"' common/changes/ 2>/dev/null; then
             echo "::error::Major version bumps are blocked. Use patch or minor."
             exit 1
           fi
 
-      - name: Rush build
-        run: node common/scripts/install-run-rush.js build
-
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
-        working-directory: packages/web
-
-      - name: Run tests
-        run: node common/scripts/install-run-rush.js test --verbose
+      - name: Build and test
+        uses: ./.github/actions/build-and-test
