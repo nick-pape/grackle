@@ -543,7 +543,7 @@ async function handleMessage(
         sendWs(ws, { type: "error", payload: { message: `Task not found: ${taskId}` } });
         return;
       }
-      if (!["pending", "assigned"].includes(task.status)) {
+      if (!["pending", "assigned", "failed"].includes(task.status)) {
         sendWs(ws, { type: "error", payload: { message: `Task cannot be started (status: ${task.status})` } });
         return;
       }
