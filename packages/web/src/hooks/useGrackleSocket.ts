@@ -74,16 +74,6 @@ export interface TokenInfo {
   expiresAt: string;
 }
 
-export interface TaskDiffData {
-  taskId: string;
-  branch?: string;
-  diff?: string;
-  changedFiles?: string[];
-  additions?: number;
-  deletions?: number;
-  error?: string;
-}
-
 /** A GitHub Codespace returned from `gh codespace list`. */
 export interface Codespace {
   name: string;
@@ -202,10 +192,6 @@ function isTokenInfo(v: unknown): v is TokenInfo {
   );
 }
 
-function isTaskDiffData(v: unknown): v is TaskDiffData {
-  return isObject(v) && typeof v.taskId === "string";
-}
-
 function isProvisionProgress(
   v: unknown,
 ): v is ProvisionStatus & { environmentId: string } {
@@ -302,7 +288,6 @@ export interface UseGrackleSocketResult {
   tasks: TaskData[];
   findings: FindingData[];
   tokens: TokenInfo[];
-  taskDiff: TaskDiffData | undefined;
   spawn: (
     environmentId: string,
     prompt: string,
@@ -342,7 +327,6 @@ export interface UseGrackleSocketResult {
     category?: string,
     tags?: string[],
   ) => void;
-  loadTaskDiff: (taskId: string) => void;
   addEnvironment: (
     displayName: string,
     adapterType: string,
@@ -390,7 +374,6 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
   const [tasks, setTasks] = useState<TaskData[]>([]);
   const [findings, setFindings] = useState<FindingData[]>([]);
   const [tokens, setTokens] = useState<TokenInfo[]>([]);
-  const [taskDiff, setTaskDiff] = useState<TaskDiffData | undefined>(undefined);
   const [provisionStatus, setProvisionStatus] = useState<Record<string, ProvisionStatus>>({});
   const [codespaces, setCodespaces] = useState<Codespace[]>([]);
   const [codespaceError, setCodespaceError] = useState("");
@@ -602,13 +585,6 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
             break;
           case "token_changed":
             send({ type: "list_tokens" });
-            break;
-          case "task_diff":
-            if (isTaskDiffData(msg.payload)) {
-              setTaskDiff(msg.payload);
-            } else {
-              warnBadPayload("task_diff", "payload is not a valid TaskDiffData");
-            }
             break;
           case "provision_progress": {
             if (!isProvisionProgress(msg.payload)) {
@@ -892,16 +868,6 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
     [send],
   );
 
-  // ─── Diff methods ─────────────────────────────────
-
-  const loadTaskDiff = useCallback(
-    (taskId: string) => {
-      setTaskDiff(undefined);
-      send({ type: "get_task_diff", payload: { taskId } });
-    },
-    [send],
-  );
-
   // ─── Token methods ──────────────────────────────────
 
   const loadTokens = useCallback(() => {
@@ -1003,7 +969,6 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
     tasks,
     findings,
     tokens,
-    taskDiff,
     spawn,
     sendInput,
     kill,
@@ -1020,7 +985,6 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
     deleteTask,
     loadFindings,
     postFinding,
-    loadTaskDiff,
     addEnvironment,
     loadTokens,
     setToken,
