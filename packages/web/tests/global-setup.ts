@@ -134,7 +134,7 @@ export default async function globalSetup(_config: FullConfig): Promise<void> {
     GRACKLE_API_KEY: apiKey,
   };
 
-  execSync(`node "${cliPath}" env add test-local --local --runtime stub`, {
+  execSync(`node "${cliPath}" env add test-local --local --port ${powerlinePort} --runtime stub`, {
     env: cliEnv,
     stdio: "pipe",
   });
