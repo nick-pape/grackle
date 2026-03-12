@@ -388,3 +388,54 @@
 .errorMessage {
   color: var(--accent-red);
 }
+
+// ---------------------------------------------------------------------------
+// Empty state CTAs
+// ---------------------------------------------------------------------------
+
+.emptyCta {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-md);
+  padding: var(--space-xl);
+  text-align: center;
+  animation: fadeIn 300ms ease;
+}
+
+.ctaTitle {
+  font-size: var(--font-size-lg);
+  color: var(--text-secondary);
+  font-weight: var(--font-weight-bold);
+}
+
+.ctaDescription {
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+  max-width: 320px;
+  line-height: var(--line-height);
+}
+
+.ctaButton {
+  @include btn-primary;
+  padding: var(--space-sm) var(--space-xl);
+  font-size: var(--font-size-md);
+}
+
+.ctaLink {
+  background: none;
+  border: none;
+  color: var(--accent-green);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+
+  &:hover {
+    color: var(--text-primary);
+  }
+}
+

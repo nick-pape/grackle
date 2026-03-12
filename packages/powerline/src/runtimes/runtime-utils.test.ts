@@ -9,14 +9,18 @@ vi.mock("node:fs", () => ({
   readFileSync: vi.fn(() => "{}"),
   readdirSync: vi.fn(() => []),
 }));
+vi.mock("node:child_process", () => ({
+  execFileSync: vi.fn(() => { throw new Error("not a git repo"); }),
+}));
 vi.mock("../worktree.js", () => ({
   ensureWorktree: vi.fn(),
 }));
 
-import { buildFindingEvent, buildSubtaskCreateEvent, resolveWorkingDirectory, GRACKLE_MCP_SCRIPT } from "./runtime-utils.js";
+import { buildFindingEvent, buildSubtaskCreateEvent, resolveWorkingDirectory, findGitRepoPath, GRACKLE_MCP_SCRIPT } from "./runtime-utils.js";
 import { AsyncQueue } from "../utils/async-queue.js";
 import type { AgentEvent } from "./runtime.js";
 import { existsSync, readdirSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { ensureWorktree } from "../worktree.js";
 
 describe("GRACKLE_MCP_SCRIPT", () => {
@@ -95,6 +99,67 @@ describe("buildSubtaskCreateEvent", () => {
   });
 });
 
+describe("findGitRepoPath", () => {
+  afterEach(() => {
+    vi.mocked(existsSync).mockReset();
+    vi.mocked(existsSync).mockReturnValue(false);
+    vi.mocked(readdirSync).mockReset();
+    vi.mocked(readdirSync).mockReturnValue([]);
+    vi.mocked(execFileSync).mockReset();
+    vi.mocked(execFileSync).mockImplementation(() => { throw new Error("not a git repo"); });
+  });
+
+  it("returns resolved toplevel when basePath exists and is a git repo", () => {
+    vi.mocked(existsSync).mockImplementation((p) => String(p) === "/repo");
+    vi.mocked(execFileSync).mockImplementation((_cmd, args) => {
+      if (Array.isArray(args) && args.includes("--show-toplevel")) {
+        return "/repo\n";
+      }
+      return Buffer.from(".git\n");
+    });
+    expect(findGitRepoPath("/repo")).toBe("/repo");
+  });
+
+  it("falls back to /workspace when basePath is not a git repo", () => {
+    vi.mocked(existsSync).mockImplementation((p) => String(p) === "/workspace" || String(p) === "/repo");
+    vi.mocked(execFileSync).mockImplementation((_cmd, args, opts) => {
+      if ((opts as { cwd: string }).cwd === "/workspace") {
+        if (Array.isArray(args) && args.includes("--show-toplevel")) {
+          return "/workspace\n";
+        }
+        return Buffer.from(".git\n");
+      }
+      throw new Error("not a git repo");
+    });
+    expect(findGitRepoPath("/repo")).toBe("/workspace");
+  });
+
+  it("finds repo under /workspaces/ (Codespaces convention)", () => {
+    vi.mocked(existsSync).mockImplementation((p) => String(p) === "/workspaces" || String(p) === "/workspaces/grackle");
+    vi.mocked(readdirSync).mockImplementation((p) => {
+      if (String(p) === "/workspaces") {
+        return ["grackle"] as unknown as ReturnType<typeof readdirSync>;
+      }
+      return [];
+    });
+    vi.mocked(execFileSync).mockImplementation((_cmd, args, opts) => {
+      if ((opts as { cwd: string }).cwd === "/workspaces/grackle") {
+        if (Array.isArray(args) && args.includes("--show-toplevel")) {
+          return "/workspaces/grackle\n";
+        }
+        return Buffer.from(".git\n");
+      }
+      throw new Error("not a git repo");
+    });
+    expect(findGitRepoPath("/workspace")).toBe("/workspaces/grackle");
+  });
+
+  it("returns undefined when nothing is found", () => {
+    vi.mocked(existsSync).mockReturnValue(false);
+    expect(findGitRepoPath("/nonexistent")).toBeUndefined();
+  });
+});
+
 describe("resolveWorkingDirectory", () => {
   afterEach(() => {
     vi.mocked(existsSync).mockReset();
@@ -102,9 +167,19 @@ describe("resolveWorkingDirectory", () => {
     vi.mocked(readdirSync).mockReset();
     vi.mocked(readdirSync).mockReturnValue([]);
     vi.mocked(ensureWorktree).mockReset();
+    vi.mocked(execFileSync).mockReset();
+    vi.mocked(execFileSync).mockImplementation(() => { throw new Error("not a git repo"); });
   });
 
   it("returns worktree path when branch and basePath are provided", async () => {
+    // findGitRepoPath needs to find /repo as a git repo
+    vi.mocked(existsSync).mockImplementation((p) => String(p) === "/repo");
+    vi.mocked(execFileSync).mockImplementation((_cmd, args) => {
+      if (Array.isArray(args) && args.includes("--show-toplevel")) {
+        return "/repo\n";
+      }
+      return Buffer.from(".git\n");
+    });
     vi.mocked(ensureWorktree).mockResolvedValue({
       worktreePath: "/worktrees/my-branch",
       branch: "my-branch",
@@ -125,9 +200,19 @@ describe("resolveWorkingDirectory", () => {
     queue.close();
   });
 
-  it("falls back to /workspace when worktree fails", async () => {
+  it("falls back to workspace directory when worktree fails", async () => {
+    // findGitRepoPath finds /repo as git repo, but ensureWorktree fails
+    vi.mocked(existsSync).mockImplementation((p) => String(p) === "/repo" || String(p) === "/workspace");
+    vi.mocked(execFileSync).mockImplementation((_cmd, args, opts) => {
+      if ((opts as { cwd: string }).cwd === "/repo") {
+        if (Array.isArray(args) && args.includes("--show-toplevel")) {
+          return "/repo\n";
+        }
+        return Buffer.from(".git\n");
+      }
+      throw new Error("not a git repo");
+    });
     vi.mocked(ensureWorktree).mockRejectedValue(new Error("git error"));
-    vi.mocked(existsSync).mockImplementation((p) => String(p) === "/workspace");
     const queue = new AsyncQueue<AgentEvent>();
 
     const result = await resolveWorkingDirectory({
@@ -136,14 +221,14 @@ describe("resolveWorkingDirectory", () => {
       eventQueue: queue,
     });
 
-    expect(result).toBe("/workspace");
+    expect(result).toBe("/repo");
     const event = await queue.shift();
     expect(event?.type).toBe("system");
-    expect(event?.content).toContain("Worktree setup skipped");
+    expect(event?.content).toContain("Worktree setup failed");
     queue.close();
   });
 
-  it("returns undefined when worktree fails and /workspace does not exist", async () => {
+  it("returns undefined when worktree fails and no workspace exists", async () => {
     vi.mocked(ensureWorktree).mockRejectedValue(new Error("git error"));
     vi.mocked(existsSync).mockReturnValue(false);
     const queue = new AsyncQueue<AgentEvent>();

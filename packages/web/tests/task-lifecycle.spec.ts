@@ -13,10 +13,10 @@ test.describe("Task Lifecycle (stub runtime)", () => {
 
     // --- Step 2: Create a task with test-local environment ---
     await page.getByText("lifecycle-proj").click();
-    await page.getByText("lifecycle-proj").locator("..").locator('button[title="New task"]').click();
+    await page.getByText("lifecycle-proj").locator("..").locator('button[title="New task"]').first().click();
     await page.locator('input[placeholder="Task title..."]').fill("test task");
     await page.locator("select").selectOption("test-local");
-    await page.locator("button", { hasText: "Create" }).click();
+    await page.locator("button", { hasText: /^Create$/ }).click();
     await expect(page.getByText("test task")).toBeVisible({ timeout: 5_000 });
 
     // --- Step 3: Navigate to task view ---
@@ -64,7 +64,7 @@ test.describe("Task Lifecycle (stub runtime)", () => {
 
     // --- Step 8: Session completes -> task auto-moves to review ---
     // The stub runtime completes quickly after input, auto-moving to review.
-    // The SessionPanel auto-switches to the Diff tab on review, so we check
+    // The SessionPanel auto-switches to the Stream tab on review, so we check
     // for the Approve button rather than stream content.
     await expect(page.locator("button", { hasText: "Approve" })).toBeVisible({ timeout: 15_000 });
 
@@ -82,7 +82,7 @@ test.describe("Task Lifecycle (stub runtime)", () => {
     await expect(page.locator("button", { hasText: "+ New Task" })).toBeVisible();
   });
 
-  test("task rejection sends back to assigned status", async ({ appPage }) => {
+  test("task rejection auto-retries and returns to review", async ({ appPage }) => {
     const page = appPage;
 
     // --- Create project and task ---
@@ -93,10 +93,10 @@ test.describe("Task Lifecycle (stub runtime)", () => {
     await expect(page.getByText("reject-proj")).toBeVisible({ timeout: 5_000 });
 
     await page.getByText("reject-proj").click();
-    await page.getByText("reject-proj").locator("..").locator('button[title="New task"]').click();
+    await page.getByText("reject-proj").locator("..").locator('button[title="New task"]').first().click();
     await page.locator('input[placeholder="Task title..."]').fill("reject task");
     await page.locator("select").selectOption("test-local");
-    await page.locator("button", { hasText: "Create" }).click();
+    await page.locator("button", { hasText: /^Create$/ }).click();
     await expect(page.getByText("reject task")).toBeVisible({ timeout: 5_000 });
 
     // Navigate to task
@@ -137,7 +137,17 @@ test.describe("Task Lifecycle (stub runtime)", () => {
     await rejectInput.fill("needs more tests");
     await page.locator("button", { hasText: "Reject" }).click();
 
-    // Task should go back to assigned/pending — "Start Task" reappears
-    await expect(page.locator("button", { hasText: "Start Task" })).toBeVisible({ timeout: 10_000 });
+    // Task auto-retries: should go to in_progress and stream events for the new session.
+    // The stub runtime will reach waiting_input again — send input to complete.
+    const retryInput = page.locator('input[placeholder="Type a message..."]');
+    await expect(retryInput).toBeVisible({ timeout: 15_000 });
+    await retryInput.fill("continue");
+    await page.locator("button", { hasText: "Send" }).click();
+
+    // Task should return to review after auto-retry completes
+    await expect(page.locator("button", { hasText: "Approve" })).toBeVisible({ timeout: 15_000 });
+
+    // Verify no task failure
+    await expect(page.getByText("Task failed")).not.toBeVisible();
   });
 });

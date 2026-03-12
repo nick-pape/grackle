@@ -115,7 +115,7 @@ function TaskTreeNode({
         <span className={styles.taskStatusIcon} style={{ color: statusStyle.color }}>
           {statusStyle.icon}
         </span>
-        <span className={styles.taskTitle}>{node.title}</span>
+        <span className={styles.taskTitle} title={node.title}>{node.title}</span>
         {hasChildren && (
           <span className={styles.childCountBadge}>
             {node.children.filter(c => c.status === "done").length}/{node.children.length}
@@ -287,8 +287,16 @@ export function ProjectList({ viewMode, setViewMode }: Props): JSX.Element {
       )}
 
       {projects.length === 0 && !showCreateForm && (
-        <div className={styles.emptyState}>
-          No projects. Click + to create one.
+        <div className={styles.emptyCta}>
+          <button
+            className={styles.ctaButton}
+            onClick={() => setShowCreateForm(true)}
+          >
+            Create Project
+          </button>
+          <div className={styles.ctaDescription}>
+            Organize your work into projects
+          </div>
         </div>
       )}
 
@@ -310,7 +318,7 @@ export function ProjectList({ viewMode, setViewMode }: Props): JSX.Element {
               <span className={`${styles.expandArrow} ${isExpanded ? styles.expanded : ""}`}>
                 {"\u25B8"}
               </span>
-              <span className={styles.projectName}>{project.name}</span>
+              <span className={styles.projectName} title={project.name}>{project.name}</span>
               <span className={styles.taskCount}>
                 {projectTasks.length > 0 && `${projectTasks.filter((t) => t.status === "done").length}/${projectTasks.length}`}
               </span>
@@ -350,8 +358,13 @@ export function ProjectList({ viewMode, setViewMode }: Props): JSX.Element {
                   ))}
 
                   {projectTasks.length === 0 && (
-                    <div className={styles.emptyTasks}>
-                      No tasks yet
+                    <div className={styles.emptyTaskCta}>
+                      <button
+                        className={styles.createTaskLink}
+                        onClick={() => setViewMode({ kind: "new_task", projectId: project.id })}
+                      >
+                        + Create Task
+                      </button>
                     </div>
                   )}
                 </motion.div>

@@ -1,6 +1,5 @@
 import { useGrackle } from "../../context/GrackleContext.js";
 import { EventRenderer } from "../display/EventRenderer.js";
-import { DiffViewer } from "../display/DiffViewer.js";
 import { FindingsPanel } from "./FindingsPanel.js";
 import { SettingsPanel } from "./SettingsPanel.js";
 import { DagView } from "../dag/DagView.js";
@@ -181,10 +180,11 @@ function TaskOverview({ task, tasksById, environments, projects }: TaskOverviewP
   const env = environments.find((e) => e.id === task.environmentId);
   const project = projects.find((p) => p.id === task.projectId);
 
-  // Build GitHub branch URL if the project has a repoUrl
+  // Build GitHub branch URL if the project has a repoUrl; encode the branch
+  // segment so names like "feature/foo" or those with special chars are safe.
   const branchUrl = task.branch && project?.repoUrl
-    ? `${project.repoUrl.replace(/\/$/, "")}/tree/${task.branch}`
-    : null;
+    ? `${project.repoUrl.replace(/\/$/, "")}/tree/${task.branch.split("/").map(encodeURIComponent).join("/")}`
+    : undefined;
 
   return (
     <div className={styles.overviewDashboard}>
@@ -194,7 +194,7 @@ function TaskOverview({ task, tasksById, environments, projects }: TaskOverviewP
         {task.branch && (
           <span className={styles.overviewBranchPill}>
             {branchUrl ? (
-              <a href={branchUrl} target="_blank" rel="noreferrer" className={styles.branchLink}>
+              <a href={branchUrl} target="_blank" rel="noreferrer noopener" className={styles.branchLink}>
                 {"\u{1F517}"} {task.branch}
               </a>
             ) : (
@@ -220,7 +220,12 @@ function TaskOverview({ task, tasksById, environments, projects }: TaskOverviewP
           <div className={styles.overviewLabel}>Environment</div>
           <div className={styles.envRow}>
             {env && (
-              <span className={`${styles.envDot} ${envStatusClass(env.status)}`} title={env.status} />
+              <span
+                className={`${styles.envDot} ${envStatusClass(env.status)}`}
+                title={env.status}
+                aria-label={`Status: ${env.status}`}
+                role="img"
+              />
             )}
             <span className={styles.overviewValue}>
               {env?.displayName ?? task.environmentId}
@@ -263,34 +268,37 @@ function TaskOverview({ task, tasksById, environments, projects }: TaskOverviewP
               <span className={styles.timelineValue}>{formatDate(task.createdAt)}</span>
             </div>
           )}
-          {task.assignedAt && (
-            <div className={styles.timelineRow}>
-              <span className={styles.timelineKey}>Assigned</span>
-              <span className={styles.timelineValue}>{formatDate(task.assignedAt)}</span>
-              {task.createdAt && (
-                <span className={styles.timelineDelta}>{formatDuration(task.createdAt, task.assignedAt)}</span>
-              )}
-            </div>
-          )}
-          {task.startedAt && (
-            <div className={styles.timelineRow}>
-              <span className={styles.timelineKey}>Started</span>
-              <span className={styles.timelineValue}>{formatDate(task.startedAt)}</span>
-              {(task.assignedAt || task.createdAt) && (
-                <span className={styles.timelineDelta}>{formatDuration(task.assignedAt ?? task.createdAt, task.startedAt)}</span>
-              )}
-            </div>
-          )}
-          {task.completedAt && (
-            <div className={styles.timelineRow}>
-              <span className={styles.timelineKey}>Completed</span>
-              <span className={styles.timelineValue}>{formatDate(task.completedAt)}</span>
-              {task.startedAt && (
-                <span className={styles.timelineDelta}>{formatDuration(task.startedAt, task.completedAt)}</span>
-              )}
-            </div>
-          )}
-          {!task.createdAt && !task.startedAt && !task.completedAt && (
+          {task.assignedAt && (() => {
+            const delta = formatDuration(task.createdAt, task.assignedAt);
+            return (
+              <div className={styles.timelineRow}>
+                <span className={styles.timelineKey}>Assigned</span>
+                <span className={styles.timelineValue}>{formatDate(task.assignedAt)}</span>
+                {delta && <span className={styles.timelineDelta}>{delta}</span>}
+              </div>
+            );
+          })()}
+          {task.startedAt && (() => {
+            const delta = formatDuration(task.assignedAt ?? task.createdAt, task.startedAt);
+            return (
+              <div className={styles.timelineRow}>
+                <span className={styles.timelineKey}>Started</span>
+                <span className={styles.timelineValue}>{formatDate(task.startedAt)}</span>
+                {delta && <span className={styles.timelineDelta}>{delta}</span>}
+              </div>
+            );
+          })()}
+          {task.completedAt && (() => {
+            const delta = formatDuration(task.startedAt, task.completedAt);
+            return (
+              <div className={styles.timelineRow}>
+                <span className={styles.timelineKey}>Completed</span>
+                <span className={styles.timelineValue}>{formatDate(task.completedAt)}</span>
+                {delta && <span className={styles.timelineDelta}>{delta}</span>}
+              </div>
+            );
+          })()}
+          {!task.createdAt && !task.assignedAt && !task.startedAt && !task.completedAt && (
             <div className={styles.overviewMuted}>No timing data</div>
           )}
         </div>
@@ -309,12 +317,12 @@ function TaskOverview({ task, tasksById, environments, projects }: TaskOverviewP
 
 // --- Main component ---
 
-type TaskTab = "overview" | "stream" | "diff" | "findings";
+type TaskTab = "overview" | "stream" | "findings";
 type ProjectTab = "tasks" | "graph";
 
 /** Main content panel that renders session streams, task views, project summaries, or empty states based on the current view mode. */
 export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
-  const { events, sessions, tasks, environments, projects, taskDiff, loadSessionEvents, loadFindings, loadTaskDiff, kill } = useGrackle();
+  const { events, sessions, tasks, environments, loadSessionEvents, loadFindings, kill, projects, createProject, startTask } = useGrackle();
   // eslint-disable-next-line @rushstack/no-new-null
   const scrollRef = useRef<HTMLDivElement>(null);
   const loadedRef = useRef<string | undefined>(undefined);
@@ -354,7 +362,7 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
       task?.status === "pending" ? "overview"
       : task?.status === "assigned" ? "overview"
       : task?.status === "in_progress" ? "stream"
-      : task?.status === "review" ? "diff"
+      : task?.status === "review" ? "stream"
       : task?.status === "done" ? "findings"
       : undefined;
     if (newTab && newTab !== activeTaskTab) {
@@ -386,15 +394,12 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
     }
   }, [sessionId, loadSessionEvents]);
 
-  // Load findings/diff when switching tabs
+  // Load findings when switching to findings tab
   useEffect(() => {
     if (activeTaskTab === "findings" && projectId) {
       loadFindings(projectId);
     }
-    if (activeTaskTab === "diff" && task?.id) {
-      loadTaskDiff(task.id);
-    }
-  }, [activeTaskTab, projectId, task?.id, loadFindings, loadTaskDiff]);
+  }, [activeTaskTab, projectId, loadFindings]);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -410,9 +415,30 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
 
   // --- empty mode ---
   if (viewMode.kind === "empty") {
+    if (projects.length === 0) {
+      return (
+        <div className={styles.emptyCta}>
+          <div className={styles.ctaTitle}>Welcome to Grackle</div>
+          <div className={styles.ctaDescription}>
+            Organize your work into projects and let agents tackle the tasks.
+          </div>
+          <button
+            className={styles.ctaButton}
+            onClick={() => {
+              const name = window.prompt("Project name:");
+              if (name?.trim()) {
+                createProject(name.trim());
+              }
+            }}
+          >
+            Create Your First Project
+          </button>
+        </div>
+      );
+    }
     return (
       <div className={styles.emptyState}>
-        Select a session, project, or task to get started
+        Select a project or task to get started
       </div>
     );
   }
@@ -451,12 +477,25 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
             Tasks
           </button>
         </div>
-        {projectTab === "tasks" && (
+        {projectTab === "tasks" && total > 0 && (
           <div className={styles.projectSummary}>
             <span className={styles.projectSummaryTitle}>
-              {total > 0 ? `${done}/${total} tasks complete` : "No tasks yet"}
+              {`${done}/${total} tasks complete`}
             </span>
             <span className={styles.projectSummarySubtitle}>Select a task or click + to create one</span>
+          </div>
+        )}
+        {projectTab === "tasks" && total === 0 && (
+          <div className={styles.emptyCta}>
+            <button
+              className={styles.ctaButton}
+              onClick={() => setViewMode({ kind: "new_task", projectId: viewMode.projectId })}
+            >
+              Create Task
+            </button>
+            <div className={styles.ctaDescription}>
+              Break your work into tasks and let agents tackle them
+            </div>
           </div>
         )}
         {projectTab === "graph" && (
@@ -528,14 +567,6 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
           </button>
           <button
             role="tab"
-            aria-selected={activeTaskTab === "diff"}
-            className={`${styles.tab} ${activeTaskTab === "diff" ? styles.active : ""}`}
-            onClick={() => setActiveTaskTab("diff")}
-          >
-            Diff
-          </button>
-          <button
-            role="tab"
             aria-selected={activeTaskTab === "findings"}
             className={`${styles.tab} ${activeTaskTab === "findings" ? styles.active : ""}`}
             onClick={() => setActiveTaskTab("findings")}
@@ -578,8 +609,18 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
               ref={scrollRef}
               className={styles.eventScroll}
             >
-              {!sessionId && (
-                <div className={styles.waitingMessage}>Task has not been started yet</div>
+              {!sessionId && task && (
+                <div className={styles.emptyCta}>
+                  <button
+                    className={styles.ctaButton}
+                    onClick={() => startTask(task.id)}
+                  >
+                    Start Task
+                  </button>
+                  <div className={styles.ctaDescription}>
+                    Click to begin agent execution
+                  </div>
+                </div>
               )}
               {sessionId && groupedEvents.length === 0 && (
                 <div className={styles.waitingMessage}>Waiting for events...</div>
@@ -587,19 +628,6 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
               {groupedEvents.map((event, i) => (
                 <EventRenderer key={`${event.sessionId}-${event.timestamp}-${i}`} event={event} />
               ))}
-            </motion.div>
-          )}
-
-          {activeTaskTab === "diff" && (
-            <motion.div
-              key="diff"
-              initial={{ opacity: 0, y: 4 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -4 }}
-              transition={{ duration: 0.15 }}
-              className={styles.tabContent}
-            >
-              <DiffViewer diff={taskDiff} />
             </motion.div>
           )}
 
@@ -616,7 +644,7 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
                 <FindingsPanel projectId={projectId} />
               ) : (
                 <div className={styles.noContext}>
-                  No project context
+                  Navigate to a task within a project to view findings
                 </div>
               )}
             </motion.div>
