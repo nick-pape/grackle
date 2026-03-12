@@ -98,7 +98,6 @@ interface WsMessage {
 }
 
 const WS_RECONNECT_DELAY_MS: number = 3_000;
-const ENV_POLL_INTERVAL_MS: number = 10_000;
 /** Maximum number of events kept in memory per hook instance. Older events are dropped. */
 const MAX_EVENTS: number = 5_000;
 
@@ -230,7 +229,6 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
   useEffect(() => {
     let ws: WebSocket;
     let reconnectTimer: ReturnType<typeof setTimeout>;
-    let envPollTimer: ReturnType<typeof setInterval>;
 
     function connect(): void {
       ws = new WebSocket(wsUrl);
@@ -243,11 +241,6 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
         send({ type: "list_projects" });
         send({ type: "list_tokens" });
         send({ type: "subscribe_all" });
-        // Periodically refresh environments to catch CLI-driven changes
-        clearInterval(envPollTimer);
-        envPollTimer = setInterval(() => {
-          send({ type: "list_environments" });
-        }, ENV_POLL_INTERVAL_MS);
       };
 
       ws.onmessage = (e) => {
@@ -297,7 +290,6 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
               setLastSpawnedId(spawnedId);
             }
             send({ type: "list_sessions" });
-            send({ type: "list_environments" });
             break;
           }
           case "projects":
@@ -421,10 +413,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
                   });
                 }, PROVISION_STATUS_CLEAR_DELAY_MS);
               }
-              // Only refresh environment list on terminal stages to avoid redundant traffic
-              if (pp.stage === "ready" || pp.stage === "error") {
-                send({ type: "list_environments" });
-              }
+              // Server broadcasts the environment list via broadcastEnvironments() on terminal stages
             }
             break;
           }
@@ -442,7 +431,8 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
                 return next;
               });
             }
-            send({ type: "list_environments" });
+            // Server broadcasts updated environment list via broadcastEnvironments();
+            // fetch sessions since the server deletes them but doesn't broadcast sessions
             send({ type: "list_sessions" });
             break;
           case "codespaces_list": {
@@ -473,7 +463,6 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
       ws.onclose = () => {
         setConnected(false);
         wsRef.current = undefined;
-        clearInterval(envPollTimer);
         clearTimeout(reconnectTimer);
         reconnectTimer = setTimeout(connect, WS_RECONNECT_DELAY_MS);
       };
@@ -486,7 +475,6 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
     connect();
 
     return () => {
-      clearInterval(envPollTimer);
       clearTimeout(reconnectTimer);
       ws?.close();
     };
