@@ -1,6 +1,17 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Thu, 12 Mar 2026 08:11:55 GMT and should not be manually modified.
+This log was last generated on Thu, 12 Mar 2026 11:30:47 GMT and should not be manually modified.
+
+## 0.14.7
+Thu, 12 Mar 2026 11:30:47 GMT
+
+### Patches
+
+- Remove proto enums that shadow hand-written string union types
+
+### Updates
+
+- No actual changes to this package
 
 ## 0.14.6
 Thu, 12 Mar 2026 08:11:55 GMT
