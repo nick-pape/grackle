@@ -207,9 +207,11 @@ async function startTaskSession(
     return `Environment not found: ${environmentId}`;
   }
 
+  // autoProvisionEnvironment already sends a detailed WS error on failure,
+  // so we return undefined to avoid duplicate error messages to the client.
   const conn = await autoProvisionEnvironment(ws, environmentId, env, { taskId: task.id });
   if (!conn) {
-    return `Failed to connect environment: ${environmentId}`;
+    return undefined;
   }
 
   const sessionId = uuid();
