@@ -206,7 +206,12 @@ function personaMcpServersToJson(row: personaStore.PersonaRow): string {
 
 /** Build a JSON string of MCP server configs for the PowerLine SpawnRequest. */
 export function buildMcpServersJson(
-  mcpServers: { name: string; command: string; args?: string[]; tools?: string[] }[],
+  mcpServers: {
+    name: string;
+    command: string;
+    args?: string[];
+    tools?: string[];
+  }[],
 ): string {
   const obj: Record<string, unknown> = {};
   for (const s of mcpServers) {
