@@ -4,3 +4,4 @@
  */
 export { EventRenderer } from "./EventRenderer.js";
 export { DiffViewer } from "./DiffViewer.js";
+export { ConfirmDialog } from "./ConfirmDialog.js";
