@@ -2,6 +2,40 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.14.0",
+      "tag": "@grackle-ai/cli_v0.14.0",
+      "date": "Thu, 12 Mar 2026 00:56:21 GMT",
+      "comments": {
+        "none": [
+          {
+            "comment": "No CLI changes — merge commit false positive"
+          },
+          {
+            "comment": "No functional changes to CLI (merge commit false positive)"
+          },
+          {
+            "comment": "No functional changes to CLI (merge commit false positive)"
+          },
+          {
+            "comment": "No functional changes (merge commit artifact)"
+          }
+        ],
+        "minor": [
+          {
+            "comment": "Add agent-initiated subtask creation via create_subtask MCP tool"
+          },
+          {
+            "comment": "Unpublished changes from 0.13.1-0.15.0: import-github command, codespace environment picker, MCP script path fix, port conflict handling, decomposition rights, provision progress broadcast, bug fixes from live testing, review fixes"
+          }
+        ],
+        "patch": [
+          {
+            "comment": "Resolve MCP script path relative to PowerLine package instead of hardcoded Docker path"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.13.0",
       "tag": "@grackle-ai/cli_v0.13.0",
       "date": "Tue, 10 Mar 2026 20:25:56 GMT",

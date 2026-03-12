@@ -1,6 +1,25 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Tue, 10 Mar 2026 20:25:56 GMT and should not be manually modified.
+This log was last generated on Thu, 12 Mar 2026 00:56:21 GMT and should not be manually modified.
+
+## 0.14.0
+Thu, 12 Mar 2026 00:56:21 GMT
+
+### Minor changes
+
+- Add agent-initiated subtask creation via create_subtask MCP tool
+- Unpublished changes from 0.13.1-0.15.0: import-github command, codespace environment picker, MCP script path fix, port conflict handling, decomposition rights, provision progress broadcast, bug fixes from live testing, review fixes
+
+### Patches
+
+- Resolve MCP script path relative to PowerLine package instead of hardcoded Docker path
+
+### Updates
+
+- No CLI changes — merge commit false positive
+- No functional changes to CLI (merge commit false positive)
+- No functional changes to CLI (merge commit false positive)
+- No functional changes (merge commit artifact)
 
 ## 0.13.0
 Tue, 10 Mar 2026 20:25:56 GMT
