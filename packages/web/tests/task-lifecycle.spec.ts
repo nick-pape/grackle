@@ -13,10 +13,10 @@ test.describe("Task Lifecycle (stub runtime)", () => {
 
     // --- Step 2: Create a task with test-local environment ---
     await page.getByText("lifecycle-proj").click();
-    await page.getByText("lifecycle-proj").locator("..").locator('button[title="New task"]').click();
+    await page.getByText("lifecycle-proj").locator("..").locator('button[title="New task"]').first().click();
     await page.locator('input[placeholder="Task title..."]').fill("test task");
     await page.locator("select").selectOption("test-local");
-    await page.locator("button", { hasText: "Create" }).click();
+    await page.locator("button", { hasText: /^Create$/ }).click();
     await expect(page.getByText("test task")).toBeVisible({ timeout: 5_000 });
 
     // --- Step 3: Navigate to task view ---
@@ -93,10 +93,10 @@ test.describe("Task Lifecycle (stub runtime)", () => {
     await expect(page.getByText("reject-proj")).toBeVisible({ timeout: 5_000 });
 
     await page.getByText("reject-proj").click();
-    await page.getByText("reject-proj").locator("..").locator('button[title="New task"]').click();
+    await page.getByText("reject-proj").locator("..").locator('button[title="New task"]').first().click();
     await page.locator('input[placeholder="Task title..."]').fill("reject task");
     await page.locator("select").selectOption("test-local");
-    await page.locator("button", { hasText: "Create" }).click();
+    await page.locator("button", { hasText: /^Create$/ }).click();
     await expect(page.getByText("reject task")).toBeVisible({ timeout: 5_000 });
 
     // Navigate to task
