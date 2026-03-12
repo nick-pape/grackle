@@ -4,6 +4,7 @@ import type { ViewMode } from "../../App.js";
 import type { TaskData } from "../../hooks/useGrackleSocket.js";
 import { AnimatePresence, motion } from "motion/react";
 import { MAX_TASK_DEPTH } from "@grackle-ai/common";
+import { Spinner } from "../display/index.js";
 import styles from "./ProjectList.module.scss";
 
 /** Props for the ProjectList component. */
@@ -175,7 +176,7 @@ function TaskTreeNode({
 
 /** Sidebar project tree with expandable task lists and hierarchical task rendering. */
 export function ProjectList({ viewMode, setViewMode }: Props): JSX.Element {
-  const { projects, tasks, loadTasks, createProject } = useGrackle();
+  const { projects, tasks, loadTasks, createProject, projectCreating } = useGrackle();
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
   const [manuallyCollapsed, setManuallyCollapsed] = useState<Set<string>>(new Set());
@@ -247,7 +248,7 @@ export function ProjectList({ viewMode, setViewMode }: Props): JSX.Element {
   }, [selectedProjectId, expanded, loadTasks]);
 
   const handleCreateProject = (): void => {
-    if (!newProjectName.trim()) {
+    if (!newProjectName.trim() || projectCreating) {
       return;
     }
     createProject(newProjectName.trim());
@@ -278,11 +279,24 @@ export function ProjectList({ viewMode, setViewMode }: Props): JSX.Element {
             onKeyDown={(e) => e.key === "Enter" && handleCreateProject()}
             placeholder="Project name..."
             autoFocus
+            disabled={projectCreating}
             className={styles.createInput}
           />
-          <button onClick={handleCreateProject} className={styles.createButton}>
-            OK
+          <button
+            onClick={handleCreateProject}
+            className={styles.createButton}
+            disabled={projectCreating}
+          >
+            {projectCreating
+              ? <Spinner size="sm" label="Creating project" />
+              : "OK"}
           </button>
+        </div>
+      )}
+      {projectCreating && (
+        <div className={styles.creatingHint}>
+          <Spinner size="sm" label="Creating project" />
+          Creating project…
         </div>
       )}
 

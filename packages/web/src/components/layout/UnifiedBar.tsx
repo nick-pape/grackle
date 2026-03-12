@@ -1,7 +1,7 @@
 import { useState, useEffect, type FormEvent, type JSX } from "react";
 import { useGrackle } from "../../context/GrackleContext.js";
 import type { ViewMode } from "../../App.js";
-import { ConfirmDialog } from "../display/index.js";
+import { ConfirmDialog, Spinner } from "../display/index.js";
 import styles from "./UnifiedBar.module.scss";
 
 /** Props for the UnifiedBar component. */
@@ -42,6 +42,7 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
     spawn, sendInput, kill, sessions, tasks, environments,
     createTask, startTask, approveTask, rejectTask, deleteTask, addEnvironment,
     codespaces, codespaceError, codespaceCreating, listCodespaces, createCodespace,
+    taskStartingId,
   } = useGrackle();
 
   const [text, setText] = useState("");
@@ -477,15 +478,25 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
 
     // Pending + unblocked
     if (task.status === "pending" || task.status === "assigned") {
+      const isStarting = taskStartingId === task.id;
       return (
         <>
           {confirmDialog}
           <div className={styles.bar}>
+            {isStarting && (
+              <span className={styles.creatingHint}>
+                <Spinner size="sm" label="Starting task" />
+                Starting task…
+              </span>
+            )}
             <button
               onClick={() => startTask(task.id)}
               className={styles.btnPrimary}
+              disabled={isStarting}
             >
-              Start Task
+              {isStarting
+                ? <span className={styles.btnLoadingContent}><Spinner size="sm" label="Starting" /> Starting…</span>
+                : "Start Task"}
             </button>
             <button
               onClick={() => setShowDeleteTaskConfirm(true)}
@@ -619,6 +630,7 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
 
     // Failed
     if (task.status === "failed") {
+      const isRetrying = taskStartingId === task.id;
       return (
         <>
           {confirmDialog}
@@ -626,11 +638,20 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
             <span className={`${styles.statusText} ${styles.statusFailed}`}>
               Task failed
             </span>
+            {isRetrying && (
+              <span className={styles.creatingHint}>
+                <Spinner size="sm" label="Starting task" />
+                Starting task…
+              </span>
+            )}
             <button
               onClick={() => startTask(task.id)}
               className={styles.btnPrimary}
+              disabled={isRetrying}
             >
-              Retry
+              {isRetrying
+                ? <span className={styles.btnLoadingContent}><Spinner size="sm" label="Starting" /> Starting…</span>
+                : "Retry"}
             </button>
             <button
               onClick={() => setShowDeleteTaskConfirm(true)}

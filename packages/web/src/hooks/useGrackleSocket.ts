@@ -354,6 +354,8 @@ export interface UseGrackleSocketResult {
   codespaceCreating: boolean;
   listCodespaces: () => void;
   createCodespace: (repo: string) => void;
+  projectCreating: boolean;
+  taskStartingId: string | undefined;
 }
 
 export function useGrackleSocket(url?: string): UseGrackleSocketResult {
@@ -381,6 +383,8 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
   const [codespaces, setCodespaces] = useState<Codespace[]>([]);
   const [codespaceError, setCodespaceError] = useState("");
   const [codespaceCreating, setCodespaceCreating] = useState(false);
+  const [projectCreating, setProjectCreating] = useState(false);
+  const [taskStartingId, setTaskStartingId] = useState<string | undefined>(undefined);
 
   const send = useCallback((msg: WsMessage) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -487,6 +491,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
             );
             break;
           case "project_created":
+            setProjectCreating(false);
             send({ type: "list_projects" });
             break;
           case "project_archived":
@@ -525,6 +530,9 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
           case "task_started": {
             const tp = msg.payload;
             if (!isObject(tp)) break;
+            setTaskStartingId((prev) =>
+              tp.taskId && prev === tp.taskId ? undefined : prev,
+            );
             if (tp.sessionId) {
               send({ type: "list_sessions" });
             }
@@ -676,6 +684,8 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
       ws.onclose = () => {
         setConnected(false);
         wsRef.current = undefined;
+        setProjectCreating(false);
+        setTaskStartingId(undefined);
         clearInterval(envPollTimer);
         clearTimeout(reconnectTimer);
         reconnectTimer = setTimeout(connect, WS_RECONNECT_DELAY_MS);
@@ -756,6 +766,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
       repoUrl?: string,
       defaultEnvironmentId?: string,
     ) => {
+      setProjectCreating(true);
       send({
         type: "create_project",
         payload: {
@@ -811,6 +822,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
 
   const startTask = useCallback(
     (taskId: string, runtime?: string, model?: string) => {
+      setTaskStartingId(taskId);
       send({
         type: "start_task",
         payload: { taskId, runtime: runtime || "", model: model || "" },
@@ -1001,5 +1013,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
     codespaceCreating,
     listCodespaces,
     createCodespace,
+    projectCreating,
+    taskStartingId,
   };
 }
