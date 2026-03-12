@@ -120,7 +120,9 @@ function isEnvironment(v: unknown): v is Environment {
     typeof v.id === "string" &&
     typeof v.displayName === "string" &&
     typeof v.adapterType === "string" &&
-    typeof v.status === "string"
+    typeof v.defaultRuntime === "string" &&
+    typeof v.status === "string" &&
+    typeof v.bootstrapped === "boolean"
   );
 }
 
@@ -129,7 +131,10 @@ function isSession(v: unknown): v is Session {
     isObject(v) &&
     typeof v.id === "string" &&
     typeof v.environmentId === "string" &&
-    typeof v.status === "string"
+    typeof v.runtime === "string" &&
+    typeof v.status === "string" &&
+    typeof v.prompt === "string" &&
+    typeof v.startedAt === "string"
   );
 }
 
@@ -138,12 +143,22 @@ function isSessionEvent(v: unknown): v is SessionEvent {
     isObject(v) &&
     typeof v.sessionId === "string" &&
     typeof v.eventType === "string" &&
+    typeof v.timestamp === "string" &&
     typeof v.content === "string"
   );
 }
 
 function isProject(v: unknown): v is Project {
-  return isObject(v) && typeof v.id === "string" && typeof v.name === "string";
+  return (
+    isObject(v) &&
+    typeof v.id === "string" &&
+    typeof v.name === "string" &&
+    typeof v.description === "string" &&
+    typeof v.repoUrl === "string" &&
+    typeof v.defaultEnvironmentId === "string" &&
+    typeof v.status === "string" &&
+    typeof v.createdAt === "string"
+  );
 }
 
 function isTaskData(v: unknown): v is TaskData {
@@ -151,7 +166,13 @@ function isTaskData(v: unknown): v is TaskData {
     isObject(v) &&
     typeof v.id === "string" &&
     typeof v.projectId === "string" &&
-    typeof v.title === "string"
+    typeof v.title === "string" &&
+    typeof v.status === "string" &&
+    typeof v.branch === "string" &&
+    typeof v.sortOrder === "number" &&
+    typeof v.depth === "number" &&
+    Array.isArray(v.dependsOn) &&
+    Array.isArray(v.childTaskIds)
   );
 }
 
@@ -159,7 +180,14 @@ function isFindingData(v: unknown): v is FindingData {
   return (
     isObject(v) &&
     typeof v.id === "string" &&
-    typeof v.title === "string"
+    typeof v.projectId === "string" &&
+    typeof v.taskId === "string" &&
+    typeof v.sessionId === "string" &&
+    typeof v.category === "string" &&
+    typeof v.title === "string" &&
+    typeof v.content === "string" &&
+    Array.isArray(v.tags) &&
+    typeof v.createdAt === "string"
   );
 }
 
@@ -167,7 +195,10 @@ function isTokenInfo(v: unknown): v is TokenInfo {
   return (
     isObject(v) &&
     typeof v.name === "string" &&
-    typeof v.tokenType === "string"
+    typeof v.tokenType === "string" &&
+    typeof v.envVar === "string" &&
+    typeof v.filePath === "string" &&
+    typeof v.expiresAt === "string"
   );
 }
 
@@ -191,7 +222,9 @@ function isCodespace(v: unknown): v is Codespace {
   return (
     isObject(v) &&
     typeof v.name === "string" &&
-    typeof v.repository === "string"
+    typeof v.repository === "string" &&
+    typeof v.state === "string" &&
+    typeof v.gitStatus === "string"
   );
 }
 
@@ -392,7 +425,11 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
         }, ENV_POLL_INTERVAL_MS);
       };
 
-      ws.onmessage = (e: MessageEvent<string>) => {
+      ws.onmessage = (e: MessageEvent<unknown>) => {
+        if (typeof e.data !== "string") {
+          console.warn("[ws] Received non-string WebSocket message; ignoring");
+          return;
+        }
         const msg = parseWsMessage(e.data);
         if (!msg) return;
         switch (msg.type) {
