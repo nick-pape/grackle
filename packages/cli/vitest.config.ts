@@ -6,5 +6,6 @@ export default defineConfig({
     environment: "node",
     testTimeout: 10_000,
     isolate: true,
+    passWithNoTests: true,
   },
 });
