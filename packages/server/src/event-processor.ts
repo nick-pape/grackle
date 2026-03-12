@@ -192,18 +192,29 @@ export function processEventStream(
         sessionStore.updateSession(sessionId, "completed");
       }
     } catch (err) {
-      sessionStore.updateSession(sessionId, "failed", undefined, String(err));
-
-      // Publish a failure event so streaming clients are notified
-      streamHub.publish(create(grackle.SessionEventSchema, {
-        sessionId,
-        type: grackle.EventType.STATUS,
-        timestamp: new Date().toISOString(),
-        content: "failed",
-        raw: String(err),
-      }));
-
-      onError?.(err);
+      const current = sessionStore.getSession(sessionId);
+      if (current && current.status === "waiting_input") {
+        // Session was idle (agent finished work). Transport error is not a task failure.
+        logger.info({ sessionId, err: String(err) }, "Stream ended while session idle — marking completed");
+        sessionStore.updateSession(sessionId, "completed");
+        streamHub.publish(create(grackle.SessionEventSchema, {
+          sessionId,
+          type: grackle.EventType.STATUS,
+          timestamp: new Date().toISOString(),
+          content: "completed",
+        }));
+      } else {
+        // Genuine failure during active work.
+        sessionStore.updateSession(sessionId, "failed", undefined, String(err));
+        streamHub.publish(create(grackle.SessionEventSchema, {
+          sessionId,
+          type: grackle.EventType.STATUS,
+          timestamp: new Date().toISOString(),
+          content: "failed",
+          raw: String(err),
+        }));
+        onError?.(err);
+      }
     } finally {
       logWriter.endSession(logPath);
       try { writeTranscript(logPath); } catch { /* non-critical */ }

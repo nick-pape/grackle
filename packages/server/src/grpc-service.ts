@@ -26,6 +26,7 @@ import { grackleHome } from "./paths.js";
 import { safeParseJsonArray } from "./json-helpers.js";
 import { slugify } from "./utils/slugify.js";
 import { buildTaskSystemContext } from "./utils/system-context.js";
+import { importGitHubIssues as executeGitHubImport } from "./github-import.js";
 
 function envRowToProto(row: EnvironmentRow): grackle.Environment {
   return create(grackle.EnvironmentSchema, {
@@ -654,6 +655,24 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       return create(grackle.FindingListSchema, {
         findings: rows.map(findingRowToProto),
       });
+    },
+
+    // ─── GitHub Import ────────────────────────────────────────
+
+    async importGitHubIssues(req: grackle.ImportGitHubIssuesRequest) {
+      if (req.state === grackle.IssueState.UNSPECIFIED) {
+        throw new Error("state must be OPEN or CLOSED");
+      }
+      const stateStr = req.state === grackle.IssueState.CLOSED ? "closed" : "open";
+      const result = await executeGitHubImport(
+        req.projectId,
+        req.repo,
+        stateStr,
+        req.label ?? undefined,
+        req.environmentId ?? undefined,
+      );
+
+      return create(grackle.ImportGitHubIssuesResponseSchema, result);
     },
 
     // ─── Diff ────────────────────────────────────────────────
