@@ -1,4 +1,4 @@
-name: CD
+name: Publish
 
 on:
   push:
@@ -32,18 +32,8 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Install
-        run: node common/scripts/install-run-rush.js install
-
-      - name: Build
-        run: node common/scripts/install-run-rush.js build
-
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
-        working-directory: packages/web
-
-      - name: Run tests
-        run: node common/scripts/install-run-rush.js test --verbose
+      - name: Build and test
+        uses: ./.github/actions/build-and-test
 
       # In lockStepVersion mode, `rush version --bump` only consumes changefiles
       # for the mainProject (@grackle-ai/cli). Changefiles targeting other
@@ -165,12 +155,8 @@ jobs:
           git commit -m "chore: bump versions [skip ci]"
           git push origin main
 
-      - name: Rebuild with bumped versions
-        if: steps.bump.outputs.has_bump == 'true'
-        run: |
-          node common/scripts/install-run-rush.js install
-          node common/scripts/install-run-rush.js build
-
+      # No rebuild needed — rush publish packages the existing dist/ output
+      # with the bumped package.json version. Compiled JS is version-independent.
       - name: Publish to npm
         if: steps.bump.outputs.has_bump == 'true'
         run: node common/scripts/install-run-rush.js publish --include-all --publish --set-access-level public
