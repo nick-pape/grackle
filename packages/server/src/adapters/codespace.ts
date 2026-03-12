@@ -12,6 +12,9 @@ import {
   remoteStop,
   remoteDestroy,
   remoteHealthCheck,
+  writeRemoteEnvFile,
+  probeRemotePowerLine,
+  startRemotePowerLine,
   SSH_CONNECTIVITY_TIMEOUT_MS,
   REMOTE_EXEC_DEFAULT_TIMEOUT_MS,
 } from "./remote-adapter-utils.js";
@@ -142,6 +145,69 @@ export class CodespaceAdapter implements EnvironmentAdapter {
     registerTunnel(environmentId, { tunnel });
 
     yield { stage: "connecting", message: `Tunnel open, connecting on port ${localPort}...`, progress: 0.90 };
+  }
+
+  /**
+   * Attempt fast reconnect: verify SSH, probe PowerLine, restart if needed, re-open tunnel.
+   * Only falls through to the caller (which triggers full provision) if SSH itself is unreachable.
+   */
+  public async *reconnect(
+    environmentId: string,
+    config: Record<string, unknown>,
+    powerlineToken: string,
+  ): AsyncGenerator<ProvisionEvent> {
+    const cfg = config as unknown as CodespaceEnvironmentConfig;
+    if (!cfg.codespaceName) {
+      throw new Error("Codespace adapter requires a 'codespaceName' in the configuration");
+    }
+
+    const executor = new CodespaceExecutor(cfg.codespaceName);
+
+    // 1. Close any stale tunnel
+    yield { stage: "reconnecting", message: "Closing stale tunnel...", progress: 0.10 };
+    await closeTunnel(environmentId);
+
+    // 2. Test codespace SSH connectivity
+    yield { stage: "reconnecting", message: `Reconnecting to codespace ${cfg.codespaceName}...`, progress: 0.20 };
+    await executor.exec("echo ok", { timeout: SSH_CONNECTIVITY_TIMEOUT_MS });
+
+    // 3. Update env vars file (tokens may have rotated)
+    yield { stage: "reconnecting", message: "Updating environment variables...", progress: 0.30 };
+    await writeRemoteEnvFile(executor, powerlineToken, cfg.env);
+
+    // 4. Probe remote PowerLine — restart if not running
+    yield { stage: "reconnecting", message: "Checking PowerLine process...", progress: 0.40 };
+    try {
+      await probeRemotePowerLine(executor);
+    } catch {
+      // PowerLine is not running — restart it without full reinstall
+      yield { stage: "reconnecting", message: "PowerLine not running, restarting...", progress: 0.50 };
+
+      // Detect the repo working directory (codespaces clone to /workspaces/<name>)
+      let workingDirectory: string | undefined;
+      try {
+        const workspaceDir = (await executor.exec(
+          "ls -d /workspaces/*/ 2>/dev/null | head -1",
+          { timeout: SSH_CONNECTIVITY_TIMEOUT_MS },
+        )).trim().replace(/\/$/, "");
+        if (workspaceDir) {
+          workingDirectory = workspaceDir;
+        }
+      } catch {
+        // Non-fatal — fall back to PowerLine directory
+      }
+
+      await startRemotePowerLine(executor, powerlineToken, cfg.env, workingDirectory);
+    }
+
+    // 5. Open new port-forward tunnel
+    const localPort = cfg.localPort || await findFreePort();
+    yield { stage: "reconnecting", message: `Forwarding local port ${localPort} to codespace...`, progress: 0.70 };
+    const tunnel = new CodespaceTunnel(localPort, cfg.codespaceName);
+    await tunnel.open();
+    registerTunnel(environmentId, { tunnel });
+
+    yield { stage: "reconnecting", message: "Reconnected to codespace", progress: 0.90 };
   }
 
   /** Connect to the PowerLine through the port-forward tunnel. */

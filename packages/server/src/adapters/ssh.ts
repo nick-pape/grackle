@@ -12,6 +12,9 @@ import {
   remoteStop,
   remoteDestroy,
   remoteHealthCheck,
+  writeRemoteEnvFile,
+  probeRemotePowerLine,
+  startRemotePowerLine,
   SSH_CONNECTIVITY_TIMEOUT_MS,
   REMOTE_EXEC_DEFAULT_TIMEOUT_MS,
 } from "./remote-adapter-utils.js";
@@ -156,6 +159,54 @@ export class SshAdapter implements EnvironmentAdapter {
     registerTunnel(environmentId, { tunnel });
 
     yield { stage: "connecting", message: `Tunnel open, connecting on port ${localPort}...`, progress: 0.90 };
+  }
+
+  /**
+   * Attempt fast reconnect: verify SSH, probe PowerLine, restart if needed, re-open tunnel.
+   * Only falls through to the caller (which triggers full provision) if SSH itself is unreachable.
+   */
+  public async *reconnect(
+    environmentId: string,
+    config: Record<string, unknown>,
+    powerlineToken: string,
+  ): AsyncGenerator<ProvisionEvent> {
+    const cfg = config as unknown as SshEnvironmentConfig;
+    if (!cfg.host) {
+      throw new Error("SSH adapter requires a 'host' in the configuration");
+    }
+
+    const executor = new SshExecutor(cfg);
+
+    // 1. Close any stale tunnel
+    yield { stage: "reconnecting", message: "Closing stale tunnel...", progress: 0.10 };
+    await closeTunnel(environmentId);
+
+    // 2. Test SSH connectivity
+    yield { stage: "reconnecting", message: `Reconnecting to ${cfg.host}...`, progress: 0.20 };
+    await executor.exec("echo ok", { timeout: SSH_CONNECTIVITY_TIMEOUT_MS });
+
+    // 3. Update env vars file (tokens may have rotated)
+    yield { stage: "reconnecting", message: "Updating environment variables...", progress: 0.30 };
+    await writeRemoteEnvFile(executor, powerlineToken, cfg.env);
+
+    // 4. Probe remote PowerLine — restart if not running
+    yield { stage: "reconnecting", message: "Checking PowerLine process...", progress: 0.40 };
+    try {
+      await probeRemotePowerLine(executor);
+    } catch {
+      // PowerLine is not running — restart it without full reinstall
+      yield { stage: "reconnecting", message: "PowerLine not running, restarting...", progress: 0.50 };
+      await startRemotePowerLine(executor, powerlineToken, cfg.env);
+    }
+
+    // 5. Open new SSH tunnel
+    const localPort = cfg.localPort || await findFreePort();
+    yield { stage: "reconnecting", message: `Opening SSH tunnel on local port ${localPort}...`, progress: 0.70 };
+    const tunnel = new SshTunnel(localPort, cfg);
+    await tunnel.open();
+    registerTunnel(environmentId, { tunnel });
+
+    yield { stage: "reconnecting", message: "Reconnected via SSH", progress: 0.90 };
   }
 
   /** Connect to the PowerLine through the SSH tunnel. */
