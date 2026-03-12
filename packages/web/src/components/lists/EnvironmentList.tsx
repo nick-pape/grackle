@@ -88,7 +88,7 @@ function EnvironmentCard({
         >
           {"\u25CF"}
         </span>
-        <span className={styles.envName}>{env.displayName || env.id}</span>
+        <span className={styles.envName} title={env.displayName || env.id}>{env.displayName || env.id}</span>
         <span className={styles.envActions}>
           {envSessions.length === 0 && !isNewChatTarget && !expanded && (
             <span className={styles.idleLabel}>(idle)</span>
@@ -154,6 +154,7 @@ function EnvironmentCard({
           key={session.id}
           onClick={() => setViewMode({ kind: "session", sessionId: session.id })}
           className={`${styles.sessionRow} ${selectedSessionId === session.id ? styles.selected : ""}`}
+          title={session.prompt}
         >
           <SessionStatusDot status={session.status} />
           {" "}

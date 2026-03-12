@@ -6,9 +6,9 @@
 
 .container {
   @include glass-panel;
-  width: 260px;
-  min-width: 180px;
-  max-width: 500px;
+  width: 320px;
+  min-width: 220px;
+  max-width: 600px;
   border-right: 1px solid var(--border-subtle);
   display: flex;
   flex-direction: column;

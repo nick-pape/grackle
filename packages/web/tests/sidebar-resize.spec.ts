@@ -6,9 +6,9 @@ test.describe("Sidebar Resize", () => {
     const sidebar = page.locator('[data-testid="sidebar"]');
     const box = await sidebar.boundingBox();
     expect(box).toBeTruthy();
-    // Default width is 260px (allow small tolerance for borders/padding)
-    expect(box!.width).toBeGreaterThanOrEqual(255);
-    expect(box!.width).toBeLessThanOrEqual(270);
+    // Default width is 320px (allow small tolerance for borders/padding)
+    expect(box!.width).toBeGreaterThanOrEqual(315);
+    expect(box!.width).toBeLessThanOrEqual(330);
   });
 
   test("sidebar has CSS resize: horizontal", async ({ appPage }) => {
@@ -81,9 +81,9 @@ test.describe("Sidebar Resize", () => {
     const sidebar = page.locator('[data-testid="sidebar"]');
     const box = await sidebar.boundingBox();
     expect(box).toBeTruthy();
-    // Should fall back to default 260px
-    expect(box!.width).toBeGreaterThanOrEqual(255);
-    expect(box!.width).toBeLessThanOrEqual(270);
+    // Should fall back to default 320px
+    expect(box!.width).toBeGreaterThanOrEqual(315);
+    expect(box!.width).toBeLessThanOrEqual(330);
 
     // Clean up
     await page.evaluate(() => localStorage.removeItem("grackle-sidebar-width"));
@@ -104,9 +104,9 @@ test.describe("Sidebar Resize", () => {
     const sidebar = page.locator('[data-testid="sidebar"]');
     const box = await sidebar.boundingBox();
     expect(box).toBeTruthy();
-    // Should fall back to default 260px (50 is below MIN_SIDEBAR_WIDTH)
-    expect(box!.width).toBeGreaterThanOrEqual(255);
-    expect(box!.width).toBeLessThanOrEqual(270);
+    // Should fall back to default 320px (50 is below MIN_SIDEBAR_WIDTH)
+    expect(box!.width).toBeGreaterThanOrEqual(315);
+    expect(box!.width).toBeLessThanOrEqual(330);
 
     // Clean up
     await page.evaluate(() => localStorage.removeItem("grackle-sidebar-width"));
@@ -123,8 +123,8 @@ test.describe("Sidebar Resize", () => {
 
     const box = await sidebar.boundingBox();
     expect(box).toBeTruthy();
-    // CSS min-width: 180px should prevent it from going below 180
-    expect(box!.width).toBeGreaterThanOrEqual(175);
+    // CSS min-width: 220px should prevent it from going below 220
+    expect(box!.width).toBeGreaterThanOrEqual(215);
   });
 
   test("sidebar respects max-width constraint", async ({ appPage }) => {
@@ -138,7 +138,7 @@ test.describe("Sidebar Resize", () => {
 
     const box = await sidebar.boundingBox();
     expect(box).toBeTruthy();
-    // CSS max-width: 500px should cap it
-    expect(box!.width).toBeLessThanOrEqual(510);
+    // CSS max-width: 600px should cap it
+    expect(box!.width).toBeLessThanOrEqual(610);
   });
 });

@@ -1,7 +1,7 @@
 import type { Command } from "commander";
 import chalk from "chalk";
 import { createGrackleClient } from "../client.js";
-import { grackle, sessionStatusToString } from "@grackle-ai/common";
+import { grackle } from "@grackle-ai/common";
 import Table from "cli-table3";
 
 /** Register agent-related commands: `spawn`, `resume`, `status`, `kill`, and `attach`. */
@@ -48,14 +48,9 @@ export function registerAgentCommands(program: Command): void {
       const client = createGrackleClient();
       const res = await client.listSessions({
         environmentId: opts.env || "",
-        status: grackle.SessionStatus.UNSPECIFIED,
+        status: "",
       });
-      const activeStatuses = new Set([
-        grackle.SessionStatus.PENDING,
-        grackle.SessionStatus.RUNNING,
-        grackle.SessionStatus.WAITING_INPUT,
-        grackle.SessionStatus.SUSPENDED,
-      ]);
+      const activeStatuses = new Set(["pending", "running", "waiting_input", "suspended"]);
       const sessions = opts.all
         ? res.sessions
         : res.sessions.filter((s) => activeStatuses.has(s.status));
@@ -68,7 +63,7 @@ export function registerAgentCommands(program: Command): void {
       });
       for (const s of sessions) {
         const prompt = s.prompt.length > 40 ? s.prompt.slice(0, 40) + "..." : s.prompt;
-        table.push([s.id.slice(0, 8), s.environmentId, s.runtime, sessionStatusToString(s.status), prompt, s.startedAt]);
+        table.push([s.id.slice(0, 8), s.environmentId, s.runtime, s.status, prompt, s.startedAt]);
       }
       console.log(table.toString());
     });

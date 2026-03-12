@@ -496,6 +496,31 @@ export async function* bootstrapPowerLine(
     throw new Error("git is not installed on the remote host. Install git and try again.");
   }
 
+  // 2.5. Capture GITHUB_TOKEN from remote host if the server doesn't have one to forward.
+  //      In GitHub Codespaces, GITHUB_TOKEN is injected by the platform but is NOT
+  //      available via `printenv` in SSH sessions. It lives in a shared env file at
+  //      /workspaces/.codespaces/shared/.env (format: GITHUB_TOKEN=ghu_...).
+  //      Fall back to printenv for non-codespace environments (e.g. SSH with real shells).
+  let enrichedExtraEnv = extraEnv;
+  const hasLocalToken = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
+  const hasAdapterToken = extraEnv?.GITHUB_TOKEN || extraEnv?.GH_TOKEN;
+  if (!hasLocalToken && !hasAdapterToken) {
+    try {
+      const remoteToken = (
+        await executor.exec(
+          `(grep -m1 '^GITHUB_TOKEN=' /workspaces/.codespaces/shared/.env 2>/dev/null | cut -d= -f2- || grep -m1 '^GH_TOKEN=' /workspaces/.codespaces/shared/.env 2>/dev/null | cut -d= -f2- || printenv GITHUB_TOKEN 2>/dev/null || printenv GH_TOKEN 2>/dev/null || true)`,
+          { timeout: SSH_CONNECTIVITY_TIMEOUT_MS },
+        )
+      ).trim();
+      if (remoteToken) {
+        enrichedExtraEnv = { ...extraEnv, GITHUB_TOKEN: remoteToken };
+        logger.info("Captured GITHUB_TOKEN from remote host for agent git operations");
+      }
+    } catch {
+      logger.debug("Could not read GITHUB_TOKEN from remote host");
+    }
+  }
+
   // 3. Install PowerLine — dev mode (copy artifacts) vs production (npm install)
   const devMode = isDevMode();
 
@@ -572,6 +597,26 @@ export async function* bootstrapPowerLine(
 
   logger.info({ devMode }, "PowerLine bootstrap mode");
 
+  // 4. Configure git credential helper so agents can push to GitHub.
+  //    Writes a small shell script that provides GITHUB_TOKEN (from PowerLine's env)
+  //    as the password for HTTPS git operations. Stored in the PowerLine directory
+  //    so destroy() cleans it up.
+  yield { stage: "bootstrapping", message: "Configuring git credentials...", progress: 0.56 };
+  try {
+    const credHelperScript = '#!/bin/sh\ntest "$1" = get || exit 0\necho "username=x-access-token"\necho "password=${GITHUB_TOKEN:-$GH_TOKEN}"\n';
+    const credHelperBase64 = Buffer.from(credHelperScript, "utf8").toString("base64");
+    const credHelperPath = `${REMOTE_POWERLINE_DIRECTORY}/git-credential-github.sh`;
+    await executor.exec(
+      `node -e "require('fs').writeFileSync(process.argv[1],Buffer.from(process.argv[2],'base64').toString('utf8'),{mode:0o755})" `
+      + `"${credHelperPath}" '${credHelperBase64}'`
+      + ` && git config --global credential.helper "${credHelperPath}"`,
+      { timeout: REMOTE_EXEC_DEFAULT_TIMEOUT_MS },
+    );
+    logger.info("Git credential helper configured at %s", credHelperPath);
+  } catch (err) {
+    logger.warn({ err }, "Failed to configure git credential helper (agents may be unable to push)");
+  }
+
   // 7. Copy Claude Code credentials for subscription auth (if present on host).
   //    Stored under the PowerLine directory so destroy() cleans them up.
   const hostCredsPath = join(homedir(), ".claude", ".credentials.json");
@@ -612,7 +657,7 @@ export async function* bootstrapPowerLine(
 
   // 9–11. Write env vars, start process, wait, verify
   yield { stage: "bootstrapping", message: "Starting PowerLine on remote host...", progress: 0.65 };
-  await startRemotePowerLine(executor, powerlineToken, { extraEnv, workingDirectory });
+  await startRemotePowerLine(executor, powerlineToken, { extraEnv: enrichedExtraEnv, workingDirectory });
 
   yield { stage: "bootstrapping", message: "PowerLine is running on remote host", progress: 0.75 };
 }
@@ -733,6 +778,8 @@ export async function remoteDestroy(environmentId: string, executor: RemoteExecu
       `${buildRemoteKillCommand()}; `
       + 'CRED="$HOME/.claude/.credentials.json"; '
       + `if [ -L "$CRED" ]; then case "$(readlink "$CRED" 2>/dev/null)" in ${REMOTE_POWERLINE_DIRECTORY}/*) rm -f "$CRED";; esac; fi; `
+      + `HELPER="$(git config --global credential.helper 2>/dev/null || true)"; `
+      + `case "$HELPER" in ${REMOTE_POWERLINE_DIRECTORY}/*) git config --global --unset credential.helper 2>/dev/null || true;; esac; `
       + `rm -rf ${REMOTE_POWERLINE_DIRECTORY}`,
     );
   } catch (err) {

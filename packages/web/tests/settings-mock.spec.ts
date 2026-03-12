@@ -1,4 +1,4 @@
-import { test as base, expect } from "@playwright/test";
+import { test as base, expect } from "./fixtures.js";
 
 /**
  * Mock-mode settings page tests.
