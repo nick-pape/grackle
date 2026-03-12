@@ -347,6 +347,12 @@ export async function startRemotePowerLine(
   options: StartRemotePowerLineOptions = {},
 ): Promise<{ alreadyRunning: boolean }> {
   const { extraEnv, workingDirectory, autoDetectWorkspace, probeFirst } = options;
+
+  // Validate workingDirectory to prevent shell injection — must be an absolute POSIX path
+  if (workingDirectory && !/^\/[\w./-]+$/.test(workingDirectory)) {
+    throw new Error(`Invalid working directory: ${workingDirectory}`);
+  }
+
   const envLines = writeRemoteEnvFileLines(powerlineToken, extraEnv);
 
   const devMode = isDevMode();
@@ -411,8 +417,8 @@ export async function startRemotePowerLine(
     ? `. ${REMOTE_POWERLINE_DIRECTORY}/.env.sh && `
     : "";
   parts.push(
-    `cd ${startDirExpr} && ${sourceEnv}`
-    + `${SPAWN_SCRIPT} ${absoluteEntryPoint} ${pidFilePath} ${logFilePath}`,
+    `cd "${startDirExpr}" && ${sourceEnv}`
+    + `${SPAWN_SCRIPT} "${absoluteEntryPoint}" "${pidFilePath}" "${logFilePath}"`,
   );
 
   // 4. Probe (after a brief pause for the port to bind)
@@ -431,9 +437,11 @@ export async function startRemotePowerLine(
     }
     logger.info("Remote PowerLine is listening on port %d", DEFAULT_POWERLINE_PORT);
     return { alreadyRunning: false };
-  } catch {
+  } catch (err) {
+    const detail = err instanceof Error ? err.message : String(err);
+    logger.info("Failed to start remote PowerLine: %s", detail);
     throw new Error(
-      "PowerLine process died immediately after starting. Check ~/.grackle/powerline.log on the remote host.",
+      `PowerLine process died immediately after starting. Check ~/.grackle/powerline.log on the remote host. Cause: ${detail}`,
     );
   }
 }

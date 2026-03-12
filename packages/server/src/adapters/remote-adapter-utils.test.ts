@@ -199,7 +199,7 @@ describe("startRemotePowerLine", () => {
 
     const calls = (executor.exec as ReturnType<typeof vi.fn>).mock.calls;
     expect(calls).toHaveLength(1);
-    expect(calls[0][0]).toContain("cd /workspaces/myrepo");
+    expect(calls[0][0]).toContain('cd "/workspaces/myrepo"');
   });
 
   it("auto-detects workspace directory when autoDetectWorkspace is true", async () => {
