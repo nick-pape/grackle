@@ -3,3 +3,4 @@
  * @module display
  */
 export { EventRenderer } from "./EventRenderer.js";
+export { ConfirmDialog } from "./ConfirmDialog.js";
