@@ -1,0 +1,10 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/rush/v5/rush-change.schema.json",
+  "changes": [
+    {
+      "packageName": "@grackle-ai/cli",
+      "comment": "Remove proto enums that shadow hand-written string union types",
+      "type": "patch"
+    }
+  ]
+}
