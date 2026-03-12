@@ -61,7 +61,7 @@ export function SettingsPanel(): JSX.Element {
         </p>
 
         {tokens.length === 0 ? (
-          <div className={styles.emptyState}>No tokens configured</div>
+          <div className={styles.emptyStateInfo}>Add your first API token to enable service integrations.</div>
         ) : (
           <div className={styles.tokenList}>
             {tokens.map((t) => (

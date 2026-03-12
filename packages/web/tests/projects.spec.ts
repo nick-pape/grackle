@@ -57,7 +57,7 @@ test.describe("Projects", () => {
     await page.getByText("task-test").click();
 
     // Click the "New task" + button scoped to this project's row
-    await page.getByText("task-test").locator("..").locator('button[title="New task"]').click();
+    await page.getByText("task-test").locator("..").locator('button[title="New task"]').first().click();
 
     // UnifiedBar should show new task form
     await expect(page.getByText("new task")).toBeVisible();
@@ -75,8 +75,8 @@ test.describe("Projects", () => {
     const envSelect = page.locator("select");
     await envSelect.selectOption("test-local");
 
-    // Click Create
-    await page.locator("button", { hasText: "Create" }).click();
+    // Click Create (exact match to avoid matching "Create Task" CTA)
+    await page.locator("button", { hasText: /^Create$/ }).click();
 
     // Task should appear in the sidebar under the project
     await expect(page.getByText("implement feature")).toBeVisible({ timeout: 5_000 });
@@ -93,10 +93,10 @@ test.describe("Projects", () => {
     await expect(page.getByText("view-test")).toBeVisible({ timeout: 5_000 });
 
     await page.getByText("view-test").click();
-    await page.getByText("view-test").locator("..").locator('button[title="New task"]').click();
+    await page.getByText("view-test").locator("..").locator('button[title="New task"]').first().click();
     await page.locator('input[placeholder="Task title..."]').fill("my task");
     await page.locator("select").selectOption("test-local");
-    await page.locator("button", { hasText: "Create" }).click();
+    await page.locator("button", { hasText: /^Create$/ }).click();
     await expect(page.getByText("my task")).toBeVisible({ timeout: 5_000 });
 
     // Click task to navigate to task view

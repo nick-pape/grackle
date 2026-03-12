@@ -198,8 +198,16 @@ export function EnvironmentList({ viewMode, setViewMode }: Props): JSX.Element {
       </div>
 
       {environments.length === 0 && (
-        <div className={styles.emptyState}>
-          No environments. Click + to add one.
+        <div className={styles.emptyCta}>
+          <button
+            className={styles.ctaButton}
+            onClick={() => setViewMode({ kind: "new_environment" })}
+          >
+            Add Environment
+          </button>
+          <div className={styles.ctaDescription}>
+            Connect an environment to run agents
+          </div>
         </div>
       )}
 

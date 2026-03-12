@@ -117,7 +117,7 @@ test.describe("Task tree hierarchy", () => {
 
     // Fill in child task title and create
     await page.locator('input[placeholder="Task title..."]').fill("ac-child");
-    await page.locator("button", { hasText: "Create" }).click();
+    await page.locator("button", { hasText: /^Create$/ }).click();
 
     // Child should appear in the sidebar under the parent
     await expect(page.getByText("ac-child")).toBeVisible({ timeout: 5_000 });

@@ -188,3 +188,52 @@
   font-size: 11px;
   color: var(--text-tertiary);
 }
+
+// ---------------------------------------------------------------------------
+// Empty state CTAs
+// ---------------------------------------------------------------------------
+
+.emptyCta {
+  margin: var(--space-md);
+  padding: var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
+  text-align: center;
+  border: 1px dashed var(--border-subtle);
+  border-radius: var(--radius-md);
+  animation: fadeIn 200ms ease forwards;
+}
+
+.ctaDescription {
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+  line-height: var(--line-height);
+}
+
+.ctaButton {
+  @include btn-primary;
+  padding: var(--space-sm) var(--space-lg);
+  font-size: var(--font-size-sm);
+}
+
+.emptyTaskCta {
+  padding: 3px var(--space-md) 3px 50px;
+  font-size: 11px;
+}
+
+.createTaskLink {
+  background: none;
+  border: none;
+  color: var(--accent-green);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+
+  &:hover {
+    color: var(--text-primary);
+  }
+}
