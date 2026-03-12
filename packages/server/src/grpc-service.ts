@@ -117,38 +117,46 @@ function findingRowToProto(row: findingStore.FindingRow): grackle.Finding {
   });
 }
 
+/** Safely parse a JSON string, returning the fallback value on failure. */
+function safeParseJson<T>(value: string | undefined, fallback: T): T {
+  if (!value) {
+    return fallback;
+  }
+  try {
+    return JSON.parse(value) as T;
+  } catch {
+    return fallback;
+  }
+}
+
 /** Convert a persona database row to a Persona proto message. */
 function personaRowToProto(row: personaStore.PersonaRow): grackle.Persona {
-  const toolConfig = JSON.parse(row.toolConfig || "{}") as {
-    allowedTools?: string[];
-    disallowedTools?: string[];
-  };
-  const mcpServers = JSON.parse(row.mcpServers || "[]") as {
-    name: string;
-    command: string;
-    args?: string[];
-    tools?: string[];
-  }[];
+  const toolConfig = safeParseJson<{ allowedTools?: string[]; disallowedTools?: string[] }>(row.toolConfig, {});
+  const mcpServers = safeParseJson<{ name: string; command: string; args?: string[]; tools?: string[] }[]>(row.mcpServers, []);
   return create(grackle.PersonaSchema, {
     id: row.id,
     name: row.name,
     description: row.description,
     systemPrompt: row.systemPrompt,
     toolConfig: create(grackle.ToolConfigSchema, {
-      allowedTools: toolConfig.allowedTools || [],
-      disallowedTools: toolConfig.disallowedTools || [],
+      allowedTools: Array.isArray(toolConfig.allowedTools) ? toolConfig.allowedTools.filter((t): t is string => typeof t === "string") : [],
+      disallowedTools: Array.isArray(toolConfig.disallowedTools) ? toolConfig.disallowedTools.filter((t): t is string => typeof t === "string") : [],
     }),
     runtime: row.runtime,
     model: row.model,
     maxTurns: row.maxTurns,
-    mcpServers: mcpServers.map((s) =>
-      create(grackle.McpServerConfigSchema, {
-        name: s.name,
-        command: s.command,
-        args: s.args || [],
-        tools: s.tools || [],
-      }),
-    ),
+    mcpServers: mcpServers
+      .filter((s): s is { name: string; command: string; args?: string[]; tools?: string[] } =>
+        typeof s === "object" && s !== null && typeof s.name === "string" && typeof s.command === "string",
+      )
+      .map((s) =>
+        create(grackle.McpServerConfigSchema, {
+          name: s.name,
+          command: s.command,
+          args: Array.isArray(s.args) ? s.args.filter((a): a is string => typeof a === "string") : [],
+          tools: Array.isArray(s.tools) ? s.tools.filter((t): t is string => typeof t === "string") : [],
+        }),
+      ),
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   });
@@ -328,6 +336,9 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       const persona = req.personaId
         ? personaStore.getPersona(req.personaId)
         : undefined;
+      if (req.personaId && !persona) {
+        throw new Error(`Persona not found: ${req.personaId}`);
+      }
 
       const sessionId = uuid();
       const runtime = req.runtime || persona?.runtime || env.defaultRuntime;
@@ -841,9 +852,13 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       if (!req.systemPrompt)
         throw new Error("Persona system_prompt is required");
 
+      // Enforce unique ID and unique name
       let id = slugify(req.name) || uuid().slice(0, 8);
       if (personaStore.getPersona(id)) {
         id = `${id}-${uuid().slice(0, 4)}`;
+      }
+      if (personaStore.getPersonaByName(req.name)) {
+        throw new Error(`Persona with name "${req.name}" already exists`);
       }
 
       const toolConfigJson = JSON.stringify({
@@ -885,28 +900,48 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       const existing = personaStore.getPersona(req.id);
       if (!existing) throw new Error(`Persona not found: ${req.id}`);
 
-      const toolConfigJson = JSON.stringify({
-        allowedTools: [...(req.toolConfig?.allowedTools || [])],
-        disallowedTools: [...(req.toolConfig?.disallowedTools || [])],
-      });
-      const mcpServersJson = JSON.stringify(
-        req.mcpServers.map((s) => ({
-          name: s.name,
-          command: s.command,
-          args: [...s.args],
-          tools: [...s.tools],
-        })),
-      );
+      // Only update toolConfig/mcpServers if the request provides non-empty values;
+      // otherwise keep the existing stored value.
+      const hasNewToolConfig =
+        !!req.toolConfig &&
+        ((req.toolConfig.allowedTools && req.toolConfig.allowedTools.length > 0) ||
+          (req.toolConfig.disallowedTools && req.toolConfig.disallowedTools.length > 0));
+      const toolConfigJson = hasNewToolConfig
+        ? JSON.stringify({
+            allowedTools: [...(req.toolConfig?.allowedTools || [])],
+            disallowedTools: [...(req.toolConfig?.disallowedTools || [])],
+          })
+        : existing.toolConfig;
+
+      const hasNewMcpServers = Array.isArray(req.mcpServers) && req.mcpServers.length > 0;
+      const mcpServersJson = hasNewMcpServers
+        ? JSON.stringify(
+            req.mcpServers.map((s) => ({
+              name: s.name,
+              command: s.command,
+              args: [...s.args],
+              tools: [...s.tools],
+            })),
+          )
+        : existing.mcpServers;
+
+      // Treat empty string / 0 as "not set" and keep existing value
+      const name = req.name || existing.name;
+      const description = req.description || existing.description;
+      const systemPrompt = req.systemPrompt || existing.systemPrompt;
+      const runtime = req.runtime || existing.runtime;
+      const model = req.model || existing.model;
+      const maxTurns = req.maxTurns === 0 ? existing.maxTurns : req.maxTurns;
 
       personaStore.updatePersona(
         req.id,
-        req.name || existing.name,
-        req.description,
-        req.systemPrompt || existing.systemPrompt,
+        name,
+        description,
+        systemPrompt,
         toolConfigJson,
-        req.runtime,
-        req.model,
-        req.maxTurns,
+        runtime,
+        model,
+        maxTurns,
         mcpServersJson,
       );
       broadcast({ type: "persona_updated", payload: { personaId: req.id } });

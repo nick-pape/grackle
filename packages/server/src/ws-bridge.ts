@@ -687,6 +687,10 @@ async function handleMessage(
       const persona = personaId
         ? personaStore.getPersona(personaId)
         : undefined;
+      if (personaId && !persona) {
+        sendWs(ws, { type: "error", payload: { message: `Persona not found: ${personaId}` } });
+        return;
+      }
 
       const runtime =
         (msg.payload?.runtime as string) ||
@@ -730,12 +734,22 @@ async function handleMessage(
       // Build MCP servers JSON from persona if available
       let mcpServersJson = "";
       if (persona) {
-        const mcpServers = JSON.parse(persona.mcpServers || "[]") as {
+        let mcpServers: {
           name: string;
           command: string;
           args?: string[];
           tools?: string[];
-        }[];
+        }[] = [];
+        try {
+          const parsed: unknown = JSON.parse(persona.mcpServers || "[]");
+          if (Array.isArray(parsed)) {
+            mcpServers = parsed as typeof mcpServers;
+          } else {
+            logger.warn("Expected persona.mcpServers to be a JSON array; ignoring invalid value");
+          }
+        } catch (err) {
+          logger.warn({ error: err }, "Failed to parse persona.mcpServers JSON; ignoring value");
+        }
         if (mcpServers.length > 0) {
           const obj: Record<string, unknown> = {};
           for (const s of mcpServers) {
