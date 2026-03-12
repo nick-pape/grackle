@@ -1,9 +1,8 @@
 import type { Command } from "commander";
 import { createGrackleClient } from "../client.js";
-import { taskStatusToString } from "@grackle-ai/common";
+import { taskStatusToString, issueStateToEnum } from "@grackle-ai/common";
 import Table from "cli-table3";
 import chalk from "chalk";
-import { execFileSync } from "node:child_process";
 
 export function registerTaskCommands(program: Command): void {
   const task = program.command("task").description("Manage tasks");
@@ -117,98 +116,26 @@ export function registerTaskCommands(program: Command): void {
     .option("--label <label>", "Filter issues by label name")
     .option("--state <state>", "Issue state to fetch", "open")
     .option("--env <env-id>", "Environment ID to assign to created tasks")
-    .action(
-      /**
-       * Fetches GitHub issues via the `gh` CLI, deduplicates against existing
-       * tasks (matched by issue number prefix `#<number>:`), and bulk-creates
-       * any issues that have not yet been imported into the given project.
-       *
-       * @param projectId - The Grackle project ID to import tasks into.
-       * @param opts - Parsed CLI options (repo, label, state, env).
-       */
-      async (projectId: string, opts: { repo: string; label?: string; state: string; env?: string }) => {
-        const MAX_BUFFER_BYTES = 50 * 1024 * 1024;
-
-        // 1. Fetch issues from GitHub CLI
-        const ghArgs = [
-          "issue",
-          "list",
-          "--repo",
-          opts.repo,
-          "--state",
-          opts.state,
-          "--json",
-          "number,title,body,labels",
-          "--limit",
-          "9999",
-        ];
-        if (opts.label) {
-          ghArgs.push("--label", opts.label);
-        }
-        let ghOutput: string;
-        try {
-          ghOutput = execFileSync("gh", ghArgs, {
-            encoding: "utf8",
-            maxBuffer: MAX_BUFFER_BYTES,
-          });
-        } catch (err) {
-          console.error(`Failed to run \`gh issue list\` for repo ${opts.repo} (state=${opts.state}).`);
-          console.error(err);
-          process.exit(1);
-        }
-
-        interface GitHubIssue {
-          number: number;
-          title: string;
-          body: string;
-          labels: { name: string }[];
-        }
-
-        let issues: GitHubIssue[];
-        try {
-          issues = JSON.parse(ghOutput);
-        } catch (err) {
-          console.error("Failed to parse JSON output from `gh issue list`.");
-          console.error("Parse error:", err);
-          process.exit(1);
-        }
-
-        // 2. Fetch existing tasks for deduplication (match by issue number)
-        const client = createGrackleClient();
-        const res = await client.listTasks({ id: projectId });
-        const issueNumberPattern = /^#(\d+):/;
-        const existingIssueNumbers = new Set(
-          res.tasks
-            .map((t) => {
-              const match = t.title.match(issueNumberPattern);
-              return match ? Number(match[1]) : null;
-            })
-            .filter((n): n is number => n !== null)
-        );
-
-        // 3. Create tasks for issues not already imported
-        let imported = 0;
-        let skipped = 0;
-        for (const issue of issues) {
-          if (existingIssueNumbers.has(issue.number)) {
-            skipped++;
-            continue;
-          }
-          const title = `#${issue.number}: ${issue.title}`;
-          await client.createTask({
-            projectId,
-            title,
-            description: issue.body ?? "",
-            environmentId: opts.env ?? "",
-            dependsOn: [],
-          });
-          imported++;
-        }
-
-        // 4. Print summary
-        console.log(
-          `Imported ${chalk.green(imported)} tasks (skipped ${skipped} already imported)`
-        );
+    .action(async (projectId: string, opts: { repo: string; label?: string; state: string; env?: string }) => {
+      const normalizedState = (opts.state ?? "").trim().toLowerCase();
+      if (normalizedState !== "open" && normalizedState !== "closed") {
+        console.error(chalk.red(`Invalid --state "${opts.state}". Must be "open" or "closed".`));
+        process.exitCode = 1;
+        return;
       }
-    );
+      const client = createGrackleClient();
+      const res = await client.importGitHubIssues({
+        projectId,
+        repo: opts.repo,
+        label: opts.label,
+        state: issueStateToEnum(normalizedState),
+        environmentId: opts.env,
+      });
+      const parts = [`Imported ${chalk.green(res.imported)} tasks`];
+      if (res.linked > 0) {
+        parts.push(`${chalk.cyan(res.linked)} linked to parents`);
+      }
+      parts.push(`skipped ${res.skipped} already imported`);
+      console.log(parts.join(", "));
+    });
 }

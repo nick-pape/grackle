@@ -64,6 +64,12 @@ enum ProjectStatus {
   PROJECT_STATUS_ARCHIVED = 2;
 }
 
+enum IssueState {
+  ISSUE_STATE_UNSPECIFIED = 0;
+  ISSUE_STATE_OPEN = 1;
+  ISSUE_STATE_CLOSED = 2;
+}
+
 enum TokenType {
   TOKEN_TYPE_UNSPECIFIED = 0;
   TOKEN_TYPE_ENV_VAR = 1;
@@ -308,6 +314,22 @@ message QueryFindingsRequest {
   int32 limit = 4;
 }
 
+// ─── GitHub Import ────────────────────────────────────
+
+message ImportGitHubIssuesRequest {
+  string project_id = 1;
+  string repo = 2;                    // "owner/repo"
+  optional string label = 3;          // label filter (omit for all)
+  IssueState state = 4;               // OPEN or CLOSED
+  optional string environment_id = 5; // env to assign (omit for project default)
+}
+
+message ImportGitHubIssuesResponse {
+  int32 imported = 1;
+  int32 linked = 2;
+  int32 skipped = 3;
+}
+
 // ─── Task Diff ─────────────────────────────────────────────
 
 message GetTaskDiffRequest {
@@ -369,6 +391,9 @@ service Grackle {
   // Findings
   rpc PostFinding(PostFindingRequest) returns (Finding);
   rpc QueryFindings(QueryFindingsRequest) returns (FindingList);
+
+  // GitHub Import
+  rpc ImportGitHubIssues(ImportGitHubIssuesRequest) returns (ImportGitHubIssuesResponse);
 
   // Diff
   rpc GetTaskDiff(GetTaskDiffRequest) returns (TaskDiff);

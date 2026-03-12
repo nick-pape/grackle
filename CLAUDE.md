@@ -13,6 +13,7 @@ When you encounter unexpected issues, workarounds, or non-obvious behavior (CI q
 ## Planning
 
 - **Always plan tests**: Every implementation plan must include a section for tests (E2E Playwright specs for `@grackle-ai/web`, unit/integration tests for other packages). If the change is purely cosmetic or untestable, explicitly note why tests are skipped.
+- **Open a PR as the final step**: When the user assigns a GitHub issue and the work goes through a full plan, the plan must include opening a PR as its last step. The PR body must link back to the issue (e.g., `Closes #<number>` or `Fixes #<number>`).
 
 ## Build & Test
 
@@ -152,3 +153,11 @@ Before considering a PR "done", always verify:
 | PowerLine | 7433 | `DEFAULT_POWERLINE_PORT` |
 | Server gRPC | 7434 | `DEFAULT_SERVER_PORT` |
 | Web UI + WS | 3000 | `DEFAULT_WEB_PORT` |
+
+### Multi-Session Safety
+Multiple Claude Code sessions may be running concurrently against the same repo. **Never kill server processes (node, grackle) unless you are certain they belong to your session.** Another agent may be using them.
+1. Check if the default ports are already in use (`netstat -ano | grep :<port> | grep LISTENING`).
+2. If a server is already running on the default ports, **do not kill it and do not reuse it** — it belongs to another session with its own DB state.
+3. Start your own server on different ports using environment variables: `GRACKLE_PORT=<grpc-port> GRACKLE_WEB_PORT=<web-port> node packages/server/dist/index.js`. Pick unused ports (e.g., 7500/7501, 7600/7601).
+4. Point CLI commands at your server: `--port <your-grpc-port>` or set `GRACKLE_PORT`.
+5. Note the PID so you can clean up your own process later without affecting other sessions.

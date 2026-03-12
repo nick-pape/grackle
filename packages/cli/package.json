@@ -20,7 +20,8 @@
   "scripts": {
     "build": "heft build --clean",
     "start": "node dist/index.js",
-    "clean": "heft clean"
+    "clean": "heft clean",
+    "test": "vitest run"
   },
   "dependencies": {
     "@connectrpc/connect": "^2.0.0",
@@ -35,6 +36,7 @@
   "devDependencies": {
     "@grackle-ai/heft-rig": "workspace:*",
     "@rushstack/heft": "1.2.4",
-    "@types/node": "^22.0.0"
+    "@types/node": "^22.0.0",
+    "vitest": "^3.1.1"
   }
 }
