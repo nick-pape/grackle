@@ -370,22 +370,34 @@ async function handleMessage(
       const sessionId = msg.payload?.sessionId as string;
       const text = msg.payload?.text as string;
       if (!sessionId || !text) {
+        sendWs(ws, { type: "error", payload: { message: "sessionId and text required" } });
         return;
       }
 
       const session = sessionStore.getSession(sessionId);
       if (!session) {
+        sendWs(ws, { type: "error", payload: { message: `Session not found: ${sessionId}` } });
+        return;
+      }
+
+      if (["completed", "failed", "killed"].includes(session.status)) {
+        sendWs(ws, { type: "error", payload: { message: `Session ${sessionId} is not active (status: ${session.status})` } });
         return;
       }
 
       const conn = adapterManager.getConnection(session.environmentId);
       if (!conn) {
+        sendWs(ws, { type: "error", payload: { message: `Environment ${session.environmentId} is not connected` } });
         return;
       }
 
-      await conn.client.sendInput(
-        create(powerline.InputMessageSchema, { sessionId, text })
-      );
+      try {
+        await conn.client.sendInput(
+          create(powerline.InputMessageSchema, { sessionId, text })
+        );
+      } catch (err) {
+        sendWs(ws, { type: "error", payload: { message: `Failed to send input: ${err}` } });
+      }
       break;
     }
 
