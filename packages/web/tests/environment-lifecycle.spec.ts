@@ -334,17 +334,18 @@ test.describe("Environment Lifecycle — Delete with Confirmation", () => {
     // Expand the environment
     await page.getByText("test-local").click();
 
-    // Set up dialog handler to dismiss the confirm
-    page.once("dialog", async (dialog) => {
-      expect(dialog.type()).toBe("confirm");
-      expect(dialog.message()).toContain("test-local");
-      await dialog.dismiss();
-    });
-
-    // Click Delete
+    // Click Delete — the in-app ConfirmDialog should appear
     await page.locator("button", { hasText: "Delete" }).click();
 
-    // Environment should still be visible (we dismissed the dialog)
+    // Verify the in-app dialog is visible with correct content
+    await expect(page.getByText("Delete Environment?")).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText(/"test-local"/)).toBeVisible();
+
+    // Cancel via the Cancel button
+    await page.locator('[role="dialog"] button', { hasText: "Cancel" }).click();
+
+    // Dialog should be gone; environment should still be visible (we cancelled)
+    await expect(page.getByText("Delete Environment?")).not.toBeVisible({ timeout: 5_000 });
     await expect(page.getByText("test-local")).toBeVisible();
   });
 });

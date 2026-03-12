@@ -1,5 +1,5 @@
 import type { AgentSession, AgentEvent } from "./runtime.js";
-import type { SessionStatus } from "@grackle-ai/common";
+import { BaseAgentSession } from "./base-session.js";
 import { BaseAgentRuntime } from "./base-runtime.js";
 import { AsyncQueue } from "../utils/async-queue.js";
 import { resolveWorkingDirectory, resolveMcpServers, buildFindingEvent, buildSubtaskCreateEvent } from "./runtime-utils.js";
@@ -142,301 +142,269 @@ export function buildSubtaskCreateTool(defineTool: (name: string, opts: Record<s
 // ─── Session ───────────────────────────────────────────────
 
 /** An in-progress Copilot agent session that streams events via the Copilot SDK. */
-class CopilotSession implements AgentSession {
-  public id: string;
+class CopilotSession extends BaseAgentSession {
   public runtimeName: string = "copilot";
-  public runtimeSessionId: string;
-  public status: SessionStatus = "running";
+  protected readonly runtimeDisplayName: string = "Copilot";
+  protected readonly noMessagesError: string =
+    "Copilot returned no messages. Check authentication: set GITHUB_TOKEN, GH_TOKEN, or COPILOT_GITHUB_TOKEN (or use COPILOT_PROVIDER_CONFIG for BYOK).";
 
-  private eventQueue: AsyncQueue<AgentEvent> = new AsyncQueue<AgentEvent>();
-  private killed: boolean = false;
-  private prompt: string;
-  private model: string;
-  private maxTurns: number;
-  private resumeSessionId?: string;
-  private branch?: string;
-  private worktreeBasePath?: string;
-  private systemContext?: string;
-  private mcpServers?: Record<string, unknown>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private copilotClient?: any;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private copilotSession?: any;
 
-  public constructor(
-    id: string,
-    prompt: string,
-    model: string,
-    maxTurns: number,
-    resumeSessionId?: string,
-    branch?: string,
-    worktreeBasePath?: string,
-    systemContext?: string,
-    mcpServers?: Record<string, unknown>,
-  ) {
-    this.id = id;
-    this.prompt = prompt;
-    this.model = model;
-    this.maxTurns = maxTurns;
-    this.resumeSessionId = resumeSessionId;
-    this.branch = branch;
-    this.worktreeBasePath = worktreeBasePath;
-    this.systemContext = systemContext;
-    this.mcpServers = mcpServers;
-    this.runtimeSessionId = resumeSessionId || "";
-  }
+  /** Callbacks for the current query's idle promise (reset per sendAndWaitForIdle call). */
+  private idleResolve?: () => void;
+  private idleReject?: (err: Error) => void;
 
-  public async *stream(): AsyncIterable<AgentEvent> {
-    const ts: () => string = () => new Date().toISOString();
+  /** Count of meaningful messages in the current query (reset per sendAndWaitForIdle call). */
+  private currentMessageCount: number = 0;
 
-    yield { type: "system", timestamp: ts(), content: "Starting Copilot runtime..." };
+  // ─── BaseAgentSession hooks ──────────────────────────────
 
-    // Drive the session in the background; events are pushed to the queue
-    // and yielded from this generator.
-    this.runSession().catch((err) => {
-      this.eventQueue.push({ type: "error", timestamp: ts(), content: String(err) });
-      this.eventQueue.push({ type: "status", timestamp: ts(), content: "failed" });
-      this.status = "failed";
-      this.eventQueue.close();
+  protected async setupSdk(): Promise<void> {
+    const ts = (): string => new Date().toISOString();
+    const { CopilotClient, defineTool, approveAll } = await getCopilotSdk();
+
+    // ── Resolve working directory ──
+    const workingDirectory = await resolveWorkingDirectory({
+      branch: this.branch,
+      worktreeBasePath: this.worktreeBasePath,
+      eventQueue: this.eventQueue,
     });
 
-    for await (const event of this.eventQueue) {
-      yield event;
+    // ── Create CopilotClient ──
+    const clientOptions: Record<string, unknown> = {
+      autoStart: false,
+      useStdio: true,
+    };
+
+    const cliUrl = process.env[ENV_COPILOT_CLI_URL];
+    if (cliUrl) {
+      clientOptions.cliUrl = cliUrl;
+      clientOptions.useStdio = false;
+    }
+
+    const cliPath = process.env[ENV_COPILOT_CLI_PATH];
+    if (cliPath && !cliUrl) {
+      clientOptions.cliPath = cliPath;
+    }
+
+    const githubToken = resolveGithubToken();
+    if (githubToken) {
+      clientOptions.githubToken = githubToken;
+      clientOptions.useLoggedInUser = false;
+    } else {
+      clientOptions.useLoggedInUser = true;
+    }
+
+    this.copilotClient = new CopilotClient(clientOptions);
+    await this.copilotClient.start();
+
+    this.eventQueue.push({ type: "system", timestamp: ts(), content: "Copilot CLI server connected" });
+
+    // ── Build session config ──
+    // onPermissionRequest is REQUIRED by the SDK — use approveAll for headless operation
+    const sessionConfig: Record<string, unknown> = {
+      model: this.model,
+      streaming: true,
+      onPermissionRequest: approveAll,
+    };
+
+    // BYOK provider config
+    const providerConfig = resolveProviderConfig();
+    if (providerConfig) {
+      sessionConfig.provider = providerConfig;
+    }
+
+    // MCP servers
+    const mcpConfig = resolveMcpServers(this.mcpServers);
+    if (mcpConfig.servers) {
+      sessionConfig.mcpServers = mcpConfig.servers;
+    }
+
+    // Note: Copilot SDK does not have a maxTurns config option.
+    // The session runs until idle. Log if the caller requested a limit.
+    if (this.maxTurns > 0) {
+      logger.info({ maxTurns: this.maxTurns }, "maxTurns requested but Copilot SDK does not support turn limits — session will run until idle");
+    }
+
+    // Custom tools: inject post_finding and create_subtask tools
+    const tools: unknown[] = [];
+    if (defineTool) {
+      tools.push(buildFindingTool(defineTool, this.eventQueue));
+      tools.push(buildSubtaskCreateTool(defineTool, this.eventQueue));
+    }
+    if (tools.length > 0) {
+      sessionConfig.tools = tools;
+    }
+
+    // Working directory (SDK uses "workingDirectory", not "cwd")
+    if (workingDirectory) {
+      sessionConfig.workingDirectory = workingDirectory;
+    }
+
+    // ── Create or resume session ──
+    if (this.resumeSessionId) {
+      this.copilotSession = await this.copilotClient.resumeSession(this.resumeSessionId, sessionConfig);
+    } else {
+      this.copilotSession = await this.copilotClient.createSession(sessionConfig);
+    }
+
+    this.runtimeSessionId = this.copilotSession.sessionId || this.id;
+
+    this.eventQueue.push({
+      type: "system",
+      timestamp: ts(),
+      content: `Copilot session created (model: ${this.model}, session: ${this.runtimeSessionId})`,
+    });
+
+    // ── Subscribe to events (once; persist for the session lifetime) ──
+    // All SessionEvent objects have shape: { id, timestamp, parentId, type, data: { ... } }
+
+    // Stream text deltas — data: { messageId, deltaContent, parentToolCallId? }
+    this.copilotSession.on("assistant.message_delta", (event: Record<string, unknown>) => {
+      if (this.killed) { return; }
+      const data = event.data as Record<string, unknown> | undefined;
+      const deltaContent = (data?.deltaContent ?? "") as string;
+      if (deltaContent) {
+        this.currentMessageCount++;
+        this.eventQueue.push({
+          type: "text",
+          timestamp: ts(),
+          content: deltaContent,
+          raw: event,
+        });
+      }
+    });
+
+    // Final assistant message — data: { messageId, content, toolRequests?, ... }
+    // We stream via deltas above, so this is mainly for bookkeeping.
+    this.copilotSession.on("assistant.message", (event: Record<string, unknown>) => {
+      if (this.killed) { return; }
+      const data = event.data as Record<string, unknown> | undefined;
+      if (data?.content) {
+        this.currentMessageCount++;
+        // Deltas already streamed the text incrementally; no need to re-emit.
+      }
+    });
+
+    // Tool execution start — data: { toolCallId, toolName, arguments?, mcpServerName?, ... }
+    this.copilotSession.on("tool.execution_start", (event: Record<string, unknown>) => {
+      if (this.killed) { return; }
+      const data = event.data as Record<string, unknown> | undefined;
+      const toolName = (data?.toolName ?? "unknown") as string;
+      const toolArgs = data?.arguments ?? {};
+      this.currentMessageCount++;
+      this.eventQueue.push({
+        type: "tool_use",
+        timestamp: ts(),
+        content: JSON.stringify({ tool: toolName, args: toolArgs }),
+        raw: event,
+      });
+
+      // Intercept MCP finding tool calls (custom tool handler covers non-MCP path)
+      if (toolName === "mcp__grackle__post_finding") {
+        const args = toolArgs as Record<string, unknown>;
+        this.eventQueue.push(buildFindingEvent(args, event));
+      }
+      // Intercept MCP subtask creation tool calls (custom tool handler covers non-MCP path)
+      if (toolName === "mcp__grackle__create_subtask") {
+        const args = toolArgs as Record<string, unknown>;
+        this.eventQueue.push(buildSubtaskCreateEvent(args, event));
+      }
+    });
+
+    // Tool execution complete — data: { toolCallId, success, result?, error?, ... }
+    this.copilotSession.on("tool.execution_complete", (event: Record<string, unknown>) => {
+      if (this.killed) { return; }
+      const data = event.data as Record<string, unknown> | undefined;
+      // result is a ToolResultObject { textResultForLlm, resultType, ... } or undefined
+      const result = data?.result as Record<string, unknown> | string | undefined;
+      const error = data?.error as string | undefined;
+      let output: string;
+      if (error) {
+        output = error;
+      } else if (result === undefined) {
+        output = "";
+      } else if (typeof result === "string") {
+        output = result;
+      } else if (typeof result === "object" && result.textResultForLlm) {
+        output = result.textResultForLlm as string;
+      } else {
+        output = JSON.stringify(result);
+      }
+      this.currentMessageCount++;
+      this.eventQueue.push({
+        type: "tool_result",
+        timestamp: ts(),
+        content: output,
+        raw: event,
+      });
+    });
+
+    // Session idle = query completed (ephemeral event, data is empty)
+    this.copilotSession.on("session.idle", () => {
+      this.idleResolve?.();
+    });
+
+    // Session error — data: { errorType, message, stack?, statusCode? }
+    this.copilotSession.on("session.error", (event: Record<string, unknown>) => {
+      const data = event.data as Record<string, unknown> | undefined;
+      const message = (data?.message ?? String(event)) as string;
+      this.eventQueue.push({ type: "error", timestamp: ts(), content: message, raw: event });
+      this.idleReject?.(new Error(message));
+    });
+  }
+
+  protected async setupForResume(): Promise<void> {
+    this.eventQueue.push({
+      type: "system",
+      timestamp: new Date().toISOString(),
+      content: `Session resumed (id: ${this.resumeSessionId})`,
+    });
+  }
+
+  protected async runInitialQuery(prompt: string): Promise<number> {
+    return this.sendAndWaitForIdle(prompt);
+  }
+
+  protected async executeFollowUp(text: string): Promise<void> {
+    await this.sendAndWaitForIdle(text);
+  }
+
+  protected canAcceptInput(): boolean {
+    return !!this.copilotSession;
+  }
+
+  protected abortActive(): void {
+    if (this.copilotSession) {
+      this.copilotSession.abort().catch(() => {});
     }
   }
 
-  /** Core session logic: create client, session, send prompt, and map events. */
-  private async runSession(): Promise<void> {
-    const ts: () => string = () => new Date().toISOString();
+  protected releaseResources(): void {
+    this.cleanup().catch(() => {});
+  }
 
-    try {
-      const { CopilotClient, defineTool, approveAll } = await getCopilotSdk();
+  // ─── Copilot-specific internals ───────────────────────────
 
-      // ── Resolve working directory ──
-      const workingDirectory = await resolveWorkingDirectory({
-        branch: this.branch,
-        worktreeBasePath: this.worktreeBasePath,
-        eventQueue: this.eventQueue,
-      });
+  /**
+   * Send a prompt to the Copilot session and wait for it to go idle.
+   * Resets the message counter for this query. Returns the message count.
+   */
+  private async sendAndWaitForIdle(prompt: string): Promise<number> {
+    this.currentMessageCount = 0;
 
-      // ── Create CopilotClient ──
-      const clientOptions: Record<string, unknown> = {
-        autoStart: false,
-        useStdio: true,
-      };
+    const idlePromise = new Promise<void>((resolve, reject) => {
+      this.idleResolve = resolve;
+      this.idleReject = reject;
+    });
 
-      const cliUrl = process.env[ENV_COPILOT_CLI_URL];
-      if (cliUrl) {
-        clientOptions.cliUrl = cliUrl;
-        clientOptions.useStdio = false;
-      }
+    await this.copilotSession.send({ prompt });
+    await idlePromise;
 
-      const cliPath = process.env[ENV_COPILOT_CLI_PATH];
-      if (cliPath && !cliUrl) {
-        clientOptions.cliPath = cliPath;
-      }
-
-      const githubToken = resolveGithubToken();
-      if (githubToken) {
-        clientOptions.githubToken = githubToken;
-        clientOptions.useLoggedInUser = false;
-      } else {
-        clientOptions.useLoggedInUser = true;
-      }
-
-      this.copilotClient = new CopilotClient(clientOptions);
-      await this.copilotClient.start();
-
-      this.eventQueue.push({ type: "system", timestamp: ts(), content: "Copilot CLI server connected" });
-
-      // ── Build session config ──
-      // onPermissionRequest is REQUIRED by the SDK — use approveAll for headless operation
-      const sessionConfig: Record<string, unknown> = {
-        model: this.model,
-        streaming: true,
-        onPermissionRequest: approveAll,
-      };
-
-      // System message from task context (SDK requires mode: "append" or "replace")
-      if (this.systemContext) {
-        sessionConfig.systemMessage = {
-          mode: "append",
-          content: this.systemContext,
-        };
-      }
-
-      // BYOK provider config
-      const providerConfig = resolveProviderConfig();
-      if (providerConfig) {
-        sessionConfig.provider = providerConfig;
-      }
-
-      // MCP servers
-      const mcpConfig = resolveMcpServers(this.mcpServers);
-      if (mcpConfig.servers) {
-        sessionConfig.mcpServers = mcpConfig.servers;
-      }
-
-      // Note: Copilot SDK does not have a maxTurns config option.
-      // The session runs until idle. Log if the caller requested a limit.
-      if (this.maxTurns > 0) {
-        logger.info({ maxTurns: this.maxTurns }, "maxTurns requested but Copilot SDK does not support turn limits — session will run until idle");
-      }
-
-      // Custom tools: inject post_finding and create_subtask tools
-      const tools: unknown[] = [];
-      if (defineTool) {
-        tools.push(buildFindingTool(defineTool, this.eventQueue));
-        tools.push(buildSubtaskCreateTool(defineTool, this.eventQueue));
-      }
-      if (tools.length > 0) {
-        sessionConfig.tools = tools;
-      }
-
-      // Working directory (SDK uses "workingDirectory", not "cwd")
-      if (workingDirectory) {
-        sessionConfig.workingDirectory = workingDirectory;
-      }
-
-      // ── Create or resume session ──
-      if (this.resumeSessionId) {
-        this.copilotSession = await this.copilotClient.resumeSession(this.resumeSessionId, sessionConfig);
-      } else {
-        this.copilotSession = await this.copilotClient.createSession(sessionConfig);
-      }
-
-      this.runtimeSessionId = this.copilotSession.sessionId || this.id;
-
-      this.eventQueue.push({
-        type: "system",
-        timestamp: ts(),
-        content: `Copilot session created (model: ${this.model}, session: ${this.runtimeSessionId})`,
-      });
-
-      // ── Subscribe to events ──
-      // All SessionEvent objects have shape: { id, timestamp, parentId, type, data: { ... } }
-      let messageCount = 0;
-
-      const idlePromise = new Promise<void>((resolve, reject) => {
-        // Stream text deltas — data: { messageId, deltaContent, parentToolCallId? }
-        this.copilotSession.on("assistant.message_delta", (event: Record<string, unknown>) => {
-          if (this.killed) { return; }
-          const data = event.data as Record<string, unknown> | undefined;
-          const deltaContent = (data?.deltaContent ?? "") as string;
-          if (deltaContent) {
-            messageCount++;
-            this.eventQueue.push({
-              type: "text",
-              timestamp: ts(),
-              content: deltaContent,
-              raw: event,
-            });
-          }
-        });
-
-        // Final assistant message — data: { messageId, content, toolRequests?, ... }
-        // We stream via deltas above, so this is mainly for bookkeeping.
-        this.copilotSession.on("assistant.message", (event: Record<string, unknown>) => {
-          if (this.killed) { return; }
-          const data = event.data as Record<string, unknown> | undefined;
-          if (data?.content) {
-            messageCount++;
-            // Deltas already streamed the text incrementally; no need to re-emit.
-          }
-        });
-
-        // Tool execution start — data: { toolCallId, toolName, arguments?, mcpServerName?, ... }
-        this.copilotSession.on("tool.execution_start", (event: Record<string, unknown>) => {
-          if (this.killed) { return; }
-          const data = event.data as Record<string, unknown> | undefined;
-          const toolName = (data?.toolName ?? "unknown") as string;
-          const toolArgs = data?.arguments ?? {};
-          messageCount++;
-          this.eventQueue.push({
-            type: "tool_use",
-            timestamp: ts(),
-            content: JSON.stringify({ tool: toolName, args: toolArgs }),
-            raw: event,
-          });
-
-          // Intercept MCP finding tool calls (custom tool handler covers non-MCP path)
-          if (toolName === "mcp__grackle__post_finding") {
-            const args = toolArgs as Record<string, unknown>;
-            this.eventQueue.push(buildFindingEvent(args, event));
-          }
-          // Intercept MCP subtask creation tool calls (custom tool handler covers non-MCP path)
-          if (toolName === "mcp__grackle__create_subtask") {
-            const args = toolArgs as Record<string, unknown>;
-            this.eventQueue.push(buildSubtaskCreateEvent(args, event));
-          }
-        });
-
-        // Tool execution complete — data: { toolCallId, success, result?, error?, ... }
-        this.copilotSession.on("tool.execution_complete", (event: Record<string, unknown>) => {
-          if (this.killed) { return; }
-          const data = event.data as Record<string, unknown> | undefined;
-          // result is a ToolResultObject { textResultForLlm, resultType, ... } or undefined
-          const result = data?.result as Record<string, unknown> | string | undefined;
-          const error = data?.error as string | undefined;
-          let output: string;
-          if (error) {
-            output = error;
-          } else if (result === undefined) {
-            output = "";
-          } else if (typeof result === "string") {
-            output = result;
-          } else if (typeof result === "object" && result.textResultForLlm) {
-            output = result.textResultForLlm as string;
-          } else {
-            output = JSON.stringify(result);
-          }
-          messageCount++;
-          this.eventQueue.push({
-            type: "tool_result",
-            timestamp: ts(),
-            content: output,
-            raw: event,
-          });
-        });
-
-        // Session idle = completed (ephemeral event, data is empty)
-        this.copilotSession.on("session.idle", () => {
-          resolve();
-        });
-
-        // Session error — data: { errorType, message, stack?, statusCode? }
-        this.copilotSession.on("session.error", (event: Record<string, unknown>) => {
-          const data = event.data as Record<string, unknown> | undefined;
-          const message = (data?.message ?? String(event)) as string;
-          this.eventQueue.push({ type: "error", timestamp: ts(), content: message, raw: event });
-          reject(new Error(message));
-        });
-      });
-
-      // ── Send the prompt ──
-      await this.copilotSession.send({ prompt: this.prompt });
-
-      // Wait for session to become idle
-      await idlePromise;
-
-      if (messageCount === 0) {
-        this.eventQueue.push({
-          type: "error",
-          timestamp: ts(),
-          content: "Copilot returned no messages. Check authentication: set GITHUB_TOKEN, GH_TOKEN, or COPILOT_GITHUB_TOKEN (or use COPILOT_PROVIDER_CONFIG for BYOK).",
-        });
-      }
-
-      this.status = "completed";
-      this.eventQueue.push({ type: "status", timestamp: ts(), content: "completed" });
-    } catch (err) {
-      this.status = "failed";
-      this.eventQueue.push({ type: "error", timestamp: ts(), content: String(err) });
-      this.eventQueue.push({ type: "status", timestamp: ts(), content: "failed" });
-    } finally {
-      await this.cleanup();
-      this.eventQueue.close();
-    }
+    return this.currentMessageCount;
   }
 
   /** Tear down the Copilot session and client. */
@@ -455,24 +423,6 @@ class CopilotSession implements AgentSession {
         }
       }
     } catch { /* best-effort */ }
-  }
-
-  public sendInput(text: string): void {
-    if (this.copilotSession && !this.killed) {
-      this.copilotSession.send({ prompt: text }).catch((err: unknown) => {
-        logger.warn({ err }, "Failed to send input to Copilot session");
-      });
-    }
-  }
-
-  public kill(): void {
-    this.killed = true;
-    this.status = "killed";
-    if (this.copilotSession) {
-      this.copilotSession.abort().catch(() => {});
-    }
-    this.cleanup().catch(() => {});
-    this.eventQueue.close();
   }
 }
 

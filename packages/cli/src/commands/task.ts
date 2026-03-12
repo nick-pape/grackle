@@ -1,6 +1,6 @@
 import type { Command } from "commander";
 import { createGrackleClient } from "../client.js";
-import { taskStatusToString, issueStateToEnum } from "@grackle-ai/common";
+import { taskStatusToString, taskStatusToEnum, issueStateToEnum } from "@grackle-ai/common";
 import Table from "cli-table3";
 import chalk from "chalk";
 
@@ -61,6 +61,39 @@ export function registerTaskCommands(program: Command): void {
       console.log(`Depends On:  ${t.dependsOn.length > 0 ? t.dependsOn.join(", ") : "none"}`);
       if (t.description) console.log(`Description: ${t.description}`);
       if (t.reviewNotes) console.log(`Review Notes: ${t.reviewNotes}`);
+    });
+
+  task
+    .command("update <task-id>")
+    .description("Update a task")
+    .option("--title <text>", "New title")
+    .option("--desc <text>", "New description")
+    .option("--env <env-id>", "Environment ID")
+    .option("--status <status>", "Task status (pending, assigned, in_progress, review, done, failed)")
+    .option("--notes <text>", "Review notes")
+    .action(async (taskId: string, opts) => {
+      const VALID_STATUSES = new Set([
+        "pending", "assigned", "in_progress", "review", "done", "failed",
+      ]);
+
+      if (opts.status !== undefined && !VALID_STATUSES.has(String(opts.status).toLowerCase())) {
+        console.error(
+          `Invalid status: "${opts.status}". Valid values are: ${[...VALID_STATUSES].join(", ")}`,
+        );
+        process.exitCode = 1;
+        return;
+      }
+
+      const client = createGrackleClient();
+      const t = await client.updateTask({
+        id: taskId,
+        title: opts.title || "",
+        description: opts.desc || "",
+        environmentId: opts.env || "",
+        status: opts.status ? taskStatusToEnum(String(opts.status).toLowerCase()) : taskStatusToEnum(""),
+        reviewNotes: opts.notes || "",
+      });
+      console.log(`Updated: ${t.id} (${t.title}) status: ${taskStatusToString(t.status)} env: ${t.environmentId || "-"}`);
     });
 
   task

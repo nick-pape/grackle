@@ -1,9 +1,6 @@
 import { readFileSync, rmSync } from "node:fs";
-import { join } from "node:path";
-import { tmpdir } from "node:os";
 import type { FullConfig } from "@playwright/test";
-
-const STATE_FILE = join(tmpdir(), "grackle-e2e-state.json");
+import { STATE_FILE } from "./state-file.js";
 
 export default async function globalTeardown(_config: FullConfig): Promise<void> {
   let state: { grackleHome: string; powerlinePid: number; serverPid: number };

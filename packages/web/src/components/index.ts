@@ -13,4 +13,4 @@ export { SessionPanel, FindingsPanel } from "./panels/index.js";
 export { EnvironmentList, ProjectList } from "./lists/index.js";
 
 // Display components - content rendering
-export { EventRenderer, DiffViewer } from "./display/index.js";
+export { EventRenderer } from "./display/index.js";

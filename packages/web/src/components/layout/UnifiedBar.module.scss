@@ -73,6 +73,13 @@
   @include btn-ghost;
 }
 
+// Flex wrapper for spinner + label inside a button
+.btnLoadingContent {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
 // ---------------------------------------------------------------------------
 // Status indicators
 // ---------------------------------------------------------------------------
@@ -113,7 +120,9 @@
 .creatingHint {
   color: var(--accent-blue);
   font-size: 11px;
-  animation: pulse 2s ease-in-out infinite;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
 }
 
 .errorHint {
