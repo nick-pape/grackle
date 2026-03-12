@@ -187,29 +187,29 @@ async function autoProvisionEnvironment(
 /**
  * Start a new agent session for a task. Handles environment lookup,
  * auto-provisioning, session creation, spawning, and completion wiring.
- * Returns true if the session was started, false on failure.
+ * Returns undefined on success, or an error message string on failure.
  */
 async function startTaskSession(
   ws: WebSocket,
   task: taskStore.TaskRow,
   options?: { runtime?: string; model?: string },
-): Promise<boolean> {
+): Promise<string | undefined> {
   const project = projectStore.getProject(task.projectId);
   if (!project) {
     logger.warn({ taskId: task.id }, "startTaskSession failed: project not found");
-    return false;
+    return `Project not found: ${task.projectId}`;
   }
 
   const environmentId = task.environmentId || project.defaultEnvironmentId;
   const env = envRegistry.getEnvironment(environmentId);
   if (!env) {
     logger.warn({ taskId: task.id, environmentId }, "startTaskSession failed: environment not found");
-    return false;
+    return `Environment not found: ${environmentId}`;
   }
 
   const conn = await autoProvisionEnvironment(ws, environmentId, env, { taskId: task.id });
   if (!conn) {
-    return false;
+    return `Failed to connect environment: ${environmentId}`;
   }
 
   const sessionId = uuid();
@@ -261,7 +261,7 @@ async function startTaskSession(
     },
   });
 
-  return true;
+  return undefined;
 }
 
 async function handleMessage(
@@ -637,12 +637,12 @@ async function handleMessage(
         return;
       }
 
-      const started = await startTaskSession(ws, task, {
+      const startError = await startTaskSession(ws, task, {
         runtime: msg.payload?.runtime as string | undefined,
         model: msg.payload?.model as string | undefined,
       });
-      if (!started) {
-        sendWs(ws, { type: "error", payload: { message: "Failed to start task session" } });
+      if (startError) {
+        sendWs(ws, { type: "error", payload: { message: startError } });
       }
       break;
     }
@@ -672,6 +672,17 @@ async function handleMessage(
       const task = taskStore.getTask(taskId);
       if (!task) return;
 
+      if (task.status !== "review") {
+        sendWs(ws, { type: "error", payload: { message: `Task cannot be rejected (status: ${task.status})` } });
+        return;
+      }
+
+      // Preserve runtime/model from the previous session so the retry
+      // doesn't unexpectedly switch runtimes/models.
+      const previousSession = task.sessionId
+        ? sessionStore.getSession(task.sessionId)
+        : undefined;
+
       // Store review notes and set status to assigned
       taskStore.updateTask(
         task.id, task.title, task.description, "assigned",
@@ -682,9 +693,12 @@ async function handleMessage(
       // Auto-retry: start a new session with the review feedback
       const freshTask = taskStore.getTask(taskId);
       if (freshTask) {
-        const retryStarted = await startTaskSession(ws, freshTask);
-        if (!retryStarted) {
-          logger.warn({ taskId }, "Auto-retry after rejection failed — task remains assigned");
+        const retryError = await startTaskSession(ws, freshTask, {
+          runtime: previousSession?.runtime,
+          model: previousSession?.model,
+        });
+        if (retryError) {
+          logger.warn({ taskId, error: retryError }, "Auto-retry after rejection failed — task remains assigned");
         }
       }
       break;
