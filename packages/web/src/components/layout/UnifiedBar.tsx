@@ -41,6 +41,7 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
     spawn, sendInput, kill, sessions, tasks, environments,
     createTask, startTask, approveTask, rejectTask, deleteTask, addEnvironment,
     codespaces, codespaceError, codespaceCreating, listCodespaces, createCodespace,
+    taskStartingId,
   } = useGrackle();
 
   const [text, setText] = useState("");
@@ -451,13 +452,18 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
 
     // Pending + unblocked
     if (task.status === "pending" || task.status === "assigned") {
+      const isStarting = taskStartingId === task.id;
       return (
         <div className={styles.bar}>
+          {isStarting && (
+            <span className={styles.creatingHint}>Starting task…</span>
+          )}
           <button
             onClick={() => startTask(task.id)}
             className={styles.btnPrimary}
+            disabled={isStarting}
           >
-            Start Task
+            {isStarting ? "Starting…" : "Start Task"}
           </button>
           <button
             onClick={() => {
@@ -597,16 +603,21 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
 
     // Failed
     if (task.status === "failed") {
+      const isRetrying = taskStartingId === task.id;
       return (
         <div className={styles.bar}>
           <span className={`${styles.statusText} ${styles.statusFailed}`}>
             Task failed
           </span>
+          {isRetrying && (
+            <span className={styles.creatingHint}>Starting task…</span>
+          )}
           <button
             onClick={() => startTask(task.id)}
             className={styles.btnPrimary}
+            disabled={isRetrying}
           >
-            Retry
+            {isRetrying ? "Starting…" : "Retry"}
           </button>
           <button
             onClick={() => {

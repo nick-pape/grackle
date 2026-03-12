@@ -825,6 +825,8 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       codespaceCreating: false,
       listCodespaces: () => {},
       createCodespace: () => {},
+      projectCreating: false,
+      taskStartingId: undefined,
     }),
     [
       sessions,

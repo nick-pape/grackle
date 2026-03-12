@@ -48,6 +48,13 @@
   font-size: var(--font-size-sm);
 }
 
+.creatingHint {
+  padding: var(--space-xs) var(--space-md);
+  color: var(--accent-blue);
+  font-size: 11px;
+  animation: pulse 2s ease-in-out infinite;
+}
+
 .projectRow {
   @include hover-lift;
   padding: var(--space-sm) var(--space-md);

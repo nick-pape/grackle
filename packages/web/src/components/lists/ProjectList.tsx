@@ -175,7 +175,7 @@ function TaskTreeNode({
 
 /** Sidebar project tree with expandable task lists and hierarchical task rendering. */
 export function ProjectList({ viewMode, setViewMode }: Props): JSX.Element {
-  const { projects, tasks, loadTasks, createProject } = useGrackle();
+  const { projects, tasks, loadTasks, createProject, projectCreating } = useGrackle();
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
   const [manuallyCollapsed, setManuallyCollapsed] = useState<Set<string>>(new Set());
@@ -247,7 +247,7 @@ export function ProjectList({ viewMode, setViewMode }: Props): JSX.Element {
   }, [selectedProjectId, expanded, loadTasks]);
 
   const handleCreateProject = (): void => {
-    if (!newProjectName.trim()) {
+    if (!newProjectName.trim() || projectCreating) {
       return;
     }
     createProject(newProjectName.trim());
@@ -278,12 +278,20 @@ export function ProjectList({ viewMode, setViewMode }: Props): JSX.Element {
             onKeyDown={(e) => e.key === "Enter" && handleCreateProject()}
             placeholder="Project name..."
             autoFocus
+            disabled={projectCreating}
             className={styles.createInput}
           />
-          <button onClick={handleCreateProject} className={styles.createButton}>
-            OK
+          <button
+            onClick={handleCreateProject}
+            className={styles.createButton}
+            disabled={projectCreating}
+          >
+            {projectCreating ? "…" : "OK"}
           </button>
         </div>
+      )}
+      {projectCreating && (
+        <div className={styles.creatingHint}>Creating project…</div>
       )}
 
       {projects.length === 0 && !showCreateForm && (
