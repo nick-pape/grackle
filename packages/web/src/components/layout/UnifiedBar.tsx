@@ -105,6 +105,15 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
 
   // --- new_environment mode ---
   if (viewMode.kind === "new_environment") {
+    /** Returns true if portStr is empty (optional) or a valid integer in [1, 65535]. */
+    const isPortValid = (portStr: string): boolean => {
+      if (!portStr.trim()) {
+        return true;
+      }
+      const parsed = parseInt(portStr, 10);
+      return Number.isFinite(parsed) && parsed >= 1 && parsed <= 65535;
+    };
+
     const isEnvValid = (): boolean => {
       if (!envName.trim()) {
         return false;
@@ -113,6 +122,9 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
         return false;
       }
       if (envAdapterType === "codespace" && !envCodespaceName.trim()) {
+        return false;
+      }
+      if (!isPortValid(envPort)) {
         return false;
       }
       return true;
@@ -222,7 +234,9 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
                 className={styles.inputSmall}
               />
               <input
-                type="text"
+                type="number"
+                min={1}
+                max={65535}
                 value={envPort}
                 onChange={(e) => setEnvPort(e.target.value)}
                 placeholder="Port (optional)..."
@@ -247,7 +261,9 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
                 className={styles.inputSmall}
               />
               <input
-                type="text"
+                type="number"
+                min={1}
+                max={65535}
                 value={envPort}
                 onChange={(e) => setEnvPort(e.target.value)}
                 placeholder="SSH port (optional)..."

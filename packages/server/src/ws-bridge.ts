@@ -447,9 +447,13 @@ async function handleMessage(
         sendWs(ws, { type: "error", payload: { message: "name required" } });
         return;
       }
-      let id = slugify(name) || uuid().slice(0, 8);
+      const baseProjectId = slugify(name) || uuid().slice(0, 8);
+      let id = baseProjectId;
+      for (let attempt = 0; attempt < 10 && projectStore.getProject(id); attempt++) {
+        id = `${baseProjectId}-${uuid().slice(0, 4)}`;
+      }
       if (projectStore.getProject(id)) {
-        id = `${id}-${uuid().slice(0, 4)}`;
+        id = uuid();
       }
       projectStore.createProject(
         id, name,
@@ -867,13 +871,26 @@ async function handleMessage(
         sendWs(ws, { type: "error", payload: { message: `Unknown adapter type: ${adapterType}` } });
         return;
       }
-      let id = slugify(displayName) || uuid().slice(0, 8);
-      if (envRegistry.getEnvironment(id)) {
-        id = `${id}-${uuid().slice(0, 4)}`;
+      const baseEnvId = slugify(displayName) || uuid().slice(0, 8);
+      let id = baseEnvId;
+      for (let attempt = 0; attempt < 10 && envRegistry.getEnvironment(id); attempt++) {
+        id = `${baseEnvId}-${uuid().slice(0, 4)}`;
       }
-      const adapterConfig = msg.payload?.adapterConfig
-        ? JSON.stringify(msg.payload.adapterConfig)
-        : "{}";
+      if (envRegistry.getEnvironment(id)) {
+        id = uuid();
+      }
+      const rawAdapterConfig = msg.payload?.adapterConfig;
+      let adapterConfig: string;
+      if (rawAdapterConfig === undefined || rawAdapterConfig === null) {
+        adapterConfig = "{}";
+      } else if (typeof rawAdapterConfig === "string") {
+        adapterConfig = rawAdapterConfig;
+      } else if (typeof rawAdapterConfig === "object") {
+        adapterConfig = JSON.stringify(rawAdapterConfig);
+      } else {
+        sendWs(ws, { type: "error", payload: { message: "adapterConfig must be an object or JSON string" } });
+        return;
+      }
       const defaultRuntime = (msg.payload?.defaultRuntime as string) || DEFAULT_RUNTIME;
       envRegistry.addEnvironment(id, displayName, adapterType, adapterConfig, defaultRuntime);
       logger.info({ id, displayName, adapterType }, "Environment added via WebSocket");
