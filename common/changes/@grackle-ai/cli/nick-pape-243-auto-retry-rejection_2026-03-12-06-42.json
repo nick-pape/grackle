@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Auto-retry task on rejection with review notes",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}

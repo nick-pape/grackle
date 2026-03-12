@@ -133,24 +133,23 @@ test.describe("Task Overview Tab", () => {
     await expect(badge).toHaveAttribute("class", /blockedBadge/);
   });
 
-  test("overview tab is default for assigned tasks after rejection", async ({ appPage }) => {
+  test("rejection auto-retries and switches to stream tab", async ({ appPage }) => {
     const page = appPage;
 
     await createProject(page, "overview-assigned");
     await createTask(page, "overview-assigned", "assigned-task", "test-local");
     await navigateToTask(page, "assigned-task");
 
-    // Run task through to review, then reject to get assigned status
+    // Run task through to review, then reject — task auto-retries
     await patchWsForStubRuntime(page);
     await runStubTaskToCompletion(page);
     await page.locator("button", { hasText: "Reject" }).click();
 
-    // Wait for task header to show assigned status
-    await expect(page.getByText(/Task:.*\| assigned/)).toBeVisible({ timeout: 10_000 });
+    // Auto-retry starts a new session — task moves to in_progress, stream tab activates
+    await expect(page.getByText(/Task:.*\| in_progress/)).toBeVisible({ timeout: 10_000 });
 
-    // Overview tab should be active (auto-switch on assigned)
-    const overviewTab = page.locator("button", { hasText: "Overview" });
-    await expect(overviewTab).toHaveAttribute("class", /active/, { timeout: 5_000 });
+    const streamTab = page.locator("button", { hasText: "Stream" });
+    await expect(streamTab).toHaveAttribute("class", /active/, { timeout: 5_000 });
   });
 
   test("can manually switch to overview tab on in_progress task", async ({ appPage }) => {

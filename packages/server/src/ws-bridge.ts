@@ -184,6 +184,91 @@ async function autoProvisionEnvironment(
   }
 }
 
+/**
+ * Start a new agent session for a task. Handles environment lookup,
+ * auto-provisioning, session creation, spawning, and completion wiring.
+ *
+ * Returns undefined on success (or if the failure was already reported
+ * to the client via WS, e.g. provisioning errors), or an error message
+ * string for failures that need the caller to surface to the client.
+ */
+async function startTaskSession(
+  ws: WebSocket,
+  task: taskStore.TaskRow,
+  options?: { runtime?: string; model?: string },
+): Promise<string | undefined> {
+  const project = projectStore.getProject(task.projectId);
+  if (!project) {
+    logger.warn({ taskId: task.id }, "startTaskSession failed: project not found");
+    return `Project not found: ${task.projectId}`;
+  }
+
+  const environmentId = task.environmentId || project.defaultEnvironmentId;
+  const env = envRegistry.getEnvironment(environmentId);
+  if (!env) {
+    logger.warn({ taskId: task.id, environmentId }, "startTaskSession failed: environment not found");
+    return `Environment not found: ${environmentId}`;
+  }
+
+  // autoProvisionEnvironment already sends a detailed WS error on failure,
+  // so we return undefined to avoid duplicate error messages to the client.
+  const conn = await autoProvisionEnvironment(ws, environmentId, env, { taskId: task.id });
+  if (!conn) {
+    return undefined;
+  }
+
+  const sessionId = uuid();
+  const runtime = options?.runtime || env.defaultRuntime || DEFAULT_RUNTIME;
+  const model = options?.model || process.env.GRACKLE_DEFAULT_MODEL || DEFAULT_MODEL;
+  const logPath = join(grackleHome, LOGS_DIR, sessionId);
+
+  // Re-read task to get latest reviewNotes (important for reject→retry flow)
+  const freshTask = taskStore.getTask(task.id) || task;
+  const systemContext = buildTaskSystemContext(
+    freshTask.title, freshTask.description, freshTask.reviewNotes, freshTask.canDecompose,
+  );
+
+  sessionStore.createSession(sessionId, environmentId, runtime, freshTask.title, model, logPath);
+  taskStore.setTaskSession(freshTask.id, sessionId);
+  taskStore.markTaskStarted(freshTask.id);
+
+  broadcast({ type: "task_started", payload: { taskId: freshTask.id, sessionId, projectId: freshTask.projectId } });
+
+  const powerlineReq = create(powerline.SpawnRequestSchema, {
+    sessionId,
+    runtime,
+    prompt: freshTask.title,
+    model,
+    maxTurns: 0,
+    branch: freshTask.branch,
+    worktreeBasePath: freshTask.branch ? (process.env.GRACKLE_WORKTREE_BASE || "/workspace") : "",
+    systemContext,
+    projectId: freshTask.projectId,
+    taskId: freshTask.id,
+  });
+
+  processEventStream(conn.client.spawn(powerlineReq), {
+    sessionId,
+    logPath,
+    projectId: freshTask.projectId,
+    taskId: freshTask.id,
+    onComplete: () => {
+      const t = taskStore.getTask(freshTask.id);
+      if (t && t.status === "in_progress") {
+        const sess = sessionStore.getSession(sessionId);
+        if (sess?.status === "completed") {
+          taskStore.markTaskCompleted(freshTask.id, "review");
+        } else if (sess?.status === "failed") {
+          taskStore.markTaskCompleted(freshTask.id, "failed");
+        }
+        broadcast({ type: "task_updated", payload: { taskId: freshTask.id, projectId: freshTask.projectId } });
+      }
+    },
+  });
+
+  return undefined;
+}
+
 async function handleMessage(
   ws: WebSocket,
   msg: WsMessage,
@@ -557,70 +642,13 @@ async function handleMessage(
         return;
       }
 
-      const project = projectStore.getProject(task.projectId);
-      if (!project) {
-        sendWs(ws, { type: "error", payload: { message: `Project not found: ${task.projectId}` } });
-        return;
-      }
-
-      const environmentId = task.environmentId || project.defaultEnvironmentId;
-      const env = envRegistry.getEnvironment(environmentId);
-      if (!env) {
-        sendWs(ws, { type: "error", payload: { message: `Environment not found: ${environmentId}` } });
-        return;
-      }
-
-      // Auto-provision the environment if not already connected
-      const conn = await autoProvisionEnvironment(ws, environmentId, env, { taskId });
-      if (!conn) {
-        return;
-      }
-
-      const sessionId = uuid();
-      const runtime = (msg.payload?.runtime as string) || env.defaultRuntime || DEFAULT_RUNTIME;
-      const model = (msg.payload?.model as string) || process.env.GRACKLE_DEFAULT_MODEL || DEFAULT_MODEL;
-      const logPath = join(grackleHome, LOGS_DIR, sessionId);
-
-      const systemContext = buildTaskSystemContext(task.title, task.description, task.reviewNotes, task.canDecompose);
-
-      sessionStore.createSession(sessionId, environmentId, runtime, task.title, model, logPath);
-      taskStore.setTaskSession(task.id, sessionId);
-      taskStore.markTaskStarted(task.id);
-
-      broadcast({ type: "task_started", payload: { taskId: task.id, sessionId, projectId: task.projectId } });
-
-      const powerlineReq = create(powerline.SpawnRequestSchema, {
-        sessionId,
-        runtime,
-        prompt: task.title,
-        model,
-        maxTurns: 0,
-        branch: task.branch,
-        worktreeBasePath: task.branch ? (process.env.GRACKLE_WORKTREE_BASE || "/workspace") : "",
-        systemContext,
-        projectId: task.projectId,
-        taskId: task.id,
+      const startError = await startTaskSession(ws, task, {
+        runtime: msg.payload?.runtime as string | undefined,
+        model: msg.payload?.model as string | undefined,
       });
-
-      processEventStream(conn.client.spawn(powerlineReq), {
-        sessionId,
-        logPath,
-        projectId: task.projectId,
-        taskId: task.id,
-        onComplete: () => {
-          // Auto-move task to review on completion
-          const t = taskStore.getTask(task.id);
-          if (t && t.status === "in_progress") {
-            const sess = sessionStore.getSession(sessionId);
-            if (sess?.status === "completed") {
-              taskStore.markTaskCompleted(task.id, "review");
-            } else if (sess?.status === "failed") {
-              taskStore.markTaskCompleted(task.id, "failed");
-            }
-            broadcast({ type: "task_updated", payload: { taskId: task.id, projectId: task.projectId } });
-          }
-        },
-      });
+      if (startError) {
+        sendWs(ws, { type: "error", payload: { message: startError } });
+      }
       break;
     }
 
@@ -647,13 +675,37 @@ async function handleMessage(
       if (!taskId) return;
 
       const task = taskStore.getTask(taskId);
-      if (task) {
-        taskStore.updateTask(
-          task.id, task.title, task.description, "assigned",
-          task.environmentId, safeParseJsonArray(task.dependsOn), reviewNotes,
-        );
+      if (!task) return;
+
+      if (task.status !== "review") {
+        sendWs(ws, { type: "error", payload: { message: `Task cannot be rejected (status: ${task.status})` } });
+        return;
       }
-      broadcast({ type: "task_rejected", payload: { taskId } });
+
+      // Preserve runtime/model from the previous session so the retry
+      // doesn't unexpectedly switch runtimes/models.
+      const previousSession = task.sessionId
+        ? sessionStore.getSession(task.sessionId)
+        : undefined;
+
+      // Store review notes and set status to assigned
+      taskStore.updateTask(
+        task.id, task.title, task.description, "assigned",
+        task.environmentId, safeParseJsonArray(task.dependsOn), reviewNotes,
+      );
+      broadcast({ type: "task_rejected", payload: { taskId, projectId: task.projectId } });
+
+      // Auto-retry: start a new session with the review feedback
+      const freshTask = taskStore.getTask(taskId);
+      if (freshTask) {
+        const retryError = await startTaskSession(ws, freshTask, {
+          runtime: previousSession?.runtime,
+          model: previousSession?.model,
+        });
+        if (retryError) {
+          logger.warn({ taskId, error: retryError }, "Auto-retry after rejection failed — task remains assigned");
+        }
+      }
       break;
     }
 
