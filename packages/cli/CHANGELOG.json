@@ -2,6 +2,26 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.14.10",
+      "tag": "@grackle-ai/cli_v0.14.10",
+      "date": "Thu, 12 Mar 2026 17:36:37 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Add error handling to SendInput WebSocket handler: validate session existence and active status, check environment connection, and send descriptive error messages to the client instead of silently dropping input."
+          }
+        ],
+        "none": [
+          {
+            "comment": "No changes (merge commit false positive)"
+          },
+          {
+            "comment": "No changes (merge commit false positive)"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.14.9",
       "tag": "@grackle-ai/cli_v0.14.9",
       "date": "Thu, 12 Mar 2026 15:30:40 GMT",

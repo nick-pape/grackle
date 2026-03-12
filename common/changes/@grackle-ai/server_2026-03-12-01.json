@@ -1,9 +1,0 @@
-{
-  "changes": [
-    {
-      "packageName": "@grackle-ai/server",
-      "comment": "Add error handling to SendInput WebSocket handler: validate session existence and active status, check environment connection, and send descriptive error messages to the client instead of silently dropping input.",
-      "type": "patch"
-    }
-  ]
-}
