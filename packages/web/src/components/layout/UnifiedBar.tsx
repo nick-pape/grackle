@@ -1,7 +1,7 @@
 import { useState, useEffect, type FormEvent, type JSX } from "react";
 import { useGrackle } from "../../context/GrackleContext.js";
 import type { ViewMode } from "../../App.js";
-import { ConfirmDialog } from "../display/index.js";
+import { ConfirmDialog, Spinner } from "../display/index.js";
 import styles from "./UnifiedBar.module.scss";
 
 /** Props for the UnifiedBar component. */
@@ -484,14 +484,19 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
           {confirmDialog}
           <div className={styles.bar}>
             {isStarting && (
-              <span className={styles.creatingHint}>Starting task…</span>
+              <span className={styles.creatingHint}>
+                <Spinner size="sm" label="Starting task" />
+                Starting task…
+              </span>
             )}
             <button
               onClick={() => startTask(task.id)}
               className={styles.btnPrimary}
               disabled={isStarting}
             >
-              {isStarting ? "Starting…" : "Start Task"}
+              {isStarting
+                ? <span className={styles.btnLoadingContent}><Spinner size="sm" label="Starting" /> Starting…</span>
+                : "Start Task"}
             </button>
             <button
               onClick={() => setShowDeleteTaskConfirm(true)}
@@ -634,14 +639,19 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
               Task failed
             </span>
             {isRetrying && (
-              <span className={styles.creatingHint}>Starting task…</span>
+              <span className={styles.creatingHint}>
+                <Spinner size="sm" label="Starting task" />
+                Starting task…
+              </span>
             )}
             <button
               onClick={() => startTask(task.id)}
               className={styles.btnPrimary}
               disabled={isRetrying}
             >
-              {isRetrying ? "Starting…" : "Retry"}
+              {isRetrying
+                ? <span className={styles.btnLoadingContent}><Spinner size="sm" label="Starting" /> Starting…</span>
+                : "Retry"}
             </button>
             <button
               onClick={() => setShowDeleteTaskConfirm(true)}

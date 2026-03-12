@@ -52,7 +52,9 @@
   padding: var(--space-xs) var(--space-md);
   color: var(--accent-blue);
   font-size: 11px;
-  animation: pulse 2s ease-in-out infinite;
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
 }
 
 .projectRow {

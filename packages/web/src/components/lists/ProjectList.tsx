@@ -4,6 +4,7 @@ import type { ViewMode } from "../../App.js";
 import type { TaskData } from "../../hooks/useGrackleSocket.js";
 import { AnimatePresence, motion } from "motion/react";
 import { MAX_TASK_DEPTH } from "@grackle-ai/common";
+import { Spinner } from "../display/index.js";
 import styles from "./ProjectList.module.scss";
 
 /** Props for the ProjectList component. */
@@ -286,12 +287,17 @@ export function ProjectList({ viewMode, setViewMode }: Props): JSX.Element {
             className={styles.createButton}
             disabled={projectCreating}
           >
-            {projectCreating ? "…" : "OK"}
+            {projectCreating
+              ? <Spinner size="sm" label="Creating project" />
+              : "OK"}
           </button>
         </div>
       )}
       {projectCreating && (
-        <div className={styles.creatingHint}>Creating project…</div>
+        <div className={styles.creatingHint}>
+          <Spinner size="sm" label="Creating project" />
+          Creating project…
+        </div>
       )}
 
       {projects.length === 0 && !showCreateForm && (
