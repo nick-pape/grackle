@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Thu, 12 Mar 2026 06:04:15 GMT and should not be manually modified.
+This log was last generated on Thu, 12 Mar 2026 06:27:52 GMT and should not be manually modified.
+
+## 0.14.4
+Thu, 12 Mar 2026 06:27:52 GMT
+
+### Patches
+
+- Fast reconnect: restart remote PowerLine (~8s) instead of full reprovision (~3min) when the process has stopped
 
 ## 0.14.3
 Thu, 12 Mar 2026 06:04:15 GMT
