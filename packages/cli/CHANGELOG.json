@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.14.2",
+      "tag": "@grackle-ai/cli_v0.14.2",
+      "date": "Thu, 12 Mar 2026 05:17:32 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Migrate cross-package dependencies to workspace:* protocol; bump MAX_TASK_DEPTH to 8; import shared constants from @grackle-ai/common instead of duplicating"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.14.1",
       "tag": "@grackle-ai/cli_v0.14.1",
       "date": "Thu, 12 Mar 2026 02:00:22 GMT",
