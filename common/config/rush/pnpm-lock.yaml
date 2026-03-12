@@ -42,7 +42,7 @@ importers:
         version: 1.58.2
       '@rush-temp/cli':
         specifier: file:./projects/cli.tgz
-        version: file:projects/cli.tgz(@bufbuild/protobuf@2.11.0)
+        version: file:projects/cli.tgz(@bufbuild/protobuf@2.11.0)(@types/debug@4.1.12)(sass@1.97.3)
       '@rush-temp/common':
         specifier: file:./projects/common.tgz
         version: file:projects/common.tgz
@@ -970,7 +970,7 @@ packages:
     os: [win32]
 
   '@rush-temp/cli@file:projects/cli.tgz':
-    resolution: {integrity: sha512-uzfOHuxehmJQkkKJ1p7T2KCMZs5pYaUtCObxA8jSP/mBHpoYodbIsojojoro+FpWISC2CPg3MTBED4/awIDJEQ==, tarball: file:projects/cli.tgz}
+    resolution: {integrity: sha512-GjhXwU8sLhvvpGjO+SAELuBY7Ap9hqKkqqf1TGykV9P/v1s+DMeiwo4Nc2JdgFeVOnOhsSbFvEsmOIJDKLZ5/w==, tarball: file:projects/cli.tgz}
     version: 0.0.0
 
   '@rush-temp/common@file:projects/common.tgz':
@@ -994,11 +994,11 @@ packages:
     version: 0.0.0
 
   '@rush-temp/powerline@file:projects/powerline.tgz':
-    resolution: {integrity: sha512-k/rpQRZz5XB6LmskoDL8Sl3z7sXUVhj+vtrlaG0RPCgvy/lD2tHkuH4HSZ/O4+Z11uvKD27lyuiZQ1tmR3dxfw==, tarball: file:projects/powerline.tgz}
+    resolution: {integrity: sha512-FlpCFeL2uXIOlzUTcl5GW1RP3Mt/vj1UZGxOBzFWEUoxcSGR1VBvgYt5zb97DEj7ewwMlJfPK2P9Vwjrpv1n3A==, tarball: file:projects/powerline.tgz}
     version: 0.0.0
 
   '@rush-temp/server@file:projects/server.tgz':
-    resolution: {integrity: sha512-WId7SPvK6eyYvLn2QjmWdvP/iyA0uBf1HhDwD58xCepdRrzUfAvbp058184M6DV/UVDfgNujBLC1igYhvBSPzQ==, tarball: file:projects/server.tgz}
+    resolution: {integrity: sha512-PcblDxAVyhpcjOL8sCywICHrBDoU4g9aezjf+GQvFFMYR+rakUIVv2aOJhc9PPV7aMZPatcsLU8DmHkbuo5yBw==, tarball: file:projects/server.tgz}
     version: 0.0.0
 
   '@rush-temp/web@file:projects/web.tgz':
@@ -3994,7 +3994,7 @@ snapshots:
   '@rollup/rollup-win32-x64-msvc@4.58.0':
     optional: true
 
-  '@rush-temp/cli@file:projects/cli.tgz(@bufbuild/protobuf@2.11.0)':
+  '@rush-temp/cli@file:projects/cli.tgz(@bufbuild/protobuf@2.11.0)(@types/debug@4.1.12)(sass@1.97.3)':
     dependencies:
       '@connectrpc/connect': 2.1.1(@bufbuild/protobuf@2.11.0)
       '@connectrpc/connect-node': 2.1.1(@bufbuild/protobuf@2.11.0)(@connectrpc/connect@2.1.1(@bufbuild/protobuf@2.11.0))
@@ -4003,8 +4003,27 @@ snapshots:
       cli-table3: 0.6.5
       commander: 13.1.0
       ora: 8.2.0
+      vitest: 3.2.4(@types/debug@4.1.12)(@types/node@22.19.11)(sass@1.97.3)
     transitivePeerDependencies:
       - '@bufbuild/protobuf'
+      - '@edge-runtime/vm'
+      - '@types/debug'
+      - '@vitest/browser'
+      - '@vitest/ui'
+      - happy-dom
+      - jiti
+      - jsdom
+      - less
+      - lightningcss
+      - msw
+      - sass
+      - sass-embedded
+      - stylus
+      - sugarss
+      - supports-color
+      - terser
+      - tsx
+      - yaml
 
   '@rush-temp/common@file:projects/common.tgz':
     dependencies:

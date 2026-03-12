@@ -316,7 +316,7 @@ export function registerTaskCommands(program: Command): void {
  * @param issueSet - Set of issue numbers in the current import batch.
  * @returns A new array of issues sorted with parents before children.
  */
-function topologicalSortIssues<T extends { number: number; parentNumber: number | undefined }>(
+export function topologicalSortIssues<T extends { number: number; parentNumber: number | undefined }>(
   issues: T[],
   issueSet: Set<number>
 ): T[] {
