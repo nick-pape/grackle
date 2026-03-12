@@ -502,7 +502,9 @@ export async function* bootstrapPowerLine(
   //      /workspaces/.codespaces/shared/.env (format: GITHUB_TOKEN=ghu_...).
   //      Fall back to printenv for non-codespace environments (e.g. SSH with real shells).
   let enrichedExtraEnv = extraEnv;
-  if (!process.env.GITHUB_TOKEN && !process.env.GH_TOKEN) {
+  const hasLocalToken = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
+  const hasAdapterToken = extraEnv?.GITHUB_TOKEN || extraEnv?.GH_TOKEN;
+  if (!hasLocalToken && !hasAdapterToken) {
     try {
       const remoteToken = (
         await executor.exec(
@@ -601,7 +603,7 @@ export async function* bootstrapPowerLine(
   //    so destroy() cleans it up.
   yield { stage: "bootstrapping", message: "Configuring git credentials...", progress: 0.56 };
   try {
-    const credHelperScript = '#!/bin/sh\ntest "$1" = get || exit 0\necho "username=x-access-token"\necho "password=$GITHUB_TOKEN"\n';
+    const credHelperScript = '#!/bin/sh\ntest "$1" = get || exit 0\necho "username=x-access-token"\necho "password=${GITHUB_TOKEN:-$GH_TOKEN}"\n';
     const credHelperBase64 = Buffer.from(credHelperScript, "utf8").toString("base64");
     const credHelperPath = `${REMOTE_POWERLINE_DIRECTORY}/git-credential-github.sh`;
     await executor.exec(
@@ -776,6 +778,8 @@ export async function remoteDestroy(environmentId: string, executor: RemoteExecu
       `${buildRemoteKillCommand()}; `
       + 'CRED="$HOME/.claude/.credentials.json"; '
       + `if [ -L "$CRED" ]; then case "$(readlink "$CRED" 2>/dev/null)" in ${REMOTE_POWERLINE_DIRECTORY}/*) rm -f "$CRED";; esac; fi; `
+      + `HELPER="$(git config --global credential.helper 2>/dev/null || true)"; `
+      + `case "$HELPER" in ${REMOTE_POWERLINE_DIRECTORY}/*) git config --global --unset credential.helper 2>/dev/null || true;; esac; `
       + `rm -rf ${REMOTE_POWERLINE_DIRECTORY}`,
     );
   } catch (err) {

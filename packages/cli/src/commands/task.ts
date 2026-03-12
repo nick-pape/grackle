@@ -69,16 +69,28 @@ export function registerTaskCommands(program: Command): void {
     .option("--title <text>", "New title")
     .option("--desc <text>", "New description")
     .option("--env <env-id>", "Environment ID")
-    .option("--status <status>", "Task status (pending, assigned, review, done, failed)")
+    .option("--status <status>", "Task status (pending, assigned, in_progress, review, done, failed)")
     .option("--notes <text>", "Review notes")
     .action(async (taskId: string, opts) => {
+      const VALID_STATUSES = new Set([
+        "pending", "assigned", "in_progress", "review", "done", "failed",
+      ]);
+
+      if (opts.status !== undefined && !VALID_STATUSES.has(String(opts.status).toLowerCase())) {
+        console.error(
+          `Invalid status: "${opts.status}". Valid values are: ${[...VALID_STATUSES].join(", ")}`,
+        );
+        process.exitCode = 1;
+        return;
+      }
+
       const client = createGrackleClient();
       const t = await client.updateTask({
         id: taskId,
         title: opts.title || "",
         description: opts.desc || "",
         environmentId: opts.env || "",
-        status: opts.status ? taskStatusToEnum(opts.status) : taskStatusToEnum(""),
+        status: opts.status ? taskStatusToEnum(String(opts.status).toLowerCase()) : taskStatusToEnum(""),
         reviewNotes: opts.notes || "",
       });
       console.log(`Updated: ${t.id} (${t.title}) status: ${taskStatusToString(t.status)} env: ${t.environmentId || "-"}`);

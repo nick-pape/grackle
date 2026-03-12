@@ -184,7 +184,7 @@ describe("resolveWorkingDirectory", () => {
     queue.close();
   });
 
-  it("falls back to /workspace when worktree fails", async () => {
+  it("falls back to workspace directory when worktree fails", async () => {
     // findGitRepoPath finds /repo as git repo, but ensureWorktree fails
     vi.mocked(existsSync).mockImplementation((p) => String(p) === "/repo" || String(p) === "/workspace");
     vi.mocked(execFileSync).mockImplementation((_cmd, _args, opts) => {

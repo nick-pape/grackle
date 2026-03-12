@@ -90,6 +90,17 @@ function isGitRepo(dir: string): boolean {
 }
 
 /**
+ * Return the git repository toplevel for a directory, or undefined if not a git repo.
+ */
+function gitToplevel(dir: string): string | undefined {
+  try {
+    return execFileSync("git", ["rev-parse", "--show-toplevel"], { cwd: dir, encoding: "utf8" }).trim();
+  } catch {
+    return undefined;
+  }
+}
+
+/**
  * Find the git repository root from a set of well-known workspace paths.
  *
  * Checks (in order):
@@ -100,9 +111,9 @@ function isGitRepo(dir: string): boolean {
  * Returns the first path that exists and is a git repository, or undefined.
  */
 export function findGitRepoPath(basePath?: string): string | undefined {
-  // Try the explicitly provided path first
+  // Try the explicitly provided path first, resolving to the actual repo root
   if (basePath && existsSync(basePath) && isGitRepo(basePath)) {
-    return basePath;
+    return gitToplevel(basePath) ?? basePath;
   }
 
   // Docker convention
@@ -148,8 +159,14 @@ function findWorkspaceDir(basePath?: string, requireNonEmpty?: boolean): string 
 
   for (const dir of candidates) {
     if (dir && existsSync(dir)) {
-      if (requireNonEmpty && readdirSync(dir).length === 0) {
-        continue;
+      if (requireNonEmpty) {
+        try {
+          if (readdirSync(dir).length === 0) {
+            continue;
+          }
+        } catch {
+          continue;
+        }
       }
       return dir;
     }
