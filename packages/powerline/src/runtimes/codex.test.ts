@@ -97,7 +97,7 @@ describe("resolveMcpServers", () => {
     expect(result.servers!.grackle).toEqual({
       command: "node",
       args: [expect.stringMatching(/mcp-grackle[\\/]index\.js$/)],
-      tools: ["post_finding", "get_task_context", "update_task_status"],
+      tools: ["post_finding", "create_subtask", "get_task_context", "update_task_status", "query_findings"],
     });
   });
 

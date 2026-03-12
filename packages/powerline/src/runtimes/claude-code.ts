@@ -1,7 +1,7 @@
 import type { AgentEvent, AgentSession } from "./runtime.js";
 import { BaseAgentSession } from "./base-session.js";
 import { BaseAgentRuntime } from "./base-runtime.js";
-import { resolveWorkingDirectory, resolveMcpServers, buildFindingEvent } from "./runtime-utils.js";
+import { resolveWorkingDirectory, resolveMcpServers, buildFindingEvent, buildSubtaskCreateEvent } from "./runtime-utils.js";
 
 // Dynamic import — try @anthropic-ai/claude-agent-sdk first, then @anthropic-ai/claude-code
 type QueryFn = (opts: Record<string, unknown>) => Promise<unknown>;
@@ -52,6 +52,13 @@ export function mapMessage(msg: Record<string, unknown>): AgentEvent[] {
             const args = b.input as Record<string, unknown> | undefined;
             if (args) {
               events.push(buildFindingEvent(args, b));
+            }
+          }
+          // Intercept subtask creation tool calls
+          if (toolName === "mcp__grackle__create_subtask" || toolName === "create_subtask") {
+            const args = b.input as Record<string, unknown> | undefined;
+            if (args) {
+              events.push(buildSubtaskCreateEvent(args, b));
             }
           }
         } else if (b.type === "tool_result") {

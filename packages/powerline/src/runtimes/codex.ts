@@ -1,7 +1,7 @@
 import type { AgentSession } from "./runtime.js";
 import { BaseAgentSession } from "./base-session.js";
 import { BaseAgentRuntime } from "./base-runtime.js";
-import { resolveWorkingDirectory, resolveMcpServers, buildFindingEvent } from "./runtime-utils.js";
+import { resolveWorkingDirectory, resolveMcpServers, buildFindingEvent, buildSubtaskCreateEvent } from "./runtime-utils.js";
 import { logger } from "../logger.js";
 
 // ─── Environment variable names ────────────────────────────
@@ -300,6 +300,11 @@ class CodexSession extends BaseAgentSession {
             if (toolName === "post_finding" || qualifiedName === "mcp__grackle__post_finding") {
               const args = (item.arguments ?? {}) as Record<string, unknown>;
               this.eventQueue.push(buildFindingEvent(args, event));
+            }
+            // Intercept subtask creation tool calls only on successful invocation
+            if (!error && (toolName === "create_subtask" || qualifiedName === "mcp__grackle__create_subtask")) {
+              const args = (item.arguments ?? {}) as Record<string, unknown>;
+              this.eventQueue.push(buildSubtaskCreateEvent(args, event));
             }
           } else if (type === "reasoning") {
             messageCount++;

@@ -206,6 +206,77 @@ describe("mapMessage", () => {
     });
   });
 
+  describe("subtask creation interception", () => {
+    it("emits subtask_create event for create_subtask tool call", () => {
+      const msg = {
+        type: "assistant",
+        message: {
+          role: "assistant",
+          content: [
+            {
+              type: "tool_use",
+              name: "create_subtask",
+              input: {
+                title: "Design API",
+                description: "Design REST endpoints",
+                local_id: "design",
+                depends_on: [],
+                can_decompose: false,
+              },
+            },
+          ],
+        },
+      };
+      const events = mapMessage(msg);
+      expect(events).toHaveLength(2); // tool_use + subtask_create
+      expect(events[0].type).toBe("tool_use");
+      expect(events[1].type).toBe("subtask_create");
+
+      const subtask = JSON.parse(events[1].content);
+      expect(subtask.title).toBe("Design API");
+      expect(subtask.description).toBe("Design REST endpoints");
+      expect(subtask.local_id).toBe("design");
+      expect(subtask.can_decompose).toBe(false);
+    });
+
+    it("emits subtask_create event for mcp__grackle__create_subtask", () => {
+      const msg = {
+        type: "assistant",
+        message: {
+          role: "assistant",
+          content: [
+            {
+              type: "tool_use",
+              name: "mcp__grackle__create_subtask",
+              input: { title: "MCP Subtask", description: "via MCP" },
+            },
+          ],
+        },
+      };
+      const events = mapMessage(msg);
+      expect(events).toHaveLength(2);
+      expect(events[1].type).toBe("subtask_create");
+
+      const subtask = JSON.parse(events[1].content);
+      expect(subtask.title).toBe("MCP Subtask");
+    });
+
+    it("does not emit subtask_create for unrelated tools", () => {
+      const msg = {
+        type: "assistant",
+        message: {
+          role: "assistant",
+          content: [
+            { type: "tool_use", name: "read_file", input: { path: "/tmp" } },
+          ],
+        },
+      };
+      const events = mapMessage(msg);
+      expect(events).toHaveLength(1);
+      expect(events[0].type).toBe("tool_use");
+    });
+  });
+
   describe("system messages", () => {
     it("init subtype produces system event with model", () => {
       const msg = { type: "system", subtype: "init", model: "claude-3" };

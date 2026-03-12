@@ -51,6 +51,43 @@ server.tool(
 );
 
 server.tool(
+  "create_subtask",
+  "Delegate work to another agent by creating a child task. Use this when work is too large or complex for you to complete alone, or when a different specialization is needed. Each subtask runs in its own agent session.",
+  {
+    title: z.string().describe("Short descriptive title for the subtask"),
+    description: z.string().describe("Detailed description of what to do and what 'done' looks like"),
+    local_id: z
+      .string()
+      .optional()
+      .describe("Assign a local ID to reference this subtask in depends_on of later subtasks"),
+    depends_on: z
+      .array(z.string())
+      .optional()
+      .describe("Local IDs of sibling subtasks that must finish first"),
+    can_decompose: z
+      .boolean()
+      .optional()
+      .describe("Set true if the subtask itself may need further decomposition (default: false)"),
+  },
+  async ({ title, description, local_id, depends_on, can_decompose }) => {
+    // The runtime intercepts this tool_use event and emits a "subtask_create"
+    // event in the stream. We just return a confirmation here.
+    const response = { status: "subtask_queued", title };
+    if (local_id) {
+      response.local_id = local_id;
+    }
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(response),
+        },
+      ],
+    };
+  }
+);
+
+server.tool(
   "query_findings",
   "Query findings posted by other agents in this project. Findings from previous tasks are also included in your system context automatically.",
   {
