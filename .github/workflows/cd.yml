@@ -168,18 +168,35 @@ jobs:
             echo "has_bump=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Merge version bump into main
+      # Rush's bump commits contain [skip ci] which prevents the required
+      # 'build' check from running on the PR. Push an empty commit without
+      # [skip ci] so CI triggers, then wait for it before merging.
+      - name: Trigger CI on bump branch
+        if: steps.bump.outputs.has_bump == 'true'
+        run: |
+          git checkout "${{ steps.bump.outputs.branch }}"
+          git commit --allow-empty -m "chore: trigger CI for version bump"
+          git push origin "${{ steps.bump.outputs.branch }}"
+
+      - name: Create and merge version bump PR
         if: steps.bump.outputs.has_bump == 'true'
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
+          branch="${{ steps.bump.outputs.branch }}"
+
           pr_url=$(gh pr create \
             --base main \
-            --head "${{ steps.bump.outputs.branch }}" \
-            --title "chore: bump versions [skip ci]" \
+            --head "$branch" \
+            --title "chore: bump versions" \
             --body "Automated version bump from publish workflow.")
 
-          gh pr merge "$pr_url" --squash --admin --delete-branch
+          pr_number=$(gh pr view "$pr_url" --json number --jq '.number')
+          echo "Waiting for CI on bump PR #${pr_number}..."
+          timeout 1800 gh pr checks "$pr_number" --watch --fail-fast
+
+          gh pr merge "$pr_url" --squash --admin --delete-branch \
+            --subject "chore: bump versions [skip ci]"
 
       # After squash-merge, local main has diverged from origin/main
       # (rush merged the temp branch locally, but the PR was squash-merged).
