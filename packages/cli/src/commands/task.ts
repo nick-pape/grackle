@@ -117,12 +117,13 @@ export function registerTaskCommands(program: Command): void {
     .option("--state <state>", "Issue state to fetch", "open")
     .option("--env <env-id>", "Environment ID to assign to created tasks")
     .action(async (projectId: string, opts: { repo: string; label?: string; state: string; env?: string }) => {
+      const normalizedState = (opts.state ?? "").trim().toLowerCase();
       const client = createGrackleClient();
       const res = await client.importGitHubIssues({
         projectId,
         repo: opts.repo,
         label: opts.label,
-        state: issueStateToEnum(opts.state),
+        state: issueStateToEnum(normalizedState),
         environmentId: opts.env,
       });
       const parts = [`Imported ${chalk.green(res.imported)} tasks`];

@@ -638,6 +638,9 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
     // ─── GitHub Import ────────────────────────────────────────
 
     async importGitHubIssues(req: grackle.ImportGitHubIssuesRequest) {
+      if (req.state === grackle.IssueState.UNSPECIFIED) {
+        throw new Error("state must be OPEN or CLOSED");
+      }
       const stateStr = req.state === grackle.IssueState.CLOSED ? "closed" : "open";
       const result = await importGitHubIssues(
         req.projectId,

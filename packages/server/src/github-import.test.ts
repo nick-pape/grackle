@@ -267,7 +267,7 @@ describe("fetchGitHubIssues", () => {
   });
 
   it("throws on invalid repo format", async () => {
-    await expect(fetchGitHubIssues("badrepo", "open")).rejects.toThrow("owner/repo format");
+    await expect(fetchGitHubIssues("badrepo", "open")).rejects.toThrow('repo must be in "owner/repo" format');
   });
 
   it("parses a single page of issues", async () => {

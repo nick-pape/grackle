@@ -6,21 +6,38 @@ import { broadcast } from "./ws-broadcast.js";
 import { slugify } from "./utils/slugify.js";
 import { logger } from "./logger.js";
 
-/** Promise wrapper around `execFile` that resolves with stdout as a string. */
-function execFileAsync(command: string, args: string[], options: { encoding: string; maxBuffer: number }): Promise<string> {
-  return new Promise((resolve, reject) => {
-    execFile(command, args, options, (err, stdout) => {
-      if (err) {
-        reject(err);
-      } else {
-        resolve(String(stdout));
-      }
-    });
-  });
-}
-
 /** Maximum buffer size for `gh` CLI output (50 MB). */
 const MAX_BUFFER_BYTES: number = 50 * 1024 * 1024;
+
+/** Default timeout for `gh` CLI invocations (5 minutes). */
+const GH_CLI_TIMEOUT_MS: number = 5 * 60 * 1000;
+
+/**
+ * Promise wrapper around `execFile` that resolves with stdout as a string.
+ * Includes a timeout to prevent hanging the import lock if `gh` stalls.
+ */
+function execFileAsync(
+  command: string,
+  args: string[],
+  options: { encoding: string; maxBuffer: number; timeout?: number },
+): Promise<string> {
+  const timeout = options.timeout ?? GH_CLI_TIMEOUT_MS;
+  return new Promise((resolve, reject) => {
+    execFile(
+      command,
+      args,
+      { ...options, timeout },
+      (err, stdout, stderr) => {
+        if (err) {
+          (err as NodeJS.ErrnoException & { stderr?: string }).stderr = String(stderr);
+          reject(err);
+        } else {
+          resolve(String(stdout));
+        }
+      },
+    );
+  });
+}
 
 /** Number of issues fetched per GraphQL page. */
 const ISSUES_PER_PAGE: number = 100;
@@ -79,7 +96,7 @@ function formatError(err: unknown): string {
 export async function fetchGitHubIssues(repo: string, state: string, label?: string): Promise<GitHubIssue[]> {
   const [owner, repoName] = repo.split("/");
   if (!owner || !repoName) {
-    throw new Error("--repo must be in owner/repo format.");
+    throw new Error(`repo must be in "owner/repo" format (received: "${repo}")`);
   }
 
   const stateEnum = state.toUpperCase() === "CLOSED" ? "CLOSED" : "OPEN";
@@ -98,7 +115,7 @@ export async function fetchGitHubIssues(repo: string, state: string, label?: str
               title
               body
               parent { number }
-              labels(first: 10) { nodes { name } }
+              labels(first: 100) { nodes { name } }
             }
           }
         }
