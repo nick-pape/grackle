@@ -119,96 +119,231 @@ export function registerTaskCommands(program: Command): void {
     .option("--env <env-id>", "Environment ID to assign to created tasks")
     .action(
       /**
-       * Fetches GitHub issues via the `gh` CLI, deduplicates against existing
-       * tasks (matched by issue number prefix `#<number>:`), and bulk-creates
-       * any issues that have not yet been imported into the given project.
+       * Fetches GitHub issues via the `gh` CLI GraphQL API (including parent
+       * sub-issue relationships), deduplicates against existing tasks (matched
+       * by issue number prefix `#<number>:`), topologically sorts so parents
+       * are created before children, and bulk-creates any issues that have not
+       * yet been imported into the given project.
        *
        * @param projectId - The Grackle project ID to import tasks into.
        * @param opts - Parsed CLI options (repo, label, state, env).
        */
       async (projectId: string, opts: { repo: string; label?: string; state: string; env?: string }) => {
         const MAX_BUFFER_BYTES = 50 * 1024 * 1024;
-
-        // 1. Fetch issues from GitHub CLI
-        const ghArgs = [
-          "issue",
-          "list",
-          "--repo",
-          opts.repo,
-          "--state",
-          opts.state,
-          "--json",
-          "number,title,body,labels",
-          "--limit",
-          "9999",
-        ];
-        if (opts.label) {
-          ghArgs.push("--label", opts.label);
-        }
-        let ghOutput: string;
-        try {
-          ghOutput = execFileSync("gh", ghArgs, {
-            encoding: "utf8",
-            maxBuffer: MAX_BUFFER_BYTES,
-          });
-        } catch (err) {
-          console.error(`Failed to run \`gh issue list\` for repo ${opts.repo} (state=${opts.state}).`);
-          console.error(err);
-          process.exit(1);
-        }
+        const ISSUES_PER_PAGE = 100;
 
         interface GitHubIssue {
           number: number;
           title: string;
           body: string;
-          labels: { name: string }[];
+          parentNumber: number | undefined;
+          labels: string[];
         }
 
-        let issues: GitHubIssue[];
-        try {
-          issues = JSON.parse(ghOutput);
-        } catch (err) {
-          console.error("Failed to parse JSON output from `gh issue list`.");
-          console.error("Parse error:", err);
+        // 1. Fetch issues from GitHub via GraphQL (includes parent sub-issue info)
+        const [owner, repo] = opts.repo.split("/");
+        if (!owner || !repo) {
+          console.error("--repo must be in owner/repo format.");
           process.exit(1);
         }
 
-        // 2. Fetch existing tasks for deduplication (match by issue number)
+        const stateEnum = opts.state.toUpperCase() === "CLOSED" ? "CLOSED" : "OPEN";
+        const issues: GitHubIssue[] = [];
+        let cursor: string | undefined;
+        let hasNextPage = true;
+
+        while (hasNextPage) {
+          const query = `
+            query($owner: String!, $repo: String!, $cursor: String) {
+              repository(owner: $owner, name: $repo) {
+                issues(first: ${ISSUES_PER_PAGE}, states: [${stateEnum}], after: $cursor) {
+                  pageInfo { hasNextPage endCursor }
+                  nodes {
+                    number
+                    title
+                    body
+                    parent { number }
+                    labels(first: 10) { nodes { name } }
+                  }
+                }
+              }
+            }`;
+
+          const ghArgs = [
+            "api", "graphql",
+            "-f", `query=${query}`,
+            "-f", `owner=${owner}`,
+            "-f", `repo=${repo}`,
+          ];
+          if (cursor !== undefined) {
+            ghArgs.push("-f", `cursor=${cursor}`);
+          }
+          let ghOutput: string;
+          try {
+            ghOutput = execFileSync("gh", ghArgs, {
+              encoding: "utf8",
+              maxBuffer: MAX_BUFFER_BYTES,
+            });
+          } catch (err) {
+            console.error(`Failed to fetch issues via GraphQL for ${opts.repo} (state=${opts.state}).`);
+            console.error(err);
+            process.exit(1);
+          }
+
+          let parsed: {
+            data: {
+              repository: {
+                issues: {
+                  pageInfo: { hasNextPage: boolean; endCursor: string | undefined };
+                  nodes: {
+                    number: number;
+                    title: string;
+                    body: string;
+                    parent: { number: number } | undefined;
+                    labels: { nodes: { name: string }[] };
+                  }[];
+                };
+              };
+            };
+          };
+          try {
+            parsed = JSON.parse(ghOutput);
+          } catch (err) {
+            console.error("Failed to parse GraphQL response.");
+            console.error("Parse error:", err);
+            process.exit(1);
+          }
+
+          const issuesPage = parsed.data.repository.issues;
+          for (const node of issuesPage.nodes) {
+            issues.push({
+              number: node.number,
+              title: node.title,
+              body: node.body,
+              parentNumber: node.parent?.number ?? undefined,
+              labels: node.labels.nodes.map((l) => l.name),
+            });
+          }
+
+          hasNextPage = issuesPage.pageInfo.hasNextPage;
+          cursor = issuesPage.pageInfo.endCursor;
+        }
+
+        // Filter by label client-side (GraphQL filterBy labels requires exact match array)
+        if (opts.label) {
+          const labelFilter = opts.label;
+          const beforeCount = issues.length;
+          const filtered = issues.filter((i) => i.labels.includes(labelFilter));
+          issues.length = 0;
+          issues.push(...filtered);
+          if (issues.length < beforeCount) {
+            console.log(`Filtered to ${issues.length} issues with label "${labelFilter}"`);
+          }
+        }
+
+        // 2. Fetch existing tasks for deduplication and parent linking
         const client = createGrackleClient();
         const res = await client.listTasks({ id: projectId });
         const issueNumberPattern = /^#(\d+):/;
-        const existingIssueNumbers = new Set(
-          res.tasks
-            .map((t) => {
-              const match = t.title.match(issueNumberPattern);
-              return match ? Number(match[1]) : null;
-            })
-            .filter((n): n is number => n !== null)
-        );
 
-        // 3. Create tasks for issues not already imported
+        /** Maps GitHub issue number → Grackle task ID (for both existing and newly created tasks). */
+        const issueNumberToTaskId = new Map<number, string>();
+        const existingIssueNumbers = new Set<number>();
+
+        for (const t of res.tasks) {
+          const match = t.title.match(issueNumberPattern);
+          if (match) {
+            const num = Number(match[1]);
+            existingIssueNumbers.add(num);
+            issueNumberToTaskId.set(num, t.id);
+          }
+        }
+
+        // 3. Topological sort: parents before children
+        const issueSet = new Set(issues.map((i) => i.number));
+        const sorted = topologicalSortIssues(issues, issueSet);
+
+        // 4. Create tasks in topological order with parent linking
         let imported = 0;
         let skipped = 0;
-        for (const issue of issues) {
+        let linked = 0;
+
+        for (const issue of sorted) {
           if (existingIssueNumbers.has(issue.number)) {
             skipped++;
             continue;
           }
+
           const title = `#${issue.number}: ${issue.title}`;
-          await client.createTask({
+          let parentTaskId = "";
+          if (issue.parentNumber !== undefined) {
+            const resolvedParentId = issueNumberToTaskId.get(issue.parentNumber);
+            if (resolvedParentId) {
+              parentTaskId = resolvedParentId;
+              linked++;
+            }
+          }
+
+          const created = await client.createTask({
             projectId,
             title,
             description: issue.body ?? "",
             environmentId: opts.env ?? "",
             dependsOn: [],
+            parentTaskId,
           });
+          issueNumberToTaskId.set(issue.number, created.id);
           imported++;
         }
 
-        // 4. Print summary
-        console.log(
-          `Imported ${chalk.green(imported)} tasks (skipped ${skipped} already imported)`
-        );
+        // 5. Print summary
+        const parts = [`Imported ${chalk.green(imported)} tasks`];
+        if (linked > 0) {
+          parts.push(`${chalk.cyan(linked)} linked to parents`);
+        }
+        parts.push(`skipped ${skipped} already imported`);
+        console.log(parts.join(", "));
       }
     );
+}
+
+/**
+ * Topologically sorts issues so that parents appear before their children.
+ * Issues whose parent is outside the import set are treated as roots.
+ * Falls back to original order for issues at the same depth.
+ *
+ * @param issues - The list of GitHub issues to sort.
+ * @param issueSet - Set of issue numbers in the current import batch.
+ * @returns A new array of issues sorted with parents before children.
+ */
+function topologicalSortIssues<T extends { number: number; parentNumber: number | undefined }>(
+  issues: T[],
+  issueSet: Set<number>
+): T[] {
+  const issueByNumber = new Map(issues.map((i) => [i.number, i]));
+  const visited = new Set<number>();
+  const sorted: T[] = [];
+
+  function visit(issue: T): void {
+    if (visited.has(issue.number)) {
+      return;
+    }
+    visited.add(issue.number);
+
+    // Visit parent first if it's in the import set
+    if (issue.parentNumber !== undefined && issueSet.has(issue.parentNumber)) {
+      const parent = issueByNumber.get(issue.parentNumber);
+      if (parent) {
+        visit(parent);
+      }
+    }
+
+    sorted.push(issue);
+  }
+
+  for (const issue of issues) {
+    visit(issue);
+  }
+
+  return sorted;
 }
