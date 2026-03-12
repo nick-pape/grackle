@@ -2,7 +2,6 @@ import { test, expect } from "./fixtures.js";
 import {
   createProject,
   createTask,
-  diffViewerLocator,
   navigateToTask,
   patchWsForStubRuntime,
   runStubTaskToCompletion,
@@ -16,12 +15,12 @@ test.describe("Tab Auto-Switching", () => {
     await createProject(page, "tab-stream");
     await createTask(page, "tab-stream", "tab-start-task", "test-local");
 
-    // Navigate to task, switch to Diff tab first
+    // Navigate to task, switch to Findings tab first
     await navigateToTask(page, "tab-start-task");
-    await page.locator("button", { hasText: "Diff" }).click();
+    await page.locator("button", { hasText: "Findings" }).click();
 
-    // Verify Diff tab content is visible (DiffViewer renders in any state)
-    await expect(diffViewerLocator(page).first()).toBeVisible({ timeout: 10_000 });
+    // Verify Findings tab content is visible
+    await expect(page.getByText("No findings yet")).toBeVisible({ timeout: 10_000 });
 
     // Start the task with stub runtime
     await patchWsForStubRuntime(page);
@@ -35,24 +34,21 @@ test.describe("Tab Auto-Switching", () => {
     await expect(page.locator("text=Stub runtime initialized")).toBeVisible({ timeout: 10_000 });
   });
 
-  test("diff tab becomes active on review state", async ({ appPage }) => {
+  test("stream tab becomes active on review state", async ({ appPage }) => {
     const page = appPage;
 
     // Create project and task
-    await createProject(page, "tab-diff");
-    await createTask(page, "tab-diff", "tab-review-task", "test-local");
+    await createProject(page, "tab-review");
+    await createTask(page, "tab-review", "tab-review-task", "test-local");
     await navigateToTask(page, "tab-review-task");
 
     // Start and complete the task to reach review
     await patchWsForStubRuntime(page);
     await runStubTaskToCompletion(page);
 
-    // Verify Diff tab is now active (auto-switch on review status)
-    // DiffViewer should be rendering — stream content should not be visible
-    await expect(diffViewerLocator(page).first()).toBeVisible({ timeout: 10_000 });
-
-    // Stream content should NOT be visible (tab conditionally renders)
-    await expect(page.locator("text=Stub runtime initialized")).not.toBeVisible();
+    // Verify Stream tab is now active (auto-switch on review status)
+    // Stream content should still be visible
+    await expect(page.locator("text=Stub runtime initialized")).toBeVisible({ timeout: 10_000 });
   });
 
   test("findings tab becomes active on done state", async ({ appPage }) => {
@@ -74,7 +70,7 @@ test.describe("Tab Auto-Switching", () => {
     // Verify Findings tab becomes active (auto-switch on done status)
     await expect(page.getByText("No findings yet")).toBeVisible({ timeout: 10_000 });
 
-    // Stream and Diff content should NOT be visible
+    // Stream content should NOT be visible
     await expect(page.locator("text=Stub runtime initialized")).not.toBeVisible();
   });
 

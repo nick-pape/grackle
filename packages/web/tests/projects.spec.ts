@@ -106,10 +106,9 @@ test.describe("Projects", () => {
     await expect(page.getByText("Task: my task")).toBeVisible({ timeout: 5_000 });
     await expect(page.getByText("pending")).toBeVisible();
 
-    // Tab bar should show Overview, Stream, Diff, Findings
+    // Tab bar should show Overview, Stream, Findings
     await expect(page.locator("button", { hasText: "Overview" })).toBeVisible();
     await expect(page.locator("button", { hasText: "Stream" })).toBeVisible();
-    await expect(page.locator("button", { hasText: "Diff" })).toBeVisible();
     await expect(page.locator("button", { hasText: "Findings" })).toBeVisible();
 
     // Overview tab (default for pending) should be active
