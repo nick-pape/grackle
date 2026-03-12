@@ -508,7 +508,7 @@ export async function* bootstrapPowerLine(
     try {
       const remoteToken = (
         await executor.exec(
-          `(grep -m1 '^GITHUB_TOKEN=' /workspaces/.codespaces/shared/.env 2>/dev/null | cut -d= -f2- || printenv GITHUB_TOKEN 2>/dev/null || true)`,
+          `(grep -m1 '^GITHUB_TOKEN=' /workspaces/.codespaces/shared/.env 2>/dev/null | cut -d= -f2- || grep -m1 '^GH_TOKEN=' /workspaces/.codespaces/shared/.env 2>/dev/null | cut -d= -f2- || printenv GITHUB_TOKEN 2>/dev/null || printenv GH_TOKEN 2>/dev/null || true)`,
           { timeout: SSH_CONNECTIVITY_TIMEOUT_MS },
         )
       ).trim();

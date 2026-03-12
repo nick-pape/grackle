@@ -109,16 +109,24 @@ describe("findGitRepoPath", () => {
     vi.mocked(execFileSync).mockImplementation(() => { throw new Error("not a git repo"); });
   });
 
-  it("returns basePath when it exists and is a git repo", () => {
+  it("returns resolved toplevel when basePath exists and is a git repo", () => {
     vi.mocked(existsSync).mockImplementation((p) => String(p) === "/repo");
-    vi.mocked(execFileSync).mockReturnValue(Buffer.from(".git\n"));
+    vi.mocked(execFileSync).mockImplementation((_cmd, args) => {
+      if (Array.isArray(args) && args.includes("--show-toplevel")) {
+        return "/repo\n";
+      }
+      return Buffer.from(".git\n");
+    });
     expect(findGitRepoPath("/repo")).toBe("/repo");
   });
 
   it("falls back to /workspace when basePath is not a git repo", () => {
     vi.mocked(existsSync).mockImplementation((p) => String(p) === "/workspace" || String(p) === "/repo");
-    vi.mocked(execFileSync).mockImplementation((_cmd, _args, opts) => {
+    vi.mocked(execFileSync).mockImplementation((_cmd, args, opts) => {
       if ((opts as { cwd: string }).cwd === "/workspace") {
+        if (Array.isArray(args) && args.includes("--show-toplevel")) {
+          return "/workspace\n";
+        }
         return Buffer.from(".git\n");
       }
       throw new Error("not a git repo");
@@ -134,8 +142,11 @@ describe("findGitRepoPath", () => {
       }
       return [];
     });
-    vi.mocked(execFileSync).mockImplementation((_cmd, _args, opts) => {
+    vi.mocked(execFileSync).mockImplementation((_cmd, args, opts) => {
       if ((opts as { cwd: string }).cwd === "/workspaces/grackle") {
+        if (Array.isArray(args) && args.includes("--show-toplevel")) {
+          return "/workspaces/grackle\n";
+        }
         return Buffer.from(".git\n");
       }
       throw new Error("not a git repo");
@@ -163,7 +174,12 @@ describe("resolveWorkingDirectory", () => {
   it("returns worktree path when branch and basePath are provided", async () => {
     // findGitRepoPath needs to find /repo as a git repo
     vi.mocked(existsSync).mockImplementation((p) => String(p) === "/repo");
-    vi.mocked(execFileSync).mockReturnValue(Buffer.from(".git\n"));
+    vi.mocked(execFileSync).mockImplementation((_cmd, args) => {
+      if (Array.isArray(args) && args.includes("--show-toplevel")) {
+        return "/repo\n";
+      }
+      return Buffer.from(".git\n");
+    });
     vi.mocked(ensureWorktree).mockResolvedValue({
       worktreePath: "/worktrees/my-branch",
       branch: "my-branch",
@@ -187,8 +203,11 @@ describe("resolveWorkingDirectory", () => {
   it("falls back to workspace directory when worktree fails", async () => {
     // findGitRepoPath finds /repo as git repo, but ensureWorktree fails
     vi.mocked(existsSync).mockImplementation((p) => String(p) === "/repo" || String(p) === "/workspace");
-    vi.mocked(execFileSync).mockImplementation((_cmd, _args, opts) => {
+    vi.mocked(execFileSync).mockImplementation((_cmd, args, opts) => {
       if ((opts as { cwd: string }).cwd === "/repo") {
+        if (Array.isArray(args) && args.includes("--show-toplevel")) {
+          return "/repo\n";
+        }
         return Buffer.from(".git\n");
       }
       throw new Error("not a git repo");

@@ -3,7 +3,7 @@
   "changes": [
     {
       "packageName": "@grackle-ai/cli",
-      "comment": "Auto-detect git repo path for worktrees, add task update/retry CLI, capture codespace git credentials",
+      "comment": "Auto-detect git repo path for worktrees, add task update CLI, capture codespace git credentials",
       "type": "patch"
     }
   ]
