@@ -42,7 +42,10 @@ function execFileAsync(
 /** Number of issues fetched per GraphQL page. */
 const ISSUES_PER_PAGE: number = 100;
 
-/** Simple concurrency guard — only one import runs at a time. */
+/**
+ * Simple concurrency guard — only one import runs at a time within this process.
+ * Does not prevent concurrent imports from separate server processes sharing the same DB.
+ */
 const importLock: { active: boolean } = { active: false };
 
 /** Acquire the import lock. Throws if already held. */

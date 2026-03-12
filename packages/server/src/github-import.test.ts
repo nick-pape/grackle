@@ -270,6 +270,43 @@ describe("fetchGitHubIssues", () => {
     await expect(fetchGitHubIssues("badrepo", "open")).rejects.toThrow('repo must be in "owner/repo" format');
   });
 
+  it("throws on extra path segments in repo format", async () => {
+    await expect(fetchGitHubIssues("owner/repo/extra", "open")).rejects.toThrow('repo must be in "owner/repo" format');
+  });
+
+  it("throws when gh CLI execution fails", async () => {
+    const ghError = new Error("Command failed: gh api graphql");
+    mockExecFile.mockImplementationOnce(
+      (_cmd: string, _args: string[], _opts: unknown, cb: (err: Error | null, stdout: string, stderr: string) => void) => {
+        cb(ghError, "", "gh: not found");
+      },
+    );
+    await expect(fetchGitHubIssues("owner/repo", "open")).rejects.toThrow("Command failed");
+  });
+
+  it("throws when gh returns invalid JSON", async () => {
+    mockExecFile.mockImplementationOnce(
+      (_cmd: string, _args: string[], _opts: unknown, cb: (err: Error | null, stdout: string, stderr: string) => void) => {
+        cb(null, "not valid json {{{", "");
+      },
+    );
+    await expect(fetchGitHubIssues("owner/repo", "open")).rejects.toThrow("Failed to parse GraphQL response");
+  });
+
+  it("throws when GraphQL response contains errors", async () => {
+    mockGhResponse({
+      errors: [{ message: "Could not resolve to a Repository" }],
+    });
+    await expect(fetchGitHubIssues("owner/repo", "open")).rejects.toThrow("GraphQL errors");
+  });
+
+  it("throws when repository is not found", async () => {
+    mockGhResponse({
+      data: { repository: null },
+    });
+    await expect(fetchGitHubIssues("owner/repo", "open")).rejects.toThrow("Repository not found or inaccessible");
+  });
+
   it("parses a single page of issues", async () => {
     mockGhResponse({
       data: {

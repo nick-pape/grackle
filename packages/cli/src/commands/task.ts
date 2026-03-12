@@ -118,6 +118,11 @@ export function registerTaskCommands(program: Command): void {
     .option("--env <env-id>", "Environment ID to assign to created tasks")
     .action(async (projectId: string, opts: { repo: string; label?: string; state: string; env?: string }) => {
       const normalizedState = (opts.state ?? "").trim().toLowerCase();
+      if (normalizedState !== "open" && normalizedState !== "closed") {
+        console.error(chalk.red(`Invalid --state "${opts.state}". Must be "open" or "closed".`));
+        process.exitCode = 1;
+        return;
+      }
       const client = createGrackleClient();
       const res = await client.importGitHubIssues({
         projectId,

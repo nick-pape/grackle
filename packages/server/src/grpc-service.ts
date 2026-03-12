@@ -25,7 +25,7 @@ import { grackleHome } from "./paths.js";
 import { safeParseJsonArray } from "./json-helpers.js";
 import { slugify } from "./utils/slugify.js";
 import { buildTaskSystemContext } from "./utils/system-context.js";
-import { importGitHubIssues } from "./github-import.js";
+import { importGitHubIssues as executeGitHubImport } from "./github-import.js";
 
 function envRowToProto(row: EnvironmentRow): grackle.Environment {
   return create(grackle.EnvironmentSchema, {
@@ -642,7 +642,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         throw new Error("state must be OPEN or CLOSED");
       }
       const stateStr = req.state === grackle.IssueState.CLOSED ? "closed" : "open";
-      const result = await importGitHubIssues(
+      const result = await executeGitHubImport(
         req.projectId,
         req.repo,
         stateStr,
