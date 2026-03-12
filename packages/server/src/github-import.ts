@@ -81,7 +81,11 @@ export interface ImportResult {
  * @returns A string suitable for logging or re-throwing.
  */
 function formatError(err: unknown): string {
-  return err instanceof Error ? err.message : String(err);
+  if (err instanceof Error) {
+    const stderr = (err as NodeJS.ErrnoException & { stderr?: string }).stderr;
+    return stderr ? `${err.message} (stderr: ${stderr})` : err.message;
+  }
+  return String(err);
 }
 
 /**
@@ -99,7 +103,11 @@ export async function fetchGitHubIssues(repo: string, state: string, label?: str
     throw new Error(`repo must be in "owner/repo" format (received: "${repo}")`);
   }
 
-  const stateEnum = state.toUpperCase() === "CLOSED" ? "CLOSED" : "OPEN";
+  const upper = state.toUpperCase();
+  if (upper !== "OPEN" && upper !== "CLOSED") {
+    throw new Error(`state must be "open" or "closed" (received: "${state}")`);
+  }
+  const stateEnum = upper;
   const issues: GitHubIssue[] = [];
   let cursor: string | undefined;
   let hasNextPage: boolean = true;
@@ -142,8 +150,9 @@ export async function fetchGitHubIssues(repo: string, state: string, label?: str
     }
 
     let parsed: {
-      data: {
-        repository: {
+      errors?: { message: string }[];
+      data?: {
+        repository?: {
           issues: {
             pageInfo: { hasNextPage: boolean; endCursor: string | null };
             nodes: {
@@ -161,6 +170,15 @@ export async function fetchGitHubIssues(repo: string, state: string, label?: str
       parsed = JSON.parse(ghOutput);
     } catch (err) {
       throw new Error(`Failed to parse GraphQL response: ${formatError(err)}`);
+    }
+
+    if (parsed.errors && parsed.errors.length > 0) {
+      const messages = parsed.errors.map((e) => e.message).join("; ");
+      throw new Error(`GraphQL errors for ${repo}: ${messages}`);
+    }
+
+    if (!parsed.data?.repository) {
+      throw new Error(`Repository not found or inaccessible: ${repo}`);
     }
 
     const issuesPage = parsed.data.repository.issues;
