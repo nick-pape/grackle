@@ -1,11 +1,10 @@
 {
+  "$schema": "https://developer.microsoft.com/json-schemas/rush/v5/rush-change.schema.json",
   "changes": [
     {
-      "comment": "placeholder",
-      "type": "none",
-      "packageName": "@grackle-ai/cli"
+      "packageName": "@grackle-ai/cli",
+      "comment": "",
+      "type": "none"
     }
-  ],
-  "packageName": "@grackle-ai/cli",
-  "email": "5674316+nick-pape@users.noreply.github.com"
+  ]
 }
