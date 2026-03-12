@@ -119,6 +119,39 @@ function safeParseAdapterConfig(raw: string, environmentId: string): Record<stri
 }
 
 /**
+ * Try fast reconnect, falling back to full provision.
+ *
+ * Centralizes the reconnect-or-provision logic used by both
+ * {@link autoProvisionEnvironment} and the `provision_environment` handler.
+ */
+async function reconnectOrProvision(
+  environmentId: string,
+  adapter: ReturnType<typeof adapterManager.getAdapter> & object,
+  config: Record<string, unknown>,
+  powerlineToken: string,
+  env: ReturnType<typeof envRegistry.getEnvironment> & object,
+  onProgress: (event: { stage: string; message: string; progress: number }) => void,
+): Promise<void> {
+  let reconnected = false;
+  if (env.bootstrapped && adapter.reconnect) {
+    try {
+      for await (const event of adapter.reconnect(environmentId, config, powerlineToken)) {
+        onProgress(event);
+      }
+      reconnected = true;
+    } catch (err) {
+      logger.info({ environmentId, err }, "Reconnect failed, falling back to full provision");
+    }
+  }
+
+  if (!reconnected) {
+    for await (const event of adapter.provision(environmentId, config, powerlineToken)) {
+      onProgress(event);
+    }
+  }
+}
+
+/**
  * Auto-provisions and connects an environment if it is not already connected.
  * Sends provision progress events over the WebSocket and updates the environment
  * registry status. Returns the connection on success, or undefined on failure.
@@ -148,32 +181,13 @@ async function autoProvisionEnvironment(
     const config = safeParseAdapterConfig(env.adapterConfig, environmentId);
     const powerlineToken = env.powerlineToken || "";
 
-    // Try fast reconnect if the environment was previously bootstrapped
-    let reconnected = false;
-    if (env.bootstrapped && adapter.reconnect) {
-      try {
-        for await (const provEvent of adapter.reconnect(environmentId, config, powerlineToken)) {
-          logger.info({ environmentId, stage: provEvent.stage, ...logContext }, "Auto-reconnect progress");
-          broadcast({
-            type: "provision_progress",
-            payload: { environmentId, stage: provEvent.stage, message: provEvent.message, progress: provEvent.progress },
-          });
-        }
-        reconnected = true;
-      } catch (err) {
-        logger.info({ environmentId, ...logContext, err }, "Reconnect failed, falling back to full provision");
-      }
-    }
-
-    if (!reconnected) {
-      for await (const provEvent of adapter.provision(environmentId, config, powerlineToken)) {
-        logger.info({ environmentId, stage: provEvent.stage, ...logContext }, "Auto-provision progress");
-        broadcast({
-          type: "provision_progress",
-          payload: { environmentId, stage: provEvent.stage, message: provEvent.message, progress: provEvent.progress },
-        });
-      }
-    }
+    await reconnectOrProvision(environmentId, adapter, config, powerlineToken, env, (provEvent) => {
+      logger.info({ environmentId, stage: provEvent.stage, ...logContext }, "Auto-provision progress");
+      broadcast({
+        type: "provision_progress",
+        payload: { environmentId, stage: provEvent.stage, message: provEvent.message, progress: provEvent.progress },
+      });
+    });
 
     conn = await adapter.connect(environmentId, config, powerlineToken);
     adapterManager.setConnection(environmentId, conn);
@@ -816,34 +830,13 @@ async function handleMessage(
           const config = safeParseAdapterConfig(env.adapterConfig, environmentId);
           const powerlineToken = env.powerlineToken || "";
 
-          // Try fast reconnect if the environment was previously bootstrapped
-          let reconnected = false;
-          if (env.bootstrapped && adapter.reconnect) {
-            try {
-              logger.info({ environmentId }, "Attempting fast reconnect");
-              for await (const event of adapter.reconnect(environmentId, config, powerlineToken)) {
-                logger.info({ environmentId, stage: event.stage, message: event.message }, "Reconnect progress");
-                broadcast({
-                  type: "provision_progress",
-                  payload: { environmentId, stage: event.stage, message: event.message, progress: event.progress },
-                });
-              }
-              reconnected = true;
-            } catch (err) {
-              logger.info({ environmentId, err }, "Reconnect failed, falling back to full provision");
-            }
-          }
-
-          if (!reconnected) {
-            logger.info({ environmentId, config }, "Starting adapter.provision");
-            for await (const event of adapter.provision(environmentId, config, powerlineToken)) {
-              logger.info({ environmentId, stage: event.stage, message: event.message }, "Provision progress");
-              broadcast({
-                type: "provision_progress",
-                payload: { environmentId, stage: event.stage, message: event.message, progress: event.progress },
-              });
-            }
-          }
+          await reconnectOrProvision(environmentId, adapter, config, powerlineToken, env, (event) => {
+            logger.info({ environmentId, stage: event.stage, message: event.message }, "Provision progress");
+            broadcast({
+              type: "provision_progress",
+              payload: { environmentId, stage: event.stage, message: event.message, progress: event.progress },
+            });
+          });
 
           logger.info({ environmentId }, "Provision complete, calling adapter.connect");
           const conn = await adapter.connect(environmentId, config, powerlineToken);

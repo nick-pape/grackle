@@ -147,10 +147,12 @@ export class CodespaceAdapter implements EnvironmentAdapter {
 
   /**
    * Attempt fast reconnect: probe PowerLine, restart if needed, re-open tunnel.
-   * Only falls through to the caller (which triggers full provision) if SSH itself is unreachable.
    *
-   * Minimizes SSH round trips — the probe doubles as a connectivity test, and
-   * env vars are only written when we need to restart (startRemotePowerLine handles it).
+   * Any failure (SSH unreachable, PowerLine won't start, tunnel error) throws
+   * and falls through to the caller, which should trigger a full provision.
+   *
+   * Minimizes SSH round trips — probe and conditional restart run in a single
+   * SSH call via `startRemotePowerLine({ probeFirst: true })`.
    */
   public async *reconnect(
     environmentId: string,

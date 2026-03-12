@@ -23,6 +23,37 @@ vi.mock("../utils/sleep.js", () => ({
 
 import { probeRemotePowerLine, writeRemoteEnvFile, startRemotePowerLine } from "./remote-adapter-utils.js";
 
+// ── Shared Env Isolation ────────────────────────────────────
+
+/** All env vars forwarded by remote-adapter-utils; must be cleared in tests. */
+const FORWARDED_ENV_VARS: string[] = [
+  "ANTHROPIC_API_KEY",
+  "GITHUB_TOKEN",
+  "GH_TOKEN",
+  "COPILOT_GITHUB_TOKEN",
+  "COPILOT_CLI_URL",
+  "COPILOT_CLI_PATH",
+  "COPILOT_PROVIDER_CONFIG",
+];
+
+/** Save and clear all forwarded env vars. Returns a restore function. */
+function clearForwardedEnvVars(): () => void {
+  const saved: Record<string, string | undefined> = {};
+  for (const key of FORWARDED_ENV_VARS) {
+    saved[key] = process.env[key];
+    delete process.env[key];
+  }
+  return () => {
+    for (const [key, val] of Object.entries(saved)) {
+      if (val === undefined) {
+        delete process.env[key];
+      } else {
+        process.env[key] = val;
+      }
+    }
+  };
+}
+
 // ── Helper ──────────────────────────────────────────────────
 
 function createMockExecutor(overrides?: Partial<RemoteExecutor>): RemoteExecutor {
@@ -52,24 +83,14 @@ describe("probeRemotePowerLine", () => {
 });
 
 describe("writeRemoteEnvFile", () => {
-  const originalEnv: Record<string, string | undefined> = {};
+  let restoreEnv: () => void;
 
   beforeEach(() => {
-    // Save and clear forwarded env vars to isolate tests
-    for (const key of ["ANTHROPIC_API_KEY", "GITHUB_TOKEN", "GH_TOKEN"]) {
-      originalEnv[key] = process.env[key];
-      delete process.env[key];
-    }
+    restoreEnv = clearForwardedEnvVars();
   });
 
   afterEach(() => {
-    for (const [key, val] of Object.entries(originalEnv)) {
-      if (val === undefined) {
-        delete process.env[key];
-      } else {
-        process.env[key] = val;
-      }
-    }
+    restoreEnv();
   });
 
   it("writes env file with powerline token", async () => {
@@ -123,23 +144,14 @@ describe("writeRemoteEnvFile", () => {
 });
 
 describe("startRemotePowerLine", () => {
-  const originalEnv: Record<string, string | undefined> = {};
+  let restoreEnv: () => void;
 
   beforeEach(() => {
-    for (const key of ["ANTHROPIC_API_KEY", "GITHUB_TOKEN", "GH_TOKEN"]) {
-      originalEnv[key] = process.env[key];
-      delete process.env[key];
-    }
+    restoreEnv = clearForwardedEnvVars();
   });
 
   afterEach(() => {
-    for (const [key, val] of Object.entries(originalEnv)) {
-      if (val === undefined) {
-        delete process.env[key];
-      } else {
-        process.env[key] = val;
-      }
-    }
+    restoreEnv();
   });
 
   it("batches env file, spawn, and probe into a single compound command", async () => {
