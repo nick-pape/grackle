@@ -144,7 +144,7 @@ describe("event-processor SUBTASK_CREATE handling", () => {
 
     const subtaskEvent = create(powerline.AgentEventSchema, {
       sessionId: "sess1",
-      type: powerline.AgentEventType.SUBTASK_CREATE,
+      type: "subtask_create",
       timestamp: new Date().toISOString(),
       content: JSON.stringify({
         title: "Design API",
@@ -183,7 +183,7 @@ describe("event-processor SUBTASK_CREATE handling", () => {
 
     const event1 = create(powerline.AgentEventSchema, {
       sessionId: "sess1",
-      type: powerline.AgentEventType.SUBTASK_CREATE,
+      type: "subtask_create",
       timestamp: new Date().toISOString(),
       content: JSON.stringify({
         title: "Research",
@@ -195,7 +195,7 @@ describe("event-processor SUBTASK_CREATE handling", () => {
 
     const event2 = create(powerline.AgentEventSchema, {
       sessionId: "sess1",
-      type: powerline.AgentEventType.SUBTASK_CREATE,
+      type: "subtask_create",
       timestamp: new Date().toISOString(),
       content: JSON.stringify({
         title: "Implement",
@@ -229,7 +229,7 @@ describe("event-processor SUBTASK_CREATE handling", () => {
 
     const subtaskEvent = create(powerline.AgentEventSchema, {
       sessionId: "sess1",
-      type: powerline.AgentEventType.SUBTASK_CREATE,
+      type: "subtask_create",
       timestamp: new Date().toISOString(),
       content: JSON.stringify({
         title: "Should Not Create",
@@ -257,7 +257,7 @@ describe("event-processor SUBTASK_CREATE handling", () => {
 
     const subtaskEvent = create(powerline.AgentEventSchema, {
       sessionId: "sess1",
-      type: powerline.AgentEventType.SUBTASK_CREATE,
+      type: "subtask_create",
       timestamp: new Date().toISOString(),
       content: JSON.stringify({
         title: "No Parent",
@@ -283,7 +283,7 @@ describe("event-processor SUBTASK_CREATE handling", () => {
 
     const subtaskEvent = create(powerline.AgentEventSchema, {
       sessionId: "sess1",
-      type: powerline.AgentEventType.SUBTASK_CREATE,
+      type: "subtask_create",
       timestamp: new Date().toISOString(),
       content: JSON.stringify({
         title: "Has Bad Dep",
@@ -316,7 +316,7 @@ describe("event-processor SUBTASK_CREATE handling", () => {
 
     const subtaskEvent = create(powerline.AgentEventSchema, {
       sessionId: "sess1",
-      type: powerline.AgentEventType.SUBTASK_CREATE,
+      type: "subtask_create",
       timestamp: new Date().toISOString(),
       content: JSON.stringify({
         title: "",
@@ -345,7 +345,7 @@ describe("event-processor SUBTASK_CREATE handling", () => {
 
     const event1 = create(powerline.AgentEventSchema, {
       sessionId: "sess1",
-      type: powerline.AgentEventType.SUBTASK_CREATE,
+      type: "subtask_create",
       timestamp: new Date().toISOString(),
       content: JSON.stringify({
         title: "First",
@@ -356,7 +356,7 @@ describe("event-processor SUBTASK_CREATE handling", () => {
 
     const event2 = create(powerline.AgentEventSchema, {
       sessionId: "sess1",
-      type: powerline.AgentEventType.SUBTASK_CREATE,
+      type: "subtask_create",
       timestamp: new Date().toISOString(),
       content: JSON.stringify({
         title: "Second",
@@ -367,7 +367,7 @@ describe("event-processor SUBTASK_CREATE handling", () => {
 
     const event3 = create(powerline.AgentEventSchema, {
       sessionId: "sess1",
-      type: powerline.AgentEventType.SUBTASK_CREATE,
+      type: "subtask_create",
       timestamp: new Date().toISOString(),
       content: JSON.stringify({
         title: "Third",
@@ -404,14 +404,14 @@ describe("event-processor SUBTASK_CREATE handling", () => {
 
     const badEvent = create(powerline.AgentEventSchema, {
       sessionId: "sess1",
-      type: powerline.AgentEventType.SUBTASK_CREATE,
+      type: "subtask_create",
       timestamp: new Date().toISOString(),
       content: "not valid json",
     });
 
     const goodEvent = create(powerline.AgentEventSchema, {
       sessionId: "sess1",
-      type: powerline.AgentEventType.STATUS,
+      type: "status",
       timestamp: new Date().toISOString(),
       content: "completed",
     });
@@ -463,7 +463,7 @@ describe("stream error handling", () => {
 
     const waitingEvent = create(powerline.AgentEventSchema, {
       sessionId: "sess1",
-      type: powerline.AgentEventType.STATUS,
+      type: "status",
       timestamp: new Date().toISOString(),
       content: "waiting_input",
     });
@@ -503,7 +503,7 @@ describe("stream error handling", () => {
 
     const textEvent = create(powerline.AgentEventSchema, {
       sessionId: "sess1",
-      type: powerline.AgentEventType.TEXT,
+      type: "text",
       timestamp: new Date().toISOString(),
       content: "some output",
     });
@@ -539,7 +539,7 @@ describe("stream error handling", () => {
 
     const waitingEvent = create(powerline.AgentEventSchema, {
       sessionId: "sess1",
-      type: powerline.AgentEventType.STATUS,
+      type: "status",
       timestamp: new Date().toISOString(),
       content: "waiting_input",
     });
