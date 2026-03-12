@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Harden add_environment input validation: port range [1,65535], adapterConfig double-encoding fix, ID collision retry loop",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
