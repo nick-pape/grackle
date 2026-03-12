@@ -86,7 +86,9 @@ export function initDatabase(): void {
       updated_at    TEXT NOT NULL DEFAULT (datetime('now')),
       sort_order    INTEGER NOT NULL DEFAULT 0,
       parent_task_id TEXT NOT NULL DEFAULT '',
-      depth         INTEGER NOT NULL DEFAULT 0
+      depth         INTEGER NOT NULL DEFAULT 0,
+      can_decompose INTEGER NOT NULL DEFAULT 0,
+      persona_id    TEXT NOT NULL DEFAULT ''
     );
 
     CREATE TABLE IF NOT EXISTS findings (
