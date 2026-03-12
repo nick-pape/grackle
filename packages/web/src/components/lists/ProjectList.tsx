@@ -115,7 +115,7 @@ function TaskTreeNode({
         <span className={styles.taskStatusIcon} style={{ color: statusStyle.color }}>
           {statusStyle.icon}
         </span>
-        <span className={styles.taskTitle}>{node.title}</span>
+        <span className={styles.taskTitle} title={node.title}>{node.title}</span>
         {hasChildren && (
           <span className={styles.childCountBadge}>
             {node.children.filter(c => c.status === "done").length}/{node.children.length}
@@ -310,7 +310,7 @@ export function ProjectList({ viewMode, setViewMode }: Props): JSX.Element {
               <span className={`${styles.expandArrow} ${isExpanded ? styles.expanded : ""}`}>
                 {"\u25B8"}
               </span>
-              <span className={styles.projectName}>{project.name}</span>
+              <span className={styles.projectName} title={project.name}>{project.name}</span>
               <span className={styles.taskCount}>
                 {projectTasks.length > 0 && `${projectTasks.filter((t) => t.status === "done").length}/${projectTasks.length}`}
               </span>

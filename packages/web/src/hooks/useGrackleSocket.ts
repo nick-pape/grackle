@@ -87,6 +87,177 @@ interface WsMessage {
   payload?: Record<string, unknown>;
 }
 
+// ─── Runtime type guards ──────────────────────────────────────────────────────
+
+/** Returns true when `v` is a non-null, non-array object. */
+function isObject(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+
+/**
+ * Emit a console warning and return `false` when an incoming payload does not
+ * match the expected shape.  We warn rather than throw so a single bad message
+ * from the server does not crash the entire UI.
+ */
+function warnBadPayload(msgType: string, reason: string): false {
+  console.warn(`[ws] Malformed "${msgType}" message: ${reason}`);
+  return false;
+}
+
+function isEnvironment(v: unknown): v is Environment {
+  return (
+    isObject(v) &&
+    typeof v.id === "string" &&
+    typeof v.displayName === "string" &&
+    typeof v.adapterType === "string" &&
+    typeof v.defaultRuntime === "string" &&
+    typeof v.status === "string" &&
+    typeof v.bootstrapped === "boolean"
+  );
+}
+
+function isSession(v: unknown): v is Session {
+  return (
+    isObject(v) &&
+    typeof v.id === "string" &&
+    typeof v.environmentId === "string" &&
+    typeof v.runtime === "string" &&
+    typeof v.status === "string" &&
+    typeof v.prompt === "string" &&
+    typeof v.startedAt === "string"
+  );
+}
+
+function isSessionEvent(v: unknown): v is SessionEvent {
+  return (
+    isObject(v) &&
+    typeof v.sessionId === "string" &&
+    typeof v.eventType === "string" &&
+    typeof v.timestamp === "string" &&
+    typeof v.content === "string"
+  );
+}
+
+function isProject(v: unknown): v is Project {
+  return (
+    isObject(v) &&
+    typeof v.id === "string" &&
+    typeof v.name === "string" &&
+    typeof v.description === "string" &&
+    typeof v.repoUrl === "string" &&
+    typeof v.defaultEnvironmentId === "string" &&
+    typeof v.status === "string" &&
+    typeof v.createdAt === "string"
+  );
+}
+
+function isTaskData(v: unknown): v is TaskData {
+  return (
+    isObject(v) &&
+    typeof v.id === "string" &&
+    typeof v.projectId === "string" &&
+    typeof v.title === "string" &&
+    typeof v.status === "string" &&
+    typeof v.branch === "string" &&
+    typeof v.sortOrder === "number" &&
+    typeof v.depth === "number" &&
+    Array.isArray(v.dependsOn) &&
+    Array.isArray(v.childTaskIds)
+  );
+}
+
+function isFindingData(v: unknown): v is FindingData {
+  return (
+    isObject(v) &&
+    typeof v.id === "string" &&
+    typeof v.projectId === "string" &&
+    typeof v.taskId === "string" &&
+    typeof v.sessionId === "string" &&
+    typeof v.category === "string" &&
+    typeof v.title === "string" &&
+    typeof v.content === "string" &&
+    Array.isArray(v.tags) &&
+    typeof v.createdAt === "string"
+  );
+}
+
+function isTokenInfo(v: unknown): v is TokenInfo {
+  return (
+    isObject(v) &&
+    typeof v.name === "string" &&
+    typeof v.tokenType === "string" &&
+    typeof v.envVar === "string" &&
+    typeof v.filePath === "string" &&
+    typeof v.expiresAt === "string"
+  );
+}
+
+function isProvisionProgress(
+  v: unknown,
+): v is ProvisionStatus & { environmentId: string } {
+  return (
+    isObject(v) &&
+    typeof v.environmentId === "string" &&
+    typeof v.stage === "string" &&
+    typeof v.message === "string" &&
+    typeof v.progress === "number"
+  );
+}
+
+function isCodespace(v: unknown): v is Codespace {
+  return (
+    isObject(v) &&
+    typeof v.name === "string" &&
+    typeof v.repository === "string" &&
+    typeof v.state === "string" &&
+    typeof v.gitStatus === "string"
+  );
+}
+
+/**
+ * Filter an unknown value to a typed array, discarding items that fail the
+ * guard and warning about each one.
+ */
+function asValidArray<T>(
+  v: unknown,
+  guard: (item: unknown) => item is T,
+  msgType: string,
+  fieldName: string,
+): T[] {
+  if (!Array.isArray(v)) {
+    warnBadPayload(msgType, `expected "${fieldName}" to be an array, got ${typeof v}`);
+    return [];
+  }
+  return v.filter((item: unknown, i: number) => {
+    if (guard(item)) return true;
+    warnBadPayload(msgType, `item at index ${i} in "${fieldName}" has unexpected shape`);
+    return false;
+  });
+}
+
+/**
+ * Parse a raw WebSocket message string into a `WsMessage`.
+ * Returns `undefined` and logs a warning if parsing fails or the result is
+ * not a valid message object.
+ */
+function parseWsMessage(data: string): WsMessage | undefined {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(data) as unknown;
+  } catch {
+    console.warn("[ws] Failed to parse WebSocket message as JSON");
+    return undefined;
+  }
+  if (!isObject(parsed) || typeof parsed.type !== "string") {
+    console.warn("[ws] Received WebSocket message without a string 'type' field:", parsed);
+    return undefined;
+  }
+  return {
+    type: parsed.type,
+    payload: isObject(parsed.payload) ? parsed.payload : undefined,
+  };
+}
+
 const WS_RECONNECT_DELAY_MS: number = 3_000;
 const ENV_POLL_INTERVAL_MS: number = 10_000;
 /** Maximum number of events kept in memory per hook instance. Older events are dropped. */
@@ -237,17 +408,30 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
         }, ENV_POLL_INTERVAL_MS);
       };
 
-      ws.onmessage = (e) => {
-        const msg = JSON.parse(e.data) as WsMessage;
+      ws.onmessage = (e: MessageEvent<unknown>) => {
+        if (typeof e.data !== "string") {
+          console.warn("[ws] Received non-string WebSocket message; ignoring");
+          return;
+        }
+        const msg = parseWsMessage(e.data);
+        if (!msg) return;
         switch (msg.type) {
           case "environments":
-            setEnvironments((msg.payload?.environments as Environment[]) || []);
+            setEnvironments(
+              asValidArray(msg.payload?.environments, isEnvironment, "environments", "environments"),
+            );
             break;
           case "sessions":
-            setSessions((msg.payload?.sessions as Session[]) || []);
+            setSessions(
+              asValidArray(msg.payload?.sessions, isSession, "sessions", "sessions"),
+            );
             break;
           case "session_event": {
-            const event = msg.payload as unknown as SessionEvent;
+            if (!isSessionEvent(msg.payload)) {
+              warnBadPayload("session_event", "payload is not a valid SessionEvent");
+              break;
+            }
+            const event: SessionEvent = msg.payload;
             setEvents((prev) => {
               const next = [...prev, event];
               return next.length > MAX_EVENTS ? next.slice(-MAX_EVENTS) : next;
@@ -264,11 +448,18 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
             break;
           }
           case "session_events": {
-            const replayEvents = msg.payload?.events as
-              | SessionEvent[]
-              | undefined;
-            const replaySessionId = msg.payload?.sessionId as string;
-            if (replayEvents && replaySessionId) {
+            const replayEvents = asValidArray(
+              msg.payload?.events,
+              isSessionEvent,
+              "session_events",
+              "events",
+            );
+            const replaySessionId = msg.payload?.sessionId;
+            if (typeof replaySessionId !== "string") {
+              warnBadPayload("session_events", "missing or non-string sessionId");
+              break;
+            }
+            if (replayEvents.length > 0 || replaySessionId) {
               setEvents((prev) => {
                 const without = prev.filter(
                   (e) => e.sessionId !== replaySessionId,
@@ -279,8 +470,8 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
             break;
           }
           case "spawned": {
-            const spawnedId = msg.payload?.sessionId as string;
-            if (spawnedId) {
+            const spawnedId = msg.payload?.sessionId;
+            if (typeof spawnedId === "string" && spawnedId) {
               setLastSpawnedId(spawnedId);
             }
             send({ type: "list_sessions" });
@@ -288,7 +479,9 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
             break;
           }
           case "projects":
-            setProjects((msg.payload?.projects as Project[]) || []);
+            setProjects(
+              asValidArray(msg.payload?.projects, isProject, "projects", "projects"),
+            );
             break;
           case "project_created":
             send({ type: "list_projects" });
@@ -297,9 +490,14 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
             send({ type: "list_projects" });
             break;
           case "tasks": {
-            const incoming = (msg.payload?.tasks as TaskData[]) || [];
+            const incoming = asValidArray(
+              msg.payload?.tasks,
+              isTaskData,
+              "tasks",
+              "tasks",
+            );
             const pid =
-              (msg.payload?.projectId as string) ||
+              (typeof msg.payload?.projectId === "string" ? msg.payload.projectId : "") ||
               (incoming.length > 0 ? incoming[0].projectId : "");
             if (!pid) {
               setTasks(incoming);
@@ -312,19 +510,23 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
             break;
           }
           case "task_created": {
-            const taskData =
-              (msg.payload?.task as Record<string, unknown>) || {};
-            const pid = (taskData.project_id || taskData.projectId) as string;
-            if (pid) send({ type: "list_tasks", payload: { projectId: pid } });
+            const taskData = msg.payload?.task;
+            if (isObject(taskData)) {
+              const pid =
+                typeof taskData.project_id === "string" ? taskData.project_id :
+                typeof taskData.projectId === "string" ? taskData.projectId : "";
+              if (pid) send({ type: "list_tasks", payload: { projectId: pid } });
+            }
             break;
           }
           case "task_started": {
-            const tp = msg.payload as Record<string, unknown>;
+            const tp = msg.payload;
+            if (!isObject(tp)) break;
             if (tp.sessionId) {
               send({ type: "list_sessions" });
             }
             // Refresh tasks for the project
-            const startedPid = tp.projectId as string | undefined;
+            const startedPid = typeof tp.projectId === "string" ? tp.projectId : undefined;
             if (startedPid) {
               send({ type: "list_tasks", payload: { projectId: startedPid } });
             } else if (tp.taskId) {
@@ -344,8 +546,9 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
           case "task_rejected":
           case "task_deleted":
           case "task_updated": {
-            const tp2 = msg.payload as Record<string, unknown>;
-            const pid = tp2.projectId as string | undefined;
+            const tp2 = msg.payload;
+            if (!isObject(tp2)) break;
+            const pid = typeof tp2.projectId === "string" ? tp2.projectId : undefined;
             if (pid) {
               send({ type: "list_tasks", payload: { projectId: pid } });
             } else if (tp2.taskId) {
@@ -362,11 +565,13 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
             break;
           }
           case "findings":
-            setFindings((msg.payload?.findings as FindingData[]) || []);
+            setFindings(
+              asValidArray(msg.payload?.findings, isFindingData, "findings", "findings"),
+            );
             break;
           case "finding_posted":
             // Refresh findings
-            if (msg.payload?.projectId) {
+            if (typeof msg.payload?.projectId === "string") {
               send({
                 type: "list_findings",
                 payload: { projectId: msg.payload.projectId },
@@ -374,41 +579,43 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
             }
             break;
           case "tokens":
-            setTokens((msg.payload?.tokens as TokenInfo[]) || []);
+            setTokens(
+              asValidArray(msg.payload?.tokens, isTokenInfo, "tokens", "tokens"),
+            );
             break;
           case "token_changed":
             send({ type: "list_tokens" });
             break;
           case "provision_progress": {
-            const pp = msg.payload as unknown as ProvisionStatus & {
-              environmentId: string;
-            };
-            if (pp.environmentId) {
-              setProvisionStatus((prev) => ({
-                ...prev,
-                [pp.environmentId]: {
-                  stage: pp.stage,
-                  message: pp.message,
-                  progress: pp.progress,
-                },
-              }));
-              // Auto-clear provision status after successful completion only;
-              // errors persist until the user retries or removes the environment
-              if (pp.stage === "ready") {
-                const PROVISION_STATUS_CLEAR_DELAY_MS: number = 5_000;
-                setTimeout(() => {
-                  setProvisionStatus((prev) => {
-                    const next = { ...prev };
-                    // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
-                    delete next[pp.environmentId];
-                    return next;
-                  });
-                }, PROVISION_STATUS_CLEAR_DELAY_MS);
-              }
-              // Only refresh environment list on terminal stages to avoid redundant traffic
-              if (pp.stage === "ready" || pp.stage === "error") {
-                send({ type: "list_environments" });
-              }
+            if (!isProvisionProgress(msg.payload)) {
+              warnBadPayload("provision_progress", "payload is not a valid ProvisionStatus with environmentId");
+              break;
+            }
+            const pp = msg.payload;
+            setProvisionStatus((prev) => ({
+              ...prev,
+              [pp.environmentId]: {
+                stage: pp.stage,
+                message: pp.message,
+                progress: pp.progress,
+              },
+            }));
+            // Auto-clear provision status after successful completion only;
+            // errors persist until the user retries or removes the environment
+            if (pp.stage === "ready") {
+              const PROVISION_STATUS_CLEAR_DELAY_MS: number = 5_000;
+              setTimeout(() => {
+                setProvisionStatus((prev) => {
+                  const next = { ...prev };
+                  // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+                  delete next[pp.environmentId];
+                  return next;
+                });
+              }, PROVISION_STATUS_CLEAR_DELAY_MS);
+            }
+            // Only refresh environment list on terminal stages to avoid redundant traffic
+            if (pp.stage === "ready" || pp.stage === "error") {
+              send({ type: "list_environments" });
             }
             break;
           }
@@ -417,8 +624,8 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
             break;
           case "environment_removed":
             // Clean up stale provision status for the removed environment
-            if (msg.payload?.environmentId) {
-              const removedId = msg.payload.environmentId as string;
+            if (typeof msg.payload?.environmentId === "string") {
+              const removedId = msg.payload.environmentId;
               setProvisionStatus((prev) => {
                 const next = { ...prev };
                 // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
@@ -430,8 +637,14 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
             send({ type: "list_sessions" });
             break;
           case "codespaces_list": {
-            const list = (msg.payload?.codespaces as Codespace[]) || [];
-            const listError = (msg.payload?.error as string) || "";
+            const list = asValidArray(
+              msg.payload?.codespaces,
+              isCodespace,
+              "codespaces_list",
+              "codespaces",
+            );
+            const listError =
+              typeof msg.payload?.error === "string" ? msg.payload.error : "";
             setCodespaces(list);
             setCodespaceError(listError);
             break;
@@ -444,7 +657,10 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
           }
           case "codespace_create_error": {
             setCodespaceCreating(false);
-            const createError = (msg.payload?.message as string) || "Failed to create codespace";
+            const createError =
+              typeof msg.payload?.message === "string"
+                ? msg.payload.message
+                : "Failed to create codespace";
             setCodespaceError(createError);
             break;
           }
