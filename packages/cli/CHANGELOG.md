@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Thu, 12 Mar 2026 00:56:21 GMT and should not be manually modified.
+This log was last generated on Thu, 12 Mar 2026 02:00:22 GMT and should not be manually modified.
+
+## 0.14.1
+Thu, 12 Mar 2026 02:00:22 GMT
+
+### Patches
+
+- Fix CD pipeline: rewrite version bump to push directly to main instead of creating temp branches and PRs
 
 ## 0.14.0
 Thu, 12 Mar 2026 00:56:21 GMT

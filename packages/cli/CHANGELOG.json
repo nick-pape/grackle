@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.14.1",
+      "tag": "@grackle-ai/cli_v0.14.1",
+      "date": "Thu, 12 Mar 2026 02:00:22 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Fix CD pipeline: rewrite version bump to push directly to main instead of creating temp branches and PRs"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.14.0",
       "tag": "@grackle-ai/cli_v0.14.0",
       "date": "Thu, 12 Mar 2026 00:56:21 GMT",
