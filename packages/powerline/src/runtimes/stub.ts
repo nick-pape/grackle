@@ -50,6 +50,13 @@ class StubSession implements AgentSession {
     const input = await this.waitForInput();
     if (this.killed) return;
 
+    // Simulate failure when input is "fail"
+    if (input === "fail") {
+      this.status = "failed";
+      yield { type: "status", timestamp: ts(), content: "failed" };
+      return;
+    }
+
     this.status = "running";
     yield { type: "status", timestamp: ts(), content: "running" };
     yield { type: "text", timestamp: ts(), content: `You said: ${input}` };

@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Allow retrying failed tasks by adding 'failed' to allowed start statuses",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
