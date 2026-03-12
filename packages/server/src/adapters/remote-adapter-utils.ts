@@ -266,74 +266,152 @@ export async function writeRemoteEnvFile(
   );
 }
 
+/** Node.js one-liner that probes the PowerLine port and exits 0/1. */
+const PROBE_SCRIPT: string =
+  `node -e "const s=require('net').createConnection(${DEFAULT_POWERLINE_PORT},'127.0.0.1');`
+  + `s.on('connect',()=>{s.destroy();process.exit(0)});`
+  + `s.on('error',()=>process.exit(1))"`;
+
 /**
  * Probe whether the remote PowerLine is listening on its port.
  * Throws if the port is not reachable.
  */
 export async function probeRemotePowerLine(executor: RemoteExecutor): Promise<void> {
-  await executor.exec(
-    `node -e "const s=require('net').createConnection(${DEFAULT_POWERLINE_PORT},'127.0.0.1');\
-s.on('connect',()=>{s.destroy();process.exit(0)});\
-s.on('error',()=>process.exit(1))"`,
-    { timeout: REMOTE_EXEC_DEFAULT_TIMEOUT_MS },
-  );
+  await executor.exec(PROBE_SCRIPT, { timeout: REMOTE_EXEC_DEFAULT_TIMEOUT_MS });
+}
+
+/** Options for {@link startRemotePowerLine}. */
+interface StartRemotePowerLineOptions {
+  /** Additional environment variables forwarded to the remote PowerLine. */
+  extraEnv?: Record<string, string>;
+  /** Explicit working directory for the PowerLine process. */
+  workingDirectory?: string;
+  /**
+   * When true, detects `/workspaces/*\/` on the remote host (codespace
+   * convention) and uses it as the working directory.
+   */
+  autoDetectWorkspace?: boolean;
+  /**
+   * When true, the compound script starts with a TCP probe and exits
+   * immediately if PowerLine is already listening. This avoids a separate
+   * SSH round trip for the initial health check.
+   */
+  probeFirst?: boolean;
 }
 
 /**
- * Start (or restart) the remote PowerLine process.
+ * Ensure the remote PowerLine process is running.
  *
- * Writes the env-var file (tokens may have rotated), detects the entry point
- * based on dev/prod mode, launches the process via nohup, and waits for it to
- * begin listening on the PowerLine port. Throws if the process fails to start.
+ * Batches env-var write, process start, and port probe into a **single SSH
+ * call** to avoid per-call latency (each `gh codespace ssh` round trip takes
+ * ~10-15 s through GitHub's relay). If the transport drops during
+ * backgrounding (exit 255), falls back to one separate probe call.
  *
- * This is the "restart" middle path — it assumes code is already installed and
- * skips npm install, git checks, and artifact copies.
+ * When `probeFirst` is true the script begins with a TCP port check and
+ * returns immediately if PowerLine is already listening, combining the
+ * "is it alive?" check and the "start if not" logic into one SSH call.
+ *
+ * This is the "restart" middle path — it assumes code is already installed
+ * and skips npm install, git checks, and artifact copies.
  */
 export async function startRemotePowerLine(
   executor: RemoteExecutor,
   powerlineToken: string,
-  extraEnv?: Record<string, string>,
-  workingDirectory?: string,
-): Promise<void> {
-  // 1. Write env vars (tokens may have rotated since last start)
+  options: StartRemotePowerLineOptions = {},
+): Promise<{ alreadyRunning: boolean }> {
+  const { extraEnv, workingDirectory, autoDetectWorkspace, probeFirst } = options;
   const envLines = writeRemoteEnvFileLines(powerlineToken, extraEnv);
-  if (envLines.length > 0) {
-    await writeRemoteEnvFile(executor, powerlineToken, extraEnv);
-  }
 
-  // 2. Detect entry point based on dev/prod mode
   const devMode = isDevMode();
   const entryPoint = devMode
     ? "dist/index.js"
     : "node_modules/@grackle-ai/powerline/dist/index.js";
+  const absoluteEntryPoint = `${REMOTE_POWERLINE_DIRECTORY}/${entryPoint}`;
 
-  // 3. Start PowerLine by sourcing the env file and backgrounding.
-  //    We avoid capturing $! because some transports (gh codespace ssh) exit
-  //    with code 255 when the shell backgrounds a process.
+  // Build a compound script that runs in a single SSH call:
+  //   0. (Optional) Probe — exit early if already listening
+  //   1. Write env file (base64 → file)
+  //   2. Detect working directory (optional)
+  //   3. Start PowerLine (nohup + background)
+  //   4. Brief sleep + probe
+  const parts: string[] = [];
+
+  // 0. Early-exit probe (saves a full SSH round trip during reconnect).
+  //    Uses `; ` (not `&&`) to separate from the start logic so that a
+  //    failed probe doesn't short-circuit the rest of the script.
+  //    `exit 0` exits the top-level bash -c, not a subshell.
+  let probeFirstPrefix = "";
+  if (probeFirst) {
+    probeFirstPrefix = `${PROBE_SCRIPT} && echo "__PL_ALIVE__" && exit 0; `;
+  }
+
+  // 1. Env file
+  if (envLines.length > 0) {
+    const envFileContent = envLines.join("\n") + "\n";
+    const envFileContentBase64 = Buffer.from(envFileContent, "utf8").toString("base64");
+    parts.push(
+      `cd ${REMOTE_POWERLINE_DIRECTORY}`
+      + ` && node -e "require('fs').writeFileSync('.env.sh',Buffer.from(process.argv[1],'base64').toString('utf8'))"`
+      + ` '${shellEscape(envFileContentBase64)}'`
+      + ` && chmod 600 .env.sh`,
+    );
+  }
+
+  // 2. Working directory
+  let startDirExpr: string;
+  if (workingDirectory) {
+    startDirExpr = workingDirectory;
+  } else if (autoDetectWorkspace) {
+    // Detect /workspaces/*/ inline; fall back to PowerLine directory.
+    // Use ${WD:-default} so the exit code is always 0 ([ -z ] && ... would
+    // return 1 when WD is set, breaking the && chain).
+    parts.push(
+      `WD=$(ls -d /workspaces/*/ 2>/dev/null | head -1 | sed "s/\\/$//");`
+      + ` WD=\${WD:-${REMOTE_POWERLINE_DIRECTORY}}`,
+    );
+    startDirExpr = "$WD";
+  } else {
+    startDirExpr = REMOTE_POWERLINE_DIRECTORY;
+  }
+
+  // 3. Start PowerLine
   const sourceEnv = envLines.length > 0
     ? `. ${REMOTE_POWERLINE_DIRECTORY}/.env.sh && `
     : "";
-  const startDir = workingDirectory || REMOTE_POWERLINE_DIRECTORY;
-  const absoluteEntryPoint = `${REMOTE_POWERLINE_DIRECTORY}/${entryPoint}`;
-  const startScript =
-    `cd ${startDir}`
+  parts.push(
+    `cd ${startDirExpr}`
     + ` && ${sourceEnv}nohup node ${absoluteEntryPoint} --port=${DEFAULT_POWERLINE_PORT}`
-    + ` > ~/.grackle/powerline.log 2>&1 & echo $! > ${REMOTE_POWERLINE_DIRECTORY}/powerline.pid`;
+    + ` < /dev/null > ~/.grackle/powerline.log 2>&1 & echo $! > ${REMOTE_POWERLINE_DIRECTORY}/powerline.pid`,
+  );
+
+  // 4. Probe (after a brief pause for the port to bind)
+  parts.push(`sleep 1 && ${PROBE_SCRIPT}`);
+
+  const compoundScript = probeFirstPrefix + parts.join(" && ");
 
   try {
-    await executor.exec(`bash -c '${shellEscape(startScript)}'`, { timeout: REMOTE_EXEC_DEFAULT_TIMEOUT_MS });
+    const stdout = await executor.exec(
+      `bash -c '${shellEscape(compoundScript)}'`,
+      { timeout: REMOTE_EXEC_DEFAULT_TIMEOUT_MS },
+    );
+    if (probeFirst && stdout.includes("__PL_ALIVE__")) {
+      logger.info("Remote PowerLine was already running on port %d", DEFAULT_POWERLINE_PORT);
+      return { alreadyRunning: true };
+    }
+    logger.info("Remote PowerLine is listening on port %d", DEFAULT_POWERLINE_PORT);
+    return { alreadyRunning: false };
   } catch (err) {
-    // Some SSH transports return non-zero when the session ends after backgrounding.
-    // We'll verify the process is running below — only log the error.
-    logger.debug({ err }, "Start command returned non-zero (expected with background process)");
+    // Some SSH transports (gh codespace ssh) exit 255 when the session
+    // backgrounded a process. The PowerLine may still be starting up.
+    logger.debug({ err }, "Compound start command returned non-zero, probing separately");
   }
 
-  // 4. Wait for process to stabilize, then verify port is listening
+  // Fallback: transport dropped during backgrounding — probe separately
   await sleep(POWERLINE_STARTUP_DELAY_MS);
-
   try {
     await probeRemotePowerLine(executor);
     logger.info("Remote PowerLine is listening on port %d", DEFAULT_POWERLINE_PORT);
+    return { alreadyRunning: false };
   } catch {
     throw new Error(
       "PowerLine process died immediately after starting. Check ~/.grackle/powerline.log on the remote host.",
@@ -507,7 +585,7 @@ export async function* bootstrapPowerLine(
 
   // 9–11. Write env vars, start process, wait, verify
   yield { stage: "bootstrapping", message: "Starting PowerLine on remote host...", progress: 0.65 };
-  await startRemotePowerLine(executor, powerlineToken, extraEnv, workingDirectory);
+  await startRemotePowerLine(executor, powerlineToken, { extraEnv, workingDirectory });
 
   yield { stage: "bootstrapping", message: "PowerLine is running on remote host", progress: 0.75 };
 }

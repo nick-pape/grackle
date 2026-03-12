@@ -142,49 +142,98 @@ describe("startRemotePowerLine", () => {
     }
   });
 
-  it("writes env file, starts process, and probes successfully", async () => {
+  it("batches env file, start, and probe into a single compound command", async () => {
     const executor = createMockExecutor();
-    await startRemotePowerLine(executor, "test-token");
+    const result = await startRemotePowerLine(executor, "test-token");
+
+    expect(result.alreadyRunning).toBe(false);
 
     const calls = (executor.exec as ReturnType<typeof vi.fn>).mock.calls;
 
-    // Should have: writeFileSync, chmod, start script (bash -c), probe (createConnection)
-    expect(calls.length).toBeGreaterThanOrEqual(4);
+    // Everything is batched into a single bash -c call
+    expect(calls).toHaveLength(1);
 
-    // Verify the start script was invoked via bash -c
-    const startCall = calls.find((c: string[]) => (c[0] as string).includes("bash -c"));
-    expect(startCall).toBeTruthy();
-    expect(startCall![0]).toContain("nohup node");
-    expect(startCall![0]).toContain("--port=");
-
-    // Verify probe was called
-    const probeCall = calls.find((c: string[]) => (c[0] as string).includes("createConnection"));
-    expect(probeCall).toBeTruthy();
+    const command = calls[0][0] as string;
+    expect(command).toContain("bash -c");
+    // Env file write (base64 decode via Node)
+    expect(command).toContain("writeFileSync");
+    expect(command).toContain(".env.sh");
+    expect(command).toContain("chmod 600");
+    // PowerLine start
+    expect(command).toContain("nohup node");
+    expect(command).toContain("--port=");
+    // Probe (TCP connect check)
+    expect(command).toContain("createConnection");
   });
 
-  it("throws when probe fails after starting", async () => {
-    let callCount = 0;
+  it("throws when compound command and fallback probe both fail", async () => {
     const executor = createMockExecutor({
-      exec: vi.fn().mockImplementation((command: string) => {
-        callCount++;
-        // Let everything succeed except the probe (createConnection)
-        if (command.includes("createConnection")) {
-          return Promise.reject(new Error("port not listening"));
-        }
-        return Promise.resolve("");
-      }),
+      exec: vi.fn().mockRejectedValue(new Error("port not listening")),
     });
 
     await expect(startRemotePowerLine(executor, "test-token"))
       .rejects.toThrow("PowerLine process died immediately after starting");
+
+    // Should have tried compound command, then fallback probe
+    const calls = (executor.exec as ReturnType<typeof vi.fn>).mock.calls;
+    expect(calls).toHaveLength(2);
+    expect(calls[0][0]).toContain("bash -c");
+    expect(calls[1][0]).toContain("createConnection");
   });
 
   it("uses workingDirectory when provided", async () => {
     const executor = createMockExecutor();
-    await startRemotePowerLine(executor, "tok", undefined, "/workspaces/myrepo");
+    await startRemotePowerLine(executor, "tok", { workingDirectory: "/workspaces/myrepo" });
 
     const calls = (executor.exec as ReturnType<typeof vi.fn>).mock.calls;
-    const startCall = calls.find((c: string[]) => (c[0] as string).includes("bash -c"));
-    expect(startCall![0]).toContain("cd /workspaces/myrepo");
+    expect(calls).toHaveLength(1);
+    expect(calls[0][0]).toContain("cd /workspaces/myrepo");
+  });
+
+  it("auto-detects workspace directory when autoDetectWorkspace is true", async () => {
+    const executor = createMockExecutor();
+    await startRemotePowerLine(executor, "tok", { autoDetectWorkspace: true });
+
+    const calls = (executor.exec as ReturnType<typeof vi.fn>).mock.calls;
+    expect(calls).toHaveLength(1);
+    const command = calls[0][0] as string;
+    // Should detect /workspaces/*/ inline
+    expect(command).toContain("ls -d /workspaces/*/");
+    expect(command).toContain("$WD");
+  });
+
+  it("returns alreadyRunning=true when probeFirst finds PowerLine alive", async () => {
+    const executor = createMockExecutor({
+      exec: vi.fn().mockResolvedValue("__PL_ALIVE__"),
+    });
+
+    const result = await startRemotePowerLine(executor, "tok", { probeFirst: true });
+    expect(result.alreadyRunning).toBe(true);
+
+    const calls = (executor.exec as ReturnType<typeof vi.fn>).mock.calls;
+    expect(calls).toHaveLength(1);
+    // Should contain the probe-first prefix
+    const command = calls[0][0] as string;
+    expect(command).toContain("__PL_ALIVE__");
+    expect(command).toContain("exit 0");
+  });
+
+  it("falls back to separate probe when compound command fails but PowerLine starts", async () => {
+    let callCount = 0;
+    const executor = createMockExecutor({
+      exec: vi.fn().mockImplementation(() => {
+        callCount++;
+        // First call (compound) fails — simulates SSH exit 255 on backgrounding
+        if (callCount === 1) {
+          return Promise.reject(new Error("exit code 255"));
+        }
+        // Second call (fallback probe) succeeds
+        return Promise.resolve("");
+      }),
+    });
+
+    const result = await startRemotePowerLine(executor, "tok");
+    expect(result.alreadyRunning).toBe(false);
+    expect(callCount).toBe(2);
   });
 });

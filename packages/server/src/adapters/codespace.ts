@@ -12,7 +12,6 @@ import {
   remoteStop,
   remoteDestroy,
   remoteHealthCheck,
-  probeRemotePowerLine,
   startRemotePowerLine,
   SSH_CONNECTIVITY_TIMEOUT_MS,
   REMOTE_EXEC_DEFAULT_TIMEOUT_MS,
@@ -169,30 +168,17 @@ export class CodespaceAdapter implements EnvironmentAdapter {
     yield { stage: "reconnecting", message: "Closing stale tunnel...", progress: 0.10 };
     await closeTunnel(environmentId);
 
-    // 2. Probe remote PowerLine (also verifies SSH connectivity)
+    // 2. Probe + conditional restart in a single SSH call.
+    //    probeFirst checks if PowerLine is already listening; if not, writes
+    //    env vars, detects workspace, starts the process, and re-probes.
     yield { stage: "reconnecting", message: `Checking PowerLine on ${cfg.codespaceName}...`, progress: 0.30 };
-    try {
-      await probeRemotePowerLine(executor);
-    } catch {
-      // PowerLine is not running — restart it without full reinstall.
-      // startRemotePowerLine writes the env file (handles token rotation).
-      yield { stage: "reconnecting", message: "PowerLine not running, restarting...", progress: 0.40 };
-
-      // Detect the repo working directory (codespaces clone to /workspaces/<name>)
-      let workingDirectory: string | undefined;
-      try {
-        const workspaceDir = (await executor.exec(
-          "ls -d /workspaces/*/ 2>/dev/null | head -1",
-          { timeout: SSH_CONNECTIVITY_TIMEOUT_MS },
-        )).trim().replace(/\/$/, "");
-        if (workspaceDir) {
-          workingDirectory = workspaceDir;
-        }
-      } catch {
-        // Non-fatal — fall back to PowerLine directory
-      }
-
-      await startRemotePowerLine(executor, powerlineToken, cfg.env, workingDirectory);
+    const { alreadyRunning } = await startRemotePowerLine(executor, powerlineToken, {
+      extraEnv: cfg.env,
+      autoDetectWorkspace: true,
+      probeFirst: true,
+    });
+    if (!alreadyRunning) {
+      yield { stage: "reconnecting", message: "PowerLine restarted", progress: 0.50 };
     }
 
     // 3. Open new port-forward tunnel

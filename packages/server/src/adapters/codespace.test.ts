@@ -22,9 +22,7 @@ const mocks = vi.hoisted(() => ({
   closeTunnel: vi.fn().mockResolvedValue(undefined),
   registerTunnel: vi.fn(),
   findFreePort: vi.fn().mockResolvedValue(9999),
-  probeRemotePowerLine: vi.fn().mockResolvedValue(undefined),
-  writeRemoteEnvFile: vi.fn().mockResolvedValue(undefined),
-  startRemotePowerLine: vi.fn().mockResolvedValue(undefined),
+  startRemotePowerLine: vi.fn().mockResolvedValue({ alreadyRunning: true }),
 }));
 
 vi.mock("./remote-adapter-utils.js", async (importOriginal) => {
@@ -34,8 +32,6 @@ vi.mock("./remote-adapter-utils.js", async (importOriginal) => {
     closeTunnel: mocks.closeTunnel,
     registerTunnel: mocks.registerTunnel,
     findFreePort: mocks.findFreePort,
-    probeRemotePowerLine: mocks.probeRemotePowerLine,
-    writeRemoteEnvFile: mocks.writeRemoteEnvFile,
     startRemotePowerLine: mocks.startRemotePowerLine,
     // Stub ProcessTunnel so CodespaceTunnel doesn't spawn real processes
     ProcessTunnel: class {
@@ -73,6 +69,7 @@ describe("CodespaceAdapter.reconnect()", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.startRemotePowerLine.mockResolvedValue({ alreadyRunning: true });
     adapter = new CodespaceAdapter();
   });
 
@@ -84,33 +81,38 @@ describe("CodespaceAdapter.reconnect()", () => {
     expect(events[events.length - 1].message).toContain("Reconnected");
   });
 
-  it("closes stale tunnel, probes PowerLine, and opens new tunnel", async () => {
+  it("closes stale tunnel, calls startRemotePowerLine with probeFirst, and opens new tunnel", async () => {
     await collectEvents(adapter.reconnect!(envId, config as Record<string, unknown>, token));
 
     expect(mocks.closeTunnel).toHaveBeenCalledWith(envId);
-    expect(mocks.probeRemotePowerLine).toHaveBeenCalledOnce();
-    // env file is NOT written on happy path — only on restart
-    expect(mocks.startRemotePowerLine).not.toHaveBeenCalled();
+    expect(mocks.startRemotePowerLine).toHaveBeenCalledOnce();
+    // Verify probeFirst and autoDetectWorkspace options
+    const options = mocks.startRemotePowerLine.mock.calls[0][2];
+    expect(options).toMatchObject({ probeFirst: true, autoDetectWorkspace: true });
     expect(mocks.registerTunnel).toHaveBeenCalledWith(envId, expect.objectContaining({
       tunnel: expect.objectContaining({ localPort: 9999 }),
     }));
   });
 
-  it("restarts PowerLine when probe fails (does not throw)", async () => {
-    mocks.probeRemotePowerLine.mockRejectedValueOnce(new Error("port not listening"));
+  it("yields 'restarted' event when PowerLine was not already running", async () => {
+    mocks.startRemotePowerLine.mockResolvedValueOnce({ alreadyRunning: false });
 
     const events = await collectEvents(adapter.reconnect!(envId, config as Record<string, unknown>, token));
 
-    // Should have called startRemotePowerLine as restart
-    expect(mocks.startRemotePowerLine).toHaveBeenCalledOnce();
-    // Should still complete successfully
+    // Should have a "restarted" event
+    expect(events.some((e) => e.message.includes("restarted"))).toBe(true);
     expect(events[events.length - 1].message).toContain("Reconnected");
-    // Should have a "restarting" event
-    expect(events.some((e) => e.message.includes("restarting"))).toBe(true);
   });
 
-  it("propagates error when probe fails AND restart fails", async () => {
-    mocks.probeRemotePowerLine.mockRejectedValueOnce(new Error("port not listening"));
+  it("does not yield 'restarted' event when PowerLine was already running", async () => {
+    mocks.startRemotePowerLine.mockResolvedValueOnce({ alreadyRunning: true });
+
+    const events = await collectEvents(adapter.reconnect!(envId, config as Record<string, unknown>, token));
+
+    expect(events.some((e) => e.message.includes("restarted"))).toBe(false);
+  });
+
+  it("propagates error when startRemotePowerLine fails", async () => {
     mocks.startRemotePowerLine.mockRejectedValueOnce(
       new Error("PowerLine process died immediately after starting"),
     );
@@ -119,10 +121,7 @@ describe("CodespaceAdapter.reconnect()", () => {
       .rejects.toThrow("PowerLine process died immediately after starting");
   });
 
-  it("propagates error when SSH is unreachable (probe and restart both fail)", async () => {
-    // Probe fails due to SSH being down
-    mocks.probeRemotePowerLine.mockRejectedValueOnce(new Error("ssh connection refused"));
-    // Restart also fails because SSH is still down
+  it("propagates error when SSH is unreachable", async () => {
     mocks.startRemotePowerLine.mockRejectedValueOnce(new Error("ssh connection refused"));
 
     await expect(collectEvents(adapter.reconnect!(envId, config as Record<string, unknown>, token)))

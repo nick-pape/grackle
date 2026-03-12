@@ -12,7 +12,6 @@ import {
   remoteStop,
   remoteDestroy,
   remoteHealthCheck,
-  probeRemotePowerLine,
   startRemotePowerLine,
   SSH_CONNECTIVITY_TIMEOUT_MS,
   REMOTE_EXEC_DEFAULT_TIMEOUT_MS,
@@ -183,15 +182,14 @@ export class SshAdapter implements EnvironmentAdapter {
     yield { stage: "reconnecting", message: "Closing stale tunnel...", progress: 0.10 };
     await closeTunnel(environmentId);
 
-    // 2. Probe remote PowerLine (also verifies SSH connectivity)
+    // 2. Probe + conditional restart in a single SSH call.
     yield { stage: "reconnecting", message: `Checking PowerLine on ${cfg.host}...`, progress: 0.30 };
-    try {
-      await probeRemotePowerLine(executor);
-    } catch {
-      // PowerLine is not running — restart it without full reinstall.
-      // startRemotePowerLine writes the env file (handles token rotation).
-      yield { stage: "reconnecting", message: "PowerLine not running, restarting...", progress: 0.40 };
-      await startRemotePowerLine(executor, powerlineToken, cfg.env);
+    const { alreadyRunning } = await startRemotePowerLine(executor, powerlineToken, {
+      extraEnv: cfg.env,
+      probeFirst: true,
+    });
+    if (!alreadyRunning) {
+      yield { stage: "reconnecting", message: "PowerLine restarted", progress: 0.50 };
     }
 
     // 3. Open new SSH tunnel
