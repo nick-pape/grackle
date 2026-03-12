@@ -6,9 +6,9 @@ test.describe("Auto-retry on rejection", () => {
     const page = appPage;
 
     // --- Setup: Create project, task, navigate, patch runtime ---
-    await createProject(page, "auto-retry-proj");
-    await page.getByText("auto-retry-proj").click();
-    await createTask(page, "auto-retry-proj", "retry task", "test-local");
+    await createProject(page, "rejection-autostart");
+    await page.getByText("rejection-autostart").click();
+    await createTask(page, "rejection-autostart", "retry task", "test-local");
     await navigateToTask(page, "retry task");
     await patchWsForStubRuntime(page);
 
