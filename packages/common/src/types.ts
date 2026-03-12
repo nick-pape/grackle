@@ -61,4 +61,4 @@ export const API_KEY_FILENAME: string = "api-key";
 /** Default LLM model identifier for new sessions. */
 export const DEFAULT_MODEL: string = "sonnet";
 /** Maximum allowed nesting depth for task hierarchies. */
-export const MAX_TASK_DEPTH: number = 5;
+export const MAX_TASK_DEPTH: number = 8;

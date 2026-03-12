@@ -92,15 +92,12 @@ describe("task-store tree operations", () => {
     });
 
     it("rejects creation when depth would exceed MAX_TASK_DEPTH", () => {
-      taskStore.createTask("t0", "test-proj", "Level 0", "desc", "", [], "proj", "", true);
-      taskStore.createTask("t1", "test-proj", "Level 1", "desc", "", [], "proj", "t0", true);
-      taskStore.createTask("t2", "test-proj", "Level 2", "desc", "", [], "proj", "t1", true);
-      taskStore.createTask("t3", "test-proj", "Level 3", "desc", "", [], "proj", "t2", true);
-      taskStore.createTask("t4", "test-proj", "Level 4", "desc", "", [], "proj", "t3", true);
-      taskStore.createTask("t5", "test-proj", "Level 5", "desc", "", [], "proj", "t4", true);
+      for (let i = 0; i <= 8; i++) {
+        taskStore.createTask(`t${i}`, "test-proj", `Level ${i}`, "desc", "", [], "proj", i === 0 ? "" : `t${i - 1}`, true);
+      }
 
       expect(() => {
-        taskStore.createTask("t6", "test-proj", "Level 6", "desc", "", [], "proj", "t5");
+        taskStore.createTask("t9", "test-proj", "Level 9", "desc", "", [], "proj", "t8");
       }).toThrow("depth would exceed maximum");
     });
   });
@@ -249,15 +246,12 @@ describe("task-store tree operations", () => {
     });
 
     it("depth limit still enforced even when canDecompose=true", () => {
-      taskStore.createTask("t0", "test-proj", "Level 0", "desc", "", [], "proj", "", true);
-      taskStore.createTask("t1", "test-proj", "Level 1", "desc", "", [], "proj", "t0", true);
-      taskStore.createTask("t2", "test-proj", "Level 2", "desc", "", [], "proj", "t1", true);
-      taskStore.createTask("t3", "test-proj", "Level 3", "desc", "", [], "proj", "t2", true);
-      taskStore.createTask("t4", "test-proj", "Level 4", "desc", "", [], "proj", "t3", true);
-      taskStore.createTask("t5", "test-proj", "Level 5", "desc", "", [], "proj", "t4", true);
+      for (let i = 0; i <= 8; i++) {
+        taskStore.createTask(`t${i}`, "test-proj", `Level ${i}`, "desc", "", [], "proj", i === 0 ? "" : `t${i - 1}`, true);
+      }
 
       expect(() => {
-        taskStore.createTask("t6", "test-proj", "Level 6", "desc", "", [], "proj", "t5", true);
+        taskStore.createTask("t9", "test-proj", "Level 9", "desc", "", [], "proj", "t8", true);
       }).toThrow("depth would exceed maximum");
     });
 
