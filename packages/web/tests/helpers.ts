@@ -128,14 +128,14 @@ export async function createTask(
   envName?: string,
 ): Promise<void> {
   // Click "New task" button (uses stopPropagation, doesn't toggle expansion)
-  await page.getByText(projectName).locator("..").locator('button[title="New task"]').click();
+  await page.getByText(projectName).locator("..").locator('button[title="New task"]').first().click();
 
   // Fill in task details
   await page.locator('input[placeholder="Task title..."]').fill(title);
   if (envName) {
     await page.locator("select").selectOption(envName);
   }
-  await page.locator("button", { hasText: "Create" }).click();
+  await page.locator("button", { hasText: /^Create$/ }).click();
 
   // After "Create", viewMode goes to project → auto-expand. Wait for task in sidebar.
   // Use .first() because AnimatePresence may briefly keep an exiting copy alongside the
