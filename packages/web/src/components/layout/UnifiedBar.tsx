@@ -542,6 +542,8 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
         <div className={styles.bar}>
           <input
             type="text"
+            value=""
+            readOnly
             disabled
             placeholder="Agent is working..."
             className={styles.input}
@@ -697,7 +699,7 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
     if (isRunning) {
       return (
         <div className={styles.bar}>
-          <input type="text" disabled placeholder="Agent is working..." className={styles.input} />
+          <input type="text" value="" readOnly disabled placeholder="Agent is working..." className={styles.input} />
           <button onClick={() => kill(viewMode.sessionId)} className={styles.btnDanger} title="Stop session">
             Stop
           </button>
