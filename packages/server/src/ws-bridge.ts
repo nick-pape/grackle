@@ -482,7 +482,8 @@ async function handleMessage(
           create(powerline.InputMessageSchema, { sessionId, text })
         );
       } catch (err) {
-        sendWs(ws, { type: "error", payload: { message: `Failed to send input: ${err}` } });
+        const errMessage = err instanceof Error ? err.message : String(err);
+        sendWs(ws, { type: "error", payload: { message: `Failed to send input: ${errMessage}` } });
       }
       break;
     }

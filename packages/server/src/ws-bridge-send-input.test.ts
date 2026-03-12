@@ -132,12 +132,28 @@ function applySchema(): void {
   `);
 }
 
+/** Track open sockets so afterEach can clean them up. */
+const openSockets: WebSocket[] = [];
+
 /** Helper: connect a WebSocket to the test server and wait for it to open. */
 function connectWs(port: number, token = "test-token"): Promise<WebSocket> {
   return new Promise((resolve, reject) => {
     const ws = new WebSocket(`ws://127.0.0.1:${port}?token=${token}`);
+    openSockets.push(ws);
     ws.once("open", () => resolve(ws));
     ws.once("error", reject);
+  });
+}
+
+/** Helper: close a WebSocket and wait for the close handshake to complete. */
+function closeWs(ws: WebSocket): Promise<void> {
+  return new Promise((resolve) => {
+    if (ws.readyState === WebSocket.CLOSED) {
+      resolve();
+      return;
+    }
+    ws.once("close", () => resolve());
+    ws.close();
   });
 }
 
@@ -171,6 +187,9 @@ describe("ws-bridge send_input error handling", () => {
   });
 
   afterEach(async () => {
+    // Close any open client sockets before shutting down the server
+    await Promise.all(openSockets.map((ws) => closeWs(ws)));
+    openSockets.length = 0;
     await new Promise<void>((resolve) => httpServer.close(() => resolve()));
   });
 
@@ -181,7 +200,7 @@ describe("ws-bridge send_input error handling", () => {
     ws.send(JSON.stringify({ type: "send_input", payload: { text: "hello" } }));
 
     const msg = await msgPromise;
-    ws.close();
+    await closeWs(ws);
 
     expect(msg.type).toBe("error");
     expect((msg.payload as Record<string, unknown>).message).toMatch(/sessionId and text required/i);
@@ -194,7 +213,7 @@ describe("ws-bridge send_input error handling", () => {
     ws.send(JSON.stringify({ type: "send_input", payload: { sessionId: "sess-1" } }));
 
     const msg = await msgPromise;
-    ws.close();
+    await closeWs(ws);
 
     expect(msg.type).toBe("error");
     expect((msg.payload as Record<string, unknown>).message).toMatch(/sessionId and text required/i);
@@ -207,7 +226,7 @@ describe("ws-bridge send_input error handling", () => {
     ws.send(JSON.stringify({ type: "send_input", payload: { sessionId: "no-such-session", text: "hello" } }));
 
     const msg = await msgPromise;
-    ws.close();
+    await closeWs(ws);
 
     expect(msg.type).toBe("error");
     expect((msg.payload as Record<string, unknown>).message).toMatch(/Session not found: no-such-session/i);
@@ -223,7 +242,7 @@ describe("ws-bridge send_input error handling", () => {
     ws.send(JSON.stringify({ type: "send_input", payload: { sessionId: "sess-completed", text: "hello" } }));
 
     const msg = await msgPromise;
-    ws.close();
+    await closeWs(ws);
 
     expect(msg.type).toBe("error");
     expect((msg.payload as Record<string, unknown>).message).toMatch(/not currently waiting for input.*completed/i);
@@ -239,7 +258,7 @@ describe("ws-bridge send_input error handling", () => {
     ws.send(JSON.stringify({ type: "send_input", payload: { sessionId: "sess-failed", text: "hello" } }));
 
     const msg = await msgPromise;
-    ws.close();
+    await closeWs(ws);
 
     expect(msg.type).toBe("error");
     expect((msg.payload as Record<string, unknown>).message).toMatch(/not currently waiting for input.*failed/i);
@@ -255,7 +274,7 @@ describe("ws-bridge send_input error handling", () => {
     ws.send(JSON.stringify({ type: "send_input", payload: { sessionId: "sess-killed", text: "hello" } }));
 
     const msg = await msgPromise;
-    ws.close();
+    await closeWs(ws);
 
     expect(msg.type).toBe("error");
     expect((msg.payload as Record<string, unknown>).message).toMatch(/not currently waiting for input.*killed/i);
@@ -274,7 +293,7 @@ describe("ws-bridge send_input error handling", () => {
     ws.send(JSON.stringify({ type: "send_input", payload: { sessionId: "sess-active", text: "hello" } }));
 
     const msg = await msgPromise;
-    ws.close();
+    await closeWs(ws);
 
     expect(msg.type).toBe("error");
     expect((msg.payload as Record<string, unknown>).message).toMatch(/env-disconnected.*not connected/i);
@@ -298,7 +317,7 @@ describe("ws-bridge send_input error handling", () => {
     ws.send(JSON.stringify({ type: "send_input", payload: { sessionId: "sess-rpc-err", text: "hello" } }));
 
     const msg = await msgPromise;
-    ws.close();
+    await closeWs(ws);
 
     expect(msg.type).toBe("error");
     expect((msg.payload as Record<string, unknown>).message).toMatch(/Failed to send input/i);
@@ -333,7 +352,7 @@ describe("ws-bridge send_input error handling", () => {
     // Wait briefly to observe any potential error response
     await new Promise((r) => setTimeout(r, 200));
 
-    ws.close();
+    await closeWs(ws);
 
     const receivedError = receivedMessages.some((msg) => msg.type === "error");
     expect(receivedError).toBe(false);
