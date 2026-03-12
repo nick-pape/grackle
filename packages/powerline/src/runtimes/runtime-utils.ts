@@ -118,7 +118,7 @@ export function findGitRepoPath(basePath?: string): string | undefined {
 
   // Docker convention
   if (existsSync("/workspace") && isGitRepo("/workspace")) {
-    return "/workspace";
+    return gitToplevel("/workspace") ?? "/workspace";
   }
 
   // GitHub Codespaces convention: /workspaces/<repo-name>
@@ -128,7 +128,7 @@ export function findGitRepoPath(basePath?: string): string | undefined {
       for (const entry of entries) {
         const candidate = `/workspaces/${entry}`;
         if (existsSync(candidate) && isGitRepo(candidate)) {
-          return candidate;
+          return gitToplevel(candidate) ?? candidate;
         }
       }
     } catch {
