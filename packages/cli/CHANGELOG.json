@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.14.5",
+      "tag": "@grackle-ai/cli_v0.14.5",
+      "date": "Thu, 12 Mar 2026 07:09:34 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Allow retrying failed tasks by adding 'failed' to allowed start statuses"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.14.4",
       "tag": "@grackle-ai/cli_v0.14.4",
       "date": "Thu, 12 Mar 2026 06:27:52 GMT",
