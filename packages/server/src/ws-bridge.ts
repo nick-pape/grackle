@@ -688,7 +688,10 @@ async function handleMessage(
         ? personaStore.getPersona(personaId)
         : undefined;
       if (personaId && !persona) {
-        sendWs(ws, { type: "error", payload: { message: `Persona not found: ${personaId}` } });
+        sendWs(ws, {
+          type: "error",
+          payload: { message: `Persona not found: ${personaId}` },
+        });
         return;
       }
 
@@ -745,10 +748,15 @@ async function handleMessage(
           if (Array.isArray(parsed)) {
             mcpServers = parsed as typeof mcpServers;
           } else {
-            logger.warn("Expected persona.mcpServers to be a JSON array; ignoring invalid value");
+            logger.warn(
+              "Expected persona.mcpServers to be a JSON array; ignoring invalid value",
+            );
           }
         } catch (err) {
-          logger.warn({ error: err }, "Failed to parse persona.mcpServers JSON; ignoring value");
+          logger.warn(
+            { error: err },
+            "Failed to parse persona.mcpServers JSON; ignoring value",
+          );
         }
         if (mcpServers.length > 0) {
           const obj: Record<string, unknown> = {};

@@ -131,30 +131,58 @@ function safeParseJson<T>(value: string | undefined, fallback: T): T {
 
 /** Convert a persona database row to a Persona proto message. */
 function personaRowToProto(row: personaStore.PersonaRow): grackle.Persona {
-  const toolConfig = safeParseJson<{ allowedTools?: string[]; disallowedTools?: string[] }>(row.toolConfig, {});
-  const mcpServers = safeParseJson<{ name: string; command: string; args?: string[]; tools?: string[] }[]>(row.mcpServers, []);
+  const toolConfig = safeParseJson<{
+    allowedTools?: string[];
+    disallowedTools?: string[];
+  }>(row.toolConfig, {});
+  const mcpServers = safeParseJson<
+    { name: string; command: string; args?: string[]; tools?: string[] }[]
+  >(row.mcpServers, []);
   return create(grackle.PersonaSchema, {
     id: row.id,
     name: row.name,
     description: row.description,
     systemPrompt: row.systemPrompt,
     toolConfig: create(grackle.ToolConfigSchema, {
-      allowedTools: Array.isArray(toolConfig.allowedTools) ? toolConfig.allowedTools.filter((t): t is string => typeof t === "string") : [],
-      disallowedTools: Array.isArray(toolConfig.disallowedTools) ? toolConfig.disallowedTools.filter((t): t is string => typeof t === "string") : [],
+      allowedTools: Array.isArray(toolConfig.allowedTools)
+        ? toolConfig.allowedTools.filter(
+            (t): t is string => typeof t === "string",
+          )
+        : [],
+      disallowedTools: Array.isArray(toolConfig.disallowedTools)
+        ? toolConfig.disallowedTools.filter(
+            (t): t is string => typeof t === "string",
+          )
+        : [],
     }),
     runtime: row.runtime,
     model: row.model,
     maxTurns: row.maxTurns,
     mcpServers: mcpServers
-      .filter((s): s is { name: string; command: string; args?: string[]; tools?: string[] } =>
-        typeof s === "object" && s !== null && typeof s.name === "string" && typeof s.command === "string",
+      .filter(
+        (
+          s,
+        ): s is {
+          name: string;
+          command: string;
+          args?: string[];
+          tools?: string[];
+        } =>
+          typeof s === "object" &&
+          s !== null &&
+          typeof s.name === "string" &&
+          typeof s.command === "string",
       )
       .map((s) =>
         create(grackle.McpServerConfigSchema, {
           name: s.name,
           command: s.command,
-          args: Array.isArray(s.args) ? s.args.filter((a): a is string => typeof a === "string") : [],
-          tools: Array.isArray(s.tools) ? s.tools.filter((t): t is string => typeof t === "string") : [],
+          args: Array.isArray(s.args)
+            ? s.args.filter((a): a is string => typeof a === "string")
+            : [],
+          tools: Array.isArray(s.tools)
+            ? s.tools.filter((t): t is string => typeof t === "string")
+            : [],
         }),
       ),
     createdAt: row.createdAt,
@@ -904,8 +932,10 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       // otherwise keep the existing stored value.
       const hasNewToolConfig =
         !!req.toolConfig &&
-        ((req.toolConfig.allowedTools && req.toolConfig.allowedTools.length > 0) ||
-          (req.toolConfig.disallowedTools && req.toolConfig.disallowedTools.length > 0));
+        ((req.toolConfig.allowedTools &&
+          req.toolConfig.allowedTools.length > 0) ||
+          (req.toolConfig.disallowedTools &&
+            req.toolConfig.disallowedTools.length > 0));
       const toolConfigJson = hasNewToolConfig
         ? JSON.stringify({
             allowedTools: [...(req.toolConfig?.allowedTools || [])],
@@ -913,7 +943,8 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
           })
         : existing.toolConfig;
 
-      const hasNewMcpServers = Array.isArray(req.mcpServers) && req.mcpServers.length > 0;
+      const hasNewMcpServers =
+        Array.isArray(req.mcpServers) && req.mcpServers.length > 0;
       const mcpServersJson = hasNewMcpServers
         ? JSON.stringify(
             req.mcpServers.map((s) => ({
