@@ -54,9 +54,9 @@ function SessionHeader({ sessionId, session, isActive, onKill }: SessionHeaderPr
 }
 
 /** Overflow warning banner shown when events exceed the in-memory cap. */
-function EventOverflowBanner({ eventsDropped }: { eventsDropped: number }): JSX.Element | null {
+function EventOverflowBanner({ eventsDropped }: { eventsDropped: number }): JSX.Element {
   if (eventsDropped <= 0) {
-    return null;
+    return <></>;
   }
   return (
     <div className={styles.eventOverflowWarning}>
