@@ -3,6 +3,7 @@ import type { AsyncQueue } from "../utils/async-queue.js";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
+import { execFileSync } from "node:child_process";
 import { ensureWorktree } from "../worktree.js";
 import { logger } from "../logger.js";
 
@@ -76,38 +77,125 @@ export interface ResolveWorkingDirectoryOptions {
 }
 
 /**
+ * Check if a directory is a git repository by running `git rev-parse --git-dir`.
+ * Returns true if the command succeeds.
+ */
+function isGitRepo(dir: string): boolean {
+  try {
+    execFileSync("git", ["rev-parse", "--git-dir"], { cwd: dir, stdio: "ignore" });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Find the git repository root from a set of well-known workspace paths.
+ *
+ * Checks (in order):
+ * 1. The provided basePath (if given)
+ * 2. /workspace (Docker convention)
+ * 3. /workspaces/* (GitHub Codespaces convention — picks the first git repo found)
+ *
+ * Returns the first path that exists and is a git repository, or undefined.
+ */
+export function findGitRepoPath(basePath?: string): string | undefined {
+  // Try the explicitly provided path first
+  if (basePath && existsSync(basePath) && isGitRepo(basePath)) {
+    return basePath;
+  }
+
+  // Docker convention
+  if (existsSync("/workspace") && isGitRepo("/workspace")) {
+    return "/workspace";
+  }
+
+  // GitHub Codespaces convention: /workspaces/<repo-name>
+  if (existsSync("/workspaces")) {
+    try {
+      const entries = readdirSync("/workspaces");
+      for (const entry of entries) {
+        const candidate = `/workspaces/${entry}`;
+        if (existsSync(candidate) && isGitRepo(candidate)) {
+          return candidate;
+        }
+      }
+    } catch {
+      // Not readable — skip
+    }
+  }
+
+  return undefined;
+}
+
+/**
+ * Find any existing workspace directory (git repo or not) for fallback use.
+ * Used when worktree setup fails and we just need a working directory.
+ */
+function findWorkspaceDir(basePath?: string, requireNonEmpty?: boolean): string | undefined {
+  const candidates = [basePath, "/workspace"];
+
+  // Also check /workspaces/* for Codespaces
+  if (existsSync("/workspaces")) {
+    try {
+      for (const entry of readdirSync("/workspaces")) {
+        candidates.push(`/workspaces/${entry}`);
+      }
+    } catch {
+      // skip
+    }
+  }
+
+  for (const dir of candidates) {
+    if (dir && existsSync(dir)) {
+      if (requireNonEmpty && readdirSync(dir).length === 0) {
+        continue;
+      }
+      return dir;
+    }
+  }
+  return undefined;
+}
+
+/**
  * Resolve the working directory for an agent session.
  *
  * Tries worktree creation first (when branch + basePath are provided),
- * then falls back to `/workspace` if it exists.
+ * auto-detecting the git repo if the provided basePath is not a git repo.
+ * Falls back to workspace directories on failure.
  */
 export async function resolveWorkingDirectory(options: ResolveWorkingDirectoryOptions): Promise<string | undefined> {
   const { branch, worktreeBasePath, eventQueue, requireNonEmpty } = options;
   const ts = (): string => new Date().toISOString();
 
   if (branch && worktreeBasePath) {
-    try {
-      const wt = await ensureWorktree(worktreeBasePath, branch);
-      eventQueue.push({ type: "system", timestamp: ts(), content: `Worktree ready: ${wt.worktreePath} (branch: ${branch}, created: ${wt.created})` });
-      return wt.worktreePath;
-    } catch (wtErr) {
-      eventQueue.push({ type: "system", timestamp: ts(), content: `Worktree setup skipped (${wtErr}), falling back to workspace` });
-      const workspacePath = "/workspace";
-      if (existsSync(workspacePath)) {
-        return workspacePath;
+    // Auto-detect the actual git repo path — the server may send a default
+    // like "/workspace" that doesn't match the actual layout (e.g. Codespaces
+    // use /workspaces/<repo>).
+    const repoPath = findGitRepoPath(worktreeBasePath);
+
+    if (repoPath) {
+      try {
+        const wt = await ensureWorktree(repoPath, branch);
+        eventQueue.push({ type: "system", timestamp: ts(), content: `Worktree ready: ${wt.worktreePath} (branch: ${branch}, created: ${wt.created})` });
+        return wt.worktreePath;
+      } catch (wtErr) {
+        eventQueue.push({ type: "system", timestamp: ts(), content: `Worktree setup failed (${wtErr}), falling back to workspace` });
       }
-      return undefined;
+    } else {
+      eventQueue.push({ type: "system", timestamp: ts(), content: `No git repo found at ${worktreeBasePath} or well-known paths, falling back to workspace` });
     }
+
+    // Worktree failed — fall back to best available workspace
+    const fallback = findWorkspaceDir(worktreeBasePath, requireNonEmpty);
+    if (fallback) {
+      return fallback;
+    }
+    return undefined;
   }
 
-  const workspacePath = "/workspace";
-  if (existsSync(workspacePath)) {
-    if (requireNonEmpty && readdirSync(workspacePath).length === 0) {
-      return undefined;
-    }
-    return workspacePath;
-  }
-  return undefined;
+  // No branch requested — just find a workspace directory
+  return findWorkspaceDir(worktreeBasePath, requireNonEmpty);
 }
 
 // ─── MCP server resolution ─────────────────────────────────

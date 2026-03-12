@@ -8,6 +8,7 @@ import { getRuntime, listRuntimes } from "./runtime-registry.js";
 import { addSession, getSession, removeSession, listAllSessions } from "./session-mgr.js";
 import { writeTokens } from "./token-writer.js";
 import { removeWorktree } from "./worktree.js";
+import { findGitRepoPath } from "./runtimes/runtime-utils.js";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import os from "node:os";
@@ -153,7 +154,7 @@ export function registerPowerLineRoutes(router: ConnectRouter): void {
 
     async getDiff(req: powerline.DiffRequest) {
       const baseBranch = req.baseBranch || "main";
-      const basePath = req.worktreeBasePath || "/workspace";
+      const basePath = findGitRepoPath(req.worktreeBasePath) || req.worktreeBasePath || "/workspace";
 
       try {
         // Resolve worktree path for the branch (may differ from basePath)
