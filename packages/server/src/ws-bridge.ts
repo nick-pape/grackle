@@ -1118,6 +1118,13 @@ async function handleMessage(
             }
           }
           sessionStore.updateSession(deletedTask.sessionId, "killed");
+          streamHub.publish(create(grackle.SessionEventSchema, {
+            sessionId: deletedTask.sessionId,
+            type: grackle.EventType.STATUS,
+            timestamp: new Date().toISOString(),
+            content: "killed",
+            raw: "",
+          }));
         }
       }
 

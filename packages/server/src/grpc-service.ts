@@ -903,6 +903,15 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
             }
           }
           sessionStore.updateSession(task.sessionId, "killed");
+          streamHub.publish(
+            create(grackle.SessionEventSchema, {
+              sessionId: task.sessionId,
+              type: grackle.EventType.STATUS,
+              timestamp: new Date().toISOString(),
+              content: "killed",
+              raw: "",
+            }),
+          );
         }
       }
 
