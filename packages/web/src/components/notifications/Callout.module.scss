@@ -1,0 +1,83 @@
+// =============================================================================
+// Callout — inline contextual alert for persistent information within a panel
+// =============================================================================
+
+.callout {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height);
+
+  // Variant: success (green)
+  &.success {
+    background: var(--accent-green-dim);
+    border-color: rgba(78, 204, 163, 0.30);
+
+    .icon {
+      color: var(--accent-green);
+    }
+  }
+
+  // Variant: error (red)
+  &.error {
+    background: var(--accent-red-dim);
+    border-color: rgba(233, 69, 96, 0.30);
+
+    .icon {
+      color: var(--accent-red);
+    }
+  }
+
+  // Variant: warning (yellow)
+  &.warning {
+    background: var(--accent-yellow-dim);
+    border-color: rgba(240, 192, 64, 0.30);
+
+    .icon {
+      color: var(--accent-yellow);
+    }
+  }
+
+  // Variant: info (blue)
+  &.info {
+    background: var(--accent-blue-dim);
+    border-color: rgba(112, 161, 255, 0.30);
+
+    .icon {
+      color: var(--accent-blue);
+    }
+  }
+}
+
+.icon {
+  font-size: var(--font-size-sm);
+  flex-shrink: 0;
+  line-height: 1.5;
+  width: 16px;
+  text-align: center;
+}
+
+.content {
+  flex: 1;
+  color: var(--text-primary);
+}
+
+.close {
+  background: none;
+  border: none;
+  color: var(--text-tertiary);
+  font-size: var(--font-size-lg);
+  cursor: pointer;
+  padding: 0 var(--space-xs);
+  line-height: 1;
+  flex-shrink: 0;
+  transition: color var(--transition-fast);
+
+  &:hover {
+    color: var(--text-primary);
+  }
+}

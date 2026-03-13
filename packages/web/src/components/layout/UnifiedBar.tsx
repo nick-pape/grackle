@@ -1,5 +1,7 @@
 import { useState, useEffect, type FormEvent, type JSX } from "react";
 import { useGrackle } from "../../context/GrackleContext.js";
+import { useToast } from "../../context/ToastContext.js";
+import { Callout } from "../notifications/index.js";
 import type { ViewMode } from "../../App.js";
 import { ConfirmDialog, Spinner } from "../display/index.js";
 import styles from "./UnifiedBar.module.scss";
@@ -44,6 +46,7 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
     codespaces, codespaceError, codespaceCreating, listCodespaces, createCodespace,
     taskStartingId,
   } = useGrackle();
+  const { showToast } = useToast();
 
   const [text, setText] = useState("");
   const [runtime, setRuntime] = useState(
@@ -173,6 +176,7 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
         config.codespaceName = envCodespaceName.trim();
       }
       addEnvironment(envName.trim(), envAdapterType, config, envRuntime);
+      showToast("Environment added successfully", "success");
       setEnvName("");
       setEnvAdapterType("local");
       setEnvRuntime("claude-code");
@@ -390,6 +394,7 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
         return;
       }
       createTask(viewMode.projectId, taskTitle.trim(), taskDesc, taskEnvId, undefined, viewMode.parentTaskId);
+      showToast("Task created successfully", "success");
       setTaskTitle("");
       setTaskDesc("");
       setTaskEnvId("");
@@ -461,16 +466,18 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
       return (
         <>
           {confirmDialog}
-          <div className={styles.bar}>
-            <span className={styles.statusBlocked}>
+          <div className={styles.barColumn}>
+            <Callout variant="warning">
               Blocked by: {blockerNames.join(", ")}
-            </span>
-            <button
-              onClick={() => setShowDeleteTaskConfirm(true)}
+            </Callout>
+            <div className={styles.bar}>
+              <button
+                onClick={() => setShowDeleteTaskConfirm(true)}
               className={styles.btnDanger}
             >
               Delete
             </button>
+            </div>
           </div>
         </>
       );
@@ -490,7 +497,10 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
               </span>
             )}
             <button
-              onClick={() => startTask(task.id)}
+              onClick={() => {
+                startTask(task.id);
+                showToast("Task started successfully", "success");
+              }}
               className={styles.btnPrimary}
               disabled={isStarting}
             >
@@ -584,6 +594,7 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
           <button
             onClick={() => {
               approveTask(task.id);
+              showToast("Task approved successfully", "success");
             }}
             className={styles.btnPrimary}
           >
@@ -592,6 +603,7 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
           <button
             onClick={() => {
               rejectTask(task.id, rejectNotes);
+              showToast("Task rejected", "warning");
               setRejectNotes("");
             }}
             className={styles.btnDanger}
@@ -645,7 +657,10 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
               </span>
             )}
             <button
-              onClick={() => startTask(task.id)}
+              onClick={() => {
+                startTask(task.id);
+                showToast("Task queued for retry", "info");
+              }}
               className={styles.btnPrimary}
               disabled={isRetrying}
             >
@@ -673,6 +688,7 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
         return;
       }
       spawn(viewMode.environmentId, text, undefined, runtime);
+      showToast("Session started", "success");
       setText("");
     };
 
