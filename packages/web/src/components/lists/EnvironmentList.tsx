@@ -80,6 +80,7 @@ function EnvironmentCard({
       />
       <div
         className={`${styles.envRow} ${isNewChatTarget ? styles.targeted : ""} ${expanded ? styles.expanded : ""}`}
+        data-testid="env-row"
         onClick={onToggleExpand}
       >
         <span
@@ -186,6 +187,7 @@ export function EnvironmentList({ viewMode, setViewMode }: Props): JSX.Element {
   return (
     <div className={styles.container}>
       <div className={styles.header}>
+        <span className={styles.headerLabel}>Environments</span>
         <button
           className={styles.addButton}
           onClick={() => setViewMode({ kind: "new_environment" })}

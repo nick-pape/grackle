@@ -147,7 +147,7 @@ test.describe("Add Environment — WebSocket Handler", () => {
 
     // Switch to Environments (in Settings) and verify the new environment appears
     await page.locator('button[title="Settings"]').click();
-    await expect(page.getByText("ws-test-env")).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText("ws-test-env", { exact: true })).toBeVisible({ timeout: 5_000 });
 
     // Clean up: remove the environment
     await sendWsMessage(page, {
