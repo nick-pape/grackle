@@ -82,7 +82,7 @@ test.describe("Task Lifecycle (stub runtime)", () => {
     await expect(page.locator("button", { hasText: "+ New Task" })).toBeVisible();
   });
 
-  test("task rejection sends back to assigned status", async ({ appPage }) => {
+  test("task rejection auto-retries and returns to review", async ({ appPage }) => {
     const page = appPage;
 
     // --- Create project and task ---
@@ -137,7 +137,17 @@ test.describe("Task Lifecycle (stub runtime)", () => {
     await rejectInput.fill("needs more tests");
     await page.locator("button", { hasText: "Reject" }).click();
 
-    // Task should go back to assigned/pending — "Start Task" reappears
-    await expect(page.locator("button", { hasText: "Start Task" })).toBeVisible({ timeout: 10_000 });
+    // Task auto-retries: should go to in_progress and stream events for the new session.
+    // The stub runtime will reach waiting_input again — send input to complete.
+    const retryInput = page.locator('input[placeholder="Type a message..."]');
+    await expect(retryInput).toBeVisible({ timeout: 15_000 });
+    await retryInput.fill("continue");
+    await page.locator("button", { hasText: "Send" }).click();
+
+    // Task should return to review after auto-retry completes
+    await expect(page.locator("button", { hasText: "Approve" })).toBeVisible({ timeout: 15_000 });
+
+    // Verify no task failure
+    await expect(page.getByText("Task failed")).not.toBeVisible();
   });
 });
