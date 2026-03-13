@@ -55,6 +55,7 @@ export interface TaskData {
   depth: number;
   childTaskIds: string[];
   canDecompose: boolean;
+  personaId: string;
 }
 
 export interface FindingData {
@@ -83,6 +84,20 @@ export interface Codespace {
   repository: string;
   state: string;
   gitStatus: string;
+}
+
+export interface PersonaData {
+  id: string;
+  name: string;
+  description: string;
+  systemPrompt: string;
+  toolConfig: string;
+  runtime: string;
+  model: string;
+  maxTurns: number;
+  mcpServers: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface WsMessage {
@@ -323,8 +338,9 @@ export interface UseGrackleSocketResult {
     environmentId?: string,
     dependsOn?: string[],
     parentTaskId?: string,
+    personaId?: string,
   ) => void;
-  startTask: (taskId: string, runtime?: string, model?: string) => void;
+  startTask: (taskId: string, runtime?: string, model?: string, personaId?: string) => void;
   approveTask: (taskId: string) => void;
   rejectTask: (taskId: string, reviewNotes: string) => void;
   deleteTask: (taskId: string) => void;
@@ -362,6 +378,10 @@ export interface UseGrackleSocketResult {
   createCodespace: (repo: string) => void;
   projectCreating: boolean;
   taskStartingId: string | undefined;
+  personas: PersonaData[];
+  createPersona: (name: string, description: string, systemPrompt: string, runtime?: string, model?: string, maxTurns?: number) => void;
+  updatePersona: (personaId: string, name?: string, description?: string, systemPrompt?: string, runtime?: string, model?: string, maxTurns?: number) => void;
+  deletePersona: (personaId: string) => void;
 }
 
 export function useGrackleSocket(url?: string): UseGrackleSocketResult {
@@ -390,6 +410,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
   const [codespaces, setCodespaces] = useState<Codespace[]>([]);
   const [codespaceError, setCodespaceError] = useState("");
   const [codespaceCreating, setCodespaceCreating] = useState(false);
+  const [personas, setPersonas] = useState<PersonaData[]>([]);
   const [projectCreating, setProjectCreating] = useState(false);
   const [taskStartingId, setTaskStartingId] = useState<string | undefined>(undefined);
 
@@ -413,6 +434,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
         send({ type: "list_sessions" });
         send({ type: "list_projects" });
         send({ type: "list_tokens" });
+        send({ type: "list_personas" });
         send({ type: "subscribe_all" });
       };
 
@@ -697,6 +719,18 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
             setCodespaceError(createError);
             break;
           }
+          case "personas": {
+            const list = Array.isArray(msg.payload?.personas)
+              ? (msg.payload.personas as PersonaData[])
+              : [];
+            setPersonas(list);
+            break;
+          }
+          case "persona_created":
+          case "persona_updated":
+          case "persona_deleted":
+            send({ type: "list_personas" });
+            break;
           case "error":
             console.error("[ws]", msg.payload?.message);
             break;
@@ -825,6 +859,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
       environmentId?: string,
       dependsOn?: string[],
       parentTaskId?: string,
+      personaId?: string,
     ) => {
       send({
         type: "create_task",
@@ -835,6 +870,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
           environmentId: environmentId || "",
           dependsOn: dependsOn || [],
           parentTaskId: parentTaskId || "",
+          personaId: personaId || "",
         },
       });
     },
@@ -842,11 +878,11 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
   );
 
   const startTask = useCallback(
-    (taskId: string, runtime?: string, model?: string) => {
+    (taskId: string, runtime?: string, model?: string, personaId?: string) => {
       setTaskStartingId(taskId);
       send({
         type: "start_task",
-        payload: { taskId, runtime: runtime || "", model: model || "" },
+        payload: { taskId, runtime: runtime || "", model: model || "", personaId: personaId || "" },
       });
     },
     [send],
@@ -995,6 +1031,35 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
     [send, connected],
   );
 
+  // ─── Persona methods ──────────────────────────────
+
+  const createPersona = useCallback(
+    (name: string, description: string, systemPrompt: string, runtime?: string, model?: string, maxTurns?: number) => {
+      send({
+        type: "create_persona",
+        payload: { name, description, systemPrompt, runtime: runtime || "", model: model || "", maxTurns: maxTurns || 0 },
+      });
+    },
+    [send],
+  );
+
+  const updatePersona = useCallback(
+    (personaId: string, name?: string, description?: string, systemPrompt?: string, runtime?: string, model?: string, maxTurns?: number) => {
+      send({
+        type: "update_persona",
+        payload: { personaId, name: name || "", description: description || "", systemPrompt: systemPrompt || "", runtime: runtime || "", model: model || "", maxTurns: maxTurns || 0 },
+      });
+    },
+    [send],
+  );
+
+  const deletePersona = useCallback(
+    (personaId: string) => {
+      send({ type: "delete_persona", payload: { personaId } });
+    },
+    [send],
+  );
+
   return {
     connected,
     environments,
@@ -1037,5 +1102,9 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
     createCodespace,
     projectCreating,
     taskStartingId,
+    personas,
+    createPersona,
+    updatePersona,
+    deletePersona,
   };
 }

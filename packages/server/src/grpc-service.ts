@@ -630,7 +630,17 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       }
 
       const id = uuid().slice(0, 8);
-      const environmentId = req.environmentId || project.defaultEnvironmentId;
+      // Resolve environment: explicit > parent task's env > project default
+      let environmentId = req.environmentId;
+      if (!environmentId && req.parentTaskId) {
+        const parent = taskStore.getTask(req.parentTaskId);
+        if (parent?.environmentId) {
+          environmentId = parent.environmentId;
+        }
+      }
+      if (!environmentId) {
+        environmentId = project.defaultEnvironmentId;
+      }
       taskStore.createTask(
         id,
         req.projectId,

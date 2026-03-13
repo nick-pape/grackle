@@ -33,6 +33,7 @@ export function registerTaskCommands(program: Command): void {
     .option("--desc <text>", "Task description")
     .option("--env <env-id>", "Environment ID")
     .option("--depends-on <ids>", "Comma-separated dependency task IDs")
+    .option("--persona <id-or-name>", "Persona to assign")
     .action(async (projectId: string, title: string, opts) => {
       const client = createGrackleClient();
       const dependsOn = opts.dependsOn ? opts.dependsOn.split(",") : [];
@@ -42,6 +43,7 @@ export function registerTaskCommands(program: Command): void {
         description: opts.desc || "",
         environmentId: opts.env || "",
         dependsOn,
+        personaId: opts.persona || "",
       });
       console.log(`Created task: ${t.id} (${t.title}) branch: ${t.branch}`);
     });
@@ -60,6 +62,7 @@ export function registerTaskCommands(program: Command): void {
       console.log(`Session:     ${t.sessionId || "-"}`);
       console.log(`Depends On:  ${t.dependsOn.length > 0 ? t.dependsOn.join(", ") : "none"}`);
       if (t.description) console.log(`Description: ${t.description}`);
+      if (t.personaId) console.log(`Persona:     ${t.personaId}`);
       if (t.reviewNotes) console.log(`Review Notes: ${t.reviewNotes}`);
     });
 
@@ -101,12 +104,14 @@ export function registerTaskCommands(program: Command): void {
     .description("Start a task (spawn agent)")
     .option("--runtime <runtime>", "Agent runtime")
     .option("--model <model>", "Model to use")
+    .option("--persona <id-or-name>", "Persona to use")
     .action(async (taskId: string, opts) => {
       const client = createGrackleClient();
       const session = await client.startTask({
         taskId,
         runtime: opts.runtime || "",
         model: opts.model || "",
+        personaId: opts.persona || "",
       });
       console.log(`Task started. Session: ${session.id}`);
     });

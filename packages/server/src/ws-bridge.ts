@@ -598,6 +598,106 @@ async function handleMessage(
       break;
     }
 
+    // ─── Personas ──────────────────────────────────────────
+
+    case "list_personas": {
+      const rows = personaStore.listPersonas();
+      sendWs(ws, {
+        type: "personas",
+        payload: {
+          personas: rows.map((r) => ({
+            id: r.id,
+            name: r.name,
+            description: r.description,
+            systemPrompt: r.systemPrompt,
+            toolConfig: r.toolConfig,
+            runtime: r.runtime,
+            model: r.model,
+            maxTurns: r.maxTurns,
+            mcpServers: r.mcpServers,
+            createdAt: r.createdAt,
+            updatedAt: r.updatedAt,
+          })),
+        },
+      });
+      break;
+    }
+
+    case "create_persona": {
+      const personaName = msg.payload?.name as string;
+      if (!personaName) {
+        sendWs(ws, { type: "error", payload: { message: "name required" } });
+        return;
+      }
+      const personaSystemPrompt = msg.payload?.systemPrompt as string;
+      if (!personaSystemPrompt) {
+        sendWs(ws, { type: "error", payload: { message: "systemPrompt required" } });
+        return;
+      }
+      let personaId = slugify(personaName) || uuid().slice(0, 8);
+      if (personaStore.getPersona(personaId)) {
+        personaId = `${personaId}-${uuid().slice(0, 4)}`;
+      }
+      personaStore.createPersona(
+        personaId, personaName,
+        (msg.payload?.description as string) || "",
+        personaSystemPrompt,
+        (msg.payload?.toolConfig as string) || "{}",
+        (msg.payload?.runtime as string) || "",
+        (msg.payload?.model as string) || "",
+        (msg.payload?.maxTurns as number) || 0,
+        (msg.payload?.mcpServers as string) || "[]",
+      );
+      broadcast({ type: "persona_created", payload: { personaId } });
+      break;
+    }
+
+    case "get_persona": {
+      const getPersonaId = msg.payload?.personaId as string;
+      if (!getPersonaId) return;
+      const personaRow = personaStore.getPersona(getPersonaId);
+      if (!personaRow) {
+        sendWs(ws, { type: "error", payload: { message: `Persona not found: ${getPersonaId}` } });
+        return;
+      }
+      sendWs(ws, { type: "persona", payload: { persona: personaRow } });
+      break;
+    }
+
+    case "update_persona": {
+      const updatePersonaId = msg.payload?.personaId as string;
+      if (!updatePersonaId) {
+        sendWs(ws, { type: "error", payload: { message: "personaId required" } });
+        return;
+      }
+      const existingPersona = personaStore.getPersona(updatePersonaId);
+      if (!existingPersona) {
+        sendWs(ws, { type: "error", payload: { message: `Persona not found: ${updatePersonaId}` } });
+        return;
+      }
+      personaStore.updatePersona(
+        updatePersonaId,
+        (msg.payload?.name as string) || existingPersona.name,
+        (msg.payload?.description as string) ?? existingPersona.description,
+        (msg.payload?.systemPrompt as string) || existingPersona.systemPrompt,
+        (msg.payload?.toolConfig as string) || existingPersona.toolConfig,
+        (msg.payload?.runtime as string) ?? existingPersona.runtime,
+        (msg.payload?.model as string) ?? existingPersona.model,
+        (msg.payload?.maxTurns as number) ?? existingPersona.maxTurns,
+        (msg.payload?.mcpServers as string) || existingPersona.mcpServers,
+      );
+      broadcast({ type: "persona_updated", payload: { personaId: updatePersonaId } });
+      break;
+    }
+
+    case "delete_persona": {
+      const deletePersonaId = msg.payload?.personaId as string;
+      if (!deletePersonaId) return;
+      personaStore.deletePersona(deletePersonaId);
+      broadcast({ type: "persona_deleted", payload: { personaId: deletePersonaId } });
+      break;
+    }
+
     // ─── Tasks ─────────────────────────────────────────────
 
     case "list_tasks": {
@@ -649,11 +749,23 @@ async function handleMessage(
       const rawCanDecompose = msg.payload?.canDecompose;
       const canDecompose = typeof rawCanDecompose === "boolean" ? rawCanDecompose : undefined;
 
+      // Resolve environment: explicit > parent task's env > project default
+      let resolvedEnvId = (msg.payload?.environmentId as string) || "";
+      if (!resolvedEnvId && parentTaskId) {
+        const parentTask = taskStore.getTask(parentTaskId);
+        if (parentTask?.environmentId) {
+          resolvedEnvId = parentTask.environmentId;
+        }
+      }
+      if (!resolvedEnvId) {
+        resolvedEnvId = project.defaultEnvironmentId;
+      }
+
       const id = uuid().slice(0, 8);
       taskStore.createTask(
         id, projectId, title,
         (msg.payload?.description as string) || "",
-        (msg.payload?.environmentId as string) || project.defaultEnvironmentId,
+        resolvedEnvId,
         (msg.payload?.dependsOn as string[]) || [],
         slugify(project.name),
         parentTaskId,

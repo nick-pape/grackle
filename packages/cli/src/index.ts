@@ -12,6 +12,7 @@ import { registerServeCommand } from "./commands/serve.js";
 import { registerProjectCommands } from "./commands/project.js";
 import { registerTaskCommands } from "./commands/task.js";
 import { registerFindingCommands } from "./commands/findings.js";
+import { registerPersonaCommands } from "./commands/persona.js";
 
 const esmRequire: NodeRequire = createRequire(import.meta.url);
 const { version } = esmRequire("../package.json") as { version: string };
@@ -31,6 +32,7 @@ registerServeCommand(program);
 registerProjectCommands(program);
 registerTaskCommands(program);
 registerFindingCommands(program);
+registerPersonaCommands(program);
 
 program.parseAsync(process.argv).catch((err: unknown) => {
   if (err instanceof ConnectError) {

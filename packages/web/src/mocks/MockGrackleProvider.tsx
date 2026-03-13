@@ -393,6 +393,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
           depth,
           childTaskIds: [],
           canDecompose: !parentTaskId,
+          personaId: "",
         };
 
         return [...prev, newTask];
@@ -796,6 +797,10 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       createCodespace: () => {},
       projectCreating: false,
       taskStartingId: undefined,
+      personas: [],
+      createPersona: () => {},
+      updatePersona: () => {},
+      deletePersona: () => {},
     }),
     [
       sessions,

@@ -1,3 +1,11 @@
+// Workaround: @github/copilot-sdk imports "vscode-jsonrpc/node" without .js
+// extension, which fails in Node 22 strict ESM resolution. Register a module
+// resolve hook to fix it before any SDK imports occur.
+import { register } from "node:module";
+register("data:text/javascript," + encodeURIComponent(
+  `export async function resolve(s,c,n){return s==="vscode-jsonrpc/node"?n("vscode-jsonrpc/node.js",c):n(s,c);}`,
+));
+
 import { Command } from "commander";
 import { connectNodeAdapter } from "@connectrpc/connect-node";
 import { ConnectError, Code } from "@connectrpc/connect";

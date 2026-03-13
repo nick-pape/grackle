@@ -2,6 +2,7 @@ import { useGrackle } from "../../context/GrackleContext.js";
 import { EventRenderer } from "../display/EventRenderer.js";
 import { FindingsPanel } from "./FindingsPanel.js";
 import { SettingsPanel } from "./SettingsPanel.js";
+import { PersonaManager } from "../personas/PersonaManager.js";
 import { DagView } from "../dag/DagView.js";
 import { useEffect, useMemo, useRef, useState, type JSX, type RefObject } from "react";
 import type { ViewMode } from "../../App.js";
@@ -425,6 +426,11 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
   // --- settings mode ---
   if (viewMode.kind === "settings") {
     return <SettingsPanel />;
+  }
+
+  // --- persona management mode ---
+  if (viewMode.kind === "persona_management") {
+    return <PersonaManager />;
   }
 
   // --- empty mode ---
