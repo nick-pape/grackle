@@ -940,6 +940,7 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
 
   return (
     <div className={styles.panelContainer}>
+      <Breadcrumbs segments={breadcrumbs} onNavigate={handleBreadcrumbNavigate} />
       <SessionHeader
         sessionId={sessionId}
         session={session}
