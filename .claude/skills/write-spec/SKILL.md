@@ -106,11 +106,21 @@ SPECEOF
 )"
 ```
 
-## Step 7: Review the Issue Description
+## Step 7: Add approved-for-grackle Label
+
+If the issue does not already have the `approved-for-grackle` label, add it:
+
+```bash
+gh issue edit $ISSUE_NUMBER -R $REPO --add-label approved-for-grackle
+```
+
+This marks the issue as spec'd and ready for development.
+
+## Step 8: Review the Issue Description
 
 Check if the current issue description is thin or missing important context. If so, update it to supplement (not overwrite) the existing content. If the description is already adequate, leave it as-is — the spec comment provides the detail.
 
-## Step 8: Report
+## Step 9: Report
 
 Summarize what was done:
 - How many functional requirements were defined
