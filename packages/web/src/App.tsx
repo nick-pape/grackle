@@ -20,6 +20,7 @@ export type ViewMode =
   | { kind: "new_task"; projectId: string; parentTaskId?: string }
   | { kind: "task"; taskId: string; tab?: "stream" | "findings" }
   | { kind: "new_environment" }
+  | { kind: "persona_management" }
   | { kind: "settings" };
 
 /** Main application content with layout and view routing. */

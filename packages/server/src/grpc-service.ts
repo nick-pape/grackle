@@ -18,8 +18,13 @@ import { broadcast } from "./ws-broadcast.js";
 import { processEventStream } from "./event-processor.js";
 import { join } from "node:path";
 import {
-  LOGS_DIR, DEFAULT_RUNTIME, DEFAULT_MODEL, MAX_TASK_DEPTH,
-  taskStatusToEnum, taskStatusToString, projectStatusToEnum,
+  LOGS_DIR,
+  DEFAULT_RUNTIME,
+  DEFAULT_MODEL,
+  MAX_TASK_DEPTH,
+  taskStatusToEnum,
+  taskStatusToString,
+  projectStatusToEnum,
 } from "@grackle-ai/common";
 import { grackleHome } from "./paths.js";
 import { safeParseJsonArray } from "./json-helpers.js";
@@ -290,7 +295,13 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       const config = JSON.parse(env.adapterConfig);
       const powerlineToken = env.powerlineToken || "";
 
-      for await (const event of reconnectOrProvision(req.id, adapter, config, powerlineToken, !!env.bootstrapped)) {
+      for await (const event of reconnectOrProvision(
+        req.id,
+        adapter,
+        config,
+        powerlineToken,
+        !!env.bootstrapped,
+      )) {
         yield create(grackle.ProvisionEventSchema, {
           stage: event.stage,
           message: event.message,
@@ -630,7 +641,17 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       }
 
       const id = uuid().slice(0, 8);
-      const environmentId = req.environmentId || project.defaultEnvironmentId;
+      // Resolve environment: explicit > parent task's env > project default
+      let environmentId = req.environmentId;
+      if (!environmentId && req.parentTaskId) {
+        const parent = taskStore.getTask(req.parentTaskId);
+        if (parent?.environmentId) {
+          environmentId = parent.environmentId;
+        }
+      }
+      if (!environmentId) {
+        environmentId = project.defaultEnvironmentId;
+      }
       taskStore.createTask(
         id,
         req.projectId,
@@ -689,7 +710,9 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       const task = taskStore.getTask(req.taskId);
       if (!task) throw new Error(`Task not found: ${req.taskId}`);
       if (!["pending", "assigned", "failed"].includes(task.status)) {
-        throw new Error(`Task ${req.taskId} cannot be started (status: ${task.status})`);
+        throw new Error(
+          `Task ${req.taskId} cannot be started (status: ${task.status})`,
+        );
       }
       if (!taskStore.areDependenciesMet(req.taskId)) {
         throw new Error(`Task ${req.taskId} has unmet dependencies`);
@@ -1029,7 +1052,8 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       if (req.state === grackle.IssueState.UNSPECIFIED) {
         throw new Error("state must be OPEN or CLOSED");
       }
-      const stateStr = req.state === grackle.IssueState.CLOSED ? "closed" : "open";
+      const stateStr =
+        req.state === grackle.IssueState.CLOSED ? "closed" : "open";
       const result = await executeGitHubImport(
         req.projectId,
         req.repo,

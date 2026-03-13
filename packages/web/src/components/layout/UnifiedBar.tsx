@@ -39,7 +39,7 @@ function RuntimeSelector({ value, onChange }: RuntimeSelectorProps): JSX.Element
 /** Contextual action bar that adapts to the current view mode and session/task state. */
 export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
   const {
-    spawn, sendInput, kill, sessions, tasks, environments,
+    spawn, sendInput, kill, sessions, tasks, environments, personas,
     createTask, addEnvironment,
     codespaces, codespaceError, codespaceCreating, listCodespaces, createCodespace,
   } = useGrackle();
@@ -52,6 +52,7 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
   const [taskTitle, setTaskTitle] = useState("");
   const [taskDesc, setTaskDesc] = useState("");
   const [taskEnvId, setTaskEnvId] = useState("");
+  const [taskPersonaId, setTaskPersonaId] = useState("");
 
   // ─── New environment form state ─────────────────
   const [envName, setEnvName] = useState("");
@@ -71,7 +72,16 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
     if (viewMode.kind === "new_chat") {
       setRuntime(viewMode.runtime);
     }
-  }, [viewMode]);
+    if (viewMode.kind === "new_task" && viewMode.parentTaskId) {
+      const parentTask = tasks.find((t) => t.id === viewMode.parentTaskId);
+      if (parentTask?.environmentId) {
+        setTaskEnvId(parentTask.environmentId);
+      }
+    }
+    if (viewMode.kind === "new_task" && !viewMode.parentTaskId && environments.length === 1) {
+      setTaskEnvId(environments[0].id);
+    }
+  }, [viewMode]); // Only re-run when viewMode changes
 
   const session = viewMode.kind === "session"
     ? sessions.find((s) => s.id === viewMode.sessionId)
@@ -388,11 +398,12 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
       if (!taskTitle.trim()) {
         return;
       }
-      createTask(viewMode.projectId, taskTitle.trim(), taskDesc, taskEnvId, undefined, viewMode.parentTaskId);
+      createTask(viewMode.projectId, taskTitle.trim(), taskDesc, taskEnvId, undefined, viewMode.parentTaskId, taskPersonaId);
       showToast("Task created successfully", "success");
       setTaskTitle("");
       setTaskDesc("");
       setTaskEnvId("");
+      setTaskPersonaId("");
       setViewMode({ kind: "project", projectId: viewMode.projectId });
     };
 
@@ -418,6 +429,16 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
             <option value="">Default env</option>
             {environments.map((env) => (
               <option key={env.id} value={env.id}>{env.displayName}</option>
+            ))}
+          </select>
+          <select
+            value={taskPersonaId}
+            onChange={(e) => setTaskPersonaId(e.target.value)}
+            className={styles.select}
+          >
+            <option value="">No persona</option>
+            {personas.map((p) => (
+              <option key={p.id} value={p.id}>{p.name}</option>
             ))}
           </select>
           <button
