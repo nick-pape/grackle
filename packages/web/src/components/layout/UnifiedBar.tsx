@@ -86,8 +86,7 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
     if (viewMode.kind === "new_task" && !viewMode.parentTaskId && environments.length === 1) {
       setTaskEnvId(environments[0].id);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally only on viewMode change
-  }, [viewMode]);
+  }, [viewMode]); // Only re-run when viewMode changes, not on every tasks/environments update
 
   const session = viewMode.kind === "session"
     ? sessions.find((s) => s.id === viewMode.sessionId)
