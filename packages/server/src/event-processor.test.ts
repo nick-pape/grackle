@@ -617,6 +617,11 @@ describe("task status sync with waiting_input", () => {
       taskId: "task1",
     });
 
+    // Verify the task DB row was actually updated to waiting_input
+    // (completed event ends the session but doesn't change task status — that's the caller's onComplete job)
+    const task = taskStore.getTask("task1");
+    expect(task?.status).toBe("waiting_input");
+
     expect(broadcast).toHaveBeenCalledWith(
       expect.objectContaining({
         type: "task_updated",
