@@ -611,6 +611,24 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       return create(grackle.EmptySchema, {});
     },
 
+    async updateProject(req: grackle.UpdateProjectRequest) {
+      const existing = projectStore.getProject(req.id);
+      if (!existing) {
+        throw new Error(`Project not found: ${req.id}`);
+      }
+      if (req.name !== undefined && req.name.trim() === "") {
+        throw new Error("Project name cannot be empty");
+      }
+      const row = projectStore.updateProject(req.id, {
+        name: req.name !== undefined ? req.name.trim() : undefined,
+        description: req.description,
+        repoUrl: req.repoUrl,
+        defaultEnvironmentId: req.defaultEnvironmentId,
+      });
+      broadcast({ type: "project_updated", payload: { projectId: req.id } });
+      return projectRowToProto(row!);
+    },
+
     // ─── Tasks ───────────────────────────────────────────────
 
     async listTasks(req: grackle.ProjectId) {

@@ -479,7 +479,7 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
     events, eventsDropped, sessions, tasks, environments,
     loadSessionEvents, loadFindings,
     kill, startTask, approveTask, rejectTask, deleteTask,
-    projects, createProject,
+    projects, createProject, archiveProject, updateProject,
     taskSessions, loadTaskSessions,
   } = useGrackle();
   // eslint-disable-next-line @rushstack/no-new-null
@@ -489,9 +489,26 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
   const [projectTab, setProjectTab] = useState<ProjectTab>("tasks");
   const [rejectNotes, setRejectNotes] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
   const [selectedSessionId, setSelectedSessionId] = useState<string | undefined>(undefined);
   const prevTaskIdRef = useRef<string | undefined>(undefined);
   const prevTaskStatusRef = useRef<string | undefined>(undefined);
+
+  // Inline-edit state for project fields
+  type EditingField = "name" | "description" | "repoUrl" | "defaultEnvironmentId" | null;
+  const [editingField, setEditingField] = useState<EditingField>(null);
+  const [editDraft, setEditDraft] = useState("");
+  const prevProjectIdRef = useRef<string | undefined>(undefined);
+
+  // Reset edit state when project changes
+  const currentProjectId = viewMode.kind === "project" ? viewMode.projectId : undefined;
+  if (currentProjectId !== prevProjectIdRef.current) {
+    prevProjectIdRef.current = currentProjectId;
+    if (editingField !== null) {
+      setEditingField(null);
+      setEditDraft("");
+    }
+  }
 
   // Determine task and project context
   let task: ReturnType<typeof tasks.find> = undefined;
@@ -697,12 +714,231 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
 
   // --- project mode ---
   if (viewMode.kind === "project") {
+    const project = projects.find((p) => p.id === viewMode.projectId);
     const projectTasks = tasks.filter((t) => t.projectId === viewMode.projectId);
     const done = projectTasks.filter((t) => t.status === "done").length;
     const total = projectTasks.length;
+
+    const MAX_NAME_LENGTH = 100;
+
+    const startEdit = (field: EditingField, currentValue: string): void => {
+      setEditingField(field);
+      setEditDraft(currentValue);
+    };
+
+    const cancelEdit = (): void => {
+      setEditingField(null);
+      setEditDraft("");
+    };
+
+    const saveEdit = (field: NonNullable<EditingField>): void => {
+      if (!project) return;
+      const trimmed = editDraft.trim();
+
+      if (field === "name") {
+        if (!trimmed || trimmed.length > MAX_NAME_LENGTH) return;
+        if (trimmed === project.name) { cancelEdit(); return; }
+        updateProject(project.id, { name: trimmed });
+      } else if (field === "description") {
+        const value = editDraft; // allow untrimmed for description
+        if (value === project.description) { cancelEdit(); return; }
+        updateProject(project.id, { description: value });
+      } else if (field === "repoUrl") {
+        if (trimmed && !/^https?:\/\/.+/.test(trimmed)) return;
+        if (trimmed === project.repoUrl) { cancelEdit(); return; }
+        updateProject(project.id, { repoUrl: trimmed });
+      } else if (field === "defaultEnvironmentId") {
+        if (editDraft === project.defaultEnvironmentId) { cancelEdit(); return; }
+        updateProject(project.id, { defaultEnvironmentId: editDraft });
+      }
+
+      cancelEdit();
+    };
+
+    const handleKeyDown = (e: { key: string }, field: NonNullable<EditingField>): void => {
+      if (e.key === "Escape") {
+        cancelEdit();
+      } else if (e.key === "Enter" && field !== "description") {
+        saveEdit(field);
+      }
+    };
+
+    const defaultEnv = environments.find((e) => e.id === project?.defaultEnvironmentId);
+
     return (
       <div className={styles.panelContainer}>
         <Breadcrumbs segments={breadcrumbs} onNavigate={handleBreadcrumbNavigate} />
+
+        {/* Project header */}
+        <div className={styles.projectHeader}>
+          <span className={styles.projectName} data-testid="project-name">
+            {editingField === "name" ? (
+              <input
+                className={styles.editInput}
+                value={editDraft}
+                onChange={(e) => setEditDraft(e.target.value)}
+                onBlur={() => saveEdit("name")}
+                onKeyDown={(e) => handleKeyDown(e, "name")}
+                maxLength={MAX_NAME_LENGTH}
+                autoFocus
+                data-testid="edit-name-input"
+              />
+            ) : (
+              <>
+                {project?.name || viewMode.projectId}
+                <button
+                  className={styles.editButton}
+                  onClick={() => startEdit("name", project?.name || "")}
+                  title="Edit name"
+                  data-testid="edit-name-button"
+                >
+                  ✏️
+                </button>
+              </>
+            )}
+          </span>
+          <button
+            className={styles.archiveButton}
+            onClick={() => setShowArchiveConfirm(true)}
+            title="Archive project"
+            data-testid="archive-project-button"
+          >
+            Archive
+          </button>
+        </div>
+
+        {/* Project metadata */}
+        <div className={styles.projectMeta} data-testid="project-meta">
+          {/* Description */}
+          <div className={styles.metaRow}>
+            <span className={styles.metaLabel}>Description</span>
+            <div className={styles.metaValue}>
+              {editingField === "description" ? (
+                <textarea
+                  className={styles.editTextarea}
+                  value={editDraft}
+                  onChange={(e) => setEditDraft(e.target.value)}
+                  onBlur={() => saveEdit("description")}
+                  onKeyDown={(e) => handleKeyDown(e, "description")}
+                  title="Project description"
+                  autoFocus
+                  data-testid="edit-description-input"
+                />
+              ) : (
+                <>
+                  {project?.description ? (
+                    <span className={styles.overviewMarkdown}>
+                      <Markdown remarkPlugins={[remarkGfm]}>{project.description}</Markdown>
+                    </span>
+                  ) : (
+                    <span className={styles.metaPlaceholder}>No description</span>
+                  )}
+                  <button
+                    className={styles.editButton}
+                    onClick={() => startEdit("description", project?.description || "")}
+                    title="Edit description"
+                    data-testid="edit-description-button"
+                  >
+                    ✏️
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Repo URL */}
+          <div className={styles.metaRow}>
+            <span className={styles.metaLabel}>Repository</span>
+            <div className={styles.metaValue}>
+              {editingField === "repoUrl" ? (
+                <input
+                  className={styles.editInput}
+                  value={editDraft}
+                  onChange={(e) => setEditDraft(e.target.value)}
+                  onBlur={() => saveEdit("repoUrl")}
+                  onKeyDown={(e) => handleKeyDown(e, "repoUrl")}
+                  placeholder="https://github.com/..."
+                  autoFocus
+                  data-testid="edit-repo-input"
+                />
+              ) : (
+                <>
+                  {project?.repoUrl ? (
+                    <a
+                      className={styles.repoLink}
+                      href={project.repoUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {project.repoUrl}
+                    </a>
+                  ) : (
+                    <span className={styles.metaPlaceholder}>No repository</span>
+                  )}
+                  <button
+                    className={styles.editButton}
+                    onClick={() => startEdit("repoUrl", project?.repoUrl || "")}
+                    title="Edit repository URL"
+                    data-testid="edit-repo-button"
+                  >
+                    ✏️
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Default Environment */}
+          <div className={styles.metaRow}>
+            <span className={styles.metaLabel}>Environment</span>
+            <div className={styles.metaValue}>
+              {editingField === "defaultEnvironmentId" ? (
+                <select
+                  className={styles.editSelect}
+                  value={editDraft}
+                  onChange={(e) => {
+                    setEditDraft(e.target.value);
+                    // Save immediately on change for select
+                    const val = e.target.value;
+                    if (project && val !== project.defaultEnvironmentId) {
+                      updateProject(project.id, { defaultEnvironmentId: val });
+                    }
+                    cancelEdit();
+                  }}
+                  onBlur={() => cancelEdit()}
+                  title="Default environment"
+                  autoFocus
+                  data-testid="edit-env-select"
+                >
+                  <option value="">None</option>
+                  {environments.map((env) => (
+                    <option key={env.id} value={env.id}>{env.displayName}</option>
+                  ))}
+                </select>
+              ) : (
+                <>
+                  {defaultEnv ? (
+                    <span>{defaultEnv.displayName}</span>
+                  ) : (
+                    <span className={styles.metaPlaceholder}>
+                      {project?.defaultEnvironmentId || "No default environment"}
+                    </span>
+                  )}
+                  <button
+                    className={styles.editButton}
+                    onClick={() => startEdit("defaultEnvironmentId", project?.defaultEnvironmentId || "")}
+                    title="Change default environment"
+                    data-testid="edit-env-button"
+                  >
+                    ✏️
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Tabs: Graph / Tasks */}
         <div className={styles.tabBar} role="tablist" aria-label="Project view">
           <button
             role="tab"
@@ -745,6 +981,22 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
         {projectTab === "graph" && (
           <DagView projectId={viewMode.projectId} setViewMode={setViewMode} />
         )}
+
+        {/* Archive confirmation dialog */}
+        <ConfirmDialog
+          isOpen={showArchiveConfirm}
+          title="Archive Project?"
+          description="This will hide the project from the sidebar. Tasks will not be deleted."
+          confirmLabel="Archive"
+          onConfirm={() => {
+            if (project) {
+              archiveProject(project.id);
+              setViewMode({ kind: "empty" });
+            }
+            setShowArchiveConfirm(false);
+          }}
+          onCancel={() => setShowArchiveConfirm(false)}
+        />
       </div>
     );
   }

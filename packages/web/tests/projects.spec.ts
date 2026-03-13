@@ -130,4 +130,156 @@ test.describe("Projects", () => {
     // Should see the test-local environment in the Settings panel
     await expect(page.getByText("test-local")).toBeVisible();
   });
+
+  // ─── Project Detail View Tests ───────────────────────────────
+
+  /** Helper: create a project and select it in the sidebar */
+  async function createAndSelectProject(page: import("@playwright/test").Page, name: string) {
+    await page.locator("button", { hasText: "+" }).first().click();
+    const nameInput = page.locator('input[placeholder="Project name..."]');
+    await nameInput.fill(name);
+    await page.locator("button", { hasText: "OK" }).click();
+    await expect(page.getByText(name)).toBeVisible({ timeout: 5_000 });
+    await page.getByText(name).click();
+  }
+
+  test("project detail shows metadata section", async ({ appPage }) => {
+    const page = appPage;
+    await createAndSelectProject(page, "detail-test");
+
+    // Project name should be visible in header
+    await expect(page.locator('[data-testid="project-name"]')).toContainText("detail-test");
+
+    // Metadata section should be visible
+    await expect(page.locator('[data-testid="project-meta"]')).toBeVisible();
+
+    // Should show labels for Description, Repository, Environment
+    await expect(page.getByText("Description", { exact: true })).toBeVisible();
+    await expect(page.getByText("Repository", { exact: true })).toBeVisible();
+    await expect(page.getByText("Environment", { exact: true })).toBeVisible();
+
+    // Should show placeholders for empty fields
+    await expect(page.getByText("No description")).toBeVisible();
+    await expect(page.getByText("No repository")).toBeVisible();
+  });
+
+  test("edit project name inline", async ({ appPage }) => {
+    const page = appPage;
+    await createAndSelectProject(page, "name-edit-test");
+
+    // Click pencil icon to edit name
+    await page.locator('[data-testid="edit-name-button"]').click();
+
+    // Input should appear with current name
+    const nameInput = page.locator('[data-testid="edit-name-input"]');
+    await expect(nameInput).toBeVisible();
+
+    // Clear and type new name
+    await nameInput.fill("renamed-project");
+    await nameInput.press("Enter");
+
+    // Name should update
+    await expect(page.locator('[data-testid="project-name"]')).toContainText("renamed-project", { timeout: 5_000 });
+  });
+
+  test("cancel name edit with Escape", async ({ appPage }) => {
+    const page = appPage;
+    await createAndSelectProject(page, "escape-test");
+
+    // Start editing
+    await page.locator('[data-testid="edit-name-button"]').click();
+    const nameInput = page.locator('[data-testid="edit-name-input"]');
+    await nameInput.fill("should-not-save");
+    await nameInput.press("Escape");
+
+    // Original name should still be displayed
+    await expect(page.locator('[data-testid="project-name"]')).toContainText("escape-test");
+
+    // Input should be gone
+    await expect(nameInput).not.toBeVisible();
+  });
+
+  test("edit project description", async ({ appPage }) => {
+    const page = appPage;
+    await createAndSelectProject(page, "desc-edit-test");
+
+    // Click pencil for description
+    await page.locator('[data-testid="edit-description-button"]').click();
+
+    const descInput = page.locator('[data-testid="edit-description-input"]');
+    await expect(descInput).toBeVisible();
+
+    await descInput.fill("A new project description");
+    // Blur to save (description uses blur, not Enter)
+    await descInput.blur();
+
+    // Should show the description text
+    await expect(page.getByText("A new project description")).toBeVisible({ timeout: 5_000 });
+
+    // Placeholder should be gone
+    await expect(page.getByText("No description")).not.toBeVisible();
+  });
+
+  test("edit repo URL", async ({ appPage }) => {
+    const page = appPage;
+    await createAndSelectProject(page, "repo-edit-test");
+
+    await page.locator('[data-testid="edit-repo-button"]').click();
+
+    const repoInput = page.locator('[data-testid="edit-repo-input"]');
+    await expect(repoInput).toBeVisible();
+
+    await repoInput.fill("https://github.com/test/repo");
+    await repoInput.press("Enter");
+
+    // Should show the repo URL as a link
+    await expect(page.getByText("https://github.com/test/repo")).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText("No repository")).not.toBeVisible();
+  });
+
+  test("pencil edit icons are visible", async ({ appPage }) => {
+    const page = appPage;
+    await createAndSelectProject(page, "pencil-test");
+
+    // All edit buttons should be present
+    await expect(page.locator('[data-testid="edit-name-button"]')).toBeVisible();
+    await expect(page.locator('[data-testid="edit-description-button"]')).toBeVisible();
+    await expect(page.locator('[data-testid="edit-repo-button"]')).toBeVisible();
+    await expect(page.locator('[data-testid="edit-env-button"]')).toBeVisible();
+  });
+
+  test("archive project flow", async ({ appPage }) => {
+    const page = appPage;
+    await createAndSelectProject(page, "archive-test");
+
+    // Click Archive button
+    await page.locator('[data-testid="archive-project-button"]').click();
+
+    // Confirmation dialog should appear
+    await expect(page.getByText("Archive Project?")).toBeVisible();
+
+    // Confirm archive
+    await page.getByLabel("Archive Project?").getByRole("button", { name: "Archive" }).click();
+
+    // Project should no longer be in sidebar
+    await expect(page.getByText("archive-test")).not.toBeVisible({ timeout: 5_000 });
+  });
+
+  test("change default environment", async ({ appPage }) => {
+    const page = appPage;
+    await createAndSelectProject(page, "env-edit-test");
+
+    // Click pencil to edit environment
+    await page.locator('[data-testid="edit-env-button"]').click();
+
+    // Select dropdown should appear
+    const envSelect = page.locator('[data-testid="edit-env-select"]');
+    await expect(envSelect).toBeVisible();
+
+    // Select an environment
+    await envSelect.selectOption("test-local");
+
+    // Environment name should now be displayed
+    await expect(page.getByText("test-local")).toBeVisible({ timeout: 5_000 });
+  });
 });

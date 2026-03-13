@@ -729,6 +729,7 @@ async function handleMessage(
             defaultEnvironmentId: r.defaultEnvironmentId,
             status: r.status,
             createdAt: r.createdAt,
+            updatedAt: r.updatedAt,
           })),
         },
       });
@@ -769,6 +770,32 @@ async function handleMessage(
       const projectId = msg.payload?.projectId as string;
       if (projectId) projectStore.archiveProject(projectId);
       broadcast({ type: "project_archived", payload: { projectId } });
+      break;
+    }
+
+    case "update_project": {
+      const projectId = msg.payload?.projectId as string;
+      if (!projectId) {
+        sendWs(ws, { type: "error", payload: { message: "projectId required" } });
+        return;
+      }
+      const existing = projectStore.getProject(projectId);
+      if (!existing) {
+        sendWs(ws, { type: "error", payload: { message: `Project not found: ${projectId}` } });
+        return;
+      }
+      const nameVal = msg.payload?.name as string | undefined;
+      if (nameVal !== undefined && nameVal.trim() === "") {
+        sendWs(ws, { type: "error", payload: { message: "Project name cannot be empty" } });
+        return;
+      }
+      projectStore.updateProject(projectId, {
+        name: nameVal !== undefined ? nameVal.trim() : undefined,
+        description: msg.payload?.description as string | undefined,
+        repoUrl: msg.payload?.repoUrl as string | undefined,
+        defaultEnvironmentId: msg.payload?.defaultEnvironmentId as string | undefined,
+      });
+      broadcast({ type: "project_updated", payload: { projectId } });
       break;
     }
 
