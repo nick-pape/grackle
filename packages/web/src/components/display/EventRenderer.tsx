@@ -76,6 +76,15 @@ function StatusEvent({ content }: { content: string }): JSX.Element {
   );
 }
 
+/** Renders a user input event, right-aligned to distinguish it from agent output. */
+function UserInputEvent({ content }: { content: string }): JSX.Element {
+  return (
+    <div className={styles.userInputEvent}>
+      <span className={styles.userInputContent}>{content}</span>
+    </div>
+  );
+}
+
 /** Renders an unrecognized event type. */
 function DefaultEvent({ content }: { content: string }): JSX.Element {
   return (
@@ -103,6 +112,8 @@ export function EventRenderer({ event }: Props): JSX.Element {
       return <ErrorEvent content={event.content} />;
     case "status":
       return <StatusEvent content={event.content} />;
+    case "user_input":
+      return <UserInputEvent content={event.content} />;
     default:
       return <DefaultEvent content={event.content} />;
   }

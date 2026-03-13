@@ -1,5 +1,6 @@
 import { useState, type JSX, type FormEvent } from "react";
 import { useGrackle } from "../../context/GrackleContext.js";
+import { useToast } from "../../context/ToastContext.js";
 import { ConfirmDialog } from "../display/index.js";
 import styles from "./SettingsPanel.module.scss";
 
@@ -12,6 +13,7 @@ const TOKEN_TYPES: Array<{ value: string; label: string }> = [
 /** Settings page with token management (list, add, delete). */
 export function SettingsPanel(): JSX.Element {
   const { tokens, setToken, deleteToken } = useGrackle();
+  const { showToast } = useToast();
 
   const [name, setName] = useState("");
   const [value, setValue] = useState("");
@@ -27,6 +29,7 @@ export function SettingsPanel(): JSX.Element {
     const envVar = tokenType === "env_var" ? (target || name.toUpperCase() + "_TOKEN") : "";
     const filePath = tokenType === "file" ? target : "";
     setToken(name, value, tokenType, envVar, filePath);
+    showToast("Token saved successfully", "success");
     setName("");
     setValue("");
     setTarget("");
@@ -39,6 +42,7 @@ export function SettingsPanel(): JSX.Element {
   const handleConfirmDelete = (): void => {
     if (confirmDeleteToken) {
       deleteToken(confirmDeleteToken);
+      showToast("Token deleted", "info");
     }
     setConfirmDeleteToken(null);
   };

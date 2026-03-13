@@ -1,5 +1,5 @@
 import { test, expect } from "./fixtures.js";
-import { sendWsAndWaitFor, createProject } from "./helpers.js";
+import { sendWsAndWaitFor } from "./helpers.js";
 
 test.describe("Persona Management", () => {
   test("create persona via WebSocket and verify it appears", async ({

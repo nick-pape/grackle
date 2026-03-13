@@ -14,3 +14,7 @@ export { EnvironmentList, ProjectList } from "./lists/index.js";
 
 // Display components - content rendering
 export { EventRenderer } from "./display/index.js";
+
+// Notification components - toasts and callouts
+export { Toast, ToastContainer, Callout } from "./notifications/index.js";
+export type { CalloutVariant } from "./notifications/index.js";

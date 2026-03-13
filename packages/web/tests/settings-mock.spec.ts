@@ -75,7 +75,7 @@ test.describe("Settings Page (Mock Mode)", () => {
     await page.locator("button", { hasText: "Add Token" }).click();
 
     // New token should appear in the list
-    await expect(page.getByText("new-mock-token")).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText("new-mock-token", { exact: true })).toBeVisible({ timeout: 5_000 });
     await expect(page.getByText("NEW_MOCK_TOKEN")).toBeVisible();
   });
 

@@ -635,6 +635,18 @@ async function handleMessage(
         return;
       }
 
+      // Record the user's input as a session event before forwarding to the agent
+      const userInputEvent = create(grackle.SessionEventSchema, {
+        sessionId,
+        type: grackle.EventType.USER_INPUT,
+        timestamp: new Date().toISOString(),
+        content: text,
+      });
+      if (session.logPath) {
+        logWriter.writeEvent(session.logPath, userInputEvent);
+      }
+      streamHub.publish(userInputEvent);
+
       try {
         await conn.client.sendInput(
           create(powerline.InputMessageSchema, { sessionId, text }),
@@ -785,8 +797,8 @@ async function handleMessage(
         return;
       }
       let personaId = slugify(personaName) || uuid().slice(0, 8);
-      if (personaStore.getPersona(personaId)) {
-        personaId = `${personaId}-${uuid().slice(0, 4)}`;
+      while (personaStore.getPersona(personaId)) {
+        personaId = `${slugify(personaName) || "persona"}-${uuid().slice(0, 4)}`;
       }
       personaStore.createPersona(
         personaId,
