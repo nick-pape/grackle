@@ -232,6 +232,23 @@ function isCodespace(v: unknown): v is Codespace {
   );
 }
 
+function isPersonaData(v: unknown): v is PersonaData {
+  return (
+    isObject(v) &&
+    typeof v.id === "string" &&
+    typeof v.name === "string" &&
+    typeof v.description === "string" &&
+    typeof v.systemPrompt === "string" &&
+    typeof v.toolConfig === "string" &&
+    typeof v.runtime === "string" &&
+    typeof v.model === "string" &&
+    typeof v.maxTurns === "number" &&
+    typeof v.mcpServers === "string" &&
+    typeof v.createdAt === "string" &&
+    typeof v.updatedAt === "string"
+  );
+}
+
 /**
  * Filter an unknown value to a typed array, discarding items that fail the
  * guard and warning about each one.
@@ -794,9 +811,12 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
             break;
           }
           case "personas": {
-            const list = Array.isArray(msg.payload?.personas)
-              ? (msg.payload.personas as PersonaData[])
-              : [];
+            const list = asValidArray(
+              msg.payload?.personas,
+              isPersonaData,
+              "personas",
+              "personas",
+            );
             setPersonas(list);
             break;
           }
