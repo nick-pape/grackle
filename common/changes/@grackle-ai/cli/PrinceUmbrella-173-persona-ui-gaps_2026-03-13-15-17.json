@@ -1,0 +1,10 @@
+{
+  "changes": [
+    {
+      "packageName": "@grackle-ai/cli",
+      "comment": "Adding missing tasks",
+      "type": "none"
+    }
+  ],
+  "packageName": "@grackle-ai/cli"
+}
