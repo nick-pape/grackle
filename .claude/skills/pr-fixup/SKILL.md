@@ -51,7 +51,9 @@ rush build
 
 If the build fails, fix the errors, commit the fixes, and re-run the build. Only proceed to push once the build succeeds.
 
-## Step 3: Push
+## Step 3: Manual Test and Push
+
+Before pushing, manually test the PR's changes to catch issues early (see Step 4g for testing instructions). If the PR only touches config/docs or codespace-only code, note why testing is skipped.
 
 ```bash
 git push
@@ -141,19 +143,40 @@ For each actionable Copilot thread:
    }' -f threadId=THREAD_NODE_ID
    ```
 
-### 4e: Commit and Push Fixes
+### 4e: Commit, Push, and Manually Test Fixes
 
 If any code changes were made in this round:
 
 1. Stage all modified files (use specific file names, not `git add -A`)
 2. Commit with a message like: `Address Copilot review round N: <brief summary of fixes>`
-3. Push:
+3. **Manually test the changes** before pushing (see Step 4g below)
+4. Push:
    ```bash
    git push
    ```
-4. Go back to step 4a (the push triggers a new Copilot review)
+5. Go back to step 4a (the push triggers a new Copilot review)
 
 If no code changes were made (all comments were dismissed), go to step 4f.
+
+### 4g: Manual Testing
+
+After making code changes (whether from Copilot fixes or CI fixes), manually test the affected functionality before pushing. This catches real-world issues that unit tests miss.
+
+**Preferred: Web UI via Playwright MCP**
+1. Start the Grackle server if not already running (check ports first per CLAUDE.md multi-session safety)
+2. Use `mcp__playwright__browser_navigate` to open the web UI
+3. Exercise the affected feature — create/edit entities, trigger the changed flow, verify the UI behaves correctly
+4. Take a screenshot if the change is visual
+
+**Fallback: CLI**
+1. Start the Grackle server if not already running
+2. Run the relevant `grackle` CLI commands to exercise the changed functionality
+3. Verify the output matches expectations
+
+**Skip conditions** (state explicitly if skipping):
+- The change is purely internal refactoring with no observable behavior
+- The change only affects codespace/remote environments that can't be tested locally
+- The change is documentation or config only
 
 ### 4f: Confirm Stability
 

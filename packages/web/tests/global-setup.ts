@@ -1,10 +1,11 @@
 import { execSync, spawn, type ChildProcess } from "node:child_process";
+import { createServer } from "node:net";
 import { mkdtempSync, writeFileSync, readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import type { FullConfig } from "@playwright/test";
+import { STATE_FILE } from "./state-file.js";
 
-const STATE_FILE = join(tmpdir(), "grackle-e2e-state.json");
 const POLL_INTERVAL_MS = 300;
 const POLL_TIMEOUT_MS = 15_000;
 
@@ -13,6 +14,42 @@ interface E2EState {
   apiKey: string;
   powerlinePid: number;
   serverPid: number;
+  powerlinePort: number;
+  serverPort: number;
+  webPort: number;
+}
+
+/** Bind a TCP server to port 0 on 127.0.0.1, read the assigned port, close, and return it. */
+async function findAvailablePort(): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const srv = createServer();
+    srv.listen(0, "127.0.0.1", () => {
+      const addr = srv.address();
+      if (typeof addr === "object" && addr !== null) {
+        const { port } = addr;
+        srv.close(() => resolve(port));
+      } else {
+        srv.close(() => reject(new Error("Failed to get assigned port")));
+      }
+    });
+    srv.on("error", reject);
+  });
+}
+
+const MAX_PORT_RETRIES = 10;
+
+/** Find N distinct available ports, retrying if the OS returns duplicates. */
+async function findDistinctPorts(count: number): Promise<number[]> {
+  const ports = new Set<number>();
+  let retries = 0;
+  while (ports.size < count) {
+    if (retries++ > MAX_PORT_RETRIES) {
+      throw new Error(`Failed to find ${count} distinct ports after ${MAX_PORT_RETRIES} retries`);
+    }
+    const port = await findAvailablePort();
+    ports.add(port);
+  }
+  return [...ports];
 }
 
 /** Wait until a TCP port accepts connections on 127.0.0.1. */
@@ -47,10 +84,14 @@ export default async function globalSetup(_config: FullConfig): Promise<void> {
 
   const repoRoot = join(import.meta.dirname, "../../..");
 
-  // 2. Start PowerLine (no --token = no auth)
+  // 2. Find available ports (guaranteed distinct)
+  const [powerlinePort, serverPort, webPort] = await findDistinctPorts(3);
+  console.log(`[e2e] Ports: powerline=${powerlinePort}, server=${serverPort}, web=${webPort}`);
+
+  // 3. Start PowerLine (no --token = no auth)
   const powerline: ChildProcess = spawn(
     process.execPath,
-    [join(repoRoot, "packages/powerline/dist/index.js"), "--port", "7433"],
+    [join(repoRoot, "packages/powerline/dist/index.js"), "--port", String(powerlinePort)],
     {
       env: { ...process.env, GRACKLE_HOME: grackleHome },
       stdio: "pipe",
@@ -60,7 +101,7 @@ export default async function globalSetup(_config: FullConfig): Promise<void> {
   powerline.stderr?.on("data", (d: Buffer) => process.stderr.write(`[powerline] ${d}`));
   powerline.stdout?.on("data", (d: Buffer) => process.stdout.write(`[powerline] ${d}`));
 
-  // 3. Start server
+  // 4. Start server
   const server: ChildProcess = spawn(
     process.execPath,
     [join(repoRoot, "packages/server/dist/index.js")],
@@ -68,8 +109,8 @@ export default async function globalSetup(_config: FullConfig): Promise<void> {
       env: {
         ...process.env,
         GRACKLE_HOME: grackleHome,
-        GRACKLE_PORT: "7434",
-        GRACKLE_WEB_PORT: "3000",
+        GRACKLE_PORT: String(serverPort),
+        GRACKLE_WEB_PORT: String(webPort),
         GRACKLE_WEB_DIR: join(repoRoot, "packages/web/dist"),
       },
       stdio: "pipe",
@@ -79,14 +120,14 @@ export default async function globalSetup(_config: FullConfig): Promise<void> {
   server.stderr?.on("data", (d: Buffer) => process.stderr.write(`[server] ${d}`));
   server.stdout?.on("data", (d: Buffer) => process.stdout.write(`[server] ${d}`));
 
-  // 4. Wait for both ports
-  console.log("[e2e] Waiting for PowerLine on :7433...");
-  await waitForPort(7433, POLL_TIMEOUT_MS);
-  console.log("[e2e] Waiting for server on :3000...");
-  await waitForPort(3000, POLL_TIMEOUT_MS);
+  // 5. Wait for both ports
+  console.log(`[e2e] Waiting for PowerLine on :${powerlinePort}...`);
+  await waitForPort(powerlinePort, POLL_TIMEOUT_MS);
+  console.log(`[e2e] Waiting for server on :${webPort}...`);
+  await waitForPort(webPort, POLL_TIMEOUT_MS);
   console.log("[e2e] Both servers ready");
 
-  // 5. Read the auto-generated API key (may not exist immediately after port opens)
+  // 6. Read the auto-generated API key (may not exist immediately after port opens)
   const apiKeyPath = join(grackleHome, ".grackle", "api-key");
   const keyDeadline = Date.now() + POLL_TIMEOUT_MS;
   while (!existsSync(apiKeyPath)) {
@@ -98,16 +139,16 @@ export default async function globalSetup(_config: FullConfig): Promise<void> {
   const apiKey = readFileSync(apiKeyPath, "utf8").trim();
   console.log(`[e2e] API key loaded (${apiKey.length} chars)`);
 
-  // 6. Seed an environment via CLI
+  // 7. Seed an environment via CLI
   const cliPath = join(repoRoot, "packages/cli/dist/index.js");
   const cliEnv = {
     ...process.env,
     GRACKLE_HOME: grackleHome,
-    GRACKLE_URL: "http://localhost:7434",
+    GRACKLE_URL: `http://localhost:${serverPort}`,
     GRACKLE_API_KEY: apiKey,
   };
 
-  execSync(`node "${cliPath}" env add test-local --local --runtime stub`, {
+  execSync(`node "${cliPath}" env add test-local --local --port ${powerlinePort} --runtime stub`, {
     env: cliEnv,
     stdio: "pipe",
   });
@@ -119,12 +160,15 @@ export default async function globalSetup(_config: FullConfig): Promise<void> {
   });
   console.log("[e2e] Environment provisioned");
 
-  // 7. Save state for tests and teardown
+  // 8. Save state for tests and teardown
   const state: E2EState = {
     grackleHome,
     apiKey,
     powerlinePid: powerline.pid!,
     serverPid: server.pid!,
+    powerlinePort,
+    serverPort,
+    webPort,
   };
   writeFileSync(STATE_FILE, JSON.stringify(state));
   console.log("[e2e] Setup complete");

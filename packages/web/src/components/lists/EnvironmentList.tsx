@@ -2,6 +2,7 @@ import { useState, type JSX } from "react";
 import { useGrackle } from "../../context/GrackleContext.js";
 import type { ViewMode } from "../../App.js";
 import type { Environment, ProvisionStatus, Session } from "../../hooks/useGrackleSocket.js";
+import { ConfirmDialog } from "../display/index.js";
 import styles from "./EnvironmentList.module.scss";
 
 /** Props for the EnvironmentList component. */
@@ -62,6 +63,7 @@ function EnvironmentCard({
   onRemove,
   setViewMode,
 }: EnvironmentCardProps): JSX.Element {
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const statusColor = STATUS_COLORS[env.status] || "var(--text-tertiary)";
   const isConnected = env.status === "connected";
   const isConnecting = env.status === "connecting";
@@ -69,6 +71,13 @@ function EnvironmentCard({
 
   return (
     <div>
+      <ConfirmDialog
+        isOpen={showDeleteConfirm}
+        title="Delete Environment?"
+        description={`"${env.displayName || env.id}" will be permanently removed. This destroys the workspace and removes all data.`}
+        onConfirm={() => { onRemove(env.id); setShowDeleteConfirm(false); }}
+        onCancel={() => setShowDeleteConfirm(false)}
+      />
       <div
         className={`${styles.envRow} ${isNewChatTarget ? styles.targeted : ""} ${expanded ? styles.expanded : ""}`}
         onClick={onToggleExpand}
@@ -130,9 +139,7 @@ function EnvironmentCard({
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                if (window.confirm(`Delete environment "${env.displayName || env.id}"? This destroys the workspace and removes all data.`)) {
-                  onRemove(env.id);
-                }
+                setShowDeleteConfirm(true);
               }}
               className={styles.deleteButton}
             >
@@ -191,8 +198,16 @@ export function EnvironmentList({ viewMode, setViewMode }: Props): JSX.Element {
       </div>
 
       {environments.length === 0 && (
-        <div className={styles.emptyState}>
-          No environments. Click + to add one.
+        <div className={styles.emptyCta}>
+          <button
+            className={styles.ctaButton}
+            onClick={() => setViewMode({ kind: "new_environment" })}
+          >
+            Add Environment
+          </button>
+          <div className={styles.ctaDescription}>
+            Connect an environment to run agents
+          </div>
         </div>
       )}
 

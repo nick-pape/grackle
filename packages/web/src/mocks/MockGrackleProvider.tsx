@@ -757,6 +757,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       environments: MOCK_ENVIRONMENTS,
       sessions,
       events,
+      eventsDropped: 0,
       lastSpawnedId,
       projects,
       tasks,
@@ -793,6 +794,8 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       codespaceCreating: false,
       listCodespaces: () => {},
       createCodespace: () => {},
+      projectCreating: false,
+      taskStartingId: undefined,
     }),
     [
       sessions,

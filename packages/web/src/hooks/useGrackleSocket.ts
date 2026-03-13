@@ -48,6 +48,9 @@ export interface TaskData {
   reviewNotes: string;
   sortOrder: number;
   createdAt: string;
+  assignedAt?: string;
+  startedAt?: string;
+  completedAt?: string;
   parentTaskId: string;
   depth: number;
   childTaskIds: string[];
@@ -259,7 +262,6 @@ function parseWsMessage(data: string): WsMessage | undefined {
 }
 
 const WS_RECONNECT_DELAY_MS: number = 3_000;
-const ENV_POLL_INTERVAL_MS: number = 10_000;
 /** Maximum number of events kept in memory per hook instance. Older events are dropped. */
 const MAX_EVENTS: number = 5_000;
 
@@ -283,6 +285,13 @@ export interface UseGrackleSocketResult {
   environments: Environment[];
   sessions: Session[];
   events: SessionEvent[];
+  /**
+   * The total number of events that have been silently dropped due to the
+   * MAX_EVENTS in-memory cap. A non-zero value means the user is only seeing
+   * the most-recent slice of a long session; older events are still available
+   * in the server-side JSONL log.
+   */
+  eventsDropped: number;
   lastSpawnedId: string | undefined;
   projects: Project[];
   tasks: TaskData[];
@@ -351,6 +360,8 @@ export interface UseGrackleSocketResult {
   codespaceCreating: boolean;
   listCodespaces: () => void;
   createCodespace: (repo: string) => void;
+  projectCreating: boolean;
+  taskStartingId: string | undefined;
 }
 
 export function useGrackleSocket(url?: string): UseGrackleSocketResult {
@@ -367,6 +378,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
   const [environments, setEnvironments] = useState<Environment[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [events, setEvents] = useState<SessionEvent[]>([]);
+  const [eventsDropped, setEventsDropped] = useState<number>(0);
   const [lastSpawnedId, setLastSpawnedId] = useState<string | undefined>(
     undefined,
   );
@@ -378,6 +390,8 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
   const [codespaces, setCodespaces] = useState<Codespace[]>([]);
   const [codespaceError, setCodespaceError] = useState("");
   const [codespaceCreating, setCodespaceCreating] = useState(false);
+  const [projectCreating, setProjectCreating] = useState(false);
+  const [taskStartingId, setTaskStartingId] = useState<string | undefined>(undefined);
 
   const send = useCallback((msg: WsMessage) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -388,7 +402,6 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
   useEffect(() => {
     let ws: WebSocket;
     let reconnectTimer: ReturnType<typeof setTimeout>;
-    let envPollTimer: ReturnType<typeof setInterval>;
 
     function connect(): void {
       ws = new WebSocket(wsUrl);
@@ -401,11 +414,6 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
         send({ type: "list_projects" });
         send({ type: "list_tokens" });
         send({ type: "subscribe_all" });
-        // Periodically refresh environments to catch CLI-driven changes
-        clearInterval(envPollTimer);
-        envPollTimer = setInterval(() => {
-          send({ type: "list_environments" });
-        }, ENV_POLL_INTERVAL_MS);
       };
 
       ws.onmessage = (e: MessageEvent<unknown>) => {
@@ -432,10 +440,22 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
               break;
             }
             const event: SessionEvent = msg.payload;
+            /* Track drops outside the updater to avoid impure side-effects
+               inside React state updaters (StrictMode may invoke updaters
+               more than once). The closure variable is assigned (not accumulated),
+               so repeated invocations with the same prev yield the same value. */
+            let dropped = 0;
             setEvents((prev) => {
               const next = [...prev, event];
-              return next.length > MAX_EVENTS ? next.slice(-MAX_EVENTS) : next;
+              if (next.length > MAX_EVENTS) {
+                dropped = next.length - MAX_EVENTS;
+                return next.slice(-MAX_EVENTS);
+              }
+              return next;
             });
+            if (dropped > 0) {
+              setEventsDropped((n) => n + dropped);
+            }
             if (event.eventType === "status") {
               setSessions((prev) =>
                 prev.map((s) =>
@@ -460,12 +480,21 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
               break;
             }
             if (replayEvents.length > 0 || replaySessionId) {
+              let replayDropped = 0;
               setEvents((prev) => {
                 const without = prev.filter(
                   (e) => e.sessionId !== replaySessionId,
                 );
-                return [...without, ...replayEvents];
+                const merged = [...without, ...replayEvents];
+                if (merged.length > MAX_EVENTS) {
+                  replayDropped = merged.length - MAX_EVENTS;
+                  return merged.slice(-MAX_EVENTS);
+                }
+                return merged;
               });
+              if (replayDropped > 0) {
+                setEventsDropped((n) => n + replayDropped);
+              }
             }
             break;
           }
@@ -475,7 +504,6 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
               setLastSpawnedId(spawnedId);
             }
             send({ type: "list_sessions" });
-            send({ type: "list_environments" });
             break;
           }
           case "projects":
@@ -484,6 +512,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
             );
             break;
           case "project_created":
+            setProjectCreating(false);
             send({ type: "list_projects" });
             break;
           case "project_archived":
@@ -522,6 +551,9 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
           case "task_started": {
             const tp = msg.payload;
             if (!isObject(tp)) break;
+            setTaskStartingId((prev) =>
+              tp.taskId && prev === tp.taskId ? undefined : prev,
+            );
             if (tp.sessionId) {
               send({ type: "list_sessions" });
             }
@@ -613,19 +645,20 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
                 });
               }, PROVISION_STATUS_CLEAR_DELAY_MS);
             }
-            // Only refresh environment list on terminal stages to avoid redundant traffic
-            if (pp.stage === "ready" || pp.stage === "error") {
-              send({ type: "list_environments" });
-            }
+            // Server broadcasts the environment list via broadcastEnvironments() on terminal stages
             break;
           }
           case "environment_added":
             // Server already broadcasts updated environment list via broadcastEnvironments()
             break;
           case "environment_removed":
-            // Clean up stale provision status for the removed environment
+            // Clean up stale provision status and optimistically remove the
+            // environment from local state so the UI updates immediately even
+            // when the removal was triggered via gRPC/CLI (which does not call
+            // broadcastEnvironments).
             if (typeof msg.payload?.environmentId === "string") {
               const removedId = msg.payload.environmentId;
+              setEnvironments((prev) => prev.filter((e) => e.id !== removedId));
               setProvisionStatus((prev) => {
                 const next = { ...prev };
                 // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
@@ -633,7 +666,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
                 return next;
               });
             }
-            send({ type: "list_environments" });
+            // Fetch sessions since the server deletes them but doesn't broadcast sessions
             send({ type: "list_sessions" });
             break;
           case "codespaces_list": {
@@ -673,7 +706,8 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
       ws.onclose = () => {
         setConnected(false);
         wsRef.current = undefined;
-        clearInterval(envPollTimer);
+        setProjectCreating(false);
+        setTaskStartingId(undefined);
         clearTimeout(reconnectTimer);
         reconnectTimer = setTimeout(connect, WS_RECONNECT_DELAY_MS);
       };
@@ -686,7 +720,6 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
     connect();
 
     return () => {
-      clearInterval(envPollTimer);
       clearTimeout(reconnectTimer);
       ws?.close();
     };
@@ -742,6 +775,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
 
   const clearEvents = useCallback(() => {
     setEvents([]);
+    setEventsDropped(0);
   }, []);
 
   // ─── Project methods ──────────────────────────────
@@ -753,6 +787,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
       repoUrl?: string,
       defaultEnvironmentId?: string,
     ) => {
+      setProjectCreating(true);
       send({
         type: "create_project",
         payload: {
@@ -808,6 +843,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
 
   const startTask = useCallback(
     (taskId: string, runtime?: string, model?: string) => {
+      setTaskStartingId(taskId);
       send({
         type: "start_task",
         payload: { taskId, runtime: runtime || "", model: model || "" },
@@ -964,6 +1000,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
     environments,
     sessions,
     events,
+    eventsDropped,
     lastSpawnedId,
     projects,
     tasks,
@@ -998,5 +1035,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
     codespaceCreating,
     listCodespaces,
     createCodespace,
+    projectCreating,
+    taskStartingId,
   };
 }
