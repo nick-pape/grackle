@@ -161,4 +161,16 @@ test.describe("Settings Page", () => {
       page.getByText("API tokens are auto-pushed to environments when set or updated"),
     ).toBeVisible();
   });
+
+  test("settings page shows breadcrumbs with Home > Settings", async ({ appPage }) => {
+    const page = appPage;
+
+    await page.locator('button[title="Settings"]').click();
+    await expect(page.getByText("Settings")).toBeVisible({ timeout: 5_000 });
+
+    const breadcrumbs = page.getByTestId("breadcrumbs");
+    await expect(breadcrumbs).toBeVisible({ timeout: 5_000 });
+    await expect(breadcrumbs).toContainText("Home");
+    await expect(breadcrumbs).toContainText("Settings");
+  });
 });

@@ -11,7 +11,9 @@ import { AnimatePresence, motion } from "motion/react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import styles from "./SessionPanel.module.scss";
-import { ConfirmDialog } from "../display/index.js";
+import { ConfirmDialog, Breadcrumbs } from "../display/index.js";
+import { buildBreadcrumbs } from "../../utils/breadcrumbs.js";
+import type { BreadcrumbSegment } from "../../utils/breadcrumbs.js";
 
 /** Props for the SessionPanel component. */
 interface Props {
@@ -594,6 +596,17 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
       })
     : false;
 
+  const breadcrumbs = useMemo(
+    () => buildBreadcrumbs(viewMode, projects, tasksById),
+    [viewMode, projects, tasksById],
+  );
+
+  const handleBreadcrumbNavigate = (segment: BreadcrumbSegment): void => {
+    if (segment.viewMode) {
+      setViewMode(segment.viewMode);
+    }
+  };
+
   const session = sessionId
     ? sessions.find((s) => s.id === sessionId) ?? undefined
     : undefined;
@@ -622,12 +635,22 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
 
   // --- settings mode ---
   if (viewMode.kind === "settings") {
-    return <SettingsPanel viewMode={viewMode} setViewMode={setViewMode} />;
+    return (
+      <div className={styles.panelContainer}>
+        <Breadcrumbs segments={breadcrumbs} onNavigate={handleBreadcrumbNavigate} />
+        <SettingsPanel viewMode={viewMode} setViewMode={setViewMode} />
+      </div>
+    );
   }
 
   // --- persona management mode ---
   if (viewMode.kind === "persona_management") {
-    return <PersonaManager />;
+    return (
+      <div className={styles.panelContainer}>
+        <Breadcrumbs segments={breadcrumbs} onNavigate={handleBreadcrumbNavigate} />
+        <PersonaManager />
+      </div>
+    );
   }
 
   // --- empty mode ---
@@ -663,8 +686,11 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
   // --- new_chat mode ---
   if (viewMode.kind === "new_chat") {
     return (
-      <div className={styles.emptyState}>
-        Enter a prompt below to start a new session
+      <div className={styles.panelContainer}>
+        <Breadcrumbs segments={breadcrumbs} onNavigate={handleBreadcrumbNavigate} />
+        <div className={styles.emptyState}>
+          Enter a prompt below to start a new session
+        </div>
       </div>
     );
   }
@@ -676,6 +702,7 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
     const total = projectTasks.length;
     return (
       <div className={styles.panelContainer}>
+        <Breadcrumbs segments={breadcrumbs} onNavigate={handleBreadcrumbNavigate} />
         <div className={styles.tabBar} role="tablist" aria-label="Project view">
           <button
             role="tab"
@@ -725,8 +752,11 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
   // --- new_environment mode ---
   if (viewMode.kind === "new_environment") {
     return (
-      <div className={styles.emptyState}>
-        Configure the new environment below
+      <div className={styles.panelContainer}>
+        <Breadcrumbs segments={breadcrumbs} onNavigate={handleBreadcrumbNavigate} />
+        <div className={styles.emptyState}>
+          Configure the new environment below
+        </div>
       </div>
     );
   }
@@ -734,8 +764,11 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
   // --- new_task mode ---
   if (viewMode.kind === "new_task") {
     return (
-      <div className={styles.emptyState}>
-        Fill in the task details below
+      <div className={styles.panelContainer}>
+        <Breadcrumbs segments={breadcrumbs} onNavigate={handleBreadcrumbNavigate} />
+        <div className={styles.emptyState}>
+          Fill in the task details below
+        </div>
       </div>
     );
   }
@@ -744,6 +777,7 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
   if (viewMode.kind === "task") {
     return (
       <div className={styles.panelContainer}>
+        <Breadcrumbs segments={breadcrumbs} onNavigate={handleBreadcrumbNavigate} />
         {/* Task header with contextual action buttons */}
         <div className={styles.header}>
           <span className={styles.headerTitle}>

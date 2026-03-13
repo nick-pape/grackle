@@ -503,4 +503,15 @@ test.describe("Persona Management", () => {
       timeout: 5_000,
     });
   });
+
+  test("persona page shows breadcrumbs with Home > Personas", async ({ appPage }) => {
+    const page = appPage;
+
+    await page.locator('button[title="Personas"]').click();
+
+    const breadcrumbs = page.getByTestId("breadcrumbs");
+    await expect(breadcrumbs).toBeVisible({ timeout: 5_000 });
+    await expect(breadcrumbs).toContainText("Home");
+    await expect(breadcrumbs).toContainText("Personas");
+  });
 });
