@@ -155,6 +155,13 @@ class ClaudeCodeSession extends BaseAgentSession {
       sdkOptions.maxTurns = this.maxTurns;
     }
 
+    // Pass through caller-provided hooks (e.g. Stop hooks for PR readiness).
+    // Consumers supply their own hooks via SpawnOptions; the runtime does not
+    // bundle any platform-specific hook implementations.
+    if (this.hooks) {
+      sdkOptions.hooks = this.hooks;
+    }
+
     this.cachedSdkOptions = sdkOptions;
   }
 
@@ -248,7 +255,8 @@ export class ClaudeCodeRuntime extends BaseAgentRuntime {
     worktreeBasePath?: string,
     systemContext?: string,
     mcpServers?: Record<string, unknown>,
+    hooks?: Record<string, unknown>,
   ): AgentSession {
-    return new ClaudeCodeSession(id, prompt, model, maxTurns, resumeSessionId, branch, worktreeBasePath, systemContext, mcpServers);
+    return new ClaudeCodeSession(id, prompt, model, maxTurns, resumeSessionId, branch, worktreeBasePath, systemContext, mcpServers, hooks);
   }
 }

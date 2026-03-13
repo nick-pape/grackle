@@ -31,6 +31,7 @@ export abstract class BaseAgentRuntime implements AgentRuntime {
     worktreeBasePath?: string,
     systemContext?: string,
     mcpServers?: Record<string, unknown>,
+    hooks?: Record<string, unknown>,
   ): AgentSession;
 
   /** Create and start a new agent session. */
@@ -45,6 +46,7 @@ export abstract class BaseAgentRuntime implements AgentRuntime {
       opts.worktreeBasePath,
       opts.systemContext,
       opts.mcpServers,
+      opts.hooks,
     );
   }
 

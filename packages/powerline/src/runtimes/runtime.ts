@@ -21,6 +21,8 @@ export interface SpawnOptions {
   taskId?: string;
   /** MCP server configurations to pass to the agent SDK. */
   mcpServers?: Record<string, unknown>;
+  /** SDK hook callbacks (e.g. Stop hooks). Only supported by the Claude Code runtime; other runtimes ignore this field. */
+  hooks?: Record<string, unknown>;
 }
 
 /** Parameters for resuming an existing agent session. */

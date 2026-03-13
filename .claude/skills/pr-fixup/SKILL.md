@@ -108,8 +108,7 @@ query($owner: String!, $repo: String!, $pr: Int!) {
 ### 4c: Filter to Actionable Comments
 
 From the response, select threads where ALL of:
-- `isResolved` is `false`
-- `isOutdated` is `false`
+- `isResolved` is `false` (do NOT filter on `isOutdated` — outdated but unresolved threads still block the merge button)
 - The last comment (from the `comments(last: 1)` query) has `author.login` equal to `"copilot-pull-request-reviewer"`
 
 If no threads match, the loop may be done — skip to step 4f.
