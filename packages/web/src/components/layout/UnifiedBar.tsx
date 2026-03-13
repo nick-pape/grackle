@@ -1,7 +1,6 @@
 import { useState, useEffect, type FormEvent, type JSX } from "react";
 import { useGrackle } from "../../context/GrackleContext.js";
 import type { ViewMode } from "../../App.js";
-import { ConfirmDialog, Spinner } from "../display/index.js";
 import styles from "./UnifiedBar.module.scss";
 
 /** Props for the UnifiedBar component. */
@@ -40,9 +39,8 @@ function RuntimeSelector({ value, onChange }: RuntimeSelectorProps): JSX.Element
 export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
   const {
     spawn, sendInput, kill, sessions, tasks, environments,
-    createTask, startTask, approveTask, rejectTask, deleteTask, addEnvironment,
+    createTask, addEnvironment,
     codespaces, codespaceError, codespaceCreating, listCodespaces, createCodespace,
-    taskStartingId,
   } = useGrackle();
 
   const [text, setText] = useState("");
@@ -52,8 +50,6 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
   const [taskTitle, setTaskTitle] = useState("");
   const [taskDesc, setTaskDesc] = useState("");
   const [taskEnvId, setTaskEnvId] = useState("");
-  const [rejectNotes, setRejectNotes] = useState("");
-  const [showDeleteTaskConfirm, setShowDeleteTaskConfirm] = useState(false);
 
   // ─── New environment form state ─────────────────
   const [envName, setEnvName] = useState("");
@@ -441,75 +437,28 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
 
   // --- task modes ---
   if (viewMode.kind === "task" && task) {
-    // Single shared ConfirmDialog for all task states that support deletion.
-    const confirmDialog = (
-      <ConfirmDialog
-        isOpen={showDeleteTaskConfirm}
-        title="Delete Task?"
-        description={`"${task.title}" will be permanently removed.`}
-        onConfirm={() => { deleteTask(task.id); setViewMode({ kind: "project", projectId: task.projectId }); setShowDeleteTaskConfirm(false); }}
-        onCancel={() => setShowDeleteTaskConfirm(false)}
-      />
-    );
-
-    // Pending + blocked
-    if (task.status === "pending" && isTaskBlocked) {
-      const blockerNames = task.dependsOn
-        .map((depId) => tasks.find((t) => t.id === depId))
-        .filter((t) => t && t.status !== "done")
-        .map((t) => t!.title);
+    // Pending (blocked or unblocked) — action buttons are now in the task header
+    if (task.status === "pending" || task.status === "assigned") {
+      const blockerNames = isTaskBlocked
+        ? task.dependsOn
+            .map((depId) => tasks.find((t) => t.id === depId))
+            .filter((t) => t && t.status !== "done")
+            .map((t) => t!.title)
+        : [];
       return (
-        <>
-          {confirmDialog}
-          <div className={styles.bar}>
+        <div className={styles.bar}>
+          {isTaskBlocked ? (
             <span className={styles.statusBlocked}>
               Blocked by: {blockerNames.join(", ")}
             </span>
-            <button
-              onClick={() => setShowDeleteTaskConfirm(true)}
-              className={styles.btnDanger}
-            >
-              Delete
-            </button>
-          </div>
-        </>
+          ) : (
+            <span className={styles.hintText}>Use the buttons above to start or manage this task</span>
+          )}
+        </div>
       );
     }
 
-    // Pending + unblocked
-    if (task.status === "pending" || task.status === "assigned") {
-      const isStarting = taskStartingId === task.id;
-      return (
-        <>
-          {confirmDialog}
-          <div className={styles.bar}>
-            {isStarting && (
-              <span className={styles.creatingHint}>
-                <Spinner size="sm" label="Starting task" />
-                Starting task…
-              </span>
-            )}
-            <button
-              onClick={() => startTask(task.id)}
-              className={styles.btnPrimary}
-              disabled={isStarting}
-            >
-              {isStarting
-                ? <span className={styles.btnLoadingContent}><Spinner size="sm" label="Starting" /> Starting…</span>
-                : "Start Task"}
-            </button>
-            <button
-              onClick={() => setShowDeleteTaskConfirm(true)}
-              className={styles.btnDanger}
-            >
-              Delete
-            </button>
-          </div>
-        </>
-      );
-    }
-
-    // In progress
+    // In progress — keep the chat input for waiting_input state; actions moved to header
     if (task.status === "in_progress") {
       const isWaiting = taskSession?.status === "waiting_input";
 
@@ -539,13 +488,6 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
             >
               Send
             </button>
-            <button
-              type="button"
-              onClick={() => task.sessionId && kill(task.sessionId)}
-              className={styles.btnDanger}
-            >
-              Stop
-            </button>
           </form>
         );
       }
@@ -554,113 +496,48 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
         <div className={styles.bar}>
           <input
             type="text"
-            value=""
-            readOnly
             disabled
             placeholder="Agent is working..."
             className={styles.input}
           />
-          <button
-            onClick={() => task.sessionId && kill(task.sessionId)}
-            className={styles.btnDanger}
-          >
-            Stop
-          </button>
         </div>
       );
     }
 
-    // Review
+    // Review — action buttons (Approve/Reject) are now in the task header
     if (task.status === "review") {
       return (
         <div className={styles.bar}>
-          <input
-            type="text"
-            value={rejectNotes}
-            onChange={(e) => setRejectNotes(e.target.value)}
-            placeholder="Rejection notes (optional)..."
-            className={styles.input}
-          />
+          <span className={styles.hintText}>Review the changes above, then approve or reject in the header</span>
+        </div>
+      );
+    }
+
+    // Done — keep "+ New Task" as a navigation shortcut
+    if (task.status === "done") {
+      return (
+        <div className={styles.bar}>
+          <span className={`${styles.statusText} ${styles.statusCompleted}`}>
+            Task completed
+          </span>
           <button
-            onClick={() => {
-              approveTask(task.id);
-            }}
+            onClick={() => setViewMode({ kind: "new_task", projectId: task.projectId })}
             className={styles.btnPrimary}
           >
-            Approve
-          </button>
-          <button
-            onClick={() => {
-              rejectTask(task.id, rejectNotes);
-              setRejectNotes("");
-            }}
-            className={styles.btnDanger}
-          >
-            Reject
+            + New Task
           </button>
         </div>
       );
     }
 
-    // Done
-    if (task.status === "done") {
-      return (
-        <>
-          {confirmDialog}
-          <div className={styles.bar}>
-            <span className={`${styles.statusText} ${styles.statusCompleted}`}>
-              Task completed
-            </span>
-            <button
-              onClick={() => setViewMode({ kind: "new_task", projectId: task.projectId })}
-              className={styles.btnPrimary}
-            >
-              + New Task
-            </button>
-            <button
-              onClick={() => setShowDeleteTaskConfirm(true)}
-              className={styles.btnDanger}
-            >
-              Delete
-            </button>
-          </div>
-        </>
-      );
-    }
-
-    // Failed
+    // Failed — action buttons (Retry/Delete) are now in the task header
     if (task.status === "failed") {
-      const isRetrying = taskStartingId === task.id;
       return (
-        <>
-          {confirmDialog}
-          <div className={styles.bar}>
-            <span className={`${styles.statusText} ${styles.statusFailed}`}>
-              Task failed
-            </span>
-            {isRetrying && (
-              <span className={styles.creatingHint}>
-                <Spinner size="sm" label="Starting task" />
-                Starting task…
-              </span>
-            )}
-            <button
-              onClick={() => startTask(task.id)}
-              className={styles.btnPrimary}
-              disabled={isRetrying}
-            >
-              {isRetrying
-                ? <span className={styles.btnLoadingContent}><Spinner size="sm" label="Starting" /> Starting…</span>
-                : "Retry"}
-            </button>
-            <button
-              onClick={() => setShowDeleteTaskConfirm(true)}
-              className={styles.btnDanger}
-            >
-              Delete
-            </button>
-          </div>
-        </>
+        <div className={styles.bar}>
+          <span className={`${styles.statusText} ${styles.statusFailed}`}>
+            Task failed
+          </span>
+        </div>
       );
     }
   }
@@ -710,7 +587,7 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
     if (isRunning) {
       return (
         <div className={styles.bar}>
-          <input type="text" value="" readOnly disabled placeholder="Agent is working..." className={styles.input} />
+          <input type="text" disabled placeholder="Agent is working..." className={styles.input} />
           <button onClick={() => kill(viewMode.sessionId)} className={styles.btnDanger} title="Stop session">
             Stop
           </button>
