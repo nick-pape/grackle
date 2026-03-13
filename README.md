@@ -2,7 +2,7 @@
 
 **Orchestrate AI coding agents across any environment, with any runtime, at any scale.**
 
-Grackle is a multi-agent coordination platform. Break a project into tasks, dispatch each to an agent running in its own isolated environment, and watch them work in real time. Review real diffs, share knowledge between agents, and scale from one agent to a swarm — without rewriting your setup.
+Grackle is a multi-agent coordination platform. Break a project into tasks, dispatch each to an agent running in its own isolated environment, and watch them work in real time. Share knowledge between agents through findings, review task output at each step, and scale from one agent to a swarm — without rewriting your setup.
 
 ![Dashboard — projects, tasks, and live agent output](docs/screenshots/dashboard-projects-tasks.png)
 
@@ -72,17 +72,19 @@ graph TD
     style N fill:#333,stroke:#666,stroke-dasharray: 5 5
 ```
 
-### 🔍 Auditable artifacts, not magic ⭐
+### 🔍 Auditable artifacts, not magic
 
-Every agent produces real, reviewable output: git diffs, markdown reports, PR comments, findings. The full conversation thread is stored in the central server database — every tool call, every decision, fully auditable. Nothing happens in a black box. Git branches and tags provide natural coordination points — not a proprietary state machine. If you can read a diff, you can audit a swarm.
+Every agent produces real, reviewable output: git branches, markdown reports, PR comments, findings. The full conversation thread is stored in the central server database — every tool call, every decision, fully auditable. Nothing happens in a black box. Git branches and tags provide natural coordination points — not a proprietary state machine. If you can read a diff, you can audit a swarm.
 
-![Diff review — see exactly what each agent changed](docs/screenshots/diff-review.png)
+Workpads and workspaces are coming as a unified mechanism for structured agent handoff — a single surface where agents produce artifacts, humans review them, and the next agent picks up where the last one left off.
 
 ### 🧠 Agents that actually coordinate
 
-Agents don't just run in parallel — they share knowledge. One agent's architectural insight becomes another agent's context through findings and the knowledge graph [⭐#13](https://github.com/nick-pape/grackle/issues/13). Agent personas [⭐#11](https://github.com/nick-pape/grackle/issues/11) with tool allowlists keep specialists focused. The coordination primitives are the ones engineers already use: git, diffs, code review.
+Agents don't just run in parallel — they share knowledge. One agent's architectural insight becomes another agent's context through findings and the knowledge graph [⭐#13](https://github.com/nick-pape/grackle/issues/13). Agent personas with focused system prompts and tool allowlists [⭐#11](https://github.com/nick-pape/grackle/issues/11) keep specialists on task. The coordination primitives are the ones engineers already use: git, branches, code review.
 
 ![Findings — categorized discoveries shared across agents](docs/screenshots/findings-panel.png)
+
+![Personas — specialized agent templates with runtime, model, and system prompt configuration](docs/screenshots/persona-management-view.png)
 
 ## 🏗️ Example Topology
 
@@ -122,9 +124,10 @@ graph TD
 | 🔄 | **Multi-runtime support** | Claude Code, Copilot, and Codex — with more on the roadmap |
 | 🌲 | **Task tree hierarchy** | Decompose tasks into parent/child subtrees up to 5 levels deep — with recursive tree view, expand/collapse, and progress badges |
 | 🔗 | **Task dependencies** | Dependency gating — blocked tasks wait for their dependencies to complete |
-| ✅ | **Diff review** | See exactly what each agent changed, approve or reject per-task |
+| 🎭 | **Agent personas** | Specialized agents with focused system prompts, configurable runtime/model, and tool allowlists [⭐#11](https://github.com/nick-pape/grackle/issues/11) |
+| 🔁 | **Session history** | Every task tracks its full session history — retry failed runs and compare attempts side by side |
+| ✅ | **Task review & approval** | Approve or reject completed tasks, with review notes for rejections that feed back into the next attempt |
 | 🧠 | **Knowledge graph** [⭐#13](https://github.com/nick-pape/grackle/issues/13) | Structured knowledge sharing across agents — beyond flat findings |
-| 🎭 | **Agent personas** [⭐#11](https://github.com/nick-pape/grackle/issues/11) | Specialized agents with tool allowlists and focused system prompts |
 
 ## 🌍 Environments
 
@@ -134,33 +137,47 @@ Each agent runs inside an isolated environment. Connect one or many:
 |---------|--------|---------|
 | 🐳 **Docker** | ✅ Available | `grackle env add my-env --docker` |
 | 💻 **Local** | ✅ Available | `grackle env add my-env --local` |
-| 🔒 **SSH** | ✅ Available [#30](https://github.com/nick-pape/grackle/issues/30) | `grackle env add my-env --ssh --host ...` |
-| ☁️ **Codespace** | ✅ Available [#31](https://github.com/nick-pape/grackle/issues/31) | `grackle env add my-env --codespace --codespace-name <name>` |
+| 🔒 **SSH** | ✅ Available | `grackle env add my-env --ssh --host ...` |
+| ☁️ **Codespace** | ✅ Available | `grackle env add my-env --codespace --codespace-name <name>` |
 
-![Environments — manage agents across local, Docker, Codespace, and SSH](docs/screenshots/agent-session-stream.png)
+![Settings — manage environments, session monitoring, and API tokens](docs/screenshots/agent-session-stream.png)
 
 Docker spins up a container with PowerLine pre-installed. Local connects to a PowerLine instance already running on your machine. SSH connects to any remote host via OpenSSH. Codespace connects to an existing GitHub Codespace by name (use `gh codespace list` to find it).
 
 ## 🚀 Quick Start
 
 ```bash
-# 1. Install and build
-npm install -g @microsoft/rush
-rush update && rush build
+# 1. Install the CLI
+npm install -g @grackle-ai/cli
 
-# 2. Start the server (gRPC + Web UI + WebSocket)
-node packages/server/dist/index.js
+# 2. Start the server (gRPC + Web UI + WebSocket — all in one)
+grackle serve
 
 # 3. Open the dashboard at http://localhost:3000
 
 # 4. Add a Docker environment and start working
-node packages/cli/dist/index.js env add my-env --docker
+grackle env add my-env --docker
 ```
+
+Or skip the global install entirely:
+
+```bash
+npx @grackle-ai/cli serve
+```
+
+<details>
+<summary>Building from source</summary>
+
+```bash
+npm install -g @microsoft/rush
+rush update && rush build
+node packages/cli/dist/index.js serve
+```
+</details>
 
 ## 📋 Requirements
 
 - Node.js >= 22
-- pnpm 10+
 - Docker (for containerized environments)
 
 ## 📄 License

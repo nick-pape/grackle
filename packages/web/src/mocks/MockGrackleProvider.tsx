@@ -27,6 +27,7 @@ import type {
   TaskData,
   Project,
   TokenInfo,
+  PersonaData,
 } from "../hooks/useGrackleSocket.js";
 import {
   MOCK_ENVIRONMENTS,
@@ -36,6 +37,8 @@ import {
   MOCK_TASKS,
   MOCK_FINDINGS,
   MOCK_TOKENS,
+  MOCK_PERSONAS,
+  MOCK_TASK_SESSIONS,
   MOCK_STREAM_SCENARIOS,
   type MockStreamStep,
 } from "./mockData.js";
@@ -67,6 +70,8 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
   const [tasks, setTasks] = useState<TaskData[]>(MOCK_TASKS);
   const [findings, setFindings] = useState<FindingData[]>(MOCK_FINDINGS);
   const [tokens, setTokens] = useState<TokenInfo[]>(MOCK_TOKENS);
+  const [personas, setPersonas] = useState<PersonaData[]>(MOCK_PERSONAS);
+  const [taskSessions] = useState<Record<string, Session[]>>(MOCK_TASK_SESSIONS);
 
   // ── Refs ──────────────────────────────────────────
   /** Auto-incrementing counter for generating unique mock IDs. */
@@ -797,12 +802,56 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       createCodespace: () => { },
       projectCreating: false,
       taskStartingId: undefined,
-      personas: [],
-      createPersona: () => { },
-      updatePersona: () => { },
-      deletePersona: () => { },
-      taskSessions: {},
-      loadTaskSessions: () => { },
+      personas,
+      createPersona: (name: string, description: string, systemPrompt: string, runtime?: string, model?: string, maxTurns?: number) => {
+        // eslint-disable-next-line no-console
+        console.log("[MockGrackle] createPersona", { name });
+        const newPersona: PersonaData = {
+          id: `mock-persona-${Date.now()}`,
+          name,
+          description,
+          systemPrompt,
+          toolConfig: "{}",
+          runtime: runtime || "claude-code",
+          model: model || "",
+          maxTurns: maxTurns || 0,
+          mcpServers: "[]",
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        setPersonas((prev) => [...prev, newPersona]);
+      },
+      updatePersona: (personaId: string, name?: string, description?: string, systemPrompt?: string, runtime?: string, model?: string, maxTurns?: number) => {
+        // eslint-disable-next-line no-console
+        console.log("[MockGrackle] updatePersona", { personaId, name });
+        setPersonas((prev) =>
+          prev.map((p) => {
+            if (p.id !== personaId) {
+              return p;
+            }
+            return {
+              ...p,
+              ...(name !== undefined ? { name } : {}),
+              ...(description !== undefined ? { description } : {}),
+              ...(systemPrompt !== undefined ? { systemPrompt } : {}),
+              ...(runtime !== undefined ? { runtime } : {}),
+              ...(model !== undefined ? { model } : {}),
+              ...(maxTurns !== undefined ? { maxTurns } : {}),
+              updatedAt: new Date().toISOString(),
+            };
+          }),
+        );
+      },
+      deletePersona: (personaId: string) => {
+        // eslint-disable-next-line no-console
+        console.log("[MockGrackle] deletePersona", personaId);
+        setPersonas((prev) => prev.filter((p) => p.id !== personaId));
+      },
+      taskSessions,
+      loadTaskSessions: (taskId: string) => {
+        // eslint-disable-next-line no-console
+        console.log("[MockGrackle] loadTaskSessions", taskId);
+      },
     }),
     [
       sessions,
@@ -812,6 +861,8 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       tasks,
       findings,
       tokens,
+      personas,
+      taskSessions,
       spawn,
       sendInput,
       kill,
