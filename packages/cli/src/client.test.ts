@@ -63,10 +63,10 @@ describe("createGrackleClient", () => {
     const { createGrpcTransport } = await import("@connectrpc/connect-node");
     const { createGrackleClient } = await import("./client.js");
 
-    createGrackleClient("http://::1:9000");
+    createGrackleClient("http://[::1]:9000");
 
     expect(createGrpcTransport).toHaveBeenCalledWith(
-      expect.objectContaining({ baseUrl: "http://::1:9000" }),
+      expect.objectContaining({ baseUrl: "http://[::1]:9000" }),
     );
   });
 });
