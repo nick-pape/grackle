@@ -54,7 +54,7 @@ function DisconnectedBanner({ environmentId, onReconnect }: DisconnectedBannerPr
   return (
     <>
       <span className={styles.disconnectHint} data-testid="env-disconnect-hint">
-        Environment disconnected
+        Environment unavailable
       </span>
       <button
         type="button"
@@ -566,7 +566,7 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
               className={styles.input}
             />
             {/* Wrap in span so tooltip is shown reliably even when button is disabled */}
-            <span title={taskEnvDisconnected ? "Environment is disconnected — reconnect first" : undefined}>
+            <span title={taskEnvDisconnected ? "Environment is unavailable — reconnect first" : undefined}>
               <button
                 type="submit"
                 disabled={!text.trim() || taskEnvDisconnected}
@@ -723,7 +723,7 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
             className={styles.input}
           />
           {/* Wrap in span so tooltip is shown reliably even when button is disabled */}
-          <span title={sessionEnvDisconnected ? "Environment is disconnected — reconnect first" : undefined}>
+          <span title={sessionEnvDisconnected ? "Environment is unavailable — reconnect first" : undefined}>
             <button
               type="submit"
               disabled={!text.trim() || sessionEnvDisconnected}

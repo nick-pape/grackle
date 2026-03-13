@@ -185,7 +185,7 @@ test.describe("Disconnected environment blocks message send", () => {
     const sendBtnWrapper = sendBtn.locator("xpath=..");
     await expect(sendBtnWrapper).toHaveAttribute(
       "title",
-      /disconnected/i,
+      /unavailable/i,
       { timeout: 5_000 },
     );
   });
@@ -209,7 +209,7 @@ test.describe("Disconnected environment blocks message send", () => {
     ).toBeVisible({ timeout: 5_000 });
     await expect(
       page.locator('[data-testid="env-disconnect-hint"]'),
-    ).toContainText(/disconnected/i);
+    ).toContainText(/unavailable/i);
   });
 
   test("Reconnect button is visible when environment is disconnected", async ({ page }) => {
@@ -387,5 +387,105 @@ test.describe("Disconnected environment blocks message send", () => {
     await expect(
       page.locator('[data-testid="env-disconnect-hint"]'),
     ).not.toBeVisible({ timeout: 5_000 });
+  });
+
+  test("Send button is disabled when task environment is in error state", async ({ page }) => {
+    await installWsTracker(page);
+    await page.goto("/");
+    await page.waitForFunction(
+      () => document.body.innerText.includes("Connected"),
+      { timeout: 10_000 },
+    );
+
+    // Set up the waiting_input state via WS injection
+    await createProject(page, "disc-env-proj-err");
+    await page.getByText("disc-env-proj-err").first().click();
+
+    const projectId = await getProjectId(page, "disc-env-proj-err");
+    const task = await createTaskViaWs(page, projectId, "disc-env-task-err", {
+      environmentId: "test-local",
+    });
+
+    await page
+      .getByText("disc-env-task-err", { exact: true })
+      .first()
+      .waitFor({ timeout: 5_000 });
+    await navigateToTask(page, "disc-env-task-err");
+
+    const fakeSessionId = `e2e-err-${Date.now()}`;
+    await injectWsMessage(page, {
+      type: "sessions",
+      payload: {
+        sessions: [
+          {
+            id: fakeSessionId,
+            environmentId: "test-local",
+            runtime: "stub",
+            status: "waiting_input",
+            prompt: "disc-env-task-err",
+            startedAt: new Date().toISOString(),
+          },
+        ],
+      },
+    });
+
+    await injectWsMessage(page, {
+      type: "tasks",
+      payload: {
+        projectId: task.projectId ?? projectId,
+        tasks: [
+          {
+            id: task.id,
+            projectId: task.projectId ?? projectId,
+            title: task.title ?? "disc-env-task-err",
+            description: task.description ?? "",
+            status: "in_progress",
+            branch: task.branch ?? "",
+            environmentId: task.environmentId ?? "test-local",
+            sessionId: fakeSessionId,
+            dependsOn: Array.isArray(task.dependsOn) ? task.dependsOn : [],
+            reviewNotes: task.reviewNotes ?? "",
+            sortOrder: typeof task.sortOrder === "number" ? task.sortOrder : 0,
+            createdAt: task.createdAt ?? new Date().toISOString(),
+            parentTaskId: task.parentTaskId ?? "",
+            depth: typeof task.depth === "number" ? task.depth : 0,
+            childTaskIds: Array.isArray(task.childTaskIds) ? task.childTaskIds : [],
+            canDecompose: task.canDecompose ?? false,
+            personaId: task.personaId ?? "",
+          },
+        ],
+      },
+    });
+
+    // Inject environment in "error" state (not "disconnected")
+    await injectWsMessage(page, {
+      type: "environments",
+      payload: {
+        environments: [
+          {
+            id: "test-local",
+            displayName: "test-local",
+            adapterType: "local",
+            defaultRuntime: "stub",
+            status: "error",
+            bootstrapped: true,
+          },
+        ],
+      },
+    });
+
+    await page
+      .locator('[data-testid="reconnect-btn"]')
+      .waitFor({ state: "visible", timeout: 5_000 });
+
+    const sendBtn = page.locator("button", { hasText: "Send" });
+    await expect(sendBtn).toBeDisabled({ timeout: 5_000 });
+
+    const inputField = page.locator('input[placeholder="Type a message..."]');
+    await expect(inputField).toBeDisabled({ timeout: 5_000 });
+
+    await expect(
+      page.locator('[data-testid="env-disconnect-hint"]'),
+    ).toBeVisible({ timeout: 5_000 });
   });
 });
