@@ -12,7 +12,7 @@ export function ToastContainer(): JSX.Element {
   const { toasts, dismissToast } = useToast();
 
   return (
-    <div className={styles.container} aria-live="polite" aria-atomic="false">
+    <div className={styles.container}>
       <AnimatePresence>
         {toasts.map((toast) => (
           <Toast key={toast.id} toast={toast} onDismiss={dismissToast} />

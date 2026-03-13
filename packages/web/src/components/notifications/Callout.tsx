@@ -47,6 +47,7 @@ export function Callout({
           <span className={styles.content}>{children}</span>
           {dismissible && (
             <button
+              type="button"
               className={styles.close}
               onClick={() => setDismissed(true)}
               aria-label="Dismiss"

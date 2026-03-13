@@ -3,7 +3,7 @@ import { motion } from "motion/react";
 import type { ToastItem } from "../../context/ToastContext.js";
 import styles from "./Toast.module.scss";
 
-const VARIANT_ICONS: Record<string, string> = {
+const VARIANT_ICONS: Record<ToastItem["variant"], string> = {
   success: "\u2713", // ✓
   error: "\u2715",   // ✕
   warning: "\u26A0", // ⚠
@@ -25,8 +25,7 @@ export function Toast({ toast, onDismiss }: ToastProps): JSX.Element {
   return (
     <motion.div
       className={`${styles.toast} ${styles[toast.variant]}`}
-      role="alert"
-      aria-live="assertive"
+      role="status"
       initial={{ opacity: 0, y: -16, scale: 0.94 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: -8, scale: 0.94 }}
@@ -38,6 +37,7 @@ export function Toast({ toast, onDismiss }: ToastProps): JSX.Element {
       </span>
       <span className={styles.message}>{toast.message}</span>
       <button
+        type="button"
         className={styles.close}
         onClick={() => onDismiss(toast.id)}
         aria-label="Dismiss notification"
