@@ -39,7 +39,7 @@ export function Callout({
       {!dismissed && (
         <div
           className={[styles.callout, styles[variant], className].filter(Boolean).join(" ")}
-          role="alert"
+          role={variant === "error" || variant === "warning" ? "alert" : "status"}
         >
           <span className={styles.icon} aria-hidden="true">
             {VARIANT_ICONS[variant]}

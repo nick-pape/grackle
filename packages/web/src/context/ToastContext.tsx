@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, type ReactNode, type JSX } from "react";
+import React, { createContext, useContext, useState, useRef, useCallback, type ReactNode, type JSX } from "react";
 
 /** Visual style variant for a toast notification. */
 export type ToastVariant = "success" | "error" | "warning" | "info";
@@ -23,11 +23,11 @@ interface ToastContextValue {
 const ToastContext: React.Context<ToastContextValue | undefined> = createContext<ToastContextValue | undefined>(undefined);
 
 const DEFAULT_DURATION_MS: number = 4_000;
-let toastCounter: number = 0;
 
 /** Provides toast notification state to the component tree. Mount <ToastContainer> as a sibling to receive rendered output. */
 export function ToastProvider({ children }: { children: ReactNode }): JSX.Element {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const toastCounterRef = useRef<number>(0);
 
   const dismissToast = useCallback((id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
@@ -35,7 +35,7 @@ export function ToastProvider({ children }: { children: ReactNode }): JSX.Elemen
 
   const showToast = useCallback(
     (message: string, variant: ToastVariant = "info", duration: number = DEFAULT_DURATION_MS) => {
-      const id = `toast-${++toastCounter}`;
+      const id = `toast-${++toastCounterRef.current}`;
       setToasts((prev) => [...prev, { id, message, variant, duration }]);
     },
     [],

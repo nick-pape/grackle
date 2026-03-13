@@ -48,8 +48,10 @@ function AppContent(): JSX.Element {
           <UnifiedBar viewMode={viewMode} setViewMode={setViewMode} />
         </div>
       </div>
-      {/* ToastContainer last in DOM so toast text does not interfere with
-          getByText().first() selectors in E2E tests */}
+      {/* Toast messages are intentionally generic (no resource names) so
+          that getByText() locators in E2E tests remain unique and strict-mode
+          safe. Use { exact: true } or data-testid selectors in tests when
+          matching resource names that may also appear in transient toasts. */}
       <ToastContainer />
     </div>
   );
