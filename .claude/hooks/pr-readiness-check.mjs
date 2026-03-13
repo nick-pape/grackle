@@ -102,37 +102,40 @@ function main() {
 
   // ── Check 1: Merge conflicts ──────────────────────────────────────
   const mergeData = runJson(`gh pr view ${prNumber} --json mergeable`);
-  const mergeable = mergeData?.mergeable;
-  if (mergeable === "CONFLICTING") {
+  if (mergeData === null) {
+    issues.push(`Could not check merge status for PR #${prNumber}. Ensure gh is authenticated and retry.`);
+  } else if (mergeData.mergeable === "CONFLICTING") {
     issues.push(`PR #${prNumber} has MERGE CONFLICTS. Run: git fetch origin && git merge origin/main (NEVER rebase), resolve conflicts, commit, and push.`);
-  } else if (mergeable === "UNKNOWN" || !mergeable) {
+  } else if (mergeData.mergeable === "UNKNOWN" || !mergeData.mergeable) {
     issues.push(`PR #${prNumber} merge status is UNKNOWN (GitHub may still be computing). Wait a moment and retry.`);
   }
 
   // ── Check 2: CI status ────────────────────────────────────────────
   const ciData = runJson(`gh pr view ${prNumber} --json statusCheckRollup`);
-  const checks = ciData?.statusCheckRollup || [];
-
-  let ciState;
-  if (checks.length === 0) {
-    ciState = "PENDING";
+  if (ciData === null) {
+    issues.push(`PR #${prNumber} CI status could not be determined. Check gh auth and network connectivity.`);
   } else {
-    const conclusions = checks.map((c) => c.conclusion || c.status || "");
-    if (conclusions.some((c) => FAILING_CONCLUSIONS.has(c))) {
-      ciState = "FAILING";
-    } else if (conclusions.some((c) => PENDING_STATUSES.has(c))) {
+    const checks = ciData.statusCheckRollup || [];
+
+    let ciState;
+    if (checks.length === 0) {
       ciState = "PENDING";
     } else {
-      ciState = "PASSING";
+      const conclusions = checks.map((c) => c.conclusion || c.status || "");
+      if (conclusions.some((c) => FAILING_CONCLUSIONS.has(c))) {
+        ciState = "FAILING";
+      } else if (conclusions.some((c) => PENDING_STATUSES.has(c))) {
+        ciState = "PENDING";
+      } else {
+        ciState = "PASSING";
+      }
     }
-  }
 
-  if (ciState === "FAILING") {
-    issues.push(`PR #${prNumber} has FAILING CI checks. Read the failed log with: gh run view <RUN_ID> --log-failed, fix the issue, commit, and push.`);
-  } else if (ciState === "PENDING") {
-    issues.push(`PR #${prNumber} CI checks are still RUNNING. Wait for them to complete: gh pr checks ${prNumber} --watch --fail-fast`);
-  } else if (ciData === null) {
-    issues.push(`PR #${prNumber} CI status could not be determined. Check gh auth and network connectivity.`);
+    if (ciState === "FAILING") {
+      issues.push(`PR #${prNumber} has FAILING CI checks. Read the failed log with: gh run view <RUN_ID> --log-failed, fix the issue, commit, and push.`);
+    } else if (ciState === "PENDING") {
+      issues.push(`PR #${prNumber} CI checks are still RUNNING. Wait for them to complete: gh pr checks ${prNumber} --watch --fail-fast`);
+    }
   }
 
   // ── Check 3: Unresolved Copilot review threads ────────────────────
@@ -159,16 +162,17 @@ function main() {
 
   const graphqlResult = runJson("gh api graphql --input -", { input: graphqlQuery });
 
-  let threadCount = 0;
-  if (graphqlResult) {
+  if (graphqlResult === null) {
+    issues.push(`Could not check Copilot review threads for PR #${prNumber}. Ensure gh has the required scopes (read:discussion) and retry.`);
+  } else {
     const threads = graphqlResult.data?.repository?.pullRequest?.reviewThreads?.nodes || [];
-    threadCount = threads.filter(
+    const threadCount = threads.filter(
       (t) => !t.isResolved && t.comments?.nodes?.[0]?.author?.login === "copilot-pull-request-reviewer"
     ).length;
-  }
 
-  if (threadCount > 0) {
-    issues.push(`PR #${prNumber} has ${threadCount} unresolved Copilot review thread(s). For each: read the suggestion, fix the code or dismiss with explanation, reply to the comment, and resolve the thread.`);
+    if (threadCount > 0) {
+      issues.push(`PR #${prNumber} has ${threadCount} unresolved Copilot review thread(s). For each: read the suggestion, fix the code or dismiss with explanation, reply to the comment, and resolve the thread.`);
+    }
   }
 
   // ── Decision ──────────────────────────────────────────────────────
