@@ -285,10 +285,10 @@ test.describe("Add Environment — WebSocket Handler", () => {
     // Click Add
     await page.locator("button", { hasText: "Add" }).click();
 
-    // Form should close (back to empty mode)
+    // Form should close (back to settings mode)
     await expect(page.locator("text=new env")).not.toBeVisible({ timeout: 5_000 });
 
-    // Environment should appear in the sidebar list
+    // Environment should appear in the Settings panel environment list
     await expect(page.getByText("ui-test-env", { exact: true })).toBeVisible({ timeout: 5_000 });
 
     // Clean up via WS

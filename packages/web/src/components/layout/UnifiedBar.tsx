@@ -184,7 +184,7 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
       setEnvIdentityFile("");
       setEnvCreateRepo("");
       setEnvCodespaceMode("pick");
-      setViewMode({ kind: "empty" });
+      setViewMode({ kind: "settings" });
     };
 
     return (

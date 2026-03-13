@@ -84,7 +84,9 @@ test.describe("Environment List — Expand/Collapse", () => {
 
     // Before expanding, (idle) should be visible if no sessions
     // Note: this depends on whether sessions exist — check conditionally
-    const idleLabel = page.locator("text=(idle)");
+    // Scope to the test-local row to avoid strict mode violations with multiple environments
+    const testLocalRow = page.locator("[class*='envRow']", { hasText: "test-local" });
+    const idleLabel = testLocalRow.locator("text=(idle)");
     const wasIdleVisible = await idleLabel.isVisible();
 
     if (wasIdleVisible) {
