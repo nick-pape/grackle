@@ -50,19 +50,16 @@ describe("buildTaskSystemContext", () => {
     expect(result).toContain("IMPORTANT: The PR is the deliverable");
   });
 
-  it("includes CI and Copilot review instructions in Phase 3", () => {
+  it("includes CI and review instructions in Phase 3", () => {
     const result = buildTaskSystemContext("Task", "desc", "");
     expect(result).toContain("Wait for CI");
-    expect(result).toContain("Address Copilot review");
-    expect(result).toContain("copilot-pull-request-reviewer");
-    expect(result).toContain("Resolve the thread");
+    expect(result).toContain("Address code review comments");
+    expect(result).toContain("resolve the thread");
   });
 
   it("includes merge conflict check in Phase 3", () => {
     const result = buildTaskSystemContext("Task", "desc", "");
     expect(result).toContain("Check for merge conflicts");
-    expect(result).toContain("CONFLICTING");
-    // Phase 3 step 11 specifically uses `gh pr view --json mergeable` to detect conflicts
-    expect(result).toContain("gh pr view --json mergeable");
+    expect(result).toContain("NEVER rebase");
   });
 });
