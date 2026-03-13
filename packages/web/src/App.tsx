@@ -1,7 +1,9 @@
 import { GrackleProvider } from "./context/GrackleContext.js";
 import { MockGrackleProvider } from "./mocks/MockGrackleProvider.js";
+import { ToastProvider } from "./context/ToastContext.js";
 import { StatusBar, Sidebar, UnifiedBar } from "./components/layout/index.js";
 import { SessionPanel } from "./components/panels/index.js";
+import { ToastContainer } from "./components/notifications/index.js";
 import { useState, useEffect, type JSX } from "react";
 import { useGrackle } from "./context/GrackleContext.js";
 import styles from "./App.module.scss";
@@ -46,6 +48,11 @@ function AppContent(): JSX.Element {
           <UnifiedBar viewMode={viewMode} setViewMode={setViewMode} />
         </div>
       </div>
+      {/* Toast messages are intentionally generic (no resource names) so
+          that getByText() locators in E2E tests remain unique and strict-mode
+          safe. Use { exact: true } or data-testid selectors in tests when
+          matching resource names that may also appear in transient toasts. */}
+      <ToastContainer />
     </div>
   );
 }
@@ -54,8 +61,10 @@ function AppContent(): JSX.Element {
 export default function App(): JSX.Element {
   const Provider = IS_MOCK_MODE ? MockGrackleProvider : GrackleProvider;
   return (
-    <Provider>
-      <AppContent />
-    </Provider>
+    <ToastProvider>
+      <Provider>
+        <AppContent />
+      </Provider>
+    </ToastProvider>
   );
 }

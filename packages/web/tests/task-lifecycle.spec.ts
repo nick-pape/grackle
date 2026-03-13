@@ -17,10 +17,10 @@ test.describe("Task Lifecycle (stub runtime)", () => {
     await page.locator('input[placeholder="Task title..."]').fill("test task");
     await page.locator("select").selectOption("test-local");
     await page.locator("button", { hasText: /^Create$/ }).click();
-    await expect(page.getByText("test task")).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText("test task", { exact: true })).toBeVisible({ timeout: 5_000 });
 
     // --- Step 3: Navigate to task view ---
-    await page.getByText("test task").click();
+    await page.getByText("test task", { exact: true }).click();
     await expect(page.locator('[data-testid="task-status"]')).toContainText("pending");
     // Overview tab should be active for pending task
     await expect(page.locator("button", { hasText: "Overview" })).toHaveAttribute("class", /active/);
@@ -96,10 +96,10 @@ test.describe("Task Lifecycle (stub runtime)", () => {
     await page.locator('input[placeholder="Task title..."]').fill("reject task");
     await page.locator("select").selectOption("test-local");
     await page.locator("button", { hasText: /^Create$/ }).click();
-    await expect(page.getByText("reject task")).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText("reject task", { exact: true })).toBeVisible({ timeout: 5_000 });
 
     // Navigate to task
-    await page.getByText("reject task").click();
+    await page.getByText("reject task", { exact: true }).click();
     await expect(page.locator('[data-testid="task-status"]')).toContainText("pending", { timeout: 5_000 });
 
     // Monkey-patch WS for stub runtime

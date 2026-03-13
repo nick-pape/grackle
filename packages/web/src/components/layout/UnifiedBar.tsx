@@ -1,5 +1,6 @@
 import { useState, useEffect, type FormEvent, type JSX } from "react";
 import { useGrackle } from "../../context/GrackleContext.js";
+import { useToast } from "../../context/ToastContext.js";
 import type { ViewMode } from "../../App.js";
 import styles from "./UnifiedBar.module.scss";
 
@@ -42,6 +43,7 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
     createTask, addEnvironment,
     codespaces, codespaceError, codespaceCreating, listCodespaces, createCodespace,
   } = useGrackle();
+  const { showToast } = useToast();
 
   const [text, setText] = useState("");
   const [runtime, setRuntime] = useState(
@@ -169,6 +171,7 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
         config.codespaceName = envCodespaceName.trim();
       }
       addEnvironment(envName.trim(), envAdapterType, config, envRuntime);
+      showToast("Environment added successfully", "success");
       setEnvName("");
       setEnvAdapterType("local");
       setEnvRuntime("claude-code");
@@ -386,6 +389,7 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
         return;
       }
       createTask(viewMode.projectId, taskTitle.trim(), taskDesc, taskEnvId, undefined, viewMode.parentTaskId);
+      showToast("Task created successfully", "success");
       setTaskTitle("");
       setTaskDesc("");
       setTaskEnvId("");
@@ -550,6 +554,7 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
         return;
       }
       spawn(viewMode.environmentId, text, undefined, runtime);
+      showToast("Session started", "success");
       setText("");
     };
 
