@@ -1112,8 +1112,8 @@ async function handleMessage(
     // ─── Task Sessions ─────────────────────────────────────
 
     case "get_task_sessions": {
-      const taskId = msg.payload?.taskId as string;
-      if (!taskId) {
+      const taskId = msg.payload?.taskId;
+      if (typeof taskId !== "string" || taskId.length === 0) {
         return;
       }
       const taskSessions = sessionStore.listSessionsForTask(taskId);

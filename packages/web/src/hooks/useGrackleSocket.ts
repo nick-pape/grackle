@@ -144,7 +144,9 @@ function isSession(v: unknown): v is Session {
     typeof v.runtime === "string" &&
     typeof v.status === "string" &&
     typeof v.prompt === "string" &&
-    typeof v.startedAt === "string"
+    typeof v.startedAt === "string" &&
+    (v.endedAt === undefined || typeof v.endedAt === "string") &&
+    (v.error === undefined || typeof v.error === "string")
   );
 }
 
