@@ -62,6 +62,7 @@ function sessionRowToProto(row: SessionRow): grackle.Session {
     suspendedAt: row.suspendedAt ?? "",
     endedAt: row.endedAt ?? "",
     error: row.error ?? "",
+    taskId: row.taskId ?? "",
   });
 }
 
@@ -769,6 +770,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         task.title,
         model,
         logPath,
+        task.id,
       );
       taskStore.setTaskSession(task.id, sessionId);
       taskStore.markTaskStarted(task.id);

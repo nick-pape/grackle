@@ -1,6 +1,6 @@
 import db from "./db.js";
 import { sessions, type SessionRow } from "./schema.js";
-import { eq, and, inArray, desc, sql } from "drizzle-orm";
+import { eq, and, inArray, desc, asc, sql } from "drizzle-orm";
 import type { SessionStatus } from "@grackle-ai/common";
 
 export type { SessionRow };
@@ -13,8 +13,9 @@ export function createSession(
   prompt: string,
   model: string,
   logPath: string,
+  taskId: string = "",
 ): void {
-  db.insert(sessions).values({ id, environmentId, runtime, prompt, model, logPath }).run();
+  db.insert(sessions).values({ id, environmentId, runtime, prompt, model, logPath, taskId }).run();
 }
 
 /** Retrieve a single session by ID. */
@@ -99,4 +100,12 @@ export function incrementTurns(id: string): void {
 /** Delete all sessions belonging to a specific environment. */
 export function deleteByEnvironment(environmentId: string): void {
   db.delete(sessions).where(eq(sessions.environmentId, environmentId)).run();
+}
+
+/** List all sessions for a specific task, ordered chronologically (oldest first). */
+export function listSessionsForTask(taskId: string): SessionRow[] {
+  return db.select().from(sessions)
+    .where(eq(sessions.taskId, taskId))
+    .orderBy(asc(sessions.startedAt))
+    .all();
 }

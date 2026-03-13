@@ -48,7 +48,8 @@ export function initDatabase(): void {
       started_at    TEXT NOT NULL DEFAULT (datetime('now')),
       suspended_at  TEXT,
       ended_at      TEXT,
-      error         TEXT
+      error         TEXT,
+      task_id       TEXT NOT NULL DEFAULT ''
     );
 
     CREATE TABLE IF NOT EXISTS tokens (
@@ -210,6 +211,24 @@ export function initDatabase(): void {
   } catch {
     /* column already exists */
   }
+
+  // Migration: add task_id column to sessions if missing
+  try {
+    sqlite.exec(
+      "ALTER TABLE sessions ADD COLUMN task_id TEXT NOT NULL DEFAULT ''",
+    );
+  } catch {
+    /* column already exists */
+  }
+
+  // Migration: backfill task_id on existing sessions from tasks.session_id
+  sqlite.exec(`
+    UPDATE sessions SET task_id = (
+      SELECT id FROM tasks WHERE tasks.session_id = sessions.id
+    ) WHERE task_id = '' AND EXISTS (
+      SELECT 1 FROM tasks WHERE tasks.session_id = sessions.id
+    )
+  `);
 }
 
 // Run init immediately for backwards compatibility — stores import db at module load

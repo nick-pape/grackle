@@ -48,6 +48,7 @@ export const sessions = sqliteTable("sessions", {
   suspendedAt: text("suspended_at"),
   endedAt: text("ended_at"),
   error: text("error"),
+  taskId: text("task_id").notNull().default(""),
 });
 
 /** Row shape returned by a SELECT on the sessions table. */

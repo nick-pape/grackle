@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "feat: add task_id to sessions, track session history per task, display attempt selector in UI",
+      "type": "minor",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}

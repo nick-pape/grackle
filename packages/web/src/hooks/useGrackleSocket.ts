@@ -16,6 +16,8 @@ export interface Session {
   status: string;
   prompt: string;
   startedAt: string;
+  endedAt?: string;
+  error?: string;
 }
 
 export interface SessionEvent {
@@ -428,6 +430,8 @@ export interface UseGrackleSocketResult {
     maxTurns?: number,
   ) => void;
   deletePersona: (personaId: string) => void;
+  taskSessions: Record<string, Session[]>;
+  loadTaskSessions: (taskId: string) => void;
 }
 
 export function useGrackleSocket(url?: string): UseGrackleSocketResult {
@@ -459,6 +463,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
   const [codespaceError, setCodespaceError] = useState("");
   const [codespaceCreating, setCodespaceCreating] = useState(false);
   const [personas, setPersonas] = useState<PersonaData[]>([]);
+  const [taskSessions, setTaskSessions] = useState<Record<string, Session[]>>({});
   const [projectCreating, setProjectCreating] = useState(false);
   const [taskStartingId, setTaskStartingId] = useState<string | undefined>(
     undefined,
@@ -825,6 +830,13 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
           case "persona_deleted":
             send({ type: "list_personas" });
             break;
+          case "task_sessions": {
+            const taskId = msg.payload?.taskId;
+            if (typeof taskId !== "string" || !taskId) break;
+            const sessionsArr = asValidArray(msg.payload?.sessions, isSession, "task_sessions", "sessions");
+            setTaskSessions((prev) => ({ ...prev, [taskId]: sessionsArr }));
+            break;
+          }
           case "error":
             console.error("[ws]", msg.payload?.message);
             break;
@@ -1191,6 +1203,13 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
     [send],
   );
 
+  const loadTaskSessions = useCallback(
+    (taskId: string) => {
+      send({ type: "get_task_sessions", payload: { taskId } });
+    },
+    [send],
+  );
+
   return {
     connected,
     environments,
@@ -1237,5 +1256,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
     createPersona,
     updatePersona,
     deletePersona,
+    taskSessions,
+    loadTaskSessions,
   };
 }

@@ -801,6 +801,8 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       createPersona: () => { },
       updatePersona: () => { },
       deletePersona: () => { },
+      taskSessions: {},
+      loadTaskSessions: () => { },
     }),
     [
       sessions,
