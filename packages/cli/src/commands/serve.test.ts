@@ -55,6 +55,9 @@ describe("registerServeCommand", () => {
   });
 
   it("UT-3c: rejects non-loopback --host to enforce security policy", async () => {
+    // Suppress console.error so the expected rejection message does not pollute test output
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
     const { registerServeCommand } = await import("./serve.js");
     const program = new Command();
     program.exitOverride();
@@ -66,5 +69,6 @@ describe("registerServeCommand", () => {
     ).rejects.toThrow("process.exit called");
 
     expect(process.exit).toHaveBeenCalledWith(1);
+    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("loopback address"));
   });
 });
