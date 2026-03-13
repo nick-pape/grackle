@@ -1,6 +1,17 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Fri, 13 Mar 2026 07:19:57 GMT and should not be manually modified.
+This log was last generated on Fri, 13 Mar 2026 08:26:43 GMT and should not be manually modified.
+
+## 0.17.0
+Fri, 13 Mar 2026 08:26:43 GMT
+
+### Minor changes
+
+- Add waiting_input task status synced with session status
+
+### Updates
+
+- No CLI changes — false positive from Rush merge detection
 
 ## 0.16.0
 Fri, 13 Mar 2026 07:19:57 GMT
