@@ -154,3 +154,32 @@
   from { opacity: 0; transform: translateY(-4px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+// ---------------------------------------------------------------------------
+// Empty state CTA
+// ---------------------------------------------------------------------------
+
+.emptyCta {
+  margin: var(--space-md);
+  padding: var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
+  text-align: center;
+  border: 1px dashed var(--border-subtle);
+  border-radius: var(--radius-md);
+  animation: fadeIn 150ms ease forwards;
+}
+
+.ctaDescription {
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+  line-height: var(--line-height);
+}
+
+.ctaButton {
+  @include btn-primary;
+  padding: var(--space-sm) var(--space-lg);
+  font-size: var(--font-size-sm);
+}

@@ -42,7 +42,7 @@ test.describe("Task Deletion", () => {
     await page.locator("button", { hasText: "Start Task" }).click();
 
     // Wait for in_progress state
-    await expect(page.getByText("in_progress")).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('[data-testid="task-status"]')).toContainText("in_progress", { timeout: 15_000 });
 
     // Delete the task via WS while it's running
     const projectId = await getProjectId(page, "del-active");
@@ -63,13 +63,15 @@ test.describe("Task Deletion", () => {
 
     await expect(page.locator("button", { hasText: "Delete" })).toBeVisible({ timeout: 5_000 });
 
-    page.once("dialog", async (dialog) => {
-      expect(dialog.type()).toBe("confirm");
-      expect(dialog.message()).toContain("tdel-accept-task");
-      await dialog.accept();
-    });
-
+    // Click Delete — the in-app ConfirmDialog should appear
     await page.locator("button", { hasText: "Delete" }).click();
+
+    // Verify the dialog is visible with correct title and task name
+    await expect(page.getByText("Delete Task?")).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText(/"tdel-accept-task"/)).toBeVisible();
+
+    // Confirm deletion via the dialog's danger button
+    await page.locator('[role="dialog"] button', { hasText: "Delete" }).click();
 
     const sidebarTask = page.locator('[class*="taskTitle"]', { hasText: "tdel-accept-task" });
     await expect(sidebarTask).not.toBeVisible({ timeout: 5_000 });
@@ -83,13 +85,17 @@ test.describe("Task Deletion", () => {
 
     await navigateToTask(page, "tdel-dismiss-task");
 
-    page.once("dialog", async (dialog) => {
-      expect(dialog.type()).toBe("confirm");
-      expect(dialog.message()).toContain("tdel-dismiss-task");
-      await dialog.dismiss();
-    });
-
+    // Click Delete — the in-app ConfirmDialog should appear
     await page.locator("button", { hasText: "Delete" }).click();
+
+    // Verify the dialog is visible
+    await expect(page.getByText("Delete Task?")).toBeVisible({ timeout: 5_000 });
+
+    // Cancel via the Cancel button
+    await page.locator('[role="dialog"] button', { hasText: "Cancel" }).click();
+
+    // Dialog should be gone and task should still exist
+    await expect(page.getByText("Delete Task?")).not.toBeVisible({ timeout: 5_000 });
 
     const sidebarTask = page.locator('[class*="taskTitle"]', { hasText: "tdel-dismiss-task" });
     await expect(sidebarTask).toBeVisible({ timeout: 5_000 });

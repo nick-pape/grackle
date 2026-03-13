@@ -129,3 +129,15 @@
   @include btn-primary;
   white-space: nowrap;
 }
+
+// ---------------------------------------------------------------------------
+// Empty state info message
+// ---------------------------------------------------------------------------
+
+.emptyStateInfo {
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+  padding: var(--space-lg) 0 var(--space-sm);
+  text-align: center;
+  line-height: var(--line-height);
+}
