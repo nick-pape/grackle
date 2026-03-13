@@ -1,4 +1,5 @@
 import { useState, type JSX } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import { useGrackle } from "../../context/GrackleContext.js";
 import type { ViewMode } from "../../App.js";
 import type { Environment, ProvisionStatus, Session } from "../../hooks/useGrackleSocket.js";
@@ -19,6 +20,41 @@ const STATUS_COLORS: Record<string, string> = {
   disconnected: "var(--text-tertiary)",
   connecting: "var(--accent-blue)",
 };
+
+/** Human-readable labels for session statuses. */
+const SESSION_STATUS_LABELS: Record<string, string> = {
+  running: "running",
+  waiting_input: "awaiting input",
+  failed: "failed",
+  killed: "killed",
+  completed: "completed",
+};
+
+/** Display order for session status groups in the summary. */
+const SESSION_STATUS_ORDER: string[] = ["running", "waiting_input", "failed", "killed", "completed"];
+
+/** Duration in seconds for the session accordion animation. */
+const SESSION_ACCORDION_DURATION: number = 0.2;
+
+/** Build a compact summary string like "3 running, 1 awaiting input". */
+function buildSessionSummary(sessions: Session[]): string {
+  const counts: Record<string, number> = {};
+  for (const session of sessions) {
+    counts[session.status] = (counts[session.status] || 0) + 1;
+  }
+  const knownParts = SESSION_STATUS_ORDER
+    .filter((status) => counts[status] > 0)
+    .map((status) => `${counts[status]} ${SESSION_STATUS_LABELS[status] || status}`);
+
+  // Append any statuses not in SESSION_STATUS_ORDER so the summary always reflects all sessions
+  const knownSet = new Set(SESSION_STATUS_ORDER);
+  const unknownParts = Object.keys(counts)
+    .filter((status) => !knownSet.has(status))
+    .sort()
+    .map((status) => `${counts[status]} ${status}`);
+
+  return [...knownParts, ...unknownParts].join(", ");
+}
 
 // --- Subcomponents ---
 
@@ -42,6 +78,8 @@ interface EnvironmentCardProps {
   isNewChatTarget: boolean;
   expanded: boolean;
   onToggleExpand: () => void;
+  sessionsExpanded: boolean;
+  onToggleSessionsExpand: () => void;
   provisionProgress: ProvisionStatus | undefined;
   onProvision: (environmentId: string) => void;
   onStop: (environmentId: string) => void;
@@ -57,6 +95,8 @@ function EnvironmentCard({
   isNewChatTarget,
   expanded,
   onToggleExpand,
+  sessionsExpanded,
+  onToggleSessionsExpand,
   provisionProgress,
   onProvision,
   onStop,
@@ -150,18 +190,56 @@ function EnvironmentCard({
         </div>
       )}
 
-      {envSessions.map((session) => (
-        <div
-          key={session.id}
-          onClick={() => setViewMode({ kind: "session", sessionId: session.id })}
-          className={`${styles.sessionRow} ${selectedSessionId === session.id ? styles.selected : ""}`}
-          title={session.prompt}
-        >
-          <SessionStatusDot status={session.status} />
-          {" "}
-          {session.prompt.length > 24 ? session.prompt.slice(0, 24) + "..." : session.prompt}
-        </div>
-      ))}
+      {envSessions.length > 0 && (
+        <>
+          <div
+            className={styles.sessionSummaryRow}
+            data-testid="session-summary-row"
+            role="button"
+            tabIndex={0}
+            aria-expanded={sessionsExpanded}
+            aria-label={sessionsExpanded ? "Collapse sessions" : "Expand sessions"}
+            onClick={onToggleSessionsExpand}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onToggleSessionsExpand(); } }}
+          >
+            <span className={`${styles.sessionExpandArrow} ${sessionsExpanded ? styles.expanded : ""}`}>
+              {"\u25B8"}
+            </span>
+            <span className={styles.sessionSummaryText}>
+              {buildSessionSummary(envSessions)}
+            </span>
+            <span className={styles.sessionCountBadge}>{envSessions.length}</span>
+          </div>
+          <AnimatePresence>
+            {sessionsExpanded && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: SESSION_ACCORDION_DURATION, ease: "easeInOut" }}
+                style={{ overflow: "hidden" }}
+              >
+                {envSessions.map((session) => (
+                  <div
+                    key={session.id}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setViewMode({ kind: "session", sessionId: session.id });
+                    }}
+                    className={`${styles.sessionRow} ${selectedSessionId === session.id ? styles.selected : ""}`}
+                    title={session.prompt}
+                    data-testid="session-row"
+                  >
+                    <SessionStatusDot status={session.status} />
+                    {" "}
+                    {session.prompt.length > 24 ? session.prompt.slice(0, 24) + "..." : session.prompt}
+                  </div>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </>
+      )}
     </div>
   );
 }
@@ -180,6 +258,7 @@ export function EnvironmentList({ viewMode, setViewMode }: Props): JSX.Element {
   } = useGrackle();
   // eslint-disable-next-line @rushstack/no-new-null
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [expandedSessionIds, setExpandedSessionIds] = useState<Set<string>>(new Set());
 
   const selectedSessionId = viewMode.kind === "session" ? viewMode.sessionId : undefined;
   const newChatEnvId = viewMode.kind === "new_chat" ? viewMode.environmentId : undefined;
@@ -222,6 +301,18 @@ export function EnvironmentList({ viewMode, setViewMode }: Props): JSX.Element {
             isNewChatTarget={newChatEnvId === env.id}
             expanded={expandedId === env.id}
             onToggleExpand={() => setExpandedId(expandedId === env.id ? null : env.id)}
+            sessionsExpanded={expandedSessionIds.has(env.id)}
+            onToggleSessionsExpand={() => {
+              setExpandedSessionIds((prev) => {
+                const next = new Set(prev);
+                if (next.has(env.id)) {
+                  next.delete(env.id);
+                } else {
+                  next.add(env.id);
+                }
+                return next;
+              });
+            }}
             provisionProgress={provisionStatus[env.id]}
             onProvision={provisionEnvironment}
             onStop={stopEnvironment}
