@@ -489,7 +489,7 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
   const prevTaskIdRef = useRef<string | undefined>(undefined);
   const prevTaskStatusRef = useRef<string | undefined>(undefined);
 
-  // Determine session context
+  // Determine task and project context
   let task: ReturnType<typeof tasks.find> = undefined;
   let projectId: string | undefined = undefined;
 
@@ -498,14 +498,12 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
     projectId = task?.projectId || undefined;
   }
 
-  // Resolve the effective session ID: for tasks, prefer the user-selected attempt;
-  // for direct session views, use the viewMode's sessionId.
+  // Resolve effective sessionId — use selectedSessionId if valid, otherwise task.sessionId
   const currentTaskSessions = task ? (taskSessions[task.id] ?? []) : [];
   let sessionId: string | undefined = undefined;
   if (viewMode.kind === "session") {
     sessionId = viewMode.sessionId;
   } else if (viewMode.kind === "task") {
-    // If user selected a session that belongs to this task, use it
     if (selectedSessionId && currentTaskSessions.some((s) => s.id === selectedSessionId)) {
       sessionId = selectedSessionId;
     } else {
@@ -525,7 +523,7 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
     setViewMode({ kind: "project", projectId: task.projectId });
   };
 
-  // Reset to overview tab, clear rejectNotes and session selection when switching to a different task.
+  // Reset to overview tab, clear rejectNotes, and clear selectedSessionId when switching tasks.
   if (viewMode.kind === "task" && task?.id !== prevTaskIdRef.current) {
     prevTaskIdRef.current = task?.id;
     if (activeTaskTab !== "overview") {
@@ -539,7 +537,7 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
     }
   }
 
-  // Load task sessions when viewing a task, and reload when the task's sessionId changes (retry)
+  // Load task sessions when task changes or when a new session is created (retry)
   const loadedTaskSessionsRef = useRef<string | undefined>(undefined);
   const prevTaskSessionIdRef = useRef<string | undefined>(undefined);
   useEffect(() => {
@@ -621,7 +619,7 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
 
   // --- settings mode ---
   if (viewMode.kind === "settings") {
-    return <SettingsPanel />;
+    return <SettingsPanel viewMode={viewMode} setViewMode={setViewMode} />;
   }
 
   // --- persona management mode ---

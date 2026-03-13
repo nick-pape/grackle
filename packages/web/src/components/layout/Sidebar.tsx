@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect, type JSX } from "react";
-import { EnvironmentList } from "../lists/EnvironmentList.js";
 import { ProjectList } from "../lists/ProjectList.js";
 import type { ViewMode } from "../../App.js";
 import styles from "./Sidebar.module.scss";
@@ -44,11 +43,8 @@ interface Props {
   setViewMode: (mode: ViewMode) => void;
 }
 
-type SidebarTab = "projects" | "environments";
-
-/** Left sidebar with tabbed navigation between projects and environments. */
+/** Left sidebar showing the permanent project/task tree. */
 export function Sidebar({ viewMode, setViewMode }: Props): JSX.Element {
-  const [tab, setTab] = useState<SidebarTab>("projects");
   const [width] = useState<number>(loadWidth);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -77,29 +73,9 @@ export function Sidebar({ viewMode, setViewMode }: Props): JSX.Element {
 
   return (
     <div className={styles.container} ref={containerRef} data-testid="sidebar" style={{ width }}>
-      {/* Tab bar */}
-      <div className={styles.tabBar}>
-        <button
-          className={`${styles.tab} ${tab === "projects" ? styles.active : ""}`}
-          onClick={() => setTab("projects")}
-        >
-          Projects
-        </button>
-        <button
-          className={`${styles.tab} ${tab === "environments" ? styles.active : ""}`}
-          onClick={() => setTab("environments")}
-        >
-          Environments
-        </button>
-      </div>
-
       {/* Content */}
       <div className={styles.content}>
-        {tab === "projects" ? (
-          <ProjectList viewMode={viewMode} setViewMode={setViewMode} />
-        ) : (
-          <EnvironmentList viewMode={viewMode} setViewMode={setViewMode} />
-        )}
+        <ProjectList viewMode={viewMode} setViewMode={setViewMode} />
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-import type { ConnectRouter } from "@connectrpc/connect";
+import { ConnectError, Code, type ConnectRouter } from "@connectrpc/connect";
 import { create } from "@bufbuild/protobuf";
 import { grackle, powerline } from "@grackle-ai/common";
 import { v4 as uuid } from "uuid";
@@ -28,6 +28,7 @@ import {
 } from "@grackle-ai/common";
 import { grackleHome } from "./paths.js";
 import { safeParseJsonArray } from "./json-helpers.js";
+import { logger } from "./logger.js";
 import { slugify } from "./utils/slugify.js";
 import { buildTaskSystemContext } from "./utils/system-context.js";
 import { importGitHubIssues as executeGitHubImport } from "./github-import.js";
@@ -878,16 +879,55 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
 
     async deleteTask(req: grackle.TaskId) {
       const task = taskStore.getTask(req.id);
+      if (!task) {
+        throw new ConnectError(`Task not found: ${req.id}`, Code.NotFound);
+      }
       const children = taskStore.getChildren(req.id);
       if (children.length > 0) {
-        throw new Error(
+        throw new ConnectError(
           "Cannot delete task with children. Delete children first.",
+          Code.FailedPrecondition,
         );
       }
-      taskStore.deleteTask(req.id);
+
+      // Kill active session before deleting the task
+      if (task.sessionId) {
+        const activeSession = sessionStore.getSession(task.sessionId);
+        if (activeSession && (activeSession.status === "running" || activeSession.status === "waiting_input")) {
+          const conn = adapterManager.getConnection(activeSession.environmentId);
+          if (conn) {
+            try {
+              await conn.client.kill(
+                create(powerline.SessionIdSchema, { id: task.sessionId }),
+              );
+            } catch (err) {
+              logger.warn({ taskId: req.id, sessionId: task.sessionId, err }, "Failed to kill session during task deletion");
+            }
+          }
+          sessionStore.updateSession(task.sessionId, "killed");
+          streamHub.publish(
+            create(grackle.SessionEventSchema, {
+              sessionId: task.sessionId,
+              type: grackle.EventType.STATUS,
+              timestamp: new Date().toISOString(),
+              content: "killed",
+              raw: "",
+            }),
+          );
+        }
+      }
+
+      const changes = taskStore.deleteTask(req.id);
+      if (changes === 0) {
+        logger.error({ taskId: req.id }, "deleteTask returned 0 changes despite task existing");
+        throw new ConnectError(
+          `Failed to delete task ${req.id}: no rows affected`,
+          Code.Internal,
+        );
+      }
       broadcast({
         type: "task_deleted",
-        payload: { taskId: req.id, projectId: task?.projectId },
+        payload: { taskId: req.id, projectId: task.projectId },
       });
       return create(grackle.EmptySchema, {});
     },

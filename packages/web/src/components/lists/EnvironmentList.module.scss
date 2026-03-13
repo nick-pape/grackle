@@ -9,11 +9,14 @@
 }
 
 .header {
-  @include section-label;
   padding: var(--space-xs) var(--space-md);
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+
+.headerLabel {
+  @include section-label;
 }
 
 .addButton {
@@ -21,6 +24,9 @@
   font-size: var(--font-size-sm);
   line-height: 1;
   padding: 1px 5px;
+  // Reset any inherited section-label typography so the button reads normally
+  text-transform: none;
+  letter-spacing: normal;
 }
 
 .emptyState {

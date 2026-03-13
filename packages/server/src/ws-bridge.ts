@@ -1090,6 +1090,11 @@ async function handleMessage(
     case "delete_task": {
       const taskId = msg.payload?.taskId as string;
       if (!taskId) return;
+      const deletedTask = taskStore.getTask(taskId);
+      if (!deletedTask) {
+        sendWs(ws, { type: "error", payload: { message: `Task not found: ${taskId}` } });
+        return;
+      }
       const children = taskStore.getChildren(taskId);
       if (children.length > 0) {
         sendWs(ws, {
@@ -1100,12 +1105,37 @@ async function handleMessage(
         });
         return;
       }
-      const deletedTask = taskStore.getTask(taskId);
-      taskStore.deleteTask(taskId);
-      broadcast({
-        type: "task_deleted",
-        payload: { taskId, projectId: deletedTask?.projectId },
-      });
+
+      // Kill active session before deleting the task
+      if (deletedTask.sessionId) {
+        const activeSession = sessionStore.getSession(deletedTask.sessionId);
+        if (activeSession && (activeSession.status === "running" || activeSession.status === "waiting_input")) {
+          const conn = adapterManager.getConnection(activeSession.environmentId);
+          if (conn) {
+            try {
+              await conn.client.kill(create(powerline.SessionIdSchema, { id: deletedTask.sessionId }));
+            } catch (err) {
+              logger.warn({ taskId, sessionId: deletedTask.sessionId, err }, "Failed to kill session during task deletion");
+            }
+          }
+          sessionStore.updateSession(deletedTask.sessionId, "killed");
+          streamHub.publish(create(grackle.SessionEventSchema, {
+            sessionId: deletedTask.sessionId,
+            type: grackle.EventType.STATUS,
+            timestamp: new Date().toISOString(),
+            content: "killed",
+            raw: "",
+          }));
+        }
+      }
+
+      const changes = taskStore.deleteTask(taskId);
+      if (changes === 0) {
+        logger.error({ taskId }, "deleteTask returned 0 changes despite task existing");
+        sendWs(ws, { type: "error", payload: { message: `Failed to delete task ${taskId}: no rows affected` } });
+        return;
+      }
+      broadcast({ type: "task_deleted", payload: { taskId, projectId: deletedTask.projectId } });
       break;
     }
 
