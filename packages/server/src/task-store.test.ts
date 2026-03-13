@@ -43,7 +43,8 @@ function applySchema(): void {
       sort_order    INTEGER NOT NULL DEFAULT 0,
       parent_task_id TEXT NOT NULL DEFAULT '',
       depth         INTEGER NOT NULL DEFAULT 0,
-      can_decompose INTEGER NOT NULL DEFAULT 0
+      can_decompose INTEGER NOT NULL DEFAULT 0,
+      persona_id    TEXT NOT NULL DEFAULT ''
     );
   `);
 }
@@ -265,6 +266,23 @@ describe("task-store tree operations", () => {
       taskStore.createTask("t2", "test-proj", "Child", "desc", "", [], "proj", "t1");
       const child = taskStore.getTask("t2");
       expect(child!.canDecompose).toBe(false);
+    });
+  });
+
+  describe("markTaskStarted on failed task", () => {
+    it("transitions a failed task to in_progress", () => {
+      taskStore.createTask("t1", "test-proj", "Retry Task", "desc", "", [], "proj");
+      taskStore.markTaskStarted("t1");
+      taskStore.markTaskCompleted("t1", "failed");
+
+      const failed = taskStore.getTask("t1");
+      expect(failed!.status).toBe("failed");
+
+      taskStore.markTaskStarted("t1");
+
+      const retried = taskStore.getTask("t1");
+      expect(retried!.status).toBe("in_progress");
+      expect(retried!.startedAt).toBeDefined();
     });
   });
 });

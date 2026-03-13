@@ -2,22 +2,6 @@ syntax = "proto3";
 
 package grackle.powerline;
 
-import "grackle/grackle.proto";
-
-// ─── Enums ──────────────────────────────────────────────────
-
-enum AgentEventType {
-  AGENT_EVENT_TYPE_UNSPECIFIED = 0;
-  AGENT_EVENT_TYPE_TEXT = 1;
-  AGENT_EVENT_TYPE_TOOL_USE = 2;
-  AGENT_EVENT_TYPE_TOOL_RESULT = 3;
-  AGENT_EVENT_TYPE_ERROR = 4;
-  AGENT_EVENT_TYPE_STATUS = 5;
-  AGENT_EVENT_TYPE_SYSTEM = 6;
-  AGENT_EVENT_TYPE_FINDING = 7;
-  AGENT_EVENT_TYPE_SUBTASK_CREATE = 8;
-}
-
 // ─── Types ──────────────────────────────────────────────────
 
 message Empty {}
@@ -39,16 +23,17 @@ message Pong {
 }
 
 message SpawnRequest {
-  string session_id = 1;        // Server-assigned session ID
-  string runtime = 2;           // "claude-code" | "stub" | ...
+  string session_id = 1; // Server-assigned session ID
+  string runtime = 2; // "claude-code" | "stub" | ...
   string prompt = 3;
   string model = 4;
   int32 max_turns = 5;
-  string branch = 6;              // Branch for worktree (empty = skip)
-  string worktree_base_path = 7;  // Repo root, e.g. "/workspace"
-  string system_context = 8;      // Prepended to prompt (task desc + findings)
-  string project_id = 9;          // So MCP server knows which project
-  string task_id = 10;            // So MCP server knows which task
+  string branch = 6; // Branch for worktree (empty = skip)
+  string worktree_base_path = 7; // Repo root, e.g. "/workspace"
+  string system_context = 8; // Prepended to prompt (task desc + findings)
+  string project_id = 9; // So MCP server knows which project
+  string task_id = 10; // So MCP server knows which task
+  string mcp_servers_json = 11; // JSON-encoded MCP server configs from persona
 }
 
 message ResumeRequest {
@@ -64,16 +49,16 @@ message InputMessage {
 
 message AgentEvent {
   string session_id = 1;
-  AgentEventType type = 2;
+  string type = 2;
   string timestamp = 3;
   string content = 4;
-  string raw = 5;                // JSON, optional
+  string raw = 5; // JSON, optional
 }
 
 message SessionInfo {
   string session_id = 1;
   string runtime = 2;
-  grackle.SessionStatus status = 3;
+  string status = 3;
 }
 
 message SessionList {
@@ -84,7 +69,7 @@ message SessionList {
 
 message TokenItem {
   string name = 1;
-  grackle.TokenType type = 2;
+  string type = 2;
   string env_var = 3;
   string file_path = 4;
   string value = 5;

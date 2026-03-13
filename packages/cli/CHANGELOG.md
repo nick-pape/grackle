@@ -1,6 +1,74 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Thu, 12 Mar 2026 06:27:52 GMT and should not be manually modified.
+This log was last generated on Fri, 13 Mar 2026 00:56:54 GMT and should not be manually modified.
+
+## 0.15.0
+Fri, 13 Mar 2026 00:56:54 GMT
+
+### Minor changes
+
+- Implements the Persona system foundation — proto definitions (#168), database schema + store (#170), and gRPC/WebSocket service handlers with spawn integration (#171). Personas are reusable agent templates containing system prompt, runtime/model config, tool config, and MCP server definitions.
+
+### Updates
+
+- No publishable changes
+- No API changes (merge commit false positive)
+- placeholder
+- No CLI changes — merge commit false positive
+- Merge commit false positive — no actual CLI changes
+- No API changes (merge commit false positive)
+- No publishable changes (merge commit false positive)
+
+## 0.14.10
+Thu, 12 Mar 2026 17:36:37 GMT
+
+### Patches
+
+- Add error handling to SendInput WebSocket handler: validate session existence and active status, check environment connection, and send descriptive error messages to the client instead of silently dropping input.
+
+### Updates
+
+- No changes (merge commit false positive)
+- No changes (merge commit false positive)
+
+## 0.14.9
+Thu, 12 Mar 2026 15:30:40 GMT
+
+### Patches
+
+- Auto-retry task on rejection with review notes
+
+## 0.14.8
+Thu, 12 Mar 2026 15:00:24 GMT
+
+### Patches
+
+- Auto-detect git repo path for worktrees, add task update CLI, capture codespace git credentials
+
+## 0.14.7
+Thu, 12 Mar 2026 11:30:47 GMT
+
+### Patches
+
+- Remove proto enums that shadow hand-written string union types
+
+### Updates
+
+- No actual changes to this package
+
+## 0.14.6
+Thu, 12 Mar 2026 08:11:55 GMT
+
+### Patches
+
+- Harden add_environment input validation: port range [1,65535], adapterConfig double-encoding fix, ID collision retry loop
+
+## 0.14.5
+Thu, 12 Mar 2026 07:09:34 GMT
+
+### Patches
+
+- Allow retrying failed tasks by adding 'failed' to allowed start statuses
 
 ## 0.14.4
 Thu, 12 Mar 2026 06:27:52 GMT
