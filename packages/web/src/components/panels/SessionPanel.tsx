@@ -498,17 +498,44 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
   type EditingField = "name" | "description" | "repoUrl" | "defaultEnvironmentId" | null;
   const [editingField, setEditingField] = useState<EditingField>(null);
   const [editDraft, setEditDraft] = useState("");
-  const prevProjectIdRef = useRef<string | undefined>(undefined);
-
-  // Reset edit state when project changes
+  const previousProjectIdRef = useRef<string | undefined>(undefined);
+  const ignoreInitialBlurFieldRef = useRef<Exclude<EditingField, null> | null>(null);
+  const nameInputRef = useRef<HTMLInputElement>(null);
+  const descriptionInputRef = useRef<HTMLTextAreaElement>(null);
+  const repositoryInputRef = useRef<HTMLInputElement>(null);
+  const environmentSelectRef = useRef<HTMLSelectElement>(null);
   const currentProjectId = viewMode.kind === "project" ? viewMode.projectId : undefined;
-  if (currentProjectId !== prevProjectIdRef.current) {
-    prevProjectIdRef.current = currentProjectId;
-    if (editingField !== null) {
+  useEffect(() => {
+    const previousProjectId = previousProjectIdRef.current;
+    previousProjectIdRef.current = currentProjectId;
+    if (previousProjectId === undefined || previousProjectId === currentProjectId) {
+      return;
+    }
+    if (editingField !== null || editDraft !== "") {
       setEditingField(null);
       setEditDraft("");
     }
-  }
+  }, [currentProjectId, editingField, editDraft]);
+
+  useEffect(() => {
+    if (editingField === null) {
+      return;
+    }
+    const focusTarget =
+      editingField === "name" ? nameInputRef.current
+      : editingField === "description" ? descriptionInputRef.current
+      : editingField === "repoUrl" ? repositoryInputRef.current
+      : environmentSelectRef.current;
+    if (!focusTarget) {
+      return;
+    }
+    const focusTimer = window.setTimeout(() => {
+      focusTarget.focus();
+    }, 0);
+    return () => {
+      window.clearTimeout(focusTimer);
+    };
+  }, [editingField]);
 
   // Determine task and project context
   let task: ReturnType<typeof tasks.find> = undefined;
@@ -722,11 +749,13 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
     const MAX_NAME_LENGTH = 100;
 
     const startEdit = (field: EditingField, currentValue: string): void => {
+      ignoreInitialBlurFieldRef.current = field;
       setEditingField(field);
       setEditDraft(currentValue);
     };
 
     const cancelEdit = (): void => {
+      ignoreInitialBlurFieldRef.current = null;
       setEditingField(null);
       setEditDraft("");
     };
@@ -774,13 +803,23 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
           <span className={styles.projectName} data-testid="project-name">
             {editingField === "name" ? (
               <input
+                ref={nameInputRef}
                 className={styles.editInput}
                 value={editDraft}
                 onChange={(e) => setEditDraft(e.target.value)}
-                onBlur={() => saveEdit("name")}
+                onBlur={(event) => {
+                  if (ignoreInitialBlurFieldRef.current === "name") {
+                    ignoreInitialBlurFieldRef.current = null;
+                    return;
+                  }
+                  if (event.relatedTarget instanceof HTMLElement && event.relatedTarget.dataset.editAction === "name") {
+                    return;
+                  }
+                  saveEdit("name");
+                }}
                 onKeyDown={(e) => handleKeyDown(e, "name")}
                 maxLength={MAX_NAME_LENGTH}
-                autoFocus
+                aria-label="Project name"
                 data-testid="edit-name-input"
               />
             ) : (
@@ -788,8 +827,14 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
                 {project?.name || viewMode.projectId}
                 <button
                   className={styles.editButton}
+                  onMouseDown={(event) => {
+                    event.preventDefault();
+                    startEdit("name", project?.name || "");
+                  }}
                   onClick={() => startEdit("name", project?.name || "")}
                   title="Edit name"
+                  aria-label="Edit project name"
+                  data-edit-action="name"
                   data-testid="edit-name-button"
                 >
                   ✏️
@@ -815,13 +860,23 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
             <div className={styles.metaValue}>
               {editingField === "description" ? (
                 <textarea
+                  ref={descriptionInputRef}
                   className={styles.editTextarea}
                   value={editDraft}
                   onChange={(e) => setEditDraft(e.target.value)}
-                  onBlur={() => saveEdit("description")}
+                  onBlur={(event) => {
+                    if (ignoreInitialBlurFieldRef.current === "description") {
+                      ignoreInitialBlurFieldRef.current = null;
+                      return;
+                    }
+                    if (event.relatedTarget instanceof HTMLElement && event.relatedTarget.dataset.editAction === "description") {
+                      return;
+                    }
+                    saveEdit("description");
+                  }}
                   onKeyDown={(e) => handleKeyDown(e, "description")}
                   title="Project description"
-                  autoFocus
+                  aria-label="Project description"
                   data-testid="edit-description-input"
                 />
               ) : (
@@ -835,8 +890,14 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
                   )}
                   <button
                     className={styles.editButton}
+                    onMouseDown={(event) => {
+                      event.preventDefault();
+                      startEdit("description", project?.description || "");
+                    }}
                     onClick={() => startEdit("description", project?.description || "")}
                     title="Edit description"
+                    aria-label="Edit project description"
+                    data-edit-action="description"
                     data-testid="edit-description-button"
                   >
                     ✏️
@@ -852,13 +913,23 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
             <div className={styles.metaValue}>
               {editingField === "repoUrl" ? (
                 <input
+                  ref={repositoryInputRef}
                   className={styles.editInput}
                   value={editDraft}
                   onChange={(e) => setEditDraft(e.target.value)}
-                  onBlur={() => saveEdit("repoUrl")}
+                  onBlur={(event) => {
+                    if (ignoreInitialBlurFieldRef.current === "repoUrl") {
+                      ignoreInitialBlurFieldRef.current = null;
+                      return;
+                    }
+                    if (event.relatedTarget instanceof HTMLElement && event.relatedTarget.dataset.editAction === "repoUrl") {
+                      return;
+                    }
+                    saveEdit("repoUrl");
+                  }}
                   onKeyDown={(e) => handleKeyDown(e, "repoUrl")}
                   placeholder="https://github.com/..."
-                  autoFocus
+                  aria-label="Project repository URL"
                   data-testid="edit-repo-input"
                 />
               ) : (
@@ -877,8 +948,14 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
                   )}
                   <button
                     className={styles.editButton}
+                    onMouseDown={(event) => {
+                      event.preventDefault();
+                      startEdit("repoUrl", project?.repoUrl || "");
+                    }}
                     onClick={() => startEdit("repoUrl", project?.repoUrl || "")}
                     title="Edit repository URL"
+                    aria-label="Edit project repository URL"
+                    data-edit-action="repoUrl"
                     data-testid="edit-repo-button"
                   >
                     ✏️
@@ -894,9 +971,11 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
             <div className={styles.metaValue}>
               {editingField === "defaultEnvironmentId" ? (
                 <select
+                  ref={environmentSelectRef}
                   className={styles.editSelect}
                   value={editDraft}
                   onChange={(e) => {
+                    ignoreInitialBlurFieldRef.current = null;
                     setEditDraft(e.target.value);
                     // Save immediately on change for select
                     const val = e.target.value;
@@ -905,9 +984,18 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
                     }
                     cancelEdit();
                   }}
-                  onBlur={() => cancelEdit()}
+                  onBlur={(event) => {
+                    if (ignoreInitialBlurFieldRef.current === "defaultEnvironmentId") {
+                      ignoreInitialBlurFieldRef.current = null;
+                      return;
+                    }
+                    if (event.relatedTarget instanceof HTMLElement && event.relatedTarget.dataset.editAction === "defaultEnvironmentId") {
+                      return;
+                    }
+                    cancelEdit();
+                  }}
                   title="Default environment"
-                  autoFocus
+                  aria-label="Project default environment"
                   data-testid="edit-env-select"
                 >
                   <option value="">None</option>
@@ -926,8 +1014,14 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
                   )}
                   <button
                     className={styles.editButton}
+                    onMouseDown={(event) => {
+                      event.preventDefault();
+                      startEdit("defaultEnvironmentId", project?.defaultEnvironmentId || "");
+                    }}
                     onClick={() => startEdit("defaultEnvironmentId", project?.defaultEnvironmentId || "")}
                     title="Change default environment"
+                    aria-label="Edit project default environment"
+                    data-edit-action="defaultEnvironmentId"
                     data-testid="edit-env-button"
                   >
                     ✏️

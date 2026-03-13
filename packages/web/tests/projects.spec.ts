@@ -167,14 +167,9 @@ test.describe("Projects", () => {
     const page = appPage;
     await createAndSelectProject(page, "name-edit-test");
 
-    // Click pencil icon to edit name
     await page.locator('[data-testid="edit-name-button"]').click();
-
-    // Input should appear with current name
     const nameInput = page.locator('[data-testid="edit-name-input"]');
     await expect(nameInput).toBeVisible();
-
-    // Clear and type new name
     await nameInput.fill("renamed-project");
     await nameInput.press("Enter");
 
@@ -186,9 +181,9 @@ test.describe("Projects", () => {
     const page = appPage;
     await createAndSelectProject(page, "escape-test");
 
-    // Start editing
-    await page.locator('[data-testid="edit-name-button"]').click();
     const nameInput = page.locator('[data-testid="edit-name-input"]');
+    await page.locator('[data-testid="edit-name-button"]').click();
+    await expect(nameInput).toBeVisible();
     await nameInput.fill("should-not-save");
     await nameInput.press("Escape");
 
@@ -203,14 +198,10 @@ test.describe("Projects", () => {
     const page = appPage;
     await createAndSelectProject(page, "desc-edit-test");
 
-    // Click pencil for description
-    await page.locator('[data-testid="edit-description-button"]').click();
-
     const descInput = page.locator('[data-testid="edit-description-input"]');
+    await page.locator('[data-testid="edit-description-button"]').click();
     await expect(descInput).toBeVisible();
-
     await descInput.fill("A new project description");
-    // Blur to save (description uses blur, not Enter)
     await descInput.blur();
 
     // Should show the description text
@@ -224,11 +215,9 @@ test.describe("Projects", () => {
     const page = appPage;
     await createAndSelectProject(page, "repo-edit-test");
 
-    await page.locator('[data-testid="edit-repo-button"]').click();
-
     const repoInput = page.locator('[data-testid="edit-repo-input"]');
+    await page.locator('[data-testid="edit-repo-button"]').click();
     await expect(repoInput).toBeVisible();
-
     await repoInput.fill("https://github.com/test/repo");
     await repoInput.press("Enter");
 
@@ -259,7 +248,7 @@ test.describe("Projects", () => {
     await expect(page.getByText("Archive Project?")).toBeVisible();
 
     // Confirm archive
-    await page.getByLabel("Archive Project?").getByRole("button", { name: "Archive" }).click();
+    await page.getByRole("dialog", { name: "Archive Project?" }).getByRole("button", { name: "Archive" }).click();
 
     // Project should no longer be in sidebar
     await expect(page.getByText("archive-test")).not.toBeVisible({ timeout: 5_000 });
@@ -269,14 +258,9 @@ test.describe("Projects", () => {
     const page = appPage;
     await createAndSelectProject(page, "env-edit-test");
 
-    // Click pencil to edit environment
-    await page.locator('[data-testid="edit-env-button"]').click();
-
-    // Select dropdown should appear
     const envSelect = page.locator('[data-testid="edit-env-select"]');
+    await page.locator('[data-testid="edit-env-button"]').click();
     await expect(envSelect).toBeVisible();
-
-    // Select an environment
     await envSelect.selectOption("test-local");
 
     // Environment name should now be displayed

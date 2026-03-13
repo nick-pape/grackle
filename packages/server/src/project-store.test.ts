@@ -120,7 +120,6 @@ describe("project-store", () => {
 
   it("updateProject bumps updatedAt", () => {
     projectStore.createProject("p1", "Name", "", "", "");
-    const before = projectStore.getProject("p1")!.updatedAt;
     // SQLite datetime('now') has second resolution, so the timestamp
     // should at least not be empty
     const updated = projectStore.updateProject("p1", { name: "Changed" });

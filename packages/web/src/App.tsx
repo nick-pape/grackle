@@ -42,7 +42,12 @@ function AppContent(): JSX.Element {
         <Sidebar viewMode={viewMode} setViewMode={setViewMode} />
         <div className={styles.main}>
           <SessionPanel
-            key={viewMode.kind === "task" ? viewMode.taskId : viewMode.kind === "session" ? viewMode.sessionId : viewMode.kind}
+            key={
+              viewMode.kind === "task" ? viewMode.taskId
+              : viewMode.kind === "session" ? viewMode.sessionId
+              : viewMode.kind === "project" ? viewMode.projectId
+              : viewMode.kind
+            }
             viewMode={viewMode}
             setViewMode={setViewMode}
           />

@@ -1,11 +1,16 @@
 {
   "changes": [
     {
-      "comment": "Add UpdateProject RPC and project detail view with inline editing",
+      "comment": "Add the UpdateProject RPC and project detail view inline editing flow.",
       "type": "patch",
+      "packageName": "@grackle-ai/common"
+    },
+    {
+      "comment": "No CLI changes; change file added to satisfy rush change verification after merging main.",
+      "type": "none",
       "packageName": "@grackle-ai/cli"
     }
   ],
-  "packageName": "@grackle-ai/cli",
+  "packageName": "@grackle-ai/common",
   "email": "leoendalekachew@gmail.com"
 }
