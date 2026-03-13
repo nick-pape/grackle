@@ -59,7 +59,7 @@ function EventOverflowBanner({ eventsDropped }: { eventsDropped: number }): JSX.
     return <></>;
   }
   return (
-    <div className={styles.eventOverflowWarning}>
+    <div className={styles.eventOverflowWarning} role="alert">
       ⚠ {eventsDropped.toLocaleString()} older event{eventsDropped === 1 ? "" : "s"} were dropped — only the most recent 5,000 are shown. Full history is available in the session log.
     </div>
   );
