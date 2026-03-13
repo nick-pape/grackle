@@ -2,6 +2,41 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.15.0",
+      "tag": "@grackle-ai/cli_v0.15.0",
+      "date": "Fri, 13 Mar 2026 00:56:54 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Implements the Persona system foundation — proto definitions (#168), database schema + store (#170), and gRPC/WebSocket service handlers with spawn integration (#171). Personas are reusable agent templates containing system prompt, runtime/model config, tool config, and MCP server definitions."
+          }
+        ],
+        "none": [
+          {
+            "comment": "No publishable changes"
+          },
+          {
+            "comment": "No API changes (merge commit false positive)"
+          },
+          {
+            "comment": "placeholder"
+          },
+          {
+            "comment": "No CLI changes — merge commit false positive"
+          },
+          {
+            "comment": "Merge commit false positive — no actual CLI changes"
+          },
+          {
+            "comment": "No API changes (merge commit false positive)"
+          },
+          {
+            "comment": "No publishable changes (merge commit false positive)"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.14.10",
       "tag": "@grackle-ai/cli_v0.14.10",
       "date": "Thu, 12 Mar 2026 17:36:37 GMT",
