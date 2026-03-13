@@ -1,6 +1,20 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Fri, 13 Mar 2026 00:56:54 GMT and should not be manually modified.
+This log was last generated on Fri, 13 Mar 2026 05:32:15 GMT and should not be manually modified.
+
+## 0.15.1
+Fri, 13 Mar 2026 05:32:15 GMT
+
+### Patches
+
+- Kill active sessions before task deletion in WS and gRPC handlers
+
+### Updates
+
+- Persona CLI commands (`persona list/create/show/edit/delete`), `--persona` flag on `spawn`, `task create`, and `task start`
+- placeholder
+- No CLI changes — merge commit false positive
+- placeholder
 
 ## 0.15.0
 Fri, 13 Mar 2026 00:56:54 GMT
