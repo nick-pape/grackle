@@ -1,4 +1,5 @@
 import { test, expect } from "./fixtures.js";
+import { getNewChatRuntimeSelect } from "./helpers.js";
 
 test.describe("Session Lifecycle (stub runtime)", () => {
   test("full stub session flow", async ({ appPage }) => {
@@ -16,7 +17,7 @@ test.describe("Session Lifecycle (stub runtime)", () => {
     await expect(goButton).toBeVisible();
 
     // Runtime selector has options
-    const runtimeSelect = page.locator("select");
+    const runtimeSelect = getNewChatRuntimeSelect(page);
     await expect(runtimeSelect).toBeVisible();
     const options = runtimeSelect.locator("option");
     await expect(options).toHaveCount(4);

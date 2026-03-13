@@ -16,12 +16,14 @@ interface Props {
 interface RuntimeSelectorProps {
   value: string;
   onChange: (value: string) => void;
+  testId?: string;
 }
 
 /** Dropdown for selecting the session runtime. */
-function RuntimeSelector({ value, onChange }: RuntimeSelectorProps): JSX.Element {
+function RuntimeSelector({ value, onChange, testId }: RuntimeSelectorProps): JSX.Element {
   return (
     <select
+      data-testid={testId}
       value={value}
       onChange={(e) => onChange(e.target.value)}
       className={styles.select}
@@ -242,7 +244,7 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
             <option value="docker">docker</option>
             <option value="codespace">codespace</option>
           </select>
-          <RuntimeSelector value={envRuntime} onChange={setEnvRuntime} />
+          <RuntimeSelector value={envRuntime} onChange={setEnvRuntime} testId="new-environment-runtime-select" />
           <button
             onClick={handleAddEnvironment}
             disabled={!isEnvValid()}
@@ -609,7 +611,7 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
           autoFocus
           className={styles.input}
         />
-        <RuntimeSelector value={runtime} onChange={setRuntime} />
+        <RuntimeSelector value={runtime} onChange={setRuntime} testId="new-chat-runtime-select" />
         <select
           value={spawnPersonaId}
           onChange={(e) => handleSpawnPersonaChange(e.target.value)}
