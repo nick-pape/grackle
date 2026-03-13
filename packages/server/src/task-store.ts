@@ -159,9 +159,10 @@ export function markTaskCompleted(
     .run();
 }
 
-/** Delete a task by ID. */
-export function deleteTask(id: string): void {
-  db.delete(tasks).where(eq(tasks.id, id)).run();
+/** Delete a task by ID. Returns the number of rows affected. */
+export function deleteTask(id: string): number {
+  const result = db.delete(tasks).where(eq(tasks.id, id)).run();
+  return result.changes;
 }
 
 /** Return all pending tasks whose dependencies are fully met. */

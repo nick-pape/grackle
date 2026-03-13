@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type JSX } from "react";
+import { useEffect, useMemo, useRef, useState, type JSX } from "react";
 import { useGrackle } from "../../context/GrackleContext.js";
 import type { ViewMode } from "../../App.js";
 import type { TaskData } from "../../hooks/useGrackleSocket.js";
@@ -185,6 +185,8 @@ export function ProjectList({ viewMode, setViewMode }: Props): JSX.Element {
 
   const selectedProjectId = viewMode.kind === "project" ? viewMode.projectId : undefined;
   const selectedTaskId = viewMode.kind === "task" ? viewMode.taskId : undefined;
+  const expandedRef = useRef(expanded);
+  expandedRef.current = expanded;
   const taskStatusById = useMemo(
     () => new Map(tasks.map((t) => [t.id, t.status])),
     [tasks],
@@ -239,13 +241,15 @@ export function ProjectList({ viewMode, setViewMode }: Props): JSX.Element {
     }
   }, [tasks, manuallyCollapsed]);
 
-  // Auto-expand a project when selected
+  // Auto-expand a project when selected via programmatic navigation (e.g. after
+  // task deletion). Uses expandedRef so that manual collapse doesn't re-trigger
+  // auto-expansion — the effect only fires when selectedProjectId changes.
   useEffect(() => {
-    if (selectedProjectId && !expanded.has(selectedProjectId)) {
+    if (selectedProjectId && !expandedRef.current.has(selectedProjectId)) {
       setExpanded((prev) => new Set(prev).add(selectedProjectId));
       loadTasks(selectedProjectId);
     }
-  }, [selectedProjectId, expanded, loadTasks]);
+  }, [selectedProjectId, loadTasks]);
 
   const handleCreateProject = (): void => {
     if (!newProjectName.trim() || projectCreating) {
@@ -324,8 +328,16 @@ export function ProjectList({ viewMode, setViewMode }: Props): JSX.Element {
           <div key={project.id}>
             <div
               onClick={() => {
-                toggleExpand(project.id);
-                setViewMode({ kind: "project", projectId: project.id });
+                if (isSelected) {
+                  // Already viewing this project — toggle expand/collapse
+                  toggleExpand(project.id);
+                } else {
+                  // Navigate to project — ensure expanded
+                  if (!isExpanded) {
+                    toggleExpand(project.id);
+                  }
+                  setViewMode({ kind: "project", projectId: project.id });
+                }
               }}
               className={`${styles.projectRow} ${isSelected ? styles.selected : ""}`}
             >
