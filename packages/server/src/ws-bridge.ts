@@ -383,6 +383,18 @@ async function handleMessage(
         return;
       }
 
+      // Record the user's input as a session event before forwarding to the agent
+      const userInputEvent = create(grackle.SessionEventSchema, {
+        sessionId,
+        type: grackle.EventType.USER_INPUT,
+        timestamp: new Date().toISOString(),
+        content: text,
+      });
+      if (session.logPath) {
+        logWriter.writeEvent(session.logPath, userInputEvent);
+      }
+      streamHub.publish(userInputEvent);
+
       await conn.client.sendInput(
         create(powerline.InputMessageSchema, { sessionId, text })
       );
