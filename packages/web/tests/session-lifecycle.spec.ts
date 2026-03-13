@@ -12,7 +12,7 @@ test.describe("Session Lifecycle (stub runtime)", () => {
     await page.locator('button[title="New chat"]').click();
 
     // UnifiedBar shows prompt input, runtime selector, and Go button
-    await expect(page.locator("text=new chat")).toBeVisible();
+    await expect(page.getByText("new chat", { exact: true })).toBeVisible();
     const goButton = page.locator("button", { hasText: "Go" });
     await expect(goButton).toBeVisible();
 
@@ -39,6 +39,12 @@ test.describe("Session Lifecycle (stub runtime)", () => {
     // Session spawns — events start streaming in
     // System event: "Stub runtime initialized"
     await expect(page.locator("text=Stub runtime initialized")).toBeVisible({ timeout: 10_000 });
+
+    // Session breadcrumb should appear once the spawned session is selected.
+    const breadcrumbs = page.getByTestId("breadcrumbs");
+    await expect(breadcrumbs).toBeVisible({ timeout: 10_000 });
+    await expect(breadcrumbs).toContainText("Home");
+    await expect(breadcrumbs).toContainText("Session ");
 
     // Echo event: "Echo: hello world"
     await expect(page.locator("text=Echo: hello world")).toBeVisible();

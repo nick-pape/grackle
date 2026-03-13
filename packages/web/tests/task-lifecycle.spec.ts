@@ -23,7 +23,7 @@ test.describe("Task Lifecycle (stub runtime)", () => {
     await page.getByText("test task", { exact: true }).click();
     await expect(page.locator('[data-testid="task-status"]')).toContainText("pending");
     // Overview tab should be active for pending task
-    await expect(page.locator("button", { hasText: "Overview" })).toHaveAttribute("class", /active/);
+    await expect(page.getByRole("tab", { name: "Overview", exact: true })).toHaveAttribute("class", /active/);
 
     // --- Step 4: Monkey-patch WS to force stub runtime on start_task ---
     await page.evaluate(() => {
@@ -43,7 +43,7 @@ test.describe("Task Lifecycle (stub runtime)", () => {
     });
 
     // --- Step 5: Click "Start" ---
-    await page.locator("button", { hasText: "Start" }).click();
+    await page.getByRole("button", { name: "Start", exact: true }).click();
 
     // --- Step 6: Verify stub runtime events stream in ---
     // System event: "Stub runtime initialized"
@@ -59,20 +59,20 @@ test.describe("Task Lifecycle (stub runtime)", () => {
     const inputField = page.locator('input[placeholder="Type a message..."]');
     await expect(inputField).toBeVisible({ timeout: 15_000 });
     await inputField.fill("continue work");
-    await page.locator("button", { hasText: "Send" }).click();
+    await page.getByRole("button", { name: "Send", exact: true }).click();
 
     // --- Step 8: Session completes -> task auto-moves to review ---
     // The stub runtime completes quickly after input, auto-moving to review.
     // The SessionPanel auto-switches to the Stream tab on review, so we check
     // for the Approve button rather than stream content.
-    await expect(page.locator("button", { hasText: "Approve" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("button", { name: "Approve", exact: true })).toBeVisible({ timeout: 15_000 });
 
     // UnifiedBar shows Approve and Reject buttons
-    await expect(page.locator("button", { hasText: "Approve" })).toBeVisible({ timeout: 5_000 });
-    await expect(page.locator("button", { hasText: "Reject" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Approve", exact: true })).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByRole("button", { name: "Reject", exact: true })).toBeVisible();
 
     // --- Step 9: Approve the task ---
-    await page.locator("button", { hasText: "Approve" }).click();
+    await page.getByRole("button", { name: "Approve", exact: true }).click();
 
     // Task status changes to done
     await expect(page.getByText("Task completed")).toBeVisible({ timeout: 5_000 });
@@ -120,31 +120,31 @@ test.describe("Task Lifecycle (stub runtime)", () => {
     });
 
     // Start task
-    await page.locator("button", { hasText: "Start" }).click();
+    await page.getByRole("button", { name: "Start", exact: true }).click();
 
     // Wait for waiting_input and send input to complete the stub session
     const inputField = page.locator('input[placeholder="Type a message..."]');
     await expect(inputField).toBeVisible({ timeout: 15_000 });
     await inputField.fill("done");
-    await page.locator("button", { hasText: "Send" }).click();
+    await page.getByRole("button", { name: "Send", exact: true }).click();
 
     // Wait for review state
-    await expect(page.locator("button", { hasText: "Approve" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("button", { name: "Approve", exact: true })).toBeVisible({ timeout: 15_000 });
 
     // Type rejection notes and click Reject
     const rejectInput = page.locator('input[placeholder="Rejection notes..."]');
     await rejectInput.fill("needs more tests");
-    await page.locator("button", { hasText: "Reject" }).click();
+    await page.getByRole("button", { name: "Reject", exact: true }).click();
 
     // Task auto-retries: should go to in_progress and stream events for the new session.
     // The stub runtime will reach waiting_input again — send input to complete.
     const retryInput = page.locator('input[placeholder="Type a message..."]');
     await expect(retryInput).toBeVisible({ timeout: 15_000 });
     await retryInput.fill("continue");
-    await page.locator("button", { hasText: "Send" }).click();
+    await page.getByRole("button", { name: "Send", exact: true }).click();
 
     // Task should return to review after auto-retry completes
-    await expect(page.locator("button", { hasText: "Approve" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("button", { name: "Approve", exact: true })).toBeVisible({ timeout: 15_000 });
 
     // Verify no task failure
     await expect(page.getByText("Task failed")).not.toBeVisible();

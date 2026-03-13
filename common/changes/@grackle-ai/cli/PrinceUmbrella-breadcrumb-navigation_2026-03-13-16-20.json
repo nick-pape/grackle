@@ -1,0 +1,10 @@
+{
+  "changes": [
+    {
+      "packageName": "@grackle-ai/cli",
+      "comment": "Add breadcrumbs",
+      "type": "none"
+    }
+  ],
+  "packageName": "@grackle-ai/cli"
+}

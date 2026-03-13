@@ -6,7 +6,7 @@ test.describe("Copilot Runtime Option", () => {
     // Environments are now in Settings — navigate there via the gear button
     await appPage.locator('button[title="Settings"]').click();
     await appPage.locator('button[title="New chat"]').click();
-    await expect(appPage.locator("text=new chat")).toBeVisible();
+    await expect(appPage.getByText("new chat", { exact: true })).toBeVisible();
   });
 
   test("copilot option appears in runtime selector", async ({ appPage }) => {
