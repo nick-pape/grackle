@@ -1,29 +1,44 @@
 import { execSync } from "node:child_process";
 import { logger } from "../logger.js";
 
-/** Timeout in seconds for the PR readiness Stop hook. */
-const HOOK_TIMEOUT_SECONDS: number = 120;
+/** Timeout in seconds for the PR readiness Stop hook. Allows for multiple sequential gh CLI calls. */
+const HOOK_TIMEOUT_SECONDS: number = 180;
+
+/** Timeout in milliseconds for individual gh CLI commands. */
+const EXEC_TIMEOUT_MS: number = 30_000;
 
 /**
  * Check whether the current branch has a PR that is ready (no merge conflicts,
  * CI passing, no unresolved Copilot threads).
  *
+ * Fail-closed: if any check cannot be performed (gh not available, auth failure,
+ * network issue), the hook blocks with actionable instructions.
+ *
  * Returns `{ ready: true }` if there is no PR or the PR is ready.
  * Returns `{ ready: false, reason: string }` with actionable instructions otherwise.
  */
-function checkPrReadiness(cwd?: string): { ready: boolean; reason?: string } {
-  const execOpts = { encoding: "utf-8" as const, cwd, timeout: 30_000 };
+export function checkPrReadiness(cwd?: string): { ready: boolean; reason?: string } {
+  const execOpts = { encoding: "utf-8" as const, cwd, timeout: EXEC_TIMEOUT_MS };
 
-  // Check if a PR exists on this branch
+  // Check if a PR exists on this branch. Distinguish "no PR" from "query failed".
   let prNumber: string;
   try {
     prNumber = execSync(
       "gh pr view --json number --jq .number",
       execOpts,
     ).trim();
-  } catch {
-    // No PR on this branch — allow stop
-    return { ready: true };
+  } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    // gh pr view exits non-zero for both "no PR" and real errors.
+    // "no pull requests found" means there's genuinely no PR — allow stop.
+    if (errorMsg.toLowerCase().includes("no pull requests found") || errorMsg.toLowerCase().includes("no open pull requests")) {
+      return { ready: true };
+    }
+    // Any other error (auth failure, network, gh not installed) — fail closed.
+    return {
+      ready: false,
+      reason: `Could not check PR status: ${errorMsg}. Ensure gh CLI is installed and authenticated.`,
+    };
   }
 
   if (!prNumber) {
@@ -32,7 +47,7 @@ function checkPrReadiness(cwd?: string): { ready: boolean; reason?: string } {
 
   const issues: string[] = [];
 
-  // Check merge conflicts
+  // Check merge conflicts — fail closed on error
   try {
     const mergeable = execSync(
       `gh pr view ${prNumber} --json mergeable --jq .mergeable`,
@@ -45,12 +60,15 @@ function checkPrReadiness(cwd?: string): { ready: boolean; reason?: string } {
     }
   } catch (err) {
     logger.warn({ err }, "Failed to check PR mergeable state");
+    issues.push(
+      `Could not check merge status for PR #${prNumber}. Ensure gh is authenticated and retry.`,
+    );
   }
 
-  // Check CI status
+  // Check CI status — fail closed on error
   try {
     const ciState = execSync(
-      `gh pr view ${prNumber} --json statusCheckRollup --jq '[.statusCheckRollup[] | .conclusion // .status] | if any(. == "FAILURE" or . == "ERROR" or . == "TIMED_OUT") then "FAILING" elif any(. == "PENDING" or . == "QUEUED" or . == "IN_PROGRESS" or . == "EXPECTED" or . == null) then "PENDING" else "PASSING" end'`,
+      `gh pr view ${prNumber} --json statusCheckRollup --jq '[.statusCheckRollup[] | .conclusion // .status] | if any(. == "FAILURE" or . == "ERROR" or . == "TIMED_OUT" or . == "CANCELLED" or . == "ACTION_REQUIRED" or . == "STALE" or . == "STARTUP_FAILURE") then "FAILING" elif any(. == "PENDING" or . == "QUEUED" or . == "IN_PROGRESS" or . == "EXPECTED" or . == null) then "PENDING" else "PASSING" end'`,
       execOpts,
     ).trim();
     if (ciState === "FAILING") {
@@ -64,9 +82,12 @@ function checkPrReadiness(cwd?: string): { ready: boolean; reason?: string } {
     }
   } catch (err) {
     logger.warn({ err }, "Failed to check PR CI status");
+    issues.push(
+      `Could not check CI status for PR #${prNumber}. Ensure gh is authenticated and retry.`,
+    );
   }
 
-  // Check unresolved Copilot review threads
+  // Check unresolved Copilot review threads — fail closed on error
   try {
     const owner = execSync(
       "gh repo view --json owner --jq .owner.login",
@@ -88,6 +109,9 @@ function checkPrReadiness(cwd?: string): { ready: boolean; reason?: string } {
     }
   } catch (err) {
     logger.warn({ err }, "Failed to check Copilot review threads");
+    issues.push(
+      `Could not check Copilot review threads for PR #${prNumber}. Ensure gh has the required scopes and retry.`,
+    );
   }
 
   if (issues.length > 0) {
@@ -103,7 +127,8 @@ function checkPrReadiness(cwd?: string): { ready: boolean; reason?: string } {
  * if the current branch has a PR that isn't ready to merge.
  *
  * Returns a hooks object suitable for passing to the Claude Agent SDK's
- * `options.hooks` field.
+ * `options.hooks` field. Only the Claude Code runtime supports SDK hooks;
+ * other runtimes (Codex, Copilot) ignore the hooks option.
  */
 export function buildPrReadinessHook(cwd?: string): Record<string, unknown> {
   return {
