@@ -4,8 +4,8 @@ test.describe("Session Lifecycle (stub runtime)", () => {
   test("full stub session flow", async ({ appPage }) => {
     const page = appPage;
 
-    // Stage2 sidebar defaults to "Projects" tab — switch to "Environments"
-    await page.locator("button", { hasText: "Environments" }).click();
+    // Environments are now in Settings — navigate there via the gear button
+    await page.locator('button[title="Settings"]').click();
 
     // Click "+" on the environment card to enter new_chat mode
     await page.locator('button[title="New chat"]').click();
