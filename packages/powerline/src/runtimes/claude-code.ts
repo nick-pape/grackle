@@ -2,6 +2,7 @@ import type { AgentEvent, AgentSession } from "./runtime.js";
 import { BaseAgentSession } from "./base-session.js";
 import { BaseAgentRuntime } from "./base-runtime.js";
 import { resolveWorkingDirectory, resolveMcpServers, buildFindingEvent, buildSubtaskCreateEvent } from "./runtime-utils.js";
+import { buildPrReadinessHook } from "./pr-readiness-hook.js";
 
 // Dynamic import — try @anthropic-ai/claude-agent-sdk first, then @anthropic-ai/claude-code
 type QueryFn = (opts: Record<string, unknown>) => Promise<unknown>;
@@ -155,10 +156,11 @@ class ClaudeCodeSession extends BaseAgentSession {
       sdkOptions.maxTurns = this.maxTurns;
     }
 
-    // Pass SDK hooks (e.g. Stop hook for PR readiness enforcement)
-    if (this.hooks) {
-      sdkOptions.hooks = this.hooks;
-    }
+    // Build PR readiness Stop hook and merge with any custom hooks.
+    // The Stop hook blocks agents from stopping if the current branch has a
+    // PR with merge conflicts, failing CI, or unresolved Copilot threads.
+    const prHook = buildPrReadinessHook(cwd as string | undefined);
+    sdkOptions.hooks = { ...prHook, ...this.hooks };
 
     this.cachedSdkOptions = sdkOptions;
   }
