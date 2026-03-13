@@ -183,10 +183,11 @@ export function registerTaskCommands(program: Command): void {
     .option("--label <label>", "Filter issues by label name")
     .option("--state <state>", "Issue state to fetch", "open")
     .option("--env <env-id>", "Environment ID to assign to created tasks")
+    .option("--no-include-comments", "Exclude issue comments from imported task descriptions")
     .action(
       async (
         projectId: string,
-        opts: { repo: string; label?: string; state: string; env?: string },
+        opts: { repo: string; label?: string; state: string; env?: string; includeComments: boolean },
       ) => {
         const normalizedState = (opts.state ?? "").trim().toLowerCase();
         if (normalizedState !== "open" && normalizedState !== "closed") {
@@ -205,6 +206,7 @@ export function registerTaskCommands(program: Command): void {
           label: opts.label,
           state: issueStateToEnum(normalizedState),
           environmentId: opts.env,
+          includeComments: opts.includeComments,
         });
         const parts = [`Imported ${chalk.green(res.imported)} tasks`];
         if (res.linked > 0) {

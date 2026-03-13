@@ -1096,12 +1096,15 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       }
       const stateStr =
         req.state === grackle.IssueState.CLOSED ? "closed" : "open";
+      // include_comments defaults to true when not set (opt-out behaviour)
+      const includeComments = req.includeComments ?? true;
       const result = await executeGitHubImport(
         req.projectId,
         req.repo,
         stateStr,
         req.label ?? undefined,
         req.environmentId ?? undefined,
+        includeComments,
       );
 
       return create(grackle.ImportGitHubIssuesResponseSchema, result);
