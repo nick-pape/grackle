@@ -41,8 +41,9 @@ describe("buildTaskSystemContext", () => {
     expect(result).not.toContain("mcp__grackle__create_subtask");
   });
 
-  it("always includes the IMPORTANT finding reminder", () => {
+  it("always includes the completion checklist", () => {
     const result = buildTaskSystemContext("Task", "desc", "", true);
-    expect(result).toContain("IMPORTANT: When you complete your task");
+    expect(result).toContain("## Completion Checklist");
+    expect(result).toContain("IMPORTANT: Do NOT stop at");
   });
 });

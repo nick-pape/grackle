@@ -25,7 +25,6 @@ import type {
   SessionEvent,
   FindingData,
   TaskData,
-  TaskDiffData,
   Project,
   TokenInfo,
 } from "../hooks/useGrackleSocket.js";
@@ -37,7 +36,6 @@ import {
   MOCK_TASKS,
   MOCK_FINDINGS,
   MOCK_TOKENS,
-  MOCK_TASK_DIFF,
   MOCK_STREAM_SCENARIOS,
   type MockStreamStep,
 } from "./mockData.js";
@@ -46,9 +44,6 @@ import {
 
 /** Delay before the "waiting_input" status is set after the last pre-pause step. */
 const WAITING_INPUT_DELAY_MS: number = 400;
-
-/** Simulated network delay for loadTaskDiff. */
-const LOAD_DIFF_DELAY_MS: number = 600;
 
 // ─── Props ──────────────────────────────────────────
 
@@ -72,7 +67,6 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
   const [tasks, setTasks] = useState<TaskData[]>(MOCK_TASKS);
   const [findings, setFindings] = useState<FindingData[]>(MOCK_FINDINGS);
   const [tokens, setTokens] = useState<TokenInfo[]>(MOCK_TOKENS);
-  const [taskDiff, setTaskDiff] = useState<TaskDiffData | undefined>(MOCK_TASK_DIFF);
 
   // ── Refs ──────────────────────────────────────────
   /** Auto-incrementing counter for generating unique mock IDs. */
@@ -714,30 +708,6 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
     [],
   );
 
-  /** Simulates async loading of task diff data with a short delay. */
-  const loadTaskDiff: UseGrackleSocketResult["loadTaskDiff"] = useCallback(
-    (taskId: string) => {
-      // eslint-disable-next-line no-console
-      console.log("[MockGrackle] loadTaskDiff", taskId);
-
-      setTaskDiff(undefined);
-
-      const handle = setTimeout(() => {
-        timersRef.current.delete(handle);
-        if (MOCK_TASK_DIFF.taskId === taskId) {
-          setTaskDiff(MOCK_TASK_DIFF);
-        } else {
-          setTaskDiff({
-            taskId,
-            error: "No diff available for this task in mock mode.",
-          });
-        }
-      }, LOAD_DIFF_DELAY_MS);
-      timersRef.current.add(handle);
-    },
-    [],
-  );
-
   // ── Token methods ──────────────────────────────────
 
   /** No-op — tokens are already in state from initial load. */
@@ -787,12 +757,12 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       environments: MOCK_ENVIRONMENTS,
       sessions,
       events,
+      eventsDropped: 0,
       lastSpawnedId,
       projects,
       tasks,
       findings,
       tokens,
-      taskDiff,
 
       // Actions
       spawn,
@@ -811,7 +781,6 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       deleteTask,
       loadFindings,
       postFinding,
-      loadTaskDiff,
       addEnvironment,
       loadTokens,
       setToken: mockSetToken,
@@ -825,6 +794,8 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       codespaceCreating: false,
       listCodespaces: () => {},
       createCodespace: () => {},
+      projectCreating: false,
+      taskStartingId: undefined,
     }),
     [
       sessions,
@@ -834,7 +805,6 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       tasks,
       findings,
       tokens,
-      taskDiff,
       spawn,
       sendInput,
       kill,
@@ -851,7 +821,6 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       deleteTask,
       loadFindings,
       postFinding,
-      loadTaskDiff,
       addEnvironment,
       loadTokens,
       mockSetToken,

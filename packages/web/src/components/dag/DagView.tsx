@@ -63,8 +63,16 @@ export function DagView({ projectId, setViewMode }: Props): JSX.Element {
 
   if (projectTasks.length === 0) {
     return (
-      <div className={styles.emptyDag}>
-        No tasks to visualize. Create tasks to see the dependency graph.
+      <div className={styles.emptyCta}>
+        <button
+          className={styles.ctaButton}
+          onClick={() => setViewMode({ kind: "new_task", projectId })}
+        >
+          Create Task
+        </button>
+        <div className={styles.ctaDescription}>
+          Create tasks to see the dependency graph
+        </div>
       </div>
     );
   }

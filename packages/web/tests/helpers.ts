@@ -1,4 +1,4 @@
-import type { Locator, Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type WsPayload = Record<string, any>;
@@ -128,14 +128,14 @@ export async function createTask(
   envName?: string,
 ): Promise<void> {
   // Click "New task" button (uses stopPropagation, doesn't toggle expansion)
-  await page.getByText(projectName).locator("..").locator('button[title="New task"]').click();
+  await page.getByText(projectName).locator("..").locator('button[title="New task"]').first().click();
 
   // Fill in task details
   await page.locator('input[placeholder="Task title..."]').fill(title);
   if (envName) {
     await page.locator("select").selectOption(envName);
   }
-  await page.locator("button", { hasText: "Create" }).click();
+  await page.locator("button", { hasText: /^Create$/ }).click();
 
   // After "Create", viewMode goes to project → auto-expand. Wait for task in sidebar.
   // Use .first() because AnimatePresence may briefly keep an exiting copy alongside the
@@ -282,25 +282,4 @@ export async function createTaskViaWs(
     "task_created",
   );
   return response.payload?.task as WsPayload;
-}
-
-/**
- * Build a locator that matches the DiffViewer in any rendered state.
- *
- * The DiffViewer component renders one of four states, each identifiable by
- * its CSS module class:
- *  - Loading:  `.emptyState` containing "Loading diff..."
- *  - Empty:    `.emptyState` containing "No changes on branch ..."
- *  - Error:    `.errorState` containing the error message
- *  - Content:  `.container` with a `.statsBar` and `.diffContent`
- *
- * CSS module hashes preserve the original class name (e.g. `_emptyState_1e9es_7`),
- * so `[class*="<name>"]` attribute selectors reliably match them.
- */
-export function diffViewerLocator(page: Page): Locator {
-  return page.locator('[class*="emptyState"]').or(
-    page.locator('[class*="errorState"]'),
-  ).or(
-    page.locator('[class*="statsBar"]'),
-  );
 }

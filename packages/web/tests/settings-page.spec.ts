@@ -77,12 +77,14 @@ test.describe("Settings Page", () => {
     // Wait for token to appear
     await expect(page.getByText("ui-delete-test")).toBeVisible({ timeout: 5_000 });
 
-    // Accept the confirm dialog
-    page.on("dialog", (dialog) => dialog.accept());
-
     // Click delete button for this token
     const tokenRow = page.getByText("ui-delete-test").locator("..");
     await tokenRow.locator('button[title="Delete ui-delete-test"]').click();
+
+    // Confirm via the in-app ConfirmDialog
+    await expect(page.getByText("Delete Token?")).toBeVisible({ timeout: 5_000 });
+    await page.locator('[role="dialog"] button', { hasText: "Delete" }).click();
+    await expect(page.getByText("Delete Token?")).not.toBeVisible({ timeout: 5_000 });
 
     // Token should disappear
     await expect(page.getByText("ui-delete-test")).not.toBeVisible({ timeout: 5_000 });
