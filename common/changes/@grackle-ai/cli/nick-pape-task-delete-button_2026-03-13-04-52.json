@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Kill active sessions before task deletion in WS and gRPC handlers",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
