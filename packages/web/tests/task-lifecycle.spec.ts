@@ -13,10 +13,10 @@ test.describe("Task Lifecycle (stub runtime)", () => {
 
     // --- Step 2: Create a task with test-local environment ---
     await page.getByText("lifecycle-proj").click();
-    await page.getByText("lifecycle-proj").locator("..").locator('button[title="New task"]').click();
+    await page.getByText("lifecycle-proj").locator("..").locator('button[title="New task"]').first().click();
     await page.locator('input[placeholder="Task title..."]').fill("test task");
     await page.locator("select").selectOption("test-local");
-    await page.locator("button", { hasText: "Create" }).click();
+    await page.locator("button", { hasText: /^Create$/ }).click();
     await expect(page.getByText("test task")).toBeVisible({ timeout: 5_000 });
 
     // --- Step 3: Navigate to task view ---
@@ -64,7 +64,7 @@ test.describe("Task Lifecycle (stub runtime)", () => {
 
     // --- Step 8: Session completes -> task auto-moves to review ---
     // The stub runtime completes quickly after input, auto-moving to review.
-    // The SessionPanel auto-switches to the Diff tab on review, so we check
+    // The SessionPanel auto-switches to the Stream tab on review, so we check
     // for the Approve button rather than stream content.
     await expect(page.locator("button", { hasText: "Approve" })).toBeVisible({ timeout: 15_000 });
 
@@ -93,10 +93,10 @@ test.describe("Task Lifecycle (stub runtime)", () => {
     await expect(page.getByText("reject-proj")).toBeVisible({ timeout: 5_000 });
 
     await page.getByText("reject-proj").click();
-    await page.getByText("reject-proj").locator("..").locator('button[title="New task"]').click();
+    await page.getByText("reject-proj").locator("..").locator('button[title="New task"]').first().click();
     await page.locator('input[placeholder="Task title..."]').fill("reject task");
     await page.locator("select").selectOption("test-local");
-    await page.locator("button", { hasText: "Create" }).click();
+    await page.locator("button", { hasText: /^Create$/ }).click();
     await expect(page.getByText("reject task")).toBeVisible({ timeout: 5_000 });
 
     // Navigate to task
