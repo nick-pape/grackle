@@ -239,15 +239,20 @@ test.describe("Session Accordion in Environment Card", () => {
     await expect(page.getByRole("heading", { name: "Settings" })).not.toBeVisible({ timeout: 5_000 });
   });
 
-  test("environment with no sessions shows idle label, not summary row", async ({ appPage }) => {
-    const page = appPage;
+  test("environment with no sessions shows idle label, not summary row", async ({ page }) => {
+    await installWsTracker(page);
+    await page.goto("/");
+    await page.waitForFunction(() => document.body.innerText.includes("Connected"), { timeout: 10_000 });
 
     // Open Settings
     await page.locator('button[title="Settings"]').click();
     await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible({ timeout: 5_000 });
 
-    // test-local has no sessions by default — should show (idle) not a summary row
-    await expect(page.getByText("(idle)")).toBeVisible();
+    // Inject empty sessions list to ensure test-local has zero sessions
+    await injectWsMessage(page, { type: "sessions", payload: { sessions: [] } });
+
+    // test-local should show (idle) when it has no sessions
+    await expect(page.getByText("(idle)")).toBeVisible({ timeout: 5_000 });
 
     // No session summary row should exist
     await expect(page.locator('[data-testid="session-summary-row"]')).not.toBeVisible();
