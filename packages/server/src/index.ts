@@ -118,6 +118,7 @@ function main(): void {
 
   // --- gRPC server (HTTP/2) ---
   const grpcPort = parseInt(process.env.GRACKLE_PORT || String(DEFAULT_SERVER_PORT), 10);
+  const bindHost = process.env.GRACKLE_HOST || "127.0.0.1";
   const grpcHandler = connectNodeAdapter({
     routes: registerGrackleRoutes,
     interceptors: [
@@ -143,8 +144,8 @@ function main(): void {
     shutdown().catch(() => { process.exit(1); });
   });
 
-  grpcServer.listen(grpcPort, "127.0.0.1", () => {
-    logger.info({ port: grpcPort }, "gRPC server listening on http://127.0.0.1:%d", grpcPort);
+  grpcServer.listen(grpcPort, bindHost, () => {
+    logger.info({ port: grpcPort, host: bindHost }, "gRPC server listening on http://%s:%d", bindHost, grpcPort);
   });
 
   // --- Web + WebSocket server (HTTP/1.1) ---
@@ -163,8 +164,8 @@ function main(): void {
     shutdown().catch(() => { process.exit(1); });
   });
 
-  webServer.listen(webPort, "127.0.0.1", () => {
-    logger.info({ port: webPort }, "Web UI + WebSocket on http://127.0.0.1:%d", webPort);
+  webServer.listen(webPort, bindHost, () => {
+    logger.info({ port: webPort, host: bindHost }, "Web UI + WebSocket on http://%s:%d", bindHost, webPort);
   });
 
   // Graceful shutdown with a hard timeout so upgraded WS connections don't block exit.
