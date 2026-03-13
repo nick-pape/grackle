@@ -227,4 +227,16 @@ describe("persona-store", () => {
   it("returns empty list when no personas exist", () => {
     expect(personaStore.listPersonas()).toHaveLength(0);
   });
+
+  it("deleting a non-existent persona is a no-op", () => {
+    expect(() => personaStore.deletePersona("does-not-exist")).not.toThrow();
+  });
+
+  it("enforces unique name on update", () => {
+    personaStore.createPersona("p1", "Name A", "", "prompt", "{}", "", "", 0, "[]");
+    personaStore.createPersona("p2", "Name B", "", "prompt", "{}", "", "", 0, "[]");
+    expect(() => {
+      personaStore.updatePersona("p2", "Name A", "", "prompt", "{}", "", "", 0, "[]");
+    }).toThrow();
+  });
 });

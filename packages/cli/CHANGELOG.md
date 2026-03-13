@@ -1,6 +1,17 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Fri, 13 Mar 2026 08:26:43 GMT and should not be manually modified.
+This log was last generated on Fri, 13 Mar 2026 17:07:19 GMT and should not be manually modified.
+
+## 0.17.1
+Fri, 13 Mar 2026 17:07:19 GMT
+
+### Patches
+
+- Add --depends-on flag to task update CLI command
+
+### Updates
+
+- Address persona CLI UI gaps by adding missing tasks help and examples
 
 ## 0.17.0
 Fri, 13 Mar 2026 08:26:43 GMT

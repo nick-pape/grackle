@@ -47,7 +47,9 @@ export function registerTaskCommands(program: Command): void {
     .option("--persona <id-or-name>", "Persona to assign")
     .action(async (projectId: string, title: string, opts) => {
       const client = createGrackleClient();
-      const dependsOn = opts.dependsOn ? opts.dependsOn.split(",") : [];
+      const dependsOn = opts.dependsOn
+        ? opts.dependsOn.split(",").map((s: string) => s.trim()).filter(Boolean)
+        : [];
       const t = await client.createTask({
         projectId,
         title,
@@ -90,6 +92,7 @@ export function registerTaskCommands(program: Command): void {
       "Task status (pending, assigned, in_progress, waiting_input, review, done, failed)",
     )
     .option("--notes <text>", "Review notes")
+    .option("--depends-on <ids>", "Comma-separated dependency task IDs")
     .action(async (taskId: string, opts) => {
       const VALID_STATUSES = new Set([
         "pending",
@@ -113,6 +116,9 @@ export function registerTaskCommands(program: Command): void {
       }
 
       const client = createGrackleClient();
+      const dependsOn = opts.dependsOn
+        ? opts.dependsOn.split(",").map((s: string) => s.trim()).filter(Boolean)
+        : [];
       const t = await client.updateTask({
         id: taskId,
         title: opts.title || "",
@@ -122,6 +128,7 @@ export function registerTaskCommands(program: Command): void {
           ? taskStatusToEnum(String(opts.status).toLowerCase())
           : taskStatusToEnum(""),
         reviewNotes: opts.notes || "",
+        dependsOn,
       });
       console.log(
         `Updated: ${t.id} (${t.title}) status: ${taskStatusToString(t.status)} env: ${t.environmentId || "-"}`,

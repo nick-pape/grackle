@@ -525,12 +525,20 @@ async function handleMessage(
       const runtime = (msg.payload?.runtime as string) || "";
       const branch = (msg.payload?.branch as string) || "";
       const systemContext = (msg.payload?.systemContext as string) || "";
+      const spawnPersonaId = (msg.payload?.personaId as string) || "";
 
       if (!environmentId || !prompt) {
         sendWs(ws, {
           type: "error",
           payload: { message: "environmentId and prompt required" },
         });
+        return;
+      }
+
+      // Resolve persona if specified
+      const spawnPersona = spawnPersonaId ? personaStore.getPersona(spawnPersonaId) : undefined;
+      if (spawnPersonaId && !spawnPersona) {
+        sendWs(ws, { type: "error", payload: { message: `Persona not found: ${spawnPersonaId}` } });
         return;
       }
 
@@ -550,10 +558,16 @@ async function handleMessage(
       }
 
       const sessionId = uuid();
-      const sessionRuntime = runtime || env.defaultRuntime || DEFAULT_RUNTIME;
+      const sessionRuntime = runtime || spawnPersona?.runtime || env.defaultRuntime || DEFAULT_RUNTIME;
       const sessionModel =
-        model || process.env.GRACKLE_DEFAULT_MODEL || DEFAULT_MODEL;
+        model || spawnPersona?.model || process.env.GRACKLE_DEFAULT_MODEL || DEFAULT_MODEL;
+      const maxTurns = spawnPersona?.maxTurns || 0;
       const logPath = join(grackleHome, LOGS_DIR, sessionId);
+
+      let finalSystemContext = systemContext;
+      if (spawnPersona) {
+        finalSystemContext = spawnPersona.systemPrompt + (systemContext ? "\n\n" + systemContext : "");
+      }
 
       sessionStore.createSession(
         sessionId,
@@ -571,10 +585,10 @@ async function handleMessage(
         runtime: sessionRuntime,
         prompt,
         model: sessionModel,
-        maxTurns: 0,
+        maxTurns,
         branch,
         worktreeBasePath: branch ? "/workspace" : "",
-        systemContext,
+        systemContext: finalSystemContext,
       });
 
       processEventStream(conn.client.spawn(powerlineReq), {
