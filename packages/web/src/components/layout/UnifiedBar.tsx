@@ -1,5 +1,7 @@
 import { useState, useEffect, type FormEvent, type JSX } from "react";
 import { useGrackle } from "../../context/GrackleContext.js";
+import { useToast } from "../../context/ToastContext.js";
+import { Callout } from "../notifications/index.js";
 import type { ViewMode } from "../../App.js";
 import styles from "./UnifiedBar.module.scss";
 
@@ -42,6 +44,7 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
     createTask, startTask, approveTask, rejectTask, deleteTask, addEnvironment,
     codespaces, codespaceError, codespaceCreating, listCodespaces, createCodespace,
   } = useGrackle();
+  const { showToast } = useToast();
 
   const [text, setText] = useState("");
   const [runtime, setRuntime] = useState(
@@ -158,6 +161,7 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
         config.codespaceName = envCodespaceName.trim();
       }
       addEnvironment(envName.trim(), envAdapterType, config, envRuntime);
+      showToast(`Environment "${envName.trim()}" added`, "success");
       setEnvName("");
       setEnvAdapterType("local");
       setEnvRuntime("claude-code");
@@ -371,6 +375,7 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
         return;
       }
       createTask(viewMode.projectId, taskTitle.trim(), taskDesc, taskEnvId, undefined, viewMode.parentTaskId);
+      showToast(`Task "${taskTitle.trim()}" created`, "success");
       setTaskTitle("");
       setTaskDesc("");
       setTaskEnvId("");
@@ -429,22 +434,25 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
         .filter((t) => t && t.status !== "done")
         .map((t) => t!.title);
       return (
-        <div className={styles.bar}>
-          <span className={styles.statusBlocked}>
+        <div className={styles.barColumn}>
+          <Callout variant="warning">
             Blocked by: {blockerNames.join(", ")}
-          </span>
-          <button
-            onClick={() => {
-              if (!window.confirm(`Delete task "${task.title}"?`)) {
-                return;
-              }
-              deleteTask(task.id);
-              setViewMode({ kind: "project", projectId: task.projectId });
-            }}
-            className={styles.btnDanger}
-          >
-            Delete
-          </button>
+          </Callout>
+          <div className={styles.bar}>
+            <button
+              onClick={() => {
+                if (!window.confirm(`Delete task "${task.title}"?`)) {
+                  return;
+                }
+                deleteTask(task.id);
+                showToast(`Task "${task.title}" deleted`, "info");
+                setViewMode({ kind: "project", projectId: task.projectId });
+              }}
+              className={styles.btnDanger}
+            >
+              Delete
+            </button>
+          </div>
         </div>
       );
     }
@@ -454,7 +462,10 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
       return (
         <div className={styles.bar}>
           <button
-            onClick={() => startTask(task.id)}
+            onClick={() => {
+              startTask(task.id);
+              showToast(`Task "${task.title}" started`, "success");
+            }}
             className={styles.btnPrimary}
           >
             Start Task
@@ -465,6 +476,7 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
                 return;
               }
               deleteTask(task.id);
+              showToast(`Task "${task.title}" deleted`, "info");
               setViewMode({ kind: "project", projectId: task.projectId });
             }}
             className={styles.btnDanger}
@@ -548,6 +560,7 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
           <button
             onClick={() => {
               approveTask(task.id);
+              showToast(`Task "${task.title}" approved`, "success");
             }}
             className={styles.btnPrimary}
           >
@@ -556,6 +569,7 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
           <button
             onClick={() => {
               rejectTask(task.id, rejectNotes);
+              showToast(`Task "${task.title}" rejected`, "warning");
               setRejectNotes("");
             }}
             className={styles.btnDanger}
@@ -585,6 +599,7 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
                 return;
               }
               deleteTask(task.id);
+              showToast(`Task "${task.title}" deleted`, "info");
               setViewMode({ kind: "project", projectId: task.projectId });
             }}
             className={styles.btnDanger}
@@ -603,7 +618,10 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
             Task failed
           </span>
           <button
-            onClick={() => startTask(task.id)}
+            onClick={() => {
+              startTask(task.id);
+              showToast(`Task "${task.title}" retried`, "info");
+            }}
             className={styles.btnPrimary}
           >
             Retry
@@ -614,6 +632,7 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
                 return;
               }
               deleteTask(task.id);
+              showToast(`Task "${task.title}" deleted`, "info");
               setViewMode({ kind: "project", projectId: task.projectId });
             }}
             className={styles.btnDanger}
@@ -633,6 +652,7 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
         return;
       }
       spawn(viewMode.environmentId, text, undefined, runtime);
+      showToast("Session started", "success");
       setText("");
     };
 

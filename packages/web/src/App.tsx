@@ -1,7 +1,9 @@
 import { GrackleProvider } from "./context/GrackleContext.js";
 import { MockGrackleProvider } from "./mocks/MockGrackleProvider.js";
+import { ToastProvider } from "./context/ToastContext.js";
 import { StatusBar, Sidebar, UnifiedBar } from "./components/layout/index.js";
 import { SessionPanel } from "./components/panels/index.js";
+import { ToastContainer } from "./components/notifications/index.js";
 import { useState, useEffect, type JSX } from "react";
 import { useGrackle } from "./context/GrackleContext.js";
 import styles from "./App.module.scss";
@@ -34,6 +36,7 @@ function AppContent(): JSX.Element {
 
   return (
     <div className={styles.root}>
+      <ToastContainer />
       <StatusBar setViewMode={setViewMode} />
       <div className={styles.body}>
         <Sidebar viewMode={viewMode} setViewMode={setViewMode} />
@@ -54,8 +57,10 @@ function AppContent(): JSX.Element {
 export default function App(): JSX.Element {
   const Provider = IS_MOCK_MODE ? MockGrackleProvider : GrackleProvider;
   return (
-    <Provider>
-      <AppContent />
-    </Provider>
+    <ToastProvider>
+      <Provider>
+        <AppContent />
+      </Provider>
+    </ToastProvider>
   );
 }

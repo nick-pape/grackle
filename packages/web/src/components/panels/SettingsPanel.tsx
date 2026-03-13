@@ -1,5 +1,6 @@
 import { useState, type JSX, type FormEvent } from "react";
 import { useGrackle } from "../../context/GrackleContext.js";
+import { useToast } from "../../context/ToastContext.js";
 import styles from "./SettingsPanel.module.scss";
 
 /** Token type options for the add form. */
@@ -11,6 +12,7 @@ const TOKEN_TYPES: Array<{ value: string; label: string }> = [
 /** Settings page with token management (list, add, delete). */
 export function SettingsPanel(): JSX.Element {
   const { tokens, setToken, deleteToken } = useGrackle();
+  const { showToast } = useToast();
 
   const [name, setName] = useState("");
   const [value, setValue] = useState("");
@@ -25,6 +27,7 @@ export function SettingsPanel(): JSX.Element {
     const envVar = tokenType === "env_var" ? (target || name.toUpperCase() + "_TOKEN") : "";
     const filePath = tokenType === "file" ? target : "";
     setToken(name, value, tokenType, envVar, filePath);
+    showToast(`Token "${name}" saved`, "success");
     setName("");
     setValue("");
     setTarget("");
@@ -33,6 +36,7 @@ export function SettingsPanel(): JSX.Element {
   const handleDelete = (tokenName: string): void => {
     if (window.confirm(`Delete token "${tokenName}"?`)) {
       deleteToken(tokenName);
+      showToast(`Token "${tokenName}" deleted`, "info");
     }
   };
 
