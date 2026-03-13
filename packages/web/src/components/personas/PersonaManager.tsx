@@ -176,7 +176,7 @@ export function PersonaManager(): JSX.Element {
                   )}
                 </div>
               </div>
-              {p.description && <p className={styles.desc}>{p.description}</p>}
+              {p.description && <p className={styles.description}>{p.description}</p>}
               <div className={styles.meta}>
                 {p.runtime && <span>Runtime: {p.runtime}</span>}
                 {p.model && <span>Model: {p.model}</span>}
