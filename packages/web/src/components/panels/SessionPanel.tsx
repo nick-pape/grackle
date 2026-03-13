@@ -164,7 +164,6 @@ function TaskStatusBadge({ status }: TaskStatusBadgeProps): JSX.Element {
     pending: "Pending",
     assigned: "Assigned",
     in_progress: "In Progress",
-    waiting_input: "Waiting for Input",
     review: "Review",
     done: "Done",
     failed: "Failed",
@@ -173,7 +172,6 @@ function TaskStatusBadge({ status }: TaskStatusBadgeProps): JSX.Element {
     pending: styles.statusPending,
     assigned: styles.statusAssigned,
     in_progress: styles.statusInProgress,
-    waiting_input: styles.statusWaitingInput,
     review: styles.statusReview,
     done: styles.statusDone,
     failed: styles.statusFailed,
@@ -381,7 +379,7 @@ function TaskActionButtons({
     );
   }
 
-  if (task.status === "in_progress" || task.status === "waiting_input") {
+  if (task.status === "in_progress") {
     return (
       <div className={styles.headerActions}>
         <button
@@ -495,7 +493,6 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
       task?.status === "pending" ? "overview"
       : task?.status === "assigned" ? "overview"
       : task?.status === "in_progress" ? "stream"
-      : task?.status === "waiting_input" ? "stream"
       : task?.status === "review" ? "stream"
       : task?.status === "done" ? "findings"
       : undefined;
@@ -552,7 +549,7 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
 
   // --- settings mode ---
   if (viewMode.kind === "settings") {
-    return <SettingsPanel />;
+    return <SettingsPanel viewMode={viewMode} setViewMode={setViewMode} />;
   }
 
   // --- persona management mode ---

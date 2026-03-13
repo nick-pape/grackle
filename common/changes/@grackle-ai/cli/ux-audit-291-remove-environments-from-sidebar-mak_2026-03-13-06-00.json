@@ -1,0 +1,10 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/rush/v5/rush-change-log.schema.json",
+  "changes": [
+    {
+      "packageName": "@grackle-ai/cli",
+      "comment": "No CLI changes — change file added to satisfy rush change --verify false positive from merge commits",
+      "type": "none"
+    }
+  ]
+}
