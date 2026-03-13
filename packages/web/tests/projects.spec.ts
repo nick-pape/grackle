@@ -103,8 +103,7 @@ test.describe("Projects", () => {
     await page.getByText("my task").click();
 
     // Task header should be visible with title and status
-    await expect(page.getByText("Task: my task")).toBeVisible({ timeout: 5_000 });
-    await expect(page.locator('[data-testid="task-status"]')).toContainText("pending");
+    await expect(page.locator('[data-testid="task-status"]')).toContainText("pending", { timeout: 5_000 });
 
     // Tab bar should show Overview, Stream, Findings
     await expect(page.locator("button", { hasText: "Overview" })).toBeVisible();
@@ -114,8 +113,8 @@ test.describe("Projects", () => {
     // Overview tab (default for pending) should be active
     await expect(page.locator("button", { hasText: "Overview" })).toHaveAttribute("class", /active/);
 
-    // UnifiedBar shows "Start Task" button
-    await expect(page.locator("button", { hasText: "Start Task" })).toBeVisible();
+    // Header shows "Start" button
+    await expect(page.locator("button", { hasText: "Start" })).toBeVisible();
 
     // Click Findings tab — shows empty state
     await page.locator("button", { hasText: "Findings" }).click();

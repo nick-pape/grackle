@@ -289,7 +289,7 @@ test.describe("Add Environment — WebSocket Handler", () => {
     await expect(page.locator("text=new env")).not.toBeVisible({ timeout: 5_000 });
 
     // Environment should appear in the sidebar list
-    await expect(page.getByText("ui-test-env")).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText("ui-test-env", { exact: true })).toBeVisible({ timeout: 5_000 });
 
     // Clean up via WS
     // First find the environment ID from list_environments

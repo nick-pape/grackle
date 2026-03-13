@@ -16,7 +16,7 @@ test.describe("Auto-retry on rejection", () => {
     await runStubTaskToCompletion(page);
 
     // --- Reject with review notes ---
-    const rejectInput = page.locator('input[placeholder="Rejection notes (optional)..."]');
+    const rejectInput = page.locator('input[placeholder="Rejection notes..."]');
     await rejectInput.fill("add more tests");
     await page.locator("button", { hasText: "Reject" }).click();
 

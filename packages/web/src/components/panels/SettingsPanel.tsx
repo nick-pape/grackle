@@ -1,5 +1,6 @@
 import { useState, type JSX, type FormEvent } from "react";
 import { useGrackle } from "../../context/GrackleContext.js";
+import { useToast } from "../../context/ToastContext.js";
 import { ConfirmDialog } from "../display/index.js";
 import { EnvironmentList } from "../lists/EnvironmentList.js";
 import type { ViewMode } from "../../App.js";
@@ -20,6 +21,7 @@ interface Props {
 /** Settings page with environment management, token management, and other configuration. */
 export function SettingsPanel({ viewMode, setViewMode }: Props): JSX.Element {
   const { tokens, setToken, deleteToken } = useGrackle();
+  const { showToast } = useToast();
 
   const [name, setName] = useState("");
   const [value, setValue] = useState("");
@@ -35,6 +37,7 @@ export function SettingsPanel({ viewMode, setViewMode }: Props): JSX.Element {
     const envVar = tokenType === "env_var" ? (target || name.toUpperCase() + "_TOKEN") : "";
     const filePath = tokenType === "file" ? target : "";
     setToken(name, value, tokenType, envVar, filePath);
+    showToast("Token saved successfully", "success");
     setName("");
     setValue("");
     setTarget("");
@@ -47,6 +50,7 @@ export function SettingsPanel({ viewMode, setViewMode }: Props): JSX.Element {
   const handleConfirmDelete = (): void => {
     if (confirmDeleteToken) {
       deleteToken(confirmDeleteToken);
+      showToast("Token deleted", "info");
     }
     setConfirmDeleteToken(null);
   };
