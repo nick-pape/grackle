@@ -159,10 +159,11 @@ grackle serve
 grackle env add my-env --docker
 ```
 
-Or skip the global install entirely:
+Or skip the global install entirely — prefix every command with `npx`:
 
 ```bash
 npx @grackle-ai/cli serve
+npx @grackle-ai/cli env add my-env --docker
 ```
 
 <details>

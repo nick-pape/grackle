@@ -812,7 +812,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
           description,
           systemPrompt,
           toolConfig: "{}",
-          runtime: runtime || "claude-code",
+          runtime: runtime ?? "claude-code",
           model: model || "",
           maxTurns: maxTurns || 0,
           mcpServers: "[]",

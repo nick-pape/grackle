@@ -60,6 +60,16 @@ export const MOCK_ENVIRONMENTS: Environment[] = [
 /** Sample sessions spanning active, completed, and failed states. */
 export const MOCK_SESSIONS: Session[] = [
   {
+    id: "sess-001-prev",
+    environmentId: "env-local-01",
+    runtime: "claude-code",
+    status: "failed",
+    prompt: "Implement auth middleware",
+    startedAt: "2026-02-26T14:00:00Z",
+    endedAt: "2026-02-26T15:12:00Z",
+    error: "Context window exceeded before completing implementation",
+  },
+  {
     id: "sess-001",
     environmentId: "env-local-01",
     runtime: "node",
@@ -97,6 +107,24 @@ export const MOCK_SESSIONS: Session[] = [
 
 /** Sample events for the first running session to populate the event stream. */
 export const MOCK_EVENTS: SessionEvent[] = [
+  {
+    sessionId: "sess-001-prev",
+    eventType: "status",
+    timestamp: "2026-02-26T14:00:01Z",
+    content: "running",
+  },
+  {
+    sessionId: "sess-001-prev",
+    eventType: "output",
+    timestamp: "2026-02-26T14:00:05Z",
+    content: "Reading src/middleware/auth.ts to understand the current authentication flow...",
+  },
+  {
+    sessionId: "sess-001-prev",
+    eventType: "error",
+    timestamp: "2026-02-26T15:12:00Z",
+    content: "Context window exceeded before completing implementation",
+  },
   {
     sessionId: "sess-001",
     eventType: "status",
