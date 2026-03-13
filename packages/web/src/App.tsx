@@ -36,7 +36,6 @@ function AppContent(): JSX.Element {
 
   return (
     <div className={styles.root}>
-      <ToastContainer />
       <StatusBar setViewMode={setViewMode} />
       <div className={styles.body}>
         <Sidebar viewMode={viewMode} setViewMode={setViewMode} />
@@ -49,6 +48,9 @@ function AppContent(): JSX.Element {
           <UnifiedBar viewMode={viewMode} setViewMode={setViewMode} />
         </div>
       </div>
+      {/* ToastContainer last in DOM so toast text does not interfere with
+          getByText().first() selectors in E2E tests */}
+      <ToastContainer />
     </div>
   );
 }
