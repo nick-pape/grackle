@@ -18,7 +18,7 @@ test.describe("Task Retry (failed → in_progress)", () => {
     await patchWsForStubRuntime(page);
 
     // --- Start the task ---
-    await page.locator("button", { hasText: "Start Task" }).click();
+    await page.locator("button", { hasText: "Start" }).click();
 
     // Wait for stub to reach waiting_input
     const inputField = page.locator('input[placeholder="Type a message..."]');

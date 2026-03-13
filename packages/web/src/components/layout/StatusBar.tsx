@@ -28,13 +28,22 @@ export function StatusBar({ setViewMode }: StatusBarProps): JSX.Element {
         <span>{connectedEnvs}/{totalEnvs} env{totalEnvs !== 1 ? "s" : ""}</span>
         <span>{activeCount} active</span>
         {setViewMode && (
-          <button
-            className={styles.settingsButton}
-            onClick={() => setViewMode({ kind: "settings" })}
-            title="Settings"
-          >
-            {"\u2699"}
-          </button>
+          <>
+            <button
+              className={styles.settingsButton}
+              onClick={() => setViewMode({ kind: "persona_management" })}
+              title="Personas"
+            >
+              {"\uD83D\uDC64"}
+            </button>
+            <button
+              className={styles.settingsButton}
+              onClick={() => setViewMode({ kind: "settings" })}
+              title="Settings"
+            >
+              {"\u2699"}
+            </button>
+          </>
         )}
       </div>
     </div>

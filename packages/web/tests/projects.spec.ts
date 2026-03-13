@@ -72,7 +72,7 @@ test.describe("Projects", () => {
 
     // Fill in task details and select environment
     await page.locator('input[placeholder="Task title..."]').fill("implement feature");
-    const envSelect = page.locator("select");
+    const envSelect = page.locator("select").first();
     await envSelect.selectOption("test-local");
 
     // Click Create (exact match to avoid matching "Create Task" CTA)
@@ -95,7 +95,7 @@ test.describe("Projects", () => {
     await page.getByText("view-test").click();
     await page.getByText("view-test").locator("..").locator('button[title="New task"]').first().click();
     await page.locator('input[placeholder="Task title..."]').fill("my task");
-    await page.locator("select").selectOption("test-local");
+    await page.locator("select").first().selectOption("test-local");
     await page.locator("button", { hasText: /^Create$/ }).click();
     await expect(page.getByText("my task")).toBeVisible({ timeout: 5_000 });
 
@@ -103,8 +103,7 @@ test.describe("Projects", () => {
     await page.getByText("my task").click();
 
     // Task header should be visible with title and status
-    await expect(page.getByText("Task: my task")).toBeVisible({ timeout: 5_000 });
-    await expect(page.locator('[data-testid="task-status"]')).toContainText("pending");
+    await expect(page.locator('[data-testid="task-status"]')).toContainText("pending", { timeout: 5_000 });
 
     // Tab bar should show Overview, Stream, Findings
     await expect(page.locator("button", { hasText: "Overview" })).toBeVisible();
@@ -114,8 +113,8 @@ test.describe("Projects", () => {
     // Overview tab (default for pending) should be active
     await expect(page.locator("button", { hasText: "Overview" })).toHaveAttribute("class", /active/);
 
-    // UnifiedBar shows "Start Task" button
-    await expect(page.locator("button", { hasText: "Start Task" })).toBeVisible();
+    // Header shows "Start" button
+    await expect(page.locator("button", { hasText: "Start" })).toBeVisible();
 
     // Click Findings tab — shows empty state
     await page.locator("button", { hasText: "Findings" }).click();

@@ -71,16 +71,58 @@
   }
 }
 
-.deleteButton {
-  @include btn-ghost(var(--accent-red));
-  margin-left: auto;
-  font-size: 11px;
-  padding: var(--space-xs) var(--space-sm);
+.headerTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
-  &:hover {
-    background: var(--accent-red-dim);
-    box-shadow: var(--shadow-glow-red);
-  }
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-shrink: 0;
+}
+
+.taskStatusBadge {
+  background: var(--bg-overlay);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  padding: 1px var(--space-sm);
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+}
+
+.taskBranch {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+}
+
+.taskBlockedBadge {
+  background: var(--accent-yellow-dim, rgba(229,192,123,0.15));
+  color: var(--accent-yellow, #e5c07b);
+  border-radius: var(--radius-full);
+  padding: 1px var(--space-sm);
+  font-size: var(--font-size-xs);
+}
+
+.btnPrimary {
+  @include btn-primary;
+}
+
+.btnDanger {
+  @include btn-danger;
+}
+
+.rejectInput {
+  @include input-field;
+  width: 160px;
+  font-size: var(--font-size-xs);
 }
 
 // ---------------------------------------------------------------------------

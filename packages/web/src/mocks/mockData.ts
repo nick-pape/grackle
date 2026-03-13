@@ -222,6 +222,7 @@ export const MOCK_TASKS: TaskData[] = [
     depth: 0,
     childTaskIds: ["task-001a", "task-001b", "task-001c"],
     canDecompose: true,
+    personaId: "",
   },
   // ── Children of task-001 ───────────────────────────
   {
@@ -241,6 +242,7 @@ export const MOCK_TASKS: TaskData[] = [
     depth: 1,
     childTaskIds: [],
     canDecompose: false,
+    personaId: "",
   },
   {
     id: "task-001b",
@@ -259,6 +261,7 @@ export const MOCK_TASKS: TaskData[] = [
     depth: 1,
     childTaskIds: [],
     canDecompose: false,
+    personaId: "",
   },
   {
     id: "task-001c",
@@ -277,6 +280,7 @@ export const MOCK_TASKS: TaskData[] = [
     depth: 1,
     childTaskIds: [],
     canDecompose: false,
+    personaId: "",
   },
   // ── Remaining root tasks for proj-alpha ────────────
   {
@@ -296,6 +300,7 @@ export const MOCK_TASKS: TaskData[] = [
     depth: 0,
     childTaskIds: [],
     canDecompose: false,
+    personaId: "",
   },
   {
     id: "task-003",
@@ -314,6 +319,7 @@ export const MOCK_TASKS: TaskData[] = [
     depth: 0,
     childTaskIds: [],
     canDecompose: false,
+    personaId: "",
   },
   {
     id: "task-004",
@@ -332,6 +338,7 @@ export const MOCK_TASKS: TaskData[] = [
     depth: 0,
     childTaskIds: [],
     canDecompose: false,
+    personaId: "",
   },
   {
     id: "task-005",
@@ -350,6 +357,7 @@ export const MOCK_TASKS: TaskData[] = [
     depth: 0,
     childTaskIds: [],
     canDecompose: false,
+    personaId: "",
   },
   // ── Tasks for proj-beta ────────────────────────────
   {
@@ -369,6 +377,7 @@ export const MOCK_TASKS: TaskData[] = [
     depth: 0,
     childTaskIds: ["task-006a", "task-006b", "task-006c", "task-006d"],
     canDecompose: true,
+    personaId: "",
   },
   // ── Children of task-006 ───────────────────────────
   {
@@ -388,6 +397,7 @@ export const MOCK_TASKS: TaskData[] = [
     depth: 1,
     childTaskIds: [],
     canDecompose: false,
+    personaId: "",
   },
   {
     id: "task-006b",
@@ -406,6 +416,7 @@ export const MOCK_TASKS: TaskData[] = [
     depth: 1,
     childTaskIds: [],
     canDecompose: false,
+    personaId: "",
   },
   {
     id: "task-006c",
@@ -424,6 +435,7 @@ export const MOCK_TASKS: TaskData[] = [
     depth: 1,
     childTaskIds: [],
     canDecompose: false,
+    personaId: "",
   },
   {
     id: "task-006d",
@@ -442,6 +454,7 @@ export const MOCK_TASKS: TaskData[] = [
     depth: 1,
     childTaskIds: [],
     canDecompose: false,
+    personaId: "",
   },
   // ── Remaining root tasks for proj-beta ─────────────
   {
@@ -461,6 +474,7 @@ export const MOCK_TASKS: TaskData[] = [
     depth: 0,
     childTaskIds: ["task-007a", "task-007b"],
     canDecompose: true,
+    personaId: "",
   },
   // ── Children of task-007 ───────────────────────────
   {
@@ -480,6 +494,7 @@ export const MOCK_TASKS: TaskData[] = [
     depth: 1,
     childTaskIds: [],
     canDecompose: false,
+    personaId: "",
   },
   {
     id: "task-007b",
@@ -498,6 +513,7 @@ export const MOCK_TASKS: TaskData[] = [
     depth: 1,
     childTaskIds: [],
     canDecompose: false,
+    personaId: "",
   },
   {
     id: "task-008",
@@ -516,6 +532,7 @@ export const MOCK_TASKS: TaskData[] = [
     depth: 0,
     childTaskIds: [],
     canDecompose: false,
+    personaId: "",
   },
 ];
 

@@ -26,14 +26,21 @@ vi.mock("node:child_process", () => ({
 }));
 
 // Import modules AFTER mocks are set up
-import { topologicalSortIssues, fetchGitHubIssues, importGitHubIssues } from "./github-import.js";
+import {
+  topologicalSortIssues,
+  fetchGitHubIssues,
+  importGitHubIssues,
+} from "./github-import.js";
 import * as taskStore from "./task-store.js";
 import * as projectStore from "./project-store.js";
 import { sqlite } from "./test-db.js";
 import { broadcast } from "./ws-broadcast.js";
 
 /** Helper to build a minimal issue-like object for topological sort tests. */
-function issue(number: number, parentNumber?: number): { number: number; parentNumber: number | undefined } {
+function issue(
+  number: number,
+  parentNumber?: number,
+): { number: number; parentNumber: number | undefined } {
   return { number, parentNumber };
 }
 
@@ -83,7 +90,12 @@ function applySchema(): void {
 function mockGhResponse(json: unknown): void {
   const stdout = JSON.stringify(json);
   mockExecFile.mockImplementationOnce(
-    (_cmd: string, _args: string[], _opts: unknown, cb: (err: Error | null, stdout: string, stderr: string) => void) => {
+    (
+      _cmd: string,
+      _args: string[],
+      _opts: unknown,
+      cb: (err: Error | null, stdout: string, stderr: string) => void,
+    ) => {
       cb(null, stdout, "");
     },
   );
@@ -144,13 +156,7 @@ describe("topologicalSortIssues", () => {
 
   describe("mixed forest", () => {
     it("handles a mix of root issues and parent-child trees", () => {
-      const issues = [
-        issue(5, 3),
-        issue(4),
-        issue(3, 1),
-        issue(2),
-        issue(1),
-      ];
+      const issues = [issue(5, 3), issue(4), issue(3, 1), issue(2), issue(1)];
       const issueSet = new Set([1, 2, 3, 4, 5]);
       const sorted = topologicalSortIssues(issues, issueSet);
       const order = sorted.map((i) => i.number);
@@ -214,12 +220,7 @@ describe("topologicalSortIssues", () => {
     });
 
     it("preserves sibling order for children of the same parent", () => {
-      const issues = [
-        issue(1),
-        issue(30, 1),
-        issue(20, 1),
-        issue(10, 1),
-      ];
+      const issues = [issue(1), issue(30, 1), issue(20, 1), issue(10, 1)];
       const issueSet = new Set([1, 30, 20, 10]);
       const sorted = topologicalSortIssues(issues, issueSet);
       const order = sorted.map((i) => i.number);
@@ -241,7 +242,9 @@ describe("topologicalSortIssues", () => {
       for (let i = 1; i < sorted.length; i++) {
         const current = sorted[i];
         if (current.parentNumber !== undefined) {
-          const parentIdx = sorted.findIndex((s) => s.number === current.parentNumber);
+          const parentIdx = sorted.findIndex(
+            (s) => s.number === current.parentNumber,
+          );
           expect(parentIdx).toBeLessThan(i);
         }
       }
@@ -268,44 +271,66 @@ describe("fetchGitHubIssues", () => {
   });
 
   it("throws on invalid repo format", async () => {
-    await expect(fetchGitHubIssues("badrepo", "open")).rejects.toThrow('repo must be in "owner/repo" format');
+    await expect(fetchGitHubIssues("badrepo", "open")).rejects.toThrow(
+      'repo must be in "owner/repo" format',
+    );
   });
 
   it("throws on extra path segments in repo format", async () => {
-    await expect(fetchGitHubIssues("owner/repo/extra", "open")).rejects.toThrow('repo must be in "owner/repo" format');
+    await expect(fetchGitHubIssues("owner/repo/extra", "open")).rejects.toThrow(
+      'repo must be in "owner/repo" format',
+    );
   });
 
   it("throws when gh CLI execution fails", async () => {
     const ghError = new Error("Command failed: gh api graphql");
     mockExecFile.mockImplementationOnce(
-      (_cmd: string, _args: string[], _opts: unknown, cb: (err: Error | null, stdout: string, stderr: string) => void) => {
+      (
+        _cmd: string,
+        _args: string[],
+        _opts: unknown,
+        cb: (err: Error | null, stdout: string, stderr: string) => void,
+      ) => {
         cb(ghError, "", "gh: not found");
       },
     );
-    await expect(fetchGitHubIssues("owner/repo", "open")).rejects.toThrow("Command failed");
+    await expect(fetchGitHubIssues("owner/repo", "open")).rejects.toThrow(
+      "Command failed",
+    );
   });
 
   it("throws when gh returns invalid JSON", async () => {
     mockExecFile.mockImplementationOnce(
-      (_cmd: string, _args: string[], _opts: unknown, cb: (err: Error | null, stdout: string, stderr: string) => void) => {
+      (
+        _cmd: string,
+        _args: string[],
+        _opts: unknown,
+        cb: (err: Error | null, stdout: string, stderr: string) => void,
+      ) => {
         cb(null, "not valid json {{{", "");
       },
     );
-    await expect(fetchGitHubIssues("owner/repo", "open")).rejects.toThrow("Failed to parse GraphQL response");
+    await expect(fetchGitHubIssues("owner/repo", "open")).rejects.toThrow(
+      "Failed to parse GraphQL response",
+    );
   });
 
   it("throws when GraphQL response contains errors", async () => {
     mockGhResponse({
       errors: [{ message: "Could not resolve to a Repository" }],
     });
-    await expect(fetchGitHubIssues("owner/repo", "open")).rejects.toThrow("GraphQL errors");
+    await expect(fetchGitHubIssues("owner/repo", "open")).rejects.toThrow(
+      "GraphQL errors",
+    );
   });
 
   it("throws when repository is not found", async () => {
     mockGhResponse({
       data: { repository: null },
     });
-    await expect(fetchGitHubIssues("owner/repo", "open")).rejects.toThrow("Repository not found or inaccessible");
+    await expect(fetchGitHubIssues("owner/repo", "open")).rejects.toThrow(
+      "Repository not found or inaccessible",
+    );
   });
 
   it("parses a single page of issues", async () => {
@@ -351,7 +376,15 @@ describe("fetchGitHubIssues", () => {
         repository: {
           issues: {
             pageInfo: { hasNextPage: true, endCursor: "cursor1" },
-            nodes: [{ number: 1, title: "Issue 1", body: "", parent: null, labels: { nodes: [] } }],
+            nodes: [
+              {
+                number: 1,
+                title: "Issue 1",
+                body: "",
+                parent: null,
+                labels: { nodes: [] },
+              },
+            ],
           },
         },
       },
@@ -361,7 +394,15 @@ describe("fetchGitHubIssues", () => {
         repository: {
           issues: {
             pageInfo: { hasNextPage: false, endCursor: null },
-            nodes: [{ number: 2, title: "Issue 2", body: "", parent: null, labels: { nodes: [] } }],
+            nodes: [
+              {
+                number: 2,
+                title: "Issue 2",
+                body: "",
+                parent: null,
+                labels: { nodes: [] },
+              },
+            ],
           },
         },
       },
@@ -379,9 +420,27 @@ describe("fetchGitHubIssues", () => {
           issues: {
             pageInfo: { hasNextPage: false, endCursor: null },
             nodes: [
-              { number: 1, title: "Bug", body: "", parent: null, labels: { nodes: [{ name: "bug" }] } },
-              { number: 2, title: "Feature", body: "", parent: null, labels: { nodes: [{ name: "feature" }] } },
-              { number: 3, title: "Another Bug", body: "", parent: null, labels: { nodes: [{ name: "bug" }] } },
+              {
+                number: 1,
+                title: "Bug",
+                body: "",
+                parent: null,
+                labels: { nodes: [{ name: "bug" }] },
+              },
+              {
+                number: 2,
+                title: "Feature",
+                body: "",
+                parent: null,
+                labels: { nodes: [{ name: "feature" }] },
+              },
+              {
+                number: 3,
+                title: "Another Bug",
+                body: "",
+                parent: null,
+                labels: { nodes: [{ name: "bug" }] },
+              },
             ],
           },
         },
@@ -409,7 +468,15 @@ describe("importGitHubIssues", () => {
   });
 
   /** Helper to set up mock gh output with given issues. */
-  function mockGhOutput(issues: { number: number; title: string; body?: string; parent?: { number: number } | null; labels?: string[] }[]): void {
+  function mockGhOutput(
+    issues: {
+      number: number;
+      title: string;
+      body?: string;
+      parent?: { number: number } | null;
+      labels?: string[];
+    }[],
+  ): void {
     mockGhResponse({
       data: {
         repository: {
@@ -465,9 +532,7 @@ describe("importGitHubIssues", () => {
 
   it("skips already-imported issues", async () => {
     // First import
-    mockGhOutput([
-      { number: 1, title: "Issue one" },
-    ]);
+    mockGhOutput([{ number: 1, title: "Issue one" }]);
     await importGitHubIssues("test-proj", "owner/repo", "open");
 
     // Second import with same issue
@@ -507,14 +572,15 @@ describe("importGitHubIssues", () => {
 
     await importGitHubIssues("test-proj", "owner/repo", "open");
     const taskCreatedCalls = mockedBroadcast.mock.calls.filter(
-      (call) => call[0].type === "task_created"
+      (call) => call[0].type === "task_created",
     );
     expect(taskCreatedCalls).toHaveLength(2);
   });
 
   it("throws when project does not exist", async () => {
-    await expect(importGitHubIssues("nonexistent", "owner/repo", "open"))
-      .rejects.toThrow("Project not found");
+    await expect(
+      importGitHubIssues("nonexistent", "owner/repo", "open"),
+    ).rejects.toThrow("Project not found");
   });
 
   it("handles child-before-parent ordering in GitHub response", async () => {
@@ -534,11 +600,15 @@ describe("importGitHubIssues", () => {
   });
 
   it("uses environment ID from request when provided", async () => {
-    mockGhOutput([
-      { number: 1, title: "Issue one" },
-    ]);
+    mockGhOutput([{ number: 1, title: "Issue one" }]);
 
-    await importGitHubIssues("test-proj", "owner/repo", "open", undefined, "env-123");
+    await importGitHubIssues(
+      "test-proj",
+      "owner/repo",
+      "open",
+      undefined,
+      "env-123",
+    );
 
     const tasks = taskStore.listTasks("test-proj");
     expect(tasks[0].environmentId).toBe("env-123");
@@ -559,9 +629,7 @@ describe("importGitHubIssues", () => {
   });
 
   it("sets canDecompose=true on imported tasks", async () => {
-    mockGhOutput([
-      { number: 1, title: "Issue one" },
-    ]);
+    mockGhOutput([{ number: 1, title: "Issue one" }]);
 
     await importGitHubIssues("test-proj", "owner/repo", "open");
 
@@ -572,25 +640,43 @@ describe("importGitHubIssues", () => {
   it("rejects concurrent imports", async () => {
     // Set up a slow mock that doesn't resolve immediately
     mockExecFile.mockImplementation(
-      (_cmd: string, _args: string[], _opts: unknown, cb: (err: Error | null, stdout: string, stderr: string) => void) => {
+      (
+        _cmd: string,
+        _args: string[],
+        _opts: unknown,
+        cb: (err: Error | null, stdout: string, stderr: string) => void,
+      ) => {
         setTimeout(() => {
-          cb(null, JSON.stringify({
-            data: {
-              repository: {
-                issues: {
-                  pageInfo: { hasNextPage: false, endCursor: null },
-                  nodes: [{ number: 1, title: "Issue", body: "", parent: null, labels: { nodes: [] } }],
+          cb(
+            null,
+            JSON.stringify({
+              data: {
+                repository: {
+                  issues: {
+                    pageInfo: { hasNextPage: false, endCursor: null },
+                    nodes: [
+                      {
+                        number: 1,
+                        title: "Issue",
+                        body: "",
+                        parent: null,
+                        labels: { nodes: [] },
+                      },
+                    ],
+                  },
                 },
               },
-            },
-          }), "");
+            }),
+            "",
+          );
         }, 50);
       },
     );
 
     const first = importGitHubIssues("test-proj", "owner/repo", "open");
-    await expect(importGitHubIssues("test-proj", "owner/repo", "open"))
-      .rejects.toThrow("already in progress");
+    await expect(
+      importGitHubIssues("test-proj", "owner/repo", "open"),
+    ).rejects.toThrow("already in progress");
     await first;
   });
 });
