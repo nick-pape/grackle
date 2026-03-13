@@ -304,6 +304,8 @@ test.describe("Disconnected environment blocks message send", () => {
       .waitFor({ state: "visible", timeout: 15_000 });
 
     // Inject a disconnected environment to simulate a connectivity drop.
+    // The global test setup seeds "test-local" as the only environment, so
+    // the stub session will always be running on that env ID.
     await injectWsMessage(page, {
       type: "environments",
       payload: {

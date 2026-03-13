@@ -1,8 +1,8 @@
 {
   "changes": [
     {
-      "comment": "Block message send when task environment is disconnected; add inline Reconnect button",
-      "type": "minor",
+      "comment": "False positive — only @grackle-ai/web (non-publishable) was modified; merge-commit detection flagged this package.",
+      "type": "none",
       "packageName": "@grackle-ai/cli"
     }
   ],
