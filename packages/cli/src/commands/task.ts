@@ -47,7 +47,9 @@ export function registerTaskCommands(program: Command): void {
     .option("--persona <id-or-name>", "Persona to assign")
     .action(async (projectId: string, title: string, opts) => {
       const client = createGrackleClient();
-      const dependsOn = opts.dependsOn ? opts.dependsOn.split(",") : [];
+      const dependsOn = opts.dependsOn
+        ? opts.dependsOn.split(",").map((s: string) => s.trim()).filter(Boolean)
+        : [];
       const t = await client.createTask({
         projectId,
         title,
@@ -90,6 +92,7 @@ export function registerTaskCommands(program: Command): void {
       "Task status (pending, assigned, in_progress, waiting_input, review, done, failed)",
     )
     .option("--notes <text>", "Review notes")
+    .option("--depends-on <ids>", "Comma-separated dependency task IDs")
     .action(async (taskId: string, opts) => {
       const VALID_STATUSES = new Set([
         "pending",
@@ -113,6 +116,9 @@ export function registerTaskCommands(program: Command): void {
       }
 
       const client = createGrackleClient();
+      const dependsOn = opts.dependsOn
+        ? opts.dependsOn.split(",").map((s: string) => s.trim()).filter(Boolean)
+        : [];
       const t = await client.updateTask({
         id: taskId,
         title: opts.title || "",
@@ -122,6 +128,7 @@ export function registerTaskCommands(program: Command): void {
           ? taskStatusToEnum(String(opts.status).toLowerCase())
           : taskStatusToEnum(""),
         reviewNotes: opts.notes || "",
+        dependsOn,
       });
       console.log(
         `Updated: ${t.id} (${t.title}) status: ${taskStatusToString(t.status)} env: ${t.environmentId || "-"}`,
@@ -183,10 +190,11 @@ export function registerTaskCommands(program: Command): void {
     .option("--label <label>", "Filter issues by label name")
     .option("--state <state>", "Issue state to fetch", "open")
     .option("--env <env-id>", "Environment ID to assign to created tasks")
+    .option("--no-include-comments", "Exclude issue comments from imported task descriptions")
     .action(
       async (
         projectId: string,
-        opts: { repo: string; label?: string; state: string; env?: string },
+        opts: { repo: string; label?: string; state: string; env?: string; includeComments: boolean },
       ) => {
         const normalizedState = (opts.state ?? "").trim().toLowerCase();
         if (normalizedState !== "open" && normalizedState !== "closed") {
@@ -205,6 +213,7 @@ export function registerTaskCommands(program: Command): void {
           label: opts.label,
           state: issueStateToEnum(normalizedState),
           environmentId: opts.env,
+          includeComments: opts.includeComments,
         });
         const parts = [`Imported ${chalk.green(res.imported)} tasks`];
         if (res.linked > 0) {

@@ -347,6 +347,7 @@ export interface UseGrackleSocketResult {
     prompt: string,
     model?: string,
     runtime?: string,
+    personaId?: string,
   ) => void;
   sendInput: (sessionId: string, text: string) => void;
   kill: (sessionId: string) => void;
@@ -879,6 +880,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
       prompt: string,
       model?: string,
       runtime?: string,
+      personaId?: string,
     ) => {
       send({
         type: "spawn",
@@ -887,6 +889,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
           prompt,
           model: model || "",
           runtime: runtime || "",
+          personaId: personaId || "",
         },
       });
     },

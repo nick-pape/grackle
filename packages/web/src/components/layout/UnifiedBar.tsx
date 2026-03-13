@@ -16,12 +16,14 @@ interface Props {
 interface RuntimeSelectorProps {
   value: string;
   onChange: (value: string) => void;
+  testId?: string;
 }
 
 /** Dropdown for selecting the session runtime. */
-function RuntimeSelector({ value, onChange }: RuntimeSelectorProps): JSX.Element {
+function RuntimeSelector({ value, onChange, testId }: RuntimeSelectorProps): JSX.Element {
   return (
     <select
+      data-testid={testId}
       value={value}
       onChange={(e) => onChange(e.target.value)}
       className={styles.select}
@@ -39,8 +41,8 @@ function RuntimeSelector({ value, onChange }: RuntimeSelectorProps): JSX.Element
 /** Contextual action bar that adapts to the current view mode and session/task state. */
 export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
   const {
-    spawn, sendInput, kill, sessions, tasks,
-    addEnvironment, environments, provisionEnvironment,
+    spawn, sendInput, kill, sessions, tasks, environments, personas,
+    addEnvironment, provisionEnvironment,
     codespaces, codespaceError, codespaceCreating, listCodespaces, createCodespace,
   } = useGrackle();
   const { showToast } = useToast();
@@ -49,6 +51,18 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
   const [runtime, setRuntime] = useState(
     viewMode.kind === "new_chat" ? viewMode.runtime : "claude-code"
   );
+  const [spawnPersonaId, setSpawnPersonaId] = useState("");
+
+  /** When a persona is selected in the new_chat form, auto-fill runtime. */
+  const handleSpawnPersonaChange = (personaId: string): void => {
+    setSpawnPersonaId(personaId);
+    if (personaId) {
+      const p = personas.find((x) => x.id === personaId);
+      if (p?.runtime) {
+        setRuntime(p.runtime);
+      }
+    }
+  };
 
   // ─── New environment form state ─────────────────
   const [envName, setEnvName] = useState("");
@@ -85,9 +99,9 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
   // Check if task is blocked
   const isTaskBlocked = task
     ? task.dependsOn.some((depId) => {
-        const dep = tasks.find((t) => t.id === depId);
-        return dep && dep.status !== "done";
-      })
+      const dep = tasks.find((t) => t.id === depId);
+      return dep && dep.status !== "done";
+    })
     : false;
 
   // --- empty mode ---
@@ -218,7 +232,7 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
             <option value="docker">docker</option>
             <option value="codespace">codespace</option>
           </select>
-          <RuntimeSelector value={envRuntime} onChange={setEnvRuntime} />
+          <RuntimeSelector value={envRuntime} onChange={setEnvRuntime} testId="new-environment-runtime-select" />
           <button
             onClick={handleAddEnvironment}
             disabled={!isEnvValid()}
@@ -396,9 +410,9 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
     if (task.status === "pending" || task.status === "assigned") {
       const blockerNames = isTaskBlocked
         ? task.dependsOn
-            .map((depId) => tasks.find((t) => t.id === depId))
-            .filter((t) => t && t.status !== "done")
-            .map((t) => t!.title)
+          .map((depId) => tasks.find((t) => t.id === depId))
+          .filter((t) => t && t.status !== "done")
+          .map((t) => t!.title)
         : [];
       return (
         <div className={styles.bar}>
@@ -533,9 +547,10 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
       if (!text.trim()) {
         return;
       }
-      spawn(viewMode.environmentId, text, undefined, runtime);
+      spawn(viewMode.environmentId, text, undefined, runtime, spawnPersonaId);
       showToast("Session started", "success");
       setText("");
+      setSpawnPersonaId("");
     };
 
     return (
@@ -551,7 +566,17 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
           autoFocus
           className={styles.input}
         />
-        <RuntimeSelector value={runtime} onChange={setRuntime} />
+        <RuntimeSelector value={runtime} onChange={setRuntime} testId="new-chat-runtime-select" />
+        <select
+          value={spawnPersonaId}
+          onChange={(e) => handleSpawnPersonaChange(e.target.value)}
+          className={styles.select}
+        >
+          <option value="">No persona</option>
+          {personas.map((p) => (
+            <option key={p.id} value={p.id}>{p.name}</option>
+          ))}
+        </select>
         <button
           type="submit"
           disabled={!text.trim()}

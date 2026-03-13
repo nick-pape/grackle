@@ -98,18 +98,18 @@ test.describe("Projects", () => {
     await expect(page.locator('[data-testid="task-status"]')).toContainText("pending", { timeout: 5_000 });
 
     // Tab bar should show Overview, Stream, Findings
-    await expect(page.locator("button", { hasText: "Overview" })).toBeVisible();
-    await expect(page.locator("button", { hasText: "Stream" })).toBeVisible();
-    await expect(page.locator("button", { hasText: "Findings" })).toBeVisible();
+    await expect(page.getByRole("tab", { name: "Overview", exact: true })).toBeVisible();
+    await expect(page.getByRole("tab", { name: "Stream", exact: true })).toBeVisible();
+    await expect(page.getByRole("tab", { name: "Findings", exact: true })).toBeVisible();
 
     // Overview tab (default for pending) should be active
-    await expect(page.locator("button", { hasText: "Overview" })).toHaveAttribute("class", /active/);
+    await expect(page.getByRole("tab", { name: "Overview", exact: true })).toHaveAttribute("class", /active/);
 
     // Header shows "Start" button
-    await expect(page.locator("button", { hasText: "Start" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Start", exact: true })).toBeVisible();
 
     // Click Findings tab — shows empty state
-    await page.locator("button", { hasText: "Findings" }).click();
+    await page.getByRole("tab", { name: "Findings", exact: true }).click();
     await expect(page.getByText("No findings yet")).toBeVisible({ timeout: 5_000 });
   });
 
