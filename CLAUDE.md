@@ -147,6 +147,7 @@ Every push to a PR branch triggers both **CI** and a **GitHub Copilot code revie
 - When opening a PR that includes **visual/UI changes**, take a Playwright screenshot of the affected area and include it in the PR description.
 - Use `mcp__playwright__browser_take_screenshot` (or Playwright's `page.screenshot()` in test code) to capture the screenshot.
 - Embed screenshots in the PR body as markdown images: `![description](url)`. Upload via `gh` or attach inline.
+- For the full CLI-driven capture and upload process, see `docs/pr-screenshot-workflow.md`.
 - This helps reviewers quickly see what changed without running the app locally.
 
 ### PR Completion Checklist
