@@ -22,7 +22,7 @@ interface Props {
  * not at creation/editing time.
  */
 export function TaskEditPanel({ viewMode, setViewMode }: Props): JSX.Element {
-  const { tasks, createTask, updateTask } = useGrackle();
+  const { tasks, createTask, updateTask, personas } = useGrackle();
   const { showToast } = useToast();
 
   const isEdit = viewMode.kind === "edit_task";
@@ -41,6 +41,7 @@ export function TaskEditPanel({ viewMode, setViewMode }: Props): JSX.Element {
   const [title, setTitle] = useState(existingTask?.title ?? "");
   const [description, setDescription] = useState(existingTask?.description ?? "");
   const [selectedDeps, setSelectedDeps] = useState<string[]>(existingTask?.dependsOn ?? []);
+  const [personaId, setPersonaId] = useState(existingTask?.personaId ?? "");
 
   // All tasks in the same project, excluding the task being edited (self)
   const siblingTasks = tasks.filter(
@@ -74,6 +75,7 @@ export function TaskEditPanel({ viewMode, setViewMode }: Props): JSX.Element {
         "",
         selectedDeps.length > 0 ? selectedDeps : undefined,
         parentTaskId || undefined,
+        personaId || undefined,
       );
       showToast("Task created", "success");
       setViewMode({ kind: "project", projectId });
@@ -157,6 +159,27 @@ export function TaskEditPanel({ viewMode, setViewMode }: Props): JSX.Element {
             rows={8}
           />
         </div>
+
+        {/* Persona (new task only — persona is a creation-time template) */}
+        {!isEdit && personas.length > 0 && (
+          <div className={styles.section}>
+            <label className={styles.label} htmlFor="task-edit-persona">
+              Persona
+            </label>
+            <select
+              id="task-edit-persona"
+              value={personaId}
+              onChange={(e) => setPersonaId(e.target.value)}
+              className={styles.personaSelect}
+              data-testid="task-edit-persona"
+            >
+              <option value="">No persona</option>
+              {personas.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {/* Dependencies */}
         <div className={styles.section}>

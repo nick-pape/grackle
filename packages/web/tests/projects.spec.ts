@@ -365,11 +365,10 @@ test.describe("Projects", () => {
     // No progress bar when no tasks
     await expect(page.locator('[data-testid="progress-bar"]')).not.toBeVisible();
 
-    // Create a task
+    // Create a task via the full-panel form (no environment selector — env is chosen at start time)
     await page.getByText("progress-test").locator("..").locator('button[title="New task"]').first().click();
-    await page.locator('input[placeholder="Task title..."]').fill("progress task");
-    await page.locator("select").first().selectOption("test-local");
-    await page.locator("button", { hasText: /^Create$/ }).click();
+    await page.locator('[data-testid="task-edit-title"]').fill("progress task");
+    await page.locator('[data-testid="task-edit-save"]').click();
     await expect(page.getByText("progress task")).toBeVisible({ timeout: 5_000 });
 
     // Go back to project view
