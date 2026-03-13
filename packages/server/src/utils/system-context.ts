@@ -61,7 +61,7 @@ export function buildTaskSystemContext(title: string, description: string, revie
     `    PR_NUMBER=$(gh pr view --json number --jq '.number')`,
     `    gh api graphql -F query=@/tmp/copilot-threads.graphql -f owner="$OWNER" -f repo="$REPO" -F pr="$PR_NUMBER"`,
     `    \`\`\``,
-    `    For each unresolved, non-outdated thread where the last comment author is \`copilot-pull-request-reviewer\`:`,
+    `    For each unresolved thread where the last comment author is \`copilot-pull-request-reviewer\` (do NOT filter on isOutdated — outdated but unresolved threads still block the merge button):`,
     `    - Read the file and understand the suggestion`,
     `    - Fix the code OR dismiss with an explanation`,
     `    - Reply to the comment (use REST API: \`gh api repos/$OWNER/$REPO/pulls/$PR_NUMBER/comments/$COMMENT_ID/replies -f body="..."\`)`,

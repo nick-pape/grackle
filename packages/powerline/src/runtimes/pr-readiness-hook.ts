@@ -98,7 +98,7 @@ export function checkPrReadiness(cwd?: string): { ready: boolean; reason?: strin
       execOpts,
     ).trim();
     const copilotCount = execSync(
-      `gh api graphql -f query='query($owner:String!,$repo:String!,$pr:Int!){repository(owner:$owner,name:$repo){pullRequest(number:$pr){reviewThreads(first:100){nodes{isResolved isOutdated comments(last:1){nodes{author{login}}}}}}}}' -f owner="${owner}" -f repo="${repo}" -F pr="${prNumber}" --jq '[.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == false and .isOutdated == false and .comments.nodes[0].author.login == "copilot-pull-request-reviewer")] | length'`,
+      `gh api graphql -f query='query($owner:String!,$repo:String!,$pr:Int!){repository(owner:$owner,name:$repo){pullRequest(number:$pr){reviewThreads(first:100){nodes{isResolved isOutdated comments(last:1){nodes{author{login}}}}}}}}' -f owner="${owner}" -f repo="${repo}" -F pr="${prNumber}" --jq '[.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == false and .comments.nodes[0].author.login == "copilot-pull-request-reviewer")] | length'`,
       execOpts,
     ).trim();
     const count = parseInt(copilotCount, 10);

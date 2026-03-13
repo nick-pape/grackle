@@ -105,7 +105,7 @@ query($owner: String!, $repo: String!, $pr: Int!) {
   }
 }' -f owner="$OWNER" -f repo="$REPO" -F pr="$PR_NUMBER" --jq '
   [.data.repository.pullRequest.reviewThreads.nodes[] |
-   select(.isResolved == false and .isOutdated == false and
+   select(.isResolved == false and
           .comments.nodes[0].author.login == "copilot-pull-request-reviewer")] |
    length
 ') || {
