@@ -1,16 +1,17 @@
 import { test, expect } from "./fixtures.js";
+import { getNewChatRuntimeSelect } from "./helpers.js";
 
 test.describe("Copilot Runtime Option", () => {
   test.beforeEach(async ({ appPage }) => {
-    // Switch to Environments tab and enter new_chat mode
-    await appPage.locator("button", { hasText: "Environments" }).click();
+    // Environments are now in Settings — navigate there via the gear button
+    await appPage.locator('button[title="Settings"]').click();
     await appPage.locator('button[title="New chat"]').click();
-    await expect(appPage.locator("text=new chat")).toBeVisible();
+    await expect(appPage.getByText("new chat", { exact: true })).toBeVisible();
   });
 
   test("copilot option appears in runtime selector", async ({ appPage }) => {
     const page = appPage;
-    const runtimeSelect = page.locator("select");
+    const runtimeSelect = getNewChatRuntimeSelect(page);
     await expect(runtimeSelect).toBeVisible();
 
     // Verify all runtime options are present in alphabetical order
@@ -24,7 +25,7 @@ test.describe("Copilot Runtime Option", () => {
 
   test("copilot can be selected as the runtime", async ({ appPage }) => {
     const page = appPage;
-    const runtimeSelect = page.locator("select");
+    const runtimeSelect = getNewChatRuntimeSelect(page);
 
     // Select copilot runtime
     await runtimeSelect.selectOption("copilot");
@@ -35,7 +36,7 @@ test.describe("Copilot Runtime Option", () => {
 
   test("copilot selection persists after typing a prompt", async ({ appPage }) => {
     const page = appPage;
-    const runtimeSelect = page.locator("select");
+    const runtimeSelect = getNewChatRuntimeSelect(page);
 
     // Select copilot, type a prompt
     await runtimeSelect.selectOption("copilot");
@@ -51,7 +52,7 @@ test.describe("Copilot Runtime Option", () => {
 
   test("switching between runtimes updates selector value", async ({ appPage }) => {
     const page = appPage;
-    const runtimeSelect = page.locator("select");
+    const runtimeSelect = getNewChatRuntimeSelect(page);
 
     // Default runtime is "stub" (set by global-setup via --runtime stub)
     await expect(runtimeSelect).toHaveValue("stub");

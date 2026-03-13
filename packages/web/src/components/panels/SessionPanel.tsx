@@ -2,12 +2,18 @@ import { useGrackle } from "../../context/GrackleContext.js";
 import { EventRenderer } from "../display/EventRenderer.js";
 import { FindingsPanel } from "./FindingsPanel.js";
 import { SettingsPanel } from "./SettingsPanel.js";
+import { PersonaManager } from "../personas/PersonaManager.js";
 import { DagView } from "../dag/DagView.js";
 import { useEffect, useMemo, useRef, useState, type JSX, type RefObject } from "react";
 import type { ViewMode } from "../../App.js";
-import type { Session, SessionEvent } from "../../hooks/useGrackleSocket.js";
+import type { Session, SessionEvent, TaskData, Environment, Project } from "../../hooks/useGrackleSocket.js";
 import { AnimatePresence, motion } from "motion/react";
+import Markdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import styles from "./SessionPanel.module.scss";
+import { ConfirmDialog, Breadcrumbs } from "../display/index.js";
+import { buildBreadcrumbs } from "../../utils/breadcrumbs.js";
+import type { BreadcrumbSegment } from "../../utils/breadcrumbs.js";
 
 /** Props for the SessionPanel component. */
 interface Props {
@@ -51,16 +57,29 @@ function SessionHeader({ sessionId, session, isActive, onKill }: SessionHeaderPr
   );
 }
 
+/** Overflow warning banner shown when events exceed the in-memory cap. */
+function EventOverflowBanner({ eventsDropped }: { eventsDropped: number }): JSX.Element {
+  if (eventsDropped <= 0) {
+    return <></>;
+  }
+  return (
+    <div className={styles.eventOverflowWarning} role="alert">
+      ⚠ {eventsDropped.toLocaleString()} older event{eventsDropped === 1 ? "" : "s"} were dropped — only the most recent 5,000 are shown. Full history is available in the session log.
+    </div>
+  );
+}
+
 /** Props for the EventList subcomponent. */
 interface EventListProps {
   sessionEvents: SessionEvent[];
   session: Session | undefined;
+  eventsDropped: number;
   // eslint-disable-next-line @rushstack/no-new-null
   scrollRef: RefObject<HTMLDivElement | null>;
 }
 
 /** Scrollable list of session events with empty-state messaging. */
-function EventList({ sessionEvents, session, scrollRef }: EventListProps): JSX.Element {
+function EventList({ sessionEvents, session, eventsDropped, scrollRef }: EventListProps): JSX.Element {
   const isTerminal = session && ["completed", "failed", "killed"].includes(session.status);
   const emptyMessage = isTerminal
     ? `Session ${session.status} with no events recorded.`
@@ -71,6 +90,7 @@ function EventList({ sessionEvents, session, scrollRef }: EventListProps): JSX.E
       {sessionEvents.length === 0 && (
         <div className={isTerminal ? styles.errorMessage : styles.waitingMessage}>{emptyMessage}</div>
       )}
+      <EventOverflowBanner eventsDropped={eventsDropped} />
       {sessionEvents.map((event, i) => (
         <EventRenderer key={`${event.sessionId}-${event.timestamp}-${i}`} event={event} />
       ))}
@@ -96,42 +116,510 @@ function groupConsecutiveTextEvents(events: SessionEvent[]): SessionEvent[] {
   return result;
 }
 
+// --- Overview helpers ---
+
+/** Formats an ISO timestamp into a human-readable local date/time string. */
+function formatDate(iso: string | undefined): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "—";
+  return d.toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+/** Returns a human-readable duration string between two ISO timestamps, or undefined if not computable. */
+function formatDuration(start: string | undefined, end: string | undefined): string | undefined {
+  if (!start || !end) return undefined;
+  const ms = new Date(end).getTime() - new Date(start).getTime();
+  if (isNaN(ms) || ms < 0) return undefined;
+  const mins = Math.floor(ms / 60000);
+  const secs = Math.floor((ms % 60000) / 1000);
+  if (mins === 0) return `${secs}s`;
+  const hours = Math.floor(mins / 60);
+  const remMins = mins % 60;
+  if (hours === 0) return `${mins}m ${secs}s`;
+  return `${hours}h ${remMins}m`;
+}
+
+/** Derives a color class for an environment status string. */
+function envStatusClass(status: string): string {
+  const s = status.toLowerCase();
+  if (s === "ready" || s === "running" || s === "available" || s === "connected") return styles.envDotGreen;
+  if (s === "provisioning" || s === "starting" || s === "pending" || s === "connecting") return styles.envDotYellow;
+  if (s === "error" || s === "failed" || s === "disconnected") return styles.envDotRed;
+  return styles.envDotGray;
+}
+
+/** Converts an ISO timestamp into a human-friendly relative time string. */
+function relativeTime(iso: string | undefined): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "";
+  const now = Date.now();
+  const diffMs = now - d.getTime();
+  if (diffMs < 0) return "just now";
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days}d ago`;
+  return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+}
+
+/** Props for the TaskStatusBadge component. */
+interface TaskStatusBadgeProps {
+  status: string;
+}
+
+/** Large colored badge displaying the current task status. */
+function TaskStatusBadge({ status }: TaskStatusBadgeProps): JSX.Element {
+  const labelMap: Record<string, string> = {
+    pending: "Pending",
+    assigned: "Assigned",
+    in_progress: "In Progress",
+    waiting_input: "Waiting for Input",
+    review: "Review",
+    done: "Done",
+    failed: "Failed",
+  };
+  const colorClassMap: Record<string, string> = {
+    pending: styles.statusPending,
+    assigned: styles.statusAssigned,
+    in_progress: styles.statusInProgress,
+    waiting_input: styles.statusWaitingInput,
+    review: styles.statusReview,
+    done: styles.statusDone,
+    failed: styles.statusFailed,
+  };
+  return (
+    <span className={`${styles.statusBadge} ${colorClassMap[status] ?? styles.statusPending}`}>
+      {labelMap[status] ?? status}
+    </span>
+  );
+}
+
+/** Props for the TaskOverview component. */
+interface TaskOverviewProps {
+  task: TaskData;
+  tasksById: Map<string, TaskData>;
+  environments: Environment[];
+  projects: Project[];
+}
+
+/** Enriched overview dashboard for a task: status, branch, description, environment, deps, timeline, review notes. */
+function TaskOverview({ task, tasksById, environments, projects }: TaskOverviewProps): JSX.Element {
+  const env = environments.find((e) => e.id === task.environmentId);
+  const project = projects.find((p) => p.id === task.projectId);
+
+  // Build GitHub branch URL if the project has a repoUrl; encode the full
+  // branch name so special characters (spaces, %, etc.) are safe in the URL.
+  const branchUrl = task.branch && project?.repoUrl
+    ? `${project.repoUrl.replace(/\/$/, "")}/tree/${encodeURIComponent(task.branch)}`
+    : undefined;
+
+  return (
+    <div className={styles.overviewDashboard}>
+      {/* Hero: status badge */}
+      <div className={styles.overviewHero}>
+        <TaskStatusBadge status={task.status} />
+        {task.branch && (
+          <span className={styles.overviewBranchPill}>
+            {branchUrl ? (
+              <a href={branchUrl} target="_blank" rel="noreferrer noopener" className={styles.branchLink}>
+                {"\u{1F517}"} {task.branch}
+              </a>
+            ) : (
+              <span>{"\u{1F517}"} {task.branch}</span>
+            )}
+          </span>
+        )}
+      </div>
+
+      {/* Description */}
+      {typeof task.description === "string" && task.description && (
+        <div className={styles.overviewSection}>
+          <div className={styles.overviewLabel}>Description</div>
+          <div className={styles.overviewMarkdown}>
+            <Markdown remarkPlugins={[remarkGfm]}>{task.description}</Markdown>
+          </div>
+        </div>
+      )}
+
+      {/* Environment */}
+      {task.environmentId && (
+        <div className={styles.overviewSection}>
+          <div className={styles.overviewLabel}>Environment</div>
+          <div className={styles.envRow}>
+            {env && (
+              <span
+                className={`${styles.envDot} ${envStatusClass(env.status)}`}
+                title={env.status}
+                aria-label={`Status: ${env.status}`}
+                role="img"
+              />
+            )}
+            <span className={styles.overviewValue}>
+              {env?.displayName ?? task.environmentId}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Dependencies — always shown */}
+      <div className={styles.overviewSection}>
+        <div className={styles.overviewLabel}>Dependencies</div>
+        {task.dependsOn.length === 0 ? (
+          <div className={styles.overviewMuted}>None</div>
+        ) : (
+          <div className={styles.depList}>
+            {task.dependsOn.map((depId) => {
+              const dep = tasksById.get(depId);
+              const isDone = dep?.status === "done";
+              return (
+                <div
+                  key={depId}
+                  className={`${styles.depItem} ${isDone ? styles.depDone : styles.depBlocked}`}
+                >
+                  <span>{isDone ? "\u2713" : "\u25CB"}</span>
+                  <span>{dep?.title ?? depId}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Timeline */}
+      <div className={styles.overviewSection}>
+        <div className={styles.overviewLabel}>Timeline</div>
+        <div className={styles.timeline}>
+          {task.createdAt && (
+            <div className={styles.timelineRow}>
+              <span className={styles.timelineKey}>Created</span>
+              <span className={styles.timelineValue}>{formatDate(task.createdAt)}</span>
+            </div>
+          )}
+          {task.assignedAt && (() => {
+            const delta = formatDuration(task.createdAt, task.assignedAt);
+            return (
+              <div className={styles.timelineRow}>
+                <span className={styles.timelineKey}>Assigned</span>
+                <span className={styles.timelineValue}>{formatDate(task.assignedAt)}</span>
+                {delta !== undefined && <span className={styles.timelineDelta}>{delta}</span>}
+              </div>
+            );
+          })()}
+          {task.startedAt && (() => {
+            const delta = formatDuration(task.assignedAt ?? task.createdAt, task.startedAt);
+            return (
+              <div className={styles.timelineRow}>
+                <span className={styles.timelineKey}>Started</span>
+                <span className={styles.timelineValue}>{formatDate(task.startedAt)}</span>
+                {delta !== undefined && <span className={styles.timelineDelta}>{delta}</span>}
+              </div>
+            );
+          })()}
+          {task.completedAt && (() => {
+            const delta = formatDuration(task.startedAt, task.completedAt);
+            return (
+              <div className={styles.timelineRow}>
+                <span className={styles.timelineKey}>Completed</span>
+                <span className={styles.timelineValue}>{formatDate(task.completedAt)}</span>
+                {delta !== undefined && <span className={styles.timelineDelta}>{delta}</span>}
+              </div>
+            );
+          })()}
+          {!task.createdAt && !task.assignedAt && !task.startedAt && !task.completedAt && (
+            <div className={styles.overviewMuted}>No timing data</div>
+          )}
+        </div>
+      </div>
+
+      {/* Review notes */}
+      {task.reviewNotes && (
+        <div className={styles.overviewSection}>
+          <div className={styles.overviewLabel}>Review Notes</div>
+          <div className={styles.reviewNotes}>{task.reviewNotes}</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // --- Main component ---
 
 type TaskTab = "overview" | "stream" | "findings";
 type ProjectTab = "tasks" | "graph";
 
+/** Props for the TaskActionButtons subcomponent. */
+interface TaskActionButtonsProps {
+  task: TaskData;
+  sessionId: string | undefined;
+  isBlocked: boolean;
+  rejectNotes: string;
+  onRejectNotesChange: (notes: string) => void;
+  onStart: () => void;
+  onStop: () => void;
+  onApprove: () => void;
+  onReject: () => void;
+  onDelete: () => void;
+}
+
+/** Context-dependent action buttons rendered in the task detail header. */
+function TaskActionButtons({
+  task,
+  sessionId,
+  isBlocked,
+  rejectNotes,
+  onRejectNotesChange,
+  onStart,
+  onStop,
+  onApprove,
+  onReject,
+  onDelete,
+}: TaskActionButtonsProps): JSX.Element | undefined {
+  if (task.status === "pending" || task.status === "assigned") {
+    if (isBlocked) {
+      return (
+        <div className={styles.headerActions}>
+          <button onClick={onDelete} className={styles.btnDanger}>Delete</button>
+        </div>
+      );
+    }
+    return (
+      <div className={styles.headerActions}>
+        <button onClick={onStart} className={styles.btnPrimary}>Start</button>
+        <button onClick={onDelete} className={styles.btnDanger}>Delete</button>
+      </div>
+    );
+  }
+
+  if (task.status === "in_progress" || task.status === "waiting_input") {
+    return (
+      <div className={styles.headerActions}>
+        <button
+          onClick={onStop}
+          disabled={!sessionId}
+          className={styles.btnDanger}
+        >
+          Stop
+        </button>
+      </div>
+    );
+  }
+
+  if (task.status === "review") {
+    return (
+      <div className={styles.headerActions}>
+        <input
+          type="text"
+          value={rejectNotes}
+          onChange={(e) => onRejectNotesChange(e.target.value)}
+          placeholder="Rejection notes..."
+          className={styles.rejectInput}
+        />
+        <button onClick={onApprove} className={styles.btnPrimary}>Approve</button>
+        <button onClick={onReject} className={styles.btnDanger}>Reject</button>
+      </div>
+    );
+  }
+
+  if (task.status === "done") {
+    return (
+      <div className={styles.headerActions}>
+        <button onClick={onDelete} className={styles.btnDanger}>Delete</button>
+      </div>
+    );
+  }
+
+  if (task.status === "failed") {
+    return (
+      <div className={styles.headerActions}>
+        <button onClick={onStart} className={styles.btnPrimary}>Retry</button>
+        <button onClick={onDelete} className={styles.btnDanger}>Delete</button>
+      </div>
+    );
+  }
+
+  return undefined;
+}
+
+/** Props for the SessionAttemptSelector component. */
+interface SessionAttemptSelectorProps {
+  taskSessions: Session[];
+  selectedSessionId: string | undefined;
+  onSelect: (sessionId: string) => void;
+}
+
+/** Renders a row of buttons for switching between session attempts (only when 2+). */
+function SessionAttemptSelector({ taskSessions, selectedSessionId, onSelect }: SessionAttemptSelectorProps): JSX.Element | undefined {
+  if (taskSessions.length < 2) {
+    return undefined;
+  }
+  return (
+    <div className={styles.attemptSelector} data-testid="attempt-selector">
+      <span className={styles.attemptLabel}>Attempts:</span>
+      {taskSessions.map((s, i) => {
+        const isActive = s.id === selectedSessionId;
+        const statusIcon = s.status === "completed" ? "\u2713"
+          : s.status === "failed" ? "\u2717"
+          : s.status === "running" || s.status === "waiting_input" ? "\u25CF"
+          : "";
+        return (
+          <button
+            key={s.id}
+            className={`${styles.attemptButton} ${isActive ? styles.attemptActive : ""}`}
+            onClick={() => onSelect(s.id)}
+            title={`Attempt #${i + 1} — ${s.status}`}
+            aria-label={`Attempt #${i + 1}, ${s.status}`}
+            aria-pressed={isActive}
+            data-testid={`attempt-${i + 1}`}
+          >
+            #{i + 1}
+            {statusIcon && <span className={styles.attemptStatus}>{statusIcon}</span>}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 /** Main content panel that renders session streams, task views, project summaries, or empty states based on the current view mode. */
 export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
-  const { events, sessions, tasks, environments, loadSessionEvents, loadFindings, kill, projects, createProject, startTask } = useGrackle();
+  const {
+    events, eventsDropped, sessions, tasks, environments,
+    loadSessionEvents, loadFindings,
+    kill, startTask, approveTask, rejectTask, deleteTask,
+    projects, createProject, archiveProject, updateProject,
+    taskSessions, loadTaskSessions,
+  } = useGrackle();
   // eslint-disable-next-line @rushstack/no-new-null
   const scrollRef = useRef<HTMLDivElement>(null);
   const loadedRef = useRef<string | undefined>(undefined);
   const [activeTaskTab, setActiveTaskTab] = useState<TaskTab>("overview");
   const [projectTab, setProjectTab] = useState<ProjectTab>("tasks");
+  const [rejectNotes, setRejectNotes] = useState("");
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
+  const [selectedSessionId, setSelectedSessionId] = useState<string | undefined>(undefined);
   const prevTaskIdRef = useRef<string | undefined>(undefined);
   const prevTaskStatusRef = useRef<string | undefined>(undefined);
 
-  // Determine session context
-  let sessionId: string | undefined = undefined;
+  // Inline-edit state for project fields
+  type EditingField = "name" | "description" | "repoUrl" | "defaultEnvironmentId" | null;
+  const [editingField, setEditingField] = useState<EditingField>(null);
+  const [editDraft, setEditDraft] = useState("");
+  const [editError, setEditError] = useState("");
+  const [metaCollapsed, setMetaCollapsed] = useState(false);
+  const previousProjectIdRef = useRef<string | undefined>(undefined);
+  const ignoreInitialBlurFieldRef = useRef<Exclude<EditingField, null> | null>(null);
+  const nameInputRef = useRef<HTMLInputElement>(null);
+  const descriptionInputRef = useRef<HTMLTextAreaElement>(null);
+  const repositoryInputRef = useRef<HTMLInputElement>(null);
+  const environmentSelectRef = useRef<HTMLSelectElement>(null);
+  const currentProjectId = viewMode.kind === "project" ? viewMode.projectId : undefined;
+  useEffect(() => {
+    const previousProjectId = previousProjectIdRef.current;
+    previousProjectIdRef.current = currentProjectId;
+    if (previousProjectId === undefined || previousProjectId === currentProjectId) {
+      return;
+    }
+    if (editingField !== null || editDraft !== "") {
+      setEditingField(null);
+      setEditDraft("");
+    }
+  }, [currentProjectId, editingField, editDraft]);
+
+  useEffect(() => {
+    if (editingField === null) {
+      return;
+    }
+    const focusTarget =
+      editingField === "name" ? nameInputRef.current
+      : editingField === "description" ? descriptionInputRef.current
+      : editingField === "repoUrl" ? repositoryInputRef.current
+      : environmentSelectRef.current;
+    if (!focusTarget) {
+      return;
+    }
+    const focusTimer = window.setTimeout(() => {
+      focusTarget.focus();
+    }, 0);
+    return () => {
+      window.clearTimeout(focusTimer);
+    };
+  }, [editingField]);
+
+  // Determine task and project context
   let task: ReturnType<typeof tasks.find> = undefined;
   let projectId: string | undefined = undefined;
 
-  if (viewMode.kind === "session") {
-    sessionId = viewMode.sessionId;
-  } else if (viewMode.kind === "task") {
+  if (viewMode.kind === "task") {
     task = tasks.find((t) => t.id === viewMode.taskId);
-    sessionId = task?.sessionId || undefined;
     projectId = task?.projectId || undefined;
   }
 
-  // Reset to overview tab when switching to a different task.
+  // Resolve effective sessionId — use selectedSessionId if valid, otherwise task.sessionId
+  const currentTaskSessions = task ? (taskSessions[task.id] ?? []) : [];
+  let sessionId: string | undefined = undefined;
+  if (viewMode.kind === "session") {
+    sessionId = viewMode.sessionId;
+  } else if (viewMode.kind === "task") {
+    if (selectedSessionId && currentTaskSessions.some((s) => s.id === selectedSessionId)) {
+      sessionId = selectedSessionId;
+    } else {
+      sessionId = task?.sessionId || undefined;
+    }
+  }
+
+  // Delete handler for task actions — opens ConfirmDialog
+  const handleDeleteTask = (): void => {
+    setShowDeleteConfirm(true);
+  };
+
+  const handleDeleteConfirm = (): void => {
+    if (!task) return;
+    deleteTask(task.id);
+    setShowDeleteConfirm(false);
+    setViewMode({ kind: "project", projectId: task.projectId });
+  };
+
+  // Reset to overview tab, clear rejectNotes, and clear selectedSessionId when switching tasks.
   if (viewMode.kind === "task" && task?.id !== prevTaskIdRef.current) {
     prevTaskIdRef.current = task?.id;
     if (activeTaskTab !== "overview") {
       setActiveTaskTab("overview");
     }
+    if (rejectNotes !== "") {
+      setRejectNotes("");
+    }
+    if (selectedSessionId !== undefined) {
+      setSelectedSessionId(undefined);
+    }
   }
+
+  // Load task sessions when task changes or when a new session is created (retry)
+  const loadedTaskSessionsRef = useRef<string | undefined>(undefined);
+  const prevTaskSessionIdRef = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (!task?.id) {
+      return;
+    }
+    const isNewTask = task.id !== loadedTaskSessionsRef.current;
+    const sessionChanged = task.sessionId !== prevTaskSessionIdRef.current;
+    if (isNewTask || sessionChanged) {
+      loadedTaskSessionsRef.current = task.id;
+      prevTaskSessionIdRef.current = task.sessionId;
+      loadTaskSessions(task.id);
+    }
+  }, [task?.id, task?.sessionId, loadTaskSessions]);
 
   // Auto-switch tab synchronously during render (not via effect) so the
   // correct tab is committed in the same frame as the status change.
@@ -143,6 +631,7 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
       task?.status === "pending" ? "overview"
       : task?.status === "assigned" ? "overview"
       : task?.status === "in_progress" ? "stream"
+      : task?.status === "waiting_input" ? "stream"
       : task?.status === "review" ? "stream"
       : task?.status === "done" ? "findings"
       : undefined;
@@ -162,6 +651,25 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
     () => new Map(tasks.map((t) => [t.id, t])),
     [tasks],
   );
+
+  // Check if task is blocked by unfinished dependencies (uses tasksById for O(deps) lookup)
+  const isTaskBlocked = task
+    ? task.dependsOn.some((depId) => {
+        const dep = tasksById.get(depId);
+        return dep !== undefined && dep.status !== "done";
+      })
+    : false;
+
+  const breadcrumbs = useMemo(
+    () => buildBreadcrumbs(viewMode, projects, tasksById),
+    [viewMode, projects, tasksById],
+  );
+
+  const handleBreadcrumbNavigate = (segment: BreadcrumbSegment): void => {
+    if (segment.viewMode) {
+      setViewMode(segment.viewMode);
+    }
+  };
 
   const session = sessionId
     ? sessions.find((s) => s.id === sessionId) ?? undefined
@@ -191,7 +699,22 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
 
   // --- settings mode ---
   if (viewMode.kind === "settings") {
-    return <SettingsPanel />;
+    return (
+      <div className={styles.panelContainer}>
+        <Breadcrumbs segments={breadcrumbs} onNavigate={handleBreadcrumbNavigate} />
+        <SettingsPanel viewMode={viewMode} setViewMode={setViewMode} />
+      </div>
+    );
+  }
+
+  // --- persona management mode ---
+  if (viewMode.kind === "persona_management") {
+    return (
+      <div className={styles.panelContainer}>
+        <Breadcrumbs segments={breadcrumbs} onNavigate={handleBreadcrumbNavigate} />
+        <PersonaManager />
+      </div>
+    );
   }
 
   // --- empty mode ---
@@ -227,19 +750,398 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
   // --- new_chat mode ---
   if (viewMode.kind === "new_chat") {
     return (
-      <div className={styles.emptyState}>
-        Enter a prompt below to start a new session
+      <div className={styles.panelContainer}>
+        <Breadcrumbs segments={breadcrumbs} onNavigate={handleBreadcrumbNavigate} />
+        <div className={styles.emptyState}>
+          Enter a prompt below to start a new session
+        </div>
       </div>
     );
   }
 
   // --- project mode ---
   if (viewMode.kind === "project") {
+    const project = projects.find((p) => p.id === viewMode.projectId);
     const projectTasks = tasks.filter((t) => t.projectId === viewMode.projectId);
     const done = projectTasks.filter((t) => t.status === "done").length;
     const total = projectTasks.length;
+    const progressPct = total > 0 ? Math.round((done / total) * 100) : 0;
+
+    const MAX_NAME_LENGTH = 100;
+
+    const startEdit = (field: EditingField, currentValue: string): void => {
+      ignoreInitialBlurFieldRef.current = field;
+      setEditingField(field);
+      setEditDraft(currentValue);
+      setEditError("");
+    };
+
+    const cancelEdit = (): void => {
+      ignoreInitialBlurFieldRef.current = null;
+      setEditingField(null);
+      setEditDraft("");
+      setEditError("");
+    };
+
+    /** Validate and return error message, or empty string if valid. */
+    const validateField = (field: NonNullable<EditingField>, value: string): string => {
+      if (field === "name") {
+        const trimmed = value.trim();
+        if (!trimmed) return "Name is required";
+        if (trimmed.length > MAX_NAME_LENGTH) return `Max ${MAX_NAME_LENGTH} characters`;
+      }
+      if (field === "repoUrl") {
+        const trimmed = value.trim();
+        if (trimmed && !/^https?:\/\/.+/.test(trimmed)) return "Must be a valid http(s) URL";
+      }
+      return "";
+    };
+
+    const saveEdit = (field: NonNullable<EditingField>): void => {
+      if (!project) return;
+      const trimmed = editDraft.trim();
+
+      const error = validateField(field, editDraft);
+      if (error) {
+        setEditError(error);
+        return;
+      }
+
+      if (field === "name") {
+        if (trimmed === project.name) { cancelEdit(); return; }
+        updateProject(project.id, { name: trimmed });
+      } else if (field === "description") {
+        const value = editDraft;
+        if (value === project.description) { cancelEdit(); return; }
+        updateProject(project.id, { description: value });
+      } else if (field === "repoUrl") {
+        if (trimmed === project.repoUrl) { cancelEdit(); return; }
+        updateProject(project.id, { repoUrl: trimmed });
+      } else if (field === "defaultEnvironmentId") {
+        if (editDraft === project.defaultEnvironmentId) { cancelEdit(); return; }
+        updateProject(project.id, { defaultEnvironmentId: editDraft });
+      }
+
+      cancelEdit();
+    };
+
+    const handleKeyDown = (e: { key: string }, field: NonNullable<EditingField>): void => {
+      if (e.key === "Escape") {
+        cancelEdit();
+      } else if (e.key === "Enter" && field !== "description") {
+        saveEdit(field);
+      }
+    };
+
+    /** Check if the current draft value differs from the saved value. */
+    const isDirty = (field: NonNullable<EditingField>): boolean => {
+      if (!project) return false;
+      if (field === "name") return editDraft.trim() !== project.name;
+      if (field === "description") return editDraft !== project.description;
+      if (field === "repoUrl") return editDraft.trim() !== project.repoUrl;
+      if (field === "defaultEnvironmentId") return editDraft !== project.defaultEnvironmentId;
+      return false;
+    };
+
+    const defaultEnv = environments.find((e) => e.id === project?.defaultEnvironmentId);
+
+    /** Keyboard shortcut hint for the current editing field. */
+    const keyboardHint = editingField === "description"
+      ? "Tab to save · Esc to cancel"
+      : "Enter to save · Esc to cancel";
+
     return (
       <div className={styles.panelContainer}>
+        <Breadcrumbs segments={breadcrumbs} onNavigate={handleBreadcrumbNavigate} />
+
+        {/* Project header */}
+        <div className={styles.projectHeader}>
+          <span className={styles.projectName} data-testid="project-name">
+            {editingField === "name" ? (
+              <div className={styles.editFieldWrapper}>
+                <input
+                  ref={nameInputRef}
+                  className={`${styles.editInput} ${editError ? styles.editInputInvalid : ""}`}
+                  value={editDraft}
+                  onChange={(e) => { setEditDraft(e.target.value); setEditError(""); }}
+                  onBlur={(event) => {
+                    if (ignoreInitialBlurFieldRef.current === "name") {
+                      ignoreInitialBlurFieldRef.current = null;
+                      return;
+                    }
+                    if (event.relatedTarget instanceof HTMLElement && event.relatedTarget.dataset.editAction === "name") {
+                      return;
+                    }
+                    saveEdit("name");
+                  }}
+                  onKeyDown={(e) => handleKeyDown(e, "name")}
+                  maxLength={MAX_NAME_LENGTH}
+                  aria-label="Project name"
+                  data-testid="edit-name-input"
+                />
+                {isDirty("name") && <span className={styles.unsavedDot} title="Unsaved changes" />}
+                {editError && <span className={styles.editError} data-testid="edit-error">{editError}</span>}
+                <span className={styles.editHint}>{keyboardHint}</span>
+              </div>
+            ) : (
+              <button
+                type="button"
+                className={styles.metaValueClickable}
+                onClick={() => startEdit("name", project?.name || "")}
+                title="Click to edit name"
+                aria-label={`Edit project name: ${project?.name || viewMode.projectId}`}
+                data-testid="edit-name-button"
+              >
+                {project?.name || viewMode.projectId}
+                <span
+                  className={styles.editButton}
+                  aria-hidden="true"
+                >
+                  ✏️
+                </span>
+              </button>
+            )}
+          </span>
+          <button
+            className={styles.archiveButton}
+            onClick={() => setShowArchiveConfirm(true)}
+            title="Archive project"
+            data-testid="archive-project-button"
+          >
+            Archive
+          </button>
+        </div>
+
+        {/* Collapsible metadata toggle */}
+        <button
+          className={styles.metaToggle}
+          onClick={() => setMetaCollapsed(!metaCollapsed)}
+          aria-expanded={!metaCollapsed}
+          aria-controls="project-meta-panel"
+          data-testid="meta-toggle"
+        >
+          <span className={`${styles.metaToggleArrow} ${!metaCollapsed ? styles.metaToggleArrowOpen : ""}`}>▶</span>
+          Details
+        </button>
+
+        {/* Project metadata (collapsible) */}
+        {!metaCollapsed && (
+          <div className={styles.projectMeta} data-testid="project-meta" id="project-meta-panel">
+            {/* Description */}
+            <div className={styles.metaRow}>
+              <span className={styles.metaLabel}>Description</span>
+              <div className={styles.metaValue}>
+                {editingField === "description" ? (
+                  <div className={styles.editFieldWrapper}>
+                    <textarea
+                      ref={descriptionInputRef}
+                      className={styles.editTextarea}
+                      value={editDraft}
+                      onChange={(e) => { setEditDraft(e.target.value); setEditError(""); }}
+                      onBlur={(event) => {
+                        if (ignoreInitialBlurFieldRef.current === "description") {
+                          ignoreInitialBlurFieldRef.current = null;
+                          return;
+                        }
+                        if (event.relatedTarget instanceof HTMLElement && event.relatedTarget.dataset.editAction === "description") {
+                          return;
+                        }
+                        saveEdit("description");
+                      }}
+                      onKeyDown={(e) => handleKeyDown(e, "description")}
+                      title="Project description"
+                      aria-label="Project description"
+                      data-testid="edit-description-input"
+                    />
+                    {isDirty("description") && <span className={styles.unsavedDot} title="Unsaved changes" />}
+                    <span className={styles.editHint}>{keyboardHint}</span>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    className={styles.metaValueClickable}
+                    onClick={() => startEdit("description", project?.description || "")}
+                    title="Click to edit description"
+                    aria-label="Edit project description"
+                    data-testid="edit-description-button"
+                  >
+                    {project?.description ? (
+                      <span className={styles.overviewMarkdown}>
+                        <Markdown remarkPlugins={[remarkGfm]}>{project.description}</Markdown>
+                      </span>
+                    ) : (
+                      <span className={styles.metaPlaceholder}>No description</span>
+                    )}
+                    <span
+                      className={styles.editButton}
+                      aria-hidden="true"
+                    >
+                      ✏️
+                    </span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Repo URL */}
+            <div className={styles.metaRow}>
+              <span className={styles.metaLabel}>Repository</span>
+              <div className={styles.metaValue}>
+                {editingField === "repoUrl" ? (
+                  <div className={styles.editFieldWrapper}>
+                    <input
+                      ref={repositoryInputRef}
+                      className={`${styles.editInput} ${editError ? styles.editInputInvalid : ""}`}
+                      value={editDraft}
+                      onChange={(e) => { setEditDraft(e.target.value); setEditError(""); }}
+                      onBlur={(event) => {
+                        if (ignoreInitialBlurFieldRef.current === "repoUrl") {
+                          ignoreInitialBlurFieldRef.current = null;
+                          return;
+                        }
+                        if (event.relatedTarget instanceof HTMLElement && event.relatedTarget.dataset.editAction === "repoUrl") {
+                          return;
+                        }
+                        saveEdit("repoUrl");
+                      }}
+                      onKeyDown={(e) => handleKeyDown(e, "repoUrl")}
+                      placeholder="https://github.com/..."
+                      aria-label="Project repository URL"
+                      data-testid="edit-repo-input"
+                    />
+                    {isDirty("repoUrl") && <span className={styles.unsavedDot} title="Unsaved changes" />}
+                    {editError && <span className={styles.editError} data-testid="edit-error">{editError}</span>}
+                    <span className={styles.editHint}>{keyboardHint}</span>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    className={styles.metaValueClickable}
+                    onClick={(e) => { e.preventDefault(); startEdit("repoUrl", project?.repoUrl || ""); }}
+                    title="Click to edit repository URL"
+                    aria-label="Edit project repository URL"
+                    data-testid="edit-repo-button"
+                  >
+                    {project?.repoUrl && /^https?:\/\//i.test(project.repoUrl) ? (
+                      <a
+                        className={styles.repoLink}
+                        href={project.repoUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {project.repoUrl}
+                      </a>
+                    ) : project?.repoUrl ? (
+                      <span>{project.repoUrl}</span>
+                    ) : (
+                      <span className={styles.metaPlaceholder}>No repository</span>
+                    )}
+                    <span
+                      className={styles.editButton}
+                      aria-hidden="true"
+                    >
+                      ✏️
+                    </span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Default Environment */}
+            <div className={styles.metaRow}>
+              <span className={styles.metaLabel}>Environment</span>
+              <div className={styles.metaValue}>
+                {editingField === "defaultEnvironmentId" ? (
+                  <select
+                    ref={environmentSelectRef}
+                    className={styles.editSelect}
+                    value={editDraft}
+                    onChange={(e) => {
+                      ignoreInitialBlurFieldRef.current = null;
+                      setEditDraft(e.target.value);
+                      const val = e.target.value;
+                      if (project && val !== project.defaultEnvironmentId) {
+                        updateProject(project.id, { defaultEnvironmentId: val });
+                      }
+                      cancelEdit();
+                    }}
+                    onBlur={(event) => {
+                      if (ignoreInitialBlurFieldRef.current === "defaultEnvironmentId") {
+                        ignoreInitialBlurFieldRef.current = null;
+                        return;
+                      }
+                      if (event.relatedTarget instanceof HTMLElement && event.relatedTarget.dataset.editAction === "defaultEnvironmentId") {
+                        return;
+                      }
+                      cancelEdit();
+                    }}
+                    title="Default environment"
+                    aria-label="Project default environment"
+                    data-testid="edit-env-select"
+                  >
+                    <option value="">None</option>
+                    {environments.map((env) => (
+                      <option key={env.id} value={env.id}>{env.displayName}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <button
+                    type="button"
+                    className={styles.metaValueClickable}
+                    onClick={() => startEdit("defaultEnvironmentId", project?.defaultEnvironmentId || "")}
+                    title="Click to change default environment"
+                    aria-label="Edit project default environment"
+                    data-testid="edit-env-button"
+                  >
+                    {defaultEnv ? (
+                      <span className={styles.envRow}>
+                        <span className={`${styles.envDot} ${envStatusClass(defaultEnv.status)}`} />
+                        {defaultEnv.displayName}
+                      </span>
+                    ) : (
+                      <span className={styles.metaPlaceholder}>
+                        {project?.defaultEnvironmentId || "No default environment"}
+                      </span>
+                    )}
+                    <span
+                      className={styles.editButton}
+                      aria-hidden="true"
+                    >
+                      ✏️
+                    </span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Timestamps */}
+            {project && (
+              <div className={styles.metaTimestamps}>
+                <span className={styles.metaTimestamp}>
+                  Created {relativeTime(project.createdAt)}
+                </span>
+                {project.updatedAt && project.updatedAt !== project.createdAt && (
+                  <span className={styles.metaTimestamp}>
+                    · Updated {relativeTime(project.updatedAt)}
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Task progress bar */}
+        {total > 0 && (
+          <div className={styles.progressBarContainer} data-testid="progress-bar">
+            <div className={styles.progressBar}>
+              <div className={styles.progressFill} style={{ width: `${progressPct}%` }} />
+            </div>
+            <span className={styles.progressLabel}>{done}/{total}</span>
+          </div>
+        )}
+
+        {/* Tabs: Graph / Tasks */}
         <div className={styles.tabBar} role="tablist" aria-label="Project view">
           <button
             role="tab"
@@ -282,6 +1184,22 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
         {projectTab === "graph" && (
           <DagView projectId={viewMode.projectId} setViewMode={setViewMode} />
         )}
+
+        {/* Archive confirmation dialog */}
+        <ConfirmDialog
+          isOpen={showArchiveConfirm}
+          title="Archive Project?"
+          description="This will hide the project from the sidebar. Tasks will not be deleted."
+          confirmLabel="Archive"
+          onConfirm={() => {
+            if (project) {
+              archiveProject(project.id);
+              setViewMode({ kind: "empty" });
+            }
+            setShowArchiveConfirm(false);
+          }}
+          onCancel={() => setShowArchiveConfirm(false)}
+        />
       </div>
     );
   }
@@ -289,8 +1207,11 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
   // --- new_environment mode ---
   if (viewMode.kind === "new_environment") {
     return (
-      <div className={styles.emptyState}>
-        Configure the new environment below
+      <div className={styles.panelContainer}>
+        <Breadcrumbs segments={breadcrumbs} onNavigate={handleBreadcrumbNavigate} />
+        <div className={styles.emptyState}>
+          Configure the new environment below
+        </div>
       </div>
     );
   }
@@ -298,33 +1219,41 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
   // --- new_task mode ---
   if (viewMode.kind === "new_task") {
     return (
-      <div className={styles.emptyState}>
-        Fill in the task details below
+      <div className={styles.panelContainer}>
+        <Breadcrumbs segments={breadcrumbs} onNavigate={handleBreadcrumbNavigate} />
+        <div className={styles.emptyState}>
+          Fill in the task details below
+        </div>
       </div>
     );
   }
 
   // --- task mode ---
   if (viewMode.kind === "task") {
-    const isActive = session?.status === "running" || session?.status === "waiting_input";
-
     return (
       <div className={styles.panelContainer}>
-        {/* Task header */}
+        <Breadcrumbs segments={breadcrumbs} onNavigate={handleBreadcrumbNavigate} />
+        {/* Task header with contextual action buttons */}
         <div className={styles.header}>
-          <span>
-            Task: {task?.title || viewMode.taskId}
-            {task && ` | ${task.status}`}
-            {task?.branch && ` | ${task.branch}`}
+          <span className={styles.headerTitle}>
+            <span data-testid="task-title">{task?.title || viewMode.taskId}</span>
+            {task && <span className={styles.taskStatusBadge} data-testid="task-status">{task.status}</span>}
+            {task?.branch && <span className={styles.taskBranch}>{task.branch}</span>}
+            {isTaskBlocked && <span className={styles.taskBlockedBadge}>blocked</span>}
           </span>
-          {isActive && (
-            <button
-              onClick={() => sessionId && kill(sessionId)}
-              title="Stop session"
-              className={styles.killButton}
-            >
-              {"\u00D7"}
-            </button>
+          {task && (
+            <TaskActionButtons
+              task={task}
+              sessionId={sessionId}
+              isBlocked={isTaskBlocked}
+              rejectNotes={rejectNotes}
+              onRejectNotesChange={setRejectNotes}
+              onStart={() => startTask(task.id)}
+              onStop={() => sessionId && kill(sessionId)}
+              onApprove={() => approveTask(task.id)}
+              onReject={() => { rejectTask(task.id, rejectNotes); setRejectNotes(""); }}
+              onDelete={handleDeleteTask}
+            />
           )}
         </div>
 
@@ -367,55 +1296,15 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
               transition={{ duration: 0.15 }}
               className={styles.overviewContent}
             >
-              {task?.description && (
-                <div className={styles.overviewSection}>
-                  <div className={styles.overviewLabel}>Description</div>
-                  <div className={styles.overviewDescription}>{task.description}</div>
-                </div>
-              )}
-
-              {task?.environmentId && (
-                <div className={styles.overviewSection}>
-                  <div className={styles.overviewLabel}>Environment</div>
-                  <div className={styles.overviewDescription}>
-                    {environments.find((e) => e.id === task.environmentId)?.displayName ?? task.environmentId}
-                  </div>
-                </div>
-              )}
-
-              {task && task.dependsOn.length > 0 && (
-                <div className={styles.overviewSection}>
-                  <div className={styles.overviewLabel}>Dependencies</div>
-                  <div className={styles.depList}>
-                    {task.dependsOn.map((depId) => {
-                      const dep = tasksById.get(depId);
-                      const isDone = dep?.status === "done";
-                      return (
-                        <div
-                          key={depId}
-                          className={`${styles.depItem} ${isDone ? styles.depDone : styles.depBlocked}`}
-                        >
-                          <span>{isDone ? "\u2713" : "\u25CB"}</span>
-                          <span>{dep?.title ?? depId}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {task && task.dependsOn.length === 0 && !task.description && (
-                <div className={styles.emptyCta}>
-                  <button
-                    className={styles.ctaLink}
-                    onClick={() => setActiveTaskTab("stream")}
-                  >
-                    Add Task Details
-                  </button>
-                  <div className={styles.ctaDescription}>
-                    Switch to the Stream tab to add a description and dependencies
-                  </div>
-                </div>
+              {task ? (
+                <TaskOverview
+                  task={task}
+                  tasksById={tasksById}
+                  environments={environments}
+                  projects={projects}
+                />
+              ) : (
+                <div className={styles.waitingMessage}>No additional details</div>
               )}
             </motion.div>
           )}
@@ -427,28 +1316,37 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -4 }}
               transition={{ duration: 0.15 }}
-              ref={scrollRef}
-              className={styles.eventScroll}
+              style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden" }}
             >
-              {!sessionId && task && (
-                <div className={styles.emptyCta}>
-                  <button
-                    className={styles.ctaButton}
-                    onClick={() => startTask(task.id)}
-                  >
-                    Start Task
-                  </button>
-                  <div className={styles.ctaDescription}>
-                    Click to begin agent execution
+              <SessionAttemptSelector
+                taskSessions={currentTaskSessions}
+                selectedSessionId={sessionId}
+                onSelect={(id) => {
+                  setSelectedSessionId(id);
+                }}
+              />
+              <div ref={scrollRef} className={styles.eventScroll}>
+                {!sessionId && task && (
+                  <div className={styles.emptyCta}>
+                    <button
+                      className={styles.ctaButton}
+                      onClick={() => startTask(task.id)}
+                    >
+                      Start Task
+                    </button>
+                    <div className={styles.ctaDescription}>
+                      Click to begin agent execution
+                    </div>
                   </div>
-                </div>
-              )}
-              {sessionId && groupedEvents.length === 0 && (
-                <div className={styles.waitingMessage}>Waiting for events...</div>
-              )}
-              {groupedEvents.map((event, i) => (
-                <EventRenderer key={`${event.sessionId}-${event.timestamp}-${i}`} event={event} />
-              ))}
+                )}
+                {sessionId && groupedEvents.length === 0 && (
+                  <div className={styles.waitingMessage}>Waiting for events...</div>
+                )}
+                <EventOverflowBanner eventsDropped={eventsDropped} />
+                {groupedEvents.map((event, i) => (
+                  <EventRenderer key={`${event.sessionId}-${event.timestamp}-${i}`} event={event} />
+                ))}
+              </div>
             </motion.div>
           )}
 
@@ -471,6 +1369,15 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
             </motion.div>
           )}
         </AnimatePresence>
+        {task && (
+          <ConfirmDialog
+            isOpen={showDeleteConfirm}
+            title="Delete Task?"
+            description={`"${task.title}" will be permanently removed.`}
+            onConfirm={handleDeleteConfirm}
+            onCancel={() => setShowDeleteConfirm(false)}
+          />
+        )}
       </div>
     );
   }
@@ -488,6 +1395,7 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
 
   return (
     <div className={styles.panelContainer}>
+      <Breadcrumbs segments={breadcrumbs} onNavigate={handleBreadcrumbNavigate} />
       <SessionHeader
         sessionId={sessionId}
         session={session}
@@ -497,6 +1405,7 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
       <EventList
         sessionEvents={groupedEvents}
         session={session}
+        eventsDropped={eventsDropped}
         scrollRef={scrollRef}
       />
     </div>

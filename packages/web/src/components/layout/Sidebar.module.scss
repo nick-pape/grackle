@@ -1,7 +1,7 @@
 @use '../../styles/mixins' as *;
 
 // =============================================================================
-// Sidebar — left panel with tabbed Projects / Environments navigation
+// Sidebar — left panel with permanent project/task tree
 // =============================================================================
 
 .container {
@@ -14,41 +14,6 @@
   flex-direction: column;
   resize: horizontal;
   overflow: hidden;
-}
-
-.tabBar {
-  display: flex;
-  border-bottom: 1px solid var(--border-subtle);
-}
-
-.tab {
-  flex: 1;
-  padding: var(--space-sm) 0;
-  background: transparent;
-  border: none;
-  color: var(--text-tertiary);
-  cursor: pointer;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  border-bottom: 2px solid transparent;
-  transition: all var(--transition-fast),
-              backdrop-filter var(--transition-fast);
-
-  &:hover {
-    color: var(--text-secondary);
-    background: var(--bg-overlay);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    box-shadow: inset 0 1px 0 0 var(--glass-highlight);
-  }
-
-  &.active {
-    color: var(--accent-green);
-    background: var(--bg-overlay);
-    border-bottom-color: var(--accent-green);
-  }
 }
 
 .content {

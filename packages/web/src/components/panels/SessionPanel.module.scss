@@ -71,6 +71,60 @@
   }
 }
 
+.headerTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-shrink: 0;
+}
+
+.taskStatusBadge {
+  background: var(--bg-overlay);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  padding: 1px var(--space-sm);
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+}
+
+.taskBranch {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+}
+
+.taskBlockedBadge {
+  background: var(--accent-yellow-dim, rgba(229,192,123,0.15));
+  color: var(--accent-yellow, #e5c07b);
+  border-radius: var(--radius-full);
+  padding: 1px var(--space-sm);
+  font-size: var(--font-size-xs);
+}
+
+.btnPrimary {
+  @include btn-primary;
+}
+
+.btnDanger {
+  @include btn-danger;
+}
+
+.rejectInput {
+  @include input-field;
+  width: 160px;
+  font-size: var(--font-size-xs);
+}
+
 // ---------------------------------------------------------------------------
 // Tab bar (Stream / Diff / Findings)
 // ---------------------------------------------------------------------------
@@ -140,6 +194,95 @@
   gap: var(--space-md);
 }
 
+// ---------------------------------------------------------------------------
+// Overview Dashboard
+// ---------------------------------------------------------------------------
+
+.overviewDashboard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.overviewHero {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+
+// Status badge
+.statusBadge {
+  display: inline-block;
+  padding: var(--space-xs) var(--space-md);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-mono);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border: 1px solid currentColor;
+}
+
+.statusPending {
+  color: var(--text-tertiary);
+  background: rgba(107, 122, 141, 0.12);
+}
+
+.statusAssigned {
+  color: var(--accent-yellow);
+  background: var(--accent-yellow-dim);
+}
+
+.statusInProgress {
+  color: var(--accent-blue);
+  background: var(--accent-blue-dim);
+}
+
+.statusReview {
+  color: var(--accent-purple);
+  background: var(--accent-purple-dim);
+}
+
+.statusDone {
+  color: var(--accent-green);
+  background: var(--accent-green-dim);
+}
+
+.statusFailed {
+  color: var(--accent-red);
+  background: var(--accent-red-dim);
+}
+
+.statusWaitingInput {
+  color: var(--accent-yellow);
+  background: var(--accent-yellow-dim);
+}
+
+// Branch pill
+.overviewBranchPill {
+  @include glass-inset;
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--space-sm);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+}
+
+.branchLink {
+  color: var(--accent-blue);
+  text-decoration: none;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+
+  &:hover {
+    text-decoration: underline;
+    color: var(--accent-cyan);
+  }
+}
+
+// Sections
 .overviewSection {
   display: flex;
   flex-direction: column;
@@ -153,12 +296,78 @@
   letter-spacing: 0.05em;
 }
 
-.overviewDescription {
+.overviewValue {
   font-size: var(--font-size-sm);
   color: var(--text-secondary);
-  white-space: pre-wrap;
 }
 
+.overviewMuted {
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+  font-style: italic;
+}
+
+// Markdown description
+.overviewMarkdown {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  line-height: 1.6;
+
+  p { margin: 0 0 var(--space-sm) 0; }
+  p:last-child { margin-bottom: 0; }
+  ul, ol { margin: 0 0 var(--space-sm) var(--space-lg); padding: 0; }
+  li { margin-bottom: var(--space-xs); }
+  code {
+    @include glass-inset;
+    padding: 1px var(--space-xs);
+    font-family: var(--font-mono);
+    font-size: 0.9em;
+    color: var(--accent-cyan);
+  }
+  pre {
+    @include glass-inset;
+    padding: var(--space-sm) var(--space-md);
+    overflow: auto;
+    margin: var(--space-xs) 0;
+    code { background: none; border: none; padding: 0; color: inherit; }
+  }
+  blockquote {
+    border-left: 3px solid var(--border-primary);
+    margin: 0 0 var(--space-sm) 0;
+    padding-left: var(--space-md);
+    color: var(--text-tertiary);
+  }
+  h1, h2, h3, h4, h5, h6 {
+    color: var(--text-primary);
+    margin: var(--space-sm) 0 var(--space-xs) 0;
+    font-size: var(--font-size-sm);
+  }
+  strong { color: var(--text-primary); }
+  a { color: var(--accent-blue); text-decoration: none;
+    &:hover { text-decoration: underline; }
+  }
+}
+
+// Environment row with status dot
+.envRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.envDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.envDotGreen  { background: var(--accent-green); box-shadow: 0 0 4px var(--accent-green); }
+.envDotYellow { background: var(--accent-yellow); box-shadow: 0 0 4px var(--accent-yellow); }
+.envDotRed    { background: var(--accent-red); box-shadow: 0 0 4px var(--accent-red); }
+.envDotGray   { background: var(--text-disabled); }
+
+// Dependencies
 .depList {
   display: flex;
   flex-direction: column;
@@ -180,12 +389,130 @@
   color: var(--accent-green);
 }
 
+// Timeline
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.timelineRow {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-sm);
+  font-size: var(--font-size-sm);
+}
+
+.timelineKey {
+  color: var(--text-tertiary);
+  min-width: 72px;
+  flex-shrink: 0;
+}
+
+.timelineValue {
+  color: var(--text-secondary);
+}
+
+.timelineDelta {
+  color: var(--text-tertiary);
+  font-size: 11px;
+
+  &::before { content: "("; }
+  &::after  { content: ")"; }
+}
+
+// Review notes
+.reviewNotes {
+  font-size: var(--font-size-sm);
+  color: var(--accent-yellow);
+  background: var(--accent-yellow-dim);
+  border: 1px solid rgba(240, 192, 64, 0.25);
+  border-radius: var(--radius-sm);
+  padding: var(--space-sm) var(--space-md);
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+
+// Legacy alias (kept for backward compatibility with existing overviewDescription usages)
+.overviewDescription {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+}
+
 .waitingMessage {
   color: var(--text-tertiary);
 }
 
 .errorMessage {
   color: var(--accent-red);
+}
+
+// ---------------------------------------------------------------------------
+// Event overflow warning (shown when events exceed the 5,000 in-memory cap)
+// ---------------------------------------------------------------------------
+
+.eventOverflowWarning {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-xs) var(--space-sm);
+  margin-bottom: var(--space-sm);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--accent-yellow, #e5c07b) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent-yellow, #e5c07b) 35%, transparent);
+  color: var(--accent-yellow, #e5c07b);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-mono);
+}
+
+// ---------------------------------------------------------------------------
+// Session attempt selector (shown when a task has 2+ sessions)
+// ---------------------------------------------------------------------------
+
+.attemptSelector {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-xs) var(--space-md);
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: var(--font-size-xs);
+  font-family: var(--font-mono);
+  color: var(--text-tertiary);
+}
+
+.attemptLabel {
+  margin-right: var(--space-xs);
+}
+
+.attemptButton {
+  background: var(--bg-overlay);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 2px var(--space-sm);
+  font-size: var(--font-size-xs);
+  font-family: var(--font-mono);
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+
+  &:hover {
+    color: var(--text-secondary);
+    border-color: var(--border-primary);
+    background: var(--bg-surface);
+  }
+}
+
+.attemptActive {
+  color: var(--accent-green);
+  border-color: var(--accent-green);
+  background: var(--accent-green-dim);
+}
+
+.attemptStatus {
+  font-size: 10px;
+  margin-left: 2px;
+  opacity: 0.7;
 }
 
 // ---------------------------------------------------------------------------
@@ -238,3 +565,282 @@
   }
 }
 
+// ---------------------------------------------------------------------------
+// Project detail metadata
+// ---------------------------------------------------------------------------
+
+.projectHeader {
+  @include glass-panel;
+  padding: var(--space-sm) var(--space-md);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.projectName {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.projectMeta {
+  padding: var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.metaRow {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  min-height: 24px;
+}
+
+.metaLabel {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  min-width: 100px;
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+
+.metaValue {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.metaPlaceholder {
+  color: var(--text-tertiary);
+  font-style: italic;
+}
+
+.editButton {
+  background: none;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: 2px;
+  font-size: var(--font-size-sm);
+  opacity: 0.4;
+  transition: opacity var(--transition-fast);
+  flex-shrink: 0;
+
+  &:hover {
+    opacity: 1;
+    color: var(--accent-green);
+  }
+}
+
+.editInput {
+  @include input-field;
+  font-size: var(--font-size-sm);
+  padding: 2px var(--space-xs);
+  flex: 1;
+  min-width: 0;
+}
+
+.editTextarea {
+  @include input-field;
+  font-size: var(--font-size-sm);
+  padding: var(--space-xs) var(--space-sm);
+  flex: 1;
+  min-width: 0;
+  resize: vertical;
+  min-height: 60px;
+  font-family: inherit;
+  line-height: 1.5;
+}
+
+.editSelect {
+  @include input-field;
+  font-size: var(--font-size-sm);
+  padding: 2px var(--space-xs);
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.archiveButton {
+  @include btn-ghost(var(--accent-red));
+  font-size: 11px;
+  padding: 2px var(--space-sm);
+  flex-shrink: 0;
+
+  &:hover {
+    background: var(--accent-red-dim);
+    box-shadow: var(--shadow-glow-red);
+  }
+}
+
+.repoLink {
+  color: var(--accent-blue);
+  text-decoration: none;
+  font-size: var(--font-size-sm);
+
+  &:hover {
+    text-decoration: underline;
+    color: var(--accent-cyan);
+  }
+}
+
+// Click-to-edit wrapper — makes the whole value area clickable
+.metaValueClickable {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  padding: 1px var(--space-xs);
+  margin: -1px calc(-1 * var(--space-xs));
+  transition: background var(--transition-fast);
+  background: none;
+  border: none;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+
+  &:hover {
+    background: var(--bg-overlay);
+  }
+}
+
+// Keyboard hint shown below editing inputs
+.editHint {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  opacity: 0.7;
+  margin-top: 2px;
+  font-family: var(--font-mono);
+  flex-basis: 100%;
+}
+
+// Validation error message
+.editError {
+  font-size: 10px;
+  color: var(--accent-red);
+  margin-top: 2px;
+  flex-basis: 100%;
+}
+
+// Red border for invalid inputs
+.editInputInvalid {
+  border-color: var(--accent-red) !important;
+  box-shadow: 0 0 0 1px var(--accent-red-dim);
+}
+
+// Unsaved dot indicator
+.unsavedDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-yellow);
+  box-shadow: 0 0 4px var(--accent-yellow);
+  flex-shrink: 0;
+}
+
+// Collapsible metadata toggle
+.metaToggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  background: none;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: var(--space-xs) var(--space-md);
+  border-bottom: 1px solid var(--border-subtle);
+  width: 100%;
+  transition: color var(--transition-fast);
+
+  &:hover {
+    color: var(--text-secondary);
+  }
+}
+
+.metaToggleArrow {
+  transition: transform var(--transition-fast);
+  font-size: 10px;
+}
+
+.metaToggleArrowOpen {
+  transform: rotate(90deg);
+}
+
+// Task progress bar
+.progressBarContainer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 0 var(--space-md);
+  margin-bottom: var(--space-xs);
+}
+
+.progressBar {
+  flex: 1;
+  height: 4px;
+  background: var(--bg-overlay);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: var(--accent-green);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.progressLabel {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+  flex-shrink: 0;
+}
+
+// Timestamp row
+.metaTimestamps {
+  display: flex;
+  gap: var(--space-md);
+  font-size: 11px;
+  color: var(--text-tertiary);
+  padding-top: var(--space-xs);
+  border-top: 1px solid var(--border-subtle);
+  margin-top: var(--space-xs);
+}
+
+.metaTimestamp {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+// Edit wrapper that supports wrapping hint/error below the input
+.editFieldWrapper {
+  display: flex;
+  flex-wrap: wrap;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+  gap: var(--space-xs);
+}

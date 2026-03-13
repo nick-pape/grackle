@@ -27,6 +27,7 @@ import type {
   TaskData,
   Project,
   TokenInfo,
+  PersonaData,
 } from "../hooks/useGrackleSocket.js";
 import {
   MOCK_ENVIRONMENTS,
@@ -36,6 +37,8 @@ import {
   MOCK_TASKS,
   MOCK_FINDINGS,
   MOCK_TOKENS,
+  MOCK_PERSONAS,
+  MOCK_TASK_SESSIONS,
   MOCK_STREAM_SCENARIOS,
   type MockStreamStep,
 } from "./mockData.js";
@@ -67,6 +70,8 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
   const [tasks, setTasks] = useState<TaskData[]>(MOCK_TASKS);
   const [findings, setFindings] = useState<FindingData[]>(MOCK_FINDINGS);
   const [tokens, setTokens] = useState<TokenInfo[]>(MOCK_TOKENS);
+  const [personas, setPersonas] = useState<PersonaData[]>(MOCK_PERSONAS);
+  const [taskSessions] = useState<Record<string, Session[]>>(MOCK_TASK_SESSIONS);
 
   // ── Refs ──────────────────────────────────────────
   /** Auto-incrementing counter for generating unique mock IDs. */
@@ -319,6 +324,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
         defaultEnvironmentId: defaultEnvironmentId || "",
         status: "active",
         createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       };
 
       setProjects((prev) => [...prev, newProject]);
@@ -393,6 +399,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
           depth,
           childTaskIds: [],
           canDecompose: !parentTaskId,
+          personaId: "",
         };
 
         return [...prev, newTask];
@@ -435,11 +442,11 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
         prev.map((t) =>
           t.id === taskId
             ? {
-                ...t,
-                status: "in_progress",
-                sessionId,
-                branch: `mock/${taskId.slice(0, 8)}`,
-              }
+              ...t,
+              status: "in_progress",
+              sessionId,
+              branch: `mock/${taskId.slice(0, 8)}`,
+            }
             : t,
         ),
       );
@@ -757,6 +764,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       environments: MOCK_ENVIRONMENTS,
       sessions,
       events,
+      eventsDropped: 0,
       lastSpawnedId,
       projects,
       tasks,
@@ -772,6 +780,25 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       clearEvents,
       createProject,
       archiveProject,
+      updateProject: (projectId: string, fields: { name?: string; description?: string; repoUrl?: string; defaultEnvironmentId?: string }) => {
+        // eslint-disable-next-line no-console
+        console.log("[MockGrackle] updateProject", { projectId, ...fields });
+        setProjects((prev) =>
+          prev.map((p) => {
+            if (p.id !== projectId) {
+              return p;
+            }
+            return {
+              ...p,
+              ...(fields.name !== undefined ? { name: fields.name } : {}),
+              ...(fields.description !== undefined ? { description: fields.description } : {}),
+              ...(fields.repoUrl !== undefined ? { repoUrl: fields.repoUrl } : {}),
+              ...(fields.defaultEnvironmentId !== undefined ? { defaultEnvironmentId: fields.defaultEnvironmentId } : {}),
+              updatedAt: new Date().toISOString(),
+            };
+          }),
+        );
+      },
       loadTasks,
       createTask,
       startTask,
@@ -785,14 +812,66 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       setToken: mockSetToken,
       deleteToken: mockDeleteToken,
       provisionStatus: {},
-      provisionEnvironment: () => {},
-      stopEnvironment: () => {},
-      removeEnvironment: () => {},
+      provisionEnvironment: () => { },
+      stopEnvironment: () => { },
+      removeEnvironment: () => { },
       codespaces: [],
       codespaceError: "",
       codespaceCreating: false,
-      listCodespaces: () => {},
-      createCodespace: () => {},
+      listCodespaces: () => { },
+      createCodespace: () => { },
+      projectCreating: false,
+      taskStartingId: undefined,
+      personas,
+      createPersona: (name: string, description: string, systemPrompt: string, runtime?: string, model?: string, maxTurns?: number) => {
+        // eslint-disable-next-line no-console
+        console.log("[MockGrackle] createPersona", { name });
+        const newPersona: PersonaData = {
+          id: `mock-persona-${Date.now()}`,
+          name,
+          description,
+          systemPrompt,
+          toolConfig: "{}",
+          runtime: runtime ?? "claude-code",
+          model: model || "",
+          maxTurns: maxTurns || 0,
+          mcpServers: "[]",
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        setPersonas((prev) => [...prev, newPersona]);
+      },
+      updatePersona: (personaId: string, name?: string, description?: string, systemPrompt?: string, runtime?: string, model?: string, maxTurns?: number) => {
+        // eslint-disable-next-line no-console
+        console.log("[MockGrackle] updatePersona", { personaId, name });
+        setPersonas((prev) =>
+          prev.map((p) => {
+            if (p.id !== personaId) {
+              return p;
+            }
+            return {
+              ...p,
+              ...(name !== undefined ? { name } : {}),
+              ...(description !== undefined ? { description } : {}),
+              ...(systemPrompt !== undefined ? { systemPrompt } : {}),
+              ...(runtime !== undefined ? { runtime } : {}),
+              ...(model !== undefined ? { model } : {}),
+              ...(maxTurns !== undefined ? { maxTurns } : {}),
+              updatedAt: new Date().toISOString(),
+            };
+          }),
+        );
+      },
+      deletePersona: (personaId: string) => {
+        // eslint-disable-next-line no-console
+        console.log("[MockGrackle] deletePersona", personaId);
+        setPersonas((prev) => prev.filter((p) => p.id !== personaId));
+      },
+      taskSessions,
+      loadTaskSessions: (taskId: string) => {
+        // eslint-disable-next-line no-console
+        console.log("[MockGrackle] loadTaskSessions", taskId);
+      },
     }),
     [
       sessions,
@@ -802,6 +881,8 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       tasks,
       findings,
       tokens,
+      personas,
+      taskSessions,
       spawn,
       sendInput,
       kill,

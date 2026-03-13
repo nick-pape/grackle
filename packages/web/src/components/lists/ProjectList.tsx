@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState, type JSX } from "react";
+import { useEffect, useMemo, useRef, useState, type JSX } from "react";
 import { useGrackle } from "../../context/GrackleContext.js";
 import type { ViewMode } from "../../App.js";
 import type { TaskData } from "../../hooks/useGrackleSocket.js";
 import { AnimatePresence, motion } from "motion/react";
 import { MAX_TASK_DEPTH } from "@grackle-ai/common";
+import { Spinner } from "../display/index.js";
 import styles from "./ProjectList.module.scss";
 
 /** Props for the ProjectList component. */
@@ -20,7 +21,7 @@ const TASK_STATUS_STYLES: Record<string, { color: string; icon: string }> = {
   review: { color: "var(--accent-yellow)", icon: "\u25C9" },
   done: { color: "var(--accent-green)", icon: "\u2713" },
   failed: { color: "var(--accent-red)", icon: "\u2717" },
-  waiting: { color: "var(--accent-purple, #a78bfa)", icon: "\u29D6" },
+  waiting_input: { color: "var(--accent-yellow)", icon: "\u29D6" },
 };
 
 /** A task node with children for recursive tree rendering. */
@@ -77,6 +78,7 @@ function TaskTreeNode({
   projectId,
   taskStatusById,
 }: TaskTreeNodeProps): JSX.Element {
+  const { personas } = useGrackle();
   const statusStyle = TASK_STATUS_STYLES[node.status] || TASK_STATUS_STYLES.pending;
   const isBlocked = node.dependsOn.length > 0 &&
     node.dependsOn.some((depId) => taskStatusById.get(depId) !== "done");
@@ -129,6 +131,18 @@ function TaskTreeNode({
             {isBlocked ? "blocked" : "dep"}
           </span>
         )}
+        {node.personaId && (() => {
+          const persona = personas.find((p) => p.id === node.personaId);
+          return persona ? (
+            <span
+              className={styles.dependencyBadge}
+              title={`Persona: ${persona.name}`}
+              style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "8rem" }}
+            >
+              {persona.name}
+            </span>
+          ) : null;
+        })()}
         {depth < MAX_TASK_DEPTH && (
           <button
             onClick={(e) => {
@@ -175,7 +189,7 @@ function TaskTreeNode({
 
 /** Sidebar project tree with expandable task lists and hierarchical task rendering. */
 export function ProjectList({ viewMode, setViewMode }: Props): JSX.Element {
-  const { projects, tasks, loadTasks, createProject } = useGrackle();
+  const { projects, tasks, loadTasks, createProject, projectCreating } = useGrackle();
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
   const [manuallyCollapsed, setManuallyCollapsed] = useState<Set<string>>(new Set());
@@ -184,6 +198,8 @@ export function ProjectList({ viewMode, setViewMode }: Props): JSX.Element {
 
   const selectedProjectId = viewMode.kind === "project" ? viewMode.projectId : undefined;
   const selectedTaskId = viewMode.kind === "task" ? viewMode.taskId : undefined;
+  const expandedRef = useRef(expanded);
+  expandedRef.current = expanded;
   const taskStatusById = useMemo(
     () => new Map(tasks.map((t) => [t.id, t.status])),
     [tasks],
@@ -238,16 +254,18 @@ export function ProjectList({ viewMode, setViewMode }: Props): JSX.Element {
     }
   }, [tasks, manuallyCollapsed]);
 
-  // Auto-expand a project when selected
+  // Auto-expand a project when selected via programmatic navigation (e.g. after
+  // task deletion). Uses expandedRef so that manual collapse doesn't re-trigger
+  // auto-expansion — the effect only fires when selectedProjectId changes.
   useEffect(() => {
-    if (selectedProjectId && !expanded.has(selectedProjectId)) {
+    if (selectedProjectId && !expandedRef.current.has(selectedProjectId)) {
       setExpanded((prev) => new Set(prev).add(selectedProjectId));
       loadTasks(selectedProjectId);
     }
-  }, [selectedProjectId, expanded, loadTasks]);
+  }, [selectedProjectId, loadTasks]);
 
   const handleCreateProject = (): void => {
-    if (!newProjectName.trim()) {
+    if (!newProjectName.trim() || projectCreating) {
       return;
     }
     createProject(newProjectName.trim());
@@ -278,11 +296,24 @@ export function ProjectList({ viewMode, setViewMode }: Props): JSX.Element {
             onKeyDown={(e) => e.key === "Enter" && handleCreateProject()}
             placeholder="Project name..."
             autoFocus
+            disabled={projectCreating}
             className={styles.createInput}
           />
-          <button onClick={handleCreateProject} className={styles.createButton}>
-            OK
+          <button
+            onClick={handleCreateProject}
+            className={styles.createButton}
+            disabled={projectCreating}
+          >
+            {projectCreating
+              ? <Spinner size="sm" label="Creating project" />
+              : "OK"}
           </button>
+        </div>
+      )}
+      {projectCreating && (
+        <div className={styles.creatingHint}>
+          <Spinner size="sm" label="Creating project" />
+          Creating project…
         </div>
       )}
 
@@ -310,8 +341,16 @@ export function ProjectList({ viewMode, setViewMode }: Props): JSX.Element {
           <div key={project.id}>
             <div
               onClick={() => {
-                toggleExpand(project.id);
-                setViewMode({ kind: "project", projectId: project.id });
+                if (isSelected) {
+                  // Already viewing this project — toggle expand/collapse
+                  toggleExpand(project.id);
+                } else {
+                  // Navigate to project — ensure expanded
+                  if (!isExpanded) {
+                    toggleExpand(project.id);
+                  }
+                  setViewMode({ kind: "project", projectId: project.id });
+                }
               }}
               className={`${styles.projectRow} ${isSelected ? styles.selected : ""}`}
             >

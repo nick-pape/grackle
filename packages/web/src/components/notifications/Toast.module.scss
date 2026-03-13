@@ -1,0 +1,86 @@
+@use '../../styles/mixins' as *;
+
+// =============================================================================
+// Toast — individual transient notification badge
+// =============================================================================
+
+.toast {
+  @include glass-card;
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  min-width: 240px;
+  max-width: 440px;
+  border-left: 3px solid transparent;
+  box-shadow: var(--shadow-lg);
+
+  // Variant: success (green)
+  &.success {
+    border-left-color: var(--accent-green);
+    box-shadow: var(--shadow-lg), var(--shadow-glow-green);
+
+    .icon {
+      color: var(--accent-green);
+    }
+  }
+
+  // Variant: error (red)
+  &.error {
+    border-left-color: var(--accent-red);
+    box-shadow: var(--shadow-lg), var(--shadow-glow-red);
+
+    .icon {
+      color: var(--accent-red);
+    }
+  }
+
+  // Variant: warning (yellow)
+  &.warning {
+    border-left-color: var(--accent-yellow);
+
+    .icon {
+      color: var(--accent-yellow);
+    }
+  }
+
+  // Variant: info (blue)
+  &.info {
+    border-left-color: var(--accent-blue);
+
+    .icon {
+      color: var(--accent-blue);
+    }
+  }
+}
+
+.icon {
+  font-size: var(--font-size-md);
+  flex-shrink: 0;
+  line-height: 1;
+  width: 16px;
+  text-align: center;
+}
+
+.message {
+  flex: 1;
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  line-height: var(--line-height);
+}
+
+.close {
+  background: none;
+  border: none;
+  color: var(--text-tertiary);
+  font-size: var(--font-size-lg);
+  cursor: pointer;
+  padding: 0 var(--space-xs);
+  line-height: 1;
+  flex-shrink: 0;
+  transition: color var(--transition-fast);
+
+  &:hover {
+    color: var(--text-primary);
+  }
+}

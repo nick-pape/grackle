@@ -26,6 +26,7 @@ enum EventType {
   EVENT_TYPE_SYSTEM = 6;
   EVENT_TYPE_FINDING = 7;
   EVENT_TYPE_SUBTASK_CREATE = 8;
+  EVENT_TYPE_USER_INPUT = 9;
 }
 
 enum TaskStatus {
@@ -36,6 +37,7 @@ enum TaskStatus {
   TASK_STATUS_REVIEW = 4;
   TASK_STATUS_DONE = 5;
   TASK_STATUS_FAILED = 6;
+  TASK_STATUS_WAITING_INPUT = 7;
 }
 
 enum ProjectStatus {
@@ -56,12 +58,12 @@ message Environment {
   string id = 1;
   string display_name = 2;
   string adapter_type = 3;
-  string adapter_config = 4;     // JSON
+  string adapter_config = 4; // JSON
   string default_runtime = 5;
   bool bootstrapped = 6;
   string status = 7;
   string last_seen = 8;
-  string env_info = 9;           // JSON from PowerLine GetInfo
+  string env_info = 9; // JSON from PowerLine GetInfo
   string created_at = 10;
 }
 
@@ -72,14 +74,14 @@ message EnvironmentList {
 message AddEnvironmentRequest {
   string display_name = 1;
   string adapter_type = 2;
-  string adapter_config = 3;     // JSON
+  string adapter_config = 3; // JSON
   string default_runtime = 4;
 }
 
 message ProvisionEvent {
   string stage = 1;
   string message = 2;
-  double progress = 3;           // 0.0 - 1.0
+  double progress = 3; // 0.0 - 1.0
 }
 
 // ─── Session ────────────────────────────────────────────────
@@ -98,6 +100,7 @@ message Session {
   string suspended_at = 11;
   string ended_at = 12;
   string error = 13;
+  string task_id = 14;
 }
 
 message SessionList {
@@ -114,9 +117,10 @@ message SpawnRequest {
   string prompt = 2;
   string model = 3;
   int32 max_turns = 4;
-  string runtime = 5;            // empty = use env default
-  string branch = 6;             // Branch for worktree (empty = skip)
-  string system_context = 7;     // Prepended to prompt (task desc + findings)
+  string runtime = 5; // empty = use env default
+  string branch = 6; // Branch for worktree (empty = skip)
+  string system_context = 7; // Prepended to prompt (task desc + findings)
+  string persona_id = 8; // Optional persona template
 }
 
 message ResumeRequest {
@@ -135,7 +139,7 @@ message SessionEvent {
   EventType type = 2;
   string timestamp = 3;
   string content = 4;
-  string raw = 5;                // JSON, optional original payload
+  string raw = 5; // JSON, optional original payload
 }
 
 // ─── Tokens ─────────────────────────────────────────────────
@@ -190,6 +194,14 @@ message CreateProjectRequest {
   string default_environment_id = 4;
 }
 
+message UpdateProjectRequest {
+  string id = 1;
+  optional string name = 2;
+  optional string description = 3;
+  optional string repo_url = 4;
+  optional string default_environment_id = 5;
+}
+
 message ProjectId {
   string id = 1;
 }
@@ -213,10 +225,11 @@ message Task {
   string created_at = 14;
   string updated_at = 15;
   int32 sort_order = 16;
-  string parent_task_id = 17;        // empty for root tasks
-  int32 depth = 18;                  // 0 for root, parent.depth + 1
-  repeated string child_task_ids = 19;  // populated by server on read
+  string parent_task_id = 17; // empty for root tasks
+  int32 depth = 18; // 0 for root, parent.depth + 1
+  repeated string child_task_ids = 19; // populated by server on read
   bool can_decompose = 20;
+  string persona_id = 21; // Persona used for this task
 }
 
 message TaskList {
@@ -231,6 +244,7 @@ message CreateTaskRequest {
   repeated string depends_on = 5;
   string parent_task_id = 6;
   optional bool can_decompose = 7;
+  string persona_id = 8; // Optional persona to assign
 }
 
 message TaskId {
@@ -251,6 +265,7 @@ message StartTaskRequest {
   string task_id = 1;
   string runtime = 2;
   string model = 3;
+  string persona_id = 4; // Override persona at start time
 }
 
 // ─── Findings ──────────────────────────────────────────────
@@ -292,10 +307,11 @@ message QueryFindingsRequest {
 
 message ImportGitHubIssuesRequest {
   string project_id = 1;
-  string repo = 2;                    // "owner/repo"
-  optional string label = 3;          // label filter (omit for all)
-  IssueState state = 4;               // OPEN or CLOSED
-  optional string environment_id = 5; // env to assign (omit for project default)
+  string repo = 2;                          // "owner/repo"
+  optional string label = 3;               // label filter (omit for all)
+  IssueState state = 4;                     // OPEN or CLOSED
+  optional string environment_id = 5;      // env to assign (omit for project default)
+  optional bool include_comments = 6;      // when false, skip issue comments (default: true)
 }
 
 message ImportGitHubIssuesResponse {
@@ -317,6 +333,65 @@ message TaskDiff {
   repeated string changed_files = 4;
   int32 additions = 5;
   int32 deletions = 6;
+}
+
+// ─── Personas ──────────────────────────────────────────────
+
+message McpServerConfig {
+  string name = 1; // Server name (e.g. "grackle", "github")
+  string command = 2; // Executable to run
+  repeated string args = 3; // CLI arguments
+  repeated string tools = 4; // Per-server tool allowlist (empty = all)
+}
+
+message ToolConfig {
+  repeated string allowed_tools = 1; // Allowlist (empty = allow all)
+  repeated string disallowed_tools = 2; // Blocklist (takes precedence)
+}
+
+message Persona {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  string system_prompt = 4;
+  ToolConfig tool_config = 5;
+  string runtime = 6;
+  string model = 7;
+  int32 max_turns = 8;
+  repeated McpServerConfig mcp_servers = 9;
+  string created_at = 10;
+  string updated_at = 11;
+}
+
+message PersonaList {
+  repeated Persona personas = 1;
+}
+
+message PersonaId {
+  string id = 1;
+}
+
+message CreatePersonaRequest {
+  string name = 1;
+  string description = 2;
+  string system_prompt = 3;
+  ToolConfig tool_config = 4;
+  string runtime = 5;
+  string model = 6;
+  int32 max_turns = 7;
+  repeated McpServerConfig mcp_servers = 8;
+}
+
+message UpdatePersonaRequest {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  string system_prompt = 4;
+  ToolConfig tool_config = 5;
+  string runtime = 6;
+  string model = 7;
+  int32 max_turns = 8;
+  repeated McpServerConfig mcp_servers = 9;
 }
 
 // ─── Service ────────────────────────────────────────────────
@@ -350,6 +425,7 @@ service Grackle {
   rpc ListProjects(Empty) returns (ProjectList);
   rpc CreateProject(CreateProjectRequest) returns (Project);
   rpc GetProject(ProjectId) returns (Project);
+  rpc UpdateProject(UpdateProjectRequest) returns (Project);
   rpc ArchiveProject(ProjectId) returns (Empty);
 
   // Tasks
@@ -361,6 +437,13 @@ service Grackle {
   rpc ApproveTask(TaskId) returns (Task);
   rpc RejectTask(UpdateTaskRequest) returns (Task);
   rpc DeleteTask(TaskId) returns (Empty);
+
+  // Personas
+  rpc ListPersonas(Empty) returns (PersonaList);
+  rpc CreatePersona(CreatePersonaRequest) returns (Persona);
+  rpc GetPersona(PersonaId) returns (Persona);
+  rpc UpdatePersona(UpdatePersonaRequest) returns (Persona);
+  rpc DeletePersona(PersonaId) returns (Empty);
 
   // Findings
   rpc PostFinding(PostFindingRequest) returns (Finding);

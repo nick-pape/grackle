@@ -1,0 +1,23 @@
+// =============================================================================
+// ToastContainer — fixed overlay at top-center for stacking toast notifications
+// =============================================================================
+
+.container {
+  position: fixed;
+  top: var(--space-xl);
+  left: 50%;
+  transform: translateX(-50%);
+  // Keep below ConfirmDialog modal overlay (z-index: 1000) so toasts cannot
+  // be interacted with while a blocking modal is open.
+  z-index: 900;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  align-items: center;
+  // Container itself is transparent to mouse events; individual toasts are not
+  pointer-events: none;
+
+  > * {
+    pointer-events: auto;
+  }
+}

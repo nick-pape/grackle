@@ -1,3 +1,14 @@
+// Workaround: @github/copilot-sdk imports "vscode-jsonrpc/node" without .js
+// extension, which fails in Node 22 strict ESM resolution. Register a module
+// resolve hook to fix it before any SDK imports occur.
+import { register } from "node:module";
+register(
+  "data:text/javascript," +
+    encodeURIComponent(
+      `export async function resolve(s,c,n){return s==="vscode-jsonrpc/node"?n("vscode-jsonrpc/node.js",c):n(s,c);}`,
+    ),
+);
+
 import { Command } from "commander";
 import { connectNodeAdapter } from "@connectrpc/connect-node";
 import { ConnectError, Code } from "@connectrpc/connect";
@@ -23,11 +34,16 @@ function main(): void {
     .name("grackle-powerline")
     .description("Grackle PowerLine agent runtime")
     .version(version)
-    .option("--port <port>", "Port to listen on", String(DEFAULT_POWERLINE_PORT))
+    .option(
+      "--port <port>",
+      "Port to listen on",
+      String(DEFAULT_POWERLINE_PORT),
+    )
     .option("--token <token>", "Authentication token")
     .action((opts: { port: string; token?: string }) => {
       const port = parseInt(opts.port, 10);
-      const powerlineToken = opts.token || process.env.GRACKLE_POWERLINE_TOKEN || "";
+      const powerlineToken =
+        opts.token || process.env.GRACKLE_POWERLINE_TOKEN || "";
 
       // Register runtimes
       registerRuntime(new StubRuntime());
@@ -58,7 +74,11 @@ function main(): void {
 
       server.on("error", (err: NodeJS.ErrnoException) => {
         if (err.code === "EADDRINUSE") {
-          logger.fatal({ port }, "Port %d is already in use. Is another PowerLine running?", port);
+          logger.fatal(
+            { port },
+            "Port %d is already in use. Is another PowerLine running?",
+            port,
+          );
         } else {
           logger.fatal({ err }, "PowerLine server error");
         }
@@ -67,8 +87,15 @@ function main(): void {
       });
 
       server.listen(port, () => {
-        const authStatus = powerlineToken ? "authenticated" : "NO AUTH (development only)";
-        logger.info({ port, authStatus }, "PowerLine listening on http://localhost:%d [%s]", port, authStatus);
+        const authStatus = powerlineToken
+          ? "authenticated"
+          : "NO AUTH (development only)";
+        logger.info(
+          { port, authStatus },
+          "PowerLine listening on http://localhost:%d [%s]",
+          port,
+          authStatus,
+        );
       });
 
       // Graceful shutdown

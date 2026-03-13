@@ -29,7 +29,7 @@ const STATUS_COLORS: Record<string, string> = {
   review: "#f0c040",
   done: "#4ecca3",
   failed: "#e94560",
-  waiting: "#a78bfa",
+  waiting_input: "#f0c040",
 };
 
 /** Custom node type registry for React Flow. */

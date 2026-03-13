@@ -39,10 +39,10 @@ test.describe("Task Deletion", () => {
     // Navigate to the task and start it
     await navigateToTask(page, "active-task");
     await patchWsForStubRuntime(page);
-    await page.locator("button", { hasText: "Start Task" }).click();
+    await page.locator("button", { hasText: "Start" }).click();
 
-    // Wait for in_progress state
-    await expect(page.getByText("in_progress")).toBeVisible({ timeout: 15_000 });
+    // Wait for active state (task may be in_progress or waiting_input depending on stub timing)
+    await expect(page.locator('[data-testid="task-status"]')).toContainText(/in_progress|waiting_input/, { timeout: 15_000 });
 
     // Delete the task via WS while it's running
     const projectId = await getProjectId(page, "del-active");
@@ -99,7 +99,7 @@ test.describe("Task Deletion", () => {
 
     const sidebarTask = page.locator('[class*="taskTitle"]', { hasText: "tdel-dismiss-task" });
     await expect(sidebarTask).toBeVisible({ timeout: 5_000 });
-
-    await expect(page.getByText("Task: tdel-dismiss-task")).toBeVisible({ timeout: 5_000 });
+    // Verify the task header is still showing (task was not deleted)
+    await expect(page.locator('[data-testid="task-title"]')).toHaveText("tdel-dismiss-task", { timeout: 5_000 });
   });
 });

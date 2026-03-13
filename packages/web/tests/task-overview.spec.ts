@@ -19,11 +19,11 @@ test.describe("Task Overview Tab", () => {
     await navigateToTask(page, "pending-overview");
 
     // Overview tab should be active
-    const overviewTab = page.locator("button", { hasText: "Overview" });
+    const overviewTab = page.getByRole("tab", { name: "Overview", exact: true });
     await expect(overviewTab).toHaveAttribute("class", /active/, { timeout: 5_000 });
 
     // Stream tab should NOT be active
-    const streamTab = page.locator("button", { hasText: "Stream" });
+    const streamTab = page.getByRole("tab", { name: "Stream", exact: true });
     await expect(streamTab).not.toHaveAttribute("class", /active/);
   });
 
@@ -92,7 +92,7 @@ test.describe("Task Overview Tab", () => {
     await navigateToTask(page, "done-blocker");
     await patchWsForStubRuntime(page);
     await runStubTaskToCompletion(page);
-    await page.locator("button", { hasText: "Approve" }).click();
+    await page.getByRole("button", { name: "Approve", exact: true }).click();
     await expect(page.getByText("Task completed")).toBeVisible({ timeout: 5_000 });
 
     const projectId = await getProjectId(page, "overview-done-dep");
@@ -143,12 +143,12 @@ test.describe("Task Overview Tab", () => {
     // Run task through to review, then reject — task auto-retries
     await patchWsForStubRuntime(page);
     await runStubTaskToCompletion(page);
-    await page.locator("button", { hasText: "Reject" }).click();
+    await page.getByRole("button", { name: "Reject", exact: true }).click();
 
-    // Auto-retry starts a new session — task moves to in_progress, stream tab activates
-    await expect(page.getByText(/Task:.*\| in_progress/)).toBeVisible({ timeout: 10_000 });
+    // Auto-retry starts a new session — task becomes active, stream tab activates
+    await expect(page.locator('[data-testid="task-status"]')).toContainText(/in_progress|waiting_input/, { timeout: 10_000 });
 
-    const streamTab = page.locator("button", { hasText: "Stream" });
+    const streamTab = page.getByRole("tab", { name: "Stream", exact: true });
     await expect(streamTab).toHaveAttribute("class", /active/, { timeout: 5_000 });
   });
 
@@ -161,16 +161,16 @@ test.describe("Task Overview Tab", () => {
 
     // Start the task
     await patchWsForStubRuntime(page);
-    await page.locator("button", { hasText: "Start Task" }).click();
+    await page.getByRole("button", { name: "Start", exact: true }).click();
 
     // Wait for in_progress auto-switch to stream tab
     await expect(page.locator("text=Stub runtime initialized")).toBeVisible({ timeout: 15_000 });
 
     // Manually click Overview tab
-    await page.locator("button", { hasText: "Overview" }).click();
+    await page.getByRole("tab", { name: "Overview", exact: true }).click();
 
     // Overview content should be visible
-    const overviewTab = page.locator("button", { hasText: "Overview" });
+    const overviewTab = page.getByRole("tab", { name: "Overview", exact: true });
     await expect(overviewTab).toHaveAttribute("class", /active/);
   });
 });

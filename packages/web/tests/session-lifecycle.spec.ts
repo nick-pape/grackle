@@ -1,22 +1,23 @@
 import { test, expect } from "./fixtures.js";
+import { getNewChatRuntimeSelect } from "./helpers.js";
 
 test.describe("Session Lifecycle (stub runtime)", () => {
   test("full stub session flow", async ({ appPage }) => {
     const page = appPage;
 
-    // Stage2 sidebar defaults to "Projects" tab — switch to "Environments"
-    await page.locator("button", { hasText: "Environments" }).click();
+    // Environments are now in Settings — navigate there via the gear button
+    await page.locator('button[title="Settings"]').click();
 
     // Click "+" on the environment card to enter new_chat mode
     await page.locator('button[title="New chat"]').click();
 
     // UnifiedBar shows prompt input, runtime selector, and Go button
-    await expect(page.locator("text=new chat")).toBeVisible();
+    await expect(page.getByText("new chat", { exact: true })).toBeVisible();
     const goButton = page.locator("button", { hasText: "Go" });
     await expect(goButton).toBeVisible();
 
     // Runtime selector has options
-    const runtimeSelect = page.locator("select");
+    const runtimeSelect = getNewChatRuntimeSelect(page);
     await expect(runtimeSelect).toBeVisible();
     const options = runtimeSelect.locator("option");
     await expect(options).toHaveCount(4);
@@ -38,6 +39,12 @@ test.describe("Session Lifecycle (stub runtime)", () => {
     // Session spawns — events start streaming in
     // System event: "Stub runtime initialized"
     await expect(page.locator("text=Stub runtime initialized")).toBeVisible({ timeout: 10_000 });
+
+    // Session breadcrumb should appear once the spawned session is selected.
+    const breadcrumbs = page.getByTestId("breadcrumbs");
+    await expect(breadcrumbs).toBeVisible({ timeout: 10_000 });
+    await expect(breadcrumbs).toContainText("Home");
+    await expect(breadcrumbs).toContainText("Session ");
 
     // Echo event: "Echo: hello world"
     await expect(page.locator("text=Echo: hello world")).toBeVisible();
