@@ -29,6 +29,9 @@ export type AgentEventType =
   | "finding"
   | "subtask_create";
 
+/** Discriminator for all session events, including user input. */
+export type EventType = AgentEventType | "user_input";
+
 export type TaskStatus = "pending" | "assigned" | "in_progress" | "review" | "done" | "failed";
 
 /** Supported environment adapter backends. */
