@@ -90,7 +90,7 @@ test.describe("Unified task create/edit experience", () => {
     await navigateToTask(page, "edit-btn-task");
 
     // Edit button should be visible in the task header
-    await expect(page.locator("button", { hasText: "Edit" })).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator("button", { hasText: /^Edit$/ })).toBeVisible({ timeout: 5_000 });
   });
 
   test("clicking Edit opens the edit form pre-populated with existing task data", async ({ appPage }) => {
@@ -111,7 +111,7 @@ test.describe("Unified task create/edit experience", () => {
     await navigateToTask(page, "editable-task");
 
     // Click Edit
-    await page.locator("button", { hasText: "Edit" }).click();
+    await page.locator("button", { hasText: /^Edit$/ }).click();
 
     // Edit form should be visible and pre-populated
     await expect(page.locator('[data-testid="task-edit-title"]')).toBeVisible({ timeout: 5_000 });
@@ -137,7 +137,7 @@ test.describe("Unified task create/edit experience", () => {
 
     // Navigate and edit
     await navigateToTask(page, "old-title-task");
-    await page.locator("button", { hasText: "Edit" }).click();
+    await page.locator("button", { hasText: /^Edit$/ }).click();
 
     // Update title and description
     await page.locator('[data-testid="task-edit-title"]').fill("new-title-task");
@@ -185,7 +185,7 @@ test.describe("Unified task create/edit experience", () => {
 
     // Edit task-beta and set task-alpha as a dependency
     await navigateToTask(page, "task-beta-dep");
-    await page.locator("button", { hasText: "Edit" }).click();
+    await page.locator("button", { hasText: /^Edit$/ }).click();
 
     await expect(page.locator('[data-testid="task-edit-title"]')).toBeVisible({ timeout: 5_000 });
 
