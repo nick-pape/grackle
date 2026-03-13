@@ -10,6 +10,7 @@ import { AnimatePresence, motion } from "motion/react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import styles from "./SessionPanel.module.scss";
+import { ConfirmDialog } from "../display/index.js";
 
 /** Props for the SessionPanel component. */
 interface Props {
@@ -441,6 +442,7 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
   const [activeTaskTab, setActiveTaskTab] = useState<TaskTab>("overview");
   const [projectTab, setProjectTab] = useState<ProjectTab>("tasks");
   const [rejectNotes, setRejectNotes] = useState("");
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const prevTaskIdRef = useRef<string | undefined>(undefined);
   const prevTaskStatusRef = useRef<string | undefined>(undefined);
 
@@ -457,31 +459,26 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
     projectId = task?.projectId || undefined;
   }
 
-  // Check if task is blocked by unfinished dependencies
-  const isTaskBlocked = task
-    ? task.dependsOn.some((depId) => {
-        const dep = tasks.find((t) => t.id === depId);
-        return dep && dep.status !== "done";
-      })
-    : false;
-
-  // Delete handler for task actions
+  // Delete handler for task actions — opens ConfirmDialog
   const handleDeleteTask = (): void => {
-    if (!task) {
-      return;
-    }
-    if (!window.confirm(`Delete task "${task.title}"?`)) {
-      return;
-    }
+    setShowDeleteConfirm(true);
+  };
+
+  const handleDeleteConfirm = (): void => {
+    if (!task) return;
     deleteTask(task.id);
+    setShowDeleteConfirm(false);
     setViewMode({ kind: "project", projectId: task.projectId });
   };
 
-  // Reset to overview tab when switching to a different task.
+  // Reset to overview tab and clear rejectNotes when switching to a different task.
   if (viewMode.kind === "task" && task?.id !== prevTaskIdRef.current) {
     prevTaskIdRef.current = task?.id;
     if (activeTaskTab !== "overview") {
       setActiveTaskTab("overview");
+    }
+    if (rejectNotes !== "") {
+      setRejectNotes("");
     }
   }
 
@@ -514,6 +511,14 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
     () => new Map(tasks.map((t) => [t.id, t])),
     [tasks],
   );
+
+  // Check if task is blocked by unfinished dependencies (uses tasksById for O(deps) lookup)
+  const isTaskBlocked = task
+    ? task.dependsOn.some((depId) => {
+        const dep = tasksById.get(depId);
+        return dep !== undefined && dep.status !== "done";
+      })
+    : false;
 
   const session = sessionId
     ? sessions.find((s) => s.id === sessionId) ?? undefined
@@ -664,7 +669,7 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
         <div className={styles.header}>
           <span className={styles.headerTitle}>
             {task?.title || viewMode.taskId}
-            {task && <span className={styles.taskStatusBadge}>{task.status}</span>}
+            {task && <span className={styles.taskStatusBadge} data-testid="task-status">{task.status}</span>}
             {task?.branch && <span className={styles.taskBranch}>{task.branch}</span>}
             {isTaskBlocked && <span className={styles.taskBlockedBadge}>blocked</span>}
           </span>
@@ -788,6 +793,15 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
             </motion.div>
           )}
         </AnimatePresence>
+        {task && (
+          <ConfirmDialog
+            isOpen={showDeleteConfirm}
+            title="Delete Task?"
+            description={`"${task.title}" will be permanently removed.`}
+            onConfirm={handleDeleteConfirm}
+            onCancel={() => setShowDeleteConfirm(false)}
+          />
+        )}
       </div>
     );
   }

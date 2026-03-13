@@ -161,7 +161,7 @@ test.describe("Task Overview Tab", () => {
 
     // Start the task
     await patchWsForStubRuntime(page);
-    await page.locator("button", { hasText: "Start Task" }).click();
+    await page.locator("button", { hasText: "Start" }).click();
 
     // Wait for in_progress auto-switch to stream tab
     await expect(page.locator("text=Stub runtime initialized")).toBeVisible({ timeout: 15_000 });

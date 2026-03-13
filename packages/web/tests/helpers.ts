@@ -175,7 +175,7 @@ export async function patchWsForStubRuntime(page: Page): Promise<void> {
  * Requires patchWsForStubRuntime to have been called on the page beforehand.
  */
 export async function runStubTaskToCompletion(page: Page): Promise<void> {
-  await page.locator("button", { hasText: "Start Task" }).click();
+  await page.locator("button", { hasText: "Start" }).click();
 
   // Wait for waiting_input state
   const inputField = page.locator('input[placeholder="Type a message..."]');

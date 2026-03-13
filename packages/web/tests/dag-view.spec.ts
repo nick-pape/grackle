@@ -49,7 +49,7 @@ test.describe("DAG View", () => {
     await nodeLocator.click();
 
     // Verify navigation to task detail view
-    await expect(page.getByText("Task: dag-nav-task")).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText("dag-nav-task")).toBeVisible({ timeout: 5_000 });
   });
 
   test("dependency edges render for tasks with dependsOn", async ({ appPage }) => {
