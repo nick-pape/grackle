@@ -103,8 +103,7 @@ test.describe("Projects", () => {
     await page.getByText("my task").click();
 
     // Task header should be visible with title and status
-    await expect(page.getByText("my task")).toBeVisible({ timeout: 5_000 });
-    await expect(page.locator('[data-testid="task-status"]')).toContainText("pending");
+    await expect(page.locator('[data-testid="task-status"]')).toContainText("pending", { timeout: 5_000 });
 
     // Tab bar should show Overview, Stream, Findings
     await expect(page.locator("button", { hasText: "Overview" })).toBeVisible();

@@ -21,7 +21,6 @@ test.describe("Task Lifecycle (stub runtime)", () => {
 
     // --- Step 3: Navigate to task view ---
     await page.getByText("test task").click();
-    await expect(page.getByText("test task")).toBeVisible({ timeout: 5_000 });
     await expect(page.locator('[data-testid="task-status"]')).toContainText("pending");
     // Overview tab should be active for pending task
     await expect(page.locator("button", { hasText: "Overview" })).toHaveAttribute("class", /active/);

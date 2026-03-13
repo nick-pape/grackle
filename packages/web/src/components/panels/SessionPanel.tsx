@@ -668,7 +668,7 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
         {/* Task header with contextual action buttons */}
         <div className={styles.header}>
           <span className={styles.headerTitle}>
-            {task?.title || viewMode.taskId}
+            <span data-testid="task-title">{task?.title || viewMode.taskId}</span>
             {task && <span className={styles.taskStatusBadge} data-testid="task-status">{task.status}</span>}
             {task?.branch && <span className={styles.taskBranch}>{task.branch}</span>}
             {isTaskBlocked && <span className={styles.taskBlockedBadge}>blocked</span>}

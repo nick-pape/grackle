@@ -146,7 +146,10 @@ export async function createTask(
 /** Navigate to a task view by clicking its name in the sidebar. */
 export async function navigateToTask(page: Page, taskTitle: string): Promise<void> {
   await page.getByText(taskTitle).first().click();
-  await page.getByText(`Task: ${taskTitle}`).waitFor({ timeout: 5_000 });
+  // Wait for the task detail header to show this specific task's title.
+  // Using data-testid="task-title" (which wraps only the title text) to avoid strict-mode
+  // violations from the task name appearing in both the sidebar and the header.
+  await page.locator(`[data-testid="task-title"]:has-text("${taskTitle}")`).waitFor({ timeout: 5_000 });
 }
 
 /** Monkey-patch WebSocket.prototype.send to force stub runtime on start_task messages. */

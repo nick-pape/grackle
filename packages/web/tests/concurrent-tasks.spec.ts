@@ -35,11 +35,11 @@ test.describe("Concurrent Tasks", () => {
 
     // Verify task B's stream shows events for task B (not task A)
     // The Stream tab should show content related to this task's session
-    await expect(page.getByText("conc-task-b")).toBeVisible();
+    await expect(page.locator('[data-testid="task-status"]')).toBeVisible();
 
     // Navigate back to task A — its stream should still be intact
     await navigateToTask(page, "conc-task-a");
-    await expect(page.getByText("conc-task-a")).toBeVisible();
+    await expect(page.locator('[data-testid="task-status"]')).toBeVisible();
     // Task A should still be in waiting_input (input field visible)
     await expect(inputField).toBeVisible({ timeout: 5_000 });
 
@@ -76,9 +76,9 @@ test.describe("Concurrent Tasks", () => {
     await navigateToTask(page, "status-task-x");
     await page.locator("button", { hasText: "Start" }).click();
 
-    // Scope status checks to each task's sidebar entry
-    const taskXRow = page.getByText("status-task-x").locator("..");
-    const taskYRow = page.getByText("status-task-y").locator("..");
+    // Scope status checks to each task's sidebar entry (exact: true avoids matching the header)
+    const taskXRow = page.getByText("status-task-x", { exact: true }).locator("..");
+    const taskYRow = page.getByText("status-task-y", { exact: true }).locator("..");
 
     // Wait for task X to be in_progress (sidebar shows ●)
     await expect(taskXRow.locator("text=●")).toBeVisible({ timeout: 15_000 });

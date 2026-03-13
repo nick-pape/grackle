@@ -100,6 +100,6 @@ test.describe("Task Deletion", () => {
     const sidebarTask = page.locator('[class*="taskTitle"]', { hasText: "tdel-dismiss-task" });
     await expect(sidebarTask).toBeVisible({ timeout: 5_000 });
 
-    await expect(page.getByText("tdel-dismiss-task")).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText("tdel-dismiss-task", { exact: true })).toBeVisible({ timeout: 5_000 });
   });
 });

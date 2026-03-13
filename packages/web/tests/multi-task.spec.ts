@@ -45,7 +45,7 @@ test.describe("Multi-Task", () => {
 
     // Navigate to task B (pending)
     await navigateToTask(page, "preserve-task-b");
-    await expect(page.getByText("preserve-task-b")).toBeVisible();
+    await expect(page.locator('[data-testid="task-status"]')).toContainText("pending");
     // Pending task defaults to Overview tab
     const overviewTab = page.locator("button", { hasText: "Overview" });
     await expect(overviewTab).toHaveAttribute("class", /active/, { timeout: 10_000 });
