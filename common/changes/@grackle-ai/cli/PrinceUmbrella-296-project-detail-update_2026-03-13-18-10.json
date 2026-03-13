@@ -3,14 +3,9 @@
     {
       "comment": "Add the UpdateProject RPC and project detail view inline editing flow.",
       "type": "patch",
-      "packageName": "@grackle-ai/common"
-    },
-    {
-      "comment": "No CLI changes; change file added to satisfy rush change verification after merging main.",
-      "type": "none",
       "packageName": "@grackle-ai/cli"
     }
   ],
-  "packageName": "@grackle-ai/common",
+  "packageName": "@grackle-ai/cli",
   "email": "leoendalekachew@gmail.com"
 }

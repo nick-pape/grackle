@@ -1028,7 +1028,7 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
                     title="Click to edit repository URL"
                     data-testid="edit-repo-button"
                   >
-                    {project?.repoUrl ? (
+                    {project?.repoUrl && /^https?:\/\//i.test(project.repoUrl) ? (
                       <a
                         className={styles.repoLink}
                         href={project.repoUrl}
@@ -1038,6 +1038,8 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
                       >
                         {project.repoUrl}
                       </a>
+                    ) : project?.repoUrl ? (
+                      <span>{project.repoUrl}</span>
                     ) : (
                       <span className={styles.metaPlaceholder}>No repository</span>
                     )}

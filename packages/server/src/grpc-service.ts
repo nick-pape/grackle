@@ -619,6 +619,9 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       if (req.name !== undefined && req.name.trim() === "") {
         throw new Error("Project name cannot be empty");
       }
+      if (req.repoUrl !== undefined && req.repoUrl !== "" && !/^https?:\/\//i.test(req.repoUrl)) {
+        throw new Error("Repository URL must use http or https scheme");
+      }
       const row = projectStore.updateProject(req.id, {
         name: req.name !== undefined ? req.name.trim() : undefined,
         description: req.description,

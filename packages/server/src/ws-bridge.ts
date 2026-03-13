@@ -784,16 +784,23 @@ async function handleMessage(
         sendWs(ws, { type: "error", payload: { message: `Project not found: ${projectId}` } });
         return;
       }
-      const nameVal = msg.payload?.name as string | undefined;
+      const nameVal = typeof msg.payload?.name === "string" ? msg.payload.name : undefined;
       if (nameVal !== undefined && nameVal.trim() === "") {
         sendWs(ws, { type: "error", payload: { message: "Project name cannot be empty" } });
         return;
       }
+      const descVal = typeof msg.payload?.description === "string" ? msg.payload.description : undefined;
+      const repoVal = typeof msg.payload?.repoUrl === "string" ? msg.payload.repoUrl : undefined;
+      const envVal = typeof msg.payload?.defaultEnvironmentId === "string" ? msg.payload.defaultEnvironmentId : undefined;
+      if (repoVal !== undefined && repoVal !== "" && !/^https?:\/\//i.test(repoVal)) {
+        sendWs(ws, { type: "error", payload: { message: "Repository URL must use http or https scheme" } });
+        return;
+      }
       projectStore.updateProject(projectId, {
         name: nameVal !== undefined ? nameVal.trim() : undefined,
-        description: msg.payload?.description as string | undefined,
-        repoUrl: msg.payload?.repoUrl as string | undefined,
-        defaultEnvironmentId: msg.payload?.defaultEnvironmentId as string | undefined,
+        description: descVal,
+        repoUrl: repoVal,
+        defaultEnvironmentId: envVal,
       });
       broadcast({ type: "project_updated", payload: { projectId } });
       break;
