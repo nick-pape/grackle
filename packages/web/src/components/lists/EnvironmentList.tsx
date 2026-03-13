@@ -197,6 +197,7 @@ function EnvironmentCard({
             data-testid="session-summary-row"
             role="button"
             tabIndex={0}
+            aria-expanded={sessionsExpanded}
             aria-label={sessionsExpanded ? "Collapse sessions" : "Expand sessions"}
             onClick={onToggleSessionsExpand}
             onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onToggleSessionsExpand(); } }}
