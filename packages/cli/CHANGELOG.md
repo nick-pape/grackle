@@ -1,6 +1,35 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Fri, 13 Mar 2026 08:26:43 GMT and should not be manually modified.
+This log was last generated on Fri, 13 Mar 2026 21:32:39 GMT and should not be manually modified.
+
+## 0.18.1
+Fri, 13 Mar 2026 21:32:39 GMT
+
+### Patches
+
+- Add the UpdateProject RPC and project detail view inline editing flow.
+
+## 0.18.0
+Fri, 13 Mar 2026 18:20:02 GMT
+
+### Minor changes
+
+- Add --no-include-comments flag to import-github command
+
+### Updates
+
+- Add breadcrumbs
+
+## 0.17.1
+Fri, 13 Mar 2026 17:07:19 GMT
+
+### Patches
+
+- Add --depends-on flag to task update CLI command
+
+### Updates
+
+- Address persona CLI UI gaps by adding missing tasks help and examples
 
 ## 0.17.0
 Fri, 13 Mar 2026 08:26:43 GMT

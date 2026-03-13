@@ -324,6 +324,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
         defaultEnvironmentId: defaultEnvironmentId || "",
         status: "active",
         createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       };
 
       setProjects((prev) => [...prev, newProject]);
@@ -779,6 +780,25 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       clearEvents,
       createProject,
       archiveProject,
+      updateProject: (projectId: string, fields: { name?: string; description?: string; repoUrl?: string; defaultEnvironmentId?: string }) => {
+        // eslint-disable-next-line no-console
+        console.log("[MockGrackle] updateProject", { projectId, ...fields });
+        setProjects((prev) =>
+          prev.map((p) => {
+            if (p.id !== projectId) {
+              return p;
+            }
+            return {
+              ...p,
+              ...(fields.name !== undefined ? { name: fields.name } : {}),
+              ...(fields.description !== undefined ? { description: fields.description } : {}),
+              ...(fields.repoUrl !== undefined ? { repoUrl: fields.repoUrl } : {}),
+              ...(fields.defaultEnvironmentId !== undefined ? { defaultEnvironmentId: fields.defaultEnvironmentId } : {}),
+              updatedAt: new Date().toISOString(),
+            };
+          }),
+        );
+      },
       loadTasks,
       createTask,
       startTask,

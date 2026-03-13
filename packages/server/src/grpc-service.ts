@@ -611,6 +611,30 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       return create(grackle.EmptySchema, {});
     },
 
+    async updateProject(req: grackle.UpdateProjectRequest) {
+      const existing = projectStore.getProject(req.id);
+      if (!existing) {
+        throw new Error(`Project not found: ${req.id}`);
+      }
+      if (req.name !== undefined && req.name.trim() === "") {
+        throw new Error("Project name cannot be empty");
+      }
+      if (req.repoUrl !== undefined && req.repoUrl !== "" && !/^https?:\/\//i.test(req.repoUrl)) {
+        throw new Error("Repository URL must use http or https scheme");
+      }
+      const row = projectStore.updateProject(req.id, {
+        name: req.name !== undefined ? req.name.trim() : undefined,
+        description: req.description,
+        repoUrl: req.repoUrl,
+        defaultEnvironmentId: req.defaultEnvironmentId,
+      });
+      if (!row) {
+        throw new Error(`Project not found after update: ${req.id}`);
+      }
+      broadcast({ type: "project_updated", payload: { projectId: req.id } });
+      return projectRowToProto(row);
+    },
+
     // ─── Tasks ───────────────────────────────────────────────
 
     async listTasks(req: grackle.ProjectId) {
@@ -1096,12 +1120,15 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       }
       const stateStr =
         req.state === grackle.IssueState.CLOSED ? "closed" : "open";
+      // include_comments defaults to true when not set (opt-out behaviour)
+      const includeComments = req.includeComments ?? true;
       const result = await executeGitHubImport(
         req.projectId,
         req.repo,
         stateStr,
         req.label ?? undefined,
         req.environmentId ?? undefined,
+        includeComments,
       );
 
       return create(grackle.ImportGitHubIssuesResponseSchema, result);
