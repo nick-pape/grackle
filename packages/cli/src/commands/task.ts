@@ -47,7 +47,9 @@ export function registerTaskCommands(program: Command): void {
     .option("--persona <id-or-name>", "Persona to assign")
     .action(async (projectId: string, title: string, opts) => {
       const client = createGrackleClient();
-      const dependsOn = opts.dependsOn ? opts.dependsOn.split(",") : [];
+      const dependsOn = opts.dependsOn
+        ? opts.dependsOn.split(",").map((s: string) => s.trim()).filter(Boolean)
+        : [];
       const t = await client.createTask({
         projectId,
         title,
@@ -114,7 +116,9 @@ export function registerTaskCommands(program: Command): void {
       }
 
       const client = createGrackleClient();
-      const dependsOn = opts.dependsOn ? opts.dependsOn.split(",") : [];
+      const dependsOn = opts.dependsOn
+        ? opts.dependsOn.split(",").map((s: string) => s.trim()).filter(Boolean)
+        : [];
       const t = await client.updateTask({
         id: taskId,
         title: opts.title || "",
