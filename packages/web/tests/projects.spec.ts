@@ -72,7 +72,7 @@ test.describe("Projects", () => {
 
     // Fill in task details and select environment
     await page.locator('input[placeholder="Task title..."]').fill("implement feature");
-    const envSelect = page.locator("select");
+    const envSelect = page.locator("select").first();
     await envSelect.selectOption("test-local");
 
     // Click Create (exact match to avoid matching "Create Task" CTA)
@@ -95,7 +95,7 @@ test.describe("Projects", () => {
     await page.getByText("view-test").click();
     await page.getByText("view-test").locator("..").locator('button[title="New task"]').first().click();
     await page.locator('input[placeholder="Task title..."]').fill("my task");
-    await page.locator("select").selectOption("test-local");
+    await page.locator("select").first().selectOption("test-local");
     await page.locator("button", { hasText: /^Create$/ }).click();
     await expect(page.getByText("my task")).toBeVisible({ timeout: 5_000 });
 

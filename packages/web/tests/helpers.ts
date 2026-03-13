@@ -78,13 +78,19 @@ export async function sendWsMessage(
 }
 
 /** Retrieve the project ID for a project with the given name. */
-export async function getProjectId(page: Page, projectName: string): Promise<string> {
+export async function getProjectId(
+  page: Page,
+  projectName: string,
+): Promise<string> {
   const response = await sendWsAndWaitFor(
     page,
     { type: "list_projects" },
     "projects",
   );
-  const projects = (response.payload?.projects || []) as Array<{ id: string; name: string }>;
+  const projects = (response.payload?.projects || []) as Array<{
+    id: string;
+    name: string;
+  }>;
   const project = projects.find((p) => p.name === projectName);
   if (!project) {
     throw new Error(`Project "${projectName}" not found`);
@@ -103,7 +109,10 @@ export async function getTaskId(
     { type: "list_tasks", payload: { projectId } },
     "tasks",
   );
-  const tasks = (response.payload?.tasks || []) as Array<{ id: string; title: string }>;
+  const tasks = (response.payload?.tasks || []) as Array<{
+    id: string;
+    title: string;
+  }>;
   const task = tasks.find((t) => t.title === taskTitle);
   if (!task) {
     throw new Error(`Task "${taskTitle}" not found in project ${projectId}`);
@@ -128,23 +137,34 @@ export async function createTask(
   envName?: string,
 ): Promise<void> {
   // Click "New task" button (uses stopPropagation, doesn't toggle expansion)
-  await page.getByText(projectName).locator("..").locator('button[title="New task"]').first().click();
+  await page
+    .getByText(projectName)
+    .locator("..")
+    .locator('button[title="New task"]')
+    .first()
+    .click();
 
   // Fill in task details
   await page.locator('input[placeholder="Task title..."]').fill(title);
   if (envName) {
-    await page.locator("select").selectOption(envName);
+    await page.locator("select").first().selectOption(envName);
   }
   await page.locator("button", { hasText: /^Create$/ }).click();
 
   // After "Create", viewMode goes to project → auto-expand. Wait for task in sidebar.
   // Use .first() because AnimatePresence may briefly keep an exiting copy alongside the
   // entering copy, causing two <span class="taskTitle"> elements with the same text.
-  await page.getByText(title, { exact: true }).first().waitFor({ timeout: 5_000 });
+  await page
+    .getByText(title, { exact: true })
+    .first()
+    .waitFor({ timeout: 5_000 });
 }
 
 /** Navigate to a task view by clicking its name in the sidebar. */
-export async function navigateToTask(page: Page, taskTitle: string): Promise<void> {
+export async function navigateToTask(
+  page: Page,
+  taskTitle: string,
+): Promise<void> {
   await page.getByText(taskTitle).first().click();
   // Wait for the task detail header to show this specific task's title.
   // Using data-testid="task-title" (which wraps only the title text) to avoid strict-mode
@@ -156,7 +176,9 @@ export async function navigateToTask(page: Page, taskTitle: string): Promise<voi
 export async function patchWsForStubRuntime(page: Page): Promise<void> {
   await page.evaluate(() => {
     const origSend = WebSocket.prototype.send;
-    WebSocket.prototype.send = function (data: string | ArrayBuffer | Blob | ArrayBufferView) {
+    WebSocket.prototype.send = function (
+      data: string | ArrayBuffer | Blob | ArrayBufferView,
+    ) {
       if (typeof data === "string") {
         try {
           const msg = JSON.parse(data);
@@ -187,7 +209,9 @@ export async function runStubTaskToCompletion(page: Page): Promise<void> {
   await page.locator("button", { hasText: "Send" }).click();
 
   // Wait for session to complete and task to move to review
-  await page.locator("button", { hasText: "Approve" }).waitFor({ timeout: 15_000 });
+  await page
+    .locator("button", { hasText: "Approve" })
+    .waitFor({ timeout: 15_000 });
 }
 
 /**
@@ -213,9 +237,13 @@ export async function injectWsMessage(
 ): Promise<void> {
   await page.evaluate((msg) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const sockets = (window as any).__grackle_ws_instances__ as WebSocket[] | undefined;
+    const sockets = (window as any).__grackle_ws_instances__ as
+      | WebSocket[]
+      | undefined;
     if (!sockets) {
-      throw new Error("WS tracker not installed — call installWsTracker before page.goto");
+      throw new Error(
+        "WS tracker not installed — call installWsTracker before page.goto",
+      );
     }
     // Find the app's socket (first OPEN one — helper sockets are already closed)
     const ws = sockets.find((s) => s.readyState === WebSocket.OPEN);
@@ -224,9 +252,11 @@ export async function injectWsMessage(
     }
     // The app uses ws.onmessage (not addEventListener), so call it directly
     if (ws.onmessage) {
-      ws.onmessage(new MessageEvent("message", {
-        data: JSON.stringify(msg),
-      }));
+      ws.onmessage(
+        new MessageEvent("message", {
+          data: JSON.stringify(msg),
+        }),
+      );
     }
   }, message);
 }
@@ -244,16 +274,22 @@ export async function installWsTracker(page: Page): Promise<void> {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (window as any).__OrigWebSocket__ = OrigWs;
     // @ts-expect-error — we're wrapping the constructor
-    window.WebSocket = function (...args: ConstructorParameters<typeof WebSocket>) {
+    window.WebSocket = function (
+      ...args: ConstructorParameters<typeof WebSocket>
+    ) {
       const ws = new OrigWs(...args);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (window as any).__grackle_ws_instances__.push(ws);
       return ws;
     } as unknown as typeof WebSocket;
     window.WebSocket.prototype = OrigWs.prototype;
-    Object.defineProperty(window.WebSocket, "CONNECTING", { value: OrigWs.CONNECTING });
+    Object.defineProperty(window.WebSocket, "CONNECTING", {
+      value: OrigWs.CONNECTING,
+    });
     Object.defineProperty(window.WebSocket, "OPEN", { value: OrigWs.OPEN });
-    Object.defineProperty(window.WebSocket, "CLOSING", { value: OrigWs.CLOSING });
+    Object.defineProperty(window.WebSocket, "CLOSING", {
+      value: OrigWs.CLOSING,
+    });
     Object.defineProperty(window.WebSocket, "CLOSED", { value: OrigWs.CLOSED });
   });
 }
@@ -263,7 +299,13 @@ export async function createTaskViaWs(
   page: Page,
   projectId: string,
   title: string,
-  options?: { environmentId?: string; dependsOn?: string[]; description?: string; parentTaskId?: string; canDecompose?: boolean },
+  options?: {
+    environmentId?: string;
+    dependsOn?: string[];
+    description?: string;
+    parentTaskId?: string;
+    canDecompose?: boolean;
+  },
 ): Promise<WsPayload> {
   const payload: WsPayload = {
     projectId,
