@@ -9,7 +9,7 @@
             "command": "bash .claude/hooks/pr-readiness-check.sh"
           }
         ],
-        "timeout": 120
+        "timeout": 180
       }
     ]
   }

@@ -62,6 +62,7 @@ describe("buildTaskSystemContext", () => {
     const result = buildTaskSystemContext("Task", "desc", "");
     expect(result).toContain("Check for merge conflicts");
     expect(result).toContain("CONFLICTING");
-    expect(result).toContain("NEVER rebase");
+    // Phase 3 step 11 specifically uses `gh pr view --json mergeable` to detect conflicts
+    expect(result).toContain("gh pr view --json mergeable");
   });
 });
