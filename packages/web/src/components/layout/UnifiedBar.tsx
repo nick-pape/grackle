@@ -483,8 +483,8 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
       );
     }
 
-    // In progress — keep the chat input for waiting_input state; actions moved to header
-    if (task.status === "in_progress") {
+    // In progress / waiting for input — keep the chat input for waiting_input state; actions moved to header
+    if (task.status === "in_progress" || task.status === "waiting_input") {
       const isWaiting = taskSession?.status === "waiting_input";
 
       if (isWaiting) {
