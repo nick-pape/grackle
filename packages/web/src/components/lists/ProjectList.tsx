@@ -4,6 +4,7 @@ import type { ViewMode } from "../../App.js";
 import type { TaskData } from "../../hooks/useGrackleSocket.js";
 import { AnimatePresence, motion } from "motion/react";
 import { MAX_TASK_DEPTH } from "@grackle-ai/common";
+import { Spinner } from "../display/index.js";
 import styles from "./ProjectList.module.scss";
 
 /** Props for the ProjectList component. */
@@ -115,7 +116,7 @@ function TaskTreeNode({
         <span className={styles.taskStatusIcon} style={{ color: statusStyle.color }}>
           {statusStyle.icon}
         </span>
-        <span className={styles.taskTitle}>{node.title}</span>
+        <span className={styles.taskTitle} title={node.title}>{node.title}</span>
         {hasChildren && (
           <span className={styles.childCountBadge}>
             {node.children.filter(c => c.status === "done").length}/{node.children.length}
@@ -175,7 +176,7 @@ function TaskTreeNode({
 
 /** Sidebar project tree with expandable task lists and hierarchical task rendering. */
 export function ProjectList({ viewMode, setViewMode }: Props): JSX.Element {
-  const { projects, tasks, loadTasks, createProject } = useGrackle();
+  const { projects, tasks, loadTasks, createProject, projectCreating } = useGrackle();
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
   const [manuallyCollapsed, setManuallyCollapsed] = useState<Set<string>>(new Set());
@@ -247,7 +248,7 @@ export function ProjectList({ viewMode, setViewMode }: Props): JSX.Element {
   }, [selectedProjectId, expanded, loadTasks]);
 
   const handleCreateProject = (): void => {
-    if (!newProjectName.trim()) {
+    if (!newProjectName.trim() || projectCreating) {
       return;
     }
     createProject(newProjectName.trim());
@@ -278,17 +279,38 @@ export function ProjectList({ viewMode, setViewMode }: Props): JSX.Element {
             onKeyDown={(e) => e.key === "Enter" && handleCreateProject()}
             placeholder="Project name..."
             autoFocus
+            disabled={projectCreating}
             className={styles.createInput}
           />
-          <button onClick={handleCreateProject} className={styles.createButton}>
-            OK
+          <button
+            onClick={handleCreateProject}
+            className={styles.createButton}
+            disabled={projectCreating}
+          >
+            {projectCreating
+              ? <Spinner size="sm" label="Creating project" />
+              : "OK"}
           </button>
+        </div>
+      )}
+      {projectCreating && (
+        <div className={styles.creatingHint}>
+          <Spinner size="sm" label="Creating project" />
+          Creating project…
         </div>
       )}
 
       {projects.length === 0 && !showCreateForm && (
-        <div className={styles.emptyState}>
-          No projects. Click + to create one.
+        <div className={styles.emptyCta}>
+          <button
+            className={styles.ctaButton}
+            onClick={() => setShowCreateForm(true)}
+          >
+            Create Project
+          </button>
+          <div className={styles.ctaDescription}>
+            Organize your work into projects
+          </div>
         </div>
       )}
 
@@ -310,7 +332,7 @@ export function ProjectList({ viewMode, setViewMode }: Props): JSX.Element {
               <span className={`${styles.expandArrow} ${isExpanded ? styles.expanded : ""}`}>
                 {"\u25B8"}
               </span>
-              <span className={styles.projectName}>{project.name}</span>
+              <span className={styles.projectName} title={project.name}>{project.name}</span>
               <span className={styles.taskCount}>
                 {projectTasks.length > 0 && `${projectTasks.filter((t) => t.status === "done").length}/${projectTasks.length}`}
               </span>
@@ -350,8 +372,13 @@ export function ProjectList({ viewMode, setViewMode }: Props): JSX.Element {
                   ))}
 
                   {projectTasks.length === 0 && (
-                    <div className={styles.emptyTasks}>
-                      No tasks yet
+                    <div className={styles.emptyTaskCta}>
+                      <button
+                        className={styles.createTaskLink}
+                        onClick={() => setViewMode({ kind: "new_task", projectId: project.id })}
+                      >
+                        + Create Task
+                      </button>
                     </div>
                   )}
                 </motion.div>

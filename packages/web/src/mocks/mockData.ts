@@ -3,8 +3,7 @@
  *
  * Provides realistic sample entities that exercise every UI state:
  * multiple environments, sessions in various statuses, projects with
- * tasks at different lifecycle stages, findings across all categories,
- * and a unified diff.
+ * tasks at different lifecycle stages, and findings across all categories.
  */
 
 import type {
@@ -14,7 +13,6 @@ import type {
   Project,
   TaskData,
   FindingData,
-  TaskDiffData,
   TokenInfo,
 } from "../hooks/useGrackleSocket.js";
 
@@ -838,83 +836,3 @@ export const MOCK_STREAM_SCENARIOS: MockStreamScenario[] = [
     ],
   },
 ];
-
-// ─── Task Diff ──────────────────────────────────────
-
-/** Sample unified diff for the JWT auth task. */
-export const MOCK_TASK_DIFF: TaskDiffData = {
-  taskId: "task-001",
-  branch: "feat/jwt-auth",
-  changedFiles: [
-    "src/middleware/auth.ts",
-    "src/routes/login.ts",
-    "src/routes/protected.ts",
-    "package.json",
-    "tests/auth.test.ts",
-  ],
-  additions: 87,
-  deletions: 34,
-  diff: `diff --git a/src/middleware/auth.ts b/src/middleware/auth.ts
-index 1a2b3c4..5e6f7g8 100644
---- a/src/middleware/auth.ts
-+++ b/src/middleware/auth.ts
-@@ -1,18 +1,26 @@
--import session from "express-session";
--import type { Request, Response, NextFunction } from "express";
-+import jwt from "jsonwebtoken";
-+import type { Request, Response, NextFunction } from "express";
-+
-+const JWT_SECRET: string = process.env.JWT_SECRET || "change-me";
-+const TOKEN_EXPIRY: string = "24h";
- 
--export function requireSession(req: Request, res: Response, next: NextFunction): void {
--  if (!req.session?.userId) {
--    res.status(401).json({ message: "Not authenticated" });
-+export function verifyToken(req: Request, res: Response, next: NextFunction): void {
-+  const header = req.headers.authorization;
-+  if (!header?.startsWith("Bearer ")) {
-+    res.status(401).json({ error: "Missing token", code: "AUTH_MISSING" });
-     return;
-   }
--  next();
-+  try {
-+    const decoded = jwt.verify(header.slice(7), JWT_SECRET);
-+    req.user = decoded;
-+    next();
-+  } catch {
-+    res.status(403).json({ error: "Invalid token", code: "AUTH_INVALID" });
-+  }
- }
- 
-diff --git a/src/routes/login.ts b/src/routes/login.ts
-index 2b3c4d5..8f9a0b1 100644
---- a/src/routes/login.ts
-+++ b/src/routes/login.ts
-@@ -1,12 +1,22 @@
- import { Router } from "express";
-+import jwt from "jsonwebtoken";
- import { findUserByEmail, verifyPassword } from "../services/users.js";
- 
-+const JWT_SECRET: string = process.env.JWT_SECRET || "change-me";
-+const TOKEN_EXPIRY: string = "24h";
-+
- const router = Router();
- 
- router.post("/login", async (req, res) => {
-   const { email, password } = req.body;
-   const user = await findUserByEmail(email);
--  if (!user || !verifyPassword(password, user.passwordHash)) {
--    return res.status(401).json({ message: "Invalid credentials" });
-+  if (!user || !await verifyPassword(password, user.passwordHash)) {
-+    return res.status(401).json({ error: "Invalid credentials", code: "AUTH_FAILED" });
-   }
--  req.session.userId = user.id;
--  res.json({ ok: true });
-+  const token = jwt.sign(
-+    { sub: user.id, email: user.email, role: user.role },
-+    JWT_SECRET,
-+    { expiresIn: TOKEN_EXPIRY }
-+  );
-+  res.json({ token, expiresIn: TOKEN_EXPIRY });
- });`,
-};
