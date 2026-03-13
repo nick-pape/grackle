@@ -55,7 +55,7 @@ describe("buildTaskSystemContext", () => {
     expect(result).toContain("Wait for CI");
     expect(result).toContain("Address Copilot review");
     expect(result).toContain("copilot-pull-request-reviewer");
-    expect(result).toContain("resolveReviewThread");
+    expect(result).toContain("Resolve the thread");
   });
 
   it("includes merge conflict check in Phase 3", () => {

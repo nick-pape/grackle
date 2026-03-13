@@ -372,7 +372,7 @@ export class CodexRuntime extends BaseAgentRuntime {
     worktreeBasePath?: string,
     systemContext?: string,
     mcpServers?: Record<string, unknown>,
-    _hooks?: Record<string, unknown>,
+    _hooks?: Record<string, unknown>, // Hooks not supported by Codex SDK — accepted for interface compatibility
   ): AgentSession {
     return new CodexSession(id, prompt, model, maxTurns, resumeSessionId, branch, worktreeBasePath, systemContext, mcpServers);
   }
