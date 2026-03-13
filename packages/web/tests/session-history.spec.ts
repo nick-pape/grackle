@@ -31,13 +31,13 @@ test.describe("Session history", () => {
     await expect(page.locator("[data-testid='attempt-1']")).toBeVisible();
     await expect(page.locator("[data-testid='attempt-2']")).toBeVisible();
 
-    // Click attempt #1 → loads historical events
+    // Click attempt #1 → loads historical events; wait for the active state to switch
     await page.locator("[data-testid='attempt-1']").click();
-    await page.waitForTimeout(500);
+    await expect(page.locator("[data-testid='attempt-1'][aria-pressed='true']")).toBeVisible({ timeout: 3_000 });
 
-    // Click attempt #2 → back to current session
+    // Click attempt #2 → back to current session; wait for the active state to switch
     await page.locator("[data-testid='attempt-2']").click();
-    await page.waitForTimeout(300);
+    await expect(page.locator("[data-testid='attempt-2'][aria-pressed='true']")).toBeVisible({ timeout: 3_000 });
 
     // Complete retry
     await page.locator('input[placeholder="Type a message..."]').fill("done");

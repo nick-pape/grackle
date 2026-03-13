@@ -456,6 +456,8 @@ function SessionAttemptSelector({ taskSessions, selectedSessionId, onSelect }: S
             className={`${styles.attemptButton} ${isActive ? styles.attemptActive : ""}`}
             onClick={() => onSelect(s.id)}
             title={`Attempt #${i + 1} — ${s.status}`}
+            aria-label={`Attempt #${i + 1}, ${s.status}`}
+            aria-pressed={isActive}
             data-testid={`attempt-${i + 1}`}
           >
             #{i + 1}

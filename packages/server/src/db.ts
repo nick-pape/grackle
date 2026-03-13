@@ -221,10 +221,11 @@ export function initDatabase(): void {
     /* column already exists */
   }
 
-  // Migration: backfill task_id on existing sessions from tasks.session_id
+  // Migration: backfill task_id on existing sessions from tasks.session_id.
+  // Use LIMIT 1 to guard against multiple tasks pointing at the same session.
   sqlite.exec(`
     UPDATE sessions SET task_id = (
-      SELECT id FROM tasks WHERE tasks.session_id = sessions.id
+      SELECT id FROM tasks WHERE tasks.session_id = sessions.id LIMIT 1
     ) WHERE task_id = '' AND EXISTS (
       SELECT 1 FROM tasks WHERE tasks.session_id = sessions.id
     )
