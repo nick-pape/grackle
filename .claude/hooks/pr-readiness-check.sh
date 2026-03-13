@@ -10,7 +10,7 @@
 #
 # Checks performed:
 #   1. Merge conflicts (PR mergeable state)
-#   2. CI status (all required checks passing)
+#   2. CI status (all checks passing)
 #   3. Unresolved Copilot review threads
 #
 # Fail-closed: if any check cannot be performed (gh not installed, auth
@@ -63,12 +63,15 @@ MERGEABLE=$(gh pr view "$PR_NUMBER" --json mergeable --jq '.mergeable') || {
 }
 if [ "$MERGEABLE" = "CONFLICTING" ]; then
   ISSUES="${ISSUES}\n- PR #${PR_NUMBER} has MERGE CONFLICTS. Run: git fetch origin && git merge origin/main (NEVER rebase), resolve conflicts, commit, and push."
+elif [ "$MERGEABLE" = "UNKNOWN" ] || [ -z "$MERGEABLE" ]; then
+  ISSUES="${ISSUES}\n- PR #${PR_NUMBER} merge status is UNKNOWN (GitHub may still be computing). Wait a moment and retry."
 fi
 
 # ── Check 2: CI status ────────────────────────────────────────────
 CI_STATE=$(gh pr view "$PR_NUMBER" --json statusCheckRollup --jq '
   [.statusCheckRollup[] | .conclusion // .status] |
-  if any(. == "FAILURE" or . == "ERROR" or . == "TIMED_OUT" or . == "CANCELLED" or . == "ACTION_REQUIRED" or . == "STALE" or . == "STARTUP_FAILURE") then "FAILING"
+  if length == 0 then "PENDING"
+  elif any(. == "FAILURE" or . == "ERROR" or . == "TIMED_OUT" or . == "CANCELLED" or . == "ACTION_REQUIRED" or . == "STALE" or . == "STARTUP_FAILURE") then "FAILING"
   elif any(. == "PENDING" or . == "QUEUED" or . == "IN_PROGRESS" or . == "EXPECTED" or . == null) then "PENDING"
   else "PASSING"
   end
@@ -94,7 +97,7 @@ query($owner: String!, $repo: String!, $pr: Int!) {
         nodes {
           isResolved
           isOutdated
-          comments(last: 1) {
+          comments(first: 1) {
             nodes {
               author { login }
             }
