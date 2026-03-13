@@ -42,10 +42,18 @@ function buildSessionSummary(sessions: Session[]): string {
   for (const session of sessions) {
     counts[session.status] = (counts[session.status] || 0) + 1;
   }
-  return SESSION_STATUS_ORDER
+  const knownParts = SESSION_STATUS_ORDER
     .filter((status) => counts[status] > 0)
-    .map((status) => `${counts[status]} ${SESSION_STATUS_LABELS[status] || status}`)
-    .join(", ");
+    .map((status) => `${counts[status]} ${SESSION_STATUS_LABELS[status] || status}`);
+
+  // Append any statuses not in SESSION_STATUS_ORDER so the summary always reflects all sessions
+  const knownSet = new Set(SESSION_STATUS_ORDER);
+  const unknownParts = Object.keys(counts)
+    .filter((status) => !knownSet.has(status))
+    .sort()
+    .map((status) => `${counts[status]} ${status}`);
+
+  return [...knownParts, ...unknownParts].join(", ");
 }
 
 // --- Subcomponents ---
@@ -187,7 +195,11 @@ function EnvironmentCard({
           <div
             className={styles.sessionSummaryRow}
             data-testid="session-summary-row"
+            role="button"
+            tabIndex={0}
+            aria-label={sessionsExpanded ? "Collapse sessions" : "Expand sessions"}
             onClick={onToggleSessionsExpand}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onToggleSessionsExpand(); } }}
           >
             <span className={`${styles.sessionExpandArrow} ${sessionsExpanded ? styles.expanded : ""}`}>
               {"\u25B8"}
