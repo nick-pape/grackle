@@ -35,7 +35,8 @@ async function reprovisionTestLocal(page: import("@playwright/test").Page): Prom
 
 test.describe("Environment List — Expand/Collapse", () => {
   test.beforeEach(async ({ appPage }) => {
-    await appPage.locator("button", { hasText: "Environments" }).click();
+    // Environments are now in Settings — navigate there via the gear button
+    await appPage.locator('button[title="Settings"]').click();
   });
 
   test("clicking environment row expands action row", async ({ appPage }) => {
@@ -119,8 +120,8 @@ test.describe("Environment Lifecycle — WebSocket Handlers", () => {
       { timeout: 10_000 },
     );
 
-    // Switch to Environments tab
-    await page.locator("button", { hasText: "Environments" }).click();
+    // Switch to Environments (now in Settings)
+    await page.locator('button[title="Settings"]').click();
     await expect(page.getByText("test-local")).toBeVisible();
 
     // Verify test-local is currently connected (green dot)
@@ -153,7 +154,7 @@ test.describe("Environment Lifecycle — WebSocket Handlers", () => {
       { timeout: 10_000 },
     );
 
-    await page.locator("button", { hasText: "Environments" }).click();
+    await page.locator('button[title="Settings"]').click();
 
     // First stop the environment
     await sendWsMessage(page, {
@@ -184,7 +185,7 @@ test.describe("Environment Lifecycle — WebSocket Handlers", () => {
       { timeout: 10_000 },
     );
 
-    await page.locator("button", { hasText: "Environments" }).click();
+    await page.locator('button[title="Settings"]').click();
 
     // Stop the environment first
     await sendWsMessage(page, {
@@ -211,7 +212,7 @@ test.describe("Environment Lifecycle — WebSocket Handlers", () => {
       { timeout: 10_000 },
     );
 
-    await page.locator("button", { hasText: "Environments" }).click();
+    await page.locator('button[title="Settings"]').click();
 
     // First, add a temporary environment that we can safely remove
     // Use the CLI-seeded "test-local" state to create a new one via WS
@@ -280,7 +281,7 @@ test.describe("Environment Lifecycle — WebSocket Handlers", () => {
       { timeout: 10_000 },
     );
 
-    await page.locator("button", { hasText: "Environments" }).click();
+    await page.locator('button[title="Settings"]').click();
 
     // Stop the environment
     await sendWsMessage(page, {
@@ -329,23 +330,9 @@ test.describe("Environment Lifecycle — Delete with Confirmation", () => {
   test("delete button shows confirmation dialog", async ({ appPage }) => {
     const page = appPage;
 
-    await page.locator("button", { hasText: "Environments" }).click();
+    await page.locator('button[title="Settings"]').click();
 
     // Expand the environment
     await page.getByText("test-local").click();
 
-    // Click Delete — the in-app ConfirmDialog should appear
-    await page.locator("button", { hasText: "Delete" }).click();
-
-    // Verify the in-app dialog is visible with correct content
-    await expect(page.getByText("Delete Environment?")).toBeVisible({ timeout: 5_000 });
-    await expect(page.getByText(/"test-local"/)).toBeVisible();
-
-    // Cancel via the Cancel button
-    await page.locator('[role="dialog"] button', { hasText: "Cancel" }).click();
-
-    // Dialog should be gone; environment should still be visible (we cancelled)
-    await expect(page.getByText("Delete Environment?")).not.toBeVisible({ timeout: 5_000 });
-    await expect(page.getByText("test-local")).toBeVisible();
-  });
-});
+    // Click Delete — the in-a
