@@ -431,6 +431,46 @@ function TaskActionButtons({
   return undefined;
 }
 
+/** Props for the SessionAttemptSelector component. */
+interface SessionAttemptSelectorProps {
+  taskSessions: Session[];
+  selectedSessionId: string | undefined;
+  onSelect: (sessionId: string) => void;
+}
+
+/** Renders a row of buttons for switching between session attempts (only when 2+). */
+function SessionAttemptSelector({ taskSessions, selectedSessionId, onSelect }: SessionAttemptSelectorProps): JSX.Element | undefined {
+  if (taskSessions.length < 2) {
+    return undefined;
+  }
+  return (
+    <div className={styles.attemptSelector} data-testid="attempt-selector">
+      <span className={styles.attemptLabel}>Attempts:</span>
+      {taskSessions.map((s, i) => {
+        const isActive = s.id === selectedSessionId;
+        const statusIcon = s.status === "completed" ? "\u2713"
+          : s.status === "failed" ? "\u2717"
+          : s.status === "running" || s.status === "waiting_input" ? "\u25CF"
+          : "";
+        return (
+          <button
+            key={s.id}
+            className={`${styles.attemptButton} ${isActive ? styles.attemptActive : ""}`}
+            onClick={() => onSelect(s.id)}
+            title={`Attempt #${i + 1} — ${s.status}`}
+            aria-label={`Attempt #${i + 1}, ${s.status}`}
+            aria-pressed={isActive}
+            data-testid={`attempt-${i + 1}`}
+          >
+            #{i + 1}
+            {statusIcon && <span className={styles.attemptStatus}>{statusIcon}</span>}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 /** Main content panel that renders session streams, task views, project summaries, or empty states based on the current view mode. */
 export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
   const {
@@ -438,6 +478,7 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
     loadSessionEvents, loadFindings,
     kill, startTask, approveTask, rejectTask, deleteTask,
     projects, createProject,
+    taskSessions, loadTaskSessions,
   } = useGrackle();
   // eslint-disable-next-line @rushstack/no-new-null
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -446,20 +487,30 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
   const [projectTab, setProjectTab] = useState<ProjectTab>("tasks");
   const [rejectNotes, setRejectNotes] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [selectedSessionId, setSelectedSessionId] = useState<string | undefined>(undefined);
   const prevTaskIdRef = useRef<string | undefined>(undefined);
   const prevTaskStatusRef = useRef<string | undefined>(undefined);
 
-  // Determine session context
-  let sessionId: string | undefined = undefined;
+  // Determine task and project context
   let task: ReturnType<typeof tasks.find> = undefined;
   let projectId: string | undefined = undefined;
 
+  if (viewMode.kind === "task") {
+    task = tasks.find((t) => t.id === viewMode.taskId);
+    projectId = task?.projectId || undefined;
+  }
+
+  // Resolve effective sessionId — use selectedSessionId if valid, otherwise task.sessionId
+  const currentTaskSessions = task ? (taskSessions[task.id] ?? []) : [];
+  let sessionId: string | undefined = undefined;
   if (viewMode.kind === "session") {
     sessionId = viewMode.sessionId;
   } else if (viewMode.kind === "task") {
-    task = tasks.find((t) => t.id === viewMode.taskId);
-    sessionId = task?.sessionId || undefined;
-    projectId = task?.projectId || undefined;
+    if (selectedSessionId && currentTaskSessions.some((s) => s.id === selectedSessionId)) {
+      sessionId = selectedSessionId;
+    } else {
+      sessionId = task?.sessionId || undefined;
+    }
   }
 
   // Delete handler for task actions — opens ConfirmDialog
@@ -474,7 +525,7 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
     setViewMode({ kind: "project", projectId: task.projectId });
   };
 
-  // Reset to overview tab and clear rejectNotes when switching to a different task.
+  // Reset to overview tab, clear rejectNotes, and clear selectedSessionId when switching tasks.
   if (viewMode.kind === "task" && task?.id !== prevTaskIdRef.current) {
     prevTaskIdRef.current = task?.id;
     if (activeTaskTab !== "overview") {
@@ -483,7 +534,26 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
     if (rejectNotes !== "") {
       setRejectNotes("");
     }
+    if (selectedSessionId !== undefined) {
+      setSelectedSessionId(undefined);
+    }
   }
+
+  // Load task sessions when task changes or when a new session is created (retry)
+  const loadedTaskSessionsRef = useRef<string | undefined>(undefined);
+  const prevTaskSessionIdRef = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (!task?.id) {
+      return;
+    }
+    const isNewTask = task.id !== loadedTaskSessionsRef.current;
+    const sessionChanged = task.sessionId !== prevTaskSessionIdRef.current;
+    if (isNewTask || sessionChanged) {
+      loadedTaskSessionsRef.current = task.id;
+      prevTaskSessionIdRef.current = task.sessionId;
+      loadTaskSessions(task.id);
+    }
+  }, [task?.id, task?.sessionId, loadTaskSessions]);
 
   // Auto-switch tab synchronously during render (not via effect) so the
   // correct tab is committed in the same frame as the status change.
@@ -757,29 +827,37 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -4 }}
               transition={{ duration: 0.15 }}
-              ref={scrollRef}
-              className={styles.eventScroll}
+              style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden" }}
             >
-              {!sessionId && task && (
-                <div className={styles.emptyCta}>
-                  <button
-                    className={styles.ctaButton}
-                    onClick={() => startTask(task.id)}
-                  >
-                    Start Task
-                  </button>
-                  <div className={styles.ctaDescription}>
-                    Click to begin agent execution
+              <SessionAttemptSelector
+                taskSessions={currentTaskSessions}
+                selectedSessionId={sessionId}
+                onSelect={(id) => {
+                  setSelectedSessionId(id);
+                }}
+              />
+              <div ref={scrollRef} className={styles.eventScroll}>
+                {!sessionId && task && (
+                  <div className={styles.emptyCta}>
+                    <button
+                      className={styles.ctaButton}
+                      onClick={() => startTask(task.id)}
+                    >
+                      Start Task
+                    </button>
+                    <div className={styles.ctaDescription}>
+                      Click to begin agent execution
+                    </div>
                   </div>
-                </div>
-              )}
-              {sessionId && groupedEvents.length === 0 && (
-                <div className={styles.waitingMessage}>Waiting for events...</div>
-              )}
-              <EventOverflowBanner eventsDropped={eventsDropped} />
-              {groupedEvents.map((event, i) => (
-                <EventRenderer key={`${event.sessionId}-${event.timestamp}-${i}`} event={event} />
-              ))}
+                )}
+                {sessionId && groupedEvents.length === 0 && (
+                  <div className={styles.waitingMessage}>Waiting for events...</div>
+                )}
+                <EventOverflowBanner eventsDropped={eventsDropped} />
+                {groupedEvents.map((event, i) => (
+                  <EventRenderer key={`${event.sessionId}-${event.timestamp}-${i}`} event={event} />
+                ))}
+              </div>
             </motion.div>
           )}
 

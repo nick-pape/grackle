@@ -323,6 +323,7 @@ async function startTaskSession(
     freshTask.title,
     model,
     logPath,
+    freshTask.id,
   );
   taskStore.setTaskSession(freshTask.id, sessionId);
   taskStore.markTaskStarted(freshTask.id);
@@ -1135,6 +1136,33 @@ async function handleMessage(
         return;
       }
       broadcast({ type: "task_deleted", payload: { taskId, projectId: deletedTask.projectId } });
+      break;
+    }
+
+    // ─── Task Sessions ─────────────────────────────────────
+
+    case "get_task_sessions": {
+      const taskId = msg.payload?.taskId;
+      if (typeof taskId !== "string" || taskId.length === 0) {
+        return;
+      }
+      const taskSessions = sessionStore.listSessionsForTask(taskId);
+      sendWs(ws, {
+        type: "task_sessions",
+        payload: {
+          taskId,
+          sessions: taskSessions.map((r) => ({
+            id: r.id,
+            environmentId: r.environmentId,
+            runtime: r.runtime,
+            status: r.status,
+            prompt: r.prompt,
+            startedAt: r.startedAt,
+            endedAt: r.endedAt ?? "",
+            error: r.error ?? "",
+          })),
+        },
+      });
       break;
     }
 
