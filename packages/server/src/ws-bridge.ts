@@ -678,12 +678,12 @@ async function handleMessage(
       personaStore.updatePersona(
         updatePersonaId,
         (msg.payload?.name as string) || existingPersona.name,
-        (msg.payload?.description as string) ?? existingPersona.description,
+        (msg.payload?.description as string) || existingPersona.description,
         (msg.payload?.systemPrompt as string) || existingPersona.systemPrompt,
         (msg.payload?.toolConfig as string) || existingPersona.toolConfig,
-        (msg.payload?.runtime as string) ?? existingPersona.runtime,
-        (msg.payload?.model as string) ?? existingPersona.model,
-        (msg.payload?.maxTurns as number) ?? existingPersona.maxTurns,
+        (msg.payload?.runtime as string) || existingPersona.runtime,
+        (msg.payload?.model as string) || existingPersona.model,
+        (msg.payload?.maxTurns as number) || existingPersona.maxTurns,
         (msg.payload?.mcpServers as string) || existingPersona.mcpServers,
       );
       broadcast({ type: "persona_updated", payload: { personaId: updatePersonaId } });

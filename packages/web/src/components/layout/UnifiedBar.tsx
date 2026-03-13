@@ -85,7 +85,7 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
     if (viewMode.kind === "new_task" && !viewMode.parentTaskId && environments.length === 1) {
       setTaskEnvId(environments[0].id);
     }
-  }, [viewMode, tasks]);
+  }, [viewMode, tasks, environments]);
 
   const session = viewMode.kind === "session"
     ? sessions.find((s) => s.id === viewMode.sessionId)
