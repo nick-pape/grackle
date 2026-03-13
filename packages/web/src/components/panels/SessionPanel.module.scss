@@ -71,6 +71,18 @@
   }
 }
 
+.deleteButton {
+  @include btn-ghost(var(--accent-red));
+  margin-left: auto;
+  font-size: 11px;
+  padding: var(--space-xs) var(--space-sm);
+
+  &:hover {
+    background: var(--accent-red-dim);
+    box-shadow: var(--shadow-glow-red);
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Tab bar (Stream / Diff / Findings)
 // ---------------------------------------------------------------------------

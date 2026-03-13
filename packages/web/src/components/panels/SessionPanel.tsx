@@ -1,5 +1,6 @@
 import { useGrackle } from "../../context/GrackleContext.js";
 import { EventRenderer } from "../display/EventRenderer.js";
+import { ConfirmDialog } from "../display/ConfirmDialog.js";
 import { FindingsPanel } from "./FindingsPanel.js";
 import { SettingsPanel } from "./SettingsPanel.js";
 import { DagView } from "../dag/DagView.js";
@@ -336,12 +337,13 @@ type ProjectTab = "tasks" | "graph";
 
 /** Main content panel that renders session streams, task views, project summaries, or empty states based on the current view mode. */
 export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
-  const { events, eventsDropped, sessions, tasks, environments, loadSessionEvents, loadFindings, kill, projects, createProject, startTask } = useGrackle();
+  const { events, eventsDropped, sessions, tasks, environments, loadSessionEvents, loadFindings, kill, projects, createProject, startTask, deleteTask } = useGrackle();
   // eslint-disable-next-line @rushstack/no-new-null
   const scrollRef = useRef<HTMLDivElement>(null);
   const loadedRef = useRef<string | undefined>(undefined);
   const [activeTaskTab, setActiveTaskTab] = useState<TaskTab>("overview");
   const [projectTab, setProjectTab] = useState<ProjectTab>("tasks");
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const prevTaskIdRef = useRef<string | undefined>(undefined);
   const prevTaskStatusRef = useRef<string | undefined>(undefined);
 
@@ -561,6 +563,21 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
           )}
         </div>
 
+        {/* Delete confirmation dialog */}
+        <ConfirmDialog
+          isOpen={showDeleteConfirm}
+          title="Delete Task?"
+          description="This task and its session history will be permanently removed."
+          onConfirm={() => {
+            if (task) {
+              deleteTask(task.id);
+              setViewMode({ kind: "project", projectId: task.projectId });
+            }
+            setShowDeleteConfirm(false);
+          }}
+          onCancel={() => setShowDeleteConfirm(false)}
+        />
+
         {/* Tab bar */}
         <div className={styles.tabBar} role="tablist" aria-label="Task view">
           <button
@@ -586,6 +603,13 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
             onClick={() => setActiveTaskTab("findings")}
           >
             Findings
+          </button>
+          <button
+            className={styles.deleteButton}
+            onClick={() => setShowDeleteConfirm(true)}
+            title="Delete task"
+          >
+            Delete
           </button>
         </div>
 
