@@ -286,23 +286,24 @@ test.describe("Disconnected environment blocks message send", () => {
     );
 
     // Spawn a real session using the stub runtime (no PowerLine gRPC needed).
-    // Navigate to Settings → New Chat, pick stub runtime, submit a prompt.
-    await page.getByTitle("Settings").click();
+    // Settings → click "+" on the environment card → select stub → submit.
+    await page.locator('button[title="Settings"]').click();
+    await page.locator('button[title="New chat"]').click();
+
     const runtimeSelect = page.locator('[data-testid="new-chat-runtime-select"]');
     await runtimeSelect.waitFor({ state: "visible", timeout: 5_000 });
     await runtimeSelect.selectOption("stub");
 
     const promptInput = page.locator('input[placeholder="Enter prompt..."]');
     await promptInput.fill("hello stub");
-    await page.keyboard.press("Enter");
+    await page.locator("button", { hasText: "Go" }).click();
 
     // Wait for the session to reach waiting_input state.
     await page
       .locator('input[placeholder="Type a message..."]')
       .waitFor({ state: "visible", timeout: 15_000 });
 
-    // Now grab the session's environmentId from the live sessions state, then
-    // inject a disconnected environment to simulate a drop.
+    // Inject a disconnected environment to simulate a connectivity drop.
     await injectWsMessage(page, {
       type: "environments",
       payload: {
