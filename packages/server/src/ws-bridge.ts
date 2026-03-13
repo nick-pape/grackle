@@ -797,7 +797,8 @@ async function handleMessage(
         return;
       }
       let personaId = slugify(personaName) || uuid().slice(0, 8);
-      while (personaStore.getPersona(personaId)) {
+      const MAX_ID_RETRIES = 10;
+      for (let i = 0; i < MAX_ID_RETRIES && personaStore.getPersona(personaId); i++) {
         personaId = `${slugify(personaName) || "persona"}-${uuid().slice(0, 4)}`;
       }
       personaStore.createPersona(
