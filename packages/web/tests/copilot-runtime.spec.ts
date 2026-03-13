@@ -2,8 +2,8 @@ import { test, expect } from "./fixtures.js";
 
 test.describe("Copilot Runtime Option", () => {
   test.beforeEach(async ({ appPage }) => {
-    // Switch to Environments tab and enter new_chat mode
-    await appPage.locator("button", { hasText: "Environments" }).click();
+    // Environments are now in Settings — navigate there via the gear button
+    await appPage.locator('button[title="Settings"]').click();
     await appPage.locator('button[title="New chat"]').click();
     await expect(appPage.locator("text=new chat")).toBeVisible();
   });

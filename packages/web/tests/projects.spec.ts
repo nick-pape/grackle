@@ -121,21 +121,14 @@ test.describe("Projects", () => {
     await expect(page.getByText("No findings yet")).toBeVisible({ timeout: 5_000 });
   });
 
-  test("switch between sidebar tabs", async ({ appPage }) => {
+  test("environments are accessible via Settings gear button", async ({ appPage }) => {
     const page = appPage;
 
-    // Default: Projects tab is visible
-    // Click Environments tab
-    await page.locator("button", { hasText: "Environments" }).click();
+    // Sidebar is now task-only (no Environments tab). Environments live in Settings.
+    // Click the gear button to open Settings.
+    await page.locator('button[title="Settings"]').click();
 
-    // Should see the test-local environment
+    // Should see the test-local environment in the Settings panel
     await expect(page.getByText("test-local")).toBeVisible();
-
-    // Click Projects tab
-    const projectsTab = page.locator("button", { hasText: "Projects" }).first();
-    await projectsTab.click();
-
-    // Environment should no longer be visible
-    await expect(page.getByText("test-local")).not.toBeVisible();
   });
 });

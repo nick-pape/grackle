@@ -3,7 +3,8 @@ import { sendWsAndWaitFor, sendWsMessage } from "./helpers.js";
 
 test.describe("Add Environment — UI Form", () => {
   test.beforeEach(async ({ appPage }) => {
-    await appPage.locator("button", { hasText: "Environments" }).click();
+    // Environments are now in Settings — navigate there via the gear button
+    await appPage.locator('button[title="Settings"]').click();
   });
 
   test("clicking + opens new environment form in UnifiedBar", async ({ appPage }) => {
@@ -144,8 +145,8 @@ test.describe("Add Environment — WebSocket Handler", () => {
 
     expect(response.payload?.environmentId).toBeTruthy();
 
-    // Switch to Environments tab and verify the new environment appears
-    await page.locator("button", { hasText: "Environments" }).click();
+    // Switch to Environments (in Settings) and verify the new environment appears
+    await page.locator('button[title="Settings"]').click();
     await expect(page.getByText("ws-test-env", { exact: true })).toBeVisible({ timeout: 5_000 });
 
     // Clean up: remove the environment
@@ -274,8 +275,8 @@ test.describe("Add Environment — WebSocket Handler", () => {
   test("add environment via UI form creates environment in server", async ({ appPage }) => {
     const page = appPage;
 
-    // Switch to environments tab, open form
-    await page.locator("button", { hasText: "Environments" }).click();
+    // Switch to Environments (in Settings), open form
+    await page.locator('button[title="Settings"]').click();
     await page.locator('button[title="Add environment"]').click();
 
     // Fill in form
@@ -284,10 +285,10 @@ test.describe("Add Environment — WebSocket Handler", () => {
     // Click Add
     await page.locator("button", { hasText: "Add" }).click();
 
-    // Form should close (back to empty mode)
+    // Form should close (back to settings mode)
     await expect(page.locator("text=new env")).not.toBeVisible({ timeout: 5_000 });
 
-    // Environment should appear in the sidebar list
+    // Environment should appear in the Settings panel environment list
     await expect(page.getByText("ui-test-env", { exact: true })).toBeVisible({ timeout: 5_000 });
 
     // Clean up via WS
