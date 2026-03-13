@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import { Command } from "commander";
 
-// Mock the server import so tests don't actually start a server
+// Mock the server import so the real action can run without starting an actual server
 vi.mock("@grackle-ai/server", () => ({}));
 
 describe("registerServeCommand", () => {
@@ -19,23 +19,17 @@ describe("registerServeCommand", () => {
     vi.resetModules();
   });
 
-  it("UT-3: --host ::1 is accepted (IPv6 loopback) and sets GRACKLE_HOST", async () => {
+  it("UT-3: --host ::1 (IPv6 loopback) is accepted and sets GRACKLE_HOST", async () => {
     const { registerServeCommand } = await import("./serve.js");
     const program = new Command();
     program.exitOverride();
     registerServeCommand(program);
 
-    // Override the action to capture opts and skip server import
-    const serveCmd = program.commands.find((c) => c.name() === "serve")!;
-    serveCmd.action((opts) => {
-      process.env.GRACKLE_HOST = opts.host;
-      process.env.GRACKLE_PORT = opts.port;
-      process.env.GRACKLE_WEB_PORT = opts.webPort;
-    });
-
-    await program.parseAsync(["serve", "--host", "::1"], { from: "user" });
+    await program.parseAsync(["serve", "--host", "::1", "--port", "7434", "--web-port", "3000"], { from: "user" });
 
     expect(process.env.GRACKLE_HOST).toBe("::1");
+    expect(process.env.GRACKLE_PORT).toBe("7434");
+    expect(process.env.GRACKLE_WEB_PORT).toBe("3000");
   });
 
   it("UT-3b: --host defaults to 127.0.0.1 when not specified", async () => {
@@ -43,11 +37,6 @@ describe("registerServeCommand", () => {
     const program = new Command();
     program.exitOverride();
     registerServeCommand(program);
-
-    const serveCmd = program.commands.find((c) => c.name() === "serve")!;
-    serveCmd.action((opts) => {
-      process.env.GRACKLE_HOST = opts.host;
-    });
 
     await program.parseAsync(["serve"], { from: "user" });
 

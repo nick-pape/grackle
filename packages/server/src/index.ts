@@ -119,6 +119,14 @@ function main(): void {
   // --- gRPC server (HTTP/2) ---
   const grpcPort = parseInt(process.env.GRACKLE_PORT || String(DEFAULT_SERVER_PORT), 10);
   const bindHost = process.env.GRACKLE_HOST || "127.0.0.1";
+
+  /** Allowed loopback bind addresses — security policy: never expose API key to the network. */
+  const ALLOWED_BIND_HOSTS: ReadonlySet<string> = new Set(["127.0.0.1", "::1"]);
+  if (!ALLOWED_BIND_HOSTS.has(bindHost)) {
+    logger.fatal({ host: bindHost }, "GRACKLE_HOST must be a loopback address (127.0.0.1 or ::1). Got: %s", bindHost);
+    process.exit(1);
+  }
+
   /** Format bindHost for embedding in a URL — IPv6 literals need brackets per RFC 2732. */
   const urlHost = bindHost.includes(":") ? `[${bindHost}]` : bindHost;
   const grpcHandler = connectNodeAdapter({
