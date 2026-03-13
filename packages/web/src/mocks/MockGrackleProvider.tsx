@@ -757,6 +757,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       environments: MOCK_ENVIRONMENTS,
       sessions,
       events,
+      eventsDropped: 0,
       lastSpawnedId,
       projects,
       tasks,
