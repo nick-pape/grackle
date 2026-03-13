@@ -665,6 +665,10 @@ describe("task status sync with waiting_input", () => {
       taskId: "task1",
     });
 
+    // Task should have reverted to in_progress after the running event
+    const task = taskStore.getTask("task1");
+    expect(task?.status).toBe("in_progress");
+
     // Two task_updated broadcasts: one for waiting_input, one for in_progress
     const taskUpdatedCalls = (broadcast as ReturnType<typeof vi.fn>).mock.calls
       .filter((c: unknown[]) => (c[0] as { type: string }).type === "task_updated");
@@ -697,6 +701,10 @@ describe("task status sync with waiting_input", () => {
       projectId: "proj1",
       taskId: "task1",
     });
+
+    // Task should remain in_progress (running does not override non-waiting_input status)
+    const task = taskStore.getTask("task1");
+    expect(task?.status).toBe("in_progress");
 
     // No task_updated broadcasts should have been made
     const taskUpdatedCalls = (broadcast as ReturnType<typeof vi.fn>).mock.calls

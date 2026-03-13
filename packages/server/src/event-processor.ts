@@ -174,8 +174,11 @@ export function processEventStream(
           if (event.content === "waiting_input") {
             sessionStore.updateSessionStatus(sessionId, "waiting_input");
             if (taskId) {
-              taskStore.updateTaskStatus(taskId, "waiting_input");
-              broadcast({ type: "task_updated", payload: { taskId, projectId } });
+              const t = taskStore.getTask(taskId);
+              if (t && t.status === "in_progress") {
+                taskStore.updateTaskStatus(taskId, "waiting_input");
+                broadcast({ type: "task_updated", payload: { taskId, projectId } });
+              }
             }
           } else if (event.content === "running") {
             sessionStore.updateSessionStatus(sessionId, "running");
