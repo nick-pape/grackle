@@ -11,7 +11,7 @@ import {
 } from "./helpers.js";
 
 test.describe("Task Dependencies", () => {
-  test("blocked task shows Blocked by text and no Start Task button", async ({ appPage }) => {
+  test("blocked task shows Blocked by text and no Start button", async ({ appPage }) => {
     const page = appPage;
 
     // Create project and a blocker task via UI
@@ -40,8 +40,8 @@ test.describe("Task Dependencies", () => {
     // Verify "Blocked by:" text shows the blocker task name
     await expect(page.getByText("Blocked by: blocker-alpha")).toBeVisible({ timeout: 5_000 });
 
-    // Verify "Start Task" button is NOT visible (blocked tasks show status instead)
-    await expect(page.locator("button", { hasText: "Start Task" })).not.toBeVisible();
+    // Verify "Start" button is NOT visible (blocked tasks show status instead)
+    await expect(page.locator("button", { hasText: "Start" })).not.toBeVisible();
   });
 
   test("completing blocker unblocks dependent task", async ({ appPage }) => {
@@ -73,7 +73,7 @@ test.describe("Task Dependencies", () => {
 
     // Navigate back to dependent — should now be unblocked
     await navigateToTask(page, "unblock-dependent");
-    await expect(page.locator("button", { hasText: "Start Task" })).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator("button", { hasText: "Start" })).toBeVisible({ timeout: 10_000 });
   });
 
   test("task with multiple dependencies requires all blockers complete", async ({ appPage }) => {
@@ -119,6 +119,6 @@ test.describe("Task Dependencies", () => {
 
     // C should now be unblocked
     await navigateToTask(page, "multi-dependent-c");
-    await expect(page.locator("button", { hasText: "Start Task" })).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator("button", { hasText: "Start" })).toBeVisible({ timeout: 10_000 });
   });
 });

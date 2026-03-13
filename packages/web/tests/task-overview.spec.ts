@@ -146,7 +146,7 @@ test.describe("Task Overview Tab", () => {
     await page.locator("button", { hasText: "Reject" }).click();
 
     // Auto-retry starts a new session — task moves to in_progress, stream tab activates
-    await expect(page.getByText(/Task:.*\| in_progress/)).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('[data-testid="task-status"]')).toContainText("in_progress", { timeout: 10_000 });
 
     const streamTab = page.locator("button", { hasText: "Stream" });
     await expect(streamTab).toHaveAttribute("class", /active/, { timeout: 5_000 });
@@ -161,7 +161,7 @@ test.describe("Task Overview Tab", () => {
 
     // Start the task
     await patchWsForStubRuntime(page);
-    await page.locator("button", { hasText: "Start Task" }).click();
+    await page.locator("button", { hasText: "Start" }).click();
 
     // Wait for in_progress auto-switch to stream tab
     await expect(page.locator("text=Stub runtime initialized")).toBeVisible({ timeout: 15_000 });

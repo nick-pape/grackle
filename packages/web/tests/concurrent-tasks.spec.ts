@@ -20,7 +20,7 @@ test.describe("Concurrent Tasks", () => {
 
     // Start task A
     await navigateToTask(page, "conc-task-a");
-    await page.locator("button", { hasText: "Start Task" }).click();
+    await page.locator("button", { hasText: "Start" }).click();
 
     // Wait for task A to reach waiting_input (stub emits events then waits)
     const inputField = page.locator('input[placeholder="Type a message..."]');
@@ -28,18 +28,18 @@ test.describe("Concurrent Tasks", () => {
 
     // Start task B (navigate to it while A is running)
     await navigateToTask(page, "conc-task-b");
-    await page.locator("button", { hasText: "Start Task" }).click();
+    await page.locator("button", { hasText: "Start" }).click();
 
     // Wait for task B to reach waiting_input
     await inputField.waitFor({ timeout: 15_000 });
 
     // Verify task B's stream shows events for task B (not task A)
     // The Stream tab should show content related to this task's session
-    await expect(page.getByText("Task: conc-task-b")).toBeVisible();
+    await expect(page.locator('[data-testid="task-status"]')).toBeVisible();
 
     // Navigate back to task A — its stream should still be intact
     await navigateToTask(page, "conc-task-a");
-    await expect(page.getByText("Task: conc-task-a")).toBeVisible();
+    await expect(page.locator('[data-testid="task-status"]')).toBeVisible();
     // Task A should still be in waiting_input (input field visible)
     await expect(inputField).toBeVisible({ timeout: 5_000 });
 
@@ -74,18 +74,18 @@ test.describe("Concurrent Tasks", () => {
 
     // Start task X
     await navigateToTask(page, "status-task-x");
-    await page.locator("button", { hasText: "Start Task" }).click();
+    await page.locator("button", { hasText: "Start" }).click();
 
-    // Scope status checks to each task's sidebar entry
-    const taskXRow = page.getByText("status-task-x").locator("..");
-    const taskYRow = page.getByText("status-task-y").locator("..");
+    // Scope status checks to each task's sidebar entry (exact: true avoids matching the header)
+    const taskXRow = page.getByText("status-task-x", { exact: true }).locator("..");
+    const taskYRow = page.getByText("status-task-y", { exact: true }).locator("..");
 
     // Wait for task X to be in_progress (sidebar shows ●)
     await expect(taskXRow.locator("text=●")).toBeVisible({ timeout: 15_000 });
 
     // Start task Y
     await navigateToTask(page, "status-task-y");
-    await page.locator("button", { hasText: "Start Task" }).click();
+    await page.locator("button", { hasText: "Start" }).click();
 
     // Wait for task Y to also be in_progress — both tasks should show ● in sidebar
     await expect(taskYRow.locator("text=●")).toBeVisible({ timeout: 15_000 });

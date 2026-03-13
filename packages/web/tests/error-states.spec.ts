@@ -77,7 +77,7 @@ test.describe("Error States", () => {
     await navigateToTask(page, "err-run-task");
 
     await patchWsForStubRuntime(page);
-    await page.locator("button", { hasText: "Start Task" }).click();
+    await page.locator("button", { hasText: "Start" }).click();
 
     // Wait for task to be in_progress
     await page.locator('input[placeholder="Type a message..."]').waitFor({ timeout: 15_000 });

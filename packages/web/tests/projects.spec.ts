@@ -26,9 +26,7 @@ test.describe("Projects", () => {
     await expect(page.getByText("my-project")).toBeVisible({ timeout: 5_000 });
   });
 
-  test("expand project shows empty task list and project view", async ({
-    appPage,
-  }) => {
+  test("expand project shows empty task list and project view", async ({ appPage }) => {
     const page = appPage;
 
     // Create a project
@@ -42,9 +40,7 @@ test.describe("Projects", () => {
     await page.getByText("expand-test").click();
 
     // Main panel shows project view with task summary (use .first() — text appears in both panel and bar)
-    await expect(
-      page.getByText("Select a task or click + to create one").first(),
-    ).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText("Select a task or click + to create one").first()).toBeVisible({ timeout: 5_000 });
   });
 
   test("create task from project", async ({ appPage }) => {
@@ -61,34 +57,21 @@ test.describe("Projects", () => {
     await page.getByText("task-test").click();
 
     // Click the "New task" + button scoped to this project's row
-    await page
-      .getByText("task-test")
-      .locator("..")
-      .locator('button[title="New task"]')
-      .first()
-      .click();
+    await page.getByText("task-test").locator("..").locator('button[title="New task"]').first().click();
 
     // UnifiedBar should show new task form
     await expect(page.getByText("new task")).toBeVisible();
-    await expect(
-      page.locator('input[placeholder="Task title..."]'),
-    ).toBeVisible();
+    await expect(page.locator('input[placeholder="Task title..."]')).toBeVisible();
 
     // Description field should be a multi-line textarea
-    const descriptionField = page.locator(
-      'textarea[placeholder="Description (optional)..."]',
-    );
+    const descriptionField = page.locator('textarea[placeholder="Description (optional)..."]');
     await expect(descriptionField).toBeVisible();
 
     // Main panel shows task creation prompt
-    await expect(
-      page.getByText("Fill in the task details below"),
-    ).toBeVisible();
+    await expect(page.getByText("Fill in the task details below")).toBeVisible();
 
     // Fill in task details and select environment
-    await page
-      .locator('input[placeholder="Task title..."]')
-      .fill("implement feature");
+    await page.locator('input[placeholder="Task title..."]').fill("implement feature");
     const envSelect = page.locator("select").first();
     await envSelect.selectOption("test-local");
 
@@ -96,9 +79,7 @@ test.describe("Projects", () => {
     await page.locator("button", { hasText: /^Create$/ }).click();
 
     // Task should appear in the sidebar under the project
-    await expect(page.getByText("implement feature")).toBeVisible({
-      timeout: 5_000,
-    });
+    await expect(page.getByText("implement feature")).toBeVisible({ timeout: 5_000 });
   });
 
   test("task view shows header and tabs", async ({ appPage }) => {
@@ -112,12 +93,7 @@ test.describe("Projects", () => {
     await expect(page.getByText("view-test")).toBeVisible({ timeout: 5_000 });
 
     await page.getByText("view-test").click();
-    await page
-      .getByText("view-test")
-      .locator("..")
-      .locator('button[title="New task"]')
-      .first()
-      .click();
+    await page.getByText("view-test").locator("..").locator('button[title="New task"]').first().click();
     await page.locator('input[placeholder="Task title..."]').fill("my task");
     await page.locator("select").first().selectOption("test-local");
     await page.locator("button", { hasText: /^Create$/ }).click();
@@ -127,12 +103,7 @@ test.describe("Projects", () => {
     await page.getByText("my task").click();
 
     // Task header should be visible with title and status
-    await expect(page.getByText("Task: my task")).toBeVisible({
-      timeout: 5_000,
-    });
-    await expect(page.locator('[data-testid="task-status"]')).toContainText(
-      "pending",
-    );
+    await expect(page.locator('[data-testid="task-status"]')).toContainText("pending", { timeout: 5_000 });
 
     // Tab bar should show Overview, Stream, Findings
     await expect(page.locator("button", { hasText: "Overview" })).toBeVisible();
@@ -140,20 +111,14 @@ test.describe("Projects", () => {
     await expect(page.locator("button", { hasText: "Findings" })).toBeVisible();
 
     // Overview tab (default for pending) should be active
-    await expect(
-      page.locator("button", { hasText: "Overview" }),
-    ).toHaveAttribute("class", /active/);
+    await expect(page.locator("button", { hasText: "Overview" })).toHaveAttribute("class", /active/);
 
-    // UnifiedBar shows "Start Task" button
-    await expect(
-      page.locator("button", { hasText: "Start Task" }),
-    ).toBeVisible();
+    // Header shows "Start" button
+    await expect(page.locator("button", { hasText: "Start" })).toBeVisible();
 
     // Click Findings tab — shows empty state
     await page.locator("button", { hasText: "Findings" }).click();
-    await expect(page.getByText("No findings yet")).toBeVisible({
-      timeout: 5_000,
-    });
+    await expect(page.getByText("No findings yet")).toBeVisible({ timeout: 5_000 });
   });
 
   test("switch between sidebar tabs", async ({ appPage }) => {

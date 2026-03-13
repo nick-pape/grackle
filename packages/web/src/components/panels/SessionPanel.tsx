@@ -11,6 +11,7 @@ import { AnimatePresence, motion } from "motion/react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import styles from "./SessionPanel.module.scss";
+import { ConfirmDialog } from "../display/index.js";
 
 /** Props for the SessionPanel component. */
 interface Props {
@@ -335,14 +336,114 @@ function TaskOverview({ task, tasksById, environments, projects }: TaskOverviewP
 type TaskTab = "overview" | "stream" | "findings";
 type ProjectTab = "tasks" | "graph";
 
+/** Props for the TaskActionButtons subcomponent. */
+interface TaskActionButtonsProps {
+  task: TaskData;
+  sessionId: string | undefined;
+  isBlocked: boolean;
+  rejectNotes: string;
+  onRejectNotesChange: (notes: string) => void;
+  onStart: () => void;
+  onStop: () => void;
+  onApprove: () => void;
+  onReject: () => void;
+  onDelete: () => void;
+}
+
+/** Context-dependent action buttons rendered in the task detail header. */
+function TaskActionButtons({
+  task,
+  sessionId,
+  isBlocked,
+  rejectNotes,
+  onRejectNotesChange,
+  onStart,
+  onStop,
+  onApprove,
+  onReject,
+  onDelete,
+}: TaskActionButtonsProps): JSX.Element | undefined {
+  if (task.status === "pending" || task.status === "assigned") {
+    if (isBlocked) {
+      return (
+        <div className={styles.headerActions}>
+          <button onClick={onDelete} className={styles.btnDanger}>Delete</button>
+        </div>
+      );
+    }
+    return (
+      <div className={styles.headerActions}>
+        <button onClick={onStart} className={styles.btnPrimary}>Start</button>
+        <button onClick={onDelete} className={styles.btnDanger}>Delete</button>
+      </div>
+    );
+  }
+
+  if (task.status === "in_progress") {
+    return (
+      <div className={styles.headerActions}>
+        <button
+          onClick={onStop}
+          disabled={!sessionId}
+          className={styles.btnDanger}
+        >
+          Stop
+        </button>
+      </div>
+    );
+  }
+
+  if (task.status === "review") {
+    return (
+      <div className={styles.headerActions}>
+        <input
+          type="text"
+          value={rejectNotes}
+          onChange={(e) => onRejectNotesChange(e.target.value)}
+          placeholder="Rejection notes..."
+          className={styles.rejectInput}
+        />
+        <button onClick={onApprove} className={styles.btnPrimary}>Approve</button>
+        <button onClick={onReject} className={styles.btnDanger}>Reject</button>
+      </div>
+    );
+  }
+
+  if (task.status === "done") {
+    return (
+      <div className={styles.headerActions}>
+        <button onClick={onDelete} className={styles.btnDanger}>Delete</button>
+      </div>
+    );
+  }
+
+  if (task.status === "failed") {
+    return (
+      <div className={styles.headerActions}>
+        <button onClick={onStart} className={styles.btnPrimary}>Retry</button>
+        <button onClick={onDelete} className={styles.btnDanger}>Delete</button>
+      </div>
+    );
+  }
+
+  return undefined;
+}
+
 /** Main content panel that renders session streams, task views, project summaries, or empty states based on the current view mode. */
 export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
-  const { events, eventsDropped, sessions, tasks, environments, loadSessionEvents, loadFindings, kill, projects, createProject, startTask } = useGrackle();
+  const {
+    events, eventsDropped, sessions, tasks, environments,
+    loadSessionEvents, loadFindings,
+    kill, startTask, approveTask, rejectTask, deleteTask,
+    projects, createProject,
+  } = useGrackle();
   // eslint-disable-next-line @rushstack/no-new-null
   const scrollRef = useRef<HTMLDivElement>(null);
   const loadedRef = useRef<string | undefined>(undefined);
   const [activeTaskTab, setActiveTaskTab] = useState<TaskTab>("overview");
   const [projectTab, setProjectTab] = useState<ProjectTab>("tasks");
+  const [rejectNotes, setRejectNotes] = useState("");
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const prevTaskIdRef = useRef<string | undefined>(undefined);
   const prevTaskStatusRef = useRef<string | undefined>(undefined);
 
@@ -359,11 +460,26 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
     projectId = task?.projectId || undefined;
   }
 
-  // Reset to overview tab when switching to a different task.
+  // Delete handler for task actions — opens ConfirmDialog
+  const handleDeleteTask = (): void => {
+    setShowDeleteConfirm(true);
+  };
+
+  const handleDeleteConfirm = (): void => {
+    if (!task) return;
+    deleteTask(task.id);
+    setShowDeleteConfirm(false);
+    setViewMode({ kind: "project", projectId: task.projectId });
+  };
+
+  // Reset to overview tab and clear rejectNotes when switching to a different task.
   if (viewMode.kind === "task" && task?.id !== prevTaskIdRef.current) {
     prevTaskIdRef.current = task?.id;
     if (activeTaskTab !== "overview") {
       setActiveTaskTab("overview");
+    }
+    if (rejectNotes !== "") {
+      setRejectNotes("");
     }
   }
 
@@ -375,11 +491,11 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
     prevTaskStatusRef.current = task?.status;
     const newTab: TaskTab | undefined =
       task?.status === "pending" ? "overview"
-        : task?.status === "assigned" ? "overview"
-          : task?.status === "in_progress" ? "stream"
-            : task?.status === "review" ? "stream"
-              : task?.status === "done" ? "findings"
-                : undefined;
+      : task?.status === "assigned" ? "overview"
+      : task?.status === "in_progress" ? "stream"
+      : task?.status === "review" ? "stream"
+      : task?.status === "done" ? "findings"
+      : undefined;
     if (newTab && newTab !== activeTaskTab) {
       setActiveTaskTab(newTab);
     }
@@ -396,6 +512,14 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
     () => new Map(tasks.map((t) => [t.id, t])),
     [tasks],
   );
+
+  // Check if task is blocked by unfinished dependencies (uses tasksById for O(deps) lookup)
+  const isTaskBlocked = task
+    ? task.dependsOn.some((depId) => {
+        const dep = tasksById.get(depId);
+        return dep !== undefined && dep.status !== "done";
+      })
+    : false;
 
   const session = sessionId
     ? sessions.find((s) => s.id === sessionId) ?? undefined
@@ -545,25 +669,29 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
 
   // --- task mode ---
   if (viewMode.kind === "task") {
-    const isActive = session?.status === "running" || session?.status === "waiting_input";
-
     return (
       <div className={styles.panelContainer}>
-        {/* Task header */}
+        {/* Task header with contextual action buttons */}
         <div className={styles.header}>
-          <span>
-            Task: {task?.title || viewMode.taskId}
-            {task && <span data-testid="task-status"> | {task.status}</span>}
-            {task?.branch && ` | ${task.branch}`}
+          <span className={styles.headerTitle}>
+            <span data-testid="task-title">{task?.title || viewMode.taskId}</span>
+            {task && <span className={styles.taskStatusBadge} data-testid="task-status">{task.status}</span>}
+            {task?.branch && <span className={styles.taskBranch}>{task.branch}</span>}
+            {isTaskBlocked && <span className={styles.taskBlockedBadge}>blocked</span>}
           </span>
-          {isActive && (
-            <button
-              onClick={() => sessionId && kill(sessionId)}
-              title="Stop session"
-              className={styles.killButton}
-            >
-              {"\u00D7"}
-            </button>
+          {task && (
+            <TaskActionButtons
+              task={task}
+              sessionId={sessionId}
+              isBlocked={isTaskBlocked}
+              rejectNotes={rejectNotes}
+              onRejectNotesChange={setRejectNotes}
+              onStart={() => startTask(task.id)}
+              onStop={() => sessionId && kill(sessionId)}
+              onApprove={() => approveTask(task.id)}
+              onReject={() => { rejectTask(task.id, rejectNotes); setRejectNotes(""); }}
+              onDelete={handleDeleteTask}
+            />
           )}
         </div>
 
@@ -671,6 +799,15 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
             </motion.div>
           )}
         </AnimatePresence>
+        {task && (
+          <ConfirmDialog
+            isOpen={showDeleteConfirm}
+            title="Delete Task?"
+            description={`"${task.title}" will be permanently removed.`}
+            onConfirm={handleDeleteConfirm}
+            onCancel={() => setShowDeleteConfirm(false)}
+          />
+        )}
       </div>
     );
   }

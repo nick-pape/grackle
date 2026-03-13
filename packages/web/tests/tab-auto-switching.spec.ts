@@ -24,7 +24,7 @@ test.describe("Tab Auto-Switching", () => {
 
     // Start the task with stub runtime
     await patchWsForStubRuntime(page);
-    await page.locator("button", { hasText: "Start Task" }).click();
+    await page.locator("button", { hasText: "Start" }).click();
 
     // Wait for task status to update in sidebar (● = in_progress)
     await expect(page.locator("text=●").first()).toBeVisible({ timeout: 15_000 });

@@ -166,7 +166,10 @@ export async function navigateToTask(
   taskTitle: string,
 ): Promise<void> {
   await page.getByText(taskTitle).first().click();
-  await page.getByText(`Task: ${taskTitle}`).waitFor({ timeout: 5_000 });
+  // Wait for the task detail header to show this specific task's title.
+  // Using data-testid="task-title" (which wraps only the title text) to avoid strict-mode
+  // violations from the task name appearing in both the sidebar and the header.
+  await page.locator(`[data-testid="task-title"]:has-text("${taskTitle}")`).waitFor({ timeout: 5_000 });
 }
 
 /** Monkey-patch WebSocket.prototype.send to force stub runtime on start_task messages. */
@@ -197,7 +200,7 @@ export async function patchWsForStubRuntime(page: Page): Promise<void> {
  * Requires patchWsForStubRuntime to have been called on the page beforehand.
  */
 export async function runStubTaskToCompletion(page: Page): Promise<void> {
-  await page.locator("button", { hasText: "Start Task" }).click();
+  await page.locator("button", { hasText: "Start" }).click();
 
   // Wait for waiting_input state
   const inputField = page.locator('input[placeholder="Type a message..."]');
