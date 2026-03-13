@@ -21,7 +21,6 @@ test.describe("Task Lifecycle (stub runtime)", () => {
 
     // --- Step 3: Navigate to task view ---
     await page.getByText("test task", { exact: true }).click();
-    await expect(page.getByText("Task: test task")).toBeVisible({ timeout: 5_000 });
     await expect(page.locator('[data-testid="task-status"]')).toContainText("pending");
     // Overview tab should be active for pending task
     await expect(page.locator("button", { hasText: "Overview" })).toHaveAttribute("class", /active/);
@@ -43,8 +42,8 @@ test.describe("Task Lifecycle (stub runtime)", () => {
       };
     });
 
-    // --- Step 5: Click "Start Task" ---
-    await page.locator("button", { hasText: "Start Task" }).click();
+    // --- Step 5: Click "Start" ---
+    await page.locator("button", { hasText: "Start" }).click();
 
     // --- Step 6: Verify stub runtime events stream in ---
     // System event: "Stub runtime initialized"
@@ -101,7 +100,7 @@ test.describe("Task Lifecycle (stub runtime)", () => {
 
     // Navigate to task
     await page.getByText("reject task", { exact: true }).click();
-    await expect(page.getByText("Task: reject task")).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator('[data-testid="task-status"]')).toContainText("pending", { timeout: 5_000 });
 
     // Monkey-patch WS for stub runtime
     await page.evaluate(() => {
@@ -121,7 +120,7 @@ test.describe("Task Lifecycle (stub runtime)", () => {
     });
 
     // Start task
-    await page.locator("button", { hasText: "Start Task" }).click();
+    await page.locator("button", { hasText: "Start" }).click();
 
     // Wait for waiting_input and send input to complete the stub session
     const inputField = page.locator('input[placeholder="Type a message..."]');
@@ -133,7 +132,7 @@ test.describe("Task Lifecycle (stub runtime)", () => {
     await expect(page.locator("button", { hasText: "Approve" })).toBeVisible({ timeout: 15_000 });
 
     // Type rejection notes and click Reject
-    const rejectInput = page.locator('input[placeholder="Rejection notes (optional)..."]');
+    const rejectInput = page.locator('input[placeholder="Rejection notes..."]');
     await rejectInput.fill("needs more tests");
     await page.locator("button", { hasText: "Reject" }).click();
 
