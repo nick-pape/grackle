@@ -570,3 +570,283 @@
     color: var(--text-primary);
   }
 }
+
+// ---------------------------------------------------------------------------
+// Project detail metadata
+// ---------------------------------------------------------------------------
+
+.projectHeader {
+  @include glass-panel;
+  padding: var(--space-sm) var(--space-md);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.projectName {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.projectMeta {
+  padding: var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.metaRow {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  min-height: 24px;
+}
+
+.metaLabel {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  min-width: 100px;
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+
+.metaValue {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.metaPlaceholder {
+  color: var(--text-tertiary);
+  font-style: italic;
+}
+
+.editButton {
+  background: none;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: 2px;
+  font-size: var(--font-size-sm);
+  opacity: 0.4;
+  transition: opacity var(--transition-fast);
+  flex-shrink: 0;
+
+  &:hover {
+    opacity: 1;
+    color: var(--accent-green);
+  }
+}
+
+.editInput {
+  @include input-field;
+  font-size: var(--font-size-sm);
+  padding: 2px var(--space-xs);
+  flex: 1;
+  min-width: 0;
+}
+
+.editTextarea {
+  @include input-field;
+  font-size: var(--font-size-sm);
+  padding: var(--space-xs) var(--space-sm);
+  flex: 1;
+  min-width: 0;
+  resize: vertical;
+  min-height: 60px;
+  font-family: inherit;
+  line-height: 1.5;
+}
+
+.editSelect {
+  @include input-field;
+  font-size: var(--font-size-sm);
+  padding: 2px var(--space-xs);
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.archiveButton {
+  @include btn-ghost(var(--accent-red));
+  font-size: 11px;
+  padding: 2px var(--space-sm);
+  flex-shrink: 0;
+
+  &:hover {
+    background: var(--accent-red-dim);
+    box-shadow: var(--shadow-glow-red);
+  }
+}
+
+.repoLink {
+  color: var(--accent-blue);
+  text-decoration: none;
+  font-size: var(--font-size-sm);
+
+  &:hover {
+    text-decoration: underline;
+    color: var(--accent-cyan);
+  }
+}
+
+// Click-to-edit wrapper — makes the whole value area clickable
+.metaValueClickable {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  padding: 1px var(--space-xs);
+  margin: -1px calc(-1 * var(--space-xs));
+  transition: background var(--transition-fast);
+  background: none;
+  border: none;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+
+  &:hover {
+    background: var(--bg-overlay);
+  }
+}
+
+// Keyboard hint shown below editing inputs
+.editHint {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  opacity: 0.7;
+  margin-top: 2px;
+  font-family: var(--font-mono);
+  flex-basis: 100%;
+}
+
+// Validation error message
+.editError {
+  font-size: 10px;
+  color: var(--accent-red);
+  margin-top: 2px;
+  flex-basis: 100%;
+}
+
+// Red border for invalid inputs
+.editInputInvalid {
+  border-color: var(--accent-red) !important;
+  box-shadow: 0 0 0 1px var(--accent-red-dim);
+}
+
+// Unsaved dot indicator
+.unsavedDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-yellow);
+  box-shadow: 0 0 4px var(--accent-yellow);
+  flex-shrink: 0;
+}
+
+// Collapsible metadata toggle
+.metaToggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  background: none;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: var(--space-xs) var(--space-md);
+  border-bottom: 1px solid var(--border-subtle);
+  width: 100%;
+  transition: color var(--transition-fast);
+
+  &:hover {
+    color: var(--text-secondary);
+  }
+}
+
+.metaToggleArrow {
+  transition: transform var(--transition-fast);
+  font-size: 10px;
+}
+
+.metaToggleArrowOpen {
+  transform: rotate(90deg);
+}
+
+// Task progress bar
+.progressBarContainer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 0 var(--space-md);
+  margin-bottom: var(--space-xs);
+}
+
+.progressBar {
+  flex: 1;
+  height: 4px;
+  background: var(--bg-overlay);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: var(--accent-green);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.progressLabel {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+  flex-shrink: 0;
+}
+
+// Timestamp row
+.metaTimestamps {
+  display: flex;
+  gap: var(--space-md);
+  font-size: 11px;
+  color: var(--text-tertiary);
+  padding-top: var(--space-xs);
+  border-top: 1px solid var(--border-subtle);
+  margin-top: var(--space-xs);
+}
+
+.metaTimestamp {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+// Edit wrapper that supports wrapping hint/error below the input
+.editFieldWrapper {
+  display: flex;
+  flex-wrap: wrap;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+  gap: var(--space-xs);
+}

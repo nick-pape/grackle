@@ -194,6 +194,14 @@ message CreateProjectRequest {
   string default_environment_id = 4;
 }
 
+message UpdateProjectRequest {
+  string id = 1;
+  optional string name = 2;
+  optional string description = 3;
+  optional string repo_url = 4;
+  optional string default_environment_id = 5;
+}
+
 message ProjectId {
   string id = 1;
 }
@@ -417,6 +425,7 @@ service Grackle {
   rpc ListProjects(Empty) returns (ProjectList);
   rpc CreateProject(CreateProjectRequest) returns (Project);
   rpc GetProject(ProjectId) returns (Project);
+  rpc UpdateProject(UpdateProjectRequest) returns (Project);
   rpc ArchiveProject(ProjectId) returns (Empty);
 
   // Tasks
