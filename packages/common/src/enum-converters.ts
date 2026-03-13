@@ -60,6 +60,7 @@ const taskStatusToEnumMap: Record<string, TaskStatus> = Object.assign(Object.cre
   "review": TaskStatus.REVIEW,
   "done": TaskStatus.DONE,
   "failed": TaskStatus.FAILED,
+  "waiting_input": TaskStatus.WAITING_INPUT,
 });
 
 const taskStatusToStringMap: Record<number, string> = {
@@ -70,6 +71,7 @@ const taskStatusToStringMap: Record<number, string> = {
   [TaskStatus.REVIEW]: "review",
   [TaskStatus.DONE]: "done",
   [TaskStatus.FAILED]: "failed",
+  [TaskStatus.WAITING_INPUT]: "waiting_input",
 };
 
 /** Convert a string task status to its proto enum value. */

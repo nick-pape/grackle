@@ -87,7 +87,7 @@ export function registerTaskCommands(program: Command): void {
     .option("--env <env-id>", "Environment ID")
     .option(
       "--status <status>",
-      "Task status (pending, assigned, in_progress, review, done, failed)",
+      "Task status (pending, assigned, in_progress, waiting_input, review, done, failed)",
     )
     .option("--notes <text>", "Review notes")
     .action(async (taskId: string, opts) => {
@@ -95,6 +95,7 @@ export function registerTaskCommands(program: Command): void {
         "pending",
         "assigned",
         "in_progress",
+        "waiting_input",
         "review",
         "done",
         "failed",

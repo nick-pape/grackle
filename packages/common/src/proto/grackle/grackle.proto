@@ -37,6 +37,7 @@ enum TaskStatus {
   TASK_STATUS_REVIEW = 4;
   TASK_STATUS_DONE = 5;
   TASK_STATUS_FAILED = 6;
+  TASK_STATUS_WAITING_INPUT = 7;
 }
 
 enum ProjectStatus {

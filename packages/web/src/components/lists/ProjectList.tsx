@@ -21,7 +21,7 @@ const TASK_STATUS_STYLES: Record<string, { color: string; icon: string }> = {
   review: { color: "var(--accent-yellow)", icon: "\u25C9" },
   done: { color: "var(--accent-green)", icon: "\u2713" },
   failed: { color: "var(--accent-red)", icon: "\u2717" },
-  waiting: { color: "var(--accent-purple, #a78bfa)", icon: "\u29D6" },
+  waiting_input: { color: "var(--accent-yellow)", icon: "\u29D6" },
 };
 
 /** A task node with children for recursive tree rendering. */

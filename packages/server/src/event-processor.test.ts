@@ -554,9 +554,9 @@ describe("stream error handling", () => {
           projectId: "proj1",
           taskId: "task1",
           onComplete: () => {
-            // Replicate the onComplete logic from ws-bridge.ts
+            // Replicate the onComplete logic from ws-bridge.ts (updated guard)
             const t = taskStore.getTask("task1");
-            if (t && t.status === "in_progress") {
+            if (t && (t.status === "in_progress" || t.status === "waiting_input")) {
               const sess = sessionStore.getSession("sess1");
               if (sess?.status === "completed") {
                 taskStore.markTaskCompleted("task1", "review");
@@ -575,5 +575,172 @@ describe("stream error handling", () => {
 
     const session = sessionStore.getSession("sess1");
     expect(session?.status).toBe("completed");
+  });
+});
+
+describe("task status sync with waiting_input", () => {
+  beforeEach(() => {
+    sqlite.exec("DROP TABLE IF EXISTS findings");
+    sqlite.exec("DROP TABLE IF EXISTS tasks");
+    sqlite.exec("DROP TABLE IF EXISTS sessions");
+    sqlite.exec("DROP TABLE IF EXISTS projects");
+    applySchema();
+    vi.clearAllMocks();
+
+    projectStore.createProject("proj1", "Test Project", "desc", "", "env1");
+  });
+
+  it("sets task status to waiting_input when session receives waiting_input event", async () => {
+    sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
+    taskStore.createTask("task1", "proj1", "Test Task", "desc", "env1", [], "test-project");
+    taskStore.setTaskSession("task1", "sess1");
+    taskStore.markTaskStarted("task1");
+
+    const waitingEvent = create(powerline.AgentEventSchema, {
+      sessionId: "sess1",
+      type: "status",
+      timestamp: new Date().toISOString(),
+      content: "waiting_input",
+    });
+
+    const completedEvent = create(powerline.AgentEventSchema, {
+      sessionId: "sess1",
+      type: "status",
+      timestamp: new Date().toISOString(),
+      content: "completed",
+    });
+
+    await waitForProcessing([waitingEvent, completedEvent], {
+      sessionId: "sess1",
+      logPath: "/tmp/log",
+      projectId: "proj1",
+      taskId: "task1",
+    });
+
+    expect(broadcast).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "task_updated",
+        payload: expect.objectContaining({ taskId: "task1", projectId: "proj1" }),
+      }),
+    );
+  });
+
+  it("reverts task from waiting_input to in_progress on running event", async () => {
+    sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
+    taskStore.createTask("task1", "proj1", "Test Task", "desc", "env1", [], "test-project");
+    taskStore.setTaskSession("task1", "sess1");
+    taskStore.markTaskStarted("task1");
+
+    const waitingEvent = create(powerline.AgentEventSchema, {
+      sessionId: "sess1",
+      type: "status",
+      timestamp: new Date().toISOString(),
+      content: "waiting_input",
+    });
+
+    const runningEvent = create(powerline.AgentEventSchema, {
+      sessionId: "sess1",
+      type: "status",
+      timestamp: new Date().toISOString(),
+      content: "running",
+    });
+
+    const completedEvent = create(powerline.AgentEventSchema, {
+      sessionId: "sess1",
+      type: "status",
+      timestamp: new Date().toISOString(),
+      content: "completed",
+    });
+
+    await waitForProcessing([waitingEvent, runningEvent, completedEvent], {
+      sessionId: "sess1",
+      logPath: "/tmp/log",
+      projectId: "proj1",
+      taskId: "task1",
+    });
+
+    // Two task_updated broadcasts: one for waiting_input, one for in_progress
+    const taskUpdatedCalls = (broadcast as ReturnType<typeof vi.fn>).mock.calls
+      .filter((c: unknown[]) => (c[0] as { type: string }).type === "task_updated");
+    expect(taskUpdatedCalls.length).toBe(2);
+  });
+
+  it("running event does not override non-waiting_input task status", async () => {
+    sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
+    taskStore.createTask("task1", "proj1", "Test Task", "desc", "env1", [], "test-project");
+    taskStore.setTaskSession("task1", "sess1");
+    taskStore.markTaskStarted("task1");
+
+    const runningEvent = create(powerline.AgentEventSchema, {
+      sessionId: "sess1",
+      type: "status",
+      timestamp: new Date().toISOString(),
+      content: "running",
+    });
+
+    const completedEvent = create(powerline.AgentEventSchema, {
+      sessionId: "sess1",
+      type: "status",
+      timestamp: new Date().toISOString(),
+      content: "completed",
+    });
+
+    await waitForProcessing([runningEvent, completedEvent], {
+      sessionId: "sess1",
+      logPath: "/tmp/log",
+      projectId: "proj1",
+      taskId: "task1",
+    });
+
+    // No task_updated broadcasts should have been made
+    const taskUpdatedCalls = (broadcast as ReturnType<typeof vi.fn>).mock.calls
+      .filter((c: unknown[]) => (c[0] as { type: string }).type === "task_updated");
+    expect(taskUpdatedCalls.length).toBe(0);
+  });
+
+  it("task completes from waiting_input state via onComplete guard", async () => {
+    sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
+    taskStore.createTask("task1", "proj1", "Test Task", "desc", "env1", [], "test-project");
+    taskStore.setTaskSession("task1", "sess1");
+    taskStore.markTaskStarted("task1");
+
+    const waitingEvent = create(powerline.AgentEventSchema, {
+      sessionId: "sess1",
+      type: "status",
+      timestamp: new Date().toISOString(),
+      content: "waiting_input",
+    });
+
+    const completedEvent = create(powerline.AgentEventSchema, {
+      sessionId: "sess1",
+      type: "status",
+      timestamp: new Date().toISOString(),
+      content: "completed",
+    });
+
+    await new Promise<void>((resolve) => {
+      processEventStream(eventStream([waitingEvent, completedEvent]), {
+        sessionId: "sess1",
+        logPath: "/tmp/log",
+        projectId: "proj1",
+        taskId: "task1",
+        onComplete: () => {
+          // Replicate the onComplete logic with the updated guard
+          const t = taskStore.getTask("task1");
+          if (t && (t.status === "in_progress" || t.status === "waiting_input")) {
+            const sess = sessionStore.getSession("sess1");
+            if (sess?.status === "completed") {
+              taskStore.markTaskCompleted("task1", "review");
+            } else if (sess?.status === "failed") {
+              taskStore.markTaskCompleted("task1", "failed");
+            }
+          }
+          resolve();
+        },
+      });
+    });
+
+    const task = taskStore.getTask("task1");
+    expect(task?.status).toBe("review");
   });
 });

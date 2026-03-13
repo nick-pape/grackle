@@ -801,7 +801,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         onComplete: () => {
           // On completion, auto-move task to review
           const t = taskStore.getTask(task.id);
-          if (t && t.status === "in_progress") {
+          if (t && (t.status === "in_progress" || t.status === "waiting_input")) {
             const sess = sessionStore.getSession(sessionId);
             if (sess?.status === "completed") {
               taskStore.markTaskCompleted(task.id, "review");
