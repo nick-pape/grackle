@@ -119,7 +119,7 @@ function formatError(err: unknown): string {
  * @param comments - Array of comments to append. Pass an empty array to omit.
  * @returns The formatted description string.
  */
-export function buildTaskDescription(body: string, comments: GitHubComment[]): string {
+export function buildDescriptionWithComments(body: string, comments: GitHubComment[]): string {
   if (comments.length === 0) {
     return body ?? "";
   }
@@ -435,7 +435,7 @@ async function doImport(
       }
     }
 
-    const description = buildTaskDescription(issue.body, issue.comments);
+    const description = buildDescriptionWithComments(issue.body, issue.comments);
 
     const id = uuid().slice(0, 8);
     taskStore.createTask(
