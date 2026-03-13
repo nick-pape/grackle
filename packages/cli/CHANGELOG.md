@@ -1,6 +1,17 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Fri, 13 Mar 2026 17:07:19 GMT and should not be manually modified.
+This log was last generated on Fri, 13 Mar 2026 18:20:02 GMT and should not be manually modified.
+
+## 0.18.0
+Fri, 13 Mar 2026 18:20:02 GMT
+
+### Minor changes
+
+- Add --no-include-comments flag to import-github command
+
+### Updates
+
+- Add breadcrumbs
 
 ## 0.17.1
 Fri, 13 Mar 2026 17:07:19 GMT
