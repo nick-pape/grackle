@@ -157,9 +157,14 @@ test.describe("Disconnected environment blocks message send", () => {
 
     const sendBtn = page.locator("button", { hasText: "Send" });
     await expect(sendBtn).toBeDisabled({ timeout: 5_000 });
+
+    // The text input should also be disabled so the user can't accidentally
+    // type a message that they won't be able to send.
+    const inputField = page.locator('input[placeholder="Type a message..."]');
+    await expect(inputField).toBeDisabled({ timeout: 5_000 });
   });
 
-  test("Send button has explanatory title when environment is disconnected", async ({ page }) => {
+  test("Send button wrapper has explanatory title when environment is disconnected", async ({ page }) => {
     await installWsTracker(page);
     await page.goto("/");
     await page.waitForFunction(
@@ -173,8 +178,12 @@ test.describe("Disconnected environment blocks message send", () => {
       "disc-env-task-2",
     );
 
+    // The disabled Send button is wrapped in a <span title="..."> so the tooltip
+    // is shown reliably even when the button is disabled (disabled elements don't
+    // consistently fire hover events in all browsers).
     const sendBtn = page.locator("button", { hasText: "Send" });
-    await expect(sendBtn).toHaveAttribute(
+    const sendBtnWrapper = sendBtn.locator("xpath=..");
+    await expect(sendBtnWrapper).toHaveAttribute(
       "title",
       /disconnected/i,
       { timeout: 5_000 },
@@ -266,6 +275,64 @@ test.describe("Disconnected environment blocks message send", () => {
       () => (window as any).__provisionCaptured__?.value === true,
       { timeout: 3_000 },
     );
+  });
+
+  test("Send button is disabled in session mode when environment is disconnected", async ({ page }) => {
+    await installWsTracker(page);
+    await page.goto("/");
+    await page.waitForFunction(
+      () => document.body.innerText.includes("Connected"),
+      { timeout: 10_000 },
+    );
+
+    // Spawn a real session using the stub runtime (no PowerLine gRPC needed).
+    // Navigate to Settings → New Chat, pick stub runtime, submit a prompt.
+    await page.getByTitle("Settings").click();
+    const runtimeSelect = page.locator('[data-testid="new-chat-runtime-select"]');
+    await runtimeSelect.waitFor({ state: "visible", timeout: 5_000 });
+    await runtimeSelect.selectOption("stub");
+
+    const promptInput = page.locator('input[placeholder="Enter prompt..."]');
+    await promptInput.fill("hello stub");
+    await page.keyboard.press("Enter");
+
+    // Wait for the session to reach waiting_input state.
+    await page
+      .locator('input[placeholder="Type a message..."]')
+      .waitFor({ state: "visible", timeout: 15_000 });
+
+    // Now grab the session's environmentId from the live sessions state, then
+    // inject a disconnected environment to simulate a drop.
+    await injectWsMessage(page, {
+      type: "environments",
+      payload: {
+        environments: [
+          {
+            id: "test-local",
+            displayName: "test-local",
+            adapterType: "local",
+            defaultRuntime: "stub",
+            status: "disconnected",
+            bootstrapped: true,
+          },
+        ],
+      },
+    });
+
+    // Reconnect button must appear, confirming the injection was processed.
+    await page
+      .locator('[data-testid="reconnect-btn"]')
+      .waitFor({ state: "visible", timeout: 5_000 });
+
+    const sendBtn = page.locator("button", { hasText: "Send" });
+    await expect(sendBtn).toBeDisabled({ timeout: 5_000 });
+
+    const inputField = page.locator('input[placeholder="Type a message..."]');
+    await expect(inputField).toBeDisabled({ timeout: 5_000 });
+
+    await expect(
+      page.locator('[data-testid="env-disconnect-hint"]'),
+    ).toBeVisible({ timeout: 5_000 });
   });
 
   test("Send button re-enables when environment reconnects", async ({ page }) => {

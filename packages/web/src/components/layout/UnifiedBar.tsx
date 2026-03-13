@@ -535,7 +535,10 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
       const isWaiting = taskSession?.status === "waiting_input";
 
       if (isWaiting) {
-        const taskEnvDisconnected = isEnvDisconnected(task.environmentId, environments);
+        // Prefer the session's environmentId because task.environmentId is ""
+        // when using "Default env" — the session always carries the resolved env.
+        const effectiveEnvId = taskSession?.environmentId || task.environmentId;
+        const taskEnvDisconnected = isEnvDisconnected(effectiveEnvId, environments);
 
         const handleSend = (e: FormEvent): void => {
           e.preventDefault();
@@ -547,9 +550,9 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
         };
         return (
           <form onSubmit={handleSend} className={styles.bar}>
-            {taskEnvDisconnected && task.environmentId && (
+            {taskEnvDisconnected && effectiveEnvId && (
               <DisconnectedBanner
-                environmentId={task.environmentId}
+                environmentId={effectiveEnvId}
                 onReconnect={provisionEnvironment}
               />
             )}
@@ -562,14 +565,16 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
               disabled={taskEnvDisconnected}
               className={styles.input}
             />
-            <button
-              type="submit"
-              disabled={!text.trim() || taskEnvDisconnected}
-              title={taskEnvDisconnected ? "Environment is disconnected — reconnect first" : undefined}
-              className={styles.btnPrimary}
-            >
-              Send
-            </button>
+            {/* Wrap in span so tooltip is shown reliably even when button is disabled */}
+            <span title={taskEnvDisconnected ? "Environment is disconnected — reconnect first" : undefined}>
+              <button
+                type="submit"
+                disabled={!text.trim() || taskEnvDisconnected}
+                className={styles.btnPrimary}
+              >
+                Send
+              </button>
+            </span>
           </form>
         );
       }
@@ -717,14 +722,16 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
             disabled={sessionEnvDisconnected}
             className={styles.input}
           />
-          <button
-            type="submit"
-            disabled={!text.trim() || sessionEnvDisconnected}
-            title={sessionEnvDisconnected ? "Environment is disconnected — reconnect first" : undefined}
-            className={styles.btnPrimary}
-          >
-            Send
-          </button>
+          {/* Wrap in span so tooltip is shown reliably even when button is disabled */}
+          <span title={sessionEnvDisconnected ? "Environment is disconnected — reconnect first" : undefined}>
+            <button
+              type="submit"
+              disabled={!text.trim() || sessionEnvDisconnected}
+              className={styles.btnPrimary}
+            >
+              Send
+            </button>
+          </span>
           <button type="button" onClick={() => kill(viewMode.sessionId)} className={styles.btnDanger} title="Stop session">
             Stop
           </button>
