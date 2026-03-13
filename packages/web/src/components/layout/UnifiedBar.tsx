@@ -176,7 +176,7 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
         config.codespaceName = envCodespaceName.trim();
       }
       addEnvironment(envName.trim(), envAdapterType, config, envRuntime);
-      showToast(`Environment "${envName.trim()}" added`, "success");
+      showToast("Environment added successfully", "success");
       setEnvName("");
       setEnvAdapterType("local");
       setEnvRuntime("claude-code");
@@ -394,7 +394,7 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
         return;
       }
       createTask(viewMode.projectId, taskTitle.trim(), taskDesc, taskEnvId, undefined, viewMode.parentTaskId);
-      showToast(`Task "${taskTitle.trim()}" created`, "success");
+      showToast("Task created successfully", "success");
       setTaskTitle("");
       setTaskDesc("");
       setTaskEnvId("");
@@ -499,7 +499,7 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
             <button
               onClick={() => {
                 startTask(task.id);
-                showToast(`Task "${task.title}" started`, "success");
+                showToast("Task started successfully", "success");
               }}
               className={styles.btnPrimary}
               disabled={isStarting}
@@ -594,7 +594,7 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
           <button
             onClick={() => {
               approveTask(task.id);
-              showToast(`Task "${task.title}" approved`, "success");
+              showToast("Task approved successfully", "success");
             }}
             className={styles.btnPrimary}
           >
@@ -603,7 +603,7 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
           <button
             onClick={() => {
               rejectTask(task.id, rejectNotes);
-              showToast(`Task "${task.title}" rejected`, "warning");
+              showToast("Task rejected", "warning");
               setRejectNotes("");
             }}
             className={styles.btnDanger}
@@ -659,7 +659,7 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
             <button
               onClick={() => {
                 startTask(task.id);
-                showToast(`Task "${task.title}" retried`, "info");
+                showToast("Task queued for retry", "info");
               }}
               className={styles.btnPrimary}
               disabled={isRetrying}

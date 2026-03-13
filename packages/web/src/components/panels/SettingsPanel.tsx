@@ -29,7 +29,7 @@ export function SettingsPanel(): JSX.Element {
     const envVar = tokenType === "env_var" ? (target || name.toUpperCase() + "_TOKEN") : "";
     const filePath = tokenType === "file" ? target : "";
     setToken(name, value, tokenType, envVar, filePath);
-    showToast(`Token "${name}" saved`, "success");
+    showToast("Token saved successfully", "success");
     setName("");
     setValue("");
     setTarget("");
@@ -42,7 +42,7 @@ export function SettingsPanel(): JSX.Element {
   const handleConfirmDelete = (): void => {
     if (confirmDeleteToken) {
       deleteToken(confirmDeleteToken);
-      showToast(`Token "${confirmDeleteToken}" deleted`, "info");
+      showToast("Token deleted", "info");
     }
     setConfirmDeleteToken(null);
   };
