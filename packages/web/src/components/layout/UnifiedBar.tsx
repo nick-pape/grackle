@@ -55,15 +55,8 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
   const [taskPersonaId, setTaskPersonaId] = useState("");
   const [spawnPersonaId, setSpawnPersonaId] = useState("");
 
-  /** When a persona is selected in the new_task form, auto-fill runtime if the persona specifies one. */
   const handleTaskPersonaChange = (personaId: string): void => {
     setTaskPersonaId(personaId);
-    if (personaId) {
-      const p = personas.find((x) => x.id === personaId);
-      if (p?.runtime) {
-        setTaskEnvId((prev) => prev); // keep env
-      }
-    }
   };
 
   /** When a persona is selected in the new_chat form, auto-fill runtime. */
@@ -121,9 +114,9 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
   // Check if task is blocked
   const isTaskBlocked = task
     ? task.dependsOn.some((depId) => {
-        const dep = tasks.find((t) => t.id === depId);
-        return dep && dep.status !== "done";
-      })
+      const dep = tasks.find((t) => t.id === depId);
+      return dep && dep.status !== "done";
+    })
     : false;
 
   // --- empty mode ---
@@ -489,9 +482,9 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
     if (task.status === "pending" || task.status === "assigned") {
       const blockerNames = isTaskBlocked
         ? task.dependsOn
-            .map((depId) => tasks.find((t) => t.id === depId))
-            .filter((t) => t && t.status !== "done")
-            .map((t) => t!.title)
+          .map((depId) => tasks.find((t) => t.id === depId))
+          .filter((t) => t && t.status !== "done")
+          .map((t) => t!.title)
         : [];
       return (
         <div className={styles.bar}>
