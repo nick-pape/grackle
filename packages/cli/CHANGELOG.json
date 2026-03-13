@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.18.1",
+      "tag": "@grackle-ai/cli_v0.18.1",
+      "date": "Fri, 13 Mar 2026 21:32:39 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Add the UpdateProject RPC and project detail view inline editing flow."
+          }
+        ]
+      }
+    },
+    {
       "version": "0.18.0",
       "tag": "@grackle-ai/cli_v0.18.0",
       "date": "Fri, 13 Mar 2026 18:20:02 GMT",

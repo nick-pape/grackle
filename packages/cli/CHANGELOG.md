@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Fri, 13 Mar 2026 18:20:02 GMT and should not be manually modified.
+This log was last generated on Fri, 13 Mar 2026 21:32:39 GMT and should not be manually modified.
+
+## 0.18.1
+Fri, 13 Mar 2026 21:32:39 GMT
+
+### Patches
+
+- Add the UpdateProject RPC and project detail view inline editing flow.
 
 ## 0.18.0
 Fri, 13 Mar 2026 18:20:02 GMT
