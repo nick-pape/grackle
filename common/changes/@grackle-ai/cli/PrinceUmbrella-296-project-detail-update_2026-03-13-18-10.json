@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Add the UpdateProject RPC and project detail view inline editing flow.",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "leoendalekachew@gmail.com"
+}
