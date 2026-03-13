@@ -35,3 +35,30 @@ export function archiveProject(id: string): void {
     .where(eq(projects.id, id))
     .run();
 }
+
+/** Partial-update fields for a project. Undefined means "no change"; empty string means "clear". */
+export interface UpdateProjectFields {
+  name?: string;
+  description?: string;
+  repoUrl?: string;
+  defaultEnvironmentId?: string;
+}
+
+/** Update one or more fields on an existing project. Returns the updated row, or undefined if not found. */
+export function updateProject(id: string, fields: UpdateProjectFields): ProjectRow | undefined {
+  const sets: Record<string, unknown> = { updatedAt: sql`datetime('now')` };
+  if (fields.name !== undefined) {
+    sets.name = fields.name;
+  }
+  if (fields.description !== undefined) {
+    sets.description = fields.description;
+  }
+  if (fields.repoUrl !== undefined) {
+    sets.repoUrl = fields.repoUrl;
+  }
+  if (fields.defaultEnvironmentId !== undefined) {
+    sets.defaultEnvironmentId = fields.defaultEnvironmentId;
+  }
+  db.update(projects).set(sets).where(eq(projects.id, id)).run();
+  return getProject(id);
+}

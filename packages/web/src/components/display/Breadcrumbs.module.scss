@@ -1,0 +1,71 @@
+@use '../../styles/mixins' as *;
+
+// =============================================================================
+// Breadcrumbs — navigational trail
+// =============================================================================
+
+.breadcrumbs {
+  padding: var(--space-xs) var(--space-md);
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  flex-shrink: 0;
+}
+
+.list {
+  display: flex;
+  align-items: center;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  gap: var(--space-xs);
+  overflow: hidden;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  min-width: 0;
+}
+
+.separator {
+  color: var(--text-tertiary);
+  opacity: 0.5;
+  flex-shrink: 0;
+}
+
+.link {
+  background: none;
+  border: none;
+  color: var(--accent-blue);
+  cursor: pointer;
+  padding: 1px var(--space-xs);
+  border-radius: var(--radius-sm);
+  font-size: inherit;
+  font-family: inherit;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+
+  &:hover {
+    background: var(--bg-hover);
+    text-decoration: underline;
+  }
+
+  &:focus-visible {
+    outline: 1px solid var(--accent-blue);
+    outline-offset: 1px;
+  }
+}
+
+.current {
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}

@@ -3,6 +3,11 @@ import type { Page } from "@playwright/test";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type WsPayload = Record<string, any>;
 
+/** Return the runtime selector used by the new chat form. */
+export function getNewChatRuntimeSelect(page: Page) {
+  return page.getByTestId("new-chat-runtime-select");
+}
+
 /**
  * Open a second WebSocket from the page context, send a message, and wait for
  * a response matching the given type. Resolves with the full response object.
@@ -200,17 +205,17 @@ export async function patchWsForStubRuntime(page: Page): Promise<void> {
  * Requires patchWsForStubRuntime to have been called on the page beforehand.
  */
 export async function runStubTaskToCompletion(page: Page): Promise<void> {
-  await page.locator("button", { hasText: "Start" }).click();
+  await page.getByRole("button", { name: "Start", exact: true }).click();
 
   // Wait for waiting_input state
   const inputField = page.locator('input[placeholder="Type a message..."]');
   await inputField.waitFor({ timeout: 15_000 });
   await inputField.fill("continue");
-  await page.locator("button", { hasText: "Send" }).click();
+  await page.getByRole("button", { name: "Send", exact: true }).click();
 
   // Wait for session to complete and task to move to review
   await page
-    .locator("button", { hasText: "Approve" })
+    .getByRole("button", { name: "Approve", exact: true })
     .waitFor({ timeout: 15_000 });
 }
 

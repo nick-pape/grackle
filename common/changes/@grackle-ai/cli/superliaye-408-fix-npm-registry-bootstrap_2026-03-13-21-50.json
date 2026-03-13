@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "No changes to CLI (merge commit false positive)",
+      "type": "none",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}

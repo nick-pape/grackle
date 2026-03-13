@@ -1,4 +1,5 @@
 import { test as base, expect } from "./fixtures.js";
+import type { Page } from "@playwright/test";
 
 /**
  * Mock-mode settings page tests.
@@ -25,6 +26,8 @@ const test = base.extend<{ mockPage: import("@playwright/test").Page }>({
 });
 
 test.describe("Settings Page (Mock Mode)", () => {
+  const settingsHeading = (page: Page) => page.getByRole("heading", { name: "Settings" });
+
   test("gear icon is visible and navigates to settings", async ({ mockPage }) => {
     const page = mockPage;
 
@@ -36,7 +39,7 @@ test.describe("Settings Page (Mock Mode)", () => {
     await gearButton.click();
 
     // Settings heading should appear
-    await expect(page.getByText("Settings")).toBeVisible({ timeout: 5_000 });
+    await expect(settingsHeading(page)).toBeVisible({ timeout: 5_000 });
     await expect(page.getByRole("heading", { name: "Tokens" })).toBeVisible();
   });
 
@@ -44,7 +47,7 @@ test.describe("Settings Page (Mock Mode)", () => {
     const page = mockPage;
 
     await page.locator('button[title="Settings"]').click();
-    await expect(page.getByText("Settings")).toBeVisible({ timeout: 5_000 });
+    await expect(settingsHeading(page)).toBeVisible({ timeout: 5_000 });
 
     // MOCK_TOKENS has 3 tokens: anthropic, github, gcp-service-account
     await expect(page.getByText("anthropic", { exact: true })).toBeVisible({ timeout: 5_000 });
@@ -61,7 +64,7 @@ test.describe("Settings Page (Mock Mode)", () => {
     const page = mockPage;
 
     await page.locator('button[title="Settings"]').click();
-    await expect(page.getByText("Settings")).toBeVisible({ timeout: 5_000 });
+    await expect(settingsHeading(page)).toBeVisible({ timeout: 5_000 });
 
     // Form elements should be visible
     await expect(page.locator('input[placeholder="Token name"]')).toBeVisible();
@@ -83,7 +86,7 @@ test.describe("Settings Page (Mock Mode)", () => {
     const page = mockPage;
 
     await page.locator('button[title="Settings"]').click();
-    await expect(page.getByText("Settings")).toBeVisible({ timeout: 5_000 });
+    await expect(settingsHeading(page)).toBeVisible({ timeout: 5_000 });
 
     // anthropic token should be visible
     await expect(page.getByText("anthropic", { exact: true })).toBeVisible({ timeout: 5_000 });
@@ -104,7 +107,7 @@ test.describe("Settings Page (Mock Mode)", () => {
     const page = mockPage;
 
     await page.locator('button[title="Settings"]').click();
-    await expect(page.getByText("Settings")).toBeVisible({ timeout: 5_000 });
+    await expect(settingsHeading(page)).toBeVisible({ timeout: 5_000 });
 
     // Default type is env_var, placeholder should show env var
     await expect(page.locator('input[placeholder*="Env var name"]')).toBeVisible();
@@ -120,7 +123,7 @@ test.describe("Settings Page (Mock Mode)", () => {
     const page = mockPage;
 
     await page.locator('button[title="Settings"]').click();
-    await expect(page.getByText("Settings")).toBeVisible({ timeout: 5_000 });
+    await expect(settingsHeading(page)).toBeVisible({ timeout: 5_000 });
 
     await expect(
       page.getByText("API tokens are auto-pushed to environments when set or updated"),
@@ -131,7 +134,7 @@ test.describe("Settings Page (Mock Mode)", () => {
     const page = mockPage;
 
     await page.locator('button[title="Settings"]').click();
-    await expect(page.getByText("Settings")).toBeVisible({ timeout: 5_000 });
+    await expect(settingsHeading(page)).toBeVisible({ timeout: 5_000 });
 
     const nameInput = page.locator('input[placeholder="Token name"]');
     const valueInput = page.locator('input[placeholder="Value"]');

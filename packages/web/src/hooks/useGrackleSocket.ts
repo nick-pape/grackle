@@ -35,6 +35,7 @@ export interface Project {
   defaultEnvironmentId: string;
   status: string;
   createdAt: string;
+  updatedAt: string;
 }
 
 export interface TaskData {
@@ -169,7 +170,8 @@ function isProject(v: unknown): v is Project {
     typeof v.repoUrl === "string" &&
     typeof v.defaultEnvironmentId === "string" &&
     typeof v.status === "string" &&
-    typeof v.createdAt === "string"
+    typeof v.createdAt === "string" &&
+    typeof v.updatedAt === "string"
   );
 }
 
@@ -347,6 +349,7 @@ export interface UseGrackleSocketResult {
     prompt: string,
     model?: string,
     runtime?: string,
+    personaId?: string,
   ) => void;
   sendInput: (sessionId: string, text: string) => void;
   kill: (sessionId: string) => void;
@@ -360,6 +363,15 @@ export interface UseGrackleSocketResult {
     defaultEnvironmentId?: string,
   ) => void;
   archiveProject: (projectId: string) => void;
+  updateProject: (
+    projectId: string,
+    fields: {
+      name?: string;
+      description?: string;
+      repoUrl?: string;
+      defaultEnvironmentId?: string;
+    },
+  ) => void;
   loadTasks: (projectId: string) => void;
   createTask: (
     projectId: string,
@@ -618,6 +630,9 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
           case "project_archived":
             send({ type: "list_projects" });
             break;
+          case "project_updated":
+            send({ type: "list_projects" });
+            break;
           case "tasks": {
             const incoming = asValidArray(
               msg.payload?.tasks,
@@ -873,6 +888,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
       prompt: string,
       model?: string,
       runtime?: string,
+      personaId?: string,
     ) => {
       send({
         type: "spawn",
@@ -881,6 +897,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
           prompt,
           model: model || "",
           runtime: runtime || "",
+          personaId: personaId || "",
         },
       });
     },
@@ -946,6 +963,24 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
   const archiveProject = useCallback(
     (projectId: string) => {
       send({ type: "archive_project", payload: { projectId } });
+    },
+    [send],
+  );
+
+  const updateProject = useCallback(
+    (
+      projectId: string,
+      fields: {
+        name?: string;
+        description?: string;
+        repoUrl?: string;
+        defaultEnvironmentId?: string;
+      },
+    ) => {
+      send({
+        type: "update_project",
+        payload: { projectId, ...fields },
+      });
     },
     [send],
   );
@@ -1231,6 +1266,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
     clearEvents,
     createProject,
     archiveProject,
+    updateProject,
     loadTasks,
     createTask,
     startTask,

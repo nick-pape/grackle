@@ -29,6 +29,7 @@ Thumbs.db
 
 # Playwright
 packages/web/test-results/
+test-results/
 .playwright-mcp/
 
 # Demo artifacts

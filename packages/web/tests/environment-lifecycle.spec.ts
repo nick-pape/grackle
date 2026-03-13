@@ -108,7 +108,7 @@ test.describe("Environment List — Expand/Collapse", () => {
     await expect(page.locator("button", { hasText: "Stop" })).not.toBeVisible({ timeout: 2_000 });
 
     // Instead, we should be in new_chat mode
-    await expect(page.locator("text=new chat")).toBeVisible();
+    await expect(page.getByText("new chat", { exact: true })).toBeVisible();
   });
 });
 
