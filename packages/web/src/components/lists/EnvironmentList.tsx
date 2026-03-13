@@ -186,14 +186,12 @@ export function EnvironmentList({ viewMode, setViewMode }: Props): JSX.Element {
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        Environments
         <button
           className={styles.addButton}
           onClick={() => setViewMode({ kind: "new_environment" })}
           title="Add environment"
-          aria-label="Add environment"
         >
-          +
+          + Add Environment
         </button>
       </div>
 

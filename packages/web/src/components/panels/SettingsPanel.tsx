@@ -1,6 +1,8 @@
 import { useState, type JSX, type FormEvent } from "react";
 import { useGrackle } from "../../context/GrackleContext.js";
 import { ConfirmDialog } from "../display/index.js";
+import { EnvironmentList } from "../lists/EnvironmentList.js";
+import type { ViewMode } from "../../App.js";
 import styles from "./SettingsPanel.module.scss";
 
 /** Token type options for the add form. */
@@ -9,8 +11,14 @@ const TOKEN_TYPES: Array<{ value: string; label: string }> = [
   { value: "file", label: "File" },
 ];
 
-/** Settings page with token management (list, add, delete). */
-export function SettingsPanel(): JSX.Element {
+/** Props for the SettingsPanel component. */
+interface Props {
+  viewMode: ViewMode;
+  setViewMode: (mode: ViewMode) => void;
+}
+
+/** Settings page with environment management, token management, and other configuration. */
+export function SettingsPanel({ viewMode, setViewMode }: Props): JSX.Element {
   const { tokens, setToken, deleteToken } = useGrackle();
 
   const [name, setName] = useState("");
@@ -53,6 +61,14 @@ export function SettingsPanel(): JSX.Element {
         onCancel={() => setConfirmDeleteToken(null)}
       />
       <h2 className={styles.heading}>Settings</h2>
+
+      <section className={styles.section}>
+        <h3 className={styles.sectionTitle}>Environments</h3>
+        <p className={styles.sectionDescription}>
+          Environments are compute workspaces where agents run. Configure once, reuse across projects.
+        </p>
+        <EnvironmentList viewMode={viewMode} setViewMode={setViewMode} />
+      </section>
 
       <section className={styles.section}>
         <h3 className={styles.sectionTitle}>Tokens</h3>

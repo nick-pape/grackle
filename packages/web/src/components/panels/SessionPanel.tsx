@@ -424,7 +424,7 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
 
   // --- settings mode ---
   if (viewMode.kind === "settings") {
-    return <SettingsPanel />;
+    return <SettingsPanel viewMode={viewMode} setViewMode={setViewMode} />;
   }
 
   // --- empty mode ---
