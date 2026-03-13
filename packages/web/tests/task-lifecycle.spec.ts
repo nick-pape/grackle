@@ -100,7 +100,7 @@ test.describe("Task Lifecycle (stub runtime)", () => {
 
     // Navigate to task
     await page.getByText("reject task").click();
-    await expect(page.getByText("reject task")).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator('[data-testid="task-status"]')).toContainText("pending", { timeout: 5_000 });
 
     // Monkey-patch WS for stub runtime
     await page.evaluate(() => {

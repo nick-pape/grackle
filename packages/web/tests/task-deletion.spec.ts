@@ -99,7 +99,7 @@ test.describe("Task Deletion", () => {
 
     const sidebarTask = page.locator('[class*="taskTitle"]', { hasText: "tdel-dismiss-task" });
     await expect(sidebarTask).toBeVisible({ timeout: 5_000 });
-
-    await expect(page.getByText("tdel-dismiss-task", { exact: true })).toBeVisible({ timeout: 5_000 });
+    // Verify the task header is still showing (task was not deleted)
+    await expect(page.locator('[data-testid="task-title"]')).toHaveText("tdel-dismiss-task", { timeout: 5_000 });
   });
 });
