@@ -149,6 +149,25 @@ describe("buildDescriptionWithComments", () => {
     expect(result).toContain("**@alice**");
     expect(result).toContain("Comment");
   });
+
+  it("appends a truncation notice when hasMoreComments is true", () => {
+    const result = buildDescriptionWithComments(
+      "Body",
+      [{ author: "alice", createdAt: "2026-01-01T00:00:00Z", body: "Comment" }],
+      true,
+    );
+    expect(result).toContain("additional comments");
+    expect(result).toContain("GitHub");
+  });
+
+  it("does not append a truncation notice when hasMoreComments is false", () => {
+    const result = buildDescriptionWithComments(
+      "Body",
+      [{ author: "alice", createdAt: "2026-01-01T00:00:00Z", body: "Comment" }],
+      false,
+    );
+    expect(result).not.toContain("additional comments");
+  });
 });
 
 // ── topologicalSortIssues tests ─────────────────────────────────
@@ -556,6 +575,40 @@ describe("fetchGitHubIssues", () => {
     expect(issues[0].comments[0].author).toBe("ghost");
   });
 
+  it("sets commentsHasNextPage=true when comments pageInfo.hasNextPage is true", async () => {
+    mockGhResponse({
+      data: {
+        repository: {
+          issues: {
+            pageInfo: { hasNextPage: false, endCursor: null },
+            nodes: [
+              {
+                number: 1,
+                title: "Issue with many comments",
+                body: "body",
+                parent: null,
+                labels: { nodes: [] },
+                comments: {
+                  pageInfo: { hasNextPage: true },
+                  nodes: [
+                    {
+                      author: { login: "alice" },
+                      createdAt: "2026-03-13T10:00:00Z",
+                      body: "Comment",
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        },
+      },
+    });
+
+    const issues = await fetchGitHubIssues("owner/repo", "open");
+    expect(issues[0].commentsHasNextPage).toBe(true);
+  });
+
   it("filters by label", async () => {
     mockGhResponse({
       data: {
@@ -823,6 +876,43 @@ describe("importGitHubIssues", () => {
     expect(tasks[0].description).toContain("**@bob**");
     expect(tasks[0].description).toContain("Second comment");
     expect(tasks[0].description).toContain("---");
+  });
+
+  it("appends a truncation notice when comments.pageInfo.hasNextPage is true", async () => {
+    mockGhResponse({
+      data: {
+        repository: {
+          issues: {
+            pageInfo: { hasNextPage: false, endCursor: null },
+            nodes: [
+              {
+                number: 1,
+                title: "Issue with many comments",
+                body: "Issue body",
+                parent: null,
+                labels: { nodes: [] },
+                comments: {
+                  pageInfo: { hasNextPage: true },
+                  nodes: [
+                    {
+                      author: { login: "alice" },
+                      createdAt: "2026-03-13T10:00:00Z",
+                      body: "Only fetched comment",
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        },
+      },
+    });
+
+    await importGitHubIssues("test-proj", "owner/repo", "open");
+
+    const tasks = taskStore.listTasks("test-proj");
+    expect(tasks[0].description).toContain("Only fetched comment");
+    expect(tasks[0].description).toContain("additional comments");
   });
 
   it("omits comments from task description when includeComments=false", async () => {
