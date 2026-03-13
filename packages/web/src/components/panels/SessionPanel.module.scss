@@ -254,6 +254,11 @@
   background: var(--accent-red-dim);
 }
 
+.statusWaitingInput {
+  color: var(--accent-yellow);
+  background: var(--accent-yellow-dim);
+}
+
 // Branch pill
 .overviewBranchPill {
   @include glass-inset;

@@ -41,8 +41,8 @@ test.describe("Task Deletion", () => {
     await patchWsForStubRuntime(page);
     await page.locator("button", { hasText: "Start" }).click();
 
-    // Wait for in_progress state
-    await expect(page.locator('[data-testid="task-status"]')).toContainText("in_progress", { timeout: 15_000 });
+    // Wait for active state (task may be in_progress or waiting_input depending on stub timing)
+    await expect(page.locator('[data-testid="task-status"]')).toContainText(/in_progress|waiting_input/, { timeout: 15_000 });
 
     // Delete the task via WS while it's running
     const projectId = await getProjectId(page, "del-active");

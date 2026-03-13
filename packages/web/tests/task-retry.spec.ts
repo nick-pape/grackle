@@ -37,7 +37,7 @@ test.describe("Task Retry (failed → in_progress)", () => {
 
     // --- Verify task restarts: stub runtime events appear again ---
     // The stub emits "Stub runtime initialized" on each start
-    await expect(page.locator("text=in_progress")).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('[data-testid="task-status"]')).toContainText(/in_progress|waiting_input/, { timeout: 15_000 });
 
     // Wait for waiting_input and send normal input to complete
     await expect(inputField).toBeVisible({ timeout: 15_000 });

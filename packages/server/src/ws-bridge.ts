@@ -380,7 +380,7 @@ async function startTaskSession(
     taskId: freshTask.id,
     onComplete: () => {
       const t = taskStore.getTask(freshTask.id);
-      if (t && t.status === "in_progress") {
+      if (t && (t.status === "in_progress" || t.status === "waiting_input")) {
         const sess = sessionStore.getSession(sessionId);
         if (sess?.status === "completed") {
           taskStore.markTaskCompleted(freshTask.id, "review");
