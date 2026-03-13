@@ -18,6 +18,7 @@ export type ViewMode =
   | { kind: "session"; sessionId: string }
   | { kind: "project"; projectId: string }
   | { kind: "new_task"; projectId: string; parentTaskId?: string }
+  | { kind: "edit_task"; taskId: string }
   | { kind: "task"; taskId: string; tab?: "stream" | "findings" }
   | { kind: "new_environment" }
   | { kind: "persona_management" }
@@ -42,7 +43,12 @@ function AppContent(): JSX.Element {
         <Sidebar viewMode={viewMode} setViewMode={setViewMode} />
         <div className={styles.main}>
           <SessionPanel
-            key={viewMode.kind === "task" ? viewMode.taskId : viewMode.kind === "session" ? viewMode.sessionId : viewMode.kind}
+            key={
+              viewMode.kind === "task" ? viewMode.taskId
+              : viewMode.kind === "edit_task" ? `edit_task:${viewMode.taskId}`
+              : viewMode.kind === "session" ? viewMode.sessionId
+              : viewMode.kind
+            }
             viewMode={viewMode}
             setViewMode={setViewMode}
           />

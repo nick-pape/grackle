@@ -112,12 +112,12 @@ test.describe("Task tree hierarchy", () => {
     await expect(addChildButton).toBeVisible({ timeout: 5_000 });
     await addChildButton.click();
 
-    // UnifiedBar should show "child task" badge
-    await expect(page.getByText("child task", { exact: true })).toBeVisible({ timeout: 5_000 });
+    // Full-panel TaskEditPanel should open for the child task
+    await expect(page.locator('[data-testid="task-edit-title"]')).toBeVisible({ timeout: 5_000 });
 
-    // Fill in child task title and create
-    await page.locator('input[placeholder="Task title..."]').fill("ac-child");
-    await page.locator("button", { hasText: /^Create$/ }).click();
+    // Fill in child task title and save
+    await page.locator('[data-testid="task-edit-title"]').fill("ac-child");
+    await page.locator('[data-testid="task-edit-save"]').click();
 
     // Child should appear in the sidebar under the parent
     await expect(page.getByText("ac-child")).toBeVisible({ timeout: 5_000 });

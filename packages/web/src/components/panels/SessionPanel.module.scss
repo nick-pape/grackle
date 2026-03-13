@@ -119,6 +119,12 @@
   @include btn-danger;
 }
 
+.btnGhost {
+  @include btn-ghost(var(--text-secondary));
+  padding: var(--space-xs) var(--space-md);
+  font-size: var(--font-size-sm);
+}
+
 .rejectInput {
   @include input-field;
   width: 160px;

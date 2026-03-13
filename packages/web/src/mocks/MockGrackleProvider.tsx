@@ -651,6 +651,22 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
     [],
   );
 
+  /** Updates title, description, and dependencies of a pending/assigned task. */
+  const updateTask: UseGrackleSocketResult["updateTask"] = useCallback(
+    (taskId: string, title: string, description: string, dependsOn: string[]) => {
+      // eslint-disable-next-line no-console
+      console.log("[MockGrackle] updateTask", { taskId, title });
+      setTasks((prev) =>
+        prev.map((t) =>
+          t.id === taskId
+            ? { ...t, title: title.trim() || t.title, description, dependsOn }
+            : t,
+        ),
+      );
+    },
+    [],
+  );
+
   /** Removes a task from state. */
   const deleteTask: UseGrackleSocketResult["deleteTask"] = useCallback(
     (taskId: string) => {
@@ -784,6 +800,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       startTask,
       approveTask,
       rejectTask,
+      updateTask,
       deleteTask,
       loadFindings,
       postFinding,
@@ -876,6 +893,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       startTask,
       approveTask,
       rejectTask,
+      updateTask,
       deleteTask,
       loadFindings,
       postFinding,

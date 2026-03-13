@@ -973,6 +973,57 @@ async function handleMessage(
       break;
     }
 
+    case "update_task": {
+      const updateTaskId = msg.payload?.taskId as string;
+      if (!updateTaskId) {
+        sendWs(ws, { type: "error", payload: { message: "taskId required" } });
+        return;
+      }
+      const existingTask = taskStore.getTask(updateTaskId);
+      if (!existingTask) {
+        sendWs(ws, { type: "error", payload: { message: `Task not found: ${updateTaskId}` } });
+        return;
+      }
+      // Only allow editing pending/assigned tasks
+      if (!["pending", "assigned"].includes(existingTask.status)) {
+        sendWs(ws, {
+          type: "error",
+          payload: { message: `Task ${updateTaskId} cannot be edited (status: ${existingTask.status})` },
+        });
+        return;
+      }
+      const updatedTitle = typeof msg.payload?.title === "string" && msg.payload.title.trim()
+        ? msg.payload.title.trim()
+        : existingTask.title;
+      const updatedDescription = typeof msg.payload?.description === "string"
+        ? msg.payload.description
+        : existingTask.description;
+      const updatedDependsOn = Array.isArray(msg.payload?.dependsOn)
+        ? (msg.payload.dependsOn as string[])
+        : safeParseJsonArray(existingTask.dependsOn);
+      taskStore.updateTask(
+        updateTaskId,
+        updatedTitle,
+        updatedDescription,
+        existingTask.status,
+        existingTask.environmentId,
+        updatedDependsOn,
+        existingTask.reviewNotes,
+      );
+      const updatedRow = taskStore.getTask(updateTaskId);
+      broadcast({
+        type: "task_updated",
+        payload: {
+          taskId: updateTaskId,
+          projectId: existingTask.projectId,
+          task: updatedRow
+            ? { ...updatedRow, dependsOn: safeParseJsonArray(updatedRow.dependsOn) }
+            : null,
+        },
+      });
+      break;
+    }
+
     case "start_task": {
       const taskId = msg.payload?.taskId as string;
       if (!taskId) return;

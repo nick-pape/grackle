@@ -2,6 +2,7 @@ import { useGrackle } from "../../context/GrackleContext.js";
 import { EventRenderer } from "../display/EventRenderer.js";
 import { FindingsPanel } from "./FindingsPanel.js";
 import { SettingsPanel } from "./SettingsPanel.js";
+import { TaskEditPanel } from "./TaskEditPanel.js";
 import { PersonaManager } from "../personas/PersonaManager.js";
 import { DagView } from "../dag/DagView.js";
 import { useEffect, useMemo, useRef, useState, type JSX, type RefObject } from "react";
@@ -350,6 +351,7 @@ interface TaskActionButtonsProps {
   onApprove: () => void;
   onReject: () => void;
   onDelete: () => void;
+  onEdit: () => void;
 }
 
 /** Context-dependent action buttons rendered in the task detail header. */
@@ -364,11 +366,13 @@ function TaskActionButtons({
   onApprove,
   onReject,
   onDelete,
+  onEdit,
 }: TaskActionButtonsProps): JSX.Element | undefined {
   if (task.status === "pending" || task.status === "assigned") {
     if (isBlocked) {
       return (
         <div className={styles.headerActions}>
+          <button onClick={onEdit} className={styles.btnGhost}>Edit</button>
           <button onClick={onDelete} className={styles.btnDanger}>Delete</button>
         </div>
       );
@@ -376,6 +380,7 @@ function TaskActionButtons({
     return (
       <div className={styles.headerActions}>
         <button onClick={onStart} className={styles.btnPrimary}>Start</button>
+        <button onClick={onEdit} className={styles.btnGhost}>Edit</button>
         <button onClick={onDelete} className={styles.btnDanger}>Delete</button>
       </div>
     );
@@ -733,11 +738,12 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
 
   // --- new_task mode ---
   if (viewMode.kind === "new_task") {
-    return (
-      <div className={styles.emptyState}>
-        Fill in the task details below
-      </div>
-    );
+    return <TaskEditPanel viewMode={viewMode} setViewMode={setViewMode} />;
+  }
+
+  // --- edit_task mode ---
+  if (viewMode.kind === "edit_task") {
+    return <TaskEditPanel viewMode={viewMode} setViewMode={setViewMode} />;
   }
 
   // --- task mode ---
@@ -764,6 +770,7 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
               onApprove={() => approveTask(task.id)}
               onReject={() => { rejectTask(task.id, rejectNotes); setRejectNotes(""); }}
               onDelete={handleDeleteTask}
+              onEdit={() => setViewMode({ kind: "edit_task", taskId: task.id })}
             />
           )}
         </div>

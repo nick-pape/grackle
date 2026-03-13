@@ -59,24 +59,17 @@ test.describe("Projects", () => {
     // Click the "New task" + button scoped to this project's row
     await page.getByText("task-test").locator("..").locator('button[title="New task"]').first().click();
 
-    // UnifiedBar should show new task form
-    await expect(page.getByText("new task")).toBeVisible();
-    await expect(page.locator('input[placeholder="Task title..."]')).toBeVisible();
-
-    // Description field should be a multi-line textarea
-    const descriptionField = page.locator('textarea[placeholder="Description (optional)..."]');
+    // Full-panel TaskEditPanel should open with title and description fields
+    await expect(page.locator('[data-testid="task-edit-title"]')).toBeVisible({ timeout: 5_000 });
+    const descriptionField = page.locator('[data-testid="task-edit-description"]');
     await expect(descriptionField).toBeVisible();
 
-    // Main panel shows task creation prompt
-    await expect(page.getByText("Fill in the task details below")).toBeVisible();
+    // No environment dropdown — environment is chosen at start time, not creation time
+    await expect(page.locator('select option:has-text("test-local")')).not.toBeVisible();
 
-    // Fill in task details and select environment
-    await page.locator('input[placeholder="Task title..."]').fill("implement feature");
-    const envSelect = page.locator("select").first();
-    await envSelect.selectOption("test-local");
-
-    // Click Create (exact match to avoid matching "Create Task" CTA)
-    await page.locator("button", { hasText: /^Create$/ }).click();
+    // Fill in task title and save
+    await page.locator('[data-testid="task-edit-title"]').fill("implement feature");
+    await page.locator('[data-testid="task-edit-save"]').click();
 
     // Task should appear in the sidebar under the project
     await expect(page.getByText("implement feature")).toBeVisible({ timeout: 5_000 });
@@ -92,11 +85,10 @@ test.describe("Projects", () => {
     await page.locator("button", { hasText: "OK" }).click();
     await expect(page.getByText("view-test")).toBeVisible({ timeout: 5_000 });
 
-    await page.getByText("view-test").click();
     await page.getByText("view-test").locator("..").locator('button[title="New task"]').first().click();
-    await page.locator('input[placeholder="Task title..."]').fill("my task");
-    await page.locator("select").first().selectOption("test-local");
-    await page.locator("button", { hasText: /^Create$/ }).click();
+    await page.locator('[data-testid="task-edit-title"]').waitFor({ timeout: 5_000 });
+    await page.locator('[data-testid="task-edit-title"]').fill("my task");
+    await page.locator('[data-testid="task-edit-save"]').click();
     await expect(page.getByText("my task")).toBeVisible({ timeout: 5_000 });
 
     // Click task to navigate to task view
