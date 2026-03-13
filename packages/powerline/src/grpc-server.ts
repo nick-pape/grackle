@@ -1,8 +1,6 @@
 import type { ConnectRouter } from "@connectrpc/connect";
 import { create } from "@bufbuild/protobuf";
-import {
-  powerline,
-} from "@grackle-ai/common";
+import { powerline } from "@grackle-ai/common";
 import { getRuntime, listRuntimes } from "./runtime-registry.js";
 import {
   addSession,
@@ -132,7 +130,7 @@ export function registerPowerLineRoutes(router: ConnectRouter): void {
             sessionId: s.id,
             runtime: s.runtimeName,
             status: s.status,
-          })
+          }),
         ),
       });
     },

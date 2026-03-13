@@ -102,9 +102,9 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
   // Check if task is blocked
   const isTaskBlocked = task
     ? task.dependsOn.some((depId) => {
-        const dep = tasks.find((t) => t.id === depId);
-        return dep && dep.status !== "done";
-      })
+      const dep = tasks.find((t) => t.id === depId);
+      return dep && dep.status !== "done";
+    })
     : false;
 
   // --- empty mode ---

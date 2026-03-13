@@ -36,8 +36,15 @@ describe("persona-store", () => {
 
   it("creates and retrieves a persona", () => {
     personaStore.createPersona(
-      "fe-eng", "Frontend Engineer", "React specialist",
-      "You are a frontend engineer.", "{}", "claude-code", "sonnet", 10, "[]",
+      "fe-eng",
+      "Frontend Engineer",
+      "React specialist",
+      "You are a frontend engineer.",
+      "{}",
+      "claude-code",
+      "sonnet",
+      10,
+      "[]",
     );
     const p = personaStore.getPersona("fe-eng");
     expect(p).toBeDefined();
@@ -50,8 +57,15 @@ describe("persona-store", () => {
 
   it("retrieves a persona by name", () => {
     personaStore.createPersona(
-      "sec-rev", "Security Reviewer", "",
-      "You review code for vulnerabilities.", "{}", "", "", 0, "[]",
+      "sec-rev",
+      "Security Reviewer",
+      "",
+      "You review code for vulnerabilities.",
+      "{}",
+      "",
+      "",
+      0,
+      "[]",
     );
     const p = personaStore.getPersonaByName("Security Reviewer");
     expect(p).toBeDefined();
@@ -64,9 +78,39 @@ describe("persona-store", () => {
   });
 
   it("lists all personas ordered by name", () => {
-    personaStore.createPersona("b", "Beta", "", "prompt", "{}", "", "", 0, "[]");
-    personaStore.createPersona("a", "Alpha", "", "prompt", "{}", "", "", 0, "[]");
-    personaStore.createPersona("c", "Charlie", "", "prompt", "{}", "", "", 0, "[]");
+    personaStore.createPersona(
+      "b",
+      "Beta",
+      "",
+      "prompt",
+      "{}",
+      "",
+      "",
+      0,
+      "[]",
+    );
+    personaStore.createPersona(
+      "a",
+      "Alpha",
+      "",
+      "prompt",
+      "{}",
+      "",
+      "",
+      0,
+      "[]",
+    );
+    personaStore.createPersona(
+      "c",
+      "Charlie",
+      "",
+      "prompt",
+      "{}",
+      "",
+      "",
+      0,
+      "[]",
+    );
     const list = personaStore.listPersonas();
     expect(list).toHaveLength(3);
     expect(list[0].name).toBe("Alpha");
@@ -75,8 +119,28 @@ describe("persona-store", () => {
   });
 
   it("updates a persona", () => {
-    personaStore.createPersona("p1", "Original", "", "old prompt", "{}", "", "", 0, "[]");
-    personaStore.updatePersona("p1", "Updated", "new desc", "new prompt", "{}", "copilot", "opus", 20, "[]");
+    personaStore.createPersona(
+      "p1",
+      "Original",
+      "",
+      "old prompt",
+      "{}",
+      "",
+      "",
+      0,
+      "[]",
+    );
+    personaStore.updatePersona(
+      "p1",
+      "Updated",
+      "new desc",
+      "new prompt",
+      "{}",
+      "copilot",
+      "opus",
+      20,
+      "[]",
+    );
     const p = personaStore.getPersona("p1");
     expect(p!.name).toBe("Updated");
     expect(p!.description).toBe("new desc");
@@ -87,26 +151,76 @@ describe("persona-store", () => {
   });
 
   it("update sets updatedAt", () => {
-    personaStore.createPersona("p1", "Test", "", "prompt", "{}", "", "", 0, "[]");
+    personaStore.createPersona(
+      "p1",
+      "Test",
+      "",
+      "prompt",
+      "{}",
+      "",
+      "",
+      0,
+      "[]",
+    );
     const before = personaStore.getPersona("p1")!.updatedAt;
     // SQLite datetime('now') has second-level precision, so we just check it's set
-    personaStore.updatePersona("p1", "Test2", "", "prompt2", "{}", "", "", 0, "[]");
+    personaStore.updatePersona(
+      "p1",
+      "Test2",
+      "",
+      "prompt2",
+      "{}",
+      "",
+      "",
+      0,
+      "[]",
+    );
     const after = personaStore.getPersona("p1")!.updatedAt;
     expect(after).toBeDefined();
     expect(before).toBeDefined();
   });
 
   it("deletes a persona", () => {
-    personaStore.createPersona("del", "ToDelete", "", "prompt", "{}", "", "", 0, "[]");
+    personaStore.createPersona(
+      "del",
+      "ToDelete",
+      "",
+      "prompt",
+      "{}",
+      "",
+      "",
+      0,
+      "[]",
+    );
     expect(personaStore.getPersona("del")).toBeDefined();
     personaStore.deletePersona("del");
     expect(personaStore.getPersona("del")).toBeUndefined();
   });
 
   it("enforces unique name constraint", () => {
-    personaStore.createPersona("p1", "Same Name", "", "prompt", "{}", "", "", 0, "[]");
+    personaStore.createPersona(
+      "p1",
+      "Same Name",
+      "",
+      "prompt",
+      "{}",
+      "",
+      "",
+      0,
+      "[]",
+    );
     expect(() => {
-      personaStore.createPersona("p2", "Same Name", "", "prompt", "{}", "", "", 0, "[]");
+      personaStore.createPersona(
+        "p2",
+        "Same Name",
+        "",
+        "prompt",
+        "{}",
+        "",
+        "",
+        0,
+        "[]",
+      );
     }).toThrow();
   });
 

@@ -36,9 +36,13 @@ registerPersonaCommands(program);
 
 program.parseAsync(process.argv).catch((err: unknown) => {
   if (err instanceof ConnectError) {
-    console.error(chalk.red(`gRPC error [${Code[err.code]}]: ${err.rawMessage}`));
+    console.error(
+      chalk.red(`gRPC error [${Code[err.code]}]: ${err.rawMessage}`),
+    );
     if (err.code === Code.Unavailable) {
-      console.error("Is the Grackle server running? Start it with: grackle serve");
+      console.error(
+        "Is the Grackle server running? Start it with: grackle serve",
+      );
     }
   } else if (err instanceof Error) {
     console.error(chalk.red(err.message));

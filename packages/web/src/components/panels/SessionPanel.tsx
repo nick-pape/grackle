@@ -375,11 +375,11 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
     prevTaskStatusRef.current = task?.status;
     const newTab: TaskTab | undefined =
       task?.status === "pending" ? "overview"
-      : task?.status === "assigned" ? "overview"
-      : task?.status === "in_progress" ? "stream"
-      : task?.status === "review" ? "stream"
-      : task?.status === "done" ? "findings"
-      : undefined;
+        : task?.status === "assigned" ? "overview"
+          : task?.status === "in_progress" ? "stream"
+            : task?.status === "review" ? "stream"
+              : task?.status === "done" ? "findings"
+                : undefined;
     if (newTab && newTab !== activeTaskTab) {
       setActiveTaskTab(newTab);
     }

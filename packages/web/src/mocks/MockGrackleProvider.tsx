@@ -436,11 +436,11 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
         prev.map((t) =>
           t.id === taskId
             ? {
-                ...t,
-                status: "in_progress",
-                sessionId,
-                branch: `mock/${taskId.slice(0, 8)}`,
-              }
+              ...t,
+              status: "in_progress",
+              sessionId,
+              branch: `mock/${taskId.slice(0, 8)}`,
+            }
             : t,
         ),
       );
@@ -787,20 +787,20 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       setToken: mockSetToken,
       deleteToken: mockDeleteToken,
       provisionStatus: {},
-      provisionEnvironment: () => {},
-      stopEnvironment: () => {},
-      removeEnvironment: () => {},
+      provisionEnvironment: () => { },
+      stopEnvironment: () => { },
+      removeEnvironment: () => { },
       codespaces: [],
       codespaceError: "",
       codespaceCreating: false,
-      listCodespaces: () => {},
-      createCodespace: () => {},
+      listCodespaces: () => { },
+      createCodespace: () => { },
       projectCreating: false,
       taskStartingId: undefined,
       personas: [],
-      createPersona: () => {},
-      updatePersona: () => {},
-      deletePersona: () => {},
+      createPersona: () => { },
+      updatePersona: () => { },
+      deletePersona: () => { },
     }),
     [
       sessions,

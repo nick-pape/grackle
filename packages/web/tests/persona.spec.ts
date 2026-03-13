@@ -2,7 +2,9 @@ import { test, expect } from "./fixtures.js";
 import { sendWsAndWaitFor, createProject } from "./helpers.js";
 
 test.describe("Persona Management", () => {
-  test("create persona via WebSocket and verify it appears", async ({ appPage }) => {
+  test("create persona via WebSocket and verify it appears", async ({
+    appPage,
+  }) => {
     const page = appPage;
 
     // Create a persona via WS
@@ -28,7 +30,11 @@ test.describe("Persona Management", () => {
       { type: "list_personas" },
       "personas",
     );
-    const personas = (response.payload?.personas || []) as Array<{ id: string; name: string; runtime: string }>;
+    const personas = (response.payload?.personas || []) as Array<{
+      id: string;
+      name: string;
+      runtime: string;
+    }>;
     expect(personas.length).toBeGreaterThanOrEqual(1);
     const created = personas.find((p) => p.name === "Test Engineer");
     expect(created).toBeDefined();
@@ -55,13 +61,21 @@ test.describe("Persona Management", () => {
 
     // Create a project
     await page.locator("button", { hasText: "+" }).first().click();
-    await page.locator('input[placeholder="Project name..."]').fill("persona-test-proj");
+    await page
+      .locator('input[placeholder="Project name..."]')
+      .fill("persona-test-proj");
     await page.locator("button", { hasText: "OK" }).click();
-    await expect(page.getByText("persona-test-proj")).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText("persona-test-proj")).toBeVisible({
+      timeout: 5_000,
+    });
 
     // Open new task form
     await page.getByText("persona-test-proj").click();
-    await page.getByText("persona-test-proj").locator("..").locator('button[title="New task"]').click();
+    await page
+      .getByText("persona-test-proj")
+      .locator("..")
+      .locator('button[title="New task"]')
+      .click();
 
     // Verify persona selector is present with "No persona" default and our persona
     const selects = page.locator("select");
@@ -70,12 +84,18 @@ test.describe("Persona Management", () => {
     expect(selectCount).toBeGreaterThanOrEqual(2);
 
     // Find the persona select (contains "No persona" option)
-    const personaSelect = page.locator("select", { has: page.locator('option:text("No persona")') });
+    const personaSelect = page.locator("select", {
+      has: page.locator('option:text("No persona")'),
+    });
     await expect(personaSelect).toBeVisible();
-    await expect(personaSelect.locator('option:text("Frontend Dev")')).toBeVisible();
+    await expect(
+      personaSelect.locator('option:text("Frontend Dev")'),
+    ).toBeVisible();
   });
 
-  test("persona management view shows created personas", async ({ appPage }) => {
+  test("persona management view shows created personas", async ({
+    appPage,
+  }) => {
     const page = appPage;
 
     // Create a persona
@@ -99,8 +119,12 @@ test.describe("Persona Management", () => {
 
     // Verify the persona management view is shown with our persona
     await expect(page.getByText("Personas")).toBeVisible({ timeout: 5_000 });
-    await expect(page.getByText("Security Reviewer")).toBeVisible({ timeout: 5_000 });
-    await expect(page.getByText("Reviews code for vulnerabilities")).toBeVisible();
+    await expect(page.getByText("Security Reviewer")).toBeVisible({
+      timeout: 5_000,
+    });
+    await expect(
+      page.getByText("Reviews code for vulnerabilities"),
+    ).toBeVisible();
   });
 
   test("delete persona via WebSocket", async ({ appPage }) => {
@@ -125,7 +149,10 @@ test.describe("Persona Management", () => {
       { type: "list_personas" },
       "personas",
     );
-    const personas = (listResponse.payload?.personas || []) as Array<{ id: string; name: string }>;
+    const personas = (listResponse.payload?.personas || []) as Array<{
+      id: string;
+      name: string;
+    }>;
     const temp = personas.find((p) => p.name === "Temp Persona");
     expect(temp).toBeDefined();
 
@@ -142,7 +169,10 @@ test.describe("Persona Management", () => {
       { type: "list_personas" },
       "personas",
     );
-    const remaining = (afterDelete.payload?.personas || []) as Array<{ id: string; name: string }>;
+    const remaining = (afterDelete.payload?.personas || []) as Array<{
+      id: string;
+      name: string;
+    }>;
     expect(remaining.find((p) => p.name === "Temp Persona")).toBeUndefined();
   });
 
@@ -169,7 +199,10 @@ test.describe("Persona Management", () => {
       { type: "list_personas" },
       "personas",
     );
-    const personas = (listResponse.payload?.personas || []) as Array<{ id: string; name: string }>;
+    const personas = (listResponse.payload?.personas || []) as Array<{
+      id: string;
+      name: string;
+    }>;
     const original = personas.find((p) => p.name === "Original Name");
     expect(original).toBeDefined();
 
@@ -193,7 +226,10 @@ test.describe("Persona Management", () => {
       { type: "list_personas" },
       "personas",
     );
-    const updated = (afterUpdate.payload?.personas || []) as Array<{ id: string; name: string }>;
+    const updated = (afterUpdate.payload?.personas || []) as Array<{
+      id: string;
+      name: string;
+    }>;
     expect(updated.find((p) => p.name === "Updated Name")).toBeDefined();
     expect(updated.find((p) => p.name === "Original Name")).toBeUndefined();
   });

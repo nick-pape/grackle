@@ -40,7 +40,10 @@ export function registerPersonaCommands(program: Command): void {
     .option("--prompt <text>", "System prompt text")
     .option("--prompt-file <path>", "Read system prompt from file")
     .option("--desc <text>", "Description")
-    .option("--runtime <runtime>", "Default runtime (claude-code, copilot, codex)")
+    .option(
+      "--runtime <runtime>",
+      "Default runtime (claude-code, copilot, codex)",
+    )
     .option("--model <model>", "Default model")
     .option("--max-turns <n>", "Maximum turns", parseInt)
     .action(async (name: string, opts) => {
@@ -49,7 +52,11 @@ export function registerPersonaCommands(program: Command): void {
         systemPrompt = readFileSync(opts.promptFile, "utf8");
       }
       if (!systemPrompt) {
-        console.error(chalk.red("System prompt is required. Use --prompt or --prompt-file."));
+        console.error(
+          chalk.red(
+            "System prompt is required. Use --prompt or --prompt-file.",
+          ),
+        );
         process.exit(1);
       }
       const client = createGrackleClient();
@@ -81,7 +88,9 @@ export function registerPersonaCommands(program: Command): void {
           console.log(`Allowed Tools: ${p.toolConfig.allowedTools.join(", ")}`);
         }
         if (p.toolConfig.disallowedTools.length > 0) {
-          console.log(`Blocked Tools: ${p.toolConfig.disallowedTools.join(", ")}`);
+          console.log(
+            `Blocked Tools: ${p.toolConfig.disallowedTools.join(", ")}`,
+          );
         }
       }
       if (p.mcpServers.length > 0) {
