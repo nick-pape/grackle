@@ -133,7 +133,7 @@ export async function createTask(
   // Fill in task details
   await page.locator('input[placeholder="Task title..."]').fill(title);
   if (envName) {
-    await page.locator("select").selectOption(envName);
+    await page.locator("select").first().selectOption(envName);
   }
   await page.locator("button", { hasText: /^Create$/ }).click();
 

@@ -15,7 +15,7 @@ test.describe("Task Lifecycle (stub runtime)", () => {
     await page.getByText("lifecycle-proj").click();
     await page.getByText("lifecycle-proj").locator("..").locator('button[title="New task"]').first().click();
     await page.locator('input[placeholder="Task title..."]').fill("test task");
-    await page.locator("select").selectOption("test-local");
+    await page.locator("select").first().selectOption("test-local");
     await page.locator("button", { hasText: /^Create$/ }).click();
     await expect(page.getByText("test task")).toBeVisible({ timeout: 5_000 });
 
@@ -95,7 +95,7 @@ test.describe("Task Lifecycle (stub runtime)", () => {
     await page.getByText("reject-proj").click();
     await page.getByText("reject-proj").locator("..").locator('button[title="New task"]').first().click();
     await page.locator('input[placeholder="Task title..."]').fill("reject task");
-    await page.locator("select").selectOption("test-local");
+    await page.locator("select").first().selectOption("test-local");
     await page.locator("button", { hasText: /^Create$/ }).click();
     await expect(page.getByText("reject task")).toBeVisible({ timeout: 5_000 });
 
