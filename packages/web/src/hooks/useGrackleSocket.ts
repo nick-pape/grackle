@@ -652,9 +652,13 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
             // Server already broadcasts updated environment list via broadcastEnvironments()
             break;
           case "environment_removed":
-            // Clean up stale provision status for the removed environment
+            // Clean up stale provision status and optimistically remove the
+            // environment from local state so the UI updates immediately even
+            // when the removal was triggered via gRPC/CLI (which does not call
+            // broadcastEnvironments).
             if (typeof msg.payload?.environmentId === "string") {
               const removedId = msg.payload.environmentId;
+              setEnvironments((prev) => prev.filter((e) => e.id !== removedId));
               setProvisionStatus((prev) => {
                 const next = { ...prev };
                 // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
@@ -662,8 +666,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
                 return next;
               });
             }
-            // Server broadcasts updated environment list via broadcastEnvironments();
-            // fetch sessions since the server deletes them but doesn't broadcast sessions
+            // Fetch sessions since the server deletes them but doesn't broadcast sessions
             send({ type: "list_sessions" });
             break;
           case "codespaces_list": {
