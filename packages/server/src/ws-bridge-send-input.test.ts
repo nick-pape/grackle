@@ -127,7 +127,8 @@ function applySchema(): void {
       started_at         TEXT NOT NULL DEFAULT (datetime('now')),
       suspended_at       TEXT,
       ended_at           TEXT,
-      error              TEXT
+      error              TEXT,
+      task_id            TEXT NOT NULL DEFAULT ''
     );
   `);
 }
