@@ -567,7 +567,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
               );
               break;
             }
-            if (replayEvents.length > 0 || replaySessionId) {
+            if (replayEvents.length > 0) {
               let replayDropped = 0;
               setEvents((prev) => {
                 const without = prev.filter(
