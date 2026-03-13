@@ -170,11 +170,15 @@ test.describe("Projects", () => {
     await page.locator('[data-testid="edit-name-button"]').click();
     const nameInput = page.locator('[data-testid="edit-name-input"]');
     await expect(nameInput).toBeVisible();
+    await expect(nameInput).toBeFocused();
     await nameInput.fill("renamed-project");
     await nameInput.press("Enter");
 
-    // Name should update
-    await expect(page.locator('[data-testid="project-name"]')).toContainText("renamed-project", { timeout: 5_000 });
+    // Input should disappear (edit mode exits)
+    await expect(nameInput).not.toBeVisible({ timeout: 2_000 });
+
+    // Name should update after server round trip
+    await expect(page.locator('[data-testid="project-name"]')).toContainText("renamed-project", { timeout: 10_000 });
   });
 
   test("cancel name edit with Escape", async ({ appPage }) => {
@@ -201,11 +205,14 @@ test.describe("Projects", () => {
     const descInput = page.locator('[data-testid="edit-description-input"]');
     await page.locator('[data-testid="edit-description-button"]').click();
     await expect(descInput).toBeVisible();
+    await expect(descInput).toBeFocused();
     await descInput.fill("A new project description");
-    await descInput.blur();
 
-    // Should show the description text
-    await expect(page.getByText("A new project description")).toBeVisible({ timeout: 5_000 });
+    // Press Tab to move focus away, triggering blur and save
+    await page.keyboard.press("Tab");
+
+    // Should show the description text after server round trip
+    await expect(page.getByText("A new project description")).toBeVisible({ timeout: 10_000 });
 
     // Placeholder should be gone
     await expect(page.getByText("No description")).not.toBeVisible();
@@ -218,11 +225,15 @@ test.describe("Projects", () => {
     const repoInput = page.locator('[data-testid="edit-repo-input"]');
     await page.locator('[data-testid="edit-repo-button"]').click();
     await expect(repoInput).toBeVisible();
+    await expect(repoInput).toBeFocused();
     await repoInput.fill("https://github.com/test/repo");
     await repoInput.press("Enter");
 
-    // Should show the repo URL as a link
-    await expect(page.getByText("https://github.com/test/repo")).toBeVisible({ timeout: 5_000 });
+    // Input should disappear (edit mode exits)
+    await expect(repoInput).not.toBeVisible({ timeout: 2_000 });
+
+    // Should show the repo URL as a link after server round trip
+    await expect(page.getByText("https://github.com/test/repo")).toBeVisible({ timeout: 10_000 });
     await expect(page.getByText("No repository")).not.toBeVisible();
   });
 
