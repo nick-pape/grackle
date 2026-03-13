@@ -164,8 +164,11 @@ function main() {
 
   if (graphqlResult === null) {
     issues.push(`Could not check Copilot review threads for PR #${prNumber}. Ensure gh has the required scopes (read:discussion) and retry.`);
+  } else if (graphqlResult.errors?.length > 0 || !graphqlResult.data?.repository?.pullRequest) {
+    const errorMessage = graphqlResult.errors?.map((e) => e.message).join(", ") || "unexpected response shape";
+    issues.push(`Could not check Copilot review threads for PR #${prNumber}: ${errorMessage}. Check gh auth and retry.`);
   } else {
-    const threads = graphqlResult.data?.repository?.pullRequest?.reviewThreads?.nodes || [];
+    const threads = graphqlResult.data.repository.pullRequest.reviewThreads?.nodes || [];
     const threadCount = threads.filter(
       (t) => !t.isResolved && t.comments?.nodes?.[0]?.author?.login === "copilot-pull-request-reviewer"
     ).length;
@@ -186,4 +189,8 @@ function main() {
   process.exit(0);
 }
 
-main();
+try {
+  main();
+} catch (error) {
+  block(`PR readiness check failed unexpectedly: ${error.message}. Fix the issue and retry.`);
+}
