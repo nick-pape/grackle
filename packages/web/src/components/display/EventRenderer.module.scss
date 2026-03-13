@@ -176,6 +176,24 @@
   animation: fadeIn 200ms ease forwards;
 }
 
+.userInputEvent {
+  display: flex;
+  justify-content: flex-end;
+  padding: var(--space-xs) 0;
+  animation: fadeIn 200ms ease forwards;
+}
+
+.userInputContent {
+  background: var(--accent-blue);
+  color: #fff;
+  border-radius: var(--radius-md);
+  padding: var(--space-xs) var(--space-sm);
+  max-width: 75%;
+  word-break: break-word;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height);
+}
+
 .defaultEvent {
   padding: 2px 0;
   color: var(--text-secondary);

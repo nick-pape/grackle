@@ -1,6 +1,90 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Thu, 12 Mar 2026 17:36:37 GMT and should not be manually modified.
+This log was last generated on Fri, 13 Mar 2026 21:32:39 GMT and should not be manually modified.
+
+## 0.18.1
+Fri, 13 Mar 2026 21:32:39 GMT
+
+### Patches
+
+- Add the UpdateProject RPC and project detail view inline editing flow.
+
+## 0.18.0
+Fri, 13 Mar 2026 18:20:02 GMT
+
+### Minor changes
+
+- Add --no-include-comments flag to import-github command
+
+### Updates
+
+- Add breadcrumbs
+
+## 0.17.1
+Fri, 13 Mar 2026 17:07:19 GMT
+
+### Patches
+
+- Add --depends-on flag to task update CLI command
+
+### Updates
+
+- Address persona CLI UI gaps by adding missing tasks help and examples
+
+## 0.17.0
+Fri, 13 Mar 2026 08:26:43 GMT
+
+### Minor changes
+
+- Add waiting_input task status synced with session status
+
+### Updates
+
+- No CLI changes — false positive from Rush merge detection
+
+## 0.16.0
+Fri, 13 Mar 2026 07:19:57 GMT
+
+### Minor changes
+
+- feat: add task_id to sessions, track session history per task, display attempt selector in UI
+
+### Updates
+
+- none-bump change file for merge-commit false positive
+- No changes to CLI (false positive from merge commits)
+- No CLI changes — change file added to satisfy rush change --verify false positive from merge commits
+
+## 0.15.1
+Fri, 13 Mar 2026 05:32:15 GMT
+
+### Patches
+
+- Kill active sessions before task deletion in WS and gRPC handlers
+
+### Updates
+
+- Persona CLI commands (`persona list/create/show/edit/delete`), `--persona` flag on `spawn`, `task create`, and `task start`
+- placeholder
+- No CLI changes — merge commit false positive
+- placeholder
+
+## 0.15.0
+Fri, 13 Mar 2026 00:56:54 GMT
+
+### Minor changes
+
+- Implements the Persona system foundation — proto definitions (#168), database schema + store (#170), and gRPC/WebSocket service handlers with spawn integration (#171). Personas are reusable agent templates containing system prompt, runtime/model config, tool config, and MCP server definitions.
+
+### Updates
+
+- No publishable changes
+- No API changes (merge commit false positive)
+- placeholder
+- No CLI changes — merge commit false positive
+- Merge commit false positive — no actual CLI changes
+- No API changes (merge commit false positive)
+- No publishable changes (merge commit false positive)
 
 ## 0.14.10
 Thu, 12 Mar 2026 17:36:37 GMT

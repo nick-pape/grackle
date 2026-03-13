@@ -75,41 +75,25 @@ sleep 30
 
 ### 4b: Fetch Review Threads
 
-Use the GraphQL API to fetch all review threads, filtering for unresolved ones with Copilot comments:
+Use the GraphQL API to fetch all review threads, filtering for unresolved ones with Copilot comments.
 
-```bash
-gh api graphql -f query='
-query($owner: String!, $repo: String!, $pr: Int!) {
-  repository(owner: $owner, name: $repo) {
-    pullRequest(number: $pr) {
-      reviewThreads(first: 100) {
-        nodes {
-          id
-          isResolved
-          isOutdated
-          path
-          line
-          startLine
-          comments(last: 1) {
-            nodes {
-              id
-              author { login }
-              body
-              createdAt
-            }
-          }
-        }
-      }
-    }
-  }
-}' -f owner="$OWNER" -f repo="$REPO" -F pr="$PR_NUMBER"
+**Important**: On Windows (MSYS2/Git Bash), `$` characters in `gh api graphql -f query='...'` are unreliably handled by the shell. Always use Node.js with `gh api -X POST /graphql --input -` to pipe the GraphQL query via stdin, avoiding all shell quoting issues:
+
+```javascript
+node -e "
+const {execSync} = require('child_process');
+const body = JSON.stringify({
+  query: 'query(\x24owner: String!, \x24repo: String!, \x24pr: Int!) { repository(owner: \x24owner, name: \x24repo) { pullRequest(number: \x24pr) { reviewThreads(first: 100) { nodes { id isResolved isOutdated path line startLine comments(last: 1) { nodes { id author { login } body createdAt } } } } } } }',
+  variables: {owner: '$OWNER', repo: '$REPO', pr: $PR_NUMBER}
+});
+console.log(execSync('gh api -X POST /graphql --input -', {input: body, encoding: 'utf-8'}));
+"
 ```
 
 ### 4c: Filter to Actionable Comments
 
 From the response, select threads where ALL of:
-- `isResolved` is `false`
-- `isOutdated` is `false`
+- `isResolved` is `false` (do NOT filter on `isOutdated` — outdated but unresolved threads still block the merge button)
 - The last comment (from the `comments(last: 1)` query) has `author.login` equal to `"copilot-pull-request-reviewer"`
 
 If no threads match, the loop may be done — skip to step 4f.
@@ -133,14 +117,16 @@ For each actionable Copilot thread:
    gh api "repos/$OWNER/$REPO/pulls/$PR_NUMBER/comments" --jq '.[] | select(.user.login == "Copilot") | {id, node_id, path, line, body}'
    ```
    To map a GraphQL thread to its REST comment ID, match the GraphQL comment's node ID (`comments.nodes[0].id`) to the `node_id` field in the REST output, then use that entry's numeric `id` as `COMMENT_ID`.
-5. **Resolve the thread** using the GraphQL mutation with the thread's GraphQL node ID:
-   ```bash
-   gh api graphql -f query='
-   mutation($threadId: ID!) {
-     resolveReviewThread(input: {threadId: $threadId}) {
-       thread { isResolved }
-     }
-   }' -f threadId=THREAD_NODE_ID
+5. **Resolve the thread** using the GraphQL mutation with the thread's GraphQL node ID. Use Node.js to avoid MSYS2 shell `$` escaping issues:
+   ```javascript
+   node -e "
+   const {execSync} = require('child_process');
+   const body = JSON.stringify({
+     query: 'mutation(\x24threadId: ID!) { resolveReviewThread(input: {threadId: \x24threadId}) { thread { isResolved } } }',
+     variables: {threadId: 'THREAD_NODE_ID'}
+   });
+   console.log(execSync('gh api -X POST /graphql --input -', {input: body, encoding: 'utf-8'}));
+   "
    ```
 
 ### 4e: Commit, Push, and Manually Test Fixes

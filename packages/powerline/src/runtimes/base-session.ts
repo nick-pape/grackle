@@ -31,6 +31,7 @@ export abstract class BaseAgentSession implements AgentSession {
   protected readonly worktreeBasePath?: string;
   protected readonly systemContext?: string;
   protected readonly mcpServers?: Record<string, unknown>;
+  protected readonly hooks?: Record<string, unknown>;
 
   /** Human-readable display name for system messages (e.g. "Claude Code", "Codex"). */
   protected abstract readonly runtimeDisplayName: string;
@@ -48,6 +49,7 @@ export abstract class BaseAgentSession implements AgentSession {
     worktreeBasePath?: string,
     systemContext?: string,
     mcpServers?: Record<string, unknown>,
+    hooks?: Record<string, unknown>,
   ) {
     this.id = id;
     this.prompt = prompt;
@@ -58,6 +60,7 @@ export abstract class BaseAgentSession implements AgentSession {
     this.worktreeBasePath = worktreeBasePath;
     this.systemContext = systemContext;
     this.mcpServers = mcpServers;
+    this.hooks = hooks;
     this.runtimeSessionId = resumeSessionId || "";
   }
 

@@ -9,11 +9,14 @@
 }
 
 .header {
-  @include section-label;
   padding: var(--space-xs) var(--space-md);
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+
+.headerLabel {
+  @include section-label;
 }
 
 .addButton {
@@ -21,6 +24,9 @@
   font-size: var(--font-size-sm);
   line-height: 1;
   padding: 1px 5px;
+  // Reset any inherited section-label typography so the button reads normally
+  text-transform: none;
+  letter-spacing: normal;
 }
 
 .emptyState {
@@ -148,6 +154,48 @@
 
 .sessionDot {
   font-size: 10px;
+}
+
+// --- Session accordion summary ---
+
+.sessionSummaryRow {
+  @include hover-lift;
+  padding: var(--space-xs) var(--space-md) var(--space-xs) 28px;
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  color: var(--text-tertiary);
+  border-radius: var(--radius-sm);
+  margin: 0 var(--space-xs);
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.sessionExpandArrow {
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+  width: 12px;
+  display: inline-block;
+  transition: transform var(--transition-fast);
+
+  &.expanded {
+    transform: rotate(90deg);
+  }
+}
+
+.sessionSummaryText {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sessionCountBadge {
+  @include glass-inset;
+  font-size: 10px;
+  color: var(--text-tertiary);
+  border-radius: var(--radius-full);
+  padding: 1px var(--space-xs);
 }
 
 @keyframes fadeIn {

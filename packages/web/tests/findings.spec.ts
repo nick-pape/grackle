@@ -139,7 +139,7 @@ test.describe("Findings", () => {
 
     // Switch to Stream tab
     await page.locator("button", { hasText: "Stream" }).click();
-    await expect(page.locator("button", { hasText: "Start Task" }).first()).toBeVisible();
+    await expect(page.locator("button", { hasText: "Start" }).first()).toBeVisible();
 
     // Switch back to Findings tab — finding should still be there
     await page.locator("button", { hasText: "Findings" }).click();

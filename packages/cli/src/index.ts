@@ -12,6 +12,7 @@ import { registerServeCommand } from "./commands/serve.js";
 import { registerProjectCommands } from "./commands/project.js";
 import { registerTaskCommands } from "./commands/task.js";
 import { registerFindingCommands } from "./commands/findings.js";
+import { registerPersonaCommands } from "./commands/persona.js";
 
 const esmRequire: NodeRequire = createRequire(import.meta.url);
 const { version } = esmRequire("../package.json") as { version: string };
@@ -31,12 +32,17 @@ registerServeCommand(program);
 registerProjectCommands(program);
 registerTaskCommands(program);
 registerFindingCommands(program);
+registerPersonaCommands(program);
 
 program.parseAsync(process.argv).catch((err: unknown) => {
   if (err instanceof ConnectError) {
-    console.error(chalk.red(`gRPC error [${Code[err.code]}]: ${err.rawMessage}`));
+    console.error(
+      chalk.red(`gRPC error [${Code[err.code]}]: ${err.rawMessage}`),
+    );
     if (err.code === Code.Unavailable) {
-      console.error("Is the Grackle server running? Start it with: grackle serve");
+      console.error(
+        "Is the Grackle server running? Start it with: grackle serve",
+      );
     }
   } else if (err instanceof Error) {
     console.error(chalk.red(err.message));

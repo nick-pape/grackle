@@ -129,7 +129,8 @@ Every push to a PR branch triggers both **CI** and a **GitHub Copilot code revie
 ### CI
 - CI runs `rush build` and `rush test` (Playwright e2e tests).
 - If CI fails, read the failed log with `gh run view <id> --log-failed`, fix the issue, and push again.
-- Common CI failures: chunk size warnings (add to `manualChunks` in `vite.config.ts`), Playwright strict mode violations (duplicate text from sidebar + new components).
+- Common CI failures: chunk size warnings (add to `manualChunks` in `vite.config.ts`), Playwright strict mode violations (duplicate text from sidebar + new components). If a UI change adds another dropdown, generic Playwright locators like `page.locator("select")` can start failing in strict mode; prefer a named/role-based locator or a `data-testid` for the specific selector under test.
+- **CI silently stops triggering** when the PR branch has a merge conflict with `main`. GitHub Actions will not create new workflow runs for the branch until the conflict is resolved. If pushes stop triggering CI, check for merge conflicts first (`git fetch origin && git merge origin/main`).
 
 ### Copilot Review
 - **Every push triggers a new Copilot review** — previous review comments may become outdated but new ones appear.
@@ -146,6 +147,7 @@ Every push to a PR branch triggers both **CI** and a **GitHub Copilot code revie
 - When opening a PR that includes **visual/UI changes**, take a Playwright screenshot of the affected area and include it in the PR description.
 - Use `mcp__playwright__browser_take_screenshot` (or Playwright's `page.screenshot()` in test code) to capture the screenshot.
 - Embed screenshots in the PR body as markdown images: `![description](url)`. Upload via `gh` or attach inline.
+- For the full CLI-driven capture and upload process, see `docs/pr-screenshot-workflow.md`.
 - This helps reviewers quickly see what changed without running the app locally.
 
 ### PR Completion Checklist

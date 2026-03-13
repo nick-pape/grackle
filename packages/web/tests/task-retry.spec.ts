@@ -18,7 +18,7 @@ test.describe("Task Retry (failed → in_progress)", () => {
     await patchWsForStubRuntime(page);
 
     // --- Start the task ---
-    await page.locator("button", { hasText: "Start Task" }).click();
+    await page.getByRole("button", { name: "Start", exact: true }).click();
 
     // Wait for stub to reach waiting_input
     const inputField = page.locator('input[placeholder="Type a message..."]');
@@ -26,25 +26,25 @@ test.describe("Task Retry (failed → in_progress)", () => {
 
     // --- Send "fail" to trigger stub failure ---
     await inputField.fill("fail");
-    await page.locator("button", { hasText: "Send" }).click();
+    await page.getByRole("button", { name: "Send", exact: true }).click();
 
     // --- Verify task is in failed state ---
     await expect(page.getByText("Task failed")).toBeVisible({ timeout: 15_000 });
-    await expect(page.locator("button", { hasText: "Retry" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Retry", exact: true })).toBeVisible();
 
     // --- Click Retry ---
-    await page.locator("button", { hasText: "Retry" }).click();
+    await page.getByRole("button", { name: "Retry", exact: true }).click();
 
     // --- Verify task restarts: stub runtime events appear again ---
     // The stub emits "Stub runtime initialized" on each start
-    await expect(page.locator("text=in_progress")).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('[data-testid="task-status"]')).toContainText(/in_progress|waiting_input/, { timeout: 15_000 });
 
     // Wait for waiting_input and send normal input to complete
     await expect(inputField).toBeVisible({ timeout: 15_000 });
     await inputField.fill("continue");
-    await page.locator("button", { hasText: "Send" }).click();
+    await page.getByRole("button", { name: "Send", exact: true }).click();
 
     // --- Verify task reaches review ---
-    await expect(page.locator("button", { hasText: "Approve" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("button", { name: "Approve", exact: true })).toBeVisible({ timeout: 15_000 });
   });
 });

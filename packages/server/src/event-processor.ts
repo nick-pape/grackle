@@ -173,8 +173,22 @@ export function processEventStream(
         if (event.type === "status") {
           if (event.content === "waiting_input") {
             sessionStore.updateSessionStatus(sessionId, "waiting_input");
+            if (taskId) {
+              const t = taskStore.getTask(taskId);
+              if (t && t.status === "in_progress") {
+                taskStore.updateTaskStatus(taskId, "waiting_input");
+                broadcast({ type: "task_updated", payload: { taskId, projectId } });
+              }
+            }
           } else if (event.content === "running") {
             sessionStore.updateSessionStatus(sessionId, "running");
+            if (taskId) {
+              const t = taskStore.getTask(taskId);
+              if (t && t.status === "waiting_input") {
+                taskStore.updateTaskStatus(taskId, "in_progress");
+                broadcast({ type: "task_updated", payload: { taskId, projectId } });
+              }
+            }
           } else if (event.content === "completed") {
             sessionStore.updateSession(sessionId, "completed");
           } else if (event.content === "failed") {

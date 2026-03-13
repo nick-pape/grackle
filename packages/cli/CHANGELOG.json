@@ -2,6 +2,153 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.18.1",
+      "tag": "@grackle-ai/cli_v0.18.1",
+      "date": "Fri, 13 Mar 2026 21:32:39 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Add the UpdateProject RPC and project detail view inline editing flow."
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.18.0",
+      "tag": "@grackle-ai/cli_v0.18.0",
+      "date": "Fri, 13 Mar 2026 18:20:02 GMT",
+      "comments": {
+        "none": [
+          {
+            "comment": "Add breadcrumbs"
+          }
+        ],
+        "minor": [
+          {
+            "comment": "Add --no-include-comments flag to import-github command"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.17.1",
+      "tag": "@grackle-ai/cli_v0.17.1",
+      "date": "Fri, 13 Mar 2026 17:07:19 GMT",
+      "comments": {
+        "none": [
+          {
+            "comment": "Address persona CLI UI gaps by adding missing tasks help and examples"
+          }
+        ],
+        "patch": [
+          {
+            "comment": "Add --depends-on flag to task update CLI command"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.17.0",
+      "tag": "@grackle-ai/cli_v0.17.0",
+      "date": "Fri, 13 Mar 2026 08:26:43 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Add waiting_input task status synced with session status"
+          }
+        ],
+        "none": [
+          {
+            "comment": "No CLI changes — false positive from Rush merge detection"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.16.0",
+      "tag": "@grackle-ai/cli_v0.16.0",
+      "date": "Fri, 13 Mar 2026 07:19:57 GMT",
+      "comments": {
+        "none": [
+          {
+            "comment": "none-bump change file for merge-commit false positive"
+          },
+          {
+            "comment": "No changes to CLI (false positive from merge commits)"
+          },
+          {
+            "comment": "No CLI changes — change file added to satisfy rush change --verify false positive from merge commits"
+          }
+        ],
+        "minor": [
+          {
+            "comment": "feat: add task_id to sessions, track session history per task, display attempt selector in UI"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.15.1",
+      "tag": "@grackle-ai/cli_v0.15.1",
+      "date": "Fri, 13 Mar 2026 05:32:15 GMT",
+      "comments": {
+        "none": [
+          {
+            "comment": "Persona CLI commands (`persona list/create/show/edit/delete`), `--persona` flag on `spawn`, `task create`, and `task start`"
+          },
+          {
+            "comment": "placeholder"
+          },
+          {
+            "comment": "No CLI changes — merge commit false positive"
+          },
+          {
+            "comment": "placeholder"
+          }
+        ],
+        "patch": [
+          {
+            "comment": "Kill active sessions before task deletion in WS and gRPC handlers"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.15.0",
+      "tag": "@grackle-ai/cli_v0.15.0",
+      "date": "Fri, 13 Mar 2026 00:56:54 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Implements the Persona system foundation — proto definitions (#168), database schema + store (#170), and gRPC/WebSocket service handlers with spawn integration (#171). Personas are reusable agent templates containing system prompt, runtime/model config, tool config, and MCP server definitions."
+          }
+        ],
+        "none": [
+          {
+            "comment": "No publishable changes"
+          },
+          {
+            "comment": "No API changes (merge commit false positive)"
+          },
+          {
+            "comment": "placeholder"
+          },
+          {
+            "comment": "No CLI changes — merge commit false positive"
+          },
+          {
+            "comment": "Merge commit false positive — no actual CLI changes"
+          },
+          {
+            "comment": "No API changes (merge commit false positive)"
+          },
+          {
+            "comment": "No publishable changes (merge commit false positive)"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.14.10",
       "tag": "@grackle-ai/cli_v0.14.10",
       "date": "Thu, 12 Mar 2026 17:36:37 GMT",

@@ -1,15 +1,16 @@
 import { test, expect } from "./fixtures.js";
+import { getNewChatRuntimeSelect } from "./helpers.js";
 
 test.describe("Kill Session", () => {
   test("kill during waiting_input", async ({ appPage }) => {
     const page = appPage;
 
-    // Stage2 sidebar defaults to "Projects" tab — switch to "Environments"
-    await page.locator("button", { hasText: "Environments" }).click();
+    // Environments are now in Settings — navigate there via the gear button
+    await page.locator('button[title="Settings"]').click();
 
     // Start a stub session
     await page.locator('button[title="New chat"]').click();
-    const runtimeSelect = page.locator("select");
+    const runtimeSelect = getNewChatRuntimeSelect(page);
     await runtimeSelect.selectOption("stub");
     const promptInput = page.locator('input[placeholder="Enter prompt..."]');
     await promptInput.fill("kill test");

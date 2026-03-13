@@ -1,10 +1,13 @@
 import type { ConnectRouter } from "@connectrpc/connect";
 import { create } from "@bufbuild/protobuf";
-import {
-  powerline,
-} from "@grackle-ai/common";
+import { powerline } from "@grackle-ai/common";
 import { getRuntime, listRuntimes } from "./runtime-registry.js";
-import { addSession, getSession, removeSession, listAllSessions } from "./session-mgr.js";
+import {
+  addSession,
+  getSession,
+  removeSession,
+  listAllSessions,
+} from "./session-mgr.js";
 import { writeTokens } from "./token-writer.js";
 import { removeWorktree } from "./worktree.js";
 import { findGitRepoPath } from "./runtimes/runtime-utils.js";
@@ -18,7 +21,10 @@ const execAsync: typeof execFile.__promisify__ = promisify(execFile);
 const startTime: number = Date.now();
 
 /** Stream events from an agent session as proto messages, cleaning up the session when done. */
-async function *streamSession(sessionId: string, session: AgentSession): AsyncGenerator<powerline.AgentEvent> {
+async function* streamSession(
+  sessionId: string,
+  session: AgentSession,
+): AsyncGenerator<powerline.AgentEvent> {
   addSession(session);
   try {
     for await (const event of session.stream()) {
@@ -70,6 +76,9 @@ export function registerPowerLineRoutes(router: ConnectRouter): void {
         systemContext: req.systemContext || undefined,
         projectId: req.projectId || undefined,
         taskId: req.taskId || undefined,
+        mcpServers: req.mcpServersJson
+          ? (JSON.parse(req.mcpServersJson) as Record<string, unknown>)
+          : undefined,
       });
 
       yield* streamSession(req.sessionId, session);
@@ -121,7 +130,7 @@ export function registerPowerLineRoutes(router: ConnectRouter): void {
             sessionId: s.id,
             runtime: s.runtimeName,
             status: s.status,
-          })
+          }),
         ),
       });
     },
@@ -163,8 +172,9 @@ export function registerPowerLineRoutes(router: ConnectRouter): void {
         let diffCwd = basePath;
         try {
           const { stdout: wtList } = await execAsync(
-            "git", ["worktree", "list", "--porcelain"],
-            { cwd: basePath }
+            "git",
+            ["worktree", "list", "--porcelain"],
+            { cwd: basePath },
           );
           for (const block of wtList.split("\n\n")) {
             if (block.includes(`branch refs/heads/${req.branch}`)) {
@@ -175,37 +185,44 @@ export function registerPowerLineRoutes(router: ConnectRouter): void {
               break;
             }
           }
-        } catch { /* fall back to basePath */ }
+        } catch {
+          /* fall back to basePath */
+        }
 
         // Include both committed AND uncommitted changes vs base branch.
         // First add all untracked files so they appear in the diff.
         try {
           await execAsync("git", ["add", "-N", "."], { cwd: diffCwd });
-        } catch { /* ignore */ }
+        } catch {
+          /* ignore */
+        }
 
         // Diff against the merge base (includes uncommitted working tree changes)
         const { stdout: mergeBase } = await execAsync(
-          "git", ["merge-base", baseBranch, "HEAD"],
-          { cwd: diffCwd }
+          "git",
+          ["merge-base", baseBranch, "HEAD"],
+          { cwd: diffCwd },
         );
         const base = mergeBase.trim();
 
-        const { stdout: diff } = await execAsync(
-          "git", ["diff", base],
-          { cwd: diffCwd, maxBuffer: 10 * 1024 * 1024 }
-        );
+        const { stdout: diff } = await execAsync("git", ["diff", base], {
+          cwd: diffCwd,
+          maxBuffer: 10 * 1024 * 1024,
+        });
 
         // Get changed files
         const { stdout: filesOut } = await execAsync(
-          "git", ["diff", "--name-only", base],
-          { cwd: diffCwd }
+          "git",
+          ["diff", "--name-only", base],
+          { cwd: diffCwd },
         );
         const changedFiles = filesOut.trim().split("\n").filter(Boolean);
 
         // Get stat
         const { stdout: statOut } = await execAsync(
-          "git", ["diff", "--stat", base],
-          { cwd: diffCwd }
+          "git",
+          ["diff", "--stat", base],
+          { cwd: diffCwd },
         );
         const statMatch = statOut.match(/(\d+) insertion.+?(\d+) deletion/);
         const additions = statMatch ? parseInt(statMatch[1], 10) : 0;
