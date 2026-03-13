@@ -1,6 +1,19 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Fri, 13 Mar 2026 05:32:15 GMT and should not be manually modified.
+This log was last generated on Fri, 13 Mar 2026 07:19:57 GMT and should not be manually modified.
+
+## 0.16.0
+Fri, 13 Mar 2026 07:19:57 GMT
+
+### Minor changes
+
+- feat: add task_id to sessions, track session history per task, display attempt selector in UI
+
+### Updates
+
+- none-bump change file for merge-commit false positive
+- No changes to CLI (false positive from merge commits)
+- No CLI changes — change file added to satisfy rush change --verify false positive from merge commits
 
 ## 0.15.1
 Fri, 13 Mar 2026 05:32:15 GMT

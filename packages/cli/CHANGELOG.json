@@ -2,6 +2,29 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.16.0",
+      "tag": "@grackle-ai/cli_v0.16.0",
+      "date": "Fri, 13 Mar 2026 07:19:57 GMT",
+      "comments": {
+        "none": [
+          {
+            "comment": "none-bump change file for merge-commit false positive"
+          },
+          {
+            "comment": "No changes to CLI (false positive from merge commits)"
+          },
+          {
+            "comment": "No CLI changes — change file added to satisfy rush change --verify false positive from merge commits"
+          }
+        ],
+        "minor": [
+          {
+            "comment": "feat: add task_id to sessions, track session history per task, display attempt selector in UI"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.15.1",
       "tag": "@grackle-ai/cli_v0.15.1",
       "date": "Fri, 13 Mar 2026 05:32:15 GMT",
