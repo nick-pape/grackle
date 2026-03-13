@@ -39,7 +39,7 @@ export function buildTaskSystemContext(title: string, description: string, revie
     ``,
     `11. **Check for merge conflicts**: Verify the PR has no merge conflicts. If it does, fetch and merge the main branch, resolve conflicts, rebuild, commit, and push.`,
     `12. **Wait for CI**: Wait for all CI checks to complete. If any check fails, read the logs, fix the issue, commit, push, and repeat.`,
-    `13. **Address code review comments**: Check for automated review comments (e.g., from Copilot or other review bots). For each unresolved comment: read the suggestion, fix the code or dismiss with an explanation, reply to the comment, and resolve the thread. After fixing, commit, push, and check again. Repeat until all review threads are resolved.`,
+    `13. **Address code review comments**: Check for automated code review comments. For each unresolved comment: read the suggestion, fix the code or dismiss with an explanation, reply to the comment, and resolve the thread. After fixing, commit, push, and check again. Repeat until all review threads are resolved.`,
     `14. **Post finding**: Use mcp__grackle__post_finding to summarize what you did and any key decisions.`,
     ``,
     `IMPORTANT: The PR is the deliverable, but a PR with failing CI or unresolved review comments is NOT done. You MUST complete Phase 3. Do NOT go to "waiting for input" until CI is green AND all review threads are resolved.`,

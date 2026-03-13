@@ -2,7 +2,6 @@ import type { AgentEvent, AgentSession } from "./runtime.js";
 import { BaseAgentSession } from "./base-session.js";
 import { BaseAgentRuntime } from "./base-runtime.js";
 import { resolveWorkingDirectory, resolveMcpServers, buildFindingEvent, buildSubtaskCreateEvent } from "./runtime-utils.js";
-import { buildPrReadinessHook } from "./pr-readiness-hook.js";
 
 // Dynamic import — try @anthropic-ai/claude-agent-sdk first, then @anthropic-ai/claude-code
 type QueryFn = (opts: Record<string, unknown>) => Promise<unknown>;
@@ -98,31 +97,6 @@ const BUILTIN_TOOLS: string[] = [
   "WebSearch", "WebFetch", "Task", "NotebookEdit",
 ];
 
-/**
- * Deep-merge two hook objects by concatenating arrays for each event key.
- * This ensures that built-in hooks (like PR readiness) are not overridden
- * by caller-provided hooks — both sets run for the same event.
- */
-function mergeHooks(
-  base: Record<string, unknown>,
-  override?: Record<string, unknown>,
-): Record<string, unknown> {
-  if (!override) {
-    return base;
-  }
-  const merged: Record<string, unknown> = { ...base };
-  for (const key of Object.keys(override)) {
-    const baseVal = merged[key];
-    const overVal = override[key];
-    if (Array.isArray(baseVal) && Array.isArray(overVal)) {
-      merged[key] = [...baseVal, ...overVal];
-    } else {
-      merged[key] = overVal;
-    }
-  }
-  return merged;
-}
-
 /** Agent session backed by the Claude Agent SDK (`@anthropic-ai/claude-agent-sdk`). */
 class ClaudeCodeSession extends BaseAgentSession {
   public runtimeName: string = "claude-code";
@@ -181,13 +155,12 @@ class ClaudeCodeSession extends BaseAgentSession {
       sdkOptions.maxTurns = this.maxTurns;
     }
 
-    // Build PR readiness Stop hook and deep-merge with any custom hooks.
-    // The Stop hook blocks agents from stopping if the current branch has a
-    // PR with merge conflicts, failing CI, or unresolved Copilot threads.
-    // We merge hook arrays per-event (e.g. Stop) so custom hooks extend rather
-    // than replace the PR readiness hook.
-    const prHook = buildPrReadinessHook(cwd as string | undefined);
-    sdkOptions.hooks = mergeHooks(prHook, this.hooks);
+    // Pass through caller-provided hooks (e.g. Stop hooks for PR readiness).
+    // Consumers supply their own hooks via SpawnOptions; the runtime does not
+    // bundle any platform-specific hook implementations.
+    if (this.hooks) {
+      sdkOptions.hooks = this.hooks;
+    }
 
     this.cachedSdkOptions = sdkOptions;
   }
