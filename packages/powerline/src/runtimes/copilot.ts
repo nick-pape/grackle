@@ -443,6 +443,7 @@ export class CopilotRuntime extends BaseAgentRuntime {
     worktreeBasePath?: string,
     systemContext?: string,
     mcpServers?: Record<string, unknown>,
+    _hooks?: Record<string, unknown>,
   ): AgentSession {
     return new CopilotSession(id, prompt, model, maxTurns, resumeSessionId, branch, worktreeBasePath, systemContext, mcpServers);
   }

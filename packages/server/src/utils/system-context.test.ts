@@ -41,9 +41,27 @@ describe("buildTaskSystemContext", () => {
     expect(result).not.toContain("mcp__grackle__create_subtask");
   });
 
-  it("always includes the completion checklist", () => {
+  it("always includes the completion checklist with all three phases", () => {
     const result = buildTaskSystemContext("Task", "desc", "", true);
     expect(result).toContain("## Completion Checklist");
-    expect(result).toContain("IMPORTANT: Do NOT stop at");
+    expect(result).toContain("### Phase 1: Implement & Test");
+    expect(result).toContain("### Phase 2: Create PR");
+    expect(result).toContain("### Phase 3: PR Readiness");
+    expect(result).toContain("IMPORTANT: The PR is the deliverable");
+  });
+
+  it("includes CI and Copilot review instructions in Phase 3", () => {
+    const result = buildTaskSystemContext("Task", "desc", "");
+    expect(result).toContain("Wait for CI");
+    expect(result).toContain("Address Copilot review");
+    expect(result).toContain("copilot-pull-request-reviewer");
+    expect(result).toContain("resolveReviewThread");
+  });
+
+  it("includes merge conflict check in Phase 3", () => {
+    const result = buildTaskSystemContext("Task", "desc", "");
+    expect(result).toContain("Check for merge conflicts");
+    expect(result).toContain("CONFLICTING");
+    expect(result).toContain("NEVER rebase");
   });
 });
