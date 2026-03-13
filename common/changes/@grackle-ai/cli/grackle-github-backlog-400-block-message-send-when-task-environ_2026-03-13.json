@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Block message send when task environment is disconnected; add inline Reconnect button",
+      "type": "minor",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "noreply@anthropic.com"
+}
