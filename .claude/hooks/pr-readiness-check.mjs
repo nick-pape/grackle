@@ -192,5 +192,6 @@ function main() {
 try {
   main();
 } catch (error) {
-  block(`PR readiness check failed unexpectedly: ${error.message}. Fix the issue and retry.`);
+  const message = error instanceof Error ? error.message : String(error);
+  block(`PR readiness check failed unexpectedly: ${message}. Fix the issue and retry.`);
 }
