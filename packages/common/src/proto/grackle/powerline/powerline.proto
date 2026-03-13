@@ -23,16 +23,17 @@ message Pong {
 }
 
 message SpawnRequest {
-  string session_id = 1;        // Server-assigned session ID
-  string runtime = 2;           // "claude-code" | "stub" | ...
+  string session_id = 1; // Server-assigned session ID
+  string runtime = 2; // "claude-code" | "stub" | ...
   string prompt = 3;
   string model = 4;
   int32 max_turns = 5;
-  string branch = 6;              // Branch for worktree (empty = skip)
-  string worktree_base_path = 7;  // Repo root, e.g. "/workspace"
-  string system_context = 8;      // Prepended to prompt (task desc + findings)
-  string project_id = 9;          // So MCP server knows which project
-  string task_id = 10;            // So MCP server knows which task
+  string branch = 6; // Branch for worktree (empty = skip)
+  string worktree_base_path = 7; // Repo root, e.g. "/workspace"
+  string system_context = 8; // Prepended to prompt (task desc + findings)
+  string project_id = 9; // So MCP server knows which project
+  string task_id = 10; // So MCP server knows which task
+  string mcp_servers_json = 11; // JSON-encoded MCP server configs from persona
 }
 
 message ResumeRequest {
@@ -51,7 +52,7 @@ message AgentEvent {
   string type = 2;
   string timestamp = 3;
   string content = 4;
-  string raw = 5;                // JSON, optional
+  string raw = 5; // JSON, optional
 }
 
 message SessionInfo {

@@ -86,7 +86,9 @@ export function initDatabase(): void {
       updated_at    TEXT NOT NULL DEFAULT (datetime('now')),
       sort_order    INTEGER NOT NULL DEFAULT 0,
       parent_task_id TEXT NOT NULL DEFAULT '',
-      depth         INTEGER NOT NULL DEFAULT 0
+      depth         INTEGER NOT NULL DEFAULT 0,
+      can_decompose INTEGER NOT NULL DEFAULT 0,
+      persona_id    TEXT NOT NULL DEFAULT ''
     );
 
     CREATE TABLE IF NOT EXISTS findings (
@@ -101,18 +103,40 @@ export function initDatabase(): void {
       created_at    TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
+    CREATE TABLE IF NOT EXISTS personas (
+      id            TEXT PRIMARY KEY,
+      name          TEXT NOT NULL UNIQUE,
+      description   TEXT NOT NULL DEFAULT '',
+      system_prompt TEXT NOT NULL,
+      tool_config   TEXT NOT NULL DEFAULT '{}',
+      runtime       TEXT NOT NULL DEFAULT '',
+      model         TEXT NOT NULL DEFAULT '',
+      max_turns     INTEGER NOT NULL DEFAULT 0,
+      mcp_servers   TEXT NOT NULL DEFAULT '[]',
+      created_at    TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at    TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
     CREATE INDEX IF NOT EXISTS idx_findings_project ON findings(project_id);
   `);
 
   // Migration: add powerline_token column if missing (older databases)
   try {
-    sqlite.exec("ALTER TABLE environments ADD COLUMN powerline_token TEXT NOT NULL DEFAULT ''");
-  } catch { /* column already exists */ }
+    sqlite.exec(
+      "ALTER TABLE environments ADD COLUMN powerline_token TEXT NOT NULL DEFAULT ''",
+    );
+  } catch {
+    /* column already exists */
+  }
 
   // Migration: rename sidecar_token → powerline_token (from older databases)
   try {
-    sqlite.exec("ALTER TABLE environments RENAME COLUMN sidecar_token TO powerline_token");
-  } catch { /* column already renamed or doesn't exist */ }
+    sqlite.exec(
+      "ALTER TABLE environments RENAME COLUMN sidecar_token TO powerline_token",
+    );
+  } catch {
+    /* column already renamed or doesn't exist */
+  }
 
   // Migration: backfill NULLs in stage-2 tables from older schemas that lacked NOT NULL
   sqlite.exec(`
@@ -143,15 +167,25 @@ export function initDatabase(): void {
 
   // Migration: add parent_task_id and depth columns if missing (older databases)
   try {
-    sqlite.exec("ALTER TABLE tasks ADD COLUMN parent_task_id TEXT NOT NULL DEFAULT ''");
-  } catch { /* column already exists */ }
+    sqlite.exec(
+      "ALTER TABLE tasks ADD COLUMN parent_task_id TEXT NOT NULL DEFAULT ''",
+    );
+  } catch {
+    /* column already exists */
+  }
   try {
-    sqlite.exec("ALTER TABLE tasks ADD COLUMN depth INTEGER NOT NULL DEFAULT 0");
-  } catch { /* column already exists */ }
+    sqlite.exec(
+      "ALTER TABLE tasks ADD COLUMN depth INTEGER NOT NULL DEFAULT 0",
+    );
+  } catch {
+    /* column already exists */
+  }
 
   // Migration: add can_decompose column if missing (older databases)
   try {
-    sqlite.exec("ALTER TABLE tasks ADD COLUMN can_decompose INTEGER NOT NULL DEFAULT 0");
+    sqlite.exec(
+      "ALTER TABLE tasks ADD COLUMN can_decompose INTEGER NOT NULL DEFAULT 0",
+    );
 
     // Backfill: mark root tasks and tasks with existing children as decomposable
     sqlite.exec(`
@@ -164,7 +198,18 @@ export function initDatabase(): void {
           WHERE parent_task_id IS NOT NULL AND parent_task_id <> ''
         )
     `);
-  } catch { /* column already exists */ }
+  } catch {
+    /* column already exists */
+  }
+
+  // Migration: add persona_id column to tasks if missing
+  try {
+    sqlite.exec(
+      "ALTER TABLE tasks ADD COLUMN persona_id TEXT NOT NULL DEFAULT ''",
+    );
+  } catch {
+    /* column already exists */
+  }
 }
 
 // Run init immediately for backwards compatibility — stores import db at module load
@@ -172,6 +217,8 @@ initDatabase();
 
 /** Drizzle ORM instance wrapping the SQLite database. */
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
-const db: BetterSQLite3Database<typeof schema> & { $client: InstanceType<typeof Database> } = drizzle(sqlite, { schema });
+const db: BetterSQLite3Database<typeof schema> & {
+  $client: InstanceType<typeof Database>;
+} = drizzle(sqlite, { schema });
 
 export default db;

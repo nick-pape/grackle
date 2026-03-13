@@ -19,6 +19,7 @@ export function createTask(
   projectSlug: string,
   parentTaskId: string = "",
   canDecompose?: boolean,
+  personaId: string = "",
 ): void {
   let depth = 0;
   let branch: string;
@@ -29,7 +30,9 @@ export function createTask(
       throw new Error(`Parent task not found: ${parentTaskId}`);
     }
     if (!parent.canDecompose) {
-      throw new Error(`Parent task "${parent.title}" (${parentTaskId}) does not have decomposition rights`);
+      throw new Error(
+        `Parent task "${parent.title}" (${parentTaskId}) does not have decomposition rights`,
+      );
     }
     depth = parent.depth + 1;
     if (depth > MAX_TASK_DEPTH) {
@@ -44,24 +47,28 @@ export function createTask(
   const resolvedCanDecompose = canDecompose ?? !parentTaskId;
 
   const depsJson = JSON.stringify(dependsOn);
-  const maxRow = db.select({ maxOrder: sql<number>`max(sort_order)` })
+  const maxRow = db
+    .select({ maxOrder: sql<number>`max(sort_order)` })
     .from(tasks)
     .where(eq(tasks.projectId, projectId))
     .get();
   const sortOrder = (maxRow?.maxOrder ?? -1) + 1;
-  db.insert(tasks).values({
-    id,
-    projectId,
-    title,
-    description,
-    branch,
-    environmentId,
-    dependsOn: depsJson,
-    sortOrder,
-    parentTaskId,
-    depth,
-    canDecompose: resolvedCanDecompose,
-  }).run();
+  db.insert(tasks)
+    .values({
+      id,
+      projectId,
+      title,
+      description,
+      branch,
+      environmentId,
+      dependsOn: depsJson,
+      sortOrder,
+      parentTaskId,
+      depth,
+      canDecompose: resolvedCanDecompose,
+      personaId,
+    })
+    .run();
 }
 
 /** Retrieve a single task by ID. */
@@ -71,7 +78,9 @@ export function getTask(id: string): TaskRow | undefined {
 
 /** Return all tasks for a project, ordered by sort_order then created_at. */
 export function listTasks(projectId: string): TaskRow[] {
-  return db.select().from(tasks)
+  return db
+    .select()
+    .from(tasks)
     .where(eq(tasks.projectId, projectId))
     .orderBy(asc(tasks.sortOrder), asc(tasks.createdAt))
     .all();
@@ -87,49 +96,67 @@ export function updateTask(
   dependsOn: string[],
   reviewNotes: string,
 ): void {
-  db.update(tasks).set({
-    title,
-    description,
-    status,
-    environmentId,
-    dependsOn: JSON.stringify(dependsOn),
-    reviewNotes,
-    updatedAt: sql`datetime('now')`,
-  }).where(eq(tasks.id, id)).run();
+  db.update(tasks)
+    .set({
+      title,
+      description,
+      status,
+      environmentId,
+      dependsOn: JSON.stringify(dependsOn),
+      reviewNotes,
+      updatedAt: sql`datetime('now')`,
+    })
+    .where(eq(tasks.id, id))
+    .run();
 }
 
 /** Update only the task status. */
 export function updateTaskStatus(id: string, status: TaskStatus): void {
-  db.update(tasks).set({
-    status,
-    updatedAt: sql`datetime('now')`,
-  }).where(eq(tasks.id, id)).run();
+  db.update(tasks)
+    .set({
+      status,
+      updatedAt: sql`datetime('now')`,
+    })
+    .where(eq(tasks.id, id))
+    .run();
 }
 
 /** Set the session ID for a task. */
 export function setTaskSession(id: string, sessionId: string): void {
-  db.update(tasks).set({
-    sessionId,
-    updatedAt: sql`datetime('now')`,
-  }).where(eq(tasks.id, id)).run();
+  db.update(tasks)
+    .set({
+      sessionId,
+      updatedAt: sql`datetime('now')`,
+    })
+    .where(eq(tasks.id, id))
+    .run();
 }
 
 /** Mark a task as in_progress with a started_at timestamp. */
 export function markTaskStarted(id: string): void {
-  db.update(tasks).set({
-    status: "in_progress",
-    startedAt: sql`datetime('now')`,
-    updatedAt: sql`datetime('now')`,
-  }).where(eq(tasks.id, id)).run();
+  db.update(tasks)
+    .set({
+      status: "in_progress",
+      startedAt: sql`datetime('now')`,
+      updatedAt: sql`datetime('now')`,
+    })
+    .where(eq(tasks.id, id))
+    .run();
 }
 
 /** Mark a task as completed (review, done, or failed) with a completed_at timestamp. */
-export function markTaskCompleted(id: string, status: "review" | "done" | "failed"): void {
-  db.update(tasks).set({
-    status,
-    completedAt: sql`datetime('now')`,
-    updatedAt: sql`datetime('now')`,
-  }).where(eq(tasks.id, id)).run();
+export function markTaskCompleted(
+  id: string,
+  status: "review" | "done" | "failed",
+): void {
+  db.update(tasks)
+    .set({
+      status,
+      completedAt: sql`datetime('now')`,
+      updatedAt: sql`datetime('now')`,
+    })
+    .where(eq(tasks.id, id))
+    .run();
 }
 
 /** Delete a task by ID. */
@@ -196,7 +223,9 @@ export function buildChildIdsMap(rows: TaskRow[]): Map<string, string[]> {
 
 /** Get direct children of a task, ordered by sort_order. */
 export function getChildren(taskId: string): TaskRow[] {
-  return db.select().from(tasks)
+  return db
+    .select()
+    .from(tasks)
     .where(eq(tasks.parentTaskId, taskId))
     .orderBy(asc(tasks.sortOrder), asc(tasks.createdAt))
     .all();
@@ -210,7 +239,7 @@ export function getDescendants(taskId: string): TaskRow[] {
   }
   const allRows = listTasks(task.projectId);
   const childIdsMap = buildChildIdsMap(allRows);
-  const rowById = new Map<string, TaskRow>(allRows.map(r => [r.id, r]));
+  const rowById = new Map<string, TaskRow>(allRows.map((r) => [r.id, r]));
 
   const result: TaskRow[] = [];
   const queue: string[] = [taskId];

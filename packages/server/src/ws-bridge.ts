@@ -12,6 +12,7 @@ import * as tokenBroker from "./token-broker.js";
 import * as projectStore from "./project-store.js";
 import * as taskStore from "./task-store.js";
 import * as findingStore from "./finding-store.js";
+import * as personaStore from "./persona-store.js";
 import { v4 as uuid } from "uuid";
 import { join } from "node:path";
 import {
@@ -26,6 +27,7 @@ import { buildTaskSystemContext } from "./utils/system-context.js";
 import { slugify } from "./utils/slugify.js";
 import { processEventStream } from "./event-processor.js";
 import { broadcast, setWssInstance } from "./ws-broadcast.js";
+import { buildMcpServersJson } from "./grpc-service.js";
 import { exec } from "./utils/exec.js";
 
 const GH_CODESPACE_LIST_TIMEOUT_MS: number = 30_000;
@@ -195,7 +197,7 @@ async function autoProvisionEnvironment(
 async function startTaskSession(
   ws: WebSocket,
   task: taskStore.TaskRow,
-  options?: { runtime?: string; model?: string },
+  options?: { runtime?: string; model?: string; personaId?: string },
 ): Promise<string | undefined> {
   const project = projectStore.getProject(task.projectId);
   if (!project) {
@@ -210,23 +212,31 @@ async function startTaskSession(
     return `Environment not found: ${environmentId}`;
   }
 
-  // autoProvisionEnvironment already sends a detailed WS error on failure,
-  // so we return undefined to avoid duplicate error messages to the client.
   const conn = await autoProvisionEnvironment(ws, environmentId, env, { taskId: task.id });
   if (!conn) {
     return undefined;
   }
 
+  // Resolve persona
+  const resolvedPersonaId = options?.personaId || task.personaId;
+  const persona = resolvedPersonaId ? personaStore.getPersona(resolvedPersonaId) : undefined;
+  if (resolvedPersonaId && !persona) {
+    return `Persona not found: ${resolvedPersonaId}`;
+  }
+
   const sessionId = uuid();
-  const runtime = options?.runtime || env.defaultRuntime || DEFAULT_RUNTIME;
-  const model = options?.model || process.env.GRACKLE_DEFAULT_MODEL || DEFAULT_MODEL;
+  const runtime = options?.runtime || persona?.runtime || env.defaultRuntime || DEFAULT_RUNTIME;
+  const model = options?.model || persona?.model || process.env.GRACKLE_DEFAULT_MODEL || DEFAULT_MODEL;
+  const maxTurns = persona?.maxTurns || 0;
   const logPath = join(grackleHome, LOGS_DIR, sessionId);
 
-  // Re-read task to get latest reviewNotes (important for reject→retry flow)
   const freshTask = taskStore.getTask(task.id) || task;
-  const systemContext = buildTaskSystemContext(
+  let systemContext = buildTaskSystemContext(
     freshTask.title, freshTask.description, freshTask.reviewNotes, freshTask.canDecompose,
   );
+  if (persona) {
+    systemContext = persona.systemPrompt + "\n\n" + systemContext;
+  }
 
   sessionStore.createSession(sessionId, environmentId, runtime, freshTask.title, model, logPath);
   taskStore.setTaskSession(freshTask.id, sessionId);
@@ -234,17 +244,33 @@ async function startTaskSession(
 
   broadcast({ type: "task_started", payload: { taskId: freshTask.id, sessionId, projectId: freshTask.projectId } });
 
+  let mcpServersJson = "";
+  if (persona) {
+    try {
+      const parsed: unknown = JSON.parse(persona.mcpServers || "[]");
+      if (Array.isArray(parsed)) {
+        const mcpServers = parsed as { name: string; command: string; args?: string[]; tools?: string[] }[];
+        if (mcpServers.length > 0) {
+          mcpServersJson = buildMcpServersJson(mcpServers);
+        }
+      }
+    } catch {
+      logger.warn("Failed to parse persona.mcpServers JSON; ignoring");
+    }
+  }
+
   const powerlineReq = create(powerline.SpawnRequestSchema, {
     sessionId,
     runtime,
     prompt: freshTask.title,
     model,
-    maxTurns: 0,
+    maxTurns,
     branch: freshTask.branch,
     worktreeBasePath: freshTask.branch ? (process.env.GRACKLE_WORKTREE_BASE || "/workspace") : "",
     systemContext,
     projectId: freshTask.projectId,
     taskId: freshTask.id,
+    mcpServersJson,
   });
 
   processEventStream(conn.client.spawn(powerlineReq), {
@@ -600,6 +626,7 @@ async function handleMessage(
             depth: r.depth,
             childTaskIds: childIdsMap.get(r.id) ?? [],
             canDecompose: r.canDecompose,
+            personaId: r.personaId,
           })),
         },
       });
@@ -631,6 +658,7 @@ async function handleMessage(
         slugify(project.name),
         parentTaskId,
         canDecompose,
+        (msg.payload?.personaId as string) || "",
       );
       const row = taskStore.getTask(id);
       broadcast({ type: "task_created", payload: { task: row ? { ...row, dependsOn: safeParseJsonArray(row.dependsOn) } : null } });
@@ -658,6 +686,7 @@ async function handleMessage(
       const startError = await startTaskSession(ws, task, {
         runtime: msg.payload?.runtime as string | undefined,
         model: msg.payload?.model as string | undefined,
+        personaId: (msg.payload?.personaId as string) || task.personaId || undefined,
       });
       if (startError) {
         sendWs(ws, { type: "error", payload: { message: startError } });
