@@ -1,0 +1,10 @@
+{
+  "changes": [
+    {
+      "packageName": "@grackle-ai/cli",
+      "comment": "Address persona CLI UI gaps by adding missing tasks help and examples",
+      "type": "none"
+    }
+  ],
+  "packageName": "@grackle-ai/cli"
+}
