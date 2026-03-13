@@ -134,8 +134,12 @@ function TaskTreeNode({
         {node.personaId && (() => {
           const persona = personas.find((p) => p.id === node.personaId);
           return persona ? (
-            <span className={styles.dependencyBadge} title={`Persona: ${persona.name}`}>
-              {persona.name.slice(0, 12)}
+            <span
+              className={styles.dependencyBadge}
+              title={`Persona: ${persona.name}`}
+              style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "8rem" }}
+            >
+              {persona.name}
             </span>
           ) : null;
         })()}
