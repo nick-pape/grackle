@@ -307,10 +307,11 @@ message QueryFindingsRequest {
 
 message ImportGitHubIssuesRequest {
   string project_id = 1;
-  string repo = 2;                    // "owner/repo"
-  optional string label = 3;          // label filter (omit for all)
-  IssueState state = 4;               // OPEN or CLOSED
-  optional string environment_id = 5; // env to assign (omit for project default)
+  string repo = 2;                          // "owner/repo"
+  optional string label = 3;               // label filter (omit for all)
+  IssueState state = 4;                     // OPEN or CLOSED
+  optional string environment_id = 5;      // env to assign (omit for project default)
+  optional bool include_comments = 6;      // when false, skip issue comments (default: true)
 }
 
 message ImportGitHubIssuesResponse {
