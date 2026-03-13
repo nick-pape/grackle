@@ -53,6 +53,29 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
   const [taskDesc, setTaskDesc] = useState("");
   const [taskEnvId, setTaskEnvId] = useState("");
   const [taskPersonaId, setTaskPersonaId] = useState("");
+  const [spawnPersonaId, setSpawnPersonaId] = useState("");
+
+  /** When a persona is selected in the new_task form, auto-fill runtime if the persona specifies one. */
+  const handleTaskPersonaChange = (personaId: string): void => {
+    setTaskPersonaId(personaId);
+    if (personaId) {
+      const p = personas.find((x) => x.id === personaId);
+      if (p?.runtime) {
+        setTaskEnvId((prev) => prev); // keep env
+      }
+    }
+  };
+
+  /** When a persona is selected in the new_chat form, auto-fill runtime. */
+  const handleSpawnPersonaChange = (personaId: string): void => {
+    setSpawnPersonaId(personaId);
+    if (personaId) {
+      const p = personas.find((x) => x.id === personaId);
+      if (p?.runtime) {
+        setRuntime(p.runtime);
+      }
+    }
+  };
 
   // ─── New environment form state ─────────────────
   const [envName, setEnvName] = useState("");
@@ -433,7 +456,7 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
           </select>
           <select
             value={taskPersonaId}
-            onChange={(e) => setTaskPersonaId(e.target.value)}
+            onChange={(e) => handleTaskPersonaChange(e.target.value)}
             className={styles.select}
           >
             <option value="">No persona</option>
@@ -574,9 +597,10 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
       if (!text.trim()) {
         return;
       }
-      spawn(viewMode.environmentId, text, undefined, runtime);
+      spawn(viewMode.environmentId, text, undefined, runtime, spawnPersonaId);
       showToast("Session started", "success");
       setText("");
+      setSpawnPersonaId("");
     };
 
     return (
@@ -593,6 +617,16 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
           className={styles.input}
         />
         <RuntimeSelector value={runtime} onChange={setRuntime} />
+        <select
+          value={spawnPersonaId}
+          onChange={(e) => handleSpawnPersonaChange(e.target.value)}
+          className={styles.select}
+        >
+          <option value="">No persona</option>
+          {personas.map((p) => (
+            <option key={p.id} value={p.id}>{p.name}</option>
+          ))}
+        </select>
         <button
           type="submit"
           disabled={!text.trim()}

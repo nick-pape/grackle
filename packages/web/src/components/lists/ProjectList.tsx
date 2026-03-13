@@ -78,6 +78,7 @@ function TaskTreeNode({
   projectId,
   taskStatusById,
 }: TaskTreeNodeProps): JSX.Element {
+  const { personas } = useGrackle();
   const statusStyle = TASK_STATUS_STYLES[node.status] || TASK_STATUS_STYLES.pending;
   const isBlocked = node.dependsOn.length > 0 &&
     node.dependsOn.some((depId) => taskStatusById.get(depId) !== "done");
@@ -130,6 +131,14 @@ function TaskTreeNode({
             {isBlocked ? "blocked" : "dep"}
           </span>
         )}
+        {node.personaId && (() => {
+          const persona = personas.find((p) => p.id === node.personaId);
+          return persona ? (
+            <span className={styles.dependencyBadge} title={`Persona: ${persona.name}`}>
+              {persona.name.slice(0, 12)}
+            </span>
+          ) : null;
+        })()}
         {depth < MAX_TASK_DEPTH && (
           <button
             onClick={(e) => {
