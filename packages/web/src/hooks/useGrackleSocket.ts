@@ -646,7 +646,6 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
               }, PROVISION_STATUS_CLEAR_DELAY_MS);
             }
             // Server broadcasts the environment list via broadcastEnvironments() on terminal stages
-            }
             break;
           }
           case "environment_added":
