@@ -83,7 +83,7 @@ Compare the mock data entities against the current proto definitions and UI comp
 - Mock data should look like a **realistic demo** — use descriptive project names, varied task statuses, and enough items to show the UI's capabilities without overwhelming it
 - Ensure data relationships are consistent (e.g., a task's `environmentId` references an environment that exists in the mock data)
 - Add enough variety to showcase each feature: multiple statuses, different adapter types, various persona configurations, etc.
-- Import types from `@grackle-ai/common` — don't use raw strings for enums or status values
+- Use the same type conventions as the existing mock data — the web app models statuses as plain strings, so match that style rather than importing proto enums
 
 ## Step 4: Build & Launch App
 

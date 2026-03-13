@@ -14,6 +14,7 @@ import type {
   TaskData,
   FindingData,
   TokenInfo,
+  PersonaData,
 } from "../hooks/useGrackleSocket.js";
 
 // ─── Environments ───────────────────────────────────
@@ -59,6 +60,16 @@ export const MOCK_ENVIRONMENTS: Environment[] = [
 /** Sample sessions spanning active, completed, and failed states. */
 export const MOCK_SESSIONS: Session[] = [
   {
+    id: "sess-001-prev",
+    environmentId: "env-local-01",
+    runtime: "claude-code",
+    status: "failed",
+    prompt: "Implement auth middleware",
+    startedAt: "2026-02-26T14:00:00Z",
+    endedAt: "2026-02-26T15:12:00Z",
+    error: "Context window exceeded before completing implementation",
+  },
+  {
     id: "sess-001",
     environmentId: "env-local-01",
     runtime: "node",
@@ -96,6 +107,24 @@ export const MOCK_SESSIONS: Session[] = [
 
 /** Sample events for the first running session to populate the event stream. */
 export const MOCK_EVENTS: SessionEvent[] = [
+  {
+    sessionId: "sess-001-prev",
+    eventType: "status",
+    timestamp: "2026-02-26T14:00:01Z",
+    content: "running",
+  },
+  {
+    sessionId: "sess-001-prev",
+    eventType: "output",
+    timestamp: "2026-02-26T14:00:05Z",
+    content: "Reading src/middleware/auth.ts to understand the current authentication flow...",
+  },
+  {
+    sessionId: "sess-001-prev",
+    eventType: "error",
+    timestamp: "2026-02-26T15:12:00Z",
+    content: "Context window exceeded before completing implementation",
+  },
   {
     sessionId: "sess-001",
     eventType: "status",
@@ -222,7 +251,7 @@ export const MOCK_TASKS: TaskData[] = [
     depth: 0,
     childTaskIds: ["task-001a", "task-001b", "task-001c"],
     canDecompose: true,
-    personaId: "",
+    personaId: "persona-arch",
   },
   // ── Children of task-001 ───────────────────────────
   {
@@ -261,7 +290,7 @@ export const MOCK_TASKS: TaskData[] = [
     depth: 1,
     childTaskIds: [],
     canDecompose: false,
-    personaId: "",
+    personaId: "persona-fe",
   },
   {
     id: "task-001c",
@@ -280,7 +309,7 @@ export const MOCK_TASKS: TaskData[] = [
     depth: 1,
     childTaskIds: [],
     canDecompose: false,
-    personaId: "",
+    personaId: "persona-tester",
   },
   // ── Remaining root tasks for proj-alpha ────────────
   {
@@ -319,7 +348,7 @@ export const MOCK_TASKS: TaskData[] = [
     depth: 0,
     childTaskIds: [],
     canDecompose: false,
-    personaId: "",
+    personaId: "persona-fe",
   },
   {
     id: "task-004",
@@ -652,6 +681,98 @@ export const MOCK_TOKENS: TokenInfo[] = [
     expiresAt: "",
   },
 ];
+
+// ─── Personas ───────────────────────────────────────
+
+/** Sample personas demonstrating different agent specializations. */
+export const MOCK_PERSONAS: PersonaData[] = [
+  {
+    id: "persona-arch",
+    name: "Software Architect",
+    description: "Designs system architecture, defines interfaces, and decomposes large features into implementable tasks.",
+    systemPrompt: "You are a senior software architect. Focus on clean interfaces, separation of concerns, and scalable patterns. When decomposing work, create concrete subtasks with clear acceptance criteria.",
+    toolConfig: JSON.stringify({ allowedTools: ["Read", "Grep", "Glob", "Write", "Edit"] }),
+    runtime: "claude-code",
+    model: "claude-sonnet-4-5-20250929",
+    maxTurns: 50,
+    mcpServers: "[]",
+    createdAt: "2026-02-20T10:00:00Z",
+    updatedAt: "2026-02-20T10:00:00Z",
+  },
+  {
+    id: "persona-fe",
+    name: "Frontend Engineer",
+    description: "React specialist — builds UI components, writes CSS, implements routing, and creates Playwright tests.",
+    systemPrompt: "You are a frontend engineer specializing in React, TypeScript, and modern CSS. Follow component composition patterns, use semantic HTML, and write accessible markup.",
+    toolConfig: JSON.stringify({ allowedTools: ["Read", "Grep", "Glob", "Write", "Edit", "Bash"] }),
+    runtime: "claude-code",
+    model: "claude-sonnet-4-5-20250929",
+    maxTurns: 100,
+    mcpServers: "[]",
+    createdAt: "2026-02-20T10:05:00Z",
+    updatedAt: "2026-02-20T10:05:00Z",
+  },
+  {
+    id: "persona-reviewer",
+    name: "Code Reviewer",
+    description: "Reviews diffs for correctness, security, and style. Posts findings for issues discovered.",
+    systemPrompt: "You are a meticulous code reviewer. Check for security vulnerabilities, performance issues, and style consistency. Post findings for anything noteworthy.",
+    toolConfig: JSON.stringify({ allowedTools: ["Read", "Grep", "Glob"] }),
+    runtime: "claude-code",
+    model: "claude-sonnet-4-5-20250929",
+    maxTurns: 30,
+    mcpServers: "[]",
+    createdAt: "2026-02-20T10:10:00Z",
+    updatedAt: "2026-02-20T10:10:00Z",
+  },
+  {
+    id: "persona-tester",
+    name: "QA Engineer",
+    description: "Writes comprehensive test suites — unit tests, integration tests, and E2E Playwright specs.",
+    systemPrompt: "You are a QA engineer focused on test coverage. Write tests that cover happy paths, edge cases, error scenarios, and accessibility. Use Playwright for E2E tests.",
+    toolConfig: JSON.stringify({ allowedTools: ["Read", "Grep", "Glob", "Write", "Edit", "Bash"] }),
+    runtime: "claude-code",
+    model: "claude-sonnet-4-5-20250929",
+    maxTurns: 80,
+    mcpServers: "[]",
+    createdAt: "2026-02-20T10:15:00Z",
+    updatedAt: "2026-02-20T10:15:00Z",
+  },
+];
+
+// ─── Task Sessions ──────────────────────────────────
+
+/** Sample session history per task, showing multiple attempts. */
+export const MOCK_TASK_SESSIONS: Record<string, Session[]> = {
+  "task-001b": [
+    {
+      id: "sess-001-prev",
+      environmentId: "env-local-01",
+      runtime: "claude-code",
+      status: "failed",
+      prompt: "Implement auth middleware",
+      startedAt: "2026-02-26T14:00:00Z",
+    },
+    {
+      id: "sess-001",
+      environmentId: "env-local-01",
+      runtime: "claude-code",
+      status: "running",
+      prompt: "Implement auth middleware",
+      startedAt: "2026-02-27T08:15:00Z",
+    },
+  ],
+  "task-006c": [
+    {
+      id: "sess-004",
+      environmentId: "env-docker-01",
+      runtime: "claude-code",
+      status: "running",
+      prompt: "Add compression options",
+      startedAt: "2026-02-27T09:00:00Z",
+    },
+  ],
+};
 
 // ─── Stream Scenarios ───────────────────────────────
 
