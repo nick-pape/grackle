@@ -145,8 +145,8 @@ test.describe("Task Overview Tab", () => {
     await runStubTaskToCompletion(page);
     await page.locator("button", { hasText: "Reject" }).click();
 
-    // Auto-retry starts a new session — task moves to in_progress, stream tab activates
-    await expect(page.locator('[data-testid="task-status"]')).toContainText("in_progress", { timeout: 10_000 });
+    // Auto-retry starts a new session — task becomes active, stream tab activates
+    await expect(page.locator('[data-testid="task-status"]')).toContainText(/in_progress|waiting_input/, { timeout: 10_000 });
 
     const streamTab = page.locator("button", { hasText: "Stream" });
     await expect(streamTab).toHaveAttribute("class", /active/, { timeout: 5_000 });

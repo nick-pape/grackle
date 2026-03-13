@@ -52,8 +52,8 @@ test.describe("Task Lifecycle (stub runtime)", () => {
     // Echo event: "Echo: test task"
     await expect(page.locator("text=Echo: test task")).toBeVisible();
 
-    // Task header should show in_progress status
-    await expect(page.locator('[data-testid="task-status"]')).toContainText("in_progress", { timeout: 5_000 });
+    // Task header should show active status (may transition to waiting_input quickly)
+    await expect(page.locator('[data-testid="task-status"]')).toContainText(/in_progress|waiting_input/, { timeout: 5_000 });
 
     // --- Step 7: Session reaches waiting_input — send input ---
     const inputField = page.locator('input[placeholder="Type a message..."]');
