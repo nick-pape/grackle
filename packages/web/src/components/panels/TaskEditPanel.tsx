@@ -13,7 +13,8 @@ interface Props {
 /**
  * Full-panel create/edit form for tasks.
  *
- * - new_task: blank form; calls createTask on save, then navigates to the task.
+ * - new_task: blank form; calls createTask on save, then navigates back to
+ *             the project view.
  * - edit_task: pre-populated form; calls updateTask on save, then navigates
  *              back to the task overview.
  *
@@ -25,11 +26,11 @@ export function TaskEditPanel({ viewMode, setViewMode }: Props): JSX.Element {
   const { showToast } = useToast();
 
   const isEdit = viewMode.kind === "edit_task";
-  const projectId = isEdit
-    ? (tasks.find((t) => t.id === viewMode.taskId)?.projectId ?? "")
-    : viewMode.projectId;
-
   const existingTask = isEdit ? tasks.find((t) => t.id === viewMode.taskId) : undefined;
+
+  const projectId = isEdit
+    ? (existingTask?.projectId ?? "")
+    : viewMode.projectId;
 
   const parentTaskId = isEdit
     ? (existingTask?.parentTaskId ?? "")
