@@ -884,27 +884,22 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
                 <span className={styles.editHint}>{keyboardHint}</span>
               </div>
             ) : (
-              <span
+              <button
+                type="button"
                 className={styles.metaValueClickable}
                 onClick={() => startEdit("name", project?.name || "")}
                 title="Click to edit name"
+                aria-label={`Edit project name: ${project?.name || viewMode.projectId}`}
                 data-testid="edit-name-button"
               >
                 {project?.name || viewMode.projectId}
-                <button
+                <span
                   className={styles.editButton}
-                  onMouseDown={(event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    startEdit("name", project?.name || "");
-                  }}
-                  title="Edit name"
-                  aria-label="Edit project name"
-                  data-edit-action="name"
+                  aria-hidden="true"
                 >
                   ✏️
-                </button>
-              </span>
+                </span>
+              </button>
             )}
           </span>
           <button
@@ -921,6 +916,8 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
         <button
           className={styles.metaToggle}
           onClick={() => setMetaCollapsed(!metaCollapsed)}
+          aria-expanded={!metaCollapsed}
+          aria-controls="project-meta-panel"
           data-testid="meta-toggle"
         >
           <span className={`${styles.metaToggleArrow} ${!metaCollapsed ? styles.metaToggleArrowOpen : ""}`}>▶</span>
@@ -929,7 +926,7 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
 
         {/* Project metadata (collapsible) */}
         {!metaCollapsed && (
-          <div className={styles.projectMeta} data-testid="project-meta">
+          <div className={styles.projectMeta} data-testid="project-meta" id="project-meta-panel">
             {/* Description */}
             <div className={styles.metaRow}>
               <span className={styles.metaLabel}>Description</span>
@@ -960,10 +957,12 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
                     <span className={styles.editHint}>{keyboardHint}</span>
                   </div>
                 ) : (
-                  <span
+                  <button
+                    type="button"
                     className={styles.metaValueClickable}
                     onClick={() => startEdit("description", project?.description || "")}
                     title="Click to edit description"
+                    aria-label="Edit project description"
                     data-testid="edit-description-button"
                   >
                     {project?.description ? (
@@ -973,20 +972,13 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
                     ) : (
                       <span className={styles.metaPlaceholder}>No description</span>
                     )}
-                    <button
+                    <span
                       className={styles.editButton}
-                      onMouseDown={(event) => {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        startEdit("description", project?.description || "");
-                      }}
-                      title="Edit description"
-                      aria-label="Edit project description"
-                      data-edit-action="description"
+                      aria-hidden="true"
                     >
                       ✏️
-                    </button>
-                  </span>
+                    </span>
+                  </button>
                 )}
               </div>
             </div>
@@ -1022,10 +1014,12 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
                     <span className={styles.editHint}>{keyboardHint}</span>
                   </div>
                 ) : (
-                  <span
+                  <button
+                    type="button"
                     className={styles.metaValueClickable}
                     onClick={(e) => { e.preventDefault(); startEdit("repoUrl", project?.repoUrl || ""); }}
                     title="Click to edit repository URL"
+                    aria-label="Edit project repository URL"
                     data-testid="edit-repo-button"
                   >
                     {project?.repoUrl && /^https?:\/\//i.test(project.repoUrl) ? (
@@ -1043,20 +1037,13 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
                     ) : (
                       <span className={styles.metaPlaceholder}>No repository</span>
                     )}
-                    <button
+                    <span
                       className={styles.editButton}
-                      onMouseDown={(event) => {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        startEdit("repoUrl", project?.repoUrl || "");
-                      }}
-                      title="Edit repository URL"
-                      aria-label="Edit project repository URL"
-                      data-edit-action="repoUrl"
+                      aria-hidden="true"
                     >
                       ✏️
-                    </button>
-                  </span>
+                    </span>
+                  </button>
                 )}
               </div>
             </div>
@@ -1099,10 +1086,12 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
                     ))}
                   </select>
                 ) : (
-                  <span
+                  <button
+                    type="button"
                     className={styles.metaValueClickable}
                     onClick={() => startEdit("defaultEnvironmentId", project?.defaultEnvironmentId || "")}
                     title="Click to change default environment"
+                    aria-label="Edit project default environment"
                     data-testid="edit-env-button"
                   >
                     {defaultEnv ? (
@@ -1115,20 +1104,13 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
                         {project?.defaultEnvironmentId || "No default environment"}
                       </span>
                     )}
-                    <button
+                    <span
                       className={styles.editButton}
-                      onMouseDown={(event) => {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        startEdit("defaultEnvironmentId", project?.defaultEnvironmentId || "");
-                      }}
-                      title="Change default environment"
-                      aria-label="Edit project default environment"
-                      data-edit-action="defaultEnvironmentId"
+                      aria-hidden="true"
                     >
                       ✏️
-                    </button>
-                  </span>
+                    </span>
+                  </button>
                 )}
               </div>
             </div>

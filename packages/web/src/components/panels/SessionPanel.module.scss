@@ -702,11 +702,19 @@
 
 // Click-to-edit wrapper — makes the whole value area clickable
 .metaValueClickable {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
   cursor: pointer;
   border-radius: var(--radius-sm);
   padding: 1px var(--space-xs);
   margin: -1px calc(-1 * var(--space-xs));
   transition: background var(--transition-fast);
+  background: none;
+  border: none;
+  text-align: left;
+  color: inherit;
+  font: inherit;
 
   &:hover {
     background: var(--bg-overlay);

@@ -628,8 +628,11 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         repoUrl: req.repoUrl,
         defaultEnvironmentId: req.defaultEnvironmentId,
       });
+      if (!row) {
+        throw new Error(`Project not found after update: ${req.id}`);
+      }
       broadcast({ type: "project_updated", payload: { projectId: req.id } });
-      return projectRowToProto(row!);
+      return projectRowToProto(row);
     },
 
     // ─── Tasks ───────────────────────────────────────────────

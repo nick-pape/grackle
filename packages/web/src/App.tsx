@@ -45,7 +45,6 @@ function AppContent(): JSX.Element {
             key={
               viewMode.kind === "task" ? viewMode.taskId
               : viewMode.kind === "session" ? viewMode.sessionId
-              : viewMode.kind === "project" ? viewMode.projectId
               : viewMode.kind
             }
             viewMode={viewMode}

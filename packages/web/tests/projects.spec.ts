@@ -1,4 +1,5 @@
 import { test, expect } from "./fixtures.js";
+import { createProject } from "./helpers.js";
 
 test.describe("Projects", () => {
   test("sidebar defaults to Projects tab", async ({ appPage }) => {
@@ -135,11 +136,7 @@ test.describe("Projects", () => {
 
   /** Helper: create a project and select it in the sidebar */
   async function createAndSelectProject(page: import("@playwright/test").Page, name: string) {
-    await page.locator("button", { hasText: "+" }).first().click();
-    const nameInput = page.locator('input[placeholder="Project name..."]');
-    await nameInput.fill(name);
-    await page.locator("button", { hasText: "OK" }).click();
-    await expect(page.getByText(name)).toBeVisible({ timeout: 5_000 });
+    await createProject(page, name);
     await page.getByText(name).click();
   }
 
