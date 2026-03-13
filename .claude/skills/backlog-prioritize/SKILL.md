@@ -47,7 +47,7 @@ Group issues by domain (web, server, powerline, etc.). Issues in different domai
 
 ## Step 5: Output the Ordering
 
-Present a numbered list with:
+Present an ordered report using the following Markdown structure:
 
 ```
 ## Suggested Backlog Order
