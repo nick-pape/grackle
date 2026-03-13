@@ -106,6 +106,6 @@ export function deleteByEnvironment(environmentId: string): void {
 export function listSessionsForTask(taskId: string): SessionRow[] {
   return db.select().from(sessions)
     .where(eq(sessions.taskId, taskId))
-    .orderBy(asc(sessions.startedAt))
+    .orderBy(asc(sessions.startedAt), asc(sessions.id))
     .all();
 }

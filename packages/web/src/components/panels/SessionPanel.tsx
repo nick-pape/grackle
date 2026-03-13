@@ -831,7 +831,6 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
                 selectedSessionId={sessionId}
                 onSelect={(id) => {
                   setSelectedSessionId(id);
-                  loadSessionEvents(id);
                 }}
               />
               <div ref={scrollRef} className={styles.eventScroll}>
