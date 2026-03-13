@@ -155,6 +155,24 @@ function envStatusClass(status: string): string {
   return styles.envDotGray;
 }
 
+/** Converts an ISO timestamp into a human-friendly relative time string. */
+function relativeTime(iso: string | undefined): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "";
+  const now = Date.now();
+  const diffMs = now - d.getTime();
+  if (diffMs < 0) return "just now";
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days}d ago`;
+  return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+}
+
 /** Props for the TaskStatusBadge component. */
 interface TaskStatusBadgeProps {
   status: string;
@@ -498,6 +516,8 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
   type EditingField = "name" | "description" | "repoUrl" | "defaultEnvironmentId" | null;
   const [editingField, setEditingField] = useState<EditingField>(null);
   const [editDraft, setEditDraft] = useState("");
+  const [editError, setEditError] = useState("");
+  const [metaCollapsed, setMetaCollapsed] = useState(false);
   const previousProjectIdRef = useRef<string | undefined>(undefined);
   const ignoreInitialBlurFieldRef = useRef<Exclude<EditingField, null> | null>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
@@ -745,6 +765,7 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
     const projectTasks = tasks.filter((t) => t.projectId === viewMode.projectId);
     const done = projectTasks.filter((t) => t.status === "done").length;
     const total = projectTasks.length;
+    const progressPct = total > 0 ? Math.round((done / total) * 100) : 0;
 
     const MAX_NAME_LENGTH = 100;
 
@@ -752,28 +773,48 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
       ignoreInitialBlurFieldRef.current = field;
       setEditingField(field);
       setEditDraft(currentValue);
+      setEditError("");
     };
 
     const cancelEdit = (): void => {
       ignoreInitialBlurFieldRef.current = null;
       setEditingField(null);
       setEditDraft("");
+      setEditError("");
+    };
+
+    /** Validate and return error message, or empty string if valid. */
+    const validateField = (field: NonNullable<EditingField>, value: string): string => {
+      if (field === "name") {
+        const trimmed = value.trim();
+        if (!trimmed) return "Name is required";
+        if (trimmed.length > MAX_NAME_LENGTH) return `Max ${MAX_NAME_LENGTH} characters`;
+      }
+      if (field === "repoUrl") {
+        const trimmed = value.trim();
+        if (trimmed && !/^https?:\/\/.+/.test(trimmed)) return "Must be a valid http(s) URL";
+      }
+      return "";
     };
 
     const saveEdit = (field: NonNullable<EditingField>): void => {
       if (!project) return;
       const trimmed = editDraft.trim();
 
+      const error = validateField(field, editDraft);
+      if (error) {
+        setEditError(error);
+        return;
+      }
+
       if (field === "name") {
-        if (!trimmed || trimmed.length > MAX_NAME_LENGTH) return;
         if (trimmed === project.name) { cancelEdit(); return; }
         updateProject(project.id, { name: trimmed });
       } else if (field === "description") {
-        const value = editDraft; // allow untrimmed for description
+        const value = editDraft;
         if (value === project.description) { cancelEdit(); return; }
         updateProject(project.id, { description: value });
       } else if (field === "repoUrl") {
-        if (trimmed && !/^https?:\/\/.+/.test(trimmed)) return;
         if (trimmed === project.repoUrl) { cancelEdit(); return; }
         updateProject(project.id, { repoUrl: trimmed });
       } else if (field === "defaultEnvironmentId") {
@@ -792,7 +833,22 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
       }
     };
 
+    /** Check if the current draft value differs from the saved value. */
+    const isDirty = (field: NonNullable<EditingField>): boolean => {
+      if (!project) return false;
+      if (field === "name") return editDraft.trim() !== project.name;
+      if (field === "description") return editDraft !== project.description;
+      if (field === "repoUrl") return editDraft.trim() !== project.repoUrl;
+      if (field === "defaultEnvironmentId") return editDraft !== project.defaultEnvironmentId;
+      return false;
+    };
+
     const defaultEnv = environments.find((e) => e.id === project?.defaultEnvironmentId);
+
+    /** Keyboard shortcut hint for the current editing field. */
+    const keyboardHint = editingField === "description"
+      ? "Tab to save · Esc to cancel"
+      : "Enter to save · Esc to cancel";
 
     return (
       <div className={styles.panelContainer}>
@@ -802,44 +858,53 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
         <div className={styles.projectHeader}>
           <span className={styles.projectName} data-testid="project-name">
             {editingField === "name" ? (
-              <input
-                ref={nameInputRef}
-                className={styles.editInput}
-                value={editDraft}
-                onChange={(e) => setEditDraft(e.target.value)}
-                onBlur={(event) => {
-                  if (ignoreInitialBlurFieldRef.current === "name") {
-                    ignoreInitialBlurFieldRef.current = null;
-                    return;
-                  }
-                  if (event.relatedTarget instanceof HTMLElement && event.relatedTarget.dataset.editAction === "name") {
-                    return;
-                  }
-                  saveEdit("name");
-                }}
-                onKeyDown={(e) => handleKeyDown(e, "name")}
-                maxLength={MAX_NAME_LENGTH}
-                aria-label="Project name"
-                data-testid="edit-name-input"
-              />
+              <div className={styles.editFieldWrapper}>
+                <input
+                  ref={nameInputRef}
+                  className={`${styles.editInput} ${editError ? styles.editInputInvalid : ""}`}
+                  value={editDraft}
+                  onChange={(e) => { setEditDraft(e.target.value); setEditError(""); }}
+                  onBlur={(event) => {
+                    if (ignoreInitialBlurFieldRef.current === "name") {
+                      ignoreInitialBlurFieldRef.current = null;
+                      return;
+                    }
+                    if (event.relatedTarget instanceof HTMLElement && event.relatedTarget.dataset.editAction === "name") {
+                      return;
+                    }
+                    saveEdit("name");
+                  }}
+                  onKeyDown={(e) => handleKeyDown(e, "name")}
+                  maxLength={MAX_NAME_LENGTH}
+                  aria-label="Project name"
+                  data-testid="edit-name-input"
+                />
+                {isDirty("name") && <span className={styles.unsavedDot} title="Unsaved changes" />}
+                {editError && <span className={styles.editError} data-testid="edit-error">{editError}</span>}
+                <span className={styles.editHint}>{keyboardHint}</span>
+              </div>
             ) : (
-              <>
+              <span
+                className={styles.metaValueClickable}
+                onClick={() => startEdit("name", project?.name || "")}
+                title="Click to edit name"
+                data-testid="edit-name-button"
+              >
                 {project?.name || viewMode.projectId}
                 <button
                   className={styles.editButton}
                   onMouseDown={(event) => {
                     event.preventDefault();
+                    event.stopPropagation();
                     startEdit("name", project?.name || "");
                   }}
-                  onClick={() => startEdit("name", project?.name || "")}
                   title="Edit name"
                   aria-label="Edit project name"
                   data-edit-action="name"
-                  data-testid="edit-name-button"
                 >
                   ✏️
                 </button>
-              </>
+              </span>
             )}
           </span>
           <button
@@ -852,185 +917,245 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
           </button>
         </div>
 
-        {/* Project metadata */}
-        <div className={styles.projectMeta} data-testid="project-meta">
-          {/* Description */}
-          <div className={styles.metaRow}>
-            <span className={styles.metaLabel}>Description</span>
-            <div className={styles.metaValue}>
-              {editingField === "description" ? (
-                <textarea
-                  ref={descriptionInputRef}
-                  className={styles.editTextarea}
-                  value={editDraft}
-                  onChange={(e) => setEditDraft(e.target.value)}
-                  onBlur={(event) => {
-                    if (ignoreInitialBlurFieldRef.current === "description") {
-                      ignoreInitialBlurFieldRef.current = null;
-                      return;
-                    }
-                    if (event.relatedTarget instanceof HTMLElement && event.relatedTarget.dataset.editAction === "description") {
-                      return;
-                    }
-                    saveEdit("description");
-                  }}
-                  onKeyDown={(e) => handleKeyDown(e, "description")}
-                  title="Project description"
-                  aria-label="Project description"
-                  data-testid="edit-description-input"
-                />
-              ) : (
-                <>
-                  {project?.description ? (
-                    <span className={styles.overviewMarkdown}>
-                      <Markdown remarkPlugins={[remarkGfm]}>{project.description}</Markdown>
-                    </span>
-                  ) : (
-                    <span className={styles.metaPlaceholder}>No description</span>
-                  )}
-                  <button
-                    className={styles.editButton}
-                    onMouseDown={(event) => {
-                      event.preventDefault();
-                      startEdit("description", project?.description || "");
-                    }}
+        {/* Collapsible metadata toggle */}
+        <button
+          className={styles.metaToggle}
+          onClick={() => setMetaCollapsed(!metaCollapsed)}
+          data-testid="meta-toggle"
+        >
+          <span className={`${styles.metaToggleArrow} ${!metaCollapsed ? styles.metaToggleArrowOpen : ""}`}>▶</span>
+          Details
+        </button>
+
+        {/* Project metadata (collapsible) */}
+        {!metaCollapsed && (
+          <div className={styles.projectMeta} data-testid="project-meta">
+            {/* Description */}
+            <div className={styles.metaRow}>
+              <span className={styles.metaLabel}>Description</span>
+              <div className={styles.metaValue}>
+                {editingField === "description" ? (
+                  <div className={styles.editFieldWrapper}>
+                    <textarea
+                      ref={descriptionInputRef}
+                      className={styles.editTextarea}
+                      value={editDraft}
+                      onChange={(e) => { setEditDraft(e.target.value); setEditError(""); }}
+                      onBlur={(event) => {
+                        if (ignoreInitialBlurFieldRef.current === "description") {
+                          ignoreInitialBlurFieldRef.current = null;
+                          return;
+                        }
+                        if (event.relatedTarget instanceof HTMLElement && event.relatedTarget.dataset.editAction === "description") {
+                          return;
+                        }
+                        saveEdit("description");
+                      }}
+                      onKeyDown={(e) => handleKeyDown(e, "description")}
+                      title="Project description"
+                      aria-label="Project description"
+                      data-testid="edit-description-input"
+                    />
+                    {isDirty("description") && <span className={styles.unsavedDot} title="Unsaved changes" />}
+                    <span className={styles.editHint}>{keyboardHint}</span>
+                  </div>
+                ) : (
+                  <span
+                    className={styles.metaValueClickable}
                     onClick={() => startEdit("description", project?.description || "")}
-                    title="Edit description"
-                    aria-label="Edit project description"
-                    data-edit-action="description"
+                    title="Click to edit description"
                     data-testid="edit-description-button"
                   >
-                    ✏️
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* Repo URL */}
-          <div className={styles.metaRow}>
-            <span className={styles.metaLabel}>Repository</span>
-            <div className={styles.metaValue}>
-              {editingField === "repoUrl" ? (
-                <input
-                  ref={repositoryInputRef}
-                  className={styles.editInput}
-                  value={editDraft}
-                  onChange={(e) => setEditDraft(e.target.value)}
-                  onBlur={(event) => {
-                    if (ignoreInitialBlurFieldRef.current === "repoUrl") {
-                      ignoreInitialBlurFieldRef.current = null;
-                      return;
-                    }
-                    if (event.relatedTarget instanceof HTMLElement && event.relatedTarget.dataset.editAction === "repoUrl") {
-                      return;
-                    }
-                    saveEdit("repoUrl");
-                  }}
-                  onKeyDown={(e) => handleKeyDown(e, "repoUrl")}
-                  placeholder="https://github.com/..."
-                  aria-label="Project repository URL"
-                  data-testid="edit-repo-input"
-                />
-              ) : (
-                <>
-                  {project?.repoUrl ? (
-                    <a
-                      className={styles.repoLink}
-                      href={project.repoUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                    {project?.description ? (
+                      <span className={styles.overviewMarkdown}>
+                        <Markdown remarkPlugins={[remarkGfm]}>{project.description}</Markdown>
+                      </span>
+                    ) : (
+                      <span className={styles.metaPlaceholder}>No description</span>
+                    )}
+                    <button
+                      className={styles.editButton}
+                      onMouseDown={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        startEdit("description", project?.description || "");
+                      }}
+                      title="Edit description"
+                      aria-label="Edit project description"
+                      data-edit-action="description"
                     >
-                      {project.repoUrl}
-                    </a>
-                  ) : (
-                    <span className={styles.metaPlaceholder}>No repository</span>
-                  )}
-                  <button
-                    className={styles.editButton}
-                    onMouseDown={(event) => {
-                      event.preventDefault();
-                      startEdit("repoUrl", project?.repoUrl || "");
-                    }}
-                    onClick={() => startEdit("repoUrl", project?.repoUrl || "")}
-                    title="Edit repository URL"
-                    aria-label="Edit project repository URL"
-                    data-edit-action="repoUrl"
+                      ✏️
+                    </button>
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Repo URL */}
+            <div className={styles.metaRow}>
+              <span className={styles.metaLabel}>Repository</span>
+              <div className={styles.metaValue}>
+                {editingField === "repoUrl" ? (
+                  <div className={styles.editFieldWrapper}>
+                    <input
+                      ref={repositoryInputRef}
+                      className={`${styles.editInput} ${editError ? styles.editInputInvalid : ""}`}
+                      value={editDraft}
+                      onChange={(e) => { setEditDraft(e.target.value); setEditError(""); }}
+                      onBlur={(event) => {
+                        if (ignoreInitialBlurFieldRef.current === "repoUrl") {
+                          ignoreInitialBlurFieldRef.current = null;
+                          return;
+                        }
+                        if (event.relatedTarget instanceof HTMLElement && event.relatedTarget.dataset.editAction === "repoUrl") {
+                          return;
+                        }
+                        saveEdit("repoUrl");
+                      }}
+                      onKeyDown={(e) => handleKeyDown(e, "repoUrl")}
+                      placeholder="https://github.com/..."
+                      aria-label="Project repository URL"
+                      data-testid="edit-repo-input"
+                    />
+                    {isDirty("repoUrl") && <span className={styles.unsavedDot} title="Unsaved changes" />}
+                    {editError && <span className={styles.editError} data-testid="edit-error">{editError}</span>}
+                    <span className={styles.editHint}>{keyboardHint}</span>
+                  </div>
+                ) : (
+                  <span
+                    className={styles.metaValueClickable}
+                    onClick={(e) => { e.preventDefault(); startEdit("repoUrl", project?.repoUrl || ""); }}
+                    title="Click to edit repository URL"
                     data-testid="edit-repo-button"
                   >
-                    ✏️
-                  </button>
-                </>
-              )}
+                    {project?.repoUrl ? (
+                      <a
+                        className={styles.repoLink}
+                        href={project.repoUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {project.repoUrl}
+                      </a>
+                    ) : (
+                      <span className={styles.metaPlaceholder}>No repository</span>
+                    )}
+                    <button
+                      className={styles.editButton}
+                      onMouseDown={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        startEdit("repoUrl", project?.repoUrl || "");
+                      }}
+                      title="Edit repository URL"
+                      aria-label="Edit project repository URL"
+                      data-edit-action="repoUrl"
+                    >
+                      ✏️
+                    </button>
+                  </span>
+                )}
+              </div>
             </div>
-          </div>
 
-          {/* Default Environment */}
-          <div className={styles.metaRow}>
-            <span className={styles.metaLabel}>Environment</span>
-            <div className={styles.metaValue}>
-              {editingField === "defaultEnvironmentId" ? (
-                <select
-                  ref={environmentSelectRef}
-                  className={styles.editSelect}
-                  value={editDraft}
-                  onChange={(e) => {
-                    ignoreInitialBlurFieldRef.current = null;
-                    setEditDraft(e.target.value);
-                    // Save immediately on change for select
-                    const val = e.target.value;
-                    if (project && val !== project.defaultEnvironmentId) {
-                      updateProject(project.id, { defaultEnvironmentId: val });
-                    }
-                    cancelEdit();
-                  }}
-                  onBlur={(event) => {
-                    if (ignoreInitialBlurFieldRef.current === "defaultEnvironmentId") {
+            {/* Default Environment */}
+            <div className={styles.metaRow}>
+              <span className={styles.metaLabel}>Environment</span>
+              <div className={styles.metaValue}>
+                {editingField === "defaultEnvironmentId" ? (
+                  <select
+                    ref={environmentSelectRef}
+                    className={styles.editSelect}
+                    value={editDraft}
+                    onChange={(e) => {
                       ignoreInitialBlurFieldRef.current = null;
-                      return;
-                    }
-                    if (event.relatedTarget instanceof HTMLElement && event.relatedTarget.dataset.editAction === "defaultEnvironmentId") {
-                      return;
-                    }
-                    cancelEdit();
-                  }}
-                  title="Default environment"
-                  aria-label="Project default environment"
-                  data-testid="edit-env-select"
-                >
-                  <option value="">None</option>
-                  {environments.map((env) => (
-                    <option key={env.id} value={env.id}>{env.displayName}</option>
-                  ))}
-                </select>
-              ) : (
-                <>
-                  {defaultEnv ? (
-                    <span>{defaultEnv.displayName}</span>
-                  ) : (
-                    <span className={styles.metaPlaceholder}>
-                      {project?.defaultEnvironmentId || "No default environment"}
-                    </span>
-                  )}
-                  <button
-                    className={styles.editButton}
-                    onMouseDown={(event) => {
-                      event.preventDefault();
-                      startEdit("defaultEnvironmentId", project?.defaultEnvironmentId || "");
+                      setEditDraft(e.target.value);
+                      const val = e.target.value;
+                      if (project && val !== project.defaultEnvironmentId) {
+                        updateProject(project.id, { defaultEnvironmentId: val });
+                      }
+                      cancelEdit();
                     }}
+                    onBlur={(event) => {
+                      if (ignoreInitialBlurFieldRef.current === "defaultEnvironmentId") {
+                        ignoreInitialBlurFieldRef.current = null;
+                        return;
+                      }
+                      if (event.relatedTarget instanceof HTMLElement && event.relatedTarget.dataset.editAction === "defaultEnvironmentId") {
+                        return;
+                      }
+                      cancelEdit();
+                    }}
+                    title="Default environment"
+                    aria-label="Project default environment"
+                    data-testid="edit-env-select"
+                  >
+                    <option value="">None</option>
+                    {environments.map((env) => (
+                      <option key={env.id} value={env.id}>{env.displayName}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <span
+                    className={styles.metaValueClickable}
                     onClick={() => startEdit("defaultEnvironmentId", project?.defaultEnvironmentId || "")}
-                    title="Change default environment"
-                    aria-label="Edit project default environment"
-                    data-edit-action="defaultEnvironmentId"
+                    title="Click to change default environment"
                     data-testid="edit-env-button"
                   >
-                    ✏️
-                  </button>
-                </>
-              )}
+                    {defaultEnv ? (
+                      <span className={styles.envRow}>
+                        <span className={`${styles.envDot} ${envStatusClass(defaultEnv.status)}`} />
+                        {defaultEnv.displayName}
+                      </span>
+                    ) : (
+                      <span className={styles.metaPlaceholder}>
+                        {project?.defaultEnvironmentId || "No default environment"}
+                      </span>
+                    )}
+                    <button
+                      className={styles.editButton}
+                      onMouseDown={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        startEdit("defaultEnvironmentId", project?.defaultEnvironmentId || "");
+                      }}
+                      title="Change default environment"
+                      aria-label="Edit project default environment"
+                      data-edit-action="defaultEnvironmentId"
+                    >
+                      ✏️
+                    </button>
+                  </span>
+                )}
+              </div>
             </div>
+
+            {/* Timestamps */}
+            {project && (
+              <div className={styles.metaTimestamps}>
+                <span className={styles.metaTimestamp}>
+                  Created {relativeTime(project.createdAt)}
+                </span>
+                {project.updatedAt && project.updatedAt !== project.createdAt && (
+                  <span className={styles.metaTimestamp}>
+                    · Updated {relativeTime(project.updatedAt)}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
-        </div>
+        )}
+
+        {/* Task progress bar */}
+        {total > 0 && (
+          <div className={styles.progressBarContainer} data-testid="progress-bar">
+            <div className={styles.progressBar}>
+              <div className={styles.progressFill} style={{ width: `${progressPct}%` }} />
+            </div>
+            <span className={styles.progressLabel}>{done}/{total}</span>
+          </div>
+        )}
 
         {/* Tabs: Graph / Tasks */}
         <div className={styles.tabBar} role="tablist" aria-label="Project view">

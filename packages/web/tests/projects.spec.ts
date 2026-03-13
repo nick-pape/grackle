@@ -150,7 +150,8 @@ test.describe("Projects", () => {
     // Project name should be visible in header
     await expect(page.locator('[data-testid="project-name"]')).toContainText("detail-test");
 
-    // Metadata section should be visible
+    // Details toggle should be visible and metadata expanded by default
+    await expect(page.locator('[data-testid="meta-toggle"]')).toBeVisible();
     await expect(page.locator('[data-testid="project-meta"]')).toBeVisible();
 
     // Should show labels for Description, Repository, Environment
@@ -161,6 +162,9 @@ test.describe("Projects", () => {
     // Should show placeholders for empty fields
     await expect(page.getByText("No description")).toBeVisible();
     await expect(page.getByText("No repository")).toBeVisible();
+
+    // Should show timestamp
+    await expect(page.getByText(/Created/)).toBeVisible();
   });
 
   test("edit project name inline", async ({ appPage }) => {
@@ -276,5 +280,113 @@ test.describe("Projects", () => {
 
     // Environment name should now be displayed
     await expect(page.getByText("test-local")).toBeVisible({ timeout: 5_000 });
+  });
+
+  test("click-to-edit on field values", async ({ appPage }) => {
+    const page = appPage;
+    await createAndSelectProject(page, "click-edit-test");
+
+    // Clicking the value area (not just the pencil) should open edit mode
+    await page.locator('[data-testid="edit-name-button"]').click();
+    await expect(page.locator('[data-testid="edit-name-input"]')).toBeVisible();
+    await page.keyboard.press("Escape");
+
+    // Click description placeholder to edit
+    await page.locator('[data-testid="edit-description-button"]').click();
+    await expect(page.locator('[data-testid="edit-description-input"]')).toBeVisible();
+    await page.keyboard.press("Escape");
+
+    // Click repo placeholder to edit
+    await page.locator('[data-testid="edit-repo-button"]').click();
+    await expect(page.locator('[data-testid="edit-repo-input"]')).toBeVisible();
+    await page.keyboard.press("Escape");
+  });
+
+  test("keyboard hints shown while editing", async ({ appPage }) => {
+    const page = appPage;
+    await createAndSelectProject(page, "hint-test");
+
+    // Edit name — should show keyboard hint
+    await page.locator('[data-testid="edit-name-button"]').click();
+    await expect(page.getByText("Enter to save")).toBeVisible();
+    await expect(page.getByText("Esc to cancel")).toBeVisible();
+    await page.keyboard.press("Escape");
+
+    // Edit description — should show "Tab to save" hint
+    await page.locator('[data-testid="edit-description-button"]').click();
+    await expect(page.getByText("Tab to save")).toBeVisible();
+    await page.keyboard.press("Escape");
+  });
+
+  test("validation error for empty name", async ({ appPage }) => {
+    const page = appPage;
+    await createAndSelectProject(page, "validation-test");
+
+    // Edit name and clear it
+    await page.locator('[data-testid="edit-name-button"]').click();
+    const nameInput = page.locator('[data-testid="edit-name-input"]');
+    await nameInput.fill("");
+    await nameInput.press("Enter");
+
+    // Should show validation error and stay in edit mode
+    await expect(page.locator('[data-testid="edit-error"]')).toContainText("Name is required");
+    await expect(nameInput).toBeVisible();
+
+    // Escape should still cancel
+    await page.keyboard.press("Escape");
+    await expect(nameInput).not.toBeVisible();
+  });
+
+  test("validation error for invalid repo URL", async ({ appPage }) => {
+    const page = appPage;
+    await createAndSelectProject(page, "repo-validate-test");
+
+    await page.locator('[data-testid="edit-repo-button"]').click();
+    const repoInput = page.locator('[data-testid="edit-repo-input"]');
+    await repoInput.fill("not-a-url");
+    await repoInput.press("Enter");
+
+    // Should show validation error
+    await expect(page.locator('[data-testid="edit-error"]')).toContainText("valid http");
+    await expect(repoInput).toBeVisible();
+    await page.keyboard.press("Escape");
+  });
+
+  test("collapsible metadata section", async ({ appPage }) => {
+    const page = appPage;
+    await createAndSelectProject(page, "collapse-test");
+
+    // Metadata should be visible by default
+    await expect(page.locator('[data-testid="project-meta"]')).toBeVisible();
+
+    // Click toggle to collapse
+    await page.locator('[data-testid="meta-toggle"]').click();
+    await expect(page.locator('[data-testid="project-meta"]')).not.toBeVisible();
+
+    // Click toggle to expand again
+    await page.locator('[data-testid="meta-toggle"]').click();
+    await expect(page.locator('[data-testid="project-meta"]')).toBeVisible();
+  });
+
+  test("task progress bar appears with tasks", async ({ appPage }) => {
+    const page = appPage;
+    await createAndSelectProject(page, "progress-test");
+
+    // No progress bar when no tasks
+    await expect(page.locator('[data-testid="progress-bar"]')).not.toBeVisible();
+
+    // Create a task
+    await page.getByText("progress-test").locator("..").locator('button[title="New task"]').first().click();
+    await page.locator('input[placeholder="Task title..."]').fill("progress task");
+    await page.locator("select").first().selectOption("test-local");
+    await page.locator("button", { hasText: /^Create$/ }).click();
+    await expect(page.getByText("progress task")).toBeVisible({ timeout: 5_000 });
+
+    // Go back to project view
+    await page.getByText("progress-test").first().click();
+
+    // Progress bar should now be visible
+    await expect(page.locator('[data-testid="progress-bar"]')).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator('[data-testid="progress-bar"]')).toContainText("0/1");
   });
 });

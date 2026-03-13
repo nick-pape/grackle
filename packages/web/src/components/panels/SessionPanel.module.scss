@@ -699,3 +699,140 @@
     color: var(--accent-cyan);
   }
 }
+
+// Click-to-edit wrapper — makes the whole value area clickable
+.metaValueClickable {
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  padding: 1px var(--space-xs);
+  margin: -1px calc(-1 * var(--space-xs));
+  transition: background var(--transition-fast);
+
+  &:hover {
+    background: var(--bg-overlay);
+  }
+}
+
+// Keyboard hint shown below editing inputs
+.editHint {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  opacity: 0.7;
+  margin-top: 2px;
+  font-family: var(--font-mono);
+  flex-basis: 100%;
+}
+
+// Validation error message
+.editError {
+  font-size: 10px;
+  color: var(--accent-red);
+  margin-top: 2px;
+  flex-basis: 100%;
+}
+
+// Red border for invalid inputs
+.editInputInvalid {
+  border-color: var(--accent-red) !important;
+  box-shadow: 0 0 0 1px var(--accent-red-dim);
+}
+
+// Unsaved dot indicator
+.unsavedDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-yellow);
+  box-shadow: 0 0 4px var(--accent-yellow);
+  flex-shrink: 0;
+}
+
+// Collapsible metadata toggle
+.metaToggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  background: none;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: var(--space-xs) var(--space-md);
+  border-bottom: 1px solid var(--border-subtle);
+  width: 100%;
+  transition: color var(--transition-fast);
+
+  &:hover {
+    color: var(--text-secondary);
+  }
+}
+
+.metaToggleArrow {
+  transition: transform var(--transition-fast);
+  font-size: 10px;
+}
+
+.metaToggleArrowOpen {
+  transform: rotate(90deg);
+}
+
+// Task progress bar
+.progressBarContainer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 0 var(--space-md);
+  margin-bottom: var(--space-xs);
+}
+
+.progressBar {
+  flex: 1;
+  height: 4px;
+  background: var(--bg-overlay);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: var(--accent-green);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.progressLabel {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+  flex-shrink: 0;
+}
+
+// Timestamp row
+.metaTimestamps {
+  display: flex;
+  gap: var(--space-md);
+  font-size: 11px;
+  color: var(--text-tertiary);
+  padding-top: var(--space-xs);
+  border-top: 1px solid var(--border-subtle);
+  margin-top: var(--space-xs);
+}
+
+.metaTimestamp {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+// Edit wrapper that supports wrapping hint/error below the input
+.editFieldWrapper {
+  display: flex;
+  flex-wrap: wrap;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+  gap: var(--space-xs);
+}
