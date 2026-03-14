@@ -145,115 +145,117 @@ export function TaskEditPanel({ viewMode, setViewMode }: Props): JSX.Element {
 
       {/* Form body */}
       <div className={styles.body}>
-        {/* Title */}
-        <div className={styles.section}>
-          <label className={styles.label} htmlFor="task-edit-title">
-            Title
-          </label>
-          <input
-            id="task-edit-title"
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="Task title..."
-            autoFocus
-            className={styles.titleInput}
-            data-testid="task-edit-title"
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && canSave) {
-                handleSave();
-              }
-            }}
-          />
-        </div>
-
-        {/* Description */}
-        <div className={styles.section}>
-          <label className={styles.label} htmlFor="task-edit-description">
-            Description
-          </label>
-          <textarea
-            id="task-edit-description"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Describe the task... (markdown supported)"
-            className={styles.descriptionTextarea}
-            data-testid="task-edit-description"
-            rows={8}
-          />
-        </div>
-
-        {/* Environment */}
-        {environments.length > 0 && (
+        <div className={styles.formContent}>
+          {/* Title */}
           <div className={styles.section}>
-            <label className={styles.label} htmlFor="task-edit-environment">
-              Environment
+            <label className={styles.label} htmlFor="task-edit-title">
+              Title
             </label>
-            <select
-              id="task-edit-environment"
-              value={environmentId}
-              onChange={(e) => setEnvironmentId(e.target.value)}
-              className={styles.personaSelect}
-              data-testid="task-edit-environment"
-            >
-              <option value="">No environment</option>
-              {environments.map((env) => (
-                <option key={env.id} value={env.id}>{env.displayName || env.id}</option>
-              ))}
-            </select>
+            <input
+              id="task-edit-title"
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Task title..."
+              autoFocus
+              className={styles.titleInput}
+              data-testid="task-edit-title"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && canSave) {
+                  handleSave();
+                }
+              }}
+            />
           </div>
-        )}
 
-        {/* Persona */}
-        {personas.length > 0 && (
+          {/* Description */}
           <div className={styles.section}>
-            <label className={styles.label} htmlFor="task-edit-persona">
-              Persona
+            <label className={styles.label} htmlFor="task-edit-description">
+              Description
             </label>
-            <select
-              id="task-edit-persona"
-              value={personaId}
-              onChange={(e) => setPersonaId(e.target.value)}
-              className={styles.personaSelect}
-              data-testid="task-edit-persona"
-            >
-              <option value="">No persona</option>
-              {personas.map((p) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
+            <textarea
+              id="task-edit-description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Describe the task... (markdown supported)"
+              className={styles.descriptionTextarea}
+              data-testid="task-edit-description"
+              rows={8}
+            />
           </div>
-        )}
 
-        {/* Dependencies */}
-        <div className={styles.section}>
-          <div className={styles.label}>Dependencies</div>
-          {siblingTasks.length === 0 ? (
-            <div className={styles.noDeps}>No other tasks in this project</div>
-          ) : (
-            <div className={styles.depList}>
-              {siblingTasks.map((t) => {
-                const isChecked = selectedDeps.includes(t.id);
-                return (
-                  <label
-                    key={t.id}
-                    className={`${styles.depItem} ${isChecked ? styles.depItemSelected : ""}`}
-                    data-testid={`dep-option-${t.id}`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={isChecked}
-                      onChange={() => toggleDep(t.id)}
-                    />
-                    {t.title}
-                    <span style={{ opacity: 0.5, fontSize: "11px", marginLeft: "4px" }}>
-                      ({t.status})
-                    </span>
-                  </label>
-                );
-              })}
+          {/* Environment */}
+          {environments.length > 0 && (
+            <div className={styles.section}>
+              <label className={styles.label} htmlFor="task-edit-environment">
+                Environment
+              </label>
+              <select
+                id="task-edit-environment"
+                value={environmentId}
+                onChange={(e) => setEnvironmentId(e.target.value)}
+                className={styles.personaSelect}
+                data-testid="task-edit-environment"
+              >
+                <option value="">No environment</option>
+                {environments.map((env) => (
+                  <option key={env.id} value={env.id}>{env.displayName || env.id}</option>
+                ))}
+              </select>
             </div>
           )}
+
+          {/* Persona */}
+          {personas.length > 0 && (
+            <div className={styles.section}>
+              <label className={styles.label} htmlFor="task-edit-persona">
+                Persona
+              </label>
+              <select
+                id="task-edit-persona"
+                value={personaId}
+                onChange={(e) => setPersonaId(e.target.value)}
+                className={styles.personaSelect}
+                data-testid="task-edit-persona"
+              >
+                <option value="">No persona</option>
+                {personas.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Dependencies */}
+          <div className={styles.section}>
+            <div className={styles.label}>Dependencies</div>
+            {siblingTasks.length === 0 ? (
+              <div className={styles.noDeps}>No other tasks in this project</div>
+            ) : (
+              <div className={styles.depList}>
+                {siblingTasks.map((t) => {
+                  const isChecked = selectedDeps.includes(t.id);
+                  return (
+                    <label
+                      key={t.id}
+                      className={`${styles.depItem} ${isChecked ? styles.depItemSelected : ""}`}
+                      data-testid={`dep-option-${t.id}`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => toggleDep(t.id)}
+                      />
+                      {t.title}
+                      <span style={{ opacity: 0.5, fontSize: "11px", marginLeft: "4px" }}>
+                        ({t.status})
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
