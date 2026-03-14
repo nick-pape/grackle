@@ -1,4 +1,7 @@
 import { eq } from "drizzle-orm";
+import { existsSync, readFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
 import db from "./db.js";
 import { tokens, type TokenRow } from "./schema.js";
 import { encrypt, decrypt } from "./crypto.js";
@@ -85,6 +88,57 @@ export async function pushToEnv(environmentId: string): Promise<void> {
   }
 
   await conn.client.pushTokens(bundle);
+}
+
+/** Push the host's Claude credentials file to a single connected environment. */
+export async function pushCredentialsToEnv(environmentId: string): Promise<void> {
+  const conn = adapterManager.getConnection(environmentId);
+  if (!conn) {
+    return;
+  }
+
+  const credentialsPath = join(homedir(), ".claude", ".credentials.json");
+  if (!existsSync(credentialsPath)) {
+    logger.debug({ environmentId, credentialsPath }, "No host credentials file found; skipping push");
+    return;
+  }
+
+  const value = readFileSync(credentialsPath, "utf-8");
+  if (!value.trim()) {
+    logger.warn({ environmentId, credentialsPath }, "Host credentials file is empty; skipping push");
+    return;
+  }
+
+  const bundle = create(powerline.TokenBundleSchema, {
+    tokens: [
+      create(powerline.TokenItemSchema, {
+        name: "claude-credentials",
+        type: "file",
+        filePath: "~/.claude/.credentials.json",
+        value,
+      }),
+    ],
+  });
+
+  await conn.client.pushTokens(bundle);
+}
+
+/**
+ * Best-effort push of stored tokens and Claude credentials before a task spawn.
+ * Both pushes run concurrently; failures are logged as warnings and do not block.
+ */
+export async function refreshTokensForTask(environmentId: string): Promise<void> {
+  const results = await Promise.allSettled([
+    pushToEnv(environmentId),
+    pushCredentialsToEnv(environmentId),
+  ]);
+
+  if (results[0].status === "rejected") {
+    logger.warn({ environmentId, err: results[0].reason }, "Failed to push tokens before task start");
+  }
+  if (results[1].status === "rejected") {
+    logger.warn({ environmentId, err: results[1].reason }, "Failed to push Claude credentials before task start");
+  }
 }
 
 /** Push the current token bundle to all connected environments in parallel. */

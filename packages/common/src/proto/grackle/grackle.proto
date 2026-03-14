@@ -324,21 +324,6 @@ message ImportGitHubIssuesResponse {
   int32 dependencies = 4; // number of blocking relationships created
 }
 
-// ─── Task Diff ─────────────────────────────────────────────
-
-message GetTaskDiffRequest {
-  string task_id = 1;
-}
-
-message TaskDiff {
-  string task_id = 1;
-  string branch = 2;
-  string diff = 3;
-  repeated string changed_files = 4;
-  int32 additions = 5;
-  int32 deletions = 6;
-}
-
 // ─── Personas ──────────────────────────────────────────────
 
 message McpServerConfig {
@@ -456,6 +441,4 @@ service Grackle {
   // GitHub Import
   rpc ImportGitHubIssues(ImportGitHubIssuesRequest) returns (ImportGitHubIssuesResponse);
 
-  // Diff
-  rpc GetTaskDiff(GetTaskDiffRequest) returns (TaskDiff);
 }

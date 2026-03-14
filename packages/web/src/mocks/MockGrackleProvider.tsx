@@ -652,15 +652,29 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
     [],
   );
 
-  /** Updates title, description, and dependencies of a pending/assigned task. */
+  /** Updates title, description, dependencies, environment, and persona of a pending/assigned task. */
   const updateTask: UseGrackleSocketResult["updateTask"] = useCallback(
-    (taskId: string, title: string, description: string, dependsOn: string[]) => {
+    (
+      taskId: string,
+      title: string,
+      description: string,
+      dependsOn: string[],
+      environmentId?: string,
+      personaId?: string,
+    ) => {
       // eslint-disable-next-line no-console
       console.log("[MockGrackle] updateTask", { taskId, title });
       setTasks((prev) =>
         prev.map((t) =>
           t.id === taskId
-            ? { ...t, title: title.trim() || t.title, description, dependsOn }
+            ? {
+                ...t,
+                title: title.trim() || t.title,
+                description,
+                dependsOn,
+                ...(environmentId !== undefined ? { environmentId } : {}),
+                ...(personaId !== undefined ? { personaId } : {}),
+              }
             : t,
         ),
       );
