@@ -2,19 +2,11 @@ import { useState, type JSX, type FormEvent } from "react";
 import { useGrackle } from "../../context/GrackleContext.js";
 import { useToast } from "../../context/ToastContext.js";
 import { useThemeContext } from "../../context/ThemeContext.js";
-import type { Theme } from "../../hooks/useTheme.js";
+import { THEMES } from "../../themes.js";
 import { ConfirmDialog } from "../display/index.js";
 import { EnvironmentList } from "../lists/EnvironmentList.js";
 import type { ViewMode } from "../../App.js";
 import styles from "./SettingsPanel.module.scss";
-
-/** Theme display options for the Appearance section. */
-const THEME_OPTIONS: Array<{ value: Theme; label: string; description: string }> = [
-  { value: "glass", label: "Glassmorphism", description: "Dark frosted-glass aesthetic with backdrop blur effects." },
-  { value: "light", label: "Light", description: "Clean light theme with subtle depth cues." },
-  { value: "dark", label: "Dark", description: "Clean dark theme with subtle depth cues." },
-  { value: "system", label: "System", description: "Follow your OS light/dark preference (clean theme)." },
-];
 
 /** Token type options for the add form. */
 const TOKEN_TYPES: Array<{ value: string; label: string }> = [
@@ -32,7 +24,7 @@ interface Props {
 export function SettingsPanel({ viewMode, setViewMode }: Props): JSX.Element {
   const { tokens, setToken, deleteToken } = useGrackle();
   const { showToast } = useToast();
-  const { theme, resolvedTheme, setTheme } = useThemeContext();
+  const { themeId, resolvedThemeId, setTheme } = useThemeContext();
 
   const [name, setName] = useState("");
   const [value, setValue] = useState("");
@@ -83,23 +75,24 @@ export function SettingsPanel({ viewMode, setViewMode }: Props): JSX.Element {
           Choose how Grackle looks across the app.
         </p>
         <div className={styles.themeOptions}>
-          {THEME_OPTIONS.map((option) => {
-            const selected = theme === option.value;
+          {THEMES.map((t) => {
+            const selected = themeId === t.id;
             return (
               <button
-                key={option.value}
+                key={t.id}
                 type="button"
                 className={`${styles.themeOption} ${selected ? styles.themeOptionSelected : ""}`}
-                onClick={() => setTheme(option.value)}
+                aria-pressed={selected}
+                onClick={() => setTheme(t.id)}
               >
-                <span className={styles.themeOptionLabel}>{option.label}</span>
-                <span className={styles.themeOptionDesc}>{option.description}</span>
+                <span className={styles.themeOptionLabel}>{t.label}</span>
+                <span className={styles.themeOptionDesc}>{t.description}</span>
               </button>
             );
           })}
         </div>
         <p className={styles.themeActive}>
-          Active theme: <strong>{resolvedTheme}</strong>
+          Active theme: <strong>{resolvedThemeId}</strong>
         </p>
       </section>
 

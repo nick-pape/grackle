@@ -39,7 +39,7 @@ function ToolUseEvent({ content }: { content: string }): JSX.Element {
   try {
     const parsed = JSON.parse(content);
     toolName = parsed.tool || "";
-    argsDisplay = JSON.stringify(parsed.args, null, 2);
+    argsDisplay = JSON.stringify(parsed.args, null, 2) ?? "";
   } catch { /* use raw */ }
   return (
     <div className={styles.toolUseEvent}>
@@ -65,19 +65,11 @@ function ToolResultEvent({ content }: { content: string }): JSX.Element {
   try {
     // Attempt JSON parse — render as highlighted JSON
     JSON.parse(content);
-    formattedContent = (
-      <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypePrismPlus]}>
-        {"```json\n" + content + "\n```"}
-      </Markdown>
-    );
+    formattedContent = <pre className={styles.toolResultPre}>{content}</pre>;
   } catch {
     if (isDiffContent(content)) {
       // Diff output — render with diff syntax highlighting
-      formattedContent = (
-        <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypePrismPlus]}>
-          {"```diff\n" + content + "\n```"}
-        </Markdown>
-      );
+      formattedContent = <pre className={styles.toolResultPre}>{content}</pre>;
     } else {
       // Fallback — raw text
       formattedContent = <pre className={styles.toolResultPre}>{content}</pre>;

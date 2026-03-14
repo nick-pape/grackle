@@ -68,8 +68,8 @@
 
   &:hover {
     background: var(--bg-overlay);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(var(--glass-blur-inset));
+    -webkit-backdrop-filter: blur(var(--glass-blur-inset));
   }
 }
 
@@ -82,8 +82,8 @@
   &:hover {
     box-shadow: var(--shadow-sm), var(--highlight-top);
     border-color: var(--glass-border-hover);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(var(--glass-blur-inset));
+    -webkit-backdrop-filter: blur(var(--glass-blur-inset));
   }
 }
 
@@ -217,8 +217,8 @@
   &:focus {
     border-color: var(--ring);
     box-shadow: 0 0 0 3px var(--ring-alpha), var(--highlight-top);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(var(--glass-blur-inset));
+    -webkit-backdrop-filter: blur(var(--glass-blur-inset));
   }
 
   &::placeholder {

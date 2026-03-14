@@ -112,7 +112,7 @@ body::after {
   outline-offset: 2px;
 }
 
-// Monospace font-feature-settings for glass theme
+// Enable OpenType ligatures and contextual alternates globally
 :root {
   font-feature-settings: 'liga' 1, 'calt' 1;
 }
@@ -168,7 +168,8 @@ body::after {
 // Increase border visibility and text contrast for high-contrast mode.
 
 @media (prefers-contrast: more) {
-  :root {
+  [data-theme="light"],
+  [data-theme="system"] {
     --text-secondary: #4b5563;
     --text-tertiary: #6b7280;
     --text-disabled: #9ca3af;
@@ -176,7 +177,8 @@ body::after {
     --border-input: rgba(0, 0, 0, 0.30);
   }
 
-  [data-theme="dark"] {
+  [data-theme="dark"],
+  [data-theme="glass"] {
     --text-secondary: #d1d5db;
     --text-tertiary: #9ca3af;
     --text-disabled: #6b7280;

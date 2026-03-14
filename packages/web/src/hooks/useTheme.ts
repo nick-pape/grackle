@@ -1,10 +1,8 @@
 import { useCallback, useEffect, useSyncExternalStore } from "react";
-
-/** Available theme choices. */
-export type Theme = "glass" | "light" | "dark" | "system";
+import { THEME_IDS, DEFAULT_THEME_ID, getThemeById } from "../themes.js";
 
 interface ThemeSnapshot {
-  theme: Theme;
+  themeId: string;
   systemDark: boolean;
 }
 
@@ -24,39 +22,44 @@ function emitChange(): void {
 
 /** Check whether the OS prefers dark mode. */
 function getSystemDark(): boolean {
+  if (typeof window === "undefined") {
+    return false;
+  }
   return window.matchMedia(MEDIA_QUERY).matches;
 }
 
-/** Read the persisted theme choice from localStorage, defaulting to "glass". */
-function getStored(): Theme {
+/** Read the persisted theme ID from localStorage, defaulting to the registry default. */
+function getStored(): string {
+  if (typeof localStorage === "undefined") {
+    return DEFAULT_THEME_ID;
+  }
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw === "glass" || raw === "light" || raw === "dark" || raw === "system") {
+    const raw: string | null = localStorage.getItem(STORAGE_KEY);
+    if (raw !== null && THEME_IDS.has(raw)) {
       return raw;
     }
   } catch {
     // localStorage may be unavailable
   }
-  return "glass";
+  return DEFAULT_THEME_ID;
 }
 
-/** Resolve a theme choice to the data-theme attribute value. */
-function resolveDataTheme(theme: Theme): string {
-  switch (theme) {
-    case "glass": return "glass";
-    case "light": return "light";
-    case "dark": return "dark";
-    case "system": return getSystemDark() ? "dark" : "light";
+/** Resolve a theme ID to the data-theme attribute value applied to the document. */
+function resolveDataTheme(themeId: string): string {
+  const def = getThemeById(themeId);
+  if (def?.isSystemAuto) {
+    return getSystemDark() ? (def.systemDarkId ?? "dark") : (def.systemLightId ?? "light");
   }
+  return themeId;
 }
 
 /** Apply the resolved theme to the document root element. */
-function applyTheme(theme: Theme, suppressTransitions: boolean = false): void {
+function applyTheme(themeId: string, suppressTransitions: boolean = false): void {
   if (suppressTransitions) {
     document.documentElement.classList.add("no-transitions");
   }
 
-  document.documentElement.dataset.theme = resolveDataTheme(theme);
+  document.documentElement.dataset.theme = resolveDataTheme(themeId);
 
   if (suppressTransitions) {
     // Force a reflow so the no-transitions class takes effect before removal
@@ -69,21 +72,15 @@ function applyTheme(theme: Theme, suppressTransitions: boolean = false): void {
 }
 
 // Apply immediately on module load to prevent flash of wrong theme
-applyTheme(getStored());
-
-// Listen for OS color scheme changes
-window.matchMedia(MEDIA_QUERY).addEventListener("change", () => {
-  if (getStored() === "system") {
-    applyTheme("system");
-  }
-  emitChange();
-});
+if (typeof document !== "undefined") {
+  applyTheme(getStored());
+}
 
 /** Build the current snapshot for useSyncExternalStore. */
 function getSnapshot(): ThemeSnapshot {
   if (lastSnapshot === undefined) {
     lastSnapshot = {
-      theme: getStored(),
+      themeId: getStored(),
       systemDark: getSystemDark(),
     };
   }
@@ -98,32 +95,62 @@ function subscribe(listener: () => void): () => void {
   };
 }
 
+/** Result shape for the useTheme hook. */
+export interface UseThemeResult {
+  /** The user's chosen theme ID (may be "system"). */
+  themeId: string;
+  /** The actually-applied data-theme value after resolving system preference. */
+  resolvedThemeId: string;
+  /** Set a new theme by ID. */
+  setTheme: (nextId: string) => void;
+}
+
 /** React hook for reading and setting the application theme. */
-export function useTheme(): {
-  theme: Theme;
-  resolvedTheme: "glass" | "light" | "dark";
-  setTheme: (next: Theme) => void;
-} {
+export function useTheme(): UseThemeResult {
   const snapshot = useSyncExternalStore(subscribe, getSnapshot);
-  const { theme } = snapshot;
+  const { themeId } = snapshot;
 
-  const resolvedTheme: "glass" | "light" | "dark" =
-    theme === "system" ? (snapshot.systemDark ? "dark" : "light") : theme;
+  const resolvedThemeId: string = resolveDataTheme(themeId);
 
-  const setTheme = useCallback((next: Theme) => {
+  const setTheme = useCallback((nextId: string) => {
+    if (!THEME_IDS.has(nextId)) {
+      return;
+    }
     try {
-      localStorage.setItem(STORAGE_KEY, next);
+      localStorage.setItem(STORAGE_KEY, nextId);
     } catch {
       // localStorage may be unavailable
     }
-    applyTheme(next, true);
+    applyTheme(nextId, true);
     emitChange();
   }, []);
 
   // Keep DOM in sync on mount/change
   useEffect(() => {
-    applyTheme(theme);
-  }, [theme]);
+    applyTheme(themeId);
+  }, [themeId]);
 
-  return { theme, setTheme, resolvedTheme };
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return undefined;
+    }
+
+    const mediaQueryList: MediaQueryList = window.matchMedia(MEDIA_QUERY);
+    const handleChange = (): void => {
+      const stored: string = getStored();
+      const def = getThemeById(stored);
+      if (def?.isSystemAuto) {
+        applyTheme(stored);
+      }
+      emitChange();
+    };
+
+    mediaQueryList.addEventListener("change", handleChange);
+
+    return () => {
+      mediaQueryList.removeEventListener("change", handleChange);
+    };
+  }, []);
+
+  return { themeId, setTheme, resolvedThemeId };
 }
