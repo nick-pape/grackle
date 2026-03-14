@@ -219,6 +219,9 @@ export function registerTaskCommands(program: Command): void {
         if (res.linked > 0) {
           parts.push(`${chalk.cyan(res.linked)} linked to parents`);
         }
+        if (res.dependencies > 0) {
+          parts.push(`${chalk.yellow(res.dependencies)} blocking relationships`);
+        }
         parts.push(`skipped ${res.skipped} already imported`);
         console.log(parts.join(", "));
       },

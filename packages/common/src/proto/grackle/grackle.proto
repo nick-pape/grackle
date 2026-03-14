@@ -318,6 +318,7 @@ message ImportGitHubIssuesResponse {
   int32 imported = 1;
   int32 linked = 2;
   int32 skipped = 3;
+  int32 dependencies = 4; // number of blocking relationships created
 }
 
 // ─── Task Diff ─────────────────────────────────────────────
