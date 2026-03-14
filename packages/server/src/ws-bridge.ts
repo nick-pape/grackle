@@ -337,6 +337,9 @@ async function startTaskSession(
     },
   });
 
+  // Re-push stored tokens + Claude credentials so they're fresh for this session
+  await tokenBroker.refreshTokensForTask(environmentId);
+
   let mcpServersJson = "";
   if (persona) {
     try {

@@ -804,6 +804,9 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         payload: { taskId: task.id, sessionId, projectId: task.projectId },
       });
 
+      // Re-push stored tokens + Claude credentials so they're fresh for this session
+      await tokenBroker.refreshTokensForTask(environmentId);
+
       const mcpServersJson = persona ? personaMcpServersToJson(persona) : "";
 
       const powerlineReq = create(powerline.SpawnRequestSchema, {
