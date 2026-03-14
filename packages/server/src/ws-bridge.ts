@@ -31,8 +31,9 @@ import { logger } from "./logger.js";
 import { buildTaskSystemContext } from "./utils/system-context.js";
 import { slugify } from "./utils/slugify.js";
 import { processEventStream } from "./event-processor.js";
+import * as processorRegistry from "./processor-registry.js";
 import { broadcast, setWssInstance } from "./ws-broadcast.js";
-import { buildMcpServersJson } from "./grpc-service.js";
+import { buildMcpServersJson, makeTaskCompletionCallback } from "./grpc-service.js";
 import { exec } from "./utils/exec.js";
 
 const GH_CODESPACE_LIST_TIMEOUT_MS: number = 30_000;
@@ -381,21 +382,7 @@ async function startTaskSession(
     logPath,
     projectId: freshTask.projectId,
     taskId: freshTask.id,
-    onComplete: () => {
-      const t = taskStore.getTask(freshTask.id);
-      if (t && (t.status === "in_progress" || t.status === "waiting_input")) {
-        const sess = sessionStore.getSession(sessionId);
-        if (sess?.status === "completed") {
-          taskStore.markTaskCompleted(freshTask.id, "review");
-        } else if (sess?.status === "failed") {
-          taskStore.markTaskCompleted(freshTask.id, "failed");
-        }
-        broadcast({
-          type: "task_updated",
-          payload: { taskId: freshTask.id, projectId: freshTask.projectId },
-        });
-      }
-    },
+    onComplete: makeTaskCompletionCallback(freshTask.id, sessionId, freshTask.projectId),
   });
 
   return undefined;
@@ -1044,7 +1031,53 @@ async function handleMessage(
         sendWs(ws, { type: "error", payload: { message: `Task not found: ${updateTaskId}` } });
         return;
       }
-      // Only allow editing pending/assigned tasks
+
+      // Late-bind: associate a running session with this task
+      const lateBindSessionId = typeof msg.payload?.sessionId === "string" ? msg.payload.sessionId : "";
+      if (lateBindSessionId) {
+        const session = sessionStore.getSession(lateBindSessionId);
+        if (!session) {
+          sendWs(ws, { type: "error", payload: { message: `Session not found: ${lateBindSessionId}` } });
+          return;
+        }
+        const terminalStatuses = ["completed", "failed", "killed"];
+        if (terminalStatuses.includes(session.status)) {
+          sendWs(ws, {
+            type: "error",
+            payload: { message: `Cannot bind terminal session ${lateBindSessionId} (status: ${session.status})` },
+          });
+          return;
+        }
+
+        // Verify the processor exists before mutating DB state to avoid partial updates
+        if (!processorRegistry.get(lateBindSessionId)) {
+          sendWs(ws, {
+            type: "error",
+            payload: { message: `No active event processor for session ${lateBindSessionId}` },
+          });
+          return;
+        }
+
+        sessionStore.setSessionTask(lateBindSessionId, updateTaskId);
+        taskStore.setTaskSession(updateTaskId, lateBindSessionId);
+        taskStore.markTaskStarted(updateTaskId);
+
+        const onComplete = makeTaskCompletionCallback(updateTaskId, lateBindSessionId, existingTask.projectId);
+        try {
+          processorRegistry.lateBind(lateBindSessionId, updateTaskId, existingTask.projectId, onComplete);
+        } catch (err) {
+          sendWs(ws, { type: "error", payload: { message: String(err) } });
+          return;
+        }
+
+        broadcast({
+          type: "task_started",
+          payload: { taskId: updateTaskId, sessionId: lateBindSessionId, projectId: existingTask.projectId },
+        });
+        break;
+      }
+
+      // Only allow editing pending/assigned tasks (non-late-bind path)
       if (!["pending", "assigned"].includes(existingTask.status)) {
         sendWs(ws, {
           type: "error",

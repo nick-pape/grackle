@@ -262,6 +262,7 @@ message UpdateTaskRequest {
   string environment_id = 5;
   repeated string depends_on = 6;
   string review_notes = 7;
+  string session_id = 8; // Optional: late-bind an existing session to this task
 }
 
 message StartTaskRequest {

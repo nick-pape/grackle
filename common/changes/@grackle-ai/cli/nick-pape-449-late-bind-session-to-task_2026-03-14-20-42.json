@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "feat: late-bind session to task — add --session flag to task update, processor registry for mutable event context, and pre-association event replay",
+      "type": "minor",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}

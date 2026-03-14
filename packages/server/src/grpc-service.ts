@@ -16,6 +16,7 @@ import * as findingStore from "./finding-store.js";
 import * as personaStore from "./persona-store.js";
 import { broadcast } from "./ws-broadcast.js";
 import { processEventStream } from "./event-processor.js";
+import * as processorRegistry from "./processor-registry.js";
 import { join } from "node:path";
 import {
   LOGS_DIR,
@@ -32,6 +33,33 @@ import { logger } from "./logger.js";
 import { slugify } from "./utils/slugify.js";
 import { buildTaskSystemContext } from "./utils/system-context.js";
 import { importGitHubIssues as executeGitHubImport } from "./github-import.js";
+
+/**
+ * Build a completion callback that transitions a task to review/failed
+ * when its associated session ends. Shared across startTask, resumeAgent,
+ * updateTask (late-bind), and WS bridge paths.
+ */
+export function makeTaskCompletionCallback(
+  taskId: string,
+  sessionId: string,
+  projectId: string,
+): () => void {
+  return (): void => {
+    const t = taskStore.getTask(taskId);
+    if (t && (t.status === "in_progress" || t.status === "waiting_input")) {
+      const sess = sessionStore.getSession(sessionId);
+      if (sess?.status === "completed") {
+        taskStore.markTaskCompleted(taskId, "review");
+      } else if (sess?.status === "failed") {
+        taskStore.markTaskCompleted(taskId, "failed");
+      }
+      broadcast({
+        type: "task_updated",
+        payload: { taskId, projectId },
+      });
+    }
+  };
+}
 
 function envRowToProto(row: EnvironmentRow): grackle.Environment {
   return create(grackle.EnvironmentSchema, {
@@ -451,9 +479,26 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       const logPath =
         session.logPath || join(grackleHome, LOGS_DIR, session.id);
 
+      // Auto-bind task context from DB if session was previously associated with a task
+      let resumeProjectId: string | undefined;
+      let resumeTaskId: string | undefined;
+      let resumeOnComplete: (() => void) | undefined;
+
+      if (session.taskId) {
+        const task = taskStore.getTask(session.taskId);
+        if (task) {
+          resumeProjectId = task.projectId;
+          resumeTaskId = task.id;
+          resumeOnComplete = makeTaskCompletionCallback(task.id, session.id, task.projectId);
+        }
+      }
+
       processEventStream(conn.client.resume(powerlineReq), {
         sessionId: session.id,
         logPath,
+        projectId: resumeProjectId,
+        taskId: resumeTaskId,
+        onComplete: resumeOnComplete,
       });
 
       const row = sessionStore.getSession(session.id);
@@ -734,6 +779,41 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         req.reviewNotes !== "" ? req.reviewNotes : existing.reviewNotes,
         existing.personaId,
       );
+
+      // Late-bind: associate an existing session with this task
+      if (req.sessionId !== "") {
+        const session = sessionStore.getSession(req.sessionId);
+        if (!session) {
+          throw new ConnectError(`Session not found: ${req.sessionId}`, Code.NotFound);
+        }
+        const terminalStatuses = ["completed", "failed", "killed"];
+        if (terminalStatuses.includes(session.status)) {
+          throw new ConnectError(
+            `Cannot bind terminal session ${req.sessionId} (status: ${session.status})`,
+            Code.FailedPrecondition,
+          );
+        }
+
+        // Verify the processor exists before mutating DB state to avoid partial updates
+        if (!processorRegistry.get(req.sessionId)) {
+          throw new ConnectError(
+            `No active event processor for session ${req.sessionId}`,
+            Code.FailedPrecondition,
+          );
+        }
+
+        sessionStore.setSessionTask(req.sessionId, req.id);
+        taskStore.setTaskSession(req.id, req.sessionId);
+        taskStore.markTaskStarted(req.id);
+
+        const onComplete = makeTaskCompletionCallback(req.id, req.sessionId, existing.projectId);
+        processorRegistry.lateBind(req.sessionId, req.id, existing.projectId, onComplete);
+        broadcast({
+          type: "task_started",
+          payload: { taskId: req.id, sessionId: req.sessionId, projectId: existing.projectId },
+        });
+      }
+
       const row = taskStore.getTask(req.id);
       return taskRowToProto(row!);
     },
@@ -845,22 +925,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         logPath,
         projectId: task.projectId,
         taskId: task.id,
-        onComplete: () => {
-          // On completion, auto-move task to review
-          const t = taskStore.getTask(task.id);
-          if (t && (t.status === "in_progress" || t.status === "waiting_input")) {
-            const sess = sessionStore.getSession(sessionId);
-            if (sess?.status === "completed") {
-              taskStore.markTaskCompleted(task.id, "review");
-            } else if (sess?.status === "failed") {
-              taskStore.markTaskCompleted(task.id, "failed");
-            }
-            broadcast({
-              type: "task_updated",
-              payload: { taskId: task.id, projectId: task.projectId },
-            });
-          }
-        },
+        onComplete: makeTaskCompletionCallback(task.id, sessionId, task.projectId),
       });
 
       const row = sessionStore.getSession(sessionId);

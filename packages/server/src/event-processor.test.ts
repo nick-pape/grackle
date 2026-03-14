@@ -15,6 +15,7 @@ vi.mock("./log-writer.js", () => ({
   initLog: vi.fn(),
   writeEvent: vi.fn(),
   endSession: vi.fn(),
+  readLog: vi.fn().mockReturnValue([]),
 }));
 
 vi.mock("./stream-hub.js", () => ({
@@ -34,7 +35,10 @@ import { processEventStream } from "./event-processor.js";
 import * as sessionStore from "./session-store.js";
 import * as taskStore from "./task-store.js";
 import * as projectStore from "./project-store.js";
+import * as processorRegistry from "./processor-registry.js";
+import * as findingStore from "./finding-store.js";
 import { broadcast } from "./ws-broadcast.js";
+import * as logWriter from "./log-writer.js";
 import { logger } from "./logger.js";
 import { sqlite } from "./test-db.js";
 
@@ -757,5 +761,384 @@ describe("task status sync with waiting_input", () => {
 
     const task = taskStore.getTask("task1");
     expect(task?.status).toBe("review");
+  });
+});
+
+describe("late-binding", () => {
+  beforeEach(() => {
+    sqlite.exec("DROP TABLE IF EXISTS findings");
+    sqlite.exec("DROP TABLE IF EXISTS tasks");
+    sqlite.exec("DROP TABLE IF EXISTS sessions");
+    sqlite.exec("DROP TABLE IF EXISTS projects");
+    applySchema();
+    vi.clearAllMocks();
+
+    projectStore.createProject("proj1", "Test Project", "desc", "", "env1");
+    // Clean up any leftover processor registrations
+    processorRegistry.unregister("sess1");
+    // Reset readLog mock to return empty by default
+    vi.mocked(logWriter.readLog).mockReturnValue([]);
+  });
+
+  /**
+   * Create a controllable async iterable that yields events on demand.
+   * Call push() to emit events and end() to close the stream.
+   */
+  function controllableStream(): {
+    stream: AsyncIterable<powerline.AgentEvent>;
+    push: (event: powerline.AgentEvent) => void;
+    end: () => void;
+  } {
+    const queue: powerline.AgentEvent[] = [];
+    let waiting: (() => void) | undefined;
+    let done = false;
+
+    const stream: AsyncIterable<powerline.AgentEvent> = {
+      [Symbol.asyncIterator]() {
+        return {
+          async next(): Promise<IteratorResult<powerline.AgentEvent>> {
+            while (queue.length === 0 && !done) {
+              await new Promise<void>((resolve) => { waiting = resolve; });
+            }
+            if (queue.length > 0) {
+              return { value: queue.shift()!, done: false };
+            }
+            return { value: undefined as unknown as powerline.AgentEvent, done: true };
+          },
+        };
+      },
+    };
+
+    return {
+      stream,
+      push(event: powerline.AgentEvent) {
+        queue.push(event);
+        if (waiting) {
+          waiting();
+          waiting = undefined;
+        }
+      },
+      end() {
+        done = true;
+        if (waiting) {
+          waiting();
+          waiting = undefined;
+        }
+      },
+    };
+  }
+
+  it("processes finding events after late-bind", async () => {
+    sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
+    taskStore.createTask("task1", "proj1", "Test Task", "desc", "env1", [], "test-project");
+
+    const { stream, push, end } = controllableStream();
+    const completed = new Promise<void>((resolve) => {
+      processEventStream(stream, {
+        sessionId: "sess1",
+        logPath: "/tmp/log",
+        onComplete: resolve,
+      });
+    });
+
+    // Wait for stream to start processing
+    await new Promise((r) => setTimeout(r, 50));
+
+    // Late-bind the session to the task
+    processorRegistry.lateBind("sess1", "task1", "proj1");
+
+    // Now emit a finding event — should be processed with task context
+    push(create(powerline.AgentEventSchema, {
+      sessionId: "sess1",
+      type: "finding",
+      timestamp: new Date().toISOString(),
+      content: JSON.stringify({ title: "Test Finding", content: "Found something", category: "bug" }),
+    }));
+
+    // End the stream
+    push(create(powerline.AgentEventSchema, {
+      sessionId: "sess1",
+      type: "status",
+      timestamp: new Date().toISOString(),
+      content: "completed",
+    }));
+    end();
+
+    await completed;
+
+    // Verify finding was stored
+    const findings = findingStore.queryFindings("proj1");
+    expect(findings).toHaveLength(1);
+    expect(findings[0].title).toBe("Test Finding");
+    expect(findings[0].projectId).toBe("proj1");
+  });
+
+  it("processes subtask events after late-bind", async () => {
+    sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
+    taskStore.createTask("task1", "proj1", "Parent Task", "desc", "env1", [], "test-project", "", true);
+
+    const { stream, push, end } = controllableStream();
+    const completed = new Promise<void>((resolve) => {
+      processEventStream(stream, {
+        sessionId: "sess1",
+        logPath: "/tmp/log",
+        onComplete: resolve,
+      });
+    });
+
+    await new Promise((r) => setTimeout(r, 50));
+
+    // Late-bind
+    processorRegistry.lateBind("sess1", "task1", "proj1");
+
+    // Emit subtask creation event
+    push(create(powerline.AgentEventSchema, {
+      sessionId: "sess1",
+      type: "subtask_create",
+      timestamp: new Date().toISOString(),
+      content: JSON.stringify({ title: "Sub Task", description: "A subtask" }),
+    }));
+
+    push(create(powerline.AgentEventSchema, {
+      sessionId: "sess1",
+      type: "status",
+      timestamp: new Date().toISOString(),
+      content: "completed",
+    }));
+    end();
+
+    await completed;
+
+    const children = taskStore.getChildren("task1");
+    expect(children).toHaveLength(1);
+    expect(children[0].title).toBe("Sub Task");
+  });
+
+  it("syncs task status after late-bind", async () => {
+    sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
+    taskStore.createTask("task1", "proj1", "Test Task", "desc", "env1", [], "test-project");
+    taskStore.markTaskStarted("task1");
+
+    const { stream, push, end } = controllableStream();
+    const completed = new Promise<void>((resolve) => {
+      processEventStream(stream, {
+        sessionId: "sess1",
+        logPath: "/tmp/log",
+        onComplete: resolve,
+      });
+    });
+
+    await new Promise((r) => setTimeout(r, 50));
+
+    // Late-bind
+    processorRegistry.lateBind("sess1", "task1", "proj1");
+
+    // Emit waiting_input — should sync task status
+    push(create(powerline.AgentEventSchema, {
+      sessionId: "sess1",
+      type: "status",
+      timestamp: new Date().toISOString(),
+      content: "waiting_input",
+    }));
+
+    // Give it a tick to process
+    await new Promise((r) => setTimeout(r, 50));
+
+    const task = taskStore.getTask("task1");
+    expect(task?.status).toBe("waiting_input");
+
+    push(create(powerline.AgentEventSchema, {
+      sessionId: "sess1",
+      type: "status",
+      timestamp: new Date().toISOString(),
+      content: "completed",
+    }));
+    end();
+
+    await completed;
+  });
+
+  it("fires onComplete callback set by late-bind (task → review)", async () => {
+    sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
+    taskStore.createTask("task1", "proj1", "Test Task", "desc", "env1", [], "test-project");
+    taskStore.markTaskStarted("task1");
+
+    const { stream, push, end } = controllableStream();
+    const completed = new Promise<void>((resolve) => {
+      processEventStream(stream, {
+        sessionId: "sess1",
+        logPath: "/tmp/log",
+        // No onComplete initially — it will be set by lateBind
+      });
+      // We need to detect completion differently since no onComplete was set.
+      // The lateBind onComplete will be called in finally. We'll poll.
+      const interval = setInterval(() => {
+        const s = sessionStore.getSession("sess1");
+        if (s && ["completed", "failed", "killed"].includes(s.status)) {
+          clearInterval(interval);
+          // Give the finally block time to run
+          setTimeout(resolve, 50);
+        }
+      }, 20);
+    });
+
+    await new Promise((r) => setTimeout(r, 50));
+
+    // Late-bind with onComplete that moves task to review
+    const onComplete = (): void => {
+      const t = taskStore.getTask("task1");
+      if (t && (t.status === "in_progress" || t.status === "waiting_input")) {
+        const sess = sessionStore.getSession("sess1");
+        if (sess?.status === "completed") {
+          taskStore.markTaskCompleted("task1", "review");
+        }
+      }
+    };
+    processorRegistry.lateBind("sess1", "task1", "proj1", onComplete);
+
+    push(create(powerline.AgentEventSchema, {
+      sessionId: "sess1",
+      type: "status",
+      timestamp: new Date().toISOString(),
+      content: "completed",
+    }));
+    end();
+
+    await completed;
+
+    const task = taskStore.getTask("task1");
+    expect(task?.status).toBe("review");
+  });
+
+  it("replays pre-association finding events from log on late-bind", async () => {
+    sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
+    taskStore.createTask("task1", "proj1", "Test Task", "desc", "env1", [], "test-project");
+
+    // Mock readLog to return a pre-existing finding event
+    vi.mocked(logWriter.readLog).mockReturnValue([
+      {
+        session_id: "sess1",
+        type: "finding",
+        timestamp: new Date().toISOString(),
+        content: JSON.stringify({ title: "Pre-bind Finding", content: "Found before bind", category: "info" }),
+      },
+    ]);
+
+    const { stream, push, end } = controllableStream();
+    const completed = new Promise<void>((resolve) => {
+      processEventStream(stream, {
+        sessionId: "sess1",
+        logPath: "/tmp/log",
+        onComplete: resolve,
+      });
+    });
+
+    await new Promise((r) => setTimeout(r, 50));
+
+    // Late-bind — should trigger replay
+    processorRegistry.lateBind("sess1", "task1", "proj1");
+
+    // Give replay time to run
+    await new Promise((r) => setTimeout(r, 50));
+
+    // Verify the pre-bind finding was stored
+    const findings = findingStore.queryFindings("proj1");
+    expect(findings).toHaveLength(1);
+    expect(findings[0].title).toBe("Pre-bind Finding");
+
+    push(create(powerline.AgentEventSchema, {
+      sessionId: "sess1",
+      type: "status",
+      timestamp: new Date().toISOString(),
+      content: "completed",
+    }));
+    end();
+
+    await completed;
+  });
+
+  it("replay does not re-publish events to streamHub", async () => {
+    sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
+    taskStore.createTask("task1", "proj1", "Test Task", "desc", "env1", [], "test-project");
+
+    vi.mocked(logWriter.readLog).mockReturnValue([
+      {
+        session_id: "sess1",
+        type: "finding",
+        timestamp: new Date().toISOString(),
+        content: JSON.stringify({ title: "Replay Finding", content: "test", category: "info" }),
+      },
+    ]);
+
+    const { stream, push, end } = controllableStream();
+    const completed = new Promise<void>((resolve) => {
+      processEventStream(stream, {
+        sessionId: "sess1",
+        logPath: "/tmp/log",
+        onComplete: resolve,
+      });
+    });
+
+    await new Promise((r) => setTimeout(r, 50));
+
+    // Clear publish mock to only track replay calls
+    const { publish } = await import("./stream-hub.js");
+    vi.mocked(publish).mockClear();
+
+    processorRegistry.lateBind("sess1", "task1", "proj1");
+    await new Promise((r) => setTimeout(r, 50));
+
+    // streamHub.publish should NOT have been called by replay
+    // (broadcast for finding_posted IS expected, but streamHub.publish is not)
+    expect(publish).not.toHaveBeenCalled();
+
+    push(create(powerline.AgentEventSchema, {
+      sessionId: "sess1",
+      type: "status",
+      timestamp: new Date().toISOString(),
+      content: "completed",
+    }));
+    end();
+
+    await completed;
+  });
+
+  it("processor is unregistered after stream ends", async () => {
+    sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
+
+    await waitForProcessing([], {
+      sessionId: "sess1",
+      logPath: "/tmp/log",
+    });
+
+    expect(processorRegistry.get("sess1")).toBeUndefined();
+  });
+
+  it("processor is registered during stream processing", async () => {
+    sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
+
+    const { stream, push, end } = controllableStream();
+    processEventStream(stream, {
+      sessionId: "sess1",
+      logPath: "/tmp/log",
+    });
+
+    await new Promise((r) => setTimeout(r, 50));
+
+    // Should be registered while stream is active
+    expect(processorRegistry.get("sess1")).toBeDefined();
+    expect(processorRegistry.get("sess1")?.sessionId).toBe("sess1");
+
+    push(create(powerline.AgentEventSchema, {
+      sessionId: "sess1",
+      type: "status",
+      timestamp: new Date().toISOString(),
+      content: "completed",
+    }));
+    end();
+
+    // Wait for cleanup
+    await new Promise((r) => setTimeout(r, 100));
+    expect(processorRegistry.get("sess1")).toBeUndefined();
   });
 });
