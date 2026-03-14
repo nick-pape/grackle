@@ -73,13 +73,15 @@ function main() {
   // Check if a PR exists on this branch. Capture stderr from the error
   // object to distinguish "no PR" from a real failure — avoids a second call.
   let prNumber;
+  let prState;
   try {
-    const output = execSync("gh pr view --json number", {
+    const output = execSync("gh pr view --json number,state", {
       encoding: "utf-8",
       stdio: ["pipe", "pipe", "pipe"],
     }).trim();
     const parsed = JSON.parse(output);
     prNumber = parsed.number;
+    prState = parsed.state;
   } catch (error) {
     const output = (error.stderr || "") + (error.stdout || "");
     if (/no pull requests found|no open pull requests/i.test(output)) {
@@ -93,9 +95,6 @@ function main() {
   }
 
   // ── Check 0: PR already merged or closed ──────────────────────────
-  const stateData = runJson(`gh pr view ${prNumber} --json state`);
-  const prState = stateData?.state;
-
   if (prState === "MERGED" || prState === "CLOSED") {
     block(
       `PR #${prNumber} is already ${prState}. Switch back to main and pull:\n` +
