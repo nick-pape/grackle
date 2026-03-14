@@ -1,6 +1,6 @@
 {
   "name": "@grackle-ai/server",
-  "version": "0.18.1",
+  "version": "0.18.3",
   "description": "Central gRPC server with SQLite storage and WebSocket bridge for Grackle",
   "license": "MIT",
   "repository": {
@@ -40,5 +40,8 @@
     "@types/uuid": "^10.0.0",
     "@types/ws": "^8.0.0",
     "vitest": "^3.1.1"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["better-sqlite3"]
   }
 }

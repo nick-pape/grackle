@@ -130,3 +130,12 @@
   font-size: 11px;
   word-break: break-word;
 }
+
+.disconnectHint {
+  color: var(--accent-yellow);
+  font-size: 11px;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+}

@@ -1,6 +1,25 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Fri, 13 Mar 2026 21:32:39 GMT and should not be manually modified.
+This log was last generated on Sat, 14 Mar 2026 04:23:29 GMT and should not be manually modified.
+
+## 0.18.3
+Sat, 14 Mar 2026 04:23:29 GMT
+
+### Patches
+
+- Fix CLI connecting via IPv6 (::1) when server binds IPv4-only (127.0.0.1); change CLI default URL from localhost to 127.0.0.1, add --host flag to grackle serve, bind PowerLine to 127.0.0.1 explicitly, and reflect actual bind address in log messages
+
+## 0.18.2
+Sat, 14 Mar 2026 04:00:53 GMT
+
+### Patches
+
+- Add pnpm.onlyBuiltDependencies to allow better-sqlite3 install script in pnpm v8+
+
+### Updates
+
+- False positive — only @grackle-ai/web (non-publishable) was modified; merge-commit detection flagged this package.
+- No changes to CLI (merge commit false positive)
 
 ## 0.18.1
 Fri, 13 Mar 2026 21:32:39 GMT
