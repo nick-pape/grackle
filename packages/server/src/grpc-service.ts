@@ -1134,37 +1134,5 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       return create(grackle.ImportGitHubIssuesResponseSchema, result);
     },
 
-    // ─── Diff ────────────────────────────────────────────────
-
-    async getTaskDiff(req: grackle.GetTaskDiffRequest) {
-      const task = taskStore.getTask(req.taskId);
-      if (!task) throw new Error(`Task not found: ${req.taskId}`);
-      if (!task.branch) throw new Error("Task has no branch");
-
-      const environmentId =
-        task.environmentId ||
-        projectStore.getProject(task.projectId)?.defaultEnvironmentId;
-      if (!environmentId) throw new Error("No environment for task");
-
-      const conn = adapterManager.getConnection(environmentId);
-      if (!conn) throw new Error(`Environment ${environmentId} not connected`);
-
-      const diffResp = await conn.client.getDiff(
-        create(powerline.DiffRequestSchema, {
-          branch: task.branch,
-          baseBranch: "main",
-          worktreeBasePath: "/workspace",
-        }),
-      );
-
-      return create(grackle.TaskDiffSchema, {
-        taskId: task.id,
-        branch: task.branch,
-        diff: diffResp.diff,
-        changedFiles: [...diffResp.changedFiles],
-        additions: diffResp.additions,
-        deletions: diffResp.deletions,
-      });
-    },
   });
 }

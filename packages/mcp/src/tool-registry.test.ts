@@ -1,13 +1,18 @@
 import { describe, it, expect } from "vitest";
+import { z } from "zod";
 import { ToolRegistry, type ToolDefinition } from "./tool-registry.js";
+import { createToolRegistry } from "./tools/index.js";
 
 function createTestTool(name: string): ToolDefinition {
   return {
     name,
-    description: `Test tool: ${name}`,
-    inputSchema: { type: "object" },
+    group: "test",
+    description: `Test tool: ${name} — used for unit testing`,
+    inputSchema: z.object({}),
+    rpcMethod: "testMethod",
+    mutating: false,
     async handler() {
-      return { content: [{ type: "text", text: `result from ${name}` }] };
+      return { content: [{ type: "text" as const, text: `result from ${name}` }] };
     },
   };
 }
@@ -85,5 +90,82 @@ describe("ToolRegistry", () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const result = await tool.handler({}, {} as any);
     expect(result.content[0].text).toBe("result from exec_test");
+  });
+
+  it("registers an array of tools with registerAll", () => {
+    const registry = new ToolRegistry();
+    registry.registerAll([
+      createTestTool("batch_one"),
+      createTestTool("batch_two"),
+      createTestTool("batch_three"),
+    ]);
+
+    expect(registry.list()).toHaveLength(3);
+  });
+});
+
+describe("Full tool registry", () => {
+  it("contains exactly 35 tools", () => {
+    const registry = createToolRegistry();
+    expect(registry.list()).toHaveLength(35);
+  });
+
+  it("every tool name matches snake_case pattern", () => {
+    const registry = createToolRegistry();
+    for (const tool of registry.list()) {
+      expect(tool.name).toMatch(/^[a-z]+_[a-z_]+$/);
+    }
+  });
+
+  it("every tool has all required fields", () => {
+    const registry = createToolRegistry();
+    for (const tool of registry.list()) {
+      expect(tool.name).toBeTruthy();
+      expect(tool.group).toBeTruthy();
+      expect(tool.description.length).toBeGreaterThanOrEqual(20);
+      expect(tool.inputSchema).toBeTruthy();
+      expect(tool.rpcMethod).toBeTruthy();
+      expect(typeof tool.mutating).toBe("boolean");
+      expect(typeof tool.handler).toBe("function");
+    }
+  });
+
+  it("read-only tools have mutating=false", () => {
+    const registry = createToolRegistry();
+    const readOnlyNames = new Set([
+      "env_list",
+      "session_status",
+      "session_attach",
+      "project_list",
+      "project_get",
+      "task_list",
+      "task_show",
+      "finding_list",
+      "persona_list",
+      "persona_show",
+      "logs_get",
+    ]);
+
+    for (const tool of registry.list()) {
+      if (readOnlyNames.has(tool.name)) {
+        expect(tool.mutating, `${tool.name} should not be mutating`).toBe(false);
+      }
+    }
+  });
+
+  it("has no duplicate tool names", () => {
+    const registry = createToolRegistry();
+    const names = registry.list().map((t) => t.name);
+    expect(new Set(names).size).toBe(names.length);
+  });
+
+  it("groups are consistent within tool files", () => {
+    const registry = createToolRegistry();
+    const expectedGroups = new Set([
+      "env", "session", "project", "task", "finding", "persona", "logs",
+    ]);
+    for (const tool of registry.list()) {
+      expect(expectedGroups.has(tool.group), `unexpected group: ${tool.group}`).toBe(true);
+    }
   });
 });
