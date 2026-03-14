@@ -1,6 +1,17 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sat, 14 Mar 2026 07:25:55 GMT and should not be manually modified.
+This log was last generated on Sat, 14 Mar 2026 08:04:11 GMT and should not be manually modified.
+
+## 0.21.0
+Sat, 14 Mar 2026 08:04:11 GMT
+
+### Minor changes
+
+- Map full CLI tool surface to 35 MCP tools, add send-input/project get/update CLI commands, remove GetTaskDiff RPC
+
+### Patches
+
+- Re-push stored tokens and Claude credentials before each task start to prevent stale OAuth token failures
 
 ## 0.20.0
 Sat, 14 Mar 2026 07:25:55 GMT
