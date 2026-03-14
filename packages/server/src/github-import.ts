@@ -528,6 +528,8 @@ async function doImport(
     if (resolvedDeps.length > 0) {
       taskStore.setTaskDependsOn(taskId, resolvedDeps);
       dependencies += resolvedDeps.length;
+      const updatedRow = taskStore.getTask(taskId);
+      broadcast({ type: "task_updated", payload: { task: updatedRow ? { ...updatedRow } : null } });
     }
   }
 
