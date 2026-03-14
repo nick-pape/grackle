@@ -51,6 +51,8 @@ export const DEFAULT_POWERLINE_PORT: number = 7433;
 export const DEFAULT_SERVER_PORT: number = 7434;
 /** Default port for the web UI and WebSocket bridge. */
 export const DEFAULT_WEB_PORT: number = 3000;
+/** Default port for the MCP (Model Context Protocol) server. */
+export const DEFAULT_MCP_PORT: number = 7435;
 /** Default agent runtime used when none is specified. */
 export const DEFAULT_RUNTIME: RuntimeName = "claude-code";
 /** Name of the Grackle config directory under the user's home. */

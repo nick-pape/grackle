@@ -1,0 +1,280 @@
+import { randomUUID, timingSafeEqual } from "node:crypto";
+import http from "node:http";
+import { createClient, type Client } from "@connectrpc/connect";
+import { createGrpcTransport } from "@connectrpc/connect-node";
+import { grackle } from "@grackle-ai/common";
+import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import {
+  ListToolsRequestSchema,
+  CallToolRequestSchema,
+  isInitializeRequest,
+  type CallToolResult,
+} from "@modelcontextprotocol/sdk/types.js";
+import pino, { type Logger } from "pino";
+import { createToolRegistry } from "./tools/index.js";
+
+const logger: Logger = pino({
+  name: "grackle-mcp",
+  level: process.env.LOG_LEVEL || "info",
+  transport: process.env.NODE_ENV !== "production"
+    ? { target: "pino/file", options: { destination: 1 } }
+    : undefined,
+});
+
+/** Options for creating an MCP server. */
+export interface McpServerOptions {
+  /** Host address to bind the MCP server to. */
+  bindHost: string;
+  /** Port for the MCP server to listen on. */
+  mcpPort: number;
+  /** Port of the co-located gRPC server for backend calls. */
+  grpcPort: number;
+  /** API key used for authenticating both inbound MCP and outbound gRPC requests. */
+  apiKey: string;
+}
+
+/** Create a ConnectRPC client pointing at the co-located Grackle gRPC server. */
+function createGrpcClient(bindHost: string, grpcPort: number, apiKey: string): Client<typeof grackle.Grackle> {
+  const transport = createGrpcTransport({
+    baseUrl: `http://${bindHost}:${grpcPort}`,
+    interceptors: [
+      (next) => async (req) => {
+        req.header.set("Authorization", `Bearer ${apiKey}`);
+        return next(req);
+      },
+    ],
+  });
+  return createClient(grackle.Grackle, transport);
+}
+
+/** Create a low-level MCP Server instance with tool handlers wired to the ConnectRPC backend. */
+function createMcpServerInstance(grpcClient: Client<typeof grackle.Grackle>): Server {
+  const registry = createToolRegistry();
+
+  const server = new Server(
+    { name: "grackle-mcp", version: "0.18.3" },
+    { capabilities: { tools: {} } },
+  );
+
+  server.setRequestHandler(ListToolsRequestSchema, async () => {
+    const tools = registry.list();
+    return {
+      tools: tools.map((t) => ({
+        name: t.name,
+        description: t.description,
+        inputSchema: t.inputSchema,
+        annotations: t.annotations,
+      })),
+    };
+  });
+
+  server.setRequestHandler(CallToolRequestSchema, async (request): Promise<CallToolResult> => {
+    const { name, arguments: args } = request.params;
+    const tool = registry.get(name);
+    if (!tool) {
+      return {
+        content: [{ type: "text", text: `Unknown tool: ${name}` }],
+        isError: true,
+      };
+    }
+
+    try {
+      logger.info({ tool: name }, "Executing MCP tool: %s", name);
+      const result = await tool.handler(args ?? {}, grpcClient);
+      return result as CallToolResult;
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error({ tool: name, err: error }, "Tool execution failed: %s", name);
+      return {
+        content: [{ type: "text", text: `Error: ${errorMessage}` }],
+        isError: true,
+      };
+    }
+  });
+
+  return server;
+}
+
+/**
+ * Verify the Bearer token on an incoming HTTP request.
+ * Uses constant-time comparison via timingSafeEqual.
+ */
+function verifyBearer(req: http.IncomingMessage, apiKey: string): boolean {
+  const authHeader = req.headers.authorization || "";
+  const token = authHeader.replace(/^Bearer\s+/i, "");
+  if (!token || token.length !== apiKey.length) {
+    return false;
+  }
+  const a = Buffer.from(token);
+  const b = Buffer.from(apiKey);
+  return timingSafeEqual(a, b);
+}
+
+/**
+ * Create an HTTP server that serves the MCP Streamable HTTP protocol on `/mcp`.
+ *
+ * The server manages stateful sessions — each MCP client gets its own transport
+ * and Server instance, tracked by session ID.
+ */
+export function createMcpServer(options: McpServerOptions): http.Server {
+  const { bindHost, grpcPort, apiKey } = options;
+  const grpcClient = createGrpcClient(bindHost, grpcPort, apiKey);
+
+  /** Map of active session transports, keyed by session ID. */
+  const transports: Map<string, StreamableHTTPServerTransport> = new Map();
+
+  const httpServer = http.createServer(async (req, res) => {
+    const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
+
+    // Only serve the /mcp endpoint
+    if (url.pathname !== "/mcp") {
+      res.writeHead(404, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "Not found" }));
+      return;
+    }
+
+    // Auth check on every request
+    if (!verifyBearer(req, apiKey)) {
+      res.writeHead(401, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "Unauthorized" }));
+      return;
+    }
+
+    const method = req.method?.toUpperCase();
+
+    if (method === "POST") {
+      await handlePost(req, res, grpcClient, transports);
+    } else if (method === "GET") {
+      await handleGet(req, res, transports);
+    } else if (method === "DELETE") {
+      await handleDelete(req, res, transports);
+    } else {
+      res.writeHead(405, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "Method not allowed" }));
+    }
+  });
+
+  return httpServer;
+}
+
+/** Parse the JSON body from an incoming HTTP request. */
+async function parseBody(req: http.IncomingMessage): Promise<unknown> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    req.on("data", (chunk: Buffer) => chunks.push(chunk));
+    req.on("end", () => {
+      try {
+        const body = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+        resolve(body);
+      } catch (err) {
+        reject(err);
+      }
+    });
+    req.on("error", reject);
+  });
+}
+
+/** Handle POST requests to /mcp — initialization or tool calls. */
+async function handlePost(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+  grpcClient: Client<typeof grackle.Grackle>,
+  transports: Map<string, StreamableHTTPServerTransport>,
+): Promise<void> {
+  try {
+    const body = await parseBody(req);
+    const sessionId = req.headers["mcp-session-id"] as string | undefined;
+
+    if (sessionId && transports.has(sessionId)) {
+      // Existing session — route to its transport
+      const transport = transports.get(sessionId)!;
+      await transport.handleRequest(req, res, body);
+      return;
+    }
+
+    if (!sessionId && isInitializeRequest(body)) {
+      // New initialization — create a new transport + server
+      const transport = new StreamableHTTPServerTransport({
+        sessionIdGenerator: () => randomUUID(),
+        onsessioninitialized: (sid: string) => {
+          logger.info({ sessionId: sid }, "MCP session initialized");
+          transports.set(sid, transport);
+        },
+      });
+
+      transport.onclose = () => {
+        const sid = transport.sessionId;
+        if (sid && transports.has(sid)) {
+          logger.info({ sessionId: sid }, "MCP session closed");
+          transports.delete(sid);
+        }
+      };
+
+      const mcpServer = createMcpServerInstance(grpcClient);
+      await mcpServer.connect(transport);
+      await transport.handleRequest(req, res, body);
+      return;
+    }
+
+    // Invalid request — no session or not an init request
+    res.writeHead(400, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({
+      jsonrpc: "2.0",
+      error: { code: -32000, message: "Bad Request: No valid session ID provided" },
+      id: null,
+    }));
+  } catch (error) {
+    logger.error({ err: error }, "Error handling MCP POST request");
+    if (!res.headersSent) {
+      res.writeHead(500, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({
+        jsonrpc: "2.0",
+        error: { code: -32603, message: "Internal server error" },
+        id: null,
+      }));
+    }
+  }
+}
+
+/** Handle GET requests to /mcp — SSE streams for server-initiated messages. */
+async function handleGet(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+  transports: Map<string, StreamableHTTPServerTransport>,
+): Promise<void> {
+  const sessionId = req.headers["mcp-session-id"] as string | undefined;
+  if (!sessionId || !transports.has(sessionId)) {
+    res.writeHead(400, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ error: "Invalid or missing session ID" }));
+    return;
+  }
+
+  const transport = transports.get(sessionId)!;
+  await transport.handleRequest(req, res);
+}
+
+/** Handle DELETE requests to /mcp — session termination. */
+async function handleDelete(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+  transports: Map<string, StreamableHTTPServerTransport>,
+): Promise<void> {
+  const sessionId = req.headers["mcp-session-id"] as string | undefined;
+  if (!sessionId || !transports.has(sessionId)) {
+    res.writeHead(400, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ error: "Invalid or missing session ID" }));
+    return;
+  }
+
+  const transport = transports.get(sessionId)!;
+  try {
+    await transport.handleRequest(req, res);
+  } catch (error) {
+    logger.error({ err: error }, "Error handling session termination");
+    if (!res.headersSent) {
+      res.writeHead(500, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "Error processing session termination" }));
+    }
+  }
+}
