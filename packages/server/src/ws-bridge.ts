@@ -33,7 +33,7 @@ import { slugify } from "./utils/slugify.js";
 import { processEventStream } from "./event-processor.js";
 import * as processorRegistry from "./processor-registry.js";
 import { broadcast, setWssInstance } from "./ws-broadcast.js";
-import { buildMcpServersJson } from "./grpc-service.js";
+import { buildMcpServersJson, makeTaskCompletionCallback } from "./grpc-service.js";
 import { exec } from "./utils/exec.js";
 
 const GH_CODESPACE_LIST_TIMEOUT_MS: number = 30_000;
@@ -382,21 +382,7 @@ async function startTaskSession(
     logPath,
     projectId: freshTask.projectId,
     taskId: freshTask.id,
-    onComplete: () => {
-      const t = taskStore.getTask(freshTask.id);
-      if (t && (t.status === "in_progress" || t.status === "waiting_input")) {
-        const sess = sessionStore.getSession(sessionId);
-        if (sess?.status === "completed") {
-          taskStore.markTaskCompleted(freshTask.id, "review");
-        } else if (sess?.status === "failed") {
-          taskStore.markTaskCompleted(freshTask.id, "failed");
-        }
-        broadcast({
-          type: "task_updated",
-          payload: { taskId: freshTask.id, projectId: freshTask.projectId },
-        });
-      }
-    },
+    onComplete: makeTaskCompletionCallback(freshTask.id, sessionId, freshTask.projectId),
   });
 
   return undefined;
@@ -1063,26 +1049,20 @@ async function handleMessage(
           return;
         }
 
+        // Verify the processor exists before mutating DB state to avoid partial updates
+        if (!processorRegistry.get(lateBindSessionId)) {
+          sendWs(ws, {
+            type: "error",
+            payload: { message: `No active event processor for session ${lateBindSessionId}` },
+          });
+          return;
+        }
+
         sessionStore.setSessionTask(lateBindSessionId, updateTaskId);
         taskStore.setTaskSession(updateTaskId, lateBindSessionId);
         taskStore.markTaskStarted(updateTaskId);
 
-        const onComplete = (): void => {
-          const t = taskStore.getTask(updateTaskId);
-          if (t && (t.status === "in_progress" || t.status === "waiting_input")) {
-            const sess = sessionStore.getSession(lateBindSessionId);
-            if (sess?.status === "completed") {
-              taskStore.markTaskCompleted(updateTaskId, "review");
-            } else if (sess?.status === "failed") {
-              taskStore.markTaskCompleted(updateTaskId, "failed");
-            }
-            broadcast({
-              type: "task_updated",
-              payload: { taskId: updateTaskId, projectId: existingTask.projectId },
-            });
-          }
-        };
-
+        const onComplete = makeTaskCompletionCallback(updateTaskId, lateBindSessionId, existingTask.projectId);
         try {
           processorRegistry.lateBind(lateBindSessionId, updateTaskId, existingTask.projectId, onComplete);
         } catch (err) {

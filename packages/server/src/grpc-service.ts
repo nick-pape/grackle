@@ -34,6 +34,33 @@ import { slugify } from "./utils/slugify.js";
 import { buildTaskSystemContext } from "./utils/system-context.js";
 import { importGitHubIssues as executeGitHubImport } from "./github-import.js";
 
+/**
+ * Build a completion callback that transitions a task to review/failed
+ * when its associated session ends. Shared across startTask, resumeAgent,
+ * updateTask (late-bind), and WS bridge paths.
+ */
+export function makeTaskCompletionCallback(
+  taskId: string,
+  sessionId: string,
+  projectId: string,
+): () => void {
+  return (): void => {
+    const t = taskStore.getTask(taskId);
+    if (t && (t.status === "in_progress" || t.status === "waiting_input")) {
+      const sess = sessionStore.getSession(sessionId);
+      if (sess?.status === "completed") {
+        taskStore.markTaskCompleted(taskId, "review");
+      } else if (sess?.status === "failed") {
+        taskStore.markTaskCompleted(taskId, "failed");
+      }
+      broadcast({
+        type: "task_updated",
+        payload: { taskId, projectId },
+      });
+    }
+  };
+}
+
 function envRowToProto(row: EnvironmentRow): grackle.Environment {
   return create(grackle.EnvironmentSchema, {
     id: row.id,
@@ -462,21 +489,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         if (task) {
           resumeProjectId = task.projectId;
           resumeTaskId = task.id;
-          resumeOnComplete = (): void => {
-            const t = taskStore.getTask(task.id);
-            if (t && (t.status === "in_progress" || t.status === "waiting_input")) {
-              const sess = sessionStore.getSession(session.id);
-              if (sess?.status === "completed") {
-                taskStore.markTaskCompleted(task.id, "review");
-              } else if (sess?.status === "failed") {
-                taskStore.markTaskCompleted(task.id, "failed");
-              }
-              broadcast({
-                type: "task_updated",
-                payload: { taskId: task.id, projectId: task.projectId },
-              });
-            }
-          };
+          resumeOnComplete = makeTaskCompletionCallback(task.id, session.id, task.projectId);
         }
       }
 
@@ -781,26 +794,19 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
           );
         }
 
+        // Verify the processor exists before mutating DB state to avoid partial updates
+        if (!processorRegistry.get(req.sessionId)) {
+          throw new ConnectError(
+            `No active event processor for session ${req.sessionId}`,
+            Code.FailedPrecondition,
+          );
+        }
+
         sessionStore.setSessionTask(req.sessionId, req.id);
         taskStore.setTaskSession(req.id, req.sessionId);
         taskStore.markTaskStarted(req.id);
 
-        const onComplete = (): void => {
-          const t = taskStore.getTask(req.id);
-          if (t && (t.status === "in_progress" || t.status === "waiting_input")) {
-            const sess = sessionStore.getSession(req.sessionId);
-            if (sess?.status === "completed") {
-              taskStore.markTaskCompleted(req.id, "review");
-            } else if (sess?.status === "failed") {
-              taskStore.markTaskCompleted(req.id, "failed");
-            }
-            broadcast({
-              type: "task_updated",
-              payload: { taskId: req.id, projectId: existing.projectId },
-            });
-          }
-        };
-
+        const onComplete = makeTaskCompletionCallback(req.id, req.sessionId, existing.projectId);
         processorRegistry.lateBind(req.sessionId, req.id, existing.projectId, onComplete);
         broadcast({
           type: "task_started",
@@ -919,22 +925,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         logPath,
         projectId: task.projectId,
         taskId: task.id,
-        onComplete: () => {
-          // On completion, auto-move task to review
-          const t = taskStore.getTask(task.id);
-          if (t && (t.status === "in_progress" || t.status === "waiting_input")) {
-            const sess = sessionStore.getSession(sessionId);
-            if (sess?.status === "completed") {
-              taskStore.markTaskCompleted(task.id, "review");
-            } else if (sess?.status === "failed") {
-              taskStore.markTaskCompleted(task.id, "failed");
-            }
-            broadcast({
-              type: "task_updated",
-              payload: { taskId: task.id, projectId: task.projectId },
-            });
-          }
-        },
+        onComplete: makeTaskCompletionCallback(task.id, sessionId, task.projectId),
       });
 
       const row = sessionStore.getSession(sessionId);

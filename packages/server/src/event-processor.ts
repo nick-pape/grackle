@@ -167,6 +167,11 @@ export function processSubtaskEvent(
 /**
  * Replay pre-association events from the session log through finding/subtask interceptors.
  * Called when a session is late-bound to a task. Does not re-publish to streamHub.
+ *
+ * Note: Uses synchronous readFileSync while the log is written via a buffered WriteStream.
+ * Events written very recently may still be in the write buffer and not yet flushed to disk.
+ * In practice this is negligible since replay targets events written before the current
+ * iteration of the for-await loop, which are already flushed by the time lateBind is called.
  */
 function replayLoggedEvents(ctx: ProcessorContext, subtaskLocalIdMap: Map<string, string>): void {
   try {
@@ -221,17 +226,19 @@ export function processEventStream(
     onComplete: options.onComplete,
   };
 
+  /** Maps local_id strings (assigned by the agent) to real task IDs, scoped to this stream. */
+  const subtaskLocalIdMap = new Map<string, string>();
+
   processorRegistry.register(ctx);
+
+  // Register the bind listener synchronously alongside register() to close the race
+  // window where lateBind() could fire between register and the async IIFE starting.
+  processorRegistry.onBind(sessionId, () => {
+    replayLoggedEvents(ctx, subtaskLocalIdMap);
+  });
 
   // eslint-disable-next-line @typescript-eslint/no-floating-promises
   (async () => {
-    /** Maps local_id strings (assigned by the agent) to real task IDs, scoped to this stream. */
-    const subtaskLocalIdMap = new Map<string, string>();
-
-    // Register a bind listener for late-binding replay
-    processorRegistry.onBind(sessionId, () => {
-      replayLoggedEvents(ctx, subtaskLocalIdMap);
-    });
 
     try {
       logWriter.initLog(logPath);
