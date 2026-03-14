@@ -18,8 +18,8 @@ interface Props {
  * - edit_task: pre-populated form; calls updateTask on save, then navigates
  *              back to the task overview.
  *
- * Environment is intentionally excluded — it is selected at task start time,
- * not at creation/editing time.
+ * Environment and persona are optional — both can be set at creation or
+ * changed later via editing. Environment can also be overridden at start time.
  */
 export function TaskEditPanel({ viewMode, setViewMode }: Props): JSX.Element {
   const { tasks, createTask, updateTask, personas, environments } = useGrackle();
@@ -198,7 +198,7 @@ export function TaskEditPanel({ viewMode, setViewMode }: Props): JSX.Element {
             >
               <option value="">No environment</option>
               {environments.map((env) => (
-                <option key={env.id} value={env.id}>{env.id}</option>
+                <option key={env.id} value={env.id}>{env.displayName || env.id}</option>
               ))}
             </select>
           </div>
