@@ -337,6 +337,18 @@ async function startTaskSession(
     },
   });
 
+  // Re-push stored tokens + Claude credentials so they're fresh for this session
+  try {
+    await tokenBroker.pushToEnv(environmentId);
+  } catch (err) {
+    logger.warn({ environmentId, err }, "Failed to push tokens before task start");
+  }
+  try {
+    await tokenBroker.pushCredentialsToEnv(environmentId);
+  } catch (err) {
+    logger.warn({ environmentId, err }, "Failed to push Claude credentials before task start");
+  }
+
   let mcpServersJson = "";
   if (persona) {
     try {

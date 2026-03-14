@@ -1,4 +1,7 @@
 import { eq } from "drizzle-orm";
+import { existsSync, readFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
 import db from "./db.js";
 import { tokens, type TokenRow } from "./schema.js";
 import { encrypt, decrypt } from "./crypto.js";
@@ -83,6 +86,34 @@ export async function pushToEnv(environmentId: string): Promise<void> {
   if (bundle.tokens.length === 0) {
     return;
   }
+
+  await conn.client.pushTokens(bundle);
+}
+
+/** Push the host's Claude credentials file to a single connected environment. */
+export async function pushCredentialsToEnv(environmentId: string): Promise<void> {
+  const conn = adapterManager.getConnection(environmentId);
+  if (!conn) {
+    return;
+  }
+
+  const credentialsPath = join(homedir(), ".claude", ".credentials.json");
+  if (!existsSync(credentialsPath)) {
+    logger.debug("No host credentials file found; skipping push");
+    return;
+  }
+
+  const value = readFileSync(credentialsPath, "utf-8");
+  const bundle = create(powerline.TokenBundleSchema, {
+    tokens: [
+      create(powerline.TokenItemSchema, {
+        name: "claude-credentials",
+        type: "file",
+        filePath: "~/.claude/.credentials.json",
+        value,
+      }),
+    ],
+  });
 
   await conn.client.pushTokens(bundle);
 }

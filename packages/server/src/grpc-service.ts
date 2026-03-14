@@ -804,6 +804,18 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         payload: { taskId: task.id, sessionId, projectId: task.projectId },
       });
 
+      // Re-push stored tokens + Claude credentials so they're fresh for this session
+      try {
+        await tokenBroker.pushToEnv(environmentId);
+      } catch (err) {
+        logger.warn({ environmentId, err }, "Failed to push tokens before task start");
+      }
+      try {
+        await tokenBroker.pushCredentialsToEnv(environmentId);
+      } catch (err) {
+        logger.warn({ environmentId, err }, "Failed to push Claude credentials before task start");
+      }
+
       const mcpServersJson = persona ? personaMcpServersToJson(persona) : "";
 
       const powerlineReq = create(powerline.SpawnRequestSchema, {
