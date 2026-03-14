@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Fix Copilot task stop action: guard abort, make kill best-effort, update task status on kill, auto-start unblocked tasks after approval",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "leoendalekachew@gmail.com"
+}
