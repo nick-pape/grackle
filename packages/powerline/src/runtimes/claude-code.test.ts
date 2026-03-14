@@ -5,6 +5,14 @@ vi.mock("../logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
 
+vi.mock("./runtime-utils.js", async (importOriginal) => {
+  const original = await importOriginal<typeof import("./runtime-utils.js")>();
+  return {
+    ...original,
+    resolveWorkingDirectory: vi.fn(async () => "/workspace/repo"),
+  };
+});
+
 import { mapMessage } from "./claude-code.js";
 
 describe("mapMessage", () => {
@@ -366,5 +374,36 @@ describe("ClaudeCodeRuntime structural", () => {
     });
     expect(session.id).toBe("cc-resume");
     expect(session.runtimeSessionId).toBe("prev-session-123");
+  });
+
+  it("setupSdk includes settingSources with 'project'", async () => {
+    const { ClaudeCodeRuntime } = await import("./claude-code.js");
+    const runtime = new ClaudeCodeRuntime();
+    const session = runtime.spawn({
+      sessionId: "cc-settings",
+      prompt: "test",
+      model: "claude-3",
+      maxTurns: 0,
+    });
+    await (session as any).setupSdk();
+    const opts = (session as any).cachedSdkOptions;
+    expect(opts.settingSources).toEqual(["project"]);
+  });
+
+  it("setupSdk preserves caller-provided hooks alongside settingSources", async () => {
+    const { ClaudeCodeRuntime } = await import("./claude-code.js");
+    const runtime = new ClaudeCodeRuntime();
+    const hooks = { Stop: [{ matcher: "", hooks: [{ type: "command", command: "echo hi" }] }] };
+    const session = runtime.spawn({
+      sessionId: "cc-hooks",
+      prompt: "test",
+      model: "claude-3",
+      maxTurns: 0,
+      hooks,
+    });
+    await (session as any).setupSdk();
+    const opts = (session as any).cachedSdkOptions;
+    expect(opts.settingSources).toEqual(["project"]);
+    expect(opts.hooks).toEqual(hooks);
   });
 });

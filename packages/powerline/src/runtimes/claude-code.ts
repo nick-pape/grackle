@@ -129,6 +129,7 @@ class ClaudeCodeSession extends BaseAgentSession {
       permissionMode: "bypassPermissions",
       allowDangerouslySkipPermissions: true,
       allowedTools: [...BUILTIN_TOOLS],
+      settingSources: ["project"],
       ...(cwd ? { cwd } : {}),
     };
 
