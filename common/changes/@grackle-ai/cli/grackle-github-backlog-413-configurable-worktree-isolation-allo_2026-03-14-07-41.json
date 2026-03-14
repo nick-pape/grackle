@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Add configurable worktree isolation per project: --no-worktrees flag for project create/update, project list shows worktree status",
+      "type": "minor",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
