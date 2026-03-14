@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sat, 14 Mar 2026 05:55:32 GMT and should not be manually modified.
+This log was last generated on Sat, 14 Mar 2026 07:25:55 GMT and should not be manually modified.
+
+## 0.20.0
+Sat, 14 Mar 2026 07:25:55 GMT
+
+### Minor changes
+
+- feat: import blocking/blocked-by relationships from GitHub Issues as task dependsOn arrays
 
 ## 0.19.0
 Sat, 14 Mar 2026 05:55:32 GMT

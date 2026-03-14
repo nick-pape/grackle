@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.20.0",
+      "tag": "@grackle-ai/cli_v0.20.0",
+      "date": "Sat, 14 Mar 2026 07:25:55 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "feat: import blocking/blocked-by relationships from GitHub Issues as task dependsOn arrays"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.19.0",
       "tag": "@grackle-ai/cli_v0.19.0",
       "date": "Sat, 14 Mar 2026 05:55:32 GMT",
