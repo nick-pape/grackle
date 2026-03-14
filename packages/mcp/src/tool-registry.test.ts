@@ -104,6 +104,8 @@ describe("ToolRegistry", () => {
   });
 });
 
+// Token tools (token_set, token_list, token_delete) are intentionally excluded from
+// the MCP surface — tokens contain secrets and should not be managed by AI agents.
 describe("Full tool registry", () => {
   it("contains exactly 35 tools", () => {
     const registry = createToolRegistry();

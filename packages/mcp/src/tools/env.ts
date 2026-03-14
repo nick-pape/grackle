@@ -122,11 +122,19 @@ export const envTools: ToolDefinition[] = [
           return grpcErrorToToolResult(error);
         } catch {
           // grpcErrorToToolResult re-throws non-ConnectError; wrap with collected events
-          return jsonResult({
-            events,
-            finalStatus: "error",
-            error: error instanceof Error ? error.message : String(error),
-          });
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: JSON.stringify({
+                  events,
+                  finalStatus: "error",
+                  error: error instanceof Error ? error.message : String(error),
+                }, null, 2),
+              },
+            ],
+            isError: true,
+          };
         }
       }
     },
@@ -253,11 +261,19 @@ export const envTools: ToolDefinition[] = [
         try {
           return grpcErrorToToolResult(error);
         } catch {
-          return jsonResult({
-            events,
-            finalStatus: "error",
-            error: error instanceof Error ? error.message : String(error),
-          });
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: JSON.stringify({
+                  events,
+                  finalStatus: "error",
+                  error: error instanceof Error ? error.message : String(error),
+                }, null, 2),
+              },
+            ],
+            isError: true,
+          };
         }
       }
     },

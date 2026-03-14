@@ -405,7 +405,7 @@ export const taskTools: ToolDefinition[] = [
           label: (args.label as string | undefined) ?? "",
           state: stateValue,
           environmentId: (args.environmentId as string | undefined) ?? "",
-          includeComments: (args.includeComments as boolean | undefined) ?? false,
+          includeComments: (args.includeComments as boolean | undefined) ?? true,
         });
         return jsonResult({
           imported: response.imported,
