@@ -167,15 +167,6 @@
   }
 }
 
-.toolResultPre {
-  @include surface-inset;
-  padding: var(--space-sm);
-  margin: var(--space-xs) 0;
-  overflow: auto;
-  max-height: 400px;
-  font-size: 11px;
-}
-
 .toolResultContent {
   @include surface-inset;
   padding: var(--space-sm);
@@ -191,6 +182,8 @@
     background: none;
     border: none;
     box-shadow: none;
+    overflow: visible;
+    max-height: none;
   }
 }
 

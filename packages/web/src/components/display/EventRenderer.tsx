@@ -52,35 +52,13 @@ function ToolUseEvent({ content }: { content: string }): JSX.Element {
   );
 }
 
-/** Detects if content looks like a unified diff. */
-function isDiffContent(text: string): boolean {
-  return text.includes("diff --git") || text.includes("--- a/");
-}
-
-/** Renders a collapsible tool result event with intelligent formatting. */
+/** Renders a collapsible tool result event. */
 function ToolResultEvent({ content }: { content: string }): JSX.Element {
-  // Try to detect content type and render appropriately
-  let formattedContent: JSX.Element;
-
-  try {
-    // Attempt JSON parse — render as highlighted JSON
-    JSON.parse(content);
-    formattedContent = <pre className={styles.toolResultPre}>{content}</pre>;
-  } catch {
-    if (isDiffContent(content)) {
-      // Diff output — render with diff syntax highlighting
-      formattedContent = <pre className={styles.toolResultPre}>{content}</pre>;
-    } else {
-      // Fallback — raw text
-      formattedContent = <pre className={styles.toolResultPre}>{content}</pre>;
-    }
-  }
-
   return (
     <details className={styles.toolResultEvent}>
       <summary className={styles.toolResultSummary}>Tool output</summary>
       <div className={styles.toolResultContent}>
-        {formattedContent}
+        <pre>{content}</pre>
       </div>
     </details>
   );

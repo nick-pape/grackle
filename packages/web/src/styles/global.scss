@@ -168,8 +168,7 @@ body::after {
 // Increase border visibility and text contrast for high-contrast mode.
 
 @media (prefers-contrast: more) {
-  [data-theme="light"],
-  [data-theme="system"] {
+  [data-theme="light"] {
     --text-secondary: #4b5563;
     --text-tertiary: #6b7280;
     --text-disabled: #9ca3af;
