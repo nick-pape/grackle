@@ -1065,15 +1065,21 @@ async function handleMessage(
             ),
           ]
         : safeParseJsonArray(existingTask.dependsOn);
+      const updatedEnvironmentId = typeof msg.payload?.environmentId === "string"
+        ? msg.payload.environmentId
+        : existingTask.environmentId;
+      const updatedPersonaId = typeof msg.payload?.personaId === "string"
+        ? msg.payload.personaId
+        : existingTask.personaId;
       taskStore.updateTask(
         updateTaskId,
         updatedTitle,
         updatedDescription,
         existingTask.status,
-        existingTask.environmentId,
+        updatedEnvironmentId,
         updatedDependsOn,
         existingTask.reviewNotes,
-        existingTask.personaId,
+        updatedPersonaId,
       );
       const updatedRow = taskStore.getTask(updateTaskId);
       broadcast({
