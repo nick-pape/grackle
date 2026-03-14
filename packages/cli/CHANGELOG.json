@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.22.0",
+      "tag": "@grackle-ai/cli_v0.22.0",
+      "date": "Sat, 14 Mar 2026 08:13:46 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Allow editing persona and environment on pending tasks"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.21.0",
       "tag": "@grackle-ai/cli_v0.21.0",
       "date": "Sat, 14 Mar 2026 08:04:11 GMT",
