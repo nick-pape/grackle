@@ -148,7 +148,7 @@ export const taskTools: ToolDefinition[] = [
     name: "task_update",
     group: "task",
     description:
-      "Update a task's title, description, status, environment, dependencies, or review notes.",
+      "Update a task's title, description, status, environment, dependencies, review notes, or bind a running session to it.",
     inputSchema: z.object({
       taskId: z.string().describe("The ID of the task to update"),
       title: z.string().optional().describe("New title for the task"),
@@ -182,6 +182,10 @@ export const taskTools: ToolDefinition[] = [
         .array(z.string())
         .optional()
         .describe("Updated array of task IDs that this task depends on"),
+      sessionId: z
+        .string()
+        .optional()
+        .describe("Bind an existing running session to this task (late-bind)"),
     }),
     rpcMethod: "updateTask",
     mutating: true,
@@ -205,6 +209,7 @@ export const taskTools: ToolDefinition[] = [
           environmentId: (args.environmentId as string | undefined) ?? "",
           dependsOn: (args.dependsOn as string[] | undefined) ?? [],
           reviewNotes: (args.reviewNotes as string | undefined) ?? "",
+          sessionId: (args.sessionId as string | undefined) ?? "",
         });
         return jsonResult(taskToJson(task));
       } catch (error) {

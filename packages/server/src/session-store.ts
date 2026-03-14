@@ -102,6 +102,14 @@ export function deleteByEnvironment(environmentId: string): void {
   db.delete(sessions).where(eq(sessions.environmentId, environmentId)).run();
 }
 
+/** Update the taskId for an existing session (late-bind). */
+export function setSessionTask(id: string, taskId: string): void {
+  db.update(sessions)
+    .set({ taskId })
+    .where(eq(sessions.id, id))
+    .run();
+}
+
 /** List all sessions for a specific task, ordered chronologically (oldest first). */
 export function listSessionsForTask(taskId: string): SessionRow[] {
   return db.select().from(sessions)

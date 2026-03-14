@@ -93,6 +93,7 @@ export function registerTaskCommands(program: Command): void {
     )
     .option("--notes <text>", "Review notes")
     .option("--depends-on <ids>", "Comma-separated dependency task IDs")
+    .option("--session <session-id>", "Bind an existing session to this task")
     .action(async (taskId: string, opts) => {
       const VALID_STATUSES = new Set([
         "pending",
@@ -129,6 +130,7 @@ export function registerTaskCommands(program: Command): void {
           : taskStatusToEnum(""),
         reviewNotes: opts.notes || "",
         dependsOn,
+        sessionId: opts.session || "",
       });
       console.log(
         `Updated: ${t.id} (${t.title}) status: ${taskStatusToString(t.status)} env: ${t.environmentId || "-"}`,
