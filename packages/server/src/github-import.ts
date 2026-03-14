@@ -42,6 +42,9 @@ function execFileAsync(
 /** Number of issues fetched per GraphQL page. */
 const ISSUES_PER_PAGE: number = 100;
 
+/** Maximum number of blockedBy relationships fetched per issue. */
+const BLOCKED_BY_PER_ISSUE: number = 25;
+
 /**
  * Simple concurrency guard — only one import runs at a time within this process.
  * Does not prevent concurrent imports from separate server processes sharing the same DB.
@@ -68,6 +71,8 @@ export interface GitHubIssue {
   body: string;
   parentNumber: number | undefined;
   labels: string[];
+  /** Issue numbers that block this issue (i.e., this issue depends on them). */
+  blockedByNumbers: number[];
 }
 
 /** Result summary returned by {@link importGitHubIssues}. */
@@ -75,6 +80,8 @@ export interface ImportResult {
   imported: number;
   linked: number;
   skipped: number;
+  /** Number of blocking (dependsOn) relationships created. */
+  dependencies: number;
 }
 
 /**
@@ -128,6 +135,7 @@ export async function fetchGitHubIssues(repo: string, state: string, label?: str
               body
               parent { number }
               labels(first: 100) { nodes { name } }
+              blockedBy(first: ${BLOCKED_BY_PER_ISSUE}) { nodes { number } }
             }
           }
         }
@@ -165,6 +173,7 @@ export async function fetchGitHubIssues(repo: string, state: string, label?: str
               body: string;
               parent: { number: number } | null;
               labels: { nodes: { name: string }[] };
+              blockedBy: { nodes: { number: number }[] };
             }[];
           };
         };
@@ -193,6 +202,7 @@ export async function fetchGitHubIssues(repo: string, state: string, label?: str
         body: node.body,
         parentNumber: node.parent?.number ?? undefined,
         labels: node.labels.nodes.map((l) => l.name),
+        blockedByNumbers: node.blockedBy.nodes.map((b) => b.number),
       });
     }
 
@@ -339,6 +349,9 @@ async function doImport(
   let skipped: number = 0;
   let linked: number = 0;
 
+  /** Tracks newly imported issues (not previously existing) for dependency resolution. */
+  const newlyImportedIssues: GitHubIssue[] = [];
+
   for (const issue of sorted) {
     if (existingIssueNumbers.has(issue.number)) {
       skipped++;
@@ -371,9 +384,40 @@ async function doImport(
     const row = taskStore.getTask(id);
     broadcast({ type: "task_created", payload: { task: row ? { ...row } : null } });
     issueNumberToTaskId.set(issue.number, id);
+    newlyImportedIssues.push(issue);
     imported++;
   }
 
-  logger.info({ projectId, imported, linked, skipped }, "GitHub import complete");
-  return { imported, linked, skipped };
+  // 5. Second pass: resolve blockedBy relationships into dependsOn arrays.
+  //    Only link relationships where both blocker and blocked are known tasks
+  //    (either newly imported or pre-existing). Skip external blockers silently.
+  //    Re-imported (skipped) issues are not updated — their existing dependsOn is preserved.
+  let dependencies: number = 0;
+
+  for (const issue of newlyImportedIssues) {
+    if (issue.blockedByNumbers.length === 0) {
+      continue;
+    }
+
+    const taskId = issueNumberToTaskId.get(issue.number);
+    if (!taskId) {
+      continue;
+    }
+
+    const resolvedDeps: string[] = [];
+    for (const blockerNumber of issue.blockedByNumbers) {
+      const blockerTaskId = issueNumberToTaskId.get(blockerNumber);
+      if (blockerTaskId) {
+        resolvedDeps.push(blockerTaskId);
+      }
+    }
+
+    if (resolvedDeps.length > 0) {
+      taskStore.setTaskDependsOn(taskId, resolvedDeps);
+      dependencies += resolvedDeps.length;
+    }
+  }
+
+  logger.info({ projectId, imported, linked, skipped, dependencies }, "GitHub import complete");
+  return { imported, linked, skipped, dependencies };
 }

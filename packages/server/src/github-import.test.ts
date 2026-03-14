@@ -346,6 +346,7 @@ describe("fetchGitHubIssues", () => {
                 body: "body1",
                 parent: null,
                 labels: { nodes: [{ name: "bug" }] },
+                blockedBy: { nodes: [] },
               },
               {
                 number: 2,
@@ -353,6 +354,7 @@ describe("fetchGitHubIssues", () => {
                 body: "body2",
                 parent: { number: 1 },
                 labels: { nodes: [] },
+                blockedBy: { nodes: [] },
               },
             ],
           },
@@ -366,6 +368,7 @@ describe("fetchGitHubIssues", () => {
     expect(issues[0].title).toBe("First issue");
     expect(issues[0].parentNumber).toBeUndefined();
     expect(issues[0].labels).toEqual(["bug"]);
+    expect(issues[0].blockedByNumbers).toEqual([]);
     expect(issues[1].number).toBe(2);
     expect(issues[1].parentNumber).toBe(1);
   });
@@ -383,6 +386,7 @@ describe("fetchGitHubIssues", () => {
                 body: "",
                 parent: null,
                 labels: { nodes: [] },
+                blockedBy: { nodes: [] },
               },
             ],
           },
@@ -401,6 +405,7 @@ describe("fetchGitHubIssues", () => {
                 body: "",
                 parent: null,
                 labels: { nodes: [] },
+                blockedBy: { nodes: [] },
               },
             ],
           },
@@ -426,6 +431,7 @@ describe("fetchGitHubIssues", () => {
                 body: "",
                 parent: null,
                 labels: { nodes: [{ name: "bug" }] },
+                blockedBy: { nodes: [] },
               },
               {
                 number: 2,
@@ -433,6 +439,7 @@ describe("fetchGitHubIssues", () => {
                 body: "",
                 parent: null,
                 labels: { nodes: [{ name: "feature" }] },
+                blockedBy: { nodes: [] },
               },
               {
                 number: 3,
@@ -440,6 +447,7 @@ describe("fetchGitHubIssues", () => {
                 body: "",
                 parent: null,
                 labels: { nodes: [{ name: "bug" }] },
+                blockedBy: { nodes: [] },
               },
             ],
           },
@@ -475,6 +483,7 @@ describe("importGitHubIssues", () => {
       body?: string;
       parent?: { number: number } | null;
       labels?: string[];
+      blockedBy?: number[];
     }[],
   ): void {
     mockGhResponse({
@@ -488,6 +497,7 @@ describe("importGitHubIssues", () => {
               body: i.body ?? "",
               parent: i.parent ?? null,
               labels: { nodes: (i.labels ?? []).map((l) => ({ name: l })) },
+              blockedBy: { nodes: (i.blockedBy ?? []).map((n) => ({ number: n })) },
             })),
           },
         },
@@ -637,6 +647,157 @@ describe("importGitHubIssues", () => {
     expect(tasks[0].canDecompose).toBe(true);
   });
 
+  // ── blockedBy / dependency tests (UT-1 through UT-7) ──────────
+
+  it("UT-1: fetchGitHubIssues returns blockedByNumbers populated from GraphQL response", async () => {
+    mockGhResponse({
+      data: {
+        repository: {
+          issues: {
+            pageInfo: { hasNextPage: false, endCursor: null },
+            nodes: [
+              {
+                number: 10,
+                title: "Blocker",
+                body: "",
+                parent: null,
+                labels: { nodes: [] },
+                blockedBy: { nodes: [] },
+              },
+              {
+                number: 11,
+                title: "Blocked",
+                body: "",
+                parent: null,
+                labels: { nodes: [] },
+                blockedBy: { nodes: [{ number: 10 }] },
+              },
+            ],
+          },
+        },
+      },
+    });
+
+    const issues = await fetchGitHubIssues("owner/repo", "open");
+    expect(issues[0].blockedByNumbers).toEqual([]);
+    expect(issues[1].blockedByNumbers).toEqual([10]);
+  });
+
+  it("UT-2: fetchGitHubIssues returns empty blockedByNumbers when no blocking relationships", async () => {
+    mockGhResponse({
+      data: {
+        repository: {
+          issues: {
+            pageInfo: { hasNextPage: false, endCursor: null },
+            nodes: [
+              {
+                number: 1,
+                title: "Solo issue",
+                body: "",
+                parent: null,
+                labels: { nodes: [] },
+                blockedBy: { nodes: [] },
+              },
+            ],
+          },
+        },
+      },
+    });
+
+    const issues = await fetchGitHubIssues("owner/repo", "open");
+    expect(issues[0].blockedByNumbers).toEqual([]);
+  });
+
+  it("UT-3: importGitHubIssues sets dependsOn when issue A is blocked by issue B (both in import set)", async () => {
+    mockGhOutput([
+      { number: 1, title: "Blocker" },
+      { number: 2, title: "Blocked", blockedBy: [1] },
+    ]);
+
+    const result = await importGitHubIssues("test-proj", "owner/repo", "open");
+    expect(result.dependencies).toBe(1);
+
+    const tasks = taskStore.listTasks("test-proj");
+    const blocker = tasks.find((t) => t.title.startsWith("#1:"));
+    const blocked = tasks.find((t) => t.title.startsWith("#2:"));
+    expect(blocker).toBeDefined();
+    expect(blocked).toBeDefined();
+
+    const dependsOn = JSON.parse(blocked!.dependsOn) as string[];
+    expect(dependsOn).toContain(blocker!.id);
+  });
+
+  it("UT-4: importGitHubIssues does not set dependsOn for blockers outside the import set", async () => {
+    mockGhOutput([
+      { number: 2, title: "Blocked", blockedBy: [999] }, // 999 not in import set
+    ]);
+
+    const result = await importGitHubIssues("test-proj", "owner/repo", "open");
+    expect(result.dependencies).toBe(0);
+
+    const tasks = taskStore.listTasks("test-proj");
+    const blocked = tasks.find((t) => t.title.startsWith("#2:"));
+    const dependsOn = JSON.parse(blocked!.dependsOn) as string[];
+    expect(dependsOn).toHaveLength(0);
+  });
+
+  it("UT-5: importGitHubIssues returns correct dependencies count", async () => {
+    mockGhOutput([
+      { number: 1, title: "A" },
+      { number: 2, title: "B", blockedBy: [1] },
+      { number: 3, title: "C", blockedBy: [1, 2] },
+    ]);
+
+    const result = await importGitHubIssues("test-proj", "owner/repo", "open");
+    expect(result.dependencies).toBe(3); // B blocked by 1, C blocked by 1 and 2
+  });
+
+  it("UT-6: re-importing already-imported issues does not duplicate dependsOn entries", async () => {
+    // First import
+    mockGhOutput([
+      { number: 1, title: "Blocker" },
+      { number: 2, title: "Blocked", blockedBy: [1] },
+    ]);
+    await importGitHubIssues("test-proj", "owner/repo", "open");
+
+    // Second import — both issues already exist, should be skipped
+    mockGhOutput([
+      { number: 1, title: "Blocker" },
+      { number: 2, title: "Blocked", blockedBy: [1] },
+    ]);
+    const result = await importGitHubIssues("test-proj", "owner/repo", "open");
+    expect(result.skipped).toBe(2);
+    expect(result.dependencies).toBe(0);
+
+    const tasks = taskStore.listTasks("test-proj");
+    const blocked = tasks.find((t) => t.title.startsWith("#2:"));
+    const dependsOn = JSON.parse(blocked!.dependsOn) as string[];
+    // Should still have exactly one entry — not duplicated
+    expect(dependsOn).toHaveLength(1);
+  });
+
+  it("UT-7: circular blocking relationships are handled gracefully", async () => {
+    mockGhOutput([
+      { number: 1, title: "A", blockedBy: [2] },
+      { number: 2, title: "B", blockedBy: [1] },
+    ]);
+
+    const result = await importGitHubIssues("test-proj", "owner/repo", "open");
+    expect(result.imported).toBe(2);
+    expect(result.dependencies).toBe(2);
+
+    const tasks = taskStore.listTasks("test-proj");
+    const taskA = tasks.find((t) => t.title.startsWith("#1:"));
+    const taskB = tasks.find((t) => t.title.startsWith("#2:"));
+    expect(taskA).toBeDefined();
+    expect(taskB).toBeDefined();
+
+    const depsA = JSON.parse(taskA!.dependsOn) as string[];
+    const depsB = JSON.parse(taskB!.dependsOn) as string[];
+    expect(depsA).toContain(taskB!.id);
+    expect(depsB).toContain(taskA!.id);
+  });
+
   it("rejects concurrent imports", async () => {
     // Set up a slow mock that doesn't resolve immediately
     mockExecFile.mockImplementation(
@@ -661,6 +822,7 @@ describe("importGitHubIssues", () => {
                         body: "",
                         parent: null,
                         labels: { nodes: [] },
+                        blockedBy: { nodes: [] },
                       },
                     ],
                   },
