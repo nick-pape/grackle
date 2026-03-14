@@ -261,4 +261,3 @@ export class ClaudeCodeRuntime extends BaseAgentRuntime {
     return new ClaudeCodeSession(id, prompt, model, maxTurns, resumeSessionId, branch, worktreeBasePath, systemContext, mcpServers, hooks);
   }
 }
-const x: number = "not a number";
