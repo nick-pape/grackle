@@ -9,7 +9,10 @@ This skill creates a pull request for the current branch: syncs with main, build
 
 ## Step 0: Detect Context
 
-If an issue number was provided as an argument, use it. Otherwise, extract from the current branch name (pattern: `<user>/<issue>-<feature>`, e.g., `nick-pape/149-agent-subtask-creation` → issue #149).
+Determine the issue number using this priority:
+1. If an argument was provided, use it as `ISSUE_NUMBER`
+2. Otherwise, extract from the branch name (pattern: `<user>/<issue>-<feature>`, e.g., `nick-pape/149-agent-subtask-creation` → `ISSUE_NUMBER=149`)
+3. If neither yields a number, set `ISSUE_NUMBER=""` (no issue linked — the PR will be created without a `Closes` reference)
 
 Set variables for subsequent steps:
 
@@ -19,7 +22,7 @@ REPO=$(gh repo view --json name --jq '.name')
 BRANCH=$(git branch --show-current)
 ```
 
-If an issue number was detected, fetch the issue title for use in the PR title:
+If `ISSUE_NUMBER` is set, fetch the issue title for use in the PR title:
 
 ```bash
 gh issue view $ISSUE_NUMBER --json title --jq '.title'
@@ -81,13 +84,13 @@ git diff --name-only origin/main...HEAD
 
 If the diff only touches private packages or non-package files (workflows, docs, config), skip change file generation.
 
-Check if a change file already exists:
+Check if this branch already added a change file by looking for new files in the branch diff:
 
 ```bash
-ls common/changes/@grackle-ai/*/
+git diff --name-only origin/main...HEAD -- common/changes/
 ```
 
-If change files already exist, skip this step.
+If the diff already includes change files, skip this step.
 
 ### Generate the change file
 
@@ -142,7 +145,7 @@ If already tracking a remote branch, use `git push` without `-u`.
 
 Only if the diff touches `packages/web/`.
 
-For the full procedure (isolated stack, Playwright capture, SVG-wrapping PNGs, gist upload), see `docs/pr-screenshot-workflow.md`.
+The canonical detailed procedure lives in `docs/pr-screenshot-workflow.md` (isolated stack, Playwright capture, SVG-wrapping PNGs, gist upload). Follow that doc; here is a quick summary of the key steps:
 
 **Quick summary:**
 1. Start an isolated Grackle stack on non-default ports (see the doc for port setup)
@@ -166,15 +169,15 @@ gh pr create --title "<PR_TITLE>" --body "$(cat <<'EOF'
 - [ ] <testing checklist items>
 
 ## Screenshots
-<if captured in Step 6, embed markdown images here>
+<if captured in Step 6, embed markdown images here; omit this section if no screenshots>
 
-Closes #<ISSUE_NUMBER>
+<if ISSUE_NUMBER is set: Closes #ISSUE_NUMBER>
 EOF
 )"
 ```
 
-- Always include `Closes #<ISSUE_NUMBER>` (or `Fixes #<ISSUE_NUMBER>`) if an issue is linked
-- Include screenshots only if Step 6 produced them
+- Include `Closes #<ISSUE_NUMBER>` (or `Fixes #<ISSUE_NUMBER>`) only if an issue was detected in Step 0. Omit the line entirely when there is no linked issue.
+- Include the Screenshots section only if Step 6 produced them
 - Use a heredoc for body formatting to preserve markdown structure
 
 ## Step 8: Report
