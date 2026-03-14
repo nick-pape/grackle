@@ -1,5 +1,8 @@
 # 🐦‍⬛ Grackle
 
+> [!WARNING]
+> Grackle is pre-1.0 and still experimental. It may have unresolved security issues, annoying bugs, and broken workflows. Not recommended for use in production systems.
+
 **Orchestrate AI coding agents across any environment, with any runtime, at any scale.**
 
 Grackle is a multi-agent coordination platform. Break a project into tasks, dispatch each to an agent running in its own isolated environment, and watch them work in real time. Share knowledge between agents through findings, review task output at each step, and scale from one agent to a swarm — without rewriting your setup.
