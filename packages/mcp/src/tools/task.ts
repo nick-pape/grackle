@@ -1,26 +1,22 @@
 import type { Client } from "@connectrpc/connect";
-import type { grackle } from "@grackle-ai/common";
+import {
+  type grackle,
+  taskStatusToEnum,
+  taskStatusToString,
+  issueStateToEnum,
+} from "@grackle-ai/common";
 import { z } from "zod";
 import type { ToolDefinition } from "../tool-registry.js";
 import { jsonResult } from "../result-helpers.js";
 import { grpcErrorToToolResult } from "../error-handler.js";
 
-/** Maps user-facing status strings to proto TaskStatus enum values. */
-const TASK_STATUS_MAP: Record<string, number> = {
-  pending: 1,
-  assigned: 2,
-  in_progress: 3,
-  review: 4,
-  done: 5,
-  failed: 6,
-  waiting_input: 7,
-};
-
-/** Maps user-facing issue state strings to proto IssueState enum values. */
-const ISSUE_STATE_MAP: Record<string, number> = {
-  open: 1,
-  closed: 2,
-};
+/** Convert a proto Task message to a plain object with human-readable status. */
+function taskToJson(task: grackle.Task): Record<string, unknown> {
+  return {
+    ...task,
+    status: taskStatusToString(task.status) || task.status,
+  };
+}
 
 /** MCP tools for Grackle task management (list, create, show, update, start, delete, approve, reject, import). */
 export const taskTools: ToolDefinition[] = [
@@ -49,7 +45,7 @@ export const taskTools: ToolDefinition[] = [
         const summaries = response.tasks.map((task) => ({
           id: task.id,
           title: task.title,
-          status: task.status,
+          status: taskStatusToString(task.status) || task.status,
           branch: task.branch,
           environmentId: task.environmentId,
           sessionId: task.sessionId,
@@ -111,7 +107,7 @@ export const taskTools: ToolDefinition[] = [
           parentTaskId: "",
           personaId: (args.personaId as string | undefined) ?? "",
         });
-        return jsonResult(task);
+        return jsonResult(taskToJson(task));
       } catch (error) {
         return grpcErrorToToolResult(error);
       }
@@ -140,7 +136,7 @@ export const taskTools: ToolDefinition[] = [
         const task = await client.getTask({
           id: args.taskId as string,
         });
-        return jsonResult(task);
+        return jsonResult(taskToJson(task));
       } catch (error) {
         return grpcErrorToToolResult(error);
       }
@@ -199,7 +195,7 @@ export const taskTools: ToolDefinition[] = [
       try {
         const statusString = args.status as string | undefined;
         const statusValue = statusString
-          ? TASK_STATUS_MAP[statusString] ?? 0
+          ? taskStatusToEnum(statusString)
           : 0;
         const task = await client.updateTask({
           id: args.taskId as string,
@@ -210,7 +206,7 @@ export const taskTools: ToolDefinition[] = [
           dependsOn: (args.dependsOn as string[] | undefined) ?? [],
           reviewNotes: (args.reviewNotes as string | undefined) ?? "",
         });
-        return jsonResult(task);
+        return jsonResult(taskToJson(task));
       } catch (error) {
         return grpcErrorToToolResult(error);
       }
@@ -248,13 +244,13 @@ export const taskTools: ToolDefinition[] = [
     },
     async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) {
       try {
-        const session = await client.startTask({
+        const response = await client.startTask({
           taskId: args.taskId as string,
           runtime: (args.runtime as string | undefined) ?? "",
           model: (args.model as string | undefined) ?? "",
           personaId: (args.personaId as string | undefined) ?? "",
         });
-        return jsonResult(session);
+        return jsonResult(response);
       } catch (error) {
         return grpcErrorToToolResult(error);
       }
@@ -312,7 +308,7 @@ export const taskTools: ToolDefinition[] = [
         const task = await client.approveTask({
           id: args.taskId as string,
         });
-        return jsonResult(task);
+        return jsonResult(taskToJson(task));
       } catch (error) {
         return grpcErrorToToolResult(error);
       }
@@ -351,7 +347,7 @@ export const taskTools: ToolDefinition[] = [
           dependsOn: [],
           reviewNotes: (args.reviewNotes as string | undefined) ?? "",
         });
-        return jsonResult(task);
+        return jsonResult(taskToJson(task));
       } catch (error) {
         return grpcErrorToToolResult(error);
       }
@@ -398,7 +394,7 @@ export const taskTools: ToolDefinition[] = [
     async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) {
       try {
         const stateString = (args.state as string | undefined) ?? "open";
-        const stateValue = ISSUE_STATE_MAP[stateString] ?? 0;
+        const stateValue = issueStateToEnum(stateString);
         const response = await client.importGitHubIssues({
           projectId: args.projectId as string,
           repo: args.repo as string,

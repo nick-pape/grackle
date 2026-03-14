@@ -23,7 +23,7 @@ export const logsTools: ToolDefinition[] = [
       sessionId: z.string().describe("Session ID to retrieve logs for"),
       transcript: z.boolean().optional().describe("Return formatted transcript instead of raw events"),
       tail: z.boolean().optional().describe("Live-tail the session stream with a timeout"),
-      timeoutSeconds: z.number().int().positive().optional().describe("Timeout in seconds for tail mode (default 10, max 60)"),
+      timeoutSeconds: z.number().int().positive().max(MAX_TAIL_TIMEOUT_SECONDS).optional().describe("Timeout in seconds for tail mode (default 10, max 60)"),
       maxEvents: z.number().int().positive().optional().describe("Maximum events to return in tail mode"),
     }),
     rpcMethod: "listSessions",
@@ -151,13 +151,16 @@ export const logsTools: ToolDefinition[] = [
             .filter((line) => line.length > 0)
             .map((line) => JSON.parse(line));
           return jsonResult({ sessionId: session.id, events });
-        } catch {
+        } catch (err: unknown) {
+          const isNotFound = err instanceof Error && "code" in err && (err as NodeJS.ErrnoException).code === "ENOENT";
+          const errorMessage = isNotFound ? "Log file not found" : `Failed to read log file: ${err instanceof Error ? err.message : String(err)}`;
+          const errorCode = isNotFound ? "NOT_FOUND" : "INTERNAL";
           return {
             content: [
               {
                 type: "text" as const,
                 text: JSON.stringify(
-                  { error: "Log file not found", code: "NOT_FOUND" },
+                  { error: errorMessage, code: errorCode },
                   null,
                   2,
                 ),
