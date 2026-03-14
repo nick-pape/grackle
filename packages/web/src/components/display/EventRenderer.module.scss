@@ -38,7 +38,7 @@
   }
 
   pre {
-    @include glass-inset;
+    @include surface-inset;
     padding: var(--space-sm);
     margin: var(--space-xs) 0;
     overflow: auto;
@@ -110,18 +110,41 @@
 }
 
 .toolUseEvent {
-  @include glass-card;
+  @include surface-card;
   border-left: 3px solid var(--accent-blue);
   padding: var(--space-sm) var(--space-md);
   margin: var(--space-xs) 0;
   font-size: var(--font-size-sm);
   font-family: var(--font-mono);
-  white-space: pre-wrap;
   animation: fadeIn 200ms ease forwards;
+}
+
+.toolUseHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-xs);
 }
 
 .toolUsePrefix {
   color: var(--accent-blue);
+  font-weight: var(--font-weight-bold);
+}
+
+.toolUseName {
+  color: var(--accent-blue);
+  font-weight: var(--font-weight-bold);
+}
+
+.toolUseArgs {
+  margin: 0;
+  padding: 0;
+  font-size: 11px;
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: none;
+  border: none;
 }
 
 .toolResultEvent {
@@ -190,14 +213,15 @@
   color: var(--text-tertiary);
 }
 
-// Recessed frosted inset for code output — third glass tier
+// Recessed inset for code output
 .toolResultPre {
-  @include glass-inset;
+  @include surface-inset;
   padding: var(--space-sm);
   margin: var(--space-xs) 0;
   overflow: auto;
-  max-height: 200px;
+  max-height: 400px;
   font-size: 11px;
+  font-family: var(--font-mono);
 }
 
 .errorEvent {
@@ -227,8 +251,9 @@
 }
 
 .userInputContent {
-  background: var(--accent-blue);
-  color: #fff;
+  background: var(--accent-blue-dim);
+  color: var(--accent-blue-fg);
+  border: 1px solid var(--accent-blue);
   border-radius: var(--radius-md);
   padding: var(--space-xs) var(--space-sm);
   max-width: 75%;

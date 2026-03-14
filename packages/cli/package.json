@@ -1,6 +1,6 @@
 {
   "name": "@grackle-ai/cli",
-  "version": "0.17.0",
+  "version": "0.20.0",
   "description": "Command-line interface for managing Grackle environments and agents",
   "license": "MIT",
   "repository": {
@@ -38,5 +38,8 @@
     "@rushstack/heft": "1.2.4",
     "@types/node": "^22.0.0",
     "vitest": "^3.1.1"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["better-sqlite3"]
   }
 }

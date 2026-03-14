@@ -1,6 +1,7 @@
 import { GrackleProvider } from "./context/GrackleContext.js";
 import { MockGrackleProvider } from "./mocks/MockGrackleProvider.js";
 import { ToastProvider } from "./context/ToastContext.js";
+import { ThemeProvider } from "./context/ThemeContext.js";
 import { StatusBar, Sidebar, UnifiedBar } from "./components/layout/index.js";
 import { SessionPanel } from "./components/panels/index.js";
 import { ToastContainer } from "./components/notifications/index.js";
@@ -18,6 +19,7 @@ export type ViewMode =
   | { kind: "session"; sessionId: string }
   | { kind: "project"; projectId: string }
   | { kind: "new_task"; projectId: string; parentTaskId?: string }
+  | { kind: "edit_task"; taskId: string }
   | { kind: "task"; taskId: string; tab?: "stream" | "findings" }
   | { kind: "new_environment" }
   | { kind: "persona_management" }
@@ -42,7 +44,13 @@ function AppContent(): JSX.Element {
         <Sidebar viewMode={viewMode} setViewMode={setViewMode} />
         <div className={styles.main}>
           <SessionPanel
-            key={viewMode.kind === "task" ? viewMode.taskId : viewMode.kind === "session" ? viewMode.sessionId : viewMode.kind}
+            key={
+              viewMode.kind === "task" ? viewMode.taskId
+              : viewMode.kind === "edit_task" ? `edit_task:${viewMode.taskId}`
+              : viewMode.kind === "new_task" ? `new_task:${viewMode.projectId}:${viewMode.parentTaskId ?? ""}`
+              : viewMode.kind === "session" ? viewMode.sessionId
+              : viewMode.kind
+            }
             viewMode={viewMode}
             setViewMode={setViewMode}
           />
@@ -62,10 +70,12 @@ function AppContent(): JSX.Element {
 export default function App(): JSX.Element {
   const Provider = IS_MOCK_MODE ? MockGrackleProvider : GrackleProvider;
   return (
-    <ToastProvider>
-      <Provider>
-        <AppContent />
-      </Provider>
-    </ToastProvider>
+    <ThemeProvider>
+      <ToastProvider>
+        <Provider>
+          <AppContent />
+        </Provider>
+      </ToastProvider>
+    </ThemeProvider>
   );
 }

@@ -528,12 +528,20 @@ async function handleMessage(
       const runtime = (msg.payload?.runtime as string) || "";
       const branch = (msg.payload?.branch as string) || "";
       const systemContext = (msg.payload?.systemContext as string) || "";
+      const spawnPersonaId = (msg.payload?.personaId as string) || "";
 
       if (!environmentId || !prompt) {
         sendWs(ws, {
           type: "error",
           payload: { message: "environmentId and prompt required" },
         });
+        return;
+      }
+
+      // Resolve persona if specified
+      const spawnPersona = spawnPersonaId ? personaStore.getPersona(spawnPersonaId) : undefined;
+      if (spawnPersonaId && !spawnPersona) {
+        sendWs(ws, { type: "error", payload: { message: `Persona not found: ${spawnPersonaId}` } });
         return;
       }
 
@@ -553,10 +561,16 @@ async function handleMessage(
       }
 
       const sessionId = uuid();
-      const sessionRuntime = runtime || env.defaultRuntime || DEFAULT_RUNTIME;
+      const sessionRuntime = runtime || spawnPersona?.runtime || env.defaultRuntime || DEFAULT_RUNTIME;
       const sessionModel =
-        model || process.env.GRACKLE_DEFAULT_MODEL || DEFAULT_MODEL;
+        model || spawnPersona?.model || process.env.GRACKLE_DEFAULT_MODEL || DEFAULT_MODEL;
+      const maxTurns = spawnPersona?.maxTurns || 0;
       const logPath = join(grackleHome, LOGS_DIR, sessionId);
+
+      let finalSystemContext = systemContext;
+      if (spawnPersona) {
+        finalSystemContext = spawnPersona.systemPrompt + (systemContext ? "\n\n" + systemContext : "");
+      }
 
       sessionStore.createSession(
         sessionId,
@@ -574,10 +588,10 @@ async function handleMessage(
         runtime: sessionRuntime,
         prompt,
         model: sessionModel,
-        maxTurns: 0,
+        maxTurns,
         branch,
         worktreeBasePath: branch ? "/workspace" : "",
-        systemContext,
+        systemContext: finalSystemContext,
       });
 
       processEventStream(conn.client.spawn(powerlineReq), {
@@ -718,6 +732,7 @@ async function handleMessage(
             defaultEnvironmentId: r.defaultEnvironmentId,
             status: r.status,
             createdAt: r.createdAt,
+            updatedAt: r.updatedAt,
           })),
         },
       });
@@ -758,6 +773,39 @@ async function handleMessage(
       const projectId = msg.payload?.projectId as string;
       if (projectId) projectStore.archiveProject(projectId);
       broadcast({ type: "project_archived", payload: { projectId } });
+      break;
+    }
+
+    case "update_project": {
+      const projectId = msg.payload?.projectId as string;
+      if (!projectId) {
+        sendWs(ws, { type: "error", payload: { message: "projectId required" } });
+        return;
+      }
+      const existing = projectStore.getProject(projectId);
+      if (!existing) {
+        sendWs(ws, { type: "error", payload: { message: `Project not found: ${projectId}` } });
+        return;
+      }
+      const nameVal = typeof msg.payload?.name === "string" ? msg.payload.name : undefined;
+      if (nameVal !== undefined && nameVal.trim() === "") {
+        sendWs(ws, { type: "error", payload: { message: "Project name cannot be empty" } });
+        return;
+      }
+      const descVal = typeof msg.payload?.description === "string" ? msg.payload.description : undefined;
+      const repoVal = typeof msg.payload?.repoUrl === "string" ? msg.payload.repoUrl : undefined;
+      const envVal = typeof msg.payload?.defaultEnvironmentId === "string" ? msg.payload.defaultEnvironmentId : undefined;
+      if (repoVal !== undefined && repoVal !== "" && !/^https?:\/\//i.test(repoVal)) {
+        sendWs(ws, { type: "error", payload: { message: "Repository URL must use http or https scheme" } });
+        return;
+      }
+      projectStore.updateProject(projectId, {
+        name: nameVal !== undefined ? nameVal.trim() : undefined,
+        description: descVal,
+        repoUrl: repoVal,
+        defaultEnvironmentId: envVal,
+      });
+      broadcast({ type: "project_updated", payload: { projectId } });
       break;
     }
 
@@ -970,6 +1018,64 @@ async function handleMessage(
         payload: {
           task: row
             ? { ...row, dependsOn: safeParseJsonArray(row.dependsOn) }
+            : null,
+        },
+      });
+      break;
+    }
+
+    case "update_task": {
+      const updateTaskId = msg.payload?.taskId as string;
+      if (!updateTaskId) {
+        sendWs(ws, { type: "error", payload: { message: "taskId required" } });
+        return;
+      }
+      const existingTask = taskStore.getTask(updateTaskId);
+      if (!existingTask) {
+        sendWs(ws, { type: "error", payload: { message: `Task not found: ${updateTaskId}` } });
+        return;
+      }
+      // Only allow editing pending/assigned tasks
+      if (!["pending", "assigned"].includes(existingTask.status)) {
+        sendWs(ws, {
+          type: "error",
+          payload: { message: `Task ${updateTaskId} cannot be edited (status: ${existingTask.status})` },
+        });
+        return;
+      }
+      const updatedTitle = typeof msg.payload?.title === "string" && msg.payload.title.trim()
+        ? msg.payload.title.trim()
+        : existingTask.title;
+      const updatedDescription = typeof msg.payload?.description === "string"
+        ? msg.payload.description
+        : existingTask.description;
+      const updatedDependsOn = Array.isArray(msg.payload?.dependsOn)
+        ? [
+            // Normalise: keep only non-empty strings, remove self-references and duplicates.
+            ...new Set(
+              (msg.payload.dependsOn as unknown[])
+                .filter((d): d is string => typeof d === "string" && d.trim() !== "")
+                .filter((d) => d !== updateTaskId),
+            ),
+          ]
+        : safeParseJsonArray(existingTask.dependsOn);
+      taskStore.updateTask(
+        updateTaskId,
+        updatedTitle,
+        updatedDescription,
+        existingTask.status,
+        existingTask.environmentId,
+        updatedDependsOn,
+        existingTask.reviewNotes,
+      );
+      const updatedRow = taskStore.getTask(updateTaskId);
+      broadcast({
+        type: "task_updated",
+        payload: {
+          taskId: updateTaskId,
+          projectId: existingTask.projectId,
+          task: updatedRow
+            ? { ...updatedRow, dependsOn: safeParseJsonArray(updatedRow.dependsOn) }
             : null,
         },
       });

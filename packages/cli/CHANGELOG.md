@@ -1,6 +1,73 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Fri, 13 Mar 2026 08:26:43 GMT and should not be manually modified.
+This log was last generated on Sat, 14 Mar 2026 07:25:55 GMT and should not be manually modified.
+
+## 0.20.0
+Sat, 14 Mar 2026 07:25:55 GMT
+
+### Minor changes
+
+- feat: import blocking/blocked-by relationships from GitHub Issues as task dependsOn arrays
+
+## 0.19.0
+Sat, 14 Mar 2026 05:55:32 GMT
+
+### Minor changes
+
+- Add MCP server core infrastructure with Streamable HTTP transport, tool registry, and proof-of-concept tools
+
+### Updates
+
+- No CLI changes; merge from main included unrelated CLI bump
+- Add a none bump change file for @grackle-ai/cli because merge commits from origin/main make rush change --verify falsely detect CLI changes on this web-only PR.
+
+## 0.18.3
+Sat, 14 Mar 2026 04:23:29 GMT
+
+### Patches
+
+- Fix CLI connecting via IPv6 (::1) when server binds IPv4-only (127.0.0.1); change CLI default URL from localhost to 127.0.0.1, add --host flag to grackle serve, bind PowerLine to 127.0.0.1 explicitly, and reflect actual bind address in log messages
+
+## 0.18.2
+Sat, 14 Mar 2026 04:00:53 GMT
+
+### Patches
+
+- Add pnpm.onlyBuiltDependencies to allow better-sqlite3 install script in pnpm v8+
+
+### Updates
+
+- False positive — only @grackle-ai/web (non-publishable) was modified; merge-commit detection flagged this package.
+- No changes to CLI (merge commit false positive)
+
+## 0.18.1
+Fri, 13 Mar 2026 21:32:39 GMT
+
+### Patches
+
+- Add the UpdateProject RPC and project detail view inline editing flow.
+
+## 0.18.0
+Fri, 13 Mar 2026 18:20:02 GMT
+
+### Minor changes
+
+- Add --no-include-comments flag to import-github command
+
+### Updates
+
+- Add breadcrumbs
+
+## 0.17.1
+Fri, 13 Mar 2026 17:07:19 GMT
+
+### Patches
+
+- Add --depends-on flag to task update CLI command
+
+### Updates
+
+- Address persona CLI UI gaps by adding missing tasks help and examples
 
 ## 0.17.0
 Fri, 13 Mar 2026 08:26:43 GMT

@@ -11,7 +11,8 @@ import { SshAdapter } from "./adapters/ssh.js";
 import { CodespaceAdapter } from "./adapters/codespace.js";
 import { closeAllTunnels } from "./adapters/remote-adapter-utils.js";
 import { createWsBridge } from "./ws-bridge.js";
-import { DEFAULT_SERVER_PORT, DEFAULT_WEB_PORT } from "@grackle-ai/common";
+import { DEFAULT_SERVER_PORT, DEFAULT_WEB_PORT, DEFAULT_MCP_PORT } from "@grackle-ai/common";
+import { createMcpServer } from "@grackle-ai/mcp";
 import { readFileSync, existsSync } from "node:fs";
 import { join, dirname, extname, normalize, resolve, relative } from "node:path";
 import { createRequire } from "node:module";
@@ -118,6 +119,17 @@ function main(): void {
 
   // --- gRPC server (HTTP/2) ---
   const grpcPort = parseInt(process.env.GRACKLE_PORT || String(DEFAULT_SERVER_PORT), 10);
+  const bindHost = process.env.GRACKLE_HOST || "127.0.0.1";
+
+  /** Allowed loopback bind addresses — security policy: never expose API key to the network. */
+  const ALLOWED_BIND_HOSTS: ReadonlySet<string> = new Set(["127.0.0.1", "::1"]);
+  if (!ALLOWED_BIND_HOSTS.has(bindHost)) {
+    logger.fatal({ host: bindHost }, "GRACKLE_HOST must be a loopback address (127.0.0.1 or ::1). Got: %s", bindHost);
+    process.exit(1);
+  }
+
+  /** Format bindHost for embedding in a URL — IPv6 literals need brackets per RFC 2732. */
+  const urlHost = bindHost.includes(":") ? `[${bindHost}]` : bindHost;
   const grpcHandler = connectNodeAdapter({
     routes: registerGrackleRoutes,
     interceptors: [
@@ -143,8 +155,8 @@ function main(): void {
     shutdown().catch(() => { process.exit(1); });
   });
 
-  grpcServer.listen(grpcPort, "127.0.0.1", () => {
-    logger.info({ port: grpcPort }, "gRPC server listening on http://127.0.0.1:%d", grpcPort);
+  grpcServer.listen(grpcPort, bindHost, () => {
+    logger.info({ port: grpcPort, host: bindHost }, "gRPC server listening on http://%s:%d", urlHost, grpcPort);
   });
 
   // --- Web + WebSocket server (HTTP/1.1) ---
@@ -163,8 +175,26 @@ function main(): void {
     shutdown().catch(() => { process.exit(1); });
   });
 
-  webServer.listen(webPort, "127.0.0.1", () => {
-    logger.info({ port: webPort }, "Web UI + WebSocket on http://127.0.0.1:%d", webPort);
+  webServer.listen(webPort, bindHost, () => {
+    logger.info({ port: webPort, host: bindHost }, "Web UI + WebSocket on http://%s:%d", urlHost, webPort);
+  });
+
+  // --- MCP server (HTTP/1.1, Streamable HTTP) ---
+  const mcpPort = parseInt(process.env.GRACKLE_MCP_PORT || String(DEFAULT_MCP_PORT), 10);
+  const mcpServer = createMcpServer({ bindHost, mcpPort, grpcPort, apiKey });
+
+  mcpServer.on("error", (err: NodeJS.ErrnoException) => {
+    if (err.code === "EADDRINUSE") {
+      logger.fatal({ port: mcpPort }, "Port %d is already in use. Is another Grackle server running?", mcpPort);
+    } else {
+      logger.fatal({ err }, "MCP server error");
+    }
+    process.exitCode = 1;
+    shutdown().catch(() => { process.exit(1); });
+  });
+
+  mcpServer.listen(mcpPort, bindHost, () => {
+    logger.info({ port: mcpPort, host: bindHost }, "MCP server on http://%s:%d/mcp", urlHost, mcpPort);
   });
 
   // Graceful shutdown with a hard timeout so upgraded WS connections don't block exit.
@@ -192,6 +222,15 @@ function main(): void {
       webServer.close((err?: Error) => {
         if (err) {
           logger.error({ err }, "Error while closing web server");
+        }
+        resolve();
+      });
+    });
+
+    await new Promise<void>((resolve) => {
+      mcpServer.close((err?: Error) => {
+        if (err) {
+          logger.error({ err }, "Error while closing MCP server");
         }
         resolve();
       });

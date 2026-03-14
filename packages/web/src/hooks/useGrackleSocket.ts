@@ -37,6 +37,7 @@ export interface Project {
   defaultEnvironmentId: string;
   status: string;
   createdAt: string;
+  updatedAt: string;
 }
 
 export interface TaskData {
@@ -172,7 +173,8 @@ function isProject(v: unknown): v is Project {
     typeof v.repoUrl === "string" &&
     typeof v.defaultEnvironmentId === "string" &&
     typeof v.status === "string" &&
-    typeof v.createdAt === "string"
+    typeof v.createdAt === "string" &&
+    typeof v.updatedAt === "string"
   );
 }
 
@@ -350,6 +352,7 @@ export interface UseGrackleSocketResult {
     prompt: string,
     model?: string,
     runtime?: string,
+    personaId?: string,
   ) => void;
   sendInput: (sessionId: string, text: string) => void;
   kill: (sessionId: string) => void;
@@ -363,6 +366,15 @@ export interface UseGrackleSocketResult {
     defaultEnvironmentId?: string,
   ) => void;
   archiveProject: (projectId: string) => void;
+  updateProject: (
+    projectId: string,
+    fields: {
+      name?: string;
+      description?: string;
+      repoUrl?: string;
+      defaultEnvironmentId?: string;
+    },
+  ) => void;
   loadTasks: (projectId: string) => void;
   createTask: (
     projectId: string,
@@ -381,6 +393,12 @@ export interface UseGrackleSocketResult {
   ) => void;
   approveTask: (taskId: string) => void;
   rejectTask: (taskId: string, reviewNotes: string) => void;
+  updateTask: (
+    taskId: string,
+    title: string,
+    description: string,
+    dependsOn: string[],
+  ) => void;
   deleteTask: (taskId: string) => void;
   loadFindings: (projectId: string) => void;
   postFinding: (
@@ -619,6 +637,9 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
             send({ type: "list_projects" });
             break;
           case "project_archived":
+            send({ type: "list_projects" });
+            break;
+          case "project_updated":
             send({ type: "list_projects" });
             break;
           case "tasks": {
@@ -876,6 +897,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
       prompt: string,
       model?: string,
       runtime?: string,
+      personaId?: string,
     ) => {
       send({
         type: "spawn",
@@ -884,6 +906,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
           prompt,
           model: model || "",
           runtime: runtime || "",
+          personaId: personaId || "",
         },
       });
     },
@@ -953,6 +976,24 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
     [send],
   );
 
+  const updateProject = useCallback(
+    (
+      projectId: string,
+      fields: {
+        name?: string;
+        description?: string;
+        repoUrl?: string;
+        defaultEnvironmentId?: string;
+      },
+    ) => {
+      send({
+        type: "update_project",
+        payload: { projectId, ...fields },
+      });
+    },
+    [send],
+  );
+
   const loadTasks = useCallback(
     (projectId: string) => {
       send({ type: "list_tasks", payload: { projectId } });
@@ -1014,6 +1055,16 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
   const rejectTask = useCallback(
     (taskId: string, reviewNotes: string) => {
       send({ type: "reject_task", payload: { taskId, reviewNotes } });
+    },
+    [send],
+  );
+
+  const updateTask = useCallback(
+    (taskId: string, title: string, description: string, dependsOn: string[]) => {
+      send({
+        type: "update_task",
+        payload: { taskId, title, description, dependsOn },
+      });
     },
     [send],
   );
@@ -1234,11 +1285,13 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
     clearEvents,
     createProject,
     archiveProject,
+    updateProject,
     loadTasks,
     createTask,
     startTask,
     approveTask,
     rejectTask,
+    updateTask,
     deleteTask,
     loadFindings,
     postFinding,

@@ -136,7 +136,7 @@
 // --- Session rows ---
 
 .sessionRow {
-  @include hover-lift;
+  @include hover-accent;
   padding: var(--space-xs) var(--space-md) var(--space-xs) 28px;
   font-size: var(--font-size-sm);
   cursor: pointer;
@@ -147,8 +147,6 @@
   &.selected {
     background: var(--bg-overlay);
     color: var(--text-primary);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
   }
 }
 
@@ -159,7 +157,7 @@
 // --- Session accordion summary ---
 
 .sessionSummaryRow {
-  @include hover-lift;
+  @include hover-accent;
   padding: var(--space-xs) var(--space-md) var(--space-xs) 28px;
   font-size: var(--font-size-sm);
   cursor: pointer;
@@ -191,7 +189,7 @@
 }
 
 .sessionCountBadge {
-  @include glass-inset;
+  @include surface-inset;
   font-size: 10px;
   color: var(--text-tertiary);
   border-radius: var(--radius-full);

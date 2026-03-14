@@ -11,6 +11,7 @@ export function registerPersonaCommands(program: Command): void {
   persona
     .command("list")
     .description("List all personas")
+    .addHelpText("after", "\nExample:\n  $ grackle persona list")
     .action(async () => {
       const client = createGrackleClient();
       const res = await client.listPersonas({});
@@ -46,6 +47,7 @@ export function registerPersonaCommands(program: Command): void {
     )
     .option("--model <model>", "Default model")
     .option("--max-turns <n>", "Maximum turns", parseInt)
+    .addHelpText("after", `\nExamples:\n  $ grackle persona create "Frontend Engineer" --prompt "You are a React specialist." --runtime claude-code\n  $ grackle persona create "Security Reviewer" --prompt-file ./prompts/security.md --model opus`)
     .action(async (name: string, opts) => {
       let systemPrompt = opts.prompt || "";
       if (opts.promptFile) {

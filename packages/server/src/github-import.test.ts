@@ -30,6 +30,7 @@ import {
   topologicalSortIssues,
   fetchGitHubIssues,
   importGitHubIssues,
+  buildDescriptionWithComments,
 } from "./github-import.js";
 import * as taskStore from "./task-store.js";
 import * as projectStore from "./project-store.js";
@@ -100,6 +101,74 @@ function mockGhResponse(json: unknown): void {
     },
   );
 }
+
+// ── buildDescriptionWithComments tests ──────────────────────────
+
+describe("buildDescriptionWithComments", () => {
+  it("returns the body unchanged when there are no comments", () => {
+    const result = buildDescriptionWithComments("Issue body", []);
+    expect(result).toBe("Issue body");
+  });
+
+  it("appends a single comment with author and timestamp", () => {
+    const result = buildDescriptionWithComments("Body", [
+      { author: "alice", createdAt: "2026-03-13T10:00:00Z", body: "A comment" },
+    ]);
+    expect(result).toContain("Body");
+    expect(result).toContain("---");
+    expect(result).toContain("**@alice**");
+    expect(result).toContain("2026-03-13T10:00:00Z");
+    expect(result).toContain("A comment");
+  });
+
+  it("appends multiple comments separated by --- dividers", () => {
+    const result = buildDescriptionWithComments("Body", [
+      { author: "alice", createdAt: "2026-03-13T10:00:00Z", body: "First" },
+      { author: "bob", createdAt: "2026-03-13T11:00:00Z", body: "Second" },
+    ]);
+    const dividerCount = (result.match(/---/g) ?? []).length;
+    expect(dividerCount).toBe(2);
+    expect(result.indexOf("**@alice**")).toBeLessThan(result.indexOf("**@bob**"));
+    expect(result).toContain("First");
+    expect(result).toContain("Second");
+  });
+
+  it("preserves markdown in the comment body", () => {
+    const md = "## Heading\n\n- item 1\n- item 2";
+    const result = buildDescriptionWithComments("Body", [
+      { author: "alice", createdAt: "2026-01-01T00:00:00Z", body: md },
+    ]);
+    expect(result).toContain(md);
+  });
+
+  it("handles an empty issue body with comments", () => {
+    const result = buildDescriptionWithComments("", [
+      { author: "alice", createdAt: "2026-01-01T00:00:00Z", body: "Comment" },
+    ]);
+    expect(result).toContain("---");
+    expect(result).toContain("**@alice**");
+    expect(result).toContain("Comment");
+  });
+
+  it("appends a truncation notice when hasMoreComments is true", () => {
+    const result = buildDescriptionWithComments(
+      "Body",
+      [{ author: "alice", createdAt: "2026-01-01T00:00:00Z", body: "Comment" }],
+      true,
+    );
+    expect(result).toContain("additional comments");
+    expect(result).toContain("GitHub");
+  });
+
+  it("does not append a truncation notice when hasMoreComments is false", () => {
+    const result = buildDescriptionWithComments(
+      "Body",
+      [{ author: "alice", createdAt: "2026-01-01T00:00:00Z", body: "Comment" }],
+      false,
+    );
+    expect(result).not.toContain("additional comments");
+  });
+});
 
 // ── topologicalSortIssues tests ─────────────────────────────────
 
@@ -346,6 +415,7 @@ describe("fetchGitHubIssues", () => {
                 body: "body1",
                 parent: null,
                 labels: { nodes: [{ name: "bug" }] },
+                blockedBy: { nodes: [] },
               },
               {
                 number: 2,
@@ -353,6 +423,7 @@ describe("fetchGitHubIssues", () => {
                 body: "body2",
                 parent: { number: 1 },
                 labels: { nodes: [] },
+                blockedBy: { nodes: [] },
               },
             ],
           },
@@ -366,6 +437,7 @@ describe("fetchGitHubIssues", () => {
     expect(issues[0].title).toBe("First issue");
     expect(issues[0].parentNumber).toBeUndefined();
     expect(issues[0].labels).toEqual(["bug"]);
+    expect(issues[0].blockedByNumbers).toEqual([]);
     expect(issues[1].number).toBe(2);
     expect(issues[1].parentNumber).toBe(1);
   });
@@ -383,6 +455,7 @@ describe("fetchGitHubIssues", () => {
                 body: "",
                 parent: null,
                 labels: { nodes: [] },
+                blockedBy: { nodes: [] },
               },
             ],
           },
@@ -401,6 +474,7 @@ describe("fetchGitHubIssues", () => {
                 body: "",
                 parent: null,
                 labels: { nodes: [] },
+                blockedBy: { nodes: [] },
               },
             ],
           },
@@ -411,6 +485,137 @@ describe("fetchGitHubIssues", () => {
     const issues = await fetchGitHubIssues("owner/repo", "open");
     expect(issues).toHaveLength(2);
     expect(mockExecFile).toHaveBeenCalledTimes(2);
+  });
+
+  it("fetches comments when includeComments is true (default)", async () => {
+    mockGhResponse({
+      data: {
+        repository: {
+          issues: {
+            pageInfo: { hasNextPage: false, endCursor: null },
+            nodes: [
+              {
+                number: 1,
+                title: "Issue with comments",
+                body: "body",
+                parent: null,
+                labels: { nodes: [] },
+                blockedBy: { nodes: [] },
+                comments: {
+                  nodes: [
+                    {
+                      author: { login: "alice" },
+                      createdAt: "2026-03-13T10:00:00Z",
+                      body: "Nice issue",
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        },
+      },
+    });
+
+    const issues = await fetchGitHubIssues("owner/repo", "open");
+    expect(issues[0].comments).toHaveLength(1);
+    expect(issues[0].comments[0].author).toBe("alice");
+    expect(issues[0].comments[0].body).toBe("Nice issue");
+    expect(issues[0].comments[0].createdAt).toBe("2026-03-13T10:00:00Z");
+  });
+
+  it("returns empty comments array when includeComments is false", async () => {
+    mockGhResponse({
+      data: {
+        repository: {
+          issues: {
+            pageInfo: { hasNextPage: false, endCursor: null },
+            nodes: [
+              {
+                number: 1,
+                title: "Issue",
+                body: "body",
+                parent: null,
+                labels: { nodes: [] },
+                blockedBy: { nodes: [] },
+              },
+            ],
+          },
+        },
+      },
+    });
+
+    const issues = await fetchGitHubIssues("owner/repo", "open", undefined, false);
+    expect(issues[0].comments).toEqual([]);
+  });
+
+  it("uses 'ghost' as author when comment author is null", async () => {
+    mockGhResponse({
+      data: {
+        repository: {
+          issues: {
+            pageInfo: { hasNextPage: false, endCursor: null },
+            nodes: [
+              {
+                number: 1,
+                title: "Issue",
+                body: "body",
+                parent: null,
+                labels: { nodes: [] },
+                blockedBy: { nodes: [] },
+                comments: {
+                  nodes: [
+                    {
+                      author: null,
+                      createdAt: "2026-03-13T10:00:00Z",
+                      body: "Deleted user comment",
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        },
+      },
+    });
+
+    const issues = await fetchGitHubIssues("owner/repo", "open");
+    expect(issues[0].comments[0].author).toBe("ghost");
+  });
+
+  it("sets commentsHasNextPage=true when comments pageInfo.hasNextPage is true", async () => {
+    mockGhResponse({
+      data: {
+        repository: {
+          issues: {
+            pageInfo: { hasNextPage: false, endCursor: null },
+            nodes: [
+              {
+                number: 1,
+                title: "Issue with many comments",
+                body: "body",
+                parent: null,
+                labels: { nodes: [] },
+                blockedBy: { nodes: [] },
+                comments: {
+                  pageInfo: { hasNextPage: true },
+                  nodes: [
+                    {
+                      author: { login: "alice" },
+                      createdAt: "2026-03-13T10:00:00Z",
+                      body: "Comment",
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        },
+      },
+    });
+
+    const issues = await fetchGitHubIssues("owner/repo", "open");
+    expect(issues[0].commentsHasNextPage).toBe(true);
   });
 
   it("filters by label", async () => {
@@ -426,6 +631,7 @@ describe("fetchGitHubIssues", () => {
                 body: "",
                 parent: null,
                 labels: { nodes: [{ name: "bug" }] },
+                blockedBy: { nodes: [] },
               },
               {
                 number: 2,
@@ -433,6 +639,7 @@ describe("fetchGitHubIssues", () => {
                 body: "",
                 parent: null,
                 labels: { nodes: [{ name: "feature" }] },
+                blockedBy: { nodes: [] },
               },
               {
                 number: 3,
@@ -440,6 +647,7 @@ describe("fetchGitHubIssues", () => {
                 body: "",
                 parent: null,
                 labels: { nodes: [{ name: "bug" }] },
+                blockedBy: { nodes: [] },
               },
             ],
           },
@@ -475,6 +683,7 @@ describe("importGitHubIssues", () => {
       body?: string;
       parent?: { number: number } | null;
       labels?: string[];
+      blockedBy?: number[];
     }[],
   ): void {
     mockGhResponse({
@@ -488,6 +697,7 @@ describe("importGitHubIssues", () => {
               body: i.body ?? "",
               parent: i.parent ?? null,
               labels: { nodes: (i.labels ?? []).map((l) => ({ name: l })) },
+              blockedBy: { nodes: (i.blockedBy ?? []).map((n) => ({ number: n })) },
             })),
           },
         },
@@ -637,6 +847,269 @@ describe("importGitHubIssues", () => {
     expect(tasks[0].canDecompose).toBe(true);
   });
 
+  // ── blockedBy / dependency tests (UT-1 through UT-7) ──────────
+
+  it("UT-1: fetchGitHubIssues returns blockedByNumbers populated from GraphQL response", async () => {
+    mockGhResponse({
+      data: {
+        repository: {
+          issues: {
+            pageInfo: { hasNextPage: false, endCursor: null },
+            nodes: [
+              {
+                number: 10,
+                title: "Blocker",
+                body: "",
+                parent: null,
+                labels: { nodes: [] },
+                blockedBy: { nodes: [] },
+              },
+              {
+                number: 11,
+                title: "Blocked",
+                body: "",
+                parent: null,
+                labels: { nodes: [] },
+                blockedBy: { nodes: [{ number: 10 }] },
+              },
+            ],
+          },
+        },
+      },
+    });
+
+    const issues = await fetchGitHubIssues("owner/repo", "open");
+    expect(issues[0].blockedByNumbers).toEqual([]);
+    expect(issues[1].blockedByNumbers).toEqual([10]);
+  });
+
+  it("UT-2: fetchGitHubIssues returns empty blockedByNumbers when no blocking relationships", async () => {
+    mockGhResponse({
+      data: {
+        repository: {
+          issues: {
+            pageInfo: { hasNextPage: false, endCursor: null },
+            nodes: [
+              {
+                number: 1,
+                title: "Solo issue",
+                body: "",
+                parent: null,
+                labels: { nodes: [] },
+                blockedBy: { nodes: [] },
+              },
+            ],
+          },
+        },
+      },
+    });
+
+    const issues = await fetchGitHubIssues("owner/repo", "open");
+    expect(issues[0].blockedByNumbers).toEqual([]);
+  });
+
+  it("appends comments to task description by default", async () => {
+    mockGhResponse({
+      data: {
+        repository: {
+          issues: {
+            pageInfo: { hasNextPage: false, endCursor: null },
+            nodes: [
+              {
+                number: 1,
+                title: "Issue with comments",
+                body: "Issue body",
+                parent: null,
+                labels: { nodes: [] },
+                blockedBy: { nodes: [] },
+                comments: {
+                  nodes: [
+                    {
+                      author: { login: "alice" },
+                      createdAt: "2026-03-13T10:00:00Z",
+                      body: "First comment",
+                    },
+                    {
+                      author: { login: "bob" },
+                      createdAt: "2026-03-13T11:00:00Z",
+                      body: "Second comment",
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        },
+      },
+    });
+
+    await importGitHubIssues("test-proj", "owner/repo", "open");
+
+    const tasks = taskStore.listTasks("test-proj");
+    expect(tasks[0].description).toContain("Issue body");
+    expect(tasks[0].description).toContain("**@alice**");
+    expect(tasks[0].description).toContain("First comment");
+    expect(tasks[0].description).toContain("**@bob**");
+    expect(tasks[0].description).toContain("Second comment");
+    expect(tasks[0].description).toContain("---");
+  });
+
+  it("appends a truncation notice when comments.pageInfo.hasNextPage is true", async () => {
+    mockGhResponse({
+      data: {
+        repository: {
+          issues: {
+            pageInfo: { hasNextPage: false, endCursor: null },
+            nodes: [
+              {
+                number: 1,
+                title: "Issue with many comments",
+                body: "Issue body",
+                parent: null,
+                labels: { nodes: [] },
+                blockedBy: { nodes: [] },
+                comments: {
+                  pageInfo: { hasNextPage: true },
+                  nodes: [
+                    {
+                      author: { login: "alice" },
+                      createdAt: "2026-03-13T10:00:00Z",
+                      body: "Only fetched comment",
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        },
+      },
+    });
+
+    await importGitHubIssues("test-proj", "owner/repo", "open");
+
+    const tasks = taskStore.listTasks("test-proj");
+    expect(tasks[0].description).toContain("Only fetched comment");
+    expect(tasks[0].description).toContain("additional comments");
+  });
+
+  it("omits comments from task description when includeComments=false", async () => {
+    mockGhResponse({
+      data: {
+        repository: {
+          issues: {
+            pageInfo: { hasNextPage: false, endCursor: null },
+            nodes: [
+              {
+                number: 1,
+                title: "Issue no comments",
+                body: "Issue body only",
+                parent: null,
+                labels: { nodes: [] },
+                blockedBy: { nodes: [] },
+                // no comments field — not requested
+              },
+            ],
+          },
+        },
+      },
+    });
+
+    await importGitHubIssues("test-proj", "owner/repo", "open", undefined, undefined, false);
+
+    const tasks = taskStore.listTasks("test-proj");
+    expect(tasks[0].description).toBe("Issue body only");
+  });
+
+  it("UT-3: importGitHubIssues sets dependsOn when issue A is blocked by issue B (both in import set)", async () => {
+    mockGhOutput([
+      { number: 1, title: "Blocker" },
+      { number: 2, title: "Blocked", blockedBy: [1] },
+    ]);
+
+    const result = await importGitHubIssues("test-proj", "owner/repo", "open");
+    expect(result.dependencies).toBe(1);
+
+    const tasks = taskStore.listTasks("test-proj");
+    const blocker = tasks.find((t) => t.title.startsWith("#1:"));
+    const blocked = tasks.find((t) => t.title.startsWith("#2:"));
+    expect(blocker).toBeDefined();
+    expect(blocked).toBeDefined();
+
+    const dependsOn = JSON.parse(blocked!.dependsOn) as string[];
+    expect(dependsOn).toContain(blocker!.id);
+  });
+
+  it("UT-4: importGitHubIssues does not set dependsOn for blockers outside the import set", async () => {
+    mockGhOutput([
+      { number: 2, title: "Blocked", blockedBy: [999] }, // 999 not in import set
+    ]);
+
+    const result = await importGitHubIssues("test-proj", "owner/repo", "open");
+    expect(result.dependencies).toBe(0);
+
+    const tasks = taskStore.listTasks("test-proj");
+    const blocked = tasks.find((t) => t.title.startsWith("#2:"));
+    const dependsOn = JSON.parse(blocked!.dependsOn) as string[];
+    expect(dependsOn).toHaveLength(0);
+  });
+
+  it("UT-5: importGitHubIssues returns correct dependencies count", async () => {
+    mockGhOutput([
+      { number: 1, title: "A" },
+      { number: 2, title: "B", blockedBy: [1] },
+      { number: 3, title: "C", blockedBy: [1, 2] },
+    ]);
+
+    const result = await importGitHubIssues("test-proj", "owner/repo", "open");
+    expect(result.dependencies).toBe(3); // B blocked by 1, C blocked by 1 and 2
+  });
+
+  it("UT-6: re-importing already-imported issues does not duplicate dependsOn entries", async () => {
+    // First import
+    mockGhOutput([
+      { number: 1, title: "Blocker" },
+      { number: 2, title: "Blocked", blockedBy: [1] },
+    ]);
+    await importGitHubIssues("test-proj", "owner/repo", "open");
+
+    // Second import — both issues already exist, should be skipped
+    mockGhOutput([
+      { number: 1, title: "Blocker" },
+      { number: 2, title: "Blocked", blockedBy: [1] },
+    ]);
+    const result = await importGitHubIssues("test-proj", "owner/repo", "open");
+    expect(result.skipped).toBe(2);
+    expect(result.dependencies).toBe(0);
+
+    const tasks = taskStore.listTasks("test-proj");
+    const blocked = tasks.find((t) => t.title.startsWith("#2:"));
+    const dependsOn = JSON.parse(blocked!.dependsOn) as string[];
+    // Should still have exactly one entry — not duplicated
+    expect(dependsOn).toHaveLength(1);
+  });
+
+  it("UT-7: circular blocking relationships are handled gracefully", async () => {
+    mockGhOutput([
+      { number: 1, title: "A", blockedBy: [2] },
+      { number: 2, title: "B", blockedBy: [1] },
+    ]);
+
+    const result = await importGitHubIssues("test-proj", "owner/repo", "open");
+    expect(result.imported).toBe(2);
+    expect(result.dependencies).toBe(2);
+
+    const tasks = taskStore.listTasks("test-proj");
+    const taskA = tasks.find((t) => t.title.startsWith("#1:"));
+    const taskB = tasks.find((t) => t.title.startsWith("#2:"));
+    expect(taskA).toBeDefined();
+    expect(taskB).toBeDefined();
+
+    const depsA = JSON.parse(taskA!.dependsOn) as string[];
+    const depsB = JSON.parse(taskB!.dependsOn) as string[];
+    expect(depsA).toContain(taskB!.id);
+    expect(depsB).toContain(taskA!.id);
+  });
+
   it("rejects concurrent imports", async () => {
     // Set up a slow mock that doesn't resolve immediately
     mockExecFile.mockImplementation(
@@ -661,6 +1134,7 @@ describe("importGitHubIssues", () => {
                         body: "",
                         parent: null,
                         labels: { nodes: [] },
+                        blockedBy: { nodes: [] },
                       },
                     ],
                   },
