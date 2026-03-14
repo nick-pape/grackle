@@ -1,4 +1,32 @@
 {
+  "permissions": {
+    "allow": [
+      "mcp__github__get_commit",
+      "mcp__github__get_file_contents",
+      "mcp__github__get_me",
+      "mcp__github__issue_read",
+      "mcp__github__list_commits",
+      "mcp__github__list_issues",
+      "mcp__github__list_pull_requests",
+      "mcp__github__merge_pull_request",
+      "mcp__github__pull_request_read",
+      "mcp__github__search_issues",
+      "mcp__github__search_pull_requests",
+      "mcp__grackle__env_list",
+      "mcp__grackle__env_wake",
+      "mcp__grackle__logs_get",
+      "mcp__grackle__project_list",
+      "mcp__grackle__session_attach",
+      "mcp__grackle__session_send_input",
+      "mcp__grackle__session_spawn",
+      "mcp__grackle__session_status",
+      "mcp__grackle__task_create",
+      "mcp__grackle__task_import_github",
+      "mcp__grackle__task_list",
+      "mcp__grackle__task_show",
+      "mcp__grackle__task_start"
+    ]
+  },
   "hooks": {
     "Stop": [
       {

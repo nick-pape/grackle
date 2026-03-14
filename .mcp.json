@@ -3,6 +3,20 @@
     "playwright": {
       "command": "npx",
       "args": ["@playwright/mcp@latest"]
+    },
+    "github": {
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/",
+      "headers": {
+        "Authorization": "Bearer ${GITHUB_PAT}"
+      }
+    },
+    "grackle": {
+      "type": "http",
+      "url": "http://127.0.0.1:7435/mcp",
+      "headers": {
+        "Authorization": "Bearer ${GRACKLE_API_KEY}"
+      }
     }
   }
 }
