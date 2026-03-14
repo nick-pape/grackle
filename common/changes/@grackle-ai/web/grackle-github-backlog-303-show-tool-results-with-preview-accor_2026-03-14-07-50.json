@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Show tool results with preview + accordion in stream: success/error indicator, first 5 lines inline, click-to-expand for longer results",
+      "type": "minor",
+      "packageName": "@grackle-ai/web"
+    }
+  ],
+  "packageName": "@grackle-ai/web",
+  "email": "noreply@anthropic.com"
+}
