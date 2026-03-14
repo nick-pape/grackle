@@ -1,4 +1,4 @@
-import type { JSX } from "react";
+import { useState, type JSX } from "react";
 import Markdown from "react-markdown";
 import rehypePrismPlus from "rehype-prism-plus/common";
 import remarkGfm from "remark-gfm";
@@ -46,15 +46,66 @@ function ToolUseEvent({ content }: { content: string }): JSX.Element {
   );
 }
 
-/** Renders a collapsible tool result event. */
-function ToolResultEvent({ content }: { content: string }): JSX.Element {
+/** Number of lines shown in the collapsed preview. */
+const PREVIEW_LINES: number = 5;
+
+/** Renders a tool result event with an inline preview and a click-to-expand accordion. */
+function ToolResultEvent({ content, raw }: { content: string; raw?: string }): JSX.Element {
+  const [expanded, setExpanded] = useState(false);
+
+  let isError = false;
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw) as Record<string, unknown>;
+      isError = parsed.is_error === true;
+    } catch { /* ignore malformed raw */ }
+  }
+
+  const lines = content.split("\n");
+  const hasMore = lines.length > PREVIEW_LINES;
+  const displayContent = expanded ? content : lines.slice(0, PREVIEW_LINES).join("\n");
+
+  const headerContent = (
+    <>
+      <span
+        className={isError ? styles.toolResultIndicatorError : styles.toolResultIndicatorOk}
+        aria-label={isError ? "error" : "success"}
+      >
+        {isError ? "\u2717" : "\u2713"}
+      </span>
+      <span className={styles.toolResultLabel}>
+        {isError ? "Tool error" : "Tool output"}
+      </span>
+      {hasMore && (
+        <span className={styles.toolResultToggle} aria-hidden="true">
+          {expanded ? "\u25be" : "\u25b8"}
+        </span>
+      )}
+    </>
+  );
+
   return (
-    <details className={styles.toolResultEvent}>
-      <summary className={styles.toolResultSummary}>Tool output</summary>
+    <div className={styles.toolResultEvent}>
+      {hasMore ? (
+        <button
+          className={styles.toolResultHeader}
+          onClick={() => { setExpanded((v) => !v); }}
+          aria-expanded={expanded}
+        >
+          {headerContent}
+        </button>
+      ) : (
+        <div className={styles.toolResultHeader}>
+          {headerContent}
+        </div>
+      )}
       <pre className={styles.toolResultPre}>
-        {content}
+        {displayContent}
+        {!expanded && hasMore && (
+          <span className={styles.toolResultEllipsis}>{"\u2026"}</span>
+        )}
       </pre>
-    </details>
+    </div>
   );
 }
 
@@ -107,7 +158,7 @@ export function EventRenderer({ event }: Props): JSX.Element {
     case "tool_use":
       return <ToolUseEvent content={event.content} />;
     case "tool_result":
-      return <ToolResultEvent content={event.content} />;
+      return <ToolResultEvent content={event.content} raw={event.raw} />;
     case "error":
       return <ErrorEvent content={event.content} />;
     case "status":

@@ -450,6 +450,7 @@ async function handleMessage(
         eventType: e.type,
         timestamp: e.timestamp,
         content: e.content,
+        raw: e.raw || undefined,
       }));
 
       sendWs(ws, { type: "session_events", payload: { sessionId, events } });
@@ -483,6 +484,7 @@ async function handleMessage(
               eventType: eventTypeToString(event.type),
               timestamp: event.timestamp,
               content: event.content,
+              raw: event.raw || undefined,
             },
           });
         }
@@ -511,6 +513,7 @@ async function handleMessage(
               eventType: eventTypeToString(event.type),
               timestamp: event.timestamp,
               content: event.content,
+              raw: event.raw || undefined,
             },
           });
         }

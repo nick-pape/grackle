@@ -25,6 +25,8 @@ export interface SessionEvent {
   eventType: string;
   timestamp: string;
   content: string;
+  /** Raw JSON payload from the agent runtime (e.g. tool block with is_error flag). Optional. */
+  raw?: string;
 }
 
 export interface Project {
@@ -156,7 +158,8 @@ function isSessionEvent(v: unknown): v is SessionEvent {
     typeof v.sessionId === "string" &&
     typeof v.eventType === "string" &&
     typeof v.timestamp === "string" &&
-    typeof v.content === "string"
+    typeof v.content === "string" &&
+    (v.raw === undefined || typeof v.raw === "string")
   );
 }
 
