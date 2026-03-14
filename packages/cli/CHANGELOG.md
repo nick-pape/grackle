@@ -1,6 +1,17 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sat, 14 Mar 2026 14:08:18 GMT and should not be manually modified.
+This log was last generated on Sat, 14 Mar 2026 21:14:30 GMT and should not be manually modified.
+
+## 0.24.1
+Sat, 14 Mar 2026 21:14:30 GMT
+
+### Patches
+
+- fix: load project settings on remote so Stop hook fires
+
+### Updates
+
+- Fix Copilot task stop action failing with internal error
 
 ## 0.24.0
 Sat, 14 Mar 2026 14:08:18 GMT
