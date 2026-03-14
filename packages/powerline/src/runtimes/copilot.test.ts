@@ -294,7 +294,7 @@ describe("CopilotSession.kill — abort path (UT-1 through UT-4)", () => {
    * UT-3: kill() still completes (and cleanup still runs) when abort() throws
    * synchronously or returns a rejected Promise — no uncaught exception surfaces.
    */
-  it("UT-3: kill() completes and cleanup runs even when abort() throws synchronously", () => {
+  it("UT-3: kill() completes and cleanup (destroy) runs even when abort() throws synchronously", async () => {
     const session = new CopilotSession("s3", "prompt", "model", 0);
     const destroyFn = vi.fn(() => Promise.resolve());
     const mockSdkSession = {
@@ -306,21 +306,28 @@ describe("CopilotSession.kill — abort path (UT-1 through UT-4)", () => {
     expect(() => session.kill()).not.toThrow();
     // Status must still be killed even though abort() threw
     expect(session.status).toBe("killed");
+
+    // releaseResources() fires cleanup() as a fire-and-forget; drain the microtask
+    // queue so the async cleanup path (destroy()) settles before we assert on it.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(destroyFn).toHaveBeenCalledOnce();
   });
 
-  it("UT-3b: kill() completes and cleanup runs even when abort() returns a rejected Promise", async () => {
+  it("UT-3b: kill() completes and cleanup (destroy) runs even when abort() returns a rejected Promise", async () => {
     const session = new CopilotSession("s3b", "prompt", "model", 0);
+    const destroyFn = vi.fn(() => Promise.resolve());
     const mockSdkSession = {
       abort: vi.fn(() => Promise.reject(new Error("async abort failure"))),
-      destroy: vi.fn(() => Promise.resolve()),
+      destroy: destroyFn,
     };
     injectMockCopilotSession(session, mockSdkSession);
 
     expect(() => session.kill()).not.toThrow();
     expect(session.status).toBe("killed");
-    // Drain microtasks — the rejection must be swallowed, not unhandled
-    await Promise.resolve();
-    await Promise.resolve();
+    // Drain microtasks — the rejection must be swallowed, not unhandled,
+    // and the cleanup (destroy) path must still execute.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(destroyFn).toHaveBeenCalledOnce();
   });
 
   /**

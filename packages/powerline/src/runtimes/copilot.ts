@@ -141,7 +141,11 @@ export function buildSubtaskCreateTool(defineTool: (name: string, opts: Record<s
 
 // ─── Session ───────────────────────────────────────────────
 
-/** An in-progress Copilot agent session that streams events via the Copilot SDK. */
+/**
+ * An in-progress Copilot agent session that streams events via the Copilot SDK.
+ *
+ * @internal Exported only for unit testing of the kill/abort path. Do not use outside of tests.
+ */
 export class CopilotSession extends BaseAgentSession {
   public runtimeName: string = "copilot";
   protected readonly runtimeDisplayName: string = "Copilot";
