@@ -18,7 +18,7 @@
 }
 
 .section {
-  @include glass-card;
+  @include surface-card;
   padding: var(--space-lg);
   margin-bottom: var(--space-lg);
 }
@@ -51,7 +51,7 @@
 }
 
 .tokenRow {
-  @include glass-inset;
+  @include surface-inset;
   display: flex;
   align-items: center;
   gap: var(--space-md);
@@ -59,7 +59,7 @@
 }
 
 .tokenBadge {
-  @include glass-inset;
+  @include surface-inset;
   font-size: var(--font-size-xs);
   padding: 2px var(--space-sm);
   color: var(--accent-cyan);
@@ -140,4 +140,57 @@
   padding: var(--space-lg) 0 var(--space-sm);
   text-align: center;
   line-height: var(--line-height);
+}
+
+// ---------------------------------------------------------------------------
+// Appearance — theme radio-card selector (T3-style)
+// ---------------------------------------------------------------------------
+
+.themeOptions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.themeOption {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  text-align: left;
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+  cursor: pointer;
+  transition: border-color var(--transition-fast),
+              background var(--transition-fast);
+  font-family: var(--font-sans);
+
+  &:hover {
+    background: var(--bg-overlay);
+  }
+}
+
+.themeOptionSelected {
+  border-color: var(--accent-green);
+  background: var(--accent-green-subtle);
+}
+
+.themeOptionLabel {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-primary);
+}
+
+.themeOptionDesc {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+}
+
+.themeActive {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  margin-top: var(--space-sm);
 }

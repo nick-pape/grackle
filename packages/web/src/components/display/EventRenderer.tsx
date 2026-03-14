@@ -32,28 +32,64 @@ function TextEvent({ content }: { content: string }): JSX.Element {
   );
 }
 
-/** Renders a tool invocation event with parsed arguments. */
+/** Renders a tool invocation event with structured display. */
 function ToolUseEvent({ content }: { content: string }): JSX.Element {
-  let display = content;
+  let toolName = "";
+  let argsDisplay = content;
   try {
     const parsed = JSON.parse(content);
-    display = `${parsed.tool}: ${JSON.stringify(parsed.args, null, 2)}`;
+    toolName = parsed.tool || "";
+    argsDisplay = JSON.stringify(parsed.args, null, 2);
   } catch { /* use raw */ }
   return (
     <div className={styles.toolUseEvent}>
-      <span className={styles.toolUsePrefix}>&gt;</span> {display}
+      <div className={styles.toolUseHeader}>
+        <span className={styles.toolUsePrefix}>&gt;</span>
+        {toolName ? <span className={styles.toolUseName}>{toolName}</span> : null}
+      </div>
+      <pre className={styles.toolUseArgs}>{argsDisplay}</pre>
     </div>
   );
 }
 
-/** Renders a collapsible tool result event. */
+/** Detects if content looks like a unified diff. */
+function isDiffContent(text: string): boolean {
+  return text.includes("diff --git") || text.includes("--- a/");
+}
+
+/** Renders a collapsible tool result event with intelligent formatting. */
 function ToolResultEvent({ content }: { content: string }): JSX.Element {
+  // Try to detect content type and render appropriately
+  let formattedContent: JSX.Element;
+
+  try {
+    // Attempt JSON parse — render as highlighted JSON
+    JSON.parse(content);
+    formattedContent = (
+      <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypePrismPlus]}>
+        {"```json\n" + content + "\n```"}
+      </Markdown>
+    );
+  } catch {
+    if (isDiffContent(content)) {
+      // Diff output — render with diff syntax highlighting
+      formattedContent = (
+        <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypePrismPlus]}>
+          {"```diff\n" + content + "\n```"}
+        </Markdown>
+      );
+    } else {
+      // Fallback — raw text
+      formattedContent = <pre className={styles.toolResultPre}>{content}</pre>;
+    }
+  }
+
   return (
     <details className={styles.toolResultEvent}>
       <summary className={styles.toolResultSummary}>Tool output</summary>
-      <pre className={styles.toolResultPre}>
-        {content}
-      </pre>
+      <div className={styles.toolResultContent}>
+        {formattedContent}
+      </div>
     </details>
   );
 }

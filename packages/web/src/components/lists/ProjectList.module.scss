@@ -58,7 +58,7 @@
 }
 
 .projectRow {
-  @include hover-lift;
+  @include hover-accent;
   padding: var(--space-sm) var(--space-md);
   font-size: var(--font-size-md);
   display: flex;
@@ -71,8 +71,6 @@
   &.selected {
     background: var(--bg-overlay);
     border: 1px solid var(--border-primary);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
   }
 }
 
@@ -106,7 +104,7 @@
 }
 
 .taskRow {
-  @include hover-lift;
+  @include hover-accent;
   padding: 3px var(--space-md) 3px 34px;
   font-size: var(--font-size-sm);
   cursor: pointer;
@@ -121,8 +119,6 @@
   &.selected {
     background: var(--bg-overlay);
     color: var(--text-primary);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
   }
 }
 
@@ -139,7 +135,7 @@
 
 // Frosted inset chip for dependency count — third glass tier
 .dependencyBadge {
-  @include glass-inset;
+  @include surface-inset;
   font-size: 10px;
   color: var(--text-tertiary);
   border-radius: var(--radius-full);
@@ -157,7 +153,7 @@
 }
 
 .childCountBadge {
-  @include glass-inset;
+  @include surface-inset;
   font-size: 10px;
   color: var(--text-tertiary);
   border-radius: var(--radius-full);
@@ -229,7 +225,7 @@
   background: none;
   border: none;
   color: var(--accent-green);
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 11px;
   cursor: pointer;
   text-decoration: underline;

@@ -9,6 +9,19 @@
 @use './prism-theme.scss';
 @import url('https://cdn.jsdelivr.net/npm/firacode@6.2.0/distr/fira_code.css');
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,400&display=swap');
+
+// =============================================================================
+// Suppress transitions during theme changes (T3 pattern)
+// =============================================================================
+
+.no-transitions,
+.no-transitions *,
+.no-transitions *::before,
+.no-transitions *::after {
+  transition-duration: 0s !important;
+  animation-duration: 0s !important;
+}
 
 // =============================================================================
 // Reset
@@ -32,13 +45,24 @@ body,
 body {
   background: var(--bg-base);
   color: var(--text-primary);
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: var(--font-size-md);
   font-weight: var(--font-weight-regular);
   line-height: var(--line-height);
-  font-feature-settings: 'liga' 1, 'calt' 1;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+// Subtle noise texture overlay (T3-inspired tactile feel)
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.03;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  z-index: 99999;
 }
 
 // =============================================================================
@@ -65,18 +89,18 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--text-disabled);
   border-radius: var(--radius-full);
 
   &:hover {
-    background: rgba(255, 255, 255, 0.14);
+    background: var(--text-tertiary);
   }
 }
 
 // Firefox
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
+  scrollbar-color: var(--text-disabled) transparent;
 }
 
 // =============================================================================
@@ -84,7 +108,7 @@ body {
 // =============================================================================
 
 :focus-visible {
-  outline: 2px solid var(--accent-green);
+  outline: 2px solid var(--ring);
   outline-offset: 2px;
 }
 
@@ -124,15 +148,6 @@ body {
   }
 }
 
-@keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
-}
-
 @keyframes spin {
   from {
     transform: rotate(0deg);
@@ -145,32 +160,22 @@ body {
 // =============================================================================
 // Accessibility: High Contrast
 // =============================================================================
-// Override glass tokens so panels become opaque and refraction is disabled.
+// Increase border visibility and text contrast for high-contrast mode.
 
 @media (prefers-contrast: more) {
   :root {
-    // Text — raise contrast
-    --text-secondary: #b0bec5;
-    --text-tertiary: #90a4ae;
-    --text-disabled: #607d8b;
+    --text-secondary: #4b5563;
+    --text-tertiary: #6b7280;
+    --text-disabled: #9ca3af;
+    --border-subtle: rgba(0, 0, 0, 0.20);
+    --border-input: rgba(0, 0, 0, 0.30);
+  }
 
-    // Glass — disable blur and make surfaces opaque
-    --glass-blur: 0px;
-    --glass-blur-card: 0px;
-    --glass-blur-inset: 0px;
-    --glass-border: rgba(255, 255, 255, 0.20);
-    --glass-border-hover: rgba(255, 255, 255, 0.30);
-    --glass-border-inset: rgba(255, 255, 255, 0.15);
-    --glass-highlight: transparent;
-    --glass-highlight-strong: transparent;
-
-    // Surfaces — raise alpha to near-opaque
-    --bg-surface: rgba(16, 20, 34, 0.95);
-    --bg-elevated: rgba(24, 30, 52, 0.95);
-    --bg-inset: rgba(10, 14, 28, 0.90);
-
-    // Borders
-    --border-subtle: rgba(255, 255, 255, 0.20);
+  [data-theme="dark"] {
+    --text-secondary: #d1d5db;
+    --text-tertiary: #9ca3af;
+    --text-disabled: #6b7280;
+    --border-subtle: rgba(255, 255, 255, 0.15);
     --border-input: rgba(255, 255, 255, 0.25);
   }
 }
