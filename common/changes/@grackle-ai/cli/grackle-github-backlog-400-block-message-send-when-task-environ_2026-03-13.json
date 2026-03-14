@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "False positive — only @grackle-ai/web (non-publishable) was modified; merge-commit detection flagged this package.",
+      "type": "none",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "noreply@anthropic.com"
+}
