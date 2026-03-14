@@ -183,16 +183,18 @@ function findWorkspaceDir(basePath?: string, requireNonEmpty?: boolean): string 
  * Tries `git checkout <branch>` first (branch already exists), then falls back to
  * `git checkout -b <branch>` (create new branch from current HEAD).
  *
+ * Arguments are passed as an array to execFile (not interpolated into a shell
+ * command string), which prevents shell injection from branch names.
+ *
  * @param repoPath - Absolute path to the git repository root.
  * @param branch - Branch name to check out.
  */
 async function checkoutBranchInPlace(repoPath: string, branch: string): Promise<void> {
-  const shell = process.env.SHELL || true;
   try {
-    await execFileAsync("git", ["checkout", branch], { cwd: repoPath, shell });
+    await execFileAsync("git", ["checkout", branch], { cwd: repoPath });
   } catch {
     // Branch doesn't exist yet — create it
-    await execFileAsync("git", ["checkout", "-b", branch], { cwd: repoPath, shell });
+    await execFileAsync("git", ["checkout", "-b", branch], { cwd: repoPath });
   }
 }
 
