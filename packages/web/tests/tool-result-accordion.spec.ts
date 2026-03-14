@@ -215,6 +215,64 @@ test.describe("Tool result preview and accordion (#303)", () => {
     ).toBeVisible({ timeout: 5_000 });
   });
 
+  test("paired tool_use+tool_result shows tool name, command preview, and hides standalone tool_use card", async ({ page }) => {
+    await setupSessionView(page);
+
+    const TOOL_USE_ID = "toolu_test_pairing_001";
+
+    // Inject tool_use with a structured raw block (mimics claude-code runtime output)
+    await injectWsMessage(page, {
+      type: "session_event",
+      payload: {
+        sessionId: FAKE_SESSION_ID,
+        eventType: "tool_use",
+        content: JSON.stringify({ tool: "Bash", args: { command: "ls -la /tmp" } }),
+        timestamp: new Date().toISOString(),
+        raw: JSON.stringify({ type: "tool_use", id: TOOL_USE_ID, name: "Bash", input: { command: "ls -la /tmp" } }),
+      },
+    });
+
+    // Inject matching tool_result
+    await injectWsMessage(page, {
+      type: "session_event",
+      payload: {
+        sessionId: FAKE_SESSION_ID,
+        eventType: "tool_result",
+        content: "total 12\ndrwxrwxrwt 5 root root 4096 Mar 14",
+        timestamp: new Date().toISOString(),
+        raw: JSON.stringify({ type: "tool_result", tool_use_id: TOOL_USE_ID, is_error: false }),
+      },
+    });
+
+    // Result card must show "Bash" as the label (tool name, not generic "Tool output")
+    await expect(page.locator('[class*="toolResultLabel"]')).toHaveText("Bash", { timeout: 5_000 });
+
+    // Command preview line must show the actual bash command
+    await expect(page.locator('[class*="toolResultCommand"]')).toHaveText("ls -la /tmp");
+
+    // The standalone tool_use card (blue-bordered box with JSON args) must be gone —
+    // the tool_use event was consumed by its paired result
+    await expect(page.locator('[class*="toolUseEvent"]')).not.toBeVisible();
+  });
+
+  test("unpaired tool_use (no raw id) still renders as its own card", async ({ page }) => {
+    await setupSessionView(page);
+
+    // Inject tool_use without raw → cannot be paired
+    await injectWsMessage(page, {
+      type: "session_event",
+      payload: {
+        sessionId: FAKE_SESSION_ID,
+        eventType: "tool_use",
+        content: JSON.stringify({ tool: "echo", args: { message: "hello" } }),
+        timestamp: new Date().toISOString(),
+      },
+    });
+
+    // Standalone tool_use card must still render
+    await expect(page.locator('[class*="toolUseEvent"]')).toBeVisible({ timeout: 5_000 });
+  });
+
   test("raw field is forwarded by backend and accepted by frontend type guard", async ({ page }) => {
     await installWsTracker(page);
     await page.goto("/");

@@ -208,6 +208,17 @@
   font-size: 10px;
 }
 
+// One-line preview of the tool invocation's arguments (command, file path, etc.)
+.toolResultCommand {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-tertiary);
+  padding: 0 var(--space-xs) 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 // Truncation ellipsis appended at end of preview
 .toolResultEllipsis {
   color: var(--text-tertiary);

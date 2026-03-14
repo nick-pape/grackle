@@ -8,6 +8,8 @@ import styles from "./EventRenderer.module.scss";
 /** Props for the EventRenderer component. */
 interface Props {
   event: SessionEvent;
+  /** Paired tool_use context, attached by SessionPanel when raw IDs match. */
+  toolUseCtx?: { tool: string; args: unknown };
 }
 
 // --- Individual event type renderers ---
@@ -55,8 +57,39 @@ function ToolUseEvent({ content }: { content: string }): JSX.Element {
 /** Number of lines shown in the collapsed preview. */
 const PREVIEW_LINES: number = 5;
 
+/** Extracts a one-line human-readable summary of tool arguments. */
+function argsPreview(_tool: string, args: unknown): string {
+  if (args === null || args === undefined) return "";
+  if (typeof args !== "object") return String(args);
+  const a = args as Record<string, unknown>;
+  // Bash / shell: show the command string
+  if (typeof a.command === "string") return a.command;
+  // File-path tools (Read, Write, Edit, Glob)
+  if (typeof a.file_path === "string") return a.file_path;
+  // Search tools (Grep)
+  if (typeof a.pattern === "string") {
+    const inPath = typeof a.path === "string" ? ` in ${a.path}` : "";
+    return `${a.pattern}${inPath}`;
+  }
+  // Path-only tools
+  if (typeof a.path === "string") return a.path;
+  // Query-based tools
+  if (typeof a.query === "string") return a.query;
+  // General fallback: first 150 chars of JSON
+  try {
+    const json = JSON.stringify(args);
+    return json.length > 150 ? `${json.slice(0, 150)}\u2026` : json;
+  } catch {
+    return "";
+  }
+}
+
 /** Renders a tool result event with an inline preview and a click-to-expand accordion. */
-function ToolResultEvent({ content, raw }: { content: string; raw?: string }): JSX.Element {
+function ToolResultEvent({ content, raw, toolUseCtx }: {
+  content: string;
+  raw?: string;
+  toolUseCtx?: { tool: string; args: unknown };
+}): JSX.Element {
   const [expanded, setExpanded] = useState(false);
 
   let isError = false;
@@ -71,6 +104,11 @@ function ToolResultEvent({ content, raw }: { content: string; raw?: string }): J
   const hasMore = lines.length > PREVIEW_LINES;
   const displayContent = expanded ? content : lines.slice(0, PREVIEW_LINES).join("\n");
 
+  // Use the paired tool name when available; fall back to generic label
+  const toolName = toolUseCtx?.tool ?? "";
+  const label = toolName || (isError ? "Tool error" : "Tool output");
+  const cmdLine = toolUseCtx ? argsPreview(toolUseCtx.tool, toolUseCtx.args) : "";
+
   const headerContent = (
     <>
       <span
@@ -80,7 +118,7 @@ function ToolResultEvent({ content, raw }: { content: string; raw?: string }): J
         {isError ? "\u2717" : "\u2713"}
       </span>
       <span className={styles.toolResultLabel}>
-        {isError ? "Tool error" : "Tool output"}
+        {label}
       </span>
       {hasMore && (
         <span className={styles.toolResultToggle} aria-hidden="true">
@@ -104,6 +142,9 @@ function ToolResultEvent({ content, raw }: { content: string; raw?: string }): J
         <div className={styles.toolResultHeader}>
           {headerContent}
         </div>
+      )}
+      {cmdLine && (
+        <div className={styles.toolResultCommand}>{cmdLine}</div>
       )}
       <pre className={styles.toolResultPre}>
         {displayContent}
@@ -152,7 +193,7 @@ function DefaultEvent({ content }: { content: string }): JSX.Element {
 // --- Main component ---
 
 /** Renders a single session event, dispatching to the appropriate type-specific renderer. */
-export function EventRenderer({ event }: Props): JSX.Element {
+export function EventRenderer({ event, toolUseCtx }: Props): JSX.Element {
   const time = new Date(event.timestamp).toLocaleTimeString();
 
   switch (event.eventType) {
@@ -164,7 +205,7 @@ export function EventRenderer({ event }: Props): JSX.Element {
     case "tool_use":
       return <ToolUseEvent content={event.content} />;
     case "tool_result":
-      return <ToolResultEvent content={event.content} raw={event.raw} />;
+      return <ToolResultEvent content={event.content} raw={event.raw} toolUseCtx={toolUseCtx} />;
     case "error":
       return <ErrorEvent content={event.content} />;
     case "status":

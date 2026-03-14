@@ -8,6 +8,9 @@ import { DagView } from "../dag/DagView.js";
 import { useEffect, useMemo, useRef, useState, type JSX, type RefObject } from "react";
 import type { ViewMode } from "../../App.js";
 import type { Session, SessionEvent, TaskData, Environment, Project } from "../../hooks/useGrackleSocket.js";
+
+/** Session event augmented with optional tool_use context for paired tool results. */
+type DisplayEvent = SessionEvent & { toolUseCtx?: { tool: string; args: unknown } };
 import { AnimatePresence, motion } from "motion/react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -72,7 +75,7 @@ function EventOverflowBanner({ eventsDropped }: { eventsDropped: number }): JSX.
 
 /** Props for the EventList subcomponent. */
 interface EventListProps {
-  sessionEvents: SessionEvent[];
+  sessionEvents: DisplayEvent[];
   session: Session | undefined;
   eventsDropped: number;
   // eslint-disable-next-line @rushstack/no-new-null
@@ -93,7 +96,7 @@ function EventList({ sessionEvents, session, eventsDropped, scrollRef }: EventLi
       )}
       <EventOverflowBanner eventsDropped={eventsDropped} />
       {sessionEvents.map((event, i) => (
-        <EventRenderer key={`${event.sessionId}-${event.timestamp}-${i}`} event={event} />
+        <EventRenderer key={`${event.sessionId}-${event.timestamp}-${i}`} event={event} toolUseCtx={event.toolUseCtx} />
       ))}
     </div>
   );
@@ -115,6 +118,52 @@ function groupConsecutiveTextEvents(events: SessionEvent[]): SessionEvent[] {
     }
   }
   return result;
+}
+
+/**
+ * Pairs tool_use events with their tool_result counterparts using raw.id / raw.tool_use_id.
+ * Attaches toolUseCtx to each matched tool_result (so the result card can show the tool name
+ * and a command preview) and removes the consumed tool_use event from the list.
+ * Events from runtimes that do not emit structured raw (e.g., stub) pass through unchanged.
+ */
+function pairToolEvents(events: SessionEvent[]): DisplayEvent[] {
+  // Build lookup: raw tool_use id → { tool, args }
+  const toolUseById = new Map<string, { tool: string; args: unknown }>();
+  for (const e of events) {
+    if (e.eventType !== "tool_use" || !e.raw) continue;
+    try {
+      const raw = JSON.parse(e.raw) as Record<string, unknown>;
+      if (typeof raw.id !== "string") continue;
+      const content = JSON.parse(e.content) as { tool: string; args: unknown };
+      toolUseById.set(raw.id, { tool: content.tool ?? "", args: content.args });
+    } catch { /* skip unparseable events */ }
+  }
+
+  // Attach toolUseCtx to tool_result events; record consumed tool_use IDs
+  const consumedIds = new Set<string>();
+  const display: DisplayEvent[] = events.map((e) => {
+    if (e.eventType !== "tool_result" || !e.raw) return e;
+    try {
+      const raw = JSON.parse(e.raw) as Record<string, unknown>;
+      if (typeof raw.tool_use_id !== "string") return e;
+      const ctx = toolUseById.get(raw.tool_use_id);
+      if (!ctx) return e;
+      consumedIds.add(raw.tool_use_id);
+      return { ...e, toolUseCtx: ctx };
+    } catch {
+      return e;
+    }
+  });
+
+  // Remove tool_use events whose result has already arrived
+  return display.filter((e) => {
+    if (e.eventType !== "tool_use" || !e.raw) return true;
+    try {
+      const raw = JSON.parse(e.raw) as Record<string, unknown>;
+      if (typeof raw.id === "string") return !consumedIds.has(raw.id);
+    } catch { /* keep */ }
+    return true;
+  });
 }
 
 // --- Overview helpers ---
@@ -649,7 +698,7 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
     const filtered = sessionId
       ? events.filter((e) => e.sessionId === sessionId)
       : [];
-    return groupConsecutiveTextEvents(filtered);
+    return pairToolEvents(groupConsecutiveTextEvents(filtered));
   }, [events, sessionId]);
 
   const tasksById = useMemo(
@@ -1348,7 +1397,7 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
                 )}
                 <EventOverflowBanner eventsDropped={eventsDropped} />
                 {groupedEvents.map((event, i) => (
-                  <EventRenderer key={`${event.sessionId}-${event.timestamp}-${i}`} event={event} />
+                  <EventRenderer key={`${event.sessionId}-${event.timestamp}-${i}`} event={event} toolUseCtx={event.toolUseCtx} />
                 ))}
               </div>
             </motion.div>
