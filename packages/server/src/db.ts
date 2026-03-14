@@ -9,7 +9,38 @@ import * as schema from "./schema.js";
 mkdirSync(grackleHome, { recursive: true });
 
 const dbPath: string = join(grackleHome, DB_FILENAME);
-const sqlite: InstanceType<typeof Database> = new Database(dbPath);
+
+let sqlite: InstanceType<typeof Database>;
+try {
+  sqlite = new Database(dbPath);
+} catch (err) {
+  if (err instanceof Error && err.message.includes("Could not locate the bindings file")) {
+    process.stderr.write(
+      [
+        "",
+        "ERROR: better-sqlite3 native binding not found.",
+        "",
+        "The install script for better-sqlite3 was skipped, so the required native",
+        "module was never built. This commonly happens with pnpm v8+, which blocks",
+        "package install scripts by default.",
+        "",
+        "To fix this, run one of the following:",
+        "",
+        "  Option 1 — approve builds interactively:",
+        "    pnpm approve-builds",
+        "",
+        "  Option 2 — add to your project's package.json, then reinstall:",
+        '    { "pnpm": { "onlyBuiltDependencies": ["better-sqlite3"] } }',
+        "    pnpm install",
+        "",
+        "After fixing, restart grackle.",
+        "",
+      ].join("\n"),
+    );
+    process.exit(1);
+  }
+  throw err;
+}
 
 // Enable WAL mode for better concurrent read performance
 sqlite.pragma("journal_mode = WAL");

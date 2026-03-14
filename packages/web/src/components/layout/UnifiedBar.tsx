@@ -1,6 +1,7 @@
 import { useState, useEffect, type FormEvent, type JSX } from "react";
 import { useGrackle } from "../../context/GrackleContext.js";
 import { useToast } from "../../context/ToastContext.js";
+import type { Environment } from "../../hooks/useGrackleSocket.js";
 import type { ViewMode } from "../../App.js";
 import styles from "./UnifiedBar.module.scss";
 
@@ -33,6 +34,38 @@ function RuntimeSelector({ value, onChange, testId }: RuntimeSelectorProps): JSX
       <option value="copilot">copilot</option>
       <option value="stub">stub</option>
     </select>
+  );
+}
+
+/** Returns true when the environment with the given ID is disconnected or in error. */
+function isEnvDisconnected(environmentId: string | undefined, environments: Environment[]): boolean {
+  if (!environmentId) return false;
+  const env = environments.find((e) => e.id === environmentId);
+  return env !== undefined && (env.status === "disconnected" || env.status === "error");
+}
+
+interface DisconnectedBannerProps {
+  environmentId: string;
+  onReconnect: (envId: string) => void;
+}
+
+/** Hint + Reconnect button shown when the task/session environment is unreachable. */
+function DisconnectedBanner({ environmentId, onReconnect }: DisconnectedBannerProps): JSX.Element {
+  return (
+    <>
+      <span className={styles.disconnectHint} data-testid="env-disconnect-hint">
+        Environment unavailable
+      </span>
+      <button
+        type="button"
+        onClick={() => onReconnect(environmentId)}
+        className={styles.btnGhost}
+        data-testid="reconnect-btn"
+        title="Reconnect the environment to resume messaging"
+      >
+        Reconnect
+      </button>
+    </>
   );
 }
 
@@ -432,17 +465,14 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
       const isWaiting = taskSession?.status === "waiting_input";
 
       if (isWaiting) {
-        // Look up the environment for this task to detect disconnected state.
-        const taskEnv = task.environmentId
-          ? environments.find((e) => e.id === task.environmentId)
-          : undefined;
-        const isEnvDisconnected =
-          taskEnv !== undefined &&
-          (taskEnv.status === "disconnected" || taskEnv.status === "error");
+        // Prefer the session's environmentId because task.environmentId is ""
+        // when using "Default env" — the session always carries the resolved env.
+        const effectiveEnvId = taskSession?.environmentId || task.environmentId;
+        const taskEnvDisconnected = isEnvDisconnected(effectiveEnvId, environments);
 
         const handleSend = (e: FormEvent): void => {
           e.preventDefault();
-          if (!text.trim() || !task.sessionId || isEnvDisconnected) {
+          if (!text.trim() || !task.sessionId || taskEnvDisconnected) {
             return;
           }
           sendInput(task.sessionId, text);
@@ -450,42 +480,31 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
         };
         return (
           <form onSubmit={handleSend} className={styles.bar}>
-            {isEnvDisconnected && (
-              <span
-                className={styles.disconnectHint}
-                data-testid="env-disconnect-hint"
-              >
-                Environment disconnected
-              </span>
+            {taskEnvDisconnected && effectiveEnvId && (
+              <DisconnectedBanner
+                environmentId={effectiveEnvId}
+                onReconnect={provisionEnvironment}
+              />
             )}
             <input
               type="text"
               value={text}
               onChange={(e) => setText(e.target.value)}
               placeholder="Type a message..."
-              autoFocus={!isEnvDisconnected}
-              disabled={isEnvDisconnected}
+              autoFocus={!taskEnvDisconnected}
+              disabled={taskEnvDisconnected}
               className={styles.input}
             />
-            {isEnvDisconnected && task.environmentId && (
+            {/* Wrap in span so tooltip is shown reliably even when button is disabled */}
+            <span title={taskEnvDisconnected ? "Environment is unavailable — reconnect first" : undefined}>
               <button
-                type="button"
-                onClick={() => provisionEnvironment(task.environmentId)}
-                className={styles.btnGhost}
-                data-testid="reconnect-btn"
-                title="Reconnect the environment to resume messaging"
+                type="submit"
+                disabled={!text.trim() || taskEnvDisconnected}
+                className={styles.btnPrimary}
               >
-                Reconnect
+                Send
               </button>
-            )}
-            <button
-              type="submit"
-              disabled={!text.trim() || isEnvDisconnected}
-              title={isEnvDisconnected ? "Environment is disconnected — reconnect first" : undefined}
-              className={styles.btnPrimary}
-            >
-              Send
-            </button>
+            </span>
           </form>
         );
       }
@@ -606,17 +625,11 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
     }
 
     if (isWaiting) {
-      // Look up the environment for this session to detect disconnected state.
-      const sessionEnv = session?.environmentId
-        ? environments.find((e) => e.id === session.environmentId)
-        : undefined;
-      const isSessionEnvDisconnected =
-        sessionEnv !== undefined &&
-        (sessionEnv.status === "disconnected" || sessionEnv.status === "error");
+      const sessionEnvDisconnected = isEnvDisconnected(session?.environmentId, environments);
 
       const handleSend = (e: FormEvent): void => {
         e.preventDefault();
-        if (!text.trim() || isSessionEnvDisconnected) {
+        if (!text.trim() || sessionEnvDisconnected) {
           return;
         }
         sendInput(viewMode.sessionId, text);
@@ -624,42 +637,31 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
       };
       return (
         <form onSubmit={handleSend} className={styles.bar}>
-          {isSessionEnvDisconnected && (
-            <span
-              className={styles.disconnectHint}
-              data-testid="env-disconnect-hint"
-            >
-              Environment disconnected
-            </span>
+          {sessionEnvDisconnected && session?.environmentId && (
+            <DisconnectedBanner
+              environmentId={session.environmentId}
+              onReconnect={provisionEnvironment}
+            />
           )}
           <input
             type="text"
             value={text}
             onChange={(e) => setText(e.target.value)}
             placeholder="Type a message..."
-            autoFocus={!isSessionEnvDisconnected}
-            disabled={isSessionEnvDisconnected}
+            autoFocus={!sessionEnvDisconnected}
+            disabled={sessionEnvDisconnected}
             className={styles.input}
           />
-          {isSessionEnvDisconnected && session?.environmentId && (
+          {/* Wrap in span so tooltip is shown reliably even when button is disabled */}
+          <span title={sessionEnvDisconnected ? "Environment is unavailable — reconnect first" : undefined}>
             <button
-              type="button"
-              onClick={() => provisionEnvironment(session.environmentId)}
-              className={styles.btnGhost}
-              data-testid="reconnect-btn"
-              title="Reconnect the environment to resume messaging"
+              type="submit"
+              disabled={!text.trim() || sessionEnvDisconnected}
+              className={styles.btnPrimary}
             >
-              Reconnect
+              Send
             </button>
-          )}
-          <button
-            type="submit"
-            disabled={!text.trim() || isSessionEnvDisconnected}
-            title={isSessionEnvDisconnected ? "Environment is disconnected — reconnect first" : undefined}
-            className={styles.btnPrimary}
-          >
-            Send
-          </button>
+          </span>
           <button type="button" onClick={() => kill(viewMode.sessionId)} className={styles.btnDanger} title="Stop session">
             Stop
           </button>
