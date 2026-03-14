@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { Client } from "@connectrpc/connect";
-import type { grackle } from "@grackle-ai/common";
+import { type grackle, eventTypeToString } from "@grackle-ai/common";
 import { z } from "zod";
 import type { ToolDefinition } from "../tool-registry.js";
 import { jsonResult } from "../result-helpers.js";
@@ -85,7 +85,7 @@ export const logsTools: ToolDefinition[] = [
           const maxEvents = args.maxEvents as number | undefined;
           const controller = new AbortController();
           const timer = setTimeout(() => controller.abort(), timeout * 1000);
-          const events: Array<{ type: number; timestamp: string; content: string }> = [];
+          const events: Array<{ type: string; timestamp: string; content: string }> = [];
           let timedOut = false;
 
           try {
@@ -95,7 +95,7 @@ export const logsTools: ToolDefinition[] = [
             );
             for await (const event of stream) {
               events.push({
-                type: event.type,
+                type: eventTypeToString(event.type) || String(event.type),
                 timestamp: event.timestamp,
                 content: event.content,
               });

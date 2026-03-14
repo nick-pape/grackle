@@ -1,6 +1,6 @@
 import type { Client } from "@connectrpc/connect";
 import { z } from "zod";
-import { grackle } from "@grackle-ai/common";
+import { grackle, eventTypeToString } from "@grackle-ai/common";
 import type { ToolDefinition } from "../tool-registry.js";
 import { jsonResult } from "../result-helpers.js";
 import { grpcErrorToToolResult } from "../error-handler.js";
@@ -183,7 +183,7 @@ export const sessionTools: ToolDefinition[] = [
         const maxEvents = args.maxEvents as number | undefined;
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), timeout * 1000);
-        const events: Array<{ type: number; timestamp: string; content: string }> = [];
+        const events: Array<{ type: string; timestamp: string; content: string }> = [];
         let timedOut = false;
 
         try {
@@ -192,7 +192,7 @@ export const sessionTools: ToolDefinition[] = [
             { signal: controller.signal },
           )) {
             events.push({
-              type: event.type,
+              type: eventTypeToString(event.type) || String(event.type),
               timestamp: event.timestamp,
               content: event.content,
             });
