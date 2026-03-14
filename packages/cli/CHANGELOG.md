@@ -1,6 +1,17 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sat, 14 Mar 2026 08:13:46 GMT and should not be manually modified.
+This log was last generated on Sat, 14 Mar 2026 13:49:54 GMT and should not be manually modified.
+
+## 0.23.0
+Sat, 14 Mar 2026 13:49:54 GMT
+
+### Minor changes
+
+- Add configurable worktree isolation per project: --no-worktrees flag for project create/update, project list shows worktree status
+
+### Updates
+
+- Fix Copilot task stop action failing with internal error
 
 ## 0.22.0
 Sat, 14 Mar 2026 08:13:46 GMT

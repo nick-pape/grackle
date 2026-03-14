@@ -2,6 +2,23 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.23.0",
+      "tag": "@grackle-ai/cli_v0.23.0",
+      "date": "Sat, 14 Mar 2026 13:49:54 GMT",
+      "comments": {
+        "none": [
+          {
+            "comment": "Fix Copilot task stop action failing with internal error"
+          }
+        ],
+        "minor": [
+          {
+            "comment": "Add configurable worktree isolation per project: --no-worktrees flag for project create/update, project list shows worktree status"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.22.0",
       "tag": "@grackle-ai/cli_v0.22.0",
       "date": "Sat, 14 Mar 2026 08:13:46 GMT",
