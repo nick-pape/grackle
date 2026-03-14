@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sat, 14 Mar 2026 04:00:53 GMT and should not be manually modified.
+This log was last generated on Sat, 14 Mar 2026 04:23:29 GMT and should not be manually modified.
+
+## 0.18.3
+Sat, 14 Mar 2026 04:23:29 GMT
+
+### Patches
+
+- Fix CLI connecting via IPv6 (::1) when server binds IPv4-only (127.0.0.1); change CLI default URL from localhost to 127.0.0.1, add --host flag to grackle serve, bind PowerLine to 127.0.0.1 explicitly, and reflect actual bind address in log messages
 
 ## 0.18.2
 Sat, 14 Mar 2026 04:00:53 GMT

@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.18.3",
+      "tag": "@grackle-ai/cli_v0.18.3",
+      "date": "Sat, 14 Mar 2026 04:23:29 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Fix CLI connecting via IPv6 (::1) when server binds IPv4-only (127.0.0.1); change CLI default URL from localhost to 127.0.0.1, add --host flag to grackle serve, bind PowerLine to 127.0.0.1 explicitly, and reflect actual bind address in log messages"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.18.2",
       "tag": "@grackle-ai/cli_v0.18.2",
       "date": "Sat, 14 Mar 2026 04:00:53 GMT",
