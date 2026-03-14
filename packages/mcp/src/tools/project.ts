@@ -1,21 +1,9 @@
 import type { Client } from "@connectrpc/connect";
-import type { grackle } from "@grackle-ai/common";
+import { type grackle, projectStatusToString } from "@grackle-ai/common";
 import { z } from "zod";
 import type { ToolDefinition } from "../tool-registry.js";
 import { jsonResult } from "../result-helpers.js";
 import { grpcErrorToToolResult } from "../error-handler.js";
-
-/** Map numeric ProjectStatus enum values to human-readable strings. */
-const PROJECT_STATUS_LABELS: Record<number, string> = {
-  0: "unspecified",
-  1: "active",
-  2: "archived",
-};
-
-/** Convert a numeric ProjectStatus to its string label. */
-function formatProjectStatus(status: number): string {
-  return PROJECT_STATUS_LABELS[status] ?? "unspecified";
-}
 
 /** MCP tools for managing Grackle projects (CRUD + archive). */
 export const projectTools: ToolDefinition[] = [
@@ -43,7 +31,7 @@ export const projectTools: ToolDefinition[] = [
             description: p.description,
             repoUrl: p.repoUrl,
             defaultEnvironmentId: p.defaultEnvironmentId,
-            status: formatProjectStatus(p.status),
+            status: projectStatusToString(p.status) || "unspecified",
           })),
         );
       } catch (error) {
@@ -96,7 +84,7 @@ export const projectTools: ToolDefinition[] = [
           description: project.description,
           repoUrl: project.repoUrl,
           defaultEnvironmentId: project.defaultEnvironmentId,
-          status: formatProjectStatus(project.status),
+          status: projectStatusToString(project.status) || "unspecified",
           createdAt: project.createdAt,
           updatedAt: project.updatedAt,
         });
@@ -132,7 +120,7 @@ export const projectTools: ToolDefinition[] = [
           description: project.description,
           repoUrl: project.repoUrl,
           defaultEnvironmentId: project.defaultEnvironmentId,
-          status: formatProjectStatus(project.status),
+          status: projectStatusToString(project.status) || "unspecified",
           createdAt: project.createdAt,
           updatedAt: project.updatedAt,
         });
@@ -190,7 +178,7 @@ export const projectTools: ToolDefinition[] = [
           description: project.description,
           repoUrl: project.repoUrl,
           defaultEnvironmentId: project.defaultEnvironmentId,
-          status: formatProjectStatus(project.status),
+          status: projectStatusToString(project.status) || "unspecified",
           createdAt: project.createdAt,
           updatedAt: project.updatedAt,
         });

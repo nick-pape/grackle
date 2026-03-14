@@ -23,7 +23,7 @@ export const logsTools: ToolDefinition[] = [
       sessionId: z.string().describe("Session ID to retrieve logs for"),
       transcript: z.boolean().optional().describe("Return formatted transcript instead of raw events"),
       tail: z.boolean().optional().describe("Live-tail the session stream with a timeout"),
-      timeoutSeconds: z.number().int().positive().max(MAX_TAIL_TIMEOUT_SECONDS).optional().describe("Timeout in seconds for tail mode (default 10, max 60)"),
+      timeoutSeconds: z.number().int().positive().max(MAX_TAIL_TIMEOUT_SECONDS).default(DEFAULT_TAIL_TIMEOUT_SECONDS).describe("Timeout in seconds for tail mode (default 10, max 60)"),
       maxEvents: z.number().int().positive().optional().describe("Maximum events to return in tail mode"),
     }),
     rpcMethod: "listSessions",
