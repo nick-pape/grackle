@@ -166,7 +166,7 @@
   cursor: pointer;
   transition: border-color var(--transition-fast),
               background var(--transition-fast);
-  font-family: var(--font-sans);
+  font-family: var(--font-ui);
 
   &:hover {
     background: var(--bg-overlay);

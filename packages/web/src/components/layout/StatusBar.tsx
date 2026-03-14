@@ -1,6 +1,5 @@
 import type { JSX } from "react";
 import { useGrackle } from "../../context/GrackleContext.js";
-import { useThemeContext } from "../../context/ThemeContext.js";
 import type { ViewMode } from "../../App.js";
 import styles from "./StatusBar.module.scss";
 
@@ -10,19 +9,8 @@ interface StatusBarProps {
 }
 
 /** Top status bar showing connection state, environment counts, and active session count. */
-/** Theme label mapping for the cycle button. */
-const THEME_LABELS: Record<string, string> = {
-  system: "\u2699",
-  light: "\u2600",
-  dark: "\u263E",
-};
-
-/** Cycle order for theme toggle. */
-const THEME_CYCLE: Array<"system" | "light" | "dark"> = ["system", "light", "dark"];
-
 export function StatusBar({ setViewMode }: StatusBarProps): JSX.Element {
   const { connected, environments, sessions } = useGrackle();
-  const { theme, setTheme } = useThemeContext();
   const totalEnvs = environments.length;
   const connectedEnvs = environments.filter((e) => e.status === "connected").length;
   const activeCount = sessions.filter((s) => ["running", "waiting_input"].includes(s.status)).length;
@@ -39,16 +27,6 @@ export function StatusBar({ setViewMode }: StatusBarProps): JSX.Element {
         </span>
         <span>{connectedEnvs}/{totalEnvs} env{totalEnvs !== 1 ? "s" : ""}</span>
         <span>{activeCount} active</span>
-        <button
-          className={styles.themeButton}
-          onClick={() => {
-            const idx = THEME_CYCLE.indexOf(theme);
-            setTheme(THEME_CYCLE[(idx + 1) % THEME_CYCLE.length]);
-          }}
-          title={`Theme: ${theme}`}
-        >
-          {THEME_LABELS[theme]}
-        </button>
         {setViewMode && (
           <>
             <button

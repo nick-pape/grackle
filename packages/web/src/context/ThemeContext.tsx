@@ -4,7 +4,7 @@ import { useTheme, type Theme } from "../hooks/useTheme.js";
 /** Context value shape for theme state. */
 interface ThemeContextType {
   theme: Theme;
-  resolvedTheme: "light" | "dark";
+  resolvedTheme: "glass" | "light" | "dark";
   setTheme: (next: Theme) => void;
 }
 

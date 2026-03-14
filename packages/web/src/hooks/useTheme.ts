@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useSyncExternalStore } from "react";
 
 /** Available theme choices. */
-export type Theme = "light" | "dark" | "system";
+export type Theme = "glass" | "light" | "dark" | "system";
 
 interface ThemeSnapshot {
   theme: Theme;
@@ -27,17 +27,27 @@ function getSystemDark(): boolean {
   return window.matchMedia(MEDIA_QUERY).matches;
 }
 
-/** Read the persisted theme choice from localStorage, defaulting to "system". */
+/** Read the persisted theme choice from localStorage, defaulting to "glass". */
 function getStored(): Theme {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw === "light" || raw === "dark" || raw === "system") {
+    if (raw === "glass" || raw === "light" || raw === "dark" || raw === "system") {
       return raw;
     }
   } catch {
     // localStorage may be unavailable
   }
-  return "system";
+  return "glass";
+}
+
+/** Resolve a theme choice to the data-theme attribute value. */
+function resolveDataTheme(theme: Theme): string {
+  switch (theme) {
+    case "glass": return "glass";
+    case "light": return "light";
+    case "dark": return "dark";
+    case "system": return getSystemDark() ? "dark" : "light";
+  }
 }
 
 /** Apply the resolved theme to the document root element. */
@@ -46,8 +56,7 @@ function applyTheme(theme: Theme, suppressTransitions: boolean = false): void {
     document.documentElement.classList.add("no-transitions");
   }
 
-  const isDark = theme === "dark" || (theme === "system" && getSystemDark());
-  document.documentElement.dataset.theme = isDark ? "dark" : "light";
+  document.documentElement.dataset.theme = resolveDataTheme(theme);
 
   if (suppressTransitions) {
     // Force a reflow so the no-transitions class takes effect before removal
@@ -92,13 +101,13 @@ function subscribe(listener: () => void): () => void {
 /** React hook for reading and setting the application theme. */
 export function useTheme(): {
   theme: Theme;
-  resolvedTheme: "light" | "dark";
+  resolvedTheme: "glass" | "light" | "dark";
   setTheme: (next: Theme) => void;
 } {
   const snapshot = useSyncExternalStore(subscribe, getSnapshot);
   const { theme } = snapshot;
 
-  const resolvedTheme: "light" | "dark" =
+  const resolvedTheme: "glass" | "light" | "dark" =
     theme === "system" ? (snapshot.systemDark ? "dark" : "light") : theme;
 
   const setTheme = useCallback((next: Theme) => {

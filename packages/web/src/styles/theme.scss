@@ -1,86 +1,91 @@
 // ============================================================================
 // Design Tokens — Grackle Web UI
 // ============================================================================
-// Dual-theme token system inspired by T3 Code.
-// :root defines the light theme defaults.
-// [data-theme="dark"] overrides for dark mode.
+// Multi-theme token system.  :root = original glassmorphism (default).
+// [data-theme="light"] and [data-theme="dark"] provide a clean T3-style look.
 // Component styles consume these via var(--token-name).
 // ============================================================================
 
 :root {
   // ---------------------------------------------------------------------------
-  // Backgrounds — Light theme
+  // Backgrounds — Glassmorphism (semi-transparent for backdrop-filter)
   // ---------------------------------------------------------------------------
-  --bg-base: #ffffff;
-  --bg-surface: #ffffff;
-  --bg-elevated: #ffffff;
-  --bg-overlay: rgba(0, 0, 0, 0.04);
-  --bg-input: #ffffff;
-  --bg-inset: #f4f4f5;
-
-  // ---------------------------------------------------------------------------
-  // Text — Light theme
-  // ---------------------------------------------------------------------------
-  --text-primary: #1c2129;
-  --text-secondary: #6b7280;
-  --text-tertiary: #9ca3af;
-  --text-disabled: #d1d5db;
+  --bg-base: #0a0c14;
+  --bg-surface: rgba(16, 20, 34, 0.82);
+  --bg-elevated: rgba(24, 30, 52, 0.72);
+  --bg-overlay: rgba(15, 52, 96, 0.35);
+  --bg-input: rgba(20, 26, 46, 0.85);
+  --bg-inset: rgba(10, 14, 28, 0.55);
 
   // ---------------------------------------------------------------------------
-  // Accent Colors — semantic palette
+  // Glass effects (active in default theme, zeroed in light/dark)
   // ---------------------------------------------------------------------------
-  // Primary (green/emerald — brand)
-  --accent-green: #10b981;
-  --accent-green-dim: rgba(16, 185, 129, 0.10);
-  --accent-green-subtle: rgba(16, 185, 129, 0.06);
-  --accent-green-focus: rgba(16, 185, 129, 0.12);
-  --accent-green-selection: rgba(16, 185, 129, 0.20);
-
-  // Destructive (red)
-  --accent-red: #ef4444;
-  --accent-red-dim: rgba(239, 68, 68, 0.10);
-
-  // Warning (amber)
-  --accent-yellow: #f59e0b;
-  --accent-yellow-dim: rgba(245, 158, 11, 0.10);
-
-  // Info (blue)
-  --accent-blue: #3b82f6;
-  --accent-blue-dim: rgba(59, 130, 246, 0.10);
-
-  // Secondary (purple)
-  --accent-purple: #8b5cf6;
-  --accent-purple-dim: rgba(139, 92, 246, 0.10);
-
-  // Patterns (cyan)
-  --accent-cyan: #06b6d4;
-  --accent-cyan-dim: rgba(6, 182, 212, 0.10);
-
-  // Semantic foreground variants (text on tinted backgrounds)
-  --accent-red-fg: #b91c1c;
-  --accent-yellow-fg: #b45309;
-  --accent-blue-fg: #1d4ed8;
-  --accent-green-fg: #047857;
-  --accent-purple-fg: #6d28d9;
-  --accent-cyan-fg: #0e7490;
+  --glass-blur: 16px;
+  --glass-blur-card: 8px;
+  --glass-blur-inset: 4px;
+  --glass-border: rgba(255, 255, 255, 0.10);
+  --glass-border-hover: rgba(255, 255, 255, 0.16);
+  --glass-highlight: rgba(255, 255, 255, 0.03);
+  --glass-highlight-strong: rgba(255, 255, 255, 0.06);
+  --glass-inner-glow: 1;
 
   // ---------------------------------------------------------------------------
-  // Borders — Light theme
+  // Text
   // ---------------------------------------------------------------------------
-  --border-primary: rgba(16, 185, 129, 0.18);
-  --border-subtle: rgba(0, 0, 0, 0.08);
-  --border-input: rgba(0, 0, 0, 0.12);
+  --text-primary: #e2e8f0;
+  --text-secondary: #94a3b8;
+  --text-tertiary: #6b7a8d;
+  --text-disabled: #475569;
+
+  // ---------------------------------------------------------------------------
+  // Accent Colors
+  // ---------------------------------------------------------------------------
+  --accent-green: #4ecca3;
+  --accent-green-dim: rgba(78, 204, 163, 0.18);
+  --accent-green-subtle: rgba(78, 204, 163, 0.08);
+  --accent-green-focus: rgba(78, 204, 163, 0.1);
+  --accent-green-selection: rgba(78, 204, 163, 0.25);
+
+  --accent-red: #e94560;
+  --accent-red-dim: rgba(233, 69, 96, 0.18);
+
+  --accent-yellow: #f0c040;
+  --accent-yellow-dim: rgba(240, 192, 64, 0.18);
+
+  --accent-blue: #70a1ff;
+  --accent-blue-dim: rgba(112, 161, 255, 0.18);
+
+  --accent-purple: #a855f7;
+  --accent-purple-dim: rgba(168, 85, 247, 0.18);
+
+  --accent-cyan: #22d3ee;
+  --accent-cyan-dim: rgba(34, 211, 238, 0.18);
+
+  // Semantic foreground variants
+  --accent-red-fg: #e94560;
+  --accent-yellow-fg: #f0c040;
+  --accent-blue-fg: #70a1ff;
+  --accent-green-fg: #4ecca3;
+  --accent-purple-fg: #a855f7;
+  --accent-cyan-fg: #22d3ee;
+
+  // ---------------------------------------------------------------------------
+  // Borders
+  // ---------------------------------------------------------------------------
+  --border-primary: rgba(78, 204, 163, 0.18);
+  --border-subtle: rgba(255, 255, 255, 0.10);
+  --border-input: rgba(255, 255, 255, 0.14);
 
   // ---------------------------------------------------------------------------
   // Ring (focus outline)
   // ---------------------------------------------------------------------------
-  --ring: #10b981;
-  --ring-alpha: rgba(16, 185, 129, 0.24);
+  --ring: #4ecca3;
+  --ring-alpha: rgba(78, 204, 163, 0.24);
 
   // ---------------------------------------------------------------------------
-  // Card highlight (top-edge depth cue)
+  // Card highlight
   // ---------------------------------------------------------------------------
-  --highlight-top: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  --highlight-top: inset 0 1px 0 0 rgba(255, 255, 255, 0.03);
 
   // ---------------------------------------------------------------------------
   // Spacing
@@ -95,24 +100,27 @@
   // Border Radii
   // ---------------------------------------------------------------------------
   --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 10px;
-  --radius-xl: 14px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
   --radius-full: 9999px;
 
   // ---------------------------------------------------------------------------
-  // Shadows — subtle depth cues
+  // Shadows
   // ---------------------------------------------------------------------------
-  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.05);
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.10), 0 1px 2px rgba(0, 0, 0, 0.06);
-  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07), 0 2px 4px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.10), 0 4px 6px rgba(0, 0, 0, 0.05);
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.4);
+  --shadow-glow-green: 0 0 16px rgba(78, 204, 163, 0.15);
+  --shadow-glow-red: 0 0 16px rgba(233, 69, 96, 0.15);
 
   // ---------------------------------------------------------------------------
   // Typography
   // ---------------------------------------------------------------------------
   --font-sans: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   --font-mono: 'Fira Code', 'JetBrains Mono', 'Cascadia Code', monospace;
+  --font-ui: var(--font-mono);
   --font-size-xs: 11px;
   --font-size-sm: 12px;
   --font-size-md: 13px;
@@ -133,8 +141,112 @@
   --transition-slow: 400ms cubic-bezier(0.16, 1, 0.3, 1);
 
   // ---------------------------------------------------------------------------
-  // Syntax highlighting — Light
+  // Noise texture overlay opacity (0 in glass, subtle in T3 themes)
   // ---------------------------------------------------------------------------
+  --noise-opacity: 0;
+
+  // ---------------------------------------------------------------------------
+  // Syntax highlighting — Glass / Dark
+  // ---------------------------------------------------------------------------
+  --code-comment: #6b7a8d;
+  --code-keyword: #4ecca3;
+  --code-function: #70a1ff;
+  --code-string: #22d3ee;
+  --code-number: #a855f7;
+  --code-class: #f0c040;
+  --code-tag: #4ecca3;
+  --code-deleted: #e94560;
+  --code-inserted: #4ecca3;
+  --code-punctuation: #94a3b8;
+}
+
+// =============================================================================
+// T3 Light Theme
+// =============================================================================
+
+[data-theme="light"] {
+  color-scheme: light;
+
+  // Disable glass effects
+  --glass-blur: 0px;
+  --glass-blur-card: 0px;
+  --glass-blur-inset: 0px;
+  --glass-border: rgba(0, 0, 0, 0.08);
+  --glass-border-hover: rgba(0, 0, 0, 0.12);
+  --glass-highlight: transparent;
+  --glass-highlight-strong: transparent;
+  --glass-inner-glow: 0;
+
+  // Backgrounds
+  --bg-base: #ffffff;
+  --bg-surface: #ffffff;
+  --bg-elevated: #ffffff;
+  --bg-overlay: rgba(0, 0, 0, 0.04);
+  --bg-input: #ffffff;
+  --bg-inset: #f4f4f5;
+
+  // Text
+  --text-primary: #1c2129;
+  --text-secondary: #6b7280;
+  --text-tertiary: #9ca3af;
+  --text-disabled: #d1d5db;
+
+  // Accents
+  --accent-green: #10b981;
+  --accent-green-dim: rgba(16, 185, 129, 0.10);
+  --accent-green-subtle: rgba(16, 185, 129, 0.06);
+  --accent-green-focus: rgba(16, 185, 129, 0.12);
+  --accent-green-selection: rgba(16, 185, 129, 0.20);
+  --accent-red: #ef4444;
+  --accent-red-dim: rgba(239, 68, 68, 0.10);
+  --accent-yellow: #f59e0b;
+  --accent-yellow-dim: rgba(245, 158, 11, 0.10);
+  --accent-blue: #3b82f6;
+  --accent-blue-dim: rgba(59, 130, 246, 0.10);
+  --accent-purple: #8b5cf6;
+  --accent-purple-dim: rgba(139, 92, 246, 0.10);
+  --accent-cyan: #06b6d4;
+  --accent-cyan-dim: rgba(6, 182, 212, 0.10);
+
+  --accent-red-fg: #b91c1c;
+  --accent-yellow-fg: #b45309;
+  --accent-blue-fg: #1d4ed8;
+  --accent-green-fg: #047857;
+  --accent-purple-fg: #6d28d9;
+  --accent-cyan-fg: #0e7490;
+
+  // Borders
+  --border-primary: rgba(16, 185, 129, 0.18);
+  --border-subtle: rgba(0, 0, 0, 0.08);
+  --border-input: rgba(0, 0, 0, 0.12);
+
+  // Ring
+  --ring: #10b981;
+  --ring-alpha: rgba(16, 185, 129, 0.24);
+
+  // Highlight
+  --highlight-top: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+
+  // Radii (slightly smaller for T3)
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 14px;
+
+  // Shadows
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.10), 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07), 0 2px 4px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.10), 0 4px 6px rgba(0, 0, 0, 0.05);
+  --shadow-glow-green: none;
+  --shadow-glow-red: none;
+
+  // Font — sans-serif for T3 themes
+  --font-ui: var(--font-sans);
+
+  // Noise texture
+  --noise-opacity: 0.03;
+
+  // Syntax highlighting
   --code-comment: #6b7280;
   --code-keyword: #059669;
   --code-function: #2563eb;
@@ -148,11 +260,21 @@
 }
 
 // =============================================================================
-// Dark Theme
+// T3 Dark Theme
 // =============================================================================
 
 [data-theme="dark"] {
   color-scheme: dark;
+
+  // Disable glass effects
+  --glass-blur: 0px;
+  --glass-blur-card: 0px;
+  --glass-blur-inset: 0px;
+  --glass-border: rgba(255, 255, 255, 0.06);
+  --glass-border-hover: rgba(255, 255, 255, 0.10);
+  --glass-highlight: transparent;
+  --glass-highlight-strong: transparent;
+  --glass-inner-glow: 0;
 
   // Backgrounds
   --bg-base: #0e1218;
@@ -168,29 +290,23 @@
   --text-tertiary: #6b7280;
   --text-disabled: #4b5563;
 
-  // Accent Colors — brighter for dark backgrounds
+  // Accents (brighter for dark backgrounds)
   --accent-green: #34d399;
   --accent-green-dim: rgba(52, 211, 153, 0.15);
   --accent-green-subtle: rgba(52, 211, 153, 0.08);
   --accent-green-focus: rgba(52, 211, 153, 0.15);
   --accent-green-selection: rgba(52, 211, 153, 0.25);
-
   --accent-red: #f87171;
   --accent-red-dim: rgba(248, 113, 113, 0.15);
-
   --accent-yellow: #fbbf24;
   --accent-yellow-dim: rgba(251, 191, 36, 0.15);
-
   --accent-blue: #60a5fa;
   --accent-blue-dim: rgba(96, 165, 250, 0.15);
-
   --accent-purple: #a78bfa;
   --accent-purple-dim: rgba(167, 139, 250, 0.15);
-
   --accent-cyan: #22d3ee;
   --accent-cyan-dim: rgba(34, 211, 238, 0.15);
 
-  // Semantic foreground variants for dark
   --accent-red-fg: #fca5a5;
   --accent-yellow-fg: #fcd34d;
   --accent-blue-fg: #93c5fd;
@@ -207,16 +323,29 @@
   --ring: #34d399;
   --ring-alpha: rgba(52, 211, 153, 0.24);
 
-  // Card highlight (bottom edge in dark — T3 pattern)
+  // Highlight
   --highlight-top: inset 0 -1px 0 rgba(255, 255, 255, 0.06);
 
-  // Shadows — darker for dark theme
+  // Radii
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 14px;
+
+  // Shadows
   --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
   --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.4), 0 2px 4px rgba(0, 0, 0, 0.3);
   --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.5), 0 4px 6px rgba(0, 0, 0, 0.3);
+  --shadow-glow-green: none;
+  --shadow-glow-red: none;
 
-  // Syntax highlighting — Dark
+  // Font
+  --font-ui: var(--font-sans);
+
+  // Noise texture
+  --noise-opacity: 0.03;
+
+  // Syntax highlighting
   --code-comment: #9ca3af;
   --code-keyword: #34d399;
   --code-function: #60a5fa;

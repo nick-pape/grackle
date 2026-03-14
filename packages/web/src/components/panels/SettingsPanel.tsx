@@ -10,9 +10,10 @@ import styles from "./SettingsPanel.module.scss";
 
 /** Theme display options for the Appearance section. */
 const THEME_OPTIONS: Array<{ value: Theme; label: string; description: string }> = [
-  { value: "system", label: "System", description: "Match your OS appearance setting." },
-  { value: "light", label: "Light", description: "Always use the light theme." },
-  { value: "dark", label: "Dark", description: "Always use the dark theme." },
+  { value: "glass", label: "Glassmorphism", description: "Dark frosted-glass aesthetic with backdrop blur effects." },
+  { value: "light", label: "Light", description: "Clean light theme with subtle depth cues." },
+  { value: "dark", label: "Dark", description: "Clean dark theme with subtle depth cues." },
+  { value: "system", label: "System", description: "Follow your OS light/dark preference (clean theme)." },
 ];
 
 /** Token type options for the add form. */
