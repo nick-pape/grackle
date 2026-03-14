@@ -2,6 +2,23 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.24.1",
+      "tag": "@grackle-ai/cli_v0.24.1",
+      "date": "Sat, 14 Mar 2026 21:14:30 GMT",
+      "comments": {
+        "none": [
+          {
+            "comment": "Fix Copilot task stop action failing with internal error"
+          }
+        ],
+        "patch": [
+          {
+            "comment": "fix: load project settings on remote so Stop hook fires"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.24.0",
       "tag": "@grackle-ai/cli_v0.24.0",
       "date": "Sat, 14 Mar 2026 14:08:18 GMT",
