@@ -40,7 +40,13 @@ Use the GitHub MCP to check for unresolved review threads on the PR.
 - **No unresolved review threads** — all threads must be resolved
 - If unresolved threads exist, **do not merge** — report the count and summarize them
 
-### 3. PR State
+### 3. Approval Status
+
+Check the PR's review decision:
+- If `reviewDecision` is `CHANGES_REQUESTED`, **do not merge** — report who requested changes
+- Approval is not strictly required (some PRs are self-merged), but `CHANGES_REQUESTED` is a hard block
+
+### 4. PR State
 
 Verify the PR is in a mergeable state:
 - PR is `open` (not already merged or closed)

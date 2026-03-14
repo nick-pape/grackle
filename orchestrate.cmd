@@ -5,7 +5,6 @@ REM Usage: orchestrate.cmd [claude args...]
 REM Example: orchestrate.cmd "burn down the items in the #282 UX epic, go one at a time"
 
 if not defined GRACKLE_PORT set GRACKLE_PORT=7434
-if not defined GRACKLE_MCP_PORT set GRACKLE_MCP_PORT=7435
 
 REM Load API key from ~/.grackle/api-key if not already set
 if "%GRACKLE_API_KEY%"=="" (

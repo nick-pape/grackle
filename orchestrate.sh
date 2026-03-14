@@ -6,7 +6,6 @@
 set -euo pipefail
 
 GRACKLE_PORT="${GRACKLE_PORT:-7434}"
-GRACKLE_MCP_PORT="${GRACKLE_MCP_PORT:-7435}"
 
 # Load API key from ~/.grackle/api-key if not already set
 if [[ -z "${GRACKLE_API_KEY:-}" ]]; then
@@ -21,7 +20,7 @@ if [[ -z "${GRACKLE_API_KEY:-}" ]]; then
 fi
 
 # Check that the Grackle server is running
-if ! netstat -ano 2>/dev/null | grep -q ":${GRACKLE_PORT}.*LISTENING"; then
+if ! (netstat -ano 2>/dev/null | grep -q ":${GRACKLE_PORT}.*LISTEN"); then
   echo "Error: Grackle server not detected on port ${GRACKLE_PORT}."
   echo "Start it with: grackle serve"
   exit 1
