@@ -1059,14 +1059,21 @@ async function handleMessage(
             ),
           ]
         : safeParseJsonArray(existingTask.dependsOn);
+      const updatedEnvironmentId = typeof msg.payload?.environmentId === "string"
+        ? msg.payload.environmentId
+        : existingTask.environmentId;
+      const updatedPersonaId = typeof msg.payload?.personaId === "string"
+        ? msg.payload.personaId
+        : existingTask.personaId;
       taskStore.updateTask(
         updateTaskId,
         updatedTitle,
         updatedDescription,
         existingTask.status,
-        existingTask.environmentId,
+        updatedEnvironmentId,
         updatedDependsOn,
         existingTask.reviewNotes,
+        updatedPersonaId,
       );
       const updatedRow = taskStore.getTask(updateTaskId);
       broadcast({
@@ -1173,6 +1180,7 @@ async function handleMessage(
         task.environmentId,
         safeParseJsonArray(task.dependsOn),
         reviewNotes,
+        task.personaId,
       );
       broadcast({
         type: "task_rejected",

@@ -727,6 +727,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
           ? [...req.dependsOn]
           : safeParseJsonArray(existing.dependsOn),
         req.reviewNotes !== "" ? req.reviewNotes : existing.reviewNotes,
+        existing.personaId,
       );
       const row = taskStore.getTask(req.id);
       return taskRowToProto(row!);
@@ -894,6 +895,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         task.environmentId,
         safeParseJsonArray(task.dependsOn),
         req.reviewNotes || "",
+        task.personaId,
       );
 
       broadcast({
