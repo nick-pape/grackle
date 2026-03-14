@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Forward raw field in WebSocket session events so clients can display is_error flag from tool results",
+      "type": "patch",
+      "packageName": "@grackle-ai/server"
+    }
+  ],
+  "packageName": "@grackle-ai/server",
+  "email": "noreply@anthropic.com"
+}
