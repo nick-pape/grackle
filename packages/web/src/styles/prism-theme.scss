@@ -1,13 +1,13 @@
 // ============================================================================
 // Prism Syntax Highlighting Theme — Grackle Web UI
 // ============================================================================
-// Custom token colors derived from the Grackle design tokens (theme.scss).
-// Applied globally to code blocks rendered by rehype-prism-plus inside
-// react-markdown. Token class names follow the Prism / refractor convention.
+// Token colors reference CSS custom properties (--code-*) defined in
+// theme.scss, so syntax highlighting automatically adapts to
+// light/dark theme via the data-theme attribute.
 // ============================================================================
 
 // ---------------------------------------------------------------------------
-// Base code block styles (applied via rehype-prism-plus class injection)
+// Base code block styles
 // ---------------------------------------------------------------------------
 
 code[class*='language-'],
@@ -23,101 +23,80 @@ pre[class*='language-'] {
 }
 
 // ---------------------------------------------------------------------------
-// Token Colors
-// ---------------------------------------------------------------------------
-// Palette mapping:
-//   green  (#4ecca3) — keywords, tags, important
-//   blue   (#70a1ff) — functions, attributes, selectors
-//   cyan   (#22d3ee) — strings, inserted
-//   purple (#a855f7) — numbers, booleans, constants
-//   yellow (#f0c040) — class names, types, annotations
-//   red    (#e94560) — deleted, regex, operator-keyword
-//   secondary text   — comments, punctuation
+// Token Colors — referencing theme CSS variables
 // ---------------------------------------------------------------------------
 
-// --- Comments & documentation ---
 .token.comment,
 .token.prolog,
 .token.doctype,
 .token.cdata {
-  color: var(--text-tertiary);
+  color: var(--code-comment);
   font-style: italic;
 }
 
-// --- Punctuation & plain structure ---
 .token.punctuation {
-  color: var(--text-secondary);
+  color: var(--code-punctuation);
 }
 
 .token.namespace {
   opacity: 0.8;
 }
 
-// --- Strings & inserted text ---
 .token.string,
 .token.attr-value,
 .token.template-string,
 .token.template-punctuation,
 .token.inserted {
-  color: var(--accent-cyan);
+  color: var(--code-string);
 }
 
-// --- Numbers, booleans, constants ---
 .token.number,
 .token.boolean,
 .token.constant,
 .token.symbol {
-  color: var(--accent-purple);
+  color: var(--code-number);
 }
 
-// --- Keywords, control flow ---
 .token.keyword,
 .token.tag,
 .token.important {
-  color: var(--accent-green);
+  color: var(--code-keyword);
 }
 
-// --- Functions, methods ---
 .token.function,
 .token.builtin {
-  color: var(--accent-blue);
+  color: var(--code-function);
 }
 
-// --- Selectors, attributes ---
 .token.selector,
 .token.attr-name,
 .token.char {
-  color: var(--accent-blue);
+  color: var(--code-function);
 }
 
-// --- Class names, types, annotations ---
 .token.class-name,
 .token.maybe-class-name {
-  color: var(--accent-yellow);
+  color: var(--code-class);
 }
 
-// --- Regex, deleted text ---
 .token.regex,
 .token.deleted {
-  color: var(--accent-red);
+  color: var(--code-deleted);
 }
 
-// --- Operators ---
 .token.operator,
 .token.entity,
 .token.url {
-  color: var(--accent-green);
+  color: var(--code-keyword);
 }
 
-// --- Variables, properties ---
 .token.variable,
 .token.property {
   color: var(--text-primary);
 }
 
-// --- Atrule (CSS @rules), keyword-adjacent ---
 .token.atrule {
-  color: var(--accent-yellow);
+  color: var(--code-class);
 }
 
 // ---------------------------------------------------------------------------

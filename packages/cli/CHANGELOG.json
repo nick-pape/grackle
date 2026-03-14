@@ -2,6 +2,104 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.19.0",
+      "tag": "@grackle-ai/cli_v0.19.0",
+      "date": "Sat, 14 Mar 2026 05:55:32 GMT",
+      "comments": {
+        "none": [
+          {
+            "comment": "No CLI changes; merge from main included unrelated CLI bump"
+          },
+          {
+            "comment": "Add a none bump change file for @grackle-ai/cli because merge commits from origin/main make rush change --verify falsely detect CLI changes on this web-only PR."
+          }
+        ],
+        "minor": [
+          {
+            "comment": "Add MCP server core infrastructure with Streamable HTTP transport, tool registry, and proof-of-concept tools"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.18.3",
+      "tag": "@grackle-ai/cli_v0.18.3",
+      "date": "Sat, 14 Mar 2026 04:23:29 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Fix CLI connecting via IPv6 (::1) when server binds IPv4-only (127.0.0.1); change CLI default URL from localhost to 127.0.0.1, add --host flag to grackle serve, bind PowerLine to 127.0.0.1 explicitly, and reflect actual bind address in log messages"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.18.2",
+      "tag": "@grackle-ai/cli_v0.18.2",
+      "date": "Sat, 14 Mar 2026 04:00:53 GMT",
+      "comments": {
+        "none": [
+          {
+            "comment": "False positive — only @grackle-ai/web (non-publishable) was modified; merge-commit detection flagged this package."
+          },
+          {
+            "comment": "No changes to CLI (merge commit false positive)"
+          }
+        ],
+        "patch": [
+          {
+            "comment": "Add pnpm.onlyBuiltDependencies to allow better-sqlite3 install script in pnpm v8+"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.18.1",
+      "tag": "@grackle-ai/cli_v0.18.1",
+      "date": "Fri, 13 Mar 2026 21:32:39 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Add the UpdateProject RPC and project detail view inline editing flow."
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.18.0",
+      "tag": "@grackle-ai/cli_v0.18.0",
+      "date": "Fri, 13 Mar 2026 18:20:02 GMT",
+      "comments": {
+        "none": [
+          {
+            "comment": "Add breadcrumbs"
+          }
+        ],
+        "minor": [
+          {
+            "comment": "Add --no-include-comments flag to import-github command"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.17.1",
+      "tag": "@grackle-ai/cli_v0.17.1",
+      "date": "Fri, 13 Mar 2026 17:07:19 GMT",
+      "comments": {
+        "none": [
+          {
+            "comment": "Address persona CLI UI gaps by adding missing tasks help and examples"
+          }
+        ],
+        "patch": [
+          {
+            "comment": "Add --depends-on flag to task update CLI command"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.17.0",
       "tag": "@grackle-ai/cli_v0.17.0",
       "date": "Fri, 13 Mar 2026 08:26:43 GMT",

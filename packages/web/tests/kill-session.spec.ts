@@ -1,4 +1,5 @@
 import { test, expect } from "./fixtures.js";
+import { getNewChatRuntimeSelect } from "./helpers.js";
 
 test.describe("Kill Session", () => {
   test("kill during waiting_input", async ({ appPage }) => {
@@ -9,7 +10,7 @@ test.describe("Kill Session", () => {
 
     // Start a stub session
     await page.locator('button[title="New chat"]').click();
-    const runtimeSelect = page.locator("select");
+    const runtimeSelect = getNewChatRuntimeSelect(page);
     await runtimeSelect.selectOption("stub");
     const promptInput = page.locator('input[placeholder="Enter prompt..."]');
     await promptInput.fill("kill test");

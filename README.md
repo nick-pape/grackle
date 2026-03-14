@@ -166,6 +166,12 @@ npx @grackle-ai/cli serve
 npx @grackle-ai/cli env add my-env --docker
 ```
 
+> **pnpm users**: pnpm v8+ blocks package install scripts by default. If `grackle serve` crashes with a `Could not locate the bindings file` error, run `pnpm approve-builds` after installing and then reinstall, or add the following to your `package.json` before installing:
+>
+> ```json
+> { "pnpm": { "onlyBuiltDependencies": ["better-sqlite3"] } }
+> ```
+
 <details>
 <summary>Building from source</summary>
 

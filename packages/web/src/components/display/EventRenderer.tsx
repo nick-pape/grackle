@@ -32,16 +32,22 @@ function TextEvent({ content }: { content: string }): JSX.Element {
   );
 }
 
-/** Renders a tool invocation event with parsed arguments. */
+/** Renders a tool invocation event with structured display. */
 function ToolUseEvent({ content }: { content: string }): JSX.Element {
-  let display = content;
+  let toolName = "";
+  let argsDisplay = content;
   try {
     const parsed = JSON.parse(content);
-    display = `${parsed.tool}: ${JSON.stringify(parsed.args, null, 2)}`;
+    toolName = parsed.tool || "";
+    argsDisplay = JSON.stringify(parsed.args, null, 2) ?? "";
   } catch { /* use raw */ }
   return (
     <div className={styles.toolUseEvent}>
-      <span className={styles.toolUsePrefix}>&gt;</span> {display}
+      <div className={styles.toolUseHeader}>
+        <span className={styles.toolUsePrefix}>&gt;</span>
+        {toolName ? <span className={styles.toolUseName}>{toolName}</span> : null}
+      </div>
+      <pre className={styles.toolUseArgs}>{argsDisplay}</pre>
     </div>
   );
 }
@@ -51,9 +57,9 @@ function ToolResultEvent({ content }: { content: string }): JSX.Element {
   return (
     <details className={styles.toolResultEvent}>
       <summary className={styles.toolResultSummary}>Tool output</summary>
-      <pre className={styles.toolResultPre}>
-        {content}
-      </pre>
+      <div className={styles.toolResultContent}>
+        <pre>{content}</pre>
+      </div>
     </details>
   );
 }

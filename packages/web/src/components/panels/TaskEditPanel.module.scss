@@ -1,0 +1,190 @@
+@use '../../styles/mixins' as *;
+
+// =============================================================================
+// Task Edit Panel — full-panel create/edit form for tasks
+// =============================================================================
+
+.container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+// ---------------------------------------------------------------------------
+// Header
+// ---------------------------------------------------------------------------
+
+.header {
+  @include surface-panel;
+  padding: var(--space-sm) var(--space-md);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  flex-shrink: 0;
+}
+
+.headerTitle {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.badge {
+  background: var(--accent-green-dim);
+  color: var(--accent-green);
+  border: 1px solid var(--accent-green);
+  border-radius: var(--radius-full);
+  padding: 1px var(--space-sm);
+  font-size: var(--font-size-xs);
+  font-family: var(--font-mono);
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-shrink: 0;
+}
+
+// ---------------------------------------------------------------------------
+// Form body
+// ---------------------------------------------------------------------------
+
+.body {
+  flex: 1;
+  overflow: auto;
+  padding: var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  max-width: 680px;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.label {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.titleInput {
+  @include input-field;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+  padding: var(--space-sm) var(--space-md);
+  width: 100%;
+}
+
+.descriptionTextarea {
+  @include input-field;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  resize: vertical;
+  min-height: 160px;
+  padding: var(--space-sm) var(--space-md);
+  width: 100%;
+  font-family: var(--font-mono);
+  line-height: 1.5;
+}
+
+.parentContext {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+}
+
+.parentLabel {
+  color: var(--text-tertiary);
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.parentName {
+  color: var(--text-secondary);
+}
+
+// ---------------------------------------------------------------------------
+// Persona select
+// ---------------------------------------------------------------------------
+
+.personaSelect {
+  @include input-field;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  padding: var(--space-xs) var(--space-sm);
+  width: 100%;
+  max-width: 320px;
+  cursor: pointer;
+}
+
+// ---------------------------------------------------------------------------
+// Dependencies multi-select
+// ---------------------------------------------------------------------------
+
+.depList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.depItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-sm);
+  transition: background var(--transition-fast);
+  color: var(--text-secondary);
+  user-select: none;
+
+  &:hover {
+    background: var(--bg-overlay);
+  }
+
+  input[type="checkbox"] {
+    accent-color: var(--accent-green);
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+  }
+}
+
+.depItemSelected {
+  color: var(--accent-green);
+}
+
+.noDeps {
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+  font-style: italic;
+}
+
+// ---------------------------------------------------------------------------
+// Buttons
+// ---------------------------------------------------------------------------
+
+.btnPrimary {
+  @include btn-primary;
+}
+
+.btnGhost {
+  @include btn-ghost(var(--text-secondary));
+}

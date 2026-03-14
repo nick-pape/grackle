@@ -159,7 +159,7 @@ test.describe("Persona Management", () => {
     await page.locator('button[title="Personas"]').click();
 
     // Verify the persona management view is shown with our persona
-    await expect(page.getByText("Personas")).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByRole("heading", { name: "Personas" })).toBeVisible({ timeout: 5_000 });
     await expect(page.getByText("Security Reviewer")).toBeVisible({
       timeout: 5_000,
     });
@@ -460,7 +460,7 @@ test.describe("Persona Management", () => {
 
     // Navigate to persona management view
     await page.locator('button[title="Personas"]').click();
-    await expect(page.getByText("Personas")).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByRole("heading", { name: "Personas" })).toBeVisible({ timeout: 5_000 });
     await expect(page.getByText("Detailed Persona")).toBeVisible({
       timeout: 5_000,
     });
@@ -482,7 +482,7 @@ test.describe("Persona Management", () => {
 
     // Navigate to management view and verify it appears
     await page.locator('button[title="Personas"]').click();
-    await expect(page.getByText("Personas")).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByRole("heading", { name: "Personas" })).toBeVisible({ timeout: 5_000 });
     await expect(page.getByText("Soon Deleted")).toBeVisible({
       timeout: 5_000,
     });
@@ -502,5 +502,16 @@ test.describe("Persona Management", () => {
     await expect(page.getByText("Soon Deleted")).not.toBeVisible({
       timeout: 5_000,
     });
+  });
+
+  test("persona page shows breadcrumbs with Home > Personas", async ({ appPage }) => {
+    const page = appPage;
+
+    await page.locator('button[title="Personas"]').click();
+
+    const breadcrumbs = page.getByTestId("breadcrumbs");
+    await expect(breadcrumbs).toBeVisible({ timeout: 5_000 });
+    await expect(breadcrumbs).toContainText("Home");
+    await expect(breadcrumbs).toContainText("Personas");
   });
 });

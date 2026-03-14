@@ -112,12 +112,12 @@ test.describe("Task tree hierarchy", () => {
     await expect(addChildButton).toBeVisible({ timeout: 5_000 });
     await addChildButton.click();
 
-    // UnifiedBar should show "child task" badge
-    await expect(page.getByText("child task", { exact: true })).toBeVisible({ timeout: 5_000 });
+    // Full-panel TaskEditPanel should open for the child task
+    await expect(page.locator('[data-testid="task-edit-title"]')).toBeVisible({ timeout: 5_000 });
 
-    // Fill in child task title and create
-    await page.locator('input[placeholder="Task title..."]').fill("ac-child");
-    await page.locator("button", { hasText: /^Create$/ }).click();
+    // Fill in child task title and save
+    await page.locator('[data-testid="task-edit-title"]').fill("ac-child");
+    await page.locator('[data-testid="task-edit-save"]').click();
 
     // Child should appear in the sidebar under the parent
     await expect(page.getByText("ac-child")).toBeVisible({ timeout: 5_000 });
@@ -155,5 +155,54 @@ test.describe("Task tree hierarchy", () => {
 
     // Parent task should be gone from sidebar
     await expect(page.getByText("del-parent")).not.toBeVisible({ timeout: 5_000 });
+  });
+
+  test("breadcrumbs show ancestor chain for nested task", async ({ appPage }) => {
+    const page = appPage;
+
+    await createProject(page, "tree-bc");
+    await createTask(page, "tree-bc", "bc-root", "test-local");
+
+    const projectId = await getProjectId(page, "tree-bc");
+    const rootId = await getTaskId(page, projectId, "bc-root");
+
+    // Create a child task
+    await createTaskViaWs(page, projectId, "bc-child", { parentTaskId: rootId });
+
+    // Click the child task in the sidebar
+    await page.getByText("bc-child").first().click();
+
+    // Breadcrumb nav should be visible
+    const breadcrumbs = page.getByTestId("breadcrumbs");
+    await expect(breadcrumbs).toBeVisible({ timeout: 5_000 });
+
+    // Should show Home > tree-bc > bc-root > bc-child
+    await expect(breadcrumbs).toContainText("Home");
+    await expect(breadcrumbs).toContainText("tree-bc");
+    await expect(breadcrumbs).toContainText("bc-root");
+    await expect(breadcrumbs).toContainText("bc-child");
+  });
+
+  test("breadcrumb click navigates to parent task", async ({ appPage }) => {
+    const page = appPage;
+
+    await createProject(page, "tree-bc-nav");
+    await createTask(page, "tree-bc-nav", "nav-root", "test-local");
+
+    const projectId = await getProjectId(page, "tree-bc-nav");
+    const rootId = await getTaskId(page, projectId, "nav-root");
+
+    await createTaskViaWs(page, projectId, "nav-child", { parentTaskId: rootId });
+
+    // Navigate to child
+    await page.getByText("nav-child").first().click();
+    await expect(page.locator('[data-testid="task-title"]')).toContainText("nav-child", { timeout: 5_000 });
+
+    // Click the parent task in the breadcrumb trail
+    const breadcrumbs = page.getByTestId("breadcrumbs");
+    await breadcrumbs.locator("button", { hasText: "nav-root" }).click();
+
+    // Should now show the parent task
+    await expect(page.locator('[data-testid="task-title"]')).toContainText("nav-root", { timeout: 5_000 });
   });
 });

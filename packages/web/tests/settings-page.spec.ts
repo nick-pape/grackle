@@ -1,7 +1,11 @@
 import { test, expect } from "./fixtures.js";
 import { sendWsAndWaitFor } from "./helpers.js";
+import type { Page } from "@playwright/test";
 
 test.describe("Settings Page", () => {
+  const settingsHeading = (page: Page) =>
+    page.getByRole("heading", { name: "Settings" });
+
   test("gear icon navigates to settings page", async ({ appPage }) => {
     const page = appPage;
 
@@ -9,7 +13,7 @@ test.describe("Settings Page", () => {
     await page.locator('button[title="Settings"]').click();
 
     // Settings page should be visible
-    await expect(page.getByText("Settings")).toBeVisible({ timeout: 5_000 });
+    await expect(settingsHeading(page)).toBeVisible({ timeout: 5_000 });
     await expect(page.getByRole("heading", { name: "Tokens" })).toBeVisible();
   });
 
@@ -17,7 +21,7 @@ test.describe("Settings Page", () => {
     const page = appPage;
 
     await page.locator('button[title="Settings"]').click();
-    await expect(page.getByText("Settings")).toBeVisible({ timeout: 5_000 });
+    await expect(settingsHeading(page)).toBeVisible({ timeout: 5_000 });
 
     // Token section heading and description should render
     await expect(page.getByRole("heading", { name: "Tokens" })).toBeVisible();
@@ -26,12 +30,38 @@ test.describe("Settings Page", () => {
     ).toBeVisible();
   });
 
+  test("theme selection updates document theme and persists across reload", async ({ appPage }) => {
+    const page = appPage;
+
+    await page.locator('button[title="Settings"]').click();
+    await expect(settingsHeading(page)).toBeVisible({ timeout: 5_000 });
+
+    const lightThemeButton = page.getByRole("button", { name: /Light/i }).first();
+    await lightThemeButton.click();
+
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+    await expect(lightThemeButton).toHaveAttribute("aria-pressed", "true");
+    await expect.poll(async () => {
+      return page.evaluate(() => localStorage.getItem("grackle-theme"));
+    }).toBe("light");
+
+    await page.reload();
+    await page.waitForFunction(
+      () => document.body.innerText.includes("Connected"),
+      { timeout: 10_000 },
+    );
+    await page.locator('button[title="Settings"]').click();
+    await expect(settingsHeading(page)).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+    await expect(page.getByRole("button", { name: /Light/i }).first()).toHaveAttribute("aria-pressed", "true");
+  });
+
   test("add token via settings form", async ({ appPage }) => {
     const page = appPage;
 
     // Navigate to settings
     await page.locator('button[title="Settings"]').click();
-    await expect(page.getByText("Settings")).toBeVisible({ timeout: 5_000 });
+    await expect(settingsHeading(page)).toBeVisible({ timeout: 5_000 });
 
     // Fill in the add token form
     await page.locator('input[placeholder="Token name"]').fill("ui-test-token");
@@ -72,7 +102,7 @@ test.describe("Settings Page", () => {
 
     // Navigate to settings
     await page.locator('button[title="Settings"]').click();
-    await expect(page.getByText("Settings")).toBeVisible({ timeout: 5_000 });
+    await expect(settingsHeading(page)).toBeVisible({ timeout: 5_000 });
 
     // Wait for token to appear
     await expect(page.getByText("ui-delete-test", { exact: true })).toBeVisible({ timeout: 5_000 });
@@ -95,7 +125,7 @@ test.describe("Settings Page", () => {
 
     // Navigate to settings
     await page.locator('button[title="Settings"]').click();
-    await expect(page.getByText("Settings")).toBeVisible({ timeout: 5_000 });
+    await expect(settingsHeading(page)).toBeVisible({ timeout: 5_000 });
 
     // Select "File" type
     await page.locator("select").selectOption("file");
@@ -126,7 +156,7 @@ test.describe("Settings Page", () => {
 
     // Navigate to settings
     await page.locator('button[title="Settings"]').click();
-    await expect(page.getByText("Settings")).toBeVisible({ timeout: 5_000 });
+    await expect(settingsHeading(page)).toBeVisible({ timeout: 5_000 });
 
     // Fill in the form
     const nameInput = page.locator('input[placeholder="Token name"]');
@@ -154,11 +184,23 @@ test.describe("Settings Page", () => {
     const page = appPage;
 
     await page.locator('button[title="Settings"]').click();
-    await expect(page.getByText("Settings")).toBeVisible({ timeout: 5_000 });
+    await expect(settingsHeading(page)).toBeVisible({ timeout: 5_000 });
 
     // Description text should be visible
     await expect(
       page.getByText("API tokens are auto-pushed to environments when set or updated"),
     ).toBeVisible();
+  });
+
+  test("settings page shows breadcrumbs with Home > Settings", async ({ appPage }) => {
+    const page = appPage;
+
+    await page.locator('button[title="Settings"]').click();
+    await expect(settingsHeading(page)).toBeVisible({ timeout: 5_000 });
+
+    const breadcrumbs = page.getByTestId("breadcrumbs");
+    await expect(breadcrumbs).toBeVisible({ timeout: 5_000 });
+    await expect(breadcrumbs).toContainText("Home");
+    await expect(breadcrumbs).toContainText("Settings");
   });
 });
