@@ -36,21 +36,36 @@ export function listProjects(): ProjectRow[] {
     .all();
 }
 
-/** Update mutable project settings. */
-export function updateProject(
-  id: string,
-  patch: { useWorktrees?: boolean },
-): void {
-  const updates: Record<string, unknown> = {
-    updatedAt: sql`datetime('now')`,
-  };
-  if (patch.useWorktrees !== undefined) {
-    updates.useWorktrees = patch.useWorktrees;
+/** Partial-update fields for a project. Undefined means "no change"; empty string means "clear". */
+export interface UpdateProjectFields {
+  name?: string;
+  description?: string;
+  repoUrl?: string;
+  defaultEnvironmentId?: string;
+  /** When false, agents work directly in the main checkout instead of creating a worktree. */
+  useWorktrees?: boolean;
+}
+
+/** Update one or more fields on an existing project. Returns the updated row, or undefined if not found. */
+export function updateProject(id: string, fields: UpdateProjectFields): ProjectRow | undefined {
+  const sets: Record<string, unknown> = { updatedAt: sql`datetime('now')` };
+  if (fields.name !== undefined) {
+    sets.name = fields.name;
   }
-  db.update(projects)
-    .set(updates)
-    .where(eq(projects.id, id))
-    .run();
+  if (fields.description !== undefined) {
+    sets.description = fields.description;
+  }
+  if (fields.repoUrl !== undefined) {
+    sets.repoUrl = fields.repoUrl;
+  }
+  if (fields.defaultEnvironmentId !== undefined) {
+    sets.defaultEnvironmentId = fields.defaultEnvironmentId;
+  }
+  if (fields.useWorktrees !== undefined) {
+    sets.useWorktrees = fields.useWorktrees;
+  }
+  db.update(projects).set(sets).where(eq(projects.id, id)).run();
+  return getProject(id);
 }
 
 /** Mark a project as archived. */

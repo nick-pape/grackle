@@ -63,8 +63,6 @@ gh issue create -R $REPO \
   --title "<TITLE>" \
   --label "<LABELS>" \
   --body "$(cat <<'EOF'
-Parent: #<EPIC_NUMBER>
-
 ## Summary
 <User's description, expanded into 2-3 sentences explaining what and why>
 
@@ -76,16 +74,80 @@ EOF
 
 Capture the created issue number from the output URL.
 
-## Step 5: Run /write-spec
+## Step 5: Set GitHub Issue Relationships
+
+GitHub has real relationship fields (sub-issues, blocked-by) accessible via GraphQL. Use these instead of markdown-only references.
+
+### Get Issue Node IDs
+
+Every GraphQL mutation needs node IDs, not issue numbers. Fetch them:
+
+```bash
+gh api graphql -f query='{ repository(owner: "nick-pape", name: "grackle") {
+  parent: issue(number: <EPIC_NUMBER>) { id }
+  child: issue(number: <NEW_ISSUE_NUMBER>) { id }
+} }'
+```
+
+### Set Parent (Sub-Issue)
+
+Makes the new issue a sub-issue of the parent epic:
+
+```bash
+gh api graphql -f query='mutation {
+  addSubIssue(input: {
+    issueId: "<PARENT_NODE_ID>",
+    subIssueId: "<CHILD_NODE_ID>"
+  }) { issue { number } }
+}'
+```
+
+### Set Blocked-By (if applicable)
+
+If the new issue depends on other issues, mark it as blocked:
+
+```bash
+gh api graphql -f query='mutation {
+  addBlockedBy(input: {
+    issueId: "<BLOCKED_ISSUE_NODE_ID>",
+    blockingIssueId: "<BLOCKER_ISSUE_NODE_ID>"
+  }) { issue { number } }
+}'
+```
+
+**Field names** (these are easy to mix up):
+- `addSubIssue`: `issueId` = parent, `subIssueId` = child
+- `addBlockedBy`: `issueId` = the blocked issue, `blockingIssueId` = the blocker
+
+You can batch multiple mutations in one call using aliases:
+
+```bash
+gh api graphql -f query='mutation {
+  a: addSubIssue(input: { issueId: "<EPIC_ID>", subIssueId: "<ISSUE_1_ID>" }) { issue { number } }
+  b: addSubIssue(input: { issueId: "<EPIC_ID>", subIssueId: "<ISSUE_2_ID>" }) { issue { number } }
+}'
+```
+
+### When creating multiple related issues
+
+If creating an epic with children, set up all relationships:
+1. Create the epic issue first
+2. Create all child issues
+3. Fetch all node IDs in one query
+4. Batch `addSubIssue` mutations for parent-child
+5. Batch `addBlockedBy` mutations for dependency ordering
+
+## Step 6: Run /write-spec
 
 Now invoke the `/write-spec` skill on the newly created issue to research and post a detailed requirements specification:
 
 Use the Skill tool to invoke `write-spec` with the new issue number as the argument.
 
-## Step 6: Report
+## Step 7: Report
 
 Summarize:
 - Issue number and URL
 - Labels applied
-- Parent epic
+- Parent epic (with real sub-issue relationship)
+- Blocked-by relationships (if any)
 - Confirm that the requirements spec was posted

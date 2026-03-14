@@ -324,6 +324,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
         defaultEnvironmentId: defaultEnvironmentId || "",
         status: "active",
         createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       };
 
       setProjects((prev) => [...prev, newProject]);
@@ -651,6 +652,22 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
     [],
   );
 
+  /** Updates title, description, and dependencies of a pending/assigned task. */
+  const updateTask: UseGrackleSocketResult["updateTask"] = useCallback(
+    (taskId: string, title: string, description: string, dependsOn: string[]) => {
+      // eslint-disable-next-line no-console
+      console.log("[MockGrackle] updateTask", { taskId, title });
+      setTasks((prev) =>
+        prev.map((t) =>
+          t.id === taskId
+            ? { ...t, title: title.trim() || t.title, description, dependsOn }
+            : t,
+        ),
+      );
+    },
+    [],
+  );
+
   /** Removes a task from state. */
   const deleteTask: UseGrackleSocketResult["deleteTask"] = useCallback(
     (taskId: string) => {
@@ -779,11 +796,31 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       clearEvents,
       createProject,
       archiveProject,
+      updateProject: (projectId: string, fields: { name?: string; description?: string; repoUrl?: string; defaultEnvironmentId?: string }) => {
+        // eslint-disable-next-line no-console
+        console.log("[MockGrackle] updateProject", { projectId, ...fields });
+        setProjects((prev) =>
+          prev.map((p) => {
+            if (p.id !== projectId) {
+              return p;
+            }
+            return {
+              ...p,
+              ...(fields.name !== undefined ? { name: fields.name } : {}),
+              ...(fields.description !== undefined ? { description: fields.description } : {}),
+              ...(fields.repoUrl !== undefined ? { repoUrl: fields.repoUrl } : {}),
+              ...(fields.defaultEnvironmentId !== undefined ? { defaultEnvironmentId: fields.defaultEnvironmentId } : {}),
+              updatedAt: new Date().toISOString(),
+            };
+          }),
+        );
+      },
       loadTasks,
       createTask,
       startTask,
       approveTask,
       rejectTask,
+      updateTask,
       deleteTask,
       loadFindings,
       postFinding,
@@ -876,6 +913,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       startTask,
       approveTask,
       rejectTask,
+      updateTask,
       deleteTask,
       loadFindings,
       postFinding,

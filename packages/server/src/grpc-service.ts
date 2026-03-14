@@ -610,14 +610,34 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
     },
 
     async updateProject(req: grackle.UpdateProjectRequest) {
-      const row = projectStore.getProject(req.id);
-      if (!row) throw new Error(`Project not found: ${req.id}`);
-      projectStore.updateProject(req.id, {
+      const existing = projectStore.getProject(req.id);
+      if (!existing) {
+        throw new Error(`Project not found: ${req.id}`);
+      }
+      if (req.name !== undefined && req.name.trim() === "") {
+        throw new Error("Project name cannot be empty");
+      }
+      if (req.repoUrl !== undefined && req.repoUrl !== "" && !/^https?:\/\//i.test(req.repoUrl)) {
+        throw new Error("Repository URL must use http or https scheme");
+      }
+      if (!existing.useWorktrees && req.useWorktrees === false) {
+        logger.warn(
+          { projectId: req.id },
+          "Worktrees already disabled for project — concurrent agents may conflict in shared working tree.",
+        );
+      }
+      const row = projectStore.updateProject(req.id, {
+        name: req.name !== undefined ? req.name.trim() : undefined,
+        description: req.description,
+        repoUrl: req.repoUrl,
+        defaultEnvironmentId: req.defaultEnvironmentId,
         useWorktrees: req.useWorktrees ?? undefined,
       });
+      if (!row) {
+        throw new Error(`Project not found after update: ${req.id}`);
+      }
       broadcast({ type: "project_updated", payload: { projectId: req.id } });
-      const updated = projectStore.getProject(req.id);
-      return projectRowToProto(updated!);
+      return projectRowToProto(row);
     },
 
     async archiveProject(req: grackle.ProjectId) {
@@ -1122,12 +1142,15 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       }
       const stateStr =
         req.state === grackle.IssueState.CLOSED ? "closed" : "open";
+      // include_comments defaults to true when not set (opt-out behaviour)
+      const includeComments = req.includeComments ?? true;
       const result = await executeGitHubImport(
         req.projectId,
         req.repo,
         stateStr,
         req.label ?? undefined,
         req.environmentId ?? undefined,
+        includeComments,
       );
 
       return create(grackle.ImportGitHubIssuesResponseSchema, result);

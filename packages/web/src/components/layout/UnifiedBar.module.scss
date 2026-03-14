@@ -5,7 +5,7 @@
 // =============================================================================
 
 .bar {
-  @include glass-panel;
+  @include surface-panel;
   display: flex;
   align-items: center;
   gap: var(--space-sm);
@@ -14,7 +14,7 @@
 }
 
 .barColumn {
-  @include glass-panel;
+  @include surface-panel;
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -129,4 +129,13 @@
   color: var(--accent-red);
   font-size: 11px;
   word-break: break-word;
+}
+
+.disconnectHint {
+  color: var(--accent-yellow);
+  font-size: 11px;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
 }

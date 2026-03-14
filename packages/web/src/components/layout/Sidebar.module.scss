@@ -5,7 +5,8 @@
 // =============================================================================
 
 .container {
-  @include glass-panel;
+  @include surface-panel;
+  background: var(--bg-surface);
   width: 320px;
   min-width: 220px;
   max-width: 600px;

@@ -199,6 +199,10 @@ message CreateProjectRequest {
 message UpdateProjectRequest {
   string id = 1;
   optional bool use_worktrees = 2; // When false, disables worktree isolation for this project
+  optional string name = 3;
+  optional string description = 4;
+  optional string repo_url = 5;
+  optional string default_environment_id = 6;
 }
 
 message ProjectId {
@@ -306,16 +310,18 @@ message QueryFindingsRequest {
 
 message ImportGitHubIssuesRequest {
   string project_id = 1;
-  string repo = 2;                    // "owner/repo"
-  optional string label = 3;          // label filter (omit for all)
-  IssueState state = 4;               // OPEN or CLOSED
-  optional string environment_id = 5; // env to assign (omit for project default)
+  string repo = 2;                          // "owner/repo"
+  optional string label = 3;               // label filter (omit for all)
+  IssueState state = 4;                     // OPEN or CLOSED
+  optional string environment_id = 5;      // env to assign (omit for project default)
+  optional bool include_comments = 6;      // when false, skip issue comments (default: true)
 }
 
 message ImportGitHubIssuesResponse {
   int32 imported = 1;
   int32 linked = 2;
   int32 skipped = 3;
+  int32 dependencies = 4; // number of blocking relationships created
 }
 
 // ─── Task Diff ─────────────────────────────────────────────

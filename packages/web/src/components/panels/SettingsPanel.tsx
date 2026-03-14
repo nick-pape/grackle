@@ -1,6 +1,8 @@
 import { useState, type JSX, type FormEvent } from "react";
 import { useGrackle } from "../../context/GrackleContext.js";
 import { useToast } from "../../context/ToastContext.js";
+import { useThemeContext } from "../../context/ThemeContext.js";
+import { THEMES } from "../../themes.js";
 import { ConfirmDialog } from "../display/index.js";
 import { EnvironmentList } from "../lists/EnvironmentList.js";
 import type { ViewMode } from "../../App.js";
@@ -22,6 +24,7 @@ interface Props {
 export function SettingsPanel({ viewMode, setViewMode }: Props): JSX.Element {
   const { tokens, setToken, deleteToken } = useGrackle();
   const { showToast } = useToast();
+  const { themeId, resolvedThemeId, setTheme } = useThemeContext();
 
   const [name, setName] = useState("");
   const [value, setValue] = useState("");
@@ -65,6 +68,33 @@ export function SettingsPanel({ viewMode, setViewMode }: Props): JSX.Element {
         onCancel={() => setConfirmDeleteToken(null)}
       />
       <h2 className={styles.heading}>Settings</h2>
+
+      <section className={styles.section}>
+        <h3 className={styles.sectionTitle}>Appearance</h3>
+        <p className={styles.sectionDescription}>
+          Choose how Grackle looks across the app.
+        </p>
+        <div className={styles.themeOptions}>
+          {THEMES.map((t) => {
+            const selected = themeId === t.id;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                className={`${styles.themeOption} ${selected ? styles.themeOptionSelected : ""}`}
+                aria-pressed={selected}
+                onClick={() => setTheme(t.id)}
+              >
+                <span className={styles.themeOptionLabel}>{t.label}</span>
+                <span className={styles.themeOptionDesc}>{t.description}</span>
+              </button>
+            );
+          })}
+        </div>
+        <p className={styles.themeActive}>
+          Active theme: <strong>{resolvedThemeId}</strong>
+        </p>
+      </section>
 
       <section className={styles.section}>
         <h3 className={styles.sectionTitle}>Environments</h3>

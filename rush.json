@@ -43,6 +43,11 @@
       "versionPolicyName": "grackle"
     },
     {
+      "packageName": "@grackle-ai/mcp",
+      "projectFolder": "packages/mcp",
+      "versionPolicyName": "grackle"
+    },
+    {
       "packageName": "@grackle-ai/web",
       "projectFolder": "packages/web",
       "versionPolicyName": "grackle"

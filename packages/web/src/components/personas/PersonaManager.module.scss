@@ -1,87 +1,80 @@
+@use '../../styles/mixins' as *;
+
+// =============================================================================
+// PersonaManager — CRUD for AI personas
+// =============================================================================
+
 .container {
-  padding: 1.5rem;
+  padding: var(--space-lg);
   max-width: 800px;
-  color: #e0e0e0;
+  color: var(--text-primary);
 }
 
 .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.5rem;
+  margin-bottom: var(--space-lg);
 
   h2 {
     margin: 0;
-    font-size: 1.25rem;
+    font-size: var(--font-size-xl);
+    font-weight: var(--font-weight-bold);
   }
 }
 
 .form {
-  background: #1e2a3a;
-  border: 1px solid #2d3f54;
-  border-radius: 8px;
-  padding: 1.25rem;
-  margin-bottom: 1.5rem;
+  @include surface-card;
+  padding: var(--space-lg);
+  margin-bottom: var(--space-lg);
 
   h3 {
-    margin: 0 0 1rem;
-    font-size: 1rem;
+    margin: 0 0 var(--space-md);
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-medium);
   }
 
   label {
     display: block;
-    margin-bottom: 0.75rem;
-    font-size: 0.85rem;
-    color: #8899aa;
+    margin-bottom: var(--space-sm);
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
 
     input,
     select,
     textarea {
+      @include input-field;
       display: block;
       width: 100%;
-      margin-top: 0.25rem;
-      padding: 0.4rem 0.6rem;
-      background: #0d1721;
-      border: 1px solid #2d3f54;
-      border-radius: 4px;
-      color: #e0e0e0;
-      font-family: inherit;
-      font-size: 0.85rem;
+      margin-top: var(--space-xs);
       box-sizing: border-box;
-
-      &:focus {
-        outline: none;
-        border-color: #4ecca3;
-      }
     }
 
     textarea {
       resize: vertical;
-      font-family: monospace;
+      font-family: var(--font-mono);
     }
   }
 }
 
 .formActions {
   display: flex;
-  gap: 0.5rem;
-  margin-top: 1rem;
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
 }
 
 .list {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: var(--space-sm);
 }
 
 .card {
-  background: #1e2a3a;
-  border: 1px solid #2d3f54;
-  border-radius: 8px;
-  padding: 1rem;
+  @include surface-card;
+  padding: var(--space-md);
 
   &.active {
-    border-color: #4ecca3;
+    border-color: var(--accent-green);
   }
 }
 
@@ -91,55 +84,55 @@
   align-items: center;
 
   strong {
-    font-size: 0.95rem;
+    font-size: var(--font-size-md);
+    color: var(--text-primary);
   }
 }
 
 .cardActions {
   display: flex;
-  gap: 0.25rem;
+  gap: var(--space-xs);
 }
 
 .description {
-  margin: 0.5rem 0 0;
-  font-size: 0.85rem;
-  color: #8899aa;
+  margin: var(--space-sm) 0 0;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
 }
 
 .meta {
   display: flex;
-  gap: 1rem;
-  margin-top: 0.5rem;
-  font-size: 0.8rem;
-  color: #6b7a8d;
+  gap: var(--space-md);
+  margin-top: var(--space-sm);
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
 
   span {
-    background: #0d1721;
-    padding: 0.15rem 0.5rem;
-    border-radius: 4px;
+    @include surface-inset;
+    padding: 2px var(--space-sm);
   }
 }
 
 .promptDetails {
-  margin-top: 0.75rem;
+  margin-top: var(--space-sm);
 
   summary {
     cursor: pointer;
-    font-size: 0.8rem;
-    color: #6b7a8d;
+    font-size: var(--font-size-xs);
+    color: var(--text-tertiary);
 
     &:hover {
-      color: #4ecca3;
+      color: var(--accent-green);
     }
   }
 }
 
 .promptText {
-  margin: 0.5rem 0 0;
-  padding: 0.75rem;
-  background: #0d1721;
-  border-radius: 4px;
-  font-size: 0.8rem;
+  margin: var(--space-sm) 0 0;
+  @include surface-inset;
+  padding: var(--space-sm);
+  font-size: var(--font-size-xs);
+  font-family: var(--font-mono);
   white-space: pre-wrap;
   word-break: break-word;
   max-height: 300px;
@@ -148,65 +141,29 @@
 
 .empty {
   text-align: center;
-  color: #6b7a8d;
-  padding: 2rem;
+  color: var(--text-tertiary);
+  padding: var(--space-xl);
 }
 
 .btnPrimary {
-  padding: 0.4rem 0.8rem;
-  background: #4ecca3;
-  color: #0d1721;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: 600;
-  font-size: 0.85rem;
-
-  &:hover {
-    background: #3dbb92;
-  }
+  @include btn-primary;
+  font-size: var(--font-size-sm);
 }
 
 .btnSecondary {
-  padding: 0.4rem 0.8rem;
-  background: transparent;
-  color: #8899aa;
-  border: 1px solid #2d3f54;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 0.85rem;
-
-  &:hover {
-    border-color: #4ecca3;
-    color: #e0e0e0;
-  }
+  @include btn-outline;
+  font-size: var(--font-size-sm);
+  padding: var(--space-xs) var(--space-md);
 }
 
 .btnSmall {
-  padding: 0.2rem 0.5rem;
-  background: transparent;
-  color: #6b7a8d;
-  border: 1px solid #2d3f54;
-  border-radius: 3px;
-  cursor: pointer;
-  font-size: 0.75rem;
-
-  &:hover {
-    border-color: #4ecca3;
-    color: #e0e0e0;
-  }
+  @include btn-ghost;
+  font-size: var(--font-size-xs);
+  padding: 2px var(--space-sm);
 }
 
 .btnDanger {
-  padding: 0.2rem 0.5rem;
-  background: #e94560;
-  color: white;
-  border: none;
-  border-radius: 3px;
-  cursor: pointer;
-  font-size: 0.75rem;
-
-  &:hover {
-    background: #d63851;
-  }
+  @include btn-danger;
+  font-size: var(--font-size-xs);
+  padding: 2px var(--space-sm);
 }

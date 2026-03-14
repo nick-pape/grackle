@@ -1,6 +1,7 @@
 import { useState, useEffect, type FormEvent, type JSX } from "react";
 import { useGrackle } from "../../context/GrackleContext.js";
 import { useToast } from "../../context/ToastContext.js";
+import type { Environment } from "../../hooks/useGrackleSocket.js";
 import type { ViewMode } from "../../App.js";
 import styles from "./UnifiedBar.module.scss";
 
@@ -16,12 +17,14 @@ interface Props {
 interface RuntimeSelectorProps {
   value: string;
   onChange: (value: string) => void;
+  testId?: string;
 }
 
 /** Dropdown for selecting the session runtime. */
-function RuntimeSelector({ value, onChange }: RuntimeSelectorProps): JSX.Element {
+function RuntimeSelector({ value, onChange, testId }: RuntimeSelectorProps): JSX.Element {
   return (
     <select
+      data-testid={testId}
       value={value}
       onChange={(e) => onChange(e.target.value)}
       className={styles.select}
@@ -34,13 +37,45 @@ function RuntimeSelector({ value, onChange }: RuntimeSelectorProps): JSX.Element
   );
 }
 
+/** Returns true when the environment with the given ID is disconnected or in error. */
+function isEnvDisconnected(environmentId: string | undefined, environments: Environment[]): boolean {
+  if (!environmentId) return false;
+  const env = environments.find((e) => e.id === environmentId);
+  return env !== undefined && (env.status === "disconnected" || env.status === "error");
+}
+
+interface DisconnectedBannerProps {
+  environmentId: string;
+  onReconnect: (envId: string) => void;
+}
+
+/** Hint + Reconnect button shown when the task/session environment is unreachable. */
+function DisconnectedBanner({ environmentId, onReconnect }: DisconnectedBannerProps): JSX.Element {
+  return (
+    <>
+      <span className={styles.disconnectHint} data-testid="env-disconnect-hint">
+        Environment unavailable
+      </span>
+      <button
+        type="button"
+        onClick={() => onReconnect(environmentId)}
+        className={styles.btnGhost}
+        data-testid="reconnect-btn"
+        title="Reconnect the environment to resume messaging"
+      >
+        Reconnect
+      </button>
+    </>
+  );
+}
+
 // --- Main component ---
 
 /** Contextual action bar that adapts to the current view mode and session/task state. */
 export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
   const {
     spawn, sendInput, kill, sessions, tasks, environments, personas,
-    createTask, addEnvironment,
+    addEnvironment, provisionEnvironment,
     codespaces, codespaceError, codespaceCreating, listCodespaces, createCodespace,
   } = useGrackle();
   const { showToast } = useToast();
@@ -49,10 +84,18 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
   const [runtime, setRuntime] = useState(
     viewMode.kind === "new_chat" ? viewMode.runtime : "claude-code"
   );
-  const [taskTitle, setTaskTitle] = useState("");
-  const [taskDesc, setTaskDesc] = useState("");
-  const [taskEnvId, setTaskEnvId] = useState("");
-  const [taskPersonaId, setTaskPersonaId] = useState("");
+  const [spawnPersonaId, setSpawnPersonaId] = useState("");
+
+  /** When a persona is selected in the new_chat form, auto-fill runtime. */
+  const handleSpawnPersonaChange = (personaId: string): void => {
+    setSpawnPersonaId(personaId);
+    if (personaId) {
+      const p = personas.find((x) => x.id === personaId);
+      if (p?.runtime) {
+        setRuntime(p.runtime);
+      }
+    }
+  };
 
   // ─── New environment form state ─────────────────
   const [envName, setEnvName] = useState("");
@@ -72,15 +115,6 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
     if (viewMode.kind === "new_chat") {
       setRuntime(viewMode.runtime);
     }
-    if (viewMode.kind === "new_task" && viewMode.parentTaskId) {
-      const parentTask = tasks.find((t) => t.id === viewMode.parentTaskId);
-      if (parentTask?.environmentId) {
-        setTaskEnvId(parentTask.environmentId);
-      }
-    }
-    if (viewMode.kind === "new_task" && !viewMode.parentTaskId && environments.length === 1) {
-      setTaskEnvId(environments[0].id);
-    }
   }, [viewMode]); // Only re-run when viewMode changes
 
   const session = viewMode.kind === "session"
@@ -98,9 +132,9 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
   // Check if task is blocked
   const isTaskBlocked = task
     ? task.dependsOn.some((depId) => {
-        const dep = tasks.find((t) => t.id === depId);
-        return dep && dep.status !== "done";
-      })
+      const dep = tasks.find((t) => t.id === depId);
+      return dep && dep.status !== "done";
+    })
     : false;
 
   // --- empty mode ---
@@ -112,6 +146,11 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
         </span>
       </div>
     );
+  }
+
+  // --- edit_task mode — form is in main panel, bar is hidden ---
+  if (viewMode.kind === "edit_task") {
+    return <></>;
   }
 
   // --- new_environment mode ---
@@ -226,7 +265,7 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
             <option value="docker">docker</option>
             <option value="codespace">codespace</option>
           </select>
-          <RuntimeSelector value={envRuntime} onChange={setEnvRuntime} />
+          <RuntimeSelector value={envRuntime} onChange={setEnvRuntime} testId="new-environment-runtime-select" />
           <button
             onClick={handleAddEnvironment}
             disabled={!isEnvValid()}
@@ -393,71 +432,9 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
   }
 
   // --- new_task mode ---
+  // The form is rendered in the main panel (TaskEditPanel). The bar is hidden.
   if (viewMode.kind === "new_task") {
-    const handleCreate = (_andStart: boolean): void => {
-      if (!taskTitle.trim()) {
-        return;
-      }
-      createTask(viewMode.projectId, taskTitle.trim(), taskDesc, taskEnvId, undefined, viewMode.parentTaskId, taskPersonaId);
-      showToast("Task created successfully", "success");
-      setTaskTitle("");
-      setTaskDesc("");
-      setTaskEnvId("");
-      setTaskPersonaId("");
-      setViewMode({ kind: "project", projectId: viewMode.projectId });
-    };
-
-    return (
-      <div className={styles.barColumn}>
-        <div className={styles.barRow}>
-          <span className={styles.badge}>
-            {viewMode.parentTaskId ? "child task" : "new task"}
-          </span>
-          <input
-            type="text"
-            value={taskTitle}
-            onChange={(e) => setTaskTitle(e.target.value)}
-            placeholder="Task title..."
-            autoFocus
-            className={styles.input}
-          />
-          <select
-            value={taskEnvId}
-            onChange={(e) => setTaskEnvId(e.target.value)}
-            className={styles.select}
-          >
-            <option value="">Default env</option>
-            {environments.map((env) => (
-              <option key={env.id} value={env.id}>{env.displayName}</option>
-            ))}
-          </select>
-          <select
-            value={taskPersonaId}
-            onChange={(e) => setTaskPersonaId(e.target.value)}
-            className={styles.select}
-          >
-            <option value="">No persona</option>
-            {personas.map((p) => (
-              <option key={p.id} value={p.id}>{p.name}</option>
-            ))}
-          </select>
-          <button
-            onClick={() => handleCreate(false)}
-            disabled={!taskTitle.trim()}
-            className={styles.btnPrimary}
-          >
-            Create
-          </button>
-        </div>
-        <textarea
-          value={taskDesc}
-          onChange={(e) => setTaskDesc(e.target.value)}
-          placeholder="Description (optional)..."
-          className={styles.textarea}
-          rows={3}
-        />
-      </div>
-    );
+    return <></>;
   }
 
   // --- task modes ---
@@ -466,9 +443,9 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
     if (task.status === "pending" || task.status === "assigned") {
       const blockerNames = isTaskBlocked
         ? task.dependsOn
-            .map((depId) => tasks.find((t) => t.id === depId))
-            .filter((t) => t && t.status !== "done")
-            .map((t) => t!.title)
+          .map((depId) => tasks.find((t) => t.id === depId))
+          .filter((t) => t && t.status !== "done")
+          .map((t) => t!.title)
         : [];
       return (
         <div className={styles.bar}>
@@ -488,9 +465,14 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
       const isWaiting = taskSession?.status === "waiting_input";
 
       if (isWaiting) {
+        // Prefer the session's environmentId because task.environmentId is ""
+        // when using "Default env" — the session always carries the resolved env.
+        const effectiveEnvId = taskSession?.environmentId || task.environmentId;
+        const taskEnvDisconnected = isEnvDisconnected(effectiveEnvId, environments);
+
         const handleSend = (e: FormEvent): void => {
           e.preventDefault();
-          if (!text.trim() || !task.sessionId) {
+          if (!text.trim() || !task.sessionId || taskEnvDisconnected) {
             return;
           }
           sendInput(task.sessionId, text);
@@ -498,21 +480,31 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
         };
         return (
           <form onSubmit={handleSend} className={styles.bar}>
+            {taskEnvDisconnected && effectiveEnvId && (
+              <DisconnectedBanner
+                environmentId={effectiveEnvId}
+                onReconnect={provisionEnvironment}
+              />
+            )}
             <input
               type="text"
               value={text}
               onChange={(e) => setText(e.target.value)}
               placeholder="Type a message..."
-              autoFocus
+              autoFocus={!taskEnvDisconnected}
+              disabled={taskEnvDisconnected}
               className={styles.input}
             />
-            <button
-              type="submit"
-              disabled={!text.trim()}
-              className={styles.btnPrimary}
-            >
-              Send
-            </button>
+            {/* Wrap in span so tooltip is shown reliably even when button is disabled */}
+            <span title={taskEnvDisconnected ? "Environment is unavailable — reconnect first" : undefined}>
+              <button
+                type="submit"
+                disabled={!text.trim() || taskEnvDisconnected}
+                className={styles.btnPrimary}
+              >
+                Send
+              </button>
+            </span>
           </form>
         );
       }
@@ -574,9 +566,10 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
       if (!text.trim()) {
         return;
       }
-      spawn(viewMode.environmentId, text, undefined, runtime);
+      spawn(viewMode.environmentId, text, undefined, runtime, spawnPersonaId);
       showToast("Session started", "success");
       setText("");
+      setSpawnPersonaId("");
     };
 
     return (
@@ -592,7 +585,17 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
           autoFocus
           className={styles.input}
         />
-        <RuntimeSelector value={runtime} onChange={setRuntime} />
+        <RuntimeSelector value={runtime} onChange={setRuntime} testId="new-chat-runtime-select" />
+        <select
+          value={spawnPersonaId}
+          onChange={(e) => handleSpawnPersonaChange(e.target.value)}
+          className={styles.select}
+        >
+          <option value="">No persona</option>
+          {personas.map((p) => (
+            <option key={p.id} value={p.id}>{p.name}</option>
+          ))}
+        </select>
         <button
           type="submit"
           disabled={!text.trim()}
@@ -622,9 +625,11 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
     }
 
     if (isWaiting) {
+      const sessionEnvDisconnected = isEnvDisconnected(session?.environmentId, environments);
+
       const handleSend = (e: FormEvent): void => {
         e.preventDefault();
-        if (!text.trim()) {
+        if (!text.trim() || sessionEnvDisconnected) {
           return;
         }
         sendInput(viewMode.sessionId, text);
@@ -632,10 +637,31 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
       };
       return (
         <form onSubmit={handleSend} className={styles.bar}>
-          <input type="text" value={text} onChange={(e) => setText(e.target.value)} placeholder="Type a message..." autoFocus className={styles.input} />
-          <button type="submit" disabled={!text.trim()} className={styles.btnPrimary}>
-            Send
-          </button>
+          {sessionEnvDisconnected && session?.environmentId && (
+            <DisconnectedBanner
+              environmentId={session.environmentId}
+              onReconnect={provisionEnvironment}
+            />
+          )}
+          <input
+            type="text"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder="Type a message..."
+            autoFocus={!sessionEnvDisconnected}
+            disabled={sessionEnvDisconnected}
+            className={styles.input}
+          />
+          {/* Wrap in span so tooltip is shown reliably even when button is disabled */}
+          <span title={sessionEnvDisconnected ? "Environment is unavailable — reconnect first" : undefined}>
+            <button
+              type="submit"
+              disabled={!text.trim() || sessionEnvDisconnected}
+              className={styles.btnPrimary}
+            >
+              Send
+            </button>
+          </span>
           <button type="button" onClick={() => kill(viewMode.sessionId)} className={styles.btnDanger} title="Stop session">
             Stop
           </button>

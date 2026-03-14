@@ -86,13 +86,13 @@ function main(): void {
         shutdown();
       });
 
-      server.listen(port, () => {
+      server.listen(port, "127.0.0.1", () => {
         const authStatus = powerlineToken
           ? "authenticated"
           : "NO AUTH (development only)";
         logger.info(
           { port, authStatus },
-          "PowerLine listening on http://localhost:%d [%s]",
+          "PowerLine listening on http://127.0.0.1:%d [%s]",
           port,
           authStatus,
         );

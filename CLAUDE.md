@@ -13,7 +13,7 @@ When you encounter unexpected issues, workarounds, or non-obvious behavior (CI q
 ## Planning
 
 - **Always plan tests**: Every implementation plan must include a section for tests (E2E Playwright specs for `@grackle-ai/web`, unit/integration tests for other packages). If the change is purely cosmetic or untestable, explicitly note why tests are skipped.
-- **Open a PR as the final step**: When the user assigns a GitHub issue and the work goes through a full plan, the plan must include opening a PR as its last step. The PR body must link back to the issue (e.g., `Closes #<number>` or `Fixes #<number>`).
+- **Open a PR as the final step**: Use `/create-pr` to open the PR. The PR body must link back to the issue.
 
 ## Build & Test
 
@@ -72,7 +72,7 @@ Rush monorepo with 5 packages under `packages/`:
 - Validate file paths to prevent path traversal (token-writer, file operations)
 - Use `ConnectError` with proper gRPC status codes (e.g., `Code.Unauthenticated`)
 - Constant-time comparison for API key verification
-- Bind servers to `127.0.0.1` only
+- Bind servers to loopback only (`127.0.0.1` or `::1`) — never `0.0.0.0` or `::`. The `--host` flag on `grackle serve` accepts both loopback addresses; the server validates this on startup.
 
 ### Dependencies
 - Cross-package deps use `"workspace:*"` (pnpm rewrites to real versions at publish time)
@@ -85,76 +85,19 @@ Rush monorepo with 5 packages under `packages/`:
 
 ## Change Files (Rush Change)
 
-PRs that modify publishable packages must include a change file. CI enforces this with `rush change --verify`.
+PRs that modify publishable packages need a change file. The `/create-pr` skill handles generation.
 
-**Publishable packages** (lockstep versioning — all share one version):
+**Publishable packages** (lockstep versioning):
 - `@grackle-ai/cli`, `@grackle-ai/common`, `@grackle-ai/powerline`, `@grackle-ai/server`
 
-**Not publishable** (private — never need change files):
+**Not publishable** (never need change files):
 - `@grackle-ai/web`, `@grackle-ai/heft-rig`, `@grackle-ai/heft-buf-plugin`, `@grackle-ai/heft-playwright-plugin`, `@grackle-ai/heft-vite-plugin`
 
-**When to create a change file**: If the PR has a diff in any publishable package. If only private packages or non-package files (workflows, docs, config) changed, no change file is needed.
+## PR Workflow
 
-**Command** (non-interactive, from repo root):
-
-> **Known issue:** `install-run-rush.js` splits `--message` values on spaces.
-> Use a single hyphenated word for the message, then edit the generated JSON
-> file to fix the comment text and bump type.
-
-```bash
-# Step 1: Generate the change file (use a single-word placeholder message)
-node common/scripts/install-run-rush.js change --bulk \
-  --message "placeholder" \
-  --bump-type patch \
-  --email "5674316+nick-pape@users.noreply.github.com"
-
-# Step 2: Edit the generated JSON in common/changes/@grackle-ai/*/
-# Fix the "comment" field to the real description and "type" to the correct bump type
-```
-
-**Bump types**:
-- `patch` — bug fixes, internal changes
-- `minor` — new features, backwards-compatible additions
-- `none` — no version bump (infra, tooling, docs touching a publishable package)
-- **Never use `major`** — CI blocks major bumps (we're pre-1.0)
-
-**What the command does**: Creates a JSON file in `common/changes/` named after the branch. The file is committed to the PR branch. One change file per PR is sufficient — it covers all publishable packages via lockstep versioning.
-
-**Merge commit false positives**: When a branch has merge commits from `origin/main`, Rush's change detection sees files from those merges as "changed" — even if the final `git diff` against main is clean. This commonly flags `@grackle-ai/cli` or other publishable packages as needing change files when only private packages were actually modified. **Fix**: add a `none` bump change file for the falsely flagged package. The change file must be **committed** (not just staged) for `rush change --verify` to detect it.
-
-## PR Workflow: CI & Copilot Review
-
-Every push to a PR branch triggers both **CI** and a **GitHub Copilot code review**. Both must pass before a PR is ready.
-
-### CI
-- CI runs `rush build` and `rush test` (Playwright e2e tests).
-- If CI fails, read the failed log with `gh run view <id> --log-failed`, fix the issue, and push again.
-- Common CI failures: chunk size warnings (add to `manualChunks` in `vite.config.ts`), Playwright strict mode violations (duplicate text from sidebar + new components).
-- **CI silently stops triggering** when the PR branch has a merge conflict with `main`. GitHub Actions will not create new workflow runs for the branch until the conflict is resolved. If pushes stop triggering CI, check for merge conflicts first (`git fetch origin && git merge origin/main`).
-
-### Copilot Review
-- **Every push triggers a new Copilot review** — previous review comments may become outdated but new ones appear.
-- **Automated**: Use `/pr-fixup` to run the full loop automatically — syncs with main, addresses all Copilot comments, and waits for CI. See `.claude/skills/pr-fixup/SKILL.md`.
-- When asked to "deal with Copilot" or "address Copilot comments" manually:
-  1. **Read** all comments: `gh api repos/nick-pape/grackle/pulls/<PR>/comments`
-  2. **Fix** the code issues Copilot identified
-  3. **Reply** to each comment explaining what was done: `gh api repos/nick-pape/grackle/pulls/<PR>/comments/<id>/replies -f body="..."`
-  4. **Resolve** each conversation thread
-  5. **Push** the fixes — this triggers another Copilot review
-  6. **Wait** for the new review and repeat until all comments are resolved
-
-### PR Screenshots
-- When opening a PR that includes **visual/UI changes**, take a Playwright screenshot of the affected area and include it in the PR description.
-- Use `mcp__playwright__browser_take_screenshot` (or Playwright's `page.screenshot()` in test code) to capture the screenshot.
-- Embed screenshots in the PR body as markdown images: `![description](url)`. Upload via `gh` or attach inline.
-- This helps reviewers quickly see what changed without running the app locally.
-
-### PR Completion Checklist
-Before considering a PR "done", always verify:
-- [ ] CI is green (build + tests pass)
-- [ ] All Copilot review comments are addressed and resolved
-- [ ] No new Copilot comments from the latest push
-- [ ] PR description includes screenshots for any visual/UI changes
+- Use `/create-pr` to open a pull request (syncs with main, generates change files, captures screenshots, creates PR with issue linking).
+- Use `/pr-fixup` to address Copilot review comments and wait for CI.
+- **CI silently stops triggering** when the PR branch has a merge conflict with `main`. If pushes stop triggering CI, merge main first.
 
 ## Ports
 
@@ -163,6 +106,7 @@ Before considering a PR "done", always verify:
 | PowerLine | 7433 | `DEFAULT_POWERLINE_PORT` |
 | Server gRPC | 7434 | `DEFAULT_SERVER_PORT` |
 | Web UI + WS | 3000 | `DEFAULT_WEB_PORT` |
+| MCP | 7435 | `DEFAULT_MCP_PORT` |
 
 ### Multi-Session Safety
 Multiple Claude Code sessions may be running concurrently against the same repo. **Never kill server processes (node, grackle) unless you are certain they belong to your session.** Another agent may be using them.

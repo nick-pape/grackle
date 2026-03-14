@@ -89,11 +89,11 @@ export function DagView({ projectId, setViewMode }: Props): JSX.Element {
         minZoom={0.3}
         maxZoom={2}
       >
-        <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="rgba(255,255,255,0.05)" />
+        <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="var(--text-disabled)" />
         <Controls showInteractive={false} />
         <MiniMap
           nodeColor={minimapNodeColor}
-          maskColor="rgba(10, 12, 20, 0.7)"
+          maskColor="var(--bg-overlay)"
           style={{ background: "var(--bg-inset)" }}
         />
       </ReactFlow>

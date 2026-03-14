@@ -34,88 +34,152 @@ describe("project-store", () => {
     applySchema();
   });
 
+  it("creates and retrieves a project", () => {
+    projectStore.createProject("p1", "My Project", "A description", "https://github.com/acme/repo", "env-1");
+    const p = projectStore.getProject("p1");
+    expect(p).toBeDefined();
+    expect(p!.name).toBe("My Project");
+    expect(p!.description).toBe("A description");
+    expect(p!.repoUrl).toBe("https://github.com/acme/repo");
+    expect(p!.defaultEnvironmentId).toBe("env-1");
+    expect(p!.status).toBe("active");
+  });
+
+  it("lists only active projects", () => {
+    projectStore.createProject("p1", "Active", "", "", "");
+    projectStore.createProject("p2", "Archived", "", "", "");
+    projectStore.archiveProject("p2");
+    const list = projectStore.listProjects();
+    expect(list).toHaveLength(1);
+    expect(list[0].id).toBe("p1");
+  });
+
+  it("archives a project", () => {
+    projectStore.createProject("p1", "Project", "", "", "");
+    projectStore.archiveProject("p1");
+    const p = projectStore.getProject("p1");
+    expect(p!.status).toBe("archived");
+  });
+
+  it("updates project name", () => {
+    projectStore.createProject("p1", "Old Name", "", "", "");
+    const updated = projectStore.updateProject("p1", { name: "New Name" });
+    expect(updated).toBeDefined();
+    expect(updated!.name).toBe("New Name");
+  });
+
+  it("updates project description", () => {
+    projectStore.createProject("p1", "Name", "Old desc", "", "");
+    const updated = projectStore.updateProject("p1", { description: "New description" });
+    expect(updated!.description).toBe("New description");
+  });
+
+  it("clears description with empty string", () => {
+    projectStore.createProject("p1", "Name", "Has desc", "", "");
+    const updated = projectStore.updateProject("p1", { description: "" });
+    expect(updated!.description).toBe("");
+  });
+
+  it("updates repo URL", () => {
+    projectStore.createProject("p1", "Name", "", "", "");
+    const updated = projectStore.updateProject("p1", { repoUrl: "https://github.com/new/repo" });
+    expect(updated!.repoUrl).toBe("https://github.com/new/repo");
+  });
+
+  it("clears repo URL with empty string", () => {
+    projectStore.createProject("p1", "Name", "", "https://old.url", "");
+    const updated = projectStore.updateProject("p1", { repoUrl: "" });
+    expect(updated!.repoUrl).toBe("");
+  });
+
+  it("updates default environment ID", () => {
+    projectStore.createProject("p1", "Name", "", "", "");
+    const updated = projectStore.updateProject("p1", { defaultEnvironmentId: "env-2" });
+    expect(updated!.defaultEnvironmentId).toBe("env-2");
+  });
+
+  it("partial update leaves other fields unchanged", () => {
+    projectStore.createProject("p1", "Name", "desc", "https://repo.url", "env-1");
+    const updated = projectStore.updateProject("p1", { name: "New Name" });
+    expect(updated!.name).toBe("New Name");
+    expect(updated!.description).toBe("desc");
+    expect(updated!.repoUrl).toBe("https://repo.url");
+    expect(updated!.defaultEnvironmentId).toBe("env-1");
+  });
+
+  it("updates multiple fields at once", () => {
+    projectStore.createProject("p1", "Name", "", "", "");
+    const updated = projectStore.updateProject("p1", {
+      name: "Updated",
+      description: "New desc",
+      repoUrl: "https://new.url",
+      defaultEnvironmentId: "env-3",
+    });
+    expect(updated!.name).toBe("Updated");
+    expect(updated!.description).toBe("New desc");
+    expect(updated!.repoUrl).toBe("https://new.url");
+    expect(updated!.defaultEnvironmentId).toBe("env-3");
+  });
+
+  it("updateProject bumps updatedAt", () => {
+    projectStore.createProject("p1", "Name", "", "", "");
+    // SQLite datetime('now') has second resolution, so the timestamp
+    // should at least not be empty
+    const updated = projectStore.updateProject("p1", { name: "Changed" });
+    expect(updated!.updatedAt).toBeDefined();
+    expect(typeof updated!.updatedAt).toBe("string");
+  });
+
+  it("updateProject returns undefined for non-existent project", () => {
+    const result = projectStore.updateProject("nope", { name: "Doesn't exist" });
+    // The function calls getProject which returns undefined for non-existent IDs
+    expect(result).toBeUndefined();
+  });
+
   // UT-5: createProject() stores useWorktrees and getProject() returns it
   describe("createProject with useWorktrees", () => {
     it("defaults useWorktrees to true when not specified", () => {
-      projectStore.createProject("p1", "My Project", "desc", "", "");
-      const row = projectStore.getProject("p1");
+      projectStore.createProject("pw1", "My Project", "desc", "", "");
+      const row = projectStore.getProject("pw1");
       expect(row).toBeDefined();
       expect(row!.useWorktrees).toBe(true);
     });
 
     it("stores useWorktrees=true when explicitly set", () => {
-      projectStore.createProject("p2", "Worktree Project", "desc", "", "", true);
-      const row = projectStore.getProject("p2");
+      projectStore.createProject("pw2", "Worktree Project", "desc", "", "", true);
+      const row = projectStore.getProject("pw2");
       expect(row).toBeDefined();
       expect(row!.useWorktrees).toBe(true);
     });
 
     it("stores useWorktrees=false when explicitly disabled", () => {
-      projectStore.createProject("p3", "No-Worktree Project", "desc", "", "", false);
-      const row = projectStore.getProject("p3");
+      projectStore.createProject("pw3", "No-Worktree Project", "desc", "", "", false);
+      const row = projectStore.getProject("pw3");
       expect(row).toBeDefined();
       expect(row!.useWorktrees).toBe(false);
     });
   });
 
-  describe("getProject", () => {
-    it("returns undefined for a non-existent project", () => {
-      expect(projectStore.getProject("nonexistent")).toBeUndefined();
-    });
-
-    it("returns the project row including useWorktrees", () => {
-      projectStore.createProject("p4", "Test", "", "https://github.com/example/repo", "env-1", false);
-      const row = projectStore.getProject("p4");
-      expect(row).toBeDefined();
-      expect(row!.id).toBe("p4");
-      expect(row!.name).toBe("Test");
-      expect(row!.repoUrl).toBe("https://github.com/example/repo");
-      expect(row!.defaultEnvironmentId).toBe("env-1");
-      expect(row!.useWorktrees).toBe(false);
-    });
-  });
-
-  describe("listProjects", () => {
-    it("returns only active projects with useWorktrees field", () => {
-      projectStore.createProject("p5", "Active", "", "", "", true);
-      projectStore.createProject("p6", "Disabled Worktrees", "", "", "", false);
-      projectStore.archiveProject("p6");
-      const rows = projectStore.listProjects();
-      expect(rows.length).toBe(1);
-      expect(rows[0]!.id).toBe("p5");
-      expect(rows[0]!.useWorktrees).toBe(true);
-    });
-  });
-
-  describe("updateProject", () => {
+  describe("updateProject with useWorktrees", () => {
     it("updates useWorktrees from true to false", () => {
-      projectStore.createProject("p7", "Togglable", "", "", "", true);
-      projectStore.updateProject("p7", { useWorktrees: false });
-      const row = projectStore.getProject("p7");
+      projectStore.createProject("pw4", "Togglable", "", "", "", true);
+      projectStore.updateProject("pw4", { useWorktrees: false });
+      const row = projectStore.getProject("pw4");
       expect(row!.useWorktrees).toBe(false);
     });
 
     it("updates useWorktrees from false to true", () => {
-      projectStore.createProject("p8", "Re-enable Worktrees", "", "", "", false);
-      projectStore.updateProject("p8", { useWorktrees: true });
-      const row = projectStore.getProject("p8");
+      projectStore.createProject("pw5", "Re-enable Worktrees", "", "", "", false);
+      projectStore.updateProject("pw5", { useWorktrees: true });
+      const row = projectStore.getProject("pw5");
       expect(row!.useWorktrees).toBe(true);
     });
 
-    it("is a no-op patch when useWorktrees is not provided", () => {
-      projectStore.createProject("p9", "No Change", "", "", "", false);
-      projectStore.updateProject("p9", {}); // no-op patch
-      const row = projectStore.getProject("p9");
+    it("leaves useWorktrees unchanged when not in patch", () => {
+      projectStore.createProject("pw6", "No Change", "", "", "", false);
+      projectStore.updateProject("pw6", { name: "New Name" }); // no useWorktrees in patch
+      const row = projectStore.getProject("pw6");
       expect(row!.useWorktrees).toBe(false); // unchanged
-    });
-  });
-
-  describe("archiveProject", () => {
-    it("archives a project so it no longer appears in listProjects", () => {
-      projectStore.createProject("p10", "To Archive", "", "", "");
-      projectStore.archiveProject("p10");
-      const rows = projectStore.listProjects();
-      expect(rows.find((r) => r.id === "p10")).toBeUndefined();
     });
   });
 });

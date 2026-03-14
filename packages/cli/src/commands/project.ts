@@ -56,6 +56,10 @@ export function registerProjectCommands(program: Command): void {
   project
     .command("update <id>")
     .description("Update project settings")
+    .option("--name <name>", "New project name")
+    .option("--desc <description>", "New project description")
+    .option("--repo <url>", "New repository URL")
+    .option("--env <env-id>", "New default environment ID")
     .option("--no-worktrees", "Disable worktree isolation for this project")
     .option("--worktrees", "Enable worktree isolation for this project")
     .action(async (id: string, opts) => {
@@ -66,14 +70,42 @@ export function registerProjectCommands(program: Command): void {
         // --no-worktrees was passed
         useWorktrees = false;
       } else if (opts.worktrees === true) {
-        // --worktrees was passed
+        // --worktrees was passed (note: Commander may need explicit handling)
         useWorktrees = true;
       }
-      if (useWorktrees === undefined) {
-        console.error("No changes specified. Use --worktrees or --no-worktrees.");
+
+      const patch: {
+        id: string;
+        name?: string;
+        description?: string;
+        repoUrl?: string;
+        defaultEnvironmentId?: string;
+        useWorktrees?: boolean;
+      } = { id };
+
+      if (opts.name !== undefined) {
+        patch.name = opts.name as string;
+      }
+      if (opts.desc !== undefined) {
+        patch.description = opts.desc as string;
+      }
+      if (opts.repo !== undefined) {
+        patch.repoUrl = opts.repo as string;
+      }
+      if (opts.env !== undefined) {
+        patch.defaultEnvironmentId = opts.env as string;
+      }
+      if (useWorktrees !== undefined) {
+        patch.useWorktrees = useWorktrees;
+      }
+
+      const hasChanges = Object.keys(patch).length > 1; // more than just 'id'
+      if (!hasChanges) {
+        console.error("No changes specified. Use --name, --desc, --repo, --env, --worktrees, or --no-worktrees.");
         process.exit(1);
       }
-      const p = await client.updateProject({ id, useWorktrees });
+
+      const p = await client.updateProject(patch);
       console.log(`Updated project: ${p.id} (${p.name}) [worktrees: ${p.useWorktrees ? "enabled" : "disabled"}]`);
     });
 
