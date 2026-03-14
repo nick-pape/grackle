@@ -106,6 +106,7 @@ PRs that modify publishable packages need a change file. The `/create-pr` skill 
 | PowerLine | 7433 | `DEFAULT_POWERLINE_PORT` |
 | Server gRPC | 7434 | `DEFAULT_SERVER_PORT` |
 | Web UI + WS | 3000 | `DEFAULT_WEB_PORT` |
+| MCP | 7435 | `DEFAULT_MCP_PORT` |
 
 ### Multi-Session Safety
 Multiple Claude Code sessions may be running concurrently against the same repo. **Never kill server processes (node, grackle) unless you are certain they belong to your session.** Another agent may be using them.
