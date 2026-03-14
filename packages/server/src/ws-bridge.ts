@@ -731,6 +731,7 @@ async function handleMessage(
             repoUrl: r.repoUrl,
             defaultEnvironmentId: r.defaultEnvironmentId,
             status: r.status,
+            useWorktrees: r.useWorktrees,
             createdAt: r.createdAt,
             updatedAt: r.updatedAt,
           })),
@@ -757,12 +758,15 @@ async function handleMessage(
       if (projectStore.getProject(id)) {
         id = uuid();
       }
+      // useWorktrees defaults to true when not specified
+      const createUseWorktrees = (msg.payload?.useWorktrees as boolean | undefined) ?? true;
       projectStore.createProject(
         id,
         name,
         (msg.payload?.description as string) || "",
         (msg.payload?.repoUrl as string) || "",
         (msg.payload?.defaultEnvironmentId as string) || "",
+        createUseWorktrees,
       );
       const row = projectStore.getProject(id);
       broadcast({ type: "project_created", payload: { project: row } });
@@ -799,11 +803,13 @@ async function handleMessage(
         sendWs(ws, { type: "error", payload: { message: "Repository URL must use http or https scheme" } });
         return;
       }
+      const worktreesVal = typeof msg.payload?.useWorktrees === "boolean" ? msg.payload.useWorktrees as boolean : undefined;
       projectStore.updateProject(projectId, {
         name: nameVal !== undefined ? nameVal.trim() : undefined,
         description: descVal,
         repoUrl: repoVal,
         defaultEnvironmentId: envVal,
+        useWorktrees: worktreesVal,
       });
       broadcast({ type: "project_updated", payload: { projectId } });
       break;
