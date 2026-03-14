@@ -79,6 +79,9 @@ export const projects = sqliteTable("projects", {
   repoUrl: text("repo_url").notNull().default(""),
   defaultEnvironmentId: text("default_env_id").notNull().default(""),
   status: text("status").notNull().default("active"),
+  useWorktrees: integer("use_worktrees", { mode: "boolean" })
+    .notNull()
+    .default(true),
   createdAt: text("created_at")
     .notNull()
     .default(sql`(datetime('now'))`),

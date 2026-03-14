@@ -5,13 +5,21 @@ import { eq, desc, sql } from "drizzle-orm";
 export type { ProjectRow };
 
 /** Insert a new project record. */
-export function createProject(id: string, name: string, description: string, repoUrl: string, defaultEnvironmentId: string): void {
+export function createProject(
+  id: string,
+  name: string,
+  description: string,
+  repoUrl: string,
+  defaultEnvironmentId: string,
+  useWorktrees: boolean = true,
+): void {
   db.insert(projects).values({
     id,
     name,
     description,
     repoUrl,
     defaultEnvironmentId,
+    useWorktrees,
   }).run();
 }
 
@@ -26,6 +34,23 @@ export function listProjects(): ProjectRow[] {
     .where(eq(projects.status, "active"))
     .orderBy(desc(projects.createdAt))
     .all();
+}
+
+/** Update mutable project settings. */
+export function updateProject(
+  id: string,
+  patch: { useWorktrees?: boolean },
+): void {
+  const updates: Record<string, unknown> = {
+    updatedAt: sql`datetime('now')`,
+  };
+  if (patch.useWorktrees !== undefined) {
+    updates.useWorktrees = patch.useWorktrees;
+  }
+  db.update(projects)
+    .set(updates)
+    .where(eq(projects.id, id))
+    .run();
 }
 
 /** Mark a project as archived. */

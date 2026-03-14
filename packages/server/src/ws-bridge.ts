@@ -714,6 +714,7 @@ async function handleMessage(
             repoUrl: r.repoUrl,
             defaultEnvironmentId: r.defaultEnvironmentId,
             status: r.status,
+            useWorktrees: r.useWorktrees,
             createdAt: r.createdAt,
           })),
         },
@@ -739,15 +740,34 @@ async function handleMessage(
       if (projectStore.getProject(id)) {
         id = uuid();
       }
+      // useWorktrees defaults to true when not specified
+      const createUseWorktrees = (msg.payload?.useWorktrees as boolean | undefined) ?? true;
       projectStore.createProject(
         id,
         name,
         (msg.payload?.description as string) || "",
         (msg.payload?.repoUrl as string) || "",
         (msg.payload?.defaultEnvironmentId as string) || "",
+        createUseWorktrees,
       );
       const row = projectStore.getProject(id);
       broadcast({ type: "project_created", payload: { project: row } });
+      break;
+    }
+
+    case "update_project": {
+      const updateProjectId = msg.payload?.projectId as string;
+      if (!updateProjectId) {
+        sendWs(ws, { type: "error", payload: { message: "projectId required" } });
+        return;
+      }
+      const patch: { useWorktrees?: boolean } = {};
+      if (typeof msg.payload?.useWorktrees === "boolean") {
+        patch.useWorktrees = msg.payload.useWorktrees as boolean;
+      }
+      projectStore.updateProject(updateProjectId, patch);
+      const updatedRow = projectStore.getProject(updateProjectId);
+      broadcast({ type: "project_updated", payload: { project: updatedRow } });
       break;
     }
 

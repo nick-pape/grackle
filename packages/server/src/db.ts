@@ -65,6 +65,7 @@ export function initDatabase(): void {
       repo_url      TEXT NOT NULL DEFAULT '',
       default_env_id TEXT NOT NULL DEFAULT '',
       status        TEXT NOT NULL DEFAULT 'active',
+      use_worktrees INTEGER NOT NULL DEFAULT 1,
       created_at    TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at    TEXT NOT NULL DEFAULT (datetime('now'))
     );
@@ -216,6 +217,15 @@ export function initDatabase(): void {
   try {
     sqlite.exec(
       "ALTER TABLE sessions ADD COLUMN task_id TEXT NOT NULL DEFAULT ''",
+    );
+  } catch {
+    /* column already exists */
+  }
+
+  // Migration: add use_worktrees column to projects if missing (older databases)
+  try {
+    sqlite.exec(
+      "ALTER TABLE projects ADD COLUMN use_worktrees INTEGER NOT NULL DEFAULT 1",
     );
   } catch {
     /* column already exists */

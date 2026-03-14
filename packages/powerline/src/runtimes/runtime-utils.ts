@@ -3,9 +3,12 @@ import type { AsyncQueue } from "../utils/async-queue.js";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { execFileSync } from "node:child_process";
+import { execFileSync, execFile } from "node:child_process";
+import { promisify } from "node:util";
 import { ensureWorktree } from "../worktree.js";
 import { logger } from "../logger.js";
+
+const execFileAsync: typeof execFile.__promisify__ = promisify(execFile);
 
 // ─── Shared constants ──────────────────────────────────────
 
@@ -175,11 +178,33 @@ function findWorkspaceDir(basePath?: string, requireNonEmpty?: boolean): string 
 }
 
 /**
+ * Check out (or create) a branch in the main working tree without creating a worktree.
+ *
+ * Tries `git checkout <branch>` first (branch already exists), then falls back to
+ * `git checkout -b <branch>` (create new branch from current HEAD).
+ *
+ * @param repoPath - Absolute path to the git repository root.
+ * @param branch - Branch name to check out.
+ */
+async function checkoutBranchInPlace(repoPath: string, branch: string): Promise<void> {
+  const shell = process.env.SHELL || true;
+  try {
+    await execFileAsync("git", ["checkout", branch], { cwd: repoPath, shell });
+  } catch {
+    // Branch doesn't exist yet — create it
+    await execFileAsync("git", ["checkout", "-b", branch], { cwd: repoPath, shell });
+  }
+}
+
+/**
  * Resolve the working directory for an agent session.
  *
  * Tries worktree creation first (when branch + basePath are provided),
  * auto-detecting the git repo if the provided basePath is not a git repo.
  * Falls back to workspace directories on failure.
+ *
+ * When a branch is provided but worktreeBasePath is empty (worktrees disabled),
+ * checks out the branch directly in the main working tree and returns it.
  */
 export async function resolveWorkingDirectory(options: ResolveWorkingDirectoryOptions): Promise<string | undefined> {
   const { branch, worktreeBasePath, eventQueue, requireNonEmpty } = options;
@@ -205,6 +230,30 @@ export async function resolveWorkingDirectory(options: ResolveWorkingDirectoryOp
 
     // Worktree failed — fall back to best available workspace
     const fallback = findWorkspaceDir(worktreeBasePath, requireNonEmpty);
+    if (fallback) {
+      return fallback;
+    }
+    return undefined;
+  }
+
+  if (branch && !worktreeBasePath) {
+    // Worktrees are disabled — check out the branch in the main working tree.
+    const repoPath = findGitRepoPath();
+
+    if (repoPath) {
+      try {
+        await checkoutBranchInPlace(repoPath, branch);
+        eventQueue.push({ type: "system", timestamp: ts(), content: `Checked out branch '${branch}' in main working tree: ${repoPath}` });
+        return repoPath;
+      } catch (checkoutErr) {
+        eventQueue.push({ type: "system", timestamp: ts(), content: `Branch checkout failed (${checkoutErr}), falling back to workspace` });
+      }
+    } else {
+      eventQueue.push({ type: "system", timestamp: ts(), content: `No git repo found for branch checkout, falling back to workspace` });
+    }
+
+    // Checkout failed — fall back to best available workspace
+    const fallback = findWorkspaceDir(undefined, requireNonEmpty);
     if (fallback) {
       return fallback;
     }
