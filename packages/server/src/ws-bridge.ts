@@ -453,6 +453,7 @@ async function handleMessage(
         eventType: e.type,
         timestamp: e.timestamp,
         content: e.content,
+        raw: e.raw || undefined,
       }));
 
       sendWs(ws, { type: "session_events", payload: { sessionId, events } });
@@ -486,6 +487,7 @@ async function handleMessage(
               eventType: eventTypeToString(event.type),
               timestamp: event.timestamp,
               content: event.content,
+              raw: event.raw || undefined,
             },
           });
         }
@@ -514,6 +516,7 @@ async function handleMessage(
               eventType: eventTypeToString(event.type),
               timestamp: event.timestamp,
               content: event.content,
+              raw: event.raw || undefined,
             },
           });
         }
@@ -731,6 +734,7 @@ async function handleMessage(
             repoUrl: r.repoUrl,
             defaultEnvironmentId: r.defaultEnvironmentId,
             status: r.status,
+            useWorktrees: r.useWorktrees,
             createdAt: r.createdAt,
             updatedAt: r.updatedAt,
           })),
@@ -757,12 +761,15 @@ async function handleMessage(
       if (projectStore.getProject(id)) {
         id = uuid();
       }
+      // useWorktrees defaults to true when not specified
+      const createUseWorktrees = (msg.payload?.useWorktrees as boolean | undefined) ?? true;
       projectStore.createProject(
         id,
         name,
         (msg.payload?.description as string) || "",
         (msg.payload?.repoUrl as string) || "",
         (msg.payload?.defaultEnvironmentId as string) || "",
+        createUseWorktrees,
       );
       const row = projectStore.getProject(id);
       broadcast({ type: "project_created", payload: { project: row } });
@@ -799,11 +806,13 @@ async function handleMessage(
         sendWs(ws, { type: "error", payload: { message: "Repository URL must use http or https scheme" } });
         return;
       }
+      const worktreesVal = typeof msg.payload?.useWorktrees === "boolean" ? msg.payload.useWorktrees as boolean : undefined;
       projectStore.updateProject(projectId, {
         name: nameVal !== undefined ? nameVal.trim() : undefined,
         description: descVal,
         repoUrl: repoVal,
         defaultEnvironmentId: envVal,
+        useWorktrees: worktreesVal,
       });
       broadcast({ type: "project_updated", payload: { projectId } });
       break;
@@ -1059,14 +1068,21 @@ async function handleMessage(
             ),
           ]
         : safeParseJsonArray(existingTask.dependsOn);
+      const updatedEnvironmentId = typeof msg.payload?.environmentId === "string"
+        ? msg.payload.environmentId
+        : existingTask.environmentId;
+      const updatedPersonaId = typeof msg.payload?.personaId === "string"
+        ? msg.payload.personaId
+        : existingTask.personaId;
       taskStore.updateTask(
         updateTaskId,
         updatedTitle,
         updatedDescription,
         existingTask.status,
-        existingTask.environmentId,
+        updatedEnvironmentId,
         updatedDependsOn,
         existingTask.reviewNotes,
+        updatedPersonaId,
       );
       const updatedRow = taskStore.getTask(updateTaskId);
       broadcast({
@@ -1173,6 +1189,7 @@ async function handleMessage(
         task.environmentId,
         safeParseJsonArray(task.dependsOn),
         reviewNotes,
+        task.personaId,
       );
       broadcast({
         type: "task_rejected",

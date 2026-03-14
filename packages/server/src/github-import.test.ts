@@ -55,6 +55,7 @@ function applySchema(): void {
       repo_url      TEXT NOT NULL DEFAULT '',
       default_env_id TEXT NOT NULL DEFAULT '',
       status        TEXT NOT NULL DEFAULT 'active',
+      use_worktrees INTEGER NOT NULL DEFAULT 1,
       created_at    TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at    TEXT NOT NULL DEFAULT (datetime('now'))
     );

@@ -18,11 +18,11 @@ interface Props {
  * - edit_task: pre-populated form; calls updateTask on save, then navigates
  *              back to the task overview.
  *
- * Environment is intentionally excluded — it is selected at task start time,
- * not at creation/editing time.
+ * Environment and persona are optional — both can be set at creation or
+ * changed later via editing. Environment can also be overridden at start time.
  */
 export function TaskEditPanel({ viewMode, setViewMode }: Props): JSX.Element {
-  const { tasks, createTask, updateTask, personas } = useGrackle();
+  const { tasks, createTask, updateTask, personas, environments } = useGrackle();
   const { showToast } = useToast();
 
   const isEdit = viewMode.kind === "edit_task";
@@ -42,6 +42,7 @@ export function TaskEditPanel({ viewMode, setViewMode }: Props): JSX.Element {
   const [description, setDescription] = useState(existingTask?.description ?? "");
   const [selectedDeps, setSelectedDeps] = useState<string[]>(existingTask?.dependsOn ?? []);
   const [personaId, setPersonaId] = useState(existingTask?.personaId ?? "");
+  const [environmentId, setEnvironmentId] = useState(existingTask?.environmentId ?? "");
 
   // In edit mode, tasks may not have loaded yet at mount time. Sync form state
   // the first time existingTask becomes available so the form is pre-populated,
@@ -54,6 +55,8 @@ export function TaskEditPanel({ viewMode, setViewMode }: Props): JSX.Element {
       setTitle(existingTask.title);
       setDescription(existingTask.description ?? "");
       setSelectedDeps(existingTask.dependsOn ?? []);
+      setPersonaId(existingTask.personaId ?? "");
+      setEnvironmentId(existingTask.environmentId ?? "");
     }
   }, [isEdit, existingTask]);
 
@@ -84,7 +87,7 @@ export function TaskEditPanel({ viewMode, setViewMode }: Props): JSX.Element {
       return;
     }
     if (isEdit) {
-      updateTask(viewMode.taskId, title.trim(), description, selectedDeps);
+      updateTask(viewMode.taskId, title.trim(), description, selectedDeps, environmentId, personaId);
       showToast("Task updated", "success");
       setViewMode({ kind: "task", taskId: viewMode.taskId });
     } else {
@@ -92,7 +95,7 @@ export function TaskEditPanel({ viewMode, setViewMode }: Props): JSX.Element {
         projectId,
         title.trim(),
         description,
-        "",
+        environmentId || undefined,
         selectedDeps.length > 0 ? selectedDeps : undefined,
         parentTaskId || undefined,
         personaId || undefined,
@@ -181,8 +184,29 @@ export function TaskEditPanel({ viewMode, setViewMode }: Props): JSX.Element {
             />
           </div>
 
-          {/* Persona (new task only — persona is a creation-time template) */}
-          {!isEdit && personas.length > 0 && (
+          {/* Environment */}
+          {environments.length > 0 && (
+            <div className={styles.section}>
+              <label className={styles.label} htmlFor="task-edit-environment">
+                Environment
+              </label>
+              <select
+                id="task-edit-environment"
+                value={environmentId}
+                onChange={(e) => setEnvironmentId(e.target.value)}
+                className={styles.personaSelect}
+                data-testid="task-edit-environment"
+              >
+                <option value="">No environment</option>
+                {environments.map((env) => (
+                  <option key={env.id} value={env.id}>{env.displayName || env.id}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Persona */}
+          {personas.length > 0 && (
             <div className={styles.section}>
               <label className={styles.label} htmlFor="task-edit-persona">
                 Persona

@@ -53,8 +53,8 @@ test.describe("Session Lifecycle (stub runtime)", () => {
     const toolUseBox = page.locator("div").filter({ hasText: '"message"' }).filter({ hasText: "echo:" });
     await expect(toolUseBox.first()).toBeVisible();
 
-    // Tool result renders (collapsible details)
-    await expect(page.locator("summary", { hasText: "Tool output" })).toBeVisible();
+    // Tool result renders (preview + accordion with success indicator and label)
+    await expect(page.getByText("Tool output", { exact: true })).toBeVisible();
 
     // Session reaches waiting_input — UnifiedBar shows text input + Send + Stop
     const inputField = page.locator('input[placeholder="Type a message..."]');

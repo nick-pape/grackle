@@ -153,21 +153,79 @@
   animation: fadeIn 200ms ease forwards;
 }
 
-.toolResultSummary {
-  cursor: pointer;
-  color: var(--text-secondary);
+// Clickable header row (button when expandable, div when not)
+.toolResultHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  background: none;
+  border: none;
   padding: 2px var(--space-xs);
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  font-family: inherit;
+  width: 100%;
+  text-align: left;
   border-radius: var(--radius-sm);
   transition: color var(--transition-fast),
               background var(--transition-fast);
+  cursor: default;
 
-  &:hover {
-    color: var(--text-primary);
-    background: var(--bg-overlay);
+  // Only the <button> variant (rendered when expandable) is interactive
+  &:is(button) {
+    cursor: pointer;
+
+    &:hover {
+      color: var(--text-primary);
+      background: var(--bg-overlay);
+    }
   }
 }
 
-.toolResultContent {
+// Success/error indicators
+.toolResultIndicatorOk {
+  color: var(--accent-green);
+  font-size: 10px;
+  flex-shrink: 0;
+  font-weight: var(--font-weight-bold);
+}
+
+.toolResultIndicatorError {
+  color: var(--accent-red);
+  font-size: 10px;
+  flex-shrink: 0;
+  font-weight: var(--font-weight-bold);
+}
+
+.toolResultLabel {
+  flex-shrink: 0;
+}
+
+// Expand/collapse chevron pushed to the right
+.toolResultToggle {
+  margin-left: auto;
+  color: var(--text-tertiary);
+  font-size: 10px;
+}
+
+// One-line preview of the tool invocation's arguments (command, file path, etc.)
+.toolResultCommand {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-tertiary);
+  padding: 0 var(--space-xs) 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// Truncation ellipsis appended at end of preview
+.toolResultEllipsis {
+  color: var(--text-tertiary);
+}
+
+// Recessed inset for code output
+.toolResultPre {
   @include surface-inset;
   padding: var(--space-sm);
   margin: var(--space-xs) 0;
@@ -175,16 +233,6 @@
   max-height: 400px;
   font-size: 11px;
   font-family: var(--font-mono);
-
-  pre {
-    margin: 0;
-    padding: 0;
-    background: none;
-    border: none;
-    box-shadow: none;
-    overflow: visible;
-    max-height: none;
-  }
 }
 
 .errorEvent {

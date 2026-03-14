@@ -77,6 +77,7 @@ function projectRowToProto(row: projectStore.ProjectRow): grackle.Project {
     status: projectStatusToEnum(row.status),
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
+    useWorktrees: row.useWorktrees,
   });
 }
 
@@ -587,12 +588,15 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       if (projectStore.getProject(id)) {
         id = `${id}-${uuid().slice(0, 4)}`;
       }
+      // useWorktrees defaults to true when not specified
+      const useWorktrees = req.useWorktrees ?? true;
       projectStore.createProject(
         id,
         req.name,
         req.description,
         req.repoUrl,
         req.defaultEnvironmentId,
+        useWorktrees,
       );
       broadcast({ type: "project_created", payload: { projectId: id } });
       const row = projectStore.getProject(id);
@@ -627,6 +631,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         description: req.description,
         repoUrl: req.repoUrl,
         defaultEnvironmentId: req.defaultEnvironmentId,
+        useWorktrees: req.useWorktrees ?? undefined,
       });
       if (!row) {
         throw new Error(`Project not found after update: ${req.id}`);
@@ -727,6 +732,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
           ? [...req.dependsOn]
           : safeParseJsonArray(existing.dependsOn),
         req.reviewNotes !== "" ? req.reviewNotes : existing.reviewNotes,
+        existing.personaId,
       );
       const row = taskStore.getTask(req.id);
       return taskRowToProto(row!);
@@ -809,6 +815,17 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
 
       const mcpServersJson = persona ? personaMcpServersToJson(persona) : "";
 
+      // When useWorktrees is false, omit worktreeBasePath so PowerLine checks
+      // out the branch in the main working tree instead of creating a worktree.
+      // The branch field is still populated so the agent knows its branch name.
+      const useWorktrees = project.useWorktrees;
+      if (!useWorktrees) {
+        logger.warn(
+          { taskId: task.id, projectId: task.projectId, branch: task.branch },
+          "Worktrees disabled for project — agent will work in main checkout. Concurrent tasks on the same environment may conflict.",
+        );
+      }
+
       const powerlineReq = create(powerline.SpawnRequestSchema, {
         sessionId,
         runtime,
@@ -816,7 +833,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         model,
         maxTurns,
         branch: task.branch,
-        worktreeBasePath: task.branch ? "/workspace" : "",
+        worktreeBasePath: task.branch && useWorktrees ? "/workspace" : "",
         systemContext,
         projectId: task.projectId,
         taskId: task.id,
@@ -894,6 +911,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         task.environmentId,
         safeParseJsonArray(task.dependsOn),
         req.reviewNotes || "",
+        task.personaId,
       );
 
       broadcast({
