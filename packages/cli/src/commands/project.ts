@@ -43,6 +43,45 @@ export function registerProjectCommands(program: Command): void {
     });
 
   project
+    .command("get <id>")
+    .description("Show full project details")
+    .action(async (id: string) => {
+      const client = createGrackleClient();
+      const p = await client.getProject({ id });
+      const table = new Table();
+      table.push(
+        { "ID": p.id },
+        { "Name": p.name },
+        { "Description": p.description || "-" },
+        { "Repo URL": p.repoUrl || "-" },
+        { "Default Env": p.defaultEnvironmentId || "-" },
+        { "Status": projectStatusToString(p.status) },
+        { "Created": p.createdAt },
+        { "Updated": p.updatedAt },
+      );
+      console.log(table.toString());
+    });
+
+  project
+    .command("update <id>")
+    .description("Update a project")
+    .option("--name <name>", "Project name")
+    .option("--desc <description>", "Project description")
+    .option("--repo <url>", "Repository URL")
+    .option("--env <env-id>", "Default environment ID")
+    .action(async (id: string, opts) => {
+      const client = createGrackleClient();
+      const p = await client.updateProject({
+        id,
+        name: opts.name,
+        description: opts.desc,
+        repoUrl: opts.repo,
+        defaultEnvironmentId: opts.env,
+      });
+      console.log(`Updated project: ${p.id} (${p.name})`);
+    });
+
+  project
     .command("archive <id>")
     .description("Archive a project")
     .action(async (id: string) => {

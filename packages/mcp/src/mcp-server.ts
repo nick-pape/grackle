@@ -15,6 +15,8 @@ import {
   type CallToolResult,
 } from "@modelcontextprotocol/sdk/types.js";
 import pino, { type Logger } from "pino";
+import { zodToJsonSchema } from "zod-to-json-schema";
+import { grpcErrorToToolResult } from "./error-handler.js";
 import { createToolRegistry } from "./tools/index.js";
 
 /** Read the package version from package.json at module load time. */
@@ -71,7 +73,7 @@ function createMcpServerInstance(grpcClient: Client<typeof grackle.Grackle>): Se
       tools: tools.map((t) => ({
         name: t.name,
         description: t.description,
-        inputSchema: t.inputSchema,
+        inputSchema: zodToJsonSchema(t.inputSchema, { target: "jsonSchema7" }),
         annotations: t.annotations,
       })),
     };
@@ -87,17 +89,43 @@ function createMcpServerInstance(grpcClient: Client<typeof grackle.Grackle>): Se
       };
     }
 
-    try {
-      logger.info({ tool: name }, "Executing MCP tool: %s", name);
-      const result = await tool.handler(args ?? {}, grpcClient);
-      return result as CallToolResult;
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      logger.error({ tool: name, err: error }, "Tool execution failed: %s", name);
+    // Validate inputs against Zod schema
+    const parsed = tool.inputSchema.safeParse(args ?? {});
+    if (!parsed.success) {
+      const issues = parsed.error.issues.map(
+        (i) => `${i.path.join(".")}: ${i.message}`,
+      );
+      logger.warn({ tool: name, issues }, "Input validation failed: %s", name);
       return {
-        content: [{ type: "text", text: `Error: ${errorMessage}` }],
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              { error: "Invalid arguments", code: "INVALID_ARGUMENT", issues },
+              null,
+              2,
+            ),
+          },
+        ],
         isError: true,
       };
+    }
+
+    try {
+      logger.info({ tool: name }, "Executing MCP tool: %s", name);
+      const result = await tool.handler(parsed.data, grpcClient);
+      return result as CallToolResult;
+    } catch (error: unknown) {
+      logger.error({ tool: name, err: error }, "Tool execution failed: %s", name);
+      try {
+        return grpcErrorToToolResult(error) as CallToolResult;
+      } catch {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        return {
+          content: [{ type: "text", text: `Error: ${errorMessage}` }],
+          isError: true,
+        };
+      }
     }
   });
 

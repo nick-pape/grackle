@@ -1,5 +1,6 @@
 import type { Client } from "@connectrpc/connect";
 import type { grackle } from "@grackle-ai/common";
+import type { ZodType } from "zod";
 
 /** Content item returned by an MCP tool handler. */
 export interface ToolContent {
@@ -11,13 +12,6 @@ export interface ToolContent {
 export interface ToolResult {
   content: ToolContent[];
   isError?: boolean;
-}
-
-/** JSON Schema describing a tool's input parameters. */
-export interface ToolInputSchema {
-  type: "object";
-  properties?: Record<string, unknown>;
-  required?: string[];
 }
 
 /** Optional hints about a tool's behavior for the MCP client. */
@@ -33,10 +27,16 @@ export interface ToolAnnotations {
 export interface ToolDefinition {
   /** Unique tool name (snake_case by convention). */
   name: string;
-  /** Human-readable description shown to the AI client. */
+  /** Tool group for organizational purposes (e.g. "env", "session"). */
+  group: string;
+  /** Human-readable description shown to the AI client (20+ chars). */
   description: string;
-  /** JSON Schema for the tool's input arguments. */
-  inputSchema: ToolInputSchema;
+  /** Zod schema for input validation (converted to JSON Schema for ListTools). */
+  inputSchema: ZodType;
+  /** Name of the ConnectRPC method this tool calls (e.g. "listEnvironments"). */
+  rpcMethod: string;
+  /** Whether this tool modifies state. */
+  mutating: boolean;
   /** Optional behavioral hints for the client. */
   annotations?: ToolAnnotations;
   /** Execute the tool, forwarding to the ConnectRPC backend. */
@@ -56,6 +56,13 @@ export class ToolRegistry {
       throw new Error(`Duplicate tool name: ${tool.name}`);
     }
     this.tools.set(tool.name, tool);
+  }
+
+  /** Register an array of tool definitions. */
+  public registerAll(tools: ToolDefinition[]): void {
+    for (const tool of tools) {
+      this.register(tool);
+    }
   }
 
   /** Return all registered tools, optionally filtered by a predicate. */
