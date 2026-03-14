@@ -19,6 +19,7 @@ export function registerServeCommand(program: Command): void {
     .option("--port <port>", "Server port", "7434")
     .option("--web-port <port>", "Web UI port", "3000")
     .option("--host <address>", "Bind address — must be a loopback address (127.0.0.1 or ::1)", "127.0.0.1")
+    .option("--mcp-port <port>", "MCP server port", "7435")
     .action(async (opts) => {
       if (!LOOPBACK_HOSTS.has(opts.host)) {
         console.error(`Error: --host must be a loopback address (127.0.0.1 or ::1). Got: ${opts.host}`);
@@ -28,11 +29,13 @@ export function registerServeCommand(program: Command): void {
 
       process.env.GRACKLE_PORT = opts.port;
       process.env.GRACKLE_WEB_PORT = opts.webPort;
+      process.env.GRACKLE_MCP_PORT = opts.mcpPort;
       process.env.GRACKLE_HOST = opts.host;
 
       const urlHost = formatHostForUrl(opts.host);
       console.log(`Starting Grackle server on ${opts.host}:${opts.port}...`);
       console.log(`Web UI will be available at http://${urlHost}:${opts.webPort}`);
+      console.log(`MCP server will be available at http://${urlHost}:${opts.mcpPort}/mcp`);
 
       // Dynamic import to start the server
       await import("@grackle-ai/server");

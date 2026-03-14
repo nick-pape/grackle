@@ -11,7 +11,8 @@ import { SshAdapter } from "./adapters/ssh.js";
 import { CodespaceAdapter } from "./adapters/codespace.js";
 import { closeAllTunnels } from "./adapters/remote-adapter-utils.js";
 import { createWsBridge } from "./ws-bridge.js";
-import { DEFAULT_SERVER_PORT, DEFAULT_WEB_PORT } from "@grackle-ai/common";
+import { DEFAULT_SERVER_PORT, DEFAULT_WEB_PORT, DEFAULT_MCP_PORT } from "@grackle-ai/common";
+import { createMcpServer } from "@grackle-ai/mcp";
 import { readFileSync, existsSync } from "node:fs";
 import { join, dirname, extname, normalize, resolve, relative } from "node:path";
 import { createRequire } from "node:module";
@@ -178,6 +179,24 @@ function main(): void {
     logger.info({ port: webPort, host: bindHost }, "Web UI + WebSocket on http://%s:%d", urlHost, webPort);
   });
 
+  // --- MCP server (HTTP/1.1, Streamable HTTP) ---
+  const mcpPort = parseInt(process.env.GRACKLE_MCP_PORT || String(DEFAULT_MCP_PORT), 10);
+  const mcpServer = createMcpServer({ bindHost, mcpPort, grpcPort, apiKey });
+
+  mcpServer.on("error", (err: NodeJS.ErrnoException) => {
+    if (err.code === "EADDRINUSE") {
+      logger.fatal({ port: mcpPort }, "Port %d is already in use. Is another Grackle server running?", mcpPort);
+    } else {
+      logger.fatal({ err }, "MCP server error");
+    }
+    process.exitCode = 1;
+    shutdown().catch(() => { process.exit(1); });
+  });
+
+  mcpServer.listen(mcpPort, bindHost, () => {
+    logger.info({ port: mcpPort, host: bindHost }, "MCP server on http://%s:%d/mcp", urlHost, mcpPort);
+  });
+
   // Graceful shutdown with a hard timeout so upgraded WS connections don't block exit.
   const SHUTDOWN_TIMEOUT_MS: number = 5_000;
 
@@ -203,6 +222,15 @@ function main(): void {
       webServer.close((err?: Error) => {
         if (err) {
           logger.error({ err }, "Error while closing web server");
+        }
+        resolve();
+      });
+    });
+
+    await new Promise<void>((resolve) => {
+      mcpServer.close((err?: Error) => {
+        if (err) {
+          logger.error({ err }, "Error while closing MCP server");
         }
         resolve();
       });

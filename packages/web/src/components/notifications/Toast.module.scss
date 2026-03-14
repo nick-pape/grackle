@@ -5,7 +5,7 @@
 // =============================================================================
 
 .toast {
-  @include glass-card;
+  @include surface-card;
   display: flex;
   align-items: center;
   gap: var(--space-sm);
@@ -18,7 +18,7 @@
   // Variant: success (green)
   &.success {
     border-left-color: var(--accent-green);
-    box-shadow: var(--shadow-lg), var(--shadow-glow-green);
+    box-shadow: var(--shadow-lg);
 
     .icon {
       color: var(--accent-green);
@@ -28,7 +28,7 @@
   // Variant: error (red)
   &.error {
     border-left-color: var(--accent-red);
-    box-shadow: var(--shadow-lg), var(--shadow-glow-red);
+    box-shadow: var(--shadow-lg);
 
     .icon {
       color: var(--accent-red);

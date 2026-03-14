@@ -1,6 +1,18 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sat, 14 Mar 2026 04:23:29 GMT and should not be manually modified.
+This log was last generated on Sat, 14 Mar 2026 05:55:32 GMT and should not be manually modified.
+
+## 0.19.0
+Sat, 14 Mar 2026 05:55:32 GMT
+
+### Minor changes
+
+- Add MCP server core infrastructure with Streamable HTTP transport, tool registry, and proof-of-concept tools
+
+### Updates
+
+- No CLI changes; merge from main included unrelated CLI bump
+- Add a none bump change file for @grackle-ai/cli because merge commits from origin/main make rush change --verify falsely detect CLI changes on this web-only PR.
 
 ## 0.18.3
 Sat, 14 Mar 2026 04:23:29 GMT
