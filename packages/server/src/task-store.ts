@@ -110,6 +110,17 @@ export function updateTask(
     .run();
 }
 
+/** Update only the dependsOn array of a task. */
+export function setTaskDependsOn(id: string, dependsOn: string[]): void {
+  db.update(tasks)
+    .set({
+      dependsOn: JSON.stringify(dependsOn),
+      updatedAt: sql`datetime('now')`,
+    })
+    .where(eq(tasks.id, id))
+    .run();
+}
+
 /** Update only the task status. */
 export function updateTaskStatus(id: string, status: TaskStatus): void {
   db.update(tasks)

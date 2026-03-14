@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "feat: import blocking/blocked-by relationships from GitHub Issues as task dependsOn arrays",
+      "type": "minor",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
