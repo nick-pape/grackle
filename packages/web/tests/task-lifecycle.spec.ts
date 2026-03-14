@@ -1,23 +1,17 @@
 import { test, expect } from "./fixtures.js";
+import { createProject, createTask } from "./helpers.js";
 
 test.describe("Task Lifecycle (stub runtime)", () => {
   test("full task flow: create, start, stream, review, approve", async ({ appPage }) => {
     const page = appPage;
 
     // --- Step 1: Create a project ---
-    await page.locator("button", { hasText: "+" }).first().click();
-    const nameInput = page.locator('input[placeholder="Project name..."]');
-    await nameInput.fill("lifecycle-proj");
-    await page.locator("button", { hasText: "OK" }).click();
-    await expect(page.getByText("lifecycle-proj")).toBeVisible({ timeout: 5_000 });
+    await createProject(page, "lifecycle-proj");
 
-    // --- Step 2: Create a task with test-local environment ---
-    await page.getByText("lifecycle-proj").click();
-    await page.getByText("lifecycle-proj").locator("..").locator('button[title="New task"]').first().click();
-    await page.locator('input[placeholder="Task title..."]').fill("test task");
-    await page.locator("select").first().selectOption("test-local");
-    await page.locator("button", { hasText: /^Create$/ }).click();
-    await expect(page.getByText("test task", { exact: true })).toBeVisible({ timeout: 5_000 });
+    // --- Step 2: Create a task with test-local environment (env is set at creation via WS
+    //     so it is available at start time; the UI no longer has an env dropdown) ---
+    await createTask(page, "lifecycle-proj", "test task", "test-local");
+    await expect(page.getByText("test task", { exact: true }).first()).toBeVisible({ timeout: 5_000 });
 
     // --- Step 3: Navigate to task view ---
     await page.getByText("test task", { exact: true }).click();
@@ -84,19 +78,10 @@ test.describe("Task Lifecycle (stub runtime)", () => {
   test("task rejection auto-retries and returns to review", async ({ appPage }) => {
     const page = appPage;
 
-    // --- Create project and task ---
-    await page.locator("button", { hasText: "+" }).first().click();
-    const nameInput = page.locator('input[placeholder="Project name..."]');
-    await nameInput.fill("reject-proj");
-    await page.locator("button", { hasText: "OK" }).click();
-    await expect(page.getByText("reject-proj")).toBeVisible({ timeout: 5_000 });
-
-    await page.getByText("reject-proj").click();
-    await page.getByText("reject-proj").locator("..").locator('button[title="New task"]').first().click();
-    await page.locator('input[placeholder="Task title..."]').fill("reject task");
-    await page.locator("select").first().selectOption("test-local");
-    await page.locator("button", { hasText: /^Create$/ }).click();
-    await expect(page.getByText("reject task", { exact: true })).toBeVisible({ timeout: 5_000 });
+    // --- Create project and task (env set via WS so it is available at start time) ---
+    await createProject(page, "reject-proj");
+    await createTask(page, "reject-proj", "reject task", "test-local");
+    await expect(page.getByText("reject task", { exact: true }).first()).toBeVisible({ timeout: 5_000 });
 
     // Navigate to task
     await page.getByText("reject task", { exact: true }).click();

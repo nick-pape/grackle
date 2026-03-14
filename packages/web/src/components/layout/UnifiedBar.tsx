@@ -75,7 +75,7 @@ function DisconnectedBanner({ environmentId, onReconnect }: DisconnectedBannerPr
 export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
   const {
     spawn, sendInput, kill, sessions, tasks, environments, personas,
-    createTask, addEnvironment, provisionEnvironment,
+    addEnvironment, provisionEnvironment,
     codespaces, codespaceError, codespaceCreating, listCodespaces, createCodespace,
   } = useGrackle();
   const { showToast } = useToast();
@@ -84,10 +84,6 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
   const [runtime, setRuntime] = useState(
     viewMode.kind === "new_chat" ? viewMode.runtime : "claude-code"
   );
-  const [taskTitle, setTaskTitle] = useState("");
-  const [taskDesc, setTaskDesc] = useState("");
-  const [taskEnvId, setTaskEnvId] = useState("");
-  const [taskPersonaId, setTaskPersonaId] = useState("");
   const [spawnPersonaId, setSpawnPersonaId] = useState("");
 
   /** When a persona is selected in the new_chat form, auto-fill runtime. */
@@ -118,15 +114,6 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
   useEffect(() => {
     if (viewMode.kind === "new_chat") {
       setRuntime(viewMode.runtime);
-    }
-    if (viewMode.kind === "new_task" && viewMode.parentTaskId) {
-      const parentTask = tasks.find((t) => t.id === viewMode.parentTaskId);
-      if (parentTask?.environmentId) {
-        setTaskEnvId(parentTask.environmentId);
-      }
-    }
-    if (viewMode.kind === "new_task" && !viewMode.parentTaskId && environments.length === 1) {
-      setTaskEnvId(environments[0].id);
     }
   }, [viewMode]); // Only re-run when viewMode changes
 
@@ -159,6 +146,11 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
         </span>
       </div>
     );
+  }
+
+  // --- edit_task mode — form is in main panel, bar is hidden ---
+  if (viewMode.kind === "edit_task") {
+    return <></>;
   }
 
   // --- new_environment mode ---
@@ -440,71 +432,9 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
   }
 
   // --- new_task mode ---
+  // The form is rendered in the main panel (TaskEditPanel). The bar is hidden.
   if (viewMode.kind === "new_task") {
-    const handleCreate = (_andStart: boolean): void => {
-      if (!taskTitle.trim()) {
-        return;
-      }
-      createTask(viewMode.projectId, taskTitle.trim(), taskDesc, taskEnvId, undefined, viewMode.parentTaskId, taskPersonaId);
-      showToast("Task created successfully", "success");
-      setTaskTitle("");
-      setTaskDesc("");
-      setTaskEnvId("");
-      setTaskPersonaId("");
-      setViewMode({ kind: "project", projectId: viewMode.projectId });
-    };
-
-    return (
-      <div className={styles.barColumn}>
-        <div className={styles.barRow}>
-          <span className={styles.badge}>
-            {viewMode.parentTaskId ? "child task" : "new task"}
-          </span>
-          <input
-            type="text"
-            value={taskTitle}
-            onChange={(e) => setTaskTitle(e.target.value)}
-            placeholder="Task title..."
-            autoFocus
-            className={styles.input}
-          />
-          <select
-            value={taskEnvId}
-            onChange={(e) => setTaskEnvId(e.target.value)}
-            className={styles.select}
-          >
-            <option value="">Default env</option>
-            {environments.map((env) => (
-              <option key={env.id} value={env.id}>{env.displayName}</option>
-            ))}
-          </select>
-          <select
-            value={taskPersonaId}
-            onChange={(e) => setTaskPersonaId(e.target.value)}
-            className={styles.select}
-          >
-            <option value="">No persona</option>
-            {personas.map((p) => (
-              <option key={p.id} value={p.id}>{p.name}</option>
-            ))}
-          </select>
-          <button
-            onClick={() => handleCreate(false)}
-            disabled={!taskTitle.trim()}
-            className={styles.btnPrimary}
-          >
-            Create
-          </button>
-        </div>
-        <textarea
-          value={taskDesc}
-          onChange={(e) => setTaskDesc(e.target.value)}
-          placeholder="Description (optional)..."
-          className={styles.textarea}
-          rows={3}
-        />
-      </div>
-    );
+    return <></>;
   }
 
   // --- task modes ---
