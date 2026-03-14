@@ -95,6 +95,7 @@ export function updateTask(
   environmentId: string,
   dependsOn: string[],
   reviewNotes: string,
+  personaId: string,
 ): void {
   db.update(tasks)
     .set({
@@ -104,6 +105,7 @@ export function updateTask(
       environmentId,
       dependsOn: JSON.stringify(dependsOn),
       reviewNotes,
+      personaId,
       updatedAt: sql`datetime('now')`,
     })
     .where(eq(tasks.id, id))
