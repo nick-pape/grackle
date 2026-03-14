@@ -2,6 +2,28 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.24.0",
+      "tag": "@grackle-ai/cli_v0.24.0",
+      "date": "Sat, 14 Mar 2026 14:08:18 GMT",
+      "comments": {
+        "none": [
+          {
+            "comment": "No CLI changes — picking up server patch for raw field forwarding in WebSocket events"
+          }
+        ],
+        "patch": [
+          {
+            "comment": "Forward raw field in WebSocket session events so clients can display is_error flag from tool results"
+          }
+        ],
+        "minor": [
+          {
+            "comment": "Show tool results with preview + accordion in stream: success/error indicator, first 5 lines inline, click-to-expand for longer results"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.23.0",
       "tag": "@grackle-ai/cli_v0.23.0",
       "date": "Sat, 14 Mar 2026 13:49:54 GMT",
