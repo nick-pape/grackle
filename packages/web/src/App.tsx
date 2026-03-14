@@ -1,6 +1,7 @@
 import { GrackleProvider } from "./context/GrackleContext.js";
 import { MockGrackleProvider } from "./mocks/MockGrackleProvider.js";
 import { ToastProvider } from "./context/ToastContext.js";
+import { ThemeProvider } from "./context/ThemeContext.js";
 import { StatusBar, Sidebar, UnifiedBar } from "./components/layout/index.js";
 import { SessionPanel } from "./components/panels/index.js";
 import { ToastContainer } from "./components/notifications/index.js";
@@ -69,10 +70,12 @@ function AppContent(): JSX.Element {
 export default function App(): JSX.Element {
   const Provider = IS_MOCK_MODE ? MockGrackleProvider : GrackleProvider;
   return (
-    <ToastProvider>
-      <Provider>
-        <AppContent />
-      </Provider>
-    </ToastProvider>
+    <ThemeProvider>
+      <ToastProvider>
+        <Provider>
+          <AppContent />
+        </Provider>
+      </ToastProvider>
+    </ThemeProvider>
   );
 }

@@ -44,7 +44,7 @@
 // ---------------------------------------------------------------------------
 
 .header {
-  @include glass-panel;
+  @include surface-panel;
   padding: var(--space-sm) var(--space-md);
   border-bottom: 1px solid var(--border-subtle);
   font-size: var(--font-size-sm);
@@ -67,7 +67,6 @@
 
   &:hover {
     background: var(--accent-red-dim);
-    box-shadow: var(--shadow-glow-red);
   }
 }
 
@@ -146,18 +145,16 @@
   border: none;
   color: var(--text-tertiary);
   cursor: pointer;
-  font-family: var(--font-mono);
-  font-size: 11px;
+  font-family: var(--font-ui);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
   border-bottom: 2px solid transparent;
-  transition: all var(--transition-fast),
-              backdrop-filter var(--transition-fast);
+  transition: color var(--transition-fast),
+              background var(--transition-fast);
 
   &:hover {
     color: var(--text-secondary);
     background: var(--bg-overlay);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    box-shadow: inset 0 1px 0 0 var(--glass-highlight);
   }
 
   &.active {
@@ -223,7 +220,8 @@
   padding: var(--space-xs) var(--space-md);
   border-radius: var(--radius-full);
   font-size: var(--font-size-sm);
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
+
   font-weight: var(--font-weight-bold);
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -267,7 +265,7 @@
 
 // Branch pill
 .overviewBranchPill {
-  @include glass-inset;
+  @include surface-inset;
   display: inline-flex;
   align-items: center;
   padding: 2px var(--space-sm);
@@ -324,14 +322,14 @@
   ul, ol { margin: 0 0 var(--space-sm) var(--space-lg); padding: 0; }
   li { margin-bottom: var(--space-xs); }
   code {
-    @include glass-inset;
+    @include surface-inset;
     padding: 1px var(--space-xs);
     font-family: var(--font-mono);
     font-size: 0.9em;
     color: var(--accent-cyan);
   }
   pre {
-    @include glass-inset;
+    @include surface-inset;
     padding: var(--space-sm) var(--space-md);
     overflow: auto;
     margin: var(--space-xs) 0;
@@ -368,9 +366,9 @@
   flex-shrink: 0;
 }
 
-.envDotGreen  { background: var(--accent-green); box-shadow: 0 0 4px var(--accent-green); }
-.envDotYellow { background: var(--accent-yellow); box-shadow: 0 0 4px var(--accent-yellow); }
-.envDotRed    { background: var(--accent-red); box-shadow: 0 0 4px var(--accent-red); }
+.envDotGreen  { background: var(--accent-green); }
+.envDotYellow { background: var(--accent-yellow); }
+.envDotRed    { background: var(--accent-red); }
 .envDotGray   { background: var(--text-disabled); }
 
 // Dependencies
@@ -576,7 +574,7 @@
 // ---------------------------------------------------------------------------
 
 .projectHeader {
-  @include glass-panel;
+  @include surface-panel;
   padding: var(--space-sm) var(--space-md);
   border-bottom: 1px solid var(--border-subtle);
   display: flex;
@@ -691,7 +689,6 @@
 
   &:hover {
     background: var(--accent-red-dim);
-    box-shadow: var(--shadow-glow-red);
   }
 }
 
@@ -757,7 +754,6 @@
   height: 6px;
   border-radius: 50%;
   background: var(--accent-yellow);
-  box-shadow: 0 0 4px var(--accent-yellow);
   flex-shrink: 0;
 }
 

@@ -5,7 +5,7 @@
 // =============================================================================
 
 .container {
-  @include glass-panel;
+  @include surface-panel;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -19,7 +19,6 @@
   font-size: var(--font-size-xl);
   letter-spacing: -0.5px;
   color: var(--text-primary);
-  text-shadow: 0 0 20px rgba(78, 204, 163, 0.3);
 }
 
 .info {
@@ -27,6 +26,7 @@
   gap: var(--space-lg);
   font-size: var(--font-size-sm);
   color: var(--text-secondary);
+  align-items: center;
 }
 
 .connectionDot {

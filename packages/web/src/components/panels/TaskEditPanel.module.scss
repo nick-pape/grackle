@@ -16,7 +16,7 @@
 // ---------------------------------------------------------------------------
 
 .header {
-  @include glass-panel;
+  @include surface-panel;
   padding: var(--space-sm) var(--space-md);
   border-bottom: 1px solid var(--border-subtle);
   display: flex;

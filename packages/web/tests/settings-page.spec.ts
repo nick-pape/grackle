@@ -30,6 +30,32 @@ test.describe("Settings Page", () => {
     ).toBeVisible();
   });
 
+  test("theme selection updates document theme and persists across reload", async ({ appPage }) => {
+    const page = appPage;
+
+    await page.locator('button[title="Settings"]').click();
+    await expect(settingsHeading(page)).toBeVisible({ timeout: 5_000 });
+
+    const lightThemeButton = page.getByRole("button", { name: /Light/i }).first();
+    await lightThemeButton.click();
+
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+    await expect(lightThemeButton).toHaveAttribute("aria-pressed", "true");
+    await expect.poll(async () => {
+      return page.evaluate(() => localStorage.getItem("grackle-theme"));
+    }).toBe("light");
+
+    await page.reload();
+    await page.waitForFunction(
+      () => document.body.innerText.includes("Connected"),
+      { timeout: 10_000 },
+    );
+    await page.locator('button[title="Settings"]').click();
+    await expect(settingsHeading(page)).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+    await expect(page.getByRole("button", { name: /Light/i }).first()).toHaveAttribute("aria-pressed", "true");
+  });
+
   test("add token via settings form", async ({ appPage }) => {
     const page = appPage;
 

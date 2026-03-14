@@ -18,8 +18,8 @@
 }
 
 .card {
-  @include glass-card;
-  @include glass-hover;
+  @include surface-card;
+  @include card-hover;
   padding: var(--space-md);
 }
 
@@ -64,7 +64,7 @@
 
 // Frosted inset chip for tags — third glass tier with category-tinted border
 .tag {
-  @include glass-inset;
+  @include surface-inset;
   font-size: 10px;
   padding: 1px var(--space-xs);
   border-radius: var(--radius-full);
