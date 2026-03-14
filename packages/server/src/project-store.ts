@@ -36,6 +36,14 @@ export function listProjects(): ProjectRow[] {
     .all();
 }
 
+/** Mark a project as archived. */
+export function archiveProject(id: string): void {
+  db.update(projects)
+    .set({ status: "archived", updatedAt: sql`datetime('now')` })
+    .where(eq(projects.id, id))
+    .run();
+}
+
 /** Partial-update fields for a project. Undefined means "no change"; empty string means "clear". */
 export interface UpdateProjectFields {
   name?: string;
@@ -66,12 +74,4 @@ export function updateProject(id: string, fields: UpdateProjectFields): ProjectR
   }
   db.update(projects).set(sets).where(eq(projects.id, id)).run();
   return getProject(id);
-}
-
-/** Mark a project as archived. */
-export function archiveProject(id: string): void {
-  db.update(projects)
-    .set({ status: "archived", updatedAt: sql`datetime('now')` })
-    .where(eq(projects.id, id))
-    .run();
 }

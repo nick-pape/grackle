@@ -609,6 +609,12 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       return projectRowToProto(row);
     },
 
+    async archiveProject(req: grackle.ProjectId) {
+      projectStore.archiveProject(req.id);
+      broadcast({ type: "project_archived", payload: { projectId: req.id } });
+      return create(grackle.EmptySchema, {});
+    },
+
     async updateProject(req: grackle.UpdateProjectRequest) {
       const existing = projectStore.getProject(req.id);
       if (!existing) {
@@ -619,12 +625,6 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       }
       if (req.repoUrl !== undefined && req.repoUrl !== "" && !/^https?:\/\//i.test(req.repoUrl)) {
         throw new Error("Repository URL must use http or https scheme");
-      }
-      if (!existing.useWorktrees && req.useWorktrees === false) {
-        logger.warn(
-          { projectId: req.id },
-          "Worktrees already disabled for project — concurrent agents may conflict in shared working tree.",
-        );
       }
       const row = projectStore.updateProject(req.id, {
         name: req.name !== undefined ? req.name.trim() : undefined,
@@ -638,12 +638,6 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       }
       broadcast({ type: "project_updated", payload: { projectId: req.id } });
       return projectRowToProto(row);
-    },
-
-    async archiveProject(req: grackle.ProjectId) {
-      projectStore.archiveProject(req.id);
-      broadcast({ type: "project_archived", payload: { projectId: req.id } });
-      return create(grackle.EmptySchema, {});
     },
 
     // ─── Tasks ───────────────────────────────────────────────

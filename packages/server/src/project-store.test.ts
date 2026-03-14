@@ -13,20 +13,18 @@ import { sqlite } from "./test-db.js";
 function applySchema(): void {
   sqlite.exec(`
     CREATE TABLE IF NOT EXISTS projects (
-      id            TEXT PRIMARY KEY,
-      name          TEXT NOT NULL,
-      description   TEXT NOT NULL DEFAULT '',
-      repo_url      TEXT NOT NULL DEFAULT '',
-      default_env_id TEXT NOT NULL DEFAULT '',
-      status        TEXT NOT NULL DEFAULT 'active',
-      use_worktrees INTEGER NOT NULL DEFAULT 1,
-      created_at    TEXT NOT NULL DEFAULT (datetime('now')),
-      updated_at    TEXT NOT NULL DEFAULT (datetime('now'))
+      id                TEXT PRIMARY KEY,
+      name              TEXT NOT NULL,
+      description       TEXT NOT NULL DEFAULT '',
+      repo_url          TEXT NOT NULL DEFAULT '',
+      default_env_id    TEXT NOT NULL DEFAULT '',
+      status            TEXT NOT NULL DEFAULT 'active',
+      use_worktrees     INTEGER NOT NULL DEFAULT 1,
+      created_at        TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at        TEXT NOT NULL DEFAULT (datetime('now'))
     );
   `);
 }
-
-// ── Tests ────────────────────────────────────────────────────────
 
 describe("project-store", () => {
   beforeEach(() => {
@@ -136,50 +134,42 @@ describe("project-store", () => {
     expect(result).toBeUndefined();
   });
 
-  // UT-5: createProject() stores useWorktrees and getProject() returns it
-  describe("createProject with useWorktrees", () => {
+  // UT-5: useWorktrees field
+  describe("useWorktrees", () => {
     it("defaults useWorktrees to true when not specified", () => {
-      projectStore.createProject("pw1", "My Project", "desc", "", "");
-      const row = projectStore.getProject("pw1");
-      expect(row).toBeDefined();
-      expect(row!.useWorktrees).toBe(true);
+      projectStore.createProject("p1", "Name", "", "", "");
+      const p = projectStore.getProject("p1");
+      expect(p!.useWorktrees).toBe(true);
     });
 
-    it("stores useWorktrees=true when explicitly set", () => {
-      projectStore.createProject("pw2", "Worktree Project", "desc", "", "", true);
-      const row = projectStore.getProject("pw2");
-      expect(row).toBeDefined();
-      expect(row!.useWorktrees).toBe(true);
+    it("can be explicitly set to true", () => {
+      projectStore.createProject("p1", "Name", "", "", "", true);
+      const p = projectStore.getProject("p1");
+      expect(p!.useWorktrees).toBe(true);
     });
 
-    it("stores useWorktrees=false when explicitly disabled", () => {
-      projectStore.createProject("pw3", "No-Worktree Project", "desc", "", "", false);
-      const row = projectStore.getProject("pw3");
-      expect(row).toBeDefined();
-      expect(row!.useWorktrees).toBe(false);
-    });
-  });
-
-  describe("updateProject with useWorktrees", () => {
-    it("updates useWorktrees from true to false", () => {
-      projectStore.createProject("pw4", "Togglable", "", "", "", true);
-      projectStore.updateProject("pw4", { useWorktrees: false });
-      const row = projectStore.getProject("pw4");
-      expect(row!.useWorktrees).toBe(false);
+    it("can be explicitly set to false", () => {
+      projectStore.createProject("p1", "Name", "", "", "", false);
+      const p = projectStore.getProject("p1");
+      expect(p!.useWorktrees).toBe(false);
     });
 
-    it("updates useWorktrees from false to true", () => {
-      projectStore.createProject("pw5", "Re-enable Worktrees", "", "", "", false);
-      projectStore.updateProject("pw5", { useWorktrees: true });
-      const row = projectStore.getProject("pw5");
-      expect(row!.useWorktrees).toBe(true);
+    it("can be updated from true to false", () => {
+      projectStore.createProject("p1", "Name", "", "", "", true);
+      const updated = projectStore.updateProject("p1", { useWorktrees: false });
+      expect(updated!.useWorktrees).toBe(false);
+    });
+
+    it("can be updated from false to true", () => {
+      projectStore.createProject("p1", "Name", "", "", "", false);
+      const updated = projectStore.updateProject("p1", { useWorktrees: true });
+      expect(updated!.useWorktrees).toBe(true);
     });
 
     it("leaves useWorktrees unchanged when not in patch", () => {
-      projectStore.createProject("pw6", "No Change", "", "", "", false);
-      projectStore.updateProject("pw6", { name: "New Name" }); // no useWorktrees in patch
-      const row = projectStore.getProject("pw6");
-      expect(row!.useWorktrees).toBe(false); // unchanged
+      projectStore.createProject("p1", "Name", "", "", "", false);
+      const updated = projectStore.updateProject("p1", { name: "New Name" });
+      expect(updated!.useWorktrees).toBe(false);
     });
   });
 });

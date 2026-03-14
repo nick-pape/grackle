@@ -773,6 +773,13 @@ async function handleMessage(
       break;
     }
 
+    case "archive_project": {
+      const projectId = msg.payload?.projectId as string;
+      if (projectId) projectStore.archiveProject(projectId);
+      broadcast({ type: "project_archived", payload: { projectId } });
+      break;
+    }
+
     case "update_project": {
       const projectId = msg.payload?.projectId as string;
       if (!projectId) {
@@ -792,26 +799,19 @@ async function handleMessage(
       const descVal = typeof msg.payload?.description === "string" ? msg.payload.description : undefined;
       const repoVal = typeof msg.payload?.repoUrl === "string" ? msg.payload.repoUrl : undefined;
       const envVal = typeof msg.payload?.defaultEnvironmentId === "string" ? msg.payload.defaultEnvironmentId : undefined;
-      const useWorktreesVal = typeof msg.payload?.useWorktrees === "boolean" ? (msg.payload.useWorktrees as boolean) : undefined;
       if (repoVal !== undefined && repoVal !== "" && !/^https?:\/\//i.test(repoVal)) {
         sendWs(ws, { type: "error", payload: { message: "Repository URL must use http or https scheme" } });
         return;
       }
-      const updatedProject = projectStore.updateProject(projectId, {
+      const worktreesVal = typeof msg.payload?.useWorktrees === "boolean" ? msg.payload.useWorktrees as boolean : undefined;
+      projectStore.updateProject(projectId, {
         name: nameVal !== undefined ? nameVal.trim() : undefined,
         description: descVal,
         repoUrl: repoVal,
         defaultEnvironmentId: envVal,
-        useWorktrees: useWorktreesVal,
+        useWorktrees: worktreesVal,
       });
-      broadcast({ type: "project_updated", payload: { projectId, project: updatedProject } });
-      break;
-    }
-
-    case "archive_project": {
-      const archiveProjectId = msg.payload?.projectId as string;
-      if (archiveProjectId) projectStore.archiveProject(archiveProjectId);
-      broadcast({ type: "project_archived", payload: { projectId: archiveProjectId } });
+      broadcast({ type: "project_updated", payload: { projectId } });
       break;
     }
 
@@ -1065,21 +1065,15 @@ async function handleMessage(
             ),
           ]
         : safeParseJsonArray(existingTask.dependsOn);
-      const updatedEnvironmentId = typeof msg.payload?.environmentId === "string"
-        ? msg.payload.environmentId
-        : existingTask.environmentId;
-      const updatedPersonaId = typeof msg.payload?.personaId === "string"
-        ? msg.payload.personaId
-        : existingTask.personaId;
       taskStore.updateTask(
         updateTaskId,
         updatedTitle,
         updatedDescription,
         existingTask.status,
-        updatedEnvironmentId,
+        existingTask.environmentId,
         updatedDependsOn,
         existingTask.reviewNotes,
-        updatedPersonaId,
+        existingTask.personaId,
       );
       const updatedRow = taskStore.getTask(updateTaskId);
       broadcast({
