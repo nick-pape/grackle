@@ -1047,7 +1047,14 @@ async function handleMessage(
         ? msg.payload.description
         : existingTask.description;
       const updatedDependsOn = Array.isArray(msg.payload?.dependsOn)
-        ? (msg.payload.dependsOn as string[])
+        ? [
+            // Normalise: keep only non-empty strings, remove self-references and duplicates.
+            ...new Set(
+              (msg.payload.dependsOn as unknown[])
+                .filter((d): d is string => typeof d === "string" && d.trim() !== "")
+                .filter((d) => d !== updateTaskId),
+            ),
+          ]
         : safeParseJsonArray(existingTask.dependsOn);
       taskStore.updateTask(
         updateTaskId,
