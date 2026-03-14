@@ -142,6 +142,7 @@ export function TaskEditPanel({ viewMode, setViewMode }: Props): JSX.Element {
 
       {/* Form body */}
       <div className={styles.body}>
+      <div className={styles.formContent}>
         {/* Title */}
         <div className={styles.section}>
           <label className={styles.label} htmlFor="task-edit-title">
@@ -231,6 +232,7 @@ export function TaskEditPanel({ viewMode, setViewMode }: Props): JSX.Element {
             </div>
           )}
         </div>
+      </div>
       </div>
     </div>
   );
