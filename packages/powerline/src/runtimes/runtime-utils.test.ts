@@ -9,8 +9,13 @@ vi.mock("node:fs", () => ({
   readFileSync: vi.fn(() => "{}"),
   readdirSync: vi.fn(() => []),
 }));
+// execFile uses the Node.js callback pattern; promisify will append the callback
+// as the last argument when called via execFileAsync.
 vi.mock("node:child_process", () => ({
   execFileSync: vi.fn(() => { throw new Error("not a git repo"); }),
+  execFile: vi.fn((_cmd: string, _args: string[], _opts: unknown, cb: (err: Error | null, result: { stdout: string; stderr: string }) => void) => {
+    cb(null, { stdout: "", stderr: "" });
+  }),
 }));
 vi.mock("../worktree.js", () => ({
   ensureWorktree: vi.fn(),
@@ -20,7 +25,7 @@ import { buildFindingEvent, buildSubtaskCreateEvent, resolveWorkingDirectory, fi
 import { AsyncQueue } from "../utils/async-queue.js";
 import type { AgentEvent } from "./runtime.js";
 import { existsSync, readdirSync } from "node:fs";
-import { execFileSync } from "node:child_process";
+import { execFileSync, execFile } from "node:child_process";
 import { ensureWorktree } from "../worktree.js";
 
 describe("GRACKLE_MCP_SCRIPT", () => {
@@ -304,6 +309,117 @@ describe("resolveWorkingDirectory", () => {
 
     expect(result).toBe("/workspace");
     expect(readdirSync).not.toHaveBeenCalled();
+    queue.close();
+  });
+
+  // UT-1: branch provided but no worktreeBasePath — worktrees disabled
+  it("checks out branch in main working tree when branch is set but worktreeBasePath is empty", async () => {
+    // findGitRepoPath should find /workspace
+    vi.mocked(existsSync).mockImplementation((p) => String(p) === "/workspace");
+    vi.mocked(execFileSync).mockImplementation((_cmd, args, opts) => {
+      if ((opts as { cwd: string }).cwd === "/workspace") {
+        if (Array.isArray(args) && args.includes("--show-toplevel")) {
+          return "/workspace\n";
+        }
+        return Buffer.from(".git\n");
+      }
+      throw new Error("not a git repo");
+    });
+    // execFile (used by checkoutBranchInPlace) succeeds by default from mock
+    const queue = new AsyncQueue<AgentEvent>();
+
+    const result = await resolveWorkingDirectory({
+      branch: "feature/my-branch",
+      worktreeBasePath: "",
+      eventQueue: queue,
+    });
+
+    expect(result).toBe("/workspace");
+    const event = await queue.shift();
+    expect(event?.type).toBe("system");
+    expect(event?.content).toContain("Checked out branch");
+    expect(event?.content).toContain("feature/my-branch");
+    // Verify ensureWorktree was NOT called (worktrees disabled path)
+    expect(ensureWorktree).not.toHaveBeenCalled();
+    queue.close();
+  });
+
+  it("falls back to workspace when branch checkout fails and worktreeBasePath is empty", async () => {
+    vi.mocked(existsSync).mockImplementation((p) => String(p) === "/workspace");
+    vi.mocked(execFileSync).mockImplementation((_cmd, args, opts) => {
+      if ((opts as { cwd: string }).cwd === "/workspace") {
+        if (Array.isArray(args) && args.includes("--show-toplevel")) {
+          return "/workspace\n";
+        }
+        return Buffer.from(".git\n");
+      }
+      throw new Error("not a git repo");
+    });
+    // Make execFile fail (checkout fails)
+    vi.mocked(execFile).mockImplementation(
+      (_cmd: string, _args: string[], _opts: unknown, cb: (err: Error | null) => void) => {
+        cb(new Error("checkout failed"));
+      },
+    );
+    const queue = new AsyncQueue<AgentEvent>();
+
+    const result = await resolveWorkingDirectory({
+      branch: "feature/bad-branch",
+      worktreeBasePath: "",
+      eventQueue: queue,
+    });
+
+    // Falls back to /workspace since no worktree path is returned
+    expect(result).toBe("/workspace");
+    const event = await queue.shift();
+    expect(event?.type).toBe("system");
+    expect(event?.content).toContain("Branch checkout failed");
+    queue.close();
+  });
+
+  it("returns undefined when branch checkout fails and no workspace exists (worktreeBasePath empty)", async () => {
+    vi.mocked(existsSync).mockReturnValue(false);
+    vi.mocked(execFile).mockImplementation(
+      (_cmd: string, _args: string[], _opts: unknown, cb: (err: Error | null) => void) => {
+        cb(new Error("checkout failed"));
+      },
+    );
+    const queue = new AsyncQueue<AgentEvent>();
+
+    const result = await resolveWorkingDirectory({
+      branch: "feature/bad-branch",
+      worktreeBasePath: "",
+      eventQueue: queue,
+    });
+
+    expect(result).toBeUndefined();
+    queue.close();
+  });
+
+  // UT-2 (existing behavior preserved): branch and worktreeBasePath both set → creates worktree
+  it("creates worktree when both branch and worktreeBasePath are set (existing behavior preserved)", async () => {
+    vi.mocked(existsSync).mockImplementation((p) => String(p) === "/repo");
+    vi.mocked(execFileSync).mockImplementation((_cmd, args) => {
+      if (Array.isArray(args) && args.includes("--show-toplevel")) {
+        return "/repo\n";
+      }
+      return Buffer.from(".git\n");
+    });
+    vi.mocked(ensureWorktree).mockResolvedValue({
+      worktreePath: "/worktrees/my-branch",
+      branch: "my-branch",
+      created: true,
+    });
+    const queue = new AsyncQueue<AgentEvent>();
+
+    const result = await resolveWorkingDirectory({
+      branch: "my-branch",
+      worktreeBasePath: "/repo",
+      eventQueue: queue,
+    });
+
+    expect(result).toBe("/worktrees/my-branch");
+    expect(ensureWorktree).toHaveBeenCalled();
     queue.close();
   });
 });

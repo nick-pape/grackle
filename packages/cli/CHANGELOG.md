@@ -1,6 +1,32 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sat, 14 Mar 2026 08:13:46 GMT and should not be manually modified.
+This log was last generated on Sat, 14 Mar 2026 14:08:18 GMT and should not be manually modified.
+
+## 0.24.0
+Sat, 14 Mar 2026 14:08:18 GMT
+
+### Minor changes
+
+- Show tool results with preview + accordion in stream: success/error indicator, first 5 lines inline, click-to-expand for longer results
+
+### Patches
+
+- Forward raw field in WebSocket session events so clients can display is_error flag from tool results
+
+### Updates
+
+- No CLI changes — picking up server patch for raw field forwarding in WebSocket events
+
+## 0.23.0
+Sat, 14 Mar 2026 13:49:54 GMT
+
+### Minor changes
+
+- Add configurable worktree isolation per project: --no-worktrees flag for project create/update, project list shows worktree status
+
+### Updates
+
+- Fix Copilot task stop action failing with internal error
 
 ## 0.22.0
 Sat, 14 Mar 2026 08:13:46 GMT

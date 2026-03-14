@@ -181,6 +181,7 @@ message Project {
   ProjectStatus status = 6;
   string created_at = 7;
   string updated_at = 8;
+  bool use_worktrees = 9; // When false, agents work in the main checkout (no worktree dirs created)
 }
 
 message ProjectList {
@@ -192,6 +193,7 @@ message CreateProjectRequest {
   string description = 2;
   string repo_url = 3;
   string default_environment_id = 4;
+  optional bool use_worktrees = 5; // Default true when omitted
 }
 
 message UpdateProjectRequest {
@@ -200,6 +202,7 @@ message UpdateProjectRequest {
   optional string description = 3;
   optional string repo_url = 4;
   optional string default_environment_id = 5;
+  optional bool use_worktrees = 6; // When false, disables worktree isolation for this project
 }
 
 message ProjectId {

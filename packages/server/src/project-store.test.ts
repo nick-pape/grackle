@@ -19,6 +19,7 @@ function applySchema(): void {
       repo_url          TEXT NOT NULL DEFAULT '',
       default_env_id    TEXT NOT NULL DEFAULT '',
       status            TEXT NOT NULL DEFAULT 'active',
+      use_worktrees     INTEGER NOT NULL DEFAULT 1,
       created_at        TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at        TEXT NOT NULL DEFAULT (datetime('now'))
     );
@@ -131,5 +132,44 @@ describe("project-store", () => {
     const result = projectStore.updateProject("nope", { name: "Doesn't exist" });
     // The function calls getProject which returns undefined for non-existent IDs
     expect(result).toBeUndefined();
+  });
+
+  // UT-5: useWorktrees field
+  describe("useWorktrees", () => {
+    it("defaults useWorktrees to true when not specified", () => {
+      projectStore.createProject("p1", "Name", "", "", "");
+      const p = projectStore.getProject("p1");
+      expect(p!.useWorktrees).toBe(true);
+    });
+
+    it("can be explicitly set to true", () => {
+      projectStore.createProject("p1", "Name", "", "", "", true);
+      const p = projectStore.getProject("p1");
+      expect(p!.useWorktrees).toBe(true);
+    });
+
+    it("can be explicitly set to false", () => {
+      projectStore.createProject("p1", "Name", "", "", "", false);
+      const p = projectStore.getProject("p1");
+      expect(p!.useWorktrees).toBe(false);
+    });
+
+    it("can be updated from true to false", () => {
+      projectStore.createProject("p1", "Name", "", "", "", true);
+      const updated = projectStore.updateProject("p1", { useWorktrees: false });
+      expect(updated!.useWorktrees).toBe(false);
+    });
+
+    it("can be updated from false to true", () => {
+      projectStore.createProject("p1", "Name", "", "", "", false);
+      const updated = projectStore.updateProject("p1", { useWorktrees: true });
+      expect(updated!.useWorktrees).toBe(true);
+    });
+
+    it("leaves useWorktrees unchanged when not in patch", () => {
+      projectStore.createProject("p1", "Name", "", "", "", false);
+      const updated = projectStore.updateProject("p1", { name: "New Name" });
+      expect(updated!.useWorktrees).toBe(false);
+    });
   });
 });

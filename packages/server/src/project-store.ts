@@ -5,13 +5,21 @@ import { eq, desc, sql } from "drizzle-orm";
 export type { ProjectRow };
 
 /** Insert a new project record. */
-export function createProject(id: string, name: string, description: string, repoUrl: string, defaultEnvironmentId: string): void {
+export function createProject(
+  id: string,
+  name: string,
+  description: string,
+  repoUrl: string,
+  defaultEnvironmentId: string,
+  useWorktrees: boolean = true,
+): void {
   db.insert(projects).values({
     id,
     name,
     description,
     repoUrl,
     defaultEnvironmentId,
+    useWorktrees,
   }).run();
 }
 
@@ -42,6 +50,8 @@ export interface UpdateProjectFields {
   description?: string;
   repoUrl?: string;
   defaultEnvironmentId?: string;
+  /** When false, agents work directly in the main checkout instead of creating a worktree. */
+  useWorktrees?: boolean;
 }
 
 /** Update one or more fields on an existing project. Returns the updated row, or undefined if not found. */
@@ -58,6 +68,9 @@ export function updateProject(id: string, fields: UpdateProjectFields): ProjectR
   }
   if (fields.defaultEnvironmentId !== undefined) {
     sets.defaultEnvironmentId = fields.defaultEnvironmentId;
+  }
+  if (fields.useWorktrees !== undefined) {
+    sets.useWorktrees = fields.useWorktrees;
   }
   db.update(projects).set(sets).where(eq(projects.id, id)).run();
   return getProject(id);

@@ -1,8 +1,15 @@
 # 🐦‍⬛ Grackle
 
-**Orchestrate AI coding agents across any environment, with any runtime, at any scale.**
+> [!WARNING]
+> Grackle is pre-1.0 and still experimental. It may have unresolved security issues, annoying bugs, and broken workflows. Not recommended for use in production systems.
 
-Grackle is a multi-agent coordination platform. Break a project into tasks, dispatch each to an agent running in its own isolated environment, and watch them work in real time. Share knowledge between agents through findings, review task output at each step, and scale from one agent to a swarm — without rewriting your setup.
+**Run any AI coding agent on any remote environment. Orchestration optional.**
+
+You're running Claude Code on a devbox. Or Codex in a container. Or Copilot over SSH. You wrote a janky script to set it up, it breaks every week, and you can't share it with your team.
+
+Grackle gives you a single platform to run any coding agent on any environment — Docker, SSH, Codespaces, whatever. It handles provisioning, credentials, transport, and lifecycle. You get a CLI, web UI, and MCP server out of the box.
+
+Want agents to share knowledge? There's a findings system. Want one agent to spawn others? There's an MCP for that. Want task trees with dependencies and review gates? Same primitives. But you don't have to use any of that. **Start with one session on one box.**
 
 ![Dashboard — projects, tasks, and live agent output](docs/screenshots/dashboard-projects-tasks.png)
 
@@ -14,15 +21,19 @@ Docker, local, SSH, and GitHub Codespaces — it shouldn't matter where an agent
 
 ### 🔄 Runtime agnostic by design
 
-The agent loop landscape is wildly unstable. Claude Code, Copilot, Codex, Goose [⭐#29](https://github.com/nick-pape/grackle/issues/29) — whatever ships next month. Grackle wraps them all behind a standard interface so you can swap runtimes without changing your workflow. Your orchestration layer shouldn't be coupled to whichever vendor is winning this quarter.
+The agent loop landscape is wildly unstable. Claude Code, Copilot, Codex, Goose [⭐#29](https://github.com/nick-pape/grackle/issues/29) — whatever ships next month. Grackle wraps them all behind a standard interface so you can swap runtimes without changing your workflow. Your tooling shouldn't be coupled to whichever vendor is winning this quarter.
+
+### 🧰 Primitives, not opinions
+
+Grackle doesn't tell you how to orchestrate your agents. It gives you the building blocks — sessions, tasks, findings, personas, an MCP control plane — and lets you compose them however you want. A single remote REPL session uses one primitive. A supervised swarm uses all of them. Same platform, same CLI, same MCP.
 
 ### 📈 Scales from remote control to swarms
 
-Most tools force a choice: run one agent manually, or build a bespoke swarm framework from scratch. Grackle covers the whole spectrum. No other tool gives you this gradient — start simple, scale up.
+Most tools force a choice: run one agent manually, or build a bespoke swarm framework from scratch. Grackle covers the whole spectrum — start simple, scale up.
 
 #### 🎮 Remote Control
 
-Manage a single agent in a remote environment.
+Manage a single agent in a remote environment. No task tree, no orchestration. Just a session.
 
 ```mermaid
 graph LR
@@ -92,7 +103,8 @@ Agents don't just run in parallel — they share knowledge. One agent's architec
 graph TD
     UI["🌐 Web UI"]
     CLI["⌨️ CLI"]
-    UI & CLI --- S["⚡ Grackle Server"]
+    MCP["🔌 MCP Server"]
+    UI & CLI & MCP --- S["⚡ Grackle Server"]
 
     subgraph D1["🐳 Docker"]
         D1A["🤖 Claude"] & D1B["🤖 Claude"] & D1C["🤖 Copilot"] & D1D["..."]
@@ -127,6 +139,7 @@ graph TD
 | 🎭 | **Agent personas** | Specialized agents with focused system prompts, configurable runtime/model, and tool allowlists [⭐#11](https://github.com/nick-pape/grackle/issues/11) |
 | 🔁 | **Session history** | Every task tracks its full session history — retry failed runs and compare attempts side by side |
 | ✅ | **Task review & approval** | Approve or reject completed tasks, with review notes for rejections that feed back into the next attempt |
+| 🔌 | **MCP server** | Expose Grackle's capabilities as MCP tools — any Claude session with the MCP connected can create tasks, spawn sessions, read findings, and orchestrate work |
 | 🧠 | **Knowledge graph** [⭐#13](https://github.com/nick-pape/grackle/issues/13) | Structured knowledge sharing across agents — beyond flat findings |
 
 ## 🌍 Environments
