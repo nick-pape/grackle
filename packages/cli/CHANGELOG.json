@@ -2,6 +2,35 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.22.0",
+      "tag": "@grackle-ai/cli_v0.22.0",
+      "date": "Sat, 14 Mar 2026 08:13:46 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Allow editing persona and environment on pending tasks"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.21.0",
+      "tag": "@grackle-ai/cli_v0.21.0",
+      "date": "Sat, 14 Mar 2026 08:04:11 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Re-push stored tokens and Claude credentials before each task start to prevent stale OAuth token failures"
+          }
+        ],
+        "minor": [
+          {
+            "comment": "Map full CLI tool surface to 35 MCP tools, add send-input/project get/update CLI commands, remove GetTaskDiff RPC"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.20.0",
       "tag": "@grackle-ai/cli_v0.20.0",
       "date": "Sat, 14 Mar 2026 07:25:55 GMT",
