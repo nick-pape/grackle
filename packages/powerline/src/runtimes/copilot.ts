@@ -142,7 +142,7 @@ export function buildSubtaskCreateTool(defineTool: (name: string, opts: Record<s
 // ─── Session ───────────────────────────────────────────────
 
 /** An in-progress Copilot agent session that streams events via the Copilot SDK. */
-class CopilotSession extends BaseAgentSession {
+export class CopilotSession extends BaseAgentSession {
   public runtimeName: string = "copilot";
   protected readonly runtimeDisplayName: string = "Copilot";
   protected readonly noMessagesError: string =
@@ -379,7 +379,15 @@ class CopilotSession extends BaseAgentSession {
 
   protected abortActive(): void {
     if (this.copilotSession) {
-      this.copilotSession.abort().catch(() => {});
+      try {
+        // abort() may be synchronous (returning void) or asynchronous (returning a Promise).
+        // Wrapping in Promise.resolve() handles both cases safely: if abort() returns void,
+        // Promise.resolve(undefined) is a no-op resolved promise; if it returns a rejected
+        // promise, the .catch() suppresses the error on a best-effort basis.
+        Promise.resolve(this.copilotSession.abort() as Promise<void> | void).catch(() => {});
+      } catch {
+        // Suppress synchronous throws from abort() so kill() always completes cleanly.
+      }
     }
   }
 

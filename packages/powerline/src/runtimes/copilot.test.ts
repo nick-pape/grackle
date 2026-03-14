@@ -9,7 +9,7 @@ vi.mock("node:fs", () => ({
   readFileSync: vi.fn(() => "{}"),
 }));
 
-import { resolveGithubToken, resolveProviderConfig, buildFindingTool, buildSubtaskCreateTool, CopilotRuntime } from "./copilot.js";
+import { resolveGithubToken, resolveProviderConfig, buildFindingTool, buildSubtaskCreateTool, CopilotRuntime, CopilotSession } from "./copilot.js";
 import { AsyncQueue } from "../utils/async-queue.js";
 import type { AgentEvent } from "./runtime.js";
 
@@ -233,5 +233,131 @@ describe("CopilotRuntime structural", () => {
     });
     expect(session.id).toBe("cop-resume");
     expect(session.runtimeSessionId).toBe("prev-123");
+  });
+});
+
+// ─── Kill path tests (UT-1 through UT-4) ────────────────────────────────────
+
+/**
+ * Helper to inject a mock Copilot SDK session into a CopilotSession instance
+ * without going through the full SDK setup. We access the private field via
+ * type-cast so the test stays self-contained and does not require starting the
+ * Copilot CLI process.
+ */
+function injectMockCopilotSession(
+  session: CopilotSession,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  mockSdkSession: Record<string, any>,
+): void {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (session as any).copilotSession = mockSdkSession;
+}
+
+describe("CopilotSession.kill — abort path (UT-1 through UT-4)", () => {
+  /**
+   * UT-1: kill() succeeds when the Copilot SDK abort() is synchronous (returns void).
+   *
+   * The original bug: abort() returning void caused `.catch()` to throw a TypeError,
+   * which propagated out of kill() and surfaced as [internal] internal error.
+   */
+  it("UT-1: kill() does not throw when abort() is synchronous (returns void)", () => {
+    const session = new CopilotSession("s1", "prompt", "model", 0);
+    const mockSdkSession = {
+      abort: vi.fn(() => { /* synchronous, returns undefined (void) */ }),
+      destroy: vi.fn(() => Promise.resolve()),
+    };
+    injectMockCopilotSession(session, mockSdkSession);
+
+    // Must not throw — this was the bug: abort() returned void and .catch() exploded
+    expect(() => session.kill()).not.toThrow();
+    expect(mockSdkSession.abort).toHaveBeenCalledOnce();
+  });
+
+  /**
+   * UT-2: kill() succeeds when the Copilot SDK abort() returns a Promise.
+   */
+  it("UT-2: kill() does not throw when abort() returns a resolved Promise", async () => {
+    const session = new CopilotSession("s2", "prompt", "model", 0);
+    const mockSdkSession = {
+      abort: vi.fn(() => Promise.resolve()),
+      destroy: vi.fn(() => Promise.resolve()),
+    };
+    injectMockCopilotSession(session, mockSdkSession);
+
+    expect(() => session.kill()).not.toThrow();
+    expect(mockSdkSession.abort).toHaveBeenCalledOnce();
+    // Let microtasks drain so the .catch() handler runs without unhandled rejection
+    await Promise.resolve();
+  });
+
+  /**
+   * UT-3: kill() still completes (and cleanup still runs) when abort() throws
+   * synchronously or returns a rejected Promise — no uncaught exception surfaces.
+   */
+  it("UT-3: kill() completes and cleanup runs even when abort() throws synchronously", () => {
+    const session = new CopilotSession("s3", "prompt", "model", 0);
+    const destroyFn = vi.fn(() => Promise.resolve());
+    const mockSdkSession = {
+      abort: vi.fn(() => { throw new Error("SDK exploded"); }),
+      destroy: destroyFn,
+    };
+    injectMockCopilotSession(session, mockSdkSession);
+
+    expect(() => session.kill()).not.toThrow();
+    // Status must still be killed even though abort() threw
+    expect(session.status).toBe("killed");
+  });
+
+  it("UT-3b: kill() completes and cleanup runs even when abort() returns a rejected Promise", async () => {
+    const session = new CopilotSession("s3b", "prompt", "model", 0);
+    const mockSdkSession = {
+      abort: vi.fn(() => Promise.reject(new Error("async abort failure"))),
+      destroy: vi.fn(() => Promise.resolve()),
+    };
+    injectMockCopilotSession(session, mockSdkSession);
+
+    expect(() => session.kill()).not.toThrow();
+    expect(session.status).toBe("killed");
+    // Drain microtasks — the rejection must be swallowed, not unhandled
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+
+  /**
+   * UT-4: After kill(), session status is "killed" and the event queue is closed
+   * (iterating it should complete immediately without hanging).
+   */
+  it("UT-4: session status is 'killed' and event queue closes after kill()", async () => {
+    const session = new CopilotSession("s4", "prompt", "model", 0);
+    const mockSdkSession = {
+      abort: vi.fn(() => Promise.resolve()),
+      destroy: vi.fn(() => Promise.resolve()),
+    };
+    injectMockCopilotSession(session, mockSdkSession);
+
+    session.kill();
+
+    expect(session.status).toBe("killed");
+
+    // The event queue must be closed — draining it should not hang.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const queue = (session as any).eventQueue;
+    const collected: unknown[] = [];
+    for await (const item of queue) {
+      collected.push(item);
+    }
+    // Queue closed cleanly; nothing to assert on items (may be empty)
+    expect(session.status).toBe("killed");
+  });
+
+  /**
+   * UT-1 variant: kill() on a session where copilotSession has not yet been
+   * set (SDK setup not started) must also be a no-op success.
+   */
+  it("kill() is safe when copilotSession has not been set yet", () => {
+    const session = new CopilotSession("s5", "prompt", "model", 0);
+    // Do NOT inject a mock — copilotSession is undefined
+    expect(() => session.kill()).not.toThrow();
+    expect(session.status).toBe("killed");
   });
 });
