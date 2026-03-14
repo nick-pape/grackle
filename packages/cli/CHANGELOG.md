@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sat, 14 Mar 2026 21:14:30 GMT and should not be manually modified.
+This log was last generated on Sat, 14 Mar 2026 21:33:40 GMT and should not be manually modified.
+
+## 0.25.0
+Sat, 14 Mar 2026 21:33:40 GMT
+
+### Minor changes
+
+- feat: late-bind session to task — add --session flag to task update, processor registry for mutable event context, and pre-association event replay
 
 ## 0.24.1
 Sat, 14 Mar 2026 21:14:30 GMT

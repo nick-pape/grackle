@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.25.0",
+      "tag": "@grackle-ai/cli_v0.25.0",
+      "date": "Sat, 14 Mar 2026 21:33:40 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "feat: late-bind session to task — add --session flag to task update, processor registry for mutable event context, and pre-association event replay"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.24.1",
       "tag": "@grackle-ai/cli_v0.24.1",
       "date": "Sat, 14 Mar 2026 21:14:30 GMT",
