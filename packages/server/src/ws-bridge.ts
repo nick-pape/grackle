@@ -384,7 +384,7 @@ async function startTaskSession(
         const sess = sessionStore.getSession(sessionId);
         if (sess?.status === "completed") {
           taskStore.markTaskCompleted(freshTask.id, "review");
-        } else if (sess?.status === "failed") {
+        } else if (sess?.status === "failed" || sess?.status === "killed") {
           taskStore.markTaskCompleted(freshTask.id, "failed");
         }
         broadcast({
@@ -684,22 +684,32 @@ async function handleMessage(
 
       const session = sessionStore.getSession(sessionId);
       if (!session) {
+        logger.warn({ sessionId }, "Kill requested for unknown session");
         return;
       }
 
       const conn = adapterManager.getConnection(session.environmentId);
+      logger.info(
+        { sessionId, environmentId: session.environmentId, hasConnection: !!conn, sessionStatus: session.status },
+        "Processing kill request",
+      );
       if (conn) {
         try {
           await conn.client.kill(
             create(powerline.SessionIdSchema, { id: sessionId }),
           );
+          logger.info({ sessionId }, "PowerLine kill RPC succeeded");
         } catch (err) {
-          sendWs(ws, {
-            type: "error",
-            payload: { message: `Kill failed: ${err}` },
-          });
-          return;
+          // Best-effort: the PowerLine process may be unreachable or crashed.
+          // Log the error but continue to mark the session as killed so the
+          // UI does not get stuck with an unkillable session.
+          logger.warn(
+            { err, sessionId, environmentId: session.environmentId, errorName: (err as Error)?.name, errorMessage: (err as Error)?.message },
+            "PowerLine kill RPC failed, marking session killed anyway",
+          );
         }
+      } else {
+        logger.warn({ sessionId, environmentId: session.environmentId }, "No PowerLine connection for environment, marking session killed");
       }
       sessionStore.updateSession(sessionId, "killed");
       streamHub.publish(
@@ -711,6 +721,19 @@ async function handleMessage(
           raw: "",
         }),
       );
+
+      // Update the associated task so the UI reflects the kill and dependent tasks can proceed.
+      if (session.taskId) {
+        const t = taskStore.getTask(session.taskId);
+        if (t && (t.status === "in_progress" || t.status === "waiting_input")) {
+          taskStore.markTaskCompleted(session.taskId, "failed");
+          broadcast({
+            type: "task_updated",
+            payload: { taskId: session.taskId, projectId: t.projectId },
+          });
+          logger.info({ sessionId, taskId: session.taskId, projectId: t.projectId }, "Task marked failed after session kill");
+        }
+      }
       break;
     }
 
@@ -1127,6 +1150,18 @@ async function handleMessage(
       taskStore.markTaskCompleted(taskId, "done");
       const task = taskStore.getTask(taskId);
       const unblocked = task ? taskStore.checkAndUnblock(task.projectId) : [];
+
+      // Auto-start unblocked tasks
+      for (const unblockedTask of unblocked) {
+        logger.info({ taskId: unblockedTask.id, projectId: unblockedTask.projectId }, "Auto-starting unblocked task");
+        const err = await startTaskSession(ws, unblockedTask, {
+          personaId: unblockedTask.personaId || undefined,
+        });
+        if (err) {
+          logger.warn({ taskId: unblockedTask.id, err }, "Failed to auto-start unblocked task");
+        }
+      }
+
       sendWs(ws, {
         type: "task_approved",
         payload: {

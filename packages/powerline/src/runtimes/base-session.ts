@@ -201,10 +201,20 @@ export abstract class BaseAgentSession implements AgentSession {
 
   /** Forcefully terminate the session. */
   public kill(): void {
+    logger.info({ sessionId: this.id, runtime: this.runtimeName, previousStatus: this.status }, `${this.runtimeDisplayName} session kill started`);
     this.killed = true;
     this.status = "killed";
-    this.abortActive();
-    this.releaseResources();
+    try {
+      this.abortActive();
+    } catch (err) {
+      logger.error({ err, sessionId: this.id, errorMessage: String(err) }, `Error during abortActive in ${this.runtimeDisplayName} session`);
+    }
+    try {
+      this.releaseResources();
+    } catch (err) {
+      logger.error({ err, sessionId: this.id, errorMessage: String(err) }, `Error during releaseResources in ${this.runtimeDisplayName} session`);
+    }
     this.eventQueue.close();
+    logger.info({ sessionId: this.id }, `${this.runtimeDisplayName} session kill finished`);
   }
 }

@@ -11,6 +11,7 @@ import {
 import { writeTokens } from "./token-writer.js";
 import { removeWorktree } from "./worktree.js";
 import { findGitRepoPath } from "./runtimes/runtime-utils.js";
+import { logger } from "./logger.js";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import os from "node:os";
@@ -116,9 +117,22 @@ export function registerPowerLineRoutes(router: ConnectRouter): void {
     async kill(req: powerline.SessionId) {
       const session = getSession(req.id);
       if (!session) {
+        logger.warn({ sessionId: req.id }, "Kill requested for unknown session in PowerLine");
         throw new Error(`Session not found: ${req.id}`);
       }
-      session.kill();
+      logger.info(
+        { sessionId: req.id, runtimeName: session.runtimeName, status: session.status },
+        "PowerLine processing kill request",
+      );
+      try {
+        session.kill();
+        logger.info({ sessionId: req.id }, "Session kill completed successfully");
+      } catch (err) {
+        logger.error(
+          { err, sessionId: req.id, runtimeName: session.runtimeName, errorMessage: String(err) },
+          "Error during session kill in PowerLine",
+        );
+      }
       return create(powerline.EmptySchema, {});
     },
 

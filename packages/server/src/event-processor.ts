@@ -195,6 +195,13 @@ export function processEventStream(
             sessionStore.updateSession(sessionId, "failed");
           } else if (event.content === "killed") {
             sessionStore.updateSession(sessionId, "killed");
+            if (taskId) {
+              const t = taskStore.getTask(taskId);
+              if (t && (t.status === "in_progress" || t.status === "waiting_input")) {
+                taskStore.markTaskCompleted(taskId, "failed");
+                broadcast({ type: "task_updated", payload: { taskId, projectId } });
+              }
+            }
           }
         }
       }

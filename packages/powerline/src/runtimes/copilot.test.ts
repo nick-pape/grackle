@@ -235,3 +235,72 @@ describe("CopilotRuntime structural", () => {
     expect(session.runtimeSessionId).toBe("prev-123");
   });
 });
+
+describe("CopilotSession kill", () => {
+  /** Helper: create a session and inject a mock copilotSession on the private field. */
+  function createSessionWithMockCopilot(mockCopilot: Record<string, unknown>): ReturnType<CopilotRuntime["spawn"]> {
+    const runtime = new CopilotRuntime();
+    const session = runtime.spawn({ sessionId: "kill-test", prompt: "test", model: "gpt-4", maxTurns: 5 });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (session as any).copilotSession = mockCopilot;
+    return session;
+  }
+
+  it("succeeds when abort() returns void (synchronous)", () => {
+    const session = createSessionWithMockCopilot({
+      abort: vi.fn(() => undefined),
+      destroy: vi.fn(),
+    });
+
+    expect(() => session.kill()).not.toThrow();
+    expect(session.status).toBe("killed");
+  });
+
+  it("succeeds when abort() returns a resolved promise", () => {
+    const session = createSessionWithMockCopilot({
+      abort: vi.fn(() => Promise.resolve()),
+      destroy: vi.fn(),
+    });
+
+    expect(() => session.kill()).not.toThrow();
+    expect(session.status).toBe("killed");
+  });
+
+  it("succeeds when abort() returns a rejected promise", () => {
+    const session = createSessionWithMockCopilot({
+      abort: vi.fn(() => Promise.reject(new Error("SDK abort failed"))),
+      destroy: vi.fn(),
+    });
+
+    expect(() => session.kill()).not.toThrow();
+    expect(session.status).toBe("killed");
+  });
+
+  it("succeeds when abort() throws synchronously", () => {
+    const session = createSessionWithMockCopilot({
+      abort: vi.fn(() => { throw new Error("sync abort failure"); }),
+      destroy: vi.fn(),
+    });
+
+    expect(() => session.kill()).not.toThrow();
+    expect(session.status).toBe("killed");
+  });
+
+  it("succeeds when abort is not a function", () => {
+    const session = createSessionWithMockCopilot({
+      abort: "not-a-function",
+      destroy: vi.fn(),
+    });
+
+    expect(() => session.kill()).not.toThrow();
+    expect(session.status).toBe("killed");
+  });
+
+  it("succeeds when copilotSession is undefined (SDK not yet initialized)", () => {
+    const runtime = new CopilotRuntime();
+    const session = runtime.spawn({ sessionId: "kill-no-sdk", prompt: "test", model: "gpt-4", maxTurns: 5 });
+
+    expect(() => session.kill()).not.toThrow();
+    expect(session.status).toBe("killed");
+  });
+});

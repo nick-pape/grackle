@@ -378,8 +378,34 @@ class CopilotSession extends BaseAgentSession {
   }
 
   protected abortActive(): void {
+    // Reject any pending sendAndWaitForIdle promise so it doesn't hang.
+    if (this.idleReject) {
+      logger.info({ sessionId: this.id }, "Copilot abortActive: rejecting pending idle promise");
+      this.idleReject(new Error("Session killed"));
+      this.idleResolve = undefined;
+      this.idleReject = undefined;
+    }
+
     if (this.copilotSession) {
-      this.copilotSession.abort().catch(() => {});
+      const hasAbort = typeof this.copilotSession.abort === "function";
+      logger.info({ sessionId: this.id, hasAbortMethod: hasAbort }, "Copilot abortActive: aborting SDK session");
+      try {
+        // abort() may be synchronous (returning void) or asynchronous (returning a
+        // promise). Guard against both cases so a missing .catch on undefined or a
+        // synchronous throw does not bubble up as an internal error.
+        const result: unknown = hasAbort
+          ? this.copilotSession.abort()
+          : undefined;
+        if (result && typeof (result as Promise<unknown>).catch === "function") {
+          (result as Promise<unknown>).catch((abortErr: unknown) => {
+            logger.warn({ err: abortErr, sessionId: this.id }, "Copilot SDK abort() promise rejected");
+          });
+        }
+      } catch (err) {
+        logger.warn({ err, sessionId: this.id }, "Copilot SDK abort() threw synchronously");
+      }
+    } else {
+      logger.info({ sessionId: this.id }, "Copilot abortActive: no SDK session to abort");
     }
   }
 
@@ -409,20 +435,30 @@ class CopilotSession extends BaseAgentSession {
 
   /** Tear down the Copilot session and client. */
   private async cleanup(): Promise<void> {
+    logger.info({ sessionId: this.id }, "Copilot cleanup started");
     try {
       if (this.copilotSession) {
+        logger.info({ sessionId: this.id }, "Destroying Copilot SDK session");
         await this.copilotSession.destroy();
+        logger.info({ sessionId: this.id }, "Copilot SDK session destroyed");
       }
-    } catch { /* best-effort */ }
+    } catch (err) {
+      logger.warn({ err, sessionId: this.id }, "Error destroying Copilot SDK session");
+    }
     try {
       if (this.copilotClient) {
-        // stop() returns Promise<Error[]> — log any errors but don't throw
+        logger.info({ sessionId: this.id }, "Stopping Copilot CLI client");
         const errors = await this.copilotClient.stop();
         if (Array.isArray(errors) && errors.length > 0) {
-          logger.warn({ errors: errors.map(String) }, "Errors during Copilot client shutdown");
+          logger.warn({ errors: errors.map(String), sessionId: this.id }, "Errors during Copilot client shutdown");
+        } else {
+          logger.info({ sessionId: this.id }, "Copilot CLI client stopped");
         }
       }
-    } catch { /* best-effort */ }
+    } catch (err) {
+      logger.warn({ err, sessionId: this.id }, "Error stopping Copilot CLI client");
+    }
+    logger.info({ sessionId: this.id }, "Copilot cleanup finished");
   }
 }
 
