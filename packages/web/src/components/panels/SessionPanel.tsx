@@ -8,9 +8,6 @@ import { DagView } from "../dag/DagView.js";
 import { useEffect, useMemo, useRef, useState, type JSX, type RefObject } from "react";
 import type { ViewMode } from "../../App.js";
 import type { Session, SessionEvent, TaskData, Environment, Project } from "../../hooks/useGrackleSocket.js";
-
-/** Session event augmented with optional tool_use context for paired tool results. */
-type DisplayEvent = SessionEvent & { toolUseCtx?: { tool: string; args: unknown } };
 import { AnimatePresence, motion } from "motion/react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -18,6 +15,9 @@ import styles from "./SessionPanel.module.scss";
 import { ConfirmDialog, Breadcrumbs } from "../display/index.js";
 import { buildBreadcrumbs } from "../../utils/breadcrumbs.js";
 import type { BreadcrumbSegment } from "../../utils/breadcrumbs.js";
+
+/** Session event augmented with optional tool_use context for paired tool results. */
+type DisplayEvent = SessionEvent & { toolUseCtx?: { tool: string; args: unknown } };
 
 /** Props for the SessionPanel component. */
 interface Props {
@@ -127,13 +127,23 @@ function groupConsecutiveTextEvents(events: SessionEvent[]): SessionEvent[] {
  * Events from runtimes that do not emit structured raw (e.g., stub) pass through unchanged.
  */
 function pairToolEvents(events: SessionEvent[]): DisplayEvent[] {
+  // Parse each event's raw JSON once upfront to avoid redundant JSON.parse calls
+  // across the three passes below.
+  const parsedRaw = new Map<SessionEvent, Record<string, unknown>>();
+  for (const e of events) {
+    if (!e.raw) continue;
+    try {
+      parsedRaw.set(e, JSON.parse(e.raw) as Record<string, unknown>);
+    } catch { /* skip unparseable events */ }
+  }
+
   // Build lookup: raw tool_use id → { tool, args }
   const toolUseById = new Map<string, { tool: string; args: unknown }>();
   for (const e of events) {
-    if (e.eventType !== "tool_use" || !e.raw) continue;
+    if (e.eventType !== "tool_use") continue;
+    const raw = parsedRaw.get(e);
+    if (!raw || typeof raw.id !== "string") continue;
     try {
-      const raw = JSON.parse(e.raw) as Record<string, unknown>;
-      if (typeof raw.id !== "string") continue;
       const content = JSON.parse(e.content) as { tool: string; args: unknown };
       toolUseById.set(raw.id, { tool: content.tool ?? "", args: content.args });
     } catch { /* skip unparseable events */ }
@@ -142,26 +152,20 @@ function pairToolEvents(events: SessionEvent[]): DisplayEvent[] {
   // Attach toolUseCtx to tool_result events; record consumed tool_use IDs
   const consumedIds = new Set<string>();
   const display: DisplayEvent[] = events.map((e) => {
-    if (e.eventType !== "tool_result" || !e.raw) return e;
-    try {
-      const raw = JSON.parse(e.raw) as Record<string, unknown>;
-      if (typeof raw.tool_use_id !== "string") return e;
-      const ctx = toolUseById.get(raw.tool_use_id);
-      if (!ctx) return e;
-      consumedIds.add(raw.tool_use_id);
-      return { ...e, toolUseCtx: ctx };
-    } catch {
-      return e;
-    }
+    if (e.eventType !== "tool_result") return e;
+    const raw = parsedRaw.get(e);
+    if (!raw || typeof raw.tool_use_id !== "string") return e;
+    const ctx = toolUseById.get(raw.tool_use_id);
+    if (!ctx) return e;
+    consumedIds.add(raw.tool_use_id);
+    return { ...e, toolUseCtx: ctx };
   });
 
   // Remove tool_use events whose result has already arrived
   return display.filter((e) => {
-    if (e.eventType !== "tool_use" || !e.raw) return true;
-    try {
-      const raw = JSON.parse(e.raw) as Record<string, unknown>;
-      if (typeof raw.id === "string") return !consumedIds.has(raw.id);
-    } catch { /* keep */ }
+    if (e.eventType !== "tool_use") return true;
+    const raw = parsedRaw.get(e);
+    if (raw && typeof raw.id === "string") return !consumedIds.has(raw.id);
     return true;
   });
 }
