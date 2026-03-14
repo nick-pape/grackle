@@ -1,5 +1,8 @@
 import { randomUUID, timingSafeEqual } from "node:crypto";
+import { readFileSync } from "node:fs";
 import http from "node:http";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { createClient, type Client } from "@connectrpc/connect";
 import { createGrpcTransport } from "@connectrpc/connect-node";
 import { grackle } from "@grackle-ai/common";
@@ -13,6 +16,11 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import pino, { type Logger } from "pino";
 import { createToolRegistry } from "./tools/index.js";
+
+/** Read the package version from package.json at module load time. */
+const PACKAGE_VERSION: string = JSON.parse(
+  readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "package.json"), "utf8"),
+).version;
 
 const logger: Logger = pino({
   name: "grackle-mcp",
@@ -53,7 +61,7 @@ function createMcpServerInstance(grpcClient: Client<typeof grackle.Grackle>): Se
   const registry = createToolRegistry();
 
   const server = new Server(
-    { name: "grackle-mcp", version: "0.18.3" },
+    { name: "grackle-mcp", version: PACKAGE_VERSION },
     { capabilities: { tools: {} } },
   );
 
@@ -158,14 +166,26 @@ export function createMcpServer(options: McpServerOptions): http.Server {
   return httpServer;
 }
 
-/** Parse the JSON body from an incoming HTTP request. */
+/** Maximum request body size in bytes (1 MB). */
+const MAX_BODY_SIZE: number = 1_048_576;
+
+/** Parse the JSON body from an incoming HTTP request with size limit enforcement. */
 async function parseBody(req: http.IncomingMessage): Promise<unknown> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
-    req.on("data", (chunk: Buffer) => chunks.push(chunk));
+    let totalSize: number = 0;
+    req.on("data", (chunk: Buffer) => {
+      totalSize += chunk.length;
+      if (totalSize > MAX_BODY_SIZE) {
+        req.destroy();
+        reject(new Error("Request body too large"));
+        return;
+      }
+      chunks.push(chunk);
+    });
     req.on("end", () => {
       try {
-        const body = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+        const body: unknown = JSON.parse(Buffer.concat(chunks).toString("utf8"));
         resolve(body);
       } catch (err) {
         reject(err);
@@ -193,7 +213,7 @@ async function handlePost(
       return;
     }
 
-    if (!sessionId && isInitializeRequest(body)) {
+    if (isInitializeRequest(body) && (!sessionId || !transports.has(sessionId))) {
       // New initialization — create a new transport + server
       const transport = new StreamableHTTPServerTransport({
         sessionIdGenerator: () => randomUUID(),
