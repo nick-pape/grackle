@@ -1,4 +1,4 @@
-import { useState, useEffect, type JSX } from "react";
+import { useState, useEffect, useRef, type JSX } from "react";
 import { useGrackle } from "../../context/GrackleContext.js";
 import { useToast } from "../../context/ToastContext.js";
 import type { ViewMode } from "../../App.js";
@@ -43,11 +43,14 @@ export function TaskEditPanel({ viewMode, setViewMode }: Props): JSX.Element {
   const [selectedDeps, setSelectedDeps] = useState<string[]>(existingTask?.dependsOn ?? []);
   const [personaId, setPersonaId] = useState(existingTask?.personaId ?? "");
 
-  // When editing, tasks may not have loaded yet at mount time. Sync form state
-  // once existingTask becomes available so the form is pre-populated correctly
-  // rather than starting empty and potentially overwriting server data.
+  // In edit mode, tasks may not have loaded yet at mount time. Sync form state
+  // the first time existingTask becomes available so the form is pre-populated,
+  // but do not re-apply on subsequent refreshes — that would discard in-progress
+  // user edits whenever a background update replaces the task object.
+  const hasHydratedRef = useRef(false);
   useEffect(() => {
-    if (isEdit && existingTask) {
+    if (isEdit && existingTask && !hasHydratedRef.current) {
+      hasHydratedRef.current = true;
       setTitle(existingTask.title);
       setDescription(existingTask.description ?? "");
       setSelectedDeps(existingTask.dependsOn ?? []);

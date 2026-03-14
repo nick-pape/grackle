@@ -46,6 +46,7 @@ function AppContent(): JSX.Element {
             key={
               viewMode.kind === "task" ? viewMode.taskId
               : viewMode.kind === "edit_task" ? `edit_task:${viewMode.taskId}`
+              : viewMode.kind === "new_task" ? `new_task:${viewMode.projectId}:${viewMode.parentTaskId ?? ""}`
               : viewMode.kind === "session" ? viewMode.sessionId
               : viewMode.kind
             }
