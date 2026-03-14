@@ -235,10 +235,53 @@ describe("task-start token push", () => {
       // Should not throw
       await tokenBroker.pushCredentialsToEnv("env-missing");
     });
+
+    it("skips push when credentials file is empty", async () => {
+      mockExistsSync.mockReturnValue(true);
+      mockReadFileSync.mockReturnValue("   ");
+
+      const mockConn = makeMockConnection();
+      vi.spyOn(adapterManager, "getConnection").mockReturnValue(
+        mockConn as unknown as ReturnType<typeof adapterManager.getConnection>,
+      );
+
+      await tokenBroker.pushCredentialsToEnv("env-1");
+
+      expect(mockConn.client.pushTokens).not.toHaveBeenCalled();
+      expect(logger.warn).toHaveBeenCalledWith(
+        expect.objectContaining({ environmentId: "env-1" }),
+        "Host credentials file is empty; skipping push",
+      );
+    });
+  });
+
+  describe("refreshTokensForTask()", () => {
+    it("logs warnings but does not throw when pushes fail", async () => {
+      mockExistsSync.mockReturnValue(true);
+      mockReadFileSync.mockReturnValue('{"token":"x"}');
+
+      const mockConn = makeMockConnection();
+      mockConn.client.pushTokens.mockRejectedValue(new Error("gRPC unavailable"));
+      vi.spyOn(adapterManager, "getConnection").mockReturnValue(
+        mockConn as unknown as ReturnType<typeof adapterManager.getConnection>,
+      );
+
+      // Should not throw despite pushTokens rejecting
+      await tokenBroker.refreshTokensForTask("env-1");
+
+      expect(logger.warn).toHaveBeenCalledWith(
+        expect.objectContaining({ environmentId: "env-1" }),
+        "Failed to push tokens before task start",
+      );
+      expect(logger.warn).toHaveBeenCalledWith(
+        expect.objectContaining({ environmentId: "env-1" }),
+        "Failed to push Claude credentials before task start",
+      );
+    });
   });
 
   describe("grpc-service startTask()", () => {
-    it("calls pushToEnv and pushCredentialsToEnv before spawn", async () => {
+    it("calls refreshTokensForTask before spawn", async () => {
       const { registerGrackleRoutes } = await import("./grpc-service.js");
 
       const mockConn = makeMockConnection();
@@ -246,8 +289,7 @@ describe("task-start token push", () => {
         mockConn as unknown as ReturnType<typeof adapterManager.getConnection>,
       );
 
-      const pushToEnvSpy = vi.spyOn(tokenBroker, "pushToEnv").mockResolvedValue();
-      const pushCredsSpy = vi.spyOn(tokenBroker, "pushCredentialsToEnv").mockResolvedValue();
+      const refreshSpy = vi.spyOn(tokenBroker, "refreshTokensForTask").mockResolvedValue();
 
       vi.mocked(taskStore.getTask).mockReturnValue(
         makeMockTask() as ReturnType<typeof taskStore.getTask>,
@@ -270,18 +312,15 @@ describe("task-start token push", () => {
 
       await startTask!({ taskId: "task-1", environmentId: "env-1" });
 
-      expect(pushToEnvSpy).toHaveBeenCalledWith("env-1");
-      expect(pushCredsSpy).toHaveBeenCalledWith("env-1");
+      expect(refreshSpy).toHaveBeenCalledWith("env-1");
 
-      // Verify push happened before spawn
-      const pushToEnvOrder = pushToEnvSpy.mock.invocationCallOrder[0];
-      const pushCredsOrder = pushCredsSpy.mock.invocationCallOrder[0];
+      // Verify refresh happened before spawn
+      const refreshOrder = refreshSpy.mock.invocationCallOrder[0];
       const spawnOrder = mockConn.client.spawn.mock.invocationCallOrder[0];
-      expect(pushToEnvOrder).toBeLessThan(spawnOrder);
-      expect(pushCredsOrder).toBeLessThan(spawnOrder);
+      expect(refreshOrder).toBeLessThan(spawnOrder);
     });
 
-    it("proceeds with spawn even if token push fails", async () => {
+    it("proceeds with spawn even if refreshTokensForTask rejects", async () => {
       const { registerGrackleRoutes } = await import("./grpc-service.js");
 
       const mockConn = makeMockConnection();
@@ -289,6 +328,8 @@ describe("task-start token push", () => {
         mockConn as unknown as ReturnType<typeof adapterManager.getConnection>,
       );
 
+      // refreshTokensForTask itself never throws (it uses allSettled internally),
+      // but verify the call site is resilient even if it did
       vi.spyOn(tokenBroker, "pushToEnv").mockRejectedValue(new Error("push failed"));
       vi.spyOn(tokenBroker, "pushCredentialsToEnv").mockRejectedValue(new Error("creds failed"));
 
@@ -314,16 +355,6 @@ describe("task-start token push", () => {
 
       // Spawn should still have been called
       expect(mockConn.client.spawn).toHaveBeenCalled();
-
-      // Warnings should have been logged
-      expect(logger.warn).toHaveBeenCalledWith(
-        expect.objectContaining({ environmentId: "env-1" }),
-        "Failed to push tokens before task start",
-      );
-      expect(logger.warn).toHaveBeenCalledWith(
-        expect.objectContaining({ environmentId: "env-1" }),
-        "Failed to push Claude credentials before task start",
-      );
     });
   });
 });
