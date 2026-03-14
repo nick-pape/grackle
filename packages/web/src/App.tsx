@@ -19,6 +19,7 @@ export type ViewMode =
   | { kind: "session"; sessionId: string }
   | { kind: "project"; projectId: string }
   | { kind: "new_task"; projectId: string; parentTaskId?: string }
+  | { kind: "edit_task"; taskId: string }
   | { kind: "task"; taskId: string; tab?: "stream" | "findings" }
   | { kind: "new_environment" }
   | { kind: "persona_management" }
@@ -45,6 +46,8 @@ function AppContent(): JSX.Element {
           <SessionPanel
             key={
               viewMode.kind === "task" ? viewMode.taskId
+              : viewMode.kind === "edit_task" ? `edit_task:${viewMode.taskId}`
+              : viewMode.kind === "new_task" ? `new_task:${viewMode.projectId}:${viewMode.parentTaskId ?? ""}`
               : viewMode.kind === "session" ? viewMode.sessionId
               : viewMode.kind
             }

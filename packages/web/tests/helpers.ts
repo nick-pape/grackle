@@ -134,13 +134,49 @@ export async function createProject(page: Page, name: string): Promise<void> {
   await page.getByText(name).waitFor({ timeout: 5_000 });
 }
 
-/** Create a task under a project via the UI and wait for it to appear. */
+/**
+ * Create a task under a project and wait for it to appear in the sidebar.
+ *
+ * When `envName` is provided the task is created via WebSocket so the
+ * environment can be carried through (task creation UI no longer has an env
+ * dropdown). When `envName` is omitted the new full-panel TaskEditPanel UI
+ * is exercised.
+ */
 export async function createTask(
   page: Page,
   projectName: string,
   title: string,
   envName?: string,
 ): Promise<void> {
+  if (envName) {
+    // Environment must be set at creation via WS (UI no longer has env field).
+    // Navigate to the task edit form via the "New task" sidebar button (this uses
+    // stopPropagation so it never toggles the project's expand/collapse state —
+    // unlike clicking the project name which collapses if already selected).
+    await page
+      .getByText(projectName)
+      .locator("..")
+      .locator('button[title="New task"]')
+      .first()
+      .click();
+    await page.locator('[data-testid="task-edit-title"]').waitFor({ timeout: 5_000 });
+
+    // Create the task via WS while the form is visible.
+    const projectId = await getProjectId(page, projectName);
+    await createTaskViaWs(page, projectId, title, { environmentId: envName });
+
+    // Cancel the form — this navigates to project view which auto-expands
+    // the project in the sidebar via useEffect in ProjectList.
+    await page.locator("button", { hasText: "Cancel" }).click();
+
+    await page
+      .getByText(title, { exact: true })
+      .first()
+      .waitFor({ timeout: 5_000 });
+    return;
+  }
+
+  // No env specified — exercise the new full-panel TaskEditPanel UI.
   // Click "New task" button (uses stopPropagation, doesn't toggle expansion)
   await page
     .getByText(projectName)
@@ -149,12 +185,9 @@ export async function createTask(
     .first()
     .click();
 
-  // Fill in task details
-  await page.locator('input[placeholder="Task title..."]').fill(title);
-  if (envName) {
-    await page.locator("select").first().selectOption(envName);
-  }
-  await page.locator("button", { hasText: /^Create$/ }).click();
+  // Fill in task title in the new full-panel form
+  await page.locator('[data-testid="task-edit-title"]').fill(title);
+  await page.locator('[data-testid="task-edit-save"]').click();
 
   // After "Create", viewMode goes to project → auto-expand. Wait for task in sidebar.
   // Use .first() because AnimatePresence may briefly keep an exiting copy alongside the
