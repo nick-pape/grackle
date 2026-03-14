@@ -93,6 +93,15 @@ export function registerAgentCommands(program: Command): void {
     });
 
   program
+    .command("send-input <session-id> <text>")
+    .description("Send input to a session waiting for input")
+    .action(async (sessionId: string, text: string) => {
+      const client = createGrackleClient();
+      await client.sendInput({ sessionId, text });
+      console.log(chalk.green(`Sent input to session ${sessionId}`));
+    });
+
+  program
     .command("attach <session-id>")
     .description("Attach to a session stream with interactive input")
     .action(async (sessionId: string) => {

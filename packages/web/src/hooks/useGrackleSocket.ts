@@ -398,6 +398,8 @@ export interface UseGrackleSocketResult {
     title: string,
     description: string,
     dependsOn: string[],
+    environmentId?: string,
+    personaId?: string,
   ) => void;
   deleteTask: (taskId: string) => void;
   loadFindings: (projectId: string) => void;
@@ -1060,10 +1062,17 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
   );
 
   const updateTask = useCallback(
-    (taskId: string, title: string, description: string, dependsOn: string[]) => {
+    (
+      taskId: string,
+      title: string,
+      description: string,
+      dependsOn: string[],
+      environmentId?: string,
+      personaId?: string,
+    ) => {
       send({
         type: "update_task",
-        payload: { taskId, title, description, dependsOn },
+        payload: { taskId, title, description, dependsOn, environmentId, personaId },
       });
     },
     [send],
