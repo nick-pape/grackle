@@ -92,6 +92,18 @@ function main() {
     process.exit(0);
   }
 
+  // ── Check 0: PR already merged or closed ──────────────────────────
+  const stateData = runJson(`gh pr view ${prNumber} --json state`);
+  const prState = stateData?.state;
+
+  if (prState === "MERGED" || prState === "CLOSED") {
+    block(
+      `PR #${prNumber} is already ${prState}. Switch back to main and pull:\n` +
+      `  git checkout main && git pull\n\n` +
+      `This will clear the stale branch context so the hook passes.`
+    );
+  }
+
   const repoData = runJson("gh repo view --json owner,name");
   if (!repoData) {
     block("Failed to determine repo owner/name. Ensure gh is authenticated.");
