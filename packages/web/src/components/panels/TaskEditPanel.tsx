@@ -1,4 +1,4 @@
-import { useState, type JSX } from "react";
+import { useState, useEffect, type JSX } from "react";
 import { useGrackle } from "../../context/GrackleContext.js";
 import { useToast } from "../../context/ToastContext.js";
 import type { ViewMode } from "../../App.js";
@@ -43,6 +43,17 @@ export function TaskEditPanel({ viewMode, setViewMode }: Props): JSX.Element {
   const [selectedDeps, setSelectedDeps] = useState<string[]>(existingTask?.dependsOn ?? []);
   const [personaId, setPersonaId] = useState(existingTask?.personaId ?? "");
 
+  // When editing, tasks may not have loaded yet at mount time. Sync form state
+  // once existingTask becomes available so the form is pre-populated correctly
+  // rather than starting empty and potentially overwriting server data.
+  useEffect(() => {
+    if (isEdit && existingTask) {
+      setTitle(existingTask.title);
+      setDescription(existingTask.description ?? "");
+      setSelectedDeps(existingTask.dependsOn ?? []);
+    }
+  }, [isEdit, existingTask]);
+
   // All tasks in the same project, excluding the task being edited (self)
   const siblingTasks = tasks.filter(
     (t) =>
@@ -51,7 +62,9 @@ export function TaskEditPanel({ viewMode, setViewMode }: Props): JSX.Element {
       t.id !== parentTaskId,
   );
 
-  const canSave = title.trim().length > 0;
+  // In edit mode, also require that task data has loaded before allowing save
+  // to prevent overwriting server data with blank form values.
+  const canSave = title.trim().length > 0 && (!isEdit || existingTask !== undefined);
 
   const toggleDep = (depId: string): void => {
     setSelectedDeps((prev) =>
@@ -61,6 +74,10 @@ export function TaskEditPanel({ viewMode, setViewMode }: Props): JSX.Element {
 
   const handleSave = (): void => {
     if (!canSave) {
+      return;
+    }
+    if (isEdit && existingTask === undefined) {
+      // Guard: task data not yet loaded — do not overwrite with blank values.
       return;
     }
     if (isEdit) {
