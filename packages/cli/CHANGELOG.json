@@ -2,6 +2,26 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.18.2",
+      "tag": "@grackle-ai/cli_v0.18.2",
+      "date": "Sat, 14 Mar 2026 04:00:53 GMT",
+      "comments": {
+        "none": [
+          {
+            "comment": "False positive — only @grackle-ai/web (non-publishable) was modified; merge-commit detection flagged this package."
+          },
+          {
+            "comment": "No changes to CLI (merge commit false positive)"
+          }
+        ],
+        "patch": [
+          {
+            "comment": "Add pnpm.onlyBuiltDependencies to allow better-sqlite3 install script in pnpm v8+"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.18.1",
       "tag": "@grackle-ai/cli_v0.18.1",
       "date": "Fri, 13 Mar 2026 21:32:39 GMT",
