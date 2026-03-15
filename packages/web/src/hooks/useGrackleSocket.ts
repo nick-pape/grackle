@@ -445,7 +445,7 @@ export interface UseGrackleSocketResult {
   codespaceError: string;
   codespaceCreating: boolean;
   listCodespaces: () => void;
-  createCodespace: (repo: string) => void;
+  createCodespace: (repo: string, machine?: string) => void;
   projectCreating: boolean;
   taskStartingId: string | undefined;
   personas: PersonaData[];
@@ -1278,7 +1278,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
   }, [send]);
 
   const createCodespace = useCallback(
-    (repo: string) => {
+    (repo: string, machine?: string) => {
       if (!connected) {
         setCodespaceError(
           "Not connected to server. Please try again once the connection is restored.",
@@ -1287,7 +1287,11 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
       }
       setCodespaceCreating(true);
       setCodespaceError("");
-      send({ type: "create_codespace", payload: { repo } });
+      const payload: Record<string, string> = { repo };
+      if (machine) {
+        payload.machine = machine;
+      }
+      send({ type: "create_codespace", payload });
     },
     [send, connected],
   );

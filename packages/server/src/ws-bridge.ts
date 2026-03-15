@@ -43,6 +43,34 @@ const GH_CODESPACE_LIST_TIMEOUT_MS: number = 30_000;
 const GH_CODESPACE_CREATE_TIMEOUT_MS: number = 300_000;
 const GH_CODESPACE_LIST_LIMIT: number = 50;
 
+/**
+ * Translate a raw `gh` CLI error into a user-friendly message.
+ * The raw error is still logged server-side for diagnostics.
+ */
+export function formatGhError(err: unknown, operation: string): string {
+  const message = err instanceof Error ? err.message : String(err);
+  const stderr =
+    err instanceof Error && "stderr" in err
+      ? String((err as Error & { stderr: unknown }).stderr)
+      : "";
+  const code =
+    err instanceof Error && "code" in err
+      ? String((err as Error & { code: unknown }).code)
+      : "";
+
+  if (code === "ENOENT" || message.includes("ENOENT")) {
+    return "Could not find the `gh` CLI. Ensure GitHub CLI is installed and available on your system PATH, then restart the Grackle server.";
+  }
+  if (code === "EACCES" || message.includes("EACCES")) {
+    return "`gh` CLI found but not executable. Check file permissions.";
+  }
+  const combined = `${stderr} ${message}`.toLowerCase();
+  if (combined.includes("auth") || combined.includes("login")) {
+    return "GitHub CLI is not authenticated. Run `gh auth login` and restart.";
+  }
+  return `Failed to ${operation}: ${stderr || message}`;
+}
+
 const WS_PING_INTERVAL_MS: number = 30_000;
 const WS_CLOSE_UNAUTHORIZED: number = 4001;
 
@@ -1706,7 +1734,10 @@ async function handleMessage(
         logger.warn({ err }, "Failed to list codespaces");
         sendWs(ws, {
           type: "codespaces_list",
-          payload: { codespaces: [], error: String(err) },
+          payload: {
+            codespaces: [],
+            error: formatGhError(err, "list codespaces"),
+          },
         });
       }
       break;
@@ -1722,19 +1753,18 @@ async function handleMessage(
         return;
       }
       const trimmedRepo = repo.trim();
+      const machine =
+        typeof msg.payload?.machine === "string"
+          ? msg.payload.machine.trim()
+          : "";
+      const createArgs = ["codespace", "create", "--repo", trimmedRepo];
+      if (machine) {
+        createArgs.push("--machine", machine);
+      }
       try {
-        const result = await exec(
-          "gh",
-          [
-            "codespace",
-            "create",
-            "--repo",
-            trimmedRepo,
-            "--machine",
-            "basicLinux32gb",
-          ],
-          { timeout: GH_CODESPACE_CREATE_TIMEOUT_MS },
-        );
+        const result = await exec("gh", createArgs, {
+          timeout: GH_CODESPACE_CREATE_TIMEOUT_MS,
+        });
         const codespaceName = result.stdout.trim();
         sendWs(ws, {
           type: "codespace_created",
@@ -1744,7 +1774,7 @@ async function handleMessage(
         logger.error({ err, repo }, "Failed to create codespace");
         sendWs(ws, {
           type: "codespace_create_error",
-          payload: { message: String(err) },
+          payload: { message: formatGhError(err, "create codespace") },
         });
       }
       break;

@@ -134,6 +134,7 @@ export function UnifiedBar(): JSX.Element {
   const [envCodespaceName, setEnvCodespaceName] = useState("");
   const [envIdentityFile, setEnvIdentityFile] = useState("");
   const [envCreateRepo, setEnvCreateRepo] = useState("");
+  const [envCreateMachine, setEnvCreateMachine] = useState("");
   const [envCodespaceMode, setEnvCodespaceMode] = useState<"pick" | "create">("pick");
 
   useEffect(() => {
@@ -258,6 +259,7 @@ export function UnifiedBar(): JSX.Element {
       setEnvCodespaceName("");
       setEnvIdentityFile("");
       setEnvCreateRepo("");
+      setEnvCreateMachine("");
       setEnvCodespaceMode("pick");
       navigate(SETTINGS_URL, { replace: true });
     };
@@ -351,19 +353,33 @@ export function UnifiedBar(): JSX.Element {
                 <span className={styles.creatingHint}>Creating codespace...</span>
               )}
               {codespaceError && (
-                <span className={styles.errorHint}>{codespaceError}</span>
+                <>
+                  <span className={styles.errorHint}>{codespaceError}</span>
+                  <input
+                    type="text"
+                    value={envCodespaceName}
+                    onChange={(e) => setEnvCodespaceName(e.target.value)}
+                    placeholder="Or enter codespace name manually..."
+                    className={styles.inputSmall}
+                  />
+                </>
               )}
             </>
           )}
           {envAdapterType === "codespace" && envCodespaceMode === "create" && (
             <>
               <input type="text" value={envCreateRepo} onChange={(e) => setEnvCreateRepo(e.target.value)} placeholder="owner/repo" className={styles.inputSmall} />
+              <input type="text" value={envCreateMachine} onChange={(e) => setEnvCreateMachine(e.target.value)} placeholder="Machine type (optional)..." className={styles.inputSmall} />
               <button
                 onClick={() => {
                   if (envCreateRepo.trim()) {
-                    createCodespace(envCreateRepo.trim());
+                    createCodespace(
+                      envCreateRepo.trim(),
+                      envCreateMachine.trim() || undefined,
+                    );
                     setEnvCodespaceMode("pick");
                     setEnvCreateRepo("");
+                    setEnvCreateMachine("");
                   }
                 }}
                 disabled={!envCreateRepo.trim()}
@@ -372,7 +388,7 @@ export function UnifiedBar(): JSX.Element {
                 Create
               </button>
               <button
-                onClick={() => { setEnvCodespaceMode("pick"); setEnvCreateRepo(""); }}
+                onClick={() => { setEnvCodespaceMode("pick"); setEnvCreateRepo(""); setEnvCreateMachine(""); }}
                 className={styles.btnGhost}
               >
                 Cancel
