@@ -14,8 +14,9 @@ export function createSession(
   model: string,
   logPath: string,
   taskId: string = "",
+  personaId: string = "",
 ): void {
-  db.insert(sessions).values({ id, environmentId, runtime, prompt, model, logPath, taskId }).run();
+  db.insert(sessions).values({ id, environmentId, runtime, prompt, model, logPath, taskId, personaId }).run();
 }
 
 /** Retrieve a single session by ID. */
@@ -114,6 +115,38 @@ export function setSessionTask(id: string, taskId: string): void {
 export function listSessionsForTask(taskId: string): SessionRow[] {
   return db.select().from(sessions)
     .where(eq(sessions.taskId, taskId))
+    .orderBy(asc(sessions.startedAt), asc(sessions.id))
+    .all();
+}
+
+/** Get the most recent session for a task (by startedAt DESC, id DESC). */
+export function getLatestSessionForTask(taskId: string): SessionRow | undefined {
+  return db.select().from(sessions)
+    .where(eq(sessions.taskId, taskId))
+    .orderBy(desc(sessions.startedAt), desc(sessions.id))
+    .limit(1)
+    .get();
+}
+
+/** Get all active (non-terminal) sessions for a task. */
+export function getActiveSessionsForTask(taskId: string): SessionRow[] {
+  return db.select().from(sessions)
+    .where(
+      and(
+        eq(sessions.taskId, taskId),
+        inArray(sessions.status, ["pending", "running", "waiting_input"]),
+      ),
+    )
+    .all();
+}
+
+/** Batch-fetch all sessions for a set of task IDs. Avoids N+1 queries for listTasks. */
+export function listSessionsByTaskIds(taskIds: string[]): SessionRow[] {
+  if (taskIds.length === 0) {
+    return [];
+  }
+  return db.select().from(sessions)
+    .where(inArray(sessions.taskId, taskIds))
     .orderBy(asc(sessions.startedAt), asc(sessions.id))
     .all();
 }

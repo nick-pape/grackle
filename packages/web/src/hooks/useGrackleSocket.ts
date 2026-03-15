@@ -47,8 +47,7 @@ export interface TaskData {
   description: string;
   status: string;
   branch: string;
-  environmentId: string;
-  sessionId: string;
+  latestSessionId: string;
   dependsOn: string[];
   reviewNotes: string;
   sortOrder: number;
@@ -60,7 +59,6 @@ export interface TaskData {
   depth: number;
   childTaskIds: string[];
   canDecompose: boolean;
-  personaId: string;
 }
 
 export interface FindingData {
@@ -380,16 +378,15 @@ export interface UseGrackleSocketResult {
     projectId: string,
     title: string,
     description?: string,
-    environmentId?: string,
     dependsOn?: string[],
     parentTaskId?: string,
-    personaId?: string,
   ) => void;
   startTask: (
     taskId: string,
     runtime?: string,
     model?: string,
     personaId?: string,
+    environmentId?: string,
   ) => void;
   approveTask: (taskId: string) => void;
   rejectTask: (taskId: string, reviewNotes: string) => void;
@@ -398,8 +395,6 @@ export interface UseGrackleSocketResult {
     title: string,
     description: string,
     dependsOn: string[],
-    environmentId?: string,
-    personaId?: string,
   ) => void;
   deleteTask: (taskId: string) => void;
   loadFindings: (projectId: string) => void;
@@ -1010,10 +1005,8 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
       projectId: string,
       title: string,
       description?: string,
-      environmentId?: string,
       dependsOn?: string[],
       parentTaskId?: string,
-      personaId?: string,
     ) => {
       send({
         type: "create_task",
@@ -1021,10 +1014,8 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
           projectId,
           title,
           description: description || "",
-          environmentId: environmentId || "",
           dependsOn: dependsOn || [],
           parentTaskId: parentTaskId || "",
-          personaId: personaId || "",
         },
       });
     },
@@ -1032,7 +1023,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
   );
 
   const startTask = useCallback(
-    (taskId: string, runtime?: string, model?: string, personaId?: string) => {
+    (taskId: string, runtime?: string, model?: string, personaId?: string, environmentId?: string) => {
       setTaskStartingId(taskId);
       send({
         type: "start_task",
@@ -1041,6 +1032,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
           runtime: runtime || "",
           model: model || "",
           personaId: personaId || "",
+          environmentId: environmentId || "",
         },
       });
     },
@@ -1067,12 +1059,10 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
       title: string,
       description: string,
       dependsOn: string[],
-      environmentId?: string,
-      personaId?: string,
     ) => {
       send({
         type: "update_task",
-        payload: { taskId, title, description, dependsOn, environmentId, personaId },
+        payload: { taskId, title, description, dependsOn },
       });
     },
     [send],

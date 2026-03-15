@@ -24,7 +24,6 @@ export interface EventStreamOptions {
   logPath: string;
   projectId?: string;
   taskId?: string;
-  onComplete?: () => void;
   onError?: (error: unknown) => void;
 }
 
@@ -123,13 +122,11 @@ export function processSubtaskEvent(
     }
 
     const subtaskId = uuid().slice(0, 8);
-    const environmentId = parentTask.environmentId || project.defaultEnvironmentId;
     taskStore.createTask(
       subtaskId,
       parentTask.projectId,
       title,
       description,
-      environmentId,
       resolvedDeps,
       slugify(project.name),
       ctx.taskId,
@@ -223,7 +220,6 @@ export function processEventStream(
     logPath,
     projectId: options.projectId || "",
     taskId: options.taskId || "",
-    onComplete: options.onComplete,
   };
 
   /** Maps local_id strings (assigned by the agent) to real task IDs, scoped to this stream. */
@@ -268,28 +264,19 @@ export function processEventStream(
         if (event.type === "status") {
           if (event.content === "waiting_input") {
             sessionStore.updateSessionStatus(sessionId, "waiting_input");
-            if (ctx.taskId) {
-              const t = taskStore.getTask(ctx.taskId);
-              if (t && t.status === "in_progress") {
-                taskStore.updateTaskStatus(ctx.taskId, "waiting_input");
-                broadcast({ type: "task_updated", payload: { taskId: ctx.taskId, projectId: ctx.projectId } });
-              }
-            }
           } else if (event.content === "running") {
             sessionStore.updateSessionStatus(sessionId, "running");
-            if (ctx.taskId) {
-              const t = taskStore.getTask(ctx.taskId);
-              if (t && t.status === "waiting_input") {
-                taskStore.updateTaskStatus(ctx.taskId, "in_progress");
-                broadcast({ type: "task_updated", payload: { taskId: ctx.taskId, projectId: ctx.projectId } });
-              }
-            }
           } else if (event.content === "completed") {
             sessionStore.updateSession(sessionId, "completed");
           } else if (event.content === "failed") {
             sessionStore.updateSession(sessionId, "failed");
           } else if (event.content === "killed") {
             sessionStore.updateSession(sessionId, "killed");
+          }
+
+          // Broadcast task_updated on terminal session events so frontend re-fetches computed status
+          if (ctx.taskId && ["completed", "failed", "killed"].includes(event.content)) {
+            broadcast({ type: "task_updated", payload: { taskId: ctx.taskId, projectId: ctx.projectId } });
           }
         }
       }
@@ -298,6 +285,9 @@ export function processEventStream(
       const current = sessionStore.getSession(sessionId);
       if (current && !TERMINAL_STATUSES.includes(current.status)) {
         sessionStore.updateSession(sessionId, "completed");
+        if (ctx.taskId) {
+          broadcast({ type: "task_updated", payload: { taskId: ctx.taskId, projectId: ctx.projectId } });
+        }
       }
     } catch (err) {
       const current = sessionStore.getSession(sessionId);
@@ -323,11 +313,13 @@ export function processEventStream(
         }));
         onError?.(err);
       }
+      if (ctx.taskId) {
+        broadcast({ type: "task_updated", payload: { taskId: ctx.taskId, projectId: ctx.projectId } });
+      }
     } finally {
       processorRegistry.unregister(sessionId);
       logWriter.endSession(logPath);
       try { writeTranscript(logPath); } catch { /* non-critical */ }
-      ctx.onComplete?.();
     }
   })();
 }

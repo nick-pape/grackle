@@ -47,13 +47,11 @@ export const taskTools: ToolDefinition[] = [
           title: task.title,
           status: taskStatusToString(task.status) || task.status,
           branch: task.branch,
-          environmentId: task.environmentId,
-          sessionId: task.sessionId,
+          latestSessionId: task.latestSessionId,
           sortOrder: task.sortOrder,
           parentTaskId: task.parentTaskId,
           depth: task.depth,
           childTaskIds: task.childTaskIds,
-          personaId: task.personaId,
         }));
         return jsonResult(summaries);
       } catch (error) {
@@ -75,18 +73,10 @@ export const taskTools: ToolDefinition[] = [
         .string()
         .optional()
         .describe("Detailed description of what the task involves"),
-      environmentId: z
-        .string()
-        .optional()
-        .describe("Environment ID to associate with this task"),
       dependsOn: z
         .array(z.string())
         .optional()
         .describe("Array of task IDs that this task depends on"),
-      personaId: z
-        .string()
-        .optional()
-        .describe("Persona ID to configure agent behavior for this task"),
     }),
     rpcMethod: "createTask",
     mutating: true,
@@ -102,10 +92,8 @@ export const taskTools: ToolDefinition[] = [
           projectId: args.projectId as string,
           title: args.title as string,
           description: (args.description as string | undefined) ?? "",
-          environmentId: (args.environmentId as string | undefined) ?? "",
           dependsOn: (args.dependsOn as string[] | undefined) ?? [],
           parentTaskId: "",
-          personaId: (args.personaId as string | undefined) ?? "",
         });
         return jsonResult(taskToJson(task));
       } catch (error) {
@@ -170,10 +158,6 @@ export const taskTools: ToolDefinition[] = [
         .describe(
           "New status for the task (pending, assigned, in_progress, review, done, failed, waiting_input)",
         ),
-      environmentId: z
-        .string()
-        .optional()
-        .describe("New environment ID to associate with this task"),
       reviewNotes: z
         .string()
         .optional()
@@ -206,7 +190,6 @@ export const taskTools: ToolDefinition[] = [
           title: (args.title as string | undefined) ?? "",
           description: (args.description as string | undefined) ?? "",
           status: statusValue,
-          environmentId: (args.environmentId as string | undefined) ?? "",
           dependsOn: (args.dependsOn as string[] | undefined) ?? [],
           reviewNotes: (args.reviewNotes as string | undefined) ?? "",
           sessionId: (args.sessionId as string | undefined) ?? "",
@@ -238,6 +221,10 @@ export const taskTools: ToolDefinition[] = [
         .string()
         .optional()
         .describe("Persona ID to configure agent behavior"),
+      environmentId: z
+        .string()
+        .optional()
+        .describe("Environment ID to run the task on (defaults to project default)"),
     }),
     rpcMethod: "startTask",
     mutating: true,
@@ -254,6 +241,7 @@ export const taskTools: ToolDefinition[] = [
           runtime: (args.runtime as string | undefined) ?? "",
           model: (args.model as string | undefined) ?? "",
           personaId: (args.personaId as string | undefined) ?? "",
+          environmentId: (args.environmentId as string | undefined) ?? "",
         });
         return jsonResult(response);
       } catch (error) {
@@ -348,7 +336,6 @@ export const taskTools: ToolDefinition[] = [
           title: "",
           description: "",
           status: 0,
-          environmentId: "",
           dependsOn: [],
           reviewNotes: (args.reviewNotes as string | undefined) ?? "",
         });

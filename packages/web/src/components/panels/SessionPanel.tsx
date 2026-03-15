@@ -265,11 +265,15 @@ interface TaskOverviewProps {
   tasksById: Map<string, TaskData>;
   environments: Environment[];
   projects: Project[];
+  taskSessions: Session[];
 }
 
 /** Enriched overview dashboard for a task: status, branch, description, environment, deps, timeline, review notes. */
-function TaskOverview({ task, tasksById, environments, projects }: TaskOverviewProps): JSX.Element {
-  const env = environments.find((e) => e.id === task.environmentId);
+function TaskOverview({ task, tasksById, environments, projects, taskSessions }: TaskOverviewProps): JSX.Element {
+  // Derive environment from the latest session (environment is no longer stored on the task)
+  const latestSession = taskSessions.length > 0 ? taskSessions[taskSessions.length - 1] : undefined;
+  const envId = latestSession?.environmentId ?? "";
+  const env = envId ? environments.find((e) => e.id === envId) : undefined;
   const project = projects.find((p) => p.id === task.projectId);
 
   // Build GitHub branch URL if the project has a repoUrl; encode the full
@@ -307,7 +311,7 @@ function TaskOverview({ task, tasksById, environments, projects }: TaskOverviewP
       )}
 
       {/* Environment */}
-      {task.environmentId && (
+      {envId && (
         <div className={styles.overviewSection}>
           <div className={styles.overviewLabel}>Environment</div>
           <div className={styles.envRow}>
@@ -320,7 +324,7 @@ function TaskOverview({ task, tasksById, environments, projects }: TaskOverviewP
               />
             )}
             <span className={styles.overviewValue}>
-              {env?.displayName ?? task.environmentId}
+              {env?.displayName ?? envId}
             </span>
           </div>
         </div>
@@ -624,7 +628,7 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
     projectId = task?.projectId || undefined;
   }
 
-  // Resolve effective sessionId — use selectedSessionId if valid, otherwise task.sessionId
+  // Resolve effective sessionId — use selectedSessionId if valid, otherwise task.latestSessionId
   const currentTaskSessions = task ? (taskSessions[task.id] ?? []) : [];
   let sessionId: string | undefined = undefined;
   if (viewMode.kind === "session") {
@@ -633,7 +637,7 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
     if (selectedSessionId && currentTaskSessions.some((s) => s.id === selectedSessionId)) {
       sessionId = selectedSessionId;
     } else {
-      sessionId = task?.sessionId || undefined;
+      sessionId = task?.latestSessionId || undefined;
     }
   }
 
@@ -671,13 +675,13 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
       return;
     }
     const isNewTask = task.id !== loadedTaskSessionsRef.current;
-    const sessionChanged = task.sessionId !== prevTaskSessionIdRef.current;
+    const sessionChanged = task.latestSessionId !== prevTaskSessionIdRef.current;
     if (isNewTask || sessionChanged) {
       loadedTaskSessionsRef.current = task.id;
-      prevTaskSessionIdRef.current = task.sessionId;
+      prevTaskSessionIdRef.current = task.latestSessionId;
       loadTaskSessions(task.id);
     }
-  }, [task?.id, task?.sessionId, loadTaskSessions]);
+  }, [task?.id, task?.latestSessionId, loadTaskSessions]);
 
   // Auto-switch tab synchronously during render (not via effect) so the
   // correct tab is committed in the same frame as the status change.
@@ -1359,6 +1363,7 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
                   tasksById={tasksById}
                   environments={environments}
                   projects={projects}
+                  taskSessions={currentTaskSessions}
                 />
               ) : (
                 <div className={styles.waitingMessage}>No additional details</div>

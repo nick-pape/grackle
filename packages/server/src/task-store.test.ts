@@ -32,8 +32,6 @@ function applySchema(): void {
       description   TEXT NOT NULL DEFAULT '',
       status        TEXT NOT NULL DEFAULT 'pending',
       branch        TEXT NOT NULL DEFAULT '',
-      env_id        TEXT NOT NULL DEFAULT '',
-      session_id    TEXT NOT NULL DEFAULT '',
       depends_on    TEXT NOT NULL DEFAULT '[]',
       assigned_at   TEXT,
       started_at    TEXT,
@@ -44,8 +42,7 @@ function applySchema(): void {
       sort_order    INTEGER NOT NULL DEFAULT 0,
       parent_task_id TEXT NOT NULL DEFAULT '',
       depth         INTEGER NOT NULL DEFAULT 0,
-      can_decompose INTEGER NOT NULL DEFAULT 0,
-      persona_id    TEXT NOT NULL DEFAULT ''
+      can_decompose INTEGER NOT NULL DEFAULT 0
     );
   `);
 }
@@ -62,7 +59,7 @@ describe("task-store tree operations", () => {
 
   describe("createTask with parentTaskId", () => {
     it("creates a root task with depth 0 and empty parentTaskId", () => {
-      taskStore.createTask("t1", "test-proj", "Root Task", "desc", "", [], "test-project");
+      taskStore.createTask("t1", "test-proj", "Root Task", "desc", [], "test-project");
       const task = taskStore.getTask("t1");
       expect(task).toBeDefined();
       expect(task!.parentTaskId).toBe("");
@@ -70,8 +67,8 @@ describe("task-store tree operations", () => {
     });
 
     it("creates a child task with depth = parent.depth + 1", () => {
-      taskStore.createTask("t1", "test-proj", "Parent", "desc", "", [], "test-project", "", true);
-      taskStore.createTask("t2", "test-proj", "Child", "desc", "", [], "test-project", "t1");
+      taskStore.createTask("t1", "test-proj", "Parent", "desc", [], "test-project", "", true);
+      taskStore.createTask("t2", "test-proj", "Child", "desc", [], "test-project", "t1");
       const child = taskStore.getTask("t2");
       expect(child).toBeDefined();
       expect(child!.parentTaskId).toBe("t1");
@@ -79,35 +76,35 @@ describe("task-store tree operations", () => {
     });
 
     it("generates branch name from parent branch when parent exists", () => {
-      taskStore.createTask("t1", "test-proj", "Parent Task", "desc", "", [], "test-project", "", true);
+      taskStore.createTask("t1", "test-proj", "Parent Task", "desc", [], "test-project", "", true);
       const parent = taskStore.getTask("t1");
-      taskStore.createTask("t2", "test-proj", "Child Task", "desc", "", [], "test-project", "t1");
+      taskStore.createTask("t2", "test-proj", "Child Task", "desc", [], "test-project", "t1");
       const child = taskStore.getTask("t2");
       expect(child!.branch).toBe(`${parent!.branch}/child-task`);
     });
 
     it("rejects creation when parent does not exist", () => {
       expect(() => {
-        taskStore.createTask("t1", "test-proj", "Orphan", "desc", "", [], "test-project", "nonexistent");
+        taskStore.createTask("t1", "test-proj", "Orphan", "desc", [], "test-project", "nonexistent");
       }).toThrow("Parent task not found");
     });
 
     it("rejects creation when depth would exceed MAX_TASK_DEPTH", () => {
       for (let i = 0; i <= 8; i++) {
-        taskStore.createTask(`t${i}`, "test-proj", `Level ${i}`, "desc", "", [], "proj", i === 0 ? "" : `t${i - 1}`, true);
+        taskStore.createTask(`t${i}`, "test-proj", `Level ${i}`, "desc", [], "proj", i === 0 ? "" : `t${i - 1}`, true);
       }
 
       expect(() => {
-        taskStore.createTask("t9", "test-proj", "Level 9", "desc", "", [], "proj", "t8");
+        taskStore.createTask("t9", "test-proj", "Level 9", "desc", [], "proj", "t8");
       }).toThrow("depth would exceed maximum");
     });
   });
 
   describe("getChildren", () => {
     it("returns direct children ordered by sort_order", () => {
-      taskStore.createTask("t1", "test-proj", "Parent", "desc", "", [], "proj", "", true);
-      taskStore.createTask("t2", "test-proj", "Child A", "desc", "", [], "proj", "t1");
-      taskStore.createTask("t3", "test-proj", "Child B", "desc", "", [], "proj", "t1");
+      taskStore.createTask("t1", "test-proj", "Parent", "desc", [], "proj", "", true);
+      taskStore.createTask("t2", "test-proj", "Child A", "desc", [], "proj", "t1");
+      taskStore.createTask("t3", "test-proj", "Child B", "desc", [], "proj", "t1");
 
       const children = taskStore.getChildren("t1");
       expect(children).toHaveLength(2);
@@ -116,14 +113,14 @@ describe("task-store tree operations", () => {
     });
 
     it("returns empty array for leaf tasks", () => {
-      taskStore.createTask("t1", "test-proj", "Leaf", "desc", "", [], "proj");
+      taskStore.createTask("t1", "test-proj", "Leaf", "desc", [], "proj");
       expect(taskStore.getChildren("t1")).toHaveLength(0);
     });
 
     it("does not return grandchildren", () => {
-      taskStore.createTask("t1", "test-proj", "Root", "desc", "", [], "proj", "", true);
-      taskStore.createTask("t2", "test-proj", "Child", "desc", "", [], "proj", "t1", true);
-      taskStore.createTask("t3", "test-proj", "Grandchild", "desc", "", [], "proj", "t2");
+      taskStore.createTask("t1", "test-proj", "Root", "desc", [], "proj", "", true);
+      taskStore.createTask("t2", "test-proj", "Child", "desc", [], "proj", "t1", true);
+      taskStore.createTask("t3", "test-proj", "Grandchild", "desc", [], "proj", "t2");
 
       const children = taskStore.getChildren("t1");
       expect(children).toHaveLength(1);
@@ -133,9 +130,9 @@ describe("task-store tree operations", () => {
 
   describe("getDescendants", () => {
     it("returns full subtree for a 3-level hierarchy", () => {
-      taskStore.createTask("t1", "test-proj", "Root", "desc", "", [], "proj", "", true);
-      taskStore.createTask("t2", "test-proj", "Child", "desc", "", [], "proj", "t1", true);
-      taskStore.createTask("t3", "test-proj", "Grandchild", "desc", "", [], "proj", "t2");
+      taskStore.createTask("t1", "test-proj", "Root", "desc", [], "proj", "", true);
+      taskStore.createTask("t2", "test-proj", "Child", "desc", [], "proj", "t1", true);
+      taskStore.createTask("t3", "test-proj", "Grandchild", "desc", [], "proj", "t2");
 
       const descendants = taskStore.getDescendants("t1");
       expect(descendants).toHaveLength(2);
@@ -145,16 +142,16 @@ describe("task-store tree operations", () => {
     });
 
     it("returns empty array for leaf tasks", () => {
-      taskStore.createTask("t1", "test-proj", "Leaf", "desc", "", [], "proj");
+      taskStore.createTask("t1", "test-proj", "Leaf", "desc", [], "proj");
       expect(taskStore.getDescendants("t1")).toHaveLength(0);
     });
   });
 
   describe("getAncestors", () => {
     it("returns path from task to root, root-first", () => {
-      taskStore.createTask("t1", "test-proj", "Root", "desc", "", [], "proj", "", true);
-      taskStore.createTask("t2", "test-proj", "Child", "desc", "", [], "proj", "t1", true);
-      taskStore.createTask("t3", "test-proj", "Grandchild", "desc", "", [], "proj", "t2");
+      taskStore.createTask("t1", "test-proj", "Root", "desc", [], "proj", "", true);
+      taskStore.createTask("t2", "test-proj", "Child", "desc", [], "proj", "t1", true);
+      taskStore.createTask("t3", "test-proj", "Grandchild", "desc", [], "proj", "t2");
 
       const ancestors = taskStore.getAncestors("t3");
       expect(ancestors).toHaveLength(2);
@@ -163,17 +160,17 @@ describe("task-store tree operations", () => {
     });
 
     it("returns empty array for root tasks", () => {
-      taskStore.createTask("t1", "test-proj", "Root", "desc", "", [], "proj");
+      taskStore.createTask("t1", "test-proj", "Root", "desc", [], "proj");
       expect(taskStore.getAncestors("t1")).toHaveLength(0);
     });
   });
 
   describe("getChildStatusCounts", () => {
     it("returns correct counts by status", () => {
-      taskStore.createTask("t1", "test-proj", "Parent", "desc", "", [], "proj", "", true);
-      taskStore.createTask("t2", "test-proj", "Done Child", "desc", "", [], "proj", "t1");
-      taskStore.createTask("t3", "test-proj", "Pending Child", "desc", "", [], "proj", "t1");
-      taskStore.createTask("t4", "test-proj", "Another Pending", "desc", "", [], "proj", "t1");
+      taskStore.createTask("t1", "test-proj", "Parent", "desc", [], "proj", "", true);
+      taskStore.createTask("t2", "test-proj", "Done Child", "desc", [], "proj", "t1");
+      taskStore.createTask("t3", "test-proj", "Pending Child", "desc", [], "proj", "t1");
+      taskStore.createTask("t4", "test-proj", "Another Pending", "desc", [], "proj", "t1");
 
       taskStore.updateTaskStatus("t2", "done");
 
@@ -183,7 +180,7 @@ describe("task-store tree operations", () => {
     });
 
     it("returns empty record for leaf tasks", () => {
-      taskStore.createTask("t1", "test-proj", "Leaf", "desc", "", [], "proj");
+      taskStore.createTask("t1", "test-proj", "Leaf", "desc", [], "proj");
       const counts = taskStore.getChildStatusCounts("t1");
       expect(Object.keys(counts)).toHaveLength(0);
     });
@@ -191,7 +188,7 @@ describe("task-store tree operations", () => {
 
   describe("deleteTask", () => {
     it("allows deletion of leaf task", () => {
-      taskStore.createTask("t1", "test-proj", "Leaf", "desc", "", [], "proj");
+      taskStore.createTask("t1", "test-proj", "Leaf", "desc", [], "proj");
       taskStore.deleteTask("t1");
       expect(taskStore.getTask("t1")).toBeUndefined();
     });
@@ -199,48 +196,48 @@ describe("task-store tree operations", () => {
 
   describe("decomposition rights", () => {
     it("allows child under decomposable parent", () => {
-      taskStore.createTask("t1", "test-proj", "Parent", "desc", "", [], "proj", "", true);
-      taskStore.createTask("t2", "test-proj", "Child", "desc", "", [], "proj", "t1");
+      taskStore.createTask("t1", "test-proj", "Parent", "desc", [], "proj", "", true);
+      taskStore.createTask("t2", "test-proj", "Child", "desc", [], "proj", "t1");
       const child = taskStore.getTask("t2");
       expect(child).toBeDefined();
       expect(child!.parentTaskId).toBe("t1");
     });
 
     it("rejects child under non-decomposable parent", () => {
-      taskStore.createTask("t1", "test-proj", "Parent", "desc", "", [], "proj", "", false);
+      taskStore.createTask("t1", "test-proj", "Parent", "desc", [], "proj", "", false);
       expect(() => {
-        taskStore.createTask("t2", "test-proj", "Child", "desc", "", [], "proj", "t1");
+        taskStore.createTask("t2", "test-proj", "Child", "desc", [], "proj", "t1");
       }).toThrow("does not have decomposition rights");
     });
 
     it("persists canDecompose=true on root task", () => {
-      taskStore.createTask("t1", "test-proj", "Root", "desc", "", [], "proj", "", true);
+      taskStore.createTask("t1", "test-proj", "Root", "desc", [], "proj", "", true);
       const task = taskStore.getTask("t1");
       expect(task).toBeDefined();
       expect(task!.canDecompose).toBe(true);
     });
 
     it("persists canDecompose=false on root task and blocks children", () => {
-      taskStore.createTask("t1", "test-proj", "Root", "desc", "", [], "proj", "", false);
+      taskStore.createTask("t1", "test-proj", "Root", "desc", [], "proj", "", false);
       const task = taskStore.getTask("t1");
       expect(task!.canDecompose).toBe(false);
       expect(() => {
-        taskStore.createTask("t2", "test-proj", "Child", "desc", "", [], "proj", "t1");
+        taskStore.createTask("t2", "test-proj", "Child", "desc", [], "proj", "t1");
       }).toThrow("does not have decomposition rights");
     });
 
     it("chain: parent true → child false → grandchild rejected", () => {
-      taskStore.createTask("t1", "test-proj", "Parent", "desc", "", [], "proj", "", true);
-      taskStore.createTask("t2", "test-proj", "Child", "desc", "", [], "proj", "t1", false);
+      taskStore.createTask("t1", "test-proj", "Parent", "desc", [], "proj", "", true);
+      taskStore.createTask("t2", "test-proj", "Child", "desc", [], "proj", "t1", false);
       expect(() => {
-        taskStore.createTask("t3", "test-proj", "Grandchild", "desc", "", [], "proj", "t2");
+        taskStore.createTask("t3", "test-proj", "Grandchild", "desc", [], "proj", "t2");
       }).toThrow("does not have decomposition rights");
     });
 
     it("chain: parent true → child true → grandchild succeeds", () => {
-      taskStore.createTask("t1", "test-proj", "Parent", "desc", "", [], "proj", "", true);
-      taskStore.createTask("t2", "test-proj", "Child", "desc", "", [], "proj", "t1", true);
-      taskStore.createTask("t3", "test-proj", "Grandchild", "desc", "", [], "proj", "t2");
+      taskStore.createTask("t1", "test-proj", "Parent", "desc", [], "proj", "", true);
+      taskStore.createTask("t2", "test-proj", "Child", "desc", [], "proj", "t1", true);
+      taskStore.createTask("t3", "test-proj", "Grandchild", "desc", [], "proj", "t2");
       const grandchild = taskStore.getTask("t3");
       expect(grandchild).toBeDefined();
       expect(grandchild!.depth).toBe(2);
@@ -248,42 +245,26 @@ describe("task-store tree operations", () => {
 
     it("depth limit still enforced even when canDecompose=true", () => {
       for (let i = 0; i <= 8; i++) {
-        taskStore.createTask(`t${i}`, "test-proj", `Level ${i}`, "desc", "", [], "proj", i === 0 ? "" : `t${i - 1}`, true);
+        taskStore.createTask(`t${i}`, "test-proj", `Level ${i}`, "desc", [], "proj", i === 0 ? "" : `t${i - 1}`, true);
       }
 
       expect(() => {
-        taskStore.createTask("t9", "test-proj", "Level 9", "desc", "", [], "proj", "t8", true);
+        taskStore.createTask("t9", "test-proj", "Level 9", "desc", [], "proj", "t8", true);
       }).toThrow("depth would exceed maximum");
     });
 
     it("defaults canDecompose to true for root tasks when not specified", () => {
-      taskStore.createTask("t1", "test-proj", "Task", "desc", "", [], "proj");
+      taskStore.createTask("t1", "test-proj", "Task", "desc", [], "proj");
       const task = taskStore.getTask("t1");
       expect(task!.canDecompose).toBe(true);
     });
 
     it("defaults canDecompose to false for child tasks when not specified", () => {
-      taskStore.createTask("t1", "test-proj", "Parent", "desc", "", [], "proj", "", true);
-      taskStore.createTask("t2", "test-proj", "Child", "desc", "", [], "proj", "t1");
+      taskStore.createTask("t1", "test-proj", "Parent", "desc", [], "proj", "", true);
+      taskStore.createTask("t2", "test-proj", "Child", "desc", [], "proj", "t1");
       const child = taskStore.getTask("t2");
       expect(child!.canDecompose).toBe(false);
     });
   });
 
-  describe("markTaskStarted on failed task", () => {
-    it("transitions a failed task to in_progress", () => {
-      taskStore.createTask("t1", "test-proj", "Retry Task", "desc", "", [], "proj");
-      taskStore.markTaskStarted("t1");
-      taskStore.markTaskCompleted("t1", "failed");
-
-      const failed = taskStore.getTask("t1");
-      expect(failed!.status).toBe("failed");
-
-      taskStore.markTaskStarted("t1");
-
-      const retried = taskStore.getTask("t1");
-      expect(retried!.status).toBe("in_progress");
-      expect(retried!.startedAt).toBeDefined();
-    });
-  });
 });

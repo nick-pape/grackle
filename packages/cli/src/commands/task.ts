@@ -32,7 +32,7 @@ export function registerTaskCommands(program: Command): void {
           taskStatusToString(t.status),
           t.branch.slice(0, 30),
           deps,
-          t.sessionId?.slice(0, 8) || "-",
+          t.latestSessionId?.slice(0, 8) || "-",
         ]);
       }
       console.log(table.toString());
@@ -42,9 +42,7 @@ export function registerTaskCommands(program: Command): void {
     .command("create <project-id> <title>")
     .description("Create a task")
     .option("--desc <text>", "Task description")
-    .option("--env <env-id>", "Environment ID")
     .option("--depends-on <ids>", "Comma-separated dependency task IDs")
-    .option("--persona <id-or-name>", "Persona to assign")
     .action(async (projectId: string, title: string, opts) => {
       const client = createGrackleClient();
       const dependsOn = opts.dependsOn
@@ -54,9 +52,7 @@ export function registerTaskCommands(program: Command): void {
         projectId,
         title,
         description: opts.desc || "",
-        environmentId: opts.env || "",
         dependsOn,
-        personaId: opts.persona || "",
       });
       console.log(`Created task: ${t.id} (${t.title}) branch: ${t.branch}`);
     });
@@ -71,13 +67,11 @@ export function registerTaskCommands(program: Command): void {
       console.log(`Title:       ${t.title}`);
       console.log(`Status:      ${taskStatusToString(t.status)}`);
       console.log(`Branch:      ${t.branch}`);
-      console.log(`Env:         ${t.environmentId || "-"}`);
-      console.log(`Session:     ${t.sessionId || "-"}`);
+      console.log(`Session:     ${t.latestSessionId || "-"}`);
       console.log(
         `Depends On:  ${t.dependsOn.length > 0 ? t.dependsOn.join(", ") : "none"}`,
       );
       if (t.description) console.log(`Description: ${t.description}`);
-      if (t.personaId) console.log(`Persona:     ${t.personaId}`);
       if (t.reviewNotes) console.log(`Review Notes: ${t.reviewNotes}`);
     });
 
@@ -86,7 +80,6 @@ export function registerTaskCommands(program: Command): void {
     .description("Update a task")
     .option("--title <text>", "New title")
     .option("--desc <text>", "New description")
-    .option("--env <env-id>", "Environment ID")
     .option(
       "--status <status>",
       "Task status (pending, assigned, in_progress, waiting_input, review, done, failed)",
@@ -124,7 +117,6 @@ export function registerTaskCommands(program: Command): void {
         id: taskId,
         title: opts.title || "",
         description: opts.desc || "",
-        environmentId: opts.env || "",
         status: opts.status
           ? taskStatusToEnum(String(opts.status).toLowerCase())
           : taskStatusToEnum(""),
@@ -133,7 +125,7 @@ export function registerTaskCommands(program: Command): void {
         sessionId: opts.session || "",
       });
       console.log(
-        `Updated: ${t.id} (${t.title}) status: ${taskStatusToString(t.status)} env: ${t.environmentId || "-"}`,
+        `Updated: ${t.id} (${t.title}) status: ${taskStatusToString(t.status)}`,
       );
     });
 
@@ -143,6 +135,7 @@ export function registerTaskCommands(program: Command): void {
     .option("--runtime <runtime>", "Agent runtime")
     .option("--model <model>", "Model to use")
     .option("--persona <id-or-name>", "Persona to use")
+    .option("--env <env-id>", "Environment to run on")
     .action(async (taskId: string, opts) => {
       const client = createGrackleClient();
       const session = await client.startTask({
@@ -150,6 +143,7 @@ export function registerTaskCommands(program: Command): void {
         runtime: opts.runtime || "",
         model: opts.model || "",
         personaId: opts.persona || "",
+        environmentId: opts.env || "",
       });
       console.log(`Task started. Session: ${session.id}`);
     });

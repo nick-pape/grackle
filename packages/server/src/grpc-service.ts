@@ -29,37 +29,11 @@ import {
 } from "@grackle-ai/common";
 import { grackleHome } from "./paths.js";
 import { safeParseJsonArray } from "./json-helpers.js";
+import { computeTaskStatus } from "./compute-task-status.js";
 import { logger } from "./logger.js";
 import { slugify } from "./utils/slugify.js";
 import { buildTaskSystemContext } from "./utils/system-context.js";
 import { importGitHubIssues as executeGitHubImport } from "./github-import.js";
-
-/**
- * Build a completion callback that transitions a task to review/failed
- * when its associated session ends. Shared across startTask, resumeAgent,
- * updateTask (late-bind), and WS bridge paths.
- */
-export function makeTaskCompletionCallback(
-  taskId: string,
-  sessionId: string,
-  projectId: string,
-): () => void {
-  return (): void => {
-    const t = taskStore.getTask(taskId);
-    if (t && (t.status === "in_progress" || t.status === "waiting_input")) {
-      const sess = sessionStore.getSession(sessionId);
-      if (sess?.status === "completed") {
-        taskStore.markTaskCompleted(taskId, "review");
-      } else if (sess?.status === "failed") {
-        taskStore.markTaskCompleted(taskId, "failed");
-      }
-      broadcast({
-        type: "task_updated",
-        payload: { taskId, projectId },
-      });
-    }
-  };
-}
 
 function envRowToProto(row: EnvironmentRow): grackle.Environment {
   return create(grackle.EnvironmentSchema, {
@@ -92,6 +66,7 @@ function sessionRowToProto(row: SessionRow): grackle.Session {
     endedAt: row.endedAt ?? "",
     error: row.error ?? "",
     taskId: row.taskId ?? "",
+    personaId: row.personaId ?? "",
   });
 }
 
@@ -112,16 +87,17 @@ function projectRowToProto(row: projectStore.ProjectRow): grackle.Project {
 function taskRowToProto(
   row: taskStore.TaskRow,
   childIds?: string[],
+  computedStatus?: string,
+  latestSessionId?: string,
 ): grackle.Task {
   return create(grackle.TaskSchema, {
     id: row.id,
     projectId: row.projectId,
     title: row.title,
     description: row.description,
-    status: taskStatusToEnum(row.status),
+    status: taskStatusToEnum(computedStatus ?? row.status),
     branch: row.branch,
-    environmentId: row.environmentId,
-    sessionId: row.sessionId,
+    latestSessionId: latestSessionId ?? "",
     dependsOn: safeParseJsonArray(row.dependsOn),
     assignedAt: row.assignedAt ?? "",
     startedAt: row.startedAt ?? "",
@@ -134,7 +110,6 @@ function taskRowToProto(
     depth: row.depth,
     childTaskIds: childIds ?? taskStore.getChildren(row.id).map((c) => c.id),
     canDecompose: row.canDecompose,
-    personaId: row.personaId,
   });
 }
 
@@ -482,14 +457,12 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       // Auto-bind task context from DB if session was previously associated with a task
       let resumeProjectId: string | undefined;
       let resumeTaskId: string | undefined;
-      let resumeOnComplete: (() => void) | undefined;
 
       if (session.taskId) {
         const task = taskStore.getTask(session.taskId);
         if (task) {
           resumeProjectId = task.projectId;
           resumeTaskId = task.id;
-          resumeOnComplete = makeTaskCompletionCallback(task.id, session.id, task.projectId);
         }
       }
 
@@ -498,7 +471,6 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         logPath,
         projectId: resumeProjectId,
         taskId: resumeTaskId,
-        onComplete: resumeOnComplete,
       });
 
       const row = sessionStore.getSession(session.id);
@@ -539,9 +511,13 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
 
       const conn = adapterManager.getConnection(session.environmentId);
       if (conn) {
-        await conn.client.kill(
-          create(powerline.SessionIdSchema, { id: req.id }),
-        );
+        try {
+          await conn.client.kill(
+            create(powerline.SessionIdSchema, { id: req.id }),
+          );
+        } catch (err) {
+          logger.warn({ sessionId: req.id, err }, "PowerLine kill failed — marking session killed anyway");
+        }
       }
 
       sessionStore.updateSession(req.id, "killed");
@@ -554,6 +530,15 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
           raw: "",
         }),
       );
+
+      // Broadcast task_updated so frontend re-fetches computed status
+      if (session.taskId) {
+        const task = taskStore.getTask(session.taskId);
+        if (task) {
+          broadcast({ type: "task_updated", payload: { taskId: task.id, projectId: task.projectId } });
+        }
+      }
+
       return create(grackle.EmptySchema, {});
     },
 
@@ -690,8 +675,23 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
     async listTasks(req: grackle.ProjectId) {
       const rows = taskStore.listTasks(req.id);
       const childIdsMap = taskStore.buildChildIdsMap(rows);
+
+      // Batch-fetch sessions for all tasks and group by taskId
+      const taskIds = rows.map((r) => r.id);
+      const allSessions = sessionStore.listSessionsByTaskIds(taskIds);
+      const sessionsByTask = new Map<string, typeof allSessions>();
+      for (const s of allSessions) {
+        const arr = sessionsByTask.get(s.taskId) ?? [];
+        arr.push(s);
+        sessionsByTask.set(s.taskId, arr);
+      }
+
       return create(grackle.TaskListSchema, {
-        tasks: rows.map((r) => taskRowToProto(r, childIdsMap.get(r.id) ?? [])),
+        tasks: rows.map((r) => {
+          const taskSessions = sessionsByTask.get(r.id) ?? [];
+          const { status, latestSessionId } = computeTaskStatus(r.status, taskSessions);
+          return taskRowToProto(r, childIdsMap.get(r.id) ?? [], status, latestSessionId);
+        }),
       });
     },
 
@@ -717,28 +717,15 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       }
 
       const id = uuid().slice(0, 8);
-      // Resolve environment: explicit > parent task's env > project default
-      let environmentId = req.environmentId;
-      if (!environmentId && req.parentTaskId) {
-        const parent = taskStore.getTask(req.parentTaskId);
-        if (parent?.environmentId) {
-          environmentId = parent.environmentId;
-        }
-      }
-      if (!environmentId) {
-        environmentId = project.defaultEnvironmentId;
-      }
       taskStore.createTask(
         id,
         req.projectId,
         req.title,
         req.description,
-        environmentId,
         [...req.dependsOn],
         slugify(project.name),
         req.parentTaskId,
         req.canDecompose,
-        req.personaId,
       );
       const row = taskStore.getTask(id);
       broadcast({
@@ -751,7 +738,9 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
     async getTask(req: grackle.TaskId) {
       const row = taskStore.getTask(req.id);
       if (!row) throw new Error(`Task not found: ${req.id}`);
-      return taskRowToProto(row);
+      const taskSessions = sessionStore.listSessionsForTask(req.id);
+      const { status, latestSessionId } = computeTaskStatus(row.status, taskSessions);
+      return taskRowToProto(row, undefined, status, latestSessionId);
     },
 
     async updateTask(req: grackle.UpdateTaskRequest) {
@@ -772,12 +761,10 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         req.title !== "" ? req.title : existing.title,
         req.description !== "" ? req.description : existing.description,
         reqStatus,
-        req.environmentId !== "" ? req.environmentId : existing.environmentId,
         req.dependsOn.length > 0
           ? [...req.dependsOn]
           : safeParseJsonArray(existing.dependsOn),
         req.reviewNotes !== "" ? req.reviewNotes : existing.reviewNotes,
-        existing.personaId,
       );
 
       // Late-bind: associate an existing session with this task
@@ -803,11 +790,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         }
 
         sessionStore.setSessionTask(req.sessionId, req.id);
-        taskStore.setTaskSession(req.id, req.sessionId);
-        taskStore.markTaskStarted(req.id);
-
-        const onComplete = makeTaskCompletionCallback(req.id, req.sessionId, existing.projectId);
-        processorRegistry.lateBind(req.sessionId, req.id, existing.projectId, onComplete);
+        processorRegistry.lateBind(req.sessionId, req.id, existing.projectId);
         broadcast({
           type: "task_started",
           payload: { taskId: req.id, sessionId: req.sessionId, projectId: existing.projectId },
@@ -815,7 +798,9 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       }
 
       const row = taskStore.getTask(req.id);
-      return taskRowToProto(row!);
+      const taskSessions = sessionStore.listSessionsForTask(req.id);
+      const { status, latestSessionId } = computeTaskStatus(row!.status, taskSessions);
+      return taskRowToProto(row!, undefined, status, latestSessionId);
     },
 
     async startTask(req: grackle.StartTaskRequest) {
@@ -833,15 +818,16 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       const project = projectStore.getProject(task.projectId);
       if (!project) throw new Error(`Project not found: ${task.projectId}`);
 
-      const environmentId = task.environmentId || project.defaultEnvironmentId;
-      if (!environmentId)
+      const environmentId = req.environmentId || project.defaultEnvironmentId;
+      if (!environmentId) {
         throw new Error("No environment specified for task or project");
+      }
 
       const conn = adapterManager.getConnection(environmentId);
       if (!conn) throw new Error(`Environment ${environmentId} not connected`);
 
-      // Resolve persona (StartTaskRequest override > task's stored persona)
-      const personaId = req.personaId || task.personaId;
+      // Resolve persona from StartTaskRequest
+      const personaId = req.personaId || "";
       const persona = personaId
         ? personaStore.getPersona(personaId)
         : undefined;
@@ -882,9 +868,8 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         model,
         logPath,
         task.id,
+        personaId,
       );
-      taskStore.setTaskSession(task.id, sessionId);
-      taskStore.markTaskStarted(task.id);
       broadcast({
         type: "task_started",
         payload: { taskId: task.id, sessionId, projectId: task.projectId },
@@ -925,7 +910,6 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         logPath,
         projectId: task.projectId,
         taskId: task.id,
-        onComplete: makeTaskCompletionCallback(task.id, sessionId, task.projectId),
       });
 
       const row = sessionStore.getSession(sessionId);
@@ -961,7 +945,9 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         payload: { taskId: task.id, projectId: task.projectId },
       });
       const row = taskStore.getTask(task.id);
-      return taskRowToProto(row!);
+      const taskSessions = sessionStore.listSessionsForTask(task.id);
+      const { status, latestSessionId } = computeTaskStatus(row!.status, taskSessions);
+      return taskRowToProto(row!, undefined, status, latestSessionId);
     },
 
     async rejectTask(req: grackle.UpdateTaskRequest) {
@@ -973,10 +959,8 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         task.title,
         task.description,
         "assigned",
-        task.environmentId,
         safeParseJsonArray(task.dependsOn),
         req.reviewNotes || "",
-        task.personaId,
       );
 
       broadcast({
@@ -984,7 +968,9 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         payload: { taskId: task.id, projectId: task.projectId },
       });
       const row = taskStore.getTask(task.id);
-      return taskRowToProto(row!);
+      const taskSessions = sessionStore.listSessionsForTask(task.id);
+      const { status, latestSessionId } = computeTaskStatus(row!.status, taskSessions);
+      return taskRowToProto(row!, undefined, status, latestSessionId);
     },
 
     async deleteTask(req: grackle.TaskId) {
@@ -1000,31 +986,29 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         );
       }
 
-      // Kill active session before deleting the task
-      if (task.sessionId) {
-        const activeSession = sessionStore.getSession(task.sessionId);
-        if (activeSession && (activeSession.status === "running" || activeSession.status === "waiting_input")) {
-          const conn = adapterManager.getConnection(activeSession.environmentId);
-          if (conn) {
-            try {
-              await conn.client.kill(
-                create(powerline.SessionIdSchema, { id: task.sessionId }),
-              );
-            } catch (err) {
-              logger.warn({ taskId: req.id, sessionId: task.sessionId, err }, "Failed to kill session during task deletion");
-            }
+      // Kill all active sessions before deleting the task
+      const activeSessions = sessionStore.getActiveSessionsForTask(req.id);
+      for (const activeSession of activeSessions) {
+        const conn = adapterManager.getConnection(activeSession.environmentId);
+        if (conn) {
+          try {
+            await conn.client.kill(
+              create(powerline.SessionIdSchema, { id: activeSession.id }),
+            );
+          } catch (err) {
+            logger.warn({ taskId: req.id, sessionId: activeSession.id, err }, "Failed to kill session during task deletion");
           }
-          sessionStore.updateSession(task.sessionId, "killed");
-          streamHub.publish(
-            create(grackle.SessionEventSchema, {
-              sessionId: task.sessionId,
-              type: grackle.EventType.STATUS,
-              timestamp: new Date().toISOString(),
-              content: "killed",
-              raw: "",
-            }),
-          );
         }
+        sessionStore.updateSession(activeSession.id, "killed");
+        streamHub.publish(
+          create(grackle.SessionEventSchema, {
+            sessionId: activeSession.id,
+            type: grackle.EventType.STATUS,
+            timestamp: new Date().toISOString(),
+            content: "killed",
+            raw: "",
+          }),
+        );
       }
 
       const changes = taskStore.deleteTask(req.id);

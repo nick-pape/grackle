@@ -391,12 +391,12 @@ export async function importGitHubIssues(
   repo: string,
   state: string,
   label?: string,
-  environmentId?: string,
+  _environmentId?: string,
   includeComments: boolean = true,
 ): Promise<ImportResult> {
   acquireImportLock();
   try {
-    return await doImport(projectId, repo, state, label, environmentId, includeComments);
+    return await doImport(projectId, repo, state, label, includeComments);
   } finally {
     releaseImportLock();
   }
@@ -419,7 +419,6 @@ async function doImport(
   repo: string,
   state: string,
   label?: string,
-  environmentId?: string,
   includeComments: boolean = true,
 ): Promise<ImportResult> {
   const project = projectStore.getProject(projectId);
@@ -427,7 +426,6 @@ async function doImport(
     throw new Error(`Project not found: ${projectId}`);
   }
 
-  const resolvedEnvironmentId = environmentId || project.defaultEnvironmentId;
   const projectSlug = slugify(project.name);
 
   // 1. Fetch issues from GitHub (with or without comments)
@@ -487,7 +485,6 @@ async function doImport(
       projectId,
       title,
       description,
-      resolvedEnvironmentId,
       [],
       projectSlug,
       parentTaskId,
