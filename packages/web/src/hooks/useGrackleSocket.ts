@@ -275,8 +275,10 @@ function asValidArray<T>(
     );
     return [];
   }
-  return v.filter((item: unknown, i: number) => {
-    if (guard(item)) return true;
+  return (v as unknown[]).filter((item: unknown, i: number): item is T => {
+    if (guard(item)) {
+      return true;
+    }
     warnBadPayload(
       msgType,
       `item at index ${i} in "${fieldName}" has unexpected shape`,
@@ -473,8 +475,10 @@ export interface UseGrackleSocketResult {
 
 export function useGrackleSocket(url?: string): UseGrackleSocketResult {
   const apiKey =
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string means "not provided"
     typeof window !== "undefined" ? window.__GRACKLE_API_KEY__ || "" : "";
   const wsUrl =
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string means "not provided"
     url ||
     (typeof window !== "undefined"
       ? `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}?token=${encodeURIComponent(apiKey)}`
@@ -728,6 +732,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
               "tasks",
               "tasks",
             );
+            // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string means "not provided"
             const pid =
               (typeof msg.payload?.projectId === "string"
                 ? msg.payload.projectId
@@ -976,6 +981,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
 
     return () => {
       clearTimeout(reconnectTimer);
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- ws may be uninitialized if cleanup runs before connect()
       ws?.close();
     };
   }, [wsUrl, send]);
@@ -993,8 +999,11 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
         payload: {
           environmentId,
           prompt,
+          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string means "not provided"
           model: model || "",
+          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string means "not provided"
           runtime: runtime || "",
+          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string means "not provided"
           personaId: personaId || "",
         },
       });
@@ -1049,8 +1058,11 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
         type: "create_project",
         payload: {
           name,
+          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string means "not provided"
           description: description || "",
+          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string means "not provided"
           repoUrl: repoUrl || "",
+          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string means "not provided"
           defaultEnvironmentId: defaultEnvironmentId || "",
         },
       });
@@ -1105,8 +1117,10 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
         payload: {
           projectId,
           title,
+          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string means "not provided"
           description: description || "",
-          dependsOn: dependsOn || [],
+          dependsOn: dependsOn ?? [],
+          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string means "not provided"
           parentTaskId: parentTaskId || "",
         },
       });
@@ -1121,10 +1135,15 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
         type: "start_task",
         payload: {
           taskId,
+          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string means "not provided"
           runtime: runtime || "",
+          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string means "not provided"
           model: model || "",
+          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string means "not provided"
           personaId: personaId || "",
+          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string means "not provided"
           environmentId: environmentId || "",
+          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string means "not provided"
           notes: notes || "",
         },
       });
@@ -1191,8 +1210,9 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
           projectId,
           title,
           content,
+          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string means "not provided"
           category: category || "general",
-          tags: tags || [],
+          tags: tags ?? [],
         },
       });
     },
@@ -1240,7 +1260,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
       const payload: Record<string, unknown> = {
         displayName,
         adapterType,
-        adapterConfig: adapterConfig || {},
+        adapterConfig: adapterConfig ?? {},
       };
       if (defaultRuntime) {
         payload.defaultRuntime = defaultRuntime;
@@ -1309,8 +1329,11 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
           name,
           description,
           systemPrompt,
+          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string means "not provided"
           runtime: runtime || "",
+          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string means "not provided"
           model: model || "",
+          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- zero means "not provided"
           maxTurns: maxTurns || 0,
         },
       });
@@ -1332,11 +1355,17 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
         type: "update_persona",
         payload: {
           personaId,
+          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string means "not provided"
           name: name || "",
+          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string means "not provided"
           description: description || "",
+          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string means "not provided"
           systemPrompt: systemPrompt || "",
+          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string means "not provided"
           runtime: runtime || "",
+          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string means "not provided"
           model: model || "",
+          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- zero means "not provided"
           maxTurns: maxTurns || 0,
         },
       });
