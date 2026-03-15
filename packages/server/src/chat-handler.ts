@@ -14,6 +14,38 @@ function readBody(req: http.IncomingMessage): Promise<string> {
   });
 }
 
+/** MCP tool names exposed by the Grackle MCP server, prefixed for Claude Code. */
+const ALLOWED_MCP_TOOLS: string[] = [
+  // environments
+  "mcp__grackle__env_list", "mcp__grackle__env_add", "mcp__grackle__env_provision",
+  "mcp__grackle__env_stop", "mcp__grackle__env_destroy", "mcp__grackle__env_remove",
+  "mcp__grackle__env_wake",
+  // projects
+  "mcp__grackle__project_list", "mcp__grackle__project_create", "mcp__grackle__project_get",
+  "mcp__grackle__project_update", "mcp__grackle__project_archive",
+  // tasks
+  "mcp__grackle__task_list", "mcp__grackle__task_create", "mcp__grackle__task_show",
+  "mcp__grackle__task_update", "mcp__grackle__task_start", "mcp__grackle__task_delete",
+  "mcp__grackle__task_approve", "mcp__grackle__task_reject", "mcp__grackle__task_import_github",
+  // sessions
+  "mcp__grackle__session_spawn", "mcp__grackle__session_resume", "mcp__grackle__session_status",
+  "mcp__grackle__session_kill", "mcp__grackle__session_attach", "mcp__grackle__session_send_input",
+  // findings
+  "mcp__grackle__finding_list", "mcp__grackle__finding_post",
+  // personas
+  "mcp__grackle__persona_list", "mcp__grackle__persona_create", "mcp__grackle__persona_show",
+  "mcp__grackle__persona_edit", "mcp__grackle__persona_delete",
+  // logs
+  "mcp__grackle__logs_get",
+];
+
+/** Built-in Claude Code tools that must NOT be used — only MCP domain tools. */
+const DISALLOWED_BUILTIN_TOOLS: string[] = [
+  "Bash", "Read", "Write", "Edit", "Glob", "Grep",
+  "NotebookEdit", "WebFetch", "WebSearch",
+  "TodoWrite", "TodoRead", "Agent",
+];
+
 /**
  * Create an HTTP handler for POST /api/chat.
  * Streams an AI response using Claude Code with Grackle MCP tools.
@@ -35,6 +67,8 @@ export function createChatHandler(
           headers: { Authorization: `Bearer ${apiKey}` },
         },
       },
+      allowedTools: ALLOWED_MCP_TOOLS,
+      disallowedTools: DISALLOWED_BUILTIN_TOOLS,
       permissionMode: "bypassPermissions",
       allowDangerouslySkipPermissions: true,
       persistSession: false,
