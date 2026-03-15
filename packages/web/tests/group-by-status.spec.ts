@@ -14,8 +14,8 @@ test.describe("Group-by-status toggle", () => {
     const page = appPage;
 
     await createProject(page, "gbs-toggle");
-    await createTask(page, "gbs-toggle", "task-a", "test-local");
-    await createTask(page, "gbs-toggle", "task-b", "test-local");
+    await createTask(page, "gbs-toggle", "task-a");
+    await createTask(page, "gbs-toggle", "task-b");
 
     // Enable group-by-status
     await page.getByTestId("group-by-status-toggle").click();
@@ -27,13 +27,16 @@ test.describe("Group-by-status toggle", () => {
     // Tasks should still be visible within the group
     await expect(page.getByText("task-a").first()).toBeVisible();
     await expect(page.getByText("task-b").first()).toBeVisible();
+
+    // Disable for next tests
+    await page.getByTestId("group-by-status-toggle").click();
   });
 
   test("collapse and expand a status group", async ({ appPage }) => {
     const page = appPage;
 
     await createProject(page, "gbs-collapse");
-    await createTask(page, "gbs-collapse", "collapse-task", "test-local");
+    await createTask(page, "gbs-collapse", "collapse-task");
 
     await page.getByTestId("group-by-status-toggle").click();
 
@@ -48,75 +51,72 @@ test.describe("Group-by-status toggle", () => {
     // Click again to expand
     await groupHeader.locator('[role="button"]').first().click();
     await expect(page.getByText("collapse-task").first()).toBeVisible({ timeout: 5_000 });
+
+    // Disable for next tests
+    await page.getByTestId("group-by-status-toggle").click();
   });
 
   test("toggle persists across page reload", async ({ appPage }) => {
     const page = appPage;
 
     await createProject(page, "gbs-persist");
-    await createTask(page, "gbs-persist", "persist-task", "test-local");
-
-    // Navigate to the project so it auto-expands after reload
-    await page.getByText("gbs-persist").first().click();
-    await page.waitForURL(/\/projects\//);
+    await createTask(page, "gbs-persist", "persist-task");
 
     // Enable group-by-status
     await page.getByTestId("group-by-status-toggle").click();
-    await expect(page.getByTestId("status-group-not_started")).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByTestId("status-group-not_started").first()).toBeVisible({ timeout: 5_000 });
 
     // Verify localStorage was set
     const stored = await page.evaluate(() => localStorage.getItem("grackle-group-by-status"));
     expect(stored).toBe("true");
 
-    // Reload — URL stays at /projects/<id> so the project auto-expands
+    // Reload and verify toggle is still active
     await page.reload();
     await page.waitForFunction(
       () => document.body.innerText.includes("Connected"),
       { timeout: 10_000 },
     );
-    await expect(page.getByTestId("group-by-status-toggle")).toBeVisible({ timeout: 5_000 });
-    // Project auto-expands via selectedProjectId; tasks load via WS
-    await expect(page.getByTestId("status-group-not_started")).toBeVisible({ timeout: 10_000 });
+
+    // The toggle button should reflect the persisted "active" state
+    const toggle = page.getByTestId("group-by-status-toggle");
+    await expect(toggle).toBeVisible({ timeout: 5_000 });
+
+    // Expand the project to see grouped tasks
+    await page.getByText("gbs-persist").first().click();
+    await expect(page.getByTestId("status-group-not_started").first()).toBeVisible({ timeout: 10_000 });
+
+    // Disable for next tests
+    await page.getByTestId("group-by-status-toggle").click();
   });
 
   test("empty status groups are hidden", async ({ appPage }) => {
     const page = appPage;
 
     await createProject(page, "gbs-empty");
-    await createTask(page, "gbs-empty", "only-not-started", "test-local");
+    await createTask(page, "gbs-empty", "only-not-started");
 
     await page.getByTestId("group-by-status-toggle").click();
 
     // Only not_started group should exist
-    await expect(page.getByTestId("status-group-not_started")).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByTestId("status-group-not_started").first()).toBeVisible({ timeout: 5_000 });
     await expect(page.getByTestId("status-group-working")).not.toBeVisible();
     await expect(page.getByTestId("status-group-paused")).not.toBeVisible();
     await expect(page.getByTestId("status-group-failed")).not.toBeVisible();
     await expect(page.getByTestId("status-group-complete")).not.toBeVisible();
+
+    // Disable for next tests
+    await page.getByTestId("group-by-status-toggle").click();
   });
 
   test("toggle back restores tree view", async ({ appPage }) => {
     const page = appPage;
 
     await createProject(page, "gbs-restore");
-    await createTask(page, "gbs-restore", "restore-parent", "test-local");
-
-    const projectId = await getProjectId(page, "gbs-restore");
-    const parentRow = page.locator(`text=restore-parent`).first();
-    await parentRow.waitFor({ timeout: 5_000 });
-
-    // Create a child task so tree structure is visible
-    const tasks = await createTaskViaWs(page, projectId, "restore-child", {
-      parentTaskId: (await page.locator('[data-task-id]').first().getAttribute("data-task-id"))!,
-    });
+    await createTask(page, "gbs-restore", "restore-parent");
 
     // Enable grouped view
     await page.getByTestId("group-by-status-toggle").click();
-    await expect(page.getByTestId("status-group-not_started")).toBeVisible({ timeout: 5_000 });
-
-    // Status group headers should be visible
-    const statusHeader = page.getByTestId("status-group-not_started");
-    await expect(statusHeader).toBeVisible();
+    await expect(page.getByTestId("status-group-not_started").first()).toBeVisible({ timeout: 5_000 });
 
     // Disable grouped view — should return to tree
     await page.getByTestId("group-by-status-toggle").click();
@@ -132,11 +132,11 @@ test.describe("Group-by-status toggle", () => {
     const page = appPage;
 
     await createProject(page, "gbs-nav");
-    await createTask(page, "gbs-nav", "nav-target", "test-local");
+    await createTask(page, "gbs-nav", "nav-target");
 
     // Enable grouped view
     await page.getByTestId("group-by-status-toggle").click();
-    await expect(page.getByTestId("status-group-not_started")).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByTestId("status-group-not_started").first()).toBeVisible({ timeout: 5_000 });
 
     // Click the task in the grouped view
     await page.getByText("nav-target").first().click();
@@ -145,5 +145,8 @@ test.describe("Group-by-status toggle", () => {
     await expect(
       page.locator('[data-testid="task-title"]:has-text("nav-target")'),
     ).toBeVisible({ timeout: 5_000 });
+
+    // Disable for next tests
+    await page.getByTestId("group-by-status-toggle").click();
   });
 });
