@@ -137,7 +137,7 @@ export abstract class BaseAgentSession implements AgentSession {
       // For resumed sessions, perform resume-specific setup and wait for input.
       if (this.resumeSessionId) {
         await this.setupForResume();
-        this.status = "waiting_input";
+        this.status = "idle";
         this.eventQueue.push({ type: "status", timestamp: ts(), content: "waiting_input" });
         return;
       }
@@ -161,7 +161,7 @@ export abstract class BaseAgentSession implements AgentSession {
 
       // Session is idle — ready for follow-up input via sendInput().
       // The queue stays open so sendInput() can push more events.
-      this.status = "waiting_input";
+      this.status = "idle";
       this.eventQueue.push({ type: "status", timestamp: ts(), content: "waiting_input" });
     } catch (err) {
       this.status = "failed";
@@ -189,7 +189,7 @@ export abstract class BaseAgentSession implements AgentSession {
           this.releaseResources();
           this.eventQueue.close();
         } else {
-          this.status = "waiting_input";
+          this.status = "idle";
           this.eventQueue.push({ type: "status", timestamp: ts(), content: "waiting_input" });
         }
       })
@@ -202,7 +202,7 @@ export abstract class BaseAgentSession implements AgentSession {
   /** Forcefully terminate the session. */
   public kill(): void {
     this.killed = true;
-    this.status = "killed";
+    this.status = "interrupted";
     this.abortActive();
     this.releaseResources();
     this.eventQueue.close();

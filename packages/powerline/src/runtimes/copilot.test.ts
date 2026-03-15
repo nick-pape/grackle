@@ -305,7 +305,7 @@ describe("CopilotSession.kill — abort path (UT-1 through UT-4)", () => {
 
     expect(() => session.kill()).not.toThrow();
     // Status must still be killed even though abort() threw
-    expect(session.status).toBe("killed");
+    expect(session.status).toBe("interrupted");
 
     // releaseResources() fires cleanup() as a fire-and-forget; drain the microtask
     // queue so the async cleanup path (destroy()) settles before we assert on it.
@@ -323,7 +323,7 @@ describe("CopilotSession.kill — abort path (UT-1 through UT-4)", () => {
     injectMockCopilotSession(session, mockSdkSession);
 
     expect(() => session.kill()).not.toThrow();
-    expect(session.status).toBe("killed");
+    expect(session.status).toBe("interrupted");
     // Drain microtasks — the rejection must be swallowed, not unhandled,
     // and the cleanup (destroy) path must still execute.
     await new Promise((resolve) => setTimeout(resolve, 0));
@@ -331,7 +331,7 @@ describe("CopilotSession.kill — abort path (UT-1 through UT-4)", () => {
   });
 
   /**
-   * UT-4: After kill(), session status is "killed" and the event queue is closed
+   * UT-4: After kill(), session status is "interrupted" and the event queue is closed
    * (iterating it should complete immediately without hanging).
    */
   it("UT-4: session status is 'killed' and event queue closes after kill()", async () => {
@@ -344,7 +344,7 @@ describe("CopilotSession.kill — abort path (UT-1 through UT-4)", () => {
 
     session.kill();
 
-    expect(session.status).toBe("killed");
+    expect(session.status).toBe("interrupted");
 
     // The event queue must be closed — draining it should not hang.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -354,7 +354,7 @@ describe("CopilotSession.kill — abort path (UT-1 through UT-4)", () => {
       collected.push(item);
     }
     // Queue closed cleanly; nothing to assert on items (may be empty)
-    expect(session.status).toBe("killed");
+    expect(session.status).toBe("interrupted");
   });
 
   /**
@@ -365,6 +365,6 @@ describe("CopilotSession.kill — abort path (UT-1 through UT-4)", () => {
     const session = new CopilotSession("s5", "prompt", "model", 0);
     // Do NOT inject a mock — copilotSession is undefined
     expect(() => session.kill()).not.toThrow();
-    expect(session.status).toBe("killed");
+    expect(session.status).toBe("interrupted");
   });
 });

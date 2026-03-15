@@ -42,7 +42,7 @@ class StubSession implements AgentSession {
     if (this.killed) return;
 
     // Wait for user input
-    this.status = "waiting_input";
+    this.status = "idle";
     yield { type: "status", timestamp: ts(), content: "waiting_input" };
 
     if (this.killed) return;
@@ -79,7 +79,7 @@ class StubSession implements AgentSession {
 
   public kill(): void {
     this.killed = true;
-    this.status = "killed";
+    this.status = "interrupted";
     if (this.inputResolve) {
       this.inputResolve("");
     }
