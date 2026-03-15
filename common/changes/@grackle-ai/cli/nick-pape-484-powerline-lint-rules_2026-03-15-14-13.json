@@ -1,7 +1,7 @@
 {
   "changes": [
     {
-      "comment": "Escalate typedef and explicit-member-accessibility lint rules to error in all packages via shared heft-rig configs",
+      "comment": "Add 11 new ESLint rules to shared heft-rig configs and fix all violations across all packages",
       "type": "none",
       "packageName": "@grackle-ai/cli"
     }
