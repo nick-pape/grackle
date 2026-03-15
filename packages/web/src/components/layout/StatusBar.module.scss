@@ -19,6 +19,16 @@
   font-size: var(--font-size-xl);
   letter-spacing: -0.5px;
   color: var(--text-primary);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
+  transition: color var(--transition-fast);
+
+  &:hover {
+    color: var(--accent-green);
+  }
 }
 
 .info {

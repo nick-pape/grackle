@@ -1,6 +1,6 @@
 import type { JSX } from "react";
 import { useGrackle } from "../../context/GrackleContext.js";
-import { SETTINGS_URL, PERSONAS_URL, useAppNavigate } from "../../utils/navigation.js";
+import { SETTINGS_URL, useAppNavigate } from "../../utils/navigation.js";
 import styles from "./StatusBar.module.scss";
 
 /** Top status bar showing connection state, environment counts, and active session count. */
@@ -13,7 +13,7 @@ export function StatusBar(): JSX.Element {
 
   return (
     <div className={styles.container}>
-      <div className={styles.brand}>Grackle</div>
+      <button type="button" className={styles.brand} onClick={() => navigate("/")} title="Home">Grackle</button>
       <div className={styles.info}>
         <span>
           <span className={`${styles.connectionDot} ${connected ? styles.connected : styles.disconnected}`}>
@@ -23,13 +23,6 @@ export function StatusBar(): JSX.Element {
         </span>
         <span>{connectedEnvs}/{totalEnvs} env{totalEnvs !== 1 ? "s" : ""}</span>
         <span>{activeCount} active</span>
-        <button
-          className={styles.settingsButton}
-          onClick={() => navigate(PERSONAS_URL)}
-          title="Personas"
-        >
-          {"\uD83D\uDC64"}
-        </button>
         <button
           className={styles.settingsButton}
           onClick={() => navigate(SETTINGS_URL)}

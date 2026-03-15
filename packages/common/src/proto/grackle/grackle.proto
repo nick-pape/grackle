@@ -122,6 +122,7 @@ message SpawnRequest {
   string branch = 6; // Branch for worktree (empty = skip)
   string system_context = 7; // Prepended to prompt (task desc + findings)
   string persona_id = 8; // Optional persona template
+  string worktree_base_path = 9; // Base path for worktrees (non-task spawns)
 }
 
 message ResumeRequest {
@@ -183,6 +184,7 @@ message Project {
   string created_at = 7;
   string updated_at = 8;
   bool use_worktrees = 9; // When false, agents work in the main checkout (no worktree dirs created)
+  string worktree_base_path = 10; // Base path for worktrees (e.g. /workspaces/my-repo)
 }
 
 message ProjectList {
@@ -195,6 +197,7 @@ message CreateProjectRequest {
   string repo_url = 3;
   string default_environment_id = 4;
   optional bool use_worktrees = 5; // Default true when omitted
+  optional string worktree_base_path = 6; // Base path for worktrees (e.g. /workspaces/my-repo)
 }
 
 message UpdateProjectRequest {
@@ -204,6 +207,7 @@ message UpdateProjectRequest {
   optional string repo_url = 4;
   optional string default_environment_id = 5;
   optional bool use_worktrees = 6; // When false, disables worktree isolation for this project
+  optional string worktree_base_path = 7; // Base path for worktrees (e.g. /workspaces/my-repo)
 }
 
 message ProjectId {

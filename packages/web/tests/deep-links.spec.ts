@@ -6,7 +6,7 @@ test.describe("Deep linking", () => {
     const page = appPage;
 
     await page.goto("/settings");
-    await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByRole("tablist", { name: "Settings" })).toBeVisible({ timeout: 5_000 });
   });
 
   test("deep link to /projects/:id loads project", async ({ appPage }) => {
@@ -55,7 +55,7 @@ test.describe("Deep linking", () => {
 
     // Navigate to settings
     await page.locator('button[title="Settings"]').click();
-    await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByRole("tablist", { name: "Settings" })).toBeVisible({ timeout: 5_000 });
 
     // Reload
     await page.reload();
@@ -65,7 +65,7 @@ test.describe("Deep linking", () => {
     );
 
     // Should still be on settings
-    await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByRole("tablist", { name: "Settings" })).toBeVisible({ timeout: 5_000 });
     expect(page.url()).toContain("/settings");
   });
 
@@ -80,7 +80,7 @@ test.describe("Deep linking", () => {
     await page.waitForTimeout(500);
 
     await page.locator('button[title="Settings"]').click();
-    await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByRole("tablist", { name: "Settings" })).toBeVisible({ timeout: 5_000 });
 
     // Go back — should be on the project page
     await page.goBack();
@@ -89,7 +89,7 @@ test.describe("Deep linking", () => {
 
     // Go forward — back to settings
     await page.goForward();
-    await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByRole("tablist", { name: "Settings" })).toBeVisible({ timeout: 5_000 });
     expect(page.url()).toContain("/settings");
   });
 

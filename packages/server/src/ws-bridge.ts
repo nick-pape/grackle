@@ -38,6 +38,7 @@ import { broadcast, setWssInstance, broadcastEnvironments, envRowToWs } from "./
 import { buildMcpServersJson } from "./grpc-service.js";
 import { computeTaskStatus } from "./compute-task-status.js";
 import { exec } from "./utils/exec.js";
+import { formatGhError } from "./utils/format-gh-error.js";
 
 const GH_CODESPACE_LIST_TIMEOUT_MS: number = 30_000;
 const GH_CODESPACE_CREATE_TIMEOUT_MS: number = 300_000;
@@ -349,7 +350,7 @@ async function startTaskSession(
     maxTurns,
     branch: freshTask.branch,
     worktreeBasePath: freshTask.branch
-      ? process.env.GRACKLE_WORKTREE_BASE || "/workspace"
+      ? (project?.worktreeBasePath || process.env.GRACKLE_WORKTREE_BASE || "/workspace")
       : "",
     systemContext,
     projectId: freshTask.projectId,
@@ -559,7 +560,9 @@ async function handleMessage(
         model: sessionModel,
         maxTurns,
         branch,
-        worktreeBasePath: branch ? "/workspace" : "",
+        worktreeBasePath: branch
+          ? ((typeof msg.payload?.worktreeBasePath === "string" ? msg.payload.worktreeBasePath.trim() : "") || process.env.GRACKLE_WORKTREE_BASE || "/workspace")
+          : "",
         systemContext: finalSystemContext,
       });
 
@@ -705,6 +708,7 @@ async function handleMessage(
             defaultEnvironmentId: r.defaultEnvironmentId,
             status: r.status,
             useWorktrees: r.useWorktrees,
+            worktreeBasePath: r.worktreeBasePath,
             createdAt: r.createdAt,
             updatedAt: r.updatedAt,
           })),
@@ -740,6 +744,7 @@ async function handleMessage(
         (msg.payload?.repoUrl as string) || "",
         (msg.payload?.defaultEnvironmentId as string) || "",
         createUseWorktrees,
+        typeof msg.payload?.worktreeBasePath === "string" ? msg.payload.worktreeBasePath.trim() : "",
       );
       const row = projectStore.getProject(id);
       broadcast({ type: "project_created", payload: { project: row } });
@@ -777,12 +782,14 @@ async function handleMessage(
         return;
       }
       const worktreesVal = typeof msg.payload?.useWorktrees === "boolean" ? msg.payload.useWorktrees as boolean : undefined;
+      const worktreeBasePathVal = typeof msg.payload?.worktreeBasePath === "string" ? msg.payload.worktreeBasePath as string : undefined;
       projectStore.updateProject(projectId, {
         name: nameVal !== undefined ? nameVal.trim() : undefined,
         description: descVal,
         repoUrl: repoVal,
         defaultEnvironmentId: envVal,
         useWorktrees: worktreesVal,
+        worktreeBasePath: worktreeBasePathVal,
       });
       broadcast({ type: "project_updated", payload: { projectId } });
       break;
@@ -1706,7 +1713,10 @@ async function handleMessage(
         logger.warn({ err }, "Failed to list codespaces");
         sendWs(ws, {
           type: "codespaces_list",
-          payload: { codespaces: [], error: String(err) },
+          payload: {
+            codespaces: [],
+            error: formatGhError(err, "list codespaces"),
+          },
         });
       }
       break;
@@ -1722,19 +1732,18 @@ async function handleMessage(
         return;
       }
       const trimmedRepo = repo.trim();
+      const machine =
+        typeof msg.payload?.machine === "string"
+          ? msg.payload.machine.trim()
+          : "";
+      const createArgs = ["codespace", "create", "--repo", trimmedRepo];
+      if (machine) {
+        createArgs.push("--machine", machine);
+      }
       try {
-        const result = await exec(
-          "gh",
-          [
-            "codespace",
-            "create",
-            "--repo",
-            trimmedRepo,
-            "--machine",
-            "basicLinux32gb",
-          ],
-          { timeout: GH_CODESPACE_CREATE_TIMEOUT_MS },
-        );
+        const result = await exec("gh", createArgs, {
+          timeout: GH_CODESPACE_CREATE_TIMEOUT_MS,
+        });
         const codespaceName = result.stdout.trim();
         sendWs(ws, {
           type: "codespace_created",
@@ -1744,7 +1753,7 @@ async function handleMessage(
         logger.error({ err, repo }, "Failed to create codespace");
         sendWs(ws, {
           type: "codespace_create_error",
-          payload: { message: String(err) },
+          payload: { message: formatGhError(err, "create codespace") },
         });
       }
       break;

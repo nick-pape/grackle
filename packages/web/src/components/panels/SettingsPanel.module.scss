@@ -282,3 +282,50 @@
   color: var(--text-tertiary);
   margin-top: var(--space-sm);
 }
+
+// ---------------------------------------------------------------------------
+// About Panel
+// ---------------------------------------------------------------------------
+
+.aboutGrid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.aboutItem {
+  @include surface-inset;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-sm) var(--space-md);
+}
+
+.aboutLabel {
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+  font-weight: var(--font-weight-medium);
+}
+
+.aboutValue {
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.aboutDot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.aboutDotConnected {
+  background: var(--accent-green);
+}
+
+.aboutDotDisconnected {
+  background: var(--accent-red);
+}

@@ -3,5 +3,7 @@
  * @module panels
  */
 export { FindingsPanel } from "./FindingsPanel.js";
-export { SettingsPanel } from "./SettingsPanel.js";
+export { TokensPanel } from "./TokensPanel.js";
+export { AppearancePanel } from "./AppearancePanel.js";
+export { AboutPanel } from "./AboutPanel.js";
 export { TaskEditPanel } from "./TaskEditPanel.js";

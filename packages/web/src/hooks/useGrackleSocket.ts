@@ -36,6 +36,7 @@ export interface Project {
   repoUrl: string;
   defaultEnvironmentId: string;
   status: string;
+  worktreeBasePath: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -367,6 +368,7 @@ export interface UseGrackleSocketResult {
     model?: string,
     runtime?: string,
     personaId?: string,
+    worktreeBasePath?: string,
   ) => void;
   sendInput: (sessionId: string, text: string) => void;
   kill: (sessionId: string) => void;
@@ -387,6 +389,7 @@ export interface UseGrackleSocketResult {
       description?: string;
       repoUrl?: string;
       defaultEnvironmentId?: string;
+      worktreeBasePath?: string;
     },
   ) => void;
   loadTasks: (projectId: string) => void;
@@ -443,9 +446,10 @@ export interface UseGrackleSocketResult {
   removeEnvironment: (environmentId: string) => void;
   codespaces: Codespace[];
   codespaceError: string;
+  codespaceListError: string;
   codespaceCreating: boolean;
   listCodespaces: () => void;
-  createCodespace: (repo: string) => void;
+  createCodespace: (repo: string, machine?: string) => void;
   projectCreating: boolean;
   taskStartingId: string | undefined;
   personas: PersonaData[];
@@ -498,6 +502,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
   >({});
   const [codespaces, setCodespaces] = useState<Codespace[]>([]);
   const [codespaceError, setCodespaceError] = useState("");
+  const [codespaceListError, setCodespaceListError] = useState("");
   const [codespaceCreating, setCodespaceCreating] = useState(false);
   const [personas, setPersonas] = useState<PersonaData[]>([]);
   const [taskSessions, setTaskSessions] = useState<Record<string, Session[]>>({});
@@ -912,7 +917,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
             const listError =
               typeof msg.payload?.error === "string" ? msg.payload.error : "";
             setCodespaces(list);
-            setCodespaceError(listError);
+            setCodespaceListError(listError);
             break;
           }
           case "codespace_created": {
@@ -987,6 +992,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
       model?: string,
       runtime?: string,
       personaId?: string,
+      worktreeBasePath?: string,
     ) => {
       send({
         type: "spawn",
@@ -996,6 +1002,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
           model: model || "",
           runtime: runtime || "",
           personaId: personaId || "",
+          worktreeBasePath: worktreeBasePath || "",
         },
       });
     },
@@ -1073,6 +1080,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
         description?: string;
         repoUrl?: string;
         defaultEnvironmentId?: string;
+        worktreeBasePath?: string;
       },
     ) => {
       send({
@@ -1278,7 +1286,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
   }, [send]);
 
   const createCodespace = useCallback(
-    (repo: string) => {
+    (repo: string, machine?: string) => {
       if (!connected) {
         setCodespaceError(
           "Not connected to server. Please try again once the connection is restored.",
@@ -1287,7 +1295,11 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
       }
       setCodespaceCreating(true);
       setCodespaceError("");
-      send({ type: "create_codespace", payload: { repo } });
+      const payload: Record<string, string> = { repo };
+      if (machine) {
+        payload.machine = machine;
+      }
+      send({ type: "create_codespace", payload });
     },
     [send, connected],
   );
@@ -1397,6 +1409,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
     removeEnvironment,
     codespaces,
     codespaceError,
+    codespaceListError,
     codespaceCreating,
     listCodespaces,
     createCodespace,
