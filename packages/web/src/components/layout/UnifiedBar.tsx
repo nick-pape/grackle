@@ -72,6 +72,7 @@ export function UnifiedBar(): JSX.Element {
     spawn, sendInput, kill, sessions, tasks, environments, personas,
     addEnvironment, provisionEnvironment,
     codespaces, codespaceError, codespaceCreating, listCodespaces, createCodespace,
+    lastSpawnedId,
   } = useGrackle();
   const { showToast } = useToast();
   const navigate = useAppNavigate();
@@ -150,8 +151,13 @@ export function UnifiedBar(): JSX.Element {
   const task = taskId
     ? tasks.find((t) => t.id === taskId)
     : undefined;
-  const taskSession = task?.latestSessionId
-    ? sessions.find((s) => s.id === task.latestSessionId)
+  // Resolve the task's active session. Use lastSpawnedId as fallback when
+  // task.latestSessionId hasn't been populated yet (requires list_tasks round-trip).
+  const taskSessionId = task?.latestSessionId || (
+    task && ["in_progress", "waiting_input"].includes(task.status) ? lastSpawnedId : undefined
+  ) || undefined;
+  const taskSession = taskSessionId
+    ? sessions.find((s) => s.id === taskSessionId)
     : undefined;
 
   // Check if task is blocked
