@@ -70,6 +70,7 @@ export function createWsBridge(
 
     const subscriptions = new Map<string, { cancel(): void }>();
 
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises
     ws.on("message", async (data: Buffer) => {
       try {
         const msg = JSON.parse(data.toString()) as WsMessage;

@@ -12,6 +12,7 @@ module.exports = {
       { selector: "interface", format: ["PascalCase"] }
     ],
     // Modern React with hooks: inline handlers are the standard pattern.
-    "react/jsx-no-bind": "off"
+    "react/jsx-no-bind": "off",
+    "@typescript-eslint/no-misused-promises": "warn"
   }
 };

@@ -160,6 +160,7 @@ export function createMcpServer(options: McpServerOptions): http.Server {
   /** Map of active session transports, keyed by session ID. */
   const transports: Map<string, StreamableHTTPServerTransport> = new Map();
 
+  // eslint-disable-next-line @typescript-eslint/no-misused-promises
   const httpServer = http.createServer(async (req, res) => {
     const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
 

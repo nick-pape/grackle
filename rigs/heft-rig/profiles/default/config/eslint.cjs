@@ -7,6 +7,7 @@ module.exports = {
     "@typescript-eslint/naming-convention": [
       "warn",
       { selector: "interface", format: ["PascalCase"] }
-    ]
+    ],
+    "@typescript-eslint/no-misused-promises": "warn"
   }
 };
