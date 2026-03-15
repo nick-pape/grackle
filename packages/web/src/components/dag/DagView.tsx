@@ -10,6 +10,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useGrackle } from "../../context/GrackleContext.js";
+import { useThemeContext } from "../../context/ThemeContext.js";
 import { useDagLayout, type TaskNodeData } from "./useDagLayout.js";
 import { TaskNode } from "./TaskNode.js";
 import type { ViewMode } from "../../App.js";
@@ -21,15 +22,15 @@ interface Props {
   setViewMode: (mode: ViewMode) => void;
 }
 
-/** Color mapping for MiniMap node coloring by task status. */
-const STATUS_COLORS: Record<string, string> = {
-  pending: "#6b7a8d",
-  assigned: "#70a1ff",
-  in_progress: "#4ecca3",
-  review: "#f0c040",
-  done: "#4ecca3",
-  failed: "#e94560",
-  waiting_input: "#f0c040",
+/** CSS variable mapping for MiniMap node coloring by task status. */
+const STATUS_VAR_MAP: Record<string, string> = {
+  pending: "--text-tertiary",
+  assigned: "--accent-blue",
+  in_progress: "--accent-green",
+  review: "--accent-yellow",
+  done: "--accent-green",
+  failed: "--accent-red",
+  waiting_input: "--accent-yellow",
 };
 
 /** Custom node type registry for React Flow. */
@@ -40,6 +41,7 @@ const nodeTypes: NodeTypes = {
 /** Interactive DAG visualization of task hierarchy and dependency relationships. */
 export function DagView({ projectId, setViewMode }: Props): JSX.Element {
   const { tasks } = useGrackle();
+  const { resolvedThemeId } = useThemeContext();
 
   const projectTasks = useMemo(
     () => tasks.filter((t) => t.projectId === projectId),
@@ -47,6 +49,16 @@ export function DagView({ projectId, setViewMode }: Props): JSX.Element {
   );
 
   const { nodes, edges } = useDagLayout(projectTasks);
+
+  /** Cached color map — recomputed only when the theme changes. */
+  const statusColors = useMemo(() => {
+    const style = getComputedStyle(document.documentElement);
+    const colors: Record<string, string> = {};
+    for (const [status, varName] of Object.entries(STATUS_VAR_MAP)) {
+      colors[status] = style.getPropertyValue(varName).trim() || "#6b7a8d";
+    }
+    return colors;
+  }, [resolvedThemeId]);
 
   const onNodeClick = useCallback(
     (_event: MouseEvent, node: Node) => {
@@ -58,8 +70,8 @@ export function DagView({ projectId, setViewMode }: Props): JSX.Element {
   /** Returns a hex color for the MiniMap based on task status. */
   const minimapNodeColor = useCallback((node: Node): string => {
     const data = node.data as TaskNodeData;
-    return STATUS_COLORS[data.task.status] || STATUS_COLORS.pending;
-  }, []);
+    return statusColors[data.task.status] || statusColors.pending;
+  }, [statusColors]);
 
   if (projectTasks.length === 0) {
     return (

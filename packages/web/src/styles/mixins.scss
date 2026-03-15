@@ -19,7 +19,7 @@
   background: var(--bg-surface);
   backdrop-filter: blur(var(--glass-blur));
   -webkit-backdrop-filter: blur(var(--glass-blur));
-  border: 1px solid var(--glass-border);
+  border: var(--border-width, 1px) solid var(--glass-border);
   box-shadow: var(--highlight-top);
   position: relative;
 
@@ -39,7 +39,7 @@
   background: var(--bg-elevated);
   backdrop-filter: blur(var(--glass-blur-card));
   -webkit-backdrop-filter: blur(var(--glass-blur-card));
-  border: 1px solid var(--glass-border);
+  border: var(--border-width, 1px) solid var(--glass-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-xs), var(--highlight-top);
   position: relative;
@@ -50,7 +50,7 @@
   background: var(--bg-inset);
   backdrop-filter: blur(var(--glass-blur-inset));
   -webkit-backdrop-filter: blur(var(--glass-blur-inset));
-  border: 1px solid var(--glass-border);
+  border: var(--border-width, 1px) solid var(--glass-border);
   border-radius: var(--radius-sm);
   box-shadow: var(--highlight-top);
 }

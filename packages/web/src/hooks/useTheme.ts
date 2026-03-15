@@ -50,6 +50,10 @@ function resolveDataTheme(themeId: string): string {
   if (def?.isSystemAuto) {
     return getSystemDark() ? (def.systemDarkId ?? "dark") : (def.systemLightId ?? "light");
   }
+  // Parent variant IDs (e.g., "brutalist") resolve to their default dark variant
+  if (def?.variantDarkId) {
+    return def.variantDarkId;
+  }
   return themeId;
 }
 

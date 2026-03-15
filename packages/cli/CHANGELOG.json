@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.26.0",
+      "tag": "@grackle-ai/cli_v0.26.0",
+      "date": "Sun, 15 Mar 2026 04:23:26 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Decouple tasks from sessions: tasks are durable goals, sessions are ephemeral execution attempts. Task status computed from session history. Environment and persona selected at start time."
+          }
+        ]
+      }
+    },
+    {
       "version": "0.25.0",
       "tag": "@grackle-ai/cli_v0.25.0",
       "date": "Sat, 14 Mar 2026 21:33:40 GMT",
