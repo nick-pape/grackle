@@ -71,7 +71,7 @@ export function UnifiedBar(): JSX.Element {
   const {
     spawn, sendInput, kill, sessions, tasks, environments, personas,
     addEnvironment, provisionEnvironment,
-    codespaces, codespaceError, codespaceCreating, listCodespaces, createCodespace,
+    codespaces, codespaceError, codespaceListError, codespaceCreating, listCodespaces, createCodespace,
   } = useGrackle();
   const { showToast } = useToast();
   const navigate = useAppNavigate();
@@ -132,6 +132,7 @@ export function UnifiedBar(): JSX.Element {
   const [envCodespaceName, setEnvCodespaceName] = useState("");
   const [envIdentityFile, setEnvIdentityFile] = useState("");
   const [envCreateRepo, setEnvCreateRepo] = useState("");
+  const [envCreateMachine, setEnvCreateMachine] = useState("");
   const [envCodespaceMode, setEnvCodespaceMode] = useState<"pick" | "create">("pick");
 
   useEffect(() => {
@@ -256,6 +257,7 @@ export function UnifiedBar(): JSX.Element {
       setEnvCodespaceName("");
       setEnvIdentityFile("");
       setEnvCreateRepo("");
+      setEnvCreateMachine("");
       setEnvCodespaceMode("pick");
       navigate(SETTINGS_URL, { replace: true });
     };
@@ -321,34 +323,48 @@ export function UnifiedBar(): JSX.Element {
           )}
           {envAdapterType === "codespace" && envCodespaceMode === "pick" && (
             <>
-              <select
-                value={envCodespaceName}
-                onChange={(e) => {
-                  if (e.target.value === "__create__") {
-                    setEnvCodespaceMode("create");
-                    setEnvCodespaceName("");
-                  } else {
-                    setEnvCodespaceName(e.target.value);
-                    if (e.target.value && !envName.trim()) {
-                      setEnvName(e.target.value);
+              {!codespaceListError && (
+                <select
+                  value={envCodespaceName}
+                  onChange={(e) => {
+                    if (e.target.value === "__create__") {
+                      setEnvCodespaceMode("create");
+                      setEnvCodespaceName("");
+                    } else {
+                      setEnvCodespaceName(e.target.value);
+                      if (e.target.value && !envName.trim()) {
+                        setEnvName(e.target.value);
+                      }
                     }
-                  }
-                }}
-                disabled={codespaceCreating}
-                className={styles.select}
-              >
-                <option value="">Select a codespace...</option>
-                {codespaces.map((cs) => (
-                  <option key={cs.name} value={cs.name}>
-                    {cs.name} ({cs.repository}) — {cs.state}
-                  </option>
-                ))}
-                <option value="__create__">Create new from repo...</option>
-              </select>
+                  }}
+                  disabled={codespaceCreating}
+                  className={styles.select}
+                >
+                  <option value="">Select a codespace...</option>
+                  {codespaces.map((cs) => (
+                    <option key={cs.name} value={cs.name}>
+                      {cs.name} ({cs.repository}) — {cs.state}
+                    </option>
+                  ))}
+                  <option value="__create__">Create new from repo...</option>
+                </select>
+              )}
               {codespaceCreating && (
                 <span className={styles.creatingHint}>Creating codespace...</span>
               )}
-              {codespaceError && (
+              {codespaceListError && (
+                <>
+                  <span className={styles.errorHint}>{codespaceListError}</span>
+                  <input
+                    type="text"
+                    value={envCodespaceName}
+                    onChange={(e) => setEnvCodespaceName(e.target.value)}
+                    placeholder="Or enter codespace name manually..."
+                    className={styles.inputSmall}
+                  />
+                </>
+              )}
+              {codespaceError && !codespaceListError && (
                 <span className={styles.errorHint}>{codespaceError}</span>
               )}
             </>
@@ -356,12 +372,17 @@ export function UnifiedBar(): JSX.Element {
           {envAdapterType === "codespace" && envCodespaceMode === "create" && (
             <>
               <input type="text" value={envCreateRepo} onChange={(e) => setEnvCreateRepo(e.target.value)} placeholder="owner/repo" className={styles.inputSmall} />
+              <input type="text" value={envCreateMachine} onChange={(e) => setEnvCreateMachine(e.target.value)} placeholder="Machine type (optional)..." className={styles.inputSmall} />
               <button
                 onClick={() => {
                   if (envCreateRepo.trim()) {
-                    createCodespace(envCreateRepo.trim());
+                    createCodespace(
+                      envCreateRepo.trim(),
+                      envCreateMachine.trim() || undefined,
+                    );
                     setEnvCodespaceMode("pick");
                     setEnvCreateRepo("");
+                    setEnvCreateMachine("");
                   }
                 }}
                 disabled={!envCreateRepo.trim()}
@@ -370,7 +391,7 @@ export function UnifiedBar(): JSX.Element {
                 Create
               </button>
               <button
-                onClick={() => { setEnvCodespaceMode("pick"); setEnvCreateRepo(""); }}
+                onClick={() => { setEnvCodespaceMode("pick"); setEnvCreateRepo(""); setEnvCreateMachine(""); }}
                 className={styles.btnGhost}
               >
                 Cancel
