@@ -34,7 +34,9 @@ test.describe("Add Environment — UI Form", () => {
 
     await page.locator('button[title="Add environment"]').click();
 
-    const addButton = page.locator("button", { hasText: "Add" });
+    // Wait for the new env form to appear after navigation
+    await expect(page.getByText("new env", { exact: true })).toBeVisible();
+    const addButton = page.locator("button", { hasText: /^Add$/ });
     await expect(addButton).toBeDisabled();
   });
 
@@ -44,7 +46,9 @@ test.describe("Add Environment — UI Form", () => {
     await page.locator('button[title="Add environment"]').click();
 
     await page.locator('input[placeholder="Environment name..."]').fill("my-local");
-    const addButton = page.locator("button", { hasText: "Add" });
+    // Wait for the new env form to appear after navigation
+    await expect(page.getByText("new env", { exact: true })).toBeVisible();
+    const addButton = page.locator("button", { hasText: /^Add$/ });
     await expect(addButton).toBeEnabled();
   });
 
@@ -60,7 +64,9 @@ test.describe("Add Environment — UI Form", () => {
     // Fill name but leave host empty
     await page.locator('input[placeholder="Environment name..."]').fill("my-ssh");
 
-    const addButton = page.locator("button", { hasText: "Add" });
+    // Wait for the new env form to appear after navigation
+    await expect(page.getByText("new env", { exact: true })).toBeVisible();
+    const addButton = page.locator("button", { hasText: /^Add$/ });
     await expect(addButton).toBeDisabled();
 
     // Fill host — now it should be enabled
@@ -77,7 +83,9 @@ test.describe("Add Environment — UI Form", () => {
     await page.locator('input[placeholder="Environment name..."]').fill("port-test");
 
     const portInput = page.locator('input[placeholder="Port (optional)..."]');
-    const addButton = page.locator("button", { hasText: "Add" });
+    // Wait for the new env form to appear after navigation
+    await expect(page.getByText("new env", { exact: true })).toBeVisible();
+    const addButton = page.locator("button", { hasText: /^Add$/ });
 
     // Out-of-range low value
     await portInput.fill("0");
