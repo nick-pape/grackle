@@ -1,7 +1,7 @@
 /**
  * Tests for #400: Block message send when task environment is disconnected.
  *
- * When a task is in `waiting_input` state but its assigned environment is
+ * When a task is in `idle` state but its assigned environment is
  * disconnected, the Send button should be disabled and a Reconnect button
  * should appear inline so the user can re-establish the connection without
  * navigating away from the stream view.
@@ -24,7 +24,7 @@ import {
 test.describe("Disconnected environment blocks message send", () => {
   /**
    * Helper: set up the UI so it looks exactly like a task that is in the
-   * `waiting_input` state with a disconnected environment — but without
+   * `idle` state with a disconnected environment — but without
    * actually starting a real task (which requires a live PowerLine gRPC
    * connection that is not available in all environments).
    *
@@ -32,9 +32,9 @@ test.describe("Disconnected environment blocks message send", () => {
    * 1. Create a project + task (task creation via WS always works).
    * 2. Navigate to the task so the app is in `task` view mode.
    * 3. Inject a fake `sessions` message: one session with
-   *    `status = "waiting_input"` and `environmentId = "test-local"`.
+   *    `status = "idle"` and `environmentId = "test-local"`.
    * 4. Inject a fake `tasks` message: the same task but now with
-   *    `status = "in_progress"` and `sessionId` pointing to the fake session.
+   *    `status = "working"` and `sessionId` pointing to the fake session.
    * 5. Inject an `environments` message marking `test-local` as disconnected.
    *
    * After step 5 the UnifiedBar renders the disconnected state:
@@ -67,7 +67,7 @@ test.describe("Disconnected environment blocks message send", () => {
       .waitFor({ timeout: 5_000 });
     await navigateToTask(page, taskTitle);
 
-    // --- 2. Inject a waiting_input session -----------------------------------
+    // --- 2. Inject an idle session -----------------------------------
     const fakeSessionId = `e2e-disc-${Date.now()}`;
     await injectWsMessage(page, {
       type: "sessions",
@@ -77,7 +77,7 @@ test.describe("Disconnected environment blocks message send", () => {
             id: fakeSessionId,
             environmentId: "test-local",
             runtime: "stub",
-            status: "waiting_input",
+            status: "idle",
             prompt: taskTitle,
             startedAt: new Date().toISOString(),
           },
@@ -85,7 +85,7 @@ test.describe("Disconnected environment blocks message send", () => {
       },
     });
 
-    // --- 3. Inject task update: now in_progress with the session -------------
+    // --- 3. Inject task update: now working with the session -------------
     // Supply every field that isTaskData validates to avoid silent drops.
     await injectWsMessage(page, {
       type: "tasks",
@@ -97,11 +97,10 @@ test.describe("Disconnected environment blocks message send", () => {
             projectId: task.projectId ?? projectId,
             title: task.title ?? taskTitle,
             description: task.description ?? "",
-            status: "in_progress",
+            status: "working",
             branch: task.branch ?? "",
             latestSessionId: fakeSessionId,
             dependsOn: Array.isArray(task.dependsOn) ? task.dependsOn : [],
-            reviewNotes: task.reviewNotes ?? "",
             sortOrder: typeof task.sortOrder === "number" ? task.sortOrder : 0,
             createdAt: task.createdAt ?? new Date().toISOString(),
             parentTaskId: task.parentTaskId ?? "",
@@ -296,7 +295,7 @@ test.describe("Disconnected environment blocks message send", () => {
     await promptInput.fill("hello stub");
     await page.locator("button", { hasText: "Go" }).click();
 
-    // Wait for the session to reach waiting_input state.
+    // Wait for the session to reach idle state.
     await page
       .locator('input[placeholder="Type a message..."]')
       .waitFor({ state: "visible", timeout: 15_000 });
@@ -419,7 +418,7 @@ test.describe("Disconnected environment blocks message send", () => {
             id: fakeSessionId,
             environmentId: "test-local",
             runtime: "stub",
-            status: "waiting_input",
+            status: "idle",
             prompt: "disc-env-task-err",
             startedAt: new Date().toISOString(),
           },
@@ -437,11 +436,10 @@ test.describe("Disconnected environment blocks message send", () => {
             projectId: task.projectId ?? projectId,
             title: task.title ?? "disc-env-task-err",
             description: task.description ?? "",
-            status: "in_progress",
+            status: "working",
             branch: task.branch ?? "",
             latestSessionId: fakeSessionId,
             dependsOn: Array.isArray(task.dependsOn) ? task.dependsOn : [],
-            reviewNotes: task.reviewNotes ?? "",
             sortOrder: typeof task.sortOrder === "number" ? task.sortOrder : 0,
             createdAt: task.createdAt ?? new Date().toISOString(),
             parentTaskId: task.parentTaskId ?? "",

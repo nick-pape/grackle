@@ -163,12 +163,48 @@ body::after {
 }
 
 // =============================================================================
+// Matrix — CRT scanline overlay + text glow
+// =============================================================================
+
+[data-theme="matrix"] {
+  // Tunable scanline intensity — defaults to atmospheric, override via DevTools
+  --matrix-scanline-opacity: 0.04;
+
+  // Override the noise overlay with CRT scanlines
+  body::after {
+    opacity: var(--matrix-scanline-opacity);
+    background-image: repeating-linear-gradient(
+      0deg,
+      rgba(0, 255, 65, 0.06) 0px,
+      rgba(0, 255, 65, 0.06) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+    background-size: 100% 3px;
+  }
+
+  // CRT text glow — subtle green halo
+  body {
+    text-shadow: 0 0 2px rgba(0, 255, 65, 0.12);
+  }
+
+  // Suppress glow on focused text inputs for readability
+  input:focus,
+  textarea:focus,
+  [contenteditable="true"]:focus {
+    text-shadow: none;
+  }
+}
+
+// =============================================================================
 // Accessibility: High Contrast
 // =============================================================================
 // Increase border visibility and text contrast for high-contrast mode.
 
 @media (prefers-contrast: more) {
-  [data-theme="light"] {
+  [data-theme="grackle-light"],
+  [data-theme="brutalist-light"],
+  [data-theme="monokai-light"] {
     --text-secondary: #4b5563;
     --text-tertiary: #6b7280;
     --text-disabled: #9ca3af;
@@ -176,8 +212,15 @@ body::after {
     --border-input: rgba(0, 0, 0, 0.30);
   }
 
-  [data-theme="dark"],
-  [data-theme="glass"] {
+  [data-theme="grackle-dark"],
+  [data-theme="glass"],
+  [data-theme="matrix"],
+  [data-theme="monokai-dark"],
+  [data-theme="brutalist-dark"],
+  [data-theme="ubuntu"],
+  [data-theme="sandstone"],
+  [data-theme="verdigris"],
+  [data-theme="primer"] {
     --text-secondary: #d1d5db;
     --text-tertiary: #9ca3af;
     --text-disabled: #6b7280;

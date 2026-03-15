@@ -18,11 +18,10 @@ function makeTask(overrides: Partial<TaskData> & { id: string; projectId: string
   return {
     title: overrides.id,
     description: "",
-    status: "pending",
+    status: "not_started",
     branch: "",
     latestSessionId: "",
     dependsOn: [],
-    reviewNotes: "",
     sortOrder: 0,
     createdAt: "",
     parentTaskId: "",

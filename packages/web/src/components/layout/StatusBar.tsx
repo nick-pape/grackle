@@ -9,7 +9,7 @@ export function StatusBar(): JSX.Element {
   const navigate = useAppNavigate();
   const totalEnvs = environments.length;
   const connectedEnvs = environments.filter((e) => e.status === "connected").length;
-  const activeCount = sessions.filter((s) => ["running", "waiting_input"].includes(s.status)).length;
+  const activeCount = sessions.filter((s) => ["running", "idle"].includes(s.status)).length;
 
   return (
     <div className={styles.container}>

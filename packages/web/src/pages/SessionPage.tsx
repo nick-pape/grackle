@@ -124,7 +124,7 @@ interface EventListProps {
 
 /** Scrollable list of session events with empty-state messaging. */
 function EventList({ sessionEvents, session, eventsDropped, scrollRef }: EventListProps): JSX.Element {
-  const isTerminal = session && ["completed", "failed", "killed"].includes(session.status);
+  const isTerminal = session && ["completed", "failed", "interrupted"].includes(session.status);
   const emptyMessage = isTerminal
     ? `Session ${session.status} with no events recorded.`
     : "Waiting for events...";
@@ -186,7 +186,7 @@ export function SessionPage(): JSX.Element {
     );
   }
 
-  const isActive = session?.status === "running" || session?.status === "waiting_input";
+  const isActive = session?.status === "running" || session?.status === "idle";
 
   return (
     <div className={styles.panelContainer}>

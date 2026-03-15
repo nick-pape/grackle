@@ -31,13 +31,13 @@ enum EventType {
 
 enum TaskStatus {
   TASK_STATUS_UNSPECIFIED = 0;
-  TASK_STATUS_PENDING = 1;
-  TASK_STATUS_ASSIGNED = 2;
-  TASK_STATUS_IN_PROGRESS = 3;
-  TASK_STATUS_REVIEW = 4;
-  TASK_STATUS_DONE = 5;
+  TASK_STATUS_NOT_STARTED = 1;
+  reserved 2;                    // was ASSIGNED (removed)
+  TASK_STATUS_WORKING = 3;
+  TASK_STATUS_PAUSED = 4;
+  TASK_STATUS_COMPLETE = 5;
   TASK_STATUS_FAILED = 6;
-  TASK_STATUS_WAITING_INPUT = 7;
+  reserved 7;                    // was WAITING_INPUT (removed, merged into PAUSED)
 }
 
 enum ProjectStatus {
@@ -222,10 +222,10 @@ message Task {
   reserved 7; // was environment_id (now a session-start param)
   string latest_session_id = 8; // computed on read from session history
   repeated string depends_on = 9;
-  string assigned_at = 10;
+  reserved 10; // was assigned_at (removed)
   string started_at = 11;
   string completed_at = 12;
-  string review_notes = 13;
+  reserved 13; // was review_notes (moved to StartTaskRequest)
   string created_at = 14;
   string updated_at = 15;
   int32 sort_order = 16;
@@ -262,7 +262,7 @@ message UpdateTaskRequest {
   TaskStatus status = 4;
   reserved 5; // was environment_id (now a session-start param)
   repeated string depends_on = 6;
-  string review_notes = 7;
+  reserved 7; // was review_notes (moved to StartTaskRequest)
   string session_id = 8; // Optional: late-bind an existing session to this task
 }
 
@@ -272,6 +272,7 @@ message StartTaskRequest {
   string model = 3;
   string persona_id = 4; // Persona to use for the agent session
   string environment_id = 5; // Select environment at start time
+  string notes = 6; // Feedback/instructions for retry (included in system context)
 }
 
 // ─── Findings ──────────────────────────────────────────────
@@ -426,8 +427,8 @@ service Grackle {
   rpc GetTask(TaskId) returns (Task);
   rpc UpdateTask(UpdateTaskRequest) returns (Task);
   rpc StartTask(StartTaskRequest) returns (Session);
-  rpc ApproveTask(TaskId) returns (Task);
-  rpc RejectTask(UpdateTaskRequest) returns (Task);
+  rpc CompleteTask(TaskId) returns (Task);
+  rpc ResumeTask(TaskId) returns (Session);
   rpc DeleteTask(TaskId) returns (Empty);
 
   // Personas

@@ -72,7 +72,6 @@ export function registerTaskCommands(program: Command): void {
         `Depends On:  ${t.dependsOn.length > 0 ? t.dependsOn.join(", ") : "none"}`,
       );
       if (t.description) console.log(`Description: ${t.description}`);
-      if (t.reviewNotes) console.log(`Review Notes: ${t.reviewNotes}`);
     });
 
   task
@@ -82,19 +81,16 @@ export function registerTaskCommands(program: Command): void {
     .option("--desc <text>", "New description")
     .option(
       "--status <status>",
-      "Task status (pending, assigned, in_progress, waiting_input, review, done, failed)",
+      "Task status (not_started, working, paused, complete, failed)",
     )
-    .option("--notes <text>", "Review notes")
     .option("--depends-on <ids>", "Comma-separated dependency task IDs")
     .option("--session <session-id>", "Bind an existing session to this task")
     .action(async (taskId: string, opts) => {
       const VALID_STATUSES = new Set([
-        "pending",
-        "assigned",
-        "in_progress",
-        "waiting_input",
-        "review",
-        "done",
+        "not_started",
+        "working",
+        "paused",
+        "complete",
         "failed",
       ]);
 
@@ -120,7 +116,6 @@ export function registerTaskCommands(program: Command): void {
         status: opts.status
           ? taskStatusToEnum(String(opts.status).toLowerCase())
           : taskStatusToEnum(""),
-        reviewNotes: opts.notes || "",
         dependsOn,
         sessionId: opts.session || "",
       });
@@ -136,6 +131,7 @@ export function registerTaskCommands(program: Command): void {
     .option("--model <model>", "Model to use")
     .option("--persona <id-or-name>", "Persona to use")
     .option("--env <env-id>", "Environment to run on")
+    .option("--notes <text>", "Feedback/instructions for retry")
     .action(async (taskId: string, opts) => {
       const client = createGrackleClient();
       const session = await client.startTask({
@@ -144,6 +140,7 @@ export function registerTaskCommands(program: Command): void {
         model: opts.model || "",
         personaId: opts.persona || "",
         environmentId: opts.env || "",
+        notes: opts.notes || "",
       });
       console.log(`Task started. Session: ${session.id}`);
     });
@@ -158,25 +155,21 @@ export function registerTaskCommands(program: Command): void {
     });
 
   task
-    .command("approve <task-id>")
-    .description("Approve a task in review")
+    .command("complete <task-id>")
+    .description("Mark a task as complete")
     .action(async (taskId: string) => {
       const client = createGrackleClient();
-      const t = await client.approveTask({ id: taskId });
-      console.log(`Approved: ${t.id} → ${taskStatusToString(t.status)}`);
+      const t = await client.completeTask({ id: taskId });
+      console.log(`Completed: ${t.id} → ${taskStatusToString(t.status)}`);
     });
 
   task
-    .command("reject <task-id>")
-    .description("Reject a task in review")
-    .option("--notes <text>", "Review notes", "")
-    .action(async (taskId: string, opts) => {
+    .command("resume <task-id>")
+    .description("Resume the latest interrupted/completed session for a task")
+    .action(async (taskId: string) => {
       const client = createGrackleClient();
-      const t = await client.rejectTask({
-        id: taskId,
-        reviewNotes: opts.notes,
-      });
-      console.log(`Rejected: ${t.id} → ${taskStatusToString(t.status)}`);
+      const session = await client.resumeTask({ id: taskId });
+      console.log(`Resumed task. Session: ${session.id}`);
     });
 
   task

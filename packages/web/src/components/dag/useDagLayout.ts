@@ -128,7 +128,7 @@ export function useDagLayout(tasks: TaskData[]): DagLayoutResult {
         data: {
           task,
           childCount: children.length,
-          doneChildCount: children.filter((c) => c.status === "done").length,
+          doneChildCount: children.filter((c) => c.status === "complete").length,
           hasDependencies: task.dependsOn.length > 0,
         },
       };

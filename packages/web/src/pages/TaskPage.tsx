@@ -105,13 +105,12 @@ function envStatusClass(status: string): string {
 
 function TaskStatusBadge({ status }: { status: string }): JSX.Element {
   const labelMap: Record<string, string> = {
-    pending: "Pending", assigned: "Assigned", in_progress: "In Progress",
-    waiting_input: "Waiting for Input", review: "Review", done: "Done", failed: "Failed",
+    not_started: "Not Started", working: "Working",
+    paused: "Paused", complete: "Complete", failed: "Failed",
   };
   const colorClassMap: Record<string, string> = {
-    pending: styles.statusPending, assigned: styles.statusAssigned,
-    in_progress: styles.statusInProgress, waiting_input: styles.statusWaitingInput,
-    review: styles.statusReview, done: styles.statusDone, failed: styles.statusFailed,
+    not_started: styles.statusPending, working: styles.statusInProgress,
+    paused: styles.statusWaitingInput, complete: styles.statusDone, failed: styles.statusFailed,
   };
   return (
     <span className={`${styles.statusBadge} ${colorClassMap[status] ?? styles.statusPending}`}>
@@ -180,7 +179,7 @@ function TaskOverview({ task, tasksById, environments, projects, taskSessions }:
           <div className={styles.depList}>
             {task.dependsOn.map((depId) => {
               const dep = tasksById.get(depId);
-              const isDone = dep?.status === "done";
+              const isDone = dep?.status === "complete";
               return (
                 <div key={depId} className={`${styles.depItem} ${isDone ? styles.depDone : styles.depBlocked}`}>
                   <span>{isDone ? "\u2713" : "\u25CB"}</span>
@@ -259,21 +258,18 @@ interface TaskActionButtonsProps {
   task: TaskData;
   sessionId: string | undefined;
   isBlocked: boolean;
-  rejectNotes: string;
-  onRejectNotesChange: (notes: string) => void;
   onStart: () => void;
   onStop: () => void;
-  onApprove: () => void;
-  onReject: () => void;
+  onComplete: () => void;
   onDelete: () => void;
   onEdit: () => void;
 }
 
 function TaskActionButtons({
-  task, sessionId, isBlocked, rejectNotes, onRejectNotesChange,
-  onStart, onStop, onApprove, onReject, onDelete, onEdit,
+  task, sessionId, isBlocked,
+  onStart, onStop, onComplete, onDelete, onEdit,
 }: TaskActionButtonsProps): JSX.Element | undefined {
-  if (task.status === "pending" || task.status === "assigned") {
+  if (task.status === "not_started") {
     if (isBlocked) {
       return (
         <div className={styles.headerActions}>
@@ -290,23 +286,23 @@ function TaskActionButtons({
       </div>
     );
   }
-  if (task.status === "in_progress" || task.status === "waiting_input") {
+  if (task.status === "working") {
     return (
       <div className={styles.headerActions}>
         <button onClick={onStop} disabled={!sessionId} className={styles.btnDanger}>Stop</button>
       </div>
     );
   }
-  if (task.status === "review") {
+  if (task.status === "paused") {
     return (
       <div className={styles.headerActions}>
-        <input type="text" value={rejectNotes} onChange={(e) => onRejectNotesChange(e.target.value)} placeholder="Rejection notes..." className={styles.rejectInput} />
-        <button onClick={onApprove} className={styles.btnPrimary}>Approve</button>
-        <button onClick={onReject} className={styles.btnDanger}>Reject</button>
+        <button onClick={onComplete} className={styles.btnPrimary}>Complete</button>
+        <button onClick={onStart} className={styles.btnGhost}>Resume</button>
+        <button onClick={onDelete} className={styles.btnDanger}>Delete</button>
       </div>
     );
   }
-  if (task.status === "done") {
+  if (task.status === "complete") {
     return (
       <div className={styles.headerActions}>
         <button onClick={onDelete} className={styles.btnDanger}>Delete</button>
@@ -339,7 +335,7 @@ function SessionAttemptSelector({ taskSessions, selectedSessionId, onSelect }: S
         const isActive = s.id === selectedSessionId;
         const statusIcon = s.status === "completed" ? "\u2713"
           : s.status === "failed" ? "\u2717"
-          : s.status === "running" || s.status === "waiting_input" ? "\u25CF"
+          : s.status === "running" || s.status === "idle" ? "\u25CF"
           : "";
         return (
           <button
@@ -368,7 +364,7 @@ export function TaskPage(): JSX.Element {
   const {
     events, eventsDropped, tasks, environments,
     loadSessionEvents, loadFindings,
-    kill, startTask, approveTask, rejectTask, deleteTask,
+    kill, startTask, completeTask, deleteTask,
     projects, taskSessions: taskSessionsMap, loadTaskSessions,
     lastSpawnedId,
   } = useGrackle();
@@ -388,7 +384,6 @@ export function TaskPage(): JSX.Element {
     : "overview";
 
   const [activeTaskTab, setActiveTaskTab] = useState<TaskTab>(tabFromUrl);
-  const [rejectNotes, setRejectNotes] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [selectedSessionId, setSelectedSessionId] = useState<string | undefined>(undefined);
 
@@ -418,7 +413,7 @@ export function TaskPage(): JSX.Element {
     sessionId = task?.latestSessionId || undefined;
   }
   // Fallback: if the task is active but no session resolved, use lastSpawnedId
-  if (!sessionId && task && ["in_progress", "waiting_input"].includes(task.status) && lastSpawnedId) {
+  if (!sessionId && task && ["working", "paused"].includes(task.status) && lastSpawnedId) {
     sessionId = lastSpawnedId;
   }
 
@@ -436,9 +431,6 @@ export function TaskPage(): JSX.Element {
   // Reset state when switching tasks
   if (task?.id !== prevTaskIdRef.current) {
     prevTaskIdRef.current = task?.id;
-    if (rejectNotes !== "") {
-      setRejectNotes("");
-    }
     if (selectedSessionId !== undefined) {
       setSelectedSessionId(undefined);
     }
@@ -460,12 +452,10 @@ export function TaskPage(): JSX.Element {
   if (task?.status !== prevTaskStatusRef.current) {
     prevTaskStatusRef.current = task?.status;
     const newTab: TaskTab | undefined =
-      task?.status === "pending" ? "overview"
-      : task?.status === "assigned" ? "overview"
-      : task?.status === "in_progress" ? "stream"
-      : task?.status === "waiting_input" ? "stream"
-      : task?.status === "review" ? "stream"
-      : task?.status === "done" ? "findings"
+      task?.status === "not_started" ? "overview"
+      : task?.status === "working" ? "stream"
+      : task?.status === "paused" ? "stream"
+      : task?.status === "complete" ? "findings"
       : undefined;
     if (newTab && newTab !== activeTaskTab) {
       setActiveTaskTab(newTab);
@@ -487,7 +477,7 @@ export function TaskPage(): JSX.Element {
   const isTaskBlocked = task
     ? task.dependsOn.some((depId) => {
         const dep = tasksById.get(depId);
-        return dep !== undefined && dep.status !== "done";
+        return dep !== undefined && dep.status !== "complete";
       })
     : false;
 
@@ -544,12 +534,9 @@ export function TaskPage(): JSX.Element {
             task={task}
             sessionId={sessionId}
             isBlocked={isTaskBlocked}
-            rejectNotes={rejectNotes}
-            onRejectNotesChange={setRejectNotes}
             onStart={() => startTask(task.id)}
             onStop={() => sessionId && kill(sessionId)}
-            onApprove={() => approveTask(task.id)}
-            onReject={() => { rejectTask(task.id, rejectNotes); setRejectNotes(""); }}
+            onComplete={() => completeTask(task.id)}
             onDelete={handleDeleteTask}
             onEdit={() => navigate(taskEditUrl(task.id))}
           />

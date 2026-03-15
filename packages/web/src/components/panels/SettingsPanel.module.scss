@@ -178,15 +178,103 @@
   background: var(--accent-green-subtle);
 }
 
+.themeOptionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  width: 100%;
+}
+
 .themeOptionLabel {
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
   color: var(--text-primary);
+  display: block;
 }
 
 .themeOptionDesc {
   font-size: var(--font-size-xs);
   color: var(--text-tertiary);
+  display: block;
+}
+
+// ─── Variant Light/Dark Toggle ────────────────────────
+
+.variantToggle {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+  margin-left: var(--space-sm);
+}
+
+.variantButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+  background: transparent;
+  color: var(--text-tertiary);
+  font-size: 14px;
+  cursor: pointer;
+  transition: background var(--transition-fast),
+              color var(--transition-fast),
+              border-color var(--transition-fast);
+
+  &:hover {
+    background: var(--bg-overlay);
+    color: var(--text-primary);
+  }
+}
+
+.variantActive {
+  background: var(--accent-green-dim);
+  color: var(--accent-green);
+  border-color: var(--accent-green);
+}
+
+// ─── Swatches ─────────────────────────────────────────
+
+.themeSwatches {
+  display: flex;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.themeSwatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1px solid rgba(128, 128, 128, 0.4);
+  flex-shrink: 0;
+}
+
+// ─── System Preference Toggle ─────────────────────────
+
+.systemToggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  cursor: pointer;
+
+  input[type="checkbox"] {
+    accent-color: var(--accent-green);
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+  }
+}
+
+.systemToggleHint {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  margin-top: 2px;
+  margin-left: 24px;
 }
 
 .themeActive {

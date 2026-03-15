@@ -17,7 +17,7 @@ const TOKEN_TYPES: Array<{ value: string; label: string }> = [
 export function SettingsPanel(): JSX.Element {
   const { tokens, setToken, deleteToken } = useGrackle();
   const { showToast } = useToast();
-  const { themeId, resolvedThemeId, setTheme } = useThemeContext();
+  const { themeId, resolvedThemeId, setTheme, preferSystem, setPreferSystem } = useThemeContext();
 
   const [name, setName] = useState("");
   const [value, setValue] = useState("");
@@ -68,22 +68,70 @@ export function SettingsPanel(): JSX.Element {
           Choose how Grackle looks across the app.
         </p>
         <div className={styles.themeOptions}>
-          {THEMES.map((t) => {
-            const selected = themeId === t.id;
+          {THEMES.filter((t) => !t.hidden).map((t) => {
+            const hasVariants = !!(t.variantLightId && t.variantDarkId);
+            const isSelected = hasVariants
+              ? (themeId === t.id || themeId === t.variantLightId || themeId === t.variantDarkId)
+              : themeId === t.id;
+            const isLight = hasVariants && resolvedThemeId === t.variantLightId;
             return (
               <button
                 key={t.id}
                 type="button"
-                className={`${styles.themeOption} ${selected ? styles.themeOptionSelected : ""}`}
-                aria-pressed={selected}
+                className={`${styles.themeOption} ${isSelected ? styles.themeOptionSelected : ""}`}
+                aria-pressed={isSelected}
                 onClick={() => setTheme(t.id)}
               >
-                <span className={styles.themeOptionLabel}>{t.label}</span>
-                <span className={styles.themeOptionDesc}>{t.description}</span>
+                <span className={styles.themeOptionHeader}>
+                  <span>
+                    <span className={styles.themeOptionLabel}>{t.label}</span>
+                    <span className={styles.themeOptionDesc}>{t.description}</span>
+                  </span>
+                  {hasVariants && (
+                    <span className={styles.variantToggle}>
+                      <span
+                        role="button"
+                        tabIndex={0}
+                        className={`${styles.variantButton} ${isSelected && isLight ? styles.variantActive : ""}`}
+                        onClick={(e) => { e.stopPropagation(); setPreferSystem(false); setTheme(t.variantLightId!); }}
+                        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); setPreferSystem(false); setTheme(t.variantLightId!); } }}
+                        aria-label="Light variant"
+                        aria-pressed={isSelected && isLight}
+                      >&#9788;</span>
+                      <span
+                        role="button"
+                        tabIndex={0}
+                        className={`${styles.variantButton} ${isSelected && !isLight ? styles.variantActive : ""}`}
+                        onClick={(e) => { e.stopPropagation(); setPreferSystem(false); setTheme(t.variantDarkId!); }}
+                        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); setPreferSystem(false); setTheme(t.variantDarkId!); } }}
+                        aria-label="Dark variant"
+                        aria-pressed={isSelected && !isLight}
+                      >&#9790;</span>
+                    </span>
+                  )}
+                </span>
+                {t.swatches && (
+                  <span className={styles.themeSwatches}>
+                    {t.swatches.map((color, i) => (
+                      <span key={i} className={styles.themeSwatch} style={{ background: color }} />
+                    ))}
+                  </span>
+                )}
               </button>
             );
           })}
         </div>
+        <label className={styles.systemToggle}>
+          <input
+            type="checkbox"
+            checked={preferSystem}
+            onChange={(e) => setPreferSystem(e.target.checked)}
+          />
+          <span>Match system light/dark preference</span>
+        </label>
+        <p className={styles.systemToggleHint}>
+          Automatically switches between light and dark variants when available.
+        </p>
         <p className={styles.themeActive}>
           Active theme: <strong>{resolvedThemeId}</strong>
         </p>

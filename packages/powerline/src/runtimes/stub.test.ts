@@ -124,7 +124,7 @@ describe("StubRuntime", () => {
         if (event.type === "status") {
           statusHistory.push(event.content);
           if (event.content === "waiting_input") {
-            expect(session.status).toBe("waiting_input");
+            expect(session.status).toBe("idle");
             setTimeout(() => session.sendInput("go"), 0);
           }
         }
@@ -156,7 +156,7 @@ describe("StubRuntime", () => {
     })();
 
     await streamDone;
-    expect(session.status).toBe("killed");
+    expect(session.status).toBe("interrupted");
 
     // Should not have any events after waiting_input
     const statusEvents = events.filter((e) => e.type === "status");
@@ -184,7 +184,7 @@ describe("StubRuntime", () => {
     })();
 
     await streamDone;
-    expect(session.status).toBe("killed");
+    expect(session.status).toBe("interrupted");
 
     // Should have system, text, tool_use but NOT tool_result or later
     const types = events.map((e) => e.type);

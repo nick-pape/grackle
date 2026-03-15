@@ -98,7 +98,7 @@ export function ProjectPage(): JSX.Element {
 
   const project = projects.find((p) => p.id === projectId);
   const projectTasks = tasks.filter((t) => t.projectId === projectId);
-  const done = projectTasks.filter((t) => t.status === "done").length;
+  const done = projectTasks.filter((t) => t.status === "complete").length;
   const total = projectTasks.length;
   const progressPct = total > 0 ? Math.round((done / total) * 100) : 0;
 

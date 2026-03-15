@@ -172,11 +172,11 @@ describe("task-store tree operations", () => {
       taskStore.createTask("t3", "test-proj", "Pending Child", "desc", [], "proj", "t1");
       taskStore.createTask("t4", "test-proj", "Another Pending", "desc", [], "proj", "t1");
 
-      taskStore.updateTaskStatus("t2", "done");
+      taskStore.updateTaskStatus("t2", "complete");
 
       const counts = taskStore.getChildStatusCounts("t1");
-      expect(counts.done).toBe(1);
-      expect(counts.pending).toBe(2);
+      expect(counts.complete).toBe(1);
+      expect(counts.not_started).toBe(2);
     });
 
     it("returns empty record for leaf tasks", () => {

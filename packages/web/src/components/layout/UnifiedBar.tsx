@@ -154,7 +154,7 @@ export function UnifiedBar(): JSX.Element {
   // Resolve the task's active session. Use lastSpawnedId as fallback when
   // task.latestSessionId hasn't been populated yet (requires list_tasks round-trip).
   const taskSessionId = task?.latestSessionId || (
-    task && ["in_progress", "waiting_input"].includes(task.status) ? lastSpawnedId : undefined
+    task && ["working", "paused"].includes(task.status) ? lastSpawnedId : undefined
   ) || undefined;
   const taskSession = taskSessionId
     ? sessions.find((s) => s.id === taskSessionId)
@@ -164,7 +164,7 @@ export function UnifiedBar(): JSX.Element {
   const isTaskBlocked = task
     ? task.dependsOn.some((depId) => {
       const dep = tasks.find((t) => t.id === depId);
-      return dep && dep.status !== "done";
+      return dep && dep.status !== "complete";
     })
     : false;
 
@@ -402,12 +402,12 @@ export function UnifiedBar(): JSX.Element {
 
   // --- task modes ---
   if (taskId && task) {
-    // Pending (blocked or unblocked)
-    if (task.status === "pending" || task.status === "assigned") {
+    // Not started (blocked or unblocked)
+    if (task.status === "not_started") {
       const blockerNames = isTaskBlocked
         ? task.dependsOn
           .map((depId) => tasks.find((t) => t.id === depId))
-          .filter((t) => t && t.status !== "done")
+          .filter((t) => t && t.status !== "complete")
           .map((t) => t!.title)
         : [];
       return (
@@ -423,9 +423,9 @@ export function UnifiedBar(): JSX.Element {
       );
     }
 
-    // In progress / waiting for input
-    if (task.status === "in_progress" || task.status === "waiting_input") {
-      const isWaiting = taskSession?.status === "waiting_input";
+    // Working / paused — show chat input when session is idle, "agent working" otherwise
+    if (task.status === "working" || task.status === "paused") {
+      const isWaiting = taskSession?.status === "idle";
 
       if (isWaiting) {
         const effectiveEnvId = taskSession?.environmentId;
@@ -460,17 +460,8 @@ export function UnifiedBar(): JSX.Element {
       );
     }
 
-    // Review
-    if (task.status === "review") {
-      return (
-        <div className={styles.bar}>
-          <span className={styles.hintText}>Review the changes above, then approve or reject in the header</span>
-        </div>
-      );
-    }
-
-    // Done
-    if (task.status === "done") {
+    // Complete — keep "+ New Task" as a navigation shortcut
+    if (task.status === "complete") {
       return (
         <div className={styles.bar}>
           <span className={`${styles.statusText} ${styles.statusCompleted}`}>
@@ -532,8 +523,8 @@ export function UnifiedBar(): JSX.Element {
   // --- session mode ---
   if (sessionId) {
     const isRunning = session?.status === "running";
-    const isWaiting = session?.status === "waiting_input";
-    const isEnded = session !== undefined && ["completed", "failed", "killed"].includes(session.status);
+    const isWaiting = session?.status === "idle";
+    const isEnded = session !== undefined && ["completed", "failed", "interrupted"].includes(session.status);
 
     if (isRunning) {
       return (

@@ -10,13 +10,11 @@ import styles from "./ProjectList.module.scss";
 
 /** Task status visual indicators using CSS custom property colors. */
 const TASK_STATUS_STYLES: Record<string, { color: string; icon: string }> = {
-  pending: { color: "var(--text-tertiary)", icon: "\u25CB" },
-  assigned: { color: "var(--accent-blue)", icon: "\u25CE" },
-  in_progress: { color: "var(--accent-green)", icon: "\u25CF" },
-  review: { color: "var(--accent-yellow)", icon: "\u25C9" },
-  done: { color: "var(--accent-green)", icon: "\u2713" },
+  not_started: { color: "var(--text-tertiary)", icon: "\u25CB" },
+  working: { color: "var(--accent-green)", icon: "\u25CF" },
+  paused: { color: "var(--accent-yellow)", icon: "\u25C9" },
+  complete: { color: "var(--accent-green)", icon: "\u2713" },
   failed: { color: "var(--accent-red)", icon: "\u2717" },
-  waiting_input: { color: "var(--accent-yellow)", icon: "\u29D6" },
 };
 
 /** A task node with children for recursive tree rendering. */
@@ -73,9 +71,9 @@ function TaskTreeNode({
   projectId,
   taskStatusById,
 }: TaskTreeNodeProps): JSX.Element {
-  const statusStyle = TASK_STATUS_STYLES[node.status] || TASK_STATUS_STYLES.pending;
+  const statusStyle = TASK_STATUS_STYLES[node.status] || TASK_STATUS_STYLES.not_started;
   const isBlocked = node.dependsOn.length > 0 &&
-    node.dependsOn.some((depId) => taskStatusById.get(depId) !== "done");
+    node.dependsOn.some((depId) => taskStatusById.get(depId) !== "complete");
   const isExpanded = expandedTasks.has(node.id);
   const hasChildren = node.children.length > 0;
   const isSelected = selectedTaskId === node.id;
@@ -114,7 +112,7 @@ function TaskTreeNode({
         <span className={styles.taskTitle} title={node.title}>{node.title}</span>
         {hasChildren && (
           <span className={styles.childCountBadge}>
-            {node.children.filter(c => c.status === "done").length}/{node.children.length}
+            {node.children.filter(c => c.status === "complete").length}/{node.children.length}
           </span>
         )}
         {node.dependsOn.length > 0 && (
@@ -344,7 +342,7 @@ export function ProjectList(): JSX.Element {
               </span>
               <span className={styles.projectName} title={project.name}>{project.name}</span>
               <span className={styles.taskCount}>
-                {projectTasks.length > 0 && `${projectTasks.filter((t) => t.status === "done").length}/${projectTasks.length}`}
+                {projectTasks.length > 0 && `${projectTasks.filter((t) => t.status === "complete").length}/${projectTasks.length}`}
               </span>
               <button
                 onClick={(e) => {

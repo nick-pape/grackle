@@ -1,6 +1,17 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sun, 15 Mar 2026 04:23:26 GMT and should not be manually modified.
+This log was last generated on Sun, 15 Mar 2026 07:00:42 GMT and should not be manually modified.
+
+## 0.27.0
+Sun, 15 Mar 2026 07:00:42 GMT
+
+### Minor changes
+
+- Simplify task/session lifecycle: 5 task statuses, 6 session statuses, replace approve/reject with complete/resume RPCs
+
+### Updates
+
+- No changes to CLI (merge commit false positive)
 
 ## 0.26.0
 Sun, 15 Mar 2026 04:23:26 GMT

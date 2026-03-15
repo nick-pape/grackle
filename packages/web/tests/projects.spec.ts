@@ -96,7 +96,7 @@ test.describe("Projects", () => {
     await page.getByText("my task").click();
 
     // Task header should be visible with title and status
-    await expect(page.locator('[data-testid="task-status"]')).toContainText("pending", { timeout: 5_000 });
+    await expect(page.locator('[data-testid="task-status"]')).toContainText("not_started", { timeout: 5_000 });
 
     // Tab bar should show Overview, Stream, Findings
     await expect(page.getByRole("tab", { name: "Overview", exact: true })).toBeVisible();

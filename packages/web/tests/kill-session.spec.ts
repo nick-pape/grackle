@@ -26,7 +26,7 @@ test.describe("Kill Session", () => {
     // Session becomes killed — UnifiedBar shows "+ New Chat"
     await expect(page.locator("button", { hasText: "+ New Chat" })).toBeVisible({ timeout: 10_000 });
 
-    // Status shows killed
-    await expect(page.locator("text=Session killed")).toBeVisible();
+    // Status shows interrupted
+    await expect(page.locator("text=Session interrupted")).toBeVisible();
   });
 });

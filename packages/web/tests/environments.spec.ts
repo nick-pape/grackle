@@ -10,11 +10,11 @@ test.describe("Environment Display", () => {
     await expect(appPage.locator("text=test-local")).toBeVisible();
   });
 
-  test("status dot is green when connected", async ({ appPage }) => {
-    // The environment list has a status dot span with #4ecca3 for connected
+  test("status dot is accent-colored when connected", async ({ appPage }) => {
+    // The environment list has a status dot span colored with --accent-green (purple in Grackle theme)
     const envSection = appPage.locator("text=test-local").locator("..");
     const dot = envSection.locator("span").first();
-    await expect(dot).toHaveCSS("color", "rgb(78, 204, 163)"); // #4ecca3
+    await expect(dot).toHaveCSS("color", "rgb(139, 92, 246)"); // #8b5cf6
   });
 
   test("add environment + button is visible and enabled", async ({ appPage }) => {
