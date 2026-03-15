@@ -228,6 +228,19 @@ function isTokenInfo(v: unknown): v is TokenInfo {
   );
 }
 
+const VALID_CLAUDE_MODES: ReadonlySet<string> = new Set(["off", "subscription", "api_key"]);
+const VALID_TOGGLE_MODES: ReadonlySet<string> = new Set(["off", "on"]);
+
+function isCredentialProviderConfig(v: unknown): v is CredentialProviderConfig {
+  return (
+    isObject(v) &&
+    VALID_CLAUDE_MODES.has(v.claude as string) &&
+    VALID_TOGGLE_MODES.has(v.github as string) &&
+    VALID_TOGGLE_MODES.has(v.copilot as string) &&
+    VALID_TOGGLE_MODES.has(v.codex as string)
+  );
+}
+
 function isProvisionProgress(
   v: unknown,
 ): v is ProvisionStatus & { environmentId: string } {
@@ -873,8 +886,8 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
             send({ type: "list_tokens" });
             break;
           case "credential_providers":
-            if (msg.payload) {
-              setCredentialProviders(msg.payload as unknown as CredentialProviderConfig);
+            if (isCredentialProviderConfig(msg.payload)) {
+              setCredentialProviders(msg.payload);
             }
             break;
           case "provision_progress": {

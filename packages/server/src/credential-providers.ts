@@ -33,6 +33,10 @@ const DEFAULT_CONFIG: CredentialProviderConfig = {
   codex: "off",
 };
 
+/** Valid values for each provider field. */
+const VALID_CLAUDE_VALUES: ReadonlySet<string> = new Set(["off", "subscription", "api_key"]);
+const VALID_TOGGLE_VALUES: ReadonlySet<string> = new Set(["off", "on"]);
+
 // ─── Read / Write ──────────────────────────────────────────
 
 /** Read the current credential provider configuration from the database. */
@@ -50,15 +54,32 @@ export function getCredentialProviders(): CredentialProviderConfig {
   try {
     const parsed = JSON.parse(row.value) as Partial<CredentialProviderConfig>;
     return {
-      claude: parsed.claude ?? DEFAULT_CONFIG.claude,
-      github: parsed.github ?? DEFAULT_CONFIG.github,
-      copilot: parsed.copilot ?? DEFAULT_CONFIG.copilot,
-      codex: parsed.codex ?? DEFAULT_CONFIG.codex,
+      claude: VALID_CLAUDE_VALUES.has(parsed.claude ?? "") ? parsed.claude! : DEFAULT_CONFIG.claude,
+      github: VALID_TOGGLE_VALUES.has(parsed.github ?? "") ? parsed.github! : DEFAULT_CONFIG.github,
+      copilot: VALID_TOGGLE_VALUES.has(parsed.copilot ?? "") ? parsed.copilot! : DEFAULT_CONFIG.copilot,
+      codex: VALID_TOGGLE_VALUES.has(parsed.codex ?? "") ? parsed.codex! : DEFAULT_CONFIG.codex,
     };
   } catch {
     logger.warn("Invalid credential_providers setting; returning defaults");
     return { ...DEFAULT_CONFIG };
   }
+}
+
+/**
+ * Validate that a value is a well-formed credential provider config.
+ * Returns true if all fields have valid values.
+ */
+export function isValidCredentialProviderConfig(value: unknown): value is CredentialProviderConfig {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+  const v = value as Record<string, unknown>;
+  return (
+    VALID_CLAUDE_VALUES.has(v.claude as string) &&
+    VALID_TOGGLE_VALUES.has(v.github as string) &&
+    VALID_TOGGLE_VALUES.has(v.copilot as string) &&
+    VALID_TOGGLE_VALUES.has(v.codex as string)
+  );
 }
 
 /** Persist credential provider configuration to the database. */

@@ -57,10 +57,13 @@ export function CredentialProvidersPanel(): JSX.Element {
   const { credentialProviders, updateCredentialProviders } = useGrackle();
 
   const handleChange = (key: keyof CredentialProviderConfig, value: string): void => {
-    updateCredentialProviders({
-      ...credentialProviders,
-      [key]: value,
-    } as CredentialProviderConfig);
+    const updated: CredentialProviderConfig = { ...credentialProviders };
+    if (key === "claude") {
+      updated.claude = value as CredentialProviderConfig["claude"];
+    } else {
+      updated[key] = value as "off" | "on";
+    }
+    updateCredentialProviders(updated);
   };
 
   return (
