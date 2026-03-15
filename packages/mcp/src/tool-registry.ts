@@ -1,6 +1,7 @@
 import type { Client } from "@connectrpc/connect";
 import type { grackle } from "@grackle-ai/common";
 import type { ZodType } from "zod";
+import type { AuthContext } from "./auth-context.js";
 
 /** Content item returned by an MCP tool handler. */
 export interface ToolContent {
@@ -40,7 +41,7 @@ export interface ToolDefinition {
   /** Optional behavioral hints for the client. */
   annotations?: ToolAnnotations;
   /** Execute the tool, forwarding to the ConnectRPC backend. */
-  handler: (args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) => Promise<ToolResult>;
+  handler: (args: Record<string, unknown>, client: Client<typeof grackle.Grackle>, authContext?: AuthContext) => Promise<ToolResult>;
 }
 
 /** Predicate function for filtering tools (used by persona-scoped filtering). */

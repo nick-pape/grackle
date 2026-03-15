@@ -1,4 +1,4 @@
-import { randomUUID, timingSafeEqual } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import http from "node:http";
 import { dirname, join } from "node:path";
@@ -16,7 +16,10 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import pino, { type Logger } from "pino";
 import { zodToJsonSchema } from "zod-to-json-schema";
+import type { AuthContext } from "./auth-context.js";
+import { authenticateMcpRequest } from "./auth-middleware.js";
 import { grpcErrorToToolResult } from "./error-handler.js";
+import { pruneRevocations } from "./scoped-token.js";
 import { createToolRegistry } from "./tools/index.js";
 
 /** Read the package version from package.json at module load time. */
@@ -59,7 +62,7 @@ function createGrpcClient(bindHost: string, grpcPort: number, apiKey: string): C
 }
 
 /** Create a low-level MCP Server instance with tool handlers wired to the ConnectRPC backend. */
-function createMcpServerInstance(grpcClient: Client<typeof grackle.Grackle>): Server {
+function createMcpServerInstance(grpcClient: Client<typeof grackle.Grackle>, authContext: AuthContext): Server {
   const registry = createToolRegistry();
 
   const server = new Server(
@@ -113,7 +116,7 @@ function createMcpServerInstance(grpcClient: Client<typeof grackle.Grackle>): Se
 
     try {
       logger.info({ tool: name }, "Executing MCP tool: %s", name);
-      const result = await tool.handler(parsed.data as Record<string, unknown>, grpcClient);
+      const result = await tool.handler(parsed.data as Record<string, unknown>, grpcClient, authContext);
       return result as CallToolResult;
     } catch (error: unknown) {
       logger.error({ tool: name, err: error }, "Tool execution failed: %s", name);
@@ -132,20 +135,8 @@ function createMcpServerInstance(grpcClient: Client<typeof grackle.Grackle>): Se
   return server;
 }
 
-/**
- * Verify the Bearer token on an incoming HTTP request.
- * Uses constant-time comparison via timingSafeEqual.
- */
-function verifyBearer(req: http.IncomingMessage, apiKey: string): boolean {
-  const authHeader = req.headers.authorization || "";
-  const token = authHeader.replace(/^Bearer\s+/i, "");
-  if (token.length === 0 || token.length !== apiKey.length) {
-    return false;
-  }
-  const a = Buffer.from(token);
-  const b = Buffer.from(apiKey);
-  return timingSafeEqual(a, b);
-}
+/** Interval for pruning stale revocation entries (1 hour). */
+const REVOCATION_PRUNE_INTERVAL_MS: number = 60 * 60 * 1000;
 
 /**
  * Create an HTTP server that serves the MCP Streamable HTTP protocol on `/mcp`.
@@ -160,6 +151,13 @@ export function createMcpServer(options: McpServerOptions): http.Server {
   /** Map of active session transports, keyed by session ID. */
   const transports: Map<string, StreamableHTTPServerTransport> = new Map();
 
+  /** Map of authentication contexts, keyed by MCP session ID. */
+  const authContexts: Map<string, AuthContext> = new Map();
+
+  // Periodically prune stale revocation entries
+  const pruneInterval = setInterval(() => pruneRevocations(), REVOCATION_PRUNE_INTERVAL_MS);
+  pruneInterval.unref();
+
   // eslint-disable-next-line @typescript-eslint/no-misused-promises
   const httpServer = http.createServer(async (req, res) => {
     const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
@@ -172,7 +170,8 @@ export function createMcpServer(options: McpServerOptions): http.Server {
     }
 
     // Auth check on every request
-    if (!verifyBearer(req, apiKey)) {
+    const authContext = authenticateMcpRequest(req, apiKey);
+    if (!authContext) {
       res.writeHead(401, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ error: "Unauthorized" }));
       return;
@@ -181,11 +180,11 @@ export function createMcpServer(options: McpServerOptions): http.Server {
     const method = req.method?.toUpperCase();
 
     if (method === "POST") {
-      await handlePost(req, res, grpcClient, transports);
+      await handlePost(req, res, grpcClient, transports, authContexts, authContext);
     } else if (method === "GET") {
       await handleGet(req, res, transports);
     } else if (method === "DELETE") {
-      await handleDelete(req, res, transports);
+      await handleDelete(req, res, transports, authContexts);
     } else {
       res.writeHead(405, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ error: "Method not allowed" }));
@@ -230,6 +229,8 @@ async function handlePost(
   res: http.ServerResponse,
   grpcClient: Client<typeof grackle.Grackle>,
   transports: Map<string, StreamableHTTPServerTransport>,
+  authContexts: Map<string, AuthContext>,
+  authContext: AuthContext,
 ): Promise<void> {
   try {
     const body = await parseBody(req);
@@ -249,6 +250,7 @@ async function handlePost(
         onsessioninitialized: (sid: string) => {
           logger.info({ sessionId: sid }, "MCP session initialized");
           transports.set(sid, transport);
+          authContexts.set(sid, authContext);
         },
       });
 
@@ -257,10 +259,11 @@ async function handlePost(
         if (sid && transports.has(sid)) {
           logger.info({ sessionId: sid }, "MCP session closed");
           transports.delete(sid);
+          authContexts.delete(sid);
         }
       };
 
-      const mcpServer = createMcpServerInstance(grpcClient);
+      const mcpServer = createMcpServerInstance(grpcClient, authContext);
       await mcpServer.connect(transport);
       await transport.handleRequest(req, res, body);
       return;
@@ -308,6 +311,7 @@ async function handleDelete(
   req: http.IncomingMessage,
   res: http.ServerResponse,
   transports: Map<string, StreamableHTTPServerTransport>,
+  authContexts: Map<string, AuthContext>,
 ): Promise<void> {
   const sessionId = req.headers["mcp-session-id"] as string | undefined;
   if (!sessionId || !transports.has(sessionId)) {
@@ -319,6 +323,7 @@ async function handleDelete(
   const transport = transports.get(sessionId)!;
   try {
     await transport.handleRequest(req, res);
+    authContexts.delete(sessionId);
   } catch (error) {
     logger.error({ err: error }, "Error handling session termination");
     if (!res.headersSent) {
