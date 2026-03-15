@@ -103,8 +103,8 @@
 }
 
 .taskBlockedBadge {
-  background: var(--accent-yellow-dim, rgba(229,192,123,0.15));
-  color: var(--accent-yellow, #e5c07b);
+  background: var(--accent-yellow-dim);
+  color: var(--accent-yellow);
   border-radius: var(--radius-full);
   padding: 1px var(--space-sm);
   font-size: var(--font-size-xs);
@@ -386,7 +386,7 @@
 }
 
 .depBlocked {
-  color: var(--accent-yellow, #e5c07b);
+  color: var(--accent-yellow);
 }
 
 .depDone {
@@ -430,7 +430,7 @@
   font-size: var(--font-size-sm);
   color: var(--accent-yellow);
   background: var(--accent-yellow-dim);
-  border: 1px solid rgba(240, 192, 64, 0.25);
+  border: 1px solid var(--accent-yellow-border);
   border-radius: var(--radius-sm);
   padding: var(--space-sm) var(--space-md);
   white-space: pre-wrap;
@@ -463,9 +463,9 @@
   padding: var(--space-xs) var(--space-sm);
   margin-bottom: var(--space-sm);
   border-radius: 4px;
-  background: color-mix(in srgb, var(--accent-yellow, #e5c07b) 12%, transparent);
-  border: 1px solid color-mix(in srgb, var(--accent-yellow, #e5c07b) 35%, transparent);
-  color: var(--accent-yellow, #e5c07b);
+  background: color-mix(in srgb, var(--accent-yellow) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent-yellow) 35%, transparent);
+  color: var(--accent-yellow);
   font-size: var(--font-size-sm);
   font-family: var(--font-mono);
 }
