@@ -69,14 +69,13 @@ export function registerPowerLineRoutes(router: ConnectRouter): void {
         return;
       }
 
-      // Start MCP broker (lazy singleton) and generate a scoped token for this session
-      let mcpBrokerUrl: string | undefined;
-      let mcpToken: string | undefined;
+      // Start MCP broker (lazy singleton) and generate a scoped token for this session.
+      // The `per` claim is left empty — persona-scoped tool filtering is deferred to #424.
+      let mcpBroker: { url: string; token: string } | undefined;
       if (req.mcpApiKey && req.mcpGrpcUrl) {
         try {
           const broker = await ensureBrokerStarted(req.mcpApiKey, req.mcpGrpcUrl);
-          mcpBrokerUrl = broker.url;
-          mcpToken = createScopedToken(
+          const token = createScopedToken(
             {
               sub: req.taskId || req.sessionId,
               pid: req.projectId || "",
@@ -85,6 +84,7 @@ export function registerPowerLineRoutes(router: ConnectRouter): void {
             },
             req.mcpApiKey,
           );
+          mcpBroker = { url: broker.url, token };
         } catch (err) {
           logger.warn({ err }, "Failed to start MCP broker, continuing without it");
         }
@@ -103,8 +103,7 @@ export function registerPowerLineRoutes(router: ConnectRouter): void {
         mcpServers: req.mcpServersJson
           ? (JSON.parse(req.mcpServersJson) as Record<string, unknown>)
           : undefined,
-        mcpBrokerUrl,
-        mcpToken,
+        mcpBroker,
       });
 
       yield* streamSession(req.sessionId, session);

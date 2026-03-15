@@ -35,8 +35,7 @@ export abstract class BaseAgentSession implements AgentSession {
   protected readonly hooks?: Record<string, unknown>;
   protected readonly projectId?: string;
   protected readonly taskId?: string;
-  protected readonly mcpBrokerUrl?: string;
-  protected readonly mcpToken?: string;
+  protected readonly mcpBroker?: { url: string; token: string };
 
   /** Human-readable display name for system messages (e.g. "Claude Code", "Codex"). */
   protected abstract readonly runtimeDisplayName: string;
@@ -57,8 +56,7 @@ export abstract class BaseAgentSession implements AgentSession {
     hooks?: Record<string, unknown>,
     projectId?: string,
     taskId?: string,
-    mcpBrokerUrl?: string,
-    mcpToken?: string,
+    mcpBroker?: { url: string; token: string },
   ) {
     this.id = id;
     this.prompt = prompt;
@@ -72,8 +70,7 @@ export abstract class BaseAgentSession implements AgentSession {
     this.hooks = hooks;
     this.projectId = projectId;
     this.taskId = taskId;
-    this.mcpBrokerUrl = mcpBrokerUrl;
-    this.mcpToken = mcpToken;
+    this.mcpBroker = mcpBroker;
     this.runtimeSessionId = resumeSessionId || "";
   }
 

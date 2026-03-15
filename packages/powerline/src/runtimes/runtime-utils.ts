@@ -274,13 +274,14 @@ export interface ResolvedMcpConfig {
   disallowedTools: string[];
 }
 
-/** Broker configuration for injecting the HTTP MCP server entry. */
+/** Broker configuration for injecting the HTTP MCP server entry. Matches SpawnOptions.mcpBroker. */
 export interface BrokerConfig {
   /** Full URL of the broker's /mcp endpoint. */
   url: string;
   /** Scoped Bearer token for this session. */
   token: string;
 }
+
 
 /**
  * Load MCP server configurations from the shared GRACKLE_MCP_CONFIG file and spawn options.

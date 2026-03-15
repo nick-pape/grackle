@@ -1,78 +1,19 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 
 // Mock dependencies before importing
 vi.mock("./logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
 
-vi.mock("./session-mgr.js", () => ({
-  getSession: vi.fn(),
-}));
-
-vi.mock("./runtimes/runtime-utils.js", () => ({
-  buildFindingEvent: vi.fn((args: Record<string, unknown>, raw: unknown) => ({
-    type: "finding",
-    timestamp: "2026-01-01T00:00:00.000Z",
-    content: JSON.stringify({ title: args.title }),
-    raw,
-  })),
-  buildSubtaskCreateEvent: vi.fn((args: Record<string, unknown>, raw: unknown) => ({
-    type: "subtask_create",
-    timestamp: "2026-01-01T00:00:00.000Z",
-    content: JSON.stringify({ title: args.title }),
-    raw,
-  })),
-}));
-
 // Mock @grackle-ai/mcp
-vi.mock("@grackle-ai/mcp", () => {
-  const mockToolRegistry = {
-    list: vi.fn(() => [
-      { name: "finding_post", group: "finding", description: "Post a finding", inputSchema: { safeParse: (args: unknown) => ({ success: true, data: args }) }, annotations: {} },
-      { name: "finding_list", group: "finding", description: "List findings", inputSchema: { safeParse: (args: unknown) => ({ success: true, data: args }) }, annotations: {} },
-      { name: "task_create", group: "task", description: "Create a task", inputSchema: { safeParse: (args: unknown) => ({ success: true, data: args }) }, annotations: {} },
-      { name: "env_list", group: "env", description: "List environments", inputSchema: { safeParse: (args: unknown) => ({ success: true, data: args }) }, annotations: {} },
-    ]),
-    get: vi.fn((name: string) => {
-      const tools: Record<string, unknown> = {
-        finding_post: {
-          name: "finding_post",
-          group: "finding",
-          description: "Post a finding",
-          inputSchema: { safeParse: (args: unknown) => ({ success: true, data: args }) },
-          handler: vi.fn(async () => ({ content: [{ type: "text", text: '{"id":"f-1"}' }] })),
-        },
-        finding_list: {
-          name: "finding_list",
-          group: "finding",
-          description: "List findings",
-          inputSchema: { safeParse: (args: unknown) => ({ success: true, data: args }) },
-          handler: vi.fn(async () => ({ content: [{ type: "text", text: "[]" }] })),
-        },
-        task_create: {
-          name: "task_create",
-          group: "task",
-          description: "Create a task",
-          inputSchema: { safeParse: (args: unknown) => ({ success: true, data: args }) },
-          handler: vi.fn(async () => ({ content: [{ type: "text", text: '{"id":"t-1"}' }] })),
-        },
-        env_list: {
-          name: "env_list",
-          group: "env",
-          description: "List environments",
-          inputSchema: { safeParse: (args: unknown) => ({ success: true, data: args }) },
-          handler: vi.fn(async () => ({ content: [{ type: "text", text: "[]" }] })),
-        },
-      };
-      return tools[name];
-    }),
-  };
-  return {
-    createToolRegistry: vi.fn(() => mockToolRegistry),
-    authenticateMcpRequest: vi.fn(),
-    ToolRegistry: vi.fn(),
-  };
-});
+vi.mock("@grackle-ai/mcp", () => ({
+  createToolRegistry: vi.fn(() => ({
+    list: vi.fn(() => []),
+    get: vi.fn(() => undefined),
+  })),
+  authenticateMcpRequest: vi.fn(),
+  ToolRegistry: vi.fn(),
+}));
 
 // Mock MCP SDK
 vi.mock("@modelcontextprotocol/sdk/server/index.js", () => ({
@@ -239,7 +180,6 @@ describe("shutdownBroker", () => {
   });
 
   it("is a no-op when no broker is running", async () => {
-    // Should not throw
     await shutdownBroker();
   });
 
@@ -248,7 +188,6 @@ describe("shutdownBroker", () => {
     const port = handle.port;
     await shutdownBroker();
 
-    // After shutdown, connecting should fail
     const result = await new Promise<string>((resolve) => {
       const req = require("node:http").get(`http://127.0.0.1:${port}/mcp`, () => {
         resolve("connected");

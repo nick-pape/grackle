@@ -119,13 +119,10 @@ class ClaudeCodeSession extends BaseAgentSession {
     };
 
     // Load MCP server config from env var or SpawnOptions.
-    // resolveMcpServers() adds a `tools` field to the grackle server entry (used by
-    // Codex/Copilot SDKs). The Claude Agent SDK ignores unknown fields in MCP server
-    // configs — it only reads `command`, `args`, and `env` to spawn the process.
-    const mcpConfig = resolveMcpServers(
-      this.mcpServers,
-      this.mcpBrokerUrl ? { url: this.mcpBrokerUrl, token: this.mcpToken! } : undefined,
-    );
+    // resolveMcpServers() injects the Grackle MCP server entry. When broker config is
+    // available, it uses HTTP (url + headers). The Claude Agent SDK supports both stdio
+    // (command/args) and HTTP (url/headers) MCP server configs.
+    const mcpConfig = resolveMcpServers(this.mcpServers, this.mcpBroker);
     if (mcpConfig.servers) {
       sdkOptions.mcpServers = mcpConfig.servers;
     }
@@ -247,9 +244,8 @@ export class ClaudeCodeRuntime extends BaseAgentRuntime {
     hooks?: Record<string, unknown>,
     projectId?: string,
     taskId?: string,
-    mcpBrokerUrl?: string,
-    mcpToken?: string,
+    mcpBroker?: { url: string; token: string },
   ): AgentSession {
-    return new ClaudeCodeSession(id, prompt, model, maxTurns, resumeSessionId, branch, worktreeBasePath, systemContext, mcpServers, hooks, projectId, taskId, mcpBrokerUrl, mcpToken);
+    return new ClaudeCodeSession(id, prompt, model, maxTurns, resumeSessionId, branch, worktreeBasePath, systemContext, mcpServers, hooks, projectId, taskId, mcpBroker);
   }
 }

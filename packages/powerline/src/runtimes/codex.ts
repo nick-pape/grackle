@@ -114,10 +114,7 @@ class CodexSession extends BaseAgentSession {
     }
 
     // MCP servers — pass via config overrides, filtering disallowed tools
-    const mcpConfig = resolveMcpServers(
-      this.mcpServers,
-      this.mcpBrokerUrl ? { url: this.mcpBrokerUrl, token: this.mcpToken! } : undefined,
-    );
+    const mcpConfig = resolveMcpServers(this.mcpServers, this.mcpBroker);
     if (mcpConfig.servers) {
       codexOptions.config = { mcpServers: mcpConfig.servers };
     }
@@ -369,9 +366,8 @@ export class CodexRuntime extends BaseAgentRuntime {
     _hooks?: Record<string, unknown>, // Hooks not supported by Codex SDK — accepted for interface compatibility
     projectId?: string,
     taskId?: string,
-    mcpBrokerUrl?: string,
-    mcpToken?: string,
+    mcpBroker?: { url: string; token: string },
   ): AgentSession {
-    return new CodexSession(id, prompt, model, maxTurns, resumeSessionId, branch, worktreeBasePath, systemContext, mcpServers, undefined, projectId, taskId, mcpBrokerUrl, mcpToken);
+    return new CodexSession(id, prompt, model, maxTurns, resumeSessionId, branch, worktreeBasePath, systemContext, mcpServers, undefined, projectId, taskId, mcpBroker);
   }
 }

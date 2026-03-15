@@ -175,10 +175,7 @@ export class CopilotSession extends BaseAgentSession {
     }
 
     // MCP servers
-    const mcpConfig = resolveMcpServers(
-      this.mcpServers,
-      this.mcpBrokerUrl ? { url: this.mcpBrokerUrl, token: this.mcpToken! } : undefined,
-    );
+    const mcpConfig = resolveMcpServers(this.mcpServers, this.mcpBroker);
     if (mcpConfig.servers) {
       sessionConfig.mcpServers = mcpConfig.servers;
     }
@@ -395,9 +392,8 @@ export class CopilotRuntime extends BaseAgentRuntime {
     _hooks?: Record<string, unknown>, // Hooks not supported by Copilot SDK — accepted for interface compatibility
     projectId?: string,
     taskId?: string,
-    mcpBrokerUrl?: string,
-    mcpToken?: string,
+    mcpBroker?: { url: string; token: string },
   ): AgentSession {
-    return new CopilotSession(id, prompt, model, maxTurns, resumeSessionId, branch, worktreeBasePath, systemContext, mcpServers, undefined, projectId, taskId, mcpBrokerUrl, mcpToken);
+    return new CopilotSession(id, prompt, model, maxTurns, resumeSessionId, branch, worktreeBasePath, systemContext, mcpServers, undefined, projectId, taskId, mcpBroker);
   }
 }
