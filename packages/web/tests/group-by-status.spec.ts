@@ -2,11 +2,6 @@ import { test, expect } from "./fixtures.js";
 import {
   createProject,
   createTask,
-  getProjectId,
-  createTaskViaWs,
-  navigateToTask,
-  patchWsForStubRuntime,
-  runStubTaskToCompletion,
 } from "./helpers.js";
 
 test.describe("Group-by-status toggle", () => {
@@ -100,10 +95,10 @@ test.describe("Group-by-status toggle", () => {
 
     // Only not_started group should exist
     await expect(page.getByTestId("status-group-not_started").first()).toBeVisible({ timeout: 5_000 });
-    await expect(page.getByTestId("status-group-working")).not.toBeVisible();
-    await expect(page.getByTestId("status-group-paused")).not.toBeVisible();
-    await expect(page.getByTestId("status-group-failed")).not.toBeVisible();
-    await expect(page.getByTestId("status-group-complete")).not.toBeVisible();
+    await expect(page.getByTestId("status-group-working")).toHaveCount(0);
+    await expect(page.getByTestId("status-group-paused")).toHaveCount(0);
+    await expect(page.getByTestId("status-group-failed")).toHaveCount(0);
+    await expect(page.getByTestId("status-group-complete")).toHaveCount(0);
 
     // Disable for next tests
     await page.getByTestId("group-by-status-toggle").click();

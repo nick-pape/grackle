@@ -130,7 +130,6 @@ interface StatusGroupAccordionProps {
   onToggle: () => void;
   selectedTaskId: string | undefined;
   navigate: ReturnType<typeof useAppNavigate>;
-  projectId: string;
 }
 
 /** Collapsible accordion for a status group in grouped view. */
@@ -140,7 +139,6 @@ function StatusGroupAccordion({
   onToggle,
   selectedTaskId,
   navigate,
-  projectId,
 }: StatusGroupAccordionProps): JSX.Element {
   return (
     <div data-testid={`status-group-${group.status}`}>
@@ -358,7 +356,10 @@ export function ProjectList(): JSX.Element {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newProjectName, setNewProjectName] = useState("");
   const [groupByStatus, setGroupByStatusState] = useState(getGroupByStatus);
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+  // Per-project accordion state using composite keys: "projectId:status"
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
+    () => getGroupByStatus() ? new Set(STATUS_GROUP_ORDER) : new Set(),
+  );
 
   /** Toggle group-by-status mode. Resets expanded groups on enable. */
   const toggleGroupByStatus = (): void => {
@@ -373,17 +374,24 @@ export function ProjectList(): JSX.Element {
     });
   };
 
-  /** Toggle a single status group accordion. */
-  const toggleStatusGroup = (status: string): void => {
+  /** Toggle a single status group accordion for a specific project. */
+  const toggleStatusGroup = (projectId: string, status: string): void => {
+    const key = `${projectId}:${status}`;
     setExpandedGroups((prev) => {
       const next = new Set(prev);
-      if (next.has(status)) {
-        next.delete(status);
+      if (next.has(key)) {
+        next.delete(key);
       } else {
-        next.add(status);
+        next.add(key);
       }
       return next;
     });
+  };
+
+  /** Check if a status group is expanded for a specific project. */
+  const isGroupExpanded = (projectId: string, status: string): boolean => {
+    // Check both per-project key and global key (for initial expand-all)
+    return expandedGroups.has(`${projectId}:${status}`) || expandedGroups.has(status);
   };
 
   // Derive selected state from router
@@ -474,6 +482,7 @@ export function ProjectList(): JSX.Element {
             className={`${styles.groupToggle} ${groupByStatus ? styles.groupToggleActive : ""}`}
             onClick={toggleGroupByStatus}
             aria-label={groupByStatus ? "Switch to tree view" : "Group tasks by status"}
+            aria-pressed={groupByStatus}
             title={groupByStatus ? "Switch to tree view" : "Group tasks by status"}
             data-testid="group-by-status-toggle"
           >
@@ -590,11 +599,10 @@ export function ProjectList(): JSX.Element {
                       <StatusGroupAccordion
                         key={group.status}
                         group={group}
-                        isExpanded={expandedGroups.has(group.status)}
-                        onToggle={() => toggleStatusGroup(group.status)}
+                        isExpanded={isGroupExpanded(project.id, group.status)}
+                        onToggle={() => toggleStatusGroup(project.id, group.status)}
                         selectedTaskId={selectedTaskId}
                         navigate={navigate}
-                        projectId={project.id}
                       />
                     ))
                   ) : (
