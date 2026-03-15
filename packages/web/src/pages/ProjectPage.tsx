@@ -424,7 +424,8 @@ export function ProjectPage(): JSX.Element {
                     </span>
                   ) : (
                     <span className={styles.metaPlaceholder}>
-                      {project?.defaultEnvironmentId ?? "No default environment"}
+                      {/* eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string means "not set" */}
+                      {project?.defaultEnvironmentId || "No default environment"}
                     </span>
                   )}
                   <span className={styles.editButton} aria-hidden="true">
