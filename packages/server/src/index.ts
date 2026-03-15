@@ -270,7 +270,9 @@ function main(): void {
     process.exit(process.exitCode || 0);
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-misused-promises
   process.on("SIGINT", shutdown);
+  // eslint-disable-next-line @typescript-eslint/no-misused-promises
   process.on("SIGTERM", shutdown);
 }
 

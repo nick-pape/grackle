@@ -221,10 +221,10 @@ export async function resolveWorkingDirectory(options: ResolveWorkingDirectoryOp
     if (repoPath) {
       try {
         const wt = await ensureWorktree(repoPath, branch);
-        eventQueue.push({ type: "system", timestamp: ts(), content: `Worktree ready: ${wt.worktreePath} (branch: ${branch}, created: ${wt.created})` });
+        eventQueue.push({ type: "system", timestamp: ts(), content: `Worktree ready: ${wt.worktreePath} (branch: ${branch}, created: ${String(wt.created)})` });
         return wt.worktreePath;
       } catch (wtErr) {
-        eventQueue.push({ type: "system", timestamp: ts(), content: `Worktree setup failed (${wtErr}), falling back to workspace` });
+        eventQueue.push({ type: "system", timestamp: ts(), content: `Worktree setup failed (${wtErr instanceof Error ? wtErr.message : String(wtErr)}), falling back to workspace` });
       }
     } else {
       eventQueue.push({ type: "system", timestamp: ts(), content: `No git repo found at ${worktreeBasePath} or well-known paths, falling back to workspace` });
@@ -248,7 +248,7 @@ export async function resolveWorkingDirectory(options: ResolveWorkingDirectoryOp
         eventQueue.push({ type: "system", timestamp: ts(), content: `Checked out branch '${branch}' in main working tree: ${repoPath}` });
         return repoPath;
       } catch (checkoutErr) {
-        eventQueue.push({ type: "system", timestamp: ts(), content: `Branch checkout failed (${checkoutErr}), falling back to workspace` });
+        eventQueue.push({ type: "system", timestamp: ts(), content: `Branch checkout failed (${checkoutErr instanceof Error ? checkoutErr.message : String(checkoutErr)}), falling back to workspace` });
       }
     } else {
       eventQueue.push({ type: "system", timestamp: ts(), content: `No git repo found for branch checkout, falling back to workspace` });

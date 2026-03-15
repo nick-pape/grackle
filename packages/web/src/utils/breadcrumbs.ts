@@ -41,8 +41,11 @@ export function buildHomeBreadcrumbs(): BreadcrumbSegment[] {
   return [{ label: "Home", url: undefined }];
 }
 
-/** Build breadcrumbs for the settings page. */
-export function buildSettingsBreadcrumbs(): BreadcrumbSegment[] {
+/** Build breadcrumbs for the settings page, optionally showing the active tab. */
+export function buildSettingsBreadcrumbs(tabLabel?: string): BreadcrumbSegment[] {
+  if (tabLabel) {
+    return [HOME_SEGMENT, { label: "Settings", url: "/settings" }, { label: tabLabel, url: undefined }];
+  }
   return [HOME_SEGMENT, { label: "Settings", url: undefined }];
 }
 
@@ -101,6 +104,7 @@ export function buildTaskBreadcrumbs(
   // Current task (non-clickable)
   const currentTask = ancestors[ancestors.length - 1];
   segments.push({
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- currentTask may be undefined if ancestors is empty
     label: currentTask?.title ?? taskId,
     url: undefined,
   });

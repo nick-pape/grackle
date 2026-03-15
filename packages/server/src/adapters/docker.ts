@@ -240,7 +240,7 @@ export class DockerAdapter implements EnvironmentAdapter {
       }
     }
 
-    throw new Error(`Could not reach PowerLine after ${CONNECT_MAX_RETRIES} attempts: ${lastErr}`);
+    throw new Error(`Could not reach PowerLine after ${CONNECT_MAX_RETRIES} attempts: ${lastErr instanceof Error ? lastErr.message : String(lastErr)}`);
   }
 
   public async disconnect(environmentId: string): Promise<void> {

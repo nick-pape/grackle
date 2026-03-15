@@ -1,8 +1,8 @@
 {
   "changes": [
     {
-      "comment": "Add user-friendly error message for Node.js ABI version mismatch in better-sqlite3",
-      "type": "patch",
+      "comment": "placeholder",
+      "type": "none",
       "packageName": "@grackle-ai/cli"
     }
   ],

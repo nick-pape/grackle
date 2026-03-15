@@ -142,7 +142,7 @@ export class SshAdapter implements EnvironmentAdapter {
     try {
       await executor.exec("echo ok", { timeout: SSH_CONNECTIVITY_TIMEOUT_MS });
     } catch (err) {
-      throw new Error(`Cannot reach ${cfg.host} via SSH: ${err}`);
+      throw new Error(`Cannot reach ${cfg.host} via SSH: ${err instanceof Error ? err.message : String(err)}`);
     }
 
     // Bootstrap PowerLine on the remote host

@@ -2,6 +2,21 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.28.1",
+      "tag": "@grackle-ai/cli_v0.28.1",
+      "date": "Sun, 15 Mar 2026 17:12:57 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Add user-friendly error message for Node.js ABI version mismatch in better-sqlite3"
+          },
+          {
+            "comment": "Add --host CLI flag to PowerLine, bind to 0.0.0.0 in Docker containers"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.28.0",
       "tag": "@grackle-ai/cli_v0.28.0",
       "date": "Sun, 15 Mar 2026 17:02:08 GMT",

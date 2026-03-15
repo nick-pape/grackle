@@ -1,6 +1,14 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sun, 15 Mar 2026 17:02:08 GMT and should not be manually modified.
+This log was last generated on Sun, 15 Mar 2026 17:12:57 GMT and should not be manually modified.
+
+## 0.28.1
+Sun, 15 Mar 2026 17:12:57 GMT
+
+### Patches
+
+- Add user-friendly error message for Node.js ABI version mismatch in better-sqlite3
+- Add --host CLI flag to PowerLine, bind to 0.0.0.0 in Docker containers
 
 ## 0.28.0
 Sun, 15 Mar 2026 17:02:08 GMT

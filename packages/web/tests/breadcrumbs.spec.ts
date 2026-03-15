@@ -94,13 +94,24 @@ test.describe("breadcrumb builders", () => {
     expect(segments[0].url).toBeUndefined();
   });
 
-  test("settings returns Home > Settings", () => {
+  test("settings returns Home > Settings when no tab specified", () => {
     const segments: BreadcrumbSegment[] = buildSettingsBreadcrumbs();
     expect(segments).toHaveLength(2);
     expect(segments[0].label).toBe("Home");
     expect(segments[0].url).toBe("/");
     expect(segments[1].label).toBe("Settings");
     expect(segments[1].url).toBeUndefined();
+  });
+
+  test("settings with tab returns Home > Settings > TabLabel", () => {
+    const segments: BreadcrumbSegment[] = buildSettingsBreadcrumbs("Environments");
+    expect(segments).toHaveLength(3);
+    expect(segments[0].label).toBe("Home");
+    expect(segments[0].url).toBe("/");
+    expect(segments[1].label).toBe("Settings");
+    expect(segments[1].url).toBe("/settings");
+    expect(segments[2].label).toBe("Environments");
+    expect(segments[2].url).toBeUndefined();
   });
 
   test("project returns Home > ProjectName", () => {

@@ -48,7 +48,7 @@ export async function ensureWorktree(basePath: string, branch: string): Promise<
   try {
     await exec("git", ["status", "--porcelain"], { cwd: basePath });
   } catch (err) {
-    throw new Error(`Git repo not writable: ${basePath} (${err})`);
+    throw new Error(`Git repo not writable: ${basePath} (${err instanceof Error ? err.message : String(err)})`);
   }
 
   const wtPath = worktreeDir(basePath, branch);
@@ -67,7 +67,7 @@ export async function ensureWorktree(basePath: string, branch: string): Promise<
       await exec("git", ["worktree", "add", wtPath, branch], { cwd: basePath });
       return { worktreePath: wtPath, branch, created: true };
     } catch (err) {
-      throw new Error(`Failed to create worktree for branch ${branch}: ${err}`);
+      throw new Error(`Failed to create worktree for branch ${branch}: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 }

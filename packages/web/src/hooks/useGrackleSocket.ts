@@ -284,8 +284,10 @@ function asValidArray<T>(
     );
     return [];
   }
-  return v.filter((item: unknown, i: number) => {
-    if (guard(item)) return true;
+  return (v as unknown[]).filter((item: unknown, i: number): item is T => {
+    if (guard(item)) {
+      return true;
+    }
     warnBadPayload(
       msgType,
       `item at index ${i} in "${fieldName}" has unexpected shape`,
@@ -1003,6 +1005,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
 
     return () => {
       clearTimeout(reconnectTimer);
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- ws may be uninitialized if cleanup runs before connect()
       ws?.close();
     };
   }, [wsUrl, send]);

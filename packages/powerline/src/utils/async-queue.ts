@@ -33,10 +33,11 @@ export class AsyncQueue<T> {
   }
 
   public async *[Symbol.asyncIterator](): AsyncIterableIterator<T> {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- closed changes asynchronously via close()
     while (true) {
       const item = await this.shift();
-      if (item === undefined && this.closed) return;
-      if (item !== undefined) yield item;
+      if (item === undefined) return;
+      yield item;
     }
   }
 }

@@ -39,12 +39,12 @@ function getCopilotSdk(): Promise<CopilotSdkModule> {
   if (!sdkPromise) {
     sdkPromise = (async (): Promise<CopilotSdkModule> => {
       try {
-        const mod = await import("@github/copilot-sdk");
+        const mod = await import("@github/copilot-sdk") as Record<string, unknown>;
         if (typeof mod.CopilotClient !== "function") {
           throw new Error("CopilotClient not found in @github/copilot-sdk");
         }
         return {
-          CopilotClient: mod.CopilotClient,
+          CopilotClient: mod.CopilotClient as CopilotSdkModule["CopilotClient"],
           defineTool: mod.defineTool as CopilotSdkModule["defineTool"],
           approveAll: mod.approveAll,
         };
@@ -168,7 +168,8 @@ export class CopilotSession extends BaseAgentSession {
 
   protected async setupSdk(): Promise<void> {
     const ts = (): string => new Date().toISOString();
-    const { CopilotClient, defineTool, approveAll } = await getCopilotSdk();
+    const copilotSdk = await getCopilotSdk();
+    const { defineTool } = copilotSdk;
 
     // ── Resolve working directory ──
     const workingDirectory = await resolveWorkingDirectory({
@@ -202,7 +203,8 @@ export class CopilotSession extends BaseAgentSession {
       clientOptions.useLoggedInUser = true;
     }
 
-    this.copilotClient = new CopilotClient(clientOptions);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    this.copilotClient = new copilotSdk.CopilotClient(clientOptions);
     await this.copilotClient.start();
 
     this.eventQueue.push({ type: "system", timestamp: ts(), content: "Copilot CLI server connected" });
@@ -212,7 +214,7 @@ export class CopilotSession extends BaseAgentSession {
     const sessionConfig: Record<string, unknown> = {
       model: this.model,
       streaming: true,
-      onPermissionRequest: approveAll,
+      onPermissionRequest: copilotSdk.approveAll,
     };
 
     // BYOK provider config
@@ -235,10 +237,8 @@ export class CopilotSession extends BaseAgentSession {
 
     // Custom tools: inject post_finding and create_subtask tools
     const tools: unknown[] = [];
-    if (defineTool) {
-      tools.push(buildFindingTool(defineTool, this.eventQueue));
-      tools.push(buildSubtaskCreateTool(defineTool, this.eventQueue));
-    }
+    tools.push(buildFindingTool(defineTool, this.eventQueue));
+    tools.push(buildSubtaskCreateTool(defineTool, this.eventQueue));
     if (tools.length > 0) {
       sessionConfig.tools = tools;
     }
@@ -250,12 +250,14 @@ export class CopilotSession extends BaseAgentSession {
 
     // ── Create or resume session ──
     if (this.resumeSessionId) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       this.copilotSession = await this.copilotClient.resumeSession(this.resumeSessionId, sessionConfig);
     } else {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       this.copilotSession = await this.copilotClient.createSession(sessionConfig);
     }
 
-    this.runtimeSessionId = this.copilotSession.sessionId || this.id;
+    this.runtimeSessionId = (this.copilotSession.sessionId as string | undefined) || this.id;
 
     this.eventQueue.push({
       type: "system",
@@ -429,7 +431,7 @@ export class CopilotSession extends BaseAgentSession {
     try {
       if (this.copilotClient) {
         // stop() returns Promise<Error[]> — log any errors but don't throw
-        const errors = await this.copilotClient.stop();
+        const errors = await this.copilotClient.stop() as unknown[];
         if (Array.isArray(errors) && errors.length > 0) {
           logger.warn({ errors: errors.map(String) }, "Errors during Copilot client shutdown");
         }
