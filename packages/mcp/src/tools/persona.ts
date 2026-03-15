@@ -79,10 +79,10 @@ export const personaTools: ToolDefinition[] = [
         const persona = await client.createPersona({
           name: args.name as string,
           systemPrompt: args.systemPrompt as string,
-          description: (args.description as string) ?? "",
-          runtime: (args.runtime as string) ?? "",
-          model: (args.model as string) ?? "",
-          maxTurns: (args.maxTurns as number) ?? 0,
+          description: (args.description as string | undefined) ?? "",
+          runtime: (args.runtime as string | undefined) ?? "",
+          model: (args.model as string | undefined) ?? "",
+          maxTurns: (args.maxTurns as number | undefined) ?? 0,
           mcpServers: [],
         });
         return jsonResult(serializePersona(persona));
@@ -140,12 +140,12 @@ export const personaTools: ToolDefinition[] = [
       try {
         const persona = await client.updatePersona({
           id: args.personaId as string,
-          name: (args.name as string) ?? "",
-          systemPrompt: (args.systemPrompt as string) ?? "",
-          description: (args.description as string) ?? "",
-          runtime: (args.runtime as string) ?? "",
-          model: (args.model as string) ?? "",
-          maxTurns: (args.maxTurns as number) ?? 0,
+          name: (args.name as string | undefined) ?? "",
+          systemPrompt: (args.systemPrompt as string | undefined) ?? "",
+          description: (args.description as string | undefined) ?? "",
+          runtime: (args.runtime as string | undefined) ?? "",
+          model: (args.model as string | undefined) ?? "",
+          maxTurns: (args.maxTurns as number | undefined) ?? 0,
           mcpServers: [],
         });
         return jsonResult(serializePersona(persona));

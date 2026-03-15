@@ -31,7 +31,7 @@ export const findingTools: ToolDefinition[] = [
           projectId: args.projectId as string,
           categories: args.category ? [args.category as string] : [],
           tags: args.tag ? [args.tag as string] : [],
-          limit: (args.limit as number) ?? 0,
+          limit: (args.limit as number | undefined) ?? 0,
         });
         return jsonResult(
           response.findings.map((f) => ({
@@ -75,9 +75,9 @@ export const findingTools: ToolDefinition[] = [
         const finding = await client.postFinding({
           projectId: args.projectId as string,
           title: args.title as string,
-          category: (args.category as string) ?? "",
-          content: (args.content as string) ?? "",
-          tags: (args.tags as string[]) ?? [],
+          category: (args.category as string | undefined) ?? "",
+          content: (args.content as string | undefined) ?? "",
+          tags: (args.tags as string[] | undefined) ?? [],
           taskId: "",
           sessionId: "",
         });

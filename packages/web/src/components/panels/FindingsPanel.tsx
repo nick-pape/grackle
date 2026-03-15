@@ -15,9 +15,6 @@ const CATEGORY_COLORS: Record<string, { text: string; bg: string }> = {
   general: { text: "var(--text-secondary)", bg: "var(--bg-elevated)" },
 };
 
-/** Default category styling fallback. */
-const DEFAULT_CATEGORY_COLOR: { text: string; bg: string } = { text: "var(--text-secondary)", bg: "var(--bg-elevated)" };
-
 /** Props for the FindingsPanel component. */
 interface Props {
   projectId: string;
@@ -40,7 +37,8 @@ export function FindingsPanel({ projectId }: Props): JSX.Element {
   return (
     <div className={styles.container}>
       {projectFindings.map((f, index) => {
-        const categoryColor = CATEGORY_COLORS[f.category] || DEFAULT_CATEGORY_COLOR;
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- category may not be in the map
+        const categoryColor = CATEGORY_COLORS[f.category] || CATEGORY_COLORS.general;
         return (
           <motion.div
             key={f.id}

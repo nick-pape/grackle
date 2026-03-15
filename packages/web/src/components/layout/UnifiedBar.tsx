@@ -442,7 +442,7 @@ export function UnifiedBar(): JSX.Element {
       const isWaiting = taskSession?.status === "idle";
 
       if (isWaiting) {
-        const effectiveEnvId = taskSession?.environmentId;
+        const effectiveEnvId = taskSession.environmentId;
         const taskEnvDisconnected = isEnvDisconnected(effectiveEnvId, environments);
 
         const handleSend = (e: FormEvent): void => {
@@ -550,7 +550,7 @@ export function UnifiedBar(): JSX.Element {
     }
 
     if (isWaiting) {
-      const sessionEnvDisconnected = isEnvDisconnected(session?.environmentId, environments);
+      const sessionEnvDisconnected = isEnvDisconnected(session.environmentId, environments);
 
       const handleSend = (e: FormEvent): void => {
         e.preventDefault();
@@ -562,7 +562,7 @@ export function UnifiedBar(): JSX.Element {
       };
       return (
         <form onSubmit={handleSend} className={styles.bar}>
-          {sessionEnvDisconnected && session?.environmentId && (
+          {sessionEnvDisconnected && session.environmentId && (
             <DisconnectedBanner environmentId={session.environmentId} onReconnect={provisionEnvironment} />
           )}
           <input type="text" value={text} onChange={(e) => setText(e.target.value)} placeholder="Type a message..." autoFocus={!sessionEnvDisconnected} disabled={sessionEnvDisconnected} className={styles.input} />
@@ -574,7 +574,7 @@ export function UnifiedBar(): JSX.Element {
       );
     }
 
-    if (isEnded && session) {
+    if (isEnded) {
       return (
         <div className={styles.bar}>
           <span className={`${styles.statusText} ${styles.hintText}`}>Session {session.status}</span>

@@ -27,11 +27,11 @@ function getCodexSdk(): Promise<CodexSdkModule> {
   if (!sdkPromise) {
     sdkPromise = (async (): Promise<CodexSdkModule> => {
       try {
-        const mod = await import("@openai/codex-sdk");
+        const mod = await import("@openai/codex-sdk") as Record<string, unknown>;
         if (typeof mod.Codex !== "function") {
           throw new Error("Codex not found in @openai/codex-sdk");
         }
-        return { Codex: mod.Codex };
+        return { Codex: mod.Codex as CodexSdkModule["Codex"] };
       } catch {
         sdkPromise = undefined;
         throw new Error(
@@ -119,6 +119,7 @@ class CodexSession extends BaseAgentSession {
       codexOptions.config = { mcpServers: mcpConfig.servers };
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     this.codexInstance = new Codex(codexOptions);
 
     this.eventQueue.push({ type: "system", timestamp: ts(), content: "Codex instance created" });
@@ -139,6 +140,7 @@ class CodexSession extends BaseAgentSession {
   }
 
   protected async setupForResume(): Promise<void> {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     this.thread = this.codexInstance.resumeThread(this.resumeSessionId, this.threadOptions);
     this.eventQueue.push({
       type: "system",
@@ -148,6 +150,7 @@ class CodexSession extends BaseAgentSession {
   }
 
   protected async runInitialQuery(prompt: string): Promise<number> {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     this.thread = this.codexInstance.startThread(this.threadOptions);
 
     this.eventQueue.push({
@@ -160,6 +163,7 @@ class CodexSession extends BaseAgentSession {
   }
 
   protected async executeFollowUp(text: string): Promise<void> {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const streamResult = await this.thread.runStreamed(text);
     await this.consumeStream(streamResult);
   }
@@ -189,6 +193,7 @@ class CodexSession extends BaseAgentSession {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private async consumeStream(streamResult: any): Promise<number> {
     const ts: () => string = () => new Date().toISOString();
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     this.activeStream = streamResult;
     let messageCount = 0;
 
@@ -241,7 +246,7 @@ class CodexSession extends BaseAgentSession {
             this.eventQueue.push({
               type: "tool_use",
               timestamp: ts(),
-              content: JSON.stringify({ tool: `mcp__${item.serverName || "unknown"}__${item.toolName || "unknown"}`, args: item.arguments || {} }),
+              content: JSON.stringify({ tool: `mcp__${String(item.serverName || "unknown")}__${String(item.toolName || "unknown")}`, args: item.arguments || {} }),
               raw: event,
             });
           }

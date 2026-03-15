@@ -14,7 +14,7 @@ import {
 
 // ─── EventType ──────────────────────────────────────────────
 
-const eventTypeToEnumMap: Record<string, EventType> = Object.assign(Object.create(null), {
+const eventTypeToEnumMap: Record<string, EventType> = Object.assign(Object.create(null) as Record<string, EventType>, {
   "": EventType.UNSPECIFIED,
   "text": EventType.TEXT,
   "tool_use": EventType.TOOL_USE,
@@ -47,12 +47,12 @@ export function eventTypeToEnum(s: string): EventType {
 
 /** Convert a proto enum event type to its string value. */
 export function eventTypeToString(e: EventType): string {
-  return eventTypeToStringMap[e] ?? "";
+  return (eventTypeToStringMap as Partial<Record<number, string>>)[e] ?? "";
 }
 
 // ─── TaskStatus ─────────────────────────────────────────────
 
-const taskStatusToEnumMap: Record<string, TaskStatus> = Object.assign(Object.create(null), {
+const taskStatusToEnumMap: Record<string, TaskStatus> = Object.assign(Object.create(null) as Record<string, TaskStatus>, {
   "": TaskStatus.UNSPECIFIED,
   // Canonical mappings
   "not_started": TaskStatus.NOT_STARTED,
@@ -85,12 +85,12 @@ export function taskStatusToEnum(s: string): TaskStatus {
 
 /** Convert a proto enum task status to its string value. */
 export function taskStatusToString(e: TaskStatus): string {
-  return taskStatusToStringMap[e] ?? "";
+  return (taskStatusToStringMap as Partial<Record<number, string>>)[e] ?? "";
 }
 
 // ─── ProjectStatus ──────────────────────────────────────────
 
-const projectStatusToEnumMap: Record<string, ProjectStatus> = Object.assign(Object.create(null), {
+const projectStatusToEnumMap: Record<string, ProjectStatus> = Object.assign(Object.create(null) as Record<string, ProjectStatus>, {
   "": ProjectStatus.UNSPECIFIED,
   "active": ProjectStatus.ACTIVE,
   "archived": ProjectStatus.ARCHIVED,
@@ -109,12 +109,12 @@ export function projectStatusToEnum(s: string): ProjectStatus {
 
 /** Convert a proto enum project status to its string value. */
 export function projectStatusToString(e: ProjectStatus): string {
-  return projectStatusToStringMap[e] ?? "";
+  return (projectStatusToStringMap as Partial<Record<number, string>>)[e] ?? "";
 }
 
 // ─── IssueState ─────────────────────────────────────────────
 
-const issueStateToEnumMap: Record<string, IssueState> = Object.assign(Object.create(null), {
+const issueStateToEnumMap: Record<string, IssueState> = Object.assign(Object.create(null) as Record<string, IssueState>, {
   "": IssueState.UNSPECIFIED,
   "open": IssueState.OPEN,
   "closed": IssueState.CLOSED,
@@ -133,5 +133,5 @@ export function issueStateToEnum(s: string): IssueState {
 
 /** Convert a proto enum issue state to its string value. */
 export function issueStateToString(e: IssueState): string {
-  return issueStateToStringMap[e] ?? "";
+  return (issueStateToStringMap as Partial<Record<number, string>>)[e] ?? "";
 }

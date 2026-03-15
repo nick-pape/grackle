@@ -49,7 +49,7 @@ export const sessionTools: ToolDefinition[] = [
           maxTurns: args.maxTurns as number | undefined,
           runtime: args.runtime as string | undefined,
           personaId: args.personaId as string | undefined,
-          worktreeBasePath: (args.worktreeBasePath as string) ?? "",
+          worktreeBasePath: (args.worktreeBasePath as string | undefined) ?? "",
         });
         return jsonResult(session);
       } catch (error) {

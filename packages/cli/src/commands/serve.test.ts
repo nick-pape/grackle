@@ -57,7 +57,7 @@ describe("registerServeCommand", () => {
       program.parseAsync(["serve", "--host", "0.0.0.0"], { from: "user" }),
     ).rejects.toThrow("process.exit called");
 
-    expect(process.exit).toHaveBeenCalledWith(1);
+    expect(process.exit).toHaveBeenCalledWith(1); // eslint-disable-line @typescript-eslint/unbound-method
     expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("loopback address"));
   });
 });

@@ -67,8 +67,8 @@ function sessionRowToProto(row: SessionRow): grackle.Session {
     suspendedAt: row.suspendedAt ?? "",
     endedAt: row.endedAt ?? "",
     error: row.error ?? "",
-    taskId: row.taskId ?? "",
-    personaId: row.personaId ?? "",
+    taskId: row.taskId,
+    personaId: row.personaId,
   });
 }
 
@@ -172,8 +172,9 @@ function personaRowToProto(row: personaStore.PersonaRow): grackle.Persona {
           args?: string[];
           tools?: string[];
         } =>
-          typeof s === "object" &&
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- typeof null === "object", JSON.parse can return null
           s !== null &&
+          typeof s === "object" &&
           typeof s.name === "string" &&
           typeof s.command === "string",
       )
@@ -300,8 +301,8 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       envRegistry.updateEnvironmentStatus(req.id, "connecting");
       broadcastEnvironments();
 
-      const config = JSON.parse(env.adapterConfig);
-      const powerlineToken = env.powerlineToken || "";
+      const config = JSON.parse(env.adapterConfig) as Record<string, unknown>;
+      const powerlineToken = env.powerlineToken;
 
       for await (const event of reconnectOrProvision(
         req.id,
@@ -336,7 +337,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         broadcastEnvironments();
         yield create(grackle.ProvisionEventSchema, {
           stage: "error",
-          message: `Connection failed: ${err}`,
+          message: `Connection failed: ${err instanceof Error ? err.message : String(err)}`,
           progress: 0,
         });
       }
@@ -350,7 +351,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
 
       const adapter = adapterManager.getAdapter(env.adapterType);
       if (adapter) {
-        await adapter.stop(req.id, JSON.parse(env.adapterConfig));
+        await adapter.stop(req.id, JSON.parse(env.adapterConfig) as Record<string, unknown>);
       }
       adapterManager.removeConnection(req.id);
       envRegistry.updateEnvironmentStatus(req.id, "disconnected");
@@ -366,7 +367,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
 
       const adapter = adapterManager.getAdapter(env.adapterType);
       if (adapter) {
-        await adapter.destroy(req.id, JSON.parse(env.adapterConfig));
+        await adapter.destroy(req.id, JSON.parse(env.adapterConfig) as Record<string, unknown>);
       }
       adapterManager.removeConnection(req.id);
       envRegistry.updateEnvironmentStatus(req.id, "disconnected");
@@ -425,7 +426,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         prompt: req.prompt,
         model,
         maxTurns: persona?.maxTurns || 0,
-        branch: req.branch || "",
+        branch: req.branch,
         worktreeBasePath: req.branch
           ? (req.worktreeBasePath.trim() || process.env.GRACKLE_WORKTREE_BASE || "/workspace")
           : "",
@@ -659,7 +660,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       if (!existing) {
         throw new Error(`Project not found: ${req.id}`);
       }
-      if (req.name !== undefined && req.name.trim() === "") {
+      if (req.name?.trim() === "") {
         throw new Error("Project name cannot be empty");
       }
       if (req.repoUrl !== undefined && req.repoUrl !== "" && !/^https?:\/\//i.test(req.repoUrl)) {
@@ -1132,10 +1133,8 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       // otherwise keep the existing stored value.
       const hasNewToolConfig =
         !!req.toolConfig &&
-        ((req.toolConfig.allowedTools &&
-          req.toolConfig.allowedTools.length > 0) ||
-          (req.toolConfig.disallowedTools &&
-            req.toolConfig.disallowedTools.length > 0));
+        (req.toolConfig.allowedTools.length > 0 ||
+          req.toolConfig.disallowedTools.length > 0);
       const toolConfigJson = hasNewToolConfig
         ? JSON.stringify({
             allowedTools: [...(req.toolConfig?.allowedTools || [])],

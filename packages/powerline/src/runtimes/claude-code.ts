@@ -12,7 +12,7 @@ async function getQuery(): Promise<QueryFn> {
   // Try the agent SDK first (the proper library package)
   for (const pkg of ["@anthropic-ai/claude-agent-sdk", "@anthropic-ai/claude-code"]) {
     try {
-      const mod = await import(pkg);
+      const mod = await import(pkg) as Record<string, unknown>;
       if (typeof mod.query === "function") {
         queryFn = mod.query as QueryFn;
         return queryFn;
@@ -83,7 +83,7 @@ export function mapMessage(msg: Record<string, unknown>): AgentEvent[] {
   if (type === "system") {
     const subtype = msg.subtype as string | undefined;
     if (subtype === "init") {
-      return [{ type: "system", timestamp: ts, content: `Session initialized (${msg.model || "unknown model"})`, raw: msg }];
+      return [{ type: "system", timestamp: ts, content: `Session initialized (${msg.model ? String(msg.model) : "unknown model"})`, raw: msg }];
     }
     return [];
   }

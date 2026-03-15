@@ -37,7 +37,7 @@ export class LocalAdapter implements EnvironmentAdapter {
       }
     }
 
-    yield { stage: "error", message: `Could not reach PowerLine: ${lastErr}`, progress: 0 };
+    yield { stage: "error", message: `Could not reach PowerLine: ${lastErr instanceof Error ? lastErr.message : String(lastErr)}`, progress: 0 };
   }
 
   public async connect(environmentId: string, config: Record<string, unknown>, powerlineToken: string): Promise<PowerLineConnection> {

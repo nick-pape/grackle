@@ -249,7 +249,7 @@ export function getDescendants(taskId: string): TaskRow[] {
 export function getAncestors(taskId: string): TaskRow[] {
   const ancestors: TaskRow[] = [];
   let current = getTask(taskId);
-  while (current && current.parentTaskId) {
+  while (current?.parentTaskId) {
     const parent = getTask(current.parentTaskId);
     if (!parent) {
       break;

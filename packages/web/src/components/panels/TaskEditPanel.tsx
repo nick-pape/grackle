@@ -54,8 +54,8 @@ export function TaskEditPanel({ mode, taskId, projectId: projectIdProp, parentTa
     if (isEdit && existingTask && !hasHydratedRef.current) {
       hasHydratedRef.current = true;
       setTitle(existingTask.title);
-      setDescription(existingTask.description ?? "");
-      setSelectedDeps(existingTask.dependsOn ?? []);
+      setDescription(existingTask.description);
+      setSelectedDeps(existingTask.dependsOn);
     }
   }, [isEdit, existingTask]);
 

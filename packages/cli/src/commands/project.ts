@@ -33,7 +33,7 @@ export function registerProjectCommands(program: Command): void {
     .option("--desc <description>", "Project description")
     .option("--no-worktrees", "Disable worktree isolation (agents share the main checkout)")
     .option("--worktree-base-path <path>", "Base path for worktrees (e.g. /workspaces/my-repo)")
-    .action(async (name: string, opts) => {
+    .action(async (name: string, opts: { worktrees?: boolean; desc?: string; repo?: string; env?: string; worktreeBasePath?: string }) => {
       const client = createGrackleClient();
       // Commander sets opts.worktrees = false when --no-worktrees is passed, true otherwise
       const useWorktrees = opts.worktrees !== false;
@@ -80,7 +80,7 @@ export function registerProjectCommands(program: Command): void {
     .option("--no-worktrees", "Disable worktree isolation (agents share the main checkout)")
     .option("--worktrees", "Enable worktree isolation (default)")
     .option("--worktree-base-path <path>", "Base path for worktrees (e.g. /workspaces/my-repo)")
-    .action(async (id: string, opts) => {
+    .action(async (id: string, opts: { worktrees?: boolean; name?: string; desc?: string; repo?: string; env?: string; worktreeBasePath?: string }) => {
       const client = createGrackleClient();
       // Determine useWorktrees: explicit --worktrees → true, --no-worktrees → false, neither → undefined (no change)
       let useWorktrees: boolean | undefined;
