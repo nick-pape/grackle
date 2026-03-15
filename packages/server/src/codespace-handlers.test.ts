@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { formatGhError } from "./ws-bridge.js";
+import { formatGhError } from "./utils/format-gh-error.js";
 
 describe("formatGhError", () => {
   it("returns friendly message for ENOENT (gh not found)", () => {
