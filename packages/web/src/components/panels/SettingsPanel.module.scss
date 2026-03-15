@@ -251,6 +251,32 @@
   flex-shrink: 0;
 }
 
+// ─── System Preference Toggle ─────────────────────────
+
+.systemToggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  cursor: pointer;
+
+  input[type="checkbox"] {
+    accent-color: var(--accent-green);
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+  }
+}
+
+.systemToggleHint {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  margin-top: 2px;
+  margin-left: 24px;
+}
+
 .themeActive {
   font-size: var(--font-size-xs);
   color: var(--text-tertiary);

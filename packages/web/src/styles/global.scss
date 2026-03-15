@@ -202,7 +202,7 @@ body::after {
 // Increase border visibility and text contrast for high-contrast mode.
 
 @media (prefers-contrast: more) {
-  [data-theme="light"],
+  [data-theme="grackle-light"],
   [data-theme="brutalist-light"],
   [data-theme="monokai-light"] {
     --text-secondary: #4b5563;
@@ -212,7 +212,7 @@ body::after {
     --border-input: rgba(0, 0, 0, 0.30);
   }
 
-  [data-theme="dark"],
+  [data-theme="grackle-dark"],
   [data-theme="glass"],
   [data-theme="matrix"],
   [data-theme="monokai-dark"],
