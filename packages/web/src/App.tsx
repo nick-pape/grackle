@@ -6,8 +6,10 @@ import { StatusBar, Sidebar, UnifiedBar } from "./components/layout/index.js";
 import { ToastContainer } from "./components/notifications/index.js";
 import { useEffect, type JSX } from "react";
 import { useGrackle } from "./context/GrackleContext.js";
+import { useToast } from "./context/ToastContext.js";
+import { useEnvironmentToasts } from "./hooks/useEnvironmentToasts.js";
 import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from "react-router";
-import { sessionUrl, useAppNavigate } from "./utils/navigation.js";
+import { sessionUrl, SETTINGS_URL, useAppNavigate } from "./utils/navigation.js";
 import { EmptyPage } from "./pages/EmptyPage.js";
 import { NewChatPage } from "./pages/NewChatPage.js";
 import { SessionPage } from "./pages/SessionPage.js";
@@ -17,7 +19,12 @@ import { TaskEditPage } from "./pages/TaskEditPage.js";
 import { TaskPage } from "./pages/TaskPage.js";
 import { NewEnvironmentPage } from "./pages/NewEnvironmentPage.js";
 import { SettingsPage } from "./pages/SettingsPage.js";
-import { PersonaManagementPage } from "./pages/PersonaManagementPage.js";
+import { SettingsNav } from "./components/settings/SettingsNav.js";
+import { SettingsEnvironmentsTab } from "./pages/settings/SettingsEnvironmentsTab.js";
+import { SettingsTokensTab } from "./pages/settings/SettingsTokensTab.js";
+import { SettingsPersonasTab } from "./pages/settings/SettingsPersonasTab.js";
+import { SettingsAppearanceTab } from "./pages/settings/SettingsAppearanceTab.js";
+import { SettingsAboutTab } from "./pages/settings/SettingsAboutTab.js";
 import styles from "./App.module.scss";
 
 /** Whether the app is running in mock mode (`?mock` query parameter). */
@@ -26,10 +33,13 @@ const IS_MOCK_MODE: boolean =
 
 /** Application shell layout with StatusBar, Sidebar, Outlet, and UnifiedBar. */
 function AppShell(): JSX.Element {
-  const { lastSpawnedId } = useGrackle();
+  const { lastSpawnedId, environments } = useGrackle();
+  const { showToast } = useToast();
+  useEnvironmentToasts(environments, showToast);
   const navigate = useAppNavigate();
 
   const location = useLocation();
+  const isSettings = location.pathname.startsWith(SETTINGS_URL);
 
   // Auto-select newly spawned sessions — but only if the user is not
   // already viewing a task (task-spawned sessions should keep the user on
@@ -44,16 +54,18 @@ function AppShell(): JSX.Element {
     <div className={styles.root}>
       <StatusBar />
       <div className={styles.body}>
-        <Sidebar />
+        {isSettings ? <SettingsNav /> : <Sidebar />}
         <div className={styles.main}>
           <Outlet />
           <UnifiedBar />
         </div>
       </div>
-      {/* Toast messages are intentionally generic (no resource names) so
-          that getByText() locators in E2E tests remain unique and strict-mode
-          safe. Use { exact: true } or data-testid selectors in tests when
-          matching resource names that may also appear in transient toasts. */}
+      {/* Toast messages (including environment status toasts from
+          useEnvironmentToasts) are intentionally generic — no resource names —
+          so that getByText() locators in E2E tests remain unique and
+          strict-mode safe. Use { exact: true } or data-testid selectors in
+          tests when matching resource names that may also appear in transient
+          toasts. */}
       <ToastContainer />
     </div>
   );
@@ -74,8 +86,14 @@ function AppRoutes(): JSX.Element {
         <Route path="tasks/:taskId/findings" element={<TaskPage />} />
         <Route path="tasks/:taskId/edit" element={<TaskEditPage />} />
         <Route path="environments/new" element={<NewEnvironmentPage />} />
-        <Route path="settings" element={<SettingsPage />} />
-        <Route path="settings/personas" element={<PersonaManagementPage />} />
+        <Route path="settings" element={<SettingsPage />}>
+          <Route index element={<Navigate to="environments" replace />} />
+          <Route path="environments" element={<SettingsEnvironmentsTab />} />
+          <Route path="tokens" element={<SettingsTokensTab />} />
+          <Route path="personas" element={<SettingsPersonasTab />} />
+          <Route path="appearance" element={<SettingsAppearanceTab />} />
+          <Route path="about" element={<SettingsAboutTab />} />
+        </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

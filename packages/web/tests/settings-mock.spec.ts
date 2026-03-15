@@ -1,5 +1,5 @@
 import { test as base, expect } from "./fixtures.js";
-import type { Page } from "@playwright/test";
+import { goToSettings } from "./helpers.js";
 
 /**
  * Mock-mode settings page tests.
@@ -26,28 +26,24 @@ const test = base.extend<{ mockPage: import("@playwright/test").Page }>({
 });
 
 test.describe("Settings Page (Mock Mode)", () => {
-  const settingsHeading = (page: Page) => page.getByRole("heading", { name: "Settings" });
-
   test("gear icon is visible and navigates to settings", async ({ mockPage }) => {
     const page = mockPage;
 
-    // Gear icon should be in the status bar
     const gearButton = page.locator('button[title="Settings"]');
     await expect(gearButton).toBeVisible({ timeout: 5_000 });
 
-    // Click it
     await gearButton.click();
 
-    // Settings heading should appear
-    await expect(settingsHeading(page)).toBeVisible({ timeout: 5_000 });
-    await expect(page.getByRole("heading", { name: "Tokens" })).toBeVisible();
+    // Should redirect to environments tab
+    await expect(page).toHaveURL(/\/settings\/environments/);
+    await expect(page.getByRole("tablist")).toBeVisible({ timeout: 5_000 });
   });
 
-  test("mock tokens are displayed in settings", async ({ mockPage }) => {
+  test("mock tokens are displayed in Tokens tab", async ({ mockPage }) => {
     const page = mockPage;
 
-    await page.locator('button[title="Settings"]').click();
-    await expect(settingsHeading(page)).toBeVisible({ timeout: 5_000 });
+    await goToSettings(mockPage);
+    await page.getByRole("tab", { name: "Tokens" }).click();
 
     // MOCK_TOKENS has 3 tokens: anthropic, github, gcp-service-account
     await expect(page.getByText("anthropic", { exact: true })).toBeVisible({ timeout: 5_000 });
@@ -63,8 +59,8 @@ test.describe("Settings Page (Mock Mode)", () => {
   test("add token form is present and functional", async ({ mockPage }) => {
     const page = mockPage;
 
-    await page.locator('button[title="Settings"]').click();
-    await expect(settingsHeading(page)).toBeVisible({ timeout: 5_000 });
+    await goToSettings(mockPage);
+    await page.getByRole("tab", { name: "Tokens" }).click();
 
     // Form elements should be visible
     await expect(page.locator('input[placeholder="Token name"]')).toBeVisible();
@@ -85,8 +81,8 @@ test.describe("Settings Page (Mock Mode)", () => {
   test("delete token removes it from mock list", async ({ mockPage }) => {
     const page = mockPage;
 
-    await page.locator('button[title="Settings"]').click();
-    await expect(settingsHeading(page)).toBeVisible({ timeout: 5_000 });
+    await goToSettings(mockPage);
+    await page.getByRole("tab", { name: "Tokens" }).click();
 
     // anthropic token should be visible
     await expect(page.getByText("anthropic", { exact: true })).toBeVisible({ timeout: 5_000 });
@@ -106,8 +102,8 @@ test.describe("Settings Page (Mock Mode)", () => {
   test("type selector switches between env_var and file", async ({ mockPage }) => {
     const page = mockPage;
 
-    await page.locator('button[title="Settings"]').click();
-    await expect(settingsHeading(page)).toBeVisible({ timeout: 5_000 });
+    await goToSettings(mockPage);
+    await page.getByRole("tab", { name: "Tokens" }).click();
 
     // Default type is env_var, placeholder should show env var
     await expect(page.locator('input[placeholder*="Env var name"]')).toBeVisible();
@@ -119,11 +115,11 @@ test.describe("Settings Page (Mock Mode)", () => {
     await expect(page.locator('input[placeholder*="File path"]')).toBeVisible();
   });
 
-  test("description text is visible", async ({ mockPage }) => {
+  test("description text is visible in Tokens tab", async ({ mockPage }) => {
     const page = mockPage;
 
-    await page.locator('button[title="Settings"]').click();
-    await expect(settingsHeading(page)).toBeVisible({ timeout: 5_000 });
+    await goToSettings(mockPage);
+    await page.getByRole("tab", { name: "Tokens" }).click();
 
     await expect(
       page.getByText("API tokens are auto-pushed to environments when set or updated"),
@@ -133,8 +129,8 @@ test.describe("Settings Page (Mock Mode)", () => {
   test("token form clears after add", async ({ mockPage }) => {
     const page = mockPage;
 
-    await page.locator('button[title="Settings"]').click();
-    await expect(settingsHeading(page)).toBeVisible({ timeout: 5_000 });
+    await goToSettings(mockPage);
+    await page.getByRole("tab", { name: "Tokens" }).click();
 
     const nameInput = page.locator('input[placeholder="Token name"]');
     const valueInput = page.locator('input[placeholder="Value"]');

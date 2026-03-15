@@ -5,6 +5,7 @@ import http from "node:http";
 import { registerGrackleRoutes } from "./grpc-service.js";
 import { registerAdapter, startHeartbeat } from "./adapter-manager.js";
 import { updateEnvironmentStatus, resetAllStatuses } from "./env-registry.js";
+import { broadcastEnvironments } from "./ws-broadcast.js";
 import { DockerAdapter } from "./adapters/docker.js";
 import { LocalAdapter } from "./adapters/local.js";
 import { SshAdapter } from "./adapters/ssh.js";
@@ -115,6 +116,7 @@ function main(): void {
   // Start heartbeat
   startHeartbeat((environmentId) => {
     updateEnvironmentStatus(environmentId, "disconnected");
+    broadcastEnvironments();
   });
 
   // --- gRPC server (HTTP/2) ---

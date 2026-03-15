@@ -46,11 +46,6 @@ export function buildSettingsBreadcrumbs(): BreadcrumbSegment[] {
   return [HOME_SEGMENT, { label: "Settings", url: undefined }];
 }
 
-/** Build breadcrumbs for the persona management page. */
-export function buildPersonasBreadcrumbs(): BreadcrumbSegment[] {
-  return [HOME_SEGMENT, { label: "Personas", url: undefined }];
-}
-
 /** Build breadcrumbs for the new environment page. */
 export function buildNewEnvironmentBreadcrumbs(): BreadcrumbSegment[] {
   return [HOME_SEGMENT, { label: "New Environment", url: undefined }];
