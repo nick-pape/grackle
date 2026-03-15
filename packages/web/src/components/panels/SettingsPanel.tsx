@@ -101,16 +101,18 @@ export function SettingsPanel({ viewMode, setViewMode }: Props): JSX.Element {
                         tabIndex={0}
                         className={`${styles.variantButton} ${isSelected && isLight ? styles.variantActive : ""}`}
                         onClick={(e) => { e.stopPropagation(); setTheme(t.variantLightId!); }}
-                        onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); setTheme(t.variantLightId!); } }}
+                        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); setTheme(t.variantLightId!); } }}
                         aria-label="Light variant"
+                        aria-pressed={isSelected && isLight}
                       >&#9788;</span>
                       <span
                         role="button"
                         tabIndex={0}
                         className={`${styles.variantButton} ${isSelected && !isLight ? styles.variantActive : ""}`}
                         onClick={(e) => { e.stopPropagation(); setTheme(t.variantDarkId!); }}
-                        onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); setTheme(t.variantDarkId!); } }}
+                        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); setTheme(t.variantDarkId!); } }}
                         aria-label="Dark variant"
+                        aria-pressed={isSelected && !isLight}
                       >&#9790;</span>
                     </span>
                   )}
