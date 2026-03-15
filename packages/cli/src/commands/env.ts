@@ -6,7 +6,7 @@ import Table from "cli-table3";
 
 /** Register environment management commands: `env list`, `add`, `provision`, `stop`, `destroy`, `remove`, `wake`. */
 export function registerEnvCommands(program: Command): void {
-  const env = program.command("env").description("Manage environments");
+  const env = program.command("env").description("Add, provision, and manage environments");
 
   env
     .command("list")

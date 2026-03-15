@@ -6,7 +6,7 @@ import { createInterface } from "node:readline";
 
 /** Register the `token set` and `token list` subcommands on the CLI program. */
 export function registerTokenCommands(program: Command): void {
-  const token = program.command("token").description("Manage auth tokens");
+  const token = program.command("token").description("Set and manage authentication tokens");
 
   token
     .command("set <name>")

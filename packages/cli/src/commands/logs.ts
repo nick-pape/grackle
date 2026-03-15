@@ -6,7 +6,7 @@ import { eventTypeToString } from "@grackle-ai/common";
 export function registerLogCommands(program: Command): void {
   program
     .command("logs <session-id>")
-    .description("View session logs")
+    .description("View session event logs")
     .option("--transcript", "Show markdown transcript")
     .option("--tail", "Follow live events")
     .action(async (sessionId: string, opts: { transcript?: boolean; tail?: boolean }) => {

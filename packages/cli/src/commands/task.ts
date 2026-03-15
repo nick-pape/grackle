@@ -9,7 +9,7 @@ import Table from "cli-table3";
 import chalk from "chalk";
 
 export function registerTaskCommands(program: Command): void {
-  const task = program.command("task").description("Manage tasks");
+  const task = program.command("task").description("Create, start, and manage tasks");
 
   task
     .command("list <project-id>")

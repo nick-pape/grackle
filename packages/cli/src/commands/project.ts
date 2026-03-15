@@ -4,7 +4,7 @@ import { projectStatusToString } from "@grackle-ai/common";
 import Table from "cli-table3";
 
 export function registerProjectCommands(program: Command): void {
-  const project = program.command("project").description("Manage projects");
+  const project = program.command("project").description("Create and manage projects");
 
   project
     .command("list")
