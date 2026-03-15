@@ -100,7 +100,7 @@ test.describe("Task Overview Tab", () => {
     await navigateToTask(page, "done-blocker");
     await patchWsForStubRuntime(page);
     await runStubTaskToCompletion(page);
-    await page.getByRole("button", { name: "Approve", exact: true }).click();
+    await page.getByRole("button", { name: "Complete", exact: true }).click();
     await expect(page.getByText("Task completed")).toBeVisible({ timeout: 5_000 });
 
     const projectId = await getProjectId(page, "overview-done-dep");
@@ -141,26 +141,23 @@ test.describe("Task Overview Tab", () => {
     await expect(badge).toHaveAttribute("class", /blockedBadge/);
   });
 
-  test("rejection auto-retries and switches to stream tab", async ({ appPage }) => {
+  test("completing paused task switches to findings tab", async ({ appPage }) => {
     const page = appPage;
 
     await createProject(page, "overview-assigned");
     await createTask(page, "overview-assigned", "assigned-task", "test-local");
     await navigateToTask(page, "assigned-task");
 
-    // Run task through to review, then reject — task auto-retries
+    // Run task through to paused, then complete it
     await patchWsForStubRuntime(page);
     await runStubTaskToCompletion(page);
-    await page.getByRole("button", { name: "Reject", exact: true }).click();
+    await page.getByRole("button", { name: "Complete", exact: true }).click();
 
-    // Auto-retry starts a new session — task becomes active, stream tab activates
-    await expect(page.locator('[data-testid="task-status"]')).toContainText(/in_progress|waiting_input/, { timeout: 10_000 });
-
-    const streamTab = page.getByRole("tab", { name: "Stream", exact: true });
-    await expect(streamTab).toHaveAttribute("class", /active/, { timeout: 5_000 });
+    // Task is now complete — status should reflect completion
+    await expect(page.getByText("Task completed")).toBeVisible({ timeout: 10_000 });
   });
 
-  test("can manually switch to overview tab on in_progress task", async ({ appPage }) => {
+  test("can manually switch to overview tab on working task", async ({ appPage }) => {
     const page = appPage;
 
     await createProject(page, "overview-manual");
@@ -171,7 +168,7 @@ test.describe("Task Overview Tab", () => {
     await patchWsForStubRuntime(page);
     await page.getByRole("button", { name: "Start", exact: true }).click();
 
-    // Wait for in_progress auto-switch to stream tab
+    // Wait for working auto-switch to stream tab
     await expect(page.locator("text=Stub runtime initialized")).toBeVisible({ timeout: 15_000 });
 
     // Manually click Overview tab

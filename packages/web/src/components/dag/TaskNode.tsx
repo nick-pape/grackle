@@ -6,19 +6,17 @@ import type { JSX } from "react";
 
 /** Task status visual indicators using CSS custom property colors. */
 const TASK_STATUS_STYLES: Record<string, { color: string; icon: string }> = {
-  pending: { color: "var(--text-tertiary)", icon: "\u25CB" },
-  assigned: { color: "var(--accent-blue)", icon: "\u25CE" },
-  in_progress: { color: "var(--accent-green)", icon: "\u25CF" },
-  review: { color: "var(--accent-yellow)", icon: "\u25C9" },
-  done: { color: "var(--accent-green)", icon: "\u2713" },
+  not_started: { color: "var(--text-tertiary)", icon: "\u25CB" },
+  working: { color: "var(--accent-green)", icon: "\u25CF" },
+  paused: { color: "var(--accent-yellow)", icon: "\u25C9" },
+  complete: { color: "var(--accent-green)", icon: "\u2713" },
   failed: { color: "var(--accent-red)", icon: "\u2717" },
-  waiting_input: { color: "var(--accent-yellow)", icon: "\u29D6" },
 };
 
 /** Custom React Flow node component rendering a task as a glass card. */
 export function TaskNode({ data }: NodeProps): JSX.Element {
   const { task, childCount, doneChildCount, hasDependencies } = data as TaskNodeData;
-  const statusStyle = TASK_STATUS_STYLES[task.status] || TASK_STATUS_STYLES.pending;
+  const statusStyle = TASK_STATUS_STYLES[task.status] || TASK_STATUS_STYLES.not_started;
 
   return (
     <div className={styles.taskNode} data-task-id={task.id} data-task-title={task.title}>

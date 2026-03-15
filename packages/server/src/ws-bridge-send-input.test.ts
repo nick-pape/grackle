@@ -72,7 +72,7 @@ vi.mock("./task-store.js", () => ({
   buildChildIdsMap: vi.fn(() => new Map()),
   getTask: vi.fn(() => undefined),
   createTask: vi.fn(),
-  markTaskCompleted: vi.fn(),
+  markTaskComplete: vi.fn(),
   checkAndUnblock: vi.fn(() => []),
   areDependenciesMet: vi.fn(() => true),
   updateTask: vi.fn(),
@@ -247,7 +247,7 @@ describe("ws-bridge send_input error handling", () => {
     await closeWs(ws);
 
     expect(msg.type).toBe("error");
-    expect((msg.payload as Record<string, unknown>).message).toMatch(/not currently waiting for input.*completed/i);
+    expect((msg.payload as Record<string, unknown>).message).toMatch(/not currently idle.*completed/i);
   });
 
   it("returns error when session is failed", async () => {
@@ -263,28 +263,28 @@ describe("ws-bridge send_input error handling", () => {
     await closeWs(ws);
 
     expect(msg.type).toBe("error");
-    expect((msg.payload as Record<string, unknown>).message).toMatch(/not currently waiting for input.*failed/i);
+    expect((msg.payload as Record<string, unknown>).message).toMatch(/not currently idle.*failed/i);
   });
 
-  it("returns error when session is killed", async () => {
-    sessionStore.createSession("sess-killed", "env-1", "node", "test", "claude", "/tmp/log");
-    sessionStore.updateSession("sess-killed", "killed");
+  it("returns error when session is interrupted", async () => {
+    sessionStore.createSession("sess-interrupted", "env-1", "node", "test", "claude", "/tmp/log");
+    sessionStore.updateSession("sess-interrupted", "interrupted");
 
     const ws = await connectWs(port);
     const msgPromise = nextMessage(ws);
 
-    ws.send(JSON.stringify({ type: "send_input", payload: { sessionId: "sess-killed", text: "hello" } }));
+    ws.send(JSON.stringify({ type: "send_input", payload: { sessionId: "sess-interrupted", text: "hello" } }));
 
     const msg = await msgPromise;
     await closeWs(ws);
 
     expect(msg.type).toBe("error");
-    expect((msg.payload as Record<string, unknown>).message).toMatch(/not currently waiting for input.*killed/i);
+    expect((msg.payload as Record<string, unknown>).message).toMatch(/not currently idle.*interrupted/i);
   });
 
   it("returns error when environment is not connected", async () => {
     sessionStore.createSession("sess-active", "env-disconnected", "node", "test", "claude", "/tmp/log");
-    sessionStore.updateSession("sess-active", "waiting_input");
+    sessionStore.updateSession("sess-active", "idle");
 
     // getConnection returns undefined (not connected)
     vi.spyOn(adapterManager, "getConnection").mockReturnValue(undefined);
@@ -303,7 +303,7 @@ describe("ws-bridge send_input error handling", () => {
 
   it("returns error when sendInput RPC throws", async () => {
     sessionStore.createSession("sess-rpc-err", "env-1", "node", "test", "claude", "/tmp/log");
-    sessionStore.updateSession("sess-rpc-err", "waiting_input");
+    sessionStore.updateSession("sess-rpc-err", "idle");
 
     const mockConn = {
       client: {
@@ -327,7 +327,7 @@ describe("ws-bridge send_input error handling", () => {
 
   it("sends no error response when input is delivered successfully", async () => {
     sessionStore.createSession("sess-ok", "env-1", "node", "test", "claude", "/tmp/log");
-    sessionStore.updateSession("sess-ok", "waiting_input");
+    sessionStore.updateSession("sess-ok", "idle");
 
     const mockConn = {
       client: {

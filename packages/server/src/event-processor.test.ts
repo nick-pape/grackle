@@ -125,7 +125,7 @@ function waitForProcessing(
     // Poll for session to reach a terminal status
     const interval = setInterval(() => {
       const s = sessionStore.getSession(options.sessionId);
-      if (s && ["completed", "failed", "killed"].includes(s.status)) {
+      if (s && ["completed", "failed", "interrupted"].includes(s.status)) {
         clearInterval(interval);
         // Give the finally block time to run
         setTimeout(resolve, 50);
@@ -501,7 +501,7 @@ describe("stream error handling", () => {
       // Poll for session to reach terminal status
       const interval = setInterval(() => {
         const s = sessionStore.getSession("sess1");
-        if (s && ["completed", "failed", "killed"].includes(s.status)) {
+        if (s && ["completed", "failed", "interrupted"].includes(s.status)) {
           clearInterval(interval);
           setTimeout(resolve, 50);
         }
@@ -543,7 +543,7 @@ describe("stream error handling", () => {
       // Poll for session to reach terminal status
       const interval = setInterval(() => {
         const s = sessionStore.getSession("sess1");
-        if (s && ["completed", "failed", "killed"].includes(s.status)) {
+        if (s && ["completed", "failed", "interrupted"].includes(s.status)) {
           clearInterval(interval);
           setTimeout(resolve, 50);
         }
@@ -560,7 +560,7 @@ describe("stream error handling", () => {
     taskStore.createTask("task1", "proj1", "Test Task", "desc", [], "test-project");
 
     // Simulate task in_progress
-    taskStore.updateTaskStatus("task1", "in_progress");
+    taskStore.updateTaskStatus("task1", "working");
 
     const waitingEvent = create(powerline.AgentEventSchema, {
       sessionId: "sess1",
@@ -582,7 +582,7 @@ describe("stream error handling", () => {
       // Poll for session to reach terminal status
       const interval = setInterval(() => {
         const s = sessionStore.getSession("sess1");
-        if (s && ["completed", "failed", "killed"].includes(s.status)) {
+        if (s && ["completed", "failed", "interrupted"].includes(s.status)) {
           clearInterval(interval);
           setTimeout(resolve, 50);
         }
@@ -617,7 +617,7 @@ describe("task status broadcast on terminal events", () => {
   it("broadcasts task_updated when session completes with a task", async () => {
     sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
     taskStore.createTask("task1", "proj1", "Test Task", "desc", [], "test-project");
-    taskStore.updateTaskStatus("task1", "in_progress");
+    taskStore.updateTaskStatus("task1", "working");
 
     const completedEvent = create(powerline.AgentEventSchema, {
       sessionId: "sess1",
@@ -645,7 +645,7 @@ describe("task status broadcast on terminal events", () => {
   it("broadcasts task_updated for both terminal and non-terminal session events", async () => {
     sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
     taskStore.createTask("task1", "proj1", "Test Task", "desc", [], "test-project");
-    taskStore.updateTaskStatus("task1", "in_progress");
+    taskStore.updateTaskStatus("task1", "working");
 
     const waitingEvent = create(powerline.AgentEventSchema, {
       sessionId: "sess1",
@@ -774,7 +774,7 @@ describe("late-binding", () => {
     return new Promise<void>((resolve) => {
       const interval = setInterval(() => {
         const s = sessionStore.getSession(sessionId);
-        if (s && ["completed", "failed", "killed"].includes(s.status)) {
+        if (s && ["completed", "failed", "interrupted"].includes(s.status)) {
           clearInterval(interval);
           setTimeout(resolve, 50);
         }
@@ -865,7 +865,7 @@ describe("late-binding", () => {
   it("broadcasts task_updated after late-bind on terminal events", async () => {
     sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
     taskStore.createTask("task1", "proj1", "Test Task", "desc", [], "test-project");
-    taskStore.updateTaskStatus("task1", "in_progress");
+    taskStore.updateTaskStatus("task1", "working");
 
     const { stream, push, end } = controllableStream();
     processEventStream(stream, {
