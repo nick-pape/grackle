@@ -226,7 +226,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
 
         playScenario(sessionId, preSteps);
 
-        // After the last pre-pause step, transition to waiting_input
+        // After the last pre-pause step, transition to idle
         schedule(
           () => {
             updateSessionStatus(sessionId, "idle");
@@ -253,7 +253,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
     [nextId, nextScenario, playScenario, schedule, updateSessionStatus, appendEvent],
   );
 
-  /** Kills a session: cancels timers, sets status to killed, fails associated tasks. */
+  /** Kills a session: cancels timers, sets status to interrupted, resets associated tasks. */
   const kill: UseGrackleSocketResult["kill"] = useCallback(
     (sessionId: string) => {
       // eslint-disable-next-line no-console

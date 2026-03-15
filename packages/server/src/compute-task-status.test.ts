@@ -15,7 +15,7 @@ function makeSession(
 describe("computeTaskStatus", () => {
   // ── No sessions ──────────────────────────────────────────────────
   describe("no sessions", () => {
-    it("returns stored status unchanged when no sessions exist", () => {
+    it("returns 'not_started' when no sessions exist", () => {
       expect(computeTaskStatus("not_started", [])).toEqual({
         status: "not_started",
         latestSessionId: "",

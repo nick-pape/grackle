@@ -514,7 +514,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
             create(powerline.SessionIdSchema, { id: req.id }),
           );
         } catch (err) {
-          logger.warn({ sessionId: req.id, err }, "PowerLine kill failed — marking session killed anyway");
+          logger.warn({ sessionId: req.id, err }, "PowerLine kill failed — marking session interrupted anyway");
         }
       }
 

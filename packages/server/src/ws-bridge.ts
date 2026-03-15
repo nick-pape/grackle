@@ -686,7 +686,7 @@ async function handleMessage(
             create(powerline.SessionIdSchema, { id: sessionId }),
           );
         } catch (err) {
-          logger.warn({ sessionId, err }, "PowerLine kill failed — marking session killed anyway");
+          logger.warn({ sessionId, err }, "PowerLine kill failed — marking session interrupted anyway");
         }
       }
       sessionStore.updateSession(sessionId, "interrupted");
