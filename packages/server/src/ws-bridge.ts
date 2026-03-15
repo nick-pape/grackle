@@ -1134,24 +1134,18 @@ async function handleMessage(
         });
         return;
       }
-      if (!["pending", "assigned", "failed"].includes(task.status)) {
-        sendWs(ws, {
-          type: "error",
-          payload: {
-            message: `Task cannot be started (status: ${task.status})`,
-          },
-        });
-        return;
-      }
-      const activeSessions = sessionStore.getActiveSessionsForTask(taskId);
-      if (activeSessions.length > 0) {
-        sendWs(ws, {
-          type: "error",
-          payload: {
-            message: `Task cannot be started — it already has an active session`,
-          },
-        });
-        return;
+      {
+        const taskSessions = sessionStore.listSessionsForTask(taskId);
+        const { status: effectiveStatus } = computeTaskStatus(task.status, taskSessions);
+        if (!["pending", "assigned", "failed"].includes(effectiveStatus)) {
+          sendWs(ws, {
+            type: "error",
+            payload: {
+              message: `Task cannot be started (status: ${effectiveStatus})`,
+            },
+          });
+          return;
+        }
       }
       if (!taskStore.areDependenciesMet(taskId)) {
         sendWs(ws, {

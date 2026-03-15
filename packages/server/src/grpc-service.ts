@@ -806,16 +806,14 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
     async startTask(req: grackle.StartTaskRequest) {
       const task = taskStore.getTask(req.taskId);
       if (!task) throw new Error(`Task not found: ${req.taskId}`);
-      if (!["pending", "assigned", "failed"].includes(task.status)) {
-        throw new Error(
-          `Task ${req.taskId} cannot be started (status: ${task.status})`,
-        );
-      }
-      const activeSessions = sessionStore.getActiveSessionsForTask(req.taskId);
-      if (activeSessions.length > 0) {
-        throw new Error(
-          `Task ${req.taskId} cannot be started — it already has an active session`,
-        );
+      {
+        const taskSessions = sessionStore.listSessionsForTask(req.taskId);
+        const { status: effectiveStatus } = computeTaskStatus(task.status, taskSessions);
+        if (!["pending", "assigned", "failed"].includes(effectiveStatus)) {
+          throw new Error(
+            `Task ${req.taskId} cannot be started (status: ${effectiveStatus})`,
+          );
+        }
       }
       if (!taskStore.areDependenciesMet(req.taskId)) {
         throw new Error(`Task ${req.taskId} has unmet dependencies`);

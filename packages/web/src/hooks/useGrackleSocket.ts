@@ -546,9 +546,19 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
               // "waiting_input" with a stale "running" from the query.
               const prevMap = new Map(prev.map((s) => [s.id, s.status]));
               const ACTIVE = new Set(["pending", "running", "waiting_input"]);
+              const TERMINAL = new Set(["completed", "failed", "killed"]);
               return incoming.map((s) => {
                 const prevStatus = prevMap.get(s.id);
-                if (prevStatus && ACTIVE.has(prevStatus) && ACTIVE.has(s.status) && prevStatus !== s.status) {
+                if (!prevStatus || prevStatus === s.status) {
+                  return s;
+                }
+                // If the previous status is terminal and the incoming is
+                // active, the list_sessions response is stale — keep the
+                // terminal status from the real-time event.
+                if (TERMINAL.has(prevStatus) && ACTIVE.has(s.status)) {
+                  return { ...s, status: prevStatus };
+                }
+                if (ACTIVE.has(prevStatus) && ACTIVE.has(s.status)) {
                   // If the previous status is "ahead" of the incoming status
                   // (e.g. waiting_input > running > pending), keep the previous.
                   const ORDER = ["pending", "running", "waiting_input"];

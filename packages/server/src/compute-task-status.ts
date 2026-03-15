@@ -18,10 +18,14 @@ const ACTIVE_SESSION_STATUSES: ReadonlySet<string> = new Set([
 /**
  * Human-authoritative task statuses. These are sticky — once a human sets
  * these statuses, session state does not override them.
+ *
+ * Note: "assigned" is intentionally NOT included. While it is set by humans,
+ * it must yield to active session status (e.g. a running session should show
+ * "in_progress", not "assigned"). The "assigned" status is only meaningful
+ * when there are no sessions.
  */
 const HUMAN_AUTHORITATIVE_STATUSES: ReadonlySet<string> = new Set([
   "done",
-  "assigned",
 ]);
 
 /**
@@ -29,7 +33,7 @@ const HUMAN_AUTHORITATIVE_STATUSES: ReadonlySet<string> = new Set([
  * session history. Pure function — no DB access, no side effects.
  *
  * Rules:
- * 1. Human-authoritative statuses ("done", "assigned") are sticky — always returned as-is.
+ * 1. Human-authoritative statuses ("done") are sticky — always returned as-is.
  * 2. No sessions → return storedStatus unchanged.
  * 3. Any active session (pending/running/waiting_input) → prefer waiting_input > in_progress.
  * 4. Latest terminal session determines status:
