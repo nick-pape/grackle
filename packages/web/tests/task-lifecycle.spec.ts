@@ -50,7 +50,7 @@ test.describe("Task Lifecycle (stub runtime)", () => {
     await expect(page.locator("text=Echo: test task")).toBeVisible();
 
     // Task header should show active status (may transition to idle quickly)
-    await expect(page.locator('[data-testid="task-status"]')).toContainText(/working|idle/, { timeout: 5_000 });
+    await expect(page.locator('[data-testid="task-status"]')).toContainText(/working|paused/, { timeout: 5_000 });
 
     // --- Step 7: Session reaches idle — send input ---
     const inputField = page.locator('input[placeholder="Type a message..."]');

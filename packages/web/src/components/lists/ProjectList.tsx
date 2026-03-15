@@ -17,7 +17,7 @@ interface Props {
 const TASK_STATUS_STYLES: Record<string, { color: string; icon: string }> = {
   not_started: { color: "var(--text-tertiary)", icon: "\u25CB" },
   working: { color: "var(--accent-green)", icon: "\u25CF" },
-  paused: { color: "var(--accent-yellow)", icon: "\u29D6" },
+  paused: { color: "var(--accent-yellow)", icon: "\u25C9" },
   complete: { color: "var(--accent-green)", icon: "\u2713" },
   failed: { color: "var(--accent-red)", icon: "\u2717" },
 };
