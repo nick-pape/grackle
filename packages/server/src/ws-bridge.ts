@@ -917,7 +917,10 @@ async function handleMessage(
     case "list_tasks": {
       const projectId = msg.payload?.projectId as string;
       if (!projectId) return;
-      const rows = taskStore.listTasks(projectId);
+      const rows = taskStore.listTasks(projectId, {
+        search: (msg.payload?.search as string) || undefined,
+        status: (msg.payload?.status as string) || undefined,
+      });
       const childIdsMap = taskStore.buildChildIdsMap(rows);
 
       // Batch-fetch sessions for all tasks and group by taskId

@@ -14,9 +14,15 @@ export function registerTaskCommands(program: Command): void {
   task
     .command("list <project-id>")
     .description("List tasks in a project")
-    .action(async (projectId: string) => {
+    .option("--search <query>", "Filter tasks by title/description substring")
+    .option("--status <status>", "Filter tasks by status")
+    .action(async (projectId: string, opts: { search?: string; status?: string }) => {
       const client = createGrackleClient();
-      const res = await client.listTasks({ id: projectId });
+      const res = await client.listTasks({
+        projectId,
+        search: opts.search || "",
+        status: opts.status || "",
+      });
       if (res.tasks.length === 0) {
         console.log("No tasks.");
         return;

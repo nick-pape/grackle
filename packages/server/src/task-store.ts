@@ -1,6 +1,6 @@
 import db from "./db.js";
 import { tasks, type TaskRow } from "./schema.js";
-import { eq, sql, asc } from "drizzle-orm";
+import { eq, and, or, like, sql, asc } from "drizzle-orm";
 import { TASK_STATUS } from "@grackle-ai/common";
 import type { TaskStatus } from "@grackle-ai/common";
 import { MAX_TASK_DEPTH } from "@grackle-ai/common";
@@ -73,12 +73,36 @@ export function getTask(id: string): TaskRow | undefined {
   return db.select().from(tasks).where(eq(tasks.id, id)).get();
 }
 
-/** Return all tasks for a project, ordered by sort_order then created_at. */
-export function listTasks(projectId: string): TaskRow[] {
+/** Options for filtering the task list. */
+export interface ListTasksOptions {
+  /** Case-insensitive substring filter on title or description. */
+  search?: string;
+  /** Exact match filter on task status (e.g. "not_started", "in_progress"). */
+  status?: string;
+}
+
+/** Return tasks for a project, with optional search/status filters, ordered by sort_order then created_at. */
+export function listTasks(projectId: string, options?: ListTasksOptions): TaskRow[] {
+  const conditions = [eq(tasks.projectId, projectId)];
+
+  if (options?.status) {
+    conditions.push(eq(tasks.status, options.status));
+  }
+
+  if (options?.search) {
+    const pattern = `%${options.search}%`;
+    conditions.push(
+      or(
+        like(tasks.title, pattern),
+        like(tasks.description, pattern),
+      )!,
+    );
+  }
+
   return db
     .select()
     .from(tasks)
-    .where(eq(tasks.projectId, projectId))
+    .where(and(...conditions))
     .orderBy(asc(tasks.sortOrder), asc(tasks.createdAt))
     .all();
 }

@@ -187,6 +187,66 @@ describe("task-store tree operations", () => {
     });
   });
 
+  describe("listTasks filtering", () => {
+    beforeEach(() => {
+      taskStore.createTask("t1", "test-proj", "Fix login bug", "User cannot login with SSO", [], "test-project");
+      taskStore.createTask("t2", "test-proj", "Add dashboard", "Create analytics dashboard", [], "test-project");
+      taskStore.createTask("t3", "test-proj", "Update auth middleware", "Refactor authentication layer", [], "test-project");
+      taskStore.updateTaskStatus("t2", "in_progress");
+      taskStore.updateTaskStatus("t3", "complete");
+    });
+
+    it("returns only tasks matching search in title", () => {
+      const results = taskStore.listTasks("test-proj", { search: "login" });
+      expect(results).toHaveLength(1);
+      expect(results[0].id).toBe("t1");
+    });
+
+    it("returns all tasks when search is empty", () => {
+      const results = taskStore.listTasks("test-proj", { search: "" });
+      expect(results).toHaveLength(3);
+    });
+
+    it("search is case-insensitive", () => {
+      const results = taskStore.listTasks("test-proj", { search: "FIX LOGIN" });
+      expect(results).toHaveLength(1);
+      expect(results[0].id).toBe("t1");
+    });
+
+    it("search matches against description", () => {
+      const results = taskStore.listTasks("test-proj", { search: "analytics" });
+      expect(results).toHaveLength(1);
+      expect(results[0].id).toBe("t2");
+    });
+
+    it("filters by status", () => {
+      const results = taskStore.listTasks("test-proj", { status: "in_progress" });
+      expect(results).toHaveLength(1);
+      expect(results[0].id).toBe("t2");
+    });
+
+    it("combines search and status filters", () => {
+      const results = taskStore.listTasks("test-proj", { search: "auth", status: "not_started" });
+      // "auth" matches t1 (title has no auth) and t3 (title: "Update auth middleware")
+      // but only not_started tasks match → none (t3 is complete)
+      // Actually t1 title is "Fix login bug" — no auth. t3 is complete. So 0.
+      expect(results).toHaveLength(0);
+    });
+
+    it("returns empty array when search has no matches", () => {
+      const results = taskStore.listTasks("test-proj", { search: "nonexistent" });
+      expect(results).toHaveLength(0);
+    });
+
+    it("preserves sort order in filtered results", () => {
+      taskStore.createTask("t4", "test-proj", "Another login fix", "Second login issue", [], "test-project");
+      const results = taskStore.listTasks("test-proj", { search: "login" });
+      expect(results).toHaveLength(2);
+      expect(results[0].id).toBe("t1");
+      expect(results[1].id).toBe("t4");
+    });
+  });
+
   describe("deleteTask", () => {
     it("allows deletion of leaf task", () => {
       taskStore.createTask("t1", "test-proj", "Leaf", "desc", [], "proj");
