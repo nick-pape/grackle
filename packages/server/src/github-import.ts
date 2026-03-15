@@ -307,7 +307,8 @@ export async function fetchGitHubIssues(
         labels: node.labels.nodes.map((l) => l.name),
         blockedByNumbers: node.blockedBy.nodes.map((b) => b.number),
         comments,
-        commentsHasNextPage: node.comments?.pageInfo.hasNextPage ?? false,
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- pageInfo may be undefined when comments is present but empty
+        commentsHasNextPage: node.comments?.pageInfo?.hasNextPage ?? false,
       });
     }
 
