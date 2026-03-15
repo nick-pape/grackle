@@ -1,47 +1,6 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sun, 15 Mar 2026 17:12:57 GMT and should not be manually modified.
-
-## 0.28.1
-Sun, 15 Mar 2026 17:12:57 GMT
-
-### Patches
-
-- Add user-friendly error message for Node.js ABI version mismatch in better-sqlite3
-- Add --host CLI flag to PowerLine, bind to 0.0.0.0 in Docker containers
-
-## 0.28.0
-Sun, 15 Mar 2026 17:02:08 GMT
-
-### Minor changes
-
-- Add per-project worktree base path configuration
-
-## 0.27.1
-Sun, 15 Mar 2026 16:33:25 GMT
-
-### Patches
-
-- User-friendly codespace error messages, manual name fallback, optional machine type
-
-### Updates
-
-- No CLI changes (merge commit false positive)
-- Broadcast environment status changes from gRPC/heartbeat to WebSocket clients
-- Escalate typedef and explicit-member-accessibility lint rules to error in common
-- No changes to CLI (web-only theme restructuring)
-- No CLI changes — merge commit false positive from lockstep versioning
-
-## 0.27.0
-Sun, 15 Mar 2026 07:00:42 GMT
-
-### Minor changes
-
-- Simplify task/session lifecycle: 5 task statuses, 6 session statuses, replace approve/reject with complete/resume RPCs
-
-### Updates
-
-- No changes to CLI (merge commit false positive)
+This log was last generated on Sun, 15 Mar 2026 04:23:26 GMT and should not be manually modified.
 
 ## 0.26.0
 Sun, 15 Mar 2026 04:23:26 GMT
