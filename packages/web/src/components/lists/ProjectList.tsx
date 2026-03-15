@@ -356,19 +356,19 @@ export function ProjectList(): JSX.Element {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newProjectName, setNewProjectName] = useState("");
   const [groupByStatus, setGroupByStatusState] = useState(getGroupByStatus);
-  // Per-project accordion state using composite keys: "projectId:status"
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
-    () => getGroupByStatus() ? new Set(STATUS_GROUP_ORDER) : new Set(),
-  );
+  // Track which groups should default to expanded (resets on each toggle-on)
+  const [groupExpandDefault, setGroupExpandDefault] = useState(getGroupByStatus);
+  // Per-project overrides: "projectId:status" → explicitly collapsed or expanded
+  const [groupExpandOverrides, setGroupExpandOverrides] = useState<Map<string, boolean>>(new Map());
 
-  /** Toggle group-by-status mode. Resets expanded groups on enable. */
+  /** Toggle group-by-status mode. */
   const toggleGroupByStatus = (): void => {
     setGroupByStatusState((prev) => {
       const next = !prev;
       saveGroupByStatus(next);
       if (next) {
-        // Expand all groups when enabling
-        setExpandedGroups(new Set(STATUS_GROUP_ORDER));
+        setGroupExpandDefault(true);
+        setGroupExpandOverrides(new Map());
       }
       return next;
     });
@@ -377,21 +377,18 @@ export function ProjectList(): JSX.Element {
   /** Toggle a single status group accordion for a specific project. */
   const toggleStatusGroup = (projectId: string, status: string): void => {
     const key = `${projectId}:${status}`;
-    setExpandedGroups((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) {
-        next.delete(key);
-      } else {
-        next.add(key);
-      }
+    setGroupExpandOverrides((prev) => {
+      const next = new Map(prev);
+      const current = next.has(key) ? next.get(key)! : groupExpandDefault;
+      next.set(key, !current);
       return next;
     });
   };
 
   /** Check if a status group is expanded for a specific project. */
   const isGroupExpanded = (projectId: string, status: string): boolean => {
-    // Check both per-project key and global key (for initial expand-all)
-    return expandedGroups.has(`${projectId}:${status}`) || expandedGroups.has(status);
+    const key = `${projectId}:${status}`;
+    return groupExpandOverrides.has(key) ? groupExpandOverrides.get(key)! : groupExpandDefault;
   };
 
   // Derive selected state from router
