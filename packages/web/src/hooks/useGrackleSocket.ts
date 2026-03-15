@@ -275,7 +275,7 @@ function asValidArray<T>(
     );
     return [];
   }
-  return (v as unknown[]).filter((item: unknown, i: number): item is T => {
+  return v.filter((item: unknown, i: number) => {
     if (guard(item)) return true;
     warnBadPayload(
       msgType,
@@ -473,9 +473,9 @@ export interface UseGrackleSocketResult {
 
 export function useGrackleSocket(url?: string): UseGrackleSocketResult {
   const apiKey =
-    typeof window !== "undefined" ? window.__GRACKLE_API_KEY__ ?? "" : "";
+    typeof window !== "undefined" ? window.__GRACKLE_API_KEY__ || "" : "";
   const wsUrl =
-    url ??
+    url ||
     (typeof window !== "undefined"
       ? `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}?token=${encodeURIComponent(apiKey)}`
       : "ws://localhost:3000");
@@ -976,7 +976,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
 
     return () => {
       clearTimeout(reconnectTimer);
-      ws.close();
+      ws?.close();
     };
   }, [wsUrl, send]);
 
@@ -993,9 +993,9 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
         payload: {
           environmentId,
           prompt,
-          model: model ?? "",
-          runtime: runtime ?? "",
-          personaId: personaId ?? "",
+          model: model || "",
+          runtime: runtime || "",
+          personaId: personaId || "",
         },
       });
     },
@@ -1049,9 +1049,9 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
         type: "create_project",
         payload: {
           name,
-          description: description ?? "",
-          repoUrl: repoUrl ?? "",
-          defaultEnvironmentId: defaultEnvironmentId ?? "",
+          description: description || "",
+          repoUrl: repoUrl || "",
+          defaultEnvironmentId: defaultEnvironmentId || "",
         },
       });
     },
@@ -1105,9 +1105,9 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
         payload: {
           projectId,
           title,
-          description: description ?? "",
-          dependsOn: dependsOn ?? [],
-          parentTaskId: parentTaskId ?? "",
+          description: description || "",
+          dependsOn: dependsOn || [],
+          parentTaskId: parentTaskId || "",
         },
       });
     },
@@ -1121,11 +1121,11 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
         type: "start_task",
         payload: {
           taskId,
-          runtime: runtime ?? "",
-          model: model ?? "",
-          personaId: personaId ?? "",
-          environmentId: environmentId ?? "",
-          notes: notes ?? "",
+          runtime: runtime || "",
+          model: model || "",
+          personaId: personaId || "",
+          environmentId: environmentId || "",
+          notes: notes || "",
         },
       });
     },
@@ -1191,8 +1191,8 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
           projectId,
           title,
           content,
-          category: category ?? "general",
-          tags: tags ?? [],
+          category: category || "general",
+          tags: tags || [],
         },
       });
     },
@@ -1240,7 +1240,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
       const payload: Record<string, unknown> = {
         displayName,
         adapterType,
-        adapterConfig: adapterConfig ?? {},
+        adapterConfig: adapterConfig || {},
       };
       if (defaultRuntime) {
         payload.defaultRuntime = defaultRuntime;
@@ -1309,9 +1309,9 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
           name,
           description,
           systemPrompt,
-          runtime: runtime ?? "",
-          model: model ?? "",
-          maxTurns: maxTurns ?? 0,
+          runtime: runtime || "",
+          model: model || "",
+          maxTurns: maxTurns || 0,
         },
       });
     },
@@ -1332,12 +1332,12 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
         type: "update_persona",
         payload: {
           personaId,
-          name: name ?? "",
-          description: description ?? "",
-          systemPrompt: systemPrompt ?? "",
-          runtime: runtime ?? "",
-          model: model ?? "",
-          maxTurns: maxTurns ?? 0,
+          name: name || "",
+          description: description || "",
+          systemPrompt: systemPrompt || "",
+          runtime: runtime || "",
+          model: model || "",
+          maxTurns: maxTurns || 0,
         },
       });
     },
