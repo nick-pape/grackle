@@ -28,6 +28,9 @@ test.describe("Task Lifecycle (stub runtime)", () => {
             const msg = JSON.parse(data);
             if (msg.type === "start_task") {
               msg.payload.runtime = "stub";
+              if (!msg.payload.environmentId) {
+                msg.payload.environmentId = "test-local";
+              }
               data = JSON.stringify(msg);
             }
           } catch { /* not JSON, pass through */ }
@@ -96,6 +99,9 @@ test.describe("Task Lifecycle (stub runtime)", () => {
             const msg = JSON.parse(data);
             if (msg.type === "start_task") {
               msg.payload.runtime = "stub";
+              if (!msg.payload.environmentId) {
+                msg.payload.environmentId = "test-local";
+              }
               data = JSON.stringify(msg);
             }
           } catch { /* not JSON */ }

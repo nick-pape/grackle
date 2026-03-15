@@ -210,9 +210,13 @@ export async function navigateToTask(
   await page.locator(`[data-testid="task-title"]:has-text("${taskTitle}")`).waitFor({ timeout: 5_000 });
 }
 
-/** Monkey-patch WebSocket.prototype.send to force stub runtime on start_task messages. */
-export async function patchWsForStubRuntime(page: Page): Promise<void> {
-  await page.evaluate(() => {
+/**
+ * Monkey-patch WebSocket.prototype.send to force stub runtime and inject
+ * environmentId on start_task messages. Environment is now a start-time
+ * param (not stored on the task), so tests must provide it explicitly.
+ */
+export async function patchWsForStubRuntime(page: Page, environmentId: string = "test-local"): Promise<void> {
+  await page.evaluate((envId: string) => {
     const origSend = WebSocket.prototype.send;
     WebSocket.prototype.send = function (
       data: string | ArrayBuffer | Blob | ArrayBufferView,
@@ -222,6 +226,9 @@ export async function patchWsForStubRuntime(page: Page): Promise<void> {
           const msg = JSON.parse(data);
           if (msg.type === "start_task") {
             msg.payload.runtime = "stub";
+            if (!msg.payload.environmentId) {
+              msg.payload.environmentId = envId;
+            }
             data = JSON.stringify(msg);
           }
         } catch {
@@ -230,7 +237,7 @@ export async function patchWsForStubRuntime(page: Page): Promise<void> {
       }
       return origSend.call(this, data);
     };
-  });
+  }, environmentId);
 }
 
 /**

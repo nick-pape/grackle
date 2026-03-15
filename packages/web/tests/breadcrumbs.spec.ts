@@ -13,8 +13,7 @@ function makeTask(overrides: Partial<TaskData> & { id: string; projectId: string
     description: "",
     status: "pending",
     branch: "",
-    environmentId: "",
-    sessionId: "",
+    latestSessionId: "",
     dependsOn: [],
     reviewNotes: "",
     sortOrder: 0,
@@ -23,7 +22,6 @@ function makeTask(overrides: Partial<TaskData> & { id: string; projectId: string
     depth: 0,
     childTaskIds: [],
     canDecompose: false,
-    personaId: "",
     ...overrides,
   };
 }

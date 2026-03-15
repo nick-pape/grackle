@@ -1222,6 +1222,8 @@ async function handleMessage(
         const retryError = await startTaskSession(ws, freshTask, {
           runtime: previousSession?.runtime,
           model: previousSession?.model,
+          environmentId: previousSession?.environmentId,
+          personaId: previousSession?.personaId,
         });
         if (retryError) {
           logger.warn(
