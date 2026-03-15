@@ -38,7 +38,7 @@ function relativeTime(iso: string | undefined): string {
 
 type ProjectTab = "tasks" | "graph";
 // eslint-disable-next-line @rushstack/no-new-null
-type EditingField = "name" | "description" | "repoUrl" | "defaultEnvironmentId" | null;
+type EditingField = "name" | "description" | "repoUrl" | "defaultEnvironmentId" | "worktreeBasePath" | null;
 
 /** Project overview page with inline editing, progress bar, and DAG/task views. */
 export function ProjectPage(): JSX.Element {
@@ -60,6 +60,7 @@ export function ProjectPage(): JSX.Element {
   const descriptionInputRef = useRef<HTMLTextAreaElement>(null);
   const repositoryInputRef = useRef<HTMLInputElement>(null);
   const environmentSelectRef = useRef<HTMLSelectElement>(null);
+  const worktreeBasePathInputRef = useRef<HTMLInputElement>(null);
 
   const breadcrumbs = buildProjectBreadcrumbs(projectId!, projects);
 
@@ -85,6 +86,7 @@ export function ProjectPage(): JSX.Element {
       editingField === "name" ? nameInputRef.current
       : editingField === "description" ? descriptionInputRef.current
       : editingField === "repoUrl" ? repositoryInputRef.current
+      : editingField === "worktreeBasePath" ? worktreeBasePathInputRef.current
       : environmentSelectRef.current;
     if (!focusTarget) {
       return;
@@ -152,9 +154,12 @@ export function ProjectPage(): JSX.Element {
     } else if (field === "repoUrl") {
       if (trimmed === project.repoUrl) { cancelEdit(); return; }
       updateProject(project.id, { repoUrl: trimmed });
-    } else {
+    } else if (field === "defaultEnvironmentId") {
       if (editDraft === project.defaultEnvironmentId) { cancelEdit(); return; }
       updateProject(project.id, { defaultEnvironmentId: editDraft });
+    } else if (field === "worktreeBasePath") {
+      if (trimmed === project.worktreeBasePath) { cancelEdit(); return; }
+      updateProject(project.id, { worktreeBasePath: trimmed });
     }
 
     cancelEdit();
@@ -173,7 +178,9 @@ export function ProjectPage(): JSX.Element {
     if (field === "name") return editDraft.trim() !== project.name;
     if (field === "description") return editDraft !== project.description;
     if (field === "repoUrl") return editDraft.trim() !== project.repoUrl;
-    return editDraft !== project.defaultEnvironmentId;
+    if (field === "defaultEnvironmentId") return editDraft !== project.defaultEnvironmentId;
+    if (field === "worktreeBasePath") return editDraft.trim() !== project.worktreeBasePath;
+    return false;
   };
 
   const defaultEnv = environments.find((e) => e.id === project?.defaultEnvironmentId);
@@ -427,6 +434,58 @@ export function ProjectPage(): JSX.Element {
                       {/* eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string means "not set" */}
                       {project?.defaultEnvironmentId || "No default environment"}
                     </span>
+                  )}
+                  <span className={styles.editButton} aria-hidden="true">
+                    ✏️
+                  </span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Worktree Base Path */}
+          <div className={styles.metaRow}>
+            <span className={styles.metaLabel}>Worktree Base</span>
+            <div className={styles.metaValue}>
+              {editingField === "worktreeBasePath" ? (
+                <div className={styles.editFieldWrapper}>
+                  <input
+                    ref={worktreeBasePathInputRef}
+                    className={`${styles.editInput} ${editError ? styles.editInputInvalid : ""}`}
+                    value={editDraft}
+                    onChange={(e) => { setEditDraft(e.target.value); setEditError(""); }}
+                    onBlur={(event) => {
+                      if (ignoreInitialBlurFieldRef.current === "worktreeBasePath") {
+                        ignoreInitialBlurFieldRef.current = null;
+                        return;
+                      }
+                      if (event.relatedTarget instanceof HTMLElement && event.relatedTarget.dataset.editAction === "worktreeBasePath") {
+                        return;
+                      }
+                      saveEdit("worktreeBasePath");
+                    }}
+                    onKeyDown={(e) => handleKeyDown(e, "worktreeBasePath")}
+                    placeholder="/workspaces/my-repo"
+                    aria-label="Worktree base path"
+                    data-testid="edit-worktree-base-path-input"
+                  />
+                  {isDirty("worktreeBasePath") && <span className={styles.unsavedDot} title="Unsaved changes" />}
+                  {editError && <span className={styles.editError} data-testid="edit-error">{editError}</span>}
+                  <span className={styles.editHint}>{keyboardHint}</span>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  className={styles.metaValueClickable}
+                  onClick={() => startEdit("worktreeBasePath", project?.worktreeBasePath || "")}
+                  title="Click to edit worktree base path"
+                  aria-label="Edit worktree base path"
+                  data-testid="edit-worktree-base-path-button"
+                >
+                  {project?.worktreeBasePath ? (
+                    <span>{project.worktreeBasePath}</span>
+                  ) : (
+                    <span className={styles.metaPlaceholder}>Default (server default)</span>
                   )}
                   <span className={styles.editButton} aria-hidden="true">
                     ✏️

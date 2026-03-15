@@ -2,6 +2,35 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.27.1",
+      "tag": "@grackle-ai/cli_v0.27.1",
+      "date": "Sun, 15 Mar 2026 16:33:25 GMT",
+      "comments": {
+        "none": [
+          {
+            "comment": "No CLI changes (merge commit false positive)"
+          },
+          {
+            "comment": "Broadcast environment status changes from gRPC/heartbeat to WebSocket clients"
+          },
+          {
+            "comment": "Escalate typedef and explicit-member-accessibility lint rules to error in common"
+          },
+          {
+            "comment": "No changes to CLI (web-only theme restructuring)"
+          },
+          {
+            "comment": "No CLI changes — merge commit false positive from lockstep versioning"
+          }
+        ],
+        "patch": [
+          {
+            "comment": "User-friendly codespace error messages, manual name fallback, optional machine type"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.27.0",
       "tag": "@grackle-ai/cli_v0.27.0",
       "date": "Sun, 15 Mar 2026 07:00:42 GMT",

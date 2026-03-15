@@ -324,6 +324,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
         repoUrl: repoUrl ?? "",
         defaultEnvironmentId: defaultEnvironmentId ?? "",
         status: "active",
+        worktreeBasePath: "",
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
@@ -834,6 +835,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       removeEnvironment: () => { },
       codespaces: [],
       codespaceError: "",
+      codespaceListError: "",
       codespaceCreating: false,
       listCodespaces: () => { },
       createCodespace: () => { },

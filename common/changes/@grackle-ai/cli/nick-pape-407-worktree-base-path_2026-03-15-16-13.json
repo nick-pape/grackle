@@ -1,8 +1,8 @@
 {
   "changes": [
     {
-      "comment": "Broadcast environment status changes from gRPC/heartbeat to WebSocket clients",
-      "type": "none",
+      "comment": "Add per-project worktree base path configuration",
+      "type": "minor",
       "packageName": "@grackle-ai/cli"
     }
   ],

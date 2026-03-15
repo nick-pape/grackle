@@ -30,6 +30,7 @@ export const sessionTools: ToolDefinition[] = [
       maxTurns: z.number().int().positive().optional().describe("Maximum number of turns the agent may take"),
       runtime: z.string().optional().describe("The runtime to use (e.g. claude-code)"),
       personaId: z.string().optional().describe("Persona ID to configure agent behavior"),
+      worktreeBasePath: z.string().optional().describe("Base path for worktrees (e.g. /workspaces/my-repo)"),
     }),
     rpcMethod: "spawnAgent",
     mutating: true,
@@ -48,6 +49,7 @@ export const sessionTools: ToolDefinition[] = [
           maxTurns: args.maxTurns as number | undefined,
           runtime: args.runtime as string | undefined,
           personaId: args.personaId as string | undefined,
+          worktreeBasePath: (args.worktreeBasePath as string) ?? "",
         });
         return jsonResult(session);
       } catch (error) {

@@ -19,6 +19,7 @@ import { join, dirname, extname, normalize, resolve, relative } from "node:path"
 import { createRequire } from "node:module";
 import { loadOrCreateApiKey, verifyApiKey } from "./api-key.js";
 import { logger } from "./logger.js";
+import { exec } from "./utils/exec.js";
 
 // Import db to ensure tables are created
 import "./db.js";
@@ -112,6 +113,33 @@ function main(): void {
   registerAdapter(new LocalAdapter());
   registerAdapter(new SshAdapter());
   registerAdapter(new CodespaceAdapter());
+
+  // Non-blocking startup diagnostic: check gh CLI availability
+  const GH_CHECK_TIMEOUT_MS: number = 5_000;
+  exec("gh", ["version"], { timeout: GH_CHECK_TIMEOUT_MS })
+    .then((result) => {
+      logger.info(
+        { version: result.stdout.split("\n")[0] },
+        "GitHub CLI available",
+      );
+    })
+    .catch((err: unknown) => {
+      const isNotFound =
+        err instanceof Error &&
+        ("code" in err
+          ? (err as Error & { code: unknown }).code === "ENOENT"
+          : err.message.includes("ENOENT"));
+      if (isNotFound) {
+        logger.warn(
+          "GitHub CLI (gh) not found on PATH — codespace features will be unavailable. Install from https://cli.github.com/",
+        );
+      } else {
+        logger.warn(
+          { err },
+          "GitHub CLI (gh) availability check failed — codespace features may not work",
+        );
+      }
+    });
 
   // Start heartbeat
   startHeartbeat((environmentId) => {

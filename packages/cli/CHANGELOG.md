@@ -1,6 +1,21 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sun, 15 Mar 2026 07:00:42 GMT and should not be manually modified.
+This log was last generated on Sun, 15 Mar 2026 16:33:25 GMT and should not be manually modified.
+
+## 0.27.1
+Sun, 15 Mar 2026 16:33:25 GMT
+
+### Patches
+
+- User-friendly codespace error messages, manual name fallback, optional machine type
+
+### Updates
+
+- No CLI changes (merge commit false positive)
+- Broadcast environment status changes from gRPC/heartbeat to WebSocket clients
+- Escalate typedef and explicit-member-accessibility lint rules to error in common
+- No changes to CLI (web-only theme restructuring)
+- No CLI changes — merge commit false positive from lockstep versioning
 
 ## 0.27.0
 Sun, 15 Mar 2026 07:00:42 GMT

@@ -20,6 +20,7 @@ function applySchema(): void {
       default_env_id    TEXT NOT NULL DEFAULT '',
       status            TEXT NOT NULL DEFAULT 'active',
       use_worktrees     INTEGER NOT NULL DEFAULT 1,
+      worktree_base_path TEXT NOT NULL DEFAULT '',
       created_at        TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at        TEXT NOT NULL DEFAULT (datetime('now'))
     );
@@ -170,6 +171,40 @@ describe("project-store", () => {
       projectStore.createProject("p1", "Name", "", "", "", false);
       const updated = projectStore.updateProject("p1", { name: "New Name" });
       expect(updated!.useWorktrees).toBe(false);
+    });
+  });
+
+  // UT-1 through UT-4: worktreeBasePath field
+  describe("worktreeBasePath", () => {
+    it("creates project with worktreeBasePath set", () => {
+      projectStore.createProject("p1", "Name", "", "", "", true, "/workspaces/odsp-web");
+      const p = projectStore.getProject("p1");
+      expect(p).toBeDefined();
+      expect(p!.worktreeBasePath).toBe("/workspaces/odsp-web");
+    });
+
+    it("defaults worktreeBasePath to empty string when not specified", () => {
+      projectStore.createProject("p1", "Name", "", "", "");
+      const p = projectStore.getProject("p1");
+      expect(p!.worktreeBasePath).toBe("");
+    });
+
+    it("updates worktreeBasePath", () => {
+      projectStore.createProject("p1", "Name", "", "", "");
+      const updated = projectStore.updateProject("p1", { worktreeBasePath: "/workspaces/my-repo" });
+      expect(updated!.worktreeBasePath).toBe("/workspaces/my-repo");
+    });
+
+    it("leaves worktreeBasePath unchanged when not in patch", () => {
+      projectStore.createProject("p1", "Name", "", "", "", true, "/workspaces/foo");
+      const updated = projectStore.updateProject("p1", { name: "New Name" });
+      expect(updated!.worktreeBasePath).toBe("/workspaces/foo");
+    });
+
+    it("clears worktreeBasePath with empty string", () => {
+      projectStore.createProject("p1", "Name", "", "", "", true, "/workspaces/foo");
+      const updated = projectStore.updateProject("p1", { worktreeBasePath: "" });
+      expect(updated!.worktreeBasePath).toBe("");
     });
   });
 });
