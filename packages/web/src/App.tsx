@@ -21,7 +21,7 @@ import { NewEnvironmentPage } from "./pages/NewEnvironmentPage.js";
 import { SettingsPage } from "./pages/SettingsPage.js";
 import { SettingsNav } from "./components/settings/SettingsNav.js";
 import { SettingsEnvironmentsTab } from "./pages/settings/SettingsEnvironmentsTab.js";
-import { SettingsTokensTab } from "./pages/settings/SettingsTokensTab.js";
+import { SettingsCredentialsTab } from "./pages/settings/SettingsCredentialsTab.js";
 import { SettingsPersonasTab } from "./pages/settings/SettingsPersonasTab.js";
 import { SettingsAppearanceTab } from "./pages/settings/SettingsAppearanceTab.js";
 import { SettingsAboutTab } from "./pages/settings/SettingsAboutTab.js";
@@ -89,7 +89,8 @@ function AppRoutes(): JSX.Element {
         <Route path="settings" element={<SettingsPage />}>
           <Route index element={<Navigate to="environments" replace />} />
           <Route path="environments" element={<SettingsEnvironmentsTab />} />
-          <Route path="tokens" element={<SettingsTokensTab />} />
+          <Route path="credentials" element={<SettingsCredentialsTab />} />
+          <Route path="tokens" element={<Navigate to="../credentials" replace />} />
           <Route path="personas" element={<SettingsPersonasTab />} />
           <Route path="appearance" element={<SettingsAppearanceTab />} />
           <Route path="about" element={<SettingsAboutTab />} />

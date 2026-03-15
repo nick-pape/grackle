@@ -27,8 +27,8 @@ test.describe("Settings Tabs", () => {
 
     await goToSettings(mockPage);
 
-    const tabs = ["Tokens", "Personas", "Appearance", "About", "Environments"];
-    const paths = ["tokens", "personas", "appearance", "about", "environments"];
+    const tabs = ["Credentials", "Personas", "Appearance", "About", "Environments"];
+    const paths = ["credentials", "personas", "appearance", "about", "environments"];
 
     for (let i = 0; i < tabs.length; i++) {
       await page.getByRole("tab", { name: tabs[i] }).click();
@@ -37,28 +37,30 @@ test.describe("Settings Tabs", () => {
     }
   });
 
-  test("deep link to /settings/tokens loads Tokens tab", async ({ mockPage }) => {
+  test("deep link to /settings/credentials loads Credentials tab", async ({ mockPage }) => {
     const page = mockPage;
 
-    await page.goto("/settings/tokens?mock");
+    await page.goto("/settings/credentials?mock");
     await expect(page.getByRole("tablist")).toBeVisible({ timeout: 5_000 });
-    await expect(page.getByRole("tab", { name: "Tokens" })).toHaveAttribute("aria-selected", "true");
-    await expect(page.getByRole("heading", { name: "Tokens" })).toBeVisible();
+    await expect(page.getByRole("tab", { name: "Credentials" })).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByRole("heading", { name: "Credential Providers" })).toBeVisible();
   });
+
+
 
   test("back/forward works between tabs", async ({ mockPage }) => {
     const page = mockPage;
 
     await goToSettings(mockPage);
-    await page.getByRole("tab", { name: "Tokens" }).click();
-    await expect(page).toHaveURL(/\/settings\/tokens/);
+    await page.getByRole("tab", { name: "Credentials" }).click();
+    await expect(page).toHaveURL(/\/settings\/credentials/);
 
     await page.getByRole("tab", { name: "About" }).click();
     await expect(page).toHaveURL(/\/settings\/about/);
 
     await page.goBack();
-    await expect(page).toHaveURL(/\/settings\/tokens/);
-    await expect(page.getByRole("tab", { name: "Tokens" })).toHaveAttribute("aria-selected", "true");
+    await expect(page).toHaveURL(/\/settings\/credentials/);
+    await expect(page.getByRole("tab", { name: "Credentials" })).toHaveAttribute("aria-selected", "true");
 
     await page.goForward();
     await expect(page).toHaveURL(/\/settings\/about/);
@@ -74,10 +76,10 @@ test.describe("Settings Tabs", () => {
     const envTab = page.getByRole("tab", { name: "Environments" });
     await envTab.focus();
 
-    // Arrow down should move to Tokens
+    // Arrow down should move to Credentials
     await page.keyboard.press("ArrowDown");
-    await expect(page).toHaveURL(/\/settings\/tokens/);
-    await expect(page.getByRole("tab", { name: "Tokens" })).toBeFocused();
+    await expect(page).toHaveURL(/\/settings\/credentials/);
+    await expect(page.getByRole("tab", { name: "Credentials" })).toBeFocused();
 
     // Arrow down again -> Personas
     await page.keyboard.press("ArrowDown");
@@ -136,7 +138,7 @@ test.describe("Settings Tabs", () => {
     await goToSettings(mockPage);
     const breadcrumbs = page.getByTestId("breadcrumbs");
 
-    const tabs = ["Environments", "Tokens", "Personas", "Appearance", "About"];
+    const tabs = ["Environments", "Credentials", "Personas", "Appearance", "About"];
     for (const tab of tabs) {
       await page.getByRole("tab", { name: tab }).click();
       await expect(breadcrumbs).toContainText("Home");

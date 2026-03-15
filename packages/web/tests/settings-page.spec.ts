@@ -12,13 +12,13 @@ test.describe("Settings Page", () => {
     await expect(page.getByRole("tab", { name: "Environments" })).toHaveAttribute("aria-selected", "true");
   });
 
-  test("settings page renders token section after clicking Tokens tab", async ({ appPage }) => {
+  test("settings page renders token section after clicking Credentials tab", async ({ appPage }) => {
     const page = appPage;
 
     await goToSettings(appPage);
-    await page.getByRole("tab", { name: "Tokens" }).click();
+    await page.getByRole("tab", { name: "Credentials" }).click();
 
-    await expect(page.getByRole("heading", { name: "Tokens" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Credential Providers" })).toBeVisible();
     await expect(
       page.getByText("API tokens are auto-pushed to environments"),
     ).toBeVisible();
@@ -54,7 +54,7 @@ test.describe("Settings Page", () => {
     const page = appPage;
 
     await goToSettings(appPage);
-    await page.getByRole("tab", { name: "Tokens" }).click();
+    await page.getByRole("tab", { name: "Credentials" }).click();
 
     // Fill in the add token form
     await page.locator('input[placeholder="Token name"]').fill("ui-test-token");
@@ -94,7 +94,7 @@ test.describe("Settings Page", () => {
     );
 
     await goToSettings(appPage);
-    await page.getByRole("tab", { name: "Tokens" }).click();
+    await page.getByRole("tab", { name: "Credentials" }).click();
 
     // Wait for token to appear
     await expect(page.getByText("ui-delete-test", { exact: true })).toBeVisible({ timeout: 5_000 });
@@ -116,10 +116,10 @@ test.describe("Settings Page", () => {
     const page = appPage;
 
     await goToSettings(appPage);
-    await page.getByRole("tab", { name: "Tokens" }).click();
+    await page.getByRole("tab", { name: "Credentials" }).click();
 
-    // Select "File" type
-    await page.locator("select").selectOption("file");
+    // Select "File" type (use token type select, not provider dropdowns)
+    await page.locator("select", { hasText: "Environment Variable" }).selectOption("file");
 
     // The placeholder should change to file path
     await expect(page.locator('input[placeholder*="File path"]')).toBeVisible();
@@ -146,7 +146,7 @@ test.describe("Settings Page", () => {
     const page = appPage;
 
     await goToSettings(appPage);
-    await page.getByRole("tab", { name: "Tokens" }).click();
+    await page.getByRole("tab", { name: "Credentials" }).click();
 
     // Fill in the form
     const nameInput = page.locator('input[placeholder="Token name"]');
@@ -170,11 +170,11 @@ test.describe("Settings Page", () => {
     );
   });
 
-  test("settings page description text is visible in Tokens tab", async ({ appPage }) => {
+  test("settings page description text is visible in Credentials tab", async ({ appPage }) => {
     const page = appPage;
 
     await goToSettings(appPage);
-    await page.getByRole("tab", { name: "Tokens" }).click();
+    await page.getByRole("tab", { name: "Credentials" }).click();
 
     await expect(
       page.getByText("API tokens are auto-pushed to environments when set or updated"),
@@ -190,5 +190,13 @@ test.describe("Settings Page", () => {
     await expect(breadcrumbs).toBeVisible({ timeout: 5_000 });
     await expect(breadcrumbs).toContainText("Home");
     await expect(breadcrumbs).toContainText("Settings");
+  });
+
+  test("old /settings/tokens URL redirects to /settings/credentials", async ({ appPage }) => {
+    const page = appPage;
+
+    await page.goto("/settings/tokens");
+    await expect(page).toHaveURL(/\/settings\/credentials/);
+    await expect(page.getByRole("tab", { name: "Credentials" })).toHaveAttribute("aria-selected", "true");
   });
 });

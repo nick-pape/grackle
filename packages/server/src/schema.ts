@@ -156,6 +156,16 @@ export type FindingRow = typeof findings.$inferSelect;
 /** Shape accepted by INSERT into the findings table. */
 export type NewFinding = typeof findings.$inferInsert;
 
+// ─── Settings ─────────────────────────────────────────────
+
+export const settings = sqliteTable("settings", {
+  key: text("key").primaryKey(),
+  value: text("value").notNull(),
+});
+
+/** Row shape returned by a SELECT on the settings table. */
+export type SettingRow = typeof settings.$inferSelect;
+
 // ─── Personas ─────────────────────────────────────────────
 
 export const personas = sqliteTable("personas", {

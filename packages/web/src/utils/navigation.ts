@@ -78,8 +78,8 @@ export const SETTINGS_URL: string = "/settings";
 /** URL for the settings environments tab. */
 export const SETTINGS_ENVIRONMENTS_URL: string = "/settings/environments";
 
-/** URL for the settings tokens tab. */
-export const SETTINGS_TOKENS_URL: string = "/settings/tokens";
+/** URL for the settings credentials tab. */
+export const SETTINGS_CREDENTIALS_URL: string = "/settings/credentials";
 
 /** URL for the persona management tab. */
 export const PERSONAS_URL: string = "/settings/personas";

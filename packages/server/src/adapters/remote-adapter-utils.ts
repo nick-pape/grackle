@@ -4,6 +4,7 @@ import { createPowerLineClient } from "./powerline-transport.js";
 import { findFreePort } from "../utils/ports.js";
 import { sleep } from "../utils/sleep.js";
 import { logger } from "../logger.js";
+import { shouldPushClaudeCredentialsFile, shouldCaptureRemoteGitHubToken } from "../credential-providers.js";
 import { spawn, type ChildProcess } from "node:child_process";
 import { createConnection } from "node:net";
 import { join, resolve } from "node:path";
@@ -193,17 +194,6 @@ export abstract class ProcessTunnel implements RemoteTunnel {
 /** Regex for valid POSIX environment variable names. */
 const ENV_VAR_NAME_PATTERN: RegExp = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
-/** Environment variables to forward to the remote PowerLine process. */
-const FORWARDED_ENV_VARS: string[] = [
-  "ANTHROPIC_API_KEY",
-  "GITHUB_TOKEN",
-  "GH_TOKEN",
-  "COPILOT_GITHUB_TOKEN",
-  "COPILOT_CLI_URL",
-  "COPILOT_CLI_PATH",
-  "COPILOT_PROVIDER_CONFIG",
-];
-
 /**
  * Escape a value for safe use inside a shell single-quoted string.
  * Replaces each `'` with `'\''` (end quote, escaped quote, start quote).
@@ -223,12 +213,6 @@ function writeRemoteEnvFileLines(
   const envLines: string[] = [];
   if (powerlineToken) {
     envLines.push(`export GRACKLE_POWERLINE_TOKEN='${shellEscape(powerlineToken)}'`);
-  }
-  for (const varName of FORWARDED_ENV_VARS) {
-    const value = process.env[varName];
-    if (value) {
-      envLines.push(`export ${varName}='${shellEscape(value)}'`);
-    }
   }
   if (extraEnv) {
     for (const [key, value] of Object.entries(extraEnv)) {
@@ -498,27 +482,30 @@ export async function* bootstrapPowerLine(
   }
 
   // 2.5. Capture GITHUB_TOKEN from remote host if the server doesn't have one to forward.
+  //      Only runs when the GitHub credential provider is enabled.
   //      In GitHub Codespaces, GITHUB_TOKEN is injected by the platform but is NOT
   //      available via `printenv` in SSH sessions. It lives in a shared env file at
   //      /workspaces/.codespaces/shared/.env (format: GITHUB_TOKEN=ghu_...).
   //      Fall back to printenv for non-codespace environments (e.g. SSH with real shells).
   let enrichedExtraEnv = extraEnv;
-  const hasLocalToken = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
-  const hasAdapterToken = extraEnv?.GITHUB_TOKEN || extraEnv?.GH_TOKEN;
-  if (!hasLocalToken && !hasAdapterToken) {
-    try {
-      const remoteToken = (
-        await executor.exec(
-          `(grep -m1 '^GITHUB_TOKEN=' /workspaces/.codespaces/shared/.env 2>/dev/null | cut -d= -f2- || grep -m1 '^GH_TOKEN=' /workspaces/.codespaces/shared/.env 2>/dev/null | cut -d= -f2- || printenv GITHUB_TOKEN 2>/dev/null || printenv GH_TOKEN 2>/dev/null || true)`,
-          { timeout: SSH_CONNECTIVITY_TIMEOUT_MS },
-        )
-      ).trim();
-      if (remoteToken) {
-        enrichedExtraEnv = { ...extraEnv, GITHUB_TOKEN: remoteToken };
-        logger.info("Captured GITHUB_TOKEN from remote host for agent git operations");
+  if (shouldCaptureRemoteGitHubToken()) {
+    const hasLocalToken = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
+    const hasAdapterToken = extraEnv?.GITHUB_TOKEN || extraEnv?.GH_TOKEN;
+    if (!hasLocalToken && !hasAdapterToken) {
+      try {
+        const remoteToken = (
+          await executor.exec(
+            `(grep -m1 '^GITHUB_TOKEN=' /workspaces/.codespaces/shared/.env 2>/dev/null | cut -d= -f2- || grep -m1 '^GH_TOKEN=' /workspaces/.codespaces/shared/.env 2>/dev/null | cut -d= -f2- || printenv GITHUB_TOKEN 2>/dev/null || printenv GH_TOKEN 2>/dev/null || true)`,
+            { timeout: SSH_CONNECTIVITY_TIMEOUT_MS },
+          )
+        ).trim();
+        if (remoteToken) {
+          enrichedExtraEnv = { ...extraEnv, GITHUB_TOKEN: remoteToken };
+          logger.info("Captured GITHUB_TOKEN from remote host for agent git operations");
+        }
+      } catch {
+        logger.debug("Could not read GITHUB_TOKEN from remote host");
       }
-    } catch {
-      logger.debug("Could not read GITHUB_TOKEN from remote host");
     }
   }
 
@@ -619,9 +606,10 @@ export async function* bootstrapPowerLine(
   }
 
   // 7. Copy Claude Code credentials for subscription auth (if present on host).
+  //    Only runs when the Claude credential provider is set to "subscription".
   //    Stored under the PowerLine directory so destroy() cleans them up.
   const hostCredsPath = join(homedir(), ".claude", ".credentials.json");
-  if (existsSync(hostCredsPath)) {
+  if (shouldPushClaudeCredentialsFile() && existsSync(hostCredsPath)) {
     yield { stage: "pushing_tokens", message: "Copying Claude credentials...", progress: 0.57 };
     try {
       await executor.exec(
