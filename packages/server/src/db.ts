@@ -39,6 +39,22 @@ try {
     );
     process.exit(1);
   }
+  if (err instanceof Error && err.message.includes("NODE_MODULE_VERSION")) {
+    process.stderr.write(
+      [
+        "",
+        "ERROR: better-sqlite3 was compiled for a different Node.js version.",
+        "",
+        "This usually means grackle was installed with one Node version but is",
+        "being run with another. Grackle requires Node >= 22.",
+        "",
+        "To fix: reinstall grackle with your current Node version:",
+        "  pnpm install -g @grackle-ai/cli",
+        "",
+      ].join("\n"),
+    );
+    process.exit(1);
+  }
   throw err;
 }
 
