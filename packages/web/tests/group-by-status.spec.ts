@@ -71,6 +71,9 @@ test.describe("Group-by-status toggle", () => {
       { timeout: 10_000 },
     );
     await expect(page.getByTestId("group-by-status-toggle")).toBeVisible({ timeout: 5_000 });
+
+    // Expand the project after reload (projects start collapsed on fresh load)
+    await page.getByText("gbs-persist").first().click();
     await expect(page.getByTestId("status-group-not_started")).toBeVisible({ timeout: 5_000 });
   });
 
