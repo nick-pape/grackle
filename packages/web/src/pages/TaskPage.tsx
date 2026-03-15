@@ -314,7 +314,6 @@ export function TaskPage(): JSX.Element {
     loadSessionEvents, loadFindings,
     kill, startTask, resumeTask, completeTask, deleteTask,
     projects, taskSessions: taskSessionsMap, loadTaskSessions,
-    lastSpawnedId,
   } = useGrackle();
 
   // eslint-disable-next-line @rushstack/no-new-null
@@ -348,21 +347,14 @@ export function TaskPage(): JSX.Element {
   const task = tasks.find((t) => t.id === taskId);
   const projectId = task?.projectId || undefined;
 
-  // Resolve effective sessionId.
-  // When a task is started, the server spawns a session. The `lastSpawnedId`
-  // from GrackleContext may be available before `task.latestSessionId` is
-  // populated (requires a `list_tasks` round-trip). Use `lastSpawnedId` as
-  // a fallback when the task is active but `latestSessionId` hasn't arrived yet.
+  // Resolve effective sessionId from the task's eagerly-patched latestSessionId
+  // (set by the task_started handler) or from the user's attempt selection.
   const currentTaskSessions = task ? (taskSessionsMap[task.id] ?? []) : [];
   let sessionId: string | undefined = undefined;
   if (selectedSessionId && currentTaskSessions.some((s) => s.id === selectedSessionId)) {
     sessionId = selectedSessionId;
   } else {
     sessionId = task?.latestSessionId || undefined;
-  }
-  // Fallback: if the task is active but no session resolved, use lastSpawnedId
-  if (!sessionId && task && ["working", "paused"].includes(task.status) && lastSpawnedId) {
-    sessionId = lastSpawnedId;
   }
 
   const handleDeleteTask = (): void => {
@@ -434,20 +426,15 @@ export function TaskPage(): JSX.Element {
     [taskId, projects, tasksById],
   );
 
-  // Load historical events when selecting a session — but skip if we already
-  // have real-time events for this session (replaying from log would overwrite
-  // events that arrived via WebSocket before the replay completes).
-  // TODO: Fix session_events reducer to merge/dedupe replayed events with
-  // real-time events so we can always load history without data loss.
+  // Load historical events when the session changes. The session_events
+  // reducer merges/dedupes replay events with real-time events, so it's
+  // always safe to request replay.
   useEffect(() => {
     if (sessionId && sessionId !== loadedRef.current) {
-      const hasRealTimeEvents = events.some((e) => e.sessionId === sessionId);
-      if (!hasRealTimeEvents) {
-        loadedRef.current = sessionId;
-        loadSessionEvents(sessionId);
-      }
+      loadedRef.current = sessionId;
+      loadSessionEvents(sessionId);
     }
-  }, [sessionId, events, loadSessionEvents]);
+  }, [sessionId, loadSessionEvents]);
 
   // Load findings when switching to findings tab
   useEffect(() => {
