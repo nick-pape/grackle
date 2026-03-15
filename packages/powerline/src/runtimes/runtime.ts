@@ -45,8 +45,6 @@ export interface AgentSession {
   sendInput(text: string): void;
   /** Forcefully terminate the session. */
   kill(): void;
-  /** Push an externally-generated event (e.g. from MCP broker) into the session's event stream. */
-  pushEvent(event: AgentEvent): void;
 }
 
 /** Contract for pluggable agent runtime implementations (e.g. Claude Code, stub). */

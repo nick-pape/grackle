@@ -33,8 +33,6 @@ export abstract class BaseAgentSession implements AgentSession {
   protected readonly systemContext?: string;
   protected readonly mcpServers?: Record<string, unknown>;
   protected readonly hooks?: Record<string, unknown>;
-  protected readonly projectId?: string;
-  protected readonly taskId?: string;
   protected readonly mcpBroker?: { url: string; token: string };
 
   /** Human-readable display name for system messages (e.g. "Claude Code", "Codex"). */
@@ -54,8 +52,6 @@ export abstract class BaseAgentSession implements AgentSession {
     systemContext?: string,
     mcpServers?: Record<string, unknown>,
     hooks?: Record<string, unknown>,
-    projectId?: string,
-    taskId?: string,
     mcpBroker?: { url: string; token: string },
   ) {
     this.id = id;
@@ -68,15 +64,8 @@ export abstract class BaseAgentSession implements AgentSession {
     this.systemContext = systemContext;
     this.mcpServers = mcpServers;
     this.hooks = hooks;
-    this.projectId = projectId;
-    this.taskId = taskId;
     this.mcpBroker = mcpBroker;
     this.runtimeSessionId = resumeSessionId || "";
-  }
-
-  /** Push an externally-generated event into the session's event stream. */
-  public pushEvent(event: AgentEvent): void {
-    this.eventQueue.push(event);
   }
 
   // ─── Abstract methods for subclasses ──────────────────────

@@ -50,13 +50,7 @@ const BROKER_TOOLS: ReadonlySet<string> = new Set([
   "finding_post", "finding_list", "task_create",
 ]);
 
-/**
- * Old stub tool names aliased to new registry names.
- *
- * Note: `create_subtask` is intentionally NOT aliased — its schema (local_id, depends_on,
- * can_decompose, no projectId) is incompatible with `task_create` (requires projectId,
- * different field names). Expanding subtask support via MCP is deferred to #424.
- */
+/** Old stub tool names aliased to new registry names for backward compatibility. */
 const ALIASES: ReadonlyMap<string, string> = new Map([
   ["post_finding", "finding_post"],
   ["query_findings", "finding_list"],

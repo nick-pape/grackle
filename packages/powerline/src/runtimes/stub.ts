@@ -86,9 +86,6 @@ class StubSession implements AgentSession {
     }
   }
 
-  public pushEvent(_event: AgentEvent): void {
-    // Stub runtime does not support external event injection.
-  }
 }
 
 /** A mock runtime that echoes prompts and waits for one round of user input. Useful for testing. */

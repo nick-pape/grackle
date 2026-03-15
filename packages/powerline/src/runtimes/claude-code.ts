@@ -242,10 +242,8 @@ export class ClaudeCodeRuntime extends BaseAgentRuntime {
     systemContext?: string,
     mcpServers?: Record<string, unknown>,
     hooks?: Record<string, unknown>,
-    projectId?: string,
-    taskId?: string,
     mcpBroker?: { url: string; token: string },
   ): AgentSession {
-    return new ClaudeCodeSession(id, prompt, model, maxTurns, resumeSessionId, branch, worktreeBasePath, systemContext, mcpServers, hooks, projectId, taskId, mcpBroker);
+    return new ClaudeCodeSession(id, prompt, model, maxTurns, resumeSessionId, branch, worktreeBasePath, systemContext, mcpServers, hooks, mcpBroker);
   }
 }

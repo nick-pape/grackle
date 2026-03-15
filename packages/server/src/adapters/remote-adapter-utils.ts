@@ -548,11 +548,11 @@ export async function* bootstrapPowerLine(
       { timeout: REMOTE_EXEC_DEFAULT_TIMEOUT_MS },
     );
     await executor.exec(
-      `cd ${REMOTE_POWERLINE_DIRECTORY} && npm install --omit=dev --registry=https://registry.npmjs.org`,
+      `cd ${REMOTE_POWERLINE_DIRECTORY} && npm install --omit=dev --legacy-peer-deps --registry=https://registry.npmjs.org`,
       { timeout: BOOTSTRAP_NPM_INSTALL_TIMEOUT_MS },
     );
 
-    // Copy @grackle-ai/common into node_modules AFTER npm install (npm would wipe it)
+    // Copy @grackle-ai/* workspace packages into node_modules AFTER npm install (npm would wipe them)
     yield { stage: "bootstrapping", message: "Copying @grackle-ai/common...", progress: 0.55 };
     await executor.exec(
       `mkdir -p ${REMOTE_POWERLINE_DIRECTORY}/node_modules/@grackle-ai/common`,
@@ -565,6 +565,22 @@ export async function* bootstrapPowerLine(
     await executor.copyTo(
       join(commonPackageDir, "package.json"),
       `${REMOTE_POWERLINE_DIRECTORY}/node_modules/@grackle-ai/common/package.json`,
+    );
+
+    // Copy @grackle-ai/mcp (PowerLine MCP broker dependency)
+    const mcpPackageDir = resolve(serverDistDir, "../../../mcp");
+    yield { stage: "bootstrapping", message: "Copying @grackle-ai/mcp...", progress: 0.57 };
+    await executor.exec(
+      `mkdir -p ${REMOTE_POWERLINE_DIRECTORY}/node_modules/@grackle-ai/mcp`,
+      { timeout: REMOTE_EXEC_DEFAULT_TIMEOUT_MS },
+    );
+    await executor.copyTo(
+      join(mcpPackageDir, "dist"),
+      `${REMOTE_POWERLINE_DIRECTORY}/node_modules/@grackle-ai/mcp/dist`,
+    );
+    await executor.copyTo(
+      join(mcpPackageDir, "package.json"),
+      `${REMOTE_POWERLINE_DIRECTORY}/node_modules/@grackle-ai/mcp/package.json`,
     );
   } else {
     // ── Production mode: npm install from registry ──

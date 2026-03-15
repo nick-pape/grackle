@@ -142,24 +142,6 @@ describe("mapMessage", () => {
       expect(events[0].type).toBe("tool_use");
     });
 
-    it("does not emit subtask_create event for create_subtask tool call", () => {
-      const msg = {
-        type: "assistant",
-        message: {
-          role: "assistant",
-          content: [
-            {
-              type: "tool_use",
-              name: "create_subtask",
-              input: { title: "Design API", description: "Design REST endpoints" },
-            },
-          ],
-        },
-      };
-      const events = mapMessage(msg);
-      expect(events).toHaveLength(1); // only tool_use, no subtask_create event
-      expect(events[0].type).toBe("tool_use");
-    });
   });
 
   describe("system messages", () => {

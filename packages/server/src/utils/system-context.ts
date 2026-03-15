@@ -12,7 +12,7 @@ export function buildTaskSystemContext(title: string, description: string, notes
 
   if (canDecompose) {
     sections.push(
-      `- **mcp__grackle__create_subtask**: Delegate work to another agent by creating a child task. Use this when work is too large or complex for you to complete alone, or when a different specialization is needed. Each subtask runs in its own agent session. Parameters: title (string, required), description (string, required — be specific about what to do and what "done" looks like), local_id (string, optional — assign an ID to reference this subtask in depends_on of later subtasks), depends_on (string[], optional — local_ids of sibling subtasks that must finish first), can_decompose (boolean, optional, default false — set true if the subtask itself may need further decomposition).`,
+      `- **mcp__grackle__task_create**: Delegate work to another agent by creating a child task. Use this when work is too large or complex for you to complete alone, or when a different specialization is needed. Each subtask runs in its own agent session. Parameters: projectId (string, required), title (string, required), description (string, optional — be specific about what to do and what "done" looks like).`,
     );
   }
 

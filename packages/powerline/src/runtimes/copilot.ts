@@ -390,10 +390,8 @@ export class CopilotRuntime extends BaseAgentRuntime {
     systemContext?: string,
     mcpServers?: Record<string, unknown>,
     _hooks?: Record<string, unknown>, // Hooks not supported by Copilot SDK — accepted for interface compatibility
-    projectId?: string,
-    taskId?: string,
     mcpBroker?: { url: string; token: string },
   ): AgentSession {
-    return new CopilotSession(id, prompt, model, maxTurns, resumeSessionId, branch, worktreeBasePath, systemContext, mcpServers, undefined, projectId, taskId, mcpBroker);
+    return new CopilotSession(id, prompt, model, maxTurns, resumeSessionId, branch, worktreeBasePath, systemContext, mcpServers, undefined, mcpBroker);
   }
 }

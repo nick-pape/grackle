@@ -32,8 +32,6 @@ export abstract class BaseAgentRuntime implements AgentRuntime {
     systemContext?: string,
     mcpServers?: Record<string, unknown>,
     hooks?: Record<string, unknown>,
-    projectId?: string,
-    taskId?: string,
     mcpBroker?: { url: string; token: string },
   ): AgentSession;
 
@@ -50,8 +48,6 @@ export abstract class BaseAgentRuntime implements AgentRuntime {
       opts.systemContext,
       opts.mcpServers,
       opts.hooks,
-      opts.projectId,
-      opts.taskId,
       opts.mcpBroker,
     );
   }
