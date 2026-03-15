@@ -30,7 +30,7 @@ export function worktreeDir(basePath: string, branch: string): string {
   // When repo is at a root-level path (e.g. /workspace in Docker),
   // dirname returns "/" which is typically not writable. Fall back to $HOME.
   if (parent === "/" || parent === "\\") {
-    const home = process.env.HOME ?? process.env.USERPROFILE ?? basePath;
+    const home = process.env.HOME || process.env.USERPROFILE || basePath; // eslint-disable-line @typescript-eslint/prefer-nullish-coalescing -- empty string means "not set"
     return resolve(home, ".grackle-worktrees", sanitized);
   }
   return resolve(parent, ".grackle-worktrees", sanitized);
