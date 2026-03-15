@@ -51,14 +51,14 @@ export function useEnvironmentToasts(
       }
 
       if (env.status === "connected") {
-        showToast(`${env.displayName} connected`, "success");
+        showToast("Environment connected", "success");
       } else if (env.status === "error") {
-        showToast(`${env.displayName} provision failed`, "error");
+        showToast("Environment provision failed", "error");
       } else if (env.status === "disconnected") {
         if (old.status === "connected") {
-          showToast(`${env.displayName} disconnected`, "warning");
+          showToast("Environment disconnected", "warning");
         } else {
-          showToast(`${env.displayName} stopped`, "info");
+          showToast("Environment stopped", "info");
         }
       }
     }
@@ -66,7 +66,7 @@ export function useEnvironmentToasts(
     // Check for removed environments
     for (const old of prev) {
       if (!currentIds.has(old.id)) {
-        showToast(`${old.displayName} removed`, "info");
+        showToast("Environment removed", "info");
       }
     }
   }, [environments, showToast]);

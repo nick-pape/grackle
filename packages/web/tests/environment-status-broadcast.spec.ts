@@ -8,6 +8,9 @@ import {
 /**
  * Tests that environment status changes broadcast via WebSocket
  * update the StatusBar count and trigger toast notifications.
+ *
+ * Toast messages are generic (no resource names) to avoid strict-mode
+ * violations with getByText() in other tests. See App.tsx comment.
  */
 
 test.describe("Environment Status Broadcast + Toasts", () => {
@@ -31,8 +34,8 @@ test.describe("Environment Status Broadcast + Toasts", () => {
     // StatusBar should update to show 0 connected (0/1)
     await expect(page.getByText("0/1")).toBeVisible({ timeout: 10_000 });
 
-    // A "disconnected" toast should appear
-    await expect(page.getByText("test-local disconnected")).toBeVisible({ timeout: 5_000 });
+    // A generic "disconnected" toast should appear
+    await expect(page.getByText("Environment disconnected")).toBeVisible({ timeout: 5_000 });
 
     // Re-provision so other tests aren't affected
     await sendWsMessage(page, {
@@ -66,8 +69,8 @@ test.describe("Environment Status Broadcast + Toasts", () => {
     // StatusBar should show 1/1 again
     await expect(page.getByText("1/1")).toBeVisible({ timeout: 15_000 });
 
-    // A "connected" toast should appear
-    await expect(page.getByText("test-local connected")).toBeVisible({ timeout: 5_000 });
+    // A generic "connected" toast should appear
+    await expect(page.getByText("Environment connected")).toBeVisible({ timeout: 5_000 });
   });
 
   test("injected environment removal shows removal toast", async ({ page }) => {
@@ -123,8 +126,8 @@ test.describe("Environment Status Broadcast + Toasts", () => {
       },
     });
 
-    // Removal toast should appear
-    await expect(page.getByText("Temp Env removed")).toBeVisible({ timeout: 5_000 });
+    // Generic removal toast should appear
+    await expect(page.getByText("Environment removed")).toBeVisible({ timeout: 5_000 });
 
     // StatusBar should now show 1/1
     await expect(page.getByText("1/1")).toBeVisible({ timeout: 5_000 });
@@ -155,7 +158,7 @@ test.describe("Environment Status Broadcast + Toasts", () => {
       },
     });
 
-    // Error toast should appear
-    await expect(page.getByText("test-local provision failed")).toBeVisible({ timeout: 5_000 });
+    // Generic error toast should appear
+    await expect(page.getByText("Environment provision failed")).toBeVisible({ timeout: 5_000 });
   });
 });
