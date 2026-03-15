@@ -532,14 +532,33 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
             );
             break;
           case "sessions":
-            setSessions(
-              asValidArray(
+            setSessions((prev) => {
+              const incoming = asValidArray(
                 msg.payload?.sessions,
                 isSession,
                 "sessions",
                 "sessions",
-              ),
-            );
+              );
+              // Build a map of previous session statuses that were updated via
+              // real-time session_event status messages (which may be more
+              // recent than the list_sessions DB snapshot).  Prefer the
+              // real-time status for active sessions to avoid overwriting
+              // "waiting_input" with a stale "running" from the query.
+              const prevMap = new Map(prev.map((s) => [s.id, s.status]));
+              const ACTIVE = new Set(["pending", "running", "waiting_input"]);
+              return incoming.map((s) => {
+                const prevStatus = prevMap.get(s.id);
+                if (prevStatus && ACTIVE.has(prevStatus) && ACTIVE.has(s.status) && prevStatus !== s.status) {
+                  // If the previous status is "ahead" of the incoming status
+                  // (e.g. waiting_input > running > pending), keep the previous.
+                  const ORDER = ["pending", "running", "waiting_input"];
+                  if (ORDER.indexOf(prevStatus) > ORDER.indexOf(s.status)) {
+                    return { ...s, status: prevStatus };
+                  }
+                }
+                return s;
+              });
+            });
             break;
           case "session_event": {
             if (!isSessionEvent(msg.payload)) {
@@ -567,13 +586,30 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
               setEventsDropped((n) => n + dropped);
             }
             if (event.eventType === "status") {
-              setSessions((prev) =>
-                prev.map((s) =>
-                  s.id === event.sessionId
-                    ? { ...s, status: event.content }
-                    : s,
-                ),
-              );
+              setSessions((prev) => {
+                const exists = prev.some((s) => s.id === event.sessionId);
+                if (exists) {
+                  return prev.map((s) =>
+                    s.id === event.sessionId
+                      ? { ...s, status: event.content }
+                      : s,
+                  );
+                }
+                // Session not yet in the array (e.g. retry session created
+                // server-side before list_sessions response arrived).  Add a
+                // placeholder entry so the UI can react to the status change.
+                return [
+                  ...prev,
+                  {
+                    id: event.sessionId,
+                    environmentId: "",
+                    runtime: "",
+                    status: event.content,
+                    prompt: "",
+                    startedAt: event.timestamp,
+                  },
+                ];
+              });
             }
             break;
           }

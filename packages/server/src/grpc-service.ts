@@ -811,6 +811,12 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
           `Task ${req.taskId} cannot be started (status: ${task.status})`,
         );
       }
+      const activeSessions = sessionStore.getActiveSessionsForTask(req.taskId);
+      if (activeSessions.length > 0) {
+        throw new Error(
+          `Task ${req.taskId} cannot be started — it already has an active session`,
+        );
+      }
       if (!taskStore.areDependenciesMet(req.taskId)) {
         throw new Error(`Task ${req.taskId} has unmet dependencies`);
       }

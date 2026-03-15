@@ -54,6 +54,14 @@ test.describe("Task Overview Tab", () => {
     await createTask(page, "overview-env", "env-task", "test-local");
     await navigateToTask(page, "env-task");
 
+    // Environment is now derived from the latest session, so we must start the
+    // task to create a session that carries the environmentId.
+    await patchWsForStubRuntime(page);
+    await runStubTaskToCompletion(page);
+
+    // Switch to Overview tab to check environment display
+    await page.getByRole("tab", { name: "Overview", exact: true }).click();
+
     // Overview should display the environment display name
     await expect(page.getByText("test-local")).toBeVisible({ timeout: 5_000 });
   });

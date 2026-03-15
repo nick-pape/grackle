@@ -16,7 +16,17 @@ export function createSession(
   taskId: string = "",
   personaId: string = "",
 ): void {
-  db.insert(sessions).values({ id, environmentId, runtime, prompt, model, logPath, taskId, personaId }).run();
+  db.insert(sessions).values({
+    id,
+    environmentId,
+    runtime,
+    prompt,
+    model,
+    logPath,
+    taskId,
+    personaId,
+    startedAt: new Date().toISOString(),
+  }).run();
 }
 
 /** Retrieve a single session by ID. */

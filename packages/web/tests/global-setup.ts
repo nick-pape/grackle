@@ -85,8 +85,8 @@ export default async function globalSetup(_config: FullConfig): Promise<void> {
   const repoRoot = join(import.meta.dirname, "../../..");
 
   // 2. Find available ports (guaranteed distinct)
-  const [powerlinePort, serverPort, webPort] = await findDistinctPorts(3);
-  console.log(`[e2e] Ports: powerline=${powerlinePort}, server=${serverPort}, web=${webPort}`);
+  const [powerlinePort, serverPort, webPort, mcpPort] = await findDistinctPorts(4);
+  console.log(`[e2e] Ports: powerline=${powerlinePort}, server=${serverPort}, web=${webPort}, mcp=${mcpPort}`);
 
   // 3. Start PowerLine (no --token = no auth)
   const powerline: ChildProcess = spawn(
@@ -111,6 +111,7 @@ export default async function globalSetup(_config: FullConfig): Promise<void> {
         GRACKLE_HOME: grackleHome,
         GRACKLE_PORT: String(serverPort),
         GRACKLE_WEB_PORT: String(webPort),
+        GRACKLE_MCP_PORT: String(mcpPort),
         GRACKLE_WEB_DIR: join(repoRoot, "packages/web/dist"),
       },
       stdio: "pipe",

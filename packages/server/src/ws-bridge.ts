@@ -1143,6 +1143,16 @@ async function handleMessage(
         });
         return;
       }
+      const activeSessions = sessionStore.getActiveSessionsForTask(taskId);
+      if (activeSessions.length > 0) {
+        sendWs(ws, {
+          type: "error",
+          payload: {
+            message: `Task cannot be started — it already has an active session`,
+          },
+        });
+        return;
+      }
       if (!taskStore.areDependenciesMet(taskId)) {
         sendWs(ws, {
           type: "error",
@@ -1188,11 +1198,16 @@ async function handleMessage(
       const task = taskStore.getTask(taskId);
       if (!task) return;
 
-      if (task.status !== "review") {
+      // Use computed status (derived from session history) since the stored
+      // status is never explicitly set to "review".
+      const taskSessions = sessionStore.listSessionsByTaskIds([taskId]);
+      const { status: effectiveStatus } = computeTaskStatus(task.status, taskSessions);
+
+      if (effectiveStatus !== "review") {
         sendWs(ws, {
           type: "error",
           payload: {
-            message: `Task cannot be rejected (status: ${task.status})`,
+            message: `Task cannot be rejected (status: ${effectiveStatus})`,
           },
         });
         return;
@@ -1202,12 +1217,15 @@ async function handleMessage(
       // doesn't unexpectedly switch runtimes/models.
       const previousSession = sessionStore.getLatestSessionForTask(task.id);
 
-      // Store review notes and set status to assigned
+      // Store review notes and set status to "pending" so computeTaskStatus
+      // can derive the effective status from the new retry session.  Using
+      // "assigned" here would be sticky (human-authoritative) and prevent
+      // the computed status from reflecting the running session.
       taskStore.updateTask(
         task.id,
         task.title,
         task.description,
-        "assigned",
+        "pending",
         safeParseJsonArray(task.dependsOn),
         reviewNotes,
       );
@@ -1226,10 +1244,23 @@ async function handleMessage(
           personaId: previousSession?.personaId,
         });
         if (retryError) {
+          // Retry failed — set status to "assigned" so the user can retry manually.
           logger.warn(
             { taskId, error: retryError },
-            "Auto-retry after rejection failed — task remains assigned",
+            "Auto-retry after rejection failed — task set to assigned",
           );
+          taskStore.updateTask(
+            freshTask.id,
+            freshTask.title,
+            freshTask.description,
+            "assigned",
+            safeParseJsonArray(freshTask.dependsOn),
+            freshTask.reviewNotes,
+          );
+          broadcast({
+            type: "task_updated",
+            payload: { taskId, projectId: freshTask.projectId },
+          });
         }
       }
       break;
