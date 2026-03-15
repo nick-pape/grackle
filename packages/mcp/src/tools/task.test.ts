@@ -88,14 +88,14 @@ describe("task_list", () => {
     });
 
     await getTool("task_list").handler(
-      { projectId: "proj-1", status: "in_progress" },
+      { projectId: "proj-1", status: "working" },
       mockClient,
     );
 
     expect(mockClient.listTasks).toHaveBeenCalledWith({
       projectId: "proj-1",
       search: "",
-      status: "in_progress",
+      status: "working",
     });
   });
 

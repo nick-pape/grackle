@@ -247,7 +247,7 @@ message TaskList {
 message ListTasksRequest {
   string project_id = 1;
   string search = 2;      // optional case-insensitive substring filter on title/description
-  string status = 3;      // optional status filter (e.g. "in_progress", "not_started")
+  string status = 3;      // optional status filter (e.g. "not_started", "working", "complete")
 }
 
 message CreateTaskRequest {

@@ -29,7 +29,7 @@ export const taskTools: ToolDefinition[] = [
     inputSchema: z.object({
       projectId: z.string().describe("The project ID to list tasks for"),
       search: z.string().optional().describe("Case-insensitive substring filter on task title or description"),
-      status: z.string().optional().describe("Filter by task status (e.g. 'not_started', 'working', 'complete')"),
+      status: z.string().optional().describe("Filter by task status: not_started, working, paused, complete, failed"),
     }),
     rpcMethod: "listTasks",
     mutating: false,

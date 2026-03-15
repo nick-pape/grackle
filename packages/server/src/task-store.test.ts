@@ -192,7 +192,7 @@ describe("task-store tree operations", () => {
       taskStore.createTask("t1", "test-proj", "Fix login bug", "User cannot login with SSO", [], "test-project");
       taskStore.createTask("t2", "test-proj", "Add dashboard", "Create analytics dashboard", [], "test-project");
       taskStore.createTask("t3", "test-proj", "Update auth middleware", "Refactor authentication layer", [], "test-project");
-      taskStore.updateTaskStatus("t2", "in_progress");
+      taskStore.updateTaskStatus("t2", "working");
       taskStore.updateTaskStatus("t3", "complete");
     });
 
@@ -220,17 +220,27 @@ describe("task-store tree operations", () => {
     });
 
     it("filters by status", () => {
+      const results = taskStore.listTasks("test-proj", { status: "working" });
+      expect(results).toHaveLength(1);
+      expect(results[0].id).toBe("t2");
+    });
+
+    it("normalizes legacy status aliases", () => {
       const results = taskStore.listTasks("test-proj", { status: "in_progress" });
       expect(results).toHaveLength(1);
       expect(results[0].id).toBe("t2");
     });
 
-    it("combines search and status filters", () => {
-      const results = taskStore.listTasks("test-proj", { search: "auth", status: "not_started" });
-      // "auth" matches t1 (title has no auth) and t3 (title: "Update auth middleware")
-      // but only not_started tasks match → none (t3 is complete)
-      // Actually t1 title is "Fix login bug" — no auth. t3 is complete. So 0.
+    it("returns empty array for unknown status values", () => {
+      const results = taskStore.listTasks("test-proj", { status: "bogus" });
       expect(results).toHaveLength(0);
+    });
+
+    it("combines search and status filters", () => {
+      const results = taskStore.listTasks("test-proj", { search: "auth", status: "complete" });
+      // "auth" matches t3 (title: "Update auth middleware") which is complete
+      expect(results).toHaveLength(1);
+      expect(results[0].id).toBe("t3");
     });
 
     it("returns empty array when search has no matches", () => {
@@ -244,6 +254,13 @@ describe("task-store tree operations", () => {
       expect(results).toHaveLength(2);
       expect(results[0].id).toBe("t1");
       expect(results[1].id).toBe("t4");
+    });
+
+    it("escapes LIKE special characters in search", () => {
+      taskStore.createTask("t5", "test-proj", "100% complete task", "desc", [], "test-project");
+      const results = taskStore.listTasks("test-proj", { search: "100%" });
+      expect(results).toHaveLength(1);
+      expect(results[0].id).toBe("t5");
     });
   });
 
