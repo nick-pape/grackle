@@ -75,18 +75,46 @@ export function SettingsPanel({ viewMode, setViewMode }: Props): JSX.Element {
           Choose how Grackle looks across the app.
         </p>
         <div className={styles.themeOptions}>
-          {THEMES.map((t) => {
-            const selected = themeId === t.id;
+          {THEMES.filter((t) => !t.hidden).map((t) => {
+            const hasVariants = !!(t.variantLightId && t.variantDarkId);
+            const isSelected = hasVariants
+              ? (themeId === t.variantLightId || themeId === t.variantDarkId)
+              : themeId === t.id;
+            const isLight = hasVariants && themeId === t.variantLightId;
             return (
               <button
                 key={t.id}
                 type="button"
-                className={`${styles.themeOption} ${selected ? styles.themeOptionSelected : ""}`}
-                aria-pressed={selected}
-                onClick={() => setTheme(t.id)}
+                className={`${styles.themeOption} ${isSelected ? styles.themeOptionSelected : ""}`}
+                aria-pressed={isSelected}
+                onClick={() => setTheme(hasVariants ? (t.variantDarkId!) : t.id)}
               >
-                <span className={styles.themeOptionLabel}>{t.label}</span>
-                <span className={styles.themeOptionDesc}>{t.description}</span>
+                <span className={styles.themeOptionHeader}>
+                  <span>
+                    <span className={styles.themeOptionLabel}>{t.label}</span>
+                    <span className={styles.themeOptionDesc}>{t.description}</span>
+                  </span>
+                  {hasVariants && (
+                    <span className={styles.variantToggle}>
+                      <span
+                        role="button"
+                        tabIndex={0}
+                        className={`${styles.variantButton} ${isLight ? styles.variantActive : ""}`}
+                        onClick={(e) => { e.stopPropagation(); setTheme(t.variantLightId!); }}
+                        onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); setTheme(t.variantLightId!); } }}
+                        aria-label="Light variant"
+                      >&#9788;</span>
+                      <span
+                        role="button"
+                        tabIndex={0}
+                        className={`${styles.variantButton} ${!isLight ? styles.variantActive : ""}`}
+                        onClick={(e) => { e.stopPropagation(); setTheme(t.variantDarkId!); }}
+                        onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); setTheme(t.variantDarkId!); } }}
+                        aria-label="Dark variant"
+                      >&#9790;</span>
+                    </span>
+                  )}
+                </span>
                 {t.swatches && (
                   <span className={styles.themeSwatches}>
                     {t.swatches.map((color, i) => (

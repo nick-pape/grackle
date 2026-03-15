@@ -279,6 +279,11 @@
   --transition-slow: 400ms cubic-bezier(0.16, 1, 0.3, 1);
 
   // ---------------------------------------------------------------------------
+  // Border width (1px default, 2px in brutalist themes)
+  // ---------------------------------------------------------------------------
+  --border-width: 1px;
+
+  // ---------------------------------------------------------------------------
   // Noise texture overlay opacity (0 in glass, subtle in T3 themes)
   // ---------------------------------------------------------------------------
   --noise-opacity: 0;
@@ -513,20 +518,20 @@
 // =============================================================================
 
 $matrix-palette: (
-  'bg-base': #000000,
-  'bg-surface': #050a05,
-  'bg-elevated': #0a120a,
+  'bg-base': #050505,
+  'bg-surface': #0a0f0a,
+  'bg-elevated': #0f160f,
   'bg-overlay': rgba(0, 255, 65, 0.06),
-  'bg-input': #050a05,
-  'bg-inset': #000000,
+  'bg-input': #0a0f0a,
+  'bg-inset': #030303,
 
   'glass-border': rgba(0, 255, 65, 0.12),
   'glass-border-hover': rgba(0, 255, 65, 0.20),
 
-  'text-primary': #00ff41,
-  'text-secondary': #00cc33,
-  'text-tertiary': #008f11,
-  'text-disabled': #004d00,
+  'text-primary': #33ff77,
+  'text-secondary': #22bb55,
+  'text-tertiary': #1a7a33,
+  'text-disabled': #0d4d1a,
 
   'green': #00ff41,
   'red': #ff3333,
@@ -628,21 +633,87 @@ $brutalist-palette: (
   'code-punctuation': #4a4a4a,
 );
 
-[data-theme="brutalist"] {
+[data-theme="brutalist-light"] {
   color-scheme: light;
   @include define-theme($brutalist-palette);
-
-  // Thick brutalist borders — override border-width globally
-  // (--glass-border is just a color, consumed via `border: 1px solid var(--glass-border)`)
-  * {
-    border-width: 2px;
-  }
+  --border-width: 2px;
 
   // Press-down effect on interactive elements
   button:active,
   [role="button"]:active {
     --shadow-xs: 1px 1px 0px #1a1a1a;
     --shadow-sm: 1px 1px 0px #1a1a1a;
+    transform: translate(1px, 1px);
+  }
+}
+
+// =============================================================================
+// Neubrutalism Dark — same raw energy, inverted
+// =============================================================================
+
+$brutalist-dark-palette: (
+  'bg-base': #1a1a1a,
+  'bg-surface': #252525,
+  'bg-elevated': #2f2f2f,
+  'bg-overlay': rgba(255, 255, 255, 0.06),
+  'bg-input': #252525,
+  'bg-inset': #111111,
+
+  'glass-border': #e0e0e0,
+  'glass-border-hover': #ffffff,
+
+  'text-primary': #f0f0f0,
+  'text-secondary': #b0b0b0,
+  'text-tertiary': #808080,
+  'text-disabled': #505050,
+
+  'green': #7ed957,
+  'red': #ff5757,
+  'yellow': #ffde59,
+  'blue': #5ce1e6,
+  'purple': #cb6ce6,
+  'cyan': #38b6ff,
+
+  'border-subtle': #e0e0e0,
+  'border-input': #e0e0e0,
+
+  'highlight-top': none,
+
+  'radius-sm': 4px,
+  'radius-md': 4px,
+  'radius-lg': 6px,
+  'radius-xl': 8px,
+
+  'shadow-xs': 2px 2px 0px #e0e0e0,
+  'shadow-sm': 3px 3px 0px #e0e0e0,
+  'shadow-md': 4px 4px 0px #e0e0e0,
+  'shadow-lg': 6px 6px 0px #e0e0e0,
+
+  'font-ui': var(--font-sans),
+  'noise-opacity': 0,
+
+  'code-comment': #808080,
+  'code-keyword': #ff5757,
+  'code-function': #5ce1e6,
+  'code-string': #7ed957,
+  'code-number': #cb6ce6,
+  'code-class': #ffde59,
+  'code-tag': #ff5757,
+  'code-deleted': #ff5757,
+  'code-inserted': #7ed957,
+  'code-punctuation': #b0b0b0,
+);
+
+[data-theme="brutalist-dark"] {
+  color-scheme: dark;
+  @include define-theme($brutalist-dark-palette);
+  --border-width: 2px;
+
+  // Press-down effect on interactive elements
+  button:active,
+  [role="button"]:active {
+    --shadow-xs: 1px 1px 0px #e0e0e0;
+    --shadow-sm: 1px 1px 0px #e0e0e0;
     transform: translate(1px, 1px);
   }
 }
@@ -702,9 +773,69 @@ $monokai-palette: (
   'code-punctuation': #f8f8f2,
 );
 
-[data-theme="monokai"] {
+[data-theme="monokai-dark"] {
   color-scheme: dark;
   @include define-theme($monokai-palette);
+}
+
+// =============================================================================
+// Monokai Light — warm editor palette on a light background
+// =============================================================================
+
+$monokai-light-palette: (
+  'bg-base': #fcfcfa,
+  'bg-surface': #ffffff,
+  'bg-elevated': #ffffff,
+  'bg-overlay': rgba(0, 0, 0, 0.04),
+  'bg-input': #ffffff,
+  'bg-inset': #f0f0ea,
+
+  'glass-border': rgba(0, 0, 0, 0.10),
+  'glass-border-hover': rgba(0, 0, 0, 0.16),
+
+  'text-primary': #2c292d,
+  'text-secondary': #727072,
+  'text-tertiary': #9e9b9e,
+  'text-disabled': #c8c6c8,
+
+  'green': #7a9e1e,
+  'red': #d4185e,
+  'yellow': #b8a510,
+  'blue': #2ba4bf,
+  'purple': #8b5fcf,
+  'cyan': #2ba4bf,
+
+  'border-subtle': rgba(0, 0, 0, 0.08),
+  'border-input': rgba(0, 0, 0, 0.14),
+
+  'highlight-top': inset 0 1px 0 rgba(255, 255, 255, 0.8),
+
+  'radius-md': 8px,
+  'radius-lg': 10px,
+  'radius-xl': 14px,
+
+  'shadow-xs': 0 1px 2px rgba(0, 0, 0, 0.06),
+  'shadow-sm': 0 1px 3px rgba(0, 0, 0, 0.10),
+  'shadow-md': 0 4px 6px rgba(0, 0, 0, 0.08),
+  'shadow-lg': 0 10px 15px rgba(0, 0, 0, 0.10),
+
+  'font-ui': var(--font-mono),
+
+  'code-comment': #9e9b9e,
+  'code-keyword': #d4185e,
+  'code-function': #7a9e1e,
+  'code-string': #b8a510,
+  'code-number': #8b5fcf,
+  'code-class': #2ba4bf,
+  'code-tag': #d4185e,
+  'code-deleted': #d4185e,
+  'code-inserted': #7a9e1e,
+  'code-punctuation': #2c292d,
+);
+
+[data-theme="monokai-light"] {
+  color-scheme: light;
+  @include define-theme($monokai-light-palette);
 }
 
 // =============================================================================
@@ -727,12 +858,12 @@ $ubuntu-palette: (
   'text-tertiary': #888a85,
   'text-disabled': #555753,
 
-  'green': #4e9a06,
-  'red': #cc0000,
-  'yellow': #c4a000,
-  'blue': #3465a4,
-  'purple': #75507b,
-  'cyan': #06989a,
+  'green': #8ae234,
+  'red': #ef2929,
+  'yellow': #fce94f,
+  'blue': #729fcf,
+  'purple': #ad7fa8,
+  'cyan': #34e2e2,
 
   'red-fg': #ef2929,
   'yellow-fg': #fce94f,
@@ -775,10 +906,10 @@ $ubuntu-palette: (
 }
 
 // =============================================================================
-// Claude Code — Warm dark theme inspired by Claude's visual identity
+// Sandstone — Warm terracotta accent on dark brown
 // =============================================================================
 
-$claude-palette: (
+$sandstone-palette: (
   'bg-base': #1a1815,
   'bg-surface': #201d18,
   'bg-elevated': #2a2620,
@@ -838,7 +969,134 @@ $claude-palette: (
   'code-punctuation': #b1ada1,
 );
 
-[data-theme="claude"] {
+[data-theme="sandstone"] {
   color-scheme: dark;
-  @include define-theme($claude-palette);
+  @include define-theme($sandstone-palette);
+}
+
+// =============================================================================
+// Verdigris — Teal accent on charcoal (ChatGPT-inspired)
+// =============================================================================
+
+$verdigris-palette: (
+  'bg-base': #141414,
+  'bg-surface': #1e1e1e,
+  'bg-elevated': #2a2a2a,
+  'bg-overlay': rgba(0, 166, 126, 0.06),
+  'bg-input': #1e1e1e,
+  'bg-inset': #0e0e0e,
+
+  'glass-border': rgba(255, 255, 255, 0.08),
+  'glass-border-hover': rgba(255, 255, 255, 0.14),
+
+  'text-primary': #ececec,
+  'text-secondary': #a1a1a6,
+  'text-tertiary': #6e6e73,
+  'text-disabled': #3e3e42,
+
+  'green': #00a67e,
+  'red': #ef4444,
+  'yellow': #f59e0b,
+  'blue': #3b82f6,
+  'purple': #ab68ff,
+  'cyan': #06b6d4,
+
+  'border-subtle': rgba(255, 255, 255, 0.06),
+  'border-input': rgba(255, 255, 255, 0.12),
+
+  'highlight-top': inset 0 1px 0 rgba(255, 255, 255, 0.03),
+
+  'radius-md': 8px,
+  'radius-lg': 12px,
+  'radius-xl': 16px,
+
+  'shadow-xs': 0 1px 2px rgba(0, 0, 0, 0.3),
+  'shadow-sm': 0 1px 3px rgba(0, 0, 0, 0.4),
+  'shadow-md': 0 4px 6px rgba(0, 0, 0, 0.4),
+  'shadow-lg': 0 10px 15px rgba(0, 0, 0, 0.5),
+
+  'font-ui': var(--font-sans),
+
+  'code-comment': #6e6e73,
+  'code-keyword': #00a67e,
+  'code-function': #3b82f6,
+  'code-string': #f59e0b,
+  'code-number': #ab68ff,
+  'code-class': #06b6d4,
+  'code-tag': #00a67e,
+  'code-deleted': #ef4444,
+  'code-inserted': #00a67e,
+  'code-punctuation': #a1a1a6,
+);
+
+[data-theme="verdigris"] {
+  color-scheme: dark;
+  @include define-theme($verdigris-palette);
+}
+
+// =============================================================================
+// Primer — Blue accent on ink-dark grey (GitHub-inspired)
+// =============================================================================
+
+$primer-palette: (
+  'bg-base': #0d1117,
+  'bg-surface': #161b22,
+  'bg-elevated': #1c2129,
+  'bg-overlay': rgba(255, 255, 255, 0.04),
+  'bg-input': #0d1117,
+  'bg-inset': #010409,
+
+  'glass-border': rgba(255, 255, 255, 0.06),
+  'glass-border-hover': rgba(255, 255, 255, 0.12),
+
+  'text-primary': #c9d1d9,
+  'text-secondary': #8b949e,
+  'text-tertiary': #6e7681,
+  'text-disabled': #484f58,
+
+  'green': #58a6ff,
+  'red': #f85149,
+  'yellow': #d29922,
+  'blue': #58a6ff,
+  'purple': #bc8cff,
+  'cyan': #39d353,
+
+  'green-fg': #3fb950,
+  'red-fg': #ffa198,
+  'yellow-fg': #e3b341,
+  'blue-fg': #79c0ff,
+  'purple-fg': #d2a8ff,
+  'cyan-fg': #56d364,
+
+  'border-subtle': rgba(255, 255, 255, 0.06),
+  'border-input': rgba(255, 255, 255, 0.10),
+
+  'highlight-top': inset 0 1px 0 rgba(255, 255, 255, 0.03),
+
+  'radius-md': 6px,
+  'radius-lg': 8px,
+  'radius-xl': 12px,
+
+  'shadow-xs': 0 1px 2px rgba(0, 0, 0, 0.3),
+  'shadow-sm': 0 1px 3px rgba(0, 0, 0, 0.4),
+  'shadow-md': 0 4px 6px rgba(0, 0, 0, 0.4),
+  'shadow-lg': 0 10px 15px rgba(0, 0, 0, 0.5),
+
+  'font-ui': var(--font-sans),
+
+  'code-comment': #6e7681,
+  'code-keyword': #ff7b72,
+  'code-function': #d2a8ff,
+  'code-string': #a5d6ff,
+  'code-number': #79c0ff,
+  'code-class': #ffa657,
+  'code-tag': #7ee787,
+  'code-deleted': #ffa198,
+  'code-inserted': #7ee787,
+  'code-punctuation': #c9d1d9,
+);
+
+[data-theme="primer"] {
+  color-scheme: dark;
+  @include define-theme($primer-palette);
 }

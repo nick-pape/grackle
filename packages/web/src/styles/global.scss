@@ -203,7 +203,8 @@ body::after {
 
 @media (prefers-contrast: more) {
   [data-theme="light"],
-  [data-theme="brutalist"] {
+  [data-theme="brutalist-light"],
+  [data-theme="monokai-light"] {
     --text-secondary: #4b5563;
     --text-tertiary: #6b7280;
     --text-disabled: #9ca3af;
@@ -214,9 +215,12 @@ body::after {
   [data-theme="dark"],
   [data-theme="glass"],
   [data-theme="matrix"],
-  [data-theme="monokai"],
+  [data-theme="monokai-dark"],
+  [data-theme="brutalist-dark"],
   [data-theme="ubuntu"],
-  [data-theme="claude"] {
+  [data-theme="sandstone"],
+  [data-theme="verdigris"],
+  [data-theme="primer"] {
     --text-secondary: #d1d5db;
     --text-tertiary: #9ca3af;
     --text-disabled: #6b7280;
