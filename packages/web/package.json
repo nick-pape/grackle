@@ -28,7 +28,8 @@
     "react-dom": "^19.0.0",
     "react-markdown": "^9.0.3",
     "rehype-prism-plus": "^2.0.0",
-    "remark-gfm": "^4.0.0"
+    "remark-gfm": "^4.0.0",
+    "react-router": "^7.0.0"
   },
   "devDependencies": {
     "@grackle-ai/heft-rig": "workspace:*",

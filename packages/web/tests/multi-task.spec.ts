@@ -18,9 +18,10 @@ test.describe("Multi-Task", () => {
     await createTask(page, "multi-sidebar", "task-charlie", "test-local");
 
     // Verify all 3 tasks appear in the sidebar
-    await expect(page.getByText("task-alpha")).toBeVisible();
-    await expect(page.getByText("task-bravo")).toBeVisible();
-    await expect(page.getByText("task-charlie")).toBeVisible();
+    const sidebar = page.getByTestId("sidebar");
+    await expect(sidebar.getByText("task-alpha")).toBeVisible();
+    await expect(sidebar.getByText("task-bravo")).toBeVisible();
+    await expect(sidebar.getByText("task-charlie")).toBeVisible();
 
     // Verify pending status icons (○) are visible for each
     const pendingIcons = page.locator("text=○");

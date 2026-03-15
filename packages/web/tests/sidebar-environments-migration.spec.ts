@@ -252,7 +252,7 @@ test.describe("Session Accordion in Environment Card", () => {
     await injectWsMessage(page, { type: "sessions", payload: { sessions: [] } });
 
     // test-local should show (idle) when it has no sessions
-    await expect(page.getByText("(idle)")).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText("(idle)").first()).toBeVisible({ timeout: 5_000 });
 
     // No session summary row should exist
     await expect(page.locator('[data-testid="session-summary-row"]')).not.toBeVisible();

@@ -1,16 +1,11 @@
 import { useState, type JSX } from "react";
 import { AnimatePresence, motion } from "motion/react";
+import { useMatch, useSearchParams } from "react-router";
 import { useGrackle } from "../../context/GrackleContext.js";
-import type { ViewMode } from "../../App.js";
 import type { Environment, ProvisionStatus, Session } from "../../hooks/useGrackleSocket.js";
 import { ConfirmDialog } from "../display/index.js";
+import { sessionUrl, newChatUrl, NEW_ENVIRONMENT_URL, useAppNavigate } from "../../utils/navigation.js";
 import styles from "./EnvironmentList.module.scss";
-
-/** Props for the EnvironmentList component. */
-interface Props {
-  viewMode: ViewMode;
-  setViewMode: (mode: ViewMode) => void;
-}
 
 /** Environment status colors using CSS custom properties. */
 const STATUS_COLORS: Record<string, string> = {
@@ -46,7 +41,6 @@ function buildSessionSummary(sessions: Session[]): string {
     .filter((status) => counts[status] > 0)
     .map((status) => `${counts[status]} ${SESSION_STATUS_LABELS[status] || status}`);
 
-  // Append any statuses not in SESSION_STATUS_ORDER so the summary always reflects all sessions
   const knownSet = new Set(SESSION_STATUS_ORDER);
   const unknownParts = Object.keys(counts)
     .filter((status) => !knownSet.has(status))
@@ -84,7 +78,7 @@ interface EnvironmentCardProps {
   onProvision: (environmentId: string) => void;
   onStop: (environmentId: string) => void;
   onRemove: (environmentId: string) => void;
-  setViewMode: (mode: ViewMode) => void;
+  navigate: ReturnType<typeof useAppNavigate>;
 }
 
 /** Card displaying an environment with its sessions and lifecycle actions. */
@@ -101,7 +95,7 @@ function EnvironmentCard({
   onProvision,
   onStop,
   onRemove,
-  setViewMode,
+  navigate,
 }: EnvironmentCardProps): JSX.Element {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const statusColor = STATUS_COLORS[env.status] || "var(--text-tertiary)";
@@ -138,7 +132,7 @@ function EnvironmentCard({
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                setViewMode({ kind: "new_chat", environmentId: env.id, runtime: env.defaultRuntime || "claude-code" });
+                navigate(newChatUrl(env.id, env.defaultRuntime || "claude-code"));
               }}
               title="New chat"
               className={styles.newChatButton}
@@ -224,7 +218,7 @@ function EnvironmentCard({
                     key={session.id}
                     onClick={(e) => {
                       e.stopPropagation();
-                      setViewMode({ kind: "session", sessionId: session.id });
+                      navigate(sessionUrl(session.id));
                     }}
                     className={`${styles.sessionRow} ${selectedSessionId === session.id ? styles.selected : ""}`}
                     title={session.prompt}
@@ -247,7 +241,7 @@ function EnvironmentCard({
 // --- Main component ---
 
 /** Sidebar panel listing all environments and their active sessions. */
-export function EnvironmentList({ viewMode, setViewMode }: Props): JSX.Element {
+export function EnvironmentList(): JSX.Element {
   const {
     environments,
     sessions,
@@ -256,12 +250,18 @@ export function EnvironmentList({ viewMode, setViewMode }: Props): JSX.Element {
     stopEnvironment,
     removeEnvironment,
   } = useGrackle();
+  const navigate = useAppNavigate();
   // eslint-disable-next-line @rushstack/no-new-null
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [expandedSessionIds, setExpandedSessionIds] = useState<Set<string>>(new Set());
 
-  const selectedSessionId = viewMode.kind === "session" ? viewMode.sessionId : undefined;
-  const newChatEnvId = viewMode.kind === "new_chat" ? viewMode.environmentId : undefined;
+  // Derive selected state from router
+  const sessionMatch = useMatch("/sessions/:sessionId");
+  const newChatMatch = useMatch("/sessions/new");
+  const selectedSessionId = sessionMatch?.params.sessionId !== "new" ? sessionMatch?.params.sessionId : undefined;
+  // For new chat target, derive env from React Router search params
+  const [searchParams] = useSearchParams();
+  const newChatEnvId = newChatMatch ? searchParams.get("env") ?? undefined : undefined;
 
   return (
     <div className={styles.container}>
@@ -269,7 +269,7 @@ export function EnvironmentList({ viewMode, setViewMode }: Props): JSX.Element {
         <span className={styles.headerLabel}>Environments</span>
         <button
           className={styles.addButton}
-          onClick={() => setViewMode({ kind: "new_environment" })}
+          onClick={() => navigate(NEW_ENVIRONMENT_URL)}
           title="Add environment"
         >
           + Add Environment
@@ -280,7 +280,7 @@ export function EnvironmentList({ viewMode, setViewMode }: Props): JSX.Element {
         <div className={styles.emptyCta}>
           <button
             className={styles.ctaButton}
-            onClick={() => setViewMode({ kind: "new_environment" })}
+            onClick={() => navigate(NEW_ENVIRONMENT_URL)}
           >
             Add Environment
           </button>
@@ -317,7 +317,7 @@ export function EnvironmentList({ viewMode, setViewMode }: Props): JSX.Element {
             onProvision={provisionEnvironment}
             onStop={stopEnvironment}
             onRemove={removeEnvironment}
-            setViewMode={setViewMode}
+            navigate={navigate}
           />
         );
       })}

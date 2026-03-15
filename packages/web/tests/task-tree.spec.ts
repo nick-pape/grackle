@@ -200,7 +200,7 @@ test.describe("Task tree hierarchy", () => {
 
     // Click the parent task in the breadcrumb trail
     const breadcrumbs = page.getByTestId("breadcrumbs");
-    await breadcrumbs.locator("button", { hasText: "nav-root" }).click();
+    await breadcrumbs.locator("a", { hasText: "nav-root" }).click();
 
     // Should now show the parent task
     await expect(page.locator('[data-testid="task-title"]')).toContainText("nav-root", { timeout: 5_000 });
