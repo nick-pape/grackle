@@ -37,6 +37,7 @@ function relativeTime(iso: string | undefined): string {
 }
 
 type ProjectTab = "tasks" | "graph";
+// eslint-disable-next-line @rushstack/no-new-null
 type EditingField = "name" | "description" | "repoUrl" | "defaultEnvironmentId" | null;
 
 /** Project overview page with inline editing, progress bar, and DAG/task views. */

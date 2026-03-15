@@ -119,6 +119,7 @@ interface EventListProps {
   sessionEvents: DisplayEvent[];
   session: Session | undefined;
   eventsDropped: number;
+  // eslint-disable-next-line @rushstack/no-new-null
   scrollRef: RefObject<HTMLDivElement | null>;
 }
 
