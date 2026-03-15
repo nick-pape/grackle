@@ -88,8 +88,7 @@ export function UnifiedBar(): JSX.Element {
   const projectMatch = useMatch("/projects/:projectId");
   const newTaskMatch = useMatch("/tasks/new");
   const emptyMatch = useMatch("/");
-  const settingsMatch = useMatch("/settings");
-  const personasMatch = useMatch("/settings/personas");
+  const settingsMatch = useMatch("/settings/*");
 
   // Derive current page context
   const sessionId = sessionMatch?.params.sessionId;
@@ -101,7 +100,6 @@ export function UnifiedBar(): JSX.Element {
   const isTaskEdit = !!taskEditMatch;
   const isEmpty = !!emptyMatch && !isNewChat && !isNewEnv && !isProject && !isNewTask;
   const isSettings = !!settingsMatch;
-  const isPersonas = !!personasMatch;
 
   // New chat params
   const newChatEnvId = isNewChat ? (searchParams.get("env") ?? "") : "";
@@ -164,7 +162,7 @@ export function UnifiedBar(): JSX.Element {
     : false;
 
   // --- empty / settings / personas mode ---
-  if (isEmpty || isSettings || isPersonas) {
+  if (isEmpty || isSettings) {
     return (
       <div className={styles.bar}>
         <span className={styles.hintText}>

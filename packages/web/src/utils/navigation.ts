@@ -75,5 +75,17 @@ export const NEW_ENVIRONMENT_URL: string = "/environments/new";
 /** URL for the settings page. */
 export const SETTINGS_URL: string = "/settings";
 
-/** URL for the persona management page. */
+/** URL for the settings environments tab. */
+export const SETTINGS_ENVIRONMENTS_URL: string = "/settings/environments";
+
+/** URL for the settings tokens tab. */
+export const SETTINGS_TOKENS_URL: string = "/settings/tokens";
+
+/** URL for the persona management tab. */
 export const PERSONAS_URL: string = "/settings/personas";
+
+/** URL for the settings appearance tab. */
+export const SETTINGS_APPEARANCE_URL: string = "/settings/appearance";
+
+/** URL for the settings about tab. */
+export const SETTINGS_ABOUT_URL: string = "/settings/about";

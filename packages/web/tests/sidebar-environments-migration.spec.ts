@@ -39,19 +39,17 @@ test.describe("Sidebar — Task-Only (No Environments Tab)", () => {
 test.describe("Environments in Settings Panel", () => {
   test.beforeEach(async ({ appPage }) => {
     await appPage.locator('button[title="Settings"]').click();
-    await expect(appPage.getByRole("heading", { name: "Settings" })).toBeVisible({ timeout: 5_000 });
+    await expect(appPage.getByRole("tablist", { name: "Settings" })).toBeVisible({ timeout: 5_000 });
   });
 
-  test("settings panel shows Environments section", async ({ appPage }) => {
+  test("settings panel shows Environments tab", async ({ appPage }) => {
     const page = appPage;
 
-    // Environments heading should be visible
-    await expect(page.getByRole("heading", { name: "Environments" })).toBeVisible();
+    // Environments tab should be selected by default
+    await expect(page.getByRole("tab", { name: "Environments" })).toHaveAttribute("aria-selected", "true");
 
-    // Description text should be visible
-    await expect(
-      page.getByText("Environments are compute workspaces where agents run"),
-    ).toBeVisible();
+    // Environment list header should be visible
+    await expect(page.getByText("Environments").first()).toBeVisible();
   });
 
   test("settings panel shows environment list with test-local", async ({ appPage }) => {
@@ -61,18 +59,18 @@ test.describe("Environments in Settings Panel", () => {
     await expect(page.getByText("test-local")).toBeVisible();
   });
 
-  test("settings panel shows Environments section before Tokens section", async ({ appPage }) => {
+  test("Environments tab is listed before Tokens tab", async ({ appPage }) => {
     const page = appPage;
 
-    // Both headings should be visible
-    const envHeading = page.getByRole("heading", { name: "Environments" });
-    const tokensHeading = page.getByRole("heading", { name: "Tokens" });
-    await expect(envHeading).toBeVisible();
-    await expect(tokensHeading).toBeVisible();
+    // Both tabs should be visible
+    const envTab = page.getByRole("tab", { name: "Environments" });
+    const tokensTab = page.getByRole("tab", { name: "Tokens" });
+    await expect(envTab).toBeVisible();
+    await expect(tokensTab).toBeVisible();
 
-    // Environments should come before Tokens in the DOM
-    const envY = (await envHeading.boundingBox())!.y;
-    const tokensY = (await tokensHeading.boundingBox())!.y;
+    // Environments tab should come before Tokens tab in the DOM
+    const envY = (await envTab.boundingBox())!.y;
+    const tokensY = (await tokensTab.boundingBox())!.y;
     expect(envY).toBeLessThan(tokensY);
   });
 
@@ -107,7 +105,7 @@ test.describe("Environments in Settings Panel", () => {
     await page.locator("button", { hasText: "Add" }).click();
 
     // Should return to Settings panel (not empty mode)
-    await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByRole("tablist", { name: "Settings" })).toBeVisible({ timeout: 5_000 });
 
     // New environment should appear in the list
     await expect(page.getByText("settings-test-env", { exact: true })).toBeVisible({ timeout: 5_000 });
@@ -174,7 +172,7 @@ test.describe("Session Accordion in Environment Card", () => {
 
     // Open Settings
     await page.locator('button[title="Settings"]').click();
-    await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByRole("tablist", { name: "Settings" })).toBeVisible({ timeout: 5_000 });
 
     // Inject fake sessions for test-local
     await injectFakeSessions(page);
@@ -196,7 +194,7 @@ test.describe("Session Accordion in Environment Card", () => {
     await page.waitForFunction(() => document.body.innerText.includes("Connected"), { timeout: 10_000 });
 
     await page.locator('button[title="Settings"]').click();
-    await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByRole("tablist", { name: "Settings" })).toBeVisible({ timeout: 5_000 });
 
     await injectFakeSessions(page);
 
@@ -221,7 +219,7 @@ test.describe("Session Accordion in Environment Card", () => {
     await page.waitForFunction(() => document.body.innerText.includes("Connected"), { timeout: 10_000 });
 
     await page.locator('button[title="Settings"]').click();
-    await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByRole("tablist", { name: "Settings" })).toBeVisible({ timeout: 5_000 });
 
     await injectFakeSessions(page);
 
@@ -236,7 +234,7 @@ test.describe("Session Accordion in Environment Card", () => {
     await firstSession.click();
 
     // Settings panel should disappear (navigated to session view)
-    await expect(page.getByRole("heading", { name: "Settings" })).not.toBeVisible({ timeout: 5_000 });
+    await expect(page.getByRole("tablist", { name: "Settings" })).not.toBeVisible({ timeout: 5_000 });
   });
 
   test("environment with no sessions shows idle label, not summary row", async ({ page }) => {
@@ -246,7 +244,7 @@ test.describe("Session Accordion in Environment Card", () => {
 
     // Open Settings
     await page.locator('button[title="Settings"]').click();
-    await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByRole("tablist", { name: "Settings" })).toBeVisible({ timeout: 5_000 });
 
     // Inject empty sessions list to ensure test-local has zero sessions
     await injectWsMessage(page, { type: "sessions", payload: { sessions: [] } });
@@ -260,28 +258,22 @@ test.describe("Session Accordion in Environment Card", () => {
 });
 
 test.describe("Navigation Between Settings and Projects", () => {
-  test("clicking a project while in Settings switches to project view", async ({ appPage }) => {
+  test("clicking Grackle brand from Settings returns to home", async ({ appPage }) => {
     const page = appPage;
 
     // Navigate to Settings
     await page.locator('button[title="Settings"]').click();
-    await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByRole("tablist", { name: "Settings" })).toBeVisible({ timeout: 5_000 });
 
-    // Create a project to click on
-    const sidebar = page.locator('[data-testid="sidebar"]');
-    await sidebar.locator('button[title="Create project"]').click();
-    const nameInput = page.locator('input[placeholder="Project name..."]');
-    await nameInput.fill("nav-test-project");
-    // Scope OK button to sidebar to avoid strict mode violation with Settings panel buttons
-    await sidebar.locator("button", { hasText: "OK" }).click();
-    await expect(page.getByText("nav-test-project")).toBeVisible({ timeout: 5_000 });
+    // Settings nav should be visible (sidebar is hidden)
+    await expect(page.locator('[data-testid="sidebar"]')).not.toBeVisible();
 
-    // Click the project in the sidebar
-    await page.getByText("nav-test-project").click();
+    // Click Grackle brand to go home
+    await page.locator('button[title="Home"]').click();
 
-    // Settings should disappear, project view should appear
-    await expect(page.getByRole("heading", { name: "Settings" })).not.toBeVisible({ timeout: 5_000 });
-    await expect(page.locator("button", { hasText: "Graph" })).toBeVisible({ timeout: 5_000 });
+    // Settings should disappear, sidebar should reappear
+    await expect(page.getByRole("tablist", { name: "Settings" })).not.toBeVisible({ timeout: 5_000 });
+    await expect(page.locator('[data-testid="sidebar"]')).toBeVisible({ timeout: 5_000 });
   });
 
   test("gear button returns to Settings from project view", async ({ appPage }) => {
@@ -299,9 +291,9 @@ test.describe("Navigation Between Settings and Projects", () => {
     // Now click gear to go to Settings
     await page.locator('button[title="Settings"]').click();
 
-    // Settings should be visible with Environments and Tokens
-    await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible({ timeout: 5_000 });
-    await expect(page.getByRole("heading", { name: "Environments" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Tokens" })).toBeVisible();
+    // Settings should be visible with Environments and Tokens tabs
+    await expect(page.getByRole("tablist", { name: "Settings" })).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByRole("tab", { name: "Environments" })).toBeVisible();
+    await expect(page.getByRole("tab", { name: "Tokens" })).toBeVisible();
   });
 });

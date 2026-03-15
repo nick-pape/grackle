@@ -373,3 +373,9 @@ export async function createTaskViaWs(
   );
   return response.payload?.task as WsPayload;
 }
+
+/** Navigate to settings and wait for the tab nav to appear. */
+export async function goToSettings(page: Page): Promise<void> {
+  await page.locator('button[title="Settings"]').click();
+  await page.getByRole("tablist", { name: "Settings" }).waitFor({ state: "visible", timeout: 5_000 });
+}
