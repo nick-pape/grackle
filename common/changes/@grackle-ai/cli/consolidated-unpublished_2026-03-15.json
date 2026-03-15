@@ -1,0 +1,61 @@
+{
+  "changes": [
+    {
+      "comment": "Simplify task/session lifecycle: 5 task statuses, 6 session statuses, replace approve/reject with complete/resume RPCs",
+      "type": "minor",
+      "packageName": "@grackle-ai/cli"
+    },
+    {
+      "comment": "User-friendly codespace error messages, manual name fallback, optional machine type",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    },
+    {
+      "comment": "Add per-project worktree base path configuration",
+      "type": "minor",
+      "packageName": "@grackle-ai/cli"
+    },
+    {
+      "comment": "Add user-friendly error message for Node.js ABI version mismatch in better-sqlite3",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    },
+    {
+      "comment": "Add --host CLI flag to PowerLine, bind to 0.0.0.0 in Docker containers",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    },
+    {
+      "comment": "Add 11 new ESLint rules to shared heft-rig configs and fix all violations across all packages",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    },
+    {
+      "comment": "Show active tab in settings breadcrumbs",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    },
+    {
+      "comment": "Broadcast environment status changes from gRPC/heartbeat to WebSocket clients",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    },
+    {
+      "comment": "Add URL routing with react-router v7",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    },
+    {
+      "comment": "Escalate typedef and explicit-member-accessibility lint rules to error in common",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    },
+    {
+      "comment": "Grackle brand theme and system toggle",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}

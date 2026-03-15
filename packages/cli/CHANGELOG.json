@@ -2,50 +2,6 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
-      "version": "0.27.0",
-      "tag": "@grackle-ai/cli_v0.27.0",
-      "date": "Sun, 15 Mar 2026 19:38:05 GMT",
-      "comments": {
-        "minor": [
-          {
-            "comment": "Simplify task/session lifecycle: 5 task statuses, 6 session statuses, replace approve/reject with complete/resume RPCs"
-          },
-          {
-            "comment": "Add per-project worktree base path configuration"
-          }
-        ],
-        "patch": [
-          {
-            "comment": "User-friendly codespace error messages, manual name fallback, optional machine type"
-          },
-          {
-            "comment": "Add user-friendly error message for Node.js ABI version mismatch in better-sqlite3"
-          },
-          {
-            "comment": "Add --host CLI flag to PowerLine, bind to 0.0.0.0 in Docker containers"
-          },
-          {
-            "comment": "Add 11 new ESLint rules to shared heft-rig configs and fix all violations across all packages"
-          },
-          {
-            "comment": "Show active tab in settings breadcrumbs"
-          },
-          {
-            "comment": "Broadcast environment status changes from gRPC/heartbeat to WebSocket clients"
-          },
-          {
-            "comment": "Add URL routing with react-router v7"
-          },
-          {
-            "comment": "Escalate typedef and explicit-member-accessibility lint rules to error in common"
-          },
-          {
-            "comment": "Grackle brand theme and system toggle"
-          }
-        ]
-      }
-    },
-    {
       "version": "0.26.0",
       "tag": "@grackle-ai/cli_v0.26.0",
       "date": "Sun, 15 Mar 2026 04:23:26 GMT",
