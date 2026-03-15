@@ -6,67 +6,14 @@ import { FindingsPanel } from "../components/panels/FindingsPanel.js";
 import { Breadcrumbs, ConfirmDialog } from "../components/display/index.js";
 import { buildTaskBreadcrumbs } from "../utils/breadcrumbs.js";
 import { projectUrl, taskEditUrl, taskUrl, useAppNavigate } from "../utils/navigation.js";
-import type { Session, SessionEvent, TaskData, Environment, Project } from "../hooks/useGrackleSocket.js";
+import type { Session, TaskData, Environment, Project } from "../hooks/useGrackleSocket.js";
 import { AnimatePresence, motion } from "motion/react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { groupConsecutiveTextEvents, pairToolEvents } from "../utils/sessionEvents.js";
 import styles from "../components/panels/SessionPanel.module.scss";
 
-/** Session event augmented with optional tool_use context for paired tool results. */
-type DisplayEvent = SessionEvent & { toolUseCtx?: { tool: string; args: unknown } };
-
 type TaskTab = "overview" | "stream" | "findings";
-
-/** Merges consecutive "text" events into single entries with concatenated content. */
-function groupConsecutiveTextEvents(events: SessionEvent[]): SessionEvent[] {
-  const result: SessionEvent[] = [];
-  for (const event of events) {
-    const previous = result[result.length - 1];
-    if (event.eventType === "text" && previous?.eventType === "text") {
-      result[result.length - 1] = { ...previous, content: previous.content + event.content };
-    } else {
-      result.push(event);
-    }
-  }
-  return result;
-}
-
-/** Pairs tool_use events with their tool_result counterparts. */
-function pairToolEvents(events: SessionEvent[]): DisplayEvent[] {
-  const parsedRaw = new Map<SessionEvent, Record<string, unknown>>();
-  for (const e of events) {
-    if (!e.raw) continue;
-    try {
-      parsedRaw.set(e, JSON.parse(e.raw) as Record<string, unknown>);
-    } catch { /* skip */ }
-  }
-  const toolUseById = new Map<string, { tool: string; args: unknown }>();
-  for (const e of events) {
-    if (e.eventType !== "tool_use") continue;
-    const raw = parsedRaw.get(e);
-    if (!raw || typeof raw.id !== "string") continue;
-    try {
-      const content = JSON.parse(e.content) as { tool: string; args: unknown };
-      toolUseById.set(raw.id, { tool: content.tool ?? "", args: content.args });
-    } catch { /* skip */ }
-  }
-  const consumedIds = new Set<string>();
-  const display: DisplayEvent[] = events.map((e) => {
-    if (e.eventType !== "tool_result") return e;
-    const raw = parsedRaw.get(e);
-    if (!raw || typeof raw.tool_use_id !== "string") return e;
-    const ctx = toolUseById.get(raw.tool_use_id);
-    if (!ctx) return e;
-    consumedIds.add(raw.tool_use_id);
-    return { ...e, toolUseCtx: ctx };
-  });
-  return display.filter((e) => {
-    if (e.eventType !== "tool_use") return true;
-    const raw = parsedRaw.get(e);
-    if (raw && typeof raw.id === "string") return !consumedIds.has(raw.id);
-    return true;
-  });
-}
 
 // --- Helper functions ---
 
@@ -259,6 +206,7 @@ interface TaskActionButtonsProps {
   sessionId: string | undefined;
   isBlocked: boolean;
   onStart: () => void;
+  onResume: () => void;
   onStop: () => void;
   onComplete: () => void;
   onDelete: () => void;
@@ -267,7 +215,7 @@ interface TaskActionButtonsProps {
 
 function TaskActionButtons({
   task, sessionId, isBlocked,
-  onStart, onStop, onComplete, onDelete, onEdit,
+  onStart, onResume, onStop, onComplete, onDelete, onEdit,
 }: TaskActionButtonsProps): JSX.Element | undefined {
   if (task.status === "not_started") {
     if (isBlocked) {
@@ -297,7 +245,7 @@ function TaskActionButtons({
     return (
       <div className={styles.headerActions}>
         <button onClick={onComplete} className={styles.btnPrimary}>Complete</button>
-        <button onClick={onStart} className={styles.btnGhost}>Resume</button>
+        <button onClick={onResume} className={styles.btnGhost}>Resume</button>
         <button onClick={onDelete} className={styles.btnDanger}>Delete</button>
       </div>
     );
@@ -364,7 +312,7 @@ export function TaskPage(): JSX.Element {
   const {
     events, eventsDropped, tasks, environments,
     loadSessionEvents, loadFindings,
-    kill, startTask, completeTask, deleteTask,
+    kill, startTask, resumeTask, completeTask, deleteTask,
     projects, taskSessions: taskSessionsMap, loadTaskSessions,
     lastSpawnedId,
   } = useGrackle();
@@ -489,6 +437,8 @@ export function TaskPage(): JSX.Element {
   // Load historical events when selecting a session — but skip if we already
   // have real-time events for this session (replaying from log would overwrite
   // events that arrived via WebSocket before the replay completes).
+  // TODO: Fix session_events reducer to merge/dedupe replayed events with
+  // real-time events so we can always load history without data loss.
   useEffect(() => {
     if (sessionId && sessionId !== loadedRef.current) {
       const hasRealTimeEvents = events.some((e) => e.sessionId === sessionId);
@@ -515,7 +465,7 @@ export function TaskPage(): JSX.Element {
 
   const handleTabChange = (tab: TaskTab): void => {
     setActiveTaskTab(tab);
-    navigate(taskUrl(taskId!, tab === "overview" ? undefined : tab), { replace: true });
+    navigate(taskUrl(taskId!, tab === "overview" ? undefined : tab));
   };
 
   return (
@@ -535,6 +485,7 @@ export function TaskPage(): JSX.Element {
             sessionId={sessionId}
             isBlocked={isTaskBlocked}
             onStart={() => startTask(task.id)}
+            onResume={() => resumeTask(task.id)}
             onStop={() => sessionId && kill(sessionId)}
             onComplete={() => completeTask(task.id)}
             onDelete={handleDeleteTask}

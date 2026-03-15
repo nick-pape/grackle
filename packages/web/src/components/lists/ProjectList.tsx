@@ -180,7 +180,7 @@ export function ProjectList(): JSX.Element {
   // Derive selected state from router
   const taskMatch = useMatch("/tasks/:taskId/*");
   const projectMatch = useMatch("/projects/:projectId");
-  const selectedTaskId = taskMatch?.params.taskId;
+  const selectedTaskId = taskMatch?.params.taskId !== "new" ? taskMatch?.params.taskId : undefined;
   const selectedProjectId = projectMatch?.params.projectId;
 
   const expandedRef = useRef(expanded);

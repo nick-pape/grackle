@@ -1,6 +1,6 @@
 import { useState, type JSX } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { useMatch } from "react-router";
+import { useMatch, useSearchParams } from "react-router";
 import { useGrackle } from "../../context/GrackleContext.js";
 import type { Environment, ProvisionStatus, Session } from "../../hooks/useGrackleSocket.js";
 import { ConfirmDialog } from "../display/index.js";
@@ -258,9 +258,10 @@ export function EnvironmentList(): JSX.Element {
   // Derive selected state from router
   const sessionMatch = useMatch("/sessions/:sessionId");
   const newChatMatch = useMatch("/sessions/new");
-  const selectedSessionId = sessionMatch?.params.sessionId;
-  // For new chat target, we need to check search params
-  const newChatEnvId = newChatMatch ? new URLSearchParams(window.location.search).get("env") ?? undefined : undefined;
+  const selectedSessionId = sessionMatch?.params.sessionId !== "new" ? sessionMatch?.params.sessionId : undefined;
+  // For new chat target, derive env from React Router search params
+  const [searchParams] = useSearchParams();
+  const newChatEnvId = newChatMatch ? searchParams.get("env") ?? undefined : undefined;
 
   return (
     <div className={styles.container}>

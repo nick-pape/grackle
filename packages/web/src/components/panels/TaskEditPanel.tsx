@@ -69,7 +69,9 @@ export function TaskEditPanel({ mode, taskId, projectId: projectIdProp, parentTa
 
   // In edit mode, also require that task data has loaded before allowing save
   // to prevent overwriting server data with blank form values.
-  const canSave = title.trim().length > 0 && (!isEdit || existingTask !== undefined);
+  const canSave = title.trim().length > 0
+    && (!isEdit || existingTask !== undefined)
+    && (isEdit || projectId.length > 0);
 
   const toggleDep = (depId: string): void => {
     setSelectedDeps((prev) =>

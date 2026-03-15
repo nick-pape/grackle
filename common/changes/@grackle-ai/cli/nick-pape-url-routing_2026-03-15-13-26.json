@@ -1,7 +1,7 @@
 {
   "changes": [
     {
-      "comment": "No functional changes (merge commit false positive)",
+      "comment": "No CLI changes — merge commit false positive from lockstep versioning",
       "type": "none",
       "packageName": "@grackle-ai/cli"
     }

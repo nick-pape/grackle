@@ -4,69 +4,9 @@ import { useGrackle } from "../context/GrackleContext.js";
 import { EventRenderer } from "../components/display/EventRenderer.js";
 import { Breadcrumbs } from "../components/display/index.js";
 import { buildSessionBreadcrumbs } from "../utils/breadcrumbs.js";
-import type { Session, SessionEvent } from "../hooks/useGrackleSocket.js";
+import type { Session } from "../hooks/useGrackleSocket.js";
+import { groupConsecutiveTextEvents, pairToolEvents, type DisplayEvent } from "../utils/sessionEvents.js";
 import styles from "../components/panels/SessionPanel.module.scss";
-
-/** Session event augmented with optional tool_use context for paired tool results. */
-type DisplayEvent = SessionEvent & { toolUseCtx?: { tool: string; args: unknown } };
-
-/**
- * Merges consecutive "text" events into single entries with concatenated content.
- */
-function groupConsecutiveTextEvents(events: SessionEvent[]): SessionEvent[] {
-  const result: SessionEvent[] = [];
-  for (const event of events) {
-    const previous = result[result.length - 1];
-    if (event.eventType === "text" && previous?.eventType === "text") {
-      result[result.length - 1] = { ...previous, content: previous.content + event.content };
-    } else {
-      result.push(event);
-    }
-  }
-  return result;
-}
-
-/**
- * Pairs tool_use events with their tool_result counterparts.
- */
-function pairToolEvents(events: SessionEvent[]): DisplayEvent[] {
-  const parsedRaw = new Map<SessionEvent, Record<string, unknown>>();
-  for (const e of events) {
-    if (!e.raw) continue;
-    try {
-      parsedRaw.set(e, JSON.parse(e.raw) as Record<string, unknown>);
-    } catch { /* skip unparseable events */ }
-  }
-
-  const toolUseById = new Map<string, { tool: string; args: unknown }>();
-  for (const e of events) {
-    if (e.eventType !== "tool_use") continue;
-    const raw = parsedRaw.get(e);
-    if (!raw || typeof raw.id !== "string") continue;
-    try {
-      const content = JSON.parse(e.content) as { tool: string; args: unknown };
-      toolUseById.set(raw.id, { tool: content.tool ?? "", args: content.args });
-    } catch { /* skip unparseable events */ }
-  }
-
-  const consumedIds = new Set<string>();
-  const display: DisplayEvent[] = events.map((e) => {
-    if (e.eventType !== "tool_result") return e;
-    const raw = parsedRaw.get(e);
-    if (!raw || typeof raw.tool_use_id !== "string") return e;
-    const ctx = toolUseById.get(raw.tool_use_id);
-    if (!ctx) return e;
-    consumedIds.add(raw.tool_use_id);
-    return { ...e, toolUseCtx: ctx };
-  });
-
-  return display.filter((e) => {
-    if (e.eventType !== "tool_use") return true;
-    const raw = parsedRaw.get(e);
-    if (raw && typeof raw.id === "string") return !consumedIds.has(raw.id);
-    return true;
-  });
-}
 
 /** Props for the SessionHeader subcomponent. */
 interface SessionHeaderProps {

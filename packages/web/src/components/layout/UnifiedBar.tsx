@@ -493,7 +493,7 @@ export function UnifiedBar(): JSX.Element {
   if (isNewChat) {
     const handleSpawn = (e: FormEvent): void => {
       e.preventDefault();
-      if (!text.trim()) {
+      if (!text.trim() || !newChatEnvId) {
         return;
       }
       spawn(newChatEnvId, text, undefined, runtime, spawnPersonaId);
@@ -515,7 +515,7 @@ export function UnifiedBar(): JSX.Element {
             <option key={p.id} value={p.id}>{p.name}</option>
           ))}
         </select>
-        <button type="submit" disabled={!text.trim()} className={styles.btnPrimary}>Go</button>
+        <button type="submit" disabled={!text.trim() || !newChatEnvId} className={styles.btnPrimary}>Go</button>
       </form>
     );
   }
