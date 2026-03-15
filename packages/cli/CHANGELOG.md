@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sun, 15 Mar 2026 16:33:25 GMT and should not be manually modified.
+This log was last generated on Sun, 15 Mar 2026 17:02:08 GMT and should not be manually modified.
+
+## 0.28.0
+Sun, 15 Mar 2026 17:02:08 GMT
+
+### Minor changes
+
+- Add per-project worktree base path configuration
 
 ## 0.27.1
 Sun, 15 Mar 2026 16:33:25 GMT
