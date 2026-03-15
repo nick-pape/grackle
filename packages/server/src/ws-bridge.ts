@@ -1211,10 +1211,10 @@ async function handleMessage(
       // doesn't unexpectedly switch runtimes/models.
       const previousSession = sessionStore.getLatestSessionForTask(task.id);
 
-      // Store review notes and set status to "pending" so computeTaskStatus
-      // can derive the effective status from the new retry session.  Using
-      // "assigned" here would be sticky (human-authoritative) and prevent
-      // the computed status from reflecting the running session.
+      // Store review notes and reset status to "pending" so computeTaskStatus
+      // can derive the effective status from the new retry session.  We use
+      // "pending" rather than "assigned" because rejection + retry is an
+      // automated flow — "assigned" implies deliberate human assignment.
       taskStore.updateTask(
         task.id,
         task.title,

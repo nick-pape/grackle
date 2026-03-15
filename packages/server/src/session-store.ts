@@ -25,9 +25,9 @@ export function createSession(
     logPath,
     taskId,
     personaId,
-    // We always set startedAt explicitly (ISO 8601 format with milliseconds),
-    // so the schema's default of datetime('now') (YYYY-MM-DD HH:MM:SS without
-    // millis) is never used. ISO format sorts lexicographically correctly.
+    // We always set startedAt explicitly (ISO 8601 format with milliseconds).
+    // The schema default also produces ISO format via strftime, but we set it
+    // here for consistency. ISO format sorts lexicographically correctly.
     startedAt: new Date().toISOString(),
   }).run();
 }

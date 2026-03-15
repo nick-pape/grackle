@@ -76,7 +76,7 @@ export function initDatabase(): void {
       status        TEXT NOT NULL DEFAULT 'pending',
       log_path      TEXT,
       turns         INTEGER NOT NULL DEFAULT 0,
-      started_at    TEXT NOT NULL DEFAULT (datetime('now')),
+      started_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
       suspended_at  TEXT,
       ended_at      TEXT,
       error         TEXT,
@@ -308,6 +308,15 @@ export function initDatabase(): void {
   } catch {
     /* column already dropped or never existed */
   }
+
+  // Migration: normalize existing started_at values from SQLite datetime('now')
+  // format (YYYY-MM-DD HH:MM:SS) to ISO 8601 (YYYY-MM-DDTHH:MM:SS.000Z) so
+  // ordering is consistent with newly inserted rows.
+  sqlite.exec(`
+    UPDATE sessions
+    SET started_at = replace(started_at, ' ', 'T') || '.000Z'
+    WHERE started_at NOT LIKE '%T%'
+  `);
 
   // Index for efficient session-by-task lookups
   sqlite.exec(
