@@ -26,7 +26,7 @@ RUN npm init -y && npm install @grackle-ai/powerline@${POWERLINE_VERSION} --omit
 USER grackle
 # --experimental-specifier-resolution=node works around vscode-jsonrpc missing .js
 # in ESM imports, required by @github/copilot-sdk (upstream bug in vscode-jsonrpc@8.x)
-CMD ["node", "--experimental-specifier-resolution=node", "node_modules/@grackle-ai/powerline/dist/index.js", "--port=7433"]
+CMD ["node", "--experimental-specifier-resolution=node", "node_modules/@grackle-ai/powerline/dist/index.js", "--port=7433", "--host=0.0.0.0"]
 
 # ─── Dev: copy local monorepo artifacts ─────────────────────
 FROM base AS dev
@@ -55,4 +55,4 @@ USER grackle
 # Agents will use /workspace as their cwd
 # --experimental-specifier-resolution=node works around vscode-jsonrpc missing .js
 # in ESM imports, required by @github/copilot-sdk (upstream bug in vscode-jsonrpc@8.x)
-CMD ["node", "--experimental-specifier-resolution=node", "dist/index.js", "--port=7433"]
+CMD ["node", "--experimental-specifier-resolution=node", "dist/index.js", "--port=7433", "--host=0.0.0.0"]

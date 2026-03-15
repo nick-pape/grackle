@@ -40,8 +40,10 @@ function main(): void {
       String(DEFAULT_POWERLINE_PORT),
     )
     .option("--token <token>", "Authentication token")
-    .action((opts: { port: string; token?: string }) => {
+    .option("--host <host>", "Host to bind to", "127.0.0.1")
+    .action((opts: { port: string; token?: string; host: string }) => {
       const port = parseInt(opts.port, 10);
+      const host = opts.host;
       const powerlineToken =
         opts.token || process.env.GRACKLE_POWERLINE_TOKEN || "";
 
@@ -86,13 +88,14 @@ function main(): void {
         shutdown();
       });
 
-      server.listen(port, "127.0.0.1", () => {
+      server.listen(port, host, () => {
         const authStatus = powerlineToken
           ? "authenticated"
           : "NO AUTH (development only)";
         logger.info(
-          { port, authStatus },
-          "PowerLine listening on http://127.0.0.1:%d [%s]",
+          { port, host, authStatus },
+          "PowerLine listening on http://%s:%d [%s]",
+          host,
           port,
           authStatus,
         );
