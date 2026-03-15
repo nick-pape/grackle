@@ -39,11 +39,11 @@ test.describe("Settings Page (Mock Mode)", () => {
     await expect(page.getByRole("tablist")).toBeVisible({ timeout: 5_000 });
   });
 
-  test("mock tokens are displayed in Tokens tab", async ({ mockPage }) => {
+  test("mock tokens are displayed in Credentials tab", async ({ mockPage }) => {
     const page = mockPage;
 
     await goToSettings(mockPage);
-    await page.getByRole("tab", { name: "Tokens" }).click();
+    await page.getByRole("tab", { name: "Credentials" }).click();
 
     // MOCK_TOKENS has 3 tokens: anthropic, github, gcp-service-account
     await expect(page.getByText("anthropic", { exact: true })).toBeVisible({ timeout: 5_000 });
@@ -60,7 +60,7 @@ test.describe("Settings Page (Mock Mode)", () => {
     const page = mockPage;
 
     await goToSettings(mockPage);
-    await page.getByRole("tab", { name: "Tokens" }).click();
+    await page.getByRole("tab", { name: "Credentials" }).click();
 
     // Form elements should be visible
     await expect(page.locator('input[placeholder="Token name"]')).toBeVisible();
@@ -82,7 +82,7 @@ test.describe("Settings Page (Mock Mode)", () => {
     const page = mockPage;
 
     await goToSettings(mockPage);
-    await page.getByRole("tab", { name: "Tokens" }).click();
+    await page.getByRole("tab", { name: "Credentials" }).click();
 
     // anthropic token should be visible
     await expect(page.getByText("anthropic", { exact: true })).toBeVisible({ timeout: 5_000 });
@@ -103,23 +103,23 @@ test.describe("Settings Page (Mock Mode)", () => {
     const page = mockPage;
 
     await goToSettings(mockPage);
-    await page.getByRole("tab", { name: "Tokens" }).click();
+    await page.getByRole("tab", { name: "Credentials" }).click();
 
     // Default type is env_var, placeholder should show env var
     await expect(page.locator('input[placeholder*="Env var name"]')).toBeVisible();
 
-    // Switch to file type
-    await page.locator("select").selectOption("file");
+    // Switch to file type (use the token type select, not the provider dropdowns)
+    await page.locator("select", { hasText: "Environment Variable" }).selectOption("file");
 
     // Placeholder should change to file path
     await expect(page.locator('input[placeholder*="File path"]')).toBeVisible();
   });
 
-  test("description text is visible in Tokens tab", async ({ mockPage }) => {
+  test("description text is visible in Credentials tab", async ({ mockPage }) => {
     const page = mockPage;
 
     await goToSettings(mockPage);
-    await page.getByRole("tab", { name: "Tokens" }).click();
+    await page.getByRole("tab", { name: "Credentials" }).click();
 
     await expect(
       page.getByText("API tokens are auto-pushed to environments when set or updated"),
@@ -130,7 +130,7 @@ test.describe("Settings Page (Mock Mode)", () => {
     const page = mockPage;
 
     await goToSettings(mockPage);
-    await page.getByRole("tab", { name: "Tokens" }).click();
+    await page.getByRole("tab", { name: "Credentials" }).click();
 
     const nameInput = page.locator('input[placeholder="Token name"]');
     const valueInput = page.locator('input[placeholder="Value"]');

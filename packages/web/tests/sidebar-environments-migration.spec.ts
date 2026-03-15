@@ -59,19 +59,19 @@ test.describe("Environments in Settings Panel", () => {
     await expect(page.getByText("test-local")).toBeVisible();
   });
 
-  test("Environments tab is listed before Tokens tab", async ({ appPage }) => {
+  test("Environments tab is listed before Credentials tab", async ({ appPage }) => {
     const page = appPage;
 
     // Both tabs should be visible
     const envTab = page.getByRole("tab", { name: "Environments" });
-    const tokensTab = page.getByRole("tab", { name: "Tokens" });
+    const credentialsTab = page.getByRole("tab", { name: "Credentials" });
     await expect(envTab).toBeVisible();
-    await expect(tokensTab).toBeVisible();
+    await expect(credentialsTab).toBeVisible();
 
-    // Environments tab should come before Tokens tab in the DOM
+    // Environments tab should come before Credentials tab in the DOM
     const envY = (await envTab.boundingBox())!.y;
-    const tokensY = (await tokensTab.boundingBox())!.y;
-    expect(envY).toBeLessThan(tokensY);
+    const credentialsY = (await credentialsTab.boundingBox())!.y;
+    expect(envY).toBeLessThan(credentialsY);
   });
 
   test("+ Add Environment button is visible and has correct text", async ({ appPage }) => {
@@ -291,9 +291,9 @@ test.describe("Navigation Between Settings and Projects", () => {
     // Now click gear to go to Settings
     await page.locator('button[title="Settings"]').click();
 
-    // Settings should be visible with Environments and Tokens tabs
+    // Settings should be visible with Environments and Credentials tabs
     await expect(page.getByRole("tablist", { name: "Settings" })).toBeVisible({ timeout: 5_000 });
     await expect(page.getByRole("tab", { name: "Environments" })).toBeVisible();
-    await expect(page.getByRole("tab", { name: "Tokens" })).toBeVisible();
+    await expect(page.getByRole("tab", { name: "Credentials" })).toBeVisible();
   });
 });
