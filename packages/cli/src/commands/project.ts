@@ -32,6 +32,7 @@ export function registerProjectCommands(program: Command): void {
     .option("--env <env-id>", "Default environment ID")
     .option("--desc <description>", "Project description")
     .option("--no-worktrees", "Disable worktree isolation (agents share the main checkout)")
+    .option("--worktree-base-path <path>", "Base path for worktrees (e.g. /workspaces/my-repo)")
     .action(async (name: string, opts) => {
       const client = createGrackleClient();
       // Commander sets opts.worktrees = false when --no-worktrees is passed, true otherwise
@@ -42,6 +43,7 @@ export function registerProjectCommands(program: Command): void {
         repoUrl: opts.repo || "",
         defaultEnvironmentId: opts.env || "",
         useWorktrees,
+        worktreeBasePath: opts.worktreeBasePath || "",
       });
       console.log(`Created project: ${p.id} (${p.name}) [worktrees: ${p.useWorktrees ? "enabled" : "disabled"}]`);
     });
@@ -60,6 +62,7 @@ export function registerProjectCommands(program: Command): void {
         { "Repo URL": p.repoUrl || "-" },
         { "Default Env": p.defaultEnvironmentId || "-" },
         { "Worktrees": p.useWorktrees ? "enabled" : "disabled" },
+        ...(p.worktreeBasePath ? [{ "Worktree Base": p.worktreeBasePath }] : []),
         { "Status": projectStatusToString(p.status) },
         { "Created": p.createdAt },
         { "Updated": p.updatedAt },
@@ -76,6 +79,7 @@ export function registerProjectCommands(program: Command): void {
     .option("--env <env-id>", "Default environment ID")
     .option("--no-worktrees", "Disable worktree isolation (agents share the main checkout)")
     .option("--worktrees", "Enable worktree isolation (default)")
+    .option("--worktree-base-path <path>", "Base path for worktrees (e.g. /workspaces/my-repo)")
     .action(async (id: string, opts) => {
       const client = createGrackleClient();
       // Determine useWorktrees: explicit --worktrees → true, --no-worktrees → false, neither → undefined (no change)
@@ -92,6 +96,7 @@ export function registerProjectCommands(program: Command): void {
         repoUrl: opts.repo,
         defaultEnvironmentId: opts.env,
         useWorktrees,
+        worktreeBasePath: opts.worktreeBasePath,
       });
       console.log(`Updated project: ${p.id} (${p.name}) [worktrees: ${p.useWorktrees ? "enabled" : "disabled"}]`);
     });

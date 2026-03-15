@@ -83,6 +83,7 @@ function projectRowToProto(row: projectStore.ProjectRow): grackle.Project {
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
     useWorktrees: row.useWorktrees,
+    worktreeBasePath: row.worktreeBasePath,
   });
 }
 
@@ -425,7 +426,9 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         model,
         maxTurns: persona?.maxTurns || 0,
         branch: req.branch || "",
-        worktreeBasePath: req.branch ? "/workspace" : "",
+        worktreeBasePath: req.branch
+          ? (req.worktreeBasePath.trim() || process.env.GRACKLE_WORKTREE_BASE || "/workspace")
+          : "",
         systemContext,
         mcpServersJson,
       });
@@ -632,6 +635,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         req.repoUrl,
         req.defaultEnvironmentId,
         useWorktrees,
+        req.worktreeBasePath ?? "",
       );
       broadcast({ type: "project_created", payload: { projectId: id } });
       const row = projectStore.getProject(id);
@@ -667,6 +671,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         repoUrl: req.repoUrl,
         defaultEnvironmentId: req.defaultEnvironmentId,
         useWorktrees: req.useWorktrees ?? undefined,
+        worktreeBasePath: req.worktreeBasePath,
       });
       if (!row) {
         throw new Error(`Project not found after update: ${req.id}`);
@@ -906,7 +911,9 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         model,
         maxTurns,
         branch: task.branch,
-        worktreeBasePath: task.branch && useWorktrees ? "/workspace" : "",
+        worktreeBasePath: task.branch && useWorktrees
+          ? (project.worktreeBasePath || process.env.GRACKLE_WORKTREE_BASE || "/workspace")
+          : "",
         systemContext,
         projectId: task.projectId,
         taskId: task.id,

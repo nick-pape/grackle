@@ -255,6 +255,15 @@ export function initDatabase(): void {
     /* column already exists */
   }
 
+  // Migration: add worktree_base_path column to projects if missing (older databases)
+  try {
+    sqlite.exec(
+      "ALTER TABLE projects ADD COLUMN worktree_base_path TEXT NOT NULL DEFAULT ''",
+    );
+  } catch {
+    /* column already exists */
+  }
+
   // Migration: backfill task_id on existing sessions from tasks.session_id.
   // Guard with try/catch since session_id column may have been dropped already.
   try {
