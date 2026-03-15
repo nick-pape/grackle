@@ -15,6 +15,7 @@ const TASK_STATUS_STYLES: Record<string, { color: string; icon: string }> = {
   paused: { color: "var(--accent-yellow)", icon: "\u25C9" },
   complete: { color: "var(--accent-green)", icon: "\u2713" },
   failed: { color: "var(--accent-red)", icon: "\u2717" },
+  blocked: { color: "var(--accent-yellow)", icon: "\u29B8" },
 };
 
 /** Base left-padding for task rows inside a project. */
@@ -51,8 +52,8 @@ function saveGroupByStatus(value: boolean): void {
 // Status grouping
 // ---------------------------------------------------------------------------
 
-/** Ordered list of task statuses from most-urgent to least. */
-const STATUS_GROUP_ORDER: string[] = ["working", "paused", "failed", "not_started", "complete"];
+/** Ordered list of task statuses from most-urgent to least. "blocked" is a virtual status for grouped view. */
+const STATUS_GROUP_ORDER: string[] = ["working", "paused", "failed", "not_started", "blocked", "complete"];
 
 /** Human-readable labels for each status group. */
 const STATUS_GROUP_LABELS: Record<string, string> = {
@@ -60,6 +61,7 @@ const STATUS_GROUP_LABELS: Record<string, string> = {
   paused: "Paused",
   failed: "Failed",
   not_started: "Not Started",
+  blocked: "Blocked",
   complete: "Complete",
 };
 
@@ -71,15 +73,19 @@ interface StatusGroup {
   tasks: TaskData[];
 }
 
-/** Group a flat list of tasks by status, ordered by urgency. Empty groups are omitted. */
-function groupTasksByStatus(taskList: TaskData[]): StatusGroup[] {
+/** Group a flat list of tasks by status, ordered by urgency. Blocked tasks are separated into their own group. */
+function groupTasksByStatus(taskList: TaskData[], taskStatusById: Map<string, string>): StatusGroup[] {
   const byStatus = new Map<string, TaskData[]>();
   for (const task of taskList) {
-    const list = byStatus.get(task.status);
+    // Tasks with unresolved dependencies go to "blocked" instead of their actual status
+    const isBlocked = task.dependsOn.length > 0 &&
+      task.dependsOn.some((depId) => taskStatusById.get(depId) !== "complete");
+    const groupKey = isBlocked ? "blocked" : task.status;
+    const list = byStatus.get(groupKey);
     if (list) {
       list.push(task);
     } else {
-      byStatus.set(task.status, [task]);
+      byStatus.set(groupKey, [task]);
     }
   }
 
@@ -590,7 +596,7 @@ export function ProjectList(): JSX.Element {
                   style={{ overflow: "hidden" }}
                 >
                   {groupByStatus ? (
-                    groupTasksByStatus(projectTasks).map(group => (
+                    groupTasksByStatus(projectTasks, taskStatusById).map(group => (
                       <StatusGroupAccordion
                         key={group.status}
                         group={group}
