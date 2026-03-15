@@ -10,6 +10,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useGrackle } from "../../context/GrackleContext.js";
+import { useThemeContext } from "../../context/ThemeContext.js";
 import { useDagLayout, type TaskNodeData } from "./useDagLayout.js";
 import { TaskNode } from "./TaskNode.js";
 import type { ViewMode } from "../../App.js";
@@ -32,13 +33,6 @@ const STATUS_VAR_MAP: Record<string, string> = {
   waiting_input: "--accent-yellow",
 };
 
-/** Reads a theme-aware color for a task status from CSS custom properties. */
-function getStatusColor(status: string): string {
-  const varName = STATUS_VAR_MAP[status] || "--text-tertiary";
-  const value = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
-  return value || "#6b7a8d";
-}
-
 /** Custom node type registry for React Flow. */
 const nodeTypes: NodeTypes = {
   task: TaskNode,
@@ -47,6 +41,7 @@ const nodeTypes: NodeTypes = {
 /** Interactive DAG visualization of task hierarchy and dependency relationships. */
 export function DagView({ projectId, setViewMode }: Props): JSX.Element {
   const { tasks } = useGrackle();
+  const { resolvedThemeId } = useThemeContext();
 
   const projectTasks = useMemo(
     () => tasks.filter((t) => t.projectId === projectId),
@@ -54,6 +49,16 @@ export function DagView({ projectId, setViewMode }: Props): JSX.Element {
   );
 
   const { nodes, edges } = useDagLayout(projectTasks);
+
+  /** Cached color map — recomputed only when the theme changes. */
+  const statusColors = useMemo(() => {
+    const style = getComputedStyle(document.documentElement);
+    const colors: Record<string, string> = {};
+    for (const [status, varName] of Object.entries(STATUS_VAR_MAP)) {
+      colors[status] = style.getPropertyValue(varName).trim() || "#6b7a8d";
+    }
+    return colors;
+  }, [resolvedThemeId]);
 
   const onNodeClick = useCallback(
     (_event: MouseEvent, node: Node) => {
@@ -65,8 +70,8 @@ export function DagView({ projectId, setViewMode }: Props): JSX.Element {
   /** Returns a hex color for the MiniMap based on task status. */
   const minimapNodeColor = useCallback((node: Node): string => {
     const data = node.data as TaskNodeData;
-    return getStatusColor(data.task.status);
-  }, []);
+    return statusColors[data.task.status] || statusColors.pending;
+  }, [statusColors]);
 
   if (projectTasks.length === 0) {
     return (

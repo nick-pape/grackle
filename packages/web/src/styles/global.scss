@@ -188,8 +188,10 @@ body::after {
     text-shadow: 0 0 2px rgba(0, 255, 65, 0.12);
   }
 
-  // Suppress glow on focused panels for readability
-  :focus-within {
+  // Suppress glow on focused text inputs for readability
+  input:focus,
+  textarea:focus,
+  [contenteditable="true"]:focus {
     text-shadow: none;
   }
 }
