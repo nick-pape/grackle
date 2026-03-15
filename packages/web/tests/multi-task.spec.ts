@@ -94,8 +94,8 @@ test.describe("Multi-Task", () => {
     await patchWsForStubRuntime(page);
     await page.locator("button", { hasText: "Start" }).click();
 
-    // Wait for active state — sidebar icon should change to ● (working) or ⧖ (idle)
-    await expect(page.locator("text=/(●|\u29D6)/").first()).toBeVisible({ timeout: 15_000 });
+    // Wait for active state — sidebar icon should change to ● (working) or ◉ (paused)
+    await expect(page.locator("text=/(●|◉)/").first()).toBeVisible({ timeout: 15_000 });
 
     // Complete to review — sidebar icon should change to ◉ (yellow)
     const inputField = page.locator('input[placeholder="Type a message..."]');
