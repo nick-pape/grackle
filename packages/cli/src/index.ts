@@ -13,7 +13,7 @@ import { registerProjectCommands } from "./commands/project.js";
 import { registerTaskCommands } from "./commands/task.js";
 import { registerFindingCommands } from "./commands/findings.js";
 import { registerPersonaCommands } from "./commands/persona.js";
-import { printBanner, getHelpFooter } from "./banner.js";
+import { renderBanner, getHelpFooter } from "./banner.js";
 
 const esmRequire: NodeRequire = createRequire(import.meta.url);
 const { version } = esmRequire("../package.json") as { version: string };
@@ -25,7 +25,7 @@ program
   .description("AI agent orchestration from the command line")
   .option("-V, --version", "output the version with banner")
   .on("option:version", () => {
-    printBanner(version);
+    console.log(renderBanner(version));
     process.exit(0);
   });
 
@@ -33,13 +33,7 @@ program.addHelpText("beforeAll", (context) => {
   if (context.command !== program) {
     return "";
   }
-  /* Capture banner output as a string instead of printing directly */
-  const lines: string[] = [];
-  const origLog = console.log;
-  console.log = (msg: string) => lines.push(msg);
-  printBanner(version);
-  console.log = origLog;
-  return lines.join("\n");
+  return renderBanner(version);
 });
 
 program.addHelpText("after", (context) => {
