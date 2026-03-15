@@ -170,11 +170,12 @@ export abstract class ProcessTunnel implements RemoteTunnel {
 
   /** Close the tunnel by killing the background process. */
   public async close(): Promise<void> {
-    if (!this.process || this.process.exitCode !== null) {
+    if (this.process?.exitCode !== null) {
       return;
     }
     this.process.kill("SIGTERM");
     await sleep(TUNNEL_KILL_GRACE_MS);
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- exitCode may change after SIGTERM + sleep
     if (this.process.exitCode === null) {
       this.process.kill("SIGKILL");
     }
@@ -183,7 +184,7 @@ export abstract class ProcessTunnel implements RemoteTunnel {
 
   /** Return true if the tunnel process is still running. */
   public isAlive(): boolean {
-    return this.process !== undefined && this.process.exitCode === null;
+    return this.process?.exitCode === null;
   }
 }
 
@@ -693,7 +694,7 @@ export async function connectThroughTunnel(
     logger.error({ environmentId, err }, "Failed to close tunnel after connect failure");
   }
 
-  throw new Error(`Could not reach PowerLine after ${CONNECT_MAX_RETRIES} attempts: ${lastError}`);
+  throw new Error(`Could not reach PowerLine after ${CONNECT_MAX_RETRIES} attempts: ${lastError instanceof Error ? lastError.message : String(lastError)}`);
 }
 
 // ─── Wait for Local Port ────────────────────────────────────
@@ -791,7 +792,7 @@ export async function remoteDestroy(environmentId: string, executor: RemoteExecu
 /** Check that the tunnel is alive and the PowerLine responds to a ping. */
 export async function remoteHealthCheck(connection: PowerLineConnection): Promise<boolean> {
   const state = getTunnel(connection.environmentId);
-  if (!state || !state.tunnel.isAlive()) {
+  if (!state?.tunnel.isAlive()) {
     return false;
   }
   try {

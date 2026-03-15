@@ -48,7 +48,10 @@ export function registerPersonaCommands(program: Command): void {
     .option("--model <model>", "Default model")
     .option("--max-turns <n>", "Maximum turns", parseInt)
     .addHelpText("after", `\nExamples:\n  $ grackle persona create "Frontend Engineer" --prompt "You are a React specialist." --runtime claude-code\n  $ grackle persona create "Security Reviewer" --prompt-file ./prompts/security.md --model opus`)
-    .action(async (name: string, opts) => {
+    .action(async (name: string, opts: {
+      prompt?: string; promptFile?: string; desc?: string;
+      runtime?: string; model?: string; maxTurns?: number;
+    }) => {
       let systemPrompt = opts.prompt || "";
       if (opts.promptFile) {
         systemPrompt = readFileSync(opts.promptFile, "utf8");
@@ -115,7 +118,10 @@ export function registerPersonaCommands(program: Command): void {
     .option("--runtime <runtime>", "New runtime")
     .option("--model <model>", "New model")
     .option("--max-turns <n>", "New max turns", parseInt)
-    .action(async (id: string, opts) => {
+    .action(async (id: string, opts: {
+      name?: string; prompt?: string; promptFile?: string; desc?: string;
+      runtime?: string; model?: string; maxTurns?: number;
+    }) => {
       let systemPrompt = opts.prompt || "";
       if (opts.promptFile) {
         systemPrompt = readFileSync(opts.promptFile, "utf8");

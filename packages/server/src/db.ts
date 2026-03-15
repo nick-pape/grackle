@@ -39,6 +39,25 @@ try {
     );
     process.exit(1);
   }
+  if (err instanceof Error && err.message.includes("NODE_MODULE_VERSION")) {
+    process.stderr.write(
+      [
+        "",
+        "ERROR: better-sqlite3 was compiled for a different Node.js version.",
+        `(Current NODE_MODULE_VERSION: ${process.versions.modules})`,
+        "",
+        "This usually means grackle was installed with one Node version but is",
+        "being run with another. Grackle requires Node >= 22.",
+        "",
+        "To fix: reinstall grackle with your current Node version:",
+        "  npm install -g @grackle-ai/cli",
+        "",
+        `Original error: ${err.message}`,
+        "",
+      ].join("\n"),
+    );
+    process.exit(1);
+  }
   throw err;
 }
 
@@ -250,6 +269,15 @@ export function initDatabase(): void {
   try {
     sqlite.exec(
       "ALTER TABLE projects ADD COLUMN use_worktrees INTEGER NOT NULL DEFAULT 1",
+    );
+  } catch {
+    /* column already exists */
+  }
+
+  // Migration: add worktree_base_path column to projects if missing (older databases)
+  try {
+    sqlite.exec(
+      "ALTER TABLE projects ADD COLUMN worktree_base_path TEXT NOT NULL DEFAULT ''",
     );
   } catch {
     /* column already exists */

@@ -20,7 +20,7 @@ export function registerServeCommand(program: Command): void {
     .option("--web-port <port>", "Web UI port", "3000")
     .option("--host <address>", "Bind address — must be a loopback address (127.0.0.1 or ::1)", "127.0.0.1")
     .option("--mcp-port <port>", "MCP server port", "7435")
-    .action(async (opts) => {
+    .action(async (opts: { host: string; port: string; webPort: string; mcpPort: string }) => {
       if (!LOOPBACK_HOSTS.has(opts.host)) {
         console.error(`Error: --host must be a loopback address (127.0.0.1 or ::1). Got: ${opts.host}`);
         console.error("Binding to non-loopback addresses would expose the API key to the network.");

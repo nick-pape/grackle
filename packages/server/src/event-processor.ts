@@ -40,7 +40,9 @@ export function processFindingEvent(
     return;
   }
   try {
-    const data = JSON.parse(content);
+    const data = JSON.parse(content) as {
+      category?: string; title?: string; content?: string; tags?: string[];
+    };
     const findingId = uuid();
     findingStore.postFinding(
       findingId, ctx.projectId, ctx.taskId || "", sessionId,
@@ -294,7 +296,7 @@ export function processEventStream(
       }
     } catch (err) {
       const current = sessionStore.getSession(sessionId);
-      if (current && current.status === SESSION_STATUS.IDLE) {
+      if (current?.status === SESSION_STATUS.IDLE) {
         // Session was idle (agent finished work). Transport error is not a task failure.
         logger.info({ sessionId, err: String(err) }, "Stream ended while session idle — marking completed");
         sessionStore.updateSession(sessionId, SESSION_STATUS.COMPLETED);

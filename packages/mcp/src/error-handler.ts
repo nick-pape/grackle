@@ -27,7 +27,7 @@ const CODE_NAMES: Record<number, string> = {
  */
 export function grpcErrorToToolResult(error: unknown): ToolResult {
   if (error instanceof ConnectError) {
-    const codeName = CODE_NAMES[error.code] ?? "UNKNOWN";
+    const codeName = (CODE_NAMES as Partial<Record<number, string>>)[error.code] ?? "UNKNOWN";
     return {
       content: [
         {

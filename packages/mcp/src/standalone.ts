@@ -43,7 +43,7 @@ function main(): void {
   let grpcPort: number;
   try {
     const parsed = new URL(grackleUrl);
-    grpcPort = parseInt(parsed.port || String(DEFAULT_SERVER_PORT), 10);
+    grpcPort = parseInt(parsed.port ? parsed.port : String(DEFAULT_SERVER_PORT), 10);
   } catch {
     console.error(`Error: Invalid GRACKLE_URL: ${grackleUrl}`);
     process.exit(1);

@@ -114,7 +114,7 @@ export class CodespaceAdapter implements EnvironmentAdapter {
     try {
       await executor.exec("echo ok", { timeout: SSH_CONNECTIVITY_TIMEOUT_MS });
     } catch (err) {
-      throw new Error(`Cannot reach codespace '${cfg.codespaceName}' via gh CLI: ${err}`);
+      throw new Error(`Cannot reach codespace '${cfg.codespaceName}' via gh CLI: ${err instanceof Error ? err.message : String(err)}`);
     }
 
     // Detect the repo working directory (codespaces clone to /workspaces/<name>)

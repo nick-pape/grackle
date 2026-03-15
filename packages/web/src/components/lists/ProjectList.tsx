@@ -71,6 +71,7 @@ function TaskTreeNode({
   projectId,
   taskStatusById,
 }: TaskTreeNodeProps): JSX.Element {
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- status may not be in the map
   const statusStyle = TASK_STATUS_STYLES[node.status] || TASK_STATUS_STYLES.not_started;
   const isBlocked = node.dependsOn.length > 0 &&
     node.dependsOn.some((depId) => taskStatusById.get(depId) !== "complete");

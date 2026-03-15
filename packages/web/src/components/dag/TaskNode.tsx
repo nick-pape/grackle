@@ -16,6 +16,7 @@ const TASK_STATUS_STYLES: Record<string, { color: string; icon: string }> = {
 /** Custom React Flow node component rendering a task as a glass card. */
 export function TaskNode({ data }: NodeProps): JSX.Element {
   const { task, childCount, doneChildCount, hasDependencies } = data as TaskNodeData;
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- status may not be in the map
   const statusStyle = TASK_STATUS_STYLES[task.status] || TASK_STATUS_STYLES.not_started;
 
   return (

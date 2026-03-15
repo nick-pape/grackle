@@ -1,7 +1,7 @@
 {
   "changes": [
     {
-      "comment": "No CLI changes (merge commit false positive)",
+      "comment": "Add 11 new ESLint rules to shared heft-rig configs and fix all violations across all packages",
       "type": "none",
       "packageName": "@grackle-ai/cli"
     }

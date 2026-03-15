@@ -49,7 +49,12 @@ export function registerEnvCommands(program: Command): void {
     .option("--identity-file <path>", "SSH identity file (private key)")
     .option("--codespace-name <name>", "Codespace name (from `gh codespace list`)")
     .option("--runtime <runtime>", "Default runtime", "claude-code")
-    .action(async (name: string, opts) => {
+    .action(async (name: string, opts: {
+      codespace?: boolean; docker?: boolean; ssh?: boolean; local?: boolean;
+      repo?: string; image?: string; host?: string; port?: string; user?: string;
+      volume?: string[]; gpu?: string | boolean; sshPort?: string;
+      identityFile?: string; codespaceName?: string; runtime?: string;
+    }) => {
       const client = createGrackleClient();
       let adapterType: AdapterType = "docker";
       const config: Record<string, unknown> = {};
@@ -90,7 +95,7 @@ export function registerEnvCommands(program: Command): void {
         if (opts.gpu) config.gpus = opts.gpu === true ? "all" : opts.gpu;
       }
 
-      const env = await client.addEnvironment({
+      const env: { id: string; adapterType: string } = await client.addEnvironment({
         displayName: name,
         adapterType,
         adapterConfig: JSON.stringify(config),

@@ -31,6 +31,7 @@ export const projectTools: ToolDefinition[] = [
             description: p.description,
             repoUrl: p.repoUrl,
             defaultEnvironmentId: p.defaultEnvironmentId,
+            worktreeBasePath: p.worktreeBasePath,
             status: projectStatusToString(p.status) || "unspecified",
           })),
         );
@@ -60,6 +61,10 @@ export const projectTools: ToolDefinition[] = [
         .describe(
           "Optional ID of the default environment to use for this project",
         ),
+      worktreeBasePath: z
+        .string()
+        .optional()
+        .describe("Optional base path for worktrees (e.g. /workspaces/my-repo)"),
     }),
     rpcMethod: "createProject",
     mutating: true,
@@ -73,10 +78,11 @@ export const projectTools: ToolDefinition[] = [
       try {
         const project = await client.createProject({
           name: args.name as string,
-          description: (args.description as string) ?? "",
-          repoUrl: (args.repoUrl as string) ?? "",
+          description: (args.description as string | undefined) ?? "",
+          repoUrl: (args.repoUrl as string | undefined) ?? "",
           defaultEnvironmentId:
-            (args.defaultEnvironmentId as string) ?? "",
+            (args.defaultEnvironmentId as string | undefined) ?? "",
+          worktreeBasePath: (args.worktreeBasePath as string | undefined) ?? "",
         });
         return jsonResult({
           id: project.id,
@@ -84,6 +90,7 @@ export const projectTools: ToolDefinition[] = [
           description: project.description,
           repoUrl: project.repoUrl,
           defaultEnvironmentId: project.defaultEnvironmentId,
+          worktreeBasePath: project.worktreeBasePath,
           status: projectStatusToString(project.status) || "unspecified",
           createdAt: project.createdAt,
           updatedAt: project.updatedAt,
@@ -120,6 +127,7 @@ export const projectTools: ToolDefinition[] = [
           description: project.description,
           repoUrl: project.repoUrl,
           defaultEnvironmentId: project.defaultEnvironmentId,
+          worktreeBasePath: project.worktreeBasePath,
           status: projectStatusToString(project.status) || "unspecified",
           createdAt: project.createdAt,
           updatedAt: project.updatedAt,
@@ -152,6 +160,10 @@ export const projectTools: ToolDefinition[] = [
         .string()
         .optional()
         .describe("New default environment ID for the project"),
+      worktreeBasePath: z
+        .string()
+        .optional()
+        .describe("New base path for worktrees (e.g. /workspaces/my-repo)"),
     }),
     rpcMethod: "updateProject",
     mutating: true,
@@ -171,6 +183,7 @@ export const projectTools: ToolDefinition[] = [
           defaultEnvironmentId: args.defaultEnvironmentId as
             | string
             | undefined,
+          worktreeBasePath: args.worktreeBasePath as string | undefined,
         });
         return jsonResult({
           id: project.id,
@@ -178,6 +191,7 @@ export const projectTools: ToolDefinition[] = [
           description: project.description,
           repoUrl: project.repoUrl,
           defaultEnvironmentId: project.defaultEnvironmentId,
+          worktreeBasePath: project.worktreeBasePath,
           status: projectStatusToString(project.status) || "unspecified",
           createdAt: project.createdAt,
           updatedAt: project.updatedAt,

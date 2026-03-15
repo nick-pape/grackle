@@ -44,6 +44,7 @@ export function startHeartbeat(onDisconnect: (environmentId: string) => void): v
     return;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-misused-promises
   heartbeatInterval = setInterval(async () => {
     for (const [environmentId, conn] of connections) {
       const env = envRegistry.getEnvironment(environmentId);

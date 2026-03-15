@@ -83,6 +83,7 @@ export const projects = sqliteTable("projects", {
   useWorktrees: integer("use_worktrees", { mode: "boolean" })
     .notNull()
     .default(true),
+  worktreeBasePath: text("worktree_base_path").notNull().default(""),
   createdAt: text("created_at")
     .notNull()
     .default(sql`(datetime('now'))`),

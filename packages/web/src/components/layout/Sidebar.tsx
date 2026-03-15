@@ -51,6 +51,7 @@ export function Sidebar(): JSX.Element {
     const observer = new ResizeObserver((entries) => {
       for (const entry of entries) {
         const borderBox = entry.borderBoxSize[0];
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- borderBoxSize[0] may be undefined in some browsers
         if (borderBox) {
           const boxWidth = Math.round(borderBox.inlineSize);
           if (boxWidth >= MIN_SIDEBAR_WIDTH && boxWidth <= MAX_SIDEBAR_WIDTH) {
