@@ -81,15 +81,15 @@ test.describe("Concurrent Tasks", () => {
     const taskYRow = page.getByText("status-task-y", { exact: true }).locator("..");
 
     // Wait for task X to be active (● = in_progress or ⧖ = waiting_input)
-    await expect(taskXRow.locator("text=/(●|\u29D6)/")).toBeVisible({ timeout: 15_000 });
+    await expect(taskXRow.locator("text=/(●|◉)/")).toBeVisible({ timeout: 15_000 });
 
     // Start task Y
     await navigateToTask(page, "status-task-y");
     await page.locator("button", { hasText: "Start" }).click();
 
     // Wait for task Y to also be active — both tasks should show active icon in sidebar
-    await expect(taskYRow.locator("text=/(●|\u29D6)/")).toBeVisible({ timeout: 15_000 });
-    await expect(taskXRow.locator("text=/(●|\u29D6)/")).toBeVisible();
+    await expect(taskYRow.locator("text=/(●|◉)/")).toBeVisible({ timeout: 15_000 });
+    await expect(taskXRow.locator("text=/(●|◉)/")).toBeVisible();
 
     // Complete task X to review: navigate, send input
     await navigateToTask(page, "status-task-x");
@@ -100,6 +100,6 @@ test.describe("Concurrent Tasks", () => {
 
     // Wait for task X to reach review (◉) while task Y stays active (● or ⧖)
     await expect(taskXRow.locator("text=◉")).toBeVisible({ timeout: 15_000 });
-    await expect(taskYRow.locator("text=/(●|\u29D6)/")).toBeVisible();
+    await expect(taskYRow.locator("text=/(●|◉)/")).toBeVisible();
   });
 });
