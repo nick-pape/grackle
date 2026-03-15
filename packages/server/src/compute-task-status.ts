@@ -53,9 +53,13 @@ export function computeTaskStatus(
     return { status: storedStatus, latestSessionId };
   }
 
-  // No sessions → return stored status
+  // No sessions → return stored status, but clamp transient statuses back to
+  // "pending" since they should not persist without an active session (e.g.
+  // stale rows after migration).
   if (sessions.length === 0) {
-    return { status: storedStatus, latestSessionId: "" };
+    const TRANSIENT_STATUSES: ReadonlySet<string> = new Set(["in_progress", "waiting_input"]);
+    const status = TRANSIENT_STATUSES.has(storedStatus) ? "pending" : storedStatus;
+    return { status, latestSessionId: "" };
   }
 
   // Check for any active sessions

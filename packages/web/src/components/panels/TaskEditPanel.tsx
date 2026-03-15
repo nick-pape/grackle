@@ -17,9 +17,6 @@ interface Props {
  *             the project view.
  * - edit_task: pre-populated form; calls updateTask on save, then navigates
  *              back to the task overview.
- *
- * Environment and persona are optional — both can be set at creation or
- * changed later via editing. Environment can also be overridden at start time.
  */
 export function TaskEditPanel({ viewMode, setViewMode }: Props): JSX.Element {
   const { tasks, createTask, updateTask } = useGrackle();

@@ -274,8 +274,10 @@ export function processEventStream(
             sessionStore.updateSession(sessionId, "killed");
           }
 
-          // Broadcast task_updated on terminal session events so frontend re-fetches computed status
-          if (ctx.taskId && ["completed", "failed", "killed"].includes(event.content)) {
+          // Broadcast task_updated on status changes so frontend re-fetches computed status.
+          // This covers both terminal events (completed/failed/killed) and non-terminal
+          // transitions (running, waiting_input) that affect the computed task status.
+          if (ctx.taskId && ["completed", "failed", "killed", "running", "waiting_input"].includes(event.content)) {
             broadcast({ type: "task_updated", payload: { taskId: ctx.taskId, projectId: ctx.projectId } });
           }
         }

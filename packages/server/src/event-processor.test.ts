@@ -122,10 +122,6 @@ function waitForProcessing(
   options: { sessionId: string; logPath: string; projectId?: string; taskId?: string },
 ): Promise<void> {
   return new Promise<void>((resolve, reject) => {
-    processEventStream(eventStream(events), {
-      ...options,
-      onError: reject,
-    });
     // Poll for session to reach a terminal status
     const interval = setInterval(() => {
       const s = sessionStore.getSession(options.sessionId);
@@ -135,6 +131,14 @@ function waitForProcessing(
         setTimeout(resolve, 50);
       }
     }, 20);
+
+    processEventStream(eventStream(events), {
+      ...options,
+      onError: (err: unknown) => {
+        clearInterval(interval);
+        reject(err);
+      },
+    });
   });
 }
 
@@ -638,7 +642,7 @@ describe("task status broadcast on terminal events", () => {
     );
   });
 
-  it("does not broadcast task_updated for non-terminal session events", async () => {
+  it("broadcasts task_updated for both terminal and non-terminal session events", async () => {
     sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
     taskStore.createTask("task1", "proj1", "Test Task", "desc", [], "test-project");
     taskStore.updateTaskStatus("task1", "in_progress");
@@ -671,10 +675,11 @@ describe("task status broadcast on terminal events", () => {
       taskId: "task1",
     });
 
-    // Only one task_updated broadcast — for the terminal "completed" event
+    // All status changes (waiting_input, running, completed) should broadcast
+    // so the frontend re-fetches and gets the computed task status
     const taskUpdatedCalls = (broadcast as ReturnType<typeof vi.fn>).mock.calls
       .filter((c: unknown[]) => (c[0] as { type: string }).type === "task_updated");
-    expect(taskUpdatedCalls.length).toBe(1);
+    expect(taskUpdatedCalls.length).toBe(3);
   });
 
   it("does not broadcast task_updated when no task is associated", async () => {

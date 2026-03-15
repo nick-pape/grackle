@@ -276,11 +276,12 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
         content: "killed",
       });
 
-      // 5. Fail any in-progress task whose latestSessionId matches
+      // 5. With computed status, killing a session makes the task retryable
+      // (computed back to "pending"), so reset in-progress tasks to "pending".
       setTasks((prev) =>
         prev.map((t) =>
           t.latestSessionId === sessionId && t.status === "in_progress"
-            ? { ...t, status: "failed" }
+            ? { ...t, status: "pending" }
             : t,
         ),
       );
