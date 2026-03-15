@@ -23,7 +23,7 @@ test.describe("Environment Status Broadcast + Toasts", () => {
     );
 
     // Verify StatusBar initially shows connected count (1/1)
-    await expect(page.getByText("1/1")).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText("1/1 envs")).toBeVisible({ timeout: 5_000 });
 
     // Stop the environment via WS
     await sendWsMessage(page, {
@@ -32,7 +32,7 @@ test.describe("Environment Status Broadcast + Toasts", () => {
     });
 
     // StatusBar should update to show 0 connected (0/1)
-    await expect(page.getByText("0/1")).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText("0/1 envs")).toBeVisible({ timeout: 10_000 });
 
     // A generic "disconnected" toast should appear
     await expect(page.getByText("Environment disconnected")).toBeVisible({ timeout: 5_000 });
@@ -42,7 +42,7 @@ test.describe("Environment Status Broadcast + Toasts", () => {
       type: "provision_environment",
       payload: { environmentId: "test-local" },
     });
-    await expect(page.getByText("1/1")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("1/1 envs")).toBeVisible({ timeout: 15_000 });
   });
 
   test("provision environment shows connected toast and updates StatusBar", async ({ page }) => {
@@ -58,7 +58,7 @@ test.describe("Environment Status Broadcast + Toasts", () => {
       type: "stop_environment",
       payload: { environmentId: "test-local" },
     });
-    await expect(page.getByText("0/1")).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText("0/1 envs")).toBeVisible({ timeout: 10_000 });
 
     // Now re-provision
     await sendWsMessage(page, {
@@ -67,7 +67,7 @@ test.describe("Environment Status Broadcast + Toasts", () => {
     });
 
     // StatusBar should show 1/1 again
-    await expect(page.getByText("1/1")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("1/1 envs")).toBeVisible({ timeout: 15_000 });
 
     // A generic "connected" toast should appear
     await expect(page.getByText("Environment connected")).toBeVisible({ timeout: 5_000 });
@@ -107,7 +107,7 @@ test.describe("Environment Status Broadcast + Toasts", () => {
     });
 
     // Verify both appear in StatusBar count
-    await expect(page.getByText("2/2")).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText("2/2 envs")).toBeVisible({ timeout: 5_000 });
 
     // Now inject list without temp-env (simulate removal)
     await injectWsMessage(page, {
@@ -130,7 +130,7 @@ test.describe("Environment Status Broadcast + Toasts", () => {
     await expect(page.getByText("Environment removed")).toBeVisible({ timeout: 5_000 });
 
     // StatusBar should now show 1/1
-    await expect(page.getByText("1/1")).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText("1/1 envs")).toBeVisible({ timeout: 5_000 });
   });
 
   test("injected error status shows provision failed toast", async ({ page }) => {

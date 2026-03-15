@@ -45,8 +45,9 @@ export function useEnvironmentToasts(
         continue;
       }
 
-      // Skip connecting transitions — provision progress UI handles these
-      if (env.status === "connecting") {
+      // Skip connecting/sleeping transitions — provision progress UI handles
+      // connecting, and sleeping is a passive state with no user action needed.
+      if (env.status === "connecting" || env.status === "sleeping") {
         continue;
       }
 
