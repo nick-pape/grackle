@@ -157,7 +157,7 @@ export function ProjectPage(): JSX.Element {
     } else if (field === "defaultEnvironmentId") {
       if (editDraft === project.defaultEnvironmentId) { cancelEdit(); return; }
       updateProject(project.id, { defaultEnvironmentId: editDraft });
-    } else if (field === "worktreeBasePath") {
+    } else {
       if (trimmed === project.worktreeBasePath) { cancelEdit(); return; }
       updateProject(project.id, { worktreeBasePath: trimmed });
     }
@@ -179,8 +179,7 @@ export function ProjectPage(): JSX.Element {
     if (field === "description") return editDraft !== project.description;
     if (field === "repoUrl") return editDraft.trim() !== project.repoUrl;
     if (field === "defaultEnvironmentId") return editDraft !== project.defaultEnvironmentId;
-    if (field === "worktreeBasePath") return editDraft.trim() !== project.worktreeBasePath;
-    return false;
+    return editDraft.trim() !== project.worktreeBasePath;
   };
 
   const defaultEnv = environments.find((e) => e.id === project?.defaultEnvironmentId);
@@ -477,6 +476,7 @@ export function ProjectPage(): JSX.Element {
                 <button
                   type="button"
                   className={styles.metaValueClickable}
+                  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string is valid default for edit field
                   onClick={() => startEdit("worktreeBasePath", project?.worktreeBasePath || "")}
                   title="Click to edit worktree base path"
                   aria-label="Edit worktree base path"

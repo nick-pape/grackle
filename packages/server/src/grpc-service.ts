@@ -431,7 +431,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         prompt: req.prompt,
         model,
         maxTurns: persona?.maxTurns ?? 0,
-        branch: req.branch ?? "",
+        branch: req.branch,
         worktreeBasePath: req.branch
           // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string means "not set"
           ? (req.worktreeBasePath.trim() || process.env.GRACKLE_WORKTREE_BASE || "/workspace")
@@ -919,6 +919,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         maxTurns,
         branch: task.branch,
         worktreeBasePath: task.branch && useWorktrees
+          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string means "not set"
           ? (project.worktreeBasePath || process.env.GRACKLE_WORKTREE_BASE || "/workspace")
           : "",
         systemContext,

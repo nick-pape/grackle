@@ -43,6 +43,7 @@ export function registerProjectCommands(program: Command): void {
         repoUrl: opts.repo ?? "",
         defaultEnvironmentId: opts.env ?? "",
         useWorktrees,
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string means "not set"
         worktreeBasePath: opts.worktreeBasePath || "",
       });
       console.log(`Created project: ${p.id} (${p.name}) [worktrees: ${p.useWorktrees ? "enabled" : "disabled"}]`);

@@ -353,7 +353,7 @@ async function startTaskSession(
     branch: freshTask.branch,
     worktreeBasePath: freshTask.branch
       // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string means "not set"
-      ? (project?.worktreeBasePath || process.env.GRACKLE_WORKTREE_BASE || "/workspace")
+      ? (project.worktreeBasePath || process.env.GRACKLE_WORKTREE_BASE || "/workspace")
       : "",
     systemContext,
     projectId: freshTask.projectId,
@@ -565,6 +565,7 @@ async function handleMessage(
         maxTurns,
         branch,
         worktreeBasePath: branch
+          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string means "not set"
           ? ((typeof msg.payload?.worktreeBasePath === "string" ? msg.payload.worktreeBasePath.trim() : "") || process.env.GRACKLE_WORKTREE_BASE || "/workspace")
           : "",
         systemContext: finalSystemContext,

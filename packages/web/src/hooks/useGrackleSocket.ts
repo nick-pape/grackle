@@ -1011,6 +1011,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
           runtime: runtime || "",
           // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string means "not provided"
           personaId: personaId || "",
+          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string means "not provided"
           worktreeBasePath: worktreeBasePath || "",
         },
       });
