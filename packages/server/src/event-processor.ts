@@ -1,5 +1,5 @@
 import { create } from "@bufbuild/protobuf";
-import { grackle, powerline, eventTypeToEnum } from "@grackle-ai/common";
+import { grackle, powerline, eventTypeToEnum, SESSION_STATUS } from "@grackle-ai/common";
 import { v4 as uuid } from "uuid";
 import * as sessionStore from "./session-store.js";
 import * as streamHub from "./stream-hub.js";
@@ -16,7 +16,7 @@ import { logger } from "./logger.js";
 import type { ProcessorContext } from "./processor-registry.js";
 
 /** Terminal session statuses that indicate the session has already ended. */
-const TERMINAL_STATUSES: string[] = ["completed", "failed", "killed"];
+const TERMINAL_STATUSES: string[] = [SESSION_STATUS.COMPLETED, SESSION_STATUS.FAILED, SESSION_STATUS.INTERRUPTED];
 
 /** Options for processing an agent event stream. */
 export interface EventStreamOptions {
@@ -238,7 +238,7 @@ export function processEventStream(
 
     try {
       logWriter.initLog(logPath);
-      sessionStore.updateSessionStatus(sessionId, "running");
+      sessionStore.updateSessionStatus(sessionId, SESSION_STATUS.RUNNING);
 
       for await (const event of events) {
         const sessionEvent = create(grackle.SessionEventSchema, {
@@ -262,16 +262,17 @@ export function processEventStream(
         }
 
         if (event.type === "status") {
+          // Map runtime status strings to our session status model
           if (event.content === "waiting_input") {
-            sessionStore.updateSessionStatus(sessionId, "waiting_input");
+            sessionStore.updateSessionStatus(sessionId, SESSION_STATUS.IDLE);
           } else if (event.content === "running") {
-            sessionStore.updateSessionStatus(sessionId, "running");
+            sessionStore.updateSessionStatus(sessionId, SESSION_STATUS.RUNNING);
           } else if (event.content === "completed") {
-            sessionStore.updateSession(sessionId, "completed");
+            sessionStore.updateSession(sessionId, SESSION_STATUS.COMPLETED);
           } else if (event.content === "failed") {
-            sessionStore.updateSession(sessionId, "failed");
+            sessionStore.updateSession(sessionId, SESSION_STATUS.FAILED);
           } else if (event.content === "killed") {
-            sessionStore.updateSession(sessionId, "killed");
+            sessionStore.updateSession(sessionId, SESSION_STATUS.INTERRUPTED);
           }
 
           // Broadcast task_updated on status changes so frontend re-fetches computed status.
@@ -286,31 +287,31 @@ export function processEventStream(
       // Fallback: if stream ended without a terminal status event, mark completed
       const current = sessionStore.getSession(sessionId);
       if (current && !TERMINAL_STATUSES.includes(current.status)) {
-        sessionStore.updateSession(sessionId, "completed");
+        sessionStore.updateSession(sessionId, SESSION_STATUS.COMPLETED);
         if (ctx.taskId) {
           broadcast({ type: "task_updated", payload: { taskId: ctx.taskId, projectId: ctx.projectId } });
         }
       }
     } catch (err) {
       const current = sessionStore.getSession(sessionId);
-      if (current && current.status === "waiting_input") {
+      if (current && current.status === SESSION_STATUS.IDLE) {
         // Session was idle (agent finished work). Transport error is not a task failure.
         logger.info({ sessionId, err: String(err) }, "Stream ended while session idle — marking completed");
-        sessionStore.updateSession(sessionId, "completed");
+        sessionStore.updateSession(sessionId, SESSION_STATUS.COMPLETED);
         streamHub.publish(create(grackle.SessionEventSchema, {
           sessionId,
           type: grackle.EventType.STATUS,
           timestamp: new Date().toISOString(),
-          content: "completed",
+          content: SESSION_STATUS.COMPLETED,
         }));
       } else {
         // Genuine failure during active work.
-        sessionStore.updateSession(sessionId, "failed", undefined, String(err));
+        sessionStore.updateSession(sessionId, SESSION_STATUS.FAILED, undefined, String(err));
         streamHub.publish(create(grackle.SessionEventSchema, {
           sessionId,
           type: grackle.EventType.STATUS,
           timestamp: new Date().toISOString(),
-          content: "failed",
+          content: SESSION_STATUS.FAILED,
           raw: String(err),
         }));
         onError?.(err);

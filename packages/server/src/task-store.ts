@@ -1,6 +1,7 @@
 import db from "./db.js";
 import { tasks, type TaskRow } from "./schema.js";
 import { eq, sql, asc } from "drizzle-orm";
+import { TASK_STATUS } from "@grackle-ai/common";
 import type { TaskStatus } from "@grackle-ai/common";
 import { MAX_TASK_DEPTH } from "@grackle-ai/common";
 import { safeParseJsonArray } from "./json-helpers.js";
@@ -89,7 +90,6 @@ export function updateTask(
   description: string,
   status: string,
   dependsOn: string[],
-  reviewNotes: string,
 ): void {
   db.update(tasks)
     .set({
@@ -97,7 +97,6 @@ export function updateTask(
       description,
       status,
       dependsOn: JSON.stringify(dependsOn),
-      reviewNotes,
       updatedAt: sql`datetime('now')`,
     })
     .where(eq(tasks.id, id))
@@ -127,12 +126,12 @@ export function updateTaskStatus(id: string, status: TaskStatus): void {
 }
 
 /**
- * Mark a task as completed with a completed_at timestamp.
- * Used only for human-authoritative status transitions (approve → "done").
+ * Mark a task as complete with a completed_at timestamp.
+ * Used only for human-authoritative status transitions (complete).
  */
-export function markTaskCompleted(
+export function markTaskComplete(
   id: string,
-  status: "review" | "done" | "failed",
+  status: "complete" | "failed" = "complete",
 ): void {
   db.update(tasks)
     .set({
@@ -150,11 +149,11 @@ export function deleteTask(id: string): number {
   return result.changes;
 }
 
-/** Return all pending tasks whose dependencies are fully met. */
+/** Return all not_started tasks whose dependencies are fully met. */
 export function getUnblockedTasks(projectId: string): TaskRow[] {
   const all = listTasks(projectId);
   return all.filter((task) => {
-    if (task.status !== "pending") {
+    if (task.status !== TASK_STATUS.NOT_STARTED) {
       return false;
     }
     const deps = safeParseJsonArray(task.dependsOn);
@@ -163,7 +162,7 @@ export function getUnblockedTasks(projectId: string): TaskRow[] {
     }
     return deps.every((depId) => {
       const dep = all.find((t) => t.id === depId);
-      return dep?.status === "done";
+      return dep?.status === TASK_STATUS.COMPLETE;
     });
   });
 }
@@ -173,7 +172,7 @@ export function checkAndUnblock(projectId: string): TaskRow[] {
   return getUnblockedTasks(projectId);
 }
 
-/** Check whether all dependencies of a task are in "done" status. */
+/** Check whether all dependencies of a task are in "complete" status. */
 export function areDependenciesMet(taskId: string): boolean {
   const task = getTask(taskId);
   if (!task) {
@@ -185,7 +184,7 @@ export function areDependenciesMet(taskId: string): boolean {
   }
   return deps.every((depId) => {
     const dep = getTask(depId);
-    return dep?.status === "done";
+    return dep?.status === TASK_STATUS.COMPLETE;
   });
 }
 

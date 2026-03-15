@@ -8,7 +8,7 @@ import {
 } from "./helpers.js";
 
 test.describe("False failure prevention", () => {
-  test("task reaches review status after stub session completes without false failure", async ({ appPage }) => {
+  test("task reaches paused status after stub session completes without false failure", async ({ appPage }) => {
     const page = appPage;
 
     await createProject(page, "no-false-fail");
@@ -18,9 +18,8 @@ test.describe("False failure prevention", () => {
     await patchWsForStubRuntime(page);
     await runStubTaskToCompletion(page);
 
-    // Task should be in review — Approve and Reject buttons visible
-    await expect(page.locator("button", { hasText: "Approve" })).toBeVisible({ timeout: 5_000 });
-    await expect(page.locator("button", { hasText: "Reject" })).toBeVisible();
+    // Task should be in paused (review) — Complete button visible
+    await expect(page.locator("button", { hasText: "Complete" })).toBeVisible({ timeout: 5_000 });
 
     // Task should NOT show failure indicators
     await expect(page.getByText("Task failed")).not.toBeVisible();

@@ -106,13 +106,11 @@ export const tasks = sqliteTable("tasks", {
     .references(() => projects.id),
   title: text("title").notNull(),
   description: text("description").notNull().default(""),
-  status: text("status").notNull().default("pending"),
+  status: text("status").notNull().default("not_started"),
   branch: text("branch").notNull().default(""),
   dependsOn: text("depends_on").notNull().default("[]"),
-  assignedAt: text("assigned_at"),
   startedAt: text("started_at"),
   completedAt: text("completed_at"),
-  reviewNotes: text("review_notes").notNull().default(""),
   createdAt: text("created_at")
     .notNull()
     .default(sql`(datetime('now'))`),
