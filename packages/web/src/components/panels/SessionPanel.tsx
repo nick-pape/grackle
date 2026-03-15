@@ -12,6 +12,7 @@ import { AnimatePresence, motion } from "motion/react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import styles from "./SessionPanel.module.scss";
+import { ChatPanel } from "./ChatPanel.js";
 import { ConfirmDialog, Breadcrumbs } from "../display/index.js";
 import { buildBreadcrumbs } from "../../utils/breadcrumbs.js";
 import type { BreadcrumbSegment } from "../../utils/breadcrumbs.js";
@@ -559,7 +560,7 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
     events, eventsDropped, sessions, tasks, environments,
     loadSessionEvents, loadFindings,
     kill, startTask, approveTask, rejectTask, deleteTask,
-    projects, createProject, archiveProject, updateProject,
+    projects, archiveProject, updateProject,
     taskSessions, loadTaskSessions,
   } = useGrackle();
   // eslint-disable-next-line @rushstack/no-new-null
@@ -779,34 +780,9 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
     );
   }
 
-  // --- empty mode ---
+  // --- empty mode — show chat landing page ---
   if (viewMode.kind === "empty") {
-    if (projects.length === 0) {
-      return (
-        <div className={styles.emptyCta}>
-          <div className={styles.ctaTitle}>Welcome to Grackle</div>
-          <div className={styles.ctaDescription}>
-            Organize your work into projects and let agents tackle the tasks.
-          </div>
-          <button
-            className={styles.ctaButton}
-            onClick={() => {
-              const name = window.prompt("Project name:");
-              if (name?.trim()) {
-                createProject(name.trim());
-              }
-            }}
-          >
-            Create Your First Project
-          </button>
-        </div>
-      );
-    }
-    return (
-      <div className={styles.emptyState}>
-        Select a project or task to get started
-      </div>
-    );
+    return <ChatPanel />;
   }
 
   // --- new_chat mode ---

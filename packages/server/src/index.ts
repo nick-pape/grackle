@@ -18,6 +18,7 @@ import { join, dirname, extname, normalize, resolve, relative } from "node:path"
 import { createRequire } from "node:module";
 import { loadOrCreateApiKey, verifyApiKey } from "./api-key.js";
 import { logger } from "./logger.js";
+import { createChatHandler } from "./chat-handler.js";
 
 // Import db to ensure tables are created
 import "./db.js";
@@ -39,7 +40,9 @@ const WEB_DIST_DIR: string = resolve(
     || join(dirname(esmRequire.resolve("@grackle-ai/web/package.json")), "dist"),
 );
 
-function createWebHandler(apiKey: string): (req: http.IncomingMessage, res: http.ServerResponse) => void {
+function createWebHandler(apiKey: string, mcpPort: number, bindHost: string): (req: http.IncomingMessage, res: http.ServerResponse) => void {
+  const chatHandler = createChatHandler(mcpPort, bindHost, apiKey);
+
   return (req: http.IncomingMessage, res: http.ServerResponse) => {
     let rawPath: string;
     try {
@@ -47,6 +50,12 @@ function createWebHandler(apiKey: string): (req: http.IncomingMessage, res: http
     } catch {
       res.writeHead(400);
       res.end("Bad Request");
+      return;
+    }
+
+    // Route /api/chat to the AI chat handler
+    if (rawPath === "/api/chat") {
+      chatHandler(req, res);
       return;
     }
     // URL paths are POSIX-style; use posix separator to detect root, then resolve safely
@@ -161,7 +170,8 @@ function main(): void {
 
   // --- Web + WebSocket server (HTTP/1.1) ---
   const webPort = parseInt(process.env.GRACKLE_WEB_PORT || String(DEFAULT_WEB_PORT), 10);
-  const webServer = http.createServer(createWebHandler(apiKey));
+  const mcpPort = parseInt(process.env.GRACKLE_MCP_PORT || String(DEFAULT_MCP_PORT), 10);
+  const webServer = http.createServer(createWebHandler(apiKey, mcpPort, bindHost));
 
   createWsBridge(webServer, verifyApiKey);
 
@@ -180,7 +190,6 @@ function main(): void {
   });
 
   // --- MCP server (HTTP/1.1, Streamable HTTP) ---
-  const mcpPort = parseInt(process.env.GRACKLE_MCP_PORT || String(DEFAULT_MCP_PORT), 10);
   const mcpServer = createMcpServer({ bindHost, mcpPort, grpcPort, apiKey });
 
   mcpServer.on("error", (err: NodeJS.ErrnoException) => {

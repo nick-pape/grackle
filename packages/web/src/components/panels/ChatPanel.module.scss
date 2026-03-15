@@ -1,0 +1,253 @@
+@use '../../styles/mixins' as *;
+
+.chatContainer {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.messageList {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-lg) var(--space-xl);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+// ---------------------------------------------------------------------------
+// Welcome state
+// ---------------------------------------------------------------------------
+
+.welcome {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  animation: fadeIn 400ms ease;
+}
+
+.welcomeTitle {
+  font-family: var(--font-ui);
+  font-size: var(--font-size-xxl, 1.5rem);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+}
+
+.welcomeHint {
+  font-family: var(--font-ui);
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+}
+
+// ---------------------------------------------------------------------------
+// Message bubbles
+// ---------------------------------------------------------------------------
+
+.message {
+  max-width: 75%;
+  animation: slideIn 200ms ease;
+}
+
+.user {
+  align-self: flex-end;
+
+  .bubble {
+    @include surface-card;
+    padding: var(--space-sm) var(--space-md);
+    background: var(--accent-primary);
+    color: var(--text-on-accent, #fff);
+    border-color: var(--accent-primary);
+    font-family: var(--font-ui);
+    font-size: var(--font-size-sm);
+    line-height: var(--line-height);
+  }
+}
+
+.assistant {
+  align-self: flex-start;
+
+  .bubble {
+    @include surface-card;
+    padding: var(--space-md) var(--space-lg);
+    font-family: var(--font-ui);
+    font-size: var(--font-size-sm);
+    line-height: var(--line-height);
+    color: var(--text-primary);
+  }
+}
+
+.role {
+  font-family: var(--font-ui);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: var(--space-xs);
+  padding-left: var(--space-xs);
+}
+
+// ---------------------------------------------------------------------------
+// Markdown content inside assistant bubbles
+// ---------------------------------------------------------------------------
+
+.content {
+  p {
+    margin: 0 0 var(--space-sm);
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  strong {
+    font-weight: var(--font-weight-bold);
+    color: var(--text-primary);
+  }
+
+  h2 {
+    font-size: var(--font-size-md);
+    font-weight: var(--font-weight-bold);
+    margin: var(--space-md) 0 var(--space-xs);
+    color: var(--text-primary);
+
+    &:first-child {
+      margin-top: 0;
+    }
+  }
+
+  ul, ol {
+    margin: var(--space-xs) 0 var(--space-sm);
+    padding-left: var(--space-lg);
+  }
+
+  li {
+    margin-bottom: var(--space-xxs);
+  }
+
+  code {
+    @include surface-inset;
+    padding: 1px 5px;
+    font-family: var(--font-mono);
+    font-size: var(--font-size-xs);
+    display: inline;
+  }
+
+  pre {
+    @include surface-inset;
+    padding: var(--space-sm) var(--space-md);
+    margin: var(--space-sm) 0;
+    overflow-x: auto;
+
+    code {
+      background: none;
+      border: none;
+      padding: 0;
+      box-shadow: none;
+      font-size: var(--font-size-xs);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Thinking indicator
+// ---------------------------------------------------------------------------
+
+.thinking {
+  align-self: flex-start;
+  animation: fadeIn 200ms ease;
+
+  .bubble {
+    @include surface-card;
+    padding: var(--space-sm) var(--space-md);
+  }
+}
+
+.dots {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  height: 20px;
+
+  span {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--text-tertiary);
+    animation: bounce 1.4s ease-in-out infinite;
+
+    &:nth-child(2) { animation-delay: 0.2s; }
+    &:nth-child(3) { animation-delay: 0.4s; }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Error banner
+// ---------------------------------------------------------------------------
+
+.error {
+  margin: 0 var(--space-xl);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--accent-red);
+  color: #fff;
+  border-radius: var(--radius-md);
+  font-family: var(--font-ui);
+  font-size: var(--font-size-xs);
+}
+
+// ---------------------------------------------------------------------------
+// Input bar
+// ---------------------------------------------------------------------------
+
+.inputBar {
+  @include surface-panel;
+  display: flex;
+  gap: var(--space-sm);
+  padding: var(--space-md) var(--space-xl);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.input {
+  @include input-field;
+  flex: 1;
+}
+
+.sendButton {
+  @include btn-primary;
+  padding: var(--space-sm) var(--space-lg);
+}
+
+// ---------------------------------------------------------------------------
+// Animations
+// ---------------------------------------------------------------------------
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes bounce {
+  0%, 80%, 100% {
+    transform: scale(0.6);
+    opacity: 0.4;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
