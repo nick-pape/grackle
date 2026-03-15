@@ -159,7 +159,7 @@ function applySchema(): void {
       project_id    TEXT NOT NULL REFERENCES projects(id),
       title         TEXT NOT NULL,
       description   TEXT NOT NULL DEFAULT '',
-      status        TEXT NOT NULL DEFAULT 'pending',
+      status        TEXT NOT NULL DEFAULT 'not_started',
       branch        TEXT NOT NULL DEFAULT '',
       depends_on    TEXT NOT NULL DEFAULT '[]',
       assigned_at   TEXT,
