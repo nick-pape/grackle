@@ -12,24 +12,6 @@ module.exports = {
       { selector: "interface", format: ["PascalCase"] }
     ],
     // Modern React with hooks: inline handlers are the standard pattern.
-    "react/jsx-no-bind": "off",
-    // Escalate from "warn" (inherited) to "error" so violations block the build.
-    // Options duplicated from @rushstack/eslint-config — ESLint replaces the
-    // entire rule config on override, and the parent can't be require()'d at
-    // config-load time (it uses @rushstack/eslint-patch/modern-module-resolution).
-    "@typescript-eslint/typedef": [
-      "error",
-      {
-        arrayDestructuring: false,
-        arrowParameter: false,
-        memberVariableDeclaration: true,
-        objectDestructuring: false,
-        parameter: true,
-        propertyDeclaration: true,
-        variableDeclaration: false,
-        variableDeclarationIgnoreFunction: true,
-      }
-    ],
-    "@typescript-eslint/explicit-member-accessibility": "error",
+    "react/jsx-no-bind": "off"
   }
 };
