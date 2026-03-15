@@ -14,9 +14,34 @@ export function registerTaskCommands(program: Command): void {
   task
     .command("list <project-id>")
     .description("List tasks in a project")
-    .action(async (projectId: string) => {
+    .option("--search <query>", "Filter tasks by title/description substring")
+    .option("--status <status>", "Filter tasks by status (not_started, working, paused, complete, failed)")
+    .action(async (projectId: string, opts: { search?: string; status?: string }) => {
+      const VALID_STATUSES = new Set([
+        "not_started",
+        "working",
+        "paused",
+        "complete",
+        "failed",
+      ]);
+
+      if (
+        opts.status !== undefined &&
+        !VALID_STATUSES.has(String(opts.status).toLowerCase())
+      ) {
+        console.error(
+          `Invalid status: "${opts.status}". Valid values are: ${[...VALID_STATUSES].join(", ")}`,
+        );
+        process.exitCode = 1;
+        return;
+      }
+
       const client = createGrackleClient();
-      const res = await client.listTasks({ id: projectId });
+      const res = await client.listTasks({
+        projectId,
+        search: opts.search || "",
+        status: opts.status ? String(opts.status).toLowerCase() : "",
+      });
       if (res.tasks.length === 0) {
         console.log("No tasks.");
         return;

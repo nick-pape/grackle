@@ -25,9 +25,11 @@ export const taskTools: ToolDefinition[] = [
     name: "task_list",
     group: "task",
     description:
-      "List all tasks in a Grackle project with their status, title, and assignment information.",
+      "List all tasks in a Grackle project with their status, title, and assignment information. Supports optional search and status filters.",
     inputSchema: z.object({
       projectId: z.string().describe("The project ID to list tasks for"),
+      search: z.string().optional().describe("Case-insensitive substring filter on task title or description"),
+      status: z.string().optional().describe("Filter by task status: not_started, working, paused, complete, failed"),
     }),
     rpcMethod: "listTasks",
     mutating: false,
@@ -40,7 +42,9 @@ export const taskTools: ToolDefinition[] = [
     async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) {
       try {
         const response = await client.listTasks({
-          id: args.projectId as string,
+          projectId: args.projectId as string,
+          search: (args.search as string) || "",
+          status: (args.status as string) || "",
         });
         const summaries = response.tasks.map((task) => ({
           id: task.id,

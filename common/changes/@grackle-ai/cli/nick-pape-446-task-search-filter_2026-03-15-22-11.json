@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Add --search and --status filters to task list across proto, store, gRPC, WS, MCP, and CLI",
+      "type": "minor",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
