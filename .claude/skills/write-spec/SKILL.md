@@ -1,11 +1,11 @@
 ---
 name: write-spec
-description: Research a GitHub issue and write a detailed requirements specification as a comment. Run with /write-spec <ISSUE_NUMBER>.
+description: Research a GitHub issue and write a detailed requirements specification into the issue body. Run with /write-spec <ISSUE_NUMBER>.
 ---
 
 # Write Spec — Requirements Specification Writer
 
-This skill researches a GitHub issue in depth and posts a detailed requirements specification as a comment on the issue.
+This skill researches a GitHub issue in depth and writes a detailed requirements specification directly into the issue body.
 
 ## Step 0: Parse Arguments
 
@@ -92,18 +92,28 @@ Write a comprehensive spec covering these sections. Adapt the sections to the is
 - For bugs, reference the specific code paths that exhibit the problem.
 - Keep it thorough but readable. Use markdown formatting with headers and numbered lists.
 
-## Step 6: Post the Spec as a Comment
+## Step 6: Write the Spec into the Issue Body
 
-Post the spec as a comment on the issue. Use a heredoc to preserve formatting:
+The spec goes directly into the issue body — NOT as a comment. This ensures agents always see it when reading the issue.
+
+1. Read the current issue body using `mcp__github__issue_read` (method: "get") or `gh issue view`.
+2. Build the new body:
+   - If the body already contains a `## Requirements Specification` section, **replace** everything from that header to the end of the body with the new spec.
+   - Otherwise, **append** the spec after the existing body, separated by `\n\n---\n\n`.
+   - If the original body is very thin (< 100 chars) and the spec has an Overview section, replace the body entirely with the spec content.
+3. Update the issue body:
 
 ```bash
-gh issue comment $ISSUE_NUMBER -R $REPO --body "$(cat <<'SPECEOF'
-## Requirements Specification
-
-<your spec content here>
-
+gh issue edit $ISSUE_NUMBER -R $REPO --body "$(cat <<'SPECEOF'
+<new body content here>
 SPECEOF
 )"
+```
+
+4. Check if the issue has any existing spec comments (comments starting with `## Requirements Specification` or `# Requirements Specification`). If found, delete them to avoid duplication:
+
+```bash
+gh api -X DELETE repos/$REPO/issues/comments/<COMMENT_ID>
 ```
 
 ## Step 7: Add approved-for-grackle Label
@@ -116,13 +126,10 @@ gh issue edit $ISSUE_NUMBER -R $REPO --add-label approved-for-grackle
 
 This marks the issue as spec'd and ready for development.
 
-## Step 8: Review the Issue Description
-
-Check if the current issue description is thin or missing important context. If so, update it to supplement (not overwrite) the existing content. If the description is already adequate, leave it as-is — the spec comment provides the detail.
-
-## Step 9: Report
+## Step 8: Report
 
 Summarize what was done:
 - How many functional requirements were defined
 - Key findings from the code review (e.g., missing APIs, partially implemented features, existing patterns to leverage)
 - Any open questions that need team input
+- Confirm the spec was written to the issue body (not as a comment)

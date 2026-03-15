@@ -1,7 +1,14 @@
 import { test, expect } from "@playwright/test";
 import {
-  buildBreadcrumbs,
   buildTaskAncestorChain,
+  buildHomeBreadcrumbs,
+  buildSettingsBreadcrumbs,
+  buildPersonasBreadcrumbs,
+  buildProjectBreadcrumbs,
+  buildTaskBreadcrumbs,
+  buildNewTaskBreadcrumbs,
+  buildNewChatBreadcrumbs,
+  buildSessionBreadcrumbs,
   type BreadcrumbSegment,
 } from "../src/utils/breadcrumbs.js";
 import type { TaskData, Project } from "../src/hooks/useGrackleSocket.js";
@@ -81,107 +88,92 @@ test.describe("buildTaskAncestorChain", () => {
   });
 });
 
-test.describe("buildBreadcrumbs", () => {
-  const emptyById: Map<string, TaskData> = new Map();
-  const emptyProjects: Project[] = [];
-
-  test("empty mode returns Home as non-clickable", () => {
-    const segments: BreadcrumbSegment[] = buildBreadcrumbs({ kind: "empty" }, emptyProjects, emptyById);
+test.describe("breadcrumb builders", () => {
+  test("home returns Home as non-clickable", () => {
+    const segments: BreadcrumbSegment[] = buildHomeBreadcrumbs();
     expect(segments).toHaveLength(1);
     expect(segments[0].label).toBe("Home");
-    expect(segments[0].viewMode).toBeUndefined();
+    expect(segments[0].url).toBeUndefined();
   });
 
-  test("settings mode returns Home > Settings", () => {
-    const segments: BreadcrumbSegment[] = buildBreadcrumbs({ kind: "settings" }, emptyProjects, emptyById);
+  test("settings returns Home > Settings", () => {
+    const segments: BreadcrumbSegment[] = buildSettingsBreadcrumbs();
     expect(segments).toHaveLength(2);
     expect(segments[0].label).toBe("Home");
-    expect(segments[0].viewMode).toEqual({ kind: "empty" });
+    expect(segments[0].url).toBe("/");
     expect(segments[1].label).toBe("Settings");
-    expect(segments[1].viewMode).toBeUndefined();
+    expect(segments[1].url).toBeUndefined();
   });
 
-  test("persona_management returns Home > Personas", () => {
-    const segments: BreadcrumbSegment[] = buildBreadcrumbs({ kind: "persona_management" }, emptyProjects, emptyById);
+  test("personas returns Home > Personas", () => {
+    const segments: BreadcrumbSegment[] = buildPersonasBreadcrumbs();
     expect(segments).toHaveLength(2);
     expect(segments[1].label).toBe("Personas");
   });
 
-  test("project mode returns Home > ProjectName", () => {
+  test("project returns Home > ProjectName", () => {
     const projects: Project[] = [makeProject({ id: "p1", name: "My Project" })];
-    const segments: BreadcrumbSegment[] = buildBreadcrumbs({ kind: "project", projectId: "p1" }, projects, emptyById);
+    const segments: BreadcrumbSegment[] = buildProjectBreadcrumbs("p1", projects);
     expect(segments).toHaveLength(2);
     expect(segments[0].label).toBe("Home");
-    expect(segments[0].viewMode).toEqual({ kind: "empty" });
+    expect(segments[0].url).toBe("/");
     expect(segments[1].label).toBe("My Project");
-    expect(segments[1].viewMode).toBeUndefined();
+    expect(segments[1].url).toBeUndefined();
   });
 
-  test("task mode returns Home > Project > Task", () => {
+  test("task returns Home > Project > Task", () => {
     const projects: Project[] = [makeProject({ id: "p1", name: "Proj" })];
     const task: TaskData = makeTask({ id: "t1", projectId: "p1", title: "My Task" });
     const byId: Map<string, TaskData> = new Map([["t1", task]]);
 
-    const segments: BreadcrumbSegment[] = buildBreadcrumbs({ kind: "task", taskId: "t1" }, projects, byId);
+    const segments: BreadcrumbSegment[] = buildTaskBreadcrumbs("t1", projects, byId);
     expect(segments).toHaveLength(3);
     expect(segments[0].label).toBe("Home");
     expect(segments[1].label).toBe("Proj");
-    expect(segments[1].viewMode).toEqual({ kind: "project", projectId: "p1" });
+    expect(segments[1].url).toBe("/projects/p1");
     expect(segments[2].label).toBe("My Task");
-    expect(segments[2].viewMode).toBeUndefined();
+    expect(segments[2].url).toBeUndefined();
   });
 
-  test("nested task mode includes ancestor chain", () => {
+  test("nested task includes ancestor chain", () => {
     const projects: Project[] = [makeProject({ id: "p1", name: "Proj" })];
     const root: TaskData = makeTask({ id: "t1", projectId: "p1", title: "Root" });
     const child: TaskData = makeTask({ id: "t2", projectId: "p1", title: "Child", parentTaskId: "t1", depth: 1 });
     const grandchild: TaskData = makeTask({ id: "t3", projectId: "p1", title: "Grandchild", parentTaskId: "t2", depth: 2 });
     const byId: Map<string, TaskData> = new Map([["t1", root], ["t2", child], ["t3", grandchild]]);
 
-    const segments: BreadcrumbSegment[] = buildBreadcrumbs({ kind: "task", taskId: "t3" }, projects, byId);
+    const segments: BreadcrumbSegment[] = buildTaskBreadcrumbs("t3", projects, byId);
     expect(segments).toHaveLength(5); // Home > Proj > Root > Child > Grandchild
     expect(segments[0].label).toBe("Home");
     expect(segments[1].label).toBe("Proj");
     expect(segments[2].label).toBe("Root");
-    expect(segments[2].viewMode).toEqual({ kind: "task", taskId: "t1" });
+    expect(segments[2].url).toBe("/tasks/t1");
     expect(segments[3].label).toBe("Child");
-    expect(segments[3].viewMode).toEqual({ kind: "task", taskId: "t2" });
+    expect(segments[3].url).toBe("/tasks/t2");
     expect(segments[4].label).toBe("Grandchild");
-    expect(segments[4].viewMode).toBeUndefined();
+    expect(segments[4].url).toBeUndefined();
   });
 
-  test("new_task with parentTaskId shows ancestor chain", () => {
+  test("new task with parentTaskId shows ancestor chain", () => {
     const projects: Project[] = [makeProject({ id: "p1", name: "Proj" })];
     const parent: TaskData = makeTask({ id: "t1", projectId: "p1", title: "Parent" });
     const byId: Map<string, TaskData> = new Map([["t1", parent]]);
 
-    const segments: BreadcrumbSegment[] = buildBreadcrumbs(
-      { kind: "new_task", projectId: "p1", parentTaskId: "t1" },
-      projects,
-      byId,
-    );
+    const segments: BreadcrumbSegment[] = buildNewTaskBreadcrumbs("p1", "t1", projects, byId);
     expect(segments).toHaveLength(4); // Home > Proj > Parent > New Task
     expect(segments[2].label).toBe("Parent");
     expect(segments[3].label).toBe("New Task");
-    expect(segments[3].viewMode).toBeUndefined();
+    expect(segments[3].url).toBeUndefined();
   });
 
-  test("new_chat returns Home > New Chat", () => {
-    const segments: BreadcrumbSegment[] = buildBreadcrumbs(
-      { kind: "new_chat", environmentId: "e1", runtime: "test" },
-      emptyProjects,
-      emptyById,
-    );
+  test("new chat returns Home > New Chat", () => {
+    const segments: BreadcrumbSegment[] = buildNewChatBreadcrumbs();
     expect(segments).toHaveLength(2);
     expect(segments[1].label).toBe("New Chat");
   });
 
-  test("session mode returns Home > Session prefix", () => {
-    const segments: BreadcrumbSegment[] = buildBreadcrumbs(
-      { kind: "session", sessionId: "abcdef1234567890" },
-      emptyProjects,
-      emptyById,
-    );
+  test("session returns Home > Session prefix", () => {
+    const segments: BreadcrumbSegment[] = buildSessionBreadcrumbs("abcdef1234567890");
     expect(segments).toHaveLength(2);
     expect(segments[1].label).toBe("Session abcdef12");
   });

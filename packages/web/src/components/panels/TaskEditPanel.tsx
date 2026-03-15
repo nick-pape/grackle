@@ -1,37 +1,43 @@
 import { useState, useEffect, useRef, type JSX } from "react";
 import { useGrackle } from "../../context/GrackleContext.js";
 import { useToast } from "../../context/ToastContext.js";
-import type { ViewMode } from "../../App.js";
+import { taskUrl, projectUrl, useAppNavigate } from "../../utils/navigation.js";
 import styles from "./TaskEditPanel.module.scss";
 
 /** Props for the TaskEditPanel component. */
 interface Props {
-  viewMode: ViewMode & { kind: "new_task" | "edit_task" };
-  setViewMode: (mode: ViewMode) => void;
+  mode: "new" | "edit";
+  /** Task ID — required in edit mode. */
+  taskId?: string;
+  /** Project ID — required in new mode. */
+  projectId?: string;
+  /** Parent task ID — optional in new mode. */
+  parentTaskId?: string;
 }
 
 /**
  * Full-panel create/edit form for tasks.
  *
- * - new_task: blank form; calls createTask on save, then navigates back to
- *             the project view.
- * - edit_task: pre-populated form; calls updateTask on save, then navigates
- *              back to the task overview.
+ * - new: blank form; calls createTask on save, then navigates back to
+ *        the project view.
+ * - edit: pre-populated form; calls updateTask on save, then navigates
+ *         back to the task overview.
  */
-export function TaskEditPanel({ viewMode, setViewMode }: Props): JSX.Element {
+export function TaskEditPanel({ mode, taskId, projectId: projectIdProp, parentTaskId: parentTaskIdProp }: Props): JSX.Element {
   const { tasks, createTask, updateTask } = useGrackle();
   const { showToast } = useToast();
+  const navigate = useAppNavigate();
 
-  const isEdit = viewMode.kind === "edit_task";
-  const existingTask = isEdit ? tasks.find((t) => t.id === viewMode.taskId) : undefined;
+  const isEdit = mode === "edit";
+  const existingTask = isEdit && taskId ? tasks.find((t) => t.id === taskId) : undefined;
 
   const projectId = isEdit
     ? (existingTask?.projectId ?? "")
-    : viewMode.projectId;
+    : (projectIdProp ?? "");
 
   const parentTaskId = isEdit
     ? (existingTask?.parentTaskId ?? "")
-    : (viewMode.kind === "new_task" ? (viewMode.parentTaskId ?? "") : "");
+    : (parentTaskIdProp ?? "");
 
   const parentTask = parentTaskId ? tasks.find((t) => t.id === parentTaskId) : undefined;
 
@@ -57,7 +63,7 @@ export function TaskEditPanel({ viewMode, setViewMode }: Props): JSX.Element {
   const siblingTasks = tasks.filter(
     (t) =>
       t.projectId === projectId &&
-      (!isEdit || t.id !== viewMode.taskId) &&
+      (!isEdit || t.id !== taskId) &&
       t.id !== parentTaskId,
   );
 
@@ -79,10 +85,10 @@ export function TaskEditPanel({ viewMode, setViewMode }: Props): JSX.Element {
       // Guard: task data not yet loaded — do not overwrite with blank values.
       return;
     }
-    if (isEdit) {
-      updateTask(viewMode.taskId, title.trim(), description, selectedDeps);
+    if (isEdit && taskId) {
+      updateTask(taskId, title.trim(), description, selectedDeps);
       showToast("Task updated", "success");
-      setViewMode({ kind: "task", taskId: viewMode.taskId });
+      navigate(taskUrl(taskId), { replace: true });
     } else {
       createTask(
         projectId,
@@ -92,15 +98,15 @@ export function TaskEditPanel({ viewMode, setViewMode }: Props): JSX.Element {
         parentTaskId || undefined,
       );
       showToast("Task created", "success");
-      setViewMode({ kind: "project", projectId });
+      navigate(projectUrl(projectId), { replace: true });
     }
   };
 
   const handleCancel = (): void => {
-    if (isEdit) {
-      setViewMode({ kind: "task", taskId: viewMode.taskId });
+    if (isEdit && taskId) {
+      navigate(taskUrl(taskId));
     } else {
-      setViewMode({ kind: "project", projectId });
+      navigate(projectUrl(projectId));
     }
   };
 

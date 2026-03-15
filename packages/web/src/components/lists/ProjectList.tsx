@@ -1,17 +1,12 @@
 import { useEffect, useMemo, useRef, useState, type JSX } from "react";
+import { useMatch } from "react-router";
 import { useGrackle } from "../../context/GrackleContext.js";
-import type { ViewMode } from "../../App.js";
 import type { TaskData } from "../../hooks/useGrackleSocket.js";
 import { AnimatePresence, motion } from "motion/react";
 import { MAX_TASK_DEPTH } from "@grackle-ai/common";
 import { Spinner } from "../display/index.js";
+import { taskUrl, projectUrl, newTaskUrl, useAppNavigate } from "../../utils/navigation.js";
 import styles from "./ProjectList.module.scss";
-
-/** Props for the ProjectList component. */
-interface Props {
-  viewMode: ViewMode;
-  setViewMode: (mode: ViewMode) => void;
-}
 
 /** Task status visual indicators using CSS custom property colors. */
 const TASK_STATUS_STYLES: Record<string, { color: string; icon: string }> = {
@@ -62,7 +57,7 @@ interface TaskTreeNodeProps {
   expandedTasks: Set<string>;
   toggleTask: (taskId: string) => void;
   selectedTaskId: string | undefined;
-  setViewMode: (mode: ViewMode) => void;
+  navigate: ReturnType<typeof useAppNavigate>;
   projectId: string;
   taskStatusById: Map<string, string>;
 }
@@ -74,7 +69,7 @@ function TaskTreeNode({
   expandedTasks,
   toggleTask,
   selectedTaskId,
-  setViewMode,
+  navigate,
   projectId,
   taskStatusById,
 }: TaskTreeNodeProps): JSX.Element {
@@ -89,7 +84,7 @@ function TaskTreeNode({
   return (
     <>
       <div
-        onClick={() => setViewMode({ kind: "task", taskId: node.id })}
+        onClick={() => navigate(taskUrl(node.id))}
         className={`${styles.taskRow} ${isSelected ? styles.selected : ""}`}
         style={{ paddingLeft: indent }}
         data-task-id={node.id}
@@ -134,7 +129,7 @@ function TaskTreeNode({
           <button
             onClick={(e) => {
               e.stopPropagation();
-              setViewMode({ kind: "new_task", projectId, parentTaskId: node.id });
+              navigate(newTaskUrl(projectId, node.id));
             }}
             title="Add child task"
             aria-label="Add child task"
@@ -162,7 +157,7 @@ function TaskTreeNode({
                 expandedTasks={expandedTasks}
                 toggleTask={toggleTask}
                 selectedTaskId={selectedTaskId}
-                setViewMode={setViewMode}
+                navigate={navigate}
                 projectId={projectId}
                 taskStatusById={taskStatusById}
               />
@@ -175,16 +170,21 @@ function TaskTreeNode({
 }
 
 /** Sidebar project tree with expandable task lists and hierarchical task rendering. */
-export function ProjectList({ viewMode, setViewMode }: Props): JSX.Element {
+export function ProjectList(): JSX.Element {
   const { projects, tasks, loadTasks, createProject, projectCreating } = useGrackle();
+  const navigate = useAppNavigate();
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
   const [manuallyCollapsed, setManuallyCollapsed] = useState<Set<string>>(new Set());
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newProjectName, setNewProjectName] = useState("");
 
-  const selectedProjectId = viewMode.kind === "project" ? viewMode.projectId : undefined;
-  const selectedTaskId = viewMode.kind === "task" ? viewMode.taskId : undefined;
+  // Derive selected state from router
+  const taskMatch = useMatch("/tasks/:taskId/*");
+  const projectMatch = useMatch("/projects/:projectId");
+  const selectedTaskId = taskMatch?.params.taskId;
+  const selectedProjectId = projectMatch?.params.projectId;
+
   const expandedRef = useRef(expanded);
   expandedRef.current = expanded;
   const taskStatusById = useMemo(
@@ -192,30 +192,30 @@ export function ProjectList({ viewMode, setViewMode }: Props): JSX.Element {
     [tasks],
   );
 
-  const toggleExpand = (projectId: string): void => {
+  const toggleExpand = (pid: string): void => {
     setExpanded((prev) => {
       const next = new Set(prev);
-      if (next.has(projectId)) {
-        next.delete(projectId);
+      if (next.has(pid)) {
+        next.delete(pid);
       } else {
-        next.add(projectId);
-        loadTasks(projectId);
+        next.add(pid);
+        loadTasks(pid);
       }
       return next;
     });
   };
 
-  const toggleTask = (taskId: string): void => {
+  const toggleTask = (tid: string): void => {
     setExpandedTasks((prev) => {
       const next = new Set(prev);
-      if (next.has(taskId)) {
-        next.delete(taskId);
-        setManuallyCollapsed((mc) => new Set(mc).add(taskId));
+      if (next.has(tid)) {
+        next.delete(tid);
+        setManuallyCollapsed((mc) => new Set(mc).add(tid));
       } else {
-        next.add(taskId);
+        next.add(tid);
         setManuallyCollapsed((mc) => {
           const updated = new Set(mc);
-          updated.delete(taskId);
+          updated.delete(tid);
           return updated;
         });
       }
@@ -241,9 +241,7 @@ export function ProjectList({ viewMode, setViewMode }: Props): JSX.Element {
     }
   }, [tasks, manuallyCollapsed]);
 
-  // Auto-expand a project when selected via programmatic navigation (e.g. after
-  // task deletion). Uses expandedRef so that manual collapse doesn't re-trigger
-  // auto-expansion — the effect only fires when selectedProjectId changes.
+  // Auto-expand a project when selected via programmatic navigation
   useEffect(() => {
     if (selectedProjectId && !expandedRef.current.has(selectedProjectId)) {
       setExpanded((prev) => new Set(prev).add(selectedProjectId));
@@ -336,7 +334,7 @@ export function ProjectList({ viewMode, setViewMode }: Props): JSX.Element {
                   if (!isExpanded) {
                     toggleExpand(project.id);
                   }
-                  setViewMode({ kind: "project", projectId: project.id });
+                  navigate(projectUrl(project.id));
                 }
               }}
               className={`${styles.projectRow} ${isSelected ? styles.selected : ""}`}
@@ -351,7 +349,7 @@ export function ProjectList({ viewMode, setViewMode }: Props): JSX.Element {
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  setViewMode({ kind: "new_task", projectId: project.id });
+                  navigate(newTaskUrl(project.id));
                 }}
                 title="New task"
                 className={styles.newTaskButton}
@@ -377,7 +375,7 @@ export function ProjectList({ viewMode, setViewMode }: Props): JSX.Element {
                       expandedTasks={expandedTasks}
                       toggleTask={toggleTask}
                       selectedTaskId={selectedTaskId}
-                      setViewMode={setViewMode}
+                      navigate={navigate}
                       projectId={project.id}
                       taskStatusById={taskStatusById}
                     />
@@ -387,7 +385,7 @@ export function ProjectList({ viewMode, setViewMode }: Props): JSX.Element {
                     <div className={styles.emptyTaskCta}>
                       <button
                         className={styles.createTaskLink}
-                        onClick={() => setViewMode({ kind: "new_task", projectId: project.id })}
+                        onClick={() => navigate(newTaskUrl(project.id))}
                       >
                         + Create Task
                       </button>

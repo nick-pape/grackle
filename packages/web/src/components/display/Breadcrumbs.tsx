@@ -1,18 +1,18 @@
 import type { JSX } from "react";
+import { Link } from "react-router";
 import type { BreadcrumbSegment } from "../../utils/breadcrumbs.js";
 import styles from "./Breadcrumbs.module.scss";
 
 /** Props for the Breadcrumbs component. */
 interface BreadcrumbsProps {
   segments: BreadcrumbSegment[];
-  onNavigate: (segment: BreadcrumbSegment) => void;
 }
 
 /** Separator character between breadcrumb segments. */
 const SEPARATOR: string = "\u203A"; // ›
 
 /** Renders a clickable breadcrumb trail from a list of segments. */
-export function Breadcrumbs({ segments, onNavigate }: BreadcrumbsProps): JSX.Element {
+export function Breadcrumbs({ segments }: BreadcrumbsProps): JSX.Element {
   return (
     <nav className={styles.breadcrumbs} aria-label="Breadcrumb" data-testid="breadcrumbs">
       <ol className={styles.list}>
@@ -25,14 +25,14 @@ export function Breadcrumbs({ segments, onNavigate }: BreadcrumbsProps): JSX.Ele
                   {SEPARATOR}
                 </span>
               )}
-              {segment.viewMode && !isLast ? (
-                <button
+              {segment.url && !isLast ? (
+                <Link
                   className={styles.link}
-                  onClick={() => onNavigate(segment)}
+                  to={segment.url}
                   title={segment.label}
                 >
                   {segment.label}
-                </button>
+                </Link>
               ) : (
                 <span className={styles.current} aria-current="page" title={segment.label}>
                   {segment.label}

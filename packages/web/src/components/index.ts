@@ -7,7 +7,7 @@
 export { StatusBar, Sidebar, UnifiedBar } from "./layout/index.js";
 
 // Panel components - main content areas
-export { SessionPanel, FindingsPanel } from "./panels/index.js";
+export { FindingsPanel } from "./panels/index.js";
 
 // List components - sidebar navigation
 export { EnvironmentList, ProjectList } from "./lists/index.js";

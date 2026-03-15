@@ -12,13 +12,12 @@ import "@xyflow/react/dist/style.css";
 import { useGrackle } from "../../context/GrackleContext.js";
 import { useDagLayout, type TaskNodeData } from "./useDagLayout.js";
 import { TaskNode } from "./TaskNode.js";
-import type { ViewMode } from "../../App.js";
+import { taskUrl, newTaskUrl, useAppNavigate } from "../../utils/navigation.js";
 import styles from "./DagView.module.scss";
 
 /** Props for the DagView component. */
 interface Props {
   projectId: string;
-  setViewMode: (mode: ViewMode) => void;
 }
 
 /** Color mapping for MiniMap node coloring by task status. */
@@ -38,8 +37,9 @@ const nodeTypes: NodeTypes = {
 };
 
 /** Interactive DAG visualization of task hierarchy and dependency relationships. */
-export function DagView({ projectId, setViewMode }: Props): JSX.Element {
+export function DagView({ projectId }: Props): JSX.Element {
   const { tasks } = useGrackle();
+  const navigate = useAppNavigate();
 
   const projectTasks = useMemo(
     () => tasks.filter((t) => t.projectId === projectId),
@@ -50,9 +50,9 @@ export function DagView({ projectId, setViewMode }: Props): JSX.Element {
 
   const onNodeClick = useCallback(
     (_event: MouseEvent, node: Node) => {
-      setViewMode({ kind: "task", taskId: node.id });
+      navigate(taskUrl(node.id));
     },
-    [setViewMode],
+    [navigate],
   );
 
   /** Returns a hex color for the MiniMap based on task status. */
@@ -66,7 +66,7 @@ export function DagView({ projectId, setViewMode }: Props): JSX.Element {
       <div className={styles.emptyCta}>
         <button
           className={styles.ctaButton}
-          onClick={() => setViewMode({ kind: "new_task", projectId })}
+          onClick={() => navigate(newTaskUrl(projectId))}
         >
           Create Task
         </button>
