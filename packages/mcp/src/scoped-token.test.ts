@@ -51,7 +51,8 @@ describe("scoped-token", () => {
   test("tampered signature returns undefined", () => {
     const token = createScopedToken(CLAIMS, SIGNING_SECRET);
     const [payload, signature] = token.split(".");
-    const tampered = signature.slice(0, -1) + (signature.endsWith("A") ? "B" : "A");
+    // Flip multiple characters to ensure the decoded bytes actually change
+    const tampered = signature.split("").map((c, i) => i < 4 ? (c === "A" ? "B" : "A") : c).join("");
     const result = verifyScopedToken(`${payload}.${tampered}`, SIGNING_SECRET);
     expect(result).toBeUndefined();
   });
