@@ -50,6 +50,22 @@ describe("formatGhError", () => {
     expect(result).toContain("list codespaces");
   });
 
+  it("handles undefined stderr without producing 'undefined' in output", () => {
+    const err = Object.assign(new Error("command failed"), {
+      stderr: undefined,
+    });
+    const result = formatGhError(err, "list codespaces");
+    expect(result).not.toContain("undefined");
+    expect(result).toContain("command failed");
+  });
+
+  it("handles null stderr without producing 'null' in output", () => {
+    const err = Object.assign(new Error("command failed"), { stderr: null });
+    const result = formatGhError(err, "list codespaces");
+    expect(result).not.toContain("null");
+    expect(result).toContain("command failed");
+  });
+
   it("falls back to message when no stderr", () => {
     const err = new Error("something broke");
     const result = formatGhError(err, "create codespace");

@@ -71,7 +71,7 @@ export function UnifiedBar(): JSX.Element {
   const {
     spawn, sendInput, kill, sessions, tasks, environments, personas,
     addEnvironment, provisionEnvironment,
-    codespaces, codespaceError, codespaceCreating, listCodespaces, createCodespace,
+    codespaces, codespaceError, codespaceListError, codespaceCreating, listCodespaces, createCodespace,
   } = useGrackle();
   const { showToast } = useToast();
   const navigate = useAppNavigate();
@@ -353,16 +353,16 @@ export function UnifiedBar(): JSX.Element {
                 <span className={styles.creatingHint}>Creating codespace...</span>
               )}
               {codespaceError && (
-                <>
-                  <span className={styles.errorHint}>{codespaceError}</span>
-                  <input
-                    type="text"
-                    value={envCodespaceName}
-                    onChange={(e) => setEnvCodespaceName(e.target.value)}
-                    placeholder="Or enter codespace name manually..."
-                    className={styles.inputSmall}
-                  />
-                </>
+                <span className={styles.errorHint}>{codespaceError}</span>
+              )}
+              {codespaceListError && (
+                <input
+                  type="text"
+                  value={envCodespaceName}
+                  onChange={(e) => setEnvCodespaceName(e.target.value)}
+                  placeholder="Or enter codespace name manually..."
+                  className={styles.inputSmall}
+                />
               )}
             </>
           )}

@@ -834,6 +834,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       removeEnvironment: () => { },
       codespaces: [],
       codespaceError: "",
+      codespaceListError: "",
       codespaceCreating: false,
       listCodespaces: () => { },
       createCodespace: () => { },

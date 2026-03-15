@@ -49,10 +49,16 @@ const GH_CODESPACE_LIST_LIMIT: number = 50;
  */
 export function formatGhError(err: unknown, operation: string): string {
   const message = err instanceof Error ? err.message : String(err);
-  const stderr =
+  const rawStderr =
     err instanceof Error && "stderr" in err
-      ? String((err as Error & { stderr: unknown }).stderr)
-      : "";
+      ? (err as Error & { stderr: unknown }).stderr
+      : undefined;
+  const stderr =
+    typeof rawStderr === "string" && rawStderr.length > 0
+      ? rawStderr
+      : Buffer.isBuffer(rawStderr) && rawStderr.length > 0
+        ? rawStderr.toString()
+        : "";
   const code =
     err instanceof Error && "code" in err
       ? String((err as Error & { code: unknown }).code)

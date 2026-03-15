@@ -123,10 +123,22 @@ function main(): void {
         "GitHub CLI available",
       );
     })
-    .catch(() => {
-      logger.warn(
-        "GitHub CLI (gh) not found on PATH — codespace features will be unavailable. Install from https://cli.github.com/",
-      );
+    .catch((err: unknown) => {
+      const isNotFound =
+        err instanceof Error &&
+        ("code" in err
+          ? (err as Error & { code: unknown }).code === "ENOENT"
+          : err.message.includes("ENOENT"));
+      if (isNotFound) {
+        logger.warn(
+          "GitHub CLI (gh) not found on PATH — codespace features will be unavailable. Install from https://cli.github.com/",
+        );
+      } else {
+        logger.warn(
+          { err },
+          "GitHub CLI (gh) availability check failed — codespace features may not work",
+        );
+      }
     });
 
   // Start heartbeat

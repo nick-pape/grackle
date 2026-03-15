@@ -34,7 +34,7 @@ test.describe("Codespace — manual entry fallback", () => {
     ).toBeVisible();
   });
 
-  test("manual entry enables the Add button and submits", async ({
+  test("manual entry enables the Add button", async ({
     appPage,
   }) => {
     // Inject a codespace list error

@@ -443,6 +443,7 @@ export interface UseGrackleSocketResult {
   removeEnvironment: (environmentId: string) => void;
   codespaces: Codespace[];
   codespaceError: string;
+  codespaceListError: string;
   codespaceCreating: boolean;
   listCodespaces: () => void;
   createCodespace: (repo: string, machine?: string) => void;
@@ -498,6 +499,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
   >({});
   const [codespaces, setCodespaces] = useState<Codespace[]>([]);
   const [codespaceError, setCodespaceError] = useState("");
+  const [codespaceListError, setCodespaceListError] = useState("");
   const [codespaceCreating, setCodespaceCreating] = useState(false);
   const [personas, setPersonas] = useState<PersonaData[]>([]);
   const [taskSessions, setTaskSessions] = useState<Record<string, Session[]>>({});
@@ -913,6 +915,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
               typeof msg.payload?.error === "string" ? msg.payload.error : "";
             setCodespaces(list);
             setCodespaceError(listError);
+            setCodespaceListError(listError);
             break;
           }
           case "codespace_created": {
@@ -1401,6 +1404,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
     removeEnvironment,
     codespaces,
     codespaceError,
+    codespaceListError,
     codespaceCreating,
     listCodespaces,
     createCodespace,
