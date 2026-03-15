@@ -1,0 +1,10 @@
+{
+  "changes": [
+    {
+      "packageName": "@grackle-ai/server",
+      "comment": "Add chat landing page powered by Claude Code + MCP tools",
+      "type": "minor"
+    }
+  ],
+  "packageName": "@grackle-ai/server"
+}
