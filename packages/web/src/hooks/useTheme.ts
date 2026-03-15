@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useSyncExternalStore } from "react";
-import { THEME_IDS, DEFAULT_THEME_ID, getThemeById } from "../themes.js";
+import { THEMES, THEME_IDS, DEFAULT_THEME_ID, getThemeById } from "../themes.js";
+import type { ThemeDefinition } from "../themes.js";
 
 interface ThemeSnapshot {
   themeId: string;
@@ -58,15 +59,27 @@ function getPreferSystem(): boolean {
   }
 }
 
+/** Find the parent theme for a hidden variant ID (e.g., "grackle-dark" → Grackle). */
+function findParentTheme(variantId: string): ThemeDefinition | undefined {
+  return THEMES.find((t) => t.variantLightId === variantId || t.variantDarkId === variantId);
+}
+
 /** Resolve a theme ID to the data-theme attribute value applied to the document. */
 function resolveDataTheme(themeId: string, preferSystem: boolean): string {
   const def = getThemeById(themeId);
-  // Parent variant IDs (e.g., "grackle") resolve based on system preference or default to dark
+  // Parent theme with variants → resolve to light or dark
   if (def?.variantDarkId) {
     if (preferSystem && def.variantLightId) {
       return getSystemDark() ? def.variantDarkId : def.variantLightId;
     }
     return def.variantDarkId;
+  }
+  // Concrete variant ID (e.g., "grackle-dark") — if preferSystem, resolve via parent
+  if (def?.hidden && preferSystem) {
+    const parent = findParentTheme(themeId);
+    if (parent?.variantLightId && parent?.variantDarkId) {
+      return getSystemDark() ? parent.variantDarkId : parent.variantLightId;
+    }
   }
   return themeId;
 }
@@ -154,6 +167,21 @@ export function useTheme(): UseThemeResult {
     } catch {
       // localStorage may be unavailable
     }
+    // When enabling preferSystem, convert variant ID to parent ID
+    if (prefer) {
+      const stored = getStored();
+      const def = getThemeById(stored);
+      if (def?.hidden) {
+        const parent = findParentTheme(stored);
+        if (parent) {
+          try {
+            localStorage.setItem(STORAGE_KEY, parent.id);
+          } catch {
+            // localStorage may be unavailable
+          }
+        }
+      }
+    }
     applyTheme(getStored(), prefer, true);
     emitChange();
   }, []);
@@ -174,8 +202,16 @@ export function useTheme(): UseThemeResult {
       const prefer: boolean = getPreferSystem();
       if (prefer) {
         const def = getThemeById(stored);
+        // Parent theme with variants
         if (def?.variantDarkId && def?.variantLightId) {
           applyTheme(stored, prefer);
+        }
+        // Concrete variant — resolve via parent
+        if (def?.hidden) {
+          const parent = findParentTheme(stored);
+          if (parent?.variantDarkId && parent?.variantLightId) {
+            applyTheme(stored, prefer);
+          }
         }
       }
       emitChange();

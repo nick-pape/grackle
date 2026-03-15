@@ -3,7 +3,7 @@
 // ============================================================================
 // Design Tokens — Grackle Web UI
 // ============================================================================
-// Multi-theme token system.  :root = original glassmorphism (default).
+// Multi-theme token system.  :root = glassmorphism. Default theme is Grackle (grackle-dark/grackle-light).
 // [data-theme="grackle-light"] and [data-theme="grackle-dark"] are the brand theme.
 // Additional themes use the define-theme mixin for compact palette definitions.
 // Component styles consume these via var(--token-name).

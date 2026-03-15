@@ -78,16 +78,16 @@ export function SettingsPanel({ viewMode, setViewMode }: Props): JSX.Element {
           {THEMES.filter((t) => !t.hidden).map((t) => {
             const hasVariants = !!(t.variantLightId && t.variantDarkId);
             const isSelected = hasVariants
-              ? (themeId === t.variantLightId || themeId === t.variantDarkId)
+              ? (themeId === t.id || themeId === t.variantLightId || themeId === t.variantDarkId)
               : themeId === t.id;
-            const isLight = hasVariants && themeId === t.variantLightId;
+            const isLight = hasVariants && resolvedThemeId === t.variantLightId;
             return (
               <button
                 key={t.id}
                 type="button"
                 className={`${styles.themeOption} ${isSelected ? styles.themeOptionSelected : ""}`}
                 aria-pressed={isSelected}
-                onClick={() => setTheme(hasVariants ? (t.variantDarkId!) : t.id)}
+                onClick={() => setTheme(t.id)}
               >
                 <span className={styles.themeOptionHeader}>
                   <span>

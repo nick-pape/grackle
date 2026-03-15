@@ -134,7 +134,7 @@ export const THEMES: readonly ThemeDefinition[] = [
 export const THEME_IDS: ReadonlySet<string> = new Set(THEMES.map((t) => t.id));
 
 /** The default theme ID used when nothing is persisted. */
-export const DEFAULT_THEME_ID: string = "grackle-dark";
+export const DEFAULT_THEME_ID: string = "grackle";
 
 /** Look up a theme definition by ID, returning undefined if not found. */
 export function getThemeById(id: string): ThemeDefinition | undefined {
