@@ -39,13 +39,6 @@ const ALLOWED_MCP_TOOLS: string[] = [
   "mcp__grackle__logs_get",
 ];
 
-/** Built-in Claude Code tools that must NOT be used — only MCP domain tools. */
-const DISALLOWED_BUILTIN_TOOLS: string[] = [
-  "Bash", "Read", "Write", "Edit", "Glob", "Grep",
-  "NotebookEdit", "WebFetch", "WebSearch",
-  "TodoWrite", "TodoRead", "Agent",
-];
-
 /**
  * Create an HTTP handler for POST /api/chat.
  * Streams an AI response using Claude Code with Grackle MCP tools.
@@ -68,7 +61,6 @@ export function createChatHandler(
         },
       },
       allowedTools: ALLOWED_MCP_TOOLS,
-      disallowedTools: DISALLOWED_BUILTIN_TOOLS,
       permissionMode: "bypassPermissions",
       allowDangerouslySkipPermissions: true,
       persistSession: false,
