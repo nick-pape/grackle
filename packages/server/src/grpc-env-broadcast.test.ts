@@ -43,7 +43,7 @@ vi.mock("./ws-broadcast.js", () => ({
 
 vi.mock("./token-broker.js", () => ({
   pushToEnv: vi.fn(),
-  pushCredentialsToEnv: vi.fn(),
+  pushProviderCredentialsToEnv: vi.fn(),
   refreshTokensForTask: vi.fn(),
   listTokens: vi.fn(() => []),
   setToken: vi.fn(),
