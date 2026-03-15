@@ -484,7 +484,7 @@ export function ProjectPage(): JSX.Element {
                   {project?.worktreeBasePath ? (
                     <span>{project.worktreeBasePath}</span>
                   ) : (
-                    <span className={styles.metaPlaceholder}>Default (/workspace)</span>
+                    <span className={styles.metaPlaceholder}>Default (server default)</span>
                   )}
                   <span className={styles.editButton} aria-hidden="true">
                     ✏️

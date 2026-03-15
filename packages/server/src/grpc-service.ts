@@ -427,7 +427,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         maxTurns: persona?.maxTurns || 0,
         branch: req.branch || "",
         worktreeBasePath: req.branch
-          ? (req.worktreeBasePath || process.env.GRACKLE_WORKTREE_BASE || "/workspace")
+          ? (req.worktreeBasePath.trim() || process.env.GRACKLE_WORKTREE_BASE || "/workspace")
           : "",
         systemContext,
         mcpServersJson,

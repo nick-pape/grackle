@@ -21,7 +21,7 @@ export function createProject(
     repoUrl,
     defaultEnvironmentId,
     useWorktrees,
-    worktreeBasePath,
+    worktreeBasePath: worktreeBasePath.trim(),
   }).run();
 }
 
@@ -77,7 +77,7 @@ export function updateProject(id: string, fields: UpdateProjectFields): ProjectR
     sets.useWorktrees = fields.useWorktrees;
   }
   if (fields.worktreeBasePath !== undefined) {
-    sets.worktreeBasePath = fields.worktreeBasePath;
+    sets.worktreeBasePath = fields.worktreeBasePath.trim();
   }
   db.update(projects).set(sets).where(eq(projects.id, id)).run();
   return getProject(id);

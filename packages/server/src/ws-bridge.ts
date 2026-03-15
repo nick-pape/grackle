@@ -560,7 +560,7 @@ async function handleMessage(
         maxTurns,
         branch,
         worktreeBasePath: branch
-          ? ((msg.payload?.worktreeBasePath as string) || process.env.GRACKLE_WORKTREE_BASE || "/workspace")
+          ? ((typeof msg.payload?.worktreeBasePath === "string" ? msg.payload.worktreeBasePath.trim() : "") || process.env.GRACKLE_WORKTREE_BASE || "/workspace")
           : "",
         systemContext: finalSystemContext,
       });
@@ -743,7 +743,7 @@ async function handleMessage(
         (msg.payload?.repoUrl as string) || "",
         (msg.payload?.defaultEnvironmentId as string) || "",
         createUseWorktrees,
-        (msg.payload?.worktreeBasePath as string) || "",
+        typeof msg.payload?.worktreeBasePath === "string" ? msg.payload.worktreeBasePath.trim() : "",
       );
       const row = projectStore.getProject(id);
       broadcast({ type: "project_created", payload: { project: row } });
