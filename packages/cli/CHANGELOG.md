@@ -1,6 +1,18 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sun, 15 Mar 2026 20:02:35 GMT and should not be manually modified.
+This log was last generated on Sun, 15 Mar 2026 21:27:25 GMT and should not be manually modified.
+
+## 0.28.0
+Sun, 15 Mar 2026 21:27:25 GMT
+
+### Minor changes
+
+- Add configurable credential providers with opt-in toggles for Claude, GitHub, Copilot, and Codex credentials
+
+### Updates
+
+- Configurable credential providers for agent runtimes
+- Add session-scoped authentication to MCP server (scoped tokens, auth middleware, revocation)
 
 ## 0.27.0
 Sun, 15 Mar 2026 20:02:35 GMT

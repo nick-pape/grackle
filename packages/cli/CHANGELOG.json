@@ -2,6 +2,26 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.28.0",
+      "tag": "@grackle-ai/cli_v0.28.0",
+      "date": "Sun, 15 Mar 2026 21:27:25 GMT",
+      "comments": {
+        "none": [
+          {
+            "comment": "Configurable credential providers for agent runtimes"
+          },
+          {
+            "comment": "Add session-scoped authentication to MCP server (scoped tokens, auth middleware, revocation)"
+          }
+        ],
+        "minor": [
+          {
+            "comment": "Add configurable credential providers with opt-in toggles for Claude, GitHub, Copilot, and Codex credentials"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.27.0",
       "tag": "@grackle-ai/cli_v0.27.0",
       "date": "Sun, 15 Mar 2026 20:02:35 GMT",
