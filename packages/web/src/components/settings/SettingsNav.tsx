@@ -63,7 +63,7 @@ export function SettingsNav(): JSX.Element {
 
     const nextPath = TABS[nextIndex].path;
     navigate(`${SETTINGS_URL}/${nextPath}`);
-    buttons[nextIndex]?.focus();
+    buttons[nextIndex]?.focus(); // eslint-disable-line @typescript-eslint/no-unnecessary-condition -- index may be out of bounds
   }, [activeTab, navigate]);
 
   return (
