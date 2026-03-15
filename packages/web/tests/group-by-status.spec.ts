@@ -56,6 +56,10 @@ test.describe("Group-by-status toggle", () => {
     await createProject(page, "gbs-persist");
     await createTask(page, "gbs-persist", "persist-task", "test-local");
 
+    // Navigate to the project so it auto-expands after reload
+    await page.getByText("gbs-persist").first().click();
+    await page.waitForURL(/\/projects\//);
+
     // Enable group-by-status
     await page.getByTestId("group-by-status-toggle").click();
     await expect(page.getByTestId("status-group-not_started")).toBeVisible({ timeout: 5_000 });
@@ -64,17 +68,15 @@ test.describe("Group-by-status toggle", () => {
     const stored = await page.evaluate(() => localStorage.getItem("grackle-group-by-status"));
     expect(stored).toBe("true");
 
-    // Reload and verify still grouped
+    // Reload — URL stays at /projects/<id> so the project auto-expands
     await page.reload();
     await page.waitForFunction(
       () => document.body.innerText.includes("Connected"),
       { timeout: 10_000 },
     );
     await expect(page.getByTestId("group-by-status-toggle")).toBeVisible({ timeout: 5_000 });
-
-    // Expand the project after reload (projects start collapsed on fresh load)
-    await page.getByText("gbs-persist").first().click();
-    await expect(page.getByTestId("status-group-not_started")).toBeVisible({ timeout: 5_000 });
+    // Project auto-expands via selectedProjectId; tasks load via WS
+    await expect(page.getByTestId("status-group-not_started")).toBeVisible({ timeout: 10_000 });
   });
 
   test("empty status groups are hidden", async ({ appPage }) => {
