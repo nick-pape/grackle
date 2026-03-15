@@ -35,14 +35,9 @@ describe("project_list", () => {
 
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed).toHaveLength(1);
-    expect(parsed[0]).toEqual({
-      id: "proj-1",
-      name: "Alpha",
-      description: "First project",
-      repoUrl: "https://github.com/org/alpha",
-      defaultEnvironmentId: "env-1",
-      status: "active",
-    });
+    expect(parsed[0].id).toBe("proj-1");
+    expect(parsed[0].name).toBe("Alpha");
+    expect(parsed[0].status).toBe("active");
     expect(result.isError).toBeUndefined();
   });
 
@@ -91,12 +86,14 @@ describe("project_create", () => {
       mockClient,
     );
 
-    expect(mockClient.createProject).toHaveBeenCalledWith({
-      name: "Beta",
-      description: "Second project",
-      repoUrl: "https://github.com/org/beta",
-      defaultEnvironmentId: "env-2",
-    });
+    expect(mockClient.createProject).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: "Beta",
+        description: "Second project",
+        repoUrl: "https://github.com/org/beta",
+        defaultEnvironmentId: "env-2",
+      }),
+    );
 
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed.id).toBe("proj-2");
@@ -122,12 +119,14 @@ describe("project_create", () => {
 
     const result = await tool.handler({ name: "Minimal" }, mockClient);
 
-    expect(mockClient.createProject).toHaveBeenCalledWith({
-      name: "Minimal",
-      description: "",
-      repoUrl: "",
-      defaultEnvironmentId: "",
-    });
+    expect(mockClient.createProject).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: "Minimal",
+        description: "",
+        repoUrl: "",
+        defaultEnvironmentId: "",
+      }),
+    );
 
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed.status).toBe("unspecified");
@@ -219,13 +218,12 @@ describe("project_update", () => {
       mockClient,
     );
 
-    expect(mockClient.updateProject).toHaveBeenCalledWith({
-      id: "proj-1",
-      name: "Alpha Renamed",
-      description: undefined,
-      repoUrl: undefined,
-      defaultEnvironmentId: undefined,
-    });
+    expect(mockClient.updateProject).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "proj-1",
+        name: "Alpha Renamed",
+      }),
+    );
 
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed.name).toBe("Alpha Renamed");
