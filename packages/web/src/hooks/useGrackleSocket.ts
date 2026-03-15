@@ -36,6 +36,7 @@ export interface Project {
   repoUrl: string;
   defaultEnvironmentId: string;
   status: string;
+  worktreeBasePath: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -367,6 +368,7 @@ export interface UseGrackleSocketResult {
     model?: string,
     runtime?: string,
     personaId?: string,
+    worktreeBasePath?: string,
   ) => void;
   sendInput: (sessionId: string, text: string) => void;
   kill: (sessionId: string) => void;
@@ -387,6 +389,7 @@ export interface UseGrackleSocketResult {
       description?: string;
       repoUrl?: string;
       defaultEnvironmentId?: string;
+      worktreeBasePath?: string;
     },
   ) => void;
   loadTasks: (projectId: string) => void;
@@ -987,6 +990,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
       model?: string,
       runtime?: string,
       personaId?: string,
+      worktreeBasePath?: string,
     ) => {
       send({
         type: "spawn",
@@ -996,6 +1000,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
           model: model || "",
           runtime: runtime || "",
           personaId: personaId || "",
+          worktreeBasePath: worktreeBasePath || "",
         },
       });
     },
@@ -1073,6 +1078,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
         description?: string;
         repoUrl?: string;
         defaultEnvironmentId?: string;
+        worktreeBasePath?: string;
       },
     ) => {
       send({

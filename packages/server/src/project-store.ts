@@ -12,6 +12,7 @@ export function createProject(
   repoUrl: string,
   defaultEnvironmentId: string,
   useWorktrees: boolean = true,
+  worktreeBasePath: string = "",
 ): void {
   db.insert(projects).values({
     id,
@@ -20,6 +21,7 @@ export function createProject(
     repoUrl,
     defaultEnvironmentId,
     useWorktrees,
+    worktreeBasePath,
   }).run();
 }
 
@@ -52,6 +54,8 @@ export interface UpdateProjectFields {
   defaultEnvironmentId?: string;
   /** When false, agents work directly in the main checkout instead of creating a worktree. */
   useWorktrees?: boolean;
+  /** Custom base path for worktrees (e.g. /workspaces/my-repo). Empty means use default. */
+  worktreeBasePath?: string;
 }
 
 /** Update one or more fields on an existing project. Returns the updated row, or undefined if not found. */
@@ -71,6 +75,9 @@ export function updateProject(id: string, fields: UpdateProjectFields): ProjectR
   }
   if (fields.useWorktrees !== undefined) {
     sets.useWorktrees = fields.useWorktrees;
+  }
+  if (fields.worktreeBasePath !== undefined) {
+    sets.worktreeBasePath = fields.worktreeBasePath;
   }
   db.update(projects).set(sets).where(eq(projects.id, id)).run();
   return getProject(id);

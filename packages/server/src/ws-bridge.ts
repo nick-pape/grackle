@@ -349,7 +349,7 @@ async function startTaskSession(
     maxTurns,
     branch: freshTask.branch,
     worktreeBasePath: freshTask.branch
-      ? process.env.GRACKLE_WORKTREE_BASE || "/workspace"
+      ? (project?.worktreeBasePath || process.env.GRACKLE_WORKTREE_BASE || "/workspace")
       : "",
     systemContext,
     projectId: freshTask.projectId,
@@ -559,7 +559,9 @@ async function handleMessage(
         model: sessionModel,
         maxTurns,
         branch,
-        worktreeBasePath: branch ? "/workspace" : "",
+        worktreeBasePath: branch
+          ? ((msg.payload?.worktreeBasePath as string) || process.env.GRACKLE_WORKTREE_BASE || "/workspace")
+          : "",
         systemContext: finalSystemContext,
       });
 
@@ -705,6 +707,7 @@ async function handleMessage(
             defaultEnvironmentId: r.defaultEnvironmentId,
             status: r.status,
             useWorktrees: r.useWorktrees,
+            worktreeBasePath: r.worktreeBasePath,
             createdAt: r.createdAt,
             updatedAt: r.updatedAt,
           })),
@@ -740,6 +743,7 @@ async function handleMessage(
         (msg.payload?.repoUrl as string) || "",
         (msg.payload?.defaultEnvironmentId as string) || "",
         createUseWorktrees,
+        (msg.payload?.worktreeBasePath as string) || "",
       );
       const row = projectStore.getProject(id);
       broadcast({ type: "project_created", payload: { project: row } });
@@ -777,12 +781,14 @@ async function handleMessage(
         return;
       }
       const worktreesVal = typeof msg.payload?.useWorktrees === "boolean" ? msg.payload.useWorktrees as boolean : undefined;
+      const worktreeBasePathVal = typeof msg.payload?.worktreeBasePath === "string" ? msg.payload.worktreeBasePath as string : undefined;
       projectStore.updateProject(projectId, {
         name: nameVal !== undefined ? nameVal.trim() : undefined,
         description: descVal,
         repoUrl: repoVal,
         defaultEnvironmentId: envVal,
         useWorktrees: worktreesVal,
+        worktreeBasePath: worktreeBasePathVal,
       });
       broadcast({ type: "project_updated", payload: { projectId } });
       break;
