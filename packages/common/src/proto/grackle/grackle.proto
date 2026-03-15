@@ -101,6 +101,7 @@ message Session {
   string ended_at = 12;
   string error = 13;
   string task_id = 14;
+  string persona_id = 15;
 }
 
 message SessionList {
@@ -218,8 +219,8 @@ message Task {
   string description = 4;
   TaskStatus status = 5;
   string branch = 6;
-  string environment_id = 7;
-  string session_id = 8;
+  reserved 7; // was environment_id (now a session-start param)
+  string latest_session_id = 8; // computed on read from session history
   repeated string depends_on = 9;
   string assigned_at = 10;
   string started_at = 11;
@@ -232,7 +233,7 @@ message Task {
   int32 depth = 18; // 0 for root, parent.depth + 1
   repeated string child_task_ids = 19; // populated by server on read
   bool can_decompose = 20;
-  string persona_id = 21; // Persona used for this task
+  reserved 21; // was persona_id (moved to Session)
 }
 
 message TaskList {
@@ -243,11 +244,11 @@ message CreateTaskRequest {
   string project_id = 1;
   string title = 2;
   string description = 3;
-  string environment_id = 4;
+  reserved 4; // was environment_id (now a session-start param)
   repeated string depends_on = 5;
   string parent_task_id = 6;
   optional bool can_decompose = 7;
-  string persona_id = 8; // Optional persona to assign
+  reserved 8; // was persona_id (moved to StartTaskRequest/Session)
 }
 
 message TaskId {
@@ -259,7 +260,7 @@ message UpdateTaskRequest {
   string title = 2;
   string description = 3;
   TaskStatus status = 4;
-  string environment_id = 5;
+  reserved 5; // was environment_id (now a session-start param)
   repeated string depends_on = 6;
   string review_notes = 7;
   string session_id = 8; // Optional: late-bind an existing session to this task
@@ -269,7 +270,8 @@ message StartTaskRequest {
   string task_id = 1;
   string runtime = 2;
   string model = 3;
-  string persona_id = 4; // Override persona at start time
+  string persona_id = 4; // Persona to use for the agent session
+  string environment_id = 5; // Select environment at start time
 }
 
 // ─── Findings ──────────────────────────────────────────────

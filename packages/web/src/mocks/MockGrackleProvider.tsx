@@ -276,11 +276,12 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
         content: "killed",
       });
 
-      // 5. Fail any in-progress task whose sessionId matches
+      // 5. With computed status, killing a session makes the task retryable
+      // (computed back to "pending"), so reset in-progress tasks to "pending".
       setTasks((prev) =>
         prev.map((t) =>
-          t.sessionId === sessionId && t.status === "in_progress"
-            ? { ...t, status: "failed" }
+          t.latestSessionId === sessionId && t.status === "in_progress"
+            ? { ...t, status: "pending" }
             : t,
         ),
       );
@@ -359,7 +360,6 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       projectId: string,
       title: string,
       description?: string,
-      environmentId?: string,
       dependsOn?: string[],
       parentTaskId?: string,
     ) => {
@@ -389,8 +389,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
           description: description || "",
           status: "pending",
           branch: "",
-          environmentId: environmentId || "",
-          sessionId: "",
+          latestSessionId: "",
           dependsOn: dependsOn || [],
           reviewNotes: "",
           sortOrder: maxSort + 1,
@@ -399,7 +398,6 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
           depth,
           childTaskIds: [],
           canDecompose: !parentTaskId,
-          personaId: "",
         };
 
         return [...prev, newTask];
@@ -422,13 +420,12 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
 
       // Find the task to get its metadata
       const target = tasksRef.current.find((t) => t.id === taskId);
-      const taskEnvironmentId = target?.environmentId ?? "";
       const taskTitle = target?.title ?? "";
 
       const sessionId = nextId("sess");
       const newSession: Session = {
         id: sessionId,
-        environmentId: taskEnvironmentId || "env-local-01",
+        environmentId: "env-local-01",
         runtime: runtime || "claude-code",
         status: "running",
         prompt: taskTitle || taskId,
@@ -437,14 +434,14 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
 
       setSessions((prev) => [...prev, newSession]);
 
-      // Update task: status → "in_progress", sessionId → new session, branch → mock branch
+      // Update task: status → "in_progress", latestSessionId → new session, branch → mock branch
       setTasks((prev) =>
         prev.map((t) =>
           t.id === taskId
             ? {
               ...t,
               status: "in_progress",
-              sessionId,
+              latestSessionId: sessionId,
               branch: `mock/${taskId.slice(0, 8)}`,
             }
             : t,
@@ -636,7 +633,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
     [],
   );
 
-  /** Rejects a task: sets status back to "assigned" with review notes, clears sessionId. */
+  /** Rejects a task: sets status back to "assigned" with review notes, clears latestSessionId. */
   const rejectTask: UseGrackleSocketResult["rejectTask"] = useCallback(
     (taskId: string, reviewNotes: string) => {
       // eslint-disable-next-line no-console
@@ -644,7 +641,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       setTasks((prev) =>
         prev.map((t) =>
           t.id === taskId
-            ? { ...t, status: "assigned", reviewNotes, sessionId: "" }
+            ? { ...t, status: "assigned", reviewNotes, latestSessionId: "" }
             : t,
         ),
       );
@@ -652,15 +649,13 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
     [],
   );
 
-  /** Updates title, description, dependencies, environment, and persona of a pending/assigned task. */
+  /** Updates title, description, and dependencies of a pending/assigned task. */
   const updateTask: UseGrackleSocketResult["updateTask"] = useCallback(
     (
       taskId: string,
       title: string,
       description: string,
       dependsOn: string[],
-      environmentId?: string,
-      personaId?: string,
     ) => {
       // eslint-disable-next-line no-console
       console.log("[MockGrackle] updateTask", { taskId, title });
@@ -672,8 +667,6 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
                 title: title.trim() || t.title,
                 description,
                 dependsOn,
-                ...(environmentId !== undefined ? { environmentId } : {}),
-                ...(personaId !== undefined ? { personaId } : {}),
               }
             : t,
         ),

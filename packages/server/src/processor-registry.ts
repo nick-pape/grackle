@@ -6,7 +6,6 @@ export interface ProcessorContext {
   logPath: string;
   projectId: string;
   taskId: string;
-  onComplete?: () => void;
 }
 
 /** Registry of active event processor contexts, keyed by sessionId. */
@@ -43,7 +42,6 @@ export function lateBind(
   sessionId: string,
   taskId: string,
   projectId: string,
-  onComplete?: () => void,
 ): void {
   const ctx = registry.get(sessionId);
   if (!ctx) {
@@ -63,9 +61,6 @@ export function lateBind(
 
   ctx.projectId = projectId;
   ctx.taskId = taskId;
-  if (onComplete) {
-    ctx.onComplete = onComplete;
-  }
 
   logger.info({ sessionId, taskId, projectId }, "Late-bound session to task");
 

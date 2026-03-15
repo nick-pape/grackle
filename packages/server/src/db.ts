@@ -76,11 +76,12 @@ export function initDatabase(): void {
       status        TEXT NOT NULL DEFAULT 'pending',
       log_path      TEXT,
       turns         INTEGER NOT NULL DEFAULT 0,
-      started_at    TEXT NOT NULL DEFAULT (datetime('now')),
+      started_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
       suspended_at  TEXT,
       ended_at      TEXT,
       error         TEXT,
-      task_id       TEXT NOT NULL DEFAULT ''
+      task_id       TEXT NOT NULL DEFAULT '',
+      persona_id    TEXT NOT NULL DEFAULT ''
     );
 
     CREATE TABLE IF NOT EXISTS tokens (
@@ -108,8 +109,6 @@ export function initDatabase(): void {
       description   TEXT NOT NULL DEFAULT '',
       status        TEXT NOT NULL DEFAULT 'pending',
       branch        TEXT NOT NULL DEFAULT '',
-      env_id        TEXT NOT NULL DEFAULT '',
-      session_id    TEXT NOT NULL DEFAULT '',
       depends_on    TEXT NOT NULL DEFAULT '[]',
       assigned_at   TEXT,
       started_at    TEXT,
@@ -120,8 +119,7 @@ export function initDatabase(): void {
       sort_order    INTEGER NOT NULL DEFAULT 0,
       parent_task_id TEXT NOT NULL DEFAULT '',
       depth         INTEGER NOT NULL DEFAULT 0,
-      can_decompose INTEGER NOT NULL DEFAULT 0,
-      persona_id    TEXT NOT NULL DEFAULT ''
+      can_decompose INTEGER NOT NULL DEFAULT 0
     );
 
     CREATE TABLE IF NOT EXISTS findings (
@@ -183,8 +181,6 @@ export function initDatabase(): void {
     UPDATE tasks SET description = '' WHERE description IS NULL;
     UPDATE tasks SET status = 'pending' WHERE status IS NULL;
     UPDATE tasks SET branch = '' WHERE branch IS NULL;
-    UPDATE tasks SET env_id = '' WHERE env_id IS NULL;
-    UPDATE tasks SET session_id = '' WHERE session_id IS NULL;
     UPDATE tasks SET depends_on = '[]' WHERE depends_on IS NULL;
     UPDATE tasks SET review_notes = '' WHERE review_notes IS NULL;
     UPDATE tasks SET created_at = datetime('now') WHERE created_at IS NULL;
@@ -263,14 +259,69 @@ export function initDatabase(): void {
   }
 
   // Migration: backfill task_id on existing sessions from tasks.session_id.
-  // Use LIMIT 1 to guard against multiple tasks pointing at the same session.
+  // Guard with try/catch since session_id column may have been dropped already.
+  try {
+    sqlite.exec(`
+      UPDATE sessions SET task_id = (
+        SELECT id FROM tasks WHERE tasks.session_id = sessions.id LIMIT 1
+      ) WHERE task_id = '' AND EXISTS (
+        SELECT 1 FROM tasks WHERE tasks.session_id = sessions.id
+      )
+    `);
+  } catch {
+    /* tasks.session_id column already dropped */
+  }
+
+  // Migration: add persona_id column to sessions if missing
+  try {
+    sqlite.exec(
+      "ALTER TABLE sessions ADD COLUMN persona_id TEXT NOT NULL DEFAULT ''",
+    );
+  } catch {
+    /* column already exists */
+  }
+
+  // Migration: copy persona_id from tasks to sessions before dropping
+  try {
+    sqlite.exec(`
+      UPDATE sessions SET persona_id = (
+        SELECT persona_id FROM tasks WHERE tasks.session_id = sessions.id LIMIT 1
+      ) WHERE persona_id = '' AND task_id != ''
+    `);
+  } catch {
+    /* tasks.session_id or tasks.persona_id column may not exist */
+  }
+
+  // Migration: drop columns that moved off the tasks table
+  try {
+    sqlite.exec("ALTER TABLE tasks DROP COLUMN session_id");
+  } catch {
+    /* column already dropped or never existed */
+  }
+  try {
+    sqlite.exec("ALTER TABLE tasks DROP COLUMN env_id");
+  } catch {
+    /* column already dropped or never existed */
+  }
+  try {
+    sqlite.exec("ALTER TABLE tasks DROP COLUMN persona_id");
+  } catch {
+    /* column already dropped or never existed */
+  }
+
+  // Migration: normalize existing started_at values from SQLite datetime('now')
+  // format (YYYY-MM-DD HH:MM:SS) to ISO 8601 (YYYY-MM-DDTHH:MM:SS.000Z) so
+  // ordering is consistent with newly inserted rows.
   sqlite.exec(`
-    UPDATE sessions SET task_id = (
-      SELECT id FROM tasks WHERE tasks.session_id = sessions.id LIMIT 1
-    ) WHERE task_id = '' AND EXISTS (
-      SELECT 1 FROM tasks WHERE tasks.session_id = sessions.id
-    )
+    UPDATE sessions
+    SET started_at = replace(started_at, ' ', 'T') || '.000Z'
+    WHERE started_at NOT LIKE '%T%'
   `);
+
+  // Index for efficient session-by-task lookups
+  sqlite.exec(
+    "CREATE INDEX IF NOT EXISTS idx_sessions_task_id ON sessions(task_id)",
+  );
 }
 
 // Run init immediately for backwards compatibility — stores import db at module load

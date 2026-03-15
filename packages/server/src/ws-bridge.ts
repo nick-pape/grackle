@@ -33,7 +33,8 @@ import { slugify } from "./utils/slugify.js";
 import { processEventStream } from "./event-processor.js";
 import * as processorRegistry from "./processor-registry.js";
 import { broadcast, setWssInstance } from "./ws-broadcast.js";
-import { buildMcpServersJson, makeTaskCompletionCallback } from "./grpc-service.js";
+import { buildMcpServersJson } from "./grpc-service.js";
+import { computeTaskStatus } from "./compute-task-status.js";
 import { exec } from "./utils/exec.js";
 
 const GH_CODESPACE_LIST_TIMEOUT_MS: number = 30_000;
@@ -255,7 +256,7 @@ async function autoProvisionEnvironment(
 async function startTaskSession(
   ws: WebSocket,
   task: taskStore.TaskRow,
-  options?: { runtime?: string; model?: string; personaId?: string },
+  options?: { runtime?: string; model?: string; personaId?: string; environmentId?: string },
 ): Promise<string | undefined> {
   const project = projectStore.getProject(task.projectId);
   if (!project) {
@@ -266,7 +267,7 @@ async function startTaskSession(
     return `Project not found: ${task.projectId}`;
   }
 
-  const environmentId = task.environmentId || project.defaultEnvironmentId;
+  const environmentId = options?.environmentId || project.defaultEnvironmentId;
   const env = envRegistry.getEnvironment(environmentId);
   if (!env) {
     logger.warn(
@@ -284,7 +285,7 @@ async function startTaskSession(
   }
 
   // Resolve persona
-  const resolvedPersonaId = options?.personaId || task.personaId;
+  const resolvedPersonaId = options?.personaId || "";
   const persona = resolvedPersonaId
     ? personaStore.getPersona(resolvedPersonaId)
     : undefined;
@@ -325,9 +326,8 @@ async function startTaskSession(
     model,
     logPath,
     freshTask.id,
+    resolvedPersonaId,
   );
-  taskStore.setTaskSession(freshTask.id, sessionId);
-  taskStore.markTaskStarted(freshTask.id);
 
   broadcast({
     type: "task_started",
@@ -382,7 +382,6 @@ async function startTaskSession(
     logPath,
     projectId: freshTask.projectId,
     taskId: freshTask.id,
-    onComplete: makeTaskCompletionCallback(freshTask.id, sessionId, freshTask.projectId),
   });
 
   return undefined;
@@ -687,11 +686,7 @@ async function handleMessage(
             create(powerline.SessionIdSchema, { id: sessionId }),
           );
         } catch (err) {
-          sendWs(ws, {
-            type: "error",
-            payload: { message: `Kill failed: ${err}` },
-          });
-          return;
+          logger.warn({ sessionId, err }, "PowerLine kill failed — marking session killed anyway");
         }
       }
       sessionStore.updateSession(sessionId, "killed");
@@ -704,6 +699,14 @@ async function handleMessage(
           raw: "",
         }),
       );
+
+      // Broadcast task_updated so frontend re-fetches computed status
+      if (session.taskId) {
+        const task = taskStore.getTask(session.taskId);
+        if (task) {
+          broadcast({ type: "task_updated", payload: { taskId: task.id, projectId: task.projectId } });
+        }
+      }
       break;
     }
 
@@ -932,29 +935,42 @@ async function handleMessage(
       if (!projectId) return;
       const rows = taskStore.listTasks(projectId);
       const childIdsMap = taskStore.buildChildIdsMap(rows);
+
+      // Batch-fetch sessions for all tasks and group by taskId
+      const taskIds = rows.map((r) => r.id);
+      const allSessions = sessionStore.listSessionsByTaskIds(taskIds);
+      const sessionsByTask = new Map<string, typeof allSessions>();
+      for (const s of allSessions) {
+        const arr = sessionsByTask.get(s.taskId) ?? [];
+        arr.push(s);
+        sessionsByTask.set(s.taskId, arr);
+      }
+
       sendWs(ws, {
         type: "tasks",
         payload: {
           projectId,
-          tasks: rows.map((r) => ({
-            id: r.id,
-            projectId: r.projectId,
-            title: r.title,
-            description: r.description,
-            status: r.status,
-            branch: r.branch,
-            environmentId: r.environmentId,
-            sessionId: r.sessionId,
-            dependsOn: safeParseJsonArray(r.dependsOn),
-            reviewNotes: r.reviewNotes,
-            sortOrder: r.sortOrder,
-            createdAt: r.createdAt,
-            parentTaskId: r.parentTaskId,
-            depth: r.depth,
-            childTaskIds: childIdsMap.get(r.id) ?? [],
-            canDecompose: r.canDecompose,
-            personaId: r.personaId,
-          })),
+          tasks: rows.map((r) => {
+            const taskSessions = sessionsByTask.get(r.id) ?? [];
+            const computed = computeTaskStatus(r.status, taskSessions);
+            return {
+              id: r.id,
+              projectId: r.projectId,
+              title: r.title,
+              description: r.description,
+              status: computed.status,
+              branch: r.branch,
+              latestSessionId: computed.latestSessionId,
+              dependsOn: safeParseJsonArray(r.dependsOn),
+              reviewNotes: r.reviewNotes,
+              sortOrder: r.sortOrder,
+              createdAt: r.createdAt,
+              parentTaskId: r.parentTaskId,
+              depth: r.depth,
+              childTaskIds: childIdsMap.get(r.id) ?? [],
+              canDecompose: r.canDecompose,
+            };
+          }),
         },
       });
       break;
@@ -983,30 +999,16 @@ async function handleMessage(
       const canDecompose =
         typeof rawCanDecompose === "boolean" ? rawCanDecompose : undefined;
 
-      // Resolve environment: explicit > parent task's env > project default
-      let resolvedEnvId = (msg.payload?.environmentId as string) || "";
-      if (!resolvedEnvId && parentTaskId) {
-        const parentTask = taskStore.getTask(parentTaskId);
-        if (parentTask?.environmentId) {
-          resolvedEnvId = parentTask.environmentId;
-        }
-      }
-      if (!resolvedEnvId) {
-        resolvedEnvId = project.defaultEnvironmentId;
-      }
-
       const id = uuid().slice(0, 8);
       taskStore.createTask(
         id,
         projectId,
         title,
         (msg.payload?.description as string) || "",
-        resolvedEnvId,
         (msg.payload?.dependsOn as string[]) || [],
         slugify(project.name),
         parentTaskId,
         canDecompose,
-        (msg.payload?.personaId as string) || "",
       );
       const row = taskStore.getTask(id);
       broadcast({
@@ -1059,12 +1061,9 @@ async function handleMessage(
         }
 
         sessionStore.setSessionTask(lateBindSessionId, updateTaskId);
-        taskStore.setTaskSession(updateTaskId, lateBindSessionId);
-        taskStore.markTaskStarted(updateTaskId);
 
-        const onComplete = makeTaskCompletionCallback(updateTaskId, lateBindSessionId, existingTask.projectId);
         try {
-          processorRegistry.lateBind(lateBindSessionId, updateTaskId, existingTask.projectId, onComplete);
+          processorRegistry.lateBind(lateBindSessionId, updateTaskId, existingTask.projectId);
         } catch (err) {
           sendWs(ws, { type: "error", payload: { message: String(err) } });
           return;
@@ -1101,21 +1100,13 @@ async function handleMessage(
             ),
           ]
         : safeParseJsonArray(existingTask.dependsOn);
-      const updatedEnvironmentId = typeof msg.payload?.environmentId === "string"
-        ? msg.payload.environmentId
-        : existingTask.environmentId;
-      const updatedPersonaId = typeof msg.payload?.personaId === "string"
-        ? msg.payload.personaId
-        : existingTask.personaId;
       taskStore.updateTask(
         updateTaskId,
         updatedTitle,
         updatedDescription,
         existingTask.status,
-        updatedEnvironmentId,
         updatedDependsOn,
         existingTask.reviewNotes,
-        updatedPersonaId,
       );
       const updatedRow = taskStore.getTask(updateTaskId);
       broadcast({
@@ -1143,14 +1134,18 @@ async function handleMessage(
         });
         return;
       }
-      if (!["pending", "assigned", "failed"].includes(task.status)) {
-        sendWs(ws, {
-          type: "error",
-          payload: {
-            message: `Task cannot be started (status: ${task.status})`,
-          },
-        });
-        return;
+      {
+        const taskSessions = sessionStore.listSessionsForTask(taskId);
+        const { status: effectiveStatus } = computeTaskStatus(task.status, taskSessions);
+        if (!["pending", "assigned", "failed"].includes(effectiveStatus)) {
+          sendWs(ws, {
+            type: "error",
+            payload: {
+              message: `Task cannot be started (status: ${effectiveStatus})`,
+            },
+          });
+          return;
+        }
       }
       if (!taskStore.areDependenciesMet(taskId)) {
         sendWs(ws, {
@@ -1163,8 +1158,8 @@ async function handleMessage(
       const startError = await startTaskSession(ws, task, {
         runtime: msg.payload?.runtime as string | undefined,
         model: msg.payload?.model as string | undefined,
-        personaId:
-          (msg.payload?.personaId as string) || task.personaId || undefined,
+        personaId: (msg.payload?.personaId as string) || undefined,
+        environmentId: (msg.payload?.environmentId as string) || undefined,
       });
       if (startError) {
         sendWs(ws, { type: "error", payload: { message: startError } });
@@ -1197,11 +1192,16 @@ async function handleMessage(
       const task = taskStore.getTask(taskId);
       if (!task) return;
 
-      if (task.status !== "review") {
+      // Use computed status (derived from session history) since the stored
+      // status is never explicitly set to "review".
+      const taskSessions = sessionStore.listSessionsByTaskIds([taskId]);
+      const { status: effectiveStatus } = computeTaskStatus(task.status, taskSessions);
+
+      if (effectiveStatus !== "review") {
         sendWs(ws, {
           type: "error",
           payload: {
-            message: `Task cannot be rejected (status: ${task.status})`,
+            message: `Task cannot be rejected (status: ${effectiveStatus})`,
           },
         });
         return;
@@ -1209,20 +1209,19 @@ async function handleMessage(
 
       // Preserve runtime/model from the previous session so the retry
       // doesn't unexpectedly switch runtimes/models.
-      const previousSession = task.sessionId
-        ? sessionStore.getSession(task.sessionId)
-        : undefined;
+      const previousSession = sessionStore.getLatestSessionForTask(task.id);
 
-      // Store review notes and set status to assigned
+      // Store review notes and reset status to "pending" so computeTaskStatus
+      // can derive the effective status from the new retry session.  We use
+      // "pending" rather than "assigned" because rejection + retry is an
+      // automated flow — "assigned" implies deliberate human assignment.
       taskStore.updateTask(
         task.id,
         task.title,
         task.description,
-        "assigned",
-        task.environmentId,
+        "pending",
         safeParseJsonArray(task.dependsOn),
         reviewNotes,
-        task.personaId,
       );
       broadcast({
         type: "task_rejected",
@@ -1235,12 +1234,27 @@ async function handleMessage(
         const retryError = await startTaskSession(ws, freshTask, {
           runtime: previousSession?.runtime,
           model: previousSession?.model,
+          environmentId: previousSession?.environmentId,
+          personaId: previousSession?.personaId,
         });
         if (retryError) {
+          // Retry failed — set status to "assigned" so the user can retry manually.
           logger.warn(
             { taskId, error: retryError },
-            "Auto-retry after rejection failed — task remains assigned",
+            "Auto-retry after rejection failed — task set to assigned",
           );
+          taskStore.updateTask(
+            freshTask.id,
+            freshTask.title,
+            freshTask.description,
+            "assigned",
+            safeParseJsonArray(freshTask.dependsOn),
+            freshTask.reviewNotes,
+          );
+          broadcast({
+            type: "task_updated",
+            payload: { taskId, projectId: freshTask.projectId },
+          });
         }
       }
       break;
@@ -1265,27 +1279,25 @@ async function handleMessage(
         return;
       }
 
-      // Kill active session before deleting the task
-      if (deletedTask.sessionId) {
-        const activeSession = sessionStore.getSession(deletedTask.sessionId);
-        if (activeSession && (activeSession.status === "running" || activeSession.status === "waiting_input")) {
-          const conn = adapterManager.getConnection(activeSession.environmentId);
-          if (conn) {
-            try {
-              await conn.client.kill(create(powerline.SessionIdSchema, { id: deletedTask.sessionId }));
-            } catch (err) {
-              logger.warn({ taskId, sessionId: deletedTask.sessionId, err }, "Failed to kill session during task deletion");
-            }
+      // Kill all active sessions before deleting the task
+      const activeSessions = sessionStore.getActiveSessionsForTask(taskId);
+      for (const activeSession of activeSessions) {
+        const conn = adapterManager.getConnection(activeSession.environmentId);
+        if (conn) {
+          try {
+            await conn.client.kill(create(powerline.SessionIdSchema, { id: activeSession.id }));
+          } catch (err) {
+            logger.warn({ taskId, sessionId: activeSession.id, err }, "Failed to kill session during task deletion");
           }
-          sessionStore.updateSession(deletedTask.sessionId, "killed");
-          streamHub.publish(create(grackle.SessionEventSchema, {
-            sessionId: deletedTask.sessionId,
-            type: grackle.EventType.STATUS,
-            timestamp: new Date().toISOString(),
-            content: "killed",
-            raw: "",
-          }));
         }
+        sessionStore.updateSession(activeSession.id, "killed");
+        streamHub.publish(create(grackle.SessionEventSchema, {
+          sessionId: activeSession.id,
+          type: grackle.EventType.STATUS,
+          timestamp: new Date().toISOString(),
+          content: "killed",
+          raw: "",
+        }));
       }
 
       const changes = taskStore.deleteTask(taskId);
@@ -1397,7 +1409,6 @@ async function handleMessage(
       }
 
       const environmentId =
-        task.environmentId ||
         projectStore.getProject(task.projectId)?.defaultEnvironmentId;
       if (!environmentId) {
         sendWs(ws, {

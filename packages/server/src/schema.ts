@@ -49,6 +49,7 @@ export const sessions = sqliteTable("sessions", {
   endedAt: text("ended_at"),
   error: text("error"),
   taskId: text("task_id").notNull().default(""),
+  personaId: text("persona_id").notNull().default(""),
 });
 
 /** Row shape returned by a SELECT on the sessions table. */
@@ -107,8 +108,6 @@ export const tasks = sqliteTable("tasks", {
   description: text("description").notNull().default(""),
   status: text("status").notNull().default("pending"),
   branch: text("branch").notNull().default(""),
-  environmentId: text("env_id").notNull().default(""),
-  sessionId: text("session_id").notNull().default(""),
   dependsOn: text("depends_on").notNull().default("[]"),
   assignedAt: text("assigned_at"),
   startedAt: text("started_at"),
@@ -126,7 +125,6 @@ export const tasks = sqliteTable("tasks", {
   canDecompose: integer("can_decompose", { mode: "boolean" })
     .notNull()
     .default(false),
-  personaId: text("persona_id").notNull().default(""),
 });
 
 /** Row shape returned by a SELECT on the tasks table. */

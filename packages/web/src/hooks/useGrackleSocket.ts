@@ -47,8 +47,7 @@ export interface TaskData {
   description: string;
   status: string;
   branch: string;
-  environmentId: string;
-  sessionId: string;
+  latestSessionId: string;
   dependsOn: string[];
   reviewNotes: string;
   sortOrder: number;
@@ -60,7 +59,6 @@ export interface TaskData {
   depth: number;
   childTaskIds: string[];
   canDecompose: boolean;
-  personaId: string;
 }
 
 export interface FindingData {
@@ -380,16 +378,15 @@ export interface UseGrackleSocketResult {
     projectId: string,
     title: string,
     description?: string,
-    environmentId?: string,
     dependsOn?: string[],
     parentTaskId?: string,
-    personaId?: string,
   ) => void;
   startTask: (
     taskId: string,
     runtime?: string,
     model?: string,
     personaId?: string,
+    environmentId?: string,
   ) => void;
   approveTask: (taskId: string) => void;
   rejectTask: (taskId: string, reviewNotes: string) => void;
@@ -398,8 +395,6 @@ export interface UseGrackleSocketResult {
     title: string,
     description: string,
     dependsOn: string[],
-    environmentId?: string,
-    personaId?: string,
   ) => void;
   deleteTask: (taskId: string) => void;
   loadFindings: (projectId: string) => void;
@@ -537,14 +532,43 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
             );
             break;
           case "sessions":
-            setSessions(
-              asValidArray(
+            setSessions((prev) => {
+              const incoming = asValidArray(
                 msg.payload?.sessions,
                 isSession,
                 "sessions",
                 "sessions",
-              ),
-            );
+              );
+              // Build a map of previous session statuses that were updated via
+              // real-time session_event status messages (which may be more
+              // recent than the list_sessions DB snapshot).  Prefer the
+              // real-time status for active sessions to avoid overwriting
+              // "waiting_input" with a stale "running" from the query.
+              const prevMap = new Map(prev.map((s) => [s.id, s.status]));
+              const ACTIVE = new Set(["pending", "running", "waiting_input"]);
+              const TERMINAL = new Set(["completed", "failed", "killed"]);
+              return incoming.map((s) => {
+                const prevStatus = prevMap.get(s.id);
+                if (!prevStatus || prevStatus === s.status) {
+                  return s;
+                }
+                // If the previous status is terminal and the incoming is
+                // active, the list_sessions response is stale — keep the
+                // terminal status from the real-time event.
+                if (TERMINAL.has(prevStatus) && ACTIVE.has(s.status)) {
+                  return { ...s, status: prevStatus };
+                }
+                if (ACTIVE.has(prevStatus) && ACTIVE.has(s.status)) {
+                  // If the previous status is "ahead" of the incoming status
+                  // (e.g. waiting_input > running > pending), keep the previous.
+                  const ORDER = ["pending", "running", "waiting_input"];
+                  if (ORDER.indexOf(prevStatus) > ORDER.indexOf(s.status)) {
+                    return { ...s, status: prevStatus };
+                  }
+                }
+                return s;
+              });
+            });
             break;
           case "session_event": {
             if (!isSessionEvent(msg.payload)) {
@@ -572,13 +596,30 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
               setEventsDropped((n) => n + dropped);
             }
             if (event.eventType === "status") {
-              setSessions((prev) =>
-                prev.map((s) =>
-                  s.id === event.sessionId
-                    ? { ...s, status: event.content }
-                    : s,
-                ),
-              );
+              setSessions((prev) => {
+                const exists = prev.some((s) => s.id === event.sessionId);
+                if (exists) {
+                  return prev.map((s) =>
+                    s.id === event.sessionId
+                      ? { ...s, status: event.content }
+                      : s,
+                  );
+                }
+                // Session not yet in the array (e.g. retry session created
+                // server-side before list_sessions response arrived).  Add a
+                // placeholder entry so the UI can react to the status change.
+                return [
+                  ...prev,
+                  {
+                    id: event.sessionId,
+                    environmentId: "",
+                    runtime: "",
+                    status: event.content,
+                    prompt: "",
+                    startedAt: event.timestamp,
+                  },
+                ];
+              });
             }
             break;
           }
@@ -1010,10 +1051,8 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
       projectId: string,
       title: string,
       description?: string,
-      environmentId?: string,
       dependsOn?: string[],
       parentTaskId?: string,
-      personaId?: string,
     ) => {
       send({
         type: "create_task",
@@ -1021,10 +1060,8 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
           projectId,
           title,
           description: description || "",
-          environmentId: environmentId || "",
           dependsOn: dependsOn || [],
           parentTaskId: parentTaskId || "",
-          personaId: personaId || "",
         },
       });
     },
@@ -1032,7 +1069,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
   );
 
   const startTask = useCallback(
-    (taskId: string, runtime?: string, model?: string, personaId?: string) => {
+    (taskId: string, runtime?: string, model?: string, personaId?: string, environmentId?: string) => {
       setTaskStartingId(taskId);
       send({
         type: "start_task",
@@ -1041,6 +1078,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
           runtime: runtime || "",
           model: model || "",
           personaId: personaId || "",
+          environmentId: environmentId || "",
         },
       });
     },
@@ -1067,12 +1105,10 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
       title: string,
       description: string,
       dependsOn: string[],
-      environmentId?: string,
-      personaId?: string,
     ) => {
       send({
         type: "update_task",
-        payload: { taskId, title, description, dependsOn, environmentId, personaId },
+        payload: { taskId, title, description, dependsOn },
       });
     },
     [send],

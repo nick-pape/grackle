@@ -45,12 +45,10 @@ describe("processor-registry", () => {
     const ctx = makeContext();
     registry.register(ctx);
 
-    const onComplete = vi.fn();
-    registry.lateBind("sess1", "task1", "proj1", onComplete);
+    registry.lateBind("sess1", "task1", "proj1");
 
     expect(ctx.taskId).toBe("task1");
     expect(ctx.projectId).toBe("proj1");
-    expect(ctx.onComplete).toBe(onComplete);
   });
 
   it("lateBind is idempotent for same task", () => {

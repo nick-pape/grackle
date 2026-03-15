@@ -14,12 +14,10 @@ export function createTask(
   projectId: string,
   title: string,
   description: string,
-  environmentId: string,
   dependsOn: string[],
   projectSlug: string,
   parentTaskId: string = "",
   canDecompose?: boolean,
-  personaId: string = "",
 ): void {
   let depth = 0;
   let branch: string;
@@ -60,13 +58,11 @@ export function createTask(
       title,
       description,
       branch,
-      environmentId,
       dependsOn: depsJson,
       sortOrder,
       parentTaskId,
       depth,
       canDecompose: resolvedCanDecompose,
-      personaId,
     })
     .run();
 }
@@ -92,20 +88,16 @@ export function updateTask(
   title: string,
   description: string,
   status: string,
-  environmentId: string,
   dependsOn: string[],
   reviewNotes: string,
-  personaId: string,
 ): void {
   db.update(tasks)
     .set({
       title,
       description,
       status,
-      environmentId,
       dependsOn: JSON.stringify(dependsOn),
       reviewNotes,
-      personaId,
       updatedAt: sql`datetime('now')`,
     })
     .where(eq(tasks.id, id))
@@ -134,30 +126,10 @@ export function updateTaskStatus(id: string, status: TaskStatus): void {
     .run();
 }
 
-/** Set the session ID for a task. */
-export function setTaskSession(id: string, sessionId: string): void {
-  db.update(tasks)
-    .set({
-      sessionId,
-      updatedAt: sql`datetime('now')`,
-    })
-    .where(eq(tasks.id, id))
-    .run();
-}
-
-/** Mark a task as in_progress with a started_at timestamp. */
-export function markTaskStarted(id: string): void {
-  db.update(tasks)
-    .set({
-      status: "in_progress",
-      startedAt: sql`datetime('now')`,
-      updatedAt: sql`datetime('now')`,
-    })
-    .where(eq(tasks.id, id))
-    .run();
-}
-
-/** Mark a task as completed (review, done, or failed) with a completed_at timestamp. */
+/**
+ * Mark a task as completed with a completed_at timestamp.
+ * Used only for human-authoritative status transitions (approve → "done").
+ */
 export function markTaskCompleted(
   id: string,
   status: "review" | "done" | "failed",

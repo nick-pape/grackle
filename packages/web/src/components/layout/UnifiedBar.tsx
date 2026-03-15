@@ -125,8 +125,8 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
   const task = viewMode.kind === "task"
     ? tasks.find((t) => t.id === viewMode.taskId)
     : undefined;
-  const taskSession = task?.sessionId
-    ? sessions.find((s) => s.id === task.sessionId)
+  const taskSession = task?.latestSessionId
+    ? sessions.find((s) => s.id === task.latestSessionId)
     : undefined;
 
   // Check if task is blocked
@@ -465,17 +465,15 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
       const isWaiting = taskSession?.status === "waiting_input";
 
       if (isWaiting) {
-        // Prefer the session's environmentId because task.environmentId is ""
-        // when using "Default env" — the session always carries the resolved env.
-        const effectiveEnvId = taskSession?.environmentId || task.environmentId;
+        const effectiveEnvId = taskSession?.environmentId;
         const taskEnvDisconnected = isEnvDisconnected(effectiveEnvId, environments);
 
         const handleSend = (e: FormEvent): void => {
           e.preventDefault();
-          if (!text.trim() || !task.sessionId || taskEnvDisconnected) {
+          if (!text.trim() || !task.latestSessionId || taskEnvDisconnected) {
             return;
           }
-          sendInput(task.sessionId, text);
+          sendInput(task.latestSessionId, text);
           setText("");
         };
         return (

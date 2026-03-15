@@ -1,5 +1,5 @@
 import { test, expect } from "./fixtures.js";
-import { createProject, createTask } from "./helpers.js";
+import { createProject, createTask, navigateToTask, patchWsForStubRuntime, runStubTaskToCompletion } from "./helpers.js";
 
 test.describe("Task Lifecycle (stub runtime)", () => {
   test("full task flow: create, start, stream, review, approve", async ({ appPage }) => {
@@ -28,6 +28,9 @@ test.describe("Task Lifecycle (stub runtime)", () => {
             const msg = JSON.parse(data);
             if (msg.type === "start_task") {
               msg.payload.runtime = "stub";
+              if (!msg.payload.environmentId) {
+                msg.payload.environmentId = "test-local";
+              }
               data = JSON.stringify(msg);
             }
           } catch { /* not JSON, pass through */ }
@@ -81,40 +84,11 @@ test.describe("Task Lifecycle (stub runtime)", () => {
     // --- Create project and task (env set via WS so it is available at start time) ---
     await createProject(page, "reject-proj");
     await createTask(page, "reject-proj", "reject task", "test-local");
-    await expect(page.getByText("reject task", { exact: true }).first()).toBeVisible({ timeout: 5_000 });
+    await navigateToTask(page, "reject task");
+    await patchWsForStubRuntime(page);
 
-    // Navigate to task
-    await page.getByText("reject task", { exact: true }).click();
-    await expect(page.locator('[data-testid="task-status"]')).toContainText("pending", { timeout: 5_000 });
-
-    // Monkey-patch WS for stub runtime
-    await page.evaluate(() => {
-      const origSend = WebSocket.prototype.send;
-      WebSocket.prototype.send = function (data: string | ArrayBuffer | Blob | ArrayBufferView) {
-        if (typeof data === "string") {
-          try {
-            const msg = JSON.parse(data);
-            if (msg.type === "start_task") {
-              msg.payload.runtime = "stub";
-              data = JSON.stringify(msg);
-            }
-          } catch { /* not JSON */ }
-        }
-        return origSend.call(this, data);
-      };
-    });
-
-    // Start task
-    await page.getByRole("button", { name: "Start", exact: true }).click();
-
-    // Wait for waiting_input and send input to complete the stub session
-    const inputField = page.locator('input[placeholder="Type a message..."]');
-    await expect(inputField).toBeVisible({ timeout: 15_000 });
-    await inputField.fill("done");
-    await page.getByRole("button", { name: "Send", exact: true }).click();
-
-    // Wait for review state
-    await expect(page.getByRole("button", { name: "Approve", exact: true })).toBeVisible({ timeout: 15_000 });
+    // Run task through to review
+    await runStubTaskToCompletion(page);
 
     // Type rejection notes and click Reject
     const rejectInput = page.locator('input[placeholder="Rejection notes..."]');

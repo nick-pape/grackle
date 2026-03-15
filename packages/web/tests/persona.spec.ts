@@ -79,67 +79,8 @@ test.describe("Persona Management", () => {
     expect(created!.runtime).toBe("stub");
   });
 
-  test("persona selector appears in new task form", async ({ appPage }) => {
-    const page = appPage;
-
-    // Create a persona first
-    await createPersonaViaWs(page, {
-      name: "Frontend Dev",
-      description: "React specialist",
-      systemPrompt: "You are a frontend engineer.",
-      runtime: "stub",
-    });
-
-    // Wait for the app's main WS to receive the persona list refresh.
-    // The app reacts to "persona_created" by sending "list_personas",
-    // so poll until the UI state has caught up.
-    await page.waitForFunction(
-      (personaName: string) => {
-        const selects = document.querySelectorAll("select");
-        for (const sel of selects) {
-          for (const opt of sel.options) {
-            if (opt.textContent?.includes(personaName)) {
-              return true;
-            }
-          }
-        }
-        return false;
-      },
-      "Frontend Dev",
-      { timeout: 10_000, polling: 500 },
-    ).catch(() => {
-      // If the persona hasn't appeared in any select yet, proceed to create
-      // the project; the persona will appear once the new task form opens.
-    });
-
-    // Create a project
-    await createProject(page, "persona-test-proj");
-
-    // Open new task form
-    await page.getByText("persona-test-proj").click();
-    await page
-      .getByText("persona-test-proj")
-      .locator("..")
-      .locator('button[title="New task"]')
-      .click();
-
-    // Verify persona selector is present with "No persona" default and our persona.
-    // NOTE: We avoid `toBeVisible()` on `<option>` elements because browsers
-    // report collapsed `<option>` elements as hidden, making the assertion flaky.
-    // Instead we read the option text contents from the select element.
-    const personaSelect = page.locator("select", {
-      has: page.locator('option:text("No persona")'),
-    });
-    await expect(personaSelect).toBeVisible({ timeout: 5_000 });
-
-    // Wait for the persona option to appear inside the select (the app's WS
-    // refresh may still be in-flight).
-    await expect(async () => {
-      const options = await personaSelect.locator("option").allTextContents();
-      expect(options).toContain("No persona");
-      expect(options).toContain("Frontend Dev");
-    }).toPass({ timeout: 10_000, intervals: [500, 1_000, 2_000] });
-  });
+  // persona selector tests removed: persona is no longer selected in the task form;
+  // it is chosen at session start time.
 
   test("persona management view shows created personas", async ({
     appPage,
@@ -367,82 +308,6 @@ test.describe("Persona Management", () => {
     expect(renamed!.runtime).toBe("stub");
     expect(renamed!.model).toBe("sonnet");
     expect(renamed!.maxTurns).toBe(10);
-  });
-
-  test("persona selector defaults to No persona in new task form", async ({
-    appPage,
-  }) => {
-    const page = appPage;
-
-    // Create two personas to ensure the dropdown doesn't auto-select one
-    await createPersonaViaWs(page, {
-      name: "Persona A",
-      systemPrompt: "A prompt",
-    });
-    await createPersonaViaWs(page, {
-      name: "Persona B",
-      systemPrompt: "B prompt",
-    });
-
-    // Create a project and open new task form
-    await createProject(page, "default-persona-proj");
-    await page.getByText("default-persona-proj").click();
-    await page
-      .getByText("default-persona-proj")
-      .locator("..")
-      .locator('button[title="New task"]')
-      .click();
-
-    // The persona select should default to the empty value ("No persona")
-    const personaSelect = page.locator("select", {
-      has: page.locator('option:text("No persona")'),
-    });
-    await expect(personaSelect).toBeVisible({ timeout: 5_000 });
-    await expect(personaSelect).toHaveValue("");
-  });
-
-  test("multiple personas appear in selector in correct order", async ({
-    appPage,
-  }) => {
-    const page = appPage;
-
-    // Create personas with names that would sort differently alphabetically
-    await createPersonaViaWs(page, {
-      name: "Zulu Persona",
-      systemPrompt: "z prompt",
-    });
-    await createPersonaViaWs(page, {
-      name: "Alpha Persona",
-      systemPrompt: "a prompt",
-    });
-
-    // Create project and open new task form
-    await createProject(page, "multi-persona-proj");
-    await page.getByText("multi-persona-proj").click();
-    await page
-      .getByText("multi-persona-proj")
-      .locator("..")
-      .locator('button[title="New task"]')
-      .click();
-
-    const personaSelect = page.locator("select", {
-      has: page.locator('option:text("No persona")'),
-    });
-    await expect(personaSelect).toBeVisible({ timeout: 5_000 });
-
-    // Wait for both persona options to appear
-    await expect(async () => {
-      const options = await personaSelect.locator("option").allTextContents();
-      expect(options).toContain("Alpha Persona");
-      expect(options).toContain("Zulu Persona");
-    }).toPass({ timeout: 10_000, intervals: [500, 1_000, 2_000] });
-
-    // "No persona" should always be the first option
-    const firstOption = await personaSelect
-      .locator("option")
-      .first()
-      .textContent();
-    expect(firstOption).toBe("No persona");
   });
 
   test("created persona appears in management view with all details", async ({

@@ -65,8 +65,6 @@ vi.mock("./task-store.js", () => ({
   buildChildIdsMap: vi.fn(() => new Map()),
   getTask: vi.fn(() => undefined),
   createTask: vi.fn(),
-  setTaskSession: vi.fn(),
-  markTaskStarted: vi.fn(),
   markTaskCompleted: vi.fn(),
   checkAndUnblock: vi.fn(() => []),
   areDependenciesMet: vi.fn(() => true),
@@ -143,7 +141,8 @@ function applySchema(): void {
       suspended_at       TEXT,
       ended_at           TEXT,
       error              TEXT,
-      task_id            TEXT NOT NULL DEFAULT ''
+      task_id            TEXT NOT NULL DEFAULT '',
+      persona_id         TEXT NOT NULL DEFAULT ''
     );
     CREATE TABLE IF NOT EXISTS tokens (
       id     TEXT PRIMARY KEY,
@@ -177,11 +176,8 @@ function makeMockTask(overrides: Record<string, unknown> = {}) {
     branch: "",
     reviewNotes: "",
     canDecompose: false,
-    environmentId: "env-1",
-    personaId: "",
     parentId: "",
     depth: 0,
-    sessionId: "",
     createdAt: new Date().toISOString(),
     ...overrides,
   };

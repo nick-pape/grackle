@@ -67,8 +67,6 @@ function applySchema(): void {
       description   TEXT NOT NULL DEFAULT '',
       status        TEXT NOT NULL DEFAULT 'pending',
       branch        TEXT NOT NULL DEFAULT '',
-      env_id        TEXT NOT NULL DEFAULT '',
-      session_id    TEXT NOT NULL DEFAULT '',
       depends_on    TEXT NOT NULL DEFAULT '[]',
       assigned_at   TEXT,
       started_at    TEXT,
@@ -79,8 +77,7 @@ function applySchema(): void {
       sort_order    INTEGER NOT NULL DEFAULT 0,
       parent_task_id TEXT NOT NULL DEFAULT '',
       depth         INTEGER NOT NULL DEFAULT 0,
-      can_decompose INTEGER NOT NULL DEFAULT 0,
-      persona_id    TEXT NOT NULL DEFAULT ''
+      can_decompose INTEGER NOT NULL DEFAULT 0
     );
   `);
 }
@@ -808,21 +805,6 @@ describe("importGitHubIssues", () => {
     const parent = tasks.find((t) => t.title.startsWith("#1:"));
     const child = tasks.find((t) => t.title.startsWith("#2:"));
     expect(child!.parentTaskId).toBe(parent!.id);
-  });
-
-  it("uses environment ID from request when provided", async () => {
-    mockGhOutput([{ number: 1, title: "Issue one" }]);
-
-    await importGitHubIssues(
-      "test-proj",
-      "owner/repo",
-      "open",
-      undefined,
-      "env-123",
-    );
-
-    const tasks = taskStore.listTasks("test-proj");
-    expect(tasks[0].environmentId).toBe("env-123");
   });
 
   it("generates branch names from parent branch for child tasks", async () => {

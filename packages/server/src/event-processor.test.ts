@@ -64,8 +64,6 @@ function applySchema(): void {
       description   TEXT NOT NULL DEFAULT '',
       status        TEXT NOT NULL DEFAULT 'pending',
       branch        TEXT NOT NULL DEFAULT '',
-      env_id        TEXT NOT NULL DEFAULT '',
-      session_id    TEXT NOT NULL DEFAULT '',
       depends_on    TEXT NOT NULL DEFAULT '[]',
       assigned_at   TEXT,
       started_at    TEXT,
@@ -76,8 +74,7 @@ function applySchema(): void {
       sort_order    INTEGER NOT NULL DEFAULT 0,
       parent_task_id TEXT NOT NULL DEFAULT '',
       depth         INTEGER NOT NULL DEFAULT 0,
-      can_decompose INTEGER NOT NULL DEFAULT 0,
-      persona_id    TEXT NOT NULL DEFAULT ''
+      can_decompose INTEGER NOT NULL DEFAULT 0
     );
 
     CREATE TABLE IF NOT EXISTS sessions (
@@ -94,7 +91,8 @@ function applySchema(): void {
       suspended_at  TEXT,
       ended_at      TEXT,
       error         TEXT,
-      task_id       TEXT NOT NULL DEFAULT ''
+      task_id       TEXT NOT NULL DEFAULT '',
+      persona_id    TEXT NOT NULL DEFAULT ''
     );
 
     CREATE TABLE IF NOT EXISTS findings (
@@ -118,16 +116,28 @@ async function* eventStream(events: powerline.AgentEvent[]): AsyncIterable<power
   }
 }
 
-/** Helper to wait for processEventStream to complete via onComplete callback. */
+/** Helper to wait for processEventStream to complete by polling session status. */
 function waitForProcessing(
   events: powerline.AgentEvent[],
   options: { sessionId: string; logPath: string; projectId?: string; taskId?: string },
 ): Promise<void> {
   return new Promise<void>((resolve, reject) => {
+    // Poll for session to reach a terminal status
+    const interval = setInterval(() => {
+      const s = sessionStore.getSession(options.sessionId);
+      if (s && ["completed", "failed", "killed"].includes(s.status)) {
+        clearInterval(interval);
+        // Give the finally block time to run
+        setTimeout(resolve, 50);
+      }
+    }, 20);
+
     processEventStream(eventStream(events), {
       ...options,
-      onComplete: resolve,
-      onError: reject,
+      onError: (err: unknown) => {
+        clearInterval(interval);
+        reject(err);
+      },
     });
   });
 }
@@ -146,7 +156,7 @@ describe("event-processor SUBTASK_CREATE handling", () => {
 
   it("creates a subtask when SUBTASK_CREATE event is received", async () => {
     // Create a decomposable parent task
-    taskStore.createTask("parent1", "proj1", "Parent Task", "desc", "env1", [], "test-project", "", true);
+    taskStore.createTask("parent1", "proj1", "Parent Task", "desc", [], "test-project", "", true);
     sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
 
     const subtaskEvent = create(powerline.AgentEventSchema, {
@@ -185,7 +195,7 @@ describe("event-processor SUBTASK_CREATE handling", () => {
   });
 
   it("resolves local_id dependencies between sibling subtasks", async () => {
-    taskStore.createTask("parent1", "proj1", "Parent Task", "desc", "env1", [], "test-project", "", true);
+    taskStore.createTask("parent1", "proj1", "Parent Task", "desc", [], "test-project", "", true);
     sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
 
     const event1 = create(powerline.AgentEventSchema, {
@@ -231,7 +241,7 @@ describe("event-processor SUBTASK_CREATE handling", () => {
   });
 
   it("skips subtask creation when parent task cannot decompose", async () => {
-    taskStore.createTask("parent1", "proj1", "Leaf Task", "desc", "env1", [], "test-project", "", false);
+    taskStore.createTask("parent1", "proj1", "Leaf Task", "desc", [], "test-project", "", false);
     sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
 
     const subtaskEvent = create(powerline.AgentEventSchema, {
@@ -285,7 +295,7 @@ describe("event-processor SUBTASK_CREATE handling", () => {
   });
 
   it("warns on unknown local_id in depends_on but still creates the subtask", async () => {
-    taskStore.createTask("parent1", "proj1", "Parent Task", "desc", "env1", [], "test-project", "", true);
+    taskStore.createTask("parent1", "proj1", "Parent Task", "desc", [], "test-project", "", true);
     sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
 
     const subtaskEvent = create(powerline.AgentEventSchema, {
@@ -318,7 +328,7 @@ describe("event-processor SUBTASK_CREATE handling", () => {
   });
 
   it("rejects subtask with empty title or description", async () => {
-    taskStore.createTask("parent1", "proj1", "Parent Task", "desc", "env1", [], "test-project", "", true);
+    taskStore.createTask("parent1", "proj1", "Parent Task", "desc", [], "test-project", "", true);
     sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
 
     const subtaskEvent = create(powerline.AgentEventSchema, {
@@ -347,7 +357,7 @@ describe("event-processor SUBTASK_CREATE handling", () => {
   });
 
   it("detects duplicate local_id and keeps existing mapping", async () => {
-    taskStore.createTask("parent1", "proj1", "Parent Task", "desc", "env1", [], "test-project", "", true);
+    taskStore.createTask("parent1", "proj1", "Parent Task", "desc", [], "test-project", "", true);
     sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
 
     const event1 = create(powerline.AgentEventSchema, {
@@ -406,7 +416,7 @@ describe("event-processor SUBTASK_CREATE handling", () => {
   });
 
   it("does not crash the stream on malformed SUBTASK_CREATE content", async () => {
-    taskStore.createTask("parent1", "proj1", "Parent Task", "desc", "env1", [], "test-project", "", true);
+    taskStore.createTask("parent1", "proj1", "Parent Task", "desc", [], "test-project", "", true);
     sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
 
     const badEvent = create(powerline.AgentEventSchema, {
@@ -476,7 +486,6 @@ describe("stream error handling", () => {
     });
 
     let onErrorCalled = false;
-    let onCompleteCalled = false;
 
     await new Promise<void>((resolve) => {
       processEventStream(
@@ -484,21 +493,24 @@ describe("stream error handling", () => {
         {
           sessionId: "sess1",
           logPath: "/tmp/log",
-          onComplete: () => {
-            onCompleteCalled = true;
-            resolve();
-          },
           onError: () => {
             onErrorCalled = true;
           },
         },
       );
+      // Poll for session to reach terminal status
+      const interval = setInterval(() => {
+        const s = sessionStore.getSession("sess1");
+        if (s && ["completed", "failed", "killed"].includes(s.status)) {
+          clearInterval(interval);
+          setTimeout(resolve, 50);
+        }
+      }, 20);
     });
 
     const session = sessionStore.getSession("sess1");
     expect(session?.status).toBe("completed");
     expect(onErrorCalled).toBe(false);
-    expect(onCompleteCalled).toBe(true);
     expect(logger.info).toHaveBeenCalledWith(
       expect.objectContaining({ sessionId: "sess1" }),
       "Stream ended while session idle — marking completed",
@@ -523,12 +535,19 @@ describe("stream error handling", () => {
         {
           sessionId: "sess1",
           logPath: "/tmp/log",
-          onComplete: resolve,
           onError: () => {
             onErrorCalled = true;
           },
         },
       );
+      // Poll for session to reach terminal status
+      const interval = setInterval(() => {
+        const s = sessionStore.getSession("sess1");
+        if (s && ["completed", "failed", "killed"].includes(s.status)) {
+          clearInterval(interval);
+          setTimeout(resolve, 50);
+        }
+      }, 20);
     });
 
     const session = sessionStore.getSession("sess1");
@@ -536,13 +555,12 @@ describe("stream error handling", () => {
     expect(onErrorCalled).toBe(true);
   });
 
-  it("task moves to review when session completes via idle disconnect", async () => {
+  it("task broadcast fires when session completes via idle disconnect", async () => {
     sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
-    taskStore.createTask("task1", "proj1", "Test Task", "desc", "env1", [], "test-project");
+    taskStore.createTask("task1", "proj1", "Test Task", "desc", [], "test-project");
 
     // Simulate task in_progress
-    taskStore.setTaskSession("task1", "sess1");
-    taskStore.markTaskStarted("task1");
+    taskStore.updateTaskStatus("task1", "in_progress");
 
     const waitingEvent = create(powerline.AgentEventSchema, {
       sessionId: "sess1",
@@ -559,32 +577,32 @@ describe("stream error handling", () => {
           logPath: "/tmp/log",
           projectId: "proj1",
           taskId: "task1",
-          onComplete: () => {
-            // Replicate the onComplete logic from ws-bridge.ts (updated guard)
-            const t = taskStore.getTask("task1");
-            if (t && (t.status === "in_progress" || t.status === "waiting_input")) {
-              const sess = sessionStore.getSession("sess1");
-              if (sess?.status === "completed") {
-                taskStore.markTaskCompleted("task1", "review");
-              } else if (sess?.status === "failed") {
-                taskStore.markTaskCompleted("task1", "failed");
-              }
-            }
-            resolve();
-          },
         },
       );
+      // Poll for session to reach terminal status
+      const interval = setInterval(() => {
+        const s = sessionStore.getSession("sess1");
+        if (s && ["completed", "failed", "killed"].includes(s.status)) {
+          clearInterval(interval);
+          setTimeout(resolve, 50);
+        }
+      }, 20);
     });
-
-    const task = taskStore.getTask("task1");
-    expect(task?.status).toBe("review");
 
     const session = sessionStore.getSession("sess1");
     expect(session?.status).toBe("completed");
+
+    // Verify task_updated was broadcast so the frontend can re-fetch computed status
+    expect(broadcast).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "task_updated",
+        payload: expect.objectContaining({ taskId: "task1", projectId: "proj1" }),
+      }),
+    );
   });
 });
 
-describe("task status sync with waiting_input", () => {
+describe("task status broadcast on terminal events", () => {
   beforeEach(() => {
     sqlite.exec("DROP TABLE IF EXISTS findings");
     sqlite.exec("DROP TABLE IF EXISTS tasks");
@@ -596,18 +614,10 @@ describe("task status sync with waiting_input", () => {
     projectStore.createProject("proj1", "Test Project", "desc", "", "env1");
   });
 
-  it("sets task status to waiting_input when session receives waiting_input event", async () => {
+  it("broadcasts task_updated when session completes with a task", async () => {
     sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
-    taskStore.createTask("task1", "proj1", "Test Task", "desc", "env1", [], "test-project");
-    taskStore.setTaskSession("task1", "sess1");
-    taskStore.markTaskStarted("task1");
-
-    const waitingEvent = create(powerline.AgentEventSchema, {
-      sessionId: "sess1",
-      type: "status",
-      timestamp: new Date().toISOString(),
-      content: "waiting_input",
-    });
+    taskStore.createTask("task1", "proj1", "Test Task", "desc", [], "test-project");
+    taskStore.updateTaskStatus("task1", "in_progress");
 
     const completedEvent = create(powerline.AgentEventSchema, {
       sessionId: "sess1",
@@ -616,18 +626,14 @@ describe("task status sync with waiting_input", () => {
       content: "completed",
     });
 
-    await waitForProcessing([waitingEvent, completedEvent], {
+    await waitForProcessing([completedEvent], {
       sessionId: "sess1",
       logPath: "/tmp/log",
       projectId: "proj1",
       taskId: "task1",
     });
 
-    // Verify the task DB row was actually updated to waiting_input
-    // (completed event ends the session but doesn't change task status — that's the caller's onComplete job)
-    const task = taskStore.getTask("task1");
-    expect(task?.status).toBe("waiting_input");
-
+    // Verify task_updated was broadcast on terminal session event
     expect(broadcast).toHaveBeenCalledWith(
       expect.objectContaining({
         type: "task_updated",
@@ -636,11 +642,10 @@ describe("task status sync with waiting_input", () => {
     );
   });
 
-  it("reverts task from waiting_input to in_progress on running event", async () => {
+  it("broadcasts task_updated for both terminal and non-terminal session events", async () => {
     sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
-    taskStore.createTask("task1", "proj1", "Test Task", "desc", "env1", [], "test-project");
-    taskStore.setTaskSession("task1", "sess1");
-    taskStore.markTaskStarted("task1");
+    taskStore.createTask("task1", "proj1", "Test Task", "desc", [], "test-project");
+    taskStore.updateTaskStatus("task1", "in_progress");
 
     const waitingEvent = create(powerline.AgentEventSchema, {
       sessionId: "sess1",
@@ -670,28 +675,15 @@ describe("task status sync with waiting_input", () => {
       taskId: "task1",
     });
 
-    // Task should have reverted to in_progress after the running event
-    const task = taskStore.getTask("task1");
-    expect(task?.status).toBe("in_progress");
-
-    // Two task_updated broadcasts: one for waiting_input, one for in_progress
+    // All status changes (waiting_input, running, completed) should broadcast
+    // so the frontend re-fetches and gets the computed task status
     const taskUpdatedCalls = (broadcast as ReturnType<typeof vi.fn>).mock.calls
       .filter((c: unknown[]) => (c[0] as { type: string }).type === "task_updated");
-    expect(taskUpdatedCalls.length).toBe(2);
+    expect(taskUpdatedCalls.length).toBe(3);
   });
 
-  it("running event does not override non-waiting_input task status", async () => {
+  it("does not broadcast task_updated when no task is associated", async () => {
     sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
-    taskStore.createTask("task1", "proj1", "Test Task", "desc", "env1", [], "test-project");
-    taskStore.setTaskSession("task1", "sess1");
-    taskStore.markTaskStarted("task1");
-
-    const runningEvent = create(powerline.AgentEventSchema, {
-      sessionId: "sess1",
-      type: "status",
-      timestamp: new Date().toISOString(),
-      content: "running",
-    });
 
     const completedEvent = create(powerline.AgentEventSchema, {
       sessionId: "sess1",
@@ -700,67 +692,16 @@ describe("task status sync with waiting_input", () => {
       content: "completed",
     });
 
-    await waitForProcessing([runningEvent, completedEvent], {
+    await waitForProcessing([completedEvent], {
       sessionId: "sess1",
       logPath: "/tmp/log",
-      projectId: "proj1",
-      taskId: "task1",
+      // no taskId
     });
-
-    // Task should remain in_progress (running does not override non-waiting_input status)
-    const task = taskStore.getTask("task1");
-    expect(task?.status).toBe("in_progress");
 
     // No task_updated broadcasts should have been made
     const taskUpdatedCalls = (broadcast as ReturnType<typeof vi.fn>).mock.calls
       .filter((c: unknown[]) => (c[0] as { type: string }).type === "task_updated");
     expect(taskUpdatedCalls.length).toBe(0);
-  });
-
-  it("task completes from waiting_input state via onComplete guard", async () => {
-    sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
-    taskStore.createTask("task1", "proj1", "Test Task", "desc", "env1", [], "test-project");
-    taskStore.setTaskSession("task1", "sess1");
-    taskStore.markTaskStarted("task1");
-
-    const waitingEvent = create(powerline.AgentEventSchema, {
-      sessionId: "sess1",
-      type: "status",
-      timestamp: new Date().toISOString(),
-      content: "waiting_input",
-    });
-
-    const completedEvent = create(powerline.AgentEventSchema, {
-      sessionId: "sess1",
-      type: "status",
-      timestamp: new Date().toISOString(),
-      content: "completed",
-    });
-
-    await new Promise<void>((resolve) => {
-      processEventStream(eventStream([waitingEvent, completedEvent]), {
-        sessionId: "sess1",
-        logPath: "/tmp/log",
-        projectId: "proj1",
-        taskId: "task1",
-        onComplete: () => {
-          // Replicate the onComplete logic with the updated guard
-          const t = taskStore.getTask("task1");
-          if (t && (t.status === "in_progress" || t.status === "waiting_input")) {
-            const sess = sessionStore.getSession("sess1");
-            if (sess?.status === "completed") {
-              taskStore.markTaskCompleted("task1", "review");
-            } else if (sess?.status === "failed") {
-              taskStore.markTaskCompleted("task1", "failed");
-            }
-          }
-          resolve();
-        },
-      });
-    });
-
-    const task = taskStore.getTask("task1");
-    expect(task?.status).toBe("review");
   });
 });
 
@@ -828,17 +769,27 @@ describe("late-binding", () => {
     };
   }
 
+  /** Helper to poll until a session reaches a terminal status. */
+  function waitForSessionTerminal(sessionId: string): Promise<void> {
+    return new Promise<void>((resolve) => {
+      const interval = setInterval(() => {
+        const s = sessionStore.getSession(sessionId);
+        if (s && ["completed", "failed", "killed"].includes(s.status)) {
+          clearInterval(interval);
+          setTimeout(resolve, 50);
+        }
+      }, 20);
+    });
+  }
+
   it("processes finding events after late-bind", async () => {
     sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
-    taskStore.createTask("task1", "proj1", "Test Task", "desc", "env1", [], "test-project");
+    taskStore.createTask("task1", "proj1", "Test Task", "desc", [], "test-project");
 
     const { stream, push, end } = controllableStream();
-    const completed = new Promise<void>((resolve) => {
-      processEventStream(stream, {
-        sessionId: "sess1",
-        logPath: "/tmp/log",
-        onComplete: resolve,
-      });
+    processEventStream(stream, {
+      sessionId: "sess1",
+      logPath: "/tmp/log",
     });
 
     // Wait for stream to start processing
@@ -864,7 +815,7 @@ describe("late-binding", () => {
     }));
     end();
 
-    await completed;
+    await waitForSessionTerminal("sess1");
 
     // Verify finding was stored
     const findings = findingStore.queryFindings("proj1");
@@ -875,15 +826,12 @@ describe("late-binding", () => {
 
   it("processes subtask events after late-bind", async () => {
     sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
-    taskStore.createTask("task1", "proj1", "Parent Task", "desc", "env1", [], "test-project", "", true);
+    taskStore.createTask("task1", "proj1", "Parent Task", "desc", [], "test-project", "", true);
 
     const { stream, push, end } = controllableStream();
-    const completed = new Promise<void>((resolve) => {
-      processEventStream(stream, {
-        sessionId: "sess1",
-        logPath: "/tmp/log",
-        onComplete: resolve,
-      });
+    processEventStream(stream, {
+      sessionId: "sess1",
+      logPath: "/tmp/log",
     });
 
     await new Promise((r) => setTimeout(r, 50));
@@ -907,25 +855,22 @@ describe("late-binding", () => {
     }));
     end();
 
-    await completed;
+    await waitForSessionTerminal("sess1");
 
     const children = taskStore.getChildren("task1");
     expect(children).toHaveLength(1);
     expect(children[0].title).toBe("Sub Task");
   });
 
-  it("syncs task status after late-bind", async () => {
+  it("broadcasts task_updated after late-bind on terminal events", async () => {
     sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
-    taskStore.createTask("task1", "proj1", "Test Task", "desc", "env1", [], "test-project");
-    taskStore.markTaskStarted("task1");
+    taskStore.createTask("task1", "proj1", "Test Task", "desc", [], "test-project");
+    taskStore.updateTaskStatus("task1", "in_progress");
 
     const { stream, push, end } = controllableStream();
-    const completed = new Promise<void>((resolve) => {
-      processEventStream(stream, {
-        sessionId: "sess1",
-        logPath: "/tmp/log",
-        onComplete: resolve,
-      });
+    processEventStream(stream, {
+      sessionId: "sess1",
+      logPath: "/tmp/log",
     });
 
     await new Promise((r) => setTimeout(r, 50));
@@ -933,20 +878,7 @@ describe("late-binding", () => {
     // Late-bind
     processorRegistry.lateBind("sess1", "task1", "proj1");
 
-    // Emit waiting_input — should sync task status
-    push(create(powerline.AgentEventSchema, {
-      sessionId: "sess1",
-      type: "status",
-      timestamp: new Date().toISOString(),
-      content: "waiting_input",
-    }));
-
-    // Give it a tick to process
-    await new Promise((r) => setTimeout(r, 50));
-
-    const task = taskStore.getTask("task1");
-    expect(task?.status).toBe("waiting_input");
-
+    // Emit completed — should trigger task_updated broadcast
     push(create(powerline.AgentEventSchema, {
       sessionId: "sess1",
       type: "status",
@@ -955,64 +887,19 @@ describe("late-binding", () => {
     }));
     end();
 
-    await completed;
-  });
+    await waitForSessionTerminal("sess1");
 
-  it("fires onComplete callback set by late-bind (task → review)", async () => {
-    sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
-    taskStore.createTask("task1", "proj1", "Test Task", "desc", "env1", [], "test-project");
-    taskStore.markTaskStarted("task1");
-
-    const { stream, push, end } = controllableStream();
-    const completed = new Promise<void>((resolve) => {
-      processEventStream(stream, {
-        sessionId: "sess1",
-        logPath: "/tmp/log",
-        // No onComplete initially — it will be set by lateBind
-      });
-      // We need to detect completion differently since no onComplete was set.
-      // The lateBind onComplete will be called in finally. We'll poll.
-      const interval = setInterval(() => {
-        const s = sessionStore.getSession("sess1");
-        if (s && ["completed", "failed", "killed"].includes(s.status)) {
-          clearInterval(interval);
-          // Give the finally block time to run
-          setTimeout(resolve, 50);
-        }
-      }, 20);
-    });
-
-    await new Promise((r) => setTimeout(r, 50));
-
-    // Late-bind with onComplete that moves task to review
-    const onComplete = (): void => {
-      const t = taskStore.getTask("task1");
-      if (t && (t.status === "in_progress" || t.status === "waiting_input")) {
-        const sess = sessionStore.getSession("sess1");
-        if (sess?.status === "completed") {
-          taskStore.markTaskCompleted("task1", "review");
-        }
-      }
-    };
-    processorRegistry.lateBind("sess1", "task1", "proj1", onComplete);
-
-    push(create(powerline.AgentEventSchema, {
-      sessionId: "sess1",
-      type: "status",
-      timestamp: new Date().toISOString(),
-      content: "completed",
-    }));
-    end();
-
-    await completed;
-
-    const task = taskStore.getTask("task1");
-    expect(task?.status).toBe("review");
+    expect(broadcast).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "task_updated",
+        payload: expect.objectContaining({ taskId: "task1", projectId: "proj1" }),
+      }),
+    );
   });
 
   it("replays pre-association finding events from log on late-bind", async () => {
     sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
-    taskStore.createTask("task1", "proj1", "Test Task", "desc", "env1", [], "test-project");
+    taskStore.createTask("task1", "proj1", "Test Task", "desc", [], "test-project");
 
     // Mock readLog to return a pre-existing finding event
     vi.mocked(logWriter.readLog).mockReturnValue([
@@ -1025,12 +912,9 @@ describe("late-binding", () => {
     ]);
 
     const { stream, push, end } = controllableStream();
-    const completed = new Promise<void>((resolve) => {
-      processEventStream(stream, {
-        sessionId: "sess1",
-        logPath: "/tmp/log",
-        onComplete: resolve,
-      });
+    processEventStream(stream, {
+      sessionId: "sess1",
+      logPath: "/tmp/log",
     });
 
     await new Promise((r) => setTimeout(r, 50));
@@ -1054,12 +938,12 @@ describe("late-binding", () => {
     }));
     end();
 
-    await completed;
+    await waitForSessionTerminal("sess1");
   });
 
   it("replay does not re-publish events to streamHub", async () => {
     sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
-    taskStore.createTask("task1", "proj1", "Test Task", "desc", "env1", [], "test-project");
+    taskStore.createTask("task1", "proj1", "Test Task", "desc", [], "test-project");
 
     vi.mocked(logWriter.readLog).mockReturnValue([
       {
@@ -1071,12 +955,9 @@ describe("late-binding", () => {
     ]);
 
     const { stream, push, end } = controllableStream();
-    const completed = new Promise<void>((resolve) => {
-      processEventStream(stream, {
-        sessionId: "sess1",
-        logPath: "/tmp/log",
-        onComplete: resolve,
-      });
+    processEventStream(stream, {
+      sessionId: "sess1",
+      logPath: "/tmp/log",
     });
 
     await new Promise((r) => setTimeout(r, 50));
@@ -1100,7 +981,7 @@ describe("late-binding", () => {
     }));
     end();
 
-    await completed;
+    await waitForSessionTerminal("sess1");
   });
 
   it("processor is unregistered after stream ends", async () => {
