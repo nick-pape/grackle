@@ -1,7 +1,7 @@
 import db from "./db.js";
 import { tasks, type TaskRow } from "./schema.js";
-import { eq, sql, asc } from "drizzle-orm";
-import { TASK_STATUS } from "@grackle-ai/common";
+import { eq, and, or, sql, asc } from "drizzle-orm";
+import { TASK_STATUS, taskStatusToEnum, taskStatusToString } from "@grackle-ai/common";
 import type { TaskStatus } from "@grackle-ai/common";
 import { MAX_TASK_DEPTH } from "@grackle-ai/common";
 import { safeParseJsonArray } from "./json-helpers.js";
@@ -73,12 +73,49 @@ export function getTask(id: string): TaskRow | undefined {
   return db.select().from(tasks).where(eq(tasks.id, id)).get();
 }
 
-/** Return all tasks for a project, ordered by sort_order then created_at. */
-export function listTasks(projectId: string): TaskRow[] {
+/** Options for filtering the task list. */
+export interface ListTasksOptions {
+  /** Case-insensitive substring filter on title or description. Case folding is ASCII-only (SQLite LIKE default). */
+  search?: string;
+  /** Exact match filter on task status (e.g. "not_started", "in_progress"). */
+  status?: string;
+}
+
+/** Escape LIKE special characters so they match literally. */
+function escapeLikePattern(value: string): string {
+  return value.replace(/[%_\\]/g, (ch) => `\\${ch}`);
+}
+
+/** Return tasks for a project, with optional search/status filters, ordered by sort_order then created_at. */
+export function listTasks(projectId: string, options?: ListTasksOptions): TaskRow[] {
+  const conditions = [eq(tasks.projectId, projectId)];
+
+  if (options?.status) {
+    // Normalize legacy status aliases (e.g. "in_progress" → "working")
+    const canonical = taskStatusToString(taskStatusToEnum(options.status));
+    if (canonical) {
+      conditions.push(eq(tasks.status, canonical));
+    } else {
+      // Unknown status — match nothing rather than ignoring the filter
+      conditions.push(sql`0`);
+    }
+  }
+
+  if (options?.search) {
+    const escaped = escapeLikePattern(options.search);
+    const pattern = `%${escaped}%`;
+    conditions.push(
+      or(
+        sql`${tasks.title} LIKE ${pattern} ESCAPE '\\'`,
+        sql`${tasks.description} LIKE ${pattern} ESCAPE '\\'`,
+      )!,
+    );
+  }
+
   return db
     .select()
     .from(tasks)
-    .where(eq(tasks.projectId, projectId))
+    .where(and(...conditions))
     .orderBy(asc(tasks.sortOrder), asc(tasks.createdAt))
     .all();
 }

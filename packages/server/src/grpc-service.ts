@@ -683,8 +683,11 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
 
     // ─── Tasks ───────────────────────────────────────────────
 
-    async listTasks(req: grackle.ProjectId) {
-      const rows = taskStore.listTasks(req.id);
+    async listTasks(req: grackle.ListTasksRequest) {
+      const rows = taskStore.listTasks(req.projectId, {
+        search: req.search || undefined,
+        status: req.status || undefined,
+      });
       const childIdsMap = taskStore.buildChildIdsMap(rows);
 
       // Batch-fetch sessions for all tasks and group by taskId

@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sun, 15 Mar 2026 21:27:25 GMT and should not be manually modified.
+This log was last generated on Sun, 15 Mar 2026 23:23:30 GMT and should not be manually modified.
+
+## 0.29.0
+Sun, 15 Mar 2026 23:23:30 GMT
+
+### Minor changes
+
+- Add --search and --status filters to task list across proto, store, gRPC, WS, MCP, and CLI
 
 ## 0.28.0
 Sun, 15 Mar 2026 21:27:25 GMT
