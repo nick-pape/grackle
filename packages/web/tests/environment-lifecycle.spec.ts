@@ -16,14 +16,14 @@ async function reprovisionTestLocal(page: import("@playwright/test").Page): Prom
     type: "provision_environment",
     payload: { environmentId: "test-local" },
   });
-  // Wait for the green dot to reappear — proves connected status broadcast was received.
-  // The green dot has color rgb(78, 204, 163) which maps to --accent-green / #4ecca3.
+  // Wait for the accent dot to reappear — proves connected status broadcast was received.
+  // The accent dot has color rgb(139, 92, 246) which maps to --accent-green / #8b5cf6.
   await page.waitForFunction(
     () => {
       const dots = document.querySelectorAll("span");
       for (const dot of dots) {
         const color = getComputedStyle(dot).color;
-        if (color === "rgb(78, 204, 163)") {
+        if (color === "rgb(139, 92, 246)") {
           return true;
         }
       }
@@ -126,10 +126,10 @@ test.describe("Environment Lifecycle — WebSocket Handlers", () => {
     await page.locator('button[title="Settings"]').click();
     await expect(page.getByText("test-local")).toBeVisible();
 
-    // Verify test-local is currently connected (green dot)
+    // Verify test-local is currently connected (accent dot)
     const envSection = page.getByText("test-local").locator("..");
     const dot = envSection.locator("span").first();
-    await expect(dot).toHaveCSS("color", "rgb(78, 204, 163)"); // green = connected
+    await expect(dot).toHaveCSS("color", "rgb(139, 92, 246)"); // accent = connected
 
     // Send stop_environment via WS
     await sendWsMessage(page, {
@@ -138,7 +138,7 @@ test.describe("Environment Lifecycle — WebSocket Handlers", () => {
     });
 
     // Wait for the dot to change from green (connected) to non-green (disconnected)
-    await expect(dot).not.toHaveCSS("color", "rgb(78, 204, 163)", { timeout: 5_000 });
+    await expect(dot).not.toHaveCSS("color", "rgb(139, 92, 246)", { timeout: 5_000 });
 
     // Expand to see the Connect button (indicates disconnected)
     await page.getByText("test-local").click();
@@ -321,10 +321,10 @@ test.describe("Environment Lifecycle — WebSocket Handlers", () => {
 
     // Verify the environment is now connected again (auto-provision reconnected it).
     // The environment status should have been broadcast to the app's WS.
-    // Wait for the green dot to confirm connected status.
+    // Wait for the accent dot to confirm connected status.
     const envSection = page.getByText("test-local").locator("..");
     const dot = envSection.locator("span").first();
-    await expect(dot).toHaveCSS("color", "rgb(78, 204, 163)", { timeout: 10_000 });
+    await expect(dot).toHaveCSS("color", "rgb(139, 92, 246)", { timeout: 10_000 });
   });
 });
 

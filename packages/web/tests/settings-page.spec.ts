@@ -36,14 +36,15 @@ test.describe("Settings Page", () => {
     await page.locator('button[title="Settings"]').click();
     await expect(settingsHeading(page)).toBeVisible({ timeout: 5_000 });
 
-    const lightThemeButton = page.getByRole("button", { name: /Light/i }).first();
-    await lightThemeButton.click();
+    // Click the Grackle light variant toggle (sun icon)
+    const grackleCard = page.getByRole("button", { name: /Grackle.*iridescent/i });
+    const lightToggle = grackleCard.getByLabel("Light variant");
+    await lightToggle.click();
 
-    await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
-    await expect(lightThemeButton).toHaveAttribute("aria-pressed", "true");
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "grackle-light");
     await expect.poll(async () => {
       return page.evaluate(() => localStorage.getItem("grackle-theme"));
-    }).toBe("light");
+    }).toBe("grackle-light");
 
     await page.reload();
     await page.waitForFunction(
@@ -52,8 +53,7 @@ test.describe("Settings Page", () => {
     );
     await page.locator('button[title="Settings"]').click();
     await expect(settingsHeading(page)).toBeVisible({ timeout: 5_000 });
-    await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
-    await expect(page.getByRole("button", { name: /Light/i }).first()).toHaveAttribute("aria-pressed", "true");
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "grackle-light");
   });
 
   test("add token via settings form", async ({ appPage }) => {

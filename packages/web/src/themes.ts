@@ -18,12 +18,6 @@ export interface ThemeDefinition {
   description: string;
   /** Preview colors shown as swatches in Settings (bg, accent, text). */
   swatches?: string[];
-  /** If true, this theme follows the OS preference (light/dark). */
-  isSystemAuto?: boolean;
-  /** The resolved data-theme value when OS is in light mode (for system-auto themes). */
-  systemLightId?: string;
-  /** The resolved data-theme value when OS is in dark mode (for system-auto themes). */
-  systemDarkId?: string;
   /** If set, this theme has a light variant toggled in Settings. */
   variantLightId?: string;
   /** If set, this theme has a dark variant toggled in Settings. */
@@ -39,22 +33,30 @@ export interface ThemeDefinition {
  */
 export const THEMES: readonly ThemeDefinition[] = [
   {
+    id: "grackle",
+    label: "Grackle",
+    description: "The default Grackle theme — iridescent purple on clean dark.",
+    swatches: ["#0e1218", "#8b5cf6", "#60a5fa", "#e5e7eb", "#34d399"],
+    variantLightId: "grackle-light",
+    variantDarkId: "grackle-dark",
+  },
+  {
+    id: "grackle-light",
+    label: "Grackle Light",
+    description: "Light Grackle variant.",
+    hidden: true,
+  },
+  {
+    id: "grackle-dark",
+    label: "Grackle Dark",
+    description: "Dark Grackle variant.",
+    hidden: true,
+  },
+  {
     id: "glass",
     label: "Glassmorphism",
     description: "Dark frosted-glass aesthetic with backdrop blur effects.",
     swatches: ["#0a0c14", "#4ecca3", "#70a1ff", "#e2e8f0", "#a855f7"],
-  },
-  {
-    id: "light",
-    label: "Light",
-    description: "Clean light theme with subtle depth cues.",
-    swatches: ["#ffffff", "#10b981", "#3b82f6", "#1c2129", "#8b5cf6"],
-  },
-  {
-    id: "dark",
-    label: "Dark",
-    description: "Clean dark theme with subtle depth cues.",
-    swatches: ["#0e1218", "#34d399", "#60a5fa", "#e5e7eb", "#a78bfa"],
   },
   {
     id: "matrix",
@@ -126,21 +128,13 @@ export const THEMES: readonly ThemeDefinition[] = [
     description: "Blue accent on ink-dark grey, in the style of GitHub.",
     swatches: ["#0d1117", "#58a6ff", "#3fb950", "#c9d1d9", "#bc8cff"],
   },
-  {
-    id: "system",
-    label: "System",
-    description: "Follow your OS light/dark preference (clean theme).",
-    isSystemAuto: true,
-    systemLightId: "light",
-    systemDarkId: "dark",
-  },
 ] as const;
 
 /** The set of valid theme IDs derived from the registry. */
 export const THEME_IDS: ReadonlySet<string> = new Set(THEMES.map((t) => t.id));
 
 /** The default theme ID used when nothing is persisted. */
-export const DEFAULT_THEME_ID: string = "glass";
+export const DEFAULT_THEME_ID: string = "grackle";
 
 /** Look up a theme definition by ID, returning undefined if not found. */
 export function getThemeById(id: string): ThemeDefinition | undefined {
