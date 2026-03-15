@@ -14,7 +14,7 @@ import * as projectStore from "./project-store.js";
 import * as taskStore from "./task-store.js";
 import * as findingStore from "./finding-store.js";
 import * as personaStore from "./persona-store.js";
-import { broadcast } from "./ws-broadcast.js";
+import { broadcast, broadcastEnvironments } from "./ws-broadcast.js";
 import { processEventStream } from "./event-processor.js";
 import * as processorRegistry from "./processor-registry.js";
 import { join } from "node:path";
@@ -297,6 +297,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       }
 
       envRegistry.updateEnvironmentStatus(req.id, "connecting");
+      broadcastEnvironments();
 
       const config = JSON.parse(env.adapterConfig);
       const powerlineToken = env.powerlineToken || "";
@@ -322,6 +323,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         await tokenBroker.pushToEnv(req.id);
         envRegistry.updateEnvironmentStatus(req.id, "connected");
         envRegistry.markBootstrapped(req.id);
+        broadcastEnvironments();
 
         yield create(grackle.ProvisionEventSchema, {
           stage: "ready",
@@ -330,6 +332,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         });
       } catch (err) {
         envRegistry.updateEnvironmentStatus(req.id, "error");
+        broadcastEnvironments();
         yield create(grackle.ProvisionEventSchema, {
           stage: "error",
           message: `Connection failed: ${err}`,
@@ -350,6 +353,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       }
       adapterManager.removeConnection(req.id);
       envRegistry.updateEnvironmentStatus(req.id, "disconnected");
+      broadcastEnvironments();
       return create(grackle.EmptySchema, {});
     },
 
@@ -365,6 +369,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       }
       adapterManager.removeConnection(req.id);
       envRegistry.updateEnvironmentStatus(req.id, "disconnected");
+      broadcastEnvironments();
       return create(grackle.EmptySchema, {});
     },
 

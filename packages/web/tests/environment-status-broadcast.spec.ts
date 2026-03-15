@@ -1,0 +1,161 @@
+import { test, expect } from "./fixtures.js";
+import {
+  sendWsMessage,
+  installWsTracker,
+  injectWsMessage,
+} from "./helpers.js";
+
+/**
+ * Tests that environment status changes broadcast via WebSocket
+ * update the StatusBar count and trigger toast notifications.
+ */
+
+test.describe("Environment Status Broadcast + Toasts", () => {
+  test("stop environment shows disconnected toast and updates StatusBar", async ({ page }) => {
+    await installWsTracker(page);
+    await page.goto("/");
+    await page.waitForFunction(
+      () => document.body.innerText.includes("Connected"),
+      { timeout: 10_000 },
+    );
+
+    // Verify StatusBar initially shows connected count (1/1)
+    await expect(page.getByText("1/1")).toBeVisible({ timeout: 5_000 });
+
+    // Stop the environment via WS
+    await sendWsMessage(page, {
+      type: "stop_environment",
+      payload: { environmentId: "test-local" },
+    });
+
+    // StatusBar should update to show 0 connected (0/1)
+    await expect(page.getByText("0/1")).toBeVisible({ timeout: 10_000 });
+
+    // A "disconnected" toast should appear
+    await expect(page.getByText("test-local disconnected")).toBeVisible({ timeout: 5_000 });
+
+    // Re-provision so other tests aren't affected
+    await sendWsMessage(page, {
+      type: "provision_environment",
+      payload: { environmentId: "test-local" },
+    });
+    await expect(page.getByText("1/1")).toBeVisible({ timeout: 15_000 });
+  });
+
+  test("provision environment shows connected toast and updates StatusBar", async ({ page }) => {
+    await installWsTracker(page);
+    await page.goto("/");
+    await page.waitForFunction(
+      () => document.body.innerText.includes("Connected"),
+      { timeout: 10_000 },
+    );
+
+    // Stop the environment first
+    await sendWsMessage(page, {
+      type: "stop_environment",
+      payload: { environmentId: "test-local" },
+    });
+    await expect(page.getByText("0/1")).toBeVisible({ timeout: 10_000 });
+
+    // Now re-provision
+    await sendWsMessage(page, {
+      type: "provision_environment",
+      payload: { environmentId: "test-local" },
+    });
+
+    // StatusBar should show 1/1 again
+    await expect(page.getByText("1/1")).toBeVisible({ timeout: 15_000 });
+
+    // A "connected" toast should appear
+    await expect(page.getByText("test-local connected")).toBeVisible({ timeout: 5_000 });
+  });
+
+  test("injected environment removal shows removal toast", async ({ page }) => {
+    await installWsTracker(page);
+    await page.goto("/");
+    await page.waitForFunction(
+      () => document.body.innerText.includes("Connected"),
+      { timeout: 10_000 },
+    );
+
+    // Inject a two-environment list first
+    await injectWsMessage(page, {
+      type: "environments",
+      payload: {
+        environments: [
+          {
+            id: "test-local",
+            displayName: "test-local",
+            adapterType: "local",
+            defaultRuntime: "stub",
+            status: "connected",
+            bootstrapped: true,
+          },
+          {
+            id: "temp-env",
+            displayName: "Temp Env",
+            adapterType: "local",
+            defaultRuntime: "stub",
+            status: "connected",
+            bootstrapped: false,
+          },
+        ],
+      },
+    });
+
+    // Verify both appear in StatusBar count
+    await expect(page.getByText("2/2")).toBeVisible({ timeout: 5_000 });
+
+    // Now inject list without temp-env (simulate removal)
+    await injectWsMessage(page, {
+      type: "environments",
+      payload: {
+        environments: [
+          {
+            id: "test-local",
+            displayName: "test-local",
+            adapterType: "local",
+            defaultRuntime: "stub",
+            status: "connected",
+            bootstrapped: true,
+          },
+        ],
+      },
+    });
+
+    // Removal toast should appear
+    await expect(page.getByText("Temp Env removed")).toBeVisible({ timeout: 5_000 });
+
+    // StatusBar should now show 1/1
+    await expect(page.getByText("1/1")).toBeVisible({ timeout: 5_000 });
+  });
+
+  test("injected error status shows provision failed toast", async ({ page }) => {
+    await installWsTracker(page);
+    await page.goto("/");
+    await page.waitForFunction(
+      () => document.body.innerText.includes("Connected"),
+      { timeout: 10_000 },
+    );
+
+    // Inject environment in error status
+    await injectWsMessage(page, {
+      type: "environments",
+      payload: {
+        environments: [
+          {
+            id: "test-local",
+            displayName: "test-local",
+            adapterType: "local",
+            defaultRuntime: "stub",
+            status: "error",
+            bootstrapped: false,
+          },
+        ],
+      },
+    });
+
+    // Error toast should appear
+    await expect(page.getByText("test-local provision failed")).toBeVisible({ timeout: 5_000 });
+  });
+});

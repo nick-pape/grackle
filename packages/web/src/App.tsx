@@ -7,6 +7,8 @@ import { SessionPanel } from "./components/panels/index.js";
 import { ToastContainer } from "./components/notifications/index.js";
 import { useState, useEffect, type JSX } from "react";
 import { useGrackle } from "./context/GrackleContext.js";
+import { useToast } from "./context/ToastContext.js";
+import { useEnvironmentToasts } from "./hooks/useEnvironmentToasts.js";
 import styles from "./App.module.scss";
 
 /** Whether the app is running in mock mode (`?mock` query parameter). */
@@ -28,7 +30,9 @@ export type ViewMode =
 /** Main application content with layout and view routing. */
 function AppContent(): JSX.Element {
   const [viewMode, setViewMode] = useState<ViewMode>({ kind: "empty" });
-  const { lastSpawnedId } = useGrackle();
+  const { lastSpawnedId, environments } = useGrackle();
+  const { showToast } = useToast();
+  useEnvironmentToasts(environments, showToast);
 
   // Auto-select newly spawned sessions
   useEffect(() => {

@@ -34,7 +34,7 @@ import { buildTaskSystemContext } from "./utils/system-context.js";
 import { slugify } from "./utils/slugify.js";
 import { processEventStream } from "./event-processor.js";
 import * as processorRegistry from "./processor-registry.js";
-import { broadcast, setWssInstance } from "./ws-broadcast.js";
+import { broadcast, setWssInstance, broadcastEnvironments, envRowToWs } from "./ws-broadcast.js";
 import { buildMcpServersJson } from "./grpc-service.js";
 import { computeTaskStatus } from "./compute-task-status.js";
 import { exec } from "./utils/exec.js";
@@ -97,28 +97,6 @@ export function createWsBridge(
   return wss;
 }
 
-/** Map a database environment row to the WebSocket payload shape. */
-function envRowToWs(
-  r: ReturnType<typeof envRegistry.listEnvironments>[number],
-): Record<string, unknown> {
-  return {
-    id: r.id,
-    displayName: r.displayName,
-    adapterType: r.adapterType,
-    adapterConfig: r.adapterConfig,
-    defaultRuntime: r.defaultRuntime,
-    status: r.status,
-    bootstrapped: r.bootstrapped,
-  };
-}
-
-/** Broadcast the current environment list to all connected WebSocket clients. */
-function broadcastEnvironments(): void {
-  broadcast({
-    type: "environments",
-    payload: { environments: envRegistry.listEnvironments().map(envRowToWs) },
-  });
-}
 
 /** Safely parse an adapter config string, returning an empty object on failure. */
 function safeParseAdapterConfig(
