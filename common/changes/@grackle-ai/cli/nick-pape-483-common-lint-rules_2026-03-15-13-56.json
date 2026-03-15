@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Escalate typedef and explicit-member-accessibility lint rules to error in common",
+      "type": "none",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
