@@ -1,6 +1,6 @@
 import type { Client } from "@connectrpc/connect";
 import { z } from "zod";
-import { grackle, eventTypeToString } from "@grackle-ai/common";
+import { grackle, eventTypeToString, SESSION_STATUS } from "@grackle-ai/common";
 import type { ToolDefinition } from "../tool-registry.js";
 import { jsonResult } from "../result-helpers.js";
 import { grpcErrorToToolResult } from "../error-handler.js";
@@ -12,10 +12,10 @@ const DEFAULT_TIMEOUT_SECONDS: number = 30;
 const MAX_TIMEOUT_SECONDS: number = 300;
 
 /** Session statuses considered "active" for filtering purposes. */
-const ACTIVE_STATUSES: string[] = ["pending", "running", "idle"];
+const ACTIVE_STATUSES: string[] = [SESSION_STATUS.PENDING, SESSION_STATUS.RUNNING, SESSION_STATUS.IDLE];
 
 /** Session statuses that indicate no further events will arrive. */
-const TERMINAL_STATUSES: string[] = ["completed", "failed", "interrupted"];
+const TERMINAL_STATUSES: string[] = [SESSION_STATUS.COMPLETED, SESSION_STATUS.FAILED, SESSION_STATUS.INTERRUPTED];
 
 /** MCP tools for managing Grackle agent sessions. */
 export const sessionTools: ToolDefinition[] = [

@@ -1,4 +1,5 @@
 import type { SessionRow } from "./schema.js";
+import { SESSION_STATUS, TASK_STATUS } from "@grackle-ai/common";
 
 /** Result of computing a task's effective status from its session history. */
 export interface TaskStatusResult {
@@ -10,9 +11,9 @@ export interface TaskStatusResult {
 
 /** Session statuses that indicate the session is actively running. */
 const ACTIVE_SESSION_STATUSES: ReadonlySet<string> = new Set([
-  "pending",
-  "running",
-  "idle",
+  SESSION_STATUS.PENDING,
+  SESSION_STATUS.RUNNING,
+  SESSION_STATUS.IDLE,
 ]);
 
 /**
@@ -41,23 +42,23 @@ export function computeTaskStatus(
   sessions: Pick<SessionRow, "id" | "status" | "startedAt">[],
 ): TaskStatusResult {
   // "complete" and "failed" are sticky — human-authoritative when no sessions contradict
-  if (storedStatus === "complete" || storedStatus === "failed") {
+  if (storedStatus === TASK_STATUS.COMPLETE || storedStatus === TASK_STATUS.FAILED) {
     const latestSessionId = sessions.length > 0
       ? getLatestSession(sessions).id
       : "";
     // If there are active sessions, they take precedence over failed (but not complete)
-    if (storedStatus === "complete") {
-      return { status: "complete", latestSessionId };
+    if (storedStatus === TASK_STATUS.COMPLETE) {
+      return { status: TASK_STATUS.COMPLETE, latestSessionId };
     }
     // For "failed" without sessions, keep it; with active sessions, fall through
     if (sessions.length === 0) {
-      return { status: "failed", latestSessionId: "" };
+      return { status: TASK_STATUS.FAILED, latestSessionId: "" };
     }
   }
 
   // No sessions → not_started (clamp any stale transient status)
   if (sessions.length === 0) {
-    return { status: "not_started", latestSessionId: "" };
+    return { status: TASK_STATUS.NOT_STARTED, latestSessionId: "" };
   }
 
   // Check for any active sessions
@@ -66,9 +67,9 @@ export function computeTaskStatus(
   );
 
   if (activeSessions.length > 0) {
-    const hasIdle = activeSessions.some((s) => s.status === "idle");
+    const hasIdle = activeSessions.some((s) => s.status === SESSION_STATUS.IDLE);
     return {
-      status: hasIdle ? "paused" : "working",
+      status: hasIdle ? TASK_STATUS.PAUSED : TASK_STATUS.WORKING,
       latestSessionId: getLatestSession(sessions).id,
     };
   }
@@ -78,17 +79,17 @@ export function computeTaskStatus(
 
   let status: string;
   switch (latest.status) {
-    case "completed":
-      status = "paused";
+    case SESSION_STATUS.COMPLETED:
+      status = TASK_STATUS.PAUSED;
       break;
-    case "failed":
-      status = "failed";
+    case SESSION_STATUS.FAILED:
+      status = TASK_STATUS.FAILED;
       break;
-    case "interrupted":
-      status = "not_started";
+    case SESSION_STATUS.INTERRUPTED:
+      status = TASK_STATUS.NOT_STARTED;
       break;
     default:
-      status = "not_started";
+      status = TASK_STATUS.NOT_STARTED;
       break;
   }
 

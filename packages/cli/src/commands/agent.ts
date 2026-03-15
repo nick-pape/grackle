@@ -1,7 +1,7 @@
 import type { Command } from "commander";
 import chalk from "chalk";
 import { createGrackleClient } from "../client.js";
-import { grackle } from "@grackle-ai/common";
+import { grackle, SESSION_STATUS } from "@grackle-ai/common";
 import Table from "cli-table3";
 
 /** Register agent-related commands: `spawn`, `resume`, `status`, `kill`, and `attach`. */
@@ -52,10 +52,10 @@ export function registerAgentCommands(program: Command): void {
         environmentId: opts.env || "",
         status: "",
       });
-      const activeStatuses = new Set([
-        "pending",
-        "running",
-        "idle",
+      const activeStatuses = new Set<string>([
+        SESSION_STATUS.PENDING,
+        SESSION_STATUS.RUNNING,
+        SESSION_STATUS.IDLE,
       ]);
       const sessions = opts.all
         ? res.sessions

@@ -1,6 +1,7 @@
 import db from "./db.js";
 import { sessions, type SessionRow } from "./schema.js";
 import { eq, and, inArray, desc, asc, sql } from "drizzle-orm";
+import { SESSION_STATUS } from "@grackle-ai/common";
 import type { SessionStatus } from "@grackle-ai/common";
 
 export type { SessionRow };
@@ -69,7 +70,7 @@ export function updateSession(
   runtimeSessionId?: string,
   error?: string,
 ): void {
-  const endedAt = ["completed", "failed", "interrupted"].includes(status)
+  const endedAt = ([SESSION_STATUS.COMPLETED, SESSION_STATUS.FAILED, SESSION_STATUS.INTERRUPTED] as string[]).includes(status)
     ? new Date().toISOString()
     : null;
   db.update(sessions)
@@ -97,7 +98,7 @@ export function getActiveForEnv(environmentId: string): SessionRow | undefined {
     .where(
       and(
         eq(sessions.environmentId, environmentId),
-        inArray(sessions.status, ["pending", "running", "idle"]),
+        inArray(sessions.status, [SESSION_STATUS.PENDING, SESSION_STATUS.RUNNING, SESSION_STATUS.IDLE]),
       ),
     )
     .get();
@@ -147,7 +148,7 @@ export function getActiveSessionsForTask(taskId: string): SessionRow[] {
     .where(
       and(
         eq(sessions.taskId, taskId),
-        inArray(sessions.status, ["pending", "running", "idle"]),
+        inArray(sessions.status, [SESSION_STATUS.PENDING, SESSION_STATUS.RUNNING, SESSION_STATUS.IDLE]),
       ),
     )
     .all();

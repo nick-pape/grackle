@@ -22,6 +22,8 @@ import {
   LOGS_DIR,
   DEFAULT_RUNTIME,
   DEFAULT_MODEL,
+  SESSION_STATUS,
+  TASK_STATUS,
   eventTypeToString,
 } from "@grackle-ai/common";
 import { grackleHome } from "./paths.js";
@@ -621,7 +623,7 @@ async function handleMessage(
         return;
       }
 
-      if (session.status !== "idle") {
+      if (session.status !== SESSION_STATUS.IDLE) {
         sendWs(ws, {
           type: "error",
           payload: {
@@ -689,13 +691,13 @@ async function handleMessage(
           logger.warn({ sessionId, err }, "PowerLine kill failed — marking session interrupted anyway");
         }
       }
-      sessionStore.updateSession(sessionId, "interrupted");
+      sessionStore.updateSession(sessionId, SESSION_STATUS.INTERRUPTED);
       streamHub.publish(
         create(grackle.SessionEventSchema, {
           sessionId,
           type: grackle.EventType.STATUS,
           timestamp: new Date().toISOString(),
-          content: "interrupted",
+          content: SESSION_STATUS.INTERRUPTED,
           raw: "",
         }),
       );
@@ -1041,7 +1043,7 @@ async function handleMessage(
           sendWs(ws, { type: "error", payload: { message: `Session not found: ${lateBindSessionId}` } });
           return;
         }
-        const terminalStatuses = ["completed", "failed", "interrupted"];
+        const terminalStatuses: string[] = [SESSION_STATUS.COMPLETED, SESSION_STATUS.FAILED, SESSION_STATUS.INTERRUPTED];
         if (terminalStatuses.includes(session.status)) {
           sendWs(ws, {
             type: "error",
@@ -1076,7 +1078,7 @@ async function handleMessage(
       }
 
       // Only allow editing not_started tasks (non-late-bind path)
-      if (existingTask.status !== "not_started") {
+      if (existingTask.status !== TASK_STATUS.NOT_STARTED) {
         sendWs(ws, {
           type: "error",
           payload: { message: `Task ${updateTaskId} cannot be edited (status: ${existingTask.status})` },
@@ -1135,7 +1137,7 @@ async function handleMessage(
       {
         const taskSessions = sessionStore.listSessionsForTask(taskId);
         const { status: effectiveStatus } = computeTaskStatus(task.status, taskSessions);
-        if (!["not_started", "failed"].includes(effectiveStatus)) {
+        if (!([TASK_STATUS.NOT_STARTED, TASK_STATUS.FAILED] as string[]).includes(effectiveStatus)) {
           sendWs(ws, {
             type: "error",
             payload: {
@@ -1170,7 +1172,7 @@ async function handleMessage(
       const taskId = msg.payload?.taskId as string;
       if (!taskId) return;
 
-      taskStore.markTaskComplete(taskId, "complete");
+      taskStore.markTaskComplete(taskId, TASK_STATUS.COMPLETE);
       const task = taskStore.getTask(taskId);
       const unblocked = task ? taskStore.checkAndUnblock(task.projectId) : [];
       sendWs(ws, {
@@ -1204,7 +1206,7 @@ async function handleMessage(
         sendWs(ws, { type: "error", payload: { message: `Task ${taskId} has no sessions to resume` } });
         return;
       }
-      if (!["interrupted", "completed"].includes(latestSession.status)) {
+      if (!([SESSION_STATUS.INTERRUPTED, SESSION_STATUS.COMPLETED] as string[]).includes(latestSession.status)) {
         sendWs(ws, {
           type: "error",
           payload: { message: `Latest session ${latestSession.id} is not resumable (status: ${latestSession.status})` },
@@ -1282,12 +1284,12 @@ async function handleMessage(
             logger.warn({ taskId, sessionId: activeSession.id, err }, "Failed to kill session during task deletion");
           }
         }
-        sessionStore.updateSession(activeSession.id, "interrupted");
+        sessionStore.updateSession(activeSession.id, SESSION_STATUS.INTERRUPTED);
         streamHub.publish(create(grackle.SessionEventSchema, {
           sessionId: activeSession.id,
           type: grackle.EventType.STATUS,
           timestamp: new Date().toISOString(),
-          content: "interrupted",
+          content: SESSION_STATUS.INTERRUPTED,
           raw: "",
         }));
       }

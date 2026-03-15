@@ -1,6 +1,7 @@
 import db from "./db.js";
 import { tasks, type TaskRow } from "./schema.js";
 import { eq, sql, asc } from "drizzle-orm";
+import { TASK_STATUS } from "@grackle-ai/common";
 import type { TaskStatus } from "@grackle-ai/common";
 import { MAX_TASK_DEPTH } from "@grackle-ai/common";
 import { safeParseJsonArray } from "./json-helpers.js";
@@ -152,7 +153,7 @@ export function deleteTask(id: string): number {
 export function getUnblockedTasks(projectId: string): TaskRow[] {
   const all = listTasks(projectId);
   return all.filter((task) => {
-    if (task.status !== "not_started") {
+    if (task.status !== TASK_STATUS.NOT_STARTED) {
       return false;
     }
     const deps = safeParseJsonArray(task.dependsOn);
@@ -161,7 +162,7 @@ export function getUnblockedTasks(projectId: string): TaskRow[] {
     }
     return deps.every((depId) => {
       const dep = all.find((t) => t.id === depId);
-      return dep?.status === "complete";
+      return dep?.status === TASK_STATUS.COMPLETE;
     });
   });
 }
@@ -183,7 +184,7 @@ export function areDependenciesMet(taskId: string): boolean {
   }
   return deps.every((depId) => {
     const dep = getTask(depId);
-    return dep?.status === "complete";
+    return dep?.status === TASK_STATUS.COMPLETE;
   });
 }
 
