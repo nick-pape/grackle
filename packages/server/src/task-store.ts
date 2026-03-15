@@ -75,7 +75,7 @@ export function getTask(id: string): TaskRow | undefined {
 
 /** Options for filtering the task list. */
 export interface ListTasksOptions {
-  /** Case-insensitive substring filter on title or description. */
+  /** Case-insensitive substring filter on title or description. Case folding is ASCII-only (SQLite LIKE default). */
   search?: string;
   /** Exact match filter on task status (e.g. "not_started", "in_progress"). */
   status?: string;

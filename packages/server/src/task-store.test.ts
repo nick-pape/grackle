@@ -262,6 +262,21 @@ describe("task-store tree operations", () => {
       expect(results).toHaveLength(1);
       expect(results[0].id).toBe("t5");
     });
+
+    it("escapes backslashes in search", () => {
+      taskStore.createTask("t5", "test-proj", "path\\to\\file", "desc", [], "test-project");
+      const results = taskStore.listTasks("test-proj", { search: "path\\to" });
+      expect(results).toHaveLength(1);
+      expect(results[0].id).toBe("t5");
+    });
+
+    it("escapes underscores in search", () => {
+      taskStore.createTask("t5", "test-proj", "v2_final", "desc", [], "test-project");
+      taskStore.createTask("t6", "test-proj", "v2Xfinal", "desc", [], "test-project");
+      const results = taskStore.listTasks("test-proj", { search: "2_f" });
+      expect(results).toHaveLength(1);
+      expect(results[0].id).toBe("t5");
+    });
   });
 
   describe("deleteTask", () => {
