@@ -496,13 +496,18 @@ export function TaskPage(): JSX.Element {
     [taskId, projects, tasksById],
   );
 
-  // Load historical events when selecting a session
+  // Load historical events when selecting a session — but skip if we already
+  // have real-time events for this session (replaying from log would overwrite
+  // events that arrived via WebSocket before the replay completes).
   useEffect(() => {
     if (sessionId && sessionId !== loadedRef.current) {
-      loadedRef.current = sessionId;
-      loadSessionEvents(sessionId);
+      const hasRealTimeEvents = events.some((e) => e.sessionId === sessionId);
+      if (!hasRealTimeEvents) {
+        loadedRef.current = sessionId;
+        loadSessionEvents(sessionId);
+      }
     }
-  }, [sessionId, loadSessionEvents]);
+  }, [sessionId, events, loadSessionEvents]);
 
   // Load findings when switching to findings tab
   useEffect(() => {

@@ -733,6 +733,17 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
               if (typeof tp.sessionId === "string") {
                 setLastSpawnedId(tp.sessionId);
               }
+              // Eagerly patch the task's latestSessionId so components don't
+              // have to wait for the list_tasks round-trip to resolve the
+              // session. The server-authoritative value will arrive shortly
+              // via list_tasks and overwrite this optimistic update.
+              if (typeof tp.taskId === "string" && typeof tp.sessionId === "string") {
+                setTasks((prev) =>
+                  prev.map((t) =>
+                    t.id === tp.taskId ? { ...t, latestSessionId: tp.sessionId as string } : t,
+                  ),
+                );
+              }
             }
             // Refresh tasks for the project
             const startedPid =

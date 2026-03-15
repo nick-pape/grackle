@@ -433,10 +433,11 @@ export function UnifiedBar(): JSX.Element {
 
         const handleSend = (e: FormEvent): void => {
           e.preventDefault();
-          if (!text.trim() || !task.latestSessionId || taskEnvDisconnected) {
+          const effectiveSessionId = task.latestSessionId || taskSessionId;
+          if (!text.trim() || !effectiveSessionId || taskEnvDisconnected) {
             return;
           }
-          sendInput(task.latestSessionId, text);
+          sendInput(effectiveSessionId, text);
           setText("");
         };
         return (
