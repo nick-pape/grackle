@@ -28,6 +28,7 @@ import type {
   Project,
   TokenInfo,
   PersonaData,
+  CredentialProviderConfig,
 } from "../hooks/useGrackleSocket.js";
 import {
   MOCK_ENVIRONMENTS,
@@ -70,6 +71,12 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
   const [tasks, setTasks] = useState<TaskData[]>(MOCK_TASKS);
   const [findings, setFindings] = useState<FindingData[]>(MOCK_FINDINGS);
   const [tokens, setTokens] = useState<TokenInfo[]>(MOCK_TOKENS);
+  const [credentialProviders, setCredentialProviders] = useState<CredentialProviderConfig>({
+    claude: "off",
+    github: "off",
+    copilot: "off",
+    codex: "off",
+  });
   const [personas, setPersonas] = useState<PersonaData[]>(MOCK_PERSONAS);
   const [taskSessions] = useState<Record<string, Session[]>>(MOCK_TASK_SESSIONS);
 
@@ -763,6 +770,16 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
     [],
   );
 
+  /** Updates credential provider configuration in state. */
+  const mockUpdateCredentialProviders: UseGrackleSocketResult["updateCredentialProviders"] = useCallback(
+    (config: CredentialProviderConfig) => {
+      // eslint-disable-next-line no-console
+      console.log("[MockGrackle] updateCredentialProviders", config);
+      setCredentialProviders(config);
+    },
+    [],
+  );
+
   // ── Cleanup ───────────────────────────────────────
 
   useEffect(() => {
@@ -787,6 +804,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       tasks,
       findings,
       tokens,
+      credentialProviders,
 
       // Actions
       spawn,
@@ -829,6 +847,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       loadTokens,
       setToken: mockSetToken,
       deleteToken: mockDeleteToken,
+      updateCredentialProviders: mockUpdateCredentialProviders,
       provisionStatus: {},
       provisionEnvironment: () => { },
       stopEnvironment: () => { },
@@ -900,6 +919,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       tasks,
       findings,
       tokens,
+      credentialProviders,
       personas,
       taskSessions,
       spawn,
@@ -923,6 +943,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       loadTokens,
       mockSetToken,
       mockDeleteToken,
+      mockUpdateCredentialProviders,
     ],
   );
 

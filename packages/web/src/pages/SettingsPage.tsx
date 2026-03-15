@@ -7,7 +7,7 @@ import styles from "./SettingsPage.module.scss";
 /** Maps settings URL path segments to display labels. */
 const SETTINGS_TAB_LABELS: Record<string, string> = {
   environments: "Environments",
-  tokens: "Tokens",
+  credentials: "Credentials",
   personas: "Personas",
   appearance: "Appearance",
   about: "About",

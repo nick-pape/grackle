@@ -107,15 +107,22 @@ vi.mock("./utils/exec.js", () => ({
   exec: vi.fn(),
 }));
 
-const { mockExistsSync, mockReadFileSync } = vi.hoisted(() => ({
-  mockExistsSync: vi.fn<(path: string) => boolean>().mockReturnValue(false),
-  mockReadFileSync: vi.fn<(path: string, encoding: string) => string>().mockReturnValue(""),
+const { mockBuildProviderTokenBundle } = vi.hoisted(() => ({
+  mockBuildProviderTokenBundle: vi.fn(),
 }));
 
-vi.mock("node:fs", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("node:fs")>();
-  return { ...actual, existsSync: mockExistsSync, readFileSync: mockReadFileSync };
-});
+vi.mock("./credential-providers.js", () => ({
+  buildProviderTokenBundle: mockBuildProviderTokenBundle,
+  getCredentialProviders: vi.fn(() => ({
+    claude: "off",
+    github: "off",
+    copilot: "off",
+    codex: "off",
+  })),
+  setCredentialProviders: vi.fn(),
+  shouldPushClaudeCredentialsFile: vi.fn(() => false),
+  shouldCaptureRemoteGitHubToken: vi.fn(() => false),
+}));
 
 // Import AFTER mocks
 import * as tokenBroker from "./token-broker.js";
@@ -123,6 +130,8 @@ import * as adapterManager from "./adapter-manager.js";
 import * as taskStore from "./task-store.js";
 import { sqlite } from "./test-db.js";
 import { logger } from "./logger.js";
+import { create } from "@bufbuild/protobuf";
+import { powerline } from "@grackle-ai/common";
 
 /** Apply the minimal SQLite schema needed for tests. */
 function applySchema(): void {
@@ -190,36 +199,44 @@ describe("task-start token push", () => {
     vi.clearAllMocks();
   });
 
-  describe("pushCredentialsToEnv()", () => {
-    it("reads host credentials and pushes a file-type token bundle", async () => {
-      mockExistsSync.mockReturnValue(true);
-      mockReadFileSync.mockReturnValue('{"oauth_token":"abc123"}');
+  describe("pushProviderCredentialsToEnv()", () => {
+    it("pushes provider token bundle when providers are enabled", async () => {
+      const mockBundle = create(powerline.TokenBundleSchema, {
+        tokens: [
+          create(powerline.TokenItemSchema, {
+            name: "anthropic-api-key",
+            type: "env_var",
+            envVar: "ANTHROPIC_API_KEY",
+            value: "sk-test",
+          }),
+        ],
+      });
+      mockBuildProviderTokenBundle.mockReturnValue(mockBundle);
 
       const mockConn = makeMockConnection();
       vi.spyOn(adapterManager, "getConnection").mockReturnValue(
         mockConn as unknown as ReturnType<typeof adapterManager.getConnection>,
       );
 
-      await tokenBroker.pushCredentialsToEnv("env-1");
+      await tokenBroker.pushProviderCredentialsToEnv("env-1");
 
       expect(mockConn.client.pushTokens).toHaveBeenCalledOnce();
       const bundle = mockConn.client.pushTokens.mock.calls[0][0];
       expect(bundle.tokens).toHaveLength(1);
-      expect(bundle.tokens[0].name).toBe("claude-credentials");
-      expect(bundle.tokens[0].type).toBe("file");
-      expect(bundle.tokens[0].filePath).toBe("~/.claude/.credentials.json");
-      expect(bundle.tokens[0].value).toBe('{"oauth_token":"abc123"}');
+      expect(bundle.tokens[0].envVar).toBe("ANTHROPIC_API_KEY");
     });
 
-    it("is a no-op when credentials file does not exist", async () => {
-      mockExistsSync.mockReturnValue(false);
+    it("skips push when provider bundle is empty", async () => {
+      mockBuildProviderTokenBundle.mockReturnValue(
+        create(powerline.TokenBundleSchema, { tokens: [] }),
+      );
 
       const mockConn = makeMockConnection();
       vi.spyOn(adapterManager, "getConnection").mockReturnValue(
         mockConn as unknown as ReturnType<typeof adapterManager.getConnection>,
       );
 
-      await tokenBroker.pushCredentialsToEnv("env-1");
+      await tokenBroker.pushProviderCredentialsToEnv("env-1");
 
       expect(mockConn.client.pushTokens).not.toHaveBeenCalled();
     });
@@ -228,32 +245,24 @@ describe("task-start token push", () => {
       vi.spyOn(adapterManager, "getConnection").mockReturnValue(undefined);
 
       // Should not throw
-      await tokenBroker.pushCredentialsToEnv("env-missing");
-    });
-
-    it("skips push when credentials file is empty", async () => {
-      mockExistsSync.mockReturnValue(true);
-      mockReadFileSync.mockReturnValue("   ");
-
-      const mockConn = makeMockConnection();
-      vi.spyOn(adapterManager, "getConnection").mockReturnValue(
-        mockConn as unknown as ReturnType<typeof adapterManager.getConnection>,
-      );
-
-      await tokenBroker.pushCredentialsToEnv("env-1");
-
-      expect(mockConn.client.pushTokens).not.toHaveBeenCalled();
-      expect(logger.warn).toHaveBeenCalledWith(
-        expect.objectContaining({ environmentId: "env-1" }),
-        "Host credentials file is empty; skipping push",
-      );
+      await tokenBroker.pushProviderCredentialsToEnv("env-missing");
     });
   });
 
   describe("refreshTokensForTask()", () => {
     it("logs warnings but does not throw when pushes fail", async () => {
-      mockExistsSync.mockReturnValue(true);
-      mockReadFileSync.mockReturnValue('{"token":"x"}');
+      mockBuildProviderTokenBundle.mockReturnValue(
+        create(powerline.TokenBundleSchema, {
+          tokens: [
+            create(powerline.TokenItemSchema, {
+              name: "test",
+              type: "env_var",
+              envVar: "TEST",
+              value: "x",
+            }),
+          ],
+        }),
+      );
 
       const mockConn = makeMockConnection();
       mockConn.client.pushTokens.mockRejectedValue(new Error("gRPC unavailable"));
@@ -270,7 +279,7 @@ describe("task-start token push", () => {
       );
       expect(logger.warn).toHaveBeenCalledWith(
         expect.objectContaining({ environmentId: "env-1" }),
-        "Failed to push Claude credentials before task start",
+        "Failed to push provider credentials before task start",
       );
     });
   });
@@ -326,7 +335,7 @@ describe("task-start token push", () => {
       // refreshTokensForTask itself never throws (it uses allSettled internally),
       // but verify the call site is resilient even if it did
       vi.spyOn(tokenBroker, "pushToEnv").mockRejectedValue(new Error("push failed"));
-      vi.spyOn(tokenBroker, "pushCredentialsToEnv").mockRejectedValue(new Error("creds failed"));
+      vi.spyOn(tokenBroker, "pushProviderCredentialsToEnv").mockRejectedValue(new Error("creds failed"));
 
       vi.mocked(taskStore.getTask).mockReturnValue(
         makeMockTask({ id: "task-2" }) as ReturnType<typeof taskStore.getTask>,

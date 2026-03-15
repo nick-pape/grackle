@@ -21,38 +21,13 @@ vi.mock("../utils/sleep.js", () => ({
   sleep: vi.fn().mockResolvedValue(undefined),
 }));
 
+// ── Mock credential-providers (no DB in adapter tests) ──────
+vi.mock("../credential-providers.js", () => ({
+  shouldPushClaudeCredentialsFile: vi.fn(() => false),
+  shouldCaptureRemoteGitHubToken: vi.fn(() => false),
+}));
+
 import { probeRemotePowerLine, writeRemoteEnvFile, startRemotePowerLine } from "./remote-adapter-utils.js";
-
-// ── Shared Env Isolation ────────────────────────────────────
-
-/** All env vars forwarded by remote-adapter-utils; must be cleared in tests. */
-const FORWARDED_ENV_VARS: string[] = [
-  "ANTHROPIC_API_KEY",
-  "GITHUB_TOKEN",
-  "GH_TOKEN",
-  "COPILOT_GITHUB_TOKEN",
-  "COPILOT_CLI_URL",
-  "COPILOT_CLI_PATH",
-  "COPILOT_PROVIDER_CONFIG",
-];
-
-/** Save and clear all forwarded env vars. Returns a restore function. */
-function clearForwardedEnvVars(): () => void {
-  const saved: Record<string, string | undefined> = {};
-  for (const key of FORWARDED_ENV_VARS) {
-    saved[key] = process.env[key];
-    delete process.env[key];
-  }
-  return () => {
-    for (const [key, val] of Object.entries(saved)) {
-      if (val === undefined) {
-        delete process.env[key];
-      } else {
-        process.env[key] = val;
-      }
-    }
-  };
-}
 
 // ── Helper ──────────────────────────────────────────────────
 
@@ -83,16 +58,6 @@ describe("probeRemotePowerLine", () => {
 });
 
 describe("writeRemoteEnvFile", () => {
-  let restoreEnv: () => void;
-
-  beforeEach(() => {
-    restoreEnv = clearForwardedEnvVars();
-  });
-
-  afterEach(() => {
-    restoreEnv();
-  });
-
   it("writes env file with powerline token", async () => {
     const executor = createMockExecutor();
     await writeRemoteEnvFile(executor, "test-token-abc");
@@ -144,16 +109,6 @@ describe("writeRemoteEnvFile", () => {
 });
 
 describe("startRemotePowerLine", () => {
-  let restoreEnv: () => void;
-
-  beforeEach(() => {
-    restoreEnv = clearForwardedEnvVars();
-  });
-
-  afterEach(() => {
-    restoreEnv();
-  });
-
   it("batches env file, spawn, and probe into a single compound command", async () => {
     const executor = createMockExecutor();
     const result = await startRemotePowerLine(executor, "test-token");

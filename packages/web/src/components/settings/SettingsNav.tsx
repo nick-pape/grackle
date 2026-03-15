@@ -16,7 +16,7 @@ interface SettingsTab {
 /** Ordered list of settings tabs. */
 const TABS: SettingsTab[] = [
   { path: "environments", label: "Environments", icon: "\uD83D\uDDA5\uFE0F" },
-  { path: "tokens", label: "Tokens", icon: "\uD83D\uDD11" },
+  { path: "credentials", label: "Credentials", icon: "\uD83D\uDD11" },
   { path: "personas", label: "Personas", icon: "\uD83D\uDC64" },
   { path: "appearance", label: "Appearance", icon: "\uD83C\uDFA8" },
   { path: "about", label: "About", icon: "\u2139\uFE0F" },

@@ -165,6 +165,11 @@ export function initDatabase(): void {
       updated_at    TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
+    CREATE TABLE IF NOT EXISTS settings (
+      key   TEXT PRIMARY KEY,
+      value TEXT NOT NULL
+    );
+
     CREATE INDEX IF NOT EXISTS idx_findings_project ON findings(project_id);
   `);
 
