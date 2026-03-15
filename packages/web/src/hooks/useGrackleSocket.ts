@@ -84,6 +84,14 @@ export interface TokenInfo {
   expiresAt: string;
 }
 
+/** Configuration for which credential providers are enabled. */
+export interface CredentialProviderConfig {
+  claude: "off" | "subscription" | "api_key";
+  github: "off" | "on";
+  copilot: "off" | "on";
+  codex: "off" | "on";
+}
+
 /** A GitHub Codespace returned from `gh codespace list`. */
 export interface Codespace {
   name: string;
@@ -440,6 +448,8 @@ export interface UseGrackleSocketResult {
     filePath: string,
   ) => void;
   deleteToken: (name: string) => void;
+  credentialProviders: CredentialProviderConfig;
+  updateCredentialProviders: (config: CredentialProviderConfig) => void;
   provisionStatus: Record<string, ProvisionStatus>;
   provisionEnvironment: (environmentId: string) => void;
   stopEnvironment: (environmentId: string) => void;
@@ -497,6 +507,12 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
   const [tasks, setTasks] = useState<TaskData[]>([]);
   const [findings, setFindings] = useState<FindingData[]>([]);
   const [tokens, setTokens] = useState<TokenInfo[]>([]);
+  const [credentialProviders, setCredentialProviders] = useState<CredentialProviderConfig>({
+    claude: "off",
+    github: "off",
+    copilot: "off",
+    codex: "off",
+  });
   const [provisionStatus, setProvisionStatus] = useState<
     Record<string, ProvisionStatus>
   >({});
@@ -531,6 +547,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
         send({ type: "list_sessions" });
         send({ type: "list_projects" });
         send({ type: "list_tokens" });
+        send({ type: "get_credential_providers" });
         send({ type: "list_personas" });
         send({ type: "subscribe_all" });
       };
@@ -852,6 +869,11 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
             break;
           case "token_changed":
             send({ type: "list_tokens" });
+            break;
+          case "credential_providers":
+            if (msg.payload) {
+              setCredentialProviders(msg.payload as unknown as CredentialProviderConfig);
+            }
             break;
           case "provision_progress": {
             if (!isProvisionProgress(msg.payload)) {
@@ -1236,6 +1258,16 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
     [send],
   );
 
+  const updateCredentialProviders = useCallback(
+    (config: CredentialProviderConfig) => {
+      send({
+        type: "set_credential_providers",
+        payload: config as unknown as Record<string, unknown>,
+      });
+    },
+    [send],
+  );
+
   // ─── Environment lifecycle methods ────────────────
 
   const addEnvironment = useCallback(
@@ -1403,6 +1435,8 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
     loadTokens,
     setToken,
     deleteToken,
+    credentialProviders,
+    updateCredentialProviders,
     provisionStatus,
     provisionEnvironment,
     stopEnvironment,

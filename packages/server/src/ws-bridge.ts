@@ -12,6 +12,7 @@ import {
 } from "./adapters/adapter.js";
 import * as streamHub from "./stream-hub.js";
 import * as tokenBroker from "./token-broker.js";
+import * as credentialProviders from "./credential-providers.js";
 import * as projectStore from "./project-store.js";
 import * as taskStore from "./task-store.js";
 import * as findingStore from "./finding-store.js";
@@ -1808,6 +1809,29 @@ async function handleMessage(
       }
       await tokenBroker.deleteToken(tokenName);
       broadcast({ type: "token_changed" });
+      break;
+    }
+
+    case "get_credential_providers": {
+      const config = credentialProviders.getCredentialProviders();
+      sendWs(ws, {
+        type: "credential_providers",
+        payload: config as unknown as Record<string, unknown>,
+      });
+      break;
+    }
+
+    case "set_credential_providers": {
+      const payload = msg.payload as unknown as credentialProviders.CredentialProviderConfig | undefined;
+      if (!payload) {
+        sendWs(ws, { type: "error", payload: { message: "payload required" } });
+        return;
+      }
+      credentialProviders.setCredentialProviders(payload);
+      broadcast({
+        type: "credential_providers",
+        payload: credentialProviders.getCredentialProviders() as unknown as Record<string, unknown>,
+      });
       break;
     }
   }
