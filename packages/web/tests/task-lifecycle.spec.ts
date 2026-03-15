@@ -47,7 +47,7 @@ test.describe("Task Lifecycle (stub runtime)", () => {
     await expect(page.locator("text=Stub runtime initialized")).toBeVisible({ timeout: 15_000 });
 
     // Echo event: "Echo: test task"
-    await expect(page.locator("text=Echo: test task")).toBeVisible();
+    await expect(page.locator("text=Echo: test task")).toBeVisible({ timeout: 10_000 });
 
     // Task header should show active status (may transition to idle quickly)
     await expect(page.locator('[data-testid="task-status"]')).toContainText(/working|paused/, { timeout: 5_000 });

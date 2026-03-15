@@ -256,7 +256,7 @@ test.describe("Projects", () => {
     await page.getByRole("dialog", { name: "Archive Project?" }).getByRole("button", { name: "Archive" }).click();
 
     // Project should no longer be in sidebar
-    await expect(page.getByText("archive-test")).not.toBeVisible({ timeout: 5_000 });
+    await expect(page.getByTestId("sidebar").getByText("archive-test")).not.toBeVisible({ timeout: 5_000 });
   });
 
   test("change default environment", async ({ appPage }) => {

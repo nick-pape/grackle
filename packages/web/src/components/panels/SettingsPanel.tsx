@@ -5,7 +5,6 @@ import { useThemeContext } from "../../context/ThemeContext.js";
 import { THEMES } from "../../themes.js";
 import { ConfirmDialog } from "../display/index.js";
 import { EnvironmentList } from "../lists/EnvironmentList.js";
-import type { ViewMode } from "../../App.js";
 import styles from "./SettingsPanel.module.scss";
 
 /** Token type options for the add form. */
@@ -14,14 +13,8 @@ const TOKEN_TYPES: Array<{ value: string; label: string }> = [
   { value: "file", label: "File" },
 ];
 
-/** Props for the SettingsPanel component. */
-interface Props {
-  viewMode: ViewMode;
-  setViewMode: (mode: ViewMode) => void;
-}
-
 /** Settings page with environment management, token management, and other configuration. */
-export function SettingsPanel({ viewMode, setViewMode }: Props): JSX.Element {
+export function SettingsPanel(): JSX.Element {
   const { tokens, setToken, deleteToken } = useGrackle();
   const { showToast } = useToast();
   const { themeId, resolvedThemeId, setTheme, preferSystem, setPreferSystem } = useThemeContext();
@@ -149,7 +142,7 @@ export function SettingsPanel({ viewMode, setViewMode }: Props): JSX.Element {
         <p className={styles.sectionDescription}>
           Environments are compute workspaces where agents run. Configure once, reuse across projects.
         </p>
-        <EnvironmentList viewMode={viewMode} setViewMode={setViewMode} />
+        <EnvironmentList />
       </section>
 
       <section className={styles.section}>
