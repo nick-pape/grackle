@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Add CLI banner with ASCII bird art and polish help text descriptions",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
