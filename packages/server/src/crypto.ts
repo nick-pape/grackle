@@ -48,7 +48,9 @@ function loadMasterKey(): string {
 let cachedMasterKey: string | undefined = undefined;
 
 function getMasterKey(): string {
-  cachedMasterKey ??= loadMasterKey();
+  if (!cachedMasterKey) {
+    cachedMasterKey = loadMasterKey();
+  }
   return cachedMasterKey;
 }
 

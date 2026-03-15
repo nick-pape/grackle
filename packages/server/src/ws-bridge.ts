@@ -62,8 +62,8 @@ export function createWsBridge(
   setWssInstance(wss);
 
   wss.on("connection", (ws: WebSocket, req: IncomingMessage) => {
-    const url = new URL(req.url ?? "/", "http://localhost");
-    const token = url.searchParams.get("token") ?? "";
+    const url = new URL(req.url || "/", "http://localhost");
+    const token = url.searchParams.get("token") || "";
     if (!verifyApiKey(token)) {
       ws.close(WS_CLOSE_UNAUTHORIZED, "Unauthorized");
       return;
@@ -280,14 +280,14 @@ async function startTaskSession(
   const model =
     options?.model || persona?.model ||
     process.env.GRACKLE_DEFAULT_MODEL || DEFAULT_MODEL;
-  const maxTurns = persona?.maxTurns ?? 0;
+  const maxTurns = persona?.maxTurns || 0;
   const logPath = join(grackleHome, LOGS_DIR, sessionId);
 
-  const freshTask = taskStore.getTask(task.id) ?? task;
+  const freshTask = taskStore.getTask(task.id) || task;
   let systemContext = buildTaskSystemContext(
     freshTask.title,
     freshTask.description,
-    options?.notes ?? "",
+    options?.notes || "",
     freshTask.canDecompose,
   );
   if (persona) {
@@ -415,7 +415,7 @@ async function handleMessage(
         eventType: e.type,
         timestamp: e.timestamp,
         content: e.content,
-        raw: e.raw ?? undefined,
+        raw: e.raw || undefined,
       }));
 
       sendWs(ws, { type: "session_events", payload: { sessionId, events } });
@@ -527,10 +527,10 @@ async function handleMessage(
 
       const sessionId = uuid();
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime/model may be undefined from WS payload
-      const sessionRuntime = runtime ?? spawnPersona?.runtime ?? env.defaultRuntime ?? DEFAULT_RUNTIME;
+      const sessionRuntime = runtime || spawnPersona?.runtime || env.defaultRuntime || DEFAULT_RUNTIME;
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-      const sessionModel = model ?? spawnPersona?.model ?? process.env.GRACKLE_DEFAULT_MODEL ?? DEFAULT_MODEL;
-      const maxTurns = spawnPersona?.maxTurns ?? 0;
+      const sessionModel = model || spawnPersona?.model || process.env.GRACKLE_DEFAULT_MODEL || DEFAULT_MODEL;
+      const maxTurns = spawnPersona?.maxTurns || 0;
       const logPath = join(grackleHome, LOGS_DIR, sessionId);
 
       let finalSystemContext = systemContext;
@@ -986,8 +986,8 @@ async function handleMessage(
         id,
         projectId,
         title,
-        (msg.payload?.description as string | undefined) ?? "",
-        (msg.payload?.dependsOn as string[] | undefined) ?? [],
+        (msg.payload?.description as string | undefined) || "",
+        (msg.payload?.dependsOn as string[] | undefined) || [],
         slugify(project.name),
         parentTaskId,
         canDecompose,
@@ -1219,7 +1219,7 @@ async function handleMessage(
         runtime: latestSession.runtime,
       });
 
-      const logPath = latestSession.logPath ?? join(grackleHome, LOGS_DIR, latestSession.id);
+      const logPath = latestSession.logPath || join(grackleHome, LOGS_DIR, latestSession.id);
 
       processEventStream(conn.client.resume(powerlineReq), {
         sessionId: latestSession.id,
@@ -1319,9 +1319,9 @@ async function handleMessage(
       if (!projectId) return;
       const rows = findingStore.queryFindings(
         projectId,
-        (msg.payload?.categories as string[] | undefined) ?? undefined,
-        (msg.payload?.tags as string[] | undefined) ?? undefined,
-        (msg.payload?.limit as number | undefined) ?? undefined,
+        (msg.payload?.categories as string[] | undefined) || undefined,
+        (msg.payload?.tags as string[] | undefined) || undefined,
+        (msg.payload?.limit as number | undefined) || undefined,
       );
       sendWs(ws, {
         type: "findings",
@@ -1357,12 +1357,12 @@ async function handleMessage(
       findingStore.postFinding(
         id,
         projectId,
-        (msg.payload?.taskId as string | undefined) ?? "",
-        (msg.payload?.sessionId as string | undefined) ?? "",
-        (msg.payload?.category as string | undefined) ?? "general",
+        (msg.payload?.taskId as string | undefined) || "",
+        (msg.payload?.sessionId as string | undefined) || "",
+        (msg.payload?.category as string | undefined) || "general",
         title,
-        (msg.payload?.content as string | undefined) ?? "",
-        (msg.payload?.tags as string[] | undefined) ?? [],
+        (msg.payload?.content as string | undefined) || "",
+        (msg.payload?.tags as string[] | undefined) || [],
       );
       sendWs(ws, { type: "finding_posted", payload: { id, projectId } });
       break;
@@ -1765,9 +1765,9 @@ async function handleMessage(
           tokens: items.map((t) => ({
             name: t.name,
             tokenType: t.type,
-            envVar: t.envVar ?? "",
-            filePath: t.filePath ?? "",
-            expiresAt: t.expiresAt ?? "",
+            envVar: t.envVar || "",
+            filePath: t.filePath || "",
+            expiresAt: t.expiresAt || "",
           })),
         },
       });

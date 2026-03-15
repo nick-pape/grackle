@@ -18,10 +18,10 @@ export function registerAgentCommands(program: Command): void {
       const session = await client.spawnAgent({
         environmentId,
         prompt,
-        model: opts.model ?? "",
-        maxTurns: opts.maxTurns ?? 0,
-        runtime: opts.runtime ?? "",
-        personaId: opts.persona ?? "",
+        model: opts.model || "",
+        maxTurns: opts.maxTurns || 0,
+        runtime: opts.runtime || "",
+        personaId: opts.persona || "",
       });
       console.log(`Spawned session: ${session.id}`);
       console.log(`Streaming events (Ctrl+C to detach)...\n`);
@@ -49,7 +49,7 @@ export function registerAgentCommands(program: Command): void {
     .action(async (opts: { env?: string; all?: boolean }) => {
       const client = createGrackleClient();
       const res = await client.listSessions({
-        environmentId: opts.env ?? "",
+        environmentId: opts.env || "",
         status: "",
       });
       const activeStatuses = new Set<string>([

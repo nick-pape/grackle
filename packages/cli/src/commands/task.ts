@@ -51,7 +51,7 @@ export function registerTaskCommands(program: Command): void {
       const t = await client.createTask({
         projectId,
         title,
-        description: opts.desc ?? "",
+        description: opts.desc || "",
         dependsOn,
       });
       console.log(`Created task: ${t.id} (${t.title}) branch: ${t.branch}`);
@@ -111,13 +111,13 @@ export function registerTaskCommands(program: Command): void {
         : [];
       const t = await client.updateTask({
         id: taskId,
-        title: opts.title ?? "",
-        description: opts.desc ?? "",
+        title: opts.title || "",
+        description: opts.desc || "",
         status: opts.status
           ? taskStatusToEnum(String(opts.status).toLowerCase())
           : taskStatusToEnum(""),
         dependsOn,
-        sessionId: opts.session ?? "",
+        sessionId: opts.session || "",
       });
       console.log(
         `Updated: ${t.id} (${t.title}) status: ${taskStatusToString(t.status)}`,
@@ -136,11 +136,11 @@ export function registerTaskCommands(program: Command): void {
       const client = createGrackleClient();
       const session = await client.startTask({
         taskId,
-        runtime: opts.runtime ?? "",
-        model: opts.model ?? "",
-        personaId: opts.persona ?? "",
-        environmentId: opts.env ?? "",
-        notes: opts.notes ?? "",
+        runtime: opts.runtime || "",
+        model: opts.model || "",
+        personaId: opts.persona || "",
+        environmentId: opts.env || "",
+        notes: opts.notes || "",
       });
       console.log(`Task started. Session: ${session.id}`);
     });

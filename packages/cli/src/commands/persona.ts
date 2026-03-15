@@ -52,7 +52,7 @@ export function registerPersonaCommands(program: Command): void {
       prompt?: string; promptFile?: string; desc?: string;
       runtime?: string; model?: string; maxTurns?: number;
     }) => {
-      let systemPrompt = opts.prompt ?? "";
+      let systemPrompt = opts.prompt || "";
       if (opts.promptFile) {
         systemPrompt = readFileSync(opts.promptFile, "utf8");
       }
@@ -67,11 +67,11 @@ export function registerPersonaCommands(program: Command): void {
       const client = createGrackleClient();
       const p = await client.createPersona({
         name,
-        description: opts.desc ?? "",
+        description: opts.desc || "",
         systemPrompt,
-        runtime: opts.runtime ?? "",
-        model: opts.model ?? "",
-        maxTurns: opts.maxTurns ?? 0,
+        runtime: opts.runtime || "",
+        model: opts.model || "",
+        maxTurns: opts.maxTurns || 0,
       });
       console.log(`Created persona: ${p.id} (${p.name})`);
     });
@@ -122,19 +122,19 @@ export function registerPersonaCommands(program: Command): void {
       name?: string; prompt?: string; promptFile?: string; desc?: string;
       runtime?: string; model?: string; maxTurns?: number;
     }) => {
-      let systemPrompt = opts.prompt ?? "";
+      let systemPrompt = opts.prompt || "";
       if (opts.promptFile) {
         systemPrompt = readFileSync(opts.promptFile, "utf8");
       }
       const client = createGrackleClient();
       const p = await client.updatePersona({
         id,
-        name: opts.name ?? "",
-        description: opts.desc ?? "",
+        name: opts.name || "",
+        description: opts.desc || "",
         systemPrompt,
-        runtime: opts.runtime ?? "",
-        model: opts.model ?? "",
-        maxTurns: opts.maxTurns ?? 0,
+        runtime: opts.runtime || "",
+        model: opts.model || "",
+        maxTurns: opts.maxTurns || 0,
       });
       console.log(`Updated persona: ${p.id} (${p.name})`);
     });

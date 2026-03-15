@@ -46,8 +46,8 @@ function envRowToProto(row: EnvironmentRow): grackle.Environment {
     defaultRuntime: row.defaultRuntime,
     bootstrapped: row.bootstrapped,
     status: row.status,
-    lastSeen: row.lastSeen ?? "",
-    envInfo: row.envInfo ?? "",
+    lastSeen: row.lastSeen || "",
+    envInfo: row.envInfo || "",
     createdAt: row.createdAt,
   });
 }
@@ -131,11 +131,6 @@ function safeParseJson<T>(value: string | undefined, fallback: T): T {
   } catch {
     return fallback;
   }
-}
-
-/** Convert an empty string to `undefined` so `??` chaining skips it. */
-function nonEmpty(value: string): string | undefined {
-  return value === "" ? undefined : value;
 }
 
 /** Convert a persona database row to a Persona proto message. */
@@ -227,7 +222,7 @@ export function buildMcpServersJson(
   for (const s of mcpServers) {
     obj[s.name] = {
       command: s.command,
-      args: s.args ?? [],
+      args: s.args || [],
       ...(s.tools && s.tools.length > 0 ? { tools: s.tools } : {}),
     };
   }
@@ -400,15 +395,15 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       }
 
       const sessionId = uuid();
-      const runtime = nonEmpty(req.runtime) ?? persona?.runtime ?? env.defaultRuntime;
+      const runtime = req.runtime || persona?.runtime || env.defaultRuntime;
       const model =
-        nonEmpty(req.model) ??
-        persona?.model ??
-        process.env.GRACKLE_DEFAULT_MODEL ??
+        req.model ||
+        persona?.model ||
+        process.env.GRACKLE_DEFAULT_MODEL ||
         DEFAULT_MODEL;
       const logPath = join(grackleHome, LOGS_DIR, sessionId);
 
-      let systemContext = nonEmpty(req.systemContext) ?? "";
+      let systemContext = req.systemContext || "";
       if (persona) {
         systemContext =
           persona.systemPrompt + (systemContext ? "\n\n" + systemContext : "");
@@ -430,7 +425,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         runtime,
         prompt: req.prompt,
         model,
-        maxTurns: persona?.maxTurns ?? 0,
+        maxTurns: persona?.maxTurns || 0,
         branch: req.branch,
         worktreeBasePath: req.branch
           ? (req.worktreeBasePath.trim() || process.env.GRACKLE_WORKTREE_BASE || "/workspace")
@@ -461,12 +456,12 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
 
       const powerlineReq = create(powerline.ResumeRequestSchema, {
         sessionId: session.id,
-        runtimeSessionId: session.runtimeSessionId ?? "",
+        runtimeSessionId: session.runtimeSessionId || "",
         runtime: session.runtime,
       });
 
       const logPath =
-        session.logPath ?? join(grackleHome, LOGS_DIR, session.id);
+        session.logPath || join(grackleHome, LOGS_DIR, session.id);
 
       // Auto-bind task context from DB if session was previously associated with a task
       let resumeProjectId: string | undefined;
@@ -604,9 +599,9 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
           create(grackle.TokenInfoSchema, {
             name: t.name,
             type: t.type,
-            envVar: t.envVar ?? "",
-            filePath: t.filePath ?? "",
-            expiresAt: t.expiresAt ?? "",
+            envVar: t.envVar || "",
+            filePath: t.filePath || "",
+            expiresAt: t.expiresAt || "",
           }),
         ),
       });
@@ -837,7 +832,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       const project = projectStore.getProject(task.projectId);
       if (!project) throw new Error(`Project not found: ${task.projectId}`);
 
-      const environmentId = nonEmpty(req.environmentId) ?? project.defaultEnvironmentId;
+      const environmentId = req.environmentId || project.defaultEnvironmentId;
       if (!environmentId) {
         throw new Error("No environment specified for task or project");
       }
@@ -846,7 +841,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       if (!conn) throw new Error(`Environment ${environmentId} not connected`);
 
       // Resolve persona from StartTaskRequest
-      const personaId = nonEmpty(req.personaId) ?? "";
+      const personaId = req.personaId || "";
       const persona = personaId
         ? personaStore.getPersona(personaId)
         : undefined;
@@ -857,22 +852,22 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       const env = envRegistry.getEnvironment(environmentId);
       const sessionId = uuid();
       const runtime =
-        nonEmpty(req.runtime) ??
-        persona?.runtime ??
-        env?.defaultRuntime ??
+        req.runtime ||
+        persona?.runtime ||
+        env?.defaultRuntime ||
         DEFAULT_RUNTIME;
       const model =
-        nonEmpty(req.model) ??
-        persona?.model ??
-        process.env.GRACKLE_DEFAULT_MODEL ??
+        req.model ||
+        persona?.model ||
+        process.env.GRACKLE_DEFAULT_MODEL ||
         DEFAULT_MODEL;
-      const maxTurns = persona?.maxTurns ?? 0;
+      const maxTurns = persona?.maxTurns || 0;
       const logPath = join(grackleHome, LOGS_DIR, sessionId);
 
       let systemContext = buildTaskSystemContext(
         task.title,
         task.description,
-        nonEmpty(req.notes) ?? "",
+        req.notes || "",
         task.canDecompose,
       );
       if (persona) {
@@ -1002,7 +997,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       });
 
       const logPath =
-        latestSession.logPath ?? join(grackleHome, LOGS_DIR, latestSession.id);
+        latestSession.logPath || join(grackleHome, LOGS_DIR, latestSession.id);
 
       processEventStream(conn.client.resume(powerlineReq), {
         sessionId: latestSession.id,
@@ -1096,8 +1091,8 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       }
 
       const toolConfigJson = JSON.stringify({
-        allowedTools: [...(req.toolConfig?.allowedTools ?? [])],
-        disallowedTools: [...(req.toolConfig?.disallowedTools ?? [])],
+        allowedTools: [...(req.toolConfig?.allowedTools || [])],
+        disallowedTools: [...(req.toolConfig?.disallowedTools || [])],
       });
       const mcpServersJson = JSON.stringify(
         req.mcpServers.map((s) => ({
@@ -1142,8 +1137,8 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
           req.toolConfig.disallowedTools.length > 0);
       const toolConfigJson = hasNewToolConfig
         ? JSON.stringify({
-            allowedTools: [...(req.toolConfig?.allowedTools ?? [])],
-            disallowedTools: [...(req.toolConfig?.disallowedTools ?? [])],
+            allowedTools: [...(req.toolConfig?.allowedTools || [])],
+            disallowedTools: [...(req.toolConfig?.disallowedTools || [])],
           })
         : existing.toolConfig;
 

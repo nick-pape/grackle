@@ -35,7 +35,7 @@ export function queryFindings(
   tags?: string[],
   limit?: number,
 ): FindingRow[] {
-  const maxResults = Math.min(limit ?? 50, 100);
+  const maxResults = Math.min(limit || 50, 100);
 
   let results: FindingRow[];
   if (categories && categories.length > 0) {

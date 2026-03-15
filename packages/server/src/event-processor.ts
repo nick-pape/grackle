@@ -45,9 +45,9 @@ export function processFindingEvent(
     };
     const findingId = uuid();
     findingStore.postFinding(
-      findingId, ctx.projectId, ctx.taskId, sessionId,
-      data.category ?? "general", data.title ?? "Untitled",
-      data.content ?? "", data.tags ?? [],
+      findingId, ctx.projectId, ctx.taskId || "", sessionId,
+      data.category || "general", data.title || "Untitled",
+      data.content || "", data.tags || [],
     );
     broadcast({ type: "finding_posted", payload: { projectId: ctx.projectId, findingId } });
     logger.info({ findingId, projectId: ctx.projectId, title: data.title }, "Finding stored");
@@ -220,8 +220,8 @@ export function processEventStream(
   const ctx: ProcessorContext = {
     sessionId,
     logPath,
-    projectId: options.projectId ?? "",
-    taskId: options.taskId ?? "",
+    projectId: options.projectId || "",
+    taskId: options.taskId || "",
   };
 
   /** Maps local_id strings (assigned by the agent) to real task IDs, scoped to this stream. */

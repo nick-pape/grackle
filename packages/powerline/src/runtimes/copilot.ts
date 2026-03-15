@@ -36,27 +36,29 @@ let sdkPromise: Promise<CopilotSdkModule> | undefined;
 
 /** Dynamically import the Copilot SDK so the module is optional at install time. */
 function getCopilotSdk(): Promise<CopilotSdkModule> {
-  sdkPromise ??= (async (): Promise<CopilotSdkModule> => {
-    try {
-      const mod = await import("@github/copilot-sdk") as Record<string, unknown>;
-      if (typeof mod.CopilotClient !== "function") {
-        throw new Error("CopilotClient not found in @github/copilot-sdk");
+  if (!sdkPromise) {
+    sdkPromise = (async (): Promise<CopilotSdkModule> => {
+      try {
+        const mod = await import("@github/copilot-sdk") as Record<string, unknown>;
+        if (typeof mod.CopilotClient !== "function") {
+          throw new Error("CopilotClient not found in @github/copilot-sdk");
+        }
+        return {
+          CopilotClient: mod.CopilotClient as CopilotSdkModule["CopilotClient"],
+          defineTool: mod.defineTool as CopilotSdkModule["defineTool"],
+          approveAll: mod.approveAll,
+        };
+      } catch {
+        // Reset so the next attempt retries the import
+        sdkPromise = undefined;
+        throw new Error(
+          "Copilot SDK not installed. Run: npm install @github/copilot-sdk\n" +
+          "The Copilot CLI must also be installed and available in PATH (or set COPILOT_CLI_URL for an external server)."
+        );
       }
-      return {
-        CopilotClient: mod.CopilotClient as CopilotSdkModule["CopilotClient"],
-        defineTool: mod.defineTool as CopilotSdkModule["defineTool"],
-        approveAll: mod.approveAll,
-      };
-    } catch {
-      // Reset so the next attempt retries the import
-      sdkPromise = undefined;
-      throw new Error(
-        "Copilot SDK not installed. Run: npm install @github/copilot-sdk\n" +
-        "The Copilot CLI must also be installed and available in PATH (or set COPILOT_CLI_URL for an external server)."
-      );
-    }
-  })();
-  return sdkPromise!;
+    })();
+  }
+  return sdkPromise;
 }
 
 // ─── Helpers ───────────────────────────────────────────────
@@ -255,7 +257,7 @@ export class CopilotSession extends BaseAgentSession {
       this.copilotSession = await this.copilotClient.createSession(sessionConfig);
     }
 
-    this.runtimeSessionId = (this.copilotSession.sessionId as string | undefined) ?? this.id;
+    this.runtimeSessionId = (this.copilotSession.sessionId as string | undefined) || this.id;
 
     this.eventQueue.push({
       type: "system",

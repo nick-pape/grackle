@@ -17,8 +17,8 @@ export class LocalAdapter implements EnvironmentAdapter {
 
   public async *provision(environmentId: string, config: Record<string, unknown>, powerlineToken: string): AsyncGenerator<ProvisionEvent> {
     const cfg = config as unknown as LocalEnvironmentConfig;
-    const port = cfg.port ?? DEFAULT_POWERLINE_PORT;
-    const host = cfg.host ?? "localhost";
+    const port = cfg.port || DEFAULT_POWERLINE_PORT;
+    const host = cfg.host || "localhost";
 
     yield { stage: "connecting", message: `Connecting to PowerLine at ${host}:${port}...`, progress: 0.5 };
 
@@ -42,8 +42,8 @@ export class LocalAdapter implements EnvironmentAdapter {
 
   public async connect(environmentId: string, config: Record<string, unknown>, powerlineToken: string): Promise<PowerLineConnection> {
     const cfg = config as unknown as LocalEnvironmentConfig;
-    const port = cfg.port ?? DEFAULT_POWERLINE_PORT;
-    const host = cfg.host ?? "localhost";
+    const port = cfg.port || DEFAULT_POWERLINE_PORT;
+    const host = cfg.host || "localhost";
 
     const client = createPowerLineClient(`http://${host}:${port}`, powerlineToken);
     await client.ping({});

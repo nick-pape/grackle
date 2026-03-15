@@ -109,11 +109,13 @@ if (typeof document !== "undefined") {
 
 /** Build the current snapshot for useSyncExternalStore. */
 function getSnapshot(): ThemeSnapshot {
-  lastSnapshot ??= {
-    themeId: getStored(),
-    systemDark: getSystemDark(),
-    preferSystem: getPreferSystem(),
-  };
+  if (lastSnapshot === undefined) {
+    lastSnapshot = {
+      themeId: getStored(),
+      systemDark: getSystemDark(),
+      preferSystem: getPreferSystem(),
+    };
+  }
   return lastSnapshot;
 }
 

@@ -40,7 +40,7 @@ function ToolUseEvent({ content }: { content: string }): JSX.Element {
   let argsDisplay = content;
   try {
     const parsed = JSON.parse(content) as { tool?: string; args?: unknown };
-    toolName = parsed.tool ?? "";
+    toolName = parsed.tool || "";
     argsDisplay = JSON.stringify(parsed.args, null, 2);
   } catch { /* use raw */ }
   return (

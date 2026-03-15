@@ -23,7 +23,7 @@ export function registerTokenCommands(program: Command): void {
       if (opts.file) {
         value = readFileSync(opts.file, "utf-8").trim();
       } else if (opts.env) {
-        value = process.env[opts.env] ?? "";
+        value = process.env[opts.env] || "";
         if (!value) {
           console.error(`Environment variable ${opts.env} is not set`);
           process.exit(1);
@@ -48,8 +48,8 @@ export function registerTokenCommands(program: Command): void {
       await client.setToken({
         name,
         type: opts.type,
-        envVar: opts.envVar ?? name.toUpperCase() + "_TOKEN",
-        filePath: opts.filePath ?? "",
+        envVar: opts.envVar || name.toUpperCase() + "_TOKEN",
+        filePath: opts.filePath || "",
         value,
         expiresAt: "",
       });

@@ -17,7 +17,7 @@ export function registerFindingCommands(program: Command): void {
         projectId,
         categories: opts.category ? [opts.category] : [],
         tags: opts.tag ? [opts.tag] : [],
-        limit: opts.limit ?? 20,
+        limit: opts.limit || 20,
       });
       if (res.findings.length === 0) {
         console.log("No findings.");

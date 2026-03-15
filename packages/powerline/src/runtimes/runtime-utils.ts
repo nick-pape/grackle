@@ -29,10 +29,10 @@ export function buildFindingEvent(args: Record<string, unknown>, raw: unknown): 
     type: "finding",
     timestamp: new Date().toISOString(),
     content: JSON.stringify({
-      title: args.title ?? "Untitled",
-      content: args.content ?? "",
-      category: args.category ?? "general",
-      tags: args.tags ?? [],
+      title: args.title || "Untitled",
+      content: args.content || "",
+      category: args.category || "general",
+      tags: args.tags || [],
     }),
     raw,
   };
@@ -54,8 +54,8 @@ export function buildSubtaskCreateEvent(args: Record<string, unknown>, raw: unkn
     content: JSON.stringify({
       title: typeof args.title === "string" ? args.title : "",
       description: typeof args.description === "string" ? args.description : "",
-      local_id: args.local_id ?? "",
-      depends_on: args.depends_on ?? [],
+      local_id: args.local_id || "",
+      depends_on: args.depends_on || [],
       can_decompose: args.can_decompose ?? false,
     }),
     raw,

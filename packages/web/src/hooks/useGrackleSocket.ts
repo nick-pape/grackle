@@ -1117,7 +1117,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
           projectId,
           title,
           description: description || "",
-          dependsOn: dependsOn ?? [],
+          dependsOn: dependsOn || [],
           parentTaskId: parentTaskId || "",
         },
       });
@@ -1203,7 +1203,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
           title,
           content,
           category: category || "general",
-          tags: tags ?? [],
+          tags: tags || [],
         },
       });
     },
@@ -1251,7 +1251,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
       const payload: Record<string, unknown> = {
         displayName,
         adapterType,
-        adapterConfig: adapterConfig ?? {},
+        adapterConfig: adapterConfig || {},
       };
       if (defaultRuntime) {
         payload.defaultRuntime = defaultRuntime;

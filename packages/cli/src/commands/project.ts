@@ -39,9 +39,9 @@ export function registerProjectCommands(program: Command): void {
       const useWorktrees = opts.worktrees !== false;
       const p = await client.createProject({
         name,
-        description: opts.desc ?? "",
-        repoUrl: opts.repo ?? "",
-        defaultEnvironmentId: opts.env ?? "",
+        description: opts.desc || "",
+        repoUrl: opts.repo || "",
+        defaultEnvironmentId: opts.env || "",
         useWorktrees,
         worktreeBasePath: opts.worktreeBasePath || "",
       });

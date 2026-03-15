@@ -17,7 +17,7 @@ const TASK_STATUS_STYLES: Record<string, { color: string; icon: string }> = {
 export function TaskNode({ data }: NodeProps): JSX.Element {
   const { task, childCount, doneChildCount, hasDependencies } = data as TaskNodeData;
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- status may not be in the map
-  const statusStyle = TASK_STATUS_STYLES[task.status] ?? TASK_STATUS_STYLES.not_started;
+  const statusStyle = TASK_STATUS_STYLES[task.status] || TASK_STATUS_STYLES.not_started;
 
   return (
     <div className={styles.taskNode} data-task-id={task.id} data-task-title={task.title}>

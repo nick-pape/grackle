@@ -163,8 +163,8 @@ export function registerPowerLineRoutes(router: ConnectRouter): void {
     async getDiff(req: powerline.DiffRequest) {
       const baseBranch = req.baseBranch || "main";
       const basePath =
-        findGitRepoPath(req.worktreeBasePath) ??
-        findGitRepoPath(undefined) ??
+        findGitRepoPath(req.worktreeBasePath) ||
+        findGitRepoPath(undefined) ||
         "/workspace";
 
       try {

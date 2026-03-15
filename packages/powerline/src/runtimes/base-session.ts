@@ -62,7 +62,7 @@ export abstract class BaseAgentSession implements AgentSession {
     this.systemContext = systemContext;
     this.mcpServers = mcpServers;
     this.hooks = hooks;
-    this.runtimeSessionId = resumeSessionId ?? "";
+    this.runtimeSessionId = resumeSessionId || "";
   }
 
   // ─── Abstract methods for subclasses ──────────────────────

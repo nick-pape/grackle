@@ -137,7 +137,7 @@ function createMcpServerInstance(grpcClient: Client<typeof grackle.Grackle>): Se
  * Uses constant-time comparison via timingSafeEqual.
  */
 function verifyBearer(req: http.IncomingMessage, apiKey: string): boolean {
-  const authHeader = req.headers.authorization ?? "";
+  const authHeader = req.headers.authorization || "";
   const token = authHeader.replace(/^Bearer\s+/i, "");
   if (token.length === 0 || token.length !== apiKey.length) {
     return false;
@@ -162,7 +162,7 @@ export function createMcpServer(options: McpServerOptions): http.Server {
 
   // eslint-disable-next-line @typescript-eslint/no-misused-promises
   const httpServer = http.createServer(async (req, res) => {
-    const url = new URL(req.url ?? "/", `http://${req.headers.host ?? "localhost"}`);
+    const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
 
     // Only serve the /mcp endpoint
     if (url.pathname !== "/mcp") {

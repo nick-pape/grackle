@@ -345,7 +345,7 @@ export function TaskPage(): JSX.Element {
   }
 
   const task = tasks.find((t) => t.id === taskId);
-  const projectId = task?.projectId ?? undefined;
+  const projectId = task?.projectId || undefined;
 
   // Resolve effective sessionId from the task's eagerly-patched latestSessionId
   // (set by the task_started handler) or from the user's attempt selection.
@@ -354,7 +354,7 @@ export function TaskPage(): JSX.Element {
   if (selectedSessionId && currentTaskSessions.some((s) => s.id === selectedSessionId)) {
     sessionId = selectedSessionId;
   } else {
-    sessionId = task?.latestSessionId ?? undefined;
+    sessionId = task?.latestSessionId || undefined;
   }
 
   const handleDeleteTask = (): void => {
@@ -461,7 +461,7 @@ export function TaskPage(): JSX.Element {
       {/* Task header */}
       <div className={styles.header}>
         <span className={styles.headerTitle}>
-          <span data-testid="task-title">{task?.title ?? taskId}</span>
+          <span data-testid="task-title">{task?.title || taskId}</span>
           {task && <span className={styles.taskStatusBadge} data-testid="task-status">{task.status}</span>}
           {task?.branch && <span className={styles.taskBranch}>{task.branch}</span>}
           {isTaskBlocked && <span className={styles.taskBlockedBadge}>blocked</span>}

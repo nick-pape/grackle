@@ -149,7 +149,7 @@ export function UnifiedBar(): JSX.Element {
   const task = taskId
     ? tasks.find((t) => t.id === taskId)
     : undefined;
-  const taskSessionId = task?.latestSessionId ?? undefined;
+  const taskSessionId = task?.latestSessionId || undefined;
   const taskSession = taskSessionId
     ? sessions.find((s) => s.id === taskSessionId)
     : undefined;

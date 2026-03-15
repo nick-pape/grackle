@@ -135,7 +135,7 @@ export class CodespaceAdapter implements EnvironmentAdapter {
     yield* bootstrapPowerLine(executor, powerlineToken, cfg.env, workingDirectory);
 
     // Open port-forward tunnel
-    const localPort = cfg.localPort ?? await findFreePort();
+    const localPort = cfg.localPort || await findFreePort();
     yield { stage: "tunneling", message: `Forwarding local port ${localPort} to codespace...`, progress: 0.80 };
 
     const tunnel = new CodespaceTunnel(localPort, cfg.codespaceName);
@@ -184,7 +184,7 @@ export class CodespaceAdapter implements EnvironmentAdapter {
     }
 
     // 3. Open new port-forward tunnel
-    const localPort = cfg.localPort ?? await findFreePort();
+    const localPort = cfg.localPort || await findFreePort();
     yield { stage: "reconnecting", message: `Forwarding local port ${localPort} to codespace...`, progress: 0.70 };
     const tunnel = new CodespaceTunnel(localPort, cfg.codespaceName);
     await tunnel.open();

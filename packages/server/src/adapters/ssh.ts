@@ -149,7 +149,7 @@ export class SshAdapter implements EnvironmentAdapter {
     yield* bootstrapPowerLine(executor, powerlineToken, cfg.env);
 
     // Open SSH tunnel
-    const localPort = cfg.localPort ?? await findFreePort();
+    const localPort = cfg.localPort || await findFreePort();
     yield { stage: "tunneling", message: `Opening SSH tunnel on local port ${localPort}...`, progress: 0.80 };
 
     const tunnel = new SshTunnel(localPort, cfg);
@@ -195,7 +195,7 @@ export class SshAdapter implements EnvironmentAdapter {
     }
 
     // 3. Open new SSH tunnel
-    const localPort = cfg.localPort ?? await findFreePort();
+    const localPort = cfg.localPort || await findFreePort();
     yield { stage: "reconnecting", message: `Opening SSH tunnel on local port ${localPort}...`, progress: 0.70 };
     const tunnel = new SshTunnel(localPort, cfg);
     await tunnel.open();

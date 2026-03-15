@@ -225,12 +225,12 @@ export function ProjectPage(): JSX.Element {
             <button
               type="button"
               className={styles.metaValueClickable}
-              onClick={() => startEdit("name", project?.name ?? "")}
+              onClick={() => startEdit("name", project?.name || "")}
               title="Click to edit name"
-              aria-label={`Edit project name: ${project?.name ?? projectId}`}
+              aria-label={`Edit project name: ${project?.name || projectId}`}
               data-testid="edit-name-button"
             >
-              {project?.name ?? projectId}
+              {project?.name || projectId}
               <span className={styles.editButton} aria-hidden="true">
                 ✏️
               </span>
@@ -295,7 +295,7 @@ export function ProjectPage(): JSX.Element {
                 <button
                   type="button"
                   className={styles.metaValueClickable}
-                  onClick={() => startEdit("description", project?.description ?? "")}
+                  onClick={() => startEdit("description", project?.description || "")}
                   title="Click to edit description"
                   aria-label="Edit project description"
                   data-testid="edit-description-button"
@@ -349,7 +349,7 @@ export function ProjectPage(): JSX.Element {
                 <button
                   type="button"
                   className={styles.metaValueClickable}
-                  onClick={(e) => { e.preventDefault(); startEdit("repoUrl", project?.repoUrl ?? ""); }}
+                  onClick={(e) => { e.preventDefault(); startEdit("repoUrl", project?.repoUrl || ""); }}
                   title="Click to edit repository URL"
                   aria-label="Edit project repository URL"
                   data-testid="edit-repo-button"
@@ -418,7 +418,7 @@ export function ProjectPage(): JSX.Element {
                 <button
                   type="button"
                   className={styles.metaValueClickable}
-                  onClick={() => startEdit("defaultEnvironmentId", project?.defaultEnvironmentId ?? "")}
+                  onClick={() => startEdit("defaultEnvironmentId", project?.defaultEnvironmentId || "")}
                   title="Click to change default environment"
                   aria-label="Edit project default environment"
                   data-testid="edit-env-button"

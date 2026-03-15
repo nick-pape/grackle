@@ -38,14 +38,14 @@ const MIME_TYPES: Record<string, string> = {
 const esmRequire: NodeRequire = createRequire(import.meta.url);
 const WEB_DIST_DIR: string = resolve(
   process.env.GRACKLE_WEB_DIR
-    ?? join(dirname(esmRequire.resolve("@grackle-ai/web/package.json")), "dist"),
+    || join(dirname(esmRequire.resolve("@grackle-ai/web/package.json")), "dist"),
 );
 
 function createWebHandler(apiKey: string): (req: http.IncomingMessage, res: http.ServerResponse) => void {
   return (req: http.IncomingMessage, res: http.ServerResponse) => {
     let rawPath: string;
     try {
-      rawPath = decodeURIComponent((req.url ?? "/").split("?")[0]);
+      rawPath = decodeURIComponent((req.url || "/").split("?")[0]);
     } catch {
       res.writeHead(400);
       res.end("Bad Request");
@@ -164,7 +164,7 @@ function main(): void {
     routes: registerGrackleRoutes,
     interceptors: [
       (next) => async (req) => {
-        const authHeader = req.header.get("authorization") ?? "";
+        const authHeader = req.header.get("authorization") || "";
         const token = authHeader.replace(/^Bearer\s+/i, "");
         if (!verifyApiKey(token)) {
           throw new ConnectError("Unauthorized", Code.Unauthenticated);
@@ -267,7 +267,7 @@ function main(): void {
     });
 
     clearTimeout(forceExit);
-    process.exit(process.exitCode ?? 0);
+    process.exit(process.exitCode || 0);
   }
 
   // eslint-disable-next-line @typescript-eslint/no-misused-promises

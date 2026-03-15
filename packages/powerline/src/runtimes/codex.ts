@@ -24,22 +24,24 @@ let sdkPromise: Promise<CodexSdkModule> | undefined;
 
 /** Lazily import the Codex SDK to avoid loading it until first use. */
 function getCodexSdk(): Promise<CodexSdkModule> {
-  sdkPromise ??= (async (): Promise<CodexSdkModule> => {
-    try {
-      const mod = await import("@openai/codex-sdk") as Record<string, unknown>;
-      if (typeof mod.Codex !== "function") {
-        throw new Error("Codex not found in @openai/codex-sdk");
+  if (!sdkPromise) {
+    sdkPromise = (async (): Promise<CodexSdkModule> => {
+      try {
+        const mod = await import("@openai/codex-sdk") as Record<string, unknown>;
+        if (typeof mod.Codex !== "function") {
+          throw new Error("Codex not found in @openai/codex-sdk");
+        }
+        return { Codex: mod.Codex as CodexSdkModule["Codex"] };
+      } catch {
+        sdkPromise = undefined;
+        throw new Error(
+          "Codex SDK not installed. Run: npm install @openai/codex-sdk\n" +
+          "The Codex CLI must also be installed and available in PATH (or set CODEX_CLI_PATH)."
+        );
       }
-      return { Codex: mod.Codex as CodexSdkModule["Codex"] };
-    } catch {
-      sdkPromise = undefined;
-      throw new Error(
-        "Codex SDK not installed. Run: npm install @openai/codex-sdk\n" +
-        "The Codex CLI must also be installed and available in PATH (or set CODEX_CLI_PATH)."
-      );
-    }
-  })();
-  return sdkPromise!;
+    })();
+  }
+  return sdkPromise;
 }
 
 // ─── Helpers ───────────────────────────────────────────────
@@ -100,7 +102,7 @@ class CodexSession extends BaseAgentSession {
 
     // API key: SDK reads OPENAI_API_KEY from env automatically,
     // but also support CODEX_API_KEY as an explicit override.
-    const apiKey = process.env.CODEX_API_KEY ?? process.env.OPENAI_API_KEY;
+    const apiKey = process.env.CODEX_API_KEY || process.env.OPENAI_API_KEY;
     if (apiKey) {
       codexOptions.apiKey = apiKey;
     }
@@ -228,7 +230,7 @@ class CodexSession extends BaseAgentSession {
             this.eventQueue.push({
               type: "tool_use",
               timestamp: ts(),
-              content: JSON.stringify({ tool: "command_execution", args: { command: item.command ?? "" } }),
+              content: JSON.stringify({ tool: "command_execution", args: { command: item.command || "" } }),
               raw: event,
             });
           } else if (type === "file_change") {
@@ -236,7 +238,7 @@ class CodexSession extends BaseAgentSession {
             this.eventQueue.push({
               type: "tool_use",
               timestamp: ts(),
-              content: JSON.stringify({ tool: "file_change", args: { file: item.file ?? "", changes: item.changes ?? [] } }),
+              content: JSON.stringify({ tool: "file_change", args: { file: item.file || "", changes: item.changes || [] } }),
               raw: event,
             });
           } else if (type === "mcp_tool_call") {
@@ -244,7 +246,7 @@ class CodexSession extends BaseAgentSession {
             this.eventQueue.push({
               type: "tool_use",
               timestamp: ts(),
-              content: JSON.stringify({ tool: `mcp__${String(item.serverName ?? "unknown")}__${String(item.toolName ?? "unknown")}`, args: item.arguments ?? {} }),
+              content: JSON.stringify({ tool: `mcp__${String(item.serverName || "unknown")}__${String(item.toolName || "unknown")}`, args: item.arguments || {} }),
               raw: event,
             });
           }
@@ -273,7 +275,7 @@ class CodexSession extends BaseAgentSession {
             this.eventQueue.push({
               type: "tool_result",
               timestamp: ts(),
-              content: JSON.stringify({ file: item.file, patch: item.patch ?? "", status: item.status ?? "completed" }),
+              content: JSON.stringify({ file: item.file, patch: item.patch || "", status: item.status || "completed" }),
               raw: event,
             });
           } else if (type === "agent_message") {
@@ -292,7 +294,7 @@ class CodexSession extends BaseAgentSession {
             this.eventQueue.push({
               type: "tool_result",
               timestamp: ts(),
-              content: error ?? result ?? "",
+              content: error || result || "",
               raw: event,
             });
 
