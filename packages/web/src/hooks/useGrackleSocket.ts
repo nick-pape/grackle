@@ -728,6 +728,11 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
             );
             if (tp.sessionId) {
               send({ type: "list_sessions" });
+              // Set lastSpawnedId so the task page can use it as a session
+              // fallback before the list_tasks round-trip completes.
+              if (typeof tp.sessionId === "string") {
+                setLastSpawnedId(tp.sessionId);
+              }
             }
             // Refresh tasks for the project
             const startedPid =

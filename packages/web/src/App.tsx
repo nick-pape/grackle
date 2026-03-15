@@ -6,7 +6,7 @@ import { StatusBar, Sidebar, UnifiedBar } from "./components/layout/index.js";
 import { ToastContainer } from "./components/notifications/index.js";
 import { useEffect, type JSX } from "react";
 import { useGrackle } from "./context/GrackleContext.js";
-import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router";
+import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from "react-router";
 import { sessionUrl, useAppNavigate } from "./utils/navigation.js";
 import { EmptyPage } from "./pages/EmptyPage.js";
 import { NewChatPage } from "./pages/NewChatPage.js";
@@ -29,12 +29,16 @@ function AppShell(): JSX.Element {
   const { lastSpawnedId } = useGrackle();
   const navigate = useAppNavigate();
 
-  // Auto-select newly spawned sessions
+  const location = useLocation();
+
+  // Auto-select newly spawned sessions — but only if the user is not
+  // already viewing a task (task-spawned sessions should keep the user on
+  // the task page rather than redirecting to the raw session view).
   useEffect(() => {
-    if (lastSpawnedId) {
+    if (lastSpawnedId && !location.pathname.startsWith("/tasks/")) {
       navigate(sessionUrl(lastSpawnedId), { replace: true });
     }
-  }, [lastSpawnedId, navigate]);
+  }, [lastSpawnedId, navigate, location.pathname]);
 
   return (
     <div className={styles.root}>

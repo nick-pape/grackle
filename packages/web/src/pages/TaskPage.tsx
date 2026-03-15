@@ -370,6 +370,7 @@ export function TaskPage(): JSX.Element {
     loadSessionEvents, loadFindings,
     kill, startTask, approveTask, rejectTask, deleteTask,
     projects, taskSessions: taskSessionsMap, loadTaskSessions,
+    lastSpawnedId,
   } = useGrackle();
 
   // eslint-disable-next-line @rushstack/no-new-null
@@ -391,21 +392,34 @@ export function TaskPage(): JSX.Element {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [selectedSessionId, setSelectedSessionId] = useState<string | undefined>(undefined);
 
-  // Sync tab with URL when URL changes
-  useEffect(() => {
-    setActiveTaskTab(tabFromUrl);
-  }, [tabFromUrl]);
+  // Sync tab with URL only when the URL-derived tab actually changes.
+  // Use a ref to avoid fighting with the auto-switch-by-status logic.
+  const prevTabFromUrlRef = useRef(tabFromUrl);
+  if (tabFromUrl !== prevTabFromUrlRef.current) {
+    prevTabFromUrlRef.current = tabFromUrl;
+    if (tabFromUrl !== activeTaskTab) {
+      setActiveTaskTab(tabFromUrl);
+    }
+  }
 
   const task = tasks.find((t) => t.id === taskId);
   const projectId = task?.projectId || undefined;
 
-  // Resolve effective sessionId
+  // Resolve effective sessionId.
+  // When a task is started, the server spawns a session. The `lastSpawnedId`
+  // from GrackleContext may be available before `task.latestSessionId` is
+  // populated (requires a `list_tasks` round-trip). Use `lastSpawnedId` as
+  // a fallback when the task is active but `latestSessionId` hasn't arrived yet.
   const currentTaskSessions = task ? (taskSessionsMap[task.id] ?? []) : [];
   let sessionId: string | undefined = undefined;
   if (selectedSessionId && currentTaskSessions.some((s) => s.id === selectedSessionId)) {
     sessionId = selectedSessionId;
   } else {
     sessionId = task?.latestSessionId || undefined;
+  }
+  // Fallback: if the task is active but no session resolved, use lastSpawnedId
+  if (!sessionId && task && ["in_progress", "waiting_input"].includes(task.status) && lastSpawnedId) {
+    sessionId = lastSpawnedId;
   }
 
   const handleDeleteTask = (): void => {
@@ -455,8 +469,6 @@ export function TaskPage(): JSX.Element {
       : undefined;
     if (newTab && newTab !== activeTaskTab) {
       setActiveTaskTab(newTab);
-      // Update URL to match new tab
-      navigate(taskUrl(taskId!, newTab === "overview" ? undefined : newTab), { replace: true });
     }
   }
 
