@@ -191,4 +191,12 @@ test.describe("Settings Page", () => {
     await expect(breadcrumbs).toContainText("Home");
     await expect(breadcrumbs).toContainText("Settings");
   });
+
+  test("old /settings/tokens URL redirects to /settings/credentials", async ({ appPage }) => {
+    const page = appPage;
+
+    await page.goto("/settings/tokens");
+    await expect(page).toHaveURL(/\/settings\/credentials/);
+    await expect(page.getByRole("tab", { name: "Credentials" })).toHaveAttribute("aria-selected", "true");
+  });
 });

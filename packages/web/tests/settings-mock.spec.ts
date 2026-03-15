@@ -50,10 +50,11 @@ test.describe("Settings Page (Mock Mode)", () => {
     await expect(page.getByText("github", { exact: true })).toBeVisible();
     await expect(page.getByText("gcp-service-account")).toBeVisible();
 
-    // Check targets are shown
-    await expect(page.getByText("ANTHROPIC_API_KEY")).toBeVisible();
-    await expect(page.getByText("GITHUB_TOKEN")).toBeVisible();
-    await expect(page.getByText("/home/user/.config/gcloud/credentials.json")).toBeVisible();
+    // Check targets are shown (scope to Tokens section to avoid matching provider descriptions)
+    const tokensSection = page.getByRole("heading", { name: "Tokens" }).locator("..");
+    await expect(tokensSection.getByText("ANTHROPIC_API_KEY")).toBeVisible();
+    await expect(tokensSection.getByText("GITHUB_TOKEN")).toBeVisible();
+    await expect(tokensSection.getByText("/home/user/.config/gcloud/credentials.json")).toBeVisible();
   });
 
   test("add token form is present and functional", async ({ mockPage }) => {

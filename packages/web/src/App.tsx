@@ -90,7 +90,7 @@ function AppRoutes(): JSX.Element {
           <Route index element={<Navigate to="environments" replace />} />
           <Route path="environments" element={<SettingsEnvironmentsTab />} />
           <Route path="credentials" element={<SettingsCredentialsTab />} />
-          <Route path="tokens" element={<Navigate to="credentials" replace />} />
+          <Route path="tokens" element={<Navigate to="../credentials" replace />} />
           <Route path="personas" element={<SettingsPersonasTab />} />
           <Route path="appearance" element={<SettingsAppearanceTab />} />
           <Route path="about" element={<SettingsAboutTab />} />

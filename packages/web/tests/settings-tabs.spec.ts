@@ -46,13 +46,7 @@ test.describe("Settings Tabs", () => {
     await expect(page.getByRole("heading", { name: "Credential Providers" })).toBeVisible();
   });
 
-  test("old /settings/tokens deep link redirects to credentials", async ({ mockPage }) => {
-    const page = mockPage;
 
-    await page.goto("/settings/tokens?mock");
-    await expect(page).toHaveURL(/\/settings\/credentials/);
-    await expect(page.getByRole("tab", { name: "Credentials" })).toHaveAttribute("aria-selected", "true");
-  });
 
   test("back/forward works between tabs", async ({ mockPage }) => {
     const page = mockPage;
