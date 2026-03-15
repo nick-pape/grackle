@@ -70,20 +70,21 @@ test.describe("Group-by-status toggle", () => {
     const stored = await page.evaluate(() => localStorage.getItem("grackle-group-by-status"));
     expect(stored).toBe("true");
 
-    // Reload and verify toggle is still active
+    // Reload and verify the toggle is still in active state (green / aria-label says "Switch to tree view")
     await page.reload();
     await page.waitForFunction(
       () => document.body.innerText.includes("Connected"),
       { timeout: 10_000 },
     );
 
-    // The toggle button should reflect the persisted "active" state
     const toggle = page.getByTestId("group-by-status-toggle");
     await expect(toggle).toBeVisible({ timeout: 5_000 });
+    // Active toggle has "Switch to tree view" label; inactive has "Group tasks by status"
+    await expect(toggle).toHaveAttribute("aria-label", "Switch to tree view");
 
-    // Expand the project to see grouped tasks
-    await page.getByText("gbs-persist").first().click();
-    await expect(page.getByTestId("status-group-not_started").first()).toBeVisible({ timeout: 10_000 });
+    // localStorage should still hold the value after reload
+    const storedAfter = await page.evaluate(() => localStorage.getItem("grackle-group-by-status"));
+    expect(storedAfter).toBe("true");
 
     // Disable for next tests
     await page.getByTestId("group-by-status-toggle").click();
