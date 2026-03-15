@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Replace stdio MCP stub with in-process HTTP MCP broker for unified agent-to-platform tool access",
+      "type": "minor",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
