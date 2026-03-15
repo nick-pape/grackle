@@ -1,12 +1,13 @@
 import { EventEmitter } from "node:events";
 import type { AgentRuntime, AgentSession, AgentEvent, SpawnOptions, ResumeOptions } from "./runtime.js";
+import { SESSION_STATUS } from "@grackle-ai/common";
 import type { SessionStatus } from "@grackle-ai/common";
 
 class StubSession implements AgentSession {
   public id: string;
   public runtimeName: string = "stub";
   public runtimeSessionId: string;
-  public status: SessionStatus = "running";
+  public status: SessionStatus = SESSION_STATUS.RUNNING;
 
   private emitter: EventEmitter = new EventEmitter();
   private inputResolve: ((text: string) => void) | null = null;
@@ -42,7 +43,7 @@ class StubSession implements AgentSession {
     if (this.killed) return;
 
     // Wait for user input
-    this.status = "waiting_input";
+    this.status = SESSION_STATUS.IDLE;
     yield { type: "status", timestamp: ts(), content: "waiting_input" };
 
     if (this.killed) return;
@@ -52,17 +53,17 @@ class StubSession implements AgentSession {
 
     // Simulate failure when input is "fail"
     if (input === "fail") {
-      this.status = "failed";
+      this.status = SESSION_STATUS.FAILED;
       yield { type: "status", timestamp: ts(), content: "failed" };
       return;
     }
 
-    this.status = "running";
+    this.status = SESSION_STATUS.RUNNING;
     yield { type: "status", timestamp: ts(), content: "running" };
     yield { type: "text", timestamp: ts(), content: `You said: ${input}` };
 
     // Complete
-    this.status = "completed";
+    this.status = SESSION_STATUS.COMPLETED;
     yield { type: "status", timestamp: ts(), content: "completed" };
   }
 
@@ -79,7 +80,7 @@ class StubSession implements AgentSession {
 
   public kill(): void {
     this.killed = true;
-    this.status = "killed";
+    this.status = SESSION_STATUS.INTERRUPTED;
     if (this.inputResolve) {
       this.inputResolve("");
     }

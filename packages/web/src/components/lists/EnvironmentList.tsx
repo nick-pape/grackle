@@ -24,14 +24,14 @@ const STATUS_COLORS: Record<string, string> = {
 /** Human-readable labels for session statuses. */
 const SESSION_STATUS_LABELS: Record<string, string> = {
   running: "running",
-  waiting_input: "awaiting input",
+  idle: "awaiting input",
   failed: "failed",
-  killed: "killed",
+  interrupted: "interrupted",
   completed: "completed",
 };
 
 /** Display order for session status groups in the summary. */
-const SESSION_STATUS_ORDER: string[] = ["running", "waiting_input", "failed", "killed", "completed"];
+const SESSION_STATUS_ORDER: string[] = ["running", "idle", "failed", "interrupted", "completed"];
 
 /** Duration in seconds for the session accordion animation. */
 const SESSION_ACCORDION_DURATION: number = 0.2;
@@ -62,10 +62,10 @@ function buildSessionSummary(sessions: Session[]): string {
 function SessionStatusDot({ status }: { status: string }): JSX.Element {
   const color =
     status === "running" ? "var(--accent-green)" :
-    status === "waiting_input" ? "var(--accent-yellow)" :
+    status === "idle" ? "var(--accent-yellow)" :
     status === "completed" ? "var(--text-secondary)" :
     status === "failed" ? "var(--accent-red)" :
-    status === "killed" ? "var(--accent-red)" :
+    status === "interrupted" ? "var(--accent-red)" :
     "var(--text-tertiary)";
   return <span className={styles.sessionDot} style={{ color }}>{"\u25CF"}</span>;
 }

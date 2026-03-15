@@ -46,19 +46,19 @@ test.describe("Concurrent Tasks", () => {
     // Complete both tasks: send input to A
     await inputField.fill("continue");
     await page.locator("button", { hasText: "Send" }).click();
-    await page.locator("button", { hasText: "Approve" }).waitFor({ timeout: 15_000 });
+    await page.locator("button", { hasText: "Complete" }).waitFor({ timeout: 15_000 });
 
     // Complete task B
     await navigateToTask(page, "conc-task-b");
     await inputField.waitFor({ timeout: 5_000 });
     await inputField.fill("continue");
     await page.locator("button", { hasText: "Send" }).click();
-    await page.locator("button", { hasText: "Approve" }).waitFor({ timeout: 15_000 });
+    await page.locator("button", { hasText: "Complete" }).waitFor({ timeout: 15_000 });
 
     // Both tasks should independently reach review
-    await expect(page.locator("button", { hasText: "Approve" })).toBeVisible();
+    await expect(page.locator("button", { hasText: "Complete" })).toBeVisible();
     await navigateToTask(page, "conc-task-a");
-    await expect(page.locator("button", { hasText: "Approve" })).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator("button", { hasText: "Complete" })).toBeVisible({ timeout: 5_000 });
   });
 
   test("concurrent tasks show correct sidebar status simultaneously", async ({ appPage }) => {
@@ -81,15 +81,15 @@ test.describe("Concurrent Tasks", () => {
     const taskYRow = page.getByText("status-task-y", { exact: true }).locator("..");
 
     // Wait for task X to be active (● = in_progress or ⧖ = waiting_input)
-    await expect(taskXRow.locator("text=/(●|\u29D6)/")).toBeVisible({ timeout: 15_000 });
+    await expect(taskXRow.locator("text=/(●|◉)/")).toBeVisible({ timeout: 15_000 });
 
     // Start task Y
     await navigateToTask(page, "status-task-y");
     await page.locator("button", { hasText: "Start" }).click();
 
     // Wait for task Y to also be active — both tasks should show active icon in sidebar
-    await expect(taskYRow.locator("text=/(●|\u29D6)/")).toBeVisible({ timeout: 15_000 });
-    await expect(taskXRow.locator("text=/(●|\u29D6)/")).toBeVisible();
+    await expect(taskYRow.locator("text=/(●|◉)/")).toBeVisible({ timeout: 15_000 });
+    await expect(taskXRow.locator("text=/(●|◉)/")).toBeVisible();
 
     // Complete task X to review: navigate, send input
     await navigateToTask(page, "status-task-x");
@@ -100,6 +100,6 @@ test.describe("Concurrent Tasks", () => {
 
     // Wait for task X to reach review (◉) while task Y stays active (● or ⧖)
     await expect(taskXRow.locator("text=◉")).toBeVisible({ timeout: 15_000 });
-    await expect(taskYRow.locator("text=/(●|\u29D6)/")).toBeVisible();
+    await expect(taskYRow.locator("text=/(●|◉)/")).toBeVisible();
   });
 });

@@ -241,21 +241,21 @@ export async function patchWsForStubRuntime(page: Page, environmentId: string = 
 }
 
 /**
- * Run a stub task through its full lifecycle: start → in_progress → waiting_input → send input → review.
+ * Run a stub task through its full lifecycle: start → working → idle → send input → paused.
  * Requires patchWsForStubRuntime to have been called on the page beforehand.
  */
 export async function runStubTaskToCompletion(page: Page): Promise<void> {
   await page.getByRole("button", { name: "Start", exact: true }).click();
 
-  // Wait for waiting_input state
+  // Wait for idle state (session waiting for input)
   const inputField = page.locator('input[placeholder="Type a message..."]');
   await inputField.waitFor({ timeout: 15_000 });
   await inputField.fill("continue");
   await page.getByRole("button", { name: "Send", exact: true }).click();
 
-  // Wait for session to complete and task to move to review
+  // Wait for session to complete and task to move to paused (review)
   await page
-    .getByRole("button", { name: "Approve", exact: true })
+    .getByRole("button", { name: "Complete", exact: true })
     .waitFor({ timeout: 15_000 });
 }
 

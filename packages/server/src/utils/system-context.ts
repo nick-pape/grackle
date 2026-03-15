@@ -1,9 +1,9 @@
 /** Build the system context string injected into task-spawned agent sessions. */
-export function buildTaskSystemContext(title: string, description: string, reviewNotes: string, canDecompose?: boolean): string {
+export function buildTaskSystemContext(title: string, description: string, notes: string, canDecompose?: boolean): string {
   const sections: string[] = [
     `## Task: ${title}`,
     description,
-    reviewNotes ? `## Review Feedback (from previous attempt)\n${reviewNotes}` : "",
+    notes ? `## Notes (from previous attempt or user feedback)\n${notes}` : "",
     `## Grackle Tools (MCP)`,
     `You have a "grackle" MCP server with tools for coordinating with other agents:`,
     `- **mcp__grackle__post_finding**: Share discoveries (architecture decisions, bugs, patterns) with other agents working on this project. Parameters: title (string), content (string), category (optional: architecture|api|bug|decision|dependency|pattern|general), tags (optional: string[]).`,

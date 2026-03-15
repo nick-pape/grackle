@@ -1,4 +1,5 @@
 import type { AgentSession, AgentEvent } from "./runtime.js";
+import { SESSION_STATUS } from "@grackle-ai/common";
 import type { SessionStatus } from "@grackle-ai/common";
 import { AsyncQueue } from "../utils/async-queue.js";
 import { logger } from "../logger.js";
@@ -19,7 +20,7 @@ export abstract class BaseAgentSession implements AgentSession {
   public id: string;
   public abstract runtimeName: string;
   public runtimeSessionId: string;
-  public status: SessionStatus = "running";
+  public status: SessionStatus = SESSION_STATUS.RUNNING;
 
   protected readonly eventQueue: AsyncQueue<AgentEvent> = new AsyncQueue<AgentEvent>();
   protected killed: boolean = false;
@@ -118,7 +119,7 @@ export abstract class BaseAgentSession implements AgentSession {
     this.runSession().catch((err) => {
       this.eventQueue.push({ type: "error", timestamp: ts(), content: String(err) });
       this.eventQueue.push({ type: "status", timestamp: ts(), content: "failed" });
-      this.status = "failed";
+      this.status = SESSION_STATUS.FAILED;
       this.eventQueue.close();
     });
 
@@ -137,7 +138,7 @@ export abstract class BaseAgentSession implements AgentSession {
       // For resumed sessions, perform resume-specific setup and wait for input.
       if (this.resumeSessionId) {
         await this.setupForResume();
-        this.status = "waiting_input";
+        this.status = SESSION_STATUS.IDLE;
         this.eventQueue.push({ type: "status", timestamp: ts(), content: "waiting_input" });
         return;
       }
@@ -161,10 +162,10 @@ export abstract class BaseAgentSession implements AgentSession {
 
       // Session is idle — ready for follow-up input via sendInput().
       // The queue stays open so sendInput() can push more events.
-      this.status = "waiting_input";
+      this.status = SESSION_STATUS.IDLE;
       this.eventQueue.push({ type: "status", timestamp: ts(), content: "waiting_input" });
     } catch (err) {
-      this.status = "failed";
+      this.status = SESSION_STATUS.FAILED;
       this.eventQueue.push({ type: "error", timestamp: ts(), content: String(err) });
       this.eventQueue.push({ type: "status", timestamp: ts(), content: "failed" });
       this.releaseResources();
@@ -178,7 +179,7 @@ export abstract class BaseAgentSession implements AgentSession {
       return;
     }
     const ts: () => string = () => new Date().toISOString();
-    this.status = "running";
+    this.status = SESSION_STATUS.RUNNING;
     this.eventQueue.push({ type: "status", timestamp: ts(), content: "running" });
 
     this.executeFollowUp(text)
@@ -189,7 +190,7 @@ export abstract class BaseAgentSession implements AgentSession {
           this.releaseResources();
           this.eventQueue.close();
         } else {
-          this.status = "waiting_input";
+          this.status = SESSION_STATUS.IDLE;
           this.eventQueue.push({ type: "status", timestamp: ts(), content: "waiting_input" });
         }
       })
@@ -202,7 +203,7 @@ export abstract class BaseAgentSession implements AgentSession {
   /** Forcefully terminate the session. */
   public kill(): void {
     this.killed = true;
-    this.status = "killed";
+    this.status = SESSION_STATUS.INTERRUPTED;
     this.abortActive();
     this.releaseResources();
     this.eventQueue.close();

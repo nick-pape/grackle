@@ -107,13 +107,11 @@ export function initDatabase(): void {
       project_id    TEXT NOT NULL REFERENCES projects(id),
       title         TEXT NOT NULL,
       description   TEXT NOT NULL DEFAULT '',
-      status        TEXT NOT NULL DEFAULT 'pending',
+      status        TEXT NOT NULL DEFAULT 'not_started',
       branch        TEXT NOT NULL DEFAULT '',
       depends_on    TEXT NOT NULL DEFAULT '[]',
-      assigned_at   TEXT,
       started_at    TEXT,
       completed_at  TEXT,
-      review_notes  TEXT NOT NULL DEFAULT '',
       created_at    TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at    TEXT NOT NULL DEFAULT (datetime('now')),
       sort_order    INTEGER NOT NULL DEFAULT 0,
@@ -179,10 +177,9 @@ export function initDatabase(): void {
     UPDATE projects SET updated_at = datetime('now') WHERE updated_at IS NULL;
 
     UPDATE tasks SET description = '' WHERE description IS NULL;
-    UPDATE tasks SET status = 'pending' WHERE status IS NULL;
+    UPDATE tasks SET status = 'not_started' WHERE status IS NULL;
     UPDATE tasks SET branch = '' WHERE branch IS NULL;
     UPDATE tasks SET depends_on = '[]' WHERE depends_on IS NULL;
-    UPDATE tasks SET review_notes = '' WHERE review_notes IS NULL;
     UPDATE tasks SET created_at = datetime('now') WHERE created_at IS NULL;
     UPDATE tasks SET updated_at = datetime('now') WHERE updated_at IS NULL;
     UPDATE tasks SET sort_order = 0 WHERE sort_order IS NULL;
@@ -317,6 +314,31 @@ export function initDatabase(): void {
     SET started_at = replace(started_at, ' ', 'T') || '.000Z'
     WHERE started_at NOT LIKE '%T%'
   `);
+
+  // Migration: normalize task statuses to simplified model
+  sqlite.exec(`
+    UPDATE tasks SET status = 'not_started' WHERE status IN ('pending', 'assigned');
+    UPDATE tasks SET status = 'complete' WHERE status = 'done';
+    UPDATE tasks SET status = 'not_started' WHERE status IN ('in_progress', 'waiting_input', 'review');
+  `);
+
+  // Migration: normalize session statuses
+  sqlite.exec(`
+    UPDATE sessions SET status = 'idle' WHERE status = 'waiting_input';
+    UPDATE sessions SET status = 'interrupted' WHERE status = 'killed';
+  `);
+
+  // Migration: drop stale columns from tasks
+  try {
+    sqlite.exec("ALTER TABLE tasks DROP COLUMN assigned_at");
+  } catch {
+    /* column already dropped or never existed */
+  }
+  try {
+    sqlite.exec("ALTER TABLE tasks DROP COLUMN review_notes");
+  } catch {
+    /* column already dropped or never existed */
+  }
 
   // Index for efficient session-by-task lookups
   sqlite.exec(

@@ -1,14 +1,31 @@
-// ─── Enums as string unions ─────────────────────────────────
+// ─── Status Constants ───────────────────────────────────────
+// Use these constants instead of string literals to get compile-time safety.
+// The types are derived from the const objects so they stay in sync automatically.
+
+/** All valid session lifecycle statuses. Import and use these instead of string literals. */
+export const SESSION_STATUS = {
+  PENDING: "pending",
+  RUNNING: "running",
+  IDLE: "idle",
+  COMPLETED: "completed",
+  FAILED: "failed",
+  INTERRUPTED: "interrupted",
+} as const;
 
 /** Lifecycle status of an agent session. */
-export type SessionStatus =
-  | "pending"
-  | "running"
-  | "waiting_input"
-  | "suspended"
-  | "completed"
-  | "failed"
-  | "killed";
+export type SessionStatus = typeof SESSION_STATUS[keyof typeof SESSION_STATUS];
+
+/** All valid task lifecycle statuses. Import and use these instead of string literals. */
+export const TASK_STATUS = {
+  NOT_STARTED: "not_started",
+  WORKING: "working",
+  PAUSED: "paused",
+  COMPLETE: "complete",
+  FAILED: "failed",
+} as const;
+
+/** Lifecycle status of a task, derived from session history. */
+export type TaskStatus = typeof TASK_STATUS[keyof typeof TASK_STATUS];
 
 /** Connection status of a remote environment. */
 export type EnvironmentStatus =
@@ -31,8 +48,6 @@ export type AgentEventType =
 
 /** Discriminator for all session events, including user input. */
 export type EventType = AgentEventType | "user_input";
-
-export type TaskStatus = "pending" | "assigned" | "in_progress" | "waiting_input" | "review" | "done" | "failed";
 
 /** Supported environment adapter backends. */
 export type AdapterType = "docker" | "local" | "codespace" | "ssh";

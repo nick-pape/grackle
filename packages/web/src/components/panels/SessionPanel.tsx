@@ -85,7 +85,7 @@ interface EventListProps {
 
 /** Scrollable list of session events with empty-state messaging. */
 function EventList({ sessionEvents, session, eventsDropped, scrollRef }: EventListProps): JSX.Element {
-  const isTerminal = session && ["completed", "failed", "killed"].includes(session.status);
+  const isTerminal = session && ["completed", "failed", "interrupted"].includes(session.status);
   const emptyMessage = isTerminal
     ? `Session ${session.status} with no events recorded.`
     : "Waiting for events...";
@@ -236,21 +236,17 @@ interface TaskStatusBadgeProps {
 /** Large colored badge displaying the current task status. */
 function TaskStatusBadge({ status }: TaskStatusBadgeProps): JSX.Element {
   const labelMap: Record<string, string> = {
-    pending: "Pending",
-    assigned: "Assigned",
-    in_progress: "In Progress",
-    waiting_input: "Waiting for Input",
-    review: "Review",
-    done: "Done",
+    not_started: "Not Started",
+    working: "Working",
+    paused: "Paused",
+    complete: "Complete",
     failed: "Failed",
   };
   const colorClassMap: Record<string, string> = {
-    pending: styles.statusPending,
-    assigned: styles.statusAssigned,
-    in_progress: styles.statusInProgress,
-    waiting_input: styles.statusWaitingInput,
-    review: styles.statusReview,
-    done: styles.statusDone,
+    not_started: styles.statusPending,
+    working: styles.statusInProgress,
+    paused: styles.statusReview,
+    complete: styles.statusDone,
     failed: styles.statusFailed,
   };
   return (
@@ -340,7 +336,7 @@ function TaskOverview({ task, tasksById, environments, projects, taskSessions }:
           <div className={styles.depList}>
             {task.dependsOn.map((depId) => {
               const dep = tasksById.get(depId);
-              const isDone = dep?.status === "done";
+              const isDone = dep?.status === "complete";
               return (
                 <div
                   key={depId}
@@ -401,13 +397,7 @@ function TaskOverview({ task, tasksById, environments, projects, taskSessions }:
         </div>
       </div>
 
-      {/* Review notes */}
-      {task.reviewNotes && (
-        <div className={styles.overviewSection}>
-          <div className={styles.overviewLabel}>Review Notes</div>
-          <div className={styles.reviewNotes}>{task.reviewNotes}</div>
-        </div>
-      )}
+      {/* Review notes — removed, notes are now passed via StartTask */}
     </div>
   );
 }
@@ -422,12 +412,13 @@ interface TaskActionButtonsProps {
   task: TaskData;
   sessionId: string | undefined;
   isBlocked: boolean;
-  rejectNotes: string;
-  onRejectNotesChange: (notes: string) => void;
+  retryNotes: string;
+  onRetryNotesChange: (notes: string) => void;
   onStart: () => void;
+  onStartWithNotes: () => void;
   onStop: () => void;
-  onApprove: () => void;
-  onReject: () => void;
+  onComplete: () => void;
+  onResume: () => void;
   onDelete: () => void;
   onEdit: () => void;
 }
@@ -437,16 +428,17 @@ function TaskActionButtons({
   task,
   sessionId,
   isBlocked,
-  rejectNotes,
-  onRejectNotesChange,
+  retryNotes,
+  onRetryNotesChange,
   onStart,
+  onStartWithNotes,
   onStop,
-  onApprove,
-  onReject,
+  onComplete,
+  onResume,
   onDelete,
   onEdit,
 }: TaskActionButtonsProps): JSX.Element | undefined {
-  if (task.status === "pending" || task.status === "assigned") {
+  if (task.status === "not_started") {
     if (isBlocked) {
       return (
         <div className={styles.headerActions}>
@@ -455,16 +447,19 @@ function TaskActionButtons({
         </div>
       );
     }
+    // Only show Resume if the task has had a previous session (latestSessionId is set)
+    const hasSession = !!task.latestSessionId;
     return (
       <div className={styles.headerActions}>
         <button onClick={onStart} className={styles.btnPrimary}>Start</button>
+        {hasSession && <button onClick={onResume} className={styles.btnGhost}>Resume</button>}
         <button onClick={onEdit} className={styles.btnGhost}>Edit</button>
         <button onClick={onDelete} className={styles.btnDanger}>Delete</button>
       </div>
     );
   }
 
-  if (task.status === "in_progress" || task.status === "waiting_input") {
+  if (task.status === "working") {
     return (
       <div className={styles.headerActions}>
         <button
@@ -478,23 +473,24 @@ function TaskActionButtons({
     );
   }
 
-  if (task.status === "review") {
+  if (task.status === "paused") {
     return (
       <div className={styles.headerActions}>
         <input
           type="text"
-          value={rejectNotes}
-          onChange={(e) => onRejectNotesChange(e.target.value)}
-          placeholder="Rejection notes..."
+          value={retryNotes}
+          onChange={(e) => onRetryNotesChange(e.target.value)}
+          placeholder="Notes for retry..."
           className={styles.rejectInput}
         />
-        <button onClick={onApprove} className={styles.btnPrimary}>Approve</button>
-        <button onClick={onReject} className={styles.btnDanger}>Reject</button>
+        <button onClick={onComplete} className={styles.btnPrimary}>Complete</button>
+        <button onClick={onResume} className={styles.btnGhost}>Resume</button>
+        <button onClick={onStartWithNotes} className={styles.btnDanger}>Retry</button>
       </div>
     );
   }
 
-  if (task.status === "done") {
+  if (task.status === "complete") {
     return (
       <div className={styles.headerActions}>
         <button onClick={onDelete} className={styles.btnDanger}>Delete</button>
@@ -533,7 +529,8 @@ function SessionAttemptSelector({ taskSessions, selectedSessionId, onSelect }: S
         const isActive = s.id === selectedSessionId;
         const statusIcon = s.status === "completed" ? "\u2713"
           : s.status === "failed" ? "\u2717"
-          : s.status === "running" || s.status === "waiting_input" ? "\u25CF"
+          : s.status === "running" || s.status === "idle" ? "\u25CF"
+          : s.status === "interrupted" ? "\u25CB"
           : "";
         return (
           <button
@@ -559,7 +556,7 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
   const {
     events, eventsDropped, sessions, tasks, environments,
     loadSessionEvents, loadFindings,
-    kill, startTask, approveTask, rejectTask, deleteTask,
+    kill, startTask, completeTask, resumeTask, deleteTask,
     projects, archiveProject, updateProject,
     taskSessions, loadTaskSessions,
   } = useGrackle();
@@ -568,7 +565,7 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
   const loadedRef = useRef<string | undefined>(undefined);
   const [activeTaskTab, setActiveTaskTab] = useState<TaskTab>("overview");
   const [projectTab, setProjectTab] = useState<ProjectTab>("tasks");
-  const [rejectNotes, setRejectNotes] = useState("");
+  const [retryNotes, setRetryNotes] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
   const [selectedSessionId, setSelectedSessionId] = useState<string | undefined>(undefined);
@@ -654,14 +651,14 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
     setViewMode({ kind: "project", projectId: task.projectId });
   };
 
-  // Reset to overview tab, clear rejectNotes, and clear selectedSessionId when switching tasks.
+  // Reset to overview tab, clear retryNotes, and clear selectedSessionId when switching tasks.
   if (viewMode.kind === "task" && task?.id !== prevTaskIdRef.current) {
     prevTaskIdRef.current = task?.id;
     if (activeTaskTab !== "overview") {
       setActiveTaskTab("overview");
     }
-    if (rejectNotes !== "") {
-      setRejectNotes("");
+    if (retryNotes !== "") {
+      setRetryNotes("");
     }
     if (selectedSessionId !== undefined) {
       setSelectedSessionId(undefined);
@@ -691,12 +688,10 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
   if (task?.status !== prevTaskStatusRef.current) {
     prevTaskStatusRef.current = task?.status;
     const newTab: TaskTab | undefined =
-      task?.status === "pending" ? "overview"
-      : task?.status === "assigned" ? "overview"
-      : task?.status === "in_progress" ? "stream"
-      : task?.status === "waiting_input" ? "stream"
-      : task?.status === "review" ? "stream"
-      : task?.status === "done" ? "findings"
+      task?.status === "not_started" ? "overview"
+      : task?.status === "working" ? "stream"
+      : task?.status === "paused" ? "stream"
+      : task?.status === "complete" ? "findings"
       : undefined;
     if (newTab && newTab !== activeTaskTab) {
       setActiveTaskTab(newTab);
@@ -719,7 +714,7 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
   const isTaskBlocked = task
     ? task.dependsOn.some((depId) => {
         const dep = tasksById.get(depId);
-        return dep !== undefined && dep.status !== "done";
+        return dep !== undefined && dep.status !== "complete";
       })
     : false;
 
@@ -801,7 +796,7 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
   if (viewMode.kind === "project") {
     const project = projects.find((p) => p.id === viewMode.projectId);
     const projectTasks = tasks.filter((t) => t.projectId === viewMode.projectId);
-    const done = projectTasks.filter((t) => t.status === "done").length;
+    const done = projectTasks.filter((t) => t.status === "complete").length;
     const total = projectTasks.length;
     const progressPct = total > 0 ? Math.round((done / total) * 100) : 0;
 
@@ -1282,12 +1277,13 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
               task={task}
               sessionId={sessionId}
               isBlocked={isTaskBlocked}
-              rejectNotes={rejectNotes}
-              onRejectNotesChange={setRejectNotes}
+              retryNotes={retryNotes}
+              onRetryNotesChange={setRetryNotes}
               onStart={() => startTask(task.id)}
+              onStartWithNotes={() => { startTask(task.id, undefined, undefined, undefined, undefined, retryNotes); setRetryNotes(""); }}
               onStop={() => sessionId && kill(sessionId)}
-              onApprove={() => approveTask(task.id)}
-              onReject={() => { rejectTask(task.id, rejectNotes); setRejectNotes(""); }}
+              onComplete={() => completeTask(task.id)}
+              onResume={() => resumeTask(task.id)}
               onDelete={handleDeleteTask}
               onEdit={() => setViewMode({ kind: "edit_task", taskId: task.id })}
             />
@@ -1429,7 +1425,7 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
     );
   }
 
-  const isActive = session?.status === "running" || session?.status === "waiting_input";
+  const isActive = session?.status === "running" || session?.status === "idle";
 
   return (
     <div className={styles.panelContainer}>

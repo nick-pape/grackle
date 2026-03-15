@@ -18,7 +18,7 @@ function taskToJson(task: grackle.Task): Record<string, unknown> {
   };
 }
 
-/** MCP tools for Grackle task management (list, create, show, update, start, delete, approve, reject, import). */
+/** MCP tools for Grackle task management (list, create, show, update, start, delete, complete, resume, import). */
 export const taskTools: ToolDefinition[] = [
   // ── task_list ───────────────────────────────────────────────────────────
   {
@@ -136,7 +136,7 @@ export const taskTools: ToolDefinition[] = [
     name: "task_update",
     group: "task",
     description:
-      "Update a task's title, description, status, environment, dependencies, review notes, or bind a running session to it.",
+      "Update a task's title, description, status, dependencies, or bind a running session to it.",
     inputSchema: z.object({
       taskId: z.string().describe("The ID of the task to update"),
       title: z.string().optional().describe("New title for the task"),
@@ -146,22 +146,16 @@ export const taskTools: ToolDefinition[] = [
         .describe("New description for the task"),
       status: z
         .enum([
-          "pending",
-          "assigned",
-          "in_progress",
-          "review",
-          "done",
+          "not_started",
+          "working",
+          "paused",
+          "complete",
           "failed",
-          "waiting_input",
         ])
         .optional()
         .describe(
-          "New status for the task (pending, assigned, in_progress, review, done, failed, waiting_input)",
+          "New status for the task (not_started, working, paused, complete, failed)",
         ),
-      reviewNotes: z
-        .string()
-        .optional()
-        .describe("Review notes or feedback for the task"),
       dependsOn: z
         .array(z.string())
         .optional()
@@ -191,7 +185,6 @@ export const taskTools: ToolDefinition[] = [
           description: (args.description as string | undefined) ?? "",
           status: statusValue,
           dependsOn: (args.dependsOn as string[] | undefined) ?? [],
-          reviewNotes: (args.reviewNotes as string | undefined) ?? "",
           sessionId: (args.sessionId as string | undefined) ?? "",
         });
         return jsonResult(taskToJson(task));
@@ -225,6 +218,10 @@ export const taskTools: ToolDefinition[] = [
         .string()
         .optional()
         .describe("Environment ID to run the task on (defaults to project default)"),
+      notes: z
+        .string()
+        .optional()
+        .describe("Feedback/instructions for retry (included in system context)"),
     }),
     rpcMethod: "startTask",
     mutating: true,
@@ -242,6 +239,7 @@ export const taskTools: ToolDefinition[] = [
           model: (args.model as string | undefined) ?? "",
           personaId: (args.personaId as string | undefined) ?? "",
           environmentId: (args.environmentId as string | undefined) ?? "",
+          notes: (args.notes as string | undefined) ?? "",
         });
         return jsonResult(response);
       } catch (error) {
@@ -279,16 +277,16 @@ export const taskTools: ToolDefinition[] = [
     },
   },
 
-  // ── task_approve ────────────────────────────────────────────────────────
+  // ── task_complete ────────────────────────────────────────────────────────
   {
-    name: "task_approve",
+    name: "task_complete",
     group: "task",
     description:
-      "Approve a completed task, marking it as reviewed and accepted.",
+      "Mark a task as complete (human-authoritative — sticky status).",
     inputSchema: z.object({
-      taskId: z.string().describe("The ID of the task to approve"),
+      taskId: z.string().describe("The ID of the task to complete"),
     }),
-    rpcMethod: "approveTask",
+    rpcMethod: "completeTask",
     mutating: true,
     annotations: {
       readOnlyHint: false,
@@ -298,7 +296,7 @@ export const taskTools: ToolDefinition[] = [
     },
     async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) {
       try {
-        const task = await client.approveTask({
+        const task = await client.completeTask({
           id: args.taskId as string,
         });
         return jsonResult(taskToJson(task));
@@ -308,38 +306,29 @@ export const taskTools: ToolDefinition[] = [
     },
   },
 
-  // ── task_reject ─────────────────────────────────────────────────────────
+  // ── task_resume ─────────────────────────────────────────────────────────
   {
-    name: "task_reject",
+    name: "task_resume",
     group: "task",
     description:
-      "Reject a task that needs further work, optionally providing review notes with feedback.",
+      "Resume the latest interrupted or completed session for a task.",
     inputSchema: z.object({
-      taskId: z.string().describe("The ID of the task to reject"),
-      reviewNotes: z
-        .string()
-        .optional()
-        .describe("Feedback explaining why the task was rejected"),
+      taskId: z.string().describe("The ID of the task to resume"),
     }),
-    rpcMethod: "rejectTask",
+    rpcMethod: "resumeTask",
     mutating: true,
     annotations: {
       readOnlyHint: false,
       destructiveHint: false,
-      idempotentHint: true,
+      idempotentHint: false,
       openWorldHint: false,
     },
     async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) {
       try {
-        const task = await client.rejectTask({
+        const session = await client.resumeTask({
           id: args.taskId as string,
-          title: "",
-          description: "",
-          status: 0,
-          dependsOn: [],
-          reviewNotes: (args.reviewNotes as string | undefined) ?? "",
         });
-        return jsonResult(taskToJson(task));
+        return jsonResult(session);
       } catch (error) {
         return grpcErrorToToolResult(error);
       }
