@@ -1,10 +1,142 @@
+@use 'sass:map';
+
 // ============================================================================
 // Design Tokens — Grackle Web UI
 // ============================================================================
 // Multi-theme token system.  :root = original glassmorphism (default).
 // [data-theme="light"] and [data-theme="dark"] provide a clean T3-style look.
+// Additional themes use the define-theme mixin for compact palette definitions.
 // Component styles consume these via var(--token-name).
 // ============================================================================
+
+// =============================================================================
+// Theme Generator Mixin
+// =============================================================================
+// Produces all CSS custom properties from a compact SCSS map (~30 seed values).
+// Derived variants (-dim, -fg, -subtle, -border) are auto-generated via
+// color-mix().  To add a new theme, define a $palette map and call:
+//   [data-theme="my-theme"] { @include define-theme($my-palette); }
+// =============================================================================
+
+@mixin define-theme($p) {
+  // Backgrounds
+  --bg-base: #{map.get($p, 'bg-base')};
+  --bg-surface: #{map.get($p, 'bg-surface')};
+  --bg-elevated: #{map.get($p, 'bg-elevated')};
+  --bg-overlay: #{map.get($p, 'bg-overlay')};
+  --bg-input: #{map.get($p, 'bg-input')};
+  --bg-inset: #{map.get($p, 'bg-inset')};
+
+  // Glass effects
+  --glass-blur: #{map.get($p, 'glass-blur') or 0px};
+  --glass-blur-card: #{map.get($p, 'glass-blur-card') or 0px};
+  --glass-blur-inset: #{map.get($p, 'glass-blur-inset') or 0px};
+  --glass-border: #{map.get($p, 'glass-border')};
+  --glass-border-hover: #{map.get($p, 'glass-border-hover')};
+  --glass-highlight: #{map.get($p, 'glass-highlight') or transparent};
+  --glass-highlight-strong: #{map.get($p, 'glass-highlight-strong') or transparent};
+  --glass-inner-glow: #{map.get($p, 'glass-inner-glow') or 0};
+
+  // Text
+  --text-primary: #{map.get($p, 'text-primary')};
+  --text-secondary: #{map.get($p, 'text-secondary')};
+  --text-tertiary: #{map.get($p, 'text-tertiary')};
+  --text-disabled: #{map.get($p, 'text-disabled')};
+
+  // Accent base colors
+  $green: map.get($p, 'green');
+  $red: map.get($p, 'red');
+  $yellow: map.get($p, 'yellow');
+  $blue: map.get($p, 'blue');
+  $purple: map.get($p, 'purple');
+  $cyan: map.get($p, 'cyan');
+
+  --accent-green: #{$green};
+  --accent-green-dim: color-mix(in srgb, #{$green} 15%, transparent);
+  --accent-green-subtle: color-mix(in srgb, #{$green} 8%, transparent);
+  --accent-green-focus: color-mix(in srgb, #{$green} 12%, transparent);
+  --accent-green-selection: color-mix(in srgb, #{$green} 25%, transparent);
+  --accent-red: #{$red};
+  --accent-red-dim: color-mix(in srgb, #{$red} 15%, transparent);
+  --accent-yellow: #{$yellow};
+  --accent-yellow-dim: color-mix(in srgb, #{$yellow} 15%, transparent);
+  --accent-blue: #{$blue};
+  --accent-blue-dim: color-mix(in srgb, #{$blue} 15%, transparent);
+  --accent-purple: #{$purple};
+  --accent-purple-dim: color-mix(in srgb, #{$purple} 15%, transparent);
+  --accent-cyan: #{$cyan};
+  --accent-cyan-dim: color-mix(in srgb, #{$cyan} 15%, transparent);
+
+  // Accent foreground variants (defaults to base if not provided)
+  --accent-red-fg: #{map.get($p, 'red-fg') or $red};
+  --accent-yellow-fg: #{map.get($p, 'yellow-fg') or $yellow};
+  --accent-blue-fg: #{map.get($p, 'blue-fg') or $blue};
+  --accent-green-fg: #{map.get($p, 'green-fg') or $green};
+  --accent-purple-fg: #{map.get($p, 'purple-fg') or $purple};
+  --accent-cyan-fg: #{map.get($p, 'cyan-fg') or $cyan};
+
+  // Accent border variants (30% opacity for callout/badge borders)
+  --accent-green-border: color-mix(in srgb, #{$green} 30%, transparent);
+  --accent-red-border: color-mix(in srgb, #{$red} 30%, transparent);
+  --accent-yellow-border: color-mix(in srgb, #{$yellow} 30%, transparent);
+  --accent-blue-border: color-mix(in srgb, #{$blue} 30%, transparent);
+
+  // Borders
+  --border-primary: color-mix(in srgb, #{$green} 18%, transparent);
+  --border-subtle: #{map.get($p, 'border-subtle')};
+  --border-input: #{map.get($p, 'border-input')};
+
+  // Ring (focus outline)
+  --ring: #{$green};
+  --ring-alpha: color-mix(in srgb, #{$green} 24%, transparent);
+
+  // Card highlight
+  --highlight-top: #{map.get($p, 'highlight-top') or none};
+
+  // Border radii (optional overrides — falls through to :root if omitted)
+  @if map.has-key($p, 'radius-sm') {
+    --radius-sm: #{map.get($p, 'radius-sm')};
+  }
+  @if map.has-key($p, 'radius-md') {
+    --radius-md: #{map.get($p, 'radius-md')};
+  }
+  @if map.has-key($p, 'radius-lg') {
+    --radius-lg: #{map.get($p, 'radius-lg')};
+  }
+  @if map.has-key($p, 'radius-xl') {
+    --radius-xl: #{map.get($p, 'radius-xl')};
+  }
+
+  // Shadows
+  --shadow-xs: #{map.get($p, 'shadow-xs')};
+  --shadow-sm: #{map.get($p, 'shadow-sm')};
+  --shadow-md: #{map.get($p, 'shadow-md')};
+  --shadow-lg: #{map.get($p, 'shadow-lg')};
+  --shadow-glow-green: #{map.get($p, 'shadow-glow-green') or none};
+  --shadow-glow-red: #{map.get($p, 'shadow-glow-red') or none};
+
+  // Font
+  --font-ui: #{map.get($p, 'font-ui')};
+
+  // Noise texture overlay opacity
+  --noise-opacity: #{map.get($p, 'noise-opacity') or 0};
+
+  // Syntax highlighting
+  --code-comment: #{map.get($p, 'code-comment')};
+  --code-keyword: #{map.get($p, 'code-keyword')};
+  --code-function: #{map.get($p, 'code-function')};
+  --code-string: #{map.get($p, 'code-string')};
+  --code-number: #{map.get($p, 'code-number')};
+  --code-class: #{map.get($p, 'code-class')};
+  --code-tag: #{map.get($p, 'code-tag')};
+  --code-deleted: #{map.get($p, 'code-deleted')};
+  --code-inserted: #{map.get($p, 'code-inserted')};
+  --code-punctuation: #{map.get($p, 'code-punctuation')};
+}
+
+// =============================================================================
+// Glassmorphism Theme (Default) — :root
+// =============================================================================
 
 :root {
   // ---------------------------------------------------------------------------
@@ -68,6 +200,12 @@
   --accent-green-fg: #4ecca3;
   --accent-purple-fg: #a855f7;
   --accent-cyan-fg: #22d3ee;
+
+  // Accent border variants (30% for callout/badge borders)
+  --accent-green-border: rgba(78, 204, 163, 0.30);
+  --accent-red-border: rgba(233, 69, 96, 0.30);
+  --accent-yellow-border: rgba(240, 192, 64, 0.30);
+  --accent-blue-border: rgba(112, 161, 255, 0.30);
 
   // ---------------------------------------------------------------------------
   // Borders
@@ -215,6 +353,12 @@
   --accent-purple-fg: #6d28d9;
   --accent-cyan-fg: #0e7490;
 
+  // Accent border variants
+  --accent-green-border: rgba(16, 185, 129, 0.30);
+  --accent-red-border: rgba(239, 68, 68, 0.30);
+  --accent-yellow-border: rgba(245, 158, 11, 0.30);
+  --accent-blue-border: rgba(59, 130, 246, 0.30);
+
   // Borders
   --border-primary: rgba(16, 185, 129, 0.18);
   --border-subtle: rgba(0, 0, 0, 0.08);
@@ -314,6 +458,12 @@
   --accent-purple-fg: #c4b5fd;
   --accent-cyan-fg: #67e8f9;
 
+  // Accent border variants
+  --accent-green-border: rgba(52, 211, 153, 0.30);
+  --accent-red-border: rgba(248, 113, 113, 0.30);
+  --accent-yellow-border: rgba(251, 191, 36, 0.30);
+  --accent-blue-border: rgba(96, 165, 250, 0.30);
+
   // Borders
   --border-primary: rgba(52, 211, 153, 0.18);
   --border-subtle: rgba(255, 255, 255, 0.06);
@@ -356,4 +506,339 @@
   --code-deleted: #f87171;
   --code-inserted: #34d399;
   --code-punctuation: #9ca3af;
+}
+
+// =============================================================================
+// Matrix — CRT / Retro Terminal
+// =============================================================================
+
+$matrix-palette: (
+  'bg-base': #000000,
+  'bg-surface': #050a05,
+  'bg-elevated': #0a120a,
+  'bg-overlay': rgba(0, 255, 65, 0.06),
+  'bg-input': #050a05,
+  'bg-inset': #000000,
+
+  'glass-border': rgba(0, 255, 65, 0.12),
+  'glass-border-hover': rgba(0, 255, 65, 0.20),
+
+  'text-primary': #00ff41,
+  'text-secondary': #00cc33,
+  'text-tertiary': #008f11,
+  'text-disabled': #004d00,
+
+  'green': #00ff41,
+  'red': #ff3333,
+  'yellow': #ffb000,
+  'blue': #00bfff,
+  'purple': #b967ff,
+  'cyan': #00ffcc,
+
+  'border-subtle': rgba(0, 255, 65, 0.10),
+  'border-input': rgba(0, 255, 65, 0.16),
+
+  'highlight-top': inset 0 1px 0 0 rgba(0, 255, 65, 0.04),
+
+  'radius-sm': 0px,
+  'radius-md': 0px,
+  'radius-lg': 0px,
+  'radius-xl': 0px,
+
+  'shadow-xs': 0 0 2px rgba(0, 255, 65, 0.15),
+  'shadow-sm': 0 0 4px rgba(0, 255, 65, 0.15),
+  'shadow-md': 0 0 8px rgba(0, 255, 65, 0.12),
+  'shadow-lg': 0 0 16px rgba(0, 255, 65, 0.20),
+  'shadow-glow-green': 0 0 20px rgba(0, 255, 65, 0.25),
+  'shadow-glow-red': 0 0 20px rgba(255, 51, 51, 0.25),
+
+  'font-ui': var(--font-mono),
+
+  'code-comment': #008f11,
+  'code-keyword': #00ff41,
+  'code-function': #00bfff,
+  'code-string': #ffb000,
+  'code-number': #b967ff,
+  'code-class': #ffb000,
+  'code-tag': #00ff41,
+  'code-deleted': #ff3333,
+  'code-inserted': #00ff41,
+  'code-punctuation': #00cc33,
+);
+
+[data-theme="matrix"] {
+  color-scheme: dark;
+  @include define-theme($matrix-palette);
+}
+
+// =============================================================================
+// Neubrutalism — thick borders, raw colors, bold type
+// =============================================================================
+
+$brutalist-palette: (
+  'bg-base': #f5f0e8,
+  'bg-surface': #ffffff,
+  'bg-elevated': #ffffff,
+  'bg-overlay': rgba(0, 0, 0, 0.06),
+  'bg-input': #ffffff,
+  'bg-inset': #ede8df,
+
+  'glass-border': #1a1a1a,
+  'glass-border-hover': #000000,
+
+  'text-primary': #1a1a1a,
+  'text-secondary': #4a4a4a,
+  'text-tertiary': #7a7a7a,
+  'text-disabled': #b0b0b0,
+
+  'green': #7ed957,
+  'red': #ff5757,
+  'yellow': #ffde59,
+  'blue': #5ce1e6,
+  'purple': #cb6ce6,
+  'cyan': #38b6ff,
+
+  'border-subtle': #1a1a1a,
+  'border-input': #1a1a1a,
+
+  'highlight-top': none,
+
+  'radius-sm': 4px,
+  'radius-md': 4px,
+  'radius-lg': 6px,
+  'radius-xl': 8px,
+
+  'shadow-xs': 2px 2px 0px #1a1a1a,
+  'shadow-sm': 3px 3px 0px #1a1a1a,
+  'shadow-md': 4px 4px 0px #1a1a1a,
+  'shadow-lg': 6px 6px 0px #1a1a1a,
+
+  'font-ui': var(--font-sans),
+  'noise-opacity': 0,
+
+  'code-comment': #7a7a7a,
+  'code-keyword': #ff5757,
+  'code-function': #5ce1e6,
+  'code-string': #7ed957,
+  'code-number': #cb6ce6,
+  'code-class': #ffde59,
+  'code-tag': #ff5757,
+  'code-deleted': #ff5757,
+  'code-inserted': #7ed957,
+  'code-punctuation': #4a4a4a,
+);
+
+[data-theme="brutalist"] {
+  color-scheme: light;
+  @include define-theme($brutalist-palette);
+
+  // Thick brutalist borders — override border-width globally
+  // (--glass-border is just a color, consumed via `border: 1px solid var(--glass-border)`)
+  * {
+    border-width: 2px;
+  }
+
+  // Press-down effect on interactive elements
+  button:active,
+  [role="button"]:active {
+    --shadow-xs: 1px 1px 0px #1a1a1a;
+    --shadow-sm: 1px 1px 0px #1a1a1a;
+    transform: translate(1px, 1px);
+  }
+}
+
+// =============================================================================
+// Monokai — Classic warm editor palette
+// =============================================================================
+
+$monokai-palette: (
+  'bg-base': #272822,
+  'bg-surface': #2d2e27,
+  'bg-elevated': #3e3d32,
+  'bg-overlay': rgba(255, 255, 255, 0.05),
+  'bg-input': #2d2e27,
+  'bg-inset': #1e1f1a,
+
+  'glass-border': rgba(255, 255, 255, 0.08),
+  'glass-border-hover': rgba(255, 255, 255, 0.14),
+
+  'text-primary': #f8f8f2,
+  'text-secondary': #a6a28c,
+  'text-tertiary': #75715e,
+  'text-disabled': #4b4a3e,
+
+  'green': #a6e22e,
+  'red': #f92672,
+  'yellow': #e6db74,
+  'blue': #66d9ef,
+  'purple': #ae81ff,
+  'cyan': #66d9ef,
+
+  'border-subtle': rgba(255, 255, 255, 0.06),
+  'border-input': rgba(255, 255, 255, 0.10),
+
+  'highlight-top': inset 0 1px 0 rgba(255, 255, 255, 0.04),
+
+  'radius-md': 8px,
+  'radius-lg': 10px,
+  'radius-xl': 14px,
+
+  'shadow-xs': 0 1px 2px rgba(0, 0, 0, 0.3),
+  'shadow-sm': 0 1px 3px rgba(0, 0, 0, 0.4), // single shadow for SCSS map
+  'shadow-md': 0 4px 6px rgba(0, 0, 0, 0.4),
+  'shadow-lg': 0 10px 15px rgba(0, 0, 0, 0.5),
+
+  'font-ui': var(--font-mono),
+
+  'code-comment': #75715e,
+  'code-keyword': #f92672,
+  'code-function': #a6e22e,
+  'code-string': #e6db74,
+  'code-number': #ae81ff,
+  'code-class': #66d9ef,
+  'code-tag': #f92672,
+  'code-deleted': #f92672,
+  'code-inserted': #a6e22e,
+  'code-punctuation': #f8f8f2,
+);
+
+[data-theme="monokai"] {
+  color-scheme: dark;
+  @include define-theme($monokai-palette);
+}
+
+// =============================================================================
+// Ubuntu — Aubergine terminal palette
+// =============================================================================
+
+$ubuntu-palette: (
+  'bg-base': #300a24,
+  'bg-surface': #3c1130,
+  'bg-elevated': #4e1a3d,
+  'bg-overlay': rgba(255, 255, 255, 0.05),
+  'bg-input': #3c1130,
+  'bg-inset': #240720,
+
+  'glass-border': rgba(255, 255, 255, 0.08),
+  'glass-border-hover': rgba(255, 255, 255, 0.14),
+
+  'text-primary': #eeeeec,
+  'text-secondary': #d3d7cf,
+  'text-tertiary': #888a85,
+  'text-disabled': #555753,
+
+  'green': #4e9a06,
+  'red': #cc0000,
+  'yellow': #c4a000,
+  'blue': #3465a4,
+  'purple': #75507b,
+  'cyan': #06989a,
+
+  'red-fg': #ef2929,
+  'yellow-fg': #fce94f,
+  'blue-fg': #729fcf,
+  'green-fg': #8ae234,
+  'purple-fg': #ad7fa8,
+  'cyan-fg': #34e2e2,
+
+  'border-subtle': rgba(255, 255, 255, 0.08),
+  'border-input': rgba(255, 255, 255, 0.12),
+
+  'highlight-top': inset 0 1px 0 rgba(255, 255, 255, 0.04),
+
+  'radius-md': 6px,
+  'radius-lg': 8px,
+  'radius-xl': 12px,
+
+  'shadow-xs': 0 1px 2px rgba(0, 0, 0, 0.3),
+  'shadow-sm': 0 1px 3px rgba(0, 0, 0, 0.4),
+  'shadow-md': 0 4px 6px rgba(0, 0, 0, 0.4),
+  'shadow-lg': 0 10px 15px rgba(0, 0, 0, 0.5),
+
+  'font-ui': var(--font-mono),
+
+  'code-comment': #888a85,
+  'code-keyword': #8ae234,
+  'code-function': #729fcf,
+  'code-string': #fce94f,
+  'code-number': #ad7fa8,
+  'code-class': #34e2e2,
+  'code-tag': #8ae234,
+  'code-deleted': #ef2929,
+  'code-inserted': #8ae234,
+  'code-punctuation': #d3d7cf,
+);
+
+[data-theme="ubuntu"] {
+  color-scheme: dark;
+  @include define-theme($ubuntu-palette);
+}
+
+// =============================================================================
+// Claude Code — Warm dark theme inspired by Claude's visual identity
+// =============================================================================
+
+$claude-palette: (
+  'bg-base': #1a1815,
+  'bg-surface': #201d18,
+  'bg-elevated': #2a2620,
+  'bg-overlay': rgba(193, 95, 60, 0.06),
+  'bg-input': #201d18,
+  'bg-inset': #141210,
+
+  'glass-border': rgba(193, 95, 60, 0.14),
+  'glass-border-hover': rgba(193, 95, 60, 0.22),
+
+  'text-primary': #e8e6e3,
+  'text-secondary': #b1ada1,
+  'text-tertiary': #7d796e,
+  'text-disabled': #4a473f,
+
+  'green': #C15F3C,
+  'red': #e85d4a,
+  'yellow': #d4a054,
+  'blue': #6b8afd,
+  'purple': #a78bfa,
+  'cyan': #5fb8c2,
+
+  'green-fg': #d4845f,
+  'red-fg': #f08070,
+  'yellow-fg': #e0b46a,
+  'blue-fg': #8da4fd,
+  'purple-fg': #c4b5fd,
+  'cyan-fg': #7dccd4,
+
+  'border-subtle': rgba(255, 255, 255, 0.06),
+  'border-input': rgba(193, 95, 60, 0.18),
+
+  'highlight-top': inset 0 1px 0 rgba(193, 95, 60, 0.04),
+
+  'radius-md': 8px,
+  'radius-lg': 10px,
+  'radius-xl': 14px,
+
+  'shadow-xs': 0 1px 2px rgba(0, 0, 0, 0.3),
+  'shadow-sm': 0 1px 3px rgba(0, 0, 0, 0.4),
+  'shadow-md': 0 4px 6px rgba(0, 0, 0, 0.4),
+  'shadow-lg': 0 10px 15px rgba(0, 0, 0, 0.5),
+  'shadow-glow-green': 0 0 16px rgba(193, 95, 60, 0.15),
+  'shadow-glow-red': 0 0 16px rgba(232, 93, 74, 0.15),
+
+  'font-ui': var(--font-mono),
+
+  'code-comment': #7d796e,
+  'code-keyword': #C15F3C,
+  'code-function': #6b8afd,
+  'code-string': #5fb8c2,
+  'code-number': #a78bfa,
+  'code-class': #d4a054,
+  'code-tag': #C15F3C,
+  'code-deleted': #e85d4a,
+  'code-inserted': #C15F3C,
+  'code-punctuation': #b1ada1,
+);
+
+[data-theme="claude"] {
+  color-scheme: dark;
+  @include define-theme($claude-palette);
 }

@@ -15,7 +15,7 @@
   // Variant: success (green)
   &.success {
     background: var(--accent-green-dim);
-    border-color: rgba(78, 204, 163, 0.30);
+    border-color: var(--accent-green-border);
 
     .icon {
       color: var(--accent-green);
@@ -25,7 +25,7 @@
   // Variant: error (red)
   &.error {
     background: var(--accent-red-dim);
-    border-color: rgba(233, 69, 96, 0.30);
+    border-color: var(--accent-red-border);
 
     .icon {
       color: var(--accent-red);
@@ -35,7 +35,7 @@
   // Variant: warning (yellow)
   &.warning {
     background: var(--accent-yellow-dim);
-    border-color: rgba(240, 192, 64, 0.30);
+    border-color: var(--accent-yellow-border);
 
     .icon {
       color: var(--accent-yellow);
@@ -45,7 +45,7 @@
   // Variant: info (blue)
   &.info {
     background: var(--accent-blue-dim);
-    border-color: rgba(112, 161, 255, 0.30);
+    border-color: var(--accent-blue-border);
 
     .icon {
       color: var(--accent-blue);

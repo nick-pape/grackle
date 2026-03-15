@@ -21,16 +21,23 @@ interface Props {
   setViewMode: (mode: ViewMode) => void;
 }
 
-/** Color mapping for MiniMap node coloring by task status. */
-const STATUS_COLORS: Record<string, string> = {
-  pending: "#6b7a8d",
-  assigned: "#70a1ff",
-  in_progress: "#4ecca3",
-  review: "#f0c040",
-  done: "#4ecca3",
-  failed: "#e94560",
-  waiting_input: "#f0c040",
+/** CSS variable mapping for MiniMap node coloring by task status. */
+const STATUS_VAR_MAP: Record<string, string> = {
+  pending: "--text-tertiary",
+  assigned: "--accent-blue",
+  in_progress: "--accent-green",
+  review: "--accent-yellow",
+  done: "--accent-green",
+  failed: "--accent-red",
+  waiting_input: "--accent-yellow",
 };
+
+/** Reads a theme-aware color for a task status from CSS custom properties. */
+function getStatusColor(status: string): string {
+  const varName = STATUS_VAR_MAP[status] || "--text-tertiary";
+  const value = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+  return value || "#6b7a8d";
+}
 
 /** Custom node type registry for React Flow. */
 const nodeTypes: NodeTypes = {
@@ -58,7 +65,7 @@ export function DagView({ projectId, setViewMode }: Props): JSX.Element {
   /** Returns a hex color for the MiniMap based on task status. */
   const minimapNodeColor = useCallback((node: Node): string => {
     const data = node.data as TaskNodeData;
-    return STATUS_COLORS[data.task.status] || STATUS_COLORS.pending;
+    return getStatusColor(data.task.status);
   }, []);
 
   if (projectTasks.length === 0) {

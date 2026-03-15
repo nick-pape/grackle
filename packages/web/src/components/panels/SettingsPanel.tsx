@@ -87,6 +87,13 @@ export function SettingsPanel({ viewMode, setViewMode }: Props): JSX.Element {
               >
                 <span className={styles.themeOptionLabel}>{t.label}</span>
                 <span className={styles.themeOptionDesc}>{t.description}</span>
+                {t.swatches && (
+                  <span className={styles.themeSwatches}>
+                    {t.swatches.map((color, i) => (
+                      <span key={i} className={styles.themeSwatch} style={{ background: color }} />
+                    ))}
+                  </span>
+                )}
               </button>
             );
           })}
