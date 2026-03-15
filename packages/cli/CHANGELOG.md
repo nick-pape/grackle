@@ -1,26 +1,6 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sun, 15 Mar 2026 19:38:05 GMT and should not be manually modified.
-
-## 0.27.0
-Sun, 15 Mar 2026 19:38:05 GMT
-
-### Minor changes
-
-- Simplify task/session lifecycle: 5 task statuses, 6 session statuses, replace approve/reject with complete/resume RPCs
-- Add per-project worktree base path configuration
-
-### Patches
-
-- User-friendly codespace error messages, manual name fallback, optional machine type
-- Add user-friendly error message for Node.js ABI version mismatch in better-sqlite3
-- Add --host CLI flag to PowerLine, bind to 0.0.0.0 in Docker containers
-- Add 11 new ESLint rules to shared heft-rig configs and fix all violations across all packages
-- Show active tab in settings breadcrumbs
-- Broadcast environment status changes from gRPC/heartbeat to WebSocket clients
-- Add URL routing with react-router v7
-- Escalate typedef and explicit-member-accessibility lint rules to error in common
-- Grackle brand theme and system toggle
+This log was last generated on Sun, 15 Mar 2026 04:23:26 GMT and should not be manually modified.
 
 ## 0.26.0
 Sun, 15 Mar 2026 04:23:26 GMT
