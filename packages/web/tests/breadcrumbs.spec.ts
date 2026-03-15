@@ -3,7 +3,6 @@ import {
   buildTaskAncestorChain,
   buildHomeBreadcrumbs,
   buildSettingsBreadcrumbs,
-  buildPersonasBreadcrumbs,
   buildProjectBreadcrumbs,
   buildTaskBreadcrumbs,
   buildNewTaskBreadcrumbs,
@@ -102,12 +101,6 @@ test.describe("breadcrumb builders", () => {
     expect(segments[0].url).toBe("/");
     expect(segments[1].label).toBe("Settings");
     expect(segments[1].url).toBeUndefined();
-  });
-
-  test("personas returns Home > Personas", () => {
-    const segments: BreadcrumbSegment[] = buildPersonasBreadcrumbs();
-    expect(segments).toHaveLength(2);
-    expect(segments[1].label).toBe("Personas");
   });
 
   test("project returns Home > ProjectName", () => {

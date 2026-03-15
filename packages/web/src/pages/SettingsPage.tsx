@@ -1,17 +1,19 @@
 import { type JSX } from "react";
+import { Outlet } from "react-router";
 import { Breadcrumbs } from "../components/display/index.js";
-import { SettingsPanel } from "../components/panels/SettingsPanel.js";
 import { buildSettingsBreadcrumbs } from "../utils/breadcrumbs.js";
-import styles from "../components/panels/SessionPanel.module.scss";
+import styles from "./SettingsPage.module.scss";
 
-/** Settings page wrapping the SettingsPanel with breadcrumbs. */
+/** Settings hub with breadcrumbs and tab content area. */
 export function SettingsPage(): JSX.Element {
   const breadcrumbs = buildSettingsBreadcrumbs();
 
   return (
-    <div className={styles.panelContainer}>
+    <div className={styles.layout}>
       <Breadcrumbs segments={breadcrumbs} />
-      <SettingsPanel />
+      <div className={styles.content} role="tabpanel">
+        <Outlet />
+      </div>
     </div>
   );
 }
