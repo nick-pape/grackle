@@ -6,7 +6,7 @@ import { readFileSync } from "node:fs";
 
 /** Register persona management commands: `persona list`, `create`, `show`, `edit`, `delete`. */
 export function registerPersonaCommands(program: Command): void {
-  const persona = program.command("persona").description("Manage personas");
+  const persona = program.command("persona").description("Create and manage agent personas");
 
   persona
     .command("list")

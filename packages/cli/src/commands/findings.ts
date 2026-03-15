@@ -3,7 +3,7 @@ import { createGrackleClient } from "../client.js";
 import Table from "cli-table3";
 
 export function registerFindingCommands(program: Command): void {
-  const finding = program.command("finding").description("Manage findings");
+  const finding = program.command("finding").description("Query project findings");
 
   finding
     .command("list <project-id>")

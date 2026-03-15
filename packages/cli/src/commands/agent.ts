@@ -8,7 +8,7 @@ import Table from "cli-table3";
 export function registerAgentCommands(program: Command): void {
   program
     .command("spawn <env-id> <prompt>")
-    .description("Spawn an agent on an environment")
+    .description("Start a new agent session")
     .option("--model <model>", "Model to use")
     .option("--max-turns <n>", "Maximum turns", parseInt)
     .option("--runtime <runtime>", "Agent runtime")
@@ -34,7 +34,7 @@ export function registerAgentCommands(program: Command): void {
 
   program
     .command("resume <session-id>")
-    .description("Resume a suspended session")
+    .description("Resume a paused session")
     .action(async (sessionId: string) => {
       const client = createGrackleClient();
       const session = await client.resumeAgent({ sessionId });
@@ -43,7 +43,7 @@ export function registerAgentCommands(program: Command): void {
 
   program
     .command("status")
-    .description("List active sessions")
+    .description("List agent sessions")
     .option("--env <env-id>", "Filter by environment")
     .option("--all", "Show all sessions including completed")
     .action(async (opts: { env?: string; all?: boolean }) => {
@@ -84,7 +84,7 @@ export function registerAgentCommands(program: Command): void {
 
   program
     .command("kill <session-id>")
-    .description("Kill a running session")
+    .description("Stop a running session")
     .action(async (sessionId: string) => {
       const client = createGrackleClient();
       await client.killAgent({ id: sessionId });
@@ -93,7 +93,7 @@ export function registerAgentCommands(program: Command): void {
 
   program
     .command("send-input <session-id> <text>")
-    .description("Send input to a session waiting for input")
+    .description("Send input to a waiting session")
     .action(async (sessionId: string, text: string) => {
       const client = createGrackleClient();
       await client.sendInput({ sessionId, text });
@@ -102,7 +102,7 @@ export function registerAgentCommands(program: Command): void {
 
   program
     .command("attach <session-id>")
-    .description("Attach to a session stream with interactive input")
+    .description("Attach to a live session")
     .action(async (sessionId: string) => {
       const client = createGrackleClient();
       console.log(`Attached to ${sessionId} (Ctrl+C to detach)\n`);
