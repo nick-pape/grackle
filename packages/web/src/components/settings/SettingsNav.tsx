@@ -1,6 +1,6 @@
 import { useCallback, useRef, type JSX, type KeyboardEvent } from "react";
 import { useLocation } from "react-router";
-import { useAppNavigate } from "../../utils/navigation.js";
+import { SETTINGS_URL, useAppNavigate } from "../../utils/navigation.js";
 import styles from "./SettingsNav.module.scss";
 
 /** Tab definition for the settings navigation rail. */
@@ -26,12 +26,12 @@ const TABS: SettingsTab[] = [
 export function SettingsNav(): JSX.Element {
   const location = useLocation();
   const navigate = useAppNavigate();
-  const tabListRef = useRef<HTMLDivElement>(null);
+  const tabListRef = useRef<HTMLElement>(null);
 
-  const activeTab = TABS.find((t) => location.pathname === `/settings/${t.path}`)?.path ?? TABS[0].path;
+  const activeTab = TABS.find((t) => location.pathname === `${SETTINGS_URL}/${t.path}`)?.path ?? TABS[0].path;
 
   const handleClick = useCallback((path: string) => {
-    navigate(`/settings/${path}`);
+    navigate(`${SETTINGS_URL}/${path}`);
   }, [navigate]);
 
   const handleKeyDown = useCallback((e: KeyboardEvent<HTMLDivElement>) => {
@@ -62,7 +62,7 @@ export function SettingsNav(): JSX.Element {
     }
 
     const nextPath = TABS[nextIndex].path;
-    navigate(`/settings/${nextPath}`);
+    navigate(`${SETTINGS_URL}/${nextPath}`);
     buttons[nextIndex]?.focus();
   }, [activeTab, navigate]);
 
@@ -87,7 +87,7 @@ export function SettingsNav(): JSX.Element {
             className={`${styles.tab} ${isActive ? styles.tabActive : ""}`}
             onClick={() => handleClick(tab.path)}
           >
-            <span className={styles.tabIcon}>{tab.icon}</span>
+            <span className={styles.tabIcon} aria-hidden="true">{tab.icon}</span>
             {tab.label}
           </button>
         );

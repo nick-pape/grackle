@@ -11,7 +11,7 @@ export function SettingsPage(): JSX.Element {
   return (
     <div className={styles.layout}>
       <Breadcrumbs segments={breadcrumbs} />
-      <div className={styles.content} role="tabpanel">
+      <div className={styles.content}>
         <Outlet />
       </div>
     </div>

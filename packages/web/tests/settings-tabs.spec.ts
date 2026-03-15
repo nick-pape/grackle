@@ -1,5 +1,5 @@
 import { test as base, expect } from "./fixtures.js";
-import type { Page } from "@playwright/test";
+import { goToSettings } from "./helpers.js";
 
 const test = base.extend<{ mockPage: import("@playwright/test").Page }>({
   mockPage: async ({ page }, use) => {
@@ -12,17 +12,11 @@ const test = base.extend<{ mockPage: import("@playwright/test").Page }>({
   },
 });
 
-/** Navigate to settings and wait for the tab nav to appear. */
-async function goToSettings(page: Page): Promise<void> {
-  await page.locator('button[title="Settings"]').click();
-  await expect(page.getByRole("tablist")).toBeVisible({ timeout: 5_000 });
-}
-
 test.describe("Settings Tabs", () => {
   test("default tab is Environments", async ({ mockPage }) => {
     const page = mockPage;
 
-    await goToSettings(page);
+    await goToSettings(mockPage);
 
     await expect(page).toHaveURL(/\/settings\/environments/);
     await expect(page.getByRole("tab", { name: "Environments" })).toHaveAttribute("aria-selected", "true");
@@ -31,7 +25,7 @@ test.describe("Settings Tabs", () => {
   test("tab switching updates URL", async ({ mockPage }) => {
     const page = mockPage;
 
-    await goToSettings(page);
+    await goToSettings(mockPage);
 
     const tabs = ["Tokens", "Personas", "Appearance", "About", "Environments"];
     const paths = ["tokens", "personas", "appearance", "about", "environments"];
@@ -55,7 +49,7 @@ test.describe("Settings Tabs", () => {
   test("back/forward works between tabs", async ({ mockPage }) => {
     const page = mockPage;
 
-    await goToSettings(page);
+    await goToSettings(mockPage);
     await page.getByRole("tab", { name: "Tokens" }).click();
     await expect(page).toHaveURL(/\/settings\/tokens/);
 
@@ -74,7 +68,7 @@ test.describe("Settings Tabs", () => {
   test("keyboard navigation with arrow keys", async ({ mockPage }) => {
     const page = mockPage;
 
-    await goToSettings(page);
+    await goToSettings(mockPage);
 
     // Focus the active tab
     const envTab = page.getByRole("tab", { name: "Environments" });
@@ -108,7 +102,7 @@ test.describe("Settings Tabs", () => {
   test("Personas tab shows PersonaManager", async ({ mockPage }) => {
     const page = mockPage;
 
-    await goToSettings(page);
+    await goToSettings(mockPage);
     await page.getByRole("tab", { name: "Personas" }).click();
 
     await expect(page.getByRole("heading", { name: "Personas" })).toBeVisible();
@@ -118,7 +112,7 @@ test.describe("Settings Tabs", () => {
   test("About tab shows connection info and version", async ({ mockPage }) => {
     const page = mockPage;
 
-    await goToSettings(page);
+    await goToSettings(mockPage);
     await page.getByRole("tab", { name: "About" }).click();
 
     await expect(page.getByText("Connection", { exact: true })).toBeVisible();
@@ -139,7 +133,7 @@ test.describe("Settings Tabs", () => {
   test("breadcrumbs always show Home > Settings on all tabs", async ({ mockPage }) => {
     const page = mockPage;
 
-    await goToSettings(page);
+    await goToSettings(mockPage);
     const breadcrumbs = page.getByTestId("breadcrumbs");
 
     const tabs = ["Environments", "Tokens", "Personas", "Appearance", "About"];
@@ -153,7 +147,7 @@ test.describe("Settings Tabs", () => {
   test("Appearance tab shows theme picker", async ({ mockPage }) => {
     const page = mockPage;
 
-    await goToSettings(page);
+    await goToSettings(mockPage);
     await page.getByRole("tab", { name: "Appearance" }).click();
 
     await expect(page.getByRole("heading", { name: "Appearance" })).toBeVisible();

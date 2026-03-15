@@ -13,7 +13,7 @@ export function StatusBar(): JSX.Element {
 
   return (
     <div className={styles.container}>
-      <button className={styles.brand} onClick={() => navigate("/")} title="Home">Grackle</button>
+      <button type="button" className={styles.brand} onClick={() => navigate("/")} title="Home">Grackle</button>
       <div className={styles.info}>
         <span>
           <span className={`${styles.connectionDot} ${connected ? styles.connected : styles.disconnected}`}>

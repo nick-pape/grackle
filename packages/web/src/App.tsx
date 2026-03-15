@@ -9,7 +9,7 @@ import { useGrackle } from "./context/GrackleContext.js";
 import { useToast } from "./context/ToastContext.js";
 import { useEnvironmentToasts } from "./hooks/useEnvironmentToasts.js";
 import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from "react-router";
-import { sessionUrl, useAppNavigate } from "./utils/navigation.js";
+import { sessionUrl, SETTINGS_URL, useAppNavigate } from "./utils/navigation.js";
 import { EmptyPage } from "./pages/EmptyPage.js";
 import { NewChatPage } from "./pages/NewChatPage.js";
 import { SessionPage } from "./pages/SessionPage.js";
@@ -39,7 +39,7 @@ function AppShell(): JSX.Element {
   const navigate = useAppNavigate();
 
   const location = useLocation();
-  const isSettings = location.pathname.startsWith("/settings");
+  const isSettings = location.pathname.startsWith(SETTINGS_URL);
 
   // Auto-select newly spawned sessions — but only if the user is not
   // already viewing a task (task-spawned sessions should keep the user on

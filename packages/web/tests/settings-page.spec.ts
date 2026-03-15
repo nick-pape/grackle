@@ -1,18 +1,11 @@
 import { test, expect } from "./fixtures.js";
-import { sendWsAndWaitFor } from "./helpers.js";
-import type { Page } from "@playwright/test";
-
-/** Navigate to settings and wait for the tab nav to appear. */
-async function goToSettings(page: Page): Promise<void> {
-  await page.locator('button[title="Settings"]').click();
-  await expect(page.getByRole("tablist")).toBeVisible({ timeout: 5_000 });
-}
+import { sendWsAndWaitFor, goToSettings } from "./helpers.js";
 
 test.describe("Settings Page", () => {
   test("gear icon navigates to settings page with Environments tab", async ({ appPage }) => {
     const page = appPage;
 
-    await goToSettings(page);
+    await goToSettings(appPage);
 
     // Should redirect to /settings/environments
     await expect(page).toHaveURL(/\/settings\/environments/);
@@ -22,7 +15,7 @@ test.describe("Settings Page", () => {
   test("settings page renders token section after clicking Tokens tab", async ({ appPage }) => {
     const page = appPage;
 
-    await goToSettings(page);
+    await goToSettings(appPage);
     await page.getByRole("tab", { name: "Tokens" }).click();
 
     await expect(page.getByRole("heading", { name: "Tokens" })).toBeVisible();
@@ -34,7 +27,7 @@ test.describe("Settings Page", () => {
   test("theme selection updates document theme and persists across reload", async ({ appPage }) => {
     const page = appPage;
 
-    await goToSettings(page);
+    await goToSettings(appPage);
     await page.getByRole("tab", { name: "Appearance" }).click();
 
     // Click the Grackle light variant toggle (sun icon)
@@ -52,7 +45,7 @@ test.describe("Settings Page", () => {
       () => document.body.innerText.includes("Connected"),
       { timeout: 10_000 },
     );
-    await goToSettings(page);
+    await goToSettings(appPage);
     await page.getByRole("tab", { name: "Appearance" }).click();
     await expect(page.locator("html")).toHaveAttribute("data-theme", "grackle-light");
   });
@@ -60,7 +53,7 @@ test.describe("Settings Page", () => {
   test("add token via settings form", async ({ appPage }) => {
     const page = appPage;
 
-    await goToSettings(page);
+    await goToSettings(appPage);
     await page.getByRole("tab", { name: "Tokens" }).click();
 
     // Fill in the add token form
@@ -100,7 +93,7 @@ test.describe("Settings Page", () => {
       "token_changed",
     );
 
-    await goToSettings(page);
+    await goToSettings(appPage);
     await page.getByRole("tab", { name: "Tokens" }).click();
 
     // Wait for token to appear
@@ -112,7 +105,7 @@ test.describe("Settings Page", () => {
 
     // Confirm via the in-app ConfirmDialog
     await expect(page.getByText("Delete Token?")).toBeVisible({ timeout: 5_000 });
-    await page.locator('[role="dialog"] button', { hasText: "Delete" }).click({ force: true });
+    await page.locator('[role="dialog"] button', { hasText: "Delete" }).click();
     await expect(page.getByText("Delete Token?")).not.toBeVisible({ timeout: 5_000 });
 
     // Token should disappear
@@ -122,7 +115,7 @@ test.describe("Settings Page", () => {
   test("add token with file type shows file path field", async ({ appPage }) => {
     const page = appPage;
 
-    await goToSettings(page);
+    await goToSettings(appPage);
     await page.getByRole("tab", { name: "Tokens" }).click();
 
     // Select "File" type
@@ -152,7 +145,7 @@ test.describe("Settings Page", () => {
   test("token form clears after successful add", async ({ appPage }) => {
     const page = appPage;
 
-    await goToSettings(page);
+    await goToSettings(appPage);
     await page.getByRole("tab", { name: "Tokens" }).click();
 
     // Fill in the form
@@ -180,7 +173,7 @@ test.describe("Settings Page", () => {
   test("settings page description text is visible in Tokens tab", async ({ appPage }) => {
     const page = appPage;
 
-    await goToSettings(page);
+    await goToSettings(appPage);
     await page.getByRole("tab", { name: "Tokens" }).click();
 
     await expect(
@@ -191,7 +184,7 @@ test.describe("Settings Page", () => {
   test("settings page shows breadcrumbs with Home > Settings", async ({ appPage }) => {
     const page = appPage;
 
-    await goToSettings(page);
+    await goToSettings(appPage);
 
     const breadcrumbs = page.getByTestId("breadcrumbs");
     await expect(breadcrumbs).toBeVisible({ timeout: 5_000 });
