@@ -6,4 +6,4 @@
  */
 export type AuthContext =
   | { type: "api-key" }
-  | { type: "scoped"; taskId: string; projectId: string; personaId: string; sessionId: string };
+  | { type: "scoped"; taskId: string; projectId: string; personaId: string; taskSessionId: string };

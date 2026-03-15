@@ -41,34 +41,34 @@ describe("authenticateMcpRequest", () => {
       taskId: "task-1",
       projectId: "project-1",
       personaId: "persona-1",
-      sessionId: "session-1",
+      taskSessionId: "session-1",
     });
   });
 
-  /** Missing Authorization header returns null. */
-  test("missing authorization header returns null", () => {
+  /** Missing Authorization header returns undefined. */
+  test("missing authorization header returns undefined", () => {
     const req = mockRequest(undefined);
     const result = authenticateMcpRequest(req, API_KEY);
     expect(result).toBeUndefined();
   });
 
-  /** Empty bearer token returns null. */
-  test("empty bearer returns null", () => {
+  /** Empty bearer token returns undefined. */
+  test("empty bearer returns undefined", () => {
     const req = mockRequest("Bearer ");
     const result = authenticateMcpRequest(req, API_KEY);
     expect(result).toBeUndefined();
   });
 
-  /** Wrong API key returns null. */
-  test("wrong API key returns null", () => {
+  /** Wrong API key returns undefined. */
+  test("wrong API key returns undefined", () => {
     const wrongKey = "b".repeat(64);
     const req = mockRequest(`Bearer ${wrongKey}`);
     const result = authenticateMcpRequest(req, API_KEY);
     expect(result).toBeUndefined();
   });
 
-  /** Expired scoped token returns null. */
-  test("expired scoped token returns null", () => {
+  /** Expired scoped token returns undefined. */
+  test("expired scoped token returns undefined", () => {
     // Create token with minimal TTL so it expires immediately
     const token = createScopedToken(CLAIMS, API_KEY, 1);
     const req = mockRequest(`Bearer ${token}`);
@@ -76,8 +76,8 @@ describe("authenticateMcpRequest", () => {
     expect(result).toBeUndefined();
   });
 
-  /** Revoked task returns null. */
-  test("revoked task returns null", () => {
+  /** Revoked task returns undefined. */
+  test("revoked task returns undefined", () => {
     const token = createScopedToken(CLAIMS, API_KEY);
     revokeTask("task-1");
     const req = mockRequest(`Bearer ${token}`);
@@ -100,7 +100,7 @@ describe("authenticateMcpRequest", () => {
       taskId: "task-1",
       projectId: "project-1",
       personaId: "persona-1",
-      sessionId: "session-1",
+      taskSessionId: "session-1",
     });
   });
 });

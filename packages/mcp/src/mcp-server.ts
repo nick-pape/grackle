@@ -237,6 +237,14 @@ async function handlePost(
     const sessionId = req.headers["mcp-session-id"] as string | undefined;
 
     if (sessionId && transports.has(sessionId)) {
+      // Reject if the auth type changed from the session's initial auth context
+      const initialAuth = authContexts.get(sessionId);
+      if (initialAuth && initialAuth.type !== authContext.type) {
+        res.writeHead(403, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "Auth context mismatch for session" }));
+        return;
+      }
+
       // Existing session — route to its transport
       const transport = transports.get(sessionId)!;
       await transport.handleRequest(req, res, body);

@@ -69,7 +69,7 @@ export function createScopedToken(
  *
  * @param token - The token string to verify.
  * @param signingSecret - The secret used to verify the HMAC signature.
- * @returns The decoded claims if valid, or null if verification fails.
+ * @returns The decoded claims if valid, or `undefined` if verification fails.
  */
 export function verifyScopedToken(token: string, signingSecret: string): ScopedTokenClaims | undefined {
   const dotIndex = token.indexOf(".");
@@ -111,9 +111,21 @@ export function verifyScopedToken(token: string, signingSecret: string): ScopedT
     return undefined;
   }
 
-  // Check expiry
+  // Validate claim types to prevent bypass via crafted payloads
+  if (
+    typeof claims.sub !== "string" ||
+    typeof claims.pid !== "string" ||
+    typeof claims.per !== "string" ||
+    typeof claims.sid !== "string" ||
+    !Number.isFinite(claims.iat) ||
+    !Number.isFinite(claims.exp)
+  ) {
+    return undefined;
+  }
+
+  // Check expiry (exp must be strictly greater than both iat and now)
   const now = Math.floor(Date.now() / 1000);
-  if (typeof claims.exp !== "number" || claims.exp <= now) {
+  if (claims.exp <= now || claims.exp <= claims.iat) {
     return undefined;
   }
 
@@ -122,7 +134,7 @@ export function verifyScopedToken(token: string, signingSecret: string): ScopedT
 
 /**
  * Revoke all tokens for a given task ID.
- * Revoked tokens are rejected by `verifyScopedToken` even if not yet expired.
+ * Revoked tokens are rejected by `authenticateMcpRequest` even if not yet expired.
  */
 export function revokeTask(taskId: string): void {
   revokedTasks.set(taskId, Date.now());

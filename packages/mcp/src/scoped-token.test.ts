@@ -37,8 +37,8 @@ describe("scoped-token", () => {
     expect(result!.exp).toBeGreaterThan(result!.iat);
   });
 
-  /** Tampered payload should fail verification. */
-  test("tampered payload returns null", () => {
+  /** Tampered payload returns undefined. */
+  test("tampered payload returns undefined", () => {
     const token = createScopedToken(CLAIMS, SIGNING_SECRET);
     const [payload, signature] = token.split(".");
     // Flip a character in the payload
@@ -47,8 +47,8 @@ describe("scoped-token", () => {
     expect(result).toBeUndefined();
   });
 
-  /** Tampered signature should fail verification. */
-  test("tampered signature returns null", () => {
+  /** Tampered signature returns undefined. */
+  test("tampered signature returns undefined", () => {
     const token = createScopedToken(CLAIMS, SIGNING_SECRET);
     const [payload, signature] = token.split(".");
     const tampered = signature.slice(0, -1) + (signature.endsWith("A") ? "B" : "A");
@@ -56,8 +56,8 @@ describe("scoped-token", () => {
     expect(result).toBeUndefined();
   });
 
-  /** Expired token should fail verification. */
-  test("expired token returns null", () => {
+  /** Expired token returns undefined. */
+  test("expired token returns undefined", () => {
     // Create a token with 1ms TTL
     const token = createScopedToken(CLAIMS, SIGNING_SECRET, 1);
     // The token was just created but with TTL < 1 second, so exp <= iat
@@ -66,35 +66,35 @@ describe("scoped-token", () => {
     expect(result).toBeUndefined();
   });
 
-  /** Wrong signing secret should fail verification. */
-  test("wrong signing secret returns null", () => {
+  /** Wrong signing secret returns undefined. */
+  test("wrong signing secret returns undefined", () => {
     const token = createScopedToken(CLAIMS, SIGNING_SECRET);
     const result = verifyScopedToken(token, "b".repeat(64));
     expect(result).toBeUndefined();
   });
 
   /** Empty string token should fail. */
-  test("empty string returns null", () => {
+  test("empty string returns undefined", () => {
     expect(verifyScopedToken("", SIGNING_SECRET)).toBeUndefined();
   });
 
   /** Token without a dot should fail. */
-  test("no dot returns null", () => {
+  test("no dot returns undefined", () => {
     expect(verifyScopedToken("nodothere", SIGNING_SECRET)).toBeUndefined();
   });
 
   /** Token with multiple dots should fail. */
-  test("triple dot returns null", () => {
+  test("triple dot returns undefined", () => {
     expect(verifyScopedToken("a.b.c", SIGNING_SECRET)).toBeUndefined();
   });
 
   /** Token with dot at start should fail. */
-  test("dot at start returns null", () => {
+  test("dot at start returns undefined", () => {
     expect(verifyScopedToken(".signature", SIGNING_SECRET)).toBeUndefined();
   });
 
   /** Token with dot at end should fail. */
-  test("dot at end returns null", () => {
+  test("dot at end returns undefined", () => {
     expect(verifyScopedToken("payload.", SIGNING_SECRET)).toBeUndefined();
   });
 
@@ -109,9 +109,8 @@ describe("scoped-token", () => {
   /** pruneRevocations removes stale entries. */
   test("pruneRevocations removes old entries", () => {
     revokeTask("task-old");
-    // Manually backdate the revocation by mocking Date.now
+    // Advance time by 25 hours (beyond the default 24h TTL) so the entry is stale
     const originalNow = Date.now;
-    // Prune with a 0ms TTL — all entries are stale
     vi.spyOn(Date, "now").mockReturnValue(originalNow() + 25 * 60 * 60 * 1000);
     pruneRevocations();
     vi.restoreAllMocks();

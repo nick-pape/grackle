@@ -53,7 +53,7 @@ export function authenticateMcpRequest(req: http.IncomingMessage, apiKey: string
       taskId: claims.sub,
       projectId: claims.pid,
       personaId: claims.per,
-      sessionId: claims.sid,
+      taskSessionId: claims.sid,
     };
   }
 
