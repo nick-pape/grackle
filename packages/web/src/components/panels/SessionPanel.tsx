@@ -84,7 +84,7 @@ interface EventListProps {
 
 /** Scrollable list of session events with empty-state messaging. */
 function EventList({ sessionEvents, session, eventsDropped, scrollRef }: EventListProps): JSX.Element {
-  const isTerminal = session && ["completed", "failed", "killed"].includes(session.status);
+  const isTerminal = session && ["completed", "failed", "interrupted"].includes(session.status);
   const emptyMessage = isTerminal
     ? `Session ${session.status} with no events recorded.`
     : "Waiting for events...";
@@ -335,7 +335,7 @@ function TaskOverview({ task, tasksById, environments, projects, taskSessions }:
           <div className={styles.depList}>
             {task.dependsOn.map((depId) => {
               const dep = tasksById.get(depId);
-              const isDone = dep?.status === "done";
+              const isDone = dep?.status === "complete";
               return (
                 <div
                   key={depId}
@@ -711,7 +711,7 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
   const isTaskBlocked = task
     ? task.dependsOn.some((depId) => {
         const dep = tasksById.get(depId);
-        return dep !== undefined && dep.status !== "done";
+        return dep !== undefined && dep.status !== "complete";
       })
     : false;
 
@@ -818,7 +818,7 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
   if (viewMode.kind === "project") {
     const project = projects.find((p) => p.id === viewMode.projectId);
     const projectTasks = tasks.filter((t) => t.projectId === viewMode.projectId);
-    const done = projectTasks.filter((t) => t.status === "done").length;
+    const done = projectTasks.filter((t) => t.status === "complete").length;
     const total = projectTasks.length;
     const progressPct = total > 0 ? Math.round((done / total) * 100) : 0;
 
@@ -1447,7 +1447,7 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
     );
   }
 
-  const isActive = session?.status === "running" || session?.status === "waiting_input";
+  const isActive = session?.status === "running" || session?.status === "idle";
 
   return (
     <div className={styles.panelContainer}>

@@ -311,6 +311,20 @@ function parseWsMessage(data: string): WsMessage | undefined {
   };
 }
 
+/**
+ * Map runtime status event content to normalized session status strings.
+ * The PowerLine runtime emits "waiting_input" and "killed" as event content,
+ * but the server stores "idle" and "interrupted". The frontend needs to use
+ * the same strings as the server for consistency with list_sessions responses.
+ */
+function mapSessionStatus(rawStatus: string): string {
+  switch (rawStatus) {
+    case "waiting_input": return "idle";
+    case "killed": return "interrupted";
+    default: return rawStatus;
+  }
+}
+
 const WS_RECONNECT_DELAY_MS: number = 3_000;
 /** Maximum number of events kept in memory per hook instance. Older events are dropped. */
 const MAX_EVENTS: number = 5_000;
@@ -599,12 +613,13 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
               setEventsDropped((n) => n + dropped);
             }
             if (event.eventType === "status") {
+              const mappedStatus = mapSessionStatus(event.content);
               setSessions((prev) => {
                 const exists = prev.some((s) => s.id === event.sessionId);
                 if (exists) {
                   return prev.map((s) =>
                     s.id === event.sessionId
-                      ? { ...s, status: event.content }
+                      ? { ...s, status: mappedStatus }
                       : s,
                   );
                 }
@@ -617,7 +632,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
                     id: event.sessionId,
                     environmentId: "",
                     runtime: "",
-                    status: event.content,
+                    status: mappedStatus,
                     prompt: "",
                     startedAt: event.timestamp,
                   },

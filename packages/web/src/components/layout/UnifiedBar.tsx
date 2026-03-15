@@ -133,7 +133,7 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
   const isTaskBlocked = task
     ? task.dependsOn.some((depId) => {
       const dep = tasks.find((t) => t.id === depId);
-      return dep && dep.status !== "done";
+      return dep && dep.status !== "complete";
     })
     : false;
 
@@ -440,11 +440,11 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
   // --- task modes ---
   if (viewMode.kind === "task" && task) {
     // Pending (blocked or unblocked) — action buttons are now in the task header
-    if (task.status === "pending" || task.status === "assigned") {
+    if (task.status === "not_started") {
       const blockerNames = isTaskBlocked
         ? task.dependsOn
           .map((depId) => tasks.find((t) => t.id === depId))
-          .filter((t) => t && t.status !== "done")
+          .filter((t) => t && t.status !== "complete")
           .map((t) => t!.title)
         : [];
       return (
@@ -460,9 +460,9 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
       );
     }
 
-    // In progress / waiting for input — show chat input when session is waiting, "agent working" otherwise
-    if (task.status === "in_progress" || task.status === "waiting_input") {
-      const isWaiting = taskSession?.status === "waiting_input";
+    // Working / paused — show chat input when session is idle, "agent working" otherwise
+    if (task.status === "working" || task.status === "paused") {
+      const isWaiting = taskSession?.status === "idle";
 
       if (isWaiting) {
         const effectiveEnvId = taskSession?.environmentId;
@@ -519,17 +519,17 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
       );
     }
 
-    // Review — action buttons (Approve/Reject) are now in the task header
-    if (task.status === "review") {
+    // Paused — action buttons (Complete/Resume/Retry) are now in the task header
+    if (task.status === "paused") {
       return (
         <div className={styles.bar}>
-          <span className={styles.hintText}>Review the changes above, then approve or reject in the header</span>
+          <span className={styles.hintText}>Review the changes above, then complete, resume, or retry in the header</span>
         </div>
       );
     }
 
     // Done — keep "+ New Task" as a navigation shortcut
-    if (task.status === "done") {
+    if (task.status === "complete") {
       return (
         <div className={styles.bar}>
           <span className={`${styles.statusText} ${styles.statusCompleted}`}>
@@ -608,8 +608,8 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
   // --- session mode ---
   if (viewMode.kind === "session") {
     const isRunning = session?.status === "running";
-    const isWaiting = session?.status === "waiting_input";
-    const isEnded = session !== undefined && ["completed", "failed", "killed"].includes(session.status);
+    const isWaiting = session?.status === "idle";
+    const isEnded = session !== undefined && ["completed", "failed", "interrupted"].includes(session.status);
 
     if (isRunning) {
       return (
