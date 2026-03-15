@@ -29,11 +29,8 @@ function loadApiKey(): string {
 
 /** Start the standalone MCP server, pointed at an already-running Grackle gRPC server. */
 function main(): void {
-  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string means "not set"
   const mcpPort = parseInt(process.env.GRACKLE_MCP_PORT || String(DEFAULT_MCP_PORT), 10);
-  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string means "not set"
   const bindHost = process.env.GRACKLE_HOST || "127.0.0.1";
-  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string means "not set"
   const apiKey = process.env.GRACKLE_API_KEY || loadApiKey();
 
   if (!ALLOWED_BIND_HOSTS.has(bindHost)) {
@@ -42,7 +39,6 @@ function main(): void {
   }
 
   // Parse the gRPC server URL to extract host and port
-  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string means "not set"
   const grackleUrl = process.env.GRACKLE_URL || `http://127.0.0.1:${DEFAULT_SERVER_PORT}`;
   let grpcPort: number;
   try {

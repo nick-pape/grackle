@@ -184,7 +184,7 @@ export class DockerAdapter implements EnvironmentAdapter {
 
   public async *provision(environmentId: string, config: Record<string, unknown>, powerlineToken: string): AsyncGenerator<ProvisionEvent> {
     const cfg = config as unknown as DockerEnvironmentConfig;
-    const image = cfg.image || DEFAULT_IMAGE;  // eslint-disable-line @typescript-eslint/prefer-nullish-coalescing -- empty-string fallback
+    const image = cfg.image || DEFAULT_IMAGE;
     const containerName = cfg.containerName ?? `grackle-${environmentId}`;
     const localPort = cfg.localPort ?? await findFreePort();
 

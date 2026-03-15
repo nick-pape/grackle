@@ -7,7 +7,6 @@ const execRaw: typeof execFile.__promisify__ = promisify(execFile);
 
 /** Wrapper that uses a shell so `git` resolves via PATH on all platforms. */
 async function exec(cmd: string, args: string[], opts: { cwd: string }): Promise<{ stdout: string; stderr: string }> {
-  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string means "not set"
   const shell = process.env.SHELL || true;
   const result = await execRaw(cmd, args, { ...opts, shell });
   return { stdout: String(result.stdout), stderr: String(result.stderr) };
@@ -31,7 +30,7 @@ export function worktreeDir(basePath: string, branch: string): string {
   // When repo is at a root-level path (e.g. /workspace in Docker),
   // dirname returns "/" which is typically not writable. Fall back to $HOME.
   if (parent === "/" || parent === "\\") {
-    const home = process.env.HOME || process.env.USERPROFILE || basePath; // eslint-disable-line @typescript-eslint/prefer-nullish-coalescing -- empty string means "not set"
+    const home = process.env.HOME || process.env.USERPROFILE || basePath;
     return resolve(home, ".grackle-worktrees", sanitized);
   }
   return resolve(parent, ".grackle-worktrees", sanitized);

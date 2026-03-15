@@ -25,7 +25,6 @@ function loadApiKey(): string {
 
 /** Create an authenticated ConnectRPC client for the central Grackle server. */
 export function createGrackleClient(serverUrl?: string): Client<typeof grackle.Grackle> {
-  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string means "not set"
   const url = serverUrl ?? (process.env.GRACKLE_URL || `http://127.0.0.1:${DEFAULT_SERVER_PORT}`);
   const apiKey = process.env.GRACKLE_API_KEY ?? loadApiKey();
   const transport = createGrpcTransport({

@@ -249,7 +249,6 @@ async function startTaskSession(
     return `Project not found: ${task.projectId}`;
   }
 
-  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string means "not provided"
   const environmentId = options?.environmentId || project.defaultEnvironmentId;
   const env = envRegistry.getEnvironment(environmentId);
   if (!env) {
@@ -268,7 +267,6 @@ async function startTaskSession(
   }
 
   // Resolve persona
-  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string means "not provided"
   const resolvedPersonaId = options?.personaId || "";
   const persona = resolvedPersonaId
     ? personaStore.getPersona(resolvedPersonaId)
@@ -278,12 +276,9 @@ async function startTaskSession(
   }
 
   const sessionId = uuid();
-  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string means "not provided"
   const runtime = options?.runtime || persona?.runtime || env.defaultRuntime || DEFAULT_RUNTIME;
   const model =
-    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string means "not provided"
     options?.model || persona?.model ||
-    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string means "not set"
     process.env.GRACKLE_DEFAULT_MODEL || DEFAULT_MODEL;
   const maxTurns = persona?.maxTurns ?? 0;
   const logPath = join(grackleHome, LOGS_DIR, sessionId);
@@ -350,7 +345,6 @@ async function startTaskSession(
     maxTurns,
     branch: freshTask.branch,
     worktreeBasePath: freshTask.branch
-      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string means "not set"
       ? (project.worktreeBasePath || process.env.GRACKLE_WORKTREE_BASE || "/workspace")
       : "",
     systemContext,
@@ -495,8 +489,8 @@ async function handleMessage(
     case "spawn": {
       const environmentId = msg.payload?.environmentId as string;
       const prompt = msg.payload?.prompt as string;
-      const model = (msg.payload?.model as string | undefined) || undefined; // eslint-disable-line @typescript-eslint/prefer-nullish-coalescing -- empty string means "not provided"
-      const runtime = (msg.payload?.runtime as string | undefined) || undefined; // eslint-disable-line @typescript-eslint/prefer-nullish-coalescing -- empty string means "not provided"
+      const model = (msg.payload?.model as string | undefined) || undefined;
+      const runtime = (msg.payload?.runtime as string | undefined) || undefined;
       const branch = (msg.payload?.branch as string) || "";
       const systemContext = (msg.payload?.systemContext as string) || "";
       const spawnPersonaId = (msg.payload?.personaId as string) || "";
@@ -563,7 +557,6 @@ async function handleMessage(
         maxTurns,
         branch,
         worktreeBasePath: branch
-          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string means "not set"
           ? ((typeof msg.payload?.worktreeBasePath === "string" ? msg.payload.worktreeBasePath.trim() : "") || process.env.GRACKLE_WORKTREE_BASE || "/workspace")
           : "",
         systemContext: finalSystemContext,

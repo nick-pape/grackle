@@ -430,7 +430,6 @@ export function ProjectPage(): JSX.Element {
                     </span>
                   ) : (
                     <span className={styles.metaPlaceholder}>
-                      {/* eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string means "not set" */}
                       {project?.defaultEnvironmentId || "No default environment"}
                     </span>
                   )}
@@ -476,7 +475,6 @@ export function ProjectPage(): JSX.Element {
                 <button
                   type="button"
                   className={styles.metaValueClickable}
-                  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string is valid default for edit field
                   onClick={() => startEdit("worktreeBasePath", project?.worktreeBasePath || "")}
                   title="Click to edit worktree base path"
                   aria-label="Edit worktree base path"
