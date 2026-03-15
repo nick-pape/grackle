@@ -8,7 +8,7 @@ export function groupConsecutiveTextEvents(events: SessionEvent[]): SessionEvent
   const result: SessionEvent[] = [];
   for (const event of events) {
     const previous = result[result.length - 1];
-    if (event.eventType === "text" && previous?.eventType === "text") {
+    if (event.eventType === "text" && previous.eventType === "text") {
       result[result.length - 1] = { ...previous, content: previous.content + event.content };
     } else {
       result.push(event);
@@ -34,7 +34,7 @@ export function pairToolEvents(events: SessionEvent[]): DisplayEvent[] {
     if (!raw || typeof raw.id !== "string") continue;
     try {
       const content = JSON.parse(e.content) as { tool: string; args: unknown };
-      toolUseById.set(raw.id, { tool: content.tool ?? "", args: content.args });
+      toolUseById.set(raw.id, { tool: content.tool, args: content.args });
     } catch { /* skip unparseable events */ }
   }
 

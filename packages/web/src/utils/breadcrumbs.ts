@@ -106,7 +106,7 @@ export function buildTaskBreadcrumbs(
   // Current task (non-clickable)
   const currentTask = ancestors[ancestors.length - 1];
   segments.push({
-    label: currentTask?.title ?? taskId,
+    label: currentTask.title,
     url: undefined,
   });
 

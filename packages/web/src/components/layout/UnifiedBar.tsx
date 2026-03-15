@@ -150,7 +150,7 @@ export function UnifiedBar(): JSX.Element {
   const task = taskId
     ? tasks.find((t) => t.id === taskId)
     : undefined;
-  const taskSessionId = task?.latestSessionId || undefined;
+  const taskSessionId = task?.latestSessionId ?? undefined;
   const taskSession = taskSessionId
     ? sessions.find((s) => s.id === taskSessionId)
     : undefined;
@@ -543,7 +543,7 @@ export function UnifiedBar(): JSX.Element {
       };
       return (
         <form onSubmit={handleSend} className={styles.bar}>
-          {sessionEnvDisconnected && session?.environmentId && (
+          {sessionEnvDisconnected && session.environmentId && (
             <DisconnectedBanner environmentId={session.environmentId} onReconnect={provisionEnvironment} />
           )}
           <input type="text" value={text} onChange={(e) => setText(e.target.value)} placeholder="Type a message..." autoFocus={!sessionEnvDisconnected} disabled={sessionEnvDisconnected} className={styles.input} />

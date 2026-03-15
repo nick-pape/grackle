@@ -152,7 +152,7 @@ export function ProjectPage(): JSX.Element {
     } else if (field === "repoUrl") {
       if (trimmed === project.repoUrl) { cancelEdit(); return; }
       updateProject(project.id, { repoUrl: trimmed });
-    } else if (field === "defaultEnvironmentId") {
+    } else {
       if (editDraft === project.defaultEnvironmentId) { cancelEdit(); return; }
       updateProject(project.id, { defaultEnvironmentId: editDraft });
     }
@@ -173,8 +173,7 @@ export function ProjectPage(): JSX.Element {
     if (field === "name") return editDraft.trim() !== project.name;
     if (field === "description") return editDraft !== project.description;
     if (field === "repoUrl") return editDraft.trim() !== project.repoUrl;
-    if (field === "defaultEnvironmentId") return editDraft !== project.defaultEnvironmentId;
-    return false;
+    return editDraft !== project.defaultEnvironmentId;
   };
 
   const defaultEnv = environments.find((e) => e.id === project?.defaultEnvironmentId);
@@ -220,12 +219,12 @@ export function ProjectPage(): JSX.Element {
             <button
               type="button"
               className={styles.metaValueClickable}
-              onClick={() => startEdit("name", project?.name || "")}
+              onClick={() => startEdit("name", project?.name ?? "")}
               title="Click to edit name"
-              aria-label={`Edit project name: ${project?.name || projectId}`}
+              aria-label={`Edit project name: ${project?.name ?? projectId}`}
               data-testid="edit-name-button"
             >
-              {project?.name || projectId}
+              {project?.name ?? projectId}
               <span className={styles.editButton} aria-hidden="true">
                 ✏️
               </span>
@@ -290,7 +289,7 @@ export function ProjectPage(): JSX.Element {
                 <button
                   type="button"
                   className={styles.metaValueClickable}
-                  onClick={() => startEdit("description", project?.description || "")}
+                  onClick={() => startEdit("description", project?.description ?? "")}
                   title="Click to edit description"
                   aria-label="Edit project description"
                   data-testid="edit-description-button"
@@ -344,7 +343,7 @@ export function ProjectPage(): JSX.Element {
                 <button
                   type="button"
                   className={styles.metaValueClickable}
-                  onClick={(e) => { e.preventDefault(); startEdit("repoUrl", project?.repoUrl || ""); }}
+                  onClick={(e) => { e.preventDefault(); startEdit("repoUrl", project?.repoUrl ?? ""); }}
                   title="Click to edit repository URL"
                   aria-label="Edit project repository URL"
                   data-testid="edit-repo-button"
@@ -413,7 +412,7 @@ export function ProjectPage(): JSX.Element {
                 <button
                   type="button"
                   className={styles.metaValueClickable}
-                  onClick={() => startEdit("defaultEnvironmentId", project?.defaultEnvironmentId || "")}
+                  onClick={() => startEdit("defaultEnvironmentId", project?.defaultEnvironmentId ?? "")}
                   title="Click to change default environment"
                   aria-label="Edit project default environment"
                   data-testid="edit-env-button"
@@ -425,7 +424,7 @@ export function ProjectPage(): JSX.Element {
                     </span>
                   ) : (
                     <span className={styles.metaPlaceholder}>
-                      {project?.defaultEnvironmentId || "No default environment"}
+                      {project?.defaultEnvironmentId ?? "No default environment"}
                     </span>
                   )}
                   <span className={styles.editButton} aria-hidden="true">
