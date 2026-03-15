@@ -21,7 +21,7 @@ vi.mock("../worktree.js", () => ({
   ensureWorktree: vi.fn(),
 }));
 
-import { buildFindingEvent, buildSubtaskCreateEvent, resolveWorkingDirectory, findGitRepoPath, GRACKLE_MCP_SCRIPT } from "./runtime-utils.js";
+import { buildFindingEvent, buildSubtaskCreateEvent, resolveWorkingDirectory, findGitRepoPath, GRACKLE_MCP_SCRIPT, resolveMcpServers } from "./runtime-utils.js";
 import { AsyncQueue } from "../utils/async-queue.js";
 import type { AgentEvent } from "./runtime.js";
 import { existsSync, readdirSync } from "node:fs";
@@ -421,5 +421,70 @@ describe("resolveWorkingDirectory", () => {
     expect(result).toBe("/worktrees/my-branch");
     expect(ensureWorktree).toHaveBeenCalled();
     queue.close();
+  });
+});
+
+describe("resolveMcpServers", () => {
+  afterEach(() => {
+    vi.mocked(existsSync).mockReset();
+    vi.mocked(existsSync).mockReturnValue(false);
+    vi.unstubAllEnvs();
+  });
+
+  it("injects HTTP broker entry when brokerConfig is provided", () => {
+    const result = resolveMcpServers(undefined, {
+      url: "http://127.0.0.1:54321/mcp",
+      token: "test-token",
+    });
+
+    expect(result.servers).toBeDefined();
+    const grackle = result.servers!.grackle as Record<string, unknown>;
+    expect(grackle.url).toBe("http://127.0.0.1:54321/mcp");
+    expect(grackle.headers).toEqual({ Authorization: "Bearer test-token" });
+  });
+
+  it("does not inject grackle entry when neither brokerConfig nor stdio stub exist", () => {
+    vi.mocked(existsSync).mockReturnValue(false);
+    const result = resolveMcpServers();
+    expect(result.servers).toBeUndefined();
+  });
+
+  it("falls back to stdio stub when no brokerConfig but script exists", () => {
+    vi.mocked(existsSync).mockReturnValue(true);
+    const result = resolveMcpServers();
+    expect(result.servers).toBeDefined();
+    const grackle = result.servers!.grackle as Record<string, unknown>;
+    expect(grackle.command).toBe("node");
+    expect(Array.isArray(grackle.args)).toBe(true);
+  });
+
+  it("brokerConfig takes priority over stdio stub", () => {
+    vi.mocked(existsSync).mockReturnValue(true);
+    const result = resolveMcpServers(undefined, {
+      url: "http://127.0.0.1:12345/mcp",
+      token: "priority-token",
+    });
+    const grackle = result.servers!.grackle as Record<string, unknown>;
+    expect(grackle.url).toBe("http://127.0.0.1:12345/mcp");
+    expect(grackle.command).toBeUndefined();
+  });
+
+  it("does not overwrite existing grackle entry from spawn config", () => {
+    const result = resolveMcpServers(
+      { grackle: { command: "custom", args: [] } },
+      { url: "http://broker/mcp", token: "t" },
+    );
+    const grackle = result.servers!.grackle as Record<string, unknown>;
+    expect(grackle.command).toBe("custom");
+    expect(grackle.url).toBeUndefined();
+  });
+
+  it("merges persona MCP servers alongside broker config", () => {
+    const result = resolveMcpServers(
+      { custom: { command: "other", args: [] } },
+      { url: "http://broker/mcp", token: "t" },
+    );
+    expect(result.servers!.custom).toBeDefined();
+    expect(result.servers!.grackle).toBeDefined();
   });
 });

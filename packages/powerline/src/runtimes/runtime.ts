@@ -23,6 +23,10 @@ export interface SpawnOptions {
   mcpServers?: Record<string, unknown>;
   /** SDK hook callbacks (e.g. Stop hooks). Only supported by the Claude Code runtime; other runtimes ignore this field. */
   hooks?: Record<string, unknown>;
+  /** URL of the MCP broker HTTP server (e.g. http://127.0.0.1:54321/mcp). */
+  mcpBrokerUrl?: string;
+  /** Scoped Bearer token for authenticating with the MCP broker. */
+  mcpToken?: string;
 }
 
 /** Parameters for resuming an existing agent session. */
@@ -43,6 +47,8 @@ export interface AgentSession {
   sendInput(text: string): void;
   /** Forcefully terminate the session. */
   kill(): void;
+  /** Push an externally-generated event (e.g. from MCP broker) into the session's event stream. */
+  pushEvent(event: AgentEvent): void;
 }
 
 /** Contract for pluggable agent runtime implementations (e.g. Claude Code, stub). */

@@ -34,6 +34,8 @@ message SpawnRequest {
   string project_id = 9; // So MCP server knows which project
   string task_id = 10; // So MCP server knows which task
   string mcp_servers_json = 11; // JSON-encoded MCP server configs from persona
+  string mcp_api_key = 12;     // Grackle API key for signing scoped tokens + gRPC forwarding
+  string mcp_grpc_url = 13;    // Grackle gRPC server URL (e.g. http://127.0.0.1:7434)
 }
 
 message ResumeRequest {

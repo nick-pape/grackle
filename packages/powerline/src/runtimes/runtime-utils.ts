@@ -14,7 +14,7 @@ const execFileAsync: typeof execFile.__promisify__ = promisify(execFile);
 
 const __dirname: string = dirname(fileURLToPath(import.meta.url));
 
-/** Path to the Grackle MCP server script, resolved relative to the PowerLine package. */
+/** @deprecated Path to the old stdio Grackle MCP server script. Replaced by the HTTP MCP broker. */
 export const GRACKLE_MCP_SCRIPT: string = join(__dirname, "../../mcp-grackle/index.js");
 
 // ─── Finding construction ──────────────────────────────────
@@ -274,13 +274,25 @@ export interface ResolvedMcpConfig {
   disallowedTools: string[];
 }
 
+/** Broker configuration for injecting the HTTP MCP server entry. */
+export interface BrokerConfig {
+  /** Full URL of the broker's /mcp endpoint. */
+  url: string;
+  /** Scoped Bearer token for this session. */
+  token: string;
+}
+
 /**
  * Load MCP server configurations from the shared GRACKLE_MCP_CONFIG file and spawn options.
  *
  * Also reads `disallowedTools` and filters matching tools from MCP server configs.
- * Auto-injects the Grackle coordination MCP server when the script is bundled.
+ * When `brokerConfig` is provided, injects an HTTP-based Grackle MCP server entry.
+ * Falls back to the old stdio stub if the script exists and no broker is available.
  */
-export function resolveMcpServers(spawnMcpServers?: Record<string, unknown>): ResolvedMcpConfig {
+export function resolveMcpServers(
+  spawnMcpServers?: Record<string, unknown>,
+  brokerConfig?: BrokerConfig,
+): ResolvedMcpConfig {
   let servers: Record<string, unknown> = {};
   let disallowedTools: string[] = [];
 
@@ -303,13 +315,21 @@ export function resolveMcpServers(spawnMcpServers?: Record<string, unknown>): Re
     servers = { ...servers, ...spawnMcpServers };
   }
 
-  // Auto-inject Grackle coordination MCP server if the script is bundled
-  if (existsSync(GRACKLE_MCP_SCRIPT) && !servers.grackle) {
-    servers.grackle = {
-      command: "node",
-      args: [GRACKLE_MCP_SCRIPT],
-      tools: ["post_finding", "create_subtask", "get_task_context", "update_task_status", "query_findings"],
-    };
+  // Inject the Grackle MCP server entry: prefer HTTP broker, fall back to stdio stub
+  if (!servers.grackle) {
+    if (brokerConfig) {
+      servers.grackle = {
+        url: brokerConfig.url,
+        headers: { Authorization: `Bearer ${brokerConfig.token}` },
+      };
+    } else if (existsSync(GRACKLE_MCP_SCRIPT)) {
+      // Legacy fallback: stdio stub (will be removed once broker is always available)
+      servers.grackle = {
+        command: "node",
+        args: [GRACKLE_MCP_SCRIPT],
+        tools: ["post_finding", "create_subtask", "get_task_context", "update_task_status", "query_findings"],
+      };
+    }
   }
 
   // Filter disallowed tools from MCP server configs. The disallowedTools list

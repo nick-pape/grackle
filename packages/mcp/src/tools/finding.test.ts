@@ -199,4 +199,60 @@ describe("finding_post", () => {
     expect(parsed.error).toContain("project not found");
     expect(parsed.code).toBe("NOT_FOUND");
   });
+
+  /** Verify scoped AuthContext provides taskId and sessionId. */
+  test("with scoped AuthContext uses taskId and taskSessionId", async () => {
+    const mockClient = {
+      postFinding: vi.fn().mockResolvedValue({
+        id: "f-4",
+        projectId: "p-1",
+        category: "bug",
+        title: "Scoped finding",
+        content: "Details",
+        tags: [],
+        createdAt: "2026-03-01T00:00:00Z",
+      }),
+    } as unknown as GrackleClient;
+
+    await tool.handler(
+      { projectId: "p-1", title: "Scoped finding" },
+      mockClient,
+      { type: "scoped", taskId: "task-42", projectId: "p-1", personaId: "per-1", taskSessionId: "sess-99" },
+    );
+
+    expect(mockClient.postFinding).toHaveBeenCalledWith(
+      expect.objectContaining({
+        taskId: "task-42",
+        sessionId: "sess-99",
+      }),
+    );
+  });
+
+  /** Verify api-key AuthContext uses empty strings for taskId and sessionId. */
+  test("with api-key AuthContext uses empty strings", async () => {
+    const mockClient = {
+      postFinding: vi.fn().mockResolvedValue({
+        id: "f-5",
+        projectId: "p-1",
+        category: "",
+        title: "API key finding",
+        content: "",
+        tags: [],
+        createdAt: "2026-03-01T00:00:00Z",
+      }),
+    } as unknown as GrackleClient;
+
+    await tool.handler(
+      { projectId: "p-1", title: "API key finding" },
+      mockClient,
+      { type: "api-key" },
+    );
+
+    expect(mockClient.postFinding).toHaveBeenCalledWith(
+      expect.objectContaining({
+        taskId: "",
+        sessionId: "",
+      }),
+    );
+  });
 });

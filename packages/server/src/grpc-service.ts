@@ -22,6 +22,7 @@ import {
   LOGS_DIR,
   DEFAULT_RUNTIME,
   DEFAULT_MODEL,
+  DEFAULT_SERVER_PORT,
   MAX_TASK_DEPTH,
   SESSION_STATUS,
   TASK_STATUS,
@@ -32,6 +33,7 @@ import {
 import { grackleHome } from "./paths.js";
 import { safeParseJsonArray } from "./json-helpers.js";
 import { computeTaskStatus } from "./compute-task-status.js";
+import { loadOrCreateApiKey } from "./api-key.js";
 import { logger } from "./logger.js";
 import { slugify } from "./utils/slugify.js";
 import { buildTaskSystemContext } from "./utils/system-context.js";
@@ -420,6 +422,10 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
 
       const mcpServersJson = persona ? personaMcpServersToJson(persona) : "";
 
+      const grpcPort = parseInt(process.env.GRACKLE_PORT || String(DEFAULT_SERVER_PORT), 10);
+      const bindHost = process.env.GRACKLE_HOST || "127.0.0.1";
+      const urlHost = bindHost.includes(":") ? `[${bindHost}]` : bindHost;
+
       const powerlineReq = create(powerline.SpawnRequestSchema, {
         sessionId,
         runtime,
@@ -432,6 +438,8 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
           : "",
         systemContext,
         mcpServersJson,
+        mcpApiKey: loadOrCreateApiKey(),
+        mcpGrpcUrl: `http://${urlHost}:${grpcPort}`,
       });
 
       processEventStream(conn.client.spawn(powerlineReq), {
@@ -905,6 +913,10 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         );
       }
 
+      const taskGrpcPort = parseInt(process.env.GRACKLE_PORT || String(DEFAULT_SERVER_PORT), 10);
+      const taskBindHost = process.env.GRACKLE_HOST || "127.0.0.1";
+      const taskUrlHost = taskBindHost.includes(":") ? `[${taskBindHost}]` : taskBindHost;
+
       const powerlineReq = create(powerline.SpawnRequestSchema, {
         sessionId,
         runtime,
@@ -919,6 +931,8 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         projectId: task.projectId,
         taskId: task.id,
         mcpServersJson,
+        mcpApiKey: loadOrCreateApiKey(),
+        mcpGrpcUrl: `http://${taskUrlHost}:${taskGrpcPort}`,
       });
 
       processEventStream(conn.client.spawn(powerlineReq), {

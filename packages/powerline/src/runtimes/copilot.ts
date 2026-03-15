@@ -1,8 +1,7 @@
-import type { AgentSession, AgentEvent } from "./runtime.js";
+import type { AgentSession } from "./runtime.js";
 import { BaseAgentSession } from "./base-session.js";
 import { BaseAgentRuntime } from "./base-runtime.js";
-import { AsyncQueue } from "../utils/async-queue.js";
-import { resolveWorkingDirectory, resolveMcpServers, buildFindingEvent, buildSubtaskCreateEvent } from "./runtime-utils.js";
+import { resolveWorkingDirectory, resolveMcpServers } from "./runtime-utils.js";
 import { logger } from "../logger.js";
 
 // ─── Environment variable names ────────────────────────────
@@ -92,53 +91,6 @@ export function resolveProviderConfig(): Record<string, unknown> | undefined {
 // Note: the return type is now ResolvedMcpConfig (from runtime-utils) instead of Record<string, unknown> | undefined.
 export { resolveMcpServers } from "./runtime-utils.js";
 
-/** @internal Build a `post_finding` tool definition for the Copilot session, so findings can be emitted. */
-export function buildFindingTool(defineTool: (name: string, opts: Record<string, unknown>) => unknown, eventQueue: AsyncQueue<AgentEvent>): unknown {
-  return defineTool("post_finding", {
-    description: "Post a finding discovered during the task. Findings are observations about code, architecture, bugs, patterns, or decisions.",
-    parameters: {
-      type: "object",
-      properties: {
-        title: { type: "string", description: "Short title for the finding" },
-        content: { type: "string", description: "Detailed content/body of the finding" },
-        category: { type: "string", description: "Category: architecture, api, bug, decision, dependency, pattern, or general" },
-        tags: { type: "array", items: { type: "string" }, description: "Tags for categorization" },
-      },
-      required: ["title", "content"],
-    },
-    handler: async (args: Record<string, unknown>) => {
-      eventQueue.push(buildFindingEvent(args, args));
-      return { status: "finding_posted", title: args.title };
-    },
-  });
-}
-
-/** @internal Build a `create_subtask` tool definition for the Copilot session, so subtask creation events can be emitted. */
-export function buildSubtaskCreateTool(defineTool: (name: string, opts: Record<string, unknown>) => unknown, eventQueue: AsyncQueue<AgentEvent>): unknown {
-  return defineTool("create_subtask", {
-    description: "Delegate work to another agent by creating a child task. Use this when work is too large or complex for you to complete alone.",
-    parameters: {
-      type: "object",
-      properties: {
-        title: { type: "string", description: "Short title for the subtask" },
-        description: { type: "string", description: "Detailed description of what to do" },
-        local_id: { type: "string", description: "Local ID for referencing in depends_on" },
-        depends_on: { type: "array", items: { type: "string" }, description: "Local IDs of sibling subtasks that must finish first" },
-        can_decompose: { type: "boolean", description: "Whether the subtask may create further subtasks" },
-      },
-      required: ["title", "description"],
-    },
-    handler: async (args: Record<string, unknown>) => {
-      eventQueue.push(buildSubtaskCreateEvent(args, args));
-      const result: Record<string, unknown> = { status: "subtask_queued", title: args.title };
-      if (args.local_id) {
-        result.local_id = args.local_id;
-      }
-      return result;
-    },
-  });
-}
-
 // ─── Session ───────────────────────────────────────────────
 
 /**
@@ -169,7 +121,6 @@ export class CopilotSession extends BaseAgentSession {
   protected async setupSdk(): Promise<void> {
     const ts = (): string => new Date().toISOString();
     const copilotSdk = await getCopilotSdk();
-    const { defineTool } = copilotSdk;
 
     // ── Resolve working directory ──
     const workingDirectory = await resolveWorkingDirectory({
@@ -224,7 +175,10 @@ export class CopilotSession extends BaseAgentSession {
     }
 
     // MCP servers
-    const mcpConfig = resolveMcpServers(this.mcpServers);
+    const mcpConfig = resolveMcpServers(
+      this.mcpServers,
+      this.mcpBrokerUrl ? { url: this.mcpBrokerUrl, token: this.mcpToken! } : undefined,
+    );
     if (mcpConfig.servers) {
       sessionConfig.mcpServers = mcpConfig.servers;
     }
@@ -233,14 +187,6 @@ export class CopilotSession extends BaseAgentSession {
     // The session runs until idle. Log if the caller requested a limit.
     if (this.maxTurns > 0) {
       logger.info({ maxTurns: this.maxTurns }, "maxTurns requested but Copilot SDK does not support turn limits — session will run until idle");
-    }
-
-    // Custom tools: inject post_finding and create_subtask tools
-    const tools: unknown[] = [];
-    tools.push(buildFindingTool(defineTool, this.eventQueue));
-    tools.push(buildSubtaskCreateTool(defineTool, this.eventQueue));
-    if (tools.length > 0) {
-      sessionConfig.tools = tools;
     }
 
     // Working directory (SDK uses "workingDirectory", not "cwd")
@@ -308,17 +254,6 @@ export class CopilotSession extends BaseAgentSession {
         content: JSON.stringify({ tool: toolName, args: toolArgs }),
         raw: event,
       });
-
-      // Intercept MCP finding tool calls (custom tool handler covers non-MCP path)
-      if (toolName === "mcp__grackle__post_finding") {
-        const args = toolArgs as Record<string, unknown>;
-        this.eventQueue.push(buildFindingEvent(args, event));
-      }
-      // Intercept MCP subtask creation tool calls (custom tool handler covers non-MCP path)
-      if (toolName === "mcp__grackle__create_subtask") {
-        const args = toolArgs as Record<string, unknown>;
-        this.eventQueue.push(buildSubtaskCreateEvent(args, event));
-      }
     });
 
     // Tool execution complete — data: { toolCallId, success, result?, error?, ... }
@@ -458,7 +393,11 @@ export class CopilotRuntime extends BaseAgentRuntime {
     systemContext?: string,
     mcpServers?: Record<string, unknown>,
     _hooks?: Record<string, unknown>, // Hooks not supported by Copilot SDK — accepted for interface compatibility
+    projectId?: string,
+    taskId?: string,
+    mcpBrokerUrl?: string,
+    mcpToken?: string,
   ): AgentSession {
-    return new CopilotSession(id, prompt, model, maxTurns, resumeSessionId, branch, worktreeBasePath, systemContext, mcpServers);
+    return new CopilotSession(id, prompt, model, maxTurns, resumeSessionId, branch, worktreeBasePath, systemContext, mcpServers, undefined, projectId, taskId, mcpBrokerUrl, mcpToken);
   }
 }

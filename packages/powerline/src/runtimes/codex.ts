@@ -1,7 +1,7 @@
 import type { AgentSession } from "./runtime.js";
 import { BaseAgentSession } from "./base-session.js";
 import { BaseAgentRuntime } from "./base-runtime.js";
-import { resolveWorkingDirectory, resolveMcpServers, buildFindingEvent, buildSubtaskCreateEvent } from "./runtime-utils.js";
+import { resolveWorkingDirectory, resolveMcpServers } from "./runtime-utils.js";
 import { logger } from "../logger.js";
 
 // ─── Environment variable names ────────────────────────────
@@ -114,7 +114,10 @@ class CodexSession extends BaseAgentSession {
     }
 
     // MCP servers — pass via config overrides, filtering disallowed tools
-    const mcpConfig = resolveMcpServers(this.mcpServers);
+    const mcpConfig = resolveMcpServers(
+      this.mcpServers,
+      this.mcpBrokerUrl ? { url: this.mcpBrokerUrl, token: this.mcpToken! } : undefined,
+    );
     if (mcpConfig.servers) {
       codexOptions.config = { mcpServers: mcpConfig.servers };
     }
@@ -297,20 +300,6 @@ class CodexSession extends BaseAgentSession {
               content: error || result || "",
               raw: event,
             });
-
-            // Intercept finding tool calls from Grackle MCP server
-            const toolName = (item.toolName ?? "") as string;
-            const serverName = (item.serverName ?? "") as string;
-            const qualifiedName = `mcp__${serverName}__${toolName}`;
-            if (toolName === "post_finding" || qualifiedName === "mcp__grackle__post_finding") {
-              const args = (item.arguments ?? {}) as Record<string, unknown>;
-              this.eventQueue.push(buildFindingEvent(args, event));
-            }
-            // Intercept subtask creation tool calls only on successful invocation
-            if (!error && (toolName === "create_subtask" || qualifiedName === "mcp__grackle__create_subtask")) {
-              const args = (item.arguments ?? {}) as Record<string, unknown>;
-              this.eventQueue.push(buildSubtaskCreateEvent(args, event));
-            }
           } else if (type === "reasoning") {
             messageCount++;
             const summary = (item.summary ?? item.text ?? "") as string;
@@ -378,7 +367,11 @@ export class CodexRuntime extends BaseAgentRuntime {
     systemContext?: string,
     mcpServers?: Record<string, unknown>,
     _hooks?: Record<string, unknown>, // Hooks not supported by Codex SDK — accepted for interface compatibility
+    projectId?: string,
+    taskId?: string,
+    mcpBrokerUrl?: string,
+    mcpToken?: string,
   ): AgentSession {
-    return new CodexSession(id, prompt, model, maxTurns, resumeSessionId, branch, worktreeBasePath, systemContext, mcpServers);
+    return new CodexSession(id, prompt, model, maxTurns, resumeSessionId, branch, worktreeBasePath, systemContext, mcpServers, undefined, projectId, taskId, mcpBrokerUrl, mcpToken);
   }
 }
