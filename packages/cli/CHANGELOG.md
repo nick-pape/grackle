@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sat, 14 Mar 2026 21:33:40 GMT and should not be manually modified.
+This log was last generated on Sun, 15 Mar 2026 04:23:26 GMT and should not be manually modified.
+
+## 0.26.0
+Sun, 15 Mar 2026 04:23:26 GMT
+
+### Minor changes
+
+- Decouple tasks from sessions: tasks are durable goals, sessions are ephemeral execution attempts. Task status computed from session history. Environment and persona selected at start time.
 
 ## 0.25.0
 Sat, 14 Mar 2026 21:33:40 GMT
