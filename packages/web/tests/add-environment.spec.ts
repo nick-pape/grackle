@@ -291,7 +291,10 @@ test.describe("Add Environment — WebSocket Handler", () => {
     await page.locator('input[placeholder="Environment name..."]').fill("ui-test-env");
 
     // Click Add
-    await page.locator("button", { hasText: "Add" }).click();
+    await page.locator("button", { hasText: /^Add$/ }).click();
+
+    // Wait for navigation back to settings to complete
+    await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible({ timeout: 5_000 });
 
     // Form should close (back to settings mode)
     await expect(page.locator("text=new env")).not.toBeVisible({ timeout: 5_000 });
