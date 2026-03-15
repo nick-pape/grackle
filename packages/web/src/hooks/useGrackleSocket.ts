@@ -560,7 +560,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
               // real-time session_event status messages (which may be more
               // recent than the list_sessions DB snapshot).  Prefer the
               // real-time status for active sessions to avoid overwriting
-              // "waiting_input" with a stale "running" from the query.
+              // "idle" with a stale "running" from the query.
               const prevMap = new Map(prev.map((s) => [s.id, s.status]));
               const ACTIVE = new Set(["pending", "running", "idle"]);
               const TERMINAL = new Set(["completed", "failed", "interrupted"]);
