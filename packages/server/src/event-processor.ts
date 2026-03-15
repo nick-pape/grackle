@@ -16,7 +16,7 @@ import { logger } from "./logger.js";
 import type { ProcessorContext } from "./processor-registry.js";
 
 /** Terminal session statuses that indicate the session has already ended. */
-const TERMINAL_STATUSES: string[] = ["completed", "failed", "killed"];
+const TERMINAL_STATUSES: string[] = ["completed", "failed", "interrupted"];
 
 /** Options for processing an agent event stream. */
 export interface EventStreamOptions {
@@ -262,8 +262,9 @@ export function processEventStream(
         }
 
         if (event.type === "status") {
+          // Map runtime status strings to our session status model
           if (event.content === "waiting_input") {
-            sessionStore.updateSessionStatus(sessionId, "waiting_input");
+            sessionStore.updateSessionStatus(sessionId, "idle");
           } else if (event.content === "running") {
             sessionStore.updateSessionStatus(sessionId, "running");
           } else if (event.content === "completed") {
@@ -271,7 +272,7 @@ export function processEventStream(
           } else if (event.content === "failed") {
             sessionStore.updateSession(sessionId, "failed");
           } else if (event.content === "killed") {
-            sessionStore.updateSession(sessionId, "killed");
+            sessionStore.updateSession(sessionId, "interrupted");
           }
 
           // Broadcast task_updated on status changes so frontend re-fetches computed status.
@@ -293,7 +294,7 @@ export function processEventStream(
       }
     } catch (err) {
       const current = sessionStore.getSession(sessionId);
-      if (current && current.status === "waiting_input") {
+      if (current && current.status === "idle") {
         // Session was idle (agent finished work). Transport error is not a task failure.
         logger.info({ sessionId, err: String(err) }, "Stream ended while session idle — marking completed");
         sessionStore.updateSession(sessionId, "completed");

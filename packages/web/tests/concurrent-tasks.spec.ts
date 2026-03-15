@@ -46,19 +46,19 @@ test.describe("Concurrent Tasks", () => {
     // Complete both tasks: send input to A
     await inputField.fill("continue");
     await page.locator("button", { hasText: "Send" }).click();
-    await page.locator("button", { hasText: "Approve" }).waitFor({ timeout: 15_000 });
+    await page.locator("button", { hasText: "Complete" }).waitFor({ timeout: 15_000 });
 
     // Complete task B
     await navigateToTask(page, "conc-task-b");
     await inputField.waitFor({ timeout: 5_000 });
     await inputField.fill("continue");
     await page.locator("button", { hasText: "Send" }).click();
-    await page.locator("button", { hasText: "Approve" }).waitFor({ timeout: 15_000 });
+    await page.locator("button", { hasText: "Complete" }).waitFor({ timeout: 15_000 });
 
     // Both tasks should independently reach review
-    await expect(page.locator("button", { hasText: "Approve" })).toBeVisible();
+    await expect(page.locator("button", { hasText: "Complete" })).toBeVisible();
     await navigateToTask(page, "conc-task-a");
-    await expect(page.locator("button", { hasText: "Approve" })).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator("button", { hasText: "Complete" })).toBeVisible({ timeout: 5_000 });
   });
 
   test("concurrent tasks show correct sidebar status simultaneously", async ({ appPage }) => {

@@ -8,15 +8,15 @@ describe("buildTaskSystemContext", () => {
     expect(result).toContain("Do the thing");
   });
 
-  it("includes review notes when provided", () => {
+  it("includes notes when provided", () => {
     const result = buildTaskSystemContext("Task", "desc", "Fix the bug please");
-    expect(result).toContain("## Review Feedback");
+    expect(result).toContain("## Notes");
     expect(result).toContain("Fix the bug please");
   });
 
-  it("omits review section when notes are empty", () => {
+  it("omits notes section when notes are empty", () => {
     const result = buildTaskSystemContext("Task", "desc", "");
-    expect(result).not.toContain("Review Feedback");
+    expect(result).not.toContain("## Notes");
   });
 
   it("always includes post_finding and query_findings tools", () => {

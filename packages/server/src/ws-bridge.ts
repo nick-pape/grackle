@@ -256,7 +256,7 @@ async function autoProvisionEnvironment(
 async function startTaskSession(
   ws: WebSocket,
   task: taskStore.TaskRow,
-  options?: { runtime?: string; model?: string; personaId?: string; environmentId?: string },
+  options?: { runtime?: string; model?: string; personaId?: string; environmentId?: string; notes?: string },
 ): Promise<string | undefined> {
   const project = projectStore.getProject(task.projectId);
   if (!project) {
@@ -311,7 +311,7 @@ async function startTaskSession(
   let systemContext = buildTaskSystemContext(
     freshTask.title,
     freshTask.description,
-    freshTask.reviewNotes,
+    options?.notes || "",
     freshTask.canDecompose,
   );
   if (persona) {
@@ -621,11 +621,11 @@ async function handleMessage(
         return;
       }
 
-      if (session.status !== "waiting_input") {
+      if (session.status !== "idle") {
         sendWs(ws, {
           type: "error",
           payload: {
-            message: `Session ${sessionId} is not currently waiting for input (status: ${session.status})`,
+            message: `Session ${sessionId} is not currently idle (status: ${session.status})`,
           },
         });
         return;
@@ -689,13 +689,13 @@ async function handleMessage(
           logger.warn({ sessionId, err }, "PowerLine kill failed — marking session killed anyway");
         }
       }
-      sessionStore.updateSession(sessionId, "killed");
+      sessionStore.updateSession(sessionId, "interrupted");
       streamHub.publish(
         create(grackle.SessionEventSchema, {
           sessionId,
           type: grackle.EventType.STATUS,
           timestamp: new Date().toISOString(),
-          content: "killed",
+          content: "interrupted",
           raw: "",
         }),
       );
@@ -962,7 +962,6 @@ async function handleMessage(
               branch: r.branch,
               latestSessionId: computed.latestSessionId,
               dependsOn: safeParseJsonArray(r.dependsOn),
-              reviewNotes: r.reviewNotes,
               sortOrder: r.sortOrder,
               createdAt: r.createdAt,
               parentTaskId: r.parentTaskId,
@@ -1042,7 +1041,7 @@ async function handleMessage(
           sendWs(ws, { type: "error", payload: { message: `Session not found: ${lateBindSessionId}` } });
           return;
         }
-        const terminalStatuses = ["completed", "failed", "killed"];
+        const terminalStatuses = ["completed", "failed", "interrupted"];
         if (terminalStatuses.includes(session.status)) {
           sendWs(ws, {
             type: "error",
@@ -1076,8 +1075,8 @@ async function handleMessage(
         break;
       }
 
-      // Only allow editing pending/assigned tasks (non-late-bind path)
-      if (!["pending", "assigned"].includes(existingTask.status)) {
+      // Only allow editing not_started tasks (non-late-bind path)
+      if (existingTask.status !== "not_started") {
         sendWs(ws, {
           type: "error",
           payload: { message: `Task ${updateTaskId} cannot be edited (status: ${existingTask.status})` },
@@ -1106,7 +1105,6 @@ async function handleMessage(
         updatedDescription,
         existingTask.status,
         updatedDependsOn,
-        existingTask.reviewNotes,
       );
       const updatedRow = taskStore.getTask(updateTaskId);
       broadcast({
@@ -1137,7 +1135,7 @@ async function handleMessage(
       {
         const taskSessions = sessionStore.listSessionsForTask(taskId);
         const { status: effectiveStatus } = computeTaskStatus(task.status, taskSessions);
-        if (!["pending", "assigned", "failed"].includes(effectiveStatus)) {
+        if (!["not_started", "failed"].includes(effectiveStatus)) {
           sendWs(ws, {
             type: "error",
             payload: {
@@ -1160,6 +1158,7 @@ async function handleMessage(
         model: msg.payload?.model as string | undefined,
         personaId: (msg.payload?.personaId as string) || undefined,
         environmentId: (msg.payload?.environmentId as string) || undefined,
+        notes: (msg.payload?.notes as string) || undefined,
       });
       if (startError) {
         sendWs(ws, { type: "error", payload: { message: startError } });
@@ -1167,96 +1166,89 @@ async function handleMessage(
       break;
     }
 
-    case "approve_task": {
+    case "complete_task": {
       const taskId = msg.payload?.taskId as string;
       if (!taskId) return;
 
-      taskStore.markTaskCompleted(taskId, "done");
+      taskStore.markTaskComplete(taskId, "complete");
       const task = taskStore.getTask(taskId);
       const unblocked = task ? taskStore.checkAndUnblock(task.projectId) : [];
       sendWs(ws, {
-        type: "task_approved",
+        type: "task_completed",
         payload: {
           taskId,
           unblockedTaskIds: unblocked.map((t) => t.id),
         },
       });
+      if (task) {
+        broadcast({
+          type: "task_completed",
+          payload: { taskId, projectId: task.projectId },
+        });
+      }
       break;
     }
 
-    case "reject_task": {
+    case "resume_task": {
       const taskId = msg.payload?.taskId as string;
-      const reviewNotes = (msg.payload?.reviewNotes as string) || "";
       if (!taskId) return;
 
       const task = taskStore.getTask(taskId);
-      if (!task) return;
+      if (!task) {
+        sendWs(ws, { type: "error", payload: { message: `Task not found: ${taskId}` } });
+        return;
+      }
 
-      // Use computed status (derived from session history) since the stored
-      // status is never explicitly set to "review".
-      const taskSessions = sessionStore.listSessionsByTaskIds([taskId]);
-      const { status: effectiveStatus } = computeTaskStatus(task.status, taskSessions);
-
-      if (effectiveStatus !== "review") {
+      const latestSession = sessionStore.getLatestSessionForTask(taskId);
+      if (!latestSession) {
+        sendWs(ws, { type: "error", payload: { message: `Task ${taskId} has no sessions to resume` } });
+        return;
+      }
+      if (!["interrupted", "completed"].includes(latestSession.status)) {
         sendWs(ws, {
           type: "error",
-          payload: {
-            message: `Task cannot be rejected (status: ${effectiveStatus})`,
-          },
+          payload: { message: `Latest session ${latestSession.id} is not resumable (status: ${latestSession.status})` },
+        });
+        return;
+      }
+      if (!latestSession.runtimeSessionId) {
+        sendWs(ws, {
+          type: "error",
+          payload: { message: `Latest session ${latestSession.id} has no runtime session ID — cannot resume` },
         });
         return;
       }
 
-      // Preserve runtime/model from the previous session so the retry
-      // doesn't unexpectedly switch runtimes/models.
-      const previousSession = sessionStore.getLatestSessionForTask(task.id);
+      const env = envRegistry.getEnvironment(latestSession.environmentId);
+      if (!env) {
+        sendWs(ws, { type: "error", payload: { message: `Environment not found: ${latestSession.environmentId}` } });
+        return;
+      }
 
-      // Store review notes and reset status to "pending" so computeTaskStatus
-      // can derive the effective status from the new retry session.  We use
-      // "pending" rather than "assigned" because rejection + retry is an
-      // automated flow — "assigned" implies deliberate human assignment.
-      taskStore.updateTask(
-        task.id,
-        task.title,
-        task.description,
-        "pending",
-        safeParseJsonArray(task.dependsOn),
-        reviewNotes,
-      );
-      broadcast({
-        type: "task_rejected",
-        payload: { taskId, projectId: task.projectId },
+      const conn = await autoProvisionEnvironment(ws, latestSession.environmentId, env, { taskId });
+      if (!conn) {
+        return;
+      }
+
+      const powerlineReq = create(powerline.ResumeRequestSchema, {
+        sessionId: latestSession.id,
+        runtimeSessionId: latestSession.runtimeSessionId,
+        runtime: latestSession.runtime,
       });
 
-      // Auto-retry: start a new session with the review feedback
-      const freshTask = taskStore.getTask(taskId);
-      if (freshTask) {
-        const retryError = await startTaskSession(ws, freshTask, {
-          runtime: previousSession?.runtime,
-          model: previousSession?.model,
-          environmentId: previousSession?.environmentId,
-          personaId: previousSession?.personaId,
-        });
-        if (retryError) {
-          // Retry failed — set status to "assigned" so the user can retry manually.
-          logger.warn(
-            { taskId, error: retryError },
-            "Auto-retry after rejection failed — task set to assigned",
-          );
-          taskStore.updateTask(
-            freshTask.id,
-            freshTask.title,
-            freshTask.description,
-            "assigned",
-            safeParseJsonArray(freshTask.dependsOn),
-            freshTask.reviewNotes,
-          );
-          broadcast({
-            type: "task_updated",
-            payload: { taskId, projectId: freshTask.projectId },
-          });
-        }
-      }
+      const logPath = latestSession.logPath || join(grackleHome, LOGS_DIR, latestSession.id);
+
+      processEventStream(conn.client.resume(powerlineReq), {
+        sessionId: latestSession.id,
+        logPath,
+        projectId: task.projectId,
+        taskId: task.id,
+      });
+
+      broadcast({
+        type: "task_started",
+        payload: { taskId: task.id, sessionId: latestSession.id, projectId: task.projectId },
+      });
       break;
     }
 
@@ -1290,12 +1282,12 @@ async function handleMessage(
             logger.warn({ taskId, sessionId: activeSession.id, err }, "Failed to kill session during task deletion");
           }
         }
-        sessionStore.updateSession(activeSession.id, "killed");
+        sessionStore.updateSession(activeSession.id, "interrupted");
         streamHub.publish(create(grackle.SessionEventSchema, {
           sessionId: activeSession.id,
           type: grackle.EventType.STATUS,
           timestamp: new Date().toISOString(),
-          content: "killed",
+          content: "interrupted",
           raw: "",
         }));
       }

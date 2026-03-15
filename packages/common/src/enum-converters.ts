@@ -54,24 +54,28 @@ export function eventTypeToString(e: EventType): string {
 
 const taskStatusToEnumMap: Record<string, TaskStatus> = Object.assign(Object.create(null), {
   "": TaskStatus.UNSPECIFIED,
-  "pending": TaskStatus.PENDING,
-  "assigned": TaskStatus.ASSIGNED,
-  "in_progress": TaskStatus.IN_PROGRESS,
-  "review": TaskStatus.REVIEW,
-  "done": TaskStatus.DONE,
+  // Canonical mappings
+  "not_started": TaskStatus.NOT_STARTED,
+  "working": TaskStatus.WORKING,
+  "paused": TaskStatus.PAUSED,
+  "complete": TaskStatus.COMPLETE,
   "failed": TaskStatus.FAILED,
-  "waiting_input": TaskStatus.WAITING_INPUT,
+  // Backwards-compatible read mappings (old DB strings → new enums)
+  "pending": TaskStatus.NOT_STARTED,
+  "assigned": TaskStatus.NOT_STARTED,
+  "in_progress": TaskStatus.WORKING,
+  "waiting_input": TaskStatus.PAUSED,
+  "review": TaskStatus.PAUSED,
+  "done": TaskStatus.COMPLETE,
 });
 
 const taskStatusToStringMap: Record<number, string> = {
   [TaskStatus.UNSPECIFIED]: "",
-  [TaskStatus.PENDING]: "pending",
-  [TaskStatus.ASSIGNED]: "assigned",
-  [TaskStatus.IN_PROGRESS]: "in_progress",
-  [TaskStatus.REVIEW]: "review",
-  [TaskStatus.DONE]: "done",
+  [TaskStatus.NOT_STARTED]: "not_started",
+  [TaskStatus.WORKING]: "working",
+  [TaskStatus.PAUSED]: "paused",
+  [TaskStatus.COMPLETE]: "complete",
   [TaskStatus.FAILED]: "failed",
-  [TaskStatus.WAITING_INPUT]: "waiting_input",
 };
 
 /** Convert a string task status to its proto enum value. */

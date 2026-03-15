@@ -12,10 +12,10 @@ const DEFAULT_TIMEOUT_SECONDS: number = 30;
 const MAX_TIMEOUT_SECONDS: number = 300;
 
 /** Session statuses considered "active" for filtering purposes. */
-const ACTIVE_STATUSES: string[] = ["pending", "running", "waiting_input", "suspended"];
+const ACTIVE_STATUSES: string[] = ["pending", "running", "idle"];
 
 /** Session statuses that indicate no further events will arrive. */
-const TERMINAL_STATUSES: string[] = ["completed", "failed", "killed"];
+const TERMINAL_STATUSES: string[] = ["completed", "failed", "interrupted"];
 
 /** MCP tools for managing Grackle agent sessions. */
 export const sessionTools: ToolDefinition[] = [

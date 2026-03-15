@@ -45,8 +45,8 @@ import {
 
 // ─── Constants ──────────────────────────────────────
 
-/** Delay before the "waiting_input" status is set after the last pre-pause step. */
-const WAITING_INPUT_DELAY_MS: number = 400;
+/** Delay before the "idle" status is set after the last pre-pause step. */
+const IDLE_DELAY_MS: number = 400;
 
 // ─── Props ──────────────────────────────────────────
 
@@ -229,15 +229,15 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
         // After the last pre-pause step, transition to waiting_input
         schedule(
           () => {
-            updateSessionStatus(sessionId, "waiting_input");
+            updateSessionStatus(sessionId, "idle");
             appendEvent({
               sessionId,
               eventType: "status",
               timestamp: new Date().toISOString(),
-              content: "waiting_input",
+              content: "idle",
             });
           },
-          lastStepDelay + WAITING_INPUT_DELAY_MS,
+          lastStepDelay + IDLE_DELAY_MS,
           sessionId,
         );
 
@@ -265,23 +265,23 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       // 2. Remove any pending resume steps
       pendingResumeRef.current.delete(sessionId);
 
-      // 3. Update session status to "killed"
-      updateSessionStatus(sessionId, "killed");
+      // 3. Update session status to "interrupted"
+      updateSessionStatus(sessionId, "interrupted");
 
       // 4. Append a status event
       appendEvent({
         sessionId,
         eventType: "status",
         timestamp: new Date().toISOString(),
-        content: "killed",
+        content: "interrupted",
       });
 
       // 5. With computed status, killing a session makes the task retryable
-      // (computed back to "pending"), so reset in-progress tasks to "pending".
+      // (computed back to "not_started"), so reset in-progress tasks to "not_started".
       setTasks((prev) =>
         prev.map((t) =>
-          t.latestSessionId === sessionId && t.status === "in_progress"
-            ? { ...t, status: "pending" }
+          t.latestSessionId === sessionId && t.status === "working"
+            ? { ...t, status: "not_started" }
             : t,
         ),
       );
@@ -387,11 +387,11 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
           projectId,
           title,
           description: description || "",
-          status: "pending",
+          status: "not_started",
           branch: "",
           latestSessionId: "",
           dependsOn: dependsOn || [],
-          reviewNotes: "",
+          reviewNotes: undefined,
           sortOrder: maxSort + 1,
           createdAt: new Date().toISOString(),
           parentTaskId: parentTaskId || "",
@@ -408,8 +408,8 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
 
   /**
    * Starts a task: creates a new session, links it to the task, sets the
-   * task to "in_progress", and plays a stream scenario. On scenario
-   * completion, transitions the task to "review".
+   * task to "working", and plays a stream scenario. On scenario
+   * completion, transitions the task to "paused".
    *
    * Also handles retry from "failed" — the task gets a fresh session.
    */
@@ -434,13 +434,13 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
 
       setSessions((prev) => [...prev, newSession]);
 
-      // Update task: status → "in_progress", latestSessionId → new session, branch → mock branch
+      // Update task: status → "working", latestSessionId → new session, branch → mock branch
       setTasks((prev) =>
         prev.map((t) =>
           t.id === taskId
             ? {
               ...t,
-              status: "in_progress",
+              status: "working",
               latestSessionId: sessionId,
               branch: `mock/${taskId.slice(0, 8)}`,
             }
@@ -462,19 +462,19 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
 
         schedule(
           () => {
-            updateSessionStatus(sessionId, "waiting_input");
+            updateSessionStatus(sessionId, "idle");
             appendEvent({
               sessionId,
               eventType: "status",
               timestamp: new Date().toISOString(),
-              content: "waiting_input",
+              content: "idle",
             });
           },
-          lastStepDelay + WAITING_INPUT_DELAY_MS,
+          lastStepDelay + IDLE_DELAY_MS,
           sessionId,
         );
 
-        // Store resume steps; on resume completion, transition task to "review"
+        // Store resume steps; on resume completion, transition task to "paused"
         if (scenario.resumeSteps) {
           // Append a synthetic completion callback step
           const resumeWithReview: MockStreamStep[] = [
@@ -506,7 +506,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
           });
         }
       } else {
-        // Straight-through scenario: on last step, transition task to "review"
+        // Straight-through scenario: on last step, transition task to "paused"
         const lastStepDelay =
           scenario.steps.length > 0
             ? scenario.steps[scenario.steps.length - 1].delayMs
@@ -515,22 +515,22 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
         playScenario(sessionId, scenario.steps);
 
         // After scenario completes, if the session ended in "completed",
-        // set task to "review". If it ended in "failed", set task to "failed".
+        // set task to "paused". If it ended in "failed", set task to "failed".
         const finalStatus = scenario.steps[scenario.steps.length - 1]?.event.content;
         schedule(
           () => {
             if (finalStatus === "completed") {
               setTasks((prev) =>
                 prev.map((t) =>
-                  t.id === taskId && t.status === "in_progress"
-                    ? { ...t, status: "review" }
+                  t.id === taskId && t.status === "working"
+                    ? { ...t, status: "paused" }
                     : t,
                 ),
               );
             } else if (finalStatus === "failed") {
               setTasks((prev) =>
                 prev.map((t) =>
-                  t.id === taskId && t.status === "in_progress"
+                  t.id === taskId && t.status === "working"
                     ? { ...t, status: "failed" }
                     : t,
                 ),
@@ -607,8 +607,8 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
           () => {
             setTasks((prev) =>
               prev.map((t) =>
-                t.id === pendingReview.taskId && t.status === "in_progress"
-                  ? { ...t, status: "review" }
+                t.id === pendingReview.taskId && t.status === "working"
+                  ? { ...t, status: "paused" }
                   : t,
               ),
             );
@@ -621,30 +621,23 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
     [appendEvent, updateSessionStatus, playScenario, schedule],
   );
 
-  /** Approves a task: sets status to "done". */
-  const approveTask: UseGrackleSocketResult["approveTask"] = useCallback(
+  /** Completes a task: sets status to "complete" (human-authoritative). */
+  const completeTask: UseGrackleSocketResult["completeTask"] = useCallback(
     (taskId: string) => {
       // eslint-disable-next-line no-console
-      console.log("[MockGrackle] approveTask", taskId);
+      console.log("[MockGrackle] completeTask", taskId);
       setTasks((prev) =>
-        prev.map((t) => (t.id === taskId ? { ...t, status: "done" } : t)),
+        prev.map((t) => (t.id === taskId ? { ...t, status: "complete" } : t)),
       );
     },
     [],
   );
 
-  /** Rejects a task: sets status back to "assigned" with review notes, clears latestSessionId. */
-  const rejectTask: UseGrackleSocketResult["rejectTask"] = useCallback(
-    (taskId: string, reviewNotes: string) => {
+  /** Resumes the latest session for a task (mock: no-op, just logs). */
+  const resumeTask: UseGrackleSocketResult["resumeTask"] = useCallback(
+    (taskId: string) => {
       // eslint-disable-next-line no-console
-      console.log("[MockGrackle] rejectTask", { taskId, reviewNotes });
-      setTasks((prev) =>
-        prev.map((t) =>
-          t.id === taskId
-            ? { ...t, status: "assigned", reviewNotes, latestSessionId: "" }
-            : t,
-        ),
-      );
+      console.log("[MockGrackle] resumeTask", taskId);
     },
     [],
   );
@@ -825,8 +818,8 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       loadTasks,
       createTask,
       startTask,
-      approveTask,
-      rejectTask,
+      completeTask,
+      resumeTask,
       updateTask,
       deleteTask,
       loadFindings,
@@ -918,8 +911,8 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       loadTasks,
       createTask,
       startTask,
-      approveTask,
-      rejectTask,
+      completeTask,
+      resumeTask,
       updateTask,
       deleteTask,
       loadFindings,

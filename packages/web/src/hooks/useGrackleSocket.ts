@@ -49,9 +49,11 @@ export interface TaskData {
   branch: string;
   latestSessionId: string;
   dependsOn: string[];
-  reviewNotes: string;
+  /** @deprecated Removed — notes are now passed via StartTask. */
+  reviewNotes?: string;
   sortOrder: number;
   createdAt: string;
+  /** @deprecated Removed. */
   assignedAt?: string;
   startedAt?: string;
   completedAt?: string;
@@ -387,9 +389,10 @@ export interface UseGrackleSocketResult {
     model?: string,
     personaId?: string,
     environmentId?: string,
+    notes?: string,
   ) => void;
-  approveTask: (taskId: string) => void;
-  rejectTask: (taskId: string, reviewNotes: string) => void;
+  completeTask: (taskId: string) => void;
+  resumeTask: (taskId: string) => void;
   updateTask: (
     taskId: string,
     title: string,
@@ -545,8 +548,8 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
               // real-time status for active sessions to avoid overwriting
               // "waiting_input" with a stale "running" from the query.
               const prevMap = new Map(prev.map((s) => [s.id, s.status]));
-              const ACTIVE = new Set(["pending", "running", "waiting_input"]);
-              const TERMINAL = new Set(["completed", "failed", "killed"]);
+              const ACTIVE = new Set(["pending", "running", "idle"]);
+              const TERMINAL = new Set(["completed", "failed", "interrupted"]);
               return incoming.map((s) => {
                 const prevStatus = prevMap.get(s.id);
                 if (!prevStatus || prevStatus === s.status) {
@@ -561,7 +564,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
                 if (ACTIVE.has(prevStatus) && ACTIVE.has(s.status)) {
                   // If the previous status is "ahead" of the incoming status
                   // (e.g. waiting_input > running > pending), keep the previous.
-                  const ORDER = ["pending", "running", "waiting_input"];
+                  const ORDER = ["pending", "running", "idle"];
                   if (ORDER.indexOf(prevStatus) > ORDER.indexOf(s.status)) {
                     return { ...s, status: prevStatus };
                   }
@@ -747,8 +750,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
             }
             break;
           }
-          case "task_approved":
-          case "task_rejected":
+          case "task_completed":
           case "task_deleted":
           case "task_updated": {
             const tp2 = msg.payload;
@@ -1069,7 +1071,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
   );
 
   const startTask = useCallback(
-    (taskId: string, runtime?: string, model?: string, personaId?: string, environmentId?: string) => {
+    (taskId: string, runtime?: string, model?: string, personaId?: string, environmentId?: string, notes?: string) => {
       setTaskStartingId(taskId);
       send({
         type: "start_task",
@@ -1079,22 +1081,23 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
           model: model || "",
           personaId: personaId || "",
           environmentId: environmentId || "",
+          notes: notes || "",
         },
       });
     },
     [send],
   );
 
-  const approveTask = useCallback(
+  const completeTask = useCallback(
     (taskId: string) => {
-      send({ type: "approve_task", payload: { taskId } });
+      send({ type: "complete_task", payload: { taskId } });
     },
     [send],
   );
 
-  const rejectTask = useCallback(
-    (taskId: string, reviewNotes: string) => {
-      send({ type: "reject_task", payload: { taskId, reviewNotes } });
+  const resumeTask = useCallback(
+    (taskId: string) => {
+      send({ type: "resume_task", payload: { taskId } });
     },
     [send],
   );
@@ -1334,8 +1337,8 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
     loadTasks,
     createTask,
     startTask,
-    approveTask,
-    rejectTask,
+    completeTask,
+    resumeTask,
     updateTask,
     deleteTask,
     loadFindings,

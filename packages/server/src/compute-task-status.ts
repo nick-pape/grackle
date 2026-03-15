@@ -2,7 +2,7 @@ import type { SessionRow } from "./schema.js";
 
 /** Result of computing a task's effective status from its session history. */
 export interface TaskStatusResult {
-  /** The computed effective status string (e.g. "in_progress", "review", "pending"). */
+  /** The computed effective status string (e.g. "working", "paused", "not_started"). */
   status: string;
   /** The ID of the most recent session (by startedAt), or empty string if none. */
   latestSessionId: string;
@@ -12,20 +12,7 @@ export interface TaskStatusResult {
 const ACTIVE_SESSION_STATUSES: ReadonlySet<string> = new Set([
   "pending",
   "running",
-  "waiting_input",
-]);
-
-/**
- * Human-authoritative task statuses. These are sticky — once a human sets
- * these statuses, session state does not override them.
- *
- * Note: "assigned" is intentionally NOT included. While it is set by humans,
- * it must yield to active session status (e.g. a running session should show
- * "in_progress", not "assigned"). The "assigned" status is only meaningful
- * when there are no sessions.
- */
-const HUMAN_AUTHORITATIVE_STATUSES: ReadonlySet<string> = new Set([
-  "done",
+  "idle",
 ]);
 
 /**
@@ -33,13 +20,15 @@ const HUMAN_AUTHORITATIVE_STATUSES: ReadonlySet<string> = new Set([
  * session history. Pure function — no DB access, no side effects.
  *
  * Rules:
- * 1. Human-authoritative statuses ("done") are sticky — always returned as-is.
- * 2. No sessions → return storedStatus unchanged.
- * 3. Any active session (pending/running/waiting_input) → prefer waiting_input > in_progress.
- * 4. Latest terminal session determines status:
- *    - completed → "review"
+ * 1. "complete" is sticky — once a human marks done, always returned as-is.
+ * 2. No sessions → "not_started" (clamp any stale transient status).
+ * 3. Any active session (pending/running/idle):
+ *    - Any "idle" → "paused"
+ *    - Otherwise → "working"
+ * 4. All sessions terminal, latest determines status:
+ *    - completed → "paused" (agent thinks done, human reviews)
  *    - failed → "failed"
- *    - killed → "pending" (retryable)
+ *    - interrupted → "not_started" (resumable)
  *
  * @param storedStatus - The task's status as stored in the DB.
  * @param sessions - All sessions for this task, in any order.
@@ -49,21 +38,24 @@ export function computeTaskStatus(
   storedStatus: string,
   sessions: Pick<SessionRow, "id" | "status" | "startedAt">[],
 ): TaskStatusResult {
-  // Human-authoritative statuses are always sticky
-  if (HUMAN_AUTHORITATIVE_STATUSES.has(storedStatus)) {
+  // "complete" and "failed" are sticky — human-authoritative when no sessions contradict
+  if (storedStatus === "complete" || storedStatus === "failed") {
     const latestSessionId = sessions.length > 0
       ? getLatestSession(sessions).id
       : "";
-    return { status: storedStatus, latestSessionId };
+    // If there are active sessions, they take precedence over failed (but not complete)
+    if (storedStatus === "complete") {
+      return { status: "complete", latestSessionId };
+    }
+    // For "failed" without sessions, keep it; with active sessions, fall through
+    if (sessions.length === 0) {
+      return { status: "failed", latestSessionId: "" };
+    }
   }
 
-  // No sessions → return stored status, but clamp transient statuses back to
-  // "pending" since they should not persist without an active session (e.g.
-  // stale rows after migration).
+  // No sessions → not_started (clamp any stale transient status)
   if (sessions.length === 0) {
-    const TRANSIENT_STATUSES: ReadonlySet<string> = new Set(["in_progress", "waiting_input"]);
-    const status = TRANSIENT_STATUSES.has(storedStatus) ? "pending" : storedStatus;
-    return { status, latestSessionId: "" };
+    return { status: "not_started", latestSessionId: "" };
   }
 
   // Check for any active sessions
@@ -72,12 +64,9 @@ export function computeTaskStatus(
   );
 
   if (activeSessions.length > 0) {
-    // Prefer waiting_input over in_progress if any session is waiting
-    const hasWaitingInput = activeSessions.some(
-      (s) => s.status === "waiting_input",
-    );
+    const hasIdle = activeSessions.some((s) => s.status === "idle");
     return {
-      status: hasWaitingInput ? "waiting_input" : "in_progress",
+      status: hasIdle ? "paused" : "working",
       latestSessionId: getLatestSession(sessions).id,
     };
   }
@@ -88,16 +77,16 @@ export function computeTaskStatus(
   let status: string;
   switch (latest.status) {
     case "completed":
-      status = "review";
+      status = "paused";
       break;
     case "failed":
       status = "failed";
       break;
-    case "killed":
-      status = "pending";
+    case "interrupted":
+      status = "not_started";
       break;
     default:
-      status = storedStatus;
+      status = "not_started";
       break;
   }
 

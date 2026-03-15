@@ -69,7 +69,7 @@ export function updateSession(
   runtimeSessionId?: string,
   error?: string,
 ): void {
-  const endedAt = ["completed", "failed", "killed"].includes(status)
+  const endedAt = ["completed", "failed", "interrupted"].includes(status)
     ? new Date().toISOString()
     : null;
   db.update(sessions)
@@ -97,7 +97,7 @@ export function getActiveForEnv(environmentId: string): SessionRow | undefined {
     .where(
       and(
         eq(sessions.environmentId, environmentId),
-        inArray(sessions.status, ["pending", "running", "waiting_input"]),
+        inArray(sessions.status, ["pending", "running", "idle"]),
       ),
     )
     .get();
@@ -147,7 +147,7 @@ export function getActiveSessionsForTask(taskId: string): SessionRow[] {
     .where(
       and(
         eq(sessions.taskId, taskId),
-        inArray(sessions.status, ["pending", "running", "waiting_input"]),
+        inArray(sessions.status, ["pending", "running", "idle"]),
       ),
     )
     .all();

@@ -16,22 +16,22 @@ describe("computeTaskStatus", () => {
   // ── No sessions ──────────────────────────────────────────────────
   describe("no sessions", () => {
     it("returns stored status unchanged when no sessions exist", () => {
-      expect(computeTaskStatus("pending", [])).toEqual({
-        status: "pending",
+      expect(computeTaskStatus("not_started", [])).toEqual({
+        status: "not_started",
         latestSessionId: "",
       });
     });
 
-    it("clamps transient status 'in_progress' to 'pending' when no sessions", () => {
-      expect(computeTaskStatus("in_progress", [])).toEqual({
-        status: "pending",
+    it("clamps transient status 'working' to 'not_started' when no sessions", () => {
+      expect(computeTaskStatus("working", [])).toEqual({
+        status: "not_started",
         latestSessionId: "",
       });
     });
 
-    it("clamps transient status 'waiting_input' to 'pending' when no sessions", () => {
-      expect(computeTaskStatus("waiting_input", [])).toEqual({
-        status: "pending",
+    it("clamps transient status 'paused' to 'not_started' when no sessions", () => {
+      expect(computeTaskStatus("paused", [])).toEqual({
+        status: "not_started",
         latestSessionId: "",
       });
     });
@@ -43,9 +43,9 @@ describe("computeTaskStatus", () => {
       });
     });
 
-    it("preserves 'review' with no sessions", () => {
-      expect(computeTaskStatus("review", [])).toEqual({
-        status: "review",
+    it("preserves 'complete' with no sessions", () => {
+      expect(computeTaskStatus("complete", [])).toEqual({
+        status: "complete",
         latestSessionId: "",
       });
     });
@@ -53,96 +53,89 @@ describe("computeTaskStatus", () => {
 
   // ── Sticky statuses ──────────────────────────────────────────────
   describe("sticky statuses", () => {
-    it("'done' is sticky even with active sessions", () => {
+    it("'complete' is sticky even with active sessions", () => {
       const sessions = [makeSession("s1", "running", "2025-01-01T00:00:00Z")];
-      expect(computeTaskStatus("done", sessions)).toEqual({
-        status: "done",
+      expect(computeTaskStatus("complete", sessions)).toEqual({
+        status: "complete",
         latestSessionId: "s1",
       });
     });
 
-    it("'done' is sticky with no sessions", () => {
-      expect(computeTaskStatus("done", [])).toEqual({
-        status: "done",
+    it("'complete' is sticky with no sessions", () => {
+      expect(computeTaskStatus("complete", [])).toEqual({
+        status: "complete",
         latestSessionId: "",
       });
     });
 
-    it("'assigned' is NOT sticky — yields to active sessions", () => {
+    it("'not_started' yields to active sessions", () => {
       const sessions = [makeSession("s1", "running", "2025-01-01T00:00:00Z")];
-      const result = computeTaskStatus("assigned", sessions);
-      expect(result.status).toBe("in_progress");
-    });
-
-    it("'assigned' is preserved when no sessions exist", () => {
-      expect(computeTaskStatus("assigned", [])).toEqual({
-        status: "assigned",
-        latestSessionId: "",
-      });
+      const result = computeTaskStatus("not_started", sessions);
+      expect(result.status).toBe("working");
     });
   });
 
   // ── Active sessions ──────────────────────────────────────────────
   describe("active sessions", () => {
-    it("returns 'in_progress' for a running session", () => {
+    it("returns 'working' for a running session", () => {
       const sessions = [makeSession("s1", "running")];
-      expect(computeTaskStatus("pending", sessions)).toEqual({
-        status: "in_progress",
+      expect(computeTaskStatus("not_started", sessions)).toEqual({
+        status: "working",
         latestSessionId: "s1",
       });
     });
 
-    it("returns 'waiting_input' when any session is waiting", () => {
+    it("returns 'paused' when any session is idle", () => {
       const sessions = [
         makeSession("s1", "running", "2025-01-01T00:00:00Z"),
-        makeSession("s2", "waiting_input", "2025-01-01T00:01:00Z"),
+        makeSession("s2", "idle", "2025-01-01T00:01:00Z"),
       ];
-      expect(computeTaskStatus("pending", sessions)).toEqual({
-        status: "waiting_input",
+      expect(computeTaskStatus("not_started", sessions)).toEqual({
+        status: "paused",
         latestSessionId: "s2",
       });
     });
 
-    it("prefers 'waiting_input' even when running session is newer", () => {
+    it("prefers 'paused' even when running session is newer", () => {
       const sessions = [
-        makeSession("s1", "waiting_input", "2025-01-01T00:00:00Z"),
+        makeSession("s1", "idle", "2025-01-01T00:00:00Z"),
         makeSession("s2", "running", "2025-01-01T00:01:00Z"),
       ];
-      expect(computeTaskStatus("pending", sessions)).toEqual({
-        status: "waiting_input",
+      expect(computeTaskStatus("not_started", sessions)).toEqual({
+        status: "paused",
         latestSessionId: "s2",
       });
     });
 
-    it("returns 'in_progress' for a pending session", () => {
+    it("returns 'working' for a pending session", () => {
       const sessions = [makeSession("s1", "pending")];
-      // A "pending" session is active — the task is effectively in progress
-      expect(computeTaskStatus("pending", sessions).status).toBe("in_progress");
+      // A "pending" session is active — the task is effectively working
+      expect(computeTaskStatus("not_started", sessions).status).toBe("working");
     });
   });
 
   // ── Terminal sessions ────────────────────────────────────────────
   describe("terminal sessions", () => {
-    it("completed session → 'review'", () => {
+    it("completed session → 'paused'", () => {
       const sessions = [makeSession("s1", "completed")];
-      expect(computeTaskStatus("pending", sessions)).toEqual({
-        status: "review",
+      expect(computeTaskStatus("not_started", sessions)).toEqual({
+        status: "paused",
         latestSessionId: "s1",
       });
     });
 
     it("failed session → 'failed'", () => {
       const sessions = [makeSession("s1", "failed")];
-      expect(computeTaskStatus("pending", sessions)).toEqual({
+      expect(computeTaskStatus("not_started", sessions)).toEqual({
         status: "failed",
         latestSessionId: "s1",
       });
     });
 
-    it("killed session → 'pending' (retryable)", () => {
-      const sessions = [makeSession("s1", "killed")];
-      expect(computeTaskStatus("pending", sessions)).toEqual({
-        status: "pending",
+    it("interrupted session → 'not_started' (retryable)", () => {
+      const sessions = [makeSession("s1", "interrupted")];
+      expect(computeTaskStatus("not_started", sessions)).toEqual({
+        status: "not_started",
         latestSessionId: "s1",
       });
     });
@@ -152,8 +145,8 @@ describe("computeTaskStatus", () => {
         makeSession("s1", "failed", "2025-01-01T00:00:00Z"),
         makeSession("s2", "completed", "2025-01-01T00:01:00Z"),
       ];
-      expect(computeTaskStatus("pending", sessions)).toEqual({
-        status: "review",
+      expect(computeTaskStatus("not_started", sessions)).toEqual({
+        status: "paused",
         latestSessionId: "s2",
       });
     });
@@ -166,8 +159,8 @@ describe("computeTaskStatus", () => {
         makeSession("s1", "completed", "2025-01-01T00:00:00Z"),
         makeSession("s2", "running", "2025-01-01T00:01:00Z"),
       ];
-      expect(computeTaskStatus("pending", sessions)).toEqual({
-        status: "in_progress",
+      expect(computeTaskStatus("not_started", sessions)).toEqual({
+        status: "working",
         latestSessionId: "s2",
       });
     });
@@ -181,7 +174,7 @@ describe("computeTaskStatus", () => {
         makeSession("s2", "completed", "2025-01-01T00:02:00Z"),
         makeSession("s3", "completed", "2025-01-01T00:01:00Z"),
       ];
-      expect(computeTaskStatus("pending", sessions).latestSessionId).toBe("s2");
+      expect(computeTaskStatus("not_started", sessions).latestSessionId).toBe("s2");
     });
 
     it("breaks ties by ID", () => {
@@ -189,7 +182,7 @@ describe("computeTaskStatus", () => {
         makeSession("a", "completed", "2025-01-01T00:00:00Z"),
         makeSession("b", "completed", "2025-01-01T00:00:00Z"),
       ];
-      expect(computeTaskStatus("pending", sessions).latestSessionId).toBe("b");
+      expect(computeTaskStatus("not_started", sessions).latestSessionId).toBe("b");
     });
   });
 });

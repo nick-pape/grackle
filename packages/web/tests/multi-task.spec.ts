@@ -40,19 +40,19 @@ test.describe("Multi-Task", () => {
     await patchWsForStubRuntime(page);
     await runStubTaskToCompletion(page);
 
-    // Verify task A is in review with Approve button
-    await expect(page.locator("button", { hasText: "Approve" })).toBeVisible();
+    // Verify task A is in paused state with Complete button
+    await expect(page.locator("button", { hasText: "Complete" })).toBeVisible();
 
     // Navigate to task B (pending)
     await navigateToTask(page, "preserve-task-b");
-    await expect(page.locator('[data-testid="task-status"]')).toContainText("pending");
+    await expect(page.locator('[data-testid="task-status"]')).toContainText("not_started");
     // Pending task defaults to Overview tab
     const overviewTab = page.locator("button", { hasText: "Overview" });
     await expect(overviewTab).toHaveAttribute("class", /active/, { timeout: 10_000 });
 
-    // Navigate back to task A — should still show review state with Approve button
+    // Navigate back to task A — should still show paused state with Complete button
     await navigateToTask(page, "preserve-task-a");
-    await expect(page.locator("button", { hasText: "Approve" })).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator("button", { hasText: "Complete" })).toBeVisible({ timeout: 5_000 });
   });
 
   test("multiple projects shown simultaneously in sidebar", async ({ appPage }) => {
@@ -94,7 +94,7 @@ test.describe("Multi-Task", () => {
     await patchWsForStubRuntime(page);
     await page.locator("button", { hasText: "Start" }).click();
 
-    // Wait for active state — sidebar icon should change to ● (in_progress) or ⧖ (waiting_input)
+    // Wait for active state — sidebar icon should change to ● (working) or ⧖ (idle)
     await expect(page.locator("text=/(●|\u29D6)/").first()).toBeVisible({ timeout: 15_000 });
 
     // Complete to review — sidebar icon should change to ◉ (yellow)
@@ -104,8 +104,8 @@ test.describe("Multi-Task", () => {
     await page.locator("button", { hasText: "Send" }).click();
     await expect(page.locator("text=◉").first()).toBeVisible({ timeout: 15_000 });
 
-    // Approve — sidebar icon should change to ✓ (green)
-    await page.locator("button", { hasText: "Approve" }).click();
+    // Complete — sidebar icon should change to ✓ (green)
+    await page.locator("button", { hasText: "Complete" }).click();
     await expect(page.locator("text=✓").first()).toBeVisible({ timeout: 5_000 });
   });
 });

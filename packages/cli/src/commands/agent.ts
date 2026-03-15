@@ -55,8 +55,7 @@ export function registerAgentCommands(program: Command): void {
       const activeStatuses = new Set([
         "pending",
         "running",
-        "waiting_input",
-        "suspended",
+        "idle",
       ]);
       const sessions = opts.all
         ? res.sessions

@@ -37,14 +37,14 @@ test.describe("Task Retry (failed → in_progress)", () => {
 
     // --- Verify task restarts: stub runtime events appear again ---
     // The stub emits "Stub runtime initialized" on each start
-    await expect(page.locator('[data-testid="task-status"]')).toContainText(/in_progress|waiting_input/, { timeout: 15_000 });
+    await expect(page.locator('[data-testid="task-status"]')).toContainText(/working|idle/, { timeout: 15_000 });
 
     // Wait for waiting_input and send normal input to complete
     await expect(inputField).toBeVisible({ timeout: 15_000 });
     await inputField.fill("continue");
     await page.getByRole("button", { name: "Send", exact: true }).click();
 
-    // --- Verify task reaches review ---
-    await expect(page.getByRole("button", { name: "Approve", exact: true })).toBeVisible({ timeout: 15_000 });
+    // --- Verify task reaches paused (review) ---
+    await expect(page.getByRole("button", { name: "Complete", exact: true })).toBeVisible({ timeout: 15_000 });
   });
 });
