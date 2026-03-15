@@ -202,10 +202,8 @@ describe("gRPC environment broadcast", () => {
       vi.mocked(adapterManager.getAdapter).mockReturnValue(fakeAdapter as never);
 
       const gen = handlers.provisionEnvironment({ id: "test-env" }) as AsyncGenerator;
-      const results = [];
-      for await (const event of gen) {
-        results.push(event);
-      }
+      // Drain the generator
+      for await (const _event of gen) { /* drain */ }
 
       // Should have broadcast after "connecting" and after "error"
       expect(broadcastEnvironments).toHaveBeenCalledTimes(2);
@@ -222,10 +220,8 @@ describe("gRPC environment broadcast", () => {
       vi.mocked(adapterManager.getAdapter).mockReturnValue(fakeAdapter as never);
 
       const gen = handlers.provisionEnvironment({ id: "test-env" }) as AsyncGenerator;
-      const results = [];
-      for await (const event of gen) {
-        results.push(event);
-      }
+      // Drain the generator
+      for await (const _event of gen) { /* drain */ }
 
       // "connecting" + "connected"
       expect(broadcastEnvironments).toHaveBeenCalledTimes(2);
@@ -244,10 +240,8 @@ describe("gRPC environment broadcast", () => {
       vi.mocked(adapterManager.getAdapter).mockReturnValue(fakeAdapter as never);
 
       const gen = handlers.provisionEnvironment({ id: "test-env" }) as AsyncGenerator;
-      const results = [];
-      for await (const event of gen) {
-        results.push(event);
-      }
+      // Drain the generator
+      for await (const _event of gen) { /* drain */ }
 
       expect(envRegistry.updateEnvironmentStatus).toHaveBeenCalledWith("test-env", "error");
       expect(broadcastEnvironments).toHaveBeenCalled();
