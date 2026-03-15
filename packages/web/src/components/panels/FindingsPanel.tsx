@@ -37,7 +37,8 @@ export function FindingsPanel({ projectId }: Props): JSX.Element {
   return (
     <div className={styles.container}>
       {projectFindings.map((f, index) => {
-        const categoryColor = CATEGORY_COLORS[f.category];
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- category may not be in the map
+        const categoryColor = CATEGORY_COLORS[f.category] ?? CATEGORY_COLORS.general;
         return (
           <motion.div
             key={f.id}

@@ -8,7 +8,8 @@ export function groupConsecutiveTextEvents(events: SessionEvent[]): SessionEvent
   const result: SessionEvent[] = [];
   for (const event of events) {
     const previous = result[result.length - 1];
-    if (event.eventType === "text" && previous.eventType === "text") {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- previous is undefined on first iteration
+    if (event.eventType === "text" && previous?.eventType === "text") {
       result[result.length - 1] = { ...previous, content: previous.content + event.content };
     } else {
       result.push(event);

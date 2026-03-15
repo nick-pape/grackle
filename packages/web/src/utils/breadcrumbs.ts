@@ -106,7 +106,8 @@ export function buildTaskBreadcrumbs(
   // Current task (non-clickable)
   const currentTask = ancestors[ancestors.length - 1];
   segments.push({
-    label: currentTask.title,
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- currentTask may be undefined if ancestors is empty
+    label: currentTask?.title ?? taskId,
     url: undefined,
   });
 
