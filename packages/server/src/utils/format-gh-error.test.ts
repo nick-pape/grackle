@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { formatGhError } from "./utils/format-gh-error.js";
+import { formatGhError } from "./format-gh-error.js";
 
 describe("formatGhError", () => {
   it("returns friendly message for ENOENT (gh not found)", () => {

@@ -914,7 +914,6 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
             const listError =
               typeof msg.payload?.error === "string" ? msg.payload.error : "";
             setCodespaces(list);
-            setCodespaceError(listError);
             setCodespaceListError(listError);
             break;
           }

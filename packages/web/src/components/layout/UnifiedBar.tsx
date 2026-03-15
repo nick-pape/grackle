@@ -325,44 +325,49 @@ export function UnifiedBar(): JSX.Element {
           )}
           {envAdapterType === "codespace" && envCodespaceMode === "pick" && (
             <>
-              <select
-                value={envCodespaceName}
-                onChange={(e) => {
-                  if (e.target.value === "__create__") {
-                    setEnvCodespaceMode("create");
-                    setEnvCodespaceName("");
-                  } else {
-                    setEnvCodespaceName(e.target.value);
-                    if (e.target.value && !envName.trim()) {
-                      setEnvName(e.target.value);
+              {!codespaceListError && (
+                <select
+                  value={envCodespaceName}
+                  onChange={(e) => {
+                    if (e.target.value === "__create__") {
+                      setEnvCodespaceMode("create");
+                      setEnvCodespaceName("");
+                    } else {
+                      setEnvCodespaceName(e.target.value);
+                      if (e.target.value && !envName.trim()) {
+                        setEnvName(e.target.value);
+                      }
                     }
-                  }
-                }}
-                disabled={codespaceCreating}
-                className={styles.select}
-              >
-                <option value="">Select a codespace...</option>
-                {codespaces.map((cs) => (
-                  <option key={cs.name} value={cs.name}>
-                    {cs.name} ({cs.repository}) — {cs.state}
-                  </option>
-                ))}
-                <option value="__create__">Create new from repo...</option>
-              </select>
+                  }}
+                  disabled={codespaceCreating}
+                  className={styles.select}
+                >
+                  <option value="">Select a codespace...</option>
+                  {codespaces.map((cs) => (
+                    <option key={cs.name} value={cs.name}>
+                      {cs.name} ({cs.repository}) — {cs.state}
+                    </option>
+                  ))}
+                  <option value="__create__">Create new from repo...</option>
+                </select>
+              )}
               {codespaceCreating && (
                 <span className={styles.creatingHint}>Creating codespace...</span>
               )}
-              {codespaceError && (
-                <span className={styles.errorHint}>{codespaceError}</span>
-              )}
               {codespaceListError && (
-                <input
-                  type="text"
-                  value={envCodespaceName}
-                  onChange={(e) => setEnvCodespaceName(e.target.value)}
-                  placeholder="Or enter codespace name manually..."
-                  className={styles.inputSmall}
-                />
+                <>
+                  <span className={styles.errorHint}>{codespaceListError}</span>
+                  <input
+                    type="text"
+                    value={envCodespaceName}
+                    onChange={(e) => setEnvCodespaceName(e.target.value)}
+                    placeholder="Or enter codespace name manually..."
+                    className={styles.inputSmall}
+                  />
+                </>
+              )}
+              {codespaceError && !codespaceListError && (
+                <span className={styles.errorHint}>{codespaceError}</span>
               )}
             </>
           )}

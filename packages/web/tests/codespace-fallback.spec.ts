@@ -1,33 +1,12 @@
-import { test as base, expect } from "@playwright/test";
-import { readFileSync } from "node:fs";
-import { STATE_FILE } from "./state-file.js";
-
-interface E2EState {
-  grackleHome: string;
-  apiKey: string;
-  powerlinePid: number;
-  serverPid: number;
-  powerlinePort: number;
-  serverPort: number;
-  webPort: number;
-}
-
-function loadState(): E2EState {
-  return JSON.parse(readFileSync(STATE_FILE, "utf8"));
-}
+import { test as baseTest, expect } from "./fixtures.js";
 
 /**
  * Custom fixture that intercepts WebSocket traffic to replace
  * codespace list responses with an error, simulating gh CLI failure.
  */
-const test = base.extend<{ codespaceErrorPage: import("@playwright/test").Page }>({
-  baseURL: async ({}, use) => {
-    const state = loadState();
-    await use(`http://127.0.0.1:${state.webPort}`);
-  },
-
-  codespaceErrorPage: async ({ page, baseURL }, use) => {
-    // Intercept WebSocket to inject codespace list errors
+const test = baseTest.extend<{ codespaceErrorPage: import("@playwright/test").Page }>({
+  codespaceErrorPage: async ({ page }, use) => {
+    // Intercept WS before navigating so the first codespace list is replaced
     await page.routeWebSocket(/.*/, (ws) => {
       const server = ws.connectToServer();
 
@@ -80,7 +59,7 @@ test.describe("Codespace — manual entry fallback", () => {
   test("shows manual entry input when codespace listing fails", async ({
     codespaceErrorPage: page,
   }) => {
-    // Error hint should be visible
+    // Manual input fallback should appear
     await expect(
       page.locator('input[placeholder="Or enter codespace name manually..."]'),
     ).toBeVisible();
@@ -89,6 +68,11 @@ test.describe("Codespace — manual entry fallback", () => {
     await expect(
       page.getByText("gh", { exact: false }),
     ).toBeVisible();
+
+    // Select dropdown should be hidden when list error is present
+    await expect(
+      page.locator("select", { has: page.locator('option:text("Select a codespace...")') }),
+    ).not.toBeVisible();
   });
 
   test("manual entry enables the Add button", async ({
