@@ -249,7 +249,8 @@ async function startTaskSession(
     return `Project not found: ${task.projectId}`;
   }
 
-  const environmentId = options?.environmentId ?? project.defaultEnvironmentId;
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string means "not provided"
+  const environmentId = options?.environmentId || project.defaultEnvironmentId;
   const env = envRegistry.getEnvironment(environmentId);
   if (!env) {
     logger.warn(
@@ -267,7 +268,8 @@ async function startTaskSession(
   }
 
   // Resolve persona
-  const resolvedPersonaId = options?.personaId ?? "";
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string means "not provided"
+  const resolvedPersonaId = options?.personaId || "";
   const persona = resolvedPersonaId
     ? personaStore.getPersona(resolvedPersonaId)
     : undefined;
@@ -276,17 +278,13 @@ async function startTaskSession(
   }
 
   const sessionId = uuid();
-  const runtime =
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime may be undefined when options is omitted
-    options?.runtime ??
-    persona?.runtime ??
-    env.defaultRuntime ??
-    DEFAULT_RUNTIME;
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string means "not provided"
+  const runtime = options?.runtime || persona?.runtime || env.defaultRuntime || DEFAULT_RUNTIME;
   const model =
-    options?.model ??
-    persona?.model ??
-    process.env.GRACKLE_DEFAULT_MODEL ??
-    DEFAULT_MODEL;
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string means "not provided"
+    options?.model || persona?.model ||
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string means "not set"
+    process.env.GRACKLE_DEFAULT_MODEL || DEFAULT_MODEL;
   const maxTurns = persona?.maxTurns ?? 0;
   const logPath = join(grackleHome, LOGS_DIR, sessionId);
 
