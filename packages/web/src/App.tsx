@@ -6,6 +6,8 @@ import { StatusBar, Sidebar, UnifiedBar } from "./components/layout/index.js";
 import { ToastContainer } from "./components/notifications/index.js";
 import { useEffect, type JSX } from "react";
 import { useGrackle } from "./context/GrackleContext.js";
+import { useToast } from "./context/ToastContext.js";
+import { useEnvironmentToasts } from "./hooks/useEnvironmentToasts.js";
 import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from "react-router";
 import { sessionUrl, useAppNavigate } from "./utils/navigation.js";
 import { EmptyPage } from "./pages/EmptyPage.js";
@@ -26,7 +28,9 @@ const IS_MOCK_MODE: boolean =
 
 /** Application shell layout with StatusBar, Sidebar, Outlet, and UnifiedBar. */
 function AppShell(): JSX.Element {
-  const { lastSpawnedId } = useGrackle();
+  const { lastSpawnedId, environments } = useGrackle();
+  const { showToast } = useToast();
+  useEnvironmentToasts(environments, showToast);
   const navigate = useAppNavigate();
 
   const location = useLocation();
@@ -50,10 +54,12 @@ function AppShell(): JSX.Element {
           <UnifiedBar />
         </div>
       </div>
-      {/* Toast messages are intentionally generic (no resource names) so
-          that getByText() locators in E2E tests remain unique and strict-mode
-          safe. Use { exact: true } or data-testid selectors in tests when
-          matching resource names that may also appear in transient toasts. */}
+      {/* Toast messages (including environment status toasts from
+          useEnvironmentToasts) are intentionally generic — no resource names —
+          so that getByText() locators in E2E tests remain unique and
+          strict-mode safe. Use { exact: true } or data-testid selectors in
+          tests when matching resource names that may also appear in transient
+          toasts. */}
       <ToastContainer />
     </div>
   );
