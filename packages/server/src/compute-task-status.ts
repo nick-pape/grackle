@@ -21,11 +21,13 @@ const ACTIVE_SESSION_STATUSES: ReadonlySet<string> = new Set([
  *
  * Rules:
  * 1. "complete" is sticky — once a human marks done, always returned as-is.
- * 2. No sessions → "not_started" (clamp any stale transient status).
- * 3. Any active session (pending/running/idle):
+ * 2. "failed" is sticky when no sessions exist (preserves human-set failure).
+ *    With active sessions, active status takes precedence.
+ * 3. No sessions → "not_started" (clamp any stale transient status).
+ * 4. Any active session (pending/running/idle):
  *    - Any "idle" → "paused"
  *    - Otherwise → "working"
- * 4. All sessions terminal, latest determines status:
+ * 5. All sessions terminal, latest determines status:
  *    - completed → "paused" (agent thinks done, human reviews)
  *    - failed → "failed"
  *    - interrupted → "not_started" (resumable)

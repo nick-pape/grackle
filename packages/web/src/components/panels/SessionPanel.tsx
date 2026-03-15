@@ -446,10 +446,12 @@ function TaskActionButtons({
         </div>
       );
     }
+    // Only show Resume if the task has had a previous session (latestSessionId is set)
+    const hasSession = !!task.latestSessionId;
     return (
       <div className={styles.headerActions}>
         <button onClick={onStart} className={styles.btnPrimary}>Start</button>
-        <button onClick={onResume} className={styles.btnGhost}>Resume</button>
+        {hasSession && <button onClick={onResume} className={styles.btnGhost}>Resume</button>}
         <button onClick={onEdit} className={styles.btnGhost}>Edit</button>
         <button onClick={onDelete} className={styles.btnDanger}>Delete</button>
       </div>
