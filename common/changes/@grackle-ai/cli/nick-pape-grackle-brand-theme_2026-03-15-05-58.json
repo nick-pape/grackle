@@ -1,8 +1,8 @@
 {
   "changes": [
     {
-      "comment": "Simplify task/session lifecycle: 5 task statuses, 6 session statuses, replace approve/reject with complete/resume RPCs",
-      "type": "minor",
+      "comment": "No changes to CLI (web-only theme restructuring)",
+      "type": "none",
       "packageName": "@grackle-ai/cli"
     }
   ],

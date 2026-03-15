@@ -24,7 +24,7 @@ interface Props {
 export function SettingsPanel({ viewMode, setViewMode }: Props): JSX.Element {
   const { tokens, setToken, deleteToken } = useGrackle();
   const { showToast } = useToast();
-  const { themeId, resolvedThemeId, setTheme } = useThemeContext();
+  const { themeId, resolvedThemeId, setTheme, preferSystem, setPreferSystem } = useThemeContext();
 
   const [name, setName] = useState("");
   const [value, setValue] = useState("");
@@ -78,16 +78,16 @@ export function SettingsPanel({ viewMode, setViewMode }: Props): JSX.Element {
           {THEMES.filter((t) => !t.hidden).map((t) => {
             const hasVariants = !!(t.variantLightId && t.variantDarkId);
             const isSelected = hasVariants
-              ? (themeId === t.variantLightId || themeId === t.variantDarkId)
+              ? (themeId === t.id || themeId === t.variantLightId || themeId === t.variantDarkId)
               : themeId === t.id;
-            const isLight = hasVariants && themeId === t.variantLightId;
+            const isLight = hasVariants && resolvedThemeId === t.variantLightId;
             return (
               <button
                 key={t.id}
                 type="button"
                 className={`${styles.themeOption} ${isSelected ? styles.themeOptionSelected : ""}`}
                 aria-pressed={isSelected}
-                onClick={() => setTheme(hasVariants ? (t.variantDarkId!) : t.id)}
+                onClick={() => setTheme(t.id)}
               >
                 <span className={styles.themeOptionHeader}>
                   <span>
@@ -100,8 +100,8 @@ export function SettingsPanel({ viewMode, setViewMode }: Props): JSX.Element {
                         role="button"
                         tabIndex={0}
                         className={`${styles.variantButton} ${isSelected && isLight ? styles.variantActive : ""}`}
-                        onClick={(e) => { e.stopPropagation(); setTheme(t.variantLightId!); }}
-                        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); setTheme(t.variantLightId!); } }}
+                        onClick={(e) => { e.stopPropagation(); setPreferSystem(false); setTheme(t.variantLightId!); }}
+                        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); setPreferSystem(false); setTheme(t.variantLightId!); } }}
                         aria-label="Light variant"
                         aria-pressed={isSelected && isLight}
                       >&#9788;</span>
@@ -109,8 +109,8 @@ export function SettingsPanel({ viewMode, setViewMode }: Props): JSX.Element {
                         role="button"
                         tabIndex={0}
                         className={`${styles.variantButton} ${isSelected && !isLight ? styles.variantActive : ""}`}
-                        onClick={(e) => { e.stopPropagation(); setTheme(t.variantDarkId!); }}
-                        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); setTheme(t.variantDarkId!); } }}
+                        onClick={(e) => { e.stopPropagation(); setPreferSystem(false); setTheme(t.variantDarkId!); }}
+                        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); setPreferSystem(false); setTheme(t.variantDarkId!); } }}
                         aria-label="Dark variant"
                         aria-pressed={isSelected && !isLight}
                       >&#9790;</span>
@@ -128,6 +128,17 @@ export function SettingsPanel({ viewMode, setViewMode }: Props): JSX.Element {
             );
           })}
         </div>
+        <label className={styles.systemToggle}>
+          <input
+            type="checkbox"
+            checked={preferSystem}
+            onChange={(e) => setPreferSystem(e.target.checked)}
+          />
+          <span>Match system light/dark preference</span>
+        </label>
+        <p className={styles.systemToggleHint}>
+          Automatically switches between light and dark variants when available.
+        </p>
         <p className={styles.themeActive}>
           Active theme: <strong>{resolvedThemeId}</strong>
         </p>

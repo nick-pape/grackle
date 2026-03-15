@@ -1,6 +1,6 @@
 {
   "name": "@grackle-ai/web",
-  "version": "0.26.0",
+  "version": "0.27.0",
   "description": "React web UI for the Grackle multi-agent coordination platform",
   "license": "MIT",
   "repository": {
@@ -8,19 +8,10 @@
     "url": "https://github.com/nick-pape/grackle.git",
     "directory": "packages/web"
   },
-  "keywords": [
-    "grackle",
-    "web",
-    "dashboard",
-    "react"
-  ],
-  "engines": {
-    "node": ">=22.0.0"
-  },
+  "keywords": ["grackle", "web", "dashboard", "react"],
+  "engines": { "node": ">=22.0.0" },
   "type": "module",
-  "files": [
-    "dist/"
-  ],
+  "files": ["dist/"],
   "scripts": {
     "dev": "vite",
     "build": "heft build --clean",
@@ -30,16 +21,16 @@
   },
   "dependencies": {
     "@grackle-ai/common": "workspace:*",
+    "@ai-sdk/react": "^1.0.0",
     "@dagrejs/dagre": "^2.0.4",
     "@xyflow/react": "^12.10.0",
+    "ai": "^6.0.0",
     "motion": "^11.18.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-markdown": "^9.0.3",
     "rehype-prism-plus": "^2.0.0",
-    "remark-gfm": "^4.0.0",
-    "ai": "^6.0.0",
-    "@ai-sdk/react": "^1.0.0"
+    "remark-gfm": "^4.0.0"
   },
   "devDependencies": {
     "@grackle-ai/heft-rig": "workspace:*",
