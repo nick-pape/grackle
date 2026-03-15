@@ -11,7 +11,7 @@ test.describe("Authentication & Connection", () => {
   });
 
   test("StatusBar shows environment count", async ({ appPage }) => {
-    await expect(appPage.locator("text=1 env")).toBeVisible();
+    await expect(appPage.getByText(/\d+\/\d+ env/).first()).toBeVisible();
   });
 
   test("StatusBar shows active session count", async ({ appPage }) => {

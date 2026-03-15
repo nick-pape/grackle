@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect, type JSX } from "react";
 import { ProjectList } from "../lists/ProjectList.js";
-import type { ViewMode } from "../../App.js";
 import styles from "./Sidebar.module.scss";
 
 /** Default sidebar width in pixels. */
@@ -37,14 +36,8 @@ function saveWidth(width: number): void {
   }
 }
 
-/** Props for the Sidebar component. */
-interface Props {
-  viewMode: ViewMode;
-  setViewMode: (mode: ViewMode) => void;
-}
-
 /** Left sidebar showing the permanent project/task tree. */
-export function Sidebar({ viewMode, setViewMode }: Props): JSX.Element {
+export function Sidebar(): JSX.Element {
   const [width] = useState<number>(loadWidth);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -73,7 +66,7 @@ export function Sidebar({ viewMode, setViewMode }: Props): JSX.Element {
     <div className={styles.container} ref={containerRef} data-testid="sidebar" style={{ width }}>
       {/* Content */}
       <div className={styles.content}>
-        <ProjectList viewMode={viewMode} setViewMode={setViewMode} />
+        <ProjectList />
       </div>
     </div>
   );

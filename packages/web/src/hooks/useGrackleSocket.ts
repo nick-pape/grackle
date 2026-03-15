@@ -659,10 +659,28 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
             if (replayEvents.length > 0) {
               let replayDropped = 0;
               setEvents((prev) => {
-                const without = prev.filter(
-                  (e) => e.sessionId !== replaySessionId,
+                // Build a Set of existing event keys for this session
+                const existingKeys = new Set<string>();
+                for (const e of prev) {
+                  if (e.sessionId === replaySessionId) {
+                    existingKeys.add(`${e.timestamp}|${e.eventType}`);
+                  }
+                }
+                // Add replay events that aren't already present
+                const newFromReplay = replayEvents.filter(
+                  (e) =>
+                    !existingKeys.has(`${e.timestamp}|${e.eventType}`),
                 );
-                const merged = [...without, ...replayEvents];
+                // Keep all existing events, append new replay events,
+                // sort by timestamp within each session
+                const merged = [...prev, ...newFromReplay].sort(
+                  (a, b) => {
+                    if (a.sessionId !== b.sessionId) {
+                      return 0;
+                    }
+                    return a.timestamp.localeCompare(b.timestamp);
+                  },
+                );
                 if (merged.length > MAX_EVENTS) {
                   replayDropped = merged.length - MAX_EVENTS;
                   return merged.slice(-MAX_EVENTS);
@@ -746,6 +764,17 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
             );
             if (tp.sessionId) {
               send({ type: "list_sessions" });
+              // Eagerly patch the task's latestSessionId so components don't
+              // have to wait for the list_tasks round-trip to resolve the
+              // session. The server-authoritative value will arrive shortly
+              // via list_tasks and overwrite this optimistic update.
+              if (typeof tp.taskId === "string" && typeof tp.sessionId === "string") {
+                setTasks((prev) =>
+                  prev.map((t) =>
+                    t.id === tp.taskId ? { ...t, latestSessionId: tp.sessionId as string } : t,
+                  ),
+                );
+              }
             }
             // Refresh tasks for the project
             const startedPid =
