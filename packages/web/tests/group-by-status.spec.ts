@@ -5,6 +5,11 @@ import {
 } from "./helpers.js";
 
 test.describe("Group-by-status toggle", () => {
+  // Clean up localStorage after each test to prevent state leakage
+  test.afterEach(async ({ page }) => {
+    await page.evaluate(() => localStorage.removeItem("grackle-group-by-status"));
+  });
+
   test("toggle switches to grouped view with status group headers", async ({ appPage }) => {
     const page = appPage;
 
@@ -22,9 +27,6 @@ test.describe("Group-by-status toggle", () => {
     // Tasks should still be visible within the group
     await expect(page.getByText("task-a").first()).toBeVisible();
     await expect(page.getByText("task-b").first()).toBeVisible();
-
-    // Disable for next tests
-    await page.getByTestId("group-by-status-toggle").click();
   });
 
   test("collapse and expand a status group", async ({ appPage }) => {
@@ -46,9 +48,6 @@ test.describe("Group-by-status toggle", () => {
     // Click again to expand
     await groupHeader.locator('[role="button"]').first().click();
     await expect(page.getByText("collapse-task").first()).toBeVisible({ timeout: 5_000 });
-
-    // Disable for next tests
-    await page.getByTestId("group-by-status-toggle").click();
   });
 
   test("toggle persists across page reload", async ({ appPage }) => {
@@ -80,9 +79,6 @@ test.describe("Group-by-status toggle", () => {
     // localStorage should still hold the value after reload
     const storedAfter = await page.evaluate(() => localStorage.getItem("grackle-group-by-status"));
     expect(storedAfter).toBe("true");
-
-    // Disable for next tests
-    await page.getByTestId("group-by-status-toggle").click();
   });
 
   test("empty status groups are hidden", async ({ appPage }) => {
@@ -93,15 +89,12 @@ test.describe("Group-by-status toggle", () => {
 
     await page.getByTestId("group-by-status-toggle").click();
 
-    // Only not_started group should exist
+    // Only not_started group should exist — empty groups should not be in the DOM at all
     await expect(page.getByTestId("status-group-not_started").first()).toBeVisible({ timeout: 5_000 });
     await expect(page.getByTestId("status-group-working")).toHaveCount(0);
     await expect(page.getByTestId("status-group-paused")).toHaveCount(0);
     await expect(page.getByTestId("status-group-failed")).toHaveCount(0);
     await expect(page.getByTestId("status-group-complete")).toHaveCount(0);
-
-    // Disable for next tests
-    await page.getByTestId("group-by-status-toggle").click();
   });
 
   test("toggle back restores tree view", async ({ appPage }) => {
@@ -141,8 +134,5 @@ test.describe("Group-by-status toggle", () => {
     await expect(
       page.locator('[data-testid="task-title"]:has-text("nav-target")'),
     ).toBeVisible({ timeout: 5_000 });
-
-    // Disable for next tests
-    await page.getByTestId("group-by-status-toggle").click();
   });
 });

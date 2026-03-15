@@ -363,15 +363,13 @@ export function ProjectList(): JSX.Element {
 
   /** Toggle group-by-status mode. */
   const toggleGroupByStatus = (): void => {
-    setGroupByStatusState((prev) => {
-      const next = !prev;
-      saveGroupByStatus(next);
-      if (next) {
-        setGroupExpandDefault(true);
-        setGroupExpandOverrides(new Map());
-      }
-      return next;
-    });
+    const next = !groupByStatus;
+    saveGroupByStatus(next);
+    setGroupByStatusState(next);
+    if (next) {
+      setGroupExpandDefault(true);
+      setGroupExpandOverrides(new Map());
+    }
   };
 
   /** Toggle a single status group accordion for a specific project. */
@@ -544,7 +542,7 @@ export function ProjectList(): JSX.Element {
         const isExpanded = expanded.has(project.id);
         const projectTasks = tasks.filter((t) => t.projectId === project.id);
         const isSelected = selectedProjectId === project.id;
-        const tree = isExpanded ? buildTaskTree(projectTasks) : [];
+        const tree = isExpanded && !groupByStatus ? buildTaskTree(projectTasks) : [];
 
         return (
           <div key={project.id}>
