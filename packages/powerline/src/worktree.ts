@@ -7,7 +7,8 @@ const execRaw: typeof execFile.__promisify__ = promisify(execFile);
 
 /** Wrapper that uses a shell so `git` resolves via PATH on all platforms. */
 async function exec(cmd: string, args: string[], opts: { cwd: string }): Promise<{ stdout: string; stderr: string }> {
-  const shell = process.env.SHELL ?? true;
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string means "not set"
+  const shell = process.env.SHELL || true;
   const result = await execRaw(cmd, args, { ...opts, shell });
   return { stdout: String(result.stdout), stderr: String(result.stderr) };
 }

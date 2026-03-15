@@ -26,7 +26,8 @@ const PACKAGE_VERSION: string = (JSON.parse(
 
 const logger: Logger = pino({
   name: "grackle-mcp",
-  level: process.env.LOG_LEVEL ?? "info",
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string means "not set"
+  level: process.env.LOG_LEVEL || "info",
   transport: process.env.NODE_ENV !== "production"
     ? { target: "pino/file", options: { destination: 1 } }
     : undefined,

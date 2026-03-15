@@ -503,8 +503,10 @@ export async function* bootstrapPowerLine(
   //      /workspaces/.codespaces/shared/.env (format: GITHUB_TOKEN=ghu_...).
   //      Fall back to printenv for non-codespace environments (e.g. SSH with real shells).
   let enrichedExtraEnv = extraEnv;
-  const hasLocalToken = process.env.GITHUB_TOKEN ?? process.env.GH_TOKEN;
-  const hasAdapterToken = extraEnv?.GITHUB_TOKEN ?? extraEnv?.GH_TOKEN;
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string means "not set"
+  const hasLocalToken = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string means "not set"
+  const hasAdapterToken = extraEnv?.GITHUB_TOKEN || extraEnv?.GH_TOKEN;
   if (!hasLocalToken && !hasAdapterToken) {
     try {
       const remoteToken = (

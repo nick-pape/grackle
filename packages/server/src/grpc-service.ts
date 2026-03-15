@@ -176,6 +176,8 @@ function personaRowToProto(row: personaStore.PersonaRow): grackle.Persona {
           args?: string[];
           tools?: string[];
         } =>
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- typeof null === "object", JSON.parse can return null
+          s !== null &&
           typeof s === "object" &&
           typeof s.name === "string" &&
           typeof s.command === "string",

@@ -120,8 +120,10 @@ function main(): void {
   });
 
   // --- gRPC server (HTTP/2) ---
-  const grpcPort = parseInt(process.env.GRACKLE_PORT ?? String(DEFAULT_SERVER_PORT), 10);
-  const bindHost = process.env.GRACKLE_HOST ?? "127.0.0.1";
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string means "not set"
+  const grpcPort = parseInt(process.env.GRACKLE_PORT || String(DEFAULT_SERVER_PORT), 10);
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string means "not set"
+  const bindHost = process.env.GRACKLE_HOST || "127.0.0.1";
 
   /** Allowed loopback bind addresses — security policy: never expose API key to the network. */
   const ALLOWED_BIND_HOSTS: ReadonlySet<string> = new Set(["127.0.0.1", "::1"]);
@@ -162,7 +164,8 @@ function main(): void {
   });
 
   // --- Web + WebSocket server (HTTP/1.1) ---
-  const webPort = parseInt(process.env.GRACKLE_WEB_PORT ?? String(DEFAULT_WEB_PORT), 10);
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string means "not set"
+  const webPort = parseInt(process.env.GRACKLE_WEB_PORT || String(DEFAULT_WEB_PORT), 10);
   const webServer = http.createServer(createWebHandler(apiKey));
 
   createWsBridge(webServer, verifyApiKey);
@@ -182,7 +185,8 @@ function main(): void {
   });
 
   // --- MCP server (HTTP/1.1, Streamable HTTP) ---
-  const mcpPort = parseInt(process.env.GRACKLE_MCP_PORT ?? String(DEFAULT_MCP_PORT), 10);
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string means "not set"
+  const mcpPort = parseInt(process.env.GRACKLE_MCP_PORT || String(DEFAULT_MCP_PORT), 10);
   const mcpServer = createMcpServer({ bindHost, mcpPort, grpcPort, apiKey });
 
   mcpServer.on("error", (err: NodeJS.ErrnoException) => {
