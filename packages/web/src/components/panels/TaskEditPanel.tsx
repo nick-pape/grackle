@@ -31,7 +31,7 @@ export function TaskEditPanel({ viewMode, setViewMode }: Props): JSX.Element {
 
   const parentTaskId = isEdit
     ? (existingTask?.parentTaskId ?? "")
-    : (viewMode.kind === "new_task" ? (viewMode.parentTaskId ?? "") : "");
+    : (viewMode.parentTaskId ?? "");
 
   const parentTask = parentTaskId ? tasks.find((t) => t.id === parentTaskId) : undefined;
 
@@ -48,8 +48,8 @@ export function TaskEditPanel({ viewMode, setViewMode }: Props): JSX.Element {
     if (isEdit && existingTask && !hasHydratedRef.current) {
       hasHydratedRef.current = true;
       setTitle(existingTask.title);
-      setDescription(existingTask.description ?? "");
-      setSelectedDeps(existingTask.dependsOn ?? []);
+      setDescription(existingTask.description);
+      setSelectedDeps(existingTask.dependsOn);
     }
   }, [isEdit, existingTask]);
 

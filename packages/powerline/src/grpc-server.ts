@@ -163,8 +163,8 @@ export function registerPowerLineRoutes(router: ConnectRouter): void {
     async getDiff(req: powerline.DiffRequest) {
       const baseBranch = req.baseBranch || "main";
       const basePath =
-        findGitRepoPath(req.worktreeBasePath) ||
-        findGitRepoPath(undefined) ||
+        findGitRepoPath(req.worktreeBasePath) ??
+        findGitRepoPath(undefined) ??
         "/workspace";
 
       try {
@@ -236,7 +236,7 @@ export function registerPowerLineRoutes(router: ConnectRouter): void {
         });
       } catch (err) {
         return create(powerline.DiffResponseSchema, {
-          diff: `Error getting diff: ${err}`,
+          diff: `Error getting diff: ${err instanceof Error ? err.message : String(err)}`,
           changedFiles: [],
           additions: 0,
           deletions: 0,

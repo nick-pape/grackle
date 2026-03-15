@@ -73,10 +73,10 @@ export const projectTools: ToolDefinition[] = [
       try {
         const project = await client.createProject({
           name: args.name as string,
-          description: (args.description as string) ?? "",
-          repoUrl: (args.repoUrl as string) ?? "",
+          description: (args.description as string | undefined) ?? "",
+          repoUrl: (args.repoUrl as string | undefined) ?? "",
           defaultEnvironmentId:
-            (args.defaultEnvironmentId as string) ?? "",
+            (args.defaultEnvironmentId as string | undefined) ?? "",
         });
         return jsonResult({
           id: project.id,

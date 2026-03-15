@@ -465,7 +465,7 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
       const isWaiting = taskSession?.status === "idle";
 
       if (isWaiting) {
-        const effectiveEnvId = taskSession?.environmentId;
+        const effectiveEnvId = taskSession.environmentId;
         const taskEnvDisconnected = isEnvDisconnected(effectiveEnvId, environments);
 
         const handleSend = (e: FormEvent): void => {
@@ -623,7 +623,7 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
     }
 
     if (isWaiting) {
-      const sessionEnvDisconnected = isEnvDisconnected(session?.environmentId, environments);
+      const sessionEnvDisconnected = isEnvDisconnected(session.environmentId, environments);
 
       const handleSend = (e: FormEvent): void => {
         e.preventDefault();
@@ -635,7 +635,7 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
       };
       return (
         <form onSubmit={handleSend} className={styles.bar}>
-          {sessionEnvDisconnected && session?.environmentId && (
+          {sessionEnvDisconnected && session.environmentId && (
             <DisconnectedBanner
               environmentId={session.environmentId}
               onReconnect={provisionEnvironment}
@@ -667,7 +667,7 @@ export function UnifiedBar({ viewMode, setViewMode }: Props): JSX.Element {
       );
     }
 
-    if (isEnded && session) {
+    if (isEnded) {
       return (
         <div className={styles.bar}>
           <span className={`${styles.statusText} ${styles.hintText}`}>Session {session.status}</span>

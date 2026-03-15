@@ -117,7 +117,7 @@ export function buildBreadcrumbs(
       }
 
       // Current task (non-clickable)
-      const currentTask = ancestors[ancestors.length - 1];
+      const currentTask = ancestors.at(-1);
       segments.push({
         label: currentTask?.title ?? viewMode.taskId,
         viewMode: undefined,

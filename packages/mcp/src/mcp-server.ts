@@ -20,13 +20,13 @@ import { grpcErrorToToolResult } from "./error-handler.js";
 import { createToolRegistry } from "./tools/index.js";
 
 /** Read the package version from package.json at module load time. */
-const PACKAGE_VERSION: string = JSON.parse(
+const PACKAGE_VERSION: string = (JSON.parse(
   readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "package.json"), "utf8"),
-).version;
+) as { version: string }).version;
 
 const logger: Logger = pino({
   name: "grackle-mcp",
-  level: process.env.LOG_LEVEL || "info",
+  level: process.env.LOG_LEVEL ?? "info",
   transport: process.env.NODE_ENV !== "production"
     ? { target: "pino/file", options: { destination: 1 } }
     : undefined,
@@ -113,7 +113,7 @@ function createMcpServerInstance(grpcClient: Client<typeof grackle.Grackle>): Se
 
     try {
       logger.info({ tool: name }, "Executing MCP tool: %s", name);
-      const result = await tool.handler(parsed.data, grpcClient);
+      const result = await tool.handler(parsed.data as Record<string, unknown>, grpcClient);
       return result as CallToolResult;
     } catch (error: unknown) {
       logger.error({ tool: name, err: error }, "Tool execution failed: %s", name);
@@ -137,9 +137,9 @@ function createMcpServerInstance(grpcClient: Client<typeof grackle.Grackle>): Se
  * Uses constant-time comparison via timingSafeEqual.
  */
 function verifyBearer(req: http.IncomingMessage, apiKey: string): boolean {
-  const authHeader = req.headers.authorization || "";
+  const authHeader = req.headers.authorization ?? "";
   const token = authHeader.replace(/^Bearer\s+/i, "");
-  if (!token || token.length !== apiKey.length) {
+  if (token.length === 0 || token.length !== apiKey.length) {
     return false;
   }
   const a = Buffer.from(token);
@@ -162,7 +162,7 @@ export function createMcpServer(options: McpServerOptions): http.Server {
 
   // eslint-disable-next-line @typescript-eslint/no-misused-promises
   const httpServer = http.createServer(async (req, res) => {
-    const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
+    const url = new URL(req.url ?? "/", `http://${req.headers.host ?? "localhost"}`);
 
     // Only serve the /mcp endpoint
     if (url.pathname !== "/mcp") {

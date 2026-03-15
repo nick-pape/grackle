@@ -114,7 +114,7 @@ export class CodespaceAdapter implements EnvironmentAdapter {
     try {
       await executor.exec("echo ok", { timeout: SSH_CONNECTIVITY_TIMEOUT_MS });
     } catch (err) {
-      throw new Error(`Cannot reach codespace '${cfg.codespaceName}' via gh CLI: ${err}`);
+      throw new Error(`Cannot reach codespace '${cfg.codespaceName}' via gh CLI: ${err instanceof Error ? err.message : String(err)}`);
     }
 
     // Detect the repo working directory (codespaces clone to /workspaces/<name>)
@@ -135,7 +135,7 @@ export class CodespaceAdapter implements EnvironmentAdapter {
     yield* bootstrapPowerLine(executor, powerlineToken, cfg.env, workingDirectory);
 
     // Open port-forward tunnel
-    const localPort = cfg.localPort || await findFreePort();
+    const localPort = cfg.localPort ?? await findFreePort();
     yield { stage: "tunneling", message: `Forwarding local port ${localPort} to codespace...`, progress: 0.80 };
 
     const tunnel = new CodespaceTunnel(localPort, cfg.codespaceName);
@@ -184,7 +184,7 @@ export class CodespaceAdapter implements EnvironmentAdapter {
     }
 
     // 3. Open new port-forward tunnel
-    const localPort = cfg.localPort || await findFreePort();
+    const localPort = cfg.localPort ?? await findFreePort();
     yield { stage: "reconnecting", message: `Forwarding local port ${localPort} to codespace...`, progress: 0.70 };
     const tunnel = new CodespaceTunnel(localPort, cfg.codespaceName);
     await tunnel.open();

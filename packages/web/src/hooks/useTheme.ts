@@ -77,7 +77,7 @@ function resolveDataTheme(themeId: string, preferSystem: boolean): string {
   // Concrete variant ID (e.g., "grackle-dark") — if preferSystem, resolve via parent
   if (def?.hidden && preferSystem) {
     const parent = findParentTheme(themeId);
-    if (parent?.variantLightId && parent?.variantDarkId) {
+    if (parent?.variantLightId && parent.variantDarkId) {
       return getSystemDark() ? parent.variantDarkId : parent.variantLightId;
     }
   }
@@ -109,13 +109,11 @@ if (typeof document !== "undefined") {
 
 /** Build the current snapshot for useSyncExternalStore. */
 function getSnapshot(): ThemeSnapshot {
-  if (lastSnapshot === undefined) {
-    lastSnapshot = {
-      themeId: getStored(),
-      systemDark: getSystemDark(),
-      preferSystem: getPreferSystem(),
-    };
-  }
+  lastSnapshot ??= {
+    themeId: getStored(),
+    systemDark: getSystemDark(),
+    preferSystem: getPreferSystem(),
+  };
   return lastSnapshot;
 }
 
@@ -203,13 +201,13 @@ export function useTheme(): UseThemeResult {
       if (prefer) {
         const def = getThemeById(stored);
         // Parent theme with variants
-        if (def?.variantDarkId && def?.variantLightId) {
+        if (def?.variantDarkId && def.variantLightId) {
           applyTheme(stored, prefer);
         }
         // Concrete variant — resolve via parent
         if (def?.hidden) {
           const parent = findParentTheme(stored);
-          if (parent?.variantDarkId && parent?.variantLightId) {
+          if (parent?.variantDarkId && parent.variantLightId) {
             applyTheme(stored, prefer);
           }
         }

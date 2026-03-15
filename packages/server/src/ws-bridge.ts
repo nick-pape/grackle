@@ -61,8 +61,8 @@ export function createWsBridge(
   setWssInstance(wss);
 
   wss.on("connection", (ws: WebSocket, req: IncomingMessage) => {
-    const url = new URL(req.url || "/", "http://localhost");
-    const token = url.searchParams.get("token") || "";
+    const url = new URL(req.url ?? "/", "http://localhost");
+    const token = url.searchParams.get("token") ?? "";
     if (!verifyApiKey(token)) {
       ws.close(WS_CLOSE_UNAUTHORIZED, "Unauthorized");
       return;
@@ -270,7 +270,7 @@ async function startTaskSession(
     return `Project not found: ${task.projectId}`;
   }
 
-  const environmentId = options?.environmentId || project.defaultEnvironmentId;
+  const environmentId = options?.environmentId ?? project.defaultEnvironmentId;
   const env = envRegistry.getEnvironment(environmentId);
   if (!env) {
     logger.warn(
@@ -288,7 +288,7 @@ async function startTaskSession(
   }
 
   // Resolve persona
-  const resolvedPersonaId = options?.personaId || "";
+  const resolvedPersonaId = options?.personaId ?? "";
   const persona = resolvedPersonaId
     ? personaStore.getPersona(resolvedPersonaId)
     : undefined;
@@ -298,23 +298,24 @@ async function startTaskSession(
 
   const sessionId = uuid();
   const runtime =
-    options?.runtime ||
-    persona?.runtime ||
-    env.defaultRuntime ||
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime may be undefined when options is omitted
+    options?.runtime ??
+    persona?.runtime ??
+    env.defaultRuntime ??
     DEFAULT_RUNTIME;
   const model =
-    options?.model ||
-    persona?.model ||
-    process.env.GRACKLE_DEFAULT_MODEL ||
+    options?.model ??
+    persona?.model ??
+    process.env.GRACKLE_DEFAULT_MODEL ??
     DEFAULT_MODEL;
-  const maxTurns = persona?.maxTurns || 0;
+  const maxTurns = persona?.maxTurns ?? 0;
   const logPath = join(grackleHome, LOGS_DIR, sessionId);
 
-  const freshTask = taskStore.getTask(task.id) || task;
+  const freshTask = taskStore.getTask(task.id) ?? task;
   let systemContext = buildTaskSystemContext(
     freshTask.title,
     freshTask.description,
-    options?.notes || "",
+    options?.notes ?? "",
     freshTask.canDecompose,
   );
   if (persona) {
@@ -372,7 +373,7 @@ async function startTaskSession(
     maxTurns,
     branch: freshTask.branch,
     worktreeBasePath: freshTask.branch
-      ? process.env.GRACKLE_WORKTREE_BASE || "/workspace"
+      ? process.env.GRACKLE_WORKTREE_BASE ?? "/workspace"
       : "",
     systemContext,
     projectId: freshTask.projectId,
@@ -432,7 +433,7 @@ async function handleMessage(
       }
 
       const session = sessionStore.getSession(sessionId);
-      if (!session || !session.logPath) {
+      if (!session?.logPath) {
         return;
       }
 
@@ -442,7 +443,7 @@ async function handleMessage(
         eventType: e.type,
         timestamp: e.timestamp,
         content: e.content,
-        raw: e.raw || undefined,
+        raw: e.raw ?? undefined,
       }));
 
       sendWs(ws, { type: "session_events", payload: { sessionId, events } });
@@ -516,8 +517,8 @@ async function handleMessage(
     case "spawn": {
       const environmentId = msg.payload?.environmentId as string;
       const prompt = msg.payload?.prompt as string;
-      const model = (msg.payload?.model as string) || "";
-      const runtime = (msg.payload?.runtime as string) || "";
+      const model = (msg.payload?.model as string | undefined) || undefined; // eslint-disable-line @typescript-eslint/prefer-nullish-coalescing -- empty string means "not provided"
+      const runtime = (msg.payload?.runtime as string | undefined) || undefined; // eslint-disable-line @typescript-eslint/prefer-nullish-coalescing -- empty string means "not provided"
       const branch = (msg.payload?.branch as string) || "";
       const systemContext = (msg.payload?.systemContext as string) || "";
       const spawnPersonaId = (msg.payload?.personaId as string) || "";
@@ -553,10 +554,11 @@ async function handleMessage(
       }
 
       const sessionId = uuid();
-      const sessionRuntime = runtime || spawnPersona?.runtime || env.defaultRuntime || DEFAULT_RUNTIME;
-      const sessionModel =
-        model || spawnPersona?.model || process.env.GRACKLE_DEFAULT_MODEL || DEFAULT_MODEL;
-      const maxTurns = spawnPersona?.maxTurns || 0;
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime/model may be undefined from WS payload
+      const sessionRuntime = runtime ?? spawnPersona?.runtime ?? env.defaultRuntime ?? DEFAULT_RUNTIME;
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+      const sessionModel = model ?? spawnPersona?.model ?? process.env.GRACKLE_DEFAULT_MODEL ?? DEFAULT_MODEL;
+      const maxTurns = spawnPersona?.maxTurns ?? 0;
       const logPath = join(grackleHome, LOGS_DIR, sessionId);
 
       let finalSystemContext = systemContext;
@@ -596,7 +598,7 @@ async function handleMessage(
               sessionId,
               eventType: "error",
               timestamp: new Date().toISOString(),
-              content: `Spawn failed: ${err}`,
+              content: `Spawn failed: ${err instanceof Error ? err.message : String(err)}`,
             },
           });
         },
@@ -788,7 +790,7 @@ async function handleMessage(
         return;
       }
       const nameVal = typeof msg.payload?.name === "string" ? msg.payload.name : undefined;
-      if (nameVal !== undefined && nameVal.trim() === "") {
+      if (nameVal?.trim() === "") {
         sendWs(ws, { type: "error", payload: { message: "Project name cannot be empty" } });
         return;
       }
@@ -1006,8 +1008,8 @@ async function handleMessage(
         id,
         projectId,
         title,
-        (msg.payload?.description as string) || "",
-        (msg.payload?.dependsOn as string[]) || [],
+        (msg.payload?.description as string | undefined) ?? "",
+        (msg.payload?.dependsOn as string[] | undefined) ?? [],
         slugify(project.name),
         parentTaskId,
         canDecompose,
@@ -1239,7 +1241,7 @@ async function handleMessage(
         runtime: latestSession.runtime,
       });
 
-      const logPath = latestSession.logPath || join(grackleHome, LOGS_DIR, latestSession.id);
+      const logPath = latestSession.logPath ?? join(grackleHome, LOGS_DIR, latestSession.id);
 
       processEventStream(conn.client.resume(powerlineReq), {
         sessionId: latestSession.id,
@@ -1339,9 +1341,9 @@ async function handleMessage(
       if (!projectId) return;
       const rows = findingStore.queryFindings(
         projectId,
-        (msg.payload?.categories as string[]) || undefined,
-        (msg.payload?.tags as string[]) || undefined,
-        (msg.payload?.limit as number) || undefined,
+        (msg.payload?.categories as string[] | undefined) ?? undefined,
+        (msg.payload?.tags as string[] | undefined) ?? undefined,
+        (msg.payload?.limit as number | undefined) ?? undefined,
       );
       sendWs(ws, {
         type: "findings",
@@ -1377,12 +1379,12 @@ async function handleMessage(
       findingStore.postFinding(
         id,
         projectId,
-        (msg.payload?.taskId as string) || "",
-        (msg.payload?.sessionId as string) || "",
-        (msg.payload?.category as string) || "general",
+        (msg.payload?.taskId as string | undefined) ?? "",
+        (msg.payload?.sessionId as string | undefined) ?? "",
+        (msg.payload?.category as string | undefined) ?? "general",
         title,
-        (msg.payload?.content as string) || "",
-        (msg.payload?.tags as string[]) || [],
+        (msg.payload?.content as string | undefined) ?? "",
+        (msg.payload?.tags as string[] | undefined) ?? [],
       );
       sendWs(ws, { type: "finding_posted", payload: { id, projectId } });
       break;
@@ -1395,7 +1397,7 @@ async function handleMessage(
       if (!taskId) return;
 
       const task = taskStore.getTask(taskId);
-      if (!task || !task.branch) {
+      if (!task?.branch) {
         sendWs(ws, {
           type: "task_diff",
           payload: { taskId, error: "No branch" },
@@ -1783,9 +1785,9 @@ async function handleMessage(
           tokens: items.map((t) => ({
             name: t.name,
             tokenType: t.type,
-            envVar: t.envVar || "",
-            filePath: t.filePath || "",
-            expiresAt: t.expiresAt || "",
+            envVar: t.envVar ?? "",
+            filePath: t.filePath ?? "",
+            expiresAt: t.expiresAt ?? "",
           })),
         },
       });

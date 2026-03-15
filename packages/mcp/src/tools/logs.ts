@@ -79,7 +79,7 @@ export const logsTools: ToolDefinition[] = [
         // Tail mode: stream live events with timeout
         if (args.tail) {
           const timeout = Math.min(
-            (args.timeoutSeconds as number) ?? DEFAULT_TAIL_TIMEOUT_SECONDS,
+            (args.timeoutSeconds as number | undefined) ?? DEFAULT_TAIL_TIMEOUT_SECONDS,
             MAX_TAIL_TIMEOUT_SECONDS,
           );
           const maxEvents = args.maxEvents as number | undefined;
@@ -149,7 +149,7 @@ export const logsTools: ToolDefinition[] = [
             .trim()
             .split("\n")
             .filter((line) => line.length > 0)
-            .map((line) => JSON.parse(line));
+            .map((line) => JSON.parse(line) as unknown);
           return jsonResult({ sessionId: session.id, events });
         } catch (err: unknown) {
           const isNotFound = err instanceof Error && "code" in err && (err as NodeJS.ErrnoException).code === "ENOENT";

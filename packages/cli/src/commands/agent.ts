@@ -13,15 +13,15 @@ export function registerAgentCommands(program: Command): void {
     .option("--max-turns <n>", "Maximum turns", parseInt)
     .option("--runtime <runtime>", "Agent runtime")
     .option("--persona <id>", "Persona to use")
-    .action(async (environmentId: string, prompt: string, opts) => {
+    .action(async (environmentId: string, prompt: string, opts: { model?: string; maxTurns?: number; runtime?: string; persona?: string }) => {
       const client = createGrackleClient();
       const session = await client.spawnAgent({
         environmentId,
         prompt,
-        model: opts.model || "",
-        maxTurns: opts.maxTurns || 0,
-        runtime: opts.runtime || "",
-        personaId: opts.persona || "",
+        model: opts.model ?? "",
+        maxTurns: opts.maxTurns ?? 0,
+        runtime: opts.runtime ?? "",
+        personaId: opts.persona ?? "",
       });
       console.log(`Spawned session: ${session.id}`);
       console.log(`Streaming events (Ctrl+C to detach)...\n`);
@@ -46,10 +46,10 @@ export function registerAgentCommands(program: Command): void {
     .description("List active sessions")
     .option("--env <env-id>", "Filter by environment")
     .option("--all", "Show all sessions including completed")
-    .action(async (opts) => {
+    .action(async (opts: { env?: string; all?: boolean }) => {
       const client = createGrackleClient();
       const res = await client.listSessions({
-        environmentId: opts.env || "",
+        environmentId: opts.env ?? "",
         status: "",
       });
       const activeStatuses = new Set<string>([

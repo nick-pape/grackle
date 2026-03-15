@@ -58,11 +58,9 @@ export function Sidebar({ viewMode, setViewMode }: Props): JSX.Element {
     const observer = new ResizeObserver((entries) => {
       for (const entry of entries) {
         const borderBox = entry.borderBoxSize[0];
-        if (borderBox) {
-          const boxWidth = Math.round(borderBox.inlineSize);
-          if (boxWidth >= MIN_SIDEBAR_WIDTH && boxWidth <= MAX_SIDEBAR_WIDTH) {
-            saveWidth(boxWidth);
-          }
+        const boxWidth = Math.round(borderBox.inlineSize);
+        if (boxWidth >= MIN_SIDEBAR_WIDTH && boxWidth <= MAX_SIDEBAR_WIDTH) {
+          saveWidth(boxWidth);
         }
       }
     });

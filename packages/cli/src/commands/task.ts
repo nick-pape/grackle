@@ -32,7 +32,7 @@ export function registerTaskCommands(program: Command): void {
           taskStatusToString(t.status),
           t.branch.slice(0, 30),
           deps,
-          t.latestSessionId?.slice(0, 8) || "-",
+          t.latestSessionId.slice(0, 8) || "-",
         ]);
       }
       console.log(table.toString());
@@ -43,15 +43,15 @@ export function registerTaskCommands(program: Command): void {
     .description("Create a task")
     .option("--desc <text>", "Task description")
     .option("--depends-on <ids>", "Comma-separated dependency task IDs")
-    .action(async (projectId: string, title: string, opts) => {
+    .action(async (projectId: string, title: string, opts: { dependsOn?: string; desc?: string }) => {
       const client = createGrackleClient();
-      const dependsOn = opts.dependsOn
+      const dependsOn: string[] = opts.dependsOn
         ? opts.dependsOn.split(",").map((s: string) => s.trim()).filter(Boolean)
         : [];
       const t = await client.createTask({
         projectId,
         title,
-        description: opts.desc || "",
+        description: opts.desc ?? "",
         dependsOn,
       });
       console.log(`Created task: ${t.id} (${t.title}) branch: ${t.branch}`);
@@ -85,7 +85,7 @@ export function registerTaskCommands(program: Command): void {
     )
     .option("--depends-on <ids>", "Comma-separated dependency task IDs")
     .option("--session <session-id>", "Bind an existing session to this task")
-    .action(async (taskId: string, opts) => {
+    .action(async (taskId: string, opts: { status?: string; dependsOn?: string; title?: string; desc?: string; session?: string }) => {
       const VALID_STATUSES = new Set([
         "not_started",
         "working",
@@ -106,18 +106,18 @@ export function registerTaskCommands(program: Command): void {
       }
 
       const client = createGrackleClient();
-      const dependsOn = opts.dependsOn
+      const dependsOn: string[] = opts.dependsOn
         ? opts.dependsOn.split(",").map((s: string) => s.trim()).filter(Boolean)
         : [];
       const t = await client.updateTask({
         id: taskId,
-        title: opts.title || "",
-        description: opts.desc || "",
+        title: opts.title ?? "",
+        description: opts.desc ?? "",
         status: opts.status
           ? taskStatusToEnum(String(opts.status).toLowerCase())
           : taskStatusToEnum(""),
         dependsOn,
-        sessionId: opts.session || "",
+        sessionId: opts.session ?? "",
       });
       console.log(
         `Updated: ${t.id} (${t.title}) status: ${taskStatusToString(t.status)}`,
@@ -132,15 +132,15 @@ export function registerTaskCommands(program: Command): void {
     .option("--persona <id-or-name>", "Persona to use")
     .option("--env <env-id>", "Environment to run on")
     .option("--notes <text>", "Feedback/instructions for retry")
-    .action(async (taskId: string, opts) => {
+    .action(async (taskId: string, opts: { runtime?: string; model?: string; persona?: string; env?: string; notes?: string }) => {
       const client = createGrackleClient();
       const session = await client.startTask({
         taskId,
-        runtime: opts.runtime || "",
-        model: opts.model || "",
-        personaId: opts.persona || "",
-        environmentId: opts.env || "",
-        notes: opts.notes || "",
+        runtime: opts.runtime ?? "",
+        model: opts.model ?? "",
+        personaId: opts.persona ?? "",
+        environmentId: opts.env ?? "",
+        notes: opts.notes ?? "",
       });
       console.log(`Task started. Session: ${session.id}`);
     });
@@ -185,7 +185,7 @@ export function registerTaskCommands(program: Command): void {
         projectId: string,
         opts: { repo: string; label?: string; state: string; env?: string; includeComments: boolean },
       ) => {
-        const normalizedState = (opts.state ?? "").trim().toLowerCase();
+        const normalizedState = opts.state.trim().toLowerCase();
         if (normalizedState !== "open" && normalizedState !== "closed") {
           console.error(
             chalk.red(

@@ -10,7 +10,7 @@ function renderEntry(entry: LogEntry): string {
       return `${entry.content}\n`;
     case "tool_use": {
       try {
-        const parsed = JSON.parse(entry.content);
+        const parsed = JSON.parse(entry.content) as { tool: string; args: unknown };
         return `\`\`\`\n${parsed.tool}: ${JSON.stringify(parsed.args, null, 2)}\n\`\`\`\n`;
       } catch {
         return `\`\`\`\n${entry.content}\n\`\`\`\n`;

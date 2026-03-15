@@ -58,7 +58,7 @@ export function useDagLayout(tasks: TaskData[]): DagLayoutResult {
     const childrenByParent = new Map<string, TaskData[]>();
     for (const task of tasks) {
       if (task.parentTaskId && taskById.has(task.parentTaskId)) {
-        const siblings = childrenByParent.get(task.parentTaskId) || [];
+        const siblings = childrenByParent.get(task.parentTaskId) ?? [];
         siblings.push(task);
         childrenByParent.set(task.parentTaskId, siblings);
       }
@@ -115,8 +115,8 @@ export function useDagLayout(tasks: TaskData[]): DagLayoutResult {
 
     // Map dagre positions to React Flow nodes
     const nodes: Node<TaskNodeData>[] = tasks.map((task) => {
-      const nodeWithPosition = graph.node(task.id);
-      const children = childrenByParent.get(task.id) || [];
+      const nodeWithPosition = graph.node(task.id) as { x: number; y: number };
+      const children = childrenByParent.get(task.id) ?? [];
 
       return {
         id: task.id,

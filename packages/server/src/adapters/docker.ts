@@ -184,9 +184,9 @@ export class DockerAdapter implements EnvironmentAdapter {
 
   public async *provision(environmentId: string, config: Record<string, unknown>, powerlineToken: string): AsyncGenerator<ProvisionEvent> {
     const cfg = config as unknown as DockerEnvironmentConfig;
-    const image = cfg.image || DEFAULT_IMAGE;
-    const containerName = cfg.containerName || `grackle-${environmentId}`;
-    const localPort = cfg.localPort || await findFreePort();
+    const image = cfg.image || DEFAULT_IMAGE;  // eslint-disable-line @typescript-eslint/prefer-nullish-coalescing -- empty-string fallback
+    const containerName = cfg.containerName ?? `grackle-${environmentId}`;
+    const localPort = cfg.localPort ?? await findFreePort();
 
     const isDefault = image === DEFAULT_IMAGE;
     const dockerfilePath = resolve(import.meta.dirname, "../../../../Dockerfile.powerline");
@@ -225,7 +225,7 @@ export class DockerAdapter implements EnvironmentAdapter {
 
   public async connect(environmentId: string, config: Record<string, unknown>, powerlineToken: string): Promise<PowerLineConnection> {
     const cfg = config as unknown as DockerEnvironmentConfig;
-    const localPort = containerPorts.get(environmentId) || cfg.localPort || DEFAULT_POWERLINE_PORT;
+    const localPort = containerPorts.get(environmentId) ?? cfg.localPort ?? DEFAULT_POWERLINE_PORT;
 
     const client = createPowerLineClient(`http://127.0.0.1:${localPort}`, powerlineToken);
 
@@ -240,7 +240,7 @@ export class DockerAdapter implements EnvironmentAdapter {
       }
     }
 
-    throw new Error(`Could not reach PowerLine after ${CONNECT_MAX_RETRIES} attempts: ${lastErr}`);
+    throw new Error(`Could not reach PowerLine after ${CONNECT_MAX_RETRIES} attempts: ${lastErr instanceof Error ? lastErr.message : String(lastErr)}`);
   }
 
   public async disconnect(environmentId: string): Promise<void> {
@@ -249,7 +249,7 @@ export class DockerAdapter implements EnvironmentAdapter {
 
   public async stop(environmentId: string, config: Record<string, unknown>): Promise<void> {
     const cfg = config as unknown as DockerEnvironmentConfig;
-    const containerName = cfg.containerName || `grackle-${environmentId}`;
+    const containerName = cfg.containerName ?? `grackle-${environmentId}`;
     try {
       await exec("docker", ["stop", containerName]);
     } catch (err) {
@@ -260,7 +260,7 @@ export class DockerAdapter implements EnvironmentAdapter {
 
   public async destroy(environmentId: string, config: Record<string, unknown>): Promise<void> {
     const cfg = config as unknown as DockerEnvironmentConfig;
-    const containerName = cfg.containerName || `grackle-${environmentId}`;
+    const containerName = cfg.containerName ?? `grackle-${environmentId}`;
     try {
       await exec("docker", ["rm", "-f", containerName]);
     } catch (err) {

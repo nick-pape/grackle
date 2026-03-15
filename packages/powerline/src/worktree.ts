@@ -7,7 +7,7 @@ const execRaw: typeof execFile.__promisify__ = promisify(execFile);
 
 /** Wrapper that uses a shell so `git` resolves via PATH on all platforms. */
 async function exec(cmd: string, args: string[], opts: { cwd: string }): Promise<{ stdout: string; stderr: string }> {
-  const shell = process.env.SHELL || true;
+  const shell = process.env.SHELL ?? true;
   const result = await execRaw(cmd, args, { ...opts, shell });
   return { stdout: String(result.stdout), stderr: String(result.stderr) };
 }
@@ -30,7 +30,7 @@ export function worktreeDir(basePath: string, branch: string): string {
   // When repo is at a root-level path (e.g. /workspace in Docker),
   // dirname returns "/" which is typically not writable. Fall back to $HOME.
   if (parent === "/" || parent === "\\") {
-    const home = process.env.HOME || process.env.USERPROFILE || basePath;
+    const home = process.env.HOME ?? process.env.USERPROFILE ?? basePath;
     return resolve(home, ".grackle-worktrees", sanitized);
   }
   return resolve(parent, ".grackle-worktrees", sanitized);
@@ -48,7 +48,7 @@ export async function ensureWorktree(basePath: string, branch: string): Promise<
   try {
     await exec("git", ["status", "--porcelain"], { cwd: basePath });
   } catch (err) {
-    throw new Error(`Git repo not writable: ${basePath} (${err})`);
+    throw new Error(`Git repo not writable: ${basePath} (${err instanceof Error ? err.message : String(err)})`);
   }
 
   const wtPath = worktreeDir(basePath, branch);
@@ -67,7 +67,7 @@ export async function ensureWorktree(basePath: string, branch: string): Promise<
       await exec("git", ["worktree", "add", wtPath, branch], { cwd: basePath });
       return { worktreePath: wtPath, branch, created: true };
     } catch (err) {
-      throw new Error(`Failed to create worktree for branch ${branch}: ${err}`);
+      throw new Error(`Failed to create worktree for branch ${branch}: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 }

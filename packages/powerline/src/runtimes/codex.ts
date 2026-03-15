@@ -24,24 +24,22 @@ let sdkPromise: Promise<CodexSdkModule> | undefined;
 
 /** Lazily import the Codex SDK to avoid loading it until first use. */
 function getCodexSdk(): Promise<CodexSdkModule> {
-  if (!sdkPromise) {
-    sdkPromise = (async (): Promise<CodexSdkModule> => {
-      try {
-        const mod = await import("@openai/codex-sdk");
-        if (typeof mod.Codex !== "function") {
-          throw new Error("Codex not found in @openai/codex-sdk");
-        }
-        return { Codex: mod.Codex };
-      } catch {
-        sdkPromise = undefined;
-        throw new Error(
-          "Codex SDK not installed. Run: npm install @openai/codex-sdk\n" +
-          "The Codex CLI must also be installed and available in PATH (or set CODEX_CLI_PATH)."
-        );
+  sdkPromise ??= (async (): Promise<CodexSdkModule> => {
+    try {
+      const mod = await import("@openai/codex-sdk") as Record<string, unknown>;
+      if (typeof mod.Codex !== "function") {
+        throw new Error("Codex not found in @openai/codex-sdk");
       }
-    })();
-  }
-  return sdkPromise;
+      return { Codex: mod.Codex as CodexSdkModule["Codex"] };
+    } catch {
+      sdkPromise = undefined;
+      throw new Error(
+        "Codex SDK not installed. Run: npm install @openai/codex-sdk\n" +
+        "The Codex CLI must also be installed and available in PATH (or set CODEX_CLI_PATH)."
+      );
+    }
+  })();
+  return sdkPromise!;
 }
 
 // ─── Helpers ───────────────────────────────────────────────
@@ -102,7 +100,7 @@ class CodexSession extends BaseAgentSession {
 
     // API key: SDK reads OPENAI_API_KEY from env automatically,
     // but also support CODEX_API_KEY as an explicit override.
-    const apiKey = process.env.CODEX_API_KEY || process.env.OPENAI_API_KEY;
+    const apiKey = process.env.CODEX_API_KEY ?? process.env.OPENAI_API_KEY;
     if (apiKey) {
       codexOptions.apiKey = apiKey;
     }
@@ -119,6 +117,7 @@ class CodexSession extends BaseAgentSession {
       codexOptions.config = { mcpServers: mcpConfig.servers };
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     this.codexInstance = new Codex(codexOptions);
 
     this.eventQueue.push({ type: "system", timestamp: ts(), content: "Codex instance created" });
@@ -139,6 +138,7 @@ class CodexSession extends BaseAgentSession {
   }
 
   protected async setupForResume(): Promise<void> {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     this.thread = this.codexInstance.resumeThread(this.resumeSessionId, this.threadOptions);
     this.eventQueue.push({
       type: "system",
@@ -148,6 +148,7 @@ class CodexSession extends BaseAgentSession {
   }
 
   protected async runInitialQuery(prompt: string): Promise<number> {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     this.thread = this.codexInstance.startThread(this.threadOptions);
 
     this.eventQueue.push({
@@ -160,6 +161,7 @@ class CodexSession extends BaseAgentSession {
   }
 
   protected async executeFollowUp(text: string): Promise<void> {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const streamResult = await this.thread.runStreamed(text);
     await this.consumeStream(streamResult);
   }
@@ -189,6 +191,7 @@ class CodexSession extends BaseAgentSession {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private async consumeStream(streamResult: any): Promise<number> {
     const ts: () => string = () => new Date().toISOString();
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     this.activeStream = streamResult;
     let messageCount = 0;
 
@@ -225,7 +228,7 @@ class CodexSession extends BaseAgentSession {
             this.eventQueue.push({
               type: "tool_use",
               timestamp: ts(),
-              content: JSON.stringify({ tool: "command_execution", args: { command: item.command || "" } }),
+              content: JSON.stringify({ tool: "command_execution", args: { command: item.command ?? "" } }),
               raw: event,
             });
           } else if (type === "file_change") {
@@ -233,7 +236,7 @@ class CodexSession extends BaseAgentSession {
             this.eventQueue.push({
               type: "tool_use",
               timestamp: ts(),
-              content: JSON.stringify({ tool: "file_change", args: { file: item.file || "", changes: item.changes || [] } }),
+              content: JSON.stringify({ tool: "file_change", args: { file: item.file ?? "", changes: item.changes ?? [] } }),
               raw: event,
             });
           } else if (type === "mcp_tool_call") {
@@ -241,7 +244,7 @@ class CodexSession extends BaseAgentSession {
             this.eventQueue.push({
               type: "tool_use",
               timestamp: ts(),
-              content: JSON.stringify({ tool: `mcp__${item.serverName || "unknown"}__${item.toolName || "unknown"}`, args: item.arguments || {} }),
+              content: JSON.stringify({ tool: `mcp__${String(item.serverName ?? "unknown")}__${String(item.toolName ?? "unknown")}`, args: item.arguments ?? {} }),
               raw: event,
             });
           }
@@ -270,7 +273,7 @@ class CodexSession extends BaseAgentSession {
             this.eventQueue.push({
               type: "tool_result",
               timestamp: ts(),
-              content: JSON.stringify({ file: item.file, patch: item.patch || "", status: item.status || "completed" }),
+              content: JSON.stringify({ file: item.file, patch: item.patch ?? "", status: item.status ?? "completed" }),
               raw: event,
             });
           } else if (type === "agent_message") {
@@ -289,7 +292,7 @@ class CodexSession extends BaseAgentSession {
             this.eventQueue.push({
               type: "tool_result",
               timestamp: ts(),
-              content: error || result || "",
+              content: error ?? result ?? "",
               raw: event,
             });
 

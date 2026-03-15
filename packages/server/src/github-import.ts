@@ -150,7 +150,7 @@ export function buildDescriptionWithComments(
   hasMoreComments: boolean = false,
 ): string {
   if (comments.length === 0) {
-    return body ?? "";
+    return body;
   }
 
   const commentBlocks = comments.map((c) => {
@@ -158,7 +158,7 @@ export function buildDescriptionWithComments(
     return `${header}\n\n${c.body}`;
   });
 
-  let result = (body ?? "") + COMMENT_SEPARATOR + commentBlocks.join(COMMENT_SEPARATOR);
+  let result = body + COMMENT_SEPARATOR + commentBlocks.join(COMMENT_SEPARATOR);
 
   if (hasMoreComments) {
     result += `${COMMENT_SEPARATOR}> **Note:** This issue has additional comments that were not fetched (limit: ${COMMENTS_PER_ISSUE}). View the full discussion on GitHub.`;
@@ -277,7 +277,7 @@ export async function fetchGitHubIssues(
       };
     };
     try {
-      parsed = JSON.parse(ghOutput);
+      parsed = JSON.parse(ghOutput) as typeof parsed;
     } catch (err) {
       throw new Error(`Failed to parse GraphQL response: ${formatError(err)}`);
     }
@@ -307,7 +307,7 @@ export async function fetchGitHubIssues(
         labels: node.labels.nodes.map((l) => l.name),
         blockedByNumbers: node.blockedBy.nodes.map((b) => b.number),
         comments,
-        commentsHasNextPage: node.comments?.pageInfo?.hasNextPage ?? false,
+        commentsHasNextPage: node.comments?.pageInfo.hasNextPage ?? false,
       });
     }
 

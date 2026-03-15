@@ -43,7 +43,7 @@ function main(): void {
     .action((opts: { port: string; token?: string }) => {
       const port = parseInt(opts.port, 10);
       const powerlineToken =
-        opts.token || process.env.GRACKLE_POWERLINE_TOKEN || "";
+        opts.token ?? process.env.GRACKLE_POWERLINE_TOKEN ?? "";
 
       // Register runtimes
       registerRuntime(new StubRuntime());
@@ -57,7 +57,7 @@ function main(): void {
         interceptors: powerlineToken
           ? [
               (next) => async (req) => {
-                const authHeader = req.header.get("authorization") || "";
+                const authHeader = req.header.get("authorization") ?? "";
                 const token = authHeader.replace(/^Bearer\s+/i, "");
                 const a = Buffer.from(token);
                 const b = Buffer.from(powerlineToken);
@@ -102,7 +102,7 @@ function main(): void {
       function shutdown(): void {
         logger.info("Shutting down PowerLine...");
         server.close(() => {
-          process.exit(process.exitCode || 0);
+          process.exit(process.exitCode ?? 0);
         });
       }
 

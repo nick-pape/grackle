@@ -66,8 +66,8 @@ export function getBundle(): powerline.TokenBundle {
     return create(powerline.TokenItemSchema, {
       name: cfg.name,
       type: cfg.type,
-      envVar: cfg.envVar || "",
-      filePath: cfg.filePath || "",
+      envVar: cfg.envVar ?? "",
+      filePath: cfg.filePath ?? "",
       value: decrypt(cfg.value),
     });
   });

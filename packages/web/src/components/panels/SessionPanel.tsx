@@ -110,7 +110,7 @@ function EventList({ sessionEvents, session, eventsDropped, scrollRef }: EventLi
 function groupConsecutiveTextEvents(events: SessionEvent[]): SessionEvent[] {
   const result: SessionEvent[] = [];
   for (const event of events) {
-    const previous = result[result.length - 1];
+    const previous = result.at(-1);
     if (event.eventType === "text" && previous?.eventType === "text") {
       result[result.length - 1] = { ...previous, content: previous.content + event.content };
     } else {
@@ -145,7 +145,7 @@ function pairToolEvents(events: SessionEvent[]): DisplayEvent[] {
     if (!raw || typeof raw.id !== "string") continue;
     try {
       const content = JSON.parse(e.content) as { tool: string; args: unknown };
-      toolUseById.set(raw.id, { tool: content.tool ?? "", args: content.args });
+      toolUseById.set(raw.id, { tool: content.tool, args: content.args });
     } catch { /* skip unparseable events */ }
   }
 
@@ -622,7 +622,7 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
 
   if (viewMode.kind === "task") {
     task = tasks.find((t) => t.id === viewMode.taskId);
-    projectId = task?.projectId || undefined;
+    projectId = task?.projectId ?? undefined;
   }
 
   // Resolve effective sessionId — use selectedSessionId if valid, otherwise task.latestSessionId
@@ -634,7 +634,7 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
     if (selectedSessionId && currentTaskSessions.some((s) => s.id === selectedSessionId)) {
       sessionId = selectedSessionId;
     } else {
-      sessionId = task?.latestSessionId || undefined;
+      sessionId = task?.latestSessionId ?? undefined;
     }
   }
 
@@ -874,7 +874,7 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
       } else if (field === "repoUrl") {
         if (trimmed === project.repoUrl) { cancelEdit(); return; }
         updateProject(project.id, { repoUrl: trimmed });
-      } else if (field === "defaultEnvironmentId") {
+      } else {
         if (editDraft === project.defaultEnvironmentId) { cancelEdit(); return; }
         updateProject(project.id, { defaultEnvironmentId: editDraft });
       }
@@ -896,8 +896,7 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
       if (field === "name") return editDraft.trim() !== project.name;
       if (field === "description") return editDraft !== project.description;
       if (field === "repoUrl") return editDraft.trim() !== project.repoUrl;
-      if (field === "defaultEnvironmentId") return editDraft !== project.defaultEnvironmentId;
-      return false;
+      return editDraft !== project.defaultEnvironmentId;
     };
 
     const defaultEnv = environments.find((e) => e.id === project?.defaultEnvironmentId);
@@ -944,12 +943,12 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
               <button
                 type="button"
                 className={styles.metaValueClickable}
-                onClick={() => startEdit("name", project?.name || "")}
+                onClick={() => startEdit("name", project?.name ?? "")}
                 title="Click to edit name"
-                aria-label={`Edit project name: ${project?.name || viewMode.projectId}`}
+                aria-label={`Edit project name: ${project?.name ?? viewMode.projectId}`}
                 data-testid="edit-name-button"
               >
-                {project?.name || viewMode.projectId}
+                {project?.name ?? viewMode.projectId}
                 <span
                   className={styles.editButton}
                   aria-hidden="true"
@@ -1017,7 +1016,7 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
                   <button
                     type="button"
                     className={styles.metaValueClickable}
-                    onClick={() => startEdit("description", project?.description || "")}
+                    onClick={() => startEdit("description", project?.description ?? "")}
                     title="Click to edit description"
                     aria-label="Edit project description"
                     data-testid="edit-description-button"
@@ -1074,7 +1073,7 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
                   <button
                     type="button"
                     className={styles.metaValueClickable}
-                    onClick={(e) => { e.preventDefault(); startEdit("repoUrl", project?.repoUrl || ""); }}
+                    onClick={(e) => { e.preventDefault(); startEdit("repoUrl", project?.repoUrl ?? ""); }}
                     title="Click to edit repository URL"
                     aria-label="Edit project repository URL"
                     data-testid="edit-repo-button"
@@ -1146,7 +1145,7 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
                   <button
                     type="button"
                     className={styles.metaValueClickable}
-                    onClick={() => startEdit("defaultEnvironmentId", project?.defaultEnvironmentId || "")}
+                    onClick={() => startEdit("defaultEnvironmentId", project?.defaultEnvironmentId ?? "")}
                     title="Click to change default environment"
                     aria-label="Edit project default environment"
                     data-testid="edit-env-button"
@@ -1158,7 +1157,7 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
                       </span>
                     ) : (
                       <span className={styles.metaPlaceholder}>
-                        {project?.defaultEnvironmentId || "No default environment"}
+                        {project?.defaultEnvironmentId ?? "No default environment"}
                       </span>
                     )}
                     <span
@@ -1291,7 +1290,7 @@ export function SessionPanel({ viewMode, setViewMode }: Props): JSX.Element {
         {/* Task header with contextual action buttons */}
         <div className={styles.header}>
           <span className={styles.headerTitle}>
-            <span data-testid="task-title">{task?.title || viewMode.taskId}</span>
+            <span data-testid="task-title">{task?.title ?? viewMode.taskId}</span>
             {task && <span className={styles.taskStatusBadge} data-testid="task-status">{task.status}</span>}
             {task?.branch && <span className={styles.taskBranch}>{task.branch}</span>}
             {isTaskBlocked && <span className={styles.taskBlockedBadge}>blocked</span>}

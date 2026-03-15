@@ -36,14 +36,14 @@ const MIME_TYPES: Record<string, string> = {
 const esmRequire: NodeRequire = createRequire(import.meta.url);
 const WEB_DIST_DIR: string = resolve(
   process.env.GRACKLE_WEB_DIR
-    || join(dirname(esmRequire.resolve("@grackle-ai/web/package.json")), "dist"),
+    ?? join(dirname(esmRequire.resolve("@grackle-ai/web/package.json")), "dist"),
 );
 
 function createWebHandler(apiKey: string): (req: http.IncomingMessage, res: http.ServerResponse) => void {
   return (req: http.IncomingMessage, res: http.ServerResponse) => {
     let rawPath: string;
     try {
-      rawPath = decodeURIComponent((req.url || "/").split("?")[0]);
+      rawPath = decodeURIComponent((req.url ?? "/").split("?")[0]);
     } catch {
       res.writeHead(400);
       res.end("Bad Request");
@@ -118,8 +118,8 @@ function main(): void {
   });
 
   // --- gRPC server (HTTP/2) ---
-  const grpcPort = parseInt(process.env.GRACKLE_PORT || String(DEFAULT_SERVER_PORT), 10);
-  const bindHost = process.env.GRACKLE_HOST || "127.0.0.1";
+  const grpcPort = parseInt(process.env.GRACKLE_PORT ?? String(DEFAULT_SERVER_PORT), 10);
+  const bindHost = process.env.GRACKLE_HOST ?? "127.0.0.1";
 
   /** Allowed loopback bind addresses — security policy: never expose API key to the network. */
   const ALLOWED_BIND_HOSTS: ReadonlySet<string> = new Set(["127.0.0.1", "::1"]);
@@ -134,7 +134,7 @@ function main(): void {
     routes: registerGrackleRoutes,
     interceptors: [
       (next) => async (req) => {
-        const authHeader = req.header.get("authorization") || "";
+        const authHeader = req.header.get("authorization") ?? "";
         const token = authHeader.replace(/^Bearer\s+/i, "");
         if (!verifyApiKey(token)) {
           throw new ConnectError("Unauthorized", Code.Unauthenticated);
@@ -160,7 +160,7 @@ function main(): void {
   });
 
   // --- Web + WebSocket server (HTTP/1.1) ---
-  const webPort = parseInt(process.env.GRACKLE_WEB_PORT || String(DEFAULT_WEB_PORT), 10);
+  const webPort = parseInt(process.env.GRACKLE_WEB_PORT ?? String(DEFAULT_WEB_PORT), 10);
   const webServer = http.createServer(createWebHandler(apiKey));
 
   createWsBridge(webServer, verifyApiKey);
@@ -180,7 +180,7 @@ function main(): void {
   });
 
   // --- MCP server (HTTP/1.1, Streamable HTTP) ---
-  const mcpPort = parseInt(process.env.GRACKLE_MCP_PORT || String(DEFAULT_MCP_PORT), 10);
+  const mcpPort = parseInt(process.env.GRACKLE_MCP_PORT ?? String(DEFAULT_MCP_PORT), 10);
   const mcpServer = createMcpServer({ bindHost, mcpPort, grpcPort, apiKey });
 
   mcpServer.on("error", (err: NodeJS.ErrnoException) => {
@@ -237,7 +237,7 @@ function main(): void {
     });
 
     clearTimeout(forceExit);
-    process.exit(process.exitCode || 0);
+    process.exit(process.exitCode ?? 0);
   }
 
   // eslint-disable-next-line @typescript-eslint/no-misused-promises

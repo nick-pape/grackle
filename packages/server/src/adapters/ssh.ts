@@ -142,14 +142,14 @@ export class SshAdapter implements EnvironmentAdapter {
     try {
       await executor.exec("echo ok", { timeout: SSH_CONNECTIVITY_TIMEOUT_MS });
     } catch (err) {
-      throw new Error(`Cannot reach ${cfg.host} via SSH: ${err}`);
+      throw new Error(`Cannot reach ${cfg.host} via SSH: ${err instanceof Error ? err.message : String(err)}`);
     }
 
     // Bootstrap PowerLine on the remote host
     yield* bootstrapPowerLine(executor, powerlineToken, cfg.env);
 
     // Open SSH tunnel
-    const localPort = cfg.localPort || await findFreePort();
+    const localPort = cfg.localPort ?? await findFreePort();
     yield { stage: "tunneling", message: `Opening SSH tunnel on local port ${localPort}...`, progress: 0.80 };
 
     const tunnel = new SshTunnel(localPort, cfg);
@@ -195,7 +195,7 @@ export class SshAdapter implements EnvironmentAdapter {
     }
 
     // 3. Open new SSH tunnel
-    const localPort = cfg.localPort || await findFreePort();
+    const localPort = cfg.localPort ?? await findFreePort();
     yield { stage: "reconnecting", message: `Opening SSH tunnel on local port ${localPort}...`, progress: 0.70 };
     const tunnel = new SshTunnel(localPort, cfg);
     await tunnel.open();

@@ -40,12 +40,14 @@ export function processFindingEvent(
     return;
   }
   try {
-    const data = JSON.parse(content);
+    const data = JSON.parse(content) as {
+      category?: string; title?: string; content?: string; tags?: string[];
+    };
     const findingId = uuid();
     findingStore.postFinding(
-      findingId, ctx.projectId, ctx.taskId || "", sessionId,
-      data.category || "general", data.title || "Untitled",
-      data.content || "", data.tags || [],
+      findingId, ctx.projectId, ctx.taskId, sessionId,
+      data.category ?? "general", data.title ?? "Untitled",
+      data.content ?? "", data.tags ?? [],
     );
     broadcast({ type: "finding_posted", payload: { projectId: ctx.projectId, findingId } });
     logger.info({ findingId, projectId: ctx.projectId, title: data.title }, "Finding stored");
@@ -218,8 +220,8 @@ export function processEventStream(
   const ctx: ProcessorContext = {
     sessionId,
     logPath,
-    projectId: options.projectId || "",
-    taskId: options.taskId || "",
+    projectId: options.projectId ?? "",
+    taskId: options.taskId ?? "",
   };
 
   /** Maps local_id strings (assigned by the agent) to real task IDs, scoped to this stream. */
@@ -294,7 +296,7 @@ export function processEventStream(
       }
     } catch (err) {
       const current = sessionStore.getSession(sessionId);
-      if (current && current.status === SESSION_STATUS.IDLE) {
+      if (current?.status === SESSION_STATUS.IDLE) {
         // Session was idle (agent finished work). Transport error is not a task failure.
         logger.info({ sessionId, err: String(err) }, "Stream ended while session idle — marking completed");
         sessionStore.updateSession(sessionId, SESSION_STATUS.COMPLETED);

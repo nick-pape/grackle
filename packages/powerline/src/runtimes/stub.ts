@@ -26,7 +26,7 @@ class StubSession implements AgentSession {
     yield { type: "system", timestamp: ts(), content: "Stub runtime initialized" };
     yield { type: "text", timestamp: ts(), content: `Echo: ${this.prompt}` };
 
-    if (this.killed) return;
+    if (this.killed as boolean) return;
 
     yield {
       type: "tool_use",
@@ -40,13 +40,13 @@ class StubSession implements AgentSession {
       content: `Tool output: "${this.prompt}"`,
     };
 
-    if (this.killed) return;
+    if (this.killed as boolean) return;
 
     // Wait for user input
     this.status = SESSION_STATUS.IDLE;
     yield { type: "status", timestamp: ts(), content: "waiting_input" };
 
-    if (this.killed) return;
+    if (this.killed as boolean) return;
 
     const input = await this.waitForInput();
     if (this.killed) return;

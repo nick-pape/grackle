@@ -32,15 +32,15 @@ export function registerProjectCommands(program: Command): void {
     .option("--env <env-id>", "Default environment ID")
     .option("--desc <description>", "Project description")
     .option("--no-worktrees", "Disable worktree isolation (agents share the main checkout)")
-    .action(async (name: string, opts) => {
+    .action(async (name: string, opts: { worktrees?: boolean; desc?: string; repo?: string; env?: string }) => {
       const client = createGrackleClient();
       // Commander sets opts.worktrees = false when --no-worktrees is passed, true otherwise
       const useWorktrees = opts.worktrees !== false;
       const p = await client.createProject({
         name,
-        description: opts.desc || "",
-        repoUrl: opts.repo || "",
-        defaultEnvironmentId: opts.env || "",
+        description: opts.desc ?? "",
+        repoUrl: opts.repo ?? "",
+        defaultEnvironmentId: opts.env ?? "",
         useWorktrees,
       });
       console.log(`Created project: ${p.id} (${p.name}) [worktrees: ${p.useWorktrees ? "enabled" : "disabled"}]`);
@@ -76,7 +76,7 @@ export function registerProjectCommands(program: Command): void {
     .option("--env <env-id>", "Default environment ID")
     .option("--no-worktrees", "Disable worktree isolation (agents share the main checkout)")
     .option("--worktrees", "Enable worktree isolation (default)")
-    .action(async (id: string, opts) => {
+    .action(async (id: string, opts: { worktrees?: boolean; name?: string; desc?: string; repo?: string; env?: string }) => {
       const client = createGrackleClient();
       // Determine useWorktrees: explicit --worktrees → true, --no-worktrees → false, neither → undefined (no change)
       let useWorktrees: boolean | undefined;

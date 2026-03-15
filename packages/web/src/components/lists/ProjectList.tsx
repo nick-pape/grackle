@@ -76,7 +76,7 @@ function TaskTreeNode({
   projectId,
   taskStatusById,
 }: TaskTreeNodeProps): JSX.Element {
-  const statusStyle = TASK_STATUS_STYLES[node.status] || TASK_STATUS_STYLES.not_started;
+  const statusStyle = TASK_STATUS_STYLES[node.status];
   const isBlocked = node.dependsOn.length > 0 &&
     node.dependsOn.some((depId) => taskStatusById.get(depId) !== "complete");
   const isExpanded = expandedTasks.has(node.id);

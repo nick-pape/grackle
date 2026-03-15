@@ -9,7 +9,7 @@ export function registerLogCommands(program: Command): void {
     .description("View session logs")
     .option("--transcript", "Show markdown transcript")
     .option("--tail", "Follow live events")
-    .action(async (sessionId: string, opts) => {
+    .action(async (sessionId: string, opts: { transcript?: boolean; tail?: boolean }) => {
       const client = createGrackleClient();
 
       if (opts.tail) {
@@ -39,7 +39,7 @@ export function registerLogCommands(program: Command): void {
       if (opts.transcript) {
         // Read transcript file
         const { readFileSync, existsSync } = await import("node:fs");
-        const { join } = await import("node:path");
+        const { join } = await import("node:path"); // eslint-disable-line @typescript-eslint/unbound-method
         const transcriptPath = join(session.logPath, "transcript.md");
         if (existsSync(transcriptPath)) {
           console.log(readFileSync(transcriptPath, "utf-8"));
@@ -51,7 +51,7 @@ export function registerLogCommands(program: Command): void {
 
       // Read JSONL
       const { readFileSync, existsSync } = await import("node:fs");
-      const { join } = await import("node:path");
+      const { join } = await import("node:path"); // eslint-disable-line @typescript-eslint/unbound-method
       const jsonlPath = join(session.logPath, "stream.jsonl");
       if (!existsSync(jsonlPath)) {
         console.error("No log file found");
@@ -60,7 +60,7 @@ export function registerLogCommands(program: Command): void {
 
       const lines = readFileSync(jsonlPath, "utf-8").split("\n").filter(Boolean);
       for (const line of lines) {
-        const entry = JSON.parse(line);
+        const entry = JSON.parse(line) as { timestamp: string; type: string; content: string };
         const time = new Date(entry.timestamp).toLocaleTimeString();
         console.log(`[${time}] ${entry.type}: ${entry.content}`);
       }

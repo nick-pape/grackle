@@ -16,7 +16,7 @@ const TASK_STATUS_STYLES: Record<string, { color: string; icon: string }> = {
 /** Custom React Flow node component rendering a task as a glass card. */
 export function TaskNode({ data }: NodeProps): JSX.Element {
   const { task, childCount, doneChildCount, hasDependencies } = data as TaskNodeData;
-  const statusStyle = TASK_STATUS_STYLES[task.status] || TASK_STATUS_STYLES.not_started;
+  const statusStyle = TASK_STATUS_STYLES[task.status];
 
   return (
     <div className={styles.taskNode} data-task-id={task.id} data-task-title={task.title}>

@@ -29,9 +29,9 @@ function loadApiKey(): string {
 
 /** Start the standalone MCP server, pointed at an already-running Grackle gRPC server. */
 function main(): void {
-  const mcpPort = parseInt(process.env.GRACKLE_MCP_PORT || String(DEFAULT_MCP_PORT), 10);
-  const bindHost = process.env.GRACKLE_HOST || "127.0.0.1";
-  const apiKey = process.env.GRACKLE_API_KEY || loadApiKey();
+  const mcpPort = parseInt(process.env.GRACKLE_MCP_PORT ?? String(DEFAULT_MCP_PORT), 10);
+  const bindHost = process.env.GRACKLE_HOST ?? "127.0.0.1";
+  const apiKey = process.env.GRACKLE_API_KEY ?? loadApiKey();
 
   if (!ALLOWED_BIND_HOSTS.has(bindHost)) {
     console.error(`Error: GRACKLE_HOST must be a loopback address (127.0.0.1 or ::1). Got: ${bindHost}`);
@@ -39,11 +39,11 @@ function main(): void {
   }
 
   // Parse the gRPC server URL to extract host and port
-  const grackleUrl = process.env.GRACKLE_URL || `http://127.0.0.1:${DEFAULT_SERVER_PORT}`;
+  const grackleUrl = process.env.GRACKLE_URL ?? `http://127.0.0.1:${DEFAULT_SERVER_PORT}`;
   let grpcPort: number;
   try {
     const parsed = new URL(grackleUrl);
-    grpcPort = parseInt(parsed.port || String(DEFAULT_SERVER_PORT), 10);
+    grpcPort = parseInt(parsed.port ? parsed.port : String(DEFAULT_SERVER_PORT), 10);
   } catch {
     console.error(`Error: Invalid GRACKLE_URL: ${grackleUrl}`);
     process.exit(1);

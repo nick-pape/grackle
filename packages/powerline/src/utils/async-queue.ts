@@ -33,9 +33,9 @@ export class AsyncQueue<T> {
   }
 
   public async *[Symbol.asyncIterator](): AsyncIterableIterator<T> {
-    while (true) {
+    while (!this.closed) {
       const item = await this.shift();
-      if (item === undefined && this.closed) return;
+      if (item === undefined && (this.closed as boolean)) return;
       if (item !== undefined) yield item;
     }
   }

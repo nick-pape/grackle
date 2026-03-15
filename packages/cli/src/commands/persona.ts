@@ -48,8 +48,11 @@ export function registerPersonaCommands(program: Command): void {
     .option("--model <model>", "Default model")
     .option("--max-turns <n>", "Maximum turns", parseInt)
     .addHelpText("after", `\nExamples:\n  $ grackle persona create "Frontend Engineer" --prompt "You are a React specialist." --runtime claude-code\n  $ grackle persona create "Security Reviewer" --prompt-file ./prompts/security.md --model opus`)
-    .action(async (name: string, opts) => {
-      let systemPrompt = opts.prompt || "";
+    .action(async (name: string, opts: {
+      prompt?: string; promptFile?: string; desc?: string;
+      runtime?: string; model?: string; maxTurns?: number;
+    }) => {
+      let systemPrompt = opts.prompt ?? "";
       if (opts.promptFile) {
         systemPrompt = readFileSync(opts.promptFile, "utf8");
       }
@@ -64,11 +67,11 @@ export function registerPersonaCommands(program: Command): void {
       const client = createGrackleClient();
       const p = await client.createPersona({
         name,
-        description: opts.desc || "",
+        description: opts.desc ?? "",
         systemPrompt,
-        runtime: opts.runtime || "",
-        model: opts.model || "",
-        maxTurns: opts.maxTurns || 0,
+        runtime: opts.runtime ?? "",
+        model: opts.model ?? "",
+        maxTurns: opts.maxTurns ?? 0,
       });
       console.log(`Created persona: ${p.id} (${p.name})`);
     });
@@ -115,20 +118,23 @@ export function registerPersonaCommands(program: Command): void {
     .option("--runtime <runtime>", "New runtime")
     .option("--model <model>", "New model")
     .option("--max-turns <n>", "New max turns", parseInt)
-    .action(async (id: string, opts) => {
-      let systemPrompt = opts.prompt || "";
+    .action(async (id: string, opts: {
+      name?: string; prompt?: string; promptFile?: string; desc?: string;
+      runtime?: string; model?: string; maxTurns?: number;
+    }) => {
+      let systemPrompt = opts.prompt ?? "";
       if (opts.promptFile) {
         systemPrompt = readFileSync(opts.promptFile, "utf8");
       }
       const client = createGrackleClient();
       const p = await client.updatePersona({
         id,
-        name: opts.name || "",
-        description: opts.desc || "",
+        name: opts.name ?? "",
+        description: opts.desc ?? "",
         systemPrompt,
-        runtime: opts.runtime || "",
-        model: opts.model || "",
-        maxTurns: opts.maxTurns || 0,
+        runtime: opts.runtime ?? "",
+        model: opts.model ?? "",
+        maxTurns: opts.maxTurns ?? 0,
       });
       console.log(`Updated persona: ${p.id} (${p.name})`);
     });
