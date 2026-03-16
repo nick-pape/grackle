@@ -1,3 +1,5 @@
+@use './styles/mixins' as *;
+
 // =============================================================================
 // App — root layout (flex column: StatusBar / body / UnifiedBar)
 // =============================================================================
@@ -12,6 +14,11 @@
   display: flex;
   flex: 1;
   overflow: hidden;
+  position: relative;
+
+  @include mobile {
+    flex-direction: column;
+  }
 }
 
 .main {
@@ -19,4 +26,55 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+// ---------------------------------------------------------------------------
+// Sidebar drawer (mobile)
+// ---------------------------------------------------------------------------
+
+.sidebarWrapper {
+  display: flex;
+  flex-shrink: 0;
+
+  @include mobile {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 280px;
+    z-index: 100;
+    transform: translateX(-100%);
+    transition: transform var(--transition-slow);
+
+    &[data-sidebar-open="true"] {
+      transform: translateX(0);
+    }
+
+    // Settings nav renders inline as horizontal tabs on mobile
+    &[data-settings="true"] {
+      position: static;
+      width: 100%;
+      transform: none;
+    }
+  }
+}
+
+.overlay {
+  display: none;
+
+  @include mobile {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 99;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--transition-base);
+
+    &.overlayVisible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+  }
 }

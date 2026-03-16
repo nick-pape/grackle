@@ -4,7 +4,7 @@ import { ToastProvider } from "./context/ToastContext.js";
 import { ThemeProvider } from "./context/ThemeContext.js";
 import { StatusBar, Sidebar, UnifiedBar } from "./components/layout/index.js";
 import { ToastContainer } from "./components/notifications/index.js";
-import { useEffect, type JSX } from "react";
+import { useCallback, useEffect, useState, type JSX } from "react";
 import { useGrackle } from "./context/GrackleContext.js";
 import { useToast } from "./context/ToastContext.js";
 import { useEnvironmentToasts } from "./hooks/useEnvironmentToasts.js";
@@ -41,6 +41,13 @@ function AppShell(): JSX.Element {
   const location = useLocation();
   const isSettings = location.pathname.startsWith(SETTINGS_URL);
 
+  // Sidebar drawer state for mobile
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const toggleSidebar = useCallback(() => setSidebarOpen((prev) => !prev), []);
+
+  // Auto-close sidebar on navigation (mobile drawer)
+  useEffect(() => { setSidebarOpen(false); }, [location.pathname]);
+
   // Auto-select newly spawned sessions — but only if the user is not
   // already viewing a task (task-spawned sessions should keep the user on
   // the task page rather than redirecting to the raw session view).
@@ -52,9 +59,19 @@ function AppShell(): JSX.Element {
 
   return (
     <div className={styles.root}>
-      <StatusBar />
+      <StatusBar onToggleSidebar={toggleSidebar} />
       <div className={styles.body}>
-        {isSettings ? <SettingsNav /> : <Sidebar />}
+        <div className={styles.sidebarWrapper} data-sidebar-open={sidebarOpen} data-settings={isSettings}>
+          {isSettings ? <SettingsNav /> : <Sidebar />}
+        </div>
+        <div
+          className={`${styles.overlay} ${sidebarOpen ? styles.overlayVisible : ""}`}
+          onClick={() => setSidebarOpen(false)}
+          onKeyDown={(e) => { if (e.key === "Escape") { setSidebarOpen(false); } }}
+          role="button"
+          tabIndex={-1}
+          aria-label="Close sidebar"
+        />
         <div className={styles.main}>
           <Outlet />
           <UnifiedBar />

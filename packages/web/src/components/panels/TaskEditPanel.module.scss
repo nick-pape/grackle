@@ -61,6 +61,10 @@
   overflow: auto;
   padding: var(--space-lg);
   width: 100%;
+
+  @include mobile {
+    padding: var(--space-md);
+  }
 }
 
 .formContent {
@@ -68,6 +72,10 @@
   flex-direction: column;
   gap: var(--space-lg);
   max-width: 680px;
+
+  @include mobile {
+    max-width: 100%;
+  }
 }
 
 .section {

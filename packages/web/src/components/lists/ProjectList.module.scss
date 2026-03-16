@@ -105,7 +105,7 @@
 
 .taskRow {
   @include hover-accent;
-  padding: 3px var(--space-md) 3px 34px;
+  padding: 3px var(--space-md) 3px var(--task-indent, 34px);
   font-size: var(--font-size-sm);
   cursor: pointer;
   color: var(--text-secondary);
@@ -119,6 +119,10 @@
   &.selected {
     background: var(--bg-overlay);
     color: var(--text-primary);
+  }
+
+  @include mobile {
+    padding-left: calc(var(--task-indent, 34px) * 0.6);
   }
 }
 
@@ -177,6 +181,10 @@
   }
 
   &:focus-visible {
+    opacity: 1;
+  }
+
+  @include mobile {
     opacity: 1;
   }
 }

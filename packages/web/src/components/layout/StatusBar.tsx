@@ -3,8 +3,14 @@ import { useGrackle } from "../../context/GrackleContext.js";
 import { SETTINGS_URL, useAppNavigate } from "../../utils/navigation.js";
 import styles from "./StatusBar.module.scss";
 
+/** Props for the StatusBar component. */
+interface StatusBarProps {
+  /** Callback to toggle the mobile sidebar drawer. */
+  onToggleSidebar?: () => void;
+}
+
 /** Top status bar showing connection state, environment counts, and active session count. */
-export function StatusBar(): JSX.Element {
+export function StatusBar({ onToggleSidebar }: StatusBarProps): JSX.Element {
   const { connected, environments, sessions } = useGrackle();
   const navigate = useAppNavigate();
   const totalEnvs = environments.length;
@@ -13,13 +19,16 @@ export function StatusBar(): JSX.Element {
 
   return (
     <div className={styles.container}>
+      <button type="button" className={styles.hamburger} onClick={onToggleSidebar} aria-label="Toggle sidebar">
+        {"\u2630"}
+      </button>
       <button type="button" className={styles.brand} onClick={() => navigate("/")} title="Home">Grackle</button>
       <div className={styles.info}>
         <span>
           <span className={`${styles.connectionDot} ${connected ? styles.connected : styles.disconnected}`}>
             {"\u25CF"}
           </span>
-          {" "}{connected ? "Connected" : "Disconnected"}
+          {" "}<span className={styles.connectionLabel}>{connected ? "Connected" : "Disconnected"}</span>
         </span>
         <span>{connectedEnvs}/{totalEnvs} env{totalEnvs !== 1 ? "s" : ""}</span>
         <span>{activeCount} active</span>
