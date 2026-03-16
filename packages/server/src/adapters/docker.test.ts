@@ -10,9 +10,12 @@ vi.mock("../logger.js", () => ({
   },
 }));
 
-// ── Mock remote-adapter-utils (isDevMode) ───────────────────
+// ── Mock remote-adapter-utils ────────────────────────────────
 vi.mock("./remote-adapter-utils.js", () => ({
   isDevMode: vi.fn().mockReturnValue(false),
+  bootstrapPowerLine: vi.fn().mockReturnValue((async function* () { /* no-op */ })()),
+  startRemotePowerLine: vi.fn().mockResolvedValue({ alreadyRunning: false }),
+  buildRemoteKillCommand: vi.fn().mockReturnValue("true"),
 }));
 
 import { DockerAdapter, type DockerEnvironmentConfig } from "./docker.js";

@@ -8,6 +8,7 @@ import { spawn, type ChildProcess } from "node:child_process";
 import { createConnection } from "node:net";
 import { join, resolve } from "node:path";
 import { existsSync, readFileSync } from "node:fs";
+import { getCredentialProviders } from "../credential-providers.js";
 
 // ─── Constants ──────────────────────────────────────────────
 
@@ -484,13 +485,13 @@ export async function* bootstrapPowerLine(
   //      available via `printenv` in SSH sessions. It lives in a shared env file at
   //      /workspaces/.codespaces/shared/.env (format: GITHUB_TOKEN=ghu_...).
   //      Fall back to printenv for non-codespace environments (e.g. SSH with real shells).
-  //      This is a connectivity concern (the token is only available on the remote host),
-  //      not a credential provider concern — the captured token is unconditionally forwarded
-  //      via extraEnv when found (and no local or adapter token is already present).
+  //      Only performed when the GitHub credential provider is enabled, so that users
+  //      who have disabled it do not receive injected tokens.
   let enrichedExtraEnv = extraEnv;
   const hasLocalToken = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
   const hasAdapterToken = extraEnv?.GITHUB_TOKEN || extraEnv?.GH_TOKEN;
-  if (!hasLocalToken && !hasAdapterToken) {
+  const githubProviderEnabled = getCredentialProviders().github === "on";
+  if (githubProviderEnabled && !hasLocalToken && !hasAdapterToken) {
     try {
       const remoteToken = (
         await executor.exec(
@@ -551,43 +552,29 @@ export async function* bootstrapPowerLine(
       { timeout: BOOTSTRAP_NPM_INSTALL_TIMEOUT_MS },
     );
 
-    // Install runtime deps needed by copied @grackle-ai/* packages (e.g. fuse.js for common).
-    // Must run BEFORE copying @grackle-ai/* dirs — npm install wipes unmanaged dirs.
-    yield { stage: "bootstrapping", message: "Installing @grackle-ai/common dependencies...", progress: 0.54 };
-    await executor.exec(
-      `cd ${REMOTE_POWERLINE_DIRECTORY} && npm install fuse.js --legacy-peer-deps --no-package-lock --no-save`,
-      { timeout: BOOTSTRAP_NPM_INSTALL_TIMEOUT_MS },
-    );
+    // Copy @grackle-ai/* packages, strip their workspace deps, and install
+    // their own runtime deps. This is self-maintaining — each package resolves
+    // its own deps without hardcoding individual package names.
+    const STRIP_WORKSPACE_DEPS: string =
+      `node -e "`
+      + `const p=JSON.parse(require('fs').readFileSync('package.json','utf8'));`
+      + `for(const k of Object.keys(p.dependencies||{})){if(k.startsWith('@grackle-ai/'))delete p.dependencies[k];}`
+      + `for(const k of Object.keys(p.devDependencies||{})){if(k.startsWith('@grackle-ai/'))delete p.devDependencies[k];}`
+      + `require('fs').writeFileSync('package.json',JSON.stringify(p,null,2));"`;
 
-    // Copy @grackle-ai/* AFTER all npm installs (npm wipes unmanaged dirs in node_modules)
-    yield { stage: "bootstrapping", message: "Copying @grackle-ai/common...", progress: 0.55 };
-    await executor.exec(
-      `mkdir -p ${REMOTE_POWERLINE_DIRECTORY}/node_modules/@grackle-ai/common`,
-      { timeout: REMOTE_EXEC_DEFAULT_TIMEOUT_MS },
-    );
-    await executor.copyTo(
-      join(commonPackageDir, "dist"),
-      `${REMOTE_POWERLINE_DIRECTORY}/node_modules/@grackle-ai/common/dist`,
-    );
-    await executor.copyTo(
-      join(commonPackageDir, "package.json"),
-      `${REMOTE_POWERLINE_DIRECTORY}/node_modules/@grackle-ai/common/package.json`,
-    );
+    for (const [name, dir] of [["common", commonPackageDir], ["mcp", mcpPackageDir]] as const) {
+      const remotePkgDir = `${REMOTE_POWERLINE_DIRECTORY}/node_modules/@grackle-ai/${name}`;
+      yield { stage: "bootstrapping", message: `Copying @grackle-ai/${name}...`, progress: name === "common" ? 0.55 : 0.60 };
+      await executor.exec(`mkdir -p ${remotePkgDir}`, { timeout: REMOTE_EXEC_DEFAULT_TIMEOUT_MS });
+      await executor.copyTo(join(dir, "dist"), `${remotePkgDir}/dist`);
+      await executor.copyTo(join(dir, "package.json"), `${remotePkgDir}/package.json`);
 
-    // Copy @grackle-ai/mcp for MCP server support
-    yield { stage: "bootstrapping", message: "Copying @grackle-ai/mcp...", progress: 0.58 };
-    await executor.exec(
-      `mkdir -p ${REMOTE_POWERLINE_DIRECTORY}/node_modules/@grackle-ai/mcp`,
-      { timeout: REMOTE_EXEC_DEFAULT_TIMEOUT_MS },
-    );
-    await executor.copyTo(
-      join(mcpPackageDir, "dist"),
-      `${REMOTE_POWERLINE_DIRECTORY}/node_modules/@grackle-ai/mcp/dist`,
-    );
-    await executor.copyTo(
-      join(mcpPackageDir, "package.json"),
-      `${REMOTE_POWERLINE_DIRECTORY}/node_modules/@grackle-ai/mcp/package.json`,
-    );
+      // Strip workspace deps and install remaining runtime deps
+      await executor.exec(
+        `cd ${remotePkgDir} && ${STRIP_WORKSPACE_DEPS} && npm install --omit=dev --legacy-peer-deps --no-package-lock`,
+        { timeout: BOOTSTRAP_NPM_INSTALL_TIMEOUT_MS },
+      );
+    }
   } else {
     // ── Production mode: npm install from registry ──
     const version = getPackageVersion();
