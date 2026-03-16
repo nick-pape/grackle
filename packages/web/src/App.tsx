@@ -85,6 +85,7 @@ function AppShell(): JSX.Element {
         {sidebarOpen && !isSettings && (
           <div
             className={styles.overlay}
+            data-testid="drawer-overlay"
             onClick={() => setSidebarOpen(false)}
           />
         )}
