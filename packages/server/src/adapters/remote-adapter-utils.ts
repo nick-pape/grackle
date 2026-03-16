@@ -485,8 +485,8 @@ export async function* bootstrapPowerLine(
   //      /workspaces/.codespaces/shared/.env (format: GITHUB_TOKEN=ghu_...).
   //      Fall back to printenv for non-codespace environments (e.g. SSH with real shells).
   //      This is a connectivity concern (the token is only available on the remote host),
-  //      not a credential provider concern — the Codespace adapter decides whether to
-  //      forward it via extraEnv.
+  //      not a credential provider concern — the captured token is unconditionally forwarded
+  //      via extraEnv when found (and no local or adapter token is already present).
   let enrichedExtraEnv = extraEnv;
   {
     const hasLocalToken = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
