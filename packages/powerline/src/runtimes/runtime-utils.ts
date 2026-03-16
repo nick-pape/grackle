@@ -1,8 +1,6 @@
 import type { AgentEvent } from "./runtime.js";
 import type { AsyncQueue } from "../utils/async-queue.js";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
-import { fileURLToPath } from "node:url";
-import { dirname, join } from "node:path";
 import { execFileSync, execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { ensureWorktree } from "../worktree.js";
@@ -11,11 +9,6 @@ import { logger } from "../logger.js";
 const execFileAsync: typeof execFile.__promisify__ = promisify(execFile);
 
 // ─── Shared constants ──────────────────────────────────────
-
-const __dirname: string = dirname(fileURLToPath(import.meta.url));
-
-/** @deprecated Path to the old stdio Grackle MCP server script. Replaced by the HTTP MCP broker. */
-export const GRACKLE_MCP_SCRIPT: string = join(__dirname, "../../mcp-grackle/index.js");
 
 // ─── Working directory resolution ──────────────────────────
 
@@ -243,7 +236,6 @@ export interface BrokerConfig {
  *
  * Also reads `disallowedTools` and filters matching tools from MCP server configs.
  * When `brokerConfig` is provided, injects an HTTP-based Grackle MCP server entry.
- * Falls back to the old stdio stub if the script exists and no broker is available.
  */
 export function resolveMcpServers(
   spawnMcpServers?: Record<string, unknown>,
@@ -271,25 +263,16 @@ export function resolveMcpServers(
     servers = { ...servers, ...spawnMcpServers };
   }
 
-  // Inject the Grackle MCP server entry: prefer HTTP broker, fall back to stdio stub
-  if (!servers.grackle) {
-    if (brokerConfig) {
-      servers.grackle = {
-        type: "http",
-        url: brokerConfig.url,
-        headers: { Authorization: `Bearer ${brokerConfig.token}` },
-        // tools: ["*"] is required by Copilot SDK (MCPServerConfigBase.tools is mandatory).
-        // Claude Agent SDK ignores unknown fields, Codex CLI flattens to --config.
-        tools: ["*"],
-      };
-    } else if (existsSync(GRACKLE_MCP_SCRIPT)) {
-      // Legacy fallback: stdio stub (will be removed once broker is always available)
-      servers.grackle = {
-        command: "node",
-        args: [GRACKLE_MCP_SCRIPT],
-        tools: ["post_finding", "query_findings"],
-      };
-    }
+  // Inject the Grackle MCP server entry when broker config is provided
+  if (!servers.grackle && brokerConfig) {
+    servers.grackle = {
+      type: "http",
+      url: brokerConfig.url,
+      headers: { Authorization: `Bearer ${brokerConfig.token}` },
+      // tools: ["*"] is required by Copilot SDK (MCPServerConfigBase.tools is mandatory).
+      // Claude Agent SDK ignores unknown fields, Codex CLI flattens to --config.
+      tools: ["*"],
+    };
   }
 
   // Filter disallowed tools from MCP server configs. The disallowedTools list

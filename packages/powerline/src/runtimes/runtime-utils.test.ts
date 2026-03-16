@@ -21,18 +21,12 @@ vi.mock("../worktree.js", () => ({
   ensureWorktree: vi.fn(),
 }));
 
-import { resolveWorkingDirectory, findGitRepoPath, GRACKLE_MCP_SCRIPT, resolveMcpServers } from "./runtime-utils.js";
+import { resolveWorkingDirectory, findGitRepoPath, resolveMcpServers } from "./runtime-utils.js";
 import { AsyncQueue } from "../utils/async-queue.js";
 import type { AgentEvent } from "./runtime.js";
 import { existsSync, readdirSync } from "node:fs";
 import { execFileSync, execFile } from "node:child_process";
 import { ensureWorktree } from "../worktree.js";
-
-describe("GRACKLE_MCP_SCRIPT", () => {
-  it("resolves to mcp-grackle/index.js within the powerline package", () => {
-    expect(GRACKLE_MCP_SCRIPT).toMatch(/mcp-grackle[\\/]index\.js$/);
-  });
-});
 
 describe("findGitRepoPath", () => {
   afterEach(() => {
@@ -374,30 +368,9 @@ describe("resolveMcpServers", () => {
     expect(grackle.headers).toEqual({ Authorization: "Bearer test-token" });
   });
 
-  it("does not inject grackle entry when neither brokerConfig nor stdio stub exist", () => {
-    vi.mocked(existsSync).mockReturnValue(false);
+  it("does not inject grackle entry when no brokerConfig is provided", () => {
     const result = resolveMcpServers();
     expect(result.servers).toBeUndefined();
-  });
-
-  it("falls back to stdio stub when no brokerConfig but script exists", () => {
-    vi.mocked(existsSync).mockReturnValue(true);
-    const result = resolveMcpServers();
-    expect(result.servers).toBeDefined();
-    const grackle = result.servers!.grackle as Record<string, unknown>;
-    expect(grackle.command).toBe("node");
-    expect(Array.isArray(grackle.args)).toBe(true);
-  });
-
-  it("brokerConfig takes priority over stdio stub", () => {
-    vi.mocked(existsSync).mockReturnValue(true);
-    const result = resolveMcpServers(undefined, {
-      url: "http://127.0.0.1:12345/mcp",
-      token: "priority-token",
-    });
-    const grackle = result.servers!.grackle as Record<string, unknown>;
-    expect(grackle.url).toBe("http://127.0.0.1:12345/mcp");
-    expect(grackle.command).toBeUndefined();
   });
 
   it("does not overwrite existing grackle entry from spawn config", () => {

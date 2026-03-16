@@ -152,20 +152,7 @@ describe("resolveMcpServers", () => {
     expect(result.servers!.spawnServer).toBeDefined();
   });
 
-  it("auto-injects grackle server when script exists", () => {
-    vi.stubEnv("GRACKLE_MCP_CONFIG", "");
-    vi.mocked(existsSync).mockImplementation(() => true);
-
-    const result = resolveMcpServers();
-    expect(result.servers).toBeDefined();
-    expect(result.servers!.grackle).toEqual({
-      command: "node",
-      args: [expect.stringMatching(/mcp-grackle[\\/]index\.js$/)],
-      tools: ["post_finding", "query_findings"],
-    });
-  });
-
-  it("returns undefined servers when no config and script not present", () => {
+  it("returns undefined servers when no config and no brokerConfig", () => {
     vi.stubEnv("GRACKLE_MCP_CONFIG", "");
     vi.mocked(existsSync).mockReturnValue(false);
 
