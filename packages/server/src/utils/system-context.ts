@@ -6,8 +6,8 @@ export function buildTaskSystemContext(title: string, description: string, notes
     notes ? `## Notes (from previous attempt or user feedback)\n${notes}` : "",
     `## Grackle Tools (MCP)`,
     `You have a "grackle" MCP server with tools for coordinating with other agents:`,
-    `- **mcp__grackle__post_finding** (alias: mcp__grackle__finding_post): Share discoveries (architecture decisions, bugs, patterns) with other agents working on this project. Parameters: projectId (string — injected automatically, you can pass any value or your project ID), title (string, required), content (string, optional), category (optional: architecture|api|bug|decision|dependency|pattern|general), tags (optional: string[]).`,
-    `- **mcp__grackle__query_findings** (alias: mcp__grackle__finding_list): Query findings posted by other agents. Parameters: projectId (string — injected automatically), category (optional), tag (optional), limit (optional). Findings from previous tasks are also in your system context above.`,
+    `- **mcp__grackle__finding_post**: Share discoveries (architecture decisions, bugs, patterns) with other agents working on this project. Parameters: projectId (string — injected automatically), title (string, required), content (string, optional), category (optional: architecture|api|bug|decision|dependency|pattern|general), tags (optional: string[]).`,
+    `- **mcp__grackle__finding_list**: Query findings posted by other agents. Parameters: projectId (string — injected automatically), category (optional), tag (optional), limit (optional). Findings from previous tasks are also in your system context above.`,
   ];
 
   if (canDecompose) {

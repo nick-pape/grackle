@@ -5,7 +5,6 @@ import type { ToolDefinition } from "./tool-registry.js";
 import type { AuthContext } from "./auth-context.js";
 import {
   SCOPED_TOOLS,
-  TOOL_ALIASES,
   resolveToolForAuth,
   listToolsForAuth,
 } from "./tool-scoping.js";
@@ -53,29 +52,17 @@ describe("SCOPED_TOOLS", () => {
   });
 });
 
-// ─── TOOL_ALIASES constant ──────────────────────────────────
-
-describe("TOOL_ALIASES", () => {
-  it("maps post_finding → finding_post", () => {
-    expect(TOOL_ALIASES.get("post_finding")).toBe("finding_post");
-  });
-
-  it("maps query_findings → finding_list", () => {
-    expect(TOOL_ALIASES.get("query_findings")).toBe("finding_list");
-  });
-});
-
 // ─── resolveToolForAuth ─────────────────────────────────────
 
 describe("resolveToolForAuth", () => {
-  it("returns tool by canonical name for api-key auth", () => {
+  it("returns tool by name for api-key auth", () => {
     const registry = buildRegistry();
     const tool = resolveToolForAuth(registry, "env_list", API_KEY_AUTH);
     expect(tool).toBeDefined();
     expect(tool!.name).toBe("env_list");
   });
 
-  it("returns scoped tool by canonical name for scoped auth", () => {
+  it("returns scoped tool by name for scoped auth", () => {
     const registry = buildRegistry();
     const tool = resolveToolForAuth(registry, "finding_post", SCOPED_AUTH);
     expect(tool).toBeDefined();
@@ -86,20 +73,6 @@ describe("resolveToolForAuth", () => {
     const registry = buildRegistry();
     const tool = resolveToolForAuth(registry, "env_list", SCOPED_AUTH);
     expect(tool).toBeUndefined();
-  });
-
-  it("resolves alias post_finding → finding_post for scoped auth", () => {
-    const registry = buildRegistry();
-    const tool = resolveToolForAuth(registry, "post_finding", SCOPED_AUTH);
-    expect(tool).toBeDefined();
-    expect(tool!.name).toBe("finding_post");
-  });
-
-  it("resolves alias query_findings → finding_list for scoped auth", () => {
-    const registry = buildRegistry();
-    const tool = resolveToolForAuth(registry, "query_findings", SCOPED_AUTH);
-    expect(tool).toBeDefined();
-    expect(tool!.name).toBe("finding_list");
   });
 
   it("returns undefined for unknown tool name", () => {
@@ -119,17 +92,11 @@ describe("listToolsForAuth", () => {
     expect(names).toEqual(["env_list", "finding_list", "finding_post", "session_list", "task_create"]);
   });
 
-  it("returns only scoped tools + aliases for scoped auth", () => {
+  it("returns only scoped tools for scoped auth", () => {
     const registry = buildRegistry();
     const tools = listToolsForAuth(registry, SCOPED_AUTH);
     const names = tools.map((t) => t.name).sort();
-    expect(names).toEqual([
-      "finding_list",
-      "finding_post",
-      "post_finding",
-      "query_findings",
-      "task_create",
-    ]);
+    expect(names).toEqual(["finding_list", "finding_post", "task_create"]);
   });
 
   it("does not include env_list or session_list for scoped auth", () => {

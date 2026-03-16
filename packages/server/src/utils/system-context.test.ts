@@ -21,8 +21,8 @@ describe("buildTaskSystemContext", () => {
 
   it("always includes finding tools with projectId parameter", () => {
     const result = buildTaskSystemContext("Task", "desc", "");
-    expect(result).toContain("mcp__grackle__post_finding");
-    expect(result).toContain("mcp__grackle__query_findings");
+    expect(result).toContain("mcp__grackle__finding_post");
+    expect(result).toContain("mcp__grackle__finding_list");
     expect(result).toContain("projectId");
   });
 
