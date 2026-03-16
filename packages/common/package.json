@@ -16,7 +16,8 @@
   "files": ["dist/"],
   "scripts": {
     "build": "heft build --clean",
-    "clean": "heft clean"
+    "clean": "heft clean",
+    "test": "vitest run"
   },
   "dependencies": {
     "@bufbuild/protobuf": "^2.5.0",

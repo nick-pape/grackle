@@ -18,16 +18,34 @@ const TASK_STATUS_STYLES: Record<string, { color: string; icon: string }> = {
   blocked: { color: "var(--accent-yellow)", icon: "\u29B8" },
 };
 
+/** Merge overlapping or adjacent [start, end] ranges into non-overlapping ranges. */
+function mergeRanges(ranges: readonly MatchIndex[]): MatchIndex[] {
+  if (ranges.length === 0) {
+    return [];
+  }
+  const sorted = [...ranges].sort((a, b) => a[0] - b[0]);
+  const merged: [number, number][] = [[sorted[0][0], sorted[0][1]]];
+  for (let i = 1; i < sorted.length; i++) {
+    const prev = merged[merged.length - 1];
+    const [start, end] = sorted[i];
+    if (start <= prev[1] + 1) {
+      prev[1] = Math.max(prev[1], end);
+    } else {
+      merged.push([start, end]);
+    }
+  }
+  return merged;
+}
+
 /** Render text with highlighted match ranges. Unmatched portions are plain, matched portions are bold. */
 function HighlightedText({ text, indices }: { text: string; indices?: readonly MatchIndex[] }): JSX.Element {
   if (!indices || indices.length === 0) {
     return <>{text}</>;
   }
-  // Sort indices by start position and merge overlaps
-  const sorted = [...indices].sort((a, b) => a[0] - b[0]);
+  const merged = mergeRanges(indices);
   const parts: JSX.Element[] = [];
   let cursor = 0;
-  for (const [start, end] of sorted) {
+  for (const [start, end] of merged) {
     if (start > cursor) {
       parts.push(<span key={`p${cursor}`}>{text.slice(cursor, start)}</span>);
     }
@@ -513,9 +531,9 @@ export function ProjectList(): JSX.Element {
   const TASK_KEYS = [{ name: "title" as const, weight: 2 }, { name: "description" as const, weight: 1 }];
 
   /** Sets of matching IDs for filtering, recomputed when query or data changes. */
-  const { directMatchTaskIds, treeMatchTaskIds, visibleProjectIds, titleHighlights } = useMemo(() => {
+  const { directMatchTaskIds, treeMatchTaskIds, visibleProjectIds, matchedProjectIds, titleHighlights } = useMemo(() => {
     if (!searchQuery.trim()) {
-      return { directMatchTaskIds: null, treeMatchTaskIds: null, visibleProjectIds: null, titleHighlights: new Map<string, readonly MatchIndex[]>() };
+      return { directMatchTaskIds: null, treeMatchTaskIds: null, visibleProjectIds: null, matchedProjectIds: null, titleHighlights: new Map<string, readonly MatchIndex[]>() };
     }
     const projectResults = fuzzySearch(projects, searchQuery, PROJECT_KEYS);
     const taskResults = fuzzySearch(tasks, searchQuery, TASK_KEYS);
@@ -549,7 +567,7 @@ export function ProjectList(): JSX.Element {
       }
     }
 
-    return { directMatchTaskIds: directIds, treeMatchTaskIds: treeIds, visibleProjectIds: vProjectIds, titleHighlights: highlights };
+    return { directMatchTaskIds: directIds, treeMatchTaskIds: treeIds, visibleProjectIds: vProjectIds, matchedProjectIds: mProjectIds, titleHighlights: highlights };
   }, [searchQuery, projects, tasks]);
 
   return (
@@ -584,6 +602,7 @@ export function ProjectList(): JSX.Element {
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Filter..."
+          aria-label="Filter projects and tasks"
           className={styles.searchInput}
           data-testid="sidebar-search"
         />
@@ -642,8 +661,9 @@ export function ProjectList(): JSX.Element {
         const isSearching = directMatchTaskIds !== null;
         const isExpanded = expanded.has(project.id) || isSearching;
         const allProjectTasks = tasks.filter((t) => t.projectId === project.id);
-        // Use tree IDs (includes ancestors) for tree view, direct IDs for grouped view
-        const activeMatchIds = isSearching
+        // When a project matches directly, show all its tasks; otherwise filter to matching tasks only
+        const projectMatchedDirectly = matchedProjectIds?.has(project.id) ?? false;
+        const activeMatchIds = isSearching && !projectMatchedDirectly
           ? (groupByStatus ? directMatchTaskIds : treeMatchTaskIds)
           : null;
         const projectTasks = activeMatchIds
