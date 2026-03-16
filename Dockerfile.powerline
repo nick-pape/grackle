@@ -45,16 +45,17 @@ RUN node -e "\
   require('fs').writeFileSync('package.json',JSON.stringify(p,null,2));"
 RUN npm install --omit=dev --legacy-peer-deps
 
-# Copy @grackle-ai/common AFTER npm install (npm cleans unmanaged dirs in node_modules)
+# Install runtime deps needed by copied @grackle-ai/* packages (e.g. fuse.js for common).
+# Must run BEFORE copying @grackle-ai/* dirs — npm install wipes unmanaged dirs.
+RUN npm install fuse.js --legacy-peer-deps --no-package-lock
+
+# Copy @grackle-ai/* AFTER all npm installs (npm cleans unmanaged dirs in node_modules)
 COPY packages/common/dist/ /app/node_modules/@grackle-ai/common/dist/
 COPY packages/common/package.json /app/node_modules/@grackle-ai/common/package.json
 
 # Copy @grackle-ai/mcp for MCP server support
 COPY packages/mcp/dist/ /app/node_modules/@grackle-ai/mcp/dist/
 COPY packages/mcp/package.json /app/node_modules/@grackle-ai/mcp/package.json
-
-# Install runtime deps for copied @grackle-ai/* packages (e.g. fuse.js for common)
-RUN cd node_modules/@grackle-ai/common && npm install --omit=dev --legacy-peer-deps --no-package-lock 2>/dev/null; true
 
 USER grackle
 

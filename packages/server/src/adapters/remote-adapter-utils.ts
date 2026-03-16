@@ -553,7 +553,15 @@ export async function* bootstrapPowerLine(
       { timeout: BOOTSTRAP_NPM_INSTALL_TIMEOUT_MS },
     );
 
-    // Copy @grackle-ai/common into node_modules AFTER npm install (npm would wipe it)
+    // Install runtime deps needed by copied @grackle-ai/* packages (e.g. fuse.js for common).
+    // Must run BEFORE copying @grackle-ai/* dirs — npm install wipes unmanaged dirs.
+    yield { stage: "bootstrapping", message: "Installing @grackle-ai/common dependencies...", progress: 0.54 };
+    await executor.exec(
+      `cd ${REMOTE_POWERLINE_DIRECTORY} && npm install fuse.js --legacy-peer-deps --no-package-lock`,
+      { timeout: BOOTSTRAP_NPM_INSTALL_TIMEOUT_MS },
+    );
+
+    // Copy @grackle-ai/* AFTER all npm installs (npm wipes unmanaged dirs in node_modules)
     yield { stage: "bootstrapping", message: "Copying @grackle-ai/common...", progress: 0.55 };
     await executor.exec(
       `mkdir -p ${REMOTE_POWERLINE_DIRECTORY}/node_modules/@grackle-ai/common`,
@@ -581,13 +589,6 @@ export async function* bootstrapPowerLine(
     await executor.copyTo(
       join(mcpPackageDir, "package.json"),
       `${REMOTE_POWERLINE_DIRECTORY}/node_modules/@grackle-ai/mcp/package.json`,
-    );
-
-    // Install runtime deps for copied @grackle-ai/* packages (e.g. fuse.js for common)
-    yield { stage: "bootstrapping", message: "Installing @grackle-ai/common dependencies...", progress: 0.59 };
-    await executor.exec(
-      `cd ${REMOTE_POWERLINE_DIRECTORY}/node_modules/@grackle-ai/common && npm install --omit=dev --legacy-peer-deps --no-package-lock 2>/dev/null; true`,
-      { timeout: BOOTSTRAP_NPM_INSTALL_TIMEOUT_MS },
     );
   } else {
     // ── Production mode: npm install from registry ──
