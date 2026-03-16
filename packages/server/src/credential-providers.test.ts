@@ -161,33 +161,44 @@ describe("credential-providers", () => {
       expect(envVars).toContain("GH_TOKEN");
     });
 
-    it("includes Copilot tokens when copilot is on", () => {
+    it("includes Copilot config file and env vars when copilot is on", () => {
       setCredentialProviders({
         claude: "off",
         github: "off",
         copilot: "on",
         codex: "off",
       });
+      mockExistsSync.mockReturnValue(true);
+      mockReadFileSync.mockReturnValue('{"logged_in_users":[]}');
       process.env.COPILOT_GITHUB_TOKEN = "ghu_test";
 
       const bundle = buildProviderTokenBundle();
-      expect(bundle.tokens).toHaveLength(1);
-      expect(bundle.tokens[0].envVar).toBe("COPILOT_GITHUB_TOKEN");
+      const fileTokens = bundle.tokens.filter((t) => t.type === "file");
+      const envTokens = bundle.tokens.filter((t) => t.type === "env_var");
+      expect(fileTokens).toHaveLength(1);
+      expect(fileTokens[0].filePath).toBe("~/.copilot/config.json");
+      expect(envTokens.some((t) => t.envVar === "COPILOT_GITHUB_TOKEN")).toBe(true);
     });
 
-    it("includes OPENAI_API_KEY when codex is on", () => {
+    it("includes Codex auth file and env var when codex is on", () => {
       setCredentialProviders({
         claude: "off",
         github: "off",
         copilot: "off",
         codex: "on",
       });
+      mockExistsSync.mockReturnValue(true);
+      mockReadFileSync.mockReturnValue('{"auth_mode":"chatgpt"}');
       process.env.OPENAI_API_KEY = "sk-openai-test";
 
       const bundle = buildProviderTokenBundle();
-      expect(bundle.tokens).toHaveLength(1);
-      expect(bundle.tokens[0].envVar).toBe("OPENAI_API_KEY");
-      expect(bundle.tokens[0].value).toBe("sk-openai-test");
+      const fileTokens = bundle.tokens.filter((t) => t.type === "file");
+      const envTokens = bundle.tokens.filter((t) => t.type === "env_var");
+      expect(fileTokens).toHaveLength(1);
+      expect(fileTokens[0].filePath).toBe("~/.codex/auth.json");
+      expect(envTokens).toHaveLength(1);
+      expect(envTokens[0].envVar).toBe("OPENAI_API_KEY");
+      expect(envTokens[0].value).toBe("sk-openai-test");
     });
 
     it("skips env vars that are not set in process.env", () => {
@@ -272,7 +283,7 @@ describe("credential-providers", () => {
       expect(envVars).toContain("OPENAI_API_KEY");
     });
 
-    it("unknown runtime includes all enabled providers", () => {
+    it("stub runtime includes no providers", () => {
       setCredentialProviders({
         claude: "api_key",
         github: "on",
@@ -284,12 +295,8 @@ describe("credential-providers", () => {
       process.env.COPILOT_GITHUB_TOKEN = "ghu_test";
       process.env.OPENAI_API_KEY = "sk-openai";
 
-      const bundle = buildProviderTokenBundle("unknown-runtime");
-      const envVars = bundle.tokens.map((t) => t.envVar);
-      expect(envVars).toContain("ANTHROPIC_API_KEY");
-      expect(envVars).toContain("GITHUB_TOKEN");
-      expect(envVars).toContain("COPILOT_GITHUB_TOKEN");
-      expect(envVars).toContain("OPENAI_API_KEY");
+      const bundle = buildProviderTokenBundle("stub");
+      expect(bundle.tokens).toHaveLength(0);
     });
 
     it("no runtime includes all enabled providers", () => {

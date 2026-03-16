@@ -7,7 +7,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { create } from "@bufbuild/protobuf";
-import { powerline } from "@grackle-ai/common";
+import { powerline, type RuntimeName } from "@grackle-ai/common";
 import db from "./db.js";
 import { settings } from "./schema.js";
 import { logger } from "./logger.js";
@@ -97,23 +97,24 @@ export function setCredentialProviders(config: CredentialProviderConfig): void {
 // ─── Runtime → Provider Mapping ────────────────────────────
 
 /** Maps each runtime to the credential providers it needs. */
-const RUNTIME_PROVIDERS: Record<string, (keyof CredentialProviderConfig)[]> = {
+const RUNTIME_PROVIDERS: Record<RuntimeName, (keyof CredentialProviderConfig)[]> = {
   "claude-code": ["claude", "github"],
   "copilot": ["copilot", "github"],
   "codex": ["codex", "github"],
+  "stub": [],
 };
 
 // ─── Token Bundle Builder ──────────────────────────────────
 
 /**
  * Build a token bundle containing enabled provider credentials.
- * When `runtime` is specified, only providers relevant to that runtime are included.
- * When `runtime` is omitted or unknown, all enabled providers are included.
+ * When `runtime` is a known {@link RuntimeName}, only providers mapped to that runtime are included.
+ * When `runtime` is omitted or not a recognized runtime name, all enabled providers are included.
  * Reads values fresh from `process.env` or disk at call time.
  */
 export function buildProviderTokenBundle(runtime?: string): powerline.TokenBundle {
   const config = getCredentialProviders();
-  const runtimeProviders = runtime ? RUNTIME_PROVIDERS[runtime] : undefined;
+  const runtimeProviders = runtime ? RUNTIME_PROVIDERS[runtime as RuntimeName] : undefined;
   const allowedProviders = runtimeProviders
     ? new Set(runtimeProviders)
     : undefined;
@@ -166,8 +167,23 @@ export function buildProviderTokenBundle(runtime?: string): powerline.TokenBundl
     }
   }
 
-  // Copilot provider
+  // Copilot provider — push the config file so the SDK's useLoggedInUser path works.
+  // Also forward env vars for explicit token / BYOK scenarios.
   if ((!allowedProviders || allowedProviders.has("copilot")) && config.copilot === "on") {
+    const copilotConfigPath = join(homedir(), ".copilot", "config.json");
+    if (existsSync(copilotConfigPath)) {
+      const value = readFileSync(copilotConfigPath, "utf-8");
+      if (value.trim()) {
+        items.push(
+          create(powerline.TokenItemSchema, {
+            name: "copilot-config",
+            type: "file",
+            filePath: "~/.copilot/config.json",
+            value,
+          }),
+        );
+      }
+    }
     for (const varName of [
       "COPILOT_GITHUB_TOKEN",
       "COPILOT_CLI_URL",
@@ -188,8 +204,23 @@ export function buildProviderTokenBundle(runtime?: string): powerline.TokenBundl
     }
   }
 
-  // Codex provider
+  // Codex provider — push the auth file so the SDK's ChatGPT auth path works.
+  // Also forward OPENAI_API_KEY env var for API-key scenarios.
   if ((!allowedProviders || allowedProviders.has("codex")) && config.codex === "on") {
+    const codexAuthPath = join(homedir(), ".codex", "auth.json");
+    if (existsSync(codexAuthPath)) {
+      const value = readFileSync(codexAuthPath, "utf-8");
+      if (value.trim()) {
+        items.push(
+          create(powerline.TokenItemSchema, {
+            name: "codex-auth",
+            type: "file",
+            filePath: "~/.codex/auth.json",
+            value,
+          }),
+        );
+      }
+    }
     const openaiKey = process.env.OPENAI_API_KEY;
     if (openaiKey) {
       items.push(
