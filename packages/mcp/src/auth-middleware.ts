@@ -48,9 +48,12 @@ export function authenticateMcpRequest(req: http.IncomingMessage, apiKey: string
     if (oauthClaims) {
       // Validate audience if present — when non-empty, must match this server's resource URL.
       // Empty aud is accepted because the client may omit the resource indicator (RFC 8707).
+      // Use the socket's local port (server-controlled) rather than the Host header (client-controlled)
+      // to prevent token replay via Host spoofing.
       if (oauthClaims.aud) {
-        const expectedAudience = `http://${req.headers.host || "localhost"}`;
-        if (oauthClaims.aud !== expectedAudience) {
+        const localPort = req.socket?.localPort;
+        const expectedAudience = localPort ? `http://127.0.0.1:${localPort}` : undefined;
+        if (!expectedAudience || oauthClaims.aud !== expectedAudience) {
           return undefined;
         }
       }

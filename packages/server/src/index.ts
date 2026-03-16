@@ -292,6 +292,24 @@ function createWebHandler(
           return;
         }
 
+        // Validate each redirect URI — only allow http(s) on loopback to prevent open redirects
+        for (const uri of redirectUris) {
+          try {
+            const parsed = new URL(uri);
+            const isLoopback = parsed.hostname === "127.0.0.1" || parsed.hostname === "localhost" || parsed.hostname === "::1";
+            const isHttpOrHttps = parsed.protocol === "http:" || parsed.protocol === "https:";
+            if (!isLoopback || !isHttpOrHttps) {
+              res.writeHead(400, { "Content-Type": "application/json" });
+              res.end(JSON.stringify({ error: "invalid_client_metadata", error_description: "redirect_uris must use http(s) on loopback (127.0.0.1 or localhost)" }));
+              return;
+            }
+          } catch {
+            res.writeHead(400, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ error: "invalid_client_metadata", error_description: "Invalid redirect_uri" }));
+            return;
+          }
+        }
+
         const client = registerClient(redirectUris, clientName);
         if (!client) {
           res.writeHead(503, { "Content-Type": "application/json" });
@@ -395,13 +413,16 @@ function createWebHandler(
           return;
         }
 
-        // Build redirect URL with state for error responses
+        // Build redirect URL using URL API to safely merge query params
         const buildRedirect = (params: Record<string, string>): string => {
-          const qs = new URLSearchParams(params);
-          if (state) {
-            qs.set("state", state);
+          const url = new URL(redirectUri);
+          for (const [key, value] of Object.entries(params)) {
+            url.searchParams.set(key, value);
           }
-          return `${redirectUri}?${qs.toString()}`;
+          if (state) {
+            url.searchParams.set("state", state);
+          }
+          return url.toString();
         };
 
         // Deny action
