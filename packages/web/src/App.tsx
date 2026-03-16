@@ -73,7 +73,7 @@ function AppShell(): JSX.Element {
 
   return (
     <div className={styles.root}>
-      <StatusBar onToggleSidebar={isSettings ? undefined : toggleSidebar} />
+      <StatusBar onToggleSidebar={isSettings ? undefined : toggleSidebar} sidebarOpen={sidebarOpen} />
       <div className={styles.body}>
         <div
           className={styles.sidebarWrapper}
