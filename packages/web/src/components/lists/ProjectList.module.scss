@@ -16,6 +16,21 @@
   justify-content: space-between;
 }
 
+.searchInput {
+  @include input-field;
+  display: block;
+  margin: 0 var(--space-md) var(--space-xs);
+  font-size: 11px;
+  padding: 3px var(--space-sm);
+  width: calc(100% - 2 * var(--space-md));
+}
+
+.searchHighlight {
+  background: none;
+  color: var(--accent-green);
+  font-weight: 600;
+}
+
 .addButton {
   @include btn-ghost;
   font-size: var(--font-size-sm);
@@ -105,7 +120,7 @@
 
 .taskRow {
   @include hover-accent;
-  padding: 3px var(--space-md) 3px 34px;
+  padding: 3px var(--space-md) 3px var(--task-indent, 34px);
   font-size: var(--font-size-sm);
   cursor: pointer;
   color: var(--text-secondary);
@@ -119,6 +134,10 @@
   &.selected {
     background: var(--bg-overlay);
     color: var(--text-primary);
+  }
+
+  @include mobile {
+    padding-left: calc(var(--task-indent, 34px) * 0.6);
   }
 }
 
@@ -177,6 +196,10 @@
   }
 
   &:focus-visible {
+    opacity: 1;
+  }
+
+  @include mobile {
     opacity: 1;
   }
 }

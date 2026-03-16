@@ -21,10 +21,8 @@ export async function sendWsAndWaitFor(
   return page.evaluate(
     async ({ msg, respType, timeout }) => {
       return new Promise<WsPayload>((resolve, reject) => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const apiKey = (window as any).__GRACKLE_API_KEY__ || "";
         const ws = new WebSocket(
-          `ws://${window.location.host}?token=${encodeURIComponent(apiKey)}`,
+          `ws://${window.location.host}`,
         );
         const timer = setTimeout(() => {
           ws.close();
@@ -62,10 +60,8 @@ export async function sendWsMessage(
 ): Promise<void> {
   await page.evaluate(async (msg) => {
     return new Promise<void>((resolve, reject) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const apiKey = (window as any).__GRACKLE_API_KEY__ || "";
       const ws = new WebSocket(
-        `ws://${window.location.host}?token=${encodeURIComponent(apiKey)}`,
+        `ws://${window.location.host}`,
       );
       ws.onerror = () => {
         ws.close();

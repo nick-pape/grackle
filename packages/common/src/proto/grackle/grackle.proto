@@ -397,6 +397,13 @@ message UpdatePersonaRequest {
   repeated McpServerConfig mcp_servers = 9;
 }
 
+// ─── Pairing ────────────────────────────────────────────────
+
+message PairingCodeResponse {
+  string code = 1;
+  string url = 2;
+}
+
 // ─── Service ────────────────────────────────────────────────
 
 service Grackle {
@@ -455,4 +462,6 @@ service Grackle {
   // GitHub Import
   rpc ImportGitHubIssues(ImportGitHubIssuesRequest) returns (ImportGitHubIssuesResponse);
 
+  // Pairing
+  rpc GeneratePairingCode(Empty) returns (PairingCodeResponse);
 }

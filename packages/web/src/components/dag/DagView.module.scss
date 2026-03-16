@@ -43,6 +43,11 @@
   overflow: hidden;
   cursor: pointer;
   @include card-hover;
+
+  @include mobile {
+    width: 160px;
+    min-height: 48px;
+  }
 }
 
 .taskNodeBorder {
