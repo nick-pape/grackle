@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Mon, 16 Mar 2026 03:56:16 GMT and should not be manually modified.
+This log was last generated on Mon, 16 Mar 2026 04:29:47 GMT and should not be manually modified.
+
+## 0.31.0
+Mon, 16 Mar 2026 04:29:47 GMT
+
+### Minor changes
+
+- Add pairing-code session auth for secure LAN access. Server binds to 0.0.0.0, web UI uses session cookies, new `grackle pair` command.
 
 ## 0.30.0
 Mon, 16 Mar 2026 03:56:16 GMT

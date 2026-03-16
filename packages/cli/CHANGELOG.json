@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.31.0",
+      "tag": "@grackle-ai/cli_v0.31.0",
+      "date": "Mon, 16 Mar 2026 04:29:47 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Add pairing-code session auth for secure LAN access. Server binds to 0.0.0.0, web UI uses session cookies, new `grackle pair` command."
+          }
+        ]
+      }
+    },
+    {
       "version": "0.30.0",
       "tag": "@grackle-ai/cli_v0.30.0",
       "date": "Mon, 16 Mar 2026 03:56:16 GMT",
