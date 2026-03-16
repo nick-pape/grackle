@@ -2,6 +2,26 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.31.1",
+      "tag": "@grackle-ai/cli_v0.31.1",
+      "date": "Mon, 16 Mar 2026 05:45:22 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Remove --no-open flag and browser auto-open; server no longer opens browsers"
+          }
+        ],
+        "none": [
+          {
+            "comment": "placeholder"
+          },
+          {
+            "comment": "No CLI changes — merge commit false positive"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.31.0",
       "tag": "@grackle-ai/cli_v0.31.0",
       "date": "Mon, 16 Mar 2026 04:29:47 GMT",

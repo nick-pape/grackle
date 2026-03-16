@@ -24,7 +24,6 @@ import { generatePairingCode, redeemPairingCode, startPairingCleanup, stopPairin
 import { logger } from "./logger.js";
 import { exec } from "./utils/exec.js";
 import { detectLanIp } from "./utils/network.js";
-import { execSync } from "node:child_process";
 // Import db to ensure tables are created
 import "./db.js";
 
@@ -332,21 +331,6 @@ function main(): void {
 
       logger.info({ url: pairingUrl }, "Pairing URL generated");
 
-      // Auto-open browser (best-effort, suppress errors)
-      if (process.env.GRACKLE_NO_OPEN !== "1") {
-        try {
-          const platform = process.platform;
-          if (platform === "win32") {
-            execSync(`start "" "${pairingUrl}"`, { stdio: "ignore" });
-          } else if (platform === "darwin") {
-            execSync(`open "${pairingUrl}"`, { stdio: "ignore" });
-          } else {
-            execSync(`xdg-open "${pairingUrl}"`, { stdio: "ignore" });
-          }
-        } catch {
-          // Browser open failed — not critical
-        }
-      }
     }
   });
 
