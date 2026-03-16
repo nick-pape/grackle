@@ -81,38 +81,39 @@ async function waitForPort(port: number, timeoutMs: number): Promise<void> {
 /**
  * Generate a pairing code via the CLI and redeem it via HTTP to obtain a session cookie.
  */
-async function obtainSessionCookie(serverPort: number, webPort: number, apiKey: string): Promise<string> {
+async function obtainSessionCookie(serverPort: number, webPort: number, apiKey: string, grackleHome: string): Promise<string> {
   const repoRoot = join(import.meta.dirname, "../../..");
   const cliPath = join(repoRoot, "packages/cli/dist/index.js");
 
-  // Use the gRPC GeneratePairingCode endpoint via CLI
-  // But simpler: just make a direct HTTP GET to the pair endpoint with a code
-  // We need to generate a code first — use the gRPC endpoint
-  const { createClient } = await import("@connectrpc/connect");
-  const { createGrpcTransport } = await import("@connectrpc/connect-node");
-  const { grackle } = await import("@grackle-ai/common");
-
-  const transport = createGrpcTransport({
-    baseUrl: `http://127.0.0.1:${serverPort}`,
-    httpVersion: "2",
-    interceptors: [
-      (next) => async (req) => {
-        req.header.set("authorization", `Bearer ${apiKey}`);
-        return next(req);
+  // Generate a pairing code via the CLI
+  const cliOutput = execSync(
+    `node "${cliPath}" pair`,
+    {
+      env: {
+        ...process.env,
+        GRACKLE_HOME: grackleHome,
+        GRACKLE_URL: `http://127.0.0.1:${serverPort}`,
+        GRACKLE_API_KEY: apiKey,
       },
-    ],
-  });
-  const client = createClient(grackle.Grackle, transport);
-  const response = await client.generatePairingCode({});
+      encoding: "utf8",
+    },
+  );
 
-  // Redeem the code via HTTP
+  // Extract the code from CLI output (format: "  Pairing code: XXXXXX")
+  const codeMatch = cliOutput.match(/Pairing code:\s*(\S+)/i);
+  if (!codeMatch) {
+    throw new Error(`Could not extract pairing code from CLI output: ${cliOutput}`);
+  }
+  const code = codeMatch[1];
+
+  // Redeem the code via HTTP to get a session cookie
   const http = await import("node:http");
   return new Promise((resolve, reject) => {
     const req = http.request(
       {
         hostname: "127.0.0.1",
         port: webPort,
-        path: `/pair?code=${response.code}`,
+        path: `/pair?code=${code}`,
         method: "GET",
       },
       (res) => {
@@ -217,7 +218,7 @@ export default async function globalSetup(_config: FullConfig): Promise<void> {
   console.log("[e2e] Environment provisioned");
 
   // 8. Obtain a session cookie by generating and redeeming a pairing code
-  const pairingCookie = await obtainSessionCookie(serverPort, webPort, apiKey);
+  const pairingCookie = await obtainSessionCookie(serverPort, webPort, apiKey, grackleHome);
   console.log("[e2e] Session cookie obtained");
 
   // 9. Save state for tests and teardown
