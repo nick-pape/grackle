@@ -5,6 +5,7 @@ import { STATE_FILE } from "./state-file.js";
 interface E2EState {
   grackleHome: string;
   apiKey: string;
+  pairingCookie: string;
   powerlinePid: number;
   serverPid: number;
   powerlinePort: number;
@@ -22,6 +23,20 @@ export const test = base.extend<{ grackle: { apiKey: string; baseURL: string; ws
   baseURL: async ({}, use) => {
     const state = loadState();
     await use(`http://127.0.0.1:${state.webPort}`);
+  },
+
+  // Inject the session cookie into every page context automatically
+  page: async ({ page, baseURL }, use) => {
+    const state = loadState();
+    const eqIdx = state.pairingCookie.indexOf("=");
+    const cookieName = state.pairingCookie.slice(0, eqIdx);
+    const cookieValue = state.pairingCookie.slice(eqIdx + 1);
+    await page.context().addCookies([{
+      name: cookieName,
+      value: cookieValue,
+      url: baseURL!,
+    }]);
+    await use(page);
   },
 
   grackle: async ({ baseURL }, use) => {

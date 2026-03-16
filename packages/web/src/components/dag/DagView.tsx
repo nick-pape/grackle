@@ -14,6 +14,7 @@ import { useThemeContext } from "../../context/ThemeContext.js";
 import { useDagLayout, type TaskNodeData } from "./useDagLayout.js";
 import { TaskNode } from "./TaskNode.js";
 import { taskUrl, newTaskUrl, useAppNavigate } from "../../utils/navigation.js";
+import { STATUS_CSS_VAR_MAP } from "../../utils/taskStatus.js";
 import styles from "./DagView.module.scss";
 
 /** Props for the DagView component. */
@@ -22,15 +23,7 @@ interface Props {
 }
 
 /** CSS variable mapping for MiniMap node coloring by task status. */
-const STATUS_VAR_MAP: Record<string, string> = {
-  pending: "--text-tertiary",
-  assigned: "--accent-blue",
-  in_progress: "--accent-green",
-  review: "--accent-yellow",
-  done: "--accent-green",
-  failed: "--accent-red",
-  waiting_input: "--accent-yellow",
-};
+const STATUS_VAR_MAP: Record<string, string> = STATUS_CSS_VAR_MAP;
 
 /** Custom node type registry for React Flow. */
 const nodeTypes: NodeTypes = {

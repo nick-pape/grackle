@@ -12,6 +12,26 @@
   padding: var(--space-sm) var(--space-lg);
   border-bottom: 1px solid var(--border-subtle);
   font-size: var(--font-size-lg);
+
+  @include mobile {
+    padding: var(--space-xs) var(--space-sm);
+    z-index: 101;
+  }
+}
+
+.hamburger {
+  display: none;
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  font-size: var(--font-size-xl);
+  cursor: pointer;
+  padding: var(--space-xs);
+  line-height: 1;
+
+  @include mobile {
+    display: block;
+  }
 }
 
 .brand {
@@ -37,6 +57,25 @@
   font-size: var(--font-size-sm);
   color: var(--text-secondary);
   align-items: center;
+
+  @include mobile {
+    gap: var(--space-sm);
+    font-size: var(--font-size-xs);
+  }
+}
+
+.connectionLabel {
+  @include mobile {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
 }
 
 .connectionDot {

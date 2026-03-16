@@ -54,7 +54,68 @@ describe("task_list", () => {
     expect(parsed[0].id).toBe("t1");
     expect(parsed[0].title).toBe("Fix bug");
     expect(typeof parsed[0].status).toBe("string");
-    expect(mockClient.listTasks).toHaveBeenCalledWith({ id: "proj-1" });
+    expect(mockClient.listTasks).toHaveBeenCalledWith({
+      projectId: "proj-1",
+      search: "",
+      status: "",
+    });
+  });
+
+  /** Should pass search param through to client.listTasks. */
+  test("passes search param to client", async () => {
+    const mockClient = createMockClient();
+    (mockClient.listTasks as ReturnType<typeof vi.fn>).mockResolvedValue({
+      tasks: [],
+    });
+
+    await getTool("task_list").handler(
+      { projectId: "proj-1", search: "login bug" },
+      mockClient,
+    );
+
+    expect(mockClient.listTasks).toHaveBeenCalledWith({
+      projectId: "proj-1",
+      search: "login bug",
+      status: "",
+    });
+  });
+
+  /** Should pass status param through to client.listTasks. */
+  test("passes status param to client", async () => {
+    const mockClient = createMockClient();
+    (mockClient.listTasks as ReturnType<typeof vi.fn>).mockResolvedValue({
+      tasks: [],
+    });
+
+    await getTool("task_list").handler(
+      { projectId: "proj-1", status: "working" },
+      mockClient,
+    );
+
+    expect(mockClient.listTasks).toHaveBeenCalledWith({
+      projectId: "proj-1",
+      search: "",
+      status: "working",
+    });
+  });
+
+  /** Should send empty strings for optional params when not provided (backwards compat). */
+  test("sends empty strings when optional params omitted", async () => {
+    const mockClient = createMockClient();
+    (mockClient.listTasks as ReturnType<typeof vi.fn>).mockResolvedValue({
+      tasks: [],
+    });
+
+    await getTool("task_list").handler(
+      { projectId: "proj-1" },
+      mockClient,
+    );
+
+    expect(mockClient.listTasks).toHaveBeenCalledWith({
+      projectId: "proj-1",
+      search: "",
+      status: "",
+    });
   });
 
   /** Should return a structured error on ConnectError. */

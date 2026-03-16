@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type JSX } from "react";
 import { useParams } from "react-router";
 import { useGrackle } from "../context/GrackleContext.js";
 import { DagView } from "../components/dag/DagView.js";
+import { ProjectBoard } from "../components/project/ProjectBoard.js";
 import { Breadcrumbs, ConfirmDialog } from "../components/display/index.js";
 import { buildProjectBreadcrumbs } from "../utils/breadcrumbs.js";
 import { newTaskUrl, useAppNavigate } from "../utils/navigation.js";
@@ -36,7 +37,7 @@ function relativeTime(iso: string | undefined): string {
   return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 }
 
-type ProjectTab = "tasks" | "graph";
+type ProjectTab = "tasks" | "board" | "graph";
 // eslint-disable-next-line @rushstack/no-new-null
 type EditingField = "name" | "description" | "repoUrl" | "defaultEnvironmentId" | "worktreeBasePath" | null;
 
@@ -519,7 +520,7 @@ export function ProjectPage(): JSX.Element {
         </div>
       )}
 
-      {/* Tabs: Graph / Tasks */}
+      {/* Tabs: Graph / Board / Tasks */}
       <div className={styles.tabBar} role="tablist" aria-label="Project view">
         <button
           role="tab"
@@ -528,6 +529,15 @@ export function ProjectPage(): JSX.Element {
           onClick={() => setProjectTab("graph")}
         >
           Graph
+        </button>
+        <button
+          role="tab"
+          aria-selected={projectTab === "board"}
+          className={`${styles.tab} ${projectTab === "board" ? styles.active : ""}`}
+          onClick={() => setProjectTab("board")}
+          data-testid="board-tab"
+        >
+          Board
         </button>
         <button
           role="tab"
@@ -558,6 +568,9 @@ export function ProjectPage(): JSX.Element {
             Break your work into tasks and let agents tackle them
           </div>
         </div>
+      )}
+      {projectTab === "board" && (
+        <ProjectBoard projectId={projectId!} />
       )}
       {projectTab === "graph" && (
         <DagView projectId={projectId!} />

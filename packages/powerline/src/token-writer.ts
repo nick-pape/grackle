@@ -64,10 +64,13 @@ export async function writeTokens(
         continue;
       }
 
-      await mkdir(dirname(resolvedPath), { recursive: true });
-      await writeFile(resolvedPath, token.value, { mode: 0o600 });
-
-      logger.info({ filePath: resolvedPath }, "Wrote file %s", resolvedPath);
+      try {
+        await mkdir(dirname(resolvedPath), { recursive: true });
+        await writeFile(resolvedPath, token.value, { mode: 0o600 });
+        logger.info({ filePath: resolvedPath }, "Wrote file %s", resolvedPath);
+      } catch (err) {
+        logger.warn({ filePath: resolvedPath, err }, "Failed to write token file %s, continuing", resolvedPath);
+      }
     }
   }
 }

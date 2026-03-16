@@ -15,6 +15,15 @@
   flex-direction: column;
   resize: horizontal;
   overflow: hidden;
+
+  @include mobile {
+    width: 100% !important;
+    min-width: unset;
+    max-width: unset;
+    resize: none;
+    border-right: none;
+    height: 100%;
+  }
 }
 
 .content {

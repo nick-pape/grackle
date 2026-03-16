@@ -161,4 +161,47 @@ describe("writeTokens", () => {
 
     expect(writeFile).toHaveBeenCalledWith(filePath, "secret", { mode: 0o600 });
   });
+
+  it("continues processing after file write failure", async () => {
+    const failPath = homeFile(".fail-token");
+    const successPath = homeFile(".success-token");
+    vi.mocked(writeFile).mockRejectedValueOnce(new Error("EROFS: read-only file system"));
+
+    await writeTokens([
+      { name: "fail", type: "file", envVar: "", filePath: failPath, value: "data1" },
+      { name: "success", type: "file", envVar: "", filePath: successPath, value: "data2" },
+    ]);
+
+    expect(logger.warn).toHaveBeenCalled();
+    expect(writeFile).toHaveBeenCalledTimes(2);
+    expect(writeFile).toHaveBeenLastCalledWith(successPath, "data2", { mode: 0o600 });
+  });
+
+  it("continues processing after mkdir failure", async () => {
+    const failPath = homeFile("readonly", "token");
+    const successPath = homeFile(".ok-token");
+    vi.mocked(mkdir).mockRejectedValueOnce(new Error("EACCES: permission denied"));
+
+    await writeTokens([
+      { name: "fail", type: "file", envVar: "", filePath: failPath, value: "data1" },
+      { name: "success", type: "file", envVar: "", filePath: successPath, value: "data2" },
+    ]);
+
+    expect(logger.warn).toHaveBeenCalled();
+    // The second token should still be processed
+    expect(writeFile).toHaveBeenCalledWith(successPath, "data2", { mode: 0o600 });
+  });
+
+  it("env var tokens are unaffected by file write failures", async () => {
+    vi.mocked(writeFile).mockRejectedValueOnce(new Error("EROFS"));
+    const filePath = homeFile(".broken");
+
+    await writeTokens([
+      { name: "file-token", type: "file", envVar: "", filePath, value: "data" },
+      { name: "env-token", type: "env_var", envVar: "MY_RESILIENT_VAR", filePath: "", value: "works" },
+    ]);
+
+    expect(process.env.MY_RESILIENT_VAR).toBe("works");
+    delete process.env.MY_RESILIENT_VAR;
+  });
 });

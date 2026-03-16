@@ -7,7 +7,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { create } from "@bufbuild/protobuf";
-import { powerline } from "@grackle-ai/common";
+import { powerline, type RuntimeName } from "@grackle-ai/common";
 import db from "./db.js";
 import { settings } from "./schema.js";
 import { logger } from "./logger.js";
@@ -94,18 +94,39 @@ export function setCredentialProviders(config: CredentialProviderConfig): void {
     .run();
 }
 
+// ─── Runtime → Provider Mapping ────────────────────────────
+
+/** Maps each runtime to the credential providers it needs. */
+const RUNTIME_PROVIDERS: Record<RuntimeName, (keyof CredentialProviderConfig)[]> = {
+  "claude-code": ["claude", "github"],
+  "copilot": ["copilot", "github"],
+  "codex": ["codex", "github"],
+  "stub": [],
+};
+
 // ─── Token Bundle Builder ──────────────────────────────────
 
 /**
- * Build a token bundle containing all enabled provider credentials.
+ * Build a token bundle containing enabled provider credentials.
+ * When `runtime` is a known {@link RuntimeName}, only providers mapped to that runtime are included.
+ * When `runtime` is omitted, all enabled providers are included.
+ * When `runtime` is provided but not a recognized {@link RuntimeName}, no providers are included
+ * (fails safe rather than exposing all credentials for an unrecognized runtime).
  * Reads values fresh from `process.env` or disk at call time.
  */
-export function buildProviderTokenBundle(): powerline.TokenBundle {
+export function buildProviderTokenBundle(runtime?: string): powerline.TokenBundle {
   const config = getCredentialProviders();
+  // When runtime is given, look it up in the map. Unknown runtimes get [] (empty, not all providers).
+  const runtimeProviders = runtime !== undefined
+    ? (Object.hasOwn(RUNTIME_PROVIDERS, runtime) ? RUNTIME_PROVIDERS[runtime as RuntimeName] : [])
+    : undefined;
+  const allowedProviders = runtimeProviders !== undefined
+    ? new Set(runtimeProviders)
+    : undefined;
   const items: powerline.TokenItem[] = [];
 
   // Claude provider
-  if (config.claude === "subscription") {
+  if ((!allowedProviders || allowedProviders.has("claude")) && config.claude === "subscription") {
     const credentialsPath = join(homedir(), ".claude", ".credentials.json");
     if (existsSync(credentialsPath)) {
       const value = readFileSync(credentialsPath, "utf-8");
@@ -120,7 +141,7 @@ export function buildProviderTokenBundle(): powerline.TokenBundle {
         );
       }
     }
-  } else if (config.claude === "api_key") {
+  } else if ((!allowedProviders || allowedProviders.has("claude")) && config.claude === "api_key") {
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (apiKey) {
       items.push(
@@ -135,7 +156,7 @@ export function buildProviderTokenBundle(): powerline.TokenBundle {
   }
 
   // GitHub provider
-  if (config.github === "on") {
+  if ((!allowedProviders || allowedProviders.has("github")) && config.github === "on") {
     for (const varName of ["GITHUB_TOKEN", "GH_TOKEN"]) {
       const value = process.env[varName];
       if (value) {
@@ -151,8 +172,23 @@ export function buildProviderTokenBundle(): powerline.TokenBundle {
     }
   }
 
-  // Copilot provider
-  if (config.copilot === "on") {
+  // Copilot provider — push the config file so the SDK's useLoggedInUser path works.
+  // Also forward env vars for explicit token / BYOK scenarios.
+  if ((!allowedProviders || allowedProviders.has("copilot")) && config.copilot === "on") {
+    const copilotConfigPath = join(homedir(), ".copilot", "config.json");
+    if (existsSync(copilotConfigPath)) {
+      const value = readFileSync(copilotConfigPath, "utf-8");
+      if (value.trim()) {
+        items.push(
+          create(powerline.TokenItemSchema, {
+            name: "copilot-config",
+            type: "file",
+            filePath: "~/.copilot/config.json",
+            value,
+          }),
+        );
+      }
+    }
     for (const varName of [
       "COPILOT_GITHUB_TOKEN",
       "COPILOT_CLI_URL",
@@ -173,8 +209,23 @@ export function buildProviderTokenBundle(): powerline.TokenBundle {
     }
   }
 
-  // Codex provider
-  if (config.codex === "on") {
+  // Codex provider — push the auth file so the SDK's ChatGPT auth path works.
+  // Also forward OPENAI_API_KEY env var for API-key scenarios.
+  if ((!allowedProviders || allowedProviders.has("codex")) && config.codex === "on") {
+    const codexAuthPath = join(homedir(), ".codex", "auth.json");
+    if (existsSync(codexAuthPath)) {
+      const value = readFileSync(codexAuthPath, "utf-8");
+      if (value.trim()) {
+        items.push(
+          create(powerline.TokenItemSchema, {
+            name: "codex-auth",
+            type: "file",
+            filePath: "~/.codex/auth.json",
+            value,
+          }),
+        );
+      }
+    }
     const openaiKey = process.env.OPENAI_API_KEY;
     if (openaiKey) {
       items.push(
@@ -191,14 +242,3 @@ export function buildProviderTokenBundle(): powerline.TokenBundle {
   return create(powerline.TokenBundleSchema, { tokens: items });
 }
 
-// ─── Gate Helpers ──────────────────────────────────────────
-
-/** Whether the Claude credentials file should be copied during bootstrap. */
-export function shouldPushClaudeCredentialsFile(): boolean {
-  return getCredentialProviders().claude === "subscription";
-}
-
-/** Whether GitHub token should be captured from the remote host during bootstrap. */
-export function shouldCaptureRemoteGitHubToken(): boolean {
-  return getCredentialProviders().github === "on";
-}

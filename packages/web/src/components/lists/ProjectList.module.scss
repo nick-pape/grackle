@@ -16,6 +16,21 @@
   justify-content: space-between;
 }
 
+.searchInput {
+  @include input-field;
+  display: block;
+  margin: 0 var(--space-md) var(--space-xs);
+  font-size: 11px;
+  padding: 3px var(--space-sm);
+  width: calc(100% - 2 * var(--space-md));
+}
+
+.searchHighlight {
+  background: none;
+  color: var(--accent-green);
+  font-weight: 600;
+}
+
 .addButton {
   @include btn-ghost;
   font-size: var(--font-size-sm);
@@ -105,7 +120,7 @@
 
 .taskRow {
   @include hover-accent;
-  padding: 3px var(--space-md) 3px 34px;
+  padding: 3px var(--space-md) 3px var(--task-indent, 34px);
   font-size: var(--font-size-sm);
   cursor: pointer;
   color: var(--text-secondary);
@@ -119,6 +134,10 @@
   &.selected {
     background: var(--bg-overlay);
     color: var(--text-primary);
+  }
+
+  @include mobile {
+    padding-left: calc(var(--task-indent, 34px) * 0.6);
   }
 }
 
@@ -179,6 +198,10 @@
   &:focus-visible {
     opacity: 1;
   }
+
+  @include mobile {
+    opacity: 1;
+  }
 }
 
 .emptyTasks {
@@ -219,6 +242,60 @@
 .emptyTaskCta {
   padding: 3px var(--space-md) 3px 50px;
   font-size: 11px;
+}
+
+// ---------------------------------------------------------------------------
+// Group-by-status toggle
+// ---------------------------------------------------------------------------
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.groupToggle {
+  @include btn-ghost;
+  font-size: var(--font-size-md);
+  line-height: 1;
+  padding: 1px 5px;
+}
+
+.groupToggleActive {
+  color: var(--accent-green);
+}
+
+// ---------------------------------------------------------------------------
+// Status group accordion
+// ---------------------------------------------------------------------------
+
+.statusGroupHeader {
+  @include hover-accent;
+  padding: var(--space-sm) var(--space-md) var(--space-sm) 26px;
+  font-size: var(--font-size-sm);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  margin: 0 var(--space-xs);
+}
+
+.statusGroupIcon {
+  font-size: 11px;
+}
+
+.statusGroupLabel {
+  flex: 1;
+  font-weight: 500;
+}
+
+.statusGroupCount {
+  @include surface-inset;
+  font-size: 10px;
+  color: var(--text-tertiary);
+  border-radius: var(--radius-full);
+  padding: 1px var(--space-xs);
 }
 
 .createTaskLink {

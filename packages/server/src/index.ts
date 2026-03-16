@@ -18,9 +18,12 @@ import { readFileSync, existsSync } from "node:fs";
 import { join, dirname, extname, normalize, resolve, relative } from "node:path";
 import { createRequire } from "node:module";
 import { loadOrCreateApiKey, verifyApiKey } from "./api-key.js";
+import { createSession, validateSessionCookie } from "./session.js";
+import { startSessionCleanup, stopSessionCleanup } from "./session.js";
+import { generatePairingCode, redeemPairingCode, startPairingCleanup, stopPairingCleanup } from "./pairing.js";
 import { logger } from "./logger.js";
 import { exec } from "./utils/exec.js";
-
+import { detectLanIp } from "./utils/network.js";
 // Import db to ensure tables are created
 import "./db.js";
 
@@ -41,64 +44,152 @@ const WEB_DIST_DIR: string = resolve(
     || join(dirname(esmRequire.resolve("@grackle-ai/web/package.json")), "dist"),
 );
 
+/** Minimal HTML page shown when the user needs to enter a pairing code. */
+function renderPairingPage(error?: string): string {
+  const errorHtml = error ? `<p style="color:#e74c3c;margin-bottom:1rem">${error}</p>` : "";
+  return `<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Grackle — Pair Device</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#0f172a;color:#e2e8f0}
+  .card{background:#1e293b;border-radius:12px;padding:2.5rem;max-width:400px;width:100%;text-align:center;box-shadow:0 4px 24px rgba(0,0,0,.3)}
+  h1{font-size:1.5rem;margin-bottom:.5rem}
+  p{color:#94a3b8;margin-bottom:1.5rem;font-size:.95rem}
+  input{width:100%;padding:.75rem 1rem;font-size:1.25rem;letter-spacing:.3em;text-align:center;border:2px solid #334155;border-radius:8px;background:#0f172a;color:#e2e8f0;text-transform:uppercase;font-family:monospace}
+  input:focus{outline:none;border-color:#3b82f6}
+  button{margin-top:1rem;width:100%;padding:.75rem;font-size:1rem;border:none;border-radius:8px;background:#3b82f6;color:#fff;cursor:pointer;font-weight:600}
+  button:hover{background:#2563eb}
+</style></head><body>
+<div class="card">
+  <h1>Grackle</h1>
+  <p>Enter the pairing code shown in your terminal.</p>
+  ${errorHtml}
+  <form method="GET" action="/pair">
+    <input name="code" type="text" maxlength="6" pattern="[A-Za-z0-9]{6}" autocomplete="off" autofocus placeholder="ABC123" required>
+    <button type="submit">Pair</button>
+  </form>
+</div></body></html>`;
+}
+
+/**
+ * Serve a static file from the web dist directory.
+ * Always writes a response (200, 403, 404, or 500).
+ */
+function serveStaticFile(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+  rawPath: string,
+): boolean {
+  const isRoot = rawPath === "/" || rawPath === "";
+  let filePath = isRoot
+    ? join(WEB_DIST_DIR, "index.html")
+    : resolve(WEB_DIST_DIR, normalize(`.${rawPath}`));
+
+  // Prevent path traversal — resolved path must stay within the dist directory
+  const rel = relative(WEB_DIST_DIR, filePath);
+  if (rel.startsWith("..") || resolve(WEB_DIST_DIR, rel) !== filePath) {
+    res.writeHead(403);
+    res.end("Forbidden");
+    return true;
+  }
+
+  if (!existsSync(filePath)) {
+    // SPA fallback
+    filePath = join(WEB_DIST_DIR, "index.html");
+  }
+
+  if (!existsSync(filePath)) {
+    res.writeHead(404);
+    res.end("Not found");
+    return true;
+  }
+
+  const ext = extname(filePath);
+  const contentType = MIME_TYPES[ext] || "application/octet-stream";
+
+  try {
+    const content = readFileSync(filePath);
+    res.writeHead(200, { "Content-Type": contentType });
+    res.end(content);
+    return true;
+  } catch {
+    res.writeHead(500);
+    res.end("Server error");
+    return true;
+  }
+}
+
+/** Extract the remote IP from an incoming request. */
+function getRemoteIp(req: http.IncomingMessage): string {
+  return req.socket.remoteAddress || "unknown";
+}
+
+/**
+ * Create the HTTP request handler for the web server.
+ *
+ * All routes are gated by session cookie authentication.
+ * The /pair endpoint handles pairing code exchange.
+ */
 function createWebHandler(apiKey: string): (req: http.IncomingMessage, res: http.ServerResponse) => void {
   return (req: http.IncomingMessage, res: http.ServerResponse) => {
     let rawPath: string;
+    let queryString = "";
     try {
-      rawPath = decodeURIComponent((req.url || "/").split("?")[0]);
+      const urlParts = (req.url || "/").split("?");
+      rawPath = decodeURIComponent(urlParts[0]);
+      queryString = urlParts[1] || "";
     } catch {
       res.writeHead(400);
       res.end("Bad Request");
       return;
     }
-    // URL paths are POSIX-style; use posix separator to detect root, then resolve safely
-    const isRoot = rawPath === "/" || rawPath === "";
-    let filePath = isRoot
-      ? join(WEB_DIST_DIR, "index.html")
-      : resolve(WEB_DIST_DIR, normalize(`.${rawPath}`));
 
-    // Prevent path traversal — resolved path must stay within the dist directory
-    const rel = relative(WEB_DIST_DIR, filePath);
-    if (rel.startsWith("..") || resolve(WEB_DIST_DIR, rel) !== filePath) {
-      res.writeHead(403);
-      res.end("Forbidden");
-      return;
-    }
+    // --- Pairing endpoint ---
+    if (rawPath === "/pair") {
+      const params = new URLSearchParams(queryString);
+      const code = params.get("code");
 
-    if (!existsSync(filePath)) {
-      // SPA fallback
-      filePath = join(WEB_DIST_DIR, "index.html");
-    }
-
-    if (!existsSync(filePath)) {
-      res.writeHead(404);
-      res.end("Not found");
-      return;
-    }
-
-    const ext = extname(filePath);
-    const contentType = MIME_TYPES[ext] || "application/octet-stream";
-
-    try {
-      let content = readFileSync(filePath);
-
-      // Inject API key into HTML pages — safe because only localhost can access
-      if (ext === ".html") {
-        const html = content.toString("utf8");
-        const injected = html.replace(
-          "</head>",
-          `<script>window.__GRACKLE_API_KEY__="${apiKey}";</script>\n</head>`
-        );
-        content = Buffer.from(injected, "utf8");
+      if (code) {
+        const remoteIp = getRemoteIp(req);
+        if (redeemPairingCode(code, remoteIp)) {
+          const setCookie = createSession(apiKey);
+          res.writeHead(302, {
+            Location: "/",
+            "Set-Cookie": setCookie,
+          });
+          res.end();
+          return;
+        }
+        // Invalid or expired code — show pairing page with error
+        const html = renderPairingPage("Invalid or expired pairing code. Try again.");
+        res.writeHead(200, { "Content-Type": "text/html" });
+        res.end(html);
+        return;
       }
 
-      res.writeHead(200, { "Content-Type": contentType });
-      res.end(content);
-    } catch {
-      res.writeHead(500);
-      res.end("Server error");
+      // No code provided — show the pairing form
+      const html = renderPairingPage();
+      res.writeHead(200, { "Content-Type": "text/html" });
+      res.end(html);
+      return;
     }
+
+    // --- All other routes require a valid session cookie ---
+    const cookieHeader = req.headers.cookie || "";
+    if (!validateSessionCookie(cookieHeader, apiKey)) {
+      res.writeHead(302, { Location: "/pair" });
+      res.end();
+      return;
+    }
+
+    serveStaticFile(req, res, rawPath);
   };
+}
+
+/** Whether a bind address is a wildcard (binds all interfaces). */
+function isWildcardAddress(host: string): boolean {
+  return host === "0.0.0.0" || host === "::" || host === "0:0:0:0:0:0:0:0";
 }
 
 function main(): void {
@@ -147,16 +238,14 @@ function main(): void {
     broadcastEnvironments();
   });
 
+  // Start periodic cleanup timers
+  startPairingCleanup();
+  startSessionCleanup();
+
   // --- gRPC server (HTTP/2) ---
   const grpcPort = parseInt(process.env.GRACKLE_PORT || String(DEFAULT_SERVER_PORT), 10);
   const bindHost = process.env.GRACKLE_HOST || "127.0.0.1";
-
-  /** Allowed loopback bind addresses — security policy: never expose API key to the network. */
-  const ALLOWED_BIND_HOSTS: ReadonlySet<string> = new Set(["127.0.0.1", "::1"]);
-  if (!ALLOWED_BIND_HOSTS.has(bindHost)) {
-    logger.fatal({ host: bindHost }, "GRACKLE_HOST must be a loopback address (127.0.0.1 or ::1). Got: %s", bindHost);
-    process.exit(1);
-  }
+  const allowNetwork = isWildcardAddress(bindHost);
 
   /** Format bindHost for embedding in a URL — IPv6 literals need brackets per RFC 2732. */
   const urlHost = bindHost.includes(":") ? `[${bindHost}]` : bindHost;
@@ -193,7 +282,9 @@ function main(): void {
   const webPort = parseInt(process.env.GRACKLE_WEB_PORT || String(DEFAULT_WEB_PORT), 10);
   const webServer = http.createServer(createWebHandler(apiKey));
 
-  createWsBridge(webServer, verifyApiKey);
+  createWsBridge(webServer, verifyApiKey, (cookieHeader: string) =>
+    validateSessionCookie(cookieHeader, apiKey),
+  );
 
   webServer.on("error", (err: NodeJS.ErrnoException) => {
     if (err.code === "EADDRINUSE") {
@@ -207,6 +298,40 @@ function main(): void {
 
   webServer.listen(webPort, bindHost, () => {
     logger.info({ port: webPort, host: bindHost }, "Web UI + WebSocket on http://%s:%d", urlHost, webPort);
+
+    // Generate initial pairing code and print to terminal
+    const code = generatePairingCode();
+    if (code) {
+      const pairingHost = isWildcardAddress(bindHost)
+        ? (detectLanIp() || "localhost")
+        : bindHost;
+      const pairingUrl = `http://${pairingHost}:${webPort}/pair?code=${code}`;
+
+      process.stdout.write("\n");
+      process.stdout.write("  Open in browser:\n");
+      process.stdout.write(`  ${pairingUrl}\n`);
+      process.stdout.write("\n");
+
+      // Print QR code only when network-accessible (useful for phone scanning)
+      if (allowNetwork) {
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          const qrcode = esmRequire("qrcode") as { toString(text: string, opts: { type: string; small: boolean }): Promise<string> };
+          qrcode.toString(pairingUrl, { type: "terminal", small: true })
+            .then((qr: string) => { process.stdout.write(qr); })
+            .catch(() => { /* QR rendering failed — not critical */ });
+        } catch {
+          // qrcode not installed — skip QR
+        }
+      }
+
+      process.stdout.write("  Pairing code expires in 5 minutes.\n");
+      process.stdout.write("  Run `grackle pair` to generate a new code.\n");
+      process.stdout.write("\n");
+
+      logger.info({ url: pairingUrl }, "Pairing URL generated");
+
+    }
   });
 
   // --- MCP server (HTTP/1.1, Streamable HTTP) ---
@@ -232,6 +357,8 @@ function main(): void {
 
   async function shutdown(): Promise<void> {
     logger.info("Shutting down...");
+    stopPairingCleanup();
+    stopSessionCleanup();
     const forceExit = setTimeout(() => {
       logger.warn("Shutdown timed out, forcing exit");
       process.exit(1);

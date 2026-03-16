@@ -13,6 +13,7 @@ When you encounter unexpected issues, workarounds, or non-obvious behavior (CI q
 ## Planning
 
 - **Always plan tests**: Every implementation plan must include a section for tests (E2E Playwright specs for `@grackle-ai/web`, unit/integration tests for other packages). If the change is purely cosmetic or untestable, explicitly note why tests are skipped.
+- **Prefer `data-testid` in E2E tests**: Use `data-testid` attributes and `page.getByTestId()` to locate elements in Playwright tests rather than fragile DOM selectors like `getByText()` with `{ exact: true }`. Text-based locators break when the same text appears in multiple places (e.g., StatusBar and page content). Add `data-testid` to components when writing tests that need to disambiguate.
 - **Open a PR as the final step**: Use `/create-pr` to open the PR. The PR body must link back to the issue.
 
 ## Build & Test
@@ -30,14 +31,18 @@ npx buf generate
 
 - **Rebuild before manual testing**: After making code changes to any package, you must run `rush build -t @grackle-ai/<package>` before starting or restarting the server. The server runs compiled JS from `dist/`, not TypeScript source files.
 - **CLI uses `GRACKLE_URL`, not `GRACKLE_PORT`**: The CLI client reads `GRACKLE_URL` (e.g., `http://127.0.0.1:7500`) to find the gRPC server. Setting `GRACKLE_PORT` only affects the server's listen port, not the CLI's connection target.
+- **Run Playwright suites sequentially when invoking them manually**: `packages/web/tests/global-setup.ts` and `global-teardown.ts` share a temp state file for the isolated stack. Launching separate `playwright test` commands in parallel can make one teardown remove the other run's state file and kill its server, causing `ENOENT` / connection-refused failures.
 
 ## Manual Testing
 
 **After finishing code changes, always manually test if the change is testable.** Don't rely solely on unit tests — unit tests mock everything and only verify wiring, not real behavior.
 
+**Use `/launch-grackle` to start an isolated test server.** This finds free ports, creates a branch-specific home directory (isolated DB), launches the server, and reports back the URLs. Never use the default ports or the user's `~/.grackle` database for testing.
+
 - **Web UI changes**: Use the Playwright MCP (`mcp__playwright__*`) to launch a browser, navigate the web UI, and verify visually that the feature works as expected.
-- **Server / adapter changes** (e.g. SSH, Codespace): Start the server (`grackle serve`), add an environment (`grackle env add`), and exercise the relevant flow (provision, stop, reconnect, etc.) against a real target. Use `gh codespace list` to find an available codespace for Codespace adapter testing.
+- **Server / adapter changes** (e.g. SSH, Codespace): Use `/launch-grackle`, add an environment (`grackle env add`), and exercise the relevant flow (provision, stop, reconnect, etc.) against a real target. Use `gh codespace list` to find an available codespace for Codespace adapter testing.
 - **CLI changes**: Run the CLI commands manually and verify the output matches expectations.
+- **Verify screenshots**: Whenever you take screenshots (for testing or for a PR), always read the PNG file back with the Read tool and visually inspect it to confirm it shows what you expect. Don't assume a screenshot is correct just because the tool reported success.
 - If you cannot manually test (e.g. no codespace available, or the change is purely internal refactoring with no observable behavior), explicitly state why manual testing was skipped.
 
 ## Project Structure
@@ -75,7 +80,8 @@ Rush monorepo with 5 packages under `packages/`:
 - Validate file paths to prevent path traversal (token-writer, file operations)
 - Use `ConnectError` with proper gRPC status codes (e.g., `Code.Unauthenticated`)
 - Constant-time comparison for API key verification
-- Bind servers to loopback only (`127.0.0.1` or `::1`) — never `0.0.0.0` or `::`. The `--host` flag on `grackle serve` accepts both loopback addresses; the server validates this on startup.
+- Web UI uses pairing-code → session-cookie auth. The API key is never injected into HTML. gRPC uses Bearer token auth. WebSocket accepts either session cookie or `?token=` query param.
+- The server binds to `127.0.0.1` by default. Use `grackle serve --allow-network` to bind to `0.0.0.0` for LAN access (e.g., phone). Use `grackle pair` to generate new pairing codes.
 
 ### Dependencies
 - Cross-package deps use `"workspace:*"` (pnpm rewrites to real versions at publish time)
@@ -113,8 +119,5 @@ PRs that modify publishable packages need a change file. The `/create-pr` skill 
 
 ### Multi-Session Safety
 Multiple Claude Code sessions may be running concurrently against the same repo. **Never kill server processes (node, grackle) unless you are certain they belong to your session.** Another agent may be using them.
-1. Check if the default ports are already in use (`netstat -ano | grep :<port> | grep LISTENING`).
-2. If a server is already running on the default ports, **do not kill it and do not reuse it** — it belongs to another session with its own DB state.
-3. Start your own server on different ports using environment variables: `GRACKLE_PORT=<grpc-port> GRACKLE_WEB_PORT=<web-port> node packages/server/dist/index.js`. Pick unused ports (e.g., 7500/7501, 7600/7601).
-4. Point CLI commands at your server: `--port <your-grpc-port>` or set `GRACKLE_PORT`.
-5. Note the PID so you can clean up your own process later without affecting other sessions.
+
+**Always use `/launch-grackle`** to start a test server. It guarantees free ports, an isolated database, and reports back the correct URLs. Never use the default ports (7434, 3000, 7435, 7433) or the user's `~/.grackle` database directly.

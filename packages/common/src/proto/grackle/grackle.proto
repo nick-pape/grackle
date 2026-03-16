@@ -244,6 +244,12 @@ message TaskList {
   repeated Task tasks = 1;
 }
 
+message ListTasksRequest {
+  string project_id = 1;
+  string search = 2;      // optional case-insensitive substring filter on title/description
+  string status = 3;      // optional status filter (e.g. "not_started", "working", "complete")
+}
+
 message CreateTaskRequest {
   string project_id = 1;
   string title = 2;
@@ -391,6 +397,13 @@ message UpdatePersonaRequest {
   repeated McpServerConfig mcp_servers = 9;
 }
 
+// ─── Pairing ────────────────────────────────────────────────
+
+message PairingCodeResponse {
+  string code = 1;
+  string url = 2;
+}
+
 // ─── Service ────────────────────────────────────────────────
 
 service Grackle {
@@ -426,7 +439,7 @@ service Grackle {
   rpc ArchiveProject(ProjectId) returns (Empty);
 
   // Tasks
-  rpc ListTasks(ProjectId) returns (TaskList);
+  rpc ListTasks(ListTasksRequest) returns (TaskList);
   rpc CreateTask(CreateTaskRequest) returns (Task);
   rpc GetTask(TaskId) returns (Task);
   rpc UpdateTask(UpdateTaskRequest) returns (Task);
@@ -449,4 +462,6 @@ service Grackle {
   // GitHub Import
   rpc ImportGitHubIssues(ImportGitHubIssuesRequest) returns (ImportGitHubIssuesResponse);
 
+  // Pairing
+  rpc GeneratePairingCode(Empty) returns (PairingCodeResponse);
 }

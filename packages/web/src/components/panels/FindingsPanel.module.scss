@@ -28,6 +28,10 @@
   align-items: center;
   gap: var(--space-sm);
   margin-bottom: var(--space-xs);
+
+  @include mobile {
+    flex-wrap: wrap;
+  }
 }
 
 .categoryBadge {
@@ -48,6 +52,11 @@
   margin-left: auto;
   font-size: var(--font-size-xs);
   color: var(--text-tertiary);
+
+  @include mobile {
+    margin-left: 0;
+    width: 100%;
+  }
 }
 
 .findingContent {
@@ -60,6 +69,10 @@
   margin-top: var(--space-xs);
   display: flex;
   gap: var(--space-xs);
+
+  @include mobile {
+    flex-wrap: wrap;
+  }
 }
 
 // Frosted inset chip for tags — third glass tier with category-tinted border

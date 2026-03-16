@@ -12,7 +12,7 @@ export function AboutPanel(): JSX.Element {
   const activeSessionCount = sessions.filter((s) => ["running", "idle"].includes(s.status)).length;
 
   return (
-    <section className={styles.section}>
+    <section className={styles.section} data-testid="about-panel">
       <h3 className={styles.sectionTitle}>About</h3>
       <p className={styles.sectionDescription}>
         Connection status and application information.

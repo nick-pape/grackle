@@ -23,6 +23,7 @@ import {
   DEFAULT_RUNTIME,
   DEFAULT_MODEL,
   DEFAULT_SERVER_PORT,
+  DEFAULT_WEB_PORT,
   MAX_TASK_DEPTH,
   SESSION_STATUS,
   TASK_STATUS,
@@ -38,6 +39,8 @@ import { logger } from "./logger.js";
 import { slugify } from "./utils/slugify.js";
 import { buildTaskSystemContext } from "./utils/system-context.js";
 import { importGitHubIssues as executeGitHubImport } from "./github-import.js";
+import { generatePairingCode } from "./pairing.js";
+import { detectLanIp } from "./utils/network.js";
 
 function envRowToProto(row: EnvironmentRow): grackle.Environment {
   return create(grackle.EnvironmentSchema, {
@@ -306,18 +309,30 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       const config = JSON.parse(env.adapterConfig) as Record<string, unknown>;
       const powerlineToken = env.powerlineToken;
 
-      for await (const event of reconnectOrProvision(
-        req.id,
-        adapter,
-        config,
-        powerlineToken,
-        !!env.bootstrapped,
-      )) {
+      try {
+        for await (const event of reconnectOrProvision(
+          req.id,
+          adapter,
+          config,
+          powerlineToken,
+          !!env.bootstrapped,
+        )) {
+          yield create(grackle.ProvisionEventSchema, {
+            stage: event.stage,
+            message: event.message,
+            progress: event.progress,
+          });
+        }
+      } catch (err) {
+        logger.error({ environmentId: req.id, err }, "Provision/bootstrap failed");
+        envRegistry.updateEnvironmentStatus(req.id, "error");
+        broadcastEnvironments();
         yield create(grackle.ProvisionEventSchema, {
-          stage: event.stage,
-          message: event.message,
-          progress: event.progress,
+          stage: "error",
+          message: `Provision failed: ${err instanceof Error ? err.message : String(err)}`,
+          progress: 0,
         });
+        return;
       }
 
       try {
@@ -691,8 +706,11 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
 
     // ─── Tasks ───────────────────────────────────────────────
 
-    async listTasks(req: grackle.ProjectId) {
-      const rows = taskStore.listTasks(req.id);
+    async listTasks(req: grackle.ListTasksRequest) {
+      const rows = taskStore.listTasks(req.projectId, {
+        search: req.search || undefined,
+        status: req.status || undefined,
+      });
       const childIdsMap = taskStore.buildChildIdsMap(rows);
 
       // Batch-fetch sessions for all tasks and group by taskId
@@ -897,8 +915,8 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         payload: { taskId: task.id, sessionId, projectId: task.projectId },
       });
 
-      // Re-push stored tokens + Claude credentials so they're fresh for this session
-      await tokenBroker.refreshTokensForTask(environmentId);
+      // Re-push stored tokens + provider credentials (scoped to runtime) so they're fresh for this session
+      await tokenBroker.refreshTokensForTask(environmentId, runtime);
 
       const mcpServersJson = persona ? personaMcpServersToJson(persona) : "";
 
@@ -1256,6 +1274,25 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       );
 
       return create(grackle.ImportGitHubIssuesResponseSchema, result);
+    },
+
+    async generatePairingCode() {
+      const code = generatePairingCode();
+      if (!code) {
+        throw new ConnectError(
+          "Maximum active pairing codes reached. Wait for existing codes to expire.",
+          Code.ResourceExhausted,
+        );
+      }
+
+      const webPort = parseInt(process.env.GRACKLE_WEB_PORT || String(DEFAULT_WEB_PORT), 10);
+      const bindHost = process.env.GRACKLE_HOST || "127.0.0.1";
+      const WILDCARD_ADDRESSES: ReadonlySet<string> = new Set(["0.0.0.0", "::", "0:0:0:0:0:0:0:0"]);
+      const pairingHost = WILDCARD_ADDRESSES.has(bindHost)
+        ? (detectLanIp() || "localhost")
+        : (bindHost === "127.0.0.1" || bindHost === "::1" ? "localhost" : bindHost);
+      const url = `http://${pairingHost}:${webPort}/pair?code=${code}`;
+      return create(grackle.PairingCodeResponseSchema, { code, url });
     },
 
   });

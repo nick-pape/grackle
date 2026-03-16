@@ -120,8 +120,6 @@ vi.mock("./credential-providers.js", () => ({
     codex: "off",
   })),
   setCredentialProviders: vi.fn(),
-  shouldPushClaudeCredentialsFile: vi.fn(() => false),
-  shouldCaptureRemoteGitHubToken: vi.fn(() => false),
 }));
 
 // Import AFTER mocks
@@ -316,7 +314,7 @@ describe("task-start token push", () => {
 
       await startTask!({ taskId: "task-1", environmentId: "env-1" });
 
-      expect(refreshSpy).toHaveBeenCalledWith("env-1");
+      expect(refreshSpy).toHaveBeenCalledWith("env-1", "claude-code");
 
       // Verify refresh happened before spawn
       const refreshOrder = refreshSpy.mock.invocationCallOrder[0];

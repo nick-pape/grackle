@@ -58,6 +58,7 @@ interface WsMessage {
 export function createWsBridge(
   httpServer: HttpServer,
   verifyApiKey: (token: string) => boolean,
+  validateCookie?: (cookieHeader: string) => boolean,
 ): WebSocketServer {
   const wss = new WebSocketServer({ server: httpServer });
   setWssInstance(wss);
@@ -65,7 +66,12 @@ export function createWsBridge(
   wss.on("connection", (ws: WebSocket, req: IncomingMessage) => {
     const url = new URL(req.url || "/", "http://localhost");
     const token = url.searchParams.get("token") || "";
-    if (!verifyApiKey(token)) {
+    const hasValidToken = token.length > 0 && verifyApiKey(token);
+    const hasValidCookie = validateCookie
+      ? validateCookie(req.headers.cookie || "")
+      : false;
+
+    if (!hasValidToken && !hasValidCookie) {
       ws.close(WS_CLOSE_UNAUTHORIZED, "Unauthorized");
       return;
     }
@@ -315,8 +321,8 @@ async function startTaskSession(
     },
   });
 
-  // Re-push stored tokens + Claude credentials so they're fresh for this session
-  await tokenBroker.refreshTokensForTask(environmentId);
+  // Re-push stored tokens + provider credentials (scoped to runtime) so they're fresh for this session
+  await tokenBroker.refreshTokensForTask(environmentId, runtime);
 
   let mcpServersJson = "";
   if (persona) {
@@ -393,6 +399,7 @@ async function handleMessage(
             status: r.status,
             prompt: r.prompt,
             startedAt: r.startedAt,
+            personaId: r.personaId,
           })),
         },
       });
@@ -917,7 +924,10 @@ async function handleMessage(
     case "list_tasks": {
       const projectId = msg.payload?.projectId as string;
       if (!projectId) return;
-      const rows = taskStore.listTasks(projectId);
+      const rows = taskStore.listTasks(projectId, {
+        search: (msg.payload?.search as string) || undefined,
+        status: (msg.payload?.status as string) || undefined,
+      });
       const childIdsMap = taskStore.buildChildIdsMap(rows);
 
       // Batch-fetch sessions for all tasks and group by taskId
@@ -1307,6 +1317,7 @@ async function handleMessage(
             startedAt: r.startedAt,
             endedAt: r.endedAt ?? "",
             error: r.error ?? "",
+            personaId: r.personaId,
           })),
         },
       });

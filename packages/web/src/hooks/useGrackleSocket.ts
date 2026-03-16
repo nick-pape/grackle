@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { PAIR_PATH } from "../utils/navigation.js";
 
 export interface Environment {
   id: string;
@@ -18,6 +19,7 @@ export interface Session {
   startedAt: string;
   endedAt?: string;
   error?: string;
+  personaId?: string;
 }
 
 export interface SessionEvent {
@@ -353,12 +355,8 @@ const WS_RECONNECT_DELAY_MS: number = 3_000;
 /** Maximum number of events kept in memory per hook instance. Older events are dropped. */
 const MAX_EVENTS: number = 5_000;
 
-// Declare the injected API key from server-side HTML injection
-declare global {
-  interface Window {
-    __GRACKLE_API_KEY__?: string;
-  }
-}
+/** WebSocket close code indicating an unauthorized connection. */
+const WS_CLOSE_UNAUTHORIZED: number = 4001;
 
 /** Provisioning progress state for a single environment. */
 export interface ProvisionStatus {
@@ -501,12 +499,10 @@ export interface UseGrackleSocketResult {
 }
 
 export function useGrackleSocket(url?: string): UseGrackleSocketResult {
-  const apiKey =
-    typeof window !== "undefined" ? window.__GRACKLE_API_KEY__ || "" : "";
   const wsUrl =
     url ||
     (typeof window !== "undefined"
-      ? `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}?token=${encodeURIComponent(apiKey)}`
+      ? `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}`
       : "ws://localhost:3000");
 
   const wsRef = useRef<WebSocket | undefined>(undefined);
@@ -1000,12 +996,19 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
         }
       };
 
-      ws.onclose = () => {
+      ws.onclose = (event: CloseEvent) => {
         setConnected(false);
         wsRef.current = undefined;
         setProjectCreating(false);
         setTaskStartingId(undefined);
         clearTimeout(reconnectTimer);
+
+        // If the server rejected us as unauthorized, redirect to the pairing page
+        if (event.code === WS_CLOSE_UNAUTHORIZED) {
+          window.location.href = PAIR_PATH;
+          return;
+        }
+
         reconnectTimer = setTimeout(connect, WS_RECONNECT_DELAY_MS);
       };
 

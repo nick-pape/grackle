@@ -1,5 +1,8 @@
-# ─── Base stage: shared setup for both production and dev ────
-FROM node:22-slim AS base
+# Minimal base image for Grackle PowerLine environments.
+# PowerLine is installed at provision time via bootstrapPowerLine(),
+# not baked into the image. This keeps the image generic and avoids
+# fragile manual dependency management.
+FROM node:22-slim
 
 RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
 
@@ -14,47 +17,7 @@ RUN mkdir -p /home/grackle/.claude/debug && chown -R grackle:grackle /home/grack
 
 EXPOSE 7433
 
-# ─── Production: npm install from registry ──────────────────
-FROM base AS production
-
-ARG POWERLINE_VERSION=latest
-WORKDIR /app
-
-RUN npm init -y && npm install @grackle-ai/powerline@${POWERLINE_VERSION} --omit=dev
-
-# Chromium needs >64MB shared memory for rendering
-USER grackle
-# --experimental-specifier-resolution=node works around vscode-jsonrpc missing .js
-# in ESM imports, required by @github/copilot-sdk (upstream bug in vscode-jsonrpc@8.x)
-CMD ["node", "--experimental-specifier-resolution=node", "node_modules/@grackle-ai/powerline/dist/index.js", "--port=7433", "--host=0.0.0.0"]
-
-# ─── Dev: copy local monorepo artifacts ─────────────────────
-FROM base AS dev
-
-WORKDIR /app
-
-# Copy powerline dist + package.json
-COPY packages/powerline/dist/ /app/dist/
-COPY packages/powerline/package.json /app/package.json
-
-# Strip private @grackle-ai/* deps before npm install
-RUN node -e "\
-  const p=JSON.parse(require('fs').readFileSync('package.json','utf8'));\
-  for(const k of Object.keys(p.dependencies||{})){if(k.startsWith('@grackle-ai/'))delete p.dependencies[k];}\
-  for(const k of Object.keys(p.devDependencies||{})){if(k.startsWith('@grackle-ai/'))delete p.devDependencies[k];}\
-  require('fs').writeFileSync('package.json',JSON.stringify(p,null,2));"
-RUN npm install --omit=dev --legacy-peer-deps
-
-# Copy @grackle-ai/* workspace packages AFTER npm install (npm cleans unmanaged dirs in node_modules)
-COPY packages/common/dist/ /app/node_modules/@grackle-ai/common/dist/
-COPY packages/common/package.json /app/node_modules/@grackle-ai/common/package.json
-COPY packages/mcp/dist/ /app/node_modules/@grackle-ai/mcp/dist/
-COPY packages/mcp/package.json /app/node_modules/@grackle-ai/mcp/package.json
-
 USER grackle
 
-# Run PowerLine from /app so node_modules resolve correctly
-# Agents will use /workspace as their cwd
-# --experimental-specifier-resolution=node works around vscode-jsonrpc missing .js
-# in ESM imports, required by @github/copilot-sdk (upstream bug in vscode-jsonrpc@8.x)
-CMD ["node", "--experimental-specifier-resolution=node", "dist/index.js", "--port=7433", "--host=0.0.0.0"]
+# Container stays alive waiting for bootstrap; PowerLine is started by the adapter
+CMD ["sleep", "infinity"]

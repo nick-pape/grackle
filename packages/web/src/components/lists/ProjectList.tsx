@@ -1,21 +1,237 @@
-import { useEffect, useMemo, useRef, useState, type JSX } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type JSX } from "react";
 import { useMatch } from "react-router";
 import { useGrackle } from "../../context/GrackleContext.js";
 import type { TaskData } from "../../hooks/useGrackleSocket.js";
 import { AnimatePresence, motion } from "motion/react";
-import { MAX_TASK_DEPTH } from "@grackle-ai/common";
+import { MAX_TASK_DEPTH, fuzzySearch, type FuzzyKey, type MatchIndex } from "@grackle-ai/common";
 import { Spinner } from "../display/index.js";
 import { taskUrl, projectUrl, newTaskUrl, useAppNavigate } from "../../utils/navigation.js";
+import { SIDEBAR_STATUS_ORDER, getStatusStyle } from "../../utils/taskStatus.js";
 import styles from "./ProjectList.module.scss";
 
-/** Task status visual indicators using CSS custom property colors. */
-const TASK_STATUS_STYLES: Record<string, { color: string; icon: string }> = {
-  not_started: { color: "var(--text-tertiary)", icon: "\u25CB" },
-  working: { color: "var(--accent-green)", icon: "\u25CF" },
-  paused: { color: "var(--accent-yellow)", icon: "\u25C9" },
-  complete: { color: "var(--accent-green)", icon: "\u2713" },
-  failed: { color: "var(--accent-red)", icon: "\u2717" },
-};
+/** Merge overlapping or adjacent [start, end] ranges into non-overlapping ranges. */
+function mergeRanges(ranges: readonly MatchIndex[]): MatchIndex[] {
+  if (ranges.length === 0) {
+    return [];
+  }
+  const sorted = [...ranges].sort((a, b) => a[0] - b[0]);
+  const merged: [number, number][] = [[sorted[0][0], sorted[0][1]]];
+  for (let i = 1; i < sorted.length; i++) {
+    const prev = merged[merged.length - 1];
+    const [start, end] = sorted[i];
+    if (start <= prev[1] + 1) {
+      prev[1] = Math.max(prev[1], end);
+    } else {
+      merged.push([start, end]);
+    }
+  }
+  return merged;
+}
+
+/** Render text with highlighted match ranges. Unmatched portions are plain, matched portions are bold. */
+function HighlightedText({ text, indices }: { text: string; indices?: readonly MatchIndex[] }): JSX.Element {
+  if (!indices || indices.length === 0) {
+    return <>{text}</>;
+  }
+  const merged = mergeRanges(indices);
+  const parts: JSX.Element[] = [];
+  let cursor = 0;
+  for (const [start, end] of merged) {
+    if (start > cursor) {
+      parts.push(<span key={`p${cursor}`}>{text.slice(cursor, start)}</span>);
+    }
+    parts.push(<mark key={`m${start}`} className={styles.searchHighlight}>{text.slice(start, end + 1)}</mark>);
+    cursor = end + 1;
+  }
+  if (cursor < text.length) {
+    parts.push(<span key={`p${cursor}`}>{text.slice(cursor)}</span>);
+  }
+  return <>{parts}</>;
+}
+
+/** Fuzzy search keys for project matching. */
+const PROJECT_SEARCH_KEYS: FuzzyKey[] = [{ name: "name", weight: 2 }, { name: "description", weight: 1 }];
+/** Fuzzy search keys for task matching. */
+const TASK_SEARCH_KEYS: FuzzyKey[] = [{ name: "title", weight: 2 }, { name: "description", weight: 1 }];
+
+/** Base left-padding for task rows inside a project. */
+const TASK_BASE_INDENT_PX: number = 34;
+/** Additional left-padding per depth level. */
+const TASK_DEPTH_INDENT_PX: number = 16;
+
+// ---------------------------------------------------------------------------
+// Group-by-status toggle persistence
+// ---------------------------------------------------------------------------
+
+/** localStorage key for the group-by-status toggle. */
+const STORAGE_KEY_GROUP_BY_STATUS: string = "grackle-group-by-status";
+
+/** Read the persisted group-by-status preference. */
+function getGroupByStatus(): boolean {
+  try {
+    return localStorage.getItem(STORAGE_KEY_GROUP_BY_STATUS) === "true";
+  } catch {
+    return false;
+  }
+}
+
+/** Persist the group-by-status preference. */
+function saveGroupByStatus(value: boolean): void {
+  try {
+    localStorage.setItem(STORAGE_KEY_GROUP_BY_STATUS, String(value));
+  } catch {
+    /* localStorage unavailable */
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Status grouping
+// ---------------------------------------------------------------------------
+
+/** A group of tasks sharing the same status. */
+interface StatusGroup {
+  status: string;
+  label: string;
+  style: { color: string; icon: string };
+  tasks: TaskData[];
+}
+
+/** Group a flat list of tasks by status, ordered by urgency. Blocked tasks are separated into their own group. */
+function groupTasksByStatus(taskList: TaskData[], taskStatusById: Map<string, string>): StatusGroup[] {
+  const byStatus = new Map<string, TaskData[]>();
+  for (const task of taskList) {
+    // Tasks with unresolved dependencies go to "blocked" instead of their actual status
+    const isBlocked = task.dependsOn.length > 0 &&
+      task.dependsOn.some((depId) => taskStatusById.get(depId) !== "complete");
+    const groupKey = isBlocked ? "blocked" : task.status;
+    const list = byStatus.get(groupKey);
+    if (list) {
+      list.push(task);
+    } else {
+      byStatus.set(groupKey, [task]);
+    }
+  }
+
+  const groups: StatusGroup[] = [];
+  const seen = new Set<string>();
+
+  // Known statuses in urgency order
+  for (const status of SIDEBAR_STATUS_ORDER) {
+    seen.add(status);
+    const tasks = byStatus.get(status);
+    if (tasks && tasks.length > 0) {
+      tasks.sort((a, b) => a.sortOrder - b.sortOrder);
+      const style = getStatusStyle(status);
+      groups.push({
+        status,
+        label: style.label,
+        style,
+        tasks,
+      });
+    }
+  }
+
+  // Append any unknown statuses for future-proofing
+  for (const [status, tasks] of byStatus) {
+    if (!seen.has(status) && tasks.length > 0) {
+      tasks.sort((a, b) => a.sortOrder - b.sortOrder);
+      const style = getStatusStyle(status);
+      groups.push({
+        status,
+        label: style.label,
+        style,
+        tasks,
+      });
+    }
+  }
+
+  return groups;
+}
+
+// ---------------------------------------------------------------------------
+// StatusGroupAccordion
+// ---------------------------------------------------------------------------
+
+/** Props for the StatusGroupAccordion component. */
+interface StatusGroupAccordionProps {
+  group: StatusGroup;
+  isExpanded: boolean;
+  onToggle: () => void;
+  selectedTaskId: string | undefined;
+  navigate: ReturnType<typeof useAppNavigate>;
+  titleHighlights: Map<string, readonly MatchIndex[]>;
+}
+
+/** Collapsible accordion for a status group in grouped view. */
+function StatusGroupAccordion({
+  group,
+  isExpanded,
+  onToggle,
+  selectedTaskId,
+  navigate,
+  titleHighlights,
+}: StatusGroupAccordionProps): JSX.Element {
+  return (
+    <div data-testid={`status-group-${group.status}`}>
+      <div
+        className={styles.statusGroupHeader}
+        role="button"
+        tabIndex={0}
+        aria-expanded={isExpanded}
+        onClick={onToggle}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onToggle();
+          }
+        }}
+      >
+        <span className={`${styles.expandArrow} ${isExpanded ? styles.expanded : ""}`}>
+          {"\u25B8"}
+        </span>
+        <span className={styles.statusGroupIcon} style={{ color: group.style.color }}>
+          {group.style.icon}
+        </span>
+        <span className={styles.statusGroupLabel}>{group.label}</span>
+        <span className={styles.statusGroupCount}>{group.tasks.length}</span>
+      </div>
+
+      <AnimatePresence>
+        {isExpanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            style={{ overflow: "hidden" }}
+          >
+            {group.tasks.map((task) => {
+              const statusStyle = getStatusStyle(task.status);
+              const isSelected = selectedTaskId === task.id;
+              return (
+                <div
+                  key={task.id}
+                  onClick={() => navigate(taskUrl(task.id))}
+                  className={`${styles.taskRow} ${isSelected ? styles.selected : ""}`}
+                  style={{ '--task-indent': `${TASK_BASE_INDENT_PX}px` } as CSSProperties}
+                  data-task-id={task.id}
+                >
+                  <span className={styles.leafSpacer} />
+                  <span className={styles.taskStatusIcon} style={{ color: statusStyle.color }}>
+                    {statusStyle.icon}
+                  </span>
+                  <span className={styles.taskTitle} title={task.title}>
+                    <HighlightedText text={task.title} indices={titleHighlights.get(task.id)} />
+                  </span>
+                </div>
+              );
+            })}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
 
 /** A task node with children for recursive tree rendering. */
 interface TaskNode extends TaskData {
@@ -42,12 +258,6 @@ function buildTaskTree(taskList: TaskData[]): TaskNode[] {
   return roots.sort((a, b) => a.sortOrder - b.sortOrder);
 }
 
-/** Base left-padding for task rows inside a project. */
-const TASK_BASE_INDENT_PX: number = 34;
-/** Additional left-padding per depth level. */
-const TASK_DEPTH_INDENT_PX: number = 16;
-
-
 /** Props for the recursive TaskTreeNode component. */
 interface TaskTreeNodeProps {
   node: TaskNode;
@@ -58,6 +268,7 @@ interface TaskTreeNodeProps {
   navigate: ReturnType<typeof useAppNavigate>;
   projectId: string;
   taskStatusById: Map<string, string>;
+  titleHighlights: Map<string, readonly MatchIndex[]>;
 }
 
 /** Renders a single task tree node with optional children. */
@@ -70,9 +281,9 @@ function TaskTreeNode({
   navigate,
   projectId,
   taskStatusById,
+  titleHighlights,
 }: TaskTreeNodeProps): JSX.Element {
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- status may not be in the map
-  const statusStyle = TASK_STATUS_STYLES[node.status] || TASK_STATUS_STYLES.not_started;
+  const statusStyle = getStatusStyle(node.status);
   const isBlocked = node.dependsOn.length > 0 &&
     node.dependsOn.some((depId) => taskStatusById.get(depId) !== "complete");
   const isExpanded = expandedTasks.has(node.id);
@@ -85,7 +296,7 @@ function TaskTreeNode({
       <div
         onClick={() => navigate(taskUrl(node.id))}
         className={`${styles.taskRow} ${isSelected ? styles.selected : ""}`}
-        style={{ paddingLeft: indent }}
+        style={{ '--task-indent': `${indent}px` } as CSSProperties}
         data-task-id={node.id}
       >
         {hasChildren && (
@@ -110,7 +321,9 @@ function TaskTreeNode({
         <span className={styles.taskStatusIcon} style={{ color: statusStyle.color }}>
           {statusStyle.icon}
         </span>
-        <span className={styles.taskTitle} title={node.title}>{node.title}</span>
+        <span className={styles.taskTitle} title={node.title}>
+                  <HighlightedText text={node.title} indices={titleHighlights.get(node.id)} />
+                </span>
         {hasChildren && (
           <span className={styles.childCountBadge}>
             {node.children.filter(c => c.status === "complete").length}/{node.children.length}
@@ -159,6 +372,7 @@ function TaskTreeNode({
                 navigate={navigate}
                 projectId={projectId}
                 taskStatusById={taskStatusById}
+                titleHighlights={titleHighlights}
               />
             ))}
           </motion.div>
@@ -177,6 +391,39 @@ export function ProjectList(): JSX.Element {
   const [manuallyCollapsed, setManuallyCollapsed] = useState<Set<string>>(new Set());
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newProjectName, setNewProjectName] = useState("");
+  const [groupByStatus, setGroupByStatusState] = useState(getGroupByStatus);
+  // Track which groups should default to expanded (resets on each toggle-on)
+  const [groupExpandDefault, setGroupExpandDefault] = useState(getGroupByStatus);
+  // Per-project overrides: "projectId:status" → explicitly collapsed or expanded
+  const [groupExpandOverrides, setGroupExpandOverrides] = useState<Map<string, boolean>>(new Map());
+
+  /** Toggle group-by-status mode. */
+  const toggleGroupByStatus = (): void => {
+    const next = !groupByStatus;
+    saveGroupByStatus(next);
+    setGroupByStatusState(next);
+    if (next) {
+      setGroupExpandDefault(true);
+      setGroupExpandOverrides(new Map());
+    }
+  };
+
+  /** Toggle a single status group accordion for a specific project. */
+  const toggleStatusGroup = (projectId: string, status: string): void => {
+    const key = `${projectId}:${status}`;
+    setGroupExpandOverrides((prev) => {
+      const next = new Map(prev);
+      const current = next.has(key) ? next.get(key)! : groupExpandDefault;
+      next.set(key, !current);
+      return next;
+    });
+  };
+
+  /** Check if a status group is expanded for a specific project. */
+  const isGroupExpanded = (projectId: string, status: string): boolean => {
+    const key = `${projectId}:${status}`;
+    return groupExpandOverrides.has(key) ? groupExpandOverrides.get(key)! : groupExpandDefault;
+  };
 
   // Derive selected state from router
   const taskMatch = useMatch("/tasks/:taskId/*");
@@ -257,19 +504,103 @@ export function ProjectList(): JSX.Element {
     setShowCreateForm(false);
   };
 
+  // ── Search / filter state ──────────────────────────────────────
+  const [searchQuery, setSearchQuery] = useState("");
+
+  /** Sets of matching IDs for filtering, recomputed when query or data changes. */
+  const { directMatchTaskIds, treeMatchTaskIds, visibleProjectIds, matchedProjectIds, titleHighlights } = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return { directMatchTaskIds: null, treeMatchTaskIds: null, visibleProjectIds: null, matchedProjectIds: null, titleHighlights: new Map<string, readonly MatchIndex[]>() };
+    }
+    const projectResults = fuzzySearch(projects, searchQuery, PROJECT_SEARCH_KEYS);
+    const taskResults = fuzzySearch(tasks, searchQuery, TASK_SEARCH_KEYS);
+
+    const mProjectIds = new Set(projectResults.map((r) => r.item.id));
+    const directIds = new Set(taskResults.map((r) => r.item.id));
+
+    // Build highlight map: task ID → match indices for the "title" field
+    const highlights = new Map<string, readonly MatchIndex[]>();
+    for (const r of taskResults) {
+      const titleMatch = r.matches.find((m) => m.key === "title");
+      if (titleMatch) {
+        highlights.set(r.item.id, titleMatch.indices);
+      }
+    }
+
+    // A project is visible if it matches directly or any of its tasks match
+    const vProjectIds = new Set(mProjectIds);
+    for (const r of taskResults) {
+      vProjectIds.add(r.item.projectId);
+    }
+
+    // For tree view, also include ancestor tasks to preserve tree structure
+    const treeIds = new Set(directIds);
+    const taskById = new Map(tasks.map((t) => [t.id, t]));
+    for (const taskId of [...directIds]) {
+      let current = taskById.get(taskId);
+      while (current?.parentTaskId) {
+        treeIds.add(current.parentTaskId);
+        current = taskById.get(current.parentTaskId);
+      }
+    }
+
+    return { directMatchTaskIds: directIds, treeMatchTaskIds: treeIds, visibleProjectIds: vProjectIds, matchedProjectIds: mProjectIds, titleHighlights: highlights };
+  }, [searchQuery, projects, tasks]);
+
+  // Track which projects have had tasks requested (superset of expanded — includes search-triggered loads)
+  const requestedProjectsRef = useRef<Set<string>>(new Set());
+
+  // When the user starts searching, eagerly load tasks for all projects so
+  // the full dataset is searchable (not just previously-expanded projects).
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      return;
+    }
+    for (const p of projects) {
+      if (!expanded.has(p.id) && !requestedProjectsRef.current.has(p.id)) {
+        requestedProjectsRef.current.add(p.id);
+        loadTasks(p.id);
+      }
+    }
+  }, [searchQuery, projects, expanded, loadTasks]);
+
   return (
     <div className={styles.container}>
       <div className={styles.header}>
         <span>Projects</span>
-        <button
-          className={styles.addButton}
-          onClick={() => setShowCreateForm(!showCreateForm)}
-          aria-label="Create project"
-          title="Create project"
-        >
-          +
-        </button>
+        <div className={styles.headerActions}>
+          <button
+            className={`${styles.groupToggle} ${groupByStatus ? styles.groupToggleActive : ""}`}
+            onClick={toggleGroupByStatus}
+            aria-label={groupByStatus ? "Switch to tree view" : "Group tasks by status"}
+            aria-pressed={groupByStatus}
+            title={groupByStatus ? "Switch to tree view" : "Group tasks by status"}
+            data-testid="group-by-status-toggle"
+          >
+            {"\u2261"}
+          </button>
+          <button
+            className={styles.addButton}
+            onClick={() => setShowCreateForm(!showCreateForm)}
+            aria-label="Create project"
+            title="Create project"
+          >
+            +
+          </button>
+        </div>
       </div>
+
+      {projects.length > 0 && (
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Filter..."
+          aria-label="Filter projects and tasks"
+          className={styles.searchInput}
+          data-testid="sidebar-search"
+        />
+      )}
 
       {showCreateForm && (
         <div className={styles.createForm}>
@@ -316,10 +647,24 @@ export function ProjectList(): JSX.Element {
       )}
 
       {projects.map((project) => {
-        const isExpanded = expanded.has(project.id);
-        const projectTasks = tasks.filter((t) => t.projectId === project.id);
+        // Skip projects that don't match the search filter
+        if (visibleProjectIds && !visibleProjectIds.has(project.id)) {
+          return null;
+        }
+
+        const isSearching = directMatchTaskIds !== null;
+        const isExpanded = expanded.has(project.id) || isSearching;
+        const allProjectTasks = tasks.filter((t) => t.projectId === project.id);
+        // When a project matches directly, show all its tasks; otherwise filter to matching tasks only
+        const projectMatchedDirectly = matchedProjectIds?.has(project.id) ?? false;
+        const activeMatchIds = isSearching && !projectMatchedDirectly
+          ? (groupByStatus ? directMatchTaskIds : treeMatchTaskIds)
+          : null;
+        const projectTasks = activeMatchIds
+          ? allProjectTasks.filter((t) => activeMatchIds.has(t.id))
+          : allProjectTasks;
         const isSelected = selectedProjectId === project.id;
-        const tree = isExpanded ? buildTaskTree(projectTasks) : [];
+        const tree = isExpanded && !groupByStatus ? buildTaskTree(projectTasks) : [];
 
         return (
           <div key={project.id}>
@@ -343,7 +688,7 @@ export function ProjectList(): JSX.Element {
               </span>
               <span className={styles.projectName} title={project.name}>{project.name}</span>
               <span className={styles.taskCount}>
-                {projectTasks.length > 0 && `${projectTasks.filter((t) => t.status === "complete").length}/${projectTasks.length}`}
+                {allProjectTasks.length > 0 && `${allProjectTasks.filter((t) => t.status === "complete").length}/${allProjectTasks.length}`}
               </span>
               <button
                 onClick={(e) => {
@@ -366,19 +711,34 @@ export function ProjectList(): JSX.Element {
                   transition={{ duration: 0.2, ease: "easeInOut" }}
                   style={{ overflow: "hidden" }}
                 >
-                  {tree.map(node => (
-                    <TaskTreeNode
-                      key={node.id}
-                      node={node}
-                      depth={0}
-                      expandedTasks={expandedTasks}
-                      toggleTask={toggleTask}
-                      selectedTaskId={selectedTaskId}
-                      navigate={navigate}
-                      projectId={project.id}
-                      taskStatusById={taskStatusById}
-                    />
-                  ))}
+                  {groupByStatus ? (
+                    groupTasksByStatus(projectTasks, taskStatusById).map(group => (
+                      <StatusGroupAccordion
+                        key={group.status}
+                        group={group}
+                        isExpanded={isGroupExpanded(project.id, group.status)}
+                        onToggle={() => toggleStatusGroup(project.id, group.status)}
+                        selectedTaskId={selectedTaskId}
+                        navigate={navigate}
+                        titleHighlights={titleHighlights}
+                      />
+                    ))
+                  ) : (
+                    tree.map(node => (
+                      <TaskTreeNode
+                        key={node.id}
+                        node={node}
+                        depth={0}
+                        expandedTasks={expandedTasks}
+                        toggleTask={toggleTask}
+                        selectedTaskId={selectedTaskId}
+                        navigate={navigate}
+                        projectId={project.id}
+                        taskStatusById={taskStatusById}
+                        titleHighlights={titleHighlights}
+                      />
+                    ))
+                  )}
 
                   {projectTasks.length === 0 && (
                     <div className={styles.emptyTaskCta}>
