@@ -245,7 +245,8 @@ function main(): void {
 
   // --- gRPC server (HTTP/2) ---
   const grpcPort = parseInt(process.env.GRACKLE_PORT || String(DEFAULT_SERVER_PORT), 10);
-  const bindHost = process.env.GRACKLE_HOST || "0.0.0.0";
+  const bindHost = process.env.GRACKLE_HOST || "127.0.0.1";
+  const allowNetwork = isWildcardAddress(bindHost);
 
   /** Format bindHost for embedding in a URL — IPv6 literals need brackets per RFC 2732. */
   const urlHost = bindHost.includes(":") ? `[${bindHost}]` : bindHost;
@@ -312,15 +313,17 @@ function main(): void {
       process.stdout.write(`  ${pairingUrl}\n`);
       process.stdout.write("\n");
 
-      // Print QR code (best-effort — missing dep is not fatal)
-      try {
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const qrcode = esmRequire("qrcode") as { toString(text: string, opts: { type: string; small: boolean }): Promise<string> };
-        qrcode.toString(pairingUrl, { type: "terminal", small: true })
-          .then((qr: string) => { process.stdout.write(qr); })
-          .catch(() => { /* QR rendering failed — not critical */ });
-      } catch {
-        // qrcode not installed — skip QR
+      // Print QR code only when network-accessible (useful for phone scanning)
+      if (allowNetwork) {
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          const qrcode = esmRequire("qrcode") as { toString(text: string, opts: { type: string; small: boolean }): Promise<string> };
+          qrcode.toString(pairingUrl, { type: "terminal", small: true })
+            .then((qr: string) => { process.stdout.write(qr); })
+            .catch(() => { /* QR rendering failed — not critical */ });
+        } catch {
+          // qrcode not installed — skip QR
+        }
       }
 
       process.stdout.write("  Pairing code expires in 5 minutes.\n");

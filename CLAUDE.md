@@ -76,7 +76,7 @@ Rush monorepo with 5 packages under `packages/`:
 - Use `ConnectError` with proper gRPC status codes (e.g., `Code.Unauthenticated`)
 - Constant-time comparison for API key verification
 - Web UI uses pairing-code → session-cookie auth. The API key is never injected into HTML. gRPC uses Bearer token auth. WebSocket accepts either session cookie or `?token=` query param.
-- The server binds to `0.0.0.0` by default for LAN access. Use `grackle pair` to generate new pairing codes.
+- The server binds to `127.0.0.1` by default. Use `grackle serve --allow-network` to bind to `0.0.0.0` for LAN access (e.g., phone). Use `grackle pair` to generate new pairing codes.
 
 ### Dependencies
 - Cross-package deps use `"workspace:*"` (pnpm rewrites to real versions at publish time)

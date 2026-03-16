@@ -20,7 +20,7 @@ describe("registerServeCommand", () => {
     vi.resetModules();
   });
 
-  it("defaults to 0.0.0.0 bind host", async () => {
+  it("defaults to 127.0.0.1 bind host", async () => {
     const { registerServeCommand } = await import("./serve.js");
     const program = new Command();
     program.exitOverride();
@@ -28,9 +28,20 @@ describe("registerServeCommand", () => {
 
     await program.parseAsync(["serve"], { from: "user" });
 
-    expect(process.env.GRACKLE_HOST).toBe("0.0.0.0");
+    expect(process.env.GRACKLE_HOST).toBe("127.0.0.1");
     expect(process.env.GRACKLE_PORT).toBe("7434");
     expect(process.env.GRACKLE_WEB_PORT).toBe("3000");
+  });
+
+  it("--allow-network sets GRACKLE_HOST to 0.0.0.0", async () => {
+    const { registerServeCommand } = await import("./serve.js");
+    const program = new Command();
+    program.exitOverride();
+    registerServeCommand(program);
+
+    await program.parseAsync(["serve", "--allow-network"], { from: "user" });
+
+    expect(process.env.GRACKLE_HOST).toBe("0.0.0.0");
   });
 
   it("--no-open sets GRACKLE_NO_OPEN=1", async () => {

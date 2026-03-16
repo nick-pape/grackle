@@ -8,12 +8,13 @@ export function registerServeCommand(program: Command): void {
     .option("--port <port>", "Server port", "7434")
     .option("--web-port <port>", "Web UI port", "3000")
     .option("--mcp-port <port>", "MCP server port", "7435")
+    .option("--allow-network", "Bind to all interfaces (0.0.0.0) for LAN access")
     .option("--no-open", "Do not auto-open the browser on startup")
-    .action(async (opts: { port: string; webPort: string; mcpPort: string; open: boolean }) => {
+    .action(async (opts: { port: string; webPort: string; mcpPort: string; allowNetwork: boolean; open: boolean }) => {
       process.env.GRACKLE_PORT = opts.port;
       process.env.GRACKLE_WEB_PORT = opts.webPort;
       process.env.GRACKLE_MCP_PORT = opts.mcpPort;
-      process.env.GRACKLE_HOST = "0.0.0.0";
+      process.env.GRACKLE_HOST = opts.allowNetwork ? "0.0.0.0" : "127.0.0.1";
 
       if (!opts.open) {
         process.env.GRACKLE_NO_OPEN = "1";
@@ -21,6 +22,9 @@ export function registerServeCommand(program: Command): void {
 
       console.log(`Starting Grackle server...`);
       console.log(`gRPC on port ${opts.port}, Web UI on port ${opts.webPort}, MCP on port ${opts.mcpPort}`);
+      if (opts.allowNetwork) {
+        console.log("Network access enabled — binding to all interfaces");
+      }
 
       // Dynamic import to start the server
       await import("@grackle-ai/server");
