@@ -13,6 +13,7 @@ When you encounter unexpected issues, workarounds, or non-obvious behavior (CI q
 ## Planning
 
 - **Always plan tests**: Every implementation plan must include a section for tests (E2E Playwright specs for `@grackle-ai/web`, unit/integration tests for other packages). If the change is purely cosmetic or untestable, explicitly note why tests are skipped.
+- **Prefer `data-testid` in E2E tests**: Use `data-testid` attributes and `page.getByTestId()` to locate elements in Playwright tests rather than fragile DOM selectors like `getByText()` with `{ exact: true }`. Text-based locators break when the same text appears in multiple places (e.g., StatusBar and page content). Add `data-testid` to components when writing tests that need to disambiguate.
 - **Open a PR as the final step**: Use `/create-pr` to open the PR. The PR body must link back to the issue.
 
 ## Build & Test
@@ -38,6 +39,7 @@ npx buf generate
 - **Web UI changes**: Use the Playwright MCP (`mcp__playwright__*`) to launch a browser, navigate the web UI, and verify visually that the feature works as expected.
 - **Server / adapter changes** (e.g. SSH, Codespace): Start the server (`grackle serve`), add an environment (`grackle env add`), and exercise the relevant flow (provision, stop, reconnect, etc.) against a real target. Use `gh codespace list` to find an available codespace for Codespace adapter testing.
 - **CLI changes**: Run the CLI commands manually and verify the output matches expectations.
+- **Verify screenshots**: Whenever you take screenshots (for testing or for a PR), always read the PNG file back with the Read tool and visually inspect it to confirm it shows what you expect. Don't assume a screenshot is correct just because the tool reported success.
 - If you cannot manually test (e.g. no codespace available, or the change is purely internal refactoring with no observable behavior), explicitly state why manual testing was skipped.
 
 ## Project Structure

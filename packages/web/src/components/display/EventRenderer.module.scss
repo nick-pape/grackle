@@ -117,6 +117,10 @@
   font-size: var(--font-size-sm);
   font-family: var(--font-mono);
   animation: fadeIn 200ms ease forwards;
+
+  @include mobile {
+    padding: var(--space-xs) var(--space-sm);
+  }
 }
 
 .toolUseHeader {
@@ -233,6 +237,11 @@
   max-height: 400px;
   font-size: 11px;
   font-family: var(--font-mono);
+
+  @include mobile {
+    max-height: 250px;
+    font-size: 10px;
+  }
 }
 
 .errorEvent {
@@ -271,6 +280,10 @@
   word-break: break-word;
   font-size: var(--font-size-sm);
   line-height: var(--line-height);
+
+  @include mobile {
+    max-width: 90%;
+  }
 }
 
 .defaultEvent {

@@ -52,6 +52,11 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+
+  @include mobile {
+    flex-wrap: wrap;
+    gap: var(--space-xs);
+  }
 }
 
 .headerInfo {
@@ -78,6 +83,10 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+
+  @include mobile {
+    flex: 1 1 100%;
+  }
 }
 
 .headerActions {
@@ -137,6 +146,10 @@
 .tabBar {
   display: flex;
   border-bottom: 1px solid var(--border-subtle);
+
+  @include mobile {
+    overflow-x: auto;
+  }
 }
 
 .tab {
@@ -483,6 +496,10 @@
   font-size: var(--font-size-xs);
   font-family: var(--font-mono);
   color: var(--text-tertiary);
+
+  @include mobile {
+    flex-wrap: wrap;
+  }
 }
 
 .attemptLabel {
@@ -608,6 +625,11 @@
   align-items: flex-start;
   gap: var(--space-sm);
   min-height: 24px;
+
+  @include mobile {
+    flex-direction: column;
+    gap: var(--space-xs);
+  }
 }
 
 .metaLabel {
@@ -618,6 +640,10 @@
   min-width: 100px;
   flex-shrink: 0;
   padding-top: 2px;
+
+  @include mobile {
+    min-width: unset;
+  }
 }
 
 .metaValue {
@@ -829,6 +855,11 @@
   padding-top: var(--space-xs);
   border-top: 1px solid var(--border-subtle);
   margin-top: var(--space-xs);
+
+  @include mobile {
+    flex-direction: column;
+    gap: var(--space-xs);
+  }
 }
 
 .metaTimestamp {

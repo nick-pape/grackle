@@ -11,6 +11,19 @@
   padding: var(--space-md);
   border-right: 1px solid var(--border-subtle);
   overflow-y: auto;
+
+  @include mobile {
+    flex-direction: row;
+    width: 100%;
+    min-width: unset;
+    border-right: none;
+    border-bottom: 1px solid var(--border-subtle);
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: var(--space-xs) var(--space-sm);
+    gap: 0;
+    flex-wrap: nowrap;
+  }
 }
 
 .tab {
@@ -41,6 +54,17 @@
     outline: 2px solid var(--accent-green);
     outline-offset: -2px;
   }
+
+  @include mobile {
+    border-left: none;
+    border-bottom: 2px solid transparent;
+    white-space: nowrap;
+    flex-shrink: 0;
+    padding: var(--space-xs) var(--space-sm);
+    font-size: var(--font-size-xs);
+    width: auto;
+    border-radius: 0;
+  }
 }
 
 .tabIcon {
@@ -54,4 +78,9 @@
   background: var(--bg-overlay);
   color: var(--text-primary);
   font-weight: var(--font-weight-medium);
+
+  @include mobile {
+    border-left-color: transparent;
+    border-bottom-color: var(--accent-green);
+  }
 }

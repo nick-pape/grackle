@@ -11,6 +11,11 @@
   gap: var(--space-sm);
   padding: var(--space-sm) var(--space-md);
   border-top: 1px solid var(--border-subtle);
+
+  @include mobile {
+    flex-wrap: wrap;
+    padding: var(--space-xs) var(--space-sm);
+  }
 }
 
 .barColumn {
@@ -21,12 +26,20 @@
   gap: var(--space-sm);
   padding: var(--space-sm) var(--space-md);
   border-top: 1px solid var(--border-subtle);
+
+  @include mobile {
+    padding: var(--space-xs) var(--space-sm);
+  }
 }
 
 .barRow {
   display: flex;
   gap: var(--space-sm);
   align-items: center;
+
+  @include mobile {
+    flex-wrap: wrap;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -36,12 +49,22 @@
 .input {
   @include input-field;
   flex: 1;
+
+  @include mobile {
+    min-width: 0;
+    flex: 1 1 100%;
+  }
 }
 
 .inputSmall {
   @include input-field;
   flex: 1;
   font-size: 11px;
+
+  @include mobile {
+    flex: 1 1 calc(50% - var(--space-sm));
+    min-width: 100px;
+  }
 }
 
 .textarea {
@@ -55,6 +78,11 @@
 
 .select {
   @include select-field;
+
+  @include mobile {
+    flex: 1 1 auto;
+    min-width: 80px;
+  }
 }
 
 // ---------------------------------------------------------------------------

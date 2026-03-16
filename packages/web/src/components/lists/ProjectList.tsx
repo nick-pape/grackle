@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type JSX } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type JSX } from "react";
 import { useMatch } from "react-router";
 import { useGrackle } from "../../context/GrackleContext.js";
 import type { TaskData } from "../../hooks/useGrackleSocket.js";
@@ -236,7 +236,7 @@ function StatusGroupAccordion({
                   key={task.id}
                   onClick={() => navigate(taskUrl(task.id))}
                   className={`${styles.taskRow} ${isSelected ? styles.selected : ""}`}
-                  style={{ paddingLeft: TASK_BASE_INDENT_PX }}
+                  style={{ '--task-indent': `${TASK_BASE_INDENT_PX}px` } as CSSProperties}
                   data-task-id={task.id}
                 >
                   <span className={styles.leafSpacer} />
@@ -320,7 +320,7 @@ function TaskTreeNode({
       <div
         onClick={() => navigate(taskUrl(node.id))}
         className={`${styles.taskRow} ${isSelected ? styles.selected : ""}`}
-        style={{ paddingLeft: indent }}
+        style={{ '--task-indent': `${indent}px` } as CSSProperties}
         data-task-id={node.id}
       >
         {hasChildren && (
