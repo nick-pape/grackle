@@ -5,6 +5,8 @@ import {
   createTaskViaWs,
   getProjectId,
   getTaskId,
+  navigateToTask,
+  patchWsForStubRuntime,
 } from "./helpers.js";
 
 test.describe("Board View", () => {
@@ -167,5 +169,42 @@ test.describe("Board View", () => {
     // Parent card should show child progress badge "0/2"
     const parentCard = page.locator("[data-testid^='board-card-']").filter({ hasText: "parent-task" });
     await expect(parentCard.locator("text=0/2")).toBeVisible({ timeout: 5_000 });
+  });
+
+  test("real-time update moves card between columns", async ({ appPage }) => {
+    const page = appPage;
+
+    await createProject(page, "board-realtime");
+    await createTask(page, "board-realtime", "rt-task", "test-local");
+
+    // Switch to board — card should be in Not Started
+    await page.getByTestId("board-tab").click();
+    await expect(page.getByTestId("board-container")).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByTestId("board-count-not_started")).toContainText("1");
+    await expect(page.getByTestId("board-count-working")).toContainText("0");
+
+    // Navigate to the task to start it
+    await navigateToTask(page, "rt-task");
+    await expect(page.locator('[data-testid="task-status"]')).toContainText("not_started", { timeout: 5_000 });
+
+    // Patch WS and start the task with stub runtime
+    await patchWsForStubRuntime(page);
+    await page.getByRole("button", { name: "Start", exact: true }).click();
+
+    // Wait for task to transition to working
+    await expect(page.locator('[data-testid="task-status"]')).toContainText(/working|paused/, { timeout: 15_000 });
+
+    // Navigate back to the project and switch to board
+    await page.getByText("board-realtime").first().click();
+    await page.getByTestId("board-tab").click();
+    await expect(page.getByTestId("board-container")).toBeVisible({ timeout: 5_000 });
+
+    // The card should have moved out of Not Started
+    await expect(page.getByTestId("board-count-not_started")).toContainText("0", { timeout: 5_000 });
+
+    // And into Working or Paused (stub runtime may transition quickly)
+    const workingCount = await page.getByTestId("board-count-working").textContent();
+    const pausedCount = await page.getByTestId("board-count-paused").textContent();
+    expect(Number(workingCount) + Number(pausedCount)).toBeGreaterThan(0);
   });
 });

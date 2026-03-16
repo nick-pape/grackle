@@ -4,6 +4,7 @@ import { useGrackle } from "../../context/GrackleContext.js";
 import { buildBoardColumns, type BoardTask } from "../../utils/boardColumns.js";
 import { getStatusStyle } from "../../utils/taskStatus.js";
 import { taskUrl, newTaskUrl, useAppNavigate } from "../../utils/navigation.js";
+import { AnimatePresence, motion } from "motion/react";
 import styles from "./ProjectBoard.module.scss";
 
 /** Props for the ProjectBoard component. */
@@ -97,7 +98,12 @@ export function ProjectBoard({ projectId }: ProjectBoardProps): JSX.Element {
   return (
     <div className={styles.boardContainer} data-testid="board-container">
       {columns.map((col) => (
-        <div key={col.status} className={styles.column} data-testid={`board-column-${col.status}`}>
+        <section
+          key={col.status}
+          className={styles.column}
+          data-testid={`board-column-${col.status}`}
+          aria-label={`${col.label}, ${col.tasks.length} ${col.tasks.length === 1 ? "task" : "tasks"}`}
+        >
           <div className={styles.columnHeader}>
             <span className={styles.columnIcon} style={{ color: col.style.color }}>
               {col.style.icon}
@@ -111,19 +117,29 @@ export function ProjectBoard({ projectId }: ProjectBoardProps): JSX.Element {
             {col.tasks.length === 0 ? (
               <div className={styles.emptyPlaceholder}>No tasks</div>
             ) : (
-              col.tasks.map((bt) => (
-                <BoardCard
-                  key={bt.task.id}
-                  boardTask={bt}
-                  tasksById={tasksById}
-                  personaName={boardMetadataByTaskId.personaNameByTaskId.get(bt.task.id)}
-                  envName={boardMetadataByTaskId.environmentNameByTaskId.get(bt.task.id)}
-                  onClick={() => navigate(taskUrl(bt.task.id))}
-                />
-              ))
+              <AnimatePresence mode="popLayout">
+                {col.tasks.map((bt) => (
+                  <motion.div
+                    key={bt.task.id}
+                    layout
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                    transition={{ duration: 0.15 }}
+                  >
+                    <BoardCard
+                      boardTask={bt}
+                      tasksById={tasksById}
+                      personaName={boardMetadataByTaskId.personaNameByTaskId.get(bt.task.id)}
+                      envName={boardMetadataByTaskId.environmentNameByTaskId.get(bt.task.id)}
+                      onClick={() => navigate(taskUrl(bt.task.id))}
+                    />
+                  </motion.div>
+                ))}
+              </AnimatePresence>
             )}
           </div>
-        </div>
+        </section>
       ))}
     </div>
   );
