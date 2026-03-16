@@ -36,6 +36,9 @@ importers:
       ora:
         specifier: ^8.0.0
         version: 8.2.0
+      qrcode-terminal:
+        specifier: ^0.12.0
+        version: 0.12.0
     devDependencies:
       '@grackle-ai/heft-rig':
         specifier: workspace:*
@@ -187,6 +190,9 @@ importers:
       pino:
         specifier: ^10.3.1
         version: 10.3.1
+      qrcode-terminal:
+        specifier: ^0.12.0
+        version: 0.12.0
       uuid:
         specifier: ^11.0.0
         version: 11.1.0
@@ -3050,6 +3056,10 @@ packages:
   punycode@2.3.1:
     resolution: {integrity: sha512-vYt7UD1U9Wg6138shLtLOvdAu+8DsC/ilFtEVHcH+wydcSpNE20AfSOduf6MkRFahL5FY7X1oU7nKVZFtfq8Fg==}
     engines: {node: '>=6'}
+
+  qrcode-terminal@0.12.0:
+    resolution: {integrity: sha512-EXtzRZmC+YGmGlDFbXKxQiMZNwCLEO6BANKXG4iCtSIM0yqc/pappSx3RIKr4r0uh5JsBckOXeKrB3Iz7mdQpQ==}
+    hasBin: true
 
   qs@6.15.0:
     resolution: {integrity: sha512-mAZTtNCeetKMH+pSjrb76NAM8V9a05I9aBZOHztWy/UqcJdQYNsf59vrRKWnojAT9Y+GbIvoTBC++CPHqpDBhQ==}
@@ -6735,6 +6745,8 @@ snapshots:
       once: 1.4.0
 
   punycode@2.3.1: {}
+
+  qrcode-terminal@0.12.0: {}
 
   qs@6.15.0:
     dependencies:

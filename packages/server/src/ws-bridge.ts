@@ -58,6 +58,7 @@ interface WsMessage {
 export function createWsBridge(
   httpServer: HttpServer,
   verifyApiKey: (token: string) => boolean,
+  validateCookie?: (cookieHeader: string) => boolean,
 ): WebSocketServer {
   const wss = new WebSocketServer({ server: httpServer });
   setWssInstance(wss);
@@ -65,7 +66,12 @@ export function createWsBridge(
   wss.on("connection", (ws: WebSocket, req: IncomingMessage) => {
     const url = new URL(req.url || "/", "http://localhost");
     const token = url.searchParams.get("token") || "";
-    if (!verifyApiKey(token)) {
+    const hasValidToken = token.length > 0 && verifyApiKey(token);
+    const hasValidCookie = validateCookie
+      ? validateCookie(req.headers.cookie || "")
+      : false;
+
+    if (!hasValidToken && !hasValidCookie) {
       ws.close(WS_CLOSE_UNAUTHORIZED, "Unauthorized");
       return;
     }

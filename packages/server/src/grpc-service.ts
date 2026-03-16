@@ -36,6 +36,7 @@ import { logger } from "./logger.js";
 import { slugify } from "./utils/slugify.js";
 import { buildTaskSystemContext } from "./utils/system-context.js";
 import { importGitHubIssues as executeGitHubImport } from "./github-import.js";
+import { generatePairingCode } from "./pairing.js";
 
 function envRowToProto(row: EnvironmentRow): grackle.Environment {
   return create(grackle.EnvironmentSchema, {
@@ -1245,6 +1246,38 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       );
 
       return create(grackle.ImportGitHubIssuesResponseSchema, result);
+    },
+
+    async generatePairingCode() {
+      const code = generatePairingCode();
+      if (!code) {
+        throw new ConnectError(
+          "Maximum active pairing codes reached. Wait for existing codes to expire.",
+          Code.ResourceExhausted,
+        );
+      }
+
+      const webPort = parseInt(process.env.GRACKLE_WEB_PORT || "3000", 10);
+      const { networkInterfaces } = await import("node:os");
+      const interfaces = networkInterfaces();
+      let lanIp = "localhost";
+      for (const entries of Object.values(interfaces)) {
+        if (!entries) {
+          continue;
+        }
+        for (const entry of entries) {
+          if (entry.family === "IPv4" && !entry.internal) {
+            lanIp = entry.address;
+            break;
+          }
+        }
+        if (lanIp !== "localhost") {
+          break;
+        }
+      }
+
+      const url = `http://${lanIp}:${webPort}/pair?code=${code}`;
+      return create(grackle.PairingCodeResponseSchema, { code, url });
     },
 
   });
