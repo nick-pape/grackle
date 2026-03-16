@@ -189,7 +189,7 @@ function StatusGroupAccordion({
                   key={task.id}
                   onClick={() => navigate(taskUrl(task.id))}
                   className={`${styles.taskRow} ${isSelected ? styles.selected : ""}`}
-                  style={{ paddingLeft: TASK_BASE_INDENT_PX }}
+                  style={{ '--task-indent': `${TASK_BASE_INDENT_PX}px` } as CSSProperties}
                   data-task-id={task.id}
                 >
                   <span className={styles.leafSpacer} />
