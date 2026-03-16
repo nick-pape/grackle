@@ -75,7 +75,7 @@ function renderPairingPage(error?: string): string {
 
 /**
  * Serve a static file from the web dist directory.
- * Returns true if the file was served, false if not found.
+ * Always writes a response (200, 403, 404, or 500).
  */
 function serveStaticFile(
   req: http.IncomingMessage,

@@ -1260,8 +1260,12 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       }
 
       const webPort = parseInt(process.env.GRACKLE_WEB_PORT || String(DEFAULT_WEB_PORT), 10);
-      const lanIp = detectLanIp() || "localhost";
-      const url = `http://${lanIp}:${webPort}/pair?code=${code}`;
+      const bindHost = process.env.GRACKLE_HOST || "127.0.0.1";
+      const WILDCARD_ADDRESSES: ReadonlySet<string> = new Set(["0.0.0.0", "::", "0:0:0:0:0:0:0:0"]);
+      const pairingHost = WILDCARD_ADDRESSES.has(bindHost)
+        ? (detectLanIp() || "localhost")
+        : (bindHost === "127.0.0.1" || bindHost === "::1" ? "localhost" : bindHost);
+      const url = `http://${pairingHost}:${webPort}/pair?code=${code}`;
       return create(grackle.PairingCodeResponseSchema, { code, url });
     },
 
