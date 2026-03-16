@@ -582,6 +582,13 @@ export async function* bootstrapPowerLine(
       join(mcpPackageDir, "package.json"),
       `${REMOTE_POWERLINE_DIRECTORY}/node_modules/@grackle-ai/mcp/package.json`,
     );
+
+    // Install runtime deps for copied @grackle-ai/* packages (e.g. fuse.js for common)
+    yield { stage: "bootstrapping", message: "Installing @grackle-ai/common dependencies...", progress: 0.59 };
+    await executor.exec(
+      `cd ${REMOTE_POWERLINE_DIRECTORY}/node_modules/@grackle-ai/common && npm install --omit=dev --legacy-peer-deps --no-package-lock 2>/dev/null; true`,
+      { timeout: BOOTSTRAP_NPM_INSTALL_TIMEOUT_MS },
+    );
   } else {
     // ── Production mode: npm install from registry ──
     const version = getPackageVersion();

@@ -53,6 +53,9 @@ COPY packages/common/package.json /app/node_modules/@grackle-ai/common/package.j
 COPY packages/mcp/dist/ /app/node_modules/@grackle-ai/mcp/dist/
 COPY packages/mcp/package.json /app/node_modules/@grackle-ai/mcp/package.json
 
+# Install runtime deps for copied @grackle-ai/* packages (e.g. fuse.js for common)
+RUN cd node_modules/@grackle-ai/common && npm install --omit=dev --legacy-peer-deps --no-package-lock 2>/dev/null; true
+
 USER grackle
 
 # Run PowerLine from /app so node_modules resolve correctly
