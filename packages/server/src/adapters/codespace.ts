@@ -1,5 +1,5 @@
 import type { EnvironmentAdapter, BaseEnvironmentConfig, PowerLineConnection, ProvisionEvent } from "./adapter.js";
-import { DEFAULT_POWERLINE_PORT, DEFAULT_SERVER_PORT } from "@grackle-ai/common";
+import { DEFAULT_POWERLINE_PORT, DEFAULT_MCP_PORT } from "@grackle-ai/common";
 import {
   type RemoteExecutor,
   ProcessTunnel,
@@ -95,7 +95,7 @@ class CodespaceTunnel extends ProcessTunnel {
 
 /**
  * Reverse SSH tunnel: binds a port inside the codespace that tunnels back to a local port.
- * Used so the MCP broker (running in the codespace) can reach the Grackle gRPC server (on the host).
+ * Used so agents (running in the codespace) can reach the Grackle MCP server (on the host).
  */
 class CodespaceReverseTunnel extends ProcessTunnel {
   private readonly codespaceName: string;
@@ -200,9 +200,9 @@ export class CodespaceAdapter implements EnvironmentAdapter {
     const tunnel = new CodespaceTunnel(localPort, cfg.codespaceName);
     await tunnel.open();
 
-    // Open reverse tunnel (codespace → host gRPC server) for MCP broker
-    const serverGrpcPort = parseInt(process.env.GRACKLE_PORT || String(DEFAULT_SERVER_PORT), 10);
-    const reverseTunnel = new CodespaceReverseTunnel(serverGrpcPort, serverGrpcPort, cfg.codespaceName);
+    // Open reverse tunnel (codespace → host MCP server) for agent tool calls
+    const mcpPort = parseInt(process.env.GRACKLE_MCP_PORT || String(DEFAULT_MCP_PORT), 10);
+    const reverseTunnel = new CodespaceReverseTunnel(mcpPort, mcpPort, cfg.codespaceName);
     await reverseTunnel.open();
 
     registerTunnel(environmentId, { tunnel, reverseTunnel });
@@ -248,14 +248,14 @@ export class CodespaceAdapter implements EnvironmentAdapter {
       yield { stage: "reconnecting", message: "PowerLine restarted", progress: 0.50 };
     }
 
-    // 3. Open new port-forward tunnel + reverse tunnel for MCP broker
+    // 3. Open new port-forward tunnel + reverse tunnel for MCP
     const localPort = cfg.localPort || await findFreePort();
     yield { stage: "reconnecting", message: `Forwarding local port ${localPort} to codespace...`, progress: 0.70 };
     const tunnel = new CodespaceTunnel(localPort, cfg.codespaceName);
     await tunnel.open();
 
-    const serverGrpcPort = parseInt(process.env.GRACKLE_PORT || String(DEFAULT_SERVER_PORT), 10);
-    const reverseTunnel = new CodespaceReverseTunnel(serverGrpcPort, serverGrpcPort, cfg.codespaceName);
+    const mcpPort = parseInt(process.env.GRACKLE_MCP_PORT || String(DEFAULT_MCP_PORT), 10);
+    const reverseTunnel = new CodespaceReverseTunnel(mcpPort, mcpPort, cfg.codespaceName);
     await reverseTunnel.open();
 
     registerTunnel(environmentId, { tunnel, reverseTunnel });

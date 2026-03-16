@@ -128,7 +128,7 @@ importers:
     dependencies:
       '@anthropic-ai/claude-agent-sdk':
         specifier: ^0.2.50
-        version: 0.2.74(zod@3.25.76)
+        version: 0.2.74(zod@4.3.6)
       '@bufbuild/protobuf':
         specifier: ^2.5.0
         version: 2.11.0
@@ -144,12 +144,6 @@ importers:
       '@grackle-ai/common':
         specifier: workspace:*
         version: link:../common
-      '@grackle-ai/mcp':
-        specifier: workspace:*
-        version: link:../mcp
-      '@modelcontextprotocol/sdk':
-        specifier: ^1.27.0
-        version: 1.27.1(zod@3.25.76)
       '@openai/codex-sdk':
         specifier: ^0.111.0
         version: 0.111.0
@@ -159,12 +153,6 @@ importers:
       pino:
         specifier: ^10.3.1
         version: 10.3.1
-      zod:
-        specifier: ^3.23.0
-        version: 3.25.76
-      zod-to-json-schema:
-        specifier: ^3.24.0
-        version: 3.25.1(zod@3.25.76)
     devDependencies:
       '@grackle-ai/heft-rig':
         specifier: workspace:*
@@ -3852,9 +3840,9 @@ packages:
 
 snapshots:
 
-  '@anthropic-ai/claude-agent-sdk@0.2.74(zod@3.25.76)':
+  '@anthropic-ai/claude-agent-sdk@0.2.74(zod@4.3.6)':
     dependencies:
-      zod: 3.25.76
+      zod: 4.3.6
     optionalDependencies:
       '@img/sharp-darwin-arm64': 0.34.5
       '@img/sharp-darwin-x64': 0.34.5

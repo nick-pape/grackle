@@ -31,10 +31,6 @@
     "@connectrpc/connect": "^2.0.0",
     "@connectrpc/connect-node": "^2.0.0",
     "@grackle-ai/common": "workspace:*",
-    "@grackle-ai/mcp": "workspace:*",
-    "@modelcontextprotocol/sdk": "^1.27.0",
-    "zod": "^3.23.0",
-    "zod-to-json-schema": "^3.24.0",
     "commander": "^13.0.0",
     "pino": "^10.3.1"
   },

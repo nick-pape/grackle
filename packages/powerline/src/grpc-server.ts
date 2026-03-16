@@ -1,7 +1,6 @@
 import type { ConnectRouter } from "@connectrpc/connect";
 import { create } from "@bufbuild/protobuf";
 import { powerline } from "@grackle-ai/common";
-import { createScopedToken } from "@grackle-ai/mcp";
 import { getRuntime, listRuntimes } from "./runtime-registry.js";
 import {
   addSession,
@@ -12,12 +11,10 @@ import {
 import { writeTokens } from "./token-writer.js";
 import { removeWorktree } from "./worktree.js";
 import { findGitRepoPath } from "./runtimes/runtime-utils.js";
-import { ensureBrokerStarted } from "./mcp-broker.js";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import os from "node:os";
 import type { AgentSession } from "./runtimes/runtime.js";
-import { logger } from "./logger.js";
 
 const execAsync: typeof execFile.__promisify__ = promisify(execFile);
 
@@ -69,25 +66,10 @@ export function registerPowerLineRoutes(router: ConnectRouter): void {
         return;
       }
 
-      // Start MCP broker (lazy singleton) and generate a scoped token for this session.
-      // The `per` claim is left empty — persona-scoped tool filtering is deferred to #424.
+      // Pass through MCP URL + scoped token from the server (no local broker needed).
       let mcpBroker: { url: string; token: string } | undefined;
-      if (req.mcpApiKey && req.mcpGrpcUrl) {
-        try {
-          const broker = await ensureBrokerStarted(req.mcpApiKey, req.mcpGrpcUrl);
-          const token = createScopedToken(
-            {
-              sub: req.taskId || req.sessionId,
-              pid: req.projectId || "",
-              per: "",
-              sid: req.sessionId,
-            },
-            req.mcpApiKey,
-          );
-          mcpBroker = { url: broker.url, token };
-        } catch (err) {
-          logger.warn({ err }, "Failed to start MCP broker, continuing without it");
-        }
+      if (req.mcpUrl && req.mcpToken) {
+        mcpBroker = { url: req.mcpUrl, token: req.mcpToken };
       }
 
       const session = runtime.spawn({

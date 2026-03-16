@@ -21,6 +21,7 @@ import { authenticateMcpRequest } from "./auth-middleware.js";
 import { grpcErrorToToolResult } from "./error-handler.js";
 import { pruneRevocations } from "./scoped-token.js";
 import { createToolRegistry } from "./tools/index.js";
+import { resolveToolForAuth, listToolsForAuth } from "./tool-scoping.js";
 
 /** Read the package version from package.json at module load time. */
 const PACKAGE_VERSION: string = (JSON.parse(
@@ -71,7 +72,7 @@ function createMcpServerInstance(grpcClient: Client<typeof grackle.Grackle>, aut
   );
 
   server.setRequestHandler(ListToolsRequestSchema, async () => {
-    const tools = registry.list();
+    const tools = listToolsForAuth(registry, authContext);
     return {
       tools: tools.map((t) => ({
         name: t.name,
@@ -84,7 +85,7 @@ function createMcpServerInstance(grpcClient: Client<typeof grackle.Grackle>, aut
 
   server.setRequestHandler(CallToolRequestSchema, async (request): Promise<CallToolResult> => {
     const { name, arguments: args } = request.params;
-    const tool = registry.get(name);
+    const tool = resolveToolForAuth(registry, name, authContext);
     if (!tool) {
       return {
         content: [{ type: "text", text: `Unknown tool: ${name}` }],
@@ -92,8 +93,14 @@ function createMcpServerInstance(grpcClient: Client<typeof grackle.Grackle>, aut
       };
     }
 
+    // Inject projectId from scoped token so callers don't need to provide it
+    const rawArgs = (args ?? {}) as Record<string, unknown>;
+    if (authContext.type === "scoped") {
+      rawArgs.projectId = authContext.projectId;
+    }
+
     // Validate inputs against Zod schema
-    const parsed = tool.inputSchema.safeParse(args ?? {});
+    const parsed = tool.inputSchema.safeParse(rawArgs);
     if (!parsed.success) {
       const issues = parsed.error.issues.map(
         (i) => `${i.path.join(".")}: ${i.message}`,
@@ -115,7 +122,7 @@ function createMcpServerInstance(grpcClient: Client<typeof grackle.Grackle>, aut
     }
 
     try {
-      logger.info({ tool: name }, "Executing MCP tool: %s", name);
+      logger.info({ tool: name, resolved: tool.name }, "Executing MCP tool: %s", name);
       const result = await tool.handler(parsed.data as Record<string, unknown>, grpcClient, authContext);
       return result as CallToolResult;
     } catch (error: unknown) {

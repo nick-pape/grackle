@@ -15,7 +15,6 @@ import { ConnectError, Code } from "@connectrpc/connect";
 import http2 from "node:http2";
 import { timingSafeEqual } from "node:crypto";
 import { registerPowerLineRoutes } from "./grpc-server.js";
-import { shutdownBroker } from "./mcp-broker.js";
 import { registerRuntime } from "./runtime-registry.js";
 import { StubRuntime } from "./runtimes/stub.js";
 import { ClaudeCodeRuntime } from "./runtimes/claude-code.js";
@@ -111,10 +110,8 @@ function main(): void {
       // Graceful shutdown
       function shutdown(): void {
         logger.info("Shutting down PowerLine...");
-        shutdownBroker().catch(() => {}).finally(() => {
-          server.close(() => {
-            process.exit(process.exitCode || 0);
-          });
+        server.close(() => {
+          process.exit(process.exitCode || 0);
         });
       }
 
