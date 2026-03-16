@@ -1,6 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 import type http from "node:http";
 import type { AuthContext } from "./auth-context.js";
+import { verifyOAuthAccessToken } from "./oauth-token.js";
 import { isRevokedTask, verifyScopedToken } from "./scoped-token.js";
 
 /** Expected length of API key tokens (64 hex characters). */
@@ -39,8 +40,15 @@ export function authenticateMcpRequest(req: http.IncomingMessage, apiKey: string
     return undefined;
   }
 
-  // Path 2: Scoped token authentication (contains a dot separator)
+  // Path 2: Token with dot separator — try OAuth first, then scoped
   if (token.includes(".")) {
+    // Try OAuth access token (distinguished by typ === "oauth")
+    const oauthClaims = verifyOAuthAccessToken(token, apiKey);
+    if (oauthClaims) {
+      return { type: "oauth", clientId: oauthClaims.sub };
+    }
+
+    // Fall through to scoped token
     const claims = verifyScopedToken(token, apiKey);
     if (!claims) {
       return undefined;
