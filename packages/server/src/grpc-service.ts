@@ -310,18 +310,30 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       const config = JSON.parse(env.adapterConfig) as Record<string, unknown>;
       const powerlineToken = env.powerlineToken;
 
-      for await (const event of reconnectOrProvision(
-        req.id,
-        adapter,
-        config,
-        powerlineToken,
-        !!env.bootstrapped,
-      )) {
+      try {
+        for await (const event of reconnectOrProvision(
+          req.id,
+          adapter,
+          config,
+          powerlineToken,
+          !!env.bootstrapped,
+        )) {
+          yield create(grackle.ProvisionEventSchema, {
+            stage: event.stage,
+            message: event.message,
+            progress: event.progress,
+          });
+        }
+      } catch (err) {
+        logger.error({ environmentId: req.id, err }, "Provision/bootstrap failed");
+        envRegistry.updateEnvironmentStatus(req.id, "error");
+        broadcastEnvironments();
         yield create(grackle.ProvisionEventSchema, {
-          stage: event.stage,
-          message: event.message,
-          progress: event.progress,
+          stage: "error",
+          message: `Provision failed: ${err instanceof Error ? err.message : String(err)}`,
+          progress: 0,
         });
+        return;
       }
 
       try {
@@ -955,8 +967,8 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         payload: { taskId: task.id, sessionId, projectId: task.projectId },
       });
 
-      // Re-push stored tokens + Claude credentials so they're fresh for this session
-      await tokenBroker.refreshTokensForTask(environmentId);
+      // Re-push stored tokens + provider credentials (scoped to runtime) so they're fresh for this session
+      await tokenBroker.refreshTokensForTask(environmentId, runtime);
 
       const mcpServersJson = persona ? personaMcpServersToJson(persona) : "";
 
