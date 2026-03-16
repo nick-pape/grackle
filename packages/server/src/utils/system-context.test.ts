@@ -19,16 +19,17 @@ describe("buildTaskSystemContext", () => {
     expect(result).not.toContain("## Notes");
   });
 
-  it("always includes post_finding and query_findings tools", () => {
+  it("always includes finding tools with projectId parameter", () => {
     const result = buildTaskSystemContext("Task", "desc", "");
     expect(result).toContain("mcp__grackle__post_finding");
     expect(result).toContain("mcp__grackle__query_findings");
+    expect(result).toContain("projectId (string, required)");
   });
 
   it("includes task_create tool when canDecompose is true", () => {
     const result = buildTaskSystemContext("Task", "desc", "", true);
     expect(result).toContain("mcp__grackle__task_create");
-    expect(result).toContain("Delegate work to another agent");
+    expect(result).toContain("Create a new task");
   });
 
   it("omits task_create tool when canDecompose is false", () => {

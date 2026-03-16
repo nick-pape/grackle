@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
+import http from "node:http";
 
 // Mock dependencies before importing
 vi.mock("./logger.js", () => ({
@@ -52,6 +53,30 @@ vi.mock("@connectrpc/connect-node", () => ({
 
 import { startMcpBroker, ensureBrokerStarted, shutdownBroker, resetBrokerHandle, type McpBrokerHandle } from "./mcp-broker.js";
 
+/** Helper to make an HTTP request and return the status code. */
+function httpRequest(url: string, options?: http.RequestOptions): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const req = http.request(url, options ?? {}, (res) => {
+      res.resume(); // drain response
+      resolve(res.statusCode ?? 0);
+    });
+    req.on("error", reject);
+    req.end();
+  });
+}
+
+/** Helper to check if a port is refusing connections. */
+function isPortClosed(port: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const req = http.get(`http://127.0.0.1:${port}/mcp`, () => {
+      resolve(false);
+    });
+    req.on("error", () => {
+      resolve(true);
+    });
+  });
+}
+
 describe("startMcpBroker", () => {
   let handle: McpBrokerHandle | undefined;
 
@@ -86,16 +111,7 @@ describe("startMcpBroker", () => {
     await handle.close();
     handle = undefined;
 
-    // After close, connecting to that port should fail
-    const result = await new Promise<string>((resolve) => {
-      const req = require("node:http").get(`http://127.0.0.1:${port}/mcp`, () => {
-        resolve("connected");
-      });
-      req.on("error", () => {
-        resolve("refused");
-      });
-    });
-    expect(result).toBe("refused");
+    expect(await isPortClosed(port)).toBe(true);
   });
 
   it("returns 404 for non-/mcp paths", async () => {
@@ -105,13 +121,8 @@ describe("startMcpBroker", () => {
       apiKey: "c".repeat(64),
     });
 
-    const result = await new Promise<number>((resolve, reject) => {
-      const req = require("node:http").get(`http://127.0.0.1:${handle!.port}/other`, (res: { statusCode: number }) => {
-        resolve(res.statusCode);
-      });
-      req.on("error", reject);
-    });
-    expect(result).toBe(404);
+    const status = await httpRequest(`http://127.0.0.1:${handle.port}/other`);
+    expect(status).toBe(404);
   });
 
   it("returns 401 for unauthenticated requests", async () => {
@@ -124,16 +135,8 @@ describe("startMcpBroker", () => {
       apiKey: "d".repeat(64),
     });
 
-    const result = await new Promise<number>((resolve, reject) => {
-      const req = require("node:http").request(
-        `http://127.0.0.1:${handle!.port}/mcp`,
-        { method: "POST" },
-        (res: { statusCode: number }) => { resolve(res.statusCode); },
-      );
-      req.on("error", reject);
-      req.end("{}");
-    });
-    expect(result).toBe(401);
+    const status = await httpRequest(`http://127.0.0.1:${handle.port}/mcp`, { method: "POST" });
+    expect(status).toBe(401);
   });
 
   it("returns 405 for unsupported methods", async () => {
@@ -146,16 +149,8 @@ describe("startMcpBroker", () => {
       apiKey: "e".repeat(64),
     });
 
-    const result = await new Promise<number>((resolve, reject) => {
-      const req = require("node:http").request(
-        `http://127.0.0.1:${handle!.port}/mcp`,
-        { method: "PUT" },
-        (res: { statusCode: number }) => { resolve(res.statusCode); },
-      );
-      req.on("error", reject);
-      req.end();
-    });
-    expect(result).toBe(405);
+    const status = await httpRequest(`http://127.0.0.1:${handle.port}/mcp`, { method: "PUT" });
+    expect(status).toBe(405);
   });
 });
 
@@ -188,14 +183,6 @@ describe("shutdownBroker", () => {
     const port = handle.port;
     await shutdownBroker();
 
-    const result = await new Promise<string>((resolve) => {
-      const req = require("node:http").get(`http://127.0.0.1:${port}/mcp`, () => {
-        resolve("connected");
-      });
-      req.on("error", () => {
-        resolve("refused");
-      });
-    });
-    expect(result).toBe("refused");
+    expect(await isPortClosed(port)).toBe(true);
   });
 });

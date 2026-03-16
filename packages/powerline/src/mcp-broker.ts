@@ -195,7 +195,17 @@ function createMcpServerInstance(
 
     try {
       logger.info({ tool: name, resolved: tool.name }, "MCP broker: executing tool");
-      const result = await tool.handler(parsed.data as Record<string, unknown>, grpcClient, authContext);
+
+      // Enforce claim-based scoping: override projectId/taskId from the scoped token
+      // to prevent cross-project access (the broker authenticates to gRPC with the server API key).
+      const scopedArgs = parsed.data as Record<string, unknown>;
+      if (authContext.type === "scoped") {
+        if ("projectId" in scopedArgs) {
+          scopedArgs.projectId = authContext.projectId;
+        }
+      }
+
+      const result = await tool.handler(scopedArgs, grpcClient, authContext);
 
       // Note: we intentionally do NOT emit finding/subtask_create AgentEvents here.
       // The gRPC handlers (postFinding, createTask) already persist data and broadcast
@@ -239,6 +249,8 @@ export async function startMcpBroker(options: McpBrokerOptions): Promise<McpBrok
 
   /** Active transports keyed by MCP session ID. */
   const transports: Map<string, StreamableHTTPServerTransport> = new Map();
+  /** Auth contexts keyed by MCP session ID — used to reject session hijack attempts. */
+  const authContexts: Map<string, AuthContext> = new Map();
 
   // eslint-disable-next-line @typescript-eslint/no-misused-promises
   const httpServer = http.createServer(async (req, res) => {
@@ -282,6 +294,13 @@ export async function startMcpBroker(options: McpBrokerOptions): Promise<McpBrok
         const sessionId = req.headers["mcp-session-id"] as string | undefined;
 
         if (sessionId && transports.has(sessionId)) {
+          // Reject if the auth type changed from the session's initial auth context
+          const initialAuth = authContexts.get(sessionId);
+          if (initialAuth && initialAuth.type !== authContext.type) {
+            res.writeHead(403, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ error: "Auth context mismatch for session" }));
+            return;
+          }
           const transport = transports.get(sessionId)!;
           await transport.handleRequest(req, res, body);
           return;
@@ -293,6 +312,7 @@ export async function startMcpBroker(options: McpBrokerOptions): Promise<McpBrok
             onsessioninitialized: (sid: string) => {
               logger.info({ sessionId: sid }, "MCP broker: session initialized");
               transports.set(sid, transport);
+              authContexts.set(sid, authContext);
             },
           });
 
@@ -300,6 +320,7 @@ export async function startMcpBroker(options: McpBrokerOptions): Promise<McpBrok
             const sid = transport.sessionId;
             if (sid && transports.has(sid)) {
               transports.delete(sid);
+              authContexts.delete(sid);
             }
           };
 
