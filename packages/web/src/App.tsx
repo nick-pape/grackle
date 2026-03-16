@@ -79,7 +79,6 @@ function AppShell(): JSX.Element {
           className={styles.sidebarWrapper}
           data-sidebar-open={sidebarOpen}
           data-settings={isSettings}
-          inert={!isSettings && !sidebarOpen ? true : undefined}
         >
           {isSettings ? <SettingsNav /> : <Sidebar />}
         </div>

@@ -19,9 +19,11 @@ export function StatusBar({ onToggleSidebar }: StatusBarProps): JSX.Element {
 
   return (
     <div className={styles.container}>
-      <button type="button" className={styles.hamburger} onClick={onToggleSidebar} aria-label="Toggle sidebar">
-        {"\u2630"}
-      </button>
+      {onToggleSidebar && (
+        <button type="button" className={styles.hamburger} onClick={onToggleSidebar} aria-label="Toggle sidebar">
+          {"\u2630"}
+        </button>
+      )}
       <button type="button" className={styles.brand} onClick={() => navigate("/")} title="Home">Grackle</button>
       <div className={styles.info}>
         <span className={styles.connectionStatus}>
