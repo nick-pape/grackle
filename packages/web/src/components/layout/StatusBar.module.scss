@@ -63,9 +63,9 @@
   }
 }
 
-.connectionLabel {
+.connectionStatus {
   @include mobile {
-    display: none;
+    font-size: 0;
   }
 }
 
