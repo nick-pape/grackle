@@ -2,6 +2,11 @@ import { test, expect } from "./fixtures.js";
 import { createProject, createTask } from "./helpers.js";
 
 test.describe("Sidebar search filter", () => {
+  // Clean up localStorage after each test to prevent state leakage
+  test.afterEach(async ({ page }) => {
+    await page.evaluate(() => localStorage.removeItem("grackle-group-by-status"));
+  });
+
   test("search input is visible when projects exist", async ({ appPage }) => {
     const page = appPage;
 
@@ -83,9 +88,6 @@ test.describe("Sidebar search filter", () => {
     // Only matching task visible
     await expect(page.getByText("matching-task").first()).toBeVisible({ timeout: 5_000 });
     await expect(page.getByText("other-task")).not.toBeVisible({ timeout: 3_000 });
-
-    // Clean up localStorage
-    await page.evaluate(() => localStorage.removeItem("grackle-group-by-status"));
   });
 
   test("project match shows all its tasks", async ({ appPage }) => {

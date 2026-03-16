@@ -571,13 +571,17 @@ export function ProjectList(): JSX.Element {
     return { directMatchTaskIds: directIds, treeMatchTaskIds: treeIds, visibleProjectIds: vProjectIds, matchedProjectIds: mProjectIds, titleHighlights: highlights };
   }, [searchQuery, projects, tasks]);
 
+  // Track which projects have had tasks requested (superset of expanded — includes search-triggered loads)
+  const requestedProjectsRef = useRef<Set<string>>(new Set());
+
   // Load tasks for projects that become visible due to search but haven't been loaded yet
   useEffect(() => {
     if (!visibleProjectIds) {
       return;
     }
     for (const pid of visibleProjectIds) {
-      if (!expanded.has(pid)) {
+      if (!expanded.has(pid) && !requestedProjectsRef.current.has(pid)) {
+        requestedProjectsRef.current.add(pid);
         loadTasks(pid);
       }
     }
