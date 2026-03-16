@@ -27,6 +27,12 @@ import { logger } from "./logger.js";
 const esmRequire: NodeRequire = createRequire(import.meta.url);
 const { version } = esmRequire("../package.json") as { version: string };
 
+// The PowerLine is an independent service, not a nested Claude Code session.
+// Clear the nesting guard so agent subprocesses (spawned via the SDK) don't
+// refuse to start when the PowerLine happens to be launched from within
+// a Claude Code session (e.g. during development or local testing).
+delete process.env.CLAUDECODE;
+
 function main(): void {
   const program = new Command();
 

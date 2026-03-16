@@ -21,12 +21,6 @@ vi.mock("../utils/sleep.js", () => ({
   sleep: vi.fn().mockResolvedValue(undefined),
 }));
 
-// ── Mock credential-providers (no DB in adapter tests) ──────
-vi.mock("../credential-providers.js", () => ({
-  shouldPushClaudeCredentialsFile: vi.fn(() => false),
-  shouldCaptureRemoteGitHubToken: vi.fn(() => false),
-}));
-
 import { probeRemotePowerLine, writeRemoteEnvFile, startRemotePowerLine } from "./remote-adapter-utils.js";
 
 // ── Helper ──────────────────────────────────────────────────
