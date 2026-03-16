@@ -83,7 +83,7 @@ export interface RemoteTunnel {
 
 interface TunnelState {
   tunnel: RemoteTunnel;
-  /** Optional reverse tunnel for MCP broker gRPC connectivity. */
+  /** Optional reverse tunnel so remote agents can reach the host MCP endpoint. */
   reverseTunnel?: RemoteTunnel;
 }
 
