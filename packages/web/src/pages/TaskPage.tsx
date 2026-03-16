@@ -6,6 +6,7 @@ import { FindingsPanel } from "../components/panels/FindingsPanel.js";
 import { Breadcrumbs, ConfirmDialog } from "../components/display/index.js";
 import { buildTaskBreadcrumbs } from "../utils/breadcrumbs.js";
 import { projectUrl, taskEditUrl, taskUrl, useAppNavigate } from "../utils/navigation.js";
+import { getStatusStyle, STATUS_BADGE_CLASS_MAP } from "../utils/taskStatus.js";
 import type { Session, TaskData, Environment, Project } from "../hooks/useGrackleSocket.js";
 import { AnimatePresence, motion } from "motion/react";
 import Markdown from "react-markdown";
@@ -51,17 +52,11 @@ function envStatusClass(status: string): string {
 // --- Subcomponents ---
 
 function TaskStatusBadge({ status }: { status: string }): JSX.Element {
-  const labelMap: Record<string, string> = {
-    not_started: "Not Started", working: "Working",
-    paused: "Paused", complete: "Complete", failed: "Failed",
-  };
-  const colorClassMap: Record<string, string> = {
-    not_started: styles.statusPending, working: styles.statusInProgress,
-    paused: styles.statusWaitingInput, complete: styles.statusDone, failed: styles.statusFailed,
-  };
+  const style = getStatusStyle(status);
+  const classKey = STATUS_BADGE_CLASS_MAP[status] ?? "statusPending";
   return (
-    <span className={`${styles.statusBadge} ${colorClassMap[status] ?? styles.statusPending}`}>
-      {labelMap[status] ?? status}
+    <span className={`${styles.statusBadge} ${styles[classKey] ?? styles.statusPending}`}>
+      {style.label}
     </span>
   );
 }

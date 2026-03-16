@@ -1,0 +1,170 @@
+import { test, expect } from "./fixtures.js";
+import {
+  createProject,
+  createTask,
+  createTaskViaWs,
+  getProjectId,
+  getTaskId,
+} from "./helpers.js";
+
+test.describe("Board View", () => {
+  test("Board tab is visible after selecting a project", async ({ appPage }) => {
+    const page = appPage;
+
+    await createProject(page, "board-tab-vis");
+    await createTask(page, "board-tab-vis", "board-vis-task");
+
+    // Board tab should be visible
+    const boardTab = page.getByTestId("board-tab");
+    await expect(boardTab).toBeVisible({ timeout: 5_000 });
+  });
+
+  test("Board tab is not visible when no project is selected", async ({ appPage }) => {
+    const page = appPage;
+
+    // Without selecting a project, Board tab should not exist
+    await expect(page.getByTestId("board-tab")).not.toBeVisible();
+  });
+
+  test("empty project shows CTA on board view", async ({ appPage }) => {
+    const page = appPage;
+
+    await createProject(page, "board-empty");
+
+    // Navigate to board tab
+    await page.getByTestId("board-tab").click();
+
+    // Should show empty CTA
+    await expect(page.getByTestId("board-empty-cta")).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText("Create Task")).toBeVisible();
+  });
+
+  test("tasks appear in correct columns based on status", async ({ appPage }) => {
+    const page = appPage;
+
+    await createProject(page, "board-columns");
+    await createTask(page, "board-columns", "col-task-a");
+    await createTask(page, "board-columns", "col-task-b");
+
+    // Switch to Board tab
+    await page.getByTestId("board-tab").click();
+
+    // Verify board container is visible
+    await expect(page.getByTestId("board-container")).toBeVisible({ timeout: 5_000 });
+
+    // Both tasks should be in the Not Started column (default status)
+    const notStartedColumn = page.getByTestId("board-column-not_started");
+    await expect(notStartedColumn).toBeVisible();
+
+    // Verify count badge shows 2
+    await expect(page.getByTestId("board-count-not_started")).toContainText("2");
+
+    // Other columns should show 0
+    await expect(page.getByTestId("board-count-working")).toContainText("0");
+    await expect(page.getByTestId("board-count-complete")).toContainText("0");
+  });
+
+  test("all five columns are always rendered", async ({ appPage }) => {
+    const page = appPage;
+
+    await createProject(page, "board-all-cols");
+    await createTask(page, "board-all-cols", "all-cols-task");
+
+    await page.getByTestId("board-tab").click();
+    await expect(page.getByTestId("board-container")).toBeVisible({ timeout: 5_000 });
+
+    // All five columns should be present
+    await expect(page.getByTestId("board-column-not_started")).toBeVisible();
+    await expect(page.getByTestId("board-column-working")).toBeVisible();
+    await expect(page.getByTestId("board-column-paused")).toBeVisible();
+    await expect(page.getByTestId("board-column-complete")).toBeVisible();
+    await expect(page.getByTestId("board-column-failed")).toBeVisible();
+  });
+
+  test("clicking a card navigates to task detail", async ({ appPage }) => {
+    const page = appPage;
+
+    await createProject(page, "board-nav");
+    await createTask(page, "board-nav", "board-nav-task");
+
+    // Switch to Board
+    await page.getByTestId("board-tab").click();
+    await expect(page.getByTestId("board-container")).toBeVisible({ timeout: 5_000 });
+
+    // Click the card
+    const card = page.locator("[data-testid^='board-card-']").first();
+    await card.click();
+
+    // Should navigate to task detail — task-status badge appears
+    await expect(page.locator('[data-testid="task-status"]')).toBeVisible({ timeout: 5_000 });
+  });
+
+  test("card is focusable via keyboard", async ({ appPage }) => {
+    const page = appPage;
+
+    await createProject(page, "board-focus");
+    await createTask(page, "board-focus", "focus-task");
+
+    await page.getByTestId("board-tab").click();
+    await expect(page.getByTestId("board-container")).toBeVisible({ timeout: 5_000 });
+
+    // Focus the card via Tab key and then activate with Enter
+    const card = page.locator("[data-testid^='board-card-']").first();
+    await card.focus();
+    await expect(card).toBeFocused();
+
+    await page.keyboard.press("Enter");
+    await expect(page.locator('[data-testid="task-status"]')).toBeVisible({ timeout: 5_000 });
+  });
+
+  test("blocked task shows blocked badge in its status column", async ({ appPage }) => {
+    const page = appPage;
+
+    await createProject(page, "board-blocked");
+    await createTask(page, "board-blocked", "blocker-task");
+
+    const projectId = await getProjectId(page, "board-blocked");
+    const blockerId = await getTaskId(page, projectId, "blocker-task");
+
+    // Create a dependent task
+    await createTaskViaWs(page, projectId, "blocked-task", {
+      dependsOn: [blockerId],
+    });
+    await page.getByText("blocked-task").first().waitFor({ timeout: 5_000 });
+
+    // Switch to board
+    await page.getByTestId("board-tab").click();
+    await expect(page.getByTestId("board-container")).toBeVisible({ timeout: 5_000 });
+
+    // The blocked task should still be in Not Started column (not a separate column)
+    await expect(page.getByTestId("board-count-not_started")).toContainText("2");
+
+    // And it should have a "blocked" badge on the card
+    const blockedBadge = page.locator("[data-testid^='board-card-']").filter({ hasText: "blocked" });
+    await expect(blockedBadge).toBeVisible({ timeout: 5_000 });
+  });
+
+  test("child progress badge shows on parent cards", async ({ appPage }) => {
+    const page = appPage;
+
+    await createProject(page, "board-children");
+    await createTask(page, "board-children", "parent-task");
+
+    const projectId = await getProjectId(page, "board-children");
+    const parentId = await getTaskId(page, projectId, "parent-task");
+
+    // Create child tasks
+    await createTaskViaWs(page, projectId, "child-1", { parentTaskId: parentId });
+    await createTaskViaWs(page, projectId, "child-2", { parentTaskId: parentId });
+    await page.getByText("child-1").first().waitFor({ timeout: 5_000 });
+    await page.getByText("child-2").first().waitFor({ timeout: 5_000 });
+
+    // Switch to board
+    await page.getByTestId("board-tab").click();
+    await expect(page.getByTestId("board-container")).toBeVisible({ timeout: 5_000 });
+
+    // Parent card should show child progress badge "0/2"
+    const parentCard = page.locator("[data-testid^='board-card-']").filter({ hasText: "parent-task" });
+    await expect(parentCard.locator("text=0/2")).toBeVisible({ timeout: 5_000 });
+  });
+});

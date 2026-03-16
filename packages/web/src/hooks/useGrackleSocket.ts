@@ -19,6 +19,7 @@ export interface Session {
   startedAt: string;
   endedAt?: string;
   error?: string;
+  personaId?: string;
 }
 
 export interface SessionEvent {
