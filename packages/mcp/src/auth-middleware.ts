@@ -46,10 +46,13 @@ export function authenticateMcpRequest(req: http.IncomingMessage, apiKey: string
     // Try OAuth access token (distinguished by typ === "oauth")
     const oauthClaims = verifyOAuthAccessToken(token, apiKey);
     if (oauthClaims) {
-      // Validate audience — token must be issued for this server's resource URL
-      const expectedAudience = `http://${req.headers.host || "localhost"}`;
-      if (oauthClaims.aud !== expectedAudience) {
-        return undefined;
+      // Validate audience if present — when non-empty, must match this server's resource URL.
+      // Empty aud is accepted because the client may omit the resource indicator (RFC 8707).
+      if (oauthClaims.aud) {
+        const expectedAudience = `http://${req.headers.host || "localhost"}`;
+        if (oauthClaims.aud !== expectedAudience) {
+          return undefined;
+        }
       }
       return { type: "oauth", clientId: oauthClaims.sub };
     }

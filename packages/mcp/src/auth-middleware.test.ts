@@ -138,6 +138,14 @@ describe("authenticateMcpRequest", () => {
     expect(result).toBeUndefined();
   });
 
+  /** OAuth token with empty audience is accepted (client omitted resource indicator). */
+  test("OAuth token with empty audience is accepted", () => {
+    const token = createOAuthAccessToken(OAUTH_CLIENT_ID, "", API_KEY);
+    const req = mockRequest(`Bearer ${token}`, OAUTH_HOST);
+    const result = authenticateMcpRequest(req, API_KEY);
+    expect(result).toEqual({ type: "oauth", clientId: OAUTH_CLIENT_ID });
+  });
+
   /** All three auth types work independently. */
   test("api key, scoped, and oauth tokens work independently", () => {
     const apiKeyReq = mockRequest(`Bearer ${API_KEY}`);
