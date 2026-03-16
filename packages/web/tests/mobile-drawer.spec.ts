@@ -1,6 +1,6 @@
 import { test, expect } from "./fixtures.js";
 
-/** Mobile viewport dimensions (iPhone SE). */
+/** Mobile viewport dimensions (iPhone X / 11 Pro). */
 const MOBILE_VIEWPORT = { width: 375, height: 812 };
 
 test.describe("Mobile Drawer", () => {
@@ -38,9 +38,8 @@ test.describe("Mobile Drawer", () => {
     await hamburger.click();
     await expect(sidebar).toBeVisible();
 
-    // Click the overlay (outside the sidebar)
-    const overlay = appPage.locator('[class*="overlay"]');
-    await overlay.click({ position: { x: 350, y: 400 } });
+    // Click outside the drawer (right side of screen) to dismiss via overlay
+    await appPage.mouse.click(350, 400);
     await expect(sidebar).not.toBeVisible();
   });
 
