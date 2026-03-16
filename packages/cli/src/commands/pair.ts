@@ -18,12 +18,11 @@ export function registerPairCommand(program: Command): void {
 
       // Print QR code (best-effort)
       try {
-        const { default: qrcode } = await import("qrcode-terminal");
-        qrcode.generate(response.url, { small: true }, (qr: string) => {
-          console.log(qr);
-        });
+        const qrcode = await import("qrcode");
+        const qr = await qrcode.toString(response.url, { type: "terminal", small: true });
+        console.log(qr);
       } catch {
-        // qrcode-terminal not installed — skip QR
+        // qrcode not installed — skip QR
       }
 
       console.log(chalk.dim("  Code expires in 5 minutes."));

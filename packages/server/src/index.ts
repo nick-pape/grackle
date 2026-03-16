@@ -323,12 +323,12 @@ function main(): void {
       // Print QR code (best-effort — missing dep is not fatal)
       try {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const qrcode = esmRequire("qrcode-terminal") as { generate(text: string, opts: { small: boolean }, cb: (qr: string) => void): void };
-        qrcode.generate(pairingUrl, { small: true }, (qr: string) => {
-          console.log(qr);
-        });
+        const qrcode = esmRequire("qrcode") as { toString(text: string, opts: { type: string; small: boolean }): Promise<string> };
+        qrcode.toString(pairingUrl, { type: "terminal", small: true })
+          .then((qr: string) => { console.log(qr); })
+          .catch(() => { /* QR rendering failed — not critical */ });
       } catch {
-        // qrcode-terminal not installed — skip QR
+        // qrcode not installed — skip QR
       }
 
       console.log("  Pairing code expires in 5 minutes.");
