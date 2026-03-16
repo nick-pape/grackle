@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Mon, 16 Mar 2026 06:43:40 GMT and should not be manually modified.
+This log was last generated on Mon, 16 Mar 2026 14:30:53 GMT and should not be manually modified.
+
+## 0.32.0
+Mon, 16 Mar 2026 14:30:53 GMT
+
+### Minor changes
+
+- Add CLI and MCP commands for credential provider configuration
 
 ## 0.31.2
 Mon, 16 Mar 2026 06:43:40 GMT
