@@ -123,15 +123,19 @@ export function buildBoardColumns({
   }
 
   // Sort tasks in each bucket by sortOrder
-  for (const tasks of buckets.values()) {
-    tasks.sort((a, b) => a.task.sortOrder - b.task.sortOrder);
+  for (const columnTasks of buckets.values()) {
+    columnTasks.sort((a, b) => a.task.sortOrder - b.task.sortOrder);
   }
 
   // Build final column array in display order
-  return BOARD_COLUMN_ORDER.map((status) => ({
-    status,
-    label: getStatusStyle(status).label,
-    style: getStatusStyle(status),
-    tasks: buckets.get(status) ?? [],
-  }));
+  return BOARD_COLUMN_ORDER.map((status) => {
+    const style = getStatusStyle(status);
+
+    return {
+      status,
+      label: style.label,
+      style,
+      tasks: buckets.get(status) ?? [],
+    };
+  });
 }
