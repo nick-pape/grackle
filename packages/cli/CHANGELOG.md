@@ -1,6 +1,17 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Mon, 16 Mar 2026 00:01:13 GMT and should not be manually modified.
+This log was last generated on Mon, 16 Mar 2026 03:56:16 GMT and should not be manually modified.
+
+## 0.30.0
+Mon, 16 Mar 2026 03:56:16 GMT
+
+### Minor changes
+
+- Add fuzzy search utility (fuse.js wrapper) for client-side and server-side search
+
+### Updates
+
+- No CLI changes — change file addresses merge-commit false positive
 
 ## 0.29.1
 Mon, 16 Mar 2026 00:01:13 GMT
