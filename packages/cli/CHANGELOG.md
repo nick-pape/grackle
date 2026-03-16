@@ -1,6 +1,17 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Mon, 16 Mar 2026 05:45:22 GMT and should not be manually modified.
+This log was last generated on Mon, 16 Mar 2026 06:43:40 GMT and should not be manually modified.
+
+## 0.31.2
+Mon, 16 Mar 2026 06:43:40 GMT
+
+### Patches
+
+- Remove adapter-specific credential handling, deliver all credentials via pushTokens
+
+### Updates
+
+- Add a new kanban view
 
 ## 0.31.1
 Mon, 16 Mar 2026 05:45:22 GMT
