@@ -45,7 +45,7 @@ export interface McpBrokerHandle {
 
 // ─── Tool scoping ───────────────────────────────────────────
 
-/** Tools exposed to scoped-token (agent) callers. Matches the old stdio stub's surface area. */
+/** Tools exposed to scoped-token (agent) callers. These are the gRPC-backed tools available to agents. */
 const BROKER_TOOLS: ReadonlySet<string> = new Set([
   "finding_post", "finding_list", "task_create",
 ]);
@@ -178,8 +178,15 @@ function createMcpServerInstance(
       };
     }
 
-    // Validate inputs
-    const parsed = tool.inputSchema.safeParse(args ?? {});
+    // Enforce claim-based scoping BEFORE validation: inject projectId from the scoped
+    // token so callers don't need to provide it (and can't supply a cross-project value).
+    const rawArgs = (args ?? {}) as Record<string, unknown>;
+    if (authContext.type === "scoped") {
+      rawArgs.projectId = authContext.projectId;
+    }
+
+    // Validate inputs (projectId is now pre-filled for scoped tokens)
+    const parsed = tool.inputSchema.safeParse(rawArgs);
     if (!parsed.success) {
       const issues = parsed.error.issues.map(
         (i) => `${i.path.join(".")}: ${i.message}`,
@@ -195,17 +202,7 @@ function createMcpServerInstance(
 
     try {
       logger.info({ tool: name, resolved: tool.name }, "MCP broker: executing tool");
-
-      // Enforce claim-based scoping: override projectId/taskId from the scoped token
-      // to prevent cross-project access (the broker authenticates to gRPC with the server API key).
-      const scopedArgs = parsed.data as Record<string, unknown>;
-      if (authContext.type === "scoped") {
-        if ("projectId" in scopedArgs) {
-          scopedArgs.projectId = authContext.projectId;
-        }
-      }
-
-      const result = await tool.handler(scopedArgs, grpcClient, authContext);
+      const result = await tool.handler(parsed.data as Record<string, unknown>, grpcClient, authContext);
 
       // Note: we intentionally do NOT emit finding/subtask_create AgentEvents here.
       // The gRPC handlers (postFinding, createTask) already persist data and broadcast
@@ -354,6 +351,12 @@ export async function startMcpBroker(options: McpBrokerOptions): Promise<McpBrok
         res.end(JSON.stringify({ error: "Invalid or missing session ID" }));
         return;
       }
+      const initialAuth = authContexts.get(sessionId);
+      if (initialAuth && initialAuth.type !== authContext.type) {
+        res.writeHead(403, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "Auth context mismatch for session" }));
+        return;
+      }
       const transport = transports.get(sessionId)!;
       await transport.handleRequest(req, res);
     } else if (method === "DELETE") {
@@ -361,6 +364,12 @@ export async function startMcpBroker(options: McpBrokerOptions): Promise<McpBrok
       if (!sessionId || !transports.has(sessionId)) {
         res.writeHead(400, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ error: "Invalid or missing session ID" }));
+        return;
+      }
+      const initialAuth = authContexts.get(sessionId);
+      if (initialAuth && initialAuth.type !== authContext.type) {
+        res.writeHead(403, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "Auth context mismatch for session" }));
         return;
       }
       const transport = transports.get(sessionId)!;

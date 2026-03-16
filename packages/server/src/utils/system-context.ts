@@ -6,13 +6,13 @@ export function buildTaskSystemContext(title: string, description: string, notes
     notes ? `## Notes (from previous attempt or user feedback)\n${notes}` : "",
     `## Grackle Tools (MCP)`,
     `You have a "grackle" MCP server with tools for coordinating with other agents:`,
-    `- **mcp__grackle__post_finding** (alias: mcp__grackle__finding_post): Share discoveries (architecture decisions, bugs, patterns) with other agents working on this project. Parameters: projectId (string, required), title (string, required), content (string, optional), category (optional: architecture|api|bug|decision|dependency|pattern|general), tags (optional: string[]). Note: projectId is automatically set from your session context.`,
-    `- **mcp__grackle__query_findings** (alias: mcp__grackle__finding_list): Query findings posted by other agents. Parameters: projectId (string, required), category (optional), tag (optional), limit (optional). Note: projectId is automatically set from your session context. Findings from previous tasks are also in your system context above.`,
+    `- **mcp__grackle__post_finding** (alias: mcp__grackle__finding_post): Share discoveries (architecture decisions, bugs, patterns) with other agents working on this project. Parameters: projectId (string — injected automatically, you can pass any value or your project ID), title (string, required), content (string, optional), category (optional: architecture|api|bug|decision|dependency|pattern|general), tags (optional: string[]).`,
+    `- **mcp__grackle__query_findings** (alias: mcp__grackle__finding_list): Query findings posted by other agents. Parameters: projectId (string — injected automatically), category (optional), tag (optional), limit (optional). Findings from previous tasks are also in your system context above.`,
   ];
 
   if (canDecompose) {
     sections.push(
-      `- **mcp__grackle__task_create**: Create a new task in the project. Use this when work is too large or complex for you to complete alone. Parameters: projectId (string, required — automatically set from session context), title (string, required), description (string, optional — be specific about what to do and what "done" looks like).`,
+      `- **mcp__grackle__task_create**: Create a new task in the project. Use this when work is too large or complex for you to complete alone. Parameters: projectId (string — injected automatically), title (string, required), description (string, optional — be specific about what to do and what "done" looks like).`,
     );
   }
 

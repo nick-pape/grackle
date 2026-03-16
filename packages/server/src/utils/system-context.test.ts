@@ -23,7 +23,7 @@ describe("buildTaskSystemContext", () => {
     const result = buildTaskSystemContext("Task", "desc", "");
     expect(result).toContain("mcp__grackle__post_finding");
     expect(result).toContain("mcp__grackle__query_findings");
-    expect(result).toContain("projectId (string, required)");
+    expect(result).toContain("projectId");
   });
 
   it("includes task_create tool when canDecompose is true", () => {

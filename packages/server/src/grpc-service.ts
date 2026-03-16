@@ -42,6 +42,14 @@ import { importGitHubIssues as executeGitHubImport } from "./github-import.js";
 import { generatePairingCode } from "./pairing.js";
 import { detectLanIp } from "./utils/network.js";
 
+/** Map a bind host to a dialable URL host. Wildcard addresses become loopback. */
+function toDialableHost(bindHost: string): string {
+  if (bindHost === "0.0.0.0" || bindHost === "::") {
+    return bindHost === "::" ? "[::1]" : "127.0.0.1";
+  }
+  return bindHost.includes(":") ? `[${bindHost}]` : bindHost;
+}
+
 function envRowToProto(row: EnvironmentRow): grackle.Environment {
   return create(grackle.EnvironmentSchema, {
     id: row.id,
@@ -438,8 +446,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       const mcpServersJson = persona ? personaMcpServersToJson(persona) : "";
 
       const grpcPort = parseInt(process.env.GRACKLE_PORT || String(DEFAULT_SERVER_PORT), 10);
-      const bindHost = process.env.GRACKLE_HOST || "127.0.0.1";
-      const urlHost = bindHost.includes(":") ? `[${bindHost}]` : bindHost;
+      const dialHost = toDialableHost(process.env.GRACKLE_HOST || "127.0.0.1");
 
       const powerlineReq = create(powerline.SpawnRequestSchema, {
         sessionId,
@@ -454,7 +461,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         systemContext,
         mcpServersJson,
         mcpApiKey: loadOrCreateApiKey(),
-        mcpGrpcUrl: `http://${urlHost}:${grpcPort}`,
+        mcpGrpcUrl: `http://${dialHost}:${grpcPort}`,
       });
 
       processEventStream(conn.client.spawn(powerlineReq), {
@@ -932,8 +939,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       }
 
       const taskGrpcPort = parseInt(process.env.GRACKLE_PORT || String(DEFAULT_SERVER_PORT), 10);
-      const taskBindHost = process.env.GRACKLE_HOST || "127.0.0.1";
-      const taskUrlHost = taskBindHost.includes(":") ? `[${taskBindHost}]` : taskBindHost;
+      const taskDialHost = toDialableHost(process.env.GRACKLE_HOST || "127.0.0.1");
 
       const powerlineReq = create(powerline.SpawnRequestSchema, {
         sessionId,
@@ -950,7 +956,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         taskId: task.id,
         mcpServersJson,
         mcpApiKey: loadOrCreateApiKey(),
-        mcpGrpcUrl: `http://${taskUrlHost}:${taskGrpcPort}`,
+        mcpGrpcUrl: `http://${taskDialHost}:${taskGrpcPort}`,
       });
 
       processEventStream(conn.client.spawn(powerlineReq), {
