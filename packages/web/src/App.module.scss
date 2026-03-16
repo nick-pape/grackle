@@ -44,10 +44,15 @@
     width: 280px;
     z-index: 100;
     transform: translateX(-100%);
-    transition: transform var(--transition-slow);
+    visibility: hidden;
+    transition: transform var(--transition-slow),
+                visibility 0s linear var(--transition-slow);
 
     &[data-sidebar-open="true"] {
       transform: translateX(0);
+      visibility: visible;
+      transition: transform var(--transition-slow),
+                  visibility 0s;
     }
 
     // Settings nav renders inline as horizontal tabs on mobile
@@ -55,6 +60,8 @@
       position: static;
       width: 100%;
       transform: none;
+      visibility: visible;
+      transition: none;
     }
   }
 }
@@ -68,13 +75,5 @@
     inset: 0;
     background: rgba(0, 0, 0, 0.5);
     z-index: 99;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity var(--transition-base);
-
-    &.overlayVisible {
-      opacity: 1;
-      pointer-events: auto;
-    }
   }
 }

@@ -48,6 +48,20 @@ function AppShell(): JSX.Element {
   // Auto-close sidebar on navigation (mobile drawer)
   useEffect(() => { setSidebarOpen(false); }, [location.pathname]);
 
+  // Close sidebar on Escape key
+  useEffect(() => {
+    if (!sidebarOpen) {
+      return;
+    }
+    const handleKeyDown = (e: KeyboardEvent): void => {
+      if (e.key === "Escape") {
+        setSidebarOpen(false);
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => { document.removeEventListener("keydown", handleKeyDown); };
+  }, [sidebarOpen]);
+
   // Auto-select newly spawned sessions — but only if the user is not
   // already viewing a task (task-spawned sessions should keep the user on
   // the task page rather than redirecting to the raw session view).
@@ -59,19 +73,22 @@ function AppShell(): JSX.Element {
 
   return (
     <div className={styles.root}>
-      <StatusBar onToggleSidebar={toggleSidebar} />
+      <StatusBar onToggleSidebar={isSettings ? undefined : toggleSidebar} />
       <div className={styles.body}>
-        <div className={styles.sidebarWrapper} data-sidebar-open={sidebarOpen} data-settings={isSettings}>
+        <div
+          className={styles.sidebarWrapper}
+          data-sidebar-open={sidebarOpen}
+          data-settings={isSettings}
+          inert={!isSettings && !sidebarOpen ? true : undefined}
+        >
           {isSettings ? <SettingsNav /> : <Sidebar />}
         </div>
-        <div
-          className={`${styles.overlay} ${sidebarOpen ? styles.overlayVisible : ""}`}
-          onClick={() => setSidebarOpen(false)}
-          onKeyDown={(e) => { if (e.key === "Escape") { setSidebarOpen(false); } }}
-          role="button"
-          tabIndex={-1}
-          aria-label="Close sidebar"
-        />
+        {sidebarOpen && !isSettings && (
+          <div
+            className={styles.overlay}
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
         <div className={styles.main}>
           <Outlet />
           <UnifiedBar />
