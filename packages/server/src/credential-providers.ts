@@ -33,9 +33,14 @@ const DEFAULT_CONFIG: CredentialProviderConfig = {
   codex: "off",
 };
 
-/** Valid values for each provider field. */
-const VALID_CLAUDE_VALUES: ReadonlySet<string> = new Set(["off", "subscription", "api_key"]);
-const VALID_TOGGLE_VALUES: ReadonlySet<string> = new Set(["off", "on"]);
+/** Valid provider names. */
+export const VALID_PROVIDERS: readonly string[] = ["claude", "github", "copilot", "codex"];
+
+/** Valid values for the Claude provider. */
+export const VALID_CLAUDE_VALUES: ReadonlySet<string> = new Set(["off", "subscription", "api_key"]);
+
+/** Valid values for toggle-style providers (github, copilot, codex). */
+export const VALID_TOGGLE_VALUES: ReadonlySet<string> = new Set(["off", "on"]);
 
 // ─── Read / Write ──────────────────────────────────────────
 

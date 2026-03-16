@@ -29,6 +29,8 @@ import {
   taskStatusToEnum,
   taskStatusToString,
   projectStatusToEnum,
+  claudeProviderModeToEnum,
+  providerToggleToEnum,
 } from "@grackle-ai/common";
 import { grackleHome } from "./paths.js";
 import { safeParseJsonArray } from "./json-helpers.js";
@@ -39,6 +41,7 @@ import { buildTaskSystemContext } from "./utils/system-context.js";
 import { importGitHubIssues as executeGitHubImport } from "./github-import.js";
 import { generatePairingCode } from "./pairing.js";
 import { detectLanIp } from "./utils/network.js";
+import * as credentialProviders from "./credential-providers.js";
 
 function envRowToProto(row: EnvironmentRow): grackle.Environment {
   return create(grackle.EnvironmentSchema, {
@@ -625,6 +628,54 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
     async deleteToken(req: grackle.TokenName) {
       await tokenBroker.deleteToken(req.name);
       return create(grackle.EmptySchema, {});
+    },
+
+    // ─── Credential Providers ─────────────────────────────────
+
+    async getCredentialProviders() {
+      const config = credentialProviders.getCredentialProviders();
+      return create(grackle.CredentialProviderConfigSchema, {
+        claude: claudeProviderModeToEnum(config.claude),
+        github: providerToggleToEnum(config.github),
+        copilot: providerToggleToEnum(config.copilot),
+        codex: providerToggleToEnum(config.codex),
+      });
+    },
+
+    async setCredentialProvider(req: grackle.SetCredentialProviderRequest) {
+      if (!credentialProviders.VALID_PROVIDERS.includes(req.provider)) {
+        throw new ConnectError(
+          `Invalid provider: ${req.provider}. Must be one of: ${credentialProviders.VALID_PROVIDERS.join(", ")}`,
+          Code.InvalidArgument,
+        );
+      }
+
+      const allowed = req.provider === "claude"
+        ? credentialProviders.VALID_CLAUDE_VALUES
+        : credentialProviders.VALID_TOGGLE_VALUES;
+
+      if (!allowed.has(req.value)) {
+        throw new ConnectError(
+          `Invalid value for ${req.provider}: ${req.value}. Must be one of: ${[...allowed].join(", ")}`,
+          Code.InvalidArgument,
+        );
+      }
+
+      const current = credentialProviders.getCredentialProviders();
+      const updated = { ...current, [req.provider]: req.value };
+      credentialProviders.setCredentialProviders(updated);
+
+      broadcast({
+        type: "credential_providers",
+        payload: updated as unknown as Record<string, unknown>,
+      });
+
+      return create(grackle.CredentialProviderConfigSchema, {
+        claude: claudeProviderModeToEnum(updated.claude),
+        github: providerToggleToEnum(updated.github),
+        copilot: providerToggleToEnum(updated.copilot),
+        codex: providerToggleToEnum(updated.codex),
+      });
     },
 
     // ─── Projects ────────────────────────────────────────────

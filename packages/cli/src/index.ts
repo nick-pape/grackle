@@ -13,6 +13,7 @@ import { registerProjectCommands } from "./commands/project.js";
 import { registerTaskCommands } from "./commands/task.js";
 import { registerFindingCommands } from "./commands/findings.js";
 import { registerPersonaCommands } from "./commands/persona.js";
+import { registerCredentialProviderCommands } from "./commands/credential-provider.js";
 import { registerPairCommand } from "./commands/pair.js";
 import { renderBanner, getHelpFooter } from "./banner.js";
 
@@ -53,6 +54,7 @@ registerProjectCommands(program);
 registerTaskCommands(program);
 registerFindingCommands(program);
 registerPersonaCommands(program);
+registerCredentialProviderCommands(program);
 registerPairCommand(program);
 
 program.parseAsync(process.argv).catch((err: unknown) => {
