@@ -643,31 +643,22 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
     },
 
     async setCredentialProvider(req: grackle.SetCredentialProviderRequest) {
-      const validProviders = ["claude", "github", "copilot", "codex"];
-      if (!validProviders.includes(req.provider)) {
+      if (!credentialProviders.VALID_PROVIDERS.includes(req.provider)) {
         throw new ConnectError(
-          `Invalid provider: ${req.provider}. Must be one of: ${validProviders.join(", ")}`,
+          `Invalid provider: ${req.provider}. Must be one of: ${credentialProviders.VALID_PROVIDERS.join(", ")}`,
           Code.InvalidArgument,
         );
       }
 
-      const validClaudeValues = ["off", "subscription", "api_key"];
-      const validToggleValues = ["off", "on"];
+      const allowed = req.provider === "claude"
+        ? credentialProviders.VALID_CLAUDE_VALUES
+        : credentialProviders.VALID_TOGGLE_VALUES;
 
-      if (req.provider === "claude") {
-        if (!validClaudeValues.includes(req.value)) {
-          throw new ConnectError(
-            `Invalid value for claude: ${req.value}. Must be one of: ${validClaudeValues.join(", ")}`,
-            Code.InvalidArgument,
-          );
-        }
-      } else {
-        if (!validToggleValues.includes(req.value)) {
-          throw new ConnectError(
-            `Invalid value for ${req.provider}: ${req.value}. Must be one of: ${validToggleValues.join(", ")}`,
-            Code.InvalidArgument,
-          );
-        }
+      if (!allowed.has(req.value)) {
+        throw new ConnectError(
+          `Invalid value for ${req.provider}: ${req.value}. Must be one of: ${[...allowed].join(", ")}`,
+          Code.InvalidArgument,
+        );
       }
 
       const current = credentialProviders.getCredentialProviders();

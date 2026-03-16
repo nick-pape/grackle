@@ -5,6 +5,11 @@ import type { ToolDefinition } from "../tool-registry.js";
 import { jsonResult } from "../result-helpers.js";
 import { grpcErrorToToolResult } from "../error-handler.js";
 
+/** Sanitize a string into a valid environment variable name (uppercase, A-Z0-9_ only). */
+function sanitizeEnvVarName(name: string): string {
+  return name.toUpperCase().replace(/[^A-Z0-9_]/g, "_").replace(/^(\d)/, "_$1");
+}
+
 /** Serialize a TokenInfo proto to a plain object. */
 function serializeTokenInfo(t: {
   name: string;
@@ -55,7 +60,10 @@ export const tokenTools: ToolDefinition[] = [
       type: z.enum(["env_var", "file"]).default("env_var").describe("How to inject the token: as an environment variable or a file"),
       envVar: z.string().optional().describe("Environment variable name (defaults to NAME_TOKEN)"),
       filePath: z.string().optional().describe("File path to write the token to (required when type is file)"),
-    }),
+    }).refine(
+      (data) => data.type !== "file" || (data.filePath !== undefined && data.filePath.length > 0),
+      { message: "filePath is required when type is 'file'", path: ["filePath"] },
+    ),
     rpcMethod: "setToken",
     mutating: true,
     annotations: {
@@ -70,7 +78,7 @@ export const tokenTools: ToolDefinition[] = [
         await client.setToken({
           name,
           type: (args.type as string) || "env_var",
-          envVar: (args.envVar as string) || name.toUpperCase() + "_TOKEN",
+          envVar: (args.envVar as string) || sanitizeEnvVarName(name) + "_TOKEN",
           filePath: (args.filePath as string) || "",
           value: args.value as string,
           expiresAt: "",

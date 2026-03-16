@@ -54,7 +54,7 @@ export const credentialTools: ToolDefinition[] = [
     description: "Set a credential provider mode. Provider must be one of: claude, github, copilot, codex. Claude accepts: off, subscription, api_key. Others accept: off, on.",
     inputSchema: z.object({
       provider: z.enum(["claude", "github", "copilot", "codex"]).describe("The credential provider to configure"),
-      value: z.string().describe("The mode to set (off, on, subscription, or api_key)"),
+      value: z.enum(["off", "on", "subscription", "api_key"]).describe("The mode to set (claude: off/subscription/api_key, others: off/on)"),
     }),
     rpcMethod: "setCredentialProvider",
     mutating: true,
