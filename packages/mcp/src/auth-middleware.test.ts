@@ -136,6 +136,14 @@ describe("authenticateMcpRequest", () => {
     expect(result).toBeUndefined();
   });
 
+  /** OAuth token with trailing-slash audience matches (clients may include it). */
+  test("OAuth token with trailing-slash audience is accepted", () => {
+    const token = createOAuthAccessToken(OAUTH_CLIENT_ID, OAUTH_RESOURCE + "/", API_KEY);
+    const req = mockRequest(`Bearer ${token}`, OAUTH_PORT);
+    const result = authenticateMcpRequest(req, API_KEY);
+    expect(result).toEqual({ type: "oauth", clientId: OAUTH_CLIENT_ID });
+  });
+
   /** OAuth token with empty audience is accepted (client omitted resource indicator). */
   test("OAuth token with empty audience is accepted", () => {
     const token = createOAuthAccessToken(OAUTH_CLIENT_ID, "", API_KEY);
