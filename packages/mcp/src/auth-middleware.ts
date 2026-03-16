@@ -10,9 +10,10 @@ const API_KEY_LENGTH: number = 64;
 /**
  * Authenticate an incoming MCP HTTP request.
  *
- * Supports two authentication modes:
+ * Supports three authentication modes:
  * 1. **API key**: A 64-character hex Bearer token compared constant-time against the server API key.
- * 2. **Scoped token**: An HMAC-signed token (contains a `.`) verified against the API key as signing secret.
+ * 2. **OAuth token**: An HMAC-signed token with `typ === "oauth"`, audience-validated against the request.
+ * 3. **Scoped token**: An HMAC-signed token (contains a `.`) verified against the API key as signing secret.
  *
  * @param req - The incoming HTTP request.
  * @param apiKey - The server's API key (used for both direct comparison and as the HMAC signing secret).
@@ -45,6 +46,11 @@ export function authenticateMcpRequest(req: http.IncomingMessage, apiKey: string
     // Try OAuth access token (distinguished by typ === "oauth")
     const oauthClaims = verifyOAuthAccessToken(token, apiKey);
     if (oauthClaims) {
+      // Validate audience — token must be issued for this server's resource URL
+      const expectedAudience = `http://${req.headers.host || "localhost"}`;
+      if (oauthClaims.aud !== expectedAudience) {
+        return undefined;
+      }
       return { type: "oauth", clientId: oauthClaims.sub };
     }
 

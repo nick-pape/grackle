@@ -14,13 +14,19 @@ const CLAIMS = {
 };
 
 const OAUTH_CLIENT_ID = "test-oauth-client";
-const OAUTH_RESOURCE = "http://127.0.0.1:7435";
+const OAUTH_HOST = "127.0.0.1:7435";
+const OAUTH_RESOURCE = `http://${OAUTH_HOST}`;
 
 /** Helper to create a mock HTTP request with the given Authorization header value. */
-function mockRequest(authorization?: string): http.IncomingMessage {
-  return {
-    headers: authorization !== undefined ? { authorization } : {},
-  } as http.IncomingMessage;
+function mockRequest(authorization?: string, host?: string): http.IncomingMessage {
+  const headers: Record<string, string> = {};
+  if (authorization !== undefined) {
+    headers.authorization = authorization;
+  }
+  if (host !== undefined) {
+    headers.host = host;
+  }
+  return { headers } as http.IncomingMessage;
 }
 
 describe("authenticateMcpRequest", () => {
@@ -111,7 +117,7 @@ describe("authenticateMcpRequest", () => {
   /** Valid OAuth access token returns oauth context. */
   test("valid OAuth token returns oauth context", () => {
     const token = createOAuthAccessToken(OAUTH_CLIENT_ID, OAUTH_RESOURCE, API_KEY);
-    const req = mockRequest(`Bearer ${token}`);
+    const req = mockRequest(`Bearer ${token}`, OAUTH_HOST);
     const result = authenticateMcpRequest(req, API_KEY);
     expect(result).toEqual({ type: "oauth", clientId: OAUTH_CLIENT_ID });
   });
@@ -119,7 +125,15 @@ describe("authenticateMcpRequest", () => {
   /** Expired OAuth access token returns undefined. */
   test("expired OAuth token returns undefined", () => {
     const token = createOAuthAccessToken(OAUTH_CLIENT_ID, OAUTH_RESOURCE, API_KEY, 1);
-    const req = mockRequest(`Bearer ${token}`);
+    const req = mockRequest(`Bearer ${token}`, OAUTH_HOST);
+    const result = authenticateMcpRequest(req, API_KEY);
+    expect(result).toBeUndefined();
+  });
+
+  /** OAuth token with wrong audience returns undefined. */
+  test("OAuth token with wrong audience returns undefined", () => {
+    const token = createOAuthAccessToken(OAUTH_CLIENT_ID, "http://other-host:9999", API_KEY);
+    const req = mockRequest(`Bearer ${token}`, OAUTH_HOST);
     const result = authenticateMcpRequest(req, API_KEY);
     expect(result).toBeUndefined();
   });
@@ -130,7 +144,7 @@ describe("authenticateMcpRequest", () => {
     const scopedToken = createScopedToken(CLAIMS, API_KEY);
     const scopedReq = mockRequest(`Bearer ${scopedToken}`);
     const oauthToken = createOAuthAccessToken(OAUTH_CLIENT_ID, OAUTH_RESOURCE, API_KEY);
-    const oauthReq = mockRequest(`Bearer ${oauthToken}`);
+    const oauthReq = mockRequest(`Bearer ${oauthToken}`, OAUTH_HOST);
 
     expect(authenticateMcpRequest(apiKeyReq, API_KEY)).toEqual({ type: "api-key" });
     expect(authenticateMcpRequest(scopedReq, API_KEY)).toEqual({

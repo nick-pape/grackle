@@ -154,11 +154,8 @@ const REVOCATION_PRUNE_INTERVAL_MS: number = 60 * 60 * 1000;
  * and Server instance, tracked by session ID.
  */
 export function createMcpServer(options: McpServerOptions): http.Server {
-  const { bindHost, mcpPort, grpcPort, apiKey, authorizationServerUrl } = options;
+  const { bindHost, grpcPort, apiKey, authorizationServerUrl } = options;
   const grpcClient = createGrpcClient(bindHost, grpcPort, apiKey);
-
-  /** The resource URL this MCP server represents (used in OAuth metadata). */
-  const resourceUrl = `http://${bindHost}:${mcpPort}`;
 
   /** Map of active session transports, keyed by session ID. */
   const transports: Map<string, StreamableHTTPServerTransport> = new Map();
@@ -174,11 +171,14 @@ export function createMcpServer(options: McpServerOptions): http.Server {
   const httpServer = http.createServer(async (req, res) => {
     const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
 
+    // Derive resource URL from request Host header (dialable by the client)
+    const requestResourceUrl = `http://${req.headers.host || url.host}`;
+
     // OAuth Protected Resource Metadata (RFC 9728) — no auth required
     if (authorizationServerUrl && url.pathname === "/.well-known/oauth-protected-resource/mcp") {
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(JSON.stringify({
-        resource: resourceUrl,
+        resource: requestResourceUrl,
         authorization_servers: [authorizationServerUrl],
       }));
       return;
@@ -197,7 +197,7 @@ export function createMcpServer(options: McpServerOptions): http.Server {
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (authorizationServerUrl) {
         headers["WWW-Authenticate"] =
-          `Bearer resource_metadata="${resourceUrl}/.well-known/oauth-protected-resource/mcp"`;
+          `Bearer resource_metadata="${requestResourceUrl}/.well-known/oauth-protected-resource/mcp"`;
       }
       res.writeHead(401, headers);
       res.end(JSON.stringify({ error: "Unauthorized" }));

@@ -13,6 +13,12 @@ const CLEANUP_INTERVAL_MS: number = 60 * 1000;
 /** Byte length of generated tokens (authorization codes, refresh tokens). */
 const TOKEN_BYTE_LENGTH: number = 32;
 
+/** Maximum number of registered OAuth clients to prevent unbounded growth. */
+const MAX_CLIENTS: number = 100;
+
+/** Time-to-live for client registrations: 7 days. */
+const CLIENT_TTL_MS: number = 7 * 24 * 60 * 60 * 1000;
+
 // ─── Client Registration ──────────────────────────────────────────────
 
 interface ClientRecord {
@@ -32,13 +38,26 @@ const clients: Map<string, ClientRecord> = new Map();
  * @param clientName - Human-readable name for the client (optional).
  * @returns The newly registered client record.
  */
-export function registerClient(redirectUris: string[], clientName?: string): ClientRecord {
+export function registerClient(redirectUris: string[], clientName?: string): ClientRecord | undefined {
+  // Evict expired clients before checking capacity
+  const now = Date.now();
+  for (const [id, rec] of clients) {
+    if (now - rec.createdAt > CLIENT_TTL_MS) {
+      clients.delete(id);
+    }
+  }
+
+  if (clients.size >= MAX_CLIENTS) {
+    logger.warn("Maximum registered OAuth clients reached (%d)", MAX_CLIENTS);
+    return undefined;
+  }
+
   const clientId = randomUUID();
   const record: ClientRecord = {
     clientId,
     redirectUris,
     clientName: clientName || "Unknown Client",
-    createdAt: Date.now(),
+    createdAt: now,
   };
   clients.set(clientId, record);
   logger.info({ clientId, clientName: record.clientName }, "OAuth client registered");
@@ -247,6 +266,11 @@ export function startOAuthCleanup(): void {
   }
   cleanupTimer = setInterval(() => {
     const now = Date.now();
+    for (const [id, record] of clients) {
+      if (now - record.createdAt > CLIENT_TTL_MS) {
+        clients.delete(id);
+      }
+    }
     for (const [code, record] of authCodes) {
       if (now > record.expiresAt) {
         authCodes.delete(code);

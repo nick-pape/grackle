@@ -36,14 +36,15 @@ describe("oauth", () => {
   describe("client registration", () => {
     test("registerClient creates a client with UUID and stores it", () => {
       const client = registerClient([REDIRECT_URI], "Test Client");
-      expect(client.clientId).toBeDefined();
-      expect(client.redirectUris).toEqual([REDIRECT_URI]);
-      expect(client.clientName).toBe("Test Client");
-      expect(typeof client.createdAt).toBe("number");
+      expect(client).toBeDefined();
+      expect(client!.clientId).toBeDefined();
+      expect(client!.redirectUris).toEqual([REDIRECT_URI]);
+      expect(client!.clientName).toBe("Test Client");
+      expect(typeof client!.createdAt).toBe("number");
     });
 
     test("getClient returns the registered client", () => {
-      const client = registerClient([REDIRECT_URI]);
+      const client = registerClient([REDIRECT_URI])!;
       const found = getClient(client.clientId);
       expect(found).toBeDefined();
       expect(found!.clientId).toBe(client.clientId);
@@ -55,7 +56,8 @@ describe("oauth", () => {
 
     test("default client name is 'Unknown Client'", () => {
       const client = registerClient([REDIRECT_URI]);
-      expect(client.clientName).toBe("Unknown Client");
+      expect(client).toBeDefined();
+      expect(client!.clientName).toBe("Unknown Client");
     });
   });
 
@@ -83,7 +85,7 @@ describe("oauth", () => {
 
   describe("authorization codes", () => {
     test("create and consume round-trip succeeds", () => {
-      const client = registerClient([REDIRECT_URI]);
+      const client = registerClient([REDIRECT_URI])!;
       const challenge = computeCodeChallenge(CODE_VERIFIER);
       const code = createAuthorizationCode(client.clientId, REDIRECT_URI, challenge, RESOURCE);
 
@@ -94,7 +96,7 @@ describe("oauth", () => {
     });
 
     test("code is single-use — second consume returns undefined", () => {
-      const client = registerClient([REDIRECT_URI]);
+      const client = registerClient([REDIRECT_URI])!;
       const challenge = computeCodeChallenge(CODE_VERIFIER);
       const code = createAuthorizationCode(client.clientId, REDIRECT_URI, challenge, RESOURCE);
 
@@ -106,7 +108,7 @@ describe("oauth", () => {
     });
 
     test("wrong client_id returns undefined", () => {
-      const client = registerClient([REDIRECT_URI]);
+      const client = registerClient([REDIRECT_URI])!;
       const challenge = computeCodeChallenge(CODE_VERIFIER);
       const code = createAuthorizationCode(client.clientId, REDIRECT_URI, challenge, RESOURCE);
 
@@ -115,7 +117,7 @@ describe("oauth", () => {
     });
 
     test("wrong redirect_uri returns undefined", () => {
-      const client = registerClient([REDIRECT_URI]);
+      const client = registerClient([REDIRECT_URI])!;
       const challenge = computeCodeChallenge(CODE_VERIFIER);
       const code = createAuthorizationCode(client.clientId, REDIRECT_URI, challenge, RESOURCE);
 
@@ -124,7 +126,7 @@ describe("oauth", () => {
     });
 
     test("wrong code_verifier returns undefined", () => {
-      const client = registerClient([REDIRECT_URI]);
+      const client = registerClient([REDIRECT_URI])!;
       const challenge = computeCodeChallenge(CODE_VERIFIER);
       const code = createAuthorizationCode(client.clientId, REDIRECT_URI, challenge, RESOURCE);
 
@@ -133,7 +135,7 @@ describe("oauth", () => {
     });
 
     test("wrong resource returns undefined", () => {
-      const client = registerClient([REDIRECT_URI]);
+      const client = registerClient([REDIRECT_URI])!;
       const challenge = computeCodeChallenge(CODE_VERIFIER);
       const code = createAuthorizationCode(client.clientId, REDIRECT_URI, challenge, RESOURCE);
 
@@ -142,7 +144,7 @@ describe("oauth", () => {
     });
 
     test("expired code returns undefined", () => {
-      const client = registerClient([REDIRECT_URI]);
+      const client = registerClient([REDIRECT_URI])!;
       const challenge = computeCodeChallenge(CODE_VERIFIER);
       const code = createAuthorizationCode(client.clientId, REDIRECT_URI, challenge, RESOURCE);
 

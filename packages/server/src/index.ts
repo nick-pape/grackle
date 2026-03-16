@@ -241,11 +241,11 @@ function getRemoteIp(req: http.IncomingMessage): string {
 function createWebHandler(
   apiKey: string,
   webPort: number,
-  mcpPort: number,
   bindHost: string,
 ): (req: http.IncomingMessage, res: http.ServerResponse) => void {
-  /** Format host for URL embedding — IPv6 needs brackets. */
-  const urlHost = bindHost.includes(":") ? `[${bindHost}]` : bindHost;
+  /** Map wildcard bind hosts to a dialable host for OAuth URLs. */
+  const dialableHost = isWildcardAddress(bindHost) ? "127.0.0.1" : bindHost;
+  const urlHost = dialableHost.includes(":") ? `[${dialableHost}]` : dialableHost;
   const webBaseUrl = `http://${urlHost}:${webPort}`;
 
   // eslint-disable-next-line @typescript-eslint/no-misused-promises
@@ -293,6 +293,11 @@ function createWebHandler(
         }
 
         const client = registerClient(redirectUris, clientName);
+        if (!client) {
+          res.writeHead(503, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: "temporarily_unavailable", error_description: "Too many registered clients" }));
+          return;
+        }
         res.writeHead(201, { "Content-Type": "application/json" });
         res.end(JSON.stringify({
           client_id: client.clientId,
@@ -382,6 +387,14 @@ function createWebHandler(
         const state = oauthParams.get("state") || "";
         const resource = oauthParams.get("resource") || "";
 
+        // Validate client and redirect URI before any redirect to prevent open redirect
+        const client = getClient(clientId);
+        if (!client?.redirectUris.includes(redirectUri)) {
+          res.writeHead(400, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: "invalid_request" }));
+          return;
+        }
+
         // Build redirect URL with state for error responses
         const buildRedirect = (params: Record<string, string>): string => {
           const qs = new URLSearchParams(params);
@@ -395,14 +408,6 @@ function createWebHandler(
         if (action === "deny") {
           res.writeHead(302, { Location: buildRedirect({ error: "access_denied" }) });
           res.end();
-          return;
-        }
-
-        // Validate client
-        const client = getClient(clientId);
-        if (!client?.redirectUris.includes(redirectUri)) {
-          res.writeHead(400, { "Content-Type": "application/json" });
-          res.end(JSON.stringify({ error: "invalid_request" }));
           return;
         }
 
@@ -656,7 +661,7 @@ function main(): void {
   // --- Web + WebSocket server (HTTP/1.1) ---
   const webPort = parseInt(process.env.GRACKLE_WEB_PORT || String(DEFAULT_WEB_PORT), 10);
   const mcpPort = parseInt(process.env.GRACKLE_MCP_PORT || String(DEFAULT_MCP_PORT), 10);
-  const webServer = http.createServer(createWebHandler(apiKey, webPort, mcpPort, bindHost));
+  const webServer = http.createServer(createWebHandler(apiKey, webPort, bindHost));
 
   createWsBridge(webServer, verifyApiKey, (cookieHeader: string) =>
     validateSessionCookie(cookieHeader, apiKey),
@@ -711,8 +716,11 @@ function main(): void {
   });
 
   // --- MCP server (HTTP/1.1, Streamable HTTP) ---
-  const webBaseUrl = `http://${urlHost}:${webPort}`;
-  const mcpServer = createMcpServer({ bindHost, mcpPort, grpcPort, apiKey, authorizationServerUrl: webBaseUrl });
+  // Use dialable host for OAuth URLs (wildcard → 127.0.0.1)
+  const dialableHost = isWildcardAddress(bindHost) ? "127.0.0.1" : bindHost;
+  const dialableUrlHost = dialableHost.includes(":") ? `[${dialableHost}]` : dialableHost;
+  const authServerUrl = `http://${dialableUrlHost}:${webPort}`;
+  const mcpServer = createMcpServer({ bindHost, mcpPort, grpcPort, apiKey, authorizationServerUrl: authServerUrl });
 
   mcpServer.on("error", (err: NodeJS.ErrnoException) => {
     if (err.code === "EADDRINUSE") {

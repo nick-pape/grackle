@@ -1,3 +1,4 @@
+import { createHmac } from "node:crypto";
 import { describe, test, expect, beforeEach, vi } from "vitest";
 import { createOAuthAccessToken, verifyOAuthAccessToken } from "./oauth-token.js";
 
@@ -93,7 +94,6 @@ describe("oauth-token", () => {
       exp: Math.floor(Date.now() / 1000) + 3600,
     })).toString("base64url");
     // Sign it (replicating the HMAC pattern)
-    const { createHmac } = require("node:crypto");
     const sig = createHmac("sha256", SIGNING_SECRET).update(payload).digest().toString("base64url");
     const token = `${payload}.${sig}`;
     const result = verifyOAuthAccessToken(token, SIGNING_SECRET);
