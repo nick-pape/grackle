@@ -229,6 +229,60 @@
   font-size: 11px;
 }
 
+// ---------------------------------------------------------------------------
+// Group-by-status toggle
+// ---------------------------------------------------------------------------
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.groupToggle {
+  @include btn-ghost;
+  font-size: var(--font-size-md);
+  line-height: 1;
+  padding: 1px 5px;
+}
+
+.groupToggleActive {
+  color: var(--accent-green);
+}
+
+// ---------------------------------------------------------------------------
+// Status group accordion
+// ---------------------------------------------------------------------------
+
+.statusGroupHeader {
+  @include hover-accent;
+  padding: var(--space-sm) var(--space-md) var(--space-sm) 26px;
+  font-size: var(--font-size-sm);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  margin: 0 var(--space-xs);
+}
+
+.statusGroupIcon {
+  font-size: 11px;
+}
+
+.statusGroupLabel {
+  flex: 1;
+  font-weight: 500;
+}
+
+.statusGroupCount {
+  @include surface-inset;
+  font-size: 10px;
+  color: var(--text-tertiary);
+  border-radius: var(--radius-full);
+  padding: 1px var(--space-xs);
+}
+
 .createTaskLink {
   background: none;
   border: none;

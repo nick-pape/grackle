@@ -2,6 +2,23 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.29.1",
+      "tag": "@grackle-ai/cli_v0.29.1",
+      "date": "Mon, 16 Mar 2026 00:01:13 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Add CLI banner with ASCII bird art and polish help text descriptions"
+          }
+        ],
+        "none": [
+          {
+            "comment": "No CLI changes (merge artifact from main sync)"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.29.0",
       "tag": "@grackle-ai/cli_v0.29.0",
       "date": "Sun, 15 Mar 2026 23:23:30 GMT",

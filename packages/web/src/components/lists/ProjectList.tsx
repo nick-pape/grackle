@@ -15,7 +15,197 @@ const TASK_STATUS_STYLES: Record<string, { color: string; icon: string }> = {
   paused: { color: "var(--accent-yellow)", icon: "\u25C9" },
   complete: { color: "var(--accent-green)", icon: "\u2713" },
   failed: { color: "var(--accent-red)", icon: "\u2717" },
+  blocked: { color: "var(--accent-yellow)", icon: "\u29B8" },
 };
+
+/** Base left-padding for task rows inside a project. */
+const TASK_BASE_INDENT_PX: number = 34;
+/** Additional left-padding per depth level. */
+const TASK_DEPTH_INDENT_PX: number = 16;
+
+// ---------------------------------------------------------------------------
+// Group-by-status toggle persistence
+// ---------------------------------------------------------------------------
+
+/** localStorage key for the group-by-status toggle. */
+const STORAGE_KEY_GROUP_BY_STATUS: string = "grackle-group-by-status";
+
+/** Read the persisted group-by-status preference. */
+function getGroupByStatus(): boolean {
+  try {
+    return localStorage.getItem(STORAGE_KEY_GROUP_BY_STATUS) === "true";
+  } catch {
+    return false;
+  }
+}
+
+/** Persist the group-by-status preference. */
+function saveGroupByStatus(value: boolean): void {
+  try {
+    localStorage.setItem(STORAGE_KEY_GROUP_BY_STATUS, String(value));
+  } catch {
+    /* localStorage unavailable */
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Status grouping
+// ---------------------------------------------------------------------------
+
+/** Ordered list of task statuses from most-urgent to least. "blocked" is a virtual status for grouped view. */
+const STATUS_GROUP_ORDER: string[] = ["working", "paused", "failed", "not_started", "blocked", "complete"];
+
+/** Human-readable labels for each status group. */
+const STATUS_GROUP_LABELS: Record<string, string> = {
+  working: "Working",
+  paused: "Paused",
+  failed: "Failed",
+  not_started: "Not Started",
+  blocked: "Blocked",
+  complete: "Complete",
+};
+
+/** A group of tasks sharing the same status. */
+interface StatusGroup {
+  status: string;
+  label: string;
+  style: { color: string; icon: string };
+  tasks: TaskData[];
+}
+
+/** Group a flat list of tasks by status, ordered by urgency. Blocked tasks are separated into their own group. */
+function groupTasksByStatus(taskList: TaskData[], taskStatusById: Map<string, string>): StatusGroup[] {
+  const byStatus = new Map<string, TaskData[]>();
+  for (const task of taskList) {
+    // Tasks with unresolved dependencies go to "blocked" instead of their actual status
+    const isBlocked = task.dependsOn.length > 0 &&
+      task.dependsOn.some((depId) => taskStatusById.get(depId) !== "complete");
+    const groupKey = isBlocked ? "blocked" : task.status;
+    const list = byStatus.get(groupKey);
+    if (list) {
+      list.push(task);
+    } else {
+      byStatus.set(groupKey, [task]);
+    }
+  }
+
+  const groups: StatusGroup[] = [];
+  const seen = new Set<string>();
+
+  // Known statuses in urgency order
+  for (const status of STATUS_GROUP_ORDER) {
+    seen.add(status);
+    const tasks = byStatus.get(status);
+    if (tasks && tasks.length > 0) {
+      tasks.sort((a, b) => a.sortOrder - b.sortOrder);
+      groups.push({
+        status,
+        label: STATUS_GROUP_LABELS[status] || status,
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- status may not be in the map
+        style: TASK_STATUS_STYLES[status] || TASK_STATUS_STYLES.not_started,
+        tasks,
+      });
+    }
+  }
+
+  // Append any unknown statuses for future-proofing
+  for (const [status, tasks] of byStatus) {
+    if (!seen.has(status) && tasks.length > 0) {
+      tasks.sort((a, b) => a.sortOrder - b.sortOrder);
+      groups.push({
+        status,
+        label: status,
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- status may not be in the map
+        style: TASK_STATUS_STYLES[status] || TASK_STATUS_STYLES.not_started,
+        tasks,
+      });
+    }
+  }
+
+  return groups;
+}
+
+// ---------------------------------------------------------------------------
+// StatusGroupAccordion
+// ---------------------------------------------------------------------------
+
+/** Props for the StatusGroupAccordion component. */
+interface StatusGroupAccordionProps {
+  group: StatusGroup;
+  isExpanded: boolean;
+  onToggle: () => void;
+  selectedTaskId: string | undefined;
+  navigate: ReturnType<typeof useAppNavigate>;
+}
+
+/** Collapsible accordion for a status group in grouped view. */
+function StatusGroupAccordion({
+  group,
+  isExpanded,
+  onToggle,
+  selectedTaskId,
+  navigate,
+}: StatusGroupAccordionProps): JSX.Element {
+  return (
+    <div data-testid={`status-group-${group.status}`}>
+      <div
+        className={styles.statusGroupHeader}
+        role="button"
+        tabIndex={0}
+        aria-expanded={isExpanded}
+        onClick={onToggle}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onToggle();
+          }
+        }}
+      >
+        <span className={`${styles.expandArrow} ${isExpanded ? styles.expanded : ""}`}>
+          {"\u25B8"}
+        </span>
+        <span className={styles.statusGroupIcon} style={{ color: group.style.color }}>
+          {group.style.icon}
+        </span>
+        <span className={styles.statusGroupLabel}>{group.label}</span>
+        <span className={styles.statusGroupCount}>{group.tasks.length}</span>
+      </div>
+
+      <AnimatePresence>
+        {isExpanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            style={{ overflow: "hidden" }}
+          >
+            {group.tasks.map((task) => {
+              // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- status may not be in the map
+              const statusStyle = TASK_STATUS_STYLES[task.status] || TASK_STATUS_STYLES.not_started;
+              const isSelected = selectedTaskId === task.id;
+              return (
+                <div
+                  key={task.id}
+                  onClick={() => navigate(taskUrl(task.id))}
+                  className={`${styles.taskRow} ${isSelected ? styles.selected : ""}`}
+                  style={{ paddingLeft: TASK_BASE_INDENT_PX }}
+                  data-task-id={task.id}
+                >
+                  <span className={styles.leafSpacer} />
+                  <span className={styles.taskStatusIcon} style={{ color: statusStyle.color }}>
+                    {statusStyle.icon}
+                  </span>
+                  <span className={styles.taskTitle} title={task.title}>{task.title}</span>
+                </div>
+              );
+            })}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
 
 /** A task node with children for recursive tree rendering. */
 interface TaskNode extends TaskData {
@@ -41,12 +231,6 @@ function buildTaskTree(taskList: TaskData[]): TaskNode[] {
   }
   return roots.sort((a, b) => a.sortOrder - b.sortOrder);
 }
-
-/** Base left-padding for task rows inside a project. */
-const TASK_BASE_INDENT_PX: number = 34;
-/** Additional left-padding per depth level. */
-const TASK_DEPTH_INDENT_PX: number = 16;
-
 
 /** Props for the recursive TaskTreeNode component. */
 interface TaskTreeNodeProps {
@@ -177,6 +361,39 @@ export function ProjectList(): JSX.Element {
   const [manuallyCollapsed, setManuallyCollapsed] = useState<Set<string>>(new Set());
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newProjectName, setNewProjectName] = useState("");
+  const [groupByStatus, setGroupByStatusState] = useState(getGroupByStatus);
+  // Track which groups should default to expanded (resets on each toggle-on)
+  const [groupExpandDefault, setGroupExpandDefault] = useState(getGroupByStatus);
+  // Per-project overrides: "projectId:status" → explicitly collapsed or expanded
+  const [groupExpandOverrides, setGroupExpandOverrides] = useState<Map<string, boolean>>(new Map());
+
+  /** Toggle group-by-status mode. */
+  const toggleGroupByStatus = (): void => {
+    const next = !groupByStatus;
+    saveGroupByStatus(next);
+    setGroupByStatusState(next);
+    if (next) {
+      setGroupExpandDefault(true);
+      setGroupExpandOverrides(new Map());
+    }
+  };
+
+  /** Toggle a single status group accordion for a specific project. */
+  const toggleStatusGroup = (projectId: string, status: string): void => {
+    const key = `${projectId}:${status}`;
+    setGroupExpandOverrides((prev) => {
+      const next = new Map(prev);
+      const current = next.has(key) ? next.get(key)! : groupExpandDefault;
+      next.set(key, !current);
+      return next;
+    });
+  };
+
+  /** Check if a status group is expanded for a specific project. */
+  const isGroupExpanded = (projectId: string, status: string): boolean => {
+    const key = `${projectId}:${status}`;
+    return groupExpandOverrides.has(key) ? groupExpandOverrides.get(key)! : groupExpandDefault;
+  };
 
   // Derive selected state from router
   const taskMatch = useMatch("/tasks/:taskId/*");
@@ -261,14 +478,26 @@ export function ProjectList(): JSX.Element {
     <div className={styles.container}>
       <div className={styles.header}>
         <span>Projects</span>
-        <button
-          className={styles.addButton}
-          onClick={() => setShowCreateForm(!showCreateForm)}
-          aria-label="Create project"
-          title="Create project"
-        >
-          +
-        </button>
+        <div className={styles.headerActions}>
+          <button
+            className={`${styles.groupToggle} ${groupByStatus ? styles.groupToggleActive : ""}`}
+            onClick={toggleGroupByStatus}
+            aria-label={groupByStatus ? "Switch to tree view" : "Group tasks by status"}
+            aria-pressed={groupByStatus}
+            title={groupByStatus ? "Switch to tree view" : "Group tasks by status"}
+            data-testid="group-by-status-toggle"
+          >
+            {"\u2261"}
+          </button>
+          <button
+            className={styles.addButton}
+            onClick={() => setShowCreateForm(!showCreateForm)}
+            aria-label="Create project"
+            title="Create project"
+          >
+            +
+          </button>
+        </div>
       </div>
 
       {showCreateForm && (
@@ -319,7 +548,7 @@ export function ProjectList(): JSX.Element {
         const isExpanded = expanded.has(project.id);
         const projectTasks = tasks.filter((t) => t.projectId === project.id);
         const isSelected = selectedProjectId === project.id;
-        const tree = isExpanded ? buildTaskTree(projectTasks) : [];
+        const tree = isExpanded && !groupByStatus ? buildTaskTree(projectTasks) : [];
 
         return (
           <div key={project.id}>
@@ -366,19 +595,32 @@ export function ProjectList(): JSX.Element {
                   transition={{ duration: 0.2, ease: "easeInOut" }}
                   style={{ overflow: "hidden" }}
                 >
-                  {tree.map(node => (
-                    <TaskTreeNode
-                      key={node.id}
-                      node={node}
-                      depth={0}
-                      expandedTasks={expandedTasks}
-                      toggleTask={toggleTask}
-                      selectedTaskId={selectedTaskId}
-                      navigate={navigate}
-                      projectId={project.id}
-                      taskStatusById={taskStatusById}
-                    />
-                  ))}
+                  {groupByStatus ? (
+                    groupTasksByStatus(projectTasks, taskStatusById).map(group => (
+                      <StatusGroupAccordion
+                        key={group.status}
+                        group={group}
+                        isExpanded={isGroupExpanded(project.id, group.status)}
+                        onToggle={() => toggleStatusGroup(project.id, group.status)}
+                        selectedTaskId={selectedTaskId}
+                        navigate={navigate}
+                      />
+                    ))
+                  ) : (
+                    tree.map(node => (
+                      <TaskTreeNode
+                        key={node.id}
+                        node={node}
+                        depth={0}
+                        expandedTasks={expandedTasks}
+                        toggleTask={toggleTask}
+                        selectedTaskId={selectedTaskId}
+                        navigate={navigate}
+                        projectId={project.id}
+                        taskStatusById={taskStatusById}
+                      />
+                    ))
+                  )}
 
                   {projectTasks.length === 0 && (
                     <div className={styles.emptyTaskCta}>
