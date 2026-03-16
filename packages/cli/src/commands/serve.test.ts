@@ -15,7 +15,6 @@ describe("registerServeCommand", () => {
     delete process.env.GRACKLE_PORT;
     delete process.env.GRACKLE_WEB_PORT;
     delete process.env.GRACKLE_HOST;
-    delete process.env.GRACKLE_NO_OPEN;
     vi.restoreAllMocks();
     vi.resetModules();
   });
@@ -42,17 +41,6 @@ describe("registerServeCommand", () => {
     await program.parseAsync(["serve", "--allow-network"], { from: "user" });
 
     expect(process.env.GRACKLE_HOST).toBe("0.0.0.0");
-  });
-
-  it("--no-open sets GRACKLE_NO_OPEN=1", async () => {
-    const { registerServeCommand } = await import("./serve.js");
-    const program = new Command();
-    program.exitOverride();
-    registerServeCommand(program);
-
-    await program.parseAsync(["serve", "--no-open"], { from: "user" });
-
-    expect(process.env.GRACKLE_NO_OPEN).toBe("1");
   });
 
   it("accepts custom port options", async () => {

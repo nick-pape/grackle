@@ -399,6 +399,7 @@ async function handleMessage(
             status: r.status,
             prompt: r.prompt,
             startedAt: r.startedAt,
+            personaId: r.personaId,
           })),
         },
       });
@@ -1316,6 +1317,7 @@ async function handleMessage(
             startedAt: r.startedAt,
             endedAt: r.endedAt ?? "",
             error: r.error ?? "",
+            personaId: r.personaId,
           })),
         },
       });
