@@ -1,6 +1,6 @@
 # Launch Grackle for Testing
 
-Launches an isolated Grackle server instance with guaranteed-free ports and a branch-specific home directory. Prevents agents from conflicting with each other or destabilizing the user's real database.
+Launches an isolated Grackle server instance with ephemeral ports and a branch-specific home directory. Prevents agents from conflicting with each other or destabilizing the user's real database.
 
 ## Invocation
 
@@ -15,7 +15,7 @@ Launches an isolated Grackle server instance with guaranteed-free ports and a br
 
 ## Step 1: Find Free Ports
 
-Use this inline Node.js snippet to find 4 guaranteed-free, distinct ports:
+Use this inline Node.js snippet to find 3 ephemeral ports (there is a small race window between closing the probe sockets and the server binding, but in practice collisions are rare):
 
 ```bash
 GRACKLE_PORTS="$(node -e "
@@ -32,13 +32,13 @@ function findPort() {
 }
 async function main() {
   const ports = new Set();
-  while (ports.size < 4) { ports.add(await findPort()); }
+  while (ports.size < 3) { ports.add(await findPort()); }
   console.log([...ports].join(' '));
 }
 main();
 ")"
-read -r GRPC_PORT WEB_PORT MCP_PORT PL_PORT <<< "$GRACKLE_PORTS"
-echo "Ports: gRPC=$GRPC_PORT web=$WEB_PORT mcp=$MCP_PORT powerline=$PL_PORT"
+read -r GRPC_PORT WEB_PORT MCP_PORT <<< "$GRACKLE_PORTS"
+echo "Ports: gRPC=$GRPC_PORT web=$WEB_PORT mcp=$MCP_PORT"
 ```
 
 ## Step 2: Create Isolated Home Directory
@@ -118,7 +118,7 @@ The web UI requires authentication via a pairing code. Generate one using the CL
 ```bash
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 PAIR_OUTPUT="$(GRACKLE_URL="http://127.0.0.1:$GRPC_PORT" GRACKLE_API_KEY="$GRACKLE_API_KEY" NO_COLOR=1 FORCE_COLOR=0 node "$REPO_ROOT/packages/cli/dist/index.js" pair 2>&1)"
-PAIRING_CODE="$(echo "$PAIR_OUTPUT" | grep -oP 'Pairing code:\s*\K\S+')"
+PAIRING_CODE="$(echo "$PAIR_OUTPUT" | node -e "const m=require('fs').readFileSync(0,'utf8').match(/Pairing code:\s*(\S+)/);if(m)process.stdout.write(m[1])")"
 PAIRING_URL="http://127.0.0.1:$WEB_PORT/pair?code=$PAIRING_CODE"
 echo "Pairing code: $PAIRING_CODE"
 echo "Pairing URL: $PAIRING_URL"
