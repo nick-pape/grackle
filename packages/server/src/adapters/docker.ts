@@ -186,6 +186,8 @@ async function buildBaseImage(tag: string): Promise<void> {
 /** Remote executor that runs commands inside a Docker container. */
 class DockerExecutor implements RemoteExecutor {
   private containerName: string;
+  /** Cached resolved $HOME path. */
+  private resolvedHome?: string;
 
   public constructor(containerName: string) {
     this.containerName = containerName;
@@ -217,9 +219,6 @@ class DockerExecutor implements RemoteExecutor {
       "exec", "-u", "root", this.containerName, "chown", "-R", "grackle:grackle", resolvedPath,
     ], { timeout: DOCKER_EXEC_TIMEOUT_MS });
   }
-
-  /** Cached resolved $HOME path. */
-  private resolvedHome?: string;
 }
 
 // ─── Docker Adapter ────────────────────────────────────────

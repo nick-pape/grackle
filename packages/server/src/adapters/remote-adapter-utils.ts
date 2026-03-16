@@ -303,8 +303,11 @@ interface StartRemotePowerLineOptions {
  * expansion): argv[1] = entryPoint, argv[2] = pidFilePath, argv[3] = logFile.
  * Uses `process.cwd()` as the working directory (caller must `cd` first).
  */
-/** Build the node one-liner that spawns a fully detached PowerLine process. */
+/** Validate and build the node one-liner that spawns a fully detached PowerLine process. */
 function buildSpawnScript(host?: string): string {
+  if (host && !/^[\d.a-zA-Z:]+$/.test(host)) {
+    throw new Error(`Invalid host address: ${host}`);
+  }
   const hostArg = host ? `,'--host=${host}'` : "";
   return (
     `node -e "`
@@ -549,27 +552,8 @@ export async function* bootstrapPowerLine(
       `${REMOTE_POWERLINE_DIRECTORY}/package.json`,
     );
 
-    // Strip @grackle-ai/* deps (they'll be copied manually) and npm install the rest
-    yield { stage: "bootstrapping", message: "Installing dependencies on remote host...", progress: 0.40 };
-    await executor.exec(
-      `cd ${REMOTE_POWERLINE_DIRECTORY} && node -e "`
-      + `const p=JSON.parse(require('fs').readFileSync('package.json','utf8'));`
-      + `for(const k of Object.keys(p.dependencies||{})){if(k.startsWith('@grackle-ai/'))delete p.dependencies[k];}`
-      + `for(const k of Object.keys(p.devDependencies||{})){if(k.startsWith('@grackle-ai/'))delete p.devDependencies[k];}`
-      + `require('fs').writeFileSync('package.json',JSON.stringify(p,null,2));"`,
-      { timeout: REMOTE_EXEC_DEFAULT_TIMEOUT_MS },
-    );
-    await executor.exec(
-      `cd ${REMOTE_POWERLINE_DIRECTORY} && npm install --omit=dev --legacy-peer-deps --registry=https://registry.npmjs.org`,
-      { timeout: BOOTSTRAP_NPM_INSTALL_TIMEOUT_MS },
-    );
-
-    // Merge non-workspace deps from @grackle-ai/common and @grackle-ai/mcp
-    // into the top-level package.json so all deps resolve from the PowerLine's
-    // root node_modules. We read their LOCAL package.json files (not remote),
-    // merge deps, then npm install. This must happen BEFORE copying the
-    // packages into node_modules — npm install would wipe them.
-    yield { stage: "bootstrapping", message: "Installing @grackle-ai/* dependencies...", progress: 0.54 };
+    // Collect non-workspace deps from @grackle-ai/common and @grackle-ai/mcp
+    // so we can merge them into powerline's package.json before a single npm install.
     const extraDeps: Record<string, string> = {};
     for (const dir of [commonPackageDir, mcpPackageDir]) {
       const pkg = JSON.parse(readFileSync(join(dir, "package.json"), "utf8")) as { dependencies?: Record<string, string> };
@@ -579,12 +563,16 @@ export async function* bootstrapPowerLine(
         }
       }
     }
-    // Add extra deps to the remote package.json and install
+
+    // Strip @grackle-ai/* workspace deps, merge in common/mcp deps, then npm install once.
+    yield { stage: "bootstrapping", message: "Installing dependencies on remote host...", progress: 0.40 };
     const extraDepsJson = JSON.stringify(extraDeps).replace(/'/g, "'\\''");
     await executor.exec(
       `cd ${REMOTE_POWERLINE_DIRECTORY} && node -e "`
       + `const p=JSON.parse(require('fs').readFileSync('package.json','utf8'));`
-      + `Object.assign(p.dependencies,JSON.parse(process.argv[1]));`
+      + `for(const k of Object.keys(p.dependencies||{})){if(k.startsWith('@grackle-ai/'))delete p.dependencies[k];}`
+      + `for(const k of Object.keys(p.devDependencies||{})){if(k.startsWith('@grackle-ai/'))delete p.devDependencies[k];}`
+      + `Object.assign(p.dependencies||{},JSON.parse(process.argv[1]));`
       + `require('fs').writeFileSync('package.json',JSON.stringify(p,null,2));" '${extraDepsJson}'`,
       { timeout: REMOTE_EXEC_DEFAULT_TIMEOUT_MS },
     );
