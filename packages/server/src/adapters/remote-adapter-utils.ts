@@ -4,11 +4,9 @@ import { createPowerLineClient } from "./powerline-transport.js";
 import { findFreePort } from "../utils/ports.js";
 import { sleep } from "../utils/sleep.js";
 import { logger } from "../logger.js";
-import { shouldPushClaudeCredentialsFile, shouldCaptureRemoteGitHubToken } from "../credential-providers.js";
 import { spawn, type ChildProcess } from "node:child_process";
 import { createConnection } from "node:net";
 import { join, resolve } from "node:path";
-import { homedir } from "node:os";
 import { existsSync, readFileSync } from "node:fs";
 
 // ─── Constants ──────────────────────────────────────────────
@@ -481,14 +479,16 @@ export async function* bootstrapPowerLine(
     throw new Error("git is not installed on the remote host. Install git and try again.");
   }
 
-  // 2.5. Capture GITHUB_TOKEN from remote host if the server doesn't have one to forward.
-  //      Only runs when the GitHub credential provider is enabled.
+  // 2.5. Capture GITHUB_TOKEN from remote host for git push connectivity.
   //      In GitHub Codespaces, GITHUB_TOKEN is injected by the platform but is NOT
   //      available via `printenv` in SSH sessions. It lives in a shared env file at
   //      /workspaces/.codespaces/shared/.env (format: GITHUB_TOKEN=ghu_...).
   //      Fall back to printenv for non-codespace environments (e.g. SSH with real shells).
+  //      This is a connectivity concern (the token is only available on the remote host),
+  //      not a credential provider concern — the Codespace adapter decides whether to
+  //      forward it via extraEnv.
   let enrichedExtraEnv = extraEnv;
-  if (shouldCaptureRemoteGitHubToken()) {
+  {
     const hasLocalToken = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
     const hasAdapterToken = extraEnv?.GITHUB_TOKEN || extraEnv?.GH_TOKEN;
     if (!hasLocalToken && !hasAdapterToken) {
@@ -526,6 +526,7 @@ export async function* bootstrapPowerLine(
     const serverDistDir = resolve(import.meta.dirname);
     const commonPackageDir = resolve(serverDistDir, "../../../common");
     const powerlinePackageDir = resolve(serverDistDir, "../../../powerline");
+    const mcpPackageDir = resolve(serverDistDir, "../../../mcp");
 
     yield { stage: "bootstrapping", message: "Copying PowerLine artifacts...", progress: 0.25 };
     await executor.copyTo(
@@ -548,7 +549,7 @@ export async function* bootstrapPowerLine(
       { timeout: REMOTE_EXEC_DEFAULT_TIMEOUT_MS },
     );
     await executor.exec(
-      `cd ${REMOTE_POWERLINE_DIRECTORY} && npm install --omit=dev --registry=https://registry.npmjs.org`,
+      `cd ${REMOTE_POWERLINE_DIRECTORY} && npm install --omit=dev --legacy-peer-deps --registry=https://registry.npmjs.org`,
       { timeout: BOOTSTRAP_NPM_INSTALL_TIMEOUT_MS },
     );
 
@@ -566,6 +567,21 @@ export async function* bootstrapPowerLine(
       join(commonPackageDir, "package.json"),
       `${REMOTE_POWERLINE_DIRECTORY}/node_modules/@grackle-ai/common/package.json`,
     );
+
+    // Copy @grackle-ai/mcp for MCP server support
+    yield { stage: "bootstrapping", message: "Copying @grackle-ai/mcp...", progress: 0.58 };
+    await executor.exec(
+      `mkdir -p ${REMOTE_POWERLINE_DIRECTORY}/node_modules/@grackle-ai/mcp`,
+      { timeout: REMOTE_EXEC_DEFAULT_TIMEOUT_MS },
+    );
+    await executor.copyTo(
+      join(mcpPackageDir, "dist"),
+      `${REMOTE_POWERLINE_DIRECTORY}/node_modules/@grackle-ai/mcp/dist`,
+    );
+    await executor.copyTo(
+      join(mcpPackageDir, "package.json"),
+      `${REMOTE_POWERLINE_DIRECTORY}/node_modules/@grackle-ai/mcp/package.json`,
+    );
   } else {
     // ── Production mode: npm install from registry ──
     const version = getPackageVersion();
@@ -578,7 +594,7 @@ export async function* bootstrapPowerLine(
 
     yield { stage: "bootstrapping", message: `Installing @grackle-ai/powerline@${version}...`, progress: 0.25 };
     await executor.exec(
-      `cd ${REMOTE_POWERLINE_DIRECTORY} && npm init -y && npm install @grackle-ai/powerline@${version} --omit=dev --registry=https://registry.npmjs.org`,
+      `cd ${REMOTE_POWERLINE_DIRECTORY} && npm init -y && npm install @grackle-ai/powerline@${version} --omit=dev --legacy-peer-deps --registry=https://registry.npmjs.org`,
       { timeout: BOOTSTRAP_NPM_INSTALL_TIMEOUT_MS },
     );
   }
@@ -605,37 +621,7 @@ export async function* bootstrapPowerLine(
     logger.warn({ err }, "Failed to configure git credential helper (agents may be unable to push)");
   }
 
-  // 7. Copy Claude Code credentials for subscription auth (if present on host).
-  //    Only runs when the Claude credential provider is set to "subscription".
-  //    Stored under the PowerLine directory so destroy() cleans them up.
-  const hostCredsPath = join(homedir(), ".claude", ".credentials.json");
-  if (shouldPushClaudeCredentialsFile() && existsSync(hostCredsPath)) {
-    yield { stage: "pushing_tokens", message: "Copying Claude credentials...", progress: 0.57 };
-    try {
-      await executor.exec(
-        `mkdir -p ${REMOTE_POWERLINE_DIRECTORY}/.claude`,
-        { timeout: REMOTE_EXEC_DEFAULT_TIMEOUT_MS },
-      );
-      await executor.copyTo(
-        hostCredsPath,
-        `${REMOTE_POWERLINE_DIRECTORY}/.claude/.credentials.json`,
-      );
-      await executor.exec(
-        `chmod 600 ${REMOTE_POWERLINE_DIRECTORY}/.claude/.credentials.json`,
-        { timeout: REMOTE_EXEC_DEFAULT_TIMEOUT_MS },
-      );
-      // Symlink so Claude Code finds it at the expected ~/.claude path.
-      // Only create if no credentials file already exists (avoid clobbering user's own setup).
-      await executor.exec(
-        `mkdir -p ~/.claude && if [ ! -e ~/.claude/.credentials.json ]; then ln -s ${REMOTE_POWERLINE_DIRECTORY}/.claude/.credentials.json ~/.claude/.credentials.json; fi`,
-        { timeout: REMOTE_EXEC_DEFAULT_TIMEOUT_MS },
-      );
-    } catch (err) {
-      logger.warn({ err }, "Failed to copy Claude credentials (agent may need manual login)");
-    }
-  }
-
-  // 8. Kill any existing PowerLine process on the port (with fallbacks)
+  // 5. Kill any existing PowerLine process on the port (with fallbacks)
   yield { stage: "bootstrapping", message: "Stopping any existing PowerLine process...", progress: 0.60 };
   try {
     await executor.exec(buildRemoteKillCommand(), { timeout: REMOTE_EXEC_DEFAULT_TIMEOUT_MS });
@@ -644,7 +630,7 @@ export async function* bootstrapPowerLine(
     // Ignore — no process to kill
   }
 
-  // 9–11. Write env vars, start process, wait, verify
+  // 6–8. Write env vars, start process, wait, verify
   yield { stage: "bootstrapping", message: "Starting PowerLine on remote host...", progress: 0.65 };
   await startRemotePowerLine(executor, powerlineToken, { extraEnv: enrichedExtraEnv, workingDirectory });
 

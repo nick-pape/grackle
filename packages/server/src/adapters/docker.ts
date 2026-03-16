@@ -5,9 +5,8 @@ import { isDevMode } from "./remote-adapter-utils.js";
 import { exec } from "../utils/exec.js";
 import { findFreePort } from "../utils/ports.js";
 import { sleep } from "../utils/sleep.js";
-import { readFileSync, existsSync } from "node:fs";
-import { join, resolve } from "node:path";
-import { homedir } from "node:os";
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
 import { logger } from "../logger.js";
 
 const DOCKER_PULL_TIMEOUT_MS: number = 120_000;
@@ -279,7 +278,7 @@ export class DockerAdapter implements EnvironmentAdapter {
   }
 
   /** Build the `docker run` argument array from config and token. */
-  private buildRunArgs(
+  public buildRunArgs(
     containerName: string,
     localPort: number,
     image: string,
@@ -304,37 +303,10 @@ export class DockerAdapter implements EnvironmentAdapter {
       }
     }
 
-    // Forward ANTHROPIC_API_KEY if set on host
-    if (process.env.ANTHROPIC_API_KEY && !cfg.env?.ANTHROPIC_API_KEY) {
-      args.push("-e", `ANTHROPIC_API_KEY=${process.env.ANTHROPIC_API_KEY}`);
-    }
-
-    // Forward GitHub tokens for Copilot runtime
-    for (const tokenVar of ["GITHUB_TOKEN", "GH_TOKEN", "COPILOT_GITHUB_TOKEN"]) {
-      if (process.env[tokenVar] && !cfg.env?.[tokenVar]) {
-        args.push("-e", `${tokenVar}=${process.env[tokenVar]}`);
-      }
-    }
-
-    // Forward Copilot-specific configuration environment variables
-    for (const envVar of ["COPILOT_CLI_URL", "COPILOT_CLI_PATH", "COPILOT_PROVIDER_CONFIG"]) {
-      if (process.env[envVar] && !cfg.env?.[envVar]) {
-        args.push("-e", `${envVar}=${process.env[envVar]}`);
-      }
-    }
-
-    // Pass PowerLine token for authentication
+    // Pass PowerLine token for gRPC authentication (connectivity, not a credential).
+    // All provider credentials are delivered via pushTokens() at task start.
     if (powerlineToken) {
       args.push("-e", `GRACKLE_POWERLINE_TOKEN=${powerlineToken}`);
-    }
-
-    // Mount Claude Code credentials for subscription auth
-    const hostCredsPath = join(homedir(), ".claude", ".credentials.json");
-    try {
-      readFileSync(hostCredsPath); // verify it exists
-      args.push("-v", `${hostCredsPath}:/home/grackle/.claude/.credentials.json:ro`);
-    } catch {
-      logger.debug("No Claude credentials file found, skipping mount");
     }
 
     // Chromium needs >64MB shared memory for rendering

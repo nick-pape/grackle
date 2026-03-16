@@ -27,8 +27,6 @@ import {
   getCredentialProviders,
   setCredentialProviders,
   buildProviderTokenBundle,
-  shouldPushClaudeCredentialsFile,
-  shouldCaptureRemoteGitHubToken,
 } from "./credential-providers.js";
 import { sqlite } from "./test-db.js";
 
@@ -206,45 +204,112 @@ describe("credential-providers", () => {
     });
   });
 
-  describe("shouldPushClaudeCredentialsFile()", () => {
-    it("returns true when claude is subscription", () => {
-      setCredentialProviders({
-        claude: "subscription",
-        github: "off",
-        copilot: "off",
-        codex: "off",
-      });
-      expect(shouldPushClaudeCredentialsFile()).toBe(true);
+  describe("buildProviderTokenBundle() — runtime scoping", () => {
+    afterEach(() => {
+      delete process.env.ANTHROPIC_API_KEY;
+      delete process.env.GITHUB_TOKEN;
+      delete process.env.COPILOT_GITHUB_TOKEN;
+      delete process.env.OPENAI_API_KEY;
     });
 
-    it("returns false when claude is api_key", () => {
+    it("claude-code runtime only includes Claude and GitHub tokens", () => {
       setCredentialProviders({
         claude: "api_key",
-        github: "off",
-        copilot: "off",
-        codex: "off",
-      });
-      expect(shouldPushClaudeCredentialsFile()).toBe(false);
-    });
-
-    it("returns false when claude is off", () => {
-      expect(shouldPushClaudeCredentialsFile()).toBe(false);
-    });
-  });
-
-  describe("shouldCaptureRemoteGitHubToken()", () => {
-    it("returns true when github is on", () => {
-      setCredentialProviders({
-        claude: "off",
         github: "on",
-        copilot: "off",
-        codex: "off",
+        copilot: "on",
+        codex: "on",
       });
-      expect(shouldCaptureRemoteGitHubToken()).toBe(true);
+      process.env.ANTHROPIC_API_KEY = "sk-test";
+      process.env.GITHUB_TOKEN = "ghp_test";
+      process.env.COPILOT_GITHUB_TOKEN = "ghu_test";
+      process.env.OPENAI_API_KEY = "sk-openai";
+
+      const bundle = buildProviderTokenBundle("claude-code");
+      const envVars = bundle.tokens.map((t) => t.envVar);
+      expect(envVars).toContain("ANTHROPIC_API_KEY");
+      expect(envVars).toContain("GITHUB_TOKEN");
+      expect(envVars).not.toContain("COPILOT_GITHUB_TOKEN");
+      expect(envVars).not.toContain("OPENAI_API_KEY");
     });
 
-    it("returns false when github is off", () => {
-      expect(shouldCaptureRemoteGitHubToken()).toBe(false);
+    it("copilot runtime only includes Copilot and GitHub tokens", () => {
+      setCredentialProviders({
+        claude: "api_key",
+        github: "on",
+        copilot: "on",
+        codex: "on",
+      });
+      process.env.ANTHROPIC_API_KEY = "sk-test";
+      process.env.GITHUB_TOKEN = "ghp_test";
+      process.env.COPILOT_GITHUB_TOKEN = "ghu_test";
+      process.env.OPENAI_API_KEY = "sk-openai";
+
+      const bundle = buildProviderTokenBundle("copilot");
+      const envVars = bundle.tokens.map((t) => t.envVar);
+      expect(envVars).not.toContain("ANTHROPIC_API_KEY");
+      expect(envVars).toContain("GITHUB_TOKEN");
+      expect(envVars).toContain("COPILOT_GITHUB_TOKEN");
+      expect(envVars).not.toContain("OPENAI_API_KEY");
+    });
+
+    it("codex runtime only includes Codex and GitHub tokens", () => {
+      setCredentialProviders({
+        claude: "api_key",
+        github: "on",
+        copilot: "on",
+        codex: "on",
+      });
+      process.env.ANTHROPIC_API_KEY = "sk-test";
+      process.env.GITHUB_TOKEN = "ghp_test";
+      process.env.COPILOT_GITHUB_TOKEN = "ghu_test";
+      process.env.OPENAI_API_KEY = "sk-openai";
+
+      const bundle = buildProviderTokenBundle("codex");
+      const envVars = bundle.tokens.map((t) => t.envVar);
+      expect(envVars).not.toContain("ANTHROPIC_API_KEY");
+      expect(envVars).toContain("GITHUB_TOKEN");
+      expect(envVars).not.toContain("COPILOT_GITHUB_TOKEN");
+      expect(envVars).toContain("OPENAI_API_KEY");
+    });
+
+    it("unknown runtime includes all enabled providers", () => {
+      setCredentialProviders({
+        claude: "api_key",
+        github: "on",
+        copilot: "on",
+        codex: "on",
+      });
+      process.env.ANTHROPIC_API_KEY = "sk-test";
+      process.env.GITHUB_TOKEN = "ghp_test";
+      process.env.COPILOT_GITHUB_TOKEN = "ghu_test";
+      process.env.OPENAI_API_KEY = "sk-openai";
+
+      const bundle = buildProviderTokenBundle("unknown-runtime");
+      const envVars = bundle.tokens.map((t) => t.envVar);
+      expect(envVars).toContain("ANTHROPIC_API_KEY");
+      expect(envVars).toContain("GITHUB_TOKEN");
+      expect(envVars).toContain("COPILOT_GITHUB_TOKEN");
+      expect(envVars).toContain("OPENAI_API_KEY");
+    });
+
+    it("no runtime includes all enabled providers", () => {
+      setCredentialProviders({
+        claude: "api_key",
+        github: "on",
+        copilot: "on",
+        codex: "on",
+      });
+      process.env.ANTHROPIC_API_KEY = "sk-test";
+      process.env.GITHUB_TOKEN = "ghp_test";
+      process.env.COPILOT_GITHUB_TOKEN = "ghu_test";
+      process.env.OPENAI_API_KEY = "sk-openai";
+
+      const bundle = buildProviderTokenBundle();
+      const envVars = bundle.tokens.map((t) => t.envVar);
+      expect(envVars).toContain("ANTHROPIC_API_KEY");
+      expect(envVars).toContain("GITHUB_TOKEN");
+      expect(envVars).toContain("COPILOT_GITHUB_TOKEN");
+      expect(envVars).toContain("OPENAI_API_KEY");
     });
   });
 });

@@ -892,8 +892,8 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         payload: { taskId: task.id, sessionId, projectId: task.projectId },
       });
 
-      // Re-push stored tokens + Claude credentials so they're fresh for this session
-      await tokenBroker.refreshTokensForTask(environmentId);
+      // Re-push stored tokens + provider credentials (scoped to runtime) so they're fresh for this session
+      await tokenBroker.refreshTokensForTask(environmentId, runtime);
 
       const mcpServersJson = persona ? personaMcpServersToJson(persona) : "";
 

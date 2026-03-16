@@ -20,7 +20,7 @@ FROM base AS production
 ARG POWERLINE_VERSION=latest
 WORKDIR /app
 
-RUN npm init -y && npm install @grackle-ai/powerline@${POWERLINE_VERSION} --omit=dev
+RUN npm init -y && npm install @grackle-ai/powerline@${POWERLINE_VERSION} --omit=dev --legacy-peer-deps
 
 # Chromium needs >64MB shared memory for rendering
 USER grackle
@@ -43,11 +43,15 @@ RUN node -e "\
   for(const k of Object.keys(p.dependencies||{})){if(k.startsWith('@grackle-ai/'))delete p.dependencies[k];}\
   for(const k of Object.keys(p.devDependencies||{})){if(k.startsWith('@grackle-ai/'))delete p.devDependencies[k];}\
   require('fs').writeFileSync('package.json',JSON.stringify(p,null,2));"
-RUN npm install --omit=dev
+RUN npm install --omit=dev --legacy-peer-deps
 
 # Copy @grackle-ai/common AFTER npm install (npm cleans unmanaged dirs in node_modules)
 COPY packages/common/dist/ /app/node_modules/@grackle-ai/common/dist/
 COPY packages/common/package.json /app/node_modules/@grackle-ai/common/package.json
+
+# Copy @grackle-ai/mcp for MCP server support
+COPY packages/mcp/dist/ /app/node_modules/@grackle-ai/mcp/dist/
+COPY packages/mcp/package.json /app/node_modules/@grackle-ai/mcp/package.json
 
 USER grackle
 
