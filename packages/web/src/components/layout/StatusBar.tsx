@@ -26,11 +26,11 @@ export function StatusBar({ onToggleSidebar }: StatusBarProps): JSX.Element {
       )}
       <button type="button" className={styles.brand} onClick={() => navigate("/")} title="Home">Grackle</button>
       <div className={styles.info}>
-        <span className={styles.connectionStatus}>
+        <span>
           <span className={`${styles.connectionDot} ${connected ? styles.connected : styles.disconnected}`}>
             {"\u25CF"}
           </span>
-          {" "}{connected ? "Connected" : "Disconnected"}
+          {" "}<span className={styles.connectionLabel}>{connected ? "Connected" : "Disconnected"}</span>
         </span>
         <span>{connectedEnvs}/{totalEnvs} env{totalEnvs !== 1 ? "s" : ""}</span>
         <span>{activeCount} active</span>

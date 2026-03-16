@@ -117,9 +117,10 @@ test.describe("Settings Tabs", () => {
     await goToSettings(mockPage);
     await page.getByRole("tab", { name: "About" }).click();
 
-    await expect(page.getByText("Connection", { exact: true })).toBeVisible();
-    await expect(page.getByText("Connected", { exact: true })).toBeVisible();
-    await expect(page.getByText("Version", { exact: true })).toBeVisible();
+    const aboutPanel = page.getByTestId("about-panel");
+    await expect(aboutPanel.getByText("Connection", { exact: true })).toBeVisible();
+    await expect(aboutPanel.getByText("Connected", { exact: true })).toBeVisible();
+    await expect(aboutPanel.getByText("Version", { exact: true })).toBeVisible();
   });
 
   test("persona button removed from StatusBar", async ({ mockPage }) => {
