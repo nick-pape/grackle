@@ -46,7 +46,7 @@
     transform: translateX(-100%);
     visibility: hidden;
     transition: transform var(--transition-slow),
-                visibility 0s linear var(--transition-slow);
+                visibility 0s linear 400ms;
 
     &[data-sidebar-open="true"] {
       transform: translateX(0);
