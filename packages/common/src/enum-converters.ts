@@ -10,6 +10,8 @@ import {
   TaskStatus,
   ProjectStatus,
   IssueState,
+  ClaudeProviderMode,
+  ProviderToggle,
 } from "./gen/grackle/grackle_pb.js";
 
 // ─── EventType ──────────────────────────────────────────────
@@ -134,4 +136,54 @@ export function issueStateToEnum(s: string): IssueState {
 /** Convert a proto enum issue state to its string value. */
 export function issueStateToString(e: IssueState): string {
   return (issueStateToStringMap as Partial<Record<number, string>>)[e] ?? "";
+}
+
+// ─── ClaudeProviderMode ─────────────────────────────────────
+
+const claudeProviderModeToEnumMap: Record<string, ClaudeProviderMode> = Object.assign(Object.create(null) as Record<string, ClaudeProviderMode>, {
+  "": ClaudeProviderMode.UNSPECIFIED,
+  "off": ClaudeProviderMode.OFF,
+  "subscription": ClaudeProviderMode.SUBSCRIPTION,
+  "api_key": ClaudeProviderMode.API_KEY,
+});
+
+const claudeProviderModeToStringMap: Record<number, string> = {
+  [ClaudeProviderMode.UNSPECIFIED]: "",
+  [ClaudeProviderMode.OFF]: "off",
+  [ClaudeProviderMode.SUBSCRIPTION]: "subscription",
+  [ClaudeProviderMode.API_KEY]: "api_key",
+};
+
+/** Convert a string Claude provider mode to its proto enum value. */
+export function claudeProviderModeToEnum(s: string): ClaudeProviderMode {
+  return claudeProviderModeToEnumMap[s] ?? ClaudeProviderMode.UNSPECIFIED;
+}
+
+/** Convert a proto enum Claude provider mode to its string value. */
+export function claudeProviderModeToString(e: ClaudeProviderMode): string {
+  return (claudeProviderModeToStringMap as Partial<Record<number, string>>)[e] ?? "";
+}
+
+// ─── ProviderToggle ─────────────────────────────────────────
+
+const providerToggleToEnumMap: Record<string, ProviderToggle> = Object.assign(Object.create(null) as Record<string, ProviderToggle>, {
+  "": ProviderToggle.UNSPECIFIED,
+  "off": ProviderToggle.OFF,
+  "on": ProviderToggle.ON,
+});
+
+const providerToggleToStringMap: Record<number, string> = {
+  [ProviderToggle.UNSPECIFIED]: "",
+  [ProviderToggle.OFF]: "off",
+  [ProviderToggle.ON]: "on",
+};
+
+/** Convert a string provider toggle to its proto enum value. */
+export function providerToggleToEnum(s: string): ProviderToggle {
+  return providerToggleToEnumMap[s] ?? ProviderToggle.UNSPECIFIED;
+}
+
+/** Convert a proto enum provider toggle to its string value. */
+export function providerToggleToString(e: ProviderToggle): string {
+  return (providerToggleToStringMap as Partial<Record<number, string>>)[e] ?? "";
 }

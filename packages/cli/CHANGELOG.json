@@ -2,6 +2,35 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.32.0",
+      "tag": "@grackle-ai/cli_v0.32.0",
+      "date": "Mon, 16 Mar 2026 14:30:53 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Add CLI and MCP commands for credential provider configuration"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.31.2",
+      "tag": "@grackle-ai/cli_v0.31.2",
+      "date": "Mon, 16 Mar 2026 06:43:40 GMT",
+      "comments": {
+        "none": [
+          {
+            "comment": "Add a new kanban view"
+          }
+        ],
+        "patch": [
+          {
+            "comment": "Remove adapter-specific credential handling, deliver all credentials via pushTokens"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.31.1",
       "tag": "@grackle-ai/cli_v0.31.1",
       "date": "Mon, 16 Mar 2026 05:45:22 GMT",
