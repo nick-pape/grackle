@@ -30,13 +30,14 @@ test.describe("Board View", () => {
     const page = appPage;
 
     await createProject(page, "board-empty");
+    await page.getByText("board-empty").first().click();
 
     // Navigate to board tab
     await page.getByTestId("board-tab").click();
 
     // Should show empty CTA
     await expect(page.getByTestId("board-empty-cta")).toBeVisible({ timeout: 5_000 });
-    await expect(page.getByText("Create Task")).toBeVisible();
+    await expect(page.getByTestId("board-empty-cta").getByRole("button", { name: "Create Task" })).toBeVisible();
   });
 
   test("tasks appear in correct columns based on status", async ({ appPage }) => {

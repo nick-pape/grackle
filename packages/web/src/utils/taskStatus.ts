@@ -44,7 +44,11 @@ export const TASK_STATUS_STYLES: Record<DisplayStatus, TaskStatusStyle> = {
 
 /** Safe accessor — returns a style for any status string, falling back to `not_started`. */
 export function getStatusStyle(status: string): TaskStatusStyle {
-  return (TASK_STATUS_STYLES as Record<string, TaskStatusStyle>)[status] ?? TASK_STATUS_STYLES.not_started;
+  if (status === "blocked") {
+    return TASK_STATUS_STYLES.blocked;
+  }
+
+  return TASK_STATUS_STYLES[resolveStatus(status)];
 }
 
 // ---------------------------------------------------------------------------
@@ -59,6 +63,11 @@ export const STATUS_BADGE_CLASS_MAP: Record<string, string> = {
   complete: "statusDone",
   failed: "statusFailed",
 };
+
+/** Resolve a task status to the corresponding badge class key. */
+export function getStatusBadgeClassKey(status: string): string {
+  return STATUS_BADGE_CLASS_MAP[resolveStatus(status)] ?? "statusPending";
+}
 
 // ---------------------------------------------------------------------------
 // Ordering

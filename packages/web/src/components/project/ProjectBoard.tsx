@@ -31,62 +31,51 @@ export function ProjectBoard({ projectId }: ProjectBoardProps): JSX.Element {
     [projectTasks],
   );
 
-  // Build sessionStatusByTaskId: for each task, find the latest session via latestSessionId
-  const sessionStatusByTaskId = useMemo(() => {
+  const boardMetadataByTaskId = useMemo(() => {
     const sessionById = new Map(sessions.map((s) => [s.id, s]));
-    const map = new Map<string, string>();
+    const personaById = new Map(personas.map((p) => [p.id, p]));
+    const environmentById = new Map(environments.map((e) => [e.id, e]));
+    const sessionStatusByTaskId = new Map<string, string>();
+    const personaNameByTaskId = new Map<string, string>();
+    const environmentNameByTaskId = new Map<string, string>();
+
     for (const task of projectTasks) {
       if (task.latestSessionId) {
         const session = sessionById.get(task.latestSessionId);
         if (session) {
-          map.set(task.id, session.status);
-        }
-      }
-    }
-    return map;
-  }, [projectTasks, sessions]);
+          sessionStatusByTaskId.set(task.id, session.status);
 
-  // Build personaId map: task → persona name via latestSessionId → session → persona
-  const personaByTaskId = useMemo(() => {
-    const sessionById = new Map(sessions.map((s) => [s.id, s]));
-    const personaById = new Map(personas.map((p) => [p.id, p]));
-    const map = new Map<string, string>();
-    for (const task of projectTasks) {
-      if (task.latestSessionId) {
-        const session = sessionById.get(task.latestSessionId);
-        if (session?.personaId) {
-          const persona = personaById.get(session.personaId);
-          if (persona) {
-            map.set(task.id, persona.name);
+          if (session.personaId) {
+            const persona = personaById.get(session.personaId);
+            if (persona) {
+              personaNameByTaskId.set(task.id, persona.name);
+            }
+          }
+
+          if (session.environmentId) {
+            const environment = environmentById.get(session.environmentId);
+            if (environment) {
+              environmentNameByTaskId.set(task.id, environment.displayName);
+            }
           }
         }
       }
     }
-    return map;
-  }, [projectTasks, sessions, personas]);
 
-  // Build environmentName map: task → environment displayName via latestSessionId → session → environment
-  const envNameByTaskId = useMemo(() => {
-    const sessionById = new Map(sessions.map((s) => [s.id, s]));
-    const envById = new Map(environments.map((e) => [e.id, e]));
-    const map = new Map<string, string>();
-    for (const task of projectTasks) {
-      if (task.latestSessionId) {
-        const session = sessionById.get(task.latestSessionId);
-        if (session?.environmentId) {
-          const env = envById.get(session.environmentId);
-          if (env) {
-            map.set(task.id, env.displayName);
-          }
-        }
-      }
-    }
-    return map;
-  }, [projectTasks, sessions, environments]);
+    return {
+      sessionStatusByTaskId,
+      personaNameByTaskId,
+      environmentNameByTaskId,
+    };
+  }, [projectTasks, sessions, personas, environments]);
 
   const columns = useMemo(
-    () => buildBoardColumns({ tasks: projectTasks, taskStatusById, sessionStatusByTaskId }),
-    [projectTasks, taskStatusById, sessionStatusByTaskId],
+    () => buildBoardColumns({
+      tasks: projectTasks,
+      taskStatusById,
+      sessionStatusByTaskId: boardMetadataByTaskId.sessionStatusByTaskId,
+    }),
+    [projectTasks, taskStatusById, boardMetadataByTaskId],
   );
 
   if (projectTasks.length === 0) {
@@ -107,38 +96,35 @@ export function ProjectBoard({ projectId }: ProjectBoardProps): JSX.Element {
 
   return (
     <div className={styles.boardContainer} data-testid="board-container">
-      {columns.map((col) => {
-        const colStyle = getStatusStyle(col.status);
-        return (
-          <div key={col.status} className={styles.column} data-testid={`board-column-${col.status}`}>
-            <div className={styles.columnHeader}>
-              <span className={styles.columnIcon} style={{ color: colStyle.color }}>
-                {colStyle.icon}
-              </span>
-              <span className={styles.columnLabel}>{col.label}</span>
-              <span className={styles.columnCount} data-testid={`board-count-${col.status}`}>
-                {col.tasks.length}
-              </span>
-            </div>
-            <div className={styles.cardList}>
-              {col.tasks.length === 0 ? (
-                <div className={styles.emptyPlaceholder}>No tasks</div>
-              ) : (
-                col.tasks.map((bt) => (
-                  <BoardCard
-                    key={bt.task.id}
-                    boardTask={bt}
-                    tasksById={tasksById}
-                    personaName={personaByTaskId.get(bt.task.id)}
-                    envName={envNameByTaskId.get(bt.task.id)}
-                    onClick={() => navigate(taskUrl(bt.task.id))}
-                  />
-                ))
-              )}
-            </div>
+      {columns.map((col) => (
+        <div key={col.status} className={styles.column} data-testid={`board-column-${col.status}`}>
+          <div className={styles.columnHeader}>
+            <span className={styles.columnIcon} style={{ color: col.style.color }}>
+              {col.style.icon}
+            </span>
+            <span className={styles.columnLabel}>{col.label}</span>
+            <span className={styles.columnCount} data-testid={`board-count-${col.status}`}>
+              {col.tasks.length}
+            </span>
           </div>
-        );
-      })}
+          <div className={styles.cardList}>
+            {col.tasks.length === 0 ? (
+              <div className={styles.emptyPlaceholder}>No tasks</div>
+            ) : (
+              col.tasks.map((bt) => (
+                <BoardCard
+                  key={bt.task.id}
+                  boardTask={bt}
+                  tasksById={tasksById}
+                  personaName={boardMetadataByTaskId.personaNameByTaskId.get(bt.task.id)}
+                  envName={boardMetadataByTaskId.environmentNameByTaskId.get(bt.task.id)}
+                  onClick={() => navigate(taskUrl(bt.task.id))}
+                />
+              ))
+            )}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
