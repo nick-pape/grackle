@@ -369,6 +369,7 @@ describe("resolveMcpServers", () => {
 
     expect(result.servers).toBeDefined();
     const grackle = result.servers!.grackle as Record<string, unknown>;
+    expect(grackle.type).toBe("http");
     expect(grackle.url).toBe("http://127.0.0.1:54321/mcp");
     expect(grackle.headers).toEqual({ Authorization: "Bearer test-token" });
   });

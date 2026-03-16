@@ -275,6 +275,7 @@ export function resolveMcpServers(
   if (!servers.grackle) {
     if (brokerConfig) {
       servers.grackle = {
+        type: "http",
         url: brokerConfig.url,
         headers: { Authorization: `Bearer ${brokerConfig.token}` },
       };
