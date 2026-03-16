@@ -473,7 +473,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         mcpToken,
       });
 
-      // Push fresh credentials before spawning (best-effort, non-blocking)
+      // Push fresh credentials before spawning (best-effort)
       await tokenBroker.refreshTokensForTask(req.environmentId, runtime);
 
       processEventStream(conn.client.spawn(powerlineReq), {
