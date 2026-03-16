@@ -17,6 +17,24 @@ vi.mock("../utils/exec.js", () => ({
   exec: mockExec,
 }));
 
+// ── Mock spawn + sleep (used by CodespaceReverseTunnel) ─────
+vi.mock("node:child_process", async (importOriginal) => {
+  const original = await importOriginal<typeof import("node:child_process")>();
+  return {
+    ...original,
+    spawn: vi.fn(() => ({
+      on: vi.fn(),
+      stderr: { on: vi.fn() },
+      exitCode: null,
+      kill: vi.fn(),
+    })),
+  };
+});
+
+vi.mock("../utils/sleep.js", () => ({
+  sleep: vi.fn().mockResolvedValue(undefined),
+}));
+
 // ── Mock remote-adapter-utils ───────────────────────────────
 const mocks = vi.hoisted(() => ({
   closeTunnel: vi.fn().mockResolvedValue(undefined),

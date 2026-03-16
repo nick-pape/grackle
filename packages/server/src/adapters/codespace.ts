@@ -1,5 +1,5 @@
 import type { EnvironmentAdapter, BaseEnvironmentConfig, PowerLineConnection, ProvisionEvent } from "./adapter.js";
-import { DEFAULT_POWERLINE_PORT } from "@grackle-ai/common";
+import { DEFAULT_POWERLINE_PORT, DEFAULT_SERVER_PORT } from "@grackle-ai/common";
 import {
   type RemoteExecutor,
   ProcessTunnel,
@@ -17,6 +17,9 @@ import {
   REMOTE_EXEC_DEFAULT_TIMEOUT_MS,
 } from "./remote-adapter-utils.js";
 import { exec } from "../utils/exec.js";
+import { spawn } from "node:child_process";
+import { sleep } from "../utils/sleep.js";
+import { logger } from "../logger.js";
 
 const REMOTE_COPY_TIMEOUT_MS: number = 120_000;
 
@@ -90,6 +93,62 @@ class CodespaceTunnel extends ProcessTunnel {
   }
 }
 
+/**
+ * Reverse SSH tunnel: binds a port inside the codespace that tunnels back to a local port.
+ * Used so the MCP broker (running in the codespace) can reach the Grackle gRPC server (on the host).
+ */
+class CodespaceReverseTunnel extends ProcessTunnel {
+  private readonly codespaceName: string;
+  private readonly remotePort: number;
+
+  public constructor(localPort: number, remotePort: number, codespaceName: string) {
+    super(localPort);
+    this.remotePort = remotePort;
+    this.codespaceName = codespaceName;
+  }
+
+  /** Return the gh codespace ssh command with -R for reverse port forwarding. */
+  protected spawnArgs(): { command: string; args: string[] } {
+    const args = [
+      "codespace", "ssh",
+      "-c", this.codespaceName,
+      "--",
+      "-R", `${this.remotePort}:127.0.0.1:${this.localPort}`,
+      "-N",
+    ];
+    return { command: "gh", args };
+  }
+
+  /**
+   * Override open() — reverse tunnels bind on the remote side, not locally.
+   * We can't probe the remote port, so just wait a fixed delay for SSH to establish.
+   */
+  public async open(): Promise<void> {
+    const { command, args } = this.spawnArgs();
+    logger.info({ command, args }, "Opening reverse tunnel");
+
+    this.process = spawn(command, args, {
+      stdio: ["ignore", "ignore", "pipe"],
+      detached: false,
+    });
+
+    this.process.on("error", (err) => {
+      logger.error({ err }, "Reverse tunnel process error");
+    });
+
+    this.process.stderr?.on("data", (data: Buffer) => {
+      logger.debug({ stderr: data.toString() }, "Reverse tunnel stderr");
+    });
+
+    // Give SSH time to establish the connection and bind the remote port
+    await sleep(3000);
+
+    if (this.process.exitCode !== null) {
+      throw new Error(`Reverse tunnel exited immediately with code ${this.process.exitCode}`);
+    }
+  }
+}
+
 // ─── Adapter ────────────────────────────────────────────────
 
 /** Environment adapter that provisions and manages GitHub Codespaces running the PowerLine. */
@@ -134,13 +193,19 @@ export class CodespaceAdapter implements EnvironmentAdapter {
     // Bootstrap PowerLine on the codespace
     yield* bootstrapPowerLine(executor, powerlineToken, cfg.env, workingDirectory);
 
-    // Open port-forward tunnel
+    // Open port-forward tunnel (host → codespace PowerLine)
     const localPort = cfg.localPort || await findFreePort();
     yield { stage: "tunneling", message: `Forwarding local port ${localPort} to codespace...`, progress: 0.80 };
 
     const tunnel = new CodespaceTunnel(localPort, cfg.codespaceName);
     await tunnel.open();
-    registerTunnel(environmentId, { tunnel });
+
+    // Open reverse tunnel (codespace → host gRPC server) for MCP broker
+    const serverGrpcPort = parseInt(process.env.GRACKLE_PORT || String(DEFAULT_SERVER_PORT), 10);
+    const reverseTunnel = new CodespaceReverseTunnel(serverGrpcPort, serverGrpcPort, cfg.codespaceName);
+    await reverseTunnel.open();
+
+    registerTunnel(environmentId, { tunnel, reverseTunnel });
 
     yield { stage: "connecting", message: `Tunnel open, connecting on port ${localPort}...`, progress: 0.90 };
   }
@@ -183,12 +248,17 @@ export class CodespaceAdapter implements EnvironmentAdapter {
       yield { stage: "reconnecting", message: "PowerLine restarted", progress: 0.50 };
     }
 
-    // 3. Open new port-forward tunnel
+    // 3. Open new port-forward tunnel + reverse tunnel for MCP broker
     const localPort = cfg.localPort || await findFreePort();
     yield { stage: "reconnecting", message: `Forwarding local port ${localPort} to codespace...`, progress: 0.70 };
     const tunnel = new CodespaceTunnel(localPort, cfg.codespaceName);
     await tunnel.open();
-    registerTunnel(environmentId, { tunnel });
+
+    const serverGrpcPort = parseInt(process.env.GRACKLE_PORT || String(DEFAULT_SERVER_PORT), 10);
+    const reverseTunnel = new CodespaceReverseTunnel(serverGrpcPort, serverGrpcPort, cfg.codespaceName);
+    await reverseTunnel.open();
+
+    registerTunnel(environmentId, { tunnel, reverseTunnel });
 
     yield { stage: "reconnecting", message: "Reconnected to codespace", progress: 0.90 };
   }

@@ -83,6 +83,8 @@ export interface RemoteTunnel {
 
 interface TunnelState {
   tunnel: RemoteTunnel;
+  /** Optional reverse tunnel for MCP broker gRPC connectivity. */
+  reverseTunnel?: RemoteTunnel;
 }
 
 const tunnelMap: Map<string, TunnelState> = new Map<string, TunnelState>();
@@ -94,6 +96,11 @@ export function registerTunnel(environmentId: string, state: TunnelState): void 
     existing.tunnel.close().catch((err) => {
       logger.warn({ err, environmentId }, "Failed to close existing tunnel before registering new one");
     });
+    if (existing.reverseTunnel) {
+      existing.reverseTunnel.close().catch((err) => {
+        logger.warn({ err, environmentId }, "Failed to close existing reverse tunnel before registering new one");
+      });
+    }
   }
   tunnelMap.set(environmentId, state);
 }
@@ -103,11 +110,14 @@ export function getTunnel(environmentId: string): TunnelState | undefined {
   return tunnelMap.get(environmentId);
 }
 
-/** Close and unregister the tunnel for an environment. */
+/** Close and unregister the tunnel(s) for an environment. */
 export async function closeTunnel(environmentId: string): Promise<void> {
   const state = tunnelMap.get(environmentId);
   if (state) {
     await state.tunnel.close();
+    if (state.reverseTunnel) {
+      await state.reverseTunnel.close();
+    }
     tunnelMap.delete(environmentId);
   }
 }
