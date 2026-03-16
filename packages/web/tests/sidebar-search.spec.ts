@@ -90,6 +90,24 @@ test.describe("Sidebar search filter", () => {
     await expect(page.getByText("other-task")).not.toBeVisible({ timeout: 3_000 });
   });
 
+  test("matching text in task titles is highlighted", async ({ appPage }) => {
+    const page = appPage;
+
+    await createProject(page, "highlight-proj");
+    await createTask(page, "highlight-proj", "Fix login bug");
+
+    const searchInput = page.getByTestId("sidebar-search");
+    await searchInput.fill("login");
+
+    // The task should be visible with "login" highlighted in a <mark> element
+    const taskRow = page.locator('[data-task-id]', { hasText: "Fix login bug" });
+    await expect(taskRow).toBeVisible({ timeout: 5_000 });
+
+    const mark = taskRow.locator("mark");
+    await expect(mark).toBeVisible();
+    await expect(mark).toHaveText("login");
+  });
+
   test("project match shows all its tasks", async ({ appPage }) => {
     const page = appPage;
 
