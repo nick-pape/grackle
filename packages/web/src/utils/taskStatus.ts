@@ -125,7 +125,7 @@ export const STATUS_CSS_VAR_MAP: Record<string, string> = {
   failed: "--accent-red",
   // Legacy aliases
   pending: "--text-tertiary",
-  assigned: "--accent-blue",
+  assigned: "--text-tertiary",
   in_progress: "--accent-green",
   review: "--accent-yellow",
   done: "--accent-green",
