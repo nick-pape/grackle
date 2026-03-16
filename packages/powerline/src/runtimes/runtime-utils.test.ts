@@ -21,88 +21,12 @@ vi.mock("../worktree.js", () => ({
   ensureWorktree: vi.fn(),
 }));
 
-import { buildFindingEvent, buildSubtaskCreateEvent, resolveWorkingDirectory, findGitRepoPath, GRACKLE_MCP_SCRIPT } from "./runtime-utils.js";
+import { resolveWorkingDirectory, findGitRepoPath, resolveMcpServers } from "./runtime-utils.js";
 import { AsyncQueue } from "../utils/async-queue.js";
 import type { AgentEvent } from "./runtime.js";
 import { existsSync, readdirSync } from "node:fs";
 import { execFileSync, execFile } from "node:child_process";
 import { ensureWorktree } from "../worktree.js";
-
-describe("GRACKLE_MCP_SCRIPT", () => {
-  it("resolves to mcp-grackle/index.js within the powerline package", () => {
-    expect(GRACKLE_MCP_SCRIPT).toMatch(/mcp-grackle[\\/]index\.js$/);
-  });
-});
-
-describe("buildFindingEvent", () => {
-  it("builds a finding event with provided fields", () => {
-    const args = { title: "Bug Found", content: "Details here", category: "bug", tags: ["critical"] };
-    const raw = { some: "data" };
-    const event = buildFindingEvent(args, raw);
-
-    expect(event.type).toBe("finding");
-    expect(event.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
-    expect(event.raw).toBe(raw);
-
-    const finding = JSON.parse(event.content);
-    expect(finding.title).toBe("Bug Found");
-    expect(finding.content).toBe("Details here");
-    expect(finding.category).toBe("bug");
-    expect(finding.tags).toEqual(["critical"]);
-  });
-
-  it("applies defaults for missing fields", () => {
-    const event = buildFindingEvent({}, { raw: true });
-    const finding = JSON.parse(event.content);
-
-    expect(finding.title).toBe("Untitled");
-    expect(finding.content).toBe("");
-    expect(finding.category).toBe("general");
-    expect(finding.tags).toEqual([]);
-  });
-});
-
-describe("buildSubtaskCreateEvent", () => {
-  it("builds a subtask_create event with provided fields", () => {
-    const args = {
-      title: "Design API",
-      description: "Design the REST API endpoints",
-      local_id: "design",
-      depends_on: ["research"],
-      can_decompose: true,
-    };
-    const raw = { some: "data" };
-    const event = buildSubtaskCreateEvent(args, raw);
-
-    expect(event.type).toBe("subtask_create");
-    expect(event.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
-    expect(event.raw).toBe(raw);
-
-    const parsed = JSON.parse(event.content);
-    expect(parsed.title).toBe("Design API");
-    expect(parsed.description).toBe("Design the REST API endpoints");
-    expect(parsed.local_id).toBe("design");
-    expect(parsed.depends_on).toEqual(["research"]);
-    expect(parsed.can_decompose).toBe(true);
-  });
-
-  it("applies defaults for missing fields (local_id left empty)", () => {
-    const event = buildSubtaskCreateEvent({}, { raw: true });
-    const parsed = JSON.parse(event.content);
-
-    expect(parsed.title).toBe("");
-    expect(parsed.description).toBe("");
-    expect(parsed.local_id).toBe("");
-    expect(parsed.depends_on).toEqual([]);
-    expect(parsed.can_decompose).toBe(false);
-  });
-
-  it("defaults can_decompose to false (not undefined)", () => {
-    const event = buildSubtaskCreateEvent({ title: "Task", description: "Do it" }, {});
-    const parsed = JSON.parse(event.content);
-    expect(parsed.can_decompose).toBe(false);
-  });
-});
 
 describe("findGitRepoPath", () => {
   afterEach(() => {
@@ -421,5 +345,50 @@ describe("resolveWorkingDirectory", () => {
     expect(result).toBe("/worktrees/my-branch");
     expect(ensureWorktree).toHaveBeenCalled();
     queue.close();
+  });
+});
+
+describe("resolveMcpServers", () => {
+  afterEach(() => {
+    vi.mocked(existsSync).mockReset();
+    vi.mocked(existsSync).mockReturnValue(false);
+    vi.unstubAllEnvs();
+  });
+
+  it("injects HTTP broker entry when brokerConfig is provided", () => {
+    const result = resolveMcpServers(undefined, {
+      url: "http://127.0.0.1:54321/mcp",
+      token: "test-token",
+    });
+
+    expect(result.servers).toBeDefined();
+    const grackle = result.servers!.grackle as Record<string, unknown>;
+    expect(grackle.type).toBe("http");
+    expect(grackle.url).toBe("http://127.0.0.1:54321/mcp");
+    expect(grackle.headers).toEqual({ Authorization: "Bearer test-token" });
+  });
+
+  it("does not inject grackle entry when no brokerConfig is provided", () => {
+    const result = resolveMcpServers();
+    expect(result.servers).toBeUndefined();
+  });
+
+  it("does not overwrite existing grackle entry from spawn config", () => {
+    const result = resolveMcpServers(
+      { grackle: { command: "custom", args: [] } },
+      { url: "http://broker/mcp", token: "t" },
+    );
+    const grackle = result.servers!.grackle as Record<string, unknown>;
+    expect(grackle.command).toBe("custom");
+    expect(grackle.url).toBeUndefined();
+  });
+
+  it("merges persona MCP servers alongside broker config", () => {
+    const result = resolveMcpServers(
+      { custom: { command: "other", args: [] } },
+      { url: "http://broker/mcp", token: "t" },
+    );
+    expect(result.servers!.custom).toBeDefined();
+    expect(result.servers!.grackle).toBeDefined();
   });
 });

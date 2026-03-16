@@ -2,6 +2,7 @@ import type { Client } from "@connectrpc/connect";
 import type { grackle } from "@grackle-ai/common";
 import { z } from "zod";
 import type { ToolDefinition } from "../tool-registry.js";
+import type { AuthContext } from "../auth-context.js";
 import { jsonResult } from "../result-helpers.js";
 import { grpcErrorToToolResult } from "../error-handler.js";
 
@@ -70,7 +71,7 @@ export const findingTools: ToolDefinition[] = [
       idempotentHint: false,
       openWorldHint: false,
     },
-    async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) {
+    async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>, authContext?: AuthContext) {
       try {
         const finding = await client.postFinding({
           projectId: args.projectId as string,
@@ -78,8 +79,8 @@ export const findingTools: ToolDefinition[] = [
           category: (args.category as string | undefined) ?? "",
           content: (args.content as string | undefined) ?? "",
           tags: (args.tags as string[] | undefined) ?? [],
-          taskId: "",
-          sessionId: "",
+          taskId: authContext?.type === "scoped" ? authContext.taskId : ((args.taskId as string | undefined) ?? ""),
+          sessionId: authContext?.type === "scoped" ? authContext.taskSessionId : ((args.sessionId as string | undefined) ?? ""),
         });
         return jsonResult({
           id: finding.id,

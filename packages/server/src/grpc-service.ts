@@ -23,6 +23,7 @@ import {
   DEFAULT_RUNTIME,
   DEFAULT_MODEL,
   DEFAULT_WEB_PORT,
+  DEFAULT_MCP_PORT,
   MAX_TASK_DEPTH,
   SESSION_STATUS,
   TASK_STATUS,
@@ -32,9 +33,11 @@ import {
   claudeProviderModeToEnum,
   providerToggleToEnum,
 } from "@grackle-ai/common";
+import { createScopedToken } from "@grackle-ai/mcp";
 import { grackleHome } from "./paths.js";
 import { safeParseJsonArray } from "./json-helpers.js";
 import { computeTaskStatus } from "./compute-task-status.js";
+import { loadOrCreateApiKey } from "./api-key.js";
 import { logger } from "./logger.js";
 import { slugify } from "./utils/slugify.js";
 import { buildTaskSystemContext } from "./utils/system-context.js";
@@ -42,6 +45,14 @@ import { importGitHubIssues as executeGitHubImport } from "./github-import.js";
 import { generatePairingCode } from "./pairing.js";
 import { detectLanIp } from "./utils/network.js";
 import * as credentialProviders from "./credential-providers.js";
+
+/** Map a bind host to a dialable URL host. Wildcard addresses become loopback. */
+function toDialableHost(bindHost: string): string {
+  if (bindHost === "0.0.0.0" || bindHost === "::") {
+    return bindHost === "::" ? "[::1]" : "127.0.0.1";
+  }
+  return bindHost.includes(":") ? `[${bindHost}]` : bindHost;
+}
 
 function envRowToProto(row: EnvironmentRow): grackle.Environment {
   return create(grackle.EnvironmentSchema, {
@@ -438,6 +449,14 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
 
       const mcpServersJson = persona ? personaMcpServersToJson(persona) : "";
 
+      const mcpPort = parseInt(process.env.GRACKLE_MCP_PORT || String(DEFAULT_MCP_PORT), 10);
+      const mcpDialHost = toDialableHost(process.env.GRACKLE_HOST || "127.0.0.1");
+      const mcpUrl = `http://${mcpDialHost}:${mcpPort}/mcp`;
+      const mcpToken = createScopedToken(
+        { sub: sessionId, pid: "", per: req.personaId || "", sid: sessionId },
+        loadOrCreateApiKey(),
+      );
+
       const powerlineReq = create(powerline.SpawnRequestSchema, {
         sessionId,
         runtime,
@@ -450,7 +469,12 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
           : "",
         systemContext,
         mcpServersJson,
+        mcpUrl,
+        mcpToken,
       });
+
+      // Push fresh credentials before spawning (best-effort)
+      await tokenBroker.refreshTokensForTask(req.environmentId, runtime);
 
       processEventStream(conn.client.spawn(powerlineReq), {
         sessionId,
@@ -974,6 +998,14 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         );
       }
 
+      const taskMcpPort = parseInt(process.env.GRACKLE_MCP_PORT || String(DEFAULT_MCP_PORT), 10);
+      const taskMcpDialHost = toDialableHost(process.env.GRACKLE_HOST || "127.0.0.1");
+      const taskMcpUrl = `http://${taskMcpDialHost}:${taskMcpPort}/mcp`;
+      const taskMcpToken = createScopedToken(
+        { sub: task.id, pid: task.projectId, per: personaId, sid: sessionId },
+        loadOrCreateApiKey(),
+      );
+
       const powerlineReq = create(powerline.SpawnRequestSchema, {
         sessionId,
         runtime,
@@ -988,6 +1020,8 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         projectId: task.projectId,
         taskId: task.id,
         mcpServersJson,
+        mcpUrl: taskMcpUrl,
+        mcpToken: taskMcpToken,
       });
 
       processEventStream(conn.client.spawn(powerlineReq), {

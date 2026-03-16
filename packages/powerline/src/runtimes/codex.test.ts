@@ -1,17 +1,81 @@
-import { describe, it, expect, vi, afterEach } from "vitest";
+import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
+import type { AgentEvent } from "./runtime.js";
 
-// Mock dependencies before importing
+// ─── Mocks ──────────────────────────────────────────────────
+
 vi.mock("../logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
 vi.mock("node:fs", () => ({
   existsSync: vi.fn(() => false),
   readFileSync: vi.fn(() => "{}"),
+  readdirSync: vi.fn(() => []),
+}));
+vi.mock("node:child_process", () => ({
+  execFileSync: vi.fn(() => { throw new Error("no git"); }),
+  execFile: vi.fn(),
+}));
+vi.mock("node:util", () => ({
+  promisify: vi.fn(() => vi.fn()),
+}));
+vi.mock("../worktree.js", () => ({
+  ensureWorktree: vi.fn(),
+}));
+
+/** Creates an async iterable from an array of events. */
+function asyncIterableFrom<T>(items: T[]): AsyncIterable<T> {
+  return {
+    [Symbol.asyncIterator]() {
+      let index = 0;
+      return {
+        async next() {
+          if (index < items.length) {
+            return { value: items[index++], done: false };
+          }
+          return { value: undefined as unknown as T, done: true };
+        },
+      };
+    },
+  };
+}
+
+// Mock the Codex SDK — must be set up before importing the module under test
+let mockRunStreamedEvents: Array<Record<string, unknown>> = [];
+const mockRunStreamed = vi.fn(async () => ({
+  events: asyncIterableFrom(mockRunStreamedEvents),
+  abort: vi.fn(),
+}));
+const mockStartThread = vi.fn(() => ({ runStreamed: mockRunStreamed }));
+const mockResumeThread = vi.fn(() => ({ runStreamed: mockRunStreamed }));
+const MockCodex = vi.fn(() => ({
+  startThread: mockStartThread,
+  resumeThread: mockResumeThread,
+}));
+
+vi.mock("@openai/codex-sdk", () => ({
+  Codex: MockCodex,
 }));
 
 import { itemType, CodexRuntime } from "./codex.js";
 import { resolveMcpServers } from "./runtime-utils.js";
 import { existsSync, readFileSync } from "node:fs";
+
+// ─── Helpers ────────────────────────────────────────────────
+
+/** Collect events from a session stream until it reaches a terminal status (waiting_input, failed, completed). */
+async function collectEvents(session: { stream(): AsyncIterable<AgentEvent>; kill(): void }): Promise<AgentEvent[]> {
+  const events: AgentEvent[] = [];
+  for await (const event of session.stream()) {
+    events.push(event);
+    if (event.type === "status" && (event.content === "waiting_input" || event.content === "failed" || event.content === "completed")) {
+      session.kill();
+      break;
+    }
+  }
+  return events;
+}
+
+// ─── Tests ──────────────────────────────────────────────────
 
 describe("itemType", () => {
   it("extracts the type field", () => {
@@ -88,20 +152,7 @@ describe("resolveMcpServers", () => {
     expect(result.servers!.spawnServer).toBeDefined();
   });
 
-  it("auto-injects grackle server when script exists", () => {
-    vi.stubEnv("GRACKLE_MCP_CONFIG", "");
-    vi.mocked(existsSync).mockImplementation(() => true);
-
-    const result = resolveMcpServers();
-    expect(result.servers).toBeDefined();
-    expect(result.servers!.grackle).toEqual({
-      command: "node",
-      args: [expect.stringMatching(/mcp-grackle[\\/]index\.js$/)],
-      tools: ["post_finding", "create_subtask", "get_task_context", "update_task_status", "query_findings"],
-    });
-  });
-
-  it("returns undefined servers when no config and script not present", () => {
+  it("returns undefined servers when no config and no brokerConfig", () => {
     vi.stubEnv("GRACKLE_MCP_CONFIG", "");
     vi.mocked(existsSync).mockReturnValue(false);
 
@@ -148,5 +199,239 @@ describe("CodexRuntime structural", () => {
     });
     expect(session.id).toBe("cdx-resume");
     expect(session.runtimeSessionId).toBe("thread-abc");
+  });
+});
+
+describe("Codex streaming field extraction", () => {
+  const runtime = new CodexRuntime();
+
+  beforeEach(() => {
+    vi.stubEnv("OPENAI_API_KEY", "test-key");
+    vi.stubEnv("GRACKLE_MCP_CONFIG", "");
+    vi.mocked(existsSync).mockReturnValue(false);
+    mockRunStreamedEvents = [];
+    MockCodex.mockClear();
+    mockStartThread.mockClear();
+    mockRunStreamed.mockClear();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  // UT-1: agent_message completed uses item.text (not item.content)
+  it("extracts agent_message text from item.text", async () => {
+    mockRunStreamedEvents = [
+      {
+        type: "item.completed",
+        item: { type: "agent_message", text: "Hello from Codex!" },
+      },
+    ];
+
+    const session = runtime.spawn({ sessionId: "ut1", prompt: "hi", model: "codex-mini", maxTurns: 1 });
+    const events = await collectEvents(session);
+
+    const textEvents = events.filter((e) => e.type === "text");
+    expect(textEvents).toHaveLength(1);
+    expect(textEvents[0].content).toBe("Hello from Codex!");
+  });
+
+  // UT-2: command_execution completed uses aggregated_output and exit_code
+  it("extracts command_execution from aggregated_output and exit_code", async () => {
+    mockRunStreamedEvents = [
+      {
+        type: "item.completed",
+        item: { type: "command_execution", aggregated_output: "file list", exit_code: 0 },
+      },
+    ];
+
+    const session = runtime.spawn({ sessionId: "ut2", prompt: "ls", model: "codex-mini", maxTurns: 1 });
+    const events = await collectEvents(session);
+
+    const resultEvents = events.filter((e) => e.type === "tool_result");
+    expect(resultEvents).toHaveLength(1);
+    expect(resultEvents[0].content).toBe("[exit 0] file list");
+  });
+
+  // UT-3: mcp_tool_call started uses item.server and item.tool
+  it("extracts mcp_tool_call started from item.server and item.tool", async () => {
+    mockRunStreamedEvents = [
+      {
+        type: "item.started",
+        item: { type: "mcp_tool_call", server: "grackle", tool: "post_finding", arguments: { text: "found it" } },
+      },
+    ];
+
+    const session = runtime.spawn({ sessionId: "ut3", prompt: "find", model: "codex-mini", maxTurns: 1 });
+    const events = await collectEvents(session);
+
+    const toolUseEvents = events.filter((e) => e.type === "tool_use");
+    expect(toolUseEvents).toHaveLength(1);
+    const parsed = JSON.parse(toolUseEvents[0].content);
+    expect(parsed.tool).toBe("mcp__grackle__post_finding");
+    expect(parsed.args).toEqual({ text: "found it" });
+  });
+
+  // UT-4: mcp_tool_call completed extracts result.content and error.message
+  it("extracts mcp_tool_call result from result.content object", async () => {
+    mockRunStreamedEvents = [
+      {
+        type: "item.completed",
+        item: {
+          type: "mcp_tool_call",
+          server: "grackle",
+          tool: "post_finding",
+          result: { content: [{ type: "text", text: "Finding posted" }], structured_content: null },
+        },
+      },
+    ];
+
+    const session = runtime.spawn({ sessionId: "ut4a", prompt: "post", model: "codex-mini", maxTurns: 1 });
+    const events = await collectEvents(session);
+
+    const resultEvents = events.filter((e) => e.type === "tool_result");
+    expect(resultEvents).toHaveLength(1);
+    // result.content is serialized as JSON
+    const content = JSON.parse(resultEvents[0].content);
+    expect(content).toEqual([{ type: "text", text: "Finding posted" }]);
+  });
+
+  it("extracts mcp_tool_call error from error.message object", async () => {
+    mockRunStreamedEvents = [
+      {
+        type: "item.completed",
+        item: {
+          type: "mcp_tool_call",
+          server: "grackle",
+          tool: "post_finding",
+          error: { message: "Permission denied" },
+        },
+      },
+    ];
+
+    const session = runtime.spawn({ sessionId: "ut4b", prompt: "post", model: "codex-mini", maxTurns: 1 });
+    const events = await collectEvents(session);
+
+    const resultEvents = events.filter((e) => e.type === "tool_result");
+    expect(resultEvents).toHaveLength(1);
+    expect(resultEvents[0].content).toBe("Permission denied");
+  });
+
+  // UT-5: file_change uses item.changes array (not item.file/item.patch)
+  it("extracts file_change from item.changes array", async () => {
+    const changes = [{ path: "src/index.ts", content: "new content" }];
+    mockRunStreamedEvents = [
+      {
+        type: "item.started",
+        item: { type: "file_change", changes },
+      },
+      {
+        type: "item.completed",
+        item: { type: "file_change", changes, status: "completed" },
+      },
+    ];
+
+    const session = runtime.spawn({ sessionId: "ut5", prompt: "edit", model: "codex-mini", maxTurns: 1 });
+    const events = await collectEvents(session);
+
+    const toolUseEvents = events.filter((e) => e.type === "tool_use");
+    expect(toolUseEvents).toHaveLength(1);
+    const startParsed = JSON.parse(toolUseEvents[0].content);
+    expect(startParsed.args.file).toBe("src/index.ts");
+    expect(startParsed.args.changes).toEqual(changes);
+
+    const resultEvents = events.filter((e) => e.type === "tool_result");
+    expect(resultEvents).toHaveLength(1);
+    const resultParsed = JSON.parse(resultEvents[0].content);
+    expect(resultParsed.file).toBe("src/index.ts");
+    expect(resultParsed.changes).toEqual(changes);
+    expect(resultParsed.status).toBe("completed");
+  });
+
+  // UT-6: reasoning completed uses item.text only (no item.summary)
+  it("extracts reasoning from item.text only", async () => {
+    mockRunStreamedEvents = [
+      {
+        type: "item.completed",
+        item: { type: "reasoning", text: "Thinking about the problem..." },
+      },
+    ];
+
+    const session = runtime.spawn({ sessionId: "ut6", prompt: "think", model: "codex-mini", maxTurns: 1 });
+    const events = await collectEvents(session);
+
+    const textEvents = events.filter((e) => e.type === "text");
+    expect(textEvents).toHaveLength(1);
+    expect(textEvents[0].content).toBe("[reasoning] Thinking about the problem...");
+  });
+
+  // MCP config transformation: verify Codex receives snake_case config
+  it("transforms HTTP MCP config to Codex format (mcp_servers, http_headers, no type)", async () => {
+    vi.stubEnv("GRACKLE_MCP_CONFIG", "/tmp/mcp.json");
+    vi.mocked(existsSync).mockReturnValue(true);
+    vi.mocked(readFileSync).mockReturnValue(
+      JSON.stringify({
+        mcpServers: {
+          grackle: {
+            type: "http",
+            url: "http://localhost:7435/mcp",
+            headers: { Authorization: "Bearer tok123" },
+            tools: ["*"],
+          },
+        },
+      }),
+    );
+
+    mockRunStreamedEvents = [
+      { type: "item.completed", item: { type: "agent_message", text: "done" } },
+    ];
+
+    const session = runtime.spawn({ sessionId: "mcp-cfg", prompt: "test", model: "codex-mini", maxTurns: 1 });
+    await collectEvents(session);
+
+    // Inspect the config passed to the Codex constructor
+    expect(MockCodex).toHaveBeenCalledTimes(1);
+    const codexOpts = MockCodex.mock.calls[0][0] as Record<string, unknown>;
+    const config = codexOpts.config as Record<string, unknown>;
+    expect(config).toBeDefined();
+
+    // Key should be mcp_servers (snake_case), not mcpServers
+    expect(config.mcp_servers).toBeDefined();
+    expect(config.mcpServers).toBeUndefined();
+
+    // Server entry should use http_headers (not headers) and have no type field
+    const grackle = (config.mcp_servers as Record<string, unknown>).grackle as Record<string, unknown>;
+    expect(grackle.url).toBe("http://localhost:7435/mcp");
+    expect(grackle.http_headers).toEqual({ Authorization: "Bearer tok123" });
+    expect(grackle.type).toBeUndefined();
+    expect(grackle.headers).toBeUndefined();
+    expect(grackle.tools).toBeUndefined();
+  });
+
+  // Stdio MCP servers are passed through unchanged
+  it("passes stdio MCP servers through unchanged", async () => {
+    vi.stubEnv("GRACKLE_MCP_CONFIG", "/tmp/mcp.json");
+    vi.mocked(existsSync).mockReturnValue(true);
+    vi.mocked(readFileSync).mockReturnValue(
+      JSON.stringify({
+        mcpServers: {
+          myStdio: { command: "node", args: ["server.js"], env: { FOO: "bar" } },
+        },
+      }),
+    );
+
+    mockRunStreamedEvents = [
+      { type: "item.completed", item: { type: "agent_message", text: "ok" } },
+    ];
+
+    const session = runtime.spawn({ sessionId: "mcp-stdio", prompt: "test", model: "codex-mini", maxTurns: 1 });
+    await collectEvents(session);
+
+    const codexOpts = MockCodex.mock.calls[0][0] as Record<string, unknown>;
+    const config = codexOpts.config as Record<string, unknown>;
+    const myStdio = (config.mcp_servers as Record<string, unknown>).myStdio as Record<string, unknown>;
+    expect(myStdio.command).toBe("node");
+    expect(myStdio.args).toEqual(["server.js"]);
+    expect(myStdio.env).toEqual({ FOO: "bar" });
   });
 });

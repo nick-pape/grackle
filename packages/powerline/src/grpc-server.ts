@@ -66,6 +66,12 @@ export function registerPowerLineRoutes(router: ConnectRouter): void {
         return;
       }
 
+      // Pass through MCP URL + scoped token from the server (no local broker needed).
+      let mcpBroker: { url: string; token: string } | undefined;
+      if (req.mcpUrl && req.mcpToken) {
+        mcpBroker = { url: req.mcpUrl, token: req.mcpToken };
+      }
+
       const session = runtime.spawn({
         sessionId: req.sessionId,
         prompt: req.prompt,
@@ -79,6 +85,7 @@ export function registerPowerLineRoutes(router: ConnectRouter): void {
         mcpServers: req.mcpServersJson
           ? (JSON.parse(req.mcpServersJson) as Record<string, unknown>)
           : undefined,
+        mcpBroker,
       });
 
       yield* streamSession(req.sessionId, session);

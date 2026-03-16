@@ -1,8 +1,6 @@
 import type { AgentEvent } from "./runtime.js";
 import type { AsyncQueue } from "../utils/async-queue.js";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
-import { fileURLToPath } from "node:url";
-import { dirname, join } from "node:path";
 import { execFileSync, execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { ensureWorktree } from "../worktree.js";
@@ -11,56 +9,6 @@ import { logger } from "../logger.js";
 const execFileAsync: typeof execFile.__promisify__ = promisify(execFile);
 
 // ─── Shared constants ──────────────────────────────────────
-
-const __dirname: string = dirname(fileURLToPath(import.meta.url));
-
-/** Path to the Grackle MCP server script, resolved relative to the PowerLine package. */
-export const GRACKLE_MCP_SCRIPT: string = join(__dirname, "../../mcp-grackle/index.js");
-
-// ─── Finding construction ──────────────────────────────────
-
-/**
- * Build a normalized "finding" AgentEvent from a `post_finding` tool call.
- *
- * Applies defaults: title "Untitled", content "", category "general", tags [].
- */
-export function buildFindingEvent(args: Record<string, unknown>, raw: unknown): AgentEvent {
-  return {
-    type: "finding",
-    timestamp: new Date().toISOString(),
-    content: JSON.stringify({
-      title: args.title || "Untitled",
-      content: args.content || "",
-      category: args.category || "general",
-      tags: args.tags || [],
-    }),
-    raw,
-  };
-}
-
-// ─── Subtask creation ─────────────────────────────────────
-
-/**
- * Build a normalized "subtask_create" AgentEvent from a `create_subtask` tool call.
- *
- * Does not auto-generate `local_id` — the caller is responsible for providing one
- * if dependency resolution via `depends_on` is needed. This avoids mismatches
- * between the event payload and tool result.
- */
-export function buildSubtaskCreateEvent(args: Record<string, unknown>, raw: unknown): AgentEvent {
-  return {
-    type: "subtask_create",
-    timestamp: new Date().toISOString(),
-    content: JSON.stringify({
-      title: typeof args.title === "string" ? args.title : "",
-      description: typeof args.description === "string" ? args.description : "",
-      local_id: args.local_id || "",
-      depends_on: args.depends_on || [],
-      can_decompose: args.can_decompose ?? false,
-    }),
-    raw,
-  };
-}
 
 // ─── Working directory resolution ──────────────────────────
 
@@ -274,13 +222,25 @@ export interface ResolvedMcpConfig {
   disallowedTools: string[];
 }
 
+/** Broker configuration for injecting the HTTP MCP server entry. Matches SpawnOptions.mcpBroker. */
+export interface BrokerConfig {
+  /** Full URL of the broker's /mcp endpoint. */
+  url: string;
+  /** Scoped Bearer token for this session. */
+  token: string;
+}
+
+
 /**
  * Load MCP server configurations from the shared GRACKLE_MCP_CONFIG file and spawn options.
  *
  * Also reads `disallowedTools` and filters matching tools from MCP server configs.
- * Auto-injects the Grackle coordination MCP server when the script is bundled.
+ * When `brokerConfig` is provided, injects an HTTP-based Grackle MCP server entry.
  */
-export function resolveMcpServers(spawnMcpServers?: Record<string, unknown>): ResolvedMcpConfig {
+export function resolveMcpServers(
+  spawnMcpServers?: Record<string, unknown>,
+  brokerConfig?: BrokerConfig,
+): ResolvedMcpConfig {
   let servers: Record<string, unknown> = {};
   let disallowedTools: string[] = [];
 
@@ -303,12 +263,15 @@ export function resolveMcpServers(spawnMcpServers?: Record<string, unknown>): Re
     servers = { ...servers, ...spawnMcpServers };
   }
 
-  // Auto-inject Grackle coordination MCP server if the script is bundled
-  if (existsSync(GRACKLE_MCP_SCRIPT) && !servers.grackle) {
+  // Inject the Grackle MCP server entry when broker config is provided
+  if (!servers.grackle && brokerConfig) {
     servers.grackle = {
-      command: "node",
-      args: [GRACKLE_MCP_SCRIPT],
-      tools: ["post_finding", "create_subtask", "get_task_context", "update_task_status", "query_findings"],
+      type: "http",
+      url: brokerConfig.url,
+      headers: { Authorization: `Bearer ${brokerConfig.token}` },
+      // tools: ["*"] is required by Copilot SDK (MCPServerConfigBase.tools is mandatory).
+      // Claude Agent SDK ignores unknown fields, Codex CLI flattens to --config.
+      tools: ["*"],
     };
   }
 

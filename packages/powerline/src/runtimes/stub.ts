@@ -85,6 +85,7 @@ class StubSession implements AgentSession {
       this.inputResolve("");
     }
   }
+
 }
 
 /** A mock runtime that echoes prompts and waits for one round of user input. Useful for testing. */
