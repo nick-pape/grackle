@@ -36,8 +36,10 @@ npx buf generate
 
 **After finishing code changes, always manually test if the change is testable.** Don't rely solely on unit tests — unit tests mock everything and only verify wiring, not real behavior.
 
+**Use `/launch-grackle` to start an isolated test server.** This finds free ports, creates a branch-specific home directory (isolated DB), launches the server, and reports back the URLs. Never use the default ports or the user's `~/.grackle` database for testing.
+
 - **Web UI changes**: Use the Playwright MCP (`mcp__playwright__*`) to launch a browser, navigate the web UI, and verify visually that the feature works as expected.
-- **Server / adapter changes** (e.g. SSH, Codespace): Start the server (`grackle serve`), add an environment (`grackle env add`), and exercise the relevant flow (provision, stop, reconnect, etc.) against a real target. Use `gh codespace list` to find an available codespace for Codespace adapter testing.
+- **Server / adapter changes** (e.g. SSH, Codespace): Use `/launch-grackle`, add an environment (`grackle env add`), and exercise the relevant flow (provision, stop, reconnect, etc.) against a real target. Use `gh codespace list` to find an available codespace for Codespace adapter testing.
 - **CLI changes**: Run the CLI commands manually and verify the output matches expectations.
 - **Verify screenshots**: Whenever you take screenshots (for testing or for a PR), always read the PNG file back with the Read tool and visually inspect it to confirm it shows what you expect. Don't assume a screenshot is correct just because the tool reported success.
 - If you cannot manually test (e.g. no codespace available, or the change is purely internal refactoring with no observable behavior), explicitly state why manual testing was skipped.
@@ -116,8 +118,5 @@ PRs that modify publishable packages need a change file. The `/create-pr` skill 
 
 ### Multi-Session Safety
 Multiple Claude Code sessions may be running concurrently against the same repo. **Never kill server processes (node, grackle) unless you are certain they belong to your session.** Another agent may be using them.
-1. Check if the default ports are already in use (`netstat -ano | grep :<port> | grep LISTENING`).
-2. If a server is already running on the default ports, **do not kill it and do not reuse it** — it belongs to another session with its own DB state.
-3. Start your own server on different ports using environment variables: `GRACKLE_PORT=<grpc-port> GRACKLE_WEB_PORT=<web-port> node packages/server/dist/index.js`. Pick unused ports (e.g., 7500/7501, 7600/7601).
-4. Point CLI commands at your server: `--port <your-grpc-port>` or set `GRACKLE_PORT`.
-5. Note the PID so you can clean up your own process later without affecting other sessions.
+
+**Always use `/launch-grackle`** to start a test server. It guarantees free ports, an isolated database, and reports back the correct URLs. Never use the default ports (7434, 3000, 7435, 7433) or the user's `~/.grackle` database directly.
