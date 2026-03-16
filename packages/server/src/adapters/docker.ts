@@ -201,10 +201,25 @@ class DockerExecutor implements RemoteExecutor {
 
   /** Copy a local file or directory into the container. */
   public async copyTo(localPath: string, remotePath: string): Promise<void> {
+    // Resolve $HOME since docker cp doesn't expand shell variables
+    let resolvedPath = remotePath;
+    if (resolvedPath.includes("$HOME")) {
+      if (!this.resolvedHome) {
+        this.resolvedHome = (await this.exec("echo $HOME")).trim();
+      }
+      resolvedPath = resolvedPath.replace(/\$HOME/g, this.resolvedHome);
+    }
     await exec("docker", [
-      "cp", localPath, `${this.containerName}:${remotePath}`,
+      "cp", localPath, `${this.containerName}:${resolvedPath}`,
+    ], { timeout: DOCKER_EXEC_TIMEOUT_MS });
+    // docker cp creates files owned by root; fix ownership so the container user can write
+    await exec("docker", [
+      "exec", "-u", "root", this.containerName, "chown", "-R", "grackle:grackle", resolvedPath,
     ], { timeout: DOCKER_EXEC_TIMEOUT_MS });
   }
+
+  /** Cached resolved $HOME path. */
+  private resolvedHome?: string;
 }
 
 // ─── Docker Adapter ────────────────────────────────────────
@@ -246,15 +261,17 @@ export class DockerAdapter implements EnvironmentAdapter {
     yield { stage: "starting", message: "Waiting for container...", progress: 0.15 };
     await waitForContainerRunning(containerName);
 
-    // Bootstrap PowerLine inside the container (same flow as SSH/Codespace)
+    // Bootstrap PowerLine inside the container (same flow as SSH/Codespace).
+    // Docker containers need host=0.0.0.0 because port mapping can't reach 127.0.0.1.
     const executor = new DockerExecutor(containerName);
     if (isNew) {
-      yield* bootstrapPowerLine(executor, powerlineToken, cfg.env, WORKSPACE_PATH);
+      yield* bootstrapPowerLine(executor, powerlineToken, cfg.env, WORKSPACE_PATH, "0.0.0.0");
     } else {
       // Container already exists — just restart PowerLine with fresh token
       yield { stage: "reconnecting", message: "Restarting PowerLine...", progress: 0.60 };
       await startRemotePowerLine(executor, powerlineToken, {
         extraEnv: cfg.env,
+        host: "0.0.0.0",
         probeFirst: true,
       });
     }

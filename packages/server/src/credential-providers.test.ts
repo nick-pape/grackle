@@ -283,6 +283,23 @@ describe("credential-providers", () => {
       expect(envVars).toContain("OPENAI_API_KEY");
     });
 
+    it("unrecognized runtime includes no providers (fails safe)", () => {
+      setCredentialProviders({
+        claude: "api_key",
+        github: "on",
+        copilot: "on",
+        codex: "on",
+      });
+      process.env.ANTHROPIC_API_KEY = "sk-test";
+      process.env.GITHUB_TOKEN = "ghp_test";
+      process.env.COPILOT_GITHUB_TOKEN = "ghu_test";
+      process.env.OPENAI_API_KEY = "sk-openai";
+
+      // An unknown runtime value (e.g. a typo) must not fall back to all providers.
+      const bundle = buildProviderTokenBundle("unknown-runtime-typo");
+      expect(bundle.tokens).toHaveLength(0);
+    });
+
     it("stub runtime includes no providers", () => {
       setCredentialProviders({
         claude: "api_key",

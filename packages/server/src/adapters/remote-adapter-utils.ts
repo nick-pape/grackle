@@ -271,6 +271,12 @@ interface StartRemotePowerLineOptions {
   /** Explicit working directory for the PowerLine process. */
   workingDirectory?: string;
   /**
+   * Host address to bind the PowerLine to. Defaults to unset (PowerLine's
+   * own default, 127.0.0.1). Use "0.0.0.0" for Docker containers where
+   * the port is accessed via Docker's port mapping.
+   */
+  host?: string;
+  /**
    * When true, detects `/workspaces/*\/` on the remote host (codespace
    * convention) and uses it as the working directory.
    */
@@ -297,15 +303,20 @@ interface StartRemotePowerLineOptions {
  * expansion): argv[1] = entryPoint, argv[2] = pidFilePath, argv[3] = logFile.
  * Uses `process.cwd()` as the working directory (caller must `cd` first).
  */
-const SPAWN_SCRIPT: string =
-  `node -e "`
-  + `const fs=require('fs');`
-  + `const {spawn}=require('child_process');`
-  + `const out=fs.openSync(process.argv[3],'w');`
-  + `const c=spawn('node',[process.argv[1],'--port=${DEFAULT_POWERLINE_PORT}'],`
-  + `{cwd:process.cwd(),detached:true,stdio:['ignore',out,out]});`
-  + `fs.writeFileSync(process.argv[2],String(c.pid));`
-  + `c.unref();"`;
+/** Build the node one-liner that spawns a fully detached PowerLine process. */
+function buildSpawnScript(host?: string): string {
+  const hostArg = host ? `,'--host=${host}'` : "";
+  return (
+    `node -e "`
+    + `const fs=require('fs');`
+    + `const {spawn}=require('child_process');`
+    + `const out=fs.openSync(process.argv[3],'w');`
+    + `const c=spawn('node',[process.argv[1],'--port=${DEFAULT_POWERLINE_PORT}'${hostArg}],`
+    + `{cwd:process.cwd(),detached:true,stdio:['ignore',out,out]});`
+    + `fs.writeFileSync(process.argv[2],String(c.pid));`
+    + `c.unref();"`
+  );
+}
 
 /**
  * Ensure the remote PowerLine process is running.
@@ -330,7 +341,7 @@ export async function startRemotePowerLine(
   powerlineToken: string,
   options: StartRemotePowerLineOptions = {},
 ): Promise<{ alreadyRunning: boolean }> {
-  const { extraEnv, workingDirectory, autoDetectWorkspace, probeFirst } = options;
+  const { extraEnv, workingDirectory, host, autoDetectWorkspace, probeFirst } = options;
 
   // Validate workingDirectory to prevent shell injection — must be an absolute POSIX path
   if (workingDirectory && !/^\/[\w./-]+$/.test(workingDirectory)) {
@@ -402,7 +413,7 @@ export async function startRemotePowerLine(
     : "";
   parts.push(
     `cd "${startDirExpr}" && ${sourceEnv}`
-    + `${SPAWN_SCRIPT} "${absoluteEntryPoint}" "${pidFilePath}" "${logFilePath}"`,
+    + `${buildSpawnScript(host)} "${absoluteEntryPoint}" "${pidFilePath}" "${logFilePath}"`,
   );
 
   // 4. Probe (after a brief pause for the port to bind)
@@ -440,6 +451,7 @@ export async function* bootstrapPowerLine(
   powerlineToken: string,
   extraEnv?: Record<string, string>,
   workingDirectory?: string,
+  host?: string,
 ): AsyncGenerator<ProvisionEvent> {
   // 1. Check Node.js (PowerLine requires >= 22)
   yield { stage: "bootstrapping", message: "Checking Node.js on remote host...", progress: 0.10 };
@@ -552,28 +564,42 @@ export async function* bootstrapPowerLine(
       { timeout: BOOTSTRAP_NPM_INSTALL_TIMEOUT_MS },
     );
 
-    // Copy @grackle-ai/* packages, strip their workspace deps, and install
-    // their own runtime deps. This is self-maintaining — each package resolves
-    // its own deps without hardcoding individual package names.
-    const STRIP_WORKSPACE_DEPS: string =
-      `node -e "`
+    // Merge non-workspace deps from @grackle-ai/common and @grackle-ai/mcp
+    // into the top-level package.json so all deps resolve from the PowerLine's
+    // root node_modules. We read their LOCAL package.json files (not remote),
+    // merge deps, then npm install. This must happen BEFORE copying the
+    // packages into node_modules — npm install would wipe them.
+    yield { stage: "bootstrapping", message: "Installing @grackle-ai/* dependencies...", progress: 0.54 };
+    const extraDeps: Record<string, string> = {};
+    for (const dir of [commonPackageDir, mcpPackageDir]) {
+      const pkg = JSON.parse(readFileSync(join(dir, "package.json"), "utf8")) as { dependencies?: Record<string, string> };
+      for (const [k, v] of Object.entries(pkg.dependencies || {})) {
+        if (!k.startsWith("@grackle-ai/")) {
+          extraDeps[k] = v;
+        }
+      }
+    }
+    // Add extra deps to the remote package.json and install
+    const extraDepsJson = JSON.stringify(extraDeps).replace(/'/g, "'\\''");
+    await executor.exec(
+      `cd ${REMOTE_POWERLINE_DIRECTORY} && node -e "`
       + `const p=JSON.parse(require('fs').readFileSync('package.json','utf8'));`
-      + `for(const k of Object.keys(p.dependencies||{})){if(k.startsWith('@grackle-ai/'))delete p.dependencies[k];}`
-      + `for(const k of Object.keys(p.devDependencies||{})){if(k.startsWith('@grackle-ai/'))delete p.devDependencies[k];}`
-      + `require('fs').writeFileSync('package.json',JSON.stringify(p,null,2));"`;
+      + `Object.assign(p.dependencies,JSON.parse(process.argv[1]));`
+      + `require('fs').writeFileSync('package.json',JSON.stringify(p,null,2));" '${extraDepsJson}'`,
+      { timeout: REMOTE_EXEC_DEFAULT_TIMEOUT_MS },
+    );
+    await executor.exec(
+      `cd ${REMOTE_POWERLINE_DIRECTORY} && npm install --omit=dev --legacy-peer-deps --registry=https://registry.npmjs.org`,
+      { timeout: BOOTSTRAP_NPM_INSTALL_TIMEOUT_MS },
+    );
 
+    // Copy @grackle-ai/* packages AFTER all npm installs (npm wipes unmanaged dirs)
     for (const [name, dir] of [["common", commonPackageDir], ["mcp", mcpPackageDir]] as const) {
       const remotePkgDir = `${REMOTE_POWERLINE_DIRECTORY}/node_modules/@grackle-ai/${name}`;
-      yield { stage: "bootstrapping", message: `Copying @grackle-ai/${name}...`, progress: name === "common" ? 0.55 : 0.60 };
+      yield { stage: "bootstrapping", message: `Copying @grackle-ai/${name}...`, progress: name === "common" ? 0.57 : 0.59 };
       await executor.exec(`mkdir -p ${remotePkgDir}`, { timeout: REMOTE_EXEC_DEFAULT_TIMEOUT_MS });
       await executor.copyTo(join(dir, "dist"), `${remotePkgDir}/dist`);
       await executor.copyTo(join(dir, "package.json"), `${remotePkgDir}/package.json`);
-
-      // Strip workspace deps and install remaining runtime deps
-      await executor.exec(
-        `cd ${remotePkgDir} && ${STRIP_WORKSPACE_DEPS} && npm install --omit=dev --legacy-peer-deps --no-package-lock`,
-        { timeout: BOOTSTRAP_NPM_INSTALL_TIMEOUT_MS },
-      );
     }
   } else {
     // ── Production mode: npm install from registry ──
@@ -625,7 +651,7 @@ export async function* bootstrapPowerLine(
 
   // 6–8. Write env vars, start process, wait, verify
   yield { stage: "bootstrapping", message: "Starting PowerLine on remote host...", progress: 0.65 };
-  await startRemotePowerLine(executor, powerlineToken, { extraEnv: enrichedExtraEnv, workingDirectory });
+  await startRemotePowerLine(executor, powerlineToken, { extraEnv: enrichedExtraEnv, workingDirectory, host });
 
   yield { stage: "bootstrapping", message: "PowerLine is running on remote host", progress: 0.75 };
 }

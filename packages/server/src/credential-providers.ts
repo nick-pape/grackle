@@ -109,13 +109,18 @@ const RUNTIME_PROVIDERS: Record<RuntimeName, (keyof CredentialProviderConfig)[]>
 /**
  * Build a token bundle containing enabled provider credentials.
  * When `runtime` is a known {@link RuntimeName}, only providers mapped to that runtime are included.
- * When `runtime` is omitted or not a recognized runtime name, all enabled providers are included.
+ * When `runtime` is omitted, all enabled providers are included.
+ * When `runtime` is provided but not a recognized {@link RuntimeName}, no providers are included
+ * (fails safe rather than exposing all credentials for an unrecognized runtime).
  * Reads values fresh from `process.env` or disk at call time.
  */
 export function buildProviderTokenBundle(runtime?: string): powerline.TokenBundle {
   const config = getCredentialProviders();
-  const runtimeProviders = runtime ? RUNTIME_PROVIDERS[runtime as RuntimeName] : undefined;
-  const allowedProviders = runtimeProviders
+  // When runtime is given, look it up in the map. Unknown runtimes get [] (empty, not all providers).
+  const runtimeProviders = runtime !== undefined
+    ? (Object.hasOwn(RUNTIME_PROVIDERS, runtime) ? RUNTIME_PROVIDERS[runtime as RuntimeName] : [])
+    : undefined;
+  const allowedProviders = runtimeProviders !== undefined
     ? new Set(runtimeProviders)
     : undefined;
   const items: powerline.TokenItem[] = [];
