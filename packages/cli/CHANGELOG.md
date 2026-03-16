@@ -1,6 +1,18 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Mon, 16 Mar 2026 04:29:47 GMT and should not be manually modified.
+This log was last generated on Mon, 16 Mar 2026 05:45:22 GMT and should not be manually modified.
+
+## 0.31.1
+Mon, 16 Mar 2026 05:45:22 GMT
+
+### Patches
+
+- Remove --no-open flag and browser auto-open; server no longer opens browsers
+
+### Updates
+
+- placeholder
+- No CLI changes — merge commit false positive
 
 ## 0.31.0
 Mon, 16 Mar 2026 04:29:47 GMT
