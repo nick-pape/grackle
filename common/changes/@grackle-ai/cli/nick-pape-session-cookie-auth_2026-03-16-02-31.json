@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Add pairing-code session auth for secure LAN access. Server binds to 0.0.0.0, web UI uses session cookies, new `grackle pair` command.",
+      "type": "minor",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}

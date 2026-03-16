@@ -12,6 +12,7 @@ const POLL_TIMEOUT_MS = 15_000;
 interface E2EState {
   grackleHome: string;
   apiKey: string;
+  pairingCookie: string;
   powerlinePid: number;
   serverPid: number;
   powerlinePort: number;
@@ -77,6 +78,62 @@ async function waitForPort(port: number, timeoutMs: number): Promise<void> {
   });
 }
 
+/**
+ * Generate a pairing code via the CLI and redeem it via HTTP to obtain a session cookie.
+ */
+async function obtainSessionCookie(serverPort: number, webPort: number, apiKey: string, grackleHome: string): Promise<string> {
+  const repoRoot = join(import.meta.dirname, "../../..");
+  const cliPath = join(repoRoot, "packages/cli/dist/index.js");
+
+  // Generate a pairing code via the CLI
+  const cliOutput = execSync(
+    `node "${cliPath}" pair`,
+    {
+      env: {
+        ...process.env,
+        GRACKLE_HOME: grackleHome,
+        GRACKLE_URL: `http://127.0.0.1:${serverPort}`,
+        GRACKLE_API_KEY: apiKey,
+        NO_COLOR: "1",
+        FORCE_COLOR: "0",
+      },
+      encoding: "utf8",
+    },
+  );
+
+  // Extract the code from CLI output (format: "  Pairing code: XXXXXX")
+  const codeMatch = cliOutput.match(/Pairing code:\s*(\S+)/i);
+  if (!codeMatch) {
+    throw new Error(`Could not extract pairing code from CLI output: ${cliOutput}`);
+  }
+  const code = codeMatch[1];
+
+  // Redeem the code via HTTP to get a session cookie
+  const http = await import("node:http");
+  return new Promise((resolve, reject) => {
+    const req = http.request(
+      {
+        hostname: "127.0.0.1",
+        port: webPort,
+        path: `/pair?code=${code}`,
+        method: "GET",
+      },
+      (res) => {
+        const setCookie = res.headers["set-cookie"];
+        if (!setCookie || setCookie.length === 0) {
+          reject(new Error("No Set-Cookie header in pairing response"));
+          return;
+        }
+        // Extract just the cookie name=value part (before the first ;)
+        const cookieValue = setCookie[0].split(";")[0];
+        resolve(cookieValue);
+      },
+    );
+    req.on("error", reject);
+    req.end();
+  });
+}
+
 export default async function globalSetup(_config: FullConfig): Promise<void> {
   // 1. Create isolated temp directory
   const grackleHome = mkdtempSync(join(tmpdir(), "grackle-e2e-"));
@@ -113,6 +170,7 @@ export default async function globalSetup(_config: FullConfig): Promise<void> {
         GRACKLE_WEB_PORT: String(webPort),
         GRACKLE_MCP_PORT: String(mcpPort),
         GRACKLE_WEB_DIR: join(repoRoot, "packages/web/dist"),
+        GRACKLE_NO_OPEN: "1",
       },
       stdio: "pipe",
     },
@@ -161,10 +219,15 @@ export default async function globalSetup(_config: FullConfig): Promise<void> {
   });
   console.log("[e2e] Environment provisioned");
 
-  // 8. Save state for tests and teardown
+  // 8. Obtain a session cookie by generating and redeeming a pairing code
+  const pairingCookie = await obtainSessionCookie(serverPort, webPort, apiKey, grackleHome);
+  console.log("[e2e] Session cookie obtained");
+
+  // 9. Save state for tests and teardown
   const state: E2EState = {
     grackleHome,
     apiKey,
+    pairingCookie,
     powerlinePid: powerline.pid!,
     serverPid: server.pid!,
     powerlinePort,

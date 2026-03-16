@@ -13,6 +13,7 @@ import { registerProjectCommands } from "./commands/project.js";
 import { registerTaskCommands } from "./commands/task.js";
 import { registerFindingCommands } from "./commands/findings.js";
 import { registerPersonaCommands } from "./commands/persona.js";
+import { registerPairCommand } from "./commands/pair.js";
 import { renderBanner, getHelpFooter } from "./banner.js";
 
 const esmRequire: NodeRequire = createRequire(import.meta.url);
@@ -52,6 +53,7 @@ registerProjectCommands(program);
 registerTaskCommands(program);
 registerFindingCommands(program);
 registerPersonaCommands(program);
+registerPairCommand(program);
 
 program.parseAsync(process.argv).catch((err: unknown) => {
   if (err instanceof ConnectError) {

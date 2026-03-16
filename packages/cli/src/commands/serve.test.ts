@@ -15,24 +15,12 @@ describe("registerServeCommand", () => {
     delete process.env.GRACKLE_PORT;
     delete process.env.GRACKLE_WEB_PORT;
     delete process.env.GRACKLE_HOST;
+    delete process.env.GRACKLE_NO_OPEN;
     vi.restoreAllMocks();
     vi.resetModules();
   });
 
-  it("UT-3: --host ::1 (IPv6 loopback) is accepted and sets GRACKLE_HOST", async () => {
-    const { registerServeCommand } = await import("./serve.js");
-    const program = new Command();
-    program.exitOverride();
-    registerServeCommand(program);
-
-    await program.parseAsync(["serve", "--host", "::1", "--port", "7434", "--web-port", "3000"], { from: "user" });
-
-    expect(process.env.GRACKLE_HOST).toBe("::1");
-    expect(process.env.GRACKLE_PORT).toBe("7434");
-    expect(process.env.GRACKLE_WEB_PORT).toBe("3000");
-  });
-
-  it("UT-3b: --host defaults to 127.0.0.1 when not specified", async () => {
+  it("defaults to 127.0.0.1 bind host", async () => {
     const { registerServeCommand } = await import("./serve.js");
     const program = new Command();
     program.exitOverride();
@@ -41,23 +29,42 @@ describe("registerServeCommand", () => {
     await program.parseAsync(["serve"], { from: "user" });
 
     expect(process.env.GRACKLE_HOST).toBe("127.0.0.1");
+    expect(process.env.GRACKLE_PORT).toBe("7434");
+    expect(process.env.GRACKLE_WEB_PORT).toBe("3000");
   });
 
-  it("UT-3c: rejects non-loopback --host to enforce security policy", async () => {
-    // Suppress console.error so the expected rejection message does not pollute test output
-    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
-
+  it("--allow-network sets GRACKLE_HOST to 0.0.0.0", async () => {
     const { registerServeCommand } = await import("./serve.js");
     const program = new Command();
     program.exitOverride();
     registerServeCommand(program);
 
-    // The real action should call process.exit(1) for non-loopback addresses
-    await expect(
-      program.parseAsync(["serve", "--host", "0.0.0.0"], { from: "user" }),
-    ).rejects.toThrow("process.exit called");
+    await program.parseAsync(["serve", "--allow-network"], { from: "user" });
 
-    expect(process.exit).toHaveBeenCalledWith(1); // eslint-disable-line @typescript-eslint/unbound-method
-    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("loopback address"));
+    expect(process.env.GRACKLE_HOST).toBe("0.0.0.0");
+  });
+
+  it("--no-open sets GRACKLE_NO_OPEN=1", async () => {
+    const { registerServeCommand } = await import("./serve.js");
+    const program = new Command();
+    program.exitOverride();
+    registerServeCommand(program);
+
+    await program.parseAsync(["serve", "--no-open"], { from: "user" });
+
+    expect(process.env.GRACKLE_NO_OPEN).toBe("1");
+  });
+
+  it("accepts custom port options", async () => {
+    const { registerServeCommand } = await import("./serve.js");
+    const program = new Command();
+    program.exitOverride();
+    registerServeCommand(program);
+
+    await program.parseAsync(["serve", "--port", "8000", "--web-port", "8001", "--mcp-port", "8002"], { from: "user" });
+
+    expect(process.env.GRACKLE_PORT).toBe("8000");
+    expect(process.env.GRACKLE_WEB_PORT).toBe("8001");
+    expect(process.env.GRACKLE_MCP_PORT).toBe("8002");
   });
 });

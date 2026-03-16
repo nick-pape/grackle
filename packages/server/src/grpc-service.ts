@@ -22,6 +22,7 @@ import {
   LOGS_DIR,
   DEFAULT_RUNTIME,
   DEFAULT_MODEL,
+  DEFAULT_WEB_PORT,
   MAX_TASK_DEPTH,
   SESSION_STATUS,
   TASK_STATUS,
@@ -36,6 +37,8 @@ import { logger } from "./logger.js";
 import { slugify } from "./utils/slugify.js";
 import { buildTaskSystemContext } from "./utils/system-context.js";
 import { importGitHubIssues as executeGitHubImport } from "./github-import.js";
+import { generatePairingCode } from "./pairing.js";
+import { detectLanIp } from "./utils/network.js";
 
 function envRowToProto(row: EnvironmentRow): grackle.Environment {
   return create(grackle.EnvironmentSchema, {
@@ -1245,6 +1248,25 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       );
 
       return create(grackle.ImportGitHubIssuesResponseSchema, result);
+    },
+
+    async generatePairingCode() {
+      const code = generatePairingCode();
+      if (!code) {
+        throw new ConnectError(
+          "Maximum active pairing codes reached. Wait for existing codes to expire.",
+          Code.ResourceExhausted,
+        );
+      }
+
+      const webPort = parseInt(process.env.GRACKLE_WEB_PORT || String(DEFAULT_WEB_PORT), 10);
+      const bindHost = process.env.GRACKLE_HOST || "127.0.0.1";
+      const WILDCARD_ADDRESSES: ReadonlySet<string> = new Set(["0.0.0.0", "::", "0:0:0:0:0:0:0:0"]);
+      const pairingHost = WILDCARD_ADDRESSES.has(bindHost)
+        ? (detectLanIp() || "localhost")
+        : (bindHost === "127.0.0.1" || bindHost === "::1" ? "localhost" : bindHost);
+      const url = `http://${pairingHost}:${webPort}/pair?code=${code}`;
+      return create(grackle.PairingCodeResponseSchema, { code, url });
     },
 
   });

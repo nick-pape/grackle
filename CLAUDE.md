@@ -75,7 +75,8 @@ Rush monorepo with 5 packages under `packages/`:
 - Validate file paths to prevent path traversal (token-writer, file operations)
 - Use `ConnectError` with proper gRPC status codes (e.g., `Code.Unauthenticated`)
 - Constant-time comparison for API key verification
-- Bind servers to loopback only (`127.0.0.1` or `::1`) — never `0.0.0.0` or `::`. The `--host` flag on `grackle serve` accepts both loopback addresses; the server validates this on startup.
+- Web UI uses pairing-code → session-cookie auth. The API key is never injected into HTML. gRPC uses Bearer token auth. WebSocket accepts either session cookie or `?token=` query param.
+- The server binds to `127.0.0.1` by default. Use `grackle serve --allow-network` to bind to `0.0.0.0` for LAN access (e.g., phone). Use `grackle pair` to generate new pairing codes.
 
 ### Dependencies
 - Cross-package deps use `"workspace:*"` (pnpm rewrites to real versions at publish time)
