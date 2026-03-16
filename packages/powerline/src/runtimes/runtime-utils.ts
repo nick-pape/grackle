@@ -278,6 +278,9 @@ export function resolveMcpServers(
         type: "http",
         url: brokerConfig.url,
         headers: { Authorization: `Bearer ${brokerConfig.token}` },
+        // tools: ["*"] is required by Copilot SDK (MCPServerConfigBase.tools is mandatory).
+        // Claude Agent SDK ignores unknown fields, Codex CLI flattens to --config.
+        tools: ["*"],
       };
     } else if (existsSync(GRACKLE_MCP_SCRIPT)) {
       // Legacy fallback: stdio stub (will be removed once broker is always available)
