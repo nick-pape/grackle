@@ -108,7 +108,7 @@ export function generatePairingCode(): string | undefined {
     expiresAt: now + PAIRING_CODE_TTL_MS,
   };
   activeCodes.set(code, record);
-  logger.info({ code, expiresIn: PAIRING_CODE_TTL_MS / 1000 }, "Generated pairing code");
+  logger.info({ expiresIn: PAIRING_CODE_TTL_MS / 1000 }, "Generated pairing code");
   return code;
 }
 
@@ -156,7 +156,7 @@ export function redeemPairingCode(code: string, remoteIp: string): boolean {
 
   // Burn the code — single use
   activeCodes.delete(normalised);
-  logger.info({ code: normalised }, "Pairing code redeemed");
+  logger.info("Pairing code redeemed");
   return true;
 }
 

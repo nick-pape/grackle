@@ -89,3 +89,6 @@ export const SETTINGS_APPEARANCE_URL: string = "/settings/appearance";
 
 /** URL for the settings about tab. */
 export const SETTINGS_ABOUT_URL: string = "/settings/about";
+
+/** URL for the device pairing page. */
+export const PAIR_PATH: string = "/pair";

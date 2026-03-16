@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { PAIR_PATH } from "../utils/navigation.js";
 
 export interface Environment {
   id: string;
@@ -999,14 +1000,14 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
         wsRef.current = undefined;
         setProjectCreating(false);
         setTaskStartingId(undefined);
+        clearTimeout(reconnectTimer);
 
         // If the server rejected us as unauthorized, redirect to the pairing page
         if (event.code === WS_CLOSE_UNAUTHORIZED) {
-          window.location.href = "/pair";
+          window.location.href = PAIR_PATH;
           return;
         }
 
-        clearTimeout(reconnectTimer);
         reconnectTimer = setTimeout(connect, WS_RECONNECT_DELAY_MS);
       };
 

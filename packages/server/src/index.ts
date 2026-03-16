@@ -19,12 +19,12 @@ import { join, dirname, extname, normalize, resolve, relative } from "node:path"
 import { createRequire } from "node:module";
 import { loadOrCreateApiKey, verifyApiKey } from "./api-key.js";
 import { createSession, validateSessionCookie } from "./session.js";
+import { startSessionCleanup, stopSessionCleanup } from "./session.js";
 import { generatePairingCode, redeemPairingCode, startPairingCleanup, stopPairingCleanup } from "./pairing.js";
 import { logger } from "./logger.js";
 import { exec } from "./utils/exec.js";
-import { networkInterfaces } from "node:os";
+import { detectLanIp } from "./utils/network.js";
 import { execSync } from "node:child_process";
-
 // Import db to ensure tables are created
 import "./db.js";
 
@@ -188,20 +188,9 @@ function createWebHandler(apiKey: string): (req: http.IncomingMessage, res: http
   };
 }
 
-/** Detect the first non-internal IPv4 address on the machine (LAN IP). */
-function detectLanIp(): string | undefined {
-  const interfaces = networkInterfaces();
-  for (const entries of Object.values(interfaces)) {
-    if (!entries) {
-      continue;
-    }
-    for (const entry of entries) {
-      if (entry.family === "IPv4" && !entry.internal) {
-        return entry.address;
-      }
-    }
-  }
-  return undefined;
+/** Whether a bind address is a wildcard (binds all interfaces). */
+function isWildcardAddress(host: string): boolean {
+  return host === "0.0.0.0" || host === "::" || host === "0:0:0:0:0:0:0:0";
 }
 
 function main(): void {
@@ -250,8 +239,9 @@ function main(): void {
     broadcastEnvironments();
   });
 
-  // Start pairing code cleanup timer
+  // Start periodic cleanup timers
   startPairingCleanup();
+  startSessionCleanup();
 
   // --- gRPC server (HTTP/2) ---
   const grpcPort = parseInt(process.env.GRACKLE_PORT || String(DEFAULT_SERVER_PORT), 10);
@@ -312,28 +302,32 @@ function main(): void {
     // Generate initial pairing code and print to terminal
     const code = generatePairingCode();
     if (code) {
-      const lanIp = detectLanIp() || "localhost";
-      const pairingUrl = `http://${lanIp}:${webPort}/pair?code=${code}`;
+      const pairingHost = isWildcardAddress(bindHost)
+        ? (detectLanIp() || "localhost")
+        : bindHost;
+      const pairingUrl = `http://${pairingHost}:${webPort}/pair?code=${code}`;
 
-      console.log("");
-      console.log("  Open in browser:");
-      console.log(`  ${pairingUrl}`);
-      console.log("");
+      process.stdout.write("\n");
+      process.stdout.write("  Open in browser:\n");
+      process.stdout.write(`  ${pairingUrl}\n`);
+      process.stdout.write("\n");
 
       // Print QR code (best-effort — missing dep is not fatal)
       try {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const qrcode = esmRequire("qrcode") as { toString(text: string, opts: { type: string; small: boolean }): Promise<string> };
         qrcode.toString(pairingUrl, { type: "terminal", small: true })
-          .then((qr: string) => { console.log(qr); })
+          .then((qr: string) => { process.stdout.write(qr); })
           .catch(() => { /* QR rendering failed — not critical */ });
       } catch {
         // qrcode not installed — skip QR
       }
 
-      console.log("  Pairing code expires in 5 minutes.");
-      console.log("  Run `grackle pair` to generate a new code.");
-      console.log("");
+      process.stdout.write("  Pairing code expires in 5 minutes.\n");
+      process.stdout.write("  Run `grackle pair` to generate a new code.\n");
+      process.stdout.write("\n");
+
+      logger.info({ url: pairingUrl }, "Pairing URL generated");
 
       // Auto-open browser (best-effort, suppress errors)
       if (process.env.GRACKLE_NO_OPEN !== "1") {
@@ -377,6 +371,7 @@ function main(): void {
   async function shutdown(): Promise<void> {
     logger.info("Shutting down...");
     stopPairingCleanup();
+    stopSessionCleanup();
     const forceExit = setTimeout(() => {
       logger.warn("Shutdown timed out, forcing exit");
       process.exit(1);

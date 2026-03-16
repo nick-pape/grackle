@@ -22,6 +22,7 @@ import {
   LOGS_DIR,
   DEFAULT_RUNTIME,
   DEFAULT_MODEL,
+  DEFAULT_WEB_PORT,
   MAX_TASK_DEPTH,
   SESSION_STATUS,
   TASK_STATUS,
@@ -37,6 +38,7 @@ import { slugify } from "./utils/slugify.js";
 import { buildTaskSystemContext } from "./utils/system-context.js";
 import { importGitHubIssues as executeGitHubImport } from "./github-import.js";
 import { generatePairingCode } from "./pairing.js";
+import { detectLanIp } from "./utils/network.js";
 
 function envRowToProto(row: EnvironmentRow): grackle.Environment {
   return create(grackle.EnvironmentSchema, {
@@ -1257,25 +1259,8 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         );
       }
 
-      const webPort = parseInt(process.env.GRACKLE_WEB_PORT || "3000", 10);
-      const { networkInterfaces } = await import("node:os");
-      const interfaces = networkInterfaces();
-      let lanIp = "localhost";
-      for (const entries of Object.values(interfaces)) {
-        if (!entries) {
-          continue;
-        }
-        for (const entry of entries) {
-          if (entry.family === "IPv4" && !entry.internal) {
-            lanIp = entry.address;
-            break;
-          }
-        }
-        if (lanIp !== "localhost") {
-          break;
-        }
-      }
-
+      const webPort = parseInt(process.env.GRACKLE_WEB_PORT || String(DEFAULT_WEB_PORT), 10);
+      const lanIp = detectLanIp() || "localhost";
       const url = `http://${lanIp}:${webPort}/pair?code=${code}`;
       return create(grackle.PairingCodeResponseSchema, { code, url });
     },

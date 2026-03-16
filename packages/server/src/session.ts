@@ -9,6 +9,9 @@ const SESSION_TTL_MS: number = 24 * 60 * 60 * 1000;
 /** Byte length of the random session identifier. */
 const SESSION_ID_BYTES: number = 32;
 
+/** Interval at which expired sessions are cleaned up. */
+const SESSION_CLEANUP_INTERVAL_MS: number = 60 * 1000;
+
 interface SessionRecord {
   createdAt: number;
   expiresAt: number;
@@ -16,6 +19,33 @@ interface SessionRecord {
 
 /** In-memory session store keyed by session ID. */
 const sessions: Map<string, SessionRecord> = new Map<string, SessionRecord>();
+
+let cleanupTimer: ReturnType<typeof setInterval> | undefined;
+
+/** Start the periodic session cleanup timer. Call once on server startup. */
+export function startSessionCleanup(): void {
+  if (cleanupTimer) {
+    return;
+  }
+  cleanupTimer = setInterval(() => {
+    const now = Date.now();
+    for (const [id, record] of sessions) {
+      if (now > record.expiresAt) {
+        sessions.delete(id);
+      }
+    }
+  }, SESSION_CLEANUP_INTERVAL_MS);
+  // Allow the process to exit even if the timer is still running
+  cleanupTimer.unref();
+}
+
+/** Stop the periodic session cleanup timer. */
+export function stopSessionCleanup(): void {
+  if (cleanupTimer) {
+    clearInterval(cleanupTimer);
+    cleanupTimer = undefined;
+  }
+}
 
 /**
  * Create an HMAC-SHA256 signature of a value using the given secret.

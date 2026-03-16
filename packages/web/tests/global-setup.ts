@@ -94,6 +94,8 @@ async function obtainSessionCookie(serverPort: number, webPort: number, apiKey: 
         GRACKLE_HOME: grackleHome,
         GRACKLE_URL: `http://127.0.0.1:${serverPort}`,
         GRACKLE_API_KEY: apiKey,
+        NO_COLOR: "1",
+        FORCE_COLOR: "0",
       },
       encoding: "utf8",
     },
