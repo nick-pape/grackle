@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.33.0",
+      "tag": "@grackle-ai/cli_v0.33.0",
+      "date": "Mon, 16 Mar 2026 18:27:18 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Replace stdio MCP stub with in-process HTTP MCP broker for unified agent-to-platform tool access"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.32.0",
       "tag": "@grackle-ai/cli_v0.32.0",
       "date": "Mon, 16 Mar 2026 14:30:53 GMT",

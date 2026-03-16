@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Mon, 16 Mar 2026 14:30:53 GMT and should not be manually modified.
+This log was last generated on Mon, 16 Mar 2026 18:27:18 GMT and should not be manually modified.
+
+## 0.33.0
+Mon, 16 Mar 2026 18:27:18 GMT
+
+### Minor changes
+
+- Replace stdio MCP stub with in-process HTTP MCP broker for unified agent-to-platform tool access
 
 ## 0.32.0
 Mon, 16 Mar 2026 14:30:53 GMT
