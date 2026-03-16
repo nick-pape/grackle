@@ -47,7 +47,7 @@ RUN npm install --omit=dev --legacy-peer-deps
 
 # Install runtime deps needed by copied @grackle-ai/* packages (e.g. fuse.js for common).
 # Must run BEFORE copying @grackle-ai/* dirs — npm install wipes unmanaged dirs.
-RUN npm install fuse.js --legacy-peer-deps --no-package-lock
+RUN npm install fuse.js --legacy-peer-deps --no-package-lock --no-save
 
 # Copy @grackle-ai/* AFTER all npm installs (npm cleans unmanaged dirs in node_modules)
 COPY packages/common/dist/ /app/node_modules/@grackle-ai/common/dist/

@@ -488,24 +488,22 @@ export async function* bootstrapPowerLine(
   //      not a credential provider concern — the captured token is unconditionally forwarded
   //      via extraEnv when found (and no local or adapter token is already present).
   let enrichedExtraEnv = extraEnv;
-  {
-    const hasLocalToken = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
-    const hasAdapterToken = extraEnv?.GITHUB_TOKEN || extraEnv?.GH_TOKEN;
-    if (!hasLocalToken && !hasAdapterToken) {
-      try {
-        const remoteToken = (
-          await executor.exec(
-            `(grep -m1 '^GITHUB_TOKEN=' /workspaces/.codespaces/shared/.env 2>/dev/null | cut -d= -f2- || grep -m1 '^GH_TOKEN=' /workspaces/.codespaces/shared/.env 2>/dev/null | cut -d= -f2- || printenv GITHUB_TOKEN 2>/dev/null || printenv GH_TOKEN 2>/dev/null || true)`,
-            { timeout: SSH_CONNECTIVITY_TIMEOUT_MS },
-          )
-        ).trim();
-        if (remoteToken) {
-          enrichedExtraEnv = { ...extraEnv, GITHUB_TOKEN: remoteToken };
-          logger.info("Captured GITHUB_TOKEN from remote host for agent git operations");
-        }
-      } catch {
-        logger.debug("Could not read GITHUB_TOKEN from remote host");
+  const hasLocalToken = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
+  const hasAdapterToken = extraEnv?.GITHUB_TOKEN || extraEnv?.GH_TOKEN;
+  if (!hasLocalToken && !hasAdapterToken) {
+    try {
+      const remoteToken = (
+        await executor.exec(
+          `(grep -m1 '^GITHUB_TOKEN=' /workspaces/.codespaces/shared/.env 2>/dev/null | cut -d= -f2- || grep -m1 '^GH_TOKEN=' /workspaces/.codespaces/shared/.env 2>/dev/null | cut -d= -f2- || printenv GITHUB_TOKEN 2>/dev/null || printenv GH_TOKEN 2>/dev/null || true)`,
+          { timeout: SSH_CONNECTIVITY_TIMEOUT_MS },
+        )
+      ).trim();
+      if (remoteToken) {
+        enrichedExtraEnv = { ...extraEnv, GITHUB_TOKEN: remoteToken };
+        logger.info("Captured GITHUB_TOKEN from remote host for agent git operations");
       }
+    } catch {
+      logger.debug("Could not read GITHUB_TOKEN from remote host");
     }
   }
 
@@ -557,7 +555,7 @@ export async function* bootstrapPowerLine(
     // Must run BEFORE copying @grackle-ai/* dirs — npm install wipes unmanaged dirs.
     yield { stage: "bootstrapping", message: "Installing @grackle-ai/common dependencies...", progress: 0.54 };
     await executor.exec(
-      `cd ${REMOTE_POWERLINE_DIRECTORY} && npm install fuse.js --legacy-peer-deps --no-package-lock`,
+      `cd ${REMOTE_POWERLINE_DIRECTORY} && npm install fuse.js --legacy-peer-deps --no-package-lock --no-save`,
       { timeout: BOOTSTRAP_NPM_INSTALL_TIMEOUT_MS },
     );
 
