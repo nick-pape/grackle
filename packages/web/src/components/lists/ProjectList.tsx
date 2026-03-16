@@ -3,7 +3,7 @@ import { useMatch } from "react-router";
 import { useGrackle } from "../../context/GrackleContext.js";
 import type { TaskData } from "../../hooks/useGrackleSocket.js";
 import { AnimatePresence, motion } from "motion/react";
-import { MAX_TASK_DEPTH, fuzzySearch, type MatchIndex } from "@grackle-ai/common";
+import { MAX_TASK_DEPTH, fuzzySearch, type FuzzyKey, type MatchIndex } from "@grackle-ai/common";
 import { Spinner } from "../display/index.js";
 import { taskUrl, projectUrl, newTaskUrl, useAppNavigate } from "../../utils/navigation.js";
 import styles from "./ProjectList.module.scss";
@@ -57,6 +57,11 @@ function HighlightedText({ text, indices }: { text: string; indices?: readonly M
   }
   return <>{parts}</>;
 }
+
+/** Fuzzy search keys for project matching. */
+const PROJECT_SEARCH_KEYS: FuzzyKey[] = [{ name: "name", weight: 2 }, { name: "description", weight: 1 }];
+/** Fuzzy search keys for task matching. */
+const TASK_SEARCH_KEYS: FuzzyKey[] = [{ name: "title", weight: 2 }, { name: "description", weight: 1 }];
 
 /** Base left-padding for task rows inside a project. */
 const TASK_BASE_INDENT_PX: number = 34;
@@ -526,17 +531,13 @@ export function ProjectList(): JSX.Element {
   // ── Search / filter state ──────────────────────────────────────
   const [searchQuery, setSearchQuery] = useState("");
 
-  /** Project and task keys for fuzzy matching. */
-  const PROJECT_KEYS = [{ name: "name" as const, weight: 2 }, { name: "description" as const, weight: 1 }];
-  const TASK_KEYS = [{ name: "title" as const, weight: 2 }, { name: "description" as const, weight: 1 }];
-
   /** Sets of matching IDs for filtering, recomputed when query or data changes. */
   const { directMatchTaskIds, treeMatchTaskIds, visibleProjectIds, matchedProjectIds, titleHighlights } = useMemo(() => {
     if (!searchQuery.trim()) {
       return { directMatchTaskIds: null, treeMatchTaskIds: null, visibleProjectIds: null, matchedProjectIds: null, titleHighlights: new Map<string, readonly MatchIndex[]>() };
     }
-    const projectResults = fuzzySearch(projects, searchQuery, PROJECT_KEYS);
-    const taskResults = fuzzySearch(tasks, searchQuery, TASK_KEYS);
+    const projectResults = fuzzySearch(projects, searchQuery, PROJECT_SEARCH_KEYS);
+    const taskResults = fuzzySearch(tasks, searchQuery, TASK_SEARCH_KEYS);
 
     const mProjectIds = new Set(projectResults.map((r) => r.item.id));
     const directIds = new Set(taskResults.map((r) => r.item.id));
@@ -569,6 +570,18 @@ export function ProjectList(): JSX.Element {
 
     return { directMatchTaskIds: directIds, treeMatchTaskIds: treeIds, visibleProjectIds: vProjectIds, matchedProjectIds: mProjectIds, titleHighlights: highlights };
   }, [searchQuery, projects, tasks]);
+
+  // Load tasks for projects that become visible due to search but haven't been loaded yet
+  useEffect(() => {
+    if (!visibleProjectIds) {
+      return;
+    }
+    for (const pid of visibleProjectIds) {
+      if (!expanded.has(pid)) {
+        loadTasks(pid);
+      }
+    }
+  }, [visibleProjectIds, expanded, loadTasks]);
 
   return (
     <div className={styles.container}>
