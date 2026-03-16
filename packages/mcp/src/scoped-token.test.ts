@@ -9,6 +9,7 @@ import {
 } from "./scoped-token.js";
 
 const SIGNING_SECRET = "a".repeat(64);
+const FLIP_LOWEST_BIT_MASK = 0x01;
 
 const CLAIMS = {
   sub: "task-1",
@@ -51,7 +52,9 @@ describe("scoped-token", () => {
   test("tampered signature returns undefined", () => {
     const token = createScopedToken(CLAIMS, SIGNING_SECRET);
     const [payload, signature] = token.split(".");
-    const tampered = signature.slice(0, -1) + (signature.endsWith("A") ? "B" : "A");
+    const signatureBytes = Buffer.from(signature, "base64url");
+    signatureBytes[0] ^= FLIP_LOWEST_BIT_MASK;
+    const tampered = signatureBytes.toString("base64url");
     const result = verifyScopedToken(`${payload}.${tampered}`, SIGNING_SECRET);
     expect(result).toBeUndefined();
   });
