@@ -51,7 +51,7 @@ export function authenticateMcpRequest(req: http.IncomingMessage, apiKey: string
       // Use the socket's local port (server-controlled) rather than the Host header (client-controlled)
       // to prevent token replay via Host spoofing.
       if (oauthClaims.aud) {
-        const localPort = req.socket?.localPort;
+        const localPort = req.socket.localPort;
         const expectedAudience = localPort ? `http://127.0.0.1:${localPort}` : undefined;
         if (!expectedAudience || oauthClaims.aud !== expectedAudience) {
           return undefined;
