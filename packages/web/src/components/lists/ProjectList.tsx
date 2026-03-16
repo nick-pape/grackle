@@ -574,18 +574,19 @@ export function ProjectList(): JSX.Element {
   // Track which projects have had tasks requested (superset of expanded — includes search-triggered loads)
   const requestedProjectsRef = useRef<Set<string>>(new Set());
 
-  // Load tasks for projects that become visible due to search but haven't been loaded yet
+  // When the user starts searching, eagerly load tasks for all projects so
+  // the full dataset is searchable (not just previously-expanded projects).
   useEffect(() => {
-    if (!visibleProjectIds) {
+    if (!searchQuery.trim()) {
       return;
     }
-    for (const pid of visibleProjectIds) {
-      if (!expanded.has(pid) && !requestedProjectsRef.current.has(pid)) {
-        requestedProjectsRef.current.add(pid);
-        loadTasks(pid);
+    for (const p of projects) {
+      if (!expanded.has(p.id) && !requestedProjectsRef.current.has(p.id)) {
+        requestedProjectsRef.current.add(p.id);
+        loadTasks(p.id);
       }
     }
-  }, [visibleProjectIds, expanded, loadTasks]);
+  }, [searchQuery, projects, expanded, loadTasks]);
 
   return (
     <div className={styles.container}>

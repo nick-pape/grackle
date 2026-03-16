@@ -1,5 +1,5 @@
 import { test, expect } from "./fixtures.js";
-import { createProject, createTask } from "./helpers.js";
+import { createProject, createTask, createTaskViaWs, getProjectId } from "./helpers.js";
 
 test.describe("Sidebar search filter", () => {
   // Clean up localStorage after each test to prevent state leakage
@@ -100,12 +100,10 @@ test.describe("Sidebar search filter", () => {
     await searchInput.fill("login");
 
     // The task should be visible with "login" highlighted in a <mark> element
-    const taskRow = page.locator('[data-task-id]', { hasText: "Fix login bug" });
-    await expect(taskRow).toBeVisible({ timeout: 5_000 });
-
-    const mark = taskRow.locator("mark");
-    await expect(mark).toBeVisible();
-    await expect(mark).toHaveText("login");
+    // Use a combined locator to avoid race conditions from eager task loading
+    const mark = page.locator('[data-task-id] mark');
+    await expect(mark.first()).toBeVisible({ timeout: 10_000 });
+    await expect(mark.first()).toHaveText("login");
   });
 
   test("project match shows all its tasks", async ({ appPage }) => {
@@ -121,5 +119,23 @@ test.describe("Sidebar search filter", () => {
     // Project matches by name, so all tasks should be shown
     await expect(page.getByText("task-aaa").first()).toBeVisible({ timeout: 5_000 });
     await expect(page.getByText("task-bbb").first()).toBeVisible({ timeout: 5_000 });
+  });
+
+  test("search finds tasks in unexpanded projects", async ({ appPage }) => {
+    const page = appPage;
+
+    // Create a project and add a task via WS (without expanding the project in the UI)
+    await createProject(page, "collapsed-proj");
+    const projectId = await getProjectId(page, "collapsed-proj");
+    await createTaskViaWs(page, projectId, "hidden-needle");
+
+    // The project is collapsed — "hidden-needle" should NOT be visible yet
+    await expect(page.getByText("hidden-needle")).not.toBeVisible({ timeout: 2_000 });
+
+    // Search for the task — should trigger eager load and find it
+    const searchInput = page.getByTestId("sidebar-search");
+    await searchInput.fill("hidden-needle");
+
+    await expect(page.getByText("hidden-needle").first()).toBeVisible({ timeout: 10_000 });
   });
 });
