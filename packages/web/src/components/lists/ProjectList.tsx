@@ -3,7 +3,7 @@ import { useMatch } from "react-router";
 import { useGrackle } from "../../context/GrackleContext.js";
 import type { TaskData } from "../../hooks/useGrackleSocket.js";
 import { AnimatePresence, motion } from "motion/react";
-import { MAX_TASK_DEPTH } from "@grackle-ai/common";
+import { MAX_TASK_DEPTH, fuzzySearch, type FuzzyKey, type MatchIndex } from "@grackle-ai/common";
 import { Spinner } from "../display/index.js";
 import { taskUrl, projectUrl, newTaskUrl, useAppNavigate } from "../../utils/navigation.js";
 import styles from "./ProjectList.module.scss";
@@ -17,6 +17,51 @@ const TASK_STATUS_STYLES: Record<string, { color: string; icon: string }> = {
   failed: { color: "var(--accent-red)", icon: "\u2717" },
   blocked: { color: "var(--accent-yellow)", icon: "\u29B8" },
 };
+
+/** Merge overlapping or adjacent [start, end] ranges into non-overlapping ranges. */
+function mergeRanges(ranges: readonly MatchIndex[]): MatchIndex[] {
+  if (ranges.length === 0) {
+    return [];
+  }
+  const sorted = [...ranges].sort((a, b) => a[0] - b[0]);
+  const merged: [number, number][] = [[sorted[0][0], sorted[0][1]]];
+  for (let i = 1; i < sorted.length; i++) {
+    const prev = merged[merged.length - 1];
+    const [start, end] = sorted[i];
+    if (start <= prev[1] + 1) {
+      prev[1] = Math.max(prev[1], end);
+    } else {
+      merged.push([start, end]);
+    }
+  }
+  return merged;
+}
+
+/** Render text with highlighted match ranges. Unmatched portions are plain, matched portions are bold. */
+function HighlightedText({ text, indices }: { text: string; indices?: readonly MatchIndex[] }): JSX.Element {
+  if (!indices || indices.length === 0) {
+    return <>{text}</>;
+  }
+  const merged = mergeRanges(indices);
+  const parts: JSX.Element[] = [];
+  let cursor = 0;
+  for (const [start, end] of merged) {
+    if (start > cursor) {
+      parts.push(<span key={`p${cursor}`}>{text.slice(cursor, start)}</span>);
+    }
+    parts.push(<mark key={`m${start}`} className={styles.searchHighlight}>{text.slice(start, end + 1)}</mark>);
+    cursor = end + 1;
+  }
+  if (cursor < text.length) {
+    parts.push(<span key={`p${cursor}`}>{text.slice(cursor)}</span>);
+  }
+  return <>{parts}</>;
+}
+
+/** Fuzzy search keys for project matching. */
+const PROJECT_SEARCH_KEYS: FuzzyKey[] = [{ name: "name", weight: 2 }, { name: "description", weight: 1 }];
+/** Fuzzy search keys for task matching. */
+const TASK_SEARCH_KEYS: FuzzyKey[] = [{ name: "title", weight: 2 }, { name: "description", weight: 1 }];
 
 /** Base left-padding for task rows inside a project. */
 const TASK_BASE_INDENT_PX: number = 34;
@@ -136,6 +181,7 @@ interface StatusGroupAccordionProps {
   onToggle: () => void;
   selectedTaskId: string | undefined;
   navigate: ReturnType<typeof useAppNavigate>;
+  titleHighlights: Map<string, readonly MatchIndex[]>;
 }
 
 /** Collapsible accordion for a status group in grouped view. */
@@ -145,6 +191,7 @@ function StatusGroupAccordion({
   onToggle,
   selectedTaskId,
   navigate,
+  titleHighlights,
 }: StatusGroupAccordionProps): JSX.Element {
   return (
     <div data-testid={`status-group-${group.status}`}>
@@ -196,7 +243,9 @@ function StatusGroupAccordion({
                   <span className={styles.taskStatusIcon} style={{ color: statusStyle.color }}>
                     {statusStyle.icon}
                   </span>
-                  <span className={styles.taskTitle} title={task.title}>{task.title}</span>
+                  <span className={styles.taskTitle} title={task.title}>
+                    <HighlightedText text={task.title} indices={titleHighlights.get(task.id)} />
+                  </span>
                 </div>
               );
             })}
@@ -242,6 +291,7 @@ interface TaskTreeNodeProps {
   navigate: ReturnType<typeof useAppNavigate>;
   projectId: string;
   taskStatusById: Map<string, string>;
+  titleHighlights: Map<string, readonly MatchIndex[]>;
 }
 
 /** Renders a single task tree node with optional children. */
@@ -254,6 +304,7 @@ function TaskTreeNode({
   navigate,
   projectId,
   taskStatusById,
+  titleHighlights,
 }: TaskTreeNodeProps): JSX.Element {
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- status may not be in the map
   const statusStyle = TASK_STATUS_STYLES[node.status] || TASK_STATUS_STYLES.not_started;
@@ -294,7 +345,9 @@ function TaskTreeNode({
         <span className={styles.taskStatusIcon} style={{ color: statusStyle.color }}>
           {statusStyle.icon}
         </span>
-        <span className={styles.taskTitle} title={node.title}>{node.title}</span>
+        <span className={styles.taskTitle} title={node.title}>
+                  <HighlightedText text={node.title} indices={titleHighlights.get(node.id)} />
+                </span>
         {hasChildren && (
           <span className={styles.childCountBadge}>
             {node.children.filter(c => c.status === "complete").length}/{node.children.length}
@@ -343,6 +396,7 @@ function TaskTreeNode({
                 navigate={navigate}
                 projectId={projectId}
                 taskStatusById={taskStatusById}
+                titleHighlights={titleHighlights}
               />
             ))}
           </motion.div>
@@ -474,6 +528,66 @@ export function ProjectList(): JSX.Element {
     setShowCreateForm(false);
   };
 
+  // ── Search / filter state ──────────────────────────────────────
+  const [searchQuery, setSearchQuery] = useState("");
+
+  /** Sets of matching IDs for filtering, recomputed when query or data changes. */
+  const { directMatchTaskIds, treeMatchTaskIds, visibleProjectIds, matchedProjectIds, titleHighlights } = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return { directMatchTaskIds: null, treeMatchTaskIds: null, visibleProjectIds: null, matchedProjectIds: null, titleHighlights: new Map<string, readonly MatchIndex[]>() };
+    }
+    const projectResults = fuzzySearch(projects, searchQuery, PROJECT_SEARCH_KEYS);
+    const taskResults = fuzzySearch(tasks, searchQuery, TASK_SEARCH_KEYS);
+
+    const mProjectIds = new Set(projectResults.map((r) => r.item.id));
+    const directIds = new Set(taskResults.map((r) => r.item.id));
+
+    // Build highlight map: task ID → match indices for the "title" field
+    const highlights = new Map<string, readonly MatchIndex[]>();
+    for (const r of taskResults) {
+      const titleMatch = r.matches.find((m) => m.key === "title");
+      if (titleMatch) {
+        highlights.set(r.item.id, titleMatch.indices);
+      }
+    }
+
+    // A project is visible if it matches directly or any of its tasks match
+    const vProjectIds = new Set(mProjectIds);
+    for (const r of taskResults) {
+      vProjectIds.add(r.item.projectId);
+    }
+
+    // For tree view, also include ancestor tasks to preserve tree structure
+    const treeIds = new Set(directIds);
+    const taskById = new Map(tasks.map((t) => [t.id, t]));
+    for (const taskId of [...directIds]) {
+      let current = taskById.get(taskId);
+      while (current?.parentTaskId) {
+        treeIds.add(current.parentTaskId);
+        current = taskById.get(current.parentTaskId);
+      }
+    }
+
+    return { directMatchTaskIds: directIds, treeMatchTaskIds: treeIds, visibleProjectIds: vProjectIds, matchedProjectIds: mProjectIds, titleHighlights: highlights };
+  }, [searchQuery, projects, tasks]);
+
+  // Track which projects have had tasks requested (superset of expanded — includes search-triggered loads)
+  const requestedProjectsRef = useRef<Set<string>>(new Set());
+
+  // When the user starts searching, eagerly load tasks for all projects so
+  // the full dataset is searchable (not just previously-expanded projects).
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      return;
+    }
+    for (const p of projects) {
+      if (!expanded.has(p.id) && !requestedProjectsRef.current.has(p.id)) {
+        requestedProjectsRef.current.add(p.id);
+        loadTasks(p.id);
+      }
+    }
+  }, [searchQuery, projects, expanded, loadTasks]);
+
   return (
     <div className={styles.container}>
       <div className={styles.header}>
@@ -499,6 +613,18 @@ export function ProjectList(): JSX.Element {
           </button>
         </div>
       </div>
+
+      {projects.length > 0 && (
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Filter..."
+          aria-label="Filter projects and tasks"
+          className={styles.searchInput}
+          data-testid="sidebar-search"
+        />
+      )}
 
       {showCreateForm && (
         <div className={styles.createForm}>
@@ -545,8 +671,22 @@ export function ProjectList(): JSX.Element {
       )}
 
       {projects.map((project) => {
-        const isExpanded = expanded.has(project.id);
-        const projectTasks = tasks.filter((t) => t.projectId === project.id);
+        // Skip projects that don't match the search filter
+        if (visibleProjectIds && !visibleProjectIds.has(project.id)) {
+          return null;
+        }
+
+        const isSearching = directMatchTaskIds !== null;
+        const isExpanded = expanded.has(project.id) || isSearching;
+        const allProjectTasks = tasks.filter((t) => t.projectId === project.id);
+        // When a project matches directly, show all its tasks; otherwise filter to matching tasks only
+        const projectMatchedDirectly = matchedProjectIds?.has(project.id) ?? false;
+        const activeMatchIds = isSearching && !projectMatchedDirectly
+          ? (groupByStatus ? directMatchTaskIds : treeMatchTaskIds)
+          : null;
+        const projectTasks = activeMatchIds
+          ? allProjectTasks.filter((t) => activeMatchIds.has(t.id))
+          : allProjectTasks;
         const isSelected = selectedProjectId === project.id;
         const tree = isExpanded && !groupByStatus ? buildTaskTree(projectTasks) : [];
 
@@ -572,7 +712,7 @@ export function ProjectList(): JSX.Element {
               </span>
               <span className={styles.projectName} title={project.name}>{project.name}</span>
               <span className={styles.taskCount}>
-                {projectTasks.length > 0 && `${projectTasks.filter((t) => t.status === "complete").length}/${projectTasks.length}`}
+                {allProjectTasks.length > 0 && `${allProjectTasks.filter((t) => t.status === "complete").length}/${allProjectTasks.length}`}
               </span>
               <button
                 onClick={(e) => {
@@ -604,6 +744,7 @@ export function ProjectList(): JSX.Element {
                         onToggle={() => toggleStatusGroup(project.id, group.status)}
                         selectedTaskId={selectedTaskId}
                         navigate={navigate}
+                        titleHighlights={titleHighlights}
                       />
                     ))
                   ) : (
@@ -618,6 +759,7 @@ export function ProjectList(): JSX.Element {
                         navigate={navigate}
                         projectId={project.id}
                         taskStatusById={taskStatusById}
+                        titleHighlights={titleHighlights}
                       />
                     ))
                   )}

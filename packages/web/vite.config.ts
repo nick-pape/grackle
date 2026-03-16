@@ -10,6 +10,7 @@ export default defineConfig({
     __APP_VERSION__: JSON.stringify(pkg.version as string),
   },
   build: {
+    chunkSizeWarningLimit: 600,
     rollupOptions: {
       output: {
         manualChunks: {

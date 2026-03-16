@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Add fuzzy search utility (fuse.js wrapper) for client-side and server-side search",
+      "type": "minor",
+      "packageName": "@grackle-ai/common"
+    }
+  ],
+  "packageName": "@grackle-ai/common",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}

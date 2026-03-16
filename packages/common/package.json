@@ -16,17 +16,20 @@
   "files": ["dist/"],
   "scripts": {
     "build": "heft build --clean",
-    "clean": "heft clean"
+    "clean": "heft clean",
+    "test": "vitest run"
   },
   "dependencies": {
     "@bufbuild/protobuf": "^2.5.0",
-    "@connectrpc/connect": "^2.0.0"
+    "@connectrpc/connect": "^2.0.0",
+    "fuse.js": "^7.0.0"
   },
   "devDependencies": {
     "@bufbuild/buf": "^1.50.0",
     "@bufbuild/protoc-gen-es": "^2.5.0",
     "@grackle-ai/heft-buf-plugin": "workspace:*",
     "@grackle-ai/heft-rig": "workspace:*",
-    "@rushstack/heft": "1.2.4"
+    "@rushstack/heft": "1.2.4",
+    "vitest": "^3.1.1"
   }
 }
