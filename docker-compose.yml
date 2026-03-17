@@ -10,11 +10,13 @@ services:
       - "7435:7435"   # MCP
       - "7433:7433"   # Local PowerLine
     volumes:
-      - grackle-data:/grackle-home/.grackle                       # Persistent DB + API key
-      - /var/run/docker.sock:/var/run/docker.sock                 # Docker-out-of-Docker
-      - "${GH_HOST_CONFIG_DIR:-./.gh-placeholder}:/home/node/.config/gh:ro"  # gh auth (set GH_HOST_CONFIG_DIR)
+      - grackle-data:/grackle-home/.grackle                              # Persistent DB + API key
+      - /var/run/docker.sock:/var/run/docker.sock                        # Docker-out-of-Docker
+      - "${USERPROFILE}/.claude:/home/node/.claude:ro"                   # Claude auth + config
+      - "${USERPROFILE}/.copilot:/home/node/.copilot:ro"                 # Copilot auth
+      - "${USERPROFILE}/.codex:/home/node/.codex:ro"                     # Codex auth
     environment:
-      - GH_CONFIG_DIR=/home/node/.config/gh
+      - GH_CONFIG_DIR=/grackle-home/.grackle/gh-config
       - GRACKLE_HOME=/grackle-home
     restart: unless-stopped
 

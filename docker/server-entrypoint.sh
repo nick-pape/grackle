@@ -23,4 +23,5 @@ if [ -S "$DOCKER_SOCK" ]; then
 fi
 
 # Drop from root to the node user and exec the CMD.
+# HOME is set to /home/node in the Dockerfile so gosu inherits it correctly.
 exec gosu node "$@"

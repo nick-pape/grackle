@@ -35,12 +35,21 @@ RUN apt-get update && apt-get install -y --no-install-recommends gosu \
 ARG GRACKLE_CLI_VERSION=latest
 RUN npm install -g @grackle-ai/cli@${GRACKLE_CLI_VERSION}
 
+# ── Agent runtimes ────────────────────────────────────────────────
+RUN npm install -g @anthropic-ai/claude-code@latest
+RUN npm install -g @openai/codex@latest
+RUN npm install -g @github/copilot@latest
+RUN npm install -g @github/copilot-sdk@latest
+
 # ── Remove build toolchain (only needed for native addon compilation) ──
 RUN apt-get purge -y --auto-remove python3 make g++ \
     && rm -rf /var/lib/apt/lists/*
 
-# ── Data directory (non-default to avoid collision with ~/.grackle) ──
+# ── Run as node user with correct HOME ───────────────────────────
+ENV HOME=/home/node
 ENV GRACKLE_HOME=/grackle-home
+
+# ── Data directory (non-default to avoid collision with ~/.grackle) ──
 RUN mkdir -p /grackle-home/.grackle && chown -R node:node /grackle-home
 VOLUME /grackle-home/.grackle
 
