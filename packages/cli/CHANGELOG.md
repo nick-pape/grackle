@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Tue, 17 Mar 2026 03:20:19 GMT and should not be manually modified.
+This log was last generated on Tue, 17 Mar 2026 03:26:49 GMT and should not be manually modified.
+
+## 0.35.1
+Tue, 17 Mar 2026 03:26:49 GMT
+
+### Patches
+
+- Add GetSession RPC for direct session lookup by ID
 
 ## 0.35.0
 Tue, 17 Mar 2026 03:20:19 GMT

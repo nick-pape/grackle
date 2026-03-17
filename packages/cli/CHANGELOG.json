@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.35.1",
+      "tag": "@grackle-ai/cli_v0.35.1",
+      "date": "Tue, 17 Mar 2026 03:26:49 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Add GetSession RPC for direct session lookup by ID"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.35.0",
       "tag": "@grackle-ai/cli_v0.35.0",
       "date": "Tue, 17 Mar 2026 03:20:19 GMT",

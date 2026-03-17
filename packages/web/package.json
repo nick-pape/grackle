@@ -1,6 +1,6 @@
 {
   "name": "@grackle-ai/web",
-  "version": "0.35.0",
+  "version": "0.35.1",
   "description": "React web UI for the Grackle multi-agent coordination platform",
   "license": "MIT",
   "repository": {
