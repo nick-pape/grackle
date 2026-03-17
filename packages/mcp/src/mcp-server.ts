@@ -104,7 +104,7 @@ function createMcpServerInstance(grpcClient: Client<typeof grackle.Grackle>, aut
         rawArgs.parentTaskId = authContext.taskId;
       }
       // Enforce project scoping: verify task belongs to the caller's project
-      if ((name === "task_show" || name === "task_complete") && rawArgs.taskId) {
+      if (name === "task_show" && rawArgs.taskId) {
         try {
           const task = await grpcClient.getTask({ id: rawArgs.taskId as string });
           if (task.projectId !== authContext.projectId) {

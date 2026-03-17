@@ -31,7 +31,6 @@ function buildRegistry(): ToolRegistry {
   registry.register(makeTool("task_create"));
   registry.register(makeTool("task_list"));
   registry.register(makeTool("task_show"));
-  registry.register(makeTool("task_complete"));
   registry.register(makeTool("env_list"));
   registry.register(makeTool("session_list"));
   return registry;
@@ -53,7 +52,7 @@ describe("SCOPED_TOOLS", () => {
   it("contains the expected scoped tools", () => {
     expect([...SCOPED_TOOLS].sort()).toEqual([
       "finding_list", "finding_post",
-      "task_complete", "task_create", "task_list", "task_show",
+      "task_create", "task_list", "task_show",
     ]);
   });
 });
@@ -97,7 +96,7 @@ describe("listToolsForAuth", () => {
     const names = tools.map((t) => t.name).sort();
     expect(names).toEqual([
       "env_list", "finding_list", "finding_post", "session_list",
-      "task_complete", "task_create", "task_list", "task_show",
+      "task_create", "task_list", "task_show",
     ]);
   });
 
@@ -107,7 +106,7 @@ describe("listToolsForAuth", () => {
     const names = tools.map((t) => t.name).sort();
     expect(names).toEqual([
       "finding_list", "finding_post",
-      "task_complete", "task_create", "task_list", "task_show",
+      "task_create", "task_list", "task_show",
     ]);
   });
 
