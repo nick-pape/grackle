@@ -3,7 +3,8 @@ set -euo pipefail
 
 # Ensure the Grackle data directory exists and is owned by the node user.
 # Only chown the top-level dir (not -R) to avoid slow traversal on large volumes.
-GRACKLE_DATA="${GRACKLE_HOME:=/grackle-home}/.grackle"
+export GRACKLE_HOME="${GRACKLE_HOME:-/grackle-home}"
+GRACKLE_DATA="${GRACKLE_HOME}/.grackle"
 mkdir -p "$GRACKLE_DATA"
 chown node:node "$GRACKLE_DATA"
 
