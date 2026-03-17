@@ -32,6 +32,7 @@ export interface UseProjectsResult {
       repoUrl?: string;
       defaultEnvironmentId?: string;
       worktreeBasePath?: string;
+      useWorktrees?: boolean;
     },
   ) => void;
   /** Handle an incoming WebSocket message. Returns `true` if handled. */
@@ -118,6 +119,7 @@ export function useProjects(send: SendFunction): UseProjectsResult {
         repoUrl?: string;
         defaultEnvironmentId?: string;
         worktreeBasePath?: string;
+        useWorktrees?: boolean;
       },
     ) => {
       send({

@@ -86,6 +86,7 @@ export interface UseGrackleSocketResult {
       repoUrl?: string;
       defaultEnvironmentId?: string;
       worktreeBasePath?: string;
+      useWorktrees?: boolean;
     },
   ) => void;
   loadTasks: (projectId: string) => void;

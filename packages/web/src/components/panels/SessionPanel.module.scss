@@ -868,6 +868,23 @@
   gap: var(--space-xs);
 }
 
+// Worktree toggle (checkbox + label)
+.worktreeToggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+
+  input[type="checkbox"] {
+    accent-color: var(--accent-green);
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+  }
+}
+
 // Edit wrapper that supports wrapping hint/error below the input
 .editFieldWrapper {
   display: flex;

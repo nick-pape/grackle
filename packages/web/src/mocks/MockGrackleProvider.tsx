@@ -332,6 +332,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
         defaultEnvironmentId: defaultEnvironmentId || "",
         status: "active",
         worktreeBasePath: "",
+        useWorktrees: true,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
@@ -815,7 +816,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       clearEvents,
       createProject,
       archiveProject,
-      updateProject: (projectId: string, fields: { name?: string; description?: string; repoUrl?: string; defaultEnvironmentId?: string }) => {
+      updateProject: (projectId: string, fields: { name?: string; description?: string; repoUrl?: string; defaultEnvironmentId?: string; worktreeBasePath?: string; useWorktrees?: boolean }) => {
         // eslint-disable-next-line no-console
         console.log("[MockGrackle] updateProject", { projectId, ...fields });
         setProjects((prev) =>
@@ -829,6 +830,8 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
               ...(fields.description !== undefined ? { description: fields.description } : {}),
               ...(fields.repoUrl !== undefined ? { repoUrl: fields.repoUrl } : {}),
               ...(fields.defaultEnvironmentId !== undefined ? { defaultEnvironmentId: fields.defaultEnvironmentId } : {}),
+              ...(fields.worktreeBasePath !== undefined ? { worktreeBasePath: fields.worktreeBasePath } : {}),
+              ...(fields.useWorktrees !== undefined ? { useWorktrees: fields.useWorktrees } : {}),
               updatedAt: new Date().toISOString(),
             };
           }),
