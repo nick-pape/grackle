@@ -39,6 +39,7 @@ export interface Project {
   defaultEnvironmentId: string;
   status: string;
   worktreeBasePath: string;
+  useWorktrees: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -411,6 +412,7 @@ export interface UseGrackleSocketResult {
       repoUrl?: string;
       defaultEnvironmentId?: string;
       worktreeBasePath?: string;
+      useWorktrees?: boolean;
     },
   ) => void;
   loadTasks: (projectId: string) => void;
@@ -1122,6 +1124,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
         repoUrl?: string;
         defaultEnvironmentId?: string;
         worktreeBasePath?: string;
+        useWorktrees?: boolean;
       },
     ) => {
       send({

@@ -332,6 +332,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
         defaultEnvironmentId: defaultEnvironmentId || "",
         status: "active",
         worktreeBasePath: "",
+        useWorktrees: true,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };

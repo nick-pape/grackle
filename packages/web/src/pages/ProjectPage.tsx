@@ -442,9 +442,28 @@ export function ProjectPage(): JSX.Element {
             </div>
           </div>
 
-          {/* Worktree Base Path */}
+          {/* Worktree Isolation */}
           <div className={styles.metaRow}>
-            <span className={styles.metaLabel}>Worktree Base</span>
+            <span className={styles.metaLabel}>Worktrees</span>
+            <div className={styles.metaValue}>
+              <label className={styles.worktreeToggle} data-testid="worktree-toggle">
+                <input
+                  type="checkbox"
+                  checked={project?.useWorktrees ?? true}
+                  onChange={(e) => {
+                    if (project) {
+                      updateProject(project.id, { useWorktrees: e.target.checked });
+                    }
+                  }}
+                />
+                <span>Enable worktree isolation</span>
+              </label>
+            </div>
+          </div>
+
+          {/* Working Directory */}
+          <div className={styles.metaRow}>
+            <span className={styles.metaLabel}>Working Dir</span>
             <div className={styles.metaValue}>
               {editingField === "worktreeBasePath" ? (
                 <div className={styles.editFieldWrapper}>
@@ -465,7 +484,7 @@ export function ProjectPage(): JSX.Element {
                     }}
                     onKeyDown={(e) => handleKeyDown(e, "worktreeBasePath")}
                     placeholder="/workspaces/my-repo"
-                    aria-label="Worktree base path"
+                    aria-label="Working directory"
                     data-testid="edit-worktree-base-path-input"
                   />
                   {isDirty("worktreeBasePath") && <span className={styles.unsavedDot} title="Unsaved changes" />}
@@ -477,8 +496,8 @@ export function ProjectPage(): JSX.Element {
                   type="button"
                   className={styles.metaValueClickable}
                   onClick={() => startEdit("worktreeBasePath", project?.worktreeBasePath || "")}
-                  title="Click to edit worktree base path"
-                  aria-label="Edit worktree base path"
+                  title="Click to edit working directory"
+                  aria-label="Edit working directory"
                   data-testid="edit-worktree-base-path-button"
                 >
                   {project?.worktreeBasePath ? (
