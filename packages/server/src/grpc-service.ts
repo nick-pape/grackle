@@ -266,6 +266,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         req.adapterConfig,
         runtime,
       );
+      broadcastEnvironments();
       const row = envRegistry.getEnvironment(id);
       return envRowToProto(row!);
     },
@@ -287,6 +288,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       // Delete sessions referencing this environment (FK constraint)
       sessionStore.deleteByEnvironment(req.id);
       envRegistry.removeEnvironment(req.id);
+      broadcastEnvironments();
       broadcast({
         type: "environment_removed",
         payload: { environmentId: req.id },

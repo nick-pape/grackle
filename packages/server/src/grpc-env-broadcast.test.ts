@@ -273,4 +273,37 @@ describe("gRPC environment broadcast", () => {
       expect(broadcastEnvironments).toHaveBeenCalledTimes(1);
     });
   });
+
+  describe("addEnvironment", () => {
+    it("broadcasts after adding an environment", async () => {
+      vi.mocked(envRegistry.getEnvironment).mockReturnValue(FAKE_ENV);
+
+      await handlers.addEnvironment({
+        displayName: "Test Env",
+        adapterType: "local",
+        adapterConfig: "{}",
+        defaultRuntime: "claude-code",
+      });
+
+      expect(envRegistry.addEnvironment).toHaveBeenCalled();
+      expect(broadcastEnvironments).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("removeEnvironment", () => {
+    it("broadcasts after removing an environment", async () => {
+      vi.mocked(envRegistry.getEnvironment).mockReturnValue(FAKE_ENV);
+      const fakeAdapter = {
+        disconnect: vi.fn(),
+        stop: vi.fn(),
+        destroy: vi.fn(),
+      };
+      vi.mocked(adapterManager.getAdapter).mockReturnValue(fakeAdapter as never);
+
+      await handlers.removeEnvironment({ id: "test-env" });
+
+      expect(envRegistry.removeEnvironment).toHaveBeenCalledWith("test-env");
+      expect(broadcastEnvironments).toHaveBeenCalledTimes(1);
+    });
+  });
 });
