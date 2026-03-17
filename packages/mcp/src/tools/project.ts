@@ -11,7 +11,7 @@ export const projectTools: ToolDefinition[] = [
     name: "project_list",
     group: "project",
     description:
-      "List all Grackle projects with their names, descriptions, repositories, and status.",
+      "List all Grackle projects with their names, descriptions, repositories, worktree settings, and status.",
     inputSchema: z.object({}),
     rpcMethod: "listProjects",
     mutating: false,
@@ -149,7 +149,7 @@ export const projectTools: ToolDefinition[] = [
     name: "project_update",
     group: "project",
     description:
-      "Update an existing Grackle project's name, description, repository URL, or default environment.",
+      "Update an existing Grackle project's name, description, repository URL, default environment, or worktree settings.",
     inputSchema: z.object({
       projectId: z.string().describe("Unique identifier of the project to update"),
       name: z

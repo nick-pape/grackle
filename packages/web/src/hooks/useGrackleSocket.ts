@@ -185,6 +185,7 @@ function isProject(v: unknown): v is Project {
     typeof v.repoUrl === "string" &&
     typeof v.defaultEnvironmentId === "string" &&
     typeof v.status === "string" &&
+    typeof v.worktreeBasePath === "string" &&
     typeof v.useWorktrees === "boolean" &&
     typeof v.createdAt === "string" &&
     typeof v.updatedAt === "string"
