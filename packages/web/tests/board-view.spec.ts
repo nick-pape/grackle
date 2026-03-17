@@ -151,10 +151,13 @@ test.describe("Board View", () => {
     const page = appPage;
 
     await createProject(page, "board-children");
-    await createTask(page, "board-children", "parent-task");
-
     const projectId = await getProjectId(page, "board-children");
-    const parentId = await getTaskId(page, projectId, "parent-task");
+    const parentTask = await createTaskViaWs(page, projectId, "parent-task", { canDecompose: true });
+    const parentId = parentTask.id as string;
+
+    // Click into the project so we're on the project page
+    await page.getByText("board-children").first().click();
+    await page.getByText("parent-task").first().waitFor({ timeout: 5_000 });
 
     // Create child tasks
     await createTaskViaWs(page, projectId, "child-1", { parentTaskId: parentId });

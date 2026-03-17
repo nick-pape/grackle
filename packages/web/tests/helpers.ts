@@ -143,6 +143,7 @@ export async function createTask(
   projectName: string,
   title: string,
   envName?: string,
+  options?: { canDecompose?: boolean },
 ): Promise<void> {
   if (envName) {
     // Environment must be set at creation via WS (UI no longer has env field).
@@ -159,7 +160,7 @@ export async function createTask(
 
     // Create the task via WS while the form is visible.
     const projectId = await getProjectId(page, projectName);
-    await createTaskViaWs(page, projectId, title, { environmentId: envName });
+    await createTaskViaWs(page, projectId, title, { environmentId: envName, canDecompose: options?.canDecompose });
 
     // Cancel the form — this navigates to project view which auto-expands
     // the project in the sidebar via useEffect in ProjectList.
