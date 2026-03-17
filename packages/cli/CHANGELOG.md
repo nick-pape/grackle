@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Mon, 16 Mar 2026 18:27:18 GMT and should not be manually modified.
+This log was last generated on Tue, 17 Mar 2026 00:33:11 GMT and should not be manually modified.
+
+## 0.34.0
+Tue, 17 Mar 2026 00:33:11 GMT
+
+### Minor changes
+
+- Add OAuth authentication flow for MCP clients (browser-based authorization with PKCE)
 
 ## 0.33.0
 Mon, 16 Mar 2026 18:27:18 GMT

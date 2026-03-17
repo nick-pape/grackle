@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.34.0",
+      "tag": "@grackle-ai/cli_v0.34.0",
+      "date": "Tue, 17 Mar 2026 00:33:11 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Add OAuth authentication flow for MCP clients (browser-based authorization with PKCE)"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.33.0",
       "tag": "@grackle-ai/cli_v0.33.0",
       "date": "Mon, 16 Mar 2026 18:27:18 GMT",
