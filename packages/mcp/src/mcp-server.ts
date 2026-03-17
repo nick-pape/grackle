@@ -46,6 +46,8 @@ export interface McpServerOptions {
   grpcPort: number;
   /** API key used for authenticating both inbound MCP and outbound gRPC requests. */
   apiKey: string;
+  /** Base URL of the OAuth authorization server (web server). When set, enables OAuth discovery. */
+  authorizationServerUrl?: string;
 }
 
 /** Create a ConnectRPC client pointing at the co-located Grackle gRPC server. */
@@ -152,7 +154,7 @@ const REVOCATION_PRUNE_INTERVAL_MS: number = 60 * 60 * 1000;
  * and Server instance, tracked by session ID.
  */
 export function createMcpServer(options: McpServerOptions): http.Server {
-  const { bindHost, grpcPort, apiKey } = options;
+  const { bindHost, grpcPort, apiKey, authorizationServerUrl } = options;
   const grpcClient = createGrpcClient(bindHost, grpcPort, apiKey);
 
   /** Map of active session transports, keyed by session ID. */
@@ -169,6 +171,19 @@ export function createMcpServer(options: McpServerOptions): http.Server {
   const httpServer = http.createServer(async (req, res) => {
     const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
 
+    // Derive resource URL from request Host header (dialable by the client)
+    const requestResourceUrl = `http://${req.headers.host || url.host}`;
+
+    // OAuth Protected Resource Metadata (RFC 9728) — no auth required
+    if (authorizationServerUrl && url.pathname === "/.well-known/oauth-protected-resource/mcp") {
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({
+        resource: requestResourceUrl,
+        authorization_servers: [authorizationServerUrl],
+      }));
+      return;
+    }
+
     // Only serve the /mcp endpoint
     if (url.pathname !== "/mcp") {
       res.writeHead(404, { "Content-Type": "application/json" });
@@ -179,7 +194,12 @@ export function createMcpServer(options: McpServerOptions): http.Server {
     // Auth check on every request
     const authContext = authenticateMcpRequest(req, apiKey);
     if (!authContext) {
-      res.writeHead(401, { "Content-Type": "application/json" });
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (authorizationServerUrl) {
+        headers["WWW-Authenticate"] =
+          `Bearer resource_metadata="${requestResourceUrl}/.well-known/oauth-protected-resource/mcp"`;
+      }
+      res.writeHead(401, headers);
       res.end(JSON.stringify({ error: "Unauthorized" }));
       return;
     }
