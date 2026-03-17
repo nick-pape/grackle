@@ -839,7 +839,9 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         [...req.dependsOn],
         slugify(project.name),
         req.parentTaskId,
-        req.canDecompose,
+        // Default to false (no decomposition rights) unless explicitly granted.
+        // Orchestrator/root processes that need fork() must opt in.
+        req.canDecompose ?? false,
       );
       const row = taskStore.getTask(id);
       broadcast({
