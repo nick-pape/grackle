@@ -634,17 +634,28 @@ async function main(): Promise<void> {
     }
 
     // Spawn the PowerLine child process
+    let stoppingGracefully: boolean = false;
     localPowerLineHandle = await startLocalPowerLine({
       port: powerlinePort,
       host: plBindHost,
       token: localEnv.powerlineToken,
       onExit: (code, signal) => {
+        if (stoppingGracefully) {
+          return;
+        }
         logger.error({ code, signal }, "Local PowerLine exited unexpectedly");
         envRegistry.updateEnvironmentStatus("local", "disconnected");
         broadcastEnvironments();
         localPowerLineHandle = undefined;
       },
     });
+
+    // Mark graceful shutdown so onExit doesn't log spurious errors
+    const originalStop = localPowerLineHandle.stop;
+    localPowerLineHandle.stop = async (): Promise<void> => {
+      stoppingGracefully = true;
+      await originalStop();
+    };
 
     // Auto-provision: connect the local adapter
     const localAdapter = adapterManager.getAdapter("local")!;
@@ -672,6 +683,15 @@ async function main(): Promise<void> {
 
     logger.info({ port: powerlinePort }, "Local environment auto-connected");
   } catch (err) {
+    // Clean up the PowerLine child if it started but provisioning/connection failed
+    const failedHandle: LocalPowerLineHandle | undefined = localPowerLineHandle;
+    if (failedHandle) {
+      localPowerLineHandle = undefined;
+      await failedHandle.stop();
+    }
+    envRegistry.updateEnvironmentStatus("local", "error");
+    broadcastEnvironments();
+
     logger.error(
       { err, port: powerlinePort },
       "Failed to start local PowerLine — local environment will not be available. Is port %d in use?",
