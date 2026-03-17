@@ -107,6 +107,10 @@ const RUNTIME_PROVIDERS: Record<RuntimeName, (keyof CredentialProviderConfig)[]>
   "copilot": ["copilot", "github"],
   "codex": ["codex", "github"],
   "stub": [],
+  // ACP runtimes (experimental) — auth via ACP authenticate method, not credential files
+  "claude-code-acp": ["claude", "github"],
+  "codex-acp": ["codex", "github"],
+  "copilot-acp": ["copilot", "github"],
 };
 
 // ─── Token Bundle Builder ──────────────────────────────────

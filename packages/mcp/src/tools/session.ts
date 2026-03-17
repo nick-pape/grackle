@@ -28,7 +28,7 @@ export const sessionTools: ToolDefinition[] = [
       prompt: z.string().describe("The prompt or task description for the agent"),
       model: z.string().optional().describe("The AI model to use (e.g. claude-sonnet-4-20250514)"),
       maxTurns: z.number().int().positive().optional().describe("Maximum number of turns the agent may take"),
-      runtime: z.string().optional().describe("The runtime to use (e.g. claude-code)"),
+      runtime: z.string().optional().describe("The runtime to use (e.g. claude-code). ACP runtimes (claude-code-acp, codex-acp, copilot-acp) are experimental."),
       personaId: z.string().optional().describe("Persona ID to configure agent behavior"),
       worktreeBasePath: z.string().optional().describe("Base path for worktrees (e.g. /workspaces/my-repo)"),
     }),

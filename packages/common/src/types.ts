@@ -53,7 +53,8 @@ export type EventType = AgentEventType | "user_input";
 export type AdapterType = "docker" | "local" | "codespace" | "ssh";
 
 /** Supported agent runtime implementations. */
-export type RuntimeName = "claude-code" | "copilot" | "codex" | "stub";
+export type RuntimeName = "claude-code" | "copilot" | "codex" | "stub"
+  | "claude-code-acp" | "codex-acp" | "copilot-acp";
 
 /** How a token is delivered to the PowerLine: as an env var or written to a file. */
 export type TokenType = "env_var" | "file";
