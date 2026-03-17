@@ -7,7 +7,7 @@ import type { SessionRow } from "./schema.js";
 import * as envRegistry from "./env-registry.js";
 import * as sessionStore from "./session-store.js";
 import * as adapterManager from "./adapter-manager.js";
-import { reconnectOrProvision } from "./adapters/adapter.js";
+import { reconnectOrProvision } from "@grackle-ai/adapter-sdk";
 import * as streamHub from "./stream-hub.js";
 import * as tokenBroker from "./token-broker.js";
 import * as projectStore from "./project-store.js";
