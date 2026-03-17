@@ -1,7 +1,7 @@
 {
   "changes": [
     {
-      "comment": "Auto-parent subtasks from agent context; expose task_list, task_show, task_complete to scoped agents",
+      "comment": "Auto-parent subtasks from agent context; expose task_list and task_show to scoped agents",
       "type": "minor",
       "packageName": "@grackle-ai/cli"
     }
