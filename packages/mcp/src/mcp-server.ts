@@ -103,6 +103,20 @@ function createMcpServerInstance(grpcClient: Client<typeof grackle.Grackle>, aut
       if (name === "task_create" && authContext.taskId) {
         rawArgs.parentTaskId = authContext.taskId;
       }
+      // Enforce project scoping: verify task belongs to the caller's project
+      if ((name === "task_show" || name === "task_complete") && rawArgs.taskId) {
+        try {
+          const task = await grpcClient.getTask({ id: rawArgs.taskId as string });
+          if (task.projectId !== authContext.projectId) {
+            return {
+              content: [{ type: "text", text: JSON.stringify({ error: "Task belongs to a different project", code: "PERMISSION_DENIED" }, null, 2) }],
+              isError: true,
+            };
+          }
+        } catch (error) {
+          return grpcErrorToToolResult(error) as CallToolResult;
+        }
+      }
     }
 
     // Validate inputs against Zod schema
