@@ -22,9 +22,15 @@ export function registerLogCommands(program: Command): void {
         return;
       }
 
-      // Get session info for log path
-      const sessions = await client.listSessions({ environmentId: "", status: "" });
-      const session = sessions.sessions.find((s) => s.id === sessionId || s.id.startsWith(sessionId));
+      // Get session info for log path — try exact match first, then prefix match
+      let session;
+      try {
+        session = await client.getSession({ id: sessionId });
+      } catch {
+        // Exact match failed — fall back to prefix match for short IDs
+        const all = await client.listSessions({ environmentId: "", status: "" });
+        session = all.sessions.find((s) => s.id.startsWith(sessionId));
+      }
 
       if (!session) {
         console.error(`Session not found: ${sessionId}`);

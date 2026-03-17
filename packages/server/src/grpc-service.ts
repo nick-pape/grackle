@@ -602,6 +602,14 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       });
     },
 
+    async getSession(req: grackle.SessionId) {
+      const row = sessionStore.getSession(req.id);
+      if (!row) {
+        throw new ConnectError(`Session not found: ${req.id}`, Code.NotFound);
+      }
+      return sessionRowToProto(row);
+    },
+
     async *streamSession(req: grackle.SessionId) {
       const stream = streamHub.createStream(req.id);
       try {
