@@ -12,7 +12,7 @@ services:
     volumes:
       - grackle-data:/grackle-home/.grackle                       # Persistent DB + API key
       - /var/run/docker.sock:/var/run/docker.sock                 # Docker-out-of-Docker
-      - "${APPDATA}/GitHub CLI:/home/node/.config/gh:ro"          # gh auth (Windows)
+      - "${GH_HOST_CONFIG_DIR:-./.gh-placeholder}:/home/node/.config/gh:ro"  # gh auth (set GH_HOST_CONFIG_DIR)
     environment:
       - GH_CONFIG_DIR=/home/node/.config/gh
       - GRACKLE_HOME=/grackle-home
