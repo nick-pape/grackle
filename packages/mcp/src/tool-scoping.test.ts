@@ -29,6 +29,9 @@ function buildRegistry(): ToolRegistry {
   registry.register(makeTool("finding_post"));
   registry.register(makeTool("finding_list"));
   registry.register(makeTool("task_create"));
+  registry.register(makeTool("task_list"));
+  registry.register(makeTool("task_show"));
+  registry.register(makeTool("task_complete"));
   registry.register(makeTool("env_list"));
   registry.register(makeTool("session_list"));
   return registry;
@@ -47,8 +50,11 @@ const SCOPED_AUTH: AuthContext = {
 // ─── SCOPED_TOOLS constant ──────────────────────────────────
 
 describe("SCOPED_TOOLS", () => {
-  it("contains exactly finding_post, finding_list, task_create", () => {
-    expect([...SCOPED_TOOLS].sort()).toEqual(["finding_list", "finding_post", "task_create"]);
+  it("contains the expected scoped tools", () => {
+    expect([...SCOPED_TOOLS].sort()).toEqual([
+      "finding_list", "finding_post",
+      "task_complete", "task_create", "task_list", "task_show",
+    ]);
   });
 });
 
@@ -89,14 +95,20 @@ describe("listToolsForAuth", () => {
     const registry = buildRegistry();
     const tools = listToolsForAuth(registry, API_KEY_AUTH);
     const names = tools.map((t) => t.name).sort();
-    expect(names).toEqual(["env_list", "finding_list", "finding_post", "session_list", "task_create"]);
+    expect(names).toEqual([
+      "env_list", "finding_list", "finding_post", "session_list",
+      "task_complete", "task_create", "task_list", "task_show",
+    ]);
   });
 
   it("returns only scoped tools for scoped auth", () => {
     const registry = buildRegistry();
     const tools = listToolsForAuth(registry, SCOPED_AUTH);
     const names = tools.map((t) => t.name).sort();
-    expect(names).toEqual(["finding_list", "finding_post", "task_create"]);
+    expect(names).toEqual([
+      "finding_list", "finding_post",
+      "task_complete", "task_create", "task_list", "task_show",
+    ]);
   });
 
   it("does not include env_list or session_list for scoped auth", () => {

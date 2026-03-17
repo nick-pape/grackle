@@ -95,10 +95,14 @@ function createMcpServerInstance(grpcClient: Client<typeof grackle.Grackle>, aut
       };
     }
 
-    // Inject projectId from scoped token so callers don't need to provide it
+    // Inject context from scoped token so callers don't need to provide it
     const rawArgs = (args ?? {}) as Record<string, unknown>;
     if (authContext.type === "scoped") {
       rawArgs.projectId = authContext.projectId;
+      // Auto-parent subtasks: when an agent creates a task, parent it to the agent's own task
+      if (name === "task_create" && authContext.taskId) {
+        rawArgs.parentTaskId = authContext.taskId;
+      }
     }
 
     // Validate inputs against Zod schema
