@@ -2,6 +2,7 @@ import { describe, test, expect, beforeEach } from "vitest";
 import type http from "node:http";
 import { authenticateMcpRequest } from "./auth-middleware.js";
 import { createScopedToken, revokeTask, clearRevocations } from "./scoped-token.js";
+import { createOAuthAccessToken } from "./oauth-token.js";
 
 const API_KEY = "a".repeat(64);
 
@@ -12,11 +13,18 @@ const CLAIMS = {
   sid: "session-1",
 };
 
+const OAUTH_CLIENT_ID = "test-oauth-client";
+const OAUTH_PORT = 7435;
+const OAUTH_RESOURCE = `http://127.0.0.1:${OAUTH_PORT}`;
+
 /** Helper to create a mock HTTP request with the given Authorization header value. */
-function mockRequest(authorization?: string): http.IncomingMessage {
-  return {
-    headers: authorization !== undefined ? { authorization } : {},
-  } as http.IncomingMessage;
+function mockRequest(authorization?: string, localPort?: number): http.IncomingMessage {
+  const headers: Record<string, string> = {};
+  if (authorization !== undefined) {
+    headers.authorization = authorization;
+  }
+  const socket = localPort !== undefined ? { localPort } : {};
+  return { headers, socket } as http.IncomingMessage;
 }
 
 describe("authenticateMcpRequest", () => {
@@ -101,6 +109,68 @@ describe("authenticateMcpRequest", () => {
       projectId: "project-1",
       personaId: "persona-1",
       taskSessionId: "session-1",
+    });
+  });
+
+  /** Valid OAuth access token returns oauth context. */
+  test("valid OAuth token returns oauth context", () => {
+    const token = createOAuthAccessToken(OAUTH_CLIENT_ID, OAUTH_RESOURCE, API_KEY);
+    const req = mockRequest(`Bearer ${token}`, OAUTH_PORT);
+    const result = authenticateMcpRequest(req, API_KEY);
+    expect(result).toEqual({ type: "oauth", clientId: OAUTH_CLIENT_ID });
+  });
+
+  /** Expired OAuth access token returns undefined. */
+  test("expired OAuth token returns undefined", () => {
+    const token = createOAuthAccessToken(OAUTH_CLIENT_ID, OAUTH_RESOURCE, API_KEY, 1);
+    const req = mockRequest(`Bearer ${token}`, OAUTH_PORT);
+    const result = authenticateMcpRequest(req, API_KEY);
+    expect(result).toBeUndefined();
+  });
+
+  /** OAuth token with wrong audience returns undefined. */
+  test("OAuth token with wrong audience returns undefined", () => {
+    const token = createOAuthAccessToken(OAUTH_CLIENT_ID, "http://other-host:9999", API_KEY);
+    const req = mockRequest(`Bearer ${token}`, OAUTH_PORT);
+    const result = authenticateMcpRequest(req, API_KEY);
+    expect(result).toBeUndefined();
+  });
+
+  /** OAuth token with trailing-slash audience matches (clients may include it). */
+  test("OAuth token with trailing-slash audience is accepted", () => {
+    const token = createOAuthAccessToken(OAUTH_CLIENT_ID, OAUTH_RESOURCE + "/", API_KEY);
+    const req = mockRequest(`Bearer ${token}`, OAUTH_PORT);
+    const result = authenticateMcpRequest(req, API_KEY);
+    expect(result).toEqual({ type: "oauth", clientId: OAUTH_CLIENT_ID });
+  });
+
+  /** OAuth token with empty audience is accepted (client omitted resource indicator). */
+  test("OAuth token with empty audience is accepted", () => {
+    const token = createOAuthAccessToken(OAUTH_CLIENT_ID, "", API_KEY);
+    const req = mockRequest(`Bearer ${token}`, OAUTH_PORT);
+    const result = authenticateMcpRequest(req, API_KEY);
+    expect(result).toEqual({ type: "oauth", clientId: OAUTH_CLIENT_ID });
+  });
+
+  /** All three auth types work independently. */
+  test("api key, scoped, and oauth tokens work independently", () => {
+    const apiKeyReq = mockRequest(`Bearer ${API_KEY}`);
+    const scopedToken = createScopedToken(CLAIMS, API_KEY);
+    const scopedReq = mockRequest(`Bearer ${scopedToken}`);
+    const oauthToken = createOAuthAccessToken(OAUTH_CLIENT_ID, OAUTH_RESOURCE, API_KEY);
+    const oauthReq = mockRequest(`Bearer ${oauthToken}`, OAUTH_PORT);
+
+    expect(authenticateMcpRequest(apiKeyReq, API_KEY)).toEqual({ type: "api-key" });
+    expect(authenticateMcpRequest(scopedReq, API_KEY)).toEqual({
+      type: "scoped",
+      taskId: "task-1",
+      projectId: "project-1",
+      personaId: "persona-1",
+      taskSessionId: "session-1",
+    });
+    expect(authenticateMcpRequest(oauthReq, API_KEY)).toEqual({
+      type: "oauth",
+      clientId: OAUTH_CLIENT_ID,
     });
   });
 });

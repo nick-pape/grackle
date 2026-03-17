@@ -6,6 +6,9 @@ export const SCOPED_TOOLS: ReadonlySet<string> = new Set([
   "finding_post", "finding_list", "task_create",
 ]);
 
+/** Auth types that receive full tool access. */
+const FULL_ACCESS_TYPES: ReadonlySet<AuthContext["type"]> = new Set(["api-key", "oauth"]);
+
 /** Resolve a tool by name with scope checks. */
 export function resolveToolForAuth(
   registry: ToolRegistry,
@@ -16,7 +19,7 @@ export function resolveToolForAuth(
   if (!tool) {
     return undefined;
   }
-  if (authContext.type === "scoped" && !SCOPED_TOOLS.has(tool.name)) {
+  if (!FULL_ACCESS_TYPES.has(authContext.type) && !SCOPED_TOOLS.has(tool.name)) {
     return undefined;
   }
   return tool;
@@ -24,7 +27,7 @@ export function resolveToolForAuth(
 
 /** List tools visible to the given auth context. */
 export function listToolsForAuth(registry: ToolRegistry, authContext: AuthContext): ToolDefinition[] {
-  if (authContext.type === "api-key") {
+  if (FULL_ACCESS_TYPES.has(authContext.type)) {
     return registry.list();
   }
   return registry.list((t) => SCOPED_TOOLS.has(t.name));
