@@ -50,7 +50,7 @@ export const envTools: ToolDefinition[] = [
       displayName: z.string().describe("Human-readable name for the environment"),
       adapterType: z.string().describe("Adapter type (e.g. 'ssh', 'codespace', 'local')"),
       adapterConfig: z
-        .record(z.unknown())
+        .record(z.string(), z.unknown())
         .optional()
         .describe("Adapter-specific configuration as a JSON object"),
       runtime: z.string().optional().describe("Default runtime for the environment"),

@@ -587,7 +587,7 @@ export async function* bootstrapPowerLine(
       { timeout: REMOTE_EXEC_DEFAULT_TIMEOUT_MS },
     );
     await executor.exec(
-      `cd ${REMOTE_POWERLINE_DIRECTORY} && npm install --omit=dev --legacy-peer-deps --registry=https://registry.npmjs.org`,
+      `cd ${REMOTE_POWERLINE_DIRECTORY} && npm install --omit=dev --registry=https://registry.npmjs.org`,
       { timeout: BOOTSTRAP_NPM_INSTALL_TIMEOUT_MS },
     );
 
@@ -611,7 +611,7 @@ export async function* bootstrapPowerLine(
 
     yield { stage: "bootstrapping", message: `Installing @grackle-ai/powerline@${version}...`, progress: 0.25 };
     await executor.exec(
-      `cd ${REMOTE_POWERLINE_DIRECTORY} && npm init -y && npm install @grackle-ai/powerline@${version} --omit=dev --legacy-peer-deps --registry=https://registry.npmjs.org`,
+      `cd ${REMOTE_POWERLINE_DIRECTORY} && npm init -y && npm install @grackle-ai/powerline@${version} --omit=dev --registry=https://registry.npmjs.org`,
       { timeout: BOOTSTRAP_NPM_INSTALL_TIMEOUT_MS },
     );
   }

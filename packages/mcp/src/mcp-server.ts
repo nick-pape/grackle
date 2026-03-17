@@ -79,7 +79,7 @@ function createMcpServerInstance(grpcClient: Client<typeof grackle.Grackle>, aut
       tools: tools.map((t) => ({
         name: t.name,
         description: t.description,
-        inputSchema: zodToJsonSchema(t.inputSchema, { target: "jsonSchema7" }),
+        inputSchema: zodToJsonSchema(t.inputSchema as unknown as Parameters<typeof zodToJsonSchema>[0], { target: "jsonSchema7" }),
         annotations: t.annotations,
       })),
     };
