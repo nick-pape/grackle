@@ -2,6 +2,9 @@
 export type { AdapterLogger } from "./logger.js";
 export { defaultLogger } from "./logger.js";
 
+// ─── Proto Types ──────────────────────────────────────────────
+export { powerline } from "@grackle-ai/common";
+
 // ─── Core Adapter Types ─────────────────────────────────────
 export type {
   PowerLineClient,

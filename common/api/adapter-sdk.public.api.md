@@ -24,6 +24,18 @@ export interface AdapterLogger {
 }
 
 // @public
+type AgentEvent = Message<"grackle.powerline.AgentEvent"> & {
+    sessionId: string;
+    type: string;
+    timestamp: string;
+    content: string;
+    raw: string;
+};
+
+// @public
+const AgentEventSchema: GenMessage<AgentEvent>;
+
+// @public
 export interface BaseEnvironmentConfig {
     host?: string;
     port?: number;
@@ -60,6 +72,33 @@ export function createPowerLineClient(baseUrl: string, powerlineToken: string): 
 export const defaultLogger: AdapterLogger;
 
 // @public
+type DiffRequest = Message<"grackle.powerline.DiffRequest"> & {
+    branch: string;
+    baseBranch: string;
+    worktreeBasePath: string;
+};
+
+// @public
+const DiffRequestSchema: GenMessage<DiffRequest>;
+
+// @public
+type DiffResponse = Message<"grackle.powerline.DiffResponse"> & {
+    diff: string;
+    changedFiles: string[];
+    additions: number;
+    deletions: number;
+};
+
+// @public
+const DiffResponseSchema: GenMessage<DiffResponse>;
+
+// @public
+type Empty = Message<"grackle.powerline.Empty"> & {};
+
+// @public
+const EmptySchema: GenMessage<Empty>;
+
+// @public
 export interface EnvironmentAdapter {
     connect(environmentId: string, config: Record<string, unknown>, powerlineToken: string): Promise<PowerLineConnection>;
     destroy(environmentId: string, config: Record<string, unknown>): Promise<void>;
@@ -73,6 +112,21 @@ export interface EnvironmentAdapter {
 }
 
 // @public
+type EnvironmentInfo = Message<"grackle.powerline.EnvironmentInfo"> & {
+    hostname: string;
+    os: string;
+    nodeVersion: string;
+    availableRuntimes: string[];
+    uptimeSeconds: bigint;
+};
+
+// @public
+const EnvironmentInfoSchema: GenMessage<EnvironmentInfo>;
+
+// @public
+const file_grackle_powerline_powerline: GenFile;
+
+// @public
 export function findFreePort(): Promise<number>;
 
 // @public
@@ -82,10 +136,116 @@ export function getPackageVersion(): string;
 export function getTunnel(environmentId: string): TunnelState | undefined;
 
 // @public
+const GracklePowerLine: GenService<{
+    getInfo: {
+        methodKind: "unary";
+        input: typeof EmptySchema;
+        output: typeof EnvironmentInfoSchema;
+    };
+    spawn: {
+        methodKind: "server_streaming";
+        input: typeof SpawnRequestSchema;
+        output: typeof AgentEventSchema;
+    };
+    resume: {
+        methodKind: "server_streaming";
+        input: typeof ResumeRequestSchema;
+        output: typeof AgentEventSchema;
+    };
+    sendInput: {
+        methodKind: "unary";
+        input: typeof InputMessageSchema;
+        output: typeof EmptySchema;
+    };
+    kill: {
+        methodKind: "unary";
+        input: typeof SessionIdSchema;
+        output: typeof EmptySchema;
+    };
+    listSessions: {
+        methodKind: "unary";
+        input: typeof EmptySchema;
+        output: typeof SessionListSchema;
+    };
+    ping: {
+        methodKind: "unary";
+        input: typeof EmptySchema;
+        output: typeof PongSchema;
+    };
+    pushTokens: {
+        methodKind: "unary";
+        input: typeof TokenBundleSchema;
+        output: typeof EmptySchema;
+    };
+    cleanupWorktree: {
+        methodKind: "unary";
+        input: typeof WorktreeCleanupRequestSchema;
+        output: typeof EmptySchema;
+    };
+    getDiff: {
+        methodKind: "unary";
+        input: typeof DiffRequestSchema;
+        output: typeof DiffResponseSchema;
+    };
+}>;
+
+// @public
+type InputMessage = Message<"grackle.powerline.InputMessage"> & {
+    sessionId: string;
+    text: string;
+};
+
+// @public
+const InputMessageSchema: GenMessage<InputMessage>;
+
+// @public
 export function isDevMode(): boolean;
 
-// Warning: (ae-forgotten-export) The symbol "powerline" needs to be exported by the entry point index.d.ts
-//
+// @public
+type Pong = Message<"grackle.powerline.Pong"> & {
+    timestamp: bigint;
+};
+
+// @public
+const PongSchema: GenMessage<Pong>;
+
+declare namespace powerline {
+    export {
+        file_grackle_powerline_powerline,
+        Empty,
+        EmptySchema,
+        SessionId,
+        SessionIdSchema,
+        EnvironmentInfo,
+        EnvironmentInfoSchema,
+        Pong,
+        PongSchema,
+        SpawnRequest,
+        SpawnRequestSchema,
+        ResumeRequest,
+        ResumeRequestSchema,
+        InputMessage,
+        InputMessageSchema,
+        AgentEvent,
+        AgentEventSchema,
+        SessionInfo,
+        SessionInfoSchema,
+        SessionList,
+        SessionListSchema,
+        TokenItem,
+        TokenItemSchema,
+        TokenBundle,
+        TokenBundleSchema,
+        WorktreeCleanupRequest,
+        WorktreeCleanupRequestSchema,
+        DiffRequest,
+        DiffRequestSchema,
+        DiffResponse,
+        DiffResponseSchema,
+        GracklePowerLine
+    }
+}
+
 // @public
 export type PowerLineClient = Client<typeof powerline.GracklePowerLine>;
 
@@ -168,10 +328,66 @@ export interface RemoteTunnel {
 }
 
 // @public
+type ResumeRequest = Message<"grackle.powerline.ResumeRequest"> & {
+    sessionId: string;
+    runtimeSessionId: string;
+    runtime: string;
+};
+
+// @public
+const ResumeRequestSchema: GenMessage<ResumeRequest>;
+
+// @public
+type SessionId = Message<"grackle.powerline.SessionId"> & {
+    id: string;
+};
+
+// @public
+const SessionIdSchema: GenMessage<SessionId>;
+
+// @public
+type SessionInfo = Message<"grackle.powerline.SessionInfo"> & {
+    sessionId: string;
+    runtime: string;
+    status: string;
+};
+
+// @public
+const SessionInfoSchema: GenMessage<SessionInfo>;
+
+// @public
+type SessionList = Message<"grackle.powerline.SessionList"> & {
+    sessions: SessionInfo[];
+};
+
+// @public
+const SessionListSchema: GenMessage<SessionList>;
+
+// @public
 export function shellEscape(value: string): string;
 
 // @public
 export function sleep(ms: number): Promise<void>;
+
+// @public
+type SpawnRequest = Message<"grackle.powerline.SpawnRequest"> & {
+    sessionId: string;
+    runtime: string;
+    prompt: string;
+    model: string;
+    maxTurns: number;
+    branch: string;
+    worktreeBasePath: string;
+    systemContext: string;
+    projectId: string;
+    taskId: string;
+    mcpServersJson: string;
+    mcpUrl: string;
+    mcpToken: string;
+};
+
+// @public
+const SpawnRequestSchema: GenMessage<SpawnRequest>;
 
 // @public
 export const SSH_CONNECTIVITY_TIMEOUT_MS: number;
@@ -192,6 +408,26 @@ export interface StartRemotePowerLineOptions {
 }
 
 // @public
+type TokenBundle = Message<"grackle.powerline.TokenBundle"> & {
+    tokens: TokenItem[];
+};
+
+// @public
+const TokenBundleSchema: GenMessage<TokenBundle>;
+
+// @public
+type TokenItem = Message<"grackle.powerline.TokenItem"> & {
+    name: string;
+    type: string;
+    envVar: string;
+    filePath: string;
+    value: string;
+};
+
+// @public
+const TokenItemSchema: GenMessage<TokenItem>;
+
+// @public
 export interface TunnelState {
     reverseTunnel?: RemoteTunnel;
     // (undocumented)
@@ -200,6 +436,15 @@ export interface TunnelState {
 
 // @public
 export function waitForLocalPort(port: number): Promise<void>;
+
+// @public
+type WorktreeCleanupRequest = Message<"grackle.powerline.WorktreeCleanupRequest"> & {
+    branch: string;
+    worktreeBasePath: string;
+};
+
+// @public
+const WorktreeCleanupRequestSchema: GenMessage<WorktreeCleanupRequest>;
 
 // @public
 export function writeRemoteEnvFile(executor: RemoteExecutor, powerlineToken: string, extraEnv?: Record<string, string>, logger?: AdapterLogger): Promise<void>;
