@@ -2,6 +2,23 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.34.1",
+      "tag": "@grackle-ai/cli_v0.34.1",
+      "date": "Tue, 17 Mar 2026 01:31:02 GMT",
+      "comments": {
+        "none": [
+          {
+            "comment": "No CLI changes — merge-commit false positive for lockstep versioning"
+          }
+        ],
+        "patch": [
+          {
+            "comment": "Broadcast environment list to WebSocket clients after gRPC add/remove operations"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.34.0",
       "tag": "@grackle-ai/cli_v0.34.0",
       "date": "Tue, 17 Mar 2026 00:33:11 GMT",
