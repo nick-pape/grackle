@@ -15,24 +15,13 @@ import {
   type CallToolResult,
 } from "@modelcontextprotocol/sdk/types.js";
 import pino, { type Logger } from "pino";
-import { zodToJsonSchema as zodToJsonSchemaOriginal } from "zod-to-json-schema";
-import type { ZodType } from "zod";
+import { z } from "zod";
 import type { AuthContext } from "./auth-context.js";
 import { authenticateMcpRequest } from "./auth-middleware.js";
 import { grpcErrorToToolResult } from "./error-handler.js";
 import { pruneRevocations } from "./scoped-token.js";
 import { createToolRegistry } from "./tools/index.js";
 import { resolveToolForAuth, listToolsForAuth } from "./tool-scoping.js";
-
-/**
- * Wraps `zodToJsonSchema` to bridge the zod v4 / zod-to-json-schema type gap.
- * `zod-to-json-schema` declares its parameter as `zod/v3`'s `ZodSchema`, but
- * at runtime it handles native v4 schemas correctly. This helper isolates the
- * cast so callers can pass a v4 `ZodType` directly.
- */
-function toJsonSchema(schema: ZodType): ReturnType<typeof zodToJsonSchemaOriginal> {
-  return zodToJsonSchemaOriginal(schema as unknown as Parameters<typeof zodToJsonSchemaOriginal>[0], { target: "jsonSchema7" });
-}
 
 /** Read the package version from package.json at module load time. */
 const PACKAGE_VERSION: string = (JSON.parse(
@@ -90,7 +79,7 @@ function createMcpServerInstance(grpcClient: Client<typeof grackle.Grackle>, aut
       tools: tools.map((t) => ({
         name: t.name,
         description: t.description,
-        inputSchema: toJsonSchema(t.inputSchema),
+        inputSchema: z.toJSONSchema(t.inputSchema),
         annotations: t.annotations,
       })),
     };
