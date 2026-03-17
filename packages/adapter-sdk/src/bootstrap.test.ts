@@ -1,27 +1,6 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import type { RemoteExecutor } from "./remote-adapter-utils.js";
-
-// ── Mock logger to avoid pino output in tests ──────────────
-vi.mock("../logger.js", () => ({
-  logger: {
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-    debug: vi.fn(),
-  },
-}));
-
-// ── Mock ports utility ──────────────────────────────────────
-vi.mock("../utils/ports.js", () => ({
-  findFreePort: vi.fn().mockResolvedValue(9999),
-}));
-
-// ── Mock sleep to speed up tests ────────────────────────────
-vi.mock("../utils/sleep.js", () => ({
-  sleep: vi.fn().mockResolvedValue(undefined),
-}));
-
-import { probeRemotePowerLine, writeRemoteEnvFile, startRemotePowerLine } from "./remote-adapter-utils.js";
+import { describe, it, expect, vi } from "vitest";
+import type { RemoteExecutor } from "./remote-executor.js";
+import { probeRemotePowerLine, writeRemoteEnvFile, startRemotePowerLine } from "./bootstrap.js";
 
 // ── Helper ──────────────────────────────────────────────────
 
@@ -32,6 +11,14 @@ function createMockExecutor(overrides?: Partial<RemoteExecutor>): RemoteExecutor
     ...overrides,
   };
 }
+
+/** Silent logger to suppress console output in tests. */
+const silentLogger = {
+  info: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+  debug: vi.fn(),
+};
 
 // ── Tests ───────────────────────────────────────────────────
 
@@ -54,7 +41,7 @@ describe("probeRemotePowerLine", () => {
 describe("writeRemoteEnvFile", () => {
   it("writes env file with powerline token", async () => {
     const executor = createMockExecutor();
-    await writeRemoteEnvFile(executor, "test-token-abc");
+    await writeRemoteEnvFile(executor, "test-token-abc", undefined, silentLogger);
 
     // Should have called exec twice: once for writing, once for chmod
     expect(executor.exec).toHaveBeenCalledTimes(2);
@@ -69,11 +56,9 @@ describe("writeRemoteEnvFile", () => {
 
   it("includes extra env vars in the file", async () => {
     const executor = createMockExecutor();
-    await writeRemoteEnvFile(executor, "tok", { MY_CUSTOM_VAR: "hello" });
+    await writeRemoteEnvFile(executor, "tok", { MY_CUSTOM_VAR: "hello" }, silentLogger);
 
-    // The base64 content is the last single-quoted arg in the first exec call
     const writeCall = (executor.exec as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
-    // Extract the last single-quoted string (the base64 payload)
     const allQuoted = [...writeCall.matchAll(/'([^']+)'/g)];
     const base64Str = allQuoted[allQuoted.length - 1]?.[1];
     expect(base64Str).toBeTruthy();
@@ -85,13 +70,13 @@ describe("writeRemoteEnvFile", () => {
 
   it("does nothing when token is empty and no env vars are set", async () => {
     const executor = createMockExecutor();
-    await writeRemoteEnvFile(executor, "");
+    await writeRemoteEnvFile(executor, "", undefined, silentLogger);
     expect(executor.exec).not.toHaveBeenCalled();
   });
 
   it("skips env var names that fail validation", async () => {
     const executor = createMockExecutor();
-    await writeRemoteEnvFile(executor, "tok", { "invalid-name!": "bad", VALID_NAME: "good" });
+    await writeRemoteEnvFile(executor, "tok", { "invalid-name!": "bad", VALID_NAME: "good" }, silentLogger);
 
     const writeCall = (executor.exec as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
     const allQuoted = [...writeCall.matchAll(/'([^']+)'/g)];
@@ -105,7 +90,7 @@ describe("writeRemoteEnvFile", () => {
 describe("startRemotePowerLine", () => {
   it("batches env file, spawn, and probe into a single compound command", async () => {
     const executor = createMockExecutor();
-    const result = await startRemotePowerLine(executor, "test-token");
+    const result = await startRemotePowerLine(executor, "test-token", { logger: silentLogger });
 
     expect(result.alreadyRunning).toBe(false);
 
@@ -116,15 +101,12 @@ describe("startRemotePowerLine", () => {
 
     const command = calls[0][0] as string;
     expect(command).toContain("bash -c");
-    // Env file write (base64 decode via Node)
     expect(command).toContain("writeFileSync");
     expect(command).toContain(".env.sh");
     expect(command).toContain("chmod 600");
-    // PowerLine spawn (detached, via Node child_process)
     expect(command).toContain("spawn");
     expect(command).toContain("detached:true");
     expect(command).toContain("unref");
-    // Probe (TCP connect check)
     expect(command).toContain("createConnection");
   });
 
@@ -133,10 +115,9 @@ describe("startRemotePowerLine", () => {
       exec: vi.fn().mockRejectedValue(new Error("port not listening")),
     });
 
-    await expect(startRemotePowerLine(executor, "test-token"))
+    await expect(startRemotePowerLine(executor, "test-token", { logger: silentLogger }))
       .rejects.toThrow("PowerLine process died immediately after starting");
 
-    // Single attempt — no fallback
     const calls = (executor.exec as ReturnType<typeof vi.fn>).mock.calls;
     expect(calls).toHaveLength(1);
     expect(calls[0][0]).toContain("bash -c");
@@ -144,7 +125,7 @@ describe("startRemotePowerLine", () => {
 
   it("uses workingDirectory when provided", async () => {
     const executor = createMockExecutor();
-    await startRemotePowerLine(executor, "tok", { workingDirectory: "/workspaces/myrepo" });
+    await startRemotePowerLine(executor, "tok", { workingDirectory: "/workspaces/myrepo", logger: silentLogger });
 
     const calls = (executor.exec as ReturnType<typeof vi.fn>).mock.calls;
     expect(calls).toHaveLength(1);
@@ -153,12 +134,11 @@ describe("startRemotePowerLine", () => {
 
   it("auto-detects workspace directory when autoDetectWorkspace is true", async () => {
     const executor = createMockExecutor();
-    await startRemotePowerLine(executor, "tok", { autoDetectWorkspace: true });
+    await startRemotePowerLine(executor, "tok", { autoDetectWorkspace: true, logger: silentLogger });
 
     const calls = (executor.exec as ReturnType<typeof vi.fn>).mock.calls;
     expect(calls).toHaveLength(1);
     const command = calls[0][0] as string;
-    // Should detect /workspaces/*/ inline
     expect(command).toContain("ls -d /workspaces/*/");
     expect(command).toContain("$WD");
   });
@@ -168,15 +148,13 @@ describe("startRemotePowerLine", () => {
       exec: vi.fn().mockResolvedValue("__PL_ALIVE__"),
     });
 
-    const result = await startRemotePowerLine(executor, "tok", { probeFirst: true });
+    const result = await startRemotePowerLine(executor, "tok", { probeFirst: true, logger: silentLogger });
     expect(result.alreadyRunning).toBe(true);
 
     const calls = (executor.exec as ReturnType<typeof vi.fn>).mock.calls;
     expect(calls).toHaveLength(1);
-    // Should contain the probe-first prefix
     const command = calls[0][0] as string;
     expect(command).toContain("__PL_ALIVE__");
     expect(command).toContain("exit 0");
   });
-
 });

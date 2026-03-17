@@ -2,6 +2,35 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.36.0",
+      "tag": "@grackle-ai/cli_v0.36.0",
+      "date": "Tue, 17 Mar 2026 03:48:25 GMT",
+      "comments": {
+        "none": [
+          {
+            "comment": "No functional changes — merge commit false positive"
+          }
+        ],
+        "minor": [
+          {
+            "comment": "Extract @grackle-ai/adapter-sdk package with adapter interfaces, bootstrap logic, and tunnel management"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.35.1",
+      "tag": "@grackle-ai/cli_v0.35.1",
+      "date": "Tue, 17 Mar 2026 03:26:49 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Add GetSession RPC for direct session lookup by ID"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.35.0",
       "tag": "@grackle-ai/cli_v0.35.0",
       "date": "Tue, 17 Mar 2026 03:20:19 GMT",

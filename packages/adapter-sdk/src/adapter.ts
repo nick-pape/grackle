@@ -1,6 +1,7 @@
 import type { Client } from "@connectrpc/connect";
 import type { powerline } from "@grackle-ai/common";
-import { logger } from "../logger.js";
+import type { AdapterLogger } from "./logger.js";
+import { defaultLogger } from "./logger.js";
 
 /** Type-safe ConnectRPC client for the PowerLine gRPC service. */
 export type PowerLineClient = Client<typeof powerline.GracklePowerLine>;
@@ -60,6 +61,7 @@ export async function* reconnectOrProvision(
   config: Record<string, unknown>,
   powerlineToken: string,
   bootstrapped: boolean,
+  logger: AdapterLogger = defaultLogger,
 ): AsyncGenerator<ProvisionEvent> {
   let reconnected = false;
   if (bootstrapped && adapter.reconnect) {

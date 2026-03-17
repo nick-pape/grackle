@@ -1,4 +1,4 @@
-import type { EnvironmentAdapter, PowerLineConnection } from "./adapters/adapter.js";
+import type { EnvironmentAdapter, PowerLineConnection } from "@grackle-ai/adapter-sdk";
 import * as envRegistry from "./env-registry.js";
 import { logger } from "./logger.js";
 

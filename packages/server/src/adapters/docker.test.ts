@@ -11,7 +11,8 @@ vi.mock("../logger.js", () => ({
 }));
 
 // ── Mock remote-adapter-utils ────────────────────────────────
-vi.mock("./remote-adapter-utils.js", () => ({
+vi.mock("@grackle-ai/adapter-sdk", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@grackle-ai/adapter-sdk")>()),
   isDevMode: vi.fn().mockReturnValue(false),
   bootstrapPowerLine: vi.fn().mockReturnValue((async function* () { /* no-op */ })()),
   startRemotePowerLine: vi.fn().mockResolvedValue({ alreadyRunning: false }),

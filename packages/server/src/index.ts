@@ -10,7 +10,7 @@ import { DockerAdapter } from "./adapters/docker.js";
 import { LocalAdapter } from "./adapters/local.js";
 import { SshAdapter } from "./adapters/ssh.js";
 import { CodespaceAdapter } from "./adapters/codespace.js";
-import { closeAllTunnels } from "./adapters/remote-adapter-utils.js";
+import { closeAllTunnels } from "@grackle-ai/adapter-sdk";
 import { createWsBridge } from "./ws-bridge.js";
 import { DEFAULT_SERVER_PORT, DEFAULT_WEB_PORT, DEFAULT_MCP_PORT } from "@grackle-ai/common";
 import { createMcpServer } from "@grackle-ai/mcp";

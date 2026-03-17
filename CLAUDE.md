@@ -47,7 +47,8 @@ npx buf generate
 
 ## Project Structure
 
-Rush monorepo with 5 packages under `packages/`:
+Rush monorepo with 6 packages under `packages/`:
+- `@grackle-ai/adapter-sdk` — SDK for building environment adapters (interfaces, bootstrap, tunnel helpers)
 - `@grackle-ai/common` — Proto definitions, generated code, shared types
 - `@grackle-ai/powerline` — gRPC PowerLine server (ConnectRPC on HTTP/2)
 - `@grackle-ai/server` — Central gRPC server, SQLite, WebSocket bridge
@@ -97,7 +98,7 @@ Rush monorepo with 5 packages under `packages/`:
 PRs that modify publishable packages need a change file. The `/create-pr` skill handles generation.
 
 **Publishable packages** (lockstep versioning):
-- `@grackle-ai/cli`, `@grackle-ai/common`, `@grackle-ai/powerline`, `@grackle-ai/server`
+- `@grackle-ai/adapter-sdk`, `@grackle-ai/cli`, `@grackle-ai/common`, `@grackle-ai/powerline`, `@grackle-ai/server`
 
 **Not publishable** (never need change files):
 - `@grackle-ai/web`, `@grackle-ai/heft-rig`, `@grackle-ai/heft-buf-plugin`, `@grackle-ai/heft-playwright-plugin`, `@grackle-ai/heft-vite-plugin`

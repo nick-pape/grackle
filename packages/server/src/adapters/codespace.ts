@@ -1,4 +1,4 @@
-import type { EnvironmentAdapter, BaseEnvironmentConfig, PowerLineConnection, ProvisionEvent } from "./adapter.js";
+import type { EnvironmentAdapter, BaseEnvironmentConfig, PowerLineConnection, ProvisionEvent } from "@grackle-ai/adapter-sdk";
 import { DEFAULT_POWERLINE_PORT, DEFAULT_MCP_PORT } from "@grackle-ai/common";
 import {
   type RemoteExecutor,
@@ -15,7 +15,8 @@ import {
   startRemotePowerLine,
   SSH_CONNECTIVITY_TIMEOUT_MS,
   REMOTE_EXEC_DEFAULT_TIMEOUT_MS,
-} from "./remote-adapter-utils.js";
+} from "@grackle-ai/adapter-sdk";
+import { getCredentialProviders } from "../credential-providers.js";
 import { exec } from "../utils/exec.js";
 import { spawn } from "node:child_process";
 import { sleep } from "../utils/sleep.js";
@@ -191,7 +192,11 @@ export class CodespaceAdapter implements EnvironmentAdapter {
     }
 
     // Bootstrap PowerLine on the codespace
-    yield* bootstrapPowerLine(executor, powerlineToken, cfg.env, workingDirectory);
+    yield* bootstrapPowerLine(executor, powerlineToken, {
+      extraEnv: cfg.env,
+      workingDirectory,
+      isGitHubProviderEnabled: () => getCredentialProviders().github !== "off",
+    });
 
     // Open port-forward tunnel (host → codespace PowerLine)
     const localPort = cfg.localPort || await findFreePort();
