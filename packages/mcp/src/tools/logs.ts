@@ -37,7 +37,7 @@ export const logsTools: ToolDefinition[] = [
     async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) {
       try {
         // Fetch the session directly by ID
-        let session;
+        let session: Awaited<ReturnType<typeof client.getSession>> | undefined;
         try {
           session = await client.getSession({ id: args.sessionId as string });
         } catch (error) {

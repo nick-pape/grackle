@@ -188,13 +188,9 @@ describe("gRPC getSession", () => {
   it("throws ConnectError with NOT_FOUND when session does not exist", async () => {
     vi.mocked(sessionStore.getSession).mockReturnValue(undefined);
 
-    await expect(handlers.getSession({ id: "nonexistent" })).rejects.toThrow(ConnectError);
-    try {
-      await handlers.getSession({ id: "nonexistent" });
-    } catch (err) {
-      expect(err).toBeInstanceOf(ConnectError);
-      expect((err as ConnectError).code).toBe(Code.NotFound);
-      expect((err as ConnectError).message).toContain("nonexistent");
-    }
+    const err = await handlers.getSession({ id: "nonexistent" }).catch((e: unknown) => e) as ConnectError;
+    expect(err).toBeInstanceOf(ConnectError);
+    expect(err.code).toBe(Code.NotFound);
+    expect(err.message).toContain("nonexistent");
   });
 });

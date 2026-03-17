@@ -1,4 +1,5 @@
 import type { Command } from "commander";
+import { ConnectError, Code } from "@connectrpc/connect";
 import { createGrackleClient } from "../client.js";
 import { eventTypeToString } from "@grackle-ai/common";
 
@@ -23,13 +24,17 @@ export function registerLogCommands(program: Command): void {
       }
 
       // Get session info for log path — try exact match first, then prefix match
-      let session;
+      let session: Awaited<ReturnType<typeof client.getSession>> | undefined;
       try {
         session = await client.getSession({ id: sessionId });
-      } catch {
-        // Exact match failed — fall back to prefix match for short IDs
-        const all = await client.listSessions({ environmentId: "", status: "" });
-        session = all.sessions.find((s) => s.id.startsWith(sessionId));
+      } catch (error) {
+        if (error instanceof ConnectError && error.code === Code.NotFound) {
+          // Exact match failed — fall back to prefix match for short IDs
+          const all = await client.listSessions({ environmentId: "", status: "" });
+          session = all.sessions.find((s) => s.id.startsWith(sessionId));
+        } else {
+          throw error;
+        }
       }
 
       if (!session) {
