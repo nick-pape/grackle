@@ -1,6 +1,19 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Tue, 17 Mar 2026 03:48:25 GMT and should not be manually modified.
+This log was last generated on Tue, 17 Mar 2026 15:03:49 GMT and should not be manually modified.
+
+## 0.37.0
+Tue, 17 Mar 2026 15:03:49 GMT
+
+### Minor changes
+
+- Auto-start local PowerLine when Grackle server starts
+
+### Updates
+
+- Upgrade to ESLint 9 flat config and remove stale eslint-disable directives
+- Upgrade zod dependency to v4 (merge artifact — no CLI changes)
+- Add API Extractor to heft build pipeline for API surface tracking
 
 ## 0.36.0
 Tue, 17 Mar 2026 03:48:25 GMT

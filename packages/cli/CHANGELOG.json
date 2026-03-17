@@ -2,6 +2,29 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.37.0",
+      "tag": "@grackle-ai/cli_v0.37.0",
+      "date": "Tue, 17 Mar 2026 15:03:49 GMT",
+      "comments": {
+        "none": [
+          {
+            "comment": "Upgrade to ESLint 9 flat config and remove stale eslint-disable directives"
+          },
+          {
+            "comment": "Upgrade zod dependency to v4 (merge artifact — no CLI changes)"
+          },
+          {
+            "comment": "Add API Extractor to heft build pipeline for API surface tracking"
+          }
+        ],
+        "minor": [
+          {
+            "comment": "Auto-start local PowerLine when Grackle server starts"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.36.0",
       "tag": "@grackle-ai/cli_v0.36.0",
       "date": "Tue, 17 Mar 2026 03:48:25 GMT",
