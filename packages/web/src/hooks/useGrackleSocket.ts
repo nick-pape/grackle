@@ -177,8 +177,8 @@ function isSessionEvent(v: unknown): v is SessionEvent {
 }
 
 function isProject(v: unknown): v is Project {
-  return (
-    isObject(v) &&
+  if (
+    !(isObject(v) &&
     typeof v.id === "string" &&
     typeof v.name === "string" &&
     typeof v.description === "string" &&
@@ -186,8 +186,15 @@ function isProject(v: unknown): v is Project {
     typeof v.defaultEnvironmentId === "string" &&
     typeof v.status === "string" &&
     typeof v.createdAt === "string" &&
-    typeof v.updatedAt === "string"
-  );
+    typeof v.updatedAt === "string")
+  ) {
+    return false;
+  }
+  // Default useWorktrees to true for backward compat with older servers
+  if (typeof v.useWorktrees !== "boolean") {
+    (v as Record<string, unknown>).useWorktrees = true;
+  }
+  return true;
 }
 
 function isTaskData(v: unknown): v is TaskData {
