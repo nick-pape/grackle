@@ -255,6 +255,52 @@ describe("convertMcpServers", () => {
       customField: 42,
     });
   });
+
+  it("detects HTTP transport from type field", () => {
+    const servers = {
+      grackle: {
+        type: "http",
+        url: "http://localhost:7435/mcp",
+        headers: { Authorization: "Bearer tok123" },
+        tools: ["*"],
+      },
+    };
+    const result = convertMcpServers(servers);
+    expect(result).toHaveLength(1);
+    expect(result[0].transport).toBe("http");
+    expect(result[0].url).toBe("http://localhost:7435/mcp");
+    expect(result[0].name).toBe("grackle");
+  });
+
+  it("detects HTTP transport from url field without explicit type", () => {
+    const servers = {
+      remote: { url: "http://example.com/mcp" },
+    };
+    const result = convertMcpServers(servers);
+    expect(result[0].transport).toBe("http");
+  });
+
+  it("skips non-object config values", () => {
+    const servers = {
+      good: { command: "node", args: [] },
+      bad: "not an object" as unknown,
+      worse: null as unknown,
+    } as Record<string, unknown>;
+    const result = convertMcpServers(servers);
+    expect(result).toHaveLength(1);
+    expect(result[0].name).toBe("good");
+  });
+
+  it("handles mixed stdio and HTTP servers", () => {
+    const servers = {
+      local: { command: "node", args: ["mcp.js"] },
+      remote: { type: "http", url: "http://example.com/mcp" },
+    };
+    const result = convertMcpServers(servers);
+    expect(result).toHaveLength(2);
+    expect(result[0].transport).toBe("stdio");
+    expect(result[1].transport).toBe("http");
+  });
 });
 
 // ─── AcpRuntime structural ──────────────────────────────────

@@ -1,7 +1,7 @@
 {
   "changes": [
     {
-      "comment": "placeholder",
+      "comment": "No CLI changes — change file required by Rush merge-commit detection",
       "type": "none",
       "packageName": "@grackle-ai/cli"
     }

@@ -189,8 +189,9 @@ class AcpSession extends BaseAgentSession {
     systemContext?: string,
     mcpServers?: Record<string, unknown>,
     hooks?: Record<string, unknown>,
+    mcpBroker?: { url: string; token: string },
   ) {
-    super(id, prompt, model, maxTurns, resumeSessionId, branch, worktreeBasePath, systemContext, mcpServers, hooks);
+    super(id, prompt, model, maxTurns, resumeSessionId, branch, worktreeBasePath, systemContext, mcpServers, hooks, mcpBroker);
     this.config = config;
     this.runtimeName = config.name;
     this.runtimeDisplayName = config.name;
@@ -211,29 +212,41 @@ class AcpSession extends BaseAgentSession {
       eventQueue: this.eventQueue,
     });
 
-    // Resolve MCP servers (shared config + spawn-provided servers)
-    const mcpConfig = resolveMcpServers(this.mcpServers);
+    // Resolve MCP servers (shared config + spawn-provided servers + broker)
+    const mcpConfig = resolveMcpServers(this.mcpServers, this.mcpBroker);
 
-    // Spawn agent subprocess
+    // Spawn agent subprocess in the resolved working directory
+    const spawnCwd = cwd || process.cwd();
     const childEnv = { ...process.env, ...this.config.env };
     this.child = spawn(this.config.command, this.config.args, {
       stdio: ["pipe", "pipe", "inherit"],
+      cwd: spawnCwd,
       env: childEnv,
     });
 
     this.eventQueue.push({
       type: "system",
       timestamp: ts(),
-      content: `Spawned ${this.config.command} ${this.config.args.join(" ")} (pid: ${String(this.child.pid)})`,
+      content: `Spawned ${this.config.command} ${this.config.args.join(" ")} (pid: ${String(this.child.pid)}, cwd: ${spawnCwd})`,
     });
 
-    // Handle spawn errors (e.g., command not found)
+    // Register exit/error handlers immediately to catch early termination
     this.child.on("error", (err: Error) => {
       if (!this.killed) {
         this.eventQueue.push({
           type: "error",
           timestamp: ts(),
           content: `Failed to spawn ${this.config.command}: ${err.message}`,
+        });
+      }
+    });
+
+    this.child.on("exit", (code: number | null, signal: string | null) => {
+      if (!this.killed) {
+        this.eventQueue.push({
+          type: "error",
+          timestamp: ts(),
+          content: `Agent process exited unexpectedly (code: ${String(code)}, signal: ${String(signal)})`,
         });
       }
     });
@@ -280,10 +293,21 @@ class AcpSession extends BaseAgentSession {
       content: "ACP connection initialized",
     });
 
-    // Create a new ACP session
+    // Create a new ACP session (or reuse existing for resume)
+    if (this.resumeSessionId) {
+      this.acpSessionId = this.resumeSessionId;
+      this.runtimeSessionId = this.resumeSessionId;
+      this.eventQueue.push({
+        type: "system",
+        timestamp: ts(),
+        content: `ACP session resuming (id: ${this.runtimeSessionId})`,
+      });
+      return;
+    }
+
     // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
     const sessionResult = await this.connection.newSession({
-      cwd: cwd || process.cwd(),
+      cwd: spawnCwd,
       mcpServers: convertMcpServers(mcpConfig.servers),
     });
 
@@ -319,24 +343,14 @@ class AcpSession extends BaseAgentSession {
       }
     }
 
-    // Monitor subprocess exit for unexpected termination
-    this.child.on("exit", (code: number | null, signal: string | null) => {
-      if (!this.killed) {
-        this.eventQueue.push({
-          type: "error",
-          timestamp: ts(),
-          content: `Agent process exited unexpectedly (code: ${String(code)}, signal: ${String(signal)})`,
-        });
-      }
-    });
   }
 
   protected async setupForResume(): Promise<void> {
-    // ACP resume requires unstable_resumeSession — attempt it
+    // setupSdk() already handled resume by setting acpSessionId = resumeSessionId
     this.eventQueue.push({
       type: "system",
       timestamp: new Date().toISOString(),
-      content: `ACP session resume not yet supported (id: ${this.resumeSessionId || ""})`,
+      content: `ACP session resumed (id: ${this.resumeSessionId || ""})`,
     });
   }
 
@@ -415,6 +429,7 @@ export class AcpRuntime extends BaseAgentRuntime {
     systemContext?: string,
     mcpServers?: Record<string, unknown>,
     _hooks?: Record<string, unknown>,
+    mcpBroker?: { url: string; token: string },
   ): AgentSession {
     return new AcpSession(
       this.config,
@@ -427,6 +442,8 @@ export class AcpRuntime extends BaseAgentRuntime {
       worktreeBasePath,
       systemContext,
       mcpServers,
+      undefined, // hooks — not supported by ACP
+      mcpBroker,
     );
   }
 }

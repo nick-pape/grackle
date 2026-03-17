@@ -226,14 +226,18 @@ export function convertMcpServers(servers: Record<string, unknown> | undefined):
   if (!servers) {
     return [];
   }
-  return Object.entries(servers).map(([name, config]) => {
-    const cfg = (config || {}) as Record<string, unknown>;
-    return {
-      ...cfg,
-      name,
-      transport: "stdio",
-    };
-  });
+  return Object.entries(servers)
+    .filter(([, config]) => typeof config === "object" && config !== null)
+    .map(([name, config]) => {
+      const cfg = config as Record<string, unknown>;
+      // Detect transport: HTTP servers have type:"http" or a url field; everything else is stdio
+      const transport = (cfg.type === "http" || cfg.url) ? "http" : "stdio";
+      return {
+        ...cfg,
+        name,
+        transport,
+      };
+    });
 }
 
 // ─── MCP server resolution ─────────────────────────────────
