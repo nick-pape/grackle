@@ -16,6 +16,7 @@ import { DEFAULT_SERVER_PORT, DEFAULT_WEB_PORT, DEFAULT_MCP_PORT, DEFAULT_POWERL
 import { startLocalPowerLine, type LocalPowerLineHandle } from "./local-powerline.js";
 import * as adapterManager from "./adapter-manager.js";
 import * as envRegistry from "./env-registry.js";
+import * as tokenBroker from "./token-broker.js";
 import { createMcpServer } from "@grackle-ai/mcp";
 import { readFileSync, existsSync } from "node:fs";
 import { join, dirname, extname, normalize, resolve, relative } from "node:path";
@@ -675,9 +676,9 @@ async function main(): Promise<void> {
 
     const conn = await localAdapter.connect("local", config, localEnv.powerlineToken);
     adapterManager.setConnection("local", conn);
-    // Skip tokenBroker.pushToEnv for local — the PowerLine runs on the same
-    // machine, so pushing tokens would just overwrite local credential files
-    // (e.g. ~/.claude/credentials.json) with their own content.
+    // Push env-var tokens only — file tokens would just overwrite local credential
+    // files (e.g. ~/.claude/credentials.json) with their own content.
+    await tokenBroker.pushToEnv("local", { excludeFileTokens: true });
     envRegistry.updateEnvironmentStatus("local", "connected");
     envRegistry.markBootstrapped("local");
     broadcastEnvironments();

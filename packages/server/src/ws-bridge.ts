@@ -321,8 +321,10 @@ async function startTaskSession(
     },
   });
 
-  // Re-push stored tokens + provider credentials (scoped to runtime) so they're fresh for this session
-  await tokenBroker.refreshTokensForTask(environmentId, runtime);
+  // Re-push stored tokens + provider credentials (scoped to runtime) so they're fresh for this session.
+  // For local envs, skip file tokens — the PowerLine is on the same machine.
+  await tokenBroker.refreshTokensForTask(environmentId, runtime,
+    env.adapterType === "local" ? { excludeFileTokens: true } : undefined);
 
   let mcpServersJson = "";
   if (persona) {

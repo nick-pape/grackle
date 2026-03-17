@@ -5,6 +5,7 @@ import { encrypt, decrypt } from "./crypto.js";
 import { create } from "@bufbuild/protobuf";
 import { powerline } from "@grackle-ai/common";
 import * as adapterManager from "./adapter-manager.js";
+import * as envRegistry from "./env-registry.js";
 import { logger } from "./logger.js";
 import { buildProviderTokenBundle } from "./credential-providers.js";
 
@@ -73,14 +74,25 @@ export function getBundle(): powerline.TokenBundle {
   return create(powerline.TokenBundleSchema, { tokens: items });
 }
 
+/** Options for {@link pushToEnv}. */
+export interface PushToEnvOptions {
+  /** When true, filter out file-type tokens (only push env vars). */
+  excludeFileTokens?: boolean;
+}
+
 /** Push the current token bundle to a single connected environment. */
-export async function pushToEnv(environmentId: string): Promise<void> {
+export async function pushToEnv(environmentId: string, options?: PushToEnvOptions): Promise<void> {
   const conn = adapterManager.getConnection(environmentId);
   if (!conn) {
     return;
   }
 
   const bundle = getBundle();
+
+  if (options?.excludeFileTokens) {
+    bundle.tokens = bundle.tokens.filter((t) => t.type !== "file");
+  }
+
   if (bundle.tokens.length === 0) {
     return;
   }
@@ -93,13 +105,18 @@ export async function pushToEnv(environmentId: string): Promise<void> {
  * When `runtime` is specified, only providers relevant to that runtime are included.
  * Reads fresh values from `process.env` / disk based on the credential provider config.
  */
-export async function pushProviderCredentialsToEnv(environmentId: string, runtime?: string): Promise<void> {
+export async function pushProviderCredentialsToEnv(environmentId: string, runtime?: string, options?: PushToEnvOptions): Promise<void> {
   const conn = adapterManager.getConnection(environmentId);
   if (!conn) {
     return;
   }
 
   const bundle = buildProviderTokenBundle(runtime);
+
+  if (options?.excludeFileTokens) {
+    bundle.tokens = bundle.tokens.filter((t) => t.type !== "file");
+  }
+
   if (bundle.tokens.length === 0) {
     return;
   }
@@ -112,10 +129,10 @@ export async function pushProviderCredentialsToEnv(environmentId: string, runtim
  * When `runtime` is specified, only providers relevant to that runtime are pushed.
  * Both pushes run concurrently; failures are logged as warnings and do not block.
  */
-export async function refreshTokensForTask(environmentId: string, runtime?: string): Promise<void> {
+export async function refreshTokensForTask(environmentId: string, runtime?: string, options?: PushToEnvOptions): Promise<void> {
   const results = await Promise.allSettled([
-    pushToEnv(environmentId),
-    pushProviderCredentialsToEnv(environmentId, runtime),
+    pushToEnv(environmentId, options),
+    pushProviderCredentialsToEnv(environmentId, runtime, options),
   ]);
 
   if (results[0].status === "rejected") {
@@ -132,7 +149,10 @@ export async function pushToAll(): Promise<void> {
   const promises: Promise<void>[] = [];
 
   for (const [environmentId] of connections) {
-    promises.push(pushToEnv(environmentId).catch((err) => {
+    const env = envRegistry.getEnvironment(environmentId);
+    const opts: PushToEnvOptions | undefined =
+      env?.adapterType === "local" ? { excludeFileTokens: true } : undefined;
+    promises.push(pushToEnv(environmentId, opts).catch((err) => {
       logger.error({ environmentId, err }, "Failed to push tokens");
     }));
   }

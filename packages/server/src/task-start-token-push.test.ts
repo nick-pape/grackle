@@ -315,7 +315,7 @@ describe("task-start token push", () => {
 
       await startTask!({ taskId: "task-1", environmentId: "env-1" });
 
-      expect(refreshSpy).toHaveBeenCalledWith("env-1", "claude-code");
+      expect(refreshSpy).toHaveBeenCalledWith("env-1", "claude-code", undefined);
 
       // Verify refresh happened before spawn
       const refreshOrder = refreshSpy.mock.invocationCallOrder[0];
