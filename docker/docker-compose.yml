@@ -11,7 +11,9 @@ services:
       - "7433:7433"   # Local PowerLine
     volumes:
       - grackle-data:/grackle-home/.grackle                              # Persistent DB + API key
-      - /var/run/docker.sock:/var/run/docker.sock                        # Docker-out-of-Docker
+      # WARNING: Grants the container root-equivalent access to the host Docker daemon.
+      # Required for the Docker adapter (DooD pattern). Remove if not using Docker environments.
+      - /var/run/docker.sock:/var/run/docker.sock
       - "${HOME}/.claude:/home/node/.claude:ro"                            # Claude auth + config
       - "${HOME}/.copilot:/home/node/.copilot:ro"                        # Copilot auth
       - "${HOME}/.codex:/home/node/.codex:ro"                            # Codex auth
