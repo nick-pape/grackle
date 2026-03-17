@@ -15,7 +15,7 @@ import {
   type CallToolResult,
 } from "@modelcontextprotocol/sdk/types.js";
 import pino, { type Logger } from "pino";
-import { zodToJsonSchema } from "zod-to-json-schema";
+import { z } from "zod";
 import type { AuthContext } from "./auth-context.js";
 import { authenticateMcpRequest } from "./auth-middleware.js";
 import { grpcErrorToToolResult } from "./error-handler.js";
@@ -79,7 +79,7 @@ function createMcpServerInstance(grpcClient: Client<typeof grackle.Grackle>, aut
       tools: tools.map((t) => ({
         name: t.name,
         description: t.description,
-        inputSchema: zodToJsonSchema(t.inputSchema, { target: "jsonSchema7" }),
+        inputSchema: z.toJSONSchema(t.inputSchema),
         annotations: t.annotations,
       })),
     };
