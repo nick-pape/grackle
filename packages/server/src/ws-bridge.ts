@@ -534,9 +534,7 @@ async function handleMessage(
       }
 
       const sessionId = uuid();
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime/model may be undefined from WS payload
       const sessionRuntime = runtime || spawnPersona?.runtime || env.defaultRuntime || DEFAULT_RUNTIME;
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       const sessionModel = model || spawnPersona?.model || process.env.GRACKLE_DEFAULT_MODEL || DEFAULT_MODEL;
       const maxTurns = spawnPersona?.maxTurns || 0;
       const logPath = join(grackleHome, LOGS_DIR, sessionId);

@@ -94,7 +94,7 @@ function applyTheme(themeId: string, preferSystem: boolean, suppressTransitions:
 
   if (suppressTransitions) {
     // Force a reflow so the no-transitions class takes effect before removal
-    // eslint-disable-next-line @typescript-eslint/no-unused-expressions, no-unused-expressions
+    // eslint-disable-next-line no-unused-expressions
     document.documentElement.offsetHeight;
     requestAnimationFrame(() => {
       document.documentElement.classList.remove("no-transitions");

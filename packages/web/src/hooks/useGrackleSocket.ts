@@ -211,7 +211,6 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
 
   // --- Message routing ---
 
-  // eslint-disable-next-line @typescript-eslint/no-use-before-define -- hoisted; stored in a ref by useWebSocket so order is safe
   function onMessage(msg: WsMessage): void {
     if (environmentsHook.handleMessage(msg)) { return; }
     if (sessionsHook.handleMessage(msg)) { return; }
@@ -228,7 +227,6 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-use-before-define -- hoisted; stored in a ref by useWebSocket
   function onConnect(sendFn: SendFunction): void {
     sendFn({ type: "list_environments" });
     sendFn({ type: "list_sessions" });
@@ -239,7 +237,6 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
     sendFn({ type: "subscribe_all" });
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-use-before-define -- hoisted; stored in a ref by useWebSocket
   function onDisconnect(): void {
     projectsHook.onDisconnect();
     tasksHook.onDisconnect();
