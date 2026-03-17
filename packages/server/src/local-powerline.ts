@@ -5,7 +5,7 @@ import { logger as parentLogger } from "./logger.js";
 
 const PORT_PROBE_TIMEOUT_MS: number = 15_000;
 const PORT_PROBE_INTERVAL_MS: number = 300;
-const STOP_TIMEOUT_MS: number = 5_000;
+const STOP_TIMEOUT_MS: number = 2_000;
 
 // eslint-disable-next-line @rushstack/typedef-var
 const logger = parentLogger.child({ component: "powerline" });
