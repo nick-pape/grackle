@@ -475,8 +475,10 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         mcpToken,
       });
 
-      // Push fresh credentials before spawning (best-effort)
-      await tokenBroker.refreshTokensForTask(req.environmentId, runtime);
+      // Push fresh credentials before spawning (best-effort).
+      // For local envs, skip file tokens — the PowerLine is on the same machine.
+      await tokenBroker.refreshTokensForTask(req.environmentId, runtime,
+        env.adapterType === "local" ? { excludeFileTokens: true } : undefined);
 
       processEventStream(conn.client.spawn(powerlineReq), {
         sessionId,
@@ -992,8 +994,10 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         payload: { taskId: task.id, sessionId, projectId: task.projectId },
       });
 
-      // Re-push stored tokens + provider credentials (scoped to runtime) so they're fresh for this session
-      await tokenBroker.refreshTokensForTask(environmentId, runtime);
+      // Re-push stored tokens + provider credentials (scoped to runtime) so they're fresh for this session.
+      // For local envs, skip file tokens — the PowerLine is on the same machine.
+      await tokenBroker.refreshTokensForTask(environmentId, runtime,
+        env?.adapterType === "local" ? { excludeFileTokens: true } : undefined);
 
       const mcpServersJson = persona ? personaMcpServersToJson(persona) : "";
 

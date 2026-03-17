@@ -66,6 +66,14 @@ export function setEnvInfo(id: string, info: string): void {
     .run();
 }
 
+/** Update the adapter config JSON for an existing environment. */
+export function updateAdapterConfig(id: string, config: string): void {
+  db.update(environments)
+    .set({ adapterConfig: config })
+    .where(eq(environments.id, id))
+    .run();
+}
+
 /** Reset all environment statuses to disconnected on server startup. */
 export function resetAllStatuses(): void {
   db.update(environments).set({ status: "disconnected" }).run();
