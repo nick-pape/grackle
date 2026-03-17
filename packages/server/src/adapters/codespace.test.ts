@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import type { ProvisionEvent } from "./adapter.js";
+import type { ProvisionEvent } from "@grackle-ai/adapter-sdk";
 
 // ── Mock logger ─────────────────────────────────────────────
 vi.mock("../logger.js", () => ({
@@ -43,8 +43,8 @@ const mocks = vi.hoisted(() => ({
   startRemotePowerLine: vi.fn().mockResolvedValue({ alreadyRunning: true }),
 }));
 
-vi.mock("./remote-adapter-utils.js", async (importOriginal) => {
-  const original = await importOriginal<typeof import("./remote-adapter-utils.js")>();
+vi.mock("@grackle-ai/adapter-sdk", async (importOriginal) => {
+  const original = await importOriginal<typeof import("@grackle-ai/adapter-sdk")>();
   return {
     ...original,
     closeTunnel: mocks.closeTunnel,
@@ -59,8 +59,6 @@ vi.mock("./remote-adapter-utils.js", async (importOriginal) => {
       public async close(): Promise<void> { /* no-op */ }
       public isAlive(): boolean { return true; }
     },
-    SSH_CONNECTIVITY_TIMEOUT_MS: 15_000,
-    REMOTE_EXEC_DEFAULT_TIMEOUT_MS: 60_000,
   };
 });
 

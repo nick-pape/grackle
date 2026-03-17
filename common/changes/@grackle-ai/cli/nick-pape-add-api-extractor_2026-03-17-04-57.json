@@ -1,7 +1,7 @@
 {
   "changes": [
     {
-      "comment": "No functional changes — merge commit false positive",
+      "comment": "Add API Extractor to heft build pipeline for API surface tracking",
       "type": "none",
       "packageName": "@grackle-ai/cli"
     }

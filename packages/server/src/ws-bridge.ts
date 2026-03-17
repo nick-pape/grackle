@@ -9,7 +9,7 @@ import * as adapterManager from "./adapter-manager.js";
 import {
   type PowerLineConnection,
   reconnectOrProvision,
-} from "./adapters/adapter.js";
+} from "@grackle-ai/adapter-sdk";
 import * as streamHub from "./stream-hub.js";
 import * as tokenBroker from "./token-broker.js";
 import * as credentialProviders from "./credential-providers.js";

@@ -95,7 +95,8 @@ vi.mock("./persona-store.js", () => ({
   deletePersona: vi.fn(),
 }));
 
-vi.mock("./adapters/adapter.js", () => ({
+vi.mock("@grackle-ai/adapter-sdk", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@grackle-ai/adapter-sdk")>()),
   reconnectOrProvision: vi.fn(async function* () {}),
 }));
 

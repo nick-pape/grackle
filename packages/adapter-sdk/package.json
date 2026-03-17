@@ -1,38 +1,29 @@
 {
-  "name": "@grackle-ai/powerline",
+  "name": "@grackle-ai/adapter-sdk",
   "version": "0.36.0",
-  "description": "gRPC PowerLine server for Grackle AI agent integration",
+  "description": "SDK for building Grackle environment adapters",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/nick-pape/grackle.git",
-    "directory": "packages/powerline"
+    "directory": "packages/adapter-sdk"
   },
-  "keywords": ["grackle", "grpc", "powerline", "ai-agents"],
+  "keywords": ["grackle", "adapter", "sdk", "environment"],
   "engines": { "node": ">=22.0.0" },
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "bin": {
-    "grackle-powerline": "dist/index.js"
-  },
   "files": ["dist/"],
   "scripts": {
     "build": "heft build --clean",
-    "start": "node dist/index.js",
-    "clean": "heft clean",
-    "test": "vitest run"
+    "test": "vitest run",
+    "clean": "heft clean"
   },
   "dependencies": {
-    "@anthropic-ai/claude-agent-sdk": "^0.2.50",
-    "@github/copilot-sdk": "^0.1.29",
-    "@openai/codex-sdk": "^0.111.0",
     "@bufbuild/protobuf": "^2.5.0",
     "@connectrpc/connect": "^2.0.0",
     "@connectrpc/connect-node": "^2.0.0",
-    "@grackle-ai/common": "workspace:*",
-    "commander": "^13.0.0",
-    "pino": "^10.3.1"
+    "@grackle-ai/common": "workspace:*"
   },
   "devDependencies": {
     "@grackle-ai/heft-rig": "workspace:*",
