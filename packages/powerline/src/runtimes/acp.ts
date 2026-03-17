@@ -1,11 +1,18 @@
 import { spawn } from "node:child_process";
 import { Readable, Writable } from "node:stream";
 import type { ChildProcess } from "node:child_process";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
 import type { AgentSession, AgentEvent } from "./runtime.js";
 import { BaseAgentSession } from "./base-session.js";
 import { BaseAgentRuntime } from "./base-runtime.js";
 import { resolveWorkingDirectory, resolveMcpServers, convertMcpServers } from "./runtime-utils.js";
 import { logger } from "../logger.js";
+
+const __dirname: string = dirname(fileURLToPath(import.meta.url));
+
+/** Path to the PowerLine package's node_modules/.bin directory, for resolving ACP bridge binaries. */
+const NODE_MODULES_BIN: string = join(__dirname, "../../node_modules/.bin");
 
 // ─── Configuration ──────────────────────────────────────────
 
@@ -217,7 +224,12 @@ class AcpSession extends BaseAgentSession {
 
     // Spawn agent subprocess in the resolved working directory
     const spawnCwd = cwd || process.cwd();
-    const childEnv = { ...process.env, ...this.config.env };
+    const pathSeparator = process.platform === "win32" ? ";" : ":";
+    const childEnv = {
+      ...process.env,
+      ...this.config.env,
+      PATH: `${NODE_MODULES_BIN}${pathSeparator}${process.env.PATH || ""}`,
+    };
     this.child = spawn(this.config.command, this.config.args, {
       stdio: ["pipe", "pipe", "inherit"],
       cwd: spawnCwd,
@@ -280,12 +292,18 @@ class AcpSession extends BaseAgentSession {
     );
 
     // Initialize ACP protocol
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-    await this.connection.initialize({
-      protocolVersion: sdk.PROTOCOL_VERSION,
-      clientInfo: { name: "grackle-powerline", version: "1.0.0" },
-      clientCapabilities: {},
-    });
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+      await this.connection.initialize({
+        protocolVersion: sdk.PROTOCOL_VERSION,
+        clientInfo: { name: "grackle-powerline", version: "1.0.0" },
+        clientCapabilities: {},
+      });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : JSON.stringify(err);
+      logger.error({ err }, "ACP initialize failed");
+      throw new Error(`ACP initialize failed: ${message}`);
+    }
 
     this.eventQueue.push({
       type: "system",
@@ -305,11 +323,19 @@ class AcpSession extends BaseAgentSession {
       return;
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
-    const sessionResult = await this.connection.newSession({
-      cwd: spawnCwd,
-      mcpServers: convertMcpServers(mcpConfig.servers),
-    });
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    let sessionResult: Record<string, unknown>;
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
+      sessionResult = await this.connection.newSession({
+        cwd: spawnCwd,
+        mcpServers: convertMcpServers(mcpConfig.servers),
+      });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : JSON.stringify(err);
+      logger.error({ err }, "ACP newSession failed");
+      throw new Error(`ACP newSession failed: ${message}`);
+    }
 
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     this.acpSessionId = sessionResult.sessionId as string;
