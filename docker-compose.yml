@@ -1,0 +1,22 @@
+services:
+  grackle:
+    build:
+      context: .
+      dockerfile: Dockerfile.server
+    container_name: grackle
+    ports:
+      - "7434:7434"   # gRPC
+      - "3000:3000"   # Web UI + WebSocket
+      - "7435:7435"   # MCP
+      - "7433:7433"   # Local PowerLine
+    volumes:
+      - grackle-data:/grackle-home/.grackle                       # Persistent DB + API key
+      - /var/run/docker.sock:/var/run/docker.sock                 # Docker-out-of-Docker
+      - "${APPDATA}/GitHub CLI:/home/node/.config/gh:ro"          # gh auth (Windows)
+    environment:
+      - GH_CONFIG_DIR=/home/node/.config/gh
+      - GRACKLE_HOME=/grackle-home
+    restart: unless-stopped
+
+volumes:
+  grackle-data:
