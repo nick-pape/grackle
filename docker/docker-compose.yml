@@ -1,8 +1,8 @@
 services:
   grackle:
     build:
-      context: .
-      dockerfile: Dockerfile.server
+      context: ..
+      dockerfile: docker/Dockerfile.server
     container_name: grackle
     ports:
       - "7434:7434"   # gRPC
