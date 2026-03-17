@@ -12,9 +12,9 @@ services:
     volumes:
       - grackle-data:/grackle-home/.grackle                              # Persistent DB + API key
       - /var/run/docker.sock:/var/run/docker.sock                        # Docker-out-of-Docker
-      - "${USERPROFILE}/.claude:/home/node/.claude:ro"                   # Claude auth + config
-      - "${USERPROFILE}/.copilot:/home/node/.copilot:ro"                 # Copilot auth
-      - "${USERPROFILE}/.codex:/home/node/.codex:ro"                     # Codex auth
+      - "${HOME}/.claude:/home/node/.claude:ro"                            # Claude auth + config
+      - "${HOME}/.copilot:/home/node/.copilot:ro"                        # Copilot auth
+      - "${HOME}/.codex:/home/node/.codex:ro"                            # Codex auth
     environment:
       - GH_CONFIG_DIR=/grackle-home/.grackle/gh-config
       - GRACKLE_HOME=/grackle-home

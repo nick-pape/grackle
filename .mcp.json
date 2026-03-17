@@ -10,6 +10,6 @@
       "headers": {
         "Authorization": "Bearer ${GITHUB_PAT}"
       }
-    },
+    }
   }
 }

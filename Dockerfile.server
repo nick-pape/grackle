@@ -36,10 +36,11 @@ ARG GRACKLE_CLI_VERSION=latest
 RUN npm install -g @grackle-ai/cli@${GRACKLE_CLI_VERSION}
 
 # ── Agent runtimes ────────────────────────────────────────────────
-RUN npm install -g @anthropic-ai/claude-code@latest
-RUN npm install -g @openai/codex@latest
-RUN npm install -g @github/copilot@latest
-RUN npm install -g @github/copilot-sdk@latest
+RUN npm install -g \
+    @anthropic-ai/claude-code@latest \
+    @openai/codex@latest \
+    @github/copilot@latest \
+    @github/copilot-sdk@latest
 
 # ── Remove build toolchain (only needed for native addon compilation) ──
 RUN apt-get purge -y --auto-remove python3 make g++ \
