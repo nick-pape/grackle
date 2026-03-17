@@ -220,14 +220,14 @@ export async function resolveWorkingDirectory(options: ResolveWorkingDirectoryOp
  * Convert Grackle MCP server configs (keyed object) to ACP format (named array).
  *
  * Grackle format: `{ "name": { command, args, env, ... } }`
- * ACP format:     `[{ name, transport: "stdio", command, args, env, ... }]`
+ * ACP format:     `[{ name, type: "stdio"|"http", command, args, env, ... }]`
  */
 export function convertMcpServers(servers: Record<string, unknown> | undefined): Record<string, unknown>[] {
   if (!servers) {
     return [];
   }
   return Object.entries(servers)
-    .filter(([, config]) => typeof config === "object" && config !== null)
+    .filter(([, config]) => typeof config === "object" && config !== null && !Array.isArray(config))
     .map(([name, config]) => {
       const cfg = config as Record<string, unknown>;
       // Detect transport: HTTP servers have type:"http" or a url field; everything else is stdio

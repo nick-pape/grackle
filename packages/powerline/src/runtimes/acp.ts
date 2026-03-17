@@ -22,7 +22,7 @@ export interface AcpAgentConfig {
   name: string;
   /** Command to spawn (e.g., "codex", "copilot", "claude"). */
   command: string;
-  /** CLI arguments to enable ACP mode (e.g., ["--acp"]). */
+  /** CLI arguments passed to the agent command (e.g., ["--acp", "--stdio"]). */
   args: string[];
   /** Additional environment variables for the subprocess. */
   env?: Record<string, string>;
@@ -56,11 +56,12 @@ function getAcpSdk(): Promise<AcpSdkModule> {
           ndJsonStream: mod.ndJsonStream as AcpSdkModule["ndJsonStream"],
           PROTOCOL_VERSION: (mod.PROTOCOL_VERSION ?? 1) as number,
         };
-      } catch {
+      } catch (importErr: unknown) {
         sdkPromise = undefined;
+        const detail = importErr instanceof Error ? importErr.message : String(importErr);
         throw new Error(
-          "ACP SDK not installed. Run: npm install @agentclientprotocol/sdk\n" +
-          "The agent CLI must also be installed and available in PATH.",
+          `ACP SDK not installed or failed to load: ${detail}\n` +
+          "Run: npm install @agentclientprotocol/sdk",
         );
       }
     })();
