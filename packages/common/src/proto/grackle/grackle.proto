@@ -448,6 +448,7 @@ service Grackle {
   rpc SendInput(InputMessage) returns (Empty);
   rpc KillAgent(SessionId) returns (Empty);
   rpc ListSessions(SessionFilter) returns (SessionList);
+  rpc GetSession(SessionId) returns (Session);
 
   // Streaming
   rpc StreamSession(SessionId) returns (stream SessionEvent);
