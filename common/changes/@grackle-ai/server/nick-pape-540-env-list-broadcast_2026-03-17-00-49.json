@@ -3,9 +3,9 @@
     {
       "comment": "Broadcast environment list to WebSocket clients after gRPC add/remove operations",
       "type": "patch",
-      "packageName": "@grackle-ai/cli"
+      "packageName": "@grackle-ai/server"
     }
   ],
-  "packageName": "@grackle-ai/cli",
+  "packageName": "@grackle-ai/server",
   "email": "5674316+nick-pape@users.noreply.github.com"
 }
