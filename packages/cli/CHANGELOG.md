@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Tue, 17 Mar 2026 01:31:02 GMT and should not be manually modified.
+This log was last generated on Tue, 17 Mar 2026 03:20:19 GMT and should not be manually modified.
+
+## 0.35.0
+Tue, 17 Mar 2026 03:20:19 GMT
+
+### Minor changes
+
+- Add useWorktrees field to project MCP tools (list, create, get, update)
 
 ## 0.34.1
 Tue, 17 Mar 2026 01:31:02 GMT
