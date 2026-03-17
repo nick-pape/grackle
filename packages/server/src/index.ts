@@ -613,10 +613,13 @@ async function main(): Promise<void> {
   registerAdapter(new CodespaceAdapter());
 
   // --- Auto-start local PowerLine ---
+  const skipLocalPowerLine = process.env.GRACKLE_SKIP_LOCAL_POWERLINE === "1";
   const powerlinePort = parseInt(process.env.GRACKLE_POWERLINE_PORT || String(DEFAULT_POWERLINE_PORT), 10);
   const plBindHost = process.env.GRACKLE_HOST || "127.0.0.1";
 
-  try {
+  if (skipLocalPowerLine) {
+    logger.info("Skipping local PowerLine auto-start (GRACKLE_SKIP_LOCAL_POWERLINE=1)");
+  } else try {
     // Ensure the "local" environment exists in the database
     let localEnv = envRegistry.getEnvironment("local");
     const adapterConfig = JSON.stringify({ port: powerlinePort, host: plBindHost });
