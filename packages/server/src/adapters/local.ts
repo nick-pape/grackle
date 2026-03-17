@@ -1,6 +1,6 @@
 import { DEFAULT_POWERLINE_PORT } from "@grackle-ai/common";
-import type { EnvironmentAdapter, BaseEnvironmentConfig, PowerLineConnection, ProvisionEvent } from "./adapter.js";
-import { createPowerLineClient } from "./powerline-transport.js";
+import type { EnvironmentAdapter, BaseEnvironmentConfig, PowerLineConnection, ProvisionEvent } from "@grackle-ai/adapter-sdk";
+import { createPowerLineClient } from "@grackle-ai/adapter-sdk";
 import { sleep } from "../utils/sleep.js";
 
 const POWERLINE_RETRY_DELAY_MS: number = 1_000;

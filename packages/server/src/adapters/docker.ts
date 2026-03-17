@@ -1,12 +1,12 @@
 import { DEFAULT_POWERLINE_PORT } from "@grackle-ai/common";
-import type { EnvironmentAdapter, BaseEnvironmentConfig, PowerLineConnection, ProvisionEvent } from "./adapter.js";
-import type { RemoteExecutor } from "./remote-adapter-utils.js";
-import { createPowerLineClient } from "./powerline-transport.js";
+import type { EnvironmentAdapter, BaseEnvironmentConfig, PowerLineConnection, ProvisionEvent, RemoteExecutor } from "@grackle-ai/adapter-sdk";
 import {
+  createPowerLineClient,
   isDevMode,
   bootstrapPowerLine,
   startRemotePowerLine,
-} from "./remote-adapter-utils.js";
+} from "@grackle-ai/adapter-sdk";
+import { getCredentialProviders } from "../credential-providers.js";
 import { exec } from "../utils/exec.js";
 import { findFreePort } from "../utils/ports.js";
 import { sleep } from "../utils/sleep.js";
@@ -264,7 +264,12 @@ export class DockerAdapter implements EnvironmentAdapter {
     // Docker containers need host=0.0.0.0 because port mapping can't reach 127.0.0.1.
     const executor = new DockerExecutor(containerName);
     if (isNew) {
-      yield* bootstrapPowerLine(executor, powerlineToken, cfg.env, WORKSPACE_PATH, "0.0.0.0");
+      yield* bootstrapPowerLine(executor, powerlineToken, {
+        extraEnv: cfg.env,
+        workingDirectory: WORKSPACE_PATH,
+        host: "0.0.0.0",
+        isGitHubProviderEnabled: () => getCredentialProviders().github !== "off",
+      });
     } else {
       // Container already exists — just restart PowerLine with fresh token
       yield { stage: "reconnecting", message: "Restarting PowerLine...", progress: 0.60 };
