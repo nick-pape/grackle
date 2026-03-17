@@ -30,7 +30,6 @@ export interface AcpAgentConfig {
 
 // ─── Dynamic import ─────────────────────────────────────────
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 interface AcpSdkModule {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ClientSideConnection: new (toClient: (agent: any) => any, stream: any) => any;
@@ -294,7 +293,6 @@ class AcpSession extends BaseAgentSession {
 
     // Initialize ACP protocol
     try {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
       await this.connection.initialize({
         protocolVersion: sdk.PROTOCOL_VERSION,
         clientInfo: { name: "grackle-powerline", version: "1.0.0" },
@@ -324,10 +322,9 @@ class AcpSession extends BaseAgentSession {
       return;
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     let sessionResult: Record<string, unknown>;
     try {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       sessionResult = await this.connection.newSession({
         cwd: spawnCwd,
         mcpServers: convertMcpServers(mcpConfig.servers),
@@ -338,7 +335,6 @@ class AcpSession extends BaseAgentSession {
       throw new Error(`ACP newSession failed: ${message}`);
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     this.acpSessionId = sessionResult.sessionId as string;
     this.runtimeSessionId = this.acpSessionId || "";
 
@@ -351,14 +347,12 @@ class AcpSession extends BaseAgentSession {
     // Set model if specified
     if (this.model) {
       try {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
         await this.connection.unstable_setSessionModel({
           sessionId: this.acpSessionId,
           modelId: this.model,
         });
       } catch {
         try {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
           await this.connection.setSessionConfigOption({
             sessionId: this.acpSessionId,
             configId: "model",
@@ -384,7 +378,6 @@ class AcpSession extends BaseAgentSession {
   protected async runInitialQuery(prompt: string): Promise<number> {
     this.messageCount = 0;
     try {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
       await this.connection.prompt({
         sessionId: this.acpSessionId,
         prompt: [{ type: "text", text: prompt }],
@@ -399,7 +392,6 @@ class AcpSession extends BaseAgentSession {
 
   protected async executeFollowUp(text: string): Promise<void> {
     this.messageCount = 0;
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
     await this.connection.prompt({
       sessionId: this.acpSessionId,
       prompt: [{ type: "text", text }],
@@ -412,7 +404,6 @@ class AcpSession extends BaseAgentSession {
 
   protected abortActive(): void {
     if (this.connection && this.acpSessionId) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
       (this.connection.cancel({ sessionId: this.acpSessionId }) as Promise<void>).catch(() => {});
     }
   }
@@ -421,7 +412,6 @@ class AcpSession extends BaseAgentSession {
   public override kill(): void {
     // Cancel ACP session before super.kill() calls abortActive()
     if (this.connection && this.acpSessionId) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
       (this.connection.cancel({ sessionId: this.acpSessionId }) as Promise<void>).catch(() => {});
     }
     // Kill the subprocess
