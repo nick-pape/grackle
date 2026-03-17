@@ -717,7 +717,6 @@ function main(): void {
       // Print QR code only when network-accessible (useful for phone scanning)
       if (allowNetwork) {
         try {
-          // eslint-disable-next-line @typescript-eslint/no-require-imports
           const qrcode = esmRequire("qrcode") as { toString(text: string, opts: { type: string; small: boolean }): Promise<string> };
           qrcode.toString(pairingUrl, { type: "terminal", small: true })
             .then((qr: string) => { process.stdout.write(qr); })

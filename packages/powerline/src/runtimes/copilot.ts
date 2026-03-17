@@ -20,7 +20,6 @@ const GITHUB_TOKEN_ENV_VARS: readonly string[] = ["COPILOT_GITHUB_TOKEN", "GH_TO
 // ─── Dynamic import ────────────────────────────────────────
 
 /** Cached result of the Copilot SDK import. */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 interface CopilotSdkModule {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   CopilotClient: new (opts?: Record<string, unknown>) => any;

@@ -13,7 +13,6 @@ const ENV_CODEX_CLI_PATH: string = "CODEX_CLI_PATH";
 
 // ─── Dynamic import ────────────────────────────────────────
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 interface CodexSdkModule {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   Codex: new (opts?: Record<string, unknown>) => any;

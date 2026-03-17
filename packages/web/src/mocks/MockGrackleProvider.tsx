@@ -205,7 +205,6 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
   /** Spawns a new session, appends it to state, and plays a stream scenario. */
   const spawn: UseGrackleSocketResult["spawn"] = useCallback(
     (environmentId: string, prompt: string, _model?: string, runtime?: string) => {
-      // eslint-disable-next-line no-console
       console.log("[MockGrackle] spawn", { environmentId, prompt, runtime });
 
       const sessionId = nextId("sess");
@@ -222,7 +221,6 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       setLastSpawnedId(sessionId);
 
       const scenario = nextScenario();
-      // eslint-disable-next-line no-console
       console.log(`[MockGrackle] Playing scenario: ${scenario.label}`);
 
       if (scenario.pauseForInput) {
@@ -263,7 +261,6 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
   /** Kills a session: cancels timers, sets status to interrupted, resets associated tasks. */
   const kill: UseGrackleSocketResult["kill"] = useCallback(
     (sessionId: string) => {
-      // eslint-disable-next-line no-console
       console.log("[MockGrackle] kill", sessionId);
 
       // 1. Cancel pending timers for this session
@@ -298,14 +295,12 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
 
   /** No-op refresh — the mock has no server to re-fetch from. */
   const refresh: UseGrackleSocketResult["refresh"] = useCallback(() => {
-    // eslint-disable-next-line no-console
     console.log("[MockGrackle] refresh");
   }, []);
 
   /** No-op — events are already accumulated in state. */
   const loadSessionEvents: UseGrackleSocketResult["loadSessionEvents"] = useCallback(
     (sessionId: string) => {
-      // eslint-disable-next-line no-console
       console.log("[MockGrackle] loadSessionEvents", sessionId);
     },
     [],
@@ -313,7 +308,6 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
 
   /** Clears all events from state. */
   const clearEvents: UseGrackleSocketResult["clearEvents"] = useCallback(() => {
-    // eslint-disable-next-line no-console
     console.log("[MockGrackle] clearEvents");
     setEvents([]);
   }, []);
@@ -321,7 +315,6 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
   /** Creates a new project and adds it to state. */
   const createProject: UseGrackleSocketResult["createProject"] = useCallback(
     (name: string, description?: string, repoUrl?: string, defaultEnvironmentId?: string) => {
-      // eslint-disable-next-line no-console
       console.log("[MockGrackle] createProject", { name, description });
 
       const newProject: Project = {
@@ -345,7 +338,6 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
   /** Sets a project's status to "archived". */
   const archiveProject: UseGrackleSocketResult["archiveProject"] = useCallback(
     (projectId: string) => {
-      // eslint-disable-next-line no-console
       console.log("[MockGrackle] archiveProject", projectId);
       setProjects((prev) =>
         prev.map((p) => (p.id === projectId ? { ...p, status: "archived" } : p)),
@@ -357,7 +349,6 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
   /** No-op — tasks are already in state from initial load. */
   const loadTasks: UseGrackleSocketResult["loadTasks"] = useCallback(
     (projectId: string) => {
-      // eslint-disable-next-line no-console
       console.log("[MockGrackle] loadTasks", projectId);
     },
     [],
@@ -372,7 +363,6 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       dependsOn?: string[],
       parentTaskId?: string,
     ) => {
-      // eslint-disable-next-line no-console
       console.log("[MockGrackle] createTask", { projectId, title, parentTaskId });
 
       setTasks((prev) => {
@@ -380,12 +370,10 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
         const maxSort = projectTasks.reduce((max, t) => Math.max(max, t.sortOrder), 0);
         const parent = parentTaskId ? prev.find((t) => t.id === parentTaskId) : undefined;
         if (parentTaskId && !parent) {
-          // eslint-disable-next-line no-console
           console.warn("[MockGrackle] Parent task not found:", parentTaskId);
           return prev;
         }
         if (parent && !parent.canDecompose) {
-          // eslint-disable-next-line no-console
           console.warn("[MockGrackle] Parent task does not have decomposition rights:", parentTaskId);
           return prev;
         }
@@ -424,7 +412,6 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
    */
   const startTask: UseGrackleSocketResult["startTask"] = useCallback(
     (taskId: string, runtime?: string, _model?: string) => {
-      // eslint-disable-next-line no-console
       console.log("[MockGrackle] startTask", { taskId, runtime });
 
       // Find the task to get its metadata
@@ -459,7 +446,6 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
 
       // Pick and play a scenario
       const scenario = nextScenario();
-      // eslint-disable-next-line no-console
       console.log(`[MockGrackle] Playing task scenario: ${scenario.label}`);
 
       if (scenario.pauseForInput) {
@@ -561,7 +547,6 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
    */
   const sendInput: UseGrackleSocketResult["sendInput"] = useCallback(
     (sessionId: string, text: string) => {
-      // eslint-disable-next-line no-console
       console.log("[MockGrackle] sendInput", { sessionId, text });
 
       // 1. Append echo event
@@ -633,7 +618,6 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
   /** Completes a task: sets status to "complete" (human-authoritative). */
   const completeTask: UseGrackleSocketResult["completeTask"] = useCallback(
     (taskId: string) => {
-      // eslint-disable-next-line no-console
       console.log("[MockGrackle] completeTask", taskId);
       setTasks((prev) =>
         prev.map((t) => (t.id === taskId ? { ...t, status: "complete" } : t)),
@@ -645,7 +629,6 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
   /** Resumes the latest session for a task (mock: no-op, just logs). */
   const resumeTask: UseGrackleSocketResult["resumeTask"] = useCallback(
     (taskId: string) => {
-      // eslint-disable-next-line no-console
       console.log("[MockGrackle] resumeTask", taskId);
     },
     [],
@@ -659,7 +642,6 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       description: string,
       dependsOn: string[],
     ) => {
-      // eslint-disable-next-line no-console
       console.log("[MockGrackle] updateTask", { taskId, title });
       setTasks((prev) =>
         prev.map((t) =>
@@ -680,7 +662,6 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
   /** Removes a task from state. */
   const deleteTask: UseGrackleSocketResult["deleteTask"] = useCallback(
     (taskId: string) => {
-      // eslint-disable-next-line no-console
       console.log("[MockGrackle] deleteTask", taskId);
       setTasks((prev) => prev.filter((t) => t.id !== taskId));
     },
@@ -690,7 +671,6 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
   /** Filters findings by projectId. */
   const loadFindings: UseGrackleSocketResult["loadFindings"] = useCallback(
     (projectId: string) => {
-      // eslint-disable-next-line no-console
       console.log("[MockGrackle] loadFindings", projectId);
       setFindings(MOCK_FINDINGS.filter((f) => f.projectId === projectId));
     },
@@ -706,7 +686,6 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       category?: string,
       tags?: string[],
     ) => {
-      // eslint-disable-next-line no-console
       console.log("[MockGrackle] postFinding", { projectId, title });
 
       const newFinding: FindingData = {
@@ -734,7 +713,6 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       adapterConfig?: Record<string, unknown>,
       defaultRuntime?: string,
     ) => {
-      // eslint-disable-next-line no-console
       console.log("[MockGrackle] addEnvironment", { displayName, adapterType, adapterConfig, defaultRuntime });
     },
     [],
@@ -744,14 +722,12 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
 
   /** No-op — tokens are already in state from initial load. */
   const loadTokens: UseGrackleSocketResult["loadTokens"] = useCallback(() => {
-    // eslint-disable-next-line no-console
     console.log("[MockGrackle] loadTokens");
   }, []);
 
   /** Adds or replaces a token in state. */
   const mockSetToken: UseGrackleSocketResult["setToken"] = useCallback(
     (name: string, _value: string, tokenType: string, envVar: string, filePath: string) => {
-      // eslint-disable-next-line no-console
       console.log("[MockGrackle] setToken", { name, tokenType });
       setTokens((prev) => {
         const without = prev.filter((t) => t.name !== name);
@@ -764,7 +740,6 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
   /** Removes a token from state. */
   const mockDeleteToken: UseGrackleSocketResult["deleteToken"] = useCallback(
     (name: string) => {
-      // eslint-disable-next-line no-console
       console.log("[MockGrackle] deleteToken", name);
       setTokens((prev) => prev.filter((t) => t.name !== name));
     },
@@ -774,7 +749,6 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
   /** Updates credential provider configuration in state. */
   const mockUpdateCredentialProviders: UseGrackleSocketResult["updateCredentialProviders"] = useCallback(
     (config: CredentialProviderConfig) => {
-      // eslint-disable-next-line no-console
       console.log("[MockGrackle] updateCredentialProviders", config);
       setCredentialProviders(config);
     },
@@ -817,7 +791,6 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       createProject,
       archiveProject,
       updateProject: (projectId: string, fields: { name?: string; description?: string; repoUrl?: string; defaultEnvironmentId?: string; worktreeBasePath?: string; useWorktrees?: boolean }) => {
-        // eslint-disable-next-line no-console
         console.log("[MockGrackle] updateProject", { projectId, ...fields });
         setProjects((prev) =>
           prev.map((p) => {
@@ -865,7 +838,6 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       taskStartingId: undefined,
       personas,
       createPersona: (name: string, description: string, systemPrompt: string, runtime?: string, model?: string, maxTurns?: number) => {
-        // eslint-disable-next-line no-console
         console.log("[MockGrackle] createPersona", { name });
         const newPersona: PersonaData = {
           id: `mock-persona-${Date.now()}`,
@@ -883,7 +855,6 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
         setPersonas((prev) => [...prev, newPersona]);
       },
       updatePersona: (personaId: string, name?: string, description?: string, systemPrompt?: string, runtime?: string, model?: string, maxTurns?: number) => {
-        // eslint-disable-next-line no-console
         console.log("[MockGrackle] updatePersona", { personaId, name });
         setPersonas((prev) =>
           prev.map((p) => {
@@ -904,13 +875,11 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
         );
       },
       deletePersona: (personaId: string) => {
-        // eslint-disable-next-line no-console
         console.log("[MockGrackle] deletePersona", personaId);
         setPersonas((prev) => prev.filter((p) => p.id !== personaId));
       },
       taskSessions,
       loadTaskSessions: (taskId: string) => {
-        // eslint-disable-next-line no-console
         console.log("[MockGrackle] loadTaskSessions", taskId);
       },
     }),
