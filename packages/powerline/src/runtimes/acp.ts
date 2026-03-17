@@ -382,11 +382,17 @@ class AcpSession extends BaseAgentSession {
 
   protected async runInitialQuery(prompt: string): Promise<number> {
     this.messageCount = 0;
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-    await this.connection.prompt({
-      sessionId: this.acpSessionId,
-      prompt: [{ type: "text", text: prompt }],
-    });
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+      await this.connection.prompt({
+        sessionId: this.acpSessionId,
+        prompt: [{ type: "text", text: prompt }],
+      });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : JSON.stringify(err);
+      logger.error({ err }, "ACP prompt failed");
+      throw new Error(`ACP prompt failed: ${message}`);
+    }
     return this.messageCount;
   }
 

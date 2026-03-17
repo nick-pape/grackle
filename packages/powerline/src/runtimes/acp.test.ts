@@ -210,14 +210,18 @@ describe("autoApprovePermission", () => {
 // ─── convertMcpServers ──────────────────────────────────────
 
 describe("convertMcpServers", () => {
-  it("converts Grackle format to ACP format", () => {
+  it("converts stdio servers to ACP format with array env", () => {
     const servers = {
       grackle: { command: "node", args: ["mcp.js"], env: { FOO: "bar" } },
     };
     const result = convertMcpServers(servers);
-    expect(result).toEqual([
-      { name: "grackle", transport: "stdio", command: "node", args: ["mcp.js"], env: { FOO: "bar" } },
-    ]);
+    expect(result).toEqual([{
+      name: "grackle",
+      type: "stdio",
+      command: "node",
+      args: ["mcp.js"],
+      env: [{ name: "FOO", value: "bar" }],
+    }]);
   });
 
   it("handles multiple servers", () => {
@@ -229,8 +233,8 @@ describe("convertMcpServers", () => {
     expect(result).toHaveLength(2);
     expect(result[0].name).toBe("server1");
     expect(result[1].name).toBe("server2");
-    expect(result[0].transport).toBe("stdio");
-    expect(result[1].transport).toBe("stdio");
+    expect(result[0].type).toBe("stdio");
+    expect(result[1].type).toBe("stdio");
   });
 
   it("returns empty array for undefined input", () => {
@@ -241,35 +245,27 @@ describe("convertMcpServers", () => {
     expect(convertMcpServers({})).toEqual([]);
   });
 
-  it("preserves extra fields from config", () => {
-    const servers = {
-      myServer: { command: "node", args: [], tools: ["tool_a", "tool_b"], customField: 42 },
-    };
+  it("defaults args and env to empty arrays for stdio", () => {
+    const servers = { myServer: { command: "node" } };
     const result = convertMcpServers(servers);
-    expect(result[0]).toEqual({
-      name: "myServer",
-      transport: "stdio",
-      command: "node",
-      args: [],
-      tools: ["tool_a", "tool_b"],
-      customField: 42,
-    });
+    expect(result[0].args).toEqual([]);
+    expect(result[0].env).toEqual([]);
   });
 
-  it("detects HTTP transport from type field", () => {
+  it("converts HTTP headers object to array of {name, value}", () => {
     const servers = {
       grackle: {
         type: "http",
         url: "http://localhost:7435/mcp",
         headers: { Authorization: "Bearer tok123" },
-        tools: ["*"],
       },
     };
     const result = convertMcpServers(servers);
     expect(result).toHaveLength(1);
-    expect(result[0].transport).toBe("http");
+    expect(result[0].type).toBe("http");
     expect(result[0].url).toBe("http://localhost:7435/mcp");
     expect(result[0].name).toBe("grackle");
+    expect(result[0].headers).toEqual([{ name: "Authorization", value: "Bearer tok123" }]);
   });
 
   it("detects HTTP transport from url field without explicit type", () => {
@@ -277,7 +273,7 @@ describe("convertMcpServers", () => {
       remote: { url: "http://example.com/mcp" },
     };
     const result = convertMcpServers(servers);
-    expect(result[0].transport).toBe("http");
+    expect(result[0].type).toBe("http");
   });
 
   it("skips non-object config values", () => {
@@ -298,8 +294,16 @@ describe("convertMcpServers", () => {
     };
     const result = convertMcpServers(servers);
     expect(result).toHaveLength(2);
-    expect(result[0].transport).toBe("stdio");
-    expect(result[1].transport).toBe("http");
+    expect(result[0].type).toBe("stdio");
+    expect(result[1].type).toBe("http");
+  });
+
+  it("passes through env/headers that are already arrays", () => {
+    const servers = {
+      s: { command: "x", args: [], env: [{ name: "A", value: "1" }] },
+    };
+    const result = convertMcpServers(servers);
+    expect(result[0].env).toEqual([{ name: "A", value: "1" }]);
   });
 });
 
