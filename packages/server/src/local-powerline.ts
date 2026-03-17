@@ -81,10 +81,10 @@ export async function startLocalPowerLine(options: StartLocalPowerLineOptions): 
 
   const child: ChildProcess = spawn(
     process.execPath,
-    [entryPoint, "--port", String(port), "--token", token, "--host", host],
+    [entryPoint, "--port", String(port), "--host", host],
     {
       stdio: ["ignore", "pipe", "pipe"],
-      env: { ...process.env },
+      env: { ...process.env, GRACKLE_POWERLINE_TOKEN: token },
     },
   );
 
