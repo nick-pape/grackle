@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Extract @grackle-ai/adapter-sdk package with adapter interfaces, bootstrap logic, and tunnel management",
+      "type": "minor",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
