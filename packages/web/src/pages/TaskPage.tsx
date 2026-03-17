@@ -311,7 +311,6 @@ export function TaskPage(): JSX.Element {
     projects, taskSessions: taskSessionsMap, loadTaskSessions,
   } = useGrackle();
 
-  // eslint-disable-next-line @rushstack/no-new-null
   const scrollRef = useRef<HTMLDivElement>(null);
   const loadedRef = useRef<string | undefined>(undefined);
   const prevTaskIdRef = useRef<string | undefined>(undefined);

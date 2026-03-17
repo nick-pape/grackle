@@ -251,7 +251,6 @@ export function EnvironmentList(): JSX.Element {
     removeEnvironment,
   } = useGrackle();
   const navigate = useAppNavigate();
-  // eslint-disable-next-line @rushstack/no-new-null
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [expandedSessionIds, setExpandedSessionIds] = useState<Set<string>>(new Set());
 

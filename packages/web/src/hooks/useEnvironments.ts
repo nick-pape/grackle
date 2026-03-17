@@ -81,7 +81,6 @@ export function useEnvironments(send: SendFunction): UseEnvironmentsResult {
           setTimeout(() => {
             setProvisionStatus((prev) => {
               const next = { ...prev };
-              // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
               delete next[pp.environmentId];
               return next;
             });
@@ -102,7 +101,6 @@ export function useEnvironments(send: SendFunction): UseEnvironmentsResult {
           setEnvironments((prev) => prev.filter((e) => e.id !== removedId));
           setProvisionStatus((prev) => {
             const next = { ...prev };
-            // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
             delete next[removedId];
             return next;
           });

@@ -89,7 +89,6 @@ export function SessionPage(): JSX.Element {
   const {
     events, eventsDropped, sessions, kill, loadSessionEvents,
   } = useGrackle();
-  // eslint-disable-next-line @rushstack/no-new-null
   const scrollRef = useRef<HTMLDivElement>(null);
   const loadedRef = useRef<string | undefined>(undefined);
 

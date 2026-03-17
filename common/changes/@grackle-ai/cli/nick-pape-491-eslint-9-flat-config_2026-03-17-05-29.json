@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Upgrade to ESLint 9 flat config and remove stale eslint-disable directives",
+      "type": "none",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
