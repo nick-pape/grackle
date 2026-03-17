@@ -381,12 +381,11 @@ The most feature-rich adapter. Full container lifecycle management.
 }
 ```
 
-**Dev mode detection:** If `rush.json` exists in the monorepo root, builds Docker image locally from `docker/Dockerfile.powerline --target dev` instead of pulling from registry. Copies local `dist/` artifacts into the container.
+**Dev mode detection:** If `rush.json` exists in the monorepo root, builds the Docker image locally from `docker/Dockerfile.powerline` instead of pulling from registry. PowerLine is installed at provision time via `bootstrapPowerLine()`, not baked into the image.
 
-**docker/Dockerfile.powerline** — Multi-stage build:
-- **Base**: `node:22-slim` with git, non-root `grackle` user, `/workspace` directory
-- **Production**: Installs `@grackle-ai/powerline` from npm
-- **Dev**: Copies local build artifacts, strips internal deps, installs external deps
+**docker/Dockerfile.powerline** — Minimal base image:
+- `node:22-slim` with git, non-root `grackle` user, `/workspace` directory
+- Sleeps on startup, waiting for the adapter to bootstrap PowerLine into the container
 
 ### 5.2 SSH Adapter
 
