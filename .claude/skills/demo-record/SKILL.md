@@ -27,10 +27,10 @@ rush build
 ```bash
 # Demo recorder image (Playwright + Xvfb + PulseAudio + ffmpeg + PocketTTS)
 # No --secret needed: uses PocketTTS built-in voices (no HF_TOKEN required)
-docker build -f Dockerfile.demo-recorder -t grackle-demo-recorder .
+docker build -f docker/Dockerfile.demo-recorder -t grackle-demo-recorder .
 
 # Dev environment image (standard PowerLine)
-docker build -f Dockerfile.powerline -t grackle-powerline .
+docker build -f docker/Dockerfile.powerline -t grackle-powerline .
 ```
 
 ### 3. Nuke database and restart server

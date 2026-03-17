@@ -42,7 +42,7 @@ Check these spec files in the repo for relevant sections:
 - `specs/GRACKLE-DEEP-DIVE.md` — Full architecture deep dive (all subsystems)
 - `specs/v0.md` — Original design spec (UI mockups, interaction patterns)
 - `specs/default-personas.md` — Persona roster definitions
-- `spec/ux-audit.md` — UX audit findings and recommendations
+- `specs/ux-audit.md` — UX audit findings and recommendations
 
 Read the files that are relevant based on the issue's domain (server, web, CLI, powerline, etc.). Use the issue labels to guide which specs to prioritize.
 

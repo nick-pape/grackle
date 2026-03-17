@@ -362,7 +362,7 @@ interface EnvironmentAdapter {
 The most feature-rich adapter. Full container lifecycle management.
 
 **Provisioning flow:**
-1. **Image acquisition**: Build from local `Dockerfile.powerline` (dev mode) or pull from registry
+1. **Image acquisition**: Build from local `docker/Dockerfile.powerline` (dev mode) or pull from registry
 2. **Container lifecycle**: Create, start, or reuse existing container
 3. **Port discovery**: `docker inspect` to find mapped host port
 4. **Repo cloning**: Clone configured git repo into `/workspace` with GitHub token
@@ -381,9 +381,9 @@ The most feature-rich adapter. Full container lifecycle management.
 }
 ```
 
-**Dev mode detection:** If `rush.json` exists in the monorepo root, builds Docker image locally from `Dockerfile.powerline --target dev` instead of pulling from registry. Copies local `dist/` artifacts into the container.
+**Dev mode detection:** If `rush.json` exists in the monorepo root, builds Docker image locally from `docker/Dockerfile.powerline --target dev` instead of pulling from registry. Copies local `dist/` artifacts into the container.
 
-**Dockerfile.powerline** — Multi-stage build:
+**docker/Dockerfile.powerline** — Multi-stage build:
 - **Base**: `node:22-slim` with git, non-root `grackle` user, `/workspace` directory
 - **Production**: Installs `@grackle-ai/powerline` from npm
 - **Dev**: Copies local build artifacts, strips internal deps, installs external deps
@@ -780,7 +780,7 @@ Triggered on push to `main`:
 - `@grackle-ai/cli` — CLI client (binary: `grackle`)
 - `@grackle-ai/web` — Web UI / frontend
 
-**Docker image:** Built from `Dockerfile.powerline` for containerized environments.
+**Docker image:** Built from `docker/Dockerfile.powerline` for containerized environments.
 
 **Lockstep versioning:** All 5 publishable packages share one version (currently 0.13.2).
 
