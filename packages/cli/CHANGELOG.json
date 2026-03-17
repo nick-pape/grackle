@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.38.0",
+      "tag": "@grackle-ai/cli_v0.38.0",
+      "date": "Tue, 17 Mar 2026 18:17:47 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Auto-parent subtasks from agent context; expose task_list and task_show to scoped agents"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.37.0",
       "tag": "@grackle-ai/cli_v0.37.0",
       "date": "Tue, 17 Mar 2026 15:03:49 GMT",
