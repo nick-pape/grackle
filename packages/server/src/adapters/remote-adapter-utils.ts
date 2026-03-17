@@ -10,11 +10,15 @@ import {
   connectThroughTunnel as sdkConnectThroughTunnel,
   remoteStop as sdkRemoteStop,
   remoteDestroy as sdkRemoteDestroy,
+  registerTunnel as sdkRegisterTunnel,
+  closeAllTunnels as sdkCloseAllTunnels,
+  ProcessTunnel as SdkProcessTunnel,
   type AdapterLogger,
   type StartRemotePowerLineOptions,
   type PowerLineConnection,
   type ProvisionEvent,
   type RemoteExecutor,
+  type TunnelState,
 } from "@grackle-ai/adapter-sdk";
 import { logger } from "../logger.js";
 import { getCredentialProviders } from "../credential-providers.js";
@@ -23,11 +27,8 @@ import { getCredentialProviders } from "../credential-providers.js";
 
 export type { RemoteExecutor, RemoteTunnel, TunnelState } from "@grackle-ai/adapter-sdk";
 export {
-  ProcessTunnel,
-  registerTunnel,
   getTunnel,
   closeTunnel,
-  closeAllTunnels,
   waitForLocalPort,
   findFreePort,
   isDevMode,
@@ -40,7 +41,33 @@ export {
   REMOTE_EXEC_DEFAULT_TIMEOUT_MS,
 } from "@grackle-ai/adapter-sdk";
 
-// ─── Wrapped re-exports (inject server deps) ───────────────
+// ─── Wrapped re-exports (inject server pino logger) ─────────
+
+/**
+ * Base class for tunnels backed by a long-lived child process.
+ * Injects the server's pino logger by default.
+ */
+export abstract class ProcessTunnel extends SdkProcessTunnel {
+  public constructor(localPort: number) {
+    super(localPort, logger as AdapterLogger);
+  }
+}
+
+/**
+ * Register an active tunnel for an environment.
+ * Injects the server's pino logger.
+ */
+export function registerTunnel(environmentId: string, state: TunnelState): void {
+  sdkRegisterTunnel(environmentId, state, logger as AdapterLogger);
+}
+
+/**
+ * Close all active tunnels (called during server shutdown).
+ * Injects the server's pino logger.
+ */
+export function closeAllTunnels(): Promise<void> {
+  return sdkCloseAllTunnels(logger as AdapterLogger);
+}
 
 /**
  * Bootstrap the PowerLine on a remote host via the given executor.

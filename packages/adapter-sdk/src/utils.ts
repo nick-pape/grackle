@@ -1,6 +1,5 @@
 import { createServer } from "node:net";
-import { existsSync } from "node:fs";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 
 // ─── Constants ──────────────────────────────────────────────
