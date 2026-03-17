@@ -266,6 +266,28 @@ export async function resolveWorkingDirectory(options: ResolveWorkingDirectoryOp
   return findWorkspaceDir(worktreeBasePath, requireNonEmpty);
 }
 
+// ─── ACP MCP server conversion ─────────────────────────────
+
+/**
+ * Convert Grackle MCP server configs (keyed object) to ACP format (named array).
+ *
+ * Grackle format: `{ "name": { command, args, env, ... } }`
+ * ACP format:     `[{ name, transport: "stdio", command, args, env, ... }]`
+ */
+export function convertMcpServers(servers: Record<string, unknown> | undefined): Record<string, unknown>[] {
+  if (!servers) {
+    return [];
+  }
+  return Object.entries(servers).map(([name, config]) => {
+    const cfg = (config || {}) as Record<string, unknown>;
+    return {
+      ...cfg,
+      name,
+      transport: "stdio",
+    };
+  });
+}
+
 // ─── MCP server resolution ─────────────────────────────────
 
 /** Resolved MCP configuration returned by resolveMcpServers. */
