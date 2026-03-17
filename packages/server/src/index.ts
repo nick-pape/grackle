@@ -10,9 +10,13 @@ import { DockerAdapter } from "./adapters/docker.js";
 import { LocalAdapter } from "./adapters/local.js";
 import { SshAdapter } from "./adapters/ssh.js";
 import { CodespaceAdapter } from "./adapters/codespace.js";
-import { closeAllTunnels } from "@grackle-ai/adapter-sdk";
+import { closeAllTunnels, reconnectOrProvision } from "@grackle-ai/adapter-sdk";
 import { createWsBridge } from "./ws-bridge.js";
-import { DEFAULT_SERVER_PORT, DEFAULT_WEB_PORT, DEFAULT_MCP_PORT } from "@grackle-ai/common";
+import { DEFAULT_SERVER_PORT, DEFAULT_WEB_PORT, DEFAULT_MCP_PORT, DEFAULT_POWERLINE_PORT } from "@grackle-ai/common";
+import { startLocalPowerLine, type LocalPowerLineHandle } from "./local-powerline.js";
+import * as adapterManager from "./adapter-manager.js";
+import * as envRegistry from "./env-registry.js";
+import * as tokenBroker from "./token-broker.js";
 import { createMcpServer } from "@grackle-ai/mcp";
 import { readFileSync, existsSync } from "node:fs";
 import { join, dirname, extname, normalize, resolve, relative } from "node:path";
@@ -592,7 +596,10 @@ function isWildcardAddress(host: string): boolean {
   return host === "0.0.0.0" || host === "::" || host === "0:0:0:0:0:0:0:0";
 }
 
-function main(): void {
+/** Handle for the auto-started local PowerLine child process. */
+let localPowerLineHandle: LocalPowerLineHandle | undefined;
+
+async function main(): Promise<void> {
   // Reset all environment statuses on startup — in-memory connections are lost
   resetAllStatuses();
 
@@ -604,6 +611,71 @@ function main(): void {
   registerAdapter(new LocalAdapter());
   registerAdapter(new SshAdapter());
   registerAdapter(new CodespaceAdapter());
+
+  // --- Auto-start local PowerLine ---
+  const powerlinePort = parseInt(process.env.GRACKLE_POWERLINE_PORT || String(DEFAULT_POWERLINE_PORT), 10);
+  const plBindHost = process.env.GRACKLE_HOST || "127.0.0.1";
+
+  try {
+    // Ensure the "local" environment exists in the database
+    let localEnv = envRegistry.getEnvironment("local");
+    const adapterConfig = JSON.stringify({ port: powerlinePort, host: plBindHost });
+
+    if (localEnv) {
+      // Update the adapter config to match the current port/host
+      envRegistry.updateAdapterConfig("local", adapterConfig);
+      localEnv = envRegistry.getEnvironment("local")!;
+    } else {
+      envRegistry.addEnvironment("local", "Local", "local", adapterConfig, "claude-code");
+      localEnv = envRegistry.getEnvironment("local")!;
+    }
+
+    // Spawn the PowerLine child process
+    localPowerLineHandle = await startLocalPowerLine({
+      port: powerlinePort,
+      host: plBindHost,
+      token: localEnv.powerlineToken,
+      onExit: (code, signal) => {
+        logger.error({ code, signal }, "Local PowerLine exited unexpectedly");
+        envRegistry.updateEnvironmentStatus("local", "disconnected");
+        broadcastEnvironments();
+        localPowerLineHandle = undefined;
+      },
+    });
+
+    // Auto-provision: connect the local adapter
+    const localAdapter = adapterManager.getAdapter("local")!;
+    const config = JSON.parse(localEnv.adapterConfig) as Record<string, unknown>;
+
+    envRegistry.updateEnvironmentStatus("local", "connecting");
+    broadcastEnvironments();
+
+    for await (const event of reconnectOrProvision(
+      "local",
+      localAdapter,
+      config,
+      localEnv.powerlineToken,
+      !!localEnv.bootstrapped,
+    )) {
+      logger.info({ stage: event.stage, progress: event.progress }, "Local env: %s", event.message);
+    }
+
+    const conn = await localAdapter.connect("local", config, localEnv.powerlineToken);
+    adapterManager.setConnection("local", conn);
+    await tokenBroker.pushToEnv("local");
+    envRegistry.updateEnvironmentStatus("local", "connected");
+    envRegistry.markBootstrapped("local");
+    broadcastEnvironments();
+
+    logger.info({ port: powerlinePort }, "Local environment auto-connected");
+  } catch (err) {
+    logger.error(
+      { err, port: powerlinePort },
+      "Failed to start local PowerLine — local environment will not be available. Is port %d in use?",
+      powerlinePort,
+    );
+    // Non-fatal: server continues without local env (remote envs still work)
+  }
 
   // Non-blocking startup diagnostic: check gh CLI availability
   const GH_CHECK_TIMEOUT_MS: number = 5_000;
@@ -770,6 +842,13 @@ function main(): void {
       process.exit(1);
     }, SHUTDOWN_TIMEOUT_MS);
 
+    // Stop the local PowerLine child process first
+    const plHandle: LocalPowerLineHandle | undefined = localPowerLineHandle;
+    if (plHandle) {
+      localPowerLineHandle = undefined;
+      await plHandle.stop();
+    }
+
     await closeAllTunnels();
 
     await new Promise<void>((resolve) => {
@@ -809,4 +888,7 @@ function main(): void {
   process.on("SIGTERM", shutdown);
 }
 
-main();
+main().catch((err) => {
+  logger.fatal({ err }, "Failed to start server");
+  process.exit(1);
+});

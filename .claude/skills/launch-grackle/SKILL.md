@@ -15,7 +15,7 @@ Launches an isolated Grackle server instance with ephemeral ports and a branch-s
 
 ## Step 1: Find Free Ports
 
-Use this inline Node.js snippet to find 3 ephemeral ports (there is a small race window between closing the probe sockets and the server binding, but in practice collisions are rare):
+Use this inline Node.js snippet to find 4 ephemeral ports (there is a small race window between closing the probe sockets and the server binding, but in practice collisions are rare):
 
 ```bash
 GRACKLE_PORTS="$(node -e "
@@ -32,13 +32,13 @@ function findPort() {
 }
 async function main() {
   const ports = new Set();
-  while (ports.size < 3) { ports.add(await findPort()); }
+  while (ports.size < 4) { ports.add(await findPort()); }
   console.log([...ports].join(' '));
 }
 main();
 ")"
-read -r GRPC_PORT WEB_PORT MCP_PORT <<< "$GRACKLE_PORTS"
-echo "Ports: gRPC=$GRPC_PORT web=$WEB_PORT mcp=$MCP_PORT"
+read -r GRPC_PORT WEB_PORT MCP_PORT POWERLINE_PORT <<< "$GRACKLE_PORTS"
+echo "Ports: gRPC=$GRPC_PORT web=$WEB_PORT mcp=$MCP_PORT powerline=$POWERLINE_PORT"
 ```
 
 ## Step 2: Create Isolated Home Directory
@@ -62,6 +62,7 @@ REPO_ROOT="$(git rev-parse --show-toplevel)"
 GRACKLE_PORT=$GRPC_PORT \
 GRACKLE_WEB_PORT=$WEB_PORT \
 GRACKLE_MCP_PORT=$MCP_PORT \
+GRACKLE_POWERLINE_PORT=$POWERLINE_PORT \
 GRACKLE_HOST=127.0.0.1 \
 GRACKLE_HOME="$GRACKLE_HOME" \
 node "$REPO_ROOT/packages/server/dist/index.js" > "$GRACKLE_HOME/server.log" 2>&1 &
@@ -90,7 +91,7 @@ async function waitForPort(port) {
   }
   throw new Error('Timeout waiting for port ' + port);
 }
-Promise.all([waitForPort($GRPC_PORT), waitForPort($WEB_PORT)])
+Promise.all([waitForPort($GRPC_PORT), waitForPort($WEB_PORT), waitForPort($POWERLINE_PORT)])
   .then(() => console.log('Server ready'))
   .catch(e => { console.error(e.message); process.exit(1); });
 "
@@ -135,6 +136,7 @@ echo "  Web UI:       http://127.0.0.1:$WEB_PORT"
 echo "  Pairing URL:  $PAIRING_URL"
 echo "  gRPC:         http://127.0.0.1:$GRPC_PORT"
 echo "  MCP:          http://127.0.0.1:$MCP_PORT/mcp"
+echo "  PowerLine:    http://127.0.0.1:$POWERLINE_PORT"
 echo "  API Key:      $GRACKLE_API_KEY"
 echo "  Home:         $GRACKLE_HOME"
 echo "  PID:          $SERVER_PID"

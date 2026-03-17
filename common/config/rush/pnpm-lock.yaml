@@ -215,6 +215,9 @@ importers:
       '@grackle-ai/mcp':
         specifier: workspace:*
         version: link:../mcp
+      '@grackle-ai/powerline':
+        specifier: workspace:*
+        version: link:../powerline
       '@grackle-ai/web':
         specifier: workspace:*
         version: link:../web
