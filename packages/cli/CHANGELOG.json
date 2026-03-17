@@ -2,6 +2,108 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.35.0",
+      "tag": "@grackle-ai/cli_v0.35.0",
+      "date": "Tue, 17 Mar 2026 03:20:19 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Add useWorktrees field to project MCP tools (list, create, get, update)"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.34.1",
+      "tag": "@grackle-ai/cli_v0.34.1",
+      "date": "Tue, 17 Mar 2026 01:31:02 GMT",
+      "comments": {
+        "none": [
+          {
+            "comment": "No CLI changes — merge-commit false positive for lockstep versioning"
+          }
+        ],
+        "patch": [
+          {
+            "comment": "Broadcast environment list to WebSocket clients after gRPC add/remove operations"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.34.0",
+      "tag": "@grackle-ai/cli_v0.34.0",
+      "date": "Tue, 17 Mar 2026 00:33:11 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Add OAuth authentication flow for MCP clients (browser-based authorization with PKCE)"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.33.0",
+      "tag": "@grackle-ai/cli_v0.33.0",
+      "date": "Mon, 16 Mar 2026 18:27:18 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Replace stdio MCP stub with in-process HTTP MCP broker for unified agent-to-platform tool access"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.32.0",
+      "tag": "@grackle-ai/cli_v0.32.0",
+      "date": "Mon, 16 Mar 2026 14:30:53 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Add CLI and MCP commands for credential provider configuration"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.31.2",
+      "tag": "@grackle-ai/cli_v0.31.2",
+      "date": "Mon, 16 Mar 2026 06:43:40 GMT",
+      "comments": {
+        "none": [
+          {
+            "comment": "Add a new kanban view"
+          }
+        ],
+        "patch": [
+          {
+            "comment": "Remove adapter-specific credential handling, deliver all credentials via pushTokens"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.31.1",
+      "tag": "@grackle-ai/cli_v0.31.1",
+      "date": "Mon, 16 Mar 2026 05:45:22 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Remove --no-open flag and browser auto-open; server no longer opens browsers"
+          }
+        ],
+        "none": [
+          {
+            "comment": "placeholder"
+          },
+          {
+            "comment": "No CLI changes — merge commit false positive"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.31.0",
       "tag": "@grackle-ai/cli_v0.31.0",
       "date": "Mon, 16 Mar 2026 04:29:47 GMT",

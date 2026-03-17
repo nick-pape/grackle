@@ -21,10 +21,16 @@ import { loadOrCreateApiKey, verifyApiKey } from "./api-key.js";
 import { createSession, validateSessionCookie } from "./session.js";
 import { startSessionCleanup, stopSessionCleanup } from "./session.js";
 import { generatePairingCode, redeemPairingCode, startPairingCleanup, stopPairingCleanup } from "./pairing.js";
+import {
+  registerClient, getClient,
+  createAuthorizationCode, consumeAuthorizationCode,
+  createRefreshToken, consumeRefreshToken,
+  startOAuthCleanup, stopOAuthCleanup,
+} from "./oauth.js";
+import { createOAuthAccessToken, OAUTH_ACCESS_TOKEN_TTL_MS } from "@grackle-ai/mcp";
 import { logger } from "./logger.js";
 import { exec } from "./utils/exec.js";
 import { detectLanIp } from "./utils/network.js";
-import { execSync } from "node:child_process";
 // Import db to ensure tables are created
 import "./db.js";
 
@@ -71,6 +77,106 @@ function renderPairingPage(error?: string): string {
     <button type="submit">Pair</button>
   </form>
 </div></body></html>`;
+}
+
+/** Shared card styles used by both pairing and authorize pages. */
+const CARD_STYLES: string = `*{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#0f172a;color:#e2e8f0}
+  .card{background:#1e293b;border-radius:12px;padding:2.5rem;max-width:400px;width:100%;text-align:center;box-shadow:0 4px 24px rgba(0,0,0,.3)}
+  h1{font-size:1.5rem;margin-bottom:.5rem}
+  p{color:#94a3b8;margin-bottom:1.5rem;font-size:.95rem}
+  input{width:100%;padding:.75rem 1rem;font-size:1.25rem;letter-spacing:.3em;text-align:center;border:2px solid #334155;border-radius:8px;background:#0f172a;color:#e2e8f0;text-transform:uppercase;font-family:monospace;margin-bottom:.5rem}
+  input:focus{outline:none;border-color:#3b82f6}
+  button{margin-top:1rem;width:100%;padding:.75rem;font-size:1rem;border:none;border-radius:8px;background:#3b82f6;color:#fff;cursor:pointer;font-weight:600}
+  button:hover{background:#2563eb}
+  .btn-deny{background:#475569;margin-top:.5rem}
+  .btn-deny:hover{background:#334155}
+  .client-name{color:#3b82f6;font-weight:600}`;
+
+/**
+ * Render the OAuth authorize page.
+ *
+ * If the user has a valid session, shows a simple "Authorize" / "Deny" form.
+ * If not paired, adds a pairing code input so the user can pair and authorize in one step.
+ */
+function renderAuthorizePage(
+  clientName: string,
+  oauthParams: string,
+  hasPairedSession: boolean,
+  error?: string,
+): string {
+  const errorHtml = error ? `<p style="color:#e74c3c;margin-bottom:1rem">${error}</p>` : "";
+  const pairingField = hasPairedSession
+    ? ""
+    : `<p>Enter the pairing code shown in your terminal to pair and authorize.</p>
+       <input name="pairing_code" type="text" maxlength="6" pattern="[A-Za-z0-9]{6}" autocomplete="off" autofocus placeholder="ABC123" required>`;
+  const buttonLabel = hasPairedSession ? "Authorize" : "Pair &amp; Authorize";
+
+  return `<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Grackle — Authorize MCP Client</title>
+<style>${CARD_STYLES}</style></head><body>
+<div class="card">
+  <h1>Authorize MCP Client</h1>
+  <p><span class="client-name">${escapeHtml(clientName)}</span> wants to connect to Grackle.</p>
+  ${errorHtml}
+  <form method="POST" action="/authorize">
+    ${pairingField}
+    <input type="hidden" name="oauth_params" value="${escapeHtml(oauthParams)}">
+    <button type="submit" name="action" value="approve">${buttonLabel}</button>
+    <button type="submit" name="action" value="deny" class="btn-deny">Deny</button>
+  </form>
+</div></body></html>`;
+}
+
+/** Escape HTML special characters for safe embedding in attributes and text content. */
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;");
+}
+
+/** Maximum size for form/JSON request bodies: 16 KB. */
+const MAX_BODY_SIZE: number = 16_384;
+
+/**
+ * Read the raw body string from an HTTP request with size limit enforcement.
+ *
+ * @param req - The incoming HTTP request.
+ * @returns The raw body as a UTF-8 string.
+ */
+function readBody(req: http.IncomingMessage): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    let totalSize: number = 0;
+    req.on("data", (chunk: Buffer) => {
+      totalSize += chunk.length;
+      if (totalSize > MAX_BODY_SIZE) {
+        req.destroy();
+        reject(new Error("Body too large"));
+        return;
+      }
+      chunks.push(chunk);
+    });
+    req.on("end", () => {
+      resolve(Buffer.concat(chunks).toString("utf8"));
+    });
+    req.on("error", reject);
+  });
+}
+
+/**
+ * Parse a URL-encoded form body from an HTTP request.
+ *
+ * @param req - The incoming HTTP request.
+ * @returns Parsed key-value pairs from the form body.
+ */
+async function parseFormBody(req: http.IncomingMessage): Promise<URLSearchParams> {
+  const raw = await readBody(req);
+  return new URLSearchParams(raw);
 }
 
 /**
@@ -129,11 +235,21 @@ function getRemoteIp(req: http.IncomingMessage): string {
 /**
  * Create the HTTP request handler for the web server.
  *
- * All routes are gated by session cookie authentication.
- * The /pair endpoint handles pairing code exchange.
+ * Serves OAuth authorization server endpoints (no auth),
+ * the pairing endpoint, and session-gated static files.
  */
-function createWebHandler(apiKey: string): (req: http.IncomingMessage, res: http.ServerResponse) => void {
-  return (req: http.IncomingMessage, res: http.ServerResponse) => {
+function createWebHandler(
+  apiKey: string,
+  webPort: number,
+  bindHost: string,
+): (req: http.IncomingMessage, res: http.ServerResponse) => void {
+  /** Map wildcard bind hosts to a dialable host for OAuth URLs. */
+  const dialableHost = isWildcardAddress(bindHost) ? "127.0.0.1" : bindHost;
+  const urlHost = dialableHost.includes(":") ? `[${dialableHost}]` : dialableHost;
+  const webBaseUrl = `http://${urlHost}:${webPort}`;
+
+  // eslint-disable-next-line @typescript-eslint/no-misused-promises
+  return async (req: http.IncomingMessage, res: http.ServerResponse) => {
     let rawPath: string;
     let queryString = "";
     try {
@@ -143,6 +259,289 @@ function createWebHandler(apiKey: string): (req: http.IncomingMessage, res: http
     } catch {
       res.writeHead(400);
       res.end("Bad Request");
+      return;
+    }
+
+    // --- OAuth Authorization Server Metadata (no auth) ---
+    if (rawPath === "/.well-known/oauth-authorization-server") {
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({
+        issuer: webBaseUrl,
+        authorization_endpoint: `${webBaseUrl}/authorize`,
+        token_endpoint: `${webBaseUrl}/token`,
+        registration_endpoint: `${webBaseUrl}/register`,
+        response_types_supported: ["code"],
+        grant_types_supported: ["authorization_code", "refresh_token"],
+        code_challenge_methods_supported: ["S256"],
+        token_endpoint_auth_methods_supported: ["none"],
+      }));
+      return;
+    }
+
+    // --- Dynamic Client Registration (no auth, JSON body) ---
+    if (rawPath === "/register" && req.method === "POST") {
+      try {
+        const raw = await readBody(req);
+        const parsed = JSON.parse(raw) as { redirect_uris?: string[]; client_name?: string };
+        const redirectUris = parsed.redirect_uris;
+        const clientName = parsed.client_name;
+
+        if (!Array.isArray(redirectUris) || redirectUris.length === 0) {
+          res.writeHead(400, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: "invalid_request", error_description: "redirect_uris is required" }));
+          return;
+        }
+
+        // Validate each redirect URI — only allow http(s) on loopback to prevent open redirects
+        for (const uri of redirectUris) {
+          try {
+            const parsed = new URL(uri);
+            const isLoopback = parsed.hostname === "127.0.0.1" || parsed.hostname === "localhost" || parsed.hostname === "::1";
+            const isHttpOrHttps = parsed.protocol === "http:" || parsed.protocol === "https:";
+            if (!isLoopback || !isHttpOrHttps) {
+              res.writeHead(400, { "Content-Type": "application/json" });
+              res.end(JSON.stringify({ error: "invalid_client_metadata", error_description: "redirect_uris must use http(s) on loopback (127.0.0.1 or localhost)" }));
+              return;
+            }
+          } catch {
+            res.writeHead(400, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ error: "invalid_client_metadata", error_description: "Invalid redirect_uri" }));
+            return;
+          }
+        }
+
+        const client = registerClient(redirectUris, clientName);
+        if (!client) {
+          res.writeHead(503, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: "temporarily_unavailable", error_description: "Too many registered clients" }));
+          return;
+        }
+        res.writeHead(201, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({
+          client_id: client.clientId,
+          redirect_uris: client.redirectUris,
+          client_name: client.clientName,
+        }));
+      } catch {
+        res.writeHead(400, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "invalid_request" }));
+      }
+      return;
+    }
+
+    // --- OAuth Authorize (GET — render page, no auth required) ---
+    if (rawPath === "/authorize" && req.method === "GET") {
+      const params = new URLSearchParams(queryString);
+      const clientId = params.get("client_id") || "";
+      const responseType = params.get("response_type") || "";
+      const redirectUri = params.get("redirect_uri") || "";
+      const codeChallenge = params.get("code_challenge") || "";
+      const codeChallengeMethod = params.get("code_challenge_method") || "";
+      const state = params.get("state") || "";
+      const resource = params.get("resource") || "";
+
+      // Validate required params
+      if (responseType !== "code") {
+        res.writeHead(400, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "unsupported_response_type" }));
+        return;
+      }
+
+      if (!clientId || !redirectUri || !codeChallenge) {
+        res.writeHead(400, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "invalid_request", error_description: "Missing required parameters" }));
+        return;
+      }
+
+      if (codeChallengeMethod && codeChallengeMethod !== "S256") {
+        res.writeHead(400, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "invalid_request", error_description: "Only S256 code challenge method is supported" }));
+        return;
+      }
+
+      const client = getClient(clientId);
+      if (!client) {
+        res.writeHead(400, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "invalid_request", error_description: "Unknown client_id" }));
+        return;
+      }
+
+      if (!client.redirectUris.includes(redirectUri)) {
+        res.writeHead(400, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "invalid_request", error_description: "redirect_uri not registered" }));
+        return;
+      }
+
+      // Serialize OAuth params for the hidden form field
+      const oauthParams = new URLSearchParams({
+        client_id: clientId,
+        redirect_uri: redirectUri,
+        code_challenge: codeChallenge,
+        state,
+        resource,
+      }).toString();
+
+      const cookieHeader = req.headers.cookie || "";
+      const hasPairedSession = validateSessionCookie(cookieHeader, apiKey);
+
+      const html = renderAuthorizePage(client.clientName, oauthParams, hasPairedSession);
+      res.writeHead(200, { "Content-Type": "text/html" });
+      res.end(html);
+      return;
+    }
+
+    // --- OAuth Authorize (POST — process approval/denial) ---
+    if (rawPath === "/authorize" && req.method === "POST") {
+      try {
+        const formData = await parseFormBody(req);
+        const action = formData.get("action") || "";
+        const oauthParamsStr = formData.get("oauth_params") || "";
+        const pairingCode = formData.get("pairing_code") || "";
+
+        const oauthParams = new URLSearchParams(oauthParamsStr);
+        const clientId = oauthParams.get("client_id") || "";
+        const redirectUri = oauthParams.get("redirect_uri") || "";
+        const codeChallenge = oauthParams.get("code_challenge") || "";
+        const state = oauthParams.get("state") || "";
+        const resource = oauthParams.get("resource") || "";
+
+        // Validate client and redirect URI before any redirect to prevent open redirect
+        const client = getClient(clientId);
+        if (!client?.redirectUris.includes(redirectUri)) {
+          res.writeHead(400, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: "invalid_request" }));
+          return;
+        }
+
+        // Build redirect URL using URL API to safely merge query params
+        const buildRedirect = (params: Record<string, string>): string => {
+          const url = new URL(redirectUri);
+          for (const [key, value] of Object.entries(params)) {
+            url.searchParams.set(key, value);
+          }
+          if (state) {
+            url.searchParams.set("state", state);
+          }
+          return url.toString();
+        };
+
+        // Deny action
+        if (action === "deny") {
+          res.writeHead(302, { Location: buildRedirect({ error: "access_denied" }) });
+          res.end();
+          return;
+        }
+
+        // Check session — if no session, require pairing code
+        const cookieHeader = req.headers.cookie || "";
+        let hasPairedSession = validateSessionCookie(cookieHeader, apiKey);
+        const responseHeaders: Record<string, string | string[]> = {};
+
+        if (!hasPairedSession) {
+          if (!pairingCode) {
+            const html = renderAuthorizePage(
+              client.clientName, oauthParamsStr, false, "Pairing code is required.",
+            );
+            res.writeHead(200, { "Content-Type": "text/html" });
+            res.end(html);
+            return;
+          }
+
+          const remoteIp = getRemoteIp(req);
+          if (!redeemPairingCode(pairingCode, remoteIp)) {
+            const html = renderAuthorizePage(
+              client.clientName, oauthParamsStr, false, "Invalid or expired pairing code.",
+            );
+            res.writeHead(200, { "Content-Type": "text/html" });
+            res.end(html);
+            return;
+          }
+
+          // Pairing succeeded — also create a browser session
+          const setCookie = createSession(apiKey);
+          responseHeaders["Set-Cookie"] = setCookie;
+          hasPairedSession = true;
+        }
+
+        // Approved — create authorization code
+        const authCode = createAuthorizationCode(clientId, redirectUri, codeChallenge, resource);
+        const redirectUrl = buildRedirect({ code: authCode });
+
+        res.writeHead(302, {
+          ...responseHeaders,
+          Location: redirectUrl,
+        });
+        res.end();
+      } catch {
+        res.writeHead(400);
+        res.end("Bad Request");
+      }
+      return;
+    }
+
+    // --- OAuth Token endpoint ---
+    if (rawPath === "/token" && req.method === "POST") {
+      try {
+        const formData = await parseFormBody(req);
+        const grantType = formData.get("grant_type") || "";
+
+        if (grantType === "authorization_code") {
+          const code = formData.get("code") || "";
+          const clientId = formData.get("client_id") || "";
+          const redirectUri = formData.get("redirect_uri") || "";
+          const codeVerifier = formData.get("code_verifier") || "";
+          const resource = formData.get("resource") || "";
+
+          const authCodeRecord = consumeAuthorizationCode(code, clientId, redirectUri, codeVerifier, resource);
+          if (!authCodeRecord) {
+            res.writeHead(400, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ error: "invalid_grant" }));
+            return;
+          }
+
+          const accessToken = createOAuthAccessToken(clientId, resource, apiKey);
+          const refreshToken = createRefreshToken(clientId, resource);
+
+          res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-store" });
+          res.end(JSON.stringify({
+            access_token: accessToken,
+            token_type: "Bearer",
+            expires_in: Math.floor(OAUTH_ACCESS_TOKEN_TTL_MS / 1000),
+            refresh_token: refreshToken,
+          }));
+          return;
+        }
+
+        if (grantType === "refresh_token") {
+          const refreshToken = formData.get("refresh_token") || "";
+          const clientId = formData.get("client_id") || "";
+
+          const refreshRecord = consumeRefreshToken(refreshToken, clientId);
+          if (!refreshRecord) {
+            res.writeHead(400, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ error: "invalid_grant" }));
+            return;
+          }
+
+          const accessToken = createOAuthAccessToken(clientId, refreshRecord.resource, apiKey);
+          const newRefreshToken = createRefreshToken(clientId, refreshRecord.resource);
+
+          res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-store" });
+          res.end(JSON.stringify({
+            access_token: accessToken,
+            token_type: "Bearer",
+            expires_in: Math.floor(OAUTH_ACCESS_TOKEN_TTL_MS / 1000),
+            refresh_token: newRefreshToken,
+          }));
+          return;
+        }
+
+        res.writeHead(400, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "unsupported_grant_type" }));
+      } catch {
+        res.writeHead(400, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "invalid_request" }));
+      }
       return;
     }
 
@@ -242,6 +641,7 @@ function main(): void {
   // Start periodic cleanup timers
   startPairingCleanup();
   startSessionCleanup();
+  startOAuthCleanup();
 
   // --- gRPC server (HTTP/2) ---
   const grpcPort = parseInt(process.env.GRACKLE_PORT || String(DEFAULT_SERVER_PORT), 10);
@@ -281,7 +681,8 @@ function main(): void {
 
   // --- Web + WebSocket server (HTTP/1.1) ---
   const webPort = parseInt(process.env.GRACKLE_WEB_PORT || String(DEFAULT_WEB_PORT), 10);
-  const webServer = http.createServer(createWebHandler(apiKey));
+  const mcpPort = parseInt(process.env.GRACKLE_MCP_PORT || String(DEFAULT_MCP_PORT), 10);
+  const webServer = http.createServer(createWebHandler(apiKey, webPort, bindHost));
 
   createWsBridge(webServer, verifyApiKey, (cookieHeader: string) =>
     validateSessionCookie(cookieHeader, apiKey),
@@ -332,27 +733,15 @@ function main(): void {
 
       logger.info({ url: pairingUrl }, "Pairing URL generated");
 
-      // Auto-open browser (best-effort, suppress errors)
-      if (process.env.GRACKLE_NO_OPEN !== "1") {
-        try {
-          const platform = process.platform;
-          if (platform === "win32") {
-            execSync(`start "" "${pairingUrl}"`, { stdio: "ignore" });
-          } else if (platform === "darwin") {
-            execSync(`open "${pairingUrl}"`, { stdio: "ignore" });
-          } else {
-            execSync(`xdg-open "${pairingUrl}"`, { stdio: "ignore" });
-          }
-        } catch {
-          // Browser open failed — not critical
-        }
-      }
     }
   });
 
   // --- MCP server (HTTP/1.1, Streamable HTTP) ---
-  const mcpPort = parseInt(process.env.GRACKLE_MCP_PORT || String(DEFAULT_MCP_PORT), 10);
-  const mcpServer = createMcpServer({ bindHost, mcpPort, grpcPort, apiKey });
+  // Use dialable host for OAuth URLs (wildcard → 127.0.0.1)
+  const dialableHost = isWildcardAddress(bindHost) ? "127.0.0.1" : bindHost;
+  const dialableUrlHost = dialableHost.includes(":") ? `[${dialableHost}]` : dialableHost;
+  const authServerUrl = `http://${dialableUrlHost}:${webPort}`;
+  const mcpServer = createMcpServer({ bindHost, mcpPort, grpcPort, apiKey, authorizationServerUrl: authServerUrl });
 
   mcpServer.on("error", (err: NodeJS.ErrnoException) => {
     if (err.code === "EADDRINUSE") {
@@ -375,6 +764,7 @@ function main(): void {
     logger.info("Shutting down...");
     stopPairingCleanup();
     stopSessionCleanup();
+    stopOAuthCleanup();
     const forceExit = setTimeout(() => {
       logger.warn("Shutdown timed out, forcing exit");
       process.exit(1);

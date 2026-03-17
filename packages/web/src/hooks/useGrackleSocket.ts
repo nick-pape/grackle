@@ -19,6 +19,7 @@ export interface Session {
   startedAt: string;
   endedAt?: string;
   error?: string;
+  personaId?: string;
 }
 
 export interface SessionEvent {
@@ -38,6 +39,7 @@ export interface Project {
   defaultEnvironmentId: string;
   status: string;
   worktreeBasePath: string;
+  useWorktrees: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -183,6 +185,8 @@ function isProject(v: unknown): v is Project {
     typeof v.repoUrl === "string" &&
     typeof v.defaultEnvironmentId === "string" &&
     typeof v.status === "string" &&
+    typeof v.worktreeBasePath === "string" &&
+    typeof v.useWorktrees === "boolean" &&
     typeof v.createdAt === "string" &&
     typeof v.updatedAt === "string"
   );
@@ -410,6 +414,7 @@ export interface UseGrackleSocketResult {
       repoUrl?: string;
       defaultEnvironmentId?: string;
       worktreeBasePath?: string;
+      useWorktrees?: boolean;
     },
   ) => void;
   loadTasks: (projectId: string) => void;
@@ -1121,6 +1126,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
         repoUrl?: string;
         defaultEnvironmentId?: string;
         worktreeBasePath?: string;
+        useWorktrees?: boolean;
       },
     ) => {
       send({

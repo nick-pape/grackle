@@ -52,6 +52,19 @@ enum IssueState {
   ISSUE_STATE_CLOSED = 2;
 }
 
+enum ClaudeProviderMode {
+  CLAUDE_PROVIDER_MODE_UNSPECIFIED = 0;
+  CLAUDE_PROVIDER_MODE_OFF = 1;
+  CLAUDE_PROVIDER_MODE_SUBSCRIPTION = 2;
+  CLAUDE_PROVIDER_MODE_API_KEY = 3;
+}
+
+enum ProviderToggle {
+  PROVIDER_TOGGLE_UNSPECIFIED = 0;
+  PROVIDER_TOGGLE_OFF = 1;
+  PROVIDER_TOGGLE_ON = 2;
+}
+
 // ─── Environment ────────────────────────────────────────────
 
 message Environment {
@@ -170,6 +183,20 @@ message TokenInfo {
 
 message TokenName {
   string name = 1;
+}
+
+// ─── Credential Providers ──────────────────────────────────
+
+message CredentialProviderConfig {
+  ClaudeProviderMode claude = 1;
+  ProviderToggle github = 2;
+  ProviderToggle copilot = 3;
+  ProviderToggle codex = 4;
+}
+
+message SetCredentialProviderRequest {
+  string provider = 1;  // "claude", "github", "copilot", or "codex"
+  string value = 2;     // "off", "on", "subscription", "api_key"
 }
 
 // ─── Projects ──────────────────────────────────────────────
@@ -421,6 +448,7 @@ service Grackle {
   rpc SendInput(InputMessage) returns (Empty);
   rpc KillAgent(SessionId) returns (Empty);
   rpc ListSessions(SessionFilter) returns (SessionList);
+  rpc GetSession(SessionId) returns (Session);
 
   // Streaming
   rpc StreamSession(SessionId) returns (stream SessionEvent);
@@ -430,6 +458,10 @@ service Grackle {
   rpc SetToken(TokenEntry) returns (Empty);
   rpc ListTokens(Empty) returns (TokenList);
   rpc DeleteToken(TokenName) returns (Empty);
+
+  // Credential providers
+  rpc GetCredentialProviders(Empty) returns (CredentialProviderConfig);
+  rpc SetCredentialProvider(SetCredentialProviderRequest) returns (CredentialProviderConfig);
 
   // Projects
   rpc ListProjects(Empty) returns (ProjectList);

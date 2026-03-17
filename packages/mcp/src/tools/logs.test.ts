@@ -18,17 +18,16 @@ const getTool = (name: string) => logsTools.find((t) => t.name === name)!;
 /** Create a mock Grackle client with methods used by logs_get. */
 function createMockClient(): GrackleClient {
   return {
-    listSessions: vi.fn(),
+    getSession: vi.fn(),
     streamSession: vi.fn(),
   } as unknown as GrackleClient;
 }
 
-/** Helper to configure listSessions to return a session with the given logPath. */
+/** Helper to configure getSession to return a session with the given logPath. */
 function mockSessionWithLogPath(mockClient: GrackleClient, sessionId: string, logPath: string): void {
-  (mockClient.listSessions as ReturnType<typeof vi.fn>).mockResolvedValue({
-    sessions: [
-      { id: sessionId, logPath },
-    ],
+  (mockClient.getSession as ReturnType<typeof vi.fn>).mockResolvedValue({
+    id: sessionId,
+    logPath,
   });
 }
 
@@ -40,9 +39,9 @@ describe("logs_get", () => {
   /** Should return isError when the session ID is not found. */
   test("session not found returns isError", async () => {
     const mockClient = createMockClient();
-    (mockClient.listSessions as ReturnType<typeof vi.fn>).mockResolvedValue({
-      sessions: [],
-    });
+    (mockClient.getSession as ReturnType<typeof vi.fn>).mockRejectedValue(
+      new ConnectError("Session not found: no-such", Code.NotFound),
+    );
 
     const result = await getTool("logs_get").handler(
       { sessionId: "no-such" },
@@ -58,8 +57,9 @@ describe("logs_get", () => {
   /** Should return isError when the session has no logPath. */
   test("session with no logPath returns isError", async () => {
     const mockClient = createMockClient();
-    (mockClient.listSessions as ReturnType<typeof vi.fn>).mockResolvedValue({
-      sessions: [{ id: "s1", logPath: "" }],
+    (mockClient.getSession as ReturnType<typeof vi.fn>).mockResolvedValue({
+      id: "s1",
+      logPath: "",
     });
 
     const result = await getTool("logs_get").handler(

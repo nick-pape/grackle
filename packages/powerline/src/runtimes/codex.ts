@@ -1,7 +1,7 @@
 import type { AgentSession } from "./runtime.js";
 import { BaseAgentSession } from "./base-session.js";
 import { BaseAgentRuntime } from "./base-runtime.js";
-import { resolveWorkingDirectory, resolveMcpServers, buildFindingEvent, buildSubtaskCreateEvent } from "./runtime-utils.js";
+import { resolveWorkingDirectory, resolveMcpServers } from "./runtime-utils.js";
 import { logger } from "../logger.js";
 
 // ─── Environment variable names ────────────────────────────
@@ -113,10 +113,31 @@ class CodexSession extends BaseAgentSession {
       codexOptions.baseUrl = baseUrl;
     }
 
-    // MCP servers — pass via config overrides, filtering disallowed tools
-    const mcpConfig = resolveMcpServers(this.mcpServers);
+    // MCP servers — pass via config overrides, filtering disallowed tools.
+    // Codex CLI uses snake_case config keys and different field names than
+    // the generic format returned by resolveMcpServers(), so we transform here.
+    const mcpConfig = resolveMcpServers(this.mcpServers, this.mcpBroker);
     if (mcpConfig.servers) {
-      codexOptions.config = { mcpServers: mcpConfig.servers };
+      const codexServers: Record<string, unknown> = {};
+      for (const [name, config] of Object.entries(mcpConfig.servers)) {
+        const cfg = config as Record<string, unknown>;
+        if (cfg.type === "http" && typeof cfg.url === "string") {
+          // HTTP MCP: Codex infers transport from `url` presence (no `type` field).
+          // Static headers use `http_headers` instead of `headers`.
+          const headers = cfg.headers as Record<string, string> | undefined;
+          codexServers[name] = {
+            url: cfg.url,
+            ...(headers ? { http_headers: headers } : {}),
+          };
+        } else if (typeof cfg.command === "string") {
+          // Stdio MCP: command/args/env are the same in Codex format
+          codexServers[name] = cfg;
+        } else {
+          // Unknown format: pass through as-is
+          codexServers[name] = cfg;
+        }
+      }
+      codexOptions.config = { mcp_servers: codexServers };
     }
 
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
@@ -128,6 +149,7 @@ class CodexSession extends BaseAgentSession {
     this.threadOptions = {
       sandboxMode: "workspace-write",
       approvalPolicy: "never",
+      skipGitRepoCheck: true,
     };
 
     if (this.model) {
@@ -235,18 +257,22 @@ class CodexSession extends BaseAgentSession {
             });
           } else if (type === "file_change") {
             messageCount++;
+            // Codex SDK: file_change has `changes` array with `{path, ...}` entries (no top-level `file`)
+            const changes = (item.changes ?? []) as Array<Record<string, unknown>>;
+            const filePaths = changes.map((c) => c.path ?? "").join(", ");
             this.eventQueue.push({
               type: "tool_use",
               timestamp: ts(),
-              content: JSON.stringify({ tool: "file_change", args: { file: item.file || "", changes: item.changes || [] } }),
+              content: JSON.stringify({ tool: "file_change", args: { file: filePaths, changes } }),
               raw: event,
             });
           } else if (type === "mcp_tool_call") {
             messageCount++;
+            // Codex SDK: uses `server` and `tool` (not `serverName`/`toolName`)
             this.eventQueue.push({
               type: "tool_use",
               timestamp: ts(),
-              content: JSON.stringify({ tool: `mcp__${String(item.serverName || "unknown")}__${String(item.toolName || "unknown")}`, args: item.arguments || {} }),
+              content: JSON.stringify({ tool: `mcp__${String(item.server || "unknown")}__${String(item.tool || "unknown")}`, args: item.arguments || {} }),
               raw: event,
             });
           }
@@ -262,8 +288,9 @@ class CodexSession extends BaseAgentSession {
 
           if (type === "command_execution") {
             messageCount++;
-            const output = (item.output ?? "") as string;
-            const exitCode = item.exitCode as number | undefined;
+            // Codex SDK: `aggregated_output` (not `output`), `exit_code` (not `exitCode`)
+            const output = (item.aggregated_output ?? "") as string;
+            const exitCode = item.exit_code as number | undefined;
             this.eventQueue.push({
               type: "tool_result",
               timestamp: ts(),
@@ -272,15 +299,19 @@ class CodexSession extends BaseAgentSession {
             });
           } else if (type === "file_change") {
             messageCount++;
+            // Codex SDK: file_change completed has `changes` array and `status` (no `file`/`patch`)
+            const changes = (item.changes ?? []) as Array<Record<string, unknown>>;
+            const filePaths = changes.map((c) => c.path ?? "").join(", ");
             this.eventQueue.push({
               type: "tool_result",
               timestamp: ts(),
-              content: JSON.stringify({ file: item.file, patch: item.patch || "", status: item.status || "completed" }),
+              content: JSON.stringify({ file: filePaths, changes, status: item.status || "completed" }),
               raw: event,
             });
           } else if (type === "agent_message") {
             messageCount++;
-            const content = (item.content ?? "") as string;
+            // Codex SDK: `text` (not `content`) for the message body
+            const content = (item.text ?? "") as string;
             this.eventQueue.push({
               type: "text",
               timestamp: ts(),
@@ -289,35 +320,28 @@ class CodexSession extends BaseAgentSession {
             });
           } else if (type === "mcp_tool_call") {
             messageCount++;
-            const result = item.result as string | undefined;
-            const error = item.error as string | undefined;
+            // Codex SDK: `server`/`tool` (not `serverName`/`toolName`),
+            // `result` is `{content, structured_content}`, `error` is `{message}`
+            const resultObj = item.result as Record<string, unknown> | undefined;
+            const errorObj = item.error as Record<string, unknown> | undefined;
+            const resultStr = resultObj ? JSON.stringify(resultObj.content ?? resultObj) : "";
+            const errorStr = errorObj
+              ? (typeof errorObj.message === "string" ? errorObj.message : JSON.stringify(errorObj))
+              : "";
             this.eventQueue.push({
               type: "tool_result",
               timestamp: ts(),
-              content: error || result || "",
+              content: errorStr || resultStr || "",
               raw: event,
             });
-
-            // Intercept finding tool calls from Grackle MCP server
-            const toolName = (item.toolName ?? "") as string;
-            const serverName = (item.serverName ?? "") as string;
-            const qualifiedName = `mcp__${serverName}__${toolName}`;
-            if (toolName === "post_finding" || qualifiedName === "mcp__grackle__post_finding") {
-              const args = (item.arguments ?? {}) as Record<string, unknown>;
-              this.eventQueue.push(buildFindingEvent(args, event));
-            }
-            // Intercept subtask creation tool calls only on successful invocation
-            if (!error && (toolName === "create_subtask" || qualifiedName === "mcp__grackle__create_subtask")) {
-              const args = (item.arguments ?? {}) as Record<string, unknown>;
-              this.eventQueue.push(buildSubtaskCreateEvent(args, event));
-            }
           } else if (type === "reasoning") {
             messageCount++;
-            const summary = (item.summary ?? item.text ?? "") as string;
+            // Codex SDK: only `text` exists (no `summary` field)
+            const text = (item.text ?? "") as string;
             this.eventQueue.push({
               type: "text",
               timestamp: ts(),
-              content: `[reasoning] ${summary}`,
+              content: `[reasoning] ${text}`,
               raw: event,
             });
           }
@@ -378,7 +402,8 @@ export class CodexRuntime extends BaseAgentRuntime {
     systemContext?: string,
     mcpServers?: Record<string, unknown>,
     _hooks?: Record<string, unknown>, // Hooks not supported by Codex SDK — accepted for interface compatibility
+    mcpBroker?: { url: string; token: string },
   ): AgentSession {
-    return new CodexSession(id, prompt, model, maxTurns, resumeSessionId, branch, worktreeBasePath, systemContext, mcpServers);
+    return new CodexSession(id, prompt, model, maxTurns, resumeSessionId, branch, worktreeBasePath, systemContext, mcpServers, undefined, mcpBroker);
   }
 }

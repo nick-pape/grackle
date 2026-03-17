@@ -1,6 +1,68 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Mon, 16 Mar 2026 04:29:47 GMT and should not be manually modified.
+This log was last generated on Tue, 17 Mar 2026 03:20:19 GMT and should not be manually modified.
+
+## 0.35.0
+Tue, 17 Mar 2026 03:20:19 GMT
+
+### Minor changes
+
+- Add useWorktrees field to project MCP tools (list, create, get, update)
+
+## 0.34.1
+Tue, 17 Mar 2026 01:31:02 GMT
+
+### Patches
+
+- Broadcast environment list to WebSocket clients after gRPC add/remove operations
+
+### Updates
+
+- No CLI changes — merge-commit false positive for lockstep versioning
+
+## 0.34.0
+Tue, 17 Mar 2026 00:33:11 GMT
+
+### Minor changes
+
+- Add OAuth authentication flow for MCP clients (browser-based authorization with PKCE)
+
+## 0.33.0
+Mon, 16 Mar 2026 18:27:18 GMT
+
+### Minor changes
+
+- Replace stdio MCP stub with in-process HTTP MCP broker for unified agent-to-platform tool access
+
+## 0.32.0
+Mon, 16 Mar 2026 14:30:53 GMT
+
+### Minor changes
+
+- Add CLI and MCP commands for credential provider configuration
+
+## 0.31.2
+Mon, 16 Mar 2026 06:43:40 GMT
+
+### Patches
+
+- Remove adapter-specific credential handling, deliver all credentials via pushTokens
+
+### Updates
+
+- Add a new kanban view
+
+## 0.31.1
+Mon, 16 Mar 2026 05:45:22 GMT
+
+### Patches
+
+- Remove --no-open flag and browser auto-open; server no longer opens browsers
+
+### Updates
+
+- placeholder
+- No CLI changes — merge commit false positive
 
 ## 0.31.0
 Mon, 16 Mar 2026 04:29:47 GMT

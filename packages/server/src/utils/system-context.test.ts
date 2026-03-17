@@ -19,26 +19,27 @@ describe("buildTaskSystemContext", () => {
     expect(result).not.toContain("## Notes");
   });
 
-  it("always includes post_finding and query_findings tools", () => {
+  it("always includes finding tools with projectId parameter", () => {
     const result = buildTaskSystemContext("Task", "desc", "");
-    expect(result).toContain("mcp__grackle__post_finding");
-    expect(result).toContain("mcp__grackle__query_findings");
+    expect(result).toContain("mcp__grackle__finding_post");
+    expect(result).toContain("mcp__grackle__finding_list");
+    expect(result).toContain("projectId");
   });
 
-  it("includes create_subtask tool when canDecompose is true", () => {
+  it("includes task_create tool when canDecompose is true", () => {
     const result = buildTaskSystemContext("Task", "desc", "", true);
-    expect(result).toContain("mcp__grackle__create_subtask");
-    expect(result).toContain("Delegate work to another agent");
+    expect(result).toContain("mcp__grackle__task_create");
+    expect(result).toContain("Create a new task");
   });
 
-  it("omits create_subtask tool when canDecompose is false", () => {
+  it("omits task_create tool when canDecompose is false", () => {
     const result = buildTaskSystemContext("Task", "desc", "", false);
-    expect(result).not.toContain("mcp__grackle__create_subtask");
+    expect(result).not.toContain("mcp__grackle__task_create");
   });
 
-  it("omits create_subtask tool when canDecompose is undefined", () => {
+  it("omits task_create tool when canDecompose is undefined", () => {
     const result = buildTaskSystemContext("Task", "desc", "");
-    expect(result).not.toContain("mcp__grackle__create_subtask");
+    expect(result).not.toContain("mcp__grackle__task_create");
   });
 
   it("always includes the completion checklist with all three phases", () => {

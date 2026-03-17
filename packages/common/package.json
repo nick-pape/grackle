@@ -1,6 +1,6 @@
 {
   "name": "@grackle-ai/common",
-  "version": "0.31.0",
+  "version": "0.35.0",
   "description": "Proto definitions, generated code, and shared types for Grackle",
   "license": "MIT",
   "repository": {

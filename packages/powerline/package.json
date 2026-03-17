@@ -1,6 +1,6 @@
 {
   "name": "@grackle-ai/powerline",
-  "version": "0.31.0",
+  "version": "0.35.0",
   "description": "gRPC PowerLine server for Grackle AI agent integration",
   "license": "MIT",
   "repository": {
@@ -16,7 +16,7 @@
   "bin": {
     "grackle-powerline": "dist/index.js"
   },
-  "files": ["dist/", "mcp-grackle/"],
+  "files": ["dist/"],
   "scripts": {
     "build": "heft build --clean",
     "start": "node dist/index.js",

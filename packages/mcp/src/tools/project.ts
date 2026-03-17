@@ -11,7 +11,7 @@ export const projectTools: ToolDefinition[] = [
     name: "project_list",
     group: "project",
     description:
-      "List all Grackle projects with their names, descriptions, repositories, and status.",
+      "List all Grackle projects with their names, descriptions, repositories, worktree settings, and status.",
     inputSchema: z.object({}),
     rpcMethod: "listProjects",
     mutating: false,
@@ -32,6 +32,7 @@ export const projectTools: ToolDefinition[] = [
             repoUrl: p.repoUrl,
             defaultEnvironmentId: p.defaultEnvironmentId,
             worktreeBasePath: p.worktreeBasePath,
+            useWorktrees: p.useWorktrees,
             status: projectStatusToString(p.status) || "unspecified",
           })),
         );
@@ -65,6 +66,10 @@ export const projectTools: ToolDefinition[] = [
         .string()
         .optional()
         .describe("Optional base path for worktrees (e.g. /workspaces/my-repo)"),
+      useWorktrees: z
+        .boolean()
+        .optional()
+        .describe("Enable worktree isolation (defaults to true)"),
     }),
     rpcMethod: "createProject",
     mutating: true,
@@ -83,6 +88,7 @@ export const projectTools: ToolDefinition[] = [
           defaultEnvironmentId:
             (args.defaultEnvironmentId as string | undefined) ?? "",
           worktreeBasePath: (args.worktreeBasePath as string | undefined) ?? "",
+          useWorktrees: args.useWorktrees as boolean | undefined,
         });
         return jsonResult({
           id: project.id,
@@ -91,6 +97,7 @@ export const projectTools: ToolDefinition[] = [
           repoUrl: project.repoUrl,
           defaultEnvironmentId: project.defaultEnvironmentId,
           worktreeBasePath: project.worktreeBasePath,
+          useWorktrees: project.useWorktrees,
           status: projectStatusToString(project.status) || "unspecified",
           createdAt: project.createdAt,
           updatedAt: project.updatedAt,
@@ -128,6 +135,7 @@ export const projectTools: ToolDefinition[] = [
           repoUrl: project.repoUrl,
           defaultEnvironmentId: project.defaultEnvironmentId,
           worktreeBasePath: project.worktreeBasePath,
+          useWorktrees: project.useWorktrees,
           status: projectStatusToString(project.status) || "unspecified",
           createdAt: project.createdAt,
           updatedAt: project.updatedAt,
@@ -141,7 +149,7 @@ export const projectTools: ToolDefinition[] = [
     name: "project_update",
     group: "project",
     description:
-      "Update an existing Grackle project's name, description, repository URL, or default environment.",
+      "Update an existing Grackle project's name, description, repository URL, default environment, or worktree settings.",
     inputSchema: z.object({
       projectId: z.string().describe("Unique identifier of the project to update"),
       name: z
@@ -164,6 +172,10 @@ export const projectTools: ToolDefinition[] = [
         .string()
         .optional()
         .describe("New base path for worktrees (e.g. /workspaces/my-repo)"),
+      useWorktrees: z
+        .boolean()
+        .optional()
+        .describe("Enable or disable worktree isolation"),
     }),
     rpcMethod: "updateProject",
     mutating: true,
@@ -184,6 +196,7 @@ export const projectTools: ToolDefinition[] = [
             | string
             | undefined,
           worktreeBasePath: args.worktreeBasePath as string | undefined,
+          useWorktrees: args.useWorktrees as boolean | undefined,
         });
         return jsonResult({
           id: project.id,
@@ -192,6 +205,7 @@ export const projectTools: ToolDefinition[] = [
           repoUrl: project.repoUrl,
           defaultEnvironmentId: project.defaultEnvironmentId,
           worktreeBasePath: project.worktreeBasePath,
+          useWorktrees: project.useWorktrees,
           status: projectStatusToString(project.status) || "unspecified",
           createdAt: project.createdAt,
           updatedAt: project.updatedAt,

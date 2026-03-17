@@ -6,17 +6,8 @@ import { AnimatePresence, motion } from "motion/react";
 import { MAX_TASK_DEPTH, fuzzySearch, type FuzzyKey, type MatchIndex } from "@grackle-ai/common";
 import { Spinner } from "../display/index.js";
 import { taskUrl, projectUrl, newTaskUrl, useAppNavigate } from "../../utils/navigation.js";
+import { SIDEBAR_STATUS_ORDER, getStatusStyle } from "../../utils/taskStatus.js";
 import styles from "./ProjectList.module.scss";
-
-/** Task status visual indicators using CSS custom property colors. */
-const TASK_STATUS_STYLES: Record<string, { color: string; icon: string }> = {
-  not_started: { color: "var(--text-tertiary)", icon: "\u25CB" },
-  working: { color: "var(--accent-green)", icon: "\u25CF" },
-  paused: { color: "var(--accent-yellow)", icon: "\u25C9" },
-  complete: { color: "var(--accent-green)", icon: "\u2713" },
-  failed: { color: "var(--accent-red)", icon: "\u2717" },
-  blocked: { color: "var(--accent-yellow)", icon: "\u29B8" },
-};
 
 /** Merge overlapping or adjacent [start, end] ranges into non-overlapping ranges. */
 function mergeRanges(ranges: readonly MatchIndex[]): MatchIndex[] {
@@ -97,19 +88,6 @@ function saveGroupByStatus(value: boolean): void {
 // Status grouping
 // ---------------------------------------------------------------------------
 
-/** Ordered list of task statuses from most-urgent to least. "blocked" is a virtual status for grouped view. */
-const STATUS_GROUP_ORDER: string[] = ["working", "paused", "failed", "not_started", "blocked", "complete"];
-
-/** Human-readable labels for each status group. */
-const STATUS_GROUP_LABELS: Record<string, string> = {
-  working: "Working",
-  paused: "Paused",
-  failed: "Failed",
-  not_started: "Not Started",
-  blocked: "Blocked",
-  complete: "Complete",
-};
-
 /** A group of tasks sharing the same status. */
 interface StatusGroup {
   status: string;
@@ -138,16 +116,16 @@ function groupTasksByStatus(taskList: TaskData[], taskStatusById: Map<string, st
   const seen = new Set<string>();
 
   // Known statuses in urgency order
-  for (const status of STATUS_GROUP_ORDER) {
+  for (const status of SIDEBAR_STATUS_ORDER) {
     seen.add(status);
     const tasks = byStatus.get(status);
     if (tasks && tasks.length > 0) {
       tasks.sort((a, b) => a.sortOrder - b.sortOrder);
+      const style = getStatusStyle(status);
       groups.push({
         status,
-        label: STATUS_GROUP_LABELS[status] || status,
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- status may not be in the map
-        style: TASK_STATUS_STYLES[status] || TASK_STATUS_STYLES.not_started,
+        label: style.label,
+        style,
         tasks,
       });
     }
@@ -157,11 +135,11 @@ function groupTasksByStatus(taskList: TaskData[], taskStatusById: Map<string, st
   for (const [status, tasks] of byStatus) {
     if (!seen.has(status) && tasks.length > 0) {
       tasks.sort((a, b) => a.sortOrder - b.sortOrder);
+      const style = getStatusStyle(status);
       groups.push({
         status,
-        label: status,
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- status may not be in the map
-        style: TASK_STATUS_STYLES[status] || TASK_STATUS_STYLES.not_started,
+        label: style.label,
+        style,
         tasks,
       });
     }
@@ -228,8 +206,7 @@ function StatusGroupAccordion({
             style={{ overflow: "hidden" }}
           >
             {group.tasks.map((task) => {
-              // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- status may not be in the map
-              const statusStyle = TASK_STATUS_STYLES[task.status] || TASK_STATUS_STYLES.not_started;
+              const statusStyle = getStatusStyle(task.status);
               const isSelected = selectedTaskId === task.id;
               return (
                 <div
@@ -306,8 +283,7 @@ function TaskTreeNode({
   taskStatusById,
   titleHighlights,
 }: TaskTreeNodeProps): JSX.Element {
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- status may not be in the map
-  const statusStyle = TASK_STATUS_STYLES[node.status] || TASK_STATUS_STYLES.not_started;
+  const statusStyle = getStatusStyle(node.status);
   const isBlocked = node.dependsOn.length > 0 &&
     node.dependsOn.some((depId) => taskStatusById.get(depId) !== "complete");
   const isExpanded = expandedTasks.has(node.id);

@@ -21,6 +21,7 @@ import { authenticateMcpRequest } from "./auth-middleware.js";
 import { grpcErrorToToolResult } from "./error-handler.js";
 import { pruneRevocations } from "./scoped-token.js";
 import { createToolRegistry } from "./tools/index.js";
+import { resolveToolForAuth, listToolsForAuth } from "./tool-scoping.js";
 
 /** Read the package version from package.json at module load time. */
 const PACKAGE_VERSION: string = (JSON.parse(
@@ -45,6 +46,8 @@ export interface McpServerOptions {
   grpcPort: number;
   /** API key used for authenticating both inbound MCP and outbound gRPC requests. */
   apiKey: string;
+  /** Base URL of the OAuth authorization server (web server). When set, enables OAuth discovery. */
+  authorizationServerUrl?: string;
 }
 
 /** Create a ConnectRPC client pointing at the co-located Grackle gRPC server. */
@@ -71,7 +74,7 @@ function createMcpServerInstance(grpcClient: Client<typeof grackle.Grackle>, aut
   );
 
   server.setRequestHandler(ListToolsRequestSchema, async () => {
-    const tools = registry.list();
+    const tools = listToolsForAuth(registry, authContext);
     return {
       tools: tools.map((t) => ({
         name: t.name,
@@ -84,7 +87,7 @@ function createMcpServerInstance(grpcClient: Client<typeof grackle.Grackle>, aut
 
   server.setRequestHandler(CallToolRequestSchema, async (request): Promise<CallToolResult> => {
     const { name, arguments: args } = request.params;
-    const tool = registry.get(name);
+    const tool = resolveToolForAuth(registry, name, authContext);
     if (!tool) {
       return {
         content: [{ type: "text", text: `Unknown tool: ${name}` }],
@@ -92,8 +95,14 @@ function createMcpServerInstance(grpcClient: Client<typeof grackle.Grackle>, aut
       };
     }
 
+    // Inject projectId from scoped token so callers don't need to provide it
+    const rawArgs = (args ?? {}) as Record<string, unknown>;
+    if (authContext.type === "scoped") {
+      rawArgs.projectId = authContext.projectId;
+    }
+
     // Validate inputs against Zod schema
-    const parsed = tool.inputSchema.safeParse(args ?? {});
+    const parsed = tool.inputSchema.safeParse(rawArgs);
     if (!parsed.success) {
       const issues = parsed.error.issues.map(
         (i) => `${i.path.join(".")}: ${i.message}`,
@@ -115,7 +124,7 @@ function createMcpServerInstance(grpcClient: Client<typeof grackle.Grackle>, aut
     }
 
     try {
-      logger.info({ tool: name }, "Executing MCP tool: %s", name);
+      logger.info({ tool: name, resolved: tool.name }, "Executing MCP tool: %s", name);
       const result = await tool.handler(parsed.data as Record<string, unknown>, grpcClient, authContext);
       return result as CallToolResult;
     } catch (error: unknown) {
@@ -145,7 +154,7 @@ const REVOCATION_PRUNE_INTERVAL_MS: number = 60 * 60 * 1000;
  * and Server instance, tracked by session ID.
  */
 export function createMcpServer(options: McpServerOptions): http.Server {
-  const { bindHost, grpcPort, apiKey } = options;
+  const { bindHost, grpcPort, apiKey, authorizationServerUrl } = options;
   const grpcClient = createGrpcClient(bindHost, grpcPort, apiKey);
 
   /** Map of active session transports, keyed by session ID. */
@@ -162,6 +171,19 @@ export function createMcpServer(options: McpServerOptions): http.Server {
   const httpServer = http.createServer(async (req, res) => {
     const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
 
+    // Derive resource URL from request Host header (dialable by the client)
+    const requestResourceUrl = `http://${req.headers.host || url.host}`;
+
+    // OAuth Protected Resource Metadata (RFC 9728) — no auth required
+    if (authorizationServerUrl && url.pathname === "/.well-known/oauth-protected-resource/mcp") {
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({
+        resource: requestResourceUrl,
+        authorization_servers: [authorizationServerUrl],
+      }));
+      return;
+    }
+
     // Only serve the /mcp endpoint
     if (url.pathname !== "/mcp") {
       res.writeHead(404, { "Content-Type": "application/json" });
@@ -172,7 +194,12 @@ export function createMcpServer(options: McpServerOptions): http.Server {
     // Auth check on every request
     const authContext = authenticateMcpRequest(req, apiKey);
     if (!authContext) {
-      res.writeHead(401, { "Content-Type": "application/json" });
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (authorizationServerUrl) {
+        headers["WWW-Authenticate"] =
+          `Bearer resource_metadata="${requestResourceUrl}/.well-known/oauth-protected-resource/mcp"`;
+      }
+      res.writeHead(401, headers);
       res.end(JSON.stringify({ error: "Unauthorized" }));
       return;
     }

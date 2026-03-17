@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type JSX } from "react";
 import { useParams } from "react-router";
 import { useGrackle } from "../context/GrackleContext.js";
 import { DagView } from "../components/dag/DagView.js";
+import { ProjectBoard } from "../components/project/ProjectBoard.js";
 import { Breadcrumbs, ConfirmDialog } from "../components/display/index.js";
 import { buildProjectBreadcrumbs } from "../utils/breadcrumbs.js";
 import { newTaskUrl, useAppNavigate } from "../utils/navigation.js";
@@ -36,7 +37,7 @@ function relativeTime(iso: string | undefined): string {
   return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 }
 
-type ProjectTab = "tasks" | "graph";
+type ProjectTab = "tasks" | "board" | "graph";
 // eslint-disable-next-line @rushstack/no-new-null
 type EditingField = "name" | "description" | "repoUrl" | "defaultEnvironmentId" | "worktreeBasePath" | null;
 
@@ -441,9 +442,28 @@ export function ProjectPage(): JSX.Element {
             </div>
           </div>
 
-          {/* Worktree Base Path */}
+          {/* Worktree Isolation */}
           <div className={styles.metaRow}>
-            <span className={styles.metaLabel}>Worktree Base</span>
+            <span className={styles.metaLabel}>Worktrees</span>
+            <div className={styles.metaValue}>
+              <label className={styles.worktreeToggle} data-testid="worktree-toggle">
+                <input
+                  type="checkbox"
+                  checked={project?.useWorktrees ?? true}
+                  onChange={(e) => {
+                    if (project) {
+                      updateProject(project.id, { useWorktrees: e.target.checked });
+                    }
+                  }}
+                />
+                <span>Enable worktree isolation</span>
+              </label>
+            </div>
+          </div>
+
+          {/* Working Directory */}
+          <div className={styles.metaRow}>
+            <span className={styles.metaLabel}>Working Dir</span>
             <div className={styles.metaValue}>
               {editingField === "worktreeBasePath" ? (
                 <div className={styles.editFieldWrapper}>
@@ -464,7 +484,7 @@ export function ProjectPage(): JSX.Element {
                     }}
                     onKeyDown={(e) => handleKeyDown(e, "worktreeBasePath")}
                     placeholder="/workspaces/my-repo"
-                    aria-label="Worktree base path"
+                    aria-label="Working directory"
                     data-testid="edit-worktree-base-path-input"
                   />
                   {isDirty("worktreeBasePath") && <span className={styles.unsavedDot} title="Unsaved changes" />}
@@ -476,8 +496,8 @@ export function ProjectPage(): JSX.Element {
                   type="button"
                   className={styles.metaValueClickable}
                   onClick={() => startEdit("worktreeBasePath", project?.worktreeBasePath || "")}
-                  title="Click to edit worktree base path"
-                  aria-label="Edit worktree base path"
+                  title="Click to edit working directory"
+                  aria-label="Edit working directory"
                   data-testid="edit-worktree-base-path-button"
                 >
                   {project?.worktreeBasePath ? (
@@ -519,7 +539,7 @@ export function ProjectPage(): JSX.Element {
         </div>
       )}
 
-      {/* Tabs: Graph / Tasks */}
+      {/* Tabs: Graph / Board / Tasks */}
       <div className={styles.tabBar} role="tablist" aria-label="Project view">
         <button
           role="tab"
@@ -528,6 +548,15 @@ export function ProjectPage(): JSX.Element {
           onClick={() => setProjectTab("graph")}
         >
           Graph
+        </button>
+        <button
+          role="tab"
+          aria-selected={projectTab === "board"}
+          className={`${styles.tab} ${projectTab === "board" ? styles.active : ""}`}
+          onClick={() => setProjectTab("board")}
+          data-testid="board-tab"
+        >
+          Board
         </button>
         <button
           role="tab"
@@ -558,6 +587,9 @@ export function ProjectPage(): JSX.Element {
             Break your work into tasks and let agents tackle them
           </div>
         </div>
+      )}
+      {projectTab === "board" && (
+        <ProjectBoard projectId={projectId!} />
       )}
       {projectTab === "graph" && (
         <DagView projectId={projectId!} />

@@ -90,15 +90,16 @@ export async function pushToEnv(environmentId: string): Promise<void> {
 
 /**
  * Push enabled provider credentials to a single connected environment.
+ * When `runtime` is specified, only providers relevant to that runtime are included.
  * Reads fresh values from `process.env` / disk based on the credential provider config.
  */
-export async function pushProviderCredentialsToEnv(environmentId: string): Promise<void> {
+export async function pushProviderCredentialsToEnv(environmentId: string, runtime?: string): Promise<void> {
   const conn = adapterManager.getConnection(environmentId);
   if (!conn) {
     return;
   }
 
-  const bundle = buildProviderTokenBundle();
+  const bundle = buildProviderTokenBundle(runtime);
   if (bundle.tokens.length === 0) {
     return;
   }
@@ -108,12 +109,13 @@ export async function pushProviderCredentialsToEnv(environmentId: string): Promi
 
 /**
  * Best-effort push of stored tokens and provider credentials before a task spawn.
+ * When `runtime` is specified, only providers relevant to that runtime are pushed.
  * Both pushes run concurrently; failures are logged as warnings and do not block.
  */
-export async function refreshTokensForTask(environmentId: string): Promise<void> {
+export async function refreshTokensForTask(environmentId: string, runtime?: string): Promise<void> {
   const results = await Promise.allSettled([
     pushToEnv(environmentId),
-    pushProviderCredentialsToEnv(environmentId),
+    pushProviderCredentialsToEnv(environmentId, runtime),
   ]);
 
   if (results[0].status === "rejected") {

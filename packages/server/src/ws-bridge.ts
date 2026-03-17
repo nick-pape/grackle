@@ -321,8 +321,8 @@ async function startTaskSession(
     },
   });
 
-  // Re-push stored tokens + Claude credentials so they're fresh for this session
-  await tokenBroker.refreshTokensForTask(environmentId);
+  // Re-push stored tokens + provider credentials (scoped to runtime) so they're fresh for this session
+  await tokenBroker.refreshTokensForTask(environmentId, runtime);
 
   let mcpServersJson = "";
   if (persona) {
@@ -399,6 +399,7 @@ async function handleMessage(
             status: r.status,
             prompt: r.prompt,
             startedAt: r.startedAt,
+            personaId: r.personaId,
           })),
         },
       });
@@ -1316,6 +1317,7 @@ async function handleMessage(
             startedAt: r.startedAt,
             endedAt: r.endedAt ?? "",
             error: r.error ?? "",
+            personaId: r.personaId,
           })),
         },
       });

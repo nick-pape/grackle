@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import type { Client } from "@connectrpc/connect";
+import { ConnectError, Code, type Client } from "@connectrpc/connect";
 import { type grackle, eventTypeToString } from "@grackle-ai/common";
 import { z } from "zod";
 import type { ToolDefinition } from "../tool-registry.js";
@@ -26,7 +26,7 @@ export const logsTools: ToolDefinition[] = [
       timeoutSeconds: z.number().int().positive().max(MAX_TAIL_TIMEOUT_SECONDS).default(DEFAULT_TAIL_TIMEOUT_SECONDS).describe("Timeout in seconds for tail mode (default 10, max 60)"),
       maxEvents: z.number().int().positive().optional().describe("Maximum events to return in tail mode"),
     }),
-    rpcMethod: "listSessions",
+    rpcMethod: "getSession",
     mutating: false,
     annotations: {
       readOnlyHint: true,
@@ -36,28 +36,27 @@ export const logsTools: ToolDefinition[] = [
     },
     async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) {
       try {
-        // Find the session to get its logPath
-        const sessionsResponse = await client.listSessions({
-          environmentId: "",
-          status: "",
-        });
-        const session = sessionsResponse.sessions.find(
-          (s) => s.id === (args.sessionId as string),
-        );
-        if (!session) {
-          return {
-            content: [
-              {
-                type: "text" as const,
-                text: JSON.stringify(
-                  { error: "Session not found", code: "NOT_FOUND" },
-                  null,
-                  2,
-                ),
-              },
-            ],
-            isError: true,
-          };
+        // Fetch the session directly by ID
+        let session: Awaited<ReturnType<typeof client.getSession>> | undefined;
+        try {
+          session = await client.getSession({ id: args.sessionId as string });
+        } catch (error) {
+          if (error instanceof ConnectError && error.code === Code.NotFound) {
+            return {
+              content: [
+                {
+                  type: "text" as const,
+                  text: JSON.stringify(
+                    { error: "Session not found", code: "NOT_FOUND" },
+                    null,
+                    2,
+                  ),
+                },
+              ],
+              isError: true,
+            };
+          }
+          throw error;
         }
 
         if (!session.logPath) {

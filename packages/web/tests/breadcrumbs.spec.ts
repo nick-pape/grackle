@@ -11,6 +11,7 @@ import {
   type BreadcrumbSegment,
 } from "../src/utils/breadcrumbs.js";
 import type { TaskData, Project } from "../src/hooks/useGrackleSocket.js";
+import { getStatusBadgeClassKey, getStatusStyle } from "../src/utils/taskStatus.js";
 
 /** Creates a minimal TaskData for testing. */
 function makeTask(overrides: Partial<TaskData> & { id: string; projectId: string }): TaskData {
@@ -179,5 +180,21 @@ test.describe("breadcrumb builders", () => {
     const segments: BreadcrumbSegment[] = buildSessionBreadcrumbs("abcdef1234567890");
     expect(segments).toHaveLength(2);
     expect(segments[1].label).toBe("Session abcdef12");
+  });
+});
+
+test.describe("task status helpers", () => {
+  test("maps legacy task statuses to canonical styles", () => {
+    expect(getStatusStyle("pending").label).toBe("Not Started");
+    expect(getStatusStyle("in_progress").label).toBe("Working");
+    expect(getStatusStyle("review").label).toBe("Paused");
+    expect(getStatusStyle("done").label).toBe("Complete");
+  });
+
+  test("maps legacy task statuses to canonical badge classes", () => {
+    expect(getStatusBadgeClassKey("pending")).toBe("statusPending");
+    expect(getStatusBadgeClassKey("in_progress")).toBe("statusInProgress");
+    expect(getStatusBadgeClassKey("waiting_input")).toBe("statusWaitingInput");
+    expect(getStatusBadgeClassKey("done")).toBe("statusDone");
   });
 });

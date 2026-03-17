@@ -23,22 +23,36 @@ import {
   DEFAULT_RUNTIME,
   DEFAULT_MODEL,
   DEFAULT_WEB_PORT,
+  DEFAULT_MCP_PORT,
   MAX_TASK_DEPTH,
   SESSION_STATUS,
   TASK_STATUS,
   taskStatusToEnum,
   taskStatusToString,
   projectStatusToEnum,
+  claudeProviderModeToEnum,
+  providerToggleToEnum,
 } from "@grackle-ai/common";
+import { createScopedToken } from "@grackle-ai/mcp";
 import { grackleHome } from "./paths.js";
 import { safeParseJsonArray } from "./json-helpers.js";
 import { computeTaskStatus } from "./compute-task-status.js";
+import { loadOrCreateApiKey } from "./api-key.js";
 import { logger } from "./logger.js";
 import { slugify } from "./utils/slugify.js";
 import { buildTaskSystemContext } from "./utils/system-context.js";
 import { importGitHubIssues as executeGitHubImport } from "./github-import.js";
 import { generatePairingCode } from "./pairing.js";
 import { detectLanIp } from "./utils/network.js";
+import * as credentialProviders from "./credential-providers.js";
+
+/** Map a bind host to a dialable URL host. Wildcard addresses become loopback. */
+function toDialableHost(bindHost: string): string {
+  if (bindHost === "0.0.0.0" || bindHost === "::") {
+    return bindHost === "::" ? "[::1]" : "127.0.0.1";
+  }
+  return bindHost.includes(":") ? `[${bindHost}]` : bindHost;
+}
 
 function envRowToProto(row: EnvironmentRow): grackle.Environment {
   return create(grackle.EnvironmentSchema, {
@@ -252,6 +266,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         req.adapterConfig,
         runtime,
       );
+      broadcastEnvironments();
       const row = envRegistry.getEnvironment(id);
       return envRowToProto(row!);
     },
@@ -273,6 +288,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       // Delete sessions referencing this environment (FK constraint)
       sessionStore.deleteByEnvironment(req.id);
       envRegistry.removeEnvironment(req.id);
+      broadcastEnvironments();
       broadcast({
         type: "environment_removed",
         payload: { environmentId: req.id },
@@ -307,18 +323,30 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       const config = JSON.parse(env.adapterConfig) as Record<string, unknown>;
       const powerlineToken = env.powerlineToken;
 
-      for await (const event of reconnectOrProvision(
-        req.id,
-        adapter,
-        config,
-        powerlineToken,
-        !!env.bootstrapped,
-      )) {
+      try {
+        for await (const event of reconnectOrProvision(
+          req.id,
+          adapter,
+          config,
+          powerlineToken,
+          !!env.bootstrapped,
+        )) {
+          yield create(grackle.ProvisionEventSchema, {
+            stage: event.stage,
+            message: event.message,
+            progress: event.progress,
+          });
+        }
+      } catch (err) {
+        logger.error({ environmentId: req.id, err }, "Provision/bootstrap failed");
+        envRegistry.updateEnvironmentStatus(req.id, "error");
+        broadcastEnvironments();
         yield create(grackle.ProvisionEventSchema, {
-          stage: event.stage,
-          message: event.message,
-          progress: event.progress,
+          stage: "error",
+          message: `Provision failed: ${err instanceof Error ? err.message : String(err)}`,
+          progress: 0,
         });
+        return;
       }
 
       try {
@@ -423,6 +451,14 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
 
       const mcpServersJson = persona ? personaMcpServersToJson(persona) : "";
 
+      const mcpPort = parseInt(process.env.GRACKLE_MCP_PORT || String(DEFAULT_MCP_PORT), 10);
+      const mcpDialHost = toDialableHost(process.env.GRACKLE_HOST || "127.0.0.1");
+      const mcpUrl = `http://${mcpDialHost}:${mcpPort}/mcp`;
+      const mcpToken = createScopedToken(
+        { sub: sessionId, pid: "", per: req.personaId || "", sid: sessionId },
+        loadOrCreateApiKey(),
+      );
+
       const powerlineReq = create(powerline.SpawnRequestSchema, {
         sessionId,
         runtime,
@@ -435,7 +471,12 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
           : "",
         systemContext,
         mcpServersJson,
+        mcpUrl,
+        mcpToken,
       });
+
+      // Push fresh credentials before spawning (best-effort)
+      await tokenBroker.refreshTokensForTask(req.environmentId, runtime);
 
       processEventStream(conn.client.spawn(powerlineReq), {
         sessionId,
@@ -561,6 +602,14 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       });
     },
 
+    async getSession(req: grackle.SessionId) {
+      const row = sessionStore.getSession(req.id);
+      if (!row) {
+        throw new ConnectError(`Session not found: ${req.id}`, Code.NotFound);
+      }
+      return sessionRowToProto(row);
+    },
+
     async *streamSession(req: grackle.SessionId) {
       const stream = streamHub.createStream(req.id);
       try {
@@ -613,6 +662,54 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
     async deleteToken(req: grackle.TokenName) {
       await tokenBroker.deleteToken(req.name);
       return create(grackle.EmptySchema, {});
+    },
+
+    // ─── Credential Providers ─────────────────────────────────
+
+    async getCredentialProviders() {
+      const config = credentialProviders.getCredentialProviders();
+      return create(grackle.CredentialProviderConfigSchema, {
+        claude: claudeProviderModeToEnum(config.claude),
+        github: providerToggleToEnum(config.github),
+        copilot: providerToggleToEnum(config.copilot),
+        codex: providerToggleToEnum(config.codex),
+      });
+    },
+
+    async setCredentialProvider(req: grackle.SetCredentialProviderRequest) {
+      if (!credentialProviders.VALID_PROVIDERS.includes(req.provider)) {
+        throw new ConnectError(
+          `Invalid provider: ${req.provider}. Must be one of: ${credentialProviders.VALID_PROVIDERS.join(", ")}`,
+          Code.InvalidArgument,
+        );
+      }
+
+      const allowed = req.provider === "claude"
+        ? credentialProviders.VALID_CLAUDE_VALUES
+        : credentialProviders.VALID_TOGGLE_VALUES;
+
+      if (!allowed.has(req.value)) {
+        throw new ConnectError(
+          `Invalid value for ${req.provider}: ${req.value}. Must be one of: ${[...allowed].join(", ")}`,
+          Code.InvalidArgument,
+        );
+      }
+
+      const current = credentialProviders.getCredentialProviders();
+      const updated = { ...current, [req.provider]: req.value };
+      credentialProviders.setCredentialProviders(updated);
+
+      broadcast({
+        type: "credential_providers",
+        payload: updated as unknown as Record<string, unknown>,
+      });
+
+      return create(grackle.CredentialProviderConfigSchema, {
+        claude: claudeProviderModeToEnum(updated.claude),
+        github: providerToggleToEnum(updated.github),
+        copilot: providerToggleToEnum(updated.copilot),
+        codex: providerToggleToEnum(updated.codex),
+      });
     },
 
     // ─── Projects ────────────────────────────────────────────
@@ -895,8 +992,8 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         payload: { taskId: task.id, sessionId, projectId: task.projectId },
       });
 
-      // Re-push stored tokens + Claude credentials so they're fresh for this session
-      await tokenBroker.refreshTokensForTask(environmentId);
+      // Re-push stored tokens + provider credentials (scoped to runtime) so they're fresh for this session
+      await tokenBroker.refreshTokensForTask(environmentId, runtime);
 
       const mcpServersJson = persona ? personaMcpServersToJson(persona) : "";
 
@@ -910,6 +1007,14 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
           "Worktrees disabled for project — agent will work in main checkout. Concurrent tasks on the same environment may conflict.",
         );
       }
+
+      const taskMcpPort = parseInt(process.env.GRACKLE_MCP_PORT || String(DEFAULT_MCP_PORT), 10);
+      const taskMcpDialHost = toDialableHost(process.env.GRACKLE_HOST || "127.0.0.1");
+      const taskMcpUrl = `http://${taskMcpDialHost}:${taskMcpPort}/mcp`;
+      const taskMcpToken = createScopedToken(
+        { sub: task.id, pid: task.projectId, per: personaId, sid: sessionId },
+        loadOrCreateApiKey(),
+      );
 
       const powerlineReq = create(powerline.SpawnRequestSchema, {
         sessionId,
@@ -925,6 +1030,8 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         projectId: task.projectId,
         taskId: task.id,
         mcpServersJson,
+        mcpUrl: taskMcpUrl,
+        mcpToken: taskMcpToken,
       });
 
       processEventStream(conn.client.spawn(powerlineReq), {
