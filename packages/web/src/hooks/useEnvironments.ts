@@ -5,8 +5,8 @@
  */
 
 import { useState, useCallback } from "react";
-import type { Environment, ProvisionStatus, WsMessage, SendFunction } from "./types.js";
-import { asValidArray, isEnvironment, isProvisionProgress, warnBadPayload } from "./types.js";
+import type { Environment, ProvisionStatus, WsMessage, SendFunction, GrackleEvent } from "./types.js";
+import { asValidArray, isEnvironment, warnBadPayload } from "./types.js";
 
 /** Delay in milliseconds before clearing a successful provision status. */
 const PROVISION_STATUS_CLEAR_DELAY_MS: number = 5_000;
@@ -31,6 +31,8 @@ export interface UseEnvironmentsResult {
   removeEnvironment: (environmentId: string) => void;
   /** Handle an incoming WebSocket message. Returns `true` if handled. */
   handleMessage: (msg: WsMessage) => boolean;
+  /** Handle a domain event from the event bus. Returns `true` if handled. */
+  handleEvent: (event: GrackleEvent) => boolean;
 }
 
 /**
@@ -45,6 +47,63 @@ export function useEnvironments(send: SendFunction): UseEnvironmentsResult {
     Record<string, ProvisionStatus>
   >({});
 
+  const handleEvent = useCallback((event: GrackleEvent): boolean => {
+    switch (event.type) {
+      case "environment.added":
+        // Signal only — re-fetch handled by environment.changed
+        return true;
+      case "environment.removed": {
+        const removedId = event.payload.environmentId as string | undefined;
+        if (removedId) {
+          setEnvironments((prev) => prev.filter((e) => e.id !== removedId));
+          setProvisionStatus((prev) => {
+            const next = { ...prev };
+            delete next[removedId];
+            return next;
+          });
+        }
+        send({ type: "list_sessions" });
+        return true;
+      }
+      case "environment.changed":
+        send({ type: "list_environments" });
+        return true;
+      case "environment.provision_progress": {
+        const pp = event.payload;
+        if (
+          typeof pp.environmentId !== "string" ||
+          typeof pp.stage !== "string" ||
+          typeof pp.message !== "string" ||
+          typeof pp.progress !== "number"
+        ) {
+          warnBadPayload("environment.provision_progress", "invalid payload");
+          return true;
+        }
+        setProvisionStatus((prev) => ({
+          ...prev,
+          [pp.environmentId as string]: {
+            stage: pp.stage as string,
+            message: pp.message as string,
+            progress: pp.progress as number,
+          },
+        }));
+        if (pp.stage === "ready") {
+          const envId = pp.environmentId as string;
+          setTimeout(() => {
+            setProvisionStatus((prev) => {
+              const next = { ...prev };
+              delete next[envId];
+              return next;
+            });
+          }, PROVISION_STATUS_CLEAR_DELAY_MS);
+        }
+        return true;
+      }
+      default:
+        return false;
+    }
+  }, [send]);
+
   const handleMessage = useCallback((msg: WsMessage): boolean => {
     switch (msg.type) {
       case "environments":
@@ -57,60 +116,10 @@ export function useEnvironments(send: SendFunction): UseEnvironmentsResult {
           ),
         );
         return true;
-      case "provision_progress": {
-        if (!isProvisionProgress(msg.payload)) {
-          warnBadPayload(
-            "provision_progress",
-            "payload is not a valid ProvisionStatus with environmentId",
-          );
-          return true;
-        }
-        const pp = msg.payload;
-        setProvisionStatus((prev) => ({
-          ...prev,
-          [pp.environmentId]: {
-            stage: pp.stage,
-            message: pp.message,
-            progress: pp.progress,
-          },
-        }));
-        // Auto-clear provision status after successful completion only;
-        // errors persist until the user retries or removes the environment
-        if (pp.stage === "ready") {
-          setTimeout(() => {
-            setProvisionStatus((prev) => {
-              const next = { ...prev };
-              delete next[pp.environmentId];
-              return next;
-            });
-          }, PROVISION_STATUS_CLEAR_DELAY_MS);
-        }
-        return true;
-      }
-      case "environment_added":
-        // Server already broadcasts updated environment list via broadcastEnvironments()
-        return true;
-      case "environment_removed":
-        // Clean up stale provision status and optimistically remove the
-        // environment from local state so the UI updates immediately even
-        // when the removal was triggered via gRPC/CLI (which does not call
-        // broadcastEnvironments).
-        if (typeof msg.payload?.environmentId === "string") {
-          const removedId = msg.payload.environmentId;
-          setEnvironments((prev) => prev.filter((e) => e.id !== removedId));
-          setProvisionStatus((prev) => {
-            const next = { ...prev };
-            delete next[removedId];
-            return next;
-          });
-        }
-        // Fetch sessions since the server deletes them but doesn't broadcast sessions
-        send({ type: "list_sessions" });
-        return true;
       default:
         return false;
     }
-  }, [send]);
+  }, []);
 
   const addEnvironment = useCallback(
     (
@@ -157,5 +166,6 @@ export function useEnvironments(send: SendFunction): UseEnvironmentsResult {
     stopEnvironment,
     removeEnvironment,
     handleMessage,
+    handleEvent,
   };
 }

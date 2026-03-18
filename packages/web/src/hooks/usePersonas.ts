@@ -5,7 +5,7 @@
  */
 
 import { useState, useCallback } from "react";
-import type { PersonaData, WsMessage, SendFunction } from "./types.js";
+import type { PersonaData, WsMessage, SendFunction, GrackleEvent } from "./types.js";
 import { asValidArray, isPersonaData } from "./types.js";
 
 /** Values returned by {@link usePersonas}. */
@@ -35,6 +35,8 @@ export interface UsePersonasResult {
   deletePersona: (personaId: string) => void;
   /** Handle an incoming WebSocket message. Returns `true` if handled. */
   handleMessage: (msg: WsMessage) => boolean;
+  /** Handle a domain event from the event bus. Returns `true` if handled. */
+  handleEvent: (event: GrackleEvent) => boolean;
 }
 
 /**
@@ -45,6 +47,18 @@ export interface UsePersonasResult {
  */
 export function usePersonas(send: SendFunction): UsePersonasResult {
   const [personas, setPersonas] = useState<PersonaData[]>([]);
+
+  const handleEvent = useCallback((event: GrackleEvent): boolean => {
+    switch (event.type) {
+      case "persona.created":
+      case "persona.updated":
+      case "persona.deleted":
+        send({ type: "list_personas" });
+        return true;
+      default:
+        return false;
+    }
+  }, [send]);
 
   const handleMessage = useCallback((msg: WsMessage): boolean => {
     switch (msg.type) {
@@ -58,15 +72,10 @@ export function usePersonas(send: SendFunction): UsePersonasResult {
         setPersonas(list);
         return true;
       }
-      case "persona_created":
-      case "persona_updated":
-      case "persona_deleted":
-        send({ type: "list_personas" });
-        return true;
       default:
         return false;
     }
-  }, [send]);
+  }, []);
 
   const createPersona = useCallback(
     (
@@ -125,5 +134,5 @@ export function usePersonas(send: SendFunction): UsePersonasResult {
     [send],
   );
 
-  return { personas, createPersona, updatePersona, deletePersona, handleMessage };
+  return { personas, createPersona, updatePersona, deletePersona, handleMessage, handleEvent };
 }

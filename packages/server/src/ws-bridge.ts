@@ -36,7 +36,8 @@ import { buildTaskSystemContext } from "./utils/system-context.js";
 import { slugify } from "./utils/slugify.js";
 import { processEventStream } from "./event-processor.js";
 import * as processorRegistry from "./processor-registry.js";
-import { broadcast, setWssInstance, broadcastEnvironments, envRowToWs } from "./ws-broadcast.js";
+import { setWssInstance, envRowToWs } from "./ws-broadcast.js";
+import { emit } from "./event-bus.js";
 import { buildMcpServersJson } from "./grpc-service.js";
 import { computeTaskStatus } from "./compute-task-status.js";
 import { exec } from "./utils/exec.js";
@@ -162,7 +163,7 @@ async function autoProvisionEnvironment(
     "Auto-provisioning environment",
   );
   envRegistry.updateEnvironmentStatus(environmentId, "connecting");
-  broadcastEnvironments();
+  emit("environment.changed", {});
 
   try {
     const config = safeParseAdapterConfig(env.adapterConfig, environmentId);
@@ -179,14 +180,11 @@ async function autoProvisionEnvironment(
         { environmentId, stage: provEvent.stage, ...logContext },
         "Auto-provision progress",
       );
-      broadcast({
-        type: "provision_progress",
-        payload: {
-          environmentId,
-          stage: provEvent.stage,
-          message: provEvent.message,
-          progress: provEvent.progress,
-        },
+      emit("environment.provision_progress", {
+        environmentId,
+        stage: provEvent.stage,
+        message: provEvent.message,
+        progress: provEvent.progress,
       });
     }
 
@@ -196,16 +194,13 @@ async function autoProvisionEnvironment(
     await tokenBroker.pushToEnv(environmentId);
     envRegistry.updateEnvironmentStatus(environmentId, "connected");
     envRegistry.markBootstrapped(environmentId);
-    broadcastEnvironments();
+    emit("environment.changed", {});
     logger.info({ environmentId, ...logContext }, "Auto-provision complete");
-    broadcast({
-      type: "provision_progress",
-      payload: {
-        environmentId,
-        stage: "ready",
-        message: "Environment connected",
-        progress: 1,
-      },
+    emit("environment.provision_progress", {
+      environmentId,
+      stage: "ready",
+      message: "Environment connected",
+      progress: 1,
     });
     return conn;
   } catch (err) {
@@ -214,16 +209,13 @@ async function autoProvisionEnvironment(
       "Auto-provision failed",
     );
     envRegistry.updateEnvironmentStatus(environmentId, "error");
-    broadcastEnvironments();
+    emit("environment.changed", {});
     const errorMessage = err instanceof Error ? err.message : String(err);
-    broadcast({
-      type: "provision_progress",
-      payload: {
-        environmentId,
-        stage: "error",
-        message: `Auto-provision failed: ${errorMessage}`,
-        progress: 0,
-      },
+    emit("environment.provision_progress", {
+      environmentId,
+      stage: "error",
+      message: `Auto-provision failed: ${errorMessage}`,
+      progress: 0,
     });
     sendWs(ws, {
       type: "error",
@@ -308,13 +300,10 @@ async function startTaskSession(
     resolved.personaId,
   );
 
-  broadcast({
-    type: "task_started",
-    payload: {
-      taskId: freshTask.id,
-      sessionId,
-      projectId: freshTask.projectId,
-    },
+  emit("task.started", {
+    taskId: freshTask.id,
+    sessionId,
+    projectId: freshTask.projectId,
   });
 
   // Re-push stored tokens + provider credentials (scoped to runtime) so they're fresh for this session.
@@ -683,7 +672,7 @@ async function handleMessage(
       if (session.taskId) {
         const task = taskStore.getTask(session.taskId);
         if (task) {
-          broadcast({ type: "task_updated", payload: { taskId: task.id, projectId: task.projectId } });
+          emit("task.updated", { taskId: task.id, projectId: task.projectId });
         }
       }
       break;
@@ -744,15 +733,14 @@ async function handleMessage(
         typeof msg.payload?.worktreeBasePath === "string" ? msg.payload.worktreeBasePath.trim() : "",
         (msg.payload?.defaultPersonaId as string) || "",
       );
-      const row = projectStore.getProject(id);
-      broadcast({ type: "project_created", payload: { project: row } });
+      emit("project.created", { projectId: id });
       break;
     }
 
     case "archive_project": {
       const projectId = msg.payload?.projectId as string;
       if (projectId) projectStore.archiveProject(projectId);
-      broadcast({ type: "project_archived", payload: { projectId } });
+      emit("project.archived", { projectId });
       break;
     }
 
@@ -791,7 +779,7 @@ async function handleMessage(
         worktreeBasePath: worktreeBasePathVal,
         defaultPersonaId: defaultPersonaIdVal,
       });
-      broadcast({ type: "project_updated", payload: { projectId } });
+      emit("project.updated", { projectId });
       break;
     }
 
@@ -850,7 +838,7 @@ async function handleMessage(
         (msg.payload?.maxTurns as number) || 0,
         (msg.payload?.mcpServers as string) || "[]",
       );
-      broadcast({ type: "persona_created", payload: { personaId } });
+      emit("persona.created", { personaId });
       break;
     }
 
@@ -897,10 +885,7 @@ async function handleMessage(
         (msg.payload?.maxTurns as number) || existingPersona.maxTurns,
         (msg.payload?.mcpServers as string) || existingPersona.mcpServers,
       );
-      broadcast({
-        type: "persona_updated",
-        payload: { personaId: updatePersonaId },
-      });
+      emit("persona.updated", { personaId: updatePersonaId });
       break;
     }
 
@@ -908,10 +893,7 @@ async function handleMessage(
       const deletePersonaId = msg.payload?.personaId as string;
       if (!deletePersonaId) return;
       personaStore.deletePersona(deletePersonaId);
-      broadcast({
-        type: "persona_deleted",
-        payload: { personaId: deletePersonaId },
-      });
+      emit("persona.deleted", { personaId: deletePersonaId });
       break;
     }
 
@@ -950,7 +932,7 @@ async function handleMessage(
         }
       }
       settingsStore.setSetting(key, value);
-      broadcast({ type: "setting_changed", payload: { key, value } });
+      emit("setting.changed", { key, value });
       break;
     }
 
@@ -1047,16 +1029,7 @@ async function handleMessage(
           canDecompose,
           (msg.payload?.defaultPersonaId as string) || "",
         );
-        const row = taskStore.getTask(id);
-        broadcast({
-          type: "task_created",
-          payload: {
-            task: row
-              ? { ...row, dependsOn: safeParseJsonArray(row.dependsOn) }
-              : null,
-            requestId,
-          },
-        });
+        emit("task.created", { taskId: id, projectId, requestId });
       } catch (error: unknown) {
         const message =
           error instanceof Error ? error.message : "Failed to create task";
@@ -1115,10 +1088,7 @@ async function handleMessage(
           return;
         }
 
-        broadcast({
-          type: "task_started",
-          payload: { taskId: updateTaskId, sessionId: lateBindSessionId, projectId: existingTask.projectId },
-        });
+        emit("task.started", { taskId: updateTaskId, sessionId: lateBindSessionId, projectId: existingTask.projectId });
         break;
       }
 
@@ -1157,17 +1127,7 @@ async function handleMessage(
         updatedDependsOn,
         updatedDefaultPersonaId,
       );
-      const updatedRow = taskStore.getTask(updateTaskId);
-      broadcast({
-        type: "task_updated",
-        payload: {
-          taskId: updateTaskId,
-          projectId: existingTask.projectId,
-          task: updatedRow
-            ? { ...updatedRow, dependsOn: safeParseJsonArray(updatedRow.dependsOn) }
-            : null,
-        },
-      });
+      emit("task.updated", { taskId: updateTaskId, projectId: existingTask.projectId });
       break;
     }
 
@@ -1230,10 +1190,7 @@ async function handleMessage(
         },
       });
       if (task) {
-        broadcast({
-          type: "task_completed",
-          payload: { taskId, projectId: task.projectId },
-        });
+        emit("task.completed", { taskId, projectId: task.projectId });
       }
       break;
     }
@@ -1294,10 +1251,7 @@ async function handleMessage(
         taskId: task.id,
       });
 
-      broadcast({
-        type: "task_started",
-        payload: { taskId: task.id, sessionId: latestSession.id, projectId: task.projectId },
-      });
+      emit("task.started", { taskId: task.id, sessionId: latestSession.id, projectId: task.projectId });
       break;
     }
 
@@ -1347,7 +1301,7 @@ async function handleMessage(
         sendWs(ws, { type: "error", payload: { message: `Failed to delete task ${taskId}: no rows affected` } });
         return;
       }
-      broadcast({ type: "task_deleted", payload: { taskId, projectId: deletedTask.projectId } });
+      emit("task.deleted", { taskId, projectId: deletedTask.projectId });
       break;
     }
 
@@ -1530,7 +1484,7 @@ async function handleMessage(
         "Provisioning environment",
       );
       envRegistry.updateEnvironmentStatus(environmentId, "connecting");
-      broadcastEnvironments();
+      emit("environment.changed", {});
 
       // Run provision in background, broadcasting progress to all connected clients
       // eslint-disable-next-line @typescript-eslint/no-floating-promises
@@ -1553,14 +1507,11 @@ async function handleMessage(
               { environmentId, stage: event.stage, message: event.message },
               "Provision progress",
             );
-            broadcast({
-              type: "provision_progress",
-              payload: {
-                environmentId,
-                stage: event.stage,
-                message: event.message,
-                progress: event.progress,
-              },
+            emit("environment.provision_progress", {
+              environmentId,
+              stage: event.stage,
+              message: event.message,
+              progress: event.progress,
             });
           }
 
@@ -1579,30 +1530,24 @@ async function handleMessage(
           envRegistry.updateEnvironmentStatus(environmentId, "connected");
           envRegistry.markBootstrapped(environmentId);
           logger.info({ environmentId }, "Environment connected");
-          broadcast({
-            type: "provision_progress",
-            payload: {
-              environmentId,
-              stage: "ready",
-              message: "Environment connected",
-              progress: 1,
-            },
+          emit("environment.provision_progress", {
+            environmentId,
+            stage: "ready",
+            message: "Environment connected",
+            progress: 1,
           });
         } catch (err) {
           logger.error({ environmentId, err }, "Provision failed");
           envRegistry.updateEnvironmentStatus(environmentId, "error");
           const errorMessage = err instanceof Error ? err.message : String(err);
-          broadcast({
-            type: "provision_progress",
-            payload: {
-              environmentId,
-              stage: "error",
-              message: `Connection failed: ${errorMessage}`,
-              progress: 0,
-            },
+          emit("environment.provision_progress", {
+            environmentId,
+            stage: "error",
+            message: `Connection failed: ${errorMessage}`,
+            progress: 0,
           });
         }
-        broadcastEnvironments();
+        emit("environment.changed", {});
       })();
       break;
     }
@@ -1634,7 +1579,7 @@ async function handleMessage(
       adapterManager.removeConnection(environmentId);
       envRegistry.updateEnvironmentStatus(environmentId, "disconnected");
       logger.info({ environmentId }, "Environment stopped");
-      broadcastEnvironments();
+      emit("environment.changed", {});
       break;
     }
 
@@ -1705,8 +1650,8 @@ async function handleMessage(
         { id, displayName, adapterType },
         "Environment added via WebSocket",
       );
-      broadcast({ type: "environment_added", payload: { environmentId: id } });
-      broadcastEnvironments();
+      emit("environment.added", { environmentId: id });
+      emit("environment.changed", {});
       break;
     }
 
@@ -1744,8 +1689,8 @@ async function handleMessage(
       sessionStore.deleteByEnvironment(environmentId);
       envRegistry.removeEnvironment(environmentId);
       logger.info({ environmentId }, "Environment removed");
-      broadcast({ type: "environment_removed", payload: { environmentId } });
-      broadcastEnvironments();
+      emit("environment.removed", { environmentId });
+      emit("environment.changed", {});
       break;
     }
 
@@ -1856,7 +1801,7 @@ async function handleMessage(
         value,
         expiresAt: (msg.payload?.expiresAt as string) || "",
       });
-      broadcast({ type: "token_changed" });
+      emit("token.changed", {});
       break;
     }
 
@@ -1867,7 +1812,7 @@ async function handleMessage(
         return;
       }
       await tokenBroker.deleteToken(tokenName);
-      broadcast({ type: "token_changed" });
+      emit("token.changed", {});
       break;
     }
 
@@ -1886,10 +1831,7 @@ async function handleMessage(
         return;
       }
       credentialProviders.setCredentialProviders(msg.payload);
-      broadcast({
-        type: "credential_providers",
-        payload: credentialProviders.getCredentialProviders() as unknown as Record<string, unknown>,
-      });
+      emit("credential.providers_changed", credentialProviders.getCredentialProviders() as unknown as Record<string, unknown>);
       break;
     }
   }

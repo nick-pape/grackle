@@ -148,7 +148,7 @@ test.describe("Add Environment — WebSocket Handler", () => {
 
         },
       },
-      "environment_added",
+      "environment.added",
     );
 
     expect(response.payload?.environmentId).toBeTruthy();
@@ -213,7 +213,7 @@ test.describe("Add Environment — WebSocket Handler", () => {
 
         },
       },
-      "environment_added",
+      "environment.added",
     );
 
     const environmentId = response.payload?.environmentId as string;

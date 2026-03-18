@@ -6,8 +6,8 @@ vi.mock("./db.js", async () => {
 });
 
 // ── Mock ws-broadcast to avoid WebSocket dependency in tests ─────
-vi.mock("./ws-broadcast.js", () => ({
-  broadcast: vi.fn(),
+vi.mock("./event-bus.js", () => ({
+  emit: vi.fn(),
 }));
 
 // ── Mock logger to suppress output during tests ─────────────────
@@ -35,7 +35,7 @@ import {
 import * as taskStore from "./task-store.js";
 import * as projectStore from "./project-store.js";
 import { sqlite } from "./test-db.js";
-import { broadcast } from "./ws-broadcast.js";
+import { emit } from "./event-bus.js";
 
 /** Helper to build a minimal issue-like object for topological sort tests. */
 function issue(
@@ -665,7 +665,7 @@ describe("fetchGitHubIssues", () => {
 // ── importGitHubIssues integration tests ────────────────────────
 
 describe("importGitHubIssues", () => {
-  const mockedBroadcast = vi.mocked(broadcast);
+  const mockedEmit = vi.mocked(emit);
 
   beforeEach(() => {
     sqlite.exec("DROP TABLE IF EXISTS tasks");
@@ -673,7 +673,7 @@ describe("importGitHubIssues", () => {
     applySchema();
     projectStore.createProject("test-proj", "Test Project", "desc", "", "");
     mockExecFile.mockReset();
-    mockedBroadcast.mockReset();
+    mockedEmit.mockReset();
   });
 
   /** Helper to set up mock gh output with given issues. */
@@ -782,8 +782,8 @@ describe("importGitHubIssues", () => {
     ]);
 
     await importGitHubIssues("test-proj", "owner/repo", "open");
-    const taskCreatedCalls = mockedBroadcast.mock.calls.filter(
-      (call) => call[0].type === "task_created",
+    const taskCreatedCalls = mockedEmit.mock.calls.filter(
+      (call) => call[0] === "task.created",
     );
     expect(taskCreatedCalls).toHaveLength(2);
   });
