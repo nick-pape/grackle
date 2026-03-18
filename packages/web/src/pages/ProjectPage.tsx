@@ -6,6 +6,12 @@ import { ProjectBoard } from "../components/project/ProjectBoard.js";
 import { Breadcrumbs, ConfirmDialog } from "../components/display/index.js";
 import { buildProjectBreadcrumbs } from "../utils/breadcrumbs.js";
 import { newTaskUrl, useAppNavigate } from "../utils/navigation.js";
+import {
+  EditableTextField,
+  EditableTextArea,
+  EditableSelect,
+  EditableCheckbox,
+} from "../components/editable/index.js";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import styles from "../components/panels/SessionPanel.module.scss";
@@ -37,9 +43,9 @@ function relativeTime(iso: string | undefined): string {
   return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 }
 
+const MAX_NAME_LENGTH: number = 100;
+
 type ProjectTab = "tasks" | "board" | "graph";
-// eslint-disable-next-line @rushstack/no-new-null
-type EditingField = "name" | "description" | "repoUrl" | "defaultEnvironmentId" | "defaultPersonaId" | "worktreeBasePath" | null;
 
 /** Project overview page with inline editing, progress bar, and DAG/task views. */
 export function ProjectPage(): JSX.Element {
@@ -51,18 +57,9 @@ export function ProjectPage(): JSX.Element {
 
   const [projectTab, setProjectTab] = useState<ProjectTab>("tasks");
   const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
-  const [editingField, setEditingField] = useState<EditingField>(null);
-  const [editDraft, setEditDraft] = useState("");
-  const [editError, setEditError] = useState("");
+  const [activeFieldId, setActiveFieldId] = useState<string | null>(null);
   const [metaCollapsed, setMetaCollapsed] = useState(false);
   const previousProjectIdRef = useRef<string | undefined>(undefined);
-  const ignoreInitialBlurFieldRef = useRef<Exclude<EditingField, null> | null>(null);
-  const nameInputRef = useRef<HTMLInputElement>(null);
-  const descriptionInputRef = useRef<HTMLTextAreaElement>(null);
-  const repositoryInputRef = useRef<HTMLInputElement>(null);
-  const environmentSelectRef = useRef<HTMLSelectElement>(null);
-  const personaSelectRef = useRef<HTMLSelectElement>(null);
-  const worktreeBasePathInputRef = useRef<HTMLInputElement>(null);
 
   const breadcrumbs = buildProjectBreadcrumbs(projectId!, projects);
 
@@ -73,34 +70,10 @@ export function ProjectPage(): JSX.Element {
     if (previousProjectId === undefined || previousProjectId === projectId) {
       return;
     }
-    if (editingField !== null || editDraft !== "") {
-      setEditingField(null);
-      setEditDraft("");
+    if (activeFieldId !== null) {
+      setActiveFieldId(null);
     }
-  }, [projectId, editingField, editDraft]);
-
-  // Auto-focus edit field
-  useEffect(() => {
-    if (editingField === null) {
-      return;
-    }
-    const focusTarget =
-      editingField === "name" ? nameInputRef.current
-      : editingField === "description" ? descriptionInputRef.current
-      : editingField === "repoUrl" ? repositoryInputRef.current
-      : editingField === "defaultPersonaId" ? personaSelectRef.current
-      : editingField === "worktreeBasePath" ? worktreeBasePathInputRef.current
-      : environmentSelectRef.current;
-    if (!focusTarget) {
-      return;
-    }
-    const focusTimer = window.setTimeout(() => {
-      focusTarget.focus();
-    }, 0);
-    return () => {
-      window.clearTimeout(focusTimer);
-    };
-  }, [editingField]);
+  }, [projectId, activeFieldId]);
 
   const project = projects.find((p) => p.id === projectId);
   const projectTasks = tasks.filter((t) => t.projectId === projectId);
@@ -108,93 +81,7 @@ export function ProjectPage(): JSX.Element {
   const total = projectTasks.length;
   const progressPct = total > 0 ? Math.round((done / total) * 100) : 0;
 
-  const MAX_NAME_LENGTH = 100;
-
-  const startEdit = (field: EditingField, currentValue: string): void => {
-    ignoreInitialBlurFieldRef.current = field;
-    setEditingField(field);
-    setEditDraft(currentValue);
-    setEditError("");
-  };
-
-  const cancelEdit = (): void => {
-    ignoreInitialBlurFieldRef.current = null;
-    setEditingField(null);
-    setEditDraft("");
-    setEditError("");
-  };
-
-  const validateField = (field: NonNullable<EditingField>, value: string): string => {
-    if (field === "name") {
-      const trimmed = value.trim();
-      if (!trimmed) return "Name is required";
-      if (trimmed.length > MAX_NAME_LENGTH) return `Max ${MAX_NAME_LENGTH} characters`;
-    }
-    if (field === "repoUrl") {
-      const trimmed = value.trim();
-      if (trimmed && !/^https?:\/\/.+/.test(trimmed)) return "Must be a valid http(s) URL";
-    }
-    return "";
-  };
-
-  const saveEdit = (field: NonNullable<EditingField>): void => {
-    if (!project) return;
-    const trimmed = editDraft.trim();
-
-    const error = validateField(field, editDraft);
-    if (error) {
-      setEditError(error);
-      return;
-    }
-
-    if (field === "name") {
-      if (trimmed === project.name) { cancelEdit(); return; }
-      updateProject(project.id, { name: trimmed });
-    } else if (field === "description") {
-      const value = editDraft;
-      if (value === project.description) { cancelEdit(); return; }
-      updateProject(project.id, { description: value });
-    } else if (field === "repoUrl") {
-      if (trimmed === project.repoUrl) { cancelEdit(); return; }
-      updateProject(project.id, { repoUrl: trimmed });
-    } else if (field === "defaultEnvironmentId") {
-      if (editDraft === project.defaultEnvironmentId) { cancelEdit(); return; }
-      updateProject(project.id, { defaultEnvironmentId: editDraft });
-    } else if (field === "defaultPersonaId") {
-      if (editDraft === project.defaultPersonaId) { cancelEdit(); return; }
-      updateProject(project.id, { defaultPersonaId: editDraft });
-    } else {
-      if (trimmed === project.worktreeBasePath) { cancelEdit(); return; }
-      updateProject(project.id, { worktreeBasePath: trimmed });
-    }
-
-    cancelEdit();
-  };
-
-  const handleKeyDown = (e: { key: string }, field: NonNullable<EditingField>): void => {
-    if (e.key === "Escape") {
-      cancelEdit();
-    } else if (e.key === "Enter" && field !== "description") {
-      saveEdit(field);
-    }
-  };
-
-  const isDirty = (field: NonNullable<EditingField>): boolean => {
-    if (!project) return false;
-    if (field === "name") return editDraft.trim() !== project.name;
-    if (field === "description") return editDraft !== project.description;
-    if (field === "repoUrl") return editDraft.trim() !== project.repoUrl;
-    if (field === "defaultEnvironmentId") return editDraft !== project.defaultEnvironmentId;
-    if (field === "defaultPersonaId") return editDraft !== project.defaultPersonaId;
-    return editDraft.trim() !== project.worktreeBasePath;
-  };
-
   const defaultEnv = environments.find((e) => e.id === project?.defaultEnvironmentId);
-  const defaultPersona = personas.find((p) => p.id === project?.defaultPersonaId);
-
-  const keyboardHint = editingField === "description"
-    ? "Tab to save · Esc to cancel"
-    : "Enter to save · Esc to cancel";
 
   return (
     <div className={styles.panelContainer}>
@@ -203,47 +90,23 @@ export function ProjectPage(): JSX.Element {
       {/* Project header */}
       <div className={styles.projectHeader}>
         <span className={styles.projectName} data-testid="project-name">
-          {editingField === "name" ? (
-            <div className={styles.editFieldWrapper}>
-              <input
-                ref={nameInputRef}
-                className={`${styles.editInput} ${editError ? styles.editInputInvalid : ""}`}
-                value={editDraft}
-                onChange={(e) => { setEditDraft(e.target.value); setEditError(""); }}
-                onBlur={(event) => {
-                  if (ignoreInitialBlurFieldRef.current === "name") {
-                    ignoreInitialBlurFieldRef.current = null;
-                    return;
-                  }
-                  if (event.relatedTarget instanceof HTMLElement && event.relatedTarget.dataset.editAction === "name") {
-                    return;
-                  }
-                  saveEdit("name");
-                }}
-                onKeyDown={(e) => handleKeyDown(e, "name")}
-                maxLength={MAX_NAME_LENGTH}
-                aria-label="Project name"
-                data-testid="edit-name-input"
-              />
-              {isDirty("name") && <span className={styles.unsavedDot} title="Unsaved changes" />}
-              {editError && <span className={styles.editError} data-testid="edit-error">{editError}</span>}
-              <span className={styles.editHint}>{keyboardHint}</span>
-            </div>
-          ) : (
-            <button
-              type="button"
-              className={styles.metaValueClickable}
-              onClick={() => startEdit("name", project?.name || "")}
-              title="Click to edit name"
-              aria-label={`Edit project name: ${project?.name || projectId}`}
-              data-testid="edit-name-button"
-            >
-              {project?.name || projectId}
-              <span className={styles.editButton} aria-hidden="true">
-                ✏️
-              </span>
-            </button>
-          )}
+          <EditableTextField
+            value={project?.name || ""}
+            onSave={(v) => { if (project) { updateProject(project.id, { name: v }); } }}
+            validate={(v) => {
+              const trimmed = v.trim();
+              if (!trimmed) return "Name is required";
+              if (trimmed.length > MAX_NAME_LENGTH) return `Max ${MAX_NAME_LENGTH} characters`;
+              return undefined;
+            }}
+            maxLength={MAX_NAME_LENGTH}
+            fieldId="name"
+            activeFieldId={activeFieldId}
+            onActivate={setActiveFieldId}
+            ariaLabel="Project name"
+            renderDisplay={(v) => v || projectId || undefined}
+            data-testid="edit-name"
+          />
         </span>
         <button
           className={styles.archiveButton}
@@ -263,7 +126,7 @@ export function ProjectPage(): JSX.Element {
         aria-controls="project-meta-panel"
         data-testid="meta-toggle"
       >
-        <span className={`${styles.metaToggleArrow} ${!metaCollapsed ? styles.metaToggleArrowOpen : ""}`}>▶</span>
+        <span className={`${styles.metaToggleArrow} ${!metaCollapsed ? styles.metaToggleArrowOpen : ""}`}>&#x25B6;</span>
         Details
       </button>
 
@@ -274,52 +137,21 @@ export function ProjectPage(): JSX.Element {
           <div className={styles.metaRow}>
             <span className={styles.metaLabel}>Description</span>
             <div className={styles.metaValue}>
-              {editingField === "description" ? (
-                <div className={styles.editFieldWrapper}>
-                  <textarea
-                    ref={descriptionInputRef}
-                    className={styles.editTextarea}
-                    value={editDraft}
-                    onChange={(e) => { setEditDraft(e.target.value); setEditError(""); }}
-                    onBlur={(event) => {
-                      if (ignoreInitialBlurFieldRef.current === "description") {
-                        ignoreInitialBlurFieldRef.current = null;
-                        return;
-                      }
-                      if (event.relatedTarget instanceof HTMLElement && event.relatedTarget.dataset.editAction === "description") {
-                        return;
-                      }
-                      saveEdit("description");
-                    }}
-                    onKeyDown={(e) => handleKeyDown(e, "description")}
-                    title="Project description"
-                    aria-label="Project description"
-                    data-testid="edit-description-input"
-                  />
-                  {isDirty("description") && <span className={styles.unsavedDot} title="Unsaved changes" />}
-                  <span className={styles.editHint}>{keyboardHint}</span>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  className={styles.metaValueClickable}
-                  onClick={() => startEdit("description", project?.description || "")}
-                  title="Click to edit description"
-                  aria-label="Edit project description"
-                  data-testid="edit-description-button"
-                >
-                  {project?.description ? (
-                    <span className={styles.overviewMarkdown}>
-                      <Markdown remarkPlugins={[remarkGfm]}>{project.description}</Markdown>
-                    </span>
-                  ) : (
-                    <span className={styles.metaPlaceholder}>No description</span>
-                  )}
-                  <span className={styles.editButton} aria-hidden="true">
-                    ✏️
+              <EditableTextArea
+                value={project?.description || ""}
+                onSave={(v) => { if (project) { updateProject(project.id, { description: v }); } }}
+                fieldId="description"
+                activeFieldId={activeFieldId}
+                onActivate={setActiveFieldId}
+                renderDisplay={(v) => v ? (
+                  <span className={styles.overviewMarkdown}>
+                    <Markdown remarkPlugins={[remarkGfm]}>{v}</Markdown>
                   </span>
-                </button>
-              )}
+                ) : undefined}
+                placeholder="No description"
+                ariaLabel="Project description"
+                data-testid="edit-description"
+              />
             </div>
           </div>
 
@@ -327,61 +159,37 @@ export function ProjectPage(): JSX.Element {
           <div className={styles.metaRow}>
             <span className={styles.metaLabel}>Repository</span>
             <div className={styles.metaValue}>
-              {editingField === "repoUrl" ? (
-                <div className={styles.editFieldWrapper}>
-                  <input
-                    ref={repositoryInputRef}
-                    className={`${styles.editInput} ${editError ? styles.editInputInvalid : ""}`}
-                    value={editDraft}
-                    onChange={(e) => { setEditDraft(e.target.value); setEditError(""); }}
-                    onBlur={(event) => {
-                      if (ignoreInitialBlurFieldRef.current === "repoUrl") {
-                        ignoreInitialBlurFieldRef.current = null;
-                        return;
-                      }
-                      if (event.relatedTarget instanceof HTMLElement && event.relatedTarget.dataset.editAction === "repoUrl") {
-                        return;
-                      }
-                      saveEdit("repoUrl");
-                    }}
-                    onKeyDown={(e) => handleKeyDown(e, "repoUrl")}
-                    placeholder="https://github.com/..."
-                    aria-label="Project repository URL"
-                    data-testid="edit-repo-input"
-                  />
-                  {isDirty("repoUrl") && <span className={styles.unsavedDot} title="Unsaved changes" />}
-                  {editError && <span className={styles.editError} data-testid="edit-error">{editError}</span>}
-                  <span className={styles.editHint}>{keyboardHint}</span>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  className={styles.metaValueClickable}
-                  onClick={(e) => { e.preventDefault(); startEdit("repoUrl", project?.repoUrl || ""); }}
-                  title="Click to edit repository URL"
-                  aria-label="Edit project repository URL"
-                  data-testid="edit-repo-button"
-                >
-                  {project?.repoUrl && /^https?:\/\//i.test(project.repoUrl) ? (
-                    <a
-                      className={styles.repoLink}
-                      href={project.repoUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      {project.repoUrl}
-                    </a>
-                  ) : project?.repoUrl ? (
-                    <span>{project.repoUrl}</span>
-                  ) : (
-                    <span className={styles.metaPlaceholder}>No repository</span>
-                  )}
-                  <span className={styles.editButton} aria-hidden="true">
-                    ✏️
-                  </span>
-                </button>
-              )}
+              <EditableTextField
+                value={project?.repoUrl || ""}
+                onSave={(v) => { if (project) { updateProject(project.id, { repoUrl: v }); } }}
+                validate={(v) => {
+                  const trimmed = v.trim();
+                  if (trimmed && !/^https?:\/\/.+/.test(trimmed)) return "Must be a valid http(s) URL";
+                  return undefined;
+                }}
+                fieldId="repoUrl"
+                activeFieldId={activeFieldId}
+                onActivate={setActiveFieldId}
+                renderDisplay={(v) => {
+                  if (v && /^https?:\/\//i.test(v)) {
+                    return (
+                      <a
+                        className={styles.repoLink}
+                        href={v}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {v}
+                      </a>
+                    );
+                  }
+                  return v ? <span>{v}</span> : undefined;
+                }}
+                placeholder="No repository"
+                ariaLabel="Project repository URL"
+                data-testid="edit-repo"
+              />
             </div>
           </div>
 
@@ -389,63 +197,31 @@ export function ProjectPage(): JSX.Element {
           <div className={styles.metaRow}>
             <span className={styles.metaLabel}>Environment</span>
             <div className={styles.metaValue}>
-              {editingField === "defaultEnvironmentId" ? (
-                <select
-                  ref={environmentSelectRef}
-                  className={styles.editSelect}
-                  value={editDraft}
-                  onChange={(e) => {
-                    ignoreInitialBlurFieldRef.current = null;
-                    setEditDraft(e.target.value);
-                    const val = e.target.value;
-                    if (project && val !== project.defaultEnvironmentId) {
-                      updateProject(project.id, { defaultEnvironmentId: val });
-                    }
-                    cancelEdit();
-                  }}
-                  onBlur={(event) => {
-                    if (ignoreInitialBlurFieldRef.current === "defaultEnvironmentId") {
-                      ignoreInitialBlurFieldRef.current = null;
-                      return;
-                    }
-                    if (event.relatedTarget instanceof HTMLElement && event.relatedTarget.dataset.editAction === "defaultEnvironmentId") {
-                      return;
-                    }
-                    cancelEdit();
-                  }}
-                  title="Default environment"
-                  aria-label="Project default environment"
-                  data-testid="edit-env-select"
-                >
-                  <option value="">None</option>
-                  {environments.map((env) => (
-                    <option key={env.id} value={env.id}>{env.displayName}</option>
-                  ))}
-                </select>
-              ) : (
-                <button
-                  type="button"
-                  className={styles.metaValueClickable}
-                  onClick={() => startEdit("defaultEnvironmentId", project?.defaultEnvironmentId || "")}
-                  title="Click to change default environment"
-                  aria-label="Edit project default environment"
-                  data-testid="edit-env-button"
-                >
-                  {defaultEnv ? (
-                    <span className={styles.envRow}>
-                      <span className={`${styles.envDot} ${envStatusClass(defaultEnv.status)}`} />
-                      {defaultEnv.displayName}
-                    </span>
-                  ) : (
-                    <span className={styles.metaPlaceholder}>
-                      {project?.defaultEnvironmentId || "No default environment"}
-                    </span>
-                  )}
-                  <span className={styles.editButton} aria-hidden="true">
-                    ✏️
-                  </span>
-                </button>
-              )}
+              <EditableSelect
+                value={project?.defaultEnvironmentId || ""}
+                onSave={(v) => { if (project) { updateProject(project.id, { defaultEnvironmentId: v }); } }}
+                options={[
+                  { value: "", label: "None" },
+                  ...environments.map((env) => ({ value: env.id, label: env.displayName })),
+                ]}
+                fieldId="defaultEnvironmentId"
+                activeFieldId={activeFieldId}
+                onActivate={setActiveFieldId}
+                renderDisplay={() => {
+                  if (defaultEnv) {
+                    return (
+                      <span className={styles.envRow}>
+                        <span className={`${styles.envDot} ${envStatusClass(defaultEnv.status)}`} />
+                        {defaultEnv.displayName}
+                      </span>
+                    );
+                  }
+                  return undefined;
+                }}
+                placeholder={project?.defaultEnvironmentId || "No default environment"}
+                ariaLabel="Project default environment"
+                data-testid="edit-env"
+              />
             </div>
           </div>
 
@@ -453,60 +229,25 @@ export function ProjectPage(): JSX.Element {
           <div className={styles.metaRow}>
             <span className={styles.metaLabel}>Persona</span>
             <div className={styles.metaValue}>
-              {editingField === "defaultPersonaId" ? (
-                <select
-                  ref={personaSelectRef}
-                  className={styles.editSelect}
-                  value={editDraft}
-                  onChange={(e) => {
-                    ignoreInitialBlurFieldRef.current = null;
-                    setEditDraft(e.target.value);
-                    const val = e.target.value;
-                    if (project && val !== project.defaultPersonaId) {
-                      updateProject(project.id, { defaultPersonaId: val });
-                    }
-                    cancelEdit();
-                  }}
-                  onBlur={(event) => {
-                    if (ignoreInitialBlurFieldRef.current === "defaultPersonaId") {
-                      ignoreInitialBlurFieldRef.current = null;
-                      return;
-                    }
-                    if (event.relatedTarget instanceof HTMLElement && event.relatedTarget.dataset.editAction === "defaultPersonaId") {
-                      return;
-                    }
-                    cancelEdit();
-                  }}
-                  title="Default persona"
-                  aria-label="Project default persona"
-                  data-testid="edit-persona-select"
-                >
-                  <option value="">(Inherit)</option>
-                  {personas.map((p) => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-                </select>
-              ) : (
-                <button
-                  type="button"
-                  className={styles.metaValueClickable}
-                  onClick={() => startEdit("defaultPersonaId", project?.defaultPersonaId || "")}
-                  title="Click to change default persona"
-                  aria-label="Edit project default persona"
-                  data-testid="edit-persona-button"
-                >
-                  {defaultPersona ? (
-                    <span>{defaultPersona.name}</span>
-                  ) : (
-                    <span className={styles.metaPlaceholder}>
-                      {project?.defaultPersonaId || "(Inherit)"}
-                    </span>
-                  )}
-                  <span className={styles.editButton} aria-hidden="true">
-                    ✏️
-                  </span>
-                </button>
-              )}
+              <EditableSelect
+                value={project?.defaultPersonaId || ""}
+                onSave={(v) => { if (project) { updateProject(project.id, { defaultPersonaId: v }); } }}
+                options={[
+                  { value: "", label: "(Inherit)" },
+                  ...personas.map((p) => ({ value: p.id, label: p.name })),
+                ]}
+                fieldId="defaultPersonaId"
+                activeFieldId={activeFieldId}
+                onActivate={setActiveFieldId}
+                renderDisplay={(v) => {
+                  const persona = personas.find((p) => p.id === v);
+                  if (persona) return <span>{persona.name}</span>;
+                  return undefined;
+                }}
+                placeholder={project?.defaultPersonaId || "(Inherit)"}
+                ariaLabel="Project default persona"
+                data-testid="edit-persona"
+              />
             </div>
           </div>
 
@@ -514,18 +255,16 @@ export function ProjectPage(): JSX.Element {
           <div className={styles.metaRow}>
             <span className={styles.metaLabel}>Worktrees</span>
             <div className={styles.metaValue}>
-              <label className={styles.worktreeToggle} data-testid="worktree-toggle">
-                <input
-                  type="checkbox"
-                  checked={project?.useWorktrees ?? true}
-                  onChange={(e) => {
-                    if (project) {
-                      updateProject(project.id, { useWorktrees: e.target.checked });
-                    }
-                  }}
-                />
-                <span>Enable worktree isolation</span>
-              </label>
+              <EditableCheckbox
+                checked={project?.useWorktrees ?? true}
+                onChange={(checked) => {
+                  if (project) {
+                    updateProject(project.id, { useWorktrees: checked });
+                  }
+                }}
+                label="Enable worktree isolation"
+                data-testid="worktree-toggle"
+              />
             </div>
           </div>
 
@@ -533,51 +272,16 @@ export function ProjectPage(): JSX.Element {
           <div className={styles.metaRow}>
             <span className={styles.metaLabel}>Working Dir</span>
             <div className={styles.metaValue}>
-              {editingField === "worktreeBasePath" ? (
-                <div className={styles.editFieldWrapper}>
-                  <input
-                    ref={worktreeBasePathInputRef}
-                    className={`${styles.editInput} ${editError ? styles.editInputInvalid : ""}`}
-                    value={editDraft}
-                    onChange={(e) => { setEditDraft(e.target.value); setEditError(""); }}
-                    onBlur={(event) => {
-                      if (ignoreInitialBlurFieldRef.current === "worktreeBasePath") {
-                        ignoreInitialBlurFieldRef.current = null;
-                        return;
-                      }
-                      if (event.relatedTarget instanceof HTMLElement && event.relatedTarget.dataset.editAction === "worktreeBasePath") {
-                        return;
-                      }
-                      saveEdit("worktreeBasePath");
-                    }}
-                    onKeyDown={(e) => handleKeyDown(e, "worktreeBasePath")}
-                    placeholder="/workspaces/my-repo"
-                    aria-label="Working directory"
-                    data-testid="edit-worktree-base-path-input"
-                  />
-                  {isDirty("worktreeBasePath") && <span className={styles.unsavedDot} title="Unsaved changes" />}
-                  {editError && <span className={styles.editError} data-testid="edit-error">{editError}</span>}
-                  <span className={styles.editHint}>{keyboardHint}</span>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  className={styles.metaValueClickable}
-                  onClick={() => startEdit("worktreeBasePath", project?.worktreeBasePath || "")}
-                  title="Click to edit working directory"
-                  aria-label="Edit working directory"
-                  data-testid="edit-worktree-base-path-button"
-                >
-                  {project?.worktreeBasePath ? (
-                    <span>{project.worktreeBasePath}</span>
-                  ) : (
-                    <span className={styles.metaPlaceholder}>Default (server default)</span>
-                  )}
-                  <span className={styles.editButton} aria-hidden="true">
-                    ✏️
-                  </span>
-                </button>
-              )}
+              <EditableTextField
+                value={project?.worktreeBasePath || ""}
+                onSave={(v) => { if (project) { updateProject(project.id, { worktreeBasePath: v }); } }}
+                fieldId="worktreeBasePath"
+                activeFieldId={activeFieldId}
+                onActivate={setActiveFieldId}
+                placeholder="Default (server default)"
+                ariaLabel="Working directory"
+                data-testid="edit-worktree-base-path"
+              />
             </div>
           </div>
 
@@ -589,7 +293,7 @@ export function ProjectPage(): JSX.Element {
               </span>
               {project.updatedAt && project.updatedAt !== project.createdAt && (
                 <span className={styles.metaTimestamp}>
-                  · Updated {relativeTime(project.updatedAt)}
+                  &middot; Updated {relativeTime(project.updatedAt)}
                 </span>
               )}
             </div>
