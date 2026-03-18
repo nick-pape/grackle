@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.40.0",
+      "tag": "@grackle-ai/cli_v0.40.0",
+      "date": "Wed, 18 Mar 2026 13:51:51 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Replace ad-hoc runtime/model resolution with persona cascade at app/project/task levels"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.39.1",
       "tag": "@grackle-ai/cli_v0.39.1",
       "date": "Wed, 18 Mar 2026 13:38:45 GMT",
