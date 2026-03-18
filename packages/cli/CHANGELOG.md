@@ -1,6 +1,17 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Wed, 18 Mar 2026 05:13:05 GMT and should not be manually modified.
+This log was last generated on Wed, 18 Mar 2026 13:38:45 GMT and should not be manually modified.
+
+## 0.39.1
+Wed, 18 Mar 2026 13:38:45 GMT
+
+### Patches
+
+- Worktrees now fetch from origin and branch from the remote default branch so agents start on up-to-date code (falls back to local HEAD if fetch fails)
+
+### Updates
+
+- No CLI changes (pnpm-lock merge artifact)
 
 ## 0.39.0
 Wed, 18 Mar 2026 05:13:05 GMT

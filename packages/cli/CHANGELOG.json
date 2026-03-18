@@ -2,6 +2,23 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.39.1",
+      "tag": "@grackle-ai/cli_v0.39.1",
+      "date": "Wed, 18 Mar 2026 13:38:45 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Worktrees now fetch from origin and branch from the remote default branch so agents start on up-to-date code (falls back to local HEAD if fetch fails)"
+          }
+        ],
+        "none": [
+          {
+            "comment": "No CLI changes (pnpm-lock merge artifact)"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.39.0",
       "tag": "@grackle-ai/cli_v0.39.0",
       "date": "Wed, 18 Mar 2026 05:13:05 GMT",
