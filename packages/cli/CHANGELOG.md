@@ -1,6 +1,17 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Tue, 17 Mar 2026 18:17:47 GMT and should not be manually modified.
+This log was last generated on Wed, 18 Mar 2026 04:06:45 GMT and should not be manually modified.
+
+## 0.38.1
+Wed, 18 Mar 2026 04:06:45 GMT
+
+### Patches
+
+- Use ConnectError with proper gRPC status codes instead of plain Error in grpc-service.ts
+
+### Updates
+
+- placeholder
 
 ## 0.38.0
 Tue, 17 Mar 2026 18:17:47 GMT
