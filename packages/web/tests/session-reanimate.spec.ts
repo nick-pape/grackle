@@ -5,9 +5,27 @@
  * and that the backward-compat path (idle session) returns as-is.
  */
 import { test, expect } from "./fixtures.js";
-import { sendWsAndWaitFor, sendWsAndWaitForError } from "./helpers.js";
+import { sendWsAndWaitFor, sendWsAndWaitForError, sendWsMessage } from "./helpers.js";
 
 test.describe("Session Reanimate (stub runtime)", () => {
+  // Kill any stale active sessions from previous specs so the shared
+  // test-local environment is clean before each test in this file.
+  test.beforeEach(async ({ appPage }) => {
+    const sessionsResp = await sendWsAndWaitFor(
+      appPage,
+      { type: "list_sessions" },
+      "sessions",
+    );
+    const all = (sessionsResp.payload?.sessions ?? []) as Array<{ id: string; status: string }>;
+    const active = all.filter((s) => s.status === "idle" || s.status === "running" || s.status === "pending");
+    for (const s of active) {
+      await sendWsMessage(appPage, { type: "kill", payload: { sessionId: s.id } });
+    }
+    if (active.length > 0) {
+      await appPage.waitForTimeout(500);
+    }
+  });
+
   test("resume a completed session reanimates it to idle, accepts input, and completes again", async ({ appPage }) => {
     const page = appPage;
 
