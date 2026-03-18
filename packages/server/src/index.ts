@@ -629,7 +629,7 @@ async function main(): Promise<void> {
       envRegistry.updateAdapterConfig("local", adapterConfig);
       localEnv = envRegistry.getEnvironment("local")!;
     } else {
-      envRegistry.addEnvironment("local", "Local", "local", adapterConfig, "claude-code");
+      envRegistry.addEnvironment("local", "Local", "local", adapterConfig);
       localEnv = envRegistry.getEnvironment("local")!;
     }
 

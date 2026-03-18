@@ -145,7 +145,7 @@ test.describe("Add Environment — WebSocket Handler", () => {
           displayName: "ws-test-env",
           adapterType: "local",
           adapterConfig: {},
-          defaultRuntime: "stub",
+
         },
       },
       "environment_added",
@@ -210,7 +210,7 @@ test.describe("Add Environment — WebSocket Handler", () => {
           displayName: "ws-string-config-env",
           adapterType: "local",
           adapterConfig: '{"host":"localhost","port":1234}',
-          defaultRuntime: "stub",
+
         },
       },
       "environment_added",

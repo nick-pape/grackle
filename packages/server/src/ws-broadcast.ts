@@ -28,7 +28,6 @@ export function envRowToWs(
     displayName: r.displayName,
     adapterType: r.adapterType,
     adapterConfig: r.adapterConfig,
-    defaultRuntime: r.defaultRuntime,
     status: r.status,
     bootstrapped: r.bootstrapped,
   };

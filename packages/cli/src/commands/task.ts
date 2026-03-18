@@ -153,17 +153,13 @@ export function registerTaskCommands(program: Command): void {
   task
     .command("start <task-id>")
     .description("Start a task (spawn agent)")
-    .option("--runtime <runtime>", "Agent runtime")
-    .option("--model <model>", "Model to use")
-    .option("--persona <id-or-name>", "Persona to use")
+    .option("--persona <id-or-name>", "Persona override (falls back to task/project/app default)")
     .option("--env <env-id>", "Environment to run on")
     .option("--notes <text>", "Feedback/instructions for retry")
-    .action(async (taskId: string, opts: { runtime?: string; model?: string; persona?: string; env?: string; notes?: string }) => {
+    .action(async (taskId: string, opts: { persona?: string; env?: string; notes?: string }) => {
       const client = createGrackleClient();
       const session = await client.startTask({
         taskId,
-        runtime: opts.runtime || "",
-        model: opts.model || "",
         personaId: opts.persona || "",
         environmentId: opts.env || "",
         notes: opts.notes || "",

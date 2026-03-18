@@ -19,6 +19,7 @@ export function createTask(
   projectSlug: string,
   parentTaskId: string = "",
   canDecompose?: boolean,
+  defaultPersonaId: string = "",
 ): void {
   let depth = 0;
   let branch: string;
@@ -64,6 +65,7 @@ export function createTask(
       parentTaskId,
       depth,
       canDecompose: resolvedCanDecompose,
+      defaultPersonaId,
     })
     .run();
 }
@@ -127,15 +129,20 @@ export function updateTask(
   description: string,
   status: string,
   dependsOn: string[],
+  defaultPersonaId?: string,
 ): void {
+  const sets: Record<string, unknown> = {
+    title,
+    description,
+    status,
+    dependsOn: JSON.stringify(dependsOn),
+    updatedAt: sql`datetime('now')`,
+  };
+  if (defaultPersonaId !== undefined) {
+    sets.defaultPersonaId = defaultPersonaId;
+  }
   db.update(tasks)
-    .set({
-      title,
-      description,
-      status,
-      dependsOn: JSON.stringify(dependsOn),
-      updatedAt: sql`datetime('now')`,
-    })
+    .set(sets)
     .where(eq(tasks.id, id))
     .run();
 }

@@ -90,7 +90,7 @@ test.describe("Environment Status Broadcast + Toasts", () => {
             id: "test-local",
             displayName: "test-local",
             adapterType: "local",
-            defaultRuntime: "stub",
+
             status: "connected",
             bootstrapped: true,
           },
@@ -98,7 +98,7 @@ test.describe("Environment Status Broadcast + Toasts", () => {
             id: "temp-env",
             displayName: "Temp Env",
             adapterType: "local",
-            defaultRuntime: "stub",
+
             status: "connected",
             bootstrapped: false,
           },
@@ -118,7 +118,7 @@ test.describe("Environment Status Broadcast + Toasts", () => {
             id: "test-local",
             displayName: "test-local",
             adapterType: "local",
-            defaultRuntime: "stub",
+
             status: "connected",
             bootstrapped: true,
           },
@@ -150,7 +150,7 @@ test.describe("Environment Status Broadcast + Toasts", () => {
             id: "test-local",
             displayName: "test-local",
             adapterType: "local",
-            defaultRuntime: "stub",
+
             status: "error",
             bootstrapped: false,
           },

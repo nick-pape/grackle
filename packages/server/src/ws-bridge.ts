@@ -21,12 +21,13 @@ import { v4 as uuid } from "uuid";
 import { join } from "node:path";
 import {
   LOGS_DIR,
-  DEFAULT_RUNTIME,
-  DEFAULT_MODEL,
   SESSION_STATUS,
   TASK_STATUS,
   eventTypeToString,
 } from "@grackle-ai/common";
+import { resolvePersona } from "./resolve-persona.js";
+import * as settingsStore from "./settings-store.js";
+import { isAllowedSettingKey } from "./settings-store.js";
 import { grackleHome } from "./paths.js";
 import * as logWriter from "./log-writer.js";
 import { safeParseJsonArray } from "./json-helpers.js";
@@ -247,7 +248,7 @@ async function autoProvisionEnvironment(
 async function startTaskSession(
   ws: WebSocket,
   task: taskStore.TaskRow,
-  options?: { runtime?: string; model?: string; personaId?: string; environmentId?: string; notes?: string },
+  options?: { personaId?: string; environmentId?: string; notes?: string },
 ): Promise<string | undefined> {
   const project = projectStore.getProject(task.projectId);
   if (!project) {
@@ -275,21 +276,16 @@ async function startTaskSession(
     return undefined;
   }
 
-  // Resolve persona
-  const resolvedPersonaId = options?.personaId || "";
-  const persona = resolvedPersonaId
-    ? personaStore.getPersona(resolvedPersonaId)
-    : undefined;
-  if (resolvedPersonaId && !persona) {
-    return `Persona not found: ${resolvedPersonaId}`;
+  // Resolve persona via cascade (request → task → project → app default)
+  let resolved;
+  try {
+    resolved = resolvePersona(options?.personaId || "", task.defaultPersonaId, project.defaultPersonaId);
+  } catch (err) {
+    return (err as Error).message;
   }
 
   const sessionId = uuid();
-  const runtime = options?.runtime || persona?.runtime || env.defaultRuntime || DEFAULT_RUNTIME;
-  const model =
-    options?.model || persona?.model ||
-    process.env.GRACKLE_DEFAULT_MODEL || DEFAULT_MODEL;
-  const maxTurns = persona?.maxTurns || 0;
+  const { runtime, model, maxTurns, systemPrompt, persona: resolvedPersonaRow } = resolved;
   const logPath = join(grackleHome, LOGS_DIR, sessionId);
 
   const freshTask = taskStore.getTask(task.id) || task;
@@ -299,8 +295,8 @@ async function startTaskSession(
     options?.notes || "",
     freshTask.canDecompose,
   );
-  if (persona) {
-    systemContext = persona.systemPrompt + "\n\n" + systemContext;
+  if (systemPrompt) {
+    systemContext = systemPrompt + "\n\n" + systemContext;
   }
 
   sessionStore.createSession(
@@ -311,7 +307,7 @@ async function startTaskSession(
     model,
     logPath,
     freshTask.id,
-    resolvedPersonaId,
+    resolved.personaId,
   );
 
   broadcast({
@@ -329,23 +325,21 @@ async function startTaskSession(
     env.adapterType === "local" ? { excludeFileTokens: true } : undefined);
 
   let mcpServersJson = "";
-  if (persona) {
-    try {
-      const parsed: unknown = JSON.parse(persona.mcpServers || "[]");
-      if (Array.isArray(parsed)) {
-        const mcpServers = parsed as {
-          name: string;
-          command: string;
-          args?: string[];
-          tools?: string[];
-        }[];
-        if (mcpServers.length > 0) {
-          mcpServersJson = buildMcpServersJson(mcpServers);
-        }
+  try {
+    const parsed: unknown = JSON.parse(resolvedPersonaRow.mcpServers || "[]");
+    if (Array.isArray(parsed)) {
+      const mcpServers = parsed as {
+        name: string;
+        command: string;
+        args?: string[];
+        tools?: string[];
+      }[];
+      if (mcpServers.length > 0) {
+        mcpServersJson = buildMcpServersJson(mcpServers);
       }
-    } catch {
-      logger.warn("Failed to parse persona.mcpServers JSON; ignoring");
     }
+  } catch {
+    logger.warn("Failed to parse persona.mcpServers JSON; ignoring");
   }
 
   const powerlineReq = create(powerline.SpawnRequestSchema, {
@@ -501,8 +495,6 @@ async function handleMessage(
     case "spawn": {
       const environmentId = msg.payload?.environmentId as string;
       const prompt = msg.payload?.prompt as string;
-      const model = (msg.payload?.model as string | undefined) || undefined;
-      const runtime = (msg.payload?.runtime as string | undefined) || undefined;
       const branch = (msg.payload?.branch as string) || "";
       const systemContext = (msg.payload?.systemContext as string) || "";
       const spawnPersonaId = (msg.payload?.personaId as string) || "";
@@ -515,10 +507,12 @@ async function handleMessage(
         return;
       }
 
-      // Resolve persona if specified
-      const spawnPersona = spawnPersonaId ? personaStore.getPersona(spawnPersonaId) : undefined;
-      if (spawnPersonaId && !spawnPersona) {
-        sendWs(ws, { type: "error", payload: { message: `Persona not found: ${spawnPersonaId}` } });
+      // Resolve persona via cascade (request → app default)
+      let resolved;
+      try {
+        resolved = resolvePersona(spawnPersonaId);
+      } catch (err) {
+        sendWs(ws, { type: "error", payload: { message: (err as Error).message } });
         return;
       }
 
@@ -538,14 +532,12 @@ async function handleMessage(
       }
 
       const sessionId = uuid();
-      const sessionRuntime = runtime || spawnPersona?.runtime || env.defaultRuntime || DEFAULT_RUNTIME;
-      const sessionModel = model || spawnPersona?.model || process.env.GRACKLE_DEFAULT_MODEL || DEFAULT_MODEL;
-      const maxTurns = spawnPersona?.maxTurns || 0;
+      const { runtime: sessionRuntime, model: sessionModel, maxTurns, systemPrompt: spawnSystemPrompt } = resolved;
       const logPath = join(grackleHome, LOGS_DIR, sessionId);
 
       let finalSystemContext = systemContext;
-      if (spawnPersona) {
-        finalSystemContext = spawnPersona.systemPrompt + (systemContext ? "\n\n" + systemContext : "");
+      if (spawnSystemPrompt) {
+        finalSystemContext = spawnSystemPrompt + (systemContext ? "\n\n" + systemContext : "");
       }
 
       sessionStore.createSession(
@@ -728,6 +720,7 @@ async function handleMessage(
             description: r.description,
             repoUrl: r.repoUrl,
             defaultEnvironmentId: r.defaultEnvironmentId,
+            defaultPersonaId: r.defaultPersonaId,
             status: r.status,
             useWorktrees: r.useWorktrees,
             worktreeBasePath: r.worktreeBasePath,
@@ -767,6 +760,7 @@ async function handleMessage(
         (msg.payload?.defaultEnvironmentId as string) || "",
         createUseWorktrees,
         typeof msg.payload?.worktreeBasePath === "string" ? msg.payload.worktreeBasePath.trim() : "",
+        (msg.payload?.defaultPersonaId as string) || "",
       );
       const row = projectStore.getProject(id);
       broadcast({ type: "project_created", payload: { project: row } });
@@ -805,6 +799,7 @@ async function handleMessage(
       }
       const worktreesVal = typeof msg.payload?.useWorktrees === "boolean" ? msg.payload.useWorktrees as boolean : undefined;
       const worktreeBasePathVal = typeof msg.payload?.worktreeBasePath === "string" ? msg.payload.worktreeBasePath as string : undefined;
+      const defaultPersonaIdVal = typeof msg.payload?.defaultPersonaId === "string" ? msg.payload.defaultPersonaId as string : undefined;
       projectStore.updateProject(projectId, {
         name: nameVal !== undefined ? nameVal.trim() : undefined,
         description: descVal,
@@ -812,6 +807,7 @@ async function handleMessage(
         defaultEnvironmentId: envVal,
         useWorktrees: worktreesVal,
         worktreeBasePath: worktreeBasePathVal,
+        defaultPersonaId: defaultPersonaIdVal,
       });
       broadcast({ type: "project_updated", payload: { projectId } });
       break;
@@ -937,6 +933,45 @@ async function handleMessage(
       break;
     }
 
+    // ─── Settings ────────────────────────────────────────────
+
+    case "get_setting": {
+      const key = msg.payload?.key;
+      if (typeof key !== "string" || !key) return;
+      if (!isAllowedSettingKey(key)) {
+        sendWs(ws, { type: "error", payload: { message: `Setting key not allowed: ${key}` } });
+        return;
+      }
+      const value = settingsStore.getSetting(key) ?? "";
+      sendWs(ws, { type: "setting", payload: { key, value } });
+      break;
+    }
+
+    case "set_setting": {
+      const key = msg.payload?.key;
+      const value = (msg.payload?.value as string) || "";
+      if (typeof key !== "string" || !key) return;
+      if (!isAllowedSettingKey(key)) {
+        sendWs(ws, { type: "error", payload: { message: `Setting key not allowed: ${key}` } });
+        return;
+      }
+      // Validate persona exists and has required fields when setting default_persona_id
+      if (key === "default_persona_id" && value) {
+        const persona = personaStore.getPersona(value);
+        if (!persona) {
+          sendWs(ws, { type: "error", payload: { message: `Persona not found: ${value}` } });
+          return;
+        }
+        if (!persona.runtime || !persona.model) {
+          sendWs(ws, { type: "error", payload: { message: `Persona "${persona.name}" must have runtime and model configured` } });
+          return;
+        }
+      }
+      settingsStore.setSetting(key, value);
+      broadcast({ type: "setting_changed", payload: { key, value } });
+      break;
+    }
+
     // ─── Tasks ─────────────────────────────────────────────
 
     case "list_tasks": {
@@ -980,6 +1015,7 @@ async function handleMessage(
               depth: r.depth,
               childTaskIds: childIdsMap.get(r.id) ?? [],
               canDecompose: r.canDecompose,
+              defaultPersonaId: r.defaultPersonaId,
             };
           }),
         },
@@ -1027,6 +1063,7 @@ async function handleMessage(
           slugify(project.name),
           parentTaskId,
           canDecompose,
+          (msg.payload?.defaultPersonaId as string) || "",
         );
         const row = taskStore.getTask(id);
         broadcast({
@@ -1127,12 +1164,16 @@ async function handleMessage(
             ),
           ]
         : safeParseJsonArray(existingTask.dependsOn);
+      const updatedDefaultPersonaId = typeof msg.payload?.defaultPersonaId === "string"
+        ? msg.payload.defaultPersonaId as string
+        : undefined;
       taskStore.updateTask(
         updateTaskId,
         updatedTitle,
         updatedDescription,
         existingTask.status,
         updatedDependsOn,
+        updatedDefaultPersonaId,
       );
       const updatedRow = taskStore.getTask(updateTaskId);
       broadcast({
@@ -1182,8 +1223,6 @@ async function handleMessage(
       }
 
       const startError = await startTaskSession(ws, task, {
-        runtime: msg.payload?.runtime as string | undefined,
-        model: msg.payload?.model as string | undefined,
         personaId: (msg.payload?.personaId as string) || undefined,
         environmentId: (msg.payload?.environmentId as string) || undefined,
         notes: (msg.payload?.notes as string) || undefined,
@@ -1674,14 +1713,11 @@ async function handleMessage(
         });
         return;
       }
-      const defaultRuntime =
-        (msg.payload?.defaultRuntime as string) || DEFAULT_RUNTIME;
       envRegistry.addEnvironment(
         id,
         displayName,
         adapterType,
         adapterConfig,
-        defaultRuntime,
       );
       logger.info(
         { id, displayName, adapterType },

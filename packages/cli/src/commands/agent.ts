@@ -9,18 +9,14 @@ export function registerAgentCommands(program: Command): void {
   program
     .command("spawn <env-id> <prompt>")
     .description("Start a new agent session")
-    .option("--model <model>", "Model to use")
     .option("--max-turns <n>", "Maximum turns", parseInt)
-    .option("--runtime <runtime>", "Agent runtime")
-    .option("--persona <id>", "Persona to use")
-    .action(async (environmentId: string, prompt: string, opts: { model?: string; maxTurns?: number; runtime?: string; persona?: string }) => {
+    .option("--persona <id>", "Persona to use (falls back to app default)")
+    .action(async (environmentId: string, prompt: string, opts: { maxTurns?: number; persona?: string }) => {
       const client = createGrackleClient();
       const session = await client.spawnAgent({
         environmentId,
         prompt,
-        model: opts.model || "",
         maxTurns: opts.maxTurns || 0,
-        runtime: opts.runtime || "",
         personaId: opts.persona || "",
       });
       console.log(`Spawned session: ${session.id}`);

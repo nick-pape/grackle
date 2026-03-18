@@ -11,7 +11,6 @@ export interface Environment {
   id: string;
   displayName: string;
   adapterType: string;
-  defaultRuntime: string;
   status: string;
   bootstrapped: boolean;
 }
@@ -49,6 +48,7 @@ export interface Project {
   status: string;
   worktreeBasePath: string;
   useWorktrees: boolean;
+  defaultPersonaId: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -75,6 +75,7 @@ export interface TaskData {
   depth: number;
   childTaskIds: string[];
   canDecompose: boolean;
+  defaultPersonaId: string;
 }
 
 /** A finding posted by an agent or user. */
@@ -170,7 +171,6 @@ export function isEnvironment(v: unknown): v is Environment {
     typeof v.id === "string" &&
     typeof v.displayName === "string" &&
     typeof v.adapterType === "string" &&
-    typeof v.defaultRuntime === "string" &&
     typeof v.status === "string" &&
     typeof v.bootstrapped === "boolean"
   );
@@ -215,6 +215,7 @@ export function isProject(v: unknown): v is Project {
     typeof v.status === "string" &&
     typeof v.worktreeBasePath === "string" &&
     typeof v.useWorktrees === "boolean" &&
+    (v.defaultPersonaId === undefined || typeof v.defaultPersonaId === "string") &&
     typeof v.createdAt === "string" &&
     typeof v.updatedAt === "string"
   );
@@ -231,6 +232,7 @@ export function isTaskData(v: unknown): v is TaskData {
     typeof v.branch === "string" &&
     typeof v.sortOrder === "number" &&
     typeof v.depth === "number" &&
+    (v.defaultPersonaId === undefined || typeof v.defaultPersonaId === "string") &&
     Array.isArray(v.dependsOn) &&
     Array.isArray(v.childTaskIds)
   );

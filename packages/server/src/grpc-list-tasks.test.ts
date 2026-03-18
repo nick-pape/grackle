@@ -151,6 +151,7 @@ function applySchema(): void {
       status        TEXT NOT NULL DEFAULT 'active',
       use_worktrees INTEGER NOT NULL DEFAULT 1,
       worktree_base_path TEXT NOT NULL DEFAULT '',
+      default_persona_id TEXT NOT NULL DEFAULT '',
       created_at    TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at    TEXT NOT NULL DEFAULT (datetime('now'))
     );
@@ -172,7 +173,8 @@ function applySchema(): void {
       sort_order    INTEGER NOT NULL DEFAULT 0,
       parent_task_id TEXT NOT NULL DEFAULT '',
       depth         INTEGER NOT NULL DEFAULT 0,
-      can_decompose INTEGER NOT NULL DEFAULT 0
+      can_decompose INTEGER NOT NULL DEFAULT 0,
+      default_persona_id TEXT NOT NULL DEFAULT ''
     );
   `);
 }

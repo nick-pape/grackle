@@ -69,8 +69,10 @@ export const DEFAULT_SERVER_PORT: number = 7434;
 export const DEFAULT_WEB_PORT: number = 3000;
 /** Default port for the MCP (Model Context Protocol) server. */
 export const DEFAULT_MCP_PORT: number = 7435;
-/** Default agent runtime used when none is specified. */
-export const DEFAULT_RUNTIME: RuntimeName = "claude-code";
+/** Name of the seed persona created on first run. */
+export const DEFAULT_PERSONA_NAME: string = "Claude Code";
+/** ID of the seed persona created on first run. */
+export const SEED_PERSONA_ID: string = "claude-code";
 /** Name of the Grackle config directory under the user's home. */
 export const GRACKLE_DIR: string = ".grackle";
 /** SQLite database filename. */
@@ -79,7 +81,5 @@ export const DB_FILENAME: string = "grackle.db";
 export const LOGS_DIR: string = "logs";
 /** Filename for the locally-stored API key. */
 export const API_KEY_FILENAME: string = "api-key";
-/** Default LLM model identifier for new sessions. */
-export const DEFAULT_MODEL: string = "sonnet";
 /** Maximum allowed nesting depth for task hierarchies. */
 export const MAX_TASK_DEPTH: number = 8;

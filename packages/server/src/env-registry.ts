@@ -24,7 +24,6 @@ export function addEnvironment(
   displayName: string,
   adapterType: string,
   adapterConfig: string,
-  defaultRuntime: string,
 ): void {
   const powerlineToken = randomBytes(POWERLINE_TOKEN_BYTE_LENGTH).toString("hex");
   db.insert(environments).values({
@@ -32,7 +31,6 @@ export function addEnvironment(
     displayName,
     adapterType,
     adapterConfig,
-    defaultRuntime,
     powerlineToken,
   }).run();
 }

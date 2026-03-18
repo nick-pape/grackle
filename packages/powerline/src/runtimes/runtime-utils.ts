@@ -169,7 +169,7 @@ export async function resolveWorkingDirectory(options: ResolveWorkingDirectoryOp
     if (repoPath) {
       try {
         const wt = await ensureWorktree(repoPath, branch);
-        eventQueue.push({ type: "system", timestamp: ts(), content: `Worktree ready: ${wt.worktreePath} (branch: ${branch}, created: ${String(wt.created)})` });
+        eventQueue.push({ type: "system", timestamp: ts(), content: `Worktree ready: ${wt.worktreePath} (branch: ${branch}, created: ${String(wt.created)}, synced: ${String(wt.synced)})` });
         return wt.worktreePath;
       } catch (wtErr) {
         eventQueue.push({ type: "system", timestamp: ts(), content: `Worktree setup failed (${wtErr instanceof Error ? wtErr.message : String(wtErr)}), falling back to workspace` });

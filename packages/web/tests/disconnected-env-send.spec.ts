@@ -123,7 +123,7 @@ test.describe("Disconnected environment blocks message send", () => {
             id: "test-local",
             displayName: "test-local",
             adapterType: "local",
-            defaultRuntime: "stub",
+
             status: "disconnected",
             bootstrapped: true,
           },
@@ -287,10 +287,6 @@ test.describe("Disconnected environment blocks message send", () => {
     await page.locator('button[title="Settings"]').click();
     await page.locator('button[title="New chat"]').click();
 
-    const runtimeSelect = page.locator('[data-testid="new-chat-runtime-select"]');
-    await runtimeSelect.waitFor({ state: "visible", timeout: 5_000 });
-    await runtimeSelect.selectOption("stub");
-
     const promptInput = page.locator('input[placeholder="Enter prompt..."]');
     await promptInput.fill("hello stub");
     await page.locator("button", { hasText: "Go" }).click();
@@ -311,7 +307,7 @@ test.describe("Disconnected environment blocks message send", () => {
             id: "test-local",
             displayName: "test-local",
             adapterType: "local",
-            defaultRuntime: "stub",
+
             status: "disconnected",
             bootstrapped: true,
           },
@@ -362,7 +358,7 @@ test.describe("Disconnected environment blocks message send", () => {
             id: "test-local",
             displayName: "test-local",
             adapterType: "local",
-            defaultRuntime: "stub",
+
             status: "connected",
             bootstrapped: true,
           },
@@ -460,7 +456,7 @@ test.describe("Disconnected environment blocks message send", () => {
             id: "test-local",
             displayName: "test-local",
             adapterType: "local",
-            defaultRuntime: "stub",
+
             status: "error",
             bootstrapped: true,
           },

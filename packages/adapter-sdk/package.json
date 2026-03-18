@@ -1,6 +1,6 @@
 {
   "name": "@grackle-ai/adapter-sdk",
-  "version": "0.38.2",
+  "version": "0.40.0",
   "description": "SDK for building Grackle environment adapters",
   "license": "MIT",
   "repository": {

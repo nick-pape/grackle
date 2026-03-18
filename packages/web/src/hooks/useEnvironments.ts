@@ -22,7 +22,6 @@ export interface UseEnvironmentsResult {
     displayName: string,
     adapterType: string,
     adapterConfig?: Record<string, unknown>,
-    defaultRuntime?: string,
   ) => void;
   /** Provision an environment by ID. */
   provisionEnvironment: (environmentId: string) => void;
@@ -118,16 +117,12 @@ export function useEnvironments(send: SendFunction): UseEnvironmentsResult {
       displayName: string,
       adapterType: string,
       adapterConfig?: Record<string, unknown>,
-      defaultRuntime?: string,
     ) => {
       const payload: Record<string, unknown> = {
         displayName,
         adapterType,
         adapterConfig: adapterConfig || {},
       };
-      if (defaultRuntime) {
-        payload.defaultRuntime = defaultRuntime;
-      }
       send({ type: "add_environment", payload });
     },
     [send],

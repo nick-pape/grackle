@@ -211,4 +211,4 @@ When everything is green, summarize:
 - **Batch commits**: Group all fixes from one review round into a single commit
 - **CLAUDE.md compliance**: When fixing code, follow all project conventions in CLAUDE.md (TSDoc, full braces, no magic numbers, etc.)
 - **No force push**: Never force-push, even if it seems easier. Follow the git workflow in CLAUDE.md.
-- **Rush change files**: If the PR modifies publishable packages and doesn't have a change file yet, create one per CLAUDE.md instructions
+- **Rush change files**: If CI fails on `rush change --verify`, run the `/rush-change` skill to generate the correct change file (it handles merge-commit false positives automatically)

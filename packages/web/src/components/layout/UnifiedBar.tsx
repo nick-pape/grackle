@@ -1,4 +1,4 @@
-import { useState, useEffect, type FormEvent, type JSX } from "react";
+import { useState, type FormEvent, type JSX } from "react";
 import { useMatch, useSearchParams } from "react-router";
 import { useGrackle } from "../../context/GrackleContext.js";
 import { useToast } from "../../context/ToastContext.js";
@@ -7,33 +7,6 @@ import { SETTINGS_URL, newTaskUrl, newChatUrl, useAppNavigate } from "../../util
 import styles from "./UnifiedBar.module.scss";
 
 // --- Subcomponents ---
-
-/** Props for the RuntimeSelector subcomponent. */
-interface RuntimeSelectorProps {
-  value: string;
-  onChange: (value: string) => void;
-  testId?: string;
-}
-
-/** Dropdown for selecting the session runtime. */
-function RuntimeSelector({ value, onChange, testId }: RuntimeSelectorProps): JSX.Element {
-  return (
-    <select
-      data-testid={testId}
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className={styles.select}
-    >
-      <option value="claude-code">claude-code</option>
-      <option value="codex">codex</option>
-      <option value="copilot">copilot</option>
-      <option value="stub">stub</option>
-      <option value="claude-code-acp">claude-code-acp (experimental)</option>
-      <option value="codex-acp">codex-acp (experimental)</option>
-      <option value="copilot-acp">copilot-acp (experimental)</option>
-    </select>
-  );
-}
 
 /** Returns true when the environment with the given ID is disconnected or in error. */
 function isEnvDisconnected(environmentId: string | undefined, environments: Environment[]): boolean {
@@ -106,27 +79,13 @@ export function UnifiedBar(): JSX.Element {
 
   // New chat params
   const newChatEnvId = isNewChat ? (searchParams.get("env") ?? "") : "";
-  const newChatRuntime = isNewChat ? (searchParams.get("runtime") ?? "claude-code") : "claude-code";
 
   const [text, setText] = useState("");
-  const [runtime, setRuntime] = useState(isNewChat ? newChatRuntime : "claude-code");
   const [spawnPersonaId, setSpawnPersonaId] = useState("");
-
-  /** When a persona is selected in the new_chat form, auto-fill runtime. */
-  const handleSpawnPersonaChange = (personaId: string): void => {
-    setSpawnPersonaId(personaId);
-    if (personaId) {
-      const p = personas.find((x) => x.id === personaId);
-      if (p?.runtime) {
-        setRuntime(p.runtime);
-      }
-    }
-  };
 
   // ─── New environment form state ─────────────────
   const [envName, setEnvName] = useState("");
   const [envAdapterType, setEnvAdapterType] = useState("local");
-  const [envRuntime, setEnvRuntime] = useState("claude-code");
   const [envHost, setEnvHost] = useState("");
   const [envPort, setEnvPort] = useState("");
   const [envUser, setEnvUser] = useState("");
@@ -137,12 +96,6 @@ export function UnifiedBar(): JSX.Element {
   const [envCreateRepo, setEnvCreateRepo] = useState("");
   const [envCreateMachine, setEnvCreateMachine] = useState("");
   const [envCodespaceMode, setEnvCodespaceMode] = useState<"pick" | "create">("pick");
-
-  useEffect(() => {
-    if (isNewChat) {
-      setRuntime(newChatRuntime);
-    }
-  }, [isNewChat, newChatRuntime]);
 
   const session = sessionId
     ? sessions.find((s) => s.id === sessionId)
@@ -247,11 +200,10 @@ export function UnifiedBar(): JSX.Element {
       } else if (envAdapterType === "codespace") {
         config.codespaceName = envCodespaceName.trim();
       }
-      addEnvironment(envName.trim(), envAdapterType, config, envRuntime);
+      addEnvironment(envName.trim(), envAdapterType, config);
       showToast("Environment added successfully", "success");
       setEnvName("");
       setEnvAdapterType("local");
-      setEnvRuntime("claude-code");
       setEnvHost("");
       setEnvPort("");
       setEnvUser("");
@@ -294,7 +246,6 @@ export function UnifiedBar(): JSX.Element {
             <option value="docker">docker</option>
             <option value="codespace">codespace</option>
           </select>
-          <RuntimeSelector value={envRuntime} onChange={setEnvRuntime} testId="new-environment-runtime-select" />
           <button
             onClick={handleAddEnvironment}
             disabled={!isEnvValid()}
@@ -513,7 +464,7 @@ export function UnifiedBar(): JSX.Element {
       if (!text.trim() || !newChatEnvId) {
         return;
       }
-      spawn(newChatEnvId, text, undefined, runtime, spawnPersonaId);
+      spawn(newChatEnvId, text, spawnPersonaId);
       showToast("Session started", "success");
       setText("");
       setSpawnPersonaId("");
@@ -525,9 +476,8 @@ export function UnifiedBar(): JSX.Element {
           new chat
         </span>
         <input type="text" value={text} onChange={(e) => setText(e.target.value)} placeholder="Enter prompt..." autoFocus className={styles.input} />
-        <RuntimeSelector value={runtime} onChange={setRuntime} testId="new-chat-runtime-select" />
-        <select value={spawnPersonaId} onChange={(e) => handleSpawnPersonaChange(e.target.value)} className={styles.select}>
-          <option value="">No persona</option>
+        <select value={spawnPersonaId} onChange={(e) => setSpawnPersonaId(e.target.value)} className={styles.select}>
+          <option value="">(Default)</option>
           {personas.map((p) => (
             <option key={p.id} value={p.id}>{p.name}</option>
           ))}
@@ -581,7 +531,7 @@ export function UnifiedBar(): JSX.Element {
       return (
         <div className={styles.bar}>
           <span className={`${styles.statusText} ${styles.hintText}`}>Session {session.status}</span>
-          <button onClick={() => navigate(newChatUrl(session.environmentId, session.runtime))} className={styles.btnPrimary}>
+          <button onClick={() => navigate(newChatUrl(session.environmentId))} className={styles.btnPrimary}>
             + New Chat
           </button>
         </div>

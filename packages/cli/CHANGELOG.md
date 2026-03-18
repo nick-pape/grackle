@@ -1,6 +1,40 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Wed, 18 Mar 2026 04:44:23 GMT and should not be manually modified.
+This log was last generated on Wed, 18 Mar 2026 13:51:51 GMT and should not be manually modified.
+
+## 0.40.0
+Wed, 18 Mar 2026 13:51:51 GMT
+
+### Minor changes
+
+- Replace ad-hoc runtime/model resolution with persona cascade at app/project/task levels
+
+## 0.39.1
+Wed, 18 Mar 2026 13:38:45 GMT
+
+### Patches
+
+- Worktrees now fetch from origin and branch from the remote default branch so agents start on up-to-date code (falls back to local HEAD if fetch fails)
+
+### Updates
+
+- No CLI changes (pnpm-lock merge artifact)
+
+## 0.39.0
+Wed, 18 Mar 2026 05:13:05 GMT
+
+### Minor changes
+
+- Add ACP (Agent Client Protocol) runtimes alongside existing SDK runtimes for codex, copilot, and claude-code
+- feat: Docker-out-of-Docker networking support for sibling containers (GRACKLE_DOCKER_NETWORK, GRACKLE_DOCKER_HOST env vars)
+
+### Patches
+
+- chore: remove grackle MCP entry from .mcp.json (use user-level OAuth config instead)
+
+### Updates
+
+- No CLI changes — change file required by Rush merge-commit detection
 
 ## 0.38.2
 Wed, 18 Mar 2026 04:44:23 GMT

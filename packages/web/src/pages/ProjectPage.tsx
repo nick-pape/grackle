@@ -39,14 +39,14 @@ function relativeTime(iso: string | undefined): string {
 
 type ProjectTab = "tasks" | "board" | "graph";
 // eslint-disable-next-line @rushstack/no-new-null
-type EditingField = "name" | "description" | "repoUrl" | "defaultEnvironmentId" | "worktreeBasePath" | null;
+type EditingField = "name" | "description" | "repoUrl" | "defaultEnvironmentId" | "defaultPersonaId" | "worktreeBasePath" | null;
 
 /** Project overview page with inline editing, progress bar, and DAG/task views. */
 export function ProjectPage(): JSX.Element {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useAppNavigate();
   const {
-    tasks, environments, projects, archiveProject, updateProject,
+    tasks, environments, projects, personas, archiveProject, updateProject,
   } = useGrackle();
 
   const [projectTab, setProjectTab] = useState<ProjectTab>("tasks");
@@ -61,6 +61,7 @@ export function ProjectPage(): JSX.Element {
   const descriptionInputRef = useRef<HTMLTextAreaElement>(null);
   const repositoryInputRef = useRef<HTMLInputElement>(null);
   const environmentSelectRef = useRef<HTMLSelectElement>(null);
+  const personaSelectRef = useRef<HTMLSelectElement>(null);
   const worktreeBasePathInputRef = useRef<HTMLInputElement>(null);
 
   const breadcrumbs = buildProjectBreadcrumbs(projectId!, projects);
@@ -87,6 +88,7 @@ export function ProjectPage(): JSX.Element {
       editingField === "name" ? nameInputRef.current
       : editingField === "description" ? descriptionInputRef.current
       : editingField === "repoUrl" ? repositoryInputRef.current
+      : editingField === "defaultPersonaId" ? personaSelectRef.current
       : editingField === "worktreeBasePath" ? worktreeBasePathInputRef.current
       : environmentSelectRef.current;
     if (!focusTarget) {
@@ -158,6 +160,9 @@ export function ProjectPage(): JSX.Element {
     } else if (field === "defaultEnvironmentId") {
       if (editDraft === project.defaultEnvironmentId) { cancelEdit(); return; }
       updateProject(project.id, { defaultEnvironmentId: editDraft });
+    } else if (field === "defaultPersonaId") {
+      if (editDraft === project.defaultPersonaId) { cancelEdit(); return; }
+      updateProject(project.id, { defaultPersonaId: editDraft });
     } else {
       if (trimmed === project.worktreeBasePath) { cancelEdit(); return; }
       updateProject(project.id, { worktreeBasePath: trimmed });
@@ -180,10 +185,12 @@ export function ProjectPage(): JSX.Element {
     if (field === "description") return editDraft !== project.description;
     if (field === "repoUrl") return editDraft.trim() !== project.repoUrl;
     if (field === "defaultEnvironmentId") return editDraft !== project.defaultEnvironmentId;
+    if (field === "defaultPersonaId") return editDraft !== project.defaultPersonaId;
     return editDraft.trim() !== project.worktreeBasePath;
   };
 
   const defaultEnv = environments.find((e) => e.id === project?.defaultEnvironmentId);
+  const defaultPersona = personas.find((p) => p.id === project?.defaultPersonaId);
 
   const keyboardHint = editingField === "description"
     ? "Tab to save · Esc to cancel"
@@ -432,6 +439,67 @@ export function ProjectPage(): JSX.Element {
                   ) : (
                     <span className={styles.metaPlaceholder}>
                       {project?.defaultEnvironmentId || "No default environment"}
+                    </span>
+                  )}
+                  <span className={styles.editButton} aria-hidden="true">
+                    ✏️
+                  </span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Default Persona */}
+          <div className={styles.metaRow}>
+            <span className={styles.metaLabel}>Persona</span>
+            <div className={styles.metaValue}>
+              {editingField === "defaultPersonaId" ? (
+                <select
+                  ref={personaSelectRef}
+                  className={styles.editSelect}
+                  value={editDraft}
+                  onChange={(e) => {
+                    ignoreInitialBlurFieldRef.current = null;
+                    setEditDraft(e.target.value);
+                    const val = e.target.value;
+                    if (project && val !== project.defaultPersonaId) {
+                      updateProject(project.id, { defaultPersonaId: val });
+                    }
+                    cancelEdit();
+                  }}
+                  onBlur={(event) => {
+                    if (ignoreInitialBlurFieldRef.current === "defaultPersonaId") {
+                      ignoreInitialBlurFieldRef.current = null;
+                      return;
+                    }
+                    if (event.relatedTarget instanceof HTMLElement && event.relatedTarget.dataset.editAction === "defaultPersonaId") {
+                      return;
+                    }
+                    cancelEdit();
+                  }}
+                  title="Default persona"
+                  aria-label="Project default persona"
+                  data-testid="edit-persona-select"
+                >
+                  <option value="">(Inherit)</option>
+                  {personas.map((p) => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+              ) : (
+                <button
+                  type="button"
+                  className={styles.metaValueClickable}
+                  onClick={() => startEdit("defaultPersonaId", project?.defaultPersonaId || "")}
+                  title="Click to change default persona"
+                  aria-label="Edit project default persona"
+                  data-testid="edit-persona-button"
+                >
+                  {defaultPersona ? (
+                    <span>{defaultPersona.name}</span>
+                  ) : (
+                    <span className={styles.metaPlaceholder}>
+                      {project?.defaultPersonaId || "(Inherit)"}
                     </span>
                   )}
                   <span className={styles.editButton} aria-hidden="true">

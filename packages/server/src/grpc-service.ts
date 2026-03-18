@@ -20,8 +20,6 @@ import * as processorRegistry from "./processor-registry.js";
 import { join } from "node:path";
 import {
   LOGS_DIR,
-  DEFAULT_RUNTIME,
-  DEFAULT_MODEL,
   DEFAULT_WEB_PORT,
   DEFAULT_MCP_PORT,
   MAX_TASK_DEPTH,
@@ -33,6 +31,9 @@ import {
   claudeProviderModeToEnum,
   providerToggleToEnum,
 } from "@grackle-ai/common";
+import { resolvePersona } from "./resolve-persona.js";
+import * as settingsStore from "./settings-store.js";
+import { isAllowedSettingKey } from "./settings-store.js";
 import { createScopedToken } from "@grackle-ai/mcp";
 import { grackleHome } from "./paths.js";
 import { safeParseJsonArray } from "./json-helpers.js";
@@ -69,7 +70,6 @@ function envRowToProto(row: EnvironmentRow): grackle.Environment {
     displayName: row.displayName,
     adapterType: row.adapterType,
     adapterConfig: row.adapterConfig,
-    defaultRuntime: row.defaultRuntime,
     bootstrapped: row.bootstrapped,
     status: row.status,
     lastSeen: row.lastSeen || "",
@@ -110,6 +110,7 @@ function projectRowToProto(row: projectStore.ProjectRow): grackle.Project {
     updatedAt: row.updatedAt,
     useWorktrees: row.useWorktrees,
     worktreeBasePath: row.worktreeBasePath,
+    defaultPersonaId: row.defaultPersonaId,
   });
 }
 
@@ -137,6 +138,7 @@ function taskRowToProto(
     depth: row.depth,
     childTaskIds: childIds ?? taskStore.getChildren(row.id).map((c) => c.id),
     canDecompose: row.canDecompose,
+    defaultPersonaId: row.defaultPersonaId,
   });
 }
 
@@ -223,13 +225,14 @@ function personaRowToProto(row: personaStore.PersonaRow): grackle.Persona {
 
 /** Convert persona MCP server configs to a JSON string for the PowerLine SpawnRequest. */
 function personaMcpServersToJson(row: personaStore.PersonaRow): string {
-  const mcpServers = JSON.parse(row.mcpServers || "[]") as {
-    name: string;
-    command: string;
-    args?: string[];
-    tools?: string[];
-  }[];
-  if (mcpServers.length === 0) {
+  let mcpServers: { name: string; command: string; args?: string[]; tools?: string[] }[];
+  try {
+    mcpServers = JSON.parse(row.mcpServers || "[]") as typeof mcpServers;
+  } catch {
+    logger.warn({ personaId: row.id }, "Failed to parse persona mcpServers JSON; ignoring");
+    return "";
+  }
+  if (!Array.isArray(mcpServers) || mcpServers.length === 0) {
     return "";
   }
   return buildMcpServersJson(mcpServers);
@@ -267,13 +270,11 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
 
     async addEnvironment(req: grackle.AddEnvironmentRequest) {
       const id = req.displayName.toLowerCase().replace(/[^a-z0-9-]/g, "-");
-      const runtime = req.defaultRuntime || DEFAULT_RUNTIME;
       envRegistry.addEnvironment(
         id,
         req.displayName,
         req.adapterType,
         req.adapterConfig,
-        runtime,
       );
       broadcastEnvironments();
       const row = envRegistry.getEnvironment(id);
@@ -426,27 +427,23 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         throw new ConnectError(`Environment ${req.environmentId} not connected`, Code.FailedPrecondition);
       }
 
-      // Resolve persona if specified
-      const persona = req.personaId
-        ? personaStore.getPersona(req.personaId)
-        : undefined;
-      if (req.personaId && !persona) {
-        throw new ConnectError(`Persona not found: ${req.personaId}`, Code.NotFound);
+      // Resolve persona via cascade (request → app default)
+      let resolved: ReturnType<typeof resolvePersona>;
+      try {
+        resolved = resolvePersona(req.personaId);
+      } catch (err) {
+        throw new ConnectError((err as Error).message, Code.FailedPrecondition);
       }
 
       const sessionId = uuid();
-      const runtime = req.runtime || persona?.runtime || env.defaultRuntime;
-      const model =
-        req.model ||
-        persona?.model ||
-        process.env.GRACKLE_DEFAULT_MODEL ||
-        DEFAULT_MODEL;
+      const { runtime, model, systemPrompt, persona } = resolved;
+      const maxTurns = req.maxTurns || resolved.maxTurns;
       const logPath = join(grackleHome, LOGS_DIR, sessionId);
 
       let systemContext = req.systemContext || "";
-      if (persona) {
+      if (systemPrompt) {
         systemContext =
-          persona.systemPrompt + (systemContext ? "\n\n" + systemContext : "");
+          systemPrompt + (systemContext ? "\n\n" + systemContext : "");
       }
 
       sessionStore.createSession(
@@ -458,13 +455,13 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         logPath,
       );
 
-      const mcpServersJson = persona ? personaMcpServersToJson(persona) : "";
+      const mcpServersJson = personaMcpServersToJson(persona);
 
       const mcpPort = parseInt(process.env.GRACKLE_MCP_PORT || String(DEFAULT_MCP_PORT), 10);
       const mcpDialHost = toDialableHost(process.env.GRACKLE_HOST || "127.0.0.1");
       const mcpUrl = `http://${mcpDialHost}:${mcpPort}/mcp`;
       const mcpToken = createScopedToken(
-        { sub: sessionId, pid: "", per: req.personaId || "", sid: sessionId },
+        { sub: sessionId, pid: "", per: resolved.personaId, sid: sessionId },
         loadOrCreateApiKey(),
       );
 
@@ -473,7 +470,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         runtime,
         prompt: req.prompt,
         model,
-        maxTurns: persona?.maxTurns || 0,
+        maxTurns,
         branch: req.branch,
         worktreeBasePath: req.branch
           ? (req.worktreeBasePath.trim() || process.env.GRACKLE_WORKTREE_BASE || "/workspace")
@@ -711,6 +708,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         req.defaultEnvironmentId,
         useWorktrees,
         req.worktreeBasePath ?? "",
+        req.defaultPersonaId ?? "",
       );
       broadcast({ type: "project_created", payload: { projectId: id } });
       const row = projectStore.getProject(id);
@@ -747,6 +745,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         defaultEnvironmentId: req.defaultEnvironmentId,
         useWorktrees: req.useWorktrees ?? undefined,
         worktreeBasePath: req.worktreeBasePath,
+        defaultPersonaId: req.defaultPersonaId,
       });
       if (!row) {
         throw new ConnectError(`Project not found after update: ${req.id}`, Code.NotFound);
@@ -818,6 +817,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         // Default to false (no decomposition rights) unless explicitly granted.
         // Orchestrator/root processes that need fork() must opt in.
         req.canDecompose ?? false,
+        req.defaultPersonaId ?? "",
       );
       const row = taskStore.getTask(id);
       broadcast({
@@ -856,6 +856,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         req.dependsOn.length > 0
           ? [...req.dependsOn]
           : safeParseJsonArray(existing.dependsOn),
+        req.defaultPersonaId,
       );
 
       // Late-bind: associate an existing session with this task
@@ -922,28 +923,17 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       const conn = adapterManager.getConnection(environmentId);
       if (!conn) throw new ConnectError(`Environment ${environmentId} not connected`, Code.FailedPrecondition);
 
-      // Resolve persona from StartTaskRequest
-      const personaId = req.personaId || "";
-      const persona = personaId
-        ? personaStore.getPersona(personaId)
-        : undefined;
-      if (personaId && !persona) {
-        throw new ConnectError(`Persona not found: ${personaId}`, Code.NotFound);
+      // Resolve persona via cascade (request → task → project → app default)
+      let resolved: ReturnType<typeof resolvePersona>;
+      try {
+        resolved = resolvePersona(req.personaId, task.defaultPersonaId, project.defaultPersonaId);
+      } catch (err) {
+        throw new ConnectError((err as Error).message, Code.FailedPrecondition);
       }
 
       const env = envRegistry.getEnvironment(environmentId);
       const sessionId = uuid();
-      const runtime =
-        req.runtime ||
-        persona?.runtime ||
-        env?.defaultRuntime ||
-        DEFAULT_RUNTIME;
-      const model =
-        req.model ||
-        persona?.model ||
-        process.env.GRACKLE_DEFAULT_MODEL ||
-        DEFAULT_MODEL;
-      const maxTurns = persona?.maxTurns || 0;
+      const { runtime, model, maxTurns, systemPrompt, persona } = resolved;
       const logPath = join(grackleHome, LOGS_DIR, sessionId);
 
       let systemContext = buildTaskSystemContext(
@@ -952,8 +942,8 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         req.notes || "",
         task.canDecompose,
       );
-      if (persona) {
-        systemContext = persona.systemPrompt + "\n\n" + systemContext;
+      if (systemPrompt) {
+        systemContext = systemPrompt + "\n\n" + systemContext;
       }
 
       sessionStore.createSession(
@@ -964,7 +954,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         model,
         logPath,
         task.id,
-        personaId,
+        resolved.personaId,
       );
       broadcast({
         type: "task_started",
@@ -976,7 +966,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       await tokenBroker.refreshTokensForTask(environmentId, runtime,
         env?.adapterType === "local" ? { excludeFileTokens: true } : undefined);
 
-      const mcpServersJson = persona ? personaMcpServersToJson(persona) : "";
+      const mcpServersJson = personaMcpServersToJson(persona);
 
       // When useWorktrees is false, omit worktreeBasePath so PowerLine checks
       // out the branch in the main working tree instead of creating a worktree.
@@ -993,7 +983,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       const taskMcpDialHost = toDialableHost(process.env.GRACKLE_HOST || "127.0.0.1");
       const taskMcpUrl = `http://${taskMcpDialHost}:${taskMcpPort}/mcp`;
       const taskMcpToken = createScopedToken(
-        { sub: task.id, pid: task.projectId, per: personaId, sid: sessionId },
+        { sub: task.id, pid: task.projectId, per: resolved.personaId, sid: sessionId },
         loadOrCreateApiKey(),
       );
 
@@ -1283,6 +1273,44 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       broadcast({ type: "persona_deleted", payload: { personaId: req.id } });
       return create(grackle.EmptySchema, {});
     },
+    // ─── Settings ─────────────────────────────────────────────
+
+    async getSetting(req: grackle.GetSettingRequest) {
+      if (!isAllowedSettingKey(req.key)) {
+        throw new ConnectError(`Setting key not allowed: ${req.key}`, Code.InvalidArgument);
+      }
+      const value = settingsStore.getSetting(req.key);
+      return create(grackle.SettingResponseSchema, {
+        key: req.key,
+        value: value ?? "",
+      });
+    },
+
+    async setSetting(req: grackle.SetSettingRequest) {
+      if (!isAllowedSettingKey(req.key)) {
+        throw new ConnectError(`Setting key not allowed: ${req.key}`, Code.InvalidArgument);
+      }
+      // Validate persona exists and has required fields when setting default_persona_id
+      if (req.key === "default_persona_id" && req.value) {
+        const persona = personaStore.getPersona(req.value);
+        if (!persona) {
+          throw new ConnectError(`Persona not found: ${req.value}`, Code.NotFound);
+        }
+        if (!persona.runtime || !persona.model) {
+          throw new ConnectError(
+            `Persona "${persona.name}" must have runtime and model configured`,
+            Code.FailedPrecondition,
+          );
+        }
+      }
+      settingsStore.setSetting(req.key, req.value);
+      broadcast({ type: "setting_changed", payload: { key: req.key, value: req.value } });
+      return create(grackle.SettingResponseSchema, {
+        key: req.key,
+        value: req.value,
+      });
+    },
+
     // ─── Findings ────────────────────────────────────────────
 
     async postFinding(req: grackle.PostFindingRequest) {

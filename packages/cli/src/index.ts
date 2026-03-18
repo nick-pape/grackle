@@ -15,6 +15,7 @@ import { registerFindingCommands } from "./commands/findings.js";
 import { registerPersonaCommands } from "./commands/persona.js";
 import { registerCredentialProviderCommands } from "./commands/credential-provider.js";
 import { registerPairCommand } from "./commands/pair.js";
+import { registerConfigCommands } from "./commands/config.js";
 import { renderBanner, getHelpFooter } from "./banner.js";
 
 const esmRequire: NodeRequire = createRequire(import.meta.url);
@@ -56,6 +57,7 @@ registerFindingCommands(program);
 registerPersonaCommands(program);
 registerCredentialProviderCommands(program);
 registerPairCommand(program);
+registerConfigCommands(program);
 
 program.parseAsync(process.argv).catch((err: unknown) => {
   if (err instanceof ConnectError) {

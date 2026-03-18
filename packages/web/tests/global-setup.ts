@@ -207,11 +207,24 @@ export default async function globalSetup(_config: FullConfig): Promise<void> {
     GRACKLE_API_KEY: apiKey,
   };
 
-  execSync(`node "${cliPath}" env add test-local --local --port ${powerlinePort} --runtime stub`, {
+  execSync(`node "${cliPath}" env add test-local --local --port ${powerlinePort}`, {
     env: cliEnv,
     stdio: "pipe",
   });
   console.log("[e2e] Environment added");
+
+  // Create a stub persona and set it as the app default for E2E tests.
+  // --model sonnet is required because resolvePersona() validates non-empty model;
+  // the stub runtime ignores it.
+  execSync(`node "${cliPath}" persona create "Stub" --prompt "E2E test persona" --runtime stub --model sonnet`, {
+    env: cliEnv,
+    stdio: "pipe",
+  });
+  execSync(`node "${cliPath}" config set default-persona stub`, {
+    env: cliEnv,
+    stdio: "pipe",
+  });
+  console.log("[e2e] Stub persona created and set as default");
 
   execSync(`node "${cliPath}" env provision test-local`, {
     env: cliEnv,

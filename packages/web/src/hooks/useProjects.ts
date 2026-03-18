@@ -20,6 +20,7 @@ export interface UseProjectsResult {
     description?: string,
     repoUrl?: string,
     defaultEnvironmentId?: string,
+    defaultPersonaId?: string,
   ) => void;
   /** Archive a project by ID. */
   archiveProject: (projectId: string) => void;
@@ -33,6 +34,7 @@ export interface UseProjectsResult {
       defaultEnvironmentId?: string;
       worktreeBasePath?: string;
       useWorktrees?: boolean;
+      defaultPersonaId?: string;
     },
   ) => void;
   /** Handle an incoming WebSocket message. Returns `true` if handled. */
@@ -88,6 +90,7 @@ export function useProjects(send: SendFunction): UseProjectsResult {
       description?: string,
       repoUrl?: string,
       defaultEnvironmentId?: string,
+      defaultPersonaId?: string,
     ) => {
       setProjectCreating(true);
       send({
@@ -97,6 +100,7 @@ export function useProjects(send: SendFunction): UseProjectsResult {
           description: description || "",
           repoUrl: repoUrl || "",
           defaultEnvironmentId: defaultEnvironmentId || "",
+          defaultPersonaId: defaultPersonaId || "",
         },
       });
     },
@@ -120,6 +124,7 @@ export function useProjects(send: SendFunction): UseProjectsResult {
         defaultEnvironmentId?: string;
         worktreeBasePath?: string;
         useWorktrees?: boolean;
+        defaultPersonaId?: string;
       },
     ) => {
       send({

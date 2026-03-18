@@ -85,6 +85,10 @@ export const taskTools: ToolDefinition[] = [
         .string()
         .optional()
         .describe("Parent task ID (auto-set when called by an agent working on a task)"),
+      defaultPersonaId: z
+        .string()
+        .optional()
+        .describe("Default persona for this task (overrides project default)"),
     }),
     rpcMethod: "createTask",
     mutating: true,
@@ -102,6 +106,7 @@ export const taskTools: ToolDefinition[] = [
           description: (args.description as string | undefined) ?? "",
           dependsOn: (args.dependsOn as string[] | undefined) ?? [],
           parentTaskId: (args.parentTaskId as string | undefined) ?? "",
+          defaultPersonaId: (args.defaultPersonaId as string | undefined) ?? "",
         });
         return jsonResult(taskToJson(task));
       } catch (error) {
@@ -207,21 +212,13 @@ export const taskTools: ToolDefinition[] = [
     name: "task_start",
     group: "task",
     description:
-      "Start a task by spawning an AI agent session to work on it, with optional runtime and model configuration.",
+      "Start a task by spawning an AI agent session to work on it. Runtime and model come from the resolved persona.",
     inputSchema: z.object({
       taskId: z.string().describe("The ID of the task to start"),
-      runtime: z
-        .string()
-        .optional()
-        .describe("The runtime to use (e.g. claude-code)"),
-      model: z
-        .string()
-        .optional()
-        .describe("The AI model to use (e.g. claude-sonnet-4-20250514)"),
       personaId: z
         .string()
         .optional()
-        .describe("Persona ID to configure agent behavior"),
+        .describe("Persona ID override (falls back to task/project/app default)"),
       environmentId: z
         .string()
         .optional()
@@ -243,8 +240,6 @@ export const taskTools: ToolDefinition[] = [
       try {
         const response = await client.startTask({
           taskId: args.taskId as string,
-          runtime: (args.runtime as string | undefined) ?? "",
-          model: (args.model as string | undefined) ?? "",
           personaId: (args.personaId as string | undefined) ?? "",
           environmentId: (args.environmentId as string | undefined) ?? "",
           notes: (args.notes as string | undefined) ?? "",

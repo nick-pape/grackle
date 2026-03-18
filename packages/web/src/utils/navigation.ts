@@ -64,8 +64,8 @@ export function newTaskUrl(projectId: string, parentTaskId?: string): string {
 }
 
 /** Build URL for the new chat form. */
-export function newChatUrl(environmentId: string, runtime: string): string {
-  const params = new URLSearchParams({ env: environmentId, runtime });
+export function newChatUrl(environmentId: string): string {
+  const params = new URLSearchParams({ env: environmentId });
   return `/sessions/new?${params.toString()}`;
 }
 

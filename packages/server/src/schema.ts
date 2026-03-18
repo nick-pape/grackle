@@ -84,6 +84,7 @@ export const projects = sqliteTable("projects", {
     .notNull()
     .default(true),
   worktreeBasePath: text("worktree_base_path").notNull().default(""),
+  defaultPersonaId: text("default_persona_id").notNull().default(""),
   createdAt: text("created_at")
     .notNull()
     .default(sql`(datetime('now'))`),
@@ -124,6 +125,7 @@ export const tasks = sqliteTable("tasks", {
   canDecompose: integer("can_decompose", { mode: "boolean" })
     .notNull()
     .default(false),
+  defaultPersonaId: text("default_persona_id").notNull().default(""),
 });
 
 /** Row shape returned by a SELECT on the tasks table. */

@@ -1,5 +1,4 @@
 import { test, expect } from "./fixtures.js";
-import { getNewChatRuntimeSelect } from "./helpers.js";
 
 test.describe("Session Lifecycle (stub runtime)", () => {
   test("full stub session flow", async ({ appPage }) => {
@@ -11,29 +10,15 @@ test.describe("Session Lifecycle (stub runtime)", () => {
     // Click "+" on the environment card to enter new_chat mode
     await page.locator('button[title="New chat"]').click();
 
-    // UnifiedBar shows prompt input, runtime selector, and Go button
+    // UnifiedBar shows prompt input, persona selector, and Go button
     await expect(page.getByText("new chat", { exact: true })).toBeVisible();
     const goButton = page.locator("button", { hasText: "Go" });
     await expect(goButton).toBeVisible();
 
-    // Runtime selector has options
-    const runtimeSelect = getNewChatRuntimeSelect(page);
-    await expect(runtimeSelect).toBeVisible();
-    const options = runtimeSelect.locator("option");
-    await expect(options).toHaveCount(7);
-    await expect(options.nth(0)).toHaveText("claude-code");
-    await expect(options.nth(1)).toHaveText("codex");
-    await expect(options.nth(2)).toHaveText("copilot");
-    await expect(options.nth(3)).toHaveText("stub");
-    await expect(options.nth(4)).toHaveText("claude-code-acp (experimental)");
-    await expect(options.nth(5)).toHaveText("codex-acp (experimental)");
-    await expect(options.nth(6)).toHaveText("copilot-acp (experimental)");
-
     // Go button disabled when no text
     await expect(goButton).toBeDisabled();
 
-    // Select stub runtime, type prompt, click Go
-    await runtimeSelect.selectOption("stub");
+    // Type prompt, click Go (uses default stub persona)
     const promptInput = page.locator('input[placeholder="Enter prompt..."]');
     await promptInput.fill("hello world");
     await expect(goButton).toBeEnabled();

@@ -89,6 +89,21 @@
   }
 }
 
+.cardTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.defaultBadge {
+  @include surface-inset;
+  padding: 2px var(--space-sm);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--accent-green);
+  border-radius: var(--radius-sm);
+}
+
 .cardActions {
   display: flex;
   gap: var(--space-xs);

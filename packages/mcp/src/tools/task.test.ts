@@ -157,6 +157,7 @@ describe("task_create", () => {
       description: "",
       dependsOn: [],
       parentTaskId: "",
+      defaultPersonaId: "",
     });
   });
 
@@ -185,6 +186,7 @@ describe("task_create", () => {
       description: "Details here",
       dependsOn: ["t1", "t2"],
       parentTaskId: "",
+      defaultPersonaId: "",
     });
   });
 
@@ -312,7 +314,7 @@ describe("task_start", () => {
     });
 
     const result = await getTool("task_start").handler(
-      { taskId: "t1", runtime: "claude-code", model: "claude-sonnet-4-20250514" },
+      { taskId: "t1" },
       mockClient,
     );
     const parsed = JSON.parse(result.content[0].text);
@@ -320,8 +322,6 @@ describe("task_start", () => {
     expect(parsed.sessionId).toBe("s1");
     expect(mockClient.startTask).toHaveBeenCalledWith({
       taskId: "t1",
-      runtime: "claude-code",
-      model: "claude-sonnet-4-20250514",
       personaId: "",
       environmentId: "",
       notes: "",
