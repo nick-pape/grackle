@@ -14,7 +14,7 @@ export function PersonaManager(): JSX.Element {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [systemPrompt, setSystemPrompt] = useState("");
-  const [runtime, setRuntime] = useState("");
+  const [runtime, setRuntime] = useState("claude-code");
   const [model, setModel] = useState("");
   const [maxTurns, setMaxTurns] = useState(0);
 
@@ -22,7 +22,7 @@ export function PersonaManager(): JSX.Element {
     setName("");
     setDescription("");
     setSystemPrompt("");
-    setRuntime("");
+    setRuntime("claude-code");
     setModel("");
     setMaxTurns(0);
   };
@@ -99,8 +99,7 @@ export function PersonaManager(): JSX.Element {
       </label>
       <label>
         Runtime
-        <select value={runtime} onChange={(e) => setRuntime(e.target.value)}>
-          <option value="">Default</option>
+        <select value={runtime} onChange={(e) => setRuntime(e.target.value)} data-testid="persona-runtime-select">
           <option value="claude-code">claude-code</option>
           <option value="codex">codex</option>
           <option value="copilot">copilot</option>
