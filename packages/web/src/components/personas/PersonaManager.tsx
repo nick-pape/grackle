@@ -15,7 +15,7 @@ export function PersonaManager(): JSX.Element {
   const [description, setDescription] = useState("");
   const [systemPrompt, setSystemPrompt] = useState("");
   const [runtime, setRuntime] = useState("claude-code");
-  const [model, setModel] = useState("");
+  const [model, setModel] = useState("sonnet");
   const [maxTurns, setMaxTurns] = useState(0);
 
   const resetForm = (): void => {
@@ -23,7 +23,7 @@ export function PersonaManager(): JSX.Element {
     setDescription("");
     setSystemPrompt("");
     setRuntime("claude-code");
-    setModel("");
+    setModel("sonnet");
     setMaxTurns(0);
   };
 
@@ -46,7 +46,7 @@ export function PersonaManager(): JSX.Element {
 
   const handleSubmit = (e: FormEvent): void => {
     e.preventDefault();
-    if (!name.trim() || !systemPrompt.trim()) {
+    if (!name.trim() || !systemPrompt.trim() || !runtime || !model) {
       return;
     }
     if (editing) {

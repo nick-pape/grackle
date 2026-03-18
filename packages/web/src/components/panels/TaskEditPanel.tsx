@@ -91,7 +91,7 @@ export function TaskEditPanel({ mode, taskId, projectId: projectIdProp, parentTa
       return;
     }
     if (isEdit && taskId) {
-      updateTask(taskId, title.trim(), description, selectedDeps, defaultPersonaId || undefined);
+      updateTask(taskId, title.trim(), description, selectedDeps, defaultPersonaId);
       showToast("Task updated", "success");
       navigate(taskUrl(taskId), { replace: true });
     } else {
@@ -102,7 +102,7 @@ export function TaskEditPanel({ mode, taskId, projectId: projectIdProp, parentTa
         description,
         selectedDeps.length > 0 ? selectedDeps : undefined,
         parentTaskId || undefined,
-        defaultPersonaId || undefined,
+        defaultPersonaId,
         () => {
           showToast("Task created", "success");
           navigate(projectUrl(projectId), { replace: true });
