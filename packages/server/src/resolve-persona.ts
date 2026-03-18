@@ -54,8 +54,8 @@ export function resolvePersona(
 
   return {
     personaId: persona.id,
-    runtime: persona.runtime || "claude-code",
-    model: persona.model || "sonnet",
+    runtime: persona.runtime,
+    model: persona.model,
     maxTurns: persona.maxTurns,
     systemPrompt: persona.systemPrompt,
     toolConfig: persona.toolConfig,

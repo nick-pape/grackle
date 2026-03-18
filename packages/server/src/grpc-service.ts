@@ -33,6 +33,7 @@ import {
 } from "@grackle-ai/common";
 import { resolvePersona } from "./resolve-persona.js";
 import * as settingsStore from "./settings-store.js";
+import { isAllowedSettingKey } from "./settings-store.js";
 import { createScopedToken } from "@grackle-ai/mcp";
 import { grackleHome } from "./paths.js";
 import { safeParseJsonArray } from "./json-helpers.js";
@@ -417,7 +418,12 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       }
 
       // Resolve persona via cascade (request → app default)
-      const resolved = resolvePersona(req.personaId);
+      let resolved: ReturnType<typeof resolvePersona>;
+      try {
+        resolved = resolvePersona(req.personaId);
+      } catch (err) {
+        throw new ConnectError((err as Error).message, Code.FailedPrecondition);
+      }
 
       const sessionId = uuid();
       const { runtime, model, maxTurns, systemPrompt, persona } = resolved;
@@ -945,7 +951,12 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       if (!conn) throw new ConnectError(`Environment ${environmentId} not connected`, Code.FailedPrecondition);
 
       // Resolve persona via cascade (request → task → project → app default)
-      const resolved = resolvePersona(req.personaId, task.defaultPersonaId, project.defaultPersonaId);
+      let resolved: ReturnType<typeof resolvePersona>;
+      try {
+        resolved = resolvePersona(req.personaId, task.defaultPersonaId, project.defaultPersonaId);
+      } catch (err) {
+        throw new ConnectError((err as Error).message, Code.FailedPrecondition);
+      }
 
       const env = envRegistry.getEnvironment(environmentId);
       const sessionId = uuid();
@@ -1292,6 +1303,9 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
     // ─── Settings ─────────────────────────────────────────────
 
     async getSetting(req: grackle.GetSettingRequest) {
+      if (!isAllowedSettingKey(req.key)) {
+        throw new ConnectError(`Setting key not allowed: ${req.key}`, Code.InvalidArgument);
+      }
       const value = settingsStore.getSetting(req.key);
       return create(grackle.SettingResponseSchema, {
         key: req.key,
@@ -1300,6 +1314,9 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
     },
 
     async setSetting(req: grackle.SetSettingRequest) {
+      if (!isAllowedSettingKey(req.key)) {
+        throw new ConnectError(`Setting key not allowed: ${req.key}`, Code.InvalidArgument);
+      }
       settingsStore.setSetting(req.key, req.value);
       broadcast({ type: "setting_changed", payload: { key: req.key, value: req.value } });
       return create(grackle.SettingResponseSchema, {

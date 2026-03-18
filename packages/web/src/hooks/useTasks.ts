@@ -316,15 +316,18 @@ export function useTasks(send: SendFunction): UseTasksResult {
       dependsOn: string[],
       defaultPersonaId?: string,
     ) => {
+      const payload: Record<string, unknown> = {
+        taskId,
+        title,
+        description,
+        dependsOn,
+      };
+      if (defaultPersonaId !== undefined) {
+        payload.defaultPersonaId = defaultPersonaId;
+      }
       send({
         type: "update_task",
-        payload: {
-          taskId,
-          title,
-          description,
-          dependsOn,
-          defaultPersonaId: defaultPersonaId || "",
-        },
+        payload,
       });
     },
     [send],

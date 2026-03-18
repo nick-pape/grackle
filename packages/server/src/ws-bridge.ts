@@ -27,6 +27,7 @@ import {
 } from "@grackle-ai/common";
 import { resolvePersona } from "./resolve-persona.js";
 import * as settingsStore from "./settings-store.js";
+import { isAllowedSettingKey } from "./settings-store.js";
 import { grackleHome } from "./paths.js";
 import * as logWriter from "./log-writer.js";
 import { safeParseJsonArray } from "./json-helpers.js";
@@ -916,17 +917,25 @@ async function handleMessage(
     // ─── Settings ────────────────────────────────────────────
 
     case "get_setting": {
-      const key = msg.payload?.key as string;
-      if (!key) return;
+      const key = msg.payload?.key;
+      if (typeof key !== "string" || !key) return;
+      if (!isAllowedSettingKey(key)) {
+        sendWs(ws, { type: "error", payload: { message: `Setting key not allowed: ${key}` } });
+        return;
+      }
       const value = settingsStore.getSetting(key) ?? "";
       sendWs(ws, { type: "setting", payload: { key, value } });
       break;
     }
 
     case "set_setting": {
-      const key = msg.payload?.key as string;
+      const key = msg.payload?.key;
       const value = (msg.payload?.value as string) || "";
-      if (!key) return;
+      if (typeof key !== "string" || !key) return;
+      if (!isAllowedSettingKey(key)) {
+        sendWs(ws, { type: "error", payload: { message: `Setting key not allowed: ${key}` } });
+        return;
+      }
       settingsStore.setSetting(key, value);
       broadcast({ type: "setting_changed", payload: { key, value } });
       break;

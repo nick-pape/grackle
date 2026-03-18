@@ -124,7 +124,7 @@ describe("resolvePersona", () => {
     });
   });
 
-  it("uses default runtime and model when persona has empty values", () => {
+  it("preserves empty runtime and model from persona row without fallback", () => {
     const persona = makePersonaRow({
       id: "bare",
       runtime: "",
@@ -134,7 +134,8 @@ describe("resolvePersona", () => {
 
     const result = resolvePersona("bare");
 
-    expect(result.runtime).toBe("claude-code");
-    expect(result.model).toBe("sonnet");
+    // No fallback — persona rows should have runtime/model set at creation time
+    expect(result.runtime).toBe("");
+    expect(result.model).toBe("");
   });
 });
