@@ -1,6 +1,5 @@
 import { test, expect } from "./fixtures.js";
 import {
-  getNewChatRuntimeSelect,
   installWsTracker,
   injectWsMessage,
 } from "./helpers.js";
@@ -17,8 +16,6 @@ test.describe("Markdown Rendering in EventRenderer", () => {
     // Environments are now in Settings — navigate there via the gear button
     await page.locator('button[title="Settings"]').click();
     await page.locator('button[title="New chat"]').click();
-    const runtimeSelect = getNewChatRuntimeSelect(page);
-    await runtimeSelect.selectOption("stub");
     const promptInput = page.locator('input[placeholder="Enter prompt..."]');
     await promptInput.fill("md test");
     await page.locator("button", { hasText: "Go" }).click();
@@ -43,7 +40,7 @@ test.describe("Markdown Rendering in EventRenderer", () => {
     // Environments are now in Settings — navigate there via the gear button
     await page.locator('button[title="Settings"]').click();
     await page.locator('button[title="New chat"]').click();
-    await getNewChatRuntimeSelect(page).selectOption("stub");
+
     await page.locator('input[placeholder="Enter prompt..."]').fill("code test");
     await page.locator("button", { hasText: "Go" }).click();
 
@@ -74,7 +71,7 @@ test.describe("Markdown Rendering in EventRenderer", () => {
     // Environments are now in Settings — navigate there via the gear button
     await page.locator('button[title="Settings"]').click();
     await page.locator('button[title="New chat"]').click();
-    await getNewChatRuntimeSelect(page).selectOption("stub");
+
     await page.locator('input[placeholder="Enter prompt..."]').fill("group test");
     await page.locator("button", { hasText: "Go" }).click();
 
@@ -107,7 +104,7 @@ test.describe("Markdown Rendering in EventRenderer", () => {
     // Start a stub session to get a session context — Environments are now in Settings
     await page.locator('button[title="Settings"]').click();
     await page.locator('button[title="New chat"]').click();
-    await getNewChatRuntimeSelect(page).selectOption("stub");
+
     await page.locator('input[placeholder="Enter prompt..."]').fill("table test");
     await page.locator("button", { hasText: "Go" }).click();
     await expect(page.locator("text=Stub runtime initialized")).toBeVisible({ timeout: 10_000 });

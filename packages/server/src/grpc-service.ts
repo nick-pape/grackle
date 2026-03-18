@@ -434,7 +434,8 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       }
 
       const sessionId = uuid();
-      const { runtime, model, maxTurns, systemPrompt, persona } = resolved;
+      const { runtime, model, systemPrompt, persona } = resolved;
+      const maxTurns = req.maxTurns || resolved.maxTurns;
       const logPath = join(grackleHome, LOGS_DIR, sessionId);
 
       let systemContext = req.systemContext || "";

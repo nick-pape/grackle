@@ -431,9 +431,9 @@ export function initDatabase(): void {
       )
       .get() as { id: string } | undefined;
     if (fallback) {
-      sqlite.exec(
-        `INSERT OR IGNORE INTO settings (key, value) VALUES ('default_persona_id', '${fallback.id}')`,
-      );
+      sqlite
+        .prepare("INSERT OR IGNORE INTO settings (key, value) VALUES ('default_persona_id', ?)")
+        .run(fallback.id);
     }
   }
 }

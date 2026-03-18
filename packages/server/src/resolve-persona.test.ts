@@ -124,18 +124,29 @@ describe("resolvePersona", () => {
     });
   });
 
-  it("preserves empty runtime and model from persona row without fallback", () => {
+  it("throws error when persona has no runtime configured", () => {
     const persona = makePersonaRow({
       id: "bare",
       runtime: "",
+      model: "sonnet",
+    });
+    vi.mocked(personaStore.getPersona).mockReturnValue(persona);
+
+    expect(() => resolvePersona("bare")).toThrow(
+      'Persona "Test Persona" has no runtime configured',
+    );
+  });
+
+  it("throws error when persona has no model configured", () => {
+    const persona = makePersonaRow({
+      id: "bare",
+      runtime: "claude-code",
       model: "",
     });
     vi.mocked(personaStore.getPersona).mockReturnValue(persona);
 
-    const result = resolvePersona("bare");
-
-    // No fallback — persona rows should have runtime/model set at creation time
-    expect(result.runtime).toBe("");
-    expect(result.model).toBe("");
+    expect(() => resolvePersona("bare")).toThrow(
+      'Persona "Test Persona" has no model configured',
+    );
   });
 });

@@ -52,6 +52,13 @@ export function resolvePersona(
     throw new Error(`Persona not found: ${personaId}`);
   }
 
+  if (!persona.runtime) {
+    throw new Error(`Persona "${persona.name}" has no runtime configured`);
+  }
+  if (!persona.model) {
+    throw new Error(`Persona "${persona.name}" has no model configured`);
+  }
+
   return {
     personaId: persona.id,
     runtime: persona.runtime,

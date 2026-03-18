@@ -79,6 +79,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
   });
   const [personas, setPersonas] = useState<PersonaData[]>(MOCK_PERSONAS);
   const [taskSessions] = useState<Record<string, Session[]>>(MOCK_TASK_SESSIONS);
+  const [appDefaultPersonaId, setAppDefaultPersonaIdState] = useState<string>("");
 
   // ── Refs ──────────────────────────────────────────
   /** Auto-incrementing counter for generating unique mock IDs. */
@@ -892,9 +893,10 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       loadTaskSessions: (taskId: string) => {
         console.log("[MockGrackle] loadTaskSessions", taskId);
       },
-      appDefaultPersonaId: "",
+      appDefaultPersonaId,
       setAppDefaultPersonaId: (personaId: string) => {
         console.log("[MockGrackle] setAppDefaultPersonaId", personaId);
+        setAppDefaultPersonaIdState(personaId);
       },
     }),
     [
@@ -908,6 +910,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       credentialProviders,
       personas,
       taskSessions,
+      appDefaultPersonaId,
       spawn,
       sendInput,
       kill,
