@@ -214,7 +214,7 @@ export default async function globalSetup(_config: FullConfig): Promise<void> {
   console.log("[e2e] Environment added");
 
   // Create a stub persona and set it as the app default for E2E tests
-  execSync(`node "${cliPath}" persona create "Stub" --prompt "E2E test persona" --runtime stub`, {
+  execSync(`node "${cliPath}" persona create "Stub" --prompt "E2E test persona" --runtime stub --model sonnet`, {
     env: cliEnv,
     stdio: "pipe",
   });
