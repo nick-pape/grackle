@@ -215,7 +215,7 @@ export function isProject(v: unknown): v is Project {
     typeof v.status === "string" &&
     typeof v.worktreeBasePath === "string" &&
     typeof v.useWorktrees === "boolean" &&
-    typeof v.defaultPersonaId === "string" &&
+    (v.defaultPersonaId === undefined || typeof v.defaultPersonaId === "string") &&
     typeof v.createdAt === "string" &&
     typeof v.updatedAt === "string"
   );
@@ -232,7 +232,7 @@ export function isTaskData(v: unknown): v is TaskData {
     typeof v.branch === "string" &&
     typeof v.sortOrder === "number" &&
     typeof v.depth === "number" &&
-    typeof v.defaultPersonaId === "string" &&
+    (v.defaultPersonaId === undefined || typeof v.defaultPersonaId === "string") &&
     Array.isArray(v.dependsOn) &&
     Array.isArray(v.childTaskIds)
   );
