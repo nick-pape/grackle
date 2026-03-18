@@ -16,11 +16,14 @@ test.describe("Copilot Runtime Option", () => {
 
     // Verify all runtime options are present in alphabetical order
     const options = runtimeSelect.locator("option");
-    await expect(options).toHaveCount(4);
+    await expect(options).toHaveCount(7);
     await expect(options.nth(0)).toHaveText("claude-code");
     await expect(options.nth(1)).toHaveText("codex");
     await expect(options.nth(2)).toHaveText("copilot");
     await expect(options.nth(3)).toHaveText("stub");
+    await expect(options.nth(4)).toHaveText("claude-code-acp (experimental)");
+    await expect(options.nth(5)).toHaveText("codex-acp (experimental)");
+    await expect(options.nth(6)).toHaveText("copilot-acp (experimental)");
   });
 
   test("copilot can be selected as the runtime", async ({ appPage }) => {

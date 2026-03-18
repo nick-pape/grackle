@@ -28,6 +28,9 @@ function RuntimeSelector({ value, onChange, testId }: RuntimeSelectorProps): JSX
       <option value="codex">codex</option>
       <option value="copilot">copilot</option>
       <option value="stub">stub</option>
+      <option value="claude-code-acp">claude-code-acp (experimental)</option>
+      <option value="codex-acp">codex-acp (experimental)</option>
+      <option value="copilot-acp">copilot-acp (experimental)</option>
     </select>
   );
 }

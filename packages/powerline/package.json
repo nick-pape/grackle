@@ -1,6 +1,6 @@
 {
   "name": "@grackle-ai/powerline",
-  "version": "0.38.1",
+  "version": "0.38.2",
   "description": "gRPC PowerLine server for Grackle AI agent integration",
   "license": "MIT",
   "repository": {
@@ -24,15 +24,20 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@agentclientprotocol/sdk": "^0.16.1",
     "@anthropic-ai/claude-agent-sdk": "^0.2.50",
     "@github/copilot-sdk": "^0.1.29",
     "@openai/codex-sdk": "^0.111.0",
+    "@github/copilot": "^1.0.7",
+    "@zed-industries/claude-agent-acp": "^0.22.0",
+    "@zed-industries/codex-acp": "^0.10.0",
     "@bufbuild/protobuf": "^2.5.0",
     "@connectrpc/connect": "^2.0.0",
     "@connectrpc/connect-node": "^2.0.0",
     "@grackle-ai/common": "workspace:*",
     "commander": "^13.0.0",
-    "pino": "^10.3.1"
+    "pino": "^10.3.1",
+    "zod": "^4.0.0"
   },
   "devDependencies": {
     "@grackle-ai/heft-rig": "workspace:*",

@@ -214,6 +214,57 @@ export async function resolveWorkingDirectory(options: ResolveWorkingDirectoryOp
   return findWorkspaceDir(worktreeBasePath, requireNonEmpty);
 }
 
+// ─── ACP MCP server conversion ─────────────────────────────
+
+/**
+ * Convert Grackle MCP server configs (keyed object) to ACP format (named array).
+ *
+ * Grackle format: `{ "name": { command, args, env, ... } }`
+ * ACP format:     `[{ name, type: "stdio"|"http", command, args, env, ... }]`
+ */
+export function convertMcpServers(servers: Record<string, unknown> | undefined): Record<string, unknown>[] {
+  if (!servers) {
+    return [];
+  }
+  return Object.entries(servers)
+    .filter(([, config]) => typeof config === "object" && config !== null && !Array.isArray(config))
+    .map(([name, config]) => {
+      const cfg = config as Record<string, unknown>;
+      // Detect transport: HTTP servers have type:"http" or a url field; everything else is stdio
+      const isHttp = cfg.type === "http" || cfg.url;
+      const result: Record<string, unknown> = {
+        name,
+        type: isHttp ? "http" : "stdio",
+      };
+
+      if (isHttp) {
+        // HTTP transport: url is required, headers must be array of {name, value}
+        result.url = cfg.url;
+        if (cfg.headers && typeof cfg.headers === "object" && !Array.isArray(cfg.headers)) {
+          result.headers = Object.entries(cfg.headers as Record<string, string>)
+            .map(([k, v]) => ({ name: k, value: v }));
+        } else if (Array.isArray(cfg.headers)) {
+          result.headers = cfg.headers;
+        }
+      } else {
+        // Stdio transport: command, args, env required
+        result.command = (cfg.command || "") as string;
+        result.args = Array.isArray(cfg.args) ? cfg.args : [];
+        // env must be array of {name, value} — convert from object if needed
+        if (cfg.env && typeof cfg.env === "object" && !Array.isArray(cfg.env)) {
+          result.env = Object.entries(cfg.env as Record<string, string>)
+            .map(([k, v]) => ({ name: k, value: v }));
+        } else if (Array.isArray(cfg.env)) {
+          result.env = cfg.env;
+        } else {
+          result.env = [];
+        }
+      }
+
+      return result;
+    });
+}
+
 // ─── MCP server resolution ─────────────────────────────────
 
 /** Resolved MCP configuration returned by resolveMcpServers. */

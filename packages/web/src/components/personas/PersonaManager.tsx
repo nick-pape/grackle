@@ -104,6 +104,9 @@ export function PersonaManager(): JSX.Element {
           <option value="claude-code">claude-code</option>
           <option value="codex">codex</option>
           <option value="copilot">copilot</option>
+          <option value="claude-code-acp">claude-code-acp (experimental)</option>
+          <option value="codex-acp">codex-acp (experimental)</option>
+          <option value="copilot-acp">copilot-acp (experimental)</option>
         </select>
       </label>
       <label>

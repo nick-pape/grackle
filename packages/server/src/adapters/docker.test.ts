@@ -117,4 +117,12 @@ describe("DockerAdapter.buildRunArgs() — credential handling", () => {
     const env = getEnvVars(args);
     expect(env.MY_CUSTOM_VAR).toBe("hello");
   });
+
+  it("maps port to 127.0.0.1 when GRACKLE_DOCKER_NETWORK is not set", () => {
+    const args = adapter.buildRunArgs(containerName, localPort, image, baseCfg(), token);
+    const portIdx = args.indexOf("-p");
+    expect(portIdx).toBeGreaterThan(-1);
+    expect(args[portIdx + 1]).toBe(`127.0.0.1:${localPort}:7433`);
+    expect(args).not.toContain("--network");
+  });
 });

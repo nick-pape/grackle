@@ -29,6 +29,14 @@ const DEFAULT_IMAGE: string = "grackle-powerline:latest";
 /** Timeout for commands executed inside the container. */
 const DOCKER_EXEC_TIMEOUT_MS: number = 60_000;
 
+/**
+ * Docker network name for sibling containers. When set (typically via compose),
+ * sibling containers join this network so the server can reach them directly
+ * by container name instead of via host port mapping. Required for DooD setups
+ * where the server itself runs in a container.
+ */
+const DOCKER_NETWORK: string | undefined = process.env.GRACKLE_DOCKER_NETWORK || undefined;
+
 /** Docker-specific environment configuration. */
 export interface DockerEnvironmentConfig extends BaseEnvironmentConfig {
   image: string;
@@ -291,9 +299,15 @@ export class DockerAdapter implements EnvironmentAdapter {
 
   public async connect(environmentId: string, config: Record<string, unknown>, powerlineToken: string): Promise<PowerLineConnection> {
     const cfg = config as unknown as DockerEnvironmentConfig;
+    const containerName = cfg.containerName || `grackle-${environmentId}`;
     const localPort = containerPorts.get(environmentId) || cfg.localPort || DEFAULT_POWERLINE_PORT;
 
-    const client = createPowerLineClient(`http://127.0.0.1:${localPort}`, powerlineToken);
+    // When on a shared Docker network, connect directly to the sibling container
+    // by name on the default PowerLine port. Otherwise, use the mapped host port.
+    const connectUrl = DOCKER_NETWORK
+      ? `http://${containerName}:${DEFAULT_POWERLINE_PORT}`
+      : `http://127.0.0.1:${localPort}`;
+    const client = createPowerLineClient(connectUrl, powerlineToken);
 
     let lastErr: unknown;
     for (let attempt = 0; attempt < CONNECT_MAX_RETRIES; attempt++) {
@@ -355,8 +369,16 @@ export class DockerAdapter implements EnvironmentAdapter {
     const args = [
       "run", "-d",
       "--name", containerName,
-      "-p", `127.0.0.1:${localPort}:${DEFAULT_POWERLINE_PORT}`,
     ];
+
+    // When running inside a container (DooD), join the shared network so the
+    // server can reach the sibling by container name. Otherwise, map the port
+    // to the host for bare-metal setups.
+    if (DOCKER_NETWORK) {
+      args.push("--network", DOCKER_NETWORK);
+    } else {
+      args.push("-p", `127.0.0.1:${localPort}:${DEFAULT_POWERLINE_PORT}`);
+    }
 
     if (cfg.volumes) {
       for (const vol of cfg.volumes) {
