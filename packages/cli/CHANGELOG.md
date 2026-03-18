@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Wed, 18 Mar 2026 13:38:45 GMT and should not be manually modified.
+This log was last generated on Wed, 18 Mar 2026 13:51:51 GMT and should not be manually modified.
+
+## 0.40.0
+Wed, 18 Mar 2026 13:51:51 GMT
+
+### Minor changes
+
+- Replace ad-hoc runtime/model resolution with persona cascade at app/project/task levels
 
 ## 0.39.1
 Wed, 18 Mar 2026 13:38:45 GMT
