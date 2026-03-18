@@ -15,7 +15,7 @@ test.describe("Task tree hierarchy", () => {
 
     // Create project and root task via UI
     await createProject(page, "tree-basic");
-    await createTask(page, "tree-basic", "root-task", "test-local");
+    await createTask(page, "tree-basic", "root-task", "test-local", { canDecompose: true });
 
     // Get IDs for WS-based child creation
     const projectId = await getProjectId(page, "tree-basic");
@@ -46,7 +46,7 @@ test.describe("Task tree hierarchy", () => {
     const page = appPage;
 
     await createProject(page, "tree-badge");
-    await createTask(page, "tree-badge", "badge-parent", "test-local");
+    await createTask(page, "tree-badge", "badge-parent", "test-local", { canDecompose: true });
 
     const projectId = await getProjectId(page, "tree-badge");
     const parentId = await getTaskId(page, projectId, "badge-parent");
@@ -67,7 +67,7 @@ test.describe("Task tree hierarchy", () => {
     const page = appPage;
 
     await createProject(page, "tree-multi");
-    await createTask(page, "tree-multi", "level-0", "test-local");
+    await createTask(page, "tree-multi", "level-0", "test-local", { canDecompose: true });
 
     const projectId = await getProjectId(page, "tree-multi");
     const level0Id = await getTaskId(page, projectId, "level-0");
@@ -98,7 +98,7 @@ test.describe("Task tree hierarchy", () => {
     const page = appPage;
 
     await createProject(page, "tree-add-child");
-    await createTask(page, "tree-add-child", "ac-parent", "test-local");
+    await createTask(page, "tree-add-child", "ac-parent", "test-local", { canDecompose: true });
 
     const projectId = await getProjectId(page, "tree-add-child");
     const parentId = await getTaskId(page, projectId, "ac-parent");
@@ -132,7 +132,7 @@ test.describe("Task tree hierarchy", () => {
     const page = appPage;
 
     await createProject(page, "tree-del");
-    await createTask(page, "tree-del", "del-parent", "test-local");
+    await createTask(page, "tree-del", "del-parent", "test-local", { canDecompose: true });
 
     const projectId = await getProjectId(page, "tree-del");
     const parentId = await getTaskId(page, projectId, "del-parent");
@@ -161,7 +161,7 @@ test.describe("Task tree hierarchy", () => {
     const page = appPage;
 
     await createProject(page, "tree-bc");
-    await createTask(page, "tree-bc", "bc-root", "test-local");
+    await createTask(page, "tree-bc", "bc-root", "test-local", { canDecompose: true });
 
     const projectId = await getProjectId(page, "tree-bc");
     const rootId = await getTaskId(page, projectId, "bc-root");
@@ -187,7 +187,7 @@ test.describe("Task tree hierarchy", () => {
     const page = appPage;
 
     await createProject(page, "tree-bc-nav");
-    await createTask(page, "tree-bc-nav", "nav-root", "test-local");
+    await createTask(page, "tree-bc-nav", "nav-root", "test-local", { canDecompose: true });
 
     const projectId = await getProjectId(page, "tree-bc-nav");
     const rootId = await getTaskId(page, projectId, "nav-root");

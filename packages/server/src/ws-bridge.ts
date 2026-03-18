@@ -1003,8 +1003,10 @@ async function handleMessage(
       }
       const parentTaskId = (msg.payload?.parentTaskId as string) || "";
       const rawCanDecompose = msg.payload?.canDecompose;
+      // Default to false (no decomposition rights) unless explicitly granted.
+      // Orchestrator/root processes that need fork() must opt in via canDecompose: true.
       const canDecompose =
-        typeof rawCanDecompose === "boolean" ? rawCanDecompose : undefined;
+        typeof rawCanDecompose === "boolean" ? rawCanDecompose : false;
 
       const id = uuid().slice(0, 8);
       taskStore.createTask(

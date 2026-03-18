@@ -96,6 +96,7 @@ export function registerTaskCommands(program: Command): void {
       console.log(
         `Depends On:  ${t.dependsOn.length > 0 ? t.dependsOn.join(", ") : "none"}`,
       );
+      console.log(`Decompose:   ${t.canDecompose ? "yes" : "no"}`);
       if (t.description) console.log(`Description: ${t.description}`);
     });
 
