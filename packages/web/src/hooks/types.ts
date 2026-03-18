@@ -138,6 +138,18 @@ export interface ProvisionStatus {
   progress: number;
 }
 
+/** A domain event emitted by the server event bus and forwarded over WebSocket. */
+export interface GrackleEvent {
+  /** ULID — chronologically sortable unique identifier. */
+  id: string;
+  /** Dot-notation event type (e.g. "task.created"). */
+  type: string;
+  /** ISO 8601 timestamp. */
+  timestamp: string;
+  /** Domain-specific payload. */
+  payload: Record<string, unknown>;
+}
+
 /** A parsed WebSocket message with a string type and optional payload. */
 export interface WsMessage {
   type: string;

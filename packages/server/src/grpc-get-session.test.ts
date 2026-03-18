@@ -41,6 +41,10 @@ vi.mock("./ws-broadcast.js", () => ({
   envRowToWs: vi.fn(),
 }));
 
+vi.mock("./event-bus.js", () => ({
+  emit: vi.fn(),
+}));
+
 vi.mock("./token-broker.js", () => ({
   pushToEnv: vi.fn(),
   pushProviderCredentialsToEnv: vi.fn(),

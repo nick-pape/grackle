@@ -5,8 +5,8 @@
  */
 
 import { useState, useCallback, useRef } from "react";
-import type { TaskData, WsMessage, SendFunction } from "./types.js";
-import { asValidArray, isObject, isTaskData } from "./types.js";
+import type { TaskData, WsMessage, SendFunction, GrackleEvent } from "./types.js";
+import { asValidArray, isTaskData } from "./types.js";
 
 /** Pending create-task callback entry keyed by requestId. */
 interface PendingCreateCallback {
@@ -60,6 +60,8 @@ export interface UseTasksResult {
   deleteTask: (taskId: string) => void;
   /** Handle an incoming WebSocket message. Returns `true` if handled. */
   handleMessage: (msg: WsMessage) => boolean;
+  /** Handle a domain event from the event bus. Returns `true` if handled. */
+  handleEvent: (event: GrackleEvent) => boolean;
   /** Reset transient state (e.g. `taskStartingId`) on disconnect. */
   onDisconnect: () => void;
 }
@@ -78,6 +80,79 @@ export function useTasks(send: SendFunction): UseTasksResult {
   const pendingCreatesRef = useRef<Map<string, PendingCreateCallback>>(
     new Map(),
   );
+
+  const handleEvent = useCallback((event: GrackleEvent): boolean => {
+    const p = event.payload;
+    switch (event.type) {
+      case "task.created": {
+        const reqId = typeof p.requestId === "string" ? p.requestId : "";
+        if (reqId) {
+          const pending = pendingCreatesRef.current.get(reqId);
+          if (pending) {
+            clearTimeout(pending.timer);
+            pendingCreatesRef.current.delete(reqId);
+            pending.onSuccess();
+          }
+        }
+        const pid = typeof p.projectId === "string" ? p.projectId : "";
+        if (pid) {
+          send({ type: "list_tasks", payload: { projectId: pid } });
+        }
+        return true;
+      }
+      case "task.started": {
+        const taskId = typeof p.taskId === "string" ? p.taskId : "";
+        const sessionId = typeof p.sessionId === "string" ? p.sessionId : "";
+        const pid = typeof p.projectId === "string" ? p.projectId : "";
+
+        setTaskStartingId((prev) =>
+          taskId && prev === taskId ? undefined : prev,
+        );
+        if (sessionId) {
+          send({ type: "list_sessions" });
+          if (taskId) {
+            setTasks((prev) =>
+              prev.map((t) =>
+                t.id === taskId ? { ...t, latestSessionId: sessionId } : t,
+              ),
+            );
+          }
+        }
+        if (pid) {
+          send({ type: "list_tasks", payload: { projectId: pid } });
+        } else if (taskId) {
+          setTasks((prev) => {
+            const found = prev.find((t) => t.id === taskId);
+            if (found) {
+              send({ type: "list_tasks", payload: { projectId: found.projectId } });
+            }
+            return prev;
+          });
+        }
+        return true;
+      }
+      case "task.completed":
+      case "task.deleted":
+      case "task.updated": {
+        const pid = typeof p.projectId === "string" ? p.projectId : "";
+        const taskId = typeof p.taskId === "string" ? p.taskId : "";
+        if (pid) {
+          send({ type: "list_tasks", payload: { projectId: pid } });
+        } else if (taskId) {
+          setTasks((prev) => {
+            const found = prev.find((t) => t.id === taskId);
+            if (found) {
+              send({ type: "list_tasks", payload: { projectId: found.projectId } });
+            }
+            return prev;
+          });
+        }
+        return true;
+      }
+      default:
+        return false;
+    }
+  }, [send]);
 
   const handleMessage = useCallback((msg: WsMessage): boolean => {
     switch (msg.type) {
@@ -100,33 +175,6 @@ export function useTasks(send: SendFunction): UseTasksResult {
           ...prev.filter((t) => t.projectId !== pid),
           ...incoming,
         ]);
-        return true;
-      }
-      case "task_created": {
-        const reqId =
-          typeof msg.payload?.requestId === "string"
-            ? msg.payload.requestId
-            : "";
-        if (reqId) {
-          const pending = pendingCreatesRef.current.get(reqId);
-          if (pending) {
-            clearTimeout(pending.timer);
-            pendingCreatesRef.current.delete(reqId);
-            pending.onSuccess();
-          }
-        }
-        const taskData = msg.payload?.task;
-        if (isObject(taskData)) {
-          const pid =
-            typeof taskData.project_id === "string"
-              ? taskData.project_id
-              : typeof taskData.projectId === "string"
-                ? taskData.projectId
-                : "";
-          if (pid) {
-            send({ type: "list_tasks", payload: { projectId: pid } });
-          }
-        }
         return true;
       }
       case "create_task_error": {
@@ -152,76 +200,10 @@ export function useTasks(send: SendFunction): UseTasksResult {
         }
         return true;
       }
-      case "task_started": {
-        const tp = msg.payload;
-        if (!isObject(tp)) {
-          return true;
-        }
-        setTaskStartingId((prev) =>
-          tp.taskId && prev === tp.taskId ? undefined : prev,
-        );
-        if (tp.sessionId) {
-          send({ type: "list_sessions" });
-          // Eagerly patch the task's latestSessionId so components don't
-          // have to wait for the list_tasks round-trip to resolve the
-          // session. The server-authoritative value will arrive shortly
-          // via list_tasks and overwrite this optimistic update.
-          if (typeof tp.taskId === "string" && typeof tp.sessionId === "string") {
-            setTasks((prev) =>
-              prev.map((t) =>
-                t.id === tp.taskId ? { ...t, latestSessionId: tp.sessionId as string } : t,
-              ),
-            );
-          }
-        }
-        // Refresh tasks for the project
-        const startedPid =
-          typeof tp.projectId === "string" ? tp.projectId : undefined;
-        if (startedPid) {
-          send({ type: "list_tasks", payload: { projectId: startedPid } });
-        } else if (tp.taskId) {
-          setTasks((prev) => {
-            const found = prev.find((t) => t.id === tp.taskId);
-            if (found) {
-              send({
-                type: "list_tasks",
-                payload: { projectId: found.projectId },
-              });
-            }
-            return prev;
-          });
-        }
-        return true;
-      }
-      case "task_completed":
-      case "task_deleted":
-      case "task_updated": {
-        const tp2 = msg.payload;
-        if (!isObject(tp2)) {
-          return true;
-        }
-        const pid =
-          typeof tp2.projectId === "string" ? tp2.projectId : undefined;
-        if (pid) {
-          send({ type: "list_tasks", payload: { projectId: pid } });
-        } else if (tp2.taskId) {
-          setTasks((prev) => {
-            const found = prev.find((t) => t.id === tp2.taskId);
-            if (found) {
-              send({
-                type: "list_tasks",
-                payload: { projectId: found.projectId },
-              });
-            }
-            return prev;
-          });
-        }
-        return true;
-      }
       default:
         return false;
     }
-  }, [send]);
+  }, []);
 
   const onDisconnect = useCallback(() => {
     setTaskStartingId(undefined);
@@ -351,6 +333,7 @@ export function useTasks(send: SendFunction): UseTasksResult {
     updateTask,
     deleteTask,
     handleMessage,
+    handleEvent,
     onDisconnect,
   };
 }

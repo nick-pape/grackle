@@ -41,6 +41,10 @@ vi.mock("./ws-broadcast.js", () => ({
   envRowToWs: vi.fn(),
 }));
 
+vi.mock("./event-bus.js", () => ({
+  emit: vi.fn(),
+}));
+
 vi.mock("./token-broker.js", () => ({
   pushToEnv: vi.fn(),
   pushProviderCredentialsToEnv: vi.fn(),
@@ -148,7 +152,7 @@ vi.mock("./github-import.js", () => ({
 
 // Import AFTER mocks — use the mocked versions
 import { registerGrackleRoutes } from "./grpc-service.js";
-import { broadcastEnvironments } from "./ws-broadcast.js";
+import { emit } from "./event-bus.js";
 import * as envRegistry from "./env-registry.js";
 import * as adapterManager from "./adapter-manager.js";
 import type { ConnectRouter } from "@connectrpc/connect";
@@ -206,7 +210,7 @@ describe("gRPC environment broadcast", () => {
       for await (const _event of gen) { /* drain */ }
 
       // Should have broadcast after "connecting" and after "error"
-      expect(broadcastEnvironments).toHaveBeenCalledTimes(2);
+      expect(emit).toHaveBeenCalledWith("environment.changed", {});
     });
 
     it("broadcasts after successful connection", async () => {
@@ -224,7 +228,7 @@ describe("gRPC environment broadcast", () => {
       for await (const _event of gen) { /* drain */ }
 
       // "connecting" + "connected"
-      expect(broadcastEnvironments).toHaveBeenCalledTimes(2);
+      expect(emit).toHaveBeenCalledWith("environment.changed", {});
       expect(envRegistry.updateEnvironmentStatus).toHaveBeenCalledWith("test-env", "connecting");
       expect(envRegistry.updateEnvironmentStatus).toHaveBeenCalledWith("test-env", "connected");
     });
@@ -244,7 +248,7 @@ describe("gRPC environment broadcast", () => {
       for await (const _event of gen) { /* drain */ }
 
       expect(envRegistry.updateEnvironmentStatus).toHaveBeenCalledWith("test-env", "error");
-      expect(broadcastEnvironments).toHaveBeenCalled();
+      expect(emit).toHaveBeenCalledWith("environment.changed", {});
     });
   });
 
@@ -257,7 +261,7 @@ describe("gRPC environment broadcast", () => {
       await handlers.stopEnvironment({ id: "test-env" });
 
       expect(envRegistry.updateEnvironmentStatus).toHaveBeenCalledWith("test-env", "disconnected");
-      expect(broadcastEnvironments).toHaveBeenCalledTimes(1);
+      expect(emit).toHaveBeenCalledWith("environment.changed", {});
     });
   });
 
@@ -270,7 +274,7 @@ describe("gRPC environment broadcast", () => {
       await handlers.destroyEnvironment({ id: "test-env" });
 
       expect(envRegistry.updateEnvironmentStatus).toHaveBeenCalledWith("test-env", "disconnected");
-      expect(broadcastEnvironments).toHaveBeenCalledTimes(1);
+      expect(emit).toHaveBeenCalledWith("environment.changed", {});
     });
   });
 
@@ -286,7 +290,7 @@ describe("gRPC environment broadcast", () => {
       });
 
       expect(envRegistry.addEnvironment).toHaveBeenCalled();
-      expect(broadcastEnvironments).toHaveBeenCalledTimes(1);
+      expect(emit).toHaveBeenCalledWith("environment.changed", {});
     });
   });
 
@@ -303,7 +307,7 @@ describe("gRPC environment broadcast", () => {
       await handlers.removeEnvironment({ id: "test-env" });
 
       expect(envRegistry.removeEnvironment).toHaveBeenCalledWith("test-env");
-      expect(broadcastEnvironments).toHaveBeenCalledTimes(1);
+      expect(emit).toHaveBeenCalledWith("environment.changed", {});
     });
   });
 });

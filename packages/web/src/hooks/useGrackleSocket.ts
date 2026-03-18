@@ -7,7 +7,7 @@
  */
 
 import { useCallback, useState } from "react";
-import type { WsMessage, SendFunction } from "./types.js";
+import type { WsMessage, SendFunction, GrackleEvent } from "./types.js";
 import { useWebSocket } from "./useWebSocket.js";
 import { useEnvironments } from "./useEnvironments.js";
 import { useSessions } from "./useSessions.js";
@@ -36,6 +36,7 @@ export type {
   ProvisionStatus,
   WsMessage,
   SendFunction,
+  GrackleEvent,
 } from "./types.js";
 
 // ─── Result interface ─────────────────────────────────────────────────────────
@@ -236,9 +237,37 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
 
   // --- Message routing ---
 
+  /** Route a domain event (dot-notation type) to the appropriate hook. */
+  function routeDomainEvent(event: GrackleEvent): void {
+    const key = event.payload.key as string | undefined;
+    const value = event.payload.value as string | undefined;
+
+    // Settings events
+    if (event.type === "setting.changed") {
+      if (key === SETTING_KEY_DEFAULT_PERSONA) {
+        setAppDefaultPersonaIdState(value ?? "");
+      }
+      return;
+    }
+
+    if (environmentsHook.handleEvent(event)) { return; }
+    if (projectsHook.handleEvent(event)) { return; }
+    if (tasksHook.handleEvent(event)) { return; }
+    if (findingsHook.handleEvent(event)) { return; }
+    if (tokensHook.handleEvent(event)) { return; }
+    if (credentialsHook.handleEvent(event)) { return; }
+    if (personasHook.handleEvent(event)) { return; }
+  }
+
   function onMessage(msg: WsMessage): void {
-    // Handle settings messages before domain hooks
-    if (msg.type === "setting" || msg.type === "setting_changed") {
+    // Domain events from event bus (dot-notation types)
+    if (typeof msg.type === "string" && msg.type.includes(".")) {
+      routeDomainEvent(msg as unknown as GrackleEvent);
+      return;
+    }
+
+    // Handle settings response (request/response, not event bus)
+    if (msg.type === "setting") {
       const key = msg.payload?.key as string | undefined;
       const value = msg.payload?.value as string | undefined;
       if (key === SETTING_KEY_DEFAULT_PERSONA) {
@@ -246,6 +275,8 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
       }
       return;
     }
+
+    // Request/response messages (existing routing)
     if (environmentsHook.handleMessage(msg)) { return; }
     if (sessionsHook.handleMessage(msg)) { return; }
     if (projectsHook.handleMessage(msg)) { return; }

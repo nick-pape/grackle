@@ -5,7 +5,7 @@
  */
 
 import { useState, useCallback } from "react";
-import type { Project, WsMessage, SendFunction } from "./types.js";
+import type { Project, WsMessage, SendFunction, GrackleEvent } from "./types.js";
 import { asValidArray, isProject } from "./types.js";
 
 /** Values returned by {@link useProjects}. */
@@ -39,6 +39,8 @@ export interface UseProjectsResult {
   ) => void;
   /** Handle an incoming WebSocket message. Returns `true` if handled. */
   handleMessage: (msg: WsMessage) => boolean;
+  /** Handle a domain event from the event bus. Returns `true` if handled. */
+  handleEvent: (event: GrackleEvent) => boolean;
   /** Reset transient state (e.g. `projectCreating`) on disconnect. */
   onDisconnect: () => void;
 }
@@ -53,6 +55,21 @@ export function useProjects(send: SendFunction): UseProjectsResult {
   const [projects, setProjects] = useState<Project[]>([]);
   const [projectCreating, setProjectCreating] = useState(false);
 
+  const handleEvent = useCallback((event: GrackleEvent): boolean => {
+    switch (event.type) {
+      case "project.created":
+        setProjectCreating(false);
+        send({ type: "list_projects" });
+        return true;
+      case "project.archived":
+      case "project.updated":
+        send({ type: "list_projects" });
+        return true;
+      default:
+        return false;
+    }
+  }, [send]);
+
   const handleMessage = useCallback((msg: WsMessage): boolean => {
     switch (msg.type) {
       case "projects":
@@ -65,20 +82,10 @@ export function useProjects(send: SendFunction): UseProjectsResult {
           ),
         );
         return true;
-      case "project_created":
-        setProjectCreating(false);
-        send({ type: "list_projects" });
-        return true;
-      case "project_archived":
-        send({ type: "list_projects" });
-        return true;
-      case "project_updated":
-        send({ type: "list_projects" });
-        return true;
       default:
         return false;
     }
-  }, [send]);
+  }, []);
 
   const onDisconnect = useCallback(() => {
     setProjectCreating(false);
@@ -142,6 +149,7 @@ export function useProjects(send: SendFunction): UseProjectsResult {
     archiveProject,
     updateProject,
     handleMessage,
+    handleEvent,
     onDisconnect,
   };
 }

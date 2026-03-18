@@ -10,8 +10,7 @@ import * as projectStore from "./project-store.js";
 import * as processorRegistry from "./processor-registry.js";
 import { slugify } from "./utils/slugify.js";
 import { writeTranscript } from "./transcript.js";
-import { broadcast } from "./ws-broadcast.js";
-import { safeParseJsonArray } from "./json-helpers.js";
+import { emit } from "./event-bus.js";
 import { logger } from "./logger.js";
 import type { ProcessorContext } from "./processor-registry.js";
 
@@ -49,7 +48,7 @@ export function processFindingEvent(
       data.category || "general", data.title || "Untitled",
       data.content || "", data.tags || [],
     );
-    broadcast({ type: "finding_posted", payload: { projectId: ctx.projectId, findingId } });
+    emit("finding.posted", { projectId: ctx.projectId, findingId });
     logger.info({ findingId, projectId: ctx.projectId, title: data.title }, "Finding stored");
   } catch (err) {
     logger.error({ err, projectId: ctx.projectId, taskId: ctx.taskId }, "Failed to store finding");
@@ -152,11 +151,7 @@ export function processSubtaskEvent(
       }
     }
 
-    const row = taskStore.getTask(subtaskId);
-    broadcast({
-      type: "task_created",
-      payload: { task: row ? { ...row, dependsOn: safeParseJsonArray(row.dependsOn) } : null },
-    });
+    emit("task.created", { taskId: subtaskId, projectId: parentTask.projectId });
     logger.info({ subtaskId, parentTaskId: ctx.taskId, title }, "Subtask created");
   } catch (err) {
     logger.error({ err, taskId: ctx.taskId }, "Failed to create subtask");
@@ -281,7 +276,7 @@ export function processEventStream(
           // This covers both terminal events (completed/failed/killed) and non-terminal
           // transitions (running, waiting_input) that affect the computed task status.
           if (ctx.taskId && ["completed", "failed", "killed", "running", "waiting_input"].includes(event.content)) {
-            broadcast({ type: "task_updated", payload: { taskId: ctx.taskId, projectId: ctx.projectId } });
+            emit("task.updated", { taskId: ctx.taskId, projectId: ctx.projectId });
           }
         }
       }
@@ -291,7 +286,7 @@ export function processEventStream(
       if (current && !TERMINAL_STATUSES.includes(current.status)) {
         sessionStore.updateSession(sessionId, SESSION_STATUS.COMPLETED);
         if (ctx.taskId) {
-          broadcast({ type: "task_updated", payload: { taskId: ctx.taskId, projectId: ctx.projectId } });
+          emit("task.updated", { taskId: ctx.taskId, projectId: ctx.projectId });
         }
       }
     } catch (err) {
@@ -319,7 +314,7 @@ export function processEventStream(
         onError?.(err);
       }
       if (ctx.taskId) {
-        broadcast({ type: "task_updated", payload: { taskId: ctx.taskId, projectId: ctx.projectId } });
+        emit("task.updated", { taskId: ctx.taskId, projectId: ctx.projectId });
       }
     } finally {
       processorRegistry.unregister(sessionId);
