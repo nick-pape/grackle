@@ -21,8 +21,26 @@ test.describe("Session Reanimate (stub runtime)", () => {
     for (const s of active) {
       await sendWsMessage(appPage, { type: "kill", payload: { sessionId: s.id } });
     }
+    // Wait until the environment has no active sessions before proceeding.
     if (active.length > 0) {
-      await appPage.waitForTimeout(500);
+      await appPage.waitForFunction(async () => {
+        // Re-query via a fresh WS connection from within the page context
+        return new Promise<boolean>((resolve) => {
+          const ws = new WebSocket(`ws://${window.location.host}`);
+          ws.onmessage = (e: MessageEvent) => {
+            const data = JSON.parse(e.data as string) as { type: string; payload: { sessions?: Array<{ status: string }> } };
+            if (data.type === "sessions") {
+              const anyActive = (data.payload.sessions ?? []).some(
+                (s) => s.status === "idle" || s.status === "running" || s.status === "pending",
+              );
+              ws.close();
+              resolve(!anyActive);
+            }
+          };
+          ws.onerror = () => { ws.close(); resolve(false); };
+          ws.onopen = () => ws.send(JSON.stringify({ type: "list_sessions" }));
+        });
+      }, undefined, { timeout: 5_000 });
     }
   });
 

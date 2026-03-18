@@ -49,6 +49,11 @@ export function reanimateAgent(sessionId: string): SessionRow {
       Code.FailedPrecondition,
     );
   }
+  // Note: the check above and reanimateSession() below are not wrapped in a DB
+  // transaction, but Node.js's single-threaded event loop provides sufficient
+  // serialization: this function is fully synchronous (no awaits, all SQLite
+  // calls use the synchronous better-sqlite3 API), so it runs to completion
+  // before any other handler can interleave.
 
   const conn = adapterManager.getConnection(session.environmentId);
   if (!conn) {
