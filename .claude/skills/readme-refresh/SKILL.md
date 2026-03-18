@@ -24,7 +24,7 @@ Produce a summary of all user-facing features and capabilities.
 ### Agent B — README & Screenshot Staleness
 
 1. Read `README.md` in full — note every screenshot reference, feature claim, and section
-2. List files in `docs/screenshots/` and check their last-modified dates via `git log -1 --format="%ai" -- <file>` for each
+2. List files in `screenshots/` and check their last-modified dates via `git log -1 --format="%ai" -- <file>` for each
 3. Find the oldest screenshot commit date, then run:
    ```bash
    gh pr list --state merged --search "merged:>YYYY-MM-DD" --limit 100 --json number,title,mergedAt,labels
@@ -34,7 +34,7 @@ Produce a summary of all user-facing features and capabilities.
 ### Agent C — RFC / Roadmap / Issues
 
 Search for forward-looking context:
-- Look for RFC, roadmap, or milestone docs in the repo (`spec/`, `docs/`, `RFC*.md`, `ROADMAP*`)
+- Look for RFC, roadmap, or milestone docs in the repo (`specs/`, `RFC*.md`, `ROADMAP*`)
 - Run `gh issue list --state open --limit 50 --json number,title,labels`
 - Run `gh milestone list --json title,description` (if supported)
 - Identify upcoming features the README could tease as "coming soon"
@@ -115,7 +115,7 @@ For each screenshot identified in Step 2:
 2. **Set up state** — expand trees, select tabs, ensure the UI shows representative data
 3. **Wait** for any animations or loading to settle: `mcp__playwright__browser_wait_for`
 4. **Verify** with `mcp__playwright__browser_snapshot` that the page is in the right state
-5. **Capture** with `mcp__playwright__browser_take_screenshot`, saving to `docs/screenshots/<name>.png`
+5. **Capture** with `mcp__playwright__browser_take_screenshot`, saving to `screenshots/<name>.png`
 
 ### Naming Convention
 - Use **kebab-case** descriptive filenames matching the existing convention
@@ -163,4 +163,4 @@ Show the user a summary:
 - Playwright MCP server must be configured
 - `rush build -t @grackle-ai/web` must succeed
 - `gh` CLI must be authenticated (for PR/issue queries)
-- `docs/screenshots/` directory must exist
+- `screenshots/` directory must exist

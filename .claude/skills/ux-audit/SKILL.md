@@ -29,7 +29,7 @@ Performs a comprehensive User Experience audit of the Grackle web UI, producing 
    - Every creation form (project, task, subtask, environment, token)
    - Any edge cases or surprising behaviors discovered
 
-   Save screenshots to `spec/screenshots/` with descriptive names.
+   Save screenshots to `screenshots/` with descriptive names.
 
 4. **Analyze as a UX Designer** — put on a Product UX Designer hat and evaluate:
    - **Information architecture**: Does the navigation make sense? Is the hierarchy clear?
@@ -40,7 +40,7 @@ Performs a comprehensive User Experience audit of the Grackle web UI, producing 
    - **Completeness**: Are there data model fields not exposed in the UI? Missing CRUD operations?
    - **Standards compliance**: Does it follow common UI conventions?
 
-5. **Write the report** — produce `spec/ux-audit.md` structured as:
+5. **Write the report** — produce `specs/ux-audit.md` structured as:
    - Grouped by theme (Navigation, Workflows, Interaction Polish, Visual, Missing Features, Bugs)
    - Each item: **Current** state (with inline screenshot), **Problem** explanation, **Proposal**
    - Priority summary table at the end (P0/P1/P2/P3 with effort and impact)
