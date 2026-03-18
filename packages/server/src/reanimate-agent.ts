@@ -58,8 +58,6 @@ export function reanimateAgent(sessionId: string): SessionRow {
     );
   }
 
-  sessionStore.reanimateSession(session.id);
-
   const powerlineReq = create(powerline.ResumeRequestSchema, {
     sessionId: session.id,
     runtimeSessionId: session.runtimeSessionId,
@@ -78,7 +76,23 @@ export function reanimateAgent(sessionId: string): SessionRow {
     }
   }
 
-  processEventStream(conn.client.resume(powerlineReq), {
+  // Reanimate only after all validation passes, and only if the stream can be
+  // initiated. If conn.client.resume() throws synchronously before we hand off
+  // to processEventStream, revert the DB state so the session isn't left stuck
+  // in "running" with no stream to drive it.
+  let resumeStream: ReturnType<typeof conn.client.resume>;
+  try {
+    resumeStream = conn.client.resume(powerlineReq);
+  } catch (err) {
+    throw new ConnectError(
+      `Failed to initiate resume stream: ${String(err)}`,
+      Code.Internal,
+    );
+  }
+
+  sessionStore.reanimateSession(session.id);
+
+  processEventStream(resumeStream, {
     sessionId: session.id,
     logPath,
     projectId,

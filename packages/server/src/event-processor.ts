@@ -243,6 +243,15 @@ export function processEventStream(
       sessionStore.updateSessionStatus(sessionId, SESSION_STATUS.RUNNING);
 
       for await (const event of events) {
+        // runtime_session_id is an internal control event: persist it then skip
+        // logging/publishing — it has no proto enum value and is not client-visible.
+        if (event.type === "runtime_session_id") {
+          if (event.content) {
+            sessionStore.updateRuntimeSessionId(sessionId, event.content);
+          }
+          continue;
+        }
+
         const sessionEvent = create(grackle.SessionEventSchema, {
           sessionId,
           type: eventTypeToEnum(event.type),
@@ -261,11 +270,6 @@ export function processEventStream(
         // Intercept subtask creation events and create child tasks
         if (event.type === "subtask_create" && ctx.taskId) {
           processSubtaskEvent(ctx, event.content, subtaskLocalIdMap);
-        }
-
-        // Persist the runtime-native session ID emitted by the PowerLine
-        if (event.type === "runtime_session_id" && event.content) {
-          sessionStore.updateRuntimeSessionId(sessionId, event.content);
         }
 
         if (event.type === "status") {

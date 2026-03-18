@@ -2,7 +2,7 @@
  * E2E tests for unified session resume (issue #576).
  *
  * Verifies that `resume_agent` correctly reanimates a completed stub session,
- * and that the backward-compat path (idle session) returns as-is.
+ * and that active sessions (idle/running/pending) are rejected with an error.
  */
 import { test, expect } from "./fixtures.js";
 import { sendWsAndWaitFor, sendWsAndWaitForError, sendWsMessage } from "./helpers.js";

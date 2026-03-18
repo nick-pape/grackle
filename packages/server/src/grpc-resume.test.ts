@@ -1,6 +1,6 @@
 /**
  * Unit tests for the gRPC resumeAgent handler.
- * Verifies status-aware routing: idle → return as-is; running/pending → error; terminal → reanimate.
+ * Verifies status-aware routing: idle/running/pending → FailedPrecondition; terminal → reanimate.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { ConnectError, Code } from "@connectrpc/connect";
