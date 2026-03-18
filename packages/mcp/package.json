@@ -1,6 +1,6 @@
 {
   "name": "@grackle-ai/mcp",
-  "version": "0.38.2",
+  "version": "0.39.0",
   "description": "MCP (Model Context Protocol) server for Grackle — translates MCP tool calls to ConnectRPC",
   "license": "MIT",
   "repository": {
