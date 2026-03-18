@@ -972,7 +972,10 @@ async function handleMessage(
     case "create_task": {
       const projectId = msg.payload?.projectId as string;
       const title = msg.payload?.title as string;
-      const requestId = (msg.payload?.requestId as string) || "";
+      const requestId =
+        typeof msg.payload?.requestId === "string"
+          ? msg.payload.requestId
+          : "";
       if (!projectId || !title) {
         sendWs(ws, {
           type: "create_task_error",

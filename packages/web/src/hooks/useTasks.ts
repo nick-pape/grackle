@@ -129,16 +129,20 @@ export function useTasks(send: SendFunction): UseTasksResult {
           typeof msg.payload?.requestId === "string"
             ? msg.payload.requestId
             : "";
+        const errorMessage =
+          typeof msg.payload?.message === "string"
+            ? msg.payload.message
+            : "Failed to create task";
         if (errorReqId) {
           const pending = pendingCreatesRef.current.get(errorReqId);
           if (pending) {
             pendingCreatesRef.current.delete(errorReqId);
-            const errorMessage =
-              typeof msg.payload?.message === "string"
-                ? msg.payload.message
-                : "Failed to create task";
             pending.onError(errorMessage);
+          } else {
+            console.error("[useTasks] create_task_error with unknown requestId:", errorMessage);
           }
+        } else {
+          console.error("[useTasks] create_task_error:", errorMessage);
         }
         return true;
       }
