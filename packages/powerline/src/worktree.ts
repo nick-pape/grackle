@@ -2,11 +2,19 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { existsSync } from "node:fs";
 import { resolve, dirname } from "node:path";
+import { logger } from "./logger.js";
 
 const execRaw: typeof execFile.__promisify__ = promisify(execFile);
 
+/** Timeout for `git fetch origin` in milliseconds. */
+const FETCH_TIMEOUT_MS: number = 30_000;
+
 /** Wrapper that uses a shell so `git` resolves via PATH on all platforms. */
-async function exec(cmd: string, args: string[], opts: { cwd: string }): Promise<{ stdout: string; stderr: string }> {
+async function exec(
+  cmd: string,
+  args: string[],
+  opts: { cwd: string; timeout?: number },
+): Promise<{ stdout: string; stderr: string }> {
   const shell = process.env.SHELL || true;
   const result = await execRaw(cmd, args, { ...opts, shell });
   return { stdout: String(result.stdout), stderr: String(result.stderr) };
@@ -16,6 +24,8 @@ export interface WorktreeResult {
   worktreePath: string;
   branch: string;
   created: boolean;
+  /** True if `git fetch origin` succeeded before worktree creation. */
+  synced: boolean;
 }
 
 /** @internal Sanitize a branch name for use in file paths. Exported for testing. */
@@ -36,6 +46,36 @@ export function worktreeDir(basePath: string, branch: string): string {
   return resolve(parent, ".grackle-worktrees", sanitized);
 }
 
+/**
+ * Fetch from origin and detect the default branch name.
+ *
+ * Returns `synced: true` with a `startPoint` like `origin/main` on success,
+ * or `synced: false` with no start point on failure (so the caller can still
+ * create the worktree from local HEAD).
+ */
+async function fetchAndDetectDefault(basePath: string): Promise<{ synced: boolean; startPoint: string | undefined }> {
+  try {
+    await exec("git", ["fetch", "origin"], { cwd: basePath, timeout: FETCH_TIMEOUT_MS });
+  } catch (err) {
+    logger.warn({ err }, "git fetch origin failed — worktree will branch from local HEAD");
+    return { synced: false, startPoint: undefined };
+  }
+
+  // Detect the remote's default branch (e.g. refs/remotes/origin/main)
+  let defaultBranch = "origin/main";
+  try {
+    const { stdout } = await exec("git", ["symbolic-ref", "refs/remotes/origin/HEAD"], { cwd: basePath });
+    const trimmed = stdout.trim(); // e.g. "refs/remotes/origin/main"
+    if (trimmed.startsWith("refs/remotes/")) {
+      defaultBranch = trimmed.slice("refs/remotes/".length); // "origin/main"
+    }
+  } catch {
+    logger.warn("Could not detect default branch via symbolic-ref, falling back to origin/main");
+  }
+
+  return { synced: true, startPoint: defaultBranch };
+}
+
 export async function ensureWorktree(basePath: string, branch: string): Promise<WorktreeResult> {
   // Pre-check: verify basePath is a git repository
   try {
@@ -54,18 +94,24 @@ export async function ensureWorktree(basePath: string, branch: string): Promise<
   const wtPath = worktreeDir(basePath, branch);
 
   if (existsSync(wtPath)) {
-    return { worktreePath: wtPath, branch, created: false };
+    return { worktreePath: wtPath, branch, created: false, synced: false };
   }
+
+  // Fetch origin so the new worktree branches from an up-to-date commit
+  const { synced, startPoint } = await fetchAndDetectDefault(basePath);
 
   // Try creating a new branch worktree first
   try {
-    await exec("git", ["worktree", "add", "-b", branch, wtPath], { cwd: basePath });
-    return { worktreePath: wtPath, branch, created: true };
+    const addArgs = startPoint
+      ? ["worktree", "add", "-b", branch, wtPath, startPoint]
+      : ["worktree", "add", "-b", branch, wtPath];
+    await exec("git", addArgs, { cwd: basePath });
+    return { worktreePath: wtPath, branch, created: true, synced };
   } catch {
     // Branch may already exist — try without -b
     try {
       await exec("git", ["worktree", "add", wtPath, branch], { cwd: basePath });
-      return { worktreePath: wtPath, branch, created: true };
+      return { worktreePath: wtPath, branch, created: true, synced };
     } catch (err) {
       throw new Error(`Failed to create worktree for branch ${branch}: ${err instanceof Error ? err.message : String(err)}`);
     }
