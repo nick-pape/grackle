@@ -7,6 +7,19 @@ import { logger } from "../logger.js";
 /** Timeout for connecting to the MCP server and completing the tool call. */
 const MCP_CONNECT_TIMEOUT_MS: number = 5_000;
 
+/** Race a promise against a timeout, clearing the timer on resolution to avoid leaks. */
+async function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<never>((_resolve, reject) => {
+    timer = setTimeout(() => reject(new Error(message)), ms);
+  });
+  try {
+    return await Promise.race([promise, timeout]);
+  } finally {
+    clearTimeout(timer!);
+  }
+}
+
 class StubMcpSession implements AgentSession {
   public id: string;
   public runtimeName: string = "stub-mcp";
@@ -121,12 +134,7 @@ class StubMcpSession implements AgentSession {
       mcpClient = new Client({ name: "stub-mcp-runtime", version: "1.0.0" });
 
       // Connect with a timeout to prevent hangs
-      await Promise.race([
-        mcpClient.connect(transport),
-        new Promise<never>((_resolve, reject) =>
-          setTimeout(() => reject(new Error("MCP connect timeout")), MCP_CONNECT_TIMEOUT_MS),
-        ),
-      ]);
+      await withTimeout(mcpClient.connect(transport), MCP_CONNECT_TIMEOUT_MS, "MCP connect timeout");
 
       // Yield the tool_use event
       yieldedToolUse = true;
@@ -138,12 +146,11 @@ class StubMcpSession implements AgentSession {
       };
 
       // Call the tool
-      const result = await Promise.race([
+      const result = await withTimeout(
         mcpClient.callTool({ name: "task_list", arguments: {} }),
-        new Promise<never>((_resolve, reject) =>
-          setTimeout(() => reject(new Error("MCP tool call timeout")), MCP_CONNECT_TIMEOUT_MS),
-        ),
-      ]);
+        MCP_CONNECT_TIMEOUT_MS,
+        "MCP tool call timeout",
+      );
 
       // Yield the tool_result event with the real MCP response
       yield {

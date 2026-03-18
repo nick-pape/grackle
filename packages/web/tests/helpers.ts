@@ -203,9 +203,11 @@ export async function navigateToTask(
 }
 
 /**
- * Monkey-patch WebSocket.prototype.send to force stub runtime and inject
- * environmentId on start_task messages. Environment is now a start-time
- * param (not stored on the task), so tests must provide it explicitly.
+ * Monkey-patch WebSocket.prototype.send to force the "Stub" persona and inject
+ * environmentId on start_task messages. The server resolves the runtime from
+ * the persona (not a runtime field), so we set personaId to "stub" which maps
+ * to the "Stub" persona created in global-setup. Environment is now a
+ * start-time param (not stored on the task), so tests must provide it explicitly.
  */
 export async function patchWsForStubRuntime(page: Page, environmentId: string = "test-local"): Promise<void> {
   await page.evaluate((envId: string) => {
@@ -217,7 +219,7 @@ export async function patchWsForStubRuntime(page: Page, environmentId: string = 
         try {
           const msg = JSON.parse(data);
           if (msg.type === "start_task") {
-            msg.payload.runtime = "stub";
+            msg.payload.personaId = "stub";
             if (!msg.payload.environmentId) {
               msg.payload.environmentId = envId;
             }
