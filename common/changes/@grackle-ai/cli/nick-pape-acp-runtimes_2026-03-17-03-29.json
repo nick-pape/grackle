@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "No CLI changes — change file required by Rush merge-commit detection",
+      "type": "none",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}

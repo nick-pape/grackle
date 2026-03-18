@@ -20,6 +20,7 @@ import { StubRuntime } from "./runtimes/stub.js";
 import { ClaudeCodeRuntime } from "./runtimes/claude-code.js";
 import { CopilotRuntime } from "./runtimes/copilot.js";
 import { CodexRuntime } from "./runtimes/codex.js";
+import { AcpRuntime } from "./runtimes/acp.js";
 import { DEFAULT_POWERLINE_PORT } from "@grackle-ai/common";
 import { createRequire } from "node:module";
 import { logger } from "./logger.js";
@@ -58,6 +59,9 @@ function main(): void {
       registerRuntime(new ClaudeCodeRuntime());
       registerRuntime(new CopilotRuntime());
       registerRuntime(new CodexRuntime());
+      registerRuntime(new AcpRuntime({ name: "codex-acp", command: "codex-acp", args: [] }));
+      registerRuntime(new AcpRuntime({ name: "copilot-acp", command: "copilot", args: ["--acp", "--stdio"] }));
+      registerRuntime(new AcpRuntime({ name: "claude-code-acp", command: "claude-agent-acp", args: [] }));
 
       // Start HTTP/2 server with optional auth
       const handler = connectNodeAdapter({

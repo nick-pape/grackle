@@ -102,11 +102,15 @@ export function setCredentialProviders(config: CredentialProviderConfig): void {
 // ─── Runtime → Provider Mapping ────────────────────────────
 
 /** Maps each runtime to the credential providers it needs. */
-const RUNTIME_PROVIDERS: Record<RuntimeName, (keyof CredentialProviderConfig)[]> = {
+const RUNTIME_PROVIDERS: Record<string, (keyof CredentialProviderConfig)[]> = {
   "claude-code": ["claude", "github"],
   "copilot": ["copilot", "github"],
   "codex": ["codex", "github"],
   "stub": [],
+  // ACP runtimes (experimental) — auth via ACP authenticate method, not credential files
+  "claude-code-acp": ["claude", "github"],
+  "codex-acp": ["codex", "github"],
+  "copilot-acp": ["copilot", "github"],
 };
 
 // ─── Token Bundle Builder ──────────────────────────────────
