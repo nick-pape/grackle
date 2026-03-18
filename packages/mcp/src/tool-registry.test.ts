@@ -107,9 +107,9 @@ describe("ToolRegistry", () => {
 // Token tools (token_set, token_list, token_delete) are intentionally excluded from
 // the MCP surface — tokens contain secrets and should not be managed by AI agents.
 describe("Full tool registry", () => {
-  it("contains exactly 35 tools", () => {
+  it("contains exactly 42 tools", () => {
     const registry = createToolRegistry();
-    expect(registry.list()).toHaveLength(40);
+    expect(registry.list()).toHaveLength(42);
   });
 
   it("every tool name matches snake_case pattern", () => {
@@ -146,6 +146,7 @@ describe("Full tool registry", () => {
       "persona_list",
       "persona_show",
       "logs_get",
+      "config_get_default_persona",
     ]);
 
     for (const tool of registry.list()) {
@@ -164,7 +165,7 @@ describe("Full tool registry", () => {
   it("groups are consistent within tool files", () => {
     const registry = createToolRegistry();
     const expectedGroups = new Set([
-      "env", "session", "project", "task", "finding", "persona", "logs", "credential", "token",
+      "env", "session", "project", "task", "finding", "persona", "logs", "credential", "token", "config",
     ]);
     for (const tool of registry.list()) {
       expect(expectedGroups.has(tool.group), `unexpected group: ${tool.group}`).toBe(true);

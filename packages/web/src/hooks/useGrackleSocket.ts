@@ -6,7 +6,7 @@
  * @module
  */
 
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import type { WsMessage, SendFunction } from "./types.js";
 import { useWebSocket } from "./useWebSocket.js";
 import { useEnvironments } from "./useEnvironments.js";
@@ -74,6 +74,7 @@ export interface UseGrackleSocketResult {
     description?: string,
     repoUrl?: string,
     defaultEnvironmentId?: string,
+    defaultPersonaId?: string,
   ) => void;
   archiveProject: (projectId: string) => void;
   updateProject: (
@@ -85,6 +86,7 @@ export interface UseGrackleSocketResult {
       defaultEnvironmentId?: string;
       worktreeBasePath?: string;
       useWorktrees?: boolean;
+      defaultPersonaId?: string;
     },
   ) => void;
   loadTasks: (projectId: string) => void;
@@ -94,11 +96,10 @@ export interface UseGrackleSocketResult {
     description?: string,
     dependsOn?: string[],
     parentTaskId?: string,
+    defaultPersonaId?: string,
   ) => void;
   startTask: (
     taskId: string,
-    runtime?: string,
-    model?: string,
     personaId?: string,
     environmentId?: string,
     notes?: string,
@@ -110,6 +111,7 @@ export interface UseGrackleSocketResult {
     title: string,
     description: string,
     dependsOn: string[],
+    defaultPersonaId?: string,
   ) => void;
   deleteTask: (taskId: string) => void;
   loadFindings: (projectId: string) => void;
@@ -169,6 +171,10 @@ export interface UseGrackleSocketResult {
   deletePersona: (personaId: string) => void;
   taskSessions: Record<string, import("./types.js").Session[]>;
   loadTaskSessions: (taskId: string) => void;
+  /** The app-level default persona ID (from server settings). */
+  appDefaultPersonaId: string;
+  /** Set the app-level default persona ID (persisted via server settings). */
+  setAppDefaultPersonaId: (personaId: string) => void;
 }
 
 // ─── Composition hook ─────────────────────────────────────────────────────────
@@ -186,6 +192,10 @@ export interface UseGrackleSocketResult {
  * @returns The full Grackle client state and actions.
  */
 export function useGrackleSocket(url?: string): UseGrackleSocketResult {
+  // --- Settings state ---
+
+  const [appDefaultPersonaId, setAppDefaultPersonaIdState] = useState("");
+
   // --- Transport (must be first to provide `send`) ---
 
   const { connected, send } = useWebSocket(url, {
@@ -206,9 +216,34 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
   const codespacesHook = useCodespaces(send, connected);
   const personasHook = usePersonas(send);
 
+  // --- Settings helpers ---
+
+  /** Key used for the app-level default persona setting. */
+  const SETTING_KEY_DEFAULT_PERSONA = "default_persona_id";
+
+  const setAppDefaultPersonaId = useCallback(
+    (personaId: string) => {
+      setAppDefaultPersonaIdState(personaId);
+      send({
+        type: "set_setting",
+        payload: { key: SETTING_KEY_DEFAULT_PERSONA, value: personaId },
+      });
+    },
+    [send],
+  );
+
   // --- Message routing ---
 
   function onMessage(msg: WsMessage): void {
+    // Handle settings messages before domain hooks
+    if (msg.type === "setting" || msg.type === "setting_changed") {
+      const key = msg.payload?.key as string | undefined;
+      const value = msg.payload?.value as string | undefined;
+      if (key === SETTING_KEY_DEFAULT_PERSONA) {
+        setAppDefaultPersonaIdState(value ?? "");
+      }
+      return;
+    }
     if (environmentsHook.handleMessage(msg)) { return; }
     if (sessionsHook.handleMessage(msg)) { return; }
     if (projectsHook.handleMessage(msg)) { return; }
@@ -231,6 +266,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
     sendFn({ type: "list_tokens" });
     sendFn({ type: "get_credential_providers" });
     sendFn({ type: "list_personas" });
+    sendFn({ type: "get_setting", payload: { key: SETTING_KEY_DEFAULT_PERSONA } });
     sendFn({ type: "subscribe_all" });
   }
 
@@ -299,5 +335,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
     deletePersona: personasHook.deletePersona,
     taskSessions: sessionsHook.taskSessions,
     loadTaskSessions: sessionsHook.loadTaskSessions,
+    appDefaultPersonaId,
+    setAppDefaultPersonaId,
   };
 }

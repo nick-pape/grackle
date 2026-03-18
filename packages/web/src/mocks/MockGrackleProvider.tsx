@@ -314,7 +314,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
 
   /** Creates a new project and adds it to state. */
   const createProject: UseGrackleSocketResult["createProject"] = useCallback(
-    (name: string, description?: string, repoUrl?: string, defaultEnvironmentId?: string) => {
+    (name: string, description?: string, repoUrl?: string, defaultEnvironmentId?: string, defaultPersonaId?: string) => {
       console.log("[MockGrackle] createProject", { name, description });
 
       const newProject: Project = {
@@ -326,7 +326,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
         status: "active",
         worktreeBasePath: "",
         useWorktrees: true,
-        defaultPersonaId: "",
+        defaultPersonaId: defaultPersonaId || "",
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
@@ -363,6 +363,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       description?: string,
       dependsOn?: string[],
       parentTaskId?: string,
+      defaultPersonaId?: string,
     ) => {
       console.log("[MockGrackle] createTask", { projectId, title, parentTaskId });
 
@@ -396,7 +397,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
           depth,
           childTaskIds: [],
           canDecompose: !parentTaskId,
-          defaultPersonaId: "",
+          defaultPersonaId: defaultPersonaId || "",
         };
 
         return [...prev, newTask];
@@ -413,8 +414,8 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
    * Also handles retry from "failed" — the task gets a fresh session.
    */
   const startTask: UseGrackleSocketResult["startTask"] = useCallback(
-    (taskId: string, runtime?: string, _model?: string) => {
-      console.log("[MockGrackle] startTask", { taskId, runtime });
+    (taskId: string, _personaId?: string, _environmentId?: string, _notes?: string) => {
+      console.log("[MockGrackle] startTask", { taskId });
 
       // Find the task to get its metadata
       const target = tasksRef.current.find((t) => t.id === taskId);
@@ -424,7 +425,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       const newSession: Session = {
         id: sessionId,
         environmentId: "env-local-01",
-        runtime: runtime || "claude-code",
+        runtime: "claude-code",
         status: "running",
         prompt: taskTitle || taskId,
         startedAt: new Date().toISOString(),
@@ -636,13 +637,14 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
     [],
   );
 
-  /** Updates title, description, and dependencies of a pending/assigned task. */
+  /** Updates title, description, dependencies, and default persona of a pending/assigned task. */
   const updateTask: UseGrackleSocketResult["updateTask"] = useCallback(
     (
       taskId: string,
       title: string,
       description: string,
       dependsOn: string[],
+      defaultPersonaId?: string,
     ) => {
       console.log("[MockGrackle] updateTask", { taskId, title });
       setTasks((prev) =>
@@ -653,6 +655,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
                 title: title.trim() || t.title,
                 description,
                 dependsOn,
+                ...(defaultPersonaId !== undefined ? { defaultPersonaId } : {}),
               }
             : t,
         ),
@@ -791,7 +794,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       clearEvents,
       createProject,
       archiveProject,
-      updateProject: (projectId: string, fields: { name?: string; description?: string; repoUrl?: string; defaultEnvironmentId?: string; worktreeBasePath?: string; useWorktrees?: boolean }) => {
+      updateProject: (projectId: string, fields: { name?: string; description?: string; repoUrl?: string; defaultEnvironmentId?: string; worktreeBasePath?: string; useWorktrees?: boolean; defaultPersonaId?: string }) => {
         console.log("[MockGrackle] updateProject", { projectId, ...fields });
         setProjects((prev) =>
           prev.map((p) => {
@@ -806,6 +809,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
               ...(fields.defaultEnvironmentId !== undefined ? { defaultEnvironmentId: fields.defaultEnvironmentId } : {}),
               ...(fields.worktreeBasePath !== undefined ? { worktreeBasePath: fields.worktreeBasePath } : {}),
               ...(fields.useWorktrees !== undefined ? { useWorktrees: fields.useWorktrees } : {}),
+              ...(fields.defaultPersonaId !== undefined ? { defaultPersonaId: fields.defaultPersonaId } : {}),
               updatedAt: new Date().toISOString(),
             };
           }),
@@ -882,6 +886,10 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       taskSessions,
       loadTaskSessions: (taskId: string) => {
         console.log("[MockGrackle] loadTaskSessions", taskId);
+      },
+      appDefaultPersonaId: "",
+      setAppDefaultPersonaId: (personaId: string) => {
+        console.log("[MockGrackle] setAppDefaultPersonaId", personaId);
       },
     }),
     [

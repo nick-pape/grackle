@@ -5,7 +5,7 @@ import styles from "./PersonaManager.module.scss";
 
 /** Full CRUD management view for personas. */
 export function PersonaManager(): JSX.Element {
-  const { personas, createPersona, updatePersona, deletePersona } = useGrackle();
+  const { personas, createPersona, updatePersona, deletePersona, appDefaultPersonaId, setAppDefaultPersonaId } = useGrackle();
   const [editing, setEditing] = useState<PersonaData | null>(null);
   const [creating, setCreating] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
@@ -160,11 +160,37 @@ export function PersonaManager(): JSX.Element {
         <p className={styles.empty}>No personas yet. Create one to get started.</p>
       ) : (
         <div className={styles.list}>
-          {personas.map((p) => (
-            <div key={p.id} className={`${styles.card} ${editing?.id === p.id ? styles.active : ""}`}>
+          {personas.map((p) => {
+            const isAppDefault = appDefaultPersonaId === p.id;
+            return (
+            <div key={p.id} className={`${styles.card} ${editing?.id === p.id ? styles.active : ""}`} data-testid={`persona-card-${p.id}`}>
               <div className={styles.cardHeader}>
-                <strong>{p.name}</strong>
+                <span className={styles.cardTitle}>
+                  <strong>{p.name}</strong>
+                  {isAppDefault && (
+                    <span className={styles.defaultBadge} data-testid={`persona-default-badge-${p.id}`}>App Default</span>
+                  )}
+                </span>
                 <div className={styles.cardActions}>
+                  {!isAppDefault ? (
+                    <button
+                      onClick={() => setAppDefaultPersonaId(p.id)}
+                      className={styles.btnSmall}
+                      data-testid={`persona-set-default-${p.id}`}
+                      title="Set as app default persona"
+                    >
+                      Set Default
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => setAppDefaultPersonaId("")}
+                      className={styles.btnSmall}
+                      data-testid={`persona-clear-default-${p.id}`}
+                      title="Remove as app default persona"
+                    >
+                      Clear Default
+                    </button>
+                  )}
                   <button onClick={() => startEdit(p)} className={styles.btnSmall}>Edit</button>
                   {confirmDelete === p.id ? (
                     <>
@@ -187,7 +213,8 @@ export function PersonaManager(): JSX.Element {
                 <pre className={styles.promptText}>{p.systemPrompt}</pre>
               </details>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

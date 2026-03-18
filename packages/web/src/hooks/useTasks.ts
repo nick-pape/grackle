@@ -23,12 +23,11 @@ export interface UseTasksResult {
     description?: string,
     dependsOn?: string[],
     parentTaskId?: string,
+    defaultPersonaId?: string,
   ) => void;
   /** Start a task, optionally specifying runtime parameters. */
   startTask: (
     taskId: string,
-    runtime?: string,
-    model?: string,
     personaId?: string,
     environmentId?: string,
     notes?: string,
@@ -37,12 +36,13 @@ export interface UseTasksResult {
   completeTask: (taskId: string) => void;
   /** Resume a paused/waiting task. */
   resumeTask: (taskId: string) => void;
-  /** Update a task's title, description, and dependencies. */
+  /** Update a task's title, description, dependencies, and default persona. */
   updateTask: (
     taskId: string,
     title: string,
     description: string,
     dependsOn: string[],
+    defaultPersonaId?: string,
   ) => void;
   /** Delete a task by ID. */
   deleteTask: (taskId: string) => void;
@@ -191,6 +191,7 @@ export function useTasks(send: SendFunction): UseTasksResult {
       description?: string,
       dependsOn?: string[],
       parentTaskId?: string,
+      defaultPersonaId?: string,
     ) => {
       send({
         type: "create_task",
@@ -200,6 +201,7 @@ export function useTasks(send: SendFunction): UseTasksResult {
           description: description || "",
           dependsOn: dependsOn || [],
           parentTaskId: parentTaskId || "",
+          defaultPersonaId: defaultPersonaId || "",
         },
       });
     },
@@ -207,14 +209,12 @@ export function useTasks(send: SendFunction): UseTasksResult {
   );
 
   const startTask = useCallback(
-    (taskId: string, runtime?: string, model?: string, personaId?: string, environmentId?: string, notes?: string) => {
+    (taskId: string, personaId?: string, environmentId?: string, notes?: string) => {
       setTaskStartingId(taskId);
       send({
         type: "start_task",
         payload: {
           taskId,
-          runtime: runtime || "",
-          model: model || "",
           personaId: personaId || "",
           environmentId: environmentId || "",
           notes: notes || "",
@@ -244,10 +244,17 @@ export function useTasks(send: SendFunction): UseTasksResult {
       title: string,
       description: string,
       dependsOn: string[],
+      defaultPersonaId?: string,
     ) => {
       send({
         type: "update_task",
-        payload: { taskId, title, description, dependsOn },
+        payload: {
+          taskId,
+          title,
+          description,
+          dependsOn,
+          defaultPersonaId: defaultPersonaId || "",
+        },
       });
     },
     [send],
