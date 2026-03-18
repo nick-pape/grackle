@@ -53,7 +53,7 @@ import * as credentialProviders from "./credential-providers.js";
  * unless GRACKLE_DOCKER_HOST is set (DooD mode) — in that case, use that value
  * so sibling containers can reach the server by container name.
  */
-function toDialableHost(bindHost: string): string {
+export function toDialableHost(bindHost: string): string {
   if (bindHost === "0.0.0.0" || bindHost === "::") {
     const dockerHost = process.env.GRACKLE_DOCKER_HOST;
     if (dockerHost) {
