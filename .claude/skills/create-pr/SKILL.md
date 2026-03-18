@@ -61,77 +61,7 @@ If the build fails, fix the errors, commit the fixes, and re-run. Only proceed o
 
 ## Step 4: Generate Change Files (if needed)
 
-### Determine if a change file is needed
-
-Check whether the branch diff touches any **publishable package**:
-
-**Publishable packages** (lockstep versioning — all share one version):
-- `@grackle-ai/cli`
-- `@grackle-ai/common`
-- `@grackle-ai/powerline`
-- `@grackle-ai/server`
-
-**Not publishable** (private — never need change files):
-- `@grackle-ai/web`
-- `@grackle-ai/heft-rig`
-- `@grackle-ai/heft-buf-plugin`
-- `@grackle-ai/heft-playwright-plugin`
-- `@grackle-ai/heft-vite-plugin`
-
-```bash
-git diff --name-only origin/main...HEAD
-```
-
-If the diff only touches private packages or non-package files (workflows, docs, config), skip change file generation.
-
-Check if this branch already added a change file by looking for new files in the branch diff:
-
-```bash
-git diff --name-only origin/main...HEAD -- common/changes/
-```
-
-If the diff already includes change files, skip this step.
-
-### Generate the change file
-
-> **Known issue:** `install-run-rush.js` splits `--message` values on spaces.
-> Use a single hyphenated word for the message, then edit the generated JSON file.
-
-```bash
-node common/scripts/install-run-rush.js change --bulk \
-  --message "placeholder" \
-  --bump-type patch \
-  --email "5674316+nick-pape@users.noreply.github.com"
-```
-
-### Edit the generated JSON
-
-Find the generated file in `common/changes/@grackle-ai/*/` and update:
-- `"comment"` — set to a real description of the change
-- `"type"` — set to the correct bump type:
-  - `patch` — bug fixes, internal changes
-  - `minor` — new features, backwards-compatible additions
-  - `none` — no version bump (infra, tooling, docs touching a publishable package)
-  - **Never use `major`** — CI blocks major bumps (we're pre-1.0)
-
-One change file per PR is sufficient — lockstep versioning covers all publishable packages.
-
-### Merge commit false positives
-
-When a branch has merge commits from `origin/main`, Rush's change detection sees files from those merges as "changed" — even if the final `git diff` against main is clean. This commonly flags `@grackle-ai/cli` or other publishable packages as needing change files when only private packages were actually modified.
-
-**Fix**: add a `none` bump change file for the falsely flagged package.
-
-### Commit the change file
-
-Stage and commit the change file(s):
-
-```bash
-git add common/changes/
-git commit -m "Add rush change file"
-```
-
-The change file must be **committed** (not just staged) for `rush change --verify` to detect it.
+Run the `/rush-change` skill. It handles everything: detecting whether a change file is actually needed, distinguishing real changes from merge-commit false positives, generating the file with the correct bump type, and committing it.
 
 ## Step 5: Push Branch
 
