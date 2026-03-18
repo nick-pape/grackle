@@ -5,7 +5,7 @@ FROM node:22-bookworm-slim
 
 # ── System dependencies (for better-sqlite3 native build) ────────
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3 make g++ git curl ca-certificates gnupg \
+    python3 make g++ git curl ca-certificates gnupg openssh-client \
     && rm -rf /var/lib/apt/lists/*
 
 # ── GitHub CLI ────────────────────────────────────────────────────

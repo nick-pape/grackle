@@ -22,7 +22,18 @@ services:
       #   export GH_TOKEN=$(gh auth token)
       - GH_TOKEN=${GH_TOKEN:-}
       - GRACKLE_HOME=/grackle-home
+      # Docker adapter networking — sibling containers join this network
+      # so the server can reach them directly (required for DooD).
+      - GRACKLE_DOCKER_NETWORK=grackle
+      # Container name used by sibling containers to reach this server's MCP/gRPC.
+      - GRACKLE_DOCKER_HOST=grackle
+    networks:
+      - grackle
     restart: unless-stopped
+
+networks:
+  grackle:
+    name: grackle
 
 volumes:
   grackle-data:

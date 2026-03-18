@@ -46,9 +46,17 @@ import { generatePairingCode } from "./pairing.js";
 import { detectLanIp } from "./utils/network.js";
 import * as credentialProviders from "./credential-providers.js";
 
-/** Map a bind host to a dialable URL host. Wildcard addresses become loopback. */
+/**
+ * Map a bind host to a dialable URL host. Wildcard addresses become loopback,
+ * unless GRACKLE_DOCKER_HOST is set (DooD mode) — in that case, use that value
+ * so sibling containers can reach the server by container name.
+ */
 function toDialableHost(bindHost: string): string {
   if (bindHost === "0.0.0.0" || bindHost === "::") {
+    const dockerHost = process.env.GRACKLE_DOCKER_HOST;
+    if (dockerHost) {
+      return dockerHost;
+    }
     return bindHost === "::" ? "[::1]" : "127.0.0.1";
   }
   return bindHost.includes(":") ? `[${bindHost}]` : bindHost;
