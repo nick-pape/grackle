@@ -424,6 +424,9 @@ export function initDatabase(): void {
     .prepare("SELECT value FROM settings WHERE key = 'default_persona_id'")
     .get() as { value: string } | undefined;
   if (!existingDefault) {
+    // Prefer the seed persona 'claude-code' if it exists; otherwise fall back
+    // to the first persona alphabetically. LIMIT 1 on the UNION returns the
+    // first matching row, so 'claude-code' wins when present.
     const fallback = sqlite
       .prepare(
         "SELECT id FROM personas WHERE id = 'claude-code' " +

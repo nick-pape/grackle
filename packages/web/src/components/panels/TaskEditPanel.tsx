@@ -203,7 +203,7 @@ export function TaskEditPanel({ mode, taskId, projectId: projectIdProp, parentTa
               id="task-edit-persona"
               value={defaultPersonaId}
               onChange={(e) => setDefaultPersonaId(e.target.value)}
-              className={styles.titleInput}
+              className={styles.personaSelect}
               data-testid="task-edit-persona"
             >
               <option value="">(Inherit)</option>

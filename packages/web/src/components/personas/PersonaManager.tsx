@@ -103,6 +103,7 @@ export function PersonaManager(): JSX.Element {
           <option value="claude-code">claude-code</option>
           <option value="codex">codex</option>
           <option value="copilot">copilot</option>
+          <option value="stub">stub</option>
           <option value="claude-code-acp">claude-code-acp (experimental)</option>
           <option value="codex-acp">codex-acp (experimental)</option>
           <option value="copilot-acp">copilot-acp (experimental)</option>
@@ -174,7 +175,7 @@ export function PersonaManager(): JSX.Element {
                   )}
                 </span>
                 <div className={styles.cardActions}>
-                  {!isAppDefault ? (
+                  {!isAppDefault && (
                     <button
                       onClick={() => setAppDefaultPersonaId(p.id)}
                       className={styles.btnSmall}
@@ -182,15 +183,6 @@ export function PersonaManager(): JSX.Element {
                       title="Set as app default persona"
                     >
                       Set Default
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => setAppDefaultPersonaId("")}
-                      className={styles.btnSmall}
-                      data-testid={`persona-clear-default-${p.id}`}
-                      title="Remove as app default persona"
-                    >
-                      Clear Default
                     </button>
                   )}
                   <button onClick={() => startEdit(p)} className={styles.btnSmall}>Edit</button>

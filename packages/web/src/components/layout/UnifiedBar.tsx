@@ -477,7 +477,7 @@ export function UnifiedBar(): JSX.Element {
         </span>
         <input type="text" value={text} onChange={(e) => setText(e.target.value)} placeholder="Enter prompt..." autoFocus className={styles.input} />
         <select value={spawnPersonaId} onChange={(e) => setSpawnPersonaId(e.target.value)} className={styles.select}>
-          <option value="">No persona</option>
+          <option value="">(Default)</option>
           {personas.map((p) => (
             <option key={p.id} value={p.id}>{p.name}</option>
           ))}
