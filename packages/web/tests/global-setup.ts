@@ -231,7 +231,7 @@ export default async function globalSetup(_config: FullConfig): Promise<void> {
     env: cliEnv,
     stdio: "pipe",
   });
-  console.log("[e2e] Stub persona created and set as default");
+  console.log("[e2e] Stub and Stub MCP personas created; Stub set as default");
 
   execSync(`node "${cliPath}" env provision test-local`, {
     env: cliEnv,

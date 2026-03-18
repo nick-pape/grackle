@@ -38,7 +38,7 @@ import { slugify } from "./utils/slugify.js";
 import { processEventStream } from "./event-processor.js";
 import * as processorRegistry from "./processor-registry.js";
 import { broadcast, setWssInstance, broadcastEnvironments, envRowToWs } from "./ws-broadcast.js";
-import { buildMcpServersJson } from "./grpc-service.js";
+import { buildMcpServersJson, toDialableHost } from "./grpc-service.js";
 import { createScopedToken } from "@grackle-ai/mcp";
 import { loadOrCreateApiKey } from "./api-key.js";
 import { computeTaskStatus } from "./compute-task-status.js";
@@ -345,13 +345,10 @@ async function startTaskSession(
 
   // Build MCP broker URL + scoped token so runtimes can call the MCP server.
   const mcpPort = parseInt(process.env.GRACKLE_MCP_PORT || String(DEFAULT_MCP_PORT), 10);
-  const bindHost = process.env.GRACKLE_HOST || "127.0.0.1";
-  const mcpDialHost = (bindHost === "0.0.0.0" || bindHost === "::")
-    ? (process.env.GRACKLE_DOCKER_HOST || (bindHost === "::" ? "[::1]" : "127.0.0.1"))
-    : (bindHost.includes(":") ? `[${bindHost}]` : bindHost);
+  const mcpDialHost = toDialableHost(process.env.GRACKLE_HOST || "127.0.0.1");
   const mcpUrl = `http://${mcpDialHost}:${mcpPort}/mcp`;
   const mcpToken = createScopedToken(
-    { sub: sessionId, pid: freshTask.projectId, per: resolved.personaId, sid: sessionId },
+    { sub: freshTask.id, pid: freshTask.projectId, per: resolved.personaId, sid: sessionId },
     loadOrCreateApiKey(),
   );
 

@@ -1,8 +1,29 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { StubMcpRuntime } from "./stub-mcp.js";
 import type { AgentEvent } from "./runtime.js";
 
+// Mock the MCP SDK modules (dynamic imports in performMcpToolCall)
+const mockConnect = vi.fn();
+const mockCallTool = vi.fn();
+const mockClose = vi.fn();
+
+vi.mock("@modelcontextprotocol/sdk/client/index.js", () => ({
+  Client: vi.fn().mockImplementation(() => ({
+    connect: mockConnect,
+    callTool: mockCallTool,
+    close: mockClose,
+  })),
+}));
+
+vi.mock("@modelcontextprotocol/sdk/client/streamableHttp.js", () => ({
+  StreamableHTTPClientTransport: vi.fn(),
+}));
+
 describe("StubMcpRuntime", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it("has name 'stub-mcp'", () => {
     const runtime = new StubMcpRuntime();
     expect(runtime.name).toBe("stub-mcp");
@@ -129,6 +150,91 @@ describe("StubMcpRuntime", () => {
 
     const statusEvents = events.filter((e) => e.type === "status");
     expect(statusEvents.map((e) => e.content)).toEqual(["waiting_input", "failed"]);
+  });
+
+  it("successful MCP tool call yields tool_use and tool_result with raw metadata", async () => {
+    mockConnect.mockResolvedValue(undefined);
+    mockCallTool.mockResolvedValue({ content: [{ type: "text", text: "[]" }] });
+    mockClose.mockResolvedValue(undefined);
+
+    const runtime = new StubMcpRuntime();
+    const session = runtime.spawn({
+      sessionId: "mcp-ok-1",
+      prompt: "test",
+      model: "m",
+      maxTurns: 1,
+      mcpBroker: { url: "http://localhost:9999/mcp", token: "test-token" },
+      projectId: "proj-1",
+    });
+
+    const events: AgentEvent[] = [];
+    const streamDone = (async () => {
+      for await (const event of session.stream()) {
+        events.push(event);
+        if (event.type === "status" && event.content === "waiting_input") {
+          setTimeout(() => session.sendInput("done"), 0);
+        }
+      }
+    })();
+
+    await streamDone;
+
+    // Should use MCP path, not fallback echo
+    const toolUse = events.find((e) => e.type === "tool_use");
+    expect(toolUse).toBeDefined();
+    expect(JSON.parse(toolUse!.content)).toEqual({ tool: "task_list", args: {} });
+    expect(toolUse!.raw).toEqual({
+      type: "tool_use", id: "toolu_stub_mcp_1", name: "task_list", input: {},
+    });
+
+    const toolResult = events.find((e) => e.type === "tool_result");
+    expect(toolResult).toBeDefined();
+    expect(toolResult!.raw).toEqual({
+      type: "tool_result", tool_use_id: "toolu_stub_mcp_1", is_error: false,
+    });
+
+    // Verify MCP client was closed
+    expect(mockClose).toHaveBeenCalled();
+    expect(session.status).toBe("completed");
+  });
+
+  it("MCP connect error yields is_error tool_result and continues to waiting_input", async () => {
+    mockConnect.mockRejectedValue(new Error("Connection refused"));
+    mockClose.mockResolvedValue(undefined);
+
+    const runtime = new StubMcpRuntime();
+    const session = runtime.spawn({
+      sessionId: "mcp-err-1",
+      prompt: "test",
+      model: "m",
+      maxTurns: 1,
+      mcpBroker: { url: "http://localhost:9999/mcp", token: "test-token" },
+      projectId: "proj-1",
+    });
+
+    const events: AgentEvent[] = [];
+    const streamDone = (async () => {
+      for await (const event of session.stream()) {
+        events.push(event);
+        if (event.type === "status" && event.content === "waiting_input") {
+          setTimeout(() => session.sendInput("continue"), 0);
+        }
+      }
+    })();
+
+    await streamDone;
+
+    // Should still yield tool_use + error tool_result
+    const toolResult = events.find((e) => e.type === "tool_result");
+    expect(toolResult).toBeDefined();
+    expect(toolResult!.raw).toEqual({
+      type: "tool_result", tool_use_id: "toolu_stub_mcp_1", is_error: true,
+    });
+    const resultContent = JSON.parse(toolResult!.content);
+    expect(resultContent.error).toBe("Connection refused");
+
+    // Session should still complete (error doesn't kill it)
+    expect(session.status).toBe("completed");
   });
 
   it("resume() uses '(resumed session)' prompt", async () => {
