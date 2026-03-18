@@ -57,7 +57,9 @@ class StubMcpSession implements AgentSession {
     }
 
     if (this.mcpBroker && this.projectId) {
-      // Real MCP tool call path
+      // Real MCP tool call path — projectId is required because the scoped token
+      // embeds it as `pid`, which the MCP server uses to scope tool responses
+      // (e.g. task_list returns only tasks for this project).
       yield* this.performMcpToolCall(ts);
     } else {
       // Fallback: same fake tool events as the regular stub runtime
@@ -213,8 +215,8 @@ class StubMcpSession implements AgentSession {
 }
 
 /**
- * A stub runtime that makes real MCP tool calls when an mcpBroker is available.
- * Falls back to fake echo tool events when no MCP broker is configured.
+ * A stub runtime that makes real MCP tool calls when both mcpBroker and projectId are available.
+ * Falls back to fake echo tool events when either is missing (e.g. no MCP server or non-task sessions).
  * Useful for integration testing the MCP tool-call chain.
  */
 export class StubMcpRuntime implements AgentRuntime {
