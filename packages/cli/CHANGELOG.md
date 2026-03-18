@@ -1,6 +1,20 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Wed, 18 Mar 2026 13:51:51 GMT and should not be manually modified.
+This log was last generated on Wed, 18 Mar 2026 20:54:11 GMT and should not be manually modified.
+
+## 0.41.0
+Wed, 18 Mar 2026 20:54:11 GMT
+
+### Minor changes
+
+- Add runtime_session_id to AgentEventType union for persisting runtime-native session IDs
+- Emit runtime_session_id event from all runtimes (claude-code, copilot, codex, acp, stub) so the server can persist the runtime-native session ID
+- Add status-aware resumeAgent: terminal sessions are reanimated in-place; active sessions return FailedPrecondition. Persist runtimeSessionId via event processor.
+
+### Updates
+
+- No user-facing CLI changes; lockstep version bump only.
+- No CLI changes (lockstep versioning entry)
 
 ## 0.40.0
 Wed, 18 Mar 2026 13:51:51 GMT

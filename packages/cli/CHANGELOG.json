@@ -2,6 +2,32 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.41.0",
+      "tag": "@grackle-ai/cli_v0.41.0",
+      "date": "Wed, 18 Mar 2026 20:54:11 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Add runtime_session_id to AgentEventType union for persisting runtime-native session IDs"
+          },
+          {
+            "comment": "Emit runtime_session_id event from all runtimes (claude-code, copilot, codex, acp, stub) so the server can persist the runtime-native session ID"
+          },
+          {
+            "comment": "Add status-aware resumeAgent: terminal sessions are reanimated in-place; active sessions return FailedPrecondition. Persist runtimeSessionId via event processor."
+          }
+        ],
+        "none": [
+          {
+            "comment": "No user-facing CLI changes; lockstep version bump only."
+          },
+          {
+            "comment": "No CLI changes (lockstep versioning entry)"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.40.0",
       "tag": "@grackle-ai/cli_v0.40.0",
       "date": "Wed, 18 Mar 2026 13:51:51 GMT",
