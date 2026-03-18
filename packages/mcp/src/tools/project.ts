@@ -70,6 +70,10 @@ export const projectTools: ToolDefinition[] = [
         .boolean()
         .optional()
         .describe("Enable worktree isolation (defaults to true)"),
+      defaultPersonaId: z
+        .string()
+        .optional()
+        .describe("Default persona for tasks in this project"),
     }),
     rpcMethod: "createProject",
     mutating: true,
@@ -89,6 +93,7 @@ export const projectTools: ToolDefinition[] = [
             (args.defaultEnvironmentId as string | undefined) ?? "",
           worktreeBasePath: (args.worktreeBasePath as string | undefined) ?? "",
           useWorktrees: args.useWorktrees as boolean | undefined,
+          defaultPersonaId: (args.defaultPersonaId as string | undefined) ?? "",
         });
         return jsonResult({
           id: project.id,
@@ -96,6 +101,7 @@ export const projectTools: ToolDefinition[] = [
           description: project.description,
           repoUrl: project.repoUrl,
           defaultEnvironmentId: project.defaultEnvironmentId,
+          defaultPersonaId: project.defaultPersonaId,
           worktreeBasePath: project.worktreeBasePath,
           useWorktrees: project.useWorktrees,
           status: projectStatusToString(project.status) || "unspecified",
@@ -176,6 +182,10 @@ export const projectTools: ToolDefinition[] = [
         .boolean()
         .optional()
         .describe("Enable or disable worktree isolation"),
+      defaultPersonaId: z
+        .string()
+        .optional()
+        .describe("Default persona for tasks in this project"),
     }),
     rpcMethod: "updateProject",
     mutating: true,
@@ -197,6 +207,7 @@ export const projectTools: ToolDefinition[] = [
             | undefined,
           worktreeBasePath: args.worktreeBasePath as string | undefined,
           useWorktrees: args.useWorktrees as boolean | undefined,
+          defaultPersonaId: args.defaultPersonaId as string | undefined,
         });
         return jsonResult({
           id: project.id,
@@ -204,6 +215,7 @@ export const projectTools: ToolDefinition[] = [
           description: project.description,
           repoUrl: project.repoUrl,
           defaultEnvironmentId: project.defaultEnvironmentId,
+          defaultPersonaId: project.defaultPersonaId,
           worktreeBasePath: project.worktreeBasePath,
           useWorktrees: project.useWorktrees,
           status: projectStatusToString(project.status) || "unspecified",

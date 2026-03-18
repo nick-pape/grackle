@@ -232,7 +232,7 @@ test.describe("Environment Lifecycle — WebSocket Handlers", () => {
             id: "test-local",
             displayName: "test-local",
             adapterType: "local",
-            defaultRuntime: "stub",
+
             status: "connected",
             bootstrapped: true,
           },
@@ -240,7 +240,7 @@ test.describe("Environment Lifecycle — WebSocket Handlers", () => {
             id: "temp-remove-test",
             displayName: "temp-remove-test",
             adapterType: "local",
-            defaultRuntime: "stub",
+
             status: "disconnected",
             bootstrapped: false,
           },
@@ -261,7 +261,7 @@ test.describe("Environment Lifecycle — WebSocket Handlers", () => {
             id: "test-local",
             displayName: "test-local",
             adapterType: "local",
-            defaultRuntime: "stub",
+
             status: "connected",
             bootstrapped: true,
           },

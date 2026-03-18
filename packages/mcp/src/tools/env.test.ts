@@ -32,7 +32,6 @@ describe("env_list", () => {
           displayName: "Dev Box",
           adapterType: "ssh",
           status: "running",
-          defaultRuntime: "claude-code",
         },
       ],
     });
@@ -46,7 +45,6 @@ describe("env_list", () => {
         displayName: "Dev Box",
         adapterType: "ssh",
         status: "running",
-        defaultRuntime: "claude-code",
       },
     ]);
     expect(result.isError).toBeUndefined();
@@ -68,8 +66,8 @@ describe("env_list", () => {
 });
 
 describe("env_add", () => {
-  /** Should JSON.stringify adapterConfig and default runtime to empty string. */
-  test("happy path stringifies adapterConfig and defaults runtime", async () => {
+  /** Should JSON.stringify adapterConfig. */
+  test("happy path stringifies adapterConfig", async () => {
     const mockClient = createMockClient();
     (mockClient.addEnvironment as ReturnType<typeof vi.fn>).mockResolvedValue({
       id: "env-2",
@@ -89,7 +87,6 @@ describe("env_add", () => {
       displayName: "My Env",
       adapterType: "codespace",
       adapterConfig: JSON.stringify({ owner: "octocat", repo: "hello" }),
-      defaultRuntime: "",
     });
 
     const parsed = JSON.parse(result.content[0].text);
@@ -103,7 +100,7 @@ describe("env_add", () => {
     (mockClient.addEnvironment as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "env-3" });
 
     await getTool("env_add").handler(
-      { displayName: "Plain", adapterType: "local", runtime: "claude-code" },
+      { displayName: "Plain", adapterType: "local" },
       mockClient,
     );
 
@@ -111,7 +108,6 @@ describe("env_add", () => {
       displayName: "Plain",
       adapterType: "local",
       adapterConfig: "",
-      defaultRuntime: "claude-code",
     });
   });
 

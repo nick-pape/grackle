@@ -61,8 +61,6 @@ export interface UseGrackleSocketResult {
   spawn: (
     environmentId: string,
     prompt: string,
-    model?: string,
-    runtime?: string,
     personaId?: string,
     worktreeBasePath?: string,
   ) => void;
@@ -126,7 +124,6 @@ export interface UseGrackleSocketResult {
     displayName: string,
     adapterType: string,
     adapterConfig?: Record<string, unknown>,
-    defaultRuntime?: string,
   ) => void;
   loadTokens: () => void;
   setToken: (

@@ -72,7 +72,7 @@ message Environment {
   string display_name = 2;
   string adapter_type = 3;
   string adapter_config = 4; // JSON
-  string default_runtime = 5;
+  reserved 5; // was default_runtime (moved to Persona)
   bool bootstrapped = 6;
   string status = 7;
   string last_seen = 8;
@@ -88,7 +88,7 @@ message AddEnvironmentRequest {
   string display_name = 1;
   string adapter_type = 2;
   string adapter_config = 3; // JSON
-  string default_runtime = 4;
+  reserved 4; // was default_runtime (moved to Persona)
 }
 
 message ProvisionEvent {
@@ -129,12 +129,12 @@ message SessionFilter {
 message SpawnRequest {
   string environment_id = 1;
   string prompt = 2;
-  string model = 3;
+  reserved 3; // was model (now comes from Persona)
   int32 max_turns = 4;
-  string runtime = 5; // empty = use env default
+  reserved 5; // was runtime (now comes from Persona)
   string branch = 6; // Branch for worktree (empty = skip)
   string system_context = 7; // Prepended to prompt (task desc + findings)
-  string persona_id = 8; // Optional persona template
+  string persona_id = 8; // Persona to use (required; falls back to env/project/app default)
   string worktree_base_path = 9; // Base path for worktrees (non-task spawns)
 }
 
@@ -212,6 +212,7 @@ message Project {
   string updated_at = 8;
   bool use_worktrees = 9; // When false, agents work in the main checkout (no worktree dirs created)
   string worktree_base_path = 10; // Base path for worktrees (e.g. /workspaces/my-repo)
+  string default_persona_id = 11; // Default persona for tasks in this project
 }
 
 message ProjectList {
@@ -225,6 +226,7 @@ message CreateProjectRequest {
   string default_environment_id = 4;
   optional bool use_worktrees = 5; // Default true when omitted
   optional string worktree_base_path = 6; // Base path for worktrees (e.g. /workspaces/my-repo)
+  optional string default_persona_id = 7; // Default persona for tasks in this project
 }
 
 message UpdateProjectRequest {
@@ -235,6 +237,7 @@ message UpdateProjectRequest {
   optional string default_environment_id = 5;
   optional bool use_worktrees = 6; // When false, disables worktree isolation for this project
   optional string worktree_base_path = 7; // Base path for worktrees (e.g. /workspaces/my-repo)
+  optional string default_persona_id = 8; // Default persona for tasks in this project
 }
 
 message ProjectId {
@@ -265,6 +268,7 @@ message Task {
   repeated string child_task_ids = 19; // populated by server on read
   bool can_decompose = 20;
   reserved 21; // was persona_id (moved to Session)
+  string default_persona_id = 22; // Default persona for this task (overrides project default)
 }
 
 message TaskList {
@@ -286,6 +290,7 @@ message CreateTaskRequest {
   string parent_task_id = 6;
   optional bool can_decompose = 7;
   reserved 8; // was persona_id (moved to StartTaskRequest/Session)
+  optional string default_persona_id = 9; // Default persona for this task
 }
 
 message TaskId {
@@ -301,13 +306,14 @@ message UpdateTaskRequest {
   repeated string depends_on = 6;
   reserved 7; // was review_notes (moved to StartTaskRequest)
   string session_id = 8; // Optional: late-bind an existing session to this task
+  optional string default_persona_id = 9; // Default persona for this task
 }
 
 message StartTaskRequest {
   string task_id = 1;
-  string runtime = 2;
-  string model = 3;
-  string persona_id = 4; // Persona to use for the agent session
+  reserved 2; // was runtime (now comes from Persona)
+  reserved 3; // was model (now comes from Persona)
+  string persona_id = 4; // Persona override (falls back to task/project/app default)
   string environment_id = 5; // Select environment at start time
   string notes = 6; // Feedback/instructions for retry (included in system context)
 }
@@ -424,6 +430,22 @@ message UpdatePersonaRequest {
   repeated McpServerConfig mcp_servers = 9;
 }
 
+// ─── Settings ───────────────────────────────────────────────
+
+message GetSettingRequest {
+  string key = 1;
+}
+
+message SetSettingRequest {
+  string key = 1;
+  string value = 2;
+}
+
+message SettingResponse {
+  string key = 1;
+  string value = 2;
+}
+
 // ─── Pairing ────────────────────────────────────────────────
 
 message PairingCodeResponse {
@@ -493,6 +515,10 @@ service Grackle {
 
   // GitHub Import
   rpc ImportGitHubIssues(ImportGitHubIssuesRequest) returns (ImportGitHubIssuesResponse);
+
+  // Settings
+  rpc GetSetting(GetSettingRequest) returns (SettingResponse);
+  rpc SetSetting(SetSettingRequest) returns (SettingResponse);
 
   // Pairing
   rpc GeneratePairingCode(Empty) returns (PairingCodeResponse);

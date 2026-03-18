@@ -123,7 +123,7 @@ test.describe("Disconnected environment blocks message send", () => {
             id: "test-local",
             displayName: "test-local",
             adapterType: "local",
-            defaultRuntime: "stub",
+
             status: "disconnected",
             bootstrapped: true,
           },
@@ -311,7 +311,7 @@ test.describe("Disconnected environment blocks message send", () => {
             id: "test-local",
             displayName: "test-local",
             adapterType: "local",
-            defaultRuntime: "stub",
+
             status: "disconnected",
             bootstrapped: true,
           },
@@ -362,7 +362,7 @@ test.describe("Disconnected environment blocks message send", () => {
             id: "test-local",
             displayName: "test-local",
             adapterType: "local",
-            defaultRuntime: "stub",
+
             status: "connected",
             bootstrapped: true,
           },
@@ -460,7 +460,7 @@ test.describe("Disconnected environment blocks message send", () => {
             id: "test-local",
             displayName: "test-local",
             adapterType: "local",
-            defaultRuntime: "stub",
+
             status: "error",
             bootstrapped: true,
           },

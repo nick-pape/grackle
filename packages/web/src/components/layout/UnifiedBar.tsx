@@ -244,7 +244,7 @@ export function UnifiedBar(): JSX.Element {
       } else if (envAdapterType === "codespace") {
         config.codespaceName = envCodespaceName.trim();
       }
-      addEnvironment(envName.trim(), envAdapterType, config, envRuntime);
+      addEnvironment(envName.trim(), envAdapterType, config);
       showToast("Environment added successfully", "success");
       setEnvName("");
       setEnvAdapterType("local");
@@ -510,7 +510,7 @@ export function UnifiedBar(): JSX.Element {
       if (!text.trim() || !newChatEnvId) {
         return;
       }
-      spawn(newChatEnvId, text, undefined, runtime, spawnPersonaId);
+      spawn(newChatEnvId, text, spawnPersonaId);
       showToast("Session started", "success");
       setText("");
       setSpawnPersonaId("");
@@ -578,7 +578,7 @@ export function UnifiedBar(): JSX.Element {
       return (
         <div className={styles.bar}>
           <span className={`${styles.statusText} ${styles.hintText}`}>Session {session.status}</span>
-          <button onClick={() => navigate(newChatUrl(session.environmentId, session.runtime))} className={styles.btnPrimary}>
+          <button onClick={() => navigate(newChatUrl(session.environmentId))} className={styles.btnPrimary}>
             + New Chat
           </button>
         </div>

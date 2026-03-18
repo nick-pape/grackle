@@ -326,6 +326,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
         status: "active",
         worktreeBasePath: "",
         useWorktrees: true,
+        defaultPersonaId: "",
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
@@ -395,6 +396,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
           depth,
           childTaskIds: [],
           canDecompose: !parentTaskId,
+          defaultPersonaId: "",
         };
 
         return [...prev, newTask];
@@ -711,9 +713,8 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       displayName: string,
       adapterType: string,
       adapterConfig?: Record<string, unknown>,
-      defaultRuntime?: string,
     ) => {
-      console.log("[MockGrackle] addEnvironment", { displayName, adapterType, adapterConfig, defaultRuntime });
+      console.log("[MockGrackle] addEnvironment", { displayName, adapterType, adapterConfig });
     },
     [],
   );

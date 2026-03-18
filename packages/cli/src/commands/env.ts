@@ -19,14 +19,14 @@ export function registerEnvCommands(program: Command): void {
         return;
       }
       const table = new Table({
-        head: ["ID", "Type", "Runtime", "Status", "Bootstrapped"],
+        head: ["ID", "Type", "Status", "Bootstrapped"],
       });
       for (const e of res.environments) {
         const status = e.status === "connected" ? chalk.green("●") + " " + e.status :
                        e.status === "sleeping" ? chalk.yellow("●") + " " + e.status :
                        e.status === "error" ? chalk.red("●") + " " + e.status :
                        chalk.gray("●") + " " + e.status;
-        table.push([e.id, e.adapterType, e.defaultRuntime, status, e.bootstrapped ? "yes" : "no"]);
+        table.push([e.id, e.adapterType, status, e.bootstrapped ? "yes" : "no"]);
       }
       console.log(table.toString());
     });
@@ -48,12 +48,11 @@ export function registerEnvCommands(program: Command): void {
     .option("--ssh-port <sshPort>", "SSH port (default: 22)")
     .option("--identity-file <path>", "SSH identity file (private key)")
     .option("--codespace-name <name>", "Codespace name (from `gh codespace list`)")
-    .option("--runtime <runtime>", "Default runtime", "claude-code")
     .action(async (name: string, opts: {
       codespace?: boolean; docker?: boolean; ssh?: boolean; local?: boolean;
       repo?: string; image?: string; host?: string; port?: string; user?: string;
       volume?: string[]; gpu?: string | boolean; sshPort?: string;
-      identityFile?: string; codespaceName?: string; runtime?: string;
+      identityFile?: string; codespaceName?: string;
     }) => {
       const client = createGrackleClient();
       let adapterType: AdapterType = "docker";
@@ -99,7 +98,6 @@ export function registerEnvCommands(program: Command): void {
         displayName: name,
         adapterType,
         adapterConfig: JSON.stringify(config),
-        defaultRuntime: opts.runtime,
       });
       console.log(`Added environment: ${env.id} (${env.adapterType})`);
     });

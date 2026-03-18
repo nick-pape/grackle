@@ -40,7 +40,7 @@ vi.mock("./ws-broadcast.js", () => ({
 
 vi.mock("./env-registry.js", () => ({
   listEnvironments: vi.fn(() => []),
-  getEnvironment: vi.fn(() => ({ defaultRuntime: "claude-code" })),
+  getEnvironment: vi.fn(() => ({ adapterType: "local" })),
   addEnvironment: vi.fn(),
   removeEnvironment: vi.fn(),
   updateEnvironmentStatus: vi.fn(),
@@ -80,11 +80,25 @@ vi.mock("./finding-store.js", () => ({
 
 vi.mock("./persona-store.js", () => ({
   listPersonas: vi.fn(() => []),
-  getPersona: vi.fn(() => undefined),
+  getPersona: vi.fn(() => ({
+    id: "claude-code",
+    name: "Claude Code",
+    runtime: "claude-code",
+    model: "sonnet",
+    maxTurns: 0,
+    systemPrompt: "",
+    toolConfig: "{}",
+    mcpServers: "[]",
+  })),
   getPersonaByName: vi.fn(() => undefined),
   createPersona: vi.fn(),
   updatePersona: vi.fn(),
   deletePersona: vi.fn(),
+}));
+
+vi.mock("./settings-store.js", () => ({
+  getSetting: vi.fn((key: string) => key === "default_persona_id" ? "claude-code" : undefined),
+  setSetting: vi.fn(),
 }));
 
 vi.mock("@grackle-ai/adapter-sdk", async (importOriginal) => ({
@@ -315,7 +329,7 @@ describe("task-start token push", () => {
 
       await startTask!({ taskId: "task-1", environmentId: "env-1" });
 
-      expect(refreshSpy).toHaveBeenCalledWith("env-1", "claude-code", undefined);
+      expect(refreshSpy).toHaveBeenCalledWith("env-1", "claude-code", { excludeFileTokens: true });
 
       // Verify refresh happened before spawn
       const refreshOrder = refreshSpy.mock.invocationCallOrder[0];

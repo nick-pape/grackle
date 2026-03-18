@@ -31,7 +31,6 @@ export const envTools: ToolDefinition[] = [
             displayName: e.displayName,
             adapterType: e.adapterType,
             status: e.status,
-            defaultRuntime: e.defaultRuntime,
           })),
         );
       } catch (error) {
@@ -53,7 +52,6 @@ export const envTools: ToolDefinition[] = [
         .record(z.string(), z.unknown())
         .optional()
         .describe("Adapter-specific configuration as a JSON object"),
-      runtime: z.string().optional().describe("Default runtime for the environment"),
     }),
     rpcMethod: "addEnvironment",
     mutating: true,
@@ -69,7 +67,6 @@ export const envTools: ToolDefinition[] = [
           displayName: string;
           adapterType: string;
           adapterConfig?: Record<string, unknown>;
-          runtime?: string;
         };
         const response = await client.addEnvironment({
           displayName: parsed.displayName,
@@ -77,7 +74,6 @@ export const envTools: ToolDefinition[] = [
           adapterConfig: parsed.adapterConfig
             ? JSON.stringify(parsed.adapterConfig)
             : "",
-          defaultRuntime: parsed.runtime ?? "",
         });
         return jsonResult(response);
       } catch (error) {
