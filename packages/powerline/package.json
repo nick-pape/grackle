@@ -1,6 +1,6 @@
 {
   "name": "@grackle-ai/powerline",
-  "version": "0.37.0",
+  "version": "0.38.1",
   "description": "gRPC PowerLine server for Grackle AI agent integration",
   "license": "MIT",
   "repository": {

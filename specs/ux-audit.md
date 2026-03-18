@@ -12,7 +12,7 @@ This document captures a UX-focused audit of the Grackle web UI based on code ex
 
 **Current:** The sidebar has two tabs — **Projects** and **Environments** — at equal visual weight. Switching between them replaces the entire sidebar.
 
-![Environments tab — sidebar and main panel desynchronized](screenshots/10-environments-tab.png)
+![Environments tab — sidebar and main panel desynchronized](../screenshots/10-environments-tab.png)
 
 **Problem:** Environments are infrastructure config — set once, rarely revisited. Giving them equal billing with Projects forces a wrong mental model. Switching tabs also desynchronizes the sidebar from the main panel (notice the DAG still showing above while the sidebar shows environments).
 
@@ -26,7 +26,7 @@ This document captures a UX-focused audit of the Grackle web UI based on code ex
 
 **Current:** On first load, the main panel shows "Select a session, project, or task to get started" — centered text on a dark void.
 
-![Landing page — empty state with no useful information](screenshots/01-landing-empty-state.png)
+![Landing page — empty state with no useful information](../screenshots/01-landing-empty-state.png)
 
 **Problem:** No overview of active work. The mock data has 2 running sessions, 2 tasks in review, 2 blocked tasks, and 1 failed task — but none of this is visible without drilling into each project.
 
@@ -41,7 +41,7 @@ This document captures a UX-focused audit of the Grackle web UI based on code ex
 
 **Current:** Settings only contains token management. The page is mostly empty.
 
-![Settings page — only token management, mostly empty](screenshots/11-settings-tokens.png)
+![Settings page — only token management, mostly empty](../screenshots/11-settings-tokens.png)
 
 **Problem:** Three tokens and an add form don't justify a full-screen view. Environments need a proper home.
 
@@ -56,7 +56,7 @@ This nav is "static" — always visible, not collapsible — because we'll add m
 
 **Current:** The header bar shows "Task: Implement JWT authentication | in_progress | feat/jwt-auth" as a flat string.
 
-![Task header — flat string with no navigable breadcrumbs](screenshots/03-task-in-progress-stream.png)
+![Task header — flat string with no navigable breadcrumbs](../screenshots/03-task-in-progress-stream.png)
 
 **Problem:** Users lose context — no indication of which project a task belongs to, and no clickable path back. For subtasks, there's no indication of the parent task either.
 
@@ -77,7 +77,7 @@ Clicking any breadcrumb segment navigates to that level.
 
 **Current:** Creating a task happens in the UnifiedBar at the bottom of the screen. There is no edit experience at all.
 
-![New task form — 90% wasted space, form crammed at bottom](screenshots/12-new-task-form.png)
+![New task form — 90% wasted space, form crammed at bottom](../screenshots/12-new-task-form.png)
 
 **Problem:**
 - **90% of the screen is wasted** showing "Fill in the task details below" while the form is crammed into two thin rows at the bottom.
@@ -106,7 +106,7 @@ Covered by 2.1 — edit is the same view as create, just pre-populated. Editable
 
 **Current:** Clicking a project shows a DAG (Graph tab) and a task summary (Tasks tab) saying "2/8 tasks complete". No project metadata is visible.
 
-![Project view — task summary with no project metadata](screenshots/02-project-alpha-tasks.png)
+![Project view — task summary with no project metadata](../screenshots/02-project-alpha-tasks.png)
 
 **Problem:** Projects have description, repo URL, and default environment in the data model, but none are visible or editable in the UI.
 
@@ -124,7 +124,7 @@ This is the same "click to edit" pattern that tools like Notion and Linear use �
 
 **Current:** Task dependencies can only be set programmatically. The DAG is read-only.
 
-![Project DAG — read-only, no way to add dependencies](screenshots/09-project-dag.png)
+![Project DAG — read-only, no way to add dependencies](../screenshots/09-project-dag.png)
 
 **Problem:** The DAG is a display artifact, not a planning tool. Users can't create dependency relationships from the UI.
 
@@ -137,7 +137,7 @@ This is the same "click to edit" pattern that tools like Notion and Linear use �
 
 **Current:** Creating a project is a tiny inline input in the sidebar.
 
-![Create project — tiny inline form](screenshots/14-create-project-form.png)
+![Create project — tiny inline form](../screenshots/14-create-project-form.png)
 
 **Problem:** Only captures the name. Description, repo URL, and default environment are skipped.
 
@@ -166,12 +166,12 @@ This is the same "click to edit" pattern that tools like Notion and Linear use �
 
 | Mode | Bottom bar becomes... |
 |------|----------------------|
-| Task creation | ![](screenshots/12-new-task-form.png) |
-| Environment creation | ![](screenshots/13-new-environment-form.png) |
-| Agent working | ![](screenshots/03-task-in-progress-stream.png) |
-| Task review | ![](screenshots/07-task-review-state.png) |
-| Blocked task | ![](screenshots/08-task-blocked.png) |
-| Empty state | ![](screenshots/01-landing-empty-state.png) |
+| Task creation | ![](../screenshots/12-new-task-form.png) |
+| Environment creation | ![](../screenshots/13-new-environment-form.png) |
+| Agent working | ![](../screenshots/03-task-in-progress-stream.png) |
+| Task review | ![](../screenshots/07-task-review-state.png) |
+| Blocked task | ![](../screenshots/08-task-blocked.png) |
+| Empty state | ![](../screenshots/01-landing-empty-state.png) |
 
 **Problem:** No consistent mental model. The bar is a Swiss Army knife — it's a vestige from early development when messaging was the only feature.
 
@@ -191,7 +191,7 @@ Everything else currently in the bar moves elsewhere:
 
 **Current:** Start, Approve, Reject, Delete buttons are in the bottom bar, far from the content they act on.
 
-![Review state — Approve/Reject far from content](screenshots/07-task-review-state.png)
+![Review state — Approve/Reject far from content](../screenshots/07-task-review-state.png)
 
 **Proposal:** Move action buttons to the **task detail header** (top of main panel, next to title and status):
 - **Pending + unblocked:** `[Start Task]` `[Edit]` `[Delete]`
@@ -276,11 +276,11 @@ Everything else currently in the bar moves elsewhere:
 
 **Current:** Shows only "DESCRIPTION" and "ENVIRONMENT". ~85% empty space.
 
-![Task Overview — two fields in a sea of nothing](screenshots/04-task-overview.png)
+![Task Overview — two fields in a sea of nothing](../screenshots/04-task-overview.png)
 
 Compare to the Findings tab which is dense with useful information:
 
-![Findings tab — rich, useful content](screenshots/06-task-findings.png)
+![Findings tab — rich, useful content](../screenshots/06-task-findings.png)
 
 **Proposal:** Make the overview a proper task dashboard:
 - **Status badge** — large, colored
@@ -296,7 +296,7 @@ Compare to the Findings tab which is dense with useful information:
 
 **Current:** Task names are truncated to near-unreadable lengths at the default 260px width.
 
-![Sidebar — task names truncated: "Write au...", "Add rate l..."](screenshots/02-project-alpha-tasks.png)
+![Sidebar — task names truncated: "Write au...", "Add rate l..."](../screenshots/02-project-alpha-tasks.png)
 
 **Problem:** "Write au..." could be anything. The sidebar is resizable but the min/max are too tight.
 
@@ -310,7 +310,7 @@ Compare to the Findings tab which is dense with useful information:
 
 **Current:** Findings show raw ISO: "2026-02-27T08:16:00Z".
 
-![Findings — raw ISO timestamps](screenshots/06-task-findings.png)
+![Findings — raw ISO timestamps](../screenshots/06-task-findings.png)
 
 **Proposal:** Use relative timestamps ("2h ago", "yesterday") with full ISO on hover tooltip.
 
@@ -318,7 +318,7 @@ Compare to the Findings tab which is dense with useful information:
 
 **Current:** The DAG view works well visually but isn't practically useful for day-to-day work.
 
-![DAG view](screenshots/09-project-dag.png)
+![DAG view](../screenshots/09-project-dag.png)
 
 **Proposal:** This is primarily a marketing/screenshot asset. Minor polish only:
 - Show full task names (wider nodes)
@@ -329,7 +329,7 @@ Compare to the Findings tab which is dense with useful information:
 
 **Current:** Empty states are passive centered text.
 
-![Empty landing state](screenshots/01-landing-empty-state.png)
+![Empty landing state](../screenshots/01-landing-empty-state.png)
 
 **Problem:** These are critical onboarding moments. Every empty state should have a **large, prominent call to action**.
 
@@ -404,9 +404,9 @@ A full command palette (with actions like "Create Task", "Go to Settings") is a 
 
 These should each become individual GitHub issues:
 
-- [ ] **UnifiedBar state leak:** "new env" form persists in the bar after navigating to Projects tab ([screenshot 14](screenshots/14-create-project-form.png)). Bar state should reset on navigation.
+- [ ] **UnifiedBar state leak:** "new env" form persists in the bar after navigating to Projects tab ([screenshot 14](../screenshots/14-create-project-form.png)). Bar state should reset on navigation.
 
-![State leak — "new env" bar persists during project creation](screenshots/14-create-project-form.png)
+![State leak — "new env" bar persists during project creation](../screenshots/14-create-project-form.png)
 
 - [ ] **React uncontrolled-to-controlled input warning:** Console error when switching to review task state. Likely missing `defaultValue`/`value` on rejection notes input.
 - [ ] **User input vanishes from stream:** When sending input to a `waiting_input` session, the user's text disappears — no event is created, no visual record exists. See 4.2.

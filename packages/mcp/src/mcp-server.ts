@@ -95,10 +95,28 @@ function createMcpServerInstance(grpcClient: Client<typeof grackle.Grackle>, aut
       };
     }
 
-    // Inject projectId from scoped token so callers don't need to provide it
+    // Inject context from scoped token so callers don't need to provide it
     const rawArgs = (args ?? {}) as Record<string, unknown>;
     if (authContext.type === "scoped") {
       rawArgs.projectId = authContext.projectId;
+      // Auto-parent subtasks: when an agent creates a task, parent it to the agent's own task
+      if (name === "task_create" && authContext.taskId) {
+        rawArgs.parentTaskId = authContext.taskId;
+      }
+      // Enforce project scoping: verify task belongs to the caller's project
+      if (name === "task_show" && typeof rawArgs.taskId === "string" && rawArgs.taskId) {
+        try {
+          const task = await grpcClient.getTask({ id: rawArgs.taskId as string });
+          if (task.projectId !== authContext.projectId) {
+            return {
+              content: [{ type: "text", text: JSON.stringify({ error: "Task belongs to a different project", code: "PERMISSION_DENIED" }, null, 2) }],
+              isError: true,
+            };
+          }
+        } catch (error) {
+          return grpcErrorToToolResult(error) as CallToolResult;
+        }
+      }
     }
 
     // Validate inputs against Zod schema

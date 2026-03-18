@@ -81,6 +81,10 @@ export const taskTools: ToolDefinition[] = [
         .array(z.string())
         .optional()
         .describe("Array of task IDs that this task depends on"),
+      parentTaskId: z
+        .string()
+        .optional()
+        .describe("Parent task ID (auto-set when called by an agent working on a task)"),
     }),
     rpcMethod: "createTask",
     mutating: true,
@@ -97,7 +101,7 @@ export const taskTools: ToolDefinition[] = [
           title: args.title as string,
           description: (args.description as string | undefined) ?? "",
           dependsOn: (args.dependsOn as string[] | undefined) ?? [],
-          parentTaskId: "",
+          parentTaskId: (args.parentTaskId as string | undefined) ?? "",
         });
         return jsonResult(taskToJson(task));
       } catch (error) {

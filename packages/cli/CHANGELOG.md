@@ -1,6 +1,24 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Tue, 17 Mar 2026 15:03:49 GMT and should not be manually modified.
+This log was last generated on Wed, 18 Mar 2026 04:06:45 GMT and should not be manually modified.
+
+## 0.38.1
+Wed, 18 Mar 2026 04:06:45 GMT
+
+### Patches
+
+- Use ConnectError with proper gRPC status codes instead of plain Error in grpc-service.ts
+
+### Updates
+
+- placeholder
+
+## 0.38.0
+Tue, 17 Mar 2026 18:17:47 GMT
+
+### Minor changes
+
+- Auto-parent subtasks from agent context; expose task_list and task_show to scoped agents
 
 ## 0.37.0
 Tue, 17 Mar 2026 15:03:49 GMT

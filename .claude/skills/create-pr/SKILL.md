@@ -145,7 +145,7 @@ If already tracking a remote branch, use `git push` without `-u`.
 
 Only if the diff touches `packages/web/`.
 
-The canonical detailed procedure lives in `docs/pr-screenshot-workflow.md` (isolated stack, Playwright capture, SVG-wrapping PNGs, gist upload). Follow that doc; here is a quick summary of the key steps:
+Here is a quick summary of the key steps:
 
 **Quick summary:**
 1. Start an isolated Grackle stack on non-default ports (see the doc for port setup)

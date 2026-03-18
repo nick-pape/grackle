@@ -175,7 +175,7 @@ async function getGitHubToken(): Promise<string | undefined> {
 }
 
 /**
- * Build the base Docker image from the Dockerfile.powerline.
+ * Build the base Docker image from the docker/Dockerfile.powerline.
  * Resolves the monorepo root from import.meta.dirname (dist/adapters → 4 levels up).
  */
 async function buildBaseImage(tag: string): Promise<void> {
@@ -183,7 +183,7 @@ async function buildBaseImage(tag: string): Promise<void> {
   logger.info({ tag, monorepoRoot }, "Building base PowerLine image");
   await exec("docker", [
     "build",
-    "-f", resolve(monorepoRoot, "Dockerfile.powerline"),
+    "-f", resolve(monorepoRoot, "docker/Dockerfile.powerline"),
     "-t", tag,
     monorepoRoot,
   ], { timeout: DOCKER_BUILD_TIMEOUT_MS });
@@ -243,7 +243,7 @@ export class DockerAdapter implements EnvironmentAdapter {
 
     // Build or pull the base image
     const isDefault = image === DEFAULT_IMAGE;
-    const dockerfilePath = resolve(import.meta.dirname, "../../../../Dockerfile.powerline");
+    const dockerfilePath = resolve(import.meta.dirname, "../../../../docker/Dockerfile.powerline");
     if (isDevMode() && isDefault && existsSync(dockerfilePath)) {
       yield { stage: "creating", message: "Building base image...", progress: 0.05 };
       await buildBaseImage(image);

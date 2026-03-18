@@ -11,7 +11,7 @@ Grackle gives you a single platform to run any coding agent on any environment �
 
 Want agents to share knowledge? There's a findings system. Want one agent to spawn others? There's an MCP for that. Want task trees with dependencies and review gates? Same primitives. But you don't have to use any of that. **Start with one session on one box.**
 
-![Dashboard — projects, tasks, and live agent output](docs/screenshots/dashboard-projects-tasks.png)
+![Dashboard — projects, tasks, and live agent output](screenshots/dashboard-projects-tasks.png)
 
 ## 💡 Philosophy
 
@@ -54,9 +54,9 @@ graph TD
     B --> C
 ```
 
-![Task tree — hierarchical tasks with status indicators and expand/collapse](docs/screenshots/task-tree-hierarchy.png)
+![Task tree — hierarchical tasks with status indicators and expand/collapse](screenshots/task-tree-hierarchy.png)
 
-![DAG visualization — interactive dependency graph with hierarchy and dependency edges](docs/screenshots/dag-visualization.png)
+![DAG visualization — interactive dependency graph with hierarchy and dependency edges](screenshots/dag-visualization.png)
 
 #### 👥 Team [⭐#37](https://github.com/nick-pape/grackle/issues/37)
 
@@ -93,9 +93,9 @@ Workpads and workspaces are coming as a unified mechanism for structured agent h
 
 Agents don't just run in parallel — they share knowledge. One agent's architectural insight becomes another agent's context through findings and the knowledge graph [⭐#13](https://github.com/nick-pape/grackle/issues/13). Agent personas with focused system prompts and tool allowlists [⭐#11](https://github.com/nick-pape/grackle/issues/11) keep specialists on task. The coordination primitives are the ones engineers already use: git, branches, code review.
 
-![Findings — categorized discoveries shared across agents](docs/screenshots/findings-panel.png)
+![Findings — categorized discoveries shared across agents](screenshots/findings-panel.png)
 
-![Personas — specialized agent templates with runtime, model, and system prompt configuration](docs/screenshots/persona-management-view.png)
+![Personas — specialized agent templates with runtime, model, and system prompt configuration](screenshots/persona-management-view.png)
 
 ## 🏗️ Example Topology
 
@@ -153,7 +153,7 @@ Each agent runs inside an isolated environment. Connect one or many:
 | 🔒 **SSH** | ✅ Available | `grackle env add my-env --ssh --host ...` |
 | ☁️ **Codespace** | ✅ Available | `grackle env add my-env --codespace --codespace-name <name>` |
 
-![Settings — manage environments, session monitoring, and API tokens](docs/screenshots/agent-session-stream.png)
+![Settings — manage environments, session monitoring, and API tokens](screenshots/agent-session-stream.png)
 
 Docker spins up a container with PowerLine pre-installed. Local connects to a PowerLine instance already running on your machine. SSH connects to any remote host via OpenSSH. Codespace connects to an existing GitHub Codespace by name (use `gh codespace list` to find it).
 
