@@ -101,7 +101,7 @@ export function EditableTextArea(props: EditableTextAreaProps): JSX.Element {
       <div className={styles.editFieldWrapper}>
         <textarea
           ref={textareaRef}
-          className={styles.editTextarea}
+          className={`${styles.editTextarea} ${field.error ? styles.editInputInvalid : ""}`}
           value={field.draft}
           onChange={(e) => field.setDraft(e.target.value)}
           onBlur={field.handleBlur}
@@ -111,18 +111,24 @@ export function EditableTextArea(props: EditableTextAreaProps): JSX.Element {
           data-testid={testId ? `${testId}-input` : undefined}
         />
         {field.isDirty && <span className={styles.unsavedDot} title="Unsaved changes" />}
+        {field.error && (
+          <span className={styles.editError} data-testid="edit-error">{field.error}</span>
+        )}
         <span className={styles.editHint}>Tab to save &middot; Esc to cancel</span>
       </div>
     );
   }
 
-  // Display mode
+  // Display mode — uses <span role="button"> to avoid nested interactive elements
+  // when renderDisplay returns links or block-level content (e.g., Markdown)
   const displayContent = renderDisplay?.(value);
   return (
-    <button
-      type="button"
+    <span
+      role="button"
+      tabIndex={0}
       className={styles.metaValueClickable}
       onClick={() => field.startEdit()}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); field.startEdit(); } }}
       title="Click to edit"
       aria-label={ariaLabel}
       data-testid={testId ? `${testId}-button` : undefined}
@@ -137,6 +143,6 @@ export function EditableTextArea(props: EditableTextAreaProps): JSX.Element {
       <span className={styles.editButton} aria-hidden="true">
         &#x270F;&#xFE0F;
       </span>
-    </button>
+    </span>
   );
 }

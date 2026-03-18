@@ -133,7 +133,7 @@ export function EditableTextField(props: EditableTextFieldProps): JSX.Element {
       tabIndex={0}
       className={styles.metaValueClickable}
       onClick={() => field.startEdit()}
-      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { field.startEdit(); } }}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); field.startEdit(); } }}
       title="Click to edit"
       aria-label={ariaLabel}
       data-testid={testId ? `${testId}-button` : undefined}
