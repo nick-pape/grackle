@@ -128,10 +128,21 @@ vi.mock("./github-import.js", () => ({
   importGitHubIssues: vi.fn(),
 }));
 
+vi.mock("./task-store.js", () => ({
+  getTask: vi.fn(() => undefined),
+  listTasks: vi.fn(() => []),
+  createTask: vi.fn(),
+  updateTask: vi.fn(),
+  updateTaskStatus: vi.fn(),
+  getChildren: vi.fn(() => []),
+  deleteTask: vi.fn(),
+}));
+
 // ── Import AFTER mocks ──────────────────────────────────────────
 
 import { registerGrackleRoutes } from "./grpc-service.js";
 import * as sessionStore from "./session-store.js";
+import * as taskStore from "./task-store.js";
 import * as adapterManager from "./adapter-manager.js";
 import { processEventStream } from "./event-processor.js";
 import type { ConnectRouter } from "@connectrpc/connect";
@@ -322,6 +333,79 @@ describe("gRPC resumeAgent", () => {
     const result = await handlers.resumeAgent({ sessionId: "sess-1" }) as grackle.Session;
 
     expect(sessionStore.reanimateSession).toHaveBeenCalledWith("sess-1");
+    expect(result.id).toBe("sess-1");
+  });
+
+  it("can reanimate a session a second time after it completes again", async () => {
+    const completedSession = makeSession({ status: "completed" });
+    const runningSession = makeSession({ status: "running", endedAt: null });
+    const completedAgain = makeSession({ status: "completed" });
+
+    vi.mocked(sessionStore.getSession)
+      .mockReturnValueOnce(completedSession)  // first reanimate: lookup
+      .mockReturnValueOnce(runningSession)    // first reanimate: return value
+      .mockReturnValueOnce(completedAgain)    // second reanimate: lookup
+      .mockReturnValueOnce(runningSession);   // second reanimate: return value
+    vi.mocked(sessionStore.getActiveForEnv).mockReturnValue(undefined);
+    vi.mocked(adapterManager.getConnection).mockReturnValue(makeConnection() as never);
+
+    await handlers.resumeAgent({ sessionId: "sess-1" });
+    await handlers.resumeAgent({ sessionId: "sess-1" });
+
+    expect(sessionStore.reanimateSession).toHaveBeenCalledTimes(2);
+    expect(processEventStream).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("gRPC resumeTask", () => {
+  let handlers: Record<string, (...args: unknown[]) => unknown>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    handlers = getHandlers();
+  });
+
+  it("throws NotFound when task does not exist", async () => {
+    vi.mocked(taskStore.getTask).mockReturnValue(undefined);
+
+    const err = await handlers.resumeTask({ id: "task-1" }).catch((e: unknown) => e) as ConnectError;
+    expect(err).toBeInstanceOf(ConnectError);
+    expect(err.code).toBe(Code.NotFound);
+  });
+
+  it("throws FailedPrecondition when task has no sessions", async () => {
+    vi.mocked(taskStore.getTask).mockReturnValue({ id: "task-1", projectId: "proj-1" } as never);
+    vi.mocked(sessionStore.getLatestSessionForTask).mockReturnValue(undefined);
+
+    const err = await handlers.resumeTask({ id: "task-1" }).catch((e: unknown) => e) as ConnectError;
+    expect(err).toBeInstanceOf(ConnectError);
+    expect(err.code).toBe(Code.FailedPrecondition);
+  });
+
+  it("throws FailedPrecondition when latest session has no runtimeSessionId", async () => {
+    vi.mocked(taskStore.getTask).mockReturnValue({ id: "task-1", projectId: "proj-1" } as never);
+    vi.mocked(sessionStore.getLatestSessionForTask).mockReturnValue(
+      makeSession({ status: "completed", runtimeSessionId: null }),
+    );
+
+    const err = await handlers.resumeTask({ id: "task-1" }).catch((e: unknown) => e) as ConnectError;
+    expect(err).toBeInstanceOf(ConnectError);
+    expect(err.code).toBe(Code.FailedPrecondition);
+    expect(err.message).toContain("no runtime session ID");
+  });
+
+  it("succeeds when latest session has a runtimeSessionId (happy path)", async () => {
+    const task = { id: "task-1", projectId: "proj-1" };
+    const session = makeSession({ status: "completed", runtimeSessionId: "rt-abc" });
+    const runningSession = makeSession({ status: "running" });
+    vi.mocked(taskStore.getTask).mockReturnValue(task as never);
+    vi.mocked(sessionStore.getLatestSessionForTask).mockReturnValue(session);
+    vi.mocked(sessionStore.getSession).mockReturnValue(runningSession);
+    vi.mocked(adapterManager.getConnection).mockReturnValue(makeConnection() as never);
+
+    const result = await handlers.resumeTask({ id: "task-1" }) as grackle.Session;
+
+    expect(processEventStream).toHaveBeenCalled();
     expect(result.id).toBe("sess-1");
   });
 });
