@@ -936,6 +936,14 @@ async function handleMessage(
         sendWs(ws, { type: "error", payload: { message: `Setting key not allowed: ${key}` } });
         return;
       }
+      // Validate persona ID exists when setting default_persona_id
+      if (key === "default_persona_id" && value) {
+        const persona = personaStore.getPersona(value);
+        if (!persona) {
+          sendWs(ws, { type: "error", payload: { message: `Persona not found: ${value}` } });
+          return;
+        }
+      }
       settingsStore.setSetting(key, value);
       broadcast({ type: "setting_changed", payload: { key, value } });
       break;

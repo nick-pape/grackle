@@ -134,7 +134,7 @@ message SpawnRequest {
   reserved 5; // was runtime (now comes from Persona)
   string branch = 6; // Branch for worktree (empty = skip)
   string system_context = 7; // Prepended to prompt (task desc + findings)
-  string persona_id = 8; // Persona to use (required; falls back to env/project/app default)
+  string persona_id = 8; // Persona to use (falls back to app default persona)
   string worktree_base_path = 9; // Base path for worktrees (non-task spawns)
 }
 

@@ -1326,6 +1326,13 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       if (!isAllowedSettingKey(req.key)) {
         throw new ConnectError(`Setting key not allowed: ${req.key}`, Code.InvalidArgument);
       }
+      // Validate persona ID exists when setting default_persona_id
+      if (req.key === "default_persona_id" && req.value) {
+        const persona = personaStore.getPersona(req.value);
+        if (!persona) {
+          throw new ConnectError(`Persona not found: ${req.value}`, Code.NotFound);
+        }
+      }
       settingsStore.setSetting(req.key, req.value);
       broadcast({ type: "setting_changed", payload: { key: req.key, value: req.value } });
       return create(grackle.SettingResponseSchema, {
