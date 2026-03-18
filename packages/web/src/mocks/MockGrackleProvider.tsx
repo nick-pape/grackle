@@ -362,6 +362,8 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       description?: string,
       dependsOn?: string[],
       parentTaskId?: string,
+      onSuccess?: () => void,
+      _onError?: (message: string) => void,
     ) => {
       console.log("[MockGrackle] createTask", { projectId, title, parentTaskId });
 
@@ -399,6 +401,9 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
 
         return [...prev, newTask];
       });
+      if (onSuccess) {
+        onSuccess();
+      }
     },
     [nextId],
   );
