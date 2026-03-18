@@ -425,14 +425,11 @@ export function initDatabase(): void {
     .get() as { value: string } | undefined;
   if (!existingDefault) {
     // Prefer the seed persona 'claude-code' if it exists; otherwise fall back
-    // to the first persona alphabetically. LIMIT 1 on the UNION returns the
-    // first matching row, so 'claude-code' wins when present.
-    const fallback = sqlite
-      .prepare(
-        "SELECT id FROM personas WHERE id = 'claude-code' " +
-        "UNION ALL SELECT id FROM personas ORDER BY name LIMIT 1",
-      )
-      .get() as { id: string } | undefined;
+    // to the first persona alphabetically.
+    const fallback = (
+      sqlite.prepare("SELECT id FROM personas WHERE id = 'claude-code'").get() ??
+      sqlite.prepare("SELECT id FROM personas ORDER BY name LIMIT 1").get()
+    ) as { id: string } | undefined;
     if (fallback) {
       sqlite
         .prepare("INSERT OR IGNORE INTO settings (key, value) VALUES ('default_persona_id', ?)")

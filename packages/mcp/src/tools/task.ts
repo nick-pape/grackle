@@ -212,7 +212,7 @@ export const taskTools: ToolDefinition[] = [
     name: "task_start",
     group: "task",
     description:
-      "Start a task by spawning an AI agent session to work on it, with optional runtime and model configuration.",
+      "Start a task by spawning an AI agent session to work on it. Runtime and model come from the resolved persona.",
     inputSchema: z.object({
       taskId: z.string().describe("The ID of the task to start"),
       personaId: z

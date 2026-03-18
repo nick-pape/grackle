@@ -224,13 +224,14 @@ function personaRowToProto(row: personaStore.PersonaRow): grackle.Persona {
 
 /** Convert persona MCP server configs to a JSON string for the PowerLine SpawnRequest. */
 function personaMcpServersToJson(row: personaStore.PersonaRow): string {
-  const mcpServers = JSON.parse(row.mcpServers || "[]") as {
-    name: string;
-    command: string;
-    args?: string[];
-    tools?: string[];
-  }[];
-  if (mcpServers.length === 0) {
+  let mcpServers: { name: string; command: string; args?: string[]; tools?: string[] }[];
+  try {
+    mcpServers = JSON.parse(row.mcpServers || "[]") as typeof mcpServers;
+  } catch {
+    logger.warn({ personaId: row.id }, "Failed to parse persona mcpServers JSON; ignoring");
+    return "";
+  }
+  if (!Array.isArray(mcpServers) || mcpServers.length === 0) {
     return "";
   }
   return buildMcpServersJson(mcpServers);
@@ -1326,11 +1327,17 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       if (!isAllowedSettingKey(req.key)) {
         throw new ConnectError(`Setting key not allowed: ${req.key}`, Code.InvalidArgument);
       }
-      // Validate persona ID exists when setting default_persona_id
+      // Validate persona exists and has required fields when setting default_persona_id
       if (req.key === "default_persona_id" && req.value) {
         const persona = personaStore.getPersona(req.value);
         if (!persona) {
           throw new ConnectError(`Persona not found: ${req.value}`, Code.NotFound);
+        }
+        if (!persona.runtime || !persona.model) {
+          throw new ConnectError(
+            `Persona "${persona.name}" must have runtime and model configured`,
+            Code.FailedPrecondition,
+          );
         }
       }
       settingsStore.setSetting(req.key, req.value);
