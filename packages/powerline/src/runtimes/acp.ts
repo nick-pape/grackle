@@ -169,6 +169,31 @@ export function autoApprovePermission(
   };
 }
 
+/**
+ * Select the first `env_var` auth method from an ACP `initialize` response
+ * whose required env vars are all present in the provided environment.
+ *
+ * Returns the `methodId` string to pass to `connection.authenticate()`, or
+ * `undefined` if no matching method is found.
+ */
+export function selectEnvVarAuthMethod(
+  authMethods: Array<Record<string, unknown>>,
+  env: Record<string, string | undefined>,
+): string | undefined {
+  for (const method of authMethods) {
+    if (method.type !== "env_var") {
+      continue;
+    }
+    const vars = (method.vars || []) as Array<{ name: string; optional?: boolean }>;
+    const allSet = vars.every((v) => v.optional || !!env[v.name]);
+    const anyRequired = vars.some((v) => !v.optional);
+    if (anyRequired && allSet) {
+      return method.id as string;
+    }
+  }
+  return undefined;
+}
+
 // ─── Session ────────────────────────────────────────────────
 
 /** An in-progress agent session that communicates via the Agent Client Protocol over stdio. */
@@ -292,8 +317,10 @@ class AcpSession extends BaseAgentSession {
     );
 
     // Initialize ACP protocol
+    let initResult: Record<string, unknown>;
     try {
-      await this.connection.initialize({
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      initResult = await this.connection.initialize({
         protocolVersion: sdk.PROTOCOL_VERSION,
         clientInfo: { name: "grackle-powerline", version: "1.0.0" },
         clientCapabilities: {},
@@ -309,6 +336,27 @@ class AcpSession extends BaseAgentSession {
       timestamp: ts(),
       content: "ACP connection initialized",
     });
+
+    // Some ACP bridges (e.g. @github/copilot) require an explicit authenticate()
+    // call even when credential files are on disk. Attempt auth with the first
+    // env_var method whose required vars are present in the subprocess environment.
+    const envVarMethodId = selectEnvVarAuthMethod(
+      (initResult.authMethods || []) as Array<Record<string, unknown>>,
+      process.env,
+    );
+    if (envVarMethodId) {
+      try {
+        await this.connection.authenticate({ methodId: envVarMethodId });
+        this.eventQueue.push({
+          type: "system",
+          timestamp: ts(),
+          content: `ACP authenticated via ${envVarMethodId}`,
+        });
+      } catch (err: unknown) {
+        // Non-fatal: bridge may not require this call (claude-code-acp, codex-acp)
+        logger.warn({ err, methodId: envVarMethodId }, "ACP authenticate() failed — continuing");
+      }
+    }
 
     // Create a new ACP session (or reuse existing for resume)
     if (this.resumeSessionId) {

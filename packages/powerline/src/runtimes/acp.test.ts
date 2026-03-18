@@ -10,7 +10,7 @@ vi.mock("node:fs", () => ({
   readdirSync: vi.fn(() => []),
 }));
 
-import { mapSessionUpdate, autoApprovePermission, AcpRuntime } from "./acp.js";
+import { mapSessionUpdate, autoApprovePermission, selectEnvVarAuthMethod, AcpRuntime } from "./acp.js";
 import { convertMcpServers } from "./runtime-utils.js";
 
 // ─── mapSessionUpdate ───────────────────────────────────────
@@ -204,6 +204,51 @@ describe("autoApprovePermission", () => {
       options: [{ optionId: "only-1", kind: "allow_once" }],
     });
     expect(result.outcome.optionId).toBe("only-1");
+  });
+});
+
+// ─── selectEnvVarAuthMethod ─────────────────────────────────
+
+describe("selectEnvVarAuthMethod", () => {
+  it("returns methodId when required env var is set", () => {
+    const methods = [
+      { id: "GithubToken", type: "env_var", vars: [{ name: "GITHUB_TOKEN" }] },
+    ];
+    expect(selectEnvVarAuthMethod(methods, { GITHUB_TOKEN: "ghp_test" })).toBe("GithubToken");
+  });
+
+  it("returns undefined when required env var is missing", () => {
+    const methods = [
+      { id: "GithubToken", type: "env_var", vars: [{ name: "GITHUB_TOKEN" }] },
+    ];
+    expect(selectEnvVarAuthMethod(methods, {})).toBeUndefined();
+  });
+
+  it("skips non-env_var methods", () => {
+    const methods = [
+      { id: "claude-login", type: "terminal" },
+      { id: "gateway" },
+    ];
+    expect(selectEnvVarAuthMethod(methods, { ANTHROPIC_API_KEY: "sk-test" })).toBeUndefined();
+  });
+
+  it("picks the first method whose vars are all set", () => {
+    const methods = [
+      { id: "A", type: "env_var", vars: [{ name: "MISSING_VAR" }] },
+      { id: "B", type: "env_var", vars: [{ name: "GITHUB_TOKEN" }] },
+    ];
+    expect(selectEnvVarAuthMethod(methods, { GITHUB_TOKEN: "ghp_test" })).toBe("B");
+  });
+
+  it("returns undefined for empty methods", () => {
+    expect(selectEnvVarAuthMethod([], { GITHUB_TOKEN: "ghp_test" })).toBeUndefined();
+  });
+
+  it("treats optional vars as satisfied when missing", () => {
+    const methods = [
+      { id: "M", type: "env_var", vars: [{ name: "REQUIRED" }, { name: "OPTIONAL", optional: true }] },
+    ];
+    expect(selectEnvVarAuthMethod(methods, { REQUIRED: "val" })).toBe("M");
   });
 });
 
