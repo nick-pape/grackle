@@ -42,6 +42,8 @@ import { emit } from "./event-bus.js";
 import { buildMcpServersJson, toDialableHost } from "./grpc-service.js";
 import { createScopedToken } from "@grackle-ai/mcp";
 import { loadOrCreateApiKey } from "./api-key.js";
+import { reanimateAgent } from "./reanimate-agent.js";
+import { ConnectError } from "@connectrpc/connect";
 import { computeTaskStatus } from "./compute-task-status.js";
 import { exec } from "./utils/exec.js";
 import { formatGhError } from "./utils/format-gh-error.js";
@@ -688,6 +690,22 @@ async function handleMessage(
         if (task) {
           emit("task.updated", { taskId: task.id, projectId: task.projectId });
         }
+      }
+      break;
+    }
+
+    case "resume_agent": {
+      const resumeSessionId = msg.payload?.sessionId as string;
+      if (!resumeSessionId) {
+        sendWs(ws, { type: "error", payload: { message: "sessionId required" } });
+        return;
+      }
+      try {
+        reanimateAgent(resumeSessionId);
+        sendWs(ws, { type: "agent_resumed", payload: { sessionId: resumeSessionId } });
+      } catch (err) {
+        const message = err instanceof ConnectError ? err.message : String(err);
+        sendWs(ws, { type: "error", payload: { message } });
       }
       break;
     }

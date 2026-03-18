@@ -76,6 +76,7 @@ describe("StubRuntime", () => {
     const types = events.map((e) => e.type);
     expect(types).toEqual([
       "system",
+      "runtime_session_id",
       "text",
       "tool_use",
       "tool_result",
@@ -87,16 +88,17 @@ describe("StubRuntime", () => {
 
     // Verify content
     expect(events[0].content).toBe("Stub runtime initialized");
-    expect(events[1].content).toBe("Echo: test prompt");
-    expect(JSON.parse(events[2].content)).toEqual({
+    expect(events[1].content).toBe("stub-lifecycle-1");
+    expect(events[2].content).toBe("Echo: test prompt");
+    expect(JSON.parse(events[3].content)).toEqual({
       tool: "echo",
       args: { message: "test prompt" },
     });
-    expect(events[3].content).toBe('Tool output: "test prompt"');
-    expect(events[4].content).toBe("waiting_input");
-    expect(events[5].content).toBe("running");
-    expect(events[6].content).toBe("You said: user reply");
-    expect(events[7].content).toBe("completed");
+    expect(events[4].content).toBe('Tool output: "test prompt"');
+    expect(events[5].content).toBe("waiting_input");
+    expect(events[6].content).toBe("running");
+    expect(events[7].content).toBe("You said: user reply");
+    expect(events[8].content).toBe("completed");
 
     // Verify timestamps are ISO strings
     for (const event of events) {
@@ -162,6 +164,59 @@ describe("StubRuntime", () => {
     const statusEvents = events.filter((e) => e.type === "status");
     expect(statusEvents).toHaveLength(1);
     expect(statusEvents[0].content).toBe("waiting_input");
+  });
+
+  it("emits runtime_session_id event early in the stream", async () => {
+    const runtime = new StubRuntime();
+    const session = runtime.spawn({
+      sessionId: "rt-id-test",
+      prompt: "hello",
+      model: "m",
+      maxTurns: 1,
+    });
+
+    const events: AgentEvent[] = [];
+    const streamDone = (async () => {
+      for await (const event of session.stream()) {
+        events.push(event);
+        if (event.type === "status" && event.content === "waiting_input") {
+          session.kill();
+          break;
+        }
+      }
+    })();
+
+    await streamDone;
+
+    const rtIdEvent = events.find((e) => e.type === "runtime_session_id");
+    expect(rtIdEvent).toBeDefined();
+    expect(rtIdEvent!.content).toBe("stub-rt-id-test");
+    expect(rtIdEvent!.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+  });
+
+  it("runtime_session_id event is emitted only once per session", async () => {
+    const runtime = new StubRuntime();
+    const session = runtime.spawn({
+      sessionId: "rt-id-once",
+      prompt: "hello",
+      model: "m",
+      maxTurns: 1,
+    });
+
+    const events: AgentEvent[] = [];
+    const streamDone = (async () => {
+      for await (const event of session.stream()) {
+        events.push(event);
+        if (event.type === "status" && event.content === "waiting_input") {
+          setTimeout(() => session.sendInput("continue"), 0);
+        }
+      }
+    })();
+
+    await streamDone;
+
+    const rtIdEvents = events.filter((e) => e.type === "runtime_session_id");
+    expect(rtIdEvents).toHaveLength(1);
   });
 
   it("kill() during tool phase results in early termination", async () => {

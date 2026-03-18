@@ -229,7 +229,11 @@ class CodexSession extends BaseAgentSession {
         case "thread.started": {
           const threadId = (event as Record<string, unknown>).thread_id as string | undefined;
           if (threadId) {
+            const wasEmpty = !this.runtimeSessionId;
             this.runtimeSessionId = threadId;
+            if (wasEmpty) {
+              this.eventQueue.push({ type: "runtime_session_id", timestamp: ts(), content: this.runtimeSessionId });
+            }
           }
           this.eventQueue.push({
             type: "system",

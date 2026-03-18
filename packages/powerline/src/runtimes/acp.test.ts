@@ -1,4 +1,5 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
+import type { AgentEvent } from "./runtime.js";
 
 // Mock dependencies before importing
 vi.mock("../logger.js", () => ({
@@ -398,5 +399,68 @@ describe("AcpRuntime structural", () => {
       maxTurns: 5,
     });
     expect(session.runtimeName).toBe("custom-acp");
+  });
+});
+
+describe("AcpRuntime — runtime_session_id emission", () => {
+  // Note: getAcpSdk() uses a lazy dynamic import that vitest cannot intercept for
+  // pure-ESM packages + child-process spawning. Tests use vi.spyOn on setupSdk()
+  // at the instance level to inject mock state and verify event propagation.
+
+  const config = { name: "test-acp", command: "echo", args: ["--acp"] };
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("emits runtime_session_id for a new session with the ACP-assigned session ID", async () => {
+    const runtime = new AcpRuntime(config);
+    const session = runtime.spawn({ sessionId: "acp-new", prompt: "hi", model: "test", maxTurns: 0 });
+
+    vi.spyOn(session as any, "setupSdk").mockImplementation(async function(this: unknown) {
+      const ts = () => new Date().toISOString();
+      // Simulate the new-session path: connection.newSession() returns an ID
+      (this as any).acpSessionId = "acp-session-new-123";
+      (this as any).runtimeSessionId = "acp-session-new-123";
+      (this as any).eventQueue.push({ type: "runtime_session_id", timestamp: ts(), content: (this as any).runtimeSessionId });
+      // Set a minimal connection so runInitialQuery() and kill() don't throw
+      (this as any).connection = { prompt: async () => {}, cancel: async () => {} };
+    });
+
+    const events: AgentEvent[] = [];
+    for await (const event of session.stream()) {
+      events.push(event);
+      if (event.type === "status" && event.content === "waiting_input") { session.kill(); break; }
+      if (event.type === "status" && event.content === "failed") break;
+    }
+
+    const rtIdEvent = events.find((e) => e.type === "runtime_session_id");
+    expect(rtIdEvent, "Expected runtime_session_id event in stream").toBeDefined();
+    expect(rtIdEvent!.content).toBe("acp-session-new-123");
+    expect(rtIdEvent!.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+  });
+
+  it("emits runtime_session_id for a resumed session with the resume session ID", async () => {
+    const runtime = new AcpRuntime(config);
+    const session = runtime.resume({ sessionId: "acp-resumed", runtimeSessionId: "acp-old-session-456" });
+
+    vi.spyOn(session as any, "setupSdk").mockImplementation(async function(this: unknown) {
+      const ts = () => new Date().toISOString();
+      // Simulate the resume path: acpSessionId = resumeSessionId
+      (this as any).acpSessionId = (this as any).resumeSessionId;
+      (this as any).runtimeSessionId = (this as any).resumeSessionId;
+      (this as any).eventQueue.push({ type: "runtime_session_id", timestamp: ts(), content: (this as any).runtimeSessionId });
+    });
+
+    const events: AgentEvent[] = [];
+    for await (const event of session.stream()) {
+      events.push(event);
+      if (event.type === "status" && event.content === "waiting_input") { session.kill(); break; }
+      if (event.type === "status" && event.content === "failed") break;
+    }
+
+    const rtIdEvent = events.find((e) => e.type === "runtime_session_id");
+    expect(rtIdEvent, "Expected runtime_session_id event in stream").toBeDefined();
+    expect(rtIdEvent!.content).toBe("acp-old-session-456");
   });
 });
