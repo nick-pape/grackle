@@ -17,7 +17,8 @@
     "build": "heft build --clean",
     "preview": "vite preview",
     "clean": "heft clean",
-    "test": "heft test"
+    "test": "heft test",
+    "test:unit": "vitest run"
   },
   "dependencies": {
     "@grackle-ai/common": "workspace:*",

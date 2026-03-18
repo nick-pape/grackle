@@ -39,10 +39,9 @@ describe("isNearAnchor", () => {
 
   // Custom threshold
   it("respects a custom threshold parameter", () => {
-    // distance = 1000 - 880 - 400 = -280 (clamped by logic, still < 10)
-    // Actually: distance = 1000 - 880 - 100 = 20, with threshold=10 → false
+    // distance = 1000 - 880 - 100 = 20, threshold=10 → 20 >= 10 → false
     expect(isNearAnchor(880, 1000, 100, false, 10)).toBe(false);
-    // distance = 1000 - 895 - 100 = 5 < 10 → true
+    // distance = 1000 - 895 - 100 = 5, threshold=10 → 5 < 10 → true
     expect(isNearAnchor(895, 1000, 100, false, 10)).toBe(true);
   });
 

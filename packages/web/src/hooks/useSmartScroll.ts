@@ -36,33 +36,50 @@ export function useSmartScroll({
   const [isAtAnchor, setIsAtAnchor] = useState(true);
   const prevScrollHeightRef = useRef<number>(0);
   const mountedRef = useRef(false);
+  const rafIdRef = useRef<number>(0);
 
-  // Passive scroll listener — updates isAtAnchor based on position
+  // Throttled scroll listener — uses rAF to avoid excessive React work during fast scrolling.
+  // Only calls setState when the boolean actually changes.
   useEffect(() => {
     const element = scrollRef.current;
     if (!element) {
       return;
     }
 
+    let lastKnownValue: boolean = true;
+
     const handleScroll = (): void => {
-      const near = isNearAnchor(
-        element.scrollTop,
-        element.scrollHeight,
-        element.clientHeight,
-        isReversed,
-        SCROLL_ANCHOR_THRESHOLD_PX,
-      );
-      setIsAtAnchor(near);
+      if (rafIdRef.current) {
+        return;
+      }
+      rafIdRef.current = requestAnimationFrame(() => {
+        rafIdRef.current = 0;
+        const near = isNearAnchor(
+          element.scrollTop,
+          element.scrollHeight,
+          element.clientHeight,
+          isReversed,
+          SCROLL_ANCHOR_THRESHOLD_PX,
+        );
+        if (near !== lastKnownValue) {
+          lastKnownValue = near;
+          setIsAtAnchor(near);
+        }
+      });
     };
 
     element.addEventListener("scroll", handleScroll, { passive: true });
     return () => {
       element.removeEventListener("scroll", handleScroll);
+      if (rafIdRef.current) {
+        cancelAnimationFrame(rafIdRef.current);
+        rafIdRef.current = 0;
+      }
     };
   }, [scrollRef, isReversed]);
 
-  // Initial scroll — instant, no animation (historical events shouldn't animate in)
-  useEffect(() => {
+  // Initial scroll — useLayoutEffect to avoid flash before paint
+  useLayoutEffect(() => {
     const element = scrollRef.current;
     if (!element || mountedRef.current) {
       return;
@@ -76,15 +93,9 @@ export function useSmartScroll({
     setIsAtAnchor(true);
   }, [scrollRef, isReversed]);
 
-  // Capture scrollHeight before render for reverse-mode compensation
-  useLayoutEffect(() => {
-    const element = scrollRef.current;
-    if (element) {
-      prevScrollHeightRef.current = element.scrollHeight;
-    }
-  });
-
-  // Auto-scroll on new content + reverse-mode compensation
+  // Auto-scroll on new content + reverse-mode compensation.
+  // prevScrollHeightRef is captured at the END of this effect so the NEXT
+  // invocation sees the prior commit's scrollHeight (not the current one).
   useLayoutEffect(() => {
     const element = scrollRef.current;
     if (!element) {
@@ -109,6 +120,10 @@ export function useSmartScroll({
         element.scrollTo({ top: element.scrollHeight, behavior: "smooth" });
       }
     }
+
+    // Update prevScrollHeight AFTER applying compensation/auto-scroll
+    // so the next render can compute the delta correctly.
+    prevScrollHeightRef.current = element.scrollHeight;
   }, [contentLength, isAtAnchor, isReversed, scrollRef]);
 
   const scrollToAnchor = useCallback((): void => {
