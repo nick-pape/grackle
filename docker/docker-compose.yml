@@ -1,0 +1,39 @@
+services:
+  grackle:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.server
+    container_name: grackle
+    ports:
+      - "7434:7434"   # gRPC
+      - "3000:3000"   # Web UI + WebSocket
+      - "7435:7435"   # MCP
+      - "7433:7433"   # Local PowerLine
+    volumes:
+      - grackle-data:/grackle-home/.grackle                              # Persistent DB + API key
+      # WARNING: Grants the container root-equivalent access to the host Docker daemon.
+      # Required for the Docker adapter (DooD pattern). Remove if not using Docker environments.
+      - /var/run/docker.sock:/var/run/docker.sock
+      - "${HOME}/.claude:/home/node/.claude:ro"                          # Claude auth + config
+      - "${HOME}/.copilot:/home/node/.copilot:ro"                        # Copilot auth
+      - "${HOME}/.codex:/home/node/.codex:ro"                            # Codex auth
+    environment:
+      # GitHub CLI auth — set GH_TOKEN before running docker compose:
+      #   export GH_TOKEN=$(gh auth token)
+      - GH_TOKEN=${GH_TOKEN:-}
+      - GRACKLE_HOME=/grackle-home
+      # Docker adapter networking — sibling containers join this network
+      # so the server can reach them directly (required for DooD).
+      - GRACKLE_DOCKER_NETWORK=grackle
+      # Container name used by sibling containers to reach this server's MCP/gRPC.
+      - GRACKLE_DOCKER_HOST=grackle
+    networks:
+      - grackle
+    restart: unless-stopped
+
+networks:
+  grackle:
+    name: grackle
+
+volumes:
+  grackle-data:
