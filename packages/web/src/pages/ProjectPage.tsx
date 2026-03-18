@@ -92,7 +92,7 @@ export function ProjectPage(): JSX.Element {
         <span className={styles.projectName} data-testid="project-name">
           <EditableTextField
             value={project?.name || ""}
-            onSave={(v) => updateProject(project!.id, { name: v })}
+            onSave={(v) => { if (project) { updateProject(project.id, { name: v }); } }}
             validate={(v) => {
               const trimmed = v.trim();
               if (!trimmed) return "Name is required";
@@ -139,7 +139,7 @@ export function ProjectPage(): JSX.Element {
             <div className={styles.metaValue}>
               <EditableTextArea
                 value={project?.description || ""}
-                onSave={(v) => updateProject(project!.id, { description: v })}
+                onSave={(v) => { if (project) { updateProject(project.id, { description: v }); } }}
                 fieldId="description"
                 activeFieldId={activeFieldId}
                 onActivate={setActiveFieldId}
@@ -161,7 +161,7 @@ export function ProjectPage(): JSX.Element {
             <div className={styles.metaValue}>
               <EditableTextField
                 value={project?.repoUrl || ""}
-                onSave={(v) => updateProject(project!.id, { repoUrl: v })}
+                onSave={(v) => { if (project) { updateProject(project.id, { repoUrl: v }); } }}
                 validate={(v) => {
                   const trimmed = v.trim();
                   if (trimmed && !/^https?:\/\/.+/.test(trimmed)) return "Must be a valid http(s) URL";
@@ -199,7 +199,7 @@ export function ProjectPage(): JSX.Element {
             <div className={styles.metaValue}>
               <EditableSelect
                 value={project?.defaultEnvironmentId || ""}
-                onSave={(v) => updateProject(project!.id, { defaultEnvironmentId: v })}
+                onSave={(v) => { if (project) { updateProject(project.id, { defaultEnvironmentId: v }); } }}
                 options={[
                   { value: "", label: "None" },
                   ...environments.map((env) => ({ value: env.id, label: env.displayName })),
@@ -207,7 +207,7 @@ export function ProjectPage(): JSX.Element {
                 fieldId="defaultEnvironmentId"
                 activeFieldId={activeFieldId}
                 onActivate={setActiveFieldId}
-                renderDisplay={(v) => {
+                renderDisplay={() => {
                   if (defaultEnv) {
                     return (
                       <span className={styles.envRow}>
@@ -216,7 +216,7 @@ export function ProjectPage(): JSX.Element {
                       </span>
                     );
                   }
-                  return v ? undefined : undefined;
+                  return undefined;
                 }}
                 placeholder={project?.defaultEnvironmentId || "No default environment"}
                 ariaLabel="Project default environment"
@@ -231,7 +231,7 @@ export function ProjectPage(): JSX.Element {
             <div className={styles.metaValue}>
               <EditableSelect
                 value={project?.defaultPersonaId || ""}
-                onSave={(v) => updateProject(project!.id, { defaultPersonaId: v })}
+                onSave={(v) => { if (project) { updateProject(project.id, { defaultPersonaId: v }); } }}
                 options={[
                   { value: "", label: "(Inherit)" },
                   ...personas.map((p) => ({ value: p.id, label: p.name })),
@@ -274,7 +274,7 @@ export function ProjectPage(): JSX.Element {
             <div className={styles.metaValue}>
               <EditableTextField
                 value={project?.worktreeBasePath || ""}
-                onSave={(v) => updateProject(project!.id, { worktreeBasePath: v })}
+                onSave={(v) => { if (project) { updateProject(project.id, { worktreeBasePath: v }); } }}
                 fieldId="worktreeBasePath"
                 activeFieldId={activeFieldId}
                 onActivate={setActiveFieldId}

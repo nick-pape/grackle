@@ -6,8 +6,8 @@ import styles from "./EditableField.module.scss";
 export interface EditableTextFieldProps {
   /** Current persisted value. */
   value: string;
-  /** Called when the user saves (edit mode). */
-  onSave?: (value: string) => void;
+  /** Called when the user saves. Required in edit mode. */
+  onSave: (value: string) => void;
   /** Optional validation — return an error string, or undefined if valid. */
   validate?: (value: string) => string | undefined;
   /** "edit" (default) for click-to-edit, "create" for always-editable. */
@@ -54,7 +54,7 @@ export function EditableTextField(props: EditableTextFieldProps): JSX.Element {
 
   const field = useEditableField({
     value,
-    onSave: onSave ?? (() => {}),
+    onSave,
     validate,
     fieldId,
     activeFieldId,
@@ -124,15 +124,18 @@ export function EditableTextField(props: EditableTextFieldProps): JSX.Element {
     );
   }
 
-  // Display mode
+  // Display mode — uses <span role="button"> to avoid nested interactive elements
+  // when renderDisplay returns links or other interactive content
   const displayContent = renderDisplay?.(value);
   return (
-    <button
-      type="button"
+    <span
+      role="button"
+      tabIndex={0}
       className={styles.metaValueClickable}
       onClick={() => field.startEdit()}
-      title={placeholder ? `Click to edit` : "Click to edit"}
-      aria-label={ariaLabel ? `Edit ${ariaLabel.toLowerCase()}` : "Edit"}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { field.startEdit(); } }}
+      title="Click to edit"
+      aria-label={ariaLabel}
       data-testid={testId ? `${testId}-button` : undefined}
     >
       {displayContent !== undefined ? displayContent : (
@@ -145,6 +148,6 @@ export function EditableTextField(props: EditableTextFieldProps): JSX.Element {
       <span className={styles.editButton} aria-hidden="true">
         &#x270F;&#xFE0F;
       </span>
-    </button>
+    </span>
   );
 }

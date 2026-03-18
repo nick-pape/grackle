@@ -12,8 +12,8 @@ export interface SelectOption {
 export interface EditableSelectProps {
   /** Current persisted value. */
   value: string;
-  /** Called when the user selects a new value (edit mode). */
-  onSave?: (value: string) => void;
+  /** Called when the user selects a new value. Required in edit mode. */
+  onSave: (value: string) => void;
   /** "edit" (default) for click-to-edit, "create" for always-visible. */
   mode?: "edit" | "create";
   /** Available options for the dropdown. */
@@ -57,7 +57,7 @@ export function EditableSelect(props: EditableSelectProps): JSX.Element {
 
   const field = useEditableField({
     value,
-    onSave: onSave ?? (() => {}),
+    onSave,
     fieldId,
     activeFieldId,
     onActivate,
@@ -80,7 +80,7 @@ export function EditableSelect(props: EditableSelectProps): JSX.Element {
     const newValue = e.target.value;
     field.ignoreInitialBlurRef.current = false;
     if (newValue !== value) {
-      onSave?.(newValue);
+      onSave(newValue);
     }
     field.cancelEdit();
   }, [value, onSave, field]);
@@ -146,7 +146,7 @@ export function EditableSelect(props: EditableSelectProps): JSX.Element {
       className={styles.metaValueClickable}
       onClick={() => field.startEdit()}
       title="Click to change"
-      aria-label={ariaLabel ? `Edit ${ariaLabel.toLowerCase()}` : "Edit"}
+      aria-label={ariaLabel}
       data-testid={testId ? `${testId}-button` : undefined}
     >
       {displayContent !== undefined ? displayContent : (

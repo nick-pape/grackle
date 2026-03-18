@@ -6,8 +6,8 @@ import styles from "./EditableField.module.scss";
 export interface EditableTextAreaProps {
   /** Current persisted value. */
   value: string;
-  /** Called when the user saves (edit mode). */
-  onSave?: (value: string) => void;
+  /** Called when the user saves. Required in edit mode. */
+  onSave: (value: string) => void;
   /** Optional validation — return an error string, or undefined if valid. */
   validate?: (value: string) => string | undefined;
   /** "edit" (default) for click-to-edit, "create" for always-editable. */
@@ -51,7 +51,7 @@ export function EditableTextArea(props: EditableTextAreaProps): JSX.Element {
 
   const field = useEditableField({
     value,
-    onSave: onSave ?? (() => {}),
+    onSave,
     validate,
     fieldId,
     activeFieldId,
@@ -76,16 +76,21 @@ export function EditableTextArea(props: EditableTextAreaProps): JSX.Element {
       onChange?.(e.target.value);
     };
 
+    const validationError = validate?.(value);
+
     return (
       <div className={styles.editFieldWrapper}>
         <textarea
-          className={styles.editTextarea}
+          className={`${styles.editTextarea} ${validationError ? styles.editInputInvalid : ""}`}
           value={value}
           onChange={handleChange}
           placeholder={placeholder}
           aria-label={ariaLabel}
           data-testid={testId ? `${testId}-input` : undefined}
         />
+        {validationError && (
+          <span className={styles.editError} data-testid="edit-error">{validationError}</span>
+        )}
       </div>
     );
   }
@@ -119,7 +124,7 @@ export function EditableTextArea(props: EditableTextAreaProps): JSX.Element {
       className={styles.metaValueClickable}
       onClick={() => field.startEdit()}
       title="Click to edit"
-      aria-label={ariaLabel ? `Edit ${ariaLabel.toLowerCase()}` : "Edit"}
+      aria-label={ariaLabel}
       data-testid={testId ? `${testId}-button` : undefined}
     >
       {displayContent !== undefined ? displayContent : (
