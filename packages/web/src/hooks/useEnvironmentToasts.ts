@@ -7,7 +7,7 @@ import type { ToastVariant } from "../context/ToastContext.js";
  * notifications for meaningful status transitions.
  *
  * Skips toasts on initial load (when the previous ref is null) and
- * for `connecting` transitions (the provision progress UI handles those).
+ * for `sleeping` transitions (passive state with no user action needed).
  */
 export function useEnvironmentToasts(
   environments: Environment[],
@@ -45,9 +45,14 @@ export function useEnvironmentToasts(
         continue;
       }
 
-      // Skip connecting/sleeping transitions — provision progress UI handles
-      // connecting, and sleeping is a passive state with no user action needed.
-      if (env.status === "connecting" || env.status === "sleeping") {
+      // Skip sleeping transitions — sleeping is a passive state with no user
+      // action needed.
+      if (env.status === "sleeping") {
+        continue;
+      }
+
+      if (env.status === "connecting") {
+        showToast("Provisioning environment\u2026", "info");
         continue;
       }
 
