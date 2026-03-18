@@ -2,6 +2,31 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.39.0",
+      "tag": "@grackle-ai/cli_v0.39.0",
+      "date": "Wed, 18 Mar 2026 05:13:05 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "chore: remove grackle MCP entry from .mcp.json (use user-level OAuth config instead)"
+          }
+        ],
+        "none": [
+          {
+            "comment": "No CLI changes — change file required by Rush merge-commit detection"
+          }
+        ],
+        "minor": [
+          {
+            "comment": "Add ACP (Agent Client Protocol) runtimes alongside existing SDK runtimes for codex, copilot, and claude-code"
+          },
+          {
+            "comment": "feat: Docker-out-of-Docker networking support for sibling containers (GRACKLE_DOCKER_NETWORK, GRACKLE_DOCKER_HOST env vars)"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.38.2",
       "tag": "@grackle-ai/cli_v0.38.2",
       "date": "Wed, 18 Mar 2026 04:44:23 GMT",
