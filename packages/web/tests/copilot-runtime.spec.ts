@@ -54,8 +54,8 @@ test.describe("Copilot Runtime Option", () => {
     const page = appPage;
     const runtimeSelect = getNewChatRuntimeSelect(page);
 
-    // Default runtime is "stub" (set by global-setup via --runtime stub)
-    await expect(runtimeSelect).toHaveValue("stub");
+    // Default runtime is "claude-code" (runtime selector defaults; persona handles actual runtime)
+    await expect(runtimeSelect).toHaveValue("claude-code");
 
     await runtimeSelect.selectOption("copilot");
     await expect(runtimeSelect).toHaveValue("copilot");
