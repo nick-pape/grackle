@@ -972,18 +972,19 @@ async function handleMessage(
     case "create_task": {
       const projectId = msg.payload?.projectId as string;
       const title = msg.payload?.title as string;
+      const requestId = (msg.payload?.requestId as string) || "";
       if (!projectId || !title) {
         sendWs(ws, {
-          type: "error",
-          payload: { message: "projectId and title required" },
+          type: "create_task_error",
+          payload: { message: "projectId and title required", requestId },
         });
         return;
       }
       const project = projectStore.getProject(projectId);
       if (!project) {
         sendWs(ws, {
-          type: "error",
-          payload: { message: `Project not found: ${projectId}` },
+          type: "create_task_error",
+          payload: { message: `Project not found: ${projectId}`, requestId },
         });
         return;
       }
@@ -992,26 +993,36 @@ async function handleMessage(
       const canDecompose =
         typeof rawCanDecompose === "boolean" ? rawCanDecompose : undefined;
 
-      const id = uuid().slice(0, 8);
-      taskStore.createTask(
-        id,
-        projectId,
-        title,
-        (msg.payload?.description as string | undefined) || "",
-        (msg.payload?.dependsOn as string[] | undefined) || [],
-        slugify(project.name),
-        parentTaskId,
-        canDecompose,
-      );
-      const row = taskStore.getTask(id);
-      broadcast({
-        type: "task_created",
-        payload: {
-          task: row
-            ? { ...row, dependsOn: safeParseJsonArray(row.dependsOn) }
-            : null,
-        },
-      });
+      try {
+        const id = uuid().slice(0, 8);
+        taskStore.createTask(
+          id,
+          projectId,
+          title,
+          (msg.payload?.description as string | undefined) || "",
+          (msg.payload?.dependsOn as string[] | undefined) || [],
+          slugify(project.name),
+          parentTaskId,
+          canDecompose,
+        );
+        const row = taskStore.getTask(id);
+        broadcast({
+          type: "task_created",
+          payload: {
+            task: row
+              ? { ...row, dependsOn: safeParseJsonArray(row.dependsOn) }
+              : null,
+            requestId,
+          },
+        });
+      } catch (error: unknown) {
+        const message =
+          error instanceof Error ? error.message : "Failed to create task";
+        sendWs(ws, {
+          type: "create_task_error",
+          payload: { message, requestId },
+        });
+      }
       break;
     }
 
