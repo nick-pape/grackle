@@ -76,10 +76,8 @@ export function reanimateAgent(sessionId: string): SessionRow {
     }
   }
 
-  // Reanimate only after all validation passes, and only if the stream can be
-  // initiated. If conn.client.resume() throws synchronously before we hand off
-  // to processEventStream, revert the DB state so the session isn't left stuck
-  // in "running" with no stream to drive it.
+  // Initiate the stream before mutating the DB. If resume() throws synchronously
+  // the DB is never touched, so no rollback is needed.
   let resumeStream: ReturnType<typeof conn.client.resume>;
   try {
     resumeStream = conn.client.resume(powerlineReq);
