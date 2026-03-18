@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type JSX } from "react";
 import { useParams, useLocation } from "react-router";
 import { useGrackle } from "../context/GrackleContext.js";
-import { EventRenderer } from "../components/display/EventRenderer.js";
+import { EventStream } from "../components/display/EventStream.js";
 import { FindingsPanel } from "../components/panels/FindingsPanel.js";
 import { Breadcrumbs, ConfirmDialog } from "../components/display/index.js";
 import { buildTaskBreadcrumbs } from "../utils/breadcrumbs.js";
@@ -186,16 +186,6 @@ function TaskOverview({ task, tasksById, environments, projects, taskSessions }:
   );
 }
 
-/** Overflow warning banner. */
-function EventOverflowBanner({ eventsDropped }: { eventsDropped: number }): JSX.Element {
-  if (eventsDropped <= 0) return <></>;
-  return (
-    <div className={styles.eventOverflowWarning} role="alert">
-      ⚠ {eventsDropped.toLocaleString()} older event{eventsDropped === 1 ? "" : "s"} were dropped — only the most recent 5,000 are shown.
-    </div>
-  );
-}
-
 interface TaskActionButtonsProps {
   task: TaskData;
   sessionId: string | undefined;
@@ -311,7 +301,6 @@ export function TaskPage(): JSX.Element {
     projects, taskSessions: taskSessionsMap, loadTaskSessions,
   } = useGrackle();
 
-  const scrollRef = useRef<HTMLDivElement>(null);
   const loadedRef = useRef<string | undefined>(undefined);
   const prevTaskIdRef = useRef<string | undefined>(undefined);
   const prevTaskStatusRef = useRef<string | undefined>(undefined);
@@ -437,13 +426,6 @@ export function TaskPage(): JSX.Element {
     }
   }, [activeTaskTab, projectId, loadFindings]);
 
-  // Auto-scroll to bottom
-  useEffect(() => {
-    if (scrollRef.current && activeTaskTab === "stream") {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [groupedEvents.length, activeTaskTab]);
-
   const handleTabChange = (tab: TaskTab): void => {
     setActiveTaskTab(tab);
     navigate(taskUrl(taskId!, tab === "overview" ? undefined : tab));
@@ -502,21 +484,20 @@ export function TaskPage(): JSX.Element {
         {activeTaskTab === "stream" && (
           <motion.div key="stream" initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.15 }} style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden" }}>
             <SessionAttemptSelector taskSessions={currentTaskSessions} selectedSessionId={sessionId} onSelect={(id) => setSelectedSessionId(id)} />
-            <div ref={scrollRef} className={styles.eventScroll}>
-              {!sessionId && task && (
-                <div className={styles.emptyCta}>
-                  <button className={styles.ctaButton} onClick={() => startTask(task.id)}>Start Task</button>
-                  <div className={styles.ctaDescription}>Click to begin agent execution</div>
-                </div>
-              )}
-              {sessionId && groupedEvents.length === 0 && (
-                <div className={styles.waitingMessage}>Waiting for events...</div>
-              )}
-              <EventOverflowBanner eventsDropped={eventsDropped} />
-              {groupedEvents.map((event, i) => (
-                <EventRenderer key={`${event.sessionId}-${event.timestamp}-${i}`} event={event} toolUseCtx={event.toolUseCtx} />
-              ))}
-            </div>
+            <EventStream
+              events={groupedEvents}
+              eventsDropped={eventsDropped}
+              emptyState={
+                !sessionId && task ? (
+                  <div className={styles.emptyCta}>
+                    <button className={styles.ctaButton} onClick={() => startTask(task.id)}>Start Task</button>
+                    <div className={styles.ctaDescription}>Click to begin agent execution</div>
+                  </div>
+                ) : sessionId && groupedEvents.length === 0 ? (
+                  <div className={styles.waitingMessage}>Waiting for events...</div>
+                ) : undefined
+              }
+            />
           </motion.div>
         )}
         {activeTaskTab === "findings" && (

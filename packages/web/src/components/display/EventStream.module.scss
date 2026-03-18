@@ -1,0 +1,66 @@
+@use '../../styles/mixins' as *;
+
+// =============================================================================
+// EventStream — scrollable event list with smart scroll + direction toggle
+// =============================================================================
+
+.wrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
+
+.scrollContainer {
+  flex: 1;
+  overflow: auto;
+  padding: var(--space-md);
+}
+
+.toolbar {
+  position: absolute;
+  top: var(--space-sm);
+  right: var(--space-md);
+  z-index: 10;
+}
+
+.directionToggle {
+  @include btn-ghost(var(--text-secondary));
+  @include surface-inset;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-sm);
+  padding: 0;
+  border-radius: var(--radius-sm);
+}
+
+.scrollToAnchor {
+  position: absolute;
+  z-index: 10;
+  right: var(--space-md);
+  @include surface-card;
+  padding: var(--space-xs) var(--space-sm);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  transition: color var(--transition-fast);
+
+  &:hover {
+    color: var(--text-primary);
+  }
+}
+
+.scrollToAnchorBottom {
+  bottom: var(--space-md);
+}
+
+.scrollToAnchorTop {
+  top: calc(var(--space-sm) + 36px);
+}

@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useRef, type JSX, type RefObject } from "react";
+import { useEffect, useMemo, useRef, type JSX } from "react";
 import { useParams } from "react-router";
 import { useGrackle } from "../context/GrackleContext.js";
-import { EventRenderer } from "../components/display/EventRenderer.js";
+import { EventStream } from "../components/display/EventStream.js";
 import { Breadcrumbs } from "../components/display/index.js";
 import { buildSessionBreadcrumbs } from "../utils/breadcrumbs.js";
 import type { Session } from "../hooks/useGrackleSocket.js";
-import { groupConsecutiveTextEvents, pairToolEvents, type DisplayEvent } from "../utils/sessionEvents.js";
+import { groupConsecutiveTextEvents, pairToolEvents } from "../utils/sessionEvents.js";
 import styles from "../components/panels/SessionPanel.module.scss";
 
 /** Props for the SessionHeader subcomponent. */
@@ -42,44 +42,14 @@ function SessionHeader({ sessionId, session, isActive, onKill }: SessionHeaderPr
   );
 }
 
-/** Overflow warning banner shown when events exceed the in-memory cap. */
-function EventOverflowBanner({ eventsDropped }: { eventsDropped: number }): JSX.Element {
-  if (eventsDropped <= 0) {
-    return <></>;
-  }
-  return (
-    <div className={styles.eventOverflowWarning} role="alert">
-      ⚠ {eventsDropped.toLocaleString()} older event{eventsDropped === 1 ? "" : "s"} were dropped — only the most recent 5,000 are shown. Full history is available in the session log.
-    </div>
-  );
-}
-
-/** Props for the EventList subcomponent. */
-interface EventListProps {
-  sessionEvents: DisplayEvent[];
-  session: Session | undefined;
-  eventsDropped: number;
-  // eslint-disable-next-line @rushstack/no-new-null
-  scrollRef: RefObject<HTMLDivElement | null>;
-}
-
-/** Scrollable list of session events with empty-state messaging. */
-function EventList({ sessionEvents, session, eventsDropped, scrollRef }: EventListProps): JSX.Element {
+/** Empty-state message for session streams. */
+function SessionEmptyState({ session }: { session: Session | undefined }): JSX.Element {
   const isTerminal = session && ["completed", "failed", "interrupted"].includes(session.status);
   const emptyMessage = isTerminal
     ? `Session ${session.status} with no events recorded.`
     : "Waiting for events...";
-
   return (
-    <div ref={scrollRef} className={styles.eventScroll}>
-      {sessionEvents.length === 0 && (
-        <div className={isTerminal ? styles.errorMessage : styles.waitingMessage}>{emptyMessage}</div>
-      )}
-      <EventOverflowBanner eventsDropped={eventsDropped} />
-      {sessionEvents.map((event, i) => (
-        <EventRenderer key={`${event.sessionId}-${event.timestamp}-${i}`} event={event} toolUseCtx={event.toolUseCtx} />
-      ))}
-    </div>
+    <div className={isTerminal ? styles.errorMessage : styles.waitingMessage}>{emptyMessage}</div>
   );
 }
 
@@ -89,7 +59,6 @@ export function SessionPage(): JSX.Element {
   const {
     events, eventsDropped, sessions, kill, loadSessionEvents,
   } = useGrackle();
-  const scrollRef = useRef<HTMLDivElement>(null);
   const loadedRef = useRef<string | undefined>(undefined);
 
   const breadcrumbs = buildSessionBreadcrumbs(sessionId!);
@@ -111,13 +80,6 @@ export function SessionPage(): JSX.Element {
     }
   }, [sessionId, loadSessionEvents]);
 
-  // Auto-scroll to bottom
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [groupedEvents.length]);
-
   if (!sessionId) {
     return (
       <div className={styles.emptyState}>
@@ -137,11 +99,10 @@ export function SessionPage(): JSX.Element {
         isActive={isActive}
         onKill={kill}
       />
-      <EventList
-        sessionEvents={groupedEvents}
-        session={session}
+      <EventStream
+        events={groupedEvents}
         eventsDropped={eventsDropped}
-        scrollRef={scrollRef}
+        emptyState={<SessionEmptyState session={session} />}
       />
     </div>
   );
