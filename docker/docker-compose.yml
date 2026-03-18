@@ -17,12 +17,10 @@ services:
       - "${HOME}/.claude:/home/node/.claude:ro"                          # Claude auth + config
       - "${HOME}/.copilot:/home/node/.copilot:ro"                        # Copilot auth
       - "${HOME}/.codex:/home/node/.codex:ro"                            # Codex auth
-      # GitHub CLI auth — set GH_HOST_CONFIG_DIR to mount host credentials:
-      #   Linux/Mac: export GH_HOST_CONFIG_DIR=~/.config/gh
-      #   Windows:   export GH_HOST_CONFIG_DIR="$APPDATA/GitHub CLI"
-      - "${GH_HOST_CONFIG_DIR:-/dev/null}:/home/node/.config/gh:ro"
     environment:
-      - GH_CONFIG_DIR=/home/node/.config/gh
+      # GitHub CLI auth — set GH_TOKEN before running docker compose:
+      #   export GH_TOKEN=$(gh auth token)
+      - GH_TOKEN=${GH_TOKEN:-}
       - GRACKLE_HOME=/grackle-home
     restart: unless-stopped
 
