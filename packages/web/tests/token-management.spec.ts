@@ -31,7 +31,7 @@ test.describe("Token Management (WebSocket)", () => {
           filePath: "",
         },
       },
-      "token_changed",
+      "token.changed",
     );
 
     // List tokens and verify it's present
@@ -55,7 +55,7 @@ test.describe("Token Management (WebSocket)", () => {
     await sendWsAndWaitFor(
       page,
       { type: "delete_token", payload: { name: "test-token-rt" } },
-      "token_changed",
+      "token.changed",
     );
   });
 
@@ -74,7 +74,7 @@ test.describe("Token Management (WebSocket)", () => {
           filePath: "/home/user/.secret",
         },
       },
-      "token_changed",
+      "token.changed",
     );
 
     const listResponse = await sendWsAndWaitFor(
@@ -97,7 +97,7 @@ test.describe("Token Management (WebSocket)", () => {
     await sendWsAndWaitFor(
       page,
       { type: "delete_token", payload: { name: "test-file-token" } },
-      "token_changed",
+      "token.changed",
     );
   });
 
@@ -117,7 +117,7 @@ test.describe("Token Management (WebSocket)", () => {
           filePath: "",
         },
       },
-      "token_changed",
+      "token.changed",
     );
 
     // Verify it exists
@@ -133,7 +133,7 @@ test.describe("Token Management (WebSocket)", () => {
     await sendWsAndWaitFor(
       page,
       { type: "delete_token", payload: { name: "test-delete-me" } },
-      "token_changed",
+      "token.changed",
     );
 
     // Verify it's gone
@@ -195,7 +195,7 @@ test.describe("Token Management (WebSocket)", () => {
           filePath: "",
         },
       },
-      "token_changed",
+      "token.changed",
     );
 
     // Overwrite with new env var name
@@ -211,7 +211,7 @@ test.describe("Token Management (WebSocket)", () => {
           filePath: "",
         },
       },
-      "token_changed",
+      "token.changed",
     );
 
     // Verify updated
@@ -235,7 +235,7 @@ test.describe("Token Management (WebSocket)", () => {
     await sendWsAndWaitFor(
       page,
       { type: "delete_token", payload: { name: "test-overwrite" } },
-      "token_changed",
+      "token.changed",
     );
   });
 
@@ -254,7 +254,7 @@ test.describe("Token Management (WebSocket)", () => {
           filePath: "",
         },
       },
-      "token_changed",
+      "token.changed",
     );
 
     const listResponse = await sendWsAndWaitFor(
@@ -273,7 +273,7 @@ test.describe("Token Management (WebSocket)", () => {
     await sendWsAndWaitFor(
       page,
       { type: "delete_token", payload: { name: "test-no-value" } },
-      "token_changed",
+      "token.changed",
     );
   });
 
@@ -284,9 +284,9 @@ test.describe("Token Management (WebSocket)", () => {
     const response = await sendWsAndWaitFor(
       page,
       { type: "delete_token", payload: { name: "nonexistent-token-xyz" } },
-      "token_changed",
+      "token.changed",
     );
 
-    expect(response.type).toBe("token_changed");
+    expect(response.type).toBe("token.changed");
   });
 });

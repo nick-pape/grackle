@@ -361,7 +361,7 @@ export async function createTaskViaWs(
       type: "create_task",
       payload,
     },
-    "task_created",
+    "task.created",
   );
   return response.payload?.task as WsPayload;
 }

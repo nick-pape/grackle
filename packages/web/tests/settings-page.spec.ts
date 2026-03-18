@@ -70,7 +70,7 @@ test.describe("Settings Page", () => {
     await sendWsAndWaitFor(
       page,
       { type: "delete_token", payload: { name: "ui-test-token" } },
-      "token_changed",
+      "token.changed",
     );
   });
 
@@ -90,7 +90,7 @@ test.describe("Settings Page", () => {
           filePath: "",
         },
       },
-      "token_changed",
+      "token.changed",
     );
 
     await goToSettings(appPage);
@@ -138,7 +138,7 @@ test.describe("Settings Page", () => {
     await sendWsAndWaitFor(
       page,
       { type: "delete_token", payload: { name: "file-ui-token" } },
-      "token_changed",
+      "token.changed",
     );
   });
 
@@ -166,7 +166,7 @@ test.describe("Settings Page", () => {
     await sendWsAndWaitFor(
       page,
       { type: "delete_token", payload: { name: "clear-test-token" } },
-      "token_changed",
+      "token.changed",
     );
   });
 
