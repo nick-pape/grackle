@@ -7,6 +7,7 @@ import {
   createTaskViaWs,
   navigateToTask,
   patchWsForStubRuntime,
+  sendWsAndWaitFor,
   sendWsAndWaitForError,
 } from "./helpers.js";
 
@@ -14,10 +15,10 @@ test.describe("Error States", () => {
   test("create_task with missing projectId returns error", async ({ appPage }) => {
     const page = appPage;
 
-    const error = await sendWsAndWaitForError(page, {
+    const error = await sendWsAndWaitFor(page, {
       type: "create_task",
       payload: { projectId: "", title: "orphan-task" },
-    });
+    }, "create_task_error");
 
     expect(error.payload?.message).toContain("required");
   });
@@ -25,10 +26,10 @@ test.describe("Error States", () => {
   test("create_task with non-existent project returns error", async ({ appPage }) => {
     const page = appPage;
 
-    const error = await sendWsAndWaitForError(page, {
+    const error = await sendWsAndWaitFor(page, {
       type: "create_task",
       payload: { projectId: "does-not-exist-999", title: "ghost-task" },
-    });
+    }, "create_task_error");
 
     expect(error.payload?.message).toContain("not found");
   });
