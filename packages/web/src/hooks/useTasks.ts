@@ -12,7 +12,11 @@ import { asValidArray, isObject, isTaskData } from "./types.js";
 interface PendingCreateCallback {
   onSuccess: () => void;
   onError: (message: string) => void;
+  timer: ReturnType<typeof setTimeout>;
 }
+
+/** How long to wait for a server response before timing out a create request. */
+const CREATE_TASK_TIMEOUT_MS: number = 15_000;
 
 /** Values returned by {@link useTasks}. */
 export interface UseTasksResult {
@@ -106,6 +110,7 @@ export function useTasks(send: SendFunction): UseTasksResult {
         if (reqId) {
           const pending = pendingCreatesRef.current.get(reqId);
           if (pending) {
+            clearTimeout(pending.timer);
             pendingCreatesRef.current.delete(reqId);
             pending.onSuccess();
           }
@@ -136,6 +141,7 @@ export function useTasks(send: SendFunction): UseTasksResult {
         if (errorReqId) {
           const pending = pendingCreatesRef.current.get(errorReqId);
           if (pending) {
+            clearTimeout(pending.timer);
             pendingCreatesRef.current.delete(errorReqId);
             pending.onError(errorMessage);
           } else {
@@ -220,6 +226,7 @@ export function useTasks(send: SendFunction): UseTasksResult {
   const onDisconnect = useCallback(() => {
     setTaskStartingId(undefined);
     for (const [, pending] of pendingCreatesRef.current) {
+      clearTimeout(pending.timer);
       pending.onError("Disconnected");
     }
     pendingCreatesRef.current.clear();
@@ -252,9 +259,16 @@ export function useTasks(send: SendFunction): UseTasksResult {
       if (onSuccess || onError) {
         const requestId = crypto.randomUUID();
         payload.requestId = requestId;
+        const errorCb = onError ?? (() => {});
+        const timer = setTimeout(() => {
+          if (pendingCreatesRef.current.delete(requestId)) {
+            errorCb("Request timed out");
+          }
+        }, CREATE_TASK_TIMEOUT_MS);
         pendingCreatesRef.current.set(requestId, {
           onSuccess: onSuccess ?? (() => {}),
-          onError: onError ?? (() => {}),
+          onError: errorCb,
+          timer,
         });
       }
       send({ type: "create_task", payload });
