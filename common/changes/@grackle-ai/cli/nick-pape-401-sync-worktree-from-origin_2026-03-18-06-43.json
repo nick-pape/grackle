@@ -1,7 +1,7 @@
 {
   "changes": [
     {
-      "comment": "Worktrees now fetch from origin and branch from origin/main so agents start on up-to-date code",
+      "comment": "Worktrees now fetch from origin and branch from the remote default branch so agents start on up-to-date code (falls back to local HEAD if fetch fails)",
       "type": "patch",
       "packageName": "@grackle-ai/cli"
     }
