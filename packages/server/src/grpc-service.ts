@@ -377,7 +377,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
     async stopEnvironment(req: grackle.EnvironmentId) {
       const env = envRegistry.getEnvironment(req.id);
       if (!env) {
-        throw new Error(`Environment not found: ${req.id}`);
+        throw new ConnectError(`Environment not found: ${req.id}`, Code.NotFound);
       }
 
       const adapter = adapterManager.getAdapter(env.adapterType);
@@ -393,7 +393,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
     async destroyEnvironment(req: grackle.EnvironmentId) {
       const env = envRegistry.getEnvironment(req.id);
       if (!env) {
-        throw new Error(`Environment not found: ${req.id}`);
+        throw new ConnectError(`Environment not found: ${req.id}`, Code.NotFound);
       }
 
       const adapter = adapterManager.getAdapter(env.adapterType);
@@ -409,12 +409,12 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
     async spawnAgent(req: grackle.SpawnRequest) {
       const env = envRegistry.getEnvironment(req.environmentId);
       if (!env) {
-        throw new Error(`Environment not found: ${req.environmentId}`);
+        throw new ConnectError(`Environment not found: ${req.environmentId}`, Code.NotFound);
       }
 
       const conn = adapterManager.getConnection(req.environmentId);
       if (!conn) {
-        throw new Error(`Environment ${req.environmentId} not connected`);
+        throw new ConnectError(`Environment ${req.environmentId} not connected`, Code.FailedPrecondition);
       }
 
       // Resolve persona if specified
@@ -422,7 +422,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         ? personaStore.getPersona(req.personaId)
         : undefined;
       if (req.personaId && !persona) {
-        throw new Error(`Persona not found: ${req.personaId}`);
+        throw new ConnectError(`Persona not found: ${req.personaId}`, Code.NotFound);
       }
 
       const sessionId = uuid();
@@ -492,12 +492,12 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
     async resumeAgent(req: grackle.ResumeRequest) {
       const session = sessionStore.getSession(req.sessionId);
       if (!session) {
-        throw new Error(`Session not found: ${req.sessionId}`);
+        throw new ConnectError(`Session not found: ${req.sessionId}`, Code.NotFound);
       }
 
       const conn = adapterManager.getConnection(session.environmentId);
       if (!conn) {
-        throw new Error(`Environment ${session.environmentId} not connected`);
+        throw new ConnectError(`Environment ${session.environmentId} not connected`, Code.FailedPrecondition);
       }
 
       const powerlineReq = create(powerline.ResumeRequestSchema, {
@@ -535,17 +535,18 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
     async sendInput(req: grackle.InputMessage) {
       const session = sessionStore.getSession(req.sessionId);
       if (!session) {
-        throw new Error(`Session not found: ${req.sessionId}`);
+        throw new ConnectError(`Session not found: ${req.sessionId}`, Code.NotFound);
       }
       if (session.status !== SESSION_STATUS.IDLE) {
-        throw new Error(
+        throw new ConnectError(
           `Session ${req.sessionId} is not idle (status: ${session.status})`,
+          Code.FailedPrecondition,
         );
       }
 
       const conn = adapterManager.getConnection(session.environmentId);
       if (!conn) {
-        throw new Error(`Environment ${session.environmentId} not connected`);
+        throw new ConnectError(`Environment ${session.environmentId} not connected`, Code.FailedPrecondition);
       }
 
       await conn.client.sendInput(
@@ -561,7 +562,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
     async killAgent(req: grackle.SessionId) {
       const session = sessionStore.getSession(req.id);
       if (!session) {
-        throw new Error(`Session not found: ${req.id}`);
+        throw new ConnectError(`Session not found: ${req.id}`, Code.NotFound);
       }
 
       const conn = adapterManager.getConnection(session.environmentId);
@@ -747,7 +748,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
 
     async getProject(req: grackle.ProjectId) {
       const row = projectStore.getProject(req.id);
-      if (!row) throw new Error(`Project not found: ${req.id}`);
+      if (!row) throw new ConnectError(`Project not found: ${req.id}`, Code.NotFound);
       return projectRowToProto(row);
     },
 
@@ -760,13 +761,13 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
     async updateProject(req: grackle.UpdateProjectRequest) {
       const existing = projectStore.getProject(req.id);
       if (!existing) {
-        throw new Error(`Project not found: ${req.id}`);
+        throw new ConnectError(`Project not found: ${req.id}`, Code.NotFound);
       }
       if (req.name?.trim() === "") {
-        throw new Error("Project name cannot be empty");
+        throw new ConnectError("Project name cannot be empty", Code.InvalidArgument);
       }
       if (req.repoUrl !== undefined && req.repoUrl !== "" && !/^https?:\/\//i.test(req.repoUrl)) {
-        throw new Error("Repository URL must use http or https scheme");
+        throw new ConnectError("Repository URL must use http or https scheme", Code.InvalidArgument);
       }
       const row = projectStore.updateProject(req.id, {
         name: req.name !== undefined ? req.name.trim() : undefined,
@@ -777,7 +778,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         worktreeBasePath: req.worktreeBasePath,
       });
       if (!row) {
-        throw new Error(`Project not found after update: ${req.id}`);
+        throw new ConnectError(`Project not found after update: ${req.id}`, Code.NotFound);
       }
       broadcast({ type: "project_updated", payload: { projectId: req.id } });
       return projectRowToProto(row);
@@ -813,21 +814,23 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
 
     async createTask(req: grackle.CreateTaskRequest) {
       const project = projectStore.getProject(req.projectId);
-      if (!project) throw new Error(`Project not found: ${req.projectId}`);
+      if (!project) throw new ConnectError(`Project not found: ${req.projectId}`, Code.NotFound);
 
       // Validate parent task if specified
       if (req.parentTaskId) {
         const parent = taskStore.getTask(req.parentTaskId);
         if (!parent)
-          throw new Error(`Parent task not found: ${req.parentTaskId}`);
+          throw new ConnectError(`Parent task not found: ${req.parentTaskId}`, Code.NotFound);
         if (!parent.canDecompose) {
-          throw new Error(
+          throw new ConnectError(
             `Parent task "${parent.title}" (${req.parentTaskId}) does not have decomposition rights`,
+            Code.FailedPrecondition,
           );
         }
         if (parent.depth + 1 > MAX_TASK_DEPTH) {
-          throw new Error(
+          throw new ConnectError(
             `Task depth would exceed maximum of ${MAX_TASK_DEPTH}`,
+            Code.FailedPrecondition,
           );
         }
       }
@@ -855,7 +858,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
 
     async getTask(req: grackle.TaskId) {
       const row = taskStore.getTask(req.id);
-      if (!row) throw new Error(`Task not found: ${req.id}`);
+      if (!row) throw new ConnectError(`Task not found: ${req.id}`, Code.NotFound);
       const taskSessions = sessionStore.listSessionsForTask(req.id);
       const { status, latestSessionId } = computeTaskStatus(row.status, taskSessions);
       return taskRowToProto(row, undefined, status, latestSessionId);
@@ -863,13 +866,13 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
 
     async updateTask(req: grackle.UpdateTaskRequest) {
       const existing = taskStore.getTask(req.id);
-      if (!existing) throw new Error(`Task not found: ${req.id}`);
+      if (!existing) throw new ConnectError(`Task not found: ${req.id}`, Code.NotFound);
 
       let reqStatus = existing.status;
       if (req.status !== grackle.TaskStatus.UNSPECIFIED) {
         const converted = taskStatusToString(req.status);
         if (!converted) {
-          throw new Error(`Unknown task status enum value: ${req.status}`);
+          throw new ConnectError(`Unknown task status enum value: ${req.status}`, Code.InvalidArgument);
         }
         reqStatus = converted;
       }
@@ -922,30 +925,31 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
 
     async startTask(req: grackle.StartTaskRequest) {
       const task = taskStore.getTask(req.taskId);
-      if (!task) throw new Error(`Task not found: ${req.taskId}`);
+      if (!task) throw new ConnectError(`Task not found: ${req.taskId}`, Code.NotFound);
       {
         const taskSessions = sessionStore.listSessionsForTask(req.taskId);
         const { status: effectiveStatus } = computeTaskStatus(task.status, taskSessions);
         if (!([TASK_STATUS.NOT_STARTED, TASK_STATUS.FAILED] as string[]).includes(effectiveStatus)) {
-          throw new Error(
+          throw new ConnectError(
             `Task ${req.taskId} cannot be started (status: ${effectiveStatus})`,
+            Code.FailedPrecondition,
           );
         }
       }
       if (!taskStore.areDependenciesMet(req.taskId)) {
-        throw new Error(`Task ${req.taskId} has unmet dependencies`);
+        throw new ConnectError(`Task ${req.taskId} has unmet dependencies`, Code.FailedPrecondition);
       }
 
       const project = projectStore.getProject(task.projectId);
-      if (!project) throw new Error(`Project not found: ${task.projectId}`);
+      if (!project) throw new ConnectError(`Project not found: ${task.projectId}`, Code.NotFound);
 
       const environmentId = req.environmentId || project.defaultEnvironmentId;
       if (!environmentId) {
-        throw new Error("No environment specified for task or project");
+        throw new ConnectError("No environment specified for task or project", Code.FailedPrecondition);
       }
 
       const conn = adapterManager.getConnection(environmentId);
-      if (!conn) throw new Error(`Environment ${environmentId} not connected`);
+      if (!conn) throw new ConnectError(`Environment ${environmentId} not connected`, Code.FailedPrecondition);
 
       // Resolve persona from StartTaskRequest
       const personaId = req.personaId || "";
@@ -953,7 +957,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         ? personaStore.getPersona(personaId)
         : undefined;
       if (personaId && !persona) {
-        throw new Error(`Persona not found: ${personaId}`);
+        throw new ConnectError(`Persona not found: ${personaId}`, Code.NotFound);
       }
 
       const env = envRegistry.getEnvironment(environmentId);
@@ -1053,7 +1057,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
 
     async completeTask(req: grackle.TaskId) {
       const task = taskStore.getTask(req.id);
-      if (!task) throw new Error(`Task not found: ${req.id}`);
+      if (!task) throw new ConnectError(`Task not found: ${req.id}`, Code.NotFound);
 
       taskStore.markTaskComplete(task.id, TASK_STATUS.COMPLETE);
 
@@ -1087,26 +1091,28 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
 
     async resumeTask(req: grackle.TaskId) {
       const task = taskStore.getTask(req.id);
-      if (!task) throw new Error(`Task not found: ${req.id}`);
+      if (!task) throw new ConnectError(`Task not found: ${req.id}`, Code.NotFound);
 
       const latestSession = sessionStore.getLatestSessionForTask(req.id);
       if (!latestSession) {
-        throw new Error(`Task ${req.id} has no sessions to resume`);
+        throw new ConnectError(`Task ${req.id} has no sessions to resume`, Code.FailedPrecondition);
       }
       if (!([SESSION_STATUS.INTERRUPTED, SESSION_STATUS.COMPLETED] as string[]).includes(latestSession.status)) {
-        throw new Error(
+        throw new ConnectError(
           `Latest session ${latestSession.id} is not resumable (status: ${latestSession.status})`,
+          Code.FailedPrecondition,
         );
       }
       if (!latestSession.runtimeSessionId) {
-        throw new Error(
+        throw new ConnectError(
           `Latest session ${latestSession.id} has no runtime session ID — cannot resume`,
+          Code.FailedPrecondition,
         );
       }
 
       const conn = adapterManager.getConnection(latestSession.environmentId);
       if (!conn) {
-        throw new Error(`Environment ${latestSession.environmentId} not connected`);
+        throw new ConnectError(`Environment ${latestSession.environmentId} not connected`, Code.FailedPrecondition);
       }
 
       const powerlineReq = create(powerline.ResumeRequestSchema, {
@@ -1196,9 +1202,9 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
     },
 
     async createPersona(req: grackle.CreatePersonaRequest) {
-      if (!req.name) throw new Error("Persona name is required");
+      if (!req.name) throw new ConnectError("Persona name is required", Code.InvalidArgument);
       if (!req.systemPrompt)
-        throw new Error("Persona system_prompt is required");
+        throw new ConnectError("Persona system_prompt is required", Code.InvalidArgument);
 
       // Enforce unique ID and unique name
       let id = slugify(req.name) || uuid().slice(0, 8);
@@ -1206,7 +1212,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         id = `${id}-${uuid().slice(0, 4)}`;
       }
       if (personaStore.getPersonaByName(req.name)) {
-        throw new Error(`Persona with name "${req.name}" already exists`);
+        throw new ConnectError(`Persona with name "${req.name}" already exists`, Code.AlreadyExists);
       }
 
       const toolConfigJson = JSON.stringify({
@@ -1240,13 +1246,13 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
 
     async getPersona(req: grackle.PersonaId) {
       const row = personaStore.getPersona(req.id);
-      if (!row) throw new Error(`Persona not found: ${req.id}`);
+      if (!row) throw new ConnectError(`Persona not found: ${req.id}`, Code.NotFound);
       return personaRowToProto(row);
     },
 
     async updatePersona(req: grackle.UpdatePersonaRequest) {
       const existing = personaStore.getPersona(req.id);
-      if (!existing) throw new Error(`Persona not found: ${req.id}`);
+      if (!existing) throw new ConnectError(`Persona not found: ${req.id}`, Code.NotFound);
 
       // Only update toolConfig/mcpServers if the request provides non-empty values;
       // otherwise keep the existing stored value.
@@ -1277,7 +1283,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       // Treat empty string / 0 as "not set" and keep existing value
       const name = req.name || existing.name;
       if (name !== existing.name && personaStore.getPersonaByName(name)) {
-        throw new Error(`Persona with name "${name}" already exists`);
+        throw new ConnectError(`Persona with name "${name}" already exists`, Code.AlreadyExists);
       }
       const description = req.description || existing.description;
       const systemPrompt = req.systemPrompt || existing.systemPrompt;
@@ -1345,7 +1351,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
 
     async importGitHubIssues(req: grackle.ImportGitHubIssuesRequest) {
       if (req.state === grackle.IssueState.UNSPECIFIED) {
-        throw new Error("state must be OPEN or CLOSED");
+        throw new ConnectError("state must be OPEN or CLOSED", Code.InvalidArgument);
       }
       const stateStr =
         req.state === grackle.IssueState.CLOSED ? "closed" : "open";

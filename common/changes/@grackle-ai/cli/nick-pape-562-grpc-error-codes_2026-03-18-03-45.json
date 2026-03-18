@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Use ConnectError with proper gRPC status codes instead of plain Error in grpc-service.ts",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
