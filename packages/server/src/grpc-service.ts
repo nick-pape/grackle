@@ -40,6 +40,7 @@ import { safeParseJsonArray } from "./json-helpers.js";
 import { computeTaskStatus } from "./compute-task-status.js";
 import { loadOrCreateApiKey } from "./api-key.js";
 import { logger } from "./logger.js";
+import { reanimateAgent } from "./reanimate-agent.js";
 import { slugify } from "./utils/slugify.js";
 import { buildTaskSystemContext } from "./utils/system-context.js";
 import { importGitHubIssues as executeGitHubImport } from "./github-import.js";
@@ -492,46 +493,8 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
     },
 
     async resumeAgent(req: grackle.ResumeRequest) {
-      const session = sessionStore.getSession(req.sessionId);
-      if (!session) {
-        throw new ConnectError(`Session not found: ${req.sessionId}`, Code.NotFound);
-      }
-
-      const conn = adapterManager.getConnection(session.environmentId);
-      if (!conn) {
-        throw new ConnectError(`Environment ${session.environmentId} not connected`, Code.FailedPrecondition);
-      }
-
-      const powerlineReq = create(powerline.ResumeRequestSchema, {
-        sessionId: session.id,
-        runtimeSessionId: session.runtimeSessionId || "",
-        runtime: session.runtime,
-      });
-
-      const logPath =
-        session.logPath || join(grackleHome, LOGS_DIR, session.id);
-
-      // Auto-bind task context from DB if session was previously associated with a task
-      let resumeProjectId: string | undefined;
-      let resumeTaskId: string | undefined;
-
-      if (session.taskId) {
-        const task = taskStore.getTask(session.taskId);
-        if (task) {
-          resumeProjectId = task.projectId;
-          resumeTaskId = task.id;
-        }
-      }
-
-      processEventStream(conn.client.resume(powerlineReq), {
-        sessionId: session.id,
-        logPath,
-        projectId: resumeProjectId,
-        taskId: resumeTaskId,
-      });
-
-      const row = sessionStore.getSession(session.id);
-      return sessionRowToProto(row!);
+      const row = reanimateAgent(req.sessionId);
+      return sessionRowToProto(row);
     },
 
     async sendInput(req: grackle.InputMessage) {

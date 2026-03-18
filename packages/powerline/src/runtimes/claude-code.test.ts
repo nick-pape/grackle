@@ -1,4 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import type { AgentEvent } from "./runtime.js";
 
 // Mock the logger before importing the module under test
 vi.mock("../logger.js", () => ({
@@ -13,7 +14,13 @@ vi.mock("./runtime-utils.js", async (importOriginal) => {
   };
 });
 
-import { mapMessage } from "./claude-code.js";
+// Mock the Claude Agent SDK so tests run without a real API key
+const mockQuery = vi.fn();
+vi.mock("@anthropic-ai/claude-agent-sdk", () => ({
+  query: mockQuery,
+}));
+
+import { mapMessage, ClaudeCodeRuntime } from "./claude-code.js";
 
 describe("mapMessage", () => {
   beforeEach(() => {
@@ -264,5 +271,83 @@ describe("ClaudeCodeRuntime structural", () => {
     const opts = (session as any).cachedSdkOptions;
     expect(opts.settingSources).toEqual(["project"]);
     expect(opts.hooks).toEqual(hooks);
+  });
+});
+
+// ─── Helpers ─────────────────────────────────────────────────
+
+/** Create an async iterable from an array of objects. */
+function asyncIterableFrom<T>(items: T[]): AsyncIterable<T> {
+  return {
+    [Symbol.asyncIterator]() {
+      let i = 0;
+      return {
+        async next() {
+          if (i < items.length) return { value: items[i++], done: false };
+          return { value: undefined as unknown as T, done: true };
+        },
+      };
+    },
+  };
+}
+
+/** Collect events from a session stream, stopping after the first waiting_input. */
+async function collectUntilIdle(session: { stream(): AsyncIterable<AgentEvent>; kill(): void }): Promise<AgentEvent[]> {
+  const events: AgentEvent[] = [];
+  for await (const event of session.stream()) {
+    events.push(event);
+    if (event.type === "status" && event.content === "waiting_input") {
+      session.kill();
+      break;
+    }
+    // Also stop on error to avoid hanging tests
+    if (event.type === "status" && event.content === "failed") {
+      break;
+    }
+  }
+  return events;
+}
+
+describe("ClaudeCodeRuntime — runtime_session_id emission", () => {
+  beforeEach(() => {
+    vi.stubEnv("GRACKLE_MCP_CONFIG", "");
+    mockQuery.mockReset();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("emits runtime_session_id event when SDK returns a system message with session_id", async () => {
+    // The SDK returns a system/init message with session_id, followed by an assistant message
+    mockQuery.mockReturnValue(asyncIterableFrom([
+      { type: "system", subtype: "init", session_id: "sdk-session-abc", model: "claude-sonnet-4" },
+      { type: "assistant", message: { role: "assistant", content: [{ type: "text", text: "Hello" }] } },
+    ]));
+
+    const runtime = new ClaudeCodeRuntime();
+    const session = runtime.spawn({ sessionId: "cc-emit-test", prompt: "hi", model: "claude-sonnet-4", maxTurns: 1 });
+    const events = await collectUntilIdle(session);
+
+    const rtIdEvent = events.find((e) => e.type === "runtime_session_id");
+    expect(rtIdEvent, "Expected runtime_session_id event").toBeDefined();
+    expect(rtIdEvent!.content).toBe("sdk-session-abc");
+    expect(rtIdEvent!.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+  });
+
+  it("emits runtime_session_id only once even if SDK sends multiple system messages", async () => {
+    mockQuery.mockReturnValue(asyncIterableFrom([
+      { type: "system", subtype: "init", session_id: "sdk-session-first", model: "claude-sonnet-4" },
+      { type: "system", subtype: "init", session_id: "sdk-session-second", model: "claude-sonnet-4" },
+      { type: "assistant", message: { role: "assistant", content: [{ type: "text", text: "Hi" }] } },
+    ]));
+
+    const runtime = new ClaudeCodeRuntime();
+    const session = runtime.spawn({ sessionId: "cc-once-test", prompt: "hi", model: "claude-sonnet-4", maxTurns: 1 });
+    const events = await collectUntilIdle(session);
+
+    const rtIdEvents = events.filter((e) => e.type === "runtime_session_id");
+    expect(rtIdEvents).toHaveLength(1);
+    expect(rtIdEvents[0].content).toBe("sdk-session-first");
   });
 });

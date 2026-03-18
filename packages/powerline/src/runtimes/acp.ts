@@ -362,6 +362,7 @@ class AcpSession extends BaseAgentSession {
     if (this.resumeSessionId) {
       this.acpSessionId = this.resumeSessionId;
       this.runtimeSessionId = this.resumeSessionId;
+      this.eventQueue.push({ type: "runtime_session_id", timestamp: ts(), content: this.runtimeSessionId });
       this.eventQueue.push({
         type: "system",
         timestamp: ts(),
@@ -385,6 +386,7 @@ class AcpSession extends BaseAgentSession {
 
     this.acpSessionId = sessionResult.sessionId as string;
     this.runtimeSessionId = this.acpSessionId || "";
+    this.eventQueue.push({ type: "runtime_session_id", timestamp: ts(), content: this.runtimeSessionId });
 
     this.eventQueue.push({
       type: "system",

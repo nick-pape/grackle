@@ -57,7 +57,7 @@ export const sessionTools: ToolDefinition[] = [
   {
     name: "session_resume",
     group: "session",
-    description: "Resume a previously suspended agent session, continuing from where it left off.",
+    description: "Resume a terminated agent session (completed, failed, or interrupted). Starts a new runtime process that loads the existing conversation via the runtime's native resume mechanism, returning the session in running state. Errors if the session is still active (idle, running, or pending).",
     inputSchema: z.object({
       sessionId: z.string().describe("The ID of the session to resume"),
     }),
