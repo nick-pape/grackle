@@ -24,7 +24,9 @@ export function SettingsPage(): JSX.Element {
     <div className={styles.layout}>
       <Breadcrumbs segments={breadcrumbs} />
       <div className={styles.content}>
-        <Outlet />
+        <div key={tabSegment} className={styles.tabPanel}>
+          <Outlet />
+        </div>
       </div>
     </div>
   );

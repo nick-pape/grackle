@@ -10,3 +10,12 @@
   overflow-y: auto;
   padding: var(--space-lg);
 }
+
+.tabPanel {
+  animation: fadeIn var(--transition-fast);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}

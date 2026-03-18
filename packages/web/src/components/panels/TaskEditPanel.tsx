@@ -45,6 +45,7 @@ export function TaskEditPanel({ mode, taskId, projectId: projectIdProp, parentTa
   const [description, setDescription] = useState(existingTask?.description ?? "");
   const [selectedDeps, setSelectedDeps] = useState<string[]>(existingTask?.dependsOn ?? []);
   const [defaultPersonaId, setDefaultPersonaId] = useState(existingTask?.defaultPersonaId ?? "");
+  const [creating, setCreating] = useState(false);
 
   // In edit mode, tasks may not have loaded yet at mount time. Sync form state
   // the first time existingTask becomes available so the form is pre-populated,
@@ -82,7 +83,7 @@ export function TaskEditPanel({ mode, taskId, projectId: projectIdProp, parentTa
   };
 
   const handleSave = (): void => {
-    if (!canSave) {
+    if (!canSave || creating) {
       return;
     }
     if (isEdit && existingTask === undefined) {
@@ -94,6 +95,7 @@ export function TaskEditPanel({ mode, taskId, projectId: projectIdProp, parentTa
       showToast("Task updated", "success");
       navigate(taskUrl(taskId), { replace: true });
     } else {
+      setCreating(true);
       createTask(
         projectId,
         title.trim(),
@@ -101,9 +103,15 @@ export function TaskEditPanel({ mode, taskId, projectId: projectIdProp, parentTa
         selectedDeps.length > 0 ? selectedDeps : undefined,
         parentTaskId || undefined,
         defaultPersonaId || undefined,
+        () => {
+          showToast("Task created", "success");
+          navigate(projectUrl(projectId), { replace: true });
+        },
+        (message: string) => {
+          showToast(message, "error");
+          setCreating(false);
+        },
       );
-      showToast("Task created", "success");
-      navigate(projectUrl(projectId), { replace: true });
     }
   };
 
@@ -133,11 +141,11 @@ export function TaskEditPanel({ mode, taskId, projectId: projectIdProp, parentTa
         <div className={styles.headerActions}>
           <button
             onClick={handleSave}
-            disabled={!canSave}
+            disabled={!canSave || creating}
             className={styles.btnPrimary}
             data-testid="task-edit-save"
           >
-            {isEdit ? "Save Changes" : "Create"}
+            {creating ? "Creating\u2026" : isEdit ? "Save Changes" : "Create"}
           </button>
           <button onClick={handleCancel} className={styles.btnGhost}>
             Cancel

@@ -369,10 +369,9 @@ test.describe("Projects", () => {
     await page.getByText("progress-test").locator("..").locator('button[title="New task"]').first().click();
     await page.locator('[data-testid="task-edit-title"]').fill("progress task");
     await page.locator('[data-testid="task-edit-save"]').click();
-    await expect(page.getByText("progress task")).toBeVisible({ timeout: 5_000 });
-
-    // Go back to project view
-    await page.getByText("progress-test").first().click();
+    // After server confirms, the app navigates to the project view and the
+    // task appears in the sidebar.
+    await expect(page.getByTestId("sidebar").getByText("progress task")).toBeVisible({ timeout: 5_000 });
 
     // Progress bar should now be visible
     await expect(page.locator('[data-testid="progress-bar"]')).toBeVisible({ timeout: 5_000 });
