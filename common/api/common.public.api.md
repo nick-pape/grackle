@@ -18,7 +18,6 @@ type AddEnvironmentRequest = Message<"grackle.AddEnvironmentRequest"> & {
     displayName: string;
     adapterType: string;
     adapterConfig: string;
-    defaultRuntime: string;
 };
 
 // @public
@@ -82,6 +81,7 @@ type CreateProjectRequest = Message<"grackle.CreateProjectRequest"> & {
     defaultEnvironmentId: string;
     useWorktrees?: boolean;
     worktreeBasePath?: string;
+    defaultPersonaId?: string;
 };
 
 // @public
@@ -95,6 +95,7 @@ type CreateTaskRequest = Message<"grackle.CreateTaskRequest"> & {
     dependsOn: string[];
     parentTaskId: string;
     canDecompose?: boolean;
+    defaultPersonaId?: string;
 };
 
 // @public
@@ -118,13 +119,10 @@ export const DB_FILENAME: string;
 export const DEFAULT_MCP_PORT: number;
 
 // @public
-export const DEFAULT_MODEL: string;
+export const DEFAULT_PERSONA_NAME: string;
 
 // @public
 export const DEFAULT_POWERLINE_PORT: number;
-
-// @public
-export const DEFAULT_RUNTIME: RuntimeName;
 
 // @public
 export const DEFAULT_SERVER_PORT: number;
@@ -171,7 +169,6 @@ type Environment = Message<"grackle.Environment"> & {
     displayName: string;
     adapterType: string;
     adapterConfig: string;
-    defaultRuntime: string;
     bootstrapped: boolean;
     status: string;
     lastSeen: string;
@@ -296,6 +293,14 @@ export interface FuzzySearchOptions {
     limit?: number;
     threshold?: number;
 }
+
+// @public
+type GetSettingRequest = Message<"grackle.GetSettingRequest"> & {
+    key: string;
+};
+
+// @public
+const GetSettingRequestSchema: GenMessage<GetSettingRequest>;
 
 // @public
 const Grackle: GenService<{
@@ -499,6 +504,16 @@ const Grackle: GenService<{
         input: typeof ImportGitHubIssuesRequestSchema;
         output: typeof ImportGitHubIssuesResponseSchema;
     };
+    getSetting: {
+        methodKind: "unary";
+        input: typeof GetSettingRequestSchema;
+        output: typeof SettingResponseSchema;
+    };
+    setSetting: {
+        methodKind: "unary";
+        input: typeof SetSettingRequestSchema;
+        output: typeof SettingResponseSchema;
+    };
     generatePairingCode: {
         methodKind: "unary";
         input: typeof EmptySchema;
@@ -599,6 +614,12 @@ declare namespace grackle {
         CreatePersonaRequestSchema,
         UpdatePersonaRequest,
         UpdatePersonaRequestSchema,
+        GetSettingRequest,
+        GetSettingRequestSchema,
+        SetSettingRequest,
+        SetSettingRequestSchema,
+        SettingResponse,
+        SettingResponseSchema,
         PairingCodeResponse,
         PairingCodeResponseSchema,
         EventType_2 as EventType,
@@ -876,6 +897,7 @@ type Project = Message<"grackle.Project"> & {
     updatedAt: string;
     useWorktrees: boolean;
     worktreeBasePath: string;
+    defaultPersonaId: string;
 };
 
 // @public
@@ -970,6 +992,9 @@ const ResumeRequestSchema_2: GenMessage<ResumeRequest_2>;
 
 // @public
 export type RuntimeName = "claude-code" | "copilot" | "codex" | "stub";
+
+// @public
+export const SEED_PERSONA_ID: string;
 
 // @public
 type Session = Message<"grackle.Session"> & {
@@ -1079,12 +1104,28 @@ type SetCredentialProviderRequest = Message<"grackle.SetCredentialProviderReques
 const SetCredentialProviderRequestSchema: GenMessage<SetCredentialProviderRequest>;
 
 // @public
+type SetSettingRequest = Message<"grackle.SetSettingRequest"> & {
+    key: string;
+    value: string;
+};
+
+// @public
+const SetSettingRequestSchema: GenMessage<SetSettingRequest>;
+
+// @public
+type SettingResponse = Message<"grackle.SettingResponse"> & {
+    key: string;
+    value: string;
+};
+
+// @public
+const SettingResponseSchema: GenMessage<SettingResponse>;
+
+// @public
 type SpawnRequest = Message<"grackle.SpawnRequest"> & {
     environmentId: string;
     prompt: string;
-    model: string;
     maxTurns: number;
-    runtime: string;
     branch: string;
     systemContext: string;
     personaId: string;
@@ -1117,8 +1158,6 @@ const SpawnRequestSchema_2: GenMessage<SpawnRequest_2>;
 // @public
 type StartTaskRequest = Message<"grackle.StartTaskRequest"> & {
     taskId: string;
-    runtime: string;
-    model: string;
     personaId: string;
     environmentId: string;
     notes: string;
@@ -1146,6 +1185,7 @@ type Task = Message<"grackle.Task"> & {
     depth: number;
     childTaskIds: string[];
     canDecompose: boolean;
+    defaultPersonaId: string;
 };
 
 // @public
@@ -1296,6 +1336,7 @@ type UpdateProjectRequest = Message<"grackle.UpdateProjectRequest"> & {
     defaultEnvironmentId?: string;
     useWorktrees?: boolean;
     worktreeBasePath?: string;
+    defaultPersonaId?: string;
 };
 
 // @public
@@ -1309,6 +1350,7 @@ type UpdateTaskRequest = Message<"grackle.UpdateTaskRequest"> & {
     status: TaskStatus_2;
     dependsOn: string[];
     sessionId: string;
+    defaultPersonaId?: string;
 };
 
 // @public

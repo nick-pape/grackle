@@ -3,11 +3,6 @@ import type { Page } from "@playwright/test";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type WsPayload = Record<string, any>;
 
-/** Return the runtime selector used by the new chat form. */
-export function getNewChatRuntimeSelect(page: Page) {
-  return page.getByTestId("new-chat-runtime-select");
-}
-
 /**
  * Open a second WebSocket from the page context, send a message, and wait for
  * a response matching the given type. Resolves with the full response object.

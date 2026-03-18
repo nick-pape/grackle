@@ -36,8 +36,6 @@ export interface UseSessionsResult {
   spawn: (
     environmentId: string,
     prompt: string,
-    model?: string,
-    runtime?: string,
     personaId?: string,
     worktreeBasePath?: string,
   ) => void;
@@ -252,8 +250,6 @@ export function useSessions(send: SendFunction): UseSessionsResult {
     (
       environmentId: string,
       prompt: string,
-      model?: string,
-      runtime?: string,
       personaId?: string,
       worktreeBasePath?: string,
     ) => {
@@ -262,8 +258,6 @@ export function useSessions(send: SendFunction): UseSessionsResult {
         payload: {
           environmentId,
           prompt,
-          model: model || "",
-          runtime: runtime || "",
           personaId: personaId || "",
           worktreeBasePath: worktreeBasePath || "",
         },

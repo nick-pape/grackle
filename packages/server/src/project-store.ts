@@ -13,6 +13,7 @@ export function createProject(
   defaultEnvironmentId: string,
   useWorktrees: boolean = true,
   worktreeBasePath: string = "",
+  defaultPersonaId: string = "",
 ): void {
   db.insert(projects).values({
     id,
@@ -22,6 +23,7 @@ export function createProject(
     defaultEnvironmentId,
     useWorktrees,
     worktreeBasePath: worktreeBasePath.trim(),
+    defaultPersonaId,
   }).run();
 }
 
@@ -56,6 +58,8 @@ export interface UpdateProjectFields {
   useWorktrees?: boolean;
   /** Custom base path for worktrees (e.g. /workspaces/my-repo). Empty means use default. */
   worktreeBasePath?: string;
+  /** Default persona for tasks in this project. */
+  defaultPersonaId?: string;
 }
 
 /** Update one or more fields on an existing project. Returns the updated row, or undefined if not found. */
@@ -78,6 +82,9 @@ export function updateProject(id: string, fields: UpdateProjectFields): ProjectR
   }
   if (fields.worktreeBasePath !== undefined) {
     sets.worktreeBasePath = fields.worktreeBasePath.trim();
+  }
+  if (fields.defaultPersonaId !== undefined) {
+    sets.defaultPersonaId = fields.defaultPersonaId;
   }
   db.update(projects).set(sets).where(eq(projects.id, id)).run();
   return getProject(id);

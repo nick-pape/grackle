@@ -24,7 +24,7 @@ interface Props {
  *         back to the task overview.
  */
 export function TaskEditPanel({ mode, taskId, projectId: projectIdProp, parentTaskId: parentTaskIdProp }: Props): JSX.Element {
-  const { tasks, createTask, updateTask } = useGrackle();
+  const { tasks, personas, createTask, updateTask } = useGrackle();
   const { showToast } = useToast();
   const navigate = useAppNavigate();
 
@@ -44,6 +44,7 @@ export function TaskEditPanel({ mode, taskId, projectId: projectIdProp, parentTa
   const [title, setTitle] = useState(existingTask?.title ?? "");
   const [description, setDescription] = useState(existingTask?.description ?? "");
   const [selectedDeps, setSelectedDeps] = useState<string[]>(existingTask?.dependsOn ?? []);
+  const [defaultPersonaId, setDefaultPersonaId] = useState(existingTask?.defaultPersonaId ?? "");
   const [creating, setCreating] = useState(false);
 
   // In edit mode, tasks may not have loaded yet at mount time. Sync form state
@@ -57,6 +58,7 @@ export function TaskEditPanel({ mode, taskId, projectId: projectIdProp, parentTa
       setTitle(existingTask.title);
       setDescription(existingTask.description);
       setSelectedDeps(existingTask.dependsOn);
+      setDefaultPersonaId(existingTask.defaultPersonaId);
     }
   }, [isEdit, existingTask]);
 
@@ -89,7 +91,7 @@ export function TaskEditPanel({ mode, taskId, projectId: projectIdProp, parentTa
       return;
     }
     if (isEdit && taskId) {
-      updateTask(taskId, title.trim(), description, selectedDeps);
+      updateTask(taskId, title.trim(), description, selectedDeps, defaultPersonaId);
       showToast("Task updated", "success");
       navigate(taskUrl(taskId), { replace: true });
     } else {
@@ -100,6 +102,7 @@ export function TaskEditPanel({ mode, taskId, projectId: projectIdProp, parentTa
         description,
         selectedDeps.length > 0 ? selectedDeps : undefined,
         parentTaskId || undefined,
+        defaultPersonaId,
         () => {
           showToast("Task created", "success");
           navigate(projectUrl(projectId), { replace: true });
@@ -189,6 +192,25 @@ export function TaskEditPanel({ mode, taskId, projectId: projectIdProp, parentTa
               data-testid="task-edit-description"
               rows={8}
             />
+          </div>
+
+          {/* Default Persona */}
+          <div className={styles.section}>
+            <label className={styles.label} htmlFor="task-edit-persona">
+              Default Persona
+            </label>
+            <select
+              id="task-edit-persona"
+              value={defaultPersonaId}
+              onChange={(e) => setDefaultPersonaId(e.target.value)}
+              className={styles.personaSelect}
+              data-testid="task-edit-persona"
+            >
+              <option value="">(Inherit)</option>
+              {personas.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
           </div>
 
           {/* Dependencies */}

@@ -53,9 +53,9 @@ test.describe("URL builder functions", () => {
     expect(url).toBe("/tasks/new?project=proj-1&parent=parent-task");
   });
 
-  test("newChatUrl includes env and runtime params", () => {
-    const url = newChatUrl("env-1", "claude-code");
-    expect(url).toBe("/sessions/new?env=env-1&runtime=claude-code");
+  test("newChatUrl includes env param", () => {
+    const url = newChatUrl("env-1");
+    expect(url).toBe("/sessions/new?env=env-1");
   });
 
   test("constant URLs are correct", () => {

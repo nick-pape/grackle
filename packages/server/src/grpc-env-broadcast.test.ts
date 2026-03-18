@@ -159,7 +159,6 @@ const FAKE_ENV = {
   displayName: "Test Env",
   adapterType: "local",
   adapterConfig: "{}",
-  defaultRuntime: "claude-code",
   bootstrapped: false,
   status: "disconnected",
   lastSeen: "",
@@ -283,7 +282,7 @@ describe("gRPC environment broadcast", () => {
         displayName: "Test Env",
         adapterType: "local",
         adapterConfig: "{}",
-        defaultRuntime: "claude-code",
+
       });
 
       expect(envRegistry.addEnvironment).toHaveBeenCalled();

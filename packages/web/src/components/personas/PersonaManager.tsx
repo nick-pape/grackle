@@ -5,7 +5,7 @@ import styles from "./PersonaManager.module.scss";
 
 /** Full CRUD management view for personas. */
 export function PersonaManager(): JSX.Element {
-  const { personas, createPersona, updatePersona, deletePersona } = useGrackle();
+  const { personas, createPersona, updatePersona, deletePersona, appDefaultPersonaId, setAppDefaultPersonaId } = useGrackle();
   const [editing, setEditing] = useState<PersonaData | null>(null);
   const [creating, setCreating] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
@@ -14,16 +14,16 @@ export function PersonaManager(): JSX.Element {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [systemPrompt, setSystemPrompt] = useState("");
-  const [runtime, setRuntime] = useState("");
-  const [model, setModel] = useState("");
+  const [runtime, setRuntime] = useState("claude-code");
+  const [model, setModel] = useState("sonnet");
   const [maxTurns, setMaxTurns] = useState(0);
 
   const resetForm = (): void => {
     setName("");
     setDescription("");
     setSystemPrompt("");
-    setRuntime("");
-    setModel("");
+    setRuntime("claude-code");
+    setModel("sonnet");
     setMaxTurns(0);
   };
 
@@ -46,7 +46,7 @@ export function PersonaManager(): JSX.Element {
 
   const handleSubmit = (e: FormEvent): void => {
     e.preventDefault();
-    if (!name.trim() || !systemPrompt.trim()) {
+    if (!name.trim() || !systemPrompt.trim() || !runtime || !model) {
       return;
     }
     if (editing) {
@@ -99,11 +99,11 @@ export function PersonaManager(): JSX.Element {
       </label>
       <label>
         Runtime
-        <select value={runtime} onChange={(e) => setRuntime(e.target.value)}>
-          <option value="">Default</option>
+        <select value={runtime} onChange={(e) => setRuntime(e.target.value)} data-testid="persona-runtime-select">
           <option value="claude-code">claude-code</option>
           <option value="codex">codex</option>
           <option value="copilot">copilot</option>
+          <option value="stub">stub</option>
           <option value="claude-code-acp">claude-code-acp (experimental)</option>
           <option value="codex-acp">codex-acp (experimental)</option>
           <option value="copilot-acp">copilot-acp (experimental)</option>
@@ -163,11 +163,28 @@ export function PersonaManager(): JSX.Element {
         <p className={styles.empty}>No personas yet. Create one to get started.</p>
       ) : (
         <div className={styles.list}>
-          {personas.map((p) => (
-            <div key={p.id} className={`${styles.card} ${editing?.id === p.id ? styles.active : ""}`}>
+          {personas.map((p) => {
+            const isAppDefault = appDefaultPersonaId === p.id;
+            return (
+            <div key={p.id} className={`${styles.card} ${editing?.id === p.id ? styles.active : ""}`} data-testid={`persona-card-${p.id}`}>
               <div className={styles.cardHeader}>
-                <strong>{p.name}</strong>
+                <span className={styles.cardTitle}>
+                  <strong>{p.name}</strong>
+                  {isAppDefault && (
+                    <span className={styles.defaultBadge} data-testid={`persona-default-badge-${p.id}`}>App Default</span>
+                  )}
+                </span>
                 <div className={styles.cardActions}>
+                  {!isAppDefault && (
+                    <button
+                      onClick={() => setAppDefaultPersonaId(p.id)}
+                      className={styles.btnSmall}
+                      data-testid={`persona-set-default-${p.id}`}
+                      title="Set as app default persona"
+                    >
+                      Set Default
+                    </button>
+                  )}
                   <button onClick={() => startEdit(p)} className={styles.btnSmall}>Edit</button>
                   {confirmDelete === p.id ? (
                     <>
@@ -190,7 +207,8 @@ export function PersonaManager(): JSX.Element {
                 <pre className={styles.promptText}>{p.systemPrompt}</pre>
               </details>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

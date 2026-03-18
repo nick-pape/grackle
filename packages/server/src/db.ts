@@ -377,6 +377,65 @@ export function initDatabase(): void {
   sqlite.exec(
     "CREATE INDEX IF NOT EXISTS idx_sessions_task_id ON sessions(task_id)",
   );
+
+  // Migration: add default_persona_id to projects and tasks
+  try {
+    sqlite.exec(
+      "ALTER TABLE projects ADD COLUMN default_persona_id TEXT NOT NULL DEFAULT ''",
+    );
+  } catch {
+    /* column already exists */
+  }
+  try {
+    sqlite.exec(
+      "ALTER TABLE tasks ADD COLUMN default_persona_id TEXT NOT NULL DEFAULT ''",
+    );
+  } catch {
+    /* column already exists */
+  }
+
+  // Seed: create default "Claude Code" persona if no personas exist
+  const personaCount = sqlite
+    .prepare("SELECT COUNT(*) as cnt FROM personas")
+    .get() as { cnt: number };
+  if (personaCount.cnt === 0) {
+    sqlite.exec(`
+      INSERT INTO personas (id, name, description, system_prompt, runtime, model, max_turns)
+      VALUES (
+        'claude-code',
+        'Claude Code',
+        'Default agent persona using Claude Code runtime',
+        '',
+        'claude-code',
+        'sonnet',
+        0
+      )
+    `);
+    sqlite.exec(`
+      INSERT OR IGNORE INTO settings (key, value)
+      VALUES ('default_persona_id', 'claude-code')
+    `);
+  }
+
+  // Backfill: ensure default_persona_id setting exists for upgrades.
+  // Existing installations may have personas but no default_persona_id setting,
+  // which would cause resolvePersona() to fail when no persona is explicitly specified.
+  const existingDefault = sqlite
+    .prepare("SELECT value FROM settings WHERE key = 'default_persona_id'")
+    .get() as { value: string } | undefined;
+  if (!existingDefault) {
+    // Prefer the seed persona 'claude-code' if it exists; otherwise fall back
+    // to the first persona alphabetically.
+    const fallback = (
+      sqlite.prepare("SELECT id FROM personas WHERE id = 'claude-code'").get() ??
+      sqlite.prepare("SELECT id FROM personas ORDER BY name LIMIT 1").get()
+    ) as { id: string } | undefined;
+    if (fallback) {
+      sqlite
+        .prepare("INSERT OR IGNORE INTO settings (key, value) VALUES ('default_persona_id', ?)")
+        .run(fallback.id);
+    }
+  }
 }
 
 // Run init immediately for backwards compatibility — stores import db at module load

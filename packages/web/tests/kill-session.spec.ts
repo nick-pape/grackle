@@ -1,5 +1,4 @@
 import { test, expect } from "./fixtures.js";
-import { getNewChatRuntimeSelect } from "./helpers.js";
 
 test.describe("Kill Session", () => {
   test("kill during waiting_input", async ({ appPage }) => {
@@ -8,10 +7,8 @@ test.describe("Kill Session", () => {
     // Environments are now in Settings — navigate there via the gear button
     await page.locator('button[title="Settings"]').click();
 
-    // Start a stub session
+    // Start a stub session (uses default stub persona)
     await page.locator('button[title="New chat"]').click();
-    const runtimeSelect = getNewChatRuntimeSelect(page);
-    await runtimeSelect.selectOption("stub");
     const promptInput = page.locator('input[placeholder="Enter prompt..."]');
     await promptInput.fill("kill test");
     await page.locator("button", { hasText: "Go" }).click();

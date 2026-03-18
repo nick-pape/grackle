@@ -132,7 +132,7 @@ function EnvironmentCard({
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                navigate(newChatUrl(env.id, env.defaultRuntime || "claude-code"));
+                navigate(newChatUrl(env.id));
               }}
               title="New chat"
               className={styles.newChatButton}

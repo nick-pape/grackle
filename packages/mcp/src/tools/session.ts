@@ -26,10 +26,8 @@ export const sessionTools: ToolDefinition[] = [
     inputSchema: z.object({
       environmentId: z.string().describe("The environment ID to spawn the agent in"),
       prompt: z.string().describe("The prompt or task description for the agent"),
-      model: z.string().optional().describe("The AI model to use (e.g. claude-sonnet-4-20250514)"),
       maxTurns: z.number().int().positive().optional().describe("Maximum number of turns the agent may take"),
-      runtime: z.string().optional().describe("The runtime to use (e.g. claude-code). ACP runtimes (claude-code-acp, codex-acp, copilot-acp) are experimental."),
-      personaId: z.string().optional().describe("Persona ID to configure agent behavior"),
+      personaId: z.string().optional().describe("Persona ID to configure agent behavior (falls back to app default)"),
       worktreeBasePath: z.string().optional().describe("Base path for worktrees (e.g. /workspaces/my-repo)"),
     }),
     rpcMethod: "spawnAgent",
@@ -45,9 +43,7 @@ export const sessionTools: ToolDefinition[] = [
         const session = await client.spawnAgent({
           environmentId: args.environmentId as string,
           prompt: args.prompt as string,
-          model: args.model as string | undefined,
           maxTurns: args.maxTurns as number | undefined,
-          runtime: args.runtime as string | undefined,
           personaId: args.personaId as string | undefined,
           worktreeBasePath: (args.worktreeBasePath as string | undefined) ?? "",
         });
