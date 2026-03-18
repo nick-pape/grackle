@@ -30,23 +30,44 @@ test.describe("Session Reanimate (stub runtime)", () => {
     await expect(page.locator("text=Session completed")).toBeVisible({ timeout: 10_000 });
 
     // ── 4. Find the completed session ID via WS ───────────────────────────
+    // Pick the most recently started completed stub session (other specs may
+    // have also left completed stub sessions in the DB).
     const sessionsResp = await sendWsAndWaitFor(
       page,
       { type: "list_sessions", payload: { status: "completed" } },
       "sessions",
     );
-    const sessions = (sessionsResp.payload?.sessions ?? []) as Array<{ id: string; status: string; runtime: string }>;
-    const completed = sessions.find((s) => s.status === "completed" && s.runtime === "stub");
+    const sessions = (sessionsResp.payload?.sessions ?? []) as Array<{
+      id: string; status: string; runtime: string; startedAt: string;
+    }>;
+    const completed = sessions
+      .filter((s) => s.status === "completed" && s.runtime === "stub")
+      .sort((a, b) => b.startedAt.localeCompare(a.startedAt))[0];
     expect(completed, "Expected a completed stub session").toBeTruthy();
-    const sessionId = completed!.id;
+    const sessionId = completed.id;
 
     // ── 5. Reanimate via WS resume_agent ──────────────────────────────────
-    const resumeResp = await sendWsAndWaitFor(
-      page,
-      { type: "resume_agent", payload: { sessionId } },
-      "agent_resumed",
+    // Use page.evaluate directly so we can capture either agent_resumed or
+    // error (sendWsAndWaitFor times out silently on error).
+    const resumeResult = await page.evaluate(
+      async ({ sessionId: sid }): Promise<{ type: string; payload: Record<string, unknown> }> => {
+        return new Promise((resolve, reject) => {
+          const ws = new WebSocket(`ws://${window.location.host}`);
+          const timer = setTimeout(() => { ws.close(); reject(new Error("WS timeout waiting for resume response")); }, 10_000);
+          ws.onmessage = (e: MessageEvent) => {
+            const data = JSON.parse(e.data as string) as { type: string; payload: Record<string, unknown> };
+            if (data.type === "agent_resumed" || data.type === "error") {
+              clearTimeout(timer); ws.close(); resolve(data);
+            }
+          };
+          ws.onerror = () => { clearTimeout(timer); ws.close(); reject(new Error("WS error")); };
+          ws.onopen = () => { ws.send(JSON.stringify({ type: "resume_agent", payload: { sessionId: sid } })); };
+        });
+      },
+      { sessionId },
     );
-    expect(resumeResp.payload?.sessionId).toBe(sessionId);
+    expect(resumeResult.type, `resume_agent failed: ${JSON.stringify(resumeResult.payload)}`).toBe("agent_resumed");
+    expect(resumeResult.payload?.sessionId).toBe(sessionId);
 
     // ── 6. UI transitions: session re-enters waiting_input ────────────────
     // The stub resume emits "Echo: (resumed session)" as its first text event
