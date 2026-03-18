@@ -1,6 +1,17 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Wed, 18 Mar 2026 04:06:45 GMT and should not be manually modified.
+This log was last generated on Wed, 18 Mar 2026 04:44:23 GMT and should not be manually modified.
+
+## 0.38.2
+Wed, 18 Mar 2026 04:44:23 GMT
+
+### Patches
+
+- fix: defer task-created toast until server confirms; add create_task_error WS message; add provisioning environment toast
+
+### Updates
+
+- placeholder
 
 ## 0.38.1
 Wed, 18 Mar 2026 04:06:45 GMT
