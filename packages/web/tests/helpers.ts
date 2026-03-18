@@ -366,6 +366,56 @@ export async function createTaskViaWs(
   return response.payload?.task as WsPayload;
 }
 
+/**
+ * Monkey-patch WebSocket.prototype.send to force the "Stub MCP" persona and
+ * inject environmentId on start_task messages. The server resolves the runtime
+ * from the persona (not a runtime field), so we set personaId to "stub-mcp"
+ * which maps to the "Stub MCP" persona created in global-setup.
+ */
+export async function patchWsForStubMcpRuntime(page: Page, environmentId: string = "test-local"): Promise<void> {
+  await page.evaluate((envId: string) => {
+    const origSend = WebSocket.prototype.send;
+    WebSocket.prototype.send = function (
+      data: string | ArrayBuffer | Blob | ArrayBufferView,
+    ) {
+      if (typeof data === "string") {
+        try {
+          const msg = JSON.parse(data);
+          if (msg.type === "start_task") {
+            msg.payload.personaId = "stub-mcp";
+            if (!msg.payload.environmentId) {
+              msg.payload.environmentId = envId;
+            }
+            data = JSON.stringify(msg);
+          }
+        } catch {
+          /* not JSON, pass through */
+        }
+      }
+      return origSend.call(this, data);
+    };
+  }, environmentId);
+}
+
+/**
+ * Run a stub-mcp task through its full lifecycle: start -> working -> idle -> send input -> paused.
+ * Requires patchWsForStubMcpRuntime to have been called on the page beforehand.
+ */
+export async function runStubMcpTaskToCompletion(page: Page): Promise<void> {
+  await page.getByRole("button", { name: "Start", exact: true }).click();
+
+  // Wait for idle state (session waiting for input)
+  const inputField = page.locator('input[placeholder="Type a message..."]');
+  await inputField.waitFor({ timeout: 15_000 });
+  await inputField.fill("continue");
+  await page.getByRole("button", { name: "Send", exact: true }).click();
+
+  // Wait for session to complete and task to move to paused (review)
+  await page
+    .getByRole("button", { name: "Complete", exact: true })
+    .waitFor({ timeout: 15_000 });
+}
+
 /** Navigate to settings and wait for the tab nav to appear. */
 export async function goToSettings(page: Page): Promise<void> {
   await page.locator('button[title="Settings"]').click();

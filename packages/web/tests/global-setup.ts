@@ -18,6 +18,7 @@ interface E2EState {
   powerlinePort: number;
   serverPort: number;
   webPort: number;
+  mcpPort: number;
 }
 
 /** Bind a TCP server to port 0 on 127.0.0.1, read the assigned port, close, and return it. */
@@ -184,7 +185,9 @@ export default async function globalSetup(_config: FullConfig): Promise<void> {
   await waitForPort(powerlinePort, POLL_TIMEOUT_MS);
   console.log(`[e2e] Waiting for server on :${webPort}...`);
   await waitForPort(webPort, POLL_TIMEOUT_MS);
-  console.log("[e2e] Both servers ready");
+  console.log(`[e2e] Waiting for MCP server on :${mcpPort}...`);
+  await waitForPort(mcpPort, POLL_TIMEOUT_MS);
+  console.log("[e2e] All servers ready");
 
   // 6. Read the auto-generated API key (may not exist immediately after port opens)
   const apiKeyPath = join(grackleHome, ".grackle", "api-key");
@@ -224,6 +227,10 @@ export default async function globalSetup(_config: FullConfig): Promise<void> {
     env: cliEnv,
     stdio: "pipe",
   });
+  execSync(`node "${cliPath}" persona create "Stub MCP" --prompt "E2E MCP test persona" --runtime stub-mcp --model sonnet`, {
+    env: cliEnv,
+    stdio: "pipe",
+  });
   console.log("[e2e] Stub persona created and set as default");
 
   execSync(`node "${cliPath}" env provision test-local`, {
@@ -246,6 +253,7 @@ export default async function globalSetup(_config: FullConfig): Promise<void> {
     powerlinePort,
     serverPort,
     webPort,
+    mcpPort,
   };
   writeFileSync(STATE_FILE, JSON.stringify(state));
   console.log("[e2e] Setup complete");
