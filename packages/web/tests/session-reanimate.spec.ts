@@ -5,18 +5,15 @@
  * and that the backward-compat path (idle session) returns as-is.
  */
 import { test, expect } from "./fixtures.js";
-import { getNewChatRuntimeSelect, sendWsAndWaitFor, sendWsAndWaitForError } from "./helpers.js";
+import { sendWsAndWaitFor, sendWsAndWaitForError } from "./helpers.js";
 
 test.describe("Session Reanimate (stub runtime)", () => {
   test("resume a completed session reanimates it to idle, accepts input, and completes again", async ({ appPage }) => {
     const page = appPage;
 
-    // ── 1. Spawn a stub session from the UI ─────────────────────────────
+    // ── 1. Spawn a stub session from the UI (uses default stub persona) ──
     await page.locator('button[title="Settings"]').click();
     await page.locator('button[title="New chat"]').click();
-
-    const runtimeSelect = getNewChatRuntimeSelect(page);
-    await runtimeSelect.selectOption("stub");
 
     const promptInput = page.locator('input[placeholder="Enter prompt..."]');
     await promptInput.fill("reanimate me");
@@ -74,8 +71,6 @@ test.describe("Session Reanimate (stub runtime)", () => {
     await page.locator('button[title="Settings"]').click();
     await page.locator('button[title="New chat"]').click();
 
-    const runtimeSelect = getNewChatRuntimeSelect(page);
-    await runtimeSelect.selectOption("stub");
     await page.locator('input[placeholder="Enter prompt..."]').fill("keep idle");
     await page.locator("button", { hasText: "Go" }).click();
 
