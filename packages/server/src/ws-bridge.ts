@@ -702,6 +702,7 @@ async function handleMessage(
             description: r.description,
             repoUrl: r.repoUrl,
             defaultEnvironmentId: r.defaultEnvironmentId,
+            defaultPersonaId: r.defaultPersonaId,
             status: r.status,
             useWorktrees: r.useWorktrees,
             worktreeBasePath: r.worktreeBasePath,
