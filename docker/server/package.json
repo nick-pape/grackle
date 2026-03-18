@@ -1,0 +1,13 @@
+{
+  "name": "grackle-server-agent-runtimes",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Pinned agent runtime dependencies for the Grackle server Docker image",
+  "dependencies": {
+    "@grackle-ai/cli": "0.38.0",
+    "@anthropic-ai/claude-code": "2.1.78",
+    "@openai/codex": "0.115.0",
+    "@github/copilot": "1.0.7",
+    "@github/copilot-sdk": "0.1.32"
+  }
+}

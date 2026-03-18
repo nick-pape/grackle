@@ -31,16 +31,11 @@ RUN install -m 0755 -d /etc/apt/keyrings \
 RUN apt-get update && apt-get install -y --no-install-recommends gosu \
     && rm -rf /var/lib/apt/lists/*
 
-# ── Grackle CLI (pulls server, web, common, adapter-sdk) ─────────
-ARG GRACKLE_CLI_VERSION=latest
-RUN npm install -g @grackle-ai/cli@${GRACKLE_CLI_VERSION}
-
-# ── Agent runtimes ────────────────────────────────────────────────
-RUN npm install -g \
-    @anthropic-ai/claude-code@latest \
-    @openai/codex@latest \
-    @github/copilot@latest \
-    @github/copilot-sdk@latest
+# ── Grackle CLI + agent runtimes (pinned via lockfile) ────────────
+COPY docker/server/package.json /opt/grackle/package.json
+COPY docker/server/package-lock.json /opt/grackle/package-lock.json
+RUN npm ci --prefix /opt/grackle --omit=dev
+ENV PATH="/opt/grackle/node_modules/.bin:$PATH"
 
 # ── Remove build toolchain (only needed for native addon compilation) ──
 RUN apt-get purge -y --auto-remove python3 make g++ \

@@ -14,11 +14,15 @@ services:
       # WARNING: Grants the container root-equivalent access to the host Docker daemon.
       # Required for the Docker adapter (DooD pattern). Remove if not using Docker environments.
       - /var/run/docker.sock:/var/run/docker.sock
-      - "${HOME}/.claude:/home/node/.claude:ro"                            # Claude auth + config
+      - "${HOME}/.claude:/home/node/.claude:ro"                          # Claude auth + config
       - "${HOME}/.copilot:/home/node/.copilot:ro"                        # Copilot auth
       - "${HOME}/.codex:/home/node/.codex:ro"                            # Codex auth
+      # GitHub CLI auth — set GH_HOST_CONFIG_DIR to mount host credentials:
+      #   Linux/Mac: export GH_HOST_CONFIG_DIR=~/.config/gh
+      #   Windows:   export GH_HOST_CONFIG_DIR="$APPDATA/GitHub CLI"
+      - "${GH_HOST_CONFIG_DIR:-/dev/null}:/home/node/.config/gh:ro"
     environment:
-      - GH_CONFIG_DIR=/grackle-home/.grackle/gh-config
+      - GH_CONFIG_DIR=/home/node/.config/gh
       - GRACKLE_HOME=/grackle-home
     restart: unless-stopped
 
