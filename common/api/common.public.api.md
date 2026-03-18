@@ -37,7 +37,7 @@ type AgentEvent = Message<"grackle.powerline.AgentEvent"> & {
 const AgentEventSchema: GenMessage<AgentEvent>;
 
 // @public
-export type AgentEventType = "text" | "tool_use" | "tool_result" | "error" | "status" | "system" | "finding" | "subtask_create";
+export type AgentEventType = "text" | "tool_use" | "tool_result" | "error" | "status" | "system" | "finding" | "subtask_create" | "runtime_session_id";
 
 // @public
 export const API_KEY_FILENAME: string;

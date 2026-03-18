@@ -200,6 +200,7 @@ export class CopilotSession extends BaseAgentSession {
     }
 
     this.runtimeSessionId = (this.copilotSession.sessionId as string | undefined) || this.id;
+    this.eventQueue.push({ type: "runtime_session_id", timestamp: ts(), content: this.runtimeSessionId });
 
     this.eventQueue.push({
       type: "system",

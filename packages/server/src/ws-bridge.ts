@@ -37,6 +37,8 @@ import { processEventStream } from "./event-processor.js";
 import * as processorRegistry from "./processor-registry.js";
 import { broadcast, setWssInstance, broadcastEnvironments, envRowToWs } from "./ws-broadcast.js";
 import { buildMcpServersJson } from "./grpc-service.js";
+import { reanimateAgent } from "./reanimate-agent.js";
+import { ConnectError } from "@connectrpc/connect";
 import { computeTaskStatus } from "./compute-task-status.js";
 import { exec } from "./utils/exec.js";
 import { formatGhError } from "./utils/format-gh-error.js";
@@ -693,6 +695,22 @@ async function handleMessage(
         if (task) {
           broadcast({ type: "task_updated", payload: { taskId: task.id, projectId: task.projectId } });
         }
+      }
+      break;
+    }
+
+    case "resume_agent": {
+      const resumeSessionId = msg.payload?.sessionId as string;
+      if (!resumeSessionId) {
+        sendWs(ws, { type: "error", payload: { message: "sessionId required" } });
+        return;
+      }
+      try {
+        reanimateAgent(resumeSessionId);
+        sendWs(ws, { type: "agent_resumed", payload: { sessionId: resumeSessionId } });
+      } catch (err) {
+        const message = err instanceof ConnectError ? err.message : String(err);
+        sendWs(ws, { type: "error", payload: { message } });
       }
       break;
     }

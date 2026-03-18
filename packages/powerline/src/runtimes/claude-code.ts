@@ -206,7 +206,11 @@ class ClaudeCodeSession extends BaseAgentSession {
 
       // Extract session ID from system init message
       if (msg.type === "system" && msg.session_id) {
+        const wasEmpty = !this.runtimeSessionId;
         this.runtimeSessionId = msg.session_id as string;
+        if (wasEmpty) {
+          this.eventQueue.push({ type: "runtime_session_id", timestamp: ts(), content: this.runtimeSessionId });
+        }
       }
 
       // Check for result errors (e.g. invalid API key)

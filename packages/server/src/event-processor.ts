@@ -263,6 +263,11 @@ export function processEventStream(
           processSubtaskEvent(ctx, event.content, subtaskLocalIdMap);
         }
 
+        // Persist the runtime-native session ID emitted by the PowerLine
+        if (event.type === "runtime_session_id" && event.content) {
+          sessionStore.updateRuntimeSessionId(sessionId, event.content);
+        }
+
         if (event.type === "status") {
           // Map runtime status strings to our session status model
           if (event.content === "waiting_input") {

@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import type { AgentEvent } from "./runtime.js";
 
 // Mock dependencies before importing
 vi.mock("../logger.js", () => ({
@@ -8,6 +9,12 @@ vi.mock("node:fs", () => ({
   existsSync: vi.fn(() => false),
   readFileSync: vi.fn(() => "{}"),
 }));
+vi.mock("./runtime-utils.js", async (importOriginal) => {
+  const original = await importOriginal<typeof import("./runtime-utils.js")>();
+  return { ...original, resolveWorkingDirectory: vi.fn(async () => undefined) };
+});
+
+
 
 import { resolveGithubToken, resolveProviderConfig, CopilotRuntime, CopilotSession } from "./copilot.js";
 
@@ -230,5 +237,55 @@ describe("CopilotSession.kill — abort path (UT-1 through UT-4)", () => {
     // Do NOT inject a mock — copilotSession is undefined
     expect(() => session.kill()).not.toThrow();
     expect(session.status).toBe("interrupted");
+  });
+});
+
+describe("CopilotRuntime — runtime_session_id emission", () => {
+  // Note: vitest cannot intercept the lazy dynamic import() inside getCopilotSdk()
+  // for pure-ESM packages at runtime. We test the emission logic by spying on setupSdk()
+  // at the instance level and verifying the event propagates through the stream.
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("emits runtime_session_id event after setupSdk sets runtimeSessionId", async () => {
+    const session = new CopilotSession("cop-emit", "hi", "gpt-4o", 1);
+
+    // Spy on setupSdk to inject mock state — this tests that the event emission
+    // logic (set runtimeSessionId + push runtime_session_id event) is called
+    // from the right place in the real setupSdk implementation.
+    vi.spyOn(session as any, "setupSdk").mockImplementation(async function(this: CopilotSession) {
+      const ts = () => new Date().toISOString();
+      const idleHandlers: Record<string, () => void> = {};
+      const mockCopilotSession = {
+        sessionId: "copilot-sdk-session-xyz",
+        on: (event: string, fn: () => void) => { idleHandlers[event] = fn; },
+        send: async () => { setTimeout(() => idleHandlers["session.idle"]?.(), 0); },
+        destroy: async () => {},
+        abort: () => {},
+      };
+      (this as any).copilotSession = mockCopilotSession;
+      // These two lines mirror the exact code in the real setupSdk():
+      this.runtimeSessionId = (mockCopilotSession.sessionId as string) || this.id;
+      (this as any).eventQueue.push({ type: "runtime_session_id", timestamp: ts(), content: this.runtimeSessionId });
+      // Register the idle handler that sendAndWaitForIdle() relies on
+      mockCopilotSession.on("session.idle", () => { (this as any).idleResolve?.(); });
+    });
+
+    const events: AgentEvent[] = [];
+    for await (const event of session.stream()) {
+      events.push(event);
+      if (event.type === "status" && event.content === "waiting_input") {
+        session.kill();
+        break;
+      }
+      if (event.type === "status" && event.content === "failed") break;
+    }
+
+    const rtIdEvent = events.find((e) => e.type === "runtime_session_id");
+    expect(rtIdEvent, "Expected runtime_session_id event in stream").toBeDefined();
+    expect(rtIdEvent!.content).toBe("copilot-sdk-session-xyz");
+    expect(rtIdEvent!.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
   });
 });

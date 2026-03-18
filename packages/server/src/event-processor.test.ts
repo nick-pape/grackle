@@ -603,6 +603,71 @@ describe("stream error handling", () => {
   });
 });
 
+describe("event-processor runtime_session_id handling", () => {
+  beforeEach(() => {
+    sqlite.exec("DROP TABLE IF EXISTS findings");
+    sqlite.exec("DROP TABLE IF EXISTS tasks");
+    sqlite.exec("DROP TABLE IF EXISTS sessions");
+    sqlite.exec("DROP TABLE IF EXISTS projects");
+    applySchema();
+    vi.clearAllMocks();
+  });
+
+  it("persists runtimeSessionId when runtime_session_id event is received", async () => {
+    sessionStore.createSession("sess1", "env1", "stub", "hello", "stub-model", "/tmp/log");
+
+    const rtIdEvent = create(powerline.AgentEventSchema, {
+      sessionId: "sess1",
+      type: "runtime_session_id",
+      timestamp: new Date().toISOString(),
+      content: "stub-abc-123",
+    });
+
+    // Need a terminal event to end the stream so waitForProcessing resolves
+    const doneEvent = create(powerline.AgentEventSchema, {
+      sessionId: "sess1",
+      type: "status",
+      timestamp: new Date().toISOString(),
+      content: "completed",
+    });
+
+    await waitForProcessing([rtIdEvent, doneEvent], {
+      sessionId: "sess1",
+      logPath: "/tmp/log",
+    });
+
+    const session = sessionStore.getSession("sess1");
+    expect(session?.runtimeSessionId).toBe("stub-abc-123");
+  });
+
+  it("does not overwrite runtimeSessionId for unrelated event types", async () => {
+    sessionStore.createSession("sess1", "env1", "stub", "hello", "stub-model", "/tmp/log");
+
+    const textEvent = create(powerline.AgentEventSchema, {
+      sessionId: "sess1",
+      type: "text",
+      timestamp: new Date().toISOString(),
+      content: "some output",
+    });
+
+    const doneEvent = create(powerline.AgentEventSchema, {
+      sessionId: "sess1",
+      type: "status",
+      timestamp: new Date().toISOString(),
+      content: "completed",
+    });
+
+    await waitForProcessing([textEvent, doneEvent], {
+      sessionId: "sess1",
+      logPath: "/tmp/log",
+    });
+
+    // runtimeSessionId should still be null (never set)
+    const session = sessionStore.getSession("sess1");
+    expect(session?.runtimeSessionId).toBeNull();
+  });
+});
+
 describe("task status broadcast on terminal events", () => {
   beforeEach(() => {
     sqlite.exec("DROP TABLE IF EXISTS findings");
