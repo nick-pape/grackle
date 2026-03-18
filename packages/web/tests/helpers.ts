@@ -363,9 +363,24 @@ export async function createTaskViaWs(
       type: "create_task",
       payload,
     },
-    "task_created",
+    "task.created",
   );
-  return response.payload?.task as WsPayload;
+  // The event bus sends { taskId, projectId } — fetch the full task row
+  const taskId = response.payload?.taskId as string;
+  if (taskId) {
+    const listResp = await sendWsAndWaitFor(
+      page,
+      { type: "list_tasks", payload: { projectId } },
+      "tasks",
+    );
+    const tasks = (listResp.payload?.tasks || []) as WsPayload[];
+    const task = tasks.find((t) => t.id === taskId);
+    if (task) {
+      return task;
+    }
+  }
+  // Fallback: return the event payload itself
+  return (response.payload ?? {}) as WsPayload;
 }
 
 /**

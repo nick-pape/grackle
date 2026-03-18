@@ -2,7 +2,7 @@ import { execFile } from "node:child_process";
 import { v4 as uuid } from "uuid";
 import * as taskStore from "./task-store.js";
 import * as projectStore from "./project-store.js";
-import { broadcast } from "./ws-broadcast.js";
+import { emit } from "./event-bus.js";
 import { slugify } from "./utils/slugify.js";
 import { logger } from "./logger.js";
 
@@ -492,8 +492,7 @@ async function doImport(
       true,
     );
 
-    const row = taskStore.getTask(id);
-    broadcast({ type: "task_created", payload: { task: row ? { ...row } : null } });
+    emit("task.created", { taskId: id, projectId });
     issueNumberToTaskId.set(issue.number, id);
     newlyImportedIssues.push(issue);
     imported++;
@@ -526,8 +525,7 @@ async function doImport(
     if (resolvedDeps.length > 0) {
       taskStore.setTaskDependsOn(taskId, resolvedDeps);
       dependencies += resolvedDeps.length;
-      const updatedRow = taskStore.getTask(taskId);
-      broadcast({ type: "task_updated", payload: { task: updatedRow ? { ...updatedRow } : null } });
+      emit("task.updated", { taskId: taskId!, projectId });
     }
   }
 

@@ -14,7 +14,7 @@ import * as projectStore from "./project-store.js";
 import * as taskStore from "./task-store.js";
 import * as findingStore from "./finding-store.js";
 import * as personaStore from "./persona-store.js";
-import { broadcast, broadcastEnvironments } from "./ws-broadcast.js";
+import { emit } from "./event-bus.js";
 import { processEventStream } from "./event-processor.js";
 import * as processorRegistry from "./processor-registry.js";
 import { join } from "node:path";
@@ -275,7 +275,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         req.adapterType,
         req.adapterConfig,
       );
-      broadcastEnvironments();
+      emit("environment.changed", {});
       const row = envRegistry.getEnvironment(id);
       return envRowToProto(row!);
     },
@@ -297,11 +297,8 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       // Delete sessions referencing this environment (FK constraint)
       sessionStore.deleteByEnvironment(req.id);
       envRegistry.removeEnvironment(req.id);
-      broadcastEnvironments();
-      broadcast({
-        type: "environment_removed",
-        payload: { environmentId: req.id },
-      });
+      emit("environment.changed", {});
+      emit("environment.removed", { environmentId: req.id });
       return create(grackle.EmptySchema, {});
     },
 
@@ -327,7 +324,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       }
 
       envRegistry.updateEnvironmentStatus(req.id, "connecting");
-      broadcastEnvironments();
+      emit("environment.changed", {});
 
       const config = JSON.parse(env.adapterConfig) as Record<string, unknown>;
       const powerlineToken = env.powerlineToken;
@@ -349,7 +346,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       } catch (err) {
         logger.error({ environmentId: req.id, err }, "Provision/bootstrap failed");
         envRegistry.updateEnvironmentStatus(req.id, "error");
-        broadcastEnvironments();
+        emit("environment.changed", {});
         yield create(grackle.ProvisionEventSchema, {
           stage: "error",
           message: `Provision failed: ${err instanceof Error ? err.message : String(err)}`,
@@ -365,7 +362,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         await tokenBroker.pushToEnv(req.id);
         envRegistry.updateEnvironmentStatus(req.id, "connected");
         envRegistry.markBootstrapped(req.id);
-        broadcastEnvironments();
+        emit("environment.changed", {});
 
         yield create(grackle.ProvisionEventSchema, {
           stage: "ready",
@@ -374,7 +371,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         });
       } catch (err) {
         envRegistry.updateEnvironmentStatus(req.id, "error");
-        broadcastEnvironments();
+        emit("environment.changed", {});
         yield create(grackle.ProvisionEventSchema, {
           stage: "error",
           message: `Connection failed: ${err instanceof Error ? err.message : String(err)}`,
@@ -395,7 +392,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       }
       adapterManager.removeConnection(req.id);
       envRegistry.updateEnvironmentStatus(req.id, "disconnected");
-      broadcastEnvironments();
+      emit("environment.changed", {});
       return create(grackle.EmptySchema, {});
     },
 
@@ -411,7 +408,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       }
       adapterManager.removeConnection(req.id);
       envRegistry.updateEnvironmentStatus(req.id, "disconnected");
-      broadcastEnvironments();
+      emit("environment.changed", {});
       return create(grackle.EmptySchema, {});
     },
 
@@ -596,7 +593,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       if (session.taskId) {
         const task = taskStore.getTask(session.taskId);
         if (task) {
-          broadcast({ type: "task_updated", payload: { taskId: task.id, projectId: task.projectId } });
+          emit("task.updated", { taskId: task.id, projectId: task.projectId });
         }
       }
 
@@ -707,10 +704,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       const updated = { ...current, [req.provider]: req.value };
       credentialProviders.setCredentialProviders(updated);
 
-      broadcast({
-        type: "credential_providers",
-        payload: updated as unknown as Record<string, unknown>,
-      });
+      emit("credential.providers_changed", updated as unknown as Record<string, unknown>);
 
       return create(grackle.CredentialProviderConfigSchema, {
         claude: claudeProviderModeToEnum(updated.claude),
@@ -747,7 +741,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         req.worktreeBasePath ?? "",
         req.defaultPersonaId ?? "",
       );
-      broadcast({ type: "project_created", payload: { projectId: id } });
+      emit("project.created", { projectId: id });
       const row = projectStore.getProject(id);
       return projectRowToProto(row!);
     },
@@ -760,7 +754,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
 
     async archiveProject(req: grackle.ProjectId) {
       projectStore.archiveProject(req.id);
-      broadcast({ type: "project_archived", payload: { projectId: req.id } });
+      emit("project.archived", { projectId: req.id });
       return create(grackle.EmptySchema, {});
     },
 
@@ -787,7 +781,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       if (!row) {
         throw new ConnectError(`Project not found after update: ${req.id}`, Code.NotFound);
       }
-      broadcast({ type: "project_updated", payload: { projectId: req.id } });
+      emit("project.updated", { projectId: req.id });
       return projectRowToProto(row);
     },
 
@@ -857,10 +851,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         req.defaultPersonaId ?? "",
       );
       const row = taskStore.getTask(id);
-      broadcast({
-        type: "task_created",
-        payload: { task: row ? { ...row } : null },
-      });
+      emit("task.created", { taskId: id, projectId: req.projectId });
       return taskRowToProto(row!);
     },
 
@@ -920,10 +911,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
 
         sessionStore.setSessionTask(req.sessionId, req.id);
         processorRegistry.lateBind(req.sessionId, req.id, existing.projectId);
-        broadcast({
-          type: "task_started",
-          payload: { taskId: req.id, sessionId: req.sessionId, projectId: existing.projectId },
-        });
+        emit("task.started", { taskId: req.id, sessionId: req.sessionId, projectId: existing.projectId });
       }
 
       const row = taskStore.getTask(req.id);
@@ -993,10 +981,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         task.id,
         resolved.personaId,
       );
-      broadcast({
-        type: "task_started",
-        payload: { taskId: task.id, sessionId, projectId: task.projectId },
-      });
+      emit("task.started", { taskId: task.id, sessionId, projectId: task.projectId });
 
       // Re-push stored tokens + provider credentials (scoped to runtime) so they're fresh for this session.
       // For local envs, skip file tokens — the PowerLine is on the same machine.
@@ -1077,10 +1062,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         );
       }
 
-      broadcast({
-        type: "task_completed",
-        payload: { taskId: task.id, projectId: task.projectId },
-      });
+      emit("task.completed", { taskId: task.id, projectId: task.projectId });
       const row = taskStore.getTask(task.id);
       const taskSessions = sessionStore.listSessionsForTask(task.id);
       const { status, latestSessionId } = computeTaskStatus(row!.status, taskSessions);
@@ -1129,10 +1111,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         taskId: task.id,
       });
 
-      broadcast({
-        type: "task_started",
-        payload: { taskId: task.id, sessionId: latestSession.id, projectId: task.projectId },
-      });
+      emit("task.started", { taskId: task.id, sessionId: latestSession.id, projectId: task.projectId });
 
       const row = sessionStore.getSession(latestSession.id);
       return sessionRowToProto(row!);
@@ -1184,10 +1163,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
           Code.Internal,
         );
       }
-      broadcast({
-        type: "task_deleted",
-        payload: { taskId: req.id, projectId: task.projectId },
-      });
+      emit("task.deleted", { taskId: req.id, projectId: task.projectId });
       return create(grackle.EmptySchema, {});
     },
     // ─── Personas ───────────────────────────────────────────────
@@ -1237,7 +1213,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         req.maxTurns,
         mcpServersJson,
       );
-      broadcast({ type: "persona_created", payload: { personaId: id } });
+      emit("persona.created", { personaId: id });
       const row = personaStore.getPersona(id);
       return personaRowToProto(row!);
     },
@@ -1300,14 +1276,14 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         maxTurns,
         mcpServersJson,
       );
-      broadcast({ type: "persona_updated", payload: { personaId: req.id } });
+      emit("persona.updated", { personaId: req.id });
       const row = personaStore.getPersona(req.id);
       return personaRowToProto(row!);
     },
 
     async deletePersona(req: grackle.PersonaId) {
       personaStore.deletePersona(req.id);
-      broadcast({ type: "persona_deleted", payload: { personaId: req.id } });
+      emit("persona.deleted", { personaId: req.id });
       return create(grackle.EmptySchema, {});
     },
     // ─── Settings ─────────────────────────────────────────────
@@ -1341,7 +1317,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         }
       }
       settingsStore.setSetting(req.key, req.value);
-      broadcast({ type: "setting_changed", payload: { key: req.key, value: req.value } });
+      emit("setting.changed", { key: req.key, value: req.value });
       return create(grackle.SettingResponseSchema, {
         key: req.key,
         value: req.value,
@@ -1362,10 +1338,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         req.content,
         [...req.tags],
       );
-      broadcast({
-        type: "finding_posted",
-        payload: { projectId: req.projectId, findingId: id },
-      });
+      emit("finding.posted", { projectId: req.projectId, findingId: id });
       const rows = findingStore.queryFindings(req.projectId);
       const row = rows.find((r) => r.id === id);
       return findingRowToProto(row!);

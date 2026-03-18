@@ -29,7 +29,7 @@ async function createPersonaViaWs(
         maxTurns: fields.maxTurns ?? 0,
       },
     },
-    "persona_created",
+    "persona.created",
   );
 }
 
@@ -128,7 +128,7 @@ test.describe("Persona Management", () => {
     await sendWsAndWaitFor(
       page,
       { type: "delete_persona", payload: { personaId: temp!.id } },
-      "persona_deleted",
+      "persona.deleted",
     );
 
     // Verify it's gone
@@ -162,7 +162,7 @@ test.describe("Persona Management", () => {
           systemPrompt: "Updated prompt",
         },
       },
-      "persona_updated",
+      "persona.updated",
     );
 
     // Verify the update
@@ -260,7 +260,7 @@ test.describe("Persona Management", () => {
     await sendWsAndWaitFor(
       page,
       { type: "delete_persona", payload: { personaId: "nonexistent-id" } },
-      "persona_deleted",
+      "persona.deleted",
     );
 
     // Verify WS is still healthy by listing personas
@@ -297,7 +297,7 @@ test.describe("Persona Management", () => {
           name: "Preserve Test Renamed",
         },
       },
-      "persona_updated",
+      "persona.updated",
     );
 
     const after = await listPersonasViaWs(page);
@@ -363,7 +363,7 @@ test.describe("Persona Management", () => {
     await sendWsAndWaitFor(
       page,
       { type: "delete_persona", payload: { personaId: toDelete!.id } },
-      "persona_deleted",
+      "persona.deleted",
     );
 
     // The management view should no longer show the persona
