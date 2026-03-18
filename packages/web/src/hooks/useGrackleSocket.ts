@@ -262,7 +262,14 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
   function onMessage(msg: WsMessage): void {
     // Domain events from event bus (dot-notation types)
     if (typeof msg.type === "string" && msg.type.includes(".")) {
-      routeDomainEvent(msg as unknown as GrackleEvent);
+      const raw = msg as WsMessage & { id?: string; timestamp?: string };
+      const event: GrackleEvent = {
+        id: raw.id ?? "",
+        type: msg.type,
+        timestamp: raw.timestamp ?? "",
+        payload: msg.payload ?? {},
+      };
+      routeDomainEvent(event);
       return;
     }
 

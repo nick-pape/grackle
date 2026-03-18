@@ -387,10 +387,18 @@ export function parseWsMessage(data: string): WsMessage | undefined {
     );
     return undefined;
   }
-  return {
+  const msg: WsMessage & { id?: string; timestamp?: string } = {
     type: parsed.type,
     payload: isObject(parsed.payload) ? parsed.payload : undefined,
   };
+  // Preserve GrackleEvent fields (id, timestamp) for domain events
+  if (typeof parsed.id === "string") {
+    msg.id = parsed.id;
+  }
+  if (typeof parsed.timestamp === "string") {
+    msg.timestamp = parsed.timestamp;
+  }
+  return msg;
 }
 
 /**

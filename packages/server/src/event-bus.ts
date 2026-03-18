@@ -66,7 +66,11 @@ export function emit(
     payload,
   };
 
-  // Persist synchronously (SQLite is fast in WAL mode)
+  // Persist synchronously (SQLite is fast in WAL mode).
+  // Intentionally non-fatal: a persistence failure is logged but does not
+  // prevent subscribers from receiving the event. Domain events drive live
+  // UI updates which must not break if SQLite is temporarily unavailable.
+  // Replay/audit consumers should monitor logs for persistence errors.
   try {
     persistEvent(event);
   } catch (err) {

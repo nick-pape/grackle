@@ -42,11 +42,18 @@ export function broadcastEnvironments(): void {
   });
 }
 
+/** Guard to ensure initWsSubscriber is only called once. */
+let wsSubscriberInitialized: boolean = false;
+
 /**
  * Register a bus subscriber that forwards GrackleEvents to all WS clients.
- * Call once after WSS creation.
+ * Idempotent — subsequent calls are no-ops.
  */
 export function initWsSubscriber(): void {
+  if (wsSubscriberInitialized) {
+    return;
+  }
+  wsSubscriberInitialized = true;
   subscribe((event: GrackleEvent) => {
     if (!wssInstance) {
       return;
