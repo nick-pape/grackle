@@ -219,6 +219,37 @@ describe("Codex streaming field extraction", () => {
     vi.unstubAllEnvs();
   });
 
+  // UT-0: thread.started emits runtime_session_id event
+  it("emits runtime_session_id event when thread.started is received", async () => {
+    mockRunStreamedEvents = [
+      { type: "thread.started", thread_id: "thread-xyz-123" },
+      { type: "item.completed", item: { type: "agent_message", text: "done" } },
+    ];
+
+    const session = runtime.spawn({ sessionId: "ut0", prompt: "hi", model: "codex-mini", maxTurns: 1 });
+    const events = await collectEvents(session);
+
+    const rtIdEvent = events.find((e) => e.type === "runtime_session_id");
+    expect(rtIdEvent).toBeDefined();
+    expect(rtIdEvent!.content).toBe("thread-xyz-123");
+    expect(rtIdEvent!.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+  });
+
+  it("emits runtime_session_id only once even on follow-up thread.started", async () => {
+    mockRunStreamedEvents = [
+      { type: "thread.started", thread_id: "thread-first" },
+      { type: "thread.started", thread_id: "thread-second" },
+      { type: "item.completed", item: { type: "agent_message", text: "done" } },
+    ];
+
+    const session = runtime.spawn({ sessionId: "ut0b", prompt: "hi", model: "codex-mini", maxTurns: 1 });
+    const events = await collectEvents(session);
+
+    const rtIdEvents = events.filter((e) => e.type === "runtime_session_id");
+    expect(rtIdEvents).toHaveLength(1);
+    expect(rtIdEvents[0].content).toBe("thread-first");
+  });
+
   // UT-1: agent_message completed uses item.text (not item.content)
   it("extracts agent_message text from item.text", async () => {
     mockRunStreamedEvents = [

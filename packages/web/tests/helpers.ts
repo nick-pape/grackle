@@ -203,9 +203,11 @@ export async function navigateToTask(
 }
 
 /**
- * Monkey-patch WebSocket.prototype.send to force stub runtime and inject
- * environmentId on start_task messages. Environment is now a start-time
- * param (not stored on the task), so tests must provide it explicitly.
+ * Monkey-patch WebSocket.prototype.send to force the "Stub" persona and inject
+ * environmentId on start_task messages. The server resolves the runtime from
+ * the persona (not a runtime field), so we set personaId to "stub" which maps
+ * to the "Stub" persona created in global-setup. Environment is now a
+ * start-time param (not stored on the task), so tests must provide it explicitly.
  */
 export async function patchWsForStubRuntime(page: Page, environmentId: string = "test-local"): Promise<void> {
   await page.evaluate((envId: string) => {
@@ -217,7 +219,7 @@ export async function patchWsForStubRuntime(page: Page, environmentId: string = 
         try {
           const msg = JSON.parse(data);
           if (msg.type === "start_task") {
-            msg.payload.runtime = "stub";
+            msg.payload.personaId = "stub";
             if (!msg.payload.environmentId) {
               msg.payload.environmentId = envId;
             }
@@ -361,9 +363,74 @@ export async function createTaskViaWs(
       type: "create_task",
       payload,
     },
-    "task_created",
+    "task.created",
   );
-  return response.payload?.task as WsPayload;
+  // The event bus sends { taskId, projectId } — fetch the full task row
+  const taskId = response.payload?.taskId as string;
+  if (taskId) {
+    const listResp = await sendWsAndWaitFor(
+      page,
+      { type: "list_tasks", payload: { projectId } },
+      "tasks",
+    );
+    const tasks = (listResp.payload?.tasks || []) as WsPayload[];
+    const task = tasks.find((t) => t.id === taskId);
+    if (task) {
+      return task;
+    }
+  }
+  // Fallback: return the event payload itself
+  return (response.payload ?? {}) as WsPayload;
+}
+
+/**
+ * Monkey-patch WebSocket.prototype.send to force the "Stub MCP" persona and
+ * inject environmentId on start_task messages. The server resolves the runtime
+ * from the persona (not a runtime field), so we set personaId to "stub-mcp"
+ * which maps to the "Stub MCP" persona created in global-setup.
+ */
+export async function patchWsForStubMcpRuntime(page: Page, environmentId: string = "test-local"): Promise<void> {
+  await page.evaluate((envId: string) => {
+    const origSend = WebSocket.prototype.send;
+    WebSocket.prototype.send = function (
+      data: string | ArrayBuffer | Blob | ArrayBufferView,
+    ) {
+      if (typeof data === "string") {
+        try {
+          const msg = JSON.parse(data);
+          if (msg.type === "start_task") {
+            msg.payload.personaId = "stub-mcp";
+            if (!msg.payload.environmentId) {
+              msg.payload.environmentId = envId;
+            }
+            data = JSON.stringify(msg);
+          }
+        } catch {
+          /* not JSON, pass through */
+        }
+      }
+      return origSend.call(this, data);
+    };
+  }, environmentId);
+}
+
+/**
+ * Run a stub-mcp task through its full lifecycle: start -> working -> idle -> send input -> paused.
+ * Requires patchWsForStubMcpRuntime to have been called on the page beforehand.
+ */
+export async function runStubMcpTaskToCompletion(page: Page): Promise<void> {
+  await page.getByRole("button", { name: "Start", exact: true }).click();
+
+  // Wait for idle state (session waiting for input)
+  const inputField = page.locator('input[placeholder="Type a message..."]');
+  await inputField.waitFor({ timeout: 15_000 });
+  await inputField.fill("continue");
+  await page.getByRole("button", { name: "Send", exact: true }).click();
+
+  // Wait for session to complete and task to move to paused (review)
+  await page
+    .getByRole("button", { name: "Complete", exact: true })
+    .waitFor({ timeout: 15_000 });
 }
 
 /** Navigate to settings and wait for the tab nav to appear. */

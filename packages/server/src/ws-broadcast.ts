@@ -1,5 +1,6 @@
 import type { WebSocketServer } from "ws";
 import * as envRegistry from "./env-registry.js";
+import { subscribe, type GrackleEvent } from "./event-bus.js";
 
 let wssInstance: WebSocketServer | undefined = undefined;
 
@@ -38,5 +39,30 @@ export function broadcastEnvironments(): void {
   broadcast({
     type: "environments",
     payload: { environments: envRegistry.listEnvironments().map(envRowToWs) },
+  });
+}
+
+/** Guard to ensure initWsSubscriber is only called once. */
+let wsSubscriberInitialized: boolean = false;
+
+/**
+ * Register a bus subscriber that forwards GrackleEvents to all WS clients.
+ * Idempotent — subsequent calls are no-ops.
+ */
+export function initWsSubscriber(): void {
+  if (wsSubscriberInitialized) {
+    return;
+  }
+  wsSubscriberInitialized = true;
+  subscribe((event: GrackleEvent) => {
+    if (!wssInstance) {
+      return;
+    }
+    const data = JSON.stringify(event);
+    for (const client of wssInstance.clients) {
+      if (client.readyState === 1 /* OPEN */) {
+        client.send(data);
+      }
+    }
   });
 }

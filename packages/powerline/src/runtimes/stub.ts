@@ -24,6 +24,7 @@ class StubSession implements AgentSession {
     const ts: () => string = () => new Date().toISOString();
 
     yield { type: "system", timestamp: ts(), content: "Stub runtime initialized" };
+    yield { type: "runtime_session_id", timestamp: ts(), content: this.runtimeSessionId };
     yield { type: "text", timestamp: ts(), content: `Echo: ${this.prompt}` };
 
     if (this.killed as boolean) return;

@@ -11,6 +11,7 @@ interface E2EState {
   powerlinePort: number;
   serverPort: number;
   webPort: number;
+  mcpPort: number;
 }
 
 function loadState(): E2EState {
@@ -18,7 +19,7 @@ function loadState(): E2EState {
 }
 
 /** Extended Playwright test fixture that provides the Grackle API key and navigates to the app. */
-export const test = base.extend<{ grackle: { apiKey: string; baseURL: string; wsUrl: string }; appPage: Page }>({
+export const test = base.extend<{ grackle: { apiKey: string; baseURL: string; wsUrl: string; mcpPort: number }; appPage: Page }>({
   // Override Playwright's built-in baseURL so page.goto("/") resolves to the dynamic port
   baseURL: async ({}, use) => {
     const state = loadState();
@@ -42,7 +43,7 @@ export const test = base.extend<{ grackle: { apiKey: string; baseURL: string; ws
   grackle: async ({ baseURL }, use) => {
     const state = loadState();
     const wsUrl = `ws://127.0.0.1:${state.webPort}`;
-    await use({ apiKey: state.apiKey, baseURL: baseURL!, wsUrl });
+    await use({ apiKey: state.apiKey, baseURL: baseURL!, wsUrl, mcpPort: state.mcpPort });
   },
 
   appPage: async ({ page }, use) => {

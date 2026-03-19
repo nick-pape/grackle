@@ -171,6 +171,16 @@ export function initDatabase(): void {
     );
 
     CREATE INDEX IF NOT EXISTS idx_findings_project ON findings(project_id);
+
+    CREATE TABLE IF NOT EXISTS domain_events (
+      id        TEXT PRIMARY KEY,
+      type      TEXT NOT NULL,
+      timestamp TEXT NOT NULL,
+      payload   TEXT NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_domain_events_type ON domain_events(type);
+    CREATE INDEX IF NOT EXISTS idx_domain_events_timestamp ON domain_events(timestamp);
   `);
 
   // Migration: add powerline_token column if missing (older databases)

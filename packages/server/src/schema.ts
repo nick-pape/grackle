@@ -192,3 +192,15 @@ export type PersonaRow = typeof personas.$inferSelect;
 
 /** Shape accepted by INSERT into the personas table. */
 export type NewPersona = typeof personas.$inferInsert;
+
+// ─── Domain Events ───────────────────────────────────────
+
+export const domainEvents = sqliteTable("domain_events", {
+  id: text("id").primaryKey(),
+  type: text("type").notNull(),
+  timestamp: text("timestamp").notNull(),
+  payload: text("payload").notNull(),
+});
+
+/** Row shape returned by a SELECT on the domain_events table. */
+export type DomainEventRow = typeof domainEvents.$inferSelect;

@@ -5,7 +5,7 @@
  */
 
 import { useState, useCallback } from "react";
-import type { TokenInfo, WsMessage, SendFunction } from "./types.js";
+import type { TokenInfo, WsMessage, SendFunction, GrackleEvent } from "./types.js";
 import { asValidArray, isTokenInfo } from "./types.js";
 
 /** Values returned by {@link useTokens}. */
@@ -26,6 +26,8 @@ export interface UseTokensResult {
   deleteToken: (name: string) => void;
   /** Handle an incoming WebSocket message. Returns `true` if handled. */
   handleMessage: (msg: WsMessage) => boolean;
+  /** Handle a domain event from the event bus. Returns `true` if handled. */
+  handleEvent: (event: GrackleEvent) => boolean;
 }
 
 /**
@@ -36,6 +38,14 @@ export interface UseTokensResult {
  */
 export function useTokens(send: SendFunction): UseTokensResult {
   const [tokens, setTokens] = useState<TokenInfo[]>([]);
+
+  const handleEvent = useCallback((event: GrackleEvent): boolean => {
+    if (event.type === "token.changed") {
+      send({ type: "list_tokens" });
+      return true;
+    }
+    return false;
+  }, [send]);
 
   const handleMessage = useCallback((msg: WsMessage): boolean => {
     switch (msg.type) {
@@ -49,13 +59,10 @@ export function useTokens(send: SendFunction): UseTokensResult {
           ),
         );
         return true;
-      case "token_changed":
-        send({ type: "list_tokens" });
-        return true;
       default:
         return false;
     }
-  }, [send]);
+  }, []);
 
   const loadTokens = useCallback(() => {
     send({ type: "list_tokens" });
@@ -84,5 +91,5 @@ export function useTokens(send: SendFunction): UseTokensResult {
     [send],
   );
 
-  return { tokens, loadTokens, setToken, deleteToken, handleMessage };
+  return { tokens, loadTokens, setToken, deleteToken, handleMessage, handleEvent };
 }

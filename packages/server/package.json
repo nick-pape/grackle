@@ -1,6 +1,6 @@
 {
   "name": "@grackle-ai/server",
-  "version": "0.39.1",
+  "version": "0.41.1",
   "description": "Central gRPC server with SQLite storage and WebSocket bridge for Grackle",
   "license": "MIT",
   "repository": {
@@ -33,6 +33,7 @@
     "drizzle-orm": "^0.38.0",
     "pino": "^10.3.1",
     "qrcode": "^1.5.4",
+    "ulid": "^2.3.0",
     "uuid": "^11.0.0",
     "ws": "^8.0.0"
   },

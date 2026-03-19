@@ -32,6 +32,14 @@ interface CopilotSdkModule {
 /** Promise for the one-time SDK import, cached to avoid race conditions. */
 let sdkPromise: Promise<CopilotSdkModule> | undefined;
 
+/**
+ * @internal For testing only — inject a mock SDK to bypass the dynamic import.
+ * Pass `undefined` to reset the cache so the real import is attempted again.
+ */
+export function _setCopilotSdkForTesting(mock: CopilotSdkModule | undefined): void {
+  sdkPromise = mock !== undefined ? Promise.resolve(mock) : undefined;
+}
+
 /** Dynamically import the Copilot SDK so the module is optional at install time. */
 function getCopilotSdk(): Promise<CopilotSdkModule> {
   if (!sdkPromise) {
@@ -200,6 +208,7 @@ export class CopilotSession extends BaseAgentSession {
     }
 
     this.runtimeSessionId = (this.copilotSession.sessionId as string | undefined) || this.id;
+    this.eventQueue.push({ type: "runtime_session_id", timestamp: ts(), content: this.runtimeSessionId });
 
     this.eventQueue.push({
       type: "system",

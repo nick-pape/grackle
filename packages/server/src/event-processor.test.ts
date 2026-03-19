@@ -22,8 +22,8 @@ vi.mock("./stream-hub.js", () => ({
   publish: vi.fn(),
 }));
 
-vi.mock("./ws-broadcast.js", () => ({
-  broadcast: vi.fn(),
+vi.mock("./event-bus.js", () => ({
+  emit: vi.fn(),
 }));
 
 vi.mock("./transcript.js", () => ({
@@ -37,7 +37,7 @@ import * as taskStore from "./task-store.js";
 import * as projectStore from "./project-store.js";
 import * as processorRegistry from "./processor-registry.js";
 import * as findingStore from "./finding-store.js";
-import { broadcast } from "./ws-broadcast.js";
+import { emit } from "./event-bus.js";
 import * as logWriter from "./log-writer.js";
 import { logger } from "./logger.js";
 import { sqlite } from "./test-db.js";
@@ -191,9 +191,10 @@ describe("event-processor SUBTASK_CREATE handling", () => {
     expect(children[0].depth).toBe(1);
     expect(children[0].canDecompose).toBe(false);
 
-    // Verify broadcast was called with task_created
-    expect(broadcast).toHaveBeenCalledWith(
-      expect.objectContaining({ type: "task_created" }),
+    // Verify emit was called with task.created
+    expect(emit).toHaveBeenCalledWith(
+      "task.created",
+      expect.objectContaining({ taskId: expect.any(String), projectId: "proj1" }),
     );
   });
 
@@ -595,13 +596,76 @@ describe("stream error handling", () => {
     const session = sessionStore.getSession("sess1");
     expect(session?.status).toBe("completed");
 
-    // Verify task_updated was broadcast so the frontend can re-fetch computed status
-    expect(broadcast).toHaveBeenCalledWith(
-      expect.objectContaining({
-        type: "task_updated",
-        payload: expect.objectContaining({ taskId: "task1", projectId: "proj1" }),
-      }),
+    // Verify task.updated was emitted so the frontend can re-fetch computed status
+    expect(emit).toHaveBeenCalledWith(
+      "task.updated",
+      expect.objectContaining({ taskId: "task1", projectId: "proj1" }),
     );
+  });
+});
+
+describe("event-processor runtime_session_id handling", () => {
+  beforeEach(() => {
+    sqlite.exec("DROP TABLE IF EXISTS findings");
+    sqlite.exec("DROP TABLE IF EXISTS tasks");
+    sqlite.exec("DROP TABLE IF EXISTS sessions");
+    sqlite.exec("DROP TABLE IF EXISTS projects");
+    applySchema();
+    vi.clearAllMocks();
+  });
+
+  it("persists runtimeSessionId when runtime_session_id event is received", async () => {
+    sessionStore.createSession("sess1", "env1", "stub", "hello", "stub-model", "/tmp/log");
+
+    const rtIdEvent = create(powerline.AgentEventSchema, {
+      sessionId: "sess1",
+      type: "runtime_session_id",
+      timestamp: new Date().toISOString(),
+      content: "stub-abc-123",
+    });
+
+    // Need a terminal event to end the stream so waitForProcessing resolves
+    const doneEvent = create(powerline.AgentEventSchema, {
+      sessionId: "sess1",
+      type: "status",
+      timestamp: new Date().toISOString(),
+      content: "completed",
+    });
+
+    await waitForProcessing([rtIdEvent, doneEvent], {
+      sessionId: "sess1",
+      logPath: "/tmp/log",
+    });
+
+    const session = sessionStore.getSession("sess1");
+    expect(session?.runtimeSessionId).toBe("stub-abc-123");
+  });
+
+  it("does not overwrite runtimeSessionId for unrelated event types", async () => {
+    sessionStore.createSession("sess1", "env1", "stub", "hello", "stub-model", "/tmp/log");
+
+    const textEvent = create(powerline.AgentEventSchema, {
+      sessionId: "sess1",
+      type: "text",
+      timestamp: new Date().toISOString(),
+      content: "some output",
+    });
+
+    const doneEvent = create(powerline.AgentEventSchema, {
+      sessionId: "sess1",
+      type: "status",
+      timestamp: new Date().toISOString(),
+      content: "completed",
+    });
+
+    await waitForProcessing([textEvent, doneEvent], {
+      sessionId: "sess1",
+      logPath: "/tmp/log",
+    });
+
+    // runtimeSessionId should still be null (never set)
+    const session = sessionStore.getSession("sess1");
+    expect(session?.runtimeSessionId).toBeNull();
   });
 });
 
@@ -636,12 +700,10 @@ describe("task status broadcast on terminal events", () => {
       taskId: "task1",
     });
 
-    // Verify task_updated was broadcast on terminal session event
-    expect(broadcast).toHaveBeenCalledWith(
-      expect.objectContaining({
-        type: "task_updated",
-        payload: expect.objectContaining({ taskId: "task1", projectId: "proj1" }),
-      }),
+    // Verify task.updated was emitted on terminal session event
+    expect(emit).toHaveBeenCalledWith(
+      "task.updated",
+      expect.objectContaining({ taskId: "task1", projectId: "proj1" }),
     );
   });
 
@@ -680,8 +742,8 @@ describe("task status broadcast on terminal events", () => {
 
     // All status changes (waiting_input, running, completed) should broadcast
     // so the frontend re-fetches and gets the computed task status
-    const taskUpdatedCalls = (broadcast as ReturnType<typeof vi.fn>).mock.calls
-      .filter((c: unknown[]) => (c[0] as { type: string }).type === "task_updated");
+    const taskUpdatedCalls = (emit as ReturnType<typeof vi.fn>).mock.calls
+      .filter((c: unknown[]) => c[0] === "task.updated");
     expect(taskUpdatedCalls.length).toBe(3);
   });
 
@@ -702,8 +764,8 @@ describe("task status broadcast on terminal events", () => {
     });
 
     // No task_updated broadcasts should have been made
-    const taskUpdatedCalls = (broadcast as ReturnType<typeof vi.fn>).mock.calls
-      .filter((c: unknown[]) => (c[0] as { type: string }).type === "task_updated");
+    const taskUpdatedCalls = (emit as ReturnType<typeof vi.fn>).mock.calls
+      .filter((c: unknown[]) => c[0] === "task.updated");
     expect(taskUpdatedCalls.length).toBe(0);
   });
 });
@@ -892,11 +954,9 @@ describe("late-binding", () => {
 
     await waitForSessionTerminal("sess1");
 
-    expect(broadcast).toHaveBeenCalledWith(
-      expect.objectContaining({
-        type: "task_updated",
-        payload: expect.objectContaining({ taskId: "task1", projectId: "proj1" }),
-      }),
+    expect(emit).toHaveBeenCalledWith(
+      "task.updated",
+      expect.objectContaining({ taskId: "task1", projectId: "proj1" }),
     );
   });
 

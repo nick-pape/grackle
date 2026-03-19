@@ -5,7 +5,8 @@ import http from "node:http";
 import { registerGrackleRoutes } from "./grpc-service.js";
 import { registerAdapter, startHeartbeat } from "./adapter-manager.js";
 import { updateEnvironmentStatus, resetAllStatuses } from "./env-registry.js";
-import { broadcastEnvironments } from "./ws-broadcast.js";
+import { initWsSubscriber } from "./ws-broadcast.js";
+import { emit } from "./event-bus.js";
 import { DockerAdapter } from "./adapters/docker.js";
 import { LocalAdapter } from "./adapters/local.js";
 import { SshAdapter } from "./adapters/ssh.js";
@@ -645,7 +646,7 @@ async function main(): Promise<void> {
         }
         logger.error({ code, signal }, "Local PowerLine exited unexpectedly");
         envRegistry.updateEnvironmentStatus("local", "disconnected");
-        broadcastEnvironments();
+        emit("environment.changed", {});
         localPowerLineHandle = undefined;
       },
     });
@@ -662,7 +663,7 @@ async function main(): Promise<void> {
     const config = JSON.parse(localEnv.adapterConfig) as Record<string, unknown>;
 
     envRegistry.updateEnvironmentStatus("local", "connecting");
-    broadcastEnvironments();
+    emit("environment.changed", {});
 
     for await (const event of reconnectOrProvision(
       "local",
@@ -681,7 +682,7 @@ async function main(): Promise<void> {
     await tokenBroker.pushToEnv("local", { excludeFileTokens: true });
     envRegistry.updateEnvironmentStatus("local", "connected");
     envRegistry.markBootstrapped("local");
-    broadcastEnvironments();
+    emit("environment.changed", {});
 
     logger.info({ port: powerlinePort }, "Local environment auto-connected");
   } catch (err) {
@@ -692,7 +693,7 @@ async function main(): Promise<void> {
       await failedHandle.stop();
     }
     envRegistry.updateEnvironmentStatus("local", "error");
-    broadcastEnvironments();
+    emit("environment.changed", {});
 
     logger.error(
       { err, port: powerlinePort },
@@ -732,7 +733,7 @@ async function main(): Promise<void> {
   // Start heartbeat
   startHeartbeat((environmentId) => {
     updateEnvironmentStatus(environmentId, "disconnected");
-    broadcastEnvironments();
+    emit("environment.changed", {});
   });
 
   // Start periodic cleanup timers
@@ -784,6 +785,9 @@ async function main(): Promise<void> {
   createWsBridge(webServer, verifyApiKey, (cookieHeader: string) =>
     validateSessionCookie(cookieHeader, apiKey),
   );
+
+  // Wire the event bus to forward domain events over WebSocket
+  initWsSubscriber();
 
   webServer.on("error", (err: NodeJS.ErrnoException) => {
     if (err.code === "EADDRINUSE") {

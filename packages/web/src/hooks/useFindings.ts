@@ -5,7 +5,7 @@
  */
 
 import { useState, useCallback } from "react";
-import type { FindingData, WsMessage, SendFunction } from "./types.js";
+import type { FindingData, WsMessage, SendFunction, GrackleEvent } from "./types.js";
 import { asValidArray, isFindingData } from "./types.js";
 
 /** Values returned by {@link useFindings}. */
@@ -24,6 +24,8 @@ export interface UseFindingsResult {
   ) => void;
   /** Handle an incoming WebSocket message. Returns `true` if handled. */
   handleMessage: (msg: WsMessage) => boolean;
+  /** Handle a domain event from the event bus. Returns `true` if handled. */
+  handleEvent: (event: GrackleEvent) => boolean;
 }
 
 /**
@@ -34,6 +36,17 @@ export interface UseFindingsResult {
  */
 export function useFindings(send: SendFunction): UseFindingsResult {
   const [findings, setFindings] = useState<FindingData[]>([]);
+
+  const handleEvent = useCallback((event: GrackleEvent): boolean => {
+    if (event.type === "finding.posted") {
+      const pid = typeof event.payload.projectId === "string" ? event.payload.projectId : "";
+      if (pid) {
+        send({ type: "list_findings", payload: { projectId: pid } });
+      }
+      return true;
+    }
+    return false;
+  }, [send]);
 
   const handleMessage = useCallback((msg: WsMessage): boolean => {
     switch (msg.type) {
@@ -47,18 +60,10 @@ export function useFindings(send: SendFunction): UseFindingsResult {
           ),
         );
         return true;
-      case "finding_posted":
-        if (typeof msg.payload?.projectId === "string") {
-          send({
-            type: "list_findings",
-            payload: { projectId: msg.payload.projectId },
-          });
-        }
-        return true;
       default:
         return false;
     }
-  }, [send]);
+  }, []);
 
   const loadFindings = useCallback(
     (projectId: string) => {
@@ -89,5 +94,5 @@ export function useFindings(send: SendFunction): UseFindingsResult {
     [send],
   );
 
-  return { findings, loadFindings, postFinding, handleMessage };
+  return { findings, loadFindings, postFinding, handleMessage, handleEvent };
 }
