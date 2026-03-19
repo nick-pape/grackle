@@ -41,10 +41,11 @@ export function PersonaManager(): JSX.Element {
     setName(p.name);
     setDescription(p.description);
     setSystemPrompt(p.systemPrompt);
-    setRuntime(p.runtime);
+    const editType = p.type === "script" ? "script" : "agent";
+    setRuntime(editType === "script" ? (p.runtime || "genaiscript") : p.runtime);
     setModel(p.model);
     setMaxTurns(p.maxTurns);
-    setPersonaType((p.type === "script" ? "script" : "agent") as "agent" | "script");
+    setPersonaType(editType as "agent" | "script");
     setScript(p.script || "");
     setEditing(p);
     setCreating(false);

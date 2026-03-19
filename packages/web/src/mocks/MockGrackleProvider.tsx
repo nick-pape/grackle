@@ -868,7 +868,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
         };
         setPersonas((prev) => [...prev, newPersona]);
       },
-      updatePersona: (personaId: string, name?: string, description?: string, systemPrompt?: string, runtime?: string, model?: string, maxTurns?: number) => {
+      updatePersona: (personaId: string, name?: string, description?: string, systemPrompt?: string, runtime?: string, model?: string, maxTurns?: number, type?: string, script?: string) => {
         console.log("[MockGrackle] updatePersona", { personaId, name });
         setPersonas((prev) =>
           prev.map((p) => {
@@ -883,6 +883,8 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
               ...(runtime !== undefined ? { runtime } : {}),
               ...(model !== undefined ? { model } : {}),
               ...(maxTurns !== undefined ? { maxTurns } : {}),
+              ...(type !== undefined ? { type } : {}),
+              ...(script !== undefined ? { script } : {}),
               updatedAt: new Date().toISOString(),
             };
           }),

@@ -1153,6 +1153,9 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
     async createPersona(req: grackle.CreatePersonaRequest) {
       if (!req.name) throw new ConnectError("Persona name is required", Code.InvalidArgument);
       const personaType = req.type || "agent";
+      if (personaType !== "agent" && personaType !== "script") {
+        throw new ConnectError(`Invalid persona type: "${personaType}". Must be "agent" or "script".`, Code.InvalidArgument);
+      }
       if (personaType === "script") {
         if (!req.script) {
           throw new ConnectError("Script content is required for script personas", Code.InvalidArgument);
@@ -1249,8 +1252,9 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       const runtime = req.runtime || existing.runtime;
       const model = req.model || existing.model;
       const maxTurns = req.maxTurns === 0 ? existing.maxTurns : req.maxTurns;
-      const updatedType = req.type || existing.type || "agent";
-      const updatedScript = req.script || existing.script || "";
+      // Empty string means "keep existing", non-empty means "set to this value"
+      const updatedType = req.type || existing.type;
+      const updatedScript = req.script || existing.script;
 
       personaStore.updatePersona(
         req.id,

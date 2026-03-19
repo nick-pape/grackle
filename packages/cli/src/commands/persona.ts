@@ -94,7 +94,7 @@ export function registerPersonaCommands(program: Command): void {
         name,
         description: opts.desc || "",
         systemPrompt,
-        runtime: opts.runtime || "",
+        runtime: opts.runtime || (personaType === "script" ? "genaiscript" : ""),
         model: opts.model || "",
         maxTurns: opts.maxTurns || 0,
         type: personaType,

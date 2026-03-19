@@ -36,9 +36,9 @@ function resolveGenAIScriptBin(): string {
 /**
  * A session that executes a GenAIScript (.genai.mjs) program via the CLI.
  *
- * Stderr is streamed as text events in real-time (progress, console.log).
+ * Stderr is streamed as system events in real-time (progress, console.log).
  * The structured result is written to `res.json` via the `-o` flag and
- * post-processed into tool_use/tool_result events on completion.
+ * the script's output text is yielded as a text event on completion.
  */
 class GenAIScriptSession implements AgentSession {
   public id: string;
@@ -97,7 +97,16 @@ class GenAIScriptSession implements AgentSession {
         env: childEnv,
       });
 
-      // Stream stderr lines as text events (progress, console.log output)
+      // Handle spawn errors (e.g. missing binary) to avoid unhandled 'error' events
+      this.child.on("error", (err: Error) => {
+        logger.error({ sessionId: this.id, err }, "genaiscript: spawn error");
+      });
+
+      // Drain stdout to prevent pipe buffer from blocking the process.
+      // The structured result comes from res.json, not stdout.
+      this.child.stdout!.resume();
+
+      // Stream stderr lines as system events (progress, console.log output)
       const stderrReader = createInterface({ input: this.child.stderr! });
 
       for await (const line of stderrReader) {
@@ -193,7 +202,7 @@ class GenAIScriptSession implements AgentSession {
 /**
  * Runtime for GenAIScript — executes .genai.mjs scripts via the CLI,
  * streaming stderr progress in real-time and parsing the structured
- * JSON result into agent-style events (text, tool_use, tool_result).
+ * JSON result for the script's output text.
  */
 export class GenAIScriptRuntime implements AgentRuntime {
   public name: string = "genaiscript";

@@ -850,6 +850,10 @@ async function handleMessage(
         return;
       }
       const personaType = (msg.payload?.type as string) || "agent";
+      if (personaType !== "agent" && personaType !== "script") {
+        sendWs(ws, { type: "error", payload: { message: `Invalid persona type: "${personaType}". Must be "agent" or "script".` } });
+        return;
+      }
       const personaSystemPrompt = (msg.payload?.systemPrompt as string) || "";
       const personaScript = (msg.payload?.script as string) || "";
       if (personaType === "script") {
