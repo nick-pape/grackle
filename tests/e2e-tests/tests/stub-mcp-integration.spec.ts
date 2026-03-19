@@ -46,7 +46,7 @@ test.describe("Stub MCP Integration", () => {
 
     // Verify full lifecycle completes
     await page
-      .getByRole("button", { name: "Complete", exact: true })
+      .getByRole("button", { name: "Resume", exact: true })
       .waitFor({ timeout: 15_000 });
   });
 

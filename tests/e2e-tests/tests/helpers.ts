@@ -247,9 +247,11 @@ export async function runStubTaskToCompletion(page: Page): Promise<void> {
   await inputField.fill("continue");
   await page.getByRole("button", { name: "Send", exact: true }).click();
 
-  // Wait for session to complete and task to move to paused (review)
+  // Wait for session to complete and task to move to paused (review).
+  // "Resume" only appears in paused state, unlike "Stop" which is in both
+  // working and paused states.
   await page
-    .getByRole("button", { name: "Complete", exact: true })
+    .getByRole("button", { name: "Resume", exact: true })
     .waitFor({ timeout: 15_000 });
 }
 
@@ -427,9 +429,11 @@ export async function runStubMcpTaskToCompletion(page: Page): Promise<void> {
   await inputField.fill("continue");
   await page.getByRole("button", { name: "Send", exact: true }).click();
 
-  // Wait for session to complete and task to move to paused (review)
+  // Wait for session to complete and task to move to paused (review).
+  // "Resume" only appears in paused state, unlike "Stop" which is in both
+  // working and paused states.
   await page
-    .getByRole("button", { name: "Complete", exact: true })
+    .getByRole("button", { name: "Resume", exact: true })
     .waitFor({ timeout: 15_000 });
 }
 

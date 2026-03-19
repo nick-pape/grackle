@@ -33,8 +33,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends gosu \
 
 # ── Grackle CLI + agent runtimes (pinned via lockfile) ────────────
 COPY docker/server/package.json /opt/grackle/package.json
-COPY docker/server/package-lock.json /opt/grackle/package-lock.json
-RUN npm ci --prefix /opt/grackle --omit=dev
+RUN npm install --prefix /opt/grackle --omit=dev
 ENV PATH="/opt/grackle/node_modules/.bin:$PATH"
 
 # ── Remove build toolchain (only needed for native addon compilation) ──

@@ -15,8 +15,8 @@ test.describe("Complete and resume flow", () => {
     // --- Run task to paused (review) state ---
     await runStubTaskToCompletion(page);
 
-    // --- Complete the task ---
-    await page.getByRole("button", { name: "Complete", exact: true }).click();
+    // --- Stop the task (kill session + mark complete) ---
+    await page.getByRole("button", { name: "Stop", exact: true }).click();
     await expect(page.getByText("Task completed")).toBeVisible({ timeout: 5_000 });
 
     // --- Verify no failure ---

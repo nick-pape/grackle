@@ -1,6 +1,21 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Thu, 19 Mar 2026 07:05:32 GMT and should not be manually modified.
+This log was last generated on Thu, 19 Mar 2026 12:25:13 GMT and should not be manually modified.
+
+## 0.45.0
+Thu, 19 Mar 2026 12:25:13 GMT
+
+### Minor changes
+
+- Add stop_task WebSocket message that kills session and marks task complete in one step
+- Expose task_start, task_complete, and session_send_input for scoped agents with descendant enforcement; add environment inheritance for startTask
+
+## 0.44.0
+Thu, 19 Mar 2026 07:29:14 GMT
+
+### Minor changes
+
+- Add script persona support with --type, --script, and --script-file flags for persona create/edit, and Type column in persona list
 
 ## 0.43.0
 Thu, 19 Mar 2026 07:05:32 GMT
