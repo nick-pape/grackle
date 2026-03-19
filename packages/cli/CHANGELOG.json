@@ -2,6 +2,21 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.45.0",
+      "tag": "@grackle-ai/cli_v0.45.0",
+      "date": "Thu, 19 Mar 2026 12:25:13 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Add stop_task WebSocket message that kills session and marks task complete in one step"
+          },
+          {
+            "comment": "Expose task_start, task_complete, and session_send_input for scoped agents with descendant enforcement; add environment inheritance for startTask"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.44.0",
       "tag": "@grackle-ai/cli_v0.44.0",
       "date": "Thu, 19 Mar 2026 07:29:14 GMT",
