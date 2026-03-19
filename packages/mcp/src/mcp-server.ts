@@ -103,11 +103,12 @@ function createMcpServerInstance(grpcClient: Client<typeof grackle.Grackle>, aut
       if (name === "task_create" && authContext.taskId) {
         rawArgs.parentTaskId = authContext.taskId;
       }
-      // Enforce project scoping: verify task belongs to the caller's project
-      if (name === "task_show" && typeof rawArgs.taskId === "string" && rawArgs.taskId) {
+      // Enforce project scoping: verify task belongs to the caller's project.
+      // Skip check when caller has no project (root task agents can see any task).
+      if (name === "task_show" && authContext.projectId && typeof rawArgs.taskId === "string" && rawArgs.taskId) {
         try {
           const task = await grpcClient.getTask({ id: rawArgs.taskId as string });
-          if (task.projectId !== authContext.projectId) {
+          if ((task.projectId || undefined) !== authContext.projectId) {
             return {
               content: [{ type: "text", text: JSON.stringify({ error: "Task belongs to a different project", code: "PERMISSION_DENIED" }, null, 2) }],
               isError: true,

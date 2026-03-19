@@ -76,7 +76,7 @@ export function reanimateAgent(sessionId: string): SessionRow {
   if (session.taskId) {
     const task = taskStore.getTask(session.taskId);
     if (task) {
-      projectId = task.projectId;
+      projectId = task.projectId || undefined;
       taskId = task.id;
     }
   }

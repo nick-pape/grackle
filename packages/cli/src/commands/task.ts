@@ -12,11 +12,11 @@ export function registerTaskCommands(program: Command): void {
   const task = program.command("task").description("Create, start, and manage tasks");
 
   task
-    .command("list <project-id>")
-    .description("List tasks in a project")
+    .command("list [project-id]")
+    .description("List tasks (optionally scoped to a project)")
     .option("--search <query>", "Filter tasks by title/description substring")
     .option("--status <status>", "Filter tasks by status (not_started, working, paused, complete, failed)")
-    .action(async (projectId: string, opts: { search?: string; status?: string }) => {
+    .action(async (projectId: string | undefined, opts: { search?: string; status?: string }) => {
       const VALID_STATUSES = new Set([
         "not_started",
         "working",
@@ -38,7 +38,7 @@ export function registerTaskCommands(program: Command): void {
 
       const client = createGrackleClient();
       const res = await client.listTasks({
-        projectId,
+        projectId: projectId || "",
         search: opts.search || "",
         status: opts.status ? String(opts.status).toLowerCase() : "",
       });
@@ -64,17 +64,18 @@ export function registerTaskCommands(program: Command): void {
     });
 
   task
-    .command("create <project-id> <title>")
+    .command("create <title>")
     .description("Create a task")
+    .option("--project <project-id>", "Project to create the task in (optional)")
     .option("--desc <text>", "Task description")
     .option("--depends-on <ids>", "Comma-separated dependency task IDs")
-    .action(async (projectId: string, title: string, opts: { dependsOn?: string; desc?: string }) => {
+    .action(async (title: string, opts: { project?: string; dependsOn?: string; desc?: string }) => {
       const client = createGrackleClient();
       const dependsOn: string[] = opts.dependsOn
         ? opts.dependsOn.split(",").map((s: string) => s.trim()).filter(Boolean)
         : [];
       const t = await client.createTask({
-        projectId,
+        projectId: opts.project || "",
         title,
         description: opts.desc || "",
         dependsOn,
