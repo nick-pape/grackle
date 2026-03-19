@@ -87,6 +87,12 @@ export function initDatabase(): void {
   } catch {
     /* column already renamed or never existed */
   }
+  // Migration: drop old findings index after column rename
+  try {
+    sqlite.exec("DROP INDEX IF EXISTS idx_findings_project");
+  } catch {
+    /* index already dropped or never existed */
+  }
 
   // Create tables — idempotent, safe to run every startup
   sqlite.exec(`

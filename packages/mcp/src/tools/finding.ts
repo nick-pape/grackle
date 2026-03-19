@@ -13,7 +13,7 @@ export const findingTools: ToolDefinition[] = [
     group: "finding",
     description: "Query findings for a workspace, optionally filtering by category and tags.",
     inputSchema: z.object({
-      workspaceId: z.string().describe("Project ID to query findings for"),
+      workspaceId: z.string().describe("Workspace ID to query findings for"),
       category: z.string().optional().describe("Filter by finding category"),
       tag: z.string().optional().describe("Filter by tag"),
       limit: z.number().int().positive().optional().describe("Maximum number of findings to return"),
@@ -57,7 +57,7 @@ export const findingTools: ToolDefinition[] = [
     group: "finding",
     description: "Post a new finding to a workspace with a title, category, content, and tags.",
     inputSchema: z.object({
-      workspaceId: z.string().describe("Project ID to post the finding to"),
+      workspaceId: z.string().describe("Workspace ID to post the finding to"),
       title: z.string().describe("Finding title"),
       category: z.string().optional().describe("Finding category (e.g. 'bug', 'insight', 'risk')"),
       content: z.string().optional().describe("Detailed finding content"),

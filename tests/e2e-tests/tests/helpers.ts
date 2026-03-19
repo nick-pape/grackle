@@ -76,7 +76,7 @@ export async function sendWsMessage(
 /** Retrieve the workspace ID for a workspace with the given name. */
 export async function getWorkspaceId(
   page: Page,
-  projectName: string,
+  workspaceName: string,
 ): Promise<string> {
   const response = await sendWsAndWaitFor(
     page,
@@ -87,9 +87,9 @@ export async function getWorkspaceId(
     id: string;
     name: string;
   }>;
-  const workspace = workspaces.find((p) => p.name === projectName);
+  const workspace = workspaces.find((w) => w.name === workspaceName);
   if (!workspace) {
-    throw new Error(`Workspace "${projectName}" not found`);
+    throw new Error(`Workspace "${workspaceName}" not found`);
   }
   return workspace.id;
 }
