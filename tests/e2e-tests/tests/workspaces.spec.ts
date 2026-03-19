@@ -1,5 +1,26 @@
 import { test, expect } from "./fixtures.js";
-import { createWorkspace } from "./helpers.js";
+import { createWorkspace, sendWsAndWaitFor } from "./helpers.js";
+
+/** Archive all existing workspaces via WS so the welcome CTA appears. */
+async function archiveAllWorkspaces(page: import("@playwright/test").Page): Promise<void> {
+  const response = await sendWsAndWaitFor(page, { type: "list_workspaces" }, "workspaces");
+  const workspaces = (response.payload?.workspaces || []) as Array<{ id: string }>;
+  for (const workspace of workspaces) {
+    await sendWsAndWaitFor(
+      page,
+      { type: "archive_workspace", payload: { workspaceId: workspace.id } },
+      "workspace.archived",
+    );
+  }
+  if (workspaces.length > 0) {
+    // Reload so the UI reflects the empty state
+    await page.goto("/");
+    await page.waitForFunction(
+      () => document.body.innerText.includes("Connected"),
+      { timeout: 10_000 },
+    );
+  }
+}
 
 test.describe("Workspaces", () => {
   test("sidebar defaults to Workspaces tab", async ({ appPage }) => {
@@ -7,6 +28,55 @@ test.describe("Workspaces", () => {
 
     // Workspaces tab should be active by default — header label visible
     await expect(page.locator("text=WORKSPACES").first()).toBeVisible();
+  });
+
+  test("welcome CTA creates workspace inline", async ({ appPage }) => {
+    const page = appPage;
+
+    // Ensure no workspaces exist so the welcome CTA is visible
+    await archiveAllWorkspaces(page);
+
+    // On fresh load (no workspaces), the welcome CTA should be visible
+    await expect(page.locator('[data-testid="welcome-cta"]')).toBeVisible();
+
+    // Click the CTA button to show the inline form (no browser prompt())
+    await page.locator('[data-testid="welcome-create-button"]').click();
+
+    // Input should be visible and focused
+    const input = page.locator('[data-testid="welcome-create-input"]');
+    await expect(input).toBeVisible();
+    await expect(input).toBeFocused();
+
+    // Fill in workspace name and click OK
+    await input.fill("cta-workspace");
+    await page.locator('[data-testid="welcome-create-ok"]').click();
+
+    // Workspace should appear in sidebar
+    await expect(page.getByText("cta-workspace")).toBeVisible({ timeout: 5_000 });
+
+    // Welcome CTA should no longer be visible (workspaces exist now)
+    await expect(page.locator('[data-testid="welcome-cta"]')).not.toBeVisible({ timeout: 5_000 });
+  });
+
+  test("welcome CTA cancel with Escape", async ({ appPage }) => {
+    const page = appPage;
+
+    // Ensure no workspaces exist so the welcome CTA is visible
+    await archiveAllWorkspaces(page);
+
+    // Click the CTA button to show the inline form
+    await page.locator('[data-testid="welcome-create-button"]').click();
+
+    // Input should be visible
+    const input = page.locator('[data-testid="welcome-create-input"]');
+    await expect(input).toBeVisible();
+
+    // Press Escape to cancel
+    await input.press("Escape");
+
+    // Input should be gone, button should be back
+    await expect(input).not.toBeVisible();
+    await expect(page.locator('[data-testid="welcome-create-button"]')).toBeVisible();
   });
 
   test("create a workspace and see it in sidebar", async ({ appPage }) => {
