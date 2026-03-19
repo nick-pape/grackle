@@ -4,7 +4,7 @@
   "private": true,
   "description": "Pinned agent runtime dependencies for the Grackle server Docker image",
   "dependencies": {
-    "@grackle-ai/cli": "0.38.0",
+    "@grackle-ai/cli": "latest",
     "@anthropic-ai/claude-code": "2.1.78",
     "@openai/codex": "0.115.0",
     "@github/copilot": "1.0.7",
