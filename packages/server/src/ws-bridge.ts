@@ -355,7 +355,7 @@ async function startTaskSession(
       ? (project?.worktreeBasePath || process.env.GRACKLE_WORKTREE_BASE || "/workspace")
       : "",
     systemContext,
-    projectId: freshTask.projectId || "",
+    projectId: freshTask.projectId ?? undefined,
     taskId: freshTask.id,
     mcpServersJson,
     mcpUrl,
@@ -365,7 +365,7 @@ async function startTaskSession(
   processEventStream(conn.client.spawn(powerlineReq), {
     sessionId,
     logPath,
-    projectId: freshTask.projectId || "",
+    projectId: freshTask.projectId ?? undefined,
     taskId: freshTask.id,
   });
 
@@ -998,7 +998,7 @@ async function handleMessage(
             const computed = computeTaskStatus(r.status, taskSessions);
             return {
               id: r.id,
-              projectId: r.projectId || "",
+              projectId: r.projectId ?? undefined,
               title: r.title,
               description: r.description,
               status: computed.status,
@@ -1282,7 +1282,7 @@ async function handleMessage(
       processEventStream(conn.client.resume(powerlineReq), {
         sessionId: latestSession.id,
         logPath,
-        projectId: task.projectId || "",
+        projectId: task.projectId ?? undefined,
         taskId: task.id,
       });
 

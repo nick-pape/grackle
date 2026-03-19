@@ -122,7 +122,7 @@ function taskRowToProto(
 ): grackle.Task {
   return create(grackle.TaskSchema, {
     id: row.id,
-    projectId: row.projectId || "",
+    projectId: row.projectId ?? undefined,
     title: row.title,
     description: row.description,
     status: taskStatusToEnum(computedStatus ?? row.status),
@@ -989,7 +989,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
           ? (project?.worktreeBasePath || process.env.GRACKLE_WORKTREE_BASE || "/workspace")
           : "",
         systemContext,
-        projectId: task.projectId || "",
+        projectId: task.projectId ?? undefined,
         taskId: task.id,
         mcpServersJson,
         mcpUrl: taskMcpUrl,
@@ -999,7 +999,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       processEventStream(conn.client.spawn(powerlineReq), {
         sessionId,
         logPath,
-        projectId: task.projectId || "",
+        projectId: task.projectId ?? undefined,
         taskId: task.id,
       });
 
@@ -1078,7 +1078,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       processEventStream(conn.client.resume(powerlineReq), {
         sessionId: latestSession.id,
         logPath,
-        projectId: task.projectId || "",
+        projectId: task.projectId ?? undefined,
         taskId: task.id,
       });
 

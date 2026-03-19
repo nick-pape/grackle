@@ -123,7 +123,7 @@ export function initDatabase(): void {
 
     CREATE TABLE IF NOT EXISTS tasks (
       id            TEXT PRIMARY KEY,
-      project_id    TEXT NOT NULL REFERENCES projects(id),
+      project_id    TEXT REFERENCES projects(id),
       title         TEXT NOT NULL,
       description   TEXT NOT NULL DEFAULT '',
       status        TEXT NOT NULL DEFAULT 'not_started',
@@ -412,6 +412,7 @@ export function initDatabase(): void {
     const projectIdCol = tableInfo.find((c) => c.name === "project_id");
     if (projectIdCol?.notnull === 1) {
       sqlite.exec(`
+        BEGIN;
         CREATE TABLE tasks_new (
           id             TEXT PRIMARY KEY,
           project_id     TEXT REFERENCES projects(id),
@@ -437,7 +438,7 @@ export function initDatabase(): void {
         FROM tasks;
         DROP TABLE tasks;
         ALTER TABLE tasks_new RENAME TO tasks;
-        CREATE INDEX IF NOT EXISTS idx_sessions_task_id ON sessions(task_id);
+        COMMIT;
       `);
     }
   }
