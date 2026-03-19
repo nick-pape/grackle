@@ -133,6 +133,7 @@ export class CopilotSession extends BaseAgentSession {
     const workingDirectory = await resolveWorkingDirectory({
       branch: this.branch,
       worktreeBasePath: this.worktreeBasePath,
+      useWorktrees: this.useWorktrees,
       eventQueue: this.eventQueue,
     });
 
@@ -399,7 +400,8 @@ export class CopilotRuntime extends BaseAgentRuntime {
     mcpServers?: Record<string, unknown>,
     _hooks?: Record<string, unknown>, // Hooks not supported by Copilot SDK — accepted for interface compatibility
     mcpBroker?: { url: string; token: string },
+    useWorktrees?: boolean,
   ): AgentSession {
-    return new CopilotSession(id, prompt, model, maxTurns, resumeSessionId, branch, worktreeBasePath, systemContext, mcpServers, undefined, mcpBroker);
+    return new CopilotSession(id, prompt, model, maxTurns, resumeSessionId, branch, worktreeBasePath, systemContext, mcpServers, undefined, mcpBroker, useWorktrees);
   }
 }

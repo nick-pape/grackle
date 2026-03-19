@@ -1,0 +1,17 @@
+.envRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.envDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.envDotGreen  { background: var(--accent-green); }
+.envDotYellow { background: var(--accent-yellow); }
+.envDotRed    { background: var(--accent-red); }
+.envDotGray   { background: var(--text-disabled); }

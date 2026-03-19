@@ -30,6 +30,7 @@ export abstract class BaseAgentSession implements AgentSession {
   protected readonly resumeSessionId?: string;
   protected readonly branch?: string;
   protected readonly worktreeBasePath?: string;
+  protected readonly useWorktrees: boolean;
   protected readonly systemContext?: string;
   protected readonly mcpServers?: Record<string, unknown>;
   protected readonly hooks?: Record<string, unknown>;
@@ -53,6 +54,7 @@ export abstract class BaseAgentSession implements AgentSession {
     mcpServers?: Record<string, unknown>,
     hooks?: Record<string, unknown>,
     mcpBroker?: { url: string; token: string },
+    useWorktrees?: boolean,
   ) {
     this.id = id;
     this.prompt = prompt;
@@ -61,6 +63,7 @@ export abstract class BaseAgentSession implements AgentSession {
     this.resumeSessionId = resumeSessionId;
     this.branch = branch;
     this.worktreeBasePath = worktreeBasePath;
+    this.useWorktrees = useWorktrees ?? true;
     this.systemContext = systemContext;
     this.mcpServers = mcpServers;
     this.hooks = hooks;
