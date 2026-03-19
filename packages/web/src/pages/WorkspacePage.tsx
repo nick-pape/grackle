@@ -75,8 +75,6 @@ export function WorkspacePage(): JSX.Element {
   const total = workspaceTasks.length;
   const progressPct = total > 0 ? Math.round((done / total) * 100) : 0;
 
-  const owningEnv = environments.find((e) => e.id === workspace?.environmentId);
-
   return (
     <div className={styles.panelContainer}>
       <Breadcrumbs segments={breadcrumbs} />

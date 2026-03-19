@@ -344,13 +344,13 @@ export function TaskPage(): JSX.Element {
   // Initialize env selector from workspace default when task/workspace loads
   useEffect(() => {
     if (selectedEnvId !== "") return;
-    if (workspace?.defaultEnvironmentId) {
-      setSelectedEnvId(workspace.defaultEnvironmentId);
+    if (workspace?.environmentId) {
+      setSelectedEnvId(workspace.environmentId);
     } else if (environments.length > 0) {
       const connected = environments.find((e) => e.status === "connected");
       setSelectedEnvId(connected?.id ?? environments[0].id);
     }
-  }, [selectedEnvId, workspace?.defaultEnvironmentId, environments]);
+  }, [selectedEnvId, workspace?.environmentId, environments]);
 
   // Resolve effective sessionId from the task's eagerly-patched latestSessionId
   // (set by the task_started handler) or from the user's attempt selection.
