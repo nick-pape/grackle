@@ -15,7 +15,6 @@ export function EmptyPage(): JSX.Element {
       return;
     }
     createProject(newProjectName.trim());
-    setNewProjectName("");
   };
 
   if (projects.length === 0) {
@@ -34,7 +33,7 @@ export function EmptyPage(): JSX.Element {
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   handleCreateProject();
-                } else if (e.key === "Escape" && !projectCreating) {
+                } else if (e.key === "Escape") {
                   setShowCreateForm(false);
                   setNewProjectName("");
                 }
@@ -50,6 +49,7 @@ export function EmptyPage(): JSX.Element {
               onClick={handleCreateProject}
               className={styles.ctaCreateOk}
               disabled={projectCreating}
+              aria-label={projectCreating ? "Creating project" : undefined}
               data-testid="welcome-create-ok"
             >
               {projectCreating
