@@ -12,6 +12,7 @@ vi.mock("../logger.js", () => ({
 
 vi.mock("../log-writer.js", () => ({
   initLog: vi.fn(),
+  ensureLogInitialized: vi.fn(),
   writeEvent: vi.fn(),
   endSession: vi.fn(),
   readLog: vi.fn(() => []),

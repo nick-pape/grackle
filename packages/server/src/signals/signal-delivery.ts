@@ -121,6 +121,9 @@ async function sendInputToSession(
       content: text,
     });
     if (session?.logPath) {
+      // Ensure the stream is open before writing — the session may still be
+      // PENDING and processEventStream may not have called initLog yet.
+      logWriter.ensureLogInitialized(session.logPath);
       logWriter.writeEvent(session.logPath, userInputEvent);
     }
     streamHub.publish(userInputEvent);

@@ -59,7 +59,9 @@ async function waitForSessionStatus(
 }
 
 /**
- * Helper: poll session events until a text event containing the pattern appears.
+ * Helper: poll session events until any event whose `content` includes the
+ * given pattern appears (regardless of event type — this catches user_input,
+ * text, and other content-bearing events).
  * Returns the matching event content, or throws on timeout.
  */
 async function waitForSessionText(

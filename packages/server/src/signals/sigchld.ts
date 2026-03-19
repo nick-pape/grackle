@@ -74,8 +74,9 @@ export function initSigchldSubscriber(): void {
 }
 
 /**
- * Handle a task.updated event: check if the task is a child with a terminal
- * session, and if so, deliver a SIGCHLD notification to the parent.
+ * Handle a task.updated event: check if the task is a child whose latest
+ * session has reached a SIGCHLD-triggering status (idle or terminal),
+ * and if so, deliver a SIGCHLD notification to the parent.
  */
 async function handleTaskUpdated(childTaskId: string): Promise<void> {
   const childTask = taskStore.getTask(childTaskId);
@@ -88,7 +89,7 @@ async function handleTaskUpdated(childTaskId: string): Promise<void> {
     return;
   }
 
-  // Check if the child has a terminal session
+  // Check if the child session is in a SIGCHLD-triggering status (idle or terminal)
   const latestSession = sessionStore.getLatestSessionForTask(childTaskId);
   if (!latestSession) {
     return;
