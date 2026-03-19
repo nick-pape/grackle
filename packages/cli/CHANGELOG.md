@@ -1,6 +1,17 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Wed, 18 Mar 2026 20:54:11 GMT and should not be manually modified.
+This log was last generated on Wed, 18 Mar 2026 21:54:32 GMT and should not be manually modified.
+
+## 0.41.1
+Wed, 18 Mar 2026 21:54:32 GMT
+
+### Patches
+
+- Lockstep version bump (no CLI changes)
+
+### Updates
+
+- No user-facing CLI changes (web-only refactor of editable field components)
 
 ## 0.41.0
 Wed, 18 Mar 2026 20:54:11 GMT

@@ -114,10 +114,11 @@ function ToolResultEvent({ content, raw, toolUseCtx }: {
       <span
         className={isError ? styles.toolResultIndicatorError : styles.toolResultIndicatorOk}
         aria-label={isError ? "error" : "success"}
+        data-testid={isError ? "tool-result-indicator-error" : "tool-result-indicator-ok"}
       >
         {isError ? "\u2717" : "\u2713"}
       </span>
-      <span className={styles.toolResultLabel}>
+      <span className={styles.toolResultLabel} data-testid="tool-result-label">
         {label}
       </span>
       {hasMore && (
@@ -129,24 +130,25 @@ function ToolResultEvent({ content, raw, toolUseCtx }: {
   );
 
   return (
-    <div className={styles.toolResultEvent}>
+    <div className={styles.toolResultEvent} data-testid="tool-result">
       {hasMore ? (
         <button
           className={styles.toolResultHeader}
+          data-testid="tool-result-header"
           onClick={() => { setExpanded((v) => !v); }}
           aria-expanded={expanded}
         >
           {headerContent}
         </button>
       ) : (
-        <div className={styles.toolResultHeader}>
+        <div className={styles.toolResultHeader} data-testid="tool-result-header">
           {headerContent}
         </div>
       )}
       {cmdLine && (
         <div className={styles.toolResultCommand}>{cmdLine}</div>
       )}
-      <pre className={styles.toolResultPre}>
+      <pre className={styles.toolResultPre} data-testid="tool-result-content">
         {displayContent}
         {!expanded && hasMore && (
           <span className={styles.toolResultEllipsis}>{"\u2026"}</span>

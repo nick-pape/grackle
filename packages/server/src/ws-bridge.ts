@@ -23,6 +23,7 @@ import {
   LOGS_DIR,
   SESSION_STATUS,
   TASK_STATUS,
+  DEFAULT_MCP_PORT,
   eventTypeToString,
 } from "@grackle-ai/common";
 import { resolvePersona } from "./resolve-persona.js";
@@ -38,7 +39,9 @@ import { processEventStream } from "./event-processor.js";
 import * as processorRegistry from "./processor-registry.js";
 import { setWssInstance, envRowToWs } from "./ws-broadcast.js";
 import { emit } from "./event-bus.js";
-import { buildMcpServersJson } from "./grpc-service.js";
+import { buildMcpServersJson, toDialableHost } from "./grpc-service.js";
+import { createScopedToken } from "@grackle-ai/mcp";
+import { loadOrCreateApiKey } from "./api-key.js";
 import { reanimateAgent } from "./reanimate-agent.js";
 import { ConnectError } from "@connectrpc/connect";
 import { computeTaskStatus } from "./compute-task-status.js";
@@ -331,6 +334,15 @@ async function startTaskSession(
     logger.warn("Failed to parse persona.mcpServers JSON; ignoring");
   }
 
+  // Build MCP broker URL + scoped token so runtimes can call the MCP server.
+  const mcpPort = parseInt(process.env.GRACKLE_MCP_PORT || String(DEFAULT_MCP_PORT), 10);
+  const mcpDialHost = toDialableHost(process.env.GRACKLE_HOST || "127.0.0.1");
+  const mcpUrl = `http://${mcpDialHost}:${mcpPort}/mcp`;
+  const mcpToken = createScopedToken(
+    { sub: freshTask.id, pid: freshTask.projectId, per: resolved.personaId, sid: sessionId },
+    loadOrCreateApiKey(),
+  );
+
   const powerlineReq = create(powerline.SpawnRequestSchema, {
     sessionId,
     runtime,
@@ -345,6 +357,8 @@ async function startTaskSession(
     projectId: freshTask.projectId,
     taskId: freshTask.id,
     mcpServersJson,
+    mcpUrl,
+    mcpToken,
   });
 
   processEventStream(conn.client.spawn(powerlineReq), {

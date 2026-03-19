@@ -2,6 +2,23 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.41.1",
+      "tag": "@grackle-ai/cli_v0.41.1",
+      "date": "Wed, 18 Mar 2026 21:54:32 GMT",
+      "comments": {
+        "none": [
+          {
+            "comment": "No user-facing CLI changes (web-only refactor of editable field components)"
+          }
+        ],
+        "patch": [
+          {
+            "comment": "Lockstep version bump (no CLI changes)"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.41.0",
       "tag": "@grackle-ai/cli_v0.41.0",
       "date": "Wed, 18 Mar 2026 20:54:11 GMT",
