@@ -927,8 +927,8 @@ async function handleMessage(
         (msg.payload?.model as string | undefined) ?? existingPersona.model,
         (msg.payload?.maxTurns as number | undefined) ?? existingPersona.maxTurns,
         (msg.payload?.mcpServers as string | undefined) ?? existingPersona.mcpServers,
-        (msg.payload?.type as string | undefined) ?? existingPersona.type ?? "agent",
-        (msg.payload?.script as string | undefined) ?? existingPersona.script ?? "",
+        (msg.payload?.type as string | undefined) ?? existingPersona.type,
+        (msg.payload?.script as string | undefined) ?? existingPersona.script,
       );
       emit("persona.updated", { personaId: updatePersonaId });
       break;
