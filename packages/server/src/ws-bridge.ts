@@ -908,14 +908,14 @@ async function handleMessage(
       }
       personaStore.updatePersona(
         updatePersonaId,
-        (msg.payload?.name as string) || existingPersona.name,
-        (msg.payload?.description as string) || existingPersona.description,
-        (msg.payload?.systemPrompt as string) || existingPersona.systemPrompt,
-        (msg.payload?.toolConfig as string) || existingPersona.toolConfig,
-        (msg.payload?.runtime as string) || existingPersona.runtime,
-        (msg.payload?.model as string) || existingPersona.model,
-        (msg.payload?.maxTurns as number) || existingPersona.maxTurns,
-        (msg.payload?.mcpServers as string) || existingPersona.mcpServers,
+        (msg.payload?.name as string | undefined) ?? existingPersona.name,
+        (msg.payload?.description as string | undefined) ?? existingPersona.description,
+        (msg.payload?.systemPrompt as string | undefined) ?? existingPersona.systemPrompt,
+        (msg.payload?.toolConfig as string | undefined) ?? existingPersona.toolConfig,
+        (msg.payload?.runtime as string | undefined) ?? existingPersona.runtime,
+        (msg.payload?.model as string | undefined) ?? existingPersona.model,
+        (msg.payload?.maxTurns as number | undefined) ?? existingPersona.maxTurns,
+        (msg.payload?.mcpServers as string | undefined) ?? existingPersona.mcpServers,
       );
       emit("persona.updated", { personaId: updatePersonaId });
       break;
