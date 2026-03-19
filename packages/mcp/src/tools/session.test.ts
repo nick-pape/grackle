@@ -376,4 +376,30 @@ describe("session_send_input", () => {
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed.code).toBe("NOT_FOUND");
   });
+
+  /** Should reject when scoped auth and session has no taskId (taskless session). */
+  test("rejects when scoped auth and session has empty taskId", async () => {
+    const scopedAuth: AuthContext = {
+      type: "scoped",
+      taskId: "parent-task",
+      projectId: "proj-1",
+      personaId: "p-1",
+      taskSessionId: "sess-1",
+    };
+    const mockClient = createMockClient();
+    (mockClient.getSession as ReturnType<typeof vi.fn>).mockResolvedValue({
+      id: "s1",
+      taskId: "",
+    });
+
+    const result = await getTool("session_send_input").handler(
+      { sessionId: "s1", text: "yes" },
+      mockClient,
+      scopedAuth,
+    );
+
+    expect(result.isError).toBe(true);
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.code).toBe("PERMISSION_DENIED");
+  });
 });

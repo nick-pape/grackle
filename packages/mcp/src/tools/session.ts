@@ -1,4 +1,5 @@
 import type { Client } from "@connectrpc/connect";
+import { ConnectError, Code } from "@connectrpc/connect";
 import { z } from "zod";
 import { grackle, eventTypeToString, SESSION_STATUS } from "@grackle-ai/common";
 import type { ToolDefinition } from "../tool-registry.js";
@@ -240,6 +241,9 @@ export const sessionTools: ToolDefinition[] = [
       try {
         if (authContext?.type === "scoped") {
           const session = await client.getSession({ id: args.sessionId as string });
+          if (!session.taskId) {
+            throw new ConnectError("Cannot send input to a taskless session via scoped auth", Code.PermissionDenied);
+          }
           await assertCallerIsAncestor(client, authContext, session.taskId);
         }
         await client.sendInput({
