@@ -44,11 +44,11 @@ export function listWorkspaces(environmentId?: string): WorkspaceRow[] {
     .all();
 }
 
-/** Count active workspaces belonging to an environment. */
+/** Count all workspaces (active and archived) belonging to an environment. */
 export function countWorkspacesByEnvironment(environmentId: string): number {
   const row = db.select({ count: sql<number>`count(*)` })
     .from(workspaces)
-    .where(and(eq(workspaces.environmentId, environmentId), eq(workspaces.status, "active")))
+    .where(eq(workspaces.environmentId, environmentId))
     .get();
   return row?.count ?? 0;
 }

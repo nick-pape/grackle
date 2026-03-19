@@ -9,14 +9,14 @@ export function EmptyPage(): JSX.Element {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newWorkspaceName, setNewWorkspaceName] = useState("");
 
+  const hasEnvironments = environments.length > 0;
+
   /** Submit the inline create form. */
   const handleCreateWorkspace = (): void => {
-    if (!newWorkspaceName.trim() || workspaceCreating) {
+    if (!newWorkspaceName.trim() || workspaceCreating || !hasEnvironments) {
       return;
     }
-    // Auto-select the first available environment for the new workspace
-    const firstEnvId = environments.length > 0 ? environments[0].id : "";
-    createWorkspace(newWorkspaceName.trim(), undefined, undefined, firstEnvId);
+    createWorkspace(newWorkspaceName.trim(), undefined, undefined, environments[0].id);
   };
 
   if (workspaces.length === 0) {
@@ -63,11 +63,16 @@ export function EmptyPage(): JSX.Element {
           <button
             className={styles.ctaButton}
             onClick={() => setShowCreateForm(true)}
-            disabled={workspaceCreating}
+            disabled={workspaceCreating || !hasEnvironments}
             data-testid="welcome-create-button"
           >
             Create Your First Workspace
           </button>
+        )}
+        {!hasEnvironments && (
+          <div className={styles.ctaDescription}>
+            Add an environment first via Settings before creating a workspace.
+          </div>
         )}
       </div>
     );

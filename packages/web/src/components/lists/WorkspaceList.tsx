@@ -496,12 +496,10 @@ export function WorkspaceList(): JSX.Element {
   }, [selectedWorkspaceId, loadTasks]);
 
   const handleCreateWorkspace = (): void => {
-    if (!newWorkspaceName.trim() || workspaceCreating) {
+    if (!newWorkspaceName.trim() || workspaceCreating || environments.length === 0) {
       return;
     }
-    // Auto-select the first available environment for the new workspace
-    const firstEnvId = environments.length > 0 ? environments[0].id : "";
-    createWorkspace(newWorkspaceName.trim(), undefined, undefined, firstEnvId);
+    createWorkspace(newWorkspaceName.trim(), undefined, undefined, environments[0].id);
     setNewWorkspaceName("");
     setShowCreateForm(false);
   };

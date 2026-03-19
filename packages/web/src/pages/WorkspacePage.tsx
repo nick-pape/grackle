@@ -81,7 +81,7 @@ export function WorkspacePage(): JSX.Element {
   const total = workspaceTasks.length;
   const progressPct = total > 0 ? Math.round((done / total) * 100) : 0;
 
-  const defaultEnv = environments.find((e) => e.id === workspace?.environmentId);
+  const owningEnv = environments.find((e) => e.id === workspace?.environmentId);
 
   return (
     <div className={styles.panelContainer}>
@@ -199,27 +199,24 @@ export function WorkspacePage(): JSX.Element {
             <div className={styles.metaValue}>
               <EditableSelect
                 value={workspace?.environmentId || ""}
-                onSave={(v) => { if (workspace) { updateWorkspace(workspace.id, { environmentId: v }); } }}
-                options={[
-                  { value: "", label: "None" },
-                  ...environments.map((env) => ({ value: env.id, label: env.displayName })),
-                ]}
+                onSave={(v) => { if (workspace && v) { updateWorkspace(workspace.id, { environmentId: v }); } }}
+                options={environments.map((env) => ({ value: env.id, label: env.displayName }))}
                 fieldId="environmentId"
                 activeFieldId={activeFieldId}
                 onActivate={setActiveFieldId}
                 renderDisplay={() => {
-                  if (defaultEnv) {
+                  if (owningEnv) {
                     return (
                       <span className={styles.envRow}>
-                        <span className={`${styles.envDot} ${envStatusClass(defaultEnv.status)}`} />
-                        {defaultEnv.displayName}
+                        <span className={`${styles.envDot} ${envStatusClass(owningEnv.status)}`} />
+                        {owningEnv.displayName}
                       </span>
                     );
                   }
                   return undefined;
                 }}
-                placeholder={workspace?.environmentId || "No default environment"}
-                ariaLabel="Workspace default environment"
+                placeholder="Select environment"
+                ariaLabel="Workspace environment"
                 data-testid="edit-env"
               />
             </div>

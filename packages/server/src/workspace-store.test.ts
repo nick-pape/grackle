@@ -64,12 +64,13 @@ describe("workspace-store", () => {
     expect(allList).toHaveLength(2);
   });
 
-  it("counts active workspaces by environment", () => {
+  it("counts all workspaces (including archived) by environment", () => {
     workspaceStore.createWorkspace("p1", "WS1", "", "", "env-1");
     workspaceStore.createWorkspace("p2", "WS2", "", "", "env-1");
     workspaceStore.createWorkspace("p3", "WS3", "", "", "env-2");
     workspaceStore.archiveWorkspace("p2");
-    expect(workspaceStore.countWorkspacesByEnvironment("env-1")).toBe(1);
+    // Archived workspaces still count — they hold an FK reference
+    expect(workspaceStore.countWorkspacesByEnvironment("env-1")).toBe(2);
     expect(workspaceStore.countWorkspacesByEnvironment("env-2")).toBe(1);
     expect(workspaceStore.countWorkspacesByEnvironment("env-3")).toBe(0);
   });

@@ -240,7 +240,9 @@ export function initDatabase(): void {
   sqlite.exec(`
     UPDATE workspaces SET description = '' WHERE description IS NULL;
     UPDATE workspaces SET repo_url = '' WHERE repo_url IS NULL;
-    UPDATE workspaces SET environment_id = '' WHERE environment_id IS NULL;
+    UPDATE workspaces SET environment_id = COALESCE(
+      (SELECT id FROM environments LIMIT 1), ''
+    ) WHERE environment_id IS NULL OR environment_id = '';
     UPDATE workspaces SET status = 'active' WHERE status IS NULL;
     UPDATE workspaces SET created_at = datetime('now') WHERE created_at IS NULL;
     UPDATE workspaces SET updated_at = datetime('now') WHERE updated_at IS NULL;
