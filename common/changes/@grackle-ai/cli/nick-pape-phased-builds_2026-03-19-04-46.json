@@ -1,7 +1,7 @@
 {
   "changes": [
     {
-      "comment": "Build-infra-only",
+      "comment": "Add phased build scripts and rush-project.json for Rush build cache and parallel CI",
       "type": "none",
       "packageName": "@grackle-ai/cli"
     }
