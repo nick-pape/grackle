@@ -44,16 +44,16 @@ test.describe("Disconnected environment blocks message send", () => {
    */
   async function setupWaitingInputWithDisconnectedEnv(
     page: import("@playwright/test").Page,
-    projectName: string,
+    workspaceName: string,
     taskTitle: string,
   ): Promise<void> {
     // --- 1. Create workspace and task -----------------------------------------
-    await createWorkspace(page, projectName);
+    await createWorkspace(page, workspaceName);
 
     // Expand the workspace in the sidebar so the task becomes visible after creation.
-    await page.getByText(projectName).first().click();
+    await page.getByText(workspaceName).first().click();
 
-    const workspaceId = await getWorkspaceId(page, projectName);
+    const workspaceId = await getWorkspaceId(page, workspaceName);
     // createTaskViaWs returns the full task row from the server, including all
     // fields required by the app's `isTaskData` validator.
     const task = await createTaskViaWs(page, workspaceId, taskTitle, {

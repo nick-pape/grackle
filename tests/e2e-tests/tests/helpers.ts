@@ -141,7 +141,7 @@ export const createProject = createWorkspace;
  */
 export async function createTask(
   page: Page,
-  projectName: string,
+  workspaceName: string,
   title: string,
   envName?: string,
   options?: { canDecompose?: boolean },
@@ -152,7 +152,7 @@ export async function createTask(
     // stopPropagation so it never toggles the workspace's expand/collapse state —
     // unlike clicking the workspace name which collapses if already selected).
     await page
-      .getByText(projectName)
+      .getByText(workspaceName)
       .locator("..")
       .locator('button[title="New task"]')
       .first()
@@ -160,7 +160,7 @@ export async function createTask(
     await page.locator('[data-testid="task-edit-title"]').waitFor({ timeout: 5_000 });
 
     // Create the task via WS while the form is visible.
-    const wsId = await getWorkspaceId(page, projectName);
+    const wsId = await getWorkspaceId(page, workspaceName);
     await createTaskViaWs(page, wsId, title, { environmentId: envName, canDecompose: options?.canDecompose });
 
     // Cancel the form — this navigates to workspace view which auto-expands
@@ -177,7 +177,7 @@ export async function createTask(
   // No env specified — exercise the new full-panel TaskEditPanel UI.
   // Click "New task" button (uses stopPropagation, doesn't toggle expansion)
   await page
-    .getByText(projectName)
+    .getByText(workspaceName)
     .locator("..")
     .locator('button[title="New task"]')
     .first()

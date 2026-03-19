@@ -162,7 +162,7 @@ function applySchema(): void {
 
     CREATE TABLE IF NOT EXISTS tasks (
       id            TEXT PRIMARY KEY,
-      workspace_id  TEXT NOT NULL REFERENCES workspaces(id),
+      workspace_id  TEXT REFERENCES workspaces(id),
       title         TEXT NOT NULL,
       description   TEXT NOT NULL DEFAULT '',
       status        TEXT NOT NULL DEFAULT 'not_started',
