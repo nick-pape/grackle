@@ -1,8 +1,8 @@
 {
   "changes": [
     {
-      "comment": "Add stop_task WebSocket message that kills session and marks task complete in one step",
-      "type": "minor",
+      "comment": "placeholder",
+      "type": "none",
       "packageName": "@grackle-ai/cli"
     }
   ],

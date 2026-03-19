@@ -11,7 +11,7 @@ export function WelcomeStep({ onNext }: WelcomeStepProps): JSX.Element {
   return (
     <div className={styles.stepContent} data-testid="setup-welcome">
       <div className={styles.logoArea}>
-        <span className={styles.logoEmoji}>🐦‍⬛</span>
+        <img src="/grackle-logo.png" alt="Grackle" className={styles.logoImage} />
       </div>
       <h1 className={styles.heading}>Welcome to Grackle</h1>
       <p className={styles.tagline}>Multi-agent orchestration for software teams</p>
