@@ -9,6 +9,49 @@ test.describe("Projects", () => {
     await expect(page.locator("text=PROJECTS").first()).toBeVisible();
   });
 
+  test("welcome CTA creates project inline", async ({ appPage }) => {
+    const page = appPage;
+
+    // On fresh load (no projects), the welcome CTA should be visible
+    await expect(page.locator('[data-testid="welcome-cta"]')).toBeVisible();
+
+    // Click the CTA button to show the inline form (no browser prompt())
+    await page.locator('[data-testid="welcome-create-button"]').click();
+
+    // Input should be visible and focused
+    const input = page.locator('[data-testid="welcome-create-input"]');
+    await expect(input).toBeVisible();
+    await expect(input).toBeFocused();
+
+    // Fill in project name and click OK
+    await input.fill("cta-project");
+    await page.locator('[data-testid="welcome-create-ok"]').click();
+
+    // Project should appear in sidebar
+    await expect(page.getByText("cta-project")).toBeVisible({ timeout: 5_000 });
+
+    // Welcome CTA should no longer be visible (projects exist now)
+    await expect(page.locator('[data-testid="welcome-cta"]')).not.toBeVisible({ timeout: 5_000 });
+  });
+
+  test("welcome CTA cancel with Escape", async ({ appPage }) => {
+    const page = appPage;
+
+    // Click the CTA button to show the inline form
+    await page.locator('[data-testid="welcome-create-button"]').click();
+
+    // Input should be visible
+    const input = page.locator('[data-testid="welcome-create-input"]');
+    await expect(input).toBeVisible();
+
+    // Press Escape to cancel
+    await input.press("Escape");
+
+    // Input should be gone, button should be back
+    await expect(input).not.toBeVisible();
+    await expect(page.locator('[data-testid="welcome-create-button"]')).toBeVisible();
+  });
+
   test("create a project and see it in sidebar", async ({ appPage }) => {
     const page = appPage;
 
