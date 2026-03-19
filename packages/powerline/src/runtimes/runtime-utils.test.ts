@@ -119,6 +119,7 @@ describe("resolveWorkingDirectory", () => {
     const result = await resolveWorkingDirectory({
       branch: "my-branch",
       worktreeBasePath: "/repo",
+      useWorktrees: true,
       eventQueue: queue,
     });
 
@@ -147,6 +148,7 @@ describe("resolveWorkingDirectory", () => {
     const result = await resolveWorkingDirectory({
       branch: "my-branch",
       worktreeBasePath: "/repo",
+      useWorktrees: true,
       eventQueue: queue,
     });
 
@@ -165,6 +167,7 @@ describe("resolveWorkingDirectory", () => {
     const result = await resolveWorkingDirectory({
       branch: "my-branch",
       worktreeBasePath: "/repo",
+      useWorktrees: true,
       eventQueue: queue,
     });
 
@@ -339,6 +342,7 @@ describe("resolveWorkingDirectory", () => {
     const result = await resolveWorkingDirectory({
       branch: "my-branch",
       worktreeBasePath: "/repo",
+      useWorktrees: true,
       eventQueue: queue,
     });
 
