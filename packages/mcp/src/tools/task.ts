@@ -85,6 +85,10 @@ export const taskTools: ToolDefinition[] = [
         .string()
         .optional()
         .describe("Parent task ID (auto-set when called by an agent working on a task)"),
+      canDecompose: z
+        .boolean()
+        .optional()
+        .describe("Allow this task to create subtasks"),
       defaultPersonaId: z
         .string()
         .optional()
@@ -106,6 +110,7 @@ export const taskTools: ToolDefinition[] = [
           description: (args.description as string | undefined) ?? "",
           dependsOn: (args.dependsOn as string[] | undefined) ?? [],
           parentTaskId: (args.parentTaskId as string | undefined) ?? "",
+          canDecompose: (args.canDecompose as boolean | undefined) ?? false,
           defaultPersonaId: (args.defaultPersonaId as string | undefined) ?? "",
         });
         return jsonResult(taskToJson(task));

@@ -98,6 +98,7 @@ export interface UseGrackleSocketResult {
     dependsOn?: string[],
     parentTaskId?: string,
     defaultPersonaId?: string,
+    canDecompose?: boolean,
     onSuccess?: () => void,
     onError?: (message: string) => void,
   ) => void;

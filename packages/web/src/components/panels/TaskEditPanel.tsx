@@ -45,6 +45,7 @@ export function TaskEditPanel({ mode, taskId, projectId: projectIdProp, parentTa
   const [description, setDescription] = useState(existingTask?.description ?? "");
   const [selectedDeps, setSelectedDeps] = useState<string[]>(existingTask?.dependsOn ?? []);
   const [defaultPersonaId, setDefaultPersonaId] = useState(existingTask?.defaultPersonaId ?? "");
+  const [canDecompose, setCanDecompose] = useState(existingTask?.canDecompose ?? false);
   const [creating, setCreating] = useState(false);
 
   // In edit mode, tasks may not have loaded yet at mount time. Sync form state
@@ -59,6 +60,7 @@ export function TaskEditPanel({ mode, taskId, projectId: projectIdProp, parentTa
       setDescription(existingTask.description);
       setSelectedDeps(existingTask.dependsOn);
       setDefaultPersonaId(existingTask.defaultPersonaId);
+      setCanDecompose(existingTask.canDecompose);
     }
   }, [isEdit, existingTask]);
 
@@ -103,6 +105,7 @@ export function TaskEditPanel({ mode, taskId, projectId: projectIdProp, parentTa
         selectedDeps.length > 0 ? selectedDeps : undefined,
         parentTaskId || undefined,
         defaultPersonaId,
+        canDecompose,
         () => {
           showToast("Task created", "success");
           navigate(projectUrl(projectId), { replace: true });
@@ -212,6 +215,20 @@ export function TaskEditPanel({ mode, taskId, projectId: projectIdProp, parentTa
               ))}
             </select>
           </div>
+
+          {/* Can Decompose */}
+          {!isEdit && (
+            <div className={styles.section}>
+              <label className={styles.depItem} data-testid="task-edit-can-decompose">
+                <input
+                  type="checkbox"
+                  checked={canDecompose}
+                  onChange={(e) => setCanDecompose(e.target.checked)}
+                />
+                Can spawn subtasks
+              </label>
+            </div>
+          )}
 
           {/* Dependencies */}
           <div className={styles.section}>
