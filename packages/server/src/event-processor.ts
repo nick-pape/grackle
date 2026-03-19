@@ -87,8 +87,8 @@ export function processSubtaskEvent(
       return;
     }
 
-    const project = projectStore.getProject(parentTask.projectId);
-    if (!project) {
+    const project = parentTask.projectId ? projectStore.getProject(parentTask.projectId) : undefined;
+    if (parentTask.projectId && !project) {
       logger.warn({ projectId: parentTask.projectId }, "Subtask creation failed: project not found");
       return;
     }
@@ -126,11 +126,11 @@ export function processSubtaskEvent(
     const subtaskId = uuid().slice(0, 8);
     taskStore.createTask(
       subtaskId,
-      parentTask.projectId,
+      parentTask.projectId || undefined,
       title,
       description,
       resolvedDeps,
-      slugify(project.name),
+      project ? slugify(project.name) : "",
       ctx.taskId,
       canDecompose,
     );

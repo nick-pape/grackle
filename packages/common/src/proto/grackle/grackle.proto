@@ -248,7 +248,7 @@ message ProjectId {
 
 message Task {
   string id = 1;
-  string project_id = 2;
+  optional string project_id = 2;
   string title = 3;
   string description = 4;
   TaskStatus status = 5;
@@ -282,7 +282,7 @@ message ListTasksRequest {
 }
 
 message CreateTaskRequest {
-  string project_id = 1;
+  optional string project_id = 1;
   string title = 2;
   string description = 3;
   reserved 4; // was environment_id (now a session-start param)

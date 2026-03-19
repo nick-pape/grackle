@@ -1,6 +1,6 @@
 import db from "./db.js";
 import { tasks, type TaskRow } from "./schema.js";
-import { eq, and, or, sql, asc } from "drizzle-orm";
+import { eq, and, or, sql, asc, type SQL } from "drizzle-orm";
 import { TASK_STATUS, taskStatusToEnum, taskStatusToString } from "@grackle-ai/common";
 import type { TaskStatus } from "@grackle-ai/common";
 import { MAX_TASK_DEPTH } from "@grackle-ai/common";
@@ -12,7 +12,7 @@ export type { TaskRow };
 /** Insert a new task with auto-generated branch name and sort order. */
 export function createTask(
   id: string,
-  projectId: string,
+  projectId: string | undefined,
   title: string,
   description: string,
   dependsOn: string[],
@@ -40,23 +40,29 @@ export function createTask(
     }
     branch = `${parent.branch}/${slugify(title)}`;
   } else {
-    branch = `${projectSlug}/${slugify(title)}`;
+    const prefix = projectSlug || "task";
+    branch = `${prefix}/${slugify(title)}`;
   }
 
   // Derive canDecompose when not explicitly set: root=true, child=false
   const resolvedCanDecompose = canDecompose ?? !parentTaskId;
 
   const depsJson = JSON.stringify(dependsOn);
-  const maxRow = db
+  const sortOrderConditions: SQL[] = [];
+  if (projectId) {
+    sortOrderConditions.push(eq(tasks.projectId, projectId));
+  }
+  const maxRowQuery = db
     .select({ maxOrder: sql<number>`max(sort_order)` })
-    .from(tasks)
-    .where(eq(tasks.projectId, projectId))
-    .get();
+    .from(tasks);
+  const maxRow = sortOrderConditions.length > 0
+    ? maxRowQuery.where(and(...sortOrderConditions)).get()
+    : maxRowQuery.get();
   const sortOrder = (maxRow?.maxOrder ?? -1) + 1;
   db.insert(tasks)
     .values({
       id,
-      projectId,
+      projectId: projectId || null,
       title,
       description,
       branch,
@@ -88,9 +94,12 @@ function escapeLikePattern(value: string): string {
   return value.replace(/[%_\\]/g, (ch) => `\\${ch}`);
 }
 
-/** Return tasks for a project, with optional search/status filters, ordered by sort_order then created_at. */
-export function listTasks(projectId: string, options?: ListTasksOptions): TaskRow[] {
-  const conditions = [eq(tasks.projectId, projectId)];
+/** Return tasks for a project (or all tasks when projectId is omitted), with optional search/status filters, ordered by sort_order then created_at. */
+export function listTasks(projectId?: string, options?: ListTasksOptions): TaskRow[] {
+  const conditions: SQL[] = [];
+  if (projectId) {
+    conditions.push(eq(tasks.projectId, projectId));
+  }
 
   if (options?.status) {
     // Normalize legacy status aliases (e.g. "in_progress" → "working")
@@ -114,10 +123,13 @@ export function listTasks(projectId: string, options?: ListTasksOptions): TaskRo
     );
   }
 
-  return db
+  const query = db
     .select()
-    .from(tasks)
-    .where(and(...conditions))
+    .from(tasks);
+  const filtered = conditions.length > 0
+    ? query.where(and(...conditions))
+    : query;
+  return filtered
     .orderBy(asc(tasks.sortOrder), asc(tasks.createdAt))
     .all();
 }
@@ -194,7 +206,7 @@ export function deleteTask(id: string): number {
 }
 
 /** Return all not_started tasks whose dependencies are fully met. */
-export function getUnblockedTasks(projectId: string): TaskRow[] {
+export function getUnblockedTasks(projectId?: string): TaskRow[] {
   const all = listTasks(projectId);
   return all.filter((task) => {
     if (task.status !== TASK_STATUS.NOT_STARTED) {
@@ -212,7 +224,7 @@ export function getUnblockedTasks(projectId: string): TaskRow[] {
 }
 
 /** Alias for getUnblockedTasks — check which pending tasks are now unblocked. */
-export function checkAndUnblock(projectId: string): TaskRow[] {
+export function checkAndUnblock(projectId?: string): TaskRow[] {
   return getUnblockedTasks(projectId);
 }
 
@@ -266,7 +278,7 @@ export function getDescendants(taskId: string): TaskRow[] {
   if (!task) {
     return [];
   }
-  const allRows = listTasks(task.projectId);
+  const allRows = listTasks(task.projectId || undefined);
   const childIdsMap = buildChildIdsMap(allRows);
   const rowById = new Map<string, TaskRow>(allRows.map((r) => [r.id, r]));
 

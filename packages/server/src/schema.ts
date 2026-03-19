@@ -104,7 +104,6 @@ export type NewProject = typeof projects.$inferInsert;
 export const tasks = sqliteTable("tasks", {
   id: text("id").primaryKey(),
   projectId: text("project_id")
-    .notNull()
     .references(() => projects.id),
   title: text("title").notNull(),
   description: text("description").notNull().default(""),
