@@ -16,6 +16,7 @@ function createMockClient(): GrackleClient {
     spawnAgent: vi.fn(),
     resumeAgent: vi.fn(),
     listSessions: vi.fn(),
+    getSession: vi.fn(),
     killAgent: vi.fn(),
     streamSession: vi.fn(),
     sendInput: vi.fn(),
@@ -300,12 +301,10 @@ describe("session_send_input", () => {
       taskSessionId: "sess-1",
     };
     const mockClient = createMockClient();
-    (mockClient.listSessions as ReturnType<typeof vi.fn>).mockResolvedValue({
-      sessions: [
-        { id: "s1", taskId: "unrelated-task", environmentId: "env-1", status: "running" },
-      ],
+    (mockClient.getSession as ReturnType<typeof vi.fn>).mockResolvedValue({
+      id: "s1",
+      taskId: "unrelated-task",
     });
-    // getTask for the unrelated task — no parent chain leading to caller
     (mockClient as unknown as { getTask: ReturnType<typeof vi.fn> }).getTask = vi.fn().mockResolvedValue({
       id: "unrelated-task",
       parentTaskId: "",
@@ -332,10 +331,9 @@ describe("session_send_input", () => {
       taskSessionId: "sess-1",
     };
     const mockClient = createMockClient();
-    (mockClient.listSessions as ReturnType<typeof vi.fn>).mockResolvedValue({
-      sessions: [
-        { id: "s1", taskId: "child-task", environmentId: "env-1", status: "running" },
-      ],
+    (mockClient.getSession as ReturnType<typeof vi.fn>).mockResolvedValue({
+      id: "s1",
+      taskId: "child-task",
     });
     (mockClient as unknown as { getTask: ReturnType<typeof vi.fn> }).getTask = vi.fn().mockResolvedValue({
       id: "child-task",
@@ -364,9 +362,9 @@ describe("session_send_input", () => {
       taskSessionId: "sess-1",
     };
     const mockClient = createMockClient();
-    (mockClient.listSessions as ReturnType<typeof vi.fn>).mockResolvedValue({
-      sessions: [],
-    });
+    (mockClient.getSession as ReturnType<typeof vi.fn>).mockRejectedValue(
+      new ConnectError("Session not found", Code.NotFound),
+    );
 
     const result = await getTool("session_send_input").handler(
       { sessionId: "nonexistent", text: "yes" },
