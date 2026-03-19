@@ -77,7 +77,7 @@ Today, sessions are tightly coupled to both tasks and environments. The kernel m
 
 A **task** is a durable unit of work with persistence, state tracking, and human oversight. Tasks survive session failures — if an agent crashes, the task remains and can be retried. Tasks form a DAG with two relationship types:
 
-- **Parent-child hierarchy** — decomposition. "This task is made of these subtasks." Up to `MAX_TASK_DEPTH = 5` levels.
+- **Parent-child hierarchy** — decomposition. "This task is made of these subtasks." Up to `MAX_TASK_DEPTH = 8` levels.
 - **Dependencies** — sequencing. "This task can't start until that task finishes." Set by the parent, between siblings only (#164 explores cross-branch deps).
 
 ### 3.3 Task Lifecycle
