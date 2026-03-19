@@ -69,7 +69,9 @@ export function registerTaskCommands(program: Command): void {
     .option("--project <project-id>", "Project to create the task in (optional)")
     .option("--desc <text>", "Task description")
     .option("--depends-on <ids>", "Comma-separated dependency task IDs")
-    .action(async (title: string, opts: { project?: string; dependsOn?: string; desc?: string }) => {
+    .option("--can-decompose", "Allow this task to create subtasks")
+    .option("--parent <task-id>", "Parent task ID (creates a subtask)")
+    .action(async (title: string, opts: { project?: string; dependsOn?: string; desc?: string; canDecompose?: boolean; parent?: string }) => {
       const client = createGrackleClient();
       const dependsOn: string[] = opts.dependsOn
         ? opts.dependsOn.split(",").map((s: string) => s.trim()).filter(Boolean)
@@ -79,6 +81,8 @@ export function registerTaskCommands(program: Command): void {
         title,
         description: opts.desc || "",
         dependsOn,
+        canDecompose: opts.canDecompose || false,
+        parentTaskId: opts.parent || "",
       });
       console.log(`Created task: ${t.id} (${t.title}) branch: ${t.branch}`);
     });
