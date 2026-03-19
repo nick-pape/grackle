@@ -17,7 +17,7 @@ function applySchema(): void {
       name              TEXT NOT NULL,
       description       TEXT NOT NULL DEFAULT '',
       repo_url          TEXT NOT NULL DEFAULT '',
-      default_env_id    TEXT NOT NULL DEFAULT '',
+      environment_id    TEXT NOT NULL DEFAULT '',
       status            TEXT NOT NULL DEFAULT 'active',
       use_worktrees     INTEGER NOT NULL DEFAULT 1,
       worktree_base_path TEXT NOT NULL DEFAULT '',
@@ -41,7 +41,7 @@ describe("workspace-store", () => {
     expect(p!.name).toBe("My Workspace");
     expect(p!.description).toBe("A description");
     expect(p!.repoUrl).toBe("https://github.com/acme/repo");
-    expect(p!.defaultEnvironmentId).toBe("env-1");
+    expect(p!.environmentId).toBe("env-1");
     expect(p!.status).toBe("active");
   });
 
@@ -52,6 +52,27 @@ describe("workspace-store", () => {
     const list = workspaceStore.listWorkspaces();
     expect(list).toHaveLength(1);
     expect(list[0].id).toBe("p1");
+  });
+
+  it("filters workspaces by environment ID", () => {
+    workspaceStore.createWorkspace("p1", "Env1 WS", "", "", "env-1");
+    workspaceStore.createWorkspace("p2", "Env2 WS", "", "", "env-2");
+    const env1List = workspaceStore.listWorkspaces("env-1");
+    expect(env1List).toHaveLength(1);
+    expect(env1List[0].id).toBe("p1");
+    const allList = workspaceStore.listWorkspaces();
+    expect(allList).toHaveLength(2);
+  });
+
+  it("counts all workspaces (including archived) by environment", () => {
+    workspaceStore.createWorkspace("p1", "WS1", "", "", "env-1");
+    workspaceStore.createWorkspace("p2", "WS2", "", "", "env-1");
+    workspaceStore.createWorkspace("p3", "WS3", "", "", "env-2");
+    workspaceStore.archiveWorkspace("p2");
+    // Archived workspaces still count — they hold an FK reference
+    expect(workspaceStore.countWorkspacesByEnvironment("env-1")).toBe(2);
+    expect(workspaceStore.countWorkspacesByEnvironment("env-2")).toBe(1);
+    expect(workspaceStore.countWorkspacesByEnvironment("env-3")).toBe(0);
   });
 
   it("archives a workspace", () => {
@@ -92,10 +113,10 @@ describe("workspace-store", () => {
     expect(updated!.repoUrl).toBe("");
   });
 
-  it("updates default environment ID", () => {
+  it("updates environment ID", () => {
     workspaceStore.createWorkspace("p1", "Name", "", "", "");
-    const updated = workspaceStore.updateWorkspace("p1", { defaultEnvironmentId: "env-2" });
-    expect(updated!.defaultEnvironmentId).toBe("env-2");
+    const updated = workspaceStore.updateWorkspace("p1", { environmentId: "env-2" });
+    expect(updated!.environmentId).toBe("env-2");
   });
 
   it("partial update leaves other fields unchanged", () => {
@@ -104,7 +125,7 @@ describe("workspace-store", () => {
     expect(updated!.name).toBe("New Name");
     expect(updated!.description).toBe("desc");
     expect(updated!.repoUrl).toBe("https://repo.url");
-    expect(updated!.defaultEnvironmentId).toBe("env-1");
+    expect(updated!.environmentId).toBe("env-1");
   });
 
   it("updates multiple fields at once", () => {
@@ -113,12 +134,12 @@ describe("workspace-store", () => {
       name: "Updated",
       description: "New desc",
       repoUrl: "https://new.url",
-      defaultEnvironmentId: "env-3",
+      environmentId: "env-3",
     });
     expect(updated!.name).toBe("Updated");
     expect(updated!.description).toBe("New desc");
     expect(updated!.repoUrl).toBe("https://new.url");
-    expect(updated!.defaultEnvironmentId).toBe("env-3");
+    expect(updated!.environmentId).toBe("env-3");
   });
 
   it("updateWorkspace bumps updatedAt", () => {

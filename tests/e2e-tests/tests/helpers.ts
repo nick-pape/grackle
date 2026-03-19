@@ -119,12 +119,20 @@ export async function getTaskId(
   return task.id;
 }
 
-/** Create a workspace via the UI and wait for it to appear in the sidebar. */
-export async function createWorkspace(page: Page, name: string): Promise<void> {
-  await page.locator("button", { hasText: "+" }).first().click();
-  const nameInput = page.locator('input[placeholder="Workspace name..."]');
-  await nameInput.fill(name);
-  await page.locator("button", { hasText: "OK" }).click();
+/**
+ * Create a workspace via WebSocket and wait for it to appear in the sidebar.
+ * Requires the test environment ("test-local") to already exist.
+ */
+export async function createWorkspace(page: Page, name: string, environmentId: string = "test-local"): Promise<void> {
+  await sendWsAndWaitFor(
+    page,
+    {
+      type: "create_workspace",
+      payload: { name, environmentId },
+    },
+    "workspace.created",
+  );
+  // Wait for the workspace to appear in the sidebar after the event triggers a refresh
   await page.getByText(name).waitFor({ timeout: 5_000 });
 }
 

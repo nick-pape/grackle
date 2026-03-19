@@ -108,7 +108,7 @@ export function TaskEditPanel({ mode, taskId, workspaceId: workspaceIdProp, pare
         canDecompose,
         () => {
           showToast("Task created", "success");
-          navigate(workspaceUrl(workspaceId), { replace: true });
+          navigate(workspaceId ? workspaceUrl(workspaceId) : "/", { replace: true });
         },
         (message: string) => {
           showToast(message, "error");
@@ -122,7 +122,7 @@ export function TaskEditPanel({ mode, taskId, workspaceId: workspaceIdProp, pare
     if (isEdit && taskId) {
       navigate(taskUrl(taskId));
     } else {
-      navigate(workspaceUrl(workspaceId));
+      navigate(workspaceId ? workspaceUrl(workspaceId) : "/");
     }
   };
 

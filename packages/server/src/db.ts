@@ -94,6 +94,16 @@ export function initDatabase(): void {
     /* index already dropped or never existed */
   }
 
+  // Migration: rename default_env_id → environment_id on workspaces
+  // Must run BEFORE the backfill block below which references environment_id.
+  try {
+    sqlite.exec(
+      "ALTER TABLE workspaces RENAME COLUMN default_env_id TO environment_id",
+    );
+  } catch {
+    /* column already renamed or never existed */
+  }
+
   // Create tables — idempotent, safe to run every startup
   sqlite.exec(`
     CREATE TABLE IF NOT EXISTS environments (
@@ -139,7 +149,7 @@ export function initDatabase(): void {
       name          TEXT NOT NULL,
       description   TEXT NOT NULL DEFAULT '',
       repo_url      TEXT NOT NULL DEFAULT '',
-      default_env_id TEXT NOT NULL DEFAULT '',
+      environment_id TEXT NOT NULL DEFAULT '' REFERENCES environments(id),
       status        TEXT NOT NULL DEFAULT 'active',
       use_worktrees INTEGER NOT NULL DEFAULT 1,
       created_at    TEXT NOT NULL DEFAULT (datetime('now')),
@@ -230,7 +240,9 @@ export function initDatabase(): void {
   sqlite.exec(`
     UPDATE workspaces SET description = '' WHERE description IS NULL;
     UPDATE workspaces SET repo_url = '' WHERE repo_url IS NULL;
-    UPDATE workspaces SET default_env_id = '' WHERE default_env_id IS NULL;
+    UPDATE workspaces SET environment_id = COALESCE(
+      (SELECT id FROM environments LIMIT 1), ''
+    ) WHERE environment_id IS NULL OR environment_id = '';
     UPDATE workspaces SET status = 'active' WHERE status IS NULL;
     UPDATE workspaces SET created_at = datetime('now') WHERE created_at IS NULL;
     UPDATE workspaces SET updated_at = datetime('now') WHERE updated_at IS NULL;
@@ -483,6 +495,11 @@ export function initDatabase(): void {
       `);
     }
   }
+
+  // Migration: add index on workspaces.environment_id for efficient lookup
+  sqlite.exec(
+    "CREATE INDEX IF NOT EXISTS idx_workspaces_environment_id ON workspaces(environment_id)",
+  );
 
   // Seed: create default "Claude Code" persona if no personas exist
   const personaCount = sqlite

@@ -22,7 +22,7 @@ describe("workspace_list", () => {
             name: "Alpha",
             description: "First workspace",
             repoUrl: "https://github.com/org/alpha",
-            defaultEnvironmentId: "env-1",
+            environmentId: "env-1",
             status: 1,
           },
         ],
@@ -31,7 +31,7 @@ describe("workspace_list", () => {
 
     const result = await tool.handler({}, mockClient);
 
-    expect(mockClient.listWorkspaces).toHaveBeenCalledWith({});
+    expect(mockClient.listWorkspaces).toHaveBeenCalledWith({ environmentId: "" });
 
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed).toHaveLength(1);
@@ -69,7 +69,7 @@ describe("workspace_create", () => {
         name: "Beta",
         description: "Second workspace",
         repoUrl: "https://github.com/org/beta",
-        defaultEnvironmentId: "env-2",
+        environmentId: "env-2",
         status: 1,
         createdAt: "2026-01-01T00:00:00Z",
         updatedAt: "2026-01-01T00:00:00Z",
@@ -81,7 +81,7 @@ describe("workspace_create", () => {
         name: "Beta",
         description: "Second workspace",
         repoUrl: "https://github.com/org/beta",
-        defaultEnvironmentId: "env-2",
+        environmentId: "env-2",
       },
       mockClient,
     );
@@ -91,7 +91,7 @@ describe("workspace_create", () => {
         name: "Beta",
         description: "Second workspace",
         repoUrl: "https://github.com/org/beta",
-        defaultEnvironmentId: "env-2",
+        environmentId: "env-2",
       }),
     );
 
@@ -110,21 +110,21 @@ describe("workspace_create", () => {
         name: "Minimal",
         description: "",
         repoUrl: "",
-        defaultEnvironmentId: "",
+        environmentId: "env-1",
         status: 0,
         createdAt: "2026-01-01T00:00:00Z",
         updatedAt: "2026-01-01T00:00:00Z",
       }),
     } as unknown as GrackleClient;
 
-    const result = await tool.handler({ name: "Minimal" }, mockClient);
+    const result = await tool.handler({ name: "Minimal", environmentId: "env-1" }, mockClient);
 
     expect(mockClient.createWorkspace).toHaveBeenCalledWith(
       expect.objectContaining({
         name: "Minimal",
+        environmentId: "env-1",
         description: "",
         repoUrl: "",
-        defaultEnvironmentId: "",
       }),
     );
 
@@ -160,7 +160,7 @@ describe("workspace_get", () => {
         name: "Alpha",
         description: "First workspace",
         repoUrl: "https://github.com/org/alpha",
-        defaultEnvironmentId: "env-1",
+        environmentId: "env-1",
         status: 1,
         createdAt: "2026-01-01T00:00:00Z",
         updatedAt: "2026-01-02T00:00:00Z",
@@ -206,7 +206,7 @@ describe("workspace_update", () => {
         name: "Alpha Renamed",
         description: "First workspace",
         repoUrl: "https://github.com/org/alpha",
-        defaultEnvironmentId: "env-1",
+        environmentId: "env-1",
         status: 1,
         createdAt: "2026-01-01T00:00:00Z",
         updatedAt: "2026-01-03T00:00:00Z",

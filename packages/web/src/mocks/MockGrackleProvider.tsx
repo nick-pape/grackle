@@ -315,7 +315,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
 
   /** Creates a new workspace and adds it to state. */
   const createWorkspace: UseGrackleSocketResult["createWorkspace"] = useCallback(
-    (name: string, description?: string, repoUrl?: string, defaultEnvironmentId?: string, defaultPersonaId?: string) => {
+    (name: string, description?: string, repoUrl?: string, environmentId?: string, defaultPersonaId?: string) => {
       console.log("[MockGrackle] createWorkspace", { name, description });
 
       const newWorkspace: Workspace = {
@@ -323,7 +323,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
         name,
         description: description || "",
         repoUrl: repoUrl || "",
-        defaultEnvironmentId: defaultEnvironmentId || "",
+        environmentId: environmentId || "",
         status: "active",
         worktreeBasePath: "",
         useWorktrees: true,
@@ -801,7 +801,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       clearEvents,
       createWorkspace,
       archiveWorkspace,
-      updateWorkspace: (workspaceId: string, fields: { name?: string; description?: string; repoUrl?: string; defaultEnvironmentId?: string; worktreeBasePath?: string; useWorktrees?: boolean; defaultPersonaId?: string }) => {
+      updateWorkspace: (workspaceId: string, fields: { name?: string; description?: string; repoUrl?: string; environmentId?: string; worktreeBasePath?: string; useWorktrees?: boolean; defaultPersonaId?: string }) => {
         console.log("[MockGrackle] updateWorkspace", { workspaceId, ...fields });
         setWorkspaces((prev) =>
           prev.map((p) => {
@@ -813,7 +813,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
               ...(fields.name !== undefined ? { name: fields.name } : {}),
               ...(fields.description !== undefined ? { description: fields.description } : {}),
               ...(fields.repoUrl !== undefined ? { repoUrl: fields.repoUrl } : {}),
-              ...(fields.defaultEnvironmentId !== undefined ? { defaultEnvironmentId: fields.defaultEnvironmentId } : {}),
+              ...(fields.environmentId !== undefined ? { environmentId: fields.environmentId } : {}),
               ...(fields.worktreeBasePath !== undefined ? { worktreeBasePath: fields.worktreeBasePath } : {}),
               ...(fields.useWorktrees !== undefined ? { useWorktrees: fields.useWorktrees } : {}),
               ...(fields.defaultPersonaId !== undefined ? { defaultPersonaId: fields.defaultPersonaId } : {}),

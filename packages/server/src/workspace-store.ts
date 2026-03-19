@@ -1,6 +1,6 @@
 import db from "./db.js";
 import { workspaces, type WorkspaceRow } from "./schema.js";
-import { eq, desc, sql } from "drizzle-orm";
+import { eq, and, desc, sql } from "drizzle-orm";
 
 export type { WorkspaceRow };
 
@@ -10,7 +10,7 @@ export function createWorkspace(
   name: string,
   description: string,
   repoUrl: string,
-  defaultEnvironmentId: string,
+  environmentId: string,
   useWorktrees: boolean = true,
   worktreeBasePath: string = "",
   defaultPersonaId: string = "",
@@ -20,7 +20,7 @@ export function createWorkspace(
     name,
     description,
     repoUrl,
-    defaultEnvironmentId,
+    environmentId,
     useWorktrees,
     worktreeBasePath: worktreeBasePath.trim(),
     defaultPersonaId,
@@ -32,12 +32,25 @@ export function getWorkspace(id: string): WorkspaceRow | undefined {
   return db.select().from(workspaces).where(eq(workspaces.id, id)).get();
 }
 
-/** Return all active workspaces, newest first. */
-export function listWorkspaces(): WorkspaceRow[] {
+/** Return all active workspaces, newest first. Optionally filter by environment. */
+export function listWorkspaces(environmentId?: string): WorkspaceRow[] {
+  const conditions = [eq(workspaces.status, "active")];
+  if (environmentId) {
+    conditions.push(eq(workspaces.environmentId, environmentId));
+  }
   return db.select().from(workspaces)
-    .where(eq(workspaces.status, "active"))
+    .where(and(...conditions))
     .orderBy(desc(workspaces.createdAt))
     .all();
+}
+
+/** Count all workspaces (active and archived) belonging to an environment. */
+export function countWorkspacesByEnvironment(environmentId: string): number {
+  const row = db.select({ count: sql<number>`count(*)` })
+    .from(workspaces)
+    .where(eq(workspaces.environmentId, environmentId))
+    .get();
+  return row?.count ?? 0;
 }
 
 /** Mark a workspace as archived. */
@@ -53,7 +66,8 @@ export interface UpdateWorkspaceFields {
   name?: string;
   description?: string;
   repoUrl?: string;
-  defaultEnvironmentId?: string;
+  /** Reparent workspace to a different environment. */
+  environmentId?: string;
   /** When false, agents work directly in the main checkout instead of creating a worktree. */
   useWorktrees?: boolean;
   /** Custom base path for worktrees (e.g. /workspaces/my-repo). Empty means use default. */
@@ -74,8 +88,8 @@ export function updateWorkspace(id: string, fields: UpdateWorkspaceFields): Work
   if (fields.repoUrl !== undefined) {
     sets.repoUrl = fields.repoUrl;
   }
-  if (fields.defaultEnvironmentId !== undefined) {
-    sets.defaultEnvironmentId = fields.defaultEnvironmentId;
+  if (fields.environmentId !== undefined) {
+    sets.environmentId = fields.environmentId;
   }
   if (fields.useWorktrees !== undefined) {
     sets.useWorktrees = fields.useWorktrees;

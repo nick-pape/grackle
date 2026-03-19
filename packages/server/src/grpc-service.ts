@@ -104,7 +104,7 @@ function workspaceRowToProto(row: workspaceStore.WorkspaceRow): grackle.Workspac
     name: row.name,
     description: row.description,
     repoUrl: row.repoUrl,
-    defaultEnvironmentId: row.defaultEnvironmentId,
+    environmentId: row.environmentId,
     status: workspaceStatusToEnum(row.status),
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
@@ -304,6 +304,14 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
     },
 
     async removeEnvironment(req: grackle.EnvironmentId) {
+      // Block deletion if workspaces still reference this environment
+      const wsCount = workspaceStore.countWorkspacesByEnvironment(req.id);
+      if (wsCount > 0) {
+        throw new ConnectError(
+          `Cannot remove environment: ${wsCount} active workspace(s) still reference it. Archive or reparent them first.`,
+          Code.FailedPrecondition,
+        );
+      }
       // Disconnect the adapter if currently connected
       const env = envRegistry.getEnvironment(req.id);
       if (env) {
@@ -702,14 +710,21 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
 
     // ─── Workspaces ──────────────────────────────────────────
 
-    async listWorkspaces() {
-      const rows = workspaceStore.listWorkspaces();
+    async listWorkspaces(req: grackle.ListWorkspacesRequest) {
+      const rows = workspaceStore.listWorkspaces(req.environmentId || undefined);
       return create(grackle.WorkspaceListSchema, {
         workspaces: rows.map(workspaceRowToProto),
       });
     },
 
     async createWorkspace(req: grackle.CreateWorkspaceRequest) {
+      if (!req.environmentId) {
+        throw new ConnectError("environment_id is required", Code.InvalidArgument);
+      }
+      const env = envRegistry.getEnvironment(req.environmentId);
+      if (!env) {
+        throw new ConnectError(`Environment not found: ${req.environmentId}`, Code.NotFound);
+      }
       let id = slugify(req.name) || uuid().slice(0, 8);
       // If slug already exists (e.g. archived workspace), append a short suffix
       if (workspaceStore.getWorkspace(id)) {
@@ -722,7 +737,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         req.name,
         req.description,
         req.repoUrl,
-        req.defaultEnvironmentId,
+        req.environmentId,
         useWorktrees,
         req.worktreeBasePath ?? "",
         req.defaultPersonaId ?? "",
@@ -755,11 +770,17 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       if (req.repoUrl !== undefined && req.repoUrl !== "" && !/^https?:\/\//i.test(req.repoUrl)) {
         throw new ConnectError("Repository URL must use http or https scheme", Code.InvalidArgument);
       }
+      if (req.environmentId !== undefined) {
+        const env = envRegistry.getEnvironment(req.environmentId);
+        if (!env) {
+          throw new ConnectError(`Environment not found: ${req.environmentId}`, Code.NotFound);
+        }
+      }
       const row = workspaceStore.updateWorkspace(req.id, {
         name: req.name !== undefined ? req.name.trim() : undefined,
         description: req.description,
         repoUrl: req.repoUrl,
-        defaultEnvironmentId: req.defaultEnvironmentId,
+        environmentId: req.environmentId,
         useWorktrees: req.useWorktrees ?? undefined,
         worktreeBasePath: req.worktreeBasePath,
         defaultPersonaId: req.defaultPersonaId,
@@ -934,7 +955,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
 
       const environmentId = req.environmentId
         || resolveAncestorEnvironmentId(task.parentTaskId)
-        || workspace?.defaultEnvironmentId
+        || workspace?.environmentId
         || "";
       if (!environmentId) {
         throw new ConnectError("No environment specified for task, ancestor, or workspace", Code.FailedPrecondition);

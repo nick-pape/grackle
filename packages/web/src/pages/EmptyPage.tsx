@@ -5,16 +5,18 @@ import styles from "../components/panels/SessionPanel.module.scss";
 
 /** Home page shown when no specific entity is selected. */
 export function EmptyPage(): JSX.Element {
-  const { workspaces, createWorkspace, workspaceCreating } = useGrackle();
+  const { workspaces, environments, createWorkspace, workspaceCreating } = useGrackle();
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newWorkspaceName, setNewWorkspaceName] = useState("");
 
+  const hasEnvironments = environments.length > 0;
+
   /** Submit the inline create form. */
   const handleCreateWorkspace = (): void => {
-    if (!newWorkspaceName.trim() || workspaceCreating) {
+    if (!newWorkspaceName.trim() || workspaceCreating || !hasEnvironments) {
       return;
     }
-    createWorkspace(newWorkspaceName.trim());
+    createWorkspace(newWorkspaceName.trim(), undefined, undefined, environments[0].id);
   };
 
   if (workspaces.length === 0) {
@@ -61,11 +63,16 @@ export function EmptyPage(): JSX.Element {
           <button
             className={styles.ctaButton}
             onClick={() => setShowCreateForm(true)}
-            disabled={workspaceCreating}
+            disabled={workspaceCreating || !hasEnvironments}
             data-testid="welcome-create-button"
           >
             Create Your First Workspace
           </button>
+        )}
+        {!hasEnvironments && (
+          <div className={styles.ctaDescription}>
+            Add an environment first via Settings before creating a workspace.
+          </div>
         )}
       </div>
     );

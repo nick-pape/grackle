@@ -12,7 +12,12 @@ export const workspaceTools: ToolDefinition[] = [
     group: "workspace",
     description:
       "List all Grackle workspaces with their names, descriptions, repositories, worktree settings, and status.",
-    inputSchema: z.object({}),
+    inputSchema: z.object({
+      environmentId: z
+        .string()
+        .optional()
+        .describe("Filter workspaces by environment ID (omit for all)"),
+    }),
     rpcMethod: "listWorkspaces",
     mutating: false,
     annotations: {
@@ -21,16 +26,18 @@ export const workspaceTools: ToolDefinition[] = [
       idempotentHint: true,
       openWorldHint: false,
     },
-    async handler(_args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) {
+    async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) {
       try {
-        const response = await client.listWorkspaces({});
+        const response = await client.listWorkspaces({
+          environmentId: (args.environmentId as string | undefined) ?? "",
+        });
         return jsonResult(
           response.workspaces.map((p) => ({
             id: p.id,
             name: p.name,
             description: p.description,
             repoUrl: p.repoUrl,
-            defaultEnvironmentId: p.defaultEnvironmentId,
+            environmentId: p.environmentId,
             worktreeBasePath: p.worktreeBasePath,
             useWorktrees: p.useWorktrees,
             status: workspaceStatusToString(p.status) || "unspecified",
@@ -48,6 +55,9 @@ export const workspaceTools: ToolDefinition[] = [
       "Create a new Grackle workspace with a name, optional description, repository URL, and default environment.",
     inputSchema: z.object({
       name: z.string().describe("Display name for the new workspace"),
+      environmentId: z
+        .string()
+        .describe("ID of the owning environment (required)"),
       description: z
         .string()
         .optional()
@@ -56,12 +66,6 @@ export const workspaceTools: ToolDefinition[] = [
         .string()
         .optional()
         .describe("Optional repository URL associated with the workspace"),
-      defaultEnvironmentId: z
-        .string()
-        .optional()
-        .describe(
-          "Optional ID of the default environment to use for this workspace",
-        ),
       worktreeBasePath: z
         .string()
         .optional()
@@ -89,8 +93,7 @@ export const workspaceTools: ToolDefinition[] = [
           name: args.name as string,
           description: (args.description as string | undefined) ?? "",
           repoUrl: (args.repoUrl as string | undefined) ?? "",
-          defaultEnvironmentId:
-            (args.defaultEnvironmentId as string | undefined) ?? "",
+          environmentId: args.environmentId as string,
           worktreeBasePath: (args.worktreeBasePath as string | undefined) ?? "",
           useWorktrees: args.useWorktrees as boolean | undefined,
           defaultPersonaId: (args.defaultPersonaId as string | undefined) ?? "",
@@ -100,7 +103,7 @@ export const workspaceTools: ToolDefinition[] = [
           name: workspace.name,
           description: workspace.description,
           repoUrl: workspace.repoUrl,
-          defaultEnvironmentId: workspace.defaultEnvironmentId,
+          environmentId: workspace.environmentId,
           defaultPersonaId: workspace.defaultPersonaId,
           worktreeBasePath: workspace.worktreeBasePath,
           useWorktrees: workspace.useWorktrees,
@@ -139,7 +142,7 @@ export const workspaceTools: ToolDefinition[] = [
           name: workspace.name,
           description: workspace.description,
           repoUrl: workspace.repoUrl,
-          defaultEnvironmentId: workspace.defaultEnvironmentId,
+          environmentId: workspace.environmentId,
           worktreeBasePath: workspace.worktreeBasePath,
           useWorktrees: workspace.useWorktrees,
           status: workspaceStatusToString(workspace.status) || "unspecified",
@@ -155,7 +158,7 @@ export const workspaceTools: ToolDefinition[] = [
     name: "workspace_update",
     group: "workspace",
     description:
-      "Update an existing Grackle workspace's name, description, repository URL, default environment, or worktree settings.",
+      "Update an existing Grackle workspace's name, description, repository URL, owning environment, or worktree settings.",
     inputSchema: z.object({
       workspaceId: z.string().describe("Unique identifier of the workspace to update"),
       name: z
@@ -170,10 +173,10 @@ export const workspaceTools: ToolDefinition[] = [
         .string()
         .optional()
         .describe("New repository URL for the workspace"),
-      defaultEnvironmentId: z
+      environmentId: z
         .string()
         .optional()
-        .describe("New default environment ID for the workspace"),
+        .describe("Reparent workspace to a different environment"),
       worktreeBasePath: z
         .string()
         .optional()
@@ -202,9 +205,7 @@ export const workspaceTools: ToolDefinition[] = [
           name: args.name as string | undefined,
           description: args.description as string | undefined,
           repoUrl: args.repoUrl as string | undefined,
-          defaultEnvironmentId: args.defaultEnvironmentId as
-            | string
-            | undefined,
+          environmentId: args.environmentId as string | undefined,
           worktreeBasePath: args.worktreeBasePath as string | undefined,
           useWorktrees: args.useWorktrees as boolean | undefined,
           defaultPersonaId: args.defaultPersonaId as string | undefined,
@@ -214,7 +215,7 @@ export const workspaceTools: ToolDefinition[] = [
           name: workspace.name,
           description: workspace.description,
           repoUrl: workspace.repoUrl,
-          defaultEnvironmentId: workspace.defaultEnvironmentId,
+          environmentId: workspace.environmentId,
           defaultPersonaId: workspace.defaultPersonaId,
           worktreeBasePath: workspace.worktreeBasePath,
           useWorktrees: workspace.useWorktrees,

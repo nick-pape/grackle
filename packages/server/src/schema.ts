@@ -78,7 +78,7 @@ export const workspaces = sqliteTable("workspaces", {
   name: text("name").notNull(),
   description: text("description").notNull().default(""),
   repoUrl: text("repo_url").notNull().default(""),
-  defaultEnvironmentId: text("default_env_id").notNull().default(""),
+  environmentId: text("environment_id").notNull().references(() => environments.id),
   status: text("status").notNull().default("active"),
   useWorktrees: integer("use_worktrees", { mode: "boolean" })
     .notNull()

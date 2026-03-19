@@ -206,27 +206,33 @@ message Workspace {
   string name = 2;
   string description = 3;
   string repo_url = 4;
-  string default_environment_id = 5;
+  reserved 5; // was default_environment_id (replaced by environment_id)
   WorkspaceStatus status = 6;
   string created_at = 7;
   string updated_at = 8;
   bool use_worktrees = 9; // When false, agents work in the main checkout (no worktree dirs created)
   string worktree_base_path = 10; // Base path for worktrees (e.g. /workspaces/my-repo)
   string default_persona_id = 11; // Default persona for tasks in this workspace
+  string environment_id = 12; // Owning environment — every workspace belongs to exactly one environment
 }
 
 message WorkspaceList {
   repeated Workspace workspaces = 1;
 }
 
+message ListWorkspacesRequest {
+  string environment_id = 1; // empty = all
+}
+
 message CreateWorkspaceRequest {
   string name = 1;
   string description = 2;
   string repo_url = 3;
-  string default_environment_id = 4;
+  reserved 4; // was default_environment_id (replaced by environment_id)
   optional bool use_worktrees = 5; // Default true when omitted
   optional string worktree_base_path = 6; // Base path for worktrees (e.g. /workspaces/my-repo)
   optional string default_persona_id = 7; // Default persona for tasks in this workspace
+  string environment_id = 8; // Required: owning environment
 }
 
 message UpdateWorkspaceRequest {
@@ -234,10 +240,11 @@ message UpdateWorkspaceRequest {
   optional string name = 2;
   optional string description = 3;
   optional string repo_url = 4;
-  optional string default_environment_id = 5;
+  reserved 5; // was default_environment_id (replaced by environment_id)
   optional bool use_worktrees = 6; // When false, disables worktree isolation for this workspace
   optional string worktree_base_path = 7; // Base path for worktrees (e.g. /workspaces/my-repo)
   optional string default_persona_id = 8; // Default persona for tasks in this workspace
+  optional string environment_id = 9; // Reparent to a different environment
 }
 
 message WorkspaceId {
@@ -492,7 +499,7 @@ service Grackle {
   rpc SetCredentialProvider(SetCredentialProviderRequest) returns (CredentialProviderConfig);
 
   // Workspaces
-  rpc ListWorkspaces(Empty) returns (WorkspaceList);
+  rpc ListWorkspaces(ListWorkspacesRequest) returns (WorkspaceList);
   rpc CreateWorkspace(CreateWorkspaceRequest) returns (Workspace);
   rpc GetWorkspace(WorkspaceId) returns (Workspace);
   rpc UpdateWorkspace(UpdateWorkspaceRequest) returns (Workspace);
