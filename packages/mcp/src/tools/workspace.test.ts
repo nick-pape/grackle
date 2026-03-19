@@ -2,25 +2,25 @@ import { describe, test, expect, vi } from "vitest";
 import { ConnectError, Code } from "@connectrpc/connect";
 import type { Client } from "@connectrpc/connect";
 import type { grackle } from "@grackle-ai/common";
-import { projectTools } from "./project.js";
+import { workspaceTools } from "./workspace.js";
 
 type GrackleClient = Client<typeof grackle.Grackle>;
 
-/** Look up a tool definition by name from the projectTools array. */
-const getTool = (name: string) => projectTools.find((t) => t.name === name)!;
+/** Look up a tool definition by name from the workspaceTools array. */
+const getTool = (name: string) => workspaceTools.find((t) => t.name === name)!;
 
-describe("project_list", () => {
-  const tool = getTool("project_list");
+describe("workspace_list", () => {
+  const tool = getTool("workspace_list");
 
-  /** Verify listProjects returns mapped project objects with stringified status. */
-  test("happy path — returns projects with status string", async () => {
+  /** Verify listWorkspaces returns mapped workspace objects with stringified status. */
+  test("happy path — returns workspaces with status string", async () => {
     const mockClient = {
-      listProjects: vi.fn().mockResolvedValue({
-        projects: [
+      listWorkspaces: vi.fn().mockResolvedValue({
+        workspaces: [
           {
             id: "proj-1",
             name: "Alpha",
-            description: "First project",
+            description: "First workspace",
             repoUrl: "https://github.com/org/alpha",
             defaultEnvironmentId: "env-1",
             status: 1,
@@ -31,7 +31,7 @@ describe("project_list", () => {
 
     const result = await tool.handler({}, mockClient);
 
-    expect(mockClient.listProjects).toHaveBeenCalledWith({});
+    expect(mockClient.listWorkspaces).toHaveBeenCalledWith({});
 
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed).toHaveLength(1);
@@ -44,7 +44,7 @@ describe("project_list", () => {
   /** Verify gRPC ConnectError is surfaced as an error result. */
   test("gRPC ConnectError returns isError", async () => {
     const mockClient = {
-      listProjects: vi.fn().mockRejectedValue(
+      listWorkspaces: vi.fn().mockRejectedValue(
         new ConnectError("unavailable", Code.Unavailable),
       ),
     } as unknown as GrackleClient;
@@ -58,16 +58,16 @@ describe("project_list", () => {
   });
 });
 
-describe("project_create", () => {
-  const tool = getTool("project_create");
+describe("workspace_create", () => {
+  const tool = getTool("workspace_create");
 
-  /** Verify createProject is called with full args and response includes timestamps. */
+  /** Verify createWorkspace is called with full args and response includes timestamps. */
   test("happy path with full args", async () => {
     const mockClient = {
-      createProject: vi.fn().mockResolvedValue({
+      createWorkspace: vi.fn().mockResolvedValue({
         id: "proj-2",
         name: "Beta",
-        description: "Second project",
+        description: "Second workspace",
         repoUrl: "https://github.com/org/beta",
         defaultEnvironmentId: "env-2",
         status: 1,
@@ -79,17 +79,17 @@ describe("project_create", () => {
     const result = await tool.handler(
       {
         name: "Beta",
-        description: "Second project",
+        description: "Second workspace",
         repoUrl: "https://github.com/org/beta",
         defaultEnvironmentId: "env-2",
       },
       mockClient,
     );
 
-    expect(mockClient.createProject).toHaveBeenCalledWith(
+    expect(mockClient.createWorkspace).toHaveBeenCalledWith(
       expect.objectContaining({
         name: "Beta",
-        description: "Second project",
+        description: "Second workspace",
         repoUrl: "https://github.com/org/beta",
         defaultEnvironmentId: "env-2",
       }),
@@ -105,7 +105,7 @@ describe("project_create", () => {
   /** Verify optional fields default to empty strings. */
   test("happy path with minimal args — defaults applied", async () => {
     const mockClient = {
-      createProject: vi.fn().mockResolvedValue({
+      createWorkspace: vi.fn().mockResolvedValue({
         id: "proj-3",
         name: "Minimal",
         description: "",
@@ -119,7 +119,7 @@ describe("project_create", () => {
 
     const result = await tool.handler({ name: "Minimal" }, mockClient);
 
-    expect(mockClient.createProject).toHaveBeenCalledWith(
+    expect(mockClient.createWorkspace).toHaveBeenCalledWith(
       expect.objectContaining({
         name: "Minimal",
         description: "",
@@ -135,7 +135,7 @@ describe("project_create", () => {
   /** Verify gRPC ConnectError is surfaced as an error result. */
   test("gRPC ConnectError returns isError", async () => {
     const mockClient = {
-      createProject: vi.fn().mockRejectedValue(
+      createWorkspace: vi.fn().mockRejectedValue(
         new ConnectError("already exists", Code.AlreadyExists),
       ),
     } as unknown as GrackleClient;
@@ -149,16 +149,16 @@ describe("project_create", () => {
   });
 });
 
-describe("project_get", () => {
-  const tool = getTool("project_get");
+describe("workspace_get", () => {
+  const tool = getTool("workspace_get");
 
-  /** Verify getProject is called with the correct ID and response is serialized. */
+  /** Verify getWorkspace is called with the correct ID and response is serialized. */
   test("happy path", async () => {
     const mockClient = {
-      getProject: vi.fn().mockResolvedValue({
+      getWorkspace: vi.fn().mockResolvedValue({
         id: "proj-1",
         name: "Alpha",
-        description: "First project",
+        description: "First workspace",
         repoUrl: "https://github.com/org/alpha",
         defaultEnvironmentId: "env-1",
         status: 1,
@@ -167,9 +167,9 @@ describe("project_get", () => {
       }),
     } as unknown as GrackleClient;
 
-    const result = await tool.handler({ projectId: "proj-1" }, mockClient);
+    const result = await tool.handler({ workspaceId: "proj-1" }, mockClient);
 
-    expect(mockClient.getProject).toHaveBeenCalledWith({ id: "proj-1" });
+    expect(mockClient.getWorkspace).toHaveBeenCalledWith({ id: "proj-1" });
 
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed.id).toBe("proj-1");
@@ -181,30 +181,30 @@ describe("project_get", () => {
   /** Verify gRPC NotFound ConnectError is surfaced as an error result. */
   test("gRPC ConnectError returns isError", async () => {
     const mockClient = {
-      getProject: vi.fn().mockRejectedValue(
-        new ConnectError("project not found", Code.NotFound),
+      getWorkspace: vi.fn().mockRejectedValue(
+        new ConnectError("workspace not found", Code.NotFound),
       ),
     } as unknown as GrackleClient;
 
-    const result = await tool.handler({ projectId: "proj-missing" }, mockClient);
+    const result = await tool.handler({ workspaceId: "proj-missing" }, mockClient);
 
     expect(result.isError).toBe(true);
     const parsed = JSON.parse(result.content[0].text);
-    expect(parsed.error).toContain("project not found");
+    expect(parsed.error).toContain("workspace not found");
     expect(parsed.code).toBe("NOT_FOUND");
   });
 });
 
-describe("project_update", () => {
-  const tool = getTool("project_update");
+describe("workspace_update", () => {
+  const tool = getTool("workspace_update");
 
-  /** Verify updateProject is called with correct args including optional fields. */
+  /** Verify updateWorkspace is called with correct args including optional fields. */
   test("happy path with partial update", async () => {
     const mockClient = {
-      updateProject: vi.fn().mockResolvedValue({
+      updateWorkspace: vi.fn().mockResolvedValue({
         id: "proj-1",
         name: "Alpha Renamed",
-        description: "First project",
+        description: "First workspace",
         repoUrl: "https://github.com/org/alpha",
         defaultEnvironmentId: "env-1",
         status: 1,
@@ -214,11 +214,11 @@ describe("project_update", () => {
     } as unknown as GrackleClient;
 
     const result = await tool.handler(
-      { projectId: "proj-1", name: "Alpha Renamed" },
+      { workspaceId: "proj-1", name: "Alpha Renamed" },
       mockClient,
     );
 
-    expect(mockClient.updateProject).toHaveBeenCalledWith(
+    expect(mockClient.updateWorkspace).toHaveBeenCalledWith(
       expect.objectContaining({
         id: "proj-1",
         name: "Alpha Renamed",
@@ -234,13 +234,13 @@ describe("project_update", () => {
   /** Verify gRPC ConnectError is surfaced as an error result. */
   test("gRPC ConnectError returns isError", async () => {
     const mockClient = {
-      updateProject: vi.fn().mockRejectedValue(
-        new ConnectError("project not found", Code.NotFound),
+      updateWorkspace: vi.fn().mockRejectedValue(
+        new ConnectError("workspace not found", Code.NotFound),
       ),
     } as unknown as GrackleClient;
 
     const result = await tool.handler(
-      { projectId: "proj-missing", name: "Nope" },
+      { workspaceId: "proj-missing", name: "Nope" },
       mockClient,
     );
 
@@ -250,18 +250,18 @@ describe("project_update", () => {
   });
 });
 
-describe("project_archive", () => {
-  const tool = getTool("project_archive");
+describe("workspace_archive", () => {
+  const tool = getTool("workspace_archive");
 
-  /** Verify archiveProject is called and returns success. */
+  /** Verify archiveWorkspace is called and returns success. */
   test("happy path", async () => {
     const mockClient = {
-      archiveProject: vi.fn().mockResolvedValue({}),
+      archiveWorkspace: vi.fn().mockResolvedValue({}),
     } as unknown as GrackleClient;
 
-    const result = await tool.handler({ projectId: "proj-1" }, mockClient);
+    const result = await tool.handler({ workspaceId: "proj-1" }, mockClient);
 
-    expect(mockClient.archiveProject).toHaveBeenCalledWith({ id: "proj-1" });
+    expect(mockClient.archiveWorkspace).toHaveBeenCalledWith({ id: "proj-1" });
 
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed).toEqual({ success: true });
@@ -271,12 +271,12 @@ describe("project_archive", () => {
   /** Verify gRPC ConnectError is surfaced as an error result. */
   test("gRPC ConnectError returns isError", async () => {
     const mockClient = {
-      archiveProject: vi.fn().mockRejectedValue(
-        new ConnectError("project not found", Code.NotFound),
+      archiveWorkspace: vi.fn().mockRejectedValue(
+        new ConnectError("workspace not found", Code.NotFound),
       ),
     } as unknown as GrackleClient;
 
-    const result = await tool.handler({ projectId: "proj-missing" }, mockClient);
+    const result = await tool.handler({ workspaceId: "proj-missing" }, mockClient);
 
     expect(result.isError).toBe(true);
     const parsed = JSON.parse(result.content[0].text);

@@ -1,7 +1,7 @@
 import { execFile } from "node:child_process";
 import { v4 as uuid } from "uuid";
 import * as taskStore from "./task-store.js";
-import * as projectStore from "./project-store.js";
+import * as workspaceStore from "./workspace-store.js";
 import { emit } from "./event-bus.js";
 import { slugify } from "./utils/slugify.js";
 import { logger } from "./logger.js";
@@ -378,7 +378,7 @@ export function topologicalSortIssues<T extends { number: number; parentNumber: 
  *
  * Only one import may run at a time; concurrent calls are rejected.
  *
- * @param projectId - The Grackle project ID to import tasks into.
+ * @param workspaceId - The Grackle workspace ID to import tasks into.
  * @param repo - Repository in "owner/repo" format.
  * @param state - Issue state filter ("open" or "closed").
  * @param label - Optional label to filter issues by.
@@ -388,7 +388,7 @@ export function topologicalSortIssues<T extends { number: number; parentNumber: 
  * @returns Summary of imported, linked, and skipped issues.
  */
 export async function importGitHubIssues(
-  projectId: string,
+  workspaceId: string,
   repo: string,
   state: string,
   label?: string,
@@ -397,7 +397,7 @@ export async function importGitHubIssues(
 ): Promise<ImportResult> {
   acquireImportLock();
   try {
-    return await doImport(projectId, repo, state, label, includeComments);
+    return await doImport(workspaceId, repo, state, label, includeComments);
   } finally {
     releaseImportLock();
   }
@@ -406,7 +406,7 @@ export async function importGitHubIssues(
 /**
  * Internal import implementation, called under the concurrency guard.
  *
- * @param projectId - The Grackle project ID to import tasks into.
+ * @param workspaceId - The Grackle workspace ID to import tasks into.
  * @param repo - Repository in "owner/repo" format.
  * @param state - Issue state filter ("open" or "closed").
  * @param label - Optional label to filter issues by.
@@ -416,25 +416,25 @@ export async function importGitHubIssues(
  * @returns Summary of imported, linked, and skipped issues.
  */
 async function doImport(
-  projectId: string,
+  workspaceId: string,
   repo: string,
   state: string,
   label?: string,
   includeComments: boolean = true,
 ): Promise<ImportResult> {
-  const project = projectStore.getProject(projectId);
-  if (!project) {
-    throw new Error(`Project not found: ${projectId}`);
+  const workspace = workspaceStore.getWorkspace(workspaceId);
+  if (!workspace) {
+    throw new Error(`Workspace not found: ${workspaceId}`);
   }
 
-  const projectSlug = slugify(project.name);
+  const workspaceSlug = slugify(workspace.name);
 
   // 1. Fetch issues from GitHub (with or without comments)
   const issues = await fetchGitHubIssues(repo, state, label, includeComments);
   logger.info({ repo, state, label, count: issues.length, includeComments }, "Fetched GitHub issues");
 
   // 2. Fetch existing tasks for deduplication and parent linking
-  const existingTasks = taskStore.listTasks(projectId);
+  const existingTasks = taskStore.listTasks(workspaceId);
   const issueNumberPattern: RegExp = /^#(\d+):/;
 
   /** Maps GitHub issue number → Grackle task ID (for both existing and newly created tasks). */
@@ -483,16 +483,16 @@ async function doImport(
     const id = uuid().slice(0, 8);
     taskStore.createTask(
       id,
-      projectId,
+      workspaceId,
       title,
       description,
       [],
-      projectSlug,
+      workspaceSlug,
       parentTaskId,
       true,
     );
 
-    emit("task.created", { taskId: id, projectId });
+    emit("task.created", { taskId: id, workspaceId });
     issueNumberToTaskId.set(issue.number, id);
     newlyImportedIssues.push(issue);
     imported++;
@@ -525,10 +525,10 @@ async function doImport(
     if (resolvedDeps.length > 0) {
       taskStore.setTaskDependsOn(taskId, resolvedDeps);
       dependencies += resolvedDeps.length;
-      emit("task.updated", { taskId: taskId!, projectId });
+      emit("task.updated", { taskId: taskId!, workspaceId });
     }
   }
 
-  logger.info({ projectId, imported, linked, skipped, dependencies }, "GitHub import complete");
+  logger.info({ workspaceId, imported, linked, skipped, dependencies }, "GitHub import complete");
   return { imported, linked, skipped, dependencies };
 }

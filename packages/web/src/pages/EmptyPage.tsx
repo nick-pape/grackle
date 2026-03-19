@@ -5,55 +5,55 @@ import styles from "../components/panels/SessionPanel.module.scss";
 
 /** Home page shown when no specific entity is selected. */
 export function EmptyPage(): JSX.Element {
-  const { projects, createProject, projectCreating } = useGrackle();
+  const { workspaces, createWorkspace, workspaceCreating } = useGrackle();
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [newProjectName, setNewProjectName] = useState("");
+  const [newWorkspaceName, setNewWorkspaceName] = useState("");
 
   /** Submit the inline create form. */
-  const handleCreateProject = (): void => {
-    if (!newProjectName.trim() || projectCreating) {
+  const handleCreateWorkspace = (): void => {
+    if (!newWorkspaceName.trim() || workspaceCreating) {
       return;
     }
-    createProject(newProjectName.trim());
+    createWorkspace(newWorkspaceName.trim());
   };
 
-  if (projects.length === 0) {
+  if (workspaces.length === 0) {
     return (
       <div className={styles.emptyCta} data-testid="welcome-cta">
         <div className={styles.ctaTitle}>Welcome to Grackle</div>
         <div className={styles.ctaDescription}>
-          Organize your work into projects and let agents tackle the tasks.
+          Organize your work into workspaces and let agents tackle the tasks.
         </div>
         {showCreateForm ? (
           <div className={styles.ctaCreateForm}>
             <input
               type="text"
-              value={newProjectName}
-              onChange={(e) => setNewProjectName(e.target.value)}
+              value={newWorkspaceName}
+              onChange={(e) => setNewWorkspaceName(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
-                  handleCreateProject();
+                  handleCreateWorkspace();
                 } else if (e.key === "Escape") {
                   setShowCreateForm(false);
-                  setNewProjectName("");
+                  setNewWorkspaceName("");
                 }
               }}
-              placeholder="Project name..."
-              aria-label="Project name"
+              placeholder="Workspace name..."
+              aria-label="Workspace name"
               autoFocus
-              disabled={projectCreating}
+              disabled={workspaceCreating}
               className={styles.ctaCreateInput}
               data-testid="welcome-create-input"
             />
             <button
-              onClick={handleCreateProject}
+              onClick={handleCreateWorkspace}
               className={styles.ctaCreateOk}
-              disabled={projectCreating}
-              aria-label={projectCreating ? "Creating project" : undefined}
+              disabled={workspaceCreating}
+              aria-label={workspaceCreating ? "Creating workspace" : undefined}
               data-testid="welcome-create-ok"
             >
-              {projectCreating
-                ? <Spinner size="sm" label="Creating project" />
+              {workspaceCreating
+                ? <Spinner size="sm" label="Creating workspace" />
                 : "OK"}
             </button>
           </div>
@@ -61,10 +61,10 @@ export function EmptyPage(): JSX.Element {
           <button
             className={styles.ctaButton}
             onClick={() => setShowCreateForm(true)}
-            disabled={projectCreating}
+            disabled={workspaceCreating}
             data-testid="welcome-create-button"
           >
-            Create Your First Project
+            Create Your First Workspace
           </button>
         )}
       </div>
@@ -72,7 +72,7 @@ export function EmptyPage(): JSX.Element {
   }
   return (
     <div className={styles.emptyState}>
-      Select a project or task to get started
+      Select a workspace or task to get started
     </div>
   );
 }

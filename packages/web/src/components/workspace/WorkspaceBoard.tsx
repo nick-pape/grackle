@@ -5,21 +5,21 @@ import { buildBoardColumns, type BoardTask } from "../../utils/boardColumns.js";
 import { getStatusStyle } from "../../utils/taskStatus.js";
 import { taskUrl, newTaskUrl, useAppNavigate } from "../../utils/navigation.js";
 import { AnimatePresence, motion } from "motion/react";
-import styles from "./ProjectBoard.module.scss";
+import styles from "./WorkspaceBoard.module.scss";
 
-/** Props for the ProjectBoard component. */
-interface ProjectBoardProps {
-  projectId: string;
+/** Props for the WorkspaceBoard component. */
+interface WorkspaceBoardProps {
+  workspaceId: string;
 }
 
 /** Kanban-style board view with fixed columns for each task status. */
-export function ProjectBoard({ projectId }: ProjectBoardProps): JSX.Element {
+export function WorkspaceBoard({ workspaceId }: WorkspaceBoardProps): JSX.Element {
   const { tasks, sessions, personas, environments } = useGrackle();
   const navigate = useAppNavigate();
 
-  const projectTasks = useMemo(
-    () => tasks.filter((t) => t.projectId === projectId),
-    [tasks, projectId],
+  const workspaceTasks = useMemo(
+    () => tasks.filter((t) => t.workspaceId === workspaceId),
+    [tasks, workspaceId],
   );
 
   const taskStatusById = useMemo(
@@ -28,8 +28,8 @@ export function ProjectBoard({ projectId }: ProjectBoardProps): JSX.Element {
   );
 
   const tasksById = useMemo(
-    () => new Map(projectTasks.map((t) => [t.id, t])),
-    [projectTasks],
+    () => new Map(workspaceTasks.map((t) => [t.id, t])),
+    [workspaceTasks],
   );
 
   const boardMetadataByTaskId = useMemo(() => {
@@ -40,7 +40,7 @@ export function ProjectBoard({ projectId }: ProjectBoardProps): JSX.Element {
     const personaNameByTaskId = new Map<string, string>();
     const environmentNameByTaskId = new Map<string, string>();
 
-    for (const task of projectTasks) {
+    for (const task of workspaceTasks) {
       if (task.latestSessionId) {
         const session = sessionById.get(task.latestSessionId);
         if (session) {
@@ -68,23 +68,23 @@ export function ProjectBoard({ projectId }: ProjectBoardProps): JSX.Element {
       personaNameByTaskId,
       environmentNameByTaskId,
     };
-  }, [projectTasks, sessions, personas, environments]);
+  }, [workspaceTasks, sessions, personas, environments]);
 
   const columns = useMemo(
     () => buildBoardColumns({
-      tasks: projectTasks,
+      tasks: workspaceTasks,
       taskStatusById,
       sessionStatusByTaskId: boardMetadataByTaskId.sessionStatusByTaskId,
     }),
-    [projectTasks, taskStatusById, boardMetadataByTaskId],
+    [workspaceTasks, taskStatusById, boardMetadataByTaskId],
   );
 
-  if (projectTasks.length === 0) {
+  if (workspaceTasks.length === 0) {
     return (
       <div className={styles.emptyCta} data-testid="board-empty-cta">
         <button
           className={styles.ctaButton}
-          onClick={() => navigate(newTaskUrl(projectId))}
+          onClick={() => navigate(newTaskUrl(workspaceId))}
         >
           Create Task
         </button>

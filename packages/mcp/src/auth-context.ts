@@ -7,5 +7,5 @@
  */
 export type AuthContext =
   | { type: "api-key" }
-  | { type: "scoped"; taskId: string; projectId?: string; personaId: string; taskSessionId: string }
+  | { type: "scoped"; taskId: string; workspaceId?: string; personaId: string; taskSessionId: string }
   | { type: "oauth"; clientId: string };

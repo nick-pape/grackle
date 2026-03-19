@@ -45,7 +45,7 @@ export interface BoardTask {
 
 /** Options for building board columns. */
 interface BuildColumnsOptions {
-  /** Flat list of tasks belonging to one project. */
+  /** Flat list of tasks belonging to one workspace. */
   tasks: TaskData[];
   /** Map of taskId → status for all tasks (used for dependency checking). */
   taskStatusById: Map<string, string>;

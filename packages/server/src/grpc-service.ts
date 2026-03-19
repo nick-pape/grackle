@@ -10,7 +10,7 @@ import * as adapterManager from "./adapter-manager.js";
 import { reconnectOrProvision } from "@grackle-ai/adapter-sdk";
 import * as streamHub from "./stream-hub.js";
 import * as tokenBroker from "./token-broker.js";
-import * as projectStore from "./project-store.js";
+import * as workspaceStore from "./workspace-store.js";
 import * as taskStore from "./task-store.js";
 import * as findingStore from "./finding-store.js";
 import * as personaStore from "./persona-store.js";
@@ -27,7 +27,7 @@ import {
   TASK_STATUS,
   taskStatusToEnum,
   taskStatusToString,
-  projectStatusToEnum,
+  workspaceStatusToEnum,
   claudeProviderModeToEnum,
   providerToggleToEnum,
 } from "@grackle-ai/common";
@@ -98,14 +98,14 @@ function sessionRowToProto(row: SessionRow): grackle.Session {
   });
 }
 
-function projectRowToProto(row: projectStore.ProjectRow): grackle.Project {
-  return create(grackle.ProjectSchema, {
+function workspaceRowToProto(row: workspaceStore.WorkspaceRow): grackle.Workspace {
+  return create(grackle.WorkspaceSchema, {
     id: row.id,
     name: row.name,
     description: row.description,
     repoUrl: row.repoUrl,
     defaultEnvironmentId: row.defaultEnvironmentId,
-    status: projectStatusToEnum(row.status),
+    status: workspaceStatusToEnum(row.status),
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
     useWorktrees: row.useWorktrees,
@@ -122,7 +122,7 @@ function taskRowToProto(
 ): grackle.Task {
   return create(grackle.TaskSchema, {
     id: row.id,
-    projectId: row.projectId ?? undefined,
+    workspaceId: row.workspaceId ?? undefined,
     title: row.title,
     description: row.description,
     status: taskStatusToEnum(computedStatus ?? row.status),
@@ -579,7 +579,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       if (session.taskId) {
         const task = taskStore.getTask(session.taskId);
         if (task) {
-          emit("task.updated", { taskId: task.id, projectId: task.projectId || "" });
+          emit("task.updated", { taskId: task.id, workspaceId: task.workspaceId || "" });
         }
       }
 
@@ -700,24 +700,24 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       });
     },
 
-    // ─── Projects ────────────────────────────────────────────
+    // ─── Workspaces ──────────────────────────────────────────
 
-    async listProjects() {
-      const rows = projectStore.listProjects();
-      return create(grackle.ProjectListSchema, {
-        projects: rows.map(projectRowToProto),
+    async listWorkspaces() {
+      const rows = workspaceStore.listWorkspaces();
+      return create(grackle.WorkspaceListSchema, {
+        workspaces: rows.map(workspaceRowToProto),
       });
     },
 
-    async createProject(req: grackle.CreateProjectRequest) {
+    async createWorkspace(req: grackle.CreateWorkspaceRequest) {
       let id = slugify(req.name) || uuid().slice(0, 8);
-      // If slug already exists (e.g. archived project), append a short suffix
-      if (projectStore.getProject(id)) {
+      // If slug already exists (e.g. archived workspace), append a short suffix
+      if (workspaceStore.getWorkspace(id)) {
         id = `${id}-${uuid().slice(0, 4)}`;
       }
       // useWorktrees defaults to true when not specified
       const useWorktrees = req.useWorktrees ?? true;
-      projectStore.createProject(
+      workspaceStore.createWorkspace(
         id,
         req.name,
         req.description,
@@ -727,35 +727,35 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         req.worktreeBasePath ?? "",
         req.defaultPersonaId ?? "",
       );
-      emit("project.created", { projectId: id });
-      const row = projectStore.getProject(id);
-      return projectRowToProto(row!);
+      emit("workspace.created", { workspaceId: id });
+      const row = workspaceStore.getWorkspace(id);
+      return workspaceRowToProto(row!);
     },
 
-    async getProject(req: grackle.ProjectId) {
-      const row = projectStore.getProject(req.id);
-      if (!row) throw new ConnectError(`Project not found: ${req.id}`, Code.NotFound);
-      return projectRowToProto(row);
+    async getWorkspace(req: grackle.WorkspaceId) {
+      const row = workspaceStore.getWorkspace(req.id);
+      if (!row) throw new ConnectError(`Workspace not found: ${req.id}`, Code.NotFound);
+      return workspaceRowToProto(row);
     },
 
-    async archiveProject(req: grackle.ProjectId) {
-      projectStore.archiveProject(req.id);
-      emit("project.archived", { projectId: req.id });
+    async archiveWorkspace(req: grackle.WorkspaceId) {
+      workspaceStore.archiveWorkspace(req.id);
+      emit("workspace.archived", { workspaceId: req.id });
       return create(grackle.EmptySchema, {});
     },
 
-    async updateProject(req: grackle.UpdateProjectRequest) {
-      const existing = projectStore.getProject(req.id);
+    async updateWorkspace(req: grackle.UpdateWorkspaceRequest) {
+      const existing = workspaceStore.getWorkspace(req.id);
       if (!existing) {
-        throw new ConnectError(`Project not found: ${req.id}`, Code.NotFound);
+        throw new ConnectError(`Workspace not found: ${req.id}`, Code.NotFound);
       }
       if (req.name?.trim() === "") {
-        throw new ConnectError("Project name cannot be empty", Code.InvalidArgument);
+        throw new ConnectError("Workspace name cannot be empty", Code.InvalidArgument);
       }
       if (req.repoUrl !== undefined && req.repoUrl !== "" && !/^https?:\/\//i.test(req.repoUrl)) {
         throw new ConnectError("Repository URL must use http or https scheme", Code.InvalidArgument);
       }
-      const row = projectStore.updateProject(req.id, {
+      const row = workspaceStore.updateWorkspace(req.id, {
         name: req.name !== undefined ? req.name.trim() : undefined,
         description: req.description,
         repoUrl: req.repoUrl,
@@ -765,16 +765,16 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         defaultPersonaId: req.defaultPersonaId,
       });
       if (!row) {
-        throw new ConnectError(`Project not found after update: ${req.id}`, Code.NotFound);
+        throw new ConnectError(`Workspace not found after update: ${req.id}`, Code.NotFound);
       }
-      emit("project.updated", { projectId: req.id });
-      return projectRowToProto(row);
+      emit("workspace.updated", { workspaceId: req.id });
+      return workspaceRowToProto(row);
     },
 
     // ─── Tasks ───────────────────────────────────────────────
 
     async listTasks(req: grackle.ListTasksRequest) {
-      const rows = taskStore.listTasks(req.projectId || undefined, {
+      const rows = taskStore.listTasks(req.workspaceId || undefined, {
         search: req.search || undefined,
         status: req.status || undefined,
       });
@@ -800,11 +800,11 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
     },
 
     async createTask(req: grackle.CreateTaskRequest) {
-      const projectId = req.projectId || undefined;
-      let project: ReturnType<typeof projectStore.getProject>;
-      if (projectId) {
-        project = projectStore.getProject(projectId);
-        if (!project) throw new ConnectError(`Project not found: ${projectId}`, Code.NotFound);
+      const workspaceId = req.workspaceId || undefined;
+      let workspace: ReturnType<typeof workspaceStore.getWorkspace>;
+      if (workspaceId) {
+        workspace = workspaceStore.getWorkspace(workspaceId);
+        if (!workspace) throw new ConnectError(`Workspace not found: ${workspaceId}`, Code.NotFound);
       }
 
       // Validate parent task if specified
@@ -829,11 +829,11 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       const id = uuid().slice(0, 8);
       taskStore.createTask(
         id,
-        projectId,
+        workspaceId,
         req.title,
         req.description,
         [...req.dependsOn],
-        project ? slugify(project.name) : "",
+        workspace ? slugify(workspace.name) : "",
         req.parentTaskId,
         // Default to false (no decomposition rights) unless explicitly granted.
         // Orchestrator/root processes that need fork() must opt in.
@@ -841,7 +841,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         req.defaultPersonaId ?? "",
       );
       const row = taskStore.getTask(id);
-      emit("task.created", { taskId: id, projectId: req.projectId });
+      emit("task.created", { taskId: id, workspaceId: req.workspaceId });
       return taskRowToProto(row!);
     },
 
@@ -900,8 +900,8 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         }
 
         sessionStore.setSessionTask(req.sessionId, req.id);
-        processorRegistry.lateBind(req.sessionId, req.id, existing.projectId || undefined);
-        emit("task.started", { taskId: req.id, sessionId: req.sessionId, projectId: existing.projectId || "" });
+        processorRegistry.lateBind(req.sessionId, req.id, existing.workspaceId || undefined);
+        emit("task.started", { taskId: req.id, sessionId: req.sessionId, workspaceId: existing.workspaceId || "" });
       }
 
       const row = taskStore.getTask(req.id);
@@ -927,26 +927,26 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         throw new ConnectError(`Task ${req.taskId} has unmet dependencies`, Code.FailedPrecondition);
       }
 
-      const project = task.projectId ? projectStore.getProject(task.projectId) : undefined;
-      if (task.projectId && !project) {
-        throw new ConnectError(`Project not found: ${task.projectId}`, Code.NotFound);
+      const workspace = task.workspaceId ? workspaceStore.getWorkspace(task.workspaceId) : undefined;
+      if (task.workspaceId && !workspace) {
+        throw new ConnectError(`Workspace not found: ${task.workspaceId}`, Code.NotFound);
       }
 
       const environmentId = req.environmentId
         || resolveAncestorEnvironmentId(task.parentTaskId)
-        || project?.defaultEnvironmentId
+        || workspace?.defaultEnvironmentId
         || "";
       if (!environmentId) {
-        throw new ConnectError("No environment specified for task, ancestor, or project", Code.FailedPrecondition);
+        throw new ConnectError("No environment specified for task, ancestor, or workspace", Code.FailedPrecondition);
       }
 
       const conn = adapterManager.getConnection(environmentId);
       if (!conn) throw new ConnectError(`Environment ${environmentId} not connected`, Code.FailedPrecondition);
 
-      // Resolve persona via cascade (request → task → project → app default)
+      // Resolve persona via cascade (request → task → workspace → app default)
       let resolved: ReturnType<typeof resolvePersona>;
       try {
-        resolved = resolvePersona(req.personaId, task.defaultPersonaId, project?.defaultPersonaId || "");
+        resolved = resolvePersona(req.personaId, task.defaultPersonaId, workspace?.defaultPersonaId || "");
       } catch (err) {
         throw new ConnectError((err as Error).message, Code.FailedPrecondition);
       }
@@ -976,7 +976,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         task.id,
         resolved.personaId,
       );
-      emit("task.started", { taskId: task.id, sessionId, projectId: task.projectId || "" });
+      emit("task.started", { taskId: task.id, sessionId, workspaceId: task.workspaceId || "" });
 
       // Re-push stored tokens + provider credentials (scoped to runtime) so they're fresh for this session.
       // For local envs, skip file tokens — the PowerLine is on the same machine.
@@ -985,11 +985,11 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
 
       const mcpServersJson = personaMcpServersToJson(persona);
 
-      const useWorktrees = project?.useWorktrees ?? false;
+      const useWorktrees = workspace?.useWorktrees ?? false;
       if (!useWorktrees) {
         logger.warn(
-          { taskId: task.id, projectId: task.projectId, branch: task.branch },
-          "Worktrees disabled for project — agent will work in main checkout. Concurrent tasks on the same environment may conflict.",
+          { taskId: task.id, workspaceId: task.workspaceId, branch: task.branch },
+          "Worktrees disabled for workspace — agent will work in main checkout. Concurrent tasks on the same environment may conflict.",
         );
       }
 
@@ -997,7 +997,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       const taskMcpDialHost = toDialableHost(process.env.GRACKLE_HOST || "127.0.0.1");
       const taskMcpUrl = `http://${taskMcpDialHost}:${taskMcpPort}/mcp`;
       const taskMcpToken = createScopedToken(
-        { sub: task.id, pid: task.projectId || "", per: resolved.personaId, sid: sessionId },
+        { sub: task.id, pid: task.workspaceId || "", per: resolved.personaId, sid: sessionId },
         loadOrCreateApiKey(),
       );
 
@@ -1009,11 +1009,11 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         maxTurns,
         branch: task.branch,
         worktreeBasePath: task.branch
-          ? (project?.worktreeBasePath || process.env.GRACKLE_WORKTREE_BASE || "/workspace")
+          ? (workspace?.worktreeBasePath || process.env.GRACKLE_WORKTREE_BASE || "/workspace")
           : "",
         useWorktrees,
         systemContext,
-        projectId: task.projectId ?? undefined,
+        workspaceId: task.workspaceId ?? undefined,
         taskId: task.id,
         mcpServersJson,
         mcpUrl: taskMcpUrl,
@@ -1024,7 +1024,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       processEventStream(conn.client.spawn(powerlineReq), {
         sessionId,
         logPath,
-        projectId: task.projectId ?? undefined,
+        workspaceId: task.workspaceId ?? undefined,
         taskId: task.id,
       });
 
@@ -1039,8 +1039,8 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       taskStore.markTaskComplete(task.id, TASK_STATUS.COMPLETE);
 
       // Check for newly unblocked tasks
-      if (task.projectId) {
-        const unblocked = taskStore.checkAndUnblock(task.projectId);
+      if (task.workspaceId) {
+        const unblocked = taskStore.checkAndUnblock(task.workspaceId);
         for (const t of unblocked) {
           streamHub.publish(
             create(grackle.SessionEventSchema, {
@@ -1058,7 +1058,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         }
       }
 
-      emit("task.completed", { taskId: task.id, projectId: task.projectId || "" });
+      emit("task.completed", { taskId: task.id, workspaceId: task.workspaceId || "" });
       const row = taskStore.getTask(task.id);
       const taskSessions = sessionStore.listSessionsForTask(task.id);
       const { status, latestSessionId } = computeTaskStatus(row!.status, taskSessions);
@@ -1103,11 +1103,11 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       processEventStream(conn.client.resume(powerlineReq), {
         sessionId: latestSession.id,
         logPath,
-        projectId: task.projectId ?? undefined,
+        workspaceId: task.workspaceId ?? undefined,
         taskId: task.id,
       });
 
-      emit("task.started", { taskId: task.id, sessionId: latestSession.id, projectId: task.projectId || "" });
+      emit("task.started", { taskId: task.id, sessionId: latestSession.id, workspaceId: task.workspaceId || "" });
 
       const row = sessionStore.getSession(latestSession.id);
       return sessionRowToProto(row!);
@@ -1159,7 +1159,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
           Code.Internal,
         );
       }
-      emit("task.deleted", { taskId: req.id, projectId: task.projectId || "" });
+      emit("task.deleted", { taskId: req.id, workspaceId: task.workspaceId || "" });
       return create(grackle.EmptySchema, {});
     },
     // ─── Personas ───────────────────────────────────────────────
@@ -1344,7 +1344,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       const id = uuid().slice(0, 8);
       findingStore.postFinding(
         id,
-        req.projectId,
+        req.workspaceId,
         req.taskId,
         req.sessionId,
         req.category,
@@ -1352,15 +1352,15 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         req.content,
         [...req.tags],
       );
-      emit("finding.posted", { projectId: req.projectId, findingId: id });
-      const rows = findingStore.queryFindings(req.projectId);
+      emit("finding.posted", { workspaceId: req.workspaceId, findingId: id });
+      const rows = findingStore.queryFindings(req.workspaceId);
       const row = rows.find((r) => r.id === id);
       return findingRowToProto(row!);
     },
 
     async queryFindings(req: grackle.QueryFindingsRequest) {
       const rows = findingStore.queryFindings(
-        req.projectId,
+        req.workspaceId,
         req.categories.length > 0 ? [...req.categories] : undefined,
         req.tags.length > 0 ? [...req.tags] : undefined,
         req.limit || undefined,
@@ -1381,7 +1381,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       // include_comments defaults to true when not set (opt-out behaviour)
       const includeComments = req.includeComments ?? true;
       const result = await executeGitHubImport(
-        req.projectId,
+        req.workspaceId,
         req.repo,
         stateStr,
         req.label ?? undefined,

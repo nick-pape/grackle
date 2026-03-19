@@ -76,22 +76,8 @@ type CreatePersonaRequest = Message<"grackle.CreatePersonaRequest"> & {
 const CreatePersonaRequestSchema: GenMessage<CreatePersonaRequest>;
 
 // @public
-type CreateProjectRequest = Message<"grackle.CreateProjectRequest"> & {
-    name: string;
-    description: string;
-    repoUrl: string;
-    defaultEnvironmentId: string;
-    useWorktrees?: boolean;
-    worktreeBasePath?: string;
-    defaultPersonaId?: string;
-};
-
-// @public
-const CreateProjectRequestSchema: GenMessage<CreateProjectRequest>;
-
-// @public
 type CreateTaskRequest = Message<"grackle.CreateTaskRequest"> & {
-    projectId?: string;
+    workspaceId?: string;
     title: string;
     description: string;
     dependsOn: string[];
@@ -102,6 +88,20 @@ type CreateTaskRequest = Message<"grackle.CreateTaskRequest"> & {
 
 // @public
 const CreateTaskRequestSchema: GenMessage<CreateTaskRequest>;
+
+// @public
+type CreateWorkspaceRequest = Message<"grackle.CreateWorkspaceRequest"> & {
+    name: string;
+    description: string;
+    repoUrl: string;
+    defaultEnvironmentId: string;
+    useWorktrees?: boolean;
+    worktreeBasePath?: string;
+    defaultPersonaId?: string;
+};
+
+// @public
+const CreateWorkspaceRequestSchema: GenMessage<CreateWorkspaceRequest>;
 
 // @public
 type CredentialProviderConfig = Message<"grackle.CredentialProviderConfig"> & {
@@ -247,7 +247,7 @@ const file_grackle_powerline_powerline: GenFile;
 // @public
 type Finding = Message<"grackle.Finding"> & {
     id: string;
-    projectId: string;
+    workspaceId: string;
     taskId: string;
     sessionId: string;
     category: string;
@@ -401,29 +401,29 @@ const Grackle: GenService<{
         input: typeof SetCredentialProviderRequestSchema;
         output: typeof CredentialProviderConfigSchema;
     };
-    listProjects: {
+    listWorkspaces: {
         methodKind: "unary";
         input: typeof EmptySchema;
-        output: typeof ProjectListSchema;
+        output: typeof WorkspaceListSchema;
     };
-    createProject: {
+    createWorkspace: {
         methodKind: "unary";
-        input: typeof CreateProjectRequestSchema;
-        output: typeof ProjectSchema;
+        input: typeof CreateWorkspaceRequestSchema;
+        output: typeof WorkspaceSchema;
     };
-    getProject: {
+    getWorkspace: {
         methodKind: "unary";
-        input: typeof ProjectIdSchema;
-        output: typeof ProjectSchema;
+        input: typeof WorkspaceIdSchema;
+        output: typeof WorkspaceSchema;
     };
-    updateProject: {
+    updateWorkspace: {
         methodKind: "unary";
-        input: typeof UpdateProjectRequestSchema;
-        output: typeof ProjectSchema;
+        input: typeof UpdateWorkspaceRequestSchema;
+        output: typeof WorkspaceSchema;
     };
-    archiveProject: {
+    archiveWorkspace: {
         methodKind: "unary";
-        input: typeof ProjectIdSchema;
+        input: typeof WorkspaceIdSchema;
         output: typeof EmptySchema;
     };
     listTasks: {
@@ -566,16 +566,16 @@ declare namespace grackle {
         CredentialProviderConfigSchema,
         SetCredentialProviderRequest,
         SetCredentialProviderRequestSchema,
-        Project,
-        ProjectSchema,
-        ProjectList,
-        ProjectListSchema,
-        CreateProjectRequest,
-        CreateProjectRequestSchema,
-        UpdateProjectRequest,
-        UpdateProjectRequestSchema,
-        ProjectId,
-        ProjectIdSchema,
+        Workspace,
+        WorkspaceSchema,
+        WorkspaceList,
+        WorkspaceListSchema,
+        CreateWorkspaceRequest,
+        CreateWorkspaceRequestSchema,
+        UpdateWorkspaceRequest,
+        UpdateWorkspaceRequestSchema,
+        WorkspaceId,
+        WorkspaceIdSchema,
         Task,
         TaskSchema,
         TaskList,
@@ -628,8 +628,8 @@ declare namespace grackle {
         EventTypeSchema,
         TaskStatus_2 as TaskStatus,
         TaskStatusSchema,
-        ProjectStatus,
-        ProjectStatusSchema,
+        WorkspaceStatus,
+        WorkspaceStatusSchema,
         IssueState,
         IssueStateSchema,
         ClaudeProviderMode,
@@ -699,7 +699,7 @@ const GracklePowerLine: GenService<{
 
 // @public
 type ImportGitHubIssuesRequest = Message<"grackle.ImportGitHubIssuesRequest"> & {
-    projectId: string;
+    workspaceId: string;
     repo: string;
     label?: string;
     state: IssueState;
@@ -757,7 +757,7 @@ export function issueStateToString(e: IssueState): string;
 
 // @public
 type ListTasksRequest = Message<"grackle.ListTasksRequest"> & {
-    projectId: string;
+    workspaceId: string;
     search: string;
     status: string;
 };
@@ -840,7 +840,7 @@ const PongSchema: GenMessage<Pong>;
 
 // @public
 type PostFindingRequest = Message<"grackle.PostFindingRequest"> & {
-    projectId: string;
+    workspaceId: string;
     taskId: string;
     sessionId: string;
     category: string;
@@ -890,56 +890,6 @@ declare namespace powerline {
 }
 
 // @public
-type Project = Message<"grackle.Project"> & {
-    id: string;
-    name: string;
-    description: string;
-    repoUrl: string;
-    defaultEnvironmentId: string;
-    status: ProjectStatus;
-    createdAt: string;
-    updatedAt: string;
-    useWorktrees: boolean;
-    worktreeBasePath: string;
-    defaultPersonaId: string;
-};
-
-// @public
-type ProjectId = Message<"grackle.ProjectId"> & {
-    id: string;
-};
-
-// @public
-const ProjectIdSchema: GenMessage<ProjectId>;
-
-// @public
-type ProjectList = Message<"grackle.ProjectList"> & {
-    projects: Project[];
-};
-
-// @public
-const ProjectListSchema: GenMessage<ProjectList>;
-
-// @public
-const ProjectSchema: GenMessage<Project>;
-
-// @public
-enum ProjectStatus {
-    ACTIVE = 1,
-    ARCHIVED = 2,
-    UNSPECIFIED = 0
-}
-
-// @public
-const ProjectStatusSchema: GenEnum<ProjectStatus>;
-
-// @public
-export function projectStatusToEnum(s: string): ProjectStatus;
-
-// @public
-export function projectStatusToString(e: ProjectStatus): string;
-
-// @public
 enum ProviderToggle {
     OFF = 1,
     ON = 2,
@@ -967,7 +917,7 @@ const ProvisionEventSchema: GenMessage<ProvisionEvent>;
 
 // @public
 type QueryFindingsRequest = Message<"grackle.QueryFindingsRequest"> & {
-    projectId: string;
+    workspaceId: string;
     categories: string[];
     tags: string[];
     limit: number;
@@ -1146,7 +1096,7 @@ type SpawnRequest_2 = Message<"grackle.powerline.SpawnRequest"> & {
     branch: string;
     worktreeBasePath: string;
     systemContext: string;
-    projectId?: string;
+    workspaceId?: string;
     taskId: string;
     mcpServersJson: string;
     mcpUrl: string;
@@ -1175,7 +1125,7 @@ const StartTaskRequestSchema: GenMessage<StartTaskRequest>;
 // @public
 type Task = Message<"grackle.Task"> & {
     id: string;
-    projectId?: string;
+    workspaceId?: string;
     title: string;
     description: string;
     status: TaskStatus_2;
@@ -1336,21 +1286,6 @@ type UpdatePersonaRequest = Message<"grackle.UpdatePersonaRequest"> & {
 const UpdatePersonaRequestSchema: GenMessage<UpdatePersonaRequest>;
 
 // @public
-type UpdateProjectRequest = Message<"grackle.UpdateProjectRequest"> & {
-    id: string;
-    name?: string;
-    description?: string;
-    repoUrl?: string;
-    defaultEnvironmentId?: string;
-    useWorktrees?: boolean;
-    worktreeBasePath?: string;
-    defaultPersonaId?: string;
-};
-
-// @public
-const UpdateProjectRequestSchema: GenMessage<UpdateProjectRequest>;
-
-// @public
 type UpdateTaskRequest = Message<"grackle.UpdateTaskRequest"> & {
     id: string;
     title: string;
@@ -1363,6 +1298,71 @@ type UpdateTaskRequest = Message<"grackle.UpdateTaskRequest"> & {
 
 // @public
 const UpdateTaskRequestSchema: GenMessage<UpdateTaskRequest>;
+
+// @public
+type UpdateWorkspaceRequest = Message<"grackle.UpdateWorkspaceRequest"> & {
+    id: string;
+    name?: string;
+    description?: string;
+    repoUrl?: string;
+    defaultEnvironmentId?: string;
+    useWorktrees?: boolean;
+    worktreeBasePath?: string;
+    defaultPersonaId?: string;
+};
+
+// @public
+const UpdateWorkspaceRequestSchema: GenMessage<UpdateWorkspaceRequest>;
+
+// @public
+type Workspace = Message<"grackle.Workspace"> & {
+    id: string;
+    name: string;
+    description: string;
+    repoUrl: string;
+    defaultEnvironmentId: string;
+    status: WorkspaceStatus;
+    createdAt: string;
+    updatedAt: string;
+    useWorktrees: boolean;
+    worktreeBasePath: string;
+    defaultPersonaId: string;
+};
+
+// @public
+type WorkspaceId = Message<"grackle.WorkspaceId"> & {
+    id: string;
+};
+
+// @public
+const WorkspaceIdSchema: GenMessage<WorkspaceId>;
+
+// @public
+type WorkspaceList = Message<"grackle.WorkspaceList"> & {
+    workspaces: Workspace[];
+};
+
+// @public
+const WorkspaceListSchema: GenMessage<WorkspaceList>;
+
+// @public
+const WorkspaceSchema: GenMessage<Workspace>;
+
+// @public
+enum WorkspaceStatus {
+    ACTIVE = 1,
+    ARCHIVED = 2,
+    UNSPECIFIED = 0
+}
+
+// @public
+const WorkspaceStatusSchema: GenEnum<WorkspaceStatus>;
+
+// @public
+export function workspaceStatusToEnum(s: string): WorkspaceStatus;
+
+// @public
+export function workspaceStatusToString(e: WorkspaceStatus): string;
 
 // @public
 type WorktreeCleanupRequest = Message<"grackle.powerline.WorktreeCleanupRequest"> & {

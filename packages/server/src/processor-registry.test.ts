@@ -11,7 +11,7 @@ function makeContext(overrides?: Partial<ProcessorContext>): ProcessorContext {
   return {
     sessionId: "sess1",
     logPath: "/tmp/log",
-    projectId: "",
+    workspaceId: "",
     taskId: "",
     ...overrides,
   };
@@ -48,7 +48,7 @@ describe("processor-registry", () => {
     registry.lateBind("sess1", "task1", "proj1");
 
     expect(ctx.taskId).toBe("task1");
-    expect(ctx.projectId).toBe("proj1");
+    expect(ctx.workspaceId).toBe("proj1");
   });
 
   it("lateBind is idempotent for same task", () => {

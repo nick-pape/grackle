@@ -23,7 +23,7 @@ function createMockClient(tasks: Record<string, { parentTaskId: string }>): Grac
 const SCOPED_AUTH: AuthContext = {
   type: "scoped",
   taskId: "parent-task",
-  projectId: "proj-1",
+  workspaceId: "proj-1",
   personaId: "p-1",
   taskSessionId: "sess-1",
 };

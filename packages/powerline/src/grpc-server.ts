@@ -81,7 +81,7 @@ export function registerPowerLineRoutes(router: ConnectRouter): void {
         worktreeBasePath: req.worktreeBasePath || undefined,
         useWorktrees: req.useWorktrees,
         systemContext: req.systemContext || undefined,
-        projectId: req.projectId || undefined,
+        workspaceId: req.workspaceId || undefined,
         taskId: req.taskId || undefined,
         mcpServers: req.mcpServersJson
           ? (JSON.parse(req.mcpServersJson) as Record<string, unknown>)

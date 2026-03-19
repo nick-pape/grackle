@@ -1,5 +1,5 @@
 import { test, expect } from "./fixtures.js";
-import { createProject, createTask, getProjectId, getTaskId } from "./helpers.js";
+import { createWorkspace, createTask, getWorkspaceId, getTaskId } from "./helpers.js";
 
 test.describe("Deep linking", () => {
   test("deep link to /settings loads settings page", async ({ appPage }) => {
@@ -9,33 +9,33 @@ test.describe("Deep linking", () => {
     await expect(page.getByRole("tablist", { name: "Settings" })).toBeVisible({ timeout: 5_000 });
   });
 
-  test("deep link to /projects/:id loads project", async ({ appPage }) => {
+  test("deep link to /workspaces/:id loads workspace", async ({ appPage }) => {
     const page = appPage;
 
-    // Create a project first
-    await createProject(page, "deep-link-proj");
-    const projectId = await getProjectId(page, "deep-link-proj");
+    // Create a workspace first
+    await createWorkspace(page, "deep-link-proj");
+    const workspaceId = await getWorkspaceId(page, "deep-link-proj");
 
     // Navigate away then deep link directly
-    await page.goto(`/projects/${projectId}`);
+    await page.goto(`/workspaces/${workspaceId}`);
     await page.waitForFunction(
       () => document.body.innerText.includes("Connected"),
       { timeout: 10_000 },
     );
 
-    // The project page should be visible (sidebar shows project name)
+    // The workspace page should be visible (sidebar shows workspace name)
     await expect(page.getByText("deep-link-proj").first()).toBeVisible({ timeout: 5_000 });
   });
 
   test("deep link to /tasks/:id loads task detail", async ({ appPage }) => {
     const page = appPage;
 
-    // Create project and task
-    await createProject(page, "deep-link-task-proj");
+    // Create workspace and task
+    await createWorkspace(page, "deep-link-task-proj");
     await page.getByText("deep-link-task-proj").click();
     await createTask(page, "deep-link-task-proj", "deep-link-task");
-    const projectId = await getProjectId(page, "deep-link-task-proj");
-    const taskId = await getTaskId(page, projectId, "deep-link-task");
+    const workspaceId = await getWorkspaceId(page, "deep-link-task-proj");
+    const taskId = await getTaskId(page, workspaceId, "deep-link-task");
 
     // Deep link via full page navigation
     await page.goto(`/tasks/${taskId}`);
@@ -72,20 +72,20 @@ test.describe("Deep linking", () => {
   test("back/forward navigation works between pages", async ({ appPage }) => {
     const page = appPage;
 
-    // Create a project to navigate to
-    await createProject(page, "back-fwd-proj");
+    // Create a workspace to navigate to
+    await createWorkspace(page, "back-fwd-proj");
 
-    // Navigate: home -> project -> settings
+    // Navigate: home -> workspace -> settings
     await page.getByText("back-fwd-proj").click();
     await page.waitForTimeout(500);
 
     await page.locator('button[title="Settings"]').click();
     await expect(page.getByRole("tablist", { name: "Settings" })).toBeVisible({ timeout: 5_000 });
 
-    // Go back — should be on the project page
+    // Go back — should be on the workspace page
     await page.goBack();
     await expect(page.getByText("back-fwd-proj").first()).toBeVisible({ timeout: 5_000 });
-    expect(page.url()).toContain("/projects/");
+    expect(page.url()).toContain("/workspaces/");
 
     // Go forward — back to settings
     await page.goForward();
@@ -109,12 +109,12 @@ test.describe("Deep linking", () => {
   test("deep link to /tasks/:id/stream loads stream tab", async ({ appPage }) => {
     const page = appPage;
 
-    // Create project and task
-    await createProject(page, "deep-stream-proj");
+    // Create workspace and task
+    await createWorkspace(page, "deep-stream-proj");
     await page.getByText("deep-stream-proj").click();
     await createTask(page, "deep-stream-proj", "deep-stream-task");
-    const projectId = await getProjectId(page, "deep-stream-proj");
-    const taskId = await getTaskId(page, projectId, "deep-stream-task");
+    const workspaceId = await getWorkspaceId(page, "deep-stream-proj");
+    const taskId = await getTaskId(page, workspaceId, "deep-stream-task");
 
     // Deep link to the stream tab
     await page.goto(`/tasks/${taskId}/stream`);

@@ -46,7 +46,7 @@ describe("task_list", () => {
     });
 
     const result = await getTool("task_list").handler(
-      { projectId: "proj-1" },
+      { workspaceId: "proj-1" },
       mockClient,
     );
     const parsed = JSON.parse(result.content[0].text);
@@ -56,7 +56,7 @@ describe("task_list", () => {
     expect(parsed[0].title).toBe("Fix bug");
     expect(typeof parsed[0].status).toBe("string");
     expect(mockClient.listTasks).toHaveBeenCalledWith({
-      projectId: "proj-1",
+      workspaceId: "proj-1",
       search: "",
       status: "",
     });
@@ -70,12 +70,12 @@ describe("task_list", () => {
     });
 
     await getTool("task_list").handler(
-      { projectId: "proj-1", search: "login bug" },
+      { workspaceId: "proj-1", search: "login bug" },
       mockClient,
     );
 
     expect(mockClient.listTasks).toHaveBeenCalledWith({
-      projectId: "proj-1",
+      workspaceId: "proj-1",
       search: "login bug",
       status: "",
     });
@@ -89,12 +89,12 @@ describe("task_list", () => {
     });
 
     await getTool("task_list").handler(
-      { projectId: "proj-1", status: "working" },
+      { workspaceId: "proj-1", status: "working" },
       mockClient,
     );
 
     expect(mockClient.listTasks).toHaveBeenCalledWith({
-      projectId: "proj-1",
+      workspaceId: "proj-1",
       search: "",
       status: "working",
     });
@@ -108,12 +108,12 @@ describe("task_list", () => {
     });
 
     await getTool("task_list").handler(
-      { projectId: "proj-1" },
+      { workspaceId: "proj-1" },
       mockClient,
     );
 
     expect(mockClient.listTasks).toHaveBeenCalledWith({
-      projectId: "proj-1",
+      workspaceId: "proj-1",
       search: "",
       status: "",
     });
@@ -127,7 +127,7 @@ describe("task_list", () => {
     );
 
     const result = await getTool("task_list").handler(
-      { projectId: "no-such" },
+      { workspaceId: "no-such" },
       mockClient,
     );
 
@@ -146,14 +146,14 @@ describe("task_create", () => {
     });
 
     const result = await getTool("task_create").handler(
-      { projectId: "proj-1", title: "New task" },
+      { workspaceId: "proj-1", title: "New task" },
       mockClient,
     );
     const parsed = JSON.parse(result.content[0].text);
 
     expect(parsed.id).toBe("t2");
     expect(mockClient.createTask).toHaveBeenCalledWith({
-      projectId: "proj-1",
+      workspaceId: "proj-1",
       title: "New task",
       description: "",
       dependsOn: [],
@@ -174,7 +174,7 @@ describe("task_create", () => {
 
     await getTool("task_create").handler(
       {
-        projectId: "proj-1",
+        workspaceId: "proj-1",
         title: "Dep task",
         description: "Details here",
         dependsOn: ["t1", "t2"],
@@ -183,7 +183,7 @@ describe("task_create", () => {
     );
 
     expect(mockClient.createTask).toHaveBeenCalledWith({
-      projectId: "proj-1",
+      workspaceId: "proj-1",
       title: "Dep task",
       description: "Details here",
       dependsOn: ["t1", "t2"],
@@ -201,7 +201,7 @@ describe("task_create", () => {
     );
 
     const result = await getTool("task_create").handler(
-      { projectId: "proj-1", title: "Bad" },
+      { workspaceId: "proj-1", title: "Bad" },
       mockClient,
     );
 
@@ -351,7 +351,7 @@ describe("task_start", () => {
     const scopedAuth: AuthContext = {
       type: "scoped",
       taskId: "parent-task",
-      projectId: "proj-1",
+      workspaceId: "proj-1",
       personaId: "p-1",
       taskSessionId: "sess-1",
     };
@@ -377,7 +377,7 @@ describe("task_start", () => {
     const scopedAuth: AuthContext = {
       type: "scoped",
       taskId: "parent-task",
-      projectId: "proj-1",
+      workspaceId: "proj-1",
       personaId: "p-1",
       taskSessionId: "sess-1",
     };
@@ -476,7 +476,7 @@ describe("task_complete", () => {
     const scopedAuth: AuthContext = {
       type: "scoped",
       taskId: "parent-task",
-      projectId: "proj-1",
+      workspaceId: "proj-1",
       personaId: "p-1",
       taskSessionId: "sess-1",
     };
@@ -502,7 +502,7 @@ describe("task_complete", () => {
     const scopedAuth: AuthContext = {
       type: "scoped",
       taskId: "parent-task",
-      projectId: "proj-1",
+      workspaceId: "proj-1",
       personaId: "p-1",
       taskSessionId: "sess-1",
     };
@@ -575,7 +575,7 @@ describe("task_import_github", () => {
     });
 
     const result = await getTool("task_import_github").handler(
-      { projectId: "proj-1", repo: "octocat/hello-world" },
+      { workspaceId: "proj-1", repo: "octocat/hello-world" },
       mockClient,
     );
     const parsed = JSON.parse(result.content[0].text);
@@ -585,7 +585,7 @@ describe("task_import_github", () => {
     expect(parsed.skipped).toBe(0);
 
     const callArgs = (mockClient.importGitHubIssues as ReturnType<typeof vi.fn>).mock.calls[0][0];
-    expect(callArgs.projectId).toBe("proj-1");
+    expect(callArgs.workspaceId).toBe("proj-1");
     expect(callArgs.repo).toBe("octocat/hello-world");
     expect(callArgs.label).toBe("");
     // state should be a numeric enum value from issueStateToEnum("open")
@@ -605,7 +605,7 @@ describe("task_import_github", () => {
 
     await getTool("task_import_github").handler(
       {
-        projectId: "proj-1",
+        workspaceId: "proj-1",
         repo: "octocat/hello-world",
         label: "bug",
         state: "closed",
@@ -628,7 +628,7 @@ describe("task_import_github", () => {
     );
 
     const result = await getTool("task_import_github").handler(
-      { projectId: "proj-1", repo: "octocat/hello-world" },
+      { workspaceId: "proj-1", repo: "octocat/hello-world" },
       mockClient,
     );
 

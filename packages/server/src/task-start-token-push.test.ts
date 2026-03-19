@@ -51,17 +51,17 @@ vi.mock("./env-registry.js", () => ({
   markBootstrapped: vi.fn(),
 }));
 
-vi.mock("./project-store.js", () => ({
-  listProjects: vi.fn(() => []),
-  getProject: vi.fn(() => ({
+vi.mock("./workspace-store.js", () => ({
+  listWorkspaces: vi.fn(() => []),
+  getWorkspace: vi.fn(() => ({
     id: "proj-1",
-    name: "Test Project",
+    name: "Test Workspace",
     defaultEnvironmentId: "env-1",
     status: "active",
     createdAt: new Date().toISOString(),
   })),
-  createProject: vi.fn(),
-  archiveProject: vi.fn(),
+  createWorkspace: vi.fn(),
+  archiveWorkspace: vi.fn(),
 }));
 
 vi.mock("./task-store.js", () => ({
@@ -195,7 +195,7 @@ function makeMockConnection() {
 function makeMockTask(overrides: Record<string, unknown> = {}) {
   return {
     id: "task-1",
-    projectId: "proj-1",
+    workspaceId: "proj-1",
     title: "Test task",
     description: "A test",
     status: "not_started",

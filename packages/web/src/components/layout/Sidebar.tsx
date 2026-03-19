@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, type JSX } from "react";
-import { ProjectList } from "../lists/ProjectList.js";
+import { WorkspaceList } from "../lists/WorkspaceList.js";
 import styles from "./Sidebar.module.scss";
 
 /** Default sidebar width in pixels. */
@@ -36,7 +36,7 @@ function saveWidth(width: number): void {
   }
 }
 
-/** Left sidebar showing the permanent project/task tree. */
+/** Left sidebar showing the permanent workspace/task tree. */
 export function Sidebar(): JSX.Element {
   const [width] = useState<number>(loadWidth);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -69,7 +69,7 @@ export function Sidebar(): JSX.Element {
     <div className={styles.container} ref={containerRef} data-testid="sidebar" style={{ width }}>
       {/* Content */}
       <div className={styles.content}>
-        <ProjectList />
+        <WorkspaceList />
       </div>
     </div>
   );

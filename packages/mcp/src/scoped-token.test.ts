@@ -13,7 +13,7 @@ const FLIP_LOWEST_BIT_MASK = 0x01;
 
 const CLAIMS = {
   sub: "task-1",
-  pid: "project-1",
+  pid: "workspace-1",
   per: "persona-1",
   sid: "session-1",
 };

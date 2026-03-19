@@ -25,7 +25,7 @@ import type {
   SessionEvent,
   FindingData,
   TaskData,
-  Project,
+  Workspace,
   TokenInfo,
   PersonaData,
   CredentialProviderConfig,
@@ -34,7 +34,7 @@ import {
   MOCK_ENVIRONMENTS,
   MOCK_SESSIONS,
   MOCK_EVENTS,
-  MOCK_PROJECTS,
+  MOCK_WORKSPACES,
   MOCK_TASKS,
   MOCK_FINDINGS,
   MOCK_TOKENS,
@@ -67,7 +67,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
   const [sessions, setSessions] = useState<Session[]>(MOCK_SESSIONS);
   const [events, setEvents] = useState<SessionEvent[]>(MOCK_EVENTS);
   const [lastSpawnedId, setLastSpawnedId] = useState<string | undefined>(undefined);
-  const [projects, setProjects] = useState<Project[]>(MOCK_PROJECTS);
+  const [workspaces, setWorkspaces] = useState<Workspace[]>(MOCK_WORKSPACES);
   const [tasks, setTasks] = useState<TaskData[]>(MOCK_TASKS);
   const [findings, setFindings] = useState<FindingData[]>(MOCK_FINDINGS);
   const [tokens, setTokens] = useState<TokenInfo[]>(MOCK_TOKENS);
@@ -313,12 +313,12 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
     setEvents([]);
   }, []);
 
-  /** Creates a new project and adds it to state. */
-  const createProject: UseGrackleSocketResult["createProject"] = useCallback(
+  /** Creates a new workspace and adds it to state. */
+  const createWorkspace: UseGrackleSocketResult["createWorkspace"] = useCallback(
     (name: string, description?: string, repoUrl?: string, defaultEnvironmentId?: string, defaultPersonaId?: string) => {
-      console.log("[MockGrackle] createProject", { name, description });
+      console.log("[MockGrackle] createWorkspace", { name, description });
 
-      const newProject: Project = {
+      const newWorkspace: Workspace = {
         id: nextId("proj"),
         name,
         description: description || "",
@@ -332,17 +332,17 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
         updatedAt: new Date().toISOString(),
       };
 
-      setProjects((prev) => [...prev, newProject]);
+      setWorkspaces((prev) => [...prev, newWorkspace]);
     },
     [nextId],
   );
 
-  /** Sets a project's status to "archived". */
-  const archiveProject: UseGrackleSocketResult["archiveProject"] = useCallback(
-    (projectId: string) => {
-      console.log("[MockGrackle] archiveProject", projectId);
-      setProjects((prev) =>
-        prev.map((p) => (p.id === projectId ? { ...p, status: "archived" } : p)),
+  /** Sets a workspace's status to "archived". */
+  const archiveWorkspace: UseGrackleSocketResult["archiveWorkspace"] = useCallback(
+    (workspaceId: string) => {
+      console.log("[MockGrackle] archiveWorkspace", workspaceId);
+      setWorkspaces((prev) =>
+        prev.map((p) => (p.id === workspaceId ? { ...p, status: "archived" } : p)),
       );
     },
     [],
@@ -350,8 +350,8 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
 
   /** No-op — tasks are already in state from initial load. */
   const loadTasks: UseGrackleSocketResult["loadTasks"] = useCallback(
-    (projectId: string) => {
-      console.log("[MockGrackle] loadTasks", projectId);
+    (workspaceId: string) => {
+      console.log("[MockGrackle] loadTasks", workspaceId);
     },
     [],
   );
@@ -359,7 +359,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
   /** Creates a new task and adds it to state. */
   const createTask: UseGrackleSocketResult["createTask"] = useCallback(
     (
-      projectId: string,
+      workspaceId: string,
       title: string,
       description?: string,
       dependsOn?: string[],
@@ -369,11 +369,11 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       onSuccess?: () => void,
       _onError?: (message: string) => void,
     ) => {
-      console.log("[MockGrackle] createTask", { projectId, title, parentTaskId });
+      console.log("[MockGrackle] createTask", { workspaceId, title, parentTaskId });
 
       setTasks((prev) => {
-        const projectTasks = prev.filter((t) => t.projectId === projectId);
-        const maxSort = projectTasks.reduce((max, t) => Math.max(max, t.sortOrder), 0);
+        const wsTasks = prev.filter((t) => t.workspaceId === workspaceId);
+        const maxSort = wsTasks.reduce((max, t) => Math.max(max, t.sortOrder), 0);
         const parent = parentTaskId ? prev.find((t) => t.id === parentTaskId) : undefined;
         if (parentTaskId && !parent) {
           console.warn("[MockGrackle] Parent task not found:", parentTaskId);
@@ -387,7 +387,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
 
         const newTask: TaskData = {
           id: nextId("task"),
-          projectId,
+          workspaceId,
           title,
           description: description || "",
           status: "not_started",
@@ -680,11 +680,11 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
     [],
   );
 
-  /** Filters findings by projectId. */
+  /** Filters findings by workspaceId. */
   const loadFindings: UseGrackleSocketResult["loadFindings"] = useCallback(
-    (projectId: string) => {
-      console.log("[MockGrackle] loadFindings", projectId);
-      setFindings(MOCK_FINDINGS.filter((f) => f.projectId === projectId));
+    (workspaceId: string) => {
+      console.log("[MockGrackle] loadFindings", workspaceId);
+      setFindings(MOCK_FINDINGS.filter((f) => f.workspaceId === workspaceId));
     },
     [],
   );
@@ -692,17 +692,17 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
   /** Adds a new finding to state. */
   const postFinding: UseGrackleSocketResult["postFinding"] = useCallback(
     (
-      projectId: string,
+      workspaceId: string,
       title: string,
       content: string,
       category?: string,
       tags?: string[],
     ) => {
-      console.log("[MockGrackle] postFinding", { projectId, title });
+      console.log("[MockGrackle] postFinding", { workspaceId, title });
 
       const newFinding: FindingData = {
         id: nextId("find"),
-        projectId,
+        workspaceId,
         taskId: "",
         sessionId: "",
         category: category || "general",
@@ -786,7 +786,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       events,
       eventsDropped: 0,
       lastSpawnedId,
-      projects,
+      workspaces,
       tasks,
       findings,
       tokens,
@@ -799,13 +799,13 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       refresh,
       loadSessionEvents,
       clearEvents,
-      createProject,
-      archiveProject,
-      updateProject: (projectId: string, fields: { name?: string; description?: string; repoUrl?: string; defaultEnvironmentId?: string; worktreeBasePath?: string; useWorktrees?: boolean; defaultPersonaId?: string }) => {
-        console.log("[MockGrackle] updateProject", { projectId, ...fields });
-        setProjects((prev) =>
+      createWorkspace,
+      archiveWorkspace,
+      updateWorkspace: (workspaceId: string, fields: { name?: string; description?: string; repoUrl?: string; defaultEnvironmentId?: string; worktreeBasePath?: string; useWorktrees?: boolean; defaultPersonaId?: string }) => {
+        console.log("[MockGrackle] updateWorkspace", { workspaceId, ...fields });
+        setWorkspaces((prev) =>
           prev.map((p) => {
-            if (p.id !== projectId) {
+            if (p.id !== workspaceId) {
               return p;
             }
             return {
@@ -850,7 +850,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       codespaceCreating: false,
       listCodespaces: () => { },
       createCodespace: () => { },
-      projectCreating: false,
+      workspaceCreating: false,
       taskStartingId: undefined,
       personas,
       createPersona: (name: string, description: string, systemPrompt: string, runtime?: string, model?: string, maxTurns?: number, type?: string, script?: string) => {
@@ -916,7 +916,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       sessions,
       events,
       lastSpawnedId,
-      projects,
+      workspaces,
       tasks,
       findings,
       tokens,
@@ -930,8 +930,8 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       refresh,
       loadSessionEvents,
       clearEvents,
-      createProject,
-      archiveProject,
+      createWorkspace,
+      archiveWorkspace,
       loadTasks,
       createTask,
       startTask,

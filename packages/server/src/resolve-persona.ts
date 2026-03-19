@@ -28,7 +28,7 @@ export interface ResolvedPersona {
 
 /**
  * Resolve a persona using the cascade:
- *   request persona → task default → project default → app default → error
+ *   request persona → task default → workspace default → app default → error
  *
  * The first non-empty persona ID in the cascade is used to look up the persona.
  * Throws if no persona ID is found at any level, or if the resolved ID does not exist.
@@ -36,18 +36,18 @@ export interface ResolvedPersona {
 export function resolvePersona(
   requestPersonaId: string,
   taskDefaultPersonaId?: string,
-  projectDefaultPersonaId?: string,
+  workspaceDefaultPersonaId?: string,
 ): ResolvedPersona {
   const personaId =
     requestPersonaId ||
     taskDefaultPersonaId ||
-    projectDefaultPersonaId ||
+    workspaceDefaultPersonaId ||
     settingsStore.getSetting("default_persona_id") ||
     "";
 
   if (!personaId) {
     throw new Error(
-      "No persona configured. Set a default persona at the app, project, or task level, or specify one explicitly.",
+      "No persona configured. Set a default persona at the app, workspace, or task level, or specify one explicitly.",
     );
   }
 

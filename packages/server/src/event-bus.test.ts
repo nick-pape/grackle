@@ -37,18 +37,18 @@ describe("event-bus", () => {
 
   describe("emit()", () => {
     it("returns a well-formed GrackleEvent", () => {
-      const event = emit("project.created", { projectId: "p1" });
+      const event = emit("workspace.created", { workspaceId: "p1" });
       expect(event.id).toBeDefined();
       expect(event.id.length).toBeGreaterThan(0);
-      expect(event.type).toBe("project.created");
+      expect(event.type).toBe("workspace.created");
       expect(event.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
-      expect(event.payload).toEqual({ projectId: "p1" });
+      expect(event.payload).toEqual({ workspaceId: "p1" });
     });
 
     it("generates unique IDs for rapid emits", () => {
       const events: GrackleEvent[] = [];
       for (let i = 0; i < 10; i++) {
-        events.push(emit("task.created", { taskId: `t${i}`, projectId: "p1" }));
+        events.push(emit("task.created", { taskId: `t${i}`, workspaceId: "p1" }));
       }
       const ids = new Set(events.map((e) => e.id));
       expect(ids.size).toBe(10);
@@ -74,7 +74,7 @@ describe("event-bus", () => {
       const received: GrackleEvent[] = [];
       subscribe((event) => { received.push(event); });
 
-      emit("task.updated", { taskId: "t1", projectId: "p1" });
+      emit("task.updated", { taskId: "t1", workspaceId: "p1" });
 
       // Wait for queueMicrotask to fire
       await new Promise((r) => setTimeout(r, 10));
@@ -88,7 +88,7 @@ describe("event-bus", () => {
       subscribe((e) => { received1.push(e); });
       subscribe((e) => { received2.push(e); });
 
-      emit("project.archived", { projectId: "p1" });
+      emit("workspace.archived", { workspaceId: "p1" });
 
       await new Promise((r) => setTimeout(r, 10));
       expect(received1).toHaveLength(1);
@@ -99,12 +99,12 @@ describe("event-bus", () => {
       const received: GrackleEvent[] = [];
       const unsub = subscribe((e) => { received.push(e); });
 
-      emit("task.created", { taskId: "t1", projectId: "p1" });
+      emit("task.created", { taskId: "t1", workspaceId: "p1" });
       await new Promise((r) => setTimeout(r, 10));
       expect(received).toHaveLength(1);
 
       unsub();
-      emit("task.deleted", { taskId: "t1", projectId: "p1" });
+      emit("task.deleted", { taskId: "t1", workspaceId: "p1" });
       await new Promise((r) => setTimeout(r, 10));
       expect(received).toHaveLength(1);
     });
@@ -114,7 +114,7 @@ describe("event-bus", () => {
       subscribe(() => { throw new Error("boom"); });
       subscribe((e) => { received.push(e); });
 
-      emit("finding.posted", { projectId: "p1", findingId: "f1" });
+      emit("finding.posted", { workspaceId: "p1", findingId: "f1" });
 
       await new Promise((r) => setTimeout(r, 10));
       expect(received).toHaveLength(1);

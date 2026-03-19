@@ -13,7 +13,7 @@ import {
 import * as streamHub from "./stream-hub.js";
 import * as tokenBroker from "./token-broker.js";
 import * as credentialProviders from "./credential-providers.js";
-import * as projectStore from "./project-store.js";
+import * as workspaceStore from "./workspace-store.js";
 import * as taskStore from "./task-store.js";
 import * as findingStore from "./finding-store.js";
 import * as personaStore from "./persona-store.js";
@@ -245,16 +245,16 @@ async function startTaskSession(
   task: taskStore.TaskRow,
   options?: { personaId?: string; environmentId?: string; notes?: string },
 ): Promise<string | undefined> {
-  const project = task.projectId ? projectStore.getProject(task.projectId) : undefined;
-  if (task.projectId && !project) {
+  const workspace = task.workspaceId ? workspaceStore.getWorkspace(task.workspaceId) : undefined;
+  if (task.workspaceId && !workspace) {
     logger.warn(
       { taskId: task.id },
-      "startTaskSession failed: project not found",
+      "startTaskSession failed: workspace not found",
     );
-    return `Project not found: ${task.projectId}`;
+    return `Workspace not found: ${task.workspaceId}`;
   }
 
-  const environmentId = options?.environmentId || project?.defaultEnvironmentId || "";
+  const environmentId = options?.environmentId || workspace?.defaultEnvironmentId || "";
   const env = envRegistry.getEnvironment(environmentId);
   if (!env) {
     logger.warn(
@@ -271,10 +271,10 @@ async function startTaskSession(
     return undefined;
   }
 
-  // Resolve persona via cascade (request → task → project → app default)
+  // Resolve persona via cascade (request → task → workspace → app default)
   let resolved;
   try {
-    resolved = resolvePersona(options?.personaId || "", task.defaultPersonaId, project?.defaultPersonaId || "");
+    resolved = resolvePersona(options?.personaId || "", task.defaultPersonaId, workspace?.defaultPersonaId || "");
   } catch (err) {
     return (err as Error).message;
   }
@@ -308,7 +308,7 @@ async function startTaskSession(
   emit("task.started", {
     taskId: freshTask.id,
     sessionId,
-    projectId: freshTask.projectId || "",
+    workspaceId: freshTask.workspaceId || "",
   });
 
   // Re-push stored tokens + provider credentials (scoped to runtime) so they're fresh for this session.
@@ -339,11 +339,11 @@ async function startTaskSession(
   const mcpDialHost = toDialableHost(process.env.GRACKLE_HOST || "127.0.0.1");
   const mcpUrl = `http://${mcpDialHost}:${mcpPort}/mcp`;
   const mcpToken = createScopedToken(
-    { sub: freshTask.id, pid: freshTask.projectId || "", per: resolved.personaId, sid: sessionId },
+    { sub: freshTask.id, pid: freshTask.workspaceId || "", per: resolved.personaId, sid: sessionId },
     loadOrCreateApiKey(),
   );
 
-  const useWorktrees = project?.useWorktrees ?? false;
+  const useWorktrees = workspace?.useWorktrees ?? false;
   const powerlineReq = create(powerline.SpawnRequestSchema, {
     sessionId,
     runtime,
@@ -352,10 +352,10 @@ async function startTaskSession(
     maxTurns,
     branch: freshTask.branch,
     worktreeBasePath: freshTask.branch && useWorktrees
-      ? (project?.worktreeBasePath || process.env.GRACKLE_WORKTREE_BASE || "/workspace")
+      ? (workspace?.worktreeBasePath || process.env.GRACKLE_WORKTREE_BASE || "/workspace")
       : "",
     systemContext,
-    projectId: freshTask.projectId ?? undefined,
+    workspaceId: freshTask.workspaceId ?? undefined,
     taskId: freshTask.id,
     mcpServersJson,
     mcpUrl,
@@ -365,7 +365,7 @@ async function startTaskSession(
   processEventStream(conn.client.spawn(powerlineReq), {
     sessionId,
     logPath,
-    projectId: freshTask.projectId ?? undefined,
+    workspaceId: freshTask.workspaceId ?? undefined,
     taskId: freshTask.id,
   });
 
@@ -689,7 +689,7 @@ async function handleMessage(
       if (session.taskId) {
         const task = taskStore.getTask(session.taskId);
         if (task) {
-          emit("task.updated", { taskId: task.id, projectId: task.projectId || "" });
+          emit("task.updated", { taskId: task.id, workspaceId: task.workspaceId || "" });
         }
       }
       break;
@@ -727,7 +727,7 @@ async function handleMessage(
       // Mark task complete (same as "complete_task" handler)
       taskStore.markTaskComplete(taskId, TASK_STATUS.COMPLETE);
       const stoppedTask = taskStore.getTask(taskId);
-      const unblocked = stoppedTask?.projectId ? taskStore.checkAndUnblock(stoppedTask.projectId) : [];
+      const unblocked = stoppedTask?.workspaceId ? taskStore.checkAndUnblock(stoppedTask.workspaceId) : [];
       sendWs(ws, {
         type: "task_completed",
         payload: {
@@ -736,7 +736,7 @@ async function handleMessage(
         },
       });
       if (stoppedTask) {
-        emit("task.completed", { taskId, projectId: stoppedTask.projectId || "" });
+        emit("task.completed", { taskId, workspaceId: stoppedTask.workspaceId || "" });
       }
       break;
     }
@@ -757,14 +757,14 @@ async function handleMessage(
       break;
     }
 
-    // ─── Projects ──────────────────────────────────────────
+    // ─── Workspaces ────────────────────────────────────────
 
-    case "list_projects": {
-      const rows = projectStore.listProjects();
+    case "list_workspaces": {
+      const rows = workspaceStore.listWorkspaces();
       sendWs(ws, {
-        type: "projects",
+        type: "workspaces",
         payload: {
-          projects: rows.map((r) => ({
+          workspaces: rows.map((r) => ({
             id: r.id,
             name: r.name,
             description: r.description,
@@ -782,27 +782,27 @@ async function handleMessage(
       break;
     }
 
-    case "create_project": {
+    case "create_workspace": {
       const name = msg.payload?.name as string;
       if (!name) {
         sendWs(ws, { type: "error", payload: { message: "name required" } });
         return;
       }
-      const baseProjectId = slugify(name) || uuid().slice(0, 8);
-      let id = baseProjectId;
+      const baseWorkspaceId = slugify(name) || uuid().slice(0, 8);
+      let id = baseWorkspaceId;
       for (
         let attempt = 0;
-        attempt < 10 && projectStore.getProject(id);
+        attempt < 10 && workspaceStore.getWorkspace(id);
         attempt++
       ) {
-        id = `${baseProjectId}-${uuid().slice(0, 4)}`;
+        id = `${baseWorkspaceId}-${uuid().slice(0, 4)}`;
       }
-      if (projectStore.getProject(id)) {
+      if (workspaceStore.getWorkspace(id)) {
         id = uuid();
       }
       // useWorktrees defaults to true when not specified
       const createUseWorktrees = (msg.payload?.useWorktrees as boolean | undefined) ?? true;
-      projectStore.createProject(
+      workspaceStore.createWorkspace(
         id,
         name,
         (msg.payload?.description as string) || "",
@@ -812,31 +812,31 @@ async function handleMessage(
         typeof msg.payload?.worktreeBasePath === "string" ? msg.payload.worktreeBasePath.trim() : "",
         (msg.payload?.defaultPersonaId as string) || "",
       );
-      emit("project.created", { projectId: id });
+      emit("workspace.created", { workspaceId: id });
       break;
     }
 
-    case "archive_project": {
-      const projectId = msg.payload?.projectId as string;
-      if (projectId) projectStore.archiveProject(projectId);
-      emit("project.archived", { projectId });
+    case "archive_workspace": {
+      const workspaceId = msg.payload?.workspaceId as string;
+      if (workspaceId) workspaceStore.archiveWorkspace(workspaceId);
+      emit("workspace.archived", { workspaceId });
       break;
     }
 
-    case "update_project": {
-      const projectId = msg.payload?.projectId as string;
-      if (!projectId) {
-        sendWs(ws, { type: "error", payload: { message: "projectId required" } });
+    case "update_workspace": {
+      const workspaceId = msg.payload?.workspaceId as string;
+      if (!workspaceId) {
+        sendWs(ws, { type: "error", payload: { message: "workspaceId required" } });
         return;
       }
-      const existing = projectStore.getProject(projectId);
+      const existing = workspaceStore.getWorkspace(workspaceId);
       if (!existing) {
-        sendWs(ws, { type: "error", payload: { message: `Project not found: ${projectId}` } });
+        sendWs(ws, { type: "error", payload: { message: `Workspace not found: ${workspaceId}` } });
         return;
       }
       const nameVal = typeof msg.payload?.name === "string" ? msg.payload.name : undefined;
       if (nameVal?.trim() === "") {
-        sendWs(ws, { type: "error", payload: { message: "Project name cannot be empty" } });
+        sendWs(ws, { type: "error", payload: { message: "Workspace name cannot be empty" } });
         return;
       }
       const descVal = typeof msg.payload?.description === "string" ? msg.payload.description : undefined;
@@ -849,7 +849,7 @@ async function handleMessage(
       const worktreesVal = typeof msg.payload?.useWorktrees === "boolean" ? msg.payload.useWorktrees as boolean : undefined;
       const worktreeBasePathVal = typeof msg.payload?.worktreeBasePath === "string" ? msg.payload.worktreeBasePath as string : undefined;
       const defaultPersonaIdVal = typeof msg.payload?.defaultPersonaId === "string" ? msg.payload.defaultPersonaId as string : undefined;
-      projectStore.updateProject(projectId, {
+      workspaceStore.updateWorkspace(workspaceId, {
         name: nameVal !== undefined ? nameVal.trim() : undefined,
         description: descVal,
         repoUrl: repoVal,
@@ -858,7 +858,7 @@ async function handleMessage(
         worktreeBasePath: worktreeBasePathVal,
         defaultPersonaId: defaultPersonaIdVal,
       });
-      emit("project.updated", { projectId });
+      emit("workspace.updated", { workspaceId });
       break;
     }
 
@@ -1034,8 +1034,8 @@ async function handleMessage(
     // ─── Tasks ─────────────────────────────────────────────
 
     case "list_tasks": {
-      const projectId = (msg.payload?.projectId as string) || undefined;
-      const rows = taskStore.listTasks(projectId, {
+      const workspaceId = (msg.payload?.workspaceId as string) || undefined;
+      const rows = taskStore.listTasks(workspaceId, {
         search: (msg.payload?.search as string) || undefined,
         status: (msg.payload?.status as string) || undefined,
       });
@@ -1054,13 +1054,13 @@ async function handleMessage(
       sendWs(ws, {
         type: "tasks",
         payload: {
-          projectId,
+          workspaceId,
           tasks: rows.map((r) => {
             const taskSessions = sessionsByTask.get(r.id) ?? [];
             const computed = computeTaskStatus(r.status, taskSessions);
             return {
               id: r.id,
-              projectId: r.projectId ?? undefined,
+              workspaceId: r.workspaceId ?? undefined,
               title: r.title,
               description: r.description,
               status: computed.status,
@@ -1082,7 +1082,7 @@ async function handleMessage(
     }
 
     case "create_task": {
-      const projectId = (msg.payload?.projectId as string) || undefined;
+      const workspaceId = (msg.payload?.workspaceId as string) || undefined;
       const title = msg.payload?.title as string;
       const requestId =
         typeof msg.payload?.requestId === "string"
@@ -1095,13 +1095,13 @@ async function handleMessage(
         });
         return;
       }
-      let project: ReturnType<typeof projectStore.getProject>;
-      if (projectId) {
-        project = projectStore.getProject(projectId);
-        if (!project) {
+      let workspace: ReturnType<typeof workspaceStore.getWorkspace>;
+      if (workspaceId) {
+        workspace = workspaceStore.getWorkspace(workspaceId);
+        if (!workspace) {
           sendWs(ws, {
             type: "create_task_error",
-            payload: { message: `Project not found: ${projectId}`, requestId },
+            payload: { message: `Workspace not found: ${workspaceId}`, requestId },
           });
           return;
         }
@@ -1117,16 +1117,16 @@ async function handleMessage(
         const id = uuid().slice(0, 8);
         taskStore.createTask(
           id,
-          projectId,
+          workspaceId,
           title,
           (msg.payload?.description as string | undefined) || "",
           (msg.payload?.dependsOn as string[] | undefined) || [],
-          project ? slugify(project.name) : "",
+          workspace ? slugify(workspace.name) : "",
           parentTaskId,
           canDecompose,
           (msg.payload?.defaultPersonaId as string) || "",
         );
-        emit("task.created", { taskId: id, projectId, requestId });
+        emit("task.created", { taskId: id, workspaceId, requestId });
       } catch (error: unknown) {
         const message =
           error instanceof Error ? error.message : "Failed to create task";
@@ -1179,13 +1179,13 @@ async function handleMessage(
         sessionStore.setSessionTask(lateBindSessionId, updateTaskId);
 
         try {
-          processorRegistry.lateBind(lateBindSessionId, updateTaskId, existingTask.projectId || undefined);
+          processorRegistry.lateBind(lateBindSessionId, updateTaskId, existingTask.workspaceId || undefined);
         } catch (err) {
           sendWs(ws, { type: "error", payload: { message: String(err) } });
           return;
         }
 
-        emit("task.started", { taskId: updateTaskId, sessionId: lateBindSessionId, projectId: existingTask.projectId || "" });
+        emit("task.started", { taskId: updateTaskId, sessionId: lateBindSessionId, workspaceId: existingTask.workspaceId || "" });
         break;
       }
 
@@ -1224,7 +1224,7 @@ async function handleMessage(
         updatedDependsOn,
         updatedDefaultPersonaId,
       );
-      emit("task.updated", { taskId: updateTaskId, projectId: existingTask.projectId || "" });
+      emit("task.updated", { taskId: updateTaskId, workspaceId: existingTask.workspaceId || "" });
       break;
     }
 
@@ -1278,7 +1278,7 @@ async function handleMessage(
 
       taskStore.markTaskComplete(taskId, TASK_STATUS.COMPLETE);
       const task = taskStore.getTask(taskId);
-      const unblocked = task?.projectId ? taskStore.checkAndUnblock(task.projectId) : [];
+      const unblocked = task?.workspaceId ? taskStore.checkAndUnblock(task.workspaceId) : [];
       sendWs(ws, {
         type: "task_completed",
         payload: {
@@ -1287,7 +1287,7 @@ async function handleMessage(
         },
       });
       if (task) {
-        emit("task.completed", { taskId, projectId: task.projectId || "" });
+        emit("task.completed", { taskId, workspaceId: task.workspaceId || "" });
       }
       break;
     }
@@ -1344,11 +1344,11 @@ async function handleMessage(
       processEventStream(conn.client.resume(powerlineReq), {
         sessionId: latestSession.id,
         logPath,
-        projectId: task.projectId ?? undefined,
+        workspaceId: task.workspaceId ?? undefined,
         taskId: task.id,
       });
 
-      emit("task.started", { taskId: task.id, sessionId: latestSession.id, projectId: task.projectId || "" });
+      emit("task.started", { taskId: task.id, sessionId: latestSession.id, workspaceId: task.workspaceId || "" });
       break;
     }
 
@@ -1398,7 +1398,7 @@ async function handleMessage(
         sendWs(ws, { type: "error", payload: { message: `Failed to delete task ${taskId}: no rows affected` } });
         return;
       }
-      emit("task.deleted", { taskId, projectId: deletedTask.projectId || "" });
+      emit("task.deleted", { taskId, workspaceId: deletedTask.workspaceId || "" });
       break;
     }
 
@@ -1433,10 +1433,10 @@ async function handleMessage(
     // ─── Findings ──────────────────────────────────────────
 
     case "list_findings": {
-      const projectId = msg.payload?.projectId as string;
-      if (!projectId) return;
+      const workspaceId = msg.payload?.workspaceId as string;
+      if (!workspaceId) return;
       const rows = findingStore.queryFindings(
-        projectId,
+        workspaceId,
         (msg.payload?.categories as string[] | undefined) || undefined,
         (msg.payload?.tags as string[] | undefined) || undefined,
         (msg.payload?.limit as number | undefined) || undefined,
@@ -1444,10 +1444,10 @@ async function handleMessage(
       sendWs(ws, {
         type: "findings",
         payload: {
-          projectId,
+          workspaceId,
           findings: rows.map((r) => ({
             id: r.id,
-            projectId: r.projectId,
+            workspaceId: r.workspaceId,
             taskId: r.taskId,
             sessionId: r.sessionId,
             category: r.category,
@@ -1462,19 +1462,19 @@ async function handleMessage(
     }
 
     case "post_finding": {
-      const projectId = msg.payload?.projectId as string;
+      const workspaceId = msg.payload?.workspaceId as string;
       const title = msg.payload?.title as string;
-      if (!projectId || !title) {
+      if (!workspaceId || !title) {
         sendWs(ws, {
           type: "error",
-          payload: { message: "projectId and title required" },
+          payload: { message: "workspaceId and title required" },
         });
         return;
       }
       const id = uuid().slice(0, 8);
       findingStore.postFinding(
         id,
-        projectId,
+        workspaceId,
         (msg.payload?.taskId as string | undefined) || "",
         (msg.payload?.sessionId as string | undefined) || "",
         (msg.payload?.category as string | undefined) || "general",
@@ -1482,7 +1482,7 @@ async function handleMessage(
         (msg.payload?.content as string | undefined) || "",
         (msg.payload?.tags as string[] | undefined) || [],
       );
-      sendWs(ws, { type: "finding_posted", payload: { id, projectId } });
+      sendWs(ws, { type: "finding_posted", payload: { id, workspaceId } });
       break;
     }
 
@@ -1501,8 +1501,8 @@ async function handleMessage(
         return;
       }
 
-      const environmentId = task.projectId
-        ? projectStore.getProject(task.projectId)?.defaultEnvironmentId
+      const environmentId = task.workspaceId
+        ? workspaceStore.getWorkspace(task.workspaceId)?.defaultEnvironmentId
         : undefined;
       if (!environmentId) {
         sendWs(ws, {

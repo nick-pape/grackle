@@ -6,13 +6,13 @@ vi.mock("./db.js", async () => {
 });
 
 // Import modules AFTER mock is set up
-import * as projectStore from "./project-store.js";
+import * as workspaceStore from "./workspace-store.js";
 import { sqlite } from "./test-db.js";
 
 /** Apply the schema DDL to the in-memory database. */
 function applySchema(): void {
   sqlite.exec(`
-    CREATE TABLE IF NOT EXISTS projects (
+    CREATE TABLE IF NOT EXISTS workspaces (
       id                TEXT PRIMARY KEY,
       name              TEXT NOT NULL,
       description       TEXT NOT NULL DEFAULT '',
@@ -28,79 +28,79 @@ function applySchema(): void {
   `);
 }
 
-describe("project-store", () => {
+describe("workspace-store", () => {
   beforeEach(() => {
-    sqlite.exec("DROP TABLE IF EXISTS projects");
+    sqlite.exec("DROP TABLE IF EXISTS workspaces");
     applySchema();
   });
 
-  it("creates and retrieves a project", () => {
-    projectStore.createProject("p1", "My Project", "A description", "https://github.com/acme/repo", "env-1");
-    const p = projectStore.getProject("p1");
+  it("creates and retrieves a workspace", () => {
+    workspaceStore.createWorkspace("p1", "My Workspace", "A description", "https://github.com/acme/repo", "env-1");
+    const p = workspaceStore.getWorkspace("p1");
     expect(p).toBeDefined();
-    expect(p!.name).toBe("My Project");
+    expect(p!.name).toBe("My Workspace");
     expect(p!.description).toBe("A description");
     expect(p!.repoUrl).toBe("https://github.com/acme/repo");
     expect(p!.defaultEnvironmentId).toBe("env-1");
     expect(p!.status).toBe("active");
   });
 
-  it("lists only active projects", () => {
-    projectStore.createProject("p1", "Active", "", "", "");
-    projectStore.createProject("p2", "Archived", "", "", "");
-    projectStore.archiveProject("p2");
-    const list = projectStore.listProjects();
+  it("lists only active workspaces", () => {
+    workspaceStore.createWorkspace("p1", "Active", "", "", "");
+    workspaceStore.createWorkspace("p2", "Archived", "", "", "");
+    workspaceStore.archiveWorkspace("p2");
+    const list = workspaceStore.listWorkspaces();
     expect(list).toHaveLength(1);
     expect(list[0].id).toBe("p1");
   });
 
-  it("archives a project", () => {
-    projectStore.createProject("p1", "Project", "", "", "");
-    projectStore.archiveProject("p1");
-    const p = projectStore.getProject("p1");
+  it("archives a workspace", () => {
+    workspaceStore.createWorkspace("p1", "Workspace", "", "", "");
+    workspaceStore.archiveWorkspace("p1");
+    const p = workspaceStore.getWorkspace("p1");
     expect(p!.status).toBe("archived");
   });
 
-  it("updates project name", () => {
-    projectStore.createProject("p1", "Old Name", "", "", "");
-    const updated = projectStore.updateProject("p1", { name: "New Name" });
+  it("updates workspace name", () => {
+    workspaceStore.createWorkspace("p1", "Old Name", "", "", "");
+    const updated = workspaceStore.updateWorkspace("p1", { name: "New Name" });
     expect(updated).toBeDefined();
     expect(updated!.name).toBe("New Name");
   });
 
-  it("updates project description", () => {
-    projectStore.createProject("p1", "Name", "Old desc", "", "");
-    const updated = projectStore.updateProject("p1", { description: "New description" });
+  it("updates workspace description", () => {
+    workspaceStore.createWorkspace("p1", "Name", "Old desc", "", "");
+    const updated = workspaceStore.updateWorkspace("p1", { description: "New description" });
     expect(updated!.description).toBe("New description");
   });
 
   it("clears description with empty string", () => {
-    projectStore.createProject("p1", "Name", "Has desc", "", "");
-    const updated = projectStore.updateProject("p1", { description: "" });
+    workspaceStore.createWorkspace("p1", "Name", "Has desc", "", "");
+    const updated = workspaceStore.updateWorkspace("p1", { description: "" });
     expect(updated!.description).toBe("");
   });
 
   it("updates repo URL", () => {
-    projectStore.createProject("p1", "Name", "", "", "");
-    const updated = projectStore.updateProject("p1", { repoUrl: "https://github.com/new/repo" });
+    workspaceStore.createWorkspace("p1", "Name", "", "", "");
+    const updated = workspaceStore.updateWorkspace("p1", { repoUrl: "https://github.com/new/repo" });
     expect(updated!.repoUrl).toBe("https://github.com/new/repo");
   });
 
   it("clears repo URL with empty string", () => {
-    projectStore.createProject("p1", "Name", "", "https://old.url", "");
-    const updated = projectStore.updateProject("p1", { repoUrl: "" });
+    workspaceStore.createWorkspace("p1", "Name", "", "https://old.url", "");
+    const updated = workspaceStore.updateWorkspace("p1", { repoUrl: "" });
     expect(updated!.repoUrl).toBe("");
   });
 
   it("updates default environment ID", () => {
-    projectStore.createProject("p1", "Name", "", "", "");
-    const updated = projectStore.updateProject("p1", { defaultEnvironmentId: "env-2" });
+    workspaceStore.createWorkspace("p1", "Name", "", "", "");
+    const updated = workspaceStore.updateWorkspace("p1", { defaultEnvironmentId: "env-2" });
     expect(updated!.defaultEnvironmentId).toBe("env-2");
   });
 
   it("partial update leaves other fields unchanged", () => {
-    projectStore.createProject("p1", "Name", "desc", "https://repo.url", "env-1");
-    const updated = projectStore.updateProject("p1", { name: "New Name" });
+    workspaceStore.createWorkspace("p1", "Name", "desc", "https://repo.url", "env-1");
+    const updated = workspaceStore.updateWorkspace("p1", { name: "New Name" });
     expect(updated!.name).toBe("New Name");
     expect(updated!.description).toBe("desc");
     expect(updated!.repoUrl).toBe("https://repo.url");
@@ -108,8 +108,8 @@ describe("project-store", () => {
   });
 
   it("updates multiple fields at once", () => {
-    projectStore.createProject("p1", "Name", "", "", "");
-    const updated = projectStore.updateProject("p1", {
+    workspaceStore.createWorkspace("p1", "Name", "", "", "");
+    const updated = workspaceStore.updateWorkspace("p1", {
       name: "Updated",
       description: "New desc",
       repoUrl: "https://new.url",
@@ -121,90 +121,90 @@ describe("project-store", () => {
     expect(updated!.defaultEnvironmentId).toBe("env-3");
   });
 
-  it("updateProject bumps updatedAt", () => {
-    projectStore.createProject("p1", "Name", "", "", "");
+  it("updateWorkspace bumps updatedAt", () => {
+    workspaceStore.createWorkspace("p1", "Name", "", "", "");
     // SQLite datetime('now') has second resolution, so the timestamp
     // should at least not be empty
-    const updated = projectStore.updateProject("p1", { name: "Changed" });
+    const updated = workspaceStore.updateWorkspace("p1", { name: "Changed" });
     expect(updated!.updatedAt).toBeDefined();
     expect(typeof updated!.updatedAt).toBe("string");
   });
 
-  it("updateProject returns undefined for non-existent project", () => {
-    const result = projectStore.updateProject("nope", { name: "Doesn't exist" });
-    // The function calls getProject which returns undefined for non-existent IDs
+  it("updateWorkspace returns undefined for non-existent workspace", () => {
+    const result = workspaceStore.updateWorkspace("nope", { name: "Doesn't exist" });
+    // The function calls getWorkspace which returns undefined for non-existent IDs
     expect(result).toBeUndefined();
   });
 
   // UT-5: useWorktrees field
   describe("useWorktrees", () => {
     it("defaults useWorktrees to true when not specified", () => {
-      projectStore.createProject("p1", "Name", "", "", "");
-      const p = projectStore.getProject("p1");
+      workspaceStore.createWorkspace("p1", "Name", "", "", "");
+      const p = workspaceStore.getWorkspace("p1");
       expect(p!.useWorktrees).toBe(true);
     });
 
     it("can be explicitly set to true", () => {
-      projectStore.createProject("p1", "Name", "", "", "", true);
-      const p = projectStore.getProject("p1");
+      workspaceStore.createWorkspace("p1", "Name", "", "", "", true);
+      const p = workspaceStore.getWorkspace("p1");
       expect(p!.useWorktrees).toBe(true);
     });
 
     it("can be explicitly set to false", () => {
-      projectStore.createProject("p1", "Name", "", "", "", false);
-      const p = projectStore.getProject("p1");
+      workspaceStore.createWorkspace("p1", "Name", "", "", "", false);
+      const p = workspaceStore.getWorkspace("p1");
       expect(p!.useWorktrees).toBe(false);
     });
 
     it("can be updated from true to false", () => {
-      projectStore.createProject("p1", "Name", "", "", "", true);
-      const updated = projectStore.updateProject("p1", { useWorktrees: false });
+      workspaceStore.createWorkspace("p1", "Name", "", "", "", true);
+      const updated = workspaceStore.updateWorkspace("p1", { useWorktrees: false });
       expect(updated!.useWorktrees).toBe(false);
     });
 
     it("can be updated from false to true", () => {
-      projectStore.createProject("p1", "Name", "", "", "", false);
-      const updated = projectStore.updateProject("p1", { useWorktrees: true });
+      workspaceStore.createWorkspace("p1", "Name", "", "", "", false);
+      const updated = workspaceStore.updateWorkspace("p1", { useWorktrees: true });
       expect(updated!.useWorktrees).toBe(true);
     });
 
     it("leaves useWorktrees unchanged when not in patch", () => {
-      projectStore.createProject("p1", "Name", "", "", "", false);
-      const updated = projectStore.updateProject("p1", { name: "New Name" });
+      workspaceStore.createWorkspace("p1", "Name", "", "", "", false);
+      const updated = workspaceStore.updateWorkspace("p1", { name: "New Name" });
       expect(updated!.useWorktrees).toBe(false);
     });
   });
 
   // UT-1 through UT-4: worktreeBasePath field
   describe("worktreeBasePath", () => {
-    it("creates project with worktreeBasePath set", () => {
-      projectStore.createProject("p1", "Name", "", "", "", true, "/workspaces/odsp-web");
-      const p = projectStore.getProject("p1");
+    it("creates workspace with worktreeBasePath set", () => {
+      workspaceStore.createWorkspace("p1", "Name", "", "", "", true, "/workspaces/odsp-web");
+      const p = workspaceStore.getWorkspace("p1");
       expect(p).toBeDefined();
       expect(p!.worktreeBasePath).toBe("/workspaces/odsp-web");
     });
 
     it("defaults worktreeBasePath to empty string when not specified", () => {
-      projectStore.createProject("p1", "Name", "", "", "");
-      const p = projectStore.getProject("p1");
+      workspaceStore.createWorkspace("p1", "Name", "", "", "");
+      const p = workspaceStore.getWorkspace("p1");
       expect(p!.worktreeBasePath).toBe("");
     });
 
     it("updates worktreeBasePath", () => {
-      projectStore.createProject("p1", "Name", "", "", "");
-      const updated = projectStore.updateProject("p1", { worktreeBasePath: "/workspaces/my-repo" });
+      workspaceStore.createWorkspace("p1", "Name", "", "", "");
+      const updated = workspaceStore.updateWorkspace("p1", { worktreeBasePath: "/workspaces/my-repo" });
       expect(updated!.worktreeBasePath).toBe("/workspaces/my-repo");
     });
 
     it("leaves worktreeBasePath unchanged when not in patch", () => {
-      projectStore.createProject("p1", "Name", "", "", "", true, "/workspaces/foo");
-      const updated = projectStore.updateProject("p1", { name: "New Name" });
+      workspaceStore.createWorkspace("p1", "Name", "", "", "", true, "/workspaces/foo");
+      const updated = workspaceStore.updateWorkspace("p1", { name: "New Name" });
       expect(updated!.worktreeBasePath).toBe("/workspaces/foo");
     });
 
     it("clears worktreeBasePath with empty string", () => {
-      projectStore.createProject("p1", "Name", "", "", "", true, "/workspaces/foo");
-      const updated = projectStore.updateProject("p1", { worktreeBasePath: "" });
+      workspaceStore.createWorkspace("p1", "Name", "", "", "", true, "/workspaces/foo");
+      const updated = workspaceStore.updateWorkspace("p1", { worktreeBasePath: "" });
       expect(updated!.worktreeBasePath).toBe("");
     });
   });

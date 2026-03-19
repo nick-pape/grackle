@@ -71,12 +71,12 @@ export function reanimateAgent(sessionId: string): SessionRow {
 
   const logPath = session.logPath || join(grackleHome, LOGS_DIR, session.id);
 
-  let projectId: string | undefined;
+  let workspaceId: string | undefined;
   let taskId: string | undefined;
   if (session.taskId) {
     const task = taskStore.getTask(session.taskId);
     if (task) {
-      projectId = task.projectId || undefined;
+      workspaceId = task.workspaceId || undefined;
       taskId = task.id;
     }
   }
@@ -98,7 +98,7 @@ export function reanimateAgent(sessionId: string): SessionRow {
   processEventStream(resumeStream, {
     sessionId: session.id,
     logPath,
-    projectId,
+    workspaceId,
     taskId,
   });
 

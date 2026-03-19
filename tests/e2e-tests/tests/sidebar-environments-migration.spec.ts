@@ -16,23 +16,23 @@ test.describe("Sidebar — Task-Only (No Environments Tab)", () => {
 
     const sidebar = page.locator('[data-testid="sidebar"]');
 
-    // There should be no "Projects" tab button either (it was part of the removed tab bar)
-    await expect(sidebar.locator("button", { hasText: "Projects" })).not.toBeVisible();
+    // There should be no "Workspaces" tab button either (it was part of the removed tab bar)
+    await expect(sidebar.locator("button", { hasText: "Workspaces" })).not.toBeVisible();
 
-    // The PROJECTS header label should still be visible (it's the section label, not a tab)
-    await expect(sidebar.locator("text=PROJECTS").first()).toBeVisible();
+    // The WORKSPACES header label should still be visible (it's the section label, not a tab)
+    await expect(sidebar.locator("text=WORKSPACES").first()).toBeVisible();
   });
 
-  test("sidebar always shows project list", async ({ appPage }) => {
+  test("sidebar always shows workspace list", async ({ appPage }) => {
     const page = appPage;
 
     const sidebar = page.locator('[data-testid="sidebar"]');
 
-    // Projects section header should be visible
-    await expect(sidebar.locator("text=PROJECTS").first()).toBeVisible();
+    // Workspaces section header should be visible
+    await expect(sidebar.locator("text=WORKSPACES").first()).toBeVisible();
 
-    // The "+" create project button should be visible
-    await expect(sidebar.locator('button[title="Create project"]')).toBeVisible();
+    // The "+" create workspace button should be visible
+    await expect(sidebar.locator('button[title="Create workspace"]')).toBeVisible();
   });
 });
 
@@ -257,7 +257,7 @@ test.describe("Session Accordion in Environment Card", () => {
   });
 });
 
-test.describe("Navigation Between Settings and Projects", () => {
+test.describe("Navigation Between Settings and Workspaces", () => {
   test("clicking Grackle brand from Settings returns to home", async ({ appPage }) => {
     const page = appPage;
 
@@ -276,13 +276,13 @@ test.describe("Navigation Between Settings and Projects", () => {
     await expect(page.locator('[data-testid="sidebar"]')).toBeVisible({ timeout: 5_000 });
   });
 
-  test("gear button returns to Settings from project view", async ({ appPage }) => {
+  test("gear button returns to Settings from workspace view", async ({ appPage }) => {
     const page = appPage;
 
-    // Create and select a project
+    // Create and select a workspace
     const sidebar = page.locator('[data-testid="sidebar"]');
-    await sidebar.locator('button[title="Create project"]').click();
-    const nameInput = page.locator('input[placeholder="Project name..."]');
+    await sidebar.locator('button[title="Create workspace"]').click();
+    const nameInput = page.locator('input[placeholder="Workspace name..."]');
     await nameInput.fill("gear-test");
     await page.locator("button", { hasText: "OK" }).click();
     await expect(page.getByText("gear-test")).toBeVisible({ timeout: 5_000 });

@@ -1,43 +1,43 @@
 import type { Command } from "commander";
 import { createGrackleClient } from "../client.js";
-import { projectStatusToString } from "@grackle-ai/common";
+import { workspaceStatusToString } from "@grackle-ai/common";
 import Table from "cli-table3";
 
-export function registerProjectCommands(program: Command): void {
-  const project = program.command("project").description("Create and manage projects");
+export function registerWorkspaceCommands(program: Command): void {
+  const workspace = program.command("workspace").description("Create and manage workspaces");
 
-  project
+  workspace
     .command("list")
-    .description("List all active projects")
+    .description("List all active workspaces")
     .action(async () => {
       const client = createGrackleClient();
-      const res = await client.listProjects({});
-      if (res.projects.length === 0) {
-        console.log("No projects.");
+      const res = await client.listWorkspaces({});
+      if (res.workspaces.length === 0) {
+        console.log("No workspaces.");
         return;
       }
       const table = new Table({
         head: ["ID", "Name", "Env", "Worktrees", "Status", "Created"],
       });
-      for (const p of res.projects) {
-        table.push([p.id, p.name, p.defaultEnvironmentId || "-", p.useWorktrees ? "enabled" : "disabled", projectStatusToString(p.status), p.createdAt]);
+      for (const p of res.workspaces) {
+        table.push([p.id, p.name, p.defaultEnvironmentId || "-", p.useWorktrees ? "enabled" : "disabled", workspaceStatusToString(p.status), p.createdAt]);
       }
       console.log(table.toString());
     });
 
-  project
+  workspace
     .command("create <name>")
-    .description("Create a new project")
+    .description("Create a new workspace")
     .option("--repo <url>", "Repository URL")
     .option("--env <env-id>", "Default environment ID")
-    .option("--desc <description>", "Project description")
+    .option("--desc <description>", "Workspace description")
     .option("--no-worktrees", "Disable worktree isolation (agents share the main checkout)")
     .option("--worktree-base-path <path>", "Base path for worktrees (e.g. /workspaces/my-repo)")
     .action(async (name: string, opts: { worktrees?: boolean; desc?: string; repo?: string; env?: string; worktreeBasePath?: string }) => {
       const client = createGrackleClient();
       // Commander sets opts.worktrees = false when --no-worktrees is passed, true otherwise
       const useWorktrees = opts.worktrees !== false;
-      const p = await client.createProject({
+      const p = await client.createWorkspace({
         name,
         description: opts.desc || "",
         repoUrl: opts.repo || "",
@@ -45,15 +45,15 @@ export function registerProjectCommands(program: Command): void {
         useWorktrees,
         worktreeBasePath: opts.worktreeBasePath || "",
       });
-      console.log(`Created project: ${p.id} (${p.name}) [worktrees: ${p.useWorktrees ? "enabled" : "disabled"}]`);
+      console.log(`Created workspace: ${p.id} (${p.name}) [worktrees: ${p.useWorktrees ? "enabled" : "disabled"}]`);
     });
 
-  project
+  workspace
     .command("get <id>")
-    .description("Show full project details")
+    .description("Show full workspace details")
     .action(async (id: string) => {
       const client = createGrackleClient();
-      const p = await client.getProject({ id });
+      const p = await client.getWorkspace({ id });
       const table = new Table();
       table.push(
         { "ID": p.id },
@@ -63,18 +63,18 @@ export function registerProjectCommands(program: Command): void {
         { "Default Env": p.defaultEnvironmentId || "-" },
         { "Worktrees": p.useWorktrees ? "enabled" : "disabled" },
         ...(p.worktreeBasePath ? [{ "Worktree Base": p.worktreeBasePath }] : []),
-        { "Status": projectStatusToString(p.status) },
+        { "Status": workspaceStatusToString(p.status) },
         { "Created": p.createdAt },
         { "Updated": p.updatedAt },
       );
       console.log(table.toString());
     });
 
-  project
+  workspace
     .command("update <id>")
-    .description("Update a project")
-    .option("--name <name>", "Project name")
-    .option("--desc <description>", "Project description")
+    .description("Update a workspace")
+    .option("--name <name>", "Workspace name")
+    .option("--desc <description>", "Workspace description")
     .option("--repo <url>", "Repository URL")
     .option("--env <env-id>", "Default environment ID")
     .option("--no-worktrees", "Disable worktree isolation (agents share the main checkout)")
@@ -89,7 +89,7 @@ export function registerProjectCommands(program: Command): void {
       } else if (opts.worktrees === false) {
         useWorktrees = false;
       }
-      const p = await client.updateProject({
+      const p = await client.updateWorkspace({
         id,
         name: opts.name,
         description: opts.desc,
@@ -98,15 +98,15 @@ export function registerProjectCommands(program: Command): void {
         useWorktrees,
         worktreeBasePath: opts.worktreeBasePath,
       });
-      console.log(`Updated project: ${p.id} (${p.name}) [worktrees: ${p.useWorktrees ? "enabled" : "disabled"}]`);
+      console.log(`Updated workspace: ${p.id} (${p.name}) [worktrees: ${p.useWorktrees ? "enabled" : "disabled"}]`);
     });
 
-  project
+  workspace
     .command("archive <id>")
-    .description("Archive a project")
+    .description("Archive a workspace")
     .action(async (id: string) => {
       const client = createGrackleClient();
-      await client.archiveProject({ id });
+      await client.archiveWorkspace({ id });
       console.log(`Archived: ${id}`);
     });
 }

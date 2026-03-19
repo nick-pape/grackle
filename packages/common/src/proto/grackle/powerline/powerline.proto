@@ -31,7 +31,7 @@ message SpawnRequest {
   string branch = 6; // Branch for worktree (empty = skip)
   string worktree_base_path = 7; // Repo root, e.g. "/workspace"
   string system_context = 8; // Prepended to prompt (task desc + findings)
-  optional string project_id = 9; // So MCP server knows which project
+  optional string workspace_id = 9; // So MCP server knows which workspace
   string task_id = 10; // So MCP server knows which task
   string mcp_servers_json = 11; // JSON-encoded MCP server configs from persona
   reserved 12, 13;             // was mcp_api_key, mcp_grpc_url

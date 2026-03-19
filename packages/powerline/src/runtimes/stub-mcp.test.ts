@@ -164,7 +164,7 @@ describe("StubMcpRuntime", () => {
       model: "m",
       maxTurns: 1,
       mcpBroker: { url: "http://localhost:9999/mcp", token: "test-token" },
-      projectId: "proj-1",
+      workspaceId: "proj-1",
     });
 
     const events: AgentEvent[] = [];
@@ -209,7 +209,7 @@ describe("StubMcpRuntime", () => {
       model: "m",
       maxTurns: 1,
       mcpBroker: { url: "http://localhost:9999/mcp", token: "test-token" },
-      projectId: "proj-1",
+      workspaceId: "proj-1",
     });
 
     const events: AgentEvent[] = [];

@@ -2,7 +2,7 @@
  * Static mock data for visual testing (`?mock` mode).
  *
  * Provides realistic sample entities that exercise every UI state:
- * multiple environments, sessions in various statuses, projects with
+ * multiple environments, sessions in various statuses, workspaces with
  * tasks at different lifecycle stages, and findings across all categories.
  */
 
@@ -10,7 +10,7 @@ import type {
   Environment,
   Session,
   SessionEvent,
-  Project,
+  Workspace,
   TaskData,
   FindingData,
   TokenInfo,
@@ -192,13 +192,13 @@ export const MOCK_EVENTS: SessionEvent[] = [
   },
 ];
 
-// ─── Projects ───────────────────────────────────────
+// ─── Workspaces ─────────────────────────────────────
 
-/** Sample projects at different lifecycle stages. */
-export const MOCK_PROJECTS: Project[] = [
+/** Sample workspaces at different lifecycle stages. */
+export const MOCK_WORKSPACES: Workspace[] = [
   {
     id: "proj-alpha",
-    name: "Project Alpha",
+    name: "Workspace Alpha",
     description: "Core platform API and authentication services",
     repoUrl: "https://github.com/acme/alpha",
     defaultEnvironmentId: "env-local-01",
@@ -244,7 +244,7 @@ export const MOCK_TASKS: TaskData[] = [
   // ── Root tasks for proj-alpha ──────────────────────
   {
     id: "task-001",
-    projectId: "proj-alpha",
+    workspaceId: "proj-alpha",
     title: "Implement JWT authentication",
     description: "Replace session-based auth with JWT tokens across all protected routes",
     status: "working",
@@ -263,7 +263,7 @@ export const MOCK_TASKS: TaskData[] = [
   // ── Children of task-001 ───────────────────────────
   {
     id: "task-001a",
-    projectId: "proj-alpha",
+    workspaceId: "proj-alpha",
     title: "Design token schema",
     description: "Define JWT payload structure, expiry, and refresh token strategy",
     status: "complete",
@@ -281,7 +281,7 @@ export const MOCK_TASKS: TaskData[] = [
   },
   {
     id: "task-001b",
-    projectId: "proj-alpha",
+    workspaceId: "proj-alpha",
     title: "Implement auth middleware",
     description: "Build Express middleware that verifies JWT Bearer tokens",
     status: "working",
@@ -299,7 +299,7 @@ export const MOCK_TASKS: TaskData[] = [
   },
   {
     id: "task-001c",
-    projectId: "proj-alpha",
+    workspaceId: "proj-alpha",
     title: "Write auth integration tests",
     description: "End-to-end tests for login flow, token refresh, and protected route access",
     status: "not_started",
@@ -318,7 +318,7 @@ export const MOCK_TASKS: TaskData[] = [
   // ── Remaining root tasks for proj-alpha ────────────
   {
     id: "task-002",
-    projectId: "proj-alpha",
+    workspaceId: "proj-alpha",
     title: "Add rate limiting",
     description: "Implement token-bucket rate limiting for public API endpoints",
     status: "not_started",
@@ -336,7 +336,7 @@ export const MOCK_TASKS: TaskData[] = [
   },
   {
     id: "task-003",
-    projectId: "proj-alpha",
+    workspaceId: "proj-alpha",
     title: "Set up OpenAPI documentation",
     description: "Generate Swagger docs from route decorators and serve at /api/docs",
     status: "paused",
@@ -354,7 +354,7 @@ export const MOCK_TASKS: TaskData[] = [
   },
   {
     id: "task-004",
-    projectId: "proj-alpha",
+    workspaceId: "proj-alpha",
     title: "Database connection pooling",
     description: "Switch from single connection to a connection pool with health checks",
     status: "complete",
@@ -372,7 +372,7 @@ export const MOCK_TASKS: TaskData[] = [
   },
   {
     id: "task-005",
-    projectId: "proj-alpha",
+    workspaceId: "proj-alpha",
     title: "Fix N+1 query in user list",
     description: "Use a JOIN instead of per-row lookups in GET /api/users",
     status: "not_started",
@@ -391,7 +391,7 @@ export const MOCK_TASKS: TaskData[] = [
   // ── Tasks for proj-beta ────────────────────────────
   {
     id: "task-006",
-    projectId: "proj-beta",
+    workspaceId: "proj-beta",
     title: "Add Parquet export support",
     description: "Allow pipeline outputs to be written as Parquet files for Spark consumption",
     status: "working",
@@ -410,7 +410,7 @@ export const MOCK_TASKS: TaskData[] = [
   // ── Children of task-006 ───────────────────────────
   {
     id: "task-006a",
-    projectId: "proj-beta",
+    workspaceId: "proj-beta",
     title: "Define Parquet schema mapping",
     description: "Map internal column types to Arrow/Parquet type system",
     status: "complete",
@@ -428,7 +428,7 @@ export const MOCK_TASKS: TaskData[] = [
   },
   {
     id: "task-006b",
-    projectId: "proj-beta",
+    workspaceId: "proj-beta",
     title: "Implement row-group writer",
     description: "Write buffered row groups with configurable batch size",
     status: "complete",
@@ -446,7 +446,7 @@ export const MOCK_TASKS: TaskData[] = [
   },
   {
     id: "task-006c",
-    projectId: "proj-beta",
+    workspaceId: "proj-beta",
     title: "Add compression options",
     description: "Support Snappy, ZSTD, and GZIP compression for Parquet output",
     status: "working",
@@ -464,7 +464,7 @@ export const MOCK_TASKS: TaskData[] = [
   },
   {
     id: "task-006d",
-    projectId: "proj-beta",
+    workspaceId: "proj-beta",
     title: "Write Parquet integration tests",
     description: "Round-trip tests: write Parquet, read back with pyarrow, verify data integrity",
     status: "not_started",
@@ -483,7 +483,7 @@ export const MOCK_TASKS: TaskData[] = [
   // ── Remaining root tasks for proj-beta ─────────────
   {
     id: "task-007",
-    projectId: "proj-beta",
+    workspaceId: "proj-beta",
     title: "Implement incremental loads",
     description: "Track watermarks so pipelines only process new/changed rows",
     status: "working",
@@ -502,7 +502,7 @@ export const MOCK_TASKS: TaskData[] = [
   // ── Children of task-007 ───────────────────────────
   {
     id: "task-007a",
-    projectId: "proj-beta",
+    workspaceId: "proj-beta",
     title: "Design watermark storage",
     description: "Define schema for per-pipeline high-watermark tracking",
     status: "complete",
@@ -520,7 +520,7 @@ export const MOCK_TASKS: TaskData[] = [
   },
   {
     id: "task-007b",
-    projectId: "proj-beta",
+    workspaceId: "proj-beta",
     title: "Implement change detection query",
     description: "Generate WHERE clauses from watermarks to fetch only changed rows",
     status: "failed",
@@ -538,7 +538,7 @@ export const MOCK_TASKS: TaskData[] = [
   },
   {
     id: "task-008",
-    projectId: "proj-beta",
+    workspaceId: "proj-beta",
     title: "Add pipeline monitoring dashboard",
     description: "Real-time metrics for pipeline throughput, latency, and error rates",
     status: "paused",
@@ -562,7 +562,7 @@ export const MOCK_TASKS: TaskData[] = [
 export const MOCK_FINDINGS: FindingData[] = [
   {
     id: "find-001",
-    projectId: "proj-alpha",
+    workspaceId: "proj-alpha",
     taskId: "task-001",
     sessionId: "sess-001",
     category: "architecture",
@@ -574,7 +574,7 @@ export const MOCK_FINDINGS: FindingData[] = [
   },
   {
     id: "find-002",
-    projectId: "proj-alpha",
+    workspaceId: "proj-alpha",
     taskId: "task-003",
     sessionId: "sess-002",
     category: "api",
@@ -586,7 +586,7 @@ export const MOCK_FINDINGS: FindingData[] = [
   },
   {
     id: "find-003",
-    projectId: "proj-alpha",
+    workspaceId: "proj-alpha",
     taskId: "task-005",
     sessionId: "sess-003",
     category: "bug",
@@ -598,7 +598,7 @@ export const MOCK_FINDINGS: FindingData[] = [
   },
   {
     id: "find-004",
-    projectId: "proj-alpha",
+    workspaceId: "proj-alpha",
     taskId: "task-004",
     sessionId: "",
     category: "decision",
@@ -610,7 +610,7 @@ export const MOCK_FINDINGS: FindingData[] = [
   },
   {
     id: "find-005",
-    projectId: "proj-alpha",
+    workspaceId: "proj-alpha",
     taskId: "",
     sessionId: "",
     category: "dependency",
@@ -622,7 +622,7 @@ export const MOCK_FINDINGS: FindingData[] = [
   },
   {
     id: "find-006",
-    projectId: "proj-alpha",
+    workspaceId: "proj-alpha",
     taskId: "task-001",
     sessionId: "sess-001",
     category: "pattern",
@@ -634,7 +634,7 @@ export const MOCK_FINDINGS: FindingData[] = [
   },
   {
     id: "find-007",
-    projectId: "proj-beta",
+    workspaceId: "proj-beta",
     taskId: "task-007",
     sessionId: "sess-004",
     category: "architecture",

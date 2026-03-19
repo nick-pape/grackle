@@ -44,7 +44,7 @@ const API_KEY_AUTH: AuthContext = { type: "api-key" };
 const SCOPED_AUTH: AuthContext = {
   type: "scoped",
   taskId: "task-1",
-  projectId: "proj-1",
+  workspaceId: "proj-1",
   personaId: "",
   taskSessionId: "sess-1",
 };

@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   sessionUrl,
-  projectUrl,
+  workspaceUrl,
   taskUrl,
   taskEditUrl,
   newTaskUrl,
@@ -18,9 +18,9 @@ describe("URL builder functions", () => {
     expect(sessionUrl("special/chars")).toBe("/sessions/special%2Fchars");
   });
 
-  it("projectUrl encodes projectId", () => {
-    expect(projectUrl("proj-1")).toBe("/projects/proj-1");
-    expect(projectUrl("proj with space")).toBe("/projects/proj%20with%20space");
+  it("workspaceUrl encodes workspaceId", () => {
+    expect(workspaceUrl("proj-1")).toBe("/workspaces/proj-1");
+    expect(workspaceUrl("proj with space")).toBe("/workspaces/proj%20with%20space");
   });
 
   it("taskUrl without tab produces base path", () => {
@@ -44,13 +44,13 @@ describe("URL builder functions", () => {
     expect(taskEditUrl("task-1")).toBe("/tasks/task-1/edit");
   });
 
-  it("newTaskUrl includes project param", () => {
-    expect(newTaskUrl("proj-1")).toBe("/tasks/new?project=proj-1");
+  it("newTaskUrl includes workspace param", () => {
+    expect(newTaskUrl("proj-1")).toBe("/tasks/new?workspace=proj-1");
   });
 
-  it("newTaskUrl includes project and parent params", () => {
+  it("newTaskUrl includes workspace and parent params", () => {
     const url = newTaskUrl("proj-1", "parent-task");
-    expect(url).toBe("/tasks/new?project=proj-1&parent=parent-task");
+    expect(url).toBe("/tasks/new?workspace=proj-1&parent=parent-task");
   });
 
   it("newChatUrl includes env param", () => {

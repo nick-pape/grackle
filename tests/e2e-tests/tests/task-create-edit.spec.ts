@@ -1,9 +1,9 @@
 import { test, expect } from "./fixtures.js";
 import {
-  createProject,
+  createWorkspace,
   createTask,
   navigateToTask,
-  getProjectId,
+  getWorkspaceId,
   getTaskId,
   createTaskViaWs,
 } from "./helpers.js";
@@ -11,7 +11,7 @@ import {
 test.describe("Unified task create/edit experience", () => {
   test("clicking New task opens full-panel form with title and description fields", async ({ appPage }) => {
     const page = appPage;
-    await createProject(page, "create-panel-proj");
+    await createWorkspace(page, "create-panel-proj");
 
     // Click "New task" button in the sidebar
     await page
@@ -29,9 +29,9 @@ test.describe("Unified task create/edit experience", () => {
     await expect(page.locator('[data-testid="task-edit-save"]')).toBeDisabled();
   });
 
-  test("creating a task via the panel fills title and description, then navigates to project", async ({ appPage }) => {
+  test("creating a task via the panel fills title and description, then navigates to workspace", async ({ appPage }) => {
     const page = appPage;
-    await createProject(page, "create-full-proj");
+    await createWorkspace(page, "create-full-proj");
 
     // Open new task form
     await page
@@ -58,9 +58,9 @@ test.describe("Unified task create/edit experience", () => {
     await expect(page.locator('.overviewMarkdown, [class*="overviewMarkdown"]')).toBeVisible({ timeout: 5_000 });
   });
 
-  test("Cancel button in new task form returns to project view", async ({ appPage }) => {
+  test("Cancel button in new task form returns to workspace view", async ({ appPage }) => {
     const page = appPage;
-    await createProject(page, "cancel-create-proj");
+    await createWorkspace(page, "cancel-create-proj");
 
     // Open new task form
     await page
@@ -76,14 +76,14 @@ test.describe("Unified task create/edit experience", () => {
     // Click Cancel
     await page.locator("button", { hasText: "Cancel" }).click();
 
-    // Should return to project view (no task created)
+    // Should return to workspace view (no task created)
     await expect(page.locator('[data-testid="task-edit-title"]')).not.toBeVisible({ timeout: 3_000 });
     await expect(page.getByText("will not be saved", { exact: true })).not.toBeVisible();
   });
 
   test("pending task header shows an Edit button", async ({ appPage }) => {
     const page = appPage;
-    await createProject(page, "edit-btn-proj");
+    await createWorkspace(page, "edit-btn-proj");
     await createTask(page, "edit-btn-proj", "edit-btn-task", "test-local");
 
     // Navigate to the task
@@ -95,13 +95,13 @@ test.describe("Unified task create/edit experience", () => {
 
   test("clicking Edit opens the edit form pre-populated with existing task data", async ({ appPage }) => {
     const page = appPage;
-    await createProject(page, "edit-form-proj");
-    // Expand the project in the sidebar so tasks will become visible
+    await createWorkspace(page, "edit-form-proj");
+    // Expand the workspace in the sidebar so tasks will become visible
     await page.getByText("edit-form-proj").first().click();
-    const projectId = await getProjectId(page, "edit-form-proj");
+    const workspaceId = await getWorkspaceId(page, "edit-form-proj");
 
     // Create task with description via WS so we can verify pre-population
-    await createTaskViaWs(page, projectId, "editable-task", {
+    await createTaskViaWs(page, workspaceId,"editable-task", {
       environmentId: "test-local",
       description: "Original description",
     });
@@ -124,12 +124,12 @@ test.describe("Unified task create/edit experience", () => {
 
   test("saving edits updates the task title and description", async ({ appPage }) => {
     const page = appPage;
-    await createProject(page, "save-edit-proj");
-    // Expand the project in the sidebar so tasks will become visible
+    await createWorkspace(page, "save-edit-proj");
+    // Expand the workspace in the sidebar so tasks will become visible
     await page.getByText("save-edit-proj").first().click();
-    const projectId = await getProjectId(page, "save-edit-proj");
+    const workspaceId = await getWorkspaceId(page, "save-edit-proj");
 
-    await createTaskViaWs(page, projectId, "old-title-task", {
+    await createTaskViaWs(page, workspaceId,"old-title-task", {
       environmentId: "test-local",
       description: "Old description",
     });
@@ -153,7 +153,7 @@ test.describe("Unified task create/edit experience", () => {
 
   test("task creation form has no environment dropdown", async ({ appPage }) => {
     const page = appPage;
-    await createProject(page, "no-env-proj");
+    await createWorkspace(page, "no-env-proj");
 
     // Open new task form
     await page
@@ -173,14 +173,14 @@ test.describe("Unified task create/edit experience", () => {
 
   test("task edit form shows dependency multi-select with sibling tasks", async ({ appPage }) => {
     const page = appPage;
-    await createProject(page, "deps-edit-proj");
-    // Expand the project in the sidebar so tasks will become visible
+    await createWorkspace(page, "deps-edit-proj");
+    // Expand the workspace in the sidebar so tasks will become visible
     await page.getByText("deps-edit-proj").first().click();
-    const projectId = await getProjectId(page, "deps-edit-proj");
+    const workspaceId = await getWorkspaceId(page, "deps-edit-proj");
 
     // Create two tasks
-    await createTaskViaWs(page, projectId, "task-alpha-dep", { environmentId: "test-local" });
-    await createTaskViaWs(page, projectId, "task-beta-dep", { environmentId: "test-local" });
+    await createTaskViaWs(page, workspaceId,"task-alpha-dep", { environmentId: "test-local" });
+    await createTaskViaWs(page, workspaceId,"task-beta-dep", { environmentId: "test-local" });
     await page.getByText("task-beta-dep", { exact: true }).first().waitFor({ timeout: 5_000 });
 
     // Edit task-beta and set task-alpha as a dependency
@@ -193,7 +193,7 @@ test.describe("Unified task create/edit experience", () => {
     await expect(page.locator('[data-testid^="dep-option-"]', { hasText: "task-alpha-dep" })).toBeVisible({ timeout: 5_000 });
 
     // Select task-alpha as a dependency
-    const alphaId = await getTaskId(page, projectId, "task-alpha-dep");
+    const alphaId = await getTaskId(page, workspaceId, "task-alpha-dep");
     await page.locator(`[data-testid="dep-option-${alphaId}"] input[type="checkbox"]`).check();
 
     // Save

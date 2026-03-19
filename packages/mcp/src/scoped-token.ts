@@ -7,7 +7,7 @@ const DEFAULT_TTL_MS: number = 24 * 60 * 60 * 1000;
 export interface ScopedTokenClaims {
   /** Task ID (subject). */
   sub: string;
-  /** Project ID. */
+  /** Workspace ID. */
   pid: string;
   /** Persona ID. */
   per: string;

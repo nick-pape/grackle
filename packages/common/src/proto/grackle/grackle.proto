@@ -40,10 +40,10 @@ enum TaskStatus {
   reserved 7;                    // was WAITING_INPUT (removed, merged into PAUSED)
 }
 
-enum ProjectStatus {
-  PROJECT_STATUS_UNSPECIFIED = 0;
-  PROJECT_STATUS_ACTIVE = 1;
-  PROJECT_STATUS_ARCHIVED = 2;
+enum WorkspaceStatus {
+  WORKSPACE_STATUS_UNSPECIFIED = 0;
+  WORKSPACE_STATUS_ACTIVE = 1;
+  WORKSPACE_STATUS_ARCHIVED = 2;
 }
 
 enum IssueState {
@@ -199,48 +199,48 @@ message SetCredentialProviderRequest {
   string value = 2;     // "off", "on", "subscription", "api_key"
 }
 
-// ─── Projects ──────────────────────────────────────────────
+// ─── Workspaces ─────────────────────────────────────────────
 
-message Project {
+message Workspace {
   string id = 1;
   string name = 2;
   string description = 3;
   string repo_url = 4;
   string default_environment_id = 5;
-  ProjectStatus status = 6;
+  WorkspaceStatus status = 6;
   string created_at = 7;
   string updated_at = 8;
   bool use_worktrees = 9; // When false, agents work in the main checkout (no worktree dirs created)
   string worktree_base_path = 10; // Base path for worktrees (e.g. /workspaces/my-repo)
-  string default_persona_id = 11; // Default persona for tasks in this project
+  string default_persona_id = 11; // Default persona for tasks in this workspace
 }
 
-message ProjectList {
-  repeated Project projects = 1;
+message WorkspaceList {
+  repeated Workspace workspaces = 1;
 }
 
-message CreateProjectRequest {
+message CreateWorkspaceRequest {
   string name = 1;
   string description = 2;
   string repo_url = 3;
   string default_environment_id = 4;
   optional bool use_worktrees = 5; // Default true when omitted
   optional string worktree_base_path = 6; // Base path for worktrees (e.g. /workspaces/my-repo)
-  optional string default_persona_id = 7; // Default persona for tasks in this project
+  optional string default_persona_id = 7; // Default persona for tasks in this workspace
 }
 
-message UpdateProjectRequest {
+message UpdateWorkspaceRequest {
   string id = 1;
   optional string name = 2;
   optional string description = 3;
   optional string repo_url = 4;
   optional string default_environment_id = 5;
-  optional bool use_worktrees = 6; // When false, disables worktree isolation for this project
+  optional bool use_worktrees = 6; // When false, disables worktree isolation for this workspace
   optional string worktree_base_path = 7; // Base path for worktrees (e.g. /workspaces/my-repo)
-  optional string default_persona_id = 8; // Default persona for tasks in this project
+  optional string default_persona_id = 8; // Default persona for tasks in this workspace
 }
 
-message ProjectId {
+message WorkspaceId {
   string id = 1;
 }
 
@@ -248,7 +248,7 @@ message ProjectId {
 
 message Task {
   string id = 1;
-  optional string project_id = 2;
+  optional string workspace_id = 2;
   string title = 3;
   string description = 4;
   TaskStatus status = 5;
@@ -268,7 +268,7 @@ message Task {
   repeated string child_task_ids = 19; // populated by server on read
   bool can_decompose = 20;
   reserved 21; // was persona_id (moved to Session)
-  string default_persona_id = 22; // Default persona for this task (overrides project default)
+  string default_persona_id = 22; // Default persona for this task (overrides workspace default)
 }
 
 message TaskList {
@@ -276,13 +276,13 @@ message TaskList {
 }
 
 message ListTasksRequest {
-  string project_id = 1;
+  string workspace_id = 1;
   string search = 2;      // optional case-insensitive substring filter on title/description
   string status = 3;      // optional status filter (e.g. "not_started", "working", "complete")
 }
 
 message CreateTaskRequest {
-  optional string project_id = 1;
+  optional string workspace_id = 1;
   string title = 2;
   string description = 3;
   reserved 4; // was environment_id (now a session-start param)
@@ -313,7 +313,7 @@ message StartTaskRequest {
   string task_id = 1;
   reserved 2; // was runtime (now comes from Persona)
   reserved 3; // was model (now comes from Persona)
-  string persona_id = 4; // Persona override (falls back to task/project/app default)
+  string persona_id = 4; // Persona override (falls back to task/workspace/app default)
   string environment_id = 5; // Select environment at start time
   string notes = 6; // Feedback/instructions for retry (included in system context)
 }
@@ -322,7 +322,7 @@ message StartTaskRequest {
 
 message Finding {
   string id = 1;
-  string project_id = 2;
+  string workspace_id = 2;
   string task_id = 3;
   string session_id = 4;
   string category = 5;
@@ -337,7 +337,7 @@ message FindingList {
 }
 
 message PostFindingRequest {
-  string project_id = 1;
+  string workspace_id = 1;
   string task_id = 2;
   string session_id = 3;
   string category = 4;
@@ -347,7 +347,7 @@ message PostFindingRequest {
 }
 
 message QueryFindingsRequest {
-  string project_id = 1;
+  string workspace_id = 1;
   repeated string categories = 2;
   repeated string tags = 3;
   int32 limit = 4;
@@ -356,11 +356,11 @@ message QueryFindingsRequest {
 // ─── GitHub Import ────────────────────────────────────
 
 message ImportGitHubIssuesRequest {
-  string project_id = 1;
+  string workspace_id = 1;
   string repo = 2;                          // "owner/repo"
   optional string label = 3;               // label filter (omit for all)
   IssueState state = 4;                     // OPEN or CLOSED
-  optional string environment_id = 5;      // env to assign (omit for project default)
+  optional string environment_id = 5;      // env to assign (omit for workspace default)
   optional bool include_comments = 6;      // when false, skip issue comments (default: true)
 }
 
@@ -491,12 +491,12 @@ service Grackle {
   rpc GetCredentialProviders(Empty) returns (CredentialProviderConfig);
   rpc SetCredentialProvider(SetCredentialProviderRequest) returns (CredentialProviderConfig);
 
-  // Projects
-  rpc ListProjects(Empty) returns (ProjectList);
-  rpc CreateProject(CreateProjectRequest) returns (Project);
-  rpc GetProject(ProjectId) returns (Project);
-  rpc UpdateProject(UpdateProjectRequest) returns (Project);
-  rpc ArchiveProject(ProjectId) returns (Empty);
+  // Workspaces
+  rpc ListWorkspaces(Empty) returns (WorkspaceList);
+  rpc CreateWorkspace(CreateWorkspaceRequest) returns (Workspace);
+  rpc GetWorkspace(WorkspaceId) returns (Workspace);
+  rpc UpdateWorkspace(UpdateWorkspaceRequest) returns (Workspace);
+  rpc ArchiveWorkspace(WorkspaceId) returns (Empty);
 
   // Tasks
   rpc ListTasks(ListTasksRequest) returns (TaskList);

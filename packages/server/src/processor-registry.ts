@@ -4,7 +4,7 @@ import { logger } from "./logger.js";
 export interface ProcessorContext {
   sessionId: string;
   logPath: string;
-  projectId?: string;
+  workspaceId?: string;
   taskId: string;
 }
 
@@ -31,7 +31,7 @@ export function get(sessionId: string): ProcessorContext | undefined {
 }
 
 /**
- * Late-bind a task to a running processor. Updates projectId, taskId, and onComplete,
+ * Late-bind a task to a running processor. Updates workspaceId, taskId, and onComplete,
  * then fires all registered bind listeners.
  *
  * Idempotent: binding to the same task is a no-op.
@@ -41,7 +41,7 @@ export function get(sessionId: string): ProcessorContext | undefined {
 export function lateBind(
   sessionId: string,
   taskId: string,
-  projectId?: string,
+  workspaceId?: string,
 ): void {
   const ctx = registry.get(sessionId);
   if (!ctx) {
@@ -59,10 +59,10 @@ export function lateBind(
     return;
   }
 
-  ctx.projectId = projectId;
+  ctx.workspaceId = workspaceId;
   ctx.taskId = taskId;
 
-  logger.info({ sessionId, taskId, projectId }, "Late-bound session to task");
+  logger.info({ sessionId, taskId, workspaceId }, "Late-bound session to task");
 
   const listeners = bindListeners.get(sessionId);
   if (listeners) {
