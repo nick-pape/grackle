@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "packageName": "@grackle-ai/cli",
+      "comment": "feat: SIGCHLD child completion notifications, --can-decompose and --parent CLI flags, MCP canDecompose field, web UI checkbox",
+      "type": "minor"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
