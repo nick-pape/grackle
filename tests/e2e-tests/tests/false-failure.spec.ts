@@ -19,7 +19,7 @@ test.describe("False failure prevention", () => {
     await runStubTaskToCompletion(page);
 
     // Task should be in paused (review) — Complete button visible
-    await expect(page.locator("button", { hasText: "Complete" })).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator("button", { hasText: "Stop" })).toBeVisible({ timeout: 5_000 });
 
     // Task should NOT show failure indicators
     await expect(page.getByText("Task failed")).not.toBeVisible();
