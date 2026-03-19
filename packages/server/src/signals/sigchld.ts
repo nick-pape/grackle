@@ -96,7 +96,6 @@ async function handleTaskUpdated(childTaskId: string): Promise<void> {
   if (previousDelivery !== undefined && now - previousDelivery < DEDUP_TTL_MS) {
     return;
   }
-  delivered.set(dedupeKey, now);
 
   // Prune expired entries to prevent unbounded growth
   pruneDelivered(now);
@@ -120,7 +119,17 @@ async function handleTaskUpdated(childTaskId: string): Promise<void> {
     "Delivering SIGCHLD to parent task",
   );
 
-  await deliverSignalToTask(childTask.parentTaskId, "sigchld", message);
+  const success = await deliverSignalToTask(childTask.parentTaskId, "sigchld", message);
+
+  // Only record dedup after successful delivery so failed deliveries can retry
+  if (success) {
+    delivered.set(dedupeKey, now);
+  } else {
+    logger.warn(
+      { childTaskId, parentTaskId: childTask.parentTaskId },
+      "SIGCHLD delivery failed — will retry on next task.updated event",
+    );
+  }
 }
 
 /** Remove dedup entries older than DEDUP_TTL_MS. */

@@ -142,26 +142,33 @@ async function waitForSessionIdle(
   sessionId: string,
   timeoutMs: number,
 ): Promise<boolean> {
-  // Check current status first — might already be idle
+  // Subscribe first, then check DB to close the race window where the session
+  // reaches IDLE between the DB read and the subscription registration.
+  const stream = streamHub.createStream(sessionId);
+
   const current = sessionStore.getSession(sessionId);
   if (current?.status === SESSION_STATUS.IDLE) {
+    stream.cancel();
     return true;
   }
 
-  const stream = streamHub.createStream(sessionId);
   let timer: ReturnType<typeof setTimeout> | undefined;
 
   try {
     return await Promise.race<boolean>([
       (async () => {
         for await (const event of stream) {
-          // Stream events use the runtime status strings, not DB session statuses.
-          // "waiting_input" is the runtime event that maps to IDLE in the session store.
+          // Only inspect status events — other event types (text, tool_use, etc.)
+          // can have arbitrary content that might accidentally match status strings.
+          if (event.type !== grackle.EventType.STATUS) {
+            continue;
+          }
+          // "waiting_input" is the runtime status that maps to IDLE in the session store.
           if (event.content === "waiting_input") {
             return true;
           }
           // If the session hit a terminal state, stop waiting
-          if (["completed", "failed", "killed"].includes(event.content)) {
+          if (["completed", "failed", "killed", "interrupted"].includes(event.content)) {
             return false;
           }
         }
