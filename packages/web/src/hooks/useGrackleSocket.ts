@@ -163,6 +163,8 @@ export interface UseGrackleSocketResult {
     runtime?: string,
     model?: string,
     maxTurns?: number,
+    type?: string,
+    script?: string,
   ) => void;
   updatePersona: (
     personaId: string,
@@ -172,6 +174,8 @@ export interface UseGrackleSocketResult {
     runtime?: string,
     model?: string,
     maxTurns?: number,
+    type?: string,
+    script?: string,
   ) => void;
   deletePersona: (personaId: string) => void;
   taskSessions: Record<string, import("./types.js").Session[]>;

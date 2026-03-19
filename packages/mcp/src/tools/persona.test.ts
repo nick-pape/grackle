@@ -20,6 +20,8 @@ const MOCK_PERSONA = {
   maxTurns: 10,
   createdAt: "2026-01-01T00:00:00Z",
   updatedAt: "2026-01-02T00:00:00Z",
+  type: "agent",
+  script: "",
 };
 
 describe("persona_list", () => {
@@ -89,6 +91,8 @@ describe("persona_create", () => {
       model: "claude-sonnet-4-20250514",
       maxTurns: 10,
       mcpServers: [],
+      type: "agent",
+      script: "",
     });
 
     const parsed = JSON.parse(result.content[0].text);
@@ -123,6 +127,8 @@ describe("persona_create", () => {
       model: "",
       maxTurns: 0,
       mcpServers: [],
+      type: "agent",
+      script: "",
     });
 
     const parsed = JSON.parse(result.content[0].text);
@@ -209,6 +215,8 @@ describe("persona_edit", () => {
       model: "",
       maxTurns: 0,
       mcpServers: [],
+      type: "",
+      script: "",
     });
 
     const parsed = JSON.parse(result.content[0].text);

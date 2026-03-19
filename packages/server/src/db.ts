@@ -404,6 +404,22 @@ export function initDatabase(): void {
     /* column already exists */
   }
 
+  // Migration: add type and script columns to personas if missing
+  try {
+    sqlite.exec(
+      "ALTER TABLE personas ADD COLUMN type TEXT NOT NULL DEFAULT 'agent'",
+    );
+  } catch {
+    /* column already exists */
+  }
+  try {
+    sqlite.exec(
+      "ALTER TABLE personas ADD COLUMN script TEXT NOT NULL DEFAULT ''",
+    );
+  } catch {
+    /* column already exists */
+  }
+
   // Migration: make project_id nullable on tasks.
   // SQLite doesn't support ALTER COLUMN, so we recreate the table.
   // Guard: only run if the column currently has NOT NULL.

@@ -20,6 +20,8 @@ export interface UsePersonasResult {
     runtime?: string,
     model?: string,
     maxTurns?: number,
+    type?: string,
+    script?: string,
   ) => void;
   /** Update an existing persona. */
   updatePersona: (
@@ -30,6 +32,8 @@ export interface UsePersonasResult {
     runtime?: string,
     model?: string,
     maxTurns?: number,
+    type?: string,
+    script?: string,
   ) => void;
   /** Delete a persona by ID. */
   deletePersona: (personaId: string) => void;
@@ -85,6 +89,8 @@ export function usePersonas(send: SendFunction): UsePersonasResult {
       runtime?: string,
       model?: string,
       maxTurns?: number,
+      type?: string,
+      script?: string,
     ) => {
       send({
         type: "create_persona",
@@ -95,6 +101,8 @@ export function usePersonas(send: SendFunction): UsePersonasResult {
           runtime: runtime || "",
           model: model || "",
           maxTurns: maxTurns || 0,
+          type: type || "agent",
+          script: script || "",
         },
       });
     },
@@ -110,6 +118,8 @@ export function usePersonas(send: SendFunction): UsePersonasResult {
       runtime?: string,
       model?: string,
       maxTurns?: number,
+      type?: string,
+      script?: string,
     ) => {
       // Only include fields that were explicitly provided so the server can
       // distinguish "not provided" (keep existing) from "set to empty" (clear).
@@ -121,6 +131,8 @@ export function usePersonas(send: SendFunction): UsePersonasResult {
       if (runtime !== undefined) { payload.runtime = runtime; }
       if (model !== undefined) { payload.model = model; }
       if (maxTurns !== undefined) { payload.maxTurns = maxTurns; }
+      if (type !== undefined) { payload.type = type; }
+      if (script !== undefined) { payload.script = script; }
       send({ type: "update_persona", payload });
     },
     [send],

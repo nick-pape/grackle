@@ -7,6 +7,12 @@ description: Generate a Rush change file for the current branch, handling merge-
 
 This skill generates a Rush change file for the current branch. It detects merge-commit false positives (where `rush change --verify` flags packages that have no real diff against main) and handles them automatically.
 
+## Important: How Rush Lockstep Versioning Works
+
+All publishable packages use **lockstep versioning** — they share the same version number. Rush will always flag `@grackle-ai/cli` as the package needing a change file, regardless of which package you actually changed. This is because Rush picks one representative package from the lockstep group.
+
+**The change file is always created for `@grackle-ai/cli`, but the comment and bump type should describe ALL the changes in your PR across ALL packages.** For example, if you changed `packages/server/` and `packages/mcp/`, the change file is still for `@grackle-ai/cli` but the comment should describe the server and MCP changes.
+
 ## Step 1: Check if Rush Requires a Change File
 
 ```bash

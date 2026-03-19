@@ -15,6 +15,8 @@ export function createPersona(
   model: string,
   maxTurns: number,
   mcpServers: string,
+  type: string = "agent",
+  script: string = "",
 ): void {
   db.insert(personas)
     .values({
@@ -27,6 +29,8 @@ export function createPersona(
       model,
       maxTurns,
       mcpServers,
+      type,
+      script,
     })
     .run();
 }
@@ -57,6 +61,8 @@ export function updatePersona(
   model: string,
   maxTurns: number,
   mcpServers: string,
+  type: string = "agent",
+  script: string = "",
 ): void {
   db.update(personas)
     .set({
@@ -68,6 +74,8 @@ export function updatePersona(
       model,
       maxTurns,
       mcpServers,
+      type,
+      script,
       updatedAt: sql`datetime('now')`,
     })
     .where(eq(personas.id, id))
