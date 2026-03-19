@@ -67,13 +67,15 @@ interface TaskOverviewProps {
   environments: Environment[];
   workspaces: Workspace[];
   taskSessions: Session[];
+  selectedEnvId: string;
 }
 
-function TaskOverview({ task, tasksById, environments, workspaces, taskSessions }: TaskOverviewProps): JSX.Element {
+function TaskOverview({ task, tasksById, environments, workspaces, taskSessions, selectedEnvId }: TaskOverviewProps): JSX.Element {
   const latestSession = taskSessions.length > 0 ? taskSessions[taskSessions.length - 1] : undefined;
   const envId = latestSession?.environmentId ?? "";
   const env = envId ? environments.find((e) => e.id === envId) : undefined;
   const workspace = workspaces.find((p) => p.id === task.workspaceId);
+  const selectedEnv = environments.find((e) => e.id === selectedEnvId);
   const branchUrl = task.branch && workspace?.repoUrl
     ? `${workspace.repoUrl.replace(/\/$/, "")}/tree/${encodeURIComponent(task.branch)}`
     : undefined;
@@ -102,17 +104,23 @@ function TaskOverview({ task, tasksById, environments, workspaces, taskSessions 
           </div>
         </div>
       )}
-      {envId && (
-        <div className={styles.overviewSection}>
-          <div className={styles.overviewLabel}>Environment</div>
+      <div className={styles.overviewSection}>
+        <div className={styles.overviewLabel}>Environment</div>
+        {envId && env ? (
           <div className={styles.envRow}>
-            {env && (
-              <span className={`${styles.envDot} ${envStatusClass(env.status)}`} title={env.status} aria-label={`Status: ${env.status}`} role="img" />
-            )}
-            <span className={styles.overviewValue}>{env?.displayName ?? envId}</span>
+            <span className={`${styles.envDot} ${envStatusClass(env.status)}`} title={env.status} aria-label={`Status: ${env.status}`} role="img" />
+            <span className={styles.overviewValue}>{env.displayName}</span>
           </div>
-        </div>
-      )}
+        ) : selectedEnv ? (
+          <div className={styles.envRow}>
+            <span className={`${styles.envDot} ${envStatusClass(selectedEnv.status)}`} title={selectedEnv.status} aria-label={`Status: ${selectedEnv.status}`} role="img" />
+            <span className={styles.overviewValue}>{selectedEnv.displayName}</span>
+            <span className={styles.overviewMuted}>(workspace default)</span>
+          </div>
+        ) : (
+          <div className={styles.overviewMuted}>Set in workspace settings</div>
+        )}
+      </div>
       <div className={styles.overviewSection}>
         <div className={styles.overviewLabel}>Dependencies</div>
         {task.dependsOn.length === 0 ? (
@@ -317,6 +325,7 @@ export function TaskPage(): JSX.Element {
   const [activeTaskTab, setActiveTaskTab] = useState<TaskTab>(tabFromUrl);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [selectedSessionId, setSelectedSessionId] = useState<string | undefined>(undefined);
+  const [selectedEnvId, setSelectedEnvId] = useState<string>("");
 
   // Sync tab with URL only when the URL-derived tab actually changes.
   // Use a ref to avoid fighting with the auto-switch-by-status logic.
@@ -330,6 +339,18 @@ export function TaskPage(): JSX.Element {
 
   const task = tasks.find((t) => t.id === taskId);
   const workspaceId = task?.workspaceId || undefined;
+  const workspace = workspaces.find((p) => p.id === workspaceId);
+
+  // Initialize env selector from workspace default when task/workspace loads
+  useEffect(() => {
+    if (selectedEnvId !== "") return;
+    if (workspace?.defaultEnvironmentId) {
+      setSelectedEnvId(workspace.defaultEnvironmentId);
+    } else if (environments.length > 0) {
+      const connected = environments.find((e) => e.status === "connected");
+      setSelectedEnvId(connected?.id ?? environments[0].id);
+    }
+  }, [selectedEnvId, workspace?.defaultEnvironmentId, environments]);
 
   // Resolve effective sessionId from the task's eagerly-patched latestSessionId
   // (set by the task_started handler) or from the user's attempt selection.
@@ -357,6 +378,9 @@ export function TaskPage(): JSX.Element {
     prevTaskIdRef.current = task?.id;
     if (selectedSessionId !== undefined) {
       setSelectedSessionId(undefined);
+    }
+    if (selectedEnvId !== "") {
+      setSelectedEnvId("");
     }
   }
 
@@ -448,7 +472,7 @@ export function TaskPage(): JSX.Element {
             task={task}
             sessionId={sessionId}
             isBlocked={isTaskBlocked}
-            onStart={() => startTask(task.id)}
+            onStart={() => startTask(task.id, undefined, selectedEnvId)}
             onResume={() => resumeTask(task.id)}
             onStop={() => stopTask(task.id)}
             onPause={() => sessionId && kill(sessionId)}
@@ -476,7 +500,7 @@ export function TaskPage(): JSX.Element {
         {activeTaskTab === "overview" && (
           <motion.div key="overview" initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.15 }} className={styles.overviewContent}>
             {task ? (
-              <TaskOverview task={task} tasksById={tasksById} environments={environments} workspaces={workspaces} taskSessions={currentTaskSessions} />
+              <TaskOverview task={task} tasksById={tasksById} environments={environments} workspaces={workspaces} taskSessions={currentTaskSessions} selectedEnvId={selectedEnvId} />
             ) : (
               <div className={styles.waitingMessage}>No additional details</div>
             )}
@@ -491,7 +515,7 @@ export function TaskPage(): JSX.Element {
               emptyState={
                 !sessionId && task ? (
                   <div className={styles.emptyCta}>
-                    <button className={styles.ctaButton} onClick={() => startTask(task.id)}>Start Task</button>
+                    <button className={styles.ctaButton} onClick={() => startTask(task.id, undefined, selectedEnvId)}>Start Task</button>
                     <div className={styles.ctaDescription}>Click to begin agent execution</div>
                   </div>
                 ) : sessionId && groupedEvents.length === 0 ? (

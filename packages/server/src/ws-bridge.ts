@@ -351,9 +351,10 @@ async function startTaskSession(
     model,
     maxTurns,
     branch: freshTask.branch,
-    worktreeBasePath: freshTask.branch && useWorktrees
+    worktreeBasePath: freshTask.branch
       ? (workspace?.worktreeBasePath || process.env.GRACKLE_WORKTREE_BASE || "/workspace")
       : "",
+    useWorktrees,
     systemContext,
     workspaceId: freshTask.workspaceId ?? undefined,
     taskId: freshTask.id,

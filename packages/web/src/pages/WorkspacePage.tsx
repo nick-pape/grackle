@@ -11,19 +11,13 @@ import {
   EditableTextArea,
   EditableSelect,
   EditableCheckbox,
+  EnvironmentSelect,
 } from "../components/editable/index.js";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import styles from "../components/panels/SessionPanel.module.scss";
 
-/** Derives a color class for an environment status string. */
-function envStatusClass(status: string): string {
-  const s = status.toLowerCase();
-  if (s === "ready" || s === "running" || s === "available" || s === "connected") return styles.envDotGreen;
-  if (s === "provisioning" || s === "starting" || s === "pending" || s === "connecting") return styles.envDotYellow;
-  if (s === "error" || s === "failed" || s === "disconnected") return styles.envDotRed;
-  return styles.envDotGray;
-}
+
 
 /** Converts an ISO timestamp into a human-friendly relative time string. */
 function relativeTime(iso: string | undefined): string {
@@ -197,24 +191,13 @@ export function WorkspacePage(): JSX.Element {
           <div className={styles.metaRow}>
             <span className={styles.metaLabel}>Environment</span>
             <div className={styles.metaValue}>
-              <EditableSelect
+              <EnvironmentSelect
                 value={workspace?.environmentId || ""}
                 onSave={(v) => { if (workspace && v) { updateWorkspace(workspace.id, { environmentId: v }); } }}
-                options={environments.map((env) => ({ value: env.id, label: env.displayName }))}
+                environments={environments}
                 fieldId="environmentId"
                 activeFieldId={activeFieldId}
                 onActivate={setActiveFieldId}
-                renderDisplay={() => {
-                  if (owningEnv) {
-                    return (
-                      <span className={styles.envRow}>
-                        <span className={`${styles.envDot} ${envStatusClass(owningEnv.status)}`} />
-                        {owningEnv.displayName}
-                      </span>
-                    );
-                  }
-                  return undefined;
-                }}
                 placeholder="Select environment"
                 ariaLabel="Workspace environment"
                 data-testid="edit-env"

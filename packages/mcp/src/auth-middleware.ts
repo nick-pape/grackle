@@ -8,6 +8,22 @@ import { isRevokedTask, verifyScopedToken } from "./scoped-token.js";
 const API_KEY_LENGTH: number = 64;
 
 /**
+ * Normalize loopback hostnames so that `localhost` and `127.0.0.1` compare equal.
+ * Parses the URL and replaces `localhost` with `127.0.0.1`, returning the origin.
+ */
+function normalizeLoopback(url: string): string {
+  try {
+    const parsed = new URL(url);
+    if (parsed.hostname === "localhost") {
+      parsed.hostname = "127.0.0.1";
+    }
+    return parsed.origin;
+  } catch {
+    return url;
+  }
+}
+
+/**
  * Authenticate an incoming MCP HTTP request.
  *
  * Supports three authentication modes:
@@ -50,11 +66,12 @@ export function authenticateMcpRequest(req: http.IncomingMessage, apiKey: string
       // Empty aud is accepted because the client may omit the resource indicator (RFC 8707).
       // Use the socket's local port (server-controlled) rather than the Host header (client-controlled)
       // to prevent token replay via Host spoofing.
-      // Normalize trailing slashes since clients may include them (e.g., "http://127.0.0.1:7435/").
+      // Normalize trailing slashes and treat "localhost" as equivalent to "127.0.0.1" since
+      // MCP clients may connect via either hostname.
       if (oauthClaims.aud) {
         const localPort = req.socket.localPort;
         const expectedAudience = localPort ? `http://127.0.0.1:${localPort}` : undefined;
-        const normalizedAud = oauthClaims.aud.replace(/\/+$/, "");
+        const normalizedAud = normalizeLoopback(oauthClaims.aud.replace(/\/+$/, ""));
         if (!expectedAudience || normalizedAud !== expectedAudience) {
           return undefined;
         }

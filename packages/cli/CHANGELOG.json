@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.47.1",
+      "tag": "@grackle-ai/cli_v0.47.1",
+      "date": "Thu, 19 Mar 2026 18:56:01 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "fix: pass worktreeBasePath to PowerLine when worktrees disabled, normalize localhost in MCP OAuth audience check"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.47.0",
       "tag": "@grackle-ai/cli_v0.47.0",
       "date": "Thu, 19 Mar 2026 16:27:42 GMT",

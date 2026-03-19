@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Thu, 19 Mar 2026 16:27:42 GMT and should not be manually modified.
+This log was last generated on Thu, 19 Mar 2026 18:56:01 GMT and should not be manually modified.
+
+## 0.47.1
+Thu, 19 Mar 2026 18:56:01 GMT
+
+### Patches
+
+- fix: pass worktreeBasePath to PowerLine when worktrees disabled, normalize localhost in MCP OAuth audience check
 
 ## 0.47.0
 Thu, 19 Mar 2026 16:27:42 GMT
