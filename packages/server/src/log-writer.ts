@@ -12,6 +12,19 @@ export function initLog(logPath: string): void {
   openStreams.set(logPath, ws);
 }
 
+/**
+ * Ensure the JSONL log stream for the given path is open.
+ * If `initLog` has already been called for this path this is a no-op;
+ * otherwise it opens a new append stream.  Use this before `writeEvent`
+ * when the caller cannot guarantee that `initLog` has already been called
+ * (e.g. signal delivery to a PENDING session).
+ */
+export function ensureLogInitialized(logPath: string): void {
+  if (!openStreams.has(logPath)) {
+    initLog(logPath);
+  }
+}
+
 /** Append a session event as a JSON line to the session's log file. */
 export function writeEvent(logPath: string, event: grackle.SessionEvent): void {
   const ws = openStreams.get(logPath);

@@ -6,6 +6,7 @@ import { registerGrackleRoutes } from "./grpc-service.js";
 import { registerAdapter, startHeartbeat } from "./adapter-manager.js";
 import { updateEnvironmentStatus, resetAllStatuses } from "./env-registry.js";
 import { initWsSubscriber } from "./ws-broadcast.js";
+import { initSigchldSubscriber } from "./signals/sigchld.js";
 import { emit } from "./event-bus.js";
 import { DockerAdapter } from "./adapters/docker.js";
 import { LocalAdapter } from "./adapters/local.js";
@@ -788,6 +789,9 @@ async function main(): Promise<void> {
 
   // Wire the event bus to forward domain events over WebSocket
   initWsSubscriber();
+
+  // Wire SIGCHLD: notify parent tasks when child sessions reach terminal status
+  initSigchldSubscriber();
 
   webServer.on("error", (err: NodeJS.ErrnoException) => {
     if (err.code === "EADDRINUSE") {
