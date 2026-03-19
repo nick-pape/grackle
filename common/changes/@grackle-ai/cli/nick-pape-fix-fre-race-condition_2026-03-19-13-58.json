@@ -1,8 +1,8 @@
 {
   "changes": [
     {
-      "comment": "placeholder",
-      "type": "none",
+      "comment": "Add splash screen during first-run experience to prevent main app flash, add grackle logo to FRE and docs site",
+      "type": "minor",
       "packageName": "@grackle-ai/cli"
     }
   ],
