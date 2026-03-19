@@ -7,10 +7,8 @@ import {
 } from "@grackle-ai/common";
 import { z } from "zod";
 import type { ToolDefinition } from "../tool-registry.js";
-import type { AuthContext } from "../auth-context.js";
 import { jsonResult } from "../result-helpers.js";
 import { grpcErrorToToolResult } from "../error-handler.js";
-import { assertCallerIsAncestor } from "../scope-enforcement.js";
 
 /** Convert a proto Task message to a plain object with human-readable status. */
 function taskToJson(task: grackle.Task): Record<string, unknown> {
@@ -243,9 +241,8 @@ export const taskTools: ToolDefinition[] = [
       idempotentHint: false,
       openWorldHint: false,
     },
-    async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>, authContext?: AuthContext) {
+    async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) {
       try {
-        await assertCallerIsAncestor(client, authContext, args.taskId as string);
         const response = await client.startTask({
           taskId: args.taskId as string,
           personaId: (args.personaId as string | undefined) ?? "",

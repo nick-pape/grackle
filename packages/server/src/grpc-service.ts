@@ -260,26 +260,6 @@ export function buildMcpServersJson(
   return JSON.stringify(obj);
 }
 
-/**
- * Walk up the task parent chain and return the environmentId from the first
- * ancestor that has a session. Returns empty string if no ancestor has one.
- */
-function resolveAncestorEnvironmentId(parentTaskId: string): string {
-  let currentId = parentTaskId;
-  for (let i = 0; i < MAX_TASK_DEPTH && currentId; i++) {
-    const session = sessionStore.getLatestSessionForTask(currentId);
-    if (session?.environmentId) {
-      return session.environmentId;
-    }
-    const parent = taskStore.getTask(currentId);
-    if (!parent) {
-      break;
-    }
-    currentId = parent.parentTaskId;
-  }
-  return "";
-}
-
 /** Register all Grackle gRPC service handlers on the given ConnectRPC router. */
 export function registerGrackleRoutes(router: ConnectRouter): void {
   router.service(grackle.Grackle, {
@@ -932,12 +912,9 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         throw new ConnectError(`Project not found: ${task.projectId}`, Code.NotFound);
       }
 
-      const environmentId = req.environmentId
-        || resolveAncestorEnvironmentId(task.parentTaskId)
-        || project?.defaultEnvironmentId
-        || "";
+      const environmentId = req.environmentId || project?.defaultEnvironmentId || "";
       if (!environmentId) {
-        throw new ConnectError("No environment specified for task, ancestor, or project", Code.FailedPrecondition);
+        throw new ConnectError("No environment specified for task or project", Code.FailedPrecondition);
       }
 
       const conn = adapterManager.getConnection(environmentId);

@@ -1,12 +1,9 @@
 import type { Client } from "@connectrpc/connect";
-import { ConnectError, Code } from "@connectrpc/connect";
 import { z } from "zod";
 import { grackle, eventTypeToString, SESSION_STATUS } from "@grackle-ai/common";
 import type { ToolDefinition } from "../tool-registry.js";
-import type { AuthContext } from "../auth-context.js";
 import { jsonResult } from "../result-helpers.js";
 import { grpcErrorToToolResult } from "../error-handler.js";
-import { assertCallerIsAncestor } from "../scope-enforcement.js";
 
 /** Default timeout in seconds for session_attach streaming. */
 const DEFAULT_TIMEOUT_SECONDS: number = 30;
@@ -237,16 +234,8 @@ export const sessionTools: ToolDefinition[] = [
       idempotentHint: false,
       openWorldHint: false,
     },
-    async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>, authContext?: AuthContext) {
+    async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) {
       try {
-        if (authContext?.type === "scoped") {
-          const { sessions } = await client.listSessions({ environmentId: "", status: "" });
-          const session = sessions.find((s) => s.id === args.sessionId);
-          if (!session) {
-            throw new ConnectError("Session not found", Code.NotFound);
-          }
-          await assertCallerIsAncestor(client, authContext, session.taskId);
-        }
         await client.sendInput({
           sessionId: args.sessionId as string,
           text: args.text as string,
