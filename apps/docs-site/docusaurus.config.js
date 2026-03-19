@@ -6,7 +6,6 @@ const config = {
   tagline: 'Run any AI coding agent on any remote environment',
   url: 'https://nick-pape.github.io',
   baseUrl: '/grackle/',
-  favicon: 'img/favicon.ico',
   organizationName: 'nick-pape',
   projectName: 'grackle',
   onBrokenLinks: 'throw',
