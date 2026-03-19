@@ -9,8 +9,10 @@ import { logger } from "../logger.js";
 /** Maximum length for the child's last text message in the notification. */
 const MAX_LAST_MESSAGE_LENGTH: number = 2000;
 
-/** Terminal session statuses that trigger SIGCHLD. */
-const TERMINAL_STATUSES: ReadonlySet<string> = new Set([
+/** Session statuses that trigger SIGCHLD. Includes IDLE because "paused" tasks
+ *  (session idle after agent finishes working) are considered done in Grackle's model. */
+const SIGCHLD_STATUSES: ReadonlySet<string> = new Set([
+  SESSION_STATUS.IDLE,
   SESSION_STATUS.COMPLETED,
   SESSION_STATUS.FAILED,
   SESSION_STATUS.INTERRUPTED,
@@ -24,6 +26,7 @@ const delivered: Map<string, number> = new Map();
 
 /** Human-readable status labels for the notification text. */
 const STATUS_LABELS: Record<string, string> = {
+  [SESSION_STATUS.IDLE]: "finished (awaiting review)",
   [SESSION_STATUS.COMPLETED]: "completed successfully",
   [SESSION_STATUS.FAILED]: "failed",
   [SESSION_STATUS.INTERRUPTED]: "was interrupted",
@@ -85,7 +88,7 @@ async function handleTaskUpdated(childTaskId: string): Promise<void> {
     return;
   }
 
-  if (!TERMINAL_STATUSES.has(latestSession.status)) {
+  if (!SIGCHLD_STATUSES.has(latestSession.status)) {
     return;
   }
 
