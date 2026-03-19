@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.47.0",
+      "tag": "@grackle-ai/cli_v0.47.0",
+      "date": "Thu, 19 Mar 2026 16:27:42 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Rename Project to Workspace across all packages (proto, server, CLI, MCP, web UI, PowerLine)"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.46.0",
       "tag": "@grackle-ai/cli_v0.46.0",
       "date": "Thu, 19 Mar 2026 14:39:39 GMT",

@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Thu, 19 Mar 2026 14:39:39 GMT and should not be manually modified.
+This log was last generated on Thu, 19 Mar 2026 16:27:42 GMT and should not be manually modified.
+
+## 0.47.0
+Thu, 19 Mar 2026 16:27:42 GMT
+
+### Minor changes
+
+- Rename Project to Workspace across all packages (proto, server, CLI, MCP, web UI, PowerLine)
 
 ## 0.46.0
 Thu, 19 Mar 2026 14:39:39 GMT
