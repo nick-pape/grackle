@@ -379,6 +379,9 @@ export function TaskPage(): JSX.Element {
     if (selectedSessionId !== undefined) {
       setSelectedSessionId(undefined);
     }
+    if (selectedEnvId !== "") {
+      setSelectedEnvId("");
+    }
   }
 
   // Load task sessions

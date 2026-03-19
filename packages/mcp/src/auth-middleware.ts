@@ -9,10 +9,18 @@ const API_KEY_LENGTH: number = 64;
 
 /**
  * Normalize loopback hostnames so that `localhost` and `127.0.0.1` compare equal.
- * Replaces `://localhost` with `://127.0.0.1` to produce a canonical form.
+ * Parses the URL and replaces `localhost` with `127.0.0.1`, returning the origin.
  */
 function normalizeLoopback(url: string): string {
-  return url.replace("://localhost", "://127.0.0.1");
+  try {
+    const parsed = new URL(url);
+    if (parsed.hostname === "localhost") {
+      parsed.hostname = "127.0.0.1";
+    }
+    return parsed.origin;
+  } catch {
+    return url;
+  }
 }
 
 /**

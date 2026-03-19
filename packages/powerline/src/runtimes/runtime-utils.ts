@@ -18,7 +18,7 @@ export interface ResolveWorkingDirectoryOptions {
   branch?: string;
   /** Base path for worktree creation or working directory override. */
   worktreeBasePath?: string;
-  /** When true, create git worktrees for branch isolation. When false, checkout in place. */
+  /** When true, create git worktrees for branch isolation. When false, checkout in place. Defaults to true when undefined. */
   useWorktrees?: boolean;
   /** Event queue to push system messages to. */
   eventQueue: AsyncQueue<AgentEvent>;
@@ -151,12 +151,13 @@ async function checkoutBranchInPlace(repoPath: string, branch: string): Promise<
 /**
  * Resolve the working directory for an agent session.
  *
- * Tries worktree creation first (when branch + basePath are provided),
- * auto-detecting the git repo if the provided basePath is not a git repo.
- * Falls back to workspace directories on failure.
+ * Tries worktree creation first (when branch + basePath are provided and
+ * useWorktrees is not false), auto-detecting the git repo if the provided
+ * basePath is not a git repo. Falls back to workspace directories on failure.
  *
- * When a branch is provided but worktreeBasePath is empty (worktrees disabled),
- * checks out the branch directly in the main working tree and returns it.
+ * When useWorktrees is explicitly false, checks out the branch directly in the
+ * main working tree instead of creating a worktree. When useWorktrees is
+ * undefined (proto3 unset), it defaults to true.
  */
 export async function resolveWorkingDirectory(options: ResolveWorkingDirectoryOptions): Promise<string | undefined> {
   const { branch, worktreeBasePath, useWorktrees = true, eventQueue, requireNonEmpty } = options;
