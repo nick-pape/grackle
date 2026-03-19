@@ -1,3 +1,9 @@
+---
+title: "Grackle: Complete Technical Deep Dive"
+status: active
+type: reference
+---
+
 # Grackle: Complete Technical Deep Dive
 
 ## Table of Contents

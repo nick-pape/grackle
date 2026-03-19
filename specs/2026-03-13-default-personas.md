@@ -1,3 +1,9 @@
+---
+title: Default Persona Roster
+status: draft
+type: spec
+---
+
 # Default Persona Roster
 
 The persona roster is the pool of agent templates available to the orchestration system. Not every persona runs on every task — the TPM and Orchestrator select from the roster based on what the work requires.

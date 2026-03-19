@@ -1,3 +1,9 @@
+---
+title: "Grackle: Multi-Agent Orchestration for AI Coding Agents"
+status: active
+type: reference
+---
+
 # Grackle: Multi-Agent Orchestration for AI Coding Agents
 
 Grackle is an open-source orchestration platform that turns AI coding agents into coordinated teams. Today, Claude Code, GitHub Copilot, and OpenAI Codex each run one-at-a-time in a single terminal on a single machine. Grackle changes that. Define a project, break it into a task DAG with dependencies, and Grackle spawns agents across Docker containers, SSH remotes, GitHub Codespaces, or your local machine — each on its own isolated git branch. Agents share discoveries through a structured findings system, work through dependency chains automatically, and surface their output through real-time streaming to a web dashboard or CLI. When an agent finishes a task, you review the diff, approve or reject with notes, and Grackle auto-unblocks the next tasks in the graph. The vision: you describe the architecture, Grackle coordinates the fleet.

@@ -1,6 +1,10 @@
-# Competitive Landscape: Multi-Agent AI Coding Orchestration
+---
+title: "Competitive Landscape: Multi-Agent AI Coding Orchestration"
+status: archived
+type: analysis
+---
 
-**Date:** 2026-03-10
+# Competitive Landscape: Multi-Agent AI Coding Orchestration
 
 This is a thorough analysis of products, frameworks, and tools that compete with or are adjacent to Grackle's vision of multi-agent AI orchestration for software engineering. The landscape is organized into tiers based on how directly each product overlaps with Grackle's architecture.
 
