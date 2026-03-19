@@ -6,7 +6,7 @@ import type { PersonaRow } from "./schema.js";
 export interface ResolvedPersona {
   /** The persona ID that was resolved. */
   personaId: string;
-  /** Agent runtime implementation (e.g. "claude-code", "codex"). */
+  /** Agent runtime implementation (e.g. "claude-code", "codex", "genaiscript"). */
   runtime: string;
   /** LLM model identifier (e.g. "sonnet", "gpt-4.1"). */
   model: string;
@@ -18,6 +18,10 @@ export interface ResolvedPersona {
   toolConfig: string;
   /** JSON array of MCP server configs. */
   mcpServers: string;
+  /** Persona type: "agent" (interactive LLM session) or "script" (run-to-completion). */
+  type: string;
+  /** Script source code (non-empty for script personas). */
+  script: string;
   /** The full persona row for additional fields. */
   persona: PersonaRow;
 }
@@ -52,10 +56,13 @@ export function resolvePersona(
     throw new Error(`Persona not found: ${personaId}`);
   }
 
+  const personaType = persona.type || "agent";
+
   if (!persona.runtime) {
     throw new Error(`Persona "${persona.name}" has no runtime configured`);
   }
-  if (!persona.model) {
+  // Model is required for agent personas but optional for script personas
+  if (personaType !== "script" && !persona.model) {
     throw new Error(`Persona "${persona.name}" has no model configured`);
   }
 
@@ -67,6 +74,8 @@ export function resolvePersona(
     systemPrompt: persona.systemPrompt,
     toolConfig: persona.toolConfig,
     mcpServers: persona.mcpServers,
+    type: personaType,
+    script: persona.script,
     persona,
   };
 }

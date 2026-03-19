@@ -397,6 +397,8 @@ message Persona {
   repeated McpServerConfig mcp_servers = 9;
   string created_at = 10;
   string updated_at = 11;
+  string type = 12; // "agent" (default) or "script"
+  string script = 13; // Script source code (for script personas)
 }
 
 message PersonaList {
@@ -416,6 +418,8 @@ message CreatePersonaRequest {
   string model = 6;
   int32 max_turns = 7;
   repeated McpServerConfig mcp_servers = 8;
+  string type = 9; // "agent" (default) or "script"
+  string script = 10; // Script source code (for script personas)
 }
 
 message UpdatePersonaRequest {
@@ -428,6 +432,8 @@ message UpdatePersonaRequest {
   string model = 7;
   int32 max_turns = 8;
   repeated McpServerConfig mcp_servers = 9;
+  string type = 10; // "agent" or "script"
+  string script = 11; // Script source code (for script personas)
 }
 
 // ─── Settings ───────────────────────────────────────────────

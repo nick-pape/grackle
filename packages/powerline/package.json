@@ -31,6 +31,7 @@
     "@github/copilot": "^1.0.7",
     "@zed-industries/claude-agent-acp": "^0.22.0",
     "@zed-industries/codex-acp": "^0.10.0",
+    "genaiscript": "^2.5.1",
     "@modelcontextprotocol/sdk": "^1.27.0",
     "@bufbuild/protobuf": "^2.5.0",
     "@connectrpc/connect": "^2.0.0",

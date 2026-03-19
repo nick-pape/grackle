@@ -848,7 +848,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       projectCreating: false,
       taskStartingId: undefined,
       personas,
-      createPersona: (name: string, description: string, systemPrompt: string, runtime?: string, model?: string, maxTurns?: number) => {
+      createPersona: (name: string, description: string, systemPrompt: string, runtime?: string, model?: string, maxTurns?: number, type?: string, script?: string) => {
         console.log("[MockGrackle] createPersona", { name });
         const newPersona: PersonaData = {
           id: `mock-persona-${Date.now()}`,
@@ -862,6 +862,8 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
           mcpServers: "[]",
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
+          type: type || "agent",
+          script: script || "",
         };
         setPersonas((prev) => [...prev, newPersona]);
       },

@@ -220,6 +220,8 @@ function personaRowToProto(row: personaStore.PersonaRow): grackle.Persona {
       ),
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
+    type: row.type || "agent",
+    script: row.script || "",
   });
 }
 
@@ -476,6 +478,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         mcpServersJson,
         mcpUrl,
         mcpToken,
+        scriptContent: resolved.type === "script" ? resolved.script : "",
       });
 
       // Push fresh credentials before spawning (best-effort).
@@ -988,6 +991,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         mcpServersJson,
         mcpUrl: taskMcpUrl,
         mcpToken: taskMcpToken,
+        scriptContent: resolved.type === "script" ? resolved.script : "",
       });
 
       processEventStream(conn.client.spawn(powerlineReq), {
@@ -1140,8 +1144,16 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
 
     async createPersona(req: grackle.CreatePersonaRequest) {
       if (!req.name) throw new ConnectError("Persona name is required", Code.InvalidArgument);
-      if (!req.systemPrompt)
-        throw new ConnectError("Persona system_prompt is required", Code.InvalidArgument);
+      const personaType = req.type || "agent";
+      if (personaType === "script") {
+        if (!req.script) {
+          throw new ConnectError("Script content is required for script personas", Code.InvalidArgument);
+        }
+      } else {
+        if (!req.systemPrompt) {
+          throw new ConnectError("Persona system_prompt is required", Code.InvalidArgument);
+        }
+      }
 
       // Enforce unique ID and unique name
       let id = slugify(req.name) || uuid().slice(0, 8);
@@ -1175,6 +1187,8 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         req.model,
         req.maxTurns,
         mcpServersJson,
+        personaType,
+        req.script,
       );
       emit("persona.created", { personaId: id });
       const row = personaStore.getPersona(id);
@@ -1227,6 +1241,8 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       const runtime = req.runtime || existing.runtime;
       const model = req.model || existing.model;
       const maxTurns = req.maxTurns === 0 ? existing.maxTurns : req.maxTurns;
+      const updatedType = req.type || existing.type || "agent";
+      const updatedScript = req.script || existing.script || "";
 
       personaStore.updatePersona(
         req.id,
@@ -1238,6 +1254,8 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         model,
         maxTurns,
         mcpServersJson,
+        updatedType,
+        updatedScript,
       );
       emit("persona.updated", { personaId: req.id });
       const row = personaStore.getPersona(req.id);

@@ -384,6 +384,7 @@ type SpawnRequest = Message<"grackle.powerline.SpawnRequest"> & {
     mcpServersJson: string;
     mcpUrl: string;
     mcpToken: string;
+    scriptContent: string;
 };
 
 // @public

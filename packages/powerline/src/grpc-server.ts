@@ -86,6 +86,7 @@ export function registerPowerLineRoutes(router: ConnectRouter): void {
           ? (JSON.parse(req.mcpServersJson) as Record<string, unknown>)
           : undefined,
         mcpBroker,
+        scriptContent: req.scriptContent || undefined,
       });
 
       yield* streamSession(req.sessionId, session);

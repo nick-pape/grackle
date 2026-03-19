@@ -68,6 +68,8 @@ type CreatePersonaRequest = Message<"grackle.CreatePersonaRequest"> & {
     model: string;
     maxTurns: number;
     mcpServers: McpServerConfig[];
+    type: string;
+    script: string;
 };
 
 // @public
@@ -805,6 +807,8 @@ type Persona = Message<"grackle.Persona"> & {
     mcpServers: McpServerConfig[];
     createdAt: string;
     updatedAt: string;
+    type: string;
+    script: string;
 };
 
 // @public
@@ -1147,6 +1151,7 @@ type SpawnRequest_2 = Message<"grackle.powerline.SpawnRequest"> & {
     mcpServersJson: string;
     mcpUrl: string;
     mcpToken: string;
+    scriptContent: string;
 };
 
 // @public
@@ -1322,6 +1327,8 @@ type UpdatePersonaRequest = Message<"grackle.UpdatePersonaRequest"> & {
     model: string;
     maxTurns: number;
     mcpServers: McpServerConfig[];
+    type: string;
+    script: string;
 };
 
 // @public

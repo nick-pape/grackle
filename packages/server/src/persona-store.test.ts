@@ -22,6 +22,8 @@ function applySchema(): void {
       model         TEXT NOT NULL DEFAULT '',
       max_turns     INTEGER NOT NULL DEFAULT 0,
       mcp_servers   TEXT NOT NULL DEFAULT '[]',
+      type          TEXT NOT NULL DEFAULT 'agent',
+      script        TEXT NOT NULL DEFAULT '',
       created_at    TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at    TEXT NOT NULL DEFAULT (datetime('now'))
     );
@@ -238,5 +240,43 @@ describe("persona-store", () => {
     expect(() => {
       personaStore.updatePersona("p2", "Name A", "", "prompt", "{}", "", "", 0, "[]");
     }).toThrow();
+  });
+
+  it("creates and retrieves a script persona with type and script", () => {
+    personaStore.createPersona(
+      "script-1",
+      "Nightly Report",
+      "Generates nightly report",
+      "",
+      "{}",
+      "genaiscript",
+      "",
+      0,
+      "[]",
+      "script",
+      'script({ model: "none" }); $`Hello`;',
+    );
+    const p = personaStore.getPersona("script-1");
+    expect(p).toBeDefined();
+    expect(p!.type).toBe("script");
+    expect(p!.script).toBe('script({ model: "none" }); $`Hello`;');
+    expect(p!.runtime).toBe("genaiscript");
+  });
+
+  it("updates type and script fields", () => {
+    personaStore.createPersona("p1", "Test", "", "prompt", "{}", "claude-code", "sonnet", 0, "[]");
+    personaStore.updatePersona(
+      "p1", "Test", "", "", "{}", "genaiscript", "", 0, "[]", "script", "console.log('hi');"
+    );
+    const p = personaStore.getPersona("p1");
+    expect(p!.type).toBe("script");
+    expect(p!.script).toBe("console.log('hi');");
+  });
+
+  it("defaults type to agent and script to empty when not provided", () => {
+    personaStore.createPersona("p1", "Agent", "", "prompt", "{}", "claude-code", "sonnet", 0, "[]");
+    const p = personaStore.getPersona("p1");
+    expect(p!.type).toBe("agent");
+    expect(p!.script).toBe("");
   });
 });
