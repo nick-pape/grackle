@@ -62,9 +62,14 @@ export async function deliverSignalToTask(
     return false;
   }
 
+  // Subscribe to the session stream BEFORE reanimating so we don't miss
+  // the waiting_input event if the runtime reaches IDLE quickly (e.g. stub).
+  const idleWaiter = waitForSessionIdle(latest.id, REANIMATE_IDLE_TIMEOUT_MS);
+
   try {
     reanimateAgent(latest.id);
   } catch (err) {
+    idleWaiter.cancel();
     logger.error(
       { err, taskId, sessionId: latest.id, signalType },
       "Failed to reanimate session for signal delivery",
@@ -73,7 +78,7 @@ export async function deliverSignalToTask(
   }
 
   // Wait for the reanimated session to reach IDLE
-  const reachedIdle = await waitForSessionIdle(latest.id, REANIMATE_IDLE_TIMEOUT_MS);
+  const reachedIdle = await idleWaiter.promise;
   if (!reachedIdle) {
     logger.error(
       { taskId, sessionId: latest.id, signalType },
@@ -134,57 +139,81 @@ async function sendInputToSession(
   }
 }
 
+/** Handle returned by waitForSessionIdle for pre-subscribe + cancel support. */
+interface IdleWaiter {
+  /** Resolves to true if IDLE reached, false on timeout or terminal status. */
+  promise: Promise<boolean>;
+  /** Cancel the waiter early (e.g. if reanimate fails). */
+  cancel: () => void;
+}
+
 /**
- * Wait for a session to reach IDLE status by watching StreamHub events.
- * Returns true if the session reaches IDLE before the timeout, false otherwise.
+ * Begin watching for a session to reach IDLE status via StreamHub events.
+ * Subscribes immediately so events are captured even before the caller starts
+ * the session (e.g. via reanimateAgent).
  */
-async function waitForSessionIdle(
+function waitForSessionIdle(
   sessionId: string,
   timeoutMs: number,
-): Promise<boolean> {
-  // Subscribe first, then check DB to close the race window where the session
-  // reaches IDLE between the DB read and the subscription registration.
+): IdleWaiter {
   const stream = streamHub.createStream(sessionId);
-
-  const current = sessionStore.getSession(sessionId);
-  if (current?.status === SESSION_STATUS.IDLE) {
-    stream.cancel();
-    return true;
-  }
-
   let timer: ReturnType<typeof setTimeout> | undefined;
+  let cancelled = false;
 
-  try {
-    return await Promise.race<boolean>([
-      (async () => {
-        for await (const event of stream) {
-          // Only inspect status events — other event types (text, tool_use, etc.)
-          // can have arbitrary content that might accidentally match status strings.
-          if (event.type !== grackle.EventType.STATUS) {
-            continue;
-          }
-          // "waiting_input" is the runtime status that maps to IDLE in the session store.
-          if (event.content === "waiting_input") {
-            return true;
-          }
-          // If the session hit a terminal state, stop waiting
-          if (["completed", "failed", "killed", "interrupted"].includes(event.content)) {
-            return false;
-          }
-        }
-        return false;
-      })(),
-      new Promise<boolean>((resolve) => {
-        timer = setTimeout(() => {
-          stream.cancel();
-          resolve(false);
-        }, timeoutMs);
-      }),
-    ]);
-  } finally {
-    if (timer !== undefined) {
-      clearTimeout(timer);
+  const promise = (async () => {
+    // Check DB after subscribing to close the race window.
+    const current = sessionStore.getSession(sessionId);
+    if (current?.status === SESSION_STATUS.IDLE) {
+      stream.cancel();
+      return true;
     }
-    stream.cancel();
-  }
+
+    try {
+      return await Promise.race<boolean>([
+        (async () => {
+          for await (const event of stream) {
+            if (cancelled) {
+              return false;
+            }
+            // Only inspect status events — other event types (text, tool_use, etc.)
+            // can have arbitrary content that might accidentally match status strings.
+            if (event.type !== grackle.EventType.STATUS) {
+              continue;
+            }
+            // "waiting_input" is the runtime status that maps to IDLE in the session store.
+            if (event.content === "waiting_input") {
+              return true;
+            }
+            // If the session hit a terminal state, stop waiting
+            if (["completed", "failed", "killed", "interrupted"].includes(event.content)) {
+              return false;
+            }
+          }
+          return false;
+        })(),
+        new Promise<boolean>((resolve) => {
+          timer = setTimeout(() => {
+            stream.cancel();
+            resolve(false);
+          }, timeoutMs);
+        }),
+      ]);
+    } finally {
+      if (timer !== undefined) {
+        clearTimeout(timer);
+      }
+      stream.cancel();
+    }
+  })();
+
+  return {
+    promise,
+    cancel: () => {
+      cancelled = true;
+      stream.cancel();
+      if (timer !== undefined) {
+        clearTimeout(timer);
+      }
+    },
+  };
 }

@@ -9,10 +9,16 @@ import { logger } from "../logger.js";
 /** Maximum length for the child's last text message in the notification. */
 const MAX_LAST_MESSAGE_LENGTH: number = 2000;
 
-/** Session statuses that trigger SIGCHLD. When a child's session reaches one of
- *  these states, the parent is notified. IDLE sessions are killed shortly after
- *  (becoming INTERRUPTED/COMPLETED), which is the actual trigger point. */
+/**
+ * Session statuses that trigger SIGCHLD. LLM agents don't reliably exit() —
+ * they go IDLE when they stop working. COMPLETED fires when the session's event
+ * stream ends (agent-initiated, not user-initiated — the user marking a task
+ * "Complete" emits task.completed which this subscriber does not listen to).
+ * Dedup prevents double notification if both IDLE and COMPLETED fire for the
+ * same session.
+ */
 const SIGCHLD_STATUSES: ReadonlySet<string> = new Set([
+  SESSION_STATUS.IDLE,
   SESSION_STATUS.COMPLETED,
   SESSION_STATUS.FAILED,
   SESSION_STATUS.INTERRUPTED,
@@ -26,6 +32,7 @@ const delivered: Map<string, number> = new Map();
 
 /** Human-readable status labels for the notification text. */
 const STATUS_LABELS: Record<string, string> = {
+  [SESSION_STATUS.IDLE]: "finished working (awaiting review)",
   [SESSION_STATUS.COMPLETED]: "completed successfully",
   [SESSION_STATUS.FAILED]: "failed",
   [SESSION_STATUS.INTERRUPTED]: "was interrupted",

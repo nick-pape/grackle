@@ -88,7 +88,7 @@ async function waitForSessionText(
 }
 
 test.describe("SIGCHLD — child completion notification", () => {
-  test("parent receives SIGCHLD when child task completes", async ({ appPage: page }) => {
+  test("parent receives SIGCHLD when child task goes idle", async ({ appPage: page }) => {
     // 1. Create project
     await createProject(page, "SIGCHLD Test");
     const projectId = await getProjectId(page, "SIGCHLD Test");
@@ -111,18 +111,12 @@ test.describe("SIGCHLD — child completion notification", () => {
     const parentSessionId = await startTaskAndGetSessionId(page, parentTaskId);
     await waitForSessionStatus(page, parentSessionId, "waiting_input");
 
-    // 5. Start child task → wait for IDLE → send input → child completes
+    // 5. Start child task → it works, goes idle → SIGCHLD fires immediately
     const childSessionId = await startTaskAndGetSessionId(page, childTaskId);
     await waitForSessionStatus(page, childSessionId, "waiting_input");
 
-    await sendWsMessage(page, {
-      type: "send_input",
-      payload: { sessionId: childSessionId, text: "continue" },
-    });
-    await waitForSessionStatus(page, childSessionId, "completed");
-
-    // 6. SIGCHLD is delivered to parent as sendInput → stub echoes it as text
-    //    "You said: [SIGCHLD] Child task ..."
+    // 6. SIGCHLD is delivered to parent when child goes idle.
+    //    Stub runtime echoes the signal as "You said: [SIGCHLD] ..."
     const sigchldContent = await waitForSessionText(
       page,
       parentSessionId,
@@ -130,7 +124,14 @@ test.describe("SIGCHLD — child completion notification", () => {
       30_000,
     );
     expect(sigchldContent).toContain("Child Worker");
-    expect(sigchldContent).toContain("completed");
+    expect(sigchldContent).toContain("finished working");
+
+    // Cleanup: complete the child session so it frees the environment for subsequent tests
+    await sendWsMessage(page, {
+      type: "send_input",
+      payload: { sessionId: childSessionId, text: "continue" },
+    });
+    await waitForSessionStatus(page, childSessionId, "completed");
   });
 
   test("SIGCHLD delivered after parent session reanimated", async ({ appPage: page }) => {
@@ -161,7 +162,10 @@ test.describe("SIGCHLD — child completion notification", () => {
     });
     await waitForSessionStatus(page, parentSessionId, "completed");
 
-    // 5. Start child task → IDLE → send input → child completes
+    // 5. Start child → idle (SIGCHLD fires but reanimate fails: env busy).
+    //    Send "continue" → child completes, freeing the env.
+    //    SIGCHLD fires again for "completed" (dedup allows retry after failure).
+    //    This time reanimate succeeds.
     const childSessionId = await startTaskAndGetSessionId(page, childTaskId);
     await waitForSessionStatus(page, childSessionId, "waiting_input");
     await sendWsMessage(page, {
@@ -170,9 +174,8 @@ test.describe("SIGCHLD — child completion notification", () => {
     });
     await waitForSessionStatus(page, childSessionId, "completed");
 
-    // 6. SIGCHLD triggers reanimate of parent session → new session streams events
+    // 6. SIGCHLD triggers reanimate of parent session.
     //    The reanimated session echoes "[SIGCHLD]..." in its text events.
-    //    Check the original session (reanimated) for the SIGCHLD text.
     const sigchldContent = await waitForSessionText(
       page,
       parentSessionId,

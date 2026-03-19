@@ -146,14 +146,14 @@ describe("initSigchldSubscriber", () => {
     initSigchldSubscriber();
   });
 
-  it("calls deliverSignalToTask with correct args when child completes", async () => {
+  it("calls deliverSignalToTask with correct args when child goes idle", async () => {
     vi.spyOn(taskStore, "getTask").mockReturnValue(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       makeTask() as any,
     );
     vi.spyOn(sessionStore, "getLatestSessionForTask").mockReturnValue(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      makeSession({ status: "completed" }) as any,
+      makeSession({ status: "idle" }) as any,
     );
     vi.mocked(readLog).mockReturnValue([
       { session_id: "sess-child", type: "text", timestamp: "", content: "Created PR #42." },
@@ -170,7 +170,7 @@ describe("initSigchldSubscriber", () => {
     expect(deliverSignalToTask).toHaveBeenCalledWith(
       "task-parent",
       "sigchld",
-      expect.stringContaining("completed successfully"),
+      expect.stringContaining("finished working"),
     );
   });
 
@@ -228,19 +228,18 @@ describe("initSigchldSubscriber", () => {
     expect(deliverSignalToTask).not.toHaveBeenCalled();
   });
 
-  it("skips non-terminal session status changes", async () => {
+  it("skips non-triggering session statuses (running, pending)", async () => {
     vi.spyOn(taskStore, "getTask").mockReturnValue(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       makeTask() as any,
     );
+
     vi.spyOn(sessionStore, "getLatestSessionForTask").mockReturnValue(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       makeSession({ status: "running" }) as any,
     );
-
     fireTaskUpdated("task-child");
     await flush();
-
     expect(deliverSignalToTask).not.toHaveBeenCalled();
   });
 
@@ -251,7 +250,7 @@ describe("initSigchldSubscriber", () => {
     );
     vi.spyOn(sessionStore, "getLatestSessionForTask").mockReturnValue(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      makeSession({ status: "completed" }) as any,
+      makeSession({ status: "idle" }) as any,
     );
     vi.mocked(readLog).mockReturnValue([]);
 
@@ -271,7 +270,7 @@ describe("initSigchldSubscriber", () => {
     );
     vi.spyOn(sessionStore, "getLatestSessionForTask").mockReturnValue(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      makeSession({ status: "completed" }) as any,
+      makeSession({ status: "idle" }) as any,
     );
     vi.mocked(readLog).mockReturnValue([
       { session_id: "sess-child", type: "tool_use", timestamp: "", content: "ran tests" },
@@ -285,7 +284,7 @@ describe("initSigchldSubscriber", () => {
     expect(message).toContain("[SIGCHLD]");
     expect(message).toContain("task-child");
     expect(message).toContain("Implement auth flow");
-    expect(message).toContain("completed successfully");
+    expect(message).toContain("finished working");
     expect(message).toContain("All tests pass. PR created.");
   });
 });
