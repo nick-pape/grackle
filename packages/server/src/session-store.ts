@@ -63,7 +63,8 @@ export function listByEnv(environmentId: string): SessionRow[] {
     .all();
 }
 
-/** Update a session's status, runtime session ID, and error; auto-sets `endedAt` for terminal states. */
+/** Update a session's status and error; auto-sets `endedAt` for terminal states.
+ * Only updates `runtimeSessionId` when explicitly provided (omitting preserves the current value). */
 export function updateSession(
   id: string,
   status: SessionStatus,
@@ -73,13 +74,16 @@ export function updateSession(
   const endedAt = ([SESSION_STATUS.COMPLETED, SESSION_STATUS.FAILED, SESSION_STATUS.INTERRUPTED] as string[]).includes(status)
     ? new Date().toISOString()
     : null;
+  const patch: Partial<typeof sessions.$inferInsert> = {
+    status,
+    endedAt,
+    error: error ?? null,
+  };
+  if (runtimeSessionId !== undefined) {
+    patch.runtimeSessionId = runtimeSessionId;
+  }
   db.update(sessions)
-    .set({
-      status,
-      runtimeSessionId: runtimeSessionId ?? null,
-      endedAt,
-      error: error ?? null,
-    })
+    .set(patch)
     .where(eq(sessions.id, id))
     .run();
 }
@@ -121,6 +125,22 @@ export function deleteByEnvironment(environmentId: string): void {
 export function setSessionTask(id: string, taskId: string): void {
   db.update(sessions)
     .set({ taskId })
+    .where(eq(sessions.id, id))
+    .run();
+}
+
+/** Persist the runtime-native session ID returned by the PowerLine. */
+export function updateRuntimeSessionId(id: string, runtimeSessionId: string): void {
+  db.update(sessions)
+    .set({ runtimeSessionId })
+    .where(eq(sessions.id, id))
+    .run();
+}
+
+/** Clear terminal state for reanimate — reset status to running, clear endedAt/error/suspendedAt. */
+export function reanimateSession(id: string): void {
+  db.update(sessions)
+    .set({ status: SESSION_STATUS.RUNNING, endedAt: null, error: null, suspendedAt: null })
     .where(eq(sessions.id, id))
     .run();
 }

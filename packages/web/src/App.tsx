@@ -25,6 +25,7 @@ import { SettingsCredentialsTab } from "./pages/settings/SettingsCredentialsTab.
 import { SettingsPersonasTab } from "./pages/settings/SettingsPersonasTab.js";
 import { SettingsAppearanceTab } from "./pages/settings/SettingsAppearanceTab.js";
 import { SettingsAboutTab } from "./pages/settings/SettingsAboutTab.js";
+import { SetupWizard } from "./pages/SetupWizard.js";
 import styles from "./App.module.scss";
 
 /** Whether the app is running in mock mode (`?mock` query parameter). */
@@ -33,7 +34,7 @@ const IS_MOCK_MODE: boolean =
 
 /** Application shell layout with StatusBar, Sidebar, Outlet, and UnifiedBar. */
 function AppShell(): JSX.Element {
-  const { lastSpawnedId, environments } = useGrackle();
+  const { lastSpawnedId, environments, connected, onboardingCompleted } = useGrackle();
   const { showToast } = useToast();
   useEnvironmentToasts(environments, showToast);
   const navigate = useAppNavigate();
@@ -70,6 +71,11 @@ function AppShell(): JSX.Element {
       navigate(sessionUrl(lastSpawnedId), { replace: true });
     }
   }, [lastSpawnedId, navigate, location.pathname]);
+
+  // Redirect to setup wizard if onboarding hasn't been completed
+  if (connected && !onboardingCompleted) {
+    return <Navigate to="/setup" replace />;
+  }
 
   return (
     <div className={styles.root}>
@@ -109,6 +115,7 @@ function AppShell(): JSX.Element {
 function AppRoutes(): JSX.Element {
   return (
     <Routes>
+      <Route path="setup" element={<SetupWizard />} />
       <Route element={<AppShell />}>
         <Route index element={<EmptyPage />} />
         <Route path="sessions/new" element={<NewChatPage />} />

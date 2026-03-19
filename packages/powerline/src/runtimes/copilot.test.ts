@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import type { AgentEvent } from "./runtime.js";
 
 // Mock dependencies before importing
 vi.mock("../logger.js", () => ({
@@ -8,8 +9,14 @@ vi.mock("node:fs", () => ({
   existsSync: vi.fn(() => false),
   readFileSync: vi.fn(() => "{}"),
 }));
+vi.mock("./runtime-utils.js", async (importOriginal) => {
+  const original = await importOriginal<typeof import("./runtime-utils.js")>();
+  return { ...original, resolveWorkingDirectory: vi.fn(async () => undefined) };
+});
 
-import { resolveGithubToken, resolveProviderConfig, CopilotRuntime, CopilotSession } from "./copilot.js";
+
+
+import { resolveGithubToken, resolveProviderConfig, CopilotRuntime, CopilotSession, _setCopilotSdkForTesting } from "./copilot.js";
 
 describe("resolveGithubToken", () => {
   beforeEach(() => {
@@ -230,5 +237,62 @@ describe("CopilotSession.kill — abort path (UT-1 through UT-4)", () => {
     // Do NOT inject a mock — copilotSession is undefined
     expect(() => session.kill()).not.toThrow();
     expect(session.status).toBe("interrupted");
+  });
+});
+
+describe("CopilotRuntime — runtime_session_id emission", () => {
+  // Uses the @internal _setCopilotSdkForTesting hook to inject a mock SDK and
+  // exercise the real setupSdk() code path end-to-end.
+
+  beforeEach(() => {
+    vi.stubEnv("GRACKLE_MCP_CONFIG", "");
+
+    const idleHandlers: Record<string, () => void> = {};
+    const mockCopilotSession = {
+      sessionId: "copilot-sdk-session-xyz",
+      on: vi.fn((event: string, fn: () => void) => { idleHandlers[event] = fn; }),
+      send: vi.fn(async () => { setTimeout(() => idleHandlers["session.idle"]?.(), 0); }),
+      destroy: vi.fn(async () => {}),
+      abort: vi.fn(),
+    };
+    const mockCopilotClient = {
+      start: vi.fn(async () => {}),
+      stop: vi.fn(async () => []),
+      createSession: vi.fn(async () => mockCopilotSession),
+      resumeSession: vi.fn(async () => mockCopilotSession),
+    };
+
+    _setCopilotSdkForTesting({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      CopilotClient: vi.fn(() => mockCopilotClient) as any,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      defineTool: vi.fn() as any,
+      approveAll: vi.fn(),
+    });
+  });
+
+  afterEach(() => {
+    _setCopilotSdkForTesting(undefined); // reset cache for next test
+    vi.unstubAllEnvs();
+  });
+
+  it("real setupSdk() emits runtime_session_id event with the Copilot session ID", async () => {
+    const runtime = new CopilotRuntime();
+    const session = runtime.spawn({ sessionId: "cop-emit-real", prompt: "hi", model: "gpt-4o", maxTurns: 1 });
+
+    const events: AgentEvent[] = [];
+    for await (const event of session.stream()) {
+      events.push(event);
+      if (event.type === "status" && event.content === "waiting_input") {
+        session.kill();
+        break;
+      }
+      if (event.type === "status" && event.content === "failed") break;
+    }
+
+    const rtIdEvent = events.find((e) => e.type === "runtime_session_id");
+    expect(rtIdEvent, `Expected runtime_session_id event. Got: ${JSON.stringify(events.map(e => e.type))}`).toBeDefined();
+    expect(rtIdEvent!.content).toBe("copilot-sdk-session-xyz");
+    expect(rtIdEvent!.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
   });
 });

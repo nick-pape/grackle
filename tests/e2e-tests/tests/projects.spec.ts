@@ -292,6 +292,26 @@ test.describe("Projects", () => {
     await page.keyboard.press("Escape");
   });
 
+  test("keyboard activation of edit button (Enter/Space)", async ({ appPage }) => {
+    const page = appPage;
+    await createAndSelectProject(page, "keyboard-activate-test");
+
+    // Focus the name edit button and press Enter to activate edit mode
+    const nameButton = page.locator('[data-testid="edit-name-button"]');
+    await nameButton.focus();
+    await page.keyboard.press("Enter");
+    await expect(page.locator('[data-testid="edit-name-input"]')).toBeVisible();
+    await expect(page.locator('[data-testid="edit-name-input"]')).toBeFocused();
+    await page.keyboard.press("Escape");
+
+    // Focus the description edit button and press Space to activate
+    const descButton = page.locator('[data-testid="edit-description-button"]');
+    await descButton.focus();
+    await page.keyboard.press("Space");
+    await expect(page.locator('[data-testid="edit-description-input"]')).toBeVisible();
+    await page.keyboard.press("Escape");
+  });
+
   test("keyboard hints shown while editing", async ({ appPage }) => {
     const page = appPage;
     await createAndSelectProject(page, "hint-test");

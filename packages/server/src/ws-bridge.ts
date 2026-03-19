@@ -23,6 +23,7 @@ import {
   LOGS_DIR,
   SESSION_STATUS,
   TASK_STATUS,
+  DEFAULT_MCP_PORT,
   eventTypeToString,
 } from "@grackle-ai/common";
 import { resolvePersona } from "./resolve-persona.js";
@@ -38,7 +39,11 @@ import { processEventStream } from "./event-processor.js";
 import * as processorRegistry from "./processor-registry.js";
 import { setWssInstance, envRowToWs } from "./ws-broadcast.js";
 import { emit } from "./event-bus.js";
-import { buildMcpServersJson } from "./grpc-service.js";
+import { buildMcpServersJson, toDialableHost } from "./grpc-service.js";
+import { createScopedToken } from "@grackle-ai/mcp";
+import { loadOrCreateApiKey } from "./api-key.js";
+import { reanimateAgent } from "./reanimate-agent.js";
+import { ConnectError } from "@connectrpc/connect";
 import { computeTaskStatus } from "./compute-task-status.js";
 import { exec } from "./utils/exec.js";
 import { formatGhError } from "./utils/format-gh-error.js";
@@ -329,6 +334,15 @@ async function startTaskSession(
     logger.warn("Failed to parse persona.mcpServers JSON; ignoring");
   }
 
+  // Build MCP broker URL + scoped token so runtimes can call the MCP server.
+  const mcpPort = parseInt(process.env.GRACKLE_MCP_PORT || String(DEFAULT_MCP_PORT), 10);
+  const mcpDialHost = toDialableHost(process.env.GRACKLE_HOST || "127.0.0.1");
+  const mcpUrl = `http://${mcpDialHost}:${mcpPort}/mcp`;
+  const mcpToken = createScopedToken(
+    { sub: freshTask.id, pid: freshTask.projectId, per: resolved.personaId, sid: sessionId },
+    loadOrCreateApiKey(),
+  );
+
   const powerlineReq = create(powerline.SpawnRequestSchema, {
     sessionId,
     runtime,
@@ -343,6 +357,8 @@ async function startTaskSession(
     projectId: freshTask.projectId,
     taskId: freshTask.id,
     mcpServersJson,
+    mcpUrl,
+    mcpToken,
   });
 
   processEventStream(conn.client.spawn(powerlineReq), {
@@ -678,6 +694,22 @@ async function handleMessage(
       break;
     }
 
+    case "resume_agent": {
+      const resumeSessionId = msg.payload?.sessionId as string;
+      if (!resumeSessionId) {
+        sendWs(ws, { type: "error", payload: { message: "sessionId required" } });
+        return;
+      }
+      try {
+        reanimateAgent(resumeSessionId);
+        sendWs(ws, { type: "agent_resumed", payload: { sessionId: resumeSessionId } });
+      } catch (err) {
+        const message = err instanceof ConnectError ? err.message : String(err);
+        sendWs(ws, { type: "error", payload: { message } });
+      }
+      break;
+    }
+
     // ─── Projects ──────────────────────────────────────────
 
     case "list_projects": {
@@ -876,14 +908,14 @@ async function handleMessage(
       }
       personaStore.updatePersona(
         updatePersonaId,
-        (msg.payload?.name as string) || existingPersona.name,
-        (msg.payload?.description as string) || existingPersona.description,
-        (msg.payload?.systemPrompt as string) || existingPersona.systemPrompt,
-        (msg.payload?.toolConfig as string) || existingPersona.toolConfig,
-        (msg.payload?.runtime as string) || existingPersona.runtime,
-        (msg.payload?.model as string) || existingPersona.model,
-        (msg.payload?.maxTurns as number) || existingPersona.maxTurns,
-        (msg.payload?.mcpServers as string) || existingPersona.mcpServers,
+        (msg.payload?.name as string | undefined) ?? existingPersona.name,
+        (msg.payload?.description as string | undefined) ?? existingPersona.description,
+        (msg.payload?.systemPrompt as string | undefined) ?? existingPersona.systemPrompt,
+        (msg.payload?.toolConfig as string | undefined) ?? existingPersona.toolConfig,
+        (msg.payload?.runtime as string | undefined) ?? existingPersona.runtime,
+        (msg.payload?.model as string | undefined) ?? existingPersona.model,
+        (msg.payload?.maxTurns as number | undefined) ?? existingPersona.maxTurns,
+        (msg.payload?.mcpServers as string | undefined) ?? existingPersona.mcpServers,
       );
       emit("persona.updated", { personaId: updatePersonaId });
       break;
