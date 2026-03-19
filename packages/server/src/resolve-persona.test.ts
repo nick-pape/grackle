@@ -28,6 +28,8 @@ function makePersonaRow(overrides: Partial<PersonaRow> = {}): PersonaRow {
     model: "sonnet",
     maxTurns: 10,
     mcpServers: "[]",
+    type: "agent",
+    script: "",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     ...overrides,
@@ -120,6 +122,8 @@ describe("resolvePersona", () => {
       systemPrompt: "Be concise.",
       toolConfig: '{"allowed":["read"]}',
       mcpServers: '[{"url":"http://localhost:8080"}]',
+      type: "agent",
+      script: "",
       persona,
     });
   });
@@ -137,16 +141,50 @@ describe("resolvePersona", () => {
     );
   });
 
-  it("throws error when persona has no model configured", () => {
+  it("throws error when agent persona has no model configured", () => {
     const persona = makePersonaRow({
       id: "bare",
       runtime: "claude-code",
       model: "",
+      type: "agent",
     });
     vi.mocked(personaStore.getPersona).mockReturnValue(persona);
 
     expect(() => resolvePersona("bare")).toThrow(
       'Persona "Test Persona" has no model configured',
+    );
+  });
+
+  it("script persona resolves OK with empty model", () => {
+    const persona = makePersonaRow({
+      id: "script-1",
+      runtime: "genaiscript",
+      model: "",
+      type: "script",
+      script: 'script({ model: "none" }); $`Hello`;',
+    });
+    vi.mocked(personaStore.getPersona).mockReturnValue(persona);
+
+    const result = resolvePersona("script-1");
+
+    expect(result.personaId).toBe("script-1");
+    expect(result.type).toBe("script");
+    expect(result.script).toBe('script({ model: "none" }); $`Hello`;');
+    expect(result.model).toBe("");
+  });
+
+  it("script persona without runtime still fails", () => {
+    const persona = makePersonaRow({
+      id: "script-no-rt",
+      runtime: "",
+      model: "",
+      type: "script",
+      script: 'script({ model: "none" });',
+    });
+    vi.mocked(personaStore.getPersona).mockReturnValue(persona);
+
+    expect(() => resolvePersona("script-no-rt")).toThrow(
+      'Persona "Test Persona" has no runtime configured',
     );
   });
 });

@@ -116,7 +116,7 @@ export interface Codespace {
   gitStatus: string;
 }
 
-/** An agent persona configuration. */
+/** An agent or script persona configuration. */
 export interface PersonaData {
   id: string;
   name: string;
@@ -129,6 +129,8 @@ export interface PersonaData {
   mcpServers: string;
   createdAt: string;
   updatedAt: string;
+  type: string;
+  script: string;
 }
 
 /** Provisioning progress state for a single environment. */
@@ -332,7 +334,9 @@ export function isPersonaData(v: unknown): v is PersonaData {
     typeof v.maxTurns === "number" &&
     typeof v.mcpServers === "string" &&
     typeof v.createdAt === "string" &&
-    typeof v.updatedAt === "string"
+    typeof v.updatedAt === "string" &&
+    typeof v.type === "string" &&
+    typeof v.script === "string"
   );
 }
 

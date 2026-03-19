@@ -689,6 +689,8 @@ export const MOCK_PERSONAS: PersonaData[] = [
     mcpServers: "[]",
     createdAt: "2026-02-20T10:00:00Z",
     updatedAt: "2026-02-20T10:00:00Z",
+    type: "agent",
+    script: "",
   },
   {
     id: "persona-fe",
@@ -702,6 +704,8 @@ export const MOCK_PERSONAS: PersonaData[] = [
     mcpServers: "[]",
     createdAt: "2026-02-20T10:05:00Z",
     updatedAt: "2026-02-20T10:05:00Z",
+    type: "agent",
+    script: "",
   },
   {
     id: "persona-reviewer",
@@ -715,6 +719,8 @@ export const MOCK_PERSONAS: PersonaData[] = [
     mcpServers: "[]",
     createdAt: "2026-02-20T10:10:00Z",
     updatedAt: "2026-02-20T10:10:00Z",
+    type: "agent",
+    script: "",
   },
   {
     id: "persona-tester",
@@ -728,6 +734,8 @@ export const MOCK_PERSONAS: PersonaData[] = [
     mcpServers: "[]",
     createdAt: "2026-02-20T10:15:00Z",
     updatedAt: "2026-02-20T10:15:00Z",
+    type: "agent",
+    script: "",
   },
 ];
 

@@ -18,6 +18,7 @@ import { registerPowerLineRoutes } from "./grpc-server.js";
 import { registerRuntime } from "./runtime-registry.js";
 import { StubRuntime } from "./runtimes/stub.js";
 import { StubMcpRuntime } from "./runtimes/stub-mcp.js";
+import { GenAIScriptRuntime } from "./runtimes/genaiscript.js";
 import { ClaudeCodeRuntime } from "./runtimes/claude-code.js";
 import { CopilotRuntime } from "./runtimes/copilot.js";
 import { CodexRuntime } from "./runtimes/codex.js";
@@ -58,6 +59,7 @@ function main(): void {
       // Register runtimes
       registerRuntime(new StubRuntime());
       registerRuntime(new StubMcpRuntime());
+      registerRuntime(new GenAIScriptRuntime());
       registerRuntime(new ClaudeCodeRuntime());
       registerRuntime(new CopilotRuntime());
       registerRuntime(new CodexRuntime());

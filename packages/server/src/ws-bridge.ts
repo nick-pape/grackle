@@ -835,6 +835,8 @@ async function handleMessage(
             mcpServers: r.mcpServers,
             createdAt: r.createdAt,
             updatedAt: r.updatedAt,
+            type: r.type || "agent",
+            script: r.script || "",
           })),
         },
       });
@@ -847,13 +849,23 @@ async function handleMessage(
         sendWs(ws, { type: "error", payload: { message: "name required" } });
         return;
       }
-      const personaSystemPrompt = msg.payload?.systemPrompt as string;
-      if (!personaSystemPrompt) {
-        sendWs(ws, {
-          type: "error",
-          payload: { message: "systemPrompt required" },
-        });
+      const personaType = (msg.payload?.type as string) || "agent";
+      if (personaType !== "agent" && personaType !== "script") {
+        sendWs(ws, { type: "error", payload: { message: `Invalid persona type: "${personaType}". Must be "agent" or "script".` } });
         return;
+      }
+      const personaSystemPrompt = (msg.payload?.systemPrompt as string) || "";
+      const personaScript = (msg.payload?.script as string) || "";
+      if (personaType === "script") {
+        if (!personaScript) {
+          sendWs(ws, { type: "error", payload: { message: "script required for script personas" } });
+          return;
+        }
+      } else {
+        if (!personaSystemPrompt) {
+          sendWs(ws, { type: "error", payload: { message: "systemPrompt required" } });
+          return;
+        }
       }
       let personaId = slugify(personaName) || uuid().slice(0, 8);
       const MAX_ID_RETRIES = 10;
@@ -870,6 +882,8 @@ async function handleMessage(
         (msg.payload?.model as string) || "",
         (msg.payload?.maxTurns as number) || 0,
         (msg.payload?.mcpServers as string) || "[]",
+        personaType,
+        personaScript,
       );
       emit("persona.created", { personaId });
       break;
@@ -917,6 +931,8 @@ async function handleMessage(
         (msg.payload?.model as string | undefined) ?? existingPersona.model,
         (msg.payload?.maxTurns as number | undefined) ?? existingPersona.maxTurns,
         (msg.payload?.mcpServers as string | undefined) ?? existingPersona.mcpServers,
+        (msg.payload?.type as string | undefined) ?? existingPersona.type,
+        (msg.payload?.script as string | undefined) ?? existingPersona.script,
       );
       emit("persona.updated", { personaId: updatePersonaId });
       break;

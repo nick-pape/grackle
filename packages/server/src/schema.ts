@@ -179,6 +179,8 @@ export const personas = sqliteTable("personas", {
   model: text("model").notNull().default(""),
   maxTurns: integer("max_turns").notNull().default(0),
   mcpServers: text("mcp_servers").notNull().default("[]"),
+  type: text("type").notNull().default("agent"),
+  script: text("script").notNull().default(""),
   createdAt: text("created_at")
     .notNull()
     .default(sql`(datetime('now'))`),

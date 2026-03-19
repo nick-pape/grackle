@@ -182,3 +182,39 @@
   font-size: var(--font-size-xs);
   padding: 2px var(--space-sm);
 }
+
+.typeToggle {
+  display: flex;
+  gap: var(--space-md);
+  margin-bottom: var(--space-md);
+
+  label {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    cursor: pointer;
+    font-size: var(--font-size-sm);
+    color: var(--text-primary);
+  }
+}
+
+.typeBadge {
+  @include surface-inset;
+  padding: 2px var(--space-sm);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-tertiary);
+  border-radius: var(--radius-sm);
+}
+
+.scriptEditor {
+  font-family: var(--font-mono) !important;
+  font-size: var(--font-size-sm) !important;
+  line-height: 1.5;
+  tab-size: 2;
+}
+
+.optional {
+  font-weight: normal;
+  color: var(--text-tertiary);
+}
