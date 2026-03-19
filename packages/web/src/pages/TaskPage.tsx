@@ -222,7 +222,7 @@ function TaskActionButtons({
   if (task.status === "working") {
     return (
       <div className={styles.headerActions}>
-        <button onClick={onStop} disabled={!sessionId} className={styles.btnDanger}>Stop</button>
+        <button onClick={onStop} className={styles.btnDanger}>Stop</button>
         <button onClick={onPause} disabled={!sessionId} className={styles.btnGhost}>Pause</button>
       </div>
     );

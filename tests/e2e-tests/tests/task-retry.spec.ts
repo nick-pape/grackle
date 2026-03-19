@@ -45,6 +45,6 @@ test.describe("Task Retry (failed → in_progress)", () => {
     await page.getByRole("button", { name: "Send", exact: true }).click();
 
     // --- Verify task reaches paused (review) ---
-    await expect(page.getByRole("button", { name: "Stop", exact: true })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("button", { name: "Resume", exact: true })).toBeVisible({ timeout: 15_000 });
   });
 });

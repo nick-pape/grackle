@@ -60,9 +60,8 @@ test.describe("Task Lifecycle (stub runtime)", () => {
 
     // --- Step 8: Session completes -> task auto-moves to paused ---
     // The stub runtime completes quickly after input, auto-moving to paused.
-    // The SessionPanel auto-switches to the Stream tab on paused, so we check
-    // for the Stop button rather than stream content.
-    await expect(page.getByRole("button", { name: "Stop", exact: true })).toBeVisible({ timeout: 15_000 });
+    // Wait for "Resume" which only appears in paused state (not working).
+    await expect(page.getByRole("button", { name: "Resume", exact: true })).toBeVisible({ timeout: 15_000 });
 
     // --- Step 9: Stop the task (kill session + mark complete) ---
     await page.getByRole("button", { name: "Stop", exact: true }).click();

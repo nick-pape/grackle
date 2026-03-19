@@ -12,8 +12,8 @@ test.describe("Task Stop & Pause buttons", () => {
     await patchWsForStubRuntime(page);
     await runStubTaskToCompletion(page);
 
-    // Task is now paused — Stop button should be visible
-    await expect(page.getByRole("button", { name: "Stop", exact: true })).toBeVisible({ timeout: 5_000 });
+    // Task is now paused — Resume confirms paused state
+    await expect(page.getByRole("button", { name: "Resume", exact: true })).toBeVisible({ timeout: 5_000 });
 
     // Click Stop (should kill active sessions + mark task complete)
     await page.getByRole("button", { name: "Stop", exact: true }).click();
@@ -39,7 +39,7 @@ test.describe("Task Stop & Pause buttons", () => {
     // button layout in the paused state (Stop, Resume, Delete).
     await page.getByRole("button", { name: "Start", exact: true }).click();
 
-    // Wait for the task to reach paused state
+    // Wait for the task to reach paused state (Resume only appears in paused)
     await expect(page.getByRole("button", { name: "Resume", exact: true })).toBeVisible({ timeout: 15_000 });
 
     // Stop and Delete buttons should also be visible
