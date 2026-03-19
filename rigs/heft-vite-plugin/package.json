@@ -5,7 +5,8 @@
   "description": "Heft task plugin that runs Vite build",
   "main": "lib/ViteBuildPlugin.js",
   "scripts": {
-    "build": "tsc"
+    "build": "tsc",
+    "_phase:build": "tsc"
   },
   "peerDependencies": {
     "@rushstack/heft": "1.2.4",

@@ -1,0 +1,12 @@
+{
+  "operationSettings": [
+    {
+      "operationName": "_phase:build",
+      "outputFolderNames": ["dist", "src/gen"]
+    },
+    {
+      "operationName": "_phase:test",
+      "outputFolderNames": []
+    }
+  ]
+}

@@ -313,9 +313,6 @@ importers:
       '@grackle-ai/heft-rig':
         specifier: workspace:*
         version: link:../../rigs/heft-rig
-      '@playwright/test':
-        specifier: ^1.49.0
-        version: 1.58.2
       '@rushstack/heft':
         specifier: 1.2.4
         version: 1.2.4(@types/node@22.19.15)
@@ -409,6 +406,21 @@ importers:
       vite:
         specifier: ^6.0.0
         version: 6.4.1(@types/node@22.19.15)(sass@1.98.0)
+
+  ../../tests/e2e-tests:
+    devDependencies:
+      '@grackle-ai/cli':
+        specifier: workspace:*
+        version: link:../../packages/cli
+      '@grackle-ai/server':
+        specifier: workspace:*
+        version: link:../../packages/server
+      '@grackle-ai/web':
+        specifier: workspace:*
+        version: link:../../packages/web
+      '@playwright/test':
+        specifier: ^1.49.0
+        version: 1.58.2
 
 packages:
 

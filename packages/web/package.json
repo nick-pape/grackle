@@ -17,8 +17,9 @@
     "build": "heft build --clean",
     "preview": "vite preview",
     "clean": "heft clean",
-    "test": "heft test",
-    "test:unit": "vitest run"
+    "test": "vitest run",
+    "_phase:build": "heft run --only build -- --clean",
+    "_phase:test": "vitest run"
   },
   "dependencies": {
     "@grackle-ai/common": "workspace:*",
@@ -38,7 +39,6 @@
     "@vitejs/plugin-react": "^4.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "@playwright/test": "^1.49.0",
     "sass": "^1.86.0",
     "vite": "^6.0.0",
     "vitest": "^3.1.1"

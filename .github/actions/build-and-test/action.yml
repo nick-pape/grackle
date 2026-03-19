@@ -4,6 +4,22 @@ description: Shared install → build → Playwright → test steps
 runs:
   using: composite
   steps:
+    - name: Cache Rush build cache
+      uses: actions/cache@v4
+      with:
+        path: common/temp/build-cache
+        key: rush-build-${{ runner.os }}-${{ github.sha }}
+        restore-keys: |
+          rush-build-${{ runner.os }}-
+
+    - name: Cache pnpm store
+      uses: actions/cache@v4
+      with:
+        path: common/temp/pnpm-store
+        key: pnpm-${{ runner.os }}-${{ hashFiles('common/config/rush/pnpm-lock.yaml') }}
+        restore-keys: |
+          pnpm-${{ runner.os }}-
+
     - name: Rush install
       shell: bash
       run: node common/scripts/install-run-rush.js install
@@ -15,8 +31,12 @@ runs:
     - name: Install Playwright browsers
       shell: bash
       run: npx playwright install --with-deps chromium
-      working-directory: packages/web
+      working-directory: tests/e2e-tests
 
-    - name: Run tests
+    - name: Run unit tests
       shell: bash
       run: node common/scripts/install-run-rush.js test --verbose
+
+    - name: Run E2E tests
+      shell: bash
+      run: node common/scripts/install-run-rush.js e2e --verbose
