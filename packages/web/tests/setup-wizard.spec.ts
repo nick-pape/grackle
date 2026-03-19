@@ -2,18 +2,16 @@ import { test, expect } from "./fixtures.js";
 import { sendWsMessage } from "./helpers.js";
 
 /**
- * Helper: set onboarding_completed and reload. Waits for Connected before
- * changing the setting so the WS is ready.
+ * Helper: set onboarding_completed via a direct WebSocket connection.
+ * Uses sendWsMessage which opens a WS, sends the message, waits briefly
+ * for server processing, then closes. Works regardless of current route.
  */
-async function setOnboardingAndReload(
+async function setOnboardingCompleted(
   page: import("@playwright/test").Page,
   value: "true" | "false",
 ): Promise<void> {
   await page.goto("/");
-  await page.waitForFunction(
-    () => document.body.innerText.includes("Connected"),
-    { timeout: 10_000 },
-  );
+  await page.waitForLoadState("networkidle");
   await sendWsMessage(page, {
     type: "set_setting",
     payload: { key: "onboarding_completed", value },
@@ -28,7 +26,6 @@ test.describe("Setup Wizard (FRE)", () => {
     // Restore onboarding_completed to true so other test suites aren't affected
     const ctx = await browser.newContext();
     const page = await ctx.newPage();
-    // Need to set the session cookie for auth
     const { readFileSync } = await import("node:fs");
     const { STATE_FILE } = await import("./state-file.js");
     const state = JSON.parse(readFileSync(STATE_FILE, "utf8"));
@@ -38,12 +35,12 @@ test.describe("Setup Wizard (FRE)", () => {
       value: state.pairingCookie.slice(eqIdx + 1),
       url: `http://127.0.0.1:${state.webPort}`,
     }]);
-    await setOnboardingAndReload(page, "true");
+    await setOnboardingCompleted(page, "true");
     await ctx.close();
   });
 
   test("redirects to /setup when onboarding is incomplete", async ({ page }) => {
-    await setOnboardingAndReload(page, "false");
+    await setOnboardingCompleted(page, "false");
 
     await page.goto("/");
     await page.waitForURL("**/setup", { timeout: 10_000 });

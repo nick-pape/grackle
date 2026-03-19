@@ -11,6 +11,13 @@ import styles from "./SetupWizard.module.scss";
 /** Total number of steps in the wizard. */
 const TOTAL_STEPS: number = 3;
 
+/** Default model for each runtime. resolvePersona() requires a non-empty model. */
+const DEFAULT_MODELS: Record<string, string> = {
+  "claude-code": "sonnet",
+  "copilot": "gpt-4o",
+  "codex": "o3",
+};
+
 /** First-run experience wizard — guides new users through initial setup. */
 export function SetupWizard(): JSX.Element {
   const { personas, updatePersona, completeOnboarding, onboardingCompleted } = useGrackle();
@@ -23,8 +30,9 @@ export function SetupWizard(): JSX.Element {
     (runtime: string) => {
       // Update the seed persona's runtime if the user picked something different
       if (seedPersona && runtime !== seedPersona.runtime) {
-        // Clear the model so the new runtime uses its own default
-        updatePersona(seedPersona.id, undefined, undefined, undefined, runtime, "");
+        // Set the model to a valid default for the chosen runtime
+        const model = DEFAULT_MODELS[runtime] ?? "sonnet";
+        updatePersona(seedPersona.id, undefined, undefined, undefined, runtime, model);
       }
       completeOnboarding();
       navigate("/", { replace: true });
