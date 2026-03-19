@@ -23,14 +23,14 @@ test.describe("Deep linking", () => {
       { timeout: 10_000 },
     );
 
-    // The project page should be visible (sidebar shows project name)
+    // The workspace page should be visible (sidebar shows workspace name)
     await expect(page.getByText("deep-link-proj").first()).toBeVisible({ timeout: 5_000 });
   });
 
   test("deep link to /tasks/:id loads task detail", async ({ appPage }) => {
     const page = appPage;
 
-    // Create project and task
+    // Create workspace and task
     await createWorkspace(page, "deep-link-task-proj");
     await page.getByText("deep-link-task-proj").click();
     await createTask(page, "deep-link-task-proj", "deep-link-task");
@@ -72,10 +72,10 @@ test.describe("Deep linking", () => {
   test("back/forward navigation works between pages", async ({ appPage }) => {
     const page = appPage;
 
-    // Create a project to navigate to
+    // Create a workspace to navigate to
     await createWorkspace(page, "back-fwd-proj");
 
-    // Navigate: home -> project -> settings
+    // Navigate: home -> workspace -> settings
     await page.getByText("back-fwd-proj").click();
     await page.waitForTimeout(500);
 
@@ -109,7 +109,7 @@ test.describe("Deep linking", () => {
   test("deep link to /tasks/:id/stream loads stream tab", async ({ appPage }) => {
     const page = appPage;
 
-    // Create project and task
+    // Create workspace and task
     await createWorkspace(page, "deep-stream-proj");
     await page.getByText("deep-stream-proj").click();
     await createTask(page, "deep-stream-proj", "deep-stream-task");

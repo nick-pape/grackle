@@ -11,7 +11,7 @@ test.describe("DAG View", () => {
   test("Graph tab renders task nodes after switching from default Tasks tab", async ({ appPage }) => {
     const page = appPage;
 
-    // Create project with two tasks
+    // Create workspace with two tasks
     await createWorkspace(page, "dag-basic");
     await createTask(page, "dag-basic", "dag-task-a", "test-local");
     await createTask(page, "dag-basic", "dag-task-b", "test-local");
@@ -27,10 +27,10 @@ test.describe("DAG View", () => {
     await expect(page.locator("[data-task-title='dag-task-b']")).toBeVisible({ timeout: 5_000 });
   });
 
-  test("Graph tab is not visible when no project is selected", async ({ appPage }) => {
+  test("Graph tab is not visible when no workspace is selected", async ({ appPage }) => {
     const page = appPage;
 
-    // Without selecting a project, Graph tab should not exist
+    // Without selecting a workspace, Graph tab should not exist
     await expect(page.getByRole("tab", { name: "Graph" })).not.toBeVisible();
   });
 

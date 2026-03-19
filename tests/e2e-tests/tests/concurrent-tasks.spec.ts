@@ -10,7 +10,7 @@ test.describe("Concurrent Tasks", () => {
   test("two tasks run concurrently without event leakage", async ({ appPage }) => {
     const page = appPage;
 
-    // Create project with two tasks
+    // Create workspace with two tasks
     await createWorkspace(page, "conc-leak");
     await createTask(page, "conc-leak", "conc-task-a", "test-local");
     await createTask(page, "conc-leak", "conc-task-b", "test-local");
@@ -64,7 +64,7 @@ test.describe("Concurrent Tasks", () => {
   test("concurrent tasks show correct sidebar status simultaneously", async ({ appPage }) => {
     const page = appPage;
 
-    // Create project with two tasks
+    // Create workspace with two tasks
     await createWorkspace(page, "conc-status");
     await createTask(page, "conc-status", "status-task-x", "test-local");
     await createTask(page, "conc-status", "status-task-y", "test-local");

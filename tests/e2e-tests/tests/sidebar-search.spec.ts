@@ -7,7 +7,7 @@ test.describe("Sidebar search filter", () => {
     await page.evaluate(() => localStorage.removeItem("grackle-group-by-status"));
   });
 
-  test("search input is visible when projects exist", async ({ appPage }) => {
+  test("search input is visible when workspaces exist", async ({ appPage }) => {
     const page = appPage;
 
     await createWorkspace(page, "search-visible");
@@ -17,7 +17,7 @@ test.describe("Sidebar search filter", () => {
     await expect(searchInput).toHaveAttribute("aria-label", "Filter workspaces and tasks");
   });
 
-  test("typing filters projects by name", async ({ appPage }) => {
+  test("typing filters workspaces by name", async ({ appPage }) => {
     const page = appPage;
 
     await createWorkspace(page, "Alpha Project");
@@ -61,7 +61,7 @@ test.describe("Sidebar search filter", () => {
     // Clear the filter
     await searchInput.fill("");
 
-    // Both projects should be visible again
+    // Both workspaces should be visible again
     await expect(page.getByText("Zebra Corp").first()).toBeVisible({ timeout: 5_000 });
     await expect(page.getByText("Quantum Labs").first()).toBeVisible({ timeout: 5_000 });
   });
@@ -106,7 +106,7 @@ test.describe("Sidebar search filter", () => {
     await expect(mark.first()).toHaveText("login");
   });
 
-  test("project match shows all its tasks", async ({ appPage }) => {
+  test("workspace match shows all its tasks", async ({ appPage }) => {
     const page = appPage;
 
     await createWorkspace(page, "unique-proj-name");
@@ -116,20 +116,20 @@ test.describe("Sidebar search filter", () => {
     const searchInput = page.getByTestId("sidebar-search");
     await searchInput.fill("unique-proj");
 
-    // Project matches by name, so all tasks should be shown
+    // Workspace matches by name, so all tasks should be shown
     await expect(page.getByText("task-aaa").first()).toBeVisible({ timeout: 5_000 });
     await expect(page.getByText("task-bbb").first()).toBeVisible({ timeout: 5_000 });
   });
 
-  test("search finds tasks in unexpanded projects", async ({ appPage }) => {
+  test("search finds tasks in unexpanded workspaces", async ({ appPage }) => {
     const page = appPage;
 
-    // Create a project and add a task via WS (without expanding the project in the UI)
+    // Create a workspace and add a task via WS (without expanding the workspace in the UI)
     await createWorkspace(page, "collapsed-proj");
     const workspaceId = await getWorkspaceId(page, "collapsed-proj");
     await createTaskViaWs(page, workspaceId, "hidden-needle");
 
-    // The project is collapsed — "hidden-needle" should NOT be visible yet
+    // The workspace is collapsed — "hidden-needle" should NOT be visible yet
     await expect(page.getByText("hidden-needle")).not.toBeVisible({ timeout: 2_000 });
 
     // Search for the task — should trigger eager load and find it

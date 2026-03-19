@@ -159,7 +159,7 @@ describe("event-processor SUBTASK_CREATE handling", () => {
 
   it("creates a subtask when SUBTASK_CREATE event is received", async () => {
     // Create a decomposable parent task
-    taskStore.createTask("parent1", "proj1", "Parent Task", "desc", [], "test-project", "", true);
+    taskStore.createTask("parent1", "proj1", "Parent Task", "desc", [], "test-workspace", "", true);
     sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
 
     const subtaskEvent = create(powerline.AgentEventSchema, {
@@ -199,7 +199,7 @@ describe("event-processor SUBTASK_CREATE handling", () => {
   });
 
   it("resolves local_id dependencies between sibling subtasks", async () => {
-    taskStore.createTask("parent1", "proj1", "Parent Task", "desc", [], "test-project", "", true);
+    taskStore.createTask("parent1", "proj1", "Parent Task", "desc", [], "test-workspace", "", true);
     sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
 
     const event1 = create(powerline.AgentEventSchema, {
@@ -245,7 +245,7 @@ describe("event-processor SUBTASK_CREATE handling", () => {
   });
 
   it("skips subtask creation when parent task cannot decompose", async () => {
-    taskStore.createTask("parent1", "proj1", "Leaf Task", "desc", [], "test-project", "", false);
+    taskStore.createTask("parent1", "proj1", "Leaf Task", "desc", [], "test-workspace", "", false);
     sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
 
     const subtaskEvent = create(powerline.AgentEventSchema, {
@@ -299,7 +299,7 @@ describe("event-processor SUBTASK_CREATE handling", () => {
   });
 
   it("warns on unknown local_id in depends_on but still creates the subtask", async () => {
-    taskStore.createTask("parent1", "proj1", "Parent Task", "desc", [], "test-project", "", true);
+    taskStore.createTask("parent1", "proj1", "Parent Task", "desc", [], "test-workspace", "", true);
     sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
 
     const subtaskEvent = create(powerline.AgentEventSchema, {
@@ -332,7 +332,7 @@ describe("event-processor SUBTASK_CREATE handling", () => {
   });
 
   it("rejects subtask with empty title or description", async () => {
-    taskStore.createTask("parent1", "proj1", "Parent Task", "desc", [], "test-project", "", true);
+    taskStore.createTask("parent1", "proj1", "Parent Task", "desc", [], "test-workspace", "", true);
     sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
 
     const subtaskEvent = create(powerline.AgentEventSchema, {
@@ -361,7 +361,7 @@ describe("event-processor SUBTASK_CREATE handling", () => {
   });
 
   it("detects duplicate local_id and keeps existing mapping", async () => {
-    taskStore.createTask("parent1", "proj1", "Parent Task", "desc", [], "test-project", "", true);
+    taskStore.createTask("parent1", "proj1", "Parent Task", "desc", [], "test-workspace", "", true);
     sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
 
     const event1 = create(powerline.AgentEventSchema, {
@@ -420,7 +420,7 @@ describe("event-processor SUBTASK_CREATE handling", () => {
   });
 
   it("does not crash the stream on malformed SUBTASK_CREATE content", async () => {
-    taskStore.createTask("parent1", "proj1", "Parent Task", "desc", [], "test-project", "", true);
+    taskStore.createTask("parent1", "proj1", "Parent Task", "desc", [], "test-workspace", "", true);
     sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
 
     const badEvent = create(powerline.AgentEventSchema, {
@@ -561,7 +561,7 @@ describe("stream error handling", () => {
 
   it("task broadcast fires when session completes via idle disconnect", async () => {
     sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
-    taskStore.createTask("task1", "proj1", "Test Task", "desc", [], "test-project");
+    taskStore.createTask("task1", "proj1", "Test Task", "desc", [], "test-workspace");
 
     // Simulate task in_progress
     taskStore.updateTaskStatus("task1", "working");
@@ -683,7 +683,7 @@ describe("task status broadcast on terminal events", () => {
 
   it("broadcasts task_updated when session completes with a task", async () => {
     sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
-    taskStore.createTask("task1", "proj1", "Test Task", "desc", [], "test-project");
+    taskStore.createTask("task1", "proj1", "Test Task", "desc", [], "test-workspace");
     taskStore.updateTaskStatus("task1", "working");
 
     const completedEvent = create(powerline.AgentEventSchema, {
@@ -709,7 +709,7 @@ describe("task status broadcast on terminal events", () => {
 
   it("broadcasts task_updated for both terminal and non-terminal session events", async () => {
     sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
-    taskStore.createTask("task1", "proj1", "Test Task", "desc", [], "test-project");
+    taskStore.createTask("task1", "proj1", "Test Task", "desc", [], "test-workspace");
     taskStore.updateTaskStatus("task1", "working");
 
     const waitingEvent = create(powerline.AgentEventSchema, {
@@ -849,7 +849,7 @@ describe("late-binding", () => {
 
   it("processes finding events after late-bind", async () => {
     sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
-    taskStore.createTask("task1", "proj1", "Test Task", "desc", [], "test-project");
+    taskStore.createTask("task1", "proj1", "Test Task", "desc", [], "test-workspace");
 
     const { stream, push, end } = controllableStream();
     processEventStream(stream, {
@@ -891,7 +891,7 @@ describe("late-binding", () => {
 
   it("processes subtask events after late-bind", async () => {
     sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
-    taskStore.createTask("task1", "proj1", "Parent Task", "desc", [], "test-project", "", true);
+    taskStore.createTask("task1", "proj1", "Parent Task", "desc", [], "test-workspace", "", true);
 
     const { stream, push, end } = controllableStream();
     processEventStream(stream, {
@@ -929,7 +929,7 @@ describe("late-binding", () => {
 
   it("broadcasts task_updated after late-bind on terminal events", async () => {
     sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
-    taskStore.createTask("task1", "proj1", "Test Task", "desc", [], "test-project");
+    taskStore.createTask("task1", "proj1", "Test Task", "desc", [], "test-workspace");
     taskStore.updateTaskStatus("task1", "working");
 
     const { stream, push, end } = controllableStream();
@@ -962,7 +962,7 @@ describe("late-binding", () => {
 
   it("replays pre-association finding events from log on late-bind", async () => {
     sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
-    taskStore.createTask("task1", "proj1", "Test Task", "desc", [], "test-project");
+    taskStore.createTask("task1", "proj1", "Test Task", "desc", [], "test-workspace");
 
     // Mock readLog to return a pre-existing finding event
     vi.mocked(logWriter.readLog).mockReturnValue([
@@ -1006,7 +1006,7 @@ describe("late-binding", () => {
 
   it("replay does not re-publish events to streamHub", async () => {
     sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
-    taskStore.createTask("task1", "proj1", "Test Task", "desc", [], "test-project");
+    taskStore.createTask("task1", "proj1", "Test Task", "desc", [], "test-workspace");
 
     vi.mocked(logWriter.readLog).mockReturnValue([
       {

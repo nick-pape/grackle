@@ -132,7 +132,7 @@ export async function createWorkspace(page: Page, name: string): Promise<void> {
 export const createProject = createWorkspace;
 
 /**
- * Create a task under a project and wait for it to appear in the sidebar.
+ * Create a task under a workspace and wait for it to appear in the sidebar.
  *
  * When `envName` is provided the task is created via WebSocket so the
  * environment can be carried through (task creation UI no longer has an env
@@ -149,8 +149,8 @@ export async function createTask(
   if (envName) {
     // Environment must be set at creation via WS (UI no longer has env field).
     // Navigate to the task edit form via the "New task" sidebar button (this uses
-    // stopPropagation so it never toggles the project's expand/collapse state —
-    // unlike clicking the project name which collapses if already selected).
+    // stopPropagation so it never toggles the workspace's expand/collapse state —
+    // unlike clicking the workspace name which collapses if already selected).
     await page
       .getByText(projectName)
       .locator("..")
@@ -187,7 +187,7 @@ export async function createTask(
   await page.locator('[data-testid="task-edit-title"]').fill(title);
   await page.locator('[data-testid="task-edit-save"]').click();
 
-  // After "Create", viewMode goes to project → auto-expand. Wait for task in sidebar.
+  // After "Create", viewMode goes to workspace → auto-expand. Wait for task in sidebar.
   // Use .first() because AnimatePresence may briefly keep an exiting copy alongside the
   // entering copy, causing two <span class="taskTitle"> elements with the same text.
   await page

@@ -5,7 +5,7 @@ test.describe("Task Lifecycle (stub runtime)", () => {
   test("full task flow: create, start, stream, review, approve", async ({ appPage }) => {
     const page = appPage;
 
-    // --- Step 1: Create a project ---
+    // --- Step 1: Create a workspace ---
     await createWorkspace(page, "lifecycle-proj");
 
     // --- Step 2: Create a task with test-local environment (env is set at creation via WS
@@ -76,7 +76,7 @@ test.describe("Task Lifecycle (stub runtime)", () => {
   test("paused task can be stopped (completed)", async ({ appPage }) => {
     const page = appPage;
 
-    // --- Create project and task (env set via WS so it is available at start time) ---
+    // --- Create workspace and task (env set via WS so it is available at start time) ---
     await createWorkspace(page, "complete-task-proj");
     await createTask(page, "complete-task-proj", "complete task", "test-local");
     await navigateToTask(page, "complete task");

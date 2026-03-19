@@ -34,7 +34,7 @@ test.describe("Error States", () => {
     expect(error.payload?.message).toContain("required");
   });
 
-  test("create_task with non-existent project returns error", async ({ appPage }) => {
+  test("create_task with non-existent workspace returns error", async ({ appPage }) => {
     const page = appPage;
 
     const error = await sendWsAndWaitFor(page, {
@@ -59,7 +59,7 @@ test.describe("Error States", () => {
   test("start_task on task with unmet dependencies returns error", async ({ appPage }) => {
     const page = appPage;
 
-    // Create project with a blocker and a dependent task
+    // Create workspace with a blocker and a dependent task
     await createWorkspace(page, "err-deps");
     await createTask(page, "err-deps", "err-blocker", "test-local");
 
@@ -83,7 +83,7 @@ test.describe("Error States", () => {
   test("start_task on already-running task returns error", async ({ appPage }) => {
     const page = appPage;
 
-    // Create project and task, start it
+    // Create workspace and task, start it
     await createWorkspace(page, "err-running");
     await createTask(page, "err-running", "err-run-task", "test-local");
     await navigateToTask(page, "err-run-task");

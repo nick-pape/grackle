@@ -62,7 +62,7 @@ describe("task-store tree operations", () => {
 
   describe("createTask with parentTaskId", () => {
     it("creates a root task with depth 0 and empty parentTaskId", () => {
-      taskStore.createTask("t1", "test-proj", "Root Task", "desc", [], "test-project");
+      taskStore.createTask("t1", "test-proj", "Root Task", "desc", [], "test-workspace");
       const task = taskStore.getTask("t1");
       expect(task).toBeDefined();
       expect(task!.parentTaskId).toBe("");
@@ -70,8 +70,8 @@ describe("task-store tree operations", () => {
     });
 
     it("creates a child task with depth = parent.depth + 1", () => {
-      taskStore.createTask("t1", "test-proj", "Parent", "desc", [], "test-project", "", true);
-      taskStore.createTask("t2", "test-proj", "Child", "desc", [], "test-project", "t1");
+      taskStore.createTask("t1", "test-proj", "Parent", "desc", [], "test-workspace", "", true);
+      taskStore.createTask("t2", "test-proj", "Child", "desc", [], "test-workspace", "t1");
       const child = taskStore.getTask("t2");
       expect(child).toBeDefined();
       expect(child!.parentTaskId).toBe("t1");
@@ -79,16 +79,16 @@ describe("task-store tree operations", () => {
     });
 
     it("generates branch name from parent branch when parent exists", () => {
-      taskStore.createTask("t1", "test-proj", "Parent Task", "desc", [], "test-project", "", true);
+      taskStore.createTask("t1", "test-proj", "Parent Task", "desc", [], "test-workspace", "", true);
       const parent = taskStore.getTask("t1");
-      taskStore.createTask("t2", "test-proj", "Child Task", "desc", [], "test-project", "t1");
+      taskStore.createTask("t2", "test-proj", "Child Task", "desc", [], "test-workspace", "t1");
       const child = taskStore.getTask("t2");
       expect(child!.branch).toBe(`${parent!.branch}/child-task`);
     });
 
     it("rejects creation when parent does not exist", () => {
       expect(() => {
-        taskStore.createTask("t1", "test-proj", "Orphan", "desc", [], "test-project", "nonexistent");
+        taskStore.createTask("t1", "test-proj", "Orphan", "desc", [], "test-workspace", "nonexistent");
       }).toThrow("Parent task not found");
     });
 
@@ -191,9 +191,9 @@ describe("task-store tree operations", () => {
 
   describe("listTasks filtering", () => {
     beforeEach(() => {
-      taskStore.createTask("t1", "test-proj", "Fix login bug", "User cannot login with SSO", [], "test-project");
-      taskStore.createTask("t2", "test-proj", "Add dashboard", "Create analytics dashboard", [], "test-project");
-      taskStore.createTask("t3", "test-proj", "Update auth middleware", "Refactor authentication layer", [], "test-project");
+      taskStore.createTask("t1", "test-proj", "Fix login bug", "User cannot login with SSO", [], "test-workspace");
+      taskStore.createTask("t2", "test-proj", "Add dashboard", "Create analytics dashboard", [], "test-workspace");
+      taskStore.createTask("t3", "test-proj", "Update auth middleware", "Refactor authentication layer", [], "test-workspace");
       taskStore.updateTaskStatus("t2", "working");
       taskStore.updateTaskStatus("t3", "complete");
     });
@@ -251,7 +251,7 @@ describe("task-store tree operations", () => {
     });
 
     it("preserves sort order in filtered results", () => {
-      taskStore.createTask("t4", "test-proj", "Another login fix", "Second login issue", [], "test-project");
+      taskStore.createTask("t4", "test-proj", "Another login fix", "Second login issue", [], "test-workspace");
       const results = taskStore.listTasks("test-proj", { search: "login" });
       expect(results).toHaveLength(2);
       expect(results[0].id).toBe("t1");
@@ -259,22 +259,22 @@ describe("task-store tree operations", () => {
     });
 
     it("escapes LIKE special characters in search", () => {
-      taskStore.createTask("t5", "test-proj", "100% complete task", "desc", [], "test-project");
+      taskStore.createTask("t5", "test-proj", "100% complete task", "desc", [], "test-workspace");
       const results = taskStore.listTasks("test-proj", { search: "100%" });
       expect(results).toHaveLength(1);
       expect(results[0].id).toBe("t5");
     });
 
     it("escapes backslashes in search", () => {
-      taskStore.createTask("t5", "test-proj", "path\\to\\file", "desc", [], "test-project");
+      taskStore.createTask("t5", "test-proj", "path\\to\\file", "desc", [], "test-workspace");
       const results = taskStore.listTasks("test-proj", { search: "path\\to" });
       expect(results).toHaveLength(1);
       expect(results[0].id).toBe("t5");
     });
 
     it("escapes underscores in search", () => {
-      taskStore.createTask("t5", "test-proj", "v2_final", "desc", [], "test-project");
-      taskStore.createTask("t6", "test-proj", "v2Xfinal", "desc", [], "test-project");
+      taskStore.createTask("t5", "test-proj", "v2_final", "desc", [], "test-workspace");
+      taskStore.createTask("t6", "test-proj", "v2Xfinal", "desc", [], "test-workspace");
       const results = taskStore.listTasks("test-proj", { search: "2_f" });
       expect(results).toHaveLength(1);
       expect(results[0].id).toBe("t5");

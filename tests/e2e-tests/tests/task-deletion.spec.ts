@@ -13,7 +13,7 @@ test.describe("Task Deletion", () => {
   test("delete pending task removes it from sidebar", async ({ appPage }) => {
     const page = appPage;
 
-    // Create project and task
+    // Create workspace and task
     await createWorkspace(page, "del-remove");
     await createTask(page, "del-remove", "doomed-task", "test-local");
 
@@ -29,10 +29,10 @@ test.describe("Task Deletion", () => {
     await expect(page.getByText("doomed-task")).not.toBeVisible({ timeout: 5_000 });
   });
 
-  test("delete in-progress task removes it and returns to project view", async ({ appPage }) => {
+  test("delete in-progress task removes it and returns to workspace view", async ({ appPage }) => {
     const page = appPage;
 
-    // Create project and task
+    // Create workspace and task
     await createWorkspace(page, "del-active");
     await createTask(page, "del-active", "active-task", "test-local");
 

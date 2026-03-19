@@ -10,7 +10,7 @@ import {
 } from "./helpers.js";
 
 test.describe("Board View", () => {
-  test("Board tab is visible after selecting a project", async ({ appPage }) => {
+  test("Board tab is visible after selecting a workspace", async ({ appPage }) => {
     const page = appPage;
 
     await createWorkspace(page, "board-tab-vis");
@@ -21,14 +21,14 @@ test.describe("Board View", () => {
     await expect(boardTab).toBeVisible({ timeout: 5_000 });
   });
 
-  test("Board tab is not visible when no project is selected", async ({ appPage }) => {
+  test("Board tab is not visible when no workspace is selected", async ({ appPage }) => {
     const page = appPage;
 
-    // Without selecting a project, Board tab should not exist
+    // Without selecting a workspace, Board tab should not exist
     await expect(page.getByTestId("board-tab")).not.toBeVisible();
   });
 
-  test("empty project shows CTA on board view", async ({ appPage }) => {
+  test("empty workspace shows CTA on board view", async ({ appPage }) => {
     const page = appPage;
 
     await createWorkspace(page, "board-empty");
@@ -197,7 +197,7 @@ test.describe("Board View", () => {
     // Wait for task to transition to working
     await expect(page.locator('[data-testid="task-status"]')).toContainText(/working|paused/, { timeout: 15_000 });
 
-    // Navigate back to the project and switch to board
+    // Navigate back to the workspace and switch to board
     await page.getByText("board-realtime").first().click();
     await page.getByTestId("board-tab").click();
     await expect(page.getByTestId("board-container")).toBeVisible({ timeout: 5_000 });

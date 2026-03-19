@@ -29,7 +29,7 @@ test.describe("Unified task create/edit experience", () => {
     await expect(page.locator('[data-testid="task-edit-save"]')).toBeDisabled();
   });
 
-  test("creating a task via the panel fills title and description, then navigates to project", async ({ appPage }) => {
+  test("creating a task via the panel fills title and description, then navigates to workspace", async ({ appPage }) => {
     const page = appPage;
     await createWorkspace(page, "create-full-proj");
 
@@ -58,7 +58,7 @@ test.describe("Unified task create/edit experience", () => {
     await expect(page.locator('.overviewMarkdown, [class*="overviewMarkdown"]')).toBeVisible({ timeout: 5_000 });
   });
 
-  test("Cancel button in new task form returns to project view", async ({ appPage }) => {
+  test("Cancel button in new task form returns to workspace view", async ({ appPage }) => {
     const page = appPage;
     await createWorkspace(page, "cancel-create-proj");
 
@@ -76,7 +76,7 @@ test.describe("Unified task create/edit experience", () => {
     // Click Cancel
     await page.locator("button", { hasText: "Cancel" }).click();
 
-    // Should return to project view (no task created)
+    // Should return to workspace view (no task created)
     await expect(page.locator('[data-testid="task-edit-title"]')).not.toBeVisible({ timeout: 3_000 });
     await expect(page.getByText("will not be saved", { exact: true })).not.toBeVisible();
   });
@@ -96,7 +96,7 @@ test.describe("Unified task create/edit experience", () => {
   test("clicking Edit opens the edit form pre-populated with existing task data", async ({ appPage }) => {
     const page = appPage;
     await createWorkspace(page, "edit-form-proj");
-    // Expand the project in the sidebar so tasks will become visible
+    // Expand the workspace in the sidebar so tasks will become visible
     await page.getByText("edit-form-proj").first().click();
     const workspaceId = await getWorkspaceId(page, "edit-form-proj");
 
@@ -125,7 +125,7 @@ test.describe("Unified task create/edit experience", () => {
   test("saving edits updates the task title and description", async ({ appPage }) => {
     const page = appPage;
     await createWorkspace(page, "save-edit-proj");
-    // Expand the project in the sidebar so tasks will become visible
+    // Expand the workspace in the sidebar so tasks will become visible
     await page.getByText("save-edit-proj").first().click();
     const workspaceId = await getWorkspaceId(page, "save-edit-proj");
 
@@ -174,7 +174,7 @@ test.describe("Unified task create/edit experience", () => {
   test("task edit form shows dependency multi-select with sibling tasks", async ({ appPage }) => {
     const page = appPage;
     await createWorkspace(page, "deps-edit-proj");
-    // Expand the project in the sidebar so tasks will become visible
+    // Expand the workspace in the sidebar so tasks will become visible
     await page.getByText("deps-edit-proj").first().click();
     const workspaceId = await getWorkspaceId(page, "deps-edit-proj");
 

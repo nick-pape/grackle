@@ -13,7 +13,7 @@ test.describe("Task tree hierarchy", () => {
   test("creates a child task and displays tree structure with expand/collapse", async ({ appPage }) => {
     const page = appPage;
 
-    // Create project and root task via UI
+    // Create workspace and root task via UI
     await createWorkspace(page, "tree-basic");
     await createTask(page, "tree-basic", "root-task", "test-local", { canDecompose: true });
 

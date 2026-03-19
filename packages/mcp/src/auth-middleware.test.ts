@@ -8,7 +8,7 @@ const API_KEY = "a".repeat(64);
 
 const CLAIMS = {
   sub: "task-1",
-  pid: "project-1",
+  pid: "workspace-1",
   per: "persona-1",
   sid: "session-1",
 };
@@ -47,7 +47,7 @@ describe("authenticateMcpRequest", () => {
     expect(result).toEqual({
       type: "scoped",
       taskId: "task-1",
-      workspaceId: "project-1",
+      workspaceId: "workspace-1",
       personaId: "persona-1",
       taskSessionId: "session-1",
     });
@@ -106,7 +106,7 @@ describe("authenticateMcpRequest", () => {
     expect(scopedResult).toEqual({
       type: "scoped",
       taskId: "task-1",
-      workspaceId: "project-1",
+      workspaceId: "workspace-1",
       personaId: "persona-1",
       taskSessionId: "session-1",
     });
@@ -164,7 +164,7 @@ describe("authenticateMcpRequest", () => {
     expect(authenticateMcpRequest(scopedReq, API_KEY)).toEqual({
       type: "scoped",
       taskId: "task-1",
-      workspaceId: "project-1",
+      workspaceId: "workspace-1",
       personaId: "persona-1",
       taskSessionId: "session-1",
     });

@@ -91,7 +91,7 @@ async function waitForSessionText(
 
 test.describe("SIGCHLD — child completion notification", () => {
   test("parent receives SIGCHLD when child task goes idle", async ({ appPage: page }) => {
-    // 1. Create project
+    // 1. Create workspace
     await createWorkspace(page, "SIGCHLD Test");
     const workspaceId = await getWorkspaceId(page, "SIGCHLD Test");
 
@@ -137,7 +137,7 @@ test.describe("SIGCHLD — child completion notification", () => {
   });
 
   test("SIGCHLD delivered after parent session reanimated", async ({ appPage: page }) => {
-    // 1. Create project
+    // 1. Create workspace
     await createWorkspace(page, "SIGCHLD Reanimate");
     const workspaceId = await getWorkspaceId(page, "SIGCHLD Reanimate");
 

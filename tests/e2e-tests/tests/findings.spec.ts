@@ -12,7 +12,7 @@ test.describe("Findings", () => {
   test("post finding and see it in Findings tab", async ({ appPage }) => {
     const page = appPage;
 
-    // Create project and task
+    // Create workspace and task
     await createWorkspace(page, "find-single");
     await createTask(page, "find-single", "find-task-1", "test-local");
 
@@ -50,7 +50,7 @@ test.describe("Findings", () => {
   test("multiple findings with different categories render correctly", async ({ appPage }) => {
     const page = appPage;
 
-    // Create project and task
+    // Create workspace and task
     await createWorkspace(page, "find-multi");
     await createTask(page, "find-multi", "find-task-2", "test-local");
 
@@ -112,7 +112,7 @@ test.describe("Findings", () => {
   test("findings persist across tab switches", async ({ appPage }) => {
     const page = appPage;
 
-    // Create project and task
+    // Create workspace and task
     await createWorkspace(page, "find-persist");
     await createTask(page, "find-persist", "find-task-3", "test-local");
 

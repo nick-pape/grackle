@@ -29,7 +29,7 @@ test.describe("Disconnected environment blocks message send", () => {
    * connection that is not available in all environments).
    *
    * The approach:
-   * 1. Create a project + task (task creation via WS always works).
+   * 1. Create a workspace + task (task creation via WS always works).
    * 2. Navigate to the task so the app is in `task` view mode.
    * 3. Inject a fake `sessions` message: one session with
    *    `status = "idle"` and `environmentId = "test-local"`.
@@ -47,10 +47,10 @@ test.describe("Disconnected environment blocks message send", () => {
     projectName: string,
     taskTitle: string,
   ): Promise<void> {
-    // --- 1. Create project and task -----------------------------------------
+    // --- 1. Create workspace and task -----------------------------------------
     await createWorkspace(page, projectName);
 
-    // Expand the project in the sidebar so the task becomes visible after creation.
+    // Expand the workspace in the sidebar so the task becomes visible after creation.
     await page.getByText(projectName).first().click();
 
     const workspaceId = await getWorkspaceId(page, projectName);

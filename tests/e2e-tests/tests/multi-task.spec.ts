@@ -8,10 +8,10 @@ import {
 } from "./helpers.js";
 
 test.describe("Multi-Task", () => {
-  test("sidebar shows multiple tasks under a project", async ({ appPage }) => {
+  test("sidebar shows multiple tasks under a workspace", async ({ appPage }) => {
     const page = appPage;
 
-    // Create project with 3 tasks
+    // Create workspace with 3 tasks
     await createWorkspace(page, "multi-sidebar");
     await createTask(page, "multi-sidebar", "task-alpha", "test-local");
     await createTask(page, "multi-sidebar", "task-bravo", "test-local");
@@ -31,7 +31,7 @@ test.describe("Multi-Task", () => {
   test("switching between tasks preserves state", async ({ appPage }) => {
     const page = appPage;
 
-    // Create project with two tasks
+    // Create workspace with two tasks
     await createWorkspace(page, "multi-preserve");
     await createTask(page, "multi-preserve", "preserve-task-a", "test-local");
     await createTask(page, "multi-preserve", "preserve-task-b", "test-local");
@@ -56,10 +56,10 @@ test.describe("Multi-Task", () => {
     await expect(page.locator("button", { hasText: "Resume" })).toBeVisible({ timeout: 5_000 });
   });
 
-  test("multiple projects shown simultaneously in sidebar", async ({ appPage }) => {
+  test("multiple workspaces shown simultaneously in sidebar", async ({ appPage }) => {
     const page = appPage;
 
-    // Create two projects
+    // Create two workspaces
     await createWorkspace(page, "multi-proj-x");
     await createWorkspace(page, "multi-proj-y");
 
@@ -67,15 +67,15 @@ test.describe("Multi-Task", () => {
     await expect(page.getByText("multi-proj-x")).toBeVisible();
     await expect(page.getByText("multi-proj-y")).toBeVisible();
 
-    // Create tasks in each project
+    // Create tasks in each workspace
     await createTask(page, "multi-proj-x", "x-task-1", "test-local");
     await createTask(page, "multi-proj-y", "y-task-1", "test-local");
 
-    // Expand project X by clicking it
+    // Expand workspace X by clicking it
     await page.getByText("multi-proj-x").first().click();
     await expect(page.getByText("x-task-1")).toBeVisible({ timeout: 5_000 });
 
-    // Expand project Y by clicking it
+    // Expand workspace Y by clicking it
     await page.getByText("multi-proj-y").first().click();
     await expect(page.getByText("y-task-1")).toBeVisible({ timeout: 5_000 });
   });
@@ -83,7 +83,7 @@ test.describe("Multi-Task", () => {
   test("task status badges update in sidebar during lifecycle", async ({ appPage }) => {
     const page = appPage;
 
-    // Create project and task
+    // Create workspace and task
     await createWorkspace(page, "multi-badge");
     await createTask(page, "multi-badge", "badge-task", "test-local");
 

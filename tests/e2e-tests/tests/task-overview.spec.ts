@@ -31,7 +31,7 @@ test.describe("Task Overview Tab", () => {
     const page = appPage;
 
     await createWorkspace(page, "overview-desc");
-    // Create a UI task first to expand the project tree
+    // Create a UI task first to expand the workspace tree
     await createTask(page, "overview-desc", "desc-placeholder", "test-local");
 
     const workspaceId = await getWorkspaceId(page, "overview-desc");

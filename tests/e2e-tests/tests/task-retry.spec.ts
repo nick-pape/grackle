@@ -10,7 +10,7 @@ test.describe("Task Retry (failed → in_progress)", () => {
   test("retry button restarts a failed task", async ({ appPage }) => {
     const page = appPage;
 
-    // --- Setup: create project and task ---
+    // --- Setup: create workspace and task ---
     await createWorkspace(page, "retry-proj");
     await page.getByText("retry-proj").click();
     await createTask(page, "retry-proj", "retry task", "test-local");

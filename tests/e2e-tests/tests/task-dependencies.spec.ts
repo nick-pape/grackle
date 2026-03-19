@@ -14,7 +14,7 @@ test.describe("Task Dependencies", () => {
   test("blocked task shows Blocked by text and no Start button", async ({ appPage }) => {
     const page = appPage;
 
-    // Create project and a blocker task via UI
+    // Create workspace and a blocker task via UI
     await createWorkspace(page, "deps-blocked");
     await createTask(page, "deps-blocked", "blocker-alpha", "test-local");
 
@@ -47,7 +47,7 @@ test.describe("Task Dependencies", () => {
   test("completing blocker unblocks dependent task", async ({ appPage }) => {
     const page = appPage;
 
-    // Create project and tasks
+    // Create workspace and tasks
     await createWorkspace(page, "deps-unblock");
     await createTask(page, "deps-unblock", "unblock-blocker", "test-local");
 
@@ -79,7 +79,7 @@ test.describe("Task Dependencies", () => {
   test("task with multiple dependencies requires all blockers complete", async ({ appPage }) => {
     const page = appPage;
 
-    // Create project and two blocker tasks
+    // Create workspace and two blocker tasks
     await createWorkspace(page, "deps-multi");
     await createTask(page, "deps-multi", "multi-blocker-a", "test-local");
     await createTask(page, "deps-multi", "multi-blocker-b", "test-local");

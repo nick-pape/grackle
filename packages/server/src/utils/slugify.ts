@@ -7,7 +7,7 @@
  * 3. Strips leading and trailing hyphens.
  * 4. Truncates the result to a maximum of 40 characters.
  *
- * @param text - The input string to slugify (e.g. a task title or project name).
+ * @param text - The input string to slugify (e.g. a task title or workspace name).
  * @returns A lowercase, hyphen-separated, URL-safe string of at most 40 characters.
  *
  * @example

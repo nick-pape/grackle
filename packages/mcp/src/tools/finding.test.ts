@@ -83,7 +83,7 @@ describe("finding_list", () => {
   test("gRPC ConnectError returns isError", async () => {
     const mockClient = {
       queryFindings: vi.fn().mockRejectedValue(
-        new ConnectError("project not found", Code.NotFound),
+        new ConnectError("workspace not found", Code.NotFound),
       ),
     } as unknown as GrackleClient;
 
@@ -91,7 +91,7 @@ describe("finding_list", () => {
 
     expect(result.isError).toBe(true);
     const parsed = JSON.parse(result.content[0].text);
-    expect(parsed.error).toContain("project not found");
+    expect(parsed.error).toContain("workspace not found");
     expect(parsed.code).toBe("NOT_FOUND");
   });
 });
@@ -185,7 +185,7 @@ describe("finding_post", () => {
   test("gRPC ConnectError returns isError", async () => {
     const mockClient = {
       postFinding: vi.fn().mockRejectedValue(
-        new ConnectError("project not found", Code.NotFound),
+        new ConnectError("workspace not found", Code.NotFound),
       ),
     } as unknown as GrackleClient;
 
@@ -196,7 +196,7 @@ describe("finding_post", () => {
 
     expect(result.isError).toBe(true);
     const parsed = JSON.parse(result.content[0].text);
-    expect(parsed.error).toContain("project not found");
+    expect(parsed.error).toContain("workspace not found");
     expect(parsed.code).toBe("NOT_FOUND");
   });
 

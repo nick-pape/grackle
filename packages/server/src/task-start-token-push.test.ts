@@ -55,7 +55,7 @@ vi.mock("./workspace-store.js", () => ({
   listWorkspaces: vi.fn(() => []),
   getWorkspace: vi.fn(() => ({
     id: "proj-1",
-    name: "Test Project",
+    name: "Test Workspace",
     defaultEnvironmentId: "env-1",
     status: "active",
     createdAt: new Date().toISOString(),
