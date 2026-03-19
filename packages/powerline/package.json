@@ -1,6 +1,6 @@
 {
   "name": "@grackle-ai/powerline",
-  "version": "0.41.1",
+  "version": "0.42.0",
   "description": "gRPC PowerLine server for Grackle AI agent integration",
   "license": "MIT",
   "repository": {
@@ -21,7 +21,9 @@
     "build": "heft build --clean",
     "start": "node dist/index.js",
     "clean": "heft clean",
-    "test": "vitest run"
+    "test": "vitest run",
+    "_phase:build": "heft run --only build -- --clean",
+    "_phase:test": "vitest run"
   },
   "dependencies": {
     "@agentclientprotocol/sdk": "^0.16.1",

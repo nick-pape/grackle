@@ -1,0 +1,12 @@
+{
+  "operationSettings": [
+    {
+      "operationName": "_phase:build",
+      "outputFolderNames": []
+    },
+    {
+      "operationName": "_phase:e2e",
+      "outputFolderNames": []
+    }
+  ]
+}

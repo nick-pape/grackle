@@ -4,7 +4,7 @@ import { logger } from "./logger.js";
 export interface ProcessorContext {
   sessionId: string;
   logPath: string;
-  projectId: string;
+  projectId?: string;
   taskId: string;
 }
 
@@ -41,7 +41,7 @@ export function get(sessionId: string): ProcessorContext | undefined {
 export function lateBind(
   sessionId: string,
   taskId: string,
-  projectId: string,
+  projectId?: string,
 ): void {
   const ctx = registry.get(sessionId);
   if (!ctx) {

@@ -379,7 +379,7 @@ type SpawnRequest = Message<"grackle.powerline.SpawnRequest"> & {
     branch: string;
     worktreeBasePath: string;
     systemContext: string;
-    projectId: string;
+    projectId?: string;
     taskId: string;
     mcpServersJson: string;
     mcpUrl: string;

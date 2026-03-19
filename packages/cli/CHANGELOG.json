@@ -2,6 +2,26 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.42.0",
+      "tag": "@grackle-ai/cli_v0.42.0",
+      "date": "Thu, 19 Mar 2026 05:48:47 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Make project_id nullable on tasks — tasks can now be created without a project"
+          }
+        ],
+        "none": [
+          {
+            "comment": "placeholder"
+          },
+          {
+            "comment": "Add phased build scripts and rush-project.json for Rush build cache and parallel CI"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.41.1",
       "tag": "@grackle-ai/cli_v0.41.1",
       "date": "Wed, 18 Mar 2026 21:54:32 GMT",

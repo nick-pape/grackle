@@ -1,6 +1,18 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Wed, 18 Mar 2026 21:54:32 GMT and should not be manually modified.
+This log was last generated on Thu, 19 Mar 2026 05:48:47 GMT and should not be manually modified.
+
+## 0.42.0
+Thu, 19 Mar 2026 05:48:47 GMT
+
+### Minor changes
+
+- Make project_id nullable on tasks — tasks can now be created without a project
+
+### Updates
+
+- placeholder
+- Add phased build scripts and rush-project.json for Rush build cache and parallel CI
 
 ## 0.41.1
 Wed, 18 Mar 2026 21:54:32 GMT
