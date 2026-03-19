@@ -184,8 +184,8 @@ export interface UseGrackleSocketResult {
   appDefaultPersonaId: string;
   /** Set the app-level default persona ID (persisted via server settings). */
   setAppDefaultPersonaId: (personaId: string) => void;
-  /** Whether the first-run onboarding wizard has been completed. */
-  onboardingCompleted: boolean;
+  /** Whether the first-run onboarding wizard has been completed. `undefined` until the server responds. */
+  onboardingCompleted: boolean | undefined;
   /** Mark onboarding as complete (persisted via server settings). */
   completeOnboarding: () => void;
 }
@@ -208,7 +208,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
   // --- Settings state ---
 
   const [appDefaultPersonaId, setAppDefaultPersonaIdState] = useState("");
-  const [onboardingCompleted, setOnboardingCompleted] = useState(true);
+  const [onboardingCompleted, setOnboardingCompleted] = useState<boolean | undefined>(undefined);
 
   // --- Transport (must be first to provide `send`) ---
 

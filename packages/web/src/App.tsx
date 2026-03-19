@@ -4,10 +4,12 @@ import { ToastProvider } from "./context/ToastContext.js";
 import { ThemeProvider } from "./context/ThemeContext.js";
 import { StatusBar, Sidebar, UnifiedBar } from "./components/layout/index.js";
 import { ToastContainer } from "./components/notifications/index.js";
+import { SplashScreen } from "./components/display/index.js";
 import { useCallback, useEffect, useState, type JSX } from "react";
 import { useGrackle } from "./context/GrackleContext.js";
 import { useToast } from "./context/ToastContext.js";
 import { useEnvironmentToasts } from "./hooks/useEnvironmentToasts.js";
+import { AnimatePresence, motion } from "motion/react";
 import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from "react-router";
 import { sessionUrl, SETTINGS_URL, useAppNavigate } from "./utils/navigation.js";
 import { EmptyPage } from "./pages/EmptyPage.js";
@@ -73,7 +75,7 @@ function AppShell(): JSX.Element {
   }, [lastSpawnedId, navigate, location.pathname]);
 
   // Redirect to setup wizard if onboarding hasn't been completed
-  if (connected && !onboardingCompleted) {
+  if (connected && onboardingCompleted === false) {
     return <Navigate to="/setup" replace />;
   }
 
@@ -142,6 +144,54 @@ function AppRoutes(): JSX.Element {
   );
 }
 
+/** Maximum time (ms) to show the splash screen before falling through to the app. */
+const SPLASH_TIMEOUT_MS: number = 10_000;
+
+/** Gates the app behind a splash screen until the server's initial state arrives. */
+function AppContent(): JSX.Element {
+  const { onboardingCompleted } = useGrackle();
+  const [timedOut, setTimedOut] = useState(false);
+
+  // Safety-net timeout: if the server never responds, fall through to the app
+  // after SPLASH_TIMEOUT_MS so the user isn't stuck on an infinite spinner.
+  useEffect(() => {
+    if (onboardingCompleted !== undefined) {
+      return;
+    }
+    const timer = setTimeout(() => setTimedOut(true), SPLASH_TIMEOUT_MS);
+    return () => clearTimeout(timer);
+  }, [onboardingCompleted]);
+
+  const showSplash = onboardingCompleted === undefined && !timedOut;
+
+  return (
+    <AnimatePresence mode="wait">
+      {showSplash ? (
+        <motion.div
+          key="splash"
+          initial={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.25 }}
+        >
+          <SplashScreen />
+        </motion.div>
+      ) : (
+        <motion.div
+          key="app"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.25 }}
+          style={{ minHeight: "100vh" }}
+        >
+          <BrowserRouter>
+            <AppRoutes />
+          </BrowserRouter>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
 /** Root application component with context providers and router. */
 export default function App(): JSX.Element {
   const Provider = IS_MOCK_MODE ? MockGrackleProvider : GrackleProvider;
@@ -149,9 +199,7 @@ export default function App(): JSX.Element {
     <ThemeProvider>
       <ToastProvider>
         <Provider>
-          <BrowserRouter>
-            <AppRoutes />
-          </BrowserRouter>
+          <AppContent />
         </Provider>
       </ToastProvider>
     </ThemeProvider>
