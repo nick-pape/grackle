@@ -27,9 +27,9 @@ export const taskTools: ToolDefinition[] = [
     name: "task_list",
     group: "task",
     description:
-      "List all tasks in a Grackle project with their status, title, and assignment information. Supports optional search and status filters.",
+      "List all tasks in a Grackle workspace with their status, title, and assignment information. Supports optional search and status filters.",
     inputSchema: z.object({
-      projectId: z.string().optional().describe("The project ID to list tasks for (optional — omit to list all tasks)"),
+      workspaceId: z.string().optional().describe("The workspace ID to list tasks for (optional — omit to list all tasks)"),
       search: z.string().optional().describe("Case-insensitive substring filter on task title or description"),
       status: z.string().optional().describe("Filter by task status: not_started, working, paused, complete, failed"),
     }),
@@ -44,7 +44,7 @@ export const taskTools: ToolDefinition[] = [
     async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) {
       try {
         const response = await client.listTasks({
-          projectId: (args.projectId as string | undefined) ?? "",
+          workspaceId: (args.workspaceId as string | undefined) ?? "",
           search: (args.search as string) || "",
           status: (args.status as string) || "",
         });
@@ -71,9 +71,9 @@ export const taskTools: ToolDefinition[] = [
     name: "task_create",
     group: "task",
     description:
-      "Create a new task in a Grackle project with a title, optional description, and dependency configuration.",
+      "Create a new task in a Grackle workspace with a title, optional description, and dependency configuration.",
     inputSchema: z.object({
-      projectId: z.string().optional().describe("The project ID to create the task in (optional — omit for root tasks)"),
+      workspaceId: z.string().optional().describe("The workspace ID to create the task in (optional — omit for root tasks)"),
       title: z.string().describe("Short descriptive title for the task"),
       description: z
         .string()
@@ -94,7 +94,7 @@ export const taskTools: ToolDefinition[] = [
       defaultPersonaId: z
         .string()
         .optional()
-        .describe("Default persona for this task (overrides project default)"),
+        .describe("Default persona for this task (overrides workspace default)"),
     }),
     rpcMethod: "createTask",
     mutating: true,
@@ -107,7 +107,7 @@ export const taskTools: ToolDefinition[] = [
     async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) {
       try {
         const task = await client.createTask({
-          projectId: (args.projectId as string | undefined) ?? "",
+          workspaceId: (args.workspaceId as string | undefined) ?? "",
           title: args.title as string,
           description: (args.description as string | undefined) ?? "",
           dependsOn: (args.dependsOn as string[] | undefined) ?? [],
@@ -225,11 +225,11 @@ export const taskTools: ToolDefinition[] = [
       personaId: z
         .string()
         .optional()
-        .describe("Persona ID override (falls back to task/project/app default)"),
+        .describe("Persona ID override (falls back to task/workspace/app default)"),
       environmentId: z
         .string()
         .optional()
-        .describe("Environment ID to run the task on (defaults to project default)"),
+        .describe("Environment ID to run the task on (defaults to workspace default)"),
       notes: z
         .string()
         .optional()
@@ -264,7 +264,7 @@ export const taskTools: ToolDefinition[] = [
     name: "task_delete",
     group: "task",
     description:
-      "Permanently delete a task from the project. This action cannot be undone.",
+      "Permanently delete a task from the workspace. This action cannot be undone.",
     inputSchema: z.object({
       taskId: z.string().describe("The ID of the task to delete"),
     }),
@@ -352,9 +352,9 @@ export const taskTools: ToolDefinition[] = [
     name: "task_import_github",
     group: "task",
     description:
-      "Import GitHub issues from a repository as tasks into a Grackle project, with optional label and state filtering.",
+      "Import GitHub issues from a repository as tasks into a Grackle workspace, with optional label and state filtering.",
     inputSchema: z.object({
-      projectId: z.string().describe("The project ID to import tasks into"),
+      workspaceId: z.string().describe("The workspace ID to import tasks into"),
       repo: z
         .string()
         .describe("GitHub repository in owner/repo format (e.g. octocat/hello-world)"),
@@ -389,7 +389,7 @@ export const taskTools: ToolDefinition[] = [
         const stateString = (args.state as string | undefined) ?? "open";
         const stateValue = issueStateToEnum(stateString);
         const response = await client.importGitHubIssues({
-          projectId: args.projectId as string,
+          workspaceId: args.workspaceId as string,
           repo: args.repo as string,
           label: (args.label as string | undefined) ?? "",
           state: stateValue,

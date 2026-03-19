@@ -1,6 +1,6 @@
 import { test, expect } from "./fixtures.js";
 import {
-  createProject,
+  createWorkspace,
   createTask,
 } from "./helpers.js";
 
@@ -13,7 +13,7 @@ test.describe("Group-by-status toggle", () => {
   test("toggle switches to grouped view with status group headers", async ({ appPage }) => {
     const page = appPage;
 
-    await createProject(page, "gbs-toggle");
+    await createWorkspace(page, "gbs-toggle");
     await createTask(page, "gbs-toggle", "task-a");
     await createTask(page, "gbs-toggle", "task-b");
 
@@ -32,7 +32,7 @@ test.describe("Group-by-status toggle", () => {
   test("collapse and expand a status group", async ({ appPage }) => {
     const page = appPage;
 
-    await createProject(page, "gbs-collapse");
+    await createWorkspace(page, "gbs-collapse");
     await createTask(page, "gbs-collapse", "collapse-task");
 
     await page.getByTestId("group-by-status-toggle").click();
@@ -53,7 +53,7 @@ test.describe("Group-by-status toggle", () => {
   test("toggle persists across page reload", async ({ appPage }) => {
     const page = appPage;
 
-    await createProject(page, "gbs-persist");
+    await createWorkspace(page, "gbs-persist");
     await createTask(page, "gbs-persist", "persist-task");
 
     // Enable group-by-status
@@ -84,7 +84,7 @@ test.describe("Group-by-status toggle", () => {
   test("empty status groups are hidden", async ({ appPage }) => {
     const page = appPage;
 
-    await createProject(page, "gbs-empty");
+    await createWorkspace(page, "gbs-empty");
     await createTask(page, "gbs-empty", "only-not-started");
 
     await page.getByTestId("group-by-status-toggle").click();
@@ -100,7 +100,7 @@ test.describe("Group-by-status toggle", () => {
   test("toggle back restores tree view", async ({ appPage }) => {
     const page = appPage;
 
-    await createProject(page, "gbs-restore");
+    await createWorkspace(page, "gbs-restore");
     await createTask(page, "gbs-restore", "restore-parent");
 
     // Enable grouped view
@@ -120,7 +120,7 @@ test.describe("Group-by-status toggle", () => {
   test("task navigation from grouped view", async ({ appPage }) => {
     const page = appPage;
 
-    await createProject(page, "gbs-nav");
+    await createWorkspace(page, "gbs-nav");
     await createTask(page, "gbs-nav", "nav-target");
 
     // Enable grouped view

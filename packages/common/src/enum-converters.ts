@@ -8,7 +8,7 @@
 import {
   EventType,
   TaskStatus,
-  ProjectStatus,
+  WorkspaceStatus,
   IssueState,
   ClaudeProviderMode,
   ProviderToggle,
@@ -90,28 +90,28 @@ export function taskStatusToString(e: TaskStatus): string {
   return (taskStatusToStringMap as Partial<Record<number, string>>)[e] ?? "";
 }
 
-// ─── ProjectStatus ──────────────────────────────────────────
+// ─── WorkspaceStatus ────────────────────────────────────────
 
-const projectStatusToEnumMap: Record<string, ProjectStatus> = Object.assign(Object.create(null) as Record<string, ProjectStatus>, {
-  "": ProjectStatus.UNSPECIFIED,
-  "active": ProjectStatus.ACTIVE,
-  "archived": ProjectStatus.ARCHIVED,
+const workspaceStatusToEnumMap: Record<string, WorkspaceStatus> = Object.assign(Object.create(null) as Record<string, WorkspaceStatus>, {
+  "": WorkspaceStatus.UNSPECIFIED,
+  "active": WorkspaceStatus.ACTIVE,
+  "archived": WorkspaceStatus.ARCHIVED,
 });
 
-const projectStatusToStringMap: Record<number, string> = {
-  [ProjectStatus.UNSPECIFIED]: "",
-  [ProjectStatus.ACTIVE]: "active",
-  [ProjectStatus.ARCHIVED]: "archived",
+const workspaceStatusToStringMap: Record<number, string> = {
+  [WorkspaceStatus.UNSPECIFIED]: "",
+  [WorkspaceStatus.ACTIVE]: "active",
+  [WorkspaceStatus.ARCHIVED]: "archived",
 };
 
-/** Convert a string project status to its proto enum value. */
-export function projectStatusToEnum(s: string): ProjectStatus {
-  return projectStatusToEnumMap[s] ?? ProjectStatus.UNSPECIFIED;
+/** Convert a string workspace status to its proto enum value. */
+export function workspaceStatusToEnum(s: string): WorkspaceStatus {
+  return workspaceStatusToEnumMap[s] ?? WorkspaceStatus.UNSPECIFIED;
 }
 
-/** Convert a proto enum project status to its string value. */
-export function projectStatusToString(e: ProjectStatus): string {
-  return (projectStatusToStringMap as Partial<Record<number, string>>)[e] ?? "";
+/** Convert a proto enum workspace status to its string value. */
+export function workspaceStatusToString(e: WorkspaceStatus): string {
+  return (workspaceStatusToStringMap as Partial<Record<number, string>>)[e] ?? "";
 }
 
 // ─── IssueState ─────────────────────────────────────────────

@@ -19,7 +19,7 @@ import styles from "./DagView.module.scss";
 
 /** Props for the DagView component. */
 interface Props {
-  projectId: string;
+  workspaceId: string;
 }
 
 /** CSS variable mapping for MiniMap node coloring by task status. */
@@ -31,17 +31,17 @@ const nodeTypes: NodeTypes = {
 };
 
 /** Interactive DAG visualization of task hierarchy and dependency relationships. */
-export function DagView({ projectId }: Props): JSX.Element {
+export function DagView({ workspaceId }: Props): JSX.Element {
   const { tasks } = useGrackle();
   const navigate = useAppNavigate();
   const { resolvedThemeId } = useThemeContext();
 
-  const projectTasks = useMemo(
-    () => tasks.filter((t) => t.projectId === projectId),
-    [tasks, projectId],
+  const workspaceTasks = useMemo(
+    () => tasks.filter((t) => t.workspaceId === workspaceId),
+    [tasks, workspaceId],
   );
 
-  const { nodes, edges } = useDagLayout(projectTasks);
+  const { nodes, edges } = useDagLayout(workspaceTasks);
 
   /** Cached color map — recomputed only when the theme changes. */
   const statusColors = useMemo(() => {
@@ -66,12 +66,12 @@ export function DagView({ projectId }: Props): JSX.Element {
     return statusColors[data.task.status] || statusColors.pending;
   }, [statusColors]);
 
-  if (projectTasks.length === 0) {
+  if (workspaceTasks.length === 0) {
     return (
       <div className={styles.emptyCta}>
         <button
           className={styles.ctaButton}
-          onClick={() => navigate(newTaskUrl(projectId))}
+          onClick={() => navigate(newTaskUrl(workspaceId))}
         >
           Create Task
         </button>

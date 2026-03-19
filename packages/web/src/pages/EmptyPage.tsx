@@ -4,32 +4,32 @@ import styles from "../components/panels/SessionPanel.module.scss";
 
 /** Home page shown when no specific entity is selected. */
 export function EmptyPage(): JSX.Element {
-  const { projects, createProject } = useGrackle();
+  const { workspaces, createWorkspace } = useGrackle();
 
-  if (projects.length === 0) {
+  if (workspaces.length === 0) {
     return (
       <div className={styles.emptyCta}>
         <div className={styles.ctaTitle}>Welcome to Grackle</div>
         <div className={styles.ctaDescription}>
-          Organize your work into projects and let agents tackle the tasks.
+          Organize your work into workspaces and let agents tackle the tasks.
         </div>
         <button
           className={styles.ctaButton}
           onClick={() => {
-            const name = window.prompt("Project name:");
+            const name = window.prompt("Workspace name:");
             if (name?.trim()) {
-              createProject(name.trim());
+              createWorkspace(name.trim());
             }
           }}
         >
-          Create Your First Project
+          Create Your First Workspace
         </button>
       </div>
     );
   }
   return (
     <div className={styles.emptyState}>
-      Select a project or task to get started
+      Select a workspace or task to get started
     </div>
   );
 }

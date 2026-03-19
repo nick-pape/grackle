@@ -7,13 +7,13 @@ vi.mock("./db.js", async () => {
 
 // Import modules AFTER mock is set up
 import * as taskStore from "./task-store.js";
-import * as projectStore from "./project-store.js";
+import * as workspaceStore from "./workspace-store.js";
 import { sqlite } from "./test-db.js";
 
 /** Apply the schema DDL to the in-memory database. */
 function applySchema(): void {
   sqlite.exec(`
-    CREATE TABLE IF NOT EXISTS projects (
+    CREATE TABLE IF NOT EXISTS workspaces (
       id            TEXT PRIMARY KEY,
       name          TEXT NOT NULL,
       description   TEXT NOT NULL DEFAULT '',
@@ -29,7 +29,7 @@ function applySchema(): void {
 
     CREATE TABLE IF NOT EXISTS tasks (
       id            TEXT PRIMARY KEY,
-      project_id    TEXT NOT NULL REFERENCES projects(id),
+      workspace_id  TEXT NOT NULL REFERENCES workspaces(id),
       title         TEXT NOT NULL,
       description   TEXT NOT NULL DEFAULT '',
       status        TEXT NOT NULL DEFAULT 'not_started',
@@ -55,9 +55,9 @@ function applySchema(): void {
 describe("task-store tree operations", () => {
   beforeEach(() => {
     sqlite.exec("DROP TABLE IF EXISTS tasks");
-    sqlite.exec("DROP TABLE IF EXISTS projects");
+    sqlite.exec("DROP TABLE IF EXISTS workspaces");
     applySchema();
-    projectStore.createProject("test-proj", "Test Project", "desc", "", "");
+    workspaceStore.createWorkspace("test-proj", "Test Project", "desc", "", "");
   });
 
   describe("createTask with parentTaskId", () => {

@@ -15,9 +15,9 @@ import { test, expect } from "./fixtures.js";
 import {
   installWsTracker,
   injectWsMessage,
-  createProject,
+  createWorkspace,
   createTaskViaWs,
-  getProjectId,
+  getWorkspaceId,
   navigateToTask,
 } from "./helpers.js";
 
@@ -48,15 +48,15 @@ test.describe("Disconnected environment blocks message send", () => {
     taskTitle: string,
   ): Promise<void> {
     // --- 1. Create project and task -----------------------------------------
-    await createProject(page, projectName);
+    await createWorkspace(page, projectName);
 
     // Expand the project in the sidebar so the task becomes visible after creation.
     await page.getByText(projectName).first().click();
 
-    const projectId = await getProjectId(page, projectName);
+    const workspaceId = await getWorkspaceId(page, projectName);
     // createTaskViaWs returns the full task row from the server, including all
     // fields required by the app's `isTaskData` validator.
-    const task = await createTaskViaWs(page, projectId, taskTitle, {
+    const task = await createTaskViaWs(page, workspaceId, taskTitle, {
       environmentId: "test-local",
     });
 
@@ -90,11 +90,11 @@ test.describe("Disconnected environment blocks message send", () => {
     await injectWsMessage(page, {
       type: "tasks",
       payload: {
-        projectId: task.projectId ?? projectId,
+        workspaceId: task.workspaceId ?? workspaceId,
         tasks: [
           {
             id: task.id,
-            projectId: task.projectId ?? projectId,
+            workspaceId: task.workspaceId ?? workspaceId,
             title: task.title ?? taskTitle,
             description: task.description ?? "",
             status: "working",
@@ -391,11 +391,11 @@ test.describe("Disconnected environment blocks message send", () => {
     );
 
     // Set up the waiting_input state via WS injection
-    await createProject(page, "disc-env-proj-err");
+    await createWorkspace(page, "disc-env-proj-err");
     await page.getByText("disc-env-proj-err").first().click();
 
-    const projectId = await getProjectId(page, "disc-env-proj-err");
-    const task = await createTaskViaWs(page, projectId, "disc-env-task-err", {
+    const workspaceId = await getWorkspaceId(page, "disc-env-proj-err");
+    const task = await createTaskViaWs(page, workspaceId, "disc-env-task-err", {
       environmentId: "test-local",
     });
 
@@ -425,11 +425,11 @@ test.describe("Disconnected environment blocks message send", () => {
     await injectWsMessage(page, {
       type: "tasks",
       payload: {
-        projectId: task.projectId ?? projectId,
+        workspaceId: task.workspaceId ?? workspaceId,
         tasks: [
           {
             id: task.id,
-            projectId: task.projectId ?? projectId,
+            workspaceId: task.workspaceId ?? workspaceId,
             title: task.title ?? "disc-env-task-err",
             description: task.description ?? "",
             status: "working",

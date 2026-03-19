@@ -12,11 +12,11 @@ export type { TaskRow };
 /** Insert a new task with auto-generated branch name and sort order. */
 export function createTask(
   id: string,
-  projectId: string | undefined,
+  workspaceId: string | undefined,
   title: string,
   description: string,
   dependsOn: string[],
-  projectSlug: string,
+  workspaceSlug: string,
   parentTaskId: string = "",
   canDecompose?: boolean,
   defaultPersonaId: string = "",
@@ -40,7 +40,7 @@ export function createTask(
     }
     branch = `${parent.branch}/${slugify(title)}`;
   } else {
-    const prefix = projectSlug || "task";
+    const prefix = workspaceSlug || "task";
     branch = `${prefix}/${slugify(title)}`;
   }
 
@@ -49,8 +49,8 @@ export function createTask(
 
   const depsJson = JSON.stringify(dependsOn);
   const sortOrderConditions: SQL[] = [];
-  if (projectId) {
-    sortOrderConditions.push(eq(tasks.projectId, projectId));
+  if (workspaceId) {
+    sortOrderConditions.push(eq(tasks.workspaceId, workspaceId));
   }
   const maxRowQuery = db
     .select({ maxOrder: sql<number>`max(sort_order)` })
@@ -62,7 +62,7 @@ export function createTask(
   db.insert(tasks)
     .values({
       id,
-      projectId: projectId || null,
+      workspaceId: workspaceId || null,
       title,
       description,
       branch,
@@ -94,11 +94,11 @@ function escapeLikePattern(value: string): string {
   return value.replace(/[%_\\]/g, (ch) => `\\${ch}`);
 }
 
-/** Return tasks for a project (or all tasks when projectId is omitted), with optional search/status filters, ordered by sort_order then created_at. */
-export function listTasks(projectId?: string, options?: ListTasksOptions): TaskRow[] {
+/** Return tasks for a workspace (or all tasks when workspaceId is omitted), with optional search/status filters, ordered by sort_order then created_at. */
+export function listTasks(workspaceId?: string, options?: ListTasksOptions): TaskRow[] {
   const conditions: SQL[] = [];
-  if (projectId) {
-    conditions.push(eq(tasks.projectId, projectId));
+  if (workspaceId) {
+    conditions.push(eq(tasks.workspaceId, workspaceId));
   }
 
   if (options?.status) {
@@ -206,8 +206,8 @@ export function deleteTask(id: string): number {
 }
 
 /** Return all not_started tasks whose dependencies are fully met. */
-export function getUnblockedTasks(projectId?: string): TaskRow[] {
-  const all = listTasks(projectId);
+export function getUnblockedTasks(workspaceId?: string): TaskRow[] {
+  const all = listTasks(workspaceId);
   return all.filter((task) => {
     if (task.status !== TASK_STATUS.NOT_STARTED) {
       return false;
@@ -224,8 +224,8 @@ export function getUnblockedTasks(projectId?: string): TaskRow[] {
 }
 
 /** Alias for getUnblockedTasks — check which pending tasks are now unblocked. */
-export function checkAndUnblock(projectId?: string): TaskRow[] {
-  return getUnblockedTasks(projectId);
+export function checkAndUnblock(workspaceId?: string): TaskRow[] {
+  return getUnblockedTasks(workspaceId);
 }
 
 /** Check whether all dependencies of a task are in "complete" status. */
@@ -272,13 +272,13 @@ export function getChildren(taskId: string): TaskRow[] {
     .all();
 }
 
-/** Get all descendants of a task (full subtree) via in-memory BFS. Fetches all project tasks once to avoid N+1 queries. */
+/** Get all descendants of a task (full subtree) via in-memory BFS. Fetches all workspace tasks once to avoid N+1 queries. */
 export function getDescendants(taskId: string): TaskRow[] {
   const task = getTask(taskId);
   if (!task) {
     return [];
   }
-  const allRows = listTasks(task.projectId || undefined);
+  const allRows = listTasks(task.workspaceId || undefined);
   const childIdsMap = buildChildIdsMap(allRows);
   const rowById = new Map<string, TaskRow>(allRows.map((r) => [r.id, r]));
 

@@ -73,36 +73,39 @@ export async function sendWsMessage(
   }, message);
 }
 
-/** Retrieve the project ID for a project with the given name. */
-export async function getProjectId(
+/** Retrieve the workspace ID for a workspace with the given name. */
+export async function getWorkspaceId(
   page: Page,
   projectName: string,
 ): Promise<string> {
   const response = await sendWsAndWaitFor(
     page,
-    { type: "list_projects" },
-    "projects",
+    { type: "list_workspaces" },
+    "workspaces",
   );
-  const projects = (response.payload?.projects || []) as Array<{
+  const workspaces = (response.payload?.workspaces || []) as Array<{
     id: string;
     name: string;
   }>;
-  const project = projects.find((p) => p.name === projectName);
-  if (!project) {
-    throw new Error(`Project "${projectName}" not found`);
+  const workspace = workspaces.find((p) => p.name === projectName);
+  if (!workspace) {
+    throw new Error(`Workspace "${projectName}" not found`);
   }
-  return project.id;
+  return workspace.id;
 }
 
-/** Retrieve the task ID for a task with the given title under a project. */
+/** @deprecated Use {@link getWorkspaceId} instead. */
+export const getProjectId = getWorkspaceId;
+
+/** Retrieve the task ID for a task with the given title under a workspace. */
 export async function getTaskId(
   page: Page,
-  projectId: string,
+  workspaceId: string,
   taskTitle: string,
 ): Promise<string> {
   const response = await sendWsAndWaitFor(
     page,
-    { type: "list_tasks", payload: { projectId } },
+    { type: "list_tasks", payload: { workspaceId } },
     "tasks",
   );
   const tasks = (response.payload?.tasks || []) as Array<{
@@ -111,19 +114,22 @@ export async function getTaskId(
   }>;
   const task = tasks.find((t) => t.title === taskTitle);
   if (!task) {
-    throw new Error(`Task "${taskTitle}" not found in project ${projectId}`);
+    throw new Error(`Task "${taskTitle}" not found in workspace ${workspaceId}`);
   }
   return task.id;
 }
 
-/** Create a project via the UI and wait for it to appear in the sidebar. */
-export async function createProject(page: Page, name: string): Promise<void> {
+/** Create a workspace via the UI and wait for it to appear in the sidebar. */
+export async function createWorkspace(page: Page, name: string): Promise<void> {
   await page.locator("button", { hasText: "+" }).first().click();
-  const nameInput = page.locator('input[placeholder="Project name..."]');
+  const nameInput = page.locator('input[placeholder="Workspace name..."]');
   await nameInput.fill(name);
   await page.locator("button", { hasText: "OK" }).click();
   await page.getByText(name).waitFor({ timeout: 5_000 });
 }
+
+/** @deprecated Use {@link createWorkspace} instead. */
+export const createProject = createWorkspace;
 
 /**
  * Create a task under a project and wait for it to appear in the sidebar.
@@ -154,11 +160,11 @@ export async function createTask(
     await page.locator('[data-testid="task-edit-title"]').waitFor({ timeout: 5_000 });
 
     // Create the task via WS while the form is visible.
-    const projectId = await getProjectId(page, projectName);
-    await createTaskViaWs(page, projectId, title, { environmentId: envName, canDecompose: options?.canDecompose });
+    const wsId = await getWorkspaceId(page, projectName);
+    await createTaskViaWs(page, wsId, title, { environmentId: envName, canDecompose: options?.canDecompose });
 
-    // Cancel the form — this navigates to project view which auto-expands
-    // the project in the sidebar via useEffect in ProjectList.
+    // Cancel the form — this navigates to workspace view which auto-expands
+    // the workspace in the sidebar via useEffect in WorkspaceList.
     await page.locator("button", { hasText: "Cancel" }).click();
 
     await page
@@ -338,7 +344,7 @@ export async function installWsTracker(page: Page): Promise<void> {
 /** Create a task via WebSocket with custom options (e.g., dependsOn, parentTaskId). Returns the created task data. */
 export async function createTaskViaWs(
   page: Page,
-  projectId: string,
+  workspaceId: string,
   title: string,
   options?: {
     environmentId?: string;
@@ -349,7 +355,7 @@ export async function createTaskViaWs(
   },
 ): Promise<WsPayload> {
   const payload: WsPayload = {
-    projectId,
+    workspaceId,
     title,
     description: options?.description || "",
     environmentId: options?.environmentId || "",
@@ -367,12 +373,12 @@ export async function createTaskViaWs(
     },
     "task.created",
   );
-  // The event bus sends { taskId, projectId } — fetch the full task row
+  // The event bus sends { taskId, workspaceId } — fetch the full task row
   const taskId = response.payload?.taskId as string;
   if (taskId) {
     const listResp = await sendWsAndWaitFor(
       page,
-      { type: "list_tasks", payload: { projectId } },
+      { type: "list_tasks", payload: { workspaceId } },
       "tasks",
     );
     const tasks = (listResp.payload?.tasks || []) as WsPayload[];

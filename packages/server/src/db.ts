@@ -69,6 +69,25 @@ sqlite.pragma("foreign_keys = ON");
 
 /** Initialize all database tables and run migrations. Call once at startup. */
 export function initDatabase(): void {
+  // Migration: rename projects table to workspaces
+  try {
+    sqlite.exec("ALTER TABLE projects RENAME TO workspaces");
+  } catch {
+    /* table already renamed or never existed */
+  }
+  // Migration: rename project_id column to workspace_id on tasks
+  try {
+    sqlite.exec("ALTER TABLE tasks RENAME COLUMN project_id TO workspace_id");
+  } catch {
+    /* column already renamed or never existed */
+  }
+  // Migration: rename project_id column to workspace_id on findings
+  try {
+    sqlite.exec("ALTER TABLE findings RENAME COLUMN project_id TO workspace_id");
+  } catch {
+    /* column already renamed or never existed */
+  }
+
   // Create tables — idempotent, safe to run every startup
   sqlite.exec(`
     CREATE TABLE IF NOT EXISTS environments (
@@ -109,7 +128,7 @@ export function initDatabase(): void {
       created_at    TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
-    CREATE TABLE IF NOT EXISTS projects (
+    CREATE TABLE IF NOT EXISTS workspaces (
       id            TEXT PRIMARY KEY,
       name          TEXT NOT NULL,
       description   TEXT NOT NULL DEFAULT '',
@@ -123,7 +142,7 @@ export function initDatabase(): void {
 
     CREATE TABLE IF NOT EXISTS tasks (
       id            TEXT PRIMARY KEY,
-      project_id    TEXT REFERENCES projects(id),
+      workspace_id  TEXT REFERENCES workspaces(id),
       title         TEXT NOT NULL,
       description   TEXT NOT NULL DEFAULT '',
       status        TEXT NOT NULL DEFAULT 'not_started',
@@ -141,7 +160,7 @@ export function initDatabase(): void {
 
     CREATE TABLE IF NOT EXISTS findings (
       id            TEXT PRIMARY KEY,
-      project_id    TEXT NOT NULL REFERENCES projects(id),
+      workspace_id  TEXT NOT NULL REFERENCES workspaces(id),
       task_id       TEXT NOT NULL DEFAULT '',
       session_id    TEXT NOT NULL DEFAULT '',
       category      TEXT NOT NULL DEFAULT 'general',
@@ -170,7 +189,7 @@ export function initDatabase(): void {
       value TEXT NOT NULL
     );
 
-    CREATE INDEX IF NOT EXISTS idx_findings_project ON findings(project_id);
+    CREATE INDEX IF NOT EXISTS idx_findings_workspace ON findings(workspace_id);
 
     CREATE TABLE IF NOT EXISTS domain_events (
       id        TEXT PRIMARY KEY,
@@ -203,12 +222,12 @@ export function initDatabase(): void {
 
   // Migration: backfill NULLs in stage-2 tables from older schemas that lacked NOT NULL
   sqlite.exec(`
-    UPDATE projects SET description = '' WHERE description IS NULL;
-    UPDATE projects SET repo_url = '' WHERE repo_url IS NULL;
-    UPDATE projects SET default_env_id = '' WHERE default_env_id IS NULL;
-    UPDATE projects SET status = 'active' WHERE status IS NULL;
-    UPDATE projects SET created_at = datetime('now') WHERE created_at IS NULL;
-    UPDATE projects SET updated_at = datetime('now') WHERE updated_at IS NULL;
+    UPDATE workspaces SET description = '' WHERE description IS NULL;
+    UPDATE workspaces SET repo_url = '' WHERE repo_url IS NULL;
+    UPDATE workspaces SET default_env_id = '' WHERE default_env_id IS NULL;
+    UPDATE workspaces SET status = 'active' WHERE status IS NULL;
+    UPDATE workspaces SET created_at = datetime('now') WHERE created_at IS NULL;
+    UPDATE workspaces SET updated_at = datetime('now') WHERE updated_at IS NULL;
 
     UPDATE tasks SET description = '' WHERE description IS NULL;
     UPDATE tasks SET status = 'not_started' WHERE status IS NULL;
@@ -280,19 +299,19 @@ export function initDatabase(): void {
     /* column already exists */
   }
 
-  // Migration: add use_worktrees column to projects if missing (older databases)
+  // Migration: add use_worktrees column to workspaces if missing (older databases)
   try {
     sqlite.exec(
-      "ALTER TABLE projects ADD COLUMN use_worktrees INTEGER NOT NULL DEFAULT 1",
+      "ALTER TABLE workspaces ADD COLUMN use_worktrees INTEGER NOT NULL DEFAULT 1",
     );
   } catch {
     /* column already exists */
   }
 
-  // Migration: add worktree_base_path column to projects if missing (older databases)
+  // Migration: add worktree_base_path column to workspaces if missing (older databases)
   try {
     sqlite.exec(
-      "ALTER TABLE projects ADD COLUMN worktree_base_path TEXT NOT NULL DEFAULT ''",
+      "ALTER TABLE workspaces ADD COLUMN worktree_base_path TEXT NOT NULL DEFAULT ''",
     );
   } catch {
     /* column already exists */
@@ -388,10 +407,10 @@ export function initDatabase(): void {
     "CREATE INDEX IF NOT EXISTS idx_sessions_task_id ON sessions(task_id)",
   );
 
-  // Migration: add default_persona_id to projects and tasks
+  // Migration: add default_persona_id to workspaces and tasks
   try {
     sqlite.exec(
-      "ALTER TABLE projects ADD COLUMN default_persona_id TEXT NOT NULL DEFAULT ''",
+      "ALTER TABLE workspaces ADD COLUMN default_persona_id TEXT NOT NULL DEFAULT ''",
     );
   } catch {
     /* column already exists */
@@ -420,18 +439,18 @@ export function initDatabase(): void {
     /* column already exists */
   }
 
-  // Migration: make project_id nullable on tasks.
+  // Migration: make workspace_id nullable on tasks.
   // SQLite doesn't support ALTER COLUMN, so we recreate the table.
   // Guard: only run if the column currently has NOT NULL.
   {
     const tableInfo = sqlite.prepare("PRAGMA table_info(tasks)").all() as Array<{ name: string; notnull: number }>;
-    const projectIdCol = tableInfo.find((c) => c.name === "project_id");
-    if (projectIdCol?.notnull === 1) {
+    const workspaceIdCol = tableInfo.find((c) => c.name === "workspace_id");
+    if (workspaceIdCol?.notnull === 1) {
       sqlite.exec(`
         BEGIN;
         CREATE TABLE tasks_new (
           id             TEXT PRIMARY KEY,
-          project_id     TEXT REFERENCES projects(id),
+          workspace_id   TEXT REFERENCES workspaces(id),
           title          TEXT NOT NULL,
           description    TEXT NOT NULL DEFAULT '',
           status         TEXT NOT NULL DEFAULT 'not_started',
@@ -448,7 +467,7 @@ export function initDatabase(): void {
           default_persona_id TEXT NOT NULL DEFAULT ''
         );
         INSERT INTO tasks_new SELECT
-          id, project_id, title, description, status, branch, depends_on,
+          id, workspace_id, title, description, status, branch, depends_on,
           started_at, completed_at, created_at, updated_at, sort_order,
           parent_task_id, depth, can_decompose, default_persona_id
         FROM tasks;

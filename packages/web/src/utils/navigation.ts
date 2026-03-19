@@ -35,9 +35,9 @@ export function sessionUrl(sessionId: string): string {
   return `/sessions/${encodeURIComponent(sessionId)}`;
 }
 
-/** Build URL for a project overview page. */
-export function projectUrl(projectId: string): string {
-  return `/projects/${encodeURIComponent(projectId)}`;
+/** Build URL for a workspace overview page. */
+export function workspaceUrl(workspaceId: string): string {
+  return `/workspaces/${encodeURIComponent(workspaceId)}`;
 }
 
 /** Build URL for a task detail page, optionally targeting a specific tab. */
@@ -55,8 +55,8 @@ export function taskEditUrl(taskId: string): string {
 }
 
 /** Build URL for the new task form. */
-export function newTaskUrl(projectId: string, parentTaskId?: string): string {
-  const params = new URLSearchParams({ project: projectId });
+export function newTaskUrl(workspaceId: string, parentTaskId?: string): string {
+  const params = new URLSearchParams({ workspace: workspaceId });
   if (parentTaskId) {
     params.set("parent", parentTaskId);
   }

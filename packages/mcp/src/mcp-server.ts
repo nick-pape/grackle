@@ -98,19 +98,19 @@ function createMcpServerInstance(grpcClient: Client<typeof grackle.Grackle>, aut
     // Inject context from scoped token so callers don't need to provide it
     const rawArgs = (args ?? {}) as Record<string, unknown>;
     if (authContext.type === "scoped") {
-      rawArgs.projectId = authContext.projectId;
+      rawArgs.workspaceId = authContext.workspaceId;
       // Auto-parent subtasks: when an agent creates a task, parent it to the agent's own task
       if (name === "task_create" && authContext.taskId) {
         rawArgs.parentTaskId = authContext.taskId;
       }
-      // Enforce project scoping: verify task belongs to the caller's project.
-      // Skip check when caller has no project (root task agents can see any task).
-      if (name === "task_show" && authContext.projectId && typeof rawArgs.taskId === "string" && rawArgs.taskId) {
+      // Enforce workspace scoping: verify task belongs to the caller's workspace.
+      // Skip check when caller has no workspace (root task agents can see any task).
+      if (name === "task_show" && authContext.workspaceId && typeof rawArgs.taskId === "string" && rawArgs.taskId) {
         try {
           const task = await grpcClient.getTask({ id: rawArgs.taskId as string });
-          if ((task.projectId || undefined) !== authContext.projectId) {
+          if ((task.workspaceId || undefined) !== authContext.workspaceId) {
             return {
-              content: [{ type: "text", text: JSON.stringify({ error: "Task belongs to a different project", code: "PERMISSION_DENIED" }, null, 2) }],
+              content: [{ type: "text", text: JSON.stringify({ error: "Task belongs to a different workspace", code: "PERMISSION_DENIED" }, null, 2) }],
               isError: true,
             };
           }

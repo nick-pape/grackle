@@ -135,7 +135,7 @@ vi.mock("./github-import.js", () => ({
 // ── Import AFTER mocks ──────────────────────────────────────────
 
 import { registerGrackleRoutes } from "./grpc-service.js";
-import * as projectStore from "./project-store.js";
+import * as workspaceStore from "./workspace-store.js";
 import * as taskStore from "./task-store.js";
 import * as sessionStore from "./session-store.js";
 import { computeTaskStatus } from "./compute-task-status.js";
@@ -146,7 +146,7 @@ import type { ConnectRouter } from "@connectrpc/connect";
 /** Apply schema DDL to in-memory database. */
 function applySchema(): void {
   sqlite.exec(`
-    CREATE TABLE IF NOT EXISTS projects (
+    CREATE TABLE IF NOT EXISTS workspaces (
       id            TEXT PRIMARY KEY,
       name          TEXT NOT NULL,
       description   TEXT NOT NULL DEFAULT '',
@@ -162,7 +162,7 @@ function applySchema(): void {
 
     CREATE TABLE IF NOT EXISTS tasks (
       id            TEXT PRIMARY KEY,
-      project_id    TEXT NOT NULL REFERENCES projects(id),
+      workspace_id  TEXT NOT NULL REFERENCES workspaces(id),
       title         TEXT NOT NULL,
       description   TEXT NOT NULL DEFAULT '',
       status        TEXT NOT NULL DEFAULT 'not_started',
@@ -202,11 +202,11 @@ describe("gRPC listTasks handler", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     sqlite.exec("DROP TABLE IF EXISTS tasks");
-    sqlite.exec("DROP TABLE IF EXISTS projects");
+    sqlite.exec("DROP TABLE IF EXISTS workspaces");
     applySchema();
 
-    // Seed project and tasks using real stores
-    projectStore.createProject(PROJECT_ID, "Test Project", "desc", "", "");
+    // Seed workspace and tasks using real stores
+    workspaceStore.createWorkspace(PROJECT_ID, "Test Project", "desc", "", "");
     taskStore.createTask("t1", PROJECT_ID, "Fix login bug", "User cannot login with SSO", [], "test-project");
     taskStore.createTask("t2", PROJECT_ID, "Add dashboard", "Create analytics dashboard", [], "test-project");
     taskStore.createTask("t3", PROJECT_ID, "Update auth middleware", "Refactor authentication layer", [], "test-project");
@@ -226,7 +226,7 @@ describe("gRPC listTasks handler", () => {
 
   it("filters by search term", async () => {
     const result = await handlers.listTasks({
-      projectId: PROJECT_ID,
+      workspaceId: PROJECT_ID,
       search: "login",
       status: "",
     }) as grackle.TaskList;
@@ -237,7 +237,7 @@ describe("gRPC listTasks handler", () => {
 
   it("filters by status", async () => {
     const result = await handlers.listTasks({
-      projectId: PROJECT_ID,
+      workspaceId: PROJECT_ID,
       search: "",
       status: "working",
     }) as grackle.TaskList;
@@ -248,7 +248,7 @@ describe("gRPC listTasks handler", () => {
 
   it("returns all tasks when no filters", async () => {
     const result = await handlers.listTasks({
-      projectId: PROJECT_ID,
+      workspaceId: PROJECT_ID,
       search: "",
       status: "",
     }) as grackle.TaskList;
@@ -258,7 +258,7 @@ describe("gRPC listTasks handler", () => {
 
   it("combines search and status filters", async () => {
     const result = await handlers.listTasks({
-      projectId: PROJECT_ID,
+      workspaceId: PROJECT_ID,
       search: "auth",
       status: "complete",
     }) as grackle.TaskList;
@@ -285,7 +285,7 @@ describe("gRPC listTasks handler", () => {
     });
 
     const result = await handlers.listTasks({
-      projectId: PROJECT_ID,
+      workspaceId: PROJECT_ID,
       search: "",
       status: "",
     }) as grackle.TaskList;

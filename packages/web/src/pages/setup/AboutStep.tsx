@@ -15,7 +15,7 @@ export function AboutStep({ onNext, onBack }: AboutStepProps): JSX.Element {
       <ul className={styles.featureList}>
         <li>Run Claude, Copilot, and Codex agents side by side</li>
         <li>Provision and control dev environments — SSH, Codespaces, or local</li>
-        <li>Organize work into projects with agent-executable tasks</li>
+        <li>Organize work into workspaces with agent-executable tasks</li>
         <li>Customize agent behavior with personas, tools, and MCP servers</li>
         <li>Live-stream agent sessions with full terminal replay</li>
       </ul>

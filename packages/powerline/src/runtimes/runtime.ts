@@ -17,7 +17,7 @@ export interface SpawnOptions {
   branch?: string;
   worktreeBasePath?: string;
   systemContext?: string;
-  projectId?: string;
+  workspaceId?: string;
   taskId?: string;
   /** MCP server configurations to pass to the agent SDK. */
   mcpServers?: Record<string, unknown>;

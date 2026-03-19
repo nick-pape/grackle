@@ -296,7 +296,7 @@ describe("session_send_input", () => {
     const scopedAuth: AuthContext = {
       type: "scoped",
       taskId: "parent-task",
-      projectId: "proj-1",
+      workspaceId: "proj-1",
       personaId: "p-1",
       taskSessionId: "sess-1",
     };
@@ -326,7 +326,7 @@ describe("session_send_input", () => {
     const scopedAuth: AuthContext = {
       type: "scoped",
       taskId: "parent-task",
-      projectId: "proj-1",
+      workspaceId: "proj-1",
       personaId: "p-1",
       taskSessionId: "sess-1",
     };
@@ -357,7 +357,7 @@ describe("session_send_input", () => {
     const scopedAuth: AuthContext = {
       type: "scoped",
       taskId: "parent-task",
-      projectId: "proj-1",
+      workspaceId: "proj-1",
       personaId: "p-1",
       taskSessionId: "sess-1",
     };
@@ -382,7 +382,7 @@ describe("session_send_input", () => {
     const scopedAuth: AuthContext = {
       type: "scoped",
       taskId: "parent-task",
-      projectId: "proj-1",
+      workspaceId: "proj-1",
       personaId: "p-1",
       taskSessionId: "sess-1",
     };

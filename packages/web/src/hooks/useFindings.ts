@@ -12,11 +12,11 @@ import { asValidArray, isFindingData } from "./types.js";
 export interface UseFindingsResult {
   /** All loaded findings. */
   findings: FindingData[];
-  /** Load findings for a given project. */
-  loadFindings: (projectId: string) => void;
-  /** Post a new finding to a project. */
+  /** Load findings for a given workspace. */
+  loadFindings: (workspaceId: string) => void;
+  /** Post a new finding to a workspace. */
   postFinding: (
-    projectId: string,
+    workspaceId: string,
     title: string,
     content: string,
     category?: string,
@@ -39,9 +39,9 @@ export function useFindings(send: SendFunction): UseFindingsResult {
 
   const handleEvent = useCallback((event: GrackleEvent): boolean => {
     if (event.type === "finding.posted") {
-      const pid = typeof event.payload.projectId === "string" ? event.payload.projectId : "";
+      const pid = typeof event.payload.workspaceId === "string" ? event.payload.workspaceId : "";
       if (pid) {
-        send({ type: "list_findings", payload: { projectId: pid } });
+        send({ type: "list_findings", payload: { workspaceId: pid } });
       }
       return true;
     }
@@ -66,15 +66,15 @@ export function useFindings(send: SendFunction): UseFindingsResult {
   }, []);
 
   const loadFindings = useCallback(
-    (projectId: string) => {
-      send({ type: "list_findings", payload: { projectId } });
+    (workspaceId: string) => {
+      send({ type: "list_findings", payload: { workspaceId } });
     },
     [send],
   );
 
   const postFinding = useCallback(
     (
-      projectId: string,
+      workspaceId: string,
       title: string,
       content: string,
       category?: string,
@@ -83,7 +83,7 @@ export function useFindings(send: SendFunction): UseFindingsResult {
       send({
         type: "post_finding",
         payload: {
-          projectId,
+          workspaceId,
           title,
           content,
           category: category || "general",

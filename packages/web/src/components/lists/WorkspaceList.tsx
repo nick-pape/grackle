@@ -5,9 +5,9 @@ import type { TaskData } from "../../hooks/useGrackleSocket.js";
 import { AnimatePresence, motion } from "motion/react";
 import { MAX_TASK_DEPTH, fuzzySearch, type FuzzyKey, type MatchIndex } from "@grackle-ai/common";
 import { Spinner } from "../display/index.js";
-import { taskUrl, projectUrl, newTaskUrl, useAppNavigate } from "../../utils/navigation.js";
+import { taskUrl, workspaceUrl, newTaskUrl, useAppNavigate } from "../../utils/navigation.js";
 import { SIDEBAR_STATUS_ORDER, getStatusStyle } from "../../utils/taskStatus.js";
-import styles from "./ProjectList.module.scss";
+import styles from "./WorkspaceList.module.scss";
 
 /** Merge overlapping or adjacent [start, end] ranges into non-overlapping ranges. */
 function mergeRanges(ranges: readonly MatchIndex[]): MatchIndex[] {
@@ -49,12 +49,12 @@ function HighlightedText({ text, indices }: { text: string; indices?: readonly M
   return <>{parts}</>;
 }
 
-/** Fuzzy search keys for project matching. */
-const PROJECT_SEARCH_KEYS: FuzzyKey[] = [{ name: "name", weight: 2 }, { name: "description", weight: 1 }];
+/** Fuzzy search keys for workspace matching. */
+const WORKSPACE_SEARCH_KEYS: FuzzyKey[] = [{ name: "name", weight: 2 }, { name: "description", weight: 1 }];
 /** Fuzzy search keys for task matching. */
 const TASK_SEARCH_KEYS: FuzzyKey[] = [{ name: "title", weight: 2 }, { name: "description", weight: 1 }];
 
-/** Base left-padding for task rows inside a project. */
+/** Base left-padding for task rows inside a workspace. */
 const TASK_BASE_INDENT_PX: number = 34;
 /** Additional left-padding per depth level. */
 const TASK_DEPTH_INDENT_PX: number = 16;
@@ -266,7 +266,7 @@ interface TaskTreeNodeProps {
   toggleTask: (taskId: string) => void;
   selectedTaskId: string | undefined;
   navigate: ReturnType<typeof useAppNavigate>;
-  projectId: string;
+  workspaceId: string;
   taskStatusById: Map<string, string>;
   titleHighlights: Map<string, readonly MatchIndex[]>;
 }
@@ -279,7 +279,7 @@ function TaskTreeNode({
   toggleTask,
   selectedTaskId,
   navigate,
-  projectId,
+  workspaceId,
   taskStatusById,
   titleHighlights,
 }: TaskTreeNodeProps): JSX.Element {
@@ -341,7 +341,7 @@ function TaskTreeNode({
           <button
             onClick={(e) => {
               e.stopPropagation();
-              navigate(newTaskUrl(projectId, node.id));
+              navigate(newTaskUrl(workspaceId, node.id));
             }}
             title="Add child task"
             aria-label="Add child task"
@@ -370,7 +370,7 @@ function TaskTreeNode({
                 toggleTask={toggleTask}
                 selectedTaskId={selectedTaskId}
                 navigate={navigate}
-                projectId={projectId}
+                workspaceId={workspaceId}
                 taskStatusById={taskStatusById}
                 titleHighlights={titleHighlights}
               />
@@ -382,19 +382,19 @@ function TaskTreeNode({
   );
 }
 
-/** Sidebar project tree with expandable task lists and hierarchical task rendering. */
-export function ProjectList(): JSX.Element {
-  const { projects, tasks, loadTasks, createProject, projectCreating } = useGrackle();
+/** Sidebar workspace tree with expandable task lists and hierarchical task rendering. */
+export function WorkspaceList(): JSX.Element {
+  const { workspaces, tasks, loadTasks, createWorkspace, workspaceCreating } = useGrackle();
   const navigate = useAppNavigate();
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
   const [manuallyCollapsed, setManuallyCollapsed] = useState<Set<string>>(new Set());
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [newProjectName, setNewProjectName] = useState("");
+  const [newWorkspaceName, setNewWorkspaceName] = useState("");
   const [groupByStatus, setGroupByStatusState] = useState(getGroupByStatus);
   // Track which groups should default to expanded (resets on each toggle-on)
   const [groupExpandDefault, setGroupExpandDefault] = useState(getGroupByStatus);
-  // Per-project overrides: "projectId:status" → explicitly collapsed or expanded
+  // Per-workspace overrides: "workspaceId:status" → explicitly collapsed or expanded
   const [groupExpandOverrides, setGroupExpandOverrides] = useState<Map<string, boolean>>(new Map());
 
   /** Toggle group-by-status mode. */
@@ -408,9 +408,9 @@ export function ProjectList(): JSX.Element {
     }
   };
 
-  /** Toggle a single status group accordion for a specific project. */
-  const toggleStatusGroup = (projectId: string, status: string): void => {
-    const key = `${projectId}:${status}`;
+  /** Toggle a single status group accordion for a specific workspace. */
+  const toggleStatusGroup = (workspaceId: string, status: string): void => {
+    const key = `${workspaceId}:${status}`;
     setGroupExpandOverrides((prev) => {
       const next = new Map(prev);
       const current = next.has(key) ? next.get(key)! : groupExpandDefault;
@@ -419,17 +419,17 @@ export function ProjectList(): JSX.Element {
     });
   };
 
-  /** Check if a status group is expanded for a specific project. */
-  const isGroupExpanded = (projectId: string, status: string): boolean => {
-    const key = `${projectId}:${status}`;
+  /** Check if a status group is expanded for a specific workspace. */
+  const isGroupExpanded = (workspaceId: string, status: string): boolean => {
+    const key = `${workspaceId}:${status}`;
     return groupExpandOverrides.has(key) ? groupExpandOverrides.get(key)! : groupExpandDefault;
   };
 
   // Derive selected state from router
   const taskMatch = useMatch("/tasks/:taskId/*");
-  const projectMatch = useMatch("/projects/:projectId");
+  const workspaceMatch = useMatch("/workspaces/:workspaceId");
   const selectedTaskId = taskMatch?.params.taskId !== "new" ? taskMatch?.params.taskId : undefined;
-  const selectedProjectId = projectMatch?.params.projectId;
+  const selectedWorkspaceId = workspaceMatch?.params.workspaceId;
 
   const expandedRef = useRef(expanded);
   expandedRef.current = expanded;
@@ -487,20 +487,20 @@ export function ProjectList(): JSX.Element {
     }
   }, [tasks, manuallyCollapsed]);
 
-  // Auto-expand a project when selected via programmatic navigation
+  // Auto-expand a workspace when selected via programmatic navigation
   useEffect(() => {
-    if (selectedProjectId && !expandedRef.current.has(selectedProjectId)) {
-      setExpanded((prev) => new Set(prev).add(selectedProjectId));
-      loadTasks(selectedProjectId);
+    if (selectedWorkspaceId && !expandedRef.current.has(selectedWorkspaceId)) {
+      setExpanded((prev) => new Set(prev).add(selectedWorkspaceId));
+      loadTasks(selectedWorkspaceId);
     }
-  }, [selectedProjectId, loadTasks]);
+  }, [selectedWorkspaceId, loadTasks]);
 
-  const handleCreateProject = (): void => {
-    if (!newProjectName.trim() || projectCreating) {
+  const handleCreateWorkspace = (): void => {
+    if (!newWorkspaceName.trim() || workspaceCreating) {
       return;
     }
-    createProject(newProjectName.trim());
-    setNewProjectName("");
+    createWorkspace(newWorkspaceName.trim());
+    setNewWorkspaceName("");
     setShowCreateForm(false);
   };
 
@@ -508,14 +508,14 @@ export function ProjectList(): JSX.Element {
   const [searchQuery, setSearchQuery] = useState("");
 
   /** Sets of matching IDs for filtering, recomputed when query or data changes. */
-  const { directMatchTaskIds, treeMatchTaskIds, visibleProjectIds, matchedProjectIds, titleHighlights } = useMemo(() => {
+  const { directMatchTaskIds, treeMatchTaskIds, visibleWorkspaceIds, matchedWorkspaceIds, titleHighlights } = useMemo(() => {
     if (!searchQuery.trim()) {
-      return { directMatchTaskIds: null, treeMatchTaskIds: null, visibleProjectIds: null, matchedProjectIds: null, titleHighlights: new Map<string, readonly MatchIndex[]>() };
+      return { directMatchTaskIds: null, treeMatchTaskIds: null, visibleWorkspaceIds: null, matchedWorkspaceIds: null, titleHighlights: new Map<string, readonly MatchIndex[]>() };
     }
-    const projectResults = fuzzySearch(projects, searchQuery, PROJECT_SEARCH_KEYS);
+    const workspaceResults = fuzzySearch(workspaces, searchQuery, WORKSPACE_SEARCH_KEYS);
     const taskResults = fuzzySearch(tasks, searchQuery, TASK_SEARCH_KEYS);
 
-    const mProjectIds = new Set(projectResults.map((r) => r.item.id));
+    const mWorkspaceIds = new Set(workspaceResults.map((r) => r.item.id));
     const directIds = new Set(taskResults.map((r) => r.item.id));
 
     // Build highlight map: task ID → match indices for the "title" field
@@ -527,10 +527,10 @@ export function ProjectList(): JSX.Element {
       }
     }
 
-    // A project is visible if it matches directly or any of its tasks match
-    const vProjectIds = new Set(mProjectIds);
+    // A workspace is visible if it matches directly or any of its tasks match
+    const vWorkspaceIds = new Set(mWorkspaceIds);
     for (const r of taskResults) {
-      vProjectIds.add(r.item.projectId);
+      vWorkspaceIds.add(r.item.workspaceId);
     }
 
     // For tree view, also include ancestor tasks to preserve tree structure
@@ -544,30 +544,30 @@ export function ProjectList(): JSX.Element {
       }
     }
 
-    return { directMatchTaskIds: directIds, treeMatchTaskIds: treeIds, visibleProjectIds: vProjectIds, matchedProjectIds: mProjectIds, titleHighlights: highlights };
-  }, [searchQuery, projects, tasks]);
+    return { directMatchTaskIds: directIds, treeMatchTaskIds: treeIds, visibleWorkspaceIds: vWorkspaceIds, matchedWorkspaceIds: mWorkspaceIds, titleHighlights: highlights };
+  }, [searchQuery, workspaces, tasks]);
 
-  // Track which projects have had tasks requested (superset of expanded — includes search-triggered loads)
-  const requestedProjectsRef = useRef<Set<string>>(new Set());
+  // Track which workspaces have had tasks requested (superset of expanded — includes search-triggered loads)
+  const requestedWorkspacesRef = useRef<Set<string>>(new Set());
 
-  // When the user starts searching, eagerly load tasks for all projects so
-  // the full dataset is searchable (not just previously-expanded projects).
+  // When the user starts searching, eagerly load tasks for all workspaces so
+  // the full dataset is searchable (not just previously-expanded workspaces).
   useEffect(() => {
     if (!searchQuery.trim()) {
       return;
     }
-    for (const p of projects) {
-      if (!expanded.has(p.id) && !requestedProjectsRef.current.has(p.id)) {
-        requestedProjectsRef.current.add(p.id);
+    for (const p of workspaces) {
+      if (!expanded.has(p.id) && !requestedWorkspacesRef.current.has(p.id)) {
+        requestedWorkspacesRef.current.add(p.id);
         loadTasks(p.id);
       }
     }
-  }, [searchQuery, projects, expanded, loadTasks]);
+  }, [searchQuery, workspaces, expanded, loadTasks]);
 
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <span>Projects</span>
+        <span>Workspaces</span>
         <div className={styles.headerActions}>
           <button
             className={`${styles.groupToggle} ${groupByStatus ? styles.groupToggleActive : ""}`}
@@ -582,21 +582,21 @@ export function ProjectList(): JSX.Element {
           <button
             className={styles.addButton}
             onClick={() => setShowCreateForm(!showCreateForm)}
-            aria-label="Create project"
-            title="Create project"
+            aria-label="Create workspace"
+            title="Create workspace"
           >
             +
           </button>
         </div>
       </div>
 
-      {projects.length > 0 && (
+      {workspaces.length > 0 && (
         <input
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Filter..."
-          aria-label="Filter projects and tasks"
+          aria-label="Filter workspaces and tasks"
           className={styles.searchInput}
           data-testid="sidebar-search"
         />
@@ -606,94 +606,94 @@ export function ProjectList(): JSX.Element {
         <div className={styles.createForm}>
           <input
             type="text"
-            value={newProjectName}
-            onChange={(e) => setNewProjectName(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleCreateProject()}
-            placeholder="Project name..."
+            value={newWorkspaceName}
+            onChange={(e) => setNewWorkspaceName(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleCreateWorkspace()}
+            placeholder="Workspace name..."
             autoFocus
-            disabled={projectCreating}
+            disabled={workspaceCreating}
             className={styles.createInput}
           />
           <button
-            onClick={handleCreateProject}
+            onClick={handleCreateWorkspace}
             className={styles.createButton}
-            disabled={projectCreating}
+            disabled={workspaceCreating}
           >
-            {projectCreating
-              ? <Spinner size="sm" label="Creating project" />
+            {workspaceCreating
+              ? <Spinner size="sm" label="Creating workspace" />
               : "OK"}
           </button>
         </div>
       )}
-      {projectCreating && (
+      {workspaceCreating && (
         <div className={styles.creatingHint}>
-          <Spinner size="sm" label="Creating project" />
-          Creating project…
+          <Spinner size="sm" label="Creating workspace" />
+          Creating workspace…
         </div>
       )}
 
-      {projects.length === 0 && !showCreateForm && (
+      {workspaces.length === 0 && !showCreateForm && (
         <div className={styles.emptyCta}>
           <button
             className={styles.ctaButton}
             onClick={() => setShowCreateForm(true)}
           >
-            Create Project
+            Create Workspace
           </button>
           <div className={styles.ctaDescription}>
-            Organize your work into projects
+            Organize your work into workspaces
           </div>
         </div>
       )}
 
-      {projects.map((project) => {
-        // Skip projects that don't match the search filter
-        if (visibleProjectIds && !visibleProjectIds.has(project.id)) {
+      {workspaces.map((workspace) => {
+        // Skip workspaces that don't match the search filter
+        if (visibleWorkspaceIds && !visibleWorkspaceIds.has(workspace.id)) {
           return null;
         }
 
         const isSearching = directMatchTaskIds !== null;
-        const isExpanded = expanded.has(project.id) || isSearching;
-        const allProjectTasks = tasks.filter((t) => t.projectId === project.id);
-        // When a project matches directly, show all its tasks; otherwise filter to matching tasks only
-        const projectMatchedDirectly = matchedProjectIds?.has(project.id) ?? false;
-        const activeMatchIds = isSearching && !projectMatchedDirectly
+        const isExpanded = expanded.has(workspace.id) || isSearching;
+        const allWorkspaceTasks = tasks.filter((t) => t.workspaceId === workspace.id);
+        // When a workspace matches directly, show all its tasks; otherwise filter to matching tasks only
+        const workspaceMatchedDirectly = matchedWorkspaceIds?.has(workspace.id) ?? false;
+        const activeMatchIds = isSearching && !workspaceMatchedDirectly
           ? (groupByStatus ? directMatchTaskIds : treeMatchTaskIds)
           : null;
-        const projectTasks = activeMatchIds
-          ? allProjectTasks.filter((t) => activeMatchIds.has(t.id))
-          : allProjectTasks;
-        const isSelected = selectedProjectId === project.id;
-        const tree = isExpanded && !groupByStatus ? buildTaskTree(projectTasks) : [];
+        const workspaceTasks = activeMatchIds
+          ? allWorkspaceTasks.filter((t) => activeMatchIds.has(t.id))
+          : allWorkspaceTasks;
+        const isSelected = selectedWorkspaceId === workspace.id;
+        const tree = isExpanded && !groupByStatus ? buildTaskTree(workspaceTasks) : [];
 
         return (
-          <div key={project.id}>
+          <div key={workspace.id}>
             <div
               onClick={() => {
                 if (isSelected) {
-                  // Already viewing this project — toggle expand/collapse
-                  toggleExpand(project.id);
+                  // Already viewing this workspace — toggle expand/collapse
+                  toggleExpand(workspace.id);
                 } else {
-                  // Navigate to project — ensure expanded
+                  // Navigate to workspace — ensure expanded
                   if (!isExpanded) {
-                    toggleExpand(project.id);
+                    toggleExpand(workspace.id);
                   }
-                  navigate(projectUrl(project.id));
+                  navigate(workspaceUrl(workspace.id));
                 }
               }}
-              className={`${styles.projectRow} ${isSelected ? styles.selected : ""}`}
+              className={`${styles.workspaceRow} ${isSelected ? styles.selected : ""}`}
             >
               <span className={`${styles.expandArrow} ${isExpanded ? styles.expanded : ""}`}>
                 {"\u25B8"}
               </span>
-              <span className={styles.projectName} title={project.name}>{project.name}</span>
+              <span className={styles.workspaceName} title={workspace.name}>{workspace.name}</span>
               <span className={styles.taskCount}>
-                {allProjectTasks.length > 0 && `${allProjectTasks.filter((t) => t.status === "complete").length}/${allProjectTasks.length}`}
+                {allWorkspaceTasks.length > 0 && `${allWorkspaceTasks.filter((t) => t.status === "complete").length}/${allWorkspaceTasks.length}`}
               </span>
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  navigate(newTaskUrl(project.id));
+                  navigate(newTaskUrl(workspace.id));
                 }}
                 title="New task"
                 className={styles.newTaskButton}
@@ -712,12 +712,12 @@ export function ProjectList(): JSX.Element {
                   style={{ overflow: "hidden" }}
                 >
                   {groupByStatus ? (
-                    groupTasksByStatus(projectTasks, taskStatusById).map(group => (
+                    groupTasksByStatus(workspaceTasks, taskStatusById).map(group => (
                       <StatusGroupAccordion
                         key={group.status}
                         group={group}
-                        isExpanded={isGroupExpanded(project.id, group.status)}
-                        onToggle={() => toggleStatusGroup(project.id, group.status)}
+                        isExpanded={isGroupExpanded(workspace.id, group.status)}
+                        onToggle={() => toggleStatusGroup(workspace.id, group.status)}
                         selectedTaskId={selectedTaskId}
                         navigate={navigate}
                         titleHighlights={titleHighlights}
@@ -733,18 +733,18 @@ export function ProjectList(): JSX.Element {
                         toggleTask={toggleTask}
                         selectedTaskId={selectedTaskId}
                         navigate={navigate}
-                        projectId={project.id}
+                        workspaceId={workspace.id}
                         taskStatusById={taskStatusById}
                         titleHighlights={titleHighlights}
                       />
                     ))
                   )}
 
-                  {projectTasks.length === 0 && (
+                  {workspaceTasks.length === 0 && (
                     <div className={styles.emptyTaskCta}>
                       <button
                         className={styles.createTaskLink}
-                        onClick={() => navigate(newTaskUrl(project.id))}
+                        onClick={() => navigate(newTaskUrl(workspace.id))}
                       >
                         + Create Task
                       </button>

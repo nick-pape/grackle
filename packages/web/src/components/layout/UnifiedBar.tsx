@@ -61,7 +61,7 @@ export function UnifiedBar(): JSX.Element {
   const taskEditMatch = useMatch("/tasks/:taskId/edit");
   const newChatMatch = useMatch("/sessions/new");
   const newEnvMatch = useMatch("/environments/new");
-  const projectMatch = useMatch("/projects/:projectId");
+  const workspaceMatch = useMatch("/workspaces/:workspaceId");
   const newTaskMatch = useMatch("/tasks/new");
   const emptyMatch = useMatch("/");
   const settingsMatch = useMatch("/settings/*");
@@ -71,10 +71,10 @@ export function UnifiedBar(): JSX.Element {
   const taskId = taskMatch?.params.taskId ?? taskStreamMatch?.params.taskId ?? taskFindingsMatch?.params.taskId;
   const isNewChat = !!newChatMatch;
   const isNewEnv = !!newEnvMatch;
-  const isProject = !!projectMatch;
+  const isWorkspace = !!workspaceMatch;
   const isNewTask = !!newTaskMatch;
   const isTaskEdit = !!taskEditMatch;
-  const isEmpty = !!emptyMatch && !isNewChat && !isNewEnv && !isProject && !isNewTask;
+  const isEmpty = !!emptyMatch && !isNewChat && !isNewEnv && !isWorkspace && !isNewTask;
   const isSettings = !!settingsMatch;
 
   // New chat params
@@ -357,8 +357,8 @@ export function UnifiedBar(): JSX.Element {
     );
   }
 
-  // --- project mode (no specific task) ---
-  if (isProject) {
+  // --- workspace mode (no specific task) ---
+  if (isWorkspace) {
     return (
       <div className={styles.bar}>
         <span className={styles.hintText}>
@@ -436,7 +436,7 @@ export function UnifiedBar(): JSX.Element {
             Task completed
           </span>
           <button
-            onClick={() => navigate(newTaskUrl(task.projectId))}
+            onClick={() => navigate(newTaskUrl(task.workspaceId))}
             className={styles.btnPrimary}
           >
             + New Task

@@ -1,6 +1,6 @@
 import { test, expect } from "./fixtures.js";
 import {
-  createProject,
+  createWorkspace,
   createTask,
   navigateToTask,
   patchWsForStubRuntime,
@@ -11,7 +11,7 @@ test.describe("Concurrent Tasks", () => {
     const page = appPage;
 
     // Create project with two tasks
-    await createProject(page, "conc-leak");
+    await createWorkspace(page, "conc-leak");
     await createTask(page, "conc-leak", "conc-task-a", "test-local");
     await createTask(page, "conc-leak", "conc-task-b", "test-local");
 
@@ -65,7 +65,7 @@ test.describe("Concurrent Tasks", () => {
     const page = appPage;
 
     // Create project with two tasks
-    await createProject(page, "conc-status");
+    await createWorkspace(page, "conc-status");
     await createTask(page, "conc-status", "status-task-x", "test-local");
     await createTask(page, "conc-status", "status-task-y", "test-local");
 

@@ -1,11 +1,11 @@
 import { test, expect } from "./fixtures.js";
-import { createProject, createTask, navigateToTask, patchWsForStubRuntime, runStubTaskToCompletion } from "./helpers.js";
+import { createWorkspace, createTask, navigateToTask, patchWsForStubRuntime, runStubTaskToCompletion } from "./helpers.js";
 
 test.describe("Session history", () => {
   test("single-session task hides attempt selector", async ({ appPage }) => {
     const page = appPage;
 
-    await createProject(page, "single-sess");
+    await createWorkspace(page, "single-sess");
     await page.getByText("single-sess").click();
     await createTask(page, "single-sess", "simple-task", "test-local");
     await navigateToTask(page, "simple-task");

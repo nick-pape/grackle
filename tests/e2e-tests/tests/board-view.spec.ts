@@ -1,9 +1,9 @@
 import { test, expect } from "./fixtures.js";
 import {
-  createProject,
+  createWorkspace,
   createTask,
   createTaskViaWs,
-  getProjectId,
+  getWorkspaceId,
   getTaskId,
   navigateToTask,
   patchWsForStubRuntime,
@@ -13,7 +13,7 @@ test.describe("Board View", () => {
   test("Board tab is visible after selecting a project", async ({ appPage }) => {
     const page = appPage;
 
-    await createProject(page, "board-tab-vis");
+    await createWorkspace(page, "board-tab-vis");
     await createTask(page, "board-tab-vis", "board-vis-task");
 
     // Board tab should be visible
@@ -31,7 +31,7 @@ test.describe("Board View", () => {
   test("empty project shows CTA on board view", async ({ appPage }) => {
     const page = appPage;
 
-    await createProject(page, "board-empty");
+    await createWorkspace(page, "board-empty");
     await page.getByText("board-empty").first().click();
 
     // Navigate to board tab
@@ -45,7 +45,7 @@ test.describe("Board View", () => {
   test("tasks appear in correct columns based on status", async ({ appPage }) => {
     const page = appPage;
 
-    await createProject(page, "board-columns");
+    await createWorkspace(page, "board-columns");
     await createTask(page, "board-columns", "col-task-a");
     await createTask(page, "board-columns", "col-task-b");
 
@@ -70,7 +70,7 @@ test.describe("Board View", () => {
   test("all five columns are always rendered", async ({ appPage }) => {
     const page = appPage;
 
-    await createProject(page, "board-all-cols");
+    await createWorkspace(page, "board-all-cols");
     await createTask(page, "board-all-cols", "all-cols-task");
 
     await page.getByTestId("board-tab").click();
@@ -87,7 +87,7 @@ test.describe("Board View", () => {
   test("clicking a card navigates to task detail", async ({ appPage }) => {
     const page = appPage;
 
-    await createProject(page, "board-nav");
+    await createWorkspace(page, "board-nav");
     await createTask(page, "board-nav", "board-nav-task");
 
     // Switch to Board
@@ -105,7 +105,7 @@ test.describe("Board View", () => {
   test("card is focusable via keyboard", async ({ appPage }) => {
     const page = appPage;
 
-    await createProject(page, "board-focus");
+    await createWorkspace(page, "board-focus");
     await createTask(page, "board-focus", "focus-task");
 
     await page.getByTestId("board-tab").click();
@@ -123,14 +123,14 @@ test.describe("Board View", () => {
   test("blocked task shows blocked badge in its status column", async ({ appPage }) => {
     const page = appPage;
 
-    await createProject(page, "board-blocked");
+    await createWorkspace(page, "board-blocked");
     await createTask(page, "board-blocked", "blocker-task");
 
-    const projectId = await getProjectId(page, "board-blocked");
-    const blockerId = await getTaskId(page, projectId, "blocker-task");
+    const workspaceId = await getWorkspaceId(page, "board-blocked");
+    const blockerId = await getTaskId(page, workspaceId, "blocker-task");
 
     // Create a dependent task
-    await createTaskViaWs(page, projectId, "blocked-task", {
+    await createTaskViaWs(page, workspaceId, "blocked-task", {
       dependsOn: [blockerId],
     });
     await page.getByText("blocked-task").first().waitFor({ timeout: 5_000 });
@@ -150,18 +150,18 @@ test.describe("Board View", () => {
   test("child progress badge shows on parent cards", async ({ appPage }) => {
     const page = appPage;
 
-    await createProject(page, "board-children");
-    const projectId = await getProjectId(page, "board-children");
-    const parentTask = await createTaskViaWs(page, projectId, "parent-task", { canDecompose: true });
+    await createWorkspace(page, "board-children");
+    const workspaceId = await getWorkspaceId(page, "board-children");
+    const parentTask = await createTaskViaWs(page, workspaceId, "parent-task", { canDecompose: true });
     const parentId = parentTask.id as string;
 
-    // Click into the project so we're on the project page
+    // Click into the workspace so we're on the workspace page
     await page.getByText("board-children").first().click();
     await page.getByText("parent-task").first().waitFor({ timeout: 5_000 });
 
     // Create child tasks
-    await createTaskViaWs(page, projectId, "child-1", { parentTaskId: parentId });
-    await createTaskViaWs(page, projectId, "child-2", { parentTaskId: parentId });
+    await createTaskViaWs(page, workspaceId, "child-1", { parentTaskId: parentId });
+    await createTaskViaWs(page, workspaceId, "child-2", { parentTaskId: parentId });
     await page.getByText("child-1").first().waitFor({ timeout: 5_000 });
     await page.getByText("child-2").first().waitFor({ timeout: 5_000 });
 
@@ -177,7 +177,7 @@ test.describe("Board View", () => {
   test("real-time update moves card between columns", async ({ appPage }) => {
     const page = appPage;
 
-    await createProject(page, "board-realtime");
+    await createWorkspace(page, "board-realtime");
     await createTask(page, "board-realtime", "rt-task", "test-local");
 
     // Switch to board — card should be in Not Started

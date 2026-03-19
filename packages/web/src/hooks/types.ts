@@ -38,8 +38,8 @@ export interface SessionEvent {
   raw?: string;
 }
 
-/** A project that groups tasks and findings. */
-export interface Project {
+/** A workspace that groups tasks and findings. */
+export interface Workspace {
   id: string;
   name: string;
   description: string;
@@ -53,10 +53,10 @@ export interface Project {
   updatedAt: string;
 }
 
-/** A task within a project. */
+/** A task within a workspace. */
 export interface TaskData {
   id: string;
-  projectId: string;
+  workspaceId: string;
   title: string;
   description: string;
   status: string;
@@ -81,7 +81,7 @@ export interface TaskData {
 /** A finding posted by an agent or user. */
 export interface FindingData {
   id: string;
-  projectId: string;
+  workspaceId: string;
   taskId: string;
   sessionId: string;
   category: string;
@@ -217,8 +217,8 @@ export function isSessionEvent(v: unknown): v is SessionEvent {
   );
 }
 
-/** Type guard for {@link Project}. */
-export function isProject(v: unknown): v is Project {
+/** Type guard for {@link Workspace}. */
+export function isWorkspace(v: unknown): v is Workspace {
   return (
     isObject(v) &&
     typeof v.id === "string" &&
@@ -240,7 +240,7 @@ export function isTaskData(v: unknown): v is TaskData {
   return (
     isObject(v) &&
     typeof v.id === "string" &&
-    typeof v.projectId === "string" &&
+    typeof v.workspaceId === "string" &&
     typeof v.title === "string" &&
     typeof v.status === "string" &&
     typeof v.branch === "string" &&
@@ -257,7 +257,7 @@ export function isFindingData(v: unknown): v is FindingData {
   return (
     isObject(v) &&
     typeof v.id === "string" &&
-    typeof v.projectId === "string" &&
+    typeof v.workspaceId === "string" &&
     typeof v.taskId === "string" &&
     typeof v.sessionId === "string" &&
     typeof v.category === "string" &&

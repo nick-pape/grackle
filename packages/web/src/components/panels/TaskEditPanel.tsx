@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, type JSX } from "react";
 import { useGrackle } from "../../context/GrackleContext.js";
 import { useToast } from "../../context/ToastContext.js";
-import { taskUrl, projectUrl, useAppNavigate } from "../../utils/navigation.js";
+import { taskUrl, workspaceUrl, useAppNavigate } from "../../utils/navigation.js";
 import styles from "./TaskEditPanel.module.scss";
 
 /** Props for the TaskEditPanel component. */
@@ -9,8 +9,8 @@ interface Props {
   mode: "new" | "edit";
   /** Task ID — required in edit mode. */
   taskId?: string;
-  /** Project ID — required in new mode. */
-  projectId?: string;
+  /** Workspace ID — required in new mode. */
+  workspaceId?: string;
   /** Parent task ID — optional in new mode. */
   parentTaskId?: string;
 }
@@ -19,11 +19,11 @@ interface Props {
  * Full-panel create/edit form for tasks.
  *
  * - new: blank form; calls createTask on save, then navigates back to
- *        the project view.
+ *        the workspace view.
  * - edit: pre-populated form; calls updateTask on save, then navigates
  *         back to the task overview.
  */
-export function TaskEditPanel({ mode, taskId, projectId: projectIdProp, parentTaskId: parentTaskIdProp }: Props): JSX.Element {
+export function TaskEditPanel({ mode, taskId, workspaceId: workspaceIdProp, parentTaskId: parentTaskIdProp }: Props): JSX.Element {
   const { tasks, personas, createTask, updateTask } = useGrackle();
   const { showToast } = useToast();
   const navigate = useAppNavigate();
@@ -31,9 +31,9 @@ export function TaskEditPanel({ mode, taskId, projectId: projectIdProp, parentTa
   const isEdit = mode === "edit";
   const existingTask = isEdit && taskId ? tasks.find((t) => t.id === taskId) : undefined;
 
-  const projectId = isEdit
-    ? (existingTask?.projectId ?? "")
-    : (projectIdProp ?? "");
+  const workspaceId = isEdit
+    ? (existingTask?.workspaceId ?? "")
+    : (workspaceIdProp ?? "");
 
   const parentTaskId = isEdit
     ? (existingTask?.parentTaskId ?? "")
@@ -64,10 +64,10 @@ export function TaskEditPanel({ mode, taskId, projectId: projectIdProp, parentTa
     }
   }, [isEdit, existingTask]);
 
-  // All tasks in the same project, excluding the task being edited (self)
+  // All tasks in the same workspace, excluding the task being edited (self)
   const siblingTasks = tasks.filter(
     (t) =>
-      t.projectId === projectId &&
+      t.workspaceId === workspaceId &&
       (!isEdit || t.id !== taskId) &&
       t.id !== parentTaskId,
   );
@@ -76,7 +76,7 @@ export function TaskEditPanel({ mode, taskId, projectId: projectIdProp, parentTa
   // to prevent overwriting server data with blank form values.
   const canSave = title.trim().length > 0
     && (!isEdit || existingTask !== undefined)
-    && (isEdit || projectId.length > 0);
+    && (isEdit || workspaceId.length > 0);
 
   const toggleDep = (depId: string): void => {
     setSelectedDeps((prev) =>
@@ -99,7 +99,7 @@ export function TaskEditPanel({ mode, taskId, projectId: projectIdProp, parentTa
     } else {
       setCreating(true);
       createTask(
-        projectId,
+        workspaceId,
         title.trim(),
         description,
         selectedDeps.length > 0 ? selectedDeps : undefined,
@@ -108,7 +108,7 @@ export function TaskEditPanel({ mode, taskId, projectId: projectIdProp, parentTa
         canDecompose,
         () => {
           showToast("Task created", "success");
-          navigate(projectUrl(projectId), { replace: true });
+          navigate(workspaceUrl(workspaceId), { replace: true });
         },
         (message: string) => {
           showToast(message, "error");
@@ -122,7 +122,7 @@ export function TaskEditPanel({ mode, taskId, projectId: projectIdProp, parentTa
     if (isEdit && taskId) {
       navigate(taskUrl(taskId));
     } else {
-      navigate(projectUrl(projectId));
+      navigate(workspaceUrl(workspaceId));
     }
   };
 
@@ -234,7 +234,7 @@ export function TaskEditPanel({ mode, taskId, projectId: projectIdProp, parentTa
           <div className={styles.section}>
             <div className={styles.label}>Dependencies</div>
             {siblingTasks.length === 0 ? (
-              <div className={styles.noDeps}>No other tasks in this project</div>
+              <div className={styles.noDeps}>No other tasks in this workspace</div>
             ) : (
               <div className={styles.depList}>
                 {siblingTasks.map((t) => {

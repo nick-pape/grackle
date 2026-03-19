@@ -33,7 +33,7 @@ import {
   buildDescriptionWithComments,
 } from "./github-import.js";
 import * as taskStore from "./task-store.js";
-import * as projectStore from "./project-store.js";
+import * as workspaceStore from "./workspace-store.js";
 import { sqlite } from "./test-db.js";
 import { emit } from "./event-bus.js";
 
@@ -48,7 +48,7 @@ function issue(
 /** Apply the schema DDL to the in-memory database. */
 function applySchema(): void {
   sqlite.exec(`
-    CREATE TABLE IF NOT EXISTS projects (
+    CREATE TABLE IF NOT EXISTS workspaces (
       id            TEXT PRIMARY KEY,
       name          TEXT NOT NULL,
       description   TEXT NOT NULL DEFAULT '',
@@ -64,7 +64,7 @@ function applySchema(): void {
 
     CREATE TABLE IF NOT EXISTS tasks (
       id            TEXT PRIMARY KEY,
-      project_id    TEXT NOT NULL REFERENCES projects(id),
+      workspace_id  TEXT NOT NULL REFERENCES workspaces(id),
       title         TEXT NOT NULL,
       description   TEXT NOT NULL DEFAULT '',
       status        TEXT NOT NULL DEFAULT 'pending',
@@ -669,9 +669,9 @@ describe("importGitHubIssues", () => {
 
   beforeEach(() => {
     sqlite.exec("DROP TABLE IF EXISTS tasks");
-    sqlite.exec("DROP TABLE IF EXISTS projects");
+    sqlite.exec("DROP TABLE IF EXISTS workspaces");
     applySchema();
-    projectStore.createProject("test-proj", "Test Project", "desc", "", "");
+    workspaceStore.createWorkspace("test-proj", "Test Project", "desc", "", "");
     mockExecFile.mockReset();
     mockedEmit.mockReset();
   });
@@ -788,10 +788,10 @@ describe("importGitHubIssues", () => {
     expect(taskCreatedCalls).toHaveLength(2);
   });
 
-  it("throws when project does not exist", async () => {
+  it("throws when workspace does not exist", async () => {
     await expect(
       importGitHubIssues("nonexistent", "owner/repo", "open"),
-    ).rejects.toThrow("Project not found");
+    ).rejects.toThrow("Workspace not found");
   });
 
   it("handles child-before-parent ordering in GitHub response", async () => {

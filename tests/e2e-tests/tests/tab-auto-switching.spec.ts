@@ -1,6 +1,6 @@
 import { test, expect } from "./fixtures.js";
 import {
-  createProject,
+  createWorkspace,
   createTask,
   navigateToTask,
   patchWsForStubRuntime,
@@ -12,7 +12,7 @@ test.describe("Tab Auto-Switching", () => {
     const page = appPage;
 
     // Create project and task
-    await createProject(page, "tab-stream");
+    await createWorkspace(page, "tab-stream");
     await createTask(page, "tab-stream", "tab-start-task", "test-local");
 
     // Navigate to task, switch to Findings tab first
@@ -38,7 +38,7 @@ test.describe("Tab Auto-Switching", () => {
     const page = appPage;
 
     // Create project and task
-    await createProject(page, "tab-review");
+    await createWorkspace(page, "tab-review");
     await createTask(page, "tab-review", "tab-review-task", "test-local");
     await navigateToTask(page, "tab-review-task");
 
@@ -55,7 +55,7 @@ test.describe("Tab Auto-Switching", () => {
     const page = appPage;
 
     // Create project and task
-    await createProject(page, "tab-findings");
+    await createWorkspace(page, "tab-findings");
     await createTask(page, "tab-findings", "tab-done-task", "test-local");
     await navigateToTask(page, "tab-done-task");
 
@@ -78,7 +78,7 @@ test.describe("Tab Auto-Switching", () => {
     const page = appPage;
 
     // Create project with two tasks
-    await createProject(page, "tab-sidebar");
+    await createWorkspace(page, "tab-sidebar");
     await createTask(page, "tab-sidebar", "sidebar-task-a", "test-local");
     await createTask(page, "tab-sidebar", "sidebar-task-b", "test-local");
 

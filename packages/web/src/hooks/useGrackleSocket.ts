@@ -11,7 +11,7 @@ import type { WsMessage, SendFunction, GrackleEvent } from "./types.js";
 import { useWebSocket } from "./useWebSocket.js";
 import { useEnvironments } from "./useEnvironments.js";
 import { useSessions } from "./useSessions.js";
-import { useProjects } from "./useProjects.js";
+import { useWorkspaces } from "./useWorkspaces.js";
 import { useTasks } from "./useTasks.js";
 import { useFindings } from "./useFindings.js";
 import { useTokens } from "./useTokens.js";
@@ -26,7 +26,7 @@ export type {
   Environment,
   Session,
   SessionEvent,
-  Project,
+  Workspace,
   TaskData,
   FindingData,
   TokenInfo,
@@ -55,7 +55,7 @@ export interface UseGrackleSocketResult {
    */
   eventsDropped: number;
   lastSpawnedId: string | undefined;
-  projects: import("./types.js").Project[];
+  workspaces: import("./types.js").Workspace[];
   tasks: import("./types.js").TaskData[];
   findings: import("./types.js").FindingData[];
   tokens: import("./types.js").TokenInfo[];
@@ -70,16 +70,16 @@ export interface UseGrackleSocketResult {
   refresh: () => void;
   loadSessionEvents: (sessionId: string) => void;
   clearEvents: () => void;
-  createProject: (
+  createWorkspace: (
     name: string,
     description?: string,
     repoUrl?: string,
     defaultEnvironmentId?: string,
     defaultPersonaId?: string,
   ) => void;
-  archiveProject: (projectId: string) => void;
-  updateProject: (
-    projectId: string,
+  archiveWorkspace: (workspaceId: string) => void;
+  updateWorkspace: (
+    workspaceId: string,
     fields: {
       name?: string;
       description?: string;
@@ -90,9 +90,9 @@ export interface UseGrackleSocketResult {
       defaultPersonaId?: string;
     },
   ) => void;
-  loadTasks: (projectId: string) => void;
+  loadTasks: (workspaceId: string) => void;
   createTask: (
-    projectId: string,
+    workspaceId: string,
     title: string,
     description?: string,
     dependsOn?: string[],
@@ -119,9 +119,9 @@ export interface UseGrackleSocketResult {
     defaultPersonaId?: string,
   ) => void;
   deleteTask: (taskId: string) => void;
-  loadFindings: (projectId: string) => void;
+  loadFindings: (workspaceId: string) => void;
   postFinding: (
-    projectId: string,
+    workspaceId: string,
     title: string,
     content: string,
     category?: string,
@@ -153,7 +153,7 @@ export interface UseGrackleSocketResult {
   codespaceCreating: boolean;
   listCodespaces: () => void;
   createCodespace: (repo: string, machine?: string) => void;
-  projectCreating: boolean;
+  workspaceCreating: boolean;
   taskStartingId: string | undefined;
   personas: import("./types.js").PersonaData[];
   createPersona: (
@@ -222,7 +222,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
 
   const environmentsHook = useEnvironments(send);
   const sessionsHook = useSessions(send);
-  const projectsHook = useProjects(send);
+  const workspacesHook = useWorkspaces(send);
   const tasksHook = useTasks(send);
   const findingsHook = useFindings(send);
   const tokensHook = useTokens(send);
@@ -276,7 +276,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
     }
 
     if (environmentsHook.handleEvent(event)) { return; }
-    if (projectsHook.handleEvent(event)) { return; }
+    if (workspacesHook.handleEvent(event)) { return; }
     if (tasksHook.handleEvent(event)) { return; }
     if (findingsHook.handleEvent(event)) { return; }
     if (tokensHook.handleEvent(event)) { return; }
@@ -314,7 +314,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
     // Request/response messages (existing routing)
     if (environmentsHook.handleMessage(msg)) { return; }
     if (sessionsHook.handleMessage(msg)) { return; }
-    if (projectsHook.handleMessage(msg)) { return; }
+    if (workspacesHook.handleMessage(msg)) { return; }
     if (tasksHook.handleMessage(msg)) { return; }
     if (findingsHook.handleMessage(msg)) { return; }
     if (tokensHook.handleMessage(msg)) { return; }
@@ -330,7 +330,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
   function onConnect(sendFn: SendFunction): void {
     sendFn({ type: "list_environments" });
     sendFn({ type: "list_sessions" });
-    sendFn({ type: "list_projects" });
+    sendFn({ type: "list_workspaces" });
     sendFn({ type: "list_tokens" });
     sendFn({ type: "get_credential_providers" });
     sendFn({ type: "list_personas" });
@@ -340,14 +340,14 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
   }
 
   function onDisconnect(): void {
-    projectsHook.onDisconnect();
+    workspacesHook.onDisconnect();
     tasksHook.onDisconnect();
   }
 
   const refresh = useCallback(() => {
     send({ type: "list_environments" });
     send({ type: "list_sessions" });
-    send({ type: "list_projects" });
+    send({ type: "list_workspaces" });
     send({ type: "list_tokens" });
   }, [send]);
 
@@ -358,7 +358,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
     events: sessionsHook.events,
     eventsDropped: sessionsHook.eventsDropped,
     lastSpawnedId: sessionsHook.lastSpawnedId,
-    projects: projectsHook.projects,
+    workspaces: workspacesHook.workspaces,
     tasks: tasksHook.tasks,
     findings: findingsHook.findings,
     tokens: tokensHook.tokens,
@@ -368,9 +368,9 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
     refresh,
     loadSessionEvents: sessionsHook.loadSessionEvents,
     clearEvents: sessionsHook.clearEvents,
-    createProject: projectsHook.createProject,
-    archiveProject: projectsHook.archiveProject,
-    updateProject: projectsHook.updateProject,
+    createWorkspace: workspacesHook.createWorkspace,
+    archiveWorkspace: workspacesHook.archiveWorkspace,
+    updateWorkspace: workspacesHook.updateWorkspace,
     loadTasks: tasksHook.loadTasks,
     createTask: tasksHook.createTask,
     startTask: tasksHook.startTask,
@@ -397,7 +397,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
     codespaceCreating: codespacesHook.codespaceCreating,
     listCodespaces: codespacesHook.listCodespaces,
     createCodespace: codespacesHook.createCodespace,
-    projectCreating: projectsHook.projectCreating,
+    workspaceCreating: workspacesHook.workspaceCreating,
     taskStartingId: tasksHook.taskStartingId,
     personas: personasHook.personas,
     createPersona: personasHook.createPersona,

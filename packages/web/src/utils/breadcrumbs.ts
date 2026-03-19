@@ -1,5 +1,5 @@
-import type { TaskData, Project } from "../hooks/useGrackleSocket.js";
-import { projectUrl, taskUrl } from "./navigation.js";
+import type { TaskData, Workspace } from "../hooks/useGrackleSocket.js";
+import { workspaceUrl, taskUrl } from "./navigation.js";
 
 /** A single segment in the breadcrumb trail. */
 export interface BreadcrumbSegment {
@@ -64,32 +64,32 @@ export function buildSessionBreadcrumbs(sessionId: string): BreadcrumbSegment[] 
   return [HOME_SEGMENT, { label: `Session ${sessionId.slice(0, 8)}`, url: undefined }];
 }
 
-/** Build breadcrumbs for a project page. */
-export function buildProjectBreadcrumbs(
-  projectId: string,
-  projects: Project[],
+/** Build breadcrumbs for a workspace page. */
+export function buildWorkspaceBreadcrumbs(
+  workspaceId: string,
+  workspaces: Workspace[],
 ): BreadcrumbSegment[] {
-  const project = projects.find((p) => p.id === projectId);
-  return [HOME_SEGMENT, { label: project?.name ?? "Project", url: undefined }];
+  const workspace = workspaces.find((p) => p.id === workspaceId);
+  return [HOME_SEGMENT, { label: workspace?.name ?? "Workspace", url: undefined }];
 }
 
 /** Build breadcrumbs for a task page. */
 export function buildTaskBreadcrumbs(
   taskId: string,
-  projects: Project[],
+  workspaces: Workspace[],
   tasksById: Map<string, TaskData>,
 ): BreadcrumbSegment[] {
   const ancestors = buildTaskAncestorChain(taskId, tasksById);
   const task = tasksById.get(taskId);
-  const taskProjectId = task?.projectId;
-  const project = taskProjectId ? projects.find((p) => p.id === taskProjectId) : undefined;
+  const taskWorkspaceId = task?.workspaceId;
+  const workspace = taskWorkspaceId ? workspaces.find((p) => p.id === taskWorkspaceId) : undefined;
 
   const segments: BreadcrumbSegment[] = [HOME_SEGMENT];
 
-  if (project) {
+  if (workspace) {
     segments.push({
-      label: project.name,
-      url: projectUrl(project.id),
+      label: workspace.name,
+      url: workspaceUrl(workspace.id),
     });
   }
 
@@ -114,17 +114,17 @@ export function buildTaskBreadcrumbs(
 
 /** Build breadcrumbs for the new task page. */
 export function buildNewTaskBreadcrumbs(
-  projectIdParam: string,
+  workspaceIdParam: string,
   parentTaskId: string | undefined,
-  projects: Project[],
+  workspaces: Workspace[],
   tasksById: Map<string, TaskData>,
 ): BreadcrumbSegment[] {
-  const project = projects.find((p) => p.id === projectIdParam);
+  const workspace = workspaces.find((p) => p.id === workspaceIdParam);
   const segments: BreadcrumbSegment[] = [
     HOME_SEGMENT,
     {
-      label: project?.name ?? "Project",
-      url: projectUrl(projectIdParam),
+      label: workspace?.name ?? "Workspace",
+      url: workspaceUrl(workspaceIdParam),
     },
   ];
 

@@ -10,7 +10,7 @@ export { StatusBar, Sidebar, UnifiedBar } from "./layout/index.js";
 export { FindingsPanel } from "./panels/index.js";
 
 // List components - sidebar navigation
-export { EnvironmentList, ProjectList } from "./lists/index.js";
+export { EnvironmentList, WorkspaceList } from "./lists/index.js";
 
 // Display components - content rendering
 export { EventRenderer } from "./display/index.js";

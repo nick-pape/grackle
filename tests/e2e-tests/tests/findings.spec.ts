@@ -1,9 +1,9 @@
 import { test, expect } from "./fixtures.js";
 import {
-  createProject,
+  createWorkspace,
   createTask,
   navigateToTask,
-  getProjectId,
+  getWorkspaceId,
   getTaskId,
   sendWsMessage,
 } from "./helpers.js";
@@ -13,18 +13,18 @@ test.describe("Findings", () => {
     const page = appPage;
 
     // Create project and task
-    await createProject(page, "find-single");
+    await createWorkspace(page, "find-single");
     await createTask(page, "find-single", "find-task-1", "test-local");
 
     // Get IDs for posting a finding
-    const projectId = await getProjectId(page, "find-single");
-    const taskId = await getTaskId(page, projectId, "find-task-1");
+    const workspaceId = await getWorkspaceId(page, "find-single");
+    const taskId = await getTaskId(page, workspaceId, "find-task-1");
 
     // Post a finding via WS
     await sendWsMessage(page, {
       type: "post_finding",
       payload: {
-        projectId,
+        workspaceId: workspaceId,
         taskId,
         category: "bug",
         title: "Found a null pointer issue",
@@ -51,17 +51,17 @@ test.describe("Findings", () => {
     const page = appPage;
 
     // Create project and task
-    await createProject(page, "find-multi");
+    await createWorkspace(page, "find-multi");
     await createTask(page, "find-multi", "find-task-2", "test-local");
 
-    const projectId = await getProjectId(page, "find-multi");
-    const taskId = await getTaskId(page, projectId, "find-task-2");
+    const workspaceId = await getWorkspaceId(page, "find-multi");
+    const taskId = await getTaskId(page, workspaceId, "find-task-2");
 
     // Post 3 findings with different categories
     await sendWsMessage(page, {
       type: "post_finding",
       payload: {
-        projectId,
+        workspaceId: workspaceId,
         taskId,
         category: "bug",
         title: "Memory leak in cache",
@@ -73,7 +73,7 @@ test.describe("Findings", () => {
     await sendWsMessage(page, {
       type: "post_finding",
       payload: {
-        projectId,
+        workspaceId: workspaceId,
         taskId,
         category: "architecture",
         title: "Consider event sourcing",
@@ -85,7 +85,7 @@ test.describe("Findings", () => {
     await sendWsMessage(page, {
       type: "post_finding",
       payload: {
-        projectId,
+        workspaceId: workspaceId,
         taskId,
         category: "general",
         title: "Code style note",
@@ -113,17 +113,17 @@ test.describe("Findings", () => {
     const page = appPage;
 
     // Create project and task
-    await createProject(page, "find-persist");
+    await createWorkspace(page, "find-persist");
     await createTask(page, "find-persist", "find-task-3", "test-local");
 
-    const projectId = await getProjectId(page, "find-persist");
-    const taskId = await getTaskId(page, projectId, "find-task-3");
+    const workspaceId = await getWorkspaceId(page, "find-persist");
+    const taskId = await getTaskId(page, workspaceId, "find-task-3");
 
     // Post a finding
     await sendWsMessage(page, {
       type: "post_finding",
       payload: {
-        projectId,
+        workspaceId: workspaceId,
         taskId,
         category: "decision",
         title: "Use PostgreSQL over MySQL",

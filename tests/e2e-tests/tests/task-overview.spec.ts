@@ -1,10 +1,10 @@
 import { test, expect } from "./fixtures.js";
 import {
-  createProject,
+  createWorkspace,
   createTask,
   createTaskViaWs,
   navigateToTask,
-  getProjectId,
+  getWorkspaceId,
   getTaskId,
   patchWsForStubRuntime,
   runStubTaskToCompletion,
@@ -14,7 +14,7 @@ test.describe("Task Overview Tab", () => {
   test("overview tab is default for pending tasks", async ({ appPage }) => {
     const page = appPage;
 
-    await createProject(page, "overview-default");
+    await createWorkspace(page, "overview-default");
     await createTask(page, "overview-default", "pending-overview", "test-local");
     await navigateToTask(page, "pending-overview");
 
@@ -30,13 +30,13 @@ test.describe("Task Overview Tab", () => {
   test("overview shows task description", async ({ appPage }) => {
     const page = appPage;
 
-    await createProject(page, "overview-desc");
+    await createWorkspace(page, "overview-desc");
     // Create a UI task first to expand the project tree
     await createTask(page, "overview-desc", "desc-placeholder", "test-local");
 
-    const projectId = await getProjectId(page, "overview-desc");
+    const workspaceId = await getWorkspaceId(page, "overview-desc");
 
-    await createTaskViaWs(page, projectId, "desc-task", {
+    await createTaskViaWs(page, workspaceId, "desc-task", {
       environmentId: "test-local",
       description: "This is a detailed task description for testing",
     });
@@ -50,7 +50,7 @@ test.describe("Task Overview Tab", () => {
   test("overview shows environment name", async ({ appPage }) => {
     const page = appPage;
 
-    await createProject(page, "overview-env");
+    await createWorkspace(page, "overview-env");
     await createTask(page, "overview-env", "env-task", "test-local");
     await navigateToTask(page, "env-task");
 
@@ -69,13 +69,13 @@ test.describe("Task Overview Tab", () => {
   test("overview shows blocked dependencies in yellow", async ({ appPage }) => {
     const page = appPage;
 
-    await createProject(page, "overview-deps");
+    await createWorkspace(page, "overview-deps");
     await createTask(page, "overview-deps", "dep-blocker", "test-local");
 
-    const projectId = await getProjectId(page, "overview-deps");
-    const blockerTaskId = await getTaskId(page, projectId, "dep-blocker");
+    const workspaceId = await getWorkspaceId(page, "overview-deps");
+    const blockerTaskId = await getTaskId(page, workspaceId, "dep-blocker");
 
-    await createTaskViaWs(page, projectId, "dep-blocked", {
+    await createTaskViaWs(page, workspaceId, "dep-blocked", {
       environmentId: "test-local",
       dependsOn: [blockerTaskId],
     });
@@ -93,7 +93,7 @@ test.describe("Task Overview Tab", () => {
   test("overview shows done dependencies in green", async ({ appPage }) => {
     const page = appPage;
 
-    await createProject(page, "overview-done-dep");
+    await createWorkspace(page, "overview-done-dep");
     await createTask(page, "overview-done-dep", "done-blocker", "test-local");
 
     // Complete the blocker task
@@ -103,11 +103,11 @@ test.describe("Task Overview Tab", () => {
     await page.getByRole("button", { name: "Stop", exact: true }).click();
     await expect(page.getByText("Task completed")).toBeVisible({ timeout: 5_000 });
 
-    const projectId = await getProjectId(page, "overview-done-dep");
-    const blockerTaskId = await getTaskId(page, projectId, "done-blocker");
+    const workspaceId = await getWorkspaceId(page, "overview-done-dep");
+    const blockerTaskId = await getTaskId(page, workspaceId, "done-blocker");
 
     // Create a dependent task (its dep is already done)
-    await createTaskViaWs(page, projectId, "unblocked-task", {
+    await createTaskViaWs(page, workspaceId, "unblocked-task", {
       environmentId: "test-local",
       dependsOn: [blockerTaskId],
     });
@@ -123,13 +123,13 @@ test.describe("Task Overview Tab", () => {
   test("sidebar shows blocked badge for tasks with incomplete dependencies", async ({ appPage }) => {
     const page = appPage;
 
-    await createProject(page, "overview-badge");
+    await createWorkspace(page, "overview-badge");
     await createTask(page, "overview-badge", "badge-blocker", "test-local");
 
-    const projectId = await getProjectId(page, "overview-badge");
-    const blockerTaskId = await getTaskId(page, projectId, "badge-blocker");
+    const workspaceId = await getWorkspaceId(page, "overview-badge");
+    const blockerTaskId = await getTaskId(page, workspaceId, "badge-blocker");
 
-    await createTaskViaWs(page, projectId, "badge-blocked", {
+    await createTaskViaWs(page, workspaceId, "badge-blocked", {
       environmentId: "test-local",
       dependsOn: [blockerTaskId],
     });
@@ -144,7 +144,7 @@ test.describe("Task Overview Tab", () => {
   test("completing paused task switches to findings tab", async ({ appPage }) => {
     const page = appPage;
 
-    await createProject(page, "overview-assigned");
+    await createWorkspace(page, "overview-assigned");
     await createTask(page, "overview-assigned", "assigned-task", "test-local");
     await navigateToTask(page, "assigned-task");
 
@@ -160,7 +160,7 @@ test.describe("Task Overview Tab", () => {
   test("can manually switch to overview tab on working task", async ({ appPage }) => {
     const page = appPage;
 
-    await createProject(page, "overview-manual");
+    await createWorkspace(page, "overview-manual");
     await createTask(page, "overview-manual", "manual-task", "test-local");
     await navigateToTask(page, "manual-task");
 

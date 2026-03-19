@@ -138,8 +138,8 @@ describe("Full tool registry", () => {
       "env_list",
       "session_status",
       "session_attach",
-      "project_list",
-      "project_get",
+      "workspace_list",
+      "workspace_get",
       "task_list",
       "task_show",
       "finding_list",
@@ -165,7 +165,7 @@ describe("Full tool registry", () => {
   it("groups are consistent within tool files", () => {
     const registry = createToolRegistry();
     const expectedGroups = new Set([
-      "env", "session", "project", "task", "finding", "persona", "logs", "credential", "token", "config",
+      "env", "session", "workspace", "task", "finding", "persona", "logs", "credential", "token", "config",
     ]);
     for (const tool of registry.list()) {
       expect(expectedGroups.has(tool.group), `unexpected group: ${tool.group}`).toBe(true);

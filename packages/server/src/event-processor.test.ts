@@ -34,7 +34,7 @@ vi.mock("./transcript.js", () => ({
 import { processEventStream } from "./event-processor.js";
 import * as sessionStore from "./session-store.js";
 import * as taskStore from "./task-store.js";
-import * as projectStore from "./project-store.js";
+import * as workspaceStore from "./workspace-store.js";
 import * as processorRegistry from "./processor-registry.js";
 import * as findingStore from "./finding-store.js";
 import { emit } from "./event-bus.js";
@@ -45,7 +45,7 @@ import { sqlite } from "./test-db.js";
 /** Apply the minimal schema needed for tests. */
 function applySchema(): void {
   sqlite.exec(`
-    CREATE TABLE IF NOT EXISTS projects (
+    CREATE TABLE IF NOT EXISTS workspaces (
       id            TEXT PRIMARY KEY,
       name          TEXT NOT NULL,
       description   TEXT NOT NULL DEFAULT '',
@@ -61,7 +61,7 @@ function applySchema(): void {
 
     CREATE TABLE IF NOT EXISTS tasks (
       id            TEXT PRIMARY KEY,
-      project_id    TEXT NOT NULL REFERENCES projects(id),
+      workspace_id  TEXT NOT NULL REFERENCES workspaces(id),
       title         TEXT NOT NULL,
       description   TEXT NOT NULL DEFAULT '',
       status        TEXT NOT NULL DEFAULT 'pending',
@@ -100,7 +100,7 @@ function applySchema(): void {
 
     CREATE TABLE IF NOT EXISTS findings (
       id            TEXT PRIMARY KEY,
-      project_id    TEXT NOT NULL,
+      workspace_id  TEXT NOT NULL,
       task_id       TEXT NOT NULL DEFAULT '',
       session_id    TEXT NOT NULL DEFAULT '',
       category      TEXT NOT NULL DEFAULT 'general',
@@ -122,7 +122,7 @@ async function* eventStream(events: powerline.AgentEvent[]): AsyncIterable<power
 /** Helper to wait for processEventStream to complete by polling session status. */
 function waitForProcessing(
   events: powerline.AgentEvent[],
-  options: { sessionId: string; logPath: string; projectId?: string; taskId?: string },
+  options: { sessionId: string; logPath: string; workspaceId?: string; taskId?: string },
 ): Promise<void> {
   return new Promise<void>((resolve, reject) => {
     // Poll for session to reach a terminal status
@@ -150,11 +150,11 @@ describe("event-processor SUBTASK_CREATE handling", () => {
     sqlite.exec("DROP TABLE IF EXISTS findings");
     sqlite.exec("DROP TABLE IF EXISTS tasks");
     sqlite.exec("DROP TABLE IF EXISTS sessions");
-    sqlite.exec("DROP TABLE IF EXISTS projects");
+    sqlite.exec("DROP TABLE IF EXISTS workspaces");
     applySchema();
     vi.clearAllMocks();
 
-    projectStore.createProject("proj1", "Test Project", "desc", "", "env1");
+    workspaceStore.createWorkspace("proj1", "Test Project", "desc", "", "env1");
   });
 
   it("creates a subtask when SUBTASK_CREATE event is received", async () => {
@@ -178,7 +178,7 @@ describe("event-processor SUBTASK_CREATE handling", () => {
     await waitForProcessing([subtaskEvent], {
       sessionId: "sess1",
       logPath: "/tmp/log",
-      projectId: "proj1",
+      workspaceId: "proj1",
       taskId: "parent1",
     });
 
@@ -194,7 +194,7 @@ describe("event-processor SUBTASK_CREATE handling", () => {
     // Verify emit was called with task.created
     expect(emit).toHaveBeenCalledWith(
       "task.created",
-      expect.objectContaining({ taskId: expect.any(String), projectId: "proj1" }),
+      expect.objectContaining({ taskId: expect.any(String), workspaceId: "proj1" }),
     );
   });
 
@@ -229,7 +229,7 @@ describe("event-processor SUBTASK_CREATE handling", () => {
     await waitForProcessing([event1, event2], {
       sessionId: "sess1",
       logPath: "/tmp/log",
-      projectId: "proj1",
+      workspaceId: "proj1",
       taskId: "parent1",
     });
 
@@ -261,7 +261,7 @@ describe("event-processor SUBTASK_CREATE handling", () => {
     await waitForProcessing([subtaskEvent], {
       sessionId: "sess1",
       logPath: "/tmp/log",
-      projectId: "proj1",
+      workspaceId: "proj1",
       taskId: "parent1",
     });
 
@@ -289,7 +289,7 @@ describe("event-processor SUBTASK_CREATE handling", () => {
     await waitForProcessing([subtaskEvent], {
       sessionId: "sess1",
       logPath: "/tmp/log",
-      projectId: "proj1",
+      workspaceId: "proj1",
       // no taskId
     });
 
@@ -316,7 +316,7 @@ describe("event-processor SUBTASK_CREATE handling", () => {
     await waitForProcessing([subtaskEvent], {
       sessionId: "sess1",
       logPath: "/tmp/log",
-      projectId: "proj1",
+      workspaceId: "proj1",
       taskId: "parent1",
     });
 
@@ -348,7 +348,7 @@ describe("event-processor SUBTASK_CREATE handling", () => {
     await waitForProcessing([subtaskEvent], {
       sessionId: "sess1",
       logPath: "/tmp/log",
-      projectId: "proj1",
+      workspaceId: "proj1",
       taskId: "parent1",
     });
 
@@ -400,7 +400,7 @@ describe("event-processor SUBTASK_CREATE handling", () => {
     await waitForProcessing([event1, event2, event3], {
       sessionId: "sess1",
       logPath: "/tmp/log",
-      projectId: "proj1",
+      workspaceId: "proj1",
       taskId: "parent1",
     });
 
@@ -441,7 +441,7 @@ describe("event-processor SUBTASK_CREATE handling", () => {
     await waitForProcessing([badEvent, goodEvent], {
       sessionId: "sess1",
       logPath: "/tmp/log",
-      projectId: "proj1",
+      workspaceId: "proj1",
       taskId: "parent1",
     });
 
@@ -461,11 +461,11 @@ describe("stream error handling", () => {
     sqlite.exec("DROP TABLE IF EXISTS findings");
     sqlite.exec("DROP TABLE IF EXISTS tasks");
     sqlite.exec("DROP TABLE IF EXISTS sessions");
-    sqlite.exec("DROP TABLE IF EXISTS projects");
+    sqlite.exec("DROP TABLE IF EXISTS workspaces");
     applySchema();
     vi.clearAllMocks();
 
-    projectStore.createProject("proj1", "Test Project", "desc", "", "env1");
+    workspaceStore.createWorkspace("proj1", "Test Project", "desc", "", "env1");
   });
 
   /** Create an async iterable that yields events, then throws an error. */
@@ -579,7 +579,7 @@ describe("stream error handling", () => {
         {
           sessionId: "sess1",
           logPath: "/tmp/log",
-          projectId: "proj1",
+          workspaceId: "proj1",
           taskId: "task1",
         },
       );
@@ -599,7 +599,7 @@ describe("stream error handling", () => {
     // Verify task.updated was emitted so the frontend can re-fetch computed status
     expect(emit).toHaveBeenCalledWith(
       "task.updated",
-      expect.objectContaining({ taskId: "task1", projectId: "proj1" }),
+      expect.objectContaining({ taskId: "task1", workspaceId: "proj1" }),
     );
   });
 });
@@ -609,7 +609,7 @@ describe("event-processor runtime_session_id handling", () => {
     sqlite.exec("DROP TABLE IF EXISTS findings");
     sqlite.exec("DROP TABLE IF EXISTS tasks");
     sqlite.exec("DROP TABLE IF EXISTS sessions");
-    sqlite.exec("DROP TABLE IF EXISTS projects");
+    sqlite.exec("DROP TABLE IF EXISTS workspaces");
     applySchema();
     vi.clearAllMocks();
   });
@@ -674,11 +674,11 @@ describe("task status broadcast on terminal events", () => {
     sqlite.exec("DROP TABLE IF EXISTS findings");
     sqlite.exec("DROP TABLE IF EXISTS tasks");
     sqlite.exec("DROP TABLE IF EXISTS sessions");
-    sqlite.exec("DROP TABLE IF EXISTS projects");
+    sqlite.exec("DROP TABLE IF EXISTS workspaces");
     applySchema();
     vi.clearAllMocks();
 
-    projectStore.createProject("proj1", "Test Project", "desc", "", "env1");
+    workspaceStore.createWorkspace("proj1", "Test Project", "desc", "", "env1");
   });
 
   it("broadcasts task_updated when session completes with a task", async () => {
@@ -696,14 +696,14 @@ describe("task status broadcast on terminal events", () => {
     await waitForProcessing([completedEvent], {
       sessionId: "sess1",
       logPath: "/tmp/log",
-      projectId: "proj1",
+      workspaceId: "proj1",
       taskId: "task1",
     });
 
     // Verify task.updated was emitted on terminal session event
     expect(emit).toHaveBeenCalledWith(
       "task.updated",
-      expect.objectContaining({ taskId: "task1", projectId: "proj1" }),
+      expect.objectContaining({ taskId: "task1", workspaceId: "proj1" }),
     );
   });
 
@@ -736,7 +736,7 @@ describe("task status broadcast on terminal events", () => {
     await waitForProcessing([waitingEvent, runningEvent, completedEvent], {
       sessionId: "sess1",
       logPath: "/tmp/log",
-      projectId: "proj1",
+      workspaceId: "proj1",
       taskId: "task1",
     });
 
@@ -775,11 +775,11 @@ describe("late-binding", () => {
     sqlite.exec("DROP TABLE IF EXISTS findings");
     sqlite.exec("DROP TABLE IF EXISTS tasks");
     sqlite.exec("DROP TABLE IF EXISTS sessions");
-    sqlite.exec("DROP TABLE IF EXISTS projects");
+    sqlite.exec("DROP TABLE IF EXISTS workspaces");
     applySchema();
     vi.clearAllMocks();
 
-    projectStore.createProject("proj1", "Test Project", "desc", "", "env1");
+    workspaceStore.createWorkspace("proj1", "Test Project", "desc", "", "env1");
     // Clean up any leftover processor registrations
     processorRegistry.unregister("sess1");
     // Reset readLog mock to return empty by default
@@ -886,7 +886,7 @@ describe("late-binding", () => {
     const findings = findingStore.queryFindings("proj1");
     expect(findings).toHaveLength(1);
     expect(findings[0].title).toBe("Test Finding");
-    expect(findings[0].projectId).toBe("proj1");
+    expect(findings[0].workspaceId).toBe("proj1");
   });
 
   it("processes subtask events after late-bind", async () => {
@@ -956,7 +956,7 @@ describe("late-binding", () => {
 
     expect(emit).toHaveBeenCalledWith(
       "task.updated",
-      expect.objectContaining({ taskId: "task1", projectId: "proj1" }),
+      expect.objectContaining({ taskId: "task1", workspaceId: "proj1" }),
     );
   });
 

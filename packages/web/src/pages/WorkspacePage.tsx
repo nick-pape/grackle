@@ -2,9 +2,9 @@ import { useEffect, useRef, useState, type JSX } from "react";
 import { useParams } from "react-router";
 import { useGrackle } from "../context/GrackleContext.js";
 import { DagView } from "../components/dag/DagView.js";
-import { ProjectBoard } from "../components/project/ProjectBoard.js";
+import { WorkspaceBoard } from "../components/workspace/WorkspaceBoard.js";
 import { Breadcrumbs, ConfirmDialog } from "../components/display/index.js";
-import { buildProjectBreadcrumbs } from "../utils/breadcrumbs.js";
+import { buildWorkspaceBreadcrumbs } from "../utils/breadcrumbs.js";
 import { newTaskUrl, useAppNavigate } from "../utils/navigation.js";
 import {
   EditableTextField,
@@ -45,54 +45,54 @@ function relativeTime(iso: string | undefined): string {
 
 const MAX_NAME_LENGTH: number = 100;
 
-type ProjectTab = "tasks" | "board" | "graph";
+type WorkspaceTab = "tasks" | "board" | "graph";
 
-/** Project overview page with inline editing, progress bar, and DAG/task views. */
-export function ProjectPage(): JSX.Element {
-  const { projectId } = useParams<{ projectId: string }>();
+/** Workspace overview page with inline editing, progress bar, and DAG/task views. */
+export function WorkspacePage(): JSX.Element {
+  const { workspaceId } = useParams<{ workspaceId: string }>();
   const navigate = useAppNavigate();
   const {
-    tasks, environments, projects, personas, archiveProject, updateProject,
+    tasks, environments, workspaces, personas, archiveWorkspace, updateWorkspace,
   } = useGrackle();
 
-  const [projectTab, setProjectTab] = useState<ProjectTab>("tasks");
+  const [workspaceTab, setWorkspaceTab] = useState<WorkspaceTab>("tasks");
   const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
   const [activeFieldId, setActiveFieldId] = useState<string | null>(null);
   const [metaCollapsed, setMetaCollapsed] = useState(false);
-  const previousProjectIdRef = useRef<string | undefined>(undefined);
+  const previousWorkspaceIdRef = useRef<string | undefined>(undefined);
 
-  const breadcrumbs = buildProjectBreadcrumbs(projectId!, projects);
+  const breadcrumbs = buildWorkspaceBreadcrumbs(workspaceId!, workspaces);
 
-  // Reset edit state when projectId changes
+  // Reset edit state when workspaceId changes
   useEffect(() => {
-    const previousProjectId = previousProjectIdRef.current;
-    previousProjectIdRef.current = projectId;
-    if (previousProjectId === undefined || previousProjectId === projectId) {
+    const previousWorkspaceId = previousWorkspaceIdRef.current;
+    previousWorkspaceIdRef.current = workspaceId;
+    if (previousWorkspaceId === undefined || previousWorkspaceId === workspaceId) {
       return;
     }
     if (activeFieldId !== null) {
       setActiveFieldId(null);
     }
-  }, [projectId, activeFieldId]);
+  }, [workspaceId, activeFieldId]);
 
-  const project = projects.find((p) => p.id === projectId);
-  const projectTasks = tasks.filter((t) => t.projectId === projectId);
-  const done = projectTasks.filter((t) => t.status === "complete").length;
-  const total = projectTasks.length;
+  const workspace = workspaces.find((p) => p.id === workspaceId);
+  const workspaceTasks = tasks.filter((t) => t.workspaceId === workspaceId);
+  const done = workspaceTasks.filter((t) => t.status === "complete").length;
+  const total = workspaceTasks.length;
   const progressPct = total > 0 ? Math.round((done / total) * 100) : 0;
 
-  const defaultEnv = environments.find((e) => e.id === project?.defaultEnvironmentId);
+  const defaultEnv = environments.find((e) => e.id === workspace?.defaultEnvironmentId);
 
   return (
     <div className={styles.panelContainer}>
       <Breadcrumbs segments={breadcrumbs} />
 
-      {/* Project header */}
-      <div className={styles.projectHeader}>
-        <span className={styles.projectName} data-testid="project-name">
+      {/* Workspace header */}
+      <div className={styles.workspaceHeader}>
+        <span className={styles.workspaceName} data-testid="workspace-name">
           <EditableTextField
-            value={project?.name || ""}
-            onSave={(v) => { if (project) { updateProject(project.id, { name: v }); } }}
+            value={workspace?.name || ""}
+            onSave={(v) => { if (workspace) { updateWorkspace(workspace.id, { name: v }); } }}
             validate={(v) => {
               const trimmed = v.trim();
               if (!trimmed) return "Name is required";
@@ -103,16 +103,16 @@ export function ProjectPage(): JSX.Element {
             fieldId="name"
             activeFieldId={activeFieldId}
             onActivate={setActiveFieldId}
-            ariaLabel="Project name"
-            renderDisplay={(v) => v || projectId || undefined}
+            ariaLabel="Workspace name"
+            renderDisplay={(v) => v || workspaceId || undefined}
             data-testid="edit-name"
           />
         </span>
         <button
           className={styles.archiveButton}
           onClick={() => setShowArchiveConfirm(true)}
-          title="Archive project"
-          data-testid="archive-project-button"
+          title="Archive workspace"
+          data-testid="archive-workspace-button"
         >
           Archive
         </button>
@@ -123,23 +123,23 @@ export function ProjectPage(): JSX.Element {
         className={styles.metaToggle}
         onClick={() => setMetaCollapsed(!metaCollapsed)}
         aria-expanded={!metaCollapsed}
-        aria-controls="project-meta-panel"
+        aria-controls="workspace-meta-panel"
         data-testid="meta-toggle"
       >
         <span className={`${styles.metaToggleArrow} ${!metaCollapsed ? styles.metaToggleArrowOpen : ""}`}>&#x25B6;</span>
         Details
       </button>
 
-      {/* Project metadata (collapsible) */}
+      {/* Workspace metadata (collapsible) */}
       {!metaCollapsed && (
-        <div className={styles.projectMeta} data-testid="project-meta" id="project-meta-panel">
+        <div className={styles.workspaceMeta} data-testid="workspace-meta" id="workspace-meta-panel">
           {/* Description */}
           <div className={styles.metaRow}>
             <span className={styles.metaLabel}>Description</span>
             <div className={styles.metaValue}>
               <EditableTextArea
-                value={project?.description || ""}
-                onSave={(v) => { if (project) { updateProject(project.id, { description: v }); } }}
+                value={workspace?.description || ""}
+                onSave={(v) => { if (workspace) { updateWorkspace(workspace.id, { description: v }); } }}
                 fieldId="description"
                 activeFieldId={activeFieldId}
                 onActivate={setActiveFieldId}
@@ -149,7 +149,7 @@ export function ProjectPage(): JSX.Element {
                   </span>
                 ) : undefined}
                 placeholder="No description"
-                ariaLabel="Project description"
+                ariaLabel="Workspace description"
                 data-testid="edit-description"
               />
             </div>
@@ -160,8 +160,8 @@ export function ProjectPage(): JSX.Element {
             <span className={styles.metaLabel}>Repository</span>
             <div className={styles.metaValue}>
               <EditableTextField
-                value={project?.repoUrl || ""}
-                onSave={(v) => { if (project) { updateProject(project.id, { repoUrl: v }); } }}
+                value={workspace?.repoUrl || ""}
+                onSave={(v) => { if (workspace) { updateWorkspace(workspace.id, { repoUrl: v }); } }}
                 validate={(v) => {
                   const trimmed = v.trim();
                   if (trimmed && !/^https?:\/\/.+/.test(trimmed)) return "Must be a valid http(s) URL";
@@ -187,7 +187,7 @@ export function ProjectPage(): JSX.Element {
                   return v ? <span>{v}</span> : undefined;
                 }}
                 placeholder="No repository"
-                ariaLabel="Project repository URL"
+                ariaLabel="Workspace repository URL"
                 data-testid="edit-repo"
               />
             </div>
@@ -198,8 +198,8 @@ export function ProjectPage(): JSX.Element {
             <span className={styles.metaLabel}>Environment</span>
             <div className={styles.metaValue}>
               <EditableSelect
-                value={project?.defaultEnvironmentId || ""}
-                onSave={(v) => { if (project) { updateProject(project.id, { defaultEnvironmentId: v }); } }}
+                value={workspace?.defaultEnvironmentId || ""}
+                onSave={(v) => { if (workspace) { updateWorkspace(workspace.id, { defaultEnvironmentId: v }); } }}
                 options={[
                   { value: "", label: "None" },
                   ...environments.map((env) => ({ value: env.id, label: env.displayName })),
@@ -218,8 +218,8 @@ export function ProjectPage(): JSX.Element {
                   }
                   return undefined;
                 }}
-                placeholder={project?.defaultEnvironmentId || "No default environment"}
-                ariaLabel="Project default environment"
+                placeholder={workspace?.defaultEnvironmentId || "No default environment"}
+                ariaLabel="Workspace default environment"
                 data-testid="edit-env"
               />
             </div>
@@ -230,8 +230,8 @@ export function ProjectPage(): JSX.Element {
             <span className={styles.metaLabel}>Persona</span>
             <div className={styles.metaValue}>
               <EditableSelect
-                value={project?.defaultPersonaId || ""}
-                onSave={(v) => { if (project) { updateProject(project.id, { defaultPersonaId: v }); } }}
+                value={workspace?.defaultPersonaId || ""}
+                onSave={(v) => { if (workspace) { updateWorkspace(workspace.id, { defaultPersonaId: v }); } }}
                 options={[
                   { value: "", label: "(Inherit)" },
                   ...personas.map((p) => ({ value: p.id, label: p.name })),
@@ -244,8 +244,8 @@ export function ProjectPage(): JSX.Element {
                   if (persona) return <span>{persona.name}</span>;
                   return undefined;
                 }}
-                placeholder={project?.defaultPersonaId || "(Inherit)"}
-                ariaLabel="Project default persona"
+                placeholder={workspace?.defaultPersonaId || "(Inherit)"}
+                ariaLabel="Workspace default persona"
                 data-testid="edit-persona"
               />
             </div>
@@ -256,10 +256,10 @@ export function ProjectPage(): JSX.Element {
             <span className={styles.metaLabel}>Worktrees</span>
             <div className={styles.metaValue}>
               <EditableCheckbox
-                checked={project?.useWorktrees ?? true}
+                checked={workspace?.useWorktrees ?? true}
                 onChange={(checked) => {
-                  if (project) {
-                    updateProject(project.id, { useWorktrees: checked });
+                  if (workspace) {
+                    updateWorkspace(workspace.id, { useWorktrees: checked });
                   }
                 }}
                 label="Enable worktree isolation"
@@ -273,8 +273,8 @@ export function ProjectPage(): JSX.Element {
             <span className={styles.metaLabel}>Working Dir</span>
             <div className={styles.metaValue}>
               <EditableTextField
-                value={project?.worktreeBasePath || ""}
-                onSave={(v) => { if (project) { updateProject(project.id, { worktreeBasePath: v }); } }}
+                value={workspace?.worktreeBasePath || ""}
+                onSave={(v) => { if (workspace) { updateWorkspace(workspace.id, { worktreeBasePath: v }); } }}
                 fieldId="worktreeBasePath"
                 activeFieldId={activeFieldId}
                 onActivate={setActiveFieldId}
@@ -286,14 +286,14 @@ export function ProjectPage(): JSX.Element {
           </div>
 
           {/* Timestamps */}
-          {project && (
+          {workspace && (
             <div className={styles.metaTimestamps}>
               <span className={styles.metaTimestamp}>
-                Created {relativeTime(project.createdAt)}
+                Created {relativeTime(workspace.createdAt)}
               </span>
-              {project.updatedAt && project.updatedAt !== project.createdAt && (
+              {workspace.updatedAt && workspace.updatedAt !== workspace.createdAt && (
                 <span className={styles.metaTimestamp}>
-                  &middot; Updated {relativeTime(project.updatedAt)}
+                  &middot; Updated {relativeTime(workspace.updatedAt)}
                 </span>
               )}
             </div>
@@ -312,46 +312,46 @@ export function ProjectPage(): JSX.Element {
       )}
 
       {/* Tabs: Graph / Board / Tasks */}
-      <div className={styles.tabBar} role="tablist" aria-label="Project view">
+      <div className={styles.tabBar} role="tablist" aria-label="Workspace view">
         <button
           role="tab"
-          aria-selected={projectTab === "graph"}
-          className={`${styles.tab} ${projectTab === "graph" ? styles.active : ""}`}
-          onClick={() => setProjectTab("graph")}
+          aria-selected={workspaceTab === "graph"}
+          className={`${styles.tab} ${workspaceTab === "graph" ? styles.active : ""}`}
+          onClick={() => setWorkspaceTab("graph")}
         >
           Graph
         </button>
         <button
           role="tab"
-          aria-selected={projectTab === "board"}
-          className={`${styles.tab} ${projectTab === "board" ? styles.active : ""}`}
-          onClick={() => setProjectTab("board")}
+          aria-selected={workspaceTab === "board"}
+          className={`${styles.tab} ${workspaceTab === "board" ? styles.active : ""}`}
+          onClick={() => setWorkspaceTab("board")}
           data-testid="board-tab"
         >
           Board
         </button>
         <button
           role="tab"
-          aria-selected={projectTab === "tasks"}
-          className={`${styles.tab} ${projectTab === "tasks" ? styles.active : ""}`}
-          onClick={() => setProjectTab("tasks")}
+          aria-selected={workspaceTab === "tasks"}
+          className={`${styles.tab} ${workspaceTab === "tasks" ? styles.active : ""}`}
+          onClick={() => setWorkspaceTab("tasks")}
         >
           Tasks
         </button>
       </div>
-      {projectTab === "tasks" && total > 0 && (
-        <div className={styles.projectSummary}>
-          <span className={styles.projectSummaryTitle}>
+      {workspaceTab === "tasks" && total > 0 && (
+        <div className={styles.workspaceSummary}>
+          <span className={styles.workspaceSummaryTitle}>
             {`${done}/${total} tasks complete`}
           </span>
-          <span className={styles.projectSummarySubtitle}>Select a task or click + to create one</span>
+          <span className={styles.workspaceSummarySubtitle}>Select a task or click + to create one</span>
         </div>
       )}
-      {projectTab === "tasks" && total === 0 && (
+      {workspaceTab === "tasks" && total === 0 && (
         <div className={styles.emptyCta}>
           <button
             className={styles.ctaButton}
-            onClick={() => navigate(newTaskUrl(projectId!))}
+            onClick={() => navigate(newTaskUrl(workspaceId!))}
           >
             Create Task
           </button>
@@ -360,22 +360,22 @@ export function ProjectPage(): JSX.Element {
           </div>
         </div>
       )}
-      {projectTab === "board" && (
-        <ProjectBoard projectId={projectId!} />
+      {workspaceTab === "board" && (
+        <WorkspaceBoard workspaceId={workspaceId!} />
       )}
-      {projectTab === "graph" && (
-        <DagView projectId={projectId!} />
+      {workspaceTab === "graph" && (
+        <DagView workspaceId={workspaceId!} />
       )}
 
       {/* Archive confirmation dialog */}
       <ConfirmDialog
         isOpen={showArchiveConfirm}
-        title="Archive Project?"
-        description="This will hide the project from the sidebar. Tasks will not be deleted."
+        title="Archive Workspace?"
+        description="This will hide the workspace from the sidebar. Tasks will not be deleted."
         confirmLabel="Archive"
         onConfirm={() => {
-          if (project) {
-            archiveProject(project.id);
+          if (workspace) {
+            archiveWorkspace(workspace.id);
             navigate("/", { replace: true });
           }
           setShowArchiveConfirm(false);

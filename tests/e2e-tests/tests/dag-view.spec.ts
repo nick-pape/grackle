@@ -1,9 +1,9 @@
 import { test, expect } from "./fixtures.js";
 import {
-  createProject,
+  createWorkspace,
   createTask,
   createTaskViaWs,
-  getProjectId,
+  getWorkspaceId,
   getTaskId,
 } from "./helpers.js";
 
@@ -12,7 +12,7 @@ test.describe("DAG View", () => {
     const page = appPage;
 
     // Create project with two tasks
-    await createProject(page, "dag-basic");
+    await createWorkspace(page, "dag-basic");
     await createTask(page, "dag-basic", "dag-task-a", "test-local");
     await createTask(page, "dag-basic", "dag-task-b", "test-local");
 
@@ -37,7 +37,7 @@ test.describe("DAG View", () => {
   test("clicking a graph node navigates to task detail", async ({ appPage }) => {
     const page = appPage;
 
-    await createProject(page, "dag-nav");
+    await createWorkspace(page, "dag-nav");
     await createTask(page, "dag-nav", "dag-nav-task", "test-local");
 
     // Switch to Graph tab
@@ -55,14 +55,14 @@ test.describe("DAG View", () => {
   test("dependency edges render for tasks with dependsOn", async ({ appPage }) => {
     const page = appPage;
 
-    await createProject(page, "dag-deps");
+    await createWorkspace(page, "dag-deps");
     await createTask(page, "dag-deps", "dep-blocker", "test-local");
 
-    const projectId = await getProjectId(page, "dag-deps");
-    const blockerId = await getTaskId(page, projectId, "dep-blocker");
+    const workspaceId = await getWorkspaceId(page, "dag-deps");
+    const blockerId = await getTaskId(page, workspaceId, "dep-blocker");
 
     // Create dependent task via WS
-    await createTaskViaWs(page, projectId, "dep-blocked", {
+    await createTaskViaWs(page, workspaceId, "dep-blocked", {
       environmentId: "test-local",
       dependsOn: [blockerId],
     });

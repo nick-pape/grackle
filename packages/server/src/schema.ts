@@ -71,9 +71,9 @@ export const tokens = sqliteTable("tokens", {
 /** Row shape returned by a SELECT on the tokens table. */
 export type TokenRow = typeof tokens.$inferSelect;
 
-// ─── Projects ─────────────────────────────────────────────
+// ─── Workspaces ───────────────────────────────────────────
 
-export const projects = sqliteTable("projects", {
+export const workspaces = sqliteTable("workspaces", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   description: text("description").notNull().default(""),
@@ -93,18 +93,18 @@ export const projects = sqliteTable("projects", {
     .default(sql`(datetime('now'))`),
 });
 
-/** Row shape returned by a SELECT on the projects table. */
-export type ProjectRow = typeof projects.$inferSelect;
+/** Row shape returned by a SELECT on the workspaces table. */
+export type WorkspaceRow = typeof workspaces.$inferSelect;
 
-/** Shape accepted by INSERT into the projects table. */
-export type NewProject = typeof projects.$inferInsert;
+/** Shape accepted by INSERT into the workspaces table. */
+export type NewWorkspace = typeof workspaces.$inferInsert;
 
 // ─── Tasks ────────────────────────────────────────────────
 
 export const tasks = sqliteTable("tasks", {
   id: text("id").primaryKey(),
-  projectId: text("project_id")
-    .references(() => projects.id),
+  workspaceId: text("workspace_id")
+    .references(() => workspaces.id),
   title: text("title").notNull(),
   description: text("description").notNull().default(""),
   status: text("status").notNull().default("not_started"),
@@ -137,9 +137,9 @@ export type NewTask = typeof tasks.$inferInsert;
 
 export const findings = sqliteTable("findings", {
   id: text("id").primaryKey(),
-  projectId: text("project_id")
+  workspaceId: text("workspace_id")
     .notNull()
-    .references(() => projects.id),
+    .references(() => workspaces.id),
   taskId: text("task_id").notNull().default(""),
   sessionId: text("session_id").notNull().default(""),
   category: text("category").notNull().default("general"),

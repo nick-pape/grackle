@@ -1,6 +1,6 @@
 import { test, expect } from "./fixtures.js";
 import {
-  createProject,
+  createWorkspace,
   createTask,
   navigateToTask,
   patchWsForStubRuntime,
@@ -12,7 +12,7 @@ test.describe("Multi-Task", () => {
     const page = appPage;
 
     // Create project with 3 tasks
-    await createProject(page, "multi-sidebar");
+    await createWorkspace(page, "multi-sidebar");
     await createTask(page, "multi-sidebar", "task-alpha", "test-local");
     await createTask(page, "multi-sidebar", "task-bravo", "test-local");
     await createTask(page, "multi-sidebar", "task-charlie", "test-local");
@@ -32,7 +32,7 @@ test.describe("Multi-Task", () => {
     const page = appPage;
 
     // Create project with two tasks
-    await createProject(page, "multi-preserve");
+    await createWorkspace(page, "multi-preserve");
     await createTask(page, "multi-preserve", "preserve-task-a", "test-local");
     await createTask(page, "multi-preserve", "preserve-task-b", "test-local");
 
@@ -60,8 +60,8 @@ test.describe("Multi-Task", () => {
     const page = appPage;
 
     // Create two projects
-    await createProject(page, "multi-proj-x");
-    await createProject(page, "multi-proj-y");
+    await createWorkspace(page, "multi-proj-x");
+    await createWorkspace(page, "multi-proj-y");
 
     // Both should appear in the sidebar
     await expect(page.getByText("multi-proj-x")).toBeVisible();
@@ -84,7 +84,7 @@ test.describe("Multi-Task", () => {
     const page = appPage;
 
     // Create project and task
-    await createProject(page, "multi-badge");
+    await createWorkspace(page, "multi-badge");
     await createTask(page, "multi-badge", "badge-task", "test-local");
 
     // Verify pending icon (○) is shown

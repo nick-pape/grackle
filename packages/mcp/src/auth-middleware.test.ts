@@ -47,7 +47,7 @@ describe("authenticateMcpRequest", () => {
     expect(result).toEqual({
       type: "scoped",
       taskId: "task-1",
-      projectId: "project-1",
+      workspaceId: "project-1",
       personaId: "persona-1",
       taskSessionId: "session-1",
     });
@@ -106,7 +106,7 @@ describe("authenticateMcpRequest", () => {
     expect(scopedResult).toEqual({
       type: "scoped",
       taskId: "task-1",
-      projectId: "project-1",
+      workspaceId: "project-1",
       personaId: "persona-1",
       taskSessionId: "session-1",
     });
@@ -164,7 +164,7 @@ describe("authenticateMcpRequest", () => {
     expect(authenticateMcpRequest(scopedReq, API_KEY)).toEqual({
       type: "scoped",
       taskId: "task-1",
-      projectId: "project-1",
+      workspaceId: "project-1",
       personaId: "persona-1",
       taskSessionId: "session-1",
     });

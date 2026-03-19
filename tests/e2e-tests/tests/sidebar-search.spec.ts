@@ -1,5 +1,5 @@
 import { test, expect } from "./fixtures.js";
-import { createProject, createTask, createTaskViaWs, getProjectId } from "./helpers.js";
+import { createWorkspace, createTask, createTaskViaWs, getWorkspaceId } from "./helpers.js";
 
 test.describe("Sidebar search filter", () => {
   // Clean up localStorage after each test to prevent state leakage
@@ -10,18 +10,18 @@ test.describe("Sidebar search filter", () => {
   test("search input is visible when projects exist", async ({ appPage }) => {
     const page = appPage;
 
-    await createProject(page, "search-visible");
+    await createWorkspace(page, "search-visible");
 
     const searchInput = page.getByTestId("sidebar-search");
     await expect(searchInput).toBeVisible({ timeout: 5_000 });
-    await expect(searchInput).toHaveAttribute("aria-label", "Filter projects and tasks");
+    await expect(searchInput).toHaveAttribute("aria-label", "Filter workspaces and tasks");
   });
 
   test("typing filters projects by name", async ({ appPage }) => {
     const page = appPage;
 
-    await createProject(page, "Alpha Project");
-    await createProject(page, "Beta Project");
+    await createWorkspace(page, "Alpha Project");
+    await createWorkspace(page, "Beta Project");
 
     const searchInput = page.getByTestId("sidebar-search");
     await searchInput.fill("Alpha");
@@ -34,7 +34,7 @@ test.describe("Sidebar search filter", () => {
   test("typing filters tasks by title", async ({ appPage }) => {
     const page = appPage;
 
-    await createProject(page, "filter-tasks");
+    await createWorkspace(page, "filter-tasks");
     await createTask(page, "filter-tasks", "Fix login bug");
     await createTask(page, "filter-tasks", "Add dashboard");
 
@@ -49,8 +49,8 @@ test.describe("Sidebar search filter", () => {
   test("clearing filter restores full list", async ({ appPage }) => {
     const page = appPage;
 
-    await createProject(page, "Zebra Corp");
-    await createProject(page, "Quantum Labs");
+    await createWorkspace(page, "Zebra Corp");
+    await createWorkspace(page, "Quantum Labs");
 
     const searchInput = page.getByTestId("sidebar-search");
     await searchInput.fill("Zebra");
@@ -69,7 +69,7 @@ test.describe("Sidebar search filter", () => {
   test("search works in grouped-by-status view", async ({ appPage }) => {
     const page = appPage;
 
-    await createProject(page, "grouped-search");
+    await createWorkspace(page, "grouped-search");
     await createTask(page, "grouped-search", "matching-task");
     await createTask(page, "grouped-search", "other-task");
 
@@ -93,7 +93,7 @@ test.describe("Sidebar search filter", () => {
   test("matching text in task titles is highlighted", async ({ appPage }) => {
     const page = appPage;
 
-    await createProject(page, "highlight-proj");
+    await createWorkspace(page, "highlight-proj");
     await createTask(page, "highlight-proj", "Fix login bug");
 
     const searchInput = page.getByTestId("sidebar-search");
@@ -109,7 +109,7 @@ test.describe("Sidebar search filter", () => {
   test("project match shows all its tasks", async ({ appPage }) => {
     const page = appPage;
 
-    await createProject(page, "unique-proj-name");
+    await createWorkspace(page, "unique-proj-name");
     await createTask(page, "unique-proj-name", "task-aaa");
     await createTask(page, "unique-proj-name", "task-bbb");
 
@@ -125,9 +125,9 @@ test.describe("Sidebar search filter", () => {
     const page = appPage;
 
     // Create a project and add a task via WS (without expanding the project in the UI)
-    await createProject(page, "collapsed-proj");
-    const projectId = await getProjectId(page, "collapsed-proj");
-    await createTaskViaWs(page, projectId, "hidden-needle");
+    await createWorkspace(page, "collapsed-proj");
+    const workspaceId = await getWorkspaceId(page, "collapsed-proj");
+    await createTaskViaWs(page, workspaceId, "hidden-needle");
 
     // The project is collapsed — "hidden-needle" should NOT be visible yet
     await expect(page.getByText("hidden-needle")).not.toBeVisible({ timeout: 2_000 });

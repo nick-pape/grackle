@@ -1,9 +1,9 @@
 import { test, expect } from "./fixtures.js";
 import {
-  createProject,
+  createWorkspace,
   createTask,
   navigateToTask,
-  getProjectId,
+  getWorkspaceId,
   getTaskId,
   patchWsForStubRuntime,
   sendWsMessage,
@@ -14,15 +14,15 @@ test.describe("Task Deletion", () => {
     const page = appPage;
 
     // Create project and task
-    await createProject(page, "del-remove");
+    await createWorkspace(page, "del-remove");
     await createTask(page, "del-remove", "doomed-task", "test-local");
 
     // Verify the task is visible
     await expect(page.getByText("doomed-task")).toBeVisible();
 
     // Get task ID and delete via WS
-    const projectId = await getProjectId(page, "del-remove");
-    const taskId = await getTaskId(page, projectId, "doomed-task");
+    const workspaceId = await getWorkspaceId(page, "del-remove");
+    const taskId = await getTaskId(page, workspaceId, "doomed-task");
     await sendWsMessage(page, { type: "delete_task", payload: { taskId } });
 
     // Verify task disappears from sidebar
@@ -33,7 +33,7 @@ test.describe("Task Deletion", () => {
     const page = appPage;
 
     // Create project and task
-    await createProject(page, "del-active");
+    await createWorkspace(page, "del-active");
     await createTask(page, "del-active", "active-task", "test-local");
 
     // Navigate to the task and start it
@@ -45,8 +45,8 @@ test.describe("Task Deletion", () => {
     await expect(page.locator('[data-testid="task-status"]')).toContainText(/working|paused/, { timeout: 15_000 });
 
     // Delete the task via WS while it's running
-    const projectId = await getProjectId(page, "del-active");
-    const taskId = await getTaskId(page, projectId, "active-task");
+    const workspaceId = await getWorkspaceId(page, "del-active");
+    const taskId = await getTaskId(page, workspaceId, "active-task");
     await sendWsMessage(page, { type: "delete_task", payload: { taskId } });
 
     // Verify task disappears from sidebar
@@ -56,7 +56,7 @@ test.describe("Task Deletion", () => {
   test("UI delete button shows confirm dialog and removes task on accept", async ({ appPage }) => {
     const page = appPage;
 
-    await createProject(page, "tdel-confirm");
+    await createWorkspace(page, "tdel-confirm");
     await createTask(page, "tdel-confirm", "tdel-accept-task", "test-local");
 
     await navigateToTask(page, "tdel-accept-task");
@@ -80,7 +80,7 @@ test.describe("Task Deletion", () => {
   test("UI delete confirm dialog can be dismissed to cancel deletion", async ({ appPage }) => {
     const page = appPage;
 
-    await createProject(page, "tdel-dismiss");
+    await createWorkspace(page, "tdel-dismiss");
     await createTask(page, "tdel-dismiss", "tdel-dismiss-task", "test-local");
 
     await navigateToTask(page, "tdel-dismiss-task");
