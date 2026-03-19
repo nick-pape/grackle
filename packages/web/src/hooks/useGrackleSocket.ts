@@ -108,7 +108,7 @@ export interface UseGrackleSocketResult {
     environmentId?: string,
     notes?: string,
   ) => void;
-  stopTask: (taskId: string, sessionId: string) => void;
+  stopTask: (taskId: string) => void;
   completeTask: (taskId: string) => void;
   resumeTask: (taskId: string) => void;
   updateTask: (

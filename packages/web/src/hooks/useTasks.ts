@@ -45,8 +45,8 @@ export interface UseTasksResult {
     environmentId?: string,
     notes?: string,
   ) => void;
-  /** Stop a working task: kill session + mark complete. */
-  stopTask: (taskId: string, sessionId: string) => void;
+  /** Stop a task: kill active sessions + mark complete. */
+  stopTask: (taskId: string) => void;
   /** Mark a task as completed. */
   completeTask: (taskId: string) => void;
   /** Resume a paused/waiting task. */
@@ -282,8 +282,8 @@ export function useTasks(send: SendFunction): UseTasksResult {
   );
 
   const stopTask = useCallback(
-    (taskId: string, sessionId: string) => {
-      send({ type: "stop_task", payload: { taskId, sessionId } });
+    (taskId: string) => {
+      send({ type: "stop_task", payload: { taskId } });
     },
     [send],
   );

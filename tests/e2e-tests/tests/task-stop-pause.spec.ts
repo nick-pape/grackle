@@ -15,7 +15,7 @@ test.describe("Task Stop & Pause buttons", () => {
     // Task is now paused — Stop button should be visible
     await expect(page.getByRole("button", { name: "Stop", exact: true })).toBeVisible({ timeout: 5_000 });
 
-    // Click Stop (should mark task complete)
+    // Click Stop (should kill active sessions + mark task complete)
     await page.getByRole("button", { name: "Stop", exact: true }).click();
 
     // Task status should become complete
@@ -25,7 +25,7 @@ test.describe("Task Stop & Pause buttons", () => {
     await expect(page.getByRole("button", { name: "Delete", exact: true })).toBeVisible({ timeout: 5_000 });
   });
 
-  test("Pause button during working state pauses task", async ({ appPage }) => {
+  test("paused state shows Stop and Resume buttons", async ({ appPage }) => {
     const page = appPage;
 
     // Create project and task
@@ -34,18 +34,20 @@ test.describe("Task Stop & Pause buttons", () => {
     await navigateToTask(page, "pause task");
     await patchWsForStubRuntime(page);
 
-    // Start the task
+    // Start the task — the stub runtime transitions to idle quickly, which
+    // causes the computed task status to become "paused". This verifies the
+    // button layout in the paused state (Stop, Resume, Delete).
     await page.getByRole("button", { name: "Start", exact: true }).click();
 
-    // Wait for the task to reach idle/paused — the stub runtime goes idle quickly
-    // so the task status becomes "paused" and Resume button appears
+    // Wait for the task to reach paused state
     await expect(page.getByRole("button", { name: "Resume", exact: true })).toBeVisible({ timeout: 15_000 });
 
-    // Stop button should also be visible in paused state
+    // Stop and Delete buttons should also be visible
     await expect(page.getByRole("button", { name: "Stop", exact: true })).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByRole("button", { name: "Delete", exact: true })).toBeVisible({ timeout: 5_000 });
   });
 
-  test("Paused task can be resumed", async ({ appPage }) => {
+  test("paused task can be resumed", async ({ appPage }) => {
     const page = appPage;
 
     // Create project and task, run stub to paused (review) state

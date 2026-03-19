@@ -697,34 +697,31 @@ async function handleMessage(
 
     case "stop_task": {
       const taskId = msg.payload?.taskId as string;
-      const sessionId = msg.payload?.sessionId as string;
       if (!taskId) return;
 
-      // Kill the active session (same as "kill" handler)
-      if (sessionId) {
-        const session = sessionStore.getSession(sessionId);
-        if (session) {
-          const conn = adapterManager.getConnection(session.environmentId);
-          if (conn) {
-            try {
-              await conn.client.kill(
-                create(powerline.SessionIdSchema, { id: sessionId }),
-              );
-            } catch (err) {
-              logger.warn({ sessionId, err }, "PowerLine kill failed — marking session interrupted anyway");
-            }
+      // Kill all active sessions for this task (server-authoritative lookup)
+      const activeSessions = sessionStore.getActiveSessionsForTask(taskId);
+      for (const session of activeSessions) {
+        const conn = adapterManager.getConnection(session.environmentId);
+        if (conn) {
+          try {
+            await conn.client.kill(
+              create(powerline.SessionIdSchema, { id: session.id }),
+            );
+          } catch (err) {
+            logger.warn({ sessionId: session.id, err }, "PowerLine kill failed — marking session interrupted anyway");
           }
-          sessionStore.updateSession(sessionId, SESSION_STATUS.INTERRUPTED);
-          streamHub.publish(
-            create(grackle.SessionEventSchema, {
-              sessionId,
-              type: grackle.EventType.STATUS,
-              timestamp: new Date().toISOString(),
-              content: SESSION_STATUS.INTERRUPTED,
-              raw: "",
-            }),
-          );
         }
+        sessionStore.updateSession(session.id, SESSION_STATUS.INTERRUPTED);
+        streamHub.publish(
+          create(grackle.SessionEventSchema, {
+            sessionId: session.id,
+            type: grackle.EventType.STATUS,
+            timestamp: new Date().toISOString(),
+            content: SESSION_STATUS.INTERRUPTED,
+            raw: "",
+          }),
+        );
       }
 
       // Mark task complete (same as "complete_task" handler)

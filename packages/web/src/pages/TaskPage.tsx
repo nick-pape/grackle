@@ -194,14 +194,13 @@ interface TaskActionButtonsProps {
   onResume: () => void;
   onStop: () => void;
   onPause: () => void;
-  onComplete: () => void;
   onDelete: () => void;
   onEdit: () => void;
 }
 
 function TaskActionButtons({
   task, sessionId, isBlocked,
-  onStart, onResume, onStop, onPause, onComplete, onDelete, onEdit,
+  onStart, onResume, onStop, onPause, onDelete, onEdit,
 }: TaskActionButtonsProps): JSX.Element | undefined {
   if (task.status === "not_started") {
     if (isBlocked) {
@@ -299,7 +298,7 @@ export function TaskPage(): JSX.Element {
   const {
     events, eventsDropped, tasks, environments,
     loadSessionEvents, loadFindings,
-    kill, startTask, stopTask, resumeTask, completeTask, deleteTask,
+    kill, startTask, stopTask, resumeTask, deleteTask,
     projects, taskSessions: taskSessionsMap, loadTaskSessions,
   } = useGrackle();
 
@@ -451,9 +450,8 @@ export function TaskPage(): JSX.Element {
             isBlocked={isTaskBlocked}
             onStart={() => startTask(task.id)}
             onResume={() => resumeTask(task.id)}
-            onStop={() => stopTask(task.id, sessionId ?? "")}
+            onStop={() => stopTask(task.id)}
             onPause={() => sessionId && kill(sessionId)}
-            onComplete={() => completeTask(task.id)}
             onDelete={handleDeleteTask}
             onEdit={() => navigate(taskEditUrl(task.id))}
           />
