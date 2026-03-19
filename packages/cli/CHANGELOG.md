@@ -1,6 +1,17 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Thu, 19 Mar 2026 12:25:13 GMT and should not be manually modified.
+This log was last generated on Thu, 19 Mar 2026 14:01:06 GMT and should not be manually modified.
+
+## 0.45.1
+Thu, 19 Mar 2026 14:01:06 GMT
+
+### Patches
+
+- Replace browser prompt() with inline project creation in welcome CTA
+
+### Updates
+
+- placeholder
 
 ## 0.45.0
 Thu, 19 Mar 2026 12:25:13 GMT
