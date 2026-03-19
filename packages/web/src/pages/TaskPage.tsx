@@ -193,6 +193,7 @@ interface TaskActionButtonsProps {
   onStart: () => void;
   onResume: () => void;
   onStop: () => void;
+  onPause: () => void;
   onComplete: () => void;
   onDelete: () => void;
   onEdit: () => void;
@@ -200,7 +201,7 @@ interface TaskActionButtonsProps {
 
 function TaskActionButtons({
   task, sessionId, isBlocked,
-  onStart, onResume, onStop, onComplete, onDelete, onEdit,
+  onStart, onResume, onStop, onPause, onComplete, onDelete, onEdit,
 }: TaskActionButtonsProps): JSX.Element | undefined {
   if (task.status === "not_started") {
     if (isBlocked) {
@@ -223,13 +224,14 @@ function TaskActionButtons({
     return (
       <div className={styles.headerActions}>
         <button onClick={onStop} disabled={!sessionId} className={styles.btnDanger}>Stop</button>
+        <button onClick={onPause} disabled={!sessionId} className={styles.btnGhost}>Pause</button>
       </div>
     );
   }
   if (task.status === "paused") {
     return (
       <div className={styles.headerActions}>
-        <button onClick={onComplete} className={styles.btnPrimary}>Complete</button>
+        <button onClick={onStop} className={styles.btnPrimary}>Stop</button>
         <button onClick={onResume} className={styles.btnGhost}>Resume</button>
         <button onClick={onDelete} className={styles.btnDanger}>Delete</button>
       </div>
@@ -297,7 +299,7 @@ export function TaskPage(): JSX.Element {
   const {
     events, eventsDropped, tasks, environments,
     loadSessionEvents, loadFindings,
-    kill, startTask, resumeTask, completeTask, deleteTask,
+    kill, startTask, stopTask, resumeTask, completeTask, deleteTask,
     projects, taskSessions: taskSessionsMap, loadTaskSessions,
   } = useGrackle();
 
@@ -449,7 +451,8 @@ export function TaskPage(): JSX.Element {
             isBlocked={isTaskBlocked}
             onStart={() => startTask(task.id)}
             onResume={() => resumeTask(task.id)}
-            onStop={() => sessionId && kill(sessionId)}
+            onStop={() => stopTask(task.id, sessionId ?? "")}
+            onPause={() => sessionId && kill(sessionId)}
             onComplete={() => completeTask(task.id)}
             onDelete={handleDeleteTask}
             onEdit={() => navigate(taskEditUrl(task.id))}

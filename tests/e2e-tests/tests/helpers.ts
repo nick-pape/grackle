@@ -249,7 +249,7 @@ export async function runStubTaskToCompletion(page: Page): Promise<void> {
 
   // Wait for session to complete and task to move to paused (review)
   await page
-    .getByRole("button", { name: "Complete", exact: true })
+    .getByRole("button", { name: "Stop", exact: true })
     .waitFor({ timeout: 15_000 });
 }
 
@@ -429,7 +429,7 @@ export async function runStubMcpTaskToCompletion(page: Page): Promise<void> {
 
   // Wait for session to complete and task to move to paused (review)
   await page
-    .getByRole("button", { name: "Complete", exact: true })
+    .getByRole("button", { name: "Stop", exact: true })
     .waitFor({ timeout: 15_000 });
 }
 

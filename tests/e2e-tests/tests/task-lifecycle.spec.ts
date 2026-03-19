@@ -61,14 +61,11 @@ test.describe("Task Lifecycle (stub runtime)", () => {
     // --- Step 8: Session completes -> task auto-moves to paused ---
     // The stub runtime completes quickly after input, auto-moving to paused.
     // The SessionPanel auto-switches to the Stream tab on paused, so we check
-    // for the Complete button rather than stream content.
-    await expect(page.getByRole("button", { name: "Complete", exact: true })).toBeVisible({ timeout: 15_000 });
+    // for the Stop button rather than stream content.
+    await expect(page.getByRole("button", { name: "Stop", exact: true })).toBeVisible({ timeout: 15_000 });
 
-    // UnifiedBar shows Complete button
-    await expect(page.getByRole("button", { name: "Complete", exact: true })).toBeVisible({ timeout: 5_000 });
-
-    // --- Step 9: Complete the task ---
-    await page.getByRole("button", { name: "Complete", exact: true }).click();
+    // --- Step 9: Stop the task (kill session + mark complete) ---
+    await page.getByRole("button", { name: "Stop", exact: true }).click();
 
     // Task status changes to complete
     await expect(page.getByText("Task completed")).toBeVisible({ timeout: 5_000 });
@@ -77,7 +74,7 @@ test.describe("Task Lifecycle (stub runtime)", () => {
     await expect(page.locator("button", { hasText: "+ New Task" })).toBeVisible();
   });
 
-  test("paused task can be completed", async ({ appPage }) => {
+  test("paused task can be stopped (completed)", async ({ appPage }) => {
     const page = appPage;
 
     // --- Create project and task (env set via WS so it is available at start time) ---
@@ -89,8 +86,8 @@ test.describe("Task Lifecycle (stub runtime)", () => {
     // Run task through to paused (review)
     await runStubTaskToCompletion(page);
 
-    // Complete the task
-    await page.getByRole("button", { name: "Complete", exact: true }).click();
+    // Stop the task (kill session + mark complete)
+    await page.getByRole("button", { name: "Stop", exact: true }).click();
 
     // Task should be marked complete
     await expect(page.getByText("Task completed")).toBeVisible({ timeout: 5_000 });
