@@ -1,19 +1,19 @@
 import type { Client } from "@connectrpc/connect";
-import { type grackle, projectStatusToString } from "@grackle-ai/common";
+import { type grackle, workspaceStatusToString } from "@grackle-ai/common";
 import { z } from "zod";
 import type { ToolDefinition } from "../tool-registry.js";
 import { jsonResult } from "../result-helpers.js";
 import { grpcErrorToToolResult } from "../error-handler.js";
 
-/** MCP tools for managing Grackle projects (CRUD + archive). */
-export const projectTools: ToolDefinition[] = [
+/** MCP tools for managing Grackle workspaces (CRUD + archive). */
+export const workspaceTools: ToolDefinition[] = [
   {
-    name: "project_list",
-    group: "project",
+    name: "workspace_list",
+    group: "workspace",
     description:
-      "List all Grackle projects with their names, descriptions, repositories, worktree settings, and status.",
+      "List all Grackle workspaces with their names, descriptions, repositories, worktree settings, and status.",
     inputSchema: z.object({}),
-    rpcMethod: "listProjects",
+    rpcMethod: "listWorkspaces",
     mutating: false,
     annotations: {
       readOnlyHint: true,
@@ -23,9 +23,9 @@ export const projectTools: ToolDefinition[] = [
     },
     async handler(_args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) {
       try {
-        const response = await client.listProjects({});
+        const response = await client.listWorkspaces({});
         return jsonResult(
-          response.projects.map((p) => ({
+          response.workspaces.map((p) => ({
             id: p.id,
             name: p.name,
             description: p.description,
@@ -33,7 +33,7 @@ export const projectTools: ToolDefinition[] = [
             defaultEnvironmentId: p.defaultEnvironmentId,
             worktreeBasePath: p.worktreeBasePath,
             useWorktrees: p.useWorktrees,
-            status: projectStatusToString(p.status) || "unspecified",
+            status: workspaceStatusToString(p.status) || "unspecified",
           })),
         );
       } catch (error) {
@@ -42,25 +42,25 @@ export const projectTools: ToolDefinition[] = [
     },
   },
   {
-    name: "project_create",
-    group: "project",
+    name: "workspace_create",
+    group: "workspace",
     description:
-      "Create a new Grackle project with a name, optional description, repository URL, and default environment.",
+      "Create a new Grackle workspace with a name, optional description, repository URL, and default environment.",
     inputSchema: z.object({
-      name: z.string().describe("Display name for the new project"),
+      name: z.string().describe("Display name for the new workspace"),
       description: z
         .string()
         .optional()
-        .describe("Optional description of the project"),
+        .describe("Optional description of the workspace"),
       repoUrl: z
         .string()
         .optional()
-        .describe("Optional repository URL associated with the project"),
+        .describe("Optional repository URL associated with the workspace"),
       defaultEnvironmentId: z
         .string()
         .optional()
         .describe(
-          "Optional ID of the default environment to use for this project",
+          "Optional ID of the default environment to use for this workspace",
         ),
       worktreeBasePath: z
         .string()
@@ -73,9 +73,9 @@ export const projectTools: ToolDefinition[] = [
       defaultPersonaId: z
         .string()
         .optional()
-        .describe("Default persona for tasks in this project"),
+        .describe("Default persona for tasks in this workspace"),
     }),
-    rpcMethod: "createProject",
+    rpcMethod: "createWorkspace",
     mutating: true,
     annotations: {
       readOnlyHint: false,
@@ -85,7 +85,7 @@ export const projectTools: ToolDefinition[] = [
     },
     async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) {
       try {
-        const project = await client.createProject({
+        const workspace = await client.createWorkspace({
           name: args.name as string,
           description: (args.description as string | undefined) ?? "",
           repoUrl: (args.repoUrl as string | undefined) ?? "",
@@ -96,17 +96,17 @@ export const projectTools: ToolDefinition[] = [
           defaultPersonaId: (args.defaultPersonaId as string | undefined) ?? "",
         });
         return jsonResult({
-          id: project.id,
-          name: project.name,
-          description: project.description,
-          repoUrl: project.repoUrl,
-          defaultEnvironmentId: project.defaultEnvironmentId,
-          defaultPersonaId: project.defaultPersonaId,
-          worktreeBasePath: project.worktreeBasePath,
-          useWorktrees: project.useWorktrees,
-          status: projectStatusToString(project.status) || "unspecified",
-          createdAt: project.createdAt,
-          updatedAt: project.updatedAt,
+          id: workspace.id,
+          name: workspace.name,
+          description: workspace.description,
+          repoUrl: workspace.repoUrl,
+          defaultEnvironmentId: workspace.defaultEnvironmentId,
+          defaultPersonaId: workspace.defaultPersonaId,
+          worktreeBasePath: workspace.worktreeBasePath,
+          useWorktrees: workspace.useWorktrees,
+          status: workspaceStatusToString(workspace.status) || "unspecified",
+          createdAt: workspace.createdAt,
+          updatedAt: workspace.updatedAt,
         });
       } catch (error) {
         return grpcErrorToToolResult(error);
@@ -114,14 +114,14 @@ export const projectTools: ToolDefinition[] = [
     },
   },
   {
-    name: "project_get",
-    group: "project",
+    name: "workspace_get",
+    group: "workspace",
     description:
-      "Get full details of a specific Grackle project by its unique identifier.",
+      "Get full details of a specific Grackle workspace by its unique identifier.",
     inputSchema: z.object({
-      projectId: z.string().describe("Unique identifier of the project to retrieve"),
+      workspaceId: z.string().describe("Unique identifier of the workspace to retrieve"),
     }),
-    rpcMethod: "getProject",
+    rpcMethod: "getWorkspace",
     mutating: false,
     annotations: {
       readOnlyHint: true,
@@ -131,20 +131,20 @@ export const projectTools: ToolDefinition[] = [
     },
     async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) {
       try {
-        const project = await client.getProject({
-          id: args.projectId as string,
+        const workspace = await client.getWorkspace({
+          id: args.workspaceId as string,
         });
         return jsonResult({
-          id: project.id,
-          name: project.name,
-          description: project.description,
-          repoUrl: project.repoUrl,
-          defaultEnvironmentId: project.defaultEnvironmentId,
-          worktreeBasePath: project.worktreeBasePath,
-          useWorktrees: project.useWorktrees,
-          status: projectStatusToString(project.status) || "unspecified",
-          createdAt: project.createdAt,
-          updatedAt: project.updatedAt,
+          id: workspace.id,
+          name: workspace.name,
+          description: workspace.description,
+          repoUrl: workspace.repoUrl,
+          defaultEnvironmentId: workspace.defaultEnvironmentId,
+          worktreeBasePath: workspace.worktreeBasePath,
+          useWorktrees: workspace.useWorktrees,
+          status: workspaceStatusToString(workspace.status) || "unspecified",
+          createdAt: workspace.createdAt,
+          updatedAt: workspace.updatedAt,
         });
       } catch (error) {
         return grpcErrorToToolResult(error);
@@ -152,28 +152,28 @@ export const projectTools: ToolDefinition[] = [
     },
   },
   {
-    name: "project_update",
-    group: "project",
+    name: "workspace_update",
+    group: "workspace",
     description:
-      "Update an existing Grackle project's name, description, repository URL, default environment, or worktree settings.",
+      "Update an existing Grackle workspace's name, description, repository URL, default environment, or worktree settings.",
     inputSchema: z.object({
-      projectId: z.string().describe("Unique identifier of the project to update"),
+      workspaceId: z.string().describe("Unique identifier of the workspace to update"),
       name: z
         .string()
         .optional()
-        .describe("New display name for the project"),
+        .describe("New display name for the workspace"),
       description: z
         .string()
         .optional()
-        .describe("New description for the project"),
+        .describe("New description for the workspace"),
       repoUrl: z
         .string()
         .optional()
-        .describe("New repository URL for the project"),
+        .describe("New repository URL for the workspace"),
       defaultEnvironmentId: z
         .string()
         .optional()
-        .describe("New default environment ID for the project"),
+        .describe("New default environment ID for the workspace"),
       worktreeBasePath: z
         .string()
         .optional()
@@ -185,9 +185,9 @@ export const projectTools: ToolDefinition[] = [
       defaultPersonaId: z
         .string()
         .optional()
-        .describe("Default persona for tasks in this project"),
+        .describe("Default persona for tasks in this workspace"),
     }),
-    rpcMethod: "updateProject",
+    rpcMethod: "updateWorkspace",
     mutating: true,
     annotations: {
       readOnlyHint: false,
@@ -197,8 +197,8 @@ export const projectTools: ToolDefinition[] = [
     },
     async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) {
       try {
-        const project = await client.updateProject({
-          id: args.projectId as string,
+        const workspace = await client.updateWorkspace({
+          id: args.workspaceId as string,
           name: args.name as string | undefined,
           description: args.description as string | undefined,
           repoUrl: args.repoUrl as string | undefined,
@@ -210,17 +210,17 @@ export const projectTools: ToolDefinition[] = [
           defaultPersonaId: args.defaultPersonaId as string | undefined,
         });
         return jsonResult({
-          id: project.id,
-          name: project.name,
-          description: project.description,
-          repoUrl: project.repoUrl,
-          defaultEnvironmentId: project.defaultEnvironmentId,
-          defaultPersonaId: project.defaultPersonaId,
-          worktreeBasePath: project.worktreeBasePath,
-          useWorktrees: project.useWorktrees,
-          status: projectStatusToString(project.status) || "unspecified",
-          createdAt: project.createdAt,
-          updatedAt: project.updatedAt,
+          id: workspace.id,
+          name: workspace.name,
+          description: workspace.description,
+          repoUrl: workspace.repoUrl,
+          defaultEnvironmentId: workspace.defaultEnvironmentId,
+          defaultPersonaId: workspace.defaultPersonaId,
+          worktreeBasePath: workspace.worktreeBasePath,
+          useWorktrees: workspace.useWorktrees,
+          status: workspaceStatusToString(workspace.status) || "unspecified",
+          createdAt: workspace.createdAt,
+          updatedAt: workspace.updatedAt,
         });
       } catch (error) {
         return grpcErrorToToolResult(error);
@@ -228,14 +228,14 @@ export const projectTools: ToolDefinition[] = [
     },
   },
   {
-    name: "project_archive",
-    group: "project",
+    name: "workspace_archive",
+    group: "workspace",
     description:
-      "Archive a Grackle project, marking it as inactive. This is a destructive operation.",
+      "Archive a Grackle workspace, marking it as inactive. This is a destructive operation.",
     inputSchema: z.object({
-      projectId: z.string().describe("Unique identifier of the project to archive"),
+      workspaceId: z.string().describe("Unique identifier of the workspace to archive"),
     }),
-    rpcMethod: "archiveProject",
+    rpcMethod: "archiveWorkspace",
     mutating: true,
     annotations: {
       readOnlyHint: false,
@@ -245,8 +245,8 @@ export const projectTools: ToolDefinition[] = [
     },
     async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) {
       try {
-        await client.archiveProject({
-          id: args.projectId as string,
+        await client.archiveWorkspace({
+          id: args.workspaceId as string,
         });
         return jsonResult({ success: true });
       } catch (error) {

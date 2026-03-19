@@ -1,6 +1,6 @@
 import { test, expect } from "./fixtures.js";
 import {
-  createProject,
+  createWorkspace,
   createTask,
   navigateToTask,
   patchWsForStubRuntime,
@@ -11,8 +11,8 @@ test.describe("Tab Auto-Switching", () => {
   test("stream tab becomes active when task starts", async ({ appPage }) => {
     const page = appPage;
 
-    // Create project and task
-    await createProject(page, "tab-stream");
+    // Create workspace and task
+    await createWorkspace(page, "tab-stream");
     await createTask(page, "tab-stream", "tab-start-task", "test-local");
 
     // Navigate to task, switch to Findings tab first
@@ -37,8 +37,8 @@ test.describe("Tab Auto-Switching", () => {
   test("stream tab becomes active on review state", async ({ appPage }) => {
     const page = appPage;
 
-    // Create project and task
-    await createProject(page, "tab-review");
+    // Create workspace and task
+    await createWorkspace(page, "tab-review");
     await createTask(page, "tab-review", "tab-review-task", "test-local");
     await navigateToTask(page, "tab-review-task");
 
@@ -54,8 +54,8 @@ test.describe("Tab Auto-Switching", () => {
   test("findings tab becomes active on done state", async ({ appPage }) => {
     const page = appPage;
 
-    // Create project and task
-    await createProject(page, "tab-findings");
+    // Create workspace and task
+    await createWorkspace(page, "tab-findings");
     await createTask(page, "tab-findings", "tab-done-task", "test-local");
     await navigateToTask(page, "tab-done-task");
 
@@ -77,8 +77,8 @@ test.describe("Tab Auto-Switching", () => {
   test("clicking task in sidebar resets to overview tab for pending tasks", async ({ appPage }) => {
     const page = appPage;
 
-    // Create project with two tasks
-    await createProject(page, "tab-sidebar");
+    // Create workspace with two tasks
+    await createWorkspace(page, "tab-sidebar");
     await createTask(page, "tab-sidebar", "sidebar-task-a", "test-local");
     await createTask(page, "tab-sidebar", "sidebar-task-b", "test-local");
 

@@ -17,16 +17,16 @@ const CATEGORY_COLORS: Record<string, { text: string; bg: string }> = {
 
 /** Props for the FindingsPanel component. */
 interface Props {
-  projectId: string;
+  workspaceId: string;
 }
 
-/** Displays project findings as styled cards with staggered entrance animation. */
-export function FindingsPanel({ projectId }: Props): JSX.Element {
+/** Displays workspace findings as styled cards with staggered entrance animation. */
+export function FindingsPanel({ workspaceId }: Props): JSX.Element {
   const { findings } = useGrackle();
 
-  const projectFindings = findings.filter((f) => f.projectId === projectId);
+  const workspaceFindings = findings.filter((f) => f.workspaceId === workspaceId);
 
-  if (projectFindings.length === 0) {
+  if (workspaceFindings.length === 0) {
     return (
       <div className={styles.emptyState}>
         No findings yet. Agents will post discoveries here.
@@ -36,7 +36,7 @@ export function FindingsPanel({ projectId }: Props): JSX.Element {
 
   return (
     <div className={styles.container}>
-      {projectFindings.map((f, index) => {
+      {workspaceFindings.map((f, index) => {
         // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- category may not be in the map
         const categoryColor = CATEGORY_COLORS[f.category] || CATEGORY_COLORS.general;
         return (

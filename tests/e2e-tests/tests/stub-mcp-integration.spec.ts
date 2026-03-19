@@ -1,6 +1,6 @@
 import { test, expect } from "./fixtures.js";
 import {
-  createProject,
+  createWorkspace,
   createTask,
   navigateToTask,
   patchWsForStubMcpRuntime,
@@ -11,8 +11,8 @@ test.describe("Stub MCP Integration", () => {
   test("real MCP tool_use and tool_result rendered in UI", async ({ appPage }) => {
     const page = appPage;
 
-    // Create project + task (task gives the spawn a real projectId for the scoped MCP token)
-    await createProject(page, "mcp-int-proj");
+    // Create workspace + task (task gives the spawn a real workspaceId for the scoped MCP token)
+    await createWorkspace(page, "mcp-int-proj");
     await createTask(page, "mcp-int-proj", "mcp test task", "test-local");
     await navigateToTask(page, "mcp test task");
 
@@ -53,7 +53,7 @@ test.describe("Stub MCP Integration", () => {
   test("stub-mcp renders paired tool_use + tool_result correctly", async ({ appPage }) => {
     const page = appPage;
 
-    await createProject(page, "mcp-pair-proj");
+    await createWorkspace(page, "mcp-pair-proj");
     await createTask(page, "mcp-pair-proj", "mcp pair task", "test-local");
     await navigateToTask(page, "mcp pair task");
     await patchWsForStubMcpRuntime(page);

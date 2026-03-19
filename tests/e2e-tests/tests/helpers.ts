@@ -73,36 +73,39 @@ export async function sendWsMessage(
   }, message);
 }
 
-/** Retrieve the project ID for a project with the given name. */
-export async function getProjectId(
+/** Retrieve the workspace ID for a workspace with the given name. */
+export async function getWorkspaceId(
   page: Page,
-  projectName: string,
+  workspaceName: string,
 ): Promise<string> {
   const response = await sendWsAndWaitFor(
     page,
-    { type: "list_projects" },
-    "projects",
+    { type: "list_workspaces" },
+    "workspaces",
   );
-  const projects = (response.payload?.projects || []) as Array<{
+  const workspaces = (response.payload?.workspaces || []) as Array<{
     id: string;
     name: string;
   }>;
-  const project = projects.find((p) => p.name === projectName);
-  if (!project) {
-    throw new Error(`Project "${projectName}" not found`);
+  const workspace = workspaces.find((w) => w.name === workspaceName);
+  if (!workspace) {
+    throw new Error(`Workspace "${workspaceName}" not found`);
   }
-  return project.id;
+  return workspace.id;
 }
 
-/** Retrieve the task ID for a task with the given title under a project. */
+/** @deprecated Use {@link getWorkspaceId} instead. */
+export const getProjectId = getWorkspaceId;
+
+/** Retrieve the task ID for a task with the given title under a workspace. */
 export async function getTaskId(
   page: Page,
-  projectId: string,
+  workspaceId: string,
   taskTitle: string,
 ): Promise<string> {
   const response = await sendWsAndWaitFor(
     page,
-    { type: "list_tasks", payload: { projectId } },
+    { type: "list_tasks", payload: { workspaceId } },
     "tasks",
   );
   const tasks = (response.payload?.tasks || []) as Array<{
@@ -111,22 +114,25 @@ export async function getTaskId(
   }>;
   const task = tasks.find((t) => t.title === taskTitle);
   if (!task) {
-    throw new Error(`Task "${taskTitle}" not found in project ${projectId}`);
+    throw new Error(`Task "${taskTitle}" not found in workspace ${workspaceId}`);
   }
   return task.id;
 }
 
-/** Create a project via the UI and wait for it to appear in the sidebar. */
-export async function createProject(page: Page, name: string): Promise<void> {
+/** Create a workspace via the UI and wait for it to appear in the sidebar. */
+export async function createWorkspace(page: Page, name: string): Promise<void> {
   await page.locator("button", { hasText: "+" }).first().click();
-  const nameInput = page.locator('input[placeholder="Project name..."]');
+  const nameInput = page.locator('input[placeholder="Workspace name..."]');
   await nameInput.fill(name);
   await page.locator("button", { hasText: "OK" }).click();
   await page.getByText(name).waitFor({ timeout: 5_000 });
 }
 
+/** @deprecated Use {@link createWorkspace} instead. */
+export const createProject = createWorkspace;
+
 /**
- * Create a task under a project and wait for it to appear in the sidebar.
+ * Create a task under a workspace and wait for it to appear in the sidebar.
  *
  * When `envName` is provided the task is created via WebSocket so the
  * environment can be carried through (task creation UI no longer has an env
@@ -135,7 +141,7 @@ export async function createProject(page: Page, name: string): Promise<void> {
  */
 export async function createTask(
   page: Page,
-  projectName: string,
+  workspaceName: string,
   title: string,
   envName?: string,
   options?: { canDecompose?: boolean },
@@ -143,10 +149,10 @@ export async function createTask(
   if (envName) {
     // Environment must be set at creation via WS (UI no longer has env field).
     // Navigate to the task edit form via the "New task" sidebar button (this uses
-    // stopPropagation so it never toggles the project's expand/collapse state —
-    // unlike clicking the project name which collapses if already selected).
+    // stopPropagation so it never toggles the workspace's expand/collapse state —
+    // unlike clicking the workspace name which collapses if already selected).
     await page
-      .getByText(projectName)
+      .getByText(workspaceName)
       .locator("..")
       .locator('button[title="New task"]')
       .first()
@@ -154,11 +160,11 @@ export async function createTask(
     await page.locator('[data-testid="task-edit-title"]').waitFor({ timeout: 5_000 });
 
     // Create the task via WS while the form is visible.
-    const projectId = await getProjectId(page, projectName);
-    await createTaskViaWs(page, projectId, title, { environmentId: envName, canDecompose: options?.canDecompose });
+    const wsId = await getWorkspaceId(page, workspaceName);
+    await createTaskViaWs(page, wsId, title, { environmentId: envName, canDecompose: options?.canDecompose });
 
-    // Cancel the form — this navigates to project view which auto-expands
-    // the project in the sidebar via useEffect in ProjectList.
+    // Cancel the form — this navigates to workspace view which auto-expands
+    // the workspace in the sidebar via useEffect in WorkspaceList.
     await page.locator("button", { hasText: "Cancel" }).click();
 
     await page
@@ -171,7 +177,7 @@ export async function createTask(
   // No env specified — exercise the new full-panel TaskEditPanel UI.
   // Click "New task" button (uses stopPropagation, doesn't toggle expansion)
   await page
-    .getByText(projectName)
+    .getByText(workspaceName)
     .locator("..")
     .locator('button[title="New task"]')
     .first()
@@ -181,7 +187,7 @@ export async function createTask(
   await page.locator('[data-testid="task-edit-title"]').fill(title);
   await page.locator('[data-testid="task-edit-save"]').click();
 
-  // After "Create", viewMode goes to project → auto-expand. Wait for task in sidebar.
+  // After "Create", viewMode goes to workspace → auto-expand. Wait for task in sidebar.
   // Use .first() because AnimatePresence may briefly keep an exiting copy alongside the
   // entering copy, causing two <span class="taskTitle"> elements with the same text.
   await page
@@ -338,7 +344,7 @@ export async function installWsTracker(page: Page): Promise<void> {
 /** Create a task via WebSocket with custom options (e.g., dependsOn, parentTaskId). Returns the created task data. */
 export async function createTaskViaWs(
   page: Page,
-  projectId: string,
+  workspaceId: string,
   title: string,
   options?: {
     environmentId?: string;
@@ -349,7 +355,7 @@ export async function createTaskViaWs(
   },
 ): Promise<WsPayload> {
   const payload: WsPayload = {
-    projectId,
+    workspaceId,
     title,
     description: options?.description || "",
     environmentId: options?.environmentId || "",
@@ -367,12 +373,12 @@ export async function createTaskViaWs(
     },
     "task.created",
   );
-  // The event bus sends { taskId, projectId } — fetch the full task row
+  // The event bus sends { taskId, workspaceId } — fetch the full task row
   const taskId = response.payload?.taskId as string;
   if (taskId) {
     const listResp = await sendWsAndWaitFor(
       page,
-      { type: "list_tasks", payload: { projectId } },
+      { type: "list_tasks", payload: { workspaceId } },
       "tasks",
     );
     const tasks = (listResp.payload?.tasks || []) as WsPayload[];

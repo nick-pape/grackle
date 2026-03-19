@@ -1,8 +1,8 @@
 import { test, expect } from "./fixtures.js";
 import {
-  createProject,
+  createWorkspace,
   createTaskViaWs,
-  getProjectId,
+  getWorkspaceId,
   sendWsAndWaitFor,
   sendWsMessage,
 } from "./helpers.js";
@@ -91,19 +91,19 @@ async function waitForSessionText(
 
 test.describe("SIGCHLD — child completion notification", () => {
   test("parent receives SIGCHLD when child task goes idle", async ({ appPage: page }) => {
-    // 1. Create project
-    await createProject(page, "SIGCHLD Test");
-    const projectId = await getProjectId(page, "SIGCHLD Test");
+    // 1. Create workspace
+    await createWorkspace(page, "SIGCHLD Test");
+    const workspaceId = await getWorkspaceId(page, "SIGCHLD Test");
 
     // 2. Create parent task (canDecompose = true)
-    const parentTask = await createTaskViaWs(page, projectId, "Parent Orchestrator", {
+    const parentTask = await createTaskViaWs(page, workspaceId, "Parent Orchestrator", {
       canDecompose: true,
       environmentId: "test-local",
     });
     const parentTaskId = parentTask.id as string;
 
     // 3. Create child task under parent
-    const childTask = await createTaskViaWs(page, projectId, "Child Worker", {
+    const childTask = await createTaskViaWs(page, workspaceId, "Child Worker", {
       parentTaskId,
       environmentId: "test-local",
     });
@@ -137,19 +137,19 @@ test.describe("SIGCHLD — child completion notification", () => {
   });
 
   test("SIGCHLD delivered after parent session reanimated", async ({ appPage: page }) => {
-    // 1. Create project
-    await createProject(page, "SIGCHLD Reanimate");
-    const projectId = await getProjectId(page, "SIGCHLD Reanimate");
+    // 1. Create workspace
+    await createWorkspace(page, "SIGCHLD Reanimate");
+    const workspaceId = await getWorkspaceId(page, "SIGCHLD Reanimate");
 
     // 2. Create parent task (canDecompose = true)
-    const parentTask = await createTaskViaWs(page, projectId, "Parent Reanimate", {
+    const parentTask = await createTaskViaWs(page, workspaceId, "Parent Reanimate", {
       canDecompose: true,
       environmentId: "test-local",
     });
     const parentTaskId = parentTask.id as string;
 
     // 3. Create child task under parent
-    const childTask = await createTaskViaWs(page, projectId, "Child For Reanimate", {
+    const childTask = await createTaskViaWs(page, workspaceId, "Child For Reanimate", {
       parentTaskId,
       environmentId: "test-local",
     });

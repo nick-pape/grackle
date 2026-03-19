@@ -1,5 +1,5 @@
 import { test, expect } from "./fixtures.js";
-import { sendWsAndWaitFor, createProject } from "./helpers.js";
+import { sendWsAndWaitFor, createWorkspace } from "./helpers.js";
 
 /**
  * Helper: create a persona via WebSocket and wait for the server acknowledgment.

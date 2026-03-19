@@ -1,0 +1,314 @@
+@use '../../styles/mixins' as *;
+
+// =============================================================================
+// Workspace List — expandable workspace tree with tasks
+// =============================================================================
+
+.container {
+  padding: var(--space-sm) 0;
+}
+
+.header {
+  @include section-label;
+  padding: var(--space-xs) var(--space-md);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.searchInput {
+  @include input-field;
+  display: block;
+  margin: 0 var(--space-md) var(--space-xs);
+  font-size: 11px;
+  padding: 3px var(--space-sm);
+  width: calc(100% - 2 * var(--space-md));
+}
+
+.searchHighlight {
+  background: none;
+  color: var(--accent-green);
+  font-weight: 600;
+}
+
+.addButton {
+  @include btn-ghost;
+  font-size: var(--font-size-sm);
+  line-height: 1;
+  padding: 1px 5px;
+}
+
+.createForm {
+  padding: var(--space-xs) var(--space-md);
+  display: flex;
+  gap: var(--space-xs);
+}
+
+.createInput {
+  @include input-field;
+  flex: 1;
+  font-size: 11px;
+  padding: 3px var(--space-sm);
+}
+
+.createButton {
+  @include btn-primary;
+  padding: 3px var(--space-sm);
+  font-size: 11px;
+}
+
+.emptyState {
+  padding: var(--space-md);
+  color: var(--text-tertiary);
+  font-size: var(--font-size-sm);
+}
+
+.creatingHint {
+  padding: var(--space-xs) var(--space-md);
+  color: var(--accent-blue);
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.workspaceRow {
+  @include hover-accent;
+  padding: var(--space-sm) var(--space-md);
+  font-size: var(--font-size-md);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  margin: 0 var(--space-xs);
+
+  &.selected {
+    background: var(--bg-overlay);
+    border: 1px solid var(--border-primary);
+  }
+}
+
+.expandArrow {
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+  width: 12px;
+  display: inline-block;
+  transition: transform var(--transition-fast);
+
+  &.expanded {
+    transform: rotate(90deg);
+  }
+}
+
+.workspaceName {
+  flex: 1;
+}
+
+.taskCount {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+.newTaskButton {
+  @include btn-ghost;
+  font-size: var(--font-size-xs);
+  line-height: 1;
+  padding: 1px var(--space-xs);
+}
+
+.taskRow {
+  @include hover-accent;
+  padding: 3px var(--space-md) 3px var(--task-indent, 34px);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  border-radius: var(--radius-sm);
+  margin: 0 var(--space-xs);
+  animation: fadeIn 200ms ease forwards;
+
+  &.selected {
+    background: var(--bg-overlay);
+    color: var(--text-primary);
+  }
+
+  @include mobile {
+    padding-left: calc(var(--task-indent, 34px) * 0.6);
+  }
+}
+
+.taskStatusIcon {
+  font-size: 11px;
+}
+
+.taskTitle {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// Frosted inset chip for dependency count — third glass tier
+.dependencyBadge {
+  @include surface-inset;
+  font-size: 10px;
+  color: var(--text-tertiary);
+  border-radius: var(--radius-full);
+  padding: 1px var(--space-xs);
+
+  &.blockedBadge {
+    color: var(--accent-yellow);
+    border-color: var(--accent-yellow);
+  }
+}
+
+.leafSpacer {
+  width: 12px;
+  display: inline-block;
+}
+
+.childCountBadge {
+  @include surface-inset;
+  font-size: 10px;
+  color: var(--text-tertiary);
+  border-radius: var(--radius-full);
+  padding: 1px var(--space-xs);
+}
+
+.addChildButton {
+  @include btn-ghost;
+  font-size: var(--font-size-xs);
+  line-height: 1;
+  padding: 1px var(--space-xs);
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+
+  .taskRow:hover & {
+    opacity: 1;
+  }
+
+  .taskRow:focus-within & {
+    opacity: 1;
+  }
+
+  &:focus-visible {
+    opacity: 1;
+  }
+
+  @include mobile {
+    opacity: 1;
+  }
+}
+
+.emptyTasks {
+  padding: 3px var(--space-md) 3px 34px;
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+// ---------------------------------------------------------------------------
+// Empty state CTAs
+// ---------------------------------------------------------------------------
+
+.emptyCta {
+  margin: var(--space-md);
+  padding: var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
+  text-align: center;
+  border: 1px dashed var(--border-subtle);
+  border-radius: var(--radius-md);
+  animation: fadeIn 200ms ease forwards;
+}
+
+.ctaDescription {
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+  line-height: var(--line-height);
+}
+
+.ctaButton {
+  @include btn-primary;
+  padding: var(--space-sm) var(--space-lg);
+  font-size: var(--font-size-sm);
+}
+
+.emptyTaskCta {
+  padding: 3px var(--space-md) 3px 50px;
+  font-size: 11px;
+}
+
+// ---------------------------------------------------------------------------
+// Group-by-status toggle
+// ---------------------------------------------------------------------------
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.groupToggle {
+  @include btn-ghost;
+  font-size: var(--font-size-md);
+  line-height: 1;
+  padding: 1px 5px;
+}
+
+.groupToggleActive {
+  color: var(--accent-green);
+}
+
+// ---------------------------------------------------------------------------
+// Status group accordion
+// ---------------------------------------------------------------------------
+
+.statusGroupHeader {
+  @include hover-accent;
+  padding: var(--space-sm) var(--space-md) var(--space-sm) 26px;
+  font-size: var(--font-size-sm);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  margin: 0 var(--space-xs);
+}
+
+.statusGroupIcon {
+  font-size: 11px;
+}
+
+.statusGroupLabel {
+  flex: 1;
+  font-weight: 500;
+}
+
+.statusGroupCount {
+  @include surface-inset;
+  font-size: 10px;
+  color: var(--text-tertiary);
+  border-radius: var(--radius-full);
+  padding: 1px var(--space-xs);
+}
+
+.createTaskLink {
+  background: none;
+  border: none;
+  color: var(--accent-green);
+  font-family: var(--font-ui);
+  font-size: 11px;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+
+  &:hover {
+    color: var(--text-primary);
+  }
+}

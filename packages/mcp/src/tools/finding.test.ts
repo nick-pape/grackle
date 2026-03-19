@@ -19,7 +19,7 @@ describe("finding_list", () => {
         findings: [
           {
             id: "f-1",
-            projectId: "p-1",
+            workspaceId: "p-1",
             taskId: "t-1",
             sessionId: "s-1",
             category: "bug",
@@ -33,12 +33,12 @@ describe("finding_list", () => {
     } as unknown as GrackleClient;
 
     const result = await tool.handler(
-      { projectId: "p-1", category: "bug", tag: "t1", limit: 10 },
+      { workspaceId: "p-1", category: "bug", tag: "t1", limit: 10 },
       mockClient,
     );
 
     expect(mockClient.queryFindings).toHaveBeenCalledWith({
-      projectId: "p-1",
+      workspaceId: "p-1",
       categories: ["bug"],
       tags: ["t1"],
       limit: 10,
@@ -48,7 +48,7 @@ describe("finding_list", () => {
     expect(parsed).toHaveLength(1);
     expect(parsed[0]).toEqual({
       id: "f-1",
-      projectId: "p-1",
+      workspaceId: "p-1",
       taskId: "t-1",
       sessionId: "s-1",
       category: "bug",
@@ -66,10 +66,10 @@ describe("finding_list", () => {
       queryFindings: vi.fn().mockResolvedValue({ findings: [] }),
     } as unknown as GrackleClient;
 
-    const result = await tool.handler({ projectId: "p-1" }, mockClient);
+    const result = await tool.handler({ workspaceId: "p-1" }, mockClient);
 
     expect(mockClient.queryFindings).toHaveBeenCalledWith({
-      projectId: "p-1",
+      workspaceId: "p-1",
       categories: [],
       tags: [],
       limit: 0,
@@ -83,15 +83,15 @@ describe("finding_list", () => {
   test("gRPC ConnectError returns isError", async () => {
     const mockClient = {
       queryFindings: vi.fn().mockRejectedValue(
-        new ConnectError("project not found", Code.NotFound),
+        new ConnectError("workspace not found", Code.NotFound),
       ),
     } as unknown as GrackleClient;
 
-    const result = await tool.handler({ projectId: "p-missing" }, mockClient);
+    const result = await tool.handler({ workspaceId: "p-missing" }, mockClient);
 
     expect(result.isError).toBe(true);
     const parsed = JSON.parse(result.content[0].text);
-    expect(parsed.error).toContain("project not found");
+    expect(parsed.error).toContain("workspace not found");
     expect(parsed.code).toBe("NOT_FOUND");
   });
 });
@@ -104,7 +104,7 @@ describe("finding_post", () => {
     const mockClient = {
       postFinding: vi.fn().mockResolvedValue({
         id: "f-2",
-        projectId: "p-1",
+        workspaceId: "p-1",
         category: "insight",
         title: "Performance improvement",
         content: "Caching reduces latency by 40%",
@@ -115,7 +115,7 @@ describe("finding_post", () => {
 
     const result = await tool.handler(
       {
-        projectId: "p-1",
+        workspaceId: "p-1",
         title: "Performance improvement",
         category: "insight",
         content: "Caching reduces latency by 40%",
@@ -125,7 +125,7 @@ describe("finding_post", () => {
     );
 
     expect(mockClient.postFinding).toHaveBeenCalledWith({
-      projectId: "p-1",
+      workspaceId: "p-1",
       title: "Performance improvement",
       category: "insight",
       content: "Caching reduces latency by 40%",
@@ -137,7 +137,7 @@ describe("finding_post", () => {
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed).toEqual({
       id: "f-2",
-      projectId: "p-1",
+      workspaceId: "p-1",
       category: "insight",
       title: "Performance improvement",
       content: "Caching reduces latency by 40%",
@@ -152,7 +152,7 @@ describe("finding_post", () => {
     const mockClient = {
       postFinding: vi.fn().mockResolvedValue({
         id: "f-3",
-        projectId: "p-1",
+        workspaceId: "p-1",
         category: "",
         title: "Minimal finding",
         content: "",
@@ -162,12 +162,12 @@ describe("finding_post", () => {
     } as unknown as GrackleClient;
 
     const result = await tool.handler(
-      { projectId: "p-1", title: "Minimal finding" },
+      { workspaceId: "p-1", title: "Minimal finding" },
       mockClient,
     );
 
     expect(mockClient.postFinding).toHaveBeenCalledWith({
-      projectId: "p-1",
+      workspaceId: "p-1",
       title: "Minimal finding",
       category: "",
       content: "",
@@ -185,18 +185,18 @@ describe("finding_post", () => {
   test("gRPC ConnectError returns isError", async () => {
     const mockClient = {
       postFinding: vi.fn().mockRejectedValue(
-        new ConnectError("project not found", Code.NotFound),
+        new ConnectError("workspace not found", Code.NotFound),
       ),
     } as unknown as GrackleClient;
 
     const result = await tool.handler(
-      { projectId: "p-missing", title: "Oops" },
+      { workspaceId: "p-missing", title: "Oops" },
       mockClient,
     );
 
     expect(result.isError).toBe(true);
     const parsed = JSON.parse(result.content[0].text);
-    expect(parsed.error).toContain("project not found");
+    expect(parsed.error).toContain("workspace not found");
     expect(parsed.code).toBe("NOT_FOUND");
   });
 
@@ -205,7 +205,7 @@ describe("finding_post", () => {
     const mockClient = {
       postFinding: vi.fn().mockResolvedValue({
         id: "f-4",
-        projectId: "p-1",
+        workspaceId: "p-1",
         category: "bug",
         title: "Scoped finding",
         content: "Details",
@@ -215,9 +215,9 @@ describe("finding_post", () => {
     } as unknown as GrackleClient;
 
     await tool.handler(
-      { projectId: "p-1", title: "Scoped finding" },
+      { workspaceId: "p-1", title: "Scoped finding" },
       mockClient,
-      { type: "scoped", taskId: "task-42", projectId: "p-1", personaId: "per-1", taskSessionId: "sess-99" },
+      { type: "scoped", taskId: "task-42", workspaceId: "p-1", personaId: "per-1", taskSessionId: "sess-99" },
     );
 
     expect(mockClient.postFinding).toHaveBeenCalledWith(
@@ -233,7 +233,7 @@ describe("finding_post", () => {
     const mockClient = {
       postFinding: vi.fn().mockResolvedValue({
         id: "f-5",
-        projectId: "p-1",
+        workspaceId: "p-1",
         category: "",
         title: "API key finding",
         content: "",
@@ -243,7 +243,7 @@ describe("finding_post", () => {
     } as unknown as GrackleClient;
 
     await tool.handler(
-      { projectId: "p-1", title: "API key finding" },
+      { workspaceId: "p-1", title: "API key finding" },
       mockClient,
       { type: "api-key" },
     );

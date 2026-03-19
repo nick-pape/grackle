@@ -1,6 +1,6 @@
 import { test, expect } from "./fixtures.js";
 import {
-  createProject,
+  createWorkspace,
   createTask,
   navigateToTask,
   patchWsForStubRuntime,
@@ -13,7 +13,7 @@ test.describe("Stream smart scroll", () => {
   test("scrolled to bottom on initial load with events", async ({ appPage }) => {
     const page = appPage;
 
-    await createProject(page, "scroll-init");
+    await createWorkspace(page, "scroll-init");
     await page.getByText("scroll-init").click();
     await createTask(page, "scroll-init", "init-task", "test-local");
     await navigateToTask(page, "init-task");
@@ -37,7 +37,7 @@ test.describe("Stream smart scroll", () => {
   test("direction toggle reverses event order", async ({ appPage }) => {
     const page = appPage;
 
-    await createProject(page, "scroll-dir");
+    await createWorkspace(page, "scroll-dir");
     await page.getByText("scroll-dir").click();
     await createTask(page, "scroll-dir", "dir-task", "test-local");
     await navigateToTask(page, "dir-task");
@@ -69,7 +69,7 @@ test.describe("Stream smart scroll", () => {
       { timeout: 10_000 },
     );
 
-    await createProject(page, "scroll-fab");
+    await createWorkspace(page, "scroll-fab");
     await page.getByText("scroll-fab").click();
     await createTask(page, "scroll-fab", "fab-task", "test-local");
     await navigateToTask(page, "fab-task");

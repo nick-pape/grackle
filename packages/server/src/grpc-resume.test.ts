@@ -374,7 +374,7 @@ describe("gRPC resumeTask", () => {
   });
 
   it("throws FailedPrecondition when task has no sessions", async () => {
-    vi.mocked(taskStore.getTask).mockReturnValue({ id: "task-1", projectId: "proj-1" } as never);
+    vi.mocked(taskStore.getTask).mockReturnValue({ id: "task-1", workspaceId: "proj-1" } as never);
     vi.mocked(sessionStore.getLatestSessionForTask).mockReturnValue(undefined);
 
     const err = await handlers.resumeTask({ id: "task-1" }).catch((e: unknown) => e) as ConnectError;
@@ -383,7 +383,7 @@ describe("gRPC resumeTask", () => {
   });
 
   it("throws FailedPrecondition when latest session has no runtimeSessionId", async () => {
-    vi.mocked(taskStore.getTask).mockReturnValue({ id: "task-1", projectId: "proj-1" } as never);
+    vi.mocked(taskStore.getTask).mockReturnValue({ id: "task-1", workspaceId: "proj-1" } as never);
     vi.mocked(sessionStore.getLatestSessionForTask).mockReturnValue(
       makeSession({ status: "completed", runtimeSessionId: null }),
     );
@@ -395,7 +395,7 @@ describe("gRPC resumeTask", () => {
   });
 
   it("succeeds when latest session has a runtimeSessionId (happy path)", async () => {
-    const task = { id: "task-1", projectId: "proj-1" };
+    const task = { id: "task-1", workspaceId: "proj-1" };
     const session = makeSession({ status: "completed", runtimeSessionId: "rt-abc" });
     const runningSession = makeSession({ status: "running" });
     vi.mocked(taskStore.getTask).mockReturnValue(task as never);

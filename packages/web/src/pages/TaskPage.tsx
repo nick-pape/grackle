@@ -5,9 +5,9 @@ import { EventStream } from "../components/display/EventStream.js";
 import { FindingsPanel } from "../components/panels/FindingsPanel.js";
 import { Breadcrumbs, ConfirmDialog } from "../components/display/index.js";
 import { buildTaskBreadcrumbs } from "../utils/breadcrumbs.js";
-import { projectUrl, taskEditUrl, taskUrl, useAppNavigate } from "../utils/navigation.js";
+import { workspaceUrl, taskEditUrl, taskUrl, useAppNavigate } from "../utils/navigation.js";
 import { getStatusBadgeClassKey, getStatusStyle } from "../utils/taskStatus.js";
-import type { Session, TaskData, Environment, Project } from "../hooks/useGrackleSocket.js";
+import type { Session, TaskData, Environment, Workspace } from "../hooks/useGrackleSocket.js";
 import { AnimatePresence, motion } from "motion/react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -65,17 +65,17 @@ interface TaskOverviewProps {
   task: TaskData;
   tasksById: Map<string, TaskData>;
   environments: Environment[];
-  projects: Project[];
+  workspaces: Workspace[];
   taskSessions: Session[];
 }
 
-function TaskOverview({ task, tasksById, environments, projects, taskSessions }: TaskOverviewProps): JSX.Element {
+function TaskOverview({ task, tasksById, environments, workspaces, taskSessions }: TaskOverviewProps): JSX.Element {
   const latestSession = taskSessions.length > 0 ? taskSessions[taskSessions.length - 1] : undefined;
   const envId = latestSession?.environmentId ?? "";
   const env = envId ? environments.find((e) => e.id === envId) : undefined;
-  const project = projects.find((p) => p.id === task.projectId);
-  const branchUrl = task.branch && project?.repoUrl
-    ? `${project.repoUrl.replace(/\/$/, "")}/tree/${encodeURIComponent(task.branch)}`
+  const workspace = workspaces.find((p) => p.id === task.workspaceId);
+  const branchUrl = task.branch && workspace?.repoUrl
+    ? `${workspace.repoUrl.replace(/\/$/, "")}/tree/${encodeURIComponent(task.branch)}`
     : undefined;
 
   return (
@@ -299,7 +299,7 @@ export function TaskPage(): JSX.Element {
     events, eventsDropped, tasks, environments,
     loadSessionEvents, loadFindings,
     kill, startTask, stopTask, resumeTask, deleteTask,
-    projects, taskSessions: taskSessionsMap, loadTaskSessions,
+    workspaces, taskSessions: taskSessionsMap, loadTaskSessions,
   } = useGrackle();
 
   const loadedRef = useRef<string | undefined>(undefined);
@@ -329,7 +329,7 @@ export function TaskPage(): JSX.Element {
   }
 
   const task = tasks.find((t) => t.id === taskId);
-  const projectId = task?.projectId || undefined;
+  const workspaceId = task?.workspaceId || undefined;
 
   // Resolve effective sessionId from the task's eagerly-patched latestSessionId
   // (set by the task_started handler) or from the user's attempt selection.
@@ -349,7 +349,7 @@ export function TaskPage(): JSX.Element {
     if (!task) return;
     deleteTask(task.id);
     setShowDeleteConfirm(false);
-    navigate(projectUrl(task.projectId), { replace: true });
+    navigate(workspaceUrl(task.workspaceId), { replace: true });
   };
 
   // Reset state when switching tasks
@@ -406,8 +406,8 @@ export function TaskPage(): JSX.Element {
     : false;
 
   const breadcrumbs = useMemo(
-    () => buildTaskBreadcrumbs(taskId!, projects, tasksById),
-    [taskId, projects, tasksById],
+    () => buildTaskBreadcrumbs(taskId!, workspaces, tasksById),
+    [taskId, workspaces, tasksById],
   );
 
   // Load historical events when the session changes. The session_events
@@ -422,10 +422,10 @@ export function TaskPage(): JSX.Element {
 
   // Load findings when switching to findings tab
   useEffect(() => {
-    if (activeTaskTab === "findings" && projectId) {
-      loadFindings(projectId);
+    if (activeTaskTab === "findings" && workspaceId) {
+      loadFindings(workspaceId);
     }
-  }, [activeTaskTab, projectId, loadFindings]);
+  }, [activeTaskTab, workspaceId, loadFindings]);
 
   const handleTabChange = (tab: TaskTab): void => {
     setActiveTaskTab(tab);
@@ -476,7 +476,7 @@ export function TaskPage(): JSX.Element {
         {activeTaskTab === "overview" && (
           <motion.div key="overview" initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.15 }} className={styles.overviewContent}>
             {task ? (
-              <TaskOverview task={task} tasksById={tasksById} environments={environments} projects={projects} taskSessions={currentTaskSessions} />
+              <TaskOverview task={task} tasksById={tasksById} environments={environments} workspaces={workspaces} taskSessions={currentTaskSessions} />
             ) : (
               <div className={styles.waitingMessage}>No additional details</div>
             )}
@@ -503,10 +503,10 @@ export function TaskPage(): JSX.Element {
         )}
         {activeTaskTab === "findings" && (
           <motion.div key="findings" initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.15 }} className={styles.tabContent}>
-            {projectId ? (
-              <FindingsPanel projectId={projectId} />
+            {workspaceId ? (
+              <FindingsPanel workspaceId={workspaceId} />
             ) : (
-              <div className={styles.noContext}>Navigate to a task within a project to view findings</div>
+              <div className={styles.noContext}>Navigate to a task within a workspace to view findings</div>
             )}
           </motion.div>
         )}

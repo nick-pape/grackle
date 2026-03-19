@@ -89,7 +89,7 @@ describe("oauth-token", () => {
   test("scoped token is not accepted as oauth token", () => {
     // Manually create a token-like payload without typ field
     const payload = Buffer.from(JSON.stringify({
-      sub: "task-1", pid: "project-1", per: "persona-1", sid: "session-1",
+      sub: "task-1", pid: "workspace-1", per: "persona-1", sid: "session-1",
       iat: Math.floor(Date.now() / 1000),
       exp: Math.floor(Date.now() / 1000) + 3600,
     })).toString("base64url");

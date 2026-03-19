@@ -8,7 +8,7 @@ export type { FindingRow };
 /** Insert a new finding record. */
 export function postFinding(
   id: string,
-  projectId: string,
+  workspaceId: string,
   taskId: string,
   sessionId: string,
   category: string,
@@ -18,7 +18,7 @@ export function postFinding(
 ): void {
   db.insert(findings).values({
     id,
-    projectId,
+    workspaceId,
     taskId,
     sessionId,
     category,
@@ -28,9 +28,9 @@ export function postFinding(
   }).run();
 }
 
-/** Query findings for a project, optionally filtering by categories and tags. */
+/** Query findings for a workspace, optionally filtering by categories and tags. */
 export function queryFindings(
-  projectId: string,
+  workspaceId: string,
   categories?: string[],
   tags?: string[],
   limit?: number,
@@ -41,7 +41,7 @@ export function queryFindings(
   if (categories && categories.length > 0) {
     results = db.select().from(findings)
       .where(and(
-        eq(findings.projectId, projectId),
+        eq(findings.workspaceId, workspaceId),
         sql`${findings.category} IN (SELECT value FROM json_each(${JSON.stringify(categories)}))`,
       ))
       .orderBy(desc(findings.createdAt))
@@ -49,7 +49,7 @@ export function queryFindings(
       .all();
   } else {
     results = db.select().from(findings)
-      .where(eq(findings.projectId, projectId))
+      .where(eq(findings.workspaceId, workspaceId))
       .orderBy(desc(findings.createdAt))
       .limit(maxResults)
       .all();
@@ -66,14 +66,14 @@ export function queryFindings(
   return results;
 }
 
-/** Build a summarized text context of recent findings for a project. */
-export function buildFindingsContext(projectId: string): string {
-  const allFindings = queryFindings(projectId, undefined, undefined, 20);
+/** Build a summarized text context of recent findings for a workspace. */
+export function buildFindingsContext(workspaceId: string): string {
+  const allFindings = queryFindings(workspaceId, undefined, undefined, 20);
   if (allFindings.length === 0) {
     return "";
   }
 
-  const lines = ["## Project Findings (shared knowledge from other agents)\n"];
+  const lines = ["## Workspace Findings (shared knowledge from other agents)\n"];
   let totalChars = lines[0].length;
   const MAX_CHARS = 8000;
   const MAX_PER_FINDING = 500;

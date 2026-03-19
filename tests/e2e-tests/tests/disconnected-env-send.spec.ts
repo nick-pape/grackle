@@ -15,9 +15,9 @@ import { test, expect } from "./fixtures.js";
 import {
   installWsTracker,
   injectWsMessage,
-  createProject,
+  createWorkspace,
   createTaskViaWs,
-  getProjectId,
+  getWorkspaceId,
   navigateToTask,
 } from "./helpers.js";
 
@@ -29,7 +29,7 @@ test.describe("Disconnected environment blocks message send", () => {
    * connection that is not available in all environments).
    *
    * The approach:
-   * 1. Create a project + task (task creation via WS always works).
+   * 1. Create a workspace + task (task creation via WS always works).
    * 2. Navigate to the task so the app is in `task` view mode.
    * 3. Inject a fake `sessions` message: one session with
    *    `status = "idle"` and `environmentId = "test-local"`.
@@ -44,19 +44,19 @@ test.describe("Disconnected environment blocks message send", () => {
    */
   async function setupWaitingInputWithDisconnectedEnv(
     page: import("@playwright/test").Page,
-    projectName: string,
+    workspaceName: string,
     taskTitle: string,
   ): Promise<void> {
-    // --- 1. Create project and task -----------------------------------------
-    await createProject(page, projectName);
+    // --- 1. Create workspace and task -----------------------------------------
+    await createWorkspace(page, workspaceName);
 
-    // Expand the project in the sidebar so the task becomes visible after creation.
-    await page.getByText(projectName).first().click();
+    // Expand the workspace in the sidebar so the task becomes visible after creation.
+    await page.getByText(workspaceName).first().click();
 
-    const projectId = await getProjectId(page, projectName);
+    const workspaceId = await getWorkspaceId(page, workspaceName);
     // createTaskViaWs returns the full task row from the server, including all
     // fields required by the app's `isTaskData` validator.
-    const task = await createTaskViaWs(page, projectId, taskTitle, {
+    const task = await createTaskViaWs(page, workspaceId, taskTitle, {
       environmentId: "test-local",
     });
 
@@ -90,11 +90,11 @@ test.describe("Disconnected environment blocks message send", () => {
     await injectWsMessage(page, {
       type: "tasks",
       payload: {
-        projectId: task.projectId ?? projectId,
+        workspaceId: task.workspaceId ?? workspaceId,
         tasks: [
           {
             id: task.id,
-            projectId: task.projectId ?? projectId,
+            workspaceId: task.workspaceId ?? workspaceId,
             title: task.title ?? taskTitle,
             description: task.description ?? "",
             status: "working",
@@ -391,11 +391,11 @@ test.describe("Disconnected environment blocks message send", () => {
     );
 
     // Set up the waiting_input state via WS injection
-    await createProject(page, "disc-env-proj-err");
+    await createWorkspace(page, "disc-env-proj-err");
     await page.getByText("disc-env-proj-err").first().click();
 
-    const projectId = await getProjectId(page, "disc-env-proj-err");
-    const task = await createTaskViaWs(page, projectId, "disc-env-task-err", {
+    const workspaceId = await getWorkspaceId(page, "disc-env-proj-err");
+    const task = await createTaskViaWs(page, workspaceId, "disc-env-task-err", {
       environmentId: "test-local",
     });
 
@@ -425,11 +425,11 @@ test.describe("Disconnected environment blocks message send", () => {
     await injectWsMessage(page, {
       type: "tasks",
       payload: {
-        projectId: task.projectId ?? projectId,
+        workspaceId: task.workspaceId ?? workspaceId,
         tasks: [
           {
             id: task.id,
-            projectId: task.projectId ?? projectId,
+            workspaceId: task.workspaceId ?? workspaceId,
             title: task.title ?? "disc-env-task-err",
             description: task.description ?? "",
             status: "working",

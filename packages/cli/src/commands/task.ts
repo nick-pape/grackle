@@ -12,11 +12,11 @@ export function registerTaskCommands(program: Command): void {
   const task = program.command("task").description("Create, start, and manage tasks");
 
   task
-    .command("list [project-id]")
-    .description("List tasks (optionally scoped to a project)")
+    .command("list [workspace-id]")
+    .description("List tasks (optionally scoped to a workspace)")
     .option("--search <query>", "Filter tasks by title/description substring")
     .option("--status <status>", "Filter tasks by status (not_started, working, paused, complete, failed)")
-    .action(async (projectId: string | undefined, opts: { search?: string; status?: string }) => {
+    .action(async (workspaceId: string | undefined, opts: { search?: string; status?: string }) => {
       const VALID_STATUSES = new Set([
         "not_started",
         "working",
@@ -38,7 +38,7 @@ export function registerTaskCommands(program: Command): void {
 
       const client = createGrackleClient();
       const res = await client.listTasks({
-        projectId: projectId || "",
+        workspaceId: workspaceId || "",
         search: opts.search || "",
         status: opts.status ? String(opts.status).toLowerCase() : "",
       });
@@ -66,18 +66,18 @@ export function registerTaskCommands(program: Command): void {
   task
     .command("create <title>")
     .description("Create a task")
-    .option("--project <project-id>", "Project to create the task in (optional)")
+    .option("--workspace <workspace-id>", "Workspace to create the task in (optional)")
     .option("--desc <text>", "Task description")
     .option("--depends-on <ids>", "Comma-separated dependency task IDs")
     .option("--can-decompose", "Allow this task to create subtasks")
     .option("--parent <task-id>", "Parent task ID (creates a subtask)")
-    .action(async (title: string, opts: { project?: string; dependsOn?: string; desc?: string; canDecompose?: boolean; parent?: string }) => {
+    .action(async (title: string, opts: { workspace?: string; dependsOn?: string; desc?: string; canDecompose?: boolean; parent?: string }) => {
       const client = createGrackleClient();
       const dependsOn: string[] = opts.dependsOn
         ? opts.dependsOn.split(",").map((s: string) => s.trim()).filter(Boolean)
         : [];
       const t = await client.createTask({
-        projectId: opts.project || "",
+        workspaceId: opts.workspace || "",
         title,
         description: opts.desc || "",
         dependsOn,
@@ -158,7 +158,7 @@ export function registerTaskCommands(program: Command): void {
   task
     .command("start <task-id>")
     .description("Start a task (spawn agent)")
-    .option("--persona <id-or-name>", "Persona override (falls back to task/project/app default)")
+    .option("--persona <id-or-name>", "Persona override (falls back to task/workspace/app default)")
     .option("--env <env-id>", "Environment to run on")
     .option("--notes <text>", "Feedback/instructions for retry")
     .action(async (taskId: string, opts: { persona?: string; env?: string; notes?: string }) => {
@@ -200,7 +200,7 @@ export function registerTaskCommands(program: Command): void {
     });
 
   task
-    .command("import-github <project-id>")
+    .command("import-github <workspace-id>")
     .description("Bulk import GitHub issues as tasks")
     .requiredOption("--repo <owner/repo>", "GitHub repository (owner/repo)")
     .option("--label <label>", "Filter issues by label name")
@@ -209,7 +209,7 @@ export function registerTaskCommands(program: Command): void {
     .option("--no-include-comments", "Exclude issue comments from imported task descriptions")
     .action(
       async (
-        projectId: string,
+        workspaceId: string,
         opts: { repo: string; label?: string; state: string; env?: string; includeComments: boolean },
       ) => {
         const normalizedState = opts.state.trim().toLowerCase();
@@ -224,7 +224,7 @@ export function registerTaskCommands(program: Command): void {
         }
         const client = createGrackleClient();
         const res = await client.importGitHubIssues({
-          projectId,
+          workspaceId,
           repo: opts.repo,
           label: opts.label,
           state: issueStateToEnum(normalizedState),

@@ -1,12 +1,12 @@
 import { test, expect } from "./fixtures.js";
-import { createProject, createTask, navigateToTask, patchWsForStubRuntime, runStubTaskToCompletion } from "./helpers.js";
+import { createWorkspace, createTask, navigateToTask, patchWsForStubRuntime, runStubTaskToCompletion } from "./helpers.js";
 
 test.describe("Task Lifecycle (stub runtime)", () => {
   test("full task flow: create, start, stream, review, approve", async ({ appPage }) => {
     const page = appPage;
 
-    // --- Step 1: Create a project ---
-    await createProject(page, "lifecycle-proj");
+    // --- Step 1: Create a workspace ---
+    await createWorkspace(page, "lifecycle-proj");
 
     // --- Step 2: Create a task with test-local environment (env is set at creation via WS
     //     so it is available at start time; the UI no longer has an env dropdown) ---
@@ -76,8 +76,8 @@ test.describe("Task Lifecycle (stub runtime)", () => {
   test("paused task can be stopped (completed)", async ({ appPage }) => {
     const page = appPage;
 
-    // --- Create project and task (env set via WS so it is available at start time) ---
-    await createProject(page, "complete-task-proj");
+    // --- Create workspace and task (env set via WS so it is available at start time) ---
+    await createWorkspace(page, "complete-task-proj");
     await createTask(page, "complete-task-proj", "complete task", "test-local");
     await navigateToTask(page, "complete task");
     await patchWsForStubRuntime(page);

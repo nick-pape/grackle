@@ -64,11 +64,11 @@ vi.mock("./env-registry.js", () => ({
   markBootstrapped: vi.fn(),
 }));
 
-vi.mock("./project-store.js", () => ({
-  listProjects: vi.fn(() => []),
-  getProject: vi.fn(() => undefined),
-  createProject: vi.fn(),
-  archiveProject: vi.fn(),
+vi.mock("./workspace-store.js", () => ({
+  listWorkspaces: vi.fn(() => []),
+  getWorkspace: vi.fn(() => undefined),
+  createWorkspace: vi.fn(),
+  archiveWorkspace: vi.fn(),
 }));
 
 vi.mock("./task-store.js", () => ({

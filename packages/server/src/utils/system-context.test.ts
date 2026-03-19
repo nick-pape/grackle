@@ -19,17 +19,17 @@ describe("buildTaskSystemContext", () => {
     expect(result).not.toContain("## Notes");
   });
 
-  it("always includes finding tools with projectId parameter", () => {
+  it("always includes finding tools with workspaceId parameter", () => {
     const result = buildTaskSystemContext("Task", "desc", "");
     expect(result).toContain("mcp__grackle__finding_post");
     expect(result).toContain("mcp__grackle__finding_list");
-    expect(result).toContain("projectId");
+    expect(result).toContain("workspaceId");
   });
 
   it("includes task_create tool when canDecompose is true", () => {
     const result = buildTaskSystemContext("Task", "desc", "", true);
     expect(result).toContain("mcp__grackle__task_create");
-    expect(result).toContain("Create a new task");
+    expect(result).toContain("Create a new task in the workspace");
   });
 
   it("omits task_create tool when canDecompose is false", () => {

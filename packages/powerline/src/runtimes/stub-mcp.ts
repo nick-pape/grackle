@@ -31,18 +31,18 @@ class StubMcpSession implements AgentSession {
   private killed: boolean = false;
   private prompt: string;
   private mcpBroker: { url: string; token: string } | undefined;
-  private projectId: string | undefined;
+  private workspaceId: string | undefined;
 
   public constructor(
     id: string,
     prompt: string,
     mcpBroker?: { url: string; token: string },
-    projectId?: string,
+    workspaceId?: string,
   ) {
     this.id = id;
     this.prompt = prompt;
     this.mcpBroker = mcpBroker;
-    this.projectId = projectId;
+    this.workspaceId = workspaceId;
     this.runtimeSessionId = `stub-mcp-${id}`;
   }
 
@@ -56,10 +56,10 @@ class StubMcpSession implements AgentSession {
       return;
     }
 
-    if (this.mcpBroker && this.projectId) {
-      // Real MCP tool call path — projectId is required because the scoped token
+    if (this.mcpBroker && this.workspaceId) {
+      // Real MCP tool call path — workspaceId is required because the scoped token
       // embeds it as `pid`, which the MCP server uses to scope tool responses
-      // (e.g. task_list returns only tasks for this project).
+      // (e.g. task_list returns only tasks for this workspace).
       yield* this.performMcpToolCall(ts);
     } else {
       // Fallback: same fake tool events as the regular stub runtime
@@ -215,7 +215,7 @@ class StubMcpSession implements AgentSession {
 }
 
 /**
- * A stub runtime that makes real MCP tool calls when both mcpBroker and projectId are available.
+ * A stub runtime that makes real MCP tool calls when both mcpBroker and workspaceId are available.
  * Falls back to fake echo tool events when either is missing (e.g. no MCP server or non-task sessions).
  * Useful for integration testing the MCP tool-call chain.
  */
@@ -223,7 +223,7 @@ export class StubMcpRuntime implements AgentRuntime {
   public name: string = "stub-mcp";
 
   public spawn(opts: SpawnOptions): AgentSession {
-    return new StubMcpSession(opts.sessionId, opts.prompt, opts.mcpBroker, opts.projectId);
+    return new StubMcpSession(opts.sessionId, opts.prompt, opts.mcpBroker, opts.workspaceId);
   }
 
   public resume(opts: ResumeOptions): AgentSession {

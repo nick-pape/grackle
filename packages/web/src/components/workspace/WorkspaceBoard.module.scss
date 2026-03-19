@@ -1,7 +1,7 @@
 @use '../../styles/mixins' as *;
 
 // =============================================================================
-// ProjectBoard — Kanban-style board view
+// WorkspaceBoard — Kanban-style board view
 // =============================================================================
 
 .boardContainer {
@@ -204,7 +204,7 @@
 }
 
 // ---------------------------------------------------------------------------
-// Empty project CTA (mirrors DagView/ProjectPage pattern)
+// Empty workspace CTA (mirrors DagView/WorkspacePage pattern)
 // ---------------------------------------------------------------------------
 
 .emptyCta {

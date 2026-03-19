@@ -1,12 +1,12 @@
 import { test, expect } from "./fixtures.js";
-import { createProject, createTask, navigateToTask, patchWsForStubRuntime, runStubTaskToCompletion } from "./helpers.js";
+import { createWorkspace, createTask, navigateToTask, patchWsForStubRuntime, runStubTaskToCompletion } from "./helpers.js";
 
 test.describe("Task Stop & Pause buttons", () => {
   test("Stop button completes a paused task", async ({ appPage }) => {
     const page = appPage;
 
-    // Create project and task, run stub to paused (review) state
-    await createProject(page, "stop-task-proj");
+    // Create workspace and task, run stub to paused (review) state
+    await createWorkspace(page, "stop-task-proj");
     await createTask(page, "stop-task-proj", "stop task", "test-local");
     await navigateToTask(page, "stop task");
     await patchWsForStubRuntime(page);
@@ -28,8 +28,8 @@ test.describe("Task Stop & Pause buttons", () => {
   test("paused state shows Stop and Resume buttons", async ({ appPage }) => {
     const page = appPage;
 
-    // Create project and task
-    await createProject(page, "pause-task-proj");
+    // Create workspace and task
+    await createWorkspace(page, "pause-task-proj");
     await createTask(page, "pause-task-proj", "pause task", "test-local");
     await navigateToTask(page, "pause task");
     await patchWsForStubRuntime(page);
@@ -50,8 +50,8 @@ test.describe("Task Stop & Pause buttons", () => {
   test("paused task can be resumed", async ({ appPage }) => {
     const page = appPage;
 
-    // Create project and task, run stub to paused (review) state
-    await createProject(page, "resume-task-proj");
+    // Create workspace and task, run stub to paused (review) state
+    await createWorkspace(page, "resume-task-proj");
     await createTask(page, "resume-task-proj", "resume task", "test-local");
     await navigateToTask(page, "resume task");
     await patchWsForStubRuntime(page);

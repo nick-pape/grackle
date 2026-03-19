@@ -1,6 +1,6 @@
 import { test, expect } from "./fixtures.js";
 import {
-  createProject,
+  createWorkspace,
   createTask,
   navigateToTask,
   patchWsForStubRuntime,
@@ -11,7 +11,7 @@ test.describe("False failure prevention", () => {
   test("task reaches paused status after stub session completes without false failure", async ({ appPage }) => {
     const page = appPage;
 
-    await createProject(page, "no-false-fail");
+    await createWorkspace(page, "no-false-fail");
     await createTask(page, "no-false-fail", "clean-task", "test-local");
     await navigateToTask(page, "clean-task");
 

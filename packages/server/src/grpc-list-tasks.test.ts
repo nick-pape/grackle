@@ -135,7 +135,7 @@ vi.mock("./github-import.js", () => ({
 // ── Import AFTER mocks ──────────────────────────────────────────
 
 import { registerGrackleRoutes } from "./grpc-service.js";
-import * as projectStore from "./project-store.js";
+import * as workspaceStore from "./workspace-store.js";
 import * as taskStore from "./task-store.js";
 import * as sessionStore from "./session-store.js";
 import { computeTaskStatus } from "./compute-task-status.js";
@@ -146,7 +146,7 @@ import type { ConnectRouter } from "@connectrpc/connect";
 /** Apply schema DDL to in-memory database. */
 function applySchema(): void {
   sqlite.exec(`
-    CREATE TABLE IF NOT EXISTS projects (
+    CREATE TABLE IF NOT EXISTS workspaces (
       id            TEXT PRIMARY KEY,
       name          TEXT NOT NULL,
       description   TEXT NOT NULL DEFAULT '',
@@ -162,7 +162,7 @@ function applySchema(): void {
 
     CREATE TABLE IF NOT EXISTS tasks (
       id            TEXT PRIMARY KEY,
-      project_id    TEXT NOT NULL REFERENCES projects(id),
+      workspace_id  TEXT REFERENCES workspaces(id),
       title         TEXT NOT NULL,
       description   TEXT NOT NULL DEFAULT '',
       status        TEXT NOT NULL DEFAULT 'not_started',
@@ -197,19 +197,19 @@ function getHandlers(): Record<string, (...args: unknown[]) => unknown> {
 
 describe("gRPC listTasks handler", () => {
   let handlers: Record<string, (...args: unknown[]) => unknown>;
-  const PROJECT_ID = "test-proj";
+  const WORKSPACE_ID = "test-proj";
 
   beforeEach(() => {
     vi.clearAllMocks();
     sqlite.exec("DROP TABLE IF EXISTS tasks");
-    sqlite.exec("DROP TABLE IF EXISTS projects");
+    sqlite.exec("DROP TABLE IF EXISTS workspaces");
     applySchema();
 
-    // Seed project and tasks using real stores
-    projectStore.createProject(PROJECT_ID, "Test Project", "desc", "", "");
-    taskStore.createTask("t1", PROJECT_ID, "Fix login bug", "User cannot login with SSO", [], "test-project");
-    taskStore.createTask("t2", PROJECT_ID, "Add dashboard", "Create analytics dashboard", [], "test-project");
-    taskStore.createTask("t3", PROJECT_ID, "Update auth middleware", "Refactor authentication layer", [], "test-project");
+    // Seed workspace and tasks using real stores
+    workspaceStore.createWorkspace(WORKSPACE_ID, "Test Project", "desc", "", "");
+    taskStore.createTask("t1", WORKSPACE_ID, "Fix login bug", "User cannot login with SSO", [], "test-workspace");
+    taskStore.createTask("t2", WORKSPACE_ID, "Add dashboard", "Create analytics dashboard", [], "test-workspace");
+    taskStore.createTask("t3", WORKSPACE_ID, "Update auth middleware", "Refactor authentication layer", [], "test-workspace");
     taskStore.updateTaskStatus("t2", "working");
     taskStore.updateTaskStatus("t3", "complete");
 
@@ -226,7 +226,7 @@ describe("gRPC listTasks handler", () => {
 
   it("filters by search term", async () => {
     const result = await handlers.listTasks({
-      projectId: PROJECT_ID,
+      workspaceId: WORKSPACE_ID,
       search: "login",
       status: "",
     }) as grackle.TaskList;
@@ -237,7 +237,7 @@ describe("gRPC listTasks handler", () => {
 
   it("filters by status", async () => {
     const result = await handlers.listTasks({
-      projectId: PROJECT_ID,
+      workspaceId: WORKSPACE_ID,
       search: "",
       status: "working",
     }) as grackle.TaskList;
@@ -248,7 +248,7 @@ describe("gRPC listTasks handler", () => {
 
   it("returns all tasks when no filters", async () => {
     const result = await handlers.listTasks({
-      projectId: PROJECT_ID,
+      workspaceId: WORKSPACE_ID,
       search: "",
       status: "",
     }) as grackle.TaskList;
@@ -258,7 +258,7 @@ describe("gRPC listTasks handler", () => {
 
   it("combines search and status filters", async () => {
     const result = await handlers.listTasks({
-      projectId: PROJECT_ID,
+      workspaceId: WORKSPACE_ID,
       search: "auth",
       status: "complete",
     }) as grackle.TaskList;
@@ -269,9 +269,9 @@ describe("gRPC listTasks handler", () => {
 
   it("returns tasks with computed status, childTaskIds, and latestSessionId", async () => {
     // Create a parent with children
-    taskStore.createTask("tp", PROJECT_ID, "Parent task", "desc", [], "test-project", "", true);
-    taskStore.createTask("tc1", PROJECT_ID, "Child 1", "desc", [], "test-project", "tp");
-    taskStore.createTask("tc2", PROJECT_ID, "Child 2", "desc", [], "test-project", "tp");
+    taskStore.createTask("tp", WORKSPACE_ID, "Parent task", "desc", [], "test-workspace", "", true);
+    taskStore.createTask("tc1", WORKSPACE_ID, "Child 1", "desc", [], "test-workspace", "tp");
+    taskStore.createTask("tc2", WORKSPACE_ID, "Child 2", "desc", [], "test-workspace", "tp");
 
     // Mock sessions for the parent task
     vi.mocked(sessionStore.listSessionsByTaskIds).mockReturnValue([
@@ -285,7 +285,7 @@ describe("gRPC listTasks handler", () => {
     });
 
     const result = await handlers.listTasks({
-      projectId: PROJECT_ID,
+      workspaceId: WORKSPACE_ID,
       search: "",
       status: "",
     }) as grackle.TaskList;

@@ -6,13 +6,13 @@ export function buildTaskSystemContext(title: string, description: string, notes
     notes ? `## Notes (from previous attempt or user feedback)\n${notes}` : "",
     `## Grackle Tools (MCP)`,
     `You have a "grackle" MCP server with tools for coordinating with other agents:`,
-    `- **mcp__grackle__finding_post**: Share discoveries (architecture decisions, bugs, patterns) with other agents working on this project. Parameters: projectId (string — injected automatically), title (string, required), content (string, optional), category (optional: architecture|api|bug|decision|dependency|pattern|general), tags (optional: string[]).`,
-    `- **mcp__grackle__finding_list**: Query findings posted by other agents. Parameters: projectId (string — injected automatically), category (optional), tag (optional), limit (optional). Findings from previous tasks are also in your system context above.`,
+    `- **mcp__grackle__finding_post**: Share discoveries (architecture decisions, bugs, patterns) with other agents working on this workspace. Parameters: workspaceId (string — injected automatically), title (string, required), content (string, optional), category (optional: architecture|api|bug|decision|dependency|pattern|general), tags (optional: string[]).`,
+    `- **mcp__grackle__finding_list**: Query findings posted by other agents. Parameters: workspaceId (string — injected automatically), category (optional), tag (optional), limit (optional). Findings from previous tasks are also in your system context above.`,
   ];
 
   if (canDecompose) {
     sections.push(
-      `- **mcp__grackle__task_create**: Create a new task in the project. Use this when work is too large or complex for you to complete alone. Parameters: projectId (string — injected automatically), title (string, required), description (string, optional — be specific about what to do and what "done" looks like).`,
+      `- **mcp__grackle__task_create**: Create a new task in the workspace. Use this when work is too large or complex for you to complete alone. Parameters: workspaceId (string — injected automatically), title (string, required), description (string, optional — be specific about what to do and what "done" looks like).`,
     );
   }
 
@@ -23,7 +23,7 @@ export function buildTaskSystemContext(title: string, description: string, notes
     `### Phase 1: Implement & Test`,
     `1. **Implement** the task requirements.`,
     `2. **Write tests**: Write unit tests, integration tests, or E2E specs as appropriate. Every implementation MUST include tests unless the change is purely cosmetic or untestable (state why if skipping).`,
-    `3. **Build**: Run the project's build command and fix any errors.`,
+    `3. **Build**: Run the repository's build command and fix any errors.`,
     `4. **Run tests**: Run relevant tests and ensure they pass.`,
     `5. **Manual test**: If the change affects UI, visually verify. If it affects CLI or API, run the commands manually. State explicitly if skipping and why.`,
     ``,

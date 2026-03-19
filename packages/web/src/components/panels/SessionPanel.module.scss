@@ -20,7 +20,7 @@
   animation: fadeIn 300ms ease;
 }
 
-.projectSummary {
+.workspaceSummary {
   flex: 1;
   display: flex;
   align-items: center;
@@ -31,11 +31,11 @@
   animation: fadeIn 300ms ease;
 }
 
-.projectSummaryTitle {
+.workspaceSummaryTitle {
   font-size: var(--font-size-xl);
 }
 
-.projectSummarySubtitle {
+.workspaceSummarySubtitle {
   font-size: var(--font-size-sm);
 }
 
@@ -606,10 +606,10 @@
 }
 
 // ---------------------------------------------------------------------------
-// Project detail metadata
+// Workspace detail metadata
 // ---------------------------------------------------------------------------
 
-.projectHeader {
+.workspaceHeader {
   @include surface-panel;
   padding: var(--space-sm) var(--space-md);
   border-bottom: 1px solid var(--border-subtle);
@@ -618,7 +618,7 @@
   align-items: center;
 }
 
-.projectName {
+.workspaceName {
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-bold);
   color: var(--text-primary);
@@ -631,7 +631,7 @@
   white-space: nowrap;
 }
 
-.projectMeta {
+.workspaceMeta {
   padding: var(--space-md);
   display: flex;
   flex-direction: column;

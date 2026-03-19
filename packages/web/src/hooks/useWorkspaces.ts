@@ -1,32 +1,32 @@
 /**
- * Domain hook for project management.
+ * Domain hook for workspace management.
  *
  * @module
  */
 
 import { useState, useCallback } from "react";
-import type { Project, WsMessage, SendFunction, GrackleEvent } from "./types.js";
-import { asValidArray, isProject } from "./types.js";
+import type { Workspace, WsMessage, SendFunction, GrackleEvent } from "./types.js";
+import { asValidArray, isWorkspace } from "./types.js";
 
-/** Values returned by {@link useProjects}. */
-export interface UseProjectsResult {
-  /** All known projects. */
-  projects: Project[];
-  /** Whether a project creation is currently in progress. */
-  projectCreating: boolean;
-  /** Create a new project. */
-  createProject: (
+/** Values returned by {@link useWorkspaces}. */
+export interface UseWorkspacesResult {
+  /** All known workspaces. */
+  workspaces: Workspace[];
+  /** Whether a workspace creation is currently in progress. */
+  workspaceCreating: boolean;
+  /** Create a new workspace. */
+  createWorkspace: (
     name: string,
     description?: string,
     repoUrl?: string,
     defaultEnvironmentId?: string,
     defaultPersonaId?: string,
   ) => void;
-  /** Archive a project by ID. */
-  archiveProject: (projectId: string) => void;
-  /** Update fields on an existing project. */
-  updateProject: (
-    projectId: string,
+  /** Archive a workspace by ID. */
+  archiveWorkspace: (workspaceId: string) => void;
+  /** Update fields on an existing workspace. */
+  updateWorkspace: (
+    workspaceId: string,
     fields: {
       name?: string;
       description?: string;
@@ -41,29 +41,29 @@ export interface UseProjectsResult {
   handleMessage: (msg: WsMessage) => boolean;
   /** Handle a domain event from the event bus. Returns `true` if handled. */
   handleEvent: (event: GrackleEvent) => boolean;
-  /** Reset transient state (e.g. `projectCreating`) on disconnect. */
+  /** Reset transient state (e.g. `workspaceCreating`) on disconnect. */
   onDisconnect: () => void;
 }
 
 /**
- * Hook that manages project state and CRUD actions.
+ * Hook that manages workspace state and CRUD actions.
  *
  * @param send - Function to send WebSocket messages.
- * @returns Project state, actions, a message handler, and a disconnect callback.
+ * @returns Workspace state, actions, a message handler, and a disconnect callback.
  */
-export function useProjects(send: SendFunction): UseProjectsResult {
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [projectCreating, setProjectCreating] = useState(false);
+export function useWorkspaces(send: SendFunction): UseWorkspacesResult {
+  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+  const [workspaceCreating, setWorkspaceCreating] = useState(false);
 
   const handleEvent = useCallback((event: GrackleEvent): boolean => {
     switch (event.type) {
-      case "project.created":
-        setProjectCreating(false);
-        send({ type: "list_projects" });
+      case "workspace.created":
+        setWorkspaceCreating(false);
+        send({ type: "list_workspaces" });
         return true;
-      case "project.archived":
-      case "project.updated":
-        send({ type: "list_projects" });
+      case "workspace.archived":
+      case "workspace.updated":
+        send({ type: "list_workspaces" });
         return true;
       default:
         return false;
@@ -72,13 +72,13 @@ export function useProjects(send: SendFunction): UseProjectsResult {
 
   const handleMessage = useCallback((msg: WsMessage): boolean => {
     switch (msg.type) {
-      case "projects":
-        setProjects(
+      case "workspaces":
+        setWorkspaces(
           asValidArray(
-            msg.payload?.projects,
-            isProject,
-            "projects",
-            "projects",
+            msg.payload?.workspaces,
+            isWorkspace,
+            "workspaces",
+            "workspaces",
           ),
         );
         return true;
@@ -88,10 +88,10 @@ export function useProjects(send: SendFunction): UseProjectsResult {
   }, []);
 
   const onDisconnect = useCallback(() => {
-    setProjectCreating(false);
+    setWorkspaceCreating(false);
   }, []);
 
-  const createProject = useCallback(
+  const createWorkspace = useCallback(
     (
       name: string,
       description?: string,
@@ -99,9 +99,9 @@ export function useProjects(send: SendFunction): UseProjectsResult {
       defaultEnvironmentId?: string,
       defaultPersonaId?: string,
     ) => {
-      setProjectCreating(true);
+      setWorkspaceCreating(true);
       send({
-        type: "create_project",
+        type: "create_workspace",
         payload: {
           name,
           description: description || "",
@@ -114,16 +114,16 @@ export function useProjects(send: SendFunction): UseProjectsResult {
     [send],
   );
 
-  const archiveProject = useCallback(
-    (projectId: string) => {
-      send({ type: "archive_project", payload: { projectId } });
+  const archiveWorkspace = useCallback(
+    (workspaceId: string) => {
+      send({ type: "archive_workspace", payload: { workspaceId } });
     },
     [send],
   );
 
-  const updateProject = useCallback(
+  const updateWorkspace = useCallback(
     (
-      projectId: string,
+      workspaceId: string,
       fields: {
         name?: string;
         description?: string;
@@ -135,19 +135,19 @@ export function useProjects(send: SendFunction): UseProjectsResult {
       },
     ) => {
       send({
-        type: "update_project",
-        payload: { projectId, ...fields },
+        type: "update_workspace",
+        payload: { workspaceId, ...fields },
       });
     },
     [send],
   );
 
   return {
-    projects,
-    projectCreating,
-    createProject,
-    archiveProject,
-    updateProject,
+    workspaces,
+    workspaceCreating,
+    createWorkspace,
+    archiveWorkspace,
+    updateWorkspace,
     handleMessage,
     handleEvent,
     onDisconnect,

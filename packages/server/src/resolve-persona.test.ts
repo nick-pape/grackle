@@ -46,7 +46,7 @@ describe("resolvePersona", () => {
     vi.mocked(personaStore.getPersona).mockReturnValue(persona);
     vi.mocked(settingsStore.getSetting).mockReturnValue("app-default");
 
-    const result = resolvePersona("req-persona", "task-default", "project-default");
+    const result = resolvePersona("req-persona", "task-default", "workspace-default");
 
     expect(personaStore.getPersona).toHaveBeenCalledWith("req-persona");
     expect(result.personaId).toBe("req-persona");
@@ -56,20 +56,20 @@ describe("resolvePersona", () => {
     const persona = makePersonaRow({ id: "task-default" });
     vi.mocked(personaStore.getPersona).mockReturnValue(persona);
 
-    const result = resolvePersona("", "task-default", "project-default");
+    const result = resolvePersona("", "task-default", "workspace-default");
 
     expect(personaStore.getPersona).toHaveBeenCalledWith("task-default");
     expect(result.personaId).toBe("task-default");
   });
 
-  it("falls back to project default persona when request and task are empty", () => {
-    const persona = makePersonaRow({ id: "project-default" });
+  it("falls back to workspace default persona when request and task are empty", () => {
+    const persona = makePersonaRow({ id: "workspace-default" });
     vi.mocked(personaStore.getPersona).mockReturnValue(persona);
 
-    const result = resolvePersona("", "", "project-default");
+    const result = resolvePersona("", "", "workspace-default");
 
-    expect(personaStore.getPersona).toHaveBeenCalledWith("project-default");
-    expect(result.personaId).toBe("project-default");
+    expect(personaStore.getPersona).toHaveBeenCalledWith("workspace-default");
+    expect(result.personaId).toBe("workspace-default");
   });
 
   it("falls back to app setting when all explicit IDs are empty", () => {
@@ -88,7 +88,7 @@ describe("resolvePersona", () => {
     vi.mocked(settingsStore.getSetting).mockReturnValue(undefined);
 
     expect(() => resolvePersona("", "", "")).toThrow(
-      "No persona configured. Set a default persona at the app, project, or task level, or specify one explicitly.",
+      "No persona configured. Set a default persona at the app, workspace, or task level, or specify one explicitly.",
     );
   });
 

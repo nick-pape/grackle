@@ -6,7 +6,7 @@ import * as streamHub from "./stream-hub.js";
 import * as logWriter from "./log-writer.js";
 import * as findingStore from "./finding-store.js";
 import * as taskStore from "./task-store.js";
-import * as projectStore from "./project-store.js";
+import * as workspaceStore from "./workspace-store.js";
 import * as processorRegistry from "./processor-registry.js";
 import { slugify } from "./utils/slugify.js";
 import { writeTranscript } from "./transcript.js";
@@ -21,7 +21,7 @@ const TERMINAL_STATUSES: string[] = [SESSION_STATUS.COMPLETED, SESSION_STATUS.FA
 export interface EventStreamOptions {
   sessionId: string;
   logPath: string;
-  projectId?: string;
+  workspaceId?: string;
   taskId?: string;
   onError?: (error: unknown) => void;
 }
@@ -35,7 +35,7 @@ export function processFindingEvent(
   content: string,
   sessionId: string,
 ): void {
-  if (!ctx.projectId) {
+  if (!ctx.workspaceId) {
     return;
   }
   try {
@@ -44,14 +44,14 @@ export function processFindingEvent(
     };
     const findingId = uuid();
     findingStore.postFinding(
-      findingId, ctx.projectId, ctx.taskId || "", sessionId,
+      findingId, ctx.workspaceId, ctx.taskId || "", sessionId,
       data.category || "general", data.title || "Untitled",
       data.content || "", data.tags || [],
     );
-    emit("finding.posted", { projectId: ctx.projectId, findingId });
-    logger.info({ findingId, projectId: ctx.projectId, title: data.title }, "Finding stored");
+    emit("finding.posted", { workspaceId: ctx.workspaceId, findingId });
+    logger.info({ findingId, workspaceId: ctx.workspaceId, title: data.title }, "Finding stored");
   } catch (err) {
-    logger.error({ err, projectId: ctx.projectId, taskId: ctx.taskId }, "Failed to store finding");
+    logger.error({ err, workspaceId: ctx.workspaceId, taskId: ctx.taskId }, "Failed to store finding");
   }
 }
 
@@ -86,9 +86,9 @@ export function processSubtaskEvent(
       return;
     }
 
-    const project = parentTask.projectId ? projectStore.getProject(parentTask.projectId) : undefined;
-    if (parentTask.projectId && !project) {
-      logger.warn({ projectId: parentTask.projectId }, "Subtask creation failed: project not found");
+    const workspace = parentTask.workspaceId ? workspaceStore.getWorkspace(parentTask.workspaceId) : undefined;
+    if (parentTask.workspaceId && !workspace) {
+      logger.warn({ workspaceId: parentTask.workspaceId }, "Subtask creation failed: workspace not found");
       return;
     }
 
@@ -125,11 +125,11 @@ export function processSubtaskEvent(
     const subtaskId = uuid().slice(0, 8);
     taskStore.createTask(
       subtaskId,
-      parentTask.projectId || undefined,
+      parentTask.workspaceId || undefined,
       title,
       description,
       resolvedDeps,
-      project ? slugify(project.name) : "",
+      workspace ? slugify(workspace.name) : "",
       ctx.taskId,
       canDecompose,
     );
@@ -151,7 +151,7 @@ export function processSubtaskEvent(
       }
     }
 
-    emit("task.created", { taskId: subtaskId, projectId: parentTask.projectId ?? undefined });
+    emit("task.created", { taskId: subtaskId, workspaceId: parentTask.workspaceId ?? undefined });
     logger.info({ subtaskId, parentTaskId: ctx.taskId, title }, "Subtask created");
   } catch (err) {
     logger.error({ err, taskId: ctx.taskId }, "Failed to create subtask");
@@ -215,7 +215,7 @@ export function processEventStream(
   const ctx: ProcessorContext = {
     sessionId,
     logPath,
-    projectId: options.projectId || "",
+    workspaceId: options.workspaceId || "",
     taskId: options.taskId || "",
   };
 
@@ -258,7 +258,7 @@ export function processEventStream(
         streamHub.publish(sessionEvent);
 
         // Intercept finding events and store + broadcast them
-        if (event.type === "finding" && ctx.projectId) {
+        if (event.type === "finding" && ctx.workspaceId) {
           processFindingEvent(ctx, event.content, sessionId);
         }
 
@@ -285,7 +285,7 @@ export function processEventStream(
           // This covers both terminal events (completed/failed/killed) and non-terminal
           // transitions (running, waiting_input) that affect the computed task status.
           if (ctx.taskId && ["completed", "failed", "killed", "running", "waiting_input"].includes(event.content)) {
-            emit("task.updated", { taskId: ctx.taskId, projectId: ctx.projectId });
+            emit("task.updated", { taskId: ctx.taskId, workspaceId: ctx.workspaceId });
           }
         }
       }
@@ -295,7 +295,7 @@ export function processEventStream(
       if (current && !TERMINAL_STATUSES.includes(current.status)) {
         sessionStore.updateSession(sessionId, SESSION_STATUS.COMPLETED);
         if (ctx.taskId) {
-          emit("task.updated", { taskId: ctx.taskId, projectId: ctx.projectId });
+          emit("task.updated", { taskId: ctx.taskId, workspaceId: ctx.workspaceId });
         }
       }
     } catch (err) {
@@ -323,7 +323,7 @@ export function processEventStream(
         onError?.(err);
       }
       if (ctx.taskId) {
-        emit("task.updated", { taskId: ctx.taskId, projectId: ctx.projectId });
+        emit("task.updated", { taskId: ctx.taskId, workspaceId: ctx.workspaceId });
       }
     } finally {
       processorRegistry.unregister(sessionId);

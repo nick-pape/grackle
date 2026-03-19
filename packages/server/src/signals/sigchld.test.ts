@@ -82,7 +82,7 @@ const eventBusMock = await import("../event-bus.js") as any;
 function makeTask(overrides: Record<string, unknown> = {}) {
   return {
     id: "task-child",
-    projectId: "proj-1",
+    workspaceId: "proj-1",
     title: "Design API",
     description: "",
     status: "working",
@@ -127,7 +127,7 @@ function fireTaskUpdated(taskId: string) {
     id: "evt-1",
     type: "task.updated",
     timestamp: new Date().toISOString(),
-    payload: { taskId, projectId: "proj-1" },
+    payload: { taskId, workspaceId: "proj-1" },
   });
 }
 

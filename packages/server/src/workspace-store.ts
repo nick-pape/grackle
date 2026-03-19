@@ -1,11 +1,11 @@
 import db from "./db.js";
-import { projects, type ProjectRow } from "./schema.js";
+import { workspaces, type WorkspaceRow } from "./schema.js";
 import { eq, desc, sql } from "drizzle-orm";
 
-export type { ProjectRow };
+export type { WorkspaceRow };
 
-/** Insert a new project record. */
-export function createProject(
+/** Insert a new workspace record. */
+export function createWorkspace(
   id: string,
   name: string,
   description: string,
@@ -15,7 +15,7 @@ export function createProject(
   worktreeBasePath: string = "",
   defaultPersonaId: string = "",
 ): void {
-  db.insert(projects).values({
+  db.insert(workspaces).values({
     id,
     name,
     description,
@@ -27,29 +27,29 @@ export function createProject(
   }).run();
 }
 
-/** Retrieve a single project by ID. */
-export function getProject(id: string): ProjectRow | undefined {
-  return db.select().from(projects).where(eq(projects.id, id)).get();
+/** Retrieve a single workspace by ID. */
+export function getWorkspace(id: string): WorkspaceRow | undefined {
+  return db.select().from(workspaces).where(eq(workspaces.id, id)).get();
 }
 
-/** Return all active projects, newest first. */
-export function listProjects(): ProjectRow[] {
-  return db.select().from(projects)
-    .where(eq(projects.status, "active"))
-    .orderBy(desc(projects.createdAt))
+/** Return all active workspaces, newest first. */
+export function listWorkspaces(): WorkspaceRow[] {
+  return db.select().from(workspaces)
+    .where(eq(workspaces.status, "active"))
+    .orderBy(desc(workspaces.createdAt))
     .all();
 }
 
-/** Mark a project as archived. */
-export function archiveProject(id: string): void {
-  db.update(projects)
+/** Mark a workspace as archived. */
+export function archiveWorkspace(id: string): void {
+  db.update(workspaces)
     .set({ status: "archived", updatedAt: sql`datetime('now')` })
-    .where(eq(projects.id, id))
+    .where(eq(workspaces.id, id))
     .run();
 }
 
-/** Partial-update fields for a project. Undefined means "no change"; empty string means "clear". */
-export interface UpdateProjectFields {
+/** Partial-update fields for a workspace. Undefined means "no change"; empty string means "clear". */
+export interface UpdateWorkspaceFields {
   name?: string;
   description?: string;
   repoUrl?: string;
@@ -58,12 +58,12 @@ export interface UpdateProjectFields {
   useWorktrees?: boolean;
   /** Custom base path for worktrees (e.g. /workspaces/my-repo). Empty means use default. */
   worktreeBasePath?: string;
-  /** Default persona for tasks in this project. */
+  /** Default persona for tasks in this workspace. */
   defaultPersonaId?: string;
 }
 
-/** Update one or more fields on an existing project. Returns the updated row, or undefined if not found. */
-export function updateProject(id: string, fields: UpdateProjectFields): ProjectRow | undefined {
+/** Update one or more fields on an existing workspace. Returns the updated row, or undefined if not found. */
+export function updateWorkspace(id: string, fields: UpdateWorkspaceFields): WorkspaceRow | undefined {
   const sets: Record<string, unknown> = { updatedAt: sql`datetime('now')` };
   if (fields.name !== undefined) {
     sets.name = fields.name;
@@ -86,6 +86,6 @@ export function updateProject(id: string, fields: UpdateProjectFields): ProjectR
   if (fields.defaultPersonaId !== undefined) {
     sets.defaultPersonaId = fields.defaultPersonaId;
   }
-  db.update(projects).set(sets).where(eq(projects.id, id)).run();
-  return getProject(id);
+  db.update(workspaces).set(sets).where(eq(workspaces.id, id)).run();
+  return getWorkspace(id);
 }

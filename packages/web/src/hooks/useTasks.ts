@@ -20,15 +20,15 @@ const CREATE_TASK_TIMEOUT_MS: number = 15_000;
 
 /** Values returned by {@link useTasks}. */
 export interface UseTasksResult {
-  /** All known tasks (may span multiple projects). */
+  /** All known tasks (may span multiple workspaces). */
   tasks: TaskData[];
   /** The ID of the task currently being started, or `undefined`. */
   taskStartingId: string | undefined;
-  /** Load tasks for a given project. */
-  loadTasks: (projectId: string) => void;
-  /** Create a new task in a project. */
+  /** Load tasks for a given workspace. */
+  loadTasks: (workspaceId: string) => void;
+  /** Create a new task in a workspace. */
   createTask: (
-    projectId: string,
+    workspaceId: string,
     title: string,
     description?: string,
     dependsOn?: string[],
@@ -97,16 +97,16 @@ export function useTasks(send: SendFunction): UseTasksResult {
             pending.onSuccess();
           }
         }
-        const pid = typeof p.projectId === "string" ? p.projectId : "";
+        const pid = typeof p.workspaceId === "string" ? p.workspaceId : "";
         if (pid) {
-          send({ type: "list_tasks", payload: { projectId: pid } });
+          send({ type: "list_tasks", payload: { workspaceId: pid } });
         }
         return true;
       }
       case "task.started": {
         const taskId = typeof p.taskId === "string" ? p.taskId : "";
         const sessionId = typeof p.sessionId === "string" ? p.sessionId : "";
-        const pid = typeof p.projectId === "string" ? p.projectId : "";
+        const pid = typeof p.workspaceId === "string" ? p.workspaceId : "";
 
         setTaskStartingId((prev) =>
           taskId && prev === taskId ? undefined : prev,
@@ -122,12 +122,12 @@ export function useTasks(send: SendFunction): UseTasksResult {
           }
         }
         if (pid) {
-          send({ type: "list_tasks", payload: { projectId: pid } });
+          send({ type: "list_tasks", payload: { workspaceId: pid } });
         } else if (taskId) {
           setTasks((prev) => {
             const found = prev.find((t) => t.id === taskId);
             if (found) {
-              send({ type: "list_tasks", payload: { projectId: found.projectId } });
+              send({ type: "list_tasks", payload: { workspaceId: found.workspaceId } });
             }
             return prev;
           });
@@ -137,15 +137,15 @@ export function useTasks(send: SendFunction): UseTasksResult {
       case "task.completed":
       case "task.deleted":
       case "task.updated": {
-        const pid = typeof p.projectId === "string" ? p.projectId : "";
+        const pid = typeof p.workspaceId === "string" ? p.workspaceId : "";
         const taskId = typeof p.taskId === "string" ? p.taskId : "";
         if (pid) {
-          send({ type: "list_tasks", payload: { projectId: pid } });
+          send({ type: "list_tasks", payload: { workspaceId: pid } });
         } else if (taskId) {
           setTasks((prev) => {
             const found = prev.find((t) => t.id === taskId);
             if (found) {
-              send({ type: "list_tasks", payload: { projectId: found.projectId } });
+              send({ type: "list_tasks", payload: { workspaceId: found.workspaceId } });
             }
             return prev;
           });
@@ -167,15 +167,15 @@ export function useTasks(send: SendFunction): UseTasksResult {
           "tasks",
         );
         const pid =
-          (typeof msg.payload?.projectId === "string"
-            ? msg.payload.projectId
-            : "") || (incoming.length > 0 ? incoming[0].projectId : "");
+          (typeof msg.payload?.workspaceId === "string"
+            ? msg.payload.workspaceId
+            : "") || (incoming.length > 0 ? incoming[0].workspaceId : "");
         if (!pid) {
           setTasks(incoming);
           return true;
         }
         setTasks((prev) => [
-          ...prev.filter((t) => t.projectId !== pid),
+          ...prev.filter((t) => t.workspaceId !== pid),
           ...incoming,
         ]);
         return true;
@@ -218,15 +218,15 @@ export function useTasks(send: SendFunction): UseTasksResult {
   }, []);
 
   const loadTasks = useCallback(
-    (projectId: string) => {
-      send({ type: "list_tasks", payload: { projectId } });
+    (workspaceId: string) => {
+      send({ type: "list_tasks", payload: { workspaceId } });
     },
     [send],
   );
 
   const createTask = useCallback(
     (
-      projectId: string,
+      workspaceId: string,
       title: string,
       description?: string,
       dependsOn?: string[],
@@ -237,7 +237,7 @@ export function useTasks(send: SendFunction): UseTasksResult {
       onError?: (message: string) => void,
     ) => {
       const payload: Record<string, unknown> = {
-        projectId,
+        workspaceId,
         title,
         description: description || "",
         dependsOn: dependsOn || [],

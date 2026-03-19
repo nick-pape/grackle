@@ -11,9 +11,9 @@ export const findingTools: ToolDefinition[] = [
   {
     name: "finding_list",
     group: "finding",
-    description: "Query findings for a project, optionally filtering by category and tags.",
+    description: "Query findings for a workspace, optionally filtering by category and tags.",
     inputSchema: z.object({
-      projectId: z.string().describe("Project ID to query findings for"),
+      workspaceId: z.string().describe("Workspace ID to query findings for"),
       category: z.string().optional().describe("Filter by finding category"),
       tag: z.string().optional().describe("Filter by tag"),
       limit: z.number().int().positive().optional().describe("Maximum number of findings to return"),
@@ -29,7 +29,7 @@ export const findingTools: ToolDefinition[] = [
     async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) {
       try {
         const response = await client.queryFindings({
-          projectId: args.projectId as string,
+          workspaceId: args.workspaceId as string,
           categories: args.category ? [args.category as string] : [],
           tags: args.tag ? [args.tag as string] : [],
           limit: (args.limit as number | undefined) ?? 0,
@@ -37,7 +37,7 @@ export const findingTools: ToolDefinition[] = [
         return jsonResult(
           response.findings.map((f) => ({
             id: f.id,
-            projectId: f.projectId,
+            workspaceId: f.workspaceId,
             taskId: f.taskId,
             sessionId: f.sessionId,
             category: f.category,
@@ -55,9 +55,9 @@ export const findingTools: ToolDefinition[] = [
   {
     name: "finding_post",
     group: "finding",
-    description: "Post a new finding to a project with a title, category, content, and tags.",
+    description: "Post a new finding to a workspace with a title, category, content, and tags.",
     inputSchema: z.object({
-      projectId: z.string().describe("Project ID to post the finding to"),
+      workspaceId: z.string().describe("Workspace ID to post the finding to"),
       title: z.string().describe("Finding title"),
       category: z.string().optional().describe("Finding category (e.g. 'bug', 'insight', 'risk')"),
       content: z.string().optional().describe("Detailed finding content"),
@@ -74,7 +74,7 @@ export const findingTools: ToolDefinition[] = [
     async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>, authContext?: AuthContext) {
       try {
         const finding = await client.postFinding({
-          projectId: args.projectId as string,
+          workspaceId: args.workspaceId as string,
           title: args.title as string,
           category: (args.category as string | undefined) ?? "",
           content: (args.content as string | undefined) ?? "",
@@ -84,7 +84,7 @@ export const findingTools: ToolDefinition[] = [
         });
         return jsonResult({
           id: finding.id,
-          projectId: finding.projectId,
+          workspaceId: finding.workspaceId,
           category: finding.category,
           title: finding.title,
           content: finding.content,
