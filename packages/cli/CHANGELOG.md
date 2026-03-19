@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Thu, 19 Mar 2026 14:01:06 GMT and should not be manually modified.
+This log was last generated on Thu, 19 Mar 2026 14:39:39 GMT and should not be manually modified.
+
+## 0.46.0
+Thu, 19 Mar 2026 14:39:39 GMT
+
+### Minor changes
+
+- Add splash screen during first-run experience to prevent main app flash, add grackle logo to FRE and docs site
 
 ## 0.45.1
 Thu, 19 Mar 2026 14:01:06 GMT
