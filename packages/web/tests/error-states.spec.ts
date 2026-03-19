@@ -18,9 +18,9 @@ test.describe("Error States", () => {
     const result = await sendWsAndWaitFor(page, {
       type: "create_task",
       payload: { title: "orphan-task" },
-    }, "task_created");
+    }, "task.created");
 
-    expect(result.payload?.task?.title).toBe("orphan-task");
+    expect(result.payload?.taskId).toBeTruthy();
   });
 
   test("create_task with missing title returns error", async ({ appPage }) => {
