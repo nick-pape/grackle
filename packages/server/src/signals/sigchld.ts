@@ -115,7 +115,7 @@ async function handleTaskUpdated(childTaskId: string): Promise<void> {
   // Extract the last text message from the child's session log
   const lastTextMessage = extractLastTextMessage(latestSession.logPath || undefined);
 
-  // Format the notification
+  // Format the notification with actionable instructions for the parent
   const statusLabel = STATUS_LABELS[latestSession.status] || latestSession.status;
   let message = `[SIGCHLD] Child task "${childTask.title}" (${childTaskId}) ${statusLabel}.`;
 
@@ -124,6 +124,14 @@ async function handleTaskUpdated(childTaskId: string): Promise<void> {
       ? lastTextMessage.slice(0, MAX_LAST_MESSAGE_LENGTH) + "..."
       : lastTextMessage;
     message += `\n\nLast message from child:\n> ${truncated}`;
+  }
+
+  if (latestSession.status === SESSION_STATUS.IDLE) {
+    message += "\n\nReview the child's work. If satisfactory, mark it complete with "
+      + `mcp__grackle__task_complete({ taskId: "${childTaskId}" }). `
+      + "If more work is needed, send additional input to the child's session.";
+  } else if (latestSession.status === SESSION_STATUS.FAILED) {
+    message += "\n\nThe child task failed. Review the error and decide whether to retry or reassign the work.";
   }
 
   logger.info(
