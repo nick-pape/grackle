@@ -25,6 +25,8 @@ export interface SpawnOptions {
   hooks?: Record<string, unknown>;
   /** MCP broker connection details. Both url and token must be present together. */
   mcpBroker?: { url: string; token: string };
+  /** Script source code for script personas (e.g. GenAIScript). */
+  scriptContent?: string;
 }
 
 /** Parameters for resuming an existing agent session. */

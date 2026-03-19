@@ -16,6 +16,8 @@ function serializePersona(p: {
   maxTurns: number;
   createdAt: string;
   updatedAt: string;
+  type: string;
+  script: string;
 }): Record<string, unknown> {
   return {
     id: p.id,
@@ -27,6 +29,8 @@ function serializePersona(p: {
     maxTurns: p.maxTurns,
     createdAt: p.createdAt,
     updatedAt: p.updatedAt,
+    type: p.type || "agent",
+    script: p.script || "",
   };
 }
 
@@ -57,14 +61,16 @@ export const personaTools: ToolDefinition[] = [
   {
     name: "persona_create",
     group: "persona",
-    description: "Create a new persona template with a system prompt and optional runtime configuration.",
+    description: "Create a new persona template. Use type 'agent' for interactive LLM sessions or 'script' for run-to-completion GenAIScript programs.",
     inputSchema: z.object({
       name: z.string().describe("Persona name"),
-      systemPrompt: z.string().describe("System prompt for the persona"),
+      systemPrompt: z.string().optional().describe("System prompt for the persona (required for agent type)"),
       description: z.string().optional().describe("Human-readable description"),
-      runtime: z.string().optional().describe("Agent runtime (e.g. 'claude-code')"),
+      runtime: z.string().optional().describe("Agent runtime (e.g. 'claude-code', 'genaiscript')"),
       model: z.string().optional().describe("Model to use"),
       maxTurns: z.number().int().positive().optional().describe("Maximum turns for sessions"),
+      type: z.enum(["agent", "script"]).optional().describe("Persona type: 'agent' (default) or 'script'"),
+      script: z.string().optional().describe("Script source code (required for script type)"),
     }),
     rpcMethod: "createPersona",
     mutating: true,
@@ -78,12 +84,14 @@ export const personaTools: ToolDefinition[] = [
       try {
         const persona = await client.createPersona({
           name: args.name as string,
-          systemPrompt: args.systemPrompt as string,
+          systemPrompt: (args.systemPrompt as string | undefined) ?? "",
           description: (args.description as string | undefined) ?? "",
           runtime: (args.runtime as string | undefined) ?? "",
           model: (args.model as string | undefined) ?? "",
           maxTurns: (args.maxTurns as number | undefined) ?? 0,
           mcpServers: [],
+          type: (args.type as string | undefined) ?? "agent",
+          script: (args.script as string | undefined) ?? "",
         });
         return jsonResult(serializePersona(persona));
       } catch (error) {
@@ -94,7 +102,7 @@ export const personaTools: ToolDefinition[] = [
   {
     name: "persona_show",
     group: "persona",
-    description: "Get full details of a persona including its system prompt and configuration.",
+    description: "Get full details of a persona including its system prompt, script, and configuration.",
     inputSchema: z.object({
       personaId: z.string().describe("Persona ID"),
     }),
@@ -118,7 +126,7 @@ export const personaTools: ToolDefinition[] = [
   {
     name: "persona_edit",
     group: "persona",
-    description: "Update an existing persona's name, system prompt, description, or runtime settings.",
+    description: "Update an existing persona's name, system prompt, script, description, or runtime settings.",
     inputSchema: z.object({
       personaId: z.string().describe("Persona ID to update"),
       name: z.string().optional().describe("New persona name"),
@@ -127,6 +135,8 @@ export const personaTools: ToolDefinition[] = [
       runtime: z.string().optional().describe("New agent runtime"),
       model: z.string().optional().describe("New model"),
       maxTurns: z.number().int().positive().optional().describe("New maximum turns"),
+      type: z.enum(["agent", "script"]).optional().describe("New persona type"),
+      script: z.string().optional().describe("New script source code"),
     }),
     rpcMethod: "updatePersona",
     mutating: true,
@@ -147,6 +157,8 @@ export const personaTools: ToolDefinition[] = [
           model: (args.model as string | undefined) ?? "",
           maxTurns: (args.maxTurns as number | undefined) ?? 0,
           mcpServers: [],
+          type: (args.type as string | undefined) ?? "",
+          script: (args.script as string | undefined) ?? "",
         });
         return jsonResult(serializePersona(persona));
       } catch (error) {
