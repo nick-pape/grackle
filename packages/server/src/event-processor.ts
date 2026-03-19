@@ -151,7 +151,7 @@ export function processSubtaskEvent(
       }
     }
 
-    emit("task.created", { taskId: subtaskId, projectId: parentTask.projectId });
+    emit("task.created", { taskId: subtaskId, projectId: parentTask.projectId ?? undefined });
     logger.info({ subtaskId, parentTaskId: ctx.taskId, title }, "Subtask created");
   } catch (err) {
     logger.error({ err, taskId: ctx.taskId }, "Failed to create subtask");
