@@ -1,3 +1,9 @@
+---
+title: "Grackle: Complete Technical Deep Dive"
+status: active
+type: reference
+---
+
 # Grackle: Complete Technical Deep Dive
 
 ## Table of Contents
@@ -115,7 +121,7 @@ The contract layer. Everything starts here.
 - Generated TypeScript from protobuf via `protoc-gen-es` (ConnectRPC v2)
 - String union types: `SessionStatus`, `EnvironmentStatus`, `TaskStatus`, `ProjectStatus`, `AdapterType`, `RuntimeName`, `TokenType`, `AgentEventType`
 - Bidirectional enum converters (proto enum ↔ string) with null-prototype maps to prevent prototype pollution
-- Constants: port defaults (7433, 7434, 3000), file paths, limits (`MAX_TASK_DEPTH = 5`)
+- Constants: port defaults (7433, 7434, 3000), file paths, limits (`MAX_TASK_DEPTH = 8`)
 
 **Namespace convention:**
 ```typescript
@@ -540,7 +546,7 @@ Mock runtime for testing. Echoes prompt, waits for input, echoes response. Demon
 
 Tasks form a directed acyclic graph with two relationship types:
 
-1. **Parent-child hierarchy** — Tasks can have subtasks (up to `MAX_TASK_DEPTH = 5` levels deep). Branch names are generated hierarchically: `project-slug/parent-task/child-task`.
+1. **Parent-child hierarchy** — Tasks can have subtasks (up to `MAX_TASK_DEPTH = 8` levels deep). Branch names are generated hierarchically: `project-slug/parent-task/child-task`.
 
 2. **Dependencies** — A task can `depend_on` other tasks. A dependent task can only start when all its dependencies have status `done`.
 

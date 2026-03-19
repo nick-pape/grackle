@@ -1,7 +1,10 @@
-# Task Orchestration Architecture
+---
+title: Task Orchestration Architecture
+status: superseded
+type: spec
+---
 
-**Status:** Draft / RFC
-**Date:** 2026-03-08
+# Task Orchestration Architecture
 
 ## Overview
 

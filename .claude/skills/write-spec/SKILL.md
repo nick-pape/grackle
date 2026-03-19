@@ -38,11 +38,11 @@ This provides context on how this issue fits into the larger feature.
 
 Check these spec files in the repo for relevant sections:
 
-- `specs/task-orchestration.md` — Orchestration RFC (task lifecycle, decomposition, reconciliation, escalation)
-- `specs/GRACKLE-DEEP-DIVE.md` — Full architecture deep dive (all subsystems)
-- `specs/v0.md` — Original design spec (UI mockups, interaction patterns)
-- `specs/default-personas.md` — Persona roster definitions
-- `specs/ux-audit.md` — UX audit findings and recommendations
+- `specs/2026-03-18-agent-kernel.md` — Agent Kernel Architecture RFC (task lifecycle, process model, scheduling, IPC, signals)
+- `specs/2026-03-11-grackle-deep-dive.md` — Full architecture deep dive (all subsystems)
+- `specs/2026-02-20-v0.md` — Original design spec (UI mockups, interaction patterns)
+- `specs/2026-03-13-default-personas.md` — Persona roster definitions
+- `specs/2026-03-12-ux-audit.md` — UX audit findings and recommendations
 
 Read the files that are relevant based on the issue's domain (server, web, CLI, powerline, etc.). Use the issue labels to guide which specs to prioritize.
 
