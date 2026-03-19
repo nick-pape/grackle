@@ -446,6 +446,23 @@ export function initDatabase(): void {
         .run(fallback.id);
     }
   }
+
+  // Backfill: ensure onboarding_completed setting exists.
+  // Fresh installs (no pre-existing environments or personas) get "false" to trigger
+  // the setup wizard. Upgrades (pre-existing data) get "true" to skip it.
+  // personaCount was captured before the seed insert, so it reflects user-created personas.
+  const existingOnboarding = sqlite
+    .prepare("SELECT value FROM settings WHERE key = 'onboarding_completed'")
+    .get() as { value: string } | undefined;
+  if (!existingOnboarding) {
+    const environmentCount = sqlite
+      .prepare("SELECT COUNT(*) as cnt FROM environments")
+      .get() as { cnt: number };
+    const isFreshInstall = environmentCount.cnt === 0 && personaCount.cnt === 0;
+    sqlite
+      .prepare("INSERT OR IGNORE INTO settings (key, value) VALUES ('onboarding_completed', ?)")
+      .run(isFreshInstall ? "false" : "true");
+  }
 }
 
 // Run init immediately for backwards compatibility — stores import db at module load

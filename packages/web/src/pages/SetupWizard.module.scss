@@ -1,0 +1,157 @@
+@use '../styles/mixins' as *;
+
+.wizard {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-base);
+  padding: var(--space-lg);
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-xl);
+  max-width: 560px;
+  width: 100%;
+}
+
+.stepContent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--space-lg);
+  width: 100%;
+}
+
+.logoArea {
+  font-size: 64px;
+  line-height: 1;
+  margin-bottom: var(--space-sm);
+}
+
+.heading {
+  font-family: var(--font-ui);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.tagline {
+  font-family: var(--font-ui);
+  font-size: var(--font-size-md);
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.subtitle {
+  font-family: var(--font-ui);
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+  margin: 0;
+  max-width: 420px;
+}
+
+.featureList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  text-align: left;
+  width: 100%;
+
+  li {
+    @include surface-card;
+    padding: var(--space-md) var(--space-lg);
+    font-family: var(--font-ui);
+    font-size: var(--font-size-sm);
+    color: var(--text-primary);
+    line-height: var(--line-height);
+  }
+}
+
+.runtimeGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-md);
+  width: 100%;
+
+  @include mobile {
+    grid-template-columns: 1fr;
+  }
+}
+
+.runtimeCard {
+  @include surface-card;
+  @include card-hover;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-xl) var(--space-lg);
+  cursor: pointer;
+  font-family: var(--font-ui);
+  text-align: center;
+  border: var(--border-width, 1px) solid var(--glass-border);
+
+  &[data-selected="true"] {
+    border-color: var(--accent-green);
+    box-shadow: 0 0 0 1px var(--accent-green), var(--shadow-xs);
+  }
+}
+
+.runtimeName {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+}
+
+.runtimeDescription {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+}
+
+.buttonRow {
+  display: flex;
+  gap: var(--space-md);
+  align-items: center;
+  margin-top: var(--space-sm);
+}
+
+.primaryButton {
+  @include btn-primary;
+  min-width: 120px;
+}
+
+.ghostButton {
+  @include btn-ghost;
+  padding: var(--space-sm) var(--space-lg);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  min-width: 80px;
+}
+
+.dots {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--text-disabled);
+  transition: background var(--transition-fast),
+              transform var(--transition-fast);
+
+  &[data-active="true"] {
+    background: var(--accent-green);
+    transform: scale(1.25);
+  }
+}
