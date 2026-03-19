@@ -111,18 +111,17 @@ export function usePersonas(send: SendFunction): UsePersonasResult {
       model?: string,
       maxTurns?: number,
     ) => {
-      send({
-        type: "update_persona",
-        payload: {
-          personaId,
-          name: name || "",
-          description: description || "",
-          systemPrompt: systemPrompt || "",
-          runtime: runtime || "",
-          model: model || "",
-          maxTurns: maxTurns || 0,
-        },
-      });
+      // Only include fields that were explicitly provided so the server can
+      // distinguish "not provided" (keep existing) from "set to empty" (clear).
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const payload: Record<string, any> = { personaId };
+      if (name !== undefined) { payload.name = name; }
+      if (description !== undefined) { payload.description = description; }
+      if (systemPrompt !== undefined) { payload.systemPrompt = systemPrompt; }
+      if (runtime !== undefined) { payload.runtime = runtime; }
+      if (model !== undefined) { payload.model = model; }
+      if (maxTurns !== undefined) { payload.maxTurns = maxTurns; }
+      send({ type: "update_persona", payload });
     },
     [send],
   );

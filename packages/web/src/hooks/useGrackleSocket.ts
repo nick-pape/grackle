@@ -178,6 +178,10 @@ export interface UseGrackleSocketResult {
   appDefaultPersonaId: string;
   /** Set the app-level default persona ID (persisted via server settings). */
   setAppDefaultPersonaId: (personaId: string) => void;
+  /** Whether the first-run onboarding wizard has been completed. */
+  onboardingCompleted: boolean;
+  /** Mark onboarding as complete (persisted via server settings). */
+  completeOnboarding: () => void;
 }
 
 // ─── Composition hook ─────────────────────────────────────────────────────────
@@ -198,6 +202,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
   // --- Settings state ---
 
   const [appDefaultPersonaId, setAppDefaultPersonaIdState] = useState("");
+  const [onboardingCompleted, setOnboardingCompleted] = useState(true);
 
   // --- Transport (must be first to provide `send`) ---
 
@@ -224,6 +229,9 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
   /** Key used for the app-level default persona setting. */
   const SETTING_KEY_DEFAULT_PERSONA = "default_persona_id";
 
+  /** Key used for the onboarding completed setting. */
+  const SETTING_KEY_ONBOARDING_COMPLETED = "onboarding_completed";
+
   const setAppDefaultPersonaId = useCallback(
     (personaId: string) => {
       setAppDefaultPersonaIdState(personaId);
@@ -234,6 +242,14 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
     },
     [send],
   );
+
+  const completeOnboarding = useCallback(() => {
+    setOnboardingCompleted(true);
+    send({
+      type: "set_setting",
+      payload: { key: SETTING_KEY_ONBOARDING_COMPLETED, value: "true" },
+    });
+  }, [send]);
 
   // --- Message routing ---
 
@@ -246,6 +262,9 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
     if (event.type === "setting.changed") {
       if (key === SETTING_KEY_DEFAULT_PERSONA) {
         setAppDefaultPersonaIdState(value ?? "");
+      }
+      if (key === SETTING_KEY_ONBOARDING_COMPLETED) {
+        setOnboardingCompleted(value === "true");
       }
       return;
     }
@@ -280,6 +299,9 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
       if (key === SETTING_KEY_DEFAULT_PERSONA) {
         setAppDefaultPersonaIdState(value ?? "");
       }
+      if (key === SETTING_KEY_ONBOARDING_COMPLETED) {
+        setOnboardingCompleted(value === "true");
+      }
       return;
     }
 
@@ -307,6 +329,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
     sendFn({ type: "get_credential_providers" });
     sendFn({ type: "list_personas" });
     sendFn({ type: "get_setting", payload: { key: SETTING_KEY_DEFAULT_PERSONA } });
+    sendFn({ type: "get_setting", payload: { key: SETTING_KEY_ONBOARDING_COMPLETED } });
     sendFn({ type: "subscribe_all" });
   }
 
@@ -377,5 +400,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
     loadTaskSessions: sessionsHook.loadTaskSessions,
     appDefaultPersonaId,
     setAppDefaultPersonaId,
+    onboardingCompleted,
+    completeOnboarding,
   };
 }
