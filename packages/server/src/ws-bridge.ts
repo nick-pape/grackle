@@ -695,6 +695,52 @@ async function handleMessage(
       break;
     }
 
+    case "stop_task": {
+      const taskId = msg.payload?.taskId as string;
+      if (!taskId) return;
+
+      // Kill all active sessions for this task (server-authoritative lookup)
+      const activeSessions = sessionStore.getActiveSessionsForTask(taskId);
+      for (const session of activeSessions) {
+        const conn = adapterManager.getConnection(session.environmentId);
+        if (conn) {
+          try {
+            await conn.client.kill(
+              create(powerline.SessionIdSchema, { id: session.id }),
+            );
+          } catch (err) {
+            logger.warn({ sessionId: session.id, err }, "PowerLine kill failed — marking session interrupted anyway");
+          }
+        }
+        sessionStore.updateSession(session.id, SESSION_STATUS.INTERRUPTED);
+        streamHub.publish(
+          create(grackle.SessionEventSchema, {
+            sessionId: session.id,
+            type: grackle.EventType.STATUS,
+            timestamp: new Date().toISOString(),
+            content: SESSION_STATUS.INTERRUPTED,
+            raw: "",
+          }),
+        );
+      }
+
+      // Mark task complete (same as "complete_task" handler)
+      taskStore.markTaskComplete(taskId, TASK_STATUS.COMPLETE);
+      const stoppedTask = taskStore.getTask(taskId);
+      const unblocked = stoppedTask?.projectId ? taskStore.checkAndUnblock(stoppedTask.projectId) : [];
+      sendWs(ws, {
+        type: "task_completed",
+        payload: {
+          taskId,
+          unblockedTaskIds: unblocked.map((t) => t.id),
+        },
+      });
+      if (stoppedTask) {
+        emit("task.completed", { taskId, projectId: stoppedTask.projectId || "" });
+      }
+      break;
+    }
+
     case "resume_agent": {
       const resumeSessionId = msg.payload?.sessionId as string;
       if (!resumeSessionId) {

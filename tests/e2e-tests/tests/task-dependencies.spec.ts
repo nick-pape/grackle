@@ -68,7 +68,7 @@ test.describe("Task Dependencies", () => {
     await patchWsForStubRuntime(page);
     await navigateToTask(page, "unblock-blocker");
     await runStubTaskToCompletion(page);
-    await page.locator("button", { hasText: "Complete" }).click();
+    await page.locator("button", { hasText: "Stop" }).click();
     await expect(page.getByText("Task completed")).toBeVisible({ timeout: 5_000 });
 
     // Navigate back to dependent — should now be unblocked
@@ -104,7 +104,7 @@ test.describe("Task Dependencies", () => {
     await patchWsForStubRuntime(page);
     await navigateToTask(page, "multi-blocker-a");
     await runStubTaskToCompletion(page);
-    await page.locator("button", { hasText: "Complete" }).click();
+    await page.locator("button", { hasText: "Stop" }).click();
     await expect(page.getByText("Task completed")).toBeVisible({ timeout: 5_000 });
 
     // C should still be blocked (only by B now)
@@ -114,7 +114,7 @@ test.describe("Task Dependencies", () => {
     // Complete task B
     await navigateToTask(page, "multi-blocker-b");
     await runStubTaskToCompletion(page);
-    await page.locator("button", { hasText: "Complete" }).click();
+    await page.locator("button", { hasText: "Stop" }).click();
     await expect(page.getByText("Task completed")).toBeVisible({ timeout: 5_000 });
 
     // C should now be unblocked

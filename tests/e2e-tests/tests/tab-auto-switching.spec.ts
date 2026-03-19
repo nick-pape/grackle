@@ -62,7 +62,7 @@ test.describe("Tab Auto-Switching", () => {
     // Run through full lifecycle: start → review → approve (done)
     await patchWsForStubRuntime(page);
     await runStubTaskToCompletion(page);
-    await page.locator("button", { hasText: "Complete" }).click();
+    await page.locator("button", { hasText: "Stop" }).click();
 
     // Wait for task status to update in sidebar (✓ = done)
     await expect(page.locator("text=✓").first()).toBeVisible({ timeout: 15_000 });

@@ -100,7 +100,7 @@ test.describe("Task Overview Tab", () => {
     await navigateToTask(page, "done-blocker");
     await patchWsForStubRuntime(page);
     await runStubTaskToCompletion(page);
-    await page.getByRole("button", { name: "Complete", exact: true }).click();
+    await page.getByRole("button", { name: "Stop", exact: true }).click();
     await expect(page.getByText("Task completed")).toBeVisible({ timeout: 5_000 });
 
     const projectId = await getProjectId(page, "overview-done-dep");
@@ -151,7 +151,7 @@ test.describe("Task Overview Tab", () => {
     // Run task through to paused, then complete it
     await patchWsForStubRuntime(page);
     await runStubTaskToCompletion(page);
-    await page.getByRole("button", { name: "Complete", exact: true }).click();
+    await page.getByRole("button", { name: "Stop", exact: true }).click();
 
     // Task is now complete — status should reflect completion
     await expect(page.getByText("Task completed")).toBeVisible({ timeout: 10_000 });

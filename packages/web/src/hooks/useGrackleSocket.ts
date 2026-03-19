@@ -108,6 +108,7 @@ export interface UseGrackleSocketResult {
     environmentId?: string,
     notes?: string,
   ) => void;
+  stopTask: (taskId: string) => void;
   completeTask: (taskId: string) => void;
   resumeTask: (taskId: string) => void;
   updateTask: (
@@ -373,6 +374,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
     loadTasks: tasksHook.loadTasks,
     createTask: tasksHook.createTask,
     startTask: tasksHook.startTask,
+    stopTask: tasksHook.stopTask,
     completeTask: tasksHook.completeTask,
     resumeTask: tasksHook.resumeTask,
     updateTask: tasksHook.updateTask,

@@ -825,6 +825,10 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       loadTasks,
       createTask,
       startTask,
+      stopTask: (taskId: string) => {
+        console.log("[MockGrackle] stopTask", { taskId });
+        completeTask(taskId);
+      },
       completeTask,
       resumeTask,
       updateTask,

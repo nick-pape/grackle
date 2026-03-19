@@ -41,8 +41,8 @@ test.describe("Multi-Task", () => {
     await patchWsForStubRuntime(page);
     await runStubTaskToCompletion(page);
 
-    // Verify task A is in paused state with Complete button
-    await expect(page.locator("button", { hasText: "Complete" })).toBeVisible();
+    // Verify task A is in paused state (Resume only appears in paused)
+    await expect(page.locator("button", { hasText: "Resume" })).toBeVisible();
 
     // Navigate to task B (pending)
     await navigateToTask(page, "preserve-task-b");
@@ -51,9 +51,9 @@ test.describe("Multi-Task", () => {
     const overviewTab = page.locator("button", { hasText: "Overview" });
     await expect(overviewTab).toHaveAttribute("class", /active/, { timeout: 10_000 });
 
-    // Navigate back to task A — should still show paused state with Complete button
+    // Navigate back to task A — should still show paused state
     await navigateToTask(page, "preserve-task-a");
-    await expect(page.locator("button", { hasText: "Complete" })).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator("button", { hasText: "Resume" })).toBeVisible({ timeout: 5_000 });
   });
 
   test("multiple projects shown simultaneously in sidebar", async ({ appPage }) => {
@@ -106,7 +106,7 @@ test.describe("Multi-Task", () => {
     await expect(page.locator("text=◉").first()).toBeVisible({ timeout: 15_000 });
 
     // Complete — sidebar icon should change to ✓ (green)
-    await page.locator("button", { hasText: "Complete" }).click();
+    await page.locator("button", { hasText: "Stop" }).click();
     await expect(page.locator("text=✓").first()).toBeVisible({ timeout: 5_000 });
   });
 });
