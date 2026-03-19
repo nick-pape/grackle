@@ -55,12 +55,16 @@ export function taskEditUrl(taskId: string): string {
 }
 
 /** Build URL for the new task form. */
-export function newTaskUrl(workspaceId: string, parentTaskId?: string): string {
-  const params = new URLSearchParams({ workspace: workspaceId });
+export function newTaskUrl(workspaceId?: string, parentTaskId?: string): string {
+  const params = new URLSearchParams();
+  if (workspaceId) {
+    params.set("workspace", workspaceId);
+  }
   if (parentTaskId) {
     params.set("parent", parentTaskId);
   }
-  return `/tasks/new?${params.toString()}`;
+  const qs = params.toString();
+  return qs ? `/tasks/new?${qs}` : "/tasks/new";
 }
 
 /** Build URL for the new chat form. */

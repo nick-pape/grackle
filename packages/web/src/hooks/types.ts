@@ -44,7 +44,7 @@ export interface Workspace {
   name: string;
   description: string;
   repoUrl: string;
-  defaultEnvironmentId: string;
+  environmentId: string;
   status: string;
   worktreeBasePath: string;
   useWorktrees: boolean;
@@ -225,7 +225,7 @@ export function isWorkspace(v: unknown): v is Workspace {
     typeof v.name === "string" &&
     typeof v.description === "string" &&
     typeof v.repoUrl === "string" &&
-    typeof v.defaultEnvironmentId === "string" &&
+    typeof v.environmentId === "string" &&
     typeof v.status === "string" &&
     typeof v.worktreeBasePath === "string" &&
     typeof v.useWorktrees === "boolean" &&

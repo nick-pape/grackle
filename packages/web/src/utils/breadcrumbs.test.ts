@@ -13,6 +13,23 @@ import {
 import type { TaskData, Workspace } from "../hooks/useGrackleSocket.js";
 import { getStatusBadgeClassKey, getStatusStyle } from "./taskStatus.js";
 
+/** Creates a minimal Workspace for testing. */
+function makeWorkspace(id: string, name: string): Workspace {
+  return {
+    id,
+    name,
+    description: "",
+    repoUrl: "",
+    environmentId: "",
+    status: "active",
+    worktreeBasePath: "",
+    useWorktrees: true,
+    defaultPersonaId: "",
+    createdAt: "",
+    updatedAt: "",
+  };
+}
+
 /** Creates a minimal TaskData for testing. */
 function makeTask(overrides: Partial<TaskData> & { id: string; workspaceId: string }): TaskData {
   return {
@@ -29,22 +46,6 @@ function makeTask(overrides: Partial<TaskData> & { id: string; workspaceId: stri
     childTaskIds: [],
     canDecompose: false,
     defaultPersonaId: "",
-    ...overrides,
-  };
-}
-
-/** Creates a minimal Workspace for testing. */
-function makeWorkspace(overrides: Partial<Workspace> & { id: string; name: string }): Workspace {
-  return {
-    description: "",
-    repoUrl: "",
-    defaultEnvironmentId: "",
-    status: "active",
-    createdAt: "",
-    worktreeBasePath: "",
-    useWorktrees: false,
-    defaultPersonaId: "",
-    updatedAt: "",
     ...overrides,
   };
 }
@@ -121,7 +122,7 @@ describe("breadcrumb builders", () => {
   });
 
   it("workspace returns Home > WorkspaceName", () => {
-    const workspaces: Workspace[] = [makeWorkspace({ id: "p1", name: "My Workspace" })];
+    const workspaces: Workspace[] = [makeWorkspace("p1", "My Workspace")];
     const segments: BreadcrumbSegment[] = buildWorkspaceBreadcrumbs("p1", workspaces);
     expect(segments).toHaveLength(2);
     expect(segments[0].label).toBe("Home");
@@ -131,30 +132,32 @@ describe("breadcrumb builders", () => {
   });
 
   it("task returns Home > Workspace > Task", () => {
-    const workspaces: Workspace[] = [makeWorkspace({ id: "p1", name: "Proj" })];
+    const workspaces: Workspace[] = [makeWorkspace("p1", "My Workspace")];
     const task: TaskData = makeTask({ id: "t1", workspaceId: "p1", title: "My Task" });
     const byId: Map<string, TaskData> = new Map([["t1", task]]);
 
     const segments: BreadcrumbSegment[] = buildTaskBreadcrumbs("t1", workspaces, byId);
     expect(segments).toHaveLength(3);
     expect(segments[0].label).toBe("Home");
-    expect(segments[1].label).toBe("Proj");
+    expect(segments[0].url).toBe("/");
+    expect(segments[1].label).toBe("My Workspace");
     expect(segments[1].url).toBe("/workspaces/p1");
     expect(segments[2].label).toBe("My Task");
     expect(segments[2].url).toBeUndefined();
   });
 
   it("nested task includes ancestor chain", () => {
-    const workspaces: Workspace[] = [makeWorkspace({ id: "p1", name: "Proj" })];
+    const workspaces: Workspace[] = [makeWorkspace("p1", "WS")];
     const root: TaskData = makeTask({ id: "t1", workspaceId: "p1", title: "Root" });
     const child: TaskData = makeTask({ id: "t2", workspaceId: "p1", title: "Child", parentTaskId: "t1", depth: 1 });
     const grandchild: TaskData = makeTask({ id: "t3", workspaceId: "p1", title: "Grandchild", parentTaskId: "t2", depth: 2 });
     const byId: Map<string, TaskData> = new Map([["t1", root], ["t2", child], ["t3", grandchild]]);
 
     const segments: BreadcrumbSegment[] = buildTaskBreadcrumbs("t3", workspaces, byId);
-    expect(segments).toHaveLength(5); // Home > Proj > Root > Child > Grandchild
+    expect(segments).toHaveLength(5); // Home > WS > Root > Child > Grandchild
     expect(segments[0].label).toBe("Home");
-    expect(segments[1].label).toBe("Proj");
+    expect(segments[1].label).toBe("WS");
+    expect(segments[1].url).toBe("/workspaces/p1");
     expect(segments[2].label).toBe("Root");
     expect(segments[2].url).toBe("/tasks/t1");
     expect(segments[3].label).toBe("Child");
@@ -164,12 +167,13 @@ describe("breadcrumb builders", () => {
   });
 
   it("new task with parentTaskId shows ancestor chain", () => {
-    const workspaces: Workspace[] = [makeWorkspace({ id: "p1", name: "Proj" })];
+    const workspaces: Workspace[] = [makeWorkspace("p1", "WS")];
     const parent: TaskData = makeTask({ id: "t1", workspaceId: "p1", title: "Parent" });
     const byId: Map<string, TaskData> = new Map([["t1", parent]]);
 
     const segments: BreadcrumbSegment[] = buildNewTaskBreadcrumbs("p1", "t1", workspaces, byId);
-    expect(segments).toHaveLength(4); // Home > Proj > Parent > New Task
+    expect(segments).toHaveLength(4); // Home > WS > Parent > New Task
+    expect(segments[1].label).toBe("WS");
     expect(segments[2].label).toBe("Parent");
     expect(segments[3].label).toBe("New Task");
     expect(segments[3].url).toBeUndefined();

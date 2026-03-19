@@ -94,10 +94,10 @@ type CreateWorkspaceRequest = Message<"grackle.CreateWorkspaceRequest"> & {
     name: string;
     description: string;
     repoUrl: string;
-    defaultEnvironmentId: string;
     useWorktrees?: boolean;
     worktreeBasePath?: string;
     defaultPersonaId?: string;
+    environmentId: string;
 };
 
 // @public
@@ -403,7 +403,7 @@ const Grackle: GenService<{
     };
     listWorkspaces: {
         methodKind: "unary";
-        input: typeof EmptySchema;
+        input: typeof ListWorkspacesRequestSchema;
         output: typeof WorkspaceListSchema;
     };
     createWorkspace: {
@@ -570,6 +570,8 @@ declare namespace grackle {
         WorkspaceSchema,
         WorkspaceList,
         WorkspaceListSchema,
+        ListWorkspacesRequest,
+        ListWorkspacesRequestSchema,
         CreateWorkspaceRequest,
         CreateWorkspaceRequestSchema,
         UpdateWorkspaceRequest,
@@ -764,6 +766,14 @@ type ListTasksRequest = Message<"grackle.ListTasksRequest"> & {
 
 // @public
 const ListTasksRequestSchema: GenMessage<ListTasksRequest>;
+
+// @public
+type ListWorkspacesRequest = Message<"grackle.ListWorkspacesRequest"> & {
+    environmentId: string;
+};
+
+// @public
+const ListWorkspacesRequestSchema: GenMessage<ListWorkspacesRequest>;
 
 // @public
 export const LOGS_DIR: string;
@@ -1304,10 +1314,10 @@ type UpdateWorkspaceRequest = Message<"grackle.UpdateWorkspaceRequest"> & {
     name?: string;
     description?: string;
     repoUrl?: string;
-    defaultEnvironmentId?: string;
     useWorktrees?: boolean;
     worktreeBasePath?: string;
     defaultPersonaId?: string;
+    environmentId?: string;
 };
 
 // @public
@@ -1319,13 +1329,13 @@ type Workspace = Message<"grackle.Workspace"> & {
     name: string;
     description: string;
     repoUrl: string;
-    defaultEnvironmentId: string;
     status: WorkspaceStatus;
     createdAt: string;
     updatedAt: string;
     useWorktrees: boolean;
     worktreeBasePath: string;
     defaultPersonaId: string;
+    environmentId: string;
 };
 
 // @public

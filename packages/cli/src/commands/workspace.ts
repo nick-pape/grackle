@@ -9,18 +9,19 @@ export function registerWorkspaceCommands(program: Command): void {
   workspace
     .command("list")
     .description("List all active workspaces")
-    .action(async () => {
+    .option("--env <env-id>", "Filter by environment ID")
+    .action(async (opts: { env?: string }) => {
       const client = createGrackleClient();
-      const res = await client.listWorkspaces({});
+      const res = await client.listWorkspaces({ environmentId: opts.env || "" });
       if (res.workspaces.length === 0) {
         console.log("No workspaces.");
         return;
       }
       const table = new Table({
-        head: ["ID", "Name", "Env", "Worktrees", "Status", "Created"],
+        head: ["ID", "Name", "Environment", "Worktrees", "Status", "Created"],
       });
       for (const p of res.workspaces) {
-        table.push([p.id, p.name, p.defaultEnvironmentId || "-", p.useWorktrees ? "enabled" : "disabled", workspaceStatusToString(p.status), p.createdAt]);
+        table.push([p.id, p.name, p.environmentId || "-", p.useWorktrees ? "enabled" : "disabled", workspaceStatusToString(p.status), p.createdAt]);
       }
       console.log(table.toString());
     });
@@ -28,12 +29,12 @@ export function registerWorkspaceCommands(program: Command): void {
   workspace
     .command("create <name>")
     .description("Create a new workspace")
+    .requiredOption("--env <env-id>", "Environment ID (required)")
     .option("--repo <url>", "Repository URL")
-    .option("--env <env-id>", "Default environment ID")
     .option("--desc <description>", "Workspace description")
     .option("--no-worktrees", "Disable worktree isolation (agents share the main checkout)")
     .option("--worktree-base-path <path>", "Base path for worktrees (e.g. /workspaces/my-repo)")
-    .action(async (name: string, opts: { worktrees?: boolean; desc?: string; repo?: string; env?: string; worktreeBasePath?: string }) => {
+    .action(async (name: string, opts: { worktrees?: boolean; desc?: string; repo?: string; env: string; worktreeBasePath?: string }) => {
       const client = createGrackleClient();
       // Commander sets opts.worktrees = false when --no-worktrees is passed, true otherwise
       const useWorktrees = opts.worktrees !== false;
@@ -41,7 +42,7 @@ export function registerWorkspaceCommands(program: Command): void {
         name,
         description: opts.desc || "",
         repoUrl: opts.repo || "",
-        defaultEnvironmentId: opts.env || "",
+        environmentId: opts.env,
         useWorktrees,
         worktreeBasePath: opts.worktreeBasePath || "",
       });
@@ -60,7 +61,7 @@ export function registerWorkspaceCommands(program: Command): void {
         { "Name": p.name },
         { "Description": p.description || "-" },
         { "Repo URL": p.repoUrl || "-" },
-        { "Default Env": p.defaultEnvironmentId || "-" },
+        { "Environment": p.environmentId || "-" },
         { "Worktrees": p.useWorktrees ? "enabled" : "disabled" },
         ...(p.worktreeBasePath ? [{ "Worktree Base": p.worktreeBasePath }] : []),
         { "Status": workspaceStatusToString(p.status) },
@@ -76,7 +77,7 @@ export function registerWorkspaceCommands(program: Command): void {
     .option("--name <name>", "Workspace name")
     .option("--desc <description>", "Workspace description")
     .option("--repo <url>", "Repository URL")
-    .option("--env <env-id>", "Default environment ID")
+    .option("--env <env-id>", "Reparent to a different environment")
     .option("--no-worktrees", "Disable worktree isolation (agents share the main checkout)")
     .option("--worktrees", "Enable worktree isolation (default)")
     .option("--worktree-base-path <path>", "Base path for worktrees (e.g. /workspaces/my-repo)")
@@ -94,7 +95,7 @@ export function registerWorkspaceCommands(program: Command): void {
         name: opts.name,
         description: opts.desc,
         repoUrl: opts.repo,
-        defaultEnvironmentId: opts.env,
+        environmentId: opts.env,
         useWorktrees,
         worktreeBasePath: opts.worktreeBasePath,
       });

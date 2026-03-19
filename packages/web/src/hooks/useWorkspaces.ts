@@ -19,7 +19,7 @@ export interface UseWorkspacesResult {
     name: string,
     description?: string,
     repoUrl?: string,
-    defaultEnvironmentId?: string,
+    environmentId?: string,
     defaultPersonaId?: string,
   ) => void;
   /** Archive a workspace by ID. */
@@ -31,7 +31,7 @@ export interface UseWorkspacesResult {
       name?: string;
       description?: string;
       repoUrl?: string;
-      defaultEnvironmentId?: string;
+      environmentId?: string;
       worktreeBasePath?: string;
       useWorktrees?: boolean;
       defaultPersonaId?: string;
@@ -96,7 +96,7 @@ export function useWorkspaces(send: SendFunction): UseWorkspacesResult {
       name: string,
       description?: string,
       repoUrl?: string,
-      defaultEnvironmentId?: string,
+      environmentId?: string,
       defaultPersonaId?: string,
     ) => {
       setWorkspaceCreating(true);
@@ -106,7 +106,7 @@ export function useWorkspaces(send: SendFunction): UseWorkspacesResult {
           name,
           description: description || "",
           repoUrl: repoUrl || "",
-          defaultEnvironmentId: defaultEnvironmentId || "",
+          environmentId: environmentId || "",
           defaultPersonaId: defaultPersonaId || "",
         },
       });
@@ -128,7 +128,7 @@ export function useWorkspaces(send: SendFunction): UseWorkspacesResult {
         name?: string;
         description?: string;
         repoUrl?: string;
-        defaultEnvironmentId?: string;
+        environmentId?: string;
         worktreeBasePath?: string;
         useWorktrees?: boolean;
         defaultPersonaId?: string;

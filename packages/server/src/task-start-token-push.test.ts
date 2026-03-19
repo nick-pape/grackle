@@ -56,12 +56,13 @@ vi.mock("./workspace-store.js", () => ({
   getWorkspace: vi.fn(() => ({
     id: "proj-1",
     name: "Test Workspace",
-    defaultEnvironmentId: "env-1",
+    environmentId: "env-1",
     status: "active",
     createdAt: new Date().toISOString(),
   })),
   createWorkspace: vi.fn(),
   archiveWorkspace: vi.fn(),
+  countWorkspacesByEnvironment: vi.fn(() => 0),
 }));
 
 vi.mock("./task-store.js", () => ({

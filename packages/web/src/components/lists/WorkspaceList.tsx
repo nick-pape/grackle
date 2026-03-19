@@ -384,7 +384,7 @@ function TaskTreeNode({
 
 /** Sidebar workspace tree with expandable task lists and hierarchical task rendering. */
 export function WorkspaceList(): JSX.Element {
-  const { workspaces, tasks, loadTasks, createWorkspace, workspaceCreating } = useGrackle();
+  const { workspaces, tasks, environments, loadTasks, createWorkspace, workspaceCreating } = useGrackle();
   const navigate = useAppNavigate();
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
@@ -499,7 +499,9 @@ export function WorkspaceList(): JSX.Element {
     if (!newWorkspaceName.trim() || workspaceCreating) {
       return;
     }
-    createWorkspace(newWorkspaceName.trim());
+    // Auto-select the first available environment for the new workspace
+    const firstEnvId = environments.length > 0 ? environments[0].id : "";
+    createWorkspace(newWorkspaceName.trim(), undefined, undefined, firstEnvId);
     setNewWorkspaceName("");
     setShowCreateForm(false);
   };

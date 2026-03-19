@@ -4,7 +4,7 @@ import { useGrackle } from "../context/GrackleContext.js";
 import { DagView } from "../components/dag/DagView.js";
 import { WorkspaceBoard } from "../components/workspace/WorkspaceBoard.js";
 import { Breadcrumbs, ConfirmDialog } from "../components/display/index.js";
-import { buildWorkspaceBreadcrumbs } from "../utils/breadcrumbs.js";
+import type { BreadcrumbSegment } from "../utils/breadcrumbs.js";
 import { newTaskUrl, useAppNavigate } from "../utils/navigation.js";
 import {
   EditableTextField,
@@ -61,7 +61,8 @@ export function WorkspacePage(): JSX.Element {
   const [metaCollapsed, setMetaCollapsed] = useState(false);
   const previousWorkspaceIdRef = useRef<string | undefined>(undefined);
 
-  const breadcrumbs = buildWorkspaceBreadcrumbs(workspaceId!, workspaces);
+  const workspace = workspaces.find((p) => p.id === workspaceId);
+  const breadcrumbs: BreadcrumbSegment[] = [{ label: "Home", url: "/" }, { label: workspace?.name ?? "Workspace", url: undefined }];
 
   // Reset edit state when workspaceId changes
   useEffect(() => {
@@ -75,13 +76,12 @@ export function WorkspacePage(): JSX.Element {
     }
   }, [workspaceId, activeFieldId]);
 
-  const workspace = workspaces.find((p) => p.id === workspaceId);
   const workspaceTasks = tasks.filter((t) => t.workspaceId === workspaceId);
   const done = workspaceTasks.filter((t) => t.status === "complete").length;
   const total = workspaceTasks.length;
   const progressPct = total > 0 ? Math.round((done / total) * 100) : 0;
 
-  const defaultEnv = environments.find((e) => e.id === workspace?.defaultEnvironmentId);
+  const defaultEnv = environments.find((e) => e.id === workspace?.environmentId);
 
   return (
     <div className={styles.panelContainer}>
@@ -198,13 +198,13 @@ export function WorkspacePage(): JSX.Element {
             <span className={styles.metaLabel}>Environment</span>
             <div className={styles.metaValue}>
               <EditableSelect
-                value={workspace?.defaultEnvironmentId || ""}
-                onSave={(v) => { if (workspace) { updateWorkspace(workspace.id, { defaultEnvironmentId: v }); } }}
+                value={workspace?.environmentId || ""}
+                onSave={(v) => { if (workspace) { updateWorkspace(workspace.id, { environmentId: v }); } }}
                 options={[
                   { value: "", label: "None" },
                   ...environments.map((env) => ({ value: env.id, label: env.displayName })),
                 ]}
-                fieldId="defaultEnvironmentId"
+                fieldId="environmentId"
                 activeFieldId={activeFieldId}
                 onActivate={setActiveFieldId}
                 renderDisplay={() => {
@@ -218,7 +218,7 @@ export function WorkspacePage(): JSX.Element {
                   }
                   return undefined;
                 }}
-                placeholder={workspace?.defaultEnvironmentId || "No default environment"}
+                placeholder={workspace?.environmentId || "No default environment"}
                 ariaLabel="Workspace default environment"
                 data-testid="edit-env"
               />

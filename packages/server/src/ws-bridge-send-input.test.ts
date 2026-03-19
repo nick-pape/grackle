@@ -69,6 +69,7 @@ vi.mock("./workspace-store.js", () => ({
   getWorkspace: vi.fn(() => undefined),
   createWorkspace: vi.fn(),
   archiveWorkspace: vi.fn(),
+  countWorkspacesByEnvironment: vi.fn(() => 0),
 }));
 
 vi.mock("./task-store.js", () => ({

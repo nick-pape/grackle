@@ -5,7 +5,7 @@ import { EventStream } from "../components/display/EventStream.js";
 import { FindingsPanel } from "../components/panels/FindingsPanel.js";
 import { Breadcrumbs, ConfirmDialog } from "../components/display/index.js";
 import { buildTaskBreadcrumbs } from "../utils/breadcrumbs.js";
-import { workspaceUrl, taskEditUrl, taskUrl, useAppNavigate } from "../utils/navigation.js";
+import { taskEditUrl, taskUrl, workspaceUrl, useAppNavigate } from "../utils/navigation.js";
 import { getStatusBadgeClassKey, getStatusStyle } from "../utils/taskStatus.js";
 import type { Session, TaskData, Environment, Workspace } from "../hooks/useGrackleSocket.js";
 import { AnimatePresence, motion } from "motion/react";
@@ -349,7 +349,7 @@ export function TaskPage(): JSX.Element {
     if (!task) return;
     deleteTask(task.id);
     setShowDeleteConfirm(false);
-    navigate(workspaceUrl(task.workspaceId), { replace: true });
+    navigate(task.workspaceId ? workspaceUrl(task.workspaceId) : "/", { replace: true });
   };
 
   // Reset state when switching tasks

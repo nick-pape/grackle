@@ -44,6 +44,10 @@ describe("URL builder functions", () => {
     expect(taskEditUrl("task-1")).toBe("/tasks/task-1/edit");
   });
 
+  it("newTaskUrl with no params produces base path", () => {
+    expect(newTaskUrl()).toBe("/tasks/new");
+  });
+
   it("newTaskUrl includes workspace param", () => {
     expect(newTaskUrl("proj-1")).toBe("/tasks/new?workspace=proj-1");
   });

@@ -254,7 +254,7 @@ async function startTaskSession(
     return `Workspace not found: ${task.workspaceId}`;
   }
 
-  const environmentId = options?.environmentId || workspace?.defaultEnvironmentId || "";
+  const environmentId = options?.environmentId || workspace?.environmentId || "";
   const env = envRegistry.getEnvironment(environmentId);
   if (!env) {
     logger.warn(
@@ -760,7 +760,8 @@ async function handleMessage(
     // ─── Workspaces ────────────────────────────────────────
 
     case "list_workspaces": {
-      const rows = workspaceStore.listWorkspaces();
+      const filterEnvironmentId = (msg.payload?.environmentId as string) || undefined;
+      const rows = workspaceStore.listWorkspaces(filterEnvironmentId);
       sendWs(ws, {
         type: "workspaces",
         payload: {
@@ -769,7 +770,7 @@ async function handleMessage(
             name: r.name,
             description: r.description,
             repoUrl: r.repoUrl,
-            defaultEnvironmentId: r.defaultEnvironmentId,
+            environmentId: r.environmentId,
             defaultPersonaId: r.defaultPersonaId,
             status: r.status,
             useWorktrees: r.useWorktrees,
@@ -786,6 +787,15 @@ async function handleMessage(
       const name = msg.payload?.name as string;
       if (!name) {
         sendWs(ws, { type: "error", payload: { message: "name required" } });
+        return;
+      }
+      const createEnvironmentId = (msg.payload?.environmentId as string) || "";
+      if (!createEnvironmentId) {
+        sendWs(ws, { type: "error", payload: { message: "environmentId required" } });
+        return;
+      }
+      if (!envRegistry.getEnvironment(createEnvironmentId)) {
+        sendWs(ws, { type: "error", payload: { message: `Environment not found: ${createEnvironmentId}` } });
         return;
       }
       const baseWorkspaceId = slugify(name) || uuid().slice(0, 8);
@@ -807,7 +817,7 @@ async function handleMessage(
         name,
         (msg.payload?.description as string) || "",
         (msg.payload?.repoUrl as string) || "",
-        (msg.payload?.defaultEnvironmentId as string) || "",
+        createEnvironmentId,
         createUseWorktrees,
         typeof msg.payload?.worktreeBasePath === "string" ? msg.payload.worktreeBasePath.trim() : "",
         (msg.payload?.defaultPersonaId as string) || "",
@@ -818,7 +828,9 @@ async function handleMessage(
 
     case "archive_workspace": {
       const workspaceId = msg.payload?.workspaceId as string;
-      if (workspaceId) workspaceStore.archiveWorkspace(workspaceId);
+      if (workspaceId) {
+        workspaceStore.archiveWorkspace(workspaceId);
+      }
       emit("workspace.archived", { workspaceId });
       break;
     }
@@ -841,9 +853,13 @@ async function handleMessage(
       }
       const descVal = typeof msg.payload?.description === "string" ? msg.payload.description : undefined;
       const repoVal = typeof msg.payload?.repoUrl === "string" ? msg.payload.repoUrl : undefined;
-      const envVal = typeof msg.payload?.defaultEnvironmentId === "string" ? msg.payload.defaultEnvironmentId : undefined;
+      const envVal = typeof msg.payload?.environmentId === "string" ? msg.payload.environmentId : undefined;
       if (repoVal !== undefined && repoVal !== "" && !/^https?:\/\//i.test(repoVal)) {
         sendWs(ws, { type: "error", payload: { message: "Repository URL must use http or https scheme" } });
+        return;
+      }
+      if (envVal !== undefined && !envRegistry.getEnvironment(envVal)) {
+        sendWs(ws, { type: "error", payload: { message: `Environment not found: ${envVal}` } });
         return;
       }
       const worktreesVal = typeof msg.payload?.useWorktrees === "boolean" ? msg.payload.useWorktrees as boolean : undefined;
@@ -853,7 +869,7 @@ async function handleMessage(
         name: nameVal !== undefined ? nameVal.trim() : undefined,
         description: descVal,
         repoUrl: repoVal,
-        defaultEnvironmentId: envVal,
+        environmentId: envVal,
         useWorktrees: worktreesVal,
         worktreeBasePath: worktreeBasePathVal,
         defaultPersonaId: defaultPersonaIdVal,
@@ -1502,7 +1518,7 @@ async function handleMessage(
       }
 
       const environmentId = task.workspaceId
-        ? workspaceStore.getWorkspace(task.workspaceId)?.defaultEnvironmentId
+        ? workspaceStore.getWorkspace(task.workspaceId)?.environmentId
         : undefined;
       if (!environmentId) {
         sendWs(ws, {
@@ -1759,6 +1775,18 @@ async function handleMessage(
         sendWs(ws, {
           type: "error",
           payload: { message: "environmentId required" },
+        });
+        return;
+      }
+
+      // Block deletion if workspaces still reference this environment
+      const wsCount = workspaceStore.countWorkspacesByEnvironment(environmentId);
+      if (wsCount > 0) {
+        sendWs(ws, {
+          type: "error",
+          payload: {
+            message: `Cannot remove environment: ${wsCount} active workspace(s) still reference it. Archive or reparent them first.`,
+          },
         });
         return;
       }

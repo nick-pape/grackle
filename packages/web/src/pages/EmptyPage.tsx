@@ -5,7 +5,7 @@ import styles from "../components/panels/SessionPanel.module.scss";
 
 /** Home page shown when no specific entity is selected. */
 export function EmptyPage(): JSX.Element {
-  const { workspaces, createWorkspace, workspaceCreating } = useGrackle();
+  const { workspaces, environments, createWorkspace, workspaceCreating } = useGrackle();
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newWorkspaceName, setNewWorkspaceName] = useState("");
 
@@ -14,7 +14,9 @@ export function EmptyPage(): JSX.Element {
     if (!newWorkspaceName.trim() || workspaceCreating) {
       return;
     }
-    createWorkspace(newWorkspaceName.trim());
+    // Auto-select the first available environment for the new workspace
+    const firstEnvId = environments.length > 0 ? environments[0].id : "";
+    createWorkspace(newWorkspaceName.trim(), undefined, undefined, firstEnvId);
   };
 
   if (workspaces.length === 0) {
