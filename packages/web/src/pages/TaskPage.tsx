@@ -106,15 +106,16 @@ function TaskOverview({ task, tasksById, environments, workspaces, taskSessions,
       )}
       <div className={styles.overviewSection}>
         <div className={styles.overviewLabel}>Environment</div>
-        {selectedEnv ? (
-          <div className={styles.envRow}>
-            <span className={`${styles.envDot} ${envStatusClass(selectedEnv.status)}`} title={selectedEnv.status} aria-label={`Status: ${selectedEnv.status}`} role="img" />
-            <span className={styles.overviewValue}>{selectedEnv.displayName}</span>
-          </div>
-        ) : envId && env ? (
+        {envId && env ? (
           <div className={styles.envRow}>
             <span className={`${styles.envDot} ${envStatusClass(env.status)}`} title={env.status} aria-label={`Status: ${env.status}`} role="img" />
             <span className={styles.overviewValue}>{env.displayName}</span>
+          </div>
+        ) : selectedEnv ? (
+          <div className={styles.envRow}>
+            <span className={`${styles.envDot} ${envStatusClass(selectedEnv.status)}`} title={selectedEnv.status} aria-label={`Status: ${selectedEnv.status}`} role="img" />
+            <span className={styles.overviewValue}>{selectedEnv.displayName}</span>
+            <span className={styles.overviewMuted}>(workspace default)</span>
           </div>
         ) : (
           <div className={styles.overviewMuted}>Set in workspace settings</div>
@@ -341,18 +342,15 @@ export function TaskPage(): JSX.Element {
   const workspace = workspaces.find((p) => p.id === workspaceId);
 
   // Initialize env selector from workspace default when task/workspace loads
-  if (selectedEnvId === "" && workspace?.defaultEnvironmentId) {
-    setSelectedEnvId(workspace.defaultEnvironmentId);
-  }
-  // If still empty, pick first connected environment
-  if (selectedEnvId === "" && environments.length > 0) {
-    const connected = environments.find((e) => e.status === "connected");
-    if (connected) {
-      setSelectedEnvId(connected.id);
-    } else if (environments[0]) {
-      setSelectedEnvId(environments[0].id);
+  useEffect(() => {
+    if (selectedEnvId !== "") return;
+    if (workspace?.defaultEnvironmentId) {
+      setSelectedEnvId(workspace.defaultEnvironmentId);
+    } else if (environments.length > 0) {
+      const connected = environments.find((e) => e.status === "connected");
+      setSelectedEnvId(connected?.id ?? environments[0].id);
     }
-  }
+  }, [selectedEnvId, workspace?.defaultEnvironmentId, environments]);
 
   // Resolve effective sessionId from the task's eagerly-patched latestSessionId
   // (set by the task_started handler) or from the user's attempt selection.

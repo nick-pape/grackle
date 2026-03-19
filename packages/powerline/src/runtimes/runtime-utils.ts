@@ -159,7 +159,7 @@ async function checkoutBranchInPlace(repoPath: string, branch: string): Promise<
  * checks out the branch directly in the main working tree and returns it.
  */
 export async function resolveWorkingDirectory(options: ResolveWorkingDirectoryOptions): Promise<string | undefined> {
-  const { branch, worktreeBasePath, useWorktrees, eventQueue, requireNonEmpty } = options;
+  const { branch, worktreeBasePath, useWorktrees = true, eventQueue, requireNonEmpty } = options;
   const ts = (): string => new Date().toISOString();
 
   if (branch && worktreeBasePath && useWorktrees) {
