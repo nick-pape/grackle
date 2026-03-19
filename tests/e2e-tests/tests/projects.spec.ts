@@ -1,5 +1,26 @@
 import { test, expect } from "./fixtures.js";
-import { createProject } from "./helpers.js";
+import { createProject, sendWsAndWaitFor } from "./helpers.js";
+
+/** Archive all existing projects via WS so the welcome CTA appears. */
+async function archiveAllProjects(page: import("@playwright/test").Page): Promise<void> {
+  const response = await sendWsAndWaitFor(page, { type: "list_projects" }, "projects");
+  const projects = (response.payload?.projects || []) as Array<{ id: string }>;
+  for (const project of projects) {
+    await sendWsAndWaitFor(
+      page,
+      { type: "archive_project", payload: { projectId: project.id } },
+      "project.archived",
+    );
+  }
+  if (projects.length > 0) {
+    // Reload so the UI reflects the empty state
+    await page.goto("/");
+    await page.waitForFunction(
+      () => document.body.innerText.includes("Connected"),
+      { timeout: 10_000 },
+    );
+  }
+}
 
 test.describe("Projects", () => {
   test("sidebar defaults to Projects tab", async ({ appPage }) => {
@@ -11,6 +32,9 @@ test.describe("Projects", () => {
 
   test("welcome CTA creates project inline", async ({ appPage }) => {
     const page = appPage;
+
+    // Ensure no projects exist so the welcome CTA is visible
+    await archiveAllProjects(page);
 
     // On fresh load (no projects), the welcome CTA should be visible
     await expect(page.locator('[data-testid="welcome-cta"]')).toBeVisible();
@@ -36,6 +60,9 @@ test.describe("Projects", () => {
 
   test("welcome CTA cancel with Escape", async ({ appPage }) => {
     const page = appPage;
+
+    // Ensure no projects exist so the welcome CTA is visible
+    await archiveAllProjects(page);
 
     // Click the CTA button to show the inline form
     await page.locator('[data-testid="welcome-create-button"]').click();
