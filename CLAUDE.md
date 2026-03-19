@@ -20,7 +20,8 @@ When you encounter unexpected issues, workarounds, or non-obvious behavior (CI q
 
 ```bash
 # Install dependencies and build all packages
-rush update && rush build
+rush install && rush build
+# Only run `rush update` if `rush install` fails and tells you to (e.g. after changing package.json)
 
 # Build a single package
 rush build -t @grackle-ai/<package>
