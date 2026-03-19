@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Thu, 19 Mar 2026 18:56:01 GMT and should not be manually modified.
+This log was last generated on Thu, 19 Mar 2026 19:33:07 GMT and should not be manually modified.
+
+## 0.48.0
+Thu, 19 Mar 2026 19:33:07 GMT
+
+### Minor changes
+
+- Reparent workspaces under environments: workspaces now require an environment_id, env deletion is blocked when child workspaces exist, and ListWorkspaces supports filtering by environment
 
 ## 0.47.1
 Thu, 19 Mar 2026 18:56:01 GMT

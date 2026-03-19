@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.48.0",
+      "tag": "@grackle-ai/cli_v0.48.0",
+      "date": "Thu, 19 Mar 2026 19:33:07 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Reparent workspaces under environments: workspaces now require an environment_id, env deletion is blocked when child workspaces exist, and ListWorkspaces supports filtering by environment"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.47.1",
       "tag": "@grackle-ai/cli_v0.47.1",
       "date": "Thu, 19 Mar 2026 18:56:01 GMT",
