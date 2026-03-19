@@ -144,12 +144,29 @@ function AppRoutes(): JSX.Element {
   );
 }
 
+/** Maximum time (ms) to show the splash screen before falling through to the app. */
+const SPLASH_TIMEOUT_MS: number = 10_000;
+
 /** Gates the app behind a splash screen until the server's initial state arrives. */
 function AppContent(): JSX.Element {
   const { onboardingCompleted } = useGrackle();
+  const [timedOut, setTimedOut] = useState(false);
+
+  // Safety-net timeout: if the server never responds, fall through to the app
+  // after SPLASH_TIMEOUT_MS so the user isn't stuck on an infinite spinner.
+  useEffect(() => {
+    if (onboardingCompleted !== undefined) {
+      return;
+    }
+    const timer = setTimeout(() => setTimedOut(true), SPLASH_TIMEOUT_MS);
+    return () => clearTimeout(timer);
+  }, [onboardingCompleted]);
+
+  const showSplash = onboardingCompleted === undefined && !timedOut;
+
   return (
     <AnimatePresence mode="wait">
-      {onboardingCompleted === undefined ? (
+      {showSplash ? (
         <motion.div
           key="splash"
           initial={{ opacity: 1 }}
