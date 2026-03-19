@@ -41,7 +41,7 @@ export function SetupWizard(): JSX.Element {
   );
 
   // If onboarding is already complete, redirect to home
-  if (onboardingCompleted) {
+  if (onboardingCompleted === true) {
     return <Navigate to="/" replace />;
   }
 

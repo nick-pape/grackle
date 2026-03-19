@@ -2,7 +2,7 @@ import type { JSX } from "react";
 import styles from "./Spinner.module.scss";
 
 /** Size variants for the Spinner component. */
-type SpinnerSize = "sm" | "md" | "lg";
+type SpinnerSize = "sm" | "md" | "lg" | "xl";
 
 /** Props for the Spinner component. */
 interface Props {
