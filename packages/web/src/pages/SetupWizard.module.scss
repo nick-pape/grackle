@@ -28,9 +28,15 @@
 }
 
 .logoArea {
-  font-size: 64px;
-  line-height: 1;
   margin-bottom: var(--space-sm);
+}
+
+.logoImage {
+  width: 512px;
+  height: 512px;
+  max-width: 80vw;
+  max-height: 80vw;
+  object-fit: contain;
 }
 
 .heading {

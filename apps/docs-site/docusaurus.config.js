@@ -30,6 +30,10 @@ const config = {
   themeConfig: {
     navbar: {
       title: 'Grackle',
+      logo: {
+        alt: 'Grackle',
+        src: 'img/grackle-logo.png',
+      },
       items: [
         { to: '/', label: 'Docs', position: 'left' },
         { href: 'https://github.com/nick-pape/grackle', label: 'GitHub', position: 'right' },
