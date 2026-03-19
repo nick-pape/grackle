@@ -1,7 +1,7 @@
 import { test, expect } from "./fixtures.js";
-import { createWorkspace, sendWsAndWaitFor } from "./helpers.js";
+import { createWorkspace, createTask, sendWsAndWaitFor, goToSettings } from "./helpers.js";
 
-/** Archive all existing workspaces via WS so the welcome CTA appears. */
+/** Archive all existing workspaces via WS so the empty state appears. */
 async function archiveAllWorkspaces(page: import("@playwright/test").Page): Promise<void> {
   const response = await sendWsAndWaitFor(page, { type: "list_workspaces" }, "workspaces");
   const workspaces = (response.payload?.workspaces || []) as Array<{ id: string }>;
@@ -22,145 +22,80 @@ async function archiveAllWorkspaces(page: import("@playwright/test").Page): Prom
   }
 }
 
-test.describe("Workspaces", () => {
-  test("sidebar defaults to Workspaces tab", async ({ appPage }) => {
+test.describe("Sidebar shows tasks (not workspaces)", () => {
+  test("sidebar header says Tasks, not WORKSPACES", async ({ appPage }) => {
     const page = appPage;
 
-    // Workspaces tab should be active by default — header label visible
-    await expect(page.locator("text=WORKSPACES").first()).toBeVisible();
+    // The sidebar header label should be "Tasks"
+    const sidebar = page.locator('[data-testid="sidebar"]');
+    await expect(sidebar.getByText("Tasks").first()).toBeVisible({ timeout: 5_000 });
+
+    // "WORKSPACES" label should NOT be present
+    await expect(sidebar.locator("text=WORKSPACES")).not.toBeVisible();
   });
 
-  test("welcome CTA creates workspace inline", async ({ appPage }) => {
+  test("tasks appear directly in sidebar without workspace grouping", async ({ appPage }) => {
     const page = appPage;
 
-    // Ensure no workspaces exist so the welcome CTA is visible
-    await archiveAllWorkspaces(page);
+    // Create a workspace and task via WS
+    await createWorkspace(page, "sidebar-ws");
+    await createTask(page, "sidebar-ws", "sidebar-task-1", "test-local");
 
-    // On fresh load (no workspaces), the welcome CTA should be visible
-    await expect(page.locator('[data-testid="welcome-cta"]')).toBeVisible();
+    // Task should appear directly in the sidebar
+    const sidebar = page.locator('[data-testid="sidebar"]');
+    await expect(sidebar.getByText("sidebar-task-1")).toBeVisible({ timeout: 5_000 });
 
-    // Click the CTA button to show the inline form (no browser prompt())
-    await page.locator('[data-testid="welcome-create-button"]').click();
-
-    // Input should be visible and focused
-    const input = page.locator('[data-testid="welcome-create-input"]');
-    await expect(input).toBeVisible();
-    await expect(input).toBeFocused();
-
-    // Fill in workspace name and click OK
-    await input.fill("cta-workspace");
-    await page.locator('[data-testid="welcome-create-ok"]').click();
-
-    // Workspace should appear in sidebar
-    await expect(page.getByText("cta-workspace")).toBeVisible({ timeout: 5_000 });
-
-    // Welcome CTA should no longer be visible (workspaces exist now)
-    await expect(page.locator('[data-testid="welcome-cta"]')).not.toBeVisible({ timeout: 5_000 });
+    // Workspace name should NOT appear as a sidebar row (workspaces are in Settings now)
+    // It may appear as a badge, but not as a collapsible row
+    await expect(sidebar.locator('button[title="New task"]')).not.toBeVisible();
   });
 
-  test("welcome CTA cancel with Escape", async ({ appPage }) => {
+  test("new task button in sidebar header opens create form", async ({ appPage }) => {
     const page = appPage;
 
-    // Ensure no workspaces exist so the welcome CTA is visible
-    await archiveAllWorkspaces(page);
+    await createWorkspace(page, "new-btn-ws");
 
-    // Click the CTA button to show the inline form
-    await page.locator('[data-testid="welcome-create-button"]').click();
+    // Click the "+" button in the sidebar header
+    await page.locator('[data-testid="new-task-button"]').click();
 
-    // Input should be visible
-    const input = page.locator('[data-testid="welcome-create-input"]');
-    await expect(input).toBeVisible();
-
-    // Press Escape to cancel
-    await input.press("Escape");
-
-    // Input should be gone, button should be back
-    await expect(input).not.toBeVisible();
-    await expect(page.locator('[data-testid="welcome-create-button"]')).toBeVisible();
-  });
-
-  test("create a workspace and see it in sidebar", async ({ appPage }) => {
-    const page = appPage;
-
-    // Click + in the Workspaces header to open create form
-    await page.locator("button", { hasText: "+" }).first().click();
-
-    // Workspace name input appears
-    const nameInput = page.locator('input[placeholder="Workspace name..."]');
-    await expect(nameInput).toBeVisible();
-
-    // Type workspace name and click OK
-    await nameInput.fill("my-workspace");
-    await page.locator("button", { hasText: "OK" }).click();
-
-    // Workspace should appear in the sidebar
-    await expect(page.getByText("my-workspace")).toBeVisible({ timeout: 5_000 });
-  });
-
-  test("expand workspace shows empty task list and workspace view", async ({ appPage }) => {
-    const page = appPage;
-
-    // Create a workspace
-    await page.locator("button", { hasText: "+" }).first().click();
-    const nameInput = page.locator('input[placeholder="Workspace name..."]');
-    await nameInput.fill("expand-test");
-    await page.locator("button", { hasText: "OK" }).click();
-    await expect(page.getByText("expand-test")).toBeVisible({ timeout: 5_000 });
-
-    // Click workspace to expand and select
-    await page.getByText("expand-test").click();
-
-    // Main panel shows workspace view with task summary (use .first() — text appears in both panel and bar)
-    await expect(page.getByText("Select a task or click + to create one").first()).toBeVisible({ timeout: 5_000 });
-  });
-
-  test("create task from workspace", async ({ appPage }) => {
-    const page = appPage;
-
-    // Create a workspace
-    await page.locator("button", { hasText: "+" }).first().click();
-    const nameInput = page.locator('input[placeholder="Workspace name..."]');
-    await nameInput.fill("task-test");
-    await page.locator("button", { hasText: "OK" }).click();
-    await expect(page.getByText("task-test")).toBeVisible({ timeout: 5_000 });
-
-    // Click workspace to expand
-    await page.getByText("task-test").click();
-
-    // Click the "New task" + button scoped to this workspace's row
-    await page.getByText("task-test").locator("..").locator('button[title="New task"]').first().click();
-
-    // Full-panel TaskEditPanel should open with title and description fields
+    // Full-panel TaskEditPanel should open
     await expect(page.locator('[data-testid="task-edit-title"]')).toBeVisible({ timeout: 5_000 });
-    const descriptionField = page.locator('[data-testid="task-edit-description"]');
-    await expect(descriptionField).toBeVisible();
 
-    // No environment dropdown — environment is chosen at start time, not creation time
-    await expect(page.locator('select option:has-text("test-local")')).not.toBeVisible();
+    // Workspace dropdown should be visible (since no workspace is pre-selected)
+    await expect(page.locator('[data-testid="task-edit-workspace"]')).toBeVisible();
+  });
+});
 
-    // Fill in task title and save
-    await page.locator('[data-testid="task-edit-title"]').fill("implement feature");
-    await page.locator('[data-testid="task-edit-save"]').click();
+test.describe("EmptyPage shows task CTA", () => {
+  test("empty state prompts task creation, not workspace creation", async ({ appPage }) => {
+    const page = appPage;
 
-    // Task should appear in the sidebar under the workspace
-    await expect(page.getByText("implement feature")).toBeVisible({ timeout: 5_000 });
+    // Ensure no workspaces/tasks exist
+    await archiveAllWorkspaces(page);
+
+    // The empty page should show a task-creation prompt
+    // It should NOT show workspace-creation language
+    await expect(page.locator("text=WORKSPACES")).not.toBeVisible();
+  });
+});
+
+test.describe("Environments accessible via Settings", () => {
+  test("environments are accessible via Settings gear button", async ({ appPage }) => {
+    const page = appPage;
+
+    // Click the gear button to open Settings
+    await goToSettings(page);
+
+    // Should see the test-local environment in the Settings panel
+    await expect(page.getByText("test-local")).toBeVisible();
   });
 
   test("task view shows header and tabs", async ({ appPage }) => {
     const page = appPage;
 
     // Create workspace and task
-    await page.locator("button", { hasText: "+" }).first().click();
-    const nameInput = page.locator('input[placeholder="Workspace name..."]');
-    await nameInput.fill("view-test");
-    await page.locator("button", { hasText: "OK" }).click();
-    await expect(page.getByText("view-test")).toBeVisible({ timeout: 5_000 });
-
-    await page.getByText("view-test").locator("..").locator('button[title="New task"]').first().click();
-    await page.locator('[data-testid="task-edit-title"]').waitFor({ timeout: 5_000 });
-    await page.locator('[data-testid="task-edit-title"]').fill("my task");
-    await page.locator('[data-testid="task-edit-save"]').click();
-    await expect(page.getByText("my task")).toBeVisible({ timeout: 5_000 });
+    await createWorkspace(page, "view-test");
+    await createTask(page, "view-test", "my task");
 
     // Click task to navigate to task view
     await page.getByText("my task").click();
@@ -182,289 +117,5 @@ test.describe("Workspaces", () => {
     // Click Findings tab — shows empty state
     await page.getByRole("tab", { name: "Findings", exact: true }).click();
     await expect(page.getByText("No findings yet")).toBeVisible({ timeout: 5_000 });
-  });
-
-  test("environments are accessible via Settings gear button", async ({ appPage }) => {
-    const page = appPage;
-
-    // Sidebar is now task-only (no Environments tab). Environments live in Settings.
-    // Click the gear button to open Settings.
-    await page.locator('button[title="Settings"]').click();
-
-    // Should see the test-local environment in the Settings panel
-    await expect(page.getByText("test-local")).toBeVisible();
-  });
-
-  // ─── Workspace Detail View Tests ───────────────────────────────
-
-  /** Helper: create a workspace and select it in the sidebar */
-  async function createAndSelectWorkspace(page: import("@playwright/test").Page, name: string) {
-    await createWorkspace(page, name);
-    await page.getByText(name).click();
-  }
-
-  test("workspace detail shows metadata section", async ({ appPage }) => {
-    const page = appPage;
-    await createAndSelectWorkspace(page, "detail-test");
-
-    // Workspace name should be visible in header
-    await expect(page.locator('[data-testid="workspace-name"]')).toContainText("detail-test");
-
-    // Details toggle should be visible and metadata expanded by default
-    await expect(page.locator('[data-testid="meta-toggle"]')).toBeVisible();
-    await expect(page.locator('[data-testid="workspace-meta"]')).toBeVisible();
-
-    // Should show labels for Description, Repository, Environment
-    await expect(page.getByText("Description", { exact: true })).toBeVisible();
-    await expect(page.getByText("Repository", { exact: true })).toBeVisible();
-    await expect(page.getByText("Environment", { exact: true })).toBeVisible();
-
-    // Should show placeholders for empty fields
-    await expect(page.getByText("No description")).toBeVisible();
-    await expect(page.getByText("No repository")).toBeVisible();
-
-    // Should show timestamp
-    await expect(page.getByText(/Created/)).toBeVisible();
-  });
-
-  test("edit workspace name inline", async ({ appPage }) => {
-    const page = appPage;
-    await createAndSelectWorkspace(page, "name-edit-test");
-
-    await page.locator('[data-testid="edit-name-button"]').click();
-    const nameInput = page.locator('[data-testid="edit-name-input"]');
-    await expect(nameInput).toBeVisible();
-    await expect(nameInput).toBeFocused();
-    await nameInput.fill("renamed-workspace");
-    await nameInput.press("Enter");
-
-    // Input should disappear (edit mode exits)
-    await expect(nameInput).not.toBeVisible({ timeout: 2_000 });
-
-    // Name should update after server round trip
-    await expect(page.locator('[data-testid="workspace-name"]')).toContainText("renamed-workspace", { timeout: 10_000 });
-  });
-
-  test("cancel name edit with Escape", async ({ appPage }) => {
-    const page = appPage;
-    await createAndSelectWorkspace(page, "escape-test");
-
-    const nameInput = page.locator('[data-testid="edit-name-input"]');
-    await page.locator('[data-testid="edit-name-button"]').click();
-    await expect(nameInput).toBeVisible();
-    await nameInput.fill("should-not-save");
-    await nameInput.press("Escape");
-
-    // Original name should still be displayed
-    await expect(page.locator('[data-testid="workspace-name"]')).toContainText("escape-test");
-
-    // Input should be gone
-    await expect(nameInput).not.toBeVisible();
-  });
-
-  test("edit workspace description", async ({ appPage }) => {
-    const page = appPage;
-    await createAndSelectWorkspace(page, "desc-edit-test");
-
-    const descInput = page.locator('[data-testid="edit-description-input"]');
-    await page.locator('[data-testid="edit-description-button"]').click();
-    await expect(descInput).toBeVisible();
-    await expect(descInput).toBeFocused();
-    await descInput.fill("A new workspace description");
-
-    // Press Tab to move focus away, triggering blur and save
-    await page.keyboard.press("Tab");
-
-    // Should show the description text after server round trip
-    await expect(page.getByText("A new workspace description")).toBeVisible({ timeout: 10_000 });
-
-    // Placeholder should be gone
-    await expect(page.getByText("No description")).not.toBeVisible();
-  });
-
-  test("edit repo URL", async ({ appPage }) => {
-    const page = appPage;
-    await createAndSelectWorkspace(page, "repo-edit-test");
-
-    const repoInput = page.locator('[data-testid="edit-repo-input"]');
-    await page.locator('[data-testid="edit-repo-button"]').click();
-    await expect(repoInput).toBeVisible();
-    await expect(repoInput).toBeFocused();
-    await repoInput.fill("https://github.com/test/repo");
-    await repoInput.press("Enter");
-
-    // Input should disappear (edit mode exits)
-    await expect(repoInput).not.toBeVisible({ timeout: 2_000 });
-
-    // Should show the repo URL as a link after server round trip
-    await expect(page.getByText("https://github.com/test/repo")).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByText("No repository")).not.toBeVisible();
-  });
-
-  test("pencil edit icons are visible", async ({ appPage }) => {
-    const page = appPage;
-    await createAndSelectWorkspace(page, "pencil-test");
-
-    // All edit buttons should be present
-    await expect(page.locator('[data-testid="edit-name-button"]')).toBeVisible();
-    await expect(page.locator('[data-testid="edit-description-button"]')).toBeVisible();
-    await expect(page.locator('[data-testid="edit-repo-button"]')).toBeVisible();
-    await expect(page.locator('[data-testid="edit-env-button"]')).toBeVisible();
-  });
-
-  test("archive workspace flow", async ({ appPage }) => {
-    const page = appPage;
-    await createAndSelectWorkspace(page, "archive-test");
-
-    // Click Archive button
-    await page.locator('[data-testid="archive-workspace-button"]').click();
-
-    // Confirmation dialog should appear
-    await expect(page.getByText("Archive Workspace?")).toBeVisible();
-
-    // Confirm archive
-    await page.getByRole("dialog", { name: "Archive Workspace?" }).getByRole("button", { name: "Archive" }).click();
-
-    // Workspace should no longer be in sidebar
-    await expect(page.getByTestId("sidebar").getByText("archive-test")).not.toBeVisible({ timeout: 5_000 });
-  });
-
-  test("change default environment", async ({ appPage }) => {
-    const page = appPage;
-    await createAndSelectWorkspace(page, "env-edit-test");
-
-    const envSelect = page.locator('[data-testid="edit-env-select"]');
-    await page.locator('[data-testid="edit-env-button"]').click();
-    await expect(envSelect).toBeVisible();
-    await envSelect.selectOption("test-local");
-
-    // Environment name should now be displayed
-    await expect(page.getByText("test-local")).toBeVisible({ timeout: 5_000 });
-  });
-
-  test("click-to-edit on field values", async ({ appPage }) => {
-    const page = appPage;
-    await createAndSelectWorkspace(page, "click-edit-test");
-
-    // Clicking the value area (not just the pencil) should open edit mode
-    await page.locator('[data-testid="edit-name-button"]').click();
-    await expect(page.locator('[data-testid="edit-name-input"]')).toBeVisible();
-    await page.keyboard.press("Escape");
-
-    // Click description placeholder to edit
-    await page.locator('[data-testid="edit-description-button"]').click();
-    await expect(page.locator('[data-testid="edit-description-input"]')).toBeVisible();
-    await page.keyboard.press("Escape");
-
-    // Click repo placeholder to edit
-    await page.locator('[data-testid="edit-repo-button"]').click();
-    await expect(page.locator('[data-testid="edit-repo-input"]')).toBeVisible();
-    await page.keyboard.press("Escape");
-  });
-
-  test("keyboard activation of edit button (Enter/Space)", async ({ appPage }) => {
-    const page = appPage;
-    await createAndSelectWorkspace(page, "keyboard-activate-test");
-
-    // Focus the name edit button and press Enter to activate edit mode
-    const nameButton = page.locator('[data-testid="edit-name-button"]');
-    await nameButton.focus();
-    await page.keyboard.press("Enter");
-    await expect(page.locator('[data-testid="edit-name-input"]')).toBeVisible();
-    await expect(page.locator('[data-testid="edit-name-input"]')).toBeFocused();
-    await page.keyboard.press("Escape");
-
-    // Focus the description edit button and press Space to activate
-    const descButton = page.locator('[data-testid="edit-description-button"]');
-    await descButton.focus();
-    await page.keyboard.press("Space");
-    await expect(page.locator('[data-testid="edit-description-input"]')).toBeVisible();
-    await page.keyboard.press("Escape");
-  });
-
-  test("keyboard hints shown while editing", async ({ appPage }) => {
-    const page = appPage;
-    await createAndSelectWorkspace(page, "hint-test");
-
-    // Edit name — should show keyboard hint
-    await page.locator('[data-testid="edit-name-button"]').click();
-    await expect(page.getByText("Enter to save")).toBeVisible();
-    await expect(page.getByText("Esc to cancel")).toBeVisible();
-    await page.keyboard.press("Escape");
-
-    // Edit description — should show "Tab to save" hint
-    await page.locator('[data-testid="edit-description-button"]').click();
-    await expect(page.getByText("Tab to save")).toBeVisible();
-    await page.keyboard.press("Escape");
-  });
-
-  test("validation error for empty name", async ({ appPage }) => {
-    const page = appPage;
-    await createAndSelectWorkspace(page, "validation-test");
-
-    // Edit name and clear it
-    await page.locator('[data-testid="edit-name-button"]').click();
-    const nameInput = page.locator('[data-testid="edit-name-input"]');
-    await nameInput.fill("");
-    await nameInput.press("Enter");
-
-    // Should show validation error and stay in edit mode
-    await expect(page.locator('[data-testid="edit-error"]')).toContainText("Name is required");
-    await expect(nameInput).toBeVisible();
-
-    // Escape should still cancel
-    await page.keyboard.press("Escape");
-    await expect(nameInput).not.toBeVisible();
-  });
-
-  test("validation error for invalid repo URL", async ({ appPage }) => {
-    const page = appPage;
-    await createAndSelectWorkspace(page, "repo-validate-test");
-
-    await page.locator('[data-testid="edit-repo-button"]').click();
-    const repoInput = page.locator('[data-testid="edit-repo-input"]');
-    await repoInput.fill("not-a-url");
-    await repoInput.press("Enter");
-
-    // Should show validation error
-    await expect(page.locator('[data-testid="edit-error"]')).toContainText("valid http");
-    await expect(repoInput).toBeVisible();
-    await page.keyboard.press("Escape");
-  });
-
-  test("collapsible metadata section", async ({ appPage }) => {
-    const page = appPage;
-    await createAndSelectWorkspace(page, "collapse-test");
-
-    // Metadata should be visible by default
-    await expect(page.locator('[data-testid="workspace-meta"]')).toBeVisible();
-
-    // Click toggle to collapse
-    await page.locator('[data-testid="meta-toggle"]').click();
-    await expect(page.locator('[data-testid="workspace-meta"]')).not.toBeVisible();
-
-    // Click toggle to expand again
-    await page.locator('[data-testid="meta-toggle"]').click();
-    await expect(page.locator('[data-testid="workspace-meta"]')).toBeVisible();
-  });
-
-  test("task progress bar appears with tasks", async ({ appPage }) => {
-    const page = appPage;
-    await createAndSelectWorkspace(page, "progress-test");
-
-    // No progress bar when no tasks
-    await expect(page.locator('[data-testid="progress-bar"]')).not.toBeVisible();
-
-    // Create a task via the full-panel form (no environment selector — env is chosen at start time)
-    await page.getByText("progress-test").locator("..").locator('button[title="New task"]').first().click();
-    await page.locator('[data-testid="task-edit-title"]').fill("progress task");
-    await page.locator('[data-testid="task-edit-save"]').click();
-    // After server confirms, the app navigates to the workspace view and the
-    // task appears in the sidebar.
-    await expect(page.getByTestId("sidebar").getByText("progress task")).toBeVisible({ timeout: 5_000 });
-
-    // Progress bar should now be visible
-    await expect(page.locator('[data-testid="progress-bar"]')).toBeVisible({ timeout: 5_000 });
-    await expect(page.locator('[data-testid="progress-bar"]')).toContainText("0/1");
   });
 });

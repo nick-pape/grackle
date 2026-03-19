@@ -7,28 +7,15 @@ test.describe("Sidebar search filter", () => {
     await page.evaluate(() => localStorage.removeItem("grackle-group-by-status"));
   });
 
-  test("search input is visible when workspaces exist", async ({ appPage }) => {
+  test("search input is visible when tasks exist", async ({ appPage }) => {
     const page = appPage;
 
     await createWorkspace(page, "search-visible");
+    await createTask(page, "search-visible", "search-vis-task", "test-local");
 
     const searchInput = page.getByTestId("sidebar-search");
     await expect(searchInput).toBeVisible({ timeout: 5_000 });
-    await expect(searchInput).toHaveAttribute("aria-label", "Filter workspaces and tasks");
-  });
-
-  test("typing filters workspaces by name", async ({ appPage }) => {
-    const page = appPage;
-
-    await createWorkspace(page, "Alpha Project");
-    await createWorkspace(page, "Beta Project");
-
-    const searchInput = page.getByTestId("sidebar-search");
-    await searchInput.fill("Alpha");
-
-    // Alpha should be visible, Beta should be hidden
-    await expect(page.getByText("Alpha Project").first()).toBeVisible({ timeout: 5_000 });
-    await expect(page.getByText("Beta Project")).not.toBeVisible({ timeout: 3_000 });
+    await expect(searchInput).toHaveAttribute("aria-label", "Filter tasks");
   });
 
   test("typing filters tasks by title", async ({ appPage }) => {
@@ -49,21 +36,22 @@ test.describe("Sidebar search filter", () => {
   test("clearing filter restores full list", async ({ appPage }) => {
     const page = appPage;
 
-    await createWorkspace(page, "Zebra Corp");
-    await createWorkspace(page, "Quantum Labs");
+    await createWorkspace(page, "clear-filter-ws");
+    await createTask(page, "clear-filter-ws", "Zebra Task", "test-local");
+    await createTask(page, "clear-filter-ws", "Quantum Task", "test-local");
 
     const searchInput = page.getByTestId("sidebar-search");
     await searchInput.fill("Zebra");
 
     // Only Zebra visible
-    await expect(page.getByText("Quantum Labs")).not.toBeVisible({ timeout: 3_000 });
+    await expect(page.getByText("Quantum Task")).not.toBeVisible({ timeout: 3_000 });
 
     // Clear the filter
     await searchInput.fill("");
 
-    // Both workspaces should be visible again
-    await expect(page.getByText("Zebra Corp").first()).toBeVisible({ timeout: 5_000 });
-    await expect(page.getByText("Quantum Labs").first()).toBeVisible({ timeout: 5_000 });
+    // Both tasks should be visible again
+    await expect(page.getByText("Zebra Task").first()).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText("Quantum Task").first()).toBeVisible({ timeout: 5_000 });
   });
 
   test("search works in grouped-by-status view", async ({ appPage }) => {
@@ -106,36 +94,21 @@ test.describe("Sidebar search filter", () => {
     await expect(mark.first()).toHaveText("login");
   });
 
-  test("workspace match shows all its tasks", async ({ appPage }) => {
+  test("search finds tasks created via WS", async ({ appPage }) => {
     const page = appPage;
 
-    await createWorkspace(page, "unique-proj-name");
-    await createTask(page, "unique-proj-name", "task-aaa");
-    await createTask(page, "unique-proj-name", "task-bbb");
+    // Create a workspace and add a task via WS
+    await createWorkspace(page, "ws-search-proj");
+    const workspaceId = await getWorkspaceId(page, "ws-search-proj");
+    await createTaskViaWs(page, workspaceId, "ws-created-needle");
 
+    // Tasks are always visible in the flat sidebar — verify it's there
+    await expect(page.getByText("ws-created-needle").first()).toBeVisible({ timeout: 5_000 });
+
+    // Search should also find it
     const searchInput = page.getByTestId("sidebar-search");
-    await searchInput.fill("unique-proj");
+    await searchInput.fill("ws-created-needle");
 
-    // Workspace matches by name, so all tasks should be shown
-    await expect(page.getByText("task-aaa").first()).toBeVisible({ timeout: 5_000 });
-    await expect(page.getByText("task-bbb").first()).toBeVisible({ timeout: 5_000 });
-  });
-
-  test("search finds tasks in unexpanded workspaces", async ({ appPage }) => {
-    const page = appPage;
-
-    // Create a workspace and add a task via WS (without expanding the workspace in the UI)
-    await createWorkspace(page, "collapsed-proj");
-    const workspaceId = await getWorkspaceId(page, "collapsed-proj");
-    await createTaskViaWs(page, workspaceId, "hidden-needle");
-
-    // The workspace is collapsed — "hidden-needle" should NOT be visible yet
-    await expect(page.getByText("hidden-needle")).not.toBeVisible({ timeout: 2_000 });
-
-    // Search for the task — should trigger eager load and find it
-    const searchInput = page.getByTestId("sidebar-search");
-    await searchInput.fill("hidden-needle");
-
-    await expect(page.getByText("hidden-needle").first()).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText("ws-created-needle").first()).toBeVisible({ timeout: 10_000 });
   });
 });

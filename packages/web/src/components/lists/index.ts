@@ -3,4 +3,4 @@
  * @module lists
  */
 export { EnvironmentList } from "./EnvironmentList.js";
-export { WorkspaceList } from "./WorkspaceList.js";
+export { TaskList } from "./TaskList.js";

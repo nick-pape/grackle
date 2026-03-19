@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
   sessionUrl,
-  workspaceUrl,
   taskUrl,
   taskEditUrl,
   newTaskUrl,
@@ -16,11 +15,6 @@ describe("URL builder functions", () => {
     expect(sessionUrl("abc-123")).toBe("/sessions/abc-123");
     expect(sessionUrl("has space")).toBe("/sessions/has%20space");
     expect(sessionUrl("special/chars")).toBe("/sessions/special%2Fchars");
-  });
-
-  it("workspaceUrl encodes workspaceId", () => {
-    expect(workspaceUrl("proj-1")).toBe("/workspaces/proj-1");
-    expect(workspaceUrl("proj with space")).toBe("/workspaces/proj%20with%20space");
   });
 
   it("taskUrl without tab produces base path", () => {

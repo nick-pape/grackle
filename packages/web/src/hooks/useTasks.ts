@@ -26,6 +26,8 @@ export interface UseTasksResult {
   taskStartingId: string | undefined;
   /** Load tasks for a given workspace. */
   loadTasks: (workspaceId: string) => void;
+  /** Load all tasks across all workspaces. */
+  loadAllTasks: () => void;
   /** Create a new task in a workspace. */
   createTask: (
     workspaceId: string,
@@ -97,16 +99,12 @@ export function useTasks(send: SendFunction): UseTasksResult {
             pending.onSuccess();
           }
         }
-        const pid = typeof p.workspaceId === "string" ? p.workspaceId : "";
-        if (pid) {
-          send({ type: "list_tasks", payload: { workspaceId: pid } });
-        }
+        send({ type: "list_tasks", payload: {} });
         return true;
       }
       case "task.started": {
         const taskId = typeof p.taskId === "string" ? p.taskId : "";
         const sessionId = typeof p.sessionId === "string" ? p.sessionId : "";
-        const pid = typeof p.workspaceId === "string" ? p.workspaceId : "";
 
         setTaskStartingId((prev) =>
           taskId && prev === taskId ? undefined : prev,
@@ -121,35 +119,13 @@ export function useTasks(send: SendFunction): UseTasksResult {
             );
           }
         }
-        if (pid) {
-          send({ type: "list_tasks", payload: { workspaceId: pid } });
-        } else if (taskId) {
-          setTasks((prev) => {
-            const found = prev.find((t) => t.id === taskId);
-            if (found) {
-              send({ type: "list_tasks", payload: { workspaceId: found.workspaceId } });
-            }
-            return prev;
-          });
-        }
+        send({ type: "list_tasks", payload: {} });
         return true;
       }
       case "task.completed":
       case "task.deleted":
       case "task.updated": {
-        const pid = typeof p.workspaceId === "string" ? p.workspaceId : "";
-        const taskId = typeof p.taskId === "string" ? p.taskId : "";
-        if (pid) {
-          send({ type: "list_tasks", payload: { workspaceId: pid } });
-        } else if (taskId) {
-          setTasks((prev) => {
-            const found = prev.find((t) => t.id === taskId);
-            if (found) {
-              send({ type: "list_tasks", payload: { workspaceId: found.workspaceId } });
-            }
-            return prev;
-          });
-        }
+        send({ type: "list_tasks", payload: {} });
         return true;
       }
       default:
@@ -223,6 +199,10 @@ export function useTasks(send: SendFunction): UseTasksResult {
     },
     [send],
   );
+
+  const loadAllTasks = useCallback(() => {
+    send({ type: "list_tasks", payload: {} });
+  }, [send]);
 
   const createTask = useCallback(
     (
@@ -338,6 +318,7 @@ export function useTasks(send: SendFunction): UseTasksResult {
     tasks,
     taskStartingId,
     loadTasks,
+    loadAllTasks,
     createTask,
     startTask,
     stopTask,

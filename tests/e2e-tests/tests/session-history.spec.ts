@@ -6,7 +6,6 @@ test.describe("Session history", () => {
     const page = appPage;
 
     await createWorkspace(page, "single-sess");
-    await page.getByText("single-sess").click();
     await createTask(page, "single-sess", "simple-task", "test-local");
     await navigateToTask(page, "simple-task");
     await patchWsForStubRuntime(page);

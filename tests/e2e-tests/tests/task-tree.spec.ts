@@ -176,9 +176,8 @@ test.describe("Task tree hierarchy", () => {
     const breadcrumbs = page.getByTestId("breadcrumbs");
     await expect(breadcrumbs).toBeVisible({ timeout: 5_000 });
 
-    // Should show Home > tree-bc > bc-root > bc-child
+    // Should show Home > bc-root > bc-child (no workspace segment)
     await expect(breadcrumbs).toContainText("Home");
-    await expect(breadcrumbs).toContainText("tree-bc");
     await expect(breadcrumbs).toContainText("bc-root");
     await expect(breadcrumbs).toContainText("bc-child");
   });

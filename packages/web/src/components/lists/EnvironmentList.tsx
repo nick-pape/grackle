@@ -4,6 +4,7 @@ import { useMatch, useSearchParams } from "react-router";
 import { useGrackle } from "../../context/GrackleContext.js";
 import type { Environment, ProvisionStatus, Session } from "../../hooks/useGrackleSocket.js";
 import { ConfirmDialog } from "../display/index.js";
+import { EnvironmentWorkspaces } from "./EnvironmentWorkspaces.js";
 import { sessionUrl, newChatUrl, NEW_ENVIRONMENT_URL, useAppNavigate } from "../../utils/navigation.js";
 import styles from "./EnvironmentList.module.scss";
 
@@ -182,6 +183,11 @@ function EnvironmentCard({
             </button>
           )}
         </div>
+      )}
+
+      {/* Workspace management (visible when environment is expanded) */}
+      {expanded && (
+        <EnvironmentWorkspaces environmentId={env.id} />
       )}
 
       {envSessions.length > 0 && (

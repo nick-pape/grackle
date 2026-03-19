@@ -7,7 +7,6 @@ test.describe("Complete and resume flow", () => {
 
     // --- Setup: Create workspace, task, navigate, patch runtime ---
     await createWorkspace(page, "complete-flow");
-    await page.getByText("complete-flow").click();
     await createTask(page, "complete-flow", "complete task", "test-local");
     await navigateToTask(page, "complete task");
     await patchWsForStubRuntime(page);

@@ -356,6 +356,11 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
     [],
   );
 
+  /** No-op — tasks are already in state from initial load. */
+  const loadAllTasks: UseGrackleSocketResult["loadAllTasks"] = useCallback(() => {
+    console.log("[MockGrackle] loadAllTasks");
+  }, []);
+
   /** Creates a new task and adds it to state. */
   const createTask: UseGrackleSocketResult["createTask"] = useCallback(
     (
@@ -823,6 +828,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
         );
       },
       loadTasks,
+      loadAllTasks,
       createTask,
       startTask,
       stopTask: (taskId: string) => {
@@ -933,6 +939,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       createWorkspace,
       archiveWorkspace,
       loadTasks,
+      loadAllTasks,
       createTask,
       startTask,
       completeTask,

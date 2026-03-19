@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, type JSX } from "react";
 import { useGrackle } from "../../context/GrackleContext.js";
 import { useToast } from "../../context/ToastContext.js";
-import { taskUrl, workspaceUrl, useAppNavigate } from "../../utils/navigation.js";
+import { taskUrl, useAppNavigate } from "../../utils/navigation.js";
 import styles from "./TaskEditPanel.module.scss";
 
 /** Props for the TaskEditPanel component. */
@@ -24,16 +24,20 @@ interface Props {
  *         back to the task overview.
  */
 export function TaskEditPanel({ mode, taskId, workspaceId: workspaceIdProp, parentTaskId: parentTaskIdProp }: Props): JSX.Element {
-  const { tasks, personas, createTask, updateTask } = useGrackle();
+  const { tasks, personas, workspaces, createTask, updateTask } = useGrackle();
   const { showToast } = useToast();
   const navigate = useAppNavigate();
 
   const isEdit = mode === "edit";
   const existingTask = isEdit && taskId ? tasks.find((t) => t.id === taskId) : undefined;
 
+  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState(
+    isEdit ? (existingTask?.workspaceId ?? "") : (workspaceIdProp ?? ""),
+  );
+
   const workspaceId = isEdit
     ? (existingTask?.workspaceId ?? "")
-    : (workspaceIdProp ?? "");
+    : selectedWorkspaceId;
 
   const parentTaskId = isEdit
     ? (existingTask?.parentTaskId ?? "")
@@ -61,6 +65,7 @@ export function TaskEditPanel({ mode, taskId, workspaceId: workspaceIdProp, pare
       setSelectedDeps(existingTask.dependsOn);
       setDefaultPersonaId(existingTask.defaultPersonaId);
       setCanDecompose(existingTask.canDecompose);
+      setSelectedWorkspaceId(existingTask.workspaceId);
     }
   }, [isEdit, existingTask]);
 
@@ -108,7 +113,7 @@ export function TaskEditPanel({ mode, taskId, workspaceId: workspaceIdProp, pare
         canDecompose,
         () => {
           showToast("Task created", "success");
-          navigate(workspaceId ? workspaceUrl(workspaceId) : "/", { replace: true });
+          navigate("/", { replace: true });
         },
         (message: string) => {
           showToast(message, "error");
@@ -122,7 +127,7 @@ export function TaskEditPanel({ mode, taskId, workspaceId: workspaceIdProp, pare
     if (isEdit && taskId) {
       navigate(taskUrl(taskId));
     } else {
-      navigate(workspaceId ? workspaceUrl(workspaceId) : "/");
+      navigate("/");
     }
   };
 
@@ -159,6 +164,27 @@ export function TaskEditPanel({ mode, taskId, workspaceId: workspaceIdProp, pare
       {/* Form body */}
       <div className={styles.body}>
         <div className={styles.formContent}>
+          {/* Workspace selector (new mode only, when no workspace pre-selected) */}
+          {!isEdit && !workspaceIdProp && (
+            <div className={styles.section}>
+              <label className={styles.label} htmlFor="task-edit-workspace">
+                Workspace
+              </label>
+              <select
+                id="task-edit-workspace"
+                value={selectedWorkspaceId}
+                onChange={(e) => setSelectedWorkspaceId(e.target.value)}
+                className={styles.personaSelect}
+                data-testid="task-edit-workspace"
+              >
+                <option value="">Select a workspace...</option>
+                {workspaces.map((w) => (
+                  <option key={w.id} value={w.id}>{w.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
           {/* Title */}
           <div className={styles.section}>
             <label className={styles.label} htmlFor="task-edit-title">

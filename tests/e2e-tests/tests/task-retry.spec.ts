@@ -12,7 +12,6 @@ test.describe("Task Retry (failed → in_progress)", () => {
 
     // --- Setup: create workspace and task ---
     await createWorkspace(page, "retry-proj");
-    await page.getByText("retry-proj").click();
     await createTask(page, "retry-proj", "retry task", "test-local");
     await navigateToTask(page, "retry task");
     await patchWsForStubRuntime(page);

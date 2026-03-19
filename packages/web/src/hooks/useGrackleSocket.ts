@@ -91,6 +91,8 @@ export interface UseGrackleSocketResult {
     },
   ) => void;
   loadTasks: (workspaceId: string) => void;
+  /** Load all tasks across all workspaces. */
+  loadAllTasks: () => void;
   createTask: (
     workspaceId: string,
     title: string,
@@ -331,6 +333,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
     sendFn({ type: "list_environments" });
     sendFn({ type: "list_sessions" });
     sendFn({ type: "list_workspaces" });
+    sendFn({ type: "list_tasks", payload: {} });
     sendFn({ type: "list_tokens" });
     sendFn({ type: "get_credential_providers" });
     sendFn({ type: "list_personas" });
@@ -372,6 +375,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
     archiveWorkspace: workspacesHook.archiveWorkspace,
     updateWorkspace: workspacesHook.updateWorkspace,
     loadTasks: tasksHook.loadTasks,
+    loadAllTasks: tasksHook.loadAllTasks,
     createTask: tasksHook.createTask,
     startTask: tasksHook.startTask,
     stopTask: tasksHook.stopTask,

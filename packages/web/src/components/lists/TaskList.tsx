@@ -1,13 +1,22 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type JSX } from "react";
+/**
+ * Global sidebar task list with tree and status-grouped views.
+ *
+ * @module
+ */
+
+import { useEffect, useMemo, useState, type CSSProperties, type JSX } from "react";
 import { useMatch } from "react-router";
 import { useGrackle } from "../../context/GrackleContext.js";
 import type { TaskData } from "../../hooks/useGrackleSocket.js";
 import { AnimatePresence, motion } from "motion/react";
 import { MAX_TASK_DEPTH, fuzzySearch, type FuzzyKey, type MatchIndex } from "@grackle-ai/common";
-import { Spinner } from "../display/index.js";
-import { taskUrl, workspaceUrl, newTaskUrl, useAppNavigate } from "../../utils/navigation.js";
+import { taskUrl, newTaskUrl, useAppNavigate } from "../../utils/navigation.js";
 import { SIDEBAR_STATUS_ORDER, getStatusStyle } from "../../utils/taskStatus.js";
-import styles from "./WorkspaceList.module.scss";
+import styles from "./TaskList.module.scss";
+
+// ---------------------------------------------------------------------------
+// Text highlighting helpers
+// ---------------------------------------------------------------------------
 
 /** Merge overlapping or adjacent [start, end] ranges into non-overlapping ranges. */
 function mergeRanges(ranges: readonly MatchIndex[]): MatchIndex[] {
@@ -49,13 +58,19 @@ function HighlightedText({ text, indices }: { text: string; indices?: readonly M
   return <>{parts}</>;
 }
 
-/** Fuzzy search keys for workspace matching. */
-const WORKSPACE_SEARCH_KEYS: FuzzyKey[] = [{ name: "name", weight: 2 }, { name: "description", weight: 1 }];
+// ---------------------------------------------------------------------------
+// Search keys
+// ---------------------------------------------------------------------------
+
 /** Fuzzy search keys for task matching. */
 const TASK_SEARCH_KEYS: FuzzyKey[] = [{ name: "title", weight: 2 }, { name: "description", weight: 1 }];
 
-/** Base left-padding for task rows inside a workspace. */
-const TASK_BASE_INDENT_PX: number = 34;
+// ---------------------------------------------------------------------------
+// Indent constants
+// ---------------------------------------------------------------------------
+
+/** Base left-padding for task rows (no workspace layer, so start shallower). */
+const TASK_BASE_INDENT_PX: number = 16;
 /** Additional left-padding per depth level. */
 const TASK_DEPTH_INDENT_PX: number = 16;
 
@@ -100,7 +115,6 @@ interface StatusGroup {
 function groupTasksByStatus(taskList: TaskData[], taskStatusById: Map<string, string>): StatusGroup[] {
   const byStatus = new Map<string, TaskData[]>();
   for (const task of taskList) {
-    // Tasks with unresolved dependencies go to "blocked" instead of their actual status
     const isBlocked = task.dependsOn.length > 0 &&
       task.dependsOn.some((depId) => taskStatusById.get(depId) !== "complete");
     const groupKey = isBlocked ? "blocked" : task.status;
@@ -115,33 +129,21 @@ function groupTasksByStatus(taskList: TaskData[], taskStatusById: Map<string, st
   const groups: StatusGroup[] = [];
   const seen = new Set<string>();
 
-  // Known statuses in urgency order
   for (const status of SIDEBAR_STATUS_ORDER) {
     seen.add(status);
     const tasks = byStatus.get(status);
     if (tasks && tasks.length > 0) {
       tasks.sort((a, b) => a.sortOrder - b.sortOrder);
       const style = getStatusStyle(status);
-      groups.push({
-        status,
-        label: style.label,
-        style,
-        tasks,
-      });
+      groups.push({ status, label: style.label, style, tasks });
     }
   }
 
-  // Append any unknown statuses for future-proofing
   for (const [status, tasks] of byStatus) {
     if (!seen.has(status) && tasks.length > 0) {
       tasks.sort((a, b) => a.sortOrder - b.sortOrder);
       const style = getStatusStyle(status);
-      groups.push({
-        status,
-        label: style.label,
-        style,
-        tasks,
-      });
+      groups.push({ status, label: style.label, style, tasks });
     }
   }
 
@@ -160,6 +162,7 @@ interface StatusGroupAccordionProps {
   selectedTaskId: string | undefined;
   navigate: ReturnType<typeof useAppNavigate>;
   titleHighlights: Map<string, readonly MatchIndex[]>;
+  workspacesById: Map<string, string>;
 }
 
 /** Collapsible accordion for a status group in grouped view. */
@@ -170,6 +173,7 @@ function StatusGroupAccordion({
   selectedTaskId,
   navigate,
   titleHighlights,
+  workspacesById,
 }: StatusGroupAccordionProps): JSX.Element {
   return (
     <div data-testid={`status-group-${group.status}`}>
@@ -208,6 +212,7 @@ function StatusGroupAccordion({
             {group.tasks.map((task) => {
               const statusStyle = getStatusStyle(task.status);
               const isSelected = selectedTaskId === task.id;
+              const wsName = workspacesById.get(task.workspaceId);
               return (
                 <div
                   key={task.id}
@@ -223,6 +228,9 @@ function StatusGroupAccordion({
                   <span className={styles.taskTitle} title={task.title}>
                     <HighlightedText text={task.title} indices={titleHighlights.get(task.id)} />
                   </span>
+                  {wsName && (
+                    <span className={styles.workspaceBadge} title={wsName}>{wsName}</span>
+                  )}
                 </div>
               );
             })}
@@ -232,6 +240,10 @@ function StatusGroupAccordion({
     </div>
   );
 }
+
+// ---------------------------------------------------------------------------
+// Task tree
+// ---------------------------------------------------------------------------
 
 /** A task node with children for recursive tree rendering. */
 interface TaskNode extends TaskData {
@@ -251,12 +263,15 @@ function buildTaskTree(taskList: TaskData[]): TaskNode[] {
       roots.push(node);
     }
   }
-  // Sort children by sortOrder
   for (const node of byId.values()) {
     node.children.sort((a, b) => a.sortOrder - b.sortOrder);
   }
   return roots.sort((a, b) => a.sortOrder - b.sortOrder);
 }
+
+// ---------------------------------------------------------------------------
+// TaskTreeNode
+// ---------------------------------------------------------------------------
 
 /** Props for the recursive TaskTreeNode component. */
 interface TaskTreeNodeProps {
@@ -266,9 +281,10 @@ interface TaskTreeNodeProps {
   toggleTask: (taskId: string) => void;
   selectedTaskId: string | undefined;
   navigate: ReturnType<typeof useAppNavigate>;
-  workspaceId: string;
   taskStatusById: Map<string, string>;
   titleHighlights: Map<string, readonly MatchIndex[]>;
+  workspacesById: Map<string, string>;
+  isRoot: boolean;
 }
 
 /** Renders a single task tree node with optional children. */
@@ -279,9 +295,10 @@ function TaskTreeNode({
   toggleTask,
   selectedTaskId,
   navigate,
-  workspaceId,
   taskStatusById,
   titleHighlights,
+  workspacesById,
+  isRoot,
 }: TaskTreeNodeProps): JSX.Element {
   const statusStyle = getStatusStyle(node.status);
   const isBlocked = node.dependsOn.length > 0 &&
@@ -290,6 +307,7 @@ function TaskTreeNode({
   const hasChildren = node.children.length > 0;
   const isSelected = selectedTaskId === node.id;
   const indent = TASK_BASE_INDENT_PX + depth * TASK_DEPTH_INDENT_PX;
+  const wsName = isRoot ? workspacesById.get(node.workspaceId) : undefined;
 
   return (
     <>
@@ -322,8 +340,8 @@ function TaskTreeNode({
           {statusStyle.icon}
         </span>
         <span className={styles.taskTitle} title={node.title}>
-                  <HighlightedText text={node.title} indices={titleHighlights.get(node.id)} />
-                </span>
+          <HighlightedText text={node.title} indices={titleHighlights.get(node.id)} />
+        </span>
         {hasChildren && (
           <span className={styles.childCountBadge}>
             {node.children.filter(c => c.status === "complete").length}/{node.children.length}
@@ -337,11 +355,14 @@ function TaskTreeNode({
             {isBlocked ? "blocked" : "dep"}
           </span>
         )}
+        {wsName && (
+          <span className={styles.workspaceBadge} title={wsName}>{wsName}</span>
+        )}
         {depth < MAX_TASK_DEPTH && (
           <button
             onClick={(e) => {
               e.stopPropagation();
-              navigate(newTaskUrl(workspaceId, node.id));
+              navigate(newTaskUrl(node.workspaceId, node.id));
             }}
             title="Add child task"
             aria-label="Add child task"
@@ -370,9 +391,10 @@ function TaskTreeNode({
                 toggleTask={toggleTask}
                 selectedTaskId={selectedTaskId}
                 navigate={navigate}
-                workspaceId={workspaceId}
                 taskStatusById={taskStatusById}
                 titleHighlights={titleHighlights}
+                workspacesById={workspacesById}
+                isRoot={false}
               />
             ))}
           </motion.div>
@@ -382,20 +404,36 @@ function TaskTreeNode({
   );
 }
 
-/** Sidebar workspace tree with expandable task lists and hierarchical task rendering. */
-export function WorkspaceList(): JSX.Element {
-  const { workspaces, tasks, environments, loadTasks, createWorkspace, workspaceCreating } = useGrackle();
+// ---------------------------------------------------------------------------
+// TaskList (main export)
+// ---------------------------------------------------------------------------
+
+/** Global sidebar task list with tree and status-grouped views. */
+export function TaskList(): JSX.Element {
+  const { tasks, workspaces } = useGrackle();
   const navigate = useAppNavigate();
-  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
   const [manuallyCollapsed, setManuallyCollapsed] = useState<Set<string>>(new Set());
-  const [showCreateForm, setShowCreateForm] = useState(false);
-  const [newWorkspaceName, setNewWorkspaceName] = useState("");
   const [groupByStatus, setGroupByStatusState] = useState(getGroupByStatus);
-  // Track which groups should default to expanded (resets on each toggle-on)
   const [groupExpandDefault, setGroupExpandDefault] = useState(getGroupByStatus);
-  // Per-workspace overrides: "workspaceId:status" → explicitly collapsed or expanded
   const [groupExpandOverrides, setGroupExpandOverrides] = useState<Map<string, boolean>>(new Map());
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Derive selected state from router
+  const taskMatch = useMatch("/tasks/:taskId/*");
+  const selectedTaskId = taskMatch?.params.taskId !== "new" ? taskMatch?.params.taskId : undefined;
+
+  const taskStatusById = useMemo(
+    () => new Map(tasks.map((t) => [t.id, t.status])),
+    [tasks],
+  );
+
+  /** Map from workspace ID to workspace name for badge display. */
+  const workspacesById = useMemo(
+    () => new Map(workspaces.map((w) => [w.id, w.name])),
+    [workspaces],
+  );
 
   /** Toggle group-by-status mode. */
   const toggleGroupByStatus = (): void => {
@@ -408,47 +446,19 @@ export function WorkspaceList(): JSX.Element {
     }
   };
 
-  /** Toggle a single status group accordion for a specific workspace. */
-  const toggleStatusGroup = (workspaceId: string, status: string): void => {
-    const key = `${workspaceId}:${status}`;
+  /** Toggle a single status group accordion. */
+  const toggleStatusGroup = (status: string): void => {
     setGroupExpandOverrides((prev) => {
       const next = new Map(prev);
-      const current = next.has(key) ? next.get(key)! : groupExpandDefault;
-      next.set(key, !current);
+      const current = next.has(status) ? next.get(status)! : groupExpandDefault;
+      next.set(status, !current);
       return next;
     });
   };
 
-  /** Check if a status group is expanded for a specific workspace. */
-  const isGroupExpanded = (workspaceId: string, status: string): boolean => {
-    const key = `${workspaceId}:${status}`;
-    return groupExpandOverrides.has(key) ? groupExpandOverrides.get(key)! : groupExpandDefault;
-  };
-
-  // Derive selected state from router
-  const taskMatch = useMatch("/tasks/:taskId/*");
-  const workspaceMatch = useMatch("/workspaces/:workspaceId");
-  const selectedTaskId = taskMatch?.params.taskId !== "new" ? taskMatch?.params.taskId : undefined;
-  const selectedWorkspaceId = workspaceMatch?.params.workspaceId;
-
-  const expandedRef = useRef(expanded);
-  expandedRef.current = expanded;
-  const taskStatusById = useMemo(
-    () => new Map(tasks.map((t) => [t.id, t.status])),
-    [tasks],
-  );
-
-  const toggleExpand = (pid: string): void => {
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      if (next.has(pid)) {
-        next.delete(pid);
-      } else {
-        next.add(pid);
-        loadTasks(pid);
-      }
-      return next;
-    });
+  /** Check if a status group is expanded. */
+  const isGroupExpanded = (status: string): boolean => {
+    return groupExpandOverrides.has(status) ? groupExpandOverrides.get(status)! : groupExpandDefault;
   };
 
   const toggleTask = (tid: string): void => {
@@ -487,38 +497,18 @@ export function WorkspaceList(): JSX.Element {
     }
   }, [tasks, manuallyCollapsed]);
 
-  // Auto-expand a workspace when selected via programmatic navigation
-  useEffect(() => {
-    if (selectedWorkspaceId && !expandedRef.current.has(selectedWorkspaceId)) {
-      setExpanded((prev) => new Set(prev).add(selectedWorkspaceId));
-      loadTasks(selectedWorkspaceId);
-    }
-  }, [selectedWorkspaceId, loadTasks]);
-
-  const handleCreateWorkspace = (): void => {
-    if (!newWorkspaceName.trim() || workspaceCreating || environments.length === 0) {
-      return;
-    }
-    createWorkspace(newWorkspaceName.trim(), undefined, undefined, environments[0].id);
-    setNewWorkspaceName("");
-    setShowCreateForm(false);
-  };
-
-  // ── Search / filter state ──────────────────────────────────────
-  const [searchQuery, setSearchQuery] = useState("");
-
-  /** Sets of matching IDs for filtering, recomputed when query or data changes. */
-  const { directMatchTaskIds, treeMatchTaskIds, visibleWorkspaceIds, matchedWorkspaceIds, titleHighlights } = useMemo(() => {
+  // Fuzzy search filtering
+  const { directMatchTaskIds, treeMatchTaskIds, titleHighlights } = useMemo(() => {
     if (!searchQuery.trim()) {
-      return { directMatchTaskIds: null, treeMatchTaskIds: null, visibleWorkspaceIds: null, matchedWorkspaceIds: null, titleHighlights: new Map<string, readonly MatchIndex[]>() };
+      return {
+        directMatchTaskIds: null,
+        treeMatchTaskIds: null,
+        titleHighlights: new Map<string, readonly MatchIndex[]>(),
+      };
     }
-    const workspaceResults = fuzzySearch(workspaces, searchQuery, WORKSPACE_SEARCH_KEYS);
     const taskResults = fuzzySearch(tasks, searchQuery, TASK_SEARCH_KEYS);
-
-    const mWorkspaceIds = new Set(workspaceResults.map((r) => r.item.id));
     const directIds = new Set(taskResults.map((r) => r.item.id));
 
-    // Build highlight map: task ID → match indices for the "title" field
     const highlights = new Map<string, readonly MatchIndex[]>();
     for (const r of taskResults) {
       const titleMatch = r.matches.find((m) => m.key === "title");
@@ -527,13 +517,7 @@ export function WorkspaceList(): JSX.Element {
       }
     }
 
-    // A workspace is visible if it matches directly or any of its tasks match
-    const vWorkspaceIds = new Set(mWorkspaceIds);
-    for (const r of taskResults) {
-      vWorkspaceIds.add(r.item.workspaceId);
-    }
-
-    // For tree view, also include ancestor tasks to preserve tree structure
+    // Include ancestor tasks to preserve tree structure
     const treeIds = new Set(directIds);
     const taskById = new Map(tasks.map((t) => [t.id, t]));
     for (const taskId of [...directIds]) {
@@ -544,30 +528,24 @@ export function WorkspaceList(): JSX.Element {
       }
     }
 
-    return { directMatchTaskIds: directIds, treeMatchTaskIds: treeIds, visibleWorkspaceIds: vWorkspaceIds, matchedWorkspaceIds: mWorkspaceIds, titleHighlights: highlights };
-  }, [searchQuery, workspaces, tasks]);
+    return { directMatchTaskIds: directIds, treeMatchTaskIds: treeIds, titleHighlights: highlights };
+  }, [searchQuery, tasks]);
 
-  // Track which workspaces have had tasks requested (superset of expanded — includes search-triggered loads)
-  const requestedWorkspacesRef = useRef<Set<string>>(new Set());
+  // Filter tasks based on search
+  const isSearching = directMatchTaskIds !== null;
+  const activeMatchIds = isSearching
+    ? (groupByStatus ? directMatchTaskIds : treeMatchTaskIds)
+    : null;
+  const filteredTasks = activeMatchIds
+    ? tasks.filter((t) => activeMatchIds.has(t.id))
+    : tasks;
 
-  // When the user starts searching, eagerly load tasks for all workspaces so
-  // the full dataset is searchable (not just previously-expanded workspaces).
-  useEffect(() => {
-    if (!searchQuery.trim()) {
-      return;
-    }
-    for (const p of workspaces) {
-      if (!expanded.has(p.id) && !requestedWorkspacesRef.current.has(p.id)) {
-        requestedWorkspacesRef.current.add(p.id);
-        loadTasks(p.id);
-      }
-    }
-  }, [searchQuery, workspaces, expanded, loadTasks]);
+  const tree = !groupByStatus ? buildTaskTree(filteredTasks) : [];
 
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <span>Workspaces</span>
+        <span>Tasks</span>
         <div className={styles.headerActions}>
           <button
             className={`${styles.groupToggle} ${groupByStatus ? styles.groupToggleActive : ""}`}
@@ -581,181 +559,72 @@ export function WorkspaceList(): JSX.Element {
           </button>
           <button
             className={styles.addButton}
-            onClick={() => setShowCreateForm(!showCreateForm)}
-            aria-label="Create workspace"
-            title="Create workspace"
+            onClick={() => navigate("/tasks/new")}
+            aria-label="Create task"
+            title="Create task"
+            data-testid="new-task-button"
           >
             +
           </button>
         </div>
       </div>
 
-      {workspaces.length > 0 && (
+      {tasks.length > 0 && (
         <input
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Filter..."
-          aria-label="Filter workspaces and tasks"
+          aria-label="Filter tasks"
           className={styles.searchInput}
           data-testid="sidebar-search"
         />
       )}
 
-      {showCreateForm && (
-        <div className={styles.createForm}>
-          <input
-            type="text"
-            value={newWorkspaceName}
-            onChange={(e) => setNewWorkspaceName(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleCreateWorkspace()}
-            placeholder="Workspace name..."
-            autoFocus
-            disabled={workspaceCreating}
-            className={styles.createInput}
-          />
-          <button
-            onClick={handleCreateWorkspace}
-            className={styles.createButton}
-            disabled={workspaceCreating}
-          >
-            {workspaceCreating
-              ? <Spinner size="sm" label="Creating workspace" />
-              : "OK"}
-          </button>
-        </div>
-      )}
-      {workspaceCreating && (
-        <div className={styles.creatingHint}>
-          <Spinner size="sm" label="Creating workspace" />
-          Creating workspace…
-        </div>
-      )}
-
-      {workspaces.length === 0 && !showCreateForm && (
+      {tasks.length === 0 && (
         <div className={styles.emptyCta}>
           <button
             className={styles.ctaButton}
-            onClick={() => setShowCreateForm(true)}
+            onClick={() => navigate("/tasks/new")}
           >
-            Create Workspace
+            Create Task
           </button>
           <div className={styles.ctaDescription}>
-            Organize your work into workspaces
+            Create a task to get started
           </div>
         </div>
       )}
 
-      {workspaces.map((workspace) => {
-        // Skip workspaces that don't match the search filter
-        if (visibleWorkspaceIds && !visibleWorkspaceIds.has(workspace.id)) {
-          return null;
-        }
-
-        const isSearching = directMatchTaskIds !== null;
-        const isExpanded = expanded.has(workspace.id) || isSearching;
-        const allWorkspaceTasks = tasks.filter((t) => t.workspaceId === workspace.id);
-        // When a workspace matches directly, show all its tasks; otherwise filter to matching tasks only
-        const workspaceMatchedDirectly = matchedWorkspaceIds?.has(workspace.id) ?? false;
-        const activeMatchIds = isSearching && !workspaceMatchedDirectly
-          ? (groupByStatus ? directMatchTaskIds : treeMatchTaskIds)
-          : null;
-        const workspaceTasks = activeMatchIds
-          ? allWorkspaceTasks.filter((t) => activeMatchIds.has(t.id))
-          : allWorkspaceTasks;
-        const isSelected = selectedWorkspaceId === workspace.id;
-        const tree = isExpanded && !groupByStatus ? buildTaskTree(workspaceTasks) : [];
-
-        return (
-          <div key={workspace.id}>
-            <div
-              onClick={() => {
-                if (isSelected) {
-                  // Already viewing this workspace — toggle expand/collapse
-                  toggleExpand(workspace.id);
-                } else {
-                  // Navigate to workspace — ensure expanded
-                  if (!isExpanded) {
-                    toggleExpand(workspace.id);
-                  }
-                  navigate(workspaceUrl(workspace.id));
-                }
-              }}
-              className={`${styles.workspaceRow} ${isSelected ? styles.selected : ""}`}
-            >
-              <span className={`${styles.expandArrow} ${isExpanded ? styles.expanded : ""}`}>
-                {"\u25B8"}
-              </span>
-              <span className={styles.workspaceName} title={workspace.name}>{workspace.name}</span>
-              <span className={styles.taskCount}>
-                {allWorkspaceTasks.length > 0 && `${allWorkspaceTasks.filter((t) => t.status === "complete").length}/${allWorkspaceTasks.length}`}
-              </span>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  navigate(newTaskUrl(workspace.id));
-                }}
-                title="New task"
-                className={styles.newTaskButton}
-              >
-                +
-              </button>
-            </div>
-
-            <AnimatePresence>
-              {isExpanded && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.2, ease: "easeInOut" }}
-                  style={{ overflow: "hidden" }}
-                >
-                  {groupByStatus ? (
-                    groupTasksByStatus(workspaceTasks, taskStatusById).map(group => (
-                      <StatusGroupAccordion
-                        key={group.status}
-                        group={group}
-                        isExpanded={isGroupExpanded(workspace.id, group.status)}
-                        onToggle={() => toggleStatusGroup(workspace.id, group.status)}
-                        selectedTaskId={selectedTaskId}
-                        navigate={navigate}
-                        titleHighlights={titleHighlights}
-                      />
-                    ))
-                  ) : (
-                    tree.map(node => (
-                      <TaskTreeNode
-                        key={node.id}
-                        node={node}
-                        depth={0}
-                        expandedTasks={expandedTasks}
-                        toggleTask={toggleTask}
-                        selectedTaskId={selectedTaskId}
-                        navigate={navigate}
-                        workspaceId={workspace.id}
-                        taskStatusById={taskStatusById}
-                        titleHighlights={titleHighlights}
-                      />
-                    ))
-                  )}
-
-                  {workspaceTasks.length === 0 && (
-                    <div className={styles.emptyTaskCta}>
-                      <button
-                        className={styles.createTaskLink}
-                        onClick={() => navigate(newTaskUrl(workspace.id))}
-                      >
-                        + Create Task
-                      </button>
-                    </div>
-                  )}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        );
-      })}
+      {groupByStatus ? (
+        groupTasksByStatus(filteredTasks, taskStatusById).map(group => (
+          <StatusGroupAccordion
+            key={group.status}
+            group={group}
+            isExpanded={isGroupExpanded(group.status)}
+            onToggle={() => toggleStatusGroup(group.status)}
+            selectedTaskId={selectedTaskId}
+            navigate={navigate}
+            titleHighlights={titleHighlights}
+            workspacesById={workspacesById}
+          />
+        ))
+      ) : (
+        tree.map(node => (
+          <TaskTreeNode
+            key={node.id}
+            node={node}
+            depth={0}
+            expandedTasks={expandedTasks}
+            toggleTask={toggleTask}
+            selectedTaskId={selectedTaskId}
+            navigate={navigate}
+            taskStatusById={taskStatusById}
+            titleHighlights={titleHighlights}
+            workspacesById={workspacesById}
+            isRoot={true}
+          />
+        ))
+      )}
     </div>
   );
 }

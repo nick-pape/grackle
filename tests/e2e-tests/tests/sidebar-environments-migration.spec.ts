@@ -16,23 +16,24 @@ test.describe("Sidebar — Task-Only (No Environments Tab)", () => {
 
     const sidebar = page.locator('[data-testid="sidebar"]');
 
-    // There should be no "Workspaces" tab button either (it was part of the removed tab bar)
+    // There should be no "Workspaces" tab button (removed tab bar)
     await expect(sidebar.locator("button", { hasText: "Workspaces" })).not.toBeVisible();
 
-    // The WORKSPACES header label should still be visible (it's the section label, not a tab)
-    await expect(sidebar.locator("text=WORKSPACES").first()).toBeVisible();
+    // The header label should be "Tasks" (not "WORKSPACES")
+    await expect(sidebar.getByText("Tasks").first()).toBeVisible();
+    await expect(sidebar.locator("text=WORKSPACES")).not.toBeVisible();
   });
 
-  test("sidebar always shows workspace list", async ({ appPage }) => {
+  test("sidebar always shows task list with new-task button", async ({ appPage }) => {
     const page = appPage;
 
     const sidebar = page.locator('[data-testid="sidebar"]');
 
-    // Workspaces section header should be visible
-    await expect(sidebar.locator("text=WORKSPACES").first()).toBeVisible();
+    // Tasks header should be visible
+    await expect(sidebar.getByText("Tasks").first()).toBeVisible();
 
-    // The "+" create workspace button should be visible
-    await expect(sidebar.locator('button[title="Create workspace"]')).toBeVisible();
+    // The "+" new task button should be visible
+    await expect(sidebar.locator('[data-testid="new-task-button"]')).toBeVisible();
   });
 });
 
@@ -257,7 +258,7 @@ test.describe("Session Accordion in Environment Card", () => {
   });
 });
 
-test.describe("Navigation Between Settings and Workspaces", () => {
+test.describe("Navigation Between Settings and Tasks", () => {
   test("clicking Grackle brand from Settings returns to home", async ({ appPage }) => {
     const page = appPage;
 
@@ -276,19 +277,14 @@ test.describe("Navigation Between Settings and Workspaces", () => {
     await expect(page.locator('[data-testid="sidebar"]')).toBeVisible({ timeout: 5_000 });
   });
 
-  test("gear button returns to Settings from workspace view", async ({ appPage }) => {
+  test("gear button returns to Settings from task view", async ({ appPage }) => {
     const page = appPage;
 
-    // Create and select a workspace
+    // The sidebar should show "Tasks" header
     const sidebar = page.locator('[data-testid="sidebar"]');
-    await sidebar.locator('button[title="Create workspace"]').click();
-    const nameInput = page.locator('input[placeholder="Workspace name..."]');
-    await nameInput.fill("gear-test");
-    await page.locator("button", { hasText: "OK" }).click();
-    await expect(page.getByText("gear-test")).toBeVisible({ timeout: 5_000 });
-    await page.getByText("gear-test").click();
+    await expect(sidebar.getByText("Tasks").first()).toBeVisible({ timeout: 5_000 });
 
-    // Now click gear to go to Settings
+    // Click gear to go to Settings
     await page.locator('button[title="Settings"]').click();
 
     // Settings should be visible with Environments and Credentials tabs

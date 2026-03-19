@@ -35,7 +35,12 @@ export function sessionUrl(sessionId: string): string {
   return `/sessions/${encodeURIComponent(sessionId)}`;
 }
 
-/** Build URL for a workspace overview page. */
+/**
+ * Build URL for a workspace overview page.
+ *
+ * @deprecated Workspace routes are being removed. This is kept temporarily
+ * for backward compatibility with WorkspaceList and tests.
+ */
 export function workspaceUrl(workspaceId: string): string {
   return `/workspaces/${encodeURIComponent(workspaceId)}`;
 }

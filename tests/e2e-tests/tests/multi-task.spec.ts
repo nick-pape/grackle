@@ -56,27 +56,17 @@ test.describe("Multi-Task", () => {
     await expect(page.locator("button", { hasText: "Resume" })).toBeVisible({ timeout: 5_000 });
   });
 
-  test("multiple workspaces shown simultaneously in sidebar", async ({ appPage }) => {
+  test("tasks from multiple workspaces shown simultaneously in sidebar", async ({ appPage }) => {
     const page = appPage;
 
-    // Create two workspaces
+    // Create two workspaces with tasks
     await createWorkspace(page, "multi-proj-x");
     await createWorkspace(page, "multi-proj-y");
-
-    // Both should appear in the sidebar
-    await expect(page.getByText("multi-proj-x")).toBeVisible();
-    await expect(page.getByText("multi-proj-y")).toBeVisible();
-
-    // Create tasks in each workspace
     await createTask(page, "multi-proj-x", "x-task-1", "test-local");
     await createTask(page, "multi-proj-y", "y-task-1", "test-local");
 
-    // Expand workspace X by clicking it
-    await page.getByText("multi-proj-x").first().click();
+    // Both tasks should appear directly in the flat sidebar (no workspace expansion needed)
     await expect(page.getByText("x-task-1")).toBeVisible({ timeout: 5_000 });
-
-    // Expand workspace Y by clicking it
-    await page.getByText("multi-proj-y").first().click();
     await expect(page.getByText("y-task-1")).toBeVisible({ timeout: 5_000 });
   });
 

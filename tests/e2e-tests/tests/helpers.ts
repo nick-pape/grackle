@@ -94,9 +94,6 @@ export async function getWorkspaceId(
   return workspace.id;
 }
 
-/** @deprecated Use {@link getWorkspaceId} instead. */
-export const getProjectId = getWorkspaceId;
-
 /** Retrieve the task ID for a task with the given title under a workspace. */
 export async function getTaskId(
   page: Page,
@@ -120,7 +117,9 @@ export async function getTaskId(
 }
 
 /**
- * Create a workspace via WebSocket and wait for it to appear in the sidebar.
+ * Create a workspace via WebSocket.
+ * Workspaces no longer appear in the sidebar (they live in Settings > Environments),
+ * so we just wait for the WS event to complete and a brief settling delay.
  * Requires the test environment ("test-local") to already exist.
  */
 export async function createWorkspace(page: Page, name: string, environmentId: string = "test-local"): Promise<void> {
@@ -132,20 +131,18 @@ export async function createWorkspace(page: Page, name: string, environmentId: s
     },
     "workspace.created",
   );
-  // Wait for the workspace to appear in the sidebar after the event triggers a refresh
-  await page.getByText(name).waitFor({ timeout: 5_000 });
+  // Allow the UI to settle after workspace creation
+  await page.waitForTimeout(500);
 }
-
-/** @deprecated Use {@link createWorkspace} instead. */
-export const createProject = createWorkspace;
 
 /**
  * Create a task under a workspace and wait for it to appear in the sidebar.
  *
- * When `envName` is provided the task is created via WebSocket so the
- * environment can be carried through (task creation UI no longer has an env
- * dropdown). When `envName` is omitted the new full-panel TaskEditPanel UI
- * is exercised.
+ * When `envName` is provided the task is created directly via WebSocket so the
+ * environment can be carried through. When `envName` is omitted the full-panel
+ * TaskEditPanel UI is exercised (sidebar "+" button, workspace dropdown, title).
+ *
+ * Tasks now appear directly in the sidebar (flat task list, no workspace grouping).
  */
 export async function createTask(
   page: Page,
@@ -155,26 +152,11 @@ export async function createTask(
   options?: { canDecompose?: boolean },
 ): Promise<void> {
   if (envName) {
-    // Environment must be set at creation via WS (UI no longer has env field).
-    // Navigate to the task edit form via the "New task" sidebar button (this uses
-    // stopPropagation so it never toggles the workspace's expand/collapse state —
-    // unlike clicking the workspace name which collapses if already selected).
-    await page
-      .getByText(workspaceName)
-      .locator("..")
-      .locator('button[title="New task"]')
-      .first()
-      .click();
-    await page.locator('[data-testid="task-edit-title"]').waitFor({ timeout: 5_000 });
-
-    // Create the task via WS while the form is visible.
+    // Create the task directly via WS (fastest path when env is needed).
     const wsId = await getWorkspaceId(page, workspaceName);
     await createTaskViaWs(page, wsId, title, { environmentId: envName, canDecompose: options?.canDecompose });
 
-    // Cancel the form — this navigates to workspace view which auto-expands
-    // the workspace in the sidebar via useEffect in WorkspaceList.
-    await page.locator("button", { hasText: "Cancel" }).click();
-
+    // Tasks appear directly in the sidebar (flat list, no workspace grouping).
     await page
       .getByText(title, { exact: true })
       .first()
@@ -182,22 +164,20 @@ export async function createTask(
     return;
   }
 
-  // No env specified — exercise the new full-panel TaskEditPanel UI.
-  // Click "New task" button (uses stopPropagation, doesn't toggle expansion)
-  await page
-    .getByText(workspaceName)
-    .locator("..")
-    .locator('button[title="New task"]')
-    .first()
-    .click();
+  // No env specified — exercise the full-panel TaskEditPanel UI.
+  // Click the "+" button in the sidebar header
+  await page.locator('[data-testid="new-task-button"]').click();
 
-  // Fill in task title in the new full-panel form
+  // Select workspace from dropdown
+  const wsId = await getWorkspaceId(page, workspaceName);
+  await page.locator('[data-testid="task-edit-workspace"]').selectOption(wsId);
+
+  // Fill in task title in the full-panel form
   await page.locator('[data-testid="task-edit-title"]').fill(title);
   await page.locator('[data-testid="task-edit-save"]').click();
 
-  // After "Create", viewMode goes to workspace → auto-expand. Wait for task in sidebar.
-  // Use .first() because AnimatePresence may briefly keep an exiting copy alongside the
-  // entering copy, causing two <span class="taskTitle"> elements with the same text.
+  // Wait for task in sidebar. Use .first() because AnimatePresence may briefly
+  // keep an exiting copy alongside the entering copy.
   await page
     .getByText(title, { exact: true })
     .first()

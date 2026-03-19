@@ -15,7 +15,7 @@ import { sessionUrl, SETTINGS_URL, useAppNavigate } from "./utils/navigation.js"
 import { EmptyPage } from "./pages/EmptyPage.js";
 import { NewChatPage } from "./pages/NewChatPage.js";
 import { SessionPage } from "./pages/SessionPage.js";
-import { WorkspacePage } from "./pages/WorkspacePage.js";
+// WorkspacePage removed — workspace management moved to Settings > Environments
 import { NewTaskPage } from "./pages/NewTaskPage.js";
 import { TaskEditPage } from "./pages/TaskEditPage.js";
 import { TaskPage } from "./pages/TaskPage.js";
@@ -122,7 +122,8 @@ function AppRoutes(): JSX.Element {
         <Route index element={<EmptyPage />} />
         <Route path="sessions/new" element={<NewChatPage />} />
         <Route path="sessions/:sessionId" element={<SessionPage />} />
-        <Route path="workspaces/:workspaceId" element={<WorkspacePage />} />
+        {/* Redirect old workspace URLs to home */}
+        <Route path="workspaces/:workspaceId" element={<Navigate to="/" replace />} />
         <Route path="tasks/new" element={<NewTaskPage />} />
         <Route path="tasks/:taskId" element={<TaskPage />} />
         <Route path="tasks/:taskId/stream" element={<TaskPage />} />
