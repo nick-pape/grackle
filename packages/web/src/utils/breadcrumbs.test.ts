@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { describe, it, expect } from "vitest";
 import {
   buildTaskAncestorChain,
   buildHomeBreadcrumbs,
@@ -9,9 +9,9 @@ import {
   buildNewChatBreadcrumbs,
   buildSessionBreadcrumbs,
   type BreadcrumbSegment,
-} from "../src/utils/breadcrumbs.js";
-import type { TaskData, Project } from "../src/hooks/useGrackleSocket.js";
-import { getStatusBadgeClassKey, getStatusStyle } from "../src/utils/taskStatus.js";
+} from "./breadcrumbs.js";
+import type { TaskData, Project } from "../hooks/useGrackleSocket.js";
+import { getStatusBadgeClassKey, getStatusStyle } from "./taskStatus.js";
 
 /** Creates a minimal TaskData for testing. */
 function makeTask(overrides: Partial<TaskData> & { id: string; projectId: string }): TaskData {
@@ -28,6 +28,7 @@ function makeTask(overrides: Partial<TaskData> & { id: string; projectId: string
     depth: 0,
     childTaskIds: [],
     canDecompose: false,
+    defaultPersonaId: "",
     ...overrides,
   };
 }
@@ -40,12 +41,16 @@ function makeProject(overrides: Partial<Project> & { id: string; name: string })
     defaultEnvironmentId: "",
     status: "active",
     createdAt: "",
+    worktreeBasePath: "",
+    useWorktrees: false,
+    defaultPersonaId: "",
+    updatedAt: "",
     ...overrides,
   };
 }
 
-test.describe("buildTaskAncestorChain", () => {
-  test("returns single task when no parent", () => {
+describe("buildTaskAncestorChain", () => {
+  it("returns single task when no parent", () => {
     const task: TaskData = makeTask({ id: "t1", projectId: "p1", title: "Root" });
     const byId: Map<string, TaskData> = new Map([["t1", task]]);
 
@@ -54,7 +59,7 @@ test.describe("buildTaskAncestorChain", () => {
     expect(chain[0].id).toBe("t1");
   });
 
-  test("returns ancestor chain root-first", () => {
+  it("returns ancestor chain root-first", () => {
     const root: TaskData = makeTask({ id: "t1", projectId: "p1", title: "Root" });
     const child: TaskData = makeTask({ id: "t2", projectId: "p1", title: "Child", parentTaskId: "t1", depth: 1 });
     const grandchild: TaskData = makeTask({ id: "t3", projectId: "p1", title: "Grandchild", parentTaskId: "t2", depth: 2 });
@@ -67,7 +72,7 @@ test.describe("buildTaskAncestorChain", () => {
     expect(chain[2].title).toBe("Grandchild");
   });
 
-  test("handles missing parent gracefully", () => {
+  it("handles missing parent gracefully", () => {
     const task: TaskData = makeTask({ id: "t1", projectId: "p1", title: "Orphan", parentTaskId: "missing" });
     const byId: Map<string, TaskData> = new Map([["t1", task]]);
 
@@ -76,7 +81,7 @@ test.describe("buildTaskAncestorChain", () => {
     expect(chain[0].title).toBe("Orphan");
   });
 
-  test("guards against cycles", () => {
+  it("guards against cycles", () => {
     const t1: TaskData = makeTask({ id: "t1", projectId: "p1", parentTaskId: "t2" });
     const t2: TaskData = makeTask({ id: "t2", projectId: "p1", parentTaskId: "t1" });
     const byId: Map<string, TaskData> = new Map([["t1", t1], ["t2", t2]]);
@@ -87,15 +92,15 @@ test.describe("buildTaskAncestorChain", () => {
   });
 });
 
-test.describe("breadcrumb builders", () => {
-  test("home returns Home as non-clickable", () => {
+describe("breadcrumb builders", () => {
+  it("home returns Home as non-clickable", () => {
     const segments: BreadcrumbSegment[] = buildHomeBreadcrumbs();
     expect(segments).toHaveLength(1);
     expect(segments[0].label).toBe("Home");
     expect(segments[0].url).toBeUndefined();
   });
 
-  test("settings returns Home > Settings when no tab specified", () => {
+  it("settings returns Home > Settings when no tab specified", () => {
     const segments: BreadcrumbSegment[] = buildSettingsBreadcrumbs();
     expect(segments).toHaveLength(2);
     expect(segments[0].label).toBe("Home");
@@ -104,7 +109,7 @@ test.describe("breadcrumb builders", () => {
     expect(segments[1].url).toBeUndefined();
   });
 
-  test("settings with tab returns Home > Settings > TabLabel", () => {
+  it("settings with tab returns Home > Settings > TabLabel", () => {
     const segments: BreadcrumbSegment[] = buildSettingsBreadcrumbs("Environments");
     expect(segments).toHaveLength(3);
     expect(segments[0].label).toBe("Home");
@@ -115,7 +120,7 @@ test.describe("breadcrumb builders", () => {
     expect(segments[2].url).toBeUndefined();
   });
 
-  test("project returns Home > ProjectName", () => {
+  it("project returns Home > ProjectName", () => {
     const projects: Project[] = [makeProject({ id: "p1", name: "My Project" })];
     const segments: BreadcrumbSegment[] = buildProjectBreadcrumbs("p1", projects);
     expect(segments).toHaveLength(2);
@@ -125,7 +130,7 @@ test.describe("breadcrumb builders", () => {
     expect(segments[1].url).toBeUndefined();
   });
 
-  test("task returns Home > Project > Task", () => {
+  it("task returns Home > Project > Task", () => {
     const projects: Project[] = [makeProject({ id: "p1", name: "Proj" })];
     const task: TaskData = makeTask({ id: "t1", projectId: "p1", title: "My Task" });
     const byId: Map<string, TaskData> = new Map([["t1", task]]);
@@ -139,7 +144,7 @@ test.describe("breadcrumb builders", () => {
     expect(segments[2].url).toBeUndefined();
   });
 
-  test("nested task includes ancestor chain", () => {
+  it("nested task includes ancestor chain", () => {
     const projects: Project[] = [makeProject({ id: "p1", name: "Proj" })];
     const root: TaskData = makeTask({ id: "t1", projectId: "p1", title: "Root" });
     const child: TaskData = makeTask({ id: "t2", projectId: "p1", title: "Child", parentTaskId: "t1", depth: 1 });
@@ -158,7 +163,7 @@ test.describe("breadcrumb builders", () => {
     expect(segments[4].url).toBeUndefined();
   });
 
-  test("new task with parentTaskId shows ancestor chain", () => {
+  it("new task with parentTaskId shows ancestor chain", () => {
     const projects: Project[] = [makeProject({ id: "p1", name: "Proj" })];
     const parent: TaskData = makeTask({ id: "t1", projectId: "p1", title: "Parent" });
     const byId: Map<string, TaskData> = new Map([["t1", parent]]);
@@ -170,28 +175,28 @@ test.describe("breadcrumb builders", () => {
     expect(segments[3].url).toBeUndefined();
   });
 
-  test("new chat returns Home > New Chat", () => {
+  it("new chat returns Home > New Chat", () => {
     const segments: BreadcrumbSegment[] = buildNewChatBreadcrumbs();
     expect(segments).toHaveLength(2);
     expect(segments[1].label).toBe("New Chat");
   });
 
-  test("session returns Home > Session prefix", () => {
+  it("session returns Home > Session prefix", () => {
     const segments: BreadcrumbSegment[] = buildSessionBreadcrumbs("abcdef1234567890");
     expect(segments).toHaveLength(2);
     expect(segments[1].label).toBe("Session abcdef12");
   });
 });
 
-test.describe("task status helpers", () => {
-  test("maps legacy task statuses to canonical styles", () => {
+describe("task status helpers", () => {
+  it("maps legacy task statuses to canonical styles", () => {
     expect(getStatusStyle("pending").label).toBe("Not Started");
     expect(getStatusStyle("in_progress").label).toBe("Working");
     expect(getStatusStyle("review").label).toBe("Paused");
     expect(getStatusStyle("done").label).toBe("Complete");
   });
 
-  test("maps legacy task statuses to canonical badge classes", () => {
+  it("maps legacy task statuses to canonical badge classes", () => {
     expect(getStatusBadgeClassKey("pending")).toBe("statusPending");
     expect(getStatusBadgeClassKey("in_progress")).toBe("statusInProgress");
     expect(getStatusBadgeClassKey("waiting_input")).toBe("statusWaitingInput");

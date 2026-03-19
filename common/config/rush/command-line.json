@@ -2,12 +2,52 @@
   "$schema": "https://developer.microsoft.com/json-schemas/rush/v5/command-line.schema.json",
   "commands": [
     {
-      "commandKind": "bulk",
-      "name": "test",
-      "summary": "Run tests for each package",
-      "description": "Runs the 'test' script in each project's package.json, if defined.",
+      "commandKind": "phased",
+      "name": "build",
+      "summary": "Build all projects",
+      "phases": ["_phase:build"],
       "enableParallelism": true,
-      "ignoreMissingScript": true
+      "incremental": true
+    },
+    {
+      "commandKind": "phased",
+      "name": "test",
+      "summary": "Build and run unit tests",
+      "phases": ["_phase:build", "_phase:test"],
+      "enableParallelism": true,
+      "incremental": true
+    },
+    {
+      "commandKind": "phased",
+      "name": "e2e",
+      "summary": "Build, unit test, and run E2E tests",
+      "phases": ["_phase:build", "_phase:test", "_phase:e2e"],
+      "enableParallelism": true,
+      "incremental": true
+    }
+  ],
+  "phases": [
+    {
+      "name": "_phase:build",
+      "dependencies": {
+        "upstream": ["_phase:build"]
+      },
+      "missingScriptBehavior": "log"
+    },
+    {
+      "name": "_phase:test",
+      "dependencies": {
+        "self": ["_phase:build"]
+      },
+      "missingScriptBehavior": "silent"
+    },
+    {
+      "name": "_phase:e2e",
+      "dependencies": {
+        "self": ["_phase:build"],
+        "upstream": ["_phase:build"]
+      },
+      "missingScriptBehavior": "silent"
     }
   ]
 }

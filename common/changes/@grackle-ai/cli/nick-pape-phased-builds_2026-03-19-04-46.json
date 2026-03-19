@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Add phased build scripts and rush-project.json for Rush build cache and parallel CI",
+      "type": "none",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
