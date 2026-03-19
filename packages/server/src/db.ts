@@ -123,7 +123,7 @@ export function initDatabase(): void {
 
     CREATE TABLE IF NOT EXISTS tasks (
       id            TEXT PRIMARY KEY,
-      project_id    TEXT NOT NULL REFERENCES projects(id),
+      project_id    TEXT REFERENCES projects(id),
       title         TEXT NOT NULL,
       description   TEXT NOT NULL DEFAULT '',
       status        TEXT NOT NULL DEFAULT 'not_started',
@@ -420,6 +420,45 @@ export function initDatabase(): void {
     /* column already exists */
   }
 
+  // Migration: make project_id nullable on tasks.
+  // SQLite doesn't support ALTER COLUMN, so we recreate the table.
+  // Guard: only run if the column currently has NOT NULL.
+  {
+    const tableInfo = sqlite.prepare("PRAGMA table_info(tasks)").all() as Array<{ name: string; notnull: number }>;
+    const projectIdCol = tableInfo.find((c) => c.name === "project_id");
+    if (projectIdCol?.notnull === 1) {
+      sqlite.exec(`
+        BEGIN;
+        CREATE TABLE tasks_new (
+          id             TEXT PRIMARY KEY,
+          project_id     TEXT REFERENCES projects(id),
+          title          TEXT NOT NULL,
+          description    TEXT NOT NULL DEFAULT '',
+          status         TEXT NOT NULL DEFAULT 'not_started',
+          branch         TEXT NOT NULL DEFAULT '',
+          depends_on     TEXT NOT NULL DEFAULT '[]',
+          started_at     TEXT,
+          completed_at   TEXT,
+          created_at     TEXT NOT NULL DEFAULT (datetime('now')),
+          updated_at     TEXT NOT NULL DEFAULT (datetime('now')),
+          sort_order     INTEGER NOT NULL DEFAULT 0,
+          parent_task_id TEXT NOT NULL DEFAULT '',
+          depth          INTEGER NOT NULL DEFAULT 0,
+          can_decompose  INTEGER NOT NULL DEFAULT 0,
+          default_persona_id TEXT NOT NULL DEFAULT ''
+        );
+        INSERT INTO tasks_new SELECT
+          id, project_id, title, description, status, branch, depends_on,
+          started_at, completed_at, created_at, updated_at, sort_order,
+          parent_task_id, depth, can_decompose, default_persona_id
+        FROM tasks;
+        DROP TABLE tasks;
+        ALTER TABLE tasks_new RENAME TO tasks;
+        COMMIT;
+      `);
+    }
+  }
+
   // Seed: create default "Claude Code" persona if no personas exist
   const personaCount = sqlite
     .prepare("SELECT COUNT(*) as cnt FROM personas")
@@ -461,6 +500,23 @@ export function initDatabase(): void {
         .prepare("INSERT OR IGNORE INTO settings (key, value) VALUES ('default_persona_id', ?)")
         .run(fallback.id);
     }
+  }
+
+  // Backfill: ensure onboarding_completed setting exists.
+  // Fresh installs (no pre-existing environments or personas) get "false" to trigger
+  // the setup wizard. Upgrades (pre-existing data) get "true" to skip it.
+  // personaCount was captured before the seed insert, so it reflects user-created personas.
+  const existingOnboarding = sqlite
+    .prepare("SELECT value FROM settings WHERE key = 'onboarding_completed'")
+    .get() as { value: string } | undefined;
+  if (!existingOnboarding) {
+    const environmentCount = sqlite
+      .prepare("SELECT COUNT(*) as cnt FROM environments")
+      .get() as { cnt: number };
+    const isFreshInstall = environmentCount.cnt === 0 && personaCount.cnt === 0;
+    sqlite
+      .prepare("INSERT OR IGNORE INTO settings (key, value) VALUES ('onboarding_completed', ?)")
+      .run(isFreshInstall ? "false" : "true");
   }
 }
 

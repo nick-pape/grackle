@@ -12,12 +12,23 @@ import {
 } from "./helpers.js";
 
 test.describe("Error States", () => {
-  test("create_task with missing projectId returns error", async ({ appPage }) => {
+  test("create_task with missing projectId succeeds (root task)", async ({ appPage }) => {
+    const page = appPage;
+
+    const result = await sendWsAndWaitFor(page, {
+      type: "create_task",
+      payload: { title: "orphan-task" },
+    }, "task.created");
+
+    expect(result.payload?.taskId).toBeTruthy();
+  });
+
+  test("create_task with missing title returns error", async ({ appPage }) => {
     const page = appPage;
 
     const error = await sendWsAndWaitFor(page, {
       type: "create_task",
-      payload: { projectId: "", title: "orphan-task" },
+      payload: { title: "" },
     }, "create_task_error");
 
     expect(error.payload?.message).toContain("required");

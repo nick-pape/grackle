@@ -9,12 +9,11 @@ concurrency:
   group: cd-publish
   cancel-in-progress: false
 
-permissions:
-  contents: write
-
 jobs:
   publish:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - uses: actions/checkout@v4
@@ -173,3 +172,43 @@ jobs:
             --target main \
             --title "v${version}" \
             --generate-notes
+
+  deploy-docs:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: common/temp/pnpm-store
+          key: pnpm-${{ runner.os }}-${{ hashFiles('common/config/rush/pnpm-lock.yaml') }}
+          restore-keys: pnpm-${{ runner.os }}-
+
+      - name: Rush install
+        run: node common/scripts/install-run-rush.js install
+
+      - name: Build docs site
+        run: node common/scripts/install-run-rush.js build -t @grackle-ai/docs-site
+
+      - uses: actions/configure-pages@v4
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: apps/docs-site/build
+
+      - id: deployment
+        uses: actions/deploy-pages@v4

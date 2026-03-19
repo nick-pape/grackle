@@ -245,8 +245,8 @@ async function startTaskSession(
   task: taskStore.TaskRow,
   options?: { personaId?: string; environmentId?: string; notes?: string },
 ): Promise<string | undefined> {
-  const project = projectStore.getProject(task.projectId);
-  if (!project) {
+  const project = task.projectId ? projectStore.getProject(task.projectId) : undefined;
+  if (task.projectId && !project) {
     logger.warn(
       { taskId: task.id },
       "startTaskSession failed: project not found",
@@ -254,7 +254,7 @@ async function startTaskSession(
     return `Project not found: ${task.projectId}`;
   }
 
-  const environmentId = options?.environmentId || project.defaultEnvironmentId;
+  const environmentId = options?.environmentId || project?.defaultEnvironmentId || "";
   const env = envRegistry.getEnvironment(environmentId);
   if (!env) {
     logger.warn(
@@ -274,7 +274,7 @@ async function startTaskSession(
   // Resolve persona via cascade (request → task → project → app default)
   let resolved;
   try {
-    resolved = resolvePersona(options?.personaId || "", task.defaultPersonaId, project.defaultPersonaId);
+    resolved = resolvePersona(options?.personaId || "", task.defaultPersonaId, project?.defaultPersonaId || "");
   } catch (err) {
     return (err as Error).message;
   }
@@ -308,7 +308,7 @@ async function startTaskSession(
   emit("task.started", {
     taskId: freshTask.id,
     sessionId,
-    projectId: freshTask.projectId,
+    projectId: freshTask.projectId || "",
   });
 
   // Re-push stored tokens + provider credentials (scoped to runtime) so they're fresh for this session.
@@ -339,10 +339,11 @@ async function startTaskSession(
   const mcpDialHost = toDialableHost(process.env.GRACKLE_HOST || "127.0.0.1");
   const mcpUrl = `http://${mcpDialHost}:${mcpPort}/mcp`;
   const mcpToken = createScopedToken(
-    { sub: freshTask.id, pid: freshTask.projectId, per: resolved.personaId, sid: sessionId },
+    { sub: freshTask.id, pid: freshTask.projectId || "", per: resolved.personaId, sid: sessionId },
     loadOrCreateApiKey(),
   );
 
+  const useWorktrees = project?.useWorktrees ?? false;
   const powerlineReq = create(powerline.SpawnRequestSchema, {
     sessionId,
     runtime,
@@ -350,11 +351,11 @@ async function startTaskSession(
     model,
     maxTurns,
     branch: freshTask.branch,
-    worktreeBasePath: freshTask.branch
-      ? (project.worktreeBasePath || process.env.GRACKLE_WORKTREE_BASE || "/workspace")
+    worktreeBasePath: freshTask.branch && useWorktrees
+      ? (project?.worktreeBasePath || process.env.GRACKLE_WORKTREE_BASE || "/workspace")
       : "",
     systemContext,
-    projectId: freshTask.projectId,
+    projectId: freshTask.projectId ?? undefined,
     taskId: freshTask.id,
     mcpServersJson,
     mcpUrl,
@@ -364,7 +365,7 @@ async function startTaskSession(
   processEventStream(conn.client.spawn(powerlineReq), {
     sessionId,
     logPath,
-    projectId: freshTask.projectId,
+    projectId: freshTask.projectId ?? undefined,
     taskId: freshTask.id,
   });
 
@@ -688,7 +689,7 @@ async function handleMessage(
       if (session.taskId) {
         const task = taskStore.getTask(session.taskId);
         if (task) {
-          emit("task.updated", { taskId: task.id, projectId: task.projectId });
+          emit("task.updated", { taskId: task.id, projectId: task.projectId || "" });
         }
       }
       break;
@@ -918,16 +919,16 @@ async function handleMessage(
       }
       personaStore.updatePersona(
         updatePersonaId,
-        (msg.payload?.name as string) || existingPersona.name,
-        (msg.payload?.description as string) || existingPersona.description,
-        (msg.payload?.systemPrompt as string) || existingPersona.systemPrompt,
-        (msg.payload?.toolConfig as string) || existingPersona.toolConfig,
-        (msg.payload?.runtime as string) || existingPersona.runtime,
-        (msg.payload?.model as string) || existingPersona.model,
-        (msg.payload?.maxTurns as number) || existingPersona.maxTurns,
-        (msg.payload?.mcpServers as string) || existingPersona.mcpServers,
-        (msg.payload?.type as string) || existingPersona.type || "agent",
-        (msg.payload?.script as string) || existingPersona.script || "",
+        (msg.payload?.name as string | undefined) ?? existingPersona.name,
+        (msg.payload?.description as string | undefined) ?? existingPersona.description,
+        (msg.payload?.systemPrompt as string | undefined) ?? existingPersona.systemPrompt,
+        (msg.payload?.toolConfig as string | undefined) ?? existingPersona.toolConfig,
+        (msg.payload?.runtime as string | undefined) ?? existingPersona.runtime,
+        (msg.payload?.model as string | undefined) ?? existingPersona.model,
+        (msg.payload?.maxTurns as number | undefined) ?? existingPersona.maxTurns,
+        (msg.payload?.mcpServers as string | undefined) ?? existingPersona.mcpServers,
+        (msg.payload?.type as string | undefined) ?? existingPersona.type ?? "agent",
+        (msg.payload?.script as string | undefined) ?? existingPersona.script ?? "",
       );
       emit("persona.updated", { personaId: updatePersonaId });
       break;
@@ -983,8 +984,7 @@ async function handleMessage(
     // ─── Tasks ─────────────────────────────────────────────
 
     case "list_tasks": {
-      const projectId = msg.payload?.projectId as string;
-      if (!projectId) return;
+      const projectId = (msg.payload?.projectId as string) || undefined;
       const rows = taskStore.listTasks(projectId, {
         search: (msg.payload?.search as string) || undefined,
         status: (msg.payload?.status as string) || undefined,
@@ -1010,7 +1010,7 @@ async function handleMessage(
             const computed = computeTaskStatus(r.status, taskSessions);
             return {
               id: r.id,
-              projectId: r.projectId,
+              projectId: r.projectId ?? undefined,
               title: r.title,
               description: r.description,
               status: computed.status,
@@ -1032,26 +1032,29 @@ async function handleMessage(
     }
 
     case "create_task": {
-      const projectId = msg.payload?.projectId as string;
+      const projectId = (msg.payload?.projectId as string) || undefined;
       const title = msg.payload?.title as string;
       const requestId =
         typeof msg.payload?.requestId === "string"
           ? msg.payload.requestId
           : "";
-      if (!projectId || !title) {
+      if (!title) {
         sendWs(ws, {
           type: "create_task_error",
-          payload: { message: "projectId and title required", requestId },
+          payload: { message: "title required", requestId },
         });
         return;
       }
-      const project = projectStore.getProject(projectId);
-      if (!project) {
-        sendWs(ws, {
-          type: "create_task_error",
-          payload: { message: `Project not found: ${projectId}`, requestId },
-        });
-        return;
+      let project: ReturnType<typeof projectStore.getProject>;
+      if (projectId) {
+        project = projectStore.getProject(projectId);
+        if (!project) {
+          sendWs(ws, {
+            type: "create_task_error",
+            payload: { message: `Project not found: ${projectId}`, requestId },
+          });
+          return;
+        }
       }
       const parentTaskId = (msg.payload?.parentTaskId as string) || "";
       const rawCanDecompose = msg.payload?.canDecompose;
@@ -1068,7 +1071,7 @@ async function handleMessage(
           title,
           (msg.payload?.description as string | undefined) || "",
           (msg.payload?.dependsOn as string[] | undefined) || [],
-          slugify(project.name),
+          project ? slugify(project.name) : "",
           parentTaskId,
           canDecompose,
           (msg.payload?.defaultPersonaId as string) || "",
@@ -1126,13 +1129,13 @@ async function handleMessage(
         sessionStore.setSessionTask(lateBindSessionId, updateTaskId);
 
         try {
-          processorRegistry.lateBind(lateBindSessionId, updateTaskId, existingTask.projectId);
+          processorRegistry.lateBind(lateBindSessionId, updateTaskId, existingTask.projectId || undefined);
         } catch (err) {
           sendWs(ws, { type: "error", payload: { message: String(err) } });
           return;
         }
 
-        emit("task.started", { taskId: updateTaskId, sessionId: lateBindSessionId, projectId: existingTask.projectId });
+        emit("task.started", { taskId: updateTaskId, sessionId: lateBindSessionId, projectId: existingTask.projectId || "" });
         break;
       }
 
@@ -1171,7 +1174,7 @@ async function handleMessage(
         updatedDependsOn,
         updatedDefaultPersonaId,
       );
-      emit("task.updated", { taskId: updateTaskId, projectId: existingTask.projectId });
+      emit("task.updated", { taskId: updateTaskId, projectId: existingTask.projectId || "" });
       break;
     }
 
@@ -1225,7 +1228,7 @@ async function handleMessage(
 
       taskStore.markTaskComplete(taskId, TASK_STATUS.COMPLETE);
       const task = taskStore.getTask(taskId);
-      const unblocked = task ? taskStore.checkAndUnblock(task.projectId) : [];
+      const unblocked = task?.projectId ? taskStore.checkAndUnblock(task.projectId) : [];
       sendWs(ws, {
         type: "task_completed",
         payload: {
@@ -1234,7 +1237,7 @@ async function handleMessage(
         },
       });
       if (task) {
-        emit("task.completed", { taskId, projectId: task.projectId });
+        emit("task.completed", { taskId, projectId: task.projectId || "" });
       }
       break;
     }
@@ -1291,11 +1294,11 @@ async function handleMessage(
       processEventStream(conn.client.resume(powerlineReq), {
         sessionId: latestSession.id,
         logPath,
-        projectId: task.projectId,
+        projectId: task.projectId ?? undefined,
         taskId: task.id,
       });
 
-      emit("task.started", { taskId: task.id, sessionId: latestSession.id, projectId: task.projectId });
+      emit("task.started", { taskId: task.id, sessionId: latestSession.id, projectId: task.projectId || "" });
       break;
     }
 
@@ -1345,7 +1348,7 @@ async function handleMessage(
         sendWs(ws, { type: "error", payload: { message: `Failed to delete task ${taskId}: no rows affected` } });
         return;
       }
-      emit("task.deleted", { taskId, projectId: deletedTask.projectId });
+      emit("task.deleted", { taskId, projectId: deletedTask.projectId || "" });
       break;
     }
 
@@ -1448,8 +1451,9 @@ async function handleMessage(
         return;
       }
 
-      const environmentId =
-        projectStore.getProject(task.projectId)?.defaultEnvironmentId;
+      const environmentId = task.projectId
+        ? projectStore.getProject(task.projectId)?.defaultEnvironmentId
+        : undefined;
       if (!environmentId) {
         sendWs(ws, {
           type: "task_diff",

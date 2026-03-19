@@ -91,7 +91,7 @@ const CreateProjectRequestSchema: GenMessage<CreateProjectRequest>;
 
 // @public
 type CreateTaskRequest = Message<"grackle.CreateTaskRequest"> & {
-    projectId: string;
+    projectId?: string;
     title: string;
     description: string;
     dependsOn: string[];
@@ -1146,7 +1146,7 @@ type SpawnRequest_2 = Message<"grackle.powerline.SpawnRequest"> & {
     branch: string;
     worktreeBasePath: string;
     systemContext: string;
-    projectId: string;
+    projectId?: string;
     taskId: string;
     mcpServersJson: string;
     mcpUrl: string;
@@ -1174,7 +1174,7 @@ const StartTaskRequestSchema: GenMessage<StartTaskRequest>;
 // @public
 type Task = Message<"grackle.Task"> & {
     id: string;
-    projectId: string;
+    projectId?: string;
     title: string;
     description: string;
     status: TaskStatus_2;

@@ -1,0 +1,25 @@
+{
+  "private": true,
+  "name": "@grackle-ai/docs-site",
+  "version": "0.0.1",
+  "description": "Documentation site for Grackle",
+  "scripts": {
+    "dev": "docusaurus start",
+    "build": "docusaurus build",
+    "serve": "docusaurus serve build",
+    "clean": "rimraf build .docusaurus",
+    "_phase:build": "docusaurus build"
+  },
+  "dependencies": {
+    "@docusaurus/core": "^2.3.1",
+    "@docusaurus/preset-classic": "^2.3.1",
+    "@mdx-js/react": "^1.6.22",
+    "clsx": "^1.2.1",
+    "prism-react-renderer": "^2.4.1",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2"
+  },
+  "devDependencies": {
+    "rimraf": "^6.0.1"
+  }
+}

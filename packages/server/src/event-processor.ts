@@ -86,8 +86,8 @@ export function processSubtaskEvent(
       return;
     }
 
-    const project = projectStore.getProject(parentTask.projectId);
-    if (!project) {
+    const project = parentTask.projectId ? projectStore.getProject(parentTask.projectId) : undefined;
+    if (parentTask.projectId && !project) {
       logger.warn({ projectId: parentTask.projectId }, "Subtask creation failed: project not found");
       return;
     }
@@ -125,11 +125,11 @@ export function processSubtaskEvent(
     const subtaskId = uuid().slice(0, 8);
     taskStore.createTask(
       subtaskId,
-      parentTask.projectId,
+      parentTask.projectId || undefined,
       title,
       description,
       resolvedDeps,
-      slugify(project.name),
+      project ? slugify(project.name) : "",
       ctx.taskId,
       canDecompose,
     );
@@ -151,7 +151,7 @@ export function processSubtaskEvent(
       }
     }
 
-    emit("task.created", { taskId: subtaskId, projectId: parentTask.projectId });
+    emit("task.created", { taskId: subtaskId, projectId: parentTask.projectId ?? undefined });
     logger.info({ subtaskId, parentTaskId: ctx.taskId, title }, "Subtask created");
   } catch (err) {
     logger.error({ err, taskId: ctx.taskId }, "Failed to create subtask");

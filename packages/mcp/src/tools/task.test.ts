@@ -157,6 +157,7 @@ describe("task_create", () => {
       description: "",
       dependsOn: [],
       parentTaskId: "",
+      canDecompose: false,
       defaultPersonaId: "",
     });
   });
@@ -186,6 +187,7 @@ describe("task_create", () => {
       description: "Details here",
       dependsOn: ["t1", "t2"],
       parentTaskId: "",
+      canDecompose: false,
       defaultPersonaId: "",
     });
   });

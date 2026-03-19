@@ -34,6 +34,7 @@ export interface UseTasksResult {
     dependsOn?: string[],
     parentTaskId?: string,
     defaultPersonaId?: string,
+    canDecompose?: boolean,
     onSuccess?: () => void,
     onError?: (message: string) => void,
   ) => void;
@@ -229,6 +230,7 @@ export function useTasks(send: SendFunction): UseTasksResult {
       dependsOn?: string[],
       parentTaskId?: string,
       defaultPersonaId?: string,
+      canDecompose?: boolean,
       onSuccess?: () => void,
       onError?: (message: string) => void,
     ) => {
@@ -239,6 +241,7 @@ export function useTasks(send: SendFunction): UseTasksResult {
         dependsOn: dependsOn || [],
         parentTaskId: parentTaskId || "",
         defaultPersonaId: defaultPersonaId || "",
+        canDecompose: canDecompose || false,
       };
       if (onSuccess || onError) {
         const requestId = crypto.randomUUID();

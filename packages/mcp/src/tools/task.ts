@@ -27,7 +27,7 @@ export const taskTools: ToolDefinition[] = [
     description:
       "List all tasks in a Grackle project with their status, title, and assignment information. Supports optional search and status filters.",
     inputSchema: z.object({
-      projectId: z.string().describe("The project ID to list tasks for"),
+      projectId: z.string().optional().describe("The project ID to list tasks for (optional — omit to list all tasks)"),
       search: z.string().optional().describe("Case-insensitive substring filter on task title or description"),
       status: z.string().optional().describe("Filter by task status: not_started, working, paused, complete, failed"),
     }),
@@ -42,7 +42,7 @@ export const taskTools: ToolDefinition[] = [
     async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) {
       try {
         const response = await client.listTasks({
-          projectId: args.projectId as string,
+          projectId: (args.projectId as string | undefined) ?? "",
           search: (args.search as string) || "",
           status: (args.status as string) || "",
         });
@@ -71,7 +71,7 @@ export const taskTools: ToolDefinition[] = [
     description:
       "Create a new task in a Grackle project with a title, optional description, and dependency configuration.",
     inputSchema: z.object({
-      projectId: z.string().describe("The project ID to create the task in"),
+      projectId: z.string().optional().describe("The project ID to create the task in (optional — omit for root tasks)"),
       title: z.string().describe("Short descriptive title for the task"),
       description: z
         .string()
@@ -85,6 +85,10 @@ export const taskTools: ToolDefinition[] = [
         .string()
         .optional()
         .describe("Parent task ID (auto-set when called by an agent working on a task)"),
+      canDecompose: z
+        .boolean()
+        .optional()
+        .describe("Allow this task to create subtasks"),
       defaultPersonaId: z
         .string()
         .optional()
@@ -101,11 +105,12 @@ export const taskTools: ToolDefinition[] = [
     async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) {
       try {
         const task = await client.createTask({
-          projectId: args.projectId as string,
+          projectId: (args.projectId as string | undefined) ?? "",
           title: args.title as string,
           description: (args.description as string | undefined) ?? "",
           dependsOn: (args.dependsOn as string[] | undefined) ?? [],
           parentTaskId: (args.parentTaskId as string | undefined) ?? "",
+          canDecompose: (args.canDecompose as boolean | undefined) ?? false,
           defaultPersonaId: (args.defaultPersonaId as string | undefined) ?? "",
         });
         return jsonResult(taskToJson(task));

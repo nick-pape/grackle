@@ -73,7 +73,7 @@ export function authenticateMcpRequest(req: http.IncomingMessage, apiKey: string
     return {
       type: "scoped",
       taskId: claims.sub,
-      projectId: claims.pid,
+      projectId: claims.pid || undefined,
       personaId: claims.per,
       taskSessionId: claims.sid,
     };
