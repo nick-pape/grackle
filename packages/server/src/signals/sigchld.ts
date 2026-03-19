@@ -98,13 +98,16 @@ async function handleTaskUpdated(childTaskId: string): Promise<void> {
     return;
   }
 
-  // Idempotency: don't re-deliver for the same child+session pair
+  // Idempotency: don't re-deliver for the same child+session pair.
+  // Set the key optimistically to prevent concurrent async handlers from
+  // both passing the check (e.g. completed + interrupted firing together).
   const dedupeKey = `${childTaskId}:${latestSession.id}`;
   const now = Date.now();
   const previousDelivery = delivered.get(dedupeKey);
   if (previousDelivery !== undefined && now - previousDelivery < DEDUP_TTL_MS) {
     return;
   }
+  delivered.set(dedupeKey, now);
 
   // Prune expired entries to prevent unbounded growth
   pruneDelivered(now);
@@ -130,10 +133,9 @@ async function handleTaskUpdated(childTaskId: string): Promise<void> {
 
   const success = await deliverSignalToTask(childTask.parentTaskId, "sigchld", message);
 
-  // Only record dedup after successful delivery so failed deliveries can retry
-  if (success) {
-    delivered.set(dedupeKey, now);
-  } else {
+  // On failure, remove the optimistic dedup key so the next event can retry
+  if (!success) {
+    delivered.delete(dedupeKey);
     logger.warn(
       { childTaskId, parentTaskId: childTask.parentTaskId },
       "SIGCHLD delivery failed — will retry on next task.updated event",

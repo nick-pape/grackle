@@ -158,7 +158,6 @@ function waitForSessionIdle(
 ): IdleWaiter {
   const stream = streamHub.createStream(sessionId);
   let timer: ReturnType<typeof setTimeout> | undefined;
-  let cancelled = false;
 
   const promise = (async () => {
     // Check DB after subscribing to close the race window.
@@ -172,9 +171,6 @@ function waitForSessionIdle(
       return await Promise.race<boolean>([
         (async () => {
           for await (const event of stream) {
-            if (cancelled) {
-              return false;
-            }
             // Only inspect status events — other event types (text, tool_use, etc.)
             // can have arbitrary content that might accidentally match status strings.
             if (event.type !== grackle.EventType.STATUS) {
@@ -209,7 +205,6 @@ function waitForSessionIdle(
   return {
     promise,
     cancel: () => {
-      cancelled = true;
       stream.cancel();
       if (timer !== undefined) {
         clearTimeout(timer);
