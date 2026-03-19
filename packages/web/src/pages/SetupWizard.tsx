@@ -23,7 +23,8 @@ export function SetupWizard(): JSX.Element {
     (runtime: string) => {
       // Update the seed persona's runtime if the user picked something different
       if (seedPersona && runtime !== seedPersona.runtime) {
-        updatePersona(seedPersona.id, undefined, undefined, undefined, runtime);
+        // Clear the model so the new runtime uses its own default
+        updatePersona(seedPersona.id, undefined, undefined, undefined, runtime, "");
       }
       completeOnboarding();
       navigate("/", { replace: true });
@@ -56,6 +57,7 @@ export function SetupWizard(): JSX.Element {
                 currentRuntime={seedPersona?.runtime ?? "claude-code"}
                 onFinish={handleFinish}
                 onBack={() => setStep(1)}
+                finishDisabled={!seedPersona}
               />
             )}
           </motion.div>

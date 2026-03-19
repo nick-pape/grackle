@@ -1,4 +1,4 @@
-import { useState, type JSX } from "react";
+import { useEffect, useState, type JSX } from "react";
 import styles from "../SetupWizard.module.scss";
 
 /** Runtime option definition. */
@@ -20,11 +20,20 @@ interface RuntimeStepProps {
   currentRuntime: string;
   onFinish: (runtime: string) => void;
   onBack: () => void;
+  /** Disable the Finish button (e.g. while personas are still loading). */
+  finishDisabled?: boolean;
 }
 
 /** Runtime selection screen — three cards for choosing the primary agent runtime. */
-export function RuntimeStep({ currentRuntime, onFinish, onBack }: RuntimeStepProps): JSX.Element {
+export function RuntimeStep({ currentRuntime, onFinish, onBack, finishDisabled }: RuntimeStepProps): JSX.Element {
   const [selected, setSelected] = useState(currentRuntime || "claude-code");
+
+  // Sync selection when currentRuntime arrives asynchronously (persona load)
+  useEffect(() => {
+    if (currentRuntime) {
+      setSelected(currentRuntime);
+    }
+  }, [currentRuntime]);
 
   return (
     <div className={styles.stepContent} data-testid="setup-runtime">
@@ -37,6 +46,7 @@ export function RuntimeStep({ currentRuntime, onFinish, onBack }: RuntimeStepPro
             type="button"
             className={styles.runtimeCard}
             data-selected={selected === rt.id}
+            aria-pressed={selected === rt.id}
             data-testid={`runtime-card-${rt.id}`}
             onClick={() => setSelected(rt.id)}
           >
@@ -57,6 +67,7 @@ export function RuntimeStep({ currentRuntime, onFinish, onBack }: RuntimeStepPro
           type="button"
           className={styles.primaryButton}
           onClick={() => onFinish(selected)}
+          disabled={finishDisabled}
           data-testid="setup-finish"
         >
           Finish

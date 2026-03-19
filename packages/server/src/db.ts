@@ -425,10 +425,6 @@ export function initDatabase(): void {
       INSERT OR IGNORE INTO settings (key, value)
       VALUES ('default_persona_id', 'claude-code')
     `);
-    sqlite.exec(`
-      INSERT OR IGNORE INTO settings (key, value)
-      VALUES ('onboarding_completed', 'false')
-    `);
   }
 
   // Backfill: ensure default_persona_id setting exists for upgrades.
@@ -451,20 +447,21 @@ export function initDatabase(): void {
     }
   }
 
-  // Backfill: ensure onboarding_completed setting exists for upgrades.
-  // Existing installations with personas or environments should skip the wizard.
+  // Backfill: ensure onboarding_completed setting exists.
+  // Fresh installs (no pre-existing environments or personas) get "false" to trigger
+  // the setup wizard. Upgrades (pre-existing data) get "true" to skip it.
+  // personaCount was captured before the seed insert, so it reflects user-created personas.
   const existingOnboarding = sqlite
     .prepare("SELECT value FROM settings WHERE key = 'onboarding_completed'")
     .get() as { value: string } | undefined;
   if (!existingOnboarding) {
-    const hasData = sqlite
+    const environmentCount = sqlite
       .prepare("SELECT COUNT(*) as cnt FROM environments")
       .get() as { cnt: number };
-    if (hasData.cnt > 0 || personaCount.cnt > 0) {
-      sqlite
-        .prepare("INSERT OR IGNORE INTO settings (key, value) VALUES ('onboarding_completed', 'true')")
-        .run();
-    }
+    const isFreshInstall = environmentCount.cnt === 0 && personaCount.cnt === 0;
+    sqlite
+      .prepare("INSERT OR IGNORE INTO settings (key, value) VALUES ('onboarding_completed', ?)")
+      .run(isFreshInstall ? "false" : "true");
   }
 }
 
