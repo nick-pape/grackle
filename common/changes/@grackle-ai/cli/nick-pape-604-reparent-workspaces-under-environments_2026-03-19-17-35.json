@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Reparent workspaces under environments: workspaces now require an environment_id, env deletion is blocked when child workspaces exist, and ListWorkspaces supports filtering by environment",
+      "type": "minor",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
