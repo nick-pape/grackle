@@ -16,7 +16,6 @@ export function EmptyPage(): JSX.Element {
     }
     createProject(newProjectName.trim());
     setNewProjectName("");
-    setShowCreateForm(false);
   };
 
   if (projects.length === 0) {
@@ -35,12 +34,13 @@ export function EmptyPage(): JSX.Element {
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   handleCreateProject();
-                } else if (e.key === "Escape") {
+                } else if (e.key === "Escape" && !projectCreating) {
                   setShowCreateForm(false);
                   setNewProjectName("");
                 }
               }}
               placeholder="Project name..."
+              aria-label="Project name"
               autoFocus
               disabled={projectCreating}
               className={styles.ctaCreateInput}
@@ -61,6 +61,7 @@ export function EmptyPage(): JSX.Element {
           <button
             className={styles.ctaButton}
             onClick={() => setShowCreateForm(true)}
+            disabled={projectCreating}
             data-testid="welcome-create-button"
           >
             Create Your First Project
