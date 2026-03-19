@@ -4,7 +4,7 @@ import type { ToolRegistry, ToolDefinition } from "./tool-registry.js";
 /** Tools exposed to scoped-token (agent) callers. */
 export const SCOPED_TOOLS: ReadonlySet<string> = new Set([
   "finding_post", "finding_list",
-  "task_create", "task_list", "task_show", "task_start",
+  "task_create", "task_list", "task_show", "task_start", "task_complete",
   "session_send_input",
 ]);
 

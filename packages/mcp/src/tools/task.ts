@@ -305,8 +305,9 @@ export const taskTools: ToolDefinition[] = [
       idempotentHint: true,
       openWorldHint: false,
     },
-    async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) {
+    async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>, authContext?: AuthContext) {
       try {
+        await assertCallerIsAncestor(client, authContext, args.taskId as string);
         const task = await client.completeTask({
           id: args.taskId as string,
         });

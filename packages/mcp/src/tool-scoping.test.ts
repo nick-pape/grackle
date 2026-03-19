@@ -32,6 +32,7 @@ function buildRegistry(): ToolRegistry {
   registry.register(makeTool("task_list"));
   registry.register(makeTool("task_show"));
   registry.register(makeTool("task_start"));
+  registry.register(makeTool("task_complete"));
   registry.register(makeTool("session_send_input"));
   registry.register(makeTool("env_list"));
   registry.register(makeTool("session_list"));
@@ -55,7 +56,7 @@ describe("SCOPED_TOOLS", () => {
     expect([...SCOPED_TOOLS].sort()).toEqual([
       "finding_list", "finding_post",
       "session_send_input",
-      "task_create", "task_list", "task_show", "task_start",
+      "task_complete", "task_create", "task_list", "task_show", "task_start",
     ]);
   });
 });
@@ -100,7 +101,7 @@ describe("listToolsForAuth", () => {
     expect(names).toEqual([
       "env_list", "finding_list", "finding_post",
       "session_list", "session_send_input",
-      "task_create", "task_list", "task_show", "task_start",
+      "task_complete", "task_create", "task_list", "task_show", "task_start",
     ]);
   });
 
@@ -111,7 +112,7 @@ describe("listToolsForAuth", () => {
     expect(names).toEqual([
       "finding_list", "finding_post",
       "session_send_input",
-      "task_create", "task_list", "task_show", "task_start",
+      "task_complete", "task_create", "task_list", "task_show", "task_start",
     ]);
   });
 
