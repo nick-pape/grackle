@@ -77,7 +77,7 @@ The MCP server exposes tools grouped by domain:
 |------|------------|
 | `project_list` | List all projects |
 | `project_create` | Create a new project |
-| `project_show` | Get project details |
+| `project_get` | Get project details |
 | `project_update` | Update project metadata |
 | `project_archive` | Archive a project |
 
@@ -98,8 +98,8 @@ The MCP server exposes tools grouped by domain:
 ### Configuration
 | Tool | Description |
 |------|------------|
-| `config_get` | Read a setting |
-| `config_set` | Update a setting |
+| `config_get_default_persona` | Get the default persona setting |
+| `config_set_default_persona` | Set the default persona |
 
 ## Scoped vs. global auth
 

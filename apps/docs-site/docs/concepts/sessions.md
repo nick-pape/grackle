@@ -28,13 +28,13 @@ Once spawned, Grackle streams the session's events in real time. Each event has 
 
 | Event | Description |
 |-------|------------|
-| `TEXT` | Agent response text |
-| `TOOL_USE` | Agent invoked a tool (shows tool name and input) |
-| `TOOL_RESULT` | Tool execution result |
-| `STATUS` | Status change (running, idle, completed, failed) |
-| `ERROR` | Error message |
-| `SYSTEM` | Internal messages (setup info, worktree creation, etc.) |
-| `USER_INPUT` | Input sent by a user or parent task |
+| `text` | Agent response text |
+| `tool_use` | Agent invoked a tool (shows tool name and input) |
+| `tool_result` | Tool execution result |
+| `status` | Status change (running, idle, completed, failed) |
+| `error` | Error message |
+| `system` | Internal messages (setup info, worktree creation, etc.) |
+| `user_input` | Input sent by a user or parent task |
 
 The CLI renders these with color coding. The web UI shows them in a chat-style transcript.
 

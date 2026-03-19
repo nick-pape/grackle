@@ -71,7 +71,7 @@ The **Grackle Server** is the control plane. It manages environments, sessions, 
 | **Git worktree isolation** | Every task gets its own branch — zero interference between agents |
 | **Findings** | Agents post discoveries that become context for other agents |
 | **Multi-runtime** | Claude Code, Copilot, and Codex — swap freely |
-| **Task trees** | Decompose work into parent/child subtasks up to 10 levels deep |
+| **Task trees** | Decompose work into parent/child subtasks up to 8 levels deep |
 | **Task dependencies** | Blocked tasks wait for their dependencies to complete |
 | **Personas** | Specialized agent configs with system prompts, tools, and model selection |
 | **Session history** | Every task tracks its full session history — retry and compare |

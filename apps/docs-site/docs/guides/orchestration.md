@@ -82,10 +82,9 @@ grackle task start <root-task-id> --persona orchestrator
 
 The orchestrator agent can:
 1. Analyze the work and break it into subtasks using `task_create`
-2. Start subtasks with `task_start` (each runs on its own environment)
-3. Post findings to share architectural decisions
-4. Monitor subtask completion (via SIGCHLD notifications)
-5. Review results and provide feedback
+2. Post findings to share architectural decisions
+3. Monitor subtask completion (via automatic notifications — see below)
+4. Review results and provide feedback
 
 ```mermaid
 graph TD

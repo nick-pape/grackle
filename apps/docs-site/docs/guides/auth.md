@@ -126,5 +126,5 @@ This binds to `0.0.0.0`. Generate a pairing code with `grackle pair` and use it 
 - **Constant-time comparison** for API key and session signature validation (prevents timing attacks)
 - **Path traversal prevention** on file token writes and static file serving
 - **HMAC-SHA256** session cookie signatures (unforgeable without the API key)
-- **AES-256-GCM** encryption for stored tokens (key derived via PBKDF2 from machine identity or `GRACKLE_MASTER_KEY` env var)
+- **AES-256-GCM** encryption for stored tokens (key derived via PBKDF2 from `GRACKLE_MASTER_KEY` env var or a persisted random key file at `~/.grackle/master-key`)
 - **Loopback-only OAuth redirects** (prevents open redirect attacks)

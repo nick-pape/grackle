@@ -86,13 +86,16 @@ Implement Auth (root)
 └── Write integration tests
 ```
 
-Child tasks are created with `--parent`:
+Child tasks are created with the `--parent` and `--can-decompose` flags:
 
 ```bash
 grackle task create "Write JWT validator" --project auth-rewrite --parent <parent-task-id>
+
+# Allow a task to create its own subtasks (e.g., for orchestrator patterns)
+grackle task create "Implement auth" --project auth-rewrite --can-decompose
 ```
 
-Tasks can be nested up to 10 levels deep. By default, root tasks can decompose (create children) but child tasks cannot — this prevents runaway nesting. You can override this per-task for orchestrator patterns.
+Tasks can be nested up to 8 levels deep. Use `--can-decompose` to allow a task to create children — this is off by default to prevent runaway nesting. The web UI and MCP tools also support setting this flag.
 
 ## Task dependencies
 
