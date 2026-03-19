@@ -898,6 +898,10 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
         console.log("[MockGrackle] setAppDefaultPersonaId", personaId);
         setAppDefaultPersonaIdState(personaId);
       },
+      onboardingCompleted: true,
+      completeOnboarding: () => {
+        console.log("[MockGrackle] completeOnboarding");
+      },
     }),
     [
       sessions,
