@@ -4,7 +4,8 @@
   "private": true,
   "description": "Shared Heft rig for Grackle packages",
   "scripts": {
-    "build": ""
+    "build": "",
+    "_phase:build": ""
   },
   "dependencies": {
     "@grackle-ai/heft-buf-plugin": "workspace:*",

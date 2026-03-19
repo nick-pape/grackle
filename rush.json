@@ -56,6 +56,10 @@
       "packageName": "@grackle-ai/web",
       "projectFolder": "packages/web",
       "versionPolicyName": "grackle"
+    },
+    {
+      "packageName": "@grackle-ai/e2e-tests",
+      "projectFolder": "tests/e2e-tests"
     }
   ]
 }

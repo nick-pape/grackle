@@ -18,7 +18,9 @@
     "build": "heft build --clean",
     "start": "node dist/index.js",
     "test": "vitest run",
-    "clean": "heft clean"
+    "clean": "heft clean",
+    "_phase:build": "heft run --only build -- --clean",
+    "_phase:test": "vitest run"
   },
   "dependencies": {
     "@bufbuild/protobuf": "^2.5.0",

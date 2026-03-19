@@ -1,0 +1,19 @@
+{
+  "name": "@grackle-ai/e2e-tests",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "End-to-end Playwright tests for the Grackle platform",
+  "scripts": {
+    "build": "",
+    "test": "playwright test",
+    "_phase:build": "",
+    "_phase:e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@grackle-ai/cli": "workspace:*",
+    "@grackle-ai/server": "workspace:*",
+    "@grackle-ai/web": "workspace:*",
+    "@playwright/test": "^1.49.0"
+  }
+}
