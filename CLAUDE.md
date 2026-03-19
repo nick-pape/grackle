@@ -6,6 +6,7 @@ When you encounter unexpected issues, workarounds, or non-obvious behavior (CI q
 
 ## Git Workflow
 
+- **Never push directly to main.** All changes must go through a pull request. Always create a feature branch and open a PR — never commit and push to `main`.
 - **Never rebase or force-push.** To sync with `main`, first run `git fetch origin` and then use `git merge origin/main` instead of `git rebase`. Rebasing published branches rewrites history and typically requires a force-push, which we do not allow.
 - **Never merge PRs** unless the user explicitly tells you to merge. Other agents may be coordinating merge order.
 - **Branch naming**: `<github-username>/<issue>-<feature>` when working on a GitHub issue (where `<issue>` is the numeric issue id, e.g., `nick-pape/149-agent-subtask-creation`), or `<github-username>/<feature>` when there's no issue (e.g., `nick-pape/fix-typo-in-readme`).
