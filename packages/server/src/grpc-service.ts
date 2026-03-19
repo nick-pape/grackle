@@ -985,9 +985,6 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
 
       const mcpServersJson = personaMcpServersToJson(persona);
 
-      // When useWorktrees is false, omit worktreeBasePath so PowerLine checks
-      // out the branch in the main working tree instead of creating a worktree.
-      // The branch field is still populated so the agent knows its branch name.
       const useWorktrees = project?.useWorktrees ?? false;
       if (!useWorktrees) {
         logger.warn(
@@ -1011,9 +1008,10 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         model,
         maxTurns,
         branch: task.branch,
-        worktreeBasePath: task.branch && useWorktrees
+        worktreeBasePath: task.branch
           ? (project?.worktreeBasePath || process.env.GRACKLE_WORKTREE_BASE || "/workspace")
           : "",
+        useWorktrees,
         systemContext,
         projectId: task.projectId ?? undefined,
         taskId: task.id,

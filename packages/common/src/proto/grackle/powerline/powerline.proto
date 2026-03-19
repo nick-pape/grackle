@@ -38,6 +38,7 @@ message SpawnRequest {
   string mcp_url = 14;         // Server's MCP endpoint URL (tunneled for remote envs)
   string mcp_token = 15;       // Pre-created scoped token for this session
   string script_content = 16;  // Script source code (for script personas)
+  bool use_worktrees = 17;     // When true, create worktrees; when false, checkout in place
 }
 
 message ResumeRequest {

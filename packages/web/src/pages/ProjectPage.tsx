@@ -11,19 +11,13 @@ import {
   EditableTextArea,
   EditableSelect,
   EditableCheckbox,
+  EnvironmentSelect,
 } from "../components/editable/index.js";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import styles from "../components/panels/SessionPanel.module.scss";
 
-/** Derives a color class for an environment status string. */
-function envStatusClass(status: string): string {
-  const s = status.toLowerCase();
-  if (s === "ready" || s === "running" || s === "available" || s === "connected") return styles.envDotGreen;
-  if (s === "provisioning" || s === "starting" || s === "pending" || s === "connecting") return styles.envDotYellow;
-  if (s === "error" || s === "failed" || s === "disconnected") return styles.envDotRed;
-  return styles.envDotGray;
-}
+
 
 /** Converts an ISO timestamp into a human-friendly relative time string. */
 function relativeTime(iso: string | undefined): string {
@@ -80,8 +74,6 @@ export function ProjectPage(): JSX.Element {
   const done = projectTasks.filter((t) => t.status === "complete").length;
   const total = projectTasks.length;
   const progressPct = total > 0 ? Math.round((done / total) * 100) : 0;
-
-  const defaultEnv = environments.find((e) => e.id === project?.defaultEnvironmentId);
 
   return (
     <div className={styles.panelContainer}>
@@ -197,27 +189,14 @@ export function ProjectPage(): JSX.Element {
           <div className={styles.metaRow}>
             <span className={styles.metaLabel}>Environment</span>
             <div className={styles.metaValue}>
-              <EditableSelect
+              <EnvironmentSelect
                 value={project?.defaultEnvironmentId || ""}
                 onSave={(v) => { if (project) { updateProject(project.id, { defaultEnvironmentId: v }); } }}
-                options={[
-                  { value: "", label: "None" },
-                  ...environments.map((env) => ({ value: env.id, label: env.displayName })),
-                ]}
+                environments={environments}
+                allowNone
                 fieldId="defaultEnvironmentId"
                 activeFieldId={activeFieldId}
                 onActivate={setActiveFieldId}
-                renderDisplay={() => {
-                  if (defaultEnv) {
-                    return (
-                      <span className={styles.envRow}>
-                        <span className={`${styles.envDot} ${envStatusClass(defaultEnv.status)}`} />
-                        {defaultEnv.displayName}
-                      </span>
-                    );
-                  }
-                  return undefined;
-                }}
                 placeholder={project?.defaultEnvironmentId || "No default environment"}
                 ariaLabel="Project default environment"
                 data-testid="edit-env"

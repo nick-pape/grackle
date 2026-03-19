@@ -101,6 +101,7 @@ class ClaudeCodeSession extends BaseAgentSession {
     const cwd = await resolveWorkingDirectory({
       branch: this.branch,
       worktreeBasePath: this.worktreeBasePath,
+      useWorktrees: this.useWorktrees,
       eventQueue: this.eventQueue,
       requireNonEmpty: true,
     });
@@ -247,7 +248,8 @@ export class ClaudeCodeRuntime extends BaseAgentRuntime {
     mcpServers?: Record<string, unknown>,
     hooks?: Record<string, unknown>,
     mcpBroker?: { url: string; token: string },
+    useWorktrees?: boolean,
   ): AgentSession {
-    return new ClaudeCodeSession(id, prompt, model, maxTurns, resumeSessionId, branch, worktreeBasePath, systemContext, mcpServers, hooks, mcpBroker);
+    return new ClaudeCodeSession(id, prompt, model, maxTurns, resumeSessionId, branch, worktreeBasePath, systemContext, mcpServers, hooks, mcpBroker, useWorktrees);
   }
 }

@@ -16,6 +16,7 @@ export interface SpawnOptions {
   maxTurns: number;
   branch?: string;
   worktreeBasePath?: string;
+  useWorktrees?: boolean;
   systemContext?: string;
   projectId?: string;
   taskId?: string;

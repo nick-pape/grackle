@@ -16,8 +16,10 @@ const execFileAsync: typeof execFile.__promisify__ = promisify(execFile);
 export interface ResolveWorkingDirectoryOptions {
   /** Git branch to check out in a worktree. */
   branch?: string;
-  /** Base path for worktree creation. */
+  /** Base path for worktree creation or working directory override. */
   worktreeBasePath?: string;
+  /** When true, create git worktrees for branch isolation. When false, checkout in place. */
+  useWorktrees?: boolean;
   /** Event queue to push system messages to. */
   eventQueue: AsyncQueue<AgentEvent>;
   /**
@@ -157,10 +159,11 @@ async function checkoutBranchInPlace(repoPath: string, branch: string): Promise<
  * checks out the branch directly in the main working tree and returns it.
  */
 export async function resolveWorkingDirectory(options: ResolveWorkingDirectoryOptions): Promise<string | undefined> {
-  const { branch, worktreeBasePath, eventQueue, requireNonEmpty } = options;
+  const { branch, worktreeBasePath, useWorktrees, eventQueue, requireNonEmpty } = options;
   const ts = (): string => new Date().toISOString();
 
-  if (branch && worktreeBasePath) {
+  if (branch && worktreeBasePath && useWorktrees) {
+    // Worktrees enabled — create a worktree for the branch.
     // Auto-detect the actual git repo path — the server may send a default
     // like "/workspace" that doesn't match the actual layout (e.g. Codespaces
     // use /workspaces/<repo>).
@@ -186,9 +189,10 @@ export async function resolveWorkingDirectory(options: ResolveWorkingDirectoryOp
     return undefined;
   }
 
-  if (branch && !worktreeBasePath) {
-    // Worktrees are disabled — check out the branch in the main working tree.
-    const repoPath = findGitRepoPath();
+  if (branch && !useWorktrees) {
+    // Worktrees disabled — check out the branch in the main working tree.
+    // Use worktreeBasePath as the repo hint if provided.
+    const repoPath = findGitRepoPath(worktreeBasePath);
 
     if (repoPath) {
       try {
@@ -199,11 +203,11 @@ export async function resolveWorkingDirectory(options: ResolveWorkingDirectoryOp
         eventQueue.push({ type: "system", timestamp: ts(), content: `Branch checkout failed (${checkoutErr instanceof Error ? checkoutErr.message : String(checkoutErr)}), falling back to workspace` });
       }
     } else {
-      eventQueue.push({ type: "system", timestamp: ts(), content: `No git repo found for branch checkout, falling back to workspace` });
+      eventQueue.push({ type: "system", timestamp: ts(), content: `No git repo found${worktreeBasePath ? ` at ${worktreeBasePath}` : ""} for branch checkout, falling back to workspace` });
     }
 
     // Checkout failed — fall back to best available workspace
-    const fallback = findWorkspaceDir(undefined, requireNonEmpty);
+    const fallback = findWorkspaceDir(worktreeBasePath, requireNonEmpty);
     if (fallback) {
       return fallback;
     }

@@ -33,6 +33,7 @@ export abstract class BaseAgentRuntime implements AgentRuntime {
     mcpServers?: Record<string, unknown>,
     hooks?: Record<string, unknown>,
     mcpBroker?: { url: string; token: string },
+    useWorktrees?: boolean,
   ): AgentSession;
 
   /** Create and start a new agent session. */
@@ -49,6 +50,7 @@ export abstract class BaseAgentRuntime implements AgentRuntime {
       opts.mcpServers,
       opts.hooks,
       opts.mcpBroker,
+      opts.useWorktrees,
     );
   }
 

@@ -79,6 +79,7 @@ export function registerPowerLineRoutes(router: ConnectRouter): void {
         maxTurns: req.maxTurns,
         branch: req.branch || undefined,
         worktreeBasePath: req.worktreeBasePath || undefined,
+        useWorktrees: req.useWorktrees,
         systemContext: req.systemContext || undefined,
         projectId: req.projectId || undefined,
         taskId: req.taskId || undefined,
