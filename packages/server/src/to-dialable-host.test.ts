@@ -1,24 +1,5 @@
-/**
- * Tests for the toDialableHost() logic in grpc-service.ts.
- * Since the function is not exported, we replicate its logic here
- * to validate the GRACKLE_DOCKER_HOST behavior independently.
- */
 import { describe, it, expect, afterEach } from "vitest";
-
-/**
- * Mirrors toDialableHost() from grpc-service.ts.
- * Kept in sync manually — if the source changes, update this copy.
- */
-function toDialableHost(bindHost: string): string {
-  if (bindHost === "0.0.0.0" || bindHost === "::") {
-    const dockerHost = process.env.GRACKLE_DOCKER_HOST;
-    if (dockerHost) {
-      return dockerHost;
-    }
-    return bindHost === "::" ? "[::1]" : "127.0.0.1";
-  }
-  return bindHost.includes(":") ? `[${bindHost}]` : bindHost;
-}
+import { toDialableHost } from "./grpc-service.js";
 
 describe("toDialableHost()", () => {
   afterEach(() => {
@@ -41,6 +22,26 @@ describe("toDialableHost()", () => {
   it("returns GRACKLE_DOCKER_HOST when set and bindHost is ::", () => {
     process.env.GRACKLE_DOCKER_HOST = "grackle";
     expect(toDialableHost("::")).toBe("grackle");
+  });
+
+  it("wraps IPv6 GRACKLE_DOCKER_HOST in brackets when bindHost is 0.0.0.0", () => {
+    process.env.GRACKLE_DOCKER_HOST = "fd12::1";
+    expect(toDialableHost("0.0.0.0")).toBe("[fd12::1]");
+  });
+
+  it("wraps IPv6 GRACKLE_DOCKER_HOST in brackets when bindHost is ::", () => {
+    process.env.GRACKLE_DOCKER_HOST = "fd12::1";
+    expect(toDialableHost("::")).toBe("[fd12::1]");
+  });
+
+  it("returns non-IPv6 GRACKLE_DOCKER_HOST unchanged", () => {
+    process.env.GRACKLE_DOCKER_HOST = "grackle.local";
+    expect(toDialableHost("0.0.0.0")).toBe("grackle.local");
+  });
+
+  it("does not double-wrap already-bracketed IPv6 GRACKLE_DOCKER_HOST", () => {
+    process.env.GRACKLE_DOCKER_HOST = "[fd12::1]";
+    expect(toDialableHost("0.0.0.0")).toBe("[fd12::1]");
   });
 
   it("does not use GRACKLE_DOCKER_HOST for explicit bind addresses", () => {
