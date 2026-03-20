@@ -1,8 +1,28 @@
-import { writeFile, mkdir, realpath } from "node:fs/promises";
+import { writeFile as writeFileNode, mkdir as mkdirNode, realpath as realpathNode } from "node:fs/promises";
 import { dirname, resolve, normalize } from "node:path";
-import { homedir } from "node:os";
-import { realpathSync, existsSync } from "node:fs";
+import { homedir as homedirNode } from "node:os";
+import { realpathSync as realpathSyncNode, existsSync as existsSyncNode } from "node:fs";
 import { logger } from "./logger.js";
+
+/** Abstraction over filesystem operations used by {@link writeTokens}. */
+export interface FileSystem {
+  realpathSync(path: string): string;
+  existsSync(path: string): boolean;
+  realpath(path: string): Promise<string>;
+  mkdir(path: string, options: { recursive: true }): Promise<void>;
+  writeFile(path: string, data: string, options: { mode: number }): Promise<void>;
+  homedir(): string;
+}
+
+/** Default implementation that delegates to real Node APIs. */
+const NODE_FILE_SYSTEM: FileSystem = {
+  realpathSync: realpathSyncNode,
+  existsSync: existsSyncNode,
+  realpath: realpathNode,
+  mkdir: (path, options) => mkdirNode(path, options).then(() => undefined),
+  writeFile: (path, data, options) => writeFileNode(path, data, options),
+  homedir: homedirNode,
+};
 
 /**
  * @internal Verify that a resolved file path is under the user's home directory,
@@ -24,14 +44,15 @@ export function isUnderHome(resolvedPath: string, home: string): boolean {
 
 /** Apply a batch of tokens by setting env vars or writing files under the user's home directory. */
 export async function writeTokens(
-  tokens: Array<{ name: string; type: string; envVar: string; filePath: string; value: string }>
+  tokens: Array<{ name: string; type: string; envVar: string; filePath: string; value: string }>,
+  fileSystem: FileSystem = NODE_FILE_SYSTEM,
 ): Promise<void> {
   // Resolve the real home directory path (resolving symlinks)
   let home: string;
   try {
-    home = realpathSync(homedir());
+    home = fileSystem.realpathSync(fileSystem.homedir());
   } catch {
-    home = homedir();
+    home = fileSystem.homedir();
   }
 
   for (const token of tokens) {
@@ -51,10 +72,10 @@ export async function writeTokens(
       try {
         let checkPath = dirname(resolvedPath);
         // Walk up until we find an existing ancestor to realpath-check
-        while (!existsSync(checkPath) && checkPath !== dirname(checkPath)) {
+        while (!fileSystem.existsSync(checkPath) && checkPath !== dirname(checkPath)) {
           checkPath = dirname(checkPath);
         }
-        const realAncestor = await realpath(checkPath);
+        const realAncestor = await fileSystem.realpath(checkPath);
         if (!isUnderHome(realAncestor, home)) {
           logger.warn({ filePath: resolvedPath, realAncestor }, "Parent directory resolves outside home via symlink");
           continue;
@@ -65,8 +86,8 @@ export async function writeTokens(
       }
 
       try {
-        await mkdir(dirname(resolvedPath), { recursive: true });
-        await writeFile(resolvedPath, token.value, { mode: 0o600 });
+        await fileSystem.mkdir(dirname(resolvedPath), { recursive: true });
+        await fileSystem.writeFile(resolvedPath, token.value, { mode: 0o600 });
         logger.info({ filePath: resolvedPath }, "Wrote file %s", resolvedPath);
       } catch (err) {
         logger.warn({ filePath: resolvedPath, err }, "Failed to write token file %s, continuing", resolvedPath);

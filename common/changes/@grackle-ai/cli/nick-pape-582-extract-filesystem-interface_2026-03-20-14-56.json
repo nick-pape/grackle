@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Extract injectable FileSystem interface from token-writer for improved testability",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
