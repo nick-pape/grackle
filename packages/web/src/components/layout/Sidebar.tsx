@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, type JSX } from "react";
 import { useLocation } from "react-router";
-import { SidebarNav, getActiveView } from "./SidebarNav.js";
+import { getActiveView } from "./AppNav.js";
 import { TaskList } from "../lists/TaskList.js";
 import { WorkspaceList } from "../lists/WorkspaceList.js";
 import { SettingsNav } from "../settings/SettingsNav.js";
@@ -40,7 +40,7 @@ function saveWidth(width: number): void {
   }
 }
 
-/** Left sidebar with tab bar for Tasks / Workspaces / Settings views. */
+/** Left sidebar showing view-specific content based on the active app navigation tab. */
 export function Sidebar(): JSX.Element {
   const [width] = useState<number>(loadWidth);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -73,7 +73,6 @@ export function Sidebar(): JSX.Element {
 
   return (
     <div className={styles.container} ref={containerRef} data-testid="sidebar" style={{ width }}>
-      <SidebarNav />
       <div className={styles.content}>
         {activeView === "tasks" && <TaskList />}
         {activeView === "workspaces" && <WorkspaceList />}

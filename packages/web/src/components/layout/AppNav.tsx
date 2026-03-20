@@ -1,35 +1,35 @@
 import { useCallback, useRef, type JSX, type KeyboardEvent } from "react";
 import { useLocation } from "react-router";
 import { CHAT_URL, SETTINGS_URL, useAppNavigate } from "../../utils/navigation.js";
-import styles from "./SidebarNav.module.scss";
+import styles from "./AppNav.module.scss";
 
-/** Sidebar view identifiers. */
-export type SidebarView = "chat" | "tasks" | "workspaces" | "settings";
+/** Application view identifiers. */
+export type AppView = "chat" | "tasks" | "workspaces" | "settings";
 
-/** Tab definition for the sidebar navigation bar. */
-interface SidebarTab {
+/** Tab definition for the application navigation bar. */
+interface AppTab {
   /** View identifier. */
-  view: SidebarView;
-  /** Display label (omit for icon-only tabs). */
-  label?: string;
+  view: AppView;
+  /** Display label. */
+  label: string;
   /** Icon character displayed before the label. */
-  icon?: string;
+  icon: string;
   /** Route to navigate to when clicked. */
   route: string;
   /** data-testid suffix. */
   testId: string;
 }
 
-/** Ordered list of sidebar tabs. */
-const TABS: SidebarTab[] = [
-  { view: "chat", label: "Chat", route: CHAT_URL, testId: "sidebar-tab-chat" },
-  { view: "tasks", label: "Tasks", route: "/tasks", testId: "sidebar-tab-tasks" },
-  { view: "workspaces", label: "Workspaces", route: "/workspaces", testId: "sidebar-tab-workspaces" },
-  { view: "settings", icon: "\u2699", route: `${SETTINGS_URL}/environments`, testId: "sidebar-tab-settings" },
+/** Ordered list of app navigation tabs. */
+const TABS: AppTab[] = [
+  { view: "chat", label: "Chat", icon: "\uD83D\uDCAC", route: CHAT_URL, testId: "sidebar-tab-chat" },
+  { view: "tasks", label: "Tasks", icon: "\uD83D\uDCCB", route: "/tasks", testId: "sidebar-tab-tasks" },
+  { view: "workspaces", label: "Workspaces", icon: "\uD83D\uDCC1", route: "/workspaces", testId: "sidebar-tab-workspaces" },
+  { view: "settings", label: "Settings", icon: "\u2699\uFE0F", route: `${SETTINGS_URL}/environments`, testId: "sidebar-tab-settings" },
 ];
 
-/** Derive the active sidebar view from a URL pathname. */
-export function getActiveView(pathname: string): SidebarView {
+/** Derive the active application view from a URL pathname. */
+export function getActiveView(pathname: string): AppView {
   if (pathname.startsWith("/chat") || pathname.startsWith("/sessions")) {
     return "chat";
   }
@@ -42,15 +42,15 @@ export function getActiveView(pathname: string): SidebarView {
   return "tasks";
 }
 
-/** Horizontal tab bar for switching between Tasks, Workspaces, and Settings sidebar views. */
-export function SidebarNav(): JSX.Element {
+/** Full-width navigation bar below the StatusBar for switching between app views. */
+export function AppNav(): JSX.Element {
   const location = useLocation();
   const navigate = useAppNavigate();
   const tabListRef = useRef<HTMLElement>(null);
 
   const activeView = getActiveView(location.pathname);
 
-  const handleClick = useCallback((tab: SidebarTab) => {
+  const handleClick = useCallback((tab: AppTab) => {
     navigate(tab.route);
   }, [navigate]);
 
@@ -89,13 +89,12 @@ export function SidebarNav(): JSX.Element {
       ref={tabListRef}
       role="tablist"
       aria-orientation="horizontal"
-      aria-label="Sidebar navigation"
+      aria-label="App navigation"
       onKeyDown={handleKeyDown}
       data-testid="sidebar-nav"
     >
       {TABS.map((tab) => {
         const isActive = tab.view === activeView;
-        const isSettings = tab.view === "settings";
         return (
           <button
             key={tab.view}
@@ -103,14 +102,14 @@ export function SidebarNav(): JSX.Element {
             type="button"
             aria-selected={isActive}
             tabIndex={isActive ? 0 : -1}
-            className={`${styles.tab} ${isActive ? styles.tabActive : ""} ${isSettings ? styles.settingsTab : ""}`}
+            className={`${styles.tab} ${isActive ? styles.tabActive : ""}`}
             onClick={() => handleClick(tab)}
             data-testid={tab.testId}
-            title={tab.label ?? "Settings"}
-            aria-label={tab.label ?? "Settings"}
+            title={tab.label}
+            aria-label={tab.label}
           >
-            {tab.icon && <span aria-hidden="true">{tab.icon}</span>}
-            {tab.label}
+            <span className={styles.tabIcon} aria-hidden="true">{tab.icon}</span>
+            <span className={styles.tabLabel}>{tab.label}</span>
           </button>
         );
       })}

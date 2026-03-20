@@ -2,7 +2,7 @@ import { GrackleProvider } from "./context/GrackleContext.js";
 import { MockGrackleProvider } from "./mocks/MockGrackleProvider.js";
 import { ToastProvider } from "./context/ToastContext.js";
 import { ThemeProvider } from "./context/ThemeContext.js";
-import { StatusBar, Sidebar, UnifiedBar } from "./components/layout/index.js";
+import { StatusBar, AppNav, Sidebar, UnifiedBar } from "./components/layout/index.js";
 import { ToastContainer } from "./components/notifications/index.js";
 import { SplashScreen } from "./components/display/index.js";
 import { useCallback, useEffect, useState, type JSX } from "react";
@@ -81,6 +81,7 @@ function AppShell(): JSX.Element {
   return (
     <div className={styles.root}>
       <StatusBar onToggleSidebar={toggleSidebar} sidebarOpen={sidebarOpen} />
+      <AppNav />
       <div className={styles.body}>
         <div
           className={styles.sidebarWrapper}

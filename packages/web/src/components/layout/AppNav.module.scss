@@ -1,29 +1,37 @@
 @use '../../styles/mixins' as *;
 
 // =============================================================================
-// SidebarNav — horizontal tab bar for switching sidebar views
+// AppNav — full-width navigation bar below the StatusBar
 // =============================================================================
 
 .nav {
+  @include surface-panel;
   display: flex;
   align-items: stretch;
   gap: 0;
-  padding: 0 var(--space-sm);
+  padding: 0 var(--space-lg);
   border-bottom: 1px solid var(--border-subtle);
   flex-shrink: 0;
+
+  @include mobile {
+    padding: 0 var(--space-xs);
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
 }
 
 .tab {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-xs);
-  padding: var(--space-sm) var(--space-md);
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-lg);
   border: none;
-  border-bottom: 2px solid transparent;
+  border-bottom: 3px solid transparent;
   background: transparent;
   color: var(--text-secondary);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-base);
   font-family: var(--font-ui);
   cursor: pointer;
   transition: background var(--transition-fast),
@@ -40,15 +48,35 @@
     outline: 2px solid var(--accent-green);
     outline-offset: -2px;
   }
+
+  @include mobile {
+    padding: var(--space-sm) var(--space-md);
+    font-size: var(--font-size-sm);
+    gap: var(--space-xs);
+    flex-shrink: 0;
+  }
+}
+
+.tabIcon {
+  font-size: var(--font-size-lg);
+  line-height: 1;
+
+  @include mobile {
+    font-size: var(--font-size-base);
+  }
+}
+
+.tabLabel {
+  @include mobile {
+    // Hide labels on very small screens, show only icons
+    @media (max-width: 480px) {
+      display: none;
+    }
+  }
 }
 
 .tabActive {
   border-bottom-color: var(--accent-green);
   color: var(--text-primary);
   font-weight: var(--font-weight-medium);
-}
-
-.settingsTab {
-  margin-left: auto;
-  font-size: var(--font-size-base);
 }
