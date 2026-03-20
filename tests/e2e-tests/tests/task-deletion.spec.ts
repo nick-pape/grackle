@@ -17,8 +17,8 @@ test.describe("Task Deletion", () => {
     await createWorkspace(page, "del-remove");
     await createTask(page, "del-remove", "doomed-task", "test-local");
 
-    // Verify the task is visible
-    await expect(page.getByText("doomed-task")).toBeVisible();
+    // Verify the task is visible in sidebar
+    await expect(page.getByText("doomed-task").first()).toBeVisible();
 
     // Get task ID and delete via WS
     const workspaceId = await getWorkspaceId(page, "del-remove");
