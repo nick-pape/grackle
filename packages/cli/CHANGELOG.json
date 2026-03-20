@@ -2,6 +2,23 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.52.3",
+      "tag": "@grackle-ai/cli_v0.52.3",
+      "date": "Fri, 20 Mar 2026 15:25:10 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Extract injectable FileSystem interface from token-writer for improved testability"
+          }
+        ],
+        "none": [
+          {
+            "comment": "Web-only: add sidebar view switcher with global task tree"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.52.2",
       "tag": "@grackle-ai/cli_v0.52.2",
       "date": "Fri, 20 Mar 2026 14:48:26 GMT",
