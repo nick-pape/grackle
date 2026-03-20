@@ -13,6 +13,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from "react-router";
 import { sessionUrl, useAppNavigate } from "./utils/navigation.js";
 import { TasksEmptyPage, WorkspacesEmptyPage } from "./pages/EmptyPage.js";
+import { ChatPage } from "./pages/ChatPage.js";
 import { NewChatPage } from "./pages/NewChatPage.js";
 import { SessionPage } from "./pages/SessionPage.js";
 import { WorkspacePage } from "./pages/WorkspacePage.js";
@@ -117,7 +118,7 @@ function AppRoutes(): JSX.Element {
       <Route path="setup" element={<SetupWizard />} />
       <Route element={<AppShell />}>
         <Route index element={<Navigate to="/tasks" replace />} />
-        <Route path="chat" element={<Navigate to="/tasks" replace />} />
+        <Route path="chat" element={<ChatPage />} />
         <Route path="tasks" element={<TasksEmptyPage />} />
         <Route path="tasks/new" element={<NewTaskPage />} />
         <Route path="tasks/:taskId" element={<TaskPage />} />

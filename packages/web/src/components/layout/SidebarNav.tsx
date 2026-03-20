@@ -1,10 +1,10 @@
 import { useCallback, useRef, type JSX, type KeyboardEvent } from "react";
 import { useLocation } from "react-router";
-import { SETTINGS_URL, useAppNavigate } from "../../utils/navigation.js";
+import { CHAT_URL, SETTINGS_URL, useAppNavigate } from "../../utils/navigation.js";
 import styles from "./SidebarNav.module.scss";
 
 /** Sidebar view identifiers. */
-export type SidebarView = "tasks" | "workspaces" | "settings";
+export type SidebarView = "chat" | "tasks" | "workspaces" | "settings";
 
 /** Tab definition for the sidebar navigation bar. */
 interface SidebarTab {
@@ -22,6 +22,7 @@ interface SidebarTab {
 
 /** Ordered list of sidebar tabs. */
 const TABS: SidebarTab[] = [
+  { view: "chat", label: "Chat", route: CHAT_URL, testId: "sidebar-tab-chat" },
   { view: "tasks", label: "Tasks", route: "/tasks", testId: "sidebar-tab-tasks" },
   { view: "workspaces", label: "Workspaces", route: "/workspaces", testId: "sidebar-tab-workspaces" },
   { view: "settings", icon: "\u2699", route: `${SETTINGS_URL}/environments`, testId: "sidebar-tab-settings" },
@@ -29,6 +30,9 @@ const TABS: SidebarTab[] = [
 
 /** Derive the active sidebar view from a URL pathname. */
 export function getActiveView(pathname: string): SidebarView {
+  if (pathname.startsWith("/chat")) {
+    return "chat";
+  }
   if (pathname.startsWith("/workspaces")) {
     return "workspaces";
   }

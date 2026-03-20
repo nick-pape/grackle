@@ -125,7 +125,7 @@ function StatusGroupAccordion({
             {group.tasks.map((task) => {
               const statusStyle = getStatusStyle(task.status);
               const isSelected = selectedTaskId === task.id;
-              const wsName = task.parentTaskId ? undefined : workspaceNames.get(task.workspaceId);
+              const wsName = task.parentTaskId || !task.workspaceId ? undefined : workspaceNames.get(task.workspaceId);
               return (
                 <div
                   key={task.id}
@@ -187,7 +187,7 @@ function TaskTreeNode({
   const isSelected = selectedTaskId === node.id;
   const indent = TASK_BASE_INDENT_PX + depth * TASK_DEPTH_INDENT_PX;
   const isRoot = depth === 0;
-  const wsName = isRoot && !node.parentTaskId ? workspaceNames.get(node.workspaceId) : undefined;
+  const wsName = isRoot && !node.parentTaskId && node.workspaceId ? workspaceNames.get(node.workspaceId) : undefined;
 
   return (
     <>
