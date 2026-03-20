@@ -58,6 +58,9 @@ export function toDialableHost(bindHost: string): string {
   if (bindHost === "0.0.0.0" || bindHost === "::") {
     const dockerHost = process.env.GRACKLE_DOCKER_HOST;
     if (dockerHost) {
+      if (dockerHost.startsWith("[") && dockerHost.endsWith("]")) {
+        return dockerHost;
+      }
       return dockerHost.includes(":") ? `[${dockerHost}]` : dockerHost;
     }
     return bindHost === "::" ? "[::1]" : "127.0.0.1";

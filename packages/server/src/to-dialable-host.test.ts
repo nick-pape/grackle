@@ -35,8 +35,13 @@ describe("toDialableHost()", () => {
   });
 
   it("returns non-IPv6 GRACKLE_DOCKER_HOST unchanged", () => {
-    process.env.GRACKLE_DOCKER_HOST = "grackle";
-    expect(toDialableHost("0.0.0.0")).toBe("grackle");
+    process.env.GRACKLE_DOCKER_HOST = "grackle.local";
+    expect(toDialableHost("0.0.0.0")).toBe("grackle.local");
+  });
+
+  it("does not double-wrap already-bracketed IPv6 GRACKLE_DOCKER_HOST", () => {
+    process.env.GRACKLE_DOCKER_HOST = "[fd12::1]";
+    expect(toDialableHost("0.0.0.0")).toBe("[fd12::1]");
   });
 
   it("does not use GRACKLE_DOCKER_HOST for explicit bind addresses", () => {
