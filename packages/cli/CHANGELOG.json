@@ -2,6 +2,23 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.50.1",
+      "tag": "@grackle-ai/cli_v0.50.1",
+      "date": "Fri, 20 Mar 2026 04:35:17 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Make CLI API key loading injectable and throw instead of process.exit"
+          }
+        ],
+        "none": [
+          {
+            "comment": "Add unit tests for resolveAncestorEnvironmentId"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.50.0",
       "tag": "@grackle-ai/cli_v0.50.0",
       "date": "Fri, 20 Mar 2026 04:17:00 GMT",

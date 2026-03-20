@@ -1,6 +1,17 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Fri, 20 Mar 2026 04:17:00 GMT and should not be manually modified.
+This log was last generated on Fri, 20 Mar 2026 04:35:17 GMT and should not be manually modified.
+
+## 0.50.1
+Fri, 20 Mar 2026 04:35:17 GMT
+
+### Patches
+
+- Make CLI API key loading injectable and throw instead of process.exit
+
+### Updates
+
+- Add unit tests for resolveAncestorEnvironmentId
 
 ## 0.50.0
 Fri, 20 Mar 2026 04:17:00 GMT
