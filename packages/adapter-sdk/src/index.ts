@@ -31,6 +31,7 @@ export { createPowerLineClient, connectThroughTunnel, waitForLocalPort } from ".
 export type { BootstrapOptions, StartRemotePowerLineOptions } from "./bootstrap.js";
 export {
   bootstrapPowerLine,
+  buildEnvFileContent,
   startRemotePowerLine,
   probeRemotePowerLine,
   writeRemoteEnvFile,

@@ -54,6 +54,9 @@ export interface BootstrapOptions {
 export function bootstrapPowerLine(executor: RemoteExecutor, powerlineToken: string, options?: BootstrapOptions): AsyncGenerator<ProvisionEvent>;
 
 // @public
+export function buildEnvFileContent(powerlineToken: string, extraEnv?: Record<string, string>, logger?: AdapterLogger): string;
+
+// @public
 export function buildRemoteKillCommand(): string;
 
 // @public

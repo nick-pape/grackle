@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Extract buildEnvFileContent() as a public pure function from adapter-sdk bootstrap helpers",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
