@@ -1503,69 +1503,6 @@ async function handleMessage(
       break;
     }
 
-    // ─── Diff ──────────────────────────────────────────────
-
-    case "get_task_diff": {
-      const taskId = msg.payload?.taskId as string;
-      if (!taskId) return;
-
-      const task = taskStore.getTask(taskId);
-      if (!task?.branch) {
-        sendWs(ws, {
-          type: "task_diff",
-          payload: { taskId, error: "No branch" },
-        });
-        return;
-      }
-
-      const environmentId = task.workspaceId
-        ? workspaceStore.getWorkspace(task.workspaceId)?.environmentId
-        : undefined;
-      if (!environmentId) {
-        sendWs(ws, {
-          type: "task_diff",
-          payload: { taskId, error: "No environment" },
-        });
-        return;
-      }
-
-      const conn = adapterManager.getConnection(environmentId);
-      if (!conn) {
-        sendWs(ws, {
-          type: "task_diff",
-          payload: { taskId, error: "Environment not connected" },
-        });
-        return;
-      }
-
-      try {
-        const diffResp = await conn.client.getDiff(
-          create(powerline.DiffRequestSchema, {
-            branch: task.branch,
-            baseBranch: "main",
-            worktreeBasePath: "/workspace",
-          }),
-        );
-        sendWs(ws, {
-          type: "task_diff",
-          payload: {
-            taskId,
-            branch: task.branch,
-            diff: diffResp.diff,
-            changedFiles: [...diffResp.changedFiles],
-            additions: diffResp.additions,
-            deletions: diffResp.deletions,
-          },
-        });
-      } catch (err) {
-        sendWs(ws, {
-          type: "task_diff",
-          payload: { taskId, error: String(err) },
-        });
-      }
-      break;
-    }
-
     case "provision_environment": {
       const environmentId = msg.payload?.environmentId as string;
       if (!environmentId) {
