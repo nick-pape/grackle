@@ -5,14 +5,6 @@ import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 
 // ── Mock heavy dependencies before importing modules under test ─────
 
-vi.mock("./db.js", async () => {
-  return await import("./test-db.js");
-});
-
-vi.mock("./logger.js", () => ({
-  logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
-}));
-
 const { mockExistsSync, mockReadFileSync } = vi.hoisted(() => ({
   mockExistsSync: vi.fn<(path: string) => boolean>().mockReturnValue(false),
   mockReadFileSync: vi.fn<(path: string, encoding: string) => string>().mockReturnValue(""),
@@ -27,8 +19,9 @@ import {
   getCredentialProviders,
   setCredentialProviders,
   buildProviderTokenBundle,
+  parseCredentialProviderConfig,
 } from "./credential-providers.js";
-import { sqlite } from "./test-db.js";
+import testDb, { sqlite } from "./test-db.js";
 
 function applySchema(): void {
   sqlite.exec(`
@@ -46,9 +39,75 @@ describe("credential-providers", () => {
     vi.clearAllMocks();
   });
 
+  describe("parseCredentialProviderConfig()", () => {
+    it("parses valid JSON with all fields", () => {
+      const result = parseCredentialProviderConfig(
+        JSON.stringify({
+          claude: "subscription",
+          github: "on",
+          copilot: "on",
+          codex: "off",
+        }),
+      );
+      expect(result).toEqual({
+        claude: "subscription",
+        github: "on",
+        copilot: "on",
+        codex: "off",
+      });
+    });
+
+    it("fills missing fields with defaults", () => {
+      const result = parseCredentialProviderConfig(JSON.stringify({ claude: "api_key" }));
+      expect(result).toEqual({
+        claude: "api_key",
+        github: "off",
+        copilot: "off",
+        codex: "off",
+      });
+    });
+
+    it("returns defaults for invalid JSON", () => {
+      const result = parseCredentialProviderConfig("not valid json {{{");
+      expect(result).toEqual({
+        claude: "off",
+        github: "off",
+        copilot: "off",
+        codex: "off",
+      });
+    });
+
+    it("falls back to defaults for invalid field values", () => {
+      const result = parseCredentialProviderConfig(
+        JSON.stringify({
+          claude: "invalid",
+          github: "maybe",
+          copilot: "on",
+          codex: "yes",
+        }),
+      );
+      expect(result).toEqual({
+        claude: "off",
+        github: "off",
+        copilot: "on",
+        codex: "off",
+      });
+    });
+
+    it("returns defaults for empty object", () => {
+      const result = parseCredentialProviderConfig("{}");
+      expect(result).toEqual({
+        claude: "off",
+        github: "off",
+        copilot: "off",
+        codex: "off",
+      });
+    });
+  });
+
   describe("getCredentialProviders()", () => {
     it("returns all-off defaults when no setting exists", () => {
-      const config = getCredentialProviders();
+      const config = getCredentialProviders(testDb);
       expect(config).toEqual({
         claude: "off",
         github: "off",
@@ -67,8 +126,8 @@ describe("credential-providers", () => {
         codex: "on" as const,
       };
 
-      setCredentialProviders(config);
-      const result = getCredentialProviders();
+      setCredentialProviders(config, testDb);
+      const result = getCredentialProviders(testDb);
 
       expect(result).toEqual(config);
     });
@@ -79,15 +138,15 @@ describe("credential-providers", () => {
         github: "off",
         copilot: "off",
         codex: "off",
-      });
+      }, testDb);
       setCredentialProviders({
         claude: "subscription",
         github: "on",
         copilot: "on",
         codex: "on",
-      });
+      }, testDb);
 
-      const result = getCredentialProviders();
+      const result = getCredentialProviders(testDb);
       expect(result.claude).toBe("subscription");
       expect(result.github).toBe("on");
     });
@@ -107,7 +166,7 @@ describe("credential-providers", () => {
     });
 
     it("returns empty bundle when all providers are off", () => {
-      const bundle = buildProviderTokenBundle();
+      const bundle = buildProviderTokenBundle(undefined, testDb);
       expect(bundle.tokens).toHaveLength(0);
     });
 
@@ -117,10 +176,10 @@ describe("credential-providers", () => {
         github: "off",
         copilot: "off",
         codex: "off",
-      });
+      }, testDb);
       process.env.ANTHROPIC_API_KEY = "sk-test-123";
 
-      const bundle = buildProviderTokenBundle();
+      const bundle = buildProviderTokenBundle(undefined, testDb);
       expect(bundle.tokens).toHaveLength(1);
       expect(bundle.tokens[0].envVar).toBe("ANTHROPIC_API_KEY");
       expect(bundle.tokens[0].value).toBe("sk-test-123");
@@ -133,11 +192,11 @@ describe("credential-providers", () => {
         github: "off",
         copilot: "off",
         codex: "off",
-      });
+      }, testDb);
       mockExistsSync.mockReturnValue(true);
       mockReadFileSync.mockReturnValue('{"oauth_token":"abc"}');
 
-      const bundle = buildProviderTokenBundle();
+      const bundle = buildProviderTokenBundle(undefined, testDb);
       expect(bundle.tokens).toHaveLength(1);
       expect(bundle.tokens[0].type).toBe("file");
       expect(bundle.tokens[0].filePath).toBe("~/.claude/.credentials.json");
@@ -150,11 +209,11 @@ describe("credential-providers", () => {
         github: "on",
         copilot: "off",
         codex: "off",
-      });
+      }, testDb);
       process.env.GITHUB_TOKEN = "ghp_test";
       process.env.GH_TOKEN = "gho_test";
 
-      const bundle = buildProviderTokenBundle();
+      const bundle = buildProviderTokenBundle(undefined, testDb);
       expect(bundle.tokens).toHaveLength(2);
       const envVars = bundle.tokens.map((t) => t.envVar);
       expect(envVars).toContain("GITHUB_TOKEN");
@@ -167,12 +226,12 @@ describe("credential-providers", () => {
         github: "off",
         copilot: "on",
         codex: "off",
-      });
+      }, testDb);
       mockExistsSync.mockReturnValue(true);
       mockReadFileSync.mockReturnValue('{"logged_in_users":[]}');
       process.env.COPILOT_GITHUB_TOKEN = "ghu_test";
 
-      const bundle = buildProviderTokenBundle();
+      const bundle = buildProviderTokenBundle(undefined, testDb);
       const fileTokens = bundle.tokens.filter((t) => t.type === "file");
       const envTokens = bundle.tokens.filter((t) => t.type === "env_var");
       expect(fileTokens).toHaveLength(1);
@@ -186,12 +245,12 @@ describe("credential-providers", () => {
         github: "off",
         copilot: "off",
         codex: "on",
-      });
+      }, testDb);
       mockExistsSync.mockReturnValue(true);
       mockReadFileSync.mockReturnValue('{"auth_mode":"chatgpt"}');
       process.env.OPENAI_API_KEY = "sk-openai-test";
 
-      const bundle = buildProviderTokenBundle();
+      const bundle = buildProviderTokenBundle(undefined, testDb);
       const fileTokens = bundle.tokens.filter((t) => t.type === "file");
       const envTokens = bundle.tokens.filter((t) => t.type === "env_var");
       expect(fileTokens).toHaveLength(1);
@@ -207,10 +266,10 @@ describe("credential-providers", () => {
         github: "on",
         copilot: "off",
         codex: "off",
-      });
+      }, testDb);
       // Don't set any env vars
 
-      const bundle = buildProviderTokenBundle();
+      const bundle = buildProviderTokenBundle(undefined, testDb);
       expect(bundle.tokens).toHaveLength(0);
     });
   });
@@ -229,13 +288,13 @@ describe("credential-providers", () => {
         github: "on",
         copilot: "on",
         codex: "on",
-      });
+      }, testDb);
       process.env.ANTHROPIC_API_KEY = "sk-test";
       process.env.GITHUB_TOKEN = "ghp_test";
       process.env.COPILOT_GITHUB_TOKEN = "ghu_test";
       process.env.OPENAI_API_KEY = "sk-openai";
 
-      const bundle = buildProviderTokenBundle("claude-code");
+      const bundle = buildProviderTokenBundle("claude-code", testDb);
       const envVars = bundle.tokens.map((t) => t.envVar);
       expect(envVars).toContain("ANTHROPIC_API_KEY");
       expect(envVars).toContain("GITHUB_TOKEN");
@@ -249,13 +308,13 @@ describe("credential-providers", () => {
         github: "on",
         copilot: "on",
         codex: "on",
-      });
+      }, testDb);
       process.env.ANTHROPIC_API_KEY = "sk-test";
       process.env.GITHUB_TOKEN = "ghp_test";
       process.env.COPILOT_GITHUB_TOKEN = "ghu_test";
       process.env.OPENAI_API_KEY = "sk-openai";
 
-      const bundle = buildProviderTokenBundle("copilot");
+      const bundle = buildProviderTokenBundle("copilot", testDb);
       const envVars = bundle.tokens.map((t) => t.envVar);
       expect(envVars).not.toContain("ANTHROPIC_API_KEY");
       expect(envVars).toContain("GITHUB_TOKEN");
@@ -269,13 +328,13 @@ describe("credential-providers", () => {
         github: "on",
         copilot: "on",
         codex: "on",
-      });
+      }, testDb);
       process.env.ANTHROPIC_API_KEY = "sk-test";
       process.env.GITHUB_TOKEN = "ghp_test";
       process.env.COPILOT_GITHUB_TOKEN = "ghu_test";
       process.env.OPENAI_API_KEY = "sk-openai";
 
-      const bundle = buildProviderTokenBundle("codex");
+      const bundle = buildProviderTokenBundle("codex", testDb);
       const envVars = bundle.tokens.map((t) => t.envVar);
       expect(envVars).not.toContain("ANTHROPIC_API_KEY");
       expect(envVars).toContain("GITHUB_TOKEN");
@@ -289,14 +348,14 @@ describe("credential-providers", () => {
         github: "on",
         copilot: "on",
         codex: "on",
-      });
+      }, testDb);
       process.env.ANTHROPIC_API_KEY = "sk-test";
       process.env.GITHUB_TOKEN = "ghp_test";
       process.env.COPILOT_GITHUB_TOKEN = "ghu_test";
       process.env.OPENAI_API_KEY = "sk-openai";
 
       // An unknown runtime value (e.g. a typo) must not fall back to all providers.
-      const bundle = buildProviderTokenBundle("unknown-runtime-typo");
+      const bundle = buildProviderTokenBundle("unknown-runtime-typo", testDb);
       expect(bundle.tokens).toHaveLength(0);
     });
 
@@ -306,13 +365,13 @@ describe("credential-providers", () => {
         github: "on",
         copilot: "on",
         codex: "on",
-      });
+      }, testDb);
       process.env.ANTHROPIC_API_KEY = "sk-test";
       process.env.GITHUB_TOKEN = "ghp_test";
       process.env.COPILOT_GITHUB_TOKEN = "ghu_test";
       process.env.OPENAI_API_KEY = "sk-openai";
 
-      const bundle = buildProviderTokenBundle("stub");
+      const bundle = buildProviderTokenBundle("stub", testDb);
       expect(bundle.tokens).toHaveLength(0);
     });
 
@@ -322,13 +381,13 @@ describe("credential-providers", () => {
         github: "on",
         copilot: "on",
         codex: "on",
-      });
+      }, testDb);
       process.env.ANTHROPIC_API_KEY = "sk-test";
       process.env.GITHUB_TOKEN = "ghp_test";
       process.env.COPILOT_GITHUB_TOKEN = "ghu_test";
       process.env.OPENAI_API_KEY = "sk-openai";
 
-      const bundle = buildProviderTokenBundle();
+      const bundle = buildProviderTokenBundle(undefined, testDb);
       const envVars = bundle.tokens.map((t) => t.envVar);
       expect(envVars).toContain("ANTHROPIC_API_KEY");
       expect(envVars).toContain("GITHUB_TOKEN");

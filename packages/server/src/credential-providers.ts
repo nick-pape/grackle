@@ -3,14 +3,15 @@
  * automatically forwarded to remote environments at task start.
  */
 import { eq } from "drizzle-orm";
+import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import { existsSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { create } from "@bufbuild/protobuf";
 import { powerline, type RuntimeName } from "@grackle-ai/common";
 import db from "./db.js";
+import * as schema from "./schema.js";
 import { settings } from "./schema.js";
-import { logger } from "./logger.js";
 
 // ─── Types ─────────────────────────────────────────────────
 
@@ -42,11 +43,37 @@ export const VALID_CLAUDE_VALUES: ReadonlySet<string> = new Set(["off", "subscri
 /** Valid values for toggle-style providers (github, copilot, codex). */
 export const VALID_TOGGLE_VALUES: ReadonlySet<string> = new Set(["off", "on"]);
 
+/** Drizzle database instance type used by credential-provider functions. */
+export type DatabaseInstance = BetterSQLite3Database<typeof schema>;
+
 // ─── Read / Write ──────────────────────────────────────────
 
-/** Read the current credential provider configuration from the database. */
-export function getCredentialProviders(): CredentialProviderConfig {
-  const row = db
+/**
+ * Parse a raw JSON string into a validated {@link CredentialProviderConfig}.
+ * Invalid or missing fields fall back to {@link DEFAULT_CONFIG} values.
+ * If the JSON is unparseable, returns a copy of {@link DEFAULT_CONFIG}.
+ */
+export function parseCredentialProviderConfig(rawJson: string): CredentialProviderConfig {
+  try {
+    const parsed = JSON.parse(rawJson) as Partial<CredentialProviderConfig>;
+    return {
+      claude: VALID_CLAUDE_VALUES.has(parsed.claude ?? "") ? parsed.claude! : DEFAULT_CONFIG.claude,
+      github: VALID_TOGGLE_VALUES.has(parsed.github ?? "") ? parsed.github! : DEFAULT_CONFIG.github,
+      copilot: VALID_TOGGLE_VALUES.has(parsed.copilot ?? "") ? parsed.copilot! : DEFAULT_CONFIG.copilot,
+      codex: VALID_TOGGLE_VALUES.has(parsed.codex ?? "") ? parsed.codex! : DEFAULT_CONFIG.codex,
+    };
+  } catch {
+    return { ...DEFAULT_CONFIG };
+  }
+}
+
+/**
+ * Read the current credential provider configuration from the database.
+ * @param database - Optional Drizzle instance; defaults to the module-level db.
+ */
+export function getCredentialProviders(database?: DatabaseInstance): CredentialProviderConfig {
+  const conn = database ?? db;
+  const row = conn
     .select()
     .from(settings)
     .where(eq(settings.key, SETTINGS_KEY))
@@ -56,18 +83,7 @@ export function getCredentialProviders(): CredentialProviderConfig {
     return { ...DEFAULT_CONFIG };
   }
 
-  try {
-    const parsed = JSON.parse(row.value) as Partial<CredentialProviderConfig>;
-    return {
-      claude: VALID_CLAUDE_VALUES.has(parsed.claude ?? "") ? parsed.claude! : DEFAULT_CONFIG.claude,
-      github: VALID_TOGGLE_VALUES.has(parsed.github ?? "") ? parsed.github! : DEFAULT_CONFIG.github,
-      copilot: VALID_TOGGLE_VALUES.has(parsed.copilot ?? "") ? parsed.copilot! : DEFAULT_CONFIG.copilot,
-      codex: VALID_TOGGLE_VALUES.has(parsed.codex ?? "") ? parsed.codex! : DEFAULT_CONFIG.codex,
-    };
-  } catch {
-    logger.warn("Invalid credential_providers setting; returning defaults");
-    return { ...DEFAULT_CONFIG };
-  }
+  return parseCredentialProviderConfig(row.value);
 }
 
 /**
@@ -87,10 +103,14 @@ export function isValidCredentialProviderConfig(value: unknown): value is Creden
   );
 }
 
-/** Persist credential provider configuration to the database. */
-export function setCredentialProviders(config: CredentialProviderConfig): void {
+/**
+ * Persist credential provider configuration to the database.
+ * @param database - Optional Drizzle instance; defaults to the module-level db.
+ */
+export function setCredentialProviders(config: CredentialProviderConfig, database?: DatabaseInstance): void {
+  const conn = database ?? db;
   const value = JSON.stringify(config);
-  db.insert(settings)
+  conn.insert(settings)
     .values({ key: SETTINGS_KEY, value })
     .onConflictDoUpdate({
       target: settings.key,
@@ -123,8 +143,8 @@ const RUNTIME_PROVIDERS: Record<string, (keyof CredentialProviderConfig)[]> = {
  * (fails safe rather than exposing all credentials for an unrecognized runtime).
  * Reads values fresh from `process.env` or disk at call time.
  */
-export function buildProviderTokenBundle(runtime?: string): powerline.TokenBundle {
-  const config = getCredentialProviders();
+export function buildProviderTokenBundle(runtime?: string, database?: DatabaseInstance): powerline.TokenBundle {
+  const config = getCredentialProviders(database);
   // When runtime is given, look it up in the map. Unknown runtimes get [] (empty, not all providers).
   const runtimeProviders = runtime !== undefined
     ? (Object.hasOwn(RUNTIME_PROVIDERS, runtime) ? RUNTIME_PROVIDERS[runtime as RuntimeName] : [])
