@@ -1,7 +1,7 @@
 {
   "changes": [
     {
-      "comment": "Make waitForLocalPort() injectable with PortProber interface for testability",
+      "comment": "Extract injectable ProcessFactory and PortProbe into tunnel adapters for testability",
       "type": "patch",
       "packageName": "@grackle-ai/cli"
     }

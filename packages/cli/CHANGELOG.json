@@ -2,6 +2,21 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.53.1",
+      "tag": "@grackle-ai/cli_v0.53.1",
+      "date": "Fri, 20 Mar 2026 22:05:09 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Extract GitRepository and WorkspaceLocator interfaces from runtime-utils for injectable testing"
+          },
+          {
+            "comment": "Make waitForLocalPort() injectable with PortProber interface for testability"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.53.0",
       "tag": "@grackle-ai/cli_v0.53.0",
       "date": "Fri, 20 Mar 2026 21:06:17 GMT",

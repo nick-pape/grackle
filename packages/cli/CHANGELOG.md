@@ -1,6 +1,14 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Fri, 20 Mar 2026 21:06:17 GMT and should not be manually modified.
+This log was last generated on Fri, 20 Mar 2026 22:05:09 GMT and should not be manually modified.
+
+## 0.53.1
+Fri, 20 Mar 2026 22:05:09 GMT
+
+### Patches
+
+- Extract GitRepository and WorkspaceLocator interfaces from runtime-utils for injectable testing
+- Make waitForLocalPort() injectable with PortProber interface for testability
 
 ## 0.53.0
 Fri, 20 Mar 2026 21:06:17 GMT
