@@ -55,7 +55,6 @@ interface StatusGroupAccordionProps {
   onToggle: () => void;
   selectedTaskId: string | undefined;
   navigate: ReturnType<typeof useAppNavigate>;
-  workspaceId: string;
   titleHighlights: Map<string, readonly MatchIndex[]>;
 }
 
@@ -66,7 +65,6 @@ function StatusGroupAccordion({
   onToggle,
   selectedTaskId,
   navigate,
-  workspaceId,
   titleHighlights,
 }: StatusGroupAccordionProps): JSX.Element {
   return (
@@ -109,7 +107,7 @@ function StatusGroupAccordion({
               return (
                 <div
                   key={task.id}
-                  onClick={() => navigate(taskUrl(task.id, undefined, workspaceId))}
+                  onClick={() => navigate(taskUrl(task.id))}
                   className={`${styles.taskRow} ${isSelected ? styles.selected : ""}`}
                   style={{ '--task-indent': `${TASK_BASE_INDENT_PX}px` } as CSSProperties}
                   data-task-id={task.id}
@@ -167,7 +165,7 @@ function TaskTreeNode({
   return (
     <>
       <div
-        onClick={() => navigate(taskUrl(node.id, undefined, workspaceId))}
+        onClick={() => navigate(taskUrl(node.id))}
         className={`${styles.taskRow} ${isSelected ? styles.selected : ""}`}
         style={{ '--task-indent': `${indent}px` } as CSSProperties}
         data-task-id={node.id}
@@ -595,7 +593,6 @@ export function WorkspaceList(): JSX.Element {
                         onToggle={() => toggleStatusGroup(workspace.id, group.status)}
                         selectedTaskId={selectedTaskId}
                         navigate={navigate}
-                        workspaceId={workspace.id}
                         titleHighlights={titleHighlights}
                       />
                     ))
