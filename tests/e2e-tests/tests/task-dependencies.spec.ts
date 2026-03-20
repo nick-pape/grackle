@@ -29,7 +29,7 @@ test.describe("Task Dependencies", () => {
     });
 
     // Wait for the dependent task to appear in sidebar
-    await page.getByText("blocked-beta").waitFor({ timeout: 5_000 });
+    await page.getByTestId("sidebar").getByText("blocked-beta", { exact: true }).waitFor({ timeout: 5_000 });
 
     // Verify the "blocked" indicator is visible in the sidebar (blocker is incomplete)
     await expect(page.locator('span[title^="Depends on:"]')).toHaveText("blocked");
@@ -58,7 +58,7 @@ test.describe("Task Dependencies", () => {
       environmentId: "test-local",
       dependsOn: [blockerTaskId],
     });
-    await page.getByText("unblock-dependent").waitFor({ timeout: 5_000 });
+    await page.getByTestId("sidebar").getByText("unblock-dependent", { exact: true }).waitFor({ timeout: 5_000 });
 
     // Verify dependent is blocked
     await navigateToTask(page, "unblock-dependent");
@@ -93,7 +93,7 @@ test.describe("Task Dependencies", () => {
       environmentId: "test-local",
       dependsOn: [taskAId, taskBId],
     });
-    await page.getByText("multi-dependent-c").waitFor({ timeout: 5_000 });
+    await page.getByTestId("sidebar").getByText("multi-dependent-c", { exact: true }).waitFor({ timeout: 5_000 });
 
     // Verify C is blocked by both
     await navigateToTask(page, "multi-dependent-c");

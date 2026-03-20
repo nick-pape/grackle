@@ -149,14 +149,53 @@ export function getWorkspaceSnapshots(
     envMap.set(e.id, e);
   }
 
+  const statsByWorkspace = new Map<string, {
+    totalTasks: number;
+    completedTasks: number;
+    workingTasks: number;
+    failedTasks: number;
+  }>();
+
+  for (const task of tasks) {
+    if (!task.workspaceId) {
+      continue;
+    }
+
+    let stats = statsByWorkspace.get(task.workspaceId);
+    if (!stats) {
+      stats = {
+        totalTasks: 0,
+        completedTasks: 0,
+        workingTasks: 0,
+        failedTasks: 0,
+      };
+      statsByWorkspace.set(task.workspaceId, stats);
+    }
+
+    stats.totalTasks += 1;
+    if (task.status === "complete") {
+      stats.completedTasks += 1;
+    } else if (task.status === "working") {
+      stats.workingTasks += 1;
+    } else if (task.status === "failed") {
+      stats.failedTasks += 1;
+    }
+  }
+
   return workspaces.map((workspace) => {
-    const wsTasks = tasks.filter((t) => t.workspaceId === workspace.id);
+    const stats = statsByWorkspace.get(workspace.id) ?? {
+      totalTasks: 0,
+      completedTasks: 0,
+      workingTasks: 0,
+      failedTasks: 0,
+    };
+
     return {
       workspace,
-      totalTasks: wsTasks.length,
-      completedTasks: wsTasks.filter((t) => t.status === "complete").length,
-      workingTasks: wsTasks.filter((t) => t.status === "working").length,
-      failedTasks: wsTasks.filter((t) => t.status === "failed").length,
+      totalTasks: stats.totalTasks,
+      completedTasks: stats.completedTasks,
+      workingTasks: stats.workingTasks,
+      failedTasks: stats.failedTasks,
       environmentName: envMap.get(workspace.environmentId)?.displayName ?? "—",
     };
   });

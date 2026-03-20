@@ -5,7 +5,7 @@ import { DagView } from "../components/dag/DagView.js";
 import { WorkspaceBoard } from "../components/workspace/WorkspaceBoard.js";
 import { Breadcrumbs, ConfirmDialog } from "../components/display/index.js";
 import type { BreadcrumbSegment } from "../utils/breadcrumbs.js";
-import { newTaskUrl, useAppNavigate } from "../utils/navigation.js";
+import { HOME_URL, newTaskUrl, useAppNavigate } from "../utils/navigation.js";
 import {
   EditableTextField,
   EditableTextArea,
@@ -56,7 +56,7 @@ export function WorkspacePage(): JSX.Element {
   const previousWorkspaceIdRef = useRef<string | undefined>(undefined);
 
   const workspace = workspaces.find((p) => p.id === workspaceId);
-  const breadcrumbs: BreadcrumbSegment[] = [{ label: "Home", url: "/" }, { label: workspace?.name ?? "Workspace", url: undefined }];
+  const breadcrumbs: BreadcrumbSegment[] = [{ label: "Home", url: HOME_URL }, { label: workspace?.name ?? "Workspace", url: undefined }];
 
   // Reset edit state when workspaceId changes
   useEffect(() => {

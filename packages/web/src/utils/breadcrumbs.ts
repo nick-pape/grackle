@@ -1,5 +1,5 @@
 import type { TaskData, Workspace } from "../hooks/useGrackleSocket.js";
-import { workspaceUrl, taskUrl } from "./navigation.js";
+import { HOME_URL, SETTINGS_URL, taskUrl, workspaceUrl } from "./navigation.js";
 
 /** A single segment in the breadcrumb trail. */
 export interface BreadcrumbSegment {
@@ -34,7 +34,7 @@ export function buildTaskAncestorChain(
 }
 
 /** Home breadcrumb segment. */
-const HOME_SEGMENT: BreadcrumbSegment = { label: "Home", url: "/" };
+const HOME_SEGMENT: BreadcrumbSegment = { label: "Home", url: HOME_URL };
 
 /** Build breadcrumbs for the home page. */
 export function buildHomeBreadcrumbs(): BreadcrumbSegment[] {
@@ -44,7 +44,7 @@ export function buildHomeBreadcrumbs(): BreadcrumbSegment[] {
 /** Build breadcrumbs for the settings page, optionally showing the active tab. */
 export function buildSettingsBreadcrumbs(tabLabel?: string): BreadcrumbSegment[] {
   if (tabLabel) {
-    return [HOME_SEGMENT, { label: "Settings", url: "/settings" }, { label: tabLabel, url: undefined }];
+    return [HOME_SEGMENT, { label: "Settings", url: SETTINGS_URL }, { label: tabLabel, url: undefined }];
   }
   return [HOME_SEGMENT, { label: "Settings", url: undefined }];
 }

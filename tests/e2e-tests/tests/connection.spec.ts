@@ -6,7 +6,7 @@ test.describe("Authentication & Connection", () => {
   });
 
   test("StatusBar shows Connected", async ({ appPage }) => {
-    const statusBar = appPage.locator("text=Connected");
+    const statusBar = appPage.getByLabel("Connected");
     await expect(statusBar).toBeVisible();
   });
 

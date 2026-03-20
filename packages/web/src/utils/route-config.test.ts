@@ -6,6 +6,7 @@ import {
   taskEditUrl,
   newTaskUrl,
   newChatUrl,
+  HOME_URL,
   SETTINGS_URL,
   PERSONAS_URL,
   NEW_ENVIRONMENT_URL,
@@ -64,6 +65,7 @@ describe("URL builder functions", () => {
 
   it("constant URLs are correct", () => {
     expect(SETTINGS_URL).toBe("/settings");
+    expect(HOME_URL).toBe("/");
     expect(PERSONAS_URL).toBe("/settings/personas");
     expect(NEW_ENVIRONMENT_URL).toBe("/environments/new");
   });

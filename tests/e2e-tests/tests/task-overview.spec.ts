@@ -40,7 +40,7 @@ test.describe("Task Overview Tab", () => {
       environmentId: "test-local",
       description: "This is a detailed task description for testing",
     });
-    await page.getByText("desc-task").waitFor({ timeout: 5_000 });
+    await page.getByTestId("sidebar").getByText("desc-task", { exact: true }).waitFor({ timeout: 5_000 });
     await navigateToTask(page, "desc-task");
 
     // Overview tab should show the description
@@ -79,7 +79,7 @@ test.describe("Task Overview Tab", () => {
       environmentId: "test-local",
       dependsOn: [blockerTaskId],
     });
-    await page.getByText("dep-blocked").waitFor({ timeout: 5_000 });
+    await page.getByTestId("sidebar").getByText("dep-blocked", { exact: true }).waitFor({ timeout: 5_000 });
     await navigateToTask(page, "dep-blocked");
 
     // Overview should show the dependency with the blocker name
@@ -111,7 +111,7 @@ test.describe("Task Overview Tab", () => {
       environmentId: "test-local",
       dependsOn: [blockerTaskId],
     });
-    await page.getByText("unblocked-task").waitFor({ timeout: 5_000 });
+    await page.getByTestId("sidebar").getByText("unblocked-task", { exact: true }).waitFor({ timeout: 5_000 });
     await navigateToTask(page, "unblocked-task");
 
     // Dependency should show as done (green)
@@ -133,7 +133,7 @@ test.describe("Task Overview Tab", () => {
       environmentId: "test-local",
       dependsOn: [blockerTaskId],
     });
-    await page.getByText("badge-blocked").waitFor({ timeout: 5_000 });
+    await page.getByTestId("sidebar").getByText("badge-blocked", { exact: true }).waitFor({ timeout: 5_000 });
 
     // The sidebar badge should say "blocked" (not "dep") and have blocked styling
     const badge = page.locator('span[title^="Depends on:"]');
