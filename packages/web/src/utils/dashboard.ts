@@ -80,7 +80,9 @@ export function getAttentionTasks(
   const result: AttentionTask[] = [];
 
   for (const task of tasks) {
-    const workspaceName = wsMap.get(task.workspaceId)?.name ?? "Unknown";
+    const workspaceName = task.workspaceId
+      ? (wsMap.get(task.workspaceId)?.name ?? "Unknown")
+      : "Unknown";
 
     if (task.status === "failed") {
       result.push({ task, reason: "failed", workspaceName });
