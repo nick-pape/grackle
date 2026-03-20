@@ -186,6 +186,11 @@ type Pong = Message<"grackle.powerline.Pong"> & {
 // @public
 const PongSchema: GenMessage<Pong>;
 
+// @public
+export interface PortProber {
+    probe(port: number, host?: string): Promise<boolean>;
+}
+
 declare namespace powerline {
     export {
         file_grackle_powerline_powerline,
@@ -383,6 +388,9 @@ export interface StartRemotePowerLineOptions {
 }
 
 // @public
+export const TCP_PORT_PROBER: PortProber;
+
+// @public
 type TokenBundle = Message<"grackle.powerline.TokenBundle"> & {
     tokens: TokenItem[];
 };
@@ -410,7 +418,13 @@ export interface TunnelState {
 }
 
 // @public
-export function waitForLocalPort(port: number): Promise<void>;
+export function waitForLocalPort(port: number, options?: WaitForLocalPortOptions): Promise<void>;
+
+// @public
+export interface WaitForLocalPortOptions {
+    portProber?: PortProber;
+    sleep?: (ms: number) => Promise<void>;
+}
 
 // @public
 type WorktreeCleanupRequest = Message<"grackle.powerline.WorktreeCleanupRequest"> & {
