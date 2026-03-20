@@ -44,8 +44,8 @@ describe("initDatabase", () => {
     const first = initDatabase(mem);
     const second = initDatabase(mem);
 
-    // Second run should succeed (tables already exist)
-    expect(second.migrationErrors.length).toBeGreaterThanOrEqual(0);
+    // Second run collects expected idempotency errors (columns already exist, etc.)
+    expect(second.migrationErrors.length).toBeGreaterThan(0);
 
     // Tables still present
     const tables = listTables(mem);

@@ -604,8 +604,12 @@ async function main(): Promise<void> {
   // Open the database and run migrations before anything else
   openDatabase();
   const { migrationErrors } = initDatabase();
-  for (const err of migrationErrors) {
-    logger.debug({ migration: err.name, error: err.error }, "Migration note: %s", err.name);
+  if (migrationErrors.length > 0) {
+    logger.warn(
+      { migrationNames: migrationErrors.map((m) => m.name), count: migrationErrors.length },
+      "Database migrations completed with %d idempotent issue(s)",
+      migrationErrors.length,
+    );
   }
 
   // Reset all environment statuses on startup — in-memory connections are lost

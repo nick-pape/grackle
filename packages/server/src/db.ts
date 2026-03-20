@@ -128,12 +128,30 @@ export function initDatabase(sqliteOverride?: InstanceType<typeof Database>): In
 
   const migrationErrors: MigrationError[] = [];
 
-  /** Run a migration step, collecting errors for idempotent operations. */
+  /** Check whether an error is an expected idempotent migration failure. */
+  const isExpectedIdempotencyError = (err: unknown): boolean => {
+    if (!(err instanceof Error)) {
+      return false;
+    }
+    const msg = err.message.toLowerCase();
+    return (
+      msg.includes("already exists") ||
+      msg.includes("duplicate column name") ||
+      msg.includes("no such table") ||
+      msg.includes("no such column")
+    );
+  };
+
+  /** Run a migration step, collecting expected idempotency errors. */
   const tryMigration = (name: string, fn: () => void): void => {
     try {
       fn();
     } catch (error) {
-      migrationErrors.push({ name, error });
+      if (isExpectedIdempotencyError(error)) {
+        migrationErrors.push({ name, error });
+      } else {
+        throw error;
+      }
     }
   };
 
