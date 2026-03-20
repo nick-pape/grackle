@@ -99,12 +99,16 @@ export function useTasks(send: SendFunction): UseTasksResult {
             pending.onSuccess();
           }
         }
-        send({ type: "list_tasks", payload: {} });
+        const createdWsId = typeof p.workspaceId === "string" ? p.workspaceId : "";
+        if (createdWsId) {
+          send({ type: "list_tasks", payload: { workspaceId: createdWsId } });
+        }
         return true;
       }
       case "task.started": {
         const taskId = typeof p.taskId === "string" ? p.taskId : "";
         const sessionId = typeof p.sessionId === "string" ? p.sessionId : "";
+        const startedWsId = typeof p.workspaceId === "string" ? p.workspaceId : "";
 
         setTaskStartingId((prev) =>
           taskId && prev === taskId ? undefined : prev,
@@ -119,13 +123,35 @@ export function useTasks(send: SendFunction): UseTasksResult {
             );
           }
         }
-        send({ type: "list_tasks", payload: {} });
+        if (startedWsId) {
+          send({ type: "list_tasks", payload: { workspaceId: startedWsId } });
+        } else if (taskId) {
+          setTasks((prev) => {
+            const found = prev.find((t) => t.id === taskId);
+            if (found) {
+              send({ type: "list_tasks", payload: { workspaceId: found.workspaceId } });
+            }
+            return prev;
+          });
+        }
         return true;
       }
       case "task.completed":
       case "task.deleted":
       case "task.updated": {
-        send({ type: "list_tasks", payload: {} });
+        const eventWsId = typeof p.workspaceId === "string" ? p.workspaceId : "";
+        const eventTaskId = typeof p.taskId === "string" ? p.taskId : "";
+        if (eventWsId) {
+          send({ type: "list_tasks", payload: { workspaceId: eventWsId } });
+        } else if (eventTaskId) {
+          setTasks((prev) => {
+            const found = prev.find((t) => t.id === eventTaskId);
+            if (found) {
+              send({ type: "list_tasks", payload: { workspaceId: found.workspaceId } });
+            }
+            return prev;
+          });
+        }
         return true;
       }
       default:
