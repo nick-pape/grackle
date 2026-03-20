@@ -546,13 +546,15 @@ export function initDatabase(): void {
 
       if (existingSystemByName && existingSystemByName.id !== SYSTEM_PERSONA_ID) {
         // Reassign existing "System" persona to the canonical id and update
-        // all stored references so nothing points at the stale id.
-        const oldId = existingSystemByName.id;
-        sqlite.prepare("UPDATE personas SET id = ? WHERE id = ?").run(SYSTEM_PERSONA_ID, oldId);
-        sqlite.prepare("UPDATE settings SET value = ? WHERE key = 'default_persona_id' AND value = ?").run(SYSTEM_PERSONA_ID, oldId);
-        sqlite.prepare("UPDATE sessions SET persona_id = ? WHERE persona_id = ?").run(SYSTEM_PERSONA_ID, oldId);
-        sqlite.prepare("UPDATE tasks SET default_persona_id = ? WHERE default_persona_id = ?").run(SYSTEM_PERSONA_ID, oldId);
-        sqlite.prepare("UPDATE workspaces SET default_persona_id = ? WHERE default_persona_id = ?").run(SYSTEM_PERSONA_ID, oldId);
+        // all stored references atomically so a crash can't leave dangling refs.
+        const reassignSystemPersona = sqlite.transaction((oldId: string) => {
+          sqlite.prepare("UPDATE personas SET id = ? WHERE id = ?").run(SYSTEM_PERSONA_ID, oldId);
+          sqlite.prepare("UPDATE settings SET value = ? WHERE key = 'default_persona_id' AND value = ?").run(SYSTEM_PERSONA_ID, oldId);
+          sqlite.prepare("UPDATE sessions SET persona_id = ? WHERE persona_id = ?").run(SYSTEM_PERSONA_ID, oldId);
+          sqlite.prepare("UPDATE tasks SET default_persona_id = ? WHERE default_persona_id = ?").run(SYSTEM_PERSONA_ID, oldId);
+          sqlite.prepare("UPDATE workspaces SET default_persona_id = ? WHERE default_persona_id = ?").run(SYSTEM_PERSONA_ID, oldId);
+        });
+        reassignSystemPersona(existingSystemByName.id);
       } else if (!existingSystemByName) {
         sqlite
           .prepare(`

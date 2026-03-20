@@ -99,12 +99,14 @@ function runSeedLogic(db: InstanceType<typeof Database>): void {
       .get() as { id: string } | undefined;
 
     if (existingSystemByName && existingSystemByName.id !== SYSTEM_PERSONA_ID) {
-      const oldId = existingSystemByName.id;
-      db.prepare("UPDATE personas SET id = ? WHERE id = ?").run(SYSTEM_PERSONA_ID, oldId);
-      db.prepare("UPDATE settings SET value = ? WHERE key = 'default_persona_id' AND value = ?").run(SYSTEM_PERSONA_ID, oldId);
-      db.prepare("UPDATE sessions SET persona_id = ? WHERE persona_id = ?").run(SYSTEM_PERSONA_ID, oldId);
-      db.prepare("UPDATE tasks SET default_persona_id = ? WHERE default_persona_id = ?").run(SYSTEM_PERSONA_ID, oldId);
-      db.prepare("UPDATE workspaces SET default_persona_id = ? WHERE default_persona_id = ?").run(SYSTEM_PERSONA_ID, oldId);
+      const reassign = db.transaction((oldId: string) => {
+        db.prepare("UPDATE personas SET id = ? WHERE id = ?").run(SYSTEM_PERSONA_ID, oldId);
+        db.prepare("UPDATE settings SET value = ? WHERE key = 'default_persona_id' AND value = ?").run(SYSTEM_PERSONA_ID, oldId);
+        db.prepare("UPDATE sessions SET persona_id = ? WHERE persona_id = ?").run(SYSTEM_PERSONA_ID, oldId);
+        db.prepare("UPDATE tasks SET default_persona_id = ? WHERE default_persona_id = ?").run(SYSTEM_PERSONA_ID, oldId);
+        db.prepare("UPDATE workspaces SET default_persona_id = ? WHERE default_persona_id = ?").run(SYSTEM_PERSONA_ID, oldId);
+      });
+      reassign(existingSystemByName.id);
     } else if (!existingSystemByName) {
       db.prepare(`
         INSERT INTO personas (id, name, description, system_prompt, runtime, model, max_turns, type)

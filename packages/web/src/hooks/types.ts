@@ -241,7 +241,7 @@ export function isTaskData(v: unknown): v is TaskData {
   return (
     isObject(v) &&
     typeof v.id === "string" &&
-    (typeof v.workspaceId === "string" || v.workspaceId === undefined || v.workspaceId === null) &&
+    (typeof v.workspaceId === "string" || v.workspaceId === undefined) &&
     typeof v.title === "string" &&
     typeof v.status === "string" &&
     typeof v.branch === "string" &&
