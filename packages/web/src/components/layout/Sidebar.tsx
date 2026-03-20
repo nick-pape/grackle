@@ -92,7 +92,7 @@ export function Sidebar(): JSX.Element {
       </div>
       {/* Content */}
       <div className={styles.content}>
-        {!isChat && <WorkspaceList />}
+        <WorkspaceList />
       </div>
     </div>
   );
