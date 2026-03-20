@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.51.0",
+      "tag": "@grackle-ai/cli_v0.51.0",
+      "date": "Fri, 20 Mar 2026 05:25:01 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Refactor system prompt into SystemPromptBuilder, inject via native SDK mechanisms, add EVENT_TYPE_SIGNAL for signal event rendering"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.50.1",
       "tag": "@grackle-ai/cli_v0.50.1",
       "date": "Fri, 20 Mar 2026 04:35:17 GMT",

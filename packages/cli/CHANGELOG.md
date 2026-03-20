@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Fri, 20 Mar 2026 04:35:17 GMT and should not be manually modified.
+This log was last generated on Fri, 20 Mar 2026 05:25:01 GMT and should not be manually modified.
+
+## 0.51.0
+Fri, 20 Mar 2026 05:25:01 GMT
+
+### Minor changes
+
+- Refactor system prompt into SystemPromptBuilder, inject via native SDK mechanisms, add EVENT_TYPE_SIGNAL for signal event rendering
 
 ## 0.50.1
 Fri, 20 Mar 2026 04:35:17 GMT
