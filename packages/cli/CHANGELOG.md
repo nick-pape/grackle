@@ -1,6 +1,17 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Fri, 20 Mar 2026 14:48:26 GMT and should not be manually modified.
+This log was last generated on Fri, 20 Mar 2026 15:25:10 GMT and should not be manually modified.
+
+## 0.52.3
+Fri, 20 Mar 2026 15:25:10 GMT
+
+### Patches
+
+- Extract injectable FileSystem interface from token-writer for improved testability
+
+### Updates
+
+- Web-only: add sidebar view switcher with global task tree
 
 ## 0.52.2
 Fri, 20 Mar 2026 14:48:26 GMT
