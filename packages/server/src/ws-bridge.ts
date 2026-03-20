@@ -1742,17 +1742,26 @@ async function handleMessage(
           configVal = "{}";
         } else if (typeof rawConfig === "string") {
           const normalized = rawConfig.trim() === "" ? "{}" : rawConfig;
+          let parsed: unknown;
           try {
-            JSON.parse(normalized);
+            parsed = JSON.parse(normalized);
           } catch {
             sendWs(ws, { type: "error", payload: { message: "adapterConfig string is not valid JSON" } });
             return;
           }
+          if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+            sendWs(ws, { type: "error", payload: { message: "adapterConfig must be a JSON object" } });
+            return;
+          }
           configVal = normalized;
         } else if (typeof rawConfig === "object") {
+          if (Array.isArray(rawConfig)) {
+            sendWs(ws, { type: "error", payload: { message: "adapterConfig must be a JSON object" } });
+            return;
+          }
           configVal = JSON.stringify(rawConfig);
         } else {
-          sendWs(ws, { type: "error", payload: { message: "adapterConfig must be an object or JSON string" } });
+          sendWs(ws, { type: "error", payload: { message: "adapterConfig must be a JSON object" } });
           return;
         }
       }
