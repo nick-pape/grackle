@@ -10,6 +10,7 @@ import type { GenFile } from '@bufbuild/protobuf/codegenv2';
 import type { GenMessage } from '@bufbuild/protobuf/codegenv2';
 import type { GenService } from '@bufbuild/protobuf/codegenv2';
 import type { Message } from '@bufbuild/protobuf';
+import { SpawnOptions } from 'node:child_process';
 
 // @public
 export interface AdapterLogger {
@@ -237,7 +238,9 @@ export function probeRemotePowerLine(executor: RemoteExecutor): Promise<void>;
 
 // @public
 export abstract class ProcessTunnel implements RemoteTunnel {
-    constructor(localPort: number, logger?: AdapterLogger);
+    // Warning: (ae-incompatible-release-tags) The symbol "__constructor" is marked as @public, but its signature references "TunnelProcessFactory" which is marked as @internal
+    // Warning: (ae-incompatible-release-tags) The symbol "__constructor" is marked as @public, but its signature references "TunnelPortProbe" which is marked as @internal
+    constructor(localPort: number, logger?: AdapterLogger, processFactory?: TunnelProcessFactory, portProbe?: TunnelPortProbe);
     close(): Promise<void>;
     isAlive(): boolean;
     // (undocumented)
@@ -245,12 +248,21 @@ export abstract class ProcessTunnel implements RemoteTunnel {
     // (undocumented)
     protected logger: AdapterLogger;
     open(): Promise<void>;
+    // Warning: (ae-incompatible-release-tags) The symbol "portProbe" is marked as @public, but its signature references "TunnelPortProbe" which is marked as @internal
+    //
+    // (undocumented)
+    protected readonly portProbe: TunnelPortProbe;
     // (undocumented)
     protected process: ChildProcess | undefined;
+    // Warning: (ae-incompatible-release-tags) The symbol "processFactory" is marked as @public, but its signature references "TunnelProcessFactory" which is marked as @internal
+    //
+    // (undocumented)
+    protected readonly processFactory: TunnelProcessFactory;
     protected abstract spawnArgs(): {
         command: string;
         args: string[];
     };
+    protected waitForReady(): Promise<void>;
 }
 
 // @public
@@ -423,6 +435,11 @@ const WorktreeCleanupRequestSchema: GenMessage<WorktreeCleanupRequest>;
 
 // @public
 export function writeRemoteEnvFile(executor: RemoteExecutor, powerlineToken: string, extraEnv?: Record<string, string>, logger?: AdapterLogger): Promise<void>;
+
+// Warnings were encountered during analysis:
+//
+// src/tunnel.ts:11:1 - (ae-internal-missing-underscore) The name "TunnelProcessFactory" should be prefixed with an underscore because the declaration is marked as @internal
+// src/tunnel.ts:20:1 - (ae-internal-missing-underscore) The name "TunnelPortProbe" should be prefixed with an underscore because the declaration is marked as @internal
 
 // (No @packageDocumentation comment for this package)
 

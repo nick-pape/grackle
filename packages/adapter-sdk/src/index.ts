@@ -19,7 +19,7 @@ export { reconnectOrProvision } from "./adapter.js";
 export type { RemoteExecutor } from "./remote-executor.js";
 
 // ─── Tunnels ────────────────────────────────────────────────
-export type { RemoteTunnel } from "./tunnel.js";
+export type { RemoteTunnel, TunnelProcessFactory, TunnelPortProbe } from "./tunnel.js";
 export { ProcessTunnel } from "./tunnel.js";
 export type { TunnelState } from "./tunnel-registry.js";
 export { registerTunnel, getTunnel, closeTunnel, closeAllTunnels } from "./tunnel-registry.js";

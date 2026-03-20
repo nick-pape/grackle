@@ -50,14 +50,26 @@ export interface DockerEnvironmentConfig extends BaseEnvironmentConfig {
   gpus?: string;
 }
 
+/** @internal Abstraction over command execution used by {@link DockerAdapter}. */
+export interface DockerExecFactory {
+  /** Execute a command and return its trimmed output. */
+  exec(command: string, args: string[], options?: { timeout?: number }): Promise<{ stdout: string; stderr: string }>;
+}
+
+/** Default implementation that delegates to the real `exec` utility. */
+const NODE_DOCKER_EXEC_FACTORY: DockerExecFactory = { exec };
+
+/** Callable exec function type extracted from the factory. */
+type ExecFunction = DockerExecFactory["exec"];
+
 const containerPorts: Map<string, number> = new Map<string, number>();
 
 // ─── Docker CLI Helpers ────────────────────────────────────
 
 /** Pull a Docker image, suppressing errors if the image exists locally. */
-async function pullImage(image: string): Promise<boolean> {
+async function pullImage(execFn: ExecFunction, image: string): Promise<boolean> {
   try {
-    await exec("docker", ["pull", image], { timeout: DOCKER_PULL_TIMEOUT_MS });
+    await execFn("docker", ["pull", image], { timeout: DOCKER_PULL_TIMEOUT_MS });
     return true;
   } catch {
     logger.debug({ image }, "Docker pull failed, trying local image");
@@ -66,23 +78,23 @@ async function pullImage(image: string): Promise<boolean> {
 }
 
 /** Start a new Docker container with the given arguments. Returns true if created; false if it already existed. */
-async function createOrStartContainer(containerName: string, runArgs: string[]): Promise<boolean> {
+async function createOrStartContainer(execFn: ExecFunction, containerName: string, runArgs: string[]): Promise<boolean> {
   try {
-    await exec("docker", ["inspect", containerName]);
+    await execFn("docker", ["inspect", containerName]);
     // Container exists — just start it
-    await exec("docker", ["start", containerName]);
+    await execFn("docker", ["start", containerName]);
     return false;
   } catch {
     // Container doesn't exist — create it
-    await exec("docker", runArgs);
+    await execFn("docker", runArgs);
     return true;
   }
 }
 
 /** Discover the host-mapped port of an existing container. */
-async function discoverHostPort(containerName: string, containerPort: number, fallback: number): Promise<number> {
+async function discoverHostPort(execFn: ExecFunction, containerName: string, containerPort: number, fallback: number): Promise<number> {
   try {
-    const { stdout } = await exec("docker", [
+    const { stdout } = await execFn("docker", [
       "inspect", "-f",
       `{{(index (index .NetworkSettings.Ports "${containerPort}/tcp") 0).HostPort}}`,
       containerName,
@@ -98,10 +110,10 @@ async function discoverHostPort(containerName: string, containerPort: number, fa
 }
 
 /** Poll until a Docker container reaches the Running state. */
-async function waitForContainerRunning(containerName: string): Promise<void> {
+async function waitForContainerRunning(execFn: ExecFunction, containerName: string): Promise<void> {
   for (let i = 0; i < CONTAINER_POLL_MAX_ATTEMPTS; i++) {
     try {
-      const { stdout } = await exec("docker", ["inspect", "-f", "{{.State.Running}}", containerName]);
+      const { stdout } = await execFn("docker", ["inspect", "-f", "{{.State.Running}}", containerName]);
       if (stdout === "true") {
         return;
       }
@@ -113,14 +125,14 @@ async function waitForContainerRunning(containerName: string): Promise<void> {
 }
 
 /** Clone or pull a git repo inside a container's workspace. */
-async function ensureRepoInContainer(containerName: string, repo: string): Promise<void> {
+async function ensureRepoInContainer(execFn: ExecFunction, containerName: string, repo: string): Promise<void> {
   // Check if already cloned
   try {
-    const { stdout } = await exec("docker", [
+    const { stdout } = await execFn("docker", [
       "exec", containerName, "bash", "-c", `ls ${WORKSPACE_PATH}/.git 2>/dev/null && echo exists`,
     ]);
     if (stdout.includes("exists")) {
-      await exec("docker", [
+      await execFn("docker", [
         "exec", "-w", WORKSPACE_PATH, containerName, "git", "pull", "--ff-only",
       ], { timeout: GIT_PULL_TIMEOUT_MS }).catch((err) => {
         logger.warn({ containerName, err }, "Git pull failed (may be detached HEAD)");
@@ -131,24 +143,24 @@ async function ensureRepoInContainer(containerName: string, repo: string): Promi
     // Not cloned — proceed to clone below
   }
 
-  const ghToken = await getGitHubToken();
+  const ghToken = await getGitHubToken(execFn);
   const cloneUrl = repo.startsWith("https://") ? repo : `https://github.com/${repo}.git`;
 
   if (ghToken) {
-    await exec("docker", [
+    await execFn("docker", [
       "exec", containerName, "git", "config", "--global",
       "credential.helper", `!f() { echo "username=x-access-token"; echo "password=${ghToken}"; }; f`,
     ]);
-    await exec("docker", [
+    await execFn("docker", [
       "exec", containerName, "git", "clone", cloneUrl, WORKSPACE_PATH,
     ], { timeout: GIT_CLONE_TIMEOUT_MS });
-    await exec("docker", [
+    await execFn("docker", [
       "exec", containerName, "git", "config", "--global", "--unset", "credential.helper",
     ]).catch((err) => {
       logger.warn({ err }, "Failed to unset credential helper");
     });
   } else {
-    await exec("docker", [
+    await execFn("docker", [
       "exec", containerName, "git", "clone", cloneUrl, WORKSPACE_PATH,
     ], { timeout: GIT_CLONE_TIMEOUT_MS });
   }
@@ -158,9 +170,9 @@ async function ensureRepoInContainer(containerName: string, repo: string): Promi
 const SAFE_TOKEN_PATTERN: RegExp = /^[a-zA-Z0-9_\-]+$/;
 
 /** Get a GitHub token from the local `gh` CLI for private repo cloning. */
-async function getGitHubToken(): Promise<string | undefined> {
+async function getGitHubToken(execFn: ExecFunction): Promise<string | undefined> {
   try {
-    const { stdout } = await exec("gh", ["auth", "token"]);
+    const { stdout } = await execFn("gh", ["auth", "token"]);
     if (!stdout) {
       return undefined;
     }
@@ -178,10 +190,10 @@ async function getGitHubToken(): Promise<string | undefined> {
  * Build the base Docker image from the docker/Dockerfile.powerline.
  * Resolves the monorepo root from import.meta.dirname (dist/adapters → 4 levels up).
  */
-async function buildBaseImage(tag: string): Promise<void> {
+async function buildBaseImage(execFn: ExecFunction, tag: string): Promise<void> {
   const monorepoRoot = resolve(import.meta.dirname, "../../../../");
   logger.info({ tag, monorepoRoot }, "Building base PowerLine image");
-  await exec("docker", [
+  await execFn("docker", [
     "build",
     "-f", resolve(monorepoRoot, "docker/Dockerfile.powerline"),
     "-t", tag,
@@ -194,16 +206,19 @@ async function buildBaseImage(tag: string): Promise<void> {
 /** Remote executor that runs commands inside a Docker container. */
 class DockerExecutor implements RemoteExecutor {
   private containerName: string;
+  private readonly execFn: ExecFunction;
   /** Cached resolved $HOME path. */
   private resolvedHome?: string;
 
-  public constructor(containerName: string) {
+  public constructor(containerName: string, execFactory?: DockerExecFactory) {
     this.containerName = containerName;
+    const factory = execFactory ?? NODE_DOCKER_EXEC_FACTORY;
+    this.execFn = factory.exec.bind(factory);
   }
 
   /** Execute a shell command inside the container and return stdout. */
   public async exec(command: string, opts?: { timeout?: number }): Promise<string> {
-    const { stdout } = await exec("docker", [
+    const { stdout } = await this.execFn("docker", [
       "exec", this.containerName, "bash", "-c", command,
     ], { timeout: opts?.timeout || DOCKER_EXEC_TIMEOUT_MS });
     return stdout;
@@ -219,11 +234,11 @@ class DockerExecutor implements RemoteExecutor {
       }
       resolvedPath = resolvedPath.replace(/\$HOME/g, this.resolvedHome);
     }
-    await exec("docker", [
+    await this.execFn("docker", [
       "cp", localPath, `${this.containerName}:${resolvedPath}`,
     ], { timeout: DOCKER_EXEC_TIMEOUT_MS });
     // docker cp creates files owned by root; fix ownership so the container user can write
-    await exec("docker", [
+    await this.execFn("docker", [
       "exec", "-u", "root", this.containerName, "chown", "-R", "grackle:grackle", resolvedPath,
     ], { timeout: DOCKER_EXEC_TIMEOUT_MS });
   }
@@ -234,6 +249,13 @@ class DockerExecutor implements RemoteExecutor {
 /** Environment adapter that provisions and manages Docker containers running the PowerLine. */
 export class DockerAdapter implements EnvironmentAdapter {
   public type: string = "docker";
+  private readonly execFn: ExecFunction;
+  private readonly execFactory: DockerExecFactory;
+
+  public constructor(execFactory?: DockerExecFactory) {
+    this.execFactory = execFactory ?? NODE_DOCKER_EXEC_FACTORY;
+    this.execFn = this.execFactory.exec.bind(this.execFactory);
+  }
 
   public async *provision(environmentId: string, config: Record<string, unknown>, powerlineToken: string): AsyncGenerator<ProvisionEvent> {
     const cfg = config as unknown as DockerEnvironmentConfig;
@@ -246,31 +268,31 @@ export class DockerAdapter implements EnvironmentAdapter {
     const dockerfilePath = resolve(import.meta.dirname, "../../../../docker/Dockerfile.powerline");
     if (isDevMode() && isDefault && existsSync(dockerfilePath)) {
       yield { stage: "creating", message: "Building base image...", progress: 0.05 };
-      await buildBaseImage(image);
+      await buildBaseImage(this.execFn, image);
     } else {
       yield { stage: "creating", message: `Pulling image ${image}...`, progress: 0.05 };
-      await pullImage(image);
+      await pullImage(this.execFn, image);
     }
 
     yield { stage: "creating", message: `Creating container ${containerName}...`, progress: 0.10 };
 
     const runArgs = this.buildRunArgs(containerName, localPort, image, cfg, powerlineToken);
 
-    const isNew = await createOrStartContainer(containerName, runArgs);
+    const isNew = await createOrStartContainer(this.execFn, containerName, runArgs);
     let actualPort = localPort;
     if (!isNew) {
       yield { stage: "starting", message: "Container exists, starting...", progress: 0.12 };
-      actualPort = await discoverHostPort(containerName, DEFAULT_POWERLINE_PORT, localPort);
+      actualPort = await discoverHostPort(this.execFn, containerName, DEFAULT_POWERLINE_PORT, localPort);
     }
 
     containerPorts.set(environmentId, actualPort);
 
     yield { stage: "starting", message: "Waiting for container...", progress: 0.15 };
-    await waitForContainerRunning(containerName);
+    await waitForContainerRunning(this.execFn, containerName);
 
     // Bootstrap PowerLine inside the container (same flow as SSH/Codespace).
     // Docker containers need host=0.0.0.0 because port mapping can't reach 127.0.0.1.
-    const executor = new DockerExecutor(containerName);
+    const executor = new DockerExecutor(containerName, this.execFactory);
     if (isNew) {
       yield* bootstrapPowerLine(executor, powerlineToken, {
         extraEnv: cfg.env,
@@ -290,7 +312,7 @@ export class DockerAdapter implements EnvironmentAdapter {
 
     if (cfg.repo) {
       yield { stage: "cloning", message: `Cloning ${cfg.repo}...`, progress: 0.80 };
-      await ensureRepoInContainer(containerName, cfg.repo);
+      await ensureRepoInContainer(this.execFn, containerName, cfg.repo);
       yield { stage: "cloning", message: "Repo ready", progress: 0.85 };
     }
 
@@ -331,7 +353,7 @@ export class DockerAdapter implements EnvironmentAdapter {
     const cfg = config as unknown as DockerEnvironmentConfig;
     const containerName = cfg.containerName || `grackle-${environmentId}`;
     try {
-      await exec("docker", ["stop", containerName]);
+      await this.execFn("docker", ["stop", containerName]);
     } catch (err) {
       logger.debug({ environmentId, err }, "Container may already be stopped");
     }
@@ -342,7 +364,7 @@ export class DockerAdapter implements EnvironmentAdapter {
     const cfg = config as unknown as DockerEnvironmentConfig;
     const containerName = cfg.containerName || `grackle-${environmentId}`;
     try {
-      await exec("docker", ["rm", "-f", containerName]);
+      await this.execFn("docker", ["rm", "-f", containerName]);
     } catch (err) {
       logger.debug({ environmentId, err }, "Container may not exist");
     }
