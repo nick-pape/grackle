@@ -138,10 +138,10 @@ A `rush-qdrant mcp` daemon provides **semantic search** over the codebase via th
 
 ### Catalog naming
 
-Catalogs are defined in `~/.config/rush-qdrant/config.jsonc`. This clone is indexed as catalog `"grackle"`. Pass it to scope searches:
+Each grackle clone is a separate catalog named after its folder (`grackle`, `grackle2`, ..., `grackle5`). This clone is catalog `"grackle5"`. Always scope searches to avoid mixing results from other clones:
 
 ```
-semantic_search(query: "session spawning", catalog: "grackle")
+semantic_search(query: "session spawning", catalog: "grackle5")
 ```
 
-Omit `catalog` to search across all indexed repos (including rushstack).
+Omit `catalog` only when you intentionally want to search across all repos.
