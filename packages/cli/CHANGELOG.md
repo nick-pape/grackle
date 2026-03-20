@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Fri, 20 Mar 2026 23:15:27 GMT and should not be manually modified.
+This log was last generated on Fri, 20 Mar 2026 23:34:14 GMT and should not be manually modified.
+
+## 0.53.4
+Fri, 20 Mar 2026 23:34:14 GMT
+
+### Patches
+
+- Extract injectable interfaces and pure functions from github-import.ts to separate fetch, transform, and persist phases
 
 ## 0.53.3
 Fri, 20 Mar 2026 23:15:27 GMT
