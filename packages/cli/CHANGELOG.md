@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Fri, 20 Mar 2026 04:01:06 GMT and should not be manually modified.
+This log was last generated on Fri, 20 Mar 2026 04:17:00 GMT and should not be manually modified.
+
+## 0.50.0
+Fri, 20 Mar 2026 04:17:00 GMT
+
+### Minor changes
+
+- Add root task (PID 0), System persona, and /chat tab for conversational orchestration
 
 ## 0.49.0
 Fri, 20 Mar 2026 04:01:06 GMT
