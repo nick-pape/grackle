@@ -2,6 +2,8 @@ import type { EnvironmentAdapter, BaseEnvironmentConfig, PowerLineConnection, Pr
 import { DEFAULT_POWERLINE_PORT, DEFAULT_MCP_PORT } from "@grackle-ai/common";
 import {
   type RemoteExecutor,
+  type TunnelProcessFactory,
+  type TunnelPortProbe,
   ProcessTunnel,
   bootstrapPowerLine,
   connectThroughTunnel,
@@ -18,11 +20,12 @@ import {
 } from "@grackle-ai/adapter-sdk";
 import { getCredentialProviders } from "../credential-providers.js";
 import { exec } from "../utils/exec.js";
-import { spawn } from "node:child_process";
 import { sleep } from "../utils/sleep.js";
-import { logger } from "../logger.js";
 
 const REMOTE_COPY_TIMEOUT_MS: number = 120_000;
+
+/** Delay for reverse tunnels to wait for SSH to establish. */
+const REVERSE_TUNNEL_SETTLE_MS: number = 3_000;
 
 // ─── Config ─────────────────────────────────────────────────
 
@@ -77,8 +80,13 @@ class CodespaceExecutor implements RemoteExecutor {
 class CodespaceTunnel extends ProcessTunnel {
   private readonly codespaceName: string;
 
-  public constructor(localPort: number, codespaceName: string) {
-    super(localPort);
+  public constructor(
+    localPort: number,
+    codespaceName: string,
+    processFactory?: TunnelProcessFactory,
+    portProbe?: TunnelPortProbe,
+  ) {
+    super(localPort, undefined, processFactory, portProbe);
     this.codespaceName = codespaceName;
   }
 
@@ -102,8 +110,14 @@ class CodespaceReverseTunnel extends ProcessTunnel {
   private readonly codespaceName: string;
   private readonly remotePort: number;
 
-  public constructor(localPort: number, remotePort: number, codespaceName: string) {
-    super(localPort);
+  public constructor(
+    localPort: number,
+    remotePort: number,
+    codespaceName: string,
+    processFactory?: TunnelProcessFactory,
+    portProbe?: TunnelPortProbe,
+  ) {
+    super(localPort, undefined, processFactory, portProbe);
     this.remotePort = remotePort;
     this.codespaceName = codespaceName;
   }
@@ -121,31 +135,13 @@ class CodespaceReverseTunnel extends ProcessTunnel {
   }
 
   /**
-   * Override open() — reverse tunnels bind on the remote side, not locally.
-   * We can't probe the remote port, so just wait a fixed delay for SSH to establish.
+   * Reverse tunnels bind on the remote side, not locally.
+   * We can't probe the remote port, so wait a fixed delay for SSH to establish.
    */
-  public async open(): Promise<void> {
-    const { command, args } = this.spawnArgs();
-    logger.info({ command, args }, "Opening reverse tunnel");
-
-    this.process = spawn(command, args, {
-      stdio: ["ignore", "ignore", "pipe"],
-      detached: false,
-    });
-
-    this.process.on("error", (err) => {
-      logger.error({ err }, "Reverse tunnel process error");
-    });
-
-    this.process.stderr?.on("data", (data: Buffer) => {
-      logger.debug({ stderr: data.toString() }, "Reverse tunnel stderr");
-    });
-
-    // Give SSH time to establish the connection and bind the remote port
-    await sleep(3000);
-
-    if (this.process.exitCode !== null) {
-      throw new Error(`Reverse tunnel exited immediately with code ${this.process.exitCode}`);
+  protected async waitForReady(): Promise<void> {
+    await sleep(REVERSE_TUNNEL_SETTLE_MS);
+    if (this.process?.exitCode !== null) {
+      throw new Error(`Reverse tunnel exited immediately with code ${this.process?.exitCode}`);
     }
   }
 }

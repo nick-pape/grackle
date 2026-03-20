@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
+import type { DockerExecFactory } from "./docker.js";
 
 // ── Mock logger ─────────────────────────────────────────────
 vi.mock("../logger.js", () => ({
@@ -8,6 +9,11 @@ vi.mock("../logger.js", () => ({
     error: vi.fn(),
     debug: vi.fn(),
   },
+}));
+
+// ── Mock sleep ──────────────────────────────────────────────
+vi.mock("../utils/sleep.js", () => ({
+  sleep: vi.fn().mockResolvedValue(undefined),
 }));
 
 // ── Mock remote-adapter-utils ────────────────────────────────
@@ -21,6 +27,41 @@ vi.mock("@grackle-ai/adapter-sdk", async (importOriginal) => ({
 
 import { DockerAdapter, type DockerEnvironmentConfig } from "./docker.js";
 
+// ── Helpers ──────────────────────────────────────────────────
+
+function baseCfg(overrides?: Partial<DockerEnvironmentConfig>): DockerEnvironmentConfig {
+  return { image: "test-image:latest", ...overrides } as DockerEnvironmentConfig;
+}
+
+/** Extract env var values passed via `-e KEY=VAL` flags. */
+function getEnvVars(args: string[]): Record<string, string> {
+  const env: Record<string, string> = {};
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === "-e" && i + 1 < args.length) {
+      const [key, ...rest] = args[i + 1]!.split("=");
+      env[key!] = rest.join("=");
+    }
+  }
+  return env;
+}
+
+/** Extract volume mounts passed via `-v` flags. */
+function getVolumes(args: string[]): string[] {
+  const vols: string[] = [];
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === "-v" && i + 1 < args.length) {
+      vols.push(args[i + 1]!);
+    }
+  }
+  return vols;
+}
+
+function createMockExecFactory(): DockerExecFactory & { exec: ReturnType<typeof vi.fn> } {
+  return {
+    exec: vi.fn().mockResolvedValue({ stdout: "", stderr: "" }),
+  };
+}
+
 // ── Tests ───────────────────────────────────────────────────
 
 describe("DockerAdapter.buildRunArgs() — credential handling", () => {
@@ -29,33 +70,6 @@ describe("DockerAdapter.buildRunArgs() — credential handling", () => {
   const localPort = 9999;
   const image = "test-image:latest";
   const token = "test-token";
-
-  function baseCfg(overrides?: Partial<DockerEnvironmentConfig>): DockerEnvironmentConfig {
-    return { image, ...overrides } as DockerEnvironmentConfig;
-  }
-
-  /** Extract env var values passed via `-e KEY=VAL` flags. */
-  function getEnvVars(args: string[]): Record<string, string> {
-    const env: Record<string, string> = {};
-    for (let i = 0; i < args.length; i++) {
-      if (args[i] === "-e" && i + 1 < args.length) {
-        const [key, ...rest] = args[i + 1]!.split("=");
-        env[key!] = rest.join("=");
-      }
-    }
-    return env;
-  }
-
-  /** Extract volume mounts passed via `-v` flags. */
-  function getVolumes(args: string[]): string[] {
-    const vols: string[] = [];
-    for (let i = 0; i < args.length; i++) {
-      if (args[i] === "-v" && i + 1 < args.length) {
-        vols.push(args[i + 1]!);
-      }
-    }
-    return vols;
-  }
 
   afterEach(() => {
     delete process.env.ANTHROPIC_API_KEY;
@@ -124,5 +138,60 @@ describe("DockerAdapter.buildRunArgs() — credential handling", () => {
     expect(portIdx).toBeGreaterThan(-1);
     expect(args[portIdx + 1]).toBe(`127.0.0.1:${localPort}:7433`);
     expect(args).not.toContain("--network");
+  });
+});
+
+describe("DockerAdapter — ExecFactory injection", () => {
+  it("calls injected exec factory for stop()", async () => {
+    const mockFactory = createMockExecFactory();
+    const adapter = new DockerAdapter(mockFactory);
+
+    await adapter.stop("env-1", { containerName: "test-container" });
+
+    expect(mockFactory.exec).toHaveBeenCalledWith(
+      "docker",
+      ["stop", "test-container"],
+    );
+  });
+
+  it("calls injected exec factory for destroy()", async () => {
+    const mockFactory = createMockExecFactory();
+    const adapter = new DockerAdapter(mockFactory);
+
+    await adapter.destroy("env-1", { containerName: "test-container" });
+
+    expect(mockFactory.exec).toHaveBeenCalledWith(
+      "docker",
+      ["rm", "-f", "test-container"],
+    );
+  });
+
+  it("uses default container name derived from environmentId", async () => {
+    const mockFactory = createMockExecFactory();
+    const adapter = new DockerAdapter(mockFactory);
+
+    await adapter.stop("env-42", {});
+
+    expect(mockFactory.exec).toHaveBeenCalledWith(
+      "docker",
+      ["stop", "grackle-env-42"],
+    );
+  });
+
+  it("does not throw when stop fails (container already stopped)", async () => {
+    const mockFactory = createMockExecFactory();
+    mockFactory.exec.mockRejectedValueOnce(new Error("container not running"));
+    const adapter = new DockerAdapter(mockFactory);
+
+    // Should not throw — Docker adapter catches stop errors
+    await expect(adapter.stop("env-1", { containerName: "test" })).resolves.toBeUndefined();
+  });
+
+  it("does not throw when destroy fails (container not found)", async () => {
+    const mockFactory = createMockExecFactory();
+    mockFactory.exec.mockRejectedValueOnce(new Error("no such container"));
+    const adapter = new DockerAdapter(mockFactory);
+
+    await expect(adapter.destroy("env-1", { containerName: "test" })).resolves.toBeUndefined();
   });
 });

@@ -10,6 +10,7 @@ import type { GenFile } from '@bufbuild/protobuf/codegenv2';
 import type { GenMessage } from '@bufbuild/protobuf/codegenv2';
 import type { GenService } from '@bufbuild/protobuf/codegenv2';
 import type { Message } from '@bufbuild/protobuf';
+import { SpawnOptions } from 'node:child_process';
 
 // @public
 export interface AdapterLogger {
@@ -242,7 +243,7 @@ export function probeRemotePowerLine(executor: RemoteExecutor): Promise<void>;
 
 // @public
 export abstract class ProcessTunnel implements RemoteTunnel {
-    constructor(localPort: number, logger?: AdapterLogger);
+    constructor(localPort: number, logger?: AdapterLogger, processFactory?: TunnelProcessFactory, portProbe?: TunnelPortProbe);
     close(): Promise<void>;
     isAlive(): boolean;
     // (undocumented)
@@ -251,11 +252,16 @@ export abstract class ProcessTunnel implements RemoteTunnel {
     protected logger: AdapterLogger;
     open(): Promise<void>;
     // (undocumented)
+    protected readonly portProbe: TunnelPortProbe;
+    // (undocumented)
     protected process: ChildProcess | undefined;
+    // (undocumented)
+    protected readonly processFactory: TunnelProcessFactory;
     protected abstract spawnArgs(): {
         command: string;
         args: string[];
     };
+    protected waitForReady(): Promise<void>;
 }
 
 // @public
@@ -409,6 +415,16 @@ type TokenItem = Message<"grackle.powerline.TokenItem"> & {
 
 // @public
 const TokenItemSchema: GenMessage<TokenItem>;
+
+// @public
+export interface TunnelPortProbe {
+    waitForPort(port: number): Promise<void>;
+}
+
+// @public
+export interface TunnelProcessFactory {
+    spawn(command: string, args: string[], options: SpawnOptions): ChildProcess;
+}
 
 // @public
 export interface TunnelState {

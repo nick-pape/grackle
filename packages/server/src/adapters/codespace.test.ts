@@ -17,20 +17,7 @@ vi.mock("../utils/exec.js", () => ({
   exec: mockExec,
 }));
 
-// ── Mock spawn + sleep (used by CodespaceReverseTunnel) ─────
-vi.mock("node:child_process", async (importOriginal) => {
-  const original = await importOriginal<typeof import("node:child_process")>();
-  return {
-    ...original,
-    spawn: vi.fn(() => ({
-      on: vi.fn(),
-      stderr: { on: vi.fn() },
-      exitCode: null,
-      kill: vi.fn(),
-    })),
-  };
-});
-
+// ── Mock sleep (used by CodespaceReverseTunnel.waitForReady) ─
 vi.mock("../utils/sleep.js", () => ({
   sleep: vi.fn().mockResolvedValue(undefined),
 }));
@@ -51,7 +38,7 @@ vi.mock("@grackle-ai/adapter-sdk", async (importOriginal) => {
     registerTunnel: mocks.registerTunnel,
     findFreePort: mocks.findFreePort,
     startRemotePowerLine: mocks.startRemotePowerLine,
-    // Stub ProcessTunnel so CodespaceTunnel doesn't spawn real processes
+    // Stub ProcessTunnel so CodespaceTunnel doesn't spawn real processes (tested in tunnel.test.ts)
     ProcessTunnel: class {
       public localPort: number;
       public constructor(localPort: number) { this.localPort = localPort; }
@@ -64,7 +51,7 @@ vi.mock("@grackle-ai/adapter-sdk", async (importOriginal) => {
 
 import { CodespaceAdapter } from "./codespace.js";
 
-// ── Helper ──────────────────────────────────────────────────
+// ── Helpers ─────────────────────────────────────────────────
 
 /** Collect all events from an async generator. */
 async function collectEvents(gen: AsyncGenerator<ProvisionEvent>): Promise<ProvisionEvent[]> {
