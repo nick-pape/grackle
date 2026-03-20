@@ -1,6 +1,22 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Fri, 20 Mar 2026 16:16:43 GMT and should not be manually modified.
+This log was last generated on Fri, 20 Mar 2026 21:06:17 GMT and should not be manually modified.
+
+## 0.53.0
+Fri, 20 Mar 2026 21:06:17 GMT
+
+### Minor changes
+
+- Add update_environment WS handler and full-page environment create/edit panel
+
+### Patches
+
+- Extract GitExecutor and WorktreeFileSystem interfaces from worktree.ts for dependency injection
+- Extract buildEnvFileContent() as a public pure function from adapter-sdk bootstrap helpers
+
+### Updates
+
+- Extract injectable seams (ProcessFactory, PortProbe) from local-powerline for testability
 
 ## 0.52.4
 Fri, 20 Mar 2026 16:16:43 GMT
