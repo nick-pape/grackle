@@ -5,29 +5,8 @@ import { AnimatePresence, motion } from "motion/react";
 import { MAX_TASK_DEPTH, fuzzySearch, type FuzzyKey, type MatchIndex } from "@grackle-ai/common";
 import { taskUrl, newTaskUrl, useAppNavigate } from "../../utils/navigation.js";
 import { getStatusStyle } from "../../utils/taskStatus.js";
-import { mergeRanges, buildTaskTree, groupTasksByStatus, type TaskNode, type StatusGroup } from "./listHelpers.js";
+import { HighlightedText, buildTaskTree, groupTasksByStatus, type TaskNode, type StatusGroup } from "./listHelpers.js";
 import styles from "./TaskList.module.scss";
-
-/** Render text with highlighted match ranges. */
-function HighlightedText({ text, indices }: { text: string; indices?: readonly MatchIndex[] }): JSX.Element {
-  if (!indices || indices.length === 0) {
-    return <>{text}</>;
-  }
-  const merged = mergeRanges(indices);
-  const parts: JSX.Element[] = [];
-  let cursor = 0;
-  for (const [start, end] of merged) {
-    if (start > cursor) {
-      parts.push(<span key={`p${cursor}`}>{text.slice(cursor, start)}</span>);
-    }
-    parts.push(<mark key={`m${start}`} className={styles.searchHighlight}>{text.slice(start, end + 1)}</mark>);
-    cursor = end + 1;
-  }
-  if (cursor < text.length) {
-    parts.push(<span key={`p${cursor}`}>{text.slice(cursor)}</span>);
-  }
-  return <>{parts}</>;
-}
 
 /** Fuzzy search keys for task matching. */
 const TASK_SEARCH_KEYS: FuzzyKey[] = [{ name: "title", weight: 2 }, { name: "description", weight: 1 }];
@@ -139,7 +118,7 @@ function StatusGroupAccordion({
                     {statusStyle.icon}
                   </span>
                   <span className={styles.taskTitle} title={task.title}>
-                    <HighlightedText text={task.title} indices={titleHighlights.get(task.id)} />
+                    <HighlightedText text={task.title} indices={titleHighlights.get(task.id)} highlightClass={styles.searchHighlight} />
                   </span>
                   {wsName && (
                     <span className={styles.workspaceBadge} title={wsName}>{wsName}</span>
@@ -220,7 +199,7 @@ function TaskTreeNode({
           {statusStyle.icon}
         </span>
         <span className={styles.taskTitle} title={node.title}>
-          <HighlightedText text={node.title} indices={titleHighlights.get(node.id)} />
+          <HighlightedText text={node.title} indices={titleHighlights.get(node.id)} highlightClass={styles.searchHighlight} />
         </span>
         {wsName && (
           <span className={styles.workspaceBadge} title={wsName}>{wsName}</span>

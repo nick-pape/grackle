@@ -300,7 +300,7 @@ function SessionAttemptSelector({ taskSessions, selectedSessionId, onSelect }: S
 
 /** Task detail page with overview/stream/findings tabs. */
 export function TaskPage(): JSX.Element {
-  const { taskId } = useParams<{ taskId: string }>();
+  const { taskId, workspaceId: routeWorkspaceId } = useParams<{ taskId: string; workspaceId?: string }>();
   const location = useLocation();
   const navigate = useAppNavigate();
   const {
@@ -457,7 +457,7 @@ export function TaskPage(): JSX.Element {
 
   const handleTabChange = (tab: TaskTab): void => {
     setActiveTaskTab(tab);
-    navigate(taskUrl(taskId!, tab === "overview" ? undefined : tab));
+    navigate(taskUrl(taskId!, tab === "overview" ? undefined : tab, routeWorkspaceId));
   };
 
   return (
@@ -481,7 +481,7 @@ export function TaskPage(): JSX.Element {
             onStop={() => stopTask(task.id)}
             onPause={() => sessionId && kill(sessionId)}
             onDelete={handleDeleteTask}
-            onEdit={() => navigate(taskEditUrl(task.id))}
+            onEdit={() => navigate(taskEditUrl(task.id, routeWorkspaceId))}
           />
         )}
       </div>

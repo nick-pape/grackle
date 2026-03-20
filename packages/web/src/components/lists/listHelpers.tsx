@@ -4,6 +4,7 @@
  * @module
  */
 
+import type { JSX } from "react";
 import type { TaskData } from "../../hooks/useGrackleSocket.js";
 import type { MatchIndex } from "@grackle-ai/common";
 import { SIDEBAR_STATUS_ORDER, getStatusStyle } from "../../utils/taskStatus.js";
@@ -29,6 +30,27 @@ export function mergeRanges(ranges: readonly MatchIndex[]): MatchIndex[] {
     }
   }
   return merged;
+}
+
+/** Render text with highlighted match ranges. Unmatched portions are plain, matched portions are bold. */
+export function HighlightedText({ text, indices, highlightClass }: { text: string; indices?: readonly MatchIndex[]; highlightClass?: string }): JSX.Element {
+  if (!indices || indices.length === 0) {
+    return <>{text}</>;
+  }
+  const merged = mergeRanges(indices);
+  const parts: JSX.Element[] = [];
+  let cursor = 0;
+  for (const [start, end] of merged) {
+    if (start > cursor) {
+      parts.push(<span key={`p${cursor}`}>{text.slice(cursor, start)}</span>);
+    }
+    parts.push(<mark key={`m${start}`} className={highlightClass}>{text.slice(start, end + 1)}</mark>);
+    cursor = end + 1;
+  }
+  if (cursor < text.length) {
+    parts.push(<span key={`p${cursor}`}>{text.slice(cursor)}</span>);
+  }
+  return <>{parts}</>;
 }
 
 // ---------------------------------------------------------------------------

@@ -62,9 +62,8 @@ test.describe("Mobile Drawer", () => {
     await hamburger.click();
     await expect(sidebar).toBeVisible();
 
-    // Navigate via URL instead of clicking sidebar tabs (avoids mobile
-    // pointer interception from the sidebar container's resize handle)
-    await appPage.goto(appPage.url().replace(/\/(chat|tasks).*/, "/settings/environments"));
+    // Click the Settings tab in the sidebar to trigger navigation
+    await appPage.locator('[data-testid="sidebar-tab-settings"]').click();
 
     // Sidebar drawer should auto-close after navigation
     await expect(sidebar).not.toBeVisible({ timeout: 5_000 });
@@ -73,11 +72,12 @@ test.describe("Mobile Drawer", () => {
   test("hamburger is visible on all pages including settings", async ({ appPage }) => {
     const hamburger = appPage.getByRole("button", { name: "Toggle sidebar" });
 
-    // Hamburger should be visible on the default page (tasks)
+    // Hamburger should be visible on the default page
     await expect(hamburger).toBeVisible();
 
-    // Navigate directly to settings
-    await appPage.goto(appPage.url().replace(/\/(chat|tasks).*/, "/settings/environments"));
+    // Navigate to settings via sidebar tab
+    await hamburger.click();
+    await appPage.locator('[data-testid="sidebar-tab-settings"]').click();
 
     // Hamburger should still be visible on settings pages
     await expect(hamburger).toBeVisible();
@@ -87,10 +87,11 @@ test.describe("Mobile Drawer", () => {
     const hamburger = appPage.getByRole("button", { name: "Toggle sidebar" });
     const sidebar = appPage.getByTestId("sidebar");
 
-    // Navigate directly to settings
-    await appPage.goto(appPage.url().replace(/\/(chat|tasks).*/, "/settings/environments"));
+    // Navigate to settings via sidebar tab
+    await hamburger.click();
+    await appPage.locator('[data-testid="sidebar-tab-settings"]').click();
 
-    // Open the drawer
+    // Drawer auto-closed. Re-open it to see settings content.
     await hamburger.click();
     await expect(sidebar).toBeVisible();
 

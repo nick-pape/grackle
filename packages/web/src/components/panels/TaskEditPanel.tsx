@@ -102,7 +102,7 @@ export function TaskEditPanel({ mode, taskId, workspaceId: workspaceIdProp, pare
     if (isEdit && taskId) {
       updateTask(taskId, title.trim(), description, selectedDeps, defaultPersonaId);
       showToast("Task updated", "success");
-      navigate(taskUrl(taskId), { replace: true });
+      navigate(taskUrl(taskId, undefined, workspaceId), { replace: true });
     } else {
       setCreating(true);
       createTask(
@@ -127,7 +127,7 @@ export function TaskEditPanel({ mode, taskId, workspaceId: workspaceIdProp, pare
 
   const handleCancel = (): void => {
     if (isEdit && taskId) {
-      navigate(taskUrl(taskId));
+      navigate(taskUrl(taskId, undefined, workspaceId));
     } else {
       navigate(workspaceIdProp ? workspaceUrl(workspaceIdProp) : "/tasks");
     }
