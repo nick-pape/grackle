@@ -150,10 +150,13 @@ export async function createWorkspace(page: Page, name: string, environmentId: s
 /** @deprecated Use {@link createWorkspace} instead. */
 export const createProject = createWorkspace;
 
-/** Click a workspace row in the sidebar without matching dashboard cards. */
-export async function clickSidebarWorkspace(page: Page, workspaceName: string): Promise<void> {
-  await getSidebarWorkspaceLabel(page, workspaceName).click();
+/** Click a label row in the sidebar without matching dashboard cards. */
+export async function clickSidebarLabel(page: Page, label: string): Promise<void> {
+  await getSidebarWorkspaceLabel(page, label).click();
 }
+
+/** @deprecated Use {@link clickSidebarLabel} instead. */
+export const clickSidebarWorkspace = clickSidebarLabel;
 
 /**
  * Create a task under a workspace and wait for it to appear in the sidebar.
@@ -175,8 +178,7 @@ export async function createTask(
     // Navigate to the task edit form via the "New task" sidebar button (this uses
     // stopPropagation so it never toggles the workspace's expand/collapse state —
     // unlike clicking the workspace name which collapses if already selected).
-    await page
-      getSidebarWorkspaceRow(page, workspaceName)
+    await getSidebarWorkspaceRow(page, workspaceName)
       .locator('button[title="New task"]')
       .first()
       .click();
@@ -199,8 +201,7 @@ export async function createTask(
 
   // No env specified — exercise the new full-panel TaskEditPanel UI.
   // Click "New task" button (uses stopPropagation, doesn't toggle expansion)
-  await page
-    getSidebarWorkspaceRow(page, workspaceName)
+  await getSidebarWorkspaceRow(page, workspaceName)
     .locator('button[title="New task"]')
     .first()
     .click();
