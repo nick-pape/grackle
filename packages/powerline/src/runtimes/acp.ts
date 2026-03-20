@@ -30,7 +30,7 @@ export interface AcpAgentConfig {
 
 // ─── Dynamic import ─────────────────────────────────────────
 
-interface AcpSdkModule {
+export interface AcpSdkModule {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ClientSideConnection: new (toClient: (agent: any) => any, stream: any) => any;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -40,6 +40,14 @@ interface AcpSdkModule {
 
 /** Promise for the one-time SDK import, cached to avoid race conditions. */
 let sdkPromise: Promise<AcpSdkModule> | undefined;
+
+/**
+ * @internal For testing only — inject a mock SDK to bypass the dynamic import.
+ * Pass `undefined` to reset the cache so the real import is attempted again.
+ */
+export function _setAcpSdkForTesting(mock: AcpSdkModule | undefined): void {
+  sdkPromise = mock !== undefined ? Promise.resolve(mock) : undefined;
+}
 
 /** Lazily import the ACP SDK to avoid loading it until first use. */
 function getAcpSdk(): Promise<AcpSdkModule> {
