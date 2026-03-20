@@ -58,10 +58,10 @@ test.describe("Mobile Drawer", () => {
     const hamburger = appPage.getByRole("button", { name: "Toggle sidebar" });
     const sidebar = appPage.getByTestId("sidebar");
 
-    // Open drawer and wait for animation to settle
+    // Open drawer and wait for slide-in animation to settle (~400ms)
     await hamburger.click();
     await expect(sidebar).toBeVisible();
-    await sidebar.locator('[data-testid="sidebar-tab-settings"]').waitFor({ state: "visible", timeout: 5_000 });
+    await appPage.waitForTimeout(500);
 
     // Navigate to settings via the sidebar tab — this triggers a navigation
     // which auto-closes the drawer
@@ -76,10 +76,10 @@ test.describe("Mobile Drawer", () => {
     // Hamburger should be visible on the default page
     await expect(hamburger).toBeVisible();
 
-    // Navigate to settings (open drawer first, wait for animation, then click tab)
+    // Navigate to settings (open drawer first, wait for slide-in animation, then click tab)
     await hamburger.click();
     await expect(sidebar).toBeVisible();
-    await sidebar.locator('[data-testid="sidebar-tab-settings"]').waitFor({ state: "visible", timeout: 5_000 });
+    await appPage.waitForTimeout(500);
     await appPage.locator('[data-testid="sidebar-tab-settings"]').click();
 
     // Hamburger should still be visible after navigation
@@ -90,10 +90,10 @@ test.describe("Mobile Drawer", () => {
     const hamburger = appPage.getByRole("button", { name: "Toggle sidebar" });
     const sidebar = appPage.getByTestId("sidebar");
 
-    // Navigate to settings (open drawer, wait, click tab)
+    // Navigate to settings (open drawer, wait for slide-in animation, click tab)
     await hamburger.click();
     await expect(sidebar).toBeVisible();
-    await sidebar.locator('[data-testid="sidebar-tab-settings"]').waitFor({ state: "visible", timeout: 5_000 });
+    await appPage.waitForTimeout(500);
     await appPage.locator('[data-testid="sidebar-tab-settings"]').click();
 
     // Drawer auto-closed. Re-open it to see settings content.
