@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, type JSX } from "react";
 import { useMatch } from "react-router";
-import { CHAT_URL, useAppNavigate } from "../../utils/navigation.js";
+import { CHAT_URL, WORKSPACES_URL, useAppNavigate } from "../../utils/navigation.js";
 import { WorkspaceList } from "../lists/WorkspaceList.js";
 import styles from "./Sidebar.module.scss";
 
@@ -87,7 +87,7 @@ export function Sidebar(): JSX.Element {
           aria-current={!isChat ? "page" : undefined}
           data-active={!isChat}
           data-testid="sidebar-tab-workspaces"
-          onClick={() => navigate("/workspaces")}
+          onClick={() => navigate(WORKSPACES_URL)}
         >
           Workspaces
         </button>
