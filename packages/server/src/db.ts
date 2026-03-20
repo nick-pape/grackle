@@ -553,12 +553,19 @@ After creating the PR, you must ensure it is ready to merge.
 14. **Post finding**: Use finding_post to summarize what you did and any key decisions.
 
 IMPORTANT: The PR is the deliverable, but a PR with failing CI or unresolved review comments is NOT done. You MUST complete Phase 3. Do NOT go to "waiting for input" until CI is green AND all review threads are resolved.'
-    WHERE id = 'claude-code' AND system_prompt = ''
+    WHERE id = 'claude-code' AND system_prompt = '' AND name = 'Claude Code'
   `);
   sqlite.exec(`
-    UPDATE personas SET name = 'Software Engineer',
-                        description = 'Default agent persona for software engineering tasks'
-    WHERE id = 'claude-code' AND name = 'Claude Code'
+    UPDATE personas
+    SET name = 'Software Engineer',
+        description = 'Default agent persona for software engineering tasks'
+    WHERE id = 'claude-code'
+      AND name = 'Claude Code'
+      AND NOT EXISTS (
+        SELECT 1 FROM personas
+        WHERE name = 'Software Engineer'
+          AND id != 'claude-code'
+      )
   `);
 
   // Backfill: ensure default_persona_id setting exists for upgrades.

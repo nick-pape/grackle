@@ -111,10 +111,9 @@ async function sendInputToSession(
   }
 
   try {
-    // Record the signal as a user_input event in the session log and stream,
-    // matching the pattern used by the WS bridge for regular user input.
+    // Record the signal as a SIGNAL event in the session log and stream.
     const session = sessionStore.getSession(sessionId);
-    const userInputEvent = create(grackle.SessionEventSchema, {
+    const signalEvent = create(grackle.SessionEventSchema, {
       sessionId,
       type: grackle.EventType.SIGNAL,
       timestamp: new Date().toISOString(),
@@ -124,9 +123,9 @@ async function sendInputToSession(
       // Ensure the stream is open before writing — the session may still be
       // PENDING and processEventStream may not have called initLog yet.
       logWriter.ensureLogInitialized(session.logPath);
-      logWriter.writeEvent(session.logPath, userInputEvent);
+      logWriter.writeEvent(session.logPath, signalEvent);
     }
-    streamHub.publish(userInputEvent);
+    streamHub.publish(signalEvent);
 
     await conn.client.sendInput(
       create(powerline.InputMessageSchema, { sessionId, text }),

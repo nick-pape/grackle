@@ -22,8 +22,16 @@ function renderEntry(entry: LogEntry): string {
       return `**Error:** ${entry.content}\n`;
     case "status":
       return `---\n*Status: ${entry.content}*\n`;
-    case "signal":
-      return `> **[SIGNAL]** ${entry.content}\n`;
+    case "signal": {
+      const lines = entry.content.split("\n");
+      if (lines.length === 0) {
+        return `> **[SIGNAL]**\n`;
+      }
+      const renderedLines = lines.map((line, index) =>
+        index === 0 ? `> **[SIGNAL]** ${line}` : `> ${line}`
+      );
+      return renderedLines.join("\n") + "\n";
+    }
     default:
       return `${entry.content}\n`;
   }
