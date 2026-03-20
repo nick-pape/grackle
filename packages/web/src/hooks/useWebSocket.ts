@@ -10,13 +10,13 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { PAIR_PATH } from "../utils/navigation.js";
-import type { WsMessage, SendFunction } from "./types.js";
+import type { WsMessage, SendFunction, GrackleEvent } from "./types.js";
 import { parseWsMessage, WS_RECONNECT_DELAY_MS, WS_CLOSE_UNAUTHORIZED } from "./types.js";
 
 /** Options accepted by {@link useWebSocket}. */
 export interface UseWebSocketOptions {
   /** Called for every parsed incoming message. */
-  onMessage: (msg: WsMessage) => void;
+  onMessage: (msg: WsMessage | GrackleEvent) => void;
   /** Called when the socket opens — use to send initial data requests. */
   onConnect: (send: SendFunction) => void;
   /** Called when the socket closes (before reconnect scheduling). */

@@ -179,6 +179,17 @@ export function warnBadPayload(msgType: string, reason: string): false {
   return false;
 }
 
+/** Type guard for {@link GrackleEvent}. */
+export function isGrackleEvent(v: unknown): v is GrackleEvent {
+  return (
+    isObject(v) &&
+    typeof v.id === "string" &&
+    typeof v.type === "string" &&
+    typeof v.timestamp === "string" &&
+    isObject(v.payload)
+  );
+}
+
 /** Type guard for {@link Environment}. */
 export function isEnvironment(v: unknown): v is Environment {
   return (
@@ -373,11 +384,13 @@ export function asValidArray<T>(
 }
 
 /**
- * Parse a raw WebSocket message string into a {@link WsMessage}.
+ * Parse a raw WebSocket message string into a {@link WsMessage} or
+ * {@link GrackleEvent}.  When both `id` and `timestamp` are present the
+ * result is a full `GrackleEvent`; otherwise a plain `WsMessage`.
  * Returns `undefined` and logs a warning if parsing fails or the result is
  * not a valid message object.
  */
-export function parseWsMessage(data: string): WsMessage | undefined {
+export function parseWsMessage(data: string): WsMessage | GrackleEvent | undefined {
   let parsed: unknown;
   try {
     parsed = JSON.parse(data) as unknown;
@@ -392,18 +405,19 @@ export function parseWsMessage(data: string): WsMessage | undefined {
     );
     return undefined;
   }
-  const msg: WsMessage & { id?: string; timestamp?: string } = {
+  // When both id and timestamp are present, return a full GrackleEvent
+  if (typeof parsed.id === "string" && typeof parsed.timestamp === "string") {
+    return {
+      id: parsed.id,
+      type: parsed.type,
+      timestamp: parsed.timestamp,
+      payload: isObject(parsed.payload) ? parsed.payload : {},
+    };
+  }
+  return {
     type: parsed.type,
     payload: isObject(parsed.payload) ? parsed.payload : undefined,
   };
-  // Preserve GrackleEvent fields (id, timestamp) for domain events
-  if (typeof parsed.id === "string") {
-    msg.id = parsed.id;
-  }
-  if (typeof parsed.timestamp === "string") {
-    msg.timestamp = parsed.timestamp;
-  }
-  return msg;
 }
 
 /**

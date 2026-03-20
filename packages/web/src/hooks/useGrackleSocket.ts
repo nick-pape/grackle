@@ -8,6 +8,7 @@
 
 import { useCallback, useState } from "react";
 import type { WsMessage, SendFunction, GrackleEvent } from "./types.js";
+import { isGrackleEvent } from "./types.js";
 import { useWebSocket } from "./useWebSocket.js";
 import { useEnvironments } from "./useEnvironments.js";
 import { useSessions } from "./useSessions.js";
@@ -38,6 +39,8 @@ export type {
   SendFunction,
   GrackleEvent,
 } from "./types.js";
+
+export { isGrackleEvent } from "./types.js";
 
 // ─── Result interface ─────────────────────────────────────────────────────────
 
@@ -284,17 +287,10 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
     if (personasHook.handleEvent(event)) { return; }
   }
 
-  function onMessage(msg: WsMessage): void {
-    // Domain events from event bus (dot-notation types)
-    if (typeof msg.type === "string" && msg.type.includes(".")) {
-      const raw = msg as WsMessage & { id?: string; timestamp?: string };
-      const event: GrackleEvent = {
-        id: raw.id ?? "",
-        type: msg.type,
-        timestamp: raw.timestamp ?? "",
-        payload: msg.payload ?? {},
-      };
-      routeDomainEvent(event);
+  function onMessage(msg: WsMessage | GrackleEvent): void {
+    // Domain events from event bus — already validated by parseWsMessage
+    if (isGrackleEvent(msg)) {
+      routeDomainEvent(msg);
       return;
     }
 

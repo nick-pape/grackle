@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Harden parseWsMessage to return a discriminated WsMessage | GrackleEvent union, replacing the unsafe type-widening hack",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
