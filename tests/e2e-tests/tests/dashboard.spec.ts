@@ -73,7 +73,7 @@ test.describe("Dashboard", () => {
 
     // Environment health should show at least one environment row
     await expect(
-      page.locator('[data-testid="dashboard-env-health"] [data-testid="env-row"]').first(),
+      page.locator('[data-testid="dashboard-env-health"] [data-testid="dashboard-env-row"]').first(),
     ).toBeVisible();
 
     // Workspace snapshot should show the workspace we created

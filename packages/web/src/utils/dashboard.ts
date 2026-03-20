@@ -135,20 +135,14 @@ export interface WorkspaceSnapshot {
   completedTasks: number;
   workingTasks: number;
   failedTasks: number;
-  environmentName: string;
 }
 
 /** Build progress snapshots for each workspace. */
 export function getWorkspaceSnapshots(
   workspaces: Workspace[],
   tasks: TaskData[],
-  environments: Environment[],
+  _environments: Environment[],
 ): WorkspaceSnapshot[] {
-  const envMap = new Map<string, Environment>();
-  for (const e of environments) {
-    envMap.set(e.id, e);
-  }
-
   const statsByWorkspace = new Map<string, {
     totalTasks: number;
     completedTasks: number;
@@ -196,7 +190,6 @@ export function getWorkspaceSnapshots(
       completedTasks: stats.completedTasks,
       workingTasks: stats.workingTasks,
       failedTasks: stats.failedTasks,
-      environmentName: envMap.get(workspace.environmentId)?.displayName ?? "—",
     };
   });
 }

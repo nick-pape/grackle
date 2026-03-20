@@ -118,7 +118,6 @@ describe("dashboard selectors", () => {
         completedTasks: 1,
         workingTasks: 1,
         failedTasks: 1,
-        environmentName: "test-local",
       },
       {
         workspace: workspaces[1],
@@ -126,7 +125,6 @@ describe("dashboard selectors", () => {
         completedTasks: 0,
         workingTasks: 0,
         failedTasks: 0,
-        environmentName: "backup",
       },
     ]);
   });

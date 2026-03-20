@@ -227,7 +227,7 @@ export function DashboardPage(): JSX.Element {
               <div className={styles.emptyHint}>No environments configured</div>
             ) : (
               environments.map((env) => (
-                <div key={env.id} className={styles.envRow} data-testid="env-row">
+                <div key={env.id} className={styles.envRow} data-testid="dashboard-env-row">
                   <span className={styles.envName}>{env.displayName}</span>
                   <span className={styles.envStatusBadge} data-status={env.status}>
                     {env.status}
