@@ -11,6 +11,7 @@ export interface Environment {
   id: string;
   displayName: string;
   adapterType: string;
+  adapterConfig: string;
   status: string;
   bootstrapped: boolean;
 }
@@ -192,14 +193,21 @@ export function isGrackleEvent(v: unknown): v is GrackleEvent {
 
 /** Type guard for {@link Environment}. */
 export function isEnvironment(v: unknown): v is Environment {
-  return (
-    isObject(v) &&
+  if (
+    !(isObject(v) &&
     typeof v.id === "string" &&
     typeof v.displayName === "string" &&
     typeof v.adapterType === "string" &&
     typeof v.status === "string" &&
-    typeof v.bootstrapped === "boolean"
-  );
+    typeof v.bootstrapped === "boolean")
+  ) {
+    return false;
+  }
+  // Normalize missing adapterConfig to "{}" so the field is always present
+  if (typeof v.adapterConfig !== "string") {
+    (v as Record<string, unknown>).adapterConfig = "{}";
+  }
+  return true;
 }
 
 /** Type guard for {@link Session}. */

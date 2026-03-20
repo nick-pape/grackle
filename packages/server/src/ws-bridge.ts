@@ -1719,6 +1719,52 @@ async function handleMessage(
       break;
     }
 
+    case "update_environment": {
+      const environmentId = msg.payload?.environmentId as string;
+      if (!environmentId) {
+        sendWs(ws, { type: "error", payload: { message: "environmentId required" } });
+        return;
+      }
+      const existing = envRegistry.getEnvironment(environmentId);
+      if (!existing) {
+        sendWs(ws, { type: "error", payload: { message: `Environment not found: ${environmentId}` } });
+        return;
+      }
+      const nameVal = typeof msg.payload?.displayName === "string" ? msg.payload.displayName : undefined;
+      if (nameVal?.trim() === "") {
+        sendWs(ws, { type: "error", payload: { message: "Environment name cannot be empty" } });
+        return;
+      }
+      let configVal: string | undefined;
+      const rawConfig = msg.payload?.adapterConfig;
+      if (rawConfig !== undefined) {
+        if (rawConfig === null) {
+          configVal = "{}";
+        } else if (typeof rawConfig === "string") {
+          const normalized = rawConfig.trim() === "" ? "{}" : rawConfig;
+          try {
+            JSON.parse(normalized);
+          } catch {
+            sendWs(ws, { type: "error", payload: { message: "adapterConfig string is not valid JSON" } });
+            return;
+          }
+          configVal = normalized;
+        } else if (typeof rawConfig === "object") {
+          configVal = JSON.stringify(rawConfig);
+        } else {
+          sendWs(ws, { type: "error", payload: { message: "adapterConfig must be an object or JSON string" } });
+          return;
+        }
+      }
+      envRegistry.updateEnvironment(environmentId, {
+        displayName: nameVal !== undefined ? nameVal.trim() : undefined,
+        adapterConfig: configVal,
+      });
+      logger.info({ environmentId, displayName: nameVal }, "Environment updated via WebSocket");
+      emit("environment.changed", {});
+      break;
+    }
+
     case "remove_environment": {
       const environmentId = msg.payload?.environmentId as string;
       if (!environmentId) {

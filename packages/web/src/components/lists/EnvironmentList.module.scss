@@ -112,6 +112,12 @@
   padding: 2px 8px;
 }
 
+.editButton {
+  @include btn-ghost(var(--text-secondary));
+  font-size: var(--font-size-sm);
+  padding: 2px 8px;
+}
+
 .deleteButton {
   @include btn-ghost(var(--accent-red));
   font-size: var(--font-size-sm);

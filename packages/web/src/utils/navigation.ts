@@ -82,6 +82,11 @@ export function newChatUrl(environmentId: string): string {
 /** URL for the new environment form. */
 export const NEW_ENVIRONMENT_URL: string = "/environments/new";
 
+/** Build URL for the environment edit page. */
+export function environmentEditUrl(environmentId: string): string {
+  return `/environments/${encodeURIComponent(environmentId)}`;
+}
+
 /** URL for the settings page. */
 export const SETTINGS_URL: string = "/settings";
 

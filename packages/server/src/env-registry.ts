@@ -72,6 +72,30 @@ export function updateAdapterConfig(id: string, config: string): void {
     .run();
 }
 
+/** Updatable fields for an existing environment. */
+export interface UpdateEnvironmentFields {
+  displayName?: string;
+  adapterConfig?: string;
+}
+
+/** Update mutable fields (displayName, adapterConfig) of an existing environment. */
+export function updateEnvironment(id: string, fields: UpdateEnvironmentFields): void {
+  const updates: Record<string, unknown> = {};
+  if (fields.displayName !== undefined) {
+    updates.displayName = fields.displayName;
+  }
+  if (fields.adapterConfig !== undefined) {
+    updates.adapterConfig = fields.adapterConfig;
+  }
+  if (Object.keys(updates).length === 0) {
+    return;
+  }
+  db.update(environments)
+    .set(updates)
+    .where(eq(environments.id, id))
+    .run();
+}
+
 /** Reset all environment statuses to disconnected on server startup. */
 export function resetAllStatuses(): void {
   db.update(environments).set({ status: "disconnected" }).run();

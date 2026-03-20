@@ -58,6 +58,7 @@ function makeEnvironment(id: string, displayName: string, status: string): Envir
     id,
     displayName,
     adapterType: "local",
+    adapterConfig: "{}",
     status,
     bootstrapped: true,
   };

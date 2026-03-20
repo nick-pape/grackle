@@ -729,6 +729,17 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
     [],
   );
 
+  /** Logs an update-environment call (mock does not persist). */
+  const updateEnvironment: UseGrackleSocketResult["updateEnvironment"] = useCallback(
+    (
+      environmentId: string,
+      fields: { displayName?: string; adapterConfig?: Record<string, unknown> },
+    ) => {
+      console.log("[MockGrackle] updateEnvironment", { environmentId, ...fields });
+    },
+    [],
+  );
+
   // ── Token methods ──────────────────────────────────
 
   /** No-op — tokens are already in state from initial load. */
@@ -839,6 +850,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       loadFindings,
       postFinding,
       addEnvironment,
+      updateEnvironment,
       loadTokens,
       setToken: mockSetToken,
       deleteToken: mockDeleteToken,
@@ -945,6 +957,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       loadFindings,
       postFinding,
       addEnvironment,
+      updateEnvironment,
       loadTokens,
       mockSetToken,
       mockDeleteToken,

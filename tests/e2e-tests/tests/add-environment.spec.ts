@@ -7,15 +7,15 @@ test.describe("Add Environment — UI Form", () => {
     await appPage.locator('[data-testid="sidebar-tab-settings"]').click();
   });
 
-  test("clicking + opens new environment form in UnifiedBar", async ({ appPage }) => {
+  test("clicking + opens new environment form in panel", async ({ appPage }) => {
     const page = appPage;
 
     await page.locator('button[title="Add environment"]').click();
 
-    // UnifiedBar should show the "new env" badge and form elements
-    await expect(page.getByText("new env", { exact: true })).toBeVisible();
-    await expect(page.locator('input[placeholder="Environment name..."]')).toBeVisible();
-    await expect(page.locator("button", { hasText: "Add" })).toBeVisible();
+    // Panel should show the "new environment" badge and form elements
+    await expect(page.getByTestId("env-create-panel")).toBeVisible();
+    await expect(page.getByTestId("env-create-name")).toBeVisible();
+    await expect(page.getByTestId("env-create-submit")).toBeVisible();
   });
 
   test("adapter type dropdown defaults to local", async ({ appPage }) => {
@@ -23,33 +23,30 @@ test.describe("Add Environment — UI Form", () => {
 
     await page.locator('button[title="Add environment"]').click();
 
-    // The first select in the form is the adapter type selector
-    const selects = page.locator("select");
     // Adapter type select should default to "local"
-    await expect(selects.first()).toHaveValue("local");
+    await expect(page.getByTestId("env-create-adapter")).toHaveValue("local");
   });
 
-  test("Add button is disabled when name is empty", async ({ appPage }) => {
+  test("Create button is disabled when name is empty", async ({ appPage }) => {
     const page = appPage;
 
     await page.locator('button[title="Add environment"]').click();
 
-    // Wait for the new env form to appear after navigation
-    await expect(page.getByText("new env", { exact: true })).toBeVisible();
-    const addButton = page.locator("button", { hasText: /^Add$/ });
-    await expect(addButton).toBeDisabled();
+    // Wait for the panel to appear
+    await expect(page.getByTestId("env-create-panel")).toBeVisible();
+    const createButton = page.getByTestId("env-create-submit");
+    await expect(createButton).toBeDisabled();
   });
 
-  test("Add button is enabled when name is filled for local adapter", async ({ appPage }) => {
+  test("Create button is enabled when name is filled for local adapter", async ({ appPage }) => {
     const page = appPage;
 
     await page.locator('button[title="Add environment"]').click();
 
-    await page.locator('input[placeholder="Environment name..."]').fill("my-local");
-    // Wait for the new env form to appear after navigation
-    await expect(page.getByText("new env", { exact: true })).toBeVisible();
-    const addButton = page.locator("button", { hasText: /^Add$/ });
-    await expect(addButton).toBeEnabled();
+    await page.getByTestId("env-create-name").fill("my-local");
+    await expect(page.getByTestId("env-create-panel")).toBeVisible();
+    const createButton = page.getByTestId("env-create-submit");
+    await expect(createButton).toBeEnabled();
   });
 
   test("SSH adapter requires host field", async ({ appPage }) => {
@@ -58,53 +55,50 @@ test.describe("Add Environment — UI Form", () => {
     await page.locator('button[title="Add environment"]').click();
 
     // Select SSH adapter
-    const adapterSelect = page.locator("select").first();
-    await adapterSelect.selectOption("ssh");
+    await page.getByTestId("env-create-adapter").selectOption("ssh");
 
     // Fill name but leave host empty
-    await page.locator('input[placeholder="Environment name..."]').fill("my-ssh");
+    await page.getByTestId("env-create-name").fill("my-ssh");
 
-    // Wait for the new env form to appear after navigation
-    await expect(page.getByText("new env", { exact: true })).toBeVisible();
-    const addButton = page.locator("button", { hasText: /^Add$/ });
-    await expect(addButton).toBeDisabled();
+    await expect(page.getByTestId("env-create-panel")).toBeVisible();
+    const createButton = page.getByTestId("env-create-submit");
+    await expect(createButton).toBeDisabled();
 
     // Fill host — now it should be enabled
-    await page.locator('input[placeholder="Host (required)..."]').fill("192.168.1.10");
-    await expect(addButton).toBeEnabled();
+    await page.getByTestId("env-create-host").fill("192.168.1.10");
+    await expect(createButton).toBeEnabled();
   });
 
-  test("Add button is disabled when port is out of range", async ({ appPage }) => {
+  test("Create button is disabled when port is out of range", async ({ appPage }) => {
     const page = appPage;
 
     await page.locator('button[title="Add environment"]').click();
 
     // Fill a valid name so that only port invalidity blocks the button
-    await page.locator('input[placeholder="Environment name..."]').fill("port-test");
+    await page.getByTestId("env-create-name").fill("port-test");
 
-    const portInput = page.locator('input[placeholder="Port (optional)..."]');
-    // Wait for the new env form to appear after navigation
-    await expect(page.getByText("new env", { exact: true })).toBeVisible();
-    const addButton = page.locator("button", { hasText: /^Add$/ });
+    const portInput = page.getByTestId("env-create-port");
+    await expect(page.getByTestId("env-create-panel")).toBeVisible();
+    const createButton = page.getByTestId("env-create-submit");
 
     // Out-of-range low value
     await portInput.fill("0");
-    await expect(addButton).toBeDisabled();
+    await expect(createButton).toBeDisabled();
 
     // Out-of-range high value
     await portInput.fill("99999");
-    await expect(addButton).toBeDisabled();
+    await expect(createButton).toBeDisabled();
 
     // Valid boundary values should re-enable the button
     await portInput.fill("1");
-    await expect(addButton).toBeEnabled();
+    await expect(createButton).toBeEnabled();
 
     await portInput.fill("65535");
-    await expect(addButton).toBeEnabled();
+    await expect(createButton).toBeEnabled();
 
     // Clearing port (optional) keeps the button enabled
     await portInput.fill("");
-    await expect(addButton).toBeEnabled();
+    await expect(createButton).toBeEnabled();
   });
 
   test("switching adapter type shows correct conditional fields", async ({ appPage }) => {
@@ -112,23 +106,61 @@ test.describe("Add Environment — UI Form", () => {
 
     await page.locator('button[title="Add environment"]').click();
 
-    const adapterSelect = page.locator("select").first();
+    const adapterSelect = page.getByTestId("env-create-adapter");
 
     // Local shows host and port (optional)
-    await expect(page.locator('input[placeholder="Host (optional)..."]')).toBeVisible();
-    await expect(page.locator('input[placeholder="Port (optional)..."]')).toBeVisible();
+    await expect(page.getByTestId("env-create-host")).toBeVisible();
+    await expect(page.getByTestId("env-create-port")).toBeVisible();
 
     // Switch to SSH — shows host (required), user, port, identity file
     await adapterSelect.selectOption("ssh");
-    await expect(page.locator('input[placeholder="Host (required)..."]')).toBeVisible();
-    await expect(page.locator('input[placeholder="User (optional)..."]')).toBeVisible();
-    await expect(page.locator('input[placeholder="SSH port (optional)..."]')).toBeVisible();
-    await expect(page.locator('input[placeholder="Identity file (optional)..."]')).toBeVisible();
+    await expect(page.getByTestId("env-create-host")).toBeVisible();
+    await expect(page.getByTestId("env-create-user")).toBeVisible();
+    await expect(page.getByTestId("env-create-port")).toBeVisible();
+    await expect(page.getByTestId("env-create-identity")).toBeVisible();
 
     // Switch to Docker — shows image and repo
     await adapterSelect.selectOption("docker");
-    await expect(page.locator('input[placeholder="Image (optional)..."]')).toBeVisible();
-    await expect(page.locator('input[placeholder="Repo (optional)..."]')).toBeVisible();
+    await expect(page.getByTestId("env-create-image")).toBeVisible();
+    await expect(page.getByTestId("env-create-repo")).toBeVisible();
+  });
+
+  test("add environment via UI form creates environment in server", async ({ appPage }) => {
+    const page = appPage;
+
+    // Switch to Environments (in Settings), open form
+    await page.locator('[data-testid="sidebar-tab-settings"]').click();
+    await page.locator('button[title="Add environment"]').click();
+
+    // Fill in form
+    await page.getByTestId("env-create-name").fill("ui-test-env");
+
+    // Click Create
+    await page.getByTestId("env-create-submit").click();
+
+    // Wait for navigation back to settings to complete
+    await expect(page.getByRole("tablist", { name: "Settings" })).toBeVisible({ timeout: 5_000 });
+
+    // Form should close (back to settings mode)
+    await expect(page.getByTestId("env-create-panel")).not.toBeVisible({ timeout: 5_000 });
+
+    // Environment should appear in the Settings panel environment list
+    await expect(page.getByText("ui-test-env", { exact: true })).toBeVisible({ timeout: 5_000 });
+
+    // Clean up via WS
+    const listResponse = await sendWsAndWaitFor(
+      page,
+      { type: "list_environments" },
+      "environments",
+    );
+    const envs = (listResponse.payload?.environments || []) as Array<{ id: string; displayName: string }>;
+    const added = envs.find((e) => e.displayName === "ui-test-env");
+    if (added) {
+      await sendWsMessage(page, {
+        type: "remove_environment",
+        payload: { environmentId: added.id },
+      });
+    }
   });
 });
 
@@ -279,43 +311,160 @@ test.describe("Add Environment — WebSocket Handler", () => {
 
     expect(response.payload?.message).toContain("adapterConfig string is not valid JSON");
   });
+});
 
-  test("add environment via UI form creates environment in server", async ({ appPage }) => {
+test.describe("Update Environment — WebSocket Handler", () => {
+  test("update_environment changes displayName", async ({ appPage }) => {
     const page = appPage;
 
-    // Switch to Environments (in Settings), open form
-    await page.locator('[data-testid="sidebar-tab-settings"]').click();
-    await page.locator('button[title="Add environment"]').click();
+    // First create an environment to update
+    const addResponse = await sendWsAndWaitFor(
+      page,
+      {
+        type: "add_environment",
+        payload: {
+          displayName: "update-name-test",
+          adapterType: "local",
+          adapterConfig: {},
+        },
+      },
+      "environment.added",
+    );
+    const environmentId = addResponse.payload?.environmentId as string;
+    expect(environmentId).toBeTruthy();
 
-    // Fill in form
-    await page.locator('input[placeholder="Environment name..."]').fill("ui-test-env");
+    // Update the name
+    await sendWsAndWaitFor(
+      page,
+      {
+        type: "update_environment",
+        payload: {
+          environmentId,
+          displayName: "updated-name",
+        },
+      },
+      "environment.changed",
+    );
 
-    // Click Add
-    await page.locator("button", { hasText: /^Add$/ }).click();
-
-    // Wait for navigation back to settings to complete
-    await expect(page.getByRole("tablist", { name: "Settings" })).toBeVisible({ timeout: 5_000 });
-
-    // Form should close (back to settings mode)
-    await expect(page.getByText("new env", { exact: true })).not.toBeVisible({ timeout: 5_000 });
-
-    // Environment should appear in the Settings panel environment list
-    await expect(page.getByText("ui-test-env", { exact: true })).toBeVisible({ timeout: 5_000 });
-
-    // Clean up via WS
-    // First find the environment ID from list_environments
+    // Verify the name changed
     const listResponse = await sendWsAndWaitFor(
       page,
       { type: "list_environments" },
       "environments",
     );
     const envs = (listResponse.payload?.environments || []) as Array<{ id: string; displayName: string }>;
-    const added = envs.find((e) => e.displayName === "ui-test-env");
-    if (added) {
-      await sendWsMessage(page, {
-        type: "remove_environment",
-        payload: { environmentId: added.id },
-      });
-    }
+    const updated = envs.find((e) => e.id === environmentId);
+    expect(updated?.displayName).toBe("updated-name");
+
+    // Clean up
+    await sendWsMessage(page, {
+      type: "remove_environment",
+      payload: { environmentId },
+    });
+  });
+
+  test("update_environment changes adapterConfig", async ({ appPage }) => {
+    const page = appPage;
+
+    const addResponse = await sendWsAndWaitFor(
+      page,
+      {
+        type: "add_environment",
+        payload: {
+          displayName: "update-config-test",
+          adapterType: "local",
+          adapterConfig: {},
+        },
+      },
+      "environment.added",
+    );
+    const environmentId = addResponse.payload?.environmentId as string;
+
+    // Update the config
+    await sendWsAndWaitFor(
+      page,
+      {
+        type: "update_environment",
+        payload: {
+          environmentId,
+          adapterConfig: { host: "1.2.3.4", port: 9999 },
+        },
+      },
+      "environment.changed",
+    );
+
+    // Verify the config changed
+    const listResponse = await sendWsAndWaitFor(
+      page,
+      { type: "list_environments" },
+      "environments",
+    );
+    const envs = (listResponse.payload?.environments || []) as Array<{
+      id: string;
+      adapterConfig: string;
+    }>;
+    const updated = envs.find((e) => e.id === environmentId);
+    expect(JSON.parse(updated!.adapterConfig)).toEqual({ host: "1.2.3.4", port: 9999 });
+
+    // Clean up
+    await sendWsMessage(page, {
+      type: "remove_environment",
+      payload: { environmentId },
+    });
+  });
+
+  test("update_environment rejects empty name", async ({ appPage }) => {
+    const page = appPage;
+
+    const addResponse = await sendWsAndWaitFor(
+      page,
+      {
+        type: "add_environment",
+        payload: {
+          displayName: "empty-name-test",
+          adapterType: "local",
+        },
+      },
+      "environment.added",
+    );
+    const environmentId = addResponse.payload?.environmentId as string;
+
+    const response = await sendWsAndWaitFor(
+      page,
+      {
+        type: "update_environment",
+        payload: {
+          environmentId,
+          displayName: "  ",
+        },
+      },
+      "error",
+    );
+
+    expect(response.payload?.message).toContain("Environment name cannot be empty");
+
+    // Clean up
+    await sendWsMessage(page, {
+      type: "remove_environment",
+      payload: { environmentId },
+    });
+  });
+
+  test("update_environment rejects unknown environment ID", async ({ appPage }) => {
+    const page = appPage;
+
+    const response = await sendWsAndWaitFor(
+      page,
+      {
+        type: "update_environment",
+        payload: {
+          environmentId: "nonexistent-env-id",
+          displayName: "should-fail",
+        },
+      },
+      "error",
+    );
+
+    expect(response.payload?.message).toContain("Environment not found");
   });
 });

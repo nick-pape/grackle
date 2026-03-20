@@ -136,6 +136,10 @@ export interface UseGrackleSocketResult {
     adapterType: string,
     adapterConfig?: Record<string, unknown>,
   ) => void;
+  updateEnvironment: (
+    environmentId: string,
+    fields: { displayName?: string; adapterConfig?: Record<string, unknown> },
+  ) => void;
   loadTokens: () => void;
   setToken: (
     name: string,
@@ -383,6 +387,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
     loadFindings: findingsHook.loadFindings,
     postFinding: findingsHook.postFinding,
     addEnvironment: environmentsHook.addEnvironment,
+    updateEnvironment: environmentsHook.updateEnvironment,
     loadTokens: tokensHook.loadTokens,
     setToken: tokensHook.setToken,
     deleteToken: tokensHook.deleteToken,

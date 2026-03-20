@@ -23,6 +23,11 @@ export interface UseEnvironmentsResult {
     adapterType: string,
     adapterConfig?: Record<string, unknown>,
   ) => void;
+  /** Update an existing environment's mutable fields. */
+  updateEnvironment: (
+    environmentId: string,
+    fields: { displayName?: string; adapterConfig?: Record<string, unknown> },
+  ) => void;
   /** Provision an environment by ID. */
   provisionEnvironment: (environmentId: string) => void;
   /** Stop an environment by ID. */
@@ -137,6 +142,17 @@ export function useEnvironments(send: SendFunction): UseEnvironmentsResult {
     [send],
   );
 
+  const updateEnvironment = useCallback(
+    (
+      environmentId: string,
+      fields: { displayName?: string; adapterConfig?: Record<string, unknown> },
+    ) => {
+      const payload: Record<string, unknown> = { environmentId, ...fields };
+      send({ type: "update_environment", payload });
+    },
+    [send],
+  );
+
   const provisionEnvironment = useCallback(
     (environmentId: string) => {
       send({ type: "provision_environment", payload: { environmentId } });
@@ -162,6 +178,7 @@ export function useEnvironments(send: SendFunction): UseEnvironmentsResult {
     environments,
     provisionStatus,
     addEnvironment,
+    updateEnvironment,
     provisionEnvironment,
     stopEnvironment,
     removeEnvironment,
