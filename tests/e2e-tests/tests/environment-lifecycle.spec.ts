@@ -4,7 +4,6 @@ import {
   sendWsMessage,
   installWsTracker,
   injectWsMessage,
-  getSidebarWorkspaceLabel,
 } from "./helpers.js";
 
 function getEnvironmentRow(page: import("@playwright/test").Page, name: string) {

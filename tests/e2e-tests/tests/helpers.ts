@@ -155,7 +155,7 @@ export async function clickSidebarLabel(page: Page, label: string): Promise<void
   await getSidebarWorkspaceLabel(page, label).click();
 }
 
-/** @deprecated Use {@link clickSidebarLabel} instead. */
+/** Alias of {@link clickSidebarLabel} for backwards compatibility. */
 export const clickSidebarWorkspace = clickSidebarLabel;
 
 /**
