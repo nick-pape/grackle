@@ -1,0 +1,170 @@
+@use '../../styles/mixins' as *;
+
+// =============================================================================
+// Environment Edit Panel — full-panel create/edit form for environments
+// =============================================================================
+
+.container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+// ---------------------------------------------------------------------------
+// Header
+// ---------------------------------------------------------------------------
+
+.header {
+  @include surface-panel;
+  padding: var(--space-sm) var(--space-md);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  flex-shrink: 0;
+}
+
+.headerTitle {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.badge {
+  background: var(--accent-green-dim);
+  color: var(--accent-green);
+  border: 1px solid var(--accent-green);
+  border-radius: var(--radius-full);
+  padding: 1px var(--space-sm);
+  font-size: var(--font-size-xs);
+  font-family: var(--font-mono);
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-shrink: 0;
+}
+
+// ---------------------------------------------------------------------------
+// Form body
+// ---------------------------------------------------------------------------
+
+.body {
+  flex: 1;
+  overflow: auto;
+  padding: var(--space-lg);
+  width: 100%;
+
+  @include mobile {
+    padding: var(--space-md);
+  }
+}
+
+.formContent {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  max-width: 680px;
+
+  @include mobile {
+    max-width: 100%;
+  }
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.label {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.nameInput {
+  @include input-field;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+  padding: var(--space-sm) var(--space-md);
+  width: 100%;
+}
+
+.fieldInput {
+  @include input-field;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  padding: var(--space-sm) var(--space-md);
+  width: 100%;
+  max-width: 400px;
+}
+
+.adapterSelect {
+  @include input-field;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  padding: var(--space-xs) var(--space-sm);
+  width: 100%;
+  max-width: 320px;
+  cursor: pointer;
+}
+
+.readOnlyValue {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  padding: var(--space-xs) 0;
+}
+
+// ---------------------------------------------------------------------------
+// Codespace picker
+// ---------------------------------------------------------------------------
+
+.codespaceSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.codespaceActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.creatingHint {
+  font-size: var(--font-size-sm);
+  color: var(--accent-blue);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.errorHint {
+  font-size: var(--font-size-sm);
+  color: var(--accent-red);
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+// ---------------------------------------------------------------------------
+// Buttons
+// ---------------------------------------------------------------------------
+
+.btnPrimary {
+  @include btn-primary;
+}
+
+.btnGhost {
+  @include btn-ghost(var(--text-secondary));
+}

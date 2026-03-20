@@ -4,7 +4,7 @@ import { useGrackle } from "../../context/GrackleContext.js";
 import { useToast } from "../../context/ToastContext.js";
 import type { Environment } from "../../hooks/useGrackleSocket.js";
 import { ROOT_TASK_ID } from "@grackle-ai/common";
-import { SETTINGS_URL, newTaskUrl, newChatUrl, useAppNavigate } from "../../utils/navigation.js";
+import { newTaskUrl, newChatUrl, useAppNavigate } from "../../utils/navigation.js";
 import styles from "./UnifiedBar.module.scss";
 
 // --- Subcomponents ---
@@ -47,8 +47,7 @@ function DisconnectedBanner({ environmentId, onReconnect }: DisconnectedBannerPr
 export function UnifiedBar(): JSX.Element {
   const {
     spawn, sendInput, kill, sessions, tasks, environments, personas,
-    addEnvironment, provisionEnvironment, startTask, taskSessions,
-    codespaces, codespaceError, codespaceListError, codespaceCreating, listCodespaces, createCodespace,
+    provisionEnvironment, startTask, taskSessions,
   } = useGrackle();
   const { showToast } = useToast();
   const navigate = useAppNavigate();
@@ -66,6 +65,7 @@ export function UnifiedBar(): JSX.Element {
   const wsTaskEditMatch = useMatch("/workspaces/:workspaceId/tasks/:taskId/edit");
   const newChatMatch = useMatch("/sessions/new");
   const newEnvMatch = useMatch("/environments/new");
+  const envEditMatch = useMatch("/environments/:environmentId");
   const workspaceMatch = useMatch("/workspaces/:workspaceId");
   const newTaskMatch = useMatch("/tasks/new");
   const chatMatch = useMatch("/chat");
@@ -79,6 +79,7 @@ export function UnifiedBar(): JSX.Element {
   const isChat = !!chatMatch;
   const isNewChat = !!newChatMatch;
   const isNewEnv = !!newEnvMatch;
+  const isEnvEdit = !!envEditMatch && !isNewEnv;
   const isWorkspace = !!workspaceMatch && !wsTaskMatch && !wsTaskStreamMatch && !wsTaskFindingsMatch && !wsTaskEditMatch;
   const isNewTask = !!newTaskMatch;
   const isTaskEdit = !!taskEditMatch || !!wsTaskEditMatch;
@@ -90,20 +91,6 @@ export function UnifiedBar(): JSX.Element {
 
   const [text, setText] = useState("");
   const [spawnPersonaId, setSpawnPersonaId] = useState("");
-
-  // ─── New environment form state ─────────────────
-  const [envName, setEnvName] = useState("");
-  const [envAdapterType, setEnvAdapterType] = useState("local");
-  const [envHost, setEnvHost] = useState("");
-  const [envPort, setEnvPort] = useState("");
-  const [envUser, setEnvUser] = useState("");
-  const [envImage, setEnvImage] = useState("");
-  const [envRepo, setEnvRepo] = useState("");
-  const [envCodespaceName, setEnvCodespaceName] = useState("");
-  const [envIdentityFile, setEnvIdentityFile] = useState("");
-  const [envCreateRepo, setEnvCreateRepo] = useState("");
-  const [envCreateMachine, setEnvCreateMachine] = useState("");
-  const [envCodespaceMode, setEnvCodespaceMode] = useState<"pick" | "create">("pick");
 
   const session = sessionId
     ? sessions.find((s) => s.id === sessionId)
@@ -202,232 +189,9 @@ export function UnifiedBar(): JSX.Element {
     return <></>;
   }
 
-  // --- edit_task / new_task mode — form is in main panel, bar is hidden ---
-  if (isTaskEdit || isNewTask) {
+  // --- edit_task / new_task / new_env / edit_env — form is in main panel, bar is hidden ---
+  if (isTaskEdit || isNewTask || isNewEnv || isEnvEdit) {
     return <></>;
-  }
-
-  // --- new_environment mode ---
-  if (isNewEnv) {
-    /** Returns true if portStr is empty (optional) or a valid integer in [1, 65535]. */
-    const isPortValid = (portStr: string): boolean => {
-      if (!portStr.trim()) {
-        return true;
-      }
-      const n = Number(portStr);
-      return Number.isInteger(n) && n >= 1 && n <= 65535;
-    };
-
-    const isEnvValid = (): boolean => {
-      if (!envName.trim()) {
-        return false;
-      }
-      if (envAdapterType === "ssh" && !envHost.trim()) {
-        return false;
-      }
-      if (envAdapterType === "codespace" && !envCodespaceName.trim()) {
-        return false;
-      }
-      if ((envAdapterType === "local" || envAdapterType === "ssh") && !isPortValid(envPort)) {
-        return false;
-      }
-      return true;
-    };
-
-    const handleAddEnvironment = (): void => {
-      if (!isEnvValid()) {
-        return;
-      }
-      const config: Record<string, unknown> = {};
-      if (envAdapterType === "local") {
-        if (envHost.trim()) {
-          config.host = envHost.trim();
-        }
-        if (envPort.trim()) {
-          const n = Number(envPort);
-          if (Number.isInteger(n)) {
-            config.port = n;
-          }
-        }
-      } else if (envAdapterType === "ssh") {
-        config.host = envHost.trim();
-        if (envUser.trim()) {
-          config.user = envUser.trim();
-        }
-        if (envPort.trim()) {
-          const n = Number(envPort);
-          if (Number.isInteger(n)) {
-            config.sshPort = n;
-          }
-        }
-        if (envIdentityFile.trim()) {
-          config.identityFile = envIdentityFile.trim();
-        }
-      } else if (envAdapterType === "docker") {
-        if (envImage.trim()) {
-          config.image = envImage.trim();
-        }
-        if (envRepo.trim()) {
-          config.repo = envRepo.trim();
-        }
-      } else if (envAdapterType === "codespace") {
-        config.codespaceName = envCodespaceName.trim();
-      }
-      addEnvironment(envName.trim(), envAdapterType, config);
-      showToast("Environment added successfully", "success");
-      setEnvName("");
-      setEnvAdapterType("local");
-      setEnvHost("");
-      setEnvPort("");
-      setEnvUser("");
-      setEnvImage("");
-      setEnvRepo("");
-      setEnvCodespaceName("");
-      setEnvIdentityFile("");
-      setEnvCreateRepo("");
-      setEnvCreateMachine("");
-      setEnvCodespaceMode("pick");
-      navigate(SETTINGS_URL, { replace: true });
-    };
-
-    return (
-      <div className={styles.barColumn}>
-        <div className={styles.barRow}>
-          <span className={styles.badge}>new env</span>
-          <input
-            type="text"
-            value={envName}
-            onChange={(e) => setEnvName(e.target.value)}
-            placeholder="Environment name..."
-            autoFocus
-            className={styles.input}
-          />
-          <select
-            value={envAdapterType}
-            onChange={(e) => {
-              setEnvAdapterType(e.target.value);
-              if (e.target.value === "codespace") {
-                listCodespaces();
-                setEnvCodespaceMode("pick");
-                setEnvCodespaceName("");
-              }
-            }}
-            className={styles.select}
-          >
-            <option value="local">local</option>
-            <option value="ssh">ssh</option>
-            <option value="docker">docker</option>
-            <option value="codespace">codespace</option>
-          </select>
-          <button
-            onClick={handleAddEnvironment}
-            disabled={!isEnvValid()}
-            className={styles.btnPrimary}
-          >
-            Add
-          </button>
-        </div>
-        <div className={styles.barRow}>
-          {envAdapterType === "local" && (
-            <>
-              <input type="text" value={envHost} onChange={(e) => setEnvHost(e.target.value)} placeholder="Host (optional)..." className={styles.inputSmall} />
-              <input type="number" min={1} max={65535} value={envPort} onChange={(e) => setEnvPort(e.target.value)} placeholder="Port (optional)..." className={styles.inputSmall} />
-            </>
-          )}
-          {envAdapterType === "ssh" && (
-            <>
-              <input type="text" value={envHost} onChange={(e) => setEnvHost(e.target.value)} placeholder="Host (required)..." className={styles.inputSmall} />
-              <input type="text" value={envUser} onChange={(e) => setEnvUser(e.target.value)} placeholder="User (optional)..." className={styles.inputSmall} />
-              <input type="number" min={1} max={65535} value={envPort} onChange={(e) => setEnvPort(e.target.value)} placeholder="SSH port (optional)..." className={styles.inputSmall} />
-              <input type="text" value={envIdentityFile} onChange={(e) => setEnvIdentityFile(e.target.value)} placeholder="Identity file (optional)..." className={styles.inputSmall} />
-            </>
-          )}
-          {envAdapterType === "docker" && (
-            <>
-              <input type="text" value={envImage} onChange={(e) => setEnvImage(e.target.value)} placeholder="Image (optional)..." className={styles.inputSmall} />
-              <input type="text" value={envRepo} onChange={(e) => setEnvRepo(e.target.value)} placeholder="Repo (optional)..." className={styles.inputSmall} />
-            </>
-          )}
-          {envAdapterType === "codespace" && envCodespaceMode === "pick" && (
-            <>
-              {!codespaceListError && (
-                <select
-                  value={envCodespaceName}
-                  onChange={(e) => {
-                    if (e.target.value === "__create__") {
-                      setEnvCodespaceMode("create");
-                      setEnvCodespaceName("");
-                    } else {
-                      setEnvCodespaceName(e.target.value);
-                      if (e.target.value && !envName.trim()) {
-                        setEnvName(e.target.value);
-                      }
-                    }
-                  }}
-                  disabled={codespaceCreating}
-                  className={styles.select}
-                >
-                  <option value="">Select a codespace...</option>
-                  {codespaces.map((cs) => (
-                    <option key={cs.name} value={cs.name}>
-                      {cs.name} ({cs.repository}) — {cs.state}
-                    </option>
-                  ))}
-                  <option value="__create__">Create new from repo...</option>
-                </select>
-              )}
-              {codespaceCreating && (
-                <span className={styles.creatingHint}>Creating codespace...</span>
-              )}
-              {codespaceListError && (
-                <>
-                  <span className={styles.errorHint}>{codespaceListError}</span>
-                  <input
-                    type="text"
-                    value={envCodespaceName}
-                    onChange={(e) => setEnvCodespaceName(e.target.value)}
-                    placeholder="Or enter codespace name manually..."
-                    className={styles.inputSmall}
-                  />
-                </>
-              )}
-              {codespaceError && !codespaceListError && (
-                <span className={styles.errorHint}>{codespaceError}</span>
-              )}
-            </>
-          )}
-          {envAdapterType === "codespace" && envCodespaceMode === "create" && (
-            <>
-              <input type="text" value={envCreateRepo} onChange={(e) => setEnvCreateRepo(e.target.value)} placeholder="owner/repo" className={styles.inputSmall} />
-              <input type="text" value={envCreateMachine} onChange={(e) => setEnvCreateMachine(e.target.value)} placeholder="Machine type (optional)..." className={styles.inputSmall} />
-              <button
-                onClick={() => {
-                  if (envCreateRepo.trim()) {
-                    createCodespace(
-                      envCreateRepo.trim(),
-                      envCreateMachine.trim() || undefined,
-                    );
-                    setEnvCodespaceMode("pick");
-                    setEnvCreateRepo("");
-                    setEnvCreateMachine("");
-                  }
-                }}
-                disabled={!envCreateRepo.trim()}
-                className={styles.btnPrimary}
-              >
-                Create
-              </button>
-              <button
-                onClick={() => { setEnvCodespaceMode("pick"); setEnvCreateRepo(""); setEnvCreateMachine(""); }}
-                className={styles.btnGhost}
-              >
-                Cancel
-              </button>
-            </>
-          )}
-        </div>
-      </div>
-    );
   }
 
   // --- workspace mode (no specific task) ---

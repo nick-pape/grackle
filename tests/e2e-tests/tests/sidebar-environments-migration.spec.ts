@@ -107,19 +107,19 @@ test.describe("Environments in Settings Panel", () => {
     await expect(envRows.first()).toBeVisible();
   });
 
-  test("clicking + Add Environment opens form and returns to Settings after submit", async ({ appPage }) => {
+  test("clicking + Add Environment opens form panel and returns to Settings after submit", async ({ appPage }) => {
     const page = appPage;
 
     // Click + Add Environment
     await page.locator('button[title="Add environment"]').click();
 
-    // Form should appear in UnifiedBar
-    await expect(page.getByText("new env", { exact: true })).toBeVisible();
-    await expect(page.locator('input[placeholder="Environment name..."]')).toBeVisible();
+    // Form should appear in the main panel (not UnifiedBar)
+    await expect(page.getByTestId("env-create-panel")).toBeVisible();
+    await expect(page.getByTestId("env-create-name")).toBeVisible();
 
     // Fill name and submit
-    await page.locator('input[placeholder="Environment name..."]').fill("settings-test-env");
-    await page.locator("button", { hasText: "Add" }).click();
+    await page.getByTestId("env-create-name").fill("settings-test-env");
+    await page.getByTestId("env-create-submit").click();
 
     // Should return to Settings panel (not empty mode)
     await expect(page.getByRole("tablist", { name: "Settings" })).toBeVisible({ timeout: 5_000 });

@@ -21,6 +21,7 @@ import { NewTaskPage } from "./pages/NewTaskPage.js";
 import { TaskEditPage } from "./pages/TaskEditPage.js";
 import { TaskPage } from "./pages/TaskPage.js";
 import { NewEnvironmentPage } from "./pages/NewEnvironmentPage.js";
+import { EnvironmentEditPage } from "./pages/EnvironmentEditPage.js";
 import { SettingsPage } from "./pages/SettingsPage.js";
 import { SettingsEnvironmentsTab } from "./pages/settings/SettingsEnvironmentsTab.js";
 import { SettingsCredentialsTab } from "./pages/settings/SettingsCredentialsTab.js";
@@ -135,6 +136,7 @@ function AppRoutes(): JSX.Element {
         <Route path="sessions/new" element={<NewChatPage />} />
         <Route path="sessions/:sessionId" element={<SessionPage />} />
         <Route path="environments/new" element={<NewEnvironmentPage />} />
+        <Route path="environments/:environmentId" element={<EnvironmentEditPage />} />
         <Route path="settings" element={<SettingsPage />}>
           <Route index element={<Navigate to="environments" replace />} />
           <Route path="environments" element={<SettingsEnvironmentsTab />} />

@@ -6,11 +6,28 @@
 
 // ─── Data interfaces ──────────────────────────────────────────────────────────
 
-/** A provisioned environment with its current status. */
+/**
+ * A provisioned environment with its current status.
+ * After normalization, `adapterConfig` is always a JSON string.
+ */
 export interface Environment {
   id: string;
   displayName: string;
   adapterType: string;
+  adapterConfig: string;
+  status: string;
+  bootstrapped: boolean;
+}
+
+/**
+ * Raw environment shape from the server — `adapterConfig` may be absent
+ * on older servers. Use {@link normalizeEnvironment} to fill in defaults.
+ */
+interface RawEnvironment {
+  id: string;
+  displayName: string;
+  adapterType: string;
+  adapterConfig?: string;
   status: string;
   bootstrapped: boolean;
 }
@@ -190,16 +207,28 @@ export function isGrackleEvent(v: unknown): v is GrackleEvent {
   );
 }
 
-/** Type guard for {@link Environment}. */
-export function isEnvironment(v: unknown): v is Environment {
+/** Type guard for {@link RawEnvironment} (pre-normalization). */
+export function isEnvironment(v: unknown): v is RawEnvironment {
   return (
     isObject(v) &&
     typeof v.id === "string" &&
     typeof v.displayName === "string" &&
     typeof v.adapterType === "string" &&
     typeof v.status === "string" &&
-    typeof v.bootstrapped === "boolean"
+    typeof v.bootstrapped === "boolean" &&
+    (typeof v.adapterConfig === "string" || v.adapterConfig === undefined)
   );
+}
+
+/**
+ * Normalize a raw environment from the server into a fully-typed {@link Environment}.
+ * Defaults `adapterConfig` to `"{}"` when missing (backwards compat with older servers).
+ */
+export function normalizeEnvironment(raw: RawEnvironment): Environment {
+  return {
+    ...raw,
+    adapterConfig: raw.adapterConfig ?? "{}",
+  };
 }
 
 /** Type guard for {@link Session}. */

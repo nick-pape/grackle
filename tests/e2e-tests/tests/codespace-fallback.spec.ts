@@ -51,9 +51,8 @@ test.describe("Codespace — manual entry fallback", () => {
     // Navigate to Settings → Add Environment
     await codespaceErrorPage.locator('[data-testid="sidebar-tab-settings"]').click();
     await codespaceErrorPage.locator('button[title="Add environment"]').click();
-    // Select the codespace adapter
-    const adapterSelect = codespaceErrorPage.locator("select").first();
-    await adapterSelect.selectOption("codespace");
+    // Select the codespace adapter in the panel form
+    await codespaceErrorPage.getByTestId("env-create-adapter").selectOption("codespace");
   });
 
   test("shows manual entry input when codespace listing fails", async ({
@@ -61,7 +60,7 @@ test.describe("Codespace — manual entry fallback", () => {
   }) => {
     // Manual input fallback should appear
     await expect(
-      page.locator('input[placeholder="Or enter codespace name manually..."]'),
+      page.getByTestId("env-codespace-manual"),
     ).toBeVisible();
 
     // Error message text should be visible
@@ -71,30 +70,26 @@ test.describe("Codespace — manual entry fallback", () => {
 
     // Select dropdown should be hidden when list error is present
     await expect(
-      page.locator("select", { has: page.locator('option:text("Select a codespace...")') }),
+      page.getByTestId("env-codespace-select"),
     ).not.toBeVisible();
   });
 
-  test("manual entry enables the Add button", async ({
+  test("manual entry enables the Create button", async ({
     codespaceErrorPage: page,
   }) => {
     // Wait for the manual input to appear
     await expect(
-      page.locator('input[placeholder="Or enter codespace name manually..."]'),
+      page.getByTestId("env-codespace-manual"),
     ).toBeVisible();
 
     // Fill environment name
-    await page
-      .locator('input[placeholder="Environment name..."]')
-      .fill("my-cs");
+    await page.getByTestId("env-create-name").fill("my-cs");
 
     // Fill manual codespace name
-    await page
-      .locator('input[placeholder="Or enter codespace name manually..."]')
-      .fill("my-codespace-name");
+    await page.getByTestId("env-codespace-manual").fill("my-codespace-name");
 
-    // Add button should be enabled
-    const addButton = page.locator("button", { hasText: /^Add$/ });
-    await expect(addButton).toBeEnabled();
+    // Create button should be enabled
+    const createButton = page.getByTestId("env-create-submit");
+    await expect(createButton).toBeEnabled();
   });
 });

@@ -4,7 +4,7 @@ import { useMatch, useSearchParams } from "react-router";
 import { useGrackle } from "../../context/GrackleContext.js";
 import type { Environment, ProvisionStatus, Session } from "../../hooks/useGrackleSocket.js";
 import { ConfirmDialog } from "../display/index.js";
-import { sessionUrl, newChatUrl, NEW_ENVIRONMENT_URL, useAppNavigate } from "../../utils/navigation.js";
+import { sessionUrl, newChatUrl, NEW_ENVIRONMENT_URL, environmentEditUrl, useAppNavigate } from "../../utils/navigation.js";
 import styles from "./EnvironmentList.module.scss";
 
 /** Environment status colors using CSS custom properties. */
@@ -170,6 +170,16 @@ function EnvironmentCard({
               Stop
             </button>
           )}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(environmentEditUrl(env.id));
+            }}
+            className={styles.editButton}
+            data-testid="env-edit-btn"
+          >
+            Edit
+          </button>
           {!isConnecting && (
             <button
               onClick={(e) => {

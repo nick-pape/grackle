@@ -6,7 +6,7 @@
 
 import { useState, useCallback } from "react";
 import type { Environment, ProvisionStatus, WsMessage, SendFunction, GrackleEvent } from "./types.js";
-import { asValidArray, isEnvironment, warnBadPayload } from "./types.js";
+import { asValidArray, isEnvironment, normalizeEnvironment, warnBadPayload } from "./types.js";
 
 /** Delay in milliseconds before clearing a successful provision status. */
 const PROVISION_STATUS_CLEAR_DELAY_MS: number = 5_000;
@@ -22,6 +22,11 @@ export interface UseEnvironmentsResult {
     displayName: string,
     adapterType: string,
     adapterConfig?: Record<string, unknown>,
+  ) => void;
+  /** Update an existing environment's mutable fields. */
+  updateEnvironment: (
+    environmentId: string,
+    fields: { displayName?: string; adapterConfig?: Record<string, unknown> },
   ) => void;
   /** Provision an environment by ID. */
   provisionEnvironment: (environmentId: string) => void;
@@ -113,7 +118,7 @@ export function useEnvironments(send: SendFunction): UseEnvironmentsResult {
             isEnvironment,
             "environments",
             "environments",
-          ),
+          ).map(normalizeEnvironment),
         );
         return true;
       default:
@@ -133,6 +138,17 @@ export function useEnvironments(send: SendFunction): UseEnvironmentsResult {
         adapterConfig: adapterConfig || {},
       };
       send({ type: "add_environment", payload });
+    },
+    [send],
+  );
+
+  const updateEnvironment = useCallback(
+    (
+      environmentId: string,
+      fields: { displayName?: string; adapterConfig?: Record<string, unknown> },
+    ) => {
+      const payload: Record<string, unknown> = { environmentId, ...fields };
+      send({ type: "update_environment", payload });
     },
     [send],
   );
@@ -162,6 +178,7 @@ export function useEnvironments(send: SendFunction): UseEnvironmentsResult {
     environments,
     provisionStatus,
     addEnvironment,
+    updateEnvironment,
     provisionEnvironment,
     stopEnvironment,
     removeEnvironment,

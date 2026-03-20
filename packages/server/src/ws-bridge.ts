@@ -1719,6 +1719,66 @@ async function handleMessage(
       break;
     }
 
+    case "update_environment": {
+      const environmentId = msg.payload?.environmentId as string;
+      if (!environmentId) {
+        sendWs(ws, { type: "error", payload: { message: "environmentId required" } });
+        return;
+      }
+      const existing = envRegistry.getEnvironment(environmentId);
+      if (!existing) {
+        sendWs(ws, { type: "error", payload: { message: `Environment not found: ${environmentId}` } });
+        return;
+      }
+      const nameVal = typeof msg.payload?.displayName === "string" ? msg.payload.displayName : undefined;
+      if (nameVal?.trim() === "") {
+        sendWs(ws, { type: "error", payload: { message: "Environment name cannot be empty" } });
+        return;
+      }
+      let configVal: string | undefined;
+      const rawConfig = msg.payload?.adapterConfig;
+      if (rawConfig !== undefined) {
+        if (rawConfig === null) {
+          configVal = "{}";
+        } else if (typeof rawConfig === "string") {
+          const normalized = rawConfig.trim() === "" ? "{}" : rawConfig;
+          let parsed: unknown;
+          try {
+            parsed = JSON.parse(normalized);
+          } catch {
+            sendWs(ws, { type: "error", payload: { message: "adapterConfig string is not valid JSON" } });
+            return;
+          }
+          if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+            sendWs(ws, { type: "error", payload: { message: "adapterConfig must be a JSON object" } });
+            return;
+          }
+          configVal = normalized;
+        } else if (typeof rawConfig === "object") {
+          if (Array.isArray(rawConfig)) {
+            sendWs(ws, { type: "error", payload: { message: "adapterConfig must be a JSON object" } });
+            return;
+          }
+          configVal = JSON.stringify(rawConfig);
+        } else {
+          sendWs(ws, { type: "error", payload: { message: "adapterConfig must be a JSON object" } });
+          return;
+        }
+      }
+      const trimmedName = nameVal !== undefined ? nameVal.trim() : undefined;
+      if (trimmedName === undefined && configVal === undefined) {
+        sendWs(ws, { type: "error", payload: { message: "No updatable fields provided" } });
+        return;
+      }
+      envRegistry.updateEnvironment(environmentId, {
+        displayName: trimmedName,
+        adapterConfig: configVal,
+      });
+      logger.info({ environmentId, displayName: trimmedName }, "Environment updated via WebSocket");
+      emit("environment.changed", {});
+      break;
+    }
+
     case "remove_environment": {
       const environmentId = msg.payload?.environmentId as string;
       if (!environmentId) {
