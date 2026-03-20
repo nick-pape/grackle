@@ -107,12 +107,12 @@ function TaskOverview({ task, tasksById, environments, workspaces, taskSessions,
       <div className={styles.overviewSection}>
         <div className={styles.overviewLabel}>Environment</div>
         {envId && env ? (
-          <div className={styles.envRow}>
+          <div className={styles.envRow} data-testid="task-overview-environment">
             <span className={`${styles.envDot} ${envStatusClass(env.status)}`} title={env.status} aria-label={`Status: ${env.status}`} role="img" />
             <span className={styles.overviewValue}>{env.displayName}</span>
           </div>
         ) : selectedEnv ? (
-          <div className={styles.envRow}>
+          <div className={styles.envRow} data-testid="task-overview-environment">
             <span className={`${styles.envDot} ${envStatusClass(selectedEnv.status)}`} title={selectedEnv.status} aria-label={`Status: ${selectedEnv.status}`} role="img" />
             <span className={styles.overviewValue}>{selectedEnv.displayName}</span>
             <span className={styles.overviewMuted}>(workspace default)</span>
@@ -502,7 +502,7 @@ export function TaskPage(): JSX.Element {
       {/* Tab content */}
       <AnimatePresence mode="wait">
         {activeTaskTab === "overview" && (
-          <motion.div key="overview" initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.15 }} className={styles.overviewContent}>
+          <motion.div key="overview" initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.15 }} className={styles.overviewContent} data-testid="task-overview">
             {task ? (
               <TaskOverview task={task} tasksById={tasksById} environments={environments} workspaces={workspaces} taskSessions={currentTaskSessions} selectedEnvId={selectedEnvId} />
             ) : (

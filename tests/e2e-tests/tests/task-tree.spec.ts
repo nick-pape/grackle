@@ -1,5 +1,6 @@
 import { test, expect } from "./fixtures.js";
 import {
+  clickSidebarWorkspace,
   createWorkspace,
   createTask,
   getWorkspaceId,
@@ -170,7 +171,7 @@ test.describe("Task tree hierarchy", () => {
     await createTaskViaWs(page, workspaceId, "bc-child", { parentTaskId: rootId });
 
     // Click the child task in the sidebar
-    await page.getByText("bc-child").first().click();
+    await clickSidebarWorkspace(page, "bc-child");
 
     // Breadcrumb nav should be visible
     const breadcrumbs = page.getByTestId("breadcrumbs");
@@ -195,7 +196,7 @@ test.describe("Task tree hierarchy", () => {
     await createTaskViaWs(page, workspaceId, "nav-child", { parentTaskId: rootId });
 
     // Navigate to child
-    await page.getByText("nav-child").first().click();
+    await clickSidebarWorkspace(page, "nav-child");
     await expect(page.locator('[data-testid="task-title"]')).toContainText("nav-child", { timeout: 5_000 });
 
     // Click the parent task in the breadcrumb trail

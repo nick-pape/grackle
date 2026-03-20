@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type JSX } from "react";
-import { useMatch } from "react-router";
+import { useMatch, useLocation } from "react-router";
 import { useGrackle } from "../../context/GrackleContext.js";
 import type { TaskData } from "../../hooks/useGrackleSocket.js";
 import { AnimatePresence, motion } from "motion/react";
 import { MAX_TASK_DEPTH, fuzzySearch, type FuzzyKey, type MatchIndex } from "@grackle-ai/common";
 import { Spinner } from "../display/index.js";
-import { taskUrl, workspaceUrl, newTaskUrl, useAppNavigate } from "../../utils/navigation.js";
+import { HOME_URL, newTaskUrl, taskUrl, workspaceUrl, useAppNavigate } from "../../utils/navigation.js";
 import { SIDEBAR_STATUS_ORDER, getStatusStyle } from "../../utils/taskStatus.js";
 import styles from "./WorkspaceList.module.scss";
 
@@ -386,6 +386,8 @@ function TaskTreeNode({
 export function WorkspaceList(): JSX.Element {
   const { workspaces, tasks, environments, loadTasks, createWorkspace, workspaceCreating } = useGrackle();
   const navigate = useAppNavigate();
+  const location = useLocation();
+  const isHome = location.pathname === HOME_URL;
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
   const [manuallyCollapsed, setManuallyCollapsed] = useState<Set<string>>(new Set());
@@ -591,6 +593,17 @@ export function WorkspaceList(): JSX.Element {
           </button>
         </div>
       </div>
+
+      <button
+        type="button"
+        className={`${styles.homeRow} ${isHome ? styles.selected : ""}`}
+        onClick={() => navigate(HOME_URL)}
+        data-testid="sidebar-home"
+        aria-current={isHome ? "page" : undefined}
+      >
+        <span className={styles.homeIcon} aria-hidden="true">⌂</span>
+        <span>Home</span>
+      </button>
 
       {workspaces.length > 0 && (
         <input

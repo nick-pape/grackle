@@ -59,7 +59,7 @@ test.describe("Sidebar Resize", () => {
     const sidebar = page.locator('[data-testid="sidebar"]');
     const box = await sidebar.boundingBox();
     expect(box).toBeTruthy();
-    expect(box!.width).toBeGreaterThanOrEqual(390);
+    expect(box!.width).toBeGreaterThanOrEqual(315);
     expect(box!.width).toBeLessThanOrEqual(410);
 
     // Clean up

@@ -13,6 +13,7 @@
  */
 import { test, expect } from "./fixtures.js";
 import {
+  clickSidebarWorkspace,
   installWsTracker,
   injectWsMessage,
   createWorkspace,
@@ -51,7 +52,7 @@ test.describe("Disconnected environment blocks message send", () => {
     await createWorkspace(page, workspaceName);
 
     // Expand the workspace in the sidebar so the task becomes visible after creation.
-    await page.getByText(workspaceName).first().click();
+    await clickSidebarWorkspace(page, workspaceName);
 
     const workspaceId = await getWorkspaceId(page, workspaceName);
     // createTaskViaWs returns the full task row from the server, including all
@@ -392,7 +393,7 @@ test.describe("Disconnected environment blocks message send", () => {
 
     // Set up the waiting_input state via WS injection
     await createWorkspace(page, "disc-env-proj-err");
-    await page.getByText("disc-env-proj-err").first().click();
+    await clickSidebarWorkspace(page, "disc-env-proj-err");
 
     const workspaceId = await getWorkspaceId(page, "disc-env-proj-err");
     const task = await createTaskViaWs(page, workspaceId, "disc-env-task-err", {

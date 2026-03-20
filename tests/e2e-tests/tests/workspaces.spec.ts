@@ -1,5 +1,10 @@
 import { test, expect } from "./fixtures.js";
-import { createWorkspace, sendWsAndWaitFor } from "./helpers.js";
+import {
+  clickSidebarWorkspace,
+  createWorkspace,
+  getSidebarWorkspaceRow,
+  sendWsAndWaitFor,
+} from "./helpers.js";
 
 /** Archive all existing workspaces via WS so the welcome CTA appears. */
 async function archiveAllWorkspaces(page: import("@playwright/test").Page): Promise<void> {
@@ -57,7 +62,7 @@ test.describe("Workspaces", () => {
     await page.locator('[data-testid="welcome-create-ok"]').click();
 
     // Workspace should appear in sidebar
-    await expect(page.getByText("cta-workspace")).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByTestId("sidebar").getByText("cta-workspace", { exact: true })).toBeVisible({ timeout: 5_000 });
 
     // Welcome CTA should no longer be visible (workspaces exist now)
     await expect(page.locator('[data-testid="welcome-cta"]')).not.toBeVisible({ timeout: 5_000 });
@@ -99,7 +104,7 @@ test.describe("Workspaces", () => {
     await page.locator("button", { hasText: "OK" }).click();
 
     // Workspace should appear in the sidebar
-    await expect(page.getByText("my-workspace")).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByTestId("sidebar").getByText("my-workspace", { exact: true })).toBeVisible({ timeout: 5_000 });
   });
 
   test("expand workspace shows empty task list and workspace view", async ({ appPage }) => {
@@ -110,10 +115,10 @@ test.describe("Workspaces", () => {
     const nameInput = page.locator('input[placeholder="Workspace name..."]');
     await nameInput.fill("expand-test");
     await page.locator("button", { hasText: "OK" }).click();
-    await expect(page.getByText("expand-test")).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByTestId("sidebar").getByText("expand-test", { exact: true })).toBeVisible({ timeout: 5_000 });
 
     // Click workspace to expand and select
-    await page.getByText("expand-test").click();
+    await clickSidebarWorkspace(page, "expand-test");
 
     // Main panel shows workspace view with task summary (use .first() — text appears in both panel and bar)
     await expect(page.getByText("Select a task or click + to create one").first()).toBeVisible({ timeout: 5_000 });
@@ -127,13 +132,13 @@ test.describe("Workspaces", () => {
     const nameInput = page.locator('input[placeholder="Workspace name..."]');
     await nameInput.fill("task-test");
     await page.locator("button", { hasText: "OK" }).click();
-    await expect(page.getByText("task-test")).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByTestId("sidebar").getByText("task-test", { exact: true })).toBeVisible({ timeout: 5_000 });
 
     // Click workspace to expand
-    await page.getByText("task-test").click();
+    await clickSidebarWorkspace(page, "task-test");
 
     // Click the "New task" + button scoped to this workspace's row
-    await page.getByText("task-test").locator("..").locator('button[title="New task"]').first().click();
+    await getSidebarWorkspaceRow(page, "task-test").locator('button[title="New task"]').first().click();
 
     // Full-panel TaskEditPanel should open with title and description fields
     await expect(page.locator('[data-testid="task-edit-title"]')).toBeVisible({ timeout: 5_000 });
@@ -159,9 +164,9 @@ test.describe("Workspaces", () => {
     const nameInput = page.locator('input[placeholder="Workspace name..."]');
     await nameInput.fill("view-test");
     await page.locator("button", { hasText: "OK" }).click();
-    await expect(page.getByText("view-test")).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByTestId("sidebar").getByText("view-test", { exact: true })).toBeVisible({ timeout: 5_000 });
 
-    await page.getByText("view-test").locator("..").locator('button[title="New task"]').first().click();
+    await getSidebarWorkspaceRow(page, "view-test").locator('button[title="New task"]').first().click();
     await page.locator('[data-testid="task-edit-title"]').waitFor({ timeout: 5_000 });
     await page.locator('[data-testid="task-edit-title"]').fill("my task");
     await page.locator('[data-testid="task-edit-save"]').click();
@@ -197,7 +202,7 @@ test.describe("Workspaces", () => {
     await page.locator('button[title="Settings"]').click();
 
     // Should see the test-local environment in the Settings panel
-    await expect(page.getByText("test-local")).toBeVisible();
+    await expect(page.getByTestId("env-row").getByText("test-local", { exact: true })).toBeVisible();
   });
 
   // ─── Workspace Detail View Tests ───────────────────────────────
@@ -205,7 +210,7 @@ test.describe("Workspaces", () => {
   /** Helper: create a workspace and select it in the sidebar */
   async function createAndSelectWorkspace(page: import("@playwright/test").Page, name: string) {
     await createWorkspace(page, name);
-    await page.getByText(name).click();
+    await clickSidebarWorkspace(page, name);
   }
 
   test("workspace detail shows metadata section", async ({ appPage }) => {
@@ -344,7 +349,7 @@ test.describe("Workspaces", () => {
     await envSelect.selectOption("test-local");
 
     // Environment name should now be displayed
-    await expect(page.getByText("test-local")).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByTestId("workspace-meta").getByText("test-local", { exact: true })).toBeVisible({ timeout: 5_000 });
   });
 
   test("click-to-edit on field values", async ({ appPage }) => {
@@ -461,7 +466,7 @@ test.describe("Workspaces", () => {
     await expect(page.locator('[data-testid="progress-bar"]')).not.toBeVisible();
 
     // Create a task via the full-panel form (no environment selector — env is chosen at start time)
-    await page.getByText("progress-test").locator("..").locator('button[title="New task"]').first().click();
+    await getSidebarWorkspaceRow(page, "progress-test").locator('button[title="New task"]').first().click();
     await page.locator('[data-testid="task-edit-title"]').fill("progress task");
     await page.locator('[data-testid="task-edit-save"]').click();
     // After server confirms, the app navigates to the workspace view and the

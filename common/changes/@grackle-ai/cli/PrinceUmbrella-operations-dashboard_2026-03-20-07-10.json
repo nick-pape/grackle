@@ -1,0 +1,10 @@
+{
+  "changes": [
+    {
+      "packageName": "@grackle-ai/cli",
+      "comment": "Add operations dashboard and home route UX",
+      "type": "minor"
+    }
+  ],
+  "packageName": "@grackle-ai/cli"
+}

@@ -1,5 +1,9 @@
 import { test, expect } from "./fixtures.js";
 
+function getEnvironmentRow(page: import("@playwright/test").Page, name: string) {
+  return page.getByTestId("env-row").filter({ hasText: name }).first();
+}
+
 test.describe("Environment Display", () => {
   test.beforeEach(async ({ appPage }) => {
     // Environments are now in Settings — navigate there via the gear button
@@ -7,12 +11,12 @@ test.describe("Environment Display", () => {
   });
 
   test("environment card renders with name", async ({ appPage }) => {
-    await expect(appPage.locator("text=test-local")).toBeVisible();
+    await expect(getEnvironmentRow(appPage, "test-local")).toBeVisible();
   });
 
   test("status dot is accent-colored when connected", async ({ appPage }) => {
     // The environment list has a status dot span colored with --accent-green (purple in Grackle theme)
-    const envSection = appPage.locator("text=test-local").locator("..");
+    const envSection = getEnvironmentRow(appPage, "test-local");
     const dot = envSection.locator("span").first();
     await expect(dot).toHaveCSS("color", "rgb(139, 92, 246)"); // #8b5cf6
   });
@@ -31,6 +35,6 @@ test.describe("Environment Display", () => {
 
   test("environment card is visible in list", async ({ appPage }) => {
     // Verify the environment entry renders (may show "(idle)" or session count)
-    await expect(appPage.getByText("test-local")).toBeVisible();
+    await expect(getEnvironmentRow(appPage, "test-local")).toBeVisible();
   });
 });

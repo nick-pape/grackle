@@ -120,7 +120,7 @@ function AppRoutes(): JSX.Element {
     <Routes>
       <Route path="setup" element={<SetupWizard />} />
       <Route element={<AppShell />}>
-        <Route index element={<Navigate to="/chat" replace />} />
+        <Route index element={<EmptyPage />} />
         <Route path="chat" element={<ChatPage />} />
         <Route path="sessions/new" element={<NewChatPage />} />
         <Route path="sessions/:sessionId" element={<SessionPage />} />

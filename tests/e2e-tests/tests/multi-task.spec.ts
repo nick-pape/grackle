@@ -1,5 +1,6 @@
 import { test, expect } from "./fixtures.js";
 import {
+  clickSidebarWorkspace,
   createWorkspace,
   createTask,
   navigateToTask,
@@ -64,19 +65,19 @@ test.describe("Multi-Task", () => {
     await createWorkspace(page, "multi-proj-y");
 
     // Both should appear in the sidebar
-    await expect(page.getByText("multi-proj-x")).toBeVisible();
-    await expect(page.getByText("multi-proj-y")).toBeVisible();
+    await expect(page.getByTestId("sidebar").getByText("multi-proj-x", { exact: true }).first()).toBeVisible();
+    await expect(page.getByTestId("sidebar").getByText("multi-proj-y", { exact: true }).first()).toBeVisible();
 
     // Create tasks in each workspace
     await createTask(page, "multi-proj-x", "x-task-1", "test-local");
     await createTask(page, "multi-proj-y", "y-task-1", "test-local");
 
     // Expand workspace X by clicking it
-    await page.getByText("multi-proj-x").first().click();
+    await clickSidebarWorkspace(page, "multi-proj-x");
     await expect(page.getByText("x-task-1")).toBeVisible({ timeout: 5_000 });
 
     // Expand workspace Y by clicking it
-    await page.getByText("multi-proj-y").first().click();
+    await clickSidebarWorkspace(page, "multi-proj-y");
     await expect(page.getByText("y-task-1")).toBeVisible({ timeout: 5_000 });
   });
 

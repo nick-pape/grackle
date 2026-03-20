@@ -1,5 +1,6 @@
 import { test, expect } from "./fixtures.js";
 import {
+  clickSidebarWorkspace,
   createWorkspace,
   createTask,
   createTaskViaWs,
@@ -32,7 +33,7 @@ test.describe("Board View", () => {
     const page = appPage;
 
     await createWorkspace(page, "board-empty");
-    await page.getByText("board-empty").first().click();
+    await clickSidebarWorkspace(page, "board-empty");
 
     // Navigate to board tab
     await page.getByTestId("board-tab").click();
@@ -156,7 +157,7 @@ test.describe("Board View", () => {
     const parentId = parentTask.id as string;
 
     // Click into the workspace so we're on the workspace page
-    await page.getByText("board-children").first().click();
+    await clickSidebarWorkspace(page, "board-children");
     await page.getByText("parent-task").first().waitFor({ timeout: 5_000 });
 
     // Create child tasks
@@ -198,7 +199,7 @@ test.describe("Board View", () => {
     await expect(page.locator('[data-testid="task-status"]')).toContainText(/working|paused/, { timeout: 15_000 });
 
     // Navigate back to the workspace and switch to board
-    await page.getByText("board-realtime").first().click();
+    await clickSidebarWorkspace(page, "board-realtime");
     await page.getByTestId("board-tab").click();
     await expect(page.getByTestId("board-container")).toBeVisible({ timeout: 5_000 });
 

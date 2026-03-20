@@ -6,6 +6,10 @@ import {
   injectWsMessage,
 } from "./helpers.js";
 
+function getEnvironmentRow(page: import("@playwright/test").Page, name: string) {
+  return page.getByTestId("env-row").filter({ hasText: name }).first();
+}
+
 /**
  * Re-provision the test-local environment via WS and wait for it to become
  * connected again. Call this after any test that stops the environment so
@@ -43,10 +47,10 @@ test.describe("Environment List — Expand/Collapse", () => {
     const page = appPage;
 
     // Verify environment is visible
-    await expect(page.getByText("test-local")).toBeVisible();
+    await expect(getEnvironmentRow(page, "test-local")).toBeVisible();
 
     // Click the environment row to expand
-    await page.getByText("test-local").click();
+    await getEnvironmentRow(page, "test-local").click();
 
     // Expanded action row should appear with lifecycle buttons
     // For a connected environment, "Stop" and "Delete" should be visible
@@ -58,11 +62,11 @@ test.describe("Environment List — Expand/Collapse", () => {
     const page = appPage;
 
     // Expand
-    await page.getByText("test-local").click();
+    await getEnvironmentRow(page, "test-local").click();
     await expect(page.locator("button", { hasText: "Stop" })).toBeVisible({ timeout: 5_000 });
 
     // Collapse by clicking again
-    await page.getByText("test-local").click();
+    await getEnvironmentRow(page, "test-local").click();
 
     // Action row should disappear
     await expect(page.locator("button", { hasText: "Stop" })).not.toBeVisible({ timeout: 5_000 });
@@ -72,7 +76,7 @@ test.describe("Environment List — Expand/Collapse", () => {
     const page = appPage;
 
     // Expand the connected environment
-    await page.getByText("test-local").click();
+    await getEnvironmentRow(page, "test-local").click();
 
     // Connected: should have Stop, should NOT have Connect
     await expect(page.locator("button", { hasText: "Stop" })).toBeVisible({ timeout: 5_000 });
@@ -91,7 +95,7 @@ test.describe("Environment List — Expand/Collapse", () => {
 
     if (wasIdleVisible) {
       // Expand the environment
-      await page.getByText("test-local").click();
+      await getEnvironmentRow(page, "test-local").click();
 
       // (idle) should now be hidden
       await expect(idleLabel).not.toBeVisible({ timeout: 5_000 });
@@ -124,10 +128,10 @@ test.describe("Environment Lifecycle — WebSocket Handlers", () => {
 
     // Switch to Environments (now in Settings)
     await page.locator('button[title="Settings"]').click();
-    await expect(page.getByText("test-local")).toBeVisible();
+    await expect(getEnvironmentRow(page, "test-local")).toBeVisible();
 
     // Verify test-local is currently connected (accent dot)
-    const envSection = page.getByText("test-local").locator("..");
+    const envSection = getEnvironmentRow(page, "test-local");
     const dot = envSection.locator("span").first();
     await expect(dot).toHaveCSS("color", "rgb(139, 92, 246)"); // accent = connected
 
@@ -141,7 +145,7 @@ test.describe("Environment Lifecycle — WebSocket Handlers", () => {
     await expect(dot).not.toHaveCSS("color", "rgb(139, 92, 246)", { timeout: 5_000 });
 
     // Expand to see the Connect button (indicates disconnected)
-    await page.getByText("test-local").click();
+    await getEnvironmentRow(page, "test-local").click();
     await expect(page.locator("button", { hasText: "Connect" })).toBeVisible({ timeout: 5_000 });
 
     // Re-provision so other tests aren't affected
@@ -165,7 +169,7 @@ test.describe("Environment Lifecycle — WebSocket Handlers", () => {
     });
 
     // Wait for disconnected state — expand and wait for Connect button
-    await page.getByText("test-local").click();
+    await getEnvironmentRow(page, "test-local").click();
     await expect(page.locator("button", { hasText: "Connect" })).toBeVisible({ timeout: 5_000 });
 
     // Now provision it back via WS message
@@ -196,7 +200,7 @@ test.describe("Environment Lifecycle — WebSocket Handlers", () => {
     });
 
     // Expand the environment and wait for it to show as disconnected
-    await page.getByText("test-local").click();
+    await getEnvironmentRow(page, "test-local").click();
     await expect(page.locator("button", { hasText: "Connect" })).toBeVisible({ timeout: 5_000 });
 
     // Click Connect and watch for provision progress
@@ -249,8 +253,8 @@ test.describe("Environment Lifecycle — WebSocket Handlers", () => {
     });
 
     // Verify both environments appear
-    await expect(page.getByText("temp-remove-test")).toBeVisible({ timeout: 5_000 });
-    await expect(page.getByText("test-local")).toBeVisible();
+    await expect(getEnvironmentRow(page, "temp-remove-test")).toBeVisible({ timeout: 5_000 });
+    await expect(getEnvironmentRow(page, "test-local")).toBeVisible();
 
     // Inject an environment_removed message
     await injectWsMessage(page, {
@@ -270,9 +274,9 @@ test.describe("Environment Lifecycle — WebSocket Handlers", () => {
     });
 
     // The temporary environment should be gone
-    await expect(page.getByText("temp-remove-test")).not.toBeVisible({ timeout: 5_000 });
+    await expect(getEnvironmentRow(page, "temp-remove-test")).not.toBeVisible({ timeout: 5_000 });
     // Original environment should still be there
-    await expect(page.getByText("test-local")).toBeVisible();
+    await expect(getEnvironmentRow(page, "test-local")).toBeVisible();
   });
 
   test("auto-provision on spawn when environment is disconnected", async ({ page }) => {
@@ -292,10 +296,10 @@ test.describe("Environment Lifecycle — WebSocket Handlers", () => {
     });
 
     // Verify environment is disconnected — expand and check for Connect button
-    await page.getByText("test-local").click();
+    await getEnvironmentRow(page, "test-local").click();
     await expect(page.locator("button", { hasText: "Connect" })).toBeVisible({ timeout: 5_000 });
     // Collapse the card so it doesn't interfere with later UI checks
-    await page.getByText("test-local").click();
+    await getEnvironmentRow(page, "test-local").click();
 
     // Send a spawn message directly via WS — the server should auto-provision
     // the disconnected environment before starting the session.
@@ -322,7 +326,7 @@ test.describe("Environment Lifecycle — WebSocket Handlers", () => {
     // Verify the environment is now connected again (auto-provision reconnected it).
     // The environment status should have been broadcast to the app's WS.
     // Wait for the accent dot to confirm connected status.
-    const envSection = page.getByText("test-local").locator("..");
+    const envSection = getEnvironmentRow(page, "test-local");
     const dot = envSection.locator("span").first();
     await expect(dot).toHaveCSS("color", "rgb(139, 92, 246)", { timeout: 10_000 });
   });
@@ -335,7 +339,7 @@ test.describe("Environment Lifecycle — Delete with Confirmation", () => {
     await page.locator('button[title="Settings"]').click();
 
     // Expand the environment
-    await page.getByText("test-local").click();
+    await getEnvironmentRow(page, "test-local").click();
 
     // Click Delete — the in-app ConfirmDialog should appear
     await page.locator("button", { hasText: "Delete" }).click();
@@ -349,6 +353,6 @@ test.describe("Environment Lifecycle — Delete with Confirmation", () => {
 
     // Dialog should be gone; environment should still be visible (we cancelled)
     await expect(page.getByText("Delete Environment?")).not.toBeVisible({ timeout: 5_000 });
-    await expect(page.getByText("test-local")).toBeVisible();
+    await expect(getEnvironmentRow(page, "test-local")).toBeVisible();
   });
 });
