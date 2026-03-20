@@ -17,8 +17,8 @@ async function archiveAllWorkspaces(page: import("@playwright/test").Page): Prom
       "workspace.archived",
     );
   }
-  // Navigate to /workspaces so the UI reflects the empty state
-  await page.goto("/workspaces");
+  // Navigate to home so the UI reflects the empty state (welcome CTA is on the home page)
+  await page.goto("/");
   await page.waitForFunction(
     () => document.body.innerText.includes("Connected"),
     { timeout: 10_000 },
@@ -26,11 +26,8 @@ async function archiveAllWorkspaces(page: import("@playwright/test").Page): Prom
 }
 
 test.describe("Workspaces", () => {
-  test("sidebar defaults to Chat tab and Workspaces tab shows workspace list", async ({ appPage }) => {
+  test("Workspaces tab shows workspace list", async ({ appPage }) => {
     const page = appPage;
-
-    // Chat tab should be active by default (app redirects / to /chat)
-    await expect(page.locator('[data-testid="sidebar-tab-chat"]')).toHaveAttribute("aria-selected", "true");
 
     // Switch to Workspaces tab — header label visible
     await page.locator('[data-testid="sidebar-tab-workspaces"]').click();

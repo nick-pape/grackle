@@ -285,8 +285,8 @@ test.describe("Navigation Between Settings and Workspaces", () => {
     // Click Grackle brand to go home
     await page.locator('button[title="Home"]').click();
 
-    // Should navigate to /chat (sidebar tab switches to Chat)
-    await expect(page.locator('[data-testid="sidebar-tab-chat"]')).toHaveAttribute("aria-selected", "true", { timeout: 5_000 });
+    // Should navigate to home (settings tab no longer active)
+    await expect(page.locator('[data-testid="sidebar-tab-settings"]')).toHaveAttribute("aria-selected", "false", { timeout: 5_000 });
   });
 
   test("settings tab returns to Settings from workspace view", async ({ appPage }) => {
