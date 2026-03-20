@@ -65,13 +65,11 @@ function createMockOptions(overrides?: Partial<StartLocalPowerLineOptions>): Sta
 describe("startLocalPowerLine", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
-    // Re-capture the child logger after restoreAllMocks
-    if (childLogger) {
-      childLogger.info = vi.fn();
-      childLogger.warn = vi.fn();
-      childLogger.error = vi.fn();
-      childLogger.debug = vi.fn();
-    }
+    // Reset spy methods on the captured child logger instance
+    childLogger.info = vi.fn();
+    childLogger.warn = vi.fn();
+    childLogger.error = vi.fn();
+    childLogger.debug = vi.fn();
   });
 
   it("spawns with correct args and env", async () => {

@@ -10,7 +10,7 @@ const STOP_TIMEOUT_MS: number = 2_000;
 // eslint-disable-next-line @rushstack/typedef-var
 const logger = parentLogger.child({ component: "powerline" });
 
-/** Abstraction over child-process spawning used by {@link startLocalPowerLine}. */
+/** @internal Abstraction over child-process spawning used by {@link startLocalPowerLine}. */
 export interface ProcessFactory {
   /** Spawn a child process. */
   spawn(command: string, args: string[], options: SpawnOptions): ChildProcess;
@@ -19,7 +19,7 @@ export interface ProcessFactory {
 /** Default implementation that delegates to Node's `child_process.spawn`. */
 const NODE_PROCESS_FACTORY: ProcessFactory = { spawn };
 
-/** Abstraction over TCP port readiness probing used by {@link startLocalPowerLine}. */
+/** @internal Abstraction over TCP port readiness probing used by {@link startLocalPowerLine}. */
 export interface PortProbe {
   /** Wait for a TCP port to accept connections, rejecting after `timeoutMs`. */
   waitForPort(port: number, host: string, timeoutMs: number): Promise<void>;
