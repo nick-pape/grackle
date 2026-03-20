@@ -1,6 +1,14 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Fri, 20 Mar 2026 22:15:12 GMT and should not be manually modified.
+This log was last generated on Fri, 20 Mar 2026 23:15:27 GMT and should not be manually modified.
+
+## 0.53.3
+Fri, 20 Mar 2026 23:15:27 GMT
+
+### Patches
+
+- Inject database dependency into credential-providers for testability
+- Add _setAcpSdkForTesting injection hook for real setupSdk() test coverage
 
 ## 0.53.2
 Fri, 20 Mar 2026 22:15:12 GMT
