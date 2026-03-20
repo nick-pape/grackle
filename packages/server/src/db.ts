@@ -1,111 +1,187 @@
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
+import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import { join } from "node:path";
 import { mkdirSync } from "node:fs";
 import { DB_FILENAME, SYSTEM_PERSONA_ID, ROOT_TASK_ID } from "@grackle-ai/common";
 import { grackleHome } from "./paths.js";
 import * as schema from "./schema.js";
 
-mkdirSync(grackleHome, { recursive: true });
-
-const dbPath: string = join(grackleHome, DB_FILENAME);
-
-let sqlite: InstanceType<typeof Database>;
-try {
-  sqlite = new Database(dbPath);
-} catch (err) {
-  if (err instanceof Error && err.message.includes("Could not locate the bindings file")) {
-    process.stderr.write(
-      [
-        "",
-        "ERROR: better-sqlite3 native binding not found.",
-        "",
-        "The install script for better-sqlite3 was skipped, so the required native",
-        "module was never built. This commonly happens with pnpm v8+, which blocks",
-        "package install scripts by default.",
-        "",
-        "To fix this, run one of the following:",
-        "",
-        "  Option 1 — approve builds interactively:",
-        "    pnpm approve-builds",
-        "",
-        "  Option 2 — add to your project's package.json, then reinstall:",
-        '    { "pnpm": { "onlyBuiltDependencies": ["better-sqlite3"] } }',
-        "    pnpm install",
-        "",
-        "After fixing, restart grackle.",
-        "",
-      ].join("\n"),
-    );
-    process.exit(1);
-  }
-  if (err instanceof Error && err.message.includes("NODE_MODULE_VERSION")) {
-    process.stderr.write(
-      [
-        "",
-        "ERROR: better-sqlite3 was compiled for a different Node.js version.",
-        `(Current NODE_MODULE_VERSION: ${process.versions.modules})`,
-        "",
-        "This usually means grackle was installed with one Node version but is",
-        "being run with another. Grackle requires Node >= 22.",
-        "",
-        "To fix: reinstall grackle with your current Node version:",
-        "  npm install -g @grackle-ai/cli",
-        "",
-        `Original error: ${err.message}`,
-        "",
-      ].join("\n"),
-    );
-    process.exit(1);
-  }
-  throw err;
+/** Error collected from a migration step that uses try-catch for idempotency. */
+export interface MigrationError {
+  name: string;
+  error: unknown;
 }
 
-// Enable WAL mode for better concurrent read performance
-sqlite.pragma("journal_mode = WAL");
+/** Result returned by {@link initDatabase}. */
+export interface InitDatabaseResult {
+  migrationErrors: MigrationError[];
+}
 
-// Enable foreign key enforcement (off by default in SQLite)
-sqlite.pragma("foreign_keys = ON");
+/** Raw better-sqlite3 instance. Available after {@link openDatabase} has been called. */
+let sqlite: InstanceType<typeof Database> | undefined;
 
-/** Initialize all database tables and run migrations. Call once at startup. */
-export function initDatabase(): void {
+/**
+ * Drizzle ORM instance wrapping the SQLite database.
+ * Available after {@link openDatabase} has been called.
+ * Exported as the default export via ESM live binding so that store modules
+ * that do `import db from "./db.js"` see the initialized value after startup.
+ */
+let db!: BetterSQLite3Database<typeof schema> & {
+  $client: InstanceType<typeof Database>;
+};
+
+/**
+ * Open the SQLite database and initialize the Drizzle ORM instance.
+ * Call once at startup before using `db` or `sqlite`.
+ * If already initialized, returns silently.
+ *
+ * @param dbPath - Optional path to the database file. Defaults to `~/.grackle/grackle.db`.
+ */
+export function openDatabase(dbPath?: string): void {
+  if (sqlite) {
+    return;
+  }
+
+  const resolvedPath = dbPath ?? join(grackleHome, DB_FILENAME);
+
+  // Ensure the grackle home directory exists (skip when a custom path is provided,
+  // e.g. tests that point at an in-memory or temp-dir database).
+  if (!dbPath) {
+    mkdirSync(grackleHome, { recursive: true });
+  }
+
+  try {
+    sqlite = new Database(resolvedPath);
+  } catch (err) {
+    if (err instanceof Error && err.message.includes("Could not locate the bindings file")) {
+      process.stderr.write(
+        [
+          "",
+          "ERROR: better-sqlite3 native binding not found.",
+          "",
+          "The install script for better-sqlite3 was skipped, so the required native",
+          "module was never built. This commonly happens with pnpm v8+, which blocks",
+          "package install scripts by default.",
+          "",
+          "To fix this, run one of the following:",
+          "",
+          "  Option 1 — approve builds interactively:",
+          "    pnpm approve-builds",
+          "",
+          "  Option 2 — add to your project's package.json, then reinstall:",
+          '    { "pnpm": { "onlyBuiltDependencies": ["better-sqlite3"] } }',
+          "    pnpm install",
+          "",
+          "After fixing, restart grackle.",
+          "",
+        ].join("\n"),
+      );
+      process.exit(1);
+    }
+    if (err instanceof Error && err.message.includes("NODE_MODULE_VERSION")) {
+      process.stderr.write(
+        [
+          "",
+          "ERROR: better-sqlite3 was compiled for a different Node.js version.",
+          `(Current NODE_MODULE_VERSION: ${process.versions.modules})`,
+          "",
+          "This usually means grackle was installed with one Node version but is",
+          "being run with another. Grackle requires Node >= 22.",
+          "",
+          "To fix: reinstall grackle with your current Node version:",
+          "  npm install -g @grackle-ai/cli",
+          "",
+          `Original error: ${err.message}`,
+          "",
+        ].join("\n"),
+      );
+      process.exit(1);
+    }
+    throw err;
+  }
+
+  // Enable WAL mode for better concurrent read performance
+  sqlite.pragma("journal_mode = WAL");
+
+  // Enable foreign key enforcement (off by default in SQLite)
+  sqlite.pragma("foreign_keys = ON");
+
+  db = drizzle(sqlite, { schema });
+}
+
+/**
+ * Initialize all database tables and run migrations.
+ * Call once at startup after {@link openDatabase}, or pass an in-memory
+ * SQLite instance for testing.
+ *
+ * @param sqliteOverride - Optional SQLite instance to use instead of the module-level one.
+ * @returns Collected migration errors from idempotent try-catch steps.
+ */
+export function initDatabase(sqliteOverride?: InstanceType<typeof Database>): InitDatabaseResult {
+  const conn = sqliteOverride ?? sqlite;
+  if (!conn) {
+    throw new Error(
+      "Database not initialized. Call openDatabase() first or provide a sqliteOverride.",
+    );
+  }
+
+  const migrationErrors: MigrationError[] = [];
+
+  /** Check whether an error is an expected idempotent migration failure. */
+  const isExpectedIdempotencyError = (err: unknown): boolean => {
+    if (!(err instanceof Error)) {
+      return false;
+    }
+    const msg = err.message.toLowerCase();
+    return (
+      msg.includes("already exists") ||
+      msg.includes("duplicate column name") ||
+      msg.includes("no such table") ||
+      msg.includes("no such column")
+    );
+  };
+
+  /** Run a migration step, collecting expected idempotency errors. */
+  const tryMigration = (name: string, fn: () => void): void => {
+    try {
+      fn();
+    } catch (error) {
+      if (isExpectedIdempotencyError(error)) {
+        migrationErrors.push({ name, error });
+      } else {
+        throw error;
+      }
+    }
+  };
+
   // Migration: rename projects table to workspaces
-  try {
-    sqlite.exec("ALTER TABLE projects RENAME TO workspaces");
-  } catch {
-    /* table already renamed or never existed */
-  }
+  tryMigration("rename-projects-to-workspaces", () => {
+    conn.exec("ALTER TABLE projects RENAME TO workspaces");
+  });
   // Migration: rename project_id column to workspace_id on tasks
-  try {
-    sqlite.exec("ALTER TABLE tasks RENAME COLUMN project_id TO workspace_id");
-  } catch {
-    /* column already renamed or never existed */
-  }
+  tryMigration("rename-tasks-project-id", () => {
+    conn.exec("ALTER TABLE tasks RENAME COLUMN project_id TO workspace_id");
+  });
   // Migration: rename project_id column to workspace_id on findings
-  try {
-    sqlite.exec("ALTER TABLE findings RENAME COLUMN project_id TO workspace_id");
-  } catch {
-    /* column already renamed or never existed */
-  }
+  tryMigration("rename-findings-project-id", () => {
+    conn.exec("ALTER TABLE findings RENAME COLUMN project_id TO workspace_id");
+  });
   // Migration: drop old findings index after column rename
-  try {
-    sqlite.exec("DROP INDEX IF EXISTS idx_findings_project");
-  } catch {
-    /* index already dropped or never existed */
-  }
+  tryMigration("drop-idx-findings-project", () => {
+    conn.exec("DROP INDEX IF EXISTS idx_findings_project");
+  });
 
   // Migration: rename default_env_id → environment_id on workspaces
   // Must run BEFORE the backfill block below which references environment_id.
-  try {
-    sqlite.exec(
+  tryMigration("rename-workspaces-default-env-id", () => {
+    conn.exec(
       "ALTER TABLE workspaces RENAME COLUMN default_env_id TO environment_id",
     );
-  } catch {
-    /* column already renamed or never existed */
-  }
+  });
 
   // Create tables — idempotent, safe to run every startup
-  sqlite.exec(`
+  conn.exec(`
     CREATE TABLE IF NOT EXISTS environments (
       id            TEXT PRIMARY KEY,
       display_name  TEXT NOT NULL,
@@ -219,25 +295,21 @@ export function initDatabase(): void {
   `);
 
   // Migration: add powerline_token column if missing (older databases)
-  try {
-    sqlite.exec(
+  tryMigration("add-environments-powerline-token", () => {
+    conn.exec(
       "ALTER TABLE environments ADD COLUMN powerline_token TEXT NOT NULL DEFAULT ''",
     );
-  } catch {
-    /* column already exists */
-  }
+  });
 
   // Migration: rename sidecar_token → powerline_token (from older databases)
-  try {
-    sqlite.exec(
+  tryMigration("rename-environments-sidecar-token", () => {
+    conn.exec(
       "ALTER TABLE environments RENAME COLUMN sidecar_token TO powerline_token",
     );
-  } catch {
-    /* column already renamed or doesn't exist */
-  }
+  });
 
   // Migration: backfill NULLs in stage-2 tables from older schemas that lacked NOT NULL
-  sqlite.exec(`
+  conn.exec(`
     UPDATE workspaces SET description = '' WHERE description IS NULL;
     UPDATE workspaces SET repo_url = '' WHERE repo_url IS NULL;
     UPDATE workspaces SET environment_id = COALESCE(
@@ -263,29 +335,25 @@ export function initDatabase(): void {
   `);
 
   // Migration: add parent_task_id and depth columns if missing (older databases)
-  try {
-    sqlite.exec(
+  tryMigration("add-tasks-parent-task-id", () => {
+    conn.exec(
       "ALTER TABLE tasks ADD COLUMN parent_task_id TEXT NOT NULL DEFAULT ''",
     );
-  } catch {
-    /* column already exists */
-  }
-  try {
-    sqlite.exec(
+  });
+  tryMigration("add-tasks-depth", () => {
+    conn.exec(
       "ALTER TABLE tasks ADD COLUMN depth INTEGER NOT NULL DEFAULT 0",
     );
-  } catch {
-    /* column already exists */
-  }
+  });
 
   // Migration: add can_decompose column if missing (older databases)
-  try {
-    sqlite.exec(
+  tryMigration("add-tasks-can-decompose", () => {
+    conn.exec(
       "ALTER TABLE tasks ADD COLUMN can_decompose INTEGER NOT NULL DEFAULT 0",
     );
 
     // Backfill: mark root tasks and tasks with existing children as decomposable
-    sqlite.exec(`
+    conn.exec(`
       UPDATE tasks
       SET can_decompose = 1
       WHERE parent_task_id IS NULL OR parent_task_id = ''
@@ -295,176 +363,142 @@ export function initDatabase(): void {
           WHERE parent_task_id IS NOT NULL AND parent_task_id <> ''
         )
     `);
-  } catch {
-    /* column already exists */
-  }
+  });
 
   // Migration: add persona_id column to tasks if missing
-  try {
-    sqlite.exec(
+  tryMigration("add-tasks-persona-id", () => {
+    conn.exec(
       "ALTER TABLE tasks ADD COLUMN persona_id TEXT NOT NULL DEFAULT ''",
     );
-  } catch {
-    /* column already exists */
-  }
+  });
 
   // Migration: add task_id column to sessions if missing
-  try {
-    sqlite.exec(
+  tryMigration("add-sessions-task-id", () => {
+    conn.exec(
       "ALTER TABLE sessions ADD COLUMN task_id TEXT NOT NULL DEFAULT ''",
     );
-  } catch {
-    /* column already exists */
-  }
+  });
 
   // Migration: add use_worktrees column to workspaces if missing (older databases)
-  try {
-    sqlite.exec(
+  tryMigration("add-workspaces-use-worktrees", () => {
+    conn.exec(
       "ALTER TABLE workspaces ADD COLUMN use_worktrees INTEGER NOT NULL DEFAULT 1",
     );
-  } catch {
-    /* column already exists */
-  }
+  });
 
   // Migration: add worktree_base_path column to workspaces if missing (older databases)
-  try {
-    sqlite.exec(
+  tryMigration("add-workspaces-worktree-base-path", () => {
+    conn.exec(
       "ALTER TABLE workspaces ADD COLUMN worktree_base_path TEXT NOT NULL DEFAULT ''",
     );
-  } catch {
-    /* column already exists */
-  }
+  });
 
   // Migration: backfill task_id on existing sessions from tasks.session_id.
   // Guard with try/catch since session_id column may have been dropped already.
-  try {
-    sqlite.exec(`
+  tryMigration("backfill-sessions-task-id", () => {
+    conn.exec(`
       UPDATE sessions SET task_id = (
         SELECT id FROM tasks WHERE tasks.session_id = sessions.id LIMIT 1
       ) WHERE task_id = '' AND EXISTS (
         SELECT 1 FROM tasks WHERE tasks.session_id = sessions.id
       )
     `);
-  } catch {
-    /* tasks.session_id column already dropped */
-  }
+  });
 
   // Migration: add persona_id column to sessions if missing
-  try {
-    sqlite.exec(
+  tryMigration("add-sessions-persona-id", () => {
+    conn.exec(
       "ALTER TABLE sessions ADD COLUMN persona_id TEXT NOT NULL DEFAULT ''",
     );
-  } catch {
-    /* column already exists */
-  }
+  });
 
   // Migration: copy persona_id from tasks to sessions before dropping
-  try {
-    sqlite.exec(`
+  tryMigration("copy-persona-id-tasks-to-sessions", () => {
+    conn.exec(`
       UPDATE sessions SET persona_id = (
         SELECT persona_id FROM tasks WHERE tasks.session_id = sessions.id LIMIT 1
       ) WHERE persona_id = '' AND task_id != ''
     `);
-  } catch {
-    /* tasks.session_id or tasks.persona_id column may not exist */
-  }
+  });
 
   // Migration: drop columns that moved off the tasks table
-  try {
-    sqlite.exec("ALTER TABLE tasks DROP COLUMN session_id");
-  } catch {
-    /* column already dropped or never existed */
-  }
-  try {
-    sqlite.exec("ALTER TABLE tasks DROP COLUMN env_id");
-  } catch {
-    /* column already dropped or never existed */
-  }
-  try {
-    sqlite.exec("ALTER TABLE tasks DROP COLUMN persona_id");
-  } catch {
-    /* column already dropped or never existed */
-  }
+  tryMigration("drop-tasks-session-id", () => {
+    conn.exec("ALTER TABLE tasks DROP COLUMN session_id");
+  });
+  tryMigration("drop-tasks-env-id", () => {
+    conn.exec("ALTER TABLE tasks DROP COLUMN env_id");
+  });
+  tryMigration("drop-tasks-persona-id", () => {
+    conn.exec("ALTER TABLE tasks DROP COLUMN persona_id");
+  });
 
   // Migration: normalize existing started_at values from SQLite datetime('now')
   // format (YYYY-MM-DD HH:MM:SS) to ISO 8601 (YYYY-MM-DDTHH:MM:SS.000Z) so
   // ordering is consistent with newly inserted rows.
-  sqlite.exec(`
+  conn.exec(`
     UPDATE sessions
     SET started_at = replace(started_at, ' ', 'T') || '.000Z'
     WHERE started_at NOT LIKE '%T%'
   `);
 
   // Migration: normalize task statuses to simplified model
-  sqlite.exec(`
+  conn.exec(`
     UPDATE tasks SET status = 'not_started' WHERE status IN ('pending', 'assigned');
     UPDATE tasks SET status = 'complete' WHERE status = 'done';
     UPDATE tasks SET status = 'not_started' WHERE status IN ('in_progress', 'waiting_input', 'review');
   `);
 
   // Migration: normalize session statuses
-  sqlite.exec(`
+  conn.exec(`
     UPDATE sessions SET status = 'idle' WHERE status = 'waiting_input';
     UPDATE sessions SET status = 'interrupted' WHERE status = 'killed';
   `);
 
   // Migration: drop stale columns from tasks
-  try {
-    sqlite.exec("ALTER TABLE tasks DROP COLUMN assigned_at");
-  } catch {
-    /* column already dropped or never existed */
-  }
-  try {
-    sqlite.exec("ALTER TABLE tasks DROP COLUMN review_notes");
-  } catch {
-    /* column already dropped or never existed */
-  }
+  tryMigration("drop-tasks-assigned-at", () => {
+    conn.exec("ALTER TABLE tasks DROP COLUMN assigned_at");
+  });
+  tryMigration("drop-tasks-review-notes", () => {
+    conn.exec("ALTER TABLE tasks DROP COLUMN review_notes");
+  });
 
   // Index for efficient session-by-task lookups
-  sqlite.exec(
+  conn.exec(
     "CREATE INDEX IF NOT EXISTS idx_sessions_task_id ON sessions(task_id)",
   );
 
   // Migration: add default_persona_id to workspaces and tasks
-  try {
-    sqlite.exec(
+  tryMigration("add-workspaces-default-persona-id", () => {
+    conn.exec(
       "ALTER TABLE workspaces ADD COLUMN default_persona_id TEXT NOT NULL DEFAULT ''",
     );
-  } catch {
-    /* column already exists */
-  }
-  try {
-    sqlite.exec(
+  });
+  tryMigration("add-tasks-default-persona-id", () => {
+    conn.exec(
       "ALTER TABLE tasks ADD COLUMN default_persona_id TEXT NOT NULL DEFAULT ''",
     );
-  } catch {
-    /* column already exists */
-  }
+  });
 
   // Migration: add type and script columns to personas if missing
-  try {
-    sqlite.exec(
+  tryMigration("add-personas-type", () => {
+    conn.exec(
       "ALTER TABLE personas ADD COLUMN type TEXT NOT NULL DEFAULT 'agent'",
     );
-  } catch {
-    /* column already exists */
-  }
-  try {
-    sqlite.exec(
+  });
+  tryMigration("add-personas-script", () => {
+    conn.exec(
       "ALTER TABLE personas ADD COLUMN script TEXT NOT NULL DEFAULT ''",
     );
-  } catch {
-    /* column already exists */
-  }
+  });
 
   // Migration: make workspace_id nullable on tasks.
   // SQLite doesn't support ALTER COLUMN, so we recreate the table.
   // Guard: only run if the column currently has NOT NULL.
   {
-    const tableInfo = sqlite.prepare("PRAGMA table_info(tasks)").all() as Array<{ name: string; notnull: number }>;
+    const tableInfo = conn.prepare("PRAGMA table_info(tasks)").all() as Array<{ name: string; notnull: number }>;
     const workspaceIdCol = tableInfo.find((c) => c.name === "workspace_id");
     if (workspaceIdCol?.notnull === 1) {
-      sqlite.exec(`
+      conn.exec(`
         BEGIN;
         CREATE TABLE tasks_new (
           id             TEXT PRIMARY KEY,
@@ -497,16 +531,16 @@ export function initDatabase(): void {
   }
 
   // Migration: add index on workspaces.environment_id for efficient lookup
-  sqlite.exec(
+  conn.exec(
     "CREATE INDEX IF NOT EXISTS idx_workspaces_environment_id ON workspaces(environment_id)",
   );
 
   // Seed: create default "Claude Code" persona if no personas exist
-  const personaCount = sqlite
+  const personaCount = conn
     .prepare("SELECT COUNT(*) as cnt FROM personas")
     .get() as { cnt: number };
   if (personaCount.cnt === 0) {
-    sqlite.exec(`
+    conn.exec(`
       INSERT INTO personas (id, name, description, system_prompt, runtime, model, max_turns)
       VALUES (
         'claude-code',
@@ -518,7 +552,7 @@ export function initDatabase(): void {
         0
       )
     `);
-    sqlite.exec(`
+    conn.exec(`
       INSERT OR IGNORE INTO settings (key, value)
       VALUES ('default_persona_id', 'claude-code')
     `);
@@ -527,7 +561,7 @@ export function initDatabase(): void {
   // Migration: update the seed persona with the completion checklist and clearer name.
   // Guards: only run when the system_prompt is still empty and name is still "Claude Code"
   // so we don't overwrite user customizations.
-  sqlite.exec(`
+  conn.exec(`
     UPDATE personas SET system_prompt = 'When you have finished implementing the task, you MUST complete ALL steps below in order. Do NOT stop early or go to "waiting for input" until every step is done.
 
 ### Phase 1: Implement & Test
@@ -555,7 +589,7 @@ After creating the PR, you must ensure it is ready to merge.
 IMPORTANT: The PR is the deliverable, but a PR with failing CI or unresolved review comments is NOT done. You MUST complete Phase 3. Do NOT go to "waiting for input" until CI is green AND all review threads are resolved.'
     WHERE id = 'claude-code' AND system_prompt = '' AND name = 'Claude Code'
   `);
-  sqlite.exec(`
+  conn.exec(`
     UPDATE personas
     SET name = 'Software Engineer',
         description = 'Default agent persona for software engineering tasks'
@@ -573,34 +607,34 @@ IMPORTANT: The PR is the deliverable, but a PR with failing CI or unresolved rev
   // Handles name collisions: if a user-created persona named "System" already
   // exists under a different id, reassign it to SYSTEM_PERSONA_ID.
   {
-    const existingSystemById = sqlite
+    const existingSystemById = conn
       .prepare("SELECT id FROM personas WHERE id = ?")
       .get(SYSTEM_PERSONA_ID) as { id: string } | undefined;
 
     if (!existingSystemById) {
-      const seedRow = sqlite
+      const seedRow = conn
         .prepare("SELECT runtime, model FROM personas WHERE id = 'claude-code'")
         .get() as { runtime: string; model: string } | undefined;
       const systemRuntime = seedRow?.runtime || "claude-code";
       const systemModel = seedRow?.model || "sonnet";
 
-      const existingSystemByName = sqlite
+      const existingSystemByName = conn
         .prepare("SELECT id FROM personas WHERE name = 'System'")
         .get() as { id: string } | undefined;
 
       if (existingSystemByName && existingSystemByName.id !== SYSTEM_PERSONA_ID) {
         // Reassign existing "System" persona to the canonical id and update
         // all stored references atomically so a crash can't leave dangling refs.
-        const reassignSystemPersona = sqlite.transaction((oldId: string) => {
-          sqlite.prepare("UPDATE personas SET id = ? WHERE id = ?").run(SYSTEM_PERSONA_ID, oldId);
-          sqlite.prepare("UPDATE settings SET value = ? WHERE key = 'default_persona_id' AND value = ?").run(SYSTEM_PERSONA_ID, oldId);
-          sqlite.prepare("UPDATE sessions SET persona_id = ? WHERE persona_id = ?").run(SYSTEM_PERSONA_ID, oldId);
-          sqlite.prepare("UPDATE tasks SET default_persona_id = ? WHERE default_persona_id = ?").run(SYSTEM_PERSONA_ID, oldId);
-          sqlite.prepare("UPDATE workspaces SET default_persona_id = ? WHERE default_persona_id = ?").run(SYSTEM_PERSONA_ID, oldId);
+        const reassignSystemPersona = conn.transaction((oldId: string) => {
+          conn.prepare("UPDATE personas SET id = ? WHERE id = ?").run(SYSTEM_PERSONA_ID, oldId);
+          conn.prepare("UPDATE settings SET value = ? WHERE key = 'default_persona_id' AND value = ?").run(SYSTEM_PERSONA_ID, oldId);
+          conn.prepare("UPDATE sessions SET persona_id = ? WHERE persona_id = ?").run(SYSTEM_PERSONA_ID, oldId);
+          conn.prepare("UPDATE tasks SET default_persona_id = ? WHERE default_persona_id = ?").run(SYSTEM_PERSONA_ID, oldId);
+          conn.prepare("UPDATE workspaces SET default_persona_id = ? WHERE default_persona_id = ?").run(SYSTEM_PERSONA_ID, oldId);
         });
         reassignSystemPersona(existingSystemByName.id);
       } else if (!existingSystemByName) {
-        sqlite
+        conn
           .prepare(`
             INSERT INTO personas (id, name, description, system_prompt, runtime, model, max_turns, type)
             VALUES (?, 'System', 'Central orchestrator persona', ?, ?, ?, 0, 'agent')
@@ -636,7 +670,7 @@ IMPORTANT: The PR is the deliverable, but a PR with failing CI or unresolved rev
   }
 
   // Seed: create root task (well-known "system" task) if it doesn't exist.
-  sqlite
+  conn
     .prepare(`
       INSERT OR IGNORE INTO tasks (id, workspace_id, title, description, status, branch, parent_task_id, depth, can_decompose, default_persona_id)
       VALUES (?, NULL, 'System', '', 'not_started', 'system', '', 0, 1, ?)
@@ -646,18 +680,18 @@ IMPORTANT: The PR is the deliverable, but a PR with failing CI or unresolved rev
   // Backfill: ensure default_persona_id setting exists for upgrades.
   // Existing installations may have personas but no default_persona_id setting,
   // which would cause resolvePersona() to fail when no persona is explicitly specified.
-  const existingDefault = sqlite
+  const existingDefault = conn
     .prepare("SELECT value FROM settings WHERE key = 'default_persona_id'")
     .get() as { value: string } | undefined;
   if (!existingDefault) {
     // Prefer the seed persona 'claude-code' if it exists; otherwise fall back
     // to the first persona alphabetically.
     const fallback = (
-      sqlite.prepare("SELECT id FROM personas WHERE id = 'claude-code'").get() ??
-      sqlite.prepare("SELECT id FROM personas ORDER BY name LIMIT 1").get()
+      conn.prepare("SELECT id FROM personas WHERE id = 'claude-code'").get() ??
+      conn.prepare("SELECT id FROM personas ORDER BY name LIMIT 1").get()
     ) as { id: string } | undefined;
     if (fallback) {
-      sqlite
+      conn
         .prepare("INSERT OR IGNORE INTO settings (key, value) VALUES ('default_persona_id', ?)")
         .run(fallback.id);
     }
@@ -667,27 +701,21 @@ IMPORTANT: The PR is the deliverable, but a PR with failing CI or unresolved rev
   // Fresh installs (no pre-existing environments or personas) get "false" to trigger
   // the setup wizard. Upgrades (pre-existing data) get "true" to skip it.
   // personaCount was captured before the seed insert, so it reflects user-created personas.
-  const existingOnboarding = sqlite
+  const existingOnboarding = conn
     .prepare("SELECT value FROM settings WHERE key = 'onboarding_completed'")
     .get() as { value: string } | undefined;
   if (!existingOnboarding) {
-    const environmentCount = sqlite
+    const environmentCount = conn
       .prepare("SELECT COUNT(*) as cnt FROM environments")
       .get() as { cnt: number };
     const isFreshInstall = environmentCount.cnt === 0 && personaCount.cnt === 0;
-    sqlite
+    conn
       .prepare("INSERT OR IGNORE INTO settings (key, value) VALUES ('onboarding_completed', ?)")
       .run(isFreshInstall ? "false" : "true");
   }
+
+  return { migrationErrors };
 }
 
-// Run init immediately for backwards compatibility — stores import db at module load
-initDatabase();
-
-/** Drizzle ORM instance wrapping the SQLite database. */
-import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
-const db: BetterSQLite3Database<typeof schema> & {
-  $client: InstanceType<typeof Database>;
-} = drizzle(sqlite, { schema });
-
-export default db;
+export { sqlite };
+export { db as default };
