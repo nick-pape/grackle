@@ -23,6 +23,10 @@ export interface EventStreamOptions {
   logPath: string;
   workspaceId?: string;
   taskId?: string;
+  /** System context injected into the agent session. Emitted as the first event in the stream. */
+  systemContext?: string;
+  /** Initial user prompt sent to the agent. Emitted as a user_input event after systemContext. */
+  prompt?: string;
   onError?: (error: unknown) => void;
 }
 
@@ -236,6 +240,31 @@ export function processEventStream(
     try {
       logWriter.initLog(logPath);
       sessionStore.updateSessionStatus(sessionId, SESSION_STATUS.RUNNING);
+
+      // Emit system context and initial prompt as the first visible events in the stream.
+      // Only for task sessions — ad-hoc spawns show the prompt in the chat input already.
+      // Use distinct timestamps so clients can reliably sort/dedup by timestamp+eventType.
+      if (options.systemContext && options.taskId) {
+        const sysCtxEvent = create(grackle.SessionEventSchema, {
+          sessionId,
+          type: grackle.EventType.SYSTEM,
+          timestamp: new Date().toISOString(),
+          content: options.systemContext,
+          raw: JSON.stringify({ systemContext: true }),
+        });
+        logWriter.writeEvent(logPath, sysCtxEvent);
+        streamHub.publish(sysCtxEvent);
+      }
+      if (options.prompt && options.taskId) {
+        const promptEvent = create(grackle.SessionEventSchema, {
+          sessionId,
+          type: grackle.EventType.USER_INPUT,
+          timestamp: new Date().toISOString(),
+          content: options.prompt,
+        });
+        logWriter.writeEvent(logPath, promptEvent);
+        streamHub.publish(promptEvent);
+      }
 
       for await (const event of events) {
         // runtime_session_id is an internal control event: persist it then skip

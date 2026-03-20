@@ -12,7 +12,7 @@ import { useEnvironmentToasts } from "./hooks/useEnvironmentToasts.js";
 import { AnimatePresence, motion } from "motion/react";
 import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from "react-router";
 import { sessionUrl, useAppNavigate } from "./utils/navigation.js";
-import { TasksEmptyPage, WorkspacesEmptyPage } from "./pages/EmptyPage.js";
+import { EmptyPage, TasksEmptyPage, WorkspacesEmptyPage } from "./pages/EmptyPage.js";
 import { ChatPage } from "./pages/ChatPage.js";
 import { NewChatPage } from "./pages/NewChatPage.js";
 import { SessionPage } from "./pages/SessionPage.js";
@@ -117,7 +117,7 @@ function AppRoutes(): JSX.Element {
     <Routes>
       <Route path="setup" element={<SetupWizard />} />
       <Route element={<AppShell />}>
-        <Route index element={<Navigate to="/chat" replace />} />
+        <Route index element={<EmptyPage />} />
         <Route path="chat" element={<ChatPage />} />
         <Route path="tasks" element={<TasksEmptyPage />} />
         <Route path="tasks/new" element={<NewTaskPage />} />

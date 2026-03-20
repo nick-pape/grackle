@@ -2,6 +2,7 @@ import { test, expect } from "./fixtures.js";
 import {
   createWorkspace,
   createTask,
+  navigateToTask,
 } from "./helpers.js";
 
 test.describe("Group-by-status toggle", () => {
@@ -128,7 +129,7 @@ test.describe("Group-by-status toggle", () => {
     await expect(page.getByTestId("status-group-not_started").first()).toBeVisible({ timeout: 5_000 });
 
     // Click the task in the grouped view
-    await page.getByText("nav-target").first().click();
+    await navigateToTask(page, "nav-target");
 
     // Task detail should load
     await expect(

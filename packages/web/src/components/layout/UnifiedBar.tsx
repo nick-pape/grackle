@@ -192,15 +192,9 @@ export function UnifiedBar(): JSX.Element {
     );
   }
 
-  // --- empty / settings / personas mode ---
+  // --- dashboard / settings mode ---
   if (isEmpty || isSettings) {
-    return (
-      <div className={styles.bar}>
-        <span className={styles.hintText}>
-          Select a session or click + to start
-        </span>
-      </div>
-    );
+    return <></>;
   }
 
   // --- edit_task / new_task mode — form is in main panel, bar is hidden ---

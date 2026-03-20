@@ -2,6 +2,59 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.52.0",
+      "tag": "@grackle-ai/cli_v0.52.0",
+      "date": "Fri, 20 Mar 2026 08:47:53 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Add operations dashboard and home route UX"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.51.0",
+      "tag": "@grackle-ai/cli_v0.51.0",
+      "date": "Fri, 20 Mar 2026 05:25:01 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Refactor system prompt into SystemPromptBuilder, inject via native SDK mechanisms, add EVENT_TYPE_SIGNAL for signal event rendering"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.50.1",
+      "tag": "@grackle-ai/cli_v0.50.1",
+      "date": "Fri, 20 Mar 2026 04:35:17 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Make CLI API key loading injectable and throw instead of process.exit"
+          }
+        ],
+        "none": [
+          {
+            "comment": "Add unit tests for resolveAncestorEnvironmentId"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.50.0",
+      "tag": "@grackle-ai/cli_v0.50.0",
+      "date": "Fri, 20 Mar 2026 04:17:00 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Add root task (PID 0), System persona, and /chat tab for conversational orchestration"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.49.0",
       "tag": "@grackle-ai/cli_v0.49.0",
       "date": "Fri, 20 Mar 2026 04:01:06 GMT",

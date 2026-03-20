@@ -58,6 +58,7 @@ import * as adapterManager from "../adapter-manager.js";
 import * as streamHub from "../stream-hub.js";
 import { reanimateAgent } from "../reanimate-agent.js";
 import { logger } from "../logger.js";
+import { grackle } from "@grackle-ai/common";
 import { deliverSignalToTask } from "./signal-delivery.js";
 
 // ── Helpers ──────────────────────────────────────────────────
@@ -127,6 +128,14 @@ describe("deliverSignalToTask", () => {
     expect(result).toBe(true);
     expect(mockConn.client.sendInput).toHaveBeenCalledOnce();
     expect(adapterManager.getConnection).toHaveBeenCalledWith("env-1");
+
+    // Verify the event published to streamHub uses EVENT_TYPE_SIGNAL, not USER_INPUT
+    expect(streamHub.publish).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: grackle.EventType.SIGNAL,
+        content: "[SIGCHLD] test",
+      }),
+    );
   });
 
   it("delivers to RUNNING session via sendInput (bypassing IDLE guard)", async () => {

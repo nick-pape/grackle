@@ -1,6 +1,6 @@
 import type { JSX } from "react";
 import { useGrackle } from "../../context/GrackleContext.js";
-import { useAppNavigate } from "../../utils/navigation.js";
+import { HOME_URL, useAppNavigate } from "../../utils/navigation.js";
 import styles from "./StatusBar.module.scss";
 
 /** Props for the StatusBar component. */
@@ -26,7 +26,7 @@ export function StatusBar({ onToggleSidebar, sidebarOpen }: StatusBarProps): JSX
           {"\u2630"}
         </button>
       )}
-      <button type="button" className={styles.brand} onClick={() => navigate("/")} title="Home">Grackle</button>
+      <button type="button" className={styles.brand} onClick={() => navigate(HOME_URL)} title="Home">Grackle</button>
       <div className={styles.info}>
         <span aria-label={connected ? "Connected" : "Disconnected"}>
           <span className={`${styles.connectionDot} ${connected ? styles.connected : styles.disconnected}`} aria-hidden="true">

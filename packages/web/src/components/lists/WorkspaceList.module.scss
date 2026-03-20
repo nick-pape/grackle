@@ -8,6 +8,36 @@
   padding: var(--space-sm) 0;
 }
 
+.homeRow {
+  appearance: none;
+  @include hover-accent;
+  padding: var(--space-sm) var(--space-md);
+  font-size: var(--font-size-md);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  width: calc(100% - (2 * var(--space-xs)));
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  margin: 0 var(--space-xs) var(--space-xs);
+  border: 1px solid transparent;
+  background: none;
+  color: var(--text-secondary);
+  font: inherit;
+  text-align: left;
+
+  &.selected {
+    background: var(--bg-overlay);
+    border: 1px solid var(--border-primary);
+    color: var(--text-primary);
+  }
+}
+
+.homeIcon {
+  font-size: var(--font-size-lg);
+  line-height: 1;
+}
+
 .header {
   @include section-label;
   padding: var(--space-xs) var(--space-md);

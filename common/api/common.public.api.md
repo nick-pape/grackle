@@ -192,12 +192,13 @@ const EnvironmentSchema: GenMessage<Environment>;
 export type EnvironmentStatus = "disconnected" | "connecting" | "connected" | "sleeping" | "error";
 
 // @public
-export type EventType = AgentEventType | "user_input";
+export type EventType = AgentEventType | "user_input" | "signal";
 
 // @public
 enum EventType_2 {
     ERROR = 4,
     FINDING = 7,
+    SIGNAL = 10,
     STATUS = 5,
     SUBTASK_CREATE = 8,
     SYSTEM = 6,

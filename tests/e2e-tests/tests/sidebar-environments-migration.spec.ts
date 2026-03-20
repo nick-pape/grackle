@@ -1,5 +1,15 @@
 import { test, expect } from "./fixtures.js";
-import { sendWsAndWaitFor, sendWsMessage, installWsTracker, injectWsMessage } from "./helpers.js";
+import {
+  clickSidebarWorkspace,
+  sendWsAndWaitFor,
+  sendWsMessage,
+  installWsTracker,
+  injectWsMessage,
+} from "./helpers.js";
+
+function getEnvironmentRow(page: import("@playwright/test").Page, name: string) {
+  return page.getByTestId("env-row").filter({ hasText: name }).first();
+}
 
 test.describe("Sidebar — Tab Bar Navigation", () => {
   test("sidebar has tab bar with Chat, Tasks, Workspaces, and Settings tabs", async ({ appPage }) => {
@@ -68,7 +78,7 @@ test.describe("Environments in Settings Panel", () => {
     const page = appPage;
 
     // The seeded test-local environment should be listed
-    await expect(page.getByText("test-local")).toBeVisible();
+    await expect(getEnvironmentRow(page, "test-local")).toBeVisible();
   });
 
   test("Environments tab is listed before Credentials tab", async ({ appPage }) => {
@@ -142,7 +152,7 @@ test.describe("Environments in Settings Panel", () => {
     const page = appPage;
 
     // Click on test-local to expand
-    await page.getByText("test-local").click();
+    await getEnvironmentRow(page, "test-local").click();
 
     // Action buttons should appear (Connect or Stop depending on state, and Delete)
     const deleteButton = page.locator("button", { hasText: "Delete" });
@@ -153,11 +163,11 @@ test.describe("Environments in Settings Panel", () => {
     const page = appPage;
 
     // Click to expand
-    await page.getByText("test-local").click();
+    await getEnvironmentRow(page, "test-local").click();
     await expect(page.locator("button", { hasText: "Delete" })).toBeVisible({ timeout: 5_000 });
 
     // Click again to collapse
-    await page.getByText("test-local").click();
+    await getEnvironmentRow(page, "test-local").click();
     await expect(page.locator("button", { hasText: "Delete" })).not.toBeVisible({ timeout: 5_000 });
   });
 });
@@ -294,8 +304,8 @@ test.describe("Navigation Between Settings and Workspaces", () => {
     const nameInput = page.locator('input[placeholder="Workspace name..."]');
     await nameInput.fill("gear-test");
     await page.locator("button", { hasText: "OK" }).click();
-    await expect(page.getByText("gear-test")).toBeVisible({ timeout: 5_000 });
-    await page.getByText("gear-test").click();
+    await expect(page.getByTestId("sidebar").getByText("gear-test", { exact: true })).toBeVisible({ timeout: 5_000 });
+    await clickSidebarWorkspace(page, "gear-test");
 
     // Now click Settings tab
     await page.locator('[data-testid="sidebar-tab-settings"]').click();
