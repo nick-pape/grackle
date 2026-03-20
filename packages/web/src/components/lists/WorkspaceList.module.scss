@@ -9,16 +9,22 @@
 }
 
 .homeRow {
+  appearance: none;
   @include hover-accent;
   padding: var(--space-sm) var(--space-md);
   font-size: var(--font-size-md);
   display: flex;
   align-items: center;
   gap: var(--space-sm);
+  width: calc(100% - (2 * var(--space-xs)));
   cursor: pointer;
   border-radius: var(--radius-sm);
   margin: 0 var(--space-xs) var(--space-xs);
+  border: 1px solid transparent;
+  background: none;
   color: var(--text-secondary);
+  font: inherit;
+  text-align: left;
 
   &.selected {
     background: var(--bg-overlay);

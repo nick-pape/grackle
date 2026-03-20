@@ -1,4 +1,4 @@
-import { useEffect, useMemo, type JSX } from "react";
+import { useEffect, useMemo, useRef, type JSX } from "react";
 import { motion, type Variants } from "motion/react";
 import { useGrackle } from "../context/GrackleContext.js";
 import {
@@ -63,11 +63,15 @@ function KpiCard({ value, label, accent, index, testId }: KpiCardProps): JSX.Ele
 export function DashboardPage(): JSX.Element {
   const { workspaces, tasks, sessions, environments, loadTasks } = useGrackle();
   const navigate = useAppNavigate();
+  const loadedWorkspaceIdsRef = useRef<Set<string>>(new Set());
 
-  // Fan-out: load tasks for every workspace on mount
+  // Load tasks for newly-seen workspaces without refetching every list refresh.
   useEffect(() => {
     for (const ws of workspaces) {
-      loadTasks(ws.id);
+      if (!loadedWorkspaceIdsRef.current.has(ws.id)) {
+        loadedWorkspaceIdsRef.current.add(ws.id);
+        loadTasks(ws.id);
+      }
     }
   }, [workspaces, loadTasks]);
 
@@ -122,8 +126,9 @@ export function DashboardPage(): JSX.Element {
               <div className={styles.emptyHint}>No active sessions</div>
             ) : (
               activeSessions.map(({ session, environmentName }) => (
-                <div
+                <button
                   key={session.id}
+                  type="button"
                   className={styles.sessionRow}
                   onClick={() => navigate(sessionUrl(session.id))}
                   data-testid="session-row"
@@ -137,7 +142,7 @@ export function DashboardPage(): JSX.Element {
                     <span className={styles.statusDot} data-status={session.status} />
                     {session.status}
                   </span>
-                </div>
+                </button>
               ))
             )}
           </div>
@@ -162,8 +167,9 @@ export function DashboardPage(): JSX.Element {
               <div className={styles.emptyHint}>All clear</div>
             ) : (
               attentionTasks.map(({ task, reason, workspaceName }) => (
-                <div
+                <button
                   key={task.id}
+                  type="button"
                   className={styles.attentionRow}
                   onClick={() => navigate(taskUrl(task.id))}
                   data-testid="attention-row"
@@ -177,7 +183,7 @@ export function DashboardPage(): JSX.Element {
                   <div className={styles.attentionMeta}>
                     <span>{workspaceName}</span>
                   </div>
-                </div>
+                </button>
               ))
             )}
           </div>
@@ -237,8 +243,9 @@ export function DashboardPage(): JSX.Element {
               workspaceSnapshots.map(({ workspace, totalTasks, completedTasks, workingTasks, failedTasks }) => {
                 const pct = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
                 return (
-                  <div
+                  <button
                     key={workspace.id}
+                    type="button"
                     className={styles.workspaceRow}
                     onClick={() => navigate(workspaceUrl(workspace.id))}
                     data-testid="workspace-row"
@@ -256,7 +263,7 @@ export function DashboardPage(): JSX.Element {
                         <div className={styles.progressFill} style={{ width: `${pct}%` }} />
                       </div>
                     )}
-                  </div>
+                  </button>
                 );
               })
             )}

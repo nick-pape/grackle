@@ -56,10 +56,7 @@ function buildTaskStatusMap(tasks: TaskData[]): Map<string, string> {
 
 /** Returns true if the task has unresolved (non-complete) dependencies. */
 function isTaskBlocked(task: TaskData, statusMap: Map<string, string>): boolean {
-  return task.dependsOn.some((depId) => {
-    const depStatus = statusMap.get(depId);
-    return depStatus !== undefined && depStatus !== "complete";
-  });
+  return task.dependsOn.some((depId) => statusMap.get(depId) !== "complete");
 }
 
 /** A task that needs operator attention (blocked, paused, or failed). */

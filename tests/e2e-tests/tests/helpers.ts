@@ -132,8 +132,9 @@ export async function createWorkspace(page: Page, name: string, environmentId: s
     },
     "workspace.created",
   );
-  // Wait for the workspace to appear in the sidebar after the event triggers a refresh
-  await page.getByText(name).waitFor({ timeout: 5_000 });
+  // Wait for the workspace to appear in the sidebar after the event triggers a refresh.
+  // The dashboard also mirrors workspace names, so scope to the sidebar to avoid strict-mode collisions.
+  await page.getByTestId("sidebar").getByText(name, { exact: true }).waitFor({ timeout: 5_000 });
 }
 
 /** @deprecated Use {@link createWorkspace} instead. */

@@ -151,13 +151,21 @@
 // ─── Active sessions ────────────────────────────────────────────────────────
 
 .sessionRow {
+  appearance: none;
   display: grid;
   grid-template-columns: 1fr auto auto auto;
   gap: var(--space-md);
   align-items: center;
+  width: 100%;
   padding: var(--space-sm) var(--space-lg);
   border-bottom: 1px solid var(--glass-border);
+  border-left: none;
+  border-right: none;
+  border-top: none;
+  background: none;
   cursor: pointer;
+  font: inherit;
+  text-align: left;
   @include hover-accent;
 
   &:last-child {
@@ -220,12 +228,20 @@
 // ─── Attention tasks ────────────────────────────────────────────────────────
 
 .attentionRow {
+  appearance: none;
   display: flex;
   flex-direction: column;
   gap: 2px;
+  width: 100%;
   padding: var(--space-sm) var(--space-lg);
   border-bottom: 1px solid var(--glass-border);
+  border-left: none;
+  border-right: none;
+  border-top: none;
+  background: none;
   cursor: pointer;
+  font: inherit;
+  text-align: left;
   @include hover-accent;
 
   &:last-child {
@@ -330,6 +346,13 @@
   background: var(--accent-blue-dim);
 }
 
+.envStatusBadge[data-status="connecting"],
+.envStatusBadge[data-status="starting"],
+.envStatusBadge[data-status="pending"] {
+  color: var(--accent-blue-fg);
+  background: var(--accent-blue-dim);
+}
+
 .envStatusBadge[data-status="disconnected"] {
   color: var(--accent-yellow-fg);
   background: var(--accent-yellow-dim);
@@ -343,12 +366,20 @@
 // ─── Workspace snapshot ─────────────────────────────────────────────────────
 
 .workspaceRow {
+  appearance: none;
   display: flex;
   flex-direction: column;
   gap: 4px;
+  width: 100%;
   padding: var(--space-sm) var(--space-lg);
   border-bottom: 1px solid var(--glass-border);
+  border-left: none;
+  border-right: none;
+  border-top: none;
+  background: none;
   cursor: pointer;
+  font: inherit;
+  text-align: left;
   @include hover-accent;
 
   &:last-child {

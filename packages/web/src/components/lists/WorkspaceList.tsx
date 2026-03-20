@@ -592,14 +592,16 @@ export function WorkspaceList(): JSX.Element {
         </div>
       </div>
 
-      <div
+      <button
+        type="button"
         className={`${styles.homeRow} ${isHome ? styles.selected : ""}`}
         onClick={() => navigate("/")}
         data-testid="sidebar-home"
+        aria-current={isHome ? "page" : undefined}
       >
         <span className={styles.homeIcon}>⌂</span>
         <span>Home</span>
-      </div>
+      </button>
 
       {workspaces.length > 0 && (
         <input
