@@ -63,7 +63,7 @@ test.describe("Task Overview Tab", () => {
     await page.getByRole("tab", { name: "Overview", exact: true }).click();
 
     // Overview should display the environment display name
-    await expect(page.getByText("test-local")).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByTestId("task-overview-environment").getByText("test-local", { exact: true })).toBeVisible({ timeout: 5_000 });
   });
 
   test("overview shows blocked dependencies in yellow", async ({ appPage }) => {

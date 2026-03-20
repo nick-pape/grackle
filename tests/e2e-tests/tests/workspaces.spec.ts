@@ -349,7 +349,7 @@ test.describe("Workspaces", () => {
     await envSelect.selectOption("test-local");
 
     // Environment name should now be displayed
-    await expect(page.getByText("test-local")).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByTestId("workspace-meta").getByText("test-local", { exact: true })).toBeVisible({ timeout: 5_000 });
   });
 
   test("click-to-edit on field values", async ({ appPage }) => {

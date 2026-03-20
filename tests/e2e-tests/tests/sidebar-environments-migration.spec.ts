@@ -7,6 +7,10 @@ import {
   injectWsMessage,
 } from "./helpers.js";
 
+function getEnvironmentRow(page: import("@playwright/test").Page, name: string) {
+  return page.getByTestId("env-row").filter({ hasText: name }).first();
+}
+
 test.describe("Sidebar — Task-Only (No Environments Tab)", () => {
   test("sidebar has no Environments tab button", async ({ appPage }) => {
     const page = appPage;
@@ -63,7 +67,7 @@ test.describe("Environments in Settings Panel", () => {
     const page = appPage;
 
     // The seeded test-local environment should be listed
-    await expect(page.getByText("test-local")).toBeVisible();
+    await expect(getEnvironmentRow(page, "test-local")).toBeVisible();
   });
 
   test("Environments tab is listed before Credentials tab", async ({ appPage }) => {
@@ -137,7 +141,7 @@ test.describe("Environments in Settings Panel", () => {
     const page = appPage;
 
     // Click on test-local to expand
-    await page.getByText("test-local").click();
+    await getEnvironmentRow(page, "test-local").click();
 
     // Action buttons should appear (Connect or Stop depending on state, and Delete)
     const deleteButton = page.locator("button", { hasText: "Delete" });
@@ -148,11 +152,11 @@ test.describe("Environments in Settings Panel", () => {
     const page = appPage;
 
     // Click to expand
-    await page.getByText("test-local").click();
+    await getEnvironmentRow(page, "test-local").click();
     await expect(page.locator("button", { hasText: "Delete" })).toBeVisible({ timeout: 5_000 });
 
     // Click again to collapse
-    await page.getByText("test-local").click();
+    await getEnvironmentRow(page, "test-local").click();
     await expect(page.locator("button", { hasText: "Delete" })).not.toBeVisible({ timeout: 5_000 });
   });
 });

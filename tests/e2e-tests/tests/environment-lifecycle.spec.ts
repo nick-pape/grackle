@@ -77,7 +77,7 @@ test.describe("Environment List — Expand/Collapse", () => {
     const page = appPage;
 
     // Expand the connected environment
-    await page.getByText("test-local").click();
+    await getEnvironmentRow(page, "test-local").click();
 
     // Connected: should have Stop, should NOT have Connect
     await expect(page.locator("button", { hasText: "Stop" })).toBeVisible({ timeout: 5_000 });
