@@ -10,6 +10,7 @@ const config = {
   projectName: 'grackle',
   onBrokenLinks: 'throw',
   onBrokenMarkdownLinks: 'warn',
+  favicon: 'img/favicon.ico',
 
   presets: [
     [
@@ -28,7 +29,6 @@ const config = {
   ],
 
   themeConfig: {
-    favicon: 'img/favicon.ico',
     navbar: {
       title: 'Grackle',
       logo: {

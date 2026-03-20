@@ -27,7 +27,7 @@ export function StatusBar({ onToggleSidebar, sidebarOpen }: StatusBarProps): JSX
         </button>
       )}
       <button type="button" className={styles.brand} onClick={() => navigate(HOME_URL)} title="Home">
-        <img src="/grackle-logo.png" alt="" className={styles.brandLogo} aria-hidden="true" data-testid="statusbar-logo" />
+        <img src="/icon-192x192.png" alt="" className={styles.brandLogo} aria-hidden="true" data-testid="statusbar-logo" />
         Grackle
       </button>
       <div className={styles.info}>
