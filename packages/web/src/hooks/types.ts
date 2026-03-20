@@ -384,7 +384,9 @@ export function asValidArray<T>(
 }
 
 /**
- * Parse a raw WebSocket message string into a {@link WsMessage}.
+ * Parse a raw WebSocket message string into a {@link WsMessage} or
+ * {@link GrackleEvent}.  When both `id` and `timestamp` are present the
+ * result is a full `GrackleEvent`; otherwise a plain `WsMessage`.
  * Returns `undefined` and logs a warning if parsing fails or the result is
  * not a valid message object.
  */
