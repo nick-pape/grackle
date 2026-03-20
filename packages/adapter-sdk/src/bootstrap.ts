@@ -29,14 +29,18 @@ const POWERLINE_STARTUP_DELAY_MS: number = 2_000;
 const ENV_VAR_NAME_PATTERN: RegExp = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
 /**
- * Build the list of env-file lines for the PowerLine process.
- * Pure helper used by both {@link writeRemoteEnvFile} and {@link startRemotePowerLine}.
+ * Build the env-file content string for the PowerLine process.
+ * Returns the full file content (with trailing newline), or empty string if
+ * there are no env vars to write.
+ * @param powerlineToken - The PowerLine authentication token
+ * @param extraEnv - Additional environment variables to include
+ * @param logger - Logger for diagnostic output
  */
-function writeRemoteEnvFileLines(
+export function buildEnvFileContent(
   powerlineToken: string,
   extraEnv?: Record<string, string>,
   logger: AdapterLogger = defaultLogger,
-): string[] {
+): string {
   const envLines: string[] = [];
   if (powerlineToken) {
     envLines.push(`export GRACKLE_POWERLINE_TOKEN='${shellEscape(powerlineToken)}'`);
@@ -50,7 +54,10 @@ function writeRemoteEnvFileLines(
       envLines.push(`export ${key}='${shellEscape(value)}'`);
     }
   }
-  return envLines;
+  if (envLines.length === 0) {
+    return "";
+  }
+  return envLines.join("\n") + "\n";
 }
 
 /**
@@ -63,11 +70,10 @@ export async function writeRemoteEnvFile(
   extraEnv?: Record<string, string>,
   logger: AdapterLogger = defaultLogger,
 ): Promise<void> {
-  const envLines = writeRemoteEnvFileLines(powerlineToken, extraEnv, logger);
-  if (envLines.length === 0) {
+  const envFileContent = buildEnvFileContent(powerlineToken, extraEnv, logger);
+  if (!envFileContent) {
     return;
   }
-  const envFileContent = envLines.join("\n") + "\n";
   const envFileContentBase64 = Buffer.from(envFileContent, "utf8").toString("base64");
   await executor.exec(
     `cd ${REMOTE_POWERLINE_DIRECTORY} && node -e "require('fs').writeFileSync('.env.sh',Buffer.from(process.argv[1],'base64').toString('utf8'))" '${shellEscape(envFileContentBase64)}'`,
@@ -200,7 +206,7 @@ export async function startRemotePowerLine(
     throw new Error(`Invalid working directory: ${workingDirectory}`);
   }
 
-  const envLines = writeRemoteEnvFileLines(powerlineToken, extraEnv, logger);
+  const envFileContent = buildEnvFileContent(powerlineToken, extraEnv, logger);
 
   const devMode = isDevMode();
   const entryPoint = devMode
@@ -225,8 +231,7 @@ export async function startRemotePowerLine(
   }
 
   // 1. Env file
-  if (envLines.length > 0) {
-    const envFileContent = envLines.join("\n") + "\n";
+  if (envFileContent) {
     const envFileContentBase64 = Buffer.from(envFileContent, "utf8").toString("base64");
     parts.push(
       `cd ${REMOTE_POWERLINE_DIRECTORY}`
@@ -251,7 +256,7 @@ export async function startRemotePowerLine(
   }
 
   // 3. Source env vars and spawn PowerLine as a detached process.
-  const sourceEnv = envLines.length > 0
+  const sourceEnv = envFileContent
     ? `. ${REMOTE_POWERLINE_DIRECTORY}/.env.sh && `
     : "";
   parts.push(

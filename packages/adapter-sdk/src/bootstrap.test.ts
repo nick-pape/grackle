@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import type { RemoteExecutor } from "./remote-executor.js";
-import { probeRemotePowerLine, writeRemoteEnvFile, startRemotePowerLine } from "./bootstrap.js";
+import { buildEnvFileContent, probeRemotePowerLine, writeRemoteEnvFile, startRemotePowerLine } from "./bootstrap.js";
 
 // ── Helper ──────────────────────────────────────────────────
 
@@ -35,6 +35,48 @@ describe("probeRemotePowerLine", () => {
       exec: vi.fn().mockRejectedValue(new Error("port not listening")),
     });
     await expect(probeRemotePowerLine(executor)).rejects.toThrow("port not listening");
+  });
+});
+
+describe("buildEnvFileContent", () => {
+  it("returns content with GRACKLE_POWERLINE_TOKEN when token is provided", () => {
+    const content = buildEnvFileContent("my-secret-token", undefined, silentLogger);
+    expect(content).toContain("export GRACKLE_POWERLINE_TOKEN=");
+    expect(content).toContain("my-secret-token");
+    expect(content).toMatch(/\n$/);
+  });
+
+  it("includes both token and extra env vars", () => {
+    const content = buildEnvFileContent("tok", { MY_VAR: "hello" }, silentLogger);
+    expect(content).toContain("GRACKLE_POWERLINE_TOKEN");
+    expect(content).toContain("export MY_VAR='hello'");
+    expect(content).toMatch(/\n$/);
+  });
+
+  it("returns empty string when token is empty and no extra env", () => {
+    const content = buildEnvFileContent("", undefined, silentLogger);
+    expect(content).toBe("");
+  });
+
+  it("skips invalid env var names and logs a warning", () => {
+    const content = buildEnvFileContent("tok", { "invalid-name!": "bad", VALID_NAME: "good" }, silentLogger);
+    expect(content).toContain("VALID_NAME");
+    expect(content).not.toContain("invalid-name!");
+    expect(silentLogger.warn).toHaveBeenCalled();
+  });
+
+  it("escapes shell-special characters in values", () => {
+    const content = buildEnvFileContent("tok", { SPECIAL: "it's a \"test\" $VAR" }, silentLogger);
+    expect(content).toContain("SPECIAL=");
+    // Single quotes in value must be escaped to prevent shell injection
+    expect(content).not.toContain("it's");
+  });
+
+  it("returns content with only extra env when token is empty", () => {
+    const content = buildEnvFileContent("", { ONLY_ENV: "value" }, silentLogger);
+    expect(content).toContain("export ONLY_ENV='value'");
+    expect(content).not.toContain("GRACKLE_POWERLINE_TOKEN");
+    expect(content).toMatch(/\n$/);
   });
 });
 
