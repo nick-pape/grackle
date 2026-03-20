@@ -3,6 +3,9 @@
 Usage:
     python tools/generate-icons.py
 
+Dependencies:
+    Pillow (PIL) — install with: pip install pillow
+
 Reads:  tools/grackle-source-1024.png
 Writes: packages/web/public/  and  apps/docs-site/static/img/
 """
@@ -44,8 +47,11 @@ def save_ico(img: Image.Image, path: Path) -> None:
 
 def main() -> None:
     """Generate all icon assets."""
+    if not SOURCE.is_file():
+        raise FileNotFoundError(f"Source image not found: {SOURCE}")
     img = Image.open(SOURCE).convert("RGBA")
-    assert img.size == (1024, 1024), f"Expected 1024x1024, got {img.size}"
+    if img.size != (1024, 1024):
+        raise ValueError(f"Expected 1024x1024 source image at {SOURCE}, got {img.size}")
 
     WEB_PUBLIC.mkdir(parents=True, exist_ok=True)
     DOCS_IMG.mkdir(parents=True, exist_ok=True)
