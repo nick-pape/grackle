@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, type JSX } from "react";
 import { useMatch } from "react-router";
-import { useAppNavigate } from "../../utils/navigation.js";
+import { CHAT_URL, useAppNavigate } from "../../utils/navigation.js";
 import { WorkspaceList } from "../lists/WorkspaceList.js";
 import styles from "./Sidebar.module.scss";
 
@@ -72,24 +72,28 @@ export function Sidebar(): JSX.Element {
   return (
     <div className={styles.container} ref={containerRef} data-testid="sidebar" style={{ width }}>
       {/* Tab bar */}
-      <div className={styles.tabBar} data-testid="sidebar-tabs">
+      <nav className={styles.tabBar} aria-label="Sidebar navigation" data-testid="sidebar-tabs" role="tablist">
         <button
           className={styles.tab}
+          role="tab"
+          aria-selected={isChat}
           data-active={isChat}
           data-testid="sidebar-tab-chat"
-          onClick={() => navigate("/chat")}
+          onClick={() => navigate(CHAT_URL)}
         >
           Chat
         </button>
         <button
           className={styles.tab}
+          role="tab"
+          aria-selected={!isChat}
           data-active={!isChat}
           data-testid="sidebar-tab-workspaces"
           onClick={() => navigate("/workspaces")}
         >
           Workspaces
         </button>
-      </div>
+      </nav>
       {/* Content */}
       <div className={styles.content}>
         <WorkspaceList />
