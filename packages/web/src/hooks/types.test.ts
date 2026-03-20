@@ -58,8 +58,8 @@ describe("isGrackleEvent", () => {
 });
 
 describe("parseWsMessage", () => {
-  // Suppress console.warn output — parseWsMessage warns on invalid input and
-  // Rush CI treats any stderr output as a build warning, failing the pipeline.
+  // Suppress console.warn output — parseWsMessage warns on invalid input and we
+  // keep test output clean and focused by silencing this noise during tests.
   let warnSpy: ReturnType<typeof vi.spyOn>;
   beforeEach(() => { warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {}); });
   afterEach(() => { warnSpy.mockRestore(); });
