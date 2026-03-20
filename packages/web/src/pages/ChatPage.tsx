@@ -27,17 +27,21 @@ function ChatEmptyState({ hasLocalEnvironment }: { hasLocalEnvironment: boolean 
 /** Clean full-page chat experience for the root task. */
 export function ChatPage(): JSX.Element {
   const {
-    tasks, events, eventsDropped, environments,
+    tasks, sessions, events, eventsDropped, environments,
     loadTaskSessions, loadSessionEvents,
     taskSessions,
   } = useGrackle();
 
   const loadedSessionRef = useRef<string | undefined>(undefined);
 
-  // Find root task + its sessions
+  // Find root task + its sessions.
+  // Resolve latest session from the already-loaded sessions list first (available
+  // immediately), falling back to taskSessions (requires a roundtrip to load).
   const rootTask = tasks.find((t) => t.id === ROOT_TASK_ID);
-  const rootSessions = taskSessions[ROOT_TASK_ID] ?? [];
-  const latestSession = rootSessions.find((s) => s.id === rootTask?.latestSessionId);
+  const latestSession = rootTask?.latestSessionId
+    ? (sessions.find((s) => s.id === rootTask.latestSessionId) ??
+       (taskSessions[ROOT_TASK_ID] ?? []).find((s) => s.id === rootTask.latestSessionId))
+    : undefined;
 
   // Load sessions on mount
   useEffect(() => {

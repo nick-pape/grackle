@@ -524,45 +524,65 @@ export function initDatabase(): void {
     `);
   }
 
-  // Seed: create System persona (orchestrator) if it doesn't exist.
+  // Seed: ensure a System persona exists with the canonical SYSTEM_PERSONA_ID.
   // Copies runtime + model from the seed persona so the FRE choice propagates.
+  // Handles name collisions: if a user-created persona named "System" already
+  // exists under a different id, reassign it to SYSTEM_PERSONA_ID.
   {
-    const seedRow = sqlite
-      .prepare("SELECT runtime, model FROM personas WHERE id = 'claude-code'")
-      .get() as { runtime: string; model: string } | undefined;
-    const systemRuntime = seedRow?.runtime || "claude-code";
-    const systemModel = seedRow?.model || "sonnet";
-    sqlite
-      .prepare(`
-        INSERT OR IGNORE INTO personas (id, name, description, system_prompt, runtime, model, max_turns, type)
-        VALUES (?, 'System', 'Central orchestrator persona', ?, ?, ?, 0, 'agent')
-      `)
-      .run(
-        SYSTEM_PERSONA_ID,
-        [
-          "You are the System — the central orchestrator for Grackle, an agent kernel that manages AI coding agents.",
-          "",
-          "You help the user coordinate work across their development environments. You can:",
-          "- Answer questions and have conversations",
-          "- Help plan and break down work into tasks",
-          "- Create and manage workspaces (project containers tied to environments)",
-          "- Create, assign, and monitor tasks executed by AI coding agents",
-          "- Share and query findings (knowledge shared between agents)",
-          "",
-          "When the user describes work to be done:",
-          "1. Help them think through the approach",
-          "2. Break complex work into discrete, well-scoped tasks",
-          "3. Create tasks with clear titles and descriptions that an AI agent can execute independently",
-          "4. Start tasks on appropriate environments",
-          "5. Monitor progress and report results",
-          "",
-          "You are always available for conversation. Think of yourself as the user's AI project manager — you coordinate the agents, track progress, and ensure work is organized effectively.",
-          "",
-          "Keep responses concise and action-oriented. When the user wants something done, bias toward creating and starting tasks rather than lengthy discussion.",
-        ].join("\n"),
-        systemRuntime,
-        systemModel,
-      );
+    const existingSystemById = sqlite
+      .prepare("SELECT id FROM personas WHERE id = ?")
+      .get(SYSTEM_PERSONA_ID) as { id: string } | undefined;
+
+    if (!existingSystemById) {
+      const seedRow = sqlite
+        .prepare("SELECT runtime, model FROM personas WHERE id = 'claude-code'")
+        .get() as { runtime: string; model: string } | undefined;
+      const systemRuntime = seedRow?.runtime || "claude-code";
+      const systemModel = seedRow?.model || "sonnet";
+
+      const existingSystemByName = sqlite
+        .prepare("SELECT id FROM personas WHERE name = 'System'")
+        .get() as { id: string } | undefined;
+
+      if (existingSystemByName && existingSystemByName.id !== SYSTEM_PERSONA_ID) {
+        // Reassign existing "System" persona to the canonical id
+        sqlite
+          .prepare("UPDATE personas SET id = ? WHERE id = ?")
+          .run(SYSTEM_PERSONA_ID, existingSystemByName.id);
+      } else if (!existingSystemByName) {
+        sqlite
+          .prepare(`
+            INSERT INTO personas (id, name, description, system_prompt, runtime, model, max_turns, type)
+            VALUES (?, 'System', 'Central orchestrator persona', ?, ?, ?, 0, 'agent')
+          `)
+          .run(
+            SYSTEM_PERSONA_ID,
+            [
+              "You are the System — the central orchestrator for Grackle, an agent kernel that manages AI coding agents.",
+              "",
+              "You help the user coordinate work across their development environments. You can:",
+              "- Answer questions and have conversations",
+              "- Help plan and break down work into tasks",
+              "- Create and manage workspaces (project containers tied to environments)",
+              "- Create, assign, and monitor tasks executed by AI coding agents",
+              "- Share and query findings (knowledge shared between agents)",
+              "",
+              "When the user describes work to be done:",
+              "1. Help them think through the approach",
+              "2. Break complex work into discrete, well-scoped tasks",
+              "3. Create tasks with clear titles and descriptions that an AI agent can execute independently",
+              "4. Start tasks on appropriate environments",
+              "5. Monitor progress and report results",
+              "",
+              "You are always available for conversation. Think of yourself as the user's AI project manager — you coordinate the agents, track progress, and ensure work is organized effectively.",
+              "",
+              "Keep responses concise and action-oriented. When the user wants something done, bias toward creating and starting tasks rather than lengthy discussion.",
+            ].join("\n"),
+            systemRuntime,
+            systemModel,
+          );
+      }
+    }
   }
 
   // Seed: create root task (well-known "system" task) if it doesn't exist.

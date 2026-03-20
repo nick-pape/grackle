@@ -174,10 +174,11 @@ export function useTasks(send: SendFunction): UseTasksResult {
           "tasks",
           "tasks",
         );
-        const pid =
-          (typeof msg.payload?.workspaceId === "string"
-            ? msg.payload.workspaceId
-            : "") || (incoming.length > 0 ? incoming[0].workspaceId : "");
+        // Use only the explicit payload.workspaceId to decide scope.
+        // An omitted workspaceId means a global response (all tasks / workspace-less tasks).
+        const pid = typeof msg.payload?.workspaceId === "string"
+          ? msg.payload.workspaceId
+          : "";
         if (!pid) {
           // Workspace-less tasks (e.g. root task) — upsert by ID to avoid
           // clobbering workspace-scoped tasks already in state.

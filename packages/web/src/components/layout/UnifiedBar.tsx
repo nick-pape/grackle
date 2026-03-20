@@ -47,8 +47,7 @@ function DisconnectedBanner({ environmentId, onReconnect }: DisconnectedBannerPr
 export function UnifiedBar(): JSX.Element {
   const {
     spawn, sendInput, kill, sessions, tasks, environments, personas,
-    addEnvironment, provisionEnvironment,
-    startTask, taskSessions,
+    addEnvironment, provisionEnvironment, startTask, taskSessions,
     codespaces, codespaceError, codespaceListError, codespaceCreating, listCodespaces, createCodespace,
   } = useGrackle();
   const { showToast } = useToast();
@@ -125,8 +124,12 @@ export function UnifiedBar(): JSX.Element {
   // --- chat mode (root task) ---
   if (isChat) {
     const rootTask = tasks.find((t) => t.id === ROOT_TASK_ID);
-    const rootSessions = taskSessions[ROOT_TASK_ID] ?? [];
-    const latestRootSession = rootSessions.find((s) => s.id === rootTask?.latestSessionId);
+    // Resolve latest session from the already-loaded sessions list first (available
+    // immediately on connect), falling back to taskSessions (requires roundtrip).
+    const latestRootSession = rootTask?.latestSessionId
+      ? (sessions.find((s) => s.id === rootTask.latestSessionId) ??
+         (taskSessions[ROOT_TASK_ID] ?? []).find((s) => s.id === rootTask.latestSessionId))
+      : undefined;
     const localEnv = environments.find((e) => e.adapterType === "local" && e.status === "connected");
 
     if (!localEnv) {
