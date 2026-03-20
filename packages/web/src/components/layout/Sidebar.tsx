@@ -1,4 +1,6 @@
 import { useState, useRef, useEffect, type JSX } from "react";
+import { useMatch } from "react-router";
+import { useAppNavigate } from "../../utils/navigation.js";
 import { WorkspaceList } from "../lists/WorkspaceList.js";
 import styles from "./Sidebar.module.scss";
 
@@ -40,6 +42,8 @@ function saveWidth(width: number): void {
 export function Sidebar(): JSX.Element {
   const [width] = useState<number>(loadWidth);
   const containerRef = useRef<HTMLDivElement>(null);
+  const navigate = useAppNavigate();
+  const isChat = !!useMatch("/chat");
 
   /** Observe container resizes and persist width to localStorage. */
   useEffect(() => {
@@ -67,9 +71,28 @@ export function Sidebar(): JSX.Element {
 
   return (
     <div className={styles.container} ref={containerRef} data-testid="sidebar" style={{ width }}>
+      {/* Tab bar */}
+      <div className={styles.tabBar} data-testid="sidebar-tabs">
+        <button
+          className={styles.tab}
+          data-active={isChat}
+          data-testid="sidebar-tab-chat"
+          onClick={() => navigate("/chat")}
+        >
+          Chat
+        </button>
+        <button
+          className={styles.tab}
+          data-active={!isChat}
+          data-testid="sidebar-tab-workspaces"
+          onClick={() => navigate("/workspaces")}
+        >
+          Workspaces
+        </button>
+      </div>
       {/* Content */}
       <div className={styles.content}>
-        <WorkspaceList />
+        {!isChat && <WorkspaceList />}
       </div>
     </div>
   );

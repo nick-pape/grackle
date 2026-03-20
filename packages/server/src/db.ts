@@ -2,7 +2,7 @@ import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { join } from "node:path";
 import { mkdirSync } from "node:fs";
-import { DB_FILENAME } from "@grackle-ai/common";
+import { DB_FILENAME, SYSTEM_PERSONA_ID, ROOT_TASK_ID } from "@grackle-ai/common";
 import { grackleHome } from "./paths.js";
 import * as schema from "./schema.js";
 
@@ -523,6 +523,55 @@ export function initDatabase(): void {
       VALUES ('default_persona_id', 'claude-code')
     `);
   }
+
+  // Seed: create System persona (orchestrator) if it doesn't exist.
+  // Copies runtime + model from the seed persona so the FRE choice propagates.
+  {
+    const seedRow = sqlite
+      .prepare("SELECT runtime, model FROM personas WHERE id = 'claude-code'")
+      .get() as { runtime: string; model: string } | undefined;
+    const systemRuntime = seedRow?.runtime || "claude-code";
+    const systemModel = seedRow?.model || "sonnet";
+    sqlite
+      .prepare(`
+        INSERT OR IGNORE INTO personas (id, name, description, system_prompt, runtime, model, max_turns, type)
+        VALUES (?, 'System', 'Central orchestrator persona', ?, ?, ?, 0, 'agent')
+      `)
+      .run(
+        SYSTEM_PERSONA_ID,
+        [
+          "You are the System — the central orchestrator for Grackle, an agent kernel that manages AI coding agents.",
+          "",
+          "You help the user coordinate work across their development environments. You can:",
+          "- Answer questions and have conversations",
+          "- Help plan and break down work into tasks",
+          "- Create and manage workspaces (project containers tied to environments)",
+          "- Create, assign, and monitor tasks executed by AI coding agents",
+          "- Share and query findings (knowledge shared between agents)",
+          "",
+          "When the user describes work to be done:",
+          "1. Help them think through the approach",
+          "2. Break complex work into discrete, well-scoped tasks",
+          "3. Create tasks with clear titles and descriptions that an AI agent can execute independently",
+          "4. Start tasks on appropriate environments",
+          "5. Monitor progress and report results",
+          "",
+          "You are always available for conversation. Think of yourself as the user's AI project manager — you coordinate the agents, track progress, and ensure work is organized effectively.",
+          "",
+          "Keep responses concise and action-oriented. When the user wants something done, bias toward creating and starting tasks rather than lengthy discussion.",
+        ].join("\n"),
+        systemRuntime,
+        systemModel,
+      );
+  }
+
+  // Seed: create root task (well-known "system" task) if it doesn't exist.
+  sqlite
+    .prepare(`
+      INSERT OR IGNORE INTO tasks (id, workspace_id, title, description, status, branch, parent_task_id, depth, can_decompose, default_persona_id)
+      VALUES (?, NULL, 'System', '', 'not_started', 'system', '', 0, 1, ?)
+    `)
+    .run(ROOT_TASK_ID, SYSTEM_PERSONA_ID);
 
   // Backfill: ensure default_persona_id setting exists for upgrades.
   // Existing installations may have personas but no default_persona_id setting,

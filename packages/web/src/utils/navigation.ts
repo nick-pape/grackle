@@ -96,3 +96,11 @@ export const SETTINGS_ABOUT_URL: string = "/settings/about";
 
 /** URL for the device pairing page. */
 export const PAIR_PATH: string = "/pair";
+
+/** URL for the root-task chat page. */
+export const CHAT_URL: string = "/chat";
+
+/** Build URL for the root-task chat page. */
+export function chatUrl(): string {
+  return CHAT_URL;
+}

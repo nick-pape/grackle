@@ -955,6 +955,9 @@ const ResumeRequestSchema: GenMessage<ResumeRequest>;
 const ResumeRequestSchema_2: GenMessage<ResumeRequest_2>;
 
 // @public
+export const ROOT_TASK_ID: string;
+
+// @public
 export type RuntimeName = "claude-code" | "copilot" | "codex" | "stub";
 
 // @public
@@ -1131,6 +1134,12 @@ type StartTaskRequest = Message<"grackle.StartTaskRequest"> & {
 
 // @public
 const StartTaskRequestSchema: GenMessage<StartTaskRequest>;
+
+// @public
+export const SYSTEM_PERSONA_ID: string;
+
+// @public
+export const SYSTEM_PERSONA_NAME: string;
 
 // @public
 type Task = Message<"grackle.Task"> & {
