@@ -21,6 +21,7 @@ import {
 import { GrackleContext } from "../context/GrackleContext.js";
 import type { UseGrackleSocketResult } from "../context/GrackleContext.js";
 import type {
+  Environment,
   Session,
   SessionEvent,
   FindingData,
@@ -64,6 +65,7 @@ interface MockGrackleProviderProps {
  */
 export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX.Element {
   // ── State ─────────────────────────────────────────
+  const [environments, setEnvironments] = useState<Environment[]>(MOCK_ENVIRONMENTS);
   const [sessions, setSessions] = useState<Session[]>(MOCK_SESSIONS);
   const [events, setEvents] = useState<SessionEvent[]>(MOCK_EVENTS);
   const [lastSpawnedId, setLastSpawnedId] = useState<string | undefined>(undefined);
@@ -729,13 +731,27 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
     [],
   );
 
-  /** Logs an update-environment call (mock does not persist). */
+  /** Updates an environment in mock state so edits persist in mock mode. */
   const updateEnvironment: UseGrackleSocketResult["updateEnvironment"] = useCallback(
     (
       environmentId: string,
       fields: { displayName?: string; adapterConfig?: Record<string, unknown> },
     ) => {
       console.log("[MockGrackle] updateEnvironment", { environmentId, ...fields });
+      setEnvironments((prev) =>
+        prev.map((env) => {
+          if (env.id !== environmentId) {
+            return env;
+          }
+          return {
+            ...env,
+            ...(fields.displayName !== undefined ? { displayName: fields.displayName } : {}),
+            ...(fields.adapterConfig !== undefined
+              ? { adapterConfig: JSON.stringify(fields.adapterConfig) }
+              : {}),
+          };
+        }),
+      );
     },
     [],
   );
@@ -792,7 +808,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
     () => ({
       // State
       connected: true,
-      environments: MOCK_ENVIRONMENTS,
+      environments,
       sessions,
       events,
       eventsDropped: 0,
@@ -928,6 +944,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       },
     }),
     [
+      environments,
       sessions,
       events,
       lastSpawnedId,

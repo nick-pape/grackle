@@ -6,7 +6,7 @@
 
 import { useState, useCallback } from "react";
 import type { Environment, ProvisionStatus, WsMessage, SendFunction, GrackleEvent } from "./types.js";
-import { asValidArray, isEnvironment, warnBadPayload } from "./types.js";
+import { asValidArray, isEnvironment, normalizeEnvironment, warnBadPayload } from "./types.js";
 
 /** Delay in milliseconds before clearing a successful provision status. */
 const PROVISION_STATUS_CLEAR_DELAY_MS: number = 5_000;
@@ -118,7 +118,7 @@ export function useEnvironments(send: SendFunction): UseEnvironmentsResult {
             isEnvironment,
             "environments",
             "environments",
-          ),
+          ).map(normalizeEnvironment),
         );
         return true;
       default:

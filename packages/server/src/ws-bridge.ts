@@ -1756,11 +1756,16 @@ async function handleMessage(
           return;
         }
       }
+      const trimmedName = nameVal !== undefined ? nameVal.trim() : undefined;
+      if (trimmedName === undefined && configVal === undefined) {
+        sendWs(ws, { type: "error", payload: { message: "No updatable fields provided" } });
+        return;
+      }
       envRegistry.updateEnvironment(environmentId, {
-        displayName: nameVal !== undefined ? nameVal.trim() : undefined,
+        displayName: trimmedName,
         adapterConfig: configVal,
       });
-      logger.info({ environmentId, displayName: nameVal }, "Environment updated via WebSocket");
+      logger.info({ environmentId, displayName: trimmedName }, "Environment updated via WebSocket");
       emit("environment.changed", {});
       break;
     }

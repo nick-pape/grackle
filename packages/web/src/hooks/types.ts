@@ -193,21 +193,27 @@ export function isGrackleEvent(v: unknown): v is GrackleEvent {
 
 /** Type guard for {@link Environment}. */
 export function isEnvironment(v: unknown): v is Environment {
-  if (
-    !(isObject(v) &&
+  return (
+    isObject(v) &&
     typeof v.id === "string" &&
     typeof v.displayName === "string" &&
     typeof v.adapterType === "string" &&
     typeof v.status === "string" &&
-    typeof v.bootstrapped === "boolean")
-  ) {
-    return false;
-  }
-  // Normalize missing adapterConfig to "{}" so the field is always present
-  if (typeof v.adapterConfig !== "string") {
-    (v as Record<string, unknown>).adapterConfig = "{}";
-  }
-  return true;
+    typeof v.bootstrapped === "boolean" &&
+    (typeof v.adapterConfig === "string" || v.adapterConfig === undefined)
+  );
+}
+
+/**
+ * Normalize a raw environment object by ensuring adapterConfig is present.
+ * The type guard allows `adapterConfig` to be undefined (for backwards
+ * compatibility with older servers), so we default it here.
+ */
+export function normalizeEnvironment(env: Environment): Environment {
+  return {
+    ...env,
+    adapterConfig: (env as { adapterConfig?: string }).adapterConfig ?? "{}",
+  };
 }
 
 /** Type guard for {@link Session}. */

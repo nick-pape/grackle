@@ -211,14 +211,6 @@ export function EnvironmentEditPanel({ mode, environmentId }: Props): JSX.Elemen
 
   const [activeFieldId, setActiveFieldId] = useState<string | null>(null);
 
-  // Hydrate once when environment data loads in edit mode
-  const hasHydratedRef = useRef(false);
-  useEffect(() => {
-    if (isEdit && existingEnv && !hasHydratedRef.current) {
-      hasHydratedRef.current = true;
-    }
-  }, [isEdit, existingEnv]);
-
   // ─── Helpers ───────────────────────────────────────
 
   /** Build adapter config object from create-mode form state. */
@@ -297,7 +289,12 @@ export function EnvironmentEditPanel({ mode, environmentId }: Props): JSX.Elemen
         return;
       }
       const current = parseAdapterConfig(existingEnv.adapterConfig);
-      current[fieldName] = value;
+      const trimmed = value.trim();
+      if (trimmed) {
+        current[fieldName] = trimmed;
+      } else {
+        delete current[fieldName];
+      }
       updateEnvironment(environmentId, { adapterConfig: current });
     },
     [existingEnv, environmentId, updateEnvironment],

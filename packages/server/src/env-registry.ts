@@ -80,7 +80,7 @@ export interface UpdateEnvironmentFields {
 
 /** Update mutable fields (displayName, adapterConfig) of an existing environment. */
 export function updateEnvironment(id: string, fields: UpdateEnvironmentFields): void {
-  const updates: Record<string, unknown> = {};
+  const updates: Partial<Pick<EnvironmentRow, "displayName" | "adapterConfig">> = {};
   if (fields.displayName !== undefined) {
     updates.displayName = fields.displayName;
   }
