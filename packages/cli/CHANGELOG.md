@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Fri, 20 Mar 2026 05:25:01 GMT and should not be manually modified.
+This log was last generated on Fri, 20 Mar 2026 08:47:53 GMT and should not be manually modified.
+
+## 0.52.0
+Fri, 20 Mar 2026 08:47:53 GMT
+
+### Minor changes
+
+- Add operations dashboard and home route UX
 
 ## 0.51.0
 Fri, 20 Mar 2026 05:25:01 GMT

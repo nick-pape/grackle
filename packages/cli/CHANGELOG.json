@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.52.0",
+      "tag": "@grackle-ai/cli_v0.52.0",
+      "date": "Fri, 20 Mar 2026 08:47:53 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Add operations dashboard and home route UX"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.51.0",
       "tag": "@grackle-ai/cli_v0.51.0",
       "date": "Fri, 20 Mar 2026 05:25:01 GMT",
