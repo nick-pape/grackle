@@ -28,6 +28,7 @@ const config = {
   ],
 
   themeConfig: {
+    favicon: 'img/favicon.ico',
     navbar: {
       title: 'Grackle',
       logo: {

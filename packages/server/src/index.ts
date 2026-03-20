@@ -581,6 +581,22 @@ function createWebHandler(
       return;
     }
 
+    // --- Public static assets (favicons, manifest) — no session required ---
+    const publicAssets = new Set([
+      "/favicon.ico",
+      "/favicon-16x16.png",
+      "/favicon-32x32.png",
+      "/apple-touch-icon.png",
+      "/manifest.json",
+      "/icon-192x192.png",
+      "/icon-512x512.png",
+      "/grackle-logo.png",
+    ]);
+    if (publicAssets.has(rawPath)) {
+      serveStaticFile(req, res, rawPath);
+      return;
+    }
+
     // --- All other routes require a valid session cookie ---
     const cookieHeader = req.headers.cookie || "";
     if (!validateSessionCookie(cookieHeader, apiKey)) {
