@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, type JSX } from "react";
+import { useState, useCallback, type JSX } from "react";
 import { useGrackle } from "../../context/GrackleContext.js";
 import { useToast } from "../../context/ToastContext.js";
 import { SETTINGS_ENVIRONMENTS_URL, useAppNavigate } from "../../utils/navigation.js";
@@ -52,21 +52,12 @@ interface CodespacePickerProps {
 function CodespacePicker({ codespaceName, onCodespaceNameChange, envName, onEnvNameChange }: CodespacePickerProps): JSX.Element {
   const {
     codespaces, codespaceError, codespaceListError, codespaceCreating,
-    listCodespaces, createCodespace,
+    createCodespace,
   } = useGrackle();
 
   const [mode, setMode] = useState<"pick" | "create">("pick");
   const [createRepo, setCreateRepo] = useState("");
   const [createMachine, setCreateMachine] = useState("");
-
-  // Fetch codespaces on mount
-  const hasListedRef = useRef(false);
-  useEffect(() => {
-    if (!hasListedRef.current) {
-      hasListedRef.current = true;
-      listCodespaces();
-    }
-  }, [listCodespaces]);
 
   if (mode === "create") {
     return (
@@ -185,7 +176,7 @@ function CodespacePicker({ codespaceName, onCodespaceNameChange, envName, onEnvN
  */
 export function EnvironmentEditPanel({ mode, environmentId }: Props): JSX.Element {
   const {
-    environments, addEnvironment, updateEnvironment,
+    environments, addEnvironment, updateEnvironment, listCodespaces,
   } = useGrackle();
   const { showToast } = useToast();
   const navigate = useAppNavigate();
@@ -376,6 +367,7 @@ export function EnvironmentEditPanel({ mode, environmentId }: Props): JSX.Elemen
                 activeFieldId={activeFieldId}
                 onActivate={setActiveFieldId}
                 placeholder="Environment name"
+                ariaLabel="Environment name"
                 data-testid="env-edit-name"
               />
             </div>
@@ -401,6 +393,7 @@ export function EnvironmentEditPanel({ mode, environmentId }: Props): JSX.Elemen
                     activeFieldId={activeFieldId}
                     onActivate={setActiveFieldId}
                     placeholder="(default)"
+                    ariaLabel="Host"
                     data-testid="env-edit-host"
                   />
                 </div>
@@ -415,6 +408,7 @@ export function EnvironmentEditPanel({ mode, environmentId }: Props): JSX.Elemen
                     activeFieldId={activeFieldId}
                     onActivate={setActiveFieldId}
                     placeholder="(default)"
+                    ariaLabel="Port"
                     data-testid="env-edit-port"
                   />
                 </div>
@@ -434,6 +428,7 @@ export function EnvironmentEditPanel({ mode, environmentId }: Props): JSX.Elemen
                     activeFieldId={activeFieldId}
                     onActivate={setActiveFieldId}
                     placeholder="hostname or IP"
+                    ariaLabel="Host"
                     data-testid="env-edit-host"
                   />
                 </div>
@@ -447,6 +442,7 @@ export function EnvironmentEditPanel({ mode, environmentId }: Props): JSX.Elemen
                     activeFieldId={activeFieldId}
                     onActivate={setActiveFieldId}
                     placeholder="(default)"
+                    ariaLabel="User"
                     data-testid="env-edit-user"
                   />
                 </div>
@@ -461,6 +457,7 @@ export function EnvironmentEditPanel({ mode, environmentId }: Props): JSX.Elemen
                     activeFieldId={activeFieldId}
                     onActivate={setActiveFieldId}
                     placeholder="22"
+                    ariaLabel="SSH Port"
                     data-testid="env-edit-ssh-port"
                   />
                 </div>
@@ -474,6 +471,7 @@ export function EnvironmentEditPanel({ mode, environmentId }: Props): JSX.Elemen
                     activeFieldId={activeFieldId}
                     onActivate={setActiveFieldId}
                     placeholder="~/.ssh/id_rsa"
+                    ariaLabel="Identity File"
                     data-testid="env-edit-identity-file"
                   />
                 </div>
@@ -492,6 +490,7 @@ export function EnvironmentEditPanel({ mode, environmentId }: Props): JSX.Elemen
                     activeFieldId={activeFieldId}
                     onActivate={setActiveFieldId}
                     placeholder="(default)"
+                    ariaLabel="Image"
                     data-testid="env-edit-image"
                   />
                 </div>
@@ -505,6 +504,7 @@ export function EnvironmentEditPanel({ mode, environmentId }: Props): JSX.Elemen
                     activeFieldId={activeFieldId}
                     onActivate={setActiveFieldId}
                     placeholder="(none)"
+                    ariaLabel="Repo"
                     data-testid="env-edit-repo"
                   />
                 </div>
@@ -523,6 +523,7 @@ export function EnvironmentEditPanel({ mode, environmentId }: Props): JSX.Elemen
                   activeFieldId={activeFieldId}
                   onActivate={setActiveFieldId}
                   placeholder="codespace-name"
+                  ariaLabel="Codespace Name"
                   data-testid="env-edit-codespace-name"
                 />
               </div>
@@ -590,7 +591,12 @@ export function EnvironmentEditPanel({ mode, environmentId }: Props): JSX.Elemen
             <select
               id="env-create-adapter"
               value={adapterType}
-              onChange={(e) => setAdapterType(e.target.value)}
+              onChange={(e) => {
+                setAdapterType(e.target.value);
+                if (e.target.value === "codespace") {
+                  listCodespaces();
+                }
+              }}
               className={styles.adapterSelect}
               data-testid="env-create-adapter"
             >
