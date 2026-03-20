@@ -40,6 +40,22 @@ interface KpiCardProps {
   testId: string;
 }
 
+function formatWorkspaceCountsLabel(
+  completedTasks: number,
+  totalTasks: number,
+  workingTasks: number,
+  failedTasks: number,
+): string {
+  const parts = [`${completedTasks} of ${totalTasks} tasks completed`];
+  if (workingTasks > 0) {
+    parts.push(`${workingTasks} in progress`);
+  }
+  if (failedTasks > 0) {
+    parts.push(`${failedTasks} failed`);
+  }
+  return parts.join(", ");
+}
+
 function KpiCard({ value, label, accent, index, testId }: KpiCardProps): JSX.Element {
   return (
     <motion.div
@@ -117,7 +133,7 @@ export function DashboardPage(): JSX.Element {
           data-testid="dashboard-active-sessions"
         >
           <div className={styles.sectionHeader}>
-            <span className={styles.sectionIcon}>●</span>
+            <span className={styles.sectionIcon} aria-hidden="true">●</span>
             <span className={styles.sectionTitle}>Active Sessions</span>
             <span className={styles.sectionCount}>{activeSessions.length}</span>
           </div>
@@ -158,7 +174,7 @@ export function DashboardPage(): JSX.Element {
           data-testid="dashboard-needs-attention"
         >
           <div className={styles.sectionHeader}>
-            <span className={styles.sectionIcon}>⚑</span>
+            <span className={styles.sectionIcon} aria-hidden="true">⚑</span>
             <span className={styles.sectionTitle}>Needs Attention</span>
             <span className={styles.sectionCount}>{attentionTasks.length}</span>
           </div>
@@ -202,7 +218,7 @@ export function DashboardPage(): JSX.Element {
           data-testid="dashboard-env-health"
         >
           <div className={styles.sectionHeader}>
-            <span className={styles.sectionIcon}>◈</span>
+            <span className={styles.sectionIcon} aria-hidden="true">◈</span>
             <span className={styles.sectionTitle}>Environment Health</span>
             <span className={styles.sectionCount}>{environments.length}</span>
           </div>
@@ -232,7 +248,7 @@ export function DashboardPage(): JSX.Element {
           data-testid="dashboard-workspace-snapshot"
         >
           <div className={styles.sectionHeader}>
-            <span className={styles.sectionIcon}>▦</span>
+            <span className={styles.sectionIcon} aria-hidden="true">▦</span>
             <span className={styles.sectionTitle}>Workspaces</span>
             <span className={styles.sectionCount}>{workspaces.length}</span>
           </div>
@@ -252,10 +268,18 @@ export function DashboardPage(): JSX.Element {
                   >
                     <div className={styles.workspaceTop}>
                       <span className={styles.workspaceName}>{workspace.name}</span>
-                      <span className={styles.workspaceCounts}>
+                      <span
+                        className={styles.workspaceCounts}
+                        aria-label={formatWorkspaceCountsLabel(
+                          completedTasks,
+                          totalTasks,
+                          workingTasks,
+                          failedTasks,
+                        )}
+                      >
                         {completedTasks}/{totalTasks}
-                        {workingTasks > 0 && <span style={{ color: "var(--accent-green)" }}>▸{workingTasks}</span>}
-                        {failedTasks > 0 && <span style={{ color: "var(--accent-red)" }}>✗{failedTasks}</span>}
+                        {workingTasks > 0 && <span style={{ color: "var(--accent-green)" }} aria-hidden="true">▸{workingTasks}</span>}
+                        {failedTasks > 0 && <span style={{ color: "var(--accent-red)" }} aria-hidden="true">✗{failedTasks}</span>}
                       </span>
                     </div>
                     {totalTasks > 0 && (

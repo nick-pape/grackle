@@ -601,7 +601,7 @@ export function WorkspaceList(): JSX.Element {
         data-testid="sidebar-home"
         aria-current={isHome ? "page" : undefined}
       >
-        <span className={styles.homeIcon}>⌂</span>
+        <span className={styles.homeIcon} aria-hidden="true">⌂</span>
         <span>Home</span>
       </button>
 
