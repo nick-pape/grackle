@@ -11,24 +11,23 @@ export function loadApiKey(): string {
     ? join(process.env.GRACKLE_HOME, GRACKLE_DIR)
     : join(homedir(), GRACKLE_DIR);
   const keyPath = join(grackleHome, API_KEY_FILENAME);
+  let raw: string;
   try {
-    const key = readFileSync(keyPath, "utf8").trim();
-    if (!key) {
-      throw new Error(`API key file is empty: ${keyPath}\nRun "grackle serve" first to generate a key.`);
-    }
-    return key;
-  } catch (err) {
-    if (err instanceof Error && err.message.startsWith("API key file is empty")) {
-      throw err;
-    }
+    raw = readFileSync(keyPath, "utf8");
+  } catch {
     throw new Error(`Could not read API key from ${keyPath}\nRun "grackle serve" first to generate a key, or set GRACKLE_API_KEY.`);
   }
+  const key = raw.trim();
+  if (!key) {
+    throw new Error(`API key file is empty: ${keyPath}\nRun "grackle serve" first to generate a key.`);
+  }
+  return key;
 }
 
 /** Create an authenticated ConnectRPC client for the central Grackle server. */
 export function createGrackleClient(serverUrl?: string, apiKey?: string): Client<typeof grackle.Grackle> {
   const url = serverUrl || process.env.GRACKLE_URL || `http://127.0.0.1:${DEFAULT_SERVER_PORT}`;
-  const resolvedApiKey = apiKey || process.env.GRACKLE_API_KEY || loadApiKey();
+  const resolvedApiKey = apiKey ?? process.env.GRACKLE_API_KEY ?? loadApiKey();
   const transport = createGrpcTransport({
     baseUrl: url,
     interceptors: [
