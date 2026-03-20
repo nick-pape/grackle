@@ -55,15 +55,6 @@ test.describe("Mobile Drawer", () => {
   });
 
   test("navigation auto-closes the drawer", async ({ appPage }) => {
-    // First navigate to settings so we have a non-root path
-    await appPage.locator('button[title="Settings"]').click();
-    await appPage.getByRole("tablist", { name: "Settings" }).waitFor({ state: "visible", timeout: 5_000 });
-
-    // Go back home — on settings page there's no hamburger,
-    // so navigate home first, then open the drawer
-    await appPage.getByRole("button", { name: "Grackle" }).click();
-    await appPage.waitForURL("**/");
-
     const hamburger = appPage.getByRole("button", { name: "Toggle sidebar" });
     const sidebar = appPage.getByTestId("sidebar");
 
@@ -71,25 +62,36 @@ test.describe("Mobile Drawer", () => {
     await hamburger.click();
     await expect(sidebar).toBeVisible();
 
-    // Navigate to settings via the gear — the button is in the StatusBar (above the overlay)
-    await appPage.locator('button[title="Settings"]').click();
+    // Navigate to settings via the sidebar tab — this triggers a navigation
+    await appPage.locator('[data-testid="sidebar-tab-settings"]').click();
     await expect(sidebar).not.toBeVisible({ timeout: 5_000 });
   });
 
-  test("hamburger is not shown on settings pages", async ({ appPage }) => {
-    await appPage.locator('button[title="Settings"]').click();
+  test("hamburger is always shown (including on settings pages)", async ({ appPage }) => {
+    // Navigate to settings via sidebar tab
+    const hamburger = appPage.getByRole("button", { name: "Toggle sidebar" });
+
+    // Open drawer to access settings tab
+    await hamburger.click();
+    await appPage.locator('[data-testid="sidebar-tab-settings"]').click();
     await appPage.getByRole("tablist", { name: "Settings" }).waitFor({ state: "visible", timeout: 5_000 });
 
-    const hamburger = appPage.getByRole("button", { name: "Toggle sidebar" });
-    await expect(hamburger).toHaveCount(0);
+    // Hamburger should still be visible on settings pages
+    await expect(hamburger).toBeVisible();
   });
 
-  test("settings tabs render horizontally on mobile", async ({ appPage }) => {
-    await appPage.locator('button[title="Settings"]').click();
+  test("settings tabs render inside sidebar on mobile", async ({ appPage }) => {
+    const hamburger = appPage.getByRole("button", { name: "Toggle sidebar" });
+
+    // Open drawer and switch to settings
+    await hamburger.click();
+    await appPage.locator('[data-testid="sidebar-tab-settings"]').click();
+
+    // Settings nav should be rendered inside the sidebar
     const tablist = appPage.getByRole("tablist", { name: "Settings" });
     await expect(tablist).toBeVisible();
 
-    // All tabs should be visible
+    // Settings tabs should be visible
     await expect(appPage.getByRole("tab", { name: "Environments" })).toBeVisible();
     await expect(appPage.getByRole("tab", { name: "Appearance" })).toBeVisible();
   });

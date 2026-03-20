@@ -1,0 +1,54 @@
+@use '../../styles/mixins' as *;
+
+// =============================================================================
+// SidebarNav — horizontal tab bar for switching sidebar views
+// =============================================================================
+
+.nav {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  padding: 0 var(--space-sm);
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-xs);
+  padding: var(--space-sm) var(--space-md);
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-ui);
+  cursor: pointer;
+  transition: background var(--transition-fast),
+              color var(--transition-fast),
+              border-color var(--transition-fast);
+  white-space: nowrap;
+
+  &:hover {
+    background: var(--bg-overlay);
+    color: var(--text-primary);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent-green);
+    outline-offset: -2px;
+  }
+}
+
+.tabActive {
+  border-bottom-color: var(--accent-green);
+  color: var(--text-primary);
+  font-weight: var(--font-weight-medium);
+}
+
+.settingsTab {
+  margin-left: auto;
+  font-size: var(--font-size-base);
+}

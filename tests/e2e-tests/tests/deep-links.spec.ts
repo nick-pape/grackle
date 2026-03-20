@@ -12,7 +12,8 @@ test.describe("Deep linking", () => {
   test("deep link to /workspaces/:id loads workspace", async ({ appPage }) => {
     const page = appPage;
 
-    // Create a workspace first
+    // Navigate to Workspaces tab to create a workspace
+    await page.locator('[data-testid="sidebar-tab-workspaces"]').click();
     await createWorkspace(page, "deep-link-proj");
     const workspaceId = await getWorkspaceId(page, "deep-link-proj");
 
@@ -30,7 +31,8 @@ test.describe("Deep linking", () => {
   test("deep link to /tasks/:id loads task detail", async ({ appPage }) => {
     const page = appPage;
 
-    // Create workspace and task
+    // Navigate to Workspaces tab to create workspace and task
+    await page.locator('[data-testid="sidebar-tab-workspaces"]').click();
     await createWorkspace(page, "deep-link-task-proj");
     await page.getByText("deep-link-task-proj").click();
     await createTask(page, "deep-link-task-proj", "deep-link-task");
@@ -53,8 +55,8 @@ test.describe("Deep linking", () => {
   test("page refresh preserves current view", async ({ appPage }) => {
     const page = appPage;
 
-    // Navigate to settings
-    await page.locator('button[title="Settings"]').click();
+    // Navigate to settings via sidebar tab
+    await page.locator('[data-testid="sidebar-tab-settings"]').click();
     await expect(page.getByRole("tablist", { name: "Settings" })).toBeVisible({ timeout: 5_000 });
 
     // Reload
@@ -72,14 +74,15 @@ test.describe("Deep linking", () => {
   test("back/forward navigation works between pages", async ({ appPage }) => {
     const page = appPage;
 
-    // Create a workspace to navigate to
+    // Navigate to Workspaces tab and create a workspace
+    await page.locator('[data-testid="sidebar-tab-workspaces"]').click();
     await createWorkspace(page, "back-fwd-proj");
 
-    // Navigate: home -> workspace -> settings
+    // Navigate: workspaces -> workspace -> settings
     await page.getByText("back-fwd-proj").click();
     await page.waitForTimeout(500);
 
-    await page.locator('button[title="Settings"]').click();
+    await page.locator('[data-testid="sidebar-tab-settings"]').click();
     await expect(page.getByRole("tablist", { name: "Settings" })).toBeVisible({ timeout: 5_000 });
 
     // Go back — should be on the workspace page
@@ -93,7 +96,7 @@ test.describe("Deep linking", () => {
     expect(page.url()).toContain("/settings");
   });
 
-  test("unknown route redirects to /", async ({ appPage }) => {
+  test("unknown route redirects to /tasks", async ({ appPage }) => {
     const page = appPage;
 
     await page.goto("/this-route-does-not-exist");
@@ -102,14 +105,15 @@ test.describe("Deep linking", () => {
       { timeout: 10_000 },
     );
 
-    // Should redirect to root (catch-all <Navigate to="/" replace />)
-    expect(new URL(page.url()).pathname).toBe("/");
+    // Should redirect to /tasks (catch-all <Navigate to="/" replace /> → / → /tasks)
+    expect(new URL(page.url()).pathname).toBe("/tasks");
   });
 
   test("deep link to /tasks/:id/stream loads stream tab", async ({ appPage }) => {
     const page = appPage;
 
-    // Create workspace and task
+    // Navigate to Workspaces tab to create workspace and task
+    await page.locator('[data-testid="sidebar-tab-workspaces"]').click();
     await createWorkspace(page, "deep-stream-proj");
     await page.getByText("deep-stream-proj").click();
     await createTask(page, "deep-stream-proj", "deep-stream-task");

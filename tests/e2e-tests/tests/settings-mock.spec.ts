@@ -29,10 +29,10 @@ test.describe("Settings Page (Mock Mode)", () => {
   test("gear icon is visible and navigates to settings", async ({ mockPage }) => {
     const page = mockPage;
 
-    const gearButton = page.locator('button[title="Settings"]');
-    await expect(gearButton).toBeVisible({ timeout: 5_000 });
+    const settingsTab = page.locator('[data-testid="sidebar-tab-settings"]');
+    await expect(settingsTab).toBeVisible({ timeout: 5_000 });
 
-    await gearButton.click();
+    await settingsTab.click();
 
     // Should redirect to environments tab
     await expect(page).toHaveURL(/\/settings\/environments/);

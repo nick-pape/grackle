@@ -3,7 +3,7 @@ import { test, expect } from "./fixtures.js";
 test.describe("Environment Display", () => {
   test.beforeEach(async ({ appPage }) => {
     // Environments are now in Settings — navigate there via the gear button
-    await appPage.locator('button[title="Settings"]').click();
+    await appPage.locator('[data-testid="sidebar-tab-settings"]').click();
   });
 
   test("environment card renders with name", async ({ appPage }) => {

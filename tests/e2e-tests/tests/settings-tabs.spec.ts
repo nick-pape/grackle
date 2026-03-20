@@ -129,8 +129,8 @@ test.describe("Settings Tabs", () => {
     // The persona button should not exist
     await expect(page.locator('button[title="Personas"]')).not.toBeVisible();
 
-    // The settings gear should still exist
-    await expect(page.locator('button[title="Settings"]')).toBeVisible();
+    // The settings sidebar tab should still exist
+    await expect(page.locator('[data-testid="sidebar-tab-settings"]')).toBeVisible();
   });
 
   test("breadcrumbs always show Home > Settings on all tabs", async ({ mockPage }) => {

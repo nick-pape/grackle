@@ -36,7 +36,7 @@ async function reprovisionTestLocal(page: import("@playwright/test").Page): Prom
 test.describe("Environment List — Expand/Collapse", () => {
   test.beforeEach(async ({ appPage }) => {
     // Environments are now in Settings — navigate there via the gear button
-    await appPage.locator('button[title="Settings"]').click();
+    await appPage.locator('[data-testid="sidebar-tab-settings"]').click();
   });
 
   test("clicking environment row expands action row", async ({ appPage }) => {
@@ -123,7 +123,7 @@ test.describe("Environment Lifecycle — WebSocket Handlers", () => {
     );
 
     // Switch to Environments (now in Settings)
-    await page.locator('button[title="Settings"]').click();
+    await page.locator('[data-testid="sidebar-tab-settings"]').click();
     await expect(page.getByText("test-local")).toBeVisible();
 
     // Verify test-local is currently connected (accent dot)
@@ -156,7 +156,7 @@ test.describe("Environment Lifecycle — WebSocket Handlers", () => {
       { timeout: 10_000 },
     );
 
-    await page.locator('button[title="Settings"]').click();
+    await page.locator('[data-testid="sidebar-tab-settings"]').click();
 
     // First stop the environment
     await sendWsMessage(page, {
@@ -187,7 +187,7 @@ test.describe("Environment Lifecycle — WebSocket Handlers", () => {
       { timeout: 10_000 },
     );
 
-    await page.locator('button[title="Settings"]').click();
+    await page.locator('[data-testid="sidebar-tab-settings"]').click();
 
     // Stop the environment first
     await sendWsMessage(page, {
@@ -214,7 +214,7 @@ test.describe("Environment Lifecycle — WebSocket Handlers", () => {
       { timeout: 10_000 },
     );
 
-    await page.locator('button[title="Settings"]').click();
+    await page.locator('[data-testid="sidebar-tab-settings"]').click();
 
     // First, add a temporary environment that we can safely remove
     // Use the CLI-seeded "test-local" state to create a new one via WS
@@ -283,7 +283,7 @@ test.describe("Environment Lifecycle — WebSocket Handlers", () => {
       { timeout: 10_000 },
     );
 
-    await page.locator('button[title="Settings"]').click();
+    await page.locator('[data-testid="sidebar-tab-settings"]').click();
 
     // Stop the environment
     await sendWsMessage(page, {
@@ -332,7 +332,7 @@ test.describe("Environment Lifecycle — Delete with Confirmation", () => {
   test("delete button shows confirmation dialog", async ({ appPage }) => {
     const page = appPage;
 
-    await page.locator('button[title="Settings"]').click();
+    await page.locator('[data-testid="sidebar-tab-settings"]').click();
 
     // Expand the environment
     await page.getByText("test-local").click();

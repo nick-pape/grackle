@@ -49,7 +49,7 @@ const test = baseTest.extend<{ codespaceErrorPage: import("@playwright/test").Pa
 test.describe("Codespace — manual entry fallback", () => {
   test.beforeEach(async ({ codespaceErrorPage }) => {
     // Navigate to Settings → Add Environment
-    await codespaceErrorPage.locator('button[title="Settings"]').click();
+    await codespaceErrorPage.locator('[data-testid="sidebar-tab-settings"]').click();
     await codespaceErrorPage.locator('button[title="Add environment"]').click();
     // Select the codespace adapter
     const adapterSelect = codespaceErrorPage.locator("select").first();

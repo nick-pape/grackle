@@ -1,5 +1,9 @@
 import { useState, useRef, useEffect, type JSX } from "react";
+import { useLocation } from "react-router";
+import { SidebarNav, getActiveView } from "./SidebarNav.js";
+import { TaskList } from "../lists/TaskList.js";
 import { WorkspaceList } from "../lists/WorkspaceList.js";
+import { SettingsNav } from "../settings/SettingsNav.js";
 import styles from "./Sidebar.module.scss";
 
 /** Default sidebar width in pixels. */
@@ -36,10 +40,12 @@ function saveWidth(width: number): void {
   }
 }
 
-/** Left sidebar showing the permanent workspace/task tree. */
+/** Left sidebar with tab bar for Tasks / Workspaces / Settings views. */
 export function Sidebar(): JSX.Element {
   const [width] = useState<number>(loadWidth);
   const containerRef = useRef<HTMLDivElement>(null);
+  const location = useLocation();
+  const activeView = getActiveView(location.pathname);
 
   /** Observe container resizes and persist width to localStorage. */
   useEffect(() => {
@@ -67,9 +73,11 @@ export function Sidebar(): JSX.Element {
 
   return (
     <div className={styles.container} ref={containerRef} data-testid="sidebar" style={{ width }}>
-      {/* Content */}
+      <SidebarNav />
       <div className={styles.content}>
-        <WorkspaceList />
+        {activeView === "tasks" && <TaskList />}
+        {activeView === "workspaces" && <WorkspaceList />}
+        {activeView === "settings" && <SettingsNav />}
       </div>
     </div>
   );

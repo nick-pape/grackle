@@ -54,15 +54,6 @@
       transition: transform var(--transition-slow),
                   visibility 0s;
     }
-
-    // Settings nav renders inline as horizontal tabs on mobile
-    &[data-settings="true"] {
-      position: static;
-      width: 100%;
-      transform: none;
-      visibility: visible;
-      transition: none;
-    }
   }
 }
 
