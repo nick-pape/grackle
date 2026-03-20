@@ -27,6 +27,7 @@ function SystemContextEvent({ content }: { content: string }): JSX.Element {
   return (
     <div className={styles.systemContextEvent} data-testid="system-context-event">
       <button
+        type="button"
         className={styles.systemContextHeader}
         onClick={() => { setExpanded((v) => !v); }}
         aria-expanded={expanded}
