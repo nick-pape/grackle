@@ -1,5 +1,11 @@
 import { test, expect } from "./fixtures.js";
-import { createWorkspace, createTask, createTaskViaWs, getWorkspaceId } from "./helpers.js";
+import {
+  createWorkspace,
+  createTask,
+  createTaskViaWs,
+  getSidebarWorkspaceLabel,
+  getWorkspaceId,
+} from "./helpers.js";
 
 test.describe("Sidebar search filter", () => {
   // Clean up localStorage after each test to prevent state leakage
@@ -27,8 +33,8 @@ test.describe("Sidebar search filter", () => {
     await searchInput.fill("Alpha");
 
     // Alpha should be visible, Beta should be hidden
-    await expect(page.getByText("Alpha Project").first()).toBeVisible({ timeout: 5_000 });
-    await expect(page.getByText("Beta Project")).not.toBeVisible({ timeout: 3_000 });
+    await expect(getSidebarWorkspaceLabel(page, "Alpha Project")).toBeVisible({ timeout: 5_000 });
+    await expect(getSidebarWorkspaceLabel(page, "Beta Project")).not.toBeVisible({ timeout: 3_000 });
   });
 
   test("typing filters tasks by title", async ({ appPage }) => {
@@ -56,14 +62,14 @@ test.describe("Sidebar search filter", () => {
     await searchInput.fill("Zebra");
 
     // Only Zebra visible
-    await expect(page.getByText("Quantum Labs")).not.toBeVisible({ timeout: 3_000 });
+    await expect(getSidebarWorkspaceLabel(page, "Quantum Labs")).not.toBeVisible({ timeout: 3_000 });
 
     // Clear the filter
     await searchInput.fill("");
 
     // Both workspaces should be visible again
-    await expect(page.getByText("Zebra Corp").first()).toBeVisible({ timeout: 5_000 });
-    await expect(page.getByText("Quantum Labs").first()).toBeVisible({ timeout: 5_000 });
+    await expect(getSidebarWorkspaceLabel(page, "Zebra Corp")).toBeVisible({ timeout: 5_000 });
+    await expect(getSidebarWorkspaceLabel(page, "Quantum Labs")).toBeVisible({ timeout: 5_000 });
   });
 
   test("search works in grouped-by-status view", async ({ appPage }) => {

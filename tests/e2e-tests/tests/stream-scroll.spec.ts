@@ -1,5 +1,6 @@
 import { test, expect } from "./fixtures.js";
 import {
+  clickSidebarWorkspace,
   createWorkspace,
   createTask,
   navigateToTask,
@@ -14,7 +15,7 @@ test.describe("Stream smart scroll", () => {
     const page = appPage;
 
     await createWorkspace(page, "scroll-init");
-    await page.getByText("scroll-init").click();
+    await clickSidebarWorkspace(page, "scroll-init");
     await createTask(page, "scroll-init", "init-task", "test-local");
     await navigateToTask(page, "init-task");
     await patchWsForStubRuntime(page);
@@ -38,7 +39,7 @@ test.describe("Stream smart scroll", () => {
     const page = appPage;
 
     await createWorkspace(page, "scroll-dir");
-    await page.getByText("scroll-dir").click();
+    await clickSidebarWorkspace(page, "scroll-dir");
     await createTask(page, "scroll-dir", "dir-task", "test-local");
     await navigateToTask(page, "dir-task");
     await patchWsForStubRuntime(page);
@@ -70,7 +71,7 @@ test.describe("Stream smart scroll", () => {
     );
 
     await createWorkspace(page, "scroll-fab");
-    await page.getByText("scroll-fab").click();
+    await clickSidebarWorkspace(page, "scroll-fab");
     await createTask(page, "scroll-fab", "fab-task", "test-local");
     await navigateToTask(page, "fab-task");
     await patchWsForStubRuntime(page);

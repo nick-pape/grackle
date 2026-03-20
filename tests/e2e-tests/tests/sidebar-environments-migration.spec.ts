@@ -1,5 +1,11 @@
 import { test, expect } from "./fixtures.js";
-import { sendWsAndWaitFor, sendWsMessage, installWsTracker, injectWsMessage } from "./helpers.js";
+import {
+  clickSidebarWorkspace,
+  sendWsAndWaitFor,
+  sendWsMessage,
+  installWsTracker,
+  injectWsMessage,
+} from "./helpers.js";
 
 test.describe("Sidebar — Task-Only (No Environments Tab)", () => {
   test("sidebar has no Environments tab button", async ({ appPage }) => {
@@ -286,8 +292,8 @@ test.describe("Navigation Between Settings and Workspaces", () => {
     const nameInput = page.locator('input[placeholder="Workspace name..."]');
     await nameInput.fill("gear-test");
     await page.locator("button", { hasText: "OK" }).click();
-    await expect(page.getByText("gear-test")).toBeVisible({ timeout: 5_000 });
-    await page.getByText("gear-test").click();
+    await expect(page.getByTestId("sidebar").getByText("gear-test", { exact: true })).toBeVisible({ timeout: 5_000 });
+    await clickSidebarWorkspace(page, "gear-test");
 
     // Now click gear to go to Settings
     await page.locator('button[title="Settings"]').click();
