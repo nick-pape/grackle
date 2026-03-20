@@ -71,6 +71,18 @@ describe("credential-providers", () => {
       expect(() => parseCredentialProviderConfig("not valid json {{{")).toThrow();
     });
 
+    it("returns defaults for non-object JSON values", () => {
+      for (const input of ["null", "42", '"hello"', "true"]) {
+        const result = parseCredentialProviderConfig(input);
+        expect(result).toEqual({
+          claude: "off",
+          github: "off",
+          copilot: "off",
+          codex: "off",
+        });
+      }
+    });
+
     it("falls back to defaults for invalid field values", () => {
       const result = parseCredentialProviderConfig(
         JSON.stringify({

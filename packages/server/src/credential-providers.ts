@@ -51,10 +51,12 @@ export type DatabaseInstance = BetterSQLite3Database<typeof schema>;
 /**
  * Parse a raw JSON string into a validated {@link CredentialProviderConfig}.
  * Invalid or missing fields fall back to {@link DEFAULT_CONFIG} values.
- * Throws if the JSON is unparseable — callers decide how to handle the error.
+ * Throws if the JSON is syntactically invalid — callers decide how to handle the error.
+ * Non-object values (e.g. `"null"`, `"42"`) are treated as empty and fall back to defaults.
  */
 export function parseCredentialProviderConfig(rawJson: string): CredentialProviderConfig {
-  const parsed = JSON.parse(rawJson) as Partial<CredentialProviderConfig>;
+  const raw = JSON.parse(rawJson) as unknown;
+  const parsed = (typeof raw === "object" && raw !== null ? raw : {}) as Partial<CredentialProviderConfig>;
   return {
     claude: VALID_CLAUDE_VALUES.has(parsed.claude ?? "") ? parsed.claude! : DEFAULT_CONFIG.claude,
     github: VALID_TOGGLE_VALUES.has(parsed.github ?? "") ? parsed.github! : DEFAULT_CONFIG.github,
