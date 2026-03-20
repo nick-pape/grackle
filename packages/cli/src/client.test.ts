@@ -33,6 +33,8 @@ describe("createGrackleClient", () => {
     // Clean up env overrides between tests
     delete process.env.GRACKLE_URL;
     delete process.env.GRACKLE_API_KEY;
+    delete process.env.GRACKLE_HOME;
+    vi.clearAllMocks();
     vi.resetModules();
   });
 
@@ -68,5 +70,46 @@ describe("createGrackleClient", () => {
     expect(createGrpcTransport).toHaveBeenCalledWith(
       expect.objectContaining({ baseUrl: "http://[::1]:9000" }),
     );
+  });
+
+  it("UT-3: throws when API key file is missing", async () => {
+    const fs = await import("node:fs");
+    vi.mocked(fs.readFileSync).mockImplementation(() => {
+      throw new Error("ENOENT: no such file or directory");
+    });
+    const { createGrackleClient } = await import("./client.js");
+
+    expect(() => createGrackleClient()).toThrow(
+      "Could not read API key from",
+    );
+  });
+
+  it("UT-4: throws when API key file is empty", async () => {
+    const fs = await import("node:fs");
+    vi.mocked(fs.readFileSync).mockReturnValue("");
+    const { createGrackleClient } = await import("./client.js");
+
+    expect(() => createGrackleClient()).toThrow(
+      "API key file is empty",
+    );
+  });
+
+  it("UT-5: uses explicit apiKey argument when provided", async () => {
+    const fs = await import("node:fs");
+    const { createGrackleClient } = await import("./client.js");
+
+    createGrackleClient(undefined, "injected-key");
+
+    expect(fs.readFileSync).not.toHaveBeenCalled();
+  });
+
+  it("UT-6: GRACKLE_API_KEY env var takes precedence over file", async () => {
+    process.env.GRACKLE_API_KEY = "env-key";
+    const fs = await import("node:fs");
+    const { createGrackleClient } = await import("./client.js");
+
+    createGrackleClient();
+
+    expect(fs.readFileSync).not.toHaveBeenCalled();
   });
 });
