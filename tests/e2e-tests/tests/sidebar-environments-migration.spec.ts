@@ -2,7 +2,7 @@ import { test, expect } from "./fixtures.js";
 import { sendWsAndWaitFor, sendWsMessage, installWsTracker, injectWsMessage } from "./helpers.js";
 
 test.describe("Sidebar — Tab Bar Navigation", () => {
-  test("sidebar has tab bar with Tasks, Workspaces, and Settings tabs", async ({ appPage }) => {
+  test("sidebar has tab bar with Chat, Tasks, Workspaces, and Settings tabs", async ({ appPage }) => {
     const page = appPage;
 
     const sidebar = page.locator('[data-testid="sidebar"]');
@@ -10,19 +10,20 @@ test.describe("Sidebar — Tab Bar Navigation", () => {
     // Tab bar should be visible
     await expect(sidebar.locator('[data-testid="sidebar-nav"]')).toBeVisible();
 
-    // All three tabs should be present
+    // All four tabs should be present
+    await expect(sidebar.locator('[data-testid="sidebar-tab-chat"]')).toBeVisible();
     await expect(sidebar.locator('[data-testid="sidebar-tab-tasks"]')).toBeVisible();
     await expect(sidebar.locator('[data-testid="sidebar-tab-workspaces"]')).toBeVisible();
     await expect(sidebar.locator('[data-testid="sidebar-tab-settings"]')).toBeVisible();
   });
 
-  test("sidebar defaults to Tasks tab", async ({ appPage }) => {
+  test("sidebar defaults to Chat tab", async ({ appPage }) => {
     const page = appPage;
 
     const sidebar = page.locator('[data-testid="sidebar"]');
 
-    // Tasks tab should be active by default (app redirects / to /tasks)
-    await expect(sidebar.locator('[data-testid="sidebar-tab-tasks"]')).toHaveAttribute("aria-selected", "true");
+    // Chat tab should be active by default (app redirects / to /chat)
+    await expect(sidebar.locator('[data-testid="sidebar-tab-chat"]')).toHaveAttribute("aria-selected", "true");
   });
 
   test("clicking Workspaces tab shows workspace list", async ({ appPage }) => {

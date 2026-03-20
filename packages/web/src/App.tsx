@@ -117,7 +117,7 @@ function AppRoutes(): JSX.Element {
     <Routes>
       <Route path="setup" element={<SetupWizard />} />
       <Route element={<AppShell />}>
-        <Route index element={<Navigate to="/tasks" replace />} />
+        <Route index element={<Navigate to="/chat" replace />} />
         <Route path="chat" element={<ChatPage />} />
         <Route path="tasks" element={<TasksEmptyPage />} />
         <Route path="tasks/new" element={<NewTaskPage />} />

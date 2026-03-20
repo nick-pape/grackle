@@ -96,7 +96,7 @@ test.describe("Deep linking", () => {
     expect(page.url()).toContain("/settings");
   });
 
-  test("unknown route redirects to /tasks", async ({ appPage }) => {
+  test("unknown route redirects to /chat", async ({ appPage }) => {
     const page = appPage;
 
     await page.goto("/this-route-does-not-exist");
@@ -105,8 +105,8 @@ test.describe("Deep linking", () => {
       { timeout: 10_000 },
     );
 
-    // Should redirect to /tasks (catch-all <Navigate to="/" replace /> → / → /tasks)
-    expect(new URL(page.url()).pathname).toBe("/tasks");
+    // Should redirect to /chat (catch-all <Navigate to="/" replace /> → / → /chat)
+    expect(new URL(page.url()).pathname).toBe("/chat");
   });
 
   test("deep link to /tasks/:id/stream loads stream tab", async ({ appPage }) => {

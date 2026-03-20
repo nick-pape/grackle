@@ -2,11 +2,11 @@ import { test, expect } from "./fixtures.js";
 import { createWorkspace } from "./helpers.js";
 
 test.describe("Workspaces", () => {
-  test("sidebar defaults to Tasks tab and Workspaces tab shows workspace list", async ({ appPage }) => {
+  test("sidebar defaults to Chat tab and Workspaces tab shows workspace list", async ({ appPage }) => {
     const page = appPage;
 
-    // Tasks tab should be active by default (app redirects / to /tasks)
-    await expect(page.locator('[data-testid="sidebar-tab-tasks"]')).toHaveAttribute("aria-selected", "true");
+    // Chat tab should be active by default (app redirects / to /chat)
+    await expect(page.locator('[data-testid="sidebar-tab-chat"]')).toHaveAttribute("aria-selected", "true");
 
     // Switch to Workspaces tab — header label visible
     await page.locator('[data-testid="sidebar-tab-workspaces"]').click();
@@ -106,10 +106,10 @@ test.describe("Workspaces", () => {
     await page.locator('[data-testid="task-edit-title"]').waitFor({ timeout: 5_000 });
     await page.locator('[data-testid="task-edit-title"]').fill("my task");
     await page.locator('[data-testid="task-edit-save"]').click();
-    await expect(page.getByText("my task")).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText("my task").first()).toBeVisible({ timeout: 5_000 });
 
     // Click task to navigate to task view
-    await page.getByText("my task").click();
+    await page.getByText("my task").first().click();
 
     // Task header should be visible with title and status
     await expect(page.locator('[data-testid="task-status"]')).toContainText("not_started", { timeout: 5_000 });
