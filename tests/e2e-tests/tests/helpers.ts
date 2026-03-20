@@ -3,6 +3,16 @@ import type { Page } from "@playwright/test";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type WsPayload = Record<string, any>;
 
+/** Get the sidebar label locator for a workspace name. */
+export function getSidebarWorkspaceLabel(page: Page, workspaceName: string) {
+  return page.getByTestId("sidebar").getByText(workspaceName, { exact: true }).first();
+}
+
+/** Get the sidebar row locator for a workspace name. */
+export function getSidebarWorkspaceRow(page: Page, workspaceName: string) {
+  return getSidebarWorkspaceLabel(page, workspaceName).locator("..");
+}
+
 /**
  * Open a second WebSocket from the page context, send a message, and wait for
  * a response matching the given type. Resolves with the full response object.
@@ -134,11 +144,16 @@ export async function createWorkspace(page: Page, name: string, environmentId: s
   );
   // Wait for the workspace to appear in the sidebar after the event triggers a refresh.
   // The dashboard also mirrors workspace names, so scope to the sidebar to avoid strict-mode collisions.
-  await page.getByTestId("sidebar").getByText(name, { exact: true }).waitFor({ timeout: 5_000 });
+  await getSidebarWorkspaceLabel(page, name).waitFor({ timeout: 5_000 });
 }
 
 /** @deprecated Use {@link createWorkspace} instead. */
 export const createProject = createWorkspace;
+
+/** Click a workspace row in the sidebar without matching dashboard cards. */
+export async function clickSidebarWorkspace(page: Page, workspaceName: string): Promise<void> {
+  await getSidebarWorkspaceLabel(page, workspaceName).click();
+}
 
 /**
  * Create a task under a workspace and wait for it to appear in the sidebar.
@@ -161,8 +176,7 @@ export async function createTask(
     // stopPropagation so it never toggles the workspace's expand/collapse state —
     // unlike clicking the workspace name which collapses if already selected).
     await page
-      .getByText(workspaceName)
-      .locator("..")
+      getSidebarWorkspaceRow(page, workspaceName)
       .locator('button[title="New task"]')
       .first()
       .click();
@@ -186,8 +200,7 @@ export async function createTask(
   // No env specified — exercise the new full-panel TaskEditPanel UI.
   // Click "New task" button (uses stopPropagation, doesn't toggle expansion)
   await page
-    .getByText(workspaceName)
-    .locator("..")
+    getSidebarWorkspaceRow(page, workspaceName)
     .locator('button[title="New task"]')
     .first()
     .click();

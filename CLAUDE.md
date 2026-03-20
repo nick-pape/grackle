@@ -15,6 +15,7 @@ When you encounter unexpected issues, workarounds, or non-obvious behavior (CI q
 
 - **Always plan tests**: Every implementation plan must include a section for tests (E2E Playwright specs for `@grackle-ai/web`, unit/integration tests for other packages). If the change is purely cosmetic or untestable, explicitly note why tests are skipped.
 - **Prefer `data-testid` in E2E tests**: Use `data-testid` attributes and `page.getByTestId()` to locate elements in Playwright tests rather than fragile DOM selectors like `getByText()` with `{ exact: true }`. Text-based locators break when the same text appears in multiple places (e.g., StatusBar and page content). Add `data-testid` to components when writing tests that need to disambiguate.
+- **Scope workspace-name locators to the sidebar in E2E tests**: the dashboard home page reuses workspace names in cards, so unscoped `page.getByText(workspaceName)` calls can hit Playwright strict-mode violations. Prefer helpers or locators rooted under `data-testid="sidebar"` when clicking workspace rows or adjacent sidebar controls.
 - **Open a PR as the final step**: Use `/create-pr` to open the PR. The PR body must link back to the issue.
 
 ## Build & Test

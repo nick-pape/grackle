@@ -1,5 +1,11 @@
 import { test, expect } from "./fixtures.js";
-import { createWorkspace, createTask, getWorkspaceId, getTaskId } from "./helpers.js";
+import {
+  clickSidebarWorkspace,
+  createWorkspace,
+  createTask,
+  getWorkspaceId,
+  getTaskId,
+} from "./helpers.js";
 
 test.describe("Deep linking", () => {
   test("deep link to /settings loads settings page", async ({ appPage }) => {
@@ -32,7 +38,7 @@ test.describe("Deep linking", () => {
 
     // Create workspace and task
     await createWorkspace(page, "deep-link-task-proj");
-    await page.getByText("deep-link-task-proj").click();
+    await clickSidebarWorkspace(page, "deep-link-task-proj");
     await createTask(page, "deep-link-task-proj", "deep-link-task");
     const workspaceId = await getWorkspaceId(page, "deep-link-task-proj");
     const taskId = await getTaskId(page, workspaceId, "deep-link-task");
@@ -76,7 +82,7 @@ test.describe("Deep linking", () => {
     await createWorkspace(page, "back-fwd-proj");
 
     // Navigate: home -> workspace -> settings
-    await page.getByText("back-fwd-proj").click();
+    await clickSidebarWorkspace(page, "back-fwd-proj");
     await page.waitForTimeout(500);
 
     await page.locator('button[title="Settings"]').click();
@@ -93,7 +99,7 @@ test.describe("Deep linking", () => {
     expect(page.url()).toContain("/settings");
   });
 
-  test("unknown route redirects to /chat", async ({ appPage }) => {
+  test("unknown route redirects to home", async ({ appPage }) => {
     const page = appPage;
 
     await page.goto("/this-route-does-not-exist");
@@ -102,8 +108,8 @@ test.describe("Deep linking", () => {
       { timeout: 10_000 },
     );
 
-    // Should redirect to /chat via catch-all → / → /chat
-    expect(new URL(page.url()).pathname).toBe("/chat");
+    // Should redirect to the dashboard home route.
+    expect(new URL(page.url()).pathname).toBe("/");
   });
 
   test("deep link to /tasks/:id/stream loads stream tab", async ({ appPage }) => {
@@ -111,7 +117,7 @@ test.describe("Deep linking", () => {
 
     // Create workspace and task
     await createWorkspace(page, "deep-stream-proj");
-    await page.getByText("deep-stream-proj").click();
+    await clickSidebarWorkspace(page, "deep-stream-proj");
     await createTask(page, "deep-stream-proj", "deep-stream-task");
     const workspaceId = await getWorkspaceId(page, "deep-stream-proj");
     const taskId = await getTaskId(page, workspaceId, "deep-stream-task");

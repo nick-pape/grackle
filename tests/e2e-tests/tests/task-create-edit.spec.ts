@@ -1,5 +1,6 @@
 import { test, expect } from "./fixtures.js";
 import {
+  clickSidebarWorkspace,
   createWorkspace,
   createTask,
   navigateToTask,
@@ -15,7 +16,9 @@ test.describe("Unified task create/edit experience", () => {
 
     // Click "New task" button in the sidebar
     await page
-      .getByText("create-panel-proj")
+      .getByTestId("sidebar")
+      .getByText("create-panel-proj", { exact: true })
+      .first()
       .locator("..")
       .locator('button[title="New task"]')
       .first()
@@ -35,7 +38,9 @@ test.describe("Unified task create/edit experience", () => {
 
     // Open new task form
     await page
-      .getByText("create-full-proj")
+      .getByTestId("sidebar")
+      .getByText("create-full-proj", { exact: true })
+      .first()
       .locator("..")
       .locator('button[title="New task"]')
       .first()
@@ -64,7 +69,9 @@ test.describe("Unified task create/edit experience", () => {
 
     // Open new task form
     await page
-      .getByText("cancel-create-proj")
+      .getByTestId("sidebar")
+      .getByText("cancel-create-proj", { exact: true })
+      .first()
       .locator("..")
       .locator('button[title="New task"]')
       .first()
@@ -97,7 +104,7 @@ test.describe("Unified task create/edit experience", () => {
     const page = appPage;
     await createWorkspace(page, "edit-form-proj");
     // Expand the workspace in the sidebar so tasks will become visible
-    await page.getByText("edit-form-proj").first().click();
+    await clickSidebarWorkspace(page, "edit-form-proj");
     const workspaceId = await getWorkspaceId(page, "edit-form-proj");
 
     // Create task with description via WS so we can verify pre-population
@@ -126,7 +133,7 @@ test.describe("Unified task create/edit experience", () => {
     const page = appPage;
     await createWorkspace(page, "save-edit-proj");
     // Expand the workspace in the sidebar so tasks will become visible
-    await page.getByText("save-edit-proj").first().click();
+    await clickSidebarWorkspace(page, "save-edit-proj");
     const workspaceId = await getWorkspaceId(page, "save-edit-proj");
 
     await createTaskViaWs(page, workspaceId,"old-title-task", {
@@ -157,7 +164,9 @@ test.describe("Unified task create/edit experience", () => {
 
     // Open new task form
     await page
-      .getByText("no-env-proj")
+      .getByTestId("sidebar")
+      .getByText("no-env-proj", { exact: true })
+      .first()
       .locator("..")
       .locator('button[title="New task"]')
       .first()
@@ -175,7 +184,7 @@ test.describe("Unified task create/edit experience", () => {
     const page = appPage;
     await createWorkspace(page, "deps-edit-proj");
     // Expand the workspace in the sidebar so tasks will become visible
-    await page.getByText("deps-edit-proj").first().click();
+    await clickSidebarWorkspace(page, "deps-edit-proj");
     const workspaceId = await getWorkspaceId(page, "deps-edit-proj");
 
     // Create two tasks
