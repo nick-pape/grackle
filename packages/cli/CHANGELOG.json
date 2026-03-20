@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.52.1",
+      "tag": "@grackle-ai/cli_v0.52.1",
+      "date": "Fri, 20 Mar 2026 14:30:15 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Normalize IPv6 literals in GRACKLE_DOCKER_HOST by wrapping them in brackets for well-formed URLs"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.52.0",
       "tag": "@grackle-ai/cli_v0.52.0",
       "date": "Fri, 20 Mar 2026 08:47:53 GMT",

@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Fri, 20 Mar 2026 08:47:53 GMT and should not be manually modified.
+This log was last generated on Fri, 20 Mar 2026 14:30:15 GMT and should not be manually modified.
+
+## 0.52.1
+Fri, 20 Mar 2026 14:30:15 GMT
+
+### Patches
+
+- Normalize IPv6 literals in GRACKLE_DOCKER_HOST by wrapping them in brackets for well-formed URLs
 
 ## 0.52.0
 Fri, 20 Mar 2026 08:47:53 GMT
