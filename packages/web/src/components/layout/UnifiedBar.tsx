@@ -75,7 +75,7 @@ export function UnifiedBar(): JSX.Element {
   // Derive current page context
   const sessionId = sessionMatch?.params.sessionId;
   const taskId = taskMatch?.params.taskId ?? taskStreamMatch?.params.taskId ?? taskFindingsMatch?.params.taskId
-    ?? wsTaskMatch?.params.taskId ?? wsTaskStreamMatch?.params.taskId ?? wsTaskFindingsMatch?.params.taskId;
+    ?? wsTaskMatch?.params.taskId ?? wsTaskStreamMatch?.params.taskId ?? wsTaskFindingsMatch?.params.taskId ?? wsTaskEditMatch?.params.taskId;
   const isChat = !!chatMatch;
   const isNewChat = !!newChatMatch;
   const isNewEnv = !!newEnvMatch;
