@@ -37,8 +37,7 @@ import { createOAuthAccessToken, OAUTH_ACCESS_TOKEN_TTL_MS } from "@grackle-ai/m
 import { logger } from "./logger.js";
 import { exec } from "./utils/exec.js";
 import { detectLanIp } from "./utils/network.js";
-// Import db to ensure tables are created
-import "./db.js";
+import { openDatabase, initDatabase } from "./db.js";
 
 const MIME_TYPES: Record<string, string> = {
   ".html": "text/html",
@@ -602,6 +601,13 @@ function isWildcardAddress(host: string): boolean {
 let localPowerLineHandle: LocalPowerLineHandle | undefined;
 
 async function main(): Promise<void> {
+  // Open the database and run migrations before anything else
+  openDatabase();
+  const { migrationErrors } = initDatabase();
+  for (const err of migrationErrors) {
+    logger.debug({ migration: err.name, error: err.error }, "Migration note: %s", err.name);
+  }
+
   // Reset all environment statuses on startup — in-memory connections are lost
   resetAllStatuses();
 
