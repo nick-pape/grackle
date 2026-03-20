@@ -1,6 +1,14 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Fri, 20 Mar 2026 14:30:15 GMT and should not be manually modified.
+This log was last generated on Fri, 20 Mar 2026 14:48:26 GMT and should not be manually modified.
+
+## 0.52.2
+Fri, 20 Mar 2026 14:48:26 GMT
+
+### Patches
+
+- Move initDatabase() off import-time execution for testability
+- Harden parseWsMessage to return a discriminated WsMessage | GrackleEvent union, replacing the unsafe type-widening hack
 
 ## 0.52.1
 Fri, 20 Mar 2026 14:30:15 GMT
