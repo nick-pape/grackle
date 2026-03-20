@@ -105,6 +105,7 @@ export function SidebarNav(): JSX.Element {
             onClick={() => handleClick(tab)}
             data-testid={tab.testId}
             title={tab.label ?? "Settings"}
+            aria-label={tab.label ?? "Settings"}
           >
             {tab.icon && <span aria-hidden="true">{tab.icon}</span>}
             {tab.label}

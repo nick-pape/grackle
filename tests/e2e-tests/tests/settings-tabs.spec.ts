@@ -41,7 +41,7 @@ test.describe("Settings Tabs", () => {
     const page = mockPage;
 
     await page.goto("/settings/credentials?mock");
-    await expect(page.getByRole("tablist")).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByRole("tablist", { name: "Settings" })).toBeVisible({ timeout: 5_000 });
     await expect(page.getByRole("tab", { name: "Credentials" })).toHaveAttribute("aria-selected", "true");
     await expect(page.getByRole("heading", { name: "Credential Providers" })).toBeVisible();
   });

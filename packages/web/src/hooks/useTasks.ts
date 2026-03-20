@@ -142,10 +142,12 @@ export function useTasks(send: SendFunction): UseTasksResult {
           "tasks",
           "tasks",
         );
+        // When workspaceId is explicitly present, merge per-workspace.
+        // When absent (global list_tasks {}), treat as a full snapshot.
         const pid =
-          (typeof msg.payload?.workspaceId === "string"
+          typeof msg.payload?.workspaceId === "string" && msg.payload.workspaceId
             ? msg.payload.workspaceId
-            : "") || (incoming.length > 0 ? incoming[0].workspaceId : "");
+            : "";
         if (!pid) {
           setTasks(incoming);
           return true;

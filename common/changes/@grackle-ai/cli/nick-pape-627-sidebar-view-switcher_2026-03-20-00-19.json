@@ -1,7 +1,7 @@
 {
   "changes": [
     {
-      "comment": "placeholder",
+      "comment": "Web-only: add sidebar view switcher with global task tree",
       "type": "none",
       "packageName": "@grackle-ai/cli"
     }

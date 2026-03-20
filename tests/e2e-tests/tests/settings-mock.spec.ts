@@ -36,7 +36,7 @@ test.describe("Settings Page (Mock Mode)", () => {
 
     // Should redirect to environments tab
     await expect(page).toHaveURL(/\/settings\/environments/);
-    await expect(page.getByRole("tablist")).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByRole("tablist", { name: "Settings" })).toBeVisible({ timeout: 5_000 });
   });
 
   test("mock tokens are displayed in Credentials tab", async ({ mockPage }) => {

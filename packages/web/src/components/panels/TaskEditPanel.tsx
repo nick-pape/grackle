@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, type JSX } from "react";
 import { useGrackle } from "../../context/GrackleContext.js";
 import { useToast } from "../../context/ToastContext.js";
-import { taskUrl, useAppNavigate } from "../../utils/navigation.js";
+import { taskUrl, workspaceUrl, useAppNavigate } from "../../utils/navigation.js";
 import styles from "./TaskEditPanel.module.scss";
 
 /** Props for the TaskEditPanel component. */
@@ -115,7 +115,7 @@ export function TaskEditPanel({ mode, taskId, workspaceId: workspaceIdProp, pare
         canDecompose,
         () => {
           showToast("Task created", "success");
-          navigate("/tasks", { replace: true });
+          navigate(workspaceIdProp ? workspaceUrl(workspaceIdProp) : "/tasks", { replace: true });
         },
         (message: string) => {
           showToast(message, "error");
@@ -129,7 +129,7 @@ export function TaskEditPanel({ mode, taskId, workspaceId: workspaceIdProp, pare
     if (isEdit && taskId) {
       navigate(taskUrl(taskId));
     } else {
-      navigate("/tasks");
+      navigate(workspaceIdProp ? workspaceUrl(workspaceIdProp) : "/tasks");
     }
   };
 

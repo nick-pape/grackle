@@ -121,9 +121,12 @@ export async function getTaskId(
 
 /**
  * Create a workspace via WebSocket and wait for it to appear in the sidebar.
+ * Navigates to the Workspaces tab first so the workspace name is visible.
  * Requires the test environment ("test-local") to already exist.
  */
 export async function createWorkspace(page: Page, name: string, environmentId: string = "test-local"): Promise<void> {
+  // Ensure we're on the Workspaces tab so the workspace name appears in the sidebar
+  await page.locator('[data-testid="sidebar-tab-workspaces"]').click();
   await sendWsAndWaitFor(
     page,
     {

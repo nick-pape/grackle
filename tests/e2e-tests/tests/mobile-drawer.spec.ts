@@ -63,35 +63,38 @@ test.describe("Mobile Drawer", () => {
     await expect(sidebar).toBeVisible();
 
     // Navigate to settings via the sidebar tab — this triggers a navigation
+    // which auto-closes the drawer
     await appPage.locator('[data-testid="sidebar-tab-settings"]').click();
     await expect(sidebar).not.toBeVisible({ timeout: 5_000 });
   });
 
-  test("hamburger is always shown (including on settings pages)", async ({ appPage }) => {
-    // Navigate to settings via sidebar tab
+  test("hamburger is visible on all pages including settings", async ({ appPage }) => {
     const hamburger = appPage.getByRole("button", { name: "Toggle sidebar" });
 
-    // Open drawer to access settings tab
+    // Hamburger should be visible on the default page
+    await expect(hamburger).toBeVisible();
+
+    // Navigate to settings (open drawer first, then click tab)
     await hamburger.click();
     await appPage.locator('[data-testid="sidebar-tab-settings"]').click();
-    await appPage.getByRole("tablist", { name: "Settings" }).waitFor({ state: "visible", timeout: 5_000 });
 
-    // Hamburger should still be visible on settings pages
+    // Hamburger should still be visible after navigation
     await expect(hamburger).toBeVisible();
   });
 
-  test("settings tabs render inside sidebar on mobile", async ({ appPage }) => {
+  test("settings tabs visible when drawer is opened on settings page", async ({ appPage }) => {
     const hamburger = appPage.getByRole("button", { name: "Toggle sidebar" });
 
-    // Open drawer and switch to settings
+    // Navigate to settings
     await hamburger.click();
     await appPage.locator('[data-testid="sidebar-tab-settings"]').click();
 
-    // Settings nav should be rendered inside the sidebar
-    const tablist = appPage.getByRole("tablist", { name: "Settings" });
-    await expect(tablist).toBeVisible();
+    // Drawer auto-closed. Re-open it to see settings content.
+    await hamburger.click();
+    const sidebar = appPage.getByTestId("sidebar");
+    await expect(sidebar).toBeVisible();
 
-    // Settings tabs should be visible
+    // Settings tabs should be visible inside the sidebar
     await expect(appPage.getByRole("tab", { name: "Environments" })).toBeVisible();
     await expect(appPage.getByRole("tab", { name: "Appearance" })).toBeVisible();
   });
