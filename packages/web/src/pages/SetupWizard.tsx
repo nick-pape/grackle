@@ -1,6 +1,7 @@
 import { useState, useCallback, type JSX } from "react";
 import { Navigate } from "react-router";
 import { AnimatePresence, motion } from "motion/react";
+import { SYSTEM_PERSONA_ID } from "@grackle-ai/common";
 import { useGrackle } from "../context/GrackleContext.js";
 import { useAppNavigate } from "../utils/navigation.js";
 import { WelcomeStep } from "./setup/WelcomeStep.js";
@@ -34,10 +35,16 @@ export function SetupWizard(): JSX.Element {
         const model = DEFAULT_MODELS[runtime] ?? "sonnet";
         updatePersona(seedPersona.id, undefined, undefined, undefined, runtime, model);
       }
+      // Sync System persona runtime to match
+      const systemPersona = personas.find((p) => p.id === SYSTEM_PERSONA_ID);
+      if (systemPersona && runtime !== systemPersona.runtime) {
+        const model = DEFAULT_MODELS[runtime] ?? "sonnet";
+        updatePersona(SYSTEM_PERSONA_ID, undefined, undefined, undefined, runtime, model);
+      }
       completeOnboarding();
       navigate("/", { replace: true });
     },
-    [seedPersona, updatePersona, completeOnboarding, navigate],
+    [seedPersona, personas, updatePersona, completeOnboarding, navigate],
   );
 
   // If onboarding is already complete, redirect to home

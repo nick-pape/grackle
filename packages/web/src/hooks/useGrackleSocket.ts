@@ -332,12 +332,14 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
     sendFn({ type: "list_environments" });
     sendFn({ type: "list_sessions" });
     sendFn({ type: "list_workspaces" });
-    sendFn({ type: "list_tasks", payload: {} });
     sendFn({ type: "list_tokens" });
     sendFn({ type: "get_credential_providers" });
     sendFn({ type: "list_personas" });
     sendFn({ type: "get_setting", payload: { key: SETTING_KEY_DEFAULT_PERSONA } });
     sendFn({ type: "get_setting", payload: { key: SETTING_KEY_ONBOARDING_COMPLETED } });
+    // Load an initial/global task list (server treats omitted workspaceId as "all workspaces",
+    // which includes any workspace-less tasks such as the root task)
+    sendFn({ type: "list_tasks", payload: {} });
     sendFn({ type: "subscribe_all" });
   }
 

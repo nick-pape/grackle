@@ -53,10 +53,11 @@ export interface Workspace {
   updatedAt: string;
 }
 
-/** A task within a workspace. */
+/** A task within a workspace (or workspace-less for the root task). */
 export interface TaskData {
   id: string;
-  workspaceId: string;
+  /** Workspace this task belongs to, or empty/undefined for workspace-less tasks (e.g. root task). */
+  workspaceId: string | undefined;
   title: string;
   description: string;
   status: string;
@@ -240,7 +241,7 @@ export function isTaskData(v: unknown): v is TaskData {
   return (
     isObject(v) &&
     typeof v.id === "string" &&
-    typeof v.workspaceId === "string" &&
+    (typeof v.workspaceId === "string" || v.workspaceId === undefined) &&
     typeof v.title === "string" &&
     typeof v.status === "string" &&
     typeof v.branch === "string" &&

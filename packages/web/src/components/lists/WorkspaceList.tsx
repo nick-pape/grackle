@@ -422,7 +422,9 @@ export function WorkspaceList(): JSX.Element {
     // A workspace is visible if it matches directly or any of its tasks match
     const vWorkspaceIds = new Set(mWorkspaceIds);
     for (const r of taskResults) {
-      vWorkspaceIds.add(r.item.workspaceId);
+      if (r.item.workspaceId) {
+        vWorkspaceIds.add(r.item.workspaceId);
+      }
     }
 
     // For tree view, also include ancestor tasks to preserve tree structure

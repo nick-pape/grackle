@@ -10,13 +10,8 @@ import {
 } from "./session-mgr.js";
 import { writeTokens } from "./token-writer.js";
 import { removeWorktree } from "./worktree.js";
-import { findGitRepoPath } from "./runtimes/runtime-utils.js";
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
 import os from "node:os";
 import type { AgentSession } from "./runtimes/runtime.js";
-
-const execAsync: typeof execFile.__promisify__ = promisify(execFile);
 
 const startTime: number = Date.now();
 
@@ -167,90 +162,6 @@ export function registerPowerLineRoutes(router: ConnectRouter): void {
         await removeWorktree(req.worktreeBasePath, req.branch);
       }
       return create(powerline.EmptySchema, {});
-    },
-
-    async getDiff(req: powerline.DiffRequest) {
-      const baseBranch = req.baseBranch || "main";
-      const basePath =
-        findGitRepoPath(req.worktreeBasePath) ||
-        findGitRepoPath(undefined) ||
-        "/workspace";
-
-      try {
-        // Resolve worktree path for the branch (may differ from basePath)
-        let diffCwd = basePath;
-        try {
-          const { stdout: wtList } = await execAsync(
-            "git",
-            ["worktree", "list", "--porcelain"],
-            { cwd: basePath },
-          );
-          for (const block of wtList.split("\n\n")) {
-            if (block.includes(`branch refs/heads/${req.branch}`)) {
-              const pathMatch = block.match(/^worktree (.+)$/m);
-              if (pathMatch) {
-                diffCwd = pathMatch[1];
-              }
-              break;
-            }
-          }
-        } catch {
-          /* fall back to basePath */
-        }
-
-        // Include both committed AND uncommitted changes vs base branch.
-        // First add all untracked files so they appear in the diff.
-        try {
-          await execAsync("git", ["add", "-N", "."], { cwd: diffCwd });
-        } catch {
-          /* ignore */
-        }
-
-        // Diff against the merge base (includes uncommitted working tree changes)
-        const { stdout: mergeBase } = await execAsync(
-          "git",
-          ["merge-base", baseBranch, "HEAD"],
-          { cwd: diffCwd },
-        );
-        const base = mergeBase.trim();
-
-        const { stdout: diff } = await execAsync("git", ["diff", base], {
-          cwd: diffCwd,
-          maxBuffer: 10 * 1024 * 1024,
-        });
-
-        // Get changed files
-        const { stdout: filesOut } = await execAsync(
-          "git",
-          ["diff", "--name-only", base],
-          { cwd: diffCwd },
-        );
-        const changedFiles = filesOut.trim().split("\n").filter(Boolean);
-
-        // Get stat
-        const { stdout: statOut } = await execAsync(
-          "git",
-          ["diff", "--stat", base],
-          { cwd: diffCwd },
-        );
-        const statMatch = statOut.match(/(\d+) insertion.+?(\d+) deletion/);
-        const additions = statMatch ? parseInt(statMatch[1], 10) : 0;
-        const deletions = statMatch ? parseInt(statMatch[2], 10) : 0;
-
-        return create(powerline.DiffResponseSchema, {
-          diff,
-          changedFiles,
-          additions,
-          deletions,
-        });
-      } catch (err) {
-        return create(powerline.DiffResponseSchema, {
-          diff: `Error getting diff: ${err instanceof Error ? err.message : String(err)}`,
-          changedFiles: [],
-          additions: 0,
-          deletions: 0,
-        });
-      }
     },
   });
 }

@@ -396,27 +396,21 @@ export function TaskPage(): JSX.Element {
     }
   }, [task?.id, task?.latestSessionId, loadTaskSessions]);
 
-  // Auto-switch tab based on task status. Blocked only on the very first
-  // status change when the user deep-linked to an explicit tab (/stream or
-  // /findings). After that initial render, auto-switching is always allowed
-  // so that starting a task switches to the stream tab regardless of which
-  // tab the user clicked manually.
-  const autoSwitchBlockedRef = useRef(tabFromUrl !== "overview");
+  // Auto-switch tab based on task status.
+  // Skip the initial status transition (undefined → first status) when the URL
+  // explicitly targets a non-default tab, so deep links like /tasks/:id/stream
+  // are not overridden by the status-based auto-switch.
   if (task?.status !== prevTaskStatusRef.current) {
+    const isInitialLoad = prevTaskStatusRef.current === undefined;
     prevTaskStatusRef.current = task?.status;
-    if (autoSwitchBlockedRef.current) {
-      // Consume the one-time deep-link guard
-      autoSwitchBlockedRef.current = false;
-    } else {
-      const newTab: TaskTab | undefined =
-        task?.status === "not_started" ? "overview"
-        : task?.status === "working" ? "stream"
-        : task?.status === "paused" ? "stream"
-        : task?.status === "complete" ? "findings"
-        : undefined;
-      if (newTab && newTab !== activeTaskTab) {
-        setActiveTaskTab(newTab);
-      }
+    const newTab: TaskTab | undefined =
+      task?.status === "not_started" ? "overview"
+      : task?.status === "working" ? "stream"
+      : task?.status === "paused" ? "stream"
+      : task?.status === "complete" ? "findings"
+      : undefined;
+    if (newTab && newTab !== activeTaskTab && !(isInitialLoad && tabFromUrl !== "overview")) {
+      setActiveTaskTab(newTab);
     }
   }
 
