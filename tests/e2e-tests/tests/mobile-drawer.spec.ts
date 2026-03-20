@@ -64,7 +64,7 @@ test.describe("Mobile Drawer", () => {
 
     // Navigate via URL instead of clicking sidebar tabs (avoids mobile
     // pointer interception from the sidebar container's resize handle)
-    await appPage.goto(appPage.url().replace(/\/tasks.*/, "/settings/environments"));
+    await appPage.goto(appPage.url().replace(/\/(chat|tasks).*/, "/settings/environments"));
 
     // Sidebar drawer should auto-close after navigation
     await expect(sidebar).not.toBeVisible({ timeout: 5_000 });
@@ -77,7 +77,7 @@ test.describe("Mobile Drawer", () => {
     await expect(hamburger).toBeVisible();
 
     // Navigate directly to settings
-    await appPage.goto(appPage.url().replace(/\/tasks.*/, "/settings/environments"));
+    await appPage.goto(appPage.url().replace(/\/(chat|tasks).*/, "/settings/environments"));
 
     // Hamburger should still be visible on settings pages
     await expect(hamburger).toBeVisible();
@@ -88,7 +88,7 @@ test.describe("Mobile Drawer", () => {
     const sidebar = appPage.getByTestId("sidebar");
 
     // Navigate directly to settings
-    await appPage.goto(appPage.url().replace(/\/tasks.*/, "/settings/environments"));
+    await appPage.goto(appPage.url().replace(/\/(chat|tasks).*/, "/settings/environments"));
 
     // Open the drawer
     await hamburger.click();
