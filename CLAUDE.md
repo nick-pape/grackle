@@ -127,3 +127,21 @@ PRs that modify publishable packages need a change file. The `/create-pr` skill 
 Multiple Claude Code sessions may be running concurrently against the same repo. **Never kill server processes (node, grackle) unless you are certain they belong to your session.** Another agent may be using them.
 
 **Always use `/launch-grackle`** to start a test server. It guarantees free ports, an isolated database, and reports back the correct URLs. Never use the default ports (7434, 3000, 7435, 7433) or the user's `~/.grackle` database directly.
+
+## Semantic Search (qdrant-search MCP)
+
+A `rush-qdrant mcp` daemon provides **semantic search** over the codebase via the `qdrant-search` MCP server. **Prefer `semantic_search` over Grep/Glob** when looking for code by concept, behavior, or intent rather than exact keywords. It understands natural language queries like "how does authentication work" or "websocket reconnection logic".
+
+- **`semantic_search`** — Use for exploratory/conceptual searches. Returns ranked results with file IDs, similarity scores, breadcrumbs, and code previews.
+- **`view_chunks`** — Retrieve full source content by file ID from search results. Supports selectors (`:3`, `:2-5`, `:3-end`).
+- **When to use Grep instead**: exact string matches, regex patterns, symbol names you already know.
+
+### Catalog naming
+
+Each grackle clone is indexed as a separate catalog named after its folder. The working directory folder name (e.g., `grackle5` from `C:/Users/nickp/src/grackle5`) is the catalog name. Pass it to scope searches:
+
+```
+semantic_search(query: "session spawning", catalog: "grackle5")
+```
+
+Omit `catalog` to search across all indexed repos (grackle clones + rushstack).
