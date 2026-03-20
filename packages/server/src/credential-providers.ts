@@ -11,7 +11,7 @@ import { create } from "@bufbuild/protobuf";
 import { powerline, type RuntimeName } from "@grackle-ai/common";
 import db from "./db.js";
 import * as schema from "./schema.js";
-import { settings } from "./schema.js";
+import { logger } from "./logger.js";
 
 // ─── Types ─────────────────────────────────────────────────
 
@@ -75,11 +75,20 @@ export function getCredentialProviders(database?: DatabaseInstance): CredentialP
   const conn = database ?? db;
   const row = conn
     .select()
-    .from(settings)
-    .where(eq(settings.key, SETTINGS_KEY))
+    .from(schema.settings)
+    .where(eq(schema.settings.key, SETTINGS_KEY))
     .get();
 
   if (!row) {
+    return { ...DEFAULT_CONFIG };
+  }
+
+  // Validate JSON before parsing — parseCredentialProviderConfig silently falls
+  // back to defaults (it's pure), but the caller should log corrupted settings.
+  try {
+    JSON.parse(row.value);
+  } catch {
+    logger.warn("Invalid credential_providers setting; returning defaults");
     return { ...DEFAULT_CONFIG };
   }
 
@@ -110,10 +119,10 @@ export function isValidCredentialProviderConfig(value: unknown): value is Creden
 export function setCredentialProviders(config: CredentialProviderConfig, database?: DatabaseInstance): void {
   const conn = database ?? db;
   const value = JSON.stringify(config);
-  conn.insert(settings)
+  conn.insert(schema.settings)
     .values({ key: SETTINGS_KEY, value })
     .onConflictDoUpdate({
-      target: settings.key,
+      target: schema.settings.key,
       set: { value },
     })
     .run();
