@@ -1,6 +1,6 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { existsSync } from "node:fs";
+import { existsSync as existsSyncNode } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { logger } from "./logger.js";
 
@@ -9,16 +9,31 @@ const execRaw: typeof execFile.__promisify__ = promisify(execFile);
 /** Timeout for `git fetch origin` in milliseconds. */
 const FETCH_TIMEOUT_MS: number = 30_000;
 
-/** Wrapper that uses a shell so `git` resolves via PATH on all platforms. */
-async function exec(
-  cmd: string,
-  args: string[],
-  opts: { cwd: string; timeout?: number },
-): Promise<{ stdout: string; stderr: string }> {
-  const shell = process.env.SHELL || true;
-  const result = await execRaw(cmd, args, { ...opts, shell });
-  return { stdout: String(result.stdout), stderr: String(result.stderr) };
+/** Abstraction over git command execution used by worktree operations. */
+export interface GitExecutor {
+  /** Run a git command and return stdout/stderr. */
+  exec(args: string[], options: { cwd: string; timeout?: number }): Promise<{ stdout: string; stderr: string }>;
 }
+
+/** Default implementation that shells out to the real git binary. */
+const NODE_GIT_EXECUTOR: GitExecutor = {
+  async exec(args: string[], options: { cwd: string; timeout?: number }) {
+    const shell = process.env.SHELL || true;
+    const result = await execRaw("git", args, { ...options, shell });
+    return { stdout: String(result.stdout), stderr: String(result.stderr) };
+  },
+};
+
+/** Filesystem operations used by worktree functions. */
+export interface WorktreeFileSystem {
+  /** Check whether a path exists. */
+  existsSync(path: string): boolean;
+}
+
+/** Default implementation using real Node.js fs. */
+const NODE_WORKTREE_FILE_SYSTEM: WorktreeFileSystem = {
+  existsSync: existsSyncNode,
+};
 
 export interface WorktreeResult {
   worktreePath: string;
@@ -53,9 +68,12 @@ export function worktreeDir(basePath: string, branch: string): string {
  * or `synced: false` with no start point on failure (so the caller can still
  * create the worktree from local HEAD).
  */
-async function fetchAndDetectDefault(basePath: string): Promise<{ synced: boolean; startPoint: string | undefined }> {
+async function fetchAndDetectDefault(
+  basePath: string,
+  git: GitExecutor,
+): Promise<{ synced: boolean; startPoint: string | undefined }> {
   try {
-    await exec("git", ["fetch", "origin"], { cwd: basePath, timeout: FETCH_TIMEOUT_MS });
+    await git.exec(["fetch", "origin"], { cwd: basePath, timeout: FETCH_TIMEOUT_MS });
   } catch (err) {
     logger.warn({ err }, "git fetch origin failed — worktree will branch from local HEAD");
     return { synced: false, startPoint: undefined };
@@ -64,7 +82,7 @@ async function fetchAndDetectDefault(basePath: string): Promise<{ synced: boolea
   // Detect the remote's default branch (e.g. refs/remotes/origin/main)
   let defaultBranch = "origin/main";
   try {
-    const { stdout } = await exec("git", ["symbolic-ref", "refs/remotes/origin/HEAD"], { cwd: basePath });
+    const { stdout } = await git.exec(["symbolic-ref", "refs/remotes/origin/HEAD"], { cwd: basePath });
     const trimmed = stdout.trim(); // e.g. "refs/remotes/origin/main"
     if (trimmed.startsWith("refs/remotes/")) {
       defaultBranch = trimmed.slice("refs/remotes/".length); // "origin/main"
@@ -76,41 +94,46 @@ async function fetchAndDetectDefault(basePath: string): Promise<{ synced: boolea
   return { synced: true, startPoint: defaultBranch };
 }
 
-export async function ensureWorktree(basePath: string, branch: string): Promise<WorktreeResult> {
+export async function ensureWorktree(
+  basePath: string,
+  branch: string,
+  git: GitExecutor = NODE_GIT_EXECUTOR,
+  fileSystem: WorktreeFileSystem = NODE_WORKTREE_FILE_SYSTEM,
+): Promise<WorktreeResult> {
   // Pre-check: verify basePath is a git repository
   try {
-    await exec("git", ["rev-parse", "--git-dir"], { cwd: basePath });
+    await git.exec(["rev-parse", "--git-dir"], { cwd: basePath });
   } catch {
     throw new Error(`Not a git repository: ${basePath}`);
   }
 
   // Pre-check: verify the git repo is writable (worktrees modify .git internals)
   try {
-    await exec("git", ["status", "--porcelain"], { cwd: basePath });
+    await git.exec(["status", "--porcelain"], { cwd: basePath });
   } catch (err) {
     throw new Error(`Git repo not writable: ${basePath} (${err instanceof Error ? err.message : String(err)})`);
   }
 
   const wtPath = worktreeDir(basePath, branch);
 
-  if (existsSync(wtPath)) {
+  if (fileSystem.existsSync(wtPath)) {
     return { worktreePath: wtPath, branch, created: false, synced: false };
   }
 
   // Fetch origin so the new worktree branches from an up-to-date commit
-  const { synced, startPoint } = await fetchAndDetectDefault(basePath);
+  const { synced, startPoint } = await fetchAndDetectDefault(basePath, git);
 
   // Try creating a new branch worktree first
   try {
     const addArgs = startPoint
       ? ["worktree", "add", "-b", branch, wtPath, startPoint]
       : ["worktree", "add", "-b", branch, wtPath];
-    await exec("git", addArgs, { cwd: basePath });
+    await git.exec(addArgs, { cwd: basePath });
     return { worktreePath: wtPath, branch, created: true, synced };
   } catch {
     // Branch may already exist — try without -b
     try {
-      await exec("git", ["worktree", "add", wtPath, branch], { cwd: basePath });
+      await git.exec(["worktree", "add", wtPath, branch], { cwd: basePath });
       return { worktreePath: wtPath, branch, created: true, synced };
     } catch (err) {
       throw new Error(`Failed to create worktree for branch ${branch}: ${err instanceof Error ? err.message : String(err)}`);
@@ -118,10 +141,14 @@ export async function ensureWorktree(basePath: string, branch: string): Promise<
   }
 }
 
-export async function removeWorktree(basePath: string, branch: string): Promise<void> {
+export async function removeWorktree(
+  basePath: string,
+  branch: string,
+  git: GitExecutor = NODE_GIT_EXECUTOR,
+): Promise<void> {
   const wtPath = worktreeDir(basePath, branch);
   try {
-    await exec("git", ["worktree", "remove", wtPath, "--force"], { cwd: basePath });
+    await git.exec(["worktree", "remove", wtPath, "--force"], { cwd: basePath });
   } catch {
     // Already removed or doesn't exist — that's fine
   }
