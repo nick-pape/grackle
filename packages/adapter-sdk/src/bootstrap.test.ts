@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { RemoteExecutor } from "./remote-executor.js";
 import { buildEnvFileContent, probeRemotePowerLine, writeRemoteEnvFile, startRemotePowerLine } from "./bootstrap.js";
 
@@ -21,6 +21,10 @@ const silentLogger = {
 };
 
 // ── Tests ───────────────────────────────────────────────────
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
 
 describe("probeRemotePowerLine", () => {
   it("resolves when the remote port check succeeds", async () => {
@@ -67,9 +71,8 @@ describe("buildEnvFileContent", () => {
 
   it("escapes shell-special characters in values", () => {
     const content = buildEnvFileContent("tok", { SPECIAL: "it's a \"test\" $VAR" }, silentLogger);
-    expect(content).toContain("SPECIAL=");
-    // Single quotes in value must be escaped to prevent shell injection
-    expect(content).not.toContain("it's");
+    // shellEscape replaces ' with '\'' — verify the actual escaped output
+    expect(content).toContain("export SPECIAL='it'\\''s a \"test\" $VAR'");
   });
 
   it("returns content with only extra env when token is empty", () => {
