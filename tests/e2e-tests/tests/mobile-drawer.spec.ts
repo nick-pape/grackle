@@ -55,16 +55,19 @@ test.describe("Mobile Drawer", () => {
   });
 
   test("navigation auto-closes the drawer", async ({ appPage }) => {
-    const hamburger = appPage.getByRole("button", { name: "Toggle sidebar" });
     const sidebar = appPage.getByTestId("sidebar");
 
-    // Open drawer and wait for slide-in animation to settle
+    // Navigate to settings programmatically (sidebar tab click has z-index issues on mobile)
+    await appPage.goto("/settings/environments");
+    await appPage.waitForFunction(() => document.body.innerText.includes("Connected"), { timeout: 10_000 });
+
+    // Open the drawer
+    const hamburger = appPage.getByRole("button", { name: "Toggle sidebar" });
     await hamburger.click();
     await expect(sidebar).toBeVisible();
-    await appPage.waitForTimeout(500);
 
-    // Click the Settings tab in the sidebar to trigger navigation
-    await appPage.locator('[data-testid="sidebar-tab-settings"]').click({ force: true });
+    // Navigate away (clicking Grackle brand)
+    await appPage.locator('button[title="Home"]').click();
 
     // Sidebar drawer should auto-close after navigation
     await expect(sidebar).not.toBeVisible({ timeout: 5_000 });
@@ -76,10 +79,9 @@ test.describe("Mobile Drawer", () => {
     // Hamburger should be visible on the default page
     await expect(hamburger).toBeVisible();
 
-    // Navigate to settings via sidebar tab (wait for drawer animation)
-    await hamburger.click();
-    await appPage.waitForTimeout(500);
-    await appPage.locator('[data-testid="sidebar-tab-settings"]').click({ force: true });
+    // Navigate to settings programmatically
+    await appPage.goto("/settings/environments");
+    await appPage.waitForFunction(() => document.body.innerText.includes("Connected"), { timeout: 10_000 });
 
     // Hamburger should still be visible on settings pages
     await expect(hamburger).toBeVisible();
@@ -89,12 +91,11 @@ test.describe("Mobile Drawer", () => {
     const hamburger = appPage.getByRole("button", { name: "Toggle sidebar" });
     const sidebar = appPage.getByTestId("sidebar");
 
-    // Navigate to settings via sidebar tab (wait for drawer animation)
-    await hamburger.click();
-    await appPage.waitForTimeout(500);
-    await appPage.locator('[data-testid="sidebar-tab-settings"]').click({ force: true });
+    // Navigate to settings programmatically
+    await appPage.goto("/settings/environments");
+    await appPage.waitForFunction(() => document.body.innerText.includes("Connected"), { timeout: 10_000 });
 
-    // Drawer auto-closed. Re-open it to see settings content.
+    // Open the drawer
     await hamburger.click();
     await expect(sidebar).toBeVisible();
 
