@@ -4,6 +4,66 @@
 // Event Renderer — individual session event styles
 // =============================================================================
 
+// System context (system prompt) — collapsible left-bordered section
+.systemContextEvent {
+  border-left: 3px solid var(--accent-purple, #a78bfa);
+  margin: var(--space-xs) 0;
+  font-size: var(--font-size-sm);
+}
+
+.systemContextHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  background: none;
+  border: none;
+  padding: 2px var(--space-sm);
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  font-family: inherit;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: color var(--transition-fast),
+              background var(--transition-fast);
+
+  &:hover {
+    color: var(--text-primary);
+    background: var(--bg-overlay);
+  }
+}
+
+.systemContextBadge {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: var(--font-weight-bold);
+  color: var(--accent-purple, #a78bfa);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.systemContextToggle {
+  margin-left: auto;
+  color: var(--text-tertiary);
+  font-size: 10px;
+}
+
+.systemContextPre {
+  padding: var(--space-xs) var(--space-sm);
+  margin: 0;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow: hidden;
+}
+
+.systemContextEllipsis {
+  color: var(--text-tertiary);
+}
+
 .systemEvent {
   color: var(--text-secondary);
   font-style: italic;
@@ -277,6 +337,31 @@
   @include mobile {
     max-width: 90%;
   }
+}
+
+.signalEvent {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  border-left: 3px solid var(--accent-yellow);
+  padding: var(--space-xs) var(--space-sm);
+  margin: var(--space-xs) 0;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.signalBadge {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: var(--font-weight-bold);
+  color: var(--accent-yellow);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.signalContent {
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .defaultEvent {

@@ -202,6 +202,75 @@ describe("CodexRuntime structural", () => {
   });
 });
 
+describe("CodexSession — native system prompt injection", () => {
+  beforeEach(() => {
+    vi.stubEnv("OPENAI_API_KEY", "test-key");
+    vi.stubEnv("GRACKLE_MCP_CONFIG", "");
+    vi.mocked(existsSync).mockReturnValue(false);
+    MockCodex.mockClear();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("passes developer_instructions in config when systemContext is provided", async () => {
+    mockRunStreamedEvents = [
+      { type: "item.completed", item: { type: "agent_message", text: "done" } },
+    ];
+    const runtime = new CodexRuntime();
+    const session = runtime.spawn({
+      sessionId: "cdx-devins",
+      prompt: "do work",
+      model: "codex-mini",
+      maxTurns: 1,
+      systemContext: "You are a code reviewer.",
+    });
+    await collectEvents(session);
+
+    expect(MockCodex).toHaveBeenCalledTimes(1);
+    const codexOpts = MockCodex.mock.calls[0][0] as Record<string, unknown>;
+    const config = codexOpts.config as Record<string, unknown>;
+    expect(config).toBeDefined();
+    expect(config.developer_instructions).toBe("You are a code reviewer.");
+  });
+
+  it("does not set developer_instructions when systemContext is absent", async () => {
+    mockRunStreamedEvents = [
+      { type: "item.completed", item: { type: "agent_message", text: "done" } },
+    ];
+    const runtime = new CodexRuntime();
+    const session = runtime.spawn({
+      sessionId: "cdx-nodevins",
+      prompt: "do work",
+      model: "codex-mini",
+      maxTurns: 1,
+    });
+    await collectEvents(session);
+
+    expect(MockCodex).toHaveBeenCalledTimes(1);
+    const codexOpts = MockCodex.mock.calls[0][0] as Record<string, unknown>;
+    const config = codexOpts.config as Record<string, unknown> | undefined;
+    if (config) {
+      expect(config.developer_instructions).toBeUndefined();
+    }
+  });
+
+  it("buildInitialPrompt returns only the prompt (excludes systemContext)", () => {
+    const runtime = new CodexRuntime();
+    const session = runtime.spawn({
+      sessionId: "cdx-prompt-only",
+      prompt: "user task",
+      model: "codex-mini",
+      maxTurns: 0,
+      systemContext: "system stuff",
+    });
+    const result = (session as any).buildInitialPrompt();
+    expect(result).toBe("user task");
+    expect(result).not.toContain("system stuff");
+  });
+});
+
 describe("Codex streaming field extraction", () => {
   const runtime = new CodexRuntime();
 

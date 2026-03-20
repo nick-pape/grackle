@@ -34,7 +34,7 @@ import { grackleHome } from "./paths.js";
 import * as logWriter from "./log-writer.js";
 import { safeParseJsonArray } from "./json-helpers.js";
 import { logger } from "./logger.js";
-import { buildTaskSystemContext } from "./utils/system-context.js";
+import { SystemPromptBuilder } from "./system-prompt-builder.js";
 import { slugify } from "./utils/slugify.js";
 import { processEventStream } from "./event-processor.js";
 import * as processorRegistry from "./processor-registry.js";
@@ -285,15 +285,11 @@ async function startTaskSession(
   const logPath = join(grackleHome, LOGS_DIR, sessionId);
 
   const freshTask = taskStore.getTask(task.id) || task;
-  let systemContext = buildTaskSystemContext(
-    freshTask.title,
-    freshTask.description,
-    options?.notes || "",
-    freshTask.canDecompose,
-  );
-  if (systemPrompt) {
-    systemContext = systemPrompt + "\n\n" + systemContext;
-  }
+  const systemContext = new SystemPromptBuilder({
+    task: { title: freshTask.title, description: freshTask.description, notes: options?.notes || "" },
+    canDecompose: freshTask.canDecompose,
+    personaPrompt: systemPrompt,
+  }).build();
 
   sessionStore.createSession(
     sessionId,
@@ -369,6 +365,8 @@ async function startTaskSession(
     logPath,
     workspaceId: freshTask.workspaceId ?? undefined,
     taskId: freshTask.id,
+    systemContext,
+    prompt: freshTask.title,
   });
 
   return undefined;
@@ -541,10 +539,12 @@ async function handleMessage(
       const { runtime: sessionRuntime, model: sessionModel, maxTurns, systemPrompt: spawnSystemPrompt } = resolved;
       const logPath = join(grackleHome, LOGS_DIR, sessionId);
 
-      let finalSystemContext = systemContext;
-      if (spawnSystemPrompt) {
-        finalSystemContext = spawnSystemPrompt + (systemContext ? "\n\n" + systemContext : "");
-      }
+      const builderPrompt = new SystemPromptBuilder({
+        personaPrompt: spawnSystemPrompt,
+      }).build();
+      const finalSystemContext = systemContext
+        ? builderPrompt + "\n\n" + systemContext
+        : builderPrompt;
 
       sessionStore.createSession(
         sessionId,
@@ -573,6 +573,8 @@ async function handleMessage(
       processEventStream(conn.client.spawn(powerlineReq), {
         sessionId,
         logPath,
+        systemContext: finalSystemContext,
+        prompt,
         onError: (err) => {
           sendWs(ws, {
             type: "session_event",

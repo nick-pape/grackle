@@ -78,6 +78,11 @@ class CodexSession extends BaseAgentSession {
   /** Cached thread options built during setupSdk(), reused for thread creation. */
   private threadOptions?: Record<string, unknown>;
 
+  /** System context is injected via codexOptions.config.developer_instructions, not prepended to the prompt. */
+  protected override buildInitialPrompt(): string {
+    return this.prompt;
+  }
+
   // ─── BaseAgentSession hooks ──────────────────────────────
 
   protected async setupSdk(): Promise<void> {
@@ -138,6 +143,15 @@ class CodexSession extends BaseAgentSession {
         }
       }
       codexOptions.config = { mcp_servers: codexServers };
+    }
+
+    // Inject system context via Codex developer_instructions config
+    if (this.systemContext) {
+      const existingConfig = (codexOptions.config ?? {}) as Record<string, unknown>;
+      codexOptions.config = {
+        ...existingConfig,
+        developer_instructions: this.systemContext,
+      };
     }
 
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment

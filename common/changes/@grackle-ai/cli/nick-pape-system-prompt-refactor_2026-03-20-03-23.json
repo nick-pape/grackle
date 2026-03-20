@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Refactor system prompt into SystemPromptBuilder, inject via native SDK mechanisms, add EVENT_TYPE_SIGNAL for signal event rendering",
+      "type": "minor",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}

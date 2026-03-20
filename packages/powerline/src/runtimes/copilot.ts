@@ -123,6 +123,11 @@ export class CopilotSession extends BaseAgentSession {
   /** Count of meaningful messages in the current query (reset per sendAndWaitForIdle call). */
   private currentMessageCount: number = 0;
 
+  /** System context is injected via sessionConfig.systemMessage, not prepended to the prompt. */
+  protected override buildInitialPrompt(): string {
+    return this.prompt;
+  }
+
   // ─── BaseAgentSession hooks ──────────────────────────────
 
   protected async setupSdk(): Promise<void> {
@@ -175,6 +180,11 @@ export class CopilotSession extends BaseAgentSession {
       streaming: true,
       onPermissionRequest: copilotSdk.approveAll,
     };
+
+    // Inject system context via SDK-native systemMessage
+    if (this.systemContext) {
+      sessionConfig.systemMessage = { mode: "append" as const, content: this.systemContext };
+    }
 
     // BYOK provider config
     const providerConfig = resolveProviderConfig();
