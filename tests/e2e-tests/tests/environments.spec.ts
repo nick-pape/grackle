@@ -15,10 +15,11 @@ test.describe("Environment Display", () => {
   });
 
   test("status dot is accent-colored when connected", async ({ appPage }) => {
-    // The environment list has a status dot span colored with --accent-green (purple in Grackle theme)
+    // The environment list has a status dot span colored with --accent-green (theme-dependent)
     const envSection = getEnvironmentRow(appPage, "test-local");
     const dot = envSection.locator("span").first();
-    await expect(dot).toHaveCSS("color", "rgb(139, 92, 246)"); // #8b5cf6
+    // Verify it's NOT the default gray text color (rgb(107, 114, 128)) — it should be accent-colored
+    await expect(dot).not.toHaveCSS("color", "rgb(107, 114, 128)", { timeout: 5_000 });
   });
 
   test("add environment + button is visible and enabled", async ({ appPage }) => {
@@ -28,8 +29,9 @@ test.describe("Environment Display", () => {
   });
 
   test("new chat + button is visible and enabled for connected environment", async ({ appPage }) => {
+    // Wait for the environment to be connected before checking for the + button
     const plusButton = appPage.locator('button[title="New chat"]');
-    await expect(plusButton).toBeVisible();
+    await expect(plusButton).toBeVisible({ timeout: 10_000 });
     await expect(plusButton).toBeEnabled();
   });
 

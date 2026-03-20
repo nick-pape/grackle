@@ -1,10 +1,10 @@
 import { useCallback, useRef, type JSX, type KeyboardEvent } from "react";
 import { useLocation } from "react-router";
-import { CHAT_URL, SETTINGS_URL, useAppNavigate } from "../../utils/navigation.js";
+import { CHAT_URL, HOME_URL, SETTINGS_URL, useAppNavigate } from "../../utils/navigation.js";
 import styles from "./AppNav.module.scss";
 
 /** Application view identifiers. */
-export type AppView = "chat" | "tasks" | "workspaces" | "settings";
+export type AppView = "dashboard" | "chat" | "tasks" | "workspaces" | "settings";
 
 /** Tab definition for the application navigation bar. */
 interface AppTab {
@@ -22,6 +22,7 @@ interface AppTab {
 
 /** Ordered list of app navigation tabs. */
 const TABS: AppTab[] = [
+  { view: "dashboard", label: "Dashboard", icon: "\uD83C\uDFE0", route: HOME_URL, testId: "sidebar-tab-dashboard" },
   { view: "chat", label: "Chat", icon: "\uD83D\uDCAC", route: CHAT_URL, testId: "sidebar-tab-chat" },
   { view: "tasks", label: "Tasks", icon: "\uD83D\uDCCB", route: "/tasks", testId: "sidebar-tab-tasks" },
   { view: "workspaces", label: "Workspaces", icon: "\uD83D\uDCC1", route: "/workspaces", testId: "sidebar-tab-workspaces" },
@@ -30,6 +31,9 @@ const TABS: AppTab[] = [
 
 /** Derive the active application view from a URL pathname. */
 export function getActiveView(pathname: string): AppView {
+  if (pathname === HOME_URL || pathname === "/") {
+    return "dashboard";
+  }
   if (pathname.startsWith("/chat") || pathname.startsWith("/sessions")) {
     return "chat";
   }

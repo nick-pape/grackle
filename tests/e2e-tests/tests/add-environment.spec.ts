@@ -297,7 +297,7 @@ test.describe("Add Environment — WebSocket Handler", () => {
     await expect(page.getByRole("tablist", { name: "Settings" })).toBeVisible({ timeout: 5_000 });
 
     // Form should close (back to settings mode)
-    await expect(page.locator("text=new env")).not.toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText("new env", { exact: true })).not.toBeVisible({ timeout: 5_000 });
 
     // Environment should appear in the Settings panel environment list
     await expect(page.getByText("ui-test-env", { exact: true })).toBeVisible({ timeout: 5_000 });
