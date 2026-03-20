@@ -265,7 +265,7 @@ export function buildMcpServersJson(
  * Walk up the task parent chain and return the environmentId from the first
  * ancestor that has a session. Returns empty string if no ancestor has one.
  */
-function resolveAncestorEnvironmentId(parentTaskId: string): string {
+export function resolveAncestorEnvironmentId(parentTaskId: string): string {
   let currentId = parentTaskId;
   for (let i = 0; i < MAX_TASK_DEPTH && currentId; i++) {
     const session = sessionStore.getLatestSessionForTask(currentId);
