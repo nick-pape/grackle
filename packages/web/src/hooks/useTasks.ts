@@ -124,10 +124,15 @@ export function useTasks(send: SendFunction): UseTasksResult {
         if (pid) {
           send({ type: "list_tasks", payload: { workspaceId: pid } });
         } else if (taskId) {
+          // Workspace-less task (e.g. root task) — refetch all workspace-less tasks
+          // or look up the task's workspace to refresh.
           setTasks((prev) => {
             const found = prev.find((t) => t.id === taskId);
-            if (found) {
+            if (found?.workspaceId) {
               send({ type: "list_tasks", payload: { workspaceId: found.workspaceId } });
+            } else {
+              // Workspace-less task — refetch global tasks
+              send({ type: "list_tasks", payload: {} });
             }
             return prev;
           });
@@ -144,8 +149,11 @@ export function useTasks(send: SendFunction): UseTasksResult {
         } else if (taskId) {
           setTasks((prev) => {
             const found = prev.find((t) => t.id === taskId);
-            if (found) {
+            if (found?.workspaceId) {
               send({ type: "list_tasks", payload: { workspaceId: found.workspaceId } });
+            } else {
+              // Workspace-less task — refetch global tasks
+              send({ type: "list_tasks", payload: {} });
             }
             return prev;
           });
@@ -166,12 +174,23 @@ export function useTasks(send: SendFunction): UseTasksResult {
           "tasks",
           "tasks",
         );
-        const pid =
-          (typeof msg.payload?.workspaceId === "string"
-            ? msg.payload.workspaceId
-            : "") || (incoming.length > 0 ? incoming[0].workspaceId : "");
+        // Use only the explicit payload.workspaceId to decide scope.
+        // An omitted workspaceId means a global response (all tasks / workspace-less tasks).
+        const pid = typeof msg.payload?.workspaceId === "string"
+          ? msg.payload.workspaceId
+          : "";
         if (!pid) {
-          setTasks(incoming);
+          // Global response (no workspaceId in payload) — includes tasks from
+          // all workspaces plus workspace-less tasks like the root task.
+          // Upsert by ID to avoid clobbering workspace-scoped tasks that may
+          // have been loaded separately or filtered differently.
+          setTasks((prev) => {
+            const incomingIds = new Set(incoming.map((t) => t.id));
+            return [
+              ...prev.filter((t) => !incomingIds.has(t.id)),
+              ...incoming,
+            ];
+          });
           return true;
         }
         setTasks((prev) => [

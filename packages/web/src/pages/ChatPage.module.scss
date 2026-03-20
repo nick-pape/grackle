@@ -1,0 +1,41 @@
+@use '../styles/mixins' as *;
+
+// =============================================================================
+// Chat Page — clean full-page chat experience for the root task
+// =============================================================================
+
+.panelContainer {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.emptyState {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-lg);
+  color: var(--text-tertiary);
+  padding: var(--space-xl);
+  text-align: center;
+}
+
+.emptyTitle {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+}
+
+.emptyDescription {
+  font-size: var(--font-size-md);
+  max-width: 480px;
+  line-height: 1.5;
+}
+
+.emptyHint {
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+}

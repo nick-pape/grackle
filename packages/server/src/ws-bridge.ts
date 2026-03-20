@@ -24,6 +24,7 @@ import {
   SESSION_STATUS,
   TASK_STATUS,
   DEFAULT_MCP_PORT,
+  ROOT_TASK_ID,
   eventTypeToString,
 } from "@grackle-ai/common";
 import { resolvePersona } from "./resolve-persona.js";
@@ -1262,7 +1263,16 @@ async function handleMessage(
       {
         const taskSessions = sessionStore.listSessionsForTask(taskId);
         const { status: effectiveStatus } = computeTaskStatus(task.status, taskSessions);
-        if (!([TASK_STATUS.NOT_STARTED, TASK_STATUS.FAILED] as string[]).includes(effectiveStatus)) {
+        if (taskId === ROOT_TASK_ID) {
+          // Root task is always re-startable unless actively working
+          if (effectiveStatus === TASK_STATUS.WORKING) {
+            sendWs(ws, {
+              type: "error",
+              payload: { message: "System is already running" },
+            });
+            return;
+          }
+        } else if (!([TASK_STATUS.NOT_STARTED, TASK_STATUS.FAILED] as string[]).includes(effectiveStatus)) {
           sendWs(ws, {
             type: "error",
             payload: {
@@ -1502,69 +1512,6 @@ async function handleMessage(
         (msg.payload?.tags as string[] | undefined) || [],
       );
       sendWs(ws, { type: "finding_posted", payload: { id, workspaceId } });
-      break;
-    }
-
-    // ─── Diff ──────────────────────────────────────────────
-
-    case "get_task_diff": {
-      const taskId = msg.payload?.taskId as string;
-      if (!taskId) return;
-
-      const task = taskStore.getTask(taskId);
-      if (!task?.branch) {
-        sendWs(ws, {
-          type: "task_diff",
-          payload: { taskId, error: "No branch" },
-        });
-        return;
-      }
-
-      const environmentId = task.workspaceId
-        ? workspaceStore.getWorkspace(task.workspaceId)?.environmentId
-        : undefined;
-      if (!environmentId) {
-        sendWs(ws, {
-          type: "task_diff",
-          payload: { taskId, error: "No environment" },
-        });
-        return;
-      }
-
-      const conn = adapterManager.getConnection(environmentId);
-      if (!conn) {
-        sendWs(ws, {
-          type: "task_diff",
-          payload: { taskId, error: "Environment not connected" },
-        });
-        return;
-      }
-
-      try {
-        const diffResp = await conn.client.getDiff(
-          create(powerline.DiffRequestSchema, {
-            branch: task.branch,
-            baseBranch: "main",
-            worktreeBasePath: "/workspace",
-          }),
-        );
-        sendWs(ws, {
-          type: "task_diff",
-          payload: {
-            taskId,
-            branch: task.branch,
-            diff: diffResp.diff,
-            changedFiles: [...diffResp.changedFiles],
-            additions: diffResp.additions,
-            deletions: diffResp.deletions,
-          },
-        });
-      } catch (err) {
-        sendWs(ws, {
-          type: "task_diff",
-          payload: { taskId, error: String(err) },
-        });
-      }
       break;
     }
 

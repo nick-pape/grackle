@@ -83,3 +83,9 @@ export const LOGS_DIR: string = "logs";
 export const API_KEY_FILENAME: string = "api-key";
 /** Maximum allowed nesting depth for task hierarchies. */
 export const MAX_TASK_DEPTH: number = 8;
+/** Well-known ID for the System persona (orchestrator). */
+export const SYSTEM_PERSONA_ID: string = "system";
+/** Display name for the System persona. */
+export const SYSTEM_PERSONA_NAME: string = "System";
+/** Well-known ID for the root task (always present, workspace-less). */
+export const ROOT_TASK_ID: string = "system";

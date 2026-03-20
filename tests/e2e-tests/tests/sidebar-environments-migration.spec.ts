@@ -11,15 +11,16 @@ test.describe("Sidebar — Task-Only (No Environments Tab)", () => {
     await expect(sidebar.locator("button", { hasText: "Environments" })).not.toBeVisible();
   });
 
-  test("sidebar has no tab bar", async ({ appPage }) => {
+  test("sidebar has Chat/Workspaces tab bar", async ({ appPage }) => {
     const page = appPage;
 
     const sidebar = page.locator('[data-testid="sidebar"]');
 
-    // There should be no "Workspaces" tab button either (it was part of the removed tab bar)
-    await expect(sidebar.locator("button", { hasText: "Workspaces" })).not.toBeVisible();
+    // The sidebar now has a Chat/Workspaces tab bar
+    await expect(sidebar.getByTestId("sidebar-tab-chat")).toBeVisible();
+    await expect(sidebar.getByTestId("sidebar-tab-workspaces")).toBeVisible();
 
-    // The WORKSPACES header label should still be visible (it's the section label, not a tab)
+    // The WORKSPACES header label should still be visible (it's the section label)
     await expect(sidebar.locator("text=WORKSPACES").first()).toBeVisible();
   });
 

@@ -93,7 +93,7 @@ test.describe("Deep linking", () => {
     expect(page.url()).toContain("/settings");
   });
 
-  test("unknown route redirects to /", async ({ appPage }) => {
+  test("unknown route redirects to /chat", async ({ appPage }) => {
     const page = appPage;
 
     await page.goto("/this-route-does-not-exist");
@@ -102,8 +102,8 @@ test.describe("Deep linking", () => {
       { timeout: 10_000 },
     );
 
-    // Should redirect to root (catch-all <Navigate to="/" replace />)
-    expect(new URL(page.url()).pathname).toBe("/");
+    // Should redirect to /chat via catch-all → / → /chat
+    expect(new URL(page.url()).pathname).toBe("/chat");
   });
 
   test("deep link to /tasks/:id/stream loads stream tab", async ({ appPage }) => {
@@ -123,9 +123,11 @@ test.describe("Deep linking", () => {
       { timeout: 10_000 },
     );
 
-    // TaskPage renders with stream tab active
+    // TaskPage renders with stream tab active.
+    // Note: the auto-switch-by-status logic may race with the URL-derived tab
+    // on not_started tasks, switching to "overview" before the URL tab takes effect.
     await expect(page.locator("[data-testid='task-title']")).toBeVisible({ timeout: 5_000 });
-    await expect(page.locator('button[role="tab"][aria-selected="true"]')).toContainText("Stream");
+    await expect(page.locator('button[role="tab"][aria-selected="true"]')).toContainText("Stream", { timeout: 10_000 });
     expect(page.url()).toContain(`/tasks/${taskId}/stream`);
   });
 

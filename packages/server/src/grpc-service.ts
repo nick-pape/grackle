@@ -25,6 +25,7 @@ import {
   MAX_TASK_DEPTH,
   SESSION_STATUS,
   TASK_STATUS,
+  ROOT_TASK_ID,
   taskStatusToEnum,
   taskStatusToString,
   workspaceStatusToEnum,
@@ -940,7 +941,12 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       {
         const taskSessions = sessionStore.listSessionsForTask(req.taskId);
         const { status: effectiveStatus } = computeTaskStatus(task.status, taskSessions);
-        if (!([TASK_STATUS.NOT_STARTED, TASK_STATUS.FAILED] as string[]).includes(effectiveStatus)) {
+        if (req.taskId === ROOT_TASK_ID) {
+          // Root task is always re-startable unless actively working
+          if (effectiveStatus === TASK_STATUS.WORKING) {
+            throw new ConnectError("System is already running", Code.FailedPrecondition);
+          }
+        } else if (!([TASK_STATUS.NOT_STARTED, TASK_STATUS.FAILED] as string[]).includes(effectiveStatus)) {
           throw new ConnectError(
             `Task ${req.taskId} cannot be started (status: ${effectiveStatus})`,
             Code.FailedPrecondition,
