@@ -568,6 +568,7 @@ export function WorkspaceList(): JSX.Element {
                 }
               }}
               className={`${styles.workspaceRow} ${isSelected ? styles.selected : ""}`}
+              data-testid="workspace-row"
             >
               <span className={`${styles.expandArrow} ${isExpanded ? styles.expanded : ""}`}>
                 {"\u25B8"}

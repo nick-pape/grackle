@@ -55,10 +55,13 @@ test.describe("Workspaces", () => {
     await input.fill("cta-workspace");
     await page.locator('[data-testid="welcome-create-ok"]').click();
 
-    // Workspace should appear in sidebar
+    // Switch to Workspaces tab — workspace should appear in sidebar
+    await page.locator('[data-testid="sidebar-tab-workspaces"]').click();
     await expect(page.getByTestId("sidebar").getByText("cta-workspace", { exact: true })).toBeVisible({ timeout: 5_000 });
 
-    // Welcome CTA should no longer be visible (workspaces exist now)
+    // Welcome CTA should no longer be visible (workspaces exist now — dashboard shows instead)
+    await page.goto("/");
+    await page.waitForFunction(() => document.body.innerText.includes("Connected"), { timeout: 10_000 });
     await expect(page.locator('[data-testid="welcome-cta"]')).not.toBeVisible({ timeout: 5_000 });
   });
 
