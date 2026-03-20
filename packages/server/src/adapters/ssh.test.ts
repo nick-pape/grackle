@@ -17,6 +17,11 @@ vi.mock("../utils/exec.js", () => ({
   exec: mockExec,
 }));
 
+// ── Mock sleep (used by SshReverseTunnel.waitForReady) ──────
+vi.mock("../utils/sleep.js", () => ({
+  sleep: vi.fn().mockResolvedValue(undefined),
+}));
+
 // ── Mock remote-adapter-utils ───────────────────────────────
 const mocks = vi.hoisted(() => ({
   closeTunnel: vi.fn().mockResolvedValue(undefined),
@@ -33,7 +38,7 @@ vi.mock("@grackle-ai/adapter-sdk", async (importOriginal) => {
     registerTunnel: mocks.registerTunnel,
     findFreePort: mocks.findFreePort,
     startRemotePowerLine: mocks.startRemotePowerLine,
-    // Stub ProcessTunnel so SshTunnel doesn't spawn real processes
+    // Stub ProcessTunnel so SshTunnel doesn't spawn real processes (tested in tunnel.test.ts)
     ProcessTunnel: class {
       public localPort: number;
       public constructor(localPort: number) { this.localPort = localPort; }
@@ -46,7 +51,7 @@ vi.mock("@grackle-ai/adapter-sdk", async (importOriginal) => {
 
 import { SshAdapter } from "./ssh.js";
 
-// ── Helper ──────────────────────────────────────────────────
+// ── Helpers ─────────────────────────────────────────────────
 
 /** Collect all events from an async generator. */
 async function collectEvents(gen: AsyncGenerator<ProvisionEvent>): Promise<ProvisionEvent[]> {

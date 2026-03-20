@@ -80,14 +80,17 @@ export async function connectThroughTunnel(
 
 // ─── Wait for Local Port ────────────────────────────────────
 
-/**
- * Poll until a TCP connection can be established on localhost at the given port.
- * Used to wait for a tunnel process to begin accepting connections.
- */
-export async function waitForLocalPort(port: number): Promise<void> {
-  for (let attempt = 0; attempt < TUNNEL_PORT_POLL_MAX_ATTEMPTS; attempt++) {
-    const reachable = await new Promise<boolean>((resolve) => {
-      const socket = createConnection({ host: "127.0.0.1", port });
+/** Single-shot TCP port prober used by {@link waitForLocalPort}. */
+export interface PortProber {
+  /** Attempt a single TCP connection to `host:port`, returning `true` if it succeeds. */
+  probe(port: number, host?: string): Promise<boolean>;
+}
+
+/** Default {@link PortProber} that uses real TCP sockets. */
+export const TCP_PORT_PROBER: PortProber = {
+  probe(port: number, host: string = "127.0.0.1"): Promise<boolean> {
+    return new Promise<boolean>((resolve) => {
+      const socket = createConnection({ host, port });
       socket.once("connect", () => {
         socket.destroy();
         resolve(true);
@@ -97,11 +100,32 @@ export async function waitForLocalPort(port: number): Promise<void> {
         resolve(false);
       });
     });
+  },
+};
+
+/** Options for {@link waitForLocalPort}. */
+export interface WaitForLocalPortOptions {
+  /** Override port probing (primarily for testing). */
+  portProber?: PortProber;
+  /** Override the sleep function (primarily for testing). */
+  sleep?: (ms: number) => Promise<void>;
+}
+
+/**
+ * Poll until a TCP connection can be established on localhost at the given port.
+ * Used to wait for a tunnel process to begin accepting connections.
+ */
+export async function waitForLocalPort(port: number, options?: WaitForLocalPortOptions): Promise<void> {
+  const prober = options?.portProber ?? TCP_PORT_PROBER;
+  const sleepFn = options?.sleep ?? sleep;
+
+  for (let attempt = 0; attempt < TUNNEL_PORT_POLL_MAX_ATTEMPTS; attempt++) {
+    const reachable = await prober.probe(port, "127.0.0.1");
 
     if (reachable) {
       return;
     }
-    await sleep(TUNNEL_PORT_POLL_DELAY_MS);
+    await sleepFn(TUNNEL_PORT_POLL_DELAY_MS);
   }
 
   throw new Error(`Local port ${port} did not become reachable after ${TUNNEL_PORT_POLL_MAX_ATTEMPTS} attempts`);
