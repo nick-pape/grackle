@@ -1,7 +1,7 @@
 {
   "changes": [
     {
-      "comment": "placeholder",
+      "comment": "Add unit tests for resolveAncestorEnvironmentId",
       "type": "none",
       "packageName": "@grackle-ai/cli"
     }
