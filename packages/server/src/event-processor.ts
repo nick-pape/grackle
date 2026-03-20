@@ -243,12 +243,12 @@ export function processEventStream(
 
       // Emit system context and initial prompt as the first visible events in the stream.
       // Only for task sessions — ad-hoc spawns show the prompt in the chat input already.
-      const now = new Date().toISOString();
+      // Use distinct timestamps so clients can reliably sort/dedup by timestamp+eventType.
       if (options.systemContext && options.taskId) {
         const sysCtxEvent = create(grackle.SessionEventSchema, {
           sessionId,
           type: grackle.EventType.SYSTEM,
-          timestamp: now,
+          timestamp: new Date().toISOString(),
           content: options.systemContext,
           raw: JSON.stringify({ systemContext: true }),
         });
@@ -259,7 +259,7 @@ export function processEventStream(
         const promptEvent = create(grackle.SessionEventSchema, {
           sessionId,
           type: grackle.EventType.USER_INPUT,
-          timestamp: now,
+          timestamp: new Date().toISOString(),
           content: options.prompt,
         });
         logWriter.writeEvent(logPath, promptEvent);

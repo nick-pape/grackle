@@ -11,7 +11,7 @@ function renderEntry(entry: LogEntry): string {
         try {
           const raw = JSON.parse(entry.raw) as Record<string, unknown>;
           if (raw.systemContext === true) {
-            return `<details>\n<summary>System Prompt</summary>\n\n${entry.content}\n</details>\n`;
+            return `<details>\n<summary>System Prompt</summary>\n\n\`\`\`\n${entry.content}\n\`\`\`\n</details>\n`;
           }
         } catch { /* not JSON, render as normal */ }
       }
