@@ -368,9 +368,15 @@ export function planImport(
     tasksToCreate.push({ id, title, description, parentTaskId, issueNumber: issue.number });
   }
 
+  // Build a map for O(1) lookup of issues by number during dependency resolution
+  const issueNumberToIssue = new Map<number, GitHubIssue>();
+  for (const issue of sorted) {
+    issueNumberToIssue.set(issue.number, issue);
+  }
+
   // Second pass: resolve blockedBy → dependsOn for newly created tasks only
   for (const instruction of tasksToCreate) {
-    const issue = sorted.find((i) => i.number === instruction.issueNumber);
+    const issue = issueNumberToIssue.get(instruction.issueNumber);
     if (!issue || issue.blockedByNumbers.length === 0) {
       continue;
     }
