@@ -45,7 +45,8 @@ export const NODE_GIT_REPOSITORY: GitRepository = (() => {
     },
     async checkoutBranch(repoPath: string, branch: string): Promise<void> {
       try {
-        await execFileAsync("git", ["checkout", branch], { cwd: repoPath });
+        // "--" prevents branch names starting with "-" from being interpreted as flags
+        await execFileAsync("git", ["checkout", "--", branch], { cwd: repoPath });
       } catch {
         // Branch doesn't exist yet — create it
         await execFileAsync("git", ["checkout", "-b", branch], { cwd: repoPath });
