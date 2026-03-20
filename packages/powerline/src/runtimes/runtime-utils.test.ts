@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 
-// Mock dependencies before importing
+// Keep module mocks only for true cross-module boundaries
 vi.mock("../logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
@@ -9,110 +9,128 @@ vi.mock("node:fs", () => ({
   readFileSync: vi.fn(() => "{}"),
   readdirSync: vi.fn(() => []),
 }));
-// execFile uses the Node.js callback pattern; promisify will append the callback
-// as the last argument when called via execFileAsync.
-vi.mock("node:child_process", () => ({
-  execFileSync: vi.fn(() => { throw new Error("not a git repo"); }),
-  execFile: vi.fn((_cmd: string, _args: string[], _opts: unknown, cb: (err: Error | null, result: { stdout: string; stderr: string }) => void) => {
-    cb(null, { stdout: "", stderr: "" });
-  }),
-}));
 vi.mock("../worktree.js", () => ({
   ensureWorktree: vi.fn(),
 }));
 
-import { resolveWorkingDirectory, findGitRepoPath, resolveMcpServers } from "./runtime-utils.js";
+import {
+  resolveWorkingDirectory,
+  findGitRepoPath,
+  resolveMcpServers,
+} from "./runtime-utils.js";
+import type { GitRepository, WorkspaceLocator } from "./runtime-utils.js";
 import { AsyncQueue } from "../utils/async-queue.js";
 import type { AgentEvent } from "./runtime.js";
-import { existsSync, readdirSync } from "node:fs";
-import { execFileSync, execFile } from "node:child_process";
+import { existsSync } from "node:fs";
 import { ensureWorktree } from "../worktree.js";
 
+// ─── Fake helpers ──────────────────────────────────────────────────────────
+
+/** Create a fake GitRepository that returns canned responses. */
+function createFakeGitRepository(options: {
+  repos?: Record<string, string | undefined>;
+  checkoutError?: Error;
+} = {}): GitRepository & { calls: Array<{ method: string; args: unknown[] }> } {
+  const { repos = {}, checkoutError } = options;
+  const calls: Array<{ method: string; args: unknown[] }> = [];
+  return {
+    calls,
+    async isRepo(dir: string): Promise<boolean> {
+      calls.push({ method: "isRepo", args: [dir] });
+      return dir in repos;
+    },
+    async toplevel(dir: string): Promise<string | undefined> {
+      calls.push({ method: "toplevel", args: [dir] });
+      return repos[dir];
+    },
+    async checkoutBranch(repoPath: string, branch: string): Promise<void> {
+      calls.push({ method: "checkoutBranch", args: [repoPath, branch] });
+      if (checkoutError) {
+        throw checkoutError;
+      }
+    },
+  };
+}
+
+/** Create a fake WorkspaceLocator with configurable paths and directory contents. */
+function createFakeWorkspaceLocator(
+  existingPaths: Set<string>,
+  directoryContents: Record<string, string[]> = {},
+): WorkspaceLocator {
+  return {
+    exists(path: string): boolean {
+      return existingPaths.has(path);
+    },
+    readDirectory(path: string): string[] {
+      return directoryContents[path] ?? [];
+    },
+  };
+}
+
+// ─── findGitRepoPath tests ────────────────────────────────────────────────
+
 describe("findGitRepoPath", () => {
-  afterEach(() => {
-    vi.mocked(existsSync).mockReset();
-    vi.mocked(existsSync).mockReturnValue(false);
-    vi.mocked(readdirSync).mockReset();
-    vi.mocked(readdirSync).mockReturnValue([]);
-    vi.mocked(execFileSync).mockReset();
-    vi.mocked(execFileSync).mockImplementation(() => { throw new Error("not a git repo"); });
+  it("returns resolved toplevel when basePath exists and is a git repo", async () => {
+    const git = createFakeGitRepository({ repos: { "/repo": "/repo" } });
+    const locator = createFakeWorkspaceLocator(new Set(["/repo"]));
+
+    expect(await findGitRepoPath("/repo", git, locator)).toBe("/repo");
   });
 
-  it("returns resolved toplevel when basePath exists and is a git repo", () => {
-    vi.mocked(existsSync).mockImplementation((p) => String(p) === "/repo");
-    vi.mocked(execFileSync).mockImplementation((_cmd, args) => {
-      if (Array.isArray(args) && args.includes("--show-toplevel")) {
-        return "/repo\n";
-      }
-      return Buffer.from(".git\n");
-    });
-    expect(findGitRepoPath("/repo")).toBe("/repo");
+  it("falls back to /workspace when basePath is not a git repo", async () => {
+    const git = createFakeGitRepository({ repos: { "/workspace": "/workspace" } });
+    const locator = createFakeWorkspaceLocator(new Set(["/repo", "/workspace"]));
+
+    expect(await findGitRepoPath("/repo", git, locator)).toBe("/workspace");
   });
 
-  it("falls back to /workspace when basePath is not a git repo", () => {
-    vi.mocked(existsSync).mockImplementation((p) => String(p) === "/workspace" || String(p) === "/repo");
-    vi.mocked(execFileSync).mockImplementation((_cmd, args, opts) => {
-      if ((opts as { cwd: string }).cwd === "/workspace") {
-        if (Array.isArray(args) && args.includes("--show-toplevel")) {
-          return "/workspace\n";
-        }
-        return Buffer.from(".git\n");
-      }
-      throw new Error("not a git repo");
-    });
-    expect(findGitRepoPath("/repo")).toBe("/workspace");
+  it("finds repo under /workspaces/ (Codespaces convention)", async () => {
+    const git = createFakeGitRepository({ repos: { "/workspaces/grackle": "/workspaces/grackle" } });
+    const locator = createFakeWorkspaceLocator(
+      new Set(["/workspaces", "/workspaces/grackle"]),
+      { "/workspaces": ["grackle"] },
+    );
+
+    expect(await findGitRepoPath("/workspace", git, locator)).toBe("/workspaces/grackle");
   });
 
-  it("finds repo under /workspaces/ (Codespaces convention)", () => {
-    vi.mocked(existsSync).mockImplementation((p) => String(p) === "/workspaces" || String(p) === "/workspaces/grackle");
-    vi.mocked(readdirSync).mockImplementation((p) => {
-      if (String(p) === "/workspaces") {
-        return ["grackle"] as unknown as ReturnType<typeof readdirSync>;
-      }
-      return [];
-    });
-    vi.mocked(execFileSync).mockImplementation((_cmd, args, opts) => {
-      if ((opts as { cwd: string }).cwd === "/workspaces/grackle") {
-        if (Array.isArray(args) && args.includes("--show-toplevel")) {
-          return "/workspaces/grackle\n";
-        }
-        return Buffer.from(".git\n");
-      }
-      throw new Error("not a git repo");
-    });
-    expect(findGitRepoPath("/workspace")).toBe("/workspaces/grackle");
+  it("returns undefined when nothing is found", async () => {
+    const git = createFakeGitRepository();
+    const locator = createFakeWorkspaceLocator(new Set());
+
+    expect(await findGitRepoPath("/nonexistent", git, locator)).toBeUndefined();
   });
 
-  it("returns undefined when nothing is found", () => {
-    vi.mocked(existsSync).mockReturnValue(false);
-    expect(findGitRepoPath("/nonexistent")).toBeUndefined();
+  it("returns basePath itself when toplevel returns undefined", async () => {
+    const git = createFakeGitRepository({ repos: { "/repo": undefined } });
+    const locator = createFakeWorkspaceLocator(new Set(["/repo"]));
+
+    expect(await findGitRepoPath("/repo", git, locator)).toBe("/repo");
+  });
+
+  it("skips basePath when it does not exist on disk", async () => {
+    const git = createFakeGitRepository({ repos: { "/workspace": "/workspace" } });
+    const locator = createFakeWorkspaceLocator(new Set(["/workspace"]));
+
+    expect(await findGitRepoPath("/nonexistent", git, locator)).toBe("/workspace");
   });
 });
 
+// ─── resolveWorkingDirectory tests ────────────────────────────────────────
+
 describe("resolveWorkingDirectory", () => {
   afterEach(() => {
-    vi.mocked(existsSync).mockReset();
-    vi.mocked(existsSync).mockReturnValue(false);
-    vi.mocked(readdirSync).mockReset();
-    vi.mocked(readdirSync).mockReturnValue([]);
     vi.mocked(ensureWorktree).mockReset();
-    vi.mocked(execFileSync).mockReset();
-    vi.mocked(execFileSync).mockImplementation(() => { throw new Error("not a git repo"); });
   });
 
   it("returns worktree path when branch and basePath are provided", async () => {
-    // findGitRepoPath needs to find /repo as a git repo
-    vi.mocked(existsSync).mockImplementation((p) => String(p) === "/repo");
-    vi.mocked(execFileSync).mockImplementation((_cmd, args) => {
-      if (Array.isArray(args) && args.includes("--show-toplevel")) {
-        return "/repo\n";
-      }
-      return Buffer.from(".git\n");
-    });
+    const git = createFakeGitRepository({ repos: { "/repo": "/repo" } });
+    const locator = createFakeWorkspaceLocator(new Set(["/repo"]));
     vi.mocked(ensureWorktree).mockResolvedValue({
       worktreePath: "/worktrees/my-branch",
       branch: "my-branch",
       created: true,
+      synced: false,
     });
     const queue = new AsyncQueue<AgentEvent>();
 
@@ -121,6 +139,8 @@ describe("resolveWorkingDirectory", () => {
       worktreeBasePath: "/repo",
       useWorktrees: true,
       eventQueue: queue,
+      git,
+      locator,
     });
 
     expect(result).toBe("/worktrees/my-branch");
@@ -131,17 +151,8 @@ describe("resolveWorkingDirectory", () => {
   });
 
   it("falls back to workspace directory when worktree fails", async () => {
-    // findGitRepoPath finds /repo as git repo, but ensureWorktree fails
-    vi.mocked(existsSync).mockImplementation((p) => String(p) === "/repo" || String(p) === "/workspace");
-    vi.mocked(execFileSync).mockImplementation((_cmd, args, opts) => {
-      if ((opts as { cwd: string }).cwd === "/repo") {
-        if (Array.isArray(args) && args.includes("--show-toplevel")) {
-          return "/repo\n";
-        }
-        return Buffer.from(".git\n");
-      }
-      throw new Error("not a git repo");
-    });
+    const git = createFakeGitRepository({ repos: { "/repo": "/repo" } });
+    const locator = createFakeWorkspaceLocator(new Set(["/repo", "/workspace"]));
     vi.mocked(ensureWorktree).mockRejectedValue(new Error("git error"));
     const queue = new AsyncQueue<AgentEvent>();
 
@@ -150,6 +161,8 @@ describe("resolveWorkingDirectory", () => {
       worktreeBasePath: "/repo",
       useWorktrees: true,
       eventQueue: queue,
+      git,
+      locator,
     });
 
     expect(result).toBe("/repo");
@@ -160,8 +173,9 @@ describe("resolveWorkingDirectory", () => {
   });
 
   it("returns undefined when worktree fails and no workspace exists", async () => {
+    const git = createFakeGitRepository();
+    const locator = createFakeWorkspaceLocator(new Set());
     vi.mocked(ensureWorktree).mockRejectedValue(new Error("git error"));
-    vi.mocked(existsSync).mockReturnValue(false);
     const queue = new AsyncQueue<AgentEvent>();
 
     const result = await resolveWorkingDirectory({
@@ -169,6 +183,8 @@ describe("resolveWorkingDirectory", () => {
       worktreeBasePath: "/repo",
       useWorktrees: true,
       eventQueue: queue,
+      git,
+      locator,
     });
 
     expect(result).toBeUndefined();
@@ -176,34 +192,45 @@ describe("resolveWorkingDirectory", () => {
   });
 
   it("returns /workspace when no branch is provided", async () => {
-    vi.mocked(existsSync).mockImplementation((p) => String(p) === "/workspace");
-    vi.mocked(readdirSync).mockReturnValue(["file.txt"] as unknown as ReturnType<typeof readdirSync>);
+    const git = createFakeGitRepository();
+    const locator = createFakeWorkspaceLocator(new Set(["/workspace"]));
     const queue = new AsyncQueue<AgentEvent>();
 
-    const result = await resolveWorkingDirectory({ eventQueue: queue });
+    const result = await resolveWorkingDirectory({
+      eventQueue: queue,
+      git,
+      locator,
+    });
 
     expect(result).toBe("/workspace");
     queue.close();
   });
 
   it("returns undefined when /workspace does not exist and no branch", async () => {
-    vi.mocked(existsSync).mockReturnValue(false);
+    const git = createFakeGitRepository();
+    const locator = createFakeWorkspaceLocator(new Set());
     const queue = new AsyncQueue<AgentEvent>();
 
-    const result = await resolveWorkingDirectory({ eventQueue: queue });
+    const result = await resolveWorkingDirectory({
+      eventQueue: queue,
+      git,
+      locator,
+    });
 
     expect(result).toBeUndefined();
     queue.close();
   });
 
   it("returns undefined when requireNonEmpty is true and /workspace is empty", async () => {
-    vi.mocked(existsSync).mockImplementation((p) => String(p) === "/workspace");
-    vi.mocked(readdirSync).mockReturnValue([]);
+    const git = createFakeGitRepository();
+    const locator = createFakeWorkspaceLocator(new Set(["/workspace"]), { "/workspace": [] });
     const queue = new AsyncQueue<AgentEvent>();
 
     const result = await resolveWorkingDirectory({
       eventQueue: queue,
       requireNonEmpty: true,
+      git,
+      locator,
     });
 
     expect(result).toBeUndefined();
@@ -211,13 +238,15 @@ describe("resolveWorkingDirectory", () => {
   });
 
   it("returns /workspace when requireNonEmpty is true and /workspace has files", async () => {
-    vi.mocked(existsSync).mockImplementation((p) => String(p) === "/workspace");
-    vi.mocked(readdirSync).mockReturnValue(["README.md"] as unknown as ReturnType<typeof readdirSync>);
+    const git = createFakeGitRepository();
+    const locator = createFakeWorkspaceLocator(new Set(["/workspace"]), { "/workspace": ["README.md"] });
     const queue = new AsyncQueue<AgentEvent>();
 
     const result = await resolveWorkingDirectory({
       eventQueue: queue,
       requireNonEmpty: true,
+      git,
+      locator,
     });
 
     expect(result).toBe("/workspace");
@@ -225,34 +254,24 @@ describe("resolveWorkingDirectory", () => {
   });
 
   it("returns /workspace without checking emptiness when requireNonEmpty is false", async () => {
-    vi.mocked(existsSync).mockImplementation((p) => String(p) === "/workspace");
-    vi.mocked(readdirSync).mockReturnValue([]);
+    const git = createFakeGitRepository();
+    const locator = createFakeWorkspaceLocator(new Set(["/workspace"]), { "/workspace": [] });
     const queue = new AsyncQueue<AgentEvent>();
 
     const result = await resolveWorkingDirectory({
       eventQueue: queue,
       requireNonEmpty: false,
+      git,
+      locator,
     });
 
     expect(result).toBe("/workspace");
-    expect(readdirSync).not.toHaveBeenCalled();
     queue.close();
   });
 
-  // UT-1: branch provided but no worktreeBasePath — worktrees disabled
-  it("checks out branch in main working tree when branch is set but worktreeBasePath is empty", async () => {
-    // findGitRepoPath should find /workspace
-    vi.mocked(existsSync).mockImplementation((p) => String(p) === "/workspace");
-    vi.mocked(execFileSync).mockImplementation((_cmd, args, opts) => {
-      if ((opts as { cwd: string }).cwd === "/workspace") {
-        if (Array.isArray(args) && args.includes("--show-toplevel")) {
-          return "/workspace\n";
-        }
-        return Buffer.from(".git\n");
-      }
-      throw new Error("not a git repo");
-    });
-    // execFile (used by checkoutBranchInPlace) succeeds by default from mock
+  it("checks out branch in main working tree when useWorktrees is false", async () => {
+    const git = createFakeGitRepository({ repos: { "/workspace": "/workspace" } });
+    const locator = createFakeWorkspaceLocator(new Set(["/workspace"]));
     const queue = new AsyncQueue<AgentEvent>();
 
     const result = await resolveWorkingDirectory({
@@ -260,6 +279,8 @@ describe("resolveWorkingDirectory", () => {
       worktreeBasePath: "",
       useWorktrees: false,
       eventQueue: queue,
+      git,
+      locator,
     });
 
     expect(result).toBe("/workspace");
@@ -267,28 +288,17 @@ describe("resolveWorkingDirectory", () => {
     expect(event?.type).toBe("system");
     expect(event?.content).toContain("Checked out branch");
     expect(event?.content).toContain("feature/my-branch");
-    // Verify ensureWorktree was NOT called (worktrees disabled path)
     expect(ensureWorktree).not.toHaveBeenCalled();
+    expect(git.calls).toContainEqual({ method: "checkoutBranch", args: ["/workspace", "feature/my-branch"] });
     queue.close();
   });
 
   it("falls back to workspace when branch checkout fails and worktreeBasePath is empty", async () => {
-    vi.mocked(existsSync).mockImplementation((p) => String(p) === "/workspace");
-    vi.mocked(execFileSync).mockImplementation((_cmd, args, opts) => {
-      if ((opts as { cwd: string }).cwd === "/workspace") {
-        if (Array.isArray(args) && args.includes("--show-toplevel")) {
-          return "/workspace\n";
-        }
-        return Buffer.from(".git\n");
-      }
-      throw new Error("not a git repo");
+    const git = createFakeGitRepository({
+      repos: { "/workspace": "/workspace" },
+      checkoutError: new Error("checkout failed"),
     });
-    // Make execFile fail (checkout fails)
-    vi.mocked(execFile).mockImplementation(
-      (_cmd: string, _args: string[], _opts: unknown, cb: (err: Error | null) => void) => {
-        cb(new Error("checkout failed"));
-      },
-    );
+    const locator = createFakeWorkspaceLocator(new Set(["/workspace"]));
     const queue = new AsyncQueue<AgentEvent>();
 
     const result = await resolveWorkingDirectory({
@@ -296,9 +306,10 @@ describe("resolveWorkingDirectory", () => {
       worktreeBasePath: "",
       useWorktrees: false,
       eventQueue: queue,
+      git,
+      locator,
     });
 
-    // Falls back to /workspace since no worktree path is returned
     expect(result).toBe("/workspace");
     const event = await queue.shift();
     expect(event?.type).toBe("system");
@@ -307,12 +318,8 @@ describe("resolveWorkingDirectory", () => {
   });
 
   it("returns undefined when branch checkout fails and no workspace exists (worktreeBasePath empty)", async () => {
-    vi.mocked(existsSync).mockReturnValue(false);
-    vi.mocked(execFile).mockImplementation(
-      (_cmd: string, _args: string[], _opts: unknown, cb: (err: Error | null) => void) => {
-        cb(new Error("checkout failed"));
-      },
-    );
+    const git = createFakeGitRepository({ checkoutError: new Error("checkout failed") });
+    const locator = createFakeWorkspaceLocator(new Set());
     const queue = new AsyncQueue<AgentEvent>();
 
     const result = await resolveWorkingDirectory({
@@ -320,25 +327,22 @@ describe("resolveWorkingDirectory", () => {
       worktreeBasePath: "",
       useWorktrees: false,
       eventQueue: queue,
+      git,
+      locator,
     });
 
     expect(result).toBeUndefined();
     queue.close();
   });
 
-  // UT-2 (existing behavior preserved): branch and worktreeBasePath both set → creates worktree
   it("creates worktree when both branch and worktreeBasePath are set (existing behavior preserved)", async () => {
-    vi.mocked(existsSync).mockImplementation((p) => String(p) === "/repo");
-    vi.mocked(execFileSync).mockImplementation((_cmd, args) => {
-      if (Array.isArray(args) && args.includes("--show-toplevel")) {
-        return "/repo\n";
-      }
-      return Buffer.from(".git\n");
-    });
+    const git = createFakeGitRepository({ repos: { "/repo": "/repo" } });
+    const locator = createFakeWorkspaceLocator(new Set(["/repo"]));
     vi.mocked(ensureWorktree).mockResolvedValue({
       worktreePath: "/worktrees/my-branch",
       branch: "my-branch",
       created: true,
+      synced: false,
     });
     const queue = new AsyncQueue<AgentEvent>();
 
@@ -347,13 +351,37 @@ describe("resolveWorkingDirectory", () => {
       worktreeBasePath: "/repo",
       useWorktrees: true,
       eventQueue: queue,
+      git,
+      locator,
     });
 
     expect(result).toBe("/worktrees/my-branch");
     expect(ensureWorktree).toHaveBeenCalled();
     queue.close();
   });
+
+  it("emits no-repo event when git repo is not found and worktrees disabled", async () => {
+    const git = createFakeGitRepository();
+    const locator = createFakeWorkspaceLocator(new Set());
+    const queue = new AsyncQueue<AgentEvent>();
+
+    const result = await resolveWorkingDirectory({
+      branch: "feature/test",
+      useWorktrees: false,
+      eventQueue: queue,
+      git,
+      locator,
+    });
+
+    expect(result).toBeUndefined();
+    const event = await queue.shift();
+    expect(event?.content).toContain("No git repo found");
+    expect(event?.content).toContain("branch checkout");
+    queue.close();
+  });
 });
+
+// ─── resolveMcpServers tests ──────────────────────────────────────────────
 
 describe("resolveMcpServers", () => {
   afterEach(() => {
