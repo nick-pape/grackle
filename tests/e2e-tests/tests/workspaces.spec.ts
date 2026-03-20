@@ -86,7 +86,7 @@ test.describe("Workspaces", () => {
     await page.locator('[data-testid="task-edit-save"]').click();
 
     // Task should appear in the sidebar under the workspace
-    await expect(page.getByText("implement feature")).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText("implement feature").first()).toBeVisible({ timeout: 5_000 });
   });
 
   test("task view shows header and tabs", async ({ appPage }) => {

@@ -128,6 +128,7 @@ function AppRoutes(): JSX.Element {
         <Route path="workspaces/:workspaceId/tasks/:taskId" element={<TaskPage />} />
         <Route path="workspaces/:workspaceId/tasks/:taskId/stream" element={<TaskPage />} />
         <Route path="workspaces/:workspaceId/tasks/:taskId/findings" element={<TaskPage />} />
+        <Route path="workspaces/:workspaceId/tasks/:taskId/edit" element={<TaskEditPage />} />
         <Route path="sessions/new" element={<NewChatPage />} />
         <Route path="sessions/:sessionId" element={<SessionPage />} />
         <Route path="environments/new" element={<NewEnvironmentPage />} />
