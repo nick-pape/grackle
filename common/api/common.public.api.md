@@ -133,27 +133,6 @@ export const DEFAULT_SERVER_PORT: number;
 export const DEFAULT_WEB_PORT: number;
 
 // @public
-type DiffRequest = Message<"grackle.powerline.DiffRequest"> & {
-    branch: string;
-    baseBranch: string;
-    worktreeBasePath: string;
-};
-
-// @public
-const DiffRequestSchema: GenMessage<DiffRequest>;
-
-// @public
-type DiffResponse = Message<"grackle.powerline.DiffResponse"> & {
-    diff: string;
-    changedFiles: string[];
-    additions: number;
-    deletions: number;
-};
-
-// @public
-const DiffResponseSchema: GenMessage<DiffResponse>;
-
-// @public
 type Empty = Message<"grackle.Empty"> & {};
 
 // @public
@@ -692,11 +671,6 @@ const GracklePowerLine: GenService<{
         input: typeof WorktreeCleanupRequestSchema;
         output: typeof EmptySchema_2;
     };
-    getDiff: {
-        methodKind: "unary";
-        input: typeof DiffRequestSchema;
-        output: typeof DiffResponseSchema;
-    };
 }>;
 
 // @public
@@ -891,10 +865,6 @@ declare namespace powerline {
         TokenBundleSchema,
         WorktreeCleanupRequest,
         WorktreeCleanupRequestSchema,
-        DiffRequest,
-        DiffRequestSchema,
-        DiffResponse,
-        DiffResponseSchema,
         GracklePowerLine
     }
 }
