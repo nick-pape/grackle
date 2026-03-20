@@ -26,7 +26,7 @@ describe("waitForLocalPort", () => {
     await waitForLocalPort(4000, { portProber: prober, sleep: noopSleep });
 
     expect(prober.probe).toHaveBeenCalledTimes(1);
-    expect(prober.probe).toHaveBeenCalledWith(4000);
+    expect(prober.probe).toHaveBeenCalledWith(4000, "127.0.0.1");
     expect(noopSleep).not.toHaveBeenCalled();
   });
 

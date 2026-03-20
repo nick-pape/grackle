@@ -105,9 +105,9 @@ export const TCP_PORT_PROBER: PortProber = {
 
 /** Options for {@link waitForLocalPort}. */
 export interface WaitForLocalPortOptions {
-  /** @internal Override port probing (for testing). */
+  /** Override port probing (primarily for testing). */
   portProber?: PortProber;
-  /** @internal Override the sleep function (for testing). */
+  /** Override the sleep function (primarily for testing). */
   sleep?: (ms: number) => Promise<void>;
 }
 
@@ -120,7 +120,7 @@ export async function waitForLocalPort(port: number, options?: WaitForLocalPortO
   const sleepFn = options?.sleep ?? sleep;
 
   for (let attempt = 0; attempt < TUNNEL_PORT_POLL_MAX_ATTEMPTS; attempt++) {
-    const reachable = await prober.probe(port);
+    const reachable = await prober.probe(port, "127.0.0.1");
 
     if (reachable) {
       return;

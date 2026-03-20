@@ -422,6 +422,8 @@ export function waitForLocalPort(port: number, options?: WaitForLocalPortOptions
 
 // @public
 export interface WaitForLocalPortOptions {
+    portProber?: PortProber;
+    sleep?: (ms: number) => Promise<void>;
 }
 
 // @public
