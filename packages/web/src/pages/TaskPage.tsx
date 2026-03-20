@@ -396,8 +396,12 @@ export function TaskPage(): JSX.Element {
     }
   }, [task?.id, task?.latestSessionId, loadTaskSessions]);
 
-  // Auto-switch tab based on task status
+  // Auto-switch tab based on task status.
+  // Skip the initial status transition (undefined → first status) when the URL
+  // explicitly targets a non-default tab, so deep links like /tasks/:id/stream
+  // are not overridden by the status-based auto-switch.
   if (task?.status !== prevTaskStatusRef.current) {
+    const isInitialLoad = prevTaskStatusRef.current === undefined;
     prevTaskStatusRef.current = task?.status;
     const newTab: TaskTab | undefined =
       task?.status === "not_started" ? "overview"
@@ -405,7 +409,7 @@ export function TaskPage(): JSX.Element {
       : task?.status === "paused" ? "stream"
       : task?.status === "complete" ? "findings"
       : undefined;
-    if (newTab && newTab !== activeTaskTab) {
+    if (newTab && newTab !== activeTaskTab && !(isInitialLoad && tabFromUrl !== "overview")) {
       setActiveTaskTab(newTab);
     }
   }
