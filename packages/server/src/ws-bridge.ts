@@ -24,6 +24,7 @@ import {
   SESSION_STATUS,
   TASK_STATUS,
   DEFAULT_MCP_PORT,
+  ROOT_TASK_ID,
   eventTypeToString,
 } from "@grackle-ai/common";
 import { resolvePersona } from "./resolve-persona.js";
@@ -1260,7 +1261,16 @@ async function handleMessage(
       {
         const taskSessions = sessionStore.listSessionsForTask(taskId);
         const { status: effectiveStatus } = computeTaskStatus(task.status, taskSessions);
-        if (!([TASK_STATUS.NOT_STARTED, TASK_STATUS.FAILED] as string[]).includes(effectiveStatus)) {
+        if (taskId === ROOT_TASK_ID) {
+          // Root task is always re-startable unless actively working
+          if (effectiveStatus === TASK_STATUS.WORKING) {
+            sendWs(ws, {
+              type: "error",
+              payload: { message: "System is already running" },
+            });
+            return;
+          }
+        } else if (!([TASK_STATUS.NOT_STARTED, TASK_STATUS.FAILED] as string[]).includes(effectiveStatus)) {
           sendWs(ws, {
             type: "error",
             payload: {

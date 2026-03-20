@@ -3,6 +3,7 @@ import { useMatch, useSearchParams } from "react-router";
 import { useGrackle } from "../../context/GrackleContext.js";
 import { useToast } from "../../context/ToastContext.js";
 import type { Environment } from "../../hooks/useGrackleSocket.js";
+import { ROOT_TASK_ID } from "@grackle-ai/common";
 import { SETTINGS_URL, newTaskUrl, newChatUrl, useAppNavigate } from "../../utils/navigation.js";
 import styles from "./UnifiedBar.module.scss";
 
@@ -46,7 +47,7 @@ function DisconnectedBanner({ environmentId, onReconnect }: DisconnectedBannerPr
 export function UnifiedBar(): JSX.Element {
   const {
     spawn, sendInput, kill, sessions, tasks, environments, personas,
-    addEnvironment, provisionEnvironment,
+    addEnvironment, provisionEnvironment, startTask, taskSessions,
     codespaces, codespaceError, codespaceListError, codespaceCreating, listCodespaces, createCodespace,
   } = useGrackle();
   const { showToast } = useToast();
@@ -63,12 +64,14 @@ export function UnifiedBar(): JSX.Element {
   const newEnvMatch = useMatch("/environments/new");
   const workspaceMatch = useMatch("/workspaces/:workspaceId");
   const newTaskMatch = useMatch("/tasks/new");
+  const chatMatch = useMatch("/chat");
   const emptyMatch = useMatch("/");
   const settingsMatch = useMatch("/settings/*");
 
   // Derive current page context
   const sessionId = sessionMatch?.params.sessionId;
   const taskId = taskMatch?.params.taskId ?? taskStreamMatch?.params.taskId ?? taskFindingsMatch?.params.taskId;
+  const isChat = !!chatMatch;
   const isNewChat = !!newChatMatch;
   const isNewEnv = !!newEnvMatch;
   const isWorkspace = !!workspaceMatch;
@@ -117,6 +120,77 @@ export function UnifiedBar(): JSX.Element {
       return dep && dep.status !== "complete";
     })
     : false;
+
+  // --- chat mode (root task) ---
+  if (isChat) {
+    const rootTask = tasks.find((t) => t.id === ROOT_TASK_ID);
+    // Resolve latest session from the already-loaded sessions list first (available
+    // immediately on connect), falling back to taskSessions (requires roundtrip).
+    const latestRootSession = rootTask?.latestSessionId
+      ? (sessions.find((s) => s.id === rootTask.latestSessionId) ??
+         (taskSessions[ROOT_TASK_ID] ?? []).find((s) => s.id === rootTask.latestSessionId))
+      : undefined;
+    const localEnv = environments.find((e) => e.adapterType === "local" && e.status === "connected");
+
+    if (!localEnv) {
+      return (
+        <div className={styles.bar}>
+          <span className={styles.hintText}>
+            Add a local environment to start chatting
+          </span>
+        </div>
+      );
+    }
+
+    if (latestRootSession?.status === "running") {
+      return (
+        <div className={styles.bar}>
+          <input type="text" disabled placeholder="Agent is working..." className={styles.input} />
+          <button onClick={() => kill(latestRootSession.id)} className={styles.btnDanger} title="Stop session">Stop</button>
+        </div>
+      );
+    }
+
+    if (latestRootSession?.status === "idle") {
+      const rootEnvDisconnected = isEnvDisconnected(latestRootSession.environmentId, environments);
+      const handleChatSend = (e: FormEvent): void => {
+        e.preventDefault();
+        if (!text.trim() || rootEnvDisconnected) {
+          return;
+        }
+        sendInput(latestRootSession.id, text);
+        setText("");
+      };
+      return (
+        <form onSubmit={handleChatSend} className={styles.bar}>
+          {rootEnvDisconnected && latestRootSession.environmentId && (
+            <DisconnectedBanner environmentId={latestRootSession.environmentId} onReconnect={provisionEnvironment} />
+          )}
+          <input type="text" value={text} onChange={(e) => setText(e.target.value)} placeholder="Type a message..." autoFocus={!rootEnvDisconnected} disabled={rootEnvDisconnected} className={styles.input} />
+          <span title={rootEnvDisconnected ? "Environment is unavailable — reconnect first" : undefined}>
+            <button type="submit" disabled={!text.trim() || rootEnvDisconnected} className={styles.btnPrimary}>Send</button>
+          </span>
+          <button type="button" onClick={() => kill(latestRootSession.id)} className={styles.btnDanger} title="Stop session">Stop</button>
+        </form>
+      );
+    }
+
+    // No active session — show input to start one
+    const handleChatStart = (e: FormEvent): void => {
+      e.preventDefault();
+      if (!text.trim()) {
+        return;
+      }
+      startTask(ROOT_TASK_ID, undefined, localEnv.id, text);
+      setText("");
+    };
+    return (
+      <form onSubmit={handleChatStart} className={styles.bar}>
+        <input type="text" value={text} onChange={(e) => setText(e.target.value)} placeholder="Type a message..." autoFocus className={styles.input} />
+        <button type="submit" disabled={!text.trim()} className={styles.btnPrimary}>Send</button>
+      </form>
+    );
+  }
 
   // --- empty / settings / personas mode ---
   if (isEmpty || isSettings) {
