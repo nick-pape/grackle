@@ -11,40 +11,35 @@ function getEnvironmentRow(page: import("@playwright/test").Page, name: string) 
   return page.getByTestId("env-row").filter({ hasText: name }).first();
 }
 
-test.describe("Sidebar — Tab Bar Navigation", () => {
-  test("sidebar has tab bar with Chat, Tasks, Workspaces, and Settings tabs", async ({ appPage }) => {
+test.describe("App Navigation Bar", () => {
+  test("app nav bar has Chat, Tasks, Workspaces, and Settings tabs", async ({ appPage }) => {
     const page = appPage;
 
-    const sidebar = page.locator('[data-testid="sidebar"]');
-
-    // Tab bar should be visible
-    await expect(sidebar.locator('[data-testid="sidebar-nav"]')).toBeVisible();
+    // App nav bar should be visible (full-width, above sidebar)
+    await expect(page.locator('[data-testid="sidebar-nav"]')).toBeVisible();
 
     // All four tabs should be present
-    await expect(sidebar.locator('[data-testid="sidebar-tab-chat"]')).toBeVisible();
-    await expect(sidebar.locator('[data-testid="sidebar-tab-tasks"]')).toBeVisible();
-    await expect(sidebar.locator('[data-testid="sidebar-tab-workspaces"]')).toBeVisible();
-    await expect(sidebar.locator('[data-testid="sidebar-tab-settings"]')).toBeVisible();
+    await expect(page.locator('[data-testid="sidebar-tab-chat"]')).toBeVisible();
+    await expect(page.locator('[data-testid="sidebar-tab-tasks"]')).toBeVisible();
+    await expect(page.locator('[data-testid="sidebar-tab-workspaces"]')).toBeVisible();
+    await expect(page.locator('[data-testid="sidebar-tab-settings"]')).toBeVisible();
   });
 
-  test("sidebar defaults to Chat tab", async ({ appPage }) => {
+  test("app defaults to home/dashboard view", async ({ appPage }) => {
     const page = appPage;
 
-    const sidebar = page.locator('[data-testid="sidebar"]');
-
-    // Chat tab should be active by default (app redirects / to /chat)
-    await expect(sidebar.locator('[data-testid="sidebar-tab-chat"]')).toHaveAttribute("aria-selected", "true");
+    // The home route renders the dashboard
+    await expect(page).toHaveURL(/\/$/);
   });
 
   test("clicking Workspaces tab shows workspace list", async ({ appPage }) => {
     const page = appPage;
 
-    const sidebar = page.locator('[data-testid="sidebar"]');
-
     // Click the Workspaces tab
-    await sidebar.locator('[data-testid="sidebar-tab-workspaces"]').click();
+    await page.locator('[data-testid="sidebar-tab-workspaces"]').click();
 
-    // The "+" create workspace button should be visible
+    // The "+" create workspace button should be visible in the sidebar
+    const sidebar = page.locator('[data-testid="sidebar"]');
     await expect(sidebar.locator('button[title="Create workspace"]')).toBeVisible();
   });
 
