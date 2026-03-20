@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { isGrackleEvent, parseWsMessage } from "./types.js";
 
 describe("isGrackleEvent", () => {
@@ -58,6 +58,12 @@ describe("isGrackleEvent", () => {
 });
 
 describe("parseWsMessage", () => {
+  // Suppress console.warn output — parseWsMessage warns on invalid input and
+  // Rush CI treats any stderr output as a build warning, failing the pipeline.
+  let warnSpy: ReturnType<typeof vi.spyOn>;
+  beforeEach(() => { warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {}); });
+  afterEach(() => { warnSpy.mockRestore(); });
+
   it("returns a GrackleEvent when id and timestamp are present", () => {
     const json = JSON.stringify({
       id: "01ABC",
