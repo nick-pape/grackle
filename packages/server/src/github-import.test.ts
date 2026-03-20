@@ -31,6 +31,15 @@ import {
   fetchGitHubIssues,
   importGitHubIssues,
   buildDescriptionWithComments,
+  buildExistingIssueMap,
+  planImport,
+} from "./github-import.js";
+import type {
+  GitHubIssue,
+  TaskPersistence,
+  ImportEventEmitter,
+  ImportLock,
+  GitHubClient,
 } from "./github-import.js";
 import * as taskStore from "./task-store.js";
 import * as workspaceStore from "./workspace-store.js";
@@ -1138,5 +1147,395 @@ describe("importGitHubIssues", () => {
       importGitHubIssues("test-proj", "owner/repo", "open"),
     ).rejects.toThrow("already in progress");
     await first;
+  });
+});
+
+// ── buildExistingIssueMap (pure function) tests ─────────────────
+
+describe("buildExistingIssueMap", () => {
+  it("returns empty maps for empty input", () => {
+    const result = buildExistingIssueMap([]);
+    expect(result.issueNumberToTaskId.size).toBe(0);
+    expect(result.existingIssueNumbers.size).toBe(0);
+  });
+
+  it("extracts issue numbers from titles matching the #N: pattern", () => {
+    const tasks = [
+      { id: "aaa", title: "#1: First issue" },
+      { id: "bbb", title: "#42: Another issue" },
+    ];
+    const result = buildExistingIssueMap(tasks);
+    expect(result.existingIssueNumbers).toEqual(new Set([1, 42]));
+    expect(result.issueNumberToTaskId.get(1)).toBe("aaa");
+    expect(result.issueNumberToTaskId.get(42)).toBe("bbb");
+  });
+
+  it("ignores tasks whose titles do not match the pattern", () => {
+    const tasks = [
+      { id: "aaa", title: "#1: Matches" },
+      { id: "bbb", title: "No hash prefix" },
+      { id: "ccc", title: "Also #2 not at start" },
+    ];
+    const result = buildExistingIssueMap(tasks);
+    expect(result.existingIssueNumbers.size).toBe(1);
+    expect(result.issueNumberToTaskId.size).toBe(1);
+  });
+});
+
+// ── planImport (pure function) tests ────────────────────────────
+
+describe("planImport", () => {
+  /** Helper to create a minimal GitHubIssue. */
+  function ghIssue(
+    num: number,
+    title: string,
+    opts?: { parentNumber?: number; blockedBy?: number[]; body?: string },
+  ): GitHubIssue {
+    return {
+      number: num,
+      title,
+      body: opts?.body ?? "",
+      parentNumber: opts?.parentNumber,
+      labels: [],
+      blockedByNumbers: opts?.blockedBy ?? [],
+      comments: [],
+      commentsHasNextPage: false,
+    };
+  }
+
+  let idCounter: number;
+  function generateId(): string {
+    return `id-${idCounter++}`;
+  }
+
+  beforeEach(() => {
+    idCounter = 1;
+  });
+
+  it("creates instructions for all new issues", () => {
+    const issues = [ghIssue(1, "A"), ghIssue(2, "B")];
+    const plan = planImport(issues, new Set(), new Map(), generateId);
+
+    expect(plan.tasksToCreate).toHaveLength(2);
+    expect(plan.skipped).toBe(0);
+    expect(plan.linked).toBe(0);
+    expect(plan.tasksToCreate[0].title).toBe("#1: A");
+    expect(plan.tasksToCreate[1].title).toBe("#2: B");
+  });
+
+  it("skips already-existing issues", () => {
+    const issues = [ghIssue(1, "A"), ghIssue(2, "B")];
+    const plan = planImport(issues, new Set([1]), new Map([[1, "existing-id"]]), generateId);
+
+    expect(plan.tasksToCreate).toHaveLength(1);
+    expect(plan.skipped).toBe(1);
+    expect(plan.tasksToCreate[0].title).toBe("#2: B");
+  });
+
+  it("resolves parent links between new issues", () => {
+    const issues = [ghIssue(1, "Parent"), ghIssue(2, "Child", { parentNumber: 1 })];
+    const plan = planImport(issues, new Set(), new Map(), generateId);
+
+    expect(plan.linked).toBe(1);
+    expect(plan.tasksToCreate[1].parentTaskId).toBe(plan.tasksToCreate[0].id);
+  });
+
+  it("resolves parent links to existing tasks", () => {
+    const issues = [ghIssue(2, "Child", { parentNumber: 1 })];
+    const plan = planImport(issues, new Set(), new Map([[1, "existing-parent"]]), generateId);
+
+    expect(plan.linked).toBe(1);
+    expect(plan.tasksToCreate[0].parentTaskId).toBe("existing-parent");
+  });
+
+  it("resolves blockedBy into dependency instructions", () => {
+    const issues = [ghIssue(1, "A"), ghIssue(2, "B", { blockedBy: [1] })];
+    const plan = planImport(issues, new Set(), new Map(), generateId);
+
+    expect(plan.dependenciesToSet).toHaveLength(1);
+    expect(plan.dependenciesToSet[0].taskId).toBe(plan.tasksToCreate[1].id);
+    expect(plan.dependenciesToSet[0].dependsOn).toEqual([plan.tasksToCreate[0].id]);
+  });
+
+  it("resolves blockedBy to existing tasks", () => {
+    const issues = [ghIssue(2, "B", { blockedBy: [1] })];
+    const plan = planImport(issues, new Set(), new Map([[1, "existing-blocker"]]), generateId);
+
+    expect(plan.dependenciesToSet).toHaveLength(1);
+    expect(plan.dependenciesToSet[0].dependsOn).toEqual(["existing-blocker"]);
+  });
+
+  it("skips blockers outside the known set", () => {
+    const issues = [ghIssue(2, "B", { blockedBy: [999] })];
+    const plan = planImport(issues, new Set(), new Map(), generateId);
+
+    expect(plan.dependenciesToSet).toHaveLength(0);
+  });
+
+  it("handles circular blocking relationships", () => {
+    const issues = [
+      ghIssue(1, "A", { blockedBy: [2] }),
+      ghIssue(2, "B", { blockedBy: [1] }),
+    ];
+    const plan = planImport(issues, new Set(), new Map(), generateId);
+
+    expect(plan.tasksToCreate).toHaveLength(2);
+    expect(plan.dependenciesToSet).toHaveLength(2);
+  });
+
+  it("handles child-before-parent ordering", () => {
+    const issues = [
+      ghIssue(2, "Child", { parentNumber: 1 }),
+      ghIssue(1, "Parent"),
+    ];
+    const plan = planImport(issues, new Set(), new Map(), generateId);
+
+    // Parent should be created before child due to topo sort
+    expect(plan.tasksToCreate[0].title).toBe("#1: Parent");
+    expect(plan.tasksToCreate[1].title).toBe("#2: Child");
+    expect(plan.tasksToCreate[1].parentTaskId).toBe(plan.tasksToCreate[0].id);
+  });
+
+  it("uses the provided generateId function", () => {
+    let counter = 100;
+    const customId = (): string => `custom-${counter++}`;
+    const issues = [ghIssue(1, "A")];
+    const plan = planImport(issues, new Set(), new Map(), customId);
+
+    expect(plan.tasksToCreate[0].id).toBe("custom-100");
+  });
+});
+
+// ── importGitHubIssues with injectable deps tests ───────────────
+
+describe("importGitHubIssues (injectable)", () => {
+  /** Fake GitHubClient that returns pre-configured issues. */
+  function fakeClient(issues: Array<{
+    number: number;
+    title: string;
+    body?: string;
+    parent?: { number: number } | null;
+    labels?: string[];
+    blockedBy?: number[];
+  }>): GitHubClient {
+    return {
+      async exec() {
+        return JSON.stringify({
+          data: {
+            repository: {
+              issues: {
+                pageInfo: { hasNextPage: false, endCursor: null },
+                nodes: issues.map((i) => ({
+                  number: i.number,
+                  title: i.title,
+                  body: i.body ?? "",
+                  parent: i.parent ?? null,
+                  labels: { nodes: (i.labels ?? []).map((l) => ({ name: l })) },
+                  blockedBy: { nodes: (i.blockedBy ?? []).map((n) => ({ number: n })) },
+                })),
+              },
+            },
+          },
+        });
+      },
+    };
+  }
+
+  /** Fake TaskPersistence backed by simple arrays. */
+  function fakePersistence(workspaceName: string = "Test"): {
+    persistence: TaskPersistence;
+    createdTasks: Array<{ id: string; workspaceId: string; title: string; description: string; parentTaskId: string }>;
+    dependencySets: Array<{ taskId: string; dependsOn: string[] }>;
+  } {
+    const createdTasks: Array<{
+      id: string; workspaceId: string; title: string; description: string; parentTaskId: string;
+    }> = [];
+    const dependencySets: Array<{ taskId: string; dependsOn: string[] }> = [];
+
+    const persistence: TaskPersistence = {
+      getWorkspace(workspaceId) {
+        if (workspaceId === "test-ws") {
+          return { name: workspaceName };
+        }
+        return undefined;
+      },
+      listTasks() {
+        return createdTasks.map((t) => ({ id: t.id, title: t.title }));
+      },
+      createTask(id, workspaceId, title, description, _dependsOn, _workspaceSlug, parentTaskId) {
+        createdTasks.push({ id, workspaceId, title, description, parentTaskId });
+      },
+      setTaskDependsOn(taskId, dependsOn) {
+        dependencySets.push({ taskId, dependsOn });
+      },
+    };
+
+    return { persistence, createdTasks, dependencySets };
+  }
+
+  /** Fake ImportEventEmitter that records calls. */
+  function fakeEmitter(): { emitter: ImportEventEmitter; calls: Array<[string, { taskId: string; workspaceId: string }]> } {
+    const calls: Array<[string, { taskId: string; workspaceId: string }]> = [];
+    const emitter: ImportEventEmitter = {
+      emit(type, payload) {
+        calls.push([type, payload]);
+      },
+    };
+    return { emitter, calls };
+  }
+
+  /** Fake ImportLock that is always available. */
+  function fakeLock(): ImportLock {
+    return {
+      acquire() { /* no-op */ },
+      release() { /* no-op */ },
+    };
+  }
+
+  it("creates tasks using injected persistence", async () => {
+    const client = fakeClient([
+      { number: 1, title: "Issue A" },
+      { number: 2, title: "Issue B" },
+    ]);
+    const { persistence, createdTasks } = fakePersistence();
+    const { emitter } = fakeEmitter();
+
+    const result = await importGitHubIssues(
+      "test-ws", "owner/repo", "open", undefined, undefined, true,
+      { githubClient: client, persistence, eventEmitter: emitter, importLock: fakeLock() },
+    );
+
+    expect(result.imported).toBe(2);
+    expect(createdTasks).toHaveLength(2);
+    expect(createdTasks[0].title).toBe("#1: Issue A");
+    expect(createdTasks[1].title).toBe("#2: Issue B");
+  });
+
+  it("emits events through injected emitter", async () => {
+    const client = fakeClient([{ number: 1, title: "Issue" }]);
+    const { persistence } = fakePersistence();
+    const { emitter, calls } = fakeEmitter();
+
+    await importGitHubIssues(
+      "test-ws", "owner/repo", "open", undefined, undefined, true,
+      { githubClient: client, persistence, eventEmitter: emitter, importLock: fakeLock() },
+    );
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0][0]).toBe("task.created");
+    expect(calls[0][1].workspaceId).toBe("test-ws");
+  });
+
+  it("uses injected lock", async () => {
+    let acquired = false;
+    let released = false;
+    const lock: ImportLock = {
+      acquire() { acquired = true; },
+      release() { released = true; },
+    };
+    const client = fakeClient([{ number: 1, title: "Issue" }]);
+    const { persistence } = fakePersistence();
+    const { emitter } = fakeEmitter();
+
+    await importGitHubIssues(
+      "test-ws", "owner/repo", "open", undefined, undefined, true,
+      { githubClient: client, persistence, eventEmitter: emitter, importLock: lock },
+    );
+
+    expect(acquired).toBe(true);
+    expect(released).toBe(true);
+  });
+
+  it("releases lock even on error", async () => {
+    let released = false;
+    const lock: ImportLock = {
+      acquire() { /* no-op */ },
+      release() { released = true; },
+    };
+    const { persistence } = fakePersistence();
+    const { emitter } = fakeEmitter();
+
+    await expect(importGitHubIssues(
+      "nonexistent", "owner/repo", "open", undefined, undefined, true,
+      { persistence, eventEmitter: emitter, importLock: lock },
+    )).rejects.toThrow("Workspace not found");
+
+    expect(released).toBe(true);
+  });
+
+  it("sets dependencies through injected persistence", async () => {
+    const client = fakeClient([
+      { number: 1, title: "Blocker" },
+      { number: 2, title: "Blocked", blockedBy: [1] },
+    ]);
+    const { persistence, dependencySets } = fakePersistence();
+    const { emitter } = fakeEmitter();
+
+    const result = await importGitHubIssues(
+      "test-ws", "owner/repo", "open", undefined, undefined, true,
+      { githubClient: client, persistence, eventEmitter: emitter, importLock: fakeLock() },
+    );
+
+    expect(result.dependencies).toBe(1);
+    expect(dependencySets).toHaveLength(1);
+  });
+
+  it("uses injected generateId", async () => {
+    let counter = 0;
+    const generateId = (): string => `test-id-${counter++}`;
+    const client = fakeClient([{ number: 1, title: "Issue" }]);
+    const { persistence, createdTasks } = fakePersistence();
+    const { emitter } = fakeEmitter();
+
+    await importGitHubIssues(
+      "test-ws", "owner/repo", "open", undefined, undefined, true,
+      { githubClient: client, persistence, eventEmitter: emitter, importLock: fakeLock(), generateId },
+    );
+
+    expect(createdTasks[0].id).toBe("test-id-0");
+  });
+
+  it("skips already-imported issues across invocations", async () => {
+    const { persistence, createdTasks } = fakePersistence();
+    const { emitter } = fakeEmitter();
+
+    // First import
+    const client1 = fakeClient([{ number: 1, title: "Issue A" }]);
+    await importGitHubIssues(
+      "test-ws", "owner/repo", "open", undefined, undefined, true,
+      { githubClient: client1, persistence, eventEmitter: emitter, importLock: fakeLock() },
+    );
+    expect(createdTasks).toHaveLength(1);
+
+    // Second import — issue 1 already exists, only issue 2 is new
+    const client2 = fakeClient([
+      { number: 1, title: "Issue A" },
+      { number: 2, title: "Issue B" },
+    ]);
+    const result = await importGitHubIssues(
+      "test-ws", "owner/repo", "open", undefined, undefined, true,
+      { githubClient: client2, persistence, eventEmitter: emitter, importLock: fakeLock() },
+    );
+
+    expect(result.imported).toBe(1);
+    expect(result.skipped).toBe(1);
+    expect(createdTasks).toHaveLength(2);
+  });
+
+  it("resolves parent links through injected persistence", async () => {
+    const client = fakeClient([
+      { number: 1, title: "Parent" },
+      { number: 2, title: "Child", parent: { number: 1 } },
+    ]);
+    const { persistence, createdTasks } = fakePersistence();
+    const { emitter } = fakeEmitter();
+
+    const result = await importGitHubIssues(
+      "test-ws", "owner/repo", "open", undefined, undefined, true,
+      { githubClient: client, persistence, eventEmitter: emitter, importLock: fakeLock() },
+    );
+
+    expect(result.linked).toBe(1);
+    expect(createdTasks[1].parentTaskId).toBe(createdTasks[0].id);
   });
 });
