@@ -1,6 +1,6 @@
 import { useCallback, useRef, type JSX, type KeyboardEvent } from "react";
 import { useLocation } from "react-router";
-import { CHAT_URL, HOME_URL, SETTINGS_URL, useAppNavigate } from "../../utils/navigation.js";
+import { CHAT_URL, HOME_URL, SETTINGS_URL, SETTINGS_ENVIRONMENTS_URL, TASKS_URL, WORKSPACES_URL, useAppNavigate } from "../../utils/navigation.js";
 import styles from "./AppNav.module.scss";
 
 /** Application view identifiers. */
@@ -24,9 +24,9 @@ interface AppTab {
 const TABS: AppTab[] = [
   { view: "dashboard", label: "Dashboard", icon: "\uD83C\uDFE0", route: HOME_URL, testId: "sidebar-tab-dashboard" },
   { view: "chat", label: "Chat", icon: "\uD83D\uDCAC", route: CHAT_URL, testId: "sidebar-tab-chat" },
-  { view: "tasks", label: "Tasks", icon: "\uD83D\uDCCB", route: "/tasks", testId: "sidebar-tab-tasks" },
-  { view: "workspaces", label: "Workspaces", icon: "\uD83D\uDCC1", route: "/workspaces", testId: "sidebar-tab-workspaces" },
-  { view: "settings", label: "Settings", icon: "\u2699\uFE0F", route: `${SETTINGS_URL}/environments`, testId: "sidebar-tab-settings" },
+  { view: "tasks", label: "Tasks", icon: "\uD83D\uDCCB", route: TASKS_URL, testId: "sidebar-tab-tasks" },
+  { view: "workspaces", label: "Workspaces", icon: "\uD83D\uDCC1", route: WORKSPACES_URL, testId: "sidebar-tab-workspaces" },
+  { view: "settings", label: "Settings", icon: "\u2699\uFE0F", route: SETTINGS_ENVIRONMENTS_URL, testId: "sidebar-tab-settings" },
 ];
 
 /** Derive the active application view from a URL pathname. */
