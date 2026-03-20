@@ -70,7 +70,7 @@ function AppShell(): JSX.Element {
   // already viewing a task (task-spawned sessions should keep the user on
   // the task page rather than redirecting to the raw session view).
   useEffect(() => {
-    if (lastSpawnedId && !location.pathname.startsWith("/tasks/") && !location.pathname.startsWith("/chat")) {
+    if (lastSpawnedId && !location.pathname.startsWith("/tasks/")) {
       navigate(sessionUrl(lastSpawnedId), { replace: true });
     }
   }, [lastSpawnedId, navigate, location.pathname]);
