@@ -45,23 +45,16 @@
     z-index: 100;
     transform: translateX(-100%);
     visibility: hidden;
+    pointer-events: none;
     transition: transform var(--transition-slow),
                 visibility 0s linear 400ms;
 
     &[data-sidebar-open="true"] {
       transform: translateX(0);
       visibility: visible;
+      pointer-events: auto;
       transition: transform var(--transition-slow),
                   visibility 0s;
-    }
-
-    // Settings nav renders inline as horizontal tabs on mobile
-    &[data-settings="true"] {
-      position: static;
-      width: 100%;
-      transform: none;
-      visibility: visible;
-      transition: none;
     }
   }
 }

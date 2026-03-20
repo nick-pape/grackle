@@ -55,9 +55,9 @@ export function DagView({ workspaceId }: Props): JSX.Element {
 
   const onNodeClick = useCallback(
     (_event: MouseEvent, node: Node) => {
-      navigate(taskUrl(node.id));
+      navigate(taskUrl(node.id, undefined, workspaceId));
     },
-    [navigate],
+    [navigate, workspaceId],
   );
 
   /** Returns a hex color for the MiniMap based on task status. */

@@ -94,6 +94,7 @@ export interface UseGrackleSocketResult {
     },
   ) => void;
   loadTasks: (workspaceId: string) => void;
+  loadAllTasks: () => void;
   createTask: (
     workspaceId: string,
     title: string,
@@ -371,6 +372,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
     archiveWorkspace: workspacesHook.archiveWorkspace,
     updateWorkspace: workspacesHook.updateWorkspace,
     loadTasks: tasksHook.loadTasks,
+    loadAllTasks: tasksHook.loadAllTasks,
     createTask: tasksHook.createTask,
     startTask: tasksHook.startTask,
     stopTask: tasksHook.stopTask,

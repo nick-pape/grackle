@@ -5,7 +5,7 @@ test.describe("Kill Session", () => {
     const page = appPage;
 
     // Environments are now in Settings — navigate there via the gear button
-    await page.locator('button[title="Settings"]').click();
+    await page.locator('[data-testid="sidebar-tab-settings"]').click();
 
     // Start a stub session (uses default stub persona)
     await page.locator('button[title="New chat"]').click();

@@ -26,7 +26,7 @@ test.describe("Chat Page (root task)", () => {
 
     const chatTab = page.getByTestId("sidebar-tab-chat");
     await expect(chatTab).toBeVisible();
-    await expect(chatTab).toHaveAttribute("data-active", "true");
+    await expect(chatTab).toHaveAttribute("aria-selected", "true");
   });
 
   test("sidebar Workspaces tab navigates away from chat", async ({ appPage }) => {
@@ -43,7 +43,7 @@ test.describe("Chat Page (root task)", () => {
 
     // Workspaces tab should now be active
     const workspacesTab = page.getByTestId("sidebar-tab-workspaces");
-    await expect(workspacesTab).toHaveAttribute("data-active", "true");
+    await expect(workspacesTab).toHaveAttribute("aria-selected", "true");
   });
 
   test("chat input is present with local env", async ({ appPage }) => {

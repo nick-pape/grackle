@@ -1,53 +1,13 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type JSX } from "react";
 import { useMatch, useLocation } from "react-router";
 import { useGrackle } from "../../context/GrackleContext.js";
-import type { TaskData } from "../../hooks/useGrackleSocket.js";
 import { AnimatePresence, motion } from "motion/react";
 import { MAX_TASK_DEPTH, fuzzySearch, type FuzzyKey, type MatchIndex } from "@grackle-ai/common";
 import { Spinner } from "../display/index.js";
-import { HOME_URL, newTaskUrl, taskUrl, workspaceUrl, useAppNavigate } from "../../utils/navigation.js";
-import { SIDEBAR_STATUS_ORDER, getStatusStyle } from "../../utils/taskStatus.js";
+import { HOME_URL, taskUrl, workspaceUrl, newTaskUrl, useAppNavigate } from "../../utils/navigation.js";
+import { getStatusStyle } from "../../utils/taskStatus.js";
+import { HighlightedText, buildTaskTree, groupTasksByStatus, type TaskNode, type StatusGroup } from "./listHelpers.js";
 import styles from "./WorkspaceList.module.scss";
-
-/** Merge overlapping or adjacent [start, end] ranges into non-overlapping ranges. */
-function mergeRanges(ranges: readonly MatchIndex[]): MatchIndex[] {
-  if (ranges.length === 0) {
-    return [];
-  }
-  const sorted = [...ranges].sort((a, b) => a[0] - b[0]);
-  const merged: [number, number][] = [[sorted[0][0], sorted[0][1]]];
-  for (let i = 1; i < sorted.length; i++) {
-    const prev = merged[merged.length - 1];
-    const [start, end] = sorted[i];
-    if (start <= prev[1] + 1) {
-      prev[1] = Math.max(prev[1], end);
-    } else {
-      merged.push([start, end]);
-    }
-  }
-  return merged;
-}
-
-/** Render text with highlighted match ranges. Unmatched portions are plain, matched portions are bold. */
-function HighlightedText({ text, indices }: { text: string; indices?: readonly MatchIndex[] }): JSX.Element {
-  if (!indices || indices.length === 0) {
-    return <>{text}</>;
-  }
-  const merged = mergeRanges(indices);
-  const parts: JSX.Element[] = [];
-  let cursor = 0;
-  for (const [start, end] of merged) {
-    if (start > cursor) {
-      parts.push(<span key={`p${cursor}`}>{text.slice(cursor, start)}</span>);
-    }
-    parts.push(<mark key={`m${start}`} className={styles.searchHighlight}>{text.slice(start, end + 1)}</mark>);
-    cursor = end + 1;
-  }
-  if (cursor < text.length) {
-    parts.push(<span key={`p${cursor}`}>{text.slice(cursor)}</span>);
-  }
-  return <>{parts}</>;
-}
 
 /** Fuzzy search keys for workspace matching. */
 const WORKSPACE_SEARCH_KEYS: FuzzyKey[] = [{ name: "name", weight: 2 }, { name: "description", weight: 1 }];
@@ -85,70 +45,6 @@ function saveGroupByStatus(value: boolean): void {
 }
 
 // ---------------------------------------------------------------------------
-// Status grouping
-// ---------------------------------------------------------------------------
-
-/** A group of tasks sharing the same status. */
-interface StatusGroup {
-  status: string;
-  label: string;
-  style: { color: string; icon: string };
-  tasks: TaskData[];
-}
-
-/** Group a flat list of tasks by status, ordered by urgency. Blocked tasks are separated into their own group. */
-function groupTasksByStatus(taskList: TaskData[], taskStatusById: Map<string, string>): StatusGroup[] {
-  const byStatus = new Map<string, TaskData[]>();
-  for (const task of taskList) {
-    // Tasks with unresolved dependencies go to "blocked" instead of their actual status
-    const isBlocked = task.dependsOn.length > 0 &&
-      task.dependsOn.some((depId) => taskStatusById.get(depId) !== "complete");
-    const groupKey = isBlocked ? "blocked" : task.status;
-    const list = byStatus.get(groupKey);
-    if (list) {
-      list.push(task);
-    } else {
-      byStatus.set(groupKey, [task]);
-    }
-  }
-
-  const groups: StatusGroup[] = [];
-  const seen = new Set<string>();
-
-  // Known statuses in urgency order
-  for (const status of SIDEBAR_STATUS_ORDER) {
-    seen.add(status);
-    const tasks = byStatus.get(status);
-    if (tasks && tasks.length > 0) {
-      tasks.sort((a, b) => a.sortOrder - b.sortOrder);
-      const style = getStatusStyle(status);
-      groups.push({
-        status,
-        label: style.label,
-        style,
-        tasks,
-      });
-    }
-  }
-
-  // Append any unknown statuses for future-proofing
-  for (const [status, tasks] of byStatus) {
-    if (!seen.has(status) && tasks.length > 0) {
-      tasks.sort((a, b) => a.sortOrder - b.sortOrder);
-      const style = getStatusStyle(status);
-      groups.push({
-        status,
-        label: style.label,
-        style,
-        tasks,
-      });
-    }
-  }
-
-  return groups;
-}
-
-// ---------------------------------------------------------------------------
 // StatusGroupAccordion
 // ---------------------------------------------------------------------------
 
@@ -159,6 +55,7 @@ interface StatusGroupAccordionProps {
   onToggle: () => void;
   selectedTaskId: string | undefined;
   navigate: ReturnType<typeof useAppNavigate>;
+  workspaceId: string;
   titleHighlights: Map<string, readonly MatchIndex[]>;
 }
 
@@ -169,6 +66,7 @@ function StatusGroupAccordion({
   onToggle,
   selectedTaskId,
   navigate,
+  workspaceId,
   titleHighlights,
 }: StatusGroupAccordionProps): JSX.Element {
   return (
@@ -211,7 +109,7 @@ function StatusGroupAccordion({
               return (
                 <div
                   key={task.id}
-                  onClick={() => navigate(taskUrl(task.id))}
+                  onClick={() => navigate(taskUrl(task.id, undefined, workspaceId))}
                   className={`${styles.taskRow} ${isSelected ? styles.selected : ""}`}
                   style={{ '--task-indent': `${TASK_BASE_INDENT_PX}px` } as CSSProperties}
                   data-task-id={task.id}
@@ -221,7 +119,7 @@ function StatusGroupAccordion({
                     {statusStyle.icon}
                   </span>
                   <span className={styles.taskTitle} title={task.title}>
-                    <HighlightedText text={task.title} indices={titleHighlights.get(task.id)} />
+                    <HighlightedText text={task.title} indices={titleHighlights.get(task.id)} highlightClass={styles.searchHighlight} />
                   </span>
                 </div>
               );
@@ -231,31 +129,6 @@ function StatusGroupAccordion({
       </AnimatePresence>
     </div>
   );
-}
-
-/** A task node with children for recursive tree rendering. */
-interface TaskNode extends TaskData {
-  children: TaskNode[];
-}
-
-/** Assemble flat TaskData[] into a tree. */
-function buildTaskTree(taskList: TaskData[]): TaskNode[] {
-  const byId = new Map<string, TaskNode>(
-    taskList.map(t => [t.id, { ...t, children: [] }]),
-  );
-  const roots: TaskNode[] = [];
-  for (const node of byId.values()) {
-    if (node.parentTaskId && byId.has(node.parentTaskId)) {
-      byId.get(node.parentTaskId)!.children.push(node);
-    } else {
-      roots.push(node);
-    }
-  }
-  // Sort children by sortOrder
-  for (const node of byId.values()) {
-    node.children.sort((a, b) => a.sortOrder - b.sortOrder);
-  }
-  return roots.sort((a, b) => a.sortOrder - b.sortOrder);
 }
 
 /** Props for the recursive TaskTreeNode component. */
@@ -294,7 +167,7 @@ function TaskTreeNode({
   return (
     <>
       <div
-        onClick={() => navigate(taskUrl(node.id))}
+        onClick={() => navigate(taskUrl(node.id, undefined, workspaceId))}
         className={`${styles.taskRow} ${isSelected ? styles.selected : ""}`}
         style={{ '--task-indent': `${indent}px` } as CSSProperties}
         data-task-id={node.id}
@@ -322,7 +195,7 @@ function TaskTreeNode({
           {statusStyle.icon}
         </span>
         <span className={styles.taskTitle} title={node.title}>
-                  <HighlightedText text={node.title} indices={titleHighlights.get(node.id)} />
+                  <HighlightedText text={node.title} indices={titleHighlights.get(node.id)} highlightClass={styles.searchHighlight} />
                 </span>
         {hasChildren && (
           <span className={styles.childCountBadge}>
@@ -697,6 +570,7 @@ export function WorkspaceList(): JSX.Element {
                 }
               }}
               className={`${styles.workspaceRow} ${isSelected ? styles.selected : ""}`}
+              data-testid="workspace-row"
             >
               <span className={`${styles.expandArrow} ${isExpanded ? styles.expanded : ""}`}>
                 {"\u25B8"}
@@ -735,6 +609,7 @@ export function WorkspaceList(): JSX.Element {
                         onToggle={() => toggleStatusGroup(workspace.id, group.status)}
                         selectedTaskId={selectedTaskId}
                         navigate={navigate}
+                        workspaceId={workspace.id}
                         titleHighlights={titleHighlights}
                       />
                     ))

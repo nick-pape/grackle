@@ -132,7 +132,7 @@ export function WorkspaceBoard({ workspaceId }: WorkspaceBoardProps): JSX.Elemen
                       tasksById={tasksById}
                       personaName={boardMetadataByTaskId.personaNameByTaskId.get(bt.task.id)}
                       envName={boardMetadataByTaskId.environmentNameByTaskId.get(bt.task.id)}
-                      onClick={() => navigate(taskUrl(bt.task.id))}
+                      onClick={() => navigate(taskUrl(bt.task.id, undefined, workspaceId))}
                     />
                   </motion.div>
                 ))}

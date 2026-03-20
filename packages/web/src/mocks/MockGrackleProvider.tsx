@@ -823,6 +823,9 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
         );
       },
       loadTasks,
+      loadAllTasks: () => {
+        console.log("[MockGrackle] loadAllTasks");
+      },
       createTask,
       startTask,
       stopTask: (taskId: string) => {
