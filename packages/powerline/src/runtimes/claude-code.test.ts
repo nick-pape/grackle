@@ -256,6 +256,50 @@ describe("ClaudeCodeRuntime structural", () => {
     expect(opts.settingSources).toEqual(["project"]);
   });
 
+  it("setupSdk sets systemPrompt when systemContext is provided", async () => {
+    const { ClaudeCodeRuntime } = await import("./claude-code.js");
+    const runtime = new ClaudeCodeRuntime();
+    const session = runtime.spawn({
+      sessionId: "cc-sysprompt",
+      prompt: "do something",
+      model: "claude-3",
+      maxTurns: 0,
+      systemContext: "You are a helpful assistant.",
+    });
+    await (session as any).setupSdk();
+    const opts = (session as any).cachedSdkOptions;
+    expect(opts.systemPrompt).toEqual({ preset: "claude_code", append: "You are a helpful assistant." });
+  });
+
+  it("setupSdk omits systemPrompt when systemContext is not provided", async () => {
+    const { ClaudeCodeRuntime } = await import("./claude-code.js");
+    const runtime = new ClaudeCodeRuntime();
+    const session = runtime.spawn({
+      sessionId: "cc-no-sysprompt",
+      prompt: "do something",
+      model: "claude-3",
+      maxTurns: 0,
+    });
+    await (session as any).setupSdk();
+    const opts = (session as any).cachedSdkOptions;
+    expect(opts.systemPrompt).toBeUndefined();
+  });
+
+  it("buildInitialPrompt returns only the prompt (excludes systemContext)", async () => {
+    const { ClaudeCodeRuntime } = await import("./claude-code.js");
+    const runtime = new ClaudeCodeRuntime();
+    const session = runtime.spawn({
+      sessionId: "cc-prompt-only",
+      prompt: "user task here",
+      model: "claude-3",
+      maxTurns: 0,
+      systemContext: "system instructions that should not appear in prompt",
+    });
+    const result = (session as any).buildInitialPrompt();
+    expect(result).toBe("user task here");
+    expect(result).not.toContain("system instructions");
+  });
+
   it("setupSdk preserves caller-provided hooks alongside settingSources", async () => {
     const { ClaudeCodeRuntime } = await import("./claude-code.js");
     const runtime = new ClaudeCodeRuntime();

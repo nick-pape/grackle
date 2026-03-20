@@ -94,6 +94,11 @@ class ClaudeCodeSession extends BaseAgentSession {
   /** Cached SDK options built once during setupSdk(), reused for follow-up queries. */
   private cachedSdkOptions?: Record<string, unknown>;
 
+  /** System context is injected via sdkOptions.systemPrompt, not prepended to the prompt. */
+  protected override buildInitialPrompt(): string {
+    return this.prompt;
+  }
+
   // ─── BaseAgentSession hooks ──────────────────────────────
 
   protected async setupSdk(): Promise<void> {
@@ -136,6 +141,11 @@ class ClaudeCodeSession extends BaseAgentSession {
       const mcpServerNames = Object.keys(sdkOptions.mcpServers as Record<string, unknown>);
       const mcpTools = mcpServerNames.map(name => `mcp__${name}__*`);
       (sdkOptions.allowedTools as string[]).push(...mcpTools);
+    }
+
+    // Inject system context via SDK-native systemPrompt (appended to Claude Code's built-in prompt)
+    if (this.systemContext) {
+      sdkOptions.systemPrompt = { preset: "claude_code" as const, append: this.systemContext };
     }
 
     if (this.maxTurns > 0) {

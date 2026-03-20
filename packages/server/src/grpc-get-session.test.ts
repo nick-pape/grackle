@@ -104,8 +104,8 @@ vi.mock("./adapters/adapter.js", () => ({
   reconnectOrProvision: vi.fn(async function* () {}),
 }));
 
-vi.mock("./utils/system-context.js", () => ({
-  buildTaskSystemContext: vi.fn(() => ""),
+vi.mock("./system-prompt-builder.js", () => ({
+  SystemPromptBuilder: vi.fn().mockImplementation(() => ({ build: () => "" })),
 }));
 
 vi.mock("./utils/slugify.js", () => ({

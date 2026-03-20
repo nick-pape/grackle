@@ -113,6 +113,17 @@ export abstract class BaseAgentSession implements AgentSession {
     // Default: no-op. Override in subclasses that hold SDK references.
   }
 
+  /**
+   * Build the initial prompt by combining system context with the user prompt.
+   * Subclasses that inject system context via SDK-native mechanisms should
+   * override this to return just `this.prompt`.
+   */
+  protected buildInitialPrompt(): string {
+    return this.systemContext
+      ? `${this.systemContext}\n\n---\n\n${this.prompt}`
+      : this.prompt;
+  }
+
   // ─── Shared lifecycle implementation ──────────────────────
 
   public async *stream(): AsyncIterable<AgentEvent> {
@@ -150,9 +161,7 @@ export abstract class BaseAgentSession implements AgentSession {
       }
 
       // Build final prompt with system context
-      const finalPrompt = this.systemContext
-        ? `${this.systemContext}\n\n---\n\n${this.prompt}`
-        : this.prompt;
+      const finalPrompt = this.buildInitialPrompt();
 
       const messageCount = await this.runInitialQuery(finalPrompt);
 

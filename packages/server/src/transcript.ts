@@ -22,6 +22,8 @@ function renderEntry(entry: LogEntry): string {
       return `**Error:** ${entry.content}\n`;
     case "status":
       return `---\n*Status: ${entry.content}*\n`;
+    case "signal":
+      return `> **[SIGNAL]** ${entry.content}\n`;
     default:
       return `${entry.content}\n`;
   }

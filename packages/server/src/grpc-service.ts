@@ -42,7 +42,7 @@ import { loadOrCreateApiKey } from "./api-key.js";
 import { logger } from "./logger.js";
 import { reanimateAgent } from "./reanimate-agent.js";
 import { slugify } from "./utils/slugify.js";
-import { buildTaskSystemContext } from "./utils/system-context.js";
+import { SystemPromptBuilder } from "./system-prompt-builder.js";
 import { importGitHubIssues as executeGitHubImport } from "./github-import.js";
 import { generatePairingCode } from "./pairing.js";
 import { detectLanIp } from "./utils/network.js";
@@ -467,11 +467,12 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       const maxTurns = req.maxTurns || resolved.maxTurns;
       const logPath = join(grackleHome, LOGS_DIR, sessionId);
 
-      let systemContext = req.systemContext || "";
-      if (systemPrompt) {
-        systemContext =
-          systemPrompt + (systemContext ? "\n\n" + systemContext : "");
-      }
+      const builderPrompt = new SystemPromptBuilder({
+        personaPrompt: systemPrompt,
+      }).build();
+      const systemContext = req.systemContext
+        ? builderPrompt + "\n\n" + req.systemContext
+        : builderPrompt;
 
       sessionStore.createSession(
         sessionId,
@@ -977,15 +978,11 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       const { runtime, model, maxTurns, systemPrompt, persona } = resolved;
       const logPath = join(grackleHome, LOGS_DIR, sessionId);
 
-      let systemContext = buildTaskSystemContext(
-        task.title,
-        task.description,
-        req.notes || "",
-        task.canDecompose,
-      );
-      if (systemPrompt) {
-        systemContext = systemPrompt + "\n\n" + systemContext;
-      }
+      const systemContext = new SystemPromptBuilder({
+        task: { title: task.title, description: task.description, notes: req.notes || "" },
+        canDecompose: task.canDecompose,
+        personaPrompt: systemPrompt,
+      }).build();
 
       sessionStore.createSession(
         sessionId,

@@ -47,8 +47,8 @@ export type AgentEventType =
   | "subtask_create"
   | "runtime_session_id";
 
-/** Discriminator for all session events, including user input. */
-export type EventType = AgentEventType | "user_input";
+/** Discriminator for all session events, including user input and signals. */
+export type EventType = AgentEventType | "user_input" | "signal";
 
 /** Supported environment adapter backends. */
 export type AdapterType = "docker" | "local" | "codespace" | "ssh";
@@ -70,7 +70,7 @@ export const DEFAULT_WEB_PORT: number = 3000;
 /** Default port for the MCP (Model Context Protocol) server. */
 export const DEFAULT_MCP_PORT: number = 7435;
 /** Name of the seed persona created on first run. */
-export const DEFAULT_PERSONA_NAME: string = "Claude Code";
+export const DEFAULT_PERSONA_NAME: string = "Software Engineer";
 /** ID of the seed persona created on first run. */
 export const SEED_PERSONA_ID: string = "claude-code";
 /** Name of the Grackle config directory under the user's home. */

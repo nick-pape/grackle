@@ -107,6 +107,21 @@ describe("CopilotRuntime structural", () => {
   });
 });
 
+describe("CopilotSession — native system prompt injection", () => {
+  it("buildInitialPrompt returns only the prompt (excludes systemContext)", () => {
+    const session = new CopilotSession("cop-prompt", "user task here", "gpt-4", 0, undefined, undefined, undefined, "system instructions");
+    const result = (session as any).buildInitialPrompt();
+    expect(result).toBe("user task here");
+    expect(result).not.toContain("system instructions");
+  });
+
+  it("buildInitialPrompt returns prompt unchanged when no systemContext", () => {
+    const session = new CopilotSession("cop-no-ctx", "just the prompt", "gpt-4", 0);
+    const result = (session as any).buildInitialPrompt();
+    expect(result).toBe("just the prompt");
+  });
+});
+
 // ─── Kill path tests (UT-1 through UT-4) ────────────────────────────────────
 
 /**

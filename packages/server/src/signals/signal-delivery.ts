@@ -116,7 +116,7 @@ async function sendInputToSession(
     const session = sessionStore.getSession(sessionId);
     const userInputEvent = create(grackle.SessionEventSchema, {
       sessionId,
-      type: grackle.EventType.USER_INPUT,
+      type: grackle.EventType.SIGNAL,
       timestamp: new Date().toISOString(),
       content: text,
     });

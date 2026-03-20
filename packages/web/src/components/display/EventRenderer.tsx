@@ -185,6 +185,16 @@ function UserInputEvent({ content }: { content: string }): JSX.Element {
   );
 }
 
+/** Renders a signal event (e.g. SIGCHLD) as a left-bordered banner. */
+function SignalEvent({ content }: { content: string }): JSX.Element {
+  return (
+    <div className={styles.signalEvent} data-testid="signal-event">
+      <span className={styles.signalBadge}>SIGNAL</span>
+      <span className={styles.signalContent}>{content}</span>
+    </div>
+  );
+}
+
 /** Renders an unrecognized event type. */
 function DefaultEvent({ content }: { content: string }): JSX.Element {
   return (
@@ -214,6 +224,8 @@ export function EventRenderer({ event, toolUseCtx }: Props): JSX.Element {
       return <StatusEvent content={event.content} />;
     case "user_input":
       return <UserInputEvent content={event.content} />;
+    case "signal":
+      return <SignalEvent content={event.content} />;
     default:
       return <DefaultEvent content={event.content} />;
   }
