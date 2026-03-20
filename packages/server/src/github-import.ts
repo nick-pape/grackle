@@ -28,55 +28,122 @@ const COMMENTS_PER_ISSUE: number = 25;
 /** Separator inserted between the issue body and each appended comment block. */
 const COMMENT_SEPARATOR: string = "\n\n---\n\n";
 
-/**
- * Promise wrapper around `execFile` that resolves with stdout as a string.
- * Includes a timeout to prevent hanging the import lock if `gh` stalls.
- */
-function execFileAsync(
-  command: string,
-  args: string[],
-  options: { encoding: BufferEncoding; maxBuffer: number; timeout?: number },
-): Promise<string> {
-  const timeout = options.timeout ?? GH_CLI_TIMEOUT_MS;
-  return new Promise((resolve, reject) => {
-    execFile(
-      command,
-      args,
-      { ...options, timeout },
-      (err, stdout, stderr) => {
-        if (err) {
-          (err as NodeJS.ErrnoException & { stderr?: string }).stderr = String(stderr);
-          reject(err);
-        } else {
-          resolve(String(stdout));
-        }
-      },
-    );
-  });
-}
-
 /** Maximum number of blockedBy relationships fetched per issue. */
 const BLOCKED_BY_PER_ISSUE: number = 25;
 
+// ── Injectable Interfaces ───────────────────────────────────────
+
+/** Wraps `gh` CLI execution for testability. */
+export interface GitHubClient {
+  /** Execute a `gh` CLI command and return stdout. */
+  exec(args: string[], options: { encoding: BufferEncoding; maxBuffer: number; timeout?: number }): Promise<string>;
+}
+
+/** Wraps task/workspace store operations for testability. */
+export interface TaskPersistence {
+  /** Look up a workspace by ID. */
+  getWorkspace(workspaceId: string): { name: string } | undefined;
+  /** List all tasks in a workspace. */
+  listTasks(workspaceId: string): Array<{ id: string; title: string }>;
+  /** Create a new task. */
+  createTask(
+    id: string, workspaceId: string, title: string, description: string,
+    dependsOn: string[], workspaceSlug: string, parentTaskId: string, canDecompose: boolean,
+  ): void;
+  /** Set the dependsOn list for a task. */
+  setTaskDependsOn(taskId: string, dependsOn: string[]): void;
+}
+
+/** Wraps event bus broadcasting for testability. */
+export interface ImportEventEmitter {
+  /** Emit a task lifecycle event. */
+  emit(type: "task.created" | "task.updated", payload: { taskId: string; workspaceId: string }): void;
+}
+
+/** Concurrency guard for imports. */
+export interface ImportLock {
+  /** Acquire the lock. Throws if already held. */
+  acquire(): void;
+  /** Release the lock. */
+  release(): void;
+}
+
+// ── Default Implementations ─────────────────────────────────────
+
+/** Default {@link GitHubClient} that shells out to the `gh` CLI. */
+const NODE_GITHUB_CLIENT: GitHubClient = {
+  exec(
+    args: string[],
+    options: { encoding: BufferEncoding; maxBuffer: number; timeout?: number },
+  ): Promise<string> {
+    const timeout = options.timeout ?? GH_CLI_TIMEOUT_MS;
+    return new Promise((resolve, reject) => {
+      execFile(
+        "gh",
+        args,
+        { ...options, timeout },
+        (err, stdout, stderr) => {
+          if (err) {
+            (err as NodeJS.ErrnoException & { stderr?: string }).stderr = String(stderr);
+            reject(err);
+          } else {
+            resolve(String(stdout));
+          }
+        },
+      );
+    });
+  },
+};
+
+/** Default {@link TaskPersistence} delegating to the real stores. */
+const NODE_TASK_PERSISTENCE: TaskPersistence = {
+  getWorkspace(workspaceId: string): { name: string } | undefined {
+    return workspaceStore.getWorkspace(workspaceId);
+  },
+  listTasks(workspaceId: string): Array<{ id: string; title: string }> {
+    return taskStore.listTasks(workspaceId);
+  },
+  createTask(
+    id: string, workspaceId: string, title: string, description: string,
+    dependsOn: string[], workspaceSlug: string, parentTaskId: string, canDecompose: boolean,
+  ): void {
+    taskStore.createTask(id, workspaceId, title, description, dependsOn, workspaceSlug, parentTaskId, canDecompose);
+  },
+  setTaskDependsOn(taskId: string, dependsOn: string[]): void {
+    taskStore.setTaskDependsOn(taskId, dependsOn);
+  },
+};
+
+/** Default {@link ImportEventEmitter} delegating to the real event bus. */
+const NODE_IMPORT_EVENT_EMITTER: ImportEventEmitter = {
+  emit(
+    type: "task.created" | "task.updated",
+    payload: { taskId: string; workspaceId: string },
+  ): void {
+    emit(type, payload);
+  },
+};
 
 /**
  * Simple concurrency guard — only one import runs at a time within this process.
  * Does not prevent concurrent imports from separate server processes sharing the same DB.
  */
-const importLock: { active: boolean } = { active: false };
+const importLockState: { active: boolean } = { active: false };
 
-/** Acquire the import lock. Throws if already held. */
-function acquireImportLock(): void {
-  if (importLock.active) {
-    throw new Error("An import is already in progress. Please wait for it to complete.");
-  }
-  importLock.active = true;
-}
+/** Default {@link ImportLock} using a process-global boolean. */
+const DEFAULT_IMPORT_LOCK: ImportLock = {
+  acquire() {
+    if (importLockState.active) {
+      throw new Error("An import is already in progress. Please wait for it to complete.");
+    }
+    importLockState.active = true;
+  },
+  release() {
+    importLockState.active = false;
+  },
+};
 
-/** Release the import lock. */
-function releaseImportLock(): void {
-  importLock.active = false;
-}
+// ── Data Types ──────────────────────────────────────────────────
 
 /** Shape of a single GitHub issue comment as returned by the GraphQL query. */
 export interface GitHubComment {
@@ -115,6 +182,56 @@ export interface ImportResult {
   /** Number of blocking (dependsOn) relationships created. */
   dependencies: number;
 }
+
+/** Instruction to create a single task during the persist phase. */
+export interface TaskCreateInstruction {
+  /** Generated task ID. */
+  id: string;
+  /** Formatted title (e.g., "#42: Fix the bug"). */
+  title: string;
+  /** Full task description including comments. */
+  description: string;
+  /** Resolved parent task ID, or empty string for root tasks. */
+  parentTaskId: string;
+  /** Original GitHub issue number. */
+  issueNumber: number;
+}
+
+/** Instruction to set dependsOn for a task during the persist phase. */
+export interface DependencyInstruction {
+  /** Task ID to update. */
+  taskId: string;
+  /** Resolved task IDs that this task depends on. */
+  dependsOn: string[];
+}
+
+/** The output of {@link planImport}: a pure description of what to persist. */
+export interface ImportPlan {
+  /** Tasks to create, in topological order. */
+  tasksToCreate: TaskCreateInstruction[];
+  /** Dependency relationships to set after task creation. */
+  dependenciesToSet: DependencyInstruction[];
+  /** Number of issues skipped because they already exist. */
+  skipped: number;
+  /** Number of parent links resolved. */
+  linked: number;
+}
+
+/** Options for dependency injection in {@link importGitHubIssues}. */
+export interface ImportGitHubIssuesOptions {
+  /** @internal GitHub CLI client for testing. */
+  githubClient?: GitHubClient;
+  /** @internal Task/workspace persistence for testing. */
+  persistence?: TaskPersistence;
+  /** @internal Event broadcaster for testing. */
+  eventEmitter?: ImportEventEmitter;
+  /** @internal Concurrency lock for testing. */
+  importLock?: ImportLock;
+  /** @internal ID generator for testing. */
+  generateId?: () => string;
+}
+
+// ── Helper Functions ────────────────────────────────────────────
 
 /**
  * Extracts a human-readable message from an unknown error value.
@@ -167,6 +284,121 @@ export function buildDescriptionWithComments(
   return result;
 }
 
+// ── Pure Transform Functions ────────────────────────────────────
+
+/**
+ * Builds a deduplication map from existing tasks whose titles match
+ * the `#<number>: <title>` pattern used by imported GitHub issues.
+ *
+ * @param existingTasks - Tasks already in the workspace.
+ * @returns Maps and sets for deduplication during import planning.
+ */
+export function buildExistingIssueMap(
+  existingTasks: Array<{ id: string; title: string }>,
+): { issueNumberToTaskId: Map<number, string>; existingIssueNumbers: Set<number> } {
+  const issueNumberPattern: RegExp = /^#(\d+):/;
+  const issueNumberToTaskId = new Map<number, string>();
+  const existingIssueNumbers = new Set<number>();
+
+  for (const t of existingTasks) {
+    const match = t.title.match(issueNumberPattern);
+    if (match) {
+      const num = Number(match[1]);
+      existingIssueNumbers.add(num);
+      issueNumberToTaskId.set(num, t.id);
+    }
+  }
+
+  return { issueNumberToTaskId, existingIssueNumbers };
+}
+
+/**
+ * Given fetched issues and existing state, computes what to create and link
+ * without performing any side effects.
+ *
+ * Performs topological sort, skips existing issues, generates IDs upfront,
+ * resolves parent links and blockedBy dependencies, and returns a plan.
+ *
+ * @param issues - Fetched GitHub issues to import.
+ * @param existingIssueNumbers - Issue numbers already imported (to skip).
+ * @param existingIssueNumberToTaskId - Map from issue number to existing task ID.
+ * @param generateId - Optional ID generator (defaults to `uuid().slice(0, 8)`).
+ * @returns An {@link ImportPlan} describing all tasks to create and dependencies to set.
+ */
+export function planImport(
+  issues: GitHubIssue[],
+  existingIssueNumbers: Set<number>,
+  existingIssueNumberToTaskId: Map<number, string>,
+  generateId: () => string = () => uuid().slice(0, 8),
+): ImportPlan {
+  // Topological sort: parents before children
+  const issueSet = new Set(issues.map((i) => i.number));
+  const sorted = topologicalSortIssues(issues, issueSet);
+
+  // Mutable copy of the issue→taskId map so we can track newly generated IDs
+  const issueNumberToTaskId = new Map(existingIssueNumberToTaskId);
+
+  const tasksToCreate: TaskCreateInstruction[] = [];
+  const dependenciesToSet: DependencyInstruction[] = [];
+  let skipped: number = 0;
+  let linked: number = 0;
+
+  // First pass: generate IDs and resolve parent links
+  for (const issue of sorted) {
+    if (existingIssueNumbers.has(issue.number)) {
+      skipped++;
+      continue;
+    }
+
+    const id = generateId();
+    issueNumberToTaskId.set(issue.number, id);
+
+    const title = `#${issue.number}: ${issue.title}`;
+    let parentTaskId: string = "";
+    if (issue.parentNumber !== undefined) {
+      const resolvedParentId = issueNumberToTaskId.get(issue.parentNumber);
+      if (resolvedParentId) {
+        parentTaskId = resolvedParentId;
+        linked++;
+      }
+    }
+
+    const description = buildDescriptionWithComments(issue.body, issue.comments, issue.commentsHasNextPage);
+
+    tasksToCreate.push({ id, title, description, parentTaskId, issueNumber: issue.number });
+  }
+
+  // Build a map for O(1) lookup of issues by number during dependency resolution
+  const issueNumberToIssue = new Map<number, GitHubIssue>();
+  for (const issue of sorted) {
+    issueNumberToIssue.set(issue.number, issue);
+  }
+
+  // Second pass: resolve blockedBy → dependsOn for newly created tasks only
+  for (const instruction of tasksToCreate) {
+    const issue = issueNumberToIssue.get(instruction.issueNumber);
+    if (!issue || issue.blockedByNumbers.length === 0) {
+      continue;
+    }
+
+    const resolvedDeps: string[] = [];
+    for (const blockerNumber of issue.blockedByNumbers) {
+      const blockerTaskId = issueNumberToTaskId.get(blockerNumber);
+      if (blockerTaskId) {
+        resolvedDeps.push(blockerTaskId);
+      }
+    }
+
+    if (resolvedDeps.length > 0) {
+      dependenciesToSet.push({ taskId: instruction.id, dependsOn: resolvedDeps });
+    }
+  }
+
+  return { tasksToCreate, dependenciesToSet, skipped, linked };
+}
+
+// ── Fetch Function ──────────────────────────────────────────────
+
 /**
  * Fetches GitHub issues from a repository via the `gh` CLI GraphQL API.
  * Paginates automatically and includes parent sub-issue information.
@@ -177,6 +409,7 @@ export function buildDescriptionWithComments(
  * @param includeComments - When `true` (default), fetches issue comments and
  *   includes them in each returned {@link GitHubIssue}. Pass `false` to omit
  *   comments and reduce payload size.
+ * @param client - Optional {@link GitHubClient} for testing (defaults to `gh` CLI).
  * @returns Array of parsed GitHub issues.
  */
 export async function fetchGitHubIssues(
@@ -184,6 +417,7 @@ export async function fetchGitHubIssues(
   state: string,
   label?: string,
   includeComments: boolean = true,
+  client: GitHubClient = NODE_GITHUB_CLIENT,
 ): Promise<GitHubIssue[]> {
   const segments = repo.split("/");
   if (segments.length !== 2 || !segments[0] || !segments[1]) {
@@ -242,7 +476,7 @@ export async function fetchGitHubIssues(
 
     let ghOutput: string;
     try {
-      ghOutput = await execFileAsync("gh", ghArgs, {
+      ghOutput = await client.exec(ghArgs, {
         encoding: "utf8",
         maxBuffer: MAX_BUFFER_BYTES,
       });
@@ -329,6 +563,8 @@ export async function fetchGitHubIssues(
   return issues;
 }
 
+// ── Topological Sort ────────────────────────────────────────────
+
 /**
  * Topologically sorts issues so that parents appear before their children.
  * Issues whose parent is outside the import set are treated as roots.
@@ -370,11 +606,13 @@ export function topologicalSortIssues<T extends { number: number; parentNumber: 
   return sorted;
 }
 
+// ── Main Entry Point ────────────────────────────────────────────
+
 /**
  * Imports GitHub issues as Grackle tasks, with deduplication and parent linking.
  *
- * Orchestrates: fetch issues → dedup against existing tasks → topological sort →
- * create tasks with parent linking → broadcast updates → return summary.
+ * Orchestrates: fetch issues → dedup against existing tasks → plan (pure) →
+ * persist tasks → broadcast updates → return summary.
  *
  * Only one import may run at a time; concurrent calls are rejected.
  *
@@ -385,6 +623,7 @@ export function topologicalSortIssues<T extends { number: number; parentNumber: 
  * @param environmentId - Optional environment ID to assign to created tasks.
  * @param includeComments - When `true` (default), appends issue comments to each
  *   task description. Pass `false` to import only the issue body (old behavior).
+ * @param options - Optional dependency overrides for testing.
  * @returns Summary of imported, linked, and skipped issues.
  */
 export async function importGitHubIssues(
@@ -394,141 +633,57 @@ export async function importGitHubIssues(
   label?: string,
   _environmentId?: string,
   includeComments: boolean = true,
+  options: ImportGitHubIssuesOptions = {},
 ): Promise<ImportResult> {
-  acquireImportLock();
+  const lock = options.importLock ?? DEFAULT_IMPORT_LOCK;
+  lock.acquire();
   try {
-    return await doImport(workspaceId, repo, state, label, includeComments);
-  } finally {
-    releaseImportLock();
-  }
-}
+    const client = options.githubClient ?? NODE_GITHUB_CLIENT;
+    const persistence = options.persistence ?? NODE_TASK_PERSISTENCE;
+    const emitter = options.eventEmitter ?? NODE_IMPORT_EVENT_EMITTER;
+    const generateId = options.generateId ?? (() => uuid().slice(0, 8));
 
-/**
- * Internal import implementation, called under the concurrency guard.
- *
- * @param workspaceId - The Grackle workspace ID to import tasks into.
- * @param repo - Repository in "owner/repo" format.
- * @param state - Issue state filter ("open" or "closed").
- * @param label - Optional label to filter issues by.
- * @param environmentId - Optional environment ID to assign to created tasks.
- * @param includeComments - When `true` (default), appends issue comments to each
- *   task description.
- * @returns Summary of imported, linked, and skipped issues.
- */
-async function doImport(
-  workspaceId: string,
-  repo: string,
-  state: string,
-  label?: string,
-  includeComments: boolean = true,
-): Promise<ImportResult> {
-  const workspace = workspaceStore.getWorkspace(workspaceId);
-  if (!workspace) {
-    throw new Error(`Workspace not found: ${workspaceId}`);
-  }
-
-  const workspaceSlug = slugify(workspace.name);
-
-  // 1. Fetch issues from GitHub (with or without comments)
-  const issues = await fetchGitHubIssues(repo, state, label, includeComments);
-  logger.info({ repo, state, label, count: issues.length, includeComments }, "Fetched GitHub issues");
-
-  // 2. Fetch existing tasks for deduplication and parent linking
-  const existingTasks = taskStore.listTasks(workspaceId);
-  const issueNumberPattern: RegExp = /^#(\d+):/;
-
-  /** Maps GitHub issue number → Grackle task ID (for both existing and newly created tasks). */
-  const issueNumberToTaskId = new Map<number, string>();
-  const existingIssueNumbers = new Set<number>();
-
-  for (const t of existingTasks) {
-    const match = t.title.match(issueNumberPattern);
-    if (match) {
-      const num = Number(match[1]);
-      existingIssueNumbers.add(num);
-      issueNumberToTaskId.set(num, t.id);
+    // 1. Validate workspace
+    const workspace = persistence.getWorkspace(workspaceId);
+    if (!workspace) {
+      throw new Error(`Workspace not found: ${workspaceId}`);
     }
-  }
+    const workspaceSlug = slugify(workspace.name);
 
-  // 3. Topological sort: parents before children
-  const issueSet = new Set(issues.map((i) => i.number));
-  const sorted = topologicalSortIssues(issues, issueSet);
+    // 2. FETCH — get issues from GitHub
+    const issues = await fetchGitHubIssues(repo, state, label, includeComments, client);
+    logger.info({ repo, state, label, count: issues.length, includeComments }, "Fetched GitHub issues");
 
-  // 4. Create tasks in topological order with parent linking
-  let imported: number = 0;
-  let skipped: number = 0;
-  let linked: number = 0;
+    // 3. Read existing state for deduplication
+    const existingTasks = persistence.listTasks(workspaceId);
+    const { issueNumberToTaskId, existingIssueNumbers } = buildExistingIssueMap(existingTasks);
 
-  /** Tracks newly imported issues (not previously existing) for dependency resolution. */
-  const newlyImportedIssues: GitHubIssue[] = [];
+    // 4. TRANSFORM — pure planning step
+    const plan = planImport(issues, existingIssueNumbers, issueNumberToTaskId, generateId);
 
-  for (const issue of sorted) {
-    if (existingIssueNumbers.has(issue.number)) {
-      skipped++;
-      continue;
+    // 5. PERSIST — create tasks
+    for (const task of plan.tasksToCreate) {
+      persistence.createTask(
+        task.id, workspaceId, task.title, task.description,
+        [], workspaceSlug, task.parentTaskId, true,
+      );
+      emitter.emit("task.created", { taskId: task.id, workspaceId });
     }
 
-    const title = `#${issue.number}: ${issue.title}`;
-    let parentTaskId: string = "";
-    if (issue.parentNumber !== undefined) {
-      const resolvedParentId = issueNumberToTaskId.get(issue.parentNumber);
-      if (resolvedParentId) {
-        parentTaskId = resolvedParentId;
-        linked++;
-      }
+    // 6. PERSIST — set dependency relationships
+    let dependencies: number = 0;
+    for (const dep of plan.dependenciesToSet) {
+      persistence.setTaskDependsOn(dep.taskId, dep.dependsOn);
+      dependencies += dep.dependsOn.length;
+      emitter.emit("task.updated", { taskId: dep.taskId, workspaceId });
     }
 
-    const description = buildDescriptionWithComments(issue.body, issue.comments, issue.commentsHasNextPage);
-
-    const id = uuid().slice(0, 8);
-    taskStore.createTask(
-      id,
-      workspaceId,
-      title,
-      description,
-      [],
-      workspaceSlug,
-      parentTaskId,
-      true,
+    logger.info(
+      { workspaceId, imported: plan.tasksToCreate.length, linked: plan.linked, skipped: plan.skipped, dependencies },
+      "GitHub import complete",
     );
-
-    emit("task.created", { taskId: id, workspaceId });
-    issueNumberToTaskId.set(issue.number, id);
-    newlyImportedIssues.push(issue);
-    imported++;
+    return { imported: plan.tasksToCreate.length, linked: plan.linked, skipped: plan.skipped, dependencies };
+  } finally {
+    lock.release();
   }
-
-  // 5. Second pass: resolve blockedBy relationships into dependsOn arrays.
-  //    Only link relationships where both blocker and blocked are known tasks
-  //    (either newly imported or pre-existing). Skip external blockers silently.
-  //    Re-imported (skipped) issues are not updated — their existing dependsOn is preserved.
-  let dependencies: number = 0;
-
-  for (const issue of newlyImportedIssues) {
-    if (issue.blockedByNumbers.length === 0) {
-      continue;
-    }
-
-    const taskId = issueNumberToTaskId.get(issue.number);
-    if (!taskId) {
-      continue;
-    }
-
-    const resolvedDeps: string[] = [];
-    for (const blockerNumber of issue.blockedByNumbers) {
-      const blockerTaskId = issueNumberToTaskId.get(blockerNumber);
-      if (blockerTaskId) {
-        resolvedDeps.push(blockerTaskId);
-      }
-    }
-
-    if (resolvedDeps.length > 0) {
-      taskStore.setTaskDependsOn(taskId, resolvedDeps);
-      dependencies += resolvedDeps.length;
-      emit("task.updated", { taskId: taskId!, workspaceId });
-    }
-  }
-
-  logger.info({ workspaceId, imported, linked, skipped, dependencies }, "GitHub import complete");
-  return { imported, linked, skipped, dependencies };
 }
