@@ -30,13 +30,13 @@ const TABS: SidebarTab[] = [
 
 /** Derive the active sidebar view from a URL pathname. */
 export function getActiveView(pathname: string): SidebarView {
-  if (pathname.startsWith("/chat")) {
+  if (pathname.startsWith("/chat") || pathname.startsWith("/sessions")) {
     return "chat";
   }
   if (pathname.startsWith("/workspaces")) {
     return "workspaces";
   }
-  if (pathname.startsWith(SETTINGS_URL)) {
+  if (pathname.startsWith(SETTINGS_URL) || pathname.startsWith("/environments")) {
     return "settings";
   }
   return "tasks";
