@@ -51,20 +51,16 @@ export type DatabaseInstance = BetterSQLite3Database<typeof schema>;
 /**
  * Parse a raw JSON string into a validated {@link CredentialProviderConfig}.
  * Invalid or missing fields fall back to {@link DEFAULT_CONFIG} values.
- * If the JSON is unparseable, returns a copy of {@link DEFAULT_CONFIG}.
+ * Throws if the JSON is unparseable — callers decide how to handle the error.
  */
 export function parseCredentialProviderConfig(rawJson: string): CredentialProviderConfig {
-  try {
-    const parsed = JSON.parse(rawJson) as Partial<CredentialProviderConfig>;
-    return {
-      claude: VALID_CLAUDE_VALUES.has(parsed.claude ?? "") ? parsed.claude! : DEFAULT_CONFIG.claude,
-      github: VALID_TOGGLE_VALUES.has(parsed.github ?? "") ? parsed.github! : DEFAULT_CONFIG.github,
-      copilot: VALID_TOGGLE_VALUES.has(parsed.copilot ?? "") ? parsed.copilot! : DEFAULT_CONFIG.copilot,
-      codex: VALID_TOGGLE_VALUES.has(parsed.codex ?? "") ? parsed.codex! : DEFAULT_CONFIG.codex,
-    };
-  } catch {
-    return { ...DEFAULT_CONFIG };
-  }
+  const parsed = JSON.parse(rawJson) as Partial<CredentialProviderConfig>;
+  return {
+    claude: VALID_CLAUDE_VALUES.has(parsed.claude ?? "") ? parsed.claude! : DEFAULT_CONFIG.claude,
+    github: VALID_TOGGLE_VALUES.has(parsed.github ?? "") ? parsed.github! : DEFAULT_CONFIG.github,
+    copilot: VALID_TOGGLE_VALUES.has(parsed.copilot ?? "") ? parsed.copilot! : DEFAULT_CONFIG.copilot,
+    codex: VALID_TOGGLE_VALUES.has(parsed.codex ?? "") ? parsed.codex! : DEFAULT_CONFIG.codex,
+  };
 }
 
 /**
@@ -83,16 +79,12 @@ export function getCredentialProviders(database?: DatabaseInstance): CredentialP
     return { ...DEFAULT_CONFIG };
   }
 
-  // Validate JSON before parsing — parseCredentialProviderConfig silently falls
-  // back to defaults (it's pure), but the caller should log corrupted settings.
   try {
-    JSON.parse(row.value);
+    return parseCredentialProviderConfig(row.value);
   } catch {
     logger.warn("Invalid credential_providers setting; returning defaults");
     return { ...DEFAULT_CONFIG };
   }
-
-  return parseCredentialProviderConfig(row.value);
 }
 
 /**
