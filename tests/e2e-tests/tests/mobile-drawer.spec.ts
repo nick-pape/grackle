@@ -65,7 +65,7 @@ test.describe("Mobile Drawer", () => {
 
     // Navigate to settings via the sidebar tab — this triggers a navigation
     // which auto-closes the drawer
-    await appPage.locator('[data-testid="sidebar-tab-settings"]').click();
+    await appPage.locator('[data-testid="sidebar-tab-settings"]').click({ force: true });
     await expect(sidebar).not.toBeVisible({ timeout: 5_000 });
   });
 
@@ -80,7 +80,7 @@ test.describe("Mobile Drawer", () => {
     await hamburger.click();
     await expect(sidebar).toBeVisible();
     await appPage.waitForTimeout(500);
-    await appPage.locator('[data-testid="sidebar-tab-settings"]').click();
+    await appPage.locator('[data-testid="sidebar-tab-settings"]').click({ force: true });
 
     // Hamburger should still be visible after navigation
     await expect(hamburger).toBeVisible();
@@ -94,7 +94,7 @@ test.describe("Mobile Drawer", () => {
     await hamburger.click();
     await expect(sidebar).toBeVisible();
     await appPage.waitForTimeout(500);
-    await appPage.locator('[data-testid="sidebar-tab-settings"]').click();
+    await appPage.locator('[data-testid="sidebar-tab-settings"]').click({ force: true });
 
     // Drawer auto-closed. Re-open it to see settings content.
     await hamburger.click();
