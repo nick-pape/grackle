@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { resolve, normalize, dirname } from "node:path";
 
 /**
@@ -12,7 +12,8 @@ vi.mock("./logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
 
-import { isUnderHome, writeTokens, FileSystem } from "./token-writer.js";
+import { isUnderHome, writeTokens } from "./token-writer.js";
+import type { FileSystem } from "./token-writer.js";
 import { logger } from "./logger.js";
 
 /** Create a fake FileSystem with sensible defaults for testing. */
@@ -69,6 +70,10 @@ describe("writeTokens", () => {
   function homeFile(...segments: string[]): string {
     return resolve(FAKE_HOME, ...segments);
   }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   afterEach(() => {
     vi.unstubAllEnvs();
