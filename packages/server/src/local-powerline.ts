@@ -1,4 +1,4 @@
-import { spawn, type ChildProcess } from "node:child_process";
+import { spawn, type ChildProcess, type SpawnOptions } from "node:child_process";
 import net from "node:net";
 import { createRequire } from "node:module";
 import { logger as parentLogger } from "./logger.js";
@@ -9,6 +9,24 @@ const STOP_TIMEOUT_MS: number = 2_000;
 
 // eslint-disable-next-line @rushstack/typedef-var
 const logger = parentLogger.child({ component: "powerline" });
+
+/** @internal Abstraction over child-process spawning used by {@link startLocalPowerLine}. */
+export interface ProcessFactory {
+  /** Spawn a child process. */
+  spawn(command: string, args: string[], options: SpawnOptions): ChildProcess;
+}
+
+/** Default implementation that delegates to Node's `child_process.spawn`. */
+const NODE_PROCESS_FACTORY: ProcessFactory = { spawn };
+
+/** @internal Abstraction over TCP port readiness probing used by {@link startLocalPowerLine}. */
+export interface PortProbe {
+  /** Wait for a TCP port to accept connections, rejecting after `timeoutMs`. */
+  waitForPort(port: number, host: string, timeoutMs: number): Promise<void>;
+}
+
+/** Default implementation that polls with real TCP connections. */
+const NODE_PORT_PROBE: PortProbe = { waitForPort };
 
 /** Handle returned by {@link startLocalPowerLine} to manage the child process. */
 export interface LocalPowerLineHandle {
@@ -28,6 +46,12 @@ export interface StartLocalPowerLineOptions {
   token: string;
   /** Callback invoked if the child exits unexpectedly. */
   onExit?: (code: number | undefined, signal: string | undefined) => void;
+  /** @internal Override child-process spawning (for testing). */
+  processFactory?: ProcessFactory;
+  /** @internal Override TCP port probing (for testing). */
+  portProbe?: PortProbe;
+  /** @internal Override PowerLine entry-point resolution (for testing). */
+  resolveEntryPoint?: () => string;
 }
 
 /**
@@ -71,15 +95,24 @@ async function waitForPort(port: number, host: string, timeoutMs: number): Promi
  * @returns A handle to manage the child process lifecycle.
  */
 export async function startLocalPowerLine(options: StartLocalPowerLineOptions): Promise<LocalPowerLineHandle> {
-  const { port, host, token, onExit } = options;
+  const {
+    port,
+    host,
+    token,
+    onExit,
+    processFactory = NODE_PROCESS_FACTORY,
+    portProbe = NODE_PORT_PROBE,
+    resolveEntryPoint = (): string => {
+      const esmRequire: NodeRequire = createRequire(import.meta.url);
+      return esmRequire.resolve("@grackle-ai/powerline");
+    },
+  } = options;
 
-  // Resolve the PowerLine entry point via its package's main field
-  const esmRequire: NodeRequire = createRequire(import.meta.url);
-  const entryPoint: string = esmRequire.resolve("@grackle-ai/powerline");
+  const entryPoint: string = resolveEntryPoint();
 
   logger.info({ port, host, entryPoint }, "Starting local PowerLine");
 
-  const child: ChildProcess = spawn(
+  const child: ChildProcess = processFactory.spawn(
     process.execPath,
     [entryPoint, "--port", String(port), "--host", host],
     {
@@ -114,7 +147,7 @@ export async function startLocalPowerLine(options: StartLocalPowerLineOptions): 
 
   // Wait for the port to accept connections
   try {
-    await waitForPort(port, host === "0.0.0.0" ? "127.0.0.1" : host, PORT_PROBE_TIMEOUT_MS);
+    await portProbe.waitForPort(port, host === "0.0.0.0" ? "127.0.0.1" : host, PORT_PROBE_TIMEOUT_MS);
   } catch (err) {
     // If the child already exited, include that in the error
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- exited may flip during async waitForPort
