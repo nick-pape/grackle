@@ -127,9 +127,9 @@ test.describe("Deep linking", () => {
       { timeout: 10_000 },
     );
 
-    // TaskPage renders with stream tab active
+    // TaskPage renders with stream tab active — scope to main content to avoid matching sidebar tabs
     await expect(page.locator("[data-testid='task-title']")).toBeVisible({ timeout: 5_000 });
-    await expect(page.locator('button[role="tab"][aria-selected="true"]')).toContainText("Stream");
+    await expect(page.getByRole("tab", { name: "Stream", exact: true })).toHaveAttribute("aria-selected", "true");
     expect(page.url()).toContain(`/tasks/${taskId}/stream`);
   });
 

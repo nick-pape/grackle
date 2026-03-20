@@ -58,9 +58,10 @@ test.describe("Mobile Drawer", () => {
     const hamburger = appPage.getByRole("button", { name: "Toggle sidebar" });
     const sidebar = appPage.getByTestId("sidebar");
 
-    // Open drawer
+    // Open drawer and wait for animation to settle
     await hamburger.click();
     await expect(sidebar).toBeVisible();
+    await sidebar.locator('[data-testid="sidebar-tab-settings"]').waitFor({ state: "visible", timeout: 5_000 });
 
     // Navigate to settings via the sidebar tab — this triggers a navigation
     // which auto-closes the drawer
@@ -70,12 +71,15 @@ test.describe("Mobile Drawer", () => {
 
   test("hamburger is visible on all pages including settings", async ({ appPage }) => {
     const hamburger = appPage.getByRole("button", { name: "Toggle sidebar" });
+    const sidebar = appPage.getByTestId("sidebar");
 
     // Hamburger should be visible on the default page
     await expect(hamburger).toBeVisible();
 
-    // Navigate to settings (open drawer first, then click tab)
+    // Navigate to settings (open drawer first, wait for animation, then click tab)
     await hamburger.click();
+    await expect(sidebar).toBeVisible();
+    await sidebar.locator('[data-testid="sidebar-tab-settings"]').waitFor({ state: "visible", timeout: 5_000 });
     await appPage.locator('[data-testid="sidebar-tab-settings"]').click();
 
     // Hamburger should still be visible after navigation
@@ -84,18 +88,20 @@ test.describe("Mobile Drawer", () => {
 
   test("settings tabs visible when drawer is opened on settings page", async ({ appPage }) => {
     const hamburger = appPage.getByRole("button", { name: "Toggle sidebar" });
+    const sidebar = appPage.getByTestId("sidebar");
 
-    // Navigate to settings
+    // Navigate to settings (open drawer, wait, click tab)
     await hamburger.click();
+    await expect(sidebar).toBeVisible();
+    await sidebar.locator('[data-testid="sidebar-tab-settings"]').waitFor({ state: "visible", timeout: 5_000 });
     await appPage.locator('[data-testid="sidebar-tab-settings"]').click();
 
     // Drawer auto-closed. Re-open it to see settings content.
     await hamburger.click();
-    const sidebar = appPage.getByTestId("sidebar");
     await expect(sidebar).toBeVisible();
 
     // Settings tabs should be visible inside the sidebar
-    await expect(appPage.getByRole("tab", { name: "Environments" })).toBeVisible();
+    await expect(appPage.getByRole("tab", { name: "Environments" })).toBeVisible({ timeout: 5_000 });
     await expect(appPage.getByRole("tab", { name: "Appearance" })).toBeVisible();
   });
 });

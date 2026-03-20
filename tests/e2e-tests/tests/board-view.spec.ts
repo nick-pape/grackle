@@ -197,7 +197,8 @@ test.describe("Board View", () => {
     // Wait for task to transition to working
     await expect(page.locator('[data-testid="task-status"]')).toContainText(/working|paused/, { timeout: 15_000 });
 
-    // Navigate back to the workspace and switch to board
+    // Navigate back to the workspace (switch to Workspaces tab first) and switch to board
+    await page.locator('[data-testid="sidebar-tab-workspaces"]').click();
     await page.getByText("board-realtime").first().click();
     await page.getByTestId("board-tab").click();
     await expect(page.getByTestId("board-container")).toBeVisible({ timeout: 5_000 });
