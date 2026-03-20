@@ -237,6 +237,18 @@ function getRemoteIp(req: http.IncomingMessage): string {
   return req.socket.remoteAddress || "unknown";
 }
 
+/** Static assets served without session authentication (favicons, manifest, logo). */
+const PUBLIC_ASSETS: Set<string> = new Set([
+  "/favicon.ico",
+  "/favicon-16x16.png",
+  "/favicon-32x32.png",
+  "/apple-touch-icon.png",
+  "/manifest.json",
+  "/icon-192x192.png",
+  "/icon-512x512.png",
+  "/grackle-logo.png",
+]);
+
 /**
  * Create the HTTP request handler for the web server.
  *
@@ -577,6 +589,12 @@ function createWebHandler(
       const html = renderPairingPage();
       res.writeHead(200, { "Content-Type": "text/html" });
       res.end(html);
+      return;
+    }
+
+    // --- Public static assets (favicons, manifest) — no session required ---
+    if (PUBLIC_ASSETS.has(rawPath)) {
+      serveStaticFile(req, res, rawPath);
       return;
     }
 

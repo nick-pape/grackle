@@ -35,6 +35,9 @@
 }
 
 .brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
   font-weight: var(--font-weight-heavy);
   font-size: var(--font-size-xl);
   letter-spacing: -0.5px;
@@ -49,6 +52,13 @@
   &:hover {
     color: var(--accent-green);
   }
+}
+
+.brandLogo {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  border-radius: var(--radius-sm);
 }
 
 .info {
