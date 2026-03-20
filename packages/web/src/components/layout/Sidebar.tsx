@@ -72,11 +72,10 @@ export function Sidebar(): JSX.Element {
   return (
     <div className={styles.container} ref={containerRef} data-testid="sidebar" style={{ width }}>
       {/* Tab bar */}
-      <nav className={styles.tabBar} aria-label="Sidebar navigation" data-testid="sidebar-tabs" role="tablist">
+      <nav className={styles.tabBar} aria-label="Sidebar navigation" data-testid="sidebar-tabs">
         <button
           className={styles.tab}
-          role="tab"
-          aria-selected={isChat}
+          aria-current={isChat ? "page" : undefined}
           data-active={isChat}
           data-testid="sidebar-tab-chat"
           onClick={() => navigate(CHAT_URL)}
@@ -85,8 +84,7 @@ export function Sidebar(): JSX.Element {
         </button>
         <button
           className={styles.tab}
-          role="tab"
-          aria-selected={!isChat}
+          aria-current={!isChat ? "page" : undefined}
           data-active={!isChat}
           data-testid="sidebar-tab-workspaces"
           onClick={() => navigate("/workspaces")}
