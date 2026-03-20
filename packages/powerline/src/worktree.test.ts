@@ -1,4 +1,10 @@
-import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
+import { resolve } from "node:path";
+
+vi.mock("./logger.js", () => ({
+  logger: { warn: vi.fn(), info: vi.fn() },
+}));
+
 import {
   sanitizeBranch,
   worktreeDir,
@@ -6,11 +12,6 @@ import {
   removeWorktree,
 } from "./worktree.js";
 import type { GitExecutor, WorktreeFileSystem } from "./worktree.js";
-import { resolve } from "node:path";
-
-vi.mock("./logger.js", () => ({
-  logger: { warn: vi.fn(), info: vi.fn() },
-}));
 
 describe("sanitizeBranch", () => {
   it("preserves alphanumeric characters", () => {
