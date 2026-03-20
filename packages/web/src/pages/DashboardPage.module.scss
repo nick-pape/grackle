@@ -1,0 +1,398 @@
+@use '../styles/mixins' as *;
+
+// ============================================================================
+// Dashboard Page — Mission-board operations console
+// ============================================================================
+
+// ─── Layout ─────────────────────────────────────────────────────────────────
+
+.dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  padding: var(--space-xl);
+  overflow-y: auto;
+  height: 100%;
+  scrollbar-gutter: stable;
+}
+
+// ─── KPI Strip ──────────────────────────────────────────────────────────────
+
+.kpiStrip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-md);
+  position: relative;
+
+  @include mobile {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.kpiCard {
+  @include surface-card;
+  padding: var(--space-lg) var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    opacity: 0.6;
+  }
+}
+
+.kpiCard[data-accent="green"]::before {
+  background: var(--accent-green);
+  box-shadow: 0 0 12px var(--accent-green-dim);
+}
+
+.kpiCard[data-accent="red"]::before {
+  background: var(--accent-red);
+  box-shadow: 0 0 12px var(--accent-red-dim);
+}
+
+.kpiCard[data-accent="yellow"]::before {
+  background: var(--accent-yellow);
+  box-shadow: 0 0 12px var(--accent-yellow-dim);
+}
+
+.kpiCard[data-accent="blue"]::before {
+  background: var(--accent-blue);
+  box-shadow: 0 0 12px var(--accent-blue-dim);
+}
+
+.kpiValue {
+  font-family: var(--font-mono);
+  font-size: 28px;
+  font-weight: var(--font-weight-bold);
+  line-height: 1;
+  color: var(--text-primary);
+}
+
+.kpiLabel {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+// ─── Body grid ──────────────────────────────────────────────────────────────
+
+.bodyGrid {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: var(--space-lg);
+  min-height: 0;
+
+  @include tablet {
+    grid-template-columns: 1fr;
+  }
+}
+
+// ─── Section chrome ─────────────────────────────────────────────────────────
+
+.section {
+  @include surface-card;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-md) var(--space-lg);
+  border-bottom: 1px solid var(--glass-border);
+  flex-shrink: 0;
+}
+
+.sectionIcon {
+  font-size: var(--font-size-lg);
+  line-height: 1;
+}
+
+.sectionTitle {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.sectionCount {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+}
+
+.sectionBody {
+  overflow-y: auto;
+  flex: 1;
+}
+
+.emptyHint {
+  padding: var(--space-xl);
+  text-align: center;
+  color: var(--text-tertiary);
+  font-size: var(--font-size-sm);
+}
+
+// ─── Active sessions ────────────────────────────────────────────────────────
+
+.sessionRow {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto;
+  gap: var(--space-md);
+  align-items: center;
+  padding: var(--space-sm) var(--space-lg);
+  border-bottom: 1px solid var(--glass-border);
+  cursor: pointer;
+  @include hover-accent;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.sessionPrompt {
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.sessionEnv {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
+
+.sessionRuntime {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
+
+.sessionStatus {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+}
+
+.statusDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.statusDot[data-status="running"] {
+  background: var(--accent-green);
+  box-shadow: 0 0 6px var(--accent-green-dim);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.statusDot[data-status="idle"],
+.statusDot[data-status="waiting"] {
+  background: var(--accent-blue);
+}
+
+.statusDot[data-status="ended"] {
+  background: var(--text-tertiary);
+}
+
+// ─── Attention tasks ────────────────────────────────────────────────────────
+
+.attentionRow {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-sm) var(--space-lg);
+  border-bottom: 1px solid var(--glass-border);
+  cursor: pointer;
+  @include hover-accent;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.attentionTitle {
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.attentionMeta {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  display: flex;
+  gap: var(--space-md);
+}
+
+.reasonBadge {
+  font-size: 10px;
+  font-weight: var(--font-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+}
+
+.reasonBadge[data-reason="failed"] {
+  color: var(--accent-red-fg);
+  background: var(--accent-red-dim);
+  border: 1px solid var(--accent-red-border);
+}
+
+.reasonBadge[data-reason="blocked"] {
+  color: var(--accent-yellow-fg);
+  background: var(--accent-yellow-dim);
+  border: 1px solid var(--accent-yellow-border);
+}
+
+.reasonBadge[data-reason="paused"] {
+  color: var(--accent-yellow-fg);
+  background: var(--accent-yellow-dim);
+  border: 1px solid var(--accent-yellow-border);
+}
+
+// ─── Bottom grid ────────────────────────────────────────────────────────────
+
+.bottomGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-lg);
+
+  @include mobile {
+    grid-template-columns: 1fr;
+  }
+}
+
+// ─── Environment health ─────────────────────────────────────────────────────
+
+.envRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-lg);
+  border-bottom: 1px solid var(--glass-border);
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.envName {
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.envStatusBadge {
+  font-size: 10px;
+  font-weight: var(--font-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+}
+
+.envStatusBadge[data-status="connected"] {
+  color: var(--accent-green-fg);
+  background: var(--accent-green-dim);
+}
+
+.envStatusBadge[data-status="provisioning"] {
+  color: var(--accent-blue-fg);
+  background: var(--accent-blue-dim);
+}
+
+.envStatusBadge[data-status="disconnected"] {
+  color: var(--accent-yellow-fg);
+  background: var(--accent-yellow-dim);
+}
+
+.envStatusBadge[data-status="error"] {
+  color: var(--accent-red-fg);
+  background: var(--accent-red-dim);
+}
+
+// ─── Workspace snapshot ─────────────────────────────────────────────────────
+
+.workspaceRow {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: var(--space-sm) var(--space-lg);
+  border-bottom: 1px solid var(--glass-border);
+  cursor: pointer;
+  @include hover-accent;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.workspaceTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.workspaceName {
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  font-weight: var(--font-weight-medium);
+}
+
+.workspaceCounts {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  display: flex;
+  gap: var(--space-md);
+}
+
+.progressBar {
+  height: 3px;
+  background: var(--bg-inset);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: var(--accent-green);
+  border-radius: var(--radius-full);
+  transition: width var(--transition-base);
+}
+
+// ─── Animations ─────────────────────────────────────────────────────────────
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type JSX } from "react";
-import { useMatch } from "react-router";
+import { useMatch, useLocation } from "react-router";
 import { useGrackle } from "../../context/GrackleContext.js";
 import type { TaskData } from "../../hooks/useGrackleSocket.js";
 import { AnimatePresence, motion } from "motion/react";
@@ -386,6 +386,8 @@ function TaskTreeNode({
 export function WorkspaceList(): JSX.Element {
   const { workspaces, tasks, environments, loadTasks, createWorkspace, workspaceCreating } = useGrackle();
   const navigate = useAppNavigate();
+  const location = useLocation();
+  const isHome = location.pathname === "/";
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
   const [manuallyCollapsed, setManuallyCollapsed] = useState<Set<string>>(new Set());
@@ -588,6 +590,15 @@ export function WorkspaceList(): JSX.Element {
             +
           </button>
         </div>
+      </div>
+
+      <div
+        className={`${styles.homeRow} ${isHome ? styles.selected : ""}`}
+        onClick={() => navigate("/")}
+        data-testid="sidebar-home"
+      >
+        <span className={styles.homeIcon}>⌂</span>
+        <span>Home</span>
       </div>
 
       {workspaces.length > 0 && (
