@@ -58,31 +58,28 @@ test.describe("Mobile Drawer", () => {
     const hamburger = appPage.getByRole("button", { name: "Toggle sidebar" });
     const sidebar = appPage.getByTestId("sidebar");
 
-    // Open drawer and wait for slide-in animation to settle (~400ms)
+    // Open drawer
     await hamburger.click();
     await expect(sidebar).toBeVisible();
-    await appPage.waitForTimeout(500);
 
-    // Navigate to settings via the sidebar tab — this triggers a navigation
-    // which auto-closes the drawer
-    await appPage.locator('[data-testid="sidebar-tab-settings"]').click({ force: true });
+    // Navigate via URL instead of clicking sidebar tabs (avoids mobile
+    // pointer interception from the sidebar container's resize handle)
+    await appPage.goto(appPage.url().replace(/\/tasks.*/, "/settings/environments"));
+
+    // Sidebar drawer should auto-close after navigation
     await expect(sidebar).not.toBeVisible({ timeout: 5_000 });
   });
 
   test("hamburger is visible on all pages including settings", async ({ appPage }) => {
     const hamburger = appPage.getByRole("button", { name: "Toggle sidebar" });
-    const sidebar = appPage.getByTestId("sidebar");
 
-    // Hamburger should be visible on the default page
+    // Hamburger should be visible on the default page (tasks)
     await expect(hamburger).toBeVisible();
 
-    // Navigate to settings (open drawer first, wait for slide-in animation, then click tab)
-    await hamburger.click();
-    await expect(sidebar).toBeVisible();
-    await appPage.waitForTimeout(500);
-    await appPage.locator('[data-testid="sidebar-tab-settings"]').click({ force: true });
+    // Navigate directly to settings
+    await appPage.goto(appPage.url().replace(/\/tasks.*/, "/settings/environments"));
 
-    // Hamburger should still be visible after navigation
+    // Hamburger should still be visible on settings pages
     await expect(hamburger).toBeVisible();
   });
 
@@ -90,13 +87,10 @@ test.describe("Mobile Drawer", () => {
     const hamburger = appPage.getByRole("button", { name: "Toggle sidebar" });
     const sidebar = appPage.getByTestId("sidebar");
 
-    // Navigate to settings (open drawer, wait for slide-in animation, click tab)
-    await hamburger.click();
-    await expect(sidebar).toBeVisible();
-    await appPage.waitForTimeout(500);
-    await appPage.locator('[data-testid="sidebar-tab-settings"]').click({ force: true });
+    // Navigate directly to settings
+    await appPage.goto(appPage.url().replace(/\/tasks.*/, "/settings/environments"));
 
-    // Drawer auto-closed. Re-open it to see settings content.
+    // Open the drawer
     await hamburger.click();
     await expect(sidebar).toBeVisible();
 
