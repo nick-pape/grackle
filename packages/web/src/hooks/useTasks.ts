@@ -180,8 +180,10 @@ export function useTasks(send: SendFunction): UseTasksResult {
           ? msg.payload.workspaceId
           : "";
         if (!pid) {
-          // Workspace-less tasks (e.g. root task) — upsert by ID to avoid
-          // clobbering workspace-scoped tasks already in state.
+          // Global response (no workspaceId in payload) — includes tasks from
+          // all workspaces plus workspace-less tasks like the root task.
+          // Upsert by ID to avoid clobbering workspace-scoped tasks that may
+          // have been loaded separately or filtered differently.
           setTasks((prev) => {
             const incomingIds = new Set(incoming.map((t) => t.id));
             return [
