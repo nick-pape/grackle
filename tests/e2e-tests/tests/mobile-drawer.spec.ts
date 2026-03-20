@@ -58,9 +58,10 @@ test.describe("Mobile Drawer", () => {
     const hamburger = appPage.getByRole("button", { name: "Toggle sidebar" });
     const sidebar = appPage.getByTestId("sidebar");
 
-    // Open drawer
+    // Open drawer and wait for slide-in animation to settle
     await hamburger.click();
     await expect(sidebar).toBeVisible();
+    await appPage.waitForTimeout(500);
 
     // Click the Settings tab in the sidebar to trigger navigation
     await appPage.locator('[data-testid="sidebar-tab-settings"]').click();
@@ -75,8 +76,9 @@ test.describe("Mobile Drawer", () => {
     // Hamburger should be visible on the default page
     await expect(hamburger).toBeVisible();
 
-    // Navigate to settings via sidebar tab
+    // Navigate to settings via sidebar tab (wait for drawer animation)
     await hamburger.click();
+    await appPage.waitForTimeout(500);
     await appPage.locator('[data-testid="sidebar-tab-settings"]').click();
 
     // Hamburger should still be visible on settings pages
@@ -87,8 +89,9 @@ test.describe("Mobile Drawer", () => {
     const hamburger = appPage.getByRole("button", { name: "Toggle sidebar" });
     const sidebar = appPage.getByTestId("sidebar");
 
-    // Navigate to settings via sidebar tab
+    // Navigate to settings via sidebar tab (wait for drawer animation)
     await hamburger.click();
+    await appPage.waitForTimeout(500);
     await appPage.locator('[data-testid="sidebar-tab-settings"]').click();
 
     // Drawer auto-closed. Re-open it to see settings content.
