@@ -1,14 +1,79 @@
 import type { AgentEvent } from "./runtime.js";
 import type { AsyncQueue } from "../utils/async-queue.js";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
-import { execFileSync, execFile } from "node:child_process";
+import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { ensureWorktree } from "../worktree.js";
 import { logger } from "../logger.js";
 
-const execFileAsync: typeof execFile.__promisify__ = promisify(execFile);
+// ─── Injectable interfaces ──────────────────────────────────
 
-// ─── Shared constants ──────────────────────────────────────
+/**
+ * Higher-level git repository abstraction for workspace resolution.
+ *
+ * Unlike the raw `GitExecutor` in worktree.ts (which wraps a single `exec(args)` call),
+ * this interface provides domain-specific methods for repository discovery and branch checkout.
+ */
+export interface GitRepository {
+  /** Check if a directory is inside a git repository. */
+  isRepo(dir: string): Promise<boolean>;
+  /** Return the git toplevel for a directory, or undefined if not a repo. */
+  toplevel(dir: string): Promise<string | undefined>;
+  /** Check out (or create) a branch in the main working tree. */
+  checkoutBranch(repoPath: string, branch: string): Promise<void>;
+}
+
+/** Default implementation that shells out to the real git binary. */
+export const NODE_GIT_REPOSITORY: GitRepository = (() => {
+  const execFileAsync: typeof execFile.__promisify__ = promisify(execFile);
+  return {
+    async isRepo(dir: string): Promise<boolean> {
+      try {
+        await execFileAsync("git", ["rev-parse", "--git-dir"], { cwd: dir });
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    async toplevel(dir: string): Promise<string | undefined> {
+      try {
+        const { stdout } = await execFileAsync("git", ["rev-parse", "--show-toplevel"], { cwd: dir });
+        return stdout.trim();
+      } catch {
+        return undefined;
+      }
+    },
+    async checkoutBranch(repoPath: string, branch: string): Promise<void> {
+      try {
+        // "--" prevents branch names starting with "-" from being interpreted as flags
+        await execFileAsync("git", ["checkout", "--", branch], { cwd: repoPath });
+      } catch {
+        // Branch doesn't exist yet — create it
+        await execFileAsync("git", ["checkout", "-b", branch], { cwd: repoPath });
+      }
+    },
+  };
+})();
+
+/** Filesystem operations for workspace discovery. */
+export interface WorkspaceLocator {
+  /** Check if a path exists. */
+  exists(path: string): boolean;
+  /** List entries in a directory. Returns empty array on failure. */
+  readDirectory(path: string): string[];
+}
+
+/** Default implementation using real Node.js fs. */
+export const NODE_WORKSPACE_LOCATOR: WorkspaceLocator = {
+  exists: existsSync,
+  readDirectory(path: string): string[] {
+    try {
+      return readdirSync(path) as unknown as string[];
+    } catch {
+      return [];
+    }
+  },
+};
 
 // ─── Working directory resolution ──────────────────────────
 
@@ -27,30 +92,10 @@ export interface ResolveWorkingDirectoryOptions {
    * Only claude-code sets this — codex and copilot accept empty workspaces.
    */
   requireNonEmpty?: boolean;
-}
-
-/**
- * Check if a directory is a git repository by running `git rev-parse --git-dir`.
- * Returns true if the command succeeds.
- */
-function isGitRepo(dir: string): boolean {
-  try {
-    execFileSync("git", ["rev-parse", "--git-dir"], { cwd: dir, stdio: "ignore" });
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Return the git repository toplevel for a directory, or undefined if not a git repo.
- */
-function gitToplevel(dir: string): string | undefined {
-  try {
-    return execFileSync("git", ["rev-parse", "--show-toplevel"], { cwd: dir, encoding: "utf8" }).trim();
-  } catch {
-    return undefined;
-  }
+  /** @internal Git repository abstraction for testing. */
+  git?: GitRepository;
+  /** @internal Workspace locator abstraction for testing. */
+  locator?: WorkspaceLocator;
 }
 
 /**
@@ -63,29 +108,29 @@ function gitToplevel(dir: string): string | undefined {
  *
  * Returns the first path that exists and is a git repository, or undefined.
  */
-export function findGitRepoPath(basePath?: string): string | undefined {
+export async function findGitRepoPath(
+  basePath?: string,
+  git: GitRepository = NODE_GIT_REPOSITORY,
+  locator: WorkspaceLocator = NODE_WORKSPACE_LOCATOR,
+): Promise<string | undefined> {
   // Try the explicitly provided path first, resolving to the actual repo root
-  if (basePath && existsSync(basePath) && isGitRepo(basePath)) {
-    return gitToplevel(basePath) ?? basePath;
+  if (basePath && locator.exists(basePath) && await git.isRepo(basePath)) {
+    return (await git.toplevel(basePath)) ?? basePath;
   }
 
   // Docker convention
-  if (existsSync("/workspace") && isGitRepo("/workspace")) {
-    return gitToplevel("/workspace") ?? "/workspace";
+  if (locator.exists("/workspace") && await git.isRepo("/workspace")) {
+    return (await git.toplevel("/workspace")) ?? "/workspace";
   }
 
   // GitHub Codespaces convention: /workspaces/<repo-name>
-  if (existsSync("/workspaces")) {
-    try {
-      const entries = readdirSync("/workspaces");
-      for (const entry of entries) {
-        const candidate = `/workspaces/${entry}`;
-        if (existsSync(candidate) && isGitRepo(candidate)) {
-          return gitToplevel(candidate) ?? candidate;
-        }
+  if (locator.exists("/workspaces")) {
+    const entries = locator.readDirectory("/workspaces");
+    for (const entry of entries) {
+      const candidate = `/workspaces/${entry}`;
+      if (locator.exists(candidate) && await git.isRepo(candidate)) {
+        return (await git.toplevel(candidate)) ?? candidate;
       }
-    } catch {
-      // Not readable — skip
     }
   }
 
@@ -96,28 +141,24 @@ export function findGitRepoPath(basePath?: string): string | undefined {
  * Find any existing workspace directory (git repo or not) for fallback use.
  * Used when worktree setup fails and we just need a working directory.
  */
-function findWorkspaceDir(basePath?: string, requireNonEmpty?: boolean): string | undefined {
+function findWorkspaceDir(
+  basePath?: string,
+  requireNonEmpty?: boolean,
+  locator: WorkspaceLocator = NODE_WORKSPACE_LOCATOR,
+): string | undefined {
   const candidates = [basePath, "/workspace"];
 
   // Also check /workspaces/* for Codespaces
-  if (existsSync("/workspaces")) {
-    try {
-      for (const entry of readdirSync("/workspaces")) {
-        candidates.push(`/workspaces/${entry}`);
-      }
-    } catch {
-      // skip
+  if (locator.exists("/workspaces")) {
+    for (const entry of locator.readDirectory("/workspaces")) {
+      candidates.push(`/workspaces/${entry}`);
     }
   }
 
   for (const dir of candidates) {
-    if (dir && existsSync(dir)) {
+    if (dir && locator.exists(dir)) {
       if (requireNonEmpty) {
-        try {
-          if (readdirSync(dir).length === 0) {
-            continue;
-          }
-        } catch {
+        if (locator.readDirectory(dir).length === 0) {
           continue;
         }
       }
@@ -125,27 +166,6 @@ function findWorkspaceDir(basePath?: string, requireNonEmpty?: boolean): string 
     }
   }
   return undefined;
-}
-
-/**
- * Check out (or create) a branch in the main working tree without creating a worktree.
- *
- * Tries `git checkout <branch>` first (branch already exists), then falls back to
- * `git checkout -b <branch>` (create new branch from current HEAD).
- *
- * Arguments are passed as an array to execFile (not interpolated into a shell
- * command string), which prevents shell injection from branch names.
- *
- * @param repoPath - Absolute path to the git repository root.
- * @param branch - Branch name to check out.
- */
-async function checkoutBranchInPlace(repoPath: string, branch: string): Promise<void> {
-  try {
-    await execFileAsync("git", ["checkout", branch], { cwd: repoPath });
-  } catch {
-    // Branch doesn't exist yet — create it
-    await execFileAsync("git", ["checkout", "-b", branch], { cwd: repoPath });
-  }
 }
 
 /**
@@ -160,7 +180,15 @@ async function checkoutBranchInPlace(repoPath: string, branch: string): Promise<
  * undefined (proto3 unset), it defaults to true.
  */
 export async function resolveWorkingDirectory(options: ResolveWorkingDirectoryOptions): Promise<string | undefined> {
-  const { branch, worktreeBasePath, useWorktrees = true, eventQueue, requireNonEmpty } = options;
+  const {
+    branch,
+    worktreeBasePath,
+    useWorktrees = true,
+    eventQueue,
+    requireNonEmpty,
+    git = NODE_GIT_REPOSITORY,
+    locator = NODE_WORKSPACE_LOCATOR,
+  } = options;
   const ts = (): string => new Date().toISOString();
 
   if (branch && worktreeBasePath && useWorktrees) {
@@ -168,7 +196,7 @@ export async function resolveWorkingDirectory(options: ResolveWorkingDirectoryOp
     // Auto-detect the actual git repo path — the server may send a default
     // like "/workspace" that doesn't match the actual layout (e.g. Codespaces
     // use /workspaces/<repo>).
-    const repoPath = findGitRepoPath(worktreeBasePath);
+    const repoPath = await findGitRepoPath(worktreeBasePath, git, locator);
 
     if (repoPath) {
       try {
@@ -183,7 +211,7 @@ export async function resolveWorkingDirectory(options: ResolveWorkingDirectoryOp
     }
 
     // Worktree failed — fall back to best available workspace
-    const fallback = findWorkspaceDir(worktreeBasePath, requireNonEmpty);
+    const fallback = findWorkspaceDir(worktreeBasePath, requireNonEmpty, locator);
     if (fallback) {
       return fallback;
     }
@@ -193,11 +221,11 @@ export async function resolveWorkingDirectory(options: ResolveWorkingDirectoryOp
   if (branch && !useWorktrees) {
     // Worktrees disabled — check out the branch in the main working tree.
     // Use worktreeBasePath as the repo hint if provided.
-    const repoPath = findGitRepoPath(worktreeBasePath);
+    const repoPath = await findGitRepoPath(worktreeBasePath, git, locator);
 
     if (repoPath) {
       try {
-        await checkoutBranchInPlace(repoPath, branch);
+        await git.checkoutBranch(repoPath, branch);
         eventQueue.push({ type: "system", timestamp: ts(), content: `Checked out branch '${branch}' in main working tree: ${repoPath}` });
         return repoPath;
       } catch (checkoutErr) {
@@ -208,7 +236,7 @@ export async function resolveWorkingDirectory(options: ResolveWorkingDirectoryOp
     }
 
     // Checkout failed — fall back to best available workspace
-    const fallback = findWorkspaceDir(worktreeBasePath, requireNonEmpty);
+    const fallback = findWorkspaceDir(worktreeBasePath, requireNonEmpty, locator);
     if (fallback) {
       return fallback;
     }
@@ -216,7 +244,7 @@ export async function resolveWorkingDirectory(options: ResolveWorkingDirectoryOp
   }
 
   // No branch requested — just find a workspace directory
-  return findWorkspaceDir(worktreeBasePath, requireNonEmpty);
+  return findWorkspaceDir(worktreeBasePath, requireNonEmpty, locator);
 }
 
 // ─── ACP MCP server conversion ─────────────────────────────

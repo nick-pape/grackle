@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Extract GitRepository and WorkspaceLocator interfaces from runtime-utils for injectable testing",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
