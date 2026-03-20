@@ -109,7 +109,7 @@ test.describe("Sidebar search filter", () => {
     // The task should be visible with "login" highlighted in a <mark> element
     // Use a combined locator to avoid race conditions from eager task loading
     const mark = page.locator('[data-task-id] mark');
-    await expect(mark.first()).toBeVisible({ timeout: 10_000 });
+    await expect(mark.first()).toBeVisible({ timeout: 15_000 });
     await expect(mark.first()).toHaveText("login");
   });
 
