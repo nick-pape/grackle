@@ -518,6 +518,8 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       processEventStream(conn.client.spawn(powerlineReq), {
         sessionId,
         logPath,
+        systemContext,
+        prompt: req.prompt,
       });
 
       const row = sessionStore.getSession(sessionId);
@@ -1044,6 +1046,8 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         logPath,
         workspaceId: task.workspaceId ?? undefined,
         taskId: task.id,
+        systemContext,
+        prompt: task.title,
       });
 
       const row = sessionStore.getSession(sessionId);

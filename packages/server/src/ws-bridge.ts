@@ -364,6 +364,8 @@ async function startTaskSession(
     logPath,
     workspaceId: freshTask.workspaceId ?? undefined,
     taskId: freshTask.id,
+    systemContext,
+    prompt: freshTask.title,
   });
 
   return undefined;
@@ -570,6 +572,8 @@ async function handleMessage(
       processEventStream(conn.client.spawn(powerlineReq), {
         sessionId,
         logPath,
+        systemContext: finalSystemContext,
+        prompt,
         onError: (err) => {
           sendWs(ws, {
             type: "session_event",
