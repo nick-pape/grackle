@@ -16,17 +16,15 @@ interface SidebarTab {
   icon?: string;
   /** Route to navigate to when clicked. */
   route: string;
-  /** URL prefix for matching active state. */
-  prefix: string;
   /** data-testid suffix. */
   testId: string;
 }
 
 /** Ordered list of sidebar tabs. */
 const TABS: SidebarTab[] = [
-  { view: "tasks", label: "Tasks", route: "/tasks", prefix: "/tasks", testId: "sidebar-tab-tasks" },
-  { view: "workspaces", label: "Workspaces", route: "/workspaces", prefix: "/workspaces", testId: "sidebar-tab-workspaces" },
-  { view: "settings", icon: "\u2699", route: `${SETTINGS_URL}/environments`, prefix: SETTINGS_URL, testId: "sidebar-tab-settings" },
+  { view: "tasks", label: "Tasks", route: "/tasks", testId: "sidebar-tab-tasks" },
+  { view: "workspaces", label: "Workspaces", route: "/workspaces", testId: "sidebar-tab-workspaces" },
+  { view: "settings", icon: "\u2699", route: `${SETTINGS_URL}/environments`, testId: "sidebar-tab-settings" },
 ];
 
 /** Derive the active sidebar view from a URL pathname. */

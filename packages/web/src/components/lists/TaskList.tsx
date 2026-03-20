@@ -41,7 +41,8 @@ const TASK_DEPTH_INDENT_PX: number = 16;
 // Group-by-status toggle persistence
 // ---------------------------------------------------------------------------
 
-/** localStorage key for the group-by-status toggle. */
+/** localStorage key for the group-by-status toggle (separate from WorkspaceList's
+ *  "grackle-group-by-status" key — each view has its own grouping preference). */
 const STORAGE_KEY_GROUP_BY_STATUS: string = "grackle-task-group-by-status";
 
 /** Read the persisted group-by-status preference. */
