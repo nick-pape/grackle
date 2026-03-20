@@ -30,6 +30,7 @@ export interface AcpAgentConfig {
 
 // ─── Dynamic import ─────────────────────────────────────────
 
+/** @internal SDK module shape — exported only for `_setAcpSdkForTesting`. */
 export interface AcpSdkModule {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ClientSideConnection: new (toClient: (agent: any) => any, stream: any) => any;
