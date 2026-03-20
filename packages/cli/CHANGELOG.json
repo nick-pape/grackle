@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.52.4",
+      "tag": "@grackle-ai/cli_v0.52.4",
+      "date": "Fri, 20 Mar 2026 16:16:43 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Serve favicon, manifest, and logo assets without requiring session auth"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.52.3",
       "tag": "@grackle-ai/cli_v0.52.3",
       "date": "Fri, 20 Mar 2026 15:25:10 GMT",
