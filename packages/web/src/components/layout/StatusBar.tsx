@@ -26,7 +26,10 @@ export function StatusBar({ onToggleSidebar, sidebarOpen }: StatusBarProps): JSX
           {"\u2630"}
         </button>
       )}
-      <button type="button" className={styles.brand} onClick={() => navigate(HOME_URL)} title="Home">Grackle</button>
+      <button type="button" className={styles.brand} onClick={() => navigate(HOME_URL)} title="Home">
+        <img src="/icon-192x192.png" alt="" className={styles.brandLogo} aria-hidden="true" data-testid="statusbar-logo" />
+        Grackle
+      </button>
       <div className={styles.info}>
         <span aria-label={connected ? "Connected" : "Disconnected"}>
           <span className={`${styles.connectionDot} ${connected ? styles.connected : styles.disconnected}`} aria-hidden="true">

@@ -10,6 +10,7 @@ const config = {
   projectName: 'grackle',
   onBrokenLinks: 'throw',
   onBrokenMarkdownLinks: 'warn',
+  favicon: 'img/favicon.ico',
 
   presets: [
     [

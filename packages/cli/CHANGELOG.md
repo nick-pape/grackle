@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Fri, 20 Mar 2026 15:25:10 GMT and should not be manually modified.
+This log was last generated on Fri, 20 Mar 2026 16:16:43 GMT and should not be manually modified.
+
+## 0.52.4
+Fri, 20 Mar 2026 16:16:43 GMT
+
+### Patches
+
+- Serve favicon, manifest, and logo assets without requiring session auth
 
 ## 0.52.3
 Fri, 20 Mar 2026 15:25:10 GMT
