@@ -402,6 +402,35 @@ describe("AcpRuntime structural", () => {
   });
 });
 
+describe("AcpRuntime — system prompt via prompt prepend (no native SDK injection)", () => {
+  it("buildInitialPrompt prepends systemContext to the prompt (default base class behavior)", () => {
+    const runtime = new AcpRuntime({ name: "test-acp", command: "echo", args: ["--acp"] });
+    const session = runtime.spawn({
+      sessionId: "acp-sysprompt",
+      prompt: "user task",
+      model: "test",
+      maxTurns: 0,
+      systemContext: "system instructions",
+    });
+    const result = (session as any).buildInitialPrompt();
+    expect(result).toContain("system instructions");
+    expect(result).toContain("user task");
+    expect(result.indexOf("system instructions")).toBeLessThan(result.indexOf("user task"));
+  });
+
+  it("buildInitialPrompt returns just the prompt when no systemContext", () => {
+    const runtime = new AcpRuntime({ name: "test-acp", command: "echo", args: ["--acp"] });
+    const session = runtime.spawn({
+      sessionId: "acp-no-ctx",
+      prompt: "just the prompt",
+      model: "test",
+      maxTurns: 0,
+    });
+    const result = (session as any).buildInitialPrompt();
+    expect(result).toBe("just the prompt");
+  });
+});
+
 describe("AcpRuntime — runtime_session_id emission", () => {
   // Note: getAcpSdk() uses a lazy dynamic import that vitest cannot intercept for
   // pure-ESM packages + child-process spawning. Tests use vi.spyOn on setupSdk()

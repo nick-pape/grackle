@@ -59,9 +59,10 @@ async function waitForSessionStatus(
 }
 
 /**
- * Helper: poll session events until any event whose `content` includes the
- * given pattern appears (regardless of event type — this catches user_input,
- * text, and other content-bearing events).
+ * Helper: poll session events until a non-system-context event whose `content`
+ * includes the given pattern appears (catches user_input, text, signal, and
+ * other content-bearing events, but skips the system context event which
+ * contains documentation that could match patterns like "[SIGCHLD]").
  * Returns the matching event content, or throws on timeout.
  */
 async function waitForSessionText(
@@ -81,7 +82,22 @@ async function waitForSessionText(
     const events = (resp.payload?.events || []) as any[];
     const match = events.find(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (e: any) => typeof e.content === "string" && e.content.includes(pattern),
+      (e: any) => {
+        if (typeof e.content !== "string" || !e.content.includes(pattern)) {
+          return false;
+        }
+        // Skip system context events — their content contains documentation
+        // that can false-match patterns like "[SIGCHLD]"
+        if (e.raw) {
+          try {
+            const raw = JSON.parse(e.raw) as Record<string, unknown>;
+            if (raw.systemContext === true) {
+              return false;
+            }
+          } catch { /* not JSON, include it */ }
+        }
+        return true;
+      },
     );
     if (match) return match.content as string;
     await page.waitForTimeout(500);

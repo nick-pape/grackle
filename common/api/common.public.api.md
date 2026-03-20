@@ -133,27 +133,6 @@ export const DEFAULT_SERVER_PORT: number;
 export const DEFAULT_WEB_PORT: number;
 
 // @public
-type DiffRequest = Message<"grackle.powerline.DiffRequest"> & {
-    branch: string;
-    baseBranch: string;
-    worktreeBasePath: string;
-};
-
-// @public
-const DiffRequestSchema: GenMessage<DiffRequest>;
-
-// @public
-type DiffResponse = Message<"grackle.powerline.DiffResponse"> & {
-    diff: string;
-    changedFiles: string[];
-    additions: number;
-    deletions: number;
-};
-
-// @public
-const DiffResponseSchema: GenMessage<DiffResponse>;
-
-// @public
 type Empty = Message<"grackle.Empty"> & {};
 
 // @public
@@ -213,12 +192,13 @@ const EnvironmentSchema: GenMessage<Environment>;
 export type EnvironmentStatus = "disconnected" | "connecting" | "connected" | "sleeping" | "error";
 
 // @public
-export type EventType = AgentEventType | "user_input";
+export type EventType = AgentEventType | "user_input" | "signal";
 
 // @public
 enum EventType_2 {
     ERROR = 4,
     FINDING = 7,
+    SIGNAL = 10,
     STATUS = 5,
     SUBTASK_CREATE = 8,
     SYSTEM = 6,
@@ -692,11 +672,6 @@ const GracklePowerLine: GenService<{
         input: typeof WorktreeCleanupRequestSchema;
         output: typeof EmptySchema_2;
     };
-    getDiff: {
-        methodKind: "unary";
-        input: typeof DiffRequestSchema;
-        output: typeof DiffResponseSchema;
-    };
 }>;
 
 // @public
@@ -891,10 +866,6 @@ declare namespace powerline {
         TokenBundleSchema,
         WorktreeCleanupRequest,
         WorktreeCleanupRequestSchema,
-        DiffRequest,
-        DiffRequestSchema,
-        DiffResponse,
-        DiffResponseSchema,
         GracklePowerLine
     }
 }
@@ -953,6 +924,9 @@ const ResumeRequestSchema: GenMessage<ResumeRequest>;
 
 // @public
 const ResumeRequestSchema_2: GenMessage<ResumeRequest_2>;
+
+// @public
+export const ROOT_TASK_ID: string;
 
 // @public
 export type RuntimeName = "claude-code" | "copilot" | "codex" | "stub";
@@ -1131,6 +1105,12 @@ type StartTaskRequest = Message<"grackle.StartTaskRequest"> & {
 
 // @public
 const StartTaskRequestSchema: GenMessage<StartTaskRequest>;
+
+// @public
+export const SYSTEM_PERSONA_ID: string;
+
+// @public
+export const SYSTEM_PERSONA_NAME: string;
 
 // @public
 type Task = Message<"grackle.Task"> & {

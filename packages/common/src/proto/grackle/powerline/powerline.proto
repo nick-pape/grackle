@@ -91,21 +91,6 @@ message WorktreeCleanupRequest {
   string worktree_base_path = 2;
 }
 
-// ─── Diff ──────────────────────────────────────────────────
-
-message DiffRequest {
-  string branch = 1;
-  string base_branch = 2;
-  string worktree_base_path = 3;
-}
-
-message DiffResponse {
-  string diff = 1;
-  repeated string changed_files = 2;
-  int32 additions = 3;
-  int32 deletions = 4;
-}
-
 // ─── Service ────────────────────────────────────────────────
 
 service GracklePowerLine {
@@ -118,5 +103,4 @@ service GracklePowerLine {
   rpc Ping(Empty) returns (Pong);
   rpc PushTokens(TokenBundle) returns (Empty);
   rpc CleanupWorktree(WorktreeCleanupRequest) returns (Empty);
-  rpc GetDiff(DiffRequest) returns (DiffResponse);
 }

@@ -24,6 +24,7 @@ import {
   SESSION_STATUS,
   TASK_STATUS,
   DEFAULT_MCP_PORT,
+  ROOT_TASK_ID,
   eventTypeToString,
 } from "@grackle-ai/common";
 import { resolvePersona } from "./resolve-persona.js";
@@ -33,7 +34,7 @@ import { grackleHome } from "./paths.js";
 import * as logWriter from "./log-writer.js";
 import { safeParseJsonArray } from "./json-helpers.js";
 import { logger } from "./logger.js";
-import { buildTaskSystemContext } from "./utils/system-context.js";
+import { SystemPromptBuilder } from "./system-prompt-builder.js";
 import { slugify } from "./utils/slugify.js";
 import { processEventStream } from "./event-processor.js";
 import * as processorRegistry from "./processor-registry.js";
@@ -284,15 +285,11 @@ async function startTaskSession(
   const logPath = join(grackleHome, LOGS_DIR, sessionId);
 
   const freshTask = taskStore.getTask(task.id) || task;
-  let systemContext = buildTaskSystemContext(
-    freshTask.title,
-    freshTask.description,
-    options?.notes || "",
-    freshTask.canDecompose,
-  );
-  if (systemPrompt) {
-    systemContext = systemPrompt + "\n\n" + systemContext;
-  }
+  const systemContext = new SystemPromptBuilder({
+    task: { title: freshTask.title, description: freshTask.description, notes: options?.notes || "" },
+    canDecompose: freshTask.canDecompose,
+    personaPrompt: systemPrompt,
+  }).build();
 
   sessionStore.createSession(
     sessionId,
@@ -368,6 +365,8 @@ async function startTaskSession(
     logPath,
     workspaceId: freshTask.workspaceId ?? undefined,
     taskId: freshTask.id,
+    systemContext,
+    prompt: freshTask.title,
   });
 
   return undefined;
@@ -540,10 +539,12 @@ async function handleMessage(
       const { runtime: sessionRuntime, model: sessionModel, maxTurns, systemPrompt: spawnSystemPrompt } = resolved;
       const logPath = join(grackleHome, LOGS_DIR, sessionId);
 
-      let finalSystemContext = systemContext;
-      if (spawnSystemPrompt) {
-        finalSystemContext = spawnSystemPrompt + (systemContext ? "\n\n" + systemContext : "");
-      }
+      const builderPrompt = new SystemPromptBuilder({
+        personaPrompt: spawnSystemPrompt,
+      }).build();
+      const finalSystemContext = systemContext
+        ? builderPrompt + "\n\n" + systemContext
+        : builderPrompt;
 
       sessionStore.createSession(
         sessionId,
@@ -572,6 +573,8 @@ async function handleMessage(
       processEventStream(conn.client.spawn(powerlineReq), {
         sessionId,
         logPath,
+        systemContext: finalSystemContext,
+        prompt,
         onError: (err) => {
           sendWs(ws, {
             type: "session_event",
@@ -1260,7 +1263,16 @@ async function handleMessage(
       {
         const taskSessions = sessionStore.listSessionsForTask(taskId);
         const { status: effectiveStatus } = computeTaskStatus(task.status, taskSessions);
-        if (!([TASK_STATUS.NOT_STARTED, TASK_STATUS.FAILED] as string[]).includes(effectiveStatus)) {
+        if (taskId === ROOT_TASK_ID) {
+          // Root task is always re-startable unless actively working
+          if (effectiveStatus === TASK_STATUS.WORKING) {
+            sendWs(ws, {
+              type: "error",
+              payload: { message: "System is already running" },
+            });
+            return;
+          }
+        } else if (!([TASK_STATUS.NOT_STARTED, TASK_STATUS.FAILED] as string[]).includes(effectiveStatus)) {
           sendWs(ws, {
             type: "error",
             payload: {
@@ -1500,69 +1512,6 @@ async function handleMessage(
         (msg.payload?.tags as string[] | undefined) || [],
       );
       sendWs(ws, { type: "finding_posted", payload: { id, workspaceId } });
-      break;
-    }
-
-    // ─── Diff ──────────────────────────────────────────────
-
-    case "get_task_diff": {
-      const taskId = msg.payload?.taskId as string;
-      if (!taskId) return;
-
-      const task = taskStore.getTask(taskId);
-      if (!task?.branch) {
-        sendWs(ws, {
-          type: "task_diff",
-          payload: { taskId, error: "No branch" },
-        });
-        return;
-      }
-
-      const environmentId = task.workspaceId
-        ? workspaceStore.getWorkspace(task.workspaceId)?.environmentId
-        : undefined;
-      if (!environmentId) {
-        sendWs(ws, {
-          type: "task_diff",
-          payload: { taskId, error: "No environment" },
-        });
-        return;
-      }
-
-      const conn = adapterManager.getConnection(environmentId);
-      if (!conn) {
-        sendWs(ws, {
-          type: "task_diff",
-          payload: { taskId, error: "Environment not connected" },
-        });
-        return;
-      }
-
-      try {
-        const diffResp = await conn.client.getDiff(
-          create(powerline.DiffRequestSchema, {
-            branch: task.branch,
-            baseBranch: "main",
-            worktreeBasePath: "/workspace",
-          }),
-        );
-        sendWs(ws, {
-          type: "task_diff",
-          payload: {
-            taskId,
-            branch: task.branch,
-            diff: diffResp.diff,
-            changedFiles: [...diffResp.changedFiles],
-            additions: diffResp.additions,
-            deletions: diffResp.deletions,
-          },
-        });
-      } catch (err) {
-        sendWs(ws, {
-          type: "task_diff",
-          payload: { taskId, error: String(err) },
-        });
-      }
       break;
     }
 

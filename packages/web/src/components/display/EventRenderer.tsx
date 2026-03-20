@@ -14,6 +14,41 @@ interface Props {
 
 // --- Individual event type renderers ---
 
+/** Number of lines shown in the collapsed system context preview. */
+const SYSTEM_CONTEXT_PREVIEW_LINES: number = 3;
+
+/** Renders the system context (system prompt) as a collapsible left-bordered section. */
+function SystemContextEvent({ content }: { content: string }): JSX.Element {
+  const [expanded, setExpanded] = useState(false);
+  const lines = content.split("\n");
+  const hasMore = lines.length > SYSTEM_CONTEXT_PREVIEW_LINES;
+  const displayContent = expanded ? content : lines.slice(0, SYSTEM_CONTEXT_PREVIEW_LINES).join("\n");
+
+  return (
+    <div className={styles.systemContextEvent} data-testid="system-context-event">
+      <button
+        type="button"
+        className={styles.systemContextHeader}
+        onClick={() => { setExpanded((v) => !v); }}
+        aria-expanded={expanded}
+      >
+        <span className={styles.systemContextBadge}>SYSTEM PROMPT</span>
+        {hasMore && (
+          <span className={styles.systemContextToggle} aria-hidden="true">
+            {expanded ? "\u25be" : "\u25b8"}
+          </span>
+        )}
+      </button>
+      <pre className={styles.systemContextPre}>
+        {displayContent}
+        {!expanded && hasMore && (
+          <span className={styles.systemContextEllipsis}>{"\u2026"}</span>
+        )}
+      </pre>
+    </div>
+  );
+}
+
 /** Renders a system-level event with timestamp. */
 function SystemEvent({ time, content }: { time: string; content: string }): JSX.Element {
   return (
@@ -185,6 +220,16 @@ function UserInputEvent({ content }: { content: string }): JSX.Element {
   );
 }
 
+/** Renders a signal event (e.g. SIGCHLD) as a left-bordered banner. */
+function SignalEvent({ content }: { content: string }): JSX.Element {
+  return (
+    <div className={styles.signalEvent} data-testid="signal-event">
+      <span className={styles.signalBadge}>SIGNAL</span>
+      <span className={styles.signalContent}>{content}</span>
+    </div>
+  );
+}
+
 /** Renders an unrecognized event type. */
 function DefaultEvent({ content }: { content: string }): JSX.Element {
   return (
@@ -199,8 +244,18 @@ export function EventRenderer({ event, toolUseCtx }: Props): JSX.Element {
   const time = new Date(event.timestamp).toLocaleTimeString();
 
   switch (event.eventType) {
-    case "system":
+    case "system": {
+      // Detect system context events via the raw metadata marker
+      if (event.raw) {
+        try {
+          const rawData = JSON.parse(event.raw) as Record<string, unknown>;
+          if (rawData.systemContext === true) {
+            return <SystemContextEvent content={event.content} />;
+          }
+        } catch { /* not JSON, render as normal system event */ }
+      }
       return <SystemEvent time={time} content={event.content} />;
+    }
     case "text":
     case "output":
       return <TextEvent content={event.content} />;
@@ -214,6 +269,8 @@ export function EventRenderer({ event, toolUseCtx }: Props): JSX.Element {
       return <StatusEvent content={event.content} />;
     case "user_input":
       return <UserInputEvent content={event.content} />;
+    case "signal":
+      return <SignalEvent content={event.content} />;
     default:
       return <DefaultEvent content={event.content} />;
   }

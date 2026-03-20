@@ -12,21 +12,26 @@ async function archiveAllWorkspaces(page: import("@playwright/test").Page): Prom
       "workspace.archived",
     );
   }
-  if (workspaces.length > 0) {
-    // Reload so the UI reflects the empty state
-    await page.goto("/");
+  // Navigate to /workspaces so the UI reflects the empty state
+  await page.goto("/workspaces");
+  await page.waitForFunction(
+    () => document.body.innerText.includes("Connected"),
+    { timeout: 10_000 },
+  );
+}
+
+test.describe("Workspaces", () => {
+  test("sidebar shows Workspaces tab on /workspaces", async ({ appPage }) => {
+    const page = appPage;
+
+    // Navigate to workspaces view
+    await page.goto("/workspaces");
     await page.waitForFunction(
       () => document.body.innerText.includes("Connected"),
       { timeout: 10_000 },
     );
-  }
-}
 
-test.describe("Workspaces", () => {
-  test("sidebar defaults to Workspaces tab", async ({ appPage }) => {
-    const page = appPage;
-
-    // Workspaces tab should be active by default — header label visible
+    // Workspaces tab should be active — header label visible
     await expect(page.locator("text=WORKSPACES").first()).toBeVisible();
   });
 

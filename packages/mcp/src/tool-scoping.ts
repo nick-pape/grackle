@@ -6,6 +6,7 @@ export const SCOPED_TOOLS: ReadonlySet<string> = new Set([
   "finding_post", "finding_list",
   "task_create", "task_list", "task_show", "task_start", "task_complete",
   "session_send_input",
+  "persona_list", "persona_show",
 ]);
 
 /** Auth types that receive full tool access. */

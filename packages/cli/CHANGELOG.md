@@ -1,6 +1,35 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Thu, 19 Mar 2026 19:33:07 GMT and should not be manually modified.
+This log was last generated on Fri, 20 Mar 2026 04:35:17 GMT and should not be manually modified.
+
+## 0.50.1
+Fri, 20 Mar 2026 04:35:17 GMT
+
+### Patches
+
+- Make CLI API key loading injectable and throw instead of process.exit
+
+### Updates
+
+- Add unit tests for resolveAncestorEnvironmentId
+
+## 0.50.0
+Fri, 20 Mar 2026 04:17:00 GMT
+
+### Minor changes
+
+- Add root task (PID 0), System persona, and /chat tab for conversational orchestration
+
+## 0.49.0
+Fri, 20 Mar 2026 04:01:06 GMT
+
+### Minor changes
+
+- Expose persona_list and persona_show MCP tools to scoped-token agents
+
+### Patches
+
+- Remove dead GetDiff RPC, PowerLine handler, and task_diff WebSocket handler
 
 ## 0.48.0
 Thu, 19 Mar 2026 19:33:07 GMT

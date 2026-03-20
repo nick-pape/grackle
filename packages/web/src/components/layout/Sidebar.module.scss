@@ -26,6 +26,34 @@
   }
 }
 
+.tabBar {
+  display: flex;
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.tab {
+  flex: 1;
+  padding: var(--space-sm) var(--space-md);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-tertiary);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: color 150ms, border-color 150ms;
+
+  &:hover {
+    color: var(--text-secondary);
+  }
+
+  &[data-active='true'] {
+    color: var(--text-primary);
+    border-bottom-color: var(--accent-blue);
+  }
+}
+
 .content {
   flex: 1;
   overflow-y: auto;

@@ -129,7 +129,7 @@ async function handleTaskUpdated(childTaskId: string): Promise<void> {
 
   if (latestSession.status === SESSION_STATUS.IDLE) {
     message += "\n\nReview the child's work. If satisfactory, mark it complete with "
-      + `mcp__grackle__task_complete({ taskId: "${childTaskId}" }). `
+      + `task_complete({ taskId: "${childTaskId}" }). `
       + "If more work is needed, send additional input to the child's session.";
   } else if (latestSession.status === SESSION_STATUS.FAILED) {
     message += "\n\nThe child task failed. Review the error and decide whether to retry or reassign the work.";

@@ -4,8 +4,19 @@ import { join, dirname } from "node:path";
 
 function renderEntry(entry: LogEntry): string {
   switch (entry.type) {
-    case "system":
+    case "system": {
+      // System context events contain the full system prompt — render as a
+      // collapsible details block instead of an inline italic line.
+      if (entry.raw) {
+        try {
+          const raw = JSON.parse(entry.raw) as Record<string, unknown>;
+          if (raw.systemContext === true) {
+            return `<details>\n<summary>System Prompt</summary>\n\n\`\`\`\n${entry.content}\n\`\`\`\n</details>\n`;
+          }
+        } catch { /* not JSON, render as normal */ }
+      }
       return `> _${entry.content}_\n`;
+    }
     case "text":
       return `${entry.content}\n`;
     case "tool_use": {
@@ -22,6 +33,16 @@ function renderEntry(entry: LogEntry): string {
       return `**Error:** ${entry.content}\n`;
     case "status":
       return `---\n*Status: ${entry.content}*\n`;
+    case "signal": {
+      if (!entry.content) {
+        return `> **[SIGNAL]**\n`;
+      }
+      const lines = entry.content.split("\n");
+      const renderedLines = lines.map((line, index) =>
+        index === 0 ? `> **[SIGNAL]** ${line}` : `> ${line}`
+      );
+      return renderedLines.join("\n") + "\n";
+    }
     default:
       return `${entry.content}\n`;
   }

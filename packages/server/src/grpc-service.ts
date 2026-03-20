@@ -25,6 +25,7 @@ import {
   MAX_TASK_DEPTH,
   SESSION_STATUS,
   TASK_STATUS,
+  ROOT_TASK_ID,
   taskStatusToEnum,
   taskStatusToString,
   workspaceStatusToEnum,
@@ -42,7 +43,7 @@ import { loadOrCreateApiKey } from "./api-key.js";
 import { logger } from "./logger.js";
 import { reanimateAgent } from "./reanimate-agent.js";
 import { slugify } from "./utils/slugify.js";
-import { buildTaskSystemContext } from "./utils/system-context.js";
+import { SystemPromptBuilder } from "./system-prompt-builder.js";
 import { importGitHubIssues as executeGitHubImport } from "./github-import.js";
 import { generatePairingCode } from "./pairing.js";
 import { detectLanIp } from "./utils/network.js";
@@ -264,7 +265,7 @@ export function buildMcpServersJson(
  * Walk up the task parent chain and return the environmentId from the first
  * ancestor that has a session. Returns empty string if no ancestor has one.
  */
-function resolveAncestorEnvironmentId(parentTaskId: string): string {
+export function resolveAncestorEnvironmentId(parentTaskId: string): string {
   let currentId = parentTaskId;
   for (let i = 0; i < MAX_TASK_DEPTH && currentId; i++) {
     const session = sessionStore.getLatestSessionForTask(currentId);
@@ -467,11 +468,12 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       const maxTurns = req.maxTurns || resolved.maxTurns;
       const logPath = join(grackleHome, LOGS_DIR, sessionId);
 
-      let systemContext = req.systemContext || "";
-      if (systemPrompt) {
-        systemContext =
-          systemPrompt + (systemContext ? "\n\n" + systemContext : "");
-      }
+      const builderPrompt = new SystemPromptBuilder({
+        personaPrompt: systemPrompt,
+      }).build();
+      const systemContext = req.systemContext
+        ? builderPrompt + "\n\n" + req.systemContext
+        : builderPrompt;
 
       sessionStore.createSession(
         sessionId,
@@ -517,6 +519,8 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       processEventStream(conn.client.spawn(powerlineReq), {
         sessionId,
         logPath,
+        systemContext,
+        prompt: req.prompt,
       });
 
       const row = sessionStore.getSession(sessionId);
@@ -937,7 +941,12 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       {
         const taskSessions = sessionStore.listSessionsForTask(req.taskId);
         const { status: effectiveStatus } = computeTaskStatus(task.status, taskSessions);
-        if (!([TASK_STATUS.NOT_STARTED, TASK_STATUS.FAILED] as string[]).includes(effectiveStatus)) {
+        if (req.taskId === ROOT_TASK_ID) {
+          // Root task is always re-startable unless actively working
+          if (effectiveStatus === TASK_STATUS.WORKING) {
+            throw new ConnectError("System is already running", Code.FailedPrecondition);
+          }
+        } else if (!([TASK_STATUS.NOT_STARTED, TASK_STATUS.FAILED] as string[]).includes(effectiveStatus)) {
           throw new ConnectError(
             `Task ${req.taskId} cannot be started (status: ${effectiveStatus})`,
             Code.FailedPrecondition,
@@ -977,15 +986,11 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       const { runtime, model, maxTurns, systemPrompt, persona } = resolved;
       const logPath = join(grackleHome, LOGS_DIR, sessionId);
 
-      let systemContext = buildTaskSystemContext(
-        task.title,
-        task.description,
-        req.notes || "",
-        task.canDecompose,
-      );
-      if (systemPrompt) {
-        systemContext = systemPrompt + "\n\n" + systemContext;
-      }
+      const systemContext = new SystemPromptBuilder({
+        task: { title: task.title, description: task.description, notes: req.notes || "" },
+        canDecompose: task.canDecompose,
+        personaPrompt: systemPrompt,
+      }).build();
 
       sessionStore.createSession(
         sessionId,
@@ -1047,6 +1052,8 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         logPath,
         workspaceId: task.workspaceId ?? undefined,
         taskId: task.id,
+        systemContext,
+        prompt: task.title,
       });
 
       const row = sessionStore.getSession(sessionId);
