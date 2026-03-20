@@ -40,9 +40,12 @@ export function workspaceUrl(workspaceId: string): string {
   return `/workspaces/${encodeURIComponent(workspaceId)}`;
 }
 
-/** Build URL for a task detail page, optionally targeting a specific tab. */
-export function taskUrl(taskId: string, tab?: "stream" | "findings"): string {
-  const base = `/tasks/${encodeURIComponent(taskId)}`;
+/** Build URL for a task detail page, optionally targeting a specific tab and workspace scope. */
+export function taskUrl(taskId: string, tab?: "stream" | "findings", workspaceId?: string): string {
+  const encodedTaskId = encodeURIComponent(taskId);
+  const base = workspaceId
+    ? `/workspaces/${encodeURIComponent(workspaceId)}/tasks/${encodedTaskId}`
+    : `/tasks/${encodedTaskId}`;
   if (tab) {
     return `${base}/${tab}`;
   }
@@ -50,7 +53,10 @@ export function taskUrl(taskId: string, tab?: "stream" | "findings"): string {
 }
 
 /** Build URL for the task edit page. */
-export function taskEditUrl(taskId: string): string {
+export function taskEditUrl(taskId: string, workspaceId?: string): string {
+  if (workspaceId) {
+    return `/workspaces/${encodeURIComponent(workspaceId)}/tasks/${encodeURIComponent(taskId)}/edit`;
+  }
   return `/tasks/${encodeURIComponent(taskId)}/edit`;
 }
 
@@ -102,6 +108,9 @@ export const CHAT_URL: string = "/chat";
 
 /** URL for the home dashboard page. */
 export const HOME_URL: string = "/";
+
+/** URL for the tasks landing page. */
+export const TASKS_URL: string = "/tasks";
 
 /** URL for the workspaces landing page. */
 export const WORKSPACES_URL: string = "/workspaces";

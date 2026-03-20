@@ -4,6 +4,24 @@ import { Spinner } from "../components/display/index.js";
 import { DashboardPage } from "./DashboardPage.js";
 import styles from "../components/panels/SessionPanel.module.scss";
 
+/** Empty page shown at /tasks when no task is selected. */
+export function TasksEmptyPage(): JSX.Element {
+  return (
+    <div className={styles.emptyState}>
+      Select a task or click + to create one
+    </div>
+  );
+}
+
+/** Empty page shown at /workspaces when no workspace is selected. */
+export function WorkspacesEmptyPage(): JSX.Element {
+  return (
+    <div className={styles.emptyState}>
+      Select a workspace or click + to create one
+    </div>
+  );
+}
+
 /** Home page — shows the operations dashboard when workspaces exist, or the welcome CTA for first-time users. */
 export function EmptyPage(): JSX.Element {
   const { workspaces, environments, createWorkspace, workspaceCreating } = useGrackle();

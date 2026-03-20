@@ -2,7 +2,7 @@ import { GrackleProvider } from "./context/GrackleContext.js";
 import { MockGrackleProvider } from "./mocks/MockGrackleProvider.js";
 import { ToastProvider } from "./context/ToastContext.js";
 import { ThemeProvider } from "./context/ThemeContext.js";
-import { StatusBar, Sidebar, UnifiedBar } from "./components/layout/index.js";
+import { StatusBar, AppNav, Sidebar, UnifiedBar } from "./components/layout/index.js";
 import { ToastContainer } from "./components/notifications/index.js";
 import { SplashScreen } from "./components/display/index.js";
 import { useCallback, useEffect, useState, type JSX } from "react";
@@ -11,9 +11,9 @@ import { useToast } from "./context/ToastContext.js";
 import { useEnvironmentToasts } from "./hooks/useEnvironmentToasts.js";
 import { AnimatePresence, motion } from "motion/react";
 import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from "react-router";
-import { sessionUrl, SETTINGS_URL, useAppNavigate } from "./utils/navigation.js";
+import { sessionUrl, useAppNavigate } from "./utils/navigation.js";
+import { EmptyPage, TasksEmptyPage, WorkspacesEmptyPage } from "./pages/EmptyPage.js";
 import { ChatPage } from "./pages/ChatPage.js";
-import { EmptyPage } from "./pages/EmptyPage.js";
 import { NewChatPage } from "./pages/NewChatPage.js";
 import { SessionPage } from "./pages/SessionPage.js";
 import { WorkspacePage } from "./pages/WorkspacePage.js";
@@ -22,7 +22,6 @@ import { TaskEditPage } from "./pages/TaskEditPage.js";
 import { TaskPage } from "./pages/TaskPage.js";
 import { NewEnvironmentPage } from "./pages/NewEnvironmentPage.js";
 import { SettingsPage } from "./pages/SettingsPage.js";
-import { SettingsNav } from "./components/settings/SettingsNav.js";
 import { SettingsEnvironmentsTab } from "./pages/settings/SettingsEnvironmentsTab.js";
 import { SettingsCredentialsTab } from "./pages/settings/SettingsCredentialsTab.js";
 import { SettingsPersonasTab } from "./pages/settings/SettingsPersonasTab.js";
@@ -43,7 +42,6 @@ function AppShell(): JSX.Element {
   const navigate = useAppNavigate();
 
   const location = useLocation();
-  const isSettings = location.pathname.startsWith(SETTINGS_URL);
 
   // Sidebar drawer state for mobile
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -70,7 +68,7 @@ function AppShell(): JSX.Element {
   // already viewing a task (task-spawned sessions should keep the user on
   // the task page rather than redirecting to the raw session view).
   useEffect(() => {
-    if (lastSpawnedId && !location.pathname.startsWith("/tasks/")) {
+    if (lastSpawnedId && !location.pathname.includes("/tasks/")) {
       navigate(sessionUrl(lastSpawnedId), { replace: true });
     }
   }, [lastSpawnedId, navigate, location.pathname]);
@@ -82,16 +80,16 @@ function AppShell(): JSX.Element {
 
   return (
     <div className={styles.root}>
-      <StatusBar onToggleSidebar={isSettings ? undefined : toggleSidebar} sidebarOpen={sidebarOpen} />
+      <StatusBar onToggleSidebar={toggleSidebar} sidebarOpen={sidebarOpen} />
+      <AppNav />
       <div className={styles.body}>
         <div
           className={styles.sidebarWrapper}
           data-sidebar-open={sidebarOpen}
-          data-settings={isSettings}
         >
-          {isSettings ? <SettingsNav /> : <Sidebar />}
+          <Sidebar />
         </div>
-        {sidebarOpen && !isSettings && (
+        {sidebarOpen && (
           <div
             className={styles.overlay}
             data-testid="drawer-overlay"
@@ -122,15 +120,20 @@ function AppRoutes(): JSX.Element {
       <Route element={<AppShell />}>
         <Route index element={<EmptyPage />} />
         <Route path="chat" element={<ChatPage />} />
-        <Route path="sessions/new" element={<NewChatPage />} />
-        <Route path="sessions/:sessionId" element={<SessionPage />} />
-        <Route path="workspaces" element={<EmptyPage />} />
-        <Route path="workspaces/:workspaceId" element={<WorkspacePage />} />
+        <Route path="tasks" element={<TasksEmptyPage />} />
         <Route path="tasks/new" element={<NewTaskPage />} />
         <Route path="tasks/:taskId" element={<TaskPage />} />
         <Route path="tasks/:taskId/stream" element={<TaskPage />} />
         <Route path="tasks/:taskId/findings" element={<TaskPage />} />
         <Route path="tasks/:taskId/edit" element={<TaskEditPage />} />
+        <Route path="workspaces" element={<WorkspacesEmptyPage />} />
+        <Route path="workspaces/:workspaceId" element={<WorkspacePage />} />
+        <Route path="workspaces/:workspaceId/tasks/:taskId" element={<TaskPage />} />
+        <Route path="workspaces/:workspaceId/tasks/:taskId/stream" element={<TaskPage />} />
+        <Route path="workspaces/:workspaceId/tasks/:taskId/findings" element={<TaskPage />} />
+        <Route path="workspaces/:workspaceId/tasks/:taskId/edit" element={<TaskEditPage />} />
+        <Route path="sessions/new" element={<NewChatPage />} />
+        <Route path="sessions/:sessionId" element={<SessionPage />} />
         <Route path="environments/new" element={<NewEnvironmentPage />} />
         <Route path="settings" element={<SettingsPage />}>
           <Route index element={<Navigate to="environments" replace />} />

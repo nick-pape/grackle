@@ -14,7 +14,7 @@ test.describe("Markdown Rendering in EventRenderer", () => {
     );
 
     // Environments are now in Settings — navigate there via the gear button
-    await page.locator('button[title="Settings"]').click();
+    await page.locator('[data-testid="sidebar-tab-settings"]').click();
     await page.locator('button[title="New chat"]').click();
     const promptInput = page.locator('input[placeholder="Enter prompt..."]');
     await promptInput.fill("md test");
@@ -38,7 +38,7 @@ test.describe("Markdown Rendering in EventRenderer", () => {
     );
 
     // Environments are now in Settings — navigate there via the gear button
-    await page.locator('button[title="Settings"]').click();
+    await page.locator('[data-testid="sidebar-tab-settings"]').click();
     await page.locator('button[title="New chat"]').click();
 
     await page.locator('input[placeholder="Enter prompt..."]').fill("code test");
@@ -69,7 +69,7 @@ test.describe("Markdown Rendering in EventRenderer", () => {
     );
 
     // Environments are now in Settings — navigate there via the gear button
-    await page.locator('button[title="Settings"]').click();
+    await page.locator('[data-testid="sidebar-tab-settings"]').click();
     await page.locator('button[title="New chat"]').click();
 
     await page.locator('input[placeholder="Enter prompt..."]').fill("group test");
@@ -102,7 +102,7 @@ test.describe("Markdown Rendering in EventRenderer", () => {
     );
 
     // Start a stub session to get a session context — Environments are now in Settings
-    await page.locator('button[title="Settings"]').click();
+    await page.locator('[data-testid="sidebar-tab-settings"]').click();
     await page.locator('button[title="New chat"]').click();
 
     await page.locator('input[placeholder="Enter prompt..."]').fill("table test");

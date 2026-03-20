@@ -131,9 +131,12 @@ export async function getTaskId(
 
 /**
  * Create a workspace via WebSocket and wait for it to appear in the sidebar.
+ * Navigates to the Workspaces tab first so the workspace name is visible.
  * Requires the test environment ("test-local") to already exist.
  */
 export async function createWorkspace(page: Page, name: string, environmentId: string = "test-local"): Promise<void> {
+  // Ensure we're on the Workspaces tab so the workspace name appears in the sidebar
+  await page.locator('[data-testid="sidebar-tab-workspaces"]').click();
   await sendWsAndWaitFor(
     page,
     {
@@ -468,6 +471,6 @@ export async function runStubMcpTaskToCompletion(page: Page): Promise<void> {
 
 /** Navigate to settings and wait for the tab nav to appear. */
 export async function goToSettings(page: Page): Promise<void> {
-  await page.locator('button[title="Settings"]').click();
+  await page.locator('[data-testid="sidebar-tab-settings"]').click();
   await page.getByRole("tablist", { name: "Settings" }).waitFor({ state: "visible", timeout: 5_000 });
 }

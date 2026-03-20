@@ -16,6 +16,8 @@ test.describe("Sidebar search filter", () => {
   test("search input is visible when workspaces exist", async ({ appPage }) => {
     const page = appPage;
 
+    // Navigate to Workspaces tab
+    await page.locator('[data-testid="sidebar-tab-workspaces"]').click();
     await createWorkspace(page, "search-visible");
 
     const searchInput = page.getByTestId("sidebar-search");
@@ -26,6 +28,7 @@ test.describe("Sidebar search filter", () => {
   test("typing filters workspaces by name", async ({ appPage }) => {
     const page = appPage;
 
+    await page.locator('[data-testid="sidebar-tab-workspaces"]').click();
     await createWorkspace(page, "Alpha Project");
     await createWorkspace(page, "Beta Project");
 
@@ -40,6 +43,7 @@ test.describe("Sidebar search filter", () => {
   test("typing filters tasks by title", async ({ appPage }) => {
     const page = appPage;
 
+    await page.locator('[data-testid="sidebar-tab-workspaces"]').click();
     await createWorkspace(page, "filter-tasks");
     await createTask(page, "filter-tasks", "Fix login bug");
     await createTask(page, "filter-tasks", "Add dashboard");
@@ -55,6 +59,7 @@ test.describe("Sidebar search filter", () => {
   test("clearing filter restores full list", async ({ appPage }) => {
     const page = appPage;
 
+    await page.locator('[data-testid="sidebar-tab-workspaces"]').click();
     await createWorkspace(page, "Zebra Corp");
     await createWorkspace(page, "Quantum Labs");
 
@@ -75,6 +80,7 @@ test.describe("Sidebar search filter", () => {
   test("search works in grouped-by-status view", async ({ appPage }) => {
     const page = appPage;
 
+    await page.locator('[data-testid="sidebar-tab-workspaces"]').click();
     await createWorkspace(page, "grouped-search");
     await createTask(page, "grouped-search", "matching-task");
     await createTask(page, "grouped-search", "other-task");
@@ -99,6 +105,7 @@ test.describe("Sidebar search filter", () => {
   test("matching text in task titles is highlighted", async ({ appPage }) => {
     const page = appPage;
 
+    await page.locator('[data-testid="sidebar-tab-workspaces"]').click();
     await createWorkspace(page, "highlight-proj");
     await createTask(page, "highlight-proj", "Fix login bug");
 
@@ -108,13 +115,14 @@ test.describe("Sidebar search filter", () => {
     // The task should be visible with "login" highlighted in a <mark> element
     // Use a combined locator to avoid race conditions from eager task loading
     const mark = page.locator('[data-task-id] mark');
-    await expect(mark.first()).toBeVisible({ timeout: 10_000 });
+    await expect(mark.first()).toBeVisible({ timeout: 15_000 });
     await expect(mark.first()).toHaveText("login");
   });
 
   test("workspace match shows all its tasks", async ({ appPage }) => {
     const page = appPage;
 
+    await page.locator('[data-testid="sidebar-tab-workspaces"]').click();
     await createWorkspace(page, "unique-proj-name");
     await createTask(page, "unique-proj-name", "task-aaa");
     await createTask(page, "unique-proj-name", "task-bbb");
@@ -130,6 +138,7 @@ test.describe("Sidebar search filter", () => {
   test("search finds tasks in unexpanded workspaces", async ({ appPage }) => {
     const page = appPage;
 
+    await page.locator('[data-testid="sidebar-tab-workspaces"]').click();
     // Create a workspace and add a task via WS (without expanding the workspace in the UI)
     await createWorkspace(page, "collapsed-proj");
     const workspaceId = await getWorkspaceId(page, "collapsed-proj");

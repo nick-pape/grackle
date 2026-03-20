@@ -54,12 +54,16 @@ export function UnifiedBar(): JSX.Element {
   const navigate = useAppNavigate();
   const [searchParams] = useSearchParams();
 
-  // Match current route
+  // Match current route (both global and workspace-scoped task URLs)
   const sessionMatch = useMatch("/sessions/:sessionId");
   const taskMatch = useMatch("/tasks/:taskId");
   const taskStreamMatch = useMatch("/tasks/:taskId/stream");
   const taskFindingsMatch = useMatch("/tasks/:taskId/findings");
   const taskEditMatch = useMatch("/tasks/:taskId/edit");
+  const wsTaskMatch = useMatch("/workspaces/:workspaceId/tasks/:taskId");
+  const wsTaskStreamMatch = useMatch("/workspaces/:workspaceId/tasks/:taskId/stream");
+  const wsTaskFindingsMatch = useMatch("/workspaces/:workspaceId/tasks/:taskId/findings");
+  const wsTaskEditMatch = useMatch("/workspaces/:workspaceId/tasks/:taskId/edit");
   const newChatMatch = useMatch("/sessions/new");
   const newEnvMatch = useMatch("/environments/new");
   const workspaceMatch = useMatch("/workspaces/:workspaceId");
@@ -70,13 +74,14 @@ export function UnifiedBar(): JSX.Element {
 
   // Derive current page context
   const sessionId = sessionMatch?.params.sessionId;
-  const taskId = taskMatch?.params.taskId ?? taskStreamMatch?.params.taskId ?? taskFindingsMatch?.params.taskId;
+  const taskId = taskMatch?.params.taskId ?? taskStreamMatch?.params.taskId ?? taskFindingsMatch?.params.taskId
+    ?? wsTaskMatch?.params.taskId ?? wsTaskStreamMatch?.params.taskId ?? wsTaskFindingsMatch?.params.taskId ?? wsTaskEditMatch?.params.taskId;
   const isChat = !!chatMatch;
   const isNewChat = !!newChatMatch;
   const isNewEnv = !!newEnvMatch;
-  const isWorkspace = !!workspaceMatch;
+  const isWorkspace = !!workspaceMatch && !wsTaskMatch && !wsTaskStreamMatch && !wsTaskFindingsMatch && !wsTaskEditMatch;
   const isNewTask = !!newTaskMatch;
-  const isTaskEdit = !!taskEditMatch;
+  const isTaskEdit = !!taskEditMatch || !!wsTaskEditMatch;
   const isEmpty = !!emptyMatch && !isNewChat && !isNewEnv && !isWorkspace && !isNewTask;
   const isSettings = !!settingsMatch;
 

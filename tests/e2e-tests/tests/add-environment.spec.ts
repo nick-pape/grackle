@@ -4,7 +4,7 @@ import { sendWsAndWaitFor, sendWsMessage } from "./helpers.js";
 test.describe("Add Environment — UI Form", () => {
   test.beforeEach(async ({ appPage }) => {
     // Environments are now in Settings — navigate there via the gear button
-    await appPage.locator('button[title="Settings"]').click();
+    await appPage.locator('[data-testid="sidebar-tab-settings"]').click();
   });
 
   test("clicking + opens new environment form in UnifiedBar", async ({ appPage }) => {
@@ -154,7 +154,7 @@ test.describe("Add Environment — WebSocket Handler", () => {
     expect(response.payload?.environmentId).toBeTruthy();
 
     // Switch to Environments (in Settings) and verify the new environment appears
-    await page.locator('button[title="Settings"]').click();
+    await page.locator('[data-testid="sidebar-tab-settings"]').click();
     await expect(page.getByText("ws-test-env", { exact: true })).toBeVisible({ timeout: 5_000 });
 
     // Clean up: remove the environment
@@ -284,7 +284,7 @@ test.describe("Add Environment — WebSocket Handler", () => {
     const page = appPage;
 
     // Switch to Environments (in Settings), open form
-    await page.locator('button[title="Settings"]').click();
+    await page.locator('[data-testid="sidebar-tab-settings"]').click();
     await page.locator('button[title="Add environment"]').click();
 
     // Fill in form
@@ -297,7 +297,7 @@ test.describe("Add Environment — WebSocket Handler", () => {
     await expect(page.getByRole("tablist", { name: "Settings" })).toBeVisible({ timeout: 5_000 });
 
     // Form should close (back to settings mode)
-    await expect(page.locator("text=new env")).not.toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText("new env", { exact: true })).not.toBeVisible({ timeout: 5_000 });
 
     // Environment should appear in the Settings panel environment list
     await expect(page.getByText("ui-test-env", { exact: true })).toBeVisible({ timeout: 5_000 });

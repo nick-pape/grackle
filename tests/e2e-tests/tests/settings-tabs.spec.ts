@@ -41,7 +41,7 @@ test.describe("Settings Tabs", () => {
     const page = mockPage;
 
     await page.goto("/settings/credentials?mock");
-    await expect(page.getByRole("tablist")).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByRole("tablist", { name: "Settings" })).toBeVisible({ timeout: 5_000 });
     await expect(page.getByRole("tab", { name: "Credentials" })).toHaveAttribute("aria-selected", "true");
     await expect(page.getByRole("heading", { name: "Credential Providers" })).toBeVisible();
   });
@@ -129,8 +129,8 @@ test.describe("Settings Tabs", () => {
     // The persona button should not exist
     await expect(page.locator('button[title="Personas"]')).not.toBeVisible();
 
-    // The settings gear should still exist
-    await expect(page.locator('button[title="Settings"]')).toBeVisible();
+    // The settings sidebar tab should still exist
+    await expect(page.locator('[data-testid="sidebar-tab-settings"]')).toBeVisible();
   });
 
   test("breadcrumbs always show Home > Settings on all tabs", async ({ mockPage }) => {

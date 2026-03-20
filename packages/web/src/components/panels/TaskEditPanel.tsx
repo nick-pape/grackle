@@ -24,16 +24,22 @@ interface Props {
  *         back to the task overview.
  */
 export function TaskEditPanel({ mode, taskId, workspaceId: workspaceIdProp, parentTaskId: parentTaskIdProp }: Props): JSX.Element {
-  const { tasks, personas, createTask, updateTask } = useGrackle();
+  const { tasks, workspaces, personas, createTask, updateTask } = useGrackle();
   const { showToast } = useToast();
   const navigate = useAppNavigate();
 
   const isEdit = mode === "edit";
   const existingTask = isEdit && taskId ? tasks.find((t) => t.id === taskId) : undefined;
 
-  const workspaceId = isEdit
+  const initialWorkspaceId = isEdit
     ? (existingTask?.workspaceId ?? "")
     : (workspaceIdProp ?? "");
+
+  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState(initialWorkspaceId);
+  const workspaceId = initialWorkspaceId || selectedWorkspaceId;
+
+  /** Whether the workspace dropdown should be shown (new mode without pre-set workspace). */
+  const showWorkspaceSelector = !isEdit && !workspaceIdProp;
 
   const parentTaskId = isEdit
     ? (existingTask?.parentTaskId ?? "")
@@ -74,9 +80,10 @@ export function TaskEditPanel({ mode, taskId, workspaceId: workspaceIdProp, pare
 
   // In edit mode, also require that task data has loaded before allowing save
   // to prevent overwriting server data with blank form values.
+  // Workspace is required: the user must pick one from the dropdown.
   const canSave = title.trim().length > 0
     && (!isEdit || existingTask !== undefined)
-    && (isEdit || workspaceId.length > 0);
+    && workspaceId.length > 0;
 
   const toggleDep = (depId: string): void => {
     setSelectedDeps((prev) =>
@@ -95,7 +102,7 @@ export function TaskEditPanel({ mode, taskId, workspaceId: workspaceIdProp, pare
     if (isEdit && taskId) {
       updateTask(taskId, title.trim(), description, selectedDeps, defaultPersonaId);
       showToast("Task updated", "success");
-      navigate(taskUrl(taskId), { replace: true });
+      navigate(taskUrl(taskId, undefined, workspaceId), { replace: true });
     } else {
       setCreating(true);
       createTask(
@@ -108,7 +115,7 @@ export function TaskEditPanel({ mode, taskId, workspaceId: workspaceIdProp, pare
         canDecompose,
         () => {
           showToast("Task created", "success");
-          navigate(workspaceId ? workspaceUrl(workspaceId) : "/", { replace: true });
+          navigate(workspaceIdProp ? workspaceUrl(workspaceIdProp) : "/tasks", { replace: true });
         },
         (message: string) => {
           showToast(message, "error");
@@ -120,9 +127,9 @@ export function TaskEditPanel({ mode, taskId, workspaceId: workspaceIdProp, pare
 
   const handleCancel = (): void => {
     if (isEdit && taskId) {
-      navigate(taskUrl(taskId));
+      navigate(taskUrl(taskId, undefined, workspaceId));
     } else {
-      navigate(workspaceId ? workspaceUrl(workspaceId) : "/");
+      navigate(workspaceIdProp ? workspaceUrl(workspaceIdProp) : "/tasks");
     }
   };
 
@@ -159,6 +166,27 @@ export function TaskEditPanel({ mode, taskId, workspaceId: workspaceIdProp, pare
       {/* Form body */}
       <div className={styles.body}>
         <div className={styles.formContent}>
+          {/* Workspace selector (shown when creating from global Tasks view) */}
+          {showWorkspaceSelector && (
+            <div className={styles.section}>
+              <label className={styles.label} htmlFor="task-edit-workspace">
+                Workspace
+              </label>
+              <select
+                id="task-edit-workspace"
+                value={selectedWorkspaceId}
+                onChange={(e) => setSelectedWorkspaceId(e.target.value)}
+                className={styles.personaSelect}
+                data-testid="task-edit-workspace"
+              >
+                <option value="">Select a workspace...</option>
+                {workspaces.map((w) => (
+                  <option key={w.id} value={w.id}>{w.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
           {/* Title */}
           <div className={styles.section}>
             <label className={styles.label} htmlFor="task-edit-title">

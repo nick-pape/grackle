@@ -26,6 +26,8 @@ export interface UseTasksResult {
   taskStartingId: string | undefined;
   /** Load tasks for a given workspace. */
   loadTasks: (workspaceId: string) => void;
+  /** Load all tasks across all workspaces. */
+  loadAllTasks: () => void;
   /** Create a new task in a workspace. */
   createTask: (
     workspaceId: string,
@@ -97,16 +99,16 @@ export function useTasks(send: SendFunction): UseTasksResult {
             pending.onSuccess();
           }
         }
-        const pid = typeof p.workspaceId === "string" ? p.workspaceId : "";
-        if (pid) {
-          send({ type: "list_tasks", payload: { workspaceId: pid } });
+        const createdWsId = typeof p.workspaceId === "string" ? p.workspaceId : "";
+        if (createdWsId) {
+          send({ type: "list_tasks", payload: { workspaceId: createdWsId } });
         }
         return true;
       }
       case "task.started": {
         const taskId = typeof p.taskId === "string" ? p.taskId : "";
         const sessionId = typeof p.sessionId === "string" ? p.sessionId : "";
-        const pid = typeof p.workspaceId === "string" ? p.workspaceId : "";
+        const startedWsId = typeof p.workspaceId === "string" ? p.workspaceId : "";
 
         setTaskStartingId((prev) =>
           taskId && prev === taskId ? undefined : prev,
@@ -121,8 +123,8 @@ export function useTasks(send: SendFunction): UseTasksResult {
             );
           }
         }
-        if (pid) {
-          send({ type: "list_tasks", payload: { workspaceId: pid } });
+        if (startedWsId) {
+          send({ type: "list_tasks", payload: { workspaceId: startedWsId } });
         } else if (taskId) {
           // Workspace-less task (e.g. root task) — refetch all workspace-less tasks
           // or look up the task's workspace to refresh.
@@ -142,13 +144,13 @@ export function useTasks(send: SendFunction): UseTasksResult {
       case "task.completed":
       case "task.deleted":
       case "task.updated": {
-        const pid = typeof p.workspaceId === "string" ? p.workspaceId : "";
-        const taskId = typeof p.taskId === "string" ? p.taskId : "";
-        if (pid) {
-          send({ type: "list_tasks", payload: { workspaceId: pid } });
-        } else if (taskId) {
+        const eventWsId = typeof p.workspaceId === "string" ? p.workspaceId : "";
+        const eventTaskId = typeof p.taskId === "string" ? p.taskId : "";
+        if (eventWsId) {
+          send({ type: "list_tasks", payload: { workspaceId: eventWsId } });
+        } else if (eventTaskId) {
           setTasks((prev) => {
-            const found = prev.find((t) => t.id === taskId);
+            const found = prev.find((t) => t.id === eventTaskId);
             if (found?.workspaceId) {
               send({ type: "list_tasks", payload: { workspaceId: found.workspaceId } });
             } else {
@@ -174,11 +176,12 @@ export function useTasks(send: SendFunction): UseTasksResult {
           "tasks",
           "tasks",
         );
-        // Use only the explicit payload.workspaceId to decide scope.
-        // An omitted workspaceId means a global response (all tasks / workspace-less tasks).
-        const pid = typeof msg.payload?.workspaceId === "string"
-          ? msg.payload.workspaceId
-          : "";
+        // When workspaceId is explicitly present, merge per-workspace.
+        // When absent (global list_tasks {}), treat as a full snapshot.
+        const pid =
+          typeof msg.payload?.workspaceId === "string" && msg.payload.workspaceId
+            ? msg.payload.workspaceId
+            : "";
         if (!pid) {
           // Global response (no workspaceId in payload) — includes tasks from
           // all workspaces plus workspace-less tasks like the root task.
@@ -239,6 +242,13 @@ export function useTasks(send: SendFunction): UseTasksResult {
   const loadTasks = useCallback(
     (workspaceId: string) => {
       send({ type: "list_tasks", payload: { workspaceId } });
+    },
+    [send],
+  );
+
+  const loadAllTasks = useCallback(
+    () => {
+      send({ type: "list_tasks", payload: {} });
     },
     [send],
   );
@@ -357,6 +367,7 @@ export function useTasks(send: SendFunction): UseTasksResult {
     tasks,
     taskStartingId,
     loadTasks,
+    loadAllTasks,
     createTask,
     startTask,
     stopTask,

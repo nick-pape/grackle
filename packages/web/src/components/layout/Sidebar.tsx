@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect, type JSX } from "react";
-import { useMatch } from "react-router";
-import { CHAT_URL, WORKSPACES_URL, useAppNavigate } from "../../utils/navigation.js";
+import { useLocation } from "react-router";
+import { getActiveView } from "./AppNav.js";
+import { TaskList } from "../lists/TaskList.js";
 import { WorkspaceList } from "../lists/WorkspaceList.js";
+import { SettingsNav } from "../settings/SettingsNav.js";
 import styles from "./Sidebar.module.scss";
 
 /** Default sidebar width in pixels. */
@@ -38,12 +40,12 @@ function saveWidth(width: number): void {
   }
 }
 
-/** Left sidebar showing the permanent workspace/task tree. */
+/** Left sidebar showing view-specific content based on the active app navigation tab. */
 export function Sidebar(): JSX.Element {
   const [width] = useState<number>(loadWidth);
   const containerRef = useRef<HTMLDivElement>(null);
-  const navigate = useAppNavigate();
-  const isChat = !!useMatch("/chat");
+  const location = useLocation();
+  const activeView = getActiveView(location.pathname);
 
   /** Observe container resizes and persist width to localStorage. */
   useEffect(() => {
@@ -71,30 +73,10 @@ export function Sidebar(): JSX.Element {
 
   return (
     <div className={styles.container} ref={containerRef} data-testid="sidebar" style={{ width }}>
-      {/* Tab bar */}
-      <nav className={styles.tabBar} aria-label="Sidebar navigation" data-testid="sidebar-tabs">
-        <button
-          className={styles.tab}
-          aria-current={isChat ? "page" : undefined}
-          data-active={isChat}
-          data-testid="sidebar-tab-chat"
-          onClick={() => navigate(CHAT_URL)}
-        >
-          Chat
-        </button>
-        <button
-          className={styles.tab}
-          aria-current={!isChat ? "page" : undefined}
-          data-active={!isChat}
-          data-testid="sidebar-tab-workspaces"
-          onClick={() => navigate(WORKSPACES_URL)}
-        >
-          Workspaces
-        </button>
-      </nav>
-      {/* Content */}
       <div className={styles.content}>
-        <WorkspaceList />
+        {activeView === "tasks" && <TaskList />}
+        {activeView === "workspaces" && <WorkspaceList />}
+        {activeView === "settings" && <SettingsNav />}
       </div>
     </div>
   );

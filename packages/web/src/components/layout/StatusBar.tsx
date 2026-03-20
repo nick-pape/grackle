@@ -1,6 +1,6 @@
 import type { JSX } from "react";
 import { useGrackle } from "../../context/GrackleContext.js";
-import { HOME_URL, SETTINGS_URL, useAppNavigate } from "../../utils/navigation.js";
+import { HOME_URL, useAppNavigate } from "../../utils/navigation.js";
 import styles from "./StatusBar.module.scss";
 
 /** Props for the StatusBar component. */
@@ -39,13 +39,6 @@ export function StatusBar({ onToggleSidebar, sidebarOpen }: StatusBarProps): JSX
         </span>
         <span>{connectedEnvs}/{totalEnvs} env{totalEnvs !== 1 ? "s" : ""}</span>
         <span>{activeCount} active</span>
-        <button
-          className={styles.settingsButton}
-          onClick={() => navigate(SETTINGS_URL)}
-          title="Settings"
-        >
-          {"\u2699"}
-        </button>
       </div>
     </div>
   );
