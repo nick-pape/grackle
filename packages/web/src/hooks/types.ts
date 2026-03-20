@@ -56,7 +56,8 @@ export interface Workspace {
 /** A task within a workspace (or workspace-less for the root task). */
 export interface TaskData {
   id: string;
-  workspaceId: string;
+  /** Workspace this task belongs to, or empty/undefined for workspace-less tasks (e.g. root task). */
+  workspaceId: string | undefined;
   title: string;
   description: string;
   status: string;
