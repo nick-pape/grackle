@@ -1,6 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { EventEmitter } from "node:events";
 import type { ChildProcess, SpawnOptions } from "node:child_process";
+
+// Mock sleep to avoid real 1s delays in close() tests
+vi.mock("./utils.js", async (importOriginal) => {
+  const original = await importOriginal<typeof import("./utils.js")>();
+  return { ...original, sleep: vi.fn().mockResolvedValue(undefined) };
+});
+
 import type { TunnelProcessFactory, TunnelPortProbe } from "./tunnel.js";
 import { ProcessTunnel } from "./tunnel.js";
 

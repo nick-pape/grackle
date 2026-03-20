@@ -7,7 +7,7 @@ import { waitForLocalPort } from "./connect.js";
 /** Grace period before sending SIGKILL to a tunnel process. */
 const TUNNEL_KILL_GRACE_MS: number = 1_000;
 
-/** @internal Abstraction over child-process spawning used by {@link ProcessTunnel}. */
+/** Abstraction over child-process spawning used by {@link ProcessTunnel}. */
 export interface TunnelProcessFactory {
   /** Spawn a child process. */
   spawn(command: string, args: string[], options: SpawnOptions): ChildProcess;
@@ -16,7 +16,7 @@ export interface TunnelProcessFactory {
 /** Default implementation that delegates to Node's `child_process.spawn`. */
 const NODE_TUNNEL_PROCESS_FACTORY: TunnelProcessFactory = { spawn };
 
-/** @internal Abstraction over port readiness probing used by {@link ProcessTunnel}. */
+/** Abstraction over port readiness probing used by {@link ProcessTunnel}. */
 export interface TunnelPortProbe {
   /** Wait for a TCP port to accept connections on localhost. */
   waitForPort(port: number): Promise<void>;

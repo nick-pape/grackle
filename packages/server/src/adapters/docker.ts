@@ -67,13 +67,11 @@ const containerPorts: Map<string, number> = new Map<string, number>();
 // ─── Docker CLI Helpers ────────────────────────────────────
 
 /** Pull a Docker image, suppressing errors if the image exists locally. */
-async function pullImage(execFn: ExecFunction, image: string): Promise<boolean> {
+async function pullImage(execFn: ExecFunction, image: string): Promise<void> {
   try {
     await execFn("docker", ["pull", image], { timeout: DOCKER_PULL_TIMEOUT_MS });
-    return true;
   } catch {
     logger.debug({ image }, "Docker pull failed, trying local image");
-    return false;
   }
 }
 
@@ -122,6 +120,7 @@ async function waitForContainerRunning(execFn: ExecFunction, containerName: stri
     }
     await sleep(CONTAINER_POLL_DELAY_MS);
   }
+  throw new Error(`Container ${containerName} did not reach Running state after ${CONTAINER_POLL_MAX_ATTEMPTS} attempts`);
 }
 
 /** Clone or pull a git repo inside a container's workspace. */
