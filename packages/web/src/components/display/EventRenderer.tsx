@@ -3,6 +3,7 @@ import Markdown from "react-markdown";
 import rehypePrismPlus from "rehype-prism-plus/common";
 import remarkGfm from "remark-gfm";
 import type { SessionEvent } from "../../hooks/useGrackleSocket.js";
+import { formatTokens, formatCost } from "../../utils/format.js";
 import styles from "./EventRenderer.module.scss";
 
 /** Props for the EventRenderer component. */
@@ -230,6 +231,24 @@ function SignalEvent({ content }: { content: string }): JSX.Element {
   );
 }
 
+/** Renders a usage event as a compact cost badge. */
+function UsageEvent({ content }: { content: string }): JSX.Element {
+  let label = content;
+  try {
+    const data = JSON.parse(content) as Record<string, unknown>;
+    const inTok = Number(data.input_tokens) || 0;
+    const outTok = Number(data.output_tokens) || 0;
+    const tokens = formatTokens(inTok + outTok);
+    const cost = formatCost(Number(data.cost_usd) || 0);
+    label = `${tokens} tokens \u00b7 ${cost}`;
+  } catch { /* show raw content if JSON fails */ }
+  return (
+    <div className={styles.usageEvent} data-testid="usage-event">
+      <span className={styles.usageBadge}>{label}</span>
+    </div>
+  );
+}
+
 /** Renders an unrecognized event type. */
 function DefaultEvent({ content }: { content: string }): JSX.Element {
   return (
@@ -271,6 +290,8 @@ export function EventRenderer({ event, toolUseCtx }: Props): JSX.Element {
       return <UserInputEvent content={event.content} />;
     case "signal":
       return <SignalEvent content={event.content} />;
+    case "usage":
+      return <UsageEvent content={event.content} />;
     default:
       return <DefaultEvent content={event.content} />;
   }

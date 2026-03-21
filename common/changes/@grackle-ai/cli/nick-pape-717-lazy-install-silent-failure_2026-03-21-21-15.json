@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "fix(powerline): surface lazy runtime installer errors with actionable details instead of failing silently",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}

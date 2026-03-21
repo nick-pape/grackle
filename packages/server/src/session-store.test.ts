@@ -159,4 +159,48 @@ describe("session-store", () => {
       expect(session?.costUsd).toBe(0);
     });
   });
+
+  describe("aggregateUsage", () => {
+    it("aggregates by taskId", () => {
+      sessionStore.createSession("agg-1", "test-env", "claude-code", "test", "model", "/tmp/log", "task-a");
+      sessionStore.createSession("agg-2", "test-env", "claude-code", "test", "model", "/tmp/log", "task-a");
+      sessionStore.updateSessionUsage("agg-1", 100, 10, 0.01);
+      sessionStore.updateSessionUsage("agg-2", 200, 20, 0.02);
+      const result = sessionStore.aggregateUsage({ taskId: "task-a" });
+      expect(result.inputTokens).toBe(300);
+      expect(result.outputTokens).toBe(30);
+      expect(result.costUsd).toBeCloseTo(0.03);
+      expect(result.sessionCount).toBe(2);
+    });
+
+    it("aggregates by taskIds", () => {
+      sessionStore.createSession("agg-3", "test-env", "claude-code", "test", "model", "/tmp/log", "task-b");
+      sessionStore.createSession("agg-4", "test-env", "claude-code", "test", "model", "/tmp/log", "task-c");
+      sessionStore.updateSessionUsage("agg-3", 50, 5, 0.005);
+      sessionStore.updateSessionUsage("agg-4", 75, 8, 0.008);
+      const result = sessionStore.aggregateUsage({ taskIds: ["task-b", "task-c"] });
+      expect(result.inputTokens).toBe(125);
+      expect(result.outputTokens).toBe(13);
+      expect(result.costUsd).toBeCloseTo(0.013);
+      expect(result.sessionCount).toBe(2);
+    });
+
+    it("aggregates by environmentId", () => {
+      sessionStore.createSession("agg-5", "test-env", "claude-code", "test", "model", "/tmp/log");
+      sessionStore.updateSessionUsage("agg-5", 500, 50, 0.05);
+      const result = sessionStore.aggregateUsage({ environmentId: "test-env" });
+      expect(result.inputTokens).toBe(500);
+      expect(result.outputTokens).toBe(50);
+      expect(result.costUsd).toBeCloseTo(0.05);
+      expect(result.sessionCount).toBe(1);
+    });
+
+    it("returns zeros when no sessions match", () => {
+      const result = sessionStore.aggregateUsage({ taskId: "nonexistent" });
+      expect(result.inputTokens).toBe(0);
+      expect(result.outputTokens).toBe(0);
+      expect(result.costUsd).toBe(0);
+      expect(result.sessionCount).toBe(0);
+    });
+  });
 });

@@ -43,6 +43,17 @@ export interface Session {
   endedAt?: string;
   error?: string;
   personaId?: string;
+  inputTokens?: number;
+  outputTokens?: number;
+  costUsd?: number;
+}
+
+/** Aggregated usage statistics for a scope (session, task, workspace, environment). */
+export interface UsageStats {
+  inputTokens: number;
+  outputTokens: number;
+  costUsd: number;
+  sessionCount: number;
 }
 
 /** A single event emitted by an agent session. */
