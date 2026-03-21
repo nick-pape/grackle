@@ -30,6 +30,7 @@ import {
   eventTypeToString,
 } from "@grackle-ai/common";
 import { resolvePersona } from "./resolve-persona.js";
+import { fetchOrchestratorContext } from "./orchestrator-context.js";
 import * as settingsStore from "./settings-store.js";
 import { isAllowedSettingKey } from "./settings-store.js";
 import { grackleHome } from "./paths.js";
@@ -295,10 +296,13 @@ async function startTaskSession(
     ? (options?.notes || "")
     : freshTask.title;
 
+  const orchestratorCtx = freshTask.canDecompose && freshTask.depth <= 1
+    ? fetchOrchestratorContext(freshTask.workspaceId || "") : undefined;
   const systemContext = new SystemPromptBuilder({
     task: { title: freshTask.title, description: freshTask.description, notes: options?.notes || "" },
-    canDecompose: freshTask.canDecompose,
-    personaPrompt: systemPrompt,
+    taskId: freshTask.id, canDecompose: freshTask.canDecompose, personaPrompt: systemPrompt,
+    taskDepth: freshTask.depth, ...orchestratorCtx,
+    ...(orchestratorCtx && { triggerMode: "fresh" as const }),
   }).build();
 
   sessionStore.createSession(
