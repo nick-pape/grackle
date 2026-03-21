@@ -21,7 +21,9 @@ export function EnvironmentNav(): JSX.Element {
 
   const envMatch = useMatch("/environments/:environmentId");
   const editMatch = useMatch("/environments/:environmentId/edit");
-  const activeId = envMatch?.params.environmentId ?? editMatch?.params.environmentId;
+  const rawId = envMatch?.params.environmentId ?? editMatch?.params.environmentId;
+  /** Filter out the "new" pseudo-ID so /environments/new doesn't highlight a real tab. */
+  const activeId = rawId === "new" ? undefined : rawId;
 
   const handleClick = useCallback((envId: string) => {
     navigate(environmentUrl(envId));
