@@ -12,6 +12,7 @@ import { slugify } from "./utils/slugify.js";
 import { writeTranscript } from "./transcript.js";
 import { emit } from "./event-bus.js";
 import { logger } from "./logger.js";
+import { publishChildCompletion } from "./pipe-delivery.js";
 import type { ProcessorContext } from "./processor-registry.js";
 
 /** Terminal session statuses that indicate the session has already ended. */
@@ -337,6 +338,11 @@ export function processEventStream(
             sessionStore.updateSession(sessionId, SESSION_STATUS.HIBERNATING);
           }
 
+          // Publish child completion to IPC stream (for parent pipe delivery)
+          if (["completed", "failed", "killed", "hibernating"].includes(event.content)) {
+            publishChildCompletion(sessionId, event.content);
+          }
+
           // Broadcast task_updated on status changes so frontend re-fetches computed status.
           // This covers both terminal events (completed/failed/killed) and non-terminal
           // transitions (running, waiting_input) that affect the computed task status.
@@ -350,6 +356,7 @@ export function processEventStream(
       const current = sessionStore.getSession(sessionId);
       if (current && !TERMINAL_STATUSES.includes(current.status)) {
         sessionStore.updateSession(sessionId, SESSION_STATUS.COMPLETED);
+        publishChildCompletion(sessionId, "completed");
         if (ctx.taskId) {
           emit("task.updated", { taskId: ctx.taskId, workspaceId: ctx.workspaceId });
         }
@@ -360,6 +367,7 @@ export function processEventStream(
         // Session was idle (agent finished work). Transport error is not a task failure.
         logger.info({ sessionId, err: String(err) }, "Stream ended while session idle — marking completed");
         sessionStore.updateSession(sessionId, SESSION_STATUS.COMPLETED);
+        publishChildCompletion(sessionId, "completed");
         streamHub.publish(create(grackle.SessionEventSchema, {
           sessionId,
           type: grackle.EventType.STATUS,
@@ -369,6 +377,7 @@ export function processEventStream(
       } else {
         // Genuine failure during active work.
         sessionStore.updateSession(sessionId, SESSION_STATUS.FAILED, undefined, String(err));
+        publishChildCompletion(sessionId, "failed");
         streamHub.publish(create(grackle.SessionEventSchema, {
           sessionId,
           type: grackle.EventType.STATUS,

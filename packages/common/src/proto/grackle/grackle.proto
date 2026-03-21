@@ -120,6 +120,7 @@ message Session {
   int32 input_tokens = 16;
   int32 output_tokens = 17;
   double cost_usd = 18;
+  int32 pipe_fd = 19; // fd assigned to parent for pipe IPC (0 = no pipe)
 }
 
 message SessionList {
@@ -142,6 +143,7 @@ message SpawnRequest {
   string persona_id = 8; // Persona to use (falls back to app default persona)
   string worktree_base_path = 9; // Base path for worktrees (non-task spawns)
   string pipe = 10; // "sync", "async", "detach", or "" (no pipe)
+  string parent_session_id = 11; // Caller's session ID (for pipe setup)
 }
 
 message ResumeRequest {
@@ -151,6 +153,18 @@ message ResumeRequest {
 message InputMessage {
   string session_id = 1;
   string text = 2;
+}
+
+// ─── IPC ────────────────────────────────────────────────────
+
+message WaitForPipeRequest {
+  string session_id = 1;       // Parent's session ID
+  int32 fd = 2;                // fd to wait on
+}
+
+message WaitForPipeResponse {
+  string content = 1;          // Message content from child
+  string sender_session_id = 2;
 }
 
 // ─── Streaming Events ───────────────────────────────────────
@@ -541,4 +555,7 @@ service Grackle {
 
   // Pairing
   rpc GeneratePairingCode(Empty) returns (PairingCodeResponse);
+
+  // IPC
+  rpc WaitForPipe(WaitForPipeRequest) returns (WaitForPipeResponse);
 }
