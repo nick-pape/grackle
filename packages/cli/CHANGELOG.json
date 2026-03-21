@@ -2,6 +2,26 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.54.0",
+      "tag": "@grackle-ai/cli_v0.54.0",
+      "date": "Sat, 21 Mar 2026 14:51:13 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Add HIBERNATING session status and parentSessionId column for streams IPC model"
+          },
+          {
+            "comment": "Add pipe field to SpawnRequest proto and PipeMode type for streams IPC"
+          }
+        ],
+        "patch": [
+          {
+            "comment": "Fix System task chat: use user message as prompt instead of title, handle read-only SDK config dir, recover session state on sendInput failure"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.53.5",
       "tag": "@grackle-ai/cli_v0.53.5",
       "date": "Sat, 21 Mar 2026 05:03:11 GMT",
