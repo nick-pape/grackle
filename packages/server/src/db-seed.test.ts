@@ -64,7 +64,10 @@ function createSchema(db: InstanceType<typeof Database>): void {
       task_id    TEXT NOT NULL DEFAULT '',
       started_at TEXT NOT NULL DEFAULT (datetime('now')),
       parent_session_id TEXT NOT NULL DEFAULT '',
-      pipe_mode         TEXT NOT NULL DEFAULT ''
+      pipe_mode         TEXT NOT NULL DEFAULT '',
+      input_tokens      INTEGER NOT NULL DEFAULT 0,
+      output_tokens     INTEGER NOT NULL DEFAULT 0,
+      cost_usd          REAL NOT NULL DEFAULT 0
     );
 
     CREATE TABLE IF NOT EXISTS workspaces (

@@ -417,6 +417,9 @@ async function handleMessage(
             prompt: r.prompt,
             startedAt: r.startedAt,
             personaId: r.personaId,
+            inputTokens: r.inputTokens,
+            outputTokens: r.outputTokens,
+            costUsd: r.costUsd,
           })),
         },
       });
@@ -1468,6 +1471,9 @@ async function handleMessage(
             endedAt: r.endedAt ?? "",
             error: r.error ?? "",
             personaId: r.personaId,
+            inputTokens: r.inputTokens,
+            outputTokens: r.outputTokens,
+            costUsd: r.costUsd,
           })),
         },
       });

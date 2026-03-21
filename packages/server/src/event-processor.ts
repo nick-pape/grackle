@@ -296,6 +296,25 @@ export function processEventStream(
           processSubtaskEvent(ctx, event.content, subtaskLocalIdMap);
         }
 
+        // Intercept usage events and accumulate token counts on the session record
+        if (event.type === "usage") {
+          try {
+            const data = JSON.parse(event.content) as {
+              input_tokens?: number;
+              output_tokens?: number;
+              cost_usd?: number;
+            };
+            const inputTokens = typeof data.input_tokens === "number" ? data.input_tokens : 0;
+            const outputTokens = typeof data.output_tokens === "number" ? data.output_tokens : 0;
+            const costUsd = typeof data.cost_usd === "number" ? data.cost_usd : 0;
+            if (inputTokens > 0 || outputTokens > 0 || costUsd > 0) {
+              sessionStore.updateSessionUsage(sessionId, inputTokens, outputTokens, costUsd);
+            }
+          } catch (err) {
+            logger.error({ err, sessionId }, "Failed to process usage event");
+          }
+        }
+
         if (event.type === "status") {
           // Map runtime status strings to our session status model
           if (event.content === "waiting_input") {

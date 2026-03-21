@@ -36,7 +36,7 @@ type AgentEvent = Message<"grackle.powerline.AgentEvent"> & {
 const AgentEventSchema: GenMessage<AgentEvent>;
 
 // @public
-export type AgentEventType = "text" | "tool_use" | "tool_result" | "error" | "status" | "system" | "finding" | "subtask_create" | "runtime_session_id";
+export type AgentEventType = "text" | "tool_use" | "tool_result" | "error" | "status" | "system" | "finding" | "subtask_create" | "runtime_session_id" | "usage";
 
 // @public
 export const API_KEY_FILENAME: string;
@@ -206,6 +206,7 @@ enum EventType_2 {
     TOOL_RESULT = 3,
     TOOL_USE = 2,
     UNSPECIFIED = 0,
+    USAGE = 11,
     USER_INPUT = 9
 }
 
@@ -963,6 +964,9 @@ type Session = Message<"grackle.Session"> & {
     error: string;
     taskId: string;
     personaId: string;
+    inputTokens: number;
+    outputTokens: number;
+    costUsd: number;
 };
 
 // @public

@@ -39,7 +39,10 @@ function applySchema(): void {
       task_id            TEXT NOT NULL DEFAULT '',
       persona_id         TEXT NOT NULL DEFAULT '',
       parent_session_id  TEXT NOT NULL DEFAULT '',
-      pipe_mode          TEXT NOT NULL DEFAULT ''
+      pipe_mode          TEXT NOT NULL DEFAULT '',
+      input_tokens       INTEGER NOT NULL DEFAULT 0,
+      output_tokens      INTEGER NOT NULL DEFAULT 0,
+      cost_usd           REAL NOT NULL DEFAULT 0
     );
   `);
 
@@ -117,6 +120,43 @@ describe("session-store", () => {
       sessionStore.createSession("unpiped", "test-env", "claude-code", "test", "model", "/tmp/log");
       const session = sessionStore.getSession("unpiped");
       expect(session?.pipeMode).toBe("");
+    });
+  });
+
+  describe("updateSessionUsage", () => {
+    it("stores usage values on first call", () => {
+      sessionStore.createSession("usage-1", "test-env", "claude-code", "test", "model", "/tmp/log");
+      sessionStore.updateSessionUsage("usage-1", 100, 50, 0.005);
+      const session = sessionStore.getSession("usage-1");
+      expect(session?.inputTokens).toBe(100);
+      expect(session?.outputTokens).toBe(50);
+      expect(session?.costUsd).toBeCloseTo(0.005);
+    });
+
+    it("accumulates values on subsequent calls", () => {
+      sessionStore.createSession("usage-2", "test-env", "claude-code", "test", "model", "/tmp/log");
+      sessionStore.updateSessionUsage("usage-2", 100, 50, 0.005);
+      sessionStore.updateSessionUsage("usage-2", 200, 75, 0.010);
+      const session = sessionStore.getSession("usage-2");
+      expect(session?.inputTokens).toBe(300);
+      expect(session?.outputTokens).toBe(125);
+      expect(session?.costUsd).toBeCloseTo(0.015);
+    });
+
+    it("handles fractional cost values precisely", () => {
+      sessionStore.createSession("usage-3", "test-env", "claude-code", "test", "model", "/tmp/log");
+      sessionStore.updateSessionUsage("usage-3", 0, 0, 0.001234);
+      sessionStore.updateSessionUsage("usage-3", 0, 0, 0.005678);
+      const session = sessionStore.getSession("usage-3");
+      expect(session?.costUsd).toBeCloseTo(0.006912, 6);
+    });
+
+    it("defaults to zero when no usage has been recorded", () => {
+      sessionStore.createSession("usage-4", "test-env", "claude-code", "test", "model", "/tmp/log");
+      const session = sessionStore.getSession("usage-4");
+      expect(session?.inputTokens).toBe(0);
+      expect(session?.outputTokens).toBe(0);
+      expect(session?.costUsd).toBe(0);
     });
   });
 });
