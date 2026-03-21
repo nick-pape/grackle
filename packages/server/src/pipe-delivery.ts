@@ -27,6 +27,7 @@ const STATUS_LABELS: Record<string, string> = {
   [SESSION_STATUS.FAILED]: "failed",
   [SESSION_STATUS.INTERRUPTED]: "was interrupted",
   [SESSION_STATUS.HIBERNATING]: "hibernated",
+  "killed": "was interrupted",  // runtime emits "killed", maps to INTERRUPTED
 };
 
 /** Stored unsubscribe functions for async listeners, keyed by parent session ID. */
