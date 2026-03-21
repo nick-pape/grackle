@@ -83,6 +83,7 @@ export function registerPowerLineRoutes(router: ConnectRouter): void {
           : undefined,
         mcpBroker,
         scriptContent: req.scriptContent || undefined,
+        pipe: (req.pipe || undefined) as import("@grackle-ai/common").PipeMode | undefined,
       });
 
       yield* streamSession(req.sessionId, session);

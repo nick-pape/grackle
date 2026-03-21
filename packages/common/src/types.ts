@@ -24,6 +24,9 @@ export const TERMINAL_SESSION_STATUSES: ReadonlySet<SessionStatus> = new Set([
   SESSION_STATUS.HIBERNATING,
 ]);
 
+/** Pipe mode for parent↔child IPC on spawn. */
+export type PipeMode = "sync" | "async" | "detach" | "";
+
 /** All valid task lifecycle statuses. Import and use these instead of string literals. */
 export const TASK_STATUS = {
   NOT_STARTED: "not_started",

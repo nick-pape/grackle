@@ -2,6 +2,10 @@ import type { AgentEvent, AgentSession } from "./runtime.js";
 import { BaseAgentSession } from "./base-session.js";
 import { BaseAgentRuntime } from "./base-runtime.js";
 import { resolveWorkingDirectory, resolveMcpServers } from "./runtime-utils.js";
+import { logger } from "../logger.js";
+import { accessSync, mkdirSync, copyFileSync, chmodSync, constants as fsConstants } from "node:fs";
+import { join } from "node:path";
+import { homedir, tmpdir } from "node:os";
 
 // Dynamic import — try @anthropic-ai/claude-agent-sdk first, then @anthropic-ai/claude-code
 type QueryFn = (opts: Record<string, unknown>) => Promise<unknown>;
@@ -159,6 +163,49 @@ class ClaudeCodeSession extends BaseAgentSession {
       sdkOptions.hooks = this.hooks;
     }
 
+    // Ensure the SDK session storage directory is writable so that multi-turn
+    // conversations can be resumed. If ~/.claude is read-only (common in Docker
+    // with bind-mounted host config), redirect session writes via CLAUDE_CONFIG_DIR.
+    const configDir = process.env.CLAUDE_CONFIG_DIR || join(homedir(), ".claude");
+    const projectsDir = join(configDir, "projects");
+    // Attempt to create the projects directory if it does not exist yet so
+    // that a missing dir (ENOENT) is not mistaken for a read-only filesystem.
+    try { mkdirSync(projectsDir, { recursive: true }); } catch { /* handled below */ }
+    if (!isDirectoryWritable(projectsDir)) {
+      const fallbackRoot = join(tmpdir(), ".claude-sdk");
+      const fallbackProjects = join(fallbackRoot, "projects");
+      try {
+        mkdirSync(fallbackProjects, { recursive: true });
+        if (isDirectoryWritable(fallbackProjects)) {
+          // Copy credential/config files so the SDK can authenticate from
+          // the fallback directory (it reads .credentials.json from CLAUDE_CONFIG_DIR).
+          for (const file of [".credentials.json", "settings.json", "settings.local.json"]) {
+            try {
+              copyFileSync(join(configDir, file), join(fallbackRoot, file));
+              if (file === ".credentials.json") {
+                chmodSync(join(fallbackRoot, file), 0o600);
+              }
+            } catch { /* missing is fine */ }
+          }
+          sdkOptions.env = { ...process.env, CLAUDE_CONFIG_DIR: fallbackRoot };
+          logger.warn(
+            { configDir, fallback: fallbackRoot },
+            "Claude config directory is read-only — redirecting session writes to writable fallback",
+          );
+        } else {
+          logger.warn(
+            { configDir },
+            "Claude config directory is read-only and no writable fallback available — multi-turn conversations will fail",
+          );
+        }
+      } catch (err) {
+        logger.warn(
+          { configDir, err },
+          "Failed to create writable fallback for Claude config — multi-turn conversations will fail",
+        );
+      }
+    }
+
     this.cachedSdkOptions = sdkOptions;
   }
 
@@ -171,16 +218,32 @@ class ClaudeCodeSession extends BaseAgentSession {
   }
 
   protected async runInitialQuery(prompt: string): Promise<number> {
+    if (!prompt) {
+      // No initial prompt (e.g. System task) — skip the query and wait for
+      // the first user message, which will be handled as an initial query
+      // in executeFollowUp(). Return 1 so the base class does not emit the
+      // misleading noMessagesError.
+      return 1;
+    }
     return this.consumeQuery(prompt, this.cachedSdkOptions!);
   }
 
   protected async executeFollowUp(text: string): Promise<void> {
-    const resumeOptions = { ...this.cachedSdkOptions!, resume: this.runtimeSessionId };
-    await this.consumeQuery(text, resumeOptions);
+    if (this.runtimeSessionId) {
+      // Resume the existing conversation
+      const resumeOptions = { ...this.cachedSdkOptions!, resume: this.runtimeSessionId };
+      await this.consumeQuery(text, resumeOptions);
+    } else {
+      // No prior session (first message after empty-prompt start) — run as
+      // initial query, which will establish the runtimeSessionId.
+      await this.consumeQuery(text, this.cachedSdkOptions!);
+    }
   }
 
   protected canAcceptInput(): boolean {
-    return !!this.runtimeSessionId && !!this.cachedSdkOptions;
+    // Allow input even without runtimeSessionId — the first sendInput after
+    // an empty-prompt start acts as the initial query.
+    return !!this.cachedSdkOptions;
   }
 
   protected abortActive(): void {
@@ -239,6 +302,17 @@ class ClaudeCodeSession extends BaseAgentSession {
     }
 
     return messageCount;
+  }
+}
+
+/** Check if a directory exists and is writable (with execute permission to create entries). */
+function isDirectoryWritable(dir: string): boolean {
+  try {
+    // eslint-disable-next-line no-bitwise -- fs constants are bitmask flags
+    accessSync(dir, fsConstants.W_OK | fsConstants.X_OK);
+    return true;
+  } catch {
+    return false;
   }
 }
 

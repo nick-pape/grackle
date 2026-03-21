@@ -137,6 +137,7 @@ message SpawnRequest {
   string system_context = 7; // Prepended to prompt (task desc + findings)
   string persona_id = 8; // Persona to use (falls back to app default persona)
   string worktree_base_path = 9; // Base path for worktrees (non-task spawns)
+  string pipe = 10; // "sync", "async", "detach", or "" (no pipe)
 }
 
 message ResumeRequest {

@@ -38,7 +38,8 @@ function applySchema(): void {
       error              TEXT,
       task_id            TEXT NOT NULL DEFAULT '',
       persona_id         TEXT NOT NULL DEFAULT '',
-      parent_session_id  TEXT NOT NULL DEFAULT ''
+      parent_session_id  TEXT NOT NULL DEFAULT '',
+      pipe_mode          TEXT NOT NULL DEFAULT ''
     );
   `);
 
@@ -70,18 +71,19 @@ describe("session-store", () => {
 
   describe("getChildSessions", () => {
     it("returns child sessions ordered by startedAt then id", () => {
-      sessionStore.createSession("child-b", "test-env", "claude-code", "b", "model", "/tmp/b", "", "", "parent-1");
-      sessionStore.createSession("child-a", "test-env", "claude-code", "a", "model", "/tmp/a", "", "", "parent-1");
-      sessionStore.createSession("unrelated", "test-env", "claude-code", "x", "model", "/tmp/x", "", "", "parent-2");
-
-      // Force distinct started_at values so ordering is deterministic
-      sqlite.exec("UPDATE sessions SET started_at = '2026-01-01 00:00:02' WHERE id = 'child-b'");
-      sqlite.exec("UPDATE sessions SET started_at = '2026-01-01 00:00:01' WHERE id = 'child-a'");
+      // Insert with explicit timestamps to ensure deterministic ordering
+      sqlite.exec(`
+        INSERT INTO sessions (id, env_id, runtime, prompt, model, log_path, task_id, persona_id, parent_session_id, pipe_mode, started_at)
+        VALUES
+          ('child-b', 'test-env', 'claude-code', 'b', 'model', '/tmp/b', '', '', 'parent-1', '', '2026-01-01T00:00:01.000Z'),
+          ('child-a', 'test-env', 'claude-code', 'a', 'model', '/tmp/a', '', '', 'parent-1', '', '2026-01-01T00:00:02.000Z'),
+          ('unrelated', 'test-env', 'claude-code', 'x', 'model', '/tmp/x', '', '', 'parent-2', '', '2026-01-01T00:00:03.000Z')
+      `);
 
       const children = sessionStore.getChildSessions("parent-1");
       expect(children).toHaveLength(2);
-      // child-a has earlier startedAt → comes first
-      expect(children.map((c) => c.id)).toEqual(["child-a", "child-b"]);
+      // child-b started earlier → comes first; child-a second
+      expect(children.map((c) => c.id)).toEqual(["child-b", "child-a"]);
     });
 
     it("returns empty array when no children exist", () => {
@@ -101,6 +103,20 @@ describe("session-store", () => {
       sessionStore.createSession("orphan", "test-env", "claude-code", "test", "model", "/tmp/log");
       const session = sessionStore.getSession("orphan");
       expect(session?.parentSessionId).toBe("");
+    });
+  });
+
+  describe("createSession with pipeMode", () => {
+    it("persists pipeMode", () => {
+      sessionStore.createSession("piped", "test-env", "claude-code", "test", "model", "/tmp/log", "", "", "", "async");
+      const session = sessionStore.getSession("piped");
+      expect(session?.pipeMode).toBe("async");
+    });
+
+    it("defaults pipeMode to empty string", () => {
+      sessionStore.createSession("unpiped", "test-env", "claude-code", "test", "model", "/tmp/log");
+      const session = sessionStore.getSession("unpiped");
+      expect(session?.pipeMode).toBe("");
     });
   });
 });
