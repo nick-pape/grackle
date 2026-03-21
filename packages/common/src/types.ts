@@ -16,6 +16,9 @@ export const SESSION_STATUS = {
 /** Lifecycle status of an agent session. */
 export type SessionStatus = typeof SESSION_STATUS[keyof typeof SESSION_STATUS];
 
+/** Pipe mode for parent↔child IPC on spawn. */
+export type PipeMode = "sync" | "async" | "detach" | "";
+
 /** All valid task lifecycle statuses. Import and use these instead of string literals. */
 export const TASK_STATUS = {
   NOT_STARTED: "not_started",

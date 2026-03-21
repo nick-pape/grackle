@@ -17,6 +17,7 @@ export function createSession(
   taskId: string = "",
   personaId: string = "",
   parentSessionId: string = "",
+  pipeMode: string = "",
 ): void {
   db.insert(sessions).values({
     id,
@@ -28,6 +29,7 @@ export function createSession(
     taskId,
     personaId,
     parentSessionId,
+    pipeMode,
     // We always set startedAt explicitly (ISO 8601 format with milliseconds).
     // The schema default also produces ISO format via strftime, but we set it
     // here for consistency. ISO format sorts lexicographically correctly.

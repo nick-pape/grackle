@@ -28,6 +28,8 @@ export interface SpawnOptions {
   mcpBroker?: { url: string; token: string };
   /** Script source code for script personas (e.g. GenAIScript). */
   scriptContent?: string;
+  /** Pipe mode for parent↔child IPC ("sync", "async", "detach", or undefined for no pipe). */
+  pipe?: string;
 }
 
 /** Parameters for resuming an existing agent session. */

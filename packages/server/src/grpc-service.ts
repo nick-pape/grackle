@@ -512,6 +512,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         mcpUrl,
         mcpToken,
         scriptContent: resolved.type === "script" ? resolved.script : "",
+        pipe: req.pipe,
       });
 
       // Push fresh credentials before spawning (best-effort).
