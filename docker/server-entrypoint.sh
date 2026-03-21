@@ -30,13 +30,16 @@ fi
 # there via CLAUDE_CONFIG_DIR.
 CLAUDE_RO="/home/node/.claude"
 CLAUDE_RW="${GRACKLE_HOME}/.claude-sdk"
-if [ -d "$CLAUDE_RO" ] && ! touch "$CLAUDE_RO/.write-test" 2>/dev/null; then
-  mkdir -p "$CLAUDE_RW"
+if [ -d "$CLAUDE_RO" ] && ! gosu node touch "$CLAUDE_RO/.write-test" 2>/dev/null; then
+  mkdir -p "$CLAUDE_RW/projects"
   # Sync credential/config files from the RO mount (skip directories —
   # they'll be created fresh in the writable dir by the SDK as needed).
   for f in .credentials.json settings.json settings.local.json CLAUDE.md; do
     if [ -f "$CLAUDE_RO/$f" ]; then
-      cp -u "$CLAUDE_RO/$f" "$CLAUDE_RW/$f" 2>/dev/null || true
+      cp -pu "$CLAUDE_RO/$f" "$CLAUDE_RW/$f" 2>/dev/null || true
+      if [ "$f" = ".credentials.json" ]; then
+        chmod 600 "$CLAUDE_RW/$f" 2>/dev/null || true
+      fi
     fi
   done
   chown -R node:node "$CLAUDE_RW"

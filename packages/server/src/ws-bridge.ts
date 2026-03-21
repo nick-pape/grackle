@@ -285,6 +285,13 @@ async function startTaskSession(
   const logPath = join(grackleHome, LOGS_DIR, sessionId);
 
   const freshTask = taskStore.getTask(task.id) || task;
+  // For the root/System task, use the user's chat message (passed as notes)
+  // as the initial prompt instead of the task title "System".
+  // For regular tasks, the task title IS the prompt.
+  const initialPrompt = freshTask.id === ROOT_TASK_ID
+    ? (options?.notes || "")
+    : freshTask.title;
+
   const systemContext = new SystemPromptBuilder({
     task: { title: freshTask.title, description: freshTask.description, notes: options?.notes || "" },
     canDecompose: freshTask.canDecompose,
@@ -295,7 +302,7 @@ async function startTaskSession(
     sessionId,
     environmentId,
     runtime,
-    freshTask.title,
+    initialPrompt || freshTask.title,
     model,
     logPath,
     freshTask.id,
@@ -341,12 +348,6 @@ async function startTaskSession(
   );
 
   const useWorktrees = workspace?.useWorktrees ?? false;
-  // For the root/System task, use the user's chat message (passed as notes)
-  // as the initial prompt instead of the task title "System".
-  // For regular tasks, the task title IS the prompt.
-  const initialPrompt = freshTask.id === ROOT_TASK_ID
-    ? (options?.notes || "")
-    : freshTask.title;
 
   const powerlineReq = create(powerline.SpawnRequestSchema, {
     sessionId,
