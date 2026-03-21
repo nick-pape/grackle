@@ -178,6 +178,22 @@ function extractLastTextMessage(logPath: string | undefined): string {
   }
 }
 
+/**
+ * Remove the async listener for a session if it has no remaining async subscriptions.
+ * Called from closeFd when a parent closes an async pipe fd.
+ */
+export function cleanupAsyncListenerIfEmpty(parentSessionId: string): void {
+  const remainingAsyncSubs = streamRegistry.getSubscriptionsForSession(parentSessionId)
+    .filter((s) => s.deliveryMode === "async");
+  if (remainingAsyncSubs.length === 0) {
+    const cleanup = asyncListenerCleanups.get(parentSessionId);
+    if (cleanup) {
+      cleanup();
+      asyncListenerCleanups.delete(parentSessionId);
+    }
+  }
+}
+
 /** Clear all state. For testing only. */
 export function _resetForTesting(): void {
   for (const cleanup of asyncListenerCleanups.values()) {

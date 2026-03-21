@@ -167,6 +167,21 @@ message WaitForPipeResponse {
   string sender_session_id = 2;
 }
 
+message WriteToFdRequest {
+  string session_id = 1;       // Caller's session ID
+  int32 fd = 2;                // fd to write to
+  string message = 3;          // Message content
+}
+
+message CloseFdRequest {
+  string session_id = 1;       // Caller's session ID
+  int32 fd = 2;                // fd to close
+}
+
+message CloseFdResponse {
+  bool hibernated = 1;         // True if the child was hibernated (last fd closed)
+}
+
 // ─── Streaming Events ───────────────────────────────────────
 
 message SessionEvent {
@@ -558,4 +573,6 @@ service Grackle {
 
   // IPC
   rpc WaitForPipe(WaitForPipeRequest) returns (WaitForPipeResponse);
+  rpc WriteToFd(WriteToFdRequest) returns (Empty);
+  rpc CloseFd(CloseFdRequest) returns (CloseFdResponse);
 }

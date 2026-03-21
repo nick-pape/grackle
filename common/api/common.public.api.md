@@ -59,6 +59,23 @@ export function claudeProviderModeToEnum(s: string): ClaudeProviderMode;
 export function claudeProviderModeToString(e: ClaudeProviderMode): string;
 
 // @public
+type CloseFdRequest = Message<"grackle.CloseFdRequest"> & {
+    sessionId: string;
+    fd: number;
+};
+
+// @public
+const CloseFdRequestSchema: GenMessage<CloseFdRequest>;
+
+// @public
+type CloseFdResponse = Message<"grackle.CloseFdResponse"> & {
+    hibernated: boolean;
+};
+
+// @public
+const CloseFdResponseSchema: GenMessage<CloseFdResponse>;
+
+// @public
 type CreatePersonaRequest = Message<"grackle.CreatePersonaRequest"> & {
     name: string;
     description: string;
@@ -507,6 +524,16 @@ const Grackle: GenService<{
         input: typeof WaitForPipeRequestSchema;
         output: typeof WaitForPipeResponseSchema;
     };
+    writeToFd: {
+        methodKind: "unary";
+        input: typeof WriteToFdRequestSchema;
+        output: typeof EmptySchema;
+    };
+    closeFd: {
+        methodKind: "unary";
+        input: typeof CloseFdRequestSchema;
+        output: typeof CloseFdResponseSchema;
+    };
 }>;
 
 declare namespace grackle {
@@ -542,6 +569,12 @@ declare namespace grackle {
         WaitForPipeRequestSchema,
         WaitForPipeResponse,
         WaitForPipeResponseSchema,
+        WriteToFdRequest,
+        WriteToFdRequestSchema,
+        CloseFdRequest,
+        CloseFdRequestSchema,
+        CloseFdResponse,
+        CloseFdResponseSchema,
         SessionEvent,
         SessionEventSchema,
         TokenEntry,
@@ -1413,6 +1446,16 @@ type WorktreeCleanupRequest = Message<"grackle.powerline.WorktreeCleanupRequest"
 
 // @public
 const WorktreeCleanupRequestSchema: GenMessage<WorktreeCleanupRequest>;
+
+// @public
+type WriteToFdRequest = Message<"grackle.WriteToFdRequest"> & {
+    sessionId: string;
+    fd: number;
+    message: string;
+};
+
+// @public
+const WriteToFdRequestSchema: GenMessage<WriteToFdRequest>;
 
 // (No @packageDocumentation comment for this package)
 
