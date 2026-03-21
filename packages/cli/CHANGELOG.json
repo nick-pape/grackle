@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.58.0",
+      "tag": "@grackle-ai/cli_v0.58.0",
+      "date": "Sat, 21 Mar 2026 20:22:13 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Add ipc_write and ipc_close MCP tools with WriteToFd and CloseFd gRPC endpoints"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.57.1",
       "tag": "@grackle-ai/cli_v0.57.1",
       "date": "Sat, 21 Mar 2026 20:06:12 GMT",

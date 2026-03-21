@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sat, 21 Mar 2026 20:06:12 GMT and should not be manually modified.
+This log was last generated on Sat, 21 Mar 2026 20:22:13 GMT and should not be manually modified.
+
+## 0.58.0
+Sat, 21 Mar 2026 20:22:13 GMT
+
+### Minor changes
+
+- Add ipc_write and ipc_close MCP tools with WriteToFd and CloseFd gRPC endpoints
 
 ## 0.57.1
 Sat, 21 Mar 2026 20:06:12 GMT
