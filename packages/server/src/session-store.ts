@@ -2,7 +2,7 @@ import db from "./db.js";
 import { sessions, type SessionRow } from "./schema.js";
 import { eq, and, inArray, desc, asc, sql } from "drizzle-orm";
 import { SESSION_STATUS } from "@grackle-ai/common";
-import type { SessionStatus } from "@grackle-ai/common";
+import type { SessionStatus, PipeMode } from "@grackle-ai/common";
 
 export type { SessionRow };
 
@@ -17,6 +17,7 @@ export function createSession(
   taskId: string = "",
   personaId: string = "",
   parentSessionId: string = "",
+  pipeMode: PipeMode = "",
 ): void {
   db.insert(sessions).values({
     id,
@@ -28,6 +29,7 @@ export function createSession(
     taskId,
     personaId,
     parentSessionId,
+    pipeMode,
     // We always set startedAt explicitly (ISO 8601 format with milliseconds).
     // The schema default also produces ISO format via strftime, but we set it
     // here for consistency. ISO format sorts lexicographically correctly.

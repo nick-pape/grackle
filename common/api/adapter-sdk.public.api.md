@@ -371,6 +371,7 @@ type SpawnRequest = Message<"grackle.powerline.SpawnRequest"> & {
     mcpToken: string;
     scriptContent: string;
     useWorktrees?: boolean;
+    pipe: string;
 };
 
 // @public
