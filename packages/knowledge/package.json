@@ -1,6 +1,6 @@
 {
   "name": "@grackle-ai/knowledge",
-  "version": "0.56.0",
+  "version": "0.56.3",
   "description": "Scaffold for the Knowledge Graph subsystem for Grackle",
   "license": "MIT",
   "repository": {

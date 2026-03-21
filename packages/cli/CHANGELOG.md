@@ -1,6 +1,14 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sat, 21 Mar 2026 18:10:39 GMT and should not be manually modified.
+This log was last generated on Sat, 21 Mar 2026 18:26:26 GMT and should not be manually modified.
+
+## 0.56.3
+Sat, 21 Mar 2026 18:26:26 GMT
+
+### Patches
+
+- Add session usage accounting: input_tokens, output_tokens, cost_usd columns with EVENT_TYPE_USAGE event processing
+- Add @grackle-ai/knowledge package scaffold for the knowledge graph subsystem
 
 ## 0.56.2
 Sat, 21 Mar 2026 18:10:39 GMT
