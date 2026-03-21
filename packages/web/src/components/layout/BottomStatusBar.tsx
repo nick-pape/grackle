@@ -1,7 +1,6 @@
 import type { JSX } from "react";
 import { useLocation, useMatch } from "react-router";
 import { useGrackle } from "../../context/GrackleContext.js";
-import { ROOT_TASK_ID } from "@grackle-ai/common";
 import { newTaskUrl, newChatUrl, useAppNavigate } from "../../utils/navigation.js";
 import styles from "./BottomStatusBar.module.scss";
 
@@ -15,7 +14,7 @@ import styles from "./BottomStatusBar.module.scss";
  */
 export function BottomStatusBar(): JSX.Element {
   const {
-    sessions, tasks, environments, taskSessions,
+    sessions, tasks, environments,
   } = useGrackle();
   const navigate = useAppNavigate();
   const location = useLocation();
@@ -55,15 +54,9 @@ export function BottomStatusBar(): JSX.Element {
     return <></>;
   }
 
-  // --- /chat route ---
+  // --- /chat route — ChatInput handles input on the page; only show hint if no local env ---
   if (isChat) {
-    const rootTask = tasks.find((t) => t.id === ROOT_TASK_ID);
-    const latestRootSession = rootTask?.latestSessionId
-      ? (sessions.find((s) => s.id === rootTask.latestSessionId) ??
-         (taskSessions[ROOT_TASK_ID] ?? []).find((s) => s.id === rootTask.latestSessionId))
-      : undefined;
     const localEnv = environments.find((e) => e.adapterType === "local" && e.status === "connected");
-
     if (!localEnv) {
       return (
         <div className={styles.bar}>
@@ -71,13 +64,6 @@ export function BottomStatusBar(): JSX.Element {
         </div>
       );
     }
-
-    // Active session — ChatInput handles this on the page; return empty
-    if (latestRootSession && !["completed", "failed", "interrupted", "hibernating"].includes(latestRootSession.status)) {
-      return <></>;
-    }
-
-    // No active session — ChatInput handles this on the page; return empty
     return <></>;
   }
 
