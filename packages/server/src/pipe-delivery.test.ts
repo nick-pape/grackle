@@ -185,20 +185,37 @@ describe("pipe-delivery integration", () => {
   // ─── No-ops ────────────────────────────────────────────────
 
   describe("no-op cases", () => {
-    it("does nothing for detach pipe", () => {
+    it("does nothing for detach pipe even with stream set up", () => {
+      sessionStore.createSession("parent", "test-env", "claude-code", "p", "sonnet", "/tmp/p");
       sessionStore.createSession("child", "test-env", "claude-code", "c", "sonnet", "/tmp/c", "", "", "parent", "detach");
 
+      // Set up stream + listener (to prove publishChildCompletion doesn't use them)
+      const stream = streamRegistry.createStream("pipe:child");
+      streamRegistry.subscribe(stream.id, "parent", "rw", "async", true);
+      streamRegistry.subscribe(stream.id, "child", "rw", "async", false);
+      pipeDelivery.setupAsyncPipeDelivery("parent");
+
       pipeDelivery.publishChildCompletion("child", "completed");
 
       expect(mockSendInput).not.toHaveBeenCalled();
+      // Stream should be untouched (no messages buffered)
+      expect(stream.messages).toHaveLength(0);
     });
 
-    it("does nothing for session without parent", () => {
+    it("does nothing for session without parent even with stream set up", () => {
+      sessionStore.createSession("parent", "test-env", "claude-code", "p", "sonnet", "/tmp/p");
       sessionStore.createSession("child", "test-env", "claude-code", "c", "sonnet", "/tmp/c");
+
+      // Set up stream + listener
+      const stream = streamRegistry.createStream("pipe:child");
+      streamRegistry.subscribe(stream.id, "parent", "rw", "async", true);
+      streamRegistry.subscribe(stream.id, "child", "rw", "async", false);
+      pipeDelivery.setupAsyncPipeDelivery("parent");
 
       pipeDelivery.publishChildCompletion("child", "completed");
 
       expect(mockSendInput).not.toHaveBeenCalled();
+      expect(stream.messages).toHaveLength(0);
     });
 
     it("does nothing for nonexistent session", () => {
@@ -211,7 +228,7 @@ describe("pipe-delivery integration", () => {
   // ─── Idempotency ───────────────────────────────────────────
 
   describe("setupAsyncPipeDelivery idempotency", () => {
-    it("only registers one listener when called twice", () => {
+    it("only calls registerAsyncListener once when invoked twice", () => {
       sessionStore.createSession("parent", "test-env", "claude-code", "p", "sonnet", "/tmp/p");
       sessionStore.createSession("child", "test-env", "claude-code", "c", "sonnet", "/tmp/c", "", "", "parent", "async");
 
@@ -219,14 +236,20 @@ describe("pipe-delivery integration", () => {
       streamRegistry.subscribe(stream.id, "parent", "rw", "async", true);
       streamRegistry.subscribe(stream.id, "child", "rw", "async", false);
 
+      const spy = vi.spyOn(streamRegistry, "registerAsyncListener");
+
       // Call twice
       pipeDelivery.setupAsyncPipeDelivery("parent");
       pipeDelivery.setupAsyncPipeDelivery("parent");
 
+      // registerAsyncListener should only be called once (second call is idempotent no-op)
+      expect(spy).toHaveBeenCalledOnce();
+
       pipeDelivery.publishChildCompletion("child", "completed");
 
-      // Should only deliver once (not twice)
+      // Should only deliver once
       expect(mockSendInput).toHaveBeenCalledOnce();
+      spy.mockRestore();
     });
   });
 });
