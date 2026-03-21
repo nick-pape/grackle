@@ -47,7 +47,7 @@ function DisconnectedBanner({ environmentId, onReconnect }: DisconnectedBannerPr
 export function UnifiedBar(): JSX.Element {
   const {
     spawn, sendInput, kill, sessions, tasks, environments, personas,
-    provisionEnvironment, taskSessions,
+    provisionEnvironment, startTask, taskSessions,
   } = useGrackle();
   const { showToast } = useToast();
   const navigate = useAppNavigate();
@@ -156,11 +156,30 @@ export function UnifiedBar(): JSX.Element {
       );
     }
 
-    // Root task not yet ready — server auto-starts it on boot
+    // Root task not yet ready — server normally auto-starts it on boot.
+    // Show a fallback start button in case auto-start failed or was skipped.
+    const localEnv = environments.find((e) => e.adapterType === "local" && e.status === "connected");
+    if (!localEnv) {
+      return (
+        <div className={styles.bar}>
+          <span className={styles.hintText}>Add a local environment to start chatting</span>
+        </div>
+      );
+    }
+
+    const handleChatStart = (e: FormEvent): void => {
+      e.preventDefault();
+      if (!text.trim()) {
+        return;
+      }
+      startTask(ROOT_TASK_ID, undefined, localEnv.id, text);
+      setText("");
+    };
     return (
-      <div className={styles.bar}>
-        <span className={styles.hintText}>Starting system agent...</span>
-      </div>
+      <form onSubmit={handleChatStart} className={styles.bar}>
+        <input type="text" value={text} onChange={(e) => setText(e.target.value)} placeholder="Type a message..." autoFocus className={styles.input} />
+        <button type="submit" disabled={!text.trim()} className={styles.btnPrimary}>Send</button>
+      </form>
     );
   }
 
