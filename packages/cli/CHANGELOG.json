@@ -2,6 +2,21 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.56.0",
+      "tag": "@grackle-ai/cli_v0.56.0",
+      "date": "Sat, 21 Mar 2026 17:06:15 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Add orchestrator system prompt template with task tree, persona roster, environments, and decomposition guidelines"
+          },
+          {
+            "comment": "Install runtime SDK packages lazily at spawn time instead of bundling all 8 as hard dependencies, reducing provisioning time and disk usage"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.55.0",
       "tag": "@grackle-ai/cli_v0.55.0",
       "date": "Sat, 21 Mar 2026 16:01:10 GMT",
