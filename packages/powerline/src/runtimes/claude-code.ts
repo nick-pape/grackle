@@ -17,6 +17,7 @@ async function getQuery(): Promise<QueryFn> {
   if (queryFn) return queryFn;
   await ensureRuntimeInstalled("claude-code");
   // Try the agent SDK first (the proper library package)
+  const errors: Array<{ package: string; error: unknown }> = [];
   for (const pkg of ["@anthropic-ai/claude-agent-sdk", "@anthropic-ai/claude-code"]) {
     try {
       const mod = await importFromRuntime<Record<string, unknown>>("claude-code", pkg);
@@ -24,10 +25,17 @@ async function getQuery(): Promise<QueryFn> {
         queryFn = mod.query as QueryFn;
         return queryFn;
       }
-    } catch { /* try next */ }
+    } catch (err: unknown) {
+      logger.warn({ err, package: pkg }, "Failed to import Claude runtime package");
+      errors.push({ package: pkg, error: err });
+    }
   }
+  const details = errors
+    .map((e) => `  ${e.package}: ${e.error instanceof Error ? e.error.message : String(e.error)}`)
+    .join("\n");
   throw new Error(
-    "Claude Agent SDK not installed. Run: npm install @anthropic-ai/claude-agent-sdk"
+    `Claude Agent SDK not installed or failed to load.\n${details}\n`
+    + `Run: npm install @anthropic-ai/claude-agent-sdk`,
   );
 }
 

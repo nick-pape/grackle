@@ -33,11 +33,14 @@ function getCodexSdk(): Promise<CodexSdkModule> {
           throw new Error("Codex not found in @openai/codex-sdk");
         }
         return { Codex: mod.Codex as CodexSdkModule["Codex"] };
-      } catch {
+      } catch (err: unknown) {
         sdkPromise = undefined;
+        logger.warn({ err }, "Failed to import Codex SDK");
+        const detail = err instanceof Error ? err.message : String(err);
         throw new Error(
-          "Codex SDK not installed. Run: npm install @openai/codex-sdk\n" +
-          "The Codex CLI must also be installed and available in PATH (or set CODEX_CLI_PATH)."
+          `Codex SDK not installed or failed to load: ${detail}\n`
+          + "Run: npm install @openai/codex-sdk\n"
+          + "The Codex CLI must also be installed and available in PATH (or set CODEX_CLI_PATH).",
         );
       }
     })();
