@@ -536,10 +536,16 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         prompt: req.prompt,
       });
 
-      // Set up IPC stream if a pipe mode is requested with a parent session
+      // Set up IPC stream if a pipe mode is requested
       let pipeFd = 0;
       const pipeMode = req.pipe as PipeMode;
-      if (pipeMode && pipeMode !== "detach" && req.parentSessionId) {
+      if (pipeMode && pipeMode !== "detach") {
+        if (!req.parentSessionId) {
+          throw new ConnectError(
+            `Pipe mode "${pipeMode}" requires parent_session_id`,
+            Code.InvalidArgument,
+          );
+        }
         const ipcStream = streamRegistry.createStream(`pipe:${sessionId}`);
         const parentSub = streamRegistry.subscribe(
           ipcStream.id, req.parentSessionId, "rw",
@@ -601,6 +607,13 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         throw new ConnectError(
           `No subscription found for session ${req.sessionId} fd ${req.fd}`,
           Code.NotFound,
+        );
+      }
+
+      if (sub.deliveryMode !== "sync") {
+        throw new ConnectError(
+          `Subscription fd ${req.fd} is not a sync subscription (mode: ${sub.deliveryMode})`,
+          Code.FailedPrecondition,
         );
       }
 

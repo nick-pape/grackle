@@ -15,7 +15,7 @@ export const ipcTools: ToolDefinition[] = [
     inputSchema: z.object({
       prompt: z.string().describe("The task/prompt for the child agent"),
       pipe: z.enum(["sync", "async", "detach"]).default("detach").describe("IPC pipe mode"),
-      environmentId: z.string().optional().describe("Environment to spawn in (defaults to caller's environment)"),
+      environmentId: z.string().describe("Environment to spawn in"),
       personaId: z.string().optional().describe("Persona for the child agent"),
       maxTurns: z.number().int().positive().optional().describe("Maximum turns for the child"),
     }),
@@ -24,18 +24,19 @@ export const ipcTools: ToolDefinition[] = [
     annotations: { openWorldHint: true },
     async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>, authContext?: AuthContext) {
       try {
-        const parentSessionId = authContext?.type === "scoped" ? authContext.taskSessionId : "";
         const pipe = (args.pipe as string) || "detach";
+        const parentSessionId = authContext?.type === "scoped" ? authContext.taskSessionId : "";
 
-        // Resolve environment: if not specified and caller is scoped, we need to pass one.
-        // The server will reject if environmentId is empty, so we require it.
-        const environmentId = args.environmentId as string | undefined;
-        if (!environmentId) {
-          return { content: [{ type: "text" as const, text: JSON.stringify({ error: "environmentId is required" }) }] };
+        // sync/async pipe modes require scoped auth (need parent session ID)
+        if (pipe !== "detach" && !parentSessionId) {
+          return {
+            content: [{ type: "text" as const, text: "Error: sync and async pipe modes require scoped auth (agent context)" }],
+            isError: true,
+          };
         }
 
         const session = await client.spawnAgent({
-          environmentId,
+          environmentId: args.environmentId as string,
           prompt: args.prompt as string,
           pipe,
           parentSessionId,
