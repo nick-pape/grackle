@@ -66,6 +66,7 @@ export function fetchOrchestratorContext(workspaceId: string): OrchestratorConte
     name: p.name,
     description: p.description,
     runtime: p.runtime,
+    model: p.model,
   }));
 
   // Available environments
@@ -73,6 +74,7 @@ export function fetchOrchestratorContext(workspaceId: string): OrchestratorConte
     displayName: e.displayName,
     adapterType: e.adapterType,
     status: e.status,
+    defaultRuntime: e.defaultRuntime,
   }));
 
   // Findings context (pre-formatted markdown with 8K char budget)

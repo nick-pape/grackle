@@ -128,8 +128,8 @@ describe("fetchOrchestratorContext", () => {
     const result = fetchOrchestratorContext("ws-1");
 
     expect(result.availablePersonas).toEqual([
-      { name: "Engineer", description: "Writes code", runtime: "claude-code" },
-      { name: "Reviewer", description: "Reviews PRs", runtime: "copilot" },
+      { name: "Engineer", description: "Writes code", runtime: "claude-code", model: "" },
+      { name: "Reviewer", description: "Reviews PRs", runtime: "copilot", model: "" },
     ]);
   });
 
@@ -142,8 +142,8 @@ describe("fetchOrchestratorContext", () => {
     const result = fetchOrchestratorContext("ws-1");
 
     expect(result.availableEnvironments).toEqual([
-      { displayName: "Local Dev", adapterType: "local", status: "connected" },
-      { displayName: "SSH Box", adapterType: "ssh", status: "disconnected" },
+      { displayName: "Local Dev", adapterType: "local", status: "connected", defaultRuntime: "claude-code" },
+      { displayName: "SSH Box", adapterType: "ssh", status: "disconnected", defaultRuntime: "claude-code" },
     ]);
   });
 

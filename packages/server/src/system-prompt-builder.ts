@@ -39,6 +39,8 @@ export interface PersonaSummary {
   description: string;
   /** Runtime backend (claude-code, copilot, codex, etc.). */
   runtime: string;
+  /** Default model (e.g. "opus", "sonnet"). */
+  model: string;
 }
 
 /** Environment summary for the available-environments prompt section. */
@@ -49,6 +51,8 @@ export interface EnvironmentSummary {
   adapterType: string;
   /** Connection status (connected, disconnected, etc.). */
   status: string;
+  /** Default runtime for this environment. */
+  defaultRuntime: string;
 }
 
 // ─── Options Interface ───────────────────────────────────────
@@ -250,13 +254,13 @@ export class SystemPromptBuilder {
       return "";
     }
     const rows = personas.map(
-      (p) => `| ${p.name} | ${p.description || "—"} | ${p.runtime || "—"} |`,
+      (p) => `| ${p.name} | ${p.description || "—"} | ${p.runtime || "—"} | ${p.model || "—"} |`,
     );
     return [
       `## Available Personas`,
       ``,
-      `| Name | Description | Runtime |`,
-      `|------|-------------|---------|`,
+      `| Name | Description | Runtime | Model |`,
+      `|------|-------------|---------|-------|`,
       ...rows,
     ].join("\n");
   }
@@ -268,13 +272,13 @@ export class SystemPromptBuilder {
       return "";
     }
     const rows = envs.map(
-      (e) => `| ${e.displayName} | ${e.adapterType} | ${e.status} |`,
+      (e) => `| ${e.displayName} | ${e.adapterType} | ${e.status} | ${e.defaultRuntime || "—"} |`,
     );
     return [
       `## Available Environments`,
       ``,
-      `| Name | Adapter | Status |`,
-      `|------|---------|--------|`,
+      `| Name | Adapter | Status | Runtime |`,
+      `|------|---------|--------|---------|`,
       ...rows,
     ].join("\n");
   }

@@ -122,12 +122,12 @@ function orchestratorOptions(overrides?: Partial<SystemPromptOptions>): SystemPr
     workspace: { name: "my-project", description: "A test project", repoUrl: "https://github.com/test/repo" },
     taskTree,
     availablePersonas: [
-      { name: "Engineer", description: "Writes code", runtime: "claude-code" },
-      { name: "Reviewer", description: "Reviews PRs", runtime: "copilot" },
+      { name: "Engineer", description: "Writes code", runtime: "claude-code", model: "sonnet" },
+      { name: "Reviewer", description: "Reviews PRs", runtime: "copilot", model: "" },
     ],
     availableEnvironments: [
-      { displayName: "Local", adapterType: "local", status: "connected" },
-      { displayName: "Dev SSH", adapterType: "ssh", status: "disconnected" },
+      { displayName: "Local", adapterType: "local", status: "connected", defaultRuntime: "claude-code" },
+      { displayName: "Dev SSH", adapterType: "ssh", status: "disconnected", defaultRuntime: "codex" },
     ],
     findingsContext: "## Workspace Findings (shared knowledge from other agents)\n\n### [architecture] Use event sourcing\nDecided to use event sourcing for audit trail.\n",
     triggerMode: "fresh",
@@ -215,8 +215,8 @@ describe("SystemPromptBuilder (orchestrator)", () => {
   it("renders available personas table", () => {
     const result = new SystemPromptBuilder(orchestratorOptions()).build();
 
-    expect(result).toContain("| Engineer | Writes code | claude-code |");
-    expect(result).toContain("| Reviewer | Reviews PRs | copilot |");
+    expect(result).toContain("| Engineer | Writes code | claude-code | sonnet |");
+    expect(result).toContain("| Reviewer | Reviews PRs | copilot | — |");
   });
 
   it("omits personas section when list is empty", () => {
@@ -228,8 +228,8 @@ describe("SystemPromptBuilder (orchestrator)", () => {
   it("renders available environments table", () => {
     const result = new SystemPromptBuilder(orchestratorOptions()).build();
 
-    expect(result).toContain("| Local | local | connected |");
-    expect(result).toContain("| Dev SSH | ssh | disconnected |");
+    expect(result).toContain("| Local | local | connected | claude-code |");
+    expect(result).toContain("| Dev SSH | ssh | disconnected | codex |");
   });
 
   it("omits environments section when list is empty", () => {
