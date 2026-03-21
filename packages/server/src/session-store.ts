@@ -2,7 +2,7 @@ import db from "./db.js";
 import { sessions, type SessionRow } from "./schema.js";
 import { eq, and, inArray, desc, asc, sql } from "drizzle-orm";
 import { SESSION_STATUS } from "@grackle-ai/common";
-import type { SessionStatus } from "@grackle-ai/common";
+import type { SessionStatus, PipeMode } from "@grackle-ai/common";
 
 export type { SessionRow };
 
@@ -17,7 +17,7 @@ export function createSession(
   taskId: string = "",
   personaId: string = "",
   parentSessionId: string = "",
-  pipeMode: string = "",
+  pipeMode: PipeMode = "",
 ): void {
   db.insert(sessions).values({
     id,

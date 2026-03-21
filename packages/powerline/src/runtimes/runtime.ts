@@ -1,4 +1,4 @@
-import type { AgentEventType, SessionStatus } from "@grackle-ai/common";
+import type { AgentEventType, SessionStatus, PipeMode } from "@grackle-ai/common";
 
 /** A single event emitted by an agent during execution. */
 export interface AgentEvent {
@@ -29,7 +29,7 @@ export interface SpawnOptions {
   /** Script source code for script personas (e.g. GenAIScript). */
   scriptContent?: string;
   /** Pipe mode for parent↔child IPC ("sync", "async", "detach", or undefined for no pipe). */
-  pipe?: string;
+  pipe?: PipeMode;
 }
 
 /** Parameters for resuming an existing agent session. */

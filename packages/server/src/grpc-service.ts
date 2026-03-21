@@ -1,6 +1,7 @@
 import { ConnectError, Code, type ConnectRouter } from "@connectrpc/connect";
 import { create } from "@bufbuild/protobuf";
 import { grackle, powerline } from "@grackle-ai/common";
+import type { PipeMode } from "@grackle-ai/common";
 import { v4 as uuid } from "uuid";
 import type { EnvironmentRow } from "./schema.js";
 import type { SessionRow } from "./schema.js";
@@ -485,6 +486,10 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         req.prompt,
         model,
         logPath,
+        "",                      // taskId
+        resolved.personaId,      // personaId
+        "",                      // parentSessionId
+        (req.pipe as PipeMode) || "",  // pipeMode
       );
 
       const mcpServersJson = personaMcpServersToJson(persona);

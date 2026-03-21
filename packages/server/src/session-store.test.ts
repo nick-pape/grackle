@@ -105,4 +105,18 @@ describe("session-store", () => {
       expect(session?.parentSessionId).toBe("");
     });
   });
+
+  describe("createSession with pipeMode", () => {
+    it("persists pipeMode", () => {
+      sessionStore.createSession("piped", "test-env", "claude-code", "test", "model", "/tmp/log", "", "", "", "async");
+      const session = sessionStore.getSession("piped");
+      expect(session?.pipeMode).toBe("async");
+    });
+
+    it("defaults pipeMode to empty string", () => {
+      sessionStore.createSession("unpiped", "test-env", "claude-code", "test", "model", "/tmp/log");
+      const session = sessionStore.getSession("unpiped");
+      expect(session?.pipeMode).toBe("");
+    });
+  });
 });
