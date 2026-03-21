@@ -31,11 +31,12 @@ RUN install -m 0755 -d /etc/apt/keyrings \
 RUN apt-get update && apt-get install -y --no-install-recommends gosu \
     && rm -rf /var/lib/apt/lists/*
 
-# ── Grackle CLI + agent runtimes (pinned via lockfile) ────────────
+# ── Grackle CLI + agent runtimes ──────────────────────────────────
 ARG GRACKLE_VERSION=latest
 COPY docker/server/package.json /opt/grackle/package.json
-RUN sed -i "s/\"@grackle-ai\/cli\": \"latest\"/\"@grackle-ai\/cli\": \"${GRACKLE_VERSION}\"/" /opt/grackle/package.json \
-    && npm install --prefix /opt/grackle --omit=dev
+RUN cd /opt/grackle \
+    && npm pkg set "dependencies.@grackle-ai/cli=${GRACKLE_VERSION}" \
+    && npm install --omit=dev
 ENV PATH="/opt/grackle/node_modules/.bin:$PATH"
 
 # ── Remove build toolchain (only needed for native addon compilation) ──

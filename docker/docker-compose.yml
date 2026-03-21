@@ -32,7 +32,7 @@ services:
       # Container name used by sibling containers to reach this server's MCP/gRPC.
       - GRACKLE_DOCKER_HOST=grackle
       # Host address for qdrant-search MCP (runs on host, accessed by agents in container).
-      - QDRANT_MCP_HOST=host.docker.internal
+      - QDRANT_MCP_HOST=${QDRANT_MCP_HOST:-host.docker.internal}
     networks:
       - grackle
     restart: unless-stopped
