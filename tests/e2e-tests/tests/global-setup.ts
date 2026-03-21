@@ -172,6 +172,7 @@ export default async function globalSetup(_config: FullConfig): Promise<void> {
         GRACKLE_MCP_PORT: String(mcpPort),
         GRACKLE_WEB_DIR: join(repoRoot, "packages/web/dist"),
         GRACKLE_SKIP_LOCAL_POWERLINE: "1",
+        GRACKLE_SKIP_ROOT_AUTOSTART: "1",
       },
       stdio: "pipe",
     },

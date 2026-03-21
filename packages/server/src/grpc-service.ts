@@ -47,7 +47,7 @@ import { loadOrCreateApiKey } from "./api-key.js";
 import { logger } from "./logger.js";
 import { reanimateAgent } from "./reanimate-agent.js";
 import { slugify } from "./utils/slugify.js";
-import { SystemPromptBuilder } from "./system-prompt-builder.js";
+import { SystemPromptBuilder, buildTaskPrompt } from "./system-prompt-builder.js";
 import { importGitHubIssues as executeGitHubImport } from "./github-import.js";
 import { generatePairingCode } from "./pairing.js";
 import { detectLanIp } from "./utils/network.js";
@@ -999,6 +999,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       const { runtime, model, maxTurns, systemPrompt, persona } = resolved;
       const logPath = join(grackleHome, LOGS_DIR, sessionId);
 
+      const taskPrompt = buildTaskPrompt(task.title, task.description, req.notes);
       const isOrchestrator = task.canDecompose && task.depth <= 1;
       const orchestratorCtx = isOrchestrator
         ? fetchOrchestratorContext(task.workspaceId || "")
@@ -1052,7 +1053,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       const powerlineReq = create(powerline.SpawnRequestSchema, {
         sessionId,
         runtime,
-        prompt: task.title,
+        prompt: taskPrompt,
         model,
         maxTurns,
         branch: task.branch,
@@ -1075,7 +1076,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         workspaceId: task.workspaceId ?? undefined,
         taskId: task.id,
         systemContext,
-        prompt: task.title,
+        prompt: taskPrompt,
       });
 
       const row = sessionStore.getSession(sessionId);
