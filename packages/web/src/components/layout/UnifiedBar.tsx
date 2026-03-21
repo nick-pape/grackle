@@ -134,7 +134,7 @@ export function UnifiedBar(): JSX.Element {
       );
     }
 
-    if (latestRootSession && !["completed", "failed", "interrupted"].includes(latestRootSession.status)) {
+    if (latestRootSession && !["completed", "failed", "interrupted", "hibernating"].includes(latestRootSession.status)) {
       const rootEnvDisconnected = isEnvDisconnected(latestRootSession.environmentId, environments);
       const handleChatSend = (e: FormEvent): void => {
         e.preventDefault();
@@ -221,7 +221,7 @@ export function UnifiedBar(): JSX.Element {
 
     // Working / paused — show chat input + Stop when session is active
     if (task.status === "working" || task.status === "paused") {
-      const isActive = taskSession && !["completed", "failed", "interrupted"].includes(taskSession.status);
+      const isActive = taskSession && !["completed", "failed", "interrupted", "hibernating"].includes(taskSession.status);
 
       if (isActive) {
         const effectiveEnvId = taskSession.environmentId;
@@ -317,7 +317,7 @@ export function UnifiedBar(): JSX.Element {
 
   // --- session mode ---
   if (sessionId) {
-    const isEnded = session !== undefined && ["completed", "failed", "interrupted"].includes(session.status);
+    const isEnded = session !== undefined && ["completed", "failed", "interrupted", "hibernating"].includes(session.status);
     const isActive = session !== undefined && !isEnded;
 
     if (isActive) {

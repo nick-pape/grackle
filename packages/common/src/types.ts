@@ -21,6 +21,7 @@ export const TERMINAL_SESSION_STATUSES: ReadonlySet<SessionStatus> = new Set([
   SESSION_STATUS.COMPLETED,
   SESSION_STATUS.FAILED,
   SESSION_STATUS.INTERRUPTED,
+  SESSION_STATUS.HIBERNATING,
 ]);
 
 /** All valid task lifecycle statuses. Import and use these instead of string literals. */

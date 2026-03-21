@@ -289,6 +289,22 @@ describe("ws-bridge send_input error handling", () => {
     expect((msg.payload as Record<string, unknown>).message).toMatch(/has ended.*interrupted/i);
   });
 
+  it("returns error when session is hibernating", async () => {
+    sessionStore.createSession("sess-hibernating", "env-1", "node", "test", "claude", "/tmp/log");
+    sessionStore.hibernateSession("sess-hibernating");
+
+    const ws = await connectWs(port);
+    const msgPromise = nextMessage(ws);
+
+    ws.send(JSON.stringify({ type: "send_input", payload: { sessionId: "sess-hibernating", text: "hello" } }));
+
+    const msg = await msgPromise;
+    await closeWs(ws);
+
+    expect(msg.type).toBe("error");
+    expect((msg.payload as Record<string, unknown>).message).toMatch(/has ended.*hibernating/i);
+  });
+
   it("returns error when environment is not connected", async () => {
     sessionStore.createSession("sess-active", "env-disconnected", "node", "test", "claude", "/tmp/log");
     sessionStore.updateSession("sess-active", "idle");
