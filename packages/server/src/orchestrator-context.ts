@@ -31,9 +31,14 @@ export interface OrchestratorContext {
  * @param workspaceId - The workspace to scope task/findings queries to.
  * @returns Data ready to spread into SystemPromptOptions.
  */
-export function fetchOrchestratorContext(workspaceId: string): OrchestratorContext {
+export function fetchOrchestratorContext(workspaceId: string): OrchestratorContext | undefined {
+  // No workspace → no orchestrator context (root/System task)
+  if (!workspaceId) {
+    return undefined;
+  }
+
   // Workspace metadata
-  const ws = workspaceId ? workspaceStore.getWorkspace(workspaceId) : undefined;
+  const ws = workspaceStore.getWorkspace(workspaceId);
 
   // All personas (used for both the roster and persona name resolution)
   const allPersonas = personaStore.listPersonas();

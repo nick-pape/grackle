@@ -174,8 +174,8 @@ describe("SystemPromptBuilder (orchestrator)", () => {
     const result = new SystemPromptBuilder(orchestratorOptions()).build();
 
     expect(result).toContain("- [working] Root Task (persona: Orchestrator) <-- YOU");
-    expect(result).toContain("  - [not_started] Implement feature (persona: Engineer)");
-    expect(result).toContain("  - [not_started] Write tests (persona: Engineer) [depends on: child-a]");
+    expect(result).toContain("  - [not_started] Implement feature (persona: Engineer) [branch: feat-a]");
+    expect(result).toContain("  - [not_started] Write tests (persona: Engineer) [depends on: child-a] [branch: feat-b]");
   });
 
   it("renders task tree status summary", () => {
@@ -194,7 +194,7 @@ describe("SystemPromptBuilder (orchestrator)", () => {
   it("marks current task with <-- YOU marker", () => {
     const result = new SystemPromptBuilder(orchestratorOptions({ taskId: "child-a" })).build();
 
-    expect(result).toContain("Implement feature (persona: Engineer) <-- YOU");
+    expect(result).toContain("Implement feature (persona: Engineer) [branch: feat-a] <-- YOU");
     expect(result).not.toContain("Root Task (persona: Orchestrator) <-- YOU");
   });
 
@@ -276,6 +276,17 @@ describe("SystemPromptBuilder (orchestrator)", () => {
 
     expect(result).toContain("all subtasks are complete");
     expect(result).toContain("task_complete");
+  });
+
+  it("includes orchestrator tools documentation", () => {
+    const result = new SystemPromptBuilder(orchestratorOptions()).build();
+
+    expect(result).toContain("## Orchestrator Tools");
+    expect(result).toContain("task_create");
+    expect(result).toContain("task_list");
+    expect(result).toContain("task_start");
+    expect(result).toContain("finding_post");
+    expect(result).toContain("finding_list");
   });
 
   it("uses leaf template when canDecompose is true but depth > 1", () => {

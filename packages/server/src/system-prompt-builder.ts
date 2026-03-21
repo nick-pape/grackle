@@ -117,6 +117,7 @@ export class SystemPromptBuilder {
         sections.push(this.buildOrchestratorFindingsSection());
         sections.push(this.buildTriggerContext());
         sections.push(this.buildDecompositionGuidelines());
+        sections.push(this.buildOrchestratorTools());
         sections.push(this.buildOrchestratorCompletionContract());
         sections.push(this.buildSignalSection());
       } else {
@@ -221,8 +222,9 @@ export class SystemPromptBuilder {
       const deps = node.dependsOn.length > 0
         ? ` [depends on: ${node.dependsOn.join(", ")}]`
         : "";
+      const branch = node.branch ? ` [branch: ${node.branch}]` : "";
       const marker = node.id === this.options.taskId ? " <-- YOU" : "";
-      lines.push(`${pad}- [${node.status}] ${node.title}${persona}${deps}${marker}`);
+      lines.push(`${pad}- [${node.status}] ${node.title}${persona}${deps}${branch}${marker}`);
 
       const children = childMap.get(node.id);
       if (children) {
@@ -311,6 +313,22 @@ export class SystemPromptBuilder {
       `- Each subtask description must be self-contained — the child agent has no context beyond what you provide in the description.`,
       `- Set dependencies between subtasks when ordering matters. Independent subtasks can run in parallel.`,
       `- Grant decomposition rights (\`canDecompose: true\`) only to subtasks that genuinely need to coordinate further work.`,
+    ].join("\n");
+  }
+
+  /** Orchestrator-specific MCP tool documentation. */
+  private buildOrchestratorTools(): string {
+    return [
+      `## Orchestrator Tools`,
+      ``,
+      `Use these tools on your \`grackle\` MCP server to coordinate work:`,
+      `- \`task_create\` — Create a subtask with title, description, dependencies, persona, and decomposition rights.`,
+      `- \`task_list\` — List all tasks in the workspace with their current statuses.`,
+      `- \`task_show\` — Show details of a specific task including its sessions and output.`,
+      `- \`task_start\` — Start a task (begins agent execution on the assigned environment).`,
+      `- \`task_complete\` — Signal that your task is complete.`,
+      `- \`finding_post\` — Share a discovery (architecture decisions, patterns, bugs) with other agents.`,
+      `- \`finding_list\` — List recent findings from all agents in this workspace.`,
     ].join("\n");
   }
 
