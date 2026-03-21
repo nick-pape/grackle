@@ -421,7 +421,7 @@ export class SystemPromptBuilder {
   /** IPC fd cleanup instructions — advisory enforcement for closing child fds before exit. */
   private buildIpcFdSection(): string {
     return [
-      "### IPC File Descriptors",
+      "## IPC File Descriptors",
       "",
       "If you spawn child sessions using `ipc_spawn`, you receive file descriptors (fds).",
       "Before finishing your work, you MUST:",
