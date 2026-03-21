@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.59.1",
+      "tag": "@grackle-ai/cli_v0.59.1",
+      "date": "Sat, 21 Mar 2026 21:09:49 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Decompose UnifiedBar into ChatInput (page-owned) and ContextHintBar (page chrome)"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.59.0",
       "tag": "@grackle-ai/cli_v0.59.0",
       "date": "Sat, 21 Mar 2026 21:01:20 GMT",
