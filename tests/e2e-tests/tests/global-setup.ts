@@ -172,6 +172,7 @@ export default async function globalSetup(_config: FullConfig): Promise<void> {
         GRACKLE_MCP_PORT: String(mcpPort),
         GRACKLE_WEB_DIR: join(repoRoot, "packages/web/dist"),
         GRACKLE_SKIP_LOCAL_POWERLINE: "1",
+        GRACKLE_SKIP_ROOT_AUTOSTART: "1",
       },
       stdio: "pipe",
     },
@@ -236,13 +237,6 @@ export default async function globalSetup(_config: FullConfig): Promise<void> {
     stdio: "pipe",
   });
   console.log("[e2e] Stub and Stub MCP personas created; Stub set as default; onboarding completed");
-
-  // Set the root task's persona to "stub" so auto-start uses the stub runtime (no API key needed).
-  execSync(`node "${cliPath}" task update system --persona stub`, {
-    env: cliEnv,
-    stdio: "pipe",
-  });
-  console.log("[e2e] Root task persona set to stub");
 
   execSync(`node "${cliPath}" env provision test-local`, {
     env: cliEnv,

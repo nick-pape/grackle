@@ -822,8 +822,8 @@ async function main(): Promise<void> {
   initSigchldSubscriber();
 
   // Auto-start the root task (process 1) when any environment connects.
-  // Uses dynamic imports to avoid circular dependency issues at module load time.
-  {
+  // Skipped in E2E tests where the root task session would conflict with test sessions.
+  if (process.env.GRACKLE_SKIP_ROOT_AUTOSTART !== "1") {
     let starting = false;
     const tryBootRootTask = async (): Promise<void> => {
       if (starting) {
