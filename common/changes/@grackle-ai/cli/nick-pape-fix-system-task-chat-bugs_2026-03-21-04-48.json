@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Fix System task chat: use user message as prompt instead of title, handle read-only SDK config dir, recover session state on sendInput failure",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
