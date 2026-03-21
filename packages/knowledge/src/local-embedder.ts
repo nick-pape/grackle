@@ -23,62 +23,68 @@ const DEFAULT_DIMENSIONS: number = 384;
  * {@link Embedder.embed | embed()} or {@link Embedder.embedBatch | embedBatch()}.
  * This avoids blocking construction with a model download.
  *
+ * When using the default model, dimensions are known upfront (384). When using
+ * a custom model without specifying dimensions, the value is inferred from the
+ * first embedding result.
+ *
  * @param options - Optional configuration for model selection and dimensions.
  * @returns An {@link Embedder} instance backed by local ONNX inference.
  */
 export function createLocalEmbedder(options?: EmbedderOptions): Embedder {
-  const modelId = options?.modelId ?? DEFAULT_MODEL_ID;
-  const dimensions = options?.dimensions ?? DEFAULT_DIMENSIONS;
+  const modelId: string = options?.modelId ?? DEFAULT_MODEL_ID;
+  let resolvedDimensions: number =
+    options?.dimensions ?? (modelId === DEFAULT_MODEL_ID ? DEFAULT_DIMENSIONS : 0);
 
   let pipelinePromise: Promise<FeatureExtractionPipeline> | undefined;
 
   /**
    * Lazily initialise the feature-extraction pipeline.
    * Concurrent calls share the same promise so the model is loaded once.
+   * If initialisation fails, the cached promise is cleared so future calls can retry.
    */
   function getPipeline(): Promise<FeatureExtractionPipeline> {
     if (!pipelinePromise) {
-      pipelinePromise = initPipeline(modelId);
+      pipelinePromise = initPipeline(modelId).catch((error: unknown) => {
+        pipelinePromise = undefined;
+        throw error;
+      });
     }
     return pipelinePromise;
   }
 
+  /** Run inference for a single text and return its vector. */
+  async function embedOne(pipe: FeatureExtractionPipeline, text: string): Promise<EmbeddingResult> {
+    const output = await pipe(text, { pooling: "mean", normalize: true });
+    const vector: number[] = Array.from(output.data as Float32Array);
+
+    if (resolvedDimensions === 0) {
+      resolvedDimensions = vector.length;
+    } else if (vector.length !== resolvedDimensions) {
+      throw new Error(
+        `Dimension mismatch: expected ${resolvedDimensions}, got ${vector.length}. ` +
+        `Check that the model "${modelId}" produces ${resolvedDimensions}-dim vectors.`
+      );
+    }
+
+    return { text, vector };
+  }
+
   return {
-    dimensions,
+    get dimensions(): number {
+      return resolvedDimensions;
+    },
 
     async embed(text: string): Promise<EmbeddingResult> {
       const pipe = await getPipeline();
-      const output = await pipe(text, { pooling: "mean", normalize: true });
-      const vector = Array.from(output.data as Float32Array);
-
-      if (dimensions && vector.length !== dimensions) {
-        throw new Error(
-          `Dimension mismatch: expected ${dimensions}, got ${vector.length}. ` +
-          `Check that the model "${modelId}" produces ${dimensions}-dim vectors.`
-        );
-      }
-
-      return { text, vector };
+      return embedOne(pipe, text);
     },
 
     async embedBatch(texts: string[]): Promise<EmbeddingResult[]> {
       const pipe = await getPipeline();
       const results: EmbeddingResult[] = [];
-
       for (const text of texts) {
-        const output = await pipe(text, { pooling: "mean", normalize: true });
-        const vector = Array.from(output.data as Float32Array);
-
-        if (dimensions && vector.length !== dimensions) {
-          throw new Error(
-            `Dimension mismatch: expected ${dimensions}, got ${vector.length}. ` +
-            `Check that the model "${modelId}" produces ${dimensions}-dim vectors.`
-          );
-        }
-
-        results.push({ text, vector });
+        results.push(await embedOne(pipe, text));
       }
-
       return results;
     },
   };

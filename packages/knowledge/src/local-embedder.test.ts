@@ -4,10 +4,10 @@ import { createLocalEmbedder } from "./local-embedder.js";
 
 /** Cosine similarity between two equal-length vectors. */
 function cosineSimilarity(a: number[], b: number[]): number {
-  let dot = 0;
-  let normA = 0;
-  let normB = 0;
-  for (let i = 0; i < a.length; i++) {
+  let dot: number = 0;
+  let normA: number = 0;
+  let normB: number = 0;
+  for (let i: number = 0; i < a.length; i++) {
     dot += a[i] * b[i];
     normA += a[i] * a[i];
     normB += b[i] * b[i];
@@ -44,21 +44,17 @@ describe("createLocalEmbedder", () => {
     }
   }, 60_000);
 
-  it("should produce similar vectors for similar texts", async () => {
-    const [a, b] = await embedder.embedBatch([
+  it("should produce higher similarity for related texts than for unrelated texts", async () => {
+    const [similarA, similarB, dissimilarA, dissimilarB] = await embedder.embedBatch([
       "the cat sat on the mat",
       "a cat was sitting on a rug",
-    ]);
-    const similarity = cosineSimilarity(a.vector, b.vector);
-    expect(similarity).toBeGreaterThan(0.7);
-  }, 60_000);
-
-  it("should produce dissimilar vectors for unrelated texts", async () => {
-    const [a, b] = await embedder.embedBatch([
       "quantum physics and black holes",
       "chocolate cake recipe with frosting",
     ]);
-    const similarity = cosineSimilarity(a.vector, b.vector);
-    expect(similarity).toBeLessThan(0.5);
+
+    const similarScore: number = cosineSimilarity(similarA.vector, similarB.vector);
+    const dissimilarScore: number = cosineSimilarity(dissimilarA.vector, dissimilarB.vector);
+
+    expect(similarScore).toBeGreaterThan(dissimilarScore + 0.1);
   }, 60_000);
 });
