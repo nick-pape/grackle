@@ -7,7 +7,7 @@ import { defineConfig, devices } from "@playwright/test";
  */
 function buildTagGrep(): RegExp | undefined {
   const raw = process.env.E2E_TAGS?.trim();
-  if (!raw) {
+  if (!raw || raw === "all") {
     return undefined;
   }
   const tags = raw.split(",").map((t) => t.trim()).filter(Boolean);
