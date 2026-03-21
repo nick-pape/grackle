@@ -49,12 +49,13 @@ describe("importFromRuntime", () => {
 
   it("throws actionable error when package cannot be resolved from runtime directory", async () => {
     const { importFromRuntime } = await import("./runtime-installer.js");
-    // Import a nonexistent package for an unknown runtime (no manifest, so
-    // the dev-mode catch rethrows MODULE_NOT_FOUND, which then falls through
-    // to the resolve-from-runtime-dir path which should fail with context).
+    // Use a runtime name that is NOT in RUNTIME_MANIFESTS so the dev-mode
+    // catch block rethrows MODULE_NOT_FOUND without attempting doInstall().
+    // The error then falls through to the resolve-from-runtime-dir path
+    // which wraps the failure with actionable context.
     await expect(
-      importFromRuntime("claude-code", "@nonexistent/pkg-that-does-not-exist"),
-    ).rejects.toThrow(/Failed to resolve|not found|MODULE_NOT_FOUND/);
+      importFromRuntime("unknown-test-runtime", "@nonexistent/pkg-that-does-not-exist"),
+    ).rejects.toThrow(/Cannot find package|Failed to resolve/);
   });
 });
 

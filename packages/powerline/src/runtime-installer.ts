@@ -294,7 +294,7 @@ async function doInstall(
           const detail = err.message || String(err);
           const stderrSnippet = stderr ? stderr.slice(0, 500) : "";
           logger.error(
-            { runtimeName, runtimeDir, error: detail, stderr: stderrSnippet },
+            { runtimeName, runtimeDir, err, stderrSnippet },
             "npm install failed for runtime packages",
           );
           reject(new Error(

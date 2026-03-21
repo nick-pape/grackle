@@ -26,7 +26,7 @@ async function getQuery(): Promise<QueryFn> {
         return queryFn;
       }
     } catch (err: unknown) {
-      logger.warn({ package: pkg, error: err }, "Failed to import Claude runtime package");
+      logger.warn({ err, package: pkg }, "Failed to import Claude runtime package");
       errors.push({ package: pkg, error: err });
     }
   }

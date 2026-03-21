@@ -35,7 +35,7 @@ function getCodexSdk(): Promise<CodexSdkModule> {
         return { Codex: mod.Codex as CodexSdkModule["Codex"] };
       } catch (err: unknown) {
         sdkPromise = undefined;
-        logger.warn({ error: err }, "Failed to import Codex SDK");
+        logger.warn({ err }, "Failed to import Codex SDK");
         const detail = err instanceof Error ? err.message : String(err);
         throw new Error(
           `Codex SDK not installed or failed to load: ${detail}\n`
