@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Add reference node sync primitives for syncing Grackle entities to the knowledge graph",
+      "type": "minor",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
