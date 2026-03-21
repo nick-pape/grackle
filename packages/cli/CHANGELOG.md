@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Fri, 20 Mar 2026 23:34:14 GMT and should not be manually modified.
+This log was last generated on Sat, 21 Mar 2026 05:03:11 GMT and should not be manually modified.
+
+## 0.53.5
+Sat, 21 Mar 2026 05:03:11 GMT
+
+### Patches
+
+- Serialize sendInput follow-ups via input queue to prevent concurrent executeFollowUp calls
 
 ## 0.53.4
 Fri, 20 Mar 2026 23:34:14 GMT
