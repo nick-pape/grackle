@@ -37,7 +37,7 @@ import { grackleHome } from "./paths.js";
 import * as logWriter from "./log-writer.js";
 import { safeParseJsonArray } from "./json-helpers.js";
 import { logger } from "./logger.js";
-import { SystemPromptBuilder } from "./system-prompt-builder.js";
+import { SystemPromptBuilder, buildTaskPrompt } from "./system-prompt-builder.js";
 import { slugify } from "./utils/slugify.js";
 import { processEventStream } from "./event-processor.js";
 import * as processorRegistry from "./processor-registry.js";
@@ -237,16 +237,9 @@ async function autoProvisionEnvironment(
   }
 }
 
-/**
- * Start a new agent session for a task. Handles environment lookup,
- * auto-provisioning, session creation, spawning, and completion wiring.
- *
- * Returns undefined on success (or if the failure was already reported
- * to the client via WS, e.g. provisioning errors), or an error message
- * string for failures that need the caller to surface to the client.
- */
-async function startTaskSession(
-  ws: WebSocket,
+/** Start a new agent session for a task. Returns an error message string on failure, undefined on success. */
+export async function startTaskSession(
+  ws: WebSocket | undefined,
   task: taskStore.TaskRow,
   options?: { personaId?: string; environmentId?: string; notes?: string },
 ): Promise<string | undefined> {
@@ -269,11 +262,16 @@ async function startTaskSession(
     return `Environment not found: ${environmentId}`;
   }
 
-  const conn = await autoProvisionEnvironment(ws, environmentId, env, {
-    taskId: task.id,
-  });
+  let conn: PowerLineConnection | undefined;
+  if (ws) {
+    conn = await autoProvisionEnvironment(ws, environmentId, env, {
+      taskId: task.id,
+    });
+  } else {
+    conn = adapterManager.getConnection(environmentId) ?? undefined;
+  }
   if (!conn) {
-    return undefined;
+    return ws ? undefined : `Environment not connected: ${environmentId}`;
   }
 
   // Resolve persona via cascade (request → task → workspace → app default)
@@ -291,10 +289,10 @@ async function startTaskSession(
   const freshTask = taskStore.getTask(task.id) || task;
   // For the root/System task, use the user's chat message (passed as notes)
   // as the initial prompt instead of the task title "System".
-  // For regular tasks, the task title IS the prompt.
-  const initialPrompt = freshTask.id === ROOT_TASK_ID
+  // For regular tasks, build the prompt from title + description.
+  const taskPrompt = freshTask.id === ROOT_TASK_ID
     ? (options?.notes || "")
-    : freshTask.title;
+    : buildTaskPrompt(freshTask.title, freshTask.description, options?.notes);
 
   const orchestratorCtx = freshTask.canDecompose && freshTask.depth <= 1
     ? fetchOrchestratorContext(freshTask.workspaceId || "") : undefined;
@@ -309,7 +307,7 @@ async function startTaskSession(
     sessionId,
     environmentId,
     runtime,
-    initialPrompt || freshTask.title,
+    freshTask.title,
     model,
     logPath,
     freshTask.id,
@@ -359,7 +357,7 @@ async function startTaskSession(
   const powerlineReq = create(powerline.SpawnRequestSchema, {
     sessionId,
     runtime,
-    prompt: initialPrompt,
+    prompt: taskPrompt,
     model,
     maxTurns,
     branch: freshTask.branch,
@@ -381,7 +379,7 @@ async function startTaskSession(
     workspaceId: freshTask.workspaceId ?? undefined,
     taskId: freshTask.id,
     systemContext,
-    prompt: initialPrompt,
+    prompt: taskPrompt,
   });
 
   return undefined;

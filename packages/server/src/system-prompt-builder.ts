@@ -5,7 +5,21 @@
  * Orchestrator tasks (canDecompose + depth <= 1) receive rich project
  * context (task tree, persona roster, environments, findings).
  * Leaf tasks receive the existing completion-contract template.
+ * Task title and description are NOT included in the system prompt — they
+ * belong in the user prompt (see {@link buildTaskPrompt}).
  */
+
+/** Build the user-facing prompt from task title, description, and optional notes. */
+export function buildTaskPrompt(title: string, description: string, notes?: string): string {
+  const parts = [title];
+  if (description) {
+    parts.push(description);
+  }
+  if (notes) {
+    parts.push(`## Notes\n${notes}`);
+  }
+  return parts.join("\n\n");
+}
 
 // ─── Orchestrator Data Types ─────────────────────────────────
 
@@ -94,6 +108,8 @@ export interface SystemPromptOptions {
  * Orchestrator tasks get project state, task tree, persona roster, and
  * decomposition guidelines. Leaf tasks get the existing completion contract.
  * Ad-hoc sessions get only the MCP note and persona prompt.
+ * Task title and description are NOT included here — they belong in the user prompt
+ * (see {@link buildTaskPrompt}).
  */
 export class SystemPromptBuilder {
   private readonly options: SystemPromptOptions;
@@ -125,8 +141,7 @@ export class SystemPromptBuilder {
         sections.push(this.buildOrchestratorCompletionContract());
         sections.push(this.buildSignalSection());
       } else {
-        // Existing leaf behavior — unchanged
-        sections.push(this.buildTaskContext());
+        // Leaf task: title/description go in the user prompt (buildTaskPrompt), not here.
         sections.push(this.buildCompletionContract());
         sections.push(this.buildSubtaskSection());
         sections.push(this.buildSignalSection());

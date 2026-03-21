@@ -1,8 +1,8 @@
 {
   "changes": [
     {
-      "comment": "Add orchestrator system prompt template with task tree, persona roster, environments, and decomposition guidelines",
-      "type": "minor",
+      "comment": "Move task title and description from system prompt to user prompt so agents receive work instructions as the first message",
+      "type": "patch",
       "packageName": "@grackle-ai/cli"
     }
   ],
