@@ -30,6 +30,7 @@ const ACTIVE_SESSION_STATUSES: ReadonlySet<string> = new Set([
  *    - Otherwise → "working"
  * 5. All sessions terminal, latest determines status:
  *    - completed → "paused" (agent thinks done, human reviews)
+ *    - hibernating → "paused" (agent paged out, reanimate-safe)
  *    - failed → "failed"
  *    - interrupted → "not_started" (resumable)
  *

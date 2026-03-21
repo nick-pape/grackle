@@ -202,6 +202,6 @@ export function hibernateSession(id: string): void {
 export function getChildSessions(parentSessionId: string): SessionRow[] {
   return db.select().from(sessions)
     .where(eq(sessions.parentSessionId, parentSessionId))
-    .orderBy(asc(sessions.startedAt))
+    .orderBy(asc(sessions.startedAt), asc(sessions.id))
     .all();
 }
