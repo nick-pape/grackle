@@ -40,6 +40,9 @@ export interface Neo4jClientConfig {
 /** Module-level singleton driver instance. */
 let driver: Driver | undefined;
 
+/** Promise that resolves when initialization is complete (guards concurrent calls). */
+let initPromise: Promise<void> | undefined;
+
 /** The database name used when creating sessions. */
 let databaseName: string = DEFAULT_NEO4J_DATABASE;
 
@@ -62,11 +65,29 @@ let databaseName: string = DEFAULT_NEO4J_DATABASE;
  * | `GRACKLE_NEO4J_PASSWORD`  | `config.password`   |
  * | `GRACKLE_NEO4J_DATABASE` | `config.database`   |
  */
-export async function openNeo4j(config?: Neo4jClientConfig): Promise<void> {
+export function openNeo4j(config?: Neo4jClientConfig): Promise<void> {
   if (driver) {
-    return;
+    return Promise.resolve();
   }
 
+  // Guard against concurrent calls: if an init is already in flight, await it.
+  if (initPromise) {
+    return initPromise;
+  }
+
+  // Wrap the async work so initPromise is cleared synchronously after settlement.
+  initPromise = doOpen(config).finally(() => {
+    initPromise = undefined;
+  });
+
+  return initPromise;
+}
+
+/**
+ * Internal init logic — separated so {@link openNeo4j} can guard concurrency
+ * with a shared promise.
+ */
+async function doOpen(config?: Neo4jClientConfig): Promise<void> {
   const url =
     process.env.GRACKLE_NEO4J_URL || config?.url || DEFAULT_NEO4J_URL;
   const username =
@@ -82,25 +103,25 @@ export async function openNeo4j(config?: Neo4jClientConfig): Promise<void> {
 
   logger.info({ url, database: databaseName }, "Connecting to Neo4j");
 
-  driver = neo4j.driver(url, neo4j.auth.basic(username, password), {
+  const newDriver = neo4j.driver(url, neo4j.auth.basic(username, password), {
     disableLosslessIntegers: true,
     maxConnectionPoolSize: 50,
     connectionAcquisitionTimeout: 30_000,
   });
 
   try {
-    await driver.verifyConnectivity({ database: databaseName });
+    await newDriver.verifyConnectivity({ database: databaseName });
     logger.info("Neo4j connectivity verified");
   } catch (error) {
-    // Clean up so a subsequent call to openNeo4j() can retry.
-    const failedDriver = driver;
-    driver = undefined;
-    await failedDriver.close().catch(() => {});
+    await newDriver.close().catch(() => {});
     throw new Error(
       `Failed to connect to Neo4j at ${url}: ${error instanceof Error ? error.message : String(error)}. ` +
         "Ensure Neo4j is running and the credentials are correct.",
+      { cause: error },
     );
   }
+
+  driver = newDriver;
 }
 
 /**

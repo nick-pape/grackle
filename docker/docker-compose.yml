@@ -40,7 +40,7 @@ services:
     restart: unless-stopped
 
   neo4j:
-    image: neo4j:2025-community
+    image: neo4j:5.25.1-community
     container_name: grackle-neo4j
     ports:
       - "7474:7474"   # Browser UI

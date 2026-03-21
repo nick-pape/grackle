@@ -25,6 +25,11 @@ vi.mock("./logger.js", () => ({
 }));
 
 import { initSchema, SCHEMA_STATEMENTS } from "./schema.js";
+import {
+  VECTOR_INDEX_NAME,
+  EMBEDDING_DIMENSIONS,
+  VECTOR_SIMILARITY_FUNCTION,
+} from "./constants.js";
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -41,23 +46,25 @@ describe("SCHEMA_STATEMENTS", () => {
   });
 
   it("all statements use IF NOT EXISTS for idempotency", () => {
-    for (const [name, cypher] of Object.entries(SCHEMA_STATEMENTS)) {
+    for (const [, cypher] of Object.entries(SCHEMA_STATEMENTS)) {
       expect(cypher.toUpperCase()).toContain("IF NOT EXISTS");
     }
   });
 
   it("vector index references the correct index name", () => {
+    expect(SCHEMA_STATEMENTS.VECTOR_INDEX).toContain(VECTOR_INDEX_NAME);
+  });
+
+  it("vector index specifies the configured dimensions", () => {
     expect(SCHEMA_STATEMENTS.VECTOR_INDEX).toContain(
-      "knowledge_embedding_index",
+      String(EMBEDDING_DIMENSIONS),
     );
   });
 
-  it("vector index specifies 1536 dimensions", () => {
-    expect(SCHEMA_STATEMENTS.VECTOR_INDEX).toContain("1536");
-  });
-
-  it("vector index uses cosine similarity", () => {
-    expect(SCHEMA_STATEMENTS.VECTOR_INDEX).toContain("cosine");
+  it("vector index uses the configured similarity function", () => {
+    expect(SCHEMA_STATEMENTS.VECTOR_INDEX).toContain(
+      VECTOR_SIMILARITY_FUNCTION,
+    );
   });
 });
 
