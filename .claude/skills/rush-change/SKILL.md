@@ -46,10 +46,10 @@ Check if any of the changed files fall within a **publishable package** director
 If the diff touches publishable package directories, this is a **real** change that needs a proper change file.
 
 1. Examine the diff to determine the appropriate bump type:
-   - `patch` — bug fixes, internal refactoring, dependency updates
+   - `patch` — bug fixes, internal refactoring, dependency updates, test-only changes
    - `minor` — new features, new APIs, backwards-compatible additions
    - **Never use `major`** — CI blocks major bumps (pre-1.0)
-   - `none` — changes that don't affect the published package (e.g., only test files, dev tooling within the package)
+   - **Never use `none` for real changes** — all publishable packages ship together in lockstep, so any real change (even test-only) should be `patch` or `minor`
 
 2. Write a concise comment describing the change (what it does, not what files changed).
 
@@ -66,9 +66,10 @@ If the diff touches publishable package directories, this is a **real** change t
      --email "$(git config user.email)"
    ```
 
-5. Find the generated JSON file in `common/changes/@grackle-ai/*/` and edit it:
+5. **IMPORTANT: You MUST edit the generated file.** The `--bump-type` flag is unreliable and may produce `"type": "none"` regardless of what you passed. Find the generated JSON file in `common/changes/@grackle-ai/cli/` and edit it:
    - Set `"comment"` to the real description
-   - Set `"type"` to the correct bump type determined above
+   - Set `"type"` to the correct bump type (`patch` or `minor`) determined above
+   - **Verify the file has the correct type before proceeding** — do not trust `--bump-type`
 
 ### Case B: False positive (merge-commit artifact)
 
