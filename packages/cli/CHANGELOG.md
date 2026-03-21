@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sat, 21 Mar 2026 17:58:15 GMT and should not be manually modified.
+This log was last generated on Sat, 21 Mar 2026 18:10:39 GMT and should not be manually modified.
+
+## 0.56.2
+Sat, 21 Mar 2026 18:10:39 GMT
+
+### Patches
+
+- Promote Environments to top-level page view, replacing the standalone Workspaces tab
 
 ## 0.56.1
 Sat, 21 Mar 2026 17:58:15 GMT

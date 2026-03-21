@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.56.2",
+      "tag": "@grackle-ai/cli_v0.56.2",
+      "date": "Sat, 21 Mar 2026 18:10:39 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Promote Environments to top-level page view, replacing the standalone Workspaces tab"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.56.1",
       "tag": "@grackle-ai/cli_v0.56.1",
       "date": "Sat, 21 Mar 2026 17:58:15 GMT",
