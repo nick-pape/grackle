@@ -74,9 +74,13 @@ describe("session-store", () => {
       sessionStore.createSession("child-a", "test-env", "claude-code", "a", "model", "/tmp/a", "", "", "parent-1");
       sessionStore.createSession("unrelated", "test-env", "claude-code", "x", "model", "/tmp/x", "", "", "parent-2");
 
+      // Force distinct started_at values so ordering is deterministic
+      sqlite.exec("UPDATE sessions SET started_at = '2026-01-01 00:00:02' WHERE id = 'child-b'");
+      sqlite.exec("UPDATE sessions SET started_at = '2026-01-01 00:00:01' WHERE id = 'child-a'");
+
       const children = sessionStore.getChildSessions("parent-1");
       expect(children).toHaveLength(2);
-      // Same startedAt → ordered by id ascending
+      // child-a has earlier startedAt → comes first
       expect(children.map((c) => c.id)).toEqual(["child-a", "child-b"]);
     });
 
