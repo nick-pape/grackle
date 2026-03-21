@@ -39,8 +39,8 @@ while IFS= read -r file; do
     packages/cli/*)         CHANGED_PACKAGES[cli]=1 ;;
     packages/knowledge/*)   CHANGED_PACKAGES[knowledge]=1 ;;
     tests/e2e-tests/*)      CHANGED_PACKAGES[e2e-tests]=1 ;;
-    # CI config, rush config, lockfile, rigs → run everything
-    .github/*|common/config/*|rush.json|pnpm-lock.yaml) CHANGED_PACKAGES[infra]=1 ;;
+    # CI config, rush config, rigs → run everything
+    .github/*|common/config/*|rush.json) CHANGED_PACKAGES[infra]=1 ;;
     rigs/*)                 CHANGED_PACKAGES[infra]=1 ;;
   esac
 done <<< "$CHANGED_FILES"

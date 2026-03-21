@@ -10,7 +10,10 @@ function buildTagGrep(): RegExp | undefined {
   if (!raw || raw === "all") {
     return undefined;
   }
-  const tags = raw.split(",").map((t) => t.trim()).filter(Boolean);
+  const tags = raw
+    .split(",")
+    .map((t) => t.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+    .filter(Boolean);
   return tags.length > 0 ? new RegExp(tags.join("|")) : undefined;
 }
 

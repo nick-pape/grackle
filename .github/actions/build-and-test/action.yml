@@ -74,5 +74,5 @@ runs:
       if: inputs.skip-e2e != 'true'
       shell: bash
       env:
-        E2E_TAGS: ${{ inputs.e2e-tags == 'all' && '' || inputs.e2e-tags }}
+        E2E_TAGS: ${{ inputs.e2e-tags }}
       run: node common/scripts/install-run-rush.js e2e --verbose
