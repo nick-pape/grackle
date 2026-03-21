@@ -67,6 +67,10 @@ export async function initSchema(): Promise<void> {
     }
     logger.info("Knowledge graph schema initialized");
   } finally {
-    await session.close();
+    try {
+      await session.close();
+    } catch (closeError) {
+      logger.warn({ err: closeError }, "Failed to close Neo4j session after schema initialization");
+    }
   }
 }

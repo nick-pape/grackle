@@ -12,6 +12,16 @@ export { openNeo4j, closeNeo4j, healthCheck, getSession, getDriver } from "./cli
 export type { Neo4jClientConfig } from "./client.js";
 export { initSchema, SCHEMA_STATEMENTS } from "./schema.js";
 export * from "./types.js";
-export * from "./constants.js";
+export {
+  DEFAULT_NEO4J_URL,
+  DEFAULT_NEO4J_USER,
+  DEFAULT_NEO4J_DATABASE,
+  NEO4J_MAX_POOL_SIZE,
+  NEO4J_CONNECTION_ACQUISITION_TIMEOUT,
+  NODE_LABEL,
+  VECTOR_INDEX_NAME,
+  EMBEDDING_DIMENSIONS,
+  VECTOR_SIMILARITY_FUNCTION,
+} from "./constants.js";
 export type { Embedder, EmbedderOptions, EmbeddingResult } from "./embedder.js";
 export { createLocalEmbedder } from "./local-embedder.js";

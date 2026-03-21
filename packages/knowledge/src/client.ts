@@ -15,6 +15,8 @@ import {
   DEFAULT_NEO4J_USER,
   DEFAULT_NEO4J_PASSWORD,
   DEFAULT_NEO4J_DATABASE,
+  NEO4J_MAX_POOL_SIZE,
+  NEO4J_CONNECTION_ACQUISITION_TIMEOUT,
 } from "./constants.js";
 
 // ---------------------------------------------------------------------------
@@ -105,8 +107,8 @@ async function doOpen(config?: Neo4jClientConfig): Promise<void> {
 
   const newDriver = neo4j.driver(url, neo4j.auth.basic(username, password), {
     disableLosslessIntegers: true,
-    maxConnectionPoolSize: 50,
-    connectionAcquisitionTimeout: 30_000,
+    maxConnectionPoolSize: NEO4J_MAX_POOL_SIZE,
+    connectionAcquisitionTimeout: NEO4J_CONNECTION_ACQUISITION_TIMEOUT,
   });
 
   try {
@@ -177,6 +179,11 @@ export async function healthCheck(): Promise<boolean> {
  * Safe to call multiple times or when no connection is open.
  */
 export async function closeNeo4j(): Promise<void> {
+  // Wait for any in-flight initialization to settle before closing.
+  if (initPromise) {
+    await initPromise.catch(() => {});
+  }
+
   const current = driver;
   if (current) {
     driver = undefined;
