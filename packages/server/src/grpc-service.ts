@@ -53,6 +53,7 @@ import { generatePairingCode } from "./pairing.js";
 import { detectLanIp } from "./utils/network.js";
 import * as credentialProviders from "./credential-providers.js";
 import * as streamRegistry from "./stream-registry.js";
+import * as pipeDelivery from "./pipe-delivery.js";
 import { setupAsyncPipeDelivery } from "./pipe-delivery.js";
 
 /**
@@ -665,29 +666,40 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         );
       }
 
-      streamRegistry.publish(sub.streamId, req.sessionId, req.message);
-
-      // Deliver to other sessions on this stream via sendInput
+      // Find target sessions on this stream and deliver via sendInput
       const stream = streamRegistry.getStream(sub.streamId);
-      if (stream) {
-        for (const targetSub of stream.subscriptions.values()) {
-          if (targetSub.sessionId === req.sessionId) {
-            continue;
-          }
-          const targetSession = sessionStore.getSession(targetSub.sessionId);
-          if (!targetSession) {
-            continue;
-          }
-          const conn = adapterManager.getConnection(targetSession.environmentId);
-          if (conn) {
-            await conn.client.sendInput(
-              create(powerline.InputMessageSchema, {
-                sessionId: targetSub.sessionId,
-                text: req.message,
-              }),
-            );
-          }
+      if (!stream) {
+        throw new ConnectError("Stream no longer exists", Code.FailedPrecondition);
+      }
+
+      let delivered = false;
+      for (const targetSub of stream.subscriptions.values()) {
+        if (targetSub.sessionId === req.sessionId) {
+          continue;
         }
+        const targetSession = sessionStore.getSession(targetSub.sessionId);
+        if (!targetSession) {
+          continue;
+        }
+        const conn = adapterManager.getConnection(targetSession.environmentId);
+        if (!conn) {
+          throw new ConnectError(
+            `Environment ${targetSession.environmentId} not connected — cannot deliver message`,
+            Code.FailedPrecondition,
+          );
+        }
+        await conn.client.sendInput(
+          create(powerline.InputMessageSchema, {
+            sessionId: targetSub.sessionId,
+            text: req.message,
+          }),
+        );
+        delivered = true;
+      }
+
+      // Only publish to stream registry after successful delivery
+      if (delivered) {
+        streamRegistry.publish(sub.streamId, req.sessionId, req.message);
       }
 
       return create(grackle.EmptySchema, {});
@@ -708,40 +720,46 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         );
       }
 
-      // Identify child session(s) on this stream before unsubscribing
-      const stream = streamRegistry.getStream(sub.streamId);
-      const childSessionIds: string[] = [];
+      const streamId = sub.streamId;
+      const stream = streamRegistry.getStream(streamId);
+
+      // Collect child sessions (inherited subscriptions, not the caller's)
+      const childSubs: Array<{ sessionId: string; subId: string }> = [];
       if (stream) {
         for (const s of stream.subscriptions.values()) {
           if (s.sessionId !== req.sessionId) {
-            childSessionIds.push(s.sessionId);
+            childSubs.push({ sessionId: s.sessionId, subId: s.id });
           }
         }
       }
 
+      // Unsubscribe the caller
       streamRegistry.unsubscribe(sub.id);
 
-      // If the stream was deleted (last subscription removed), hibernate children
+      // Also unsubscribe children and delete the stream — the parent closing
+      // its fd means it's done with the pipe. Hibernate the children.
       let hibernated = false;
-      if (!streamRegistry.getStream(sub.streamId)) {
-        for (const childId of childSessionIds) {
-          sessionStore.hibernateSession(childId);
-          const childSession = sessionStore.getSession(childId);
-          if (childSession) {
-            const conn = adapterManager.getConnection(childSession.environmentId);
-            if (conn) {
-              try {
-                await conn.client.kill(
-                  create(powerline.SessionIdSchema, { id: childId }),
-                );
-              } catch {
-                // Best-effort kill — child may have already exited
-              }
+      for (const child of childSubs) {
+        streamRegistry.unsubscribe(child.subId);
+        sessionStore.hibernateSession(child.sessionId);
+        const childSession = sessionStore.getSession(child.sessionId);
+        if (childSession) {
+          const conn = adapterManager.getConnection(childSession.environmentId);
+          if (conn) {
+            try {
+              await conn.client.kill(
+                create(powerline.SessionIdSchema, { id: child.sessionId }),
+              );
+            } catch {
+              // Best-effort kill — child may have already exited
             }
           }
-          hibernated = true;
         }
+        hibernated = true;
       }
+
+      // Clean up async listener if no remaining async subs for this session
+      pipeDelivery.cleanupAsyncListenerIfEmpty(req.sessionId);
 
       return create(grackle.CloseFdResponseSchema, { hibernated });
     },
