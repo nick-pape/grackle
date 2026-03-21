@@ -53,6 +53,7 @@ import { generatePairingCode } from "./pairing.js";
 import { detectLanIp } from "./utils/network.js";
 import * as credentialProviders from "./credential-providers.js";
 import * as streamRegistry from "./stream-registry.js";
+import * as pipeDelivery from "./pipe-delivery.js";
 import { setupAsyncPipeDelivery } from "./pipe-delivery.js";
 
 /**
@@ -648,6 +649,119 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         content: msg.content,
         senderSessionId: msg.senderId,
       });
+    },
+
+    async writeToFd(req: grackle.WriteToFdRequest) {
+      const sub = streamRegistry.getSubscription(req.sessionId, req.fd);
+      if (!sub) {
+        throw new ConnectError(
+          `No subscription found for session ${req.sessionId} fd ${req.fd}`,
+          Code.NotFound,
+        );
+      }
+      if (sub.permission !== "w" && sub.permission !== "rw") {
+        throw new ConnectError(
+          `Subscription fd ${req.fd} does not have write permission (permission: ${sub.permission})`,
+          Code.FailedPrecondition,
+        );
+      }
+
+      // Find target sessions on this stream and deliver via sendInput
+      const stream = streamRegistry.getStream(sub.streamId);
+      if (!stream) {
+        throw new ConnectError("Stream no longer exists", Code.FailedPrecondition);
+      }
+
+      let delivered = false;
+      for (const targetSub of stream.subscriptions.values()) {
+        if (targetSub.sessionId === req.sessionId) {
+          continue;
+        }
+        const targetSession = sessionStore.getSession(targetSub.sessionId);
+        if (!targetSession) {
+          continue;
+        }
+        const conn = adapterManager.getConnection(targetSession.environmentId);
+        if (!conn) {
+          throw new ConnectError(
+            `Environment ${targetSession.environmentId} not connected — cannot deliver message`,
+            Code.FailedPrecondition,
+          );
+        }
+        await conn.client.sendInput(
+          create(powerline.InputMessageSchema, {
+            sessionId: targetSub.sessionId,
+            text: req.message,
+          }),
+        );
+        delivered = true;
+      }
+
+      // Only publish to stream registry after successful delivery
+      if (delivered) {
+        streamRegistry.publish(sub.streamId, req.sessionId, req.message);
+      }
+
+      return create(grackle.EmptySchema, {});
+    },
+
+    async closeFd(req: grackle.CloseFdRequest) {
+      const sub = streamRegistry.getSubscription(req.sessionId, req.fd);
+      if (!sub) {
+        throw new ConnectError(
+          `No subscription found for session ${req.sessionId} fd ${req.fd}`,
+          Code.NotFound,
+        );
+      }
+      if (streamRegistry.hasUndeliveredMessages(sub.id)) {
+        throw new ConnectError(
+          `Cannot close fd ${req.fd}: undelivered messages pending. Process or consume them first.`,
+          Code.FailedPrecondition,
+        );
+      }
+
+      const streamId = sub.streamId;
+      const stream = streamRegistry.getStream(streamId);
+
+      // Collect child sessions (inherited subscriptions, not the caller's)
+      const childSubs: Array<{ sessionId: string; subId: string }> = [];
+      if (stream) {
+        for (const s of stream.subscriptions.values()) {
+          if (s.sessionId !== req.sessionId) {
+            childSubs.push({ sessionId: s.sessionId, subId: s.id });
+          }
+        }
+      }
+
+      // Unsubscribe the caller
+      streamRegistry.unsubscribe(sub.id);
+
+      // Also unsubscribe children and delete the stream — the parent closing
+      // its fd means it's done with the pipe. Hibernate the children.
+      let hibernated = false;
+      for (const child of childSubs) {
+        streamRegistry.unsubscribe(child.subId);
+        sessionStore.hibernateSession(child.sessionId);
+        const childSession = sessionStore.getSession(child.sessionId);
+        if (childSession) {
+          const conn = adapterManager.getConnection(childSession.environmentId);
+          if (conn) {
+            try {
+              await conn.client.kill(
+                create(powerline.SessionIdSchema, { id: child.sessionId }),
+              );
+            } catch {
+              // Best-effort kill — child may have already exited
+            }
+          }
+        }
+        hibernated = true;
+      }
+
+      // Clean up async listener if no remaining async subs for this session
+      pipeDelivery.cleanupAsyncListenerIfEmpty(req.sessionId);
+
+      return create(grackle.CloseFdResponseSchema, { hibernated });
     },
 
     async killAgent(req: grackle.SessionId) {
