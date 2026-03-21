@@ -13,8 +13,8 @@ test.describe("Markdown Rendering in EventRenderer", () => {
       { timeout: 10_000 },
     );
 
-    // Environments are now in Settings — navigate there via the gear button
-    await page.locator('[data-testid="sidebar-tab-settings"]').click();
+    // Navigate to the Environments tab
+    await page.locator('[data-testid="sidebar-tab-environments"]').click();
     await page.locator('button[title="New chat"]').click();
     const promptInput = page.locator('input[placeholder="Enter prompt..."]');
     await promptInput.fill("md test");
@@ -37,8 +37,8 @@ test.describe("Markdown Rendering in EventRenderer", () => {
       { timeout: 10_000 },
     );
 
-    // Environments are now in Settings — navigate there via the gear button
-    await page.locator('[data-testid="sidebar-tab-settings"]').click();
+    // Navigate to the Environments tab
+    await page.locator('[data-testid="sidebar-tab-environments"]').click();
     await page.locator('button[title="New chat"]').click();
 
     await page.locator('input[placeholder="Enter prompt..."]').fill("code test");
@@ -68,8 +68,8 @@ test.describe("Markdown Rendering in EventRenderer", () => {
       { timeout: 10_000 },
     );
 
-    // Environments are now in Settings — navigate there via the gear button
-    await page.locator('[data-testid="sidebar-tab-settings"]').click();
+    // Navigate to the Environments tab
+    await page.locator('[data-testid="sidebar-tab-environments"]').click();
     await page.locator('button[title="New chat"]').click();
 
     await page.locator('input[placeholder="Enter prompt..."]').fill("group test");
@@ -101,8 +101,8 @@ test.describe("Markdown Rendering in EventRenderer", () => {
       { timeout: 10_000 },
     );
 
-    // Start a stub session to get a session context — Environments are now in Settings
-    await page.locator('[data-testid="sidebar-tab-settings"]').click();
+    // Start a stub session to get a session context — navigate to Environments tab
+    await page.locator('[data-testid="sidebar-tab-environments"]').click();
     await page.locator('button[title="New chat"]').click();
 
     await page.locator('input[placeholder="Enter prompt..."]').fill("table test");

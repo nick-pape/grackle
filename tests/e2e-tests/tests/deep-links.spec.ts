@@ -18,8 +18,8 @@ test.describe("Deep linking", () => {
   test("deep link to /workspaces/:id loads workspace", async ({ appPage }) => {
     const page = appPage;
 
-    // Navigate to Workspaces tab to create a workspace
-    await page.locator('[data-testid="sidebar-tab-workspaces"]').click();
+    // Navigate to Environments tab to create a workspace
+    await page.locator('[data-testid="sidebar-tab-environments"]').click();
     await createWorkspace(page, "deep-link-proj");
     const workspaceId = await getWorkspaceId(page, "deep-link-proj");
 
@@ -38,7 +38,7 @@ test.describe("Deep linking", () => {
     const page = appPage;
 
     // Navigate to Workspaces tab to create workspace and task
-    await page.locator('[data-testid="sidebar-tab-workspaces"]').click();
+    await page.locator('[data-testid="sidebar-tab-environments"]').click();
     await createWorkspace(page, "deep-link-task-proj");
     await clickSidebarWorkspace(page, "deep-link-task-proj");
     await createTask(page, "deep-link-task-proj", "deep-link-task");
@@ -80,8 +80,8 @@ test.describe("Deep linking", () => {
   test("back/forward navigation works between pages", async ({ appPage }) => {
     const page = appPage;
 
-    // Navigate to Workspaces tab and create a workspace
-    await page.locator('[data-testid="sidebar-tab-workspaces"]').click();
+    // Navigate to Environments tab and create a workspace
+    await page.locator('[data-testid="sidebar-tab-environments"]').click();
     await createWorkspace(page, "back-fwd-proj");
 
     // Navigate: workspaces -> workspace -> settings
@@ -119,7 +119,7 @@ test.describe("Deep linking", () => {
     const page = appPage;
 
     // Navigate to Workspaces tab to create workspace and task
-    await page.locator('[data-testid="sidebar-tab-workspaces"]').click();
+    await page.locator('[data-testid="sidebar-tab-environments"]').click();
     await createWorkspace(page, "deep-stream-proj");
     await clickSidebarWorkspace(page, "deep-stream-proj");
     await createTask(page, "deep-stream-proj", "deep-stream-task");

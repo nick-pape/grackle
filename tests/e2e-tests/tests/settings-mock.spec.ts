@@ -34,8 +34,8 @@ test.describe("Settings Page (Mock Mode)", () => {
 
     await settingsTab.click();
 
-    // Should redirect to environments tab
-    await expect(page).toHaveURL(/\/settings\/environments/);
+    // Should redirect to credentials tab (default settings tab)
+    await expect(page).toHaveURL(/\/settings\/credentials/);
     await expect(page.getByRole("tablist", { name: "Settings" })).toBeVisible({ timeout: 5_000 });
   });
 

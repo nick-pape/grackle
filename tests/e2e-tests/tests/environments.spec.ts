@@ -6,8 +6,8 @@ function getEnvironmentRow(page: import("@playwright/test").Page, name: string) 
 
 test.describe("Environment Display", () => {
   test.beforeEach(async ({ appPage }) => {
-    // Environments are now in Settings — navigate there via the gear button
-    await appPage.locator('[data-testid="sidebar-tab-settings"]').click();
+    // Navigate to the Environments tab
+    await appPage.locator('[data-testid="sidebar-tab-environments"]').click();
   });
 
   test("environment card renders with name", async ({ appPage }) => {

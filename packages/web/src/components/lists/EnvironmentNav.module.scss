@@ -1,0 +1,118 @@
+@use '../../styles/mixins' as *;
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  width: 100%;
+  padding: var(--space-md);
+  overflow-y: auto;
+
+  @include mobile {
+    flex-direction: row;
+    width: 100%;
+    min-width: unset;
+    border-right: none;
+    border-bottom: 1px solid var(--border-subtle);
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: var(--space-xs) var(--space-sm);
+    gap: 0;
+    flex-wrap: nowrap;
+  }
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  border: none;
+  border-left: 3px solid transparent;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-ui);
+  cursor: pointer;
+  transition: background var(--transition-fast),
+              color var(--transition-fast),
+              border-color var(--transition-fast);
+  text-align: left;
+  width: 100%;
+
+  &:hover {
+    background: var(--bg-overlay);
+    color: var(--text-primary);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent-green);
+    outline-offset: -2px;
+  }
+
+  @include mobile {
+    border-left: none;
+    border-bottom: 2px solid transparent;
+    white-space: nowrap;
+    flex-shrink: 0;
+    padding: var(--space-xs) var(--space-sm);
+    font-size: var(--font-size-xs);
+    width: auto;
+    border-radius: 0;
+  }
+}
+
+.tabActive {
+  border-left-color: var(--accent-green);
+  background: var(--bg-overlay);
+  color: var(--text-primary);
+  font-weight: var(--font-weight-medium);
+
+  @include mobile {
+    border-left-color: transparent;
+    border-bottom-color: var(--accent-green);
+  }
+}
+
+.tabLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.statusDot {
+  flex-shrink: 0;
+  font-size: var(--font-size-xs);
+  line-height: 1;
+}
+
+.pulse {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.addButton {
+  @include btn-ghost;
+  font-size: var(--font-size-sm);
+  padding: var(--space-sm) var(--space-md);
+  margin-top: var(--space-sm);
+  text-align: left;
+  width: 100%;
+  color: var(--text-tertiary);
+
+  &:hover {
+    color: var(--accent-green);
+  }
+}
+
+.empty {
+  padding: var(--space-md);
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+  text-align: center;
+}

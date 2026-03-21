@@ -4,8 +4,8 @@ test.describe("Kill Session", () => {
   test("kill during waiting_input", async ({ appPage }) => {
     const page = appPage;
 
-    // Environments are now in Settings — navigate there via the gear button
-    await page.locator('[data-testid="sidebar-tab-settings"]').click();
+    // Navigate to the Environments tab
+    await page.locator('[data-testid="sidebar-tab-environments"]').click();
 
     // Start a stub session (uses default stub persona)
     await page.locator('button[title="New chat"]').click();

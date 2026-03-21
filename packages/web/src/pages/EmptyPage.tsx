@@ -13,11 +13,11 @@ export function TasksEmptyPage(): JSX.Element {
   );
 }
 
-/** Empty page shown at /workspaces when no workspace is selected. */
-export function WorkspacesEmptyPage(): JSX.Element {
+/** Empty page shown at /environments when no environment is selected. */
+export function EnvironmentsEmptyPage(): JSX.Element {
   return (
     <div className={styles.emptyState}>
-      Select a workspace or click + to create one
+      Select an environment to manage its workspaces, or add a new one.
     </div>
   );
 }
@@ -95,7 +95,7 @@ export function EmptyPage(): JSX.Element {
       )}
       {!hasEnvironments && (
         <div className={styles.ctaDescription}>
-          Add an environment first via Settings before creating a workspace.
+          Add an environment first before creating a workspace.
         </div>
       )}
     </div>

@@ -26,11 +26,11 @@ async function archiveAllWorkspaces(page: import("@playwright/test").Page): Prom
 }
 
 test.describe("Workspaces", () => {
-  test("Workspaces tab shows workspace list", async ({ appPage }) => {
+  test("Environments tab shows workspace list", async ({ appPage }) => {
     const page = appPage;
 
-    // Switch to Workspaces tab — header label visible
-    await page.locator('[data-testid="sidebar-tab-workspaces"]').click();
+    // Switch to Environments tab — header label visible
+    await page.locator('[data-testid="sidebar-tab-environments"]').click();
     await expect(page.locator("text=WORKSPACES").first()).toBeVisible();
   });
 
@@ -55,8 +55,8 @@ test.describe("Workspaces", () => {
     await input.fill("cta-workspace");
     await page.locator('[data-testid="welcome-create-ok"]').click();
 
-    // Switch to Workspaces tab — workspace should appear in sidebar
-    await page.locator('[data-testid="sidebar-tab-workspaces"]').click();
+    // Switch to Environments tab — workspace should appear in sidebar
+    await page.locator('[data-testid="sidebar-tab-environments"]').click();
     await expect(page.getByTestId("sidebar").getByText("cta-workspace", { exact: true })).toBeVisible({ timeout: 5_000 });
 
     // Welcome CTA should no longer be visible (workspaces exist now — dashboard shows instead)
@@ -90,8 +90,8 @@ test.describe("Workspaces", () => {
   test("create a workspace and see it in sidebar", async ({ appPage }) => {
     const page = appPage;
 
-    // Navigate to Workspaces tab
-    await page.locator('[data-testid="sidebar-tab-workspaces"]').click();
+    // Navigate to Environments tab
+    await page.locator('[data-testid="sidebar-tab-environments"]').click();
 
     // Click + in the Workspaces header to open create form
     await page.locator("button", { hasText: "+" }).first().click();
@@ -111,8 +111,8 @@ test.describe("Workspaces", () => {
   test("expand workspace shows empty task list and workspace view", async ({ appPage }) => {
     const page = appPage;
 
-    // Navigate to Workspaces tab
-    await page.locator('[data-testid="sidebar-tab-workspaces"]').click();
+    // Navigate to Environments tab
+    await page.locator('[data-testid="sidebar-tab-environments"]').click();
 
     // Create a workspace
     await page.locator("button", { hasText: "+" }).first().click();
@@ -131,8 +131,8 @@ test.describe("Workspaces", () => {
   test("create task from workspace", async ({ appPage }) => {
     const page = appPage;
 
-    // Navigate to Workspaces tab
-    await page.locator('[data-testid="sidebar-tab-workspaces"]').click();
+    // Navigate to Environments tab
+    await page.locator('[data-testid="sidebar-tab-environments"]').click();
 
     // Create a workspace
     await page.locator("button", { hasText: "+" }).first().click();
@@ -166,8 +166,8 @@ test.describe("Workspaces", () => {
   test("task view shows header and tabs", async ({ appPage }) => {
     const page = appPage;
 
-    // Navigate to Workspaces tab
-    await page.locator('[data-testid="sidebar-tab-workspaces"]').click();
+    // Navigate to Environments tab
+    await page.locator('[data-testid="sidebar-tab-environments"]').click();
 
     // Create workspace and task
     await page.locator("button", { hasText: "+" }).first().click();
@@ -204,13 +204,13 @@ test.describe("Workspaces", () => {
     await expect(page.getByText("No findings yet")).toBeVisible({ timeout: 5_000 });
   });
 
-  test("environments are accessible via Settings tab", async ({ appPage }) => {
+  test("environments are accessible via Environments tab", async ({ appPage }) => {
     const page = appPage;
 
-    // Environments live in Settings. Click the Settings tab in sidebar.
-    await page.locator('[data-testid="sidebar-tab-settings"]').click();
+    // Environments have their own tab in the sidebar.
+    await page.locator('[data-testid="sidebar-tab-environments"]').click();
 
-    // Should see the test-local environment in the Settings panel
+    // Should see the test-local environment in the Environments panel
     await expect(page.getByTestId("env-row").getByText("test-local", { exact: true })).toBeVisible();
   });
 
@@ -218,8 +218,8 @@ test.describe("Workspaces", () => {
 
   /** Helper: create a workspace and select it in the sidebar */
   async function createAndSelectWorkspace(page: import("@playwright/test").Page, name: string) {
-    // Navigate to Workspaces tab so workspace name is visible in sidebar
-    await page.locator('[data-testid="sidebar-tab-workspaces"]').click();
+    // Navigate to Environments tab so workspace name is visible in sidebar
+    await page.locator('[data-testid="sidebar-tab-environments"]').click();
     await createWorkspace(page, name);
     await clickSidebarWorkspace(page, name);
   }

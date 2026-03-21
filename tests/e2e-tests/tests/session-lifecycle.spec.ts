@@ -4,8 +4,8 @@ test.describe("Session Lifecycle (stub runtime)", () => {
   test("full stub session flow", async ({ appPage }) => {
     const page = appPage;
 
-    // Environments are now in Settings — navigate there via the gear button
-    await page.locator('[data-testid="sidebar-tab-settings"]').click();
+    // Navigate to the Environments tab
+    await page.locator('[data-testid="sidebar-tab-environments"]').click();
 
     // Click "+" on the environment card to enter new_chat mode
     await page.locator('button[title="New chat"]').click();

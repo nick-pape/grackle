@@ -12,7 +12,7 @@ import { useEnvironmentToasts } from "./hooks/useEnvironmentToasts.js";
 import { AnimatePresence, motion } from "motion/react";
 import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from "react-router";
 import { sessionUrl, useAppNavigate } from "./utils/navigation.js";
-import { EmptyPage, TasksEmptyPage, WorkspacesEmptyPage } from "./pages/EmptyPage.js";
+import { EmptyPage, TasksEmptyPage, EnvironmentsEmptyPage } from "./pages/EmptyPage.js";
 import { ChatPage } from "./pages/ChatPage.js";
 import { NewChatPage } from "./pages/NewChatPage.js";
 import { SessionPage } from "./pages/SessionPage.js";
@@ -22,8 +22,9 @@ import { TaskEditPage } from "./pages/TaskEditPage.js";
 import { TaskPage } from "./pages/TaskPage.js";
 import { NewEnvironmentPage } from "./pages/NewEnvironmentPage.js";
 import { EnvironmentEditPage } from "./pages/EnvironmentEditPage.js";
+import { EnvironmentsPage } from "./pages/EnvironmentsPage.js";
+import { EnvironmentDetailPage } from "./pages/EnvironmentDetailPage.js";
 import { SettingsPage } from "./pages/SettingsPage.js";
-import { SettingsEnvironmentsTab } from "./pages/settings/SettingsEnvironmentsTab.js";
 import { SettingsCredentialsTab } from "./pages/settings/SettingsCredentialsTab.js";
 import { SettingsPersonasTab } from "./pages/settings/SettingsPersonasTab.js";
 import { SettingsAppearanceTab } from "./pages/settings/SettingsAppearanceTab.js";
@@ -127,7 +128,7 @@ function AppRoutes(): JSX.Element {
         <Route path="tasks/:taskId/stream" element={<TaskPage />} />
         <Route path="tasks/:taskId/findings" element={<TaskPage />} />
         <Route path="tasks/:taskId/edit" element={<TaskEditPage />} />
-        <Route path="workspaces" element={<WorkspacesEmptyPage />} />
+        <Route path="workspaces" element={<Navigate to="/environments" replace />} />
         <Route path="workspaces/:workspaceId" element={<WorkspacePage />} />
         <Route path="workspaces/:workspaceId/tasks/:taskId" element={<TaskPage />} />
         <Route path="workspaces/:workspaceId/tasks/:taskId/stream" element={<TaskPage />} />
@@ -135,11 +136,15 @@ function AppRoutes(): JSX.Element {
         <Route path="workspaces/:workspaceId/tasks/:taskId/edit" element={<TaskEditPage />} />
         <Route path="sessions/new" element={<NewChatPage />} />
         <Route path="sessions/:sessionId" element={<SessionPage />} />
-        <Route path="environments/new" element={<NewEnvironmentPage />} />
-        <Route path="environments/:environmentId" element={<EnvironmentEditPage />} />
+        <Route path="environments" element={<EnvironmentsPage />}>
+          <Route index element={<EnvironmentsEmptyPage />} />
+          <Route path="new" element={<NewEnvironmentPage />} />
+          <Route path=":environmentId" element={<EnvironmentDetailPage />} />
+          <Route path=":environmentId/edit" element={<EnvironmentEditPage />} />
+        </Route>
         <Route path="settings" element={<SettingsPage />}>
-          <Route index element={<Navigate to="environments" replace />} />
-          <Route path="environments" element={<SettingsEnvironmentsTab />} />
+          <Route index element={<Navigate to="credentials" replace />} />
+          <Route path="environments" element={<Navigate to="/environments" replace />} />
           <Route path="credentials" element={<SettingsCredentialsTab />} />
           <Route path="tokens" element={<Navigate to="../credentials" replace />} />
           <Route path="personas" element={<SettingsPersonasTab />} />

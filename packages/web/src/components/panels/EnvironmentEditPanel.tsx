@@ -1,7 +1,7 @@
 import { useState, useCallback, type JSX } from "react";
 import { useGrackle } from "../../context/GrackleContext.js";
 import { useToast } from "../../context/ToastContext.js";
-import { SETTINGS_ENVIRONMENTS_URL, useAppNavigate } from "../../utils/navigation.js";
+import { ENVIRONMENTS_URL, environmentUrl, useAppNavigate } from "../../utils/navigation.js";
 import { EditableTextField } from "../editable/EditableTextField.js";
 import styles from "./EnvironmentEditPanel.module.scss";
 
@@ -266,11 +266,15 @@ export function EnvironmentEditPanel({ mode, environmentId }: Props): JSX.Elemen
     }
     addEnvironment(envName.trim(), adapterType, buildCreateConfig());
     showToast("Environment added successfully", "success");
-    navigate(SETTINGS_ENVIRONMENTS_URL, { replace: true });
+    navigate(ENVIRONMENTS_URL, { replace: true });
   };
 
   const handleCancel = (): void => {
-    navigate(SETTINGS_ENVIRONMENTS_URL);
+    if (environmentId) {
+      navigate(environmentUrl(environmentId));
+    } else {
+      navigate(ENVIRONMENTS_URL);
+    }
   };
 
   /** Save a single config field in edit mode by merging into existing adapterConfig. */
