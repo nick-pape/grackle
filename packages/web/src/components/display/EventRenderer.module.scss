@@ -364,6 +364,22 @@
   word-break: break-word;
 }
 
+.usageEvent {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-xs) 0;
+  margin: var(--space-xs) 0;
+}
+
+.usageBadge {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+  padding: 2px var(--space-sm);
+  letter-spacing: 0.02em;
+}
+
 .defaultEvent {
   padding: 2px 0;
   color: var(--text-secondary);

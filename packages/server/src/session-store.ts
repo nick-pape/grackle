@@ -137,6 +137,30 @@ export function updateSessionUsage(
     .run();
 }
 
+/** Aggregate usage stats across sessions matching the given filter. */
+export function aggregateUsage(
+  filter: { taskId?: string; taskIds?: string[]; environmentId?: string },
+): { inputTokens: number; outputTokens: number; costUsd: number; sessionCount: number } {
+  const conditions = [];
+  if (filter.taskId) {
+    conditions.push(eq(sessions.taskId, filter.taskId));
+  }
+  if (filter.taskIds && filter.taskIds.length > 0) {
+    conditions.push(inArray(sessions.taskId, filter.taskIds));
+  }
+  if (filter.environmentId) {
+    conditions.push(eq(sessions.environmentId, filter.environmentId));
+  }
+  const where = conditions.length > 0 ? and(...conditions) : undefined;
+  const result = db.select({
+    inputTokens: sql<number>`COALESCE(SUM(${sessions.inputTokens}), 0)`,
+    outputTokens: sql<number>`COALESCE(SUM(${sessions.outputTokens}), 0)`,
+    costUsd: sql<number>`COALESCE(SUM(${sessions.costUsd}), 0)`,
+    sessionCount: sql<number>`COUNT(*)`,
+  }).from(sessions).where(where).get();
+  return result ?? { inputTokens: 0, outputTokens: 0, costUsd: 0, sessionCount: 0 };
+}
+
 /** Delete all sessions belonging to a specific environment. */
 export function deleteByEnvironment(environmentId: string): void {
   db.delete(sessions).where(eq(sessions.environmentId, environmentId)).run();

@@ -316,6 +316,15 @@ type GetSettingRequest = Message<"grackle.GetSettingRequest"> & {
 const GetSettingRequestSchema: GenMessage<GetSettingRequest>;
 
 // @public
+type GetUsageRequest = Message<"grackle.GetUsageRequest"> & {
+    scope: string;
+    id: string;
+};
+
+// @public
+const GetUsageRequestSchema: GenMessage<GetUsageRequest>;
+
+// @public
 const Grackle: GenService<{
     listEnvironments: {
         methodKind: "unary";
@@ -532,6 +541,11 @@ const Grackle: GenService<{
         input: typeof EmptySchema;
         output: typeof PairingCodeResponseSchema;
     };
+    getUsage: {
+        methodKind: "unary";
+        input: typeof GetUsageRequestSchema;
+        output: typeof UsageStatsSchema;
+    };
     waitForPipe: {
         methodKind: "unary";
         input: typeof WaitForPipeRequestSchema;
@@ -671,6 +685,10 @@ declare namespace grackle {
         SettingResponseSchema,
         PairingCodeResponse,
         PairingCodeResponseSchema,
+        GetUsageRequest,
+        GetUsageRequestSchema,
+        UsageStats,
+        UsageStatsSchema,
         EventType_2 as EventType,
         EventTypeSchema,
         TaskStatus_2 as TaskStatus,
@@ -1399,6 +1417,17 @@ type UpdateWorkspaceRequest = Message<"grackle.UpdateWorkspaceRequest"> & {
 
 // @public
 const UpdateWorkspaceRequestSchema: GenMessage<UpdateWorkspaceRequest>;
+
+// @public
+type UsageStats = Message<"grackle.UsageStats"> & {
+    inputTokens: number;
+    outputTokens: number;
+    costUsd: number;
+    sessionCount: number;
+};
+
+// @public
+const UsageStatsSchema: GenMessage<UsageStats>;
 
 // @public
 type WaitForPipeRequest = Message<"grackle.WaitForPipeRequest"> & {

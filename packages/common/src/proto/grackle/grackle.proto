@@ -514,6 +514,20 @@ message PairingCodeResponse {
   string url = 2;
 }
 
+// ─── Usage ──────────────────────────────────────────────────
+
+message GetUsageRequest {
+  string scope = 1;              // "session" | "task" | "task_tree" | "workspace" | "environment"
+  string id = 2;                 // ID of the scoped entity
+}
+
+message UsageStats {
+  int32 input_tokens = 1;
+  int32 output_tokens = 2;
+  double cost_usd = 3;
+  int32 session_count = 4;
+}
+
 // ─── Service ────────────────────────────────────────────────
 
 service Grackle {
@@ -583,6 +597,9 @@ service Grackle {
 
   // Pairing
   rpc GeneratePairingCode(Empty) returns (PairingCodeResponse);
+
+  // Usage
+  rpc GetUsage(GetUsageRequest) returns (UsageStats);
 
   // IPC
   rpc WaitForPipe(WaitForPipeRequest) returns (WaitForPipeResponse);
