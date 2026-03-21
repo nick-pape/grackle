@@ -245,7 +245,6 @@ export function UnifiedBar(): JSX.Element {
             <span title={taskEnvDisconnected ? "Environment is unavailable — reconnect first" : undefined}>
               <button type="submit" disabled={!text.trim() || taskEnvDisconnected} className={styles.btnPrimary}>Send</button>
             </span>
-            <button type="button" onClick={() => kill(taskSession.id)} className={styles.btnDanger} title="Stop session">Stop</button>
           </form>
         );
       }
