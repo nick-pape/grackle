@@ -1,0 +1,81 @@
+@use '../../styles/mixins' as *;
+
+// =============================================================================
+// ChatInput — reusable chat form for sending messages to agent sessions
+// =============================================================================
+
+.bar {
+  @include surface-panel;
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  border-top: 1px solid var(--border-subtle);
+
+  @include mobile {
+    flex-wrap: wrap;
+    padding: var(--space-xs) var(--space-sm);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Form controls
+// ---------------------------------------------------------------------------
+
+.input {
+  @include input-field;
+  flex: 1;
+
+  @include mobile {
+    min-width: 0;
+    flex: 1 1 100%;
+  }
+}
+
+.select {
+  @include select-field;
+
+  @include mobile {
+    flex: 1 1 auto;
+    min-width: 80px;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Buttons
+// ---------------------------------------------------------------------------
+
+.btnPrimary {
+  @include btn-primary;
+}
+
+.btnDanger {
+  @include btn-danger;
+}
+
+.btnGhost {
+  @include btn-ghost;
+}
+
+// ---------------------------------------------------------------------------
+// Status indicators
+// ---------------------------------------------------------------------------
+
+.badge {
+  background: var(--accent-green-dim);
+  color: var(--accent-green);
+  border-radius: var(--radius-full);
+  padding: 3px var(--space-md);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+}
+
+.disconnectHint {
+  color: var(--accent-yellow);
+  font-size: 11px;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
