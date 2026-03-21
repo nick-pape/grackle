@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sat, 21 Mar 2026 19:53:31 GMT and should not be manually modified.
+This log was last generated on Sat, 21 Mar 2026 20:06:12 GMT and should not be manually modified.
+
+## 0.57.1
+Sat, 21 Mar 2026 20:06:12 GMT
+
+### Patches
+
+- Emit usage events (input_tokens, output_tokens, cost_usd) from Claude Code runtime
 
 ## 0.57.0
 Sat, 21 Mar 2026 19:53:31 GMT

@@ -402,3 +402,68 @@ describe("ClaudeCodeRuntime — runtime_session_id emission", () => {
     expect(rtIdEvents[0].content).toBe("sdk-session-first");
   });
 });
+
+describe("ClaudeCodeRuntime — usage event emission", () => {
+  beforeEach(() => {
+    vi.stubEnv("GRACKLE_MCP_CONFIG", "");
+    mockQuery.mockReset();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("emits usage event from result message with token counts and cost", async () => {
+    mockQuery.mockReturnValue(asyncIterableFrom([
+      { type: "system", subtype: "init", session_id: "sdk-usage-test", model: "claude-sonnet-4" },
+      { type: "assistant", message: { role: "assistant", content: [{ type: "text", text: "Hello" }] } },
+      {
+        type: "result",
+        subtype: "success",
+        is_error: false,
+        result: "Hello",
+        total_cost_usd: 0.005916,
+        usage: { input_tokens: 1952, output_tokens: 4, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
+      },
+    ]));
+
+    const runtime = new ClaudeCodeRuntime();
+    const session = runtime.spawn({ sessionId: "cc-usage-test", prompt: "hi", model: "claude-sonnet-4", maxTurns: 1 });
+    const events = await collectUntilIdle(session);
+
+    const usageEvents = events.filter((e) => e.type === "usage");
+    expect(usageEvents).toHaveLength(1);
+    const data = JSON.parse(usageEvents[0].content) as Record<string, number>;
+    expect(data.input_tokens).toBe(1952);
+    expect(data.output_tokens).toBe(4);
+    expect(data.cost_usd).toBe(0.005916);
+  });
+
+  it("does not emit usage event for error results", async () => {
+    mockQuery.mockReturnValue(asyncIterableFrom([
+      { type: "system", subtype: "init", session_id: "sdk-err-test", model: "claude-sonnet-4" },
+      { type: "result", is_error: true, result: "Invalid API key" },
+    ]));
+
+    const runtime = new ClaudeCodeRuntime();
+    const session = runtime.spawn({ sessionId: "cc-err-usage", prompt: "hi", model: "claude-sonnet-4", maxTurns: 1 });
+    const events = await collectUntilIdle(session);
+
+    const usageEvents = events.filter((e) => e.type === "usage");
+    expect(usageEvents).toHaveLength(0);
+  });
+
+  it("handles result message without usage field gracefully", async () => {
+    mockQuery.mockReturnValue(asyncIterableFrom([
+      { type: "system", subtype: "init", session_id: "sdk-no-usage", model: "claude-sonnet-4" },
+      { type: "result", subtype: "success", is_error: false, result: "done" },
+    ]));
+
+    const runtime = new ClaudeCodeRuntime();
+    const session = runtime.spawn({ sessionId: "cc-no-usage", prompt: "hi", model: "claude-sonnet-4", maxTurns: 1 });
+    const events = await collectUntilIdle(session);
+
+    const usageEvents = events.filter((e) => e.type === "usage");
+    expect(usageEvents).toHaveLength(0);
+  });
+});
