@@ -109,6 +109,12 @@ test.describe("Sidebar search filter", () => {
     await createWorkspace(page, "highlight-proj");
     await createTask(page, "highlight-proj", "Fix login bug");
 
+    // Wait for the task to be fully rendered in a sidebar task row (not just any
+    // text match on the page). The createTask helper's getByText wait can resolve
+    // against the main content area before the sidebar's React state has the task
+    // data, causing the subsequent search to find no match for highlighting.
+    await page.locator('[data-task-id]', { hasText: "Fix login bug" }).waitFor({ timeout: 5_000 });
+
     const searchInput = page.getByTestId("sidebar-search");
     await searchInput.fill("login");
 
