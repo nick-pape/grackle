@@ -1,7 +1,7 @@
 import { test, expect } from "./fixtures.js";
 import { patchWsForStubRuntime } from "./helpers.js";
 
-test.describe("Chat Page (root task)", () => {
+test.describe("Chat Page (root task)", { tag: ["@session"] }, () => {
   test("navigates to /chat by default and renders chat page", async ({ appPage }) => {
     const page = appPage;
 

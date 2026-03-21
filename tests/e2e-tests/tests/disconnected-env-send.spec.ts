@@ -21,7 +21,7 @@ import {
   navigateToTask,
 } from "./helpers.js";
 
-test.describe("Disconnected environment blocks message send", () => {
+test.describe("Disconnected environment blocks message send", { tag: ["@error"] }, () => {
   /**
    * Helper: set up the UI so it looks exactly like a task that is in the
    * `idle` state with a disconnected environment — but without

@@ -9,7 +9,7 @@ import {
   createTaskViaWs,
 } from "./helpers.js";
 
-test.describe("Unified task create/edit experience", () => {
+test.describe("Unified task create/edit experience", { tag: ["@task"] }, () => {
   test("clicking Create Task opens full-panel form with title and description fields", async ({ appPage }) => {
     const page = appPage;
     await createWorkspace(page, "create-panel-proj");

@@ -11,7 +11,7 @@ async function goToTasksTab(page: import("@playwright/test").Page): Promise<void
   await page.locator('[data-testid="sidebar-tab-tasks"]').click();
 }
 
-test.describe("Sidebar search filter", () => {
+test.describe("Sidebar search filter", { tag: ["@webui"] }, () => {
   test("search input is visible when tasks exist", async ({ appPage }) => {
     const page = appPage;
 

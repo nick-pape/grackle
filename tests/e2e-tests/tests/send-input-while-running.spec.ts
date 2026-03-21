@@ -1,7 +1,7 @@
 import { test, expect } from "./fixtures.js";
 import { createWorkspace, createTask, navigateToTask, patchWsForStubRuntime } from "./helpers.js";
 
-test.describe("Send input while agent is running", () => {
+test.describe("Send input while agent is running", { tag: ["@session"] }, () => {
   test("input field is enabled during active session", async ({ appPage }) => {
     const page = appPage;
 

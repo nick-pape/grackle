@@ -11,7 +11,7 @@ import {
   sendWsAndWaitForError,
 } from "./helpers.js";
 
-test.describe("Error States", () => {
+test.describe("Error States", { tag: ["@error"] }, () => {
   test("create_task with missing workspaceId succeeds (root task)", async ({ appPage }) => {
     const page = appPage;
 

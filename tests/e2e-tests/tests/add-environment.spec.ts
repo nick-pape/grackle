@@ -1,7 +1,7 @@
 import { test, expect } from "./fixtures.js";
 import { sendWsAndWaitFor, sendWsMessage } from "./helpers.js";
 
-test.describe("Add Environment — UI Form", () => {
+test.describe("Add Environment — UI Form", { tag: ["@environment"] }, () => {
   test.beforeEach(async ({ appPage }) => {
     // Navigate to the Environments tab
     await appPage.locator('[data-testid="sidebar-tab-environments"]').click();
@@ -161,7 +161,7 @@ test.describe("Add Environment — UI Form", () => {
   });
 });
 
-test.describe("Add Environment — WebSocket Handler", () => {
+test.describe("Add Environment — WebSocket Handler", { tag: ["@environment"] }, () => {
   test("add_environment creates environment visible in list", async ({ appPage }) => {
     const page = appPage;
 
@@ -310,7 +310,7 @@ test.describe("Add Environment — WebSocket Handler", () => {
   });
 });
 
-test.describe("Update Environment — WebSocket Handler", () => {
+test.describe("Update Environment — WebSocket Handler", { tag: ["@environment"] }, () => {
   test("update_environment changes displayName", async ({ appPage }) => {
     const page = appPage;
 

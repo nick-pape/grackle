@@ -15,7 +15,7 @@ async function goToTasksTab(page: import("@playwright/test").Page): Promise<void
   await page.locator('[data-testid="sidebar-tab-tasks"]').click();
 }
 
-test.describe("Task tree hierarchy", () => {
+test.describe("Task tree hierarchy", { tag: ["@task"] }, () => {
   test("creates a child task and displays tree structure with expand/collapse", async ({ appPage }) => {
     const page = appPage;
 

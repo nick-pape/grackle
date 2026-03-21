@@ -1,6 +1,6 @@
 import { test, expect } from "./fixtures.js";
 
-test.describe("Kill Session", () => {
+test.describe("Kill Session", { tag: ["@session"] }, () => {
   test("kill during waiting_input", async ({ appPage }) => {
     const page = appPage;
 

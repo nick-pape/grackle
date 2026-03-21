@@ -7,7 +7,7 @@ import {
   navigateToWorkspace,
 } from "./helpers.js";
 
-test.describe("Deep linking", () => {
+test.describe("Deep linking", { tag: ["@webui"] }, () => {
   test("deep link to /settings loads settings page", async ({ appPage }) => {
     const page = appPage;
 

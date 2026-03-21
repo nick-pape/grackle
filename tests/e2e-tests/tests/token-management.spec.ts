@@ -1,7 +1,7 @@
 import { test, expect } from "./fixtures.js";
 import { sendWsAndWaitFor, sendWsAndWaitForError } from "./helpers.js";
 
-test.describe("Token Management (WebSocket)", () => {
+test.describe("Token Management (WebSocket)", { tag: ["@settings"] }, () => {
   test("list_tokens returns a valid token array", async ({ appPage }) => {
     const page = appPage;
 

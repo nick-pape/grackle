@@ -8,7 +8,7 @@ import {
   installWsTracker,
 } from "./helpers.js";
 
-test.describe("Stream smart scroll", () => {
+test.describe("Stream smart scroll", { tag: ["@webui"] }, () => {
   test("scrolled to bottom on initial load with events", async ({ appPage }) => {
     const page = appPage;
 

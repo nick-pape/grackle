@@ -7,7 +7,7 @@ import {
   runStubTaskToCompletion,
 } from "./helpers.js";
 
-test.describe("Complete and resume flow", () => {
+test.describe("Complete and resume flow", { tag: ["@error"] }, () => {
   test("paused task can be completed", async ({ appPage }) => {
     const page = appPage;
 

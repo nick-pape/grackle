@@ -15,7 +15,7 @@ async function goToTasksTab(page: import("@playwright/test").Page): Promise<void
   await page.locator('[data-testid="sidebar-tab-tasks"]').click();
 }
 
-test.describe("Task Dependencies", () => {
+test.describe("Task Dependencies", { tag: ["@task"] }, () => {
   test("blocked task shows Blocked by text and no Start button", async ({ appPage }) => {
     const page = appPage;
 

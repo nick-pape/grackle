@@ -1,7 +1,7 @@
 import { test, expect } from "./fixtures.js";
 import { sendWsAndWaitFor, goToSettings } from "./helpers.js";
 
-test.describe("Settings Page", () => {
+test.describe("Settings Page", { tag: ["@settings"] }, () => {
   test("gear icon navigates to settings page with Credentials tab", async ({ appPage }) => {
     const page = appPage;
 

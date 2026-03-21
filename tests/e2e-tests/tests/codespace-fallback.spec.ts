@@ -46,7 +46,7 @@ const test = baseTest.extend<{ codespaceErrorPage: import("@playwright/test").Pa
   },
 });
 
-test.describe("Codespace — manual entry fallback", () => {
+test.describe("Codespace — manual entry fallback", { tag: ["@environment"] }, () => {
   test.beforeEach(async ({ codespaceErrorPage }) => {
     // Navigate to Environments tab → Add Environment
     await codespaceErrorPage.locator('[data-testid="sidebar-tab-environments"]').click();

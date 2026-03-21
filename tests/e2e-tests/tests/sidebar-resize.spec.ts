@@ -1,6 +1,6 @@
 import { test, expect } from "./fixtures.js";
 
-test.describe("Sidebar Resize", () => {
+test.describe("Sidebar Resize", { tag: ["@webui"] }, () => {
   test("sidebar renders with default width", async ({ appPage }) => {
     const page = appPage;
     const sidebar = page.locator('[data-testid="sidebar"]');

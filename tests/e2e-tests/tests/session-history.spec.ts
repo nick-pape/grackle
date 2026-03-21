@@ -7,7 +7,7 @@ import {
   runStubTaskToCompletion,
 } from "./helpers.js";
 
-test.describe("Session history", () => {
+test.describe("Session history", { tag: ["@session"] }, () => {
   test("single-session task hides attempt selector", async ({ appPage }) => {
     const page = appPage;
 

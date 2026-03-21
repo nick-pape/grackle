@@ -1,7 +1,7 @@
 import { test, expect } from "./fixtures.js";
 import { createWorkspace, createTask, navigateToTask, patchWsForStubRuntime, runStubTaskToCompletion } from "./helpers.js";
 
-test.describe("Task Lifecycle (stub runtime)", () => {
+test.describe("Task Lifecycle (stub runtime)", { tag: ["@task", "@smoke"] }, () => {
   test("full task flow: create, start, stream, review, approve", async ({ appPage }) => {
     const page = appPage;
 

@@ -4,7 +4,7 @@ function getEnvironmentNavItem(page: import("@playwright/test").Page, name: stri
   return page.getByTestId("env-nav-item").filter({ hasText: name }).first();
 }
 
-test.describe("Environment Display", () => {
+test.describe("Environment Display", { tag: ["@environment"] }, () => {
   test.beforeEach(async ({ appPage }) => {
     // Navigate to the Environments tab
     await appPage.locator('[data-testid="sidebar-tab-environments"]').click();

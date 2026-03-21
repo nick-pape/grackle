@@ -27,7 +27,7 @@ async function archiveAllWorkspaces(page: import("@playwright/test").Page): Prom
   );
 }
 
-test.describe("Workspaces", () => {
+test.describe("Workspaces", { tag: ["@workspace"] }, () => {
   test("Environments tab shows environment nav", async ({ appPage }) => {
     const page = appPage;
 

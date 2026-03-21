@@ -52,7 +52,7 @@ async function injectToolResult(
   });
 }
 
-test.describe("Tool result preview and accordion (#303)", () => {
+test.describe("Tool result preview and accordion (#303)", { tag: ["@webui"] }, () => {
   /** Navigate to the app, wait for connection, and inject a spawned event so
    *  the app enters session view mode for FAKE_SESSION_ID.
    *

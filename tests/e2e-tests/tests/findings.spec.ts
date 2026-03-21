@@ -8,7 +8,7 @@ import {
   sendWsMessage,
 } from "./helpers.js";
 
-test.describe("Findings", () => {
+test.describe("Findings", { tag: ["@error"] }, () => {
   test("post finding and see it in Findings tab", async ({ appPage }) => {
     const page = appPage;
 

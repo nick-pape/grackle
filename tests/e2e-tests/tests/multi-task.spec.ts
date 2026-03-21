@@ -8,7 +8,7 @@ import {
   runStubTaskToCompletion,
 } from "./helpers.js";
 
-test.describe("Multi-Task", () => {
+test.describe("Multi-Task", { tag: ["@task"] }, () => {
   test("tasks sidebar shows multiple tasks", async ({ appPage }) => {
     const page = appPage;
 

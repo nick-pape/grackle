@@ -21,7 +21,7 @@ async function setOnboardingCompleted(
 // Run tests serially — they share server state (onboarding_completed setting).
 test.describe.configure({ mode: "serial" });
 
-test.describe("Setup Wizard (FRE)", () => {
+test.describe("Setup Wizard (FRE)", { tag: ["@settings"] }, () => {
   test.afterAll(async ({ browser }) => {
     // Restore onboarding_completed to true so other test suites aren't affected
     const ctx = await browser.newContext();

@@ -55,7 +55,7 @@ async function listPersonasViaWs(
   }>;
 }
 
-test.describe("Persona Management", () => {
+test.describe("Persona Management", { tag: ["@persona"] }, () => {
   test("create persona via WebSocket and verify it appears", async ({
     appPage,
   }) => {

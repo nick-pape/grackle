@@ -13,7 +13,7 @@ import {
  * violations with getByText() in other tests. See App.tsx comment.
  */
 
-test.describe("Environment Status Broadcast + Toasts", () => {
+test.describe("Environment Status Broadcast + Toasts", { tag: ["@environment"] }, () => {
   test("stop environment shows disconnected toast and updates StatusBar", async ({ page }) => {
     await installWsTracker(page);
     await page.goto("/");
