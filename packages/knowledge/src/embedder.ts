@@ -26,6 +26,12 @@ export interface Embedder {
   embed(text: string): Promise<EmbeddingResult>;
   /** Embed multiple texts in batch. */
   embedBatch(texts: string[]): Promise<EmbeddingResult[]>;
-  /** The dimensionality of vectors produced by this embedder. */
+  /**
+   * The dimensionality of vectors produced by this embedder.
+   *
+   * When using a custom model without specifying `dimensions` in options,
+   * this value is `0` until the first embedding is computed. A value of `0`
+   * means the true dimensions are not yet known.
+   */
   readonly dimensions: number;
 }

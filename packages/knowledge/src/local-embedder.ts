@@ -80,6 +80,9 @@ export function createLocalEmbedder(options?: EmbedderOptions): Embedder {
     },
 
     async embedBatch(texts: string[]): Promise<EmbeddingResult[]> {
+      if (texts.length === 0) {
+        return [];
+      }
       const pipe = await getPipeline();
       const results: EmbeddingResult[] = [];
       for (const text of texts) {
