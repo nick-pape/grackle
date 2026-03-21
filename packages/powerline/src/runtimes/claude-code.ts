@@ -301,7 +301,7 @@ class ClaudeCodeSession extends BaseAgentSession {
       if (msg.type === "result" && !msg.is_error) {
         const usage = msg.usage as { input_tokens?: number; output_tokens?: number } | undefined;
         const costUsd = msg.total_cost_usd as number | undefined;
-        if (usage || costUsd) {
+        if (usage !== undefined || costUsd !== undefined) {
           this.eventQueue.push({
             type: "usage",
             timestamp: ts(),
