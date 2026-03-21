@@ -2,7 +2,7 @@ import { GrackleProvider } from "./context/GrackleContext.js";
 import { MockGrackleProvider } from "./mocks/MockGrackleProvider.js";
 import { ToastProvider } from "./context/ToastContext.js";
 import { ThemeProvider } from "./context/ThemeContext.js";
-import { StatusBar, AppNav, Sidebar, ContextHintBar } from "./components/layout/index.js";
+import { StatusBar, AppNav, Sidebar, BottomStatusBar } from "./components/layout/index.js";
 import { ToastContainer } from "./components/notifications/index.js";
 import { SplashScreen } from "./components/display/index.js";
 import { useCallback, useEffect, useState, type JSX } from "react";
@@ -36,7 +36,7 @@ import styles from "./App.module.scss";
 const IS_MOCK_MODE: boolean =
   typeof window !== "undefined" && new URLSearchParams(window.location.search).has("mock");
 
-/** Application shell layout with StatusBar, Sidebar, Outlet, and ContextHintBar. */
+/** Application shell layout with StatusBar, Sidebar, Outlet, and BottomStatusBar. */
 function AppShell(): JSX.Element {
   const { lastSpawnedId, environments, connected, onboardingCompleted } = useGrackle();
   const { showToast } = useToast();
@@ -100,7 +100,7 @@ function AppShell(): JSX.Element {
         )}
         <div className={styles.main}>
           <Outlet />
-          <ContextHintBar />
+          <BottomStatusBar />
         </div>
       </div>
       {/* Toast messages (including environment status toasts from

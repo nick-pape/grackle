@@ -4,7 +4,7 @@
  */
 
 // Layout components - application shell structure
-export { StatusBar, Sidebar, ContextHintBar } from "./layout/index.js";
+export { StatusBar, Sidebar, BottomStatusBar } from "./layout/index.js";
 
 // Panel components - main content areas
 export { FindingsPanel } from "./panels/index.js";

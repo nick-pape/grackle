@@ -3,7 +3,7 @@ import { useLocation, useMatch } from "react-router";
 import { useGrackle } from "../../context/GrackleContext.js";
 import { ROOT_TASK_ID } from "@grackle-ai/common";
 import { newTaskUrl, newChatUrl, useAppNavigate } from "../../utils/navigation.js";
-import styles from "./ContextHintBar.module.scss";
+import styles from "./BottomStatusBar.module.scss";
 
 /**
  * Thin, read-only status bar that shows contextual hints based on the current
@@ -13,7 +13,7 @@ import styles from "./ContextHintBar.module.scss";
  * Returns an empty fragment when the current page is showing a ChatInput or
  * when the route has no meaningful hint to display.
  */
-export function ContextHintBar(): JSX.Element {
+export function BottomStatusBar(): JSX.Element {
   const {
     sessions, tasks, environments, taskSessions,
   } = useGrackle();
