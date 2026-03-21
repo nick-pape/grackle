@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, type JSX } from "react";
 import { useParams } from "react-router";
 import { useGrackle } from "../context/GrackleContext.js";
 import { EventStream } from "../components/display/EventStream.js";
+import { ChatInput } from "../components/chat/index.js";
 import { Breadcrumbs } from "../components/display/index.js";
 import { buildSessionBreadcrumbs } from "../utils/breadcrumbs.js";
 import type { Session } from "../hooks/useGrackleSocket.js";
@@ -104,6 +105,15 @@ export function SessionPage(): JSX.Element {
         eventsDropped={eventsDropped}
         emptyState={<SessionEmptyState session={session} />}
       />
+      {isActive && (
+        <ChatInput
+          mode="send"
+          sessionId={sessionId}
+          environmentId={session!.environmentId}
+          showStop
+          onSessionKill={() => kill(sessionId)}
+        />
+      )}
     </div>
   );
 }

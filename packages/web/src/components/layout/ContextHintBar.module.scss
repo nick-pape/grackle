@@ -1,0 +1,58 @@
+@use '../../styles/mixins' as *;
+
+// =============================================================================
+// ContextHintBar — read-only status bar with contextual hints
+// =============================================================================
+
+.bar {
+  @include surface-panel;
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  border-top: 1px solid var(--border-subtle);
+
+  @include mobile {
+    flex-wrap: wrap;
+    padding: var(--space-xs) var(--space-sm);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Buttons
+// ---------------------------------------------------------------------------
+
+.btnPrimary {
+  @include btn-primary;
+}
+
+.btnGhost {
+  @include btn-ghost;
+}
+
+// ---------------------------------------------------------------------------
+// Status indicators
+// ---------------------------------------------------------------------------
+
+.statusText {
+  font-size: var(--font-size-md);
+  flex: 1;
+}
+
+.statusCompleted {
+  color: var(--accent-green);
+}
+
+.statusFailed {
+  color: var(--accent-red);
+}
+
+.statusBlocked {
+  color: var(--accent-yellow);
+  font-size: var(--font-size-sm);
+}
+
+.hintText {
+  color: var(--text-tertiary);
+  font-size: var(--font-size-md);
+}
