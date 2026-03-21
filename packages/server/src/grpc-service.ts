@@ -631,13 +631,16 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         );
       }
 
-      const msg = await streamRegistry.consumeSync(sub.id);
-
-      // Clean up the pipe stream after the sync consumer has read the message.
-      // This is safe because the message has been dequeued and we have the data.
-      const stream = streamRegistry.getStream(sub.streamId);
-      if (stream) {
-        streamRegistry.deleteStream(sub.streamId);
+      // Use try/finally so the pipe stream is cleaned up even if consumeSync rejects
+      // (e.g., the request is cancelled or times out) to prevent unbounded memory growth.
+      let msg: Awaited<ReturnType<typeof streamRegistry.consumeSync>>;
+      try {
+        msg = await streamRegistry.consumeSync(sub.id);
+      } finally {
+        const stream = streamRegistry.getStream(sub.streamId);
+        if (stream) {
+          streamRegistry.deleteStream(sub.streamId);
+        }
       }
 
       return create(grackle.WaitForPipeResponseSchema, {

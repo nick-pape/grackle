@@ -14,7 +14,7 @@ import { powerline, SESSION_STATUS } from "@grackle-ai/common";
 import * as sessionStore from "./session-store.js";
 import * as adapterManager from "./adapter-manager.js";
 import * as streamRegistry from "./stream-registry.js";
-import { readLog } from "./log-writer.js";
+import { readLastTextEntry } from "./log-writer.js";
 import { logger } from "./logger.js";
 
 /** Maximum length for the child's last text message in pipe delivery. */
@@ -161,6 +161,7 @@ function buildCompletionMessage(session: { logPath: string | null; error: string
 
 /**
  * Read the session log and extract the content of the last "text" entry.
+ * Uses tail-reading to avoid loading the full log file into memory.
  * Returns an empty string if no text entries exist or the log cannot be read.
  */
 function extractLastTextMessage(logPath: string | undefined): string {
@@ -169,13 +170,7 @@ function extractLastTextMessage(logPath: string | undefined): string {
   }
 
   try {
-    const entries = readLog(logPath);
-    for (let i = entries.length - 1; i >= 0; i--) {
-      if (entries[i].type === "text") {
-        return entries[i].content;
-      }
-    }
-    return "";
+    return readLastTextEntry(logPath)?.content ?? "";
   } catch {
     return "";
   }
