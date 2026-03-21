@@ -1,5 +1,4 @@
 import { test, expect } from "./fixtures.js";
-import { patchWsForStubRuntime } from "./helpers.js";
 
 test.describe("Chat Page (root task)", () => {
   test("navigates to /chat by default and renders chat page", async ({ appPage }) => {
@@ -13,9 +12,6 @@ test.describe("Chat Page (root task)", () => {
 
     // Chat page renders
     await expect(page.getByTestId("chat-page")).toBeVisible();
-
-    // Empty state is shown
-    await expect(page.getByTestId("chat-empty-state")).toBeVisible();
   });
 
   test("sidebar Chat tab is active on /chat", async ({ appPage }) => {
@@ -46,33 +42,33 @@ test.describe("Chat Page (root task)", () => {
     await expect(workspacesTab).toHaveAttribute("aria-selected", "true");
   });
 
-  test("chat input is present with local env", async ({ appPage }) => {
+  test("chat input is present after root task auto-starts", async ({ appPage }) => {
     const page = appPage;
 
     await page.getByTestId("sidebar-tab-chat").click();
     await expect(page).toHaveURL(/\/chat/);
 
-    // The UnifiedBar should show an input (since test harness has a local env)
+    // The root task auto-starts on server boot; wait for the session to go idle
+    // and the chat input to appear.
     const input = page.locator('input[placeholder="Type a message..."]');
-    await expect(input).toBeVisible({ timeout: 5_000 });
+    await expect(input).toBeVisible({ timeout: 15_000 });
   });
 
-  test("can start root task via chat input", async ({ appPage }) => {
+  test("can send message to auto-started root task", async ({ appPage }) => {
     const page = appPage;
 
     await page.getByTestId("sidebar-tab-chat").click();
     await expect(page).toHaveURL(/\/chat/);
 
-    // Patch WS to force stub runtime
-    await patchWsForStubRuntime(page);
-
-    // Type a message and submit
+    // Wait for the root task session to be ready (auto-started on boot)
     const input = page.locator('input[placeholder="Type a message..."]');
-    await expect(input).toBeVisible({ timeout: 5_000 });
+    await expect(input).toBeVisible({ timeout: 15_000 });
+
+    // Send a message via sendInput
     await input.fill("Hello system");
     await page.getByRole("button", { name: "Send" }).click();
 
-    // Events should start appearing from the stub runtime
-    await expect(page.locator("text=Stub runtime initialized")).toBeVisible({ timeout: 15_000 });
+    // The stub runtime echoes input; verify the message was delivered
+    await expect(page.locator("text=Hello system")).toBeVisible({ timeout: 15_000 });
   });
 });

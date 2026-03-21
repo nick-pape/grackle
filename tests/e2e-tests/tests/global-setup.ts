@@ -237,6 +237,13 @@ export default async function globalSetup(_config: FullConfig): Promise<void> {
   });
   console.log("[e2e] Stub and Stub MCP personas created; Stub set as default; onboarding completed");
 
+  // Set the root task's persona to "stub" so auto-start uses the stub runtime (no API key needed).
+  execSync(`node "${cliPath}" task update system --persona stub`, {
+    env: cliEnv,
+    stdio: "pipe",
+  });
+  console.log("[e2e] Root task persona set to stub");
+
   execSync(`node "${cliPath}" env provision test-local`, {
     env: cliEnv,
     stdio: "pipe",

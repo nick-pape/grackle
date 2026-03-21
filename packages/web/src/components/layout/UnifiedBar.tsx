@@ -47,7 +47,7 @@ function DisconnectedBanner({ environmentId, onReconnect }: DisconnectedBannerPr
 export function UnifiedBar(): JSX.Element {
   const {
     spawn, sendInput, kill, sessions, tasks, environments, personas,
-    provisionEnvironment, startTask, taskSessions,
+    provisionEnvironment, taskSessions,
   } = useGrackle();
   const { showToast } = useToast();
   const navigate = useAppNavigate();
@@ -154,21 +154,11 @@ export function UnifiedBar(): JSX.Element {
       );
     }
 
-    // No active session — server normally auto-starts the root task on boot.
-    // Fallback: let the user start it manually if auto-start was skipped or failed.
-    const handleChatStart = (e: FormEvent): void => {
-      e.preventDefault();
-      if (!text.trim()) {
-        return;
-      }
-      startTask(ROOT_TASK_ID, undefined, localEnv.id, text);
-      setText("");
-    };
+    // No active session — server auto-starts the root task when an environment connects.
     return (
-      <form onSubmit={handleChatStart} className={styles.bar}>
-        <input type="text" value={text} onChange={(e) => setText(e.target.value)} placeholder="Type a message..." autoFocus className={styles.input} />
-        <button type="submit" disabled={!text.trim()} className={styles.btnPrimary}>Send</button>
-      </form>
+      <div className={styles.bar}>
+        <span className={styles.hintText}>Starting system agent...</span>
+      </div>
     );
   }
 

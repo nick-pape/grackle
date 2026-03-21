@@ -116,7 +116,8 @@ export function registerTaskCommands(program: Command): void {
     )
     .option("--depends-on <ids>", "Comma-separated dependency task IDs")
     .option("--session <session-id>", "Bind an existing session to this task")
-    .action(async (taskId: string, opts: { status?: string; dependsOn?: string; title?: string; desc?: string; session?: string }) => {
+    .option("--persona <id>", "Default persona ID for this task")
+    .action(async (taskId: string, opts: { status?: string; dependsOn?: string; title?: string; desc?: string; session?: string; persona?: string }) => {
       const VALID_STATUSES = new Set([
         "not_started",
         "working",
@@ -149,6 +150,7 @@ export function registerTaskCommands(program: Command): void {
           : taskStatusToEnum(""),
         dependsOn,
         sessionId: opts.session || "",
+        defaultPersonaId: opts.persona,
       });
       console.log(
         `Updated: ${t.id} (${t.title}) status: ${taskStatusToString(t.status)}`,
