@@ -36,6 +36,7 @@ import {
   providerToggleToEnum,
 } from "@grackle-ai/common";
 import { resolvePersona } from "./resolve-persona.js";
+import { fetchOrchestratorContext } from "./orchestrator-context.js";
 import * as settingsStore from "./settings-store.js";
 import { isAllowedSettingKey } from "./settings-store.js";
 import { createScopedToken } from "@grackle-ai/mcp";
@@ -46,7 +47,7 @@ import { loadOrCreateApiKey } from "./api-key.js";
 import { logger } from "./logger.js";
 import { reanimateAgent } from "./reanimate-agent.js";
 import { slugify } from "./utils/slugify.js";
-import { SystemPromptBuilder } from "./system-prompt-builder.js";
+import { SystemPromptBuilder, buildTaskPrompt } from "./system-prompt-builder.js";
 import { importGitHubIssues as executeGitHubImport } from "./github-import.js";
 import { generatePairingCode } from "./pairing.js";
 import { detectLanIp } from "./utils/network.js";
@@ -104,6 +105,9 @@ function sessionRowToProto(row: SessionRow): grackle.Session {
     error: row.error ?? "",
     taskId: row.taskId,
     personaId: row.personaId,
+    inputTokens: row.inputTokens,
+    outputTokens: row.outputTokens,
+    costUsd: row.costUsd,
   });
 }
 
@@ -367,6 +371,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       emit("environment.changed", {});
 
       const config = JSON.parse(env.adapterConfig) as Record<string, unknown>;
+      config.defaultRuntime = env.defaultRuntime;
       const powerlineToken = env.powerlineToken;
 
       try {
@@ -1068,10 +1073,20 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       const { runtime, model, maxTurns, systemPrompt, persona } = resolved;
       const logPath = join(grackleHome, LOGS_DIR, sessionId);
 
+      const taskPrompt = buildTaskPrompt(task.title, task.description, req.notes);
+      const isOrchestrator = task.canDecompose && task.depth <= 1;
+      const orchestratorCtx = isOrchestrator
+        ? fetchOrchestratorContext(task.workspaceId || "")
+        : undefined;
+
       const systemContext = new SystemPromptBuilder({
         task: { title: task.title, description: task.description, notes: req.notes || "" },
+        taskId: task.id,
         canDecompose: task.canDecompose,
         personaPrompt: systemPrompt,
+        taskDepth: task.depth,
+        ...orchestratorCtx,
+        ...(orchestratorCtx && { triggerMode: "fresh" as const }),
       }).build();
 
       sessionStore.createSession(
@@ -1112,7 +1127,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       const powerlineReq = create(powerline.SpawnRequestSchema, {
         sessionId,
         runtime,
-        prompt: task.title,
+        prompt: taskPrompt,
         model,
         maxTurns,
         branch: task.branch,
@@ -1135,7 +1150,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         workspaceId: task.workspaceId ?? undefined,
         taskId: task.id,
         systemContext,
-        prompt: task.title,
+        prompt: taskPrompt,
       });
 
       const row = sessionStore.getSession(sessionId);

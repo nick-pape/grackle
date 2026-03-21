@@ -13,13 +13,13 @@ const test = base.extend<{ mockPage: import("@playwright/test").Page }>({
 });
 
 test.describe("Settings Tabs", () => {
-  test("default tab is Environments", async ({ mockPage }) => {
+  test("default tab is Credentials", async ({ mockPage }) => {
     const page = mockPage;
 
     await goToSettings(mockPage);
 
-    await expect(page).toHaveURL(/\/settings\/environments/);
-    await expect(page.getByRole("tab", { name: "Environments" })).toHaveAttribute("aria-selected", "true");
+    await expect(page).toHaveURL(/\/settings\/credentials/);
+    await expect(page.getByRole("tab", { name: "Credentials" })).toHaveAttribute("aria-selected", "true");
   });
 
   test("tab switching updates URL", async ({ mockPage }) => {
@@ -27,8 +27,8 @@ test.describe("Settings Tabs", () => {
 
     await goToSettings(mockPage);
 
-    const tabs = ["Credentials", "Personas", "Appearance", "About", "Environments"];
-    const paths = ["credentials", "personas", "appearance", "about", "environments"];
+    const tabs = ["Personas", "Appearance", "About", "Credentials"];
+    const paths = ["personas", "appearance", "about", "credentials"];
 
     for (let i = 0; i < tabs.length; i++) {
       await page.getByRole("tab", { name: tabs[i] }).click();
@@ -52,15 +52,15 @@ test.describe("Settings Tabs", () => {
     const page = mockPage;
 
     await goToSettings(mockPage);
-    await page.getByRole("tab", { name: "Credentials" }).click();
-    await expect(page).toHaveURL(/\/settings\/credentials/);
+    await page.getByRole("tab", { name: "Personas" }).click();
+    await expect(page).toHaveURL(/\/settings\/personas/);
 
     await page.getByRole("tab", { name: "About" }).click();
     await expect(page).toHaveURL(/\/settings\/about/);
 
     await page.goBack();
-    await expect(page).toHaveURL(/\/settings\/credentials/);
-    await expect(page.getByRole("tab", { name: "Credentials" })).toHaveAttribute("aria-selected", "true");
+    await expect(page).toHaveURL(/\/settings\/personas/);
+    await expect(page.getByRole("tab", { name: "Personas" })).toHaveAttribute("aria-selected", "true");
 
     await page.goForward();
     await expect(page).toHaveURL(/\/settings\/about/);
@@ -72,24 +72,24 @@ test.describe("Settings Tabs", () => {
 
     await goToSettings(mockPage);
 
-    // Focus the active tab
-    const envTab = page.getByRole("tab", { name: "Environments" });
-    await envTab.focus();
+    // Focus the active tab (Credentials is default now)
+    const credentialsTab = page.getByRole("tab", { name: "Credentials" });
+    await credentialsTab.focus();
 
-    // Arrow down should move to Credentials
-    await page.keyboard.press("ArrowDown");
-    await expect(page).toHaveURL(/\/settings\/credentials/);
-    await expect(page.getByRole("tab", { name: "Credentials" })).toBeFocused();
-
-    // Arrow down again -> Personas
+    // Arrow down should move to Personas
     await page.keyboard.press("ArrowDown");
     await expect(page).toHaveURL(/\/settings\/personas/);
     await expect(page.getByRole("tab", { name: "Personas" })).toBeFocused();
 
-    // Home -> Environments
+    // Arrow down again -> Appearance
+    await page.keyboard.press("ArrowDown");
+    await expect(page).toHaveURL(/\/settings\/appearance/);
+    await expect(page.getByRole("tab", { name: "Appearance" })).toBeFocused();
+
+    // Home -> Credentials
     await page.keyboard.press("Home");
-    await expect(page).toHaveURL(/\/settings\/environments/);
-    await expect(page.getByRole("tab", { name: "Environments" })).toBeFocused();
+    await expect(page).toHaveURL(/\/settings\/credentials/);
+    await expect(page.getByRole("tab", { name: "Credentials" })).toBeFocused();
 
     // End -> About
     await page.keyboard.press("End");
@@ -139,7 +139,7 @@ test.describe("Settings Tabs", () => {
     await goToSettings(mockPage);
     const breadcrumbs = page.getByTestId("breadcrumbs");
 
-    const tabs = ["Environments", "Credentials", "Personas", "Appearance", "About"];
+    const tabs = ["Credentials", "Personas", "Appearance", "About"];
     for (const tab of tabs) {
       await page.getByRole("tab", { name: tab }).click();
       await expect(breadcrumbs).toContainText("Home");

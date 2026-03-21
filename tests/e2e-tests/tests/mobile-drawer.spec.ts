@@ -58,7 +58,7 @@ test.describe("Mobile Drawer", () => {
     const sidebar = appPage.getByTestId("sidebar");
 
     // Navigate to settings programmatically (sidebar tab click has z-index issues on mobile)
-    await appPage.goto("/settings/environments");
+    await appPage.goto("/settings/credentials");
     await appPage.waitForFunction(() => document.body.innerText.includes("Connected"), { timeout: 10_000 });
 
     // Open the drawer
@@ -80,7 +80,7 @@ test.describe("Mobile Drawer", () => {
     await expect(hamburger).toBeVisible();
 
     // Navigate to settings programmatically
-    await appPage.goto("/settings/environments");
+    await appPage.goto("/settings/credentials");
     await appPage.waitForFunction(() => document.body.innerText.includes("Connected"), { timeout: 10_000 });
 
     // Hamburger should still be visible on settings pages
@@ -92,7 +92,7 @@ test.describe("Mobile Drawer", () => {
     const sidebar = appPage.getByTestId("sidebar");
 
     // Navigate to settings programmatically
-    await appPage.goto("/settings/environments");
+    await appPage.goto("/settings/credentials");
     await appPage.waitForFunction(() => document.body.innerText.includes("Connected"), { timeout: 10_000 });
 
     // Open the drawer
@@ -100,7 +100,7 @@ test.describe("Mobile Drawer", () => {
     await expect(sidebar).toBeVisible();
 
     // Settings tabs should be visible inside the sidebar
-    await expect(appPage.getByRole("tab", { name: "Environments" })).toBeVisible({ timeout: 5_000 });
+    await expect(appPage.getByRole("tab", { name: "Credentials" })).toBeVisible({ timeout: 5_000 });
     await expect(appPage.getByRole("tab", { name: "Appearance" })).toBeVisible();
   });
 });

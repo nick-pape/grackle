@@ -36,7 +36,7 @@ type AgentEvent = Message<"grackle.powerline.AgentEvent"> & {
 const AgentEventSchema: GenMessage<AgentEvent>;
 
 // @public
-export type AgentEventType = "text" | "tool_use" | "tool_result" | "error" | "status" | "system" | "finding" | "subtask_create" | "runtime_session_id";
+export type AgentEventType = "text" | "tool_use" | "tool_result" | "error" | "status" | "system" | "finding" | "subtask_create" | "runtime_session_id" | "usage";
 
 // @public
 export const API_KEY_FILENAME: string;
@@ -206,6 +206,7 @@ enum EventType_2 {
     TOOL_RESULT = 3,
     TOOL_USE = 2,
     UNSPECIFIED = 0,
+    USAGE = 11,
     USER_INPUT = 9
 }
 
@@ -501,11 +502,6 @@ const Grackle: GenService<{
         input: typeof EmptySchema;
         output: typeof PairingCodeResponseSchema;
     };
-    waitForPipe: {
-        methodKind: "unary";
-        input: typeof WaitForPipeRequestSchema;
-        output: typeof WaitForPipeResponseSchema;
-    };
 }>;
 
 declare namespace grackle {
@@ -537,10 +533,6 @@ declare namespace grackle {
         ResumeRequestSchema,
         InputMessage,
         InputMessageSchema,
-        WaitForPipeRequest,
-        WaitForPipeRequestSchema,
-        WaitForPipeResponse,
-        WaitForPipeResponseSchema,
         SessionEvent,
         SessionEventSchema,
         TokenEntry,
@@ -941,7 +933,16 @@ const ResumeRequestSchema_2: GenMessage<ResumeRequest_2>;
 export const ROOT_TASK_ID: string;
 
 // @public
+export const RUNTIME_MANIFESTS: Readonly<Record<string, RuntimePackageManifest>>;
+
+// @public
 export type RuntimeName = "claude-code" | "copilot" | "codex" | "stub";
+
+// @public
+export interface RuntimePackageManifest {
+    needsJsonRpcHook?: boolean;
+    packages: Record<string, string>;
+}
 
 // @public
 export const SEED_PERSONA_ID: string;
@@ -963,7 +964,9 @@ type Session = Message<"grackle.Session"> & {
     error: string;
     taskId: string;
     personaId: string;
-    pipeFd: number;
+    inputTokens: number;
+    outputTokens: number;
+    costUsd: number;
 };
 
 // @public
@@ -1083,7 +1086,6 @@ type SpawnRequest = Message<"grackle.SpawnRequest"> & {
     personaId: string;
     worktreeBasePath: string;
     pipe: string;
-    parentSessionId: string;
 };
 
 // @public
@@ -1323,24 +1325,6 @@ type UpdateWorkspaceRequest = Message<"grackle.UpdateWorkspaceRequest"> & {
 
 // @public
 const UpdateWorkspaceRequestSchema: GenMessage<UpdateWorkspaceRequest>;
-
-// @public
-type WaitForPipeRequest = Message<"grackle.WaitForPipeRequest"> & {
-    sessionId: string;
-    fd: number;
-};
-
-// @public
-const WaitForPipeRequestSchema: GenMessage<WaitForPipeRequest>;
-
-// @public
-type WaitForPipeResponse = Message<"grackle.WaitForPipeResponse"> & {
-    content: string;
-    senderSessionId: string;
-};
-
-// @public
-const WaitForPipeResponseSchema: GenMessage<WaitForPipeResponse>;
 
 // @public
 type Workspace = Message<"grackle.Workspace"> & {

@@ -97,6 +97,7 @@ vi.mock("@grackle-ai/adapter-sdk", async (importOriginal) => ({
 
 vi.mock("./system-prompt-builder.js", () => ({
   SystemPromptBuilder: vi.fn().mockImplementation(() => ({ build: () => "" })),
+  buildTaskPrompt: vi.fn((title: string) => title),
 }));
 
 vi.mock("./utils/slugify.js", () => ({
@@ -137,7 +138,10 @@ function applySchema(): void {
       task_id            TEXT NOT NULL DEFAULT '',
       persona_id         TEXT NOT NULL DEFAULT '',
       parent_session_id  TEXT NOT NULL DEFAULT '',
-      pipe_mode          TEXT NOT NULL DEFAULT ''
+      pipe_mode          TEXT NOT NULL DEFAULT '',
+      input_tokens       INTEGER NOT NULL DEFAULT 0,
+      output_tokens      INTEGER NOT NULL DEFAULT 0,
+      cost_usd           REAL NOT NULL DEFAULT 0
     );
   `);
 }

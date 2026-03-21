@@ -29,6 +29,12 @@ vi.mock("./runtime-utils.js", async (importOriginal) => {
   const original = await importOriginal<typeof import("./runtime-utils.js")>();
   return { ...original, resolveWorkingDirectory: vi.fn(async () => undefined) };
 });
+vi.mock("../runtime-installer.js", () => ({
+  ensureRuntimeInstalled: vi.fn(async () => ""),
+  importFromRuntime: vi.fn(async (_runtime: string, pkg: string) => import(pkg)),
+  getRuntimeBinDirectory: vi.fn(() => ""),
+  isDevMode: vi.fn(() => true),
+}));
 
 import { mapSessionUpdate, autoApprovePermission, selectEnvVarAuthMethod, AcpRuntime, _setAcpSdkForTesting } from "./acp.js";
 import type { AcpSdkModule } from "./acp.js";

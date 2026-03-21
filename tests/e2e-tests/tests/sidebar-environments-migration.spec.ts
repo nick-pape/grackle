@@ -1,18 +1,11 @@
 import { test, expect } from "./fixtures.js";
 import {
-  clickSidebarWorkspace,
   sendWsAndWaitFor,
   sendWsMessage,
-  installWsTracker,
-  injectWsMessage,
 } from "./helpers.js";
 
-function getEnvironmentRow(page: import("@playwright/test").Page, name: string) {
-  return page.getByTestId("env-row").filter({ hasText: name }).first();
-}
-
 test.describe("App Navigation Bar", () => {
-  test("app nav bar has Chat, Tasks, Workspaces, and Settings tabs", async ({ appPage }) => {
+  test("app nav bar has Chat, Tasks, Environments, and Settings tabs", async ({ appPage }) => {
     const page = appPage;
 
     // App nav bar should be visible (full-width, above sidebar)
@@ -21,7 +14,7 @@ test.describe("App Navigation Bar", () => {
     // All four tabs should be present
     await expect(page.locator('[data-testid="sidebar-tab-chat"]')).toBeVisible();
     await expect(page.locator('[data-testid="sidebar-tab-tasks"]')).toBeVisible();
-    await expect(page.locator('[data-testid="sidebar-tab-workspaces"]')).toBeVisible();
+    await expect(page.locator('[data-testid="sidebar-tab-environments"]')).toBeVisible();
     await expect(page.locator('[data-testid="sidebar-tab-settings"]')).toBeVisible();
   });
 
@@ -32,88 +25,54 @@ test.describe("App Navigation Bar", () => {
     await expect(page).toHaveURL(/\/$/);
   });
 
-  test("clicking Workspaces tab shows workspace list", async ({ appPage }) => {
+  test("clicking Environments tab shows environment nav", async ({ appPage }) => {
     const page = appPage;
 
-    // Click the Workspaces tab
-    await page.locator('[data-testid="sidebar-tab-workspaces"]').click();
+    // Click the Environments tab
+    await page.locator('[data-testid="sidebar-tab-environments"]').click();
 
-    // The "+" create workspace button should be visible in the sidebar
-    const sidebar = page.locator('[data-testid="sidebar"]');
-    await expect(sidebar.locator('button[title="Create workspace"]')).toBeVisible();
-  });
-
-  test("sidebar does NOT contain an Environments tab button", async ({ appPage }) => {
-    const page = appPage;
-
-    const sidebar = page.locator('[data-testid="sidebar"]');
-
-    // Sidebar should NOT contain an "Environments" button
-    await expect(sidebar.locator("button", { hasText: "Environments" })).not.toBeVisible();
+    // The environment nav and add button should be visible
+    await expect(page.getByTestId("environment-nav")).toBeVisible();
+    await expect(page.getByTestId("env-nav-add")).toBeVisible();
   });
 });
 
-test.describe("Environments in Settings Panel", () => {
+test.describe("Environments Page", () => {
   test.beforeEach(async ({ appPage }) => {
-    await appPage.locator('[data-testid="sidebar-tab-settings"]').click();
-    await expect(appPage.getByRole("tablist", { name: "Settings" })).toBeVisible({ timeout: 5_000 });
+    await appPage.locator('[data-testid="sidebar-tab-environments"]').click();
   });
 
-  test("settings panel shows Environments tab", async ({ appPage }) => {
+  test("environment nav shows test-local environment", async ({ appPage }) => {
     const page = appPage;
 
-    // Environments tab should be selected by default
-    await expect(page.getByRole("tab", { name: "Environments" })).toHaveAttribute("aria-selected", "true");
-
-    // Environment list header should be visible
-    await expect(page.getByText("Environments").first()).toBeVisible();
+    // The seeded test-local environment should be listed in the nav
+    await expect(page.getByTestId("env-nav-item")).toBeVisible();
   });
 
-  test("settings panel shows environment list with test-local", async ({ appPage }) => {
+  test("+ Add Environment button is visible", async ({ appPage }) => {
     const page = appPage;
 
-    // The seeded test-local environment should be listed
-    await expect(getEnvironmentRow(page, "test-local")).toBeVisible();
+    await expect(page.getByTestId("env-nav-add")).toBeVisible();
+    await expect(page.getByTestId("env-nav-add")).toHaveText("+ Add Environment");
   });
 
-  test("Environments tab is listed before Credentials tab", async ({ appPage }) => {
+  test("clicking environment nav item shows detail page", async ({ appPage }) => {
     const page = appPage;
 
-    // Both tabs should be visible
-    const envTab = page.getByRole("tab", { name: "Environments" });
-    const credentialsTab = page.getByRole("tab", { name: "Credentials" });
-    await expect(envTab).toBeVisible();
-    await expect(credentialsTab).toBeVisible();
+    // Click the environment
+    await page.getByTestId("env-nav-item").first().click();
 
-    // Environments tab should come before Credentials tab in the DOM
-    const envY = (await envTab.boundingBox())!.y;
-    const credentialsY = (await credentialsTab.boundingBox())!.y;
-    expect(envY).toBeLessThan(credentialsY);
+    // Detail page should show lifecycle actions
+    await expect(page.getByTestId("env-edit-btn")).toBeVisible({ timeout: 5_000 });
   });
 
-  test("+ Add Environment button is visible and has correct text", async ({ appPage }) => {
-    const page = appPage;
-
-    const addButton = page.locator('button[title="Add environment"]');
-    await expect(addButton).toBeVisible();
-    await expect(addButton).toHaveText("+ Add Environment");
-  });
-
-  test("environment rows have data-testid", async ({ appPage }) => {
-    const page = appPage;
-
-    // At least the test-local environment should have the data-testid
-    const envRows = page.locator('[data-testid="env-row"]');
-    await expect(envRows.first()).toBeVisible();
-  });
-
-  test("clicking + Add Environment opens form panel and returns to Settings after submit", async ({ appPage }) => {
+  test("clicking + Add Environment opens form panel and returns to list after submit", async ({ appPage }) => {
     const page = appPage;
 
     // Click + Add Environment
-    await page.locator('button[title="Add environment"]').click();
+    await page.getByTestId("env-nav-add").click();
 
-    // Form should appear in the main panel (not UnifiedBar)
+    // Form should appear in the main panel
     await expect(page.getByTestId("env-create-panel")).toBeVisible();
     await expect(page.getByTestId("env-create-name")).toBeVisible();
 
@@ -121,10 +80,10 @@ test.describe("Environments in Settings Panel", () => {
     await page.getByTestId("env-create-name").fill("settings-test-env");
     await page.getByTestId("env-create-submit").click();
 
-    // Should return to Settings panel (not empty mode)
-    await expect(page.getByRole("tablist", { name: "Settings" })).toBeVisible({ timeout: 5_000 });
+    // Form should close
+    await expect(page.getByTestId("env-create-panel")).not.toBeVisible({ timeout: 5_000 });
 
-    // New environment should appear in the list
+    // New environment should appear in the nav
     await expect(page.getByText("settings-test-env", { exact: true })).toBeVisible({ timeout: 5_000 });
 
     // Clean up
@@ -142,139 +101,9 @@ test.describe("Environments in Settings Panel", () => {
       });
     }
   });
-
-  test("expand environment row shows action buttons", async ({ appPage }) => {
-    const page = appPage;
-
-    // Click on test-local to expand
-    await getEnvironmentRow(page, "test-local").click();
-
-    // Action buttons should appear (Connect or Stop depending on state, and Delete)
-    const deleteButton = page.locator("button", { hasText: "Delete" });
-    await expect(deleteButton).toBeVisible({ timeout: 5_000 });
-  });
-
-  test("collapse environment row hides action buttons", async ({ appPage }) => {
-    const page = appPage;
-
-    // Click to expand
-    await getEnvironmentRow(page, "test-local").click();
-    await expect(page.locator("button", { hasText: "Delete" })).toBeVisible({ timeout: 5_000 });
-
-    // Click again to collapse
-    await getEnvironmentRow(page, "test-local").click();
-    await expect(page.locator("button", { hasText: "Delete" })).not.toBeVisible({ timeout: 5_000 });
-  });
 });
 
-test.describe("Session Accordion in Environment Card", () => {
-  /** Inject fake sessions into the app via WS message. */
-  async function injectFakeSessions(page: import("@playwright/test").Page): Promise<void> {
-    await injectWsMessage(page, {
-      type: "sessions",
-      payload: {
-        sessions: [
-          { id: "s1", environmentId: "test-local", runtime: "stub", status: "running", prompt: "running session one", startedAt: "2025-01-01T00:00:00Z" },
-          { id: "s2", environmentId: "test-local", runtime: "stub", status: "failed", prompt: "failed session two", startedAt: "2025-01-01T00:01:00Z" },
-          { id: "s3", environmentId: "test-local", runtime: "stub", status: "completed", prompt: "completed session three", startedAt: "2025-01-01T00:02:00Z" },
-        ],
-      },
-    });
-  }
-
-  test("session summary row visible when environment has sessions", async ({ page }) => {
-    await installWsTracker(page);
-    await page.goto("/");
-    await page.waitForFunction(() => document.body.innerText.includes("Connected"), { timeout: 10_000 });
-
-    // Open Settings via sidebar tab
-    await page.locator('[data-testid="sidebar-tab-settings"]').click();
-    await expect(page.getByRole("tablist", { name: "Settings" })).toBeVisible({ timeout: 5_000 });
-
-    // Inject fake sessions for test-local
-    await injectFakeSessions(page);
-
-    // Summary row should appear with status counts
-    const summaryRow = page.locator('[data-testid="session-summary-row"]');
-    await expect(summaryRow).toBeVisible({ timeout: 5_000 });
-    await expect(summaryRow).toContainText("1 running");
-    await expect(summaryRow).toContainText("1 failed");
-    await expect(summaryRow).toContainText("1 completed");
-
-    // Count badge should show total
-    await expect(summaryRow.locator("text=3")).toBeVisible();
-  });
-
-  test("session list hidden by default, expands on click", async ({ page }) => {
-    await installWsTracker(page);
-    await page.goto("/");
-    await page.waitForFunction(() => document.body.innerText.includes("Connected"), { timeout: 10_000 });
-
-    await page.locator('[data-testid="sidebar-tab-settings"]').click();
-    await expect(page.getByRole("tablist", { name: "Settings" })).toBeVisible({ timeout: 5_000 });
-
-    await injectFakeSessions(page);
-
-    const summaryRow = page.locator('[data-testid="session-summary-row"]');
-    await expect(summaryRow).toBeVisible({ timeout: 5_000 });
-
-    // Session rows should NOT be visible when collapsed
-    await expect(page.locator('[data-testid="session-row"]').first()).not.toBeVisible();
-
-    // Click summary to expand
-    await summaryRow.click();
-
-    // Session rows should now be visible
-    const sessionRows = page.locator('[data-testid="session-row"]');
-    await expect(sessionRows).toHaveCount(3, { timeout: 5_000 });
-    await expect(sessionRows.first()).toBeVisible();
-  });
-
-  test("clicking session row navigates to session view", async ({ page }) => {
-    await installWsTracker(page);
-    await page.goto("/");
-    await page.waitForFunction(() => document.body.innerText.includes("Connected"), { timeout: 10_000 });
-
-    await page.locator('[data-testid="sidebar-tab-settings"]').click();
-    await expect(page.getByRole("tablist", { name: "Settings" })).toBeVisible({ timeout: 5_000 });
-
-    await injectFakeSessions(page);
-
-    // Expand sessions
-    const summaryRow = page.locator('[data-testid="session-summary-row"]');
-    await expect(summaryRow).toBeVisible({ timeout: 5_000 });
-    await summaryRow.click();
-
-    // Click the first session row
-    const firstSession = page.locator('[data-testid="session-row"]').first();
-    await expect(firstSession).toBeVisible({ timeout: 5_000 });
-    await firstSession.click();
-
-    // Settings panel should disappear (navigated to session view)
-    await expect(page.getByRole("tablist", { name: "Settings" })).not.toBeVisible({ timeout: 5_000 });
-  });
-
-  test("environment with no sessions shows idle label, not summary row", async ({ page }) => {
-    await installWsTracker(page);
-    await page.goto("/");
-    await page.waitForFunction(() => document.body.innerText.includes("Connected"), { timeout: 10_000 });
-
-    // Open Settings via sidebar tab
-    await page.locator('[data-testid="sidebar-tab-settings"]').click();
-    await expect(page.getByRole("tablist", { name: "Settings" })).toBeVisible({ timeout: 5_000 });
-
-    // Inject empty sessions list to ensure test-local has zero sessions
-    await injectWsMessage(page, { type: "sessions", payload: { sessions: [] } });
-
-    // test-local should show (idle) when it has no sessions
-    await expect(page.getByText("(idle)").first()).toBeVisible({ timeout: 5_000 });
-
-    // No session summary row should exist
-    await expect(page.locator('[data-testid="session-summary-row"]')).not.toBeVisible();
-  });
-});
-
-test.describe("Navigation Between Settings and Workspaces", () => {
+test.describe("Navigation Between Settings and Environments", () => {
   test("clicking Grackle brand from Settings returns to home", async ({ appPage }) => {
     const page = appPage;
 
@@ -289,25 +118,18 @@ test.describe("Navigation Between Settings and Workspaces", () => {
     await expect(page.locator('[data-testid="sidebar-tab-settings"]')).toHaveAttribute("aria-selected", "false", { timeout: 5_000 });
   });
 
-  test("settings tab returns to Settings from workspace view", async ({ appPage }) => {
+  test("settings tab returns to Settings from environment view", async ({ appPage }) => {
     const page = appPage;
 
-    // Switch to Workspaces tab and create a workspace
-    await page.locator('[data-testid="sidebar-tab-workspaces"]').click();
-    const sidebar = page.locator('[data-testid="sidebar"]');
-    await sidebar.locator('button[title="Create workspace"]').click();
-    const nameInput = page.locator('input[placeholder="Workspace name..."]');
-    await nameInput.fill("gear-test");
-    await page.locator("button", { hasText: "OK" }).click();
-    await expect(page.getByTestId("sidebar").getByText("gear-test", { exact: true })).toBeVisible({ timeout: 5_000 });
-    await clickSidebarWorkspace(page, "gear-test");
+    // Switch to Environments tab and select an environment
+    await page.locator('[data-testid="sidebar-tab-environments"]').click();
+    await page.getByTestId("env-nav-item").first().click();
 
     // Now click Settings tab
     await page.locator('[data-testid="sidebar-tab-settings"]').click();
 
-    // Settings should be visible with Environments and Credentials tabs
+    // Settings should be visible with Credentials tab (Environments are in their own tab)
     await expect(page.getByRole("tablist", { name: "Settings" })).toBeVisible({ timeout: 5_000 });
-    await expect(page.getByRole("tab", { name: "Environments" })).toBeVisible();
     await expect(page.getByRole("tab", { name: "Credentials" })).toBeVisible();
   });
 });

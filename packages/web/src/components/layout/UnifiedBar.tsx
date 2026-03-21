@@ -113,11 +113,8 @@ export function UnifiedBar(): JSX.Element {
     })
     : false;
 
-  // --- chat mode (root task) ---
   if (isChat) {
     const rootTask = tasks.find((t) => t.id === ROOT_TASK_ID);
-    // Resolve latest session from the already-loaded sessions list first (available
-    // immediately on connect), falling back to taskSessions (requires roundtrip).
     const latestRootSession = rootTask?.latestSessionId
       ? (sessions.find((s) => s.id === rootTask.latestSessionId) ??
          (taskSessions[ROOT_TASK_ID] ?? []).find((s) => s.id === rootTask.latestSessionId))
@@ -127,13 +124,12 @@ export function UnifiedBar(): JSX.Element {
     if (!localEnv) {
       return (
         <div className={styles.bar}>
-          <span className={styles.hintText}>
-            Add a local environment to start chatting
-          </span>
+          <span className={styles.hintText}>Add a local environment to start chatting</span>
         </div>
       );
     }
 
+    // Active session (running or idle) — show chat input with sendInput
     if (latestRootSession && !["completed", "failed", "interrupted", "hibernating"].includes(latestRootSession.status)) {
       const rootEnvDisconnected = isEnvDisconnected(latestRootSession.environmentId, environments);
       const handleChatSend = (e: FormEvent): void => {
@@ -158,7 +154,8 @@ export function UnifiedBar(): JSX.Element {
       );
     }
 
-    // No active session — show input to start one
+    // No active session — server normally auto-starts the root task on boot.
+    // Fallback: let the user start it if auto-start was skipped.
     const handleChatStart = (e: FormEvent): void => {
       e.preventDefault();
       if (!text.trim()) {

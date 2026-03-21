@@ -7,14 +7,14 @@ import { registerAdapter, startHeartbeat } from "./adapter-manager.js";
 import { updateEnvironmentStatus, resetAllStatuses } from "./env-registry.js";
 import { initWsSubscriber } from "./ws-broadcast.js";
 import { initSigchldSubscriber } from "./signals/sigchld.js";
-import { emit } from "./event-bus.js";
+import { emit, subscribe } from "./event-bus.js";
 import { DockerAdapter } from "./adapters/docker.js";
 import { LocalAdapter } from "./adapters/local.js";
 import { SshAdapter } from "./adapters/ssh.js";
 import { CodespaceAdapter } from "./adapters/codespace.js";
 import { closeAllTunnels, reconnectOrProvision } from "@grackle-ai/adapter-sdk";
-import { createWsBridge } from "./ws-bridge.js";
-import { DEFAULT_SERVER_PORT, DEFAULT_WEB_PORT, DEFAULT_MCP_PORT, DEFAULT_POWERLINE_PORT } from "@grackle-ai/common";
+import { createWsBridge, startTaskSession } from "./ws-bridge.js";
+import { DEFAULT_SERVER_PORT, DEFAULT_WEB_PORT, DEFAULT_MCP_PORT, DEFAULT_POWERLINE_PORT, ROOT_TASK_ID, TASK_STATUS } from "@grackle-ai/common";
 import { startLocalPowerLine, type LocalPowerLineHandle } from "./local-powerline.js";
 import * as adapterManager from "./adapter-manager.js";
 import * as envRegistry from "./env-registry.js";
@@ -820,6 +820,58 @@ async function main(): Promise<void> {
 
   // Wire SIGCHLD: notify parent tasks when child sessions reach terminal status
   initSigchldSubscriber();
+
+  // Auto-start the root task (process 1) when any environment connects.
+  // Skipped in E2E tests where the root task session would conflict with test sessions.
+  if (process.env.GRACKLE_SKIP_ROOT_AUTOSTART !== "1") {
+    let starting = false;
+    const tryBootRootTask = async (): Promise<void> => {
+      if (starting) {
+        return;
+      }
+      starting = true;
+      try {
+        const taskStoreModule = await import("./task-store.js");
+        const sessionStoreModule = await import("./session-store.js");
+        const { computeTaskStatus } = await import("./compute-task-status.js");
+
+        const rootTask = taskStoreModule.getTask(ROOT_TASK_ID);
+        if (!rootTask) {
+          return;
+        }
+
+        const taskSessions = sessionStoreModule.listSessionsForTask(ROOT_TASK_ID);
+        const { status } = computeTaskStatus(rootTask.status, taskSessions);
+        if (status === TASK_STATUS.WORKING) {
+          return; // Already running
+        }
+
+        // Find any connected environment (prefer local)
+        const allEnvs = (await import("./env-registry.js")).listEnvironments();
+        const connectedEnv = allEnvs.find((e) => e.status === "connected" && e.adapterType === "local")
+          || allEnvs.find((e) => e.status === "connected");
+        if (!connectedEnv) {
+          return;
+        }
+
+        const err = await startTaskSession(undefined, rootTask, { environmentId: connectedEnv.id });
+        if (err) {
+          logger.warn({ err }, "Root task auto-start failed");
+        } else {
+          logger.info({ environmentId: connectedEnv.id }, "Root task auto-started");
+        }
+      } catch (bootErr) {
+        logger.warn({ err: bootErr }, "Root task auto-start failed");
+      } finally {
+        starting = false; // eslint-disable-line require-atomic-updates -- single-threaded, flag guards re-entry
+      }
+    };
+    subscribe((event) => {
+      if (event.type === "environment.changed") {
+        tryBootRootTask().catch(() => { /* logged inside */ });
+      }
+    });
+  }
 
   webServer.on("error", (err: NodeJS.ErrnoException) => {
     if (err.code === "EADDRINUSE") {

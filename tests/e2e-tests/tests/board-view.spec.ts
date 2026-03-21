@@ -1,6 +1,6 @@
 import { test, expect } from "./fixtures.js";
 import {
-  clickSidebarWorkspace,
+  navigateToWorkspace,
   createWorkspace,
   createTask,
   createTaskViaWs,
@@ -16,6 +16,7 @@ test.describe("Board View", () => {
 
     await createWorkspace(page, "board-tab-vis");
     await createTask(page, "board-tab-vis", "board-vis-task");
+    await navigateToWorkspace(page, "board-tab-vis");
 
     // Board tab should be visible
     const boardTab = page.getByTestId("board-tab");
@@ -33,7 +34,7 @@ test.describe("Board View", () => {
     const page = appPage;
 
     await createWorkspace(page, "board-empty");
-    await clickSidebarWorkspace(page, "board-empty");
+    await navigateToWorkspace(page, "board-empty");
 
     // Navigate to board tab
     await page.getByTestId("board-tab").click();
@@ -49,6 +50,7 @@ test.describe("Board View", () => {
     await createWorkspace(page, "board-columns");
     await createTask(page, "board-columns", "col-task-a");
     await createTask(page, "board-columns", "col-task-b");
+    await navigateToWorkspace(page, "board-columns");
 
     // Switch to Board tab
     await page.getByTestId("board-tab").click();
@@ -73,6 +75,7 @@ test.describe("Board View", () => {
 
     await createWorkspace(page, "board-all-cols");
     await createTask(page, "board-all-cols", "all-cols-task");
+    await navigateToWorkspace(page, "board-all-cols");
 
     await page.getByTestId("board-tab").click();
     await expect(page.getByTestId("board-container")).toBeVisible({ timeout: 5_000 });
@@ -90,6 +93,7 @@ test.describe("Board View", () => {
 
     await createWorkspace(page, "board-nav");
     await createTask(page, "board-nav", "board-nav-task");
+    await navigateToWorkspace(page, "board-nav");
 
     // Switch to Board
     await page.getByTestId("board-tab").click();
@@ -108,6 +112,7 @@ test.describe("Board View", () => {
 
     await createWorkspace(page, "board-focus");
     await createTask(page, "board-focus", "focus-task");
+    await navigateToWorkspace(page, "board-focus");
 
     await page.getByTestId("board-tab").click();
     await expect(page.getByTestId("board-container")).toBeVisible({ timeout: 5_000 });
@@ -134,7 +139,9 @@ test.describe("Board View", () => {
     await createTaskViaWs(page, workspaceId, "blocked-task", {
       dependsOn: [blockerId],
     });
-    await page.getByText("blocked-task").first().waitFor({ timeout: 5_000 });
+
+    // Navigate to workspace page to see board
+    await navigateToWorkspace(page, "board-blocked");
 
     // Switch to board
     await page.getByTestId("board-tab").click();
@@ -156,15 +163,12 @@ test.describe("Board View", () => {
     const parentTask = await createTaskViaWs(page, workspaceId, "parent-task", { canDecompose: true });
     const parentId = parentTask.id as string;
 
-    // Click into the workspace so we're on the workspace page
-    await clickSidebarWorkspace(page, "board-children");
-    await page.getByText("parent-task").first().waitFor({ timeout: 5_000 });
-
     // Create child tasks
     await createTaskViaWs(page, workspaceId, "child-1", { parentTaskId: parentId });
     await createTaskViaWs(page, workspaceId, "child-2", { parentTaskId: parentId });
-    await page.getByText("child-1").first().waitFor({ timeout: 5_000 });
-    await page.getByText("child-2").first().waitFor({ timeout: 5_000 });
+
+    // Navigate to workspace page to see board
+    await navigateToWorkspace(page, "board-children");
 
     // Switch to board
     await page.getByTestId("board-tab").click();
@@ -180,6 +184,7 @@ test.describe("Board View", () => {
 
     await createWorkspace(page, "board-realtime");
     await createTask(page, "board-realtime", "rt-task", "test-local");
+    await navigateToWorkspace(page, "board-realtime");
 
     // Switch to board — card should be in Not Started
     await page.getByTestId("board-tab").click();
@@ -198,9 +203,8 @@ test.describe("Board View", () => {
     // Wait for task to transition to working
     await expect(page.locator('[data-testid="task-status"]')).toContainText(/working|paused/, { timeout: 15_000 });
 
-    // Navigate back to the workspace (switch to Workspaces tab first) and switch to board
-    await page.locator('[data-testid="sidebar-tab-workspaces"]').click();
-    await clickSidebarWorkspace(page, "board-realtime");
+    // Navigate back to the workspace and switch to board
+    await navigateToWorkspace(page, "board-realtime");
     await page.getByTestId("board-tab").click();
     await expect(page.getByTestId("board-container")).toBeVisible({ timeout: 5_000 });
 

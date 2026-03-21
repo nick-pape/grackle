@@ -1,0 +1,178 @@
+@use '../styles/mixins' as *;
+
+.container {
+  max-width: 800px;
+  color: var(--text-primary);
+}
+
+// --- Environment header ---
+
+.envHeader {
+  margin-bottom: var(--space-lg);
+}
+
+.envTitleRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.statusDot {
+  font-size: var(--font-size-lg);
+  flex-shrink: 0;
+}
+
+.envName {
+  margin: 0;
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+}
+
+.statusBadge {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  text-transform: capitalize;
+}
+
+.envMeta {
+  display: flex;
+  gap: var(--space-md);
+  margin-top: var(--space-xs);
+}
+
+.metaTag {
+  @include surface-inset;
+  padding: 2px var(--space-sm);
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+}
+
+// --- Actions ---
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-xl);
+  flex-wrap: wrap;
+}
+
+.provisionMessage {
+  font-size: var(--font-size-sm);
+  color: var(--accent-blue);
+}
+
+.errorMessage {
+  font-size: var(--font-size-sm);
+  color: var(--accent-red);
+}
+
+// --- Workspace section ---
+
+.section {
+  margin-top: var(--space-lg);
+}
+
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-md);
+
+  h3 {
+    margin: 0;
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-bold);
+  }
+}
+
+.createForm {
+  display: flex;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+  align-items: center;
+}
+
+.createInput {
+  @include input-field;
+  flex: 1;
+}
+
+.cardList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.card {
+  @include surface-card;
+  padding: var(--space-md);
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.cardName {
+  font-size: var(--font-size-md);
+  color: var(--text-primary);
+}
+
+.cardActions {
+  display: flex;
+  gap: var(--space-xs);
+}
+
+.cardDescription {
+  margin: var(--space-sm) 0 0;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.cardMeta {
+  margin-top: var(--space-sm);
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+}
+
+.repoLink {
+  color: var(--accent-blue);
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.empty {
+  text-align: center;
+  color: var(--text-tertiary);
+  padding: var(--space-xl);
+}
+
+// --- Buttons ---
+
+.btnPrimary {
+  @include btn-primary;
+  font-size: var(--font-size-sm);
+}
+
+.btnOutline {
+  @include btn-outline;
+  font-size: var(--font-size-sm);
+  padding: var(--space-xs) var(--space-md);
+}
+
+.btnSmall {
+  @include btn-ghost;
+  font-size: var(--font-size-xs);
+  padding: 2px var(--space-sm);
+}
+
+.btnDanger {
+  @include btn-danger;
+  font-size: var(--font-size-xs);
+  padding: 2px var(--space-sm);
+}

@@ -1,6 +1,28 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sat, 21 Mar 2026 16:01:10 GMT and should not be manually modified.
+This log was last generated on Sat, 21 Mar 2026 18:10:39 GMT and should not be manually modified.
+
+## 0.56.2
+Sat, 21 Mar 2026 18:10:39 GMT
+
+### Patches
+
+- Promote Environments to top-level page view, replacing the standalone Workspaces tab
+
+## 0.56.1
+Sat, 21 Mar 2026 17:58:15 GMT
+
+### Patches
+
+- Move task title and description from system prompt to user prompt so agents receive work instructions as the first message
+
+## 0.56.0
+Sat, 21 Mar 2026 17:06:15 GMT
+
+### Minor changes
+
+- Add orchestrator system prompt template with task tree, persona roster, environments, and decomposition guidelines
+- Install runtime SDK packages lazily at spawn time instead of bundling all 8 as hard dependencies, reducing provisioning time and disk usage
 
 ## 0.55.0
 Sat, 21 Mar 2026 16:01:10 GMT

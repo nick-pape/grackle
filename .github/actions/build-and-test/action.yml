@@ -1,6 +1,12 @@
 name: Build and Test
 description: Shared install → build → Playwright → test steps
 
+inputs:
+  skip-e2e:
+    description: Skip E2E tests (Playwright install + rush e2e)
+    required: false
+    default: "false"
+
 runs:
   using: composite
   steps:
@@ -28,9 +34,24 @@ runs:
       shell: bash
       run: node common/scripts/install-run-rush.js build
 
+    - name: Cache Playwright browsers
+      if: inputs.skip-e2e != 'true'
+      id: playwright-cache
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/ms-playwright
+        key: playwright-${{ runner.os }}-${{ hashFiles('common/config/rush/pnpm-lock.yaml') }}
+
     - name: Install Playwright browsers
+      if: inputs.skip-e2e != 'true' && steps.playwright-cache.outputs.cache-hit != 'true'
       shell: bash
       run: npx playwright install --with-deps chromium
+      working-directory: tests/e2e-tests
+
+    - name: Install Playwright system deps
+      if: inputs.skip-e2e != 'true' && steps.playwright-cache.outputs.cache-hit == 'true'
+      shell: bash
+      run: npx playwright install-deps chromium
       working-directory: tests/e2e-tests
 
     - name: Run unit tests
@@ -38,5 +59,6 @@ runs:
       run: node common/scripts/install-run-rush.js test --verbose
 
     - name: Run E2E tests
+      if: inputs.skip-e2e != 'true'
       shell: bash
       run: node common/scripts/install-run-rush.js e2e --verbose

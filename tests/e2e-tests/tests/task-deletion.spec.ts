@@ -9,23 +9,31 @@ import {
   sendWsMessage,
 } from "./helpers.js";
 
+/** Navigate to the Tasks sidebar tab so the TaskList is visible. */
+async function goToTasksTab(page: import("@playwright/test").Page): Promise<void> {
+  await page.locator('[data-testid="sidebar-tab-tasks"]').click();
+}
+
 test.describe("Task Deletion", () => {
-  test("delete pending task removes it from sidebar", async ({ appPage }) => {
+  test("delete pending task removes it from task list", async ({ appPage }) => {
     const page = appPage;
 
     // Create workspace and task
     await createWorkspace(page, "del-remove");
     await createTask(page, "del-remove", "doomed-task", "test-local");
 
-    // Verify the task is visible in sidebar
-    await expect(page.getByText("doomed-task").first()).toBeVisible();
+    // Navigate to Tasks tab to see the task in the TaskList sidebar
+    await goToTasksTab(page);
+
+    // Verify the task is visible in the task list
+    await expect(page.getByText("doomed-task").first()).toBeVisible({ timeout: 5_000 });
 
     // Get task ID and delete via WS
     const workspaceId = await getWorkspaceId(page, "del-remove");
     const taskId = await getTaskId(page, workspaceId, "doomed-task");
     await sendWsMessage(page, { type: "delete_task", payload: { taskId } });
 
-    // Verify task disappears from sidebar
+    // Verify task disappears from the task list
     await expect(page.getByText("doomed-task")).not.toBeVisible({ timeout: 5_000 });
   });
 
@@ -49,7 +57,8 @@ test.describe("Task Deletion", () => {
     const taskId = await getTaskId(page, workspaceId, "active-task");
     await sendWsMessage(page, { type: "delete_task", payload: { taskId } });
 
-    // Verify task disappears from sidebar
+    // Navigate to Tasks tab and verify task disappeared
+    await goToTasksTab(page);
     await expect(page.getByText("active-task")).not.toBeVisible({ timeout: 5_000 });
   });
 
@@ -73,6 +82,8 @@ test.describe("Task Deletion", () => {
     // Confirm deletion via the dialog's danger button
     await page.locator('[role="dialog"] button', { hasText: "Delete" }).click();
 
+    // Navigate to Tasks tab and verify task is gone
+    await goToTasksTab(page);
     const sidebarTask = page.locator('[class*="taskTitle"]', { hasText: "tdel-accept-task" });
     await expect(sidebarTask).not.toBeVisible({ timeout: 5_000 });
   });
@@ -97,9 +108,12 @@ test.describe("Task Deletion", () => {
     // Dialog should be gone and task should still exist
     await expect(page.getByText("Delete Task?")).not.toBeVisible({ timeout: 5_000 });
 
-    const sidebarTask = page.locator('[class*="taskTitle"]', { hasText: "tdel-dismiss-task" });
-    await expect(sidebarTask).toBeVisible({ timeout: 5_000 });
     // Verify the task header is still showing (task was not deleted)
     await expect(page.locator('[data-testid="task-title"]')).toHaveText("tdel-dismiss-task", { timeout: 5_000 });
+
+    // Also verify the task is still in the Tasks tab
+    await goToTasksTab(page);
+    const sidebarTask = page.locator('[class*="taskTitle"]', { hasText: "tdel-dismiss-task" });
+    await expect(sidebarTask).toBeVisible({ timeout: 5_000 });
   });
 });

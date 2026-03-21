@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, real } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
 
 // ─── Environments ──────────────────────────────────────────
@@ -52,6 +52,9 @@ export const sessions = sqliteTable("sessions", {
   personaId: text("persona_id").notNull().default(""),
   parentSessionId: text("parent_session_id").notNull().default(""),
   pipeMode: text("pipe_mode").notNull().default(""),
+  inputTokens: integer("input_tokens").notNull().default(0),
+  outputTokens: integer("output_tokens").notNull().default(0),
+  costUsd: real("cost_usd").notNull().default(0),
 });
 
 /** Row shape returned by a SELECT on the sessions table. */

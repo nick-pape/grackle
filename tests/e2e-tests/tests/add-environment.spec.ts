@@ -3,8 +3,8 @@ import { sendWsAndWaitFor, sendWsMessage } from "./helpers.js";
 
 test.describe("Add Environment — UI Form", () => {
   test.beforeEach(async ({ appPage }) => {
-    // Environments are now in Settings — navigate there via the gear button
-    await appPage.locator('[data-testid="sidebar-tab-settings"]').click();
+    // Navigate to the Environments tab
+    await appPage.locator('[data-testid="sidebar-tab-environments"]').click();
   });
 
   test("clicking + opens new environment form in panel", async ({ appPage }) => {
@@ -128,8 +128,8 @@ test.describe("Add Environment — UI Form", () => {
   test("add environment via UI form creates environment in server", async ({ appPage }) => {
     const page = appPage;
 
-    // Switch to Environments (in Settings), open form
-    await page.locator('[data-testid="sidebar-tab-settings"]').click();
+    // Switch to Environments tab, open form
+    await page.locator('[data-testid="sidebar-tab-environments"]').click();
     await page.locator('button[title="Add environment"]').click();
 
     // Fill in form
@@ -138,13 +138,10 @@ test.describe("Add Environment — UI Form", () => {
     // Click Create
     await page.getByTestId("env-create-submit").click();
 
-    // Wait for navigation back to settings to complete
-    await expect(page.getByRole("tablist", { name: "Settings" })).toBeVisible({ timeout: 5_000 });
-
-    // Form should close (back to settings mode)
+    // Form should close (back to environment list)
     await expect(page.getByTestId("env-create-panel")).not.toBeVisible({ timeout: 5_000 });
 
-    // Environment should appear in the Settings panel environment list
+    // Environment should appear in the environment list
     await expect(page.getByText("ui-test-env", { exact: true })).toBeVisible({ timeout: 5_000 });
 
     // Clean up via WS
@@ -185,8 +182,8 @@ test.describe("Add Environment — WebSocket Handler", () => {
 
     expect(response.payload?.environmentId).toBeTruthy();
 
-    // Switch to Environments (in Settings) and verify the new environment appears
-    await page.locator('[data-testid="sidebar-tab-settings"]').click();
+    // Switch to Environments tab and verify the new environment appears
+    await page.locator('[data-testid="sidebar-tab-environments"]').click();
     await expect(page.getByText("ws-test-env", { exact: true })).toBeVisible({ timeout: 5_000 });
 
     // Clean up: remove the environment

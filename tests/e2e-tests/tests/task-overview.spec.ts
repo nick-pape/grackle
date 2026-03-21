@@ -10,6 +10,11 @@ import {
   runStubTaskToCompletion,
 } from "./helpers.js";
 
+/** Navigate to the Tasks sidebar tab so the TaskList is visible. */
+async function goToTasksTab(page: import("@playwright/test").Page): Promise<void> {
+  await page.locator('[data-testid="sidebar-tab-tasks"]').click();
+}
+
 test.describe("Task Overview Tab", () => {
   test("overview tab is default for pending tasks", async ({ appPage }) => {
     const page = appPage;
@@ -40,7 +45,10 @@ test.describe("Task Overview Tab", () => {
       environmentId: "test-local",
       description: "This is a detailed task description for testing",
     });
-    await page.getByTestId("sidebar").getByText("desc-task", { exact: true }).waitFor({ timeout: 5_000 });
+
+    // Navigate to Tasks tab and wait for the task to appear
+    await goToTasksTab(page);
+    await page.getByText("desc-task", { exact: true }).first().waitFor({ timeout: 5_000 });
     await navigateToTask(page, "desc-task");
 
     // Overview tab should show the description
@@ -79,7 +87,10 @@ test.describe("Task Overview Tab", () => {
       environmentId: "test-local",
       dependsOn: [blockerTaskId],
     });
-    await page.getByTestId("sidebar").getByText("dep-blocked", { exact: true }).waitFor({ timeout: 5_000 });
+
+    // Navigate to Tasks tab and wait for the task to appear
+    await goToTasksTab(page);
+    await page.getByText("dep-blocked", { exact: true }).first().waitFor({ timeout: 5_000 });
     await navigateToTask(page, "dep-blocked");
 
     // Overview should show the dependency with the blocker name
@@ -111,7 +122,10 @@ test.describe("Task Overview Tab", () => {
       environmentId: "test-local",
       dependsOn: [blockerTaskId],
     });
-    await page.getByTestId("sidebar").getByText("unblocked-task", { exact: true }).waitFor({ timeout: 5_000 });
+
+    // Navigate to Tasks tab and wait for the task to appear
+    await goToTasksTab(page);
+    await page.getByText("unblocked-task", { exact: true }).first().waitFor({ timeout: 5_000 });
     await navigateToTask(page, "unblocked-task");
 
     // Dependency should show as done (green)
@@ -133,10 +147,13 @@ test.describe("Task Overview Tab", () => {
       environmentId: "test-local",
       dependsOn: [blockerTaskId],
     });
-    await page.getByTestId("sidebar").getByText("badge-blocked", { exact: true }).waitFor({ timeout: 5_000 });
+
+    // Navigate to Tasks tab and wait for the task to appear
+    await goToTasksTab(page);
+    await page.getByText("badge-blocked", { exact: true }).first().waitFor({ timeout: 5_000 });
 
     // The sidebar badge should say "blocked" (not "dep") and have blocked styling
-    const badge = page.locator('span[title^="Depends on:"]');
+    const badge = page.locator('span[title^="Depends on:"]').first();
     await expect(badge).toHaveText("blocked");
     await expect(badge).toHaveAttribute("class", /blockedBadge/);
   });

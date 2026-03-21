@@ -192,6 +192,7 @@ export class CodespaceAdapter implements EnvironmentAdapter {
       extraEnv: cfg.env,
       workingDirectory,
       isGitHubProviderEnabled: () => getCredentialProviders().github !== "off",
+      defaultRuntime: (config.defaultRuntime as string) || undefined,
     });
 
     // Open port-forward tunnel (host → codespace PowerLine)

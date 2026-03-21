@@ -28,6 +28,7 @@ enum EventType {
   EVENT_TYPE_SUBTASK_CREATE = 8;
   EVENT_TYPE_USER_INPUT = 9;
   EVENT_TYPE_SIGNAL = 10;
+  EVENT_TYPE_USAGE = 11;
 }
 
 enum TaskStatus {
@@ -116,7 +117,10 @@ message Session {
   string error = 13;
   string task_id = 14;
   string persona_id = 15;
-  int32 pipe_fd = 16; // fd assigned to parent for pipe IPC (0 = no pipe)
+  int32 input_tokens = 16;
+  int32 output_tokens = 17;
+  double cost_usd = 18;
+  int32 pipe_fd = 19; // fd assigned to parent for pipe IPC (0 = no pipe)
 }
 
 message SessionList {
