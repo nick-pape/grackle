@@ -285,7 +285,7 @@ async function startTaskSession(
   const logPath = join(grackleHome, LOGS_DIR, sessionId);
 
   const freshTask = taskStore.getTask(task.id) || task;
-  const taskPrompt = buildTaskPrompt(freshTask.title, freshTask.description, options?.notes);
+  const taskPrompt = buildTaskPrompt(freshTask.title, freshTask.description);
   const systemContext = new SystemPromptBuilder({
     isTaskSession: true,
     canDecompose: freshTask.canDecompose,
@@ -342,6 +342,7 @@ async function startTaskSession(
   );
 
   const useWorktrees = workspace?.useWorktrees ?? false;
+
   const powerlineReq = create(powerline.SpawnRequestSchema, {
     sessionId,
     runtime,

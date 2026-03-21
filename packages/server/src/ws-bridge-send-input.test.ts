@@ -136,7 +136,8 @@ function applySchema(): void {
       ended_at           TEXT,
       error              TEXT,
       task_id            TEXT NOT NULL DEFAULT '',
-      persona_id         TEXT NOT NULL DEFAULT ''
+      persona_id         TEXT NOT NULL DEFAULT '',
+      parent_session_id  TEXT NOT NULL DEFAULT ''
     );
   `);
 }

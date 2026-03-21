@@ -132,6 +132,14 @@ describe("computeTaskStatus", () => {
       });
     });
 
+    it("hibernating session → 'paused'", () => {
+      const sessions = [makeSession("s1", "hibernating")];
+      expect(computeTaskStatus("not_started", sessions)).toEqual({
+        status: "paused",
+        latestSessionId: "s1",
+      });
+    });
+
     it("interrupted session → 'not_started' (retryable)", () => {
       const sessions = [makeSession("s1", "interrupted")];
       expect(computeTaskStatus("not_started", sessions)).toEqual({

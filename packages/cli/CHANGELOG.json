@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.53.5",
+      "tag": "@grackle-ai/cli_v0.53.5",
+      "date": "Sat, 21 Mar 2026 05:03:11 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Serialize sendInput follow-ups via input queue to prevent concurrent executeFollowUp calls"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.53.4",
       "tag": "@grackle-ai/cli_v0.53.4",
       "date": "Fri, 20 Mar 2026 23:34:14 GMT",
