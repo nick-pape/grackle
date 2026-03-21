@@ -78,4 +78,9 @@ describe("@grackle-ai/knowledge", () => {
     expect(typeof mod.createEdge).toBe("function");
     expect(typeof mod.removeEdge).toBe("function");
   });
+
+  it("exports search functions", async () => {
+    const mod = await import("./index.js");
+    expect(typeof mod.knowledgeSearch).toBe("function");
+  });
 });
