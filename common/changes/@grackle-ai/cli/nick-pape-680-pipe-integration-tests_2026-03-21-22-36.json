@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Add integration tests for pipe delivery flow (async/sync delivery, cleanup, no-ops)",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
