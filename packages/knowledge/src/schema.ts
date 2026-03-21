@@ -63,7 +63,15 @@ export async function initSchema(): Promise<void> {
   try {
     for (const [name, cypher] of Object.entries(SCHEMA_STATEMENTS)) {
       logger.debug({ statement: name }, "Running schema statement");
-      await session.run(cypher);
+      try {
+        await session.run(cypher);
+      } catch (error) {
+        logger.error({ err: error, statement: name }, "Schema statement failed");
+        throw new Error(
+          `Schema statement "${name}" failed: ${error instanceof Error ? error.message : String(error)}`,
+          { cause: error },
+        );
+      }
     }
     logger.info("Knowledge graph schema initialized");
   } finally {

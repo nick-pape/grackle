@@ -35,6 +35,9 @@ services:
       - QDRANT_MCP_HOST=${QDRANT_MCP_HOST:-host.docker.internal}
       # Knowledge graph — Neo4j connection for the knowledge subsystem.
       - GRACKLE_NEO4J_URL=bolt://neo4j:7687
+    depends_on:
+      neo4j:
+        condition: service_healthy
     networks:
       - grackle
     restart: unless-stopped
@@ -51,6 +54,12 @@ services:
       - neo4j-data:/data
     networks:
       - grackle
+    healthcheck:
+      test: ["CMD", "neo4j", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     restart: unless-stopped
 
 networks:
