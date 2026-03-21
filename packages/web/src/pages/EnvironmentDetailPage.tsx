@@ -1,4 +1,4 @@
-import { useState, useMemo, type JSX, type KeyboardEvent } from "react";
+import { useState, type JSX, type KeyboardEvent } from "react";
 import { useParams, Navigate } from "react-router";
 import { useGrackle } from "../context/GrackleContext.js";
 import { ConfirmDialog, Spinner } from "../components/display/index.js";
@@ -45,7 +45,7 @@ export function EnvironmentDetailPage(): JSX.Element {
 
   const envWorkspaces = workspaces.filter((w) => w.environmentId === env.id);
   const envSessions = sessions.filter((s) => s.environmentId === env.id);
-  const envCost = useMemo(() => envSessions.reduce((sum, s) => sum + (s.costUsd ?? 0), 0), [envSessions]);
+  const envCost = envSessions.reduce((sum, s) => sum + (s.costUsd ?? 0), 0);
   const statusColor = STATUS_COLORS[env.status] || "var(--text-tertiary)";
   const isConnected = env.status === "connected";
   const isConnecting = env.status === "connecting";

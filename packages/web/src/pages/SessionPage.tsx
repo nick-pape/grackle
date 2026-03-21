@@ -25,7 +25,9 @@ function SessionHeader({ sessionId, session, isActive, onKill }: SessionHeaderPr
       <span>
         Session: {sessionId.slice(0, 8)}
         {session && ` | ${session.runtime} | ${session.status}`}
-        {session?.costUsd ? ` | ${formatTokens((session.inputTokens ?? 0) + (session.outputTokens ?? 0))} tokens · ${formatCost(session.costUsd)}` : ""}
+        {(session?.inputTokens || session?.outputTokens || session?.costUsd)
+          ? ` | ${formatTokens((session!.inputTokens ?? 0) + (session!.outputTokens ?? 0))} tokens · ${formatCost(session!.costUsd ?? 0)}`
+          : ""}
       </span>
       <span className={styles.headerInfo}>
         {session && (
