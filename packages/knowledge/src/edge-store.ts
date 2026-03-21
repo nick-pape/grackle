@@ -86,7 +86,7 @@ export async function createEdge(
   assertValidEdgeType(type);
 
   const createdAt = new Date().toISOString();
-  const metadataStr = metadata !== undefined && metadata !== null ? JSON.stringify(metadata) : null;
+  const metadataStr: string | null = metadata !== undefined ? JSON.stringify(metadata) : null;
 
   const session = getSession();
   try {
@@ -107,7 +107,7 @@ export async function createEdge(
 
     let parsedMetadata: Record<string, unknown> | undefined;
     const rawMetadata = record.get("metadata") as string | null;
-    if (rawMetadata !== undefined && rawMetadata !== null) {
+    if (rawMetadata !== null) {
       try {
         parsedMetadata = JSON.parse(rawMetadata) as Record<string, unknown>;
       } catch {

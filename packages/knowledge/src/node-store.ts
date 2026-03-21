@@ -92,7 +92,7 @@ export interface NodeWithEdges {
 // Cypher queries
 // ---------------------------------------------------------------------------
 
-const GET_NODE_WITH_EDGES_CYPHER = `
+const GET_NODE_WITH_EDGES_CYPHER: string = `
   MATCH (n:${NODE_LABEL} {id: $id})
   OPTIONAL MATCH (n)-[r]-(m:${NODE_LABEL})
   WITH n, r, m
@@ -110,12 +110,12 @@ const GET_NODE_WITH_EDGES_CYPHER = `
   WHERE NOT (n)-[]-()
   RETURN n, [] AS edges`;
 
-const DELETE_NODE_CYPHER = `
+const DELETE_NODE_CYPHER: string = `
   MATCH (n:${NODE_LABEL} {id: $id})
   DETACH DELETE n
   RETURN count(n) AS deleted`;
 
-const UPDATE_NODE_CYPHER = `
+const UPDATE_NODE_CYPHER: string = `
   MATCH (n:${NODE_LABEL} {id: $id})
   SET n += $updates
   RETURN n`;
