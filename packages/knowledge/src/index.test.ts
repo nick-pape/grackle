@@ -83,4 +83,10 @@ describe("@grackle-ai/knowledge", () => {
     const mod = await import("./index.js");
     expect(typeof mod.knowledgeSearch).toBe("function");
   });
+
+  it("exports graph expansion functions", async () => {
+    const mod = await import("./index.js");
+    expect(typeof mod.expandNode).toBe("function");
+    expect(typeof mod.expandResults).toBe("function");
+  });
 });
