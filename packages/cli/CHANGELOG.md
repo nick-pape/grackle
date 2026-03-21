@@ -1,6 +1,19 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sat, 21 Mar 2026 18:26:26 GMT and should not be manually modified.
+This log was last generated on Sat, 21 Mar 2026 19:53:31 GMT and should not be manually modified.
+
+## 0.57.0
+Sat, 21 Mar 2026 19:53:31 GMT
+
+### Minor changes
+
+- Add ipc_spawn MCP tool with sync/async/detach pipe modes and WaitForPipe gRPC endpoint
+
+### Patches
+
+- Clean up UnifiedBar route matching for environment pages
+- Add pluggable embedder interface with local ONNX implementation to @grackle-ai/knowledge
+- Add chunker interface, pass-through chunker, and ingest pipeline to @grackle-ai/knowledge
 
 ## 0.56.3
 Sat, 21 Mar 2026 18:26:26 GMT

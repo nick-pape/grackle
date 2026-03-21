@@ -2,6 +2,29 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.57.0",
+      "tag": "@grackle-ai/cli_v0.57.0",
+      "date": "Sat, 21 Mar 2026 19:53:31 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Clean up UnifiedBar route matching for environment pages"
+          },
+          {
+            "comment": "Add pluggable embedder interface with local ONNX implementation to @grackle-ai/knowledge"
+          },
+          {
+            "comment": "Add chunker interface, pass-through chunker, and ingest pipeline to @grackle-ai/knowledge"
+          }
+        ],
+        "minor": [
+          {
+            "comment": "Add ipc_spawn MCP tool with sync/async/detach pipe modes and WaitForPipe gRPC endpoint"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.56.3",
       "tag": "@grackle-ai/cli_v0.56.3",
       "date": "Sat, 21 Mar 2026 18:26:26 GMT",
