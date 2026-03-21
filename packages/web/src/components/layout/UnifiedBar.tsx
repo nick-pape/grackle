@@ -1,4 +1,4 @@
-import { useState, type FormEvent, type JSX } from "react";
+import { useState, useEffect, useRef, type FormEvent, type JSX } from "react";
 import { useMatch, useSearchParams } from "react-router";
 import { useGrackle } from "../../context/GrackleContext.js";
 import { useToast } from "../../context/ToastContext.js";
@@ -91,6 +91,8 @@ export function UnifiedBar(): JSX.Element {
 
   const [text, setText] = useState("");
   const [spawnPersonaId, setSpawnPersonaId] = useState("");
+  /** Queued chat message to send via sendInput once the root task session goes idle. */
+  const pendingChatRef = useRef<string | undefined>(undefined);
 
   const session = sessionId
     ? sessions.find((s) => s.id === sessionId)
@@ -114,14 +116,23 @@ export function UnifiedBar(): JSX.Element {
     : false;
 
   // --- chat mode (root task) ---
+  const rootTask = isChat ? tasks.find((t) => t.id === ROOT_TASK_ID) : undefined;
+  // Resolve latest session from the already-loaded sessions list first (available
+  // immediately on connect), falling back to taskSessions (requires roundtrip).
+  const latestRootSession = rootTask?.latestSessionId
+    ? (sessions.find((s) => s.id === rootTask.latestSessionId) ??
+       (taskSessions[ROOT_TASK_ID] ?? []).find((s) => s.id === rootTask.latestSessionId))
+    : undefined;
+
+  // Auto-send queued chat message once the root task session goes idle.
+  useEffect(() => {
+    if (latestRootSession?.status === "idle" && pendingChatRef.current) {
+      sendInput(latestRootSession.id, pendingChatRef.current);
+      pendingChatRef.current = undefined;
+    }
+  }, [latestRootSession?.status, latestRootSession?.id, sendInput]);
+
   if (isChat) {
-    const rootTask = tasks.find((t) => t.id === ROOT_TASK_ID);
-    // Resolve latest session from the already-loaded sessions list first (available
-    // immediately on connect), falling back to taskSessions (requires roundtrip).
-    const latestRootSession = rootTask?.latestSessionId
-      ? (sessions.find((s) => s.id === rootTask.latestSessionId) ??
-         (taskSessions[ROOT_TASK_ID] ?? []).find((s) => s.id === rootTask.latestSessionId))
-      : undefined;
     const localEnv = environments.find((e) => e.adapterType === "local" && e.status === "connected");
 
     if (!localEnv) {
@@ -167,13 +178,14 @@ export function UnifiedBar(): JSX.Element {
       );
     }
 
-    // No active session — show input to start one
+    // No active session — start the root task and queue the user's message
     const handleChatStart = (e: FormEvent): void => {
       e.preventDefault();
       if (!text.trim()) {
         return;
       }
-      startTask(ROOT_TASK_ID, undefined, localEnv.id, text);
+      pendingChatRef.current = text;
+      startTask(ROOT_TASK_ID, undefined, localEnv.id);
       setText("");
     };
     return (
