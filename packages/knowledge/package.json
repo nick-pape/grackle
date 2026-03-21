@@ -1,7 +1,7 @@
 {
   "name": "@grackle-ai/knowledge",
   "version": "0.56.0",
-  "description": "Knowledge graph subsystem for Grackle — vector search and graph traversal over Neo4j",
+  "description": "Scaffold for the Knowledge Graph subsystem for Grackle",
   "license": "MIT",
   "repository": {
     "type": "git",

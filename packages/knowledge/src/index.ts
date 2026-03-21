@@ -1,8 +1,10 @@
 /**
- * Knowledge graph subsystem for Grackle.
+ * Scaffold for a knowledge graph subsystem for Grackle.
  *
- * Provides vector search and graph traversal over a Neo4j backing store,
- * enabling agents to share structured memory across sessions.
+ * Defines the surface area for integrating structured knowledge storage and
+ * retrieval so that agents can share and reuse contextual information across
+ * sessions. Concrete storage technologies and capabilities are provided by
+ * implementations that build on this package.
  *
  * @packageDocumentation
  */
