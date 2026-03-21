@@ -234,6 +234,10 @@ export const taskTools: ToolDefinition[] = [
         .string()
         .optional()
         .describe("Feedback/instructions for retry (included in system context)"),
+      pipe: z
+        .enum(["sync", "async", "detach"])
+        .optional()
+        .describe("IPC pipe mode: sync (block until done), async (receive results between turns), detach (fire-and-forget)"),
     }),
     rpcMethod: "startTask",
     mutating: true,
@@ -246,12 +250,38 @@ export const taskTools: ToolDefinition[] = [
     async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>, authContext?: AuthContext) {
       try {
         await assertCallerIsAncestor(client, authContext, args.taskId as string);
+        const pipe = (args.pipe as string) || "";
+        const parentSessionId = authContext?.type === "scoped" ? authContext.taskSessionId : "";
+
         const response = await client.startTask({
           taskId: args.taskId as string,
           personaId: (args.personaId as string | undefined) ?? "",
           environmentId: (args.environmentId as string | undefined) ?? "",
           notes: (args.notes as string | undefined) ?? "",
+          pipe,
+          parentSessionId,
         });
+
+        if (pipe === "sync") {
+          const result = await client.waitForPipe({
+            sessionId: parentSessionId,
+            fd: response.pipeFd,
+          });
+          return jsonResult({
+            sessionId: response.id,
+            taskId: args.taskId,
+            output: result.content,
+            senderSessionId: result.senderSessionId,
+          });
+        }
+
+        if (pipe === "async") {
+          return jsonResult({
+            ...response,
+            fd: response.pipeFd,
+          });
+        }
+
         return jsonResult(response);
       } catch (error) {
         return grpcErrorToToolResult(error);

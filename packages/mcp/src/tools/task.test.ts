@@ -328,6 +328,8 @@ describe("task_start", () => {
       personaId: "",
       environmentId: "",
       notes: "",
+      pipe: "",
+      parentSessionId: "",
     });
   });
 
