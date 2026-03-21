@@ -1,7 +1,7 @@
 {
   "changes": [
     {
-      "comment": "Add semantic vector search to @grackle-ai/knowledge",
+      "comment": "Add integration tests for pipe delivery flow (async/sync delivery, cleanup, no-ops)",
       "type": "patch",
       "packageName": "@grackle-ai/cli"
     }

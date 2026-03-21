@@ -137,6 +137,9 @@ test.describe("Task tree hierarchy", { tag: ["@task"] }, () => {
     await page.locator('[data-testid="task-edit-title"]').fill("ac-child");
     await page.locator('[data-testid="task-edit-save"]').click();
 
+    // Wait for the edit panel to close, confirming the save round-trip completed
+    await expect(page.locator('[data-testid="task-edit-title"]')).not.toBeVisible({ timeout: 5_000 });
+
     // Navigate back to Tasks tab to see the updated tree
     await goToTasksTab(page);
 
