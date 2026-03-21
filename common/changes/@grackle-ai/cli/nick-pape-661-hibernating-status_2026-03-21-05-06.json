@@ -1,8 +1,8 @@
 {
   "changes": [
     {
-      "comment": "Serialize sendInput follow-ups via input queue to prevent concurrent executeFollowUp calls",
-      "type": "patch",
+      "comment": "Add HIBERNATING session status and parentSessionId column for streams IPC model",
+      "type": "minor",
       "packageName": "@grackle-ai/cli"
     }
   ],

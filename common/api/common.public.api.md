@@ -958,6 +958,7 @@ export const SESSION_STATUS: {
     readonly PENDING: "pending";
     readonly RUNNING: "running";
     readonly IDLE: "idle";
+    readonly HIBERNATING: "hibernating";
     readonly COMPLETED: "completed";
     readonly FAILED: "failed";
     readonly INTERRUPTED: "interrupted";
