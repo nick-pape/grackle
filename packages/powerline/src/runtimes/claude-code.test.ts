@@ -14,6 +14,13 @@ vi.mock("./runtime-utils.js", async (importOriginal) => {
   };
 });
 
+vi.mock("../runtime-installer.js", () => ({
+  ensureRuntimeInstalled: vi.fn(async () => ""),
+  importFromRuntime: vi.fn(async (_runtime: string, pkg: string) => import(pkg)),
+  getRuntimeBinDirectory: vi.fn(() => ""),
+  isDevMode: vi.fn(() => true),
+}));
+
 // Mock the Claude Agent SDK so tests run without a real API key
 const mockQuery = vi.fn();
 vi.mock("@anthropic-ai/claude-agent-sdk", () => ({

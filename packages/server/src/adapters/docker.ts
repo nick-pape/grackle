@@ -298,6 +298,7 @@ export class DockerAdapter implements EnvironmentAdapter {
         workingDirectory: WORKSPACE_PATH,
         host: "0.0.0.0",
         isGitHubProviderEnabled: () => getCredentialProviders().github !== "off",
+        defaultRuntime: (config.defaultRuntime as string) || undefined,
       });
     } else {
       // Container already exists — just restart PowerLine with fresh token

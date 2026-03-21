@@ -36,6 +36,7 @@ import {
   providerToggleToEnum,
 } from "@grackle-ai/common";
 import { resolvePersona } from "./resolve-persona.js";
+import { fetchOrchestratorContext } from "./orchestrator-context.js";
 import * as settingsStore from "./settings-store.js";
 import { isAllowedSettingKey } from "./settings-store.js";
 import { createScopedToken } from "@grackle-ai/mcp";
@@ -365,6 +366,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       emit("environment.changed", {});
 
       const config = JSON.parse(env.adapterConfig) as Record<string, unknown>;
+      config.defaultRuntime = env.defaultRuntime;
       const powerlineToken = env.powerlineToken;
 
       try {
@@ -998,10 +1000,19 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       const logPath = join(grackleHome, LOGS_DIR, sessionId);
 
       const taskPrompt = buildTaskPrompt(task.title, task.description, req.notes);
+      const isOrchestrator = task.canDecompose && task.depth <= 1;
+      const orchestratorCtx = isOrchestrator
+        ? fetchOrchestratorContext(task.workspaceId || "")
+        : undefined;
+
       const systemContext = new SystemPromptBuilder({
-        isTaskSession: true,
+        task: { title: task.title, description: task.description, notes: req.notes || "" },
+        taskId: task.id,
         canDecompose: task.canDecompose,
         personaPrompt: systemPrompt,
+        taskDepth: task.depth,
+        ...orchestratorCtx,
+        ...(orchestratorCtx && { triggerMode: "fresh" as const }),
       }).build();
 
       sessionStore.createSession(

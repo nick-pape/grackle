@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Install runtime SDK packages lazily at spawn time instead of bundling all 8 as hard dependencies, reducing provisioning time and disk usage",
+      "type": "minor",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}

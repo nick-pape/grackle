@@ -30,6 +30,7 @@ import {
   eventTypeToString,
 } from "@grackle-ai/common";
 import { resolvePersona } from "./resolve-persona.js";
+import { fetchOrchestratorContext } from "./orchestrator-context.js";
 import * as settingsStore from "./settings-store.js";
 import { isAllowedSettingKey } from "./settings-store.js";
 import { grackleHome } from "./paths.js";
@@ -175,6 +176,7 @@ async function autoProvisionEnvironment(
 
   try {
     const config = safeParseAdapterConfig(env.adapterConfig, environmentId);
+    config.defaultRuntime = env.defaultRuntime;
     const powerlineToken = env.powerlineToken || "";
 
     for await (const provEvent of reconnectOrProvision(
@@ -292,11 +294,20 @@ export async function startTaskSession(
   const logPath = join(grackleHome, LOGS_DIR, sessionId);
 
   const freshTask = taskStore.getTask(task.id) || task;
-  const taskPrompt = buildTaskPrompt(freshTask.title, freshTask.description);
+  // For the root/System task, use the user's chat message (passed as notes)
+  // as the initial prompt instead of the task title "System".
+  // For regular tasks, build the prompt from title + description.
+  const taskPrompt = freshTask.id === ROOT_TASK_ID
+    ? (options?.notes || "")
+    : buildTaskPrompt(freshTask.title, freshTask.description, options?.notes);
+
+  const orchestratorCtx = freshTask.canDecompose && freshTask.depth <= 1
+    ? fetchOrchestratorContext(freshTask.workspaceId || "") : undefined;
   const systemContext = new SystemPromptBuilder({
-    isTaskSession: true,
-    canDecompose: freshTask.canDecompose,
-    personaPrompt: systemPrompt,
+    task: { title: freshTask.title, description: freshTask.description, notes: options?.notes || "" },
+    taskId: freshTask.id, canDecompose: freshTask.canDecompose, personaPrompt: systemPrompt,
+    taskDepth: freshTask.depth, ...orchestratorCtx,
+    ...(orchestratorCtx && { triggerMode: "fresh" as const }),
   }).build();
 
   sessionStore.createSession(
@@ -1567,6 +1578,7 @@ async function handleMessage(
             env.adapterConfig,
             environmentId,
           );
+          config.defaultRuntime = env.defaultRuntime;
           const powerlineToken = env.powerlineToken || "";
 
           for await (const event of reconnectOrProvision(
