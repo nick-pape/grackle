@@ -137,11 +137,17 @@ test.describe("Task tree hierarchy", () => {
     await page.locator('[data-testid="task-edit-title"]').fill("ac-child");
     await page.locator('[data-testid="task-edit-save"]').click();
 
+    // Navigate back to Tasks tab to see the updated tree
+    await goToTasksTab(page);
+
     // Child should appear in the task list
     await expect(page.getByText("ac-child")).toBeVisible({ timeout: 5_000 });
 
+    // Re-locate parent row (DOM may have re-rendered after navigation)
+    const updatedParentRow = page.locator(`[data-task-id="${parentId}"]`);
+
     // Parent should now have an expand arrow and child count badge
-    const badge = parentRow.locator('[class*="childCountBadge"]');
+    const badge = updatedParentRow.locator('[class*="childCountBadge"]');
     await expect(badge).toBeVisible({ timeout: 5_000 });
     await expect(badge).toHaveText("0/1");
   });

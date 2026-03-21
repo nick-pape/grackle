@@ -13,7 +13,6 @@
  */
 import { test, expect } from "./fixtures.js";
 import {
-  navigateToWorkspace,
   installWsTracker,
   injectWsMessage,
   createWorkspace,
@@ -51,9 +50,6 @@ test.describe("Disconnected environment blocks message send", () => {
     // --- 1. Create workspace and task -----------------------------------------
     await createWorkspace(page, workspaceName);
 
-    // Navigate to the workspace page so the task becomes visible after creation.
-    await navigateToWorkspace(page, workspaceName);
-
     const workspaceId = await getWorkspaceId(page, workspaceName);
     // createTaskViaWs returns the full task row from the server, including all
     // fields required by the app's `isTaskData` validator.
@@ -61,11 +57,7 @@ test.describe("Disconnected environment blocks message send", () => {
       environmentId: "test-local",
     });
 
-    // Wait for the task to be visible in the sidebar, then click it.
-    await page
-      .getByText(taskTitle, { exact: true })
-      .first()
-      .waitFor({ timeout: 5_000 });
+    // Navigate directly to the task detail page via URL lookup.
     await navigateToTask(page, taskTitle);
 
     // --- 2. Inject an idle session -----------------------------------
@@ -394,17 +386,13 @@ test.describe("Disconnected environment blocks message send", () => {
 
     // Set up the waiting_input state via WS injection
     await createWorkspace(page, "disc-env-proj-err");
-    await navigateToWorkspace(page, "disc-env-proj-err");
 
     const workspaceId = await getWorkspaceId(page, "disc-env-proj-err");
     const task = await createTaskViaWs(page, workspaceId, "disc-env-task-err", {
       environmentId: "test-local",
     });
 
-    await page
-      .getByText("disc-env-task-err", { exact: true })
-      .first()
-      .waitFor({ timeout: 5_000 });
+    // Navigate directly to the task detail page via URL lookup.
     await navigateToTask(page, "disc-env-task-err");
 
     const fakeSessionId = `e2e-err-${Date.now()}`;

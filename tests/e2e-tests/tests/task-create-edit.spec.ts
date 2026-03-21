@@ -41,10 +41,7 @@ test.describe("Unified task create/edit experience", () => {
     await expect(page.locator('[data-testid="task-edit-save"]')).toBeEnabled();
     await page.locator('[data-testid="task-edit-save"]').click();
 
-    // Task should appear on the page
-    await expect(page.getByText("panel-created-task", { exact: true }).first()).toBeVisible({ timeout: 5_000 });
-
-    // Navigate to the task — description should render as markdown in overview
+    // After saving, navigate to the task to verify it was created
     await navigateToTask(page, "panel-created-task");
     await expect(page.locator('[data-testid="task-title"]')).toContainText("panel-created-task");
     // Description markdown should render (strong tag from **markdown**)
@@ -93,11 +90,7 @@ test.describe("Unified task create/edit experience", () => {
       description: "Original description",
     });
 
-    // Navigate to workspace page to see the task
-    await navigateToWorkspace(page, "edit-form-proj");
-    await page.getByText("editable-task", { exact: true }).first().waitFor({ timeout: 5_000 });
-
-    // Navigate to task
+    // Navigate directly to the task via URL lookup
     await navigateToTask(page, "editable-task");
 
     // Click Edit
@@ -122,12 +115,10 @@ test.describe("Unified task create/edit experience", () => {
       description: "Old description",
     });
 
-    // Navigate to workspace page to see the task
-    await navigateToWorkspace(page, "save-edit-proj");
-    await page.getByText("old-title-task", { exact: true }).first().waitFor({ timeout: 5_000 });
-
-    // Navigate and edit
+    // Navigate directly to the task via URL lookup
     await navigateToTask(page, "old-title-task");
+
+    // Click Edit
     await page.locator("button", { hasText: /^Edit$/ }).click();
 
     // Update title and description
@@ -167,11 +158,7 @@ test.describe("Unified task create/edit experience", () => {
     await createTaskViaWs(page, workspaceId, "task-alpha-dep", { environmentId: "test-local" });
     await createTaskViaWs(page, workspaceId, "task-beta-dep", { environmentId: "test-local" });
 
-    // Navigate to workspace page to see tasks
-    await navigateToWorkspace(page, "deps-edit-proj");
-    await page.getByText("task-beta-dep", { exact: true }).first().waitFor({ timeout: 5_000 });
-
-    // Edit task-beta and set task-alpha as a dependency
+    // Navigate directly to task-beta and edit
     await navigateToTask(page, "task-beta-dep");
     await page.locator("button", { hasText: /^Edit$/ }).click();
 

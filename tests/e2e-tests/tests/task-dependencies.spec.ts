@@ -10,6 +10,11 @@ import {
   runStubTaskToCompletion,
 } from "./helpers.js";
 
+/** Navigate to the Tasks sidebar tab so the TaskList with dependency badges is visible. */
+async function goToTasksTab(page: import("@playwright/test").Page): Promise<void> {
+  await page.locator('[data-testid="sidebar-tab-tasks"]').click();
+}
+
 test.describe("Task Dependencies", () => {
   test("blocked task shows Blocked by text and no Start button", async ({ appPage }) => {
     const page = appPage;
@@ -28,8 +33,11 @@ test.describe("Task Dependencies", () => {
       dependsOn: [blockerTaskId],
     });
 
-    // Wait for the dependent task to appear in sidebar
-    await page.getByTestId("sidebar").getByText("blocked-beta", { exact: true }).waitFor({ timeout: 5_000 });
+    // Navigate to Tasks tab to see the task in the sidebar
+    await goToTasksTab(page);
+
+    // Wait for the dependent task to appear in the task list
+    await page.getByText("blocked-beta", { exact: true }).first().waitFor({ timeout: 5_000 });
 
     // Verify the "blocked" indicator is visible in the sidebar (blocker is incomplete)
     await expect(page.locator('span[title^="Depends on:"]')).toHaveText("blocked");
@@ -58,7 +66,10 @@ test.describe("Task Dependencies", () => {
       environmentId: "test-local",
       dependsOn: [blockerTaskId],
     });
-    await page.getByTestId("sidebar").getByText("unblock-dependent", { exact: true }).waitFor({ timeout: 5_000 });
+
+    // Navigate to Tasks tab and wait for dependent task to appear
+    await goToTasksTab(page);
+    await page.getByText("unblock-dependent", { exact: true }).first().waitFor({ timeout: 5_000 });
 
     // Verify dependent is blocked
     await navigateToTask(page, "unblock-dependent");
@@ -93,7 +104,10 @@ test.describe("Task Dependencies", () => {
       environmentId: "test-local",
       dependsOn: [taskAId, taskBId],
     });
-    await page.getByTestId("sidebar").getByText("multi-dependent-c", { exact: true }).waitFor({ timeout: 5_000 });
+
+    // Navigate to Tasks tab and wait for dependent task
+    await goToTasksTab(page);
+    await page.getByText("multi-dependent-c", { exact: true }).first().waitFor({ timeout: 5_000 });
 
     // Verify C is blocked by both
     await navigateToTask(page, "multi-dependent-c");
