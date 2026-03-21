@@ -312,8 +312,8 @@ describe("task_start", () => {
   test("happy path returns response", async () => {
     const mockClient = createMockClient();
     (mockClient.startTask as ReturnType<typeof vi.fn>).mockResolvedValue({
-      sessionId: "s1",
-      taskId: "t1",
+      id: "s1",
+      pipeFd: 0,
     });
 
     const result = await getTool("task_start").handler(
@@ -323,6 +323,7 @@ describe("task_start", () => {
     const parsed = JSON.parse(result.content[0].text);
 
     expect(parsed.sessionId).toBe("s1");
+    expect(parsed.taskId).toBe("t1");
     expect(mockClient.startTask).toHaveBeenCalledWith({
       taskId: "t1",
       personaId: "",
@@ -389,8 +390,8 @@ describe("task_start", () => {
       parentTaskId: "parent-task",
     });
     (mockClient.startTask as ReturnType<typeof vi.fn>).mockResolvedValue({
-      sessionId: "s1",
-      taskId: "child-task",
+      id: "s1",
+      pipeFd: 0,
     });
 
     const result = await getTool("task_start").handler(

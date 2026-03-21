@@ -253,6 +253,14 @@ export const taskTools: ToolDefinition[] = [
         const pipe = (args.pipe as string) || "";
         const parentSessionId = authContext?.type === "scoped" ? authContext.taskSessionId : "";
 
+        // Reject sync/async pipe modes without scoped auth (same guard as ipc_spawn)
+        if (pipe && pipe !== "detach" && !parentSessionId) {
+          return {
+            content: [{ type: "text" as const, text: "Error: sync and async pipe modes require scoped auth (agent context)" }],
+            isError: true,
+          };
+        }
+
         const response = await client.startTask({
           taskId: args.taskId as string,
           personaId: (args.personaId as string | undefined) ?? "",
@@ -262,14 +270,16 @@ export const taskTools: ToolDefinition[] = [
           parentSessionId,
         });
 
+        // Consistent response envelope across all pipe modes
+        const base = { sessionId: response.id, taskId: args.taskId as string };
+
         if (pipe === "sync") {
           const result = await client.waitForPipe({
             sessionId: parentSessionId,
             fd: response.pipeFd,
           });
           return jsonResult({
-            sessionId: response.id,
-            taskId: args.taskId,
+            ...base,
             output: result.content,
             senderSessionId: result.senderSessionId,
           });
@@ -277,12 +287,12 @@ export const taskTools: ToolDefinition[] = [
 
         if (pipe === "async") {
           return jsonResult({
-            ...response,
+            ...base,
             fd: response.pipeFd,
           });
         }
 
-        return jsonResult(response);
+        return jsonResult(base);
       } catch (error) {
         return grpcErrorToToolResult(error);
       }

@@ -42,6 +42,11 @@ const asyncListenerCleanups: Map<string, () => void> = new Map();
  * `hasUndeliveredMessages()` remains accurate for close() buffer drain checks.
  */
 export function setupAsyncPipeDelivery(parentSessionId: string): void {
+  // Idempotent: if a listener is already registered for this parent, skip
+  if (asyncListenerCleanups.has(parentSessionId)) {
+    return;
+  }
+
   const unsubscribe = streamRegistry.registerAsyncListener(parentSessionId, (sub, msg) => {
     const session = sessionStore.getSession(parentSessionId);
     if (!session) {

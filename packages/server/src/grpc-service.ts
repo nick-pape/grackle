@@ -56,6 +56,25 @@ import * as streamRegistry from "./stream-registry.js";
 import * as pipeDelivery from "./pipe-delivery.js";
 import { setupAsyncPipeDelivery } from "./pipe-delivery.js";
 
+/** Valid pipe mode values for SpawnRequest and StartTaskRequest. */
+const VALID_PIPE_MODES: ReadonlySet<string> = new Set(["", "sync", "async", "detach"]);
+
+/** Validate pipe mode and parentSessionId. Throws ConnectError on invalid input. */
+function validatePipeInputs(pipe: string, parentSessionId: string): void {
+  if (pipe && !VALID_PIPE_MODES.has(pipe)) {
+    throw new ConnectError(
+      `Invalid pipe mode: "${pipe}". Must be "sync", "async", "detach", or empty.`,
+      Code.InvalidArgument,
+    );
+  }
+  if (pipe && pipe !== "detach" && !parentSessionId) {
+    throw new ConnectError(
+      `Pipe mode "${pipe}" requires parent_session_id`,
+      Code.InvalidArgument,
+    );
+  }
+}
+
 /**
  * Map a bind host to a dialable URL host. Wildcard addresses become loopback,
  * unless GRACKLE_DOCKER_HOST is set (DooD mode) — in that case, use that value
@@ -490,20 +509,8 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         : builderPrompt;
 
       // Validate pipe inputs before creating the session or spawning the child
-      const validPipeModes: readonly string[] = ["", "sync", "async", "detach"];
-      if (req.pipe && !validPipeModes.includes(req.pipe)) {
-        throw new ConnectError(
-          `Invalid pipe mode: "${req.pipe}". Must be "sync", "async", "detach", or empty.`,
-          Code.InvalidArgument,
-        );
-      }
+      validatePipeInputs(req.pipe, req.parentSessionId);
       const pipeMode = req.pipe as PipeMode;
-      if (pipeMode && pipeMode !== "detach" && !req.parentSessionId) {
-        throw new ConnectError(
-          `Pipe mode "${pipeMode}" requires parent_session_id`,
-          Code.InvalidArgument,
-        );
-      }
 
       sessionStore.createSession(
         sessionId,
@@ -1212,20 +1219,8 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       }
 
       // Validate pipe inputs before creating the session
+      validatePipeInputs(req.pipe, req.parentSessionId);
       const taskPipeMode = req.pipe as PipeMode;
-      const validTaskPipeModes: readonly string[] = ["", "sync", "async", "detach"];
-      if (req.pipe && !validTaskPipeModes.includes(req.pipe)) {
-        throw new ConnectError(
-          `Invalid pipe mode: "${req.pipe}". Must be "sync", "async", "detach", or empty.`,
-          Code.InvalidArgument,
-        );
-      }
-      if (taskPipeMode && taskPipeMode !== "detach" && !req.parentSessionId) {
-        throw new ConnectError(
-          `Pipe mode "${taskPipeMode}" requires parent_session_id`,
-          Code.InvalidArgument,
-        );
-      }
 
       const env = envRegistry.getEnvironment(environmentId);
       const sessionId = uuid();
