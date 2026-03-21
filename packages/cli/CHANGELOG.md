@@ -1,6 +1,19 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sat, 21 Mar 2026 20:22:13 GMT and should not be manually modified.
+This log was last generated on Sat, 21 Mar 2026 21:01:20 GMT and should not be manually modified.
+
+## 0.59.0
+Sat, 21 Mar 2026 21:01:20 GMT
+
+### Minor changes
+
+- Add ipc_list_fds MCP tool, GetSessionFds gRPC endpoint, and advisory fd cleanup instructions in system prompt
+- Add Neo4j client, schema initialization, and domain types for the knowledge graph subsystem
+
+### Patches
+
+- Display session token usage and cost in status and task show commands
+- Add session transcript chunker to @grackle-ai/knowledge
 
 ## 0.58.0
 Sat, 21 Mar 2026 20:22:13 GMT
