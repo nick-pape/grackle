@@ -5,7 +5,7 @@
  * stopping if the current branch has an open PR that isn't ready to merge.
  *
  * Exit codes:
- *   0 — Allow stop (no PR, or PR is ready, or transient API error)
+ *   0 — Allow stop (no PR, or PR is ready, or rate-limited)
  *   2 — Block stop (PR has issues; message on stderr tells agent what to fix)
  *
  * Checks performed (all in a single GraphQL query):
@@ -13,8 +13,9 @@
  *   2. CI status (all checks passing)
  *   3. Unresolved Copilot review threads
  *
- * Rate-limit aware: exits 0 on rate-limit errors so agents aren't stuck in a
- * retry loop that burns even more quota. Fail-closed only for real auth issues.
+ * Fail-closed: blocks on auth failures, network errors, and unexpected API
+ * responses. The only exception is rate-limit errors, which exit 0 so agents
+ * aren't stuck in a retry loop that burns even more quota.
  */
 
 import { execSync } from "node:child_process";
@@ -32,8 +33,11 @@ const PENDING_STATUSES = new Set([
 ]);
 
 /**
- * Run a command and return its stdout trimmed, plus stderr.
- * Returns { stdout, stderr } on success, null on failure.
+ * Run a command and return its stdout (trimmed) and stderr.
+ *
+ * Returns an object:
+ *   - On success: { stdout: string, stderr: string } (stderr usually empty).
+ *   - On failure: { stdout: null, stderr: string, error: Error }.
  */
 function run(cmd, options) {
   try {
@@ -116,6 +120,7 @@ function main() {
             commit {
               statusCheckRollup {
                 contexts(first: 100) {
+                  pageInfo { hasNextPage }
                   nodes {
                     ... on CheckRun {
                       conclusion
@@ -131,6 +136,7 @@ function main() {
           }
         }
         reviewThreads(first: 100) {
+          pageInfo { hasNextPage }
           nodes {
             isResolved
             isOutdated
@@ -209,7 +215,9 @@ function main() {
 
   // ── Check 2: CI status ────────────────────────────────────────────
   const commitNode = pr.commits?.nodes?.[0]?.commit;
-  const checkContexts = commitNode?.statusCheckRollup?.contexts?.nodes || [];
+  const contextsConnection = commitNode?.statusCheckRollup?.contexts;
+  const checkContexts = contextsConnection?.nodes || [];
+  const checksHasNextPage = contextsConnection?.pageInfo?.hasNextPage || false;
 
   let ciState;
   if (checkContexts.length === 0) {
@@ -220,6 +228,9 @@ function main() {
       ciState = "FAILING";
     } else if (conclusions.some((c) => PENDING_STATUSES.has(c))) {
       ciState = "PENDING";
+    } else if (checksHasNextPage) {
+      // More than 100 checks — we can't confirm all are passing
+      ciState = "PENDING";
     } else {
       ciState = "PASSING";
     }
@@ -228,17 +239,24 @@ function main() {
   if (ciState === "FAILING") {
     issues.push(`PR #${prNumber} has FAILING CI checks. Read the failed log with: gh run view <RUN_ID> --log-failed, fix the issue, commit, and push.`);
   } else if (ciState === "PENDING") {
-    issues.push(`PR #${prNumber} CI checks are still RUNNING. Wait for them to complete: gh pr checks ${prNumber} --watch --fail-fast -i ${CHECK_WATCH_INTERVAL_SECONDS}`);
+    const truncationNote = checksHasNextPage ? " (Note: PR has >100 checks; verify manually on GitHub.)" : "";
+    issues.push(`PR #${prNumber} CI checks are still RUNNING.${truncationNote} Wait for them to complete: gh pr checks ${prNumber} --watch --fail-fast -i ${CHECK_WATCH_INTERVAL_SECONDS}`);
   }
 
   // ── Check 3: Unresolved Copilot review threads ────────────────────
-  const threads = pr.reviewThreads?.nodes || [];
+  const threadsConnection = pr.reviewThreads;
+  const threads = threadsConnection?.nodes || [];
+  const threadsHasNextPage = threadsConnection?.pageInfo?.hasNextPage || false;
   const unresolvedCount = threads.filter(
     (t) => !t.isResolved && t.comments?.nodes?.[0]?.author?.login === "copilot-pull-request-reviewer"
   ).length;
 
-  if (unresolvedCount > 0) {
-    issues.push(`PR #${prNumber} has ${unresolvedCount} unresolved Copilot review thread(s). For each: read the suggestion, fix the code or dismiss with explanation, reply to the comment, and resolve the thread.`);
+  if (unresolvedCount > 0 || threadsHasNextPage) {
+    const count = threadsHasNextPage && unresolvedCount === 0
+      ? "possible additional"
+      : String(unresolvedCount);
+    const truncationNote = threadsHasNextPage ? " (PR has >100 review threads; there may be more.)" : "";
+    issues.push(`PR #${prNumber} has ${count} unresolved Copilot review thread(s).${truncationNote} For each: read the suggestion, fix the code or dismiss with explanation, reply to the comment, and resolve the thread.`);
   }
 
   // ── Decision ──────────────────────────────────────────────────────
