@@ -303,6 +303,7 @@ class ClaudeCodeSession extends BaseAgentSession {
 /** Check if a directory exists and is writable (with execute permission to create entries). */
 function isDirectoryWritable(dir: string): boolean {
   try {
+    // eslint-disable-next-line no-bitwise -- fs constants are bitmask flags
     accessSync(dir, fsConstants.W_OK | fsConstants.X_OK);
     return true;
   } catch {
