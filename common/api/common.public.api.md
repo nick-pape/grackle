@@ -1212,6 +1212,8 @@ type StartTaskRequest = Message<"grackle.StartTaskRequest"> & {
     personaId: string;
     environmentId: string;
     notes: string;
+    pipe: string;
+    parentSessionId: string;
 };
 
 // @public

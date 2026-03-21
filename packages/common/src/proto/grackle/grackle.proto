@@ -371,6 +371,8 @@ message StartTaskRequest {
   string persona_id = 4; // Persona override (falls back to task/workspace/app default)
   string environment_id = 5; // Select environment at start time
   string notes = 6; // Feedback/instructions for retry (included in system context)
+  string pipe = 7; // "sync", "async", "detach", or "" (no pipe)
+  string parent_session_id = 8; // Caller's session ID (for pipe setup)
 }
 
 // ─── Findings ──────────────────────────────────────────────
