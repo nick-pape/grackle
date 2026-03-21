@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, type FormEvent, type JSX } from "react";
+import { useState, type FormEvent, type JSX } from "react";
 import { useMatch, useSearchParams } from "react-router";
 import { useGrackle } from "../../context/GrackleContext.js";
 import { useToast } from "../../context/ToastContext.js";
@@ -47,7 +47,7 @@ function DisconnectedBanner({ environmentId, onReconnect }: DisconnectedBannerPr
 export function UnifiedBar(): JSX.Element {
   const {
     spawn, sendInput, kill, sessions, tasks, environments, personas,
-    provisionEnvironment, startTask, taskSessions,
+    provisionEnvironment, taskSessions,
   } = useGrackle();
   const { showToast } = useToast();
   const navigate = useAppNavigate();
@@ -91,10 +91,6 @@ export function UnifiedBar(): JSX.Element {
 
   const [text, setText] = useState("");
   const [spawnPersonaId, setSpawnPersonaId] = useState("");
-  /** Queued chat message to send via sendInput once the root task session goes idle. */
-  const pendingChatRef = useRef<string | undefined>(undefined);
-  /** Session ID at the time the message was queued, to avoid sending to an unrelated session. */
-  const pendingChatSessionRef = useRef<string | undefined>(undefined);
 
   const session = sessionId
     ? sessions.find((s) => s.id === sessionId)
@@ -126,34 +122,7 @@ export function UnifiedBar(): JSX.Element {
        (taskSessions[ROOT_TASK_ID] ?? []).find((s) => s.id === rootTask.latestSessionId))
     : undefined;
 
-  // Auto-send queued chat message once the root task session goes idle.
-  // Only sends if the session changed since queueing (new session spawned by startTask).
-  useEffect(() => {
-    if (!pendingChatRef.current || !latestRootSession?.id || latestRootSession.status !== "idle") {
-      return;
-    }
-    // Only send to the new session that was created after we queued the message.
-    if (latestRootSession.id === pendingChatSessionRef.current) {
-      return; // Same session as before queueing — still waiting for the new one.
-    }
-    sendInput(latestRootSession.id, pendingChatRef.current);
-    pendingChatRef.current = undefined;
-    pendingChatSessionRef.current = undefined;
-  }, [latestRootSession?.status, latestRootSession?.id, sendInput]);
-
   if (isChat) {
-    const localEnv = environments.find((e) => e.adapterType === "local" && e.status === "connected");
-
-    if (!localEnv) {
-      return (
-        <div className={styles.bar}>
-          <span className={styles.hintText}>
-            Add a local environment to start chatting
-          </span>
-        </div>
-      );
-    }
-
     if (latestRootSession?.status === "running") {
       return (
         <div className={styles.bar}>
@@ -187,22 +156,11 @@ export function UnifiedBar(): JSX.Element {
       );
     }
 
-    // No active session — start the root task and queue the user's message
-    const handleChatStart = (e: FormEvent): void => {
-      e.preventDefault();
-      if (!text.trim()) {
-        return;
-      }
-      pendingChatRef.current = text;
-      pendingChatSessionRef.current = latestRootSession?.id;
-      startTask(ROOT_TASK_ID, undefined, localEnv.id);
-      setText("");
-    };
+    // Root task not yet ready — server auto-starts it on boot
     return (
-      <form onSubmit={handleChatStart} className={styles.bar}>
-        <input type="text" value={text} onChange={(e) => setText(e.target.value)} placeholder="Type a message..." autoFocus className={styles.input} />
-        <button type="submit" disabled={!text.trim()} className={styles.btnPrimary}>Send</button>
-      </form>
+      <div className={styles.bar}>
+        <span className={styles.hintText}>Starting system agent...</span>
+      </div>
     );
   }
 
