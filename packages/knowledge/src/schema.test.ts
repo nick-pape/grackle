@@ -1,15 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // ---------------------------------------------------------------------------
-// Mock dependencies
+// Mock dependencies — use vi.hoisted() so variables are available in the
+// hoisted vi.mock() factory.
 // ---------------------------------------------------------------------------
 
-const mockSessionRun = vi.fn().mockResolvedValue({ records: [] });
-const mockSessionClose = vi.fn().mockResolvedValue(undefined);
-const mockSession = {
-  run: mockSessionRun,
-  close: mockSessionClose,
-};
+const { mockSessionRun, mockSessionClose, mockSession } = vi.hoisted(() => {
+  const mockSessionRun = vi.fn().mockResolvedValue({ records: [] });
+  const mockSessionClose = vi.fn().mockResolvedValue(undefined);
+  const mockSession = {
+    run: mockSessionRun,
+    close: mockSessionClose,
+  };
+  return { mockSessionRun, mockSessionClose, mockSession };
+});
 
 vi.mock("./client.js", () => ({
   getSession: vi.fn(() => mockSession),
