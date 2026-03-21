@@ -44,6 +44,7 @@ export interface BaseEnvironmentConfig {
 
 // @public
 export interface BootstrapOptions {
+    defaultRuntime?: string;
     extraEnv?: Record<string, string>;
     host?: string;
     isGitHubProviderEnabled?: () => boolean;

@@ -13,8 +13,12 @@ vi.mock("./runtime-utils.js", async (importOriginal) => {
   const original = await importOriginal<typeof import("./runtime-utils.js")>();
   return { ...original, resolveWorkingDirectory: vi.fn(async () => undefined) };
 });
-
-
+vi.mock("../runtime-installer.js", () => ({
+  ensureRuntimeInstalled: vi.fn(async () => ""),
+  importFromRuntime: vi.fn(async (_runtime: string, pkg: string) => import(pkg)),
+  getRuntimeBinDirectory: vi.fn(() => ""),
+  isDevMode: vi.fn(() => true),
+}));
 
 import { resolveGithubToken, resolveProviderConfig, CopilotRuntime, CopilotSession, _setCopilotSdkForTesting } from "./copilot.js";
 

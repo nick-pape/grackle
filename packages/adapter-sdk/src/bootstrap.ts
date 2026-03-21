@@ -1,4 +1,4 @@
-import { DEFAULT_POWERLINE_PORT } from "@grackle-ai/common";
+import { DEFAULT_POWERLINE_PORT, RUNTIME_MANIFESTS } from "@grackle-ai/common";
 import type { ProvisionEvent } from "./adapter.js";
 import type { RemoteExecutor } from "./remote-executor.js";
 import type { AdapterLogger } from "./logger.js";
@@ -307,6 +307,12 @@ export interface BootstrapOptions {
   logger?: AdapterLogger;
   /** Callback to check whether the GitHub credential provider is enabled. */
   isGitHubProviderEnabled?: () => boolean;
+  /**
+   * Default runtime to eagerly install during provisioning.
+   * When set, the runtime's packages are pre-installed into
+   * `~/.grackle/runtimes/<name>/` so the first spawn is instant.
+   */
+  defaultRuntime?: string;
 }
 
 /**
@@ -324,6 +330,7 @@ export async function* bootstrapPowerLine(
     host,
     logger = defaultLogger,
     isGitHubProviderEnabled,
+    defaultRuntime,
   } = options;
 
   // 1. Check Node.js (PowerLine requires >= 22)
@@ -486,6 +493,71 @@ export async function* bootstrapPowerLine(
     logger.info({ path: credHelperPath }, "Git credential helper configured");
   } catch (err) {
     logger.warn({ err }, "Failed to configure git credential helper (agents may be unable to push)");
+  }
+
+  // 4.5. Eagerly install the default runtime's packages on the remote host
+  //       so the first spawn doesn't need a cold install.
+  if (defaultRuntime) {
+    const runtimeManifest = RUNTIME_MANIFESTS[defaultRuntime];
+    if (runtimeManifest) {
+      const runtimeDir = `$HOME/.grackle/runtimes/${defaultRuntime}`;
+      const runtimePackageJson = JSON.stringify({
+        name: `grackle-runtime-${defaultRuntime}`,
+        version: "1.0.0",
+        private: true,
+        dependencies: runtimeManifest.packages,
+      });
+      const runtimePkgBase64 = Buffer.from(runtimePackageJson, "utf8").toString("base64");
+      // Expected manifest used both for up-to-date checks and for writing manifest.json
+      const manifestJson = JSON.stringify({
+        powerlineVersion: getPackageVersion(),
+        packages: runtimeManifest.packages,
+      });
+      const manifestBase64 = Buffer.from(manifestJson, "utf8").toString("base64");
+      try {
+        // Ensure runtime directory exists on remote host
+        await executor.exec(
+          `mkdir -p ${runtimeDir}`,
+          { timeout: REMOTE_EXEC_DEFAULT_TIMEOUT_MS },
+        );
+
+        // Fast-path: check if existing manifest.json matches expected version and packages
+        let runtimeUpToDate = false;
+        try {
+          await executor.exec(
+            `cd ${runtimeDir} && node -e "const fs=require('fs');let c;try{c=JSON.parse(fs.readFileSync('manifest.json','utf8'));}catch(e){process.exit(1);}const e=JSON.parse(Buffer.from(process.argv[1],'base64').toString('utf8'));function pkgsEqual(a,b){if(!a||!b)return false;const ak=Object.keys(a).sort(),bk=Object.keys(b).sort();if(ak.length!==bk.length)return false;for(let i=0;i<ak.length;i++){if(ak[i]!==bk[i]||a[ak[i]]!==b[bk[i]])return false;}return true;}if(c.powerlineVersion===e.powerlineVersion&&pkgsEqual(c.packages,e.packages)){process.exit(0);}process.exit(1);" '${shellEscape(manifestBase64)}'`,
+            { timeout: REMOTE_EXEC_DEFAULT_TIMEOUT_MS },
+          );
+          runtimeUpToDate = true;
+        } catch {
+          runtimeUpToDate = false;
+        }
+
+        if (!runtimeUpToDate) {
+          yield { stage: "bootstrapping", message: `Installing ${defaultRuntime} runtime...`, progress: 0.57 };
+          // Write package.json and install dependencies when runtime is missing or stale
+          await executor.exec(
+            `cd ${runtimeDir}`
+            + ` && node -e "require('fs').writeFileSync('package.json',Buffer.from(process.argv[1],'base64').toString('utf8'))" '${shellEscape(runtimePkgBase64)}'`,
+            { timeout: REMOTE_EXEC_DEFAULT_TIMEOUT_MS },
+          );
+          await executor.exec(
+            `cd ${runtimeDir} && npm install --omit=dev --registry=https://registry.npmjs.org`,
+            { timeout: BOOTSTRAP_NPM_INSTALL_TIMEOUT_MS },
+          );
+          // Write manifest.json for future staleness checks by the PowerLine runtime installer
+          await executor.exec(
+            `cd ${runtimeDir} && node -e "require('fs').writeFileSync('manifest.json',Buffer.from(process.argv[1],'base64').toString('utf8'))" '${shellEscape(manifestBase64)}'`,
+            { timeout: REMOTE_EXEC_DEFAULT_TIMEOUT_MS },
+          );
+          logger.info({ defaultRuntime, runtimeDir }, "Default runtime pre-installed on remote host");
+        } else {
+          logger.info({ defaultRuntime, runtimeDir }, "Default runtime already up to date on remote host; skipping pre-install");
+        }
+      } catch (err) {
+        logger.warn({ defaultRuntime, err }, "Failed to pre-install default runtime (will be installed on first spawn)");
+      }
+    }
   }
 
   // 5. Kill any existing PowerLine process on the port (with fallbacks)

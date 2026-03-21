@@ -255,7 +255,7 @@ describe("ws-bridge send_input error handling", () => {
     await closeWs(ws);
 
     expect(msg.type).toBe("error");
-    expect((msg.payload as Record<string, unknown>).message).toMatch(/not currently idle.*completed/i);
+    expect((msg.payload as Record<string, unknown>).message).toMatch(/has ended.*completed/i);
   });
 
   it("returns error when session is failed", async () => {
@@ -271,7 +271,7 @@ describe("ws-bridge send_input error handling", () => {
     await closeWs(ws);
 
     expect(msg.type).toBe("error");
-    expect((msg.payload as Record<string, unknown>).message).toMatch(/not currently idle.*failed/i);
+    expect((msg.payload as Record<string, unknown>).message).toMatch(/has ended.*failed/i);
   });
 
   it("returns error when session is interrupted", async () => {
@@ -287,7 +287,23 @@ describe("ws-bridge send_input error handling", () => {
     await closeWs(ws);
 
     expect(msg.type).toBe("error");
-    expect((msg.payload as Record<string, unknown>).message).toMatch(/not currently idle.*interrupted/i);
+    expect((msg.payload as Record<string, unknown>).message).toMatch(/has ended.*interrupted/i);
+  });
+
+  it("returns error when session is hibernating", async () => {
+    sessionStore.createSession("sess-hibernating", "env-1", "node", "test", "claude", "/tmp/log");
+    sessionStore.hibernateSession("sess-hibernating");
+
+    const ws = await connectWs(port);
+    const msgPromise = nextMessage(ws);
+
+    ws.send(JSON.stringify({ type: "send_input", payload: { sessionId: "sess-hibernating", text: "hello" } }));
+
+    const msg = await msgPromise;
+    await closeWs(ws);
+
+    expect(msg.type).toBe("error");
+    expect((msg.payload as Record<string, unknown>).message).toMatch(/has ended.*hibernating/i);
   });
 
   it("returns error when environment is not connected", async () => {
@@ -331,6 +347,74 @@ describe("ws-bridge send_input error handling", () => {
 
     expect(msg.type).toBe("error");
     expect((msg.payload as Record<string, unknown>).message).toMatch(/Failed to send input/i);
+  });
+
+  it("accepts input when session is running", async () => {
+    sessionStore.createSession("sess-running", "env-1", "node", "test", "claude", "/tmp/log");
+    sessionStore.updateSession("sess-running", "running");
+
+    const mockConn = {
+      client: {
+        sendInput: vi.fn().mockResolvedValue({}),
+      },
+    };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vi.spyOn(adapterManager, "getConnection").mockReturnValue(mockConn as any);
+
+    const ws = await connectWs(port);
+
+    const receivedMessages: { type: string }[] = [];
+    ws.on("message", (data) => {
+      try {
+        const parsed = JSON.parse(data.toString()) as { type: string };
+        receivedMessages.push(parsed);
+      } catch {
+        // Ignore malformed messages for this test
+      }
+    });
+
+    ws.send(JSON.stringify({ type: "send_input", payload: { sessionId: "sess-running", text: "hello" } }));
+
+    await new Promise((r) => setTimeout(r, 200));
+    await closeWs(ws);
+
+    const receivedError = receivedMessages.some((msg) => msg.type === "error");
+    expect(receivedError).toBe(false);
+    expect(mockConn.client.sendInput).toHaveBeenCalledOnce();
+  });
+
+  it("accepts input when session is pending", async () => {
+    sessionStore.createSession("sess-pending", "env-1", "node", "test", "claude", "/tmp/log");
+    // Default status is "pending" — no updateSession needed
+
+    const mockConn = {
+      client: {
+        sendInput: vi.fn().mockResolvedValue({}),
+      },
+    };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vi.spyOn(adapterManager, "getConnection").mockReturnValue(mockConn as any);
+
+    const ws = await connectWs(port);
+
+    const receivedMessages: { type: string }[] = [];
+    ws.on("message", (data) => {
+      try {
+        const parsed = JSON.parse(data.toString()) as { type: string };
+        receivedMessages.push(parsed);
+      } catch {
+        // Ignore malformed messages for this test
+      }
+    });
+
+    ws.send(JSON.stringify({ type: "send_input", payload: { sessionId: "sess-pending", text: "hello" } }));
+
+    await new Promise((r) => setTimeout(r, 200));
+    await closeWs(ws);
+
+    const receivedError = receivedMessages.some((msg) => msg.type === "error");
+    expect(receivedError).toBe(false);
+    expect(mockConn.client.sendInput).toHaveBeenCalledOnce();
   });
 
   it("sends no error response when input is delivered successfully", async () => {

@@ -22,12 +22,15 @@ import { join } from "node:path";
 import {
   LOGS_DIR,
   SESSION_STATUS,
+  TERMINAL_SESSION_STATUSES,
+  type SessionStatus,
   TASK_STATUS,
   DEFAULT_MCP_PORT,
   ROOT_TASK_ID,
   eventTypeToString,
 } from "@grackle-ai/common";
 import { resolvePersona } from "./resolve-persona.js";
+import { fetchOrchestratorContext } from "./orchestrator-context.js";
 import * as settingsStore from "./settings-store.js";
 import { isAllowedSettingKey } from "./settings-store.js";
 import { grackleHome } from "./paths.js";
@@ -173,6 +176,7 @@ async function autoProvisionEnvironment(
 
   try {
     const config = safeParseAdapterConfig(env.adapterConfig, environmentId);
+    config.defaultRuntime = env.defaultRuntime;
     const powerlineToken = env.powerlineToken || "";
 
     for await (const provEvent of reconnectOrProvision(
@@ -292,10 +296,13 @@ async function startTaskSession(
     ? (options?.notes || "")
     : freshTask.title;
 
+  const orchestratorCtx = freshTask.canDecompose && freshTask.depth <= 1
+    ? fetchOrchestratorContext(freshTask.workspaceId || "") : undefined;
   const systemContext = new SystemPromptBuilder({
     task: { title: freshTask.title, description: freshTask.description, notes: options?.notes || "" },
-    canDecompose: freshTask.canDecompose,
-    personaPrompt: systemPrompt,
+    taskId: freshTask.id, canDecompose: freshTask.canDecompose, personaPrompt: systemPrompt,
+    taskDepth: freshTask.depth, ...orchestratorCtx,
+    ...(orchestratorCtx && { triggerMode: "fresh" as const }),
   }).build();
 
   sessionStore.createSession(
@@ -618,11 +625,11 @@ async function handleMessage(
         return;
       }
 
-      if (session.status !== SESSION_STATUS.IDLE) {
+      if (TERMINAL_SESSION_STATUSES.has(session.status as SessionStatus)) {
         sendWs(ws, {
           type: "error",
           payload: {
-            message: `Session ${sessionId} is not currently idle (status: ${session.status})`,
+            message: `Session ${sessionId} has ended (status: ${session.status})`,
           },
         });
         return;
@@ -1566,6 +1573,7 @@ async function handleMessage(
             env.adapterConfig,
             environmentId,
           );
+          config.defaultRuntime = env.defaultRuntime;
           const powerlineToken = env.powerlineToken || "";
 
           for await (const event of reconnectOrProvision(

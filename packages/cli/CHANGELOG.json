@@ -2,6 +2,30 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.55.0",
+      "tag": "@grackle-ai/cli_v0.55.0",
+      "date": "Sat, 21 Mar 2026 16:01:10 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Add stream-registry: in-memory streams and subscriptions model for agent IPC"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.54.1",
+      "tag": "@grackle-ai/cli_v0.54.1",
+      "date": "Sat, 21 Mar 2026 15:32:23 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Allow sendInput while agent is running by only rejecting terminal session statuses"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.54.0",
       "tag": "@grackle-ai/cli_v0.54.0",
       "date": "Sat, 21 Mar 2026 14:51:13 GMT",

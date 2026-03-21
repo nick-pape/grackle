@@ -25,6 +25,8 @@ import {
   DEFAULT_MCP_PORT,
   MAX_TASK_DEPTH,
   SESSION_STATUS,
+  TERMINAL_SESSION_STATUSES,
+  type SessionStatus,
   TASK_STATUS,
   ROOT_TASK_ID,
   taskStatusToEnum,
@@ -34,6 +36,7 @@ import {
   providerToggleToEnum,
 } from "@grackle-ai/common";
 import { resolvePersona } from "./resolve-persona.js";
+import { fetchOrchestratorContext } from "./orchestrator-context.js";
 import * as settingsStore from "./settings-store.js";
 import { isAllowedSettingKey } from "./settings-store.js";
 import { createScopedToken } from "@grackle-ai/mcp";
@@ -363,6 +366,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       emit("environment.changed", {});
 
       const config = JSON.parse(env.adapterConfig) as Record<string, unknown>;
+      config.defaultRuntime = env.defaultRuntime;
       const powerlineToken = env.powerlineToken;
 
       try {
@@ -546,9 +550,9 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       if (!session) {
         throw new ConnectError(`Session not found: ${req.sessionId}`, Code.NotFound);
       }
-      if (session.status !== SESSION_STATUS.IDLE) {
+      if (TERMINAL_SESSION_STATUSES.has(session.status as SessionStatus)) {
         throw new ConnectError(
-          `Session ${req.sessionId} is not idle (status: ${session.status})`,
+          `Session ${req.sessionId} has ended (status: ${session.status})`,
           Code.FailedPrecondition,
         );
       }
@@ -995,10 +999,19 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       const { runtime, model, maxTurns, systemPrompt, persona } = resolved;
       const logPath = join(grackleHome, LOGS_DIR, sessionId);
 
+      const isOrchestrator = task.canDecompose && task.depth <= 1;
+      const orchestratorCtx = isOrchestrator
+        ? fetchOrchestratorContext(task.workspaceId || "")
+        : undefined;
+
       const systemContext = new SystemPromptBuilder({
         task: { title: task.title, description: task.description, notes: req.notes || "" },
+        taskId: task.id,
         canDecompose: task.canDecompose,
         personaPrompt: systemPrompt,
+        taskDepth: task.depth,
+        ...orchestratorCtx,
+        ...(orchestratorCtx && { triggerMode: "fresh" as const }),
       }).build();
 
       sessionStore.createSession(

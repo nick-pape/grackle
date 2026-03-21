@@ -932,7 +932,16 @@ const ResumeRequestSchema_2: GenMessage<ResumeRequest_2>;
 export const ROOT_TASK_ID: string;
 
 // @public
+export const RUNTIME_MANIFESTS: Readonly<Record<string, RuntimePackageManifest>>;
+
+// @public
 export type RuntimeName = "claude-code" | "copilot" | "codex" | "stub";
+
+// @public
+export interface RuntimePackageManifest {
+    needsJsonRpcHook?: boolean;
+    packages: Record<string, string>;
+}
 
 // @public
 export const SEED_PERSONA_ID: string;
@@ -1189,6 +1198,9 @@ export function taskStatusToEnum(s: string): TaskStatus_2;
 
 // @public
 export function taskStatusToString(e: TaskStatus_2): string;
+
+// @public
+export const TERMINAL_SESSION_STATUSES: ReadonlySet<SessionStatus>;
 
 // @public
 type TokenBundle = Message<"grackle.powerline.TokenBundle"> & {

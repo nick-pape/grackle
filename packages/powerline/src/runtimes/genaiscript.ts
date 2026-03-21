@@ -9,6 +9,7 @@ import type { AgentRuntime, AgentSession, AgentEvent, SpawnOptions, ResumeOption
 import { SESSION_STATUS } from "@grackle-ai/common";
 import type { SessionStatus } from "@grackle-ai/common";
 import { logger } from "../logger.js";
+import { ensureRuntimeInstalled } from "../runtime-installer.js";
 
 /** Shape of the JSON result from genaiscript's res.json output. */
 interface GenAIResult {
@@ -20,10 +21,17 @@ interface GenAIResult {
 
 /**
  * Resolve the path to the genaiscript CLI entry point (CJS bundle).
- * Uses require.resolve to find the package through pnpm's hoisted node_modules.
+ *
+ * In dev mode, resolves from the PowerLine package's own node_modules.
+ * In production, resolves from the isolated runtime directory after lazy install.
+ *
+ * @param runtimeDir - The isolated runtime directory (empty string in dev mode)
  */
-function resolveGenAIScriptBin(): string {
-  const esmRequire = createRequire(import.meta.url);
+function resolveGenAIScriptBin(runtimeDir: string): string {
+  const requireBase = runtimeDir
+    ? join(runtimeDir, "package.json")
+    : import.meta.url;
+  const esmRequire = createRequire(requireBase);
   const pkgPath = esmRequire.resolve("genaiscript/package.json");
   const pkgDir = dirname(pkgPath);
   const pkg = esmRequire(pkgPath) as { bin?: Record<string, string> | string };
@@ -87,7 +95,8 @@ class GenAIScriptSession implements AgentSession {
         childEnv.GENAISCRIPT_VAR_GRACKLE_MCP_TOKEN = this.mcpBroker.token;
       }
 
-      const genaiscriptBin = resolveGenAIScriptBin();
+      const runtimeDir = await ensureRuntimeInstalled("genaiscript");
+      const genaiscriptBin = resolveGenAIScriptBin(runtimeDir);
       logger.info({ sessionId: this.id, scriptPath, genaiscriptBin }, "genaiscript: spawning");
 
       yield { type: "system", timestamp: ts(), content: "Starting GenAIScript..." };
