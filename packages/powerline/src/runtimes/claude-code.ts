@@ -13,9 +13,9 @@ import { ensureRuntimeInstalled, importFromRuntime } from "../runtime-installer.
 type QueryFn = (opts: Record<string, unknown>) => Promise<unknown>;
 let queryFn: QueryFn | undefined = undefined;
 
-async function getQuery(eventCallback?: (message: string) => void): Promise<QueryFn> {
+async function getQuery(): Promise<QueryFn> {
   if (queryFn) return queryFn;
-  await ensureRuntimeInstalled("claude-code", { eventCallback });
+  await ensureRuntimeInstalled("claude-code");
   // Try the agent SDK first (the proper library package)
   for (const pkg of ["@anthropic-ai/claude-agent-sdk", "@anthropic-ai/claude-code"]) {
     try {

@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { homedir } from "node:os";
-import { execSync } from "node:child_process";
+import { execFile } from "node:child_process";
 import { createRequire, register } from "node:module";
 import { pathToFileURL } from "node:url";
 import { RUNTIME_MANIFESTS } from "@grackle-ai/common";
@@ -109,6 +109,13 @@ export function ensureRuntimeInstalled(
   runtimeName: string,
   options: RuntimeInstallOptions = {},
 ): Promise<string> {
+  // Register module hooks regardless of install path — the hook must be
+  // active before the first SDK import, even when packages are already
+  // installed or resolved via Rush in dev mode.
+  if (runtimeName in RUNTIME_MANIFESTS && RUNTIME_MANIFESTS[runtimeName]!.needsJsonRpcHook) {
+    registerJsonRpcHook();
+  }
+
   // Dev mode: packages already available via Rush
   if (isDevMode()) {
     return Promise.resolve("");
@@ -241,26 +248,26 @@ async function doInstall(
   };
   writeFileSync(join(runtimeDir, "package.json"), JSON.stringify(packageJson, null, 2));
 
-  // Run npm install
-  try {
-    execSync("npm install --omit=dev --registry=https://registry.npmjs.org", {
-      cwd: runtimeDir,
-      stdio: "pipe",
-      timeout: 120_000,
-    });
-  } catch (err: unknown) {
-    const detail = err instanceof Error ? err.message : String(err);
-    throw new Error(
-      `Failed to install ${runtimeName} runtime packages. Run manually:\n`
-      + `  cd ${runtimeDir} && npm install\n`
-      + `Cause: ${detail}`,
+  // Run npm install asynchronously to avoid blocking the event loop
+  await new Promise<void>((resolve, reject) => {
+    execFile(
+      "npm",
+      ["install", "--omit=dev", "--registry=https://registry.npmjs.org"],
+      { cwd: runtimeDir, timeout: 120_000 },
+      (err) => {
+        if (err) {
+          const detail = err.message || String(err);
+          reject(new Error(
+            `Failed to install ${runtimeName} runtime packages. Run manually:\n`
+            + `  cd ${runtimeDir} && npm install\n`
+            + `Cause: ${detail}`,
+          ));
+        } else {
+          resolve();
+        }
+      },
     );
-  }
-
-  // Register vscode-jsonrpc hook if needed
-  if (manifest.needsJsonRpcHook) {
-    registerJsonRpcHook();
-  }
+  });
 
   // Write manifest for staleness checking
   const persistedManifest: PersistedManifest = {

@@ -76,8 +76,9 @@ function getAcpSdk(runtimeName: string): Promise<AcpSdkModule> {
       sdkPromiseMap.delete(runtimeName);
       const detail = importErr instanceof Error ? importErr.message : String(importErr);
       throw new Error(
-        `ACP SDK not installed or failed to load: ${detail}\n` +
-        "Run: npm install @agentclientprotocol/sdk",
+        `ACP SDK not installed or failed to load for runtime "${runtimeName}": ${detail}\n` +
+        `ACP runtimes are installed in isolated directories (e.g. ~/.grackle/runtimes/${runtimeName}/).\n` +
+        "Please check that directory or rerun/repair the runtime installation for this ACP runtime.",
       );
     }
   })();

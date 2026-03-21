@@ -56,11 +56,13 @@ function getCopilotSdk(): Promise<CopilotSdkModule> {
           defineTool: mod.defineTool as CopilotSdkModule["defineTool"],
           approveAll: mod.approveAll,
         };
-      } catch {
+      } catch (err: unknown) {
         // Reset so the next attempt retries the import
         sdkPromise = undefined;
+        const detail = err instanceof Error ? err.message : String(err);
         throw new Error(
-          "Copilot SDK not installed. Run: npm install @github/copilot-sdk\n" +
+          `Copilot SDK failed to load: ${detail}\n` +
+          "Runtime packages are installed in ~/.grackle/runtimes/copilot/.\n" +
           "The Copilot CLI must also be installed and available in PATH (or set COPILOT_CLI_URL for an external server)."
         );
       }

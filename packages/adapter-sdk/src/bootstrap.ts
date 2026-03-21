@@ -500,7 +500,6 @@ export async function* bootstrapPowerLine(
   if (defaultRuntime) {
     const runtimeManifest = RUNTIME_MANIFESTS[defaultRuntime];
     if (runtimeManifest) {
-      yield { stage: "bootstrapping", message: `Installing ${defaultRuntime} runtime...`, progress: 0.57 };
       const runtimeDir = `$HOME/.grackle/runtimes/${defaultRuntime}`;
       const runtimePackageJson = JSON.stringify({
         name: `grackle-runtime-${defaultRuntime}`,
@@ -509,28 +508,52 @@ export async function* bootstrapPowerLine(
         dependencies: runtimeManifest.packages,
       });
       const runtimePkgBase64 = Buffer.from(runtimePackageJson, "utf8").toString("base64");
+      // Expected manifest used both for up-to-date checks and for writing manifest.json
+      const manifestJson = JSON.stringify({
+        powerlineVersion: getPackageVersion(),
+        packages: runtimeManifest.packages,
+      });
+      const manifestBase64 = Buffer.from(manifestJson, "utf8").toString("base64");
       try {
+        // Ensure runtime directory exists on remote host
         await executor.exec(
-          `mkdir -p ${runtimeDir}`
-          + ` && cd ${runtimeDir}`
-          + ` && node -e "require('fs').writeFileSync('package.json',Buffer.from(process.argv[1],'base64').toString('utf8'))" '${shellEscape(runtimePkgBase64)}'`,
+          `mkdir -p ${runtimeDir}`,
           { timeout: REMOTE_EXEC_DEFAULT_TIMEOUT_MS },
         );
-        await executor.exec(
-          `cd ${runtimeDir} && npm install --omit=dev --registry=https://registry.npmjs.org`,
-          { timeout: BOOTSTRAP_NPM_INSTALL_TIMEOUT_MS },
-        );
-        // Write manifest.json for staleness checks by the PowerLine runtime installer
-        const manifestJson = JSON.stringify({
-          powerlineVersion: getPackageVersion(),
-          packages: runtimeManifest.packages,
-        });
-        const manifestBase64 = Buffer.from(manifestJson, "utf8").toString("base64");
-        await executor.exec(
-          `cd ${runtimeDir} && node -e "require('fs').writeFileSync('manifest.json',Buffer.from(process.argv[1],'base64').toString('utf8'))" '${shellEscape(manifestBase64)}'`,
-          { timeout: REMOTE_EXEC_DEFAULT_TIMEOUT_MS },
-        );
-        logger.info({ defaultRuntime, runtimeDir }, "Default runtime pre-installed on remote host");
+
+        // Fast-path: check if existing manifest.json matches expected version and packages
+        let runtimeUpToDate = false;
+        try {
+          await executor.exec(
+            `cd ${runtimeDir} && node -e "const fs=require('fs');let c;try{c=JSON.parse(fs.readFileSync('manifest.json','utf8'));}catch(e){process.exit(1);}const e=JSON.parse(Buffer.from(process.argv[1],'base64').toString('utf8'));if(c.powerlineVersion===e.powerlineVersion&&JSON.stringify(c.packages)===JSON.stringify(e.packages)){process.exit(0);}process.exit(1);" '${shellEscape(manifestBase64)}'`,
+            { timeout: REMOTE_EXEC_DEFAULT_TIMEOUT_MS },
+          );
+          runtimeUpToDate = true;
+        } catch {
+          runtimeUpToDate = false;
+        }
+
+        if (!runtimeUpToDate) {
+          yield { stage: "bootstrapping", message: `Installing ${defaultRuntime} runtime...`, progress: 0.57 };
+          // Write package.json and install dependencies when runtime is missing or stale
+          await executor.exec(
+            `cd ${runtimeDir}`
+            + ` && node -e "require('fs').writeFileSync('package.json',Buffer.from(process.argv[1],'base64').toString('utf8'))" '${shellEscape(runtimePkgBase64)}'`,
+            { timeout: REMOTE_EXEC_DEFAULT_TIMEOUT_MS },
+          );
+          await executor.exec(
+            `cd ${runtimeDir} && npm install --omit=dev --registry=https://registry.npmjs.org`,
+            { timeout: BOOTSTRAP_NPM_INSTALL_TIMEOUT_MS },
+          );
+          // Write manifest.json for future staleness checks by the PowerLine runtime installer
+          await executor.exec(
+            `cd ${runtimeDir} && node -e "require('fs').writeFileSync('manifest.json',Buffer.from(process.argv[1],'base64').toString('utf8'))" '${shellEscape(manifestBase64)}'`,
+            { timeout: REMOTE_EXEC_DEFAULT_TIMEOUT_MS },
+          );
+          logger.info({ defaultRuntime, runtimeDir }, "Default runtime pre-installed on remote host");
+        } else {
+          logger.info({ defaultRuntime, runtimeDir }, "Default runtime already up to date on remote host; skipping pre-install");
+        }
       } catch (err) {
         logger.warn({ defaultRuntime, err }, "Failed to pre-install default runtime (will be installed on first spawn)");
       }
