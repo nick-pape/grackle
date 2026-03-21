@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Add orchestrator system prompt template with task tree, persona roster, environments, and decomposition guidelines",
+      "type": "minor",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
