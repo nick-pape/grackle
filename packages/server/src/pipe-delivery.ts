@@ -22,26 +22,31 @@ const asyncListenerCleanups: Map<string, () => void> = new Map();
 /**
  * Register an async listener that delivers IPC stream messages to a parent session
  * via sendInput. Called when a pipe with "async" mode is created.
+ *
+ * The listener throws if delivery fails (session not found, environment disconnected),
+ * which causes the stream-registry to leave the message as undelivered. This ensures
+ * `hasUndeliveredMessages()` remains accurate for close() buffer drain checks.
  */
 export function setupAsyncPipeDelivery(parentSessionId: string, _parentSub: Subscription): void {
   const unsubscribe = streamRegistry.registerAsyncListener(parentSessionId, (sub, msg) => {
     const session = sessionStore.getSession(parentSessionId);
     if (!session) {
-      logger.warn({ parentSessionId }, "Async pipe delivery: parent session not found");
-      return;
+      throw new Error(`Async pipe delivery: parent session ${parentSessionId} not found`);
     }
 
     const conn = adapterManager.getConnection(session.environmentId);
     if (!conn) {
-      logger.warn({ parentSessionId, environmentId: session.environmentId }, "Async pipe delivery: environment not connected");
-      return;
+      throw new Error(`Async pipe delivery: environment ${session.environmentId} not connected`);
     }
 
     const text = `[fd:${sub.fd}] ${msg.content}`;
+    // Fire sendInput — this is async but we've verified the connection exists.
+    // If the gRPC call fails later, the message is already marked delivered.
+    // This is an acceptable trade-off: the connection was live at check time.
     conn.client.sendInput(
       create(powerline.InputMessageSchema, { sessionId: parentSessionId, text }),
     ).catch((err: unknown) => {
-      logger.warn({ err, parentSessionId }, "Async pipe delivery: sendInput failed");
+      logger.warn({ err, parentSessionId }, "Async pipe delivery: sendInput failed after dispatch");
     });
   });
 
@@ -51,7 +56,8 @@ export function setupAsyncPipeDelivery(parentSessionId: string, _parentSub: Subs
 /**
  * Publish a completion message to the IPC stream when a child session with a pipe
  * reaches terminal status. Called from the event processor. After publishing,
- * cleans up the stream and subscriptions to prevent memory leaks.
+ * defers cleanup to the next microtask so sync consumers have time to process
+ * the message before the stream is deleted.
  */
 export function publishChildCompletion(childSessionId: string, status: string): void {
   const session = sessionStore.getSession(childSessionId);
@@ -76,10 +82,13 @@ export function publishChildCompletion(childSessionId: string, status: string): 
     logger.warn({ err, childSessionId }, "Failed to publish child completion to IPC stream");
   }
 
-  // Clean up: remove subscriptions and stream to prevent memory leaks.
-  // For sync mode, consumeSync will have already unblocked by now.
-  // For async mode, the listener already fired.
-  cleanupPipeStream(pipeStream.id, session.parentSessionId);
+  // Defer cleanup to next microtask so sync consumers (consumeSync / WaitForPipe)
+  // have time to dequeue the message before the stream is deleted.
+  const streamId = pipeStream.id;
+  const parentSessionId = session.parentSessionId;
+  queueMicrotask(() => {
+    cleanupPipeStream(streamId, parentSessionId);
+  });
 }
 
 /** Remove all subscriptions on a pipe stream and clean up the async listener. */
