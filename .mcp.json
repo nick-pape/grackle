@@ -13,7 +13,7 @@
     },
     "qdrant-search": {
       "type": "http",
-      "url": "http://127.0.0.1:7436/mcp"
+      "url": "http://${QDRANT_MCP_HOST:-127.0.0.1}:7436/mcp"
     }
   }
 }

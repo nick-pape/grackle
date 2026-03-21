@@ -32,8 +32,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends gosu \
     && rm -rf /var/lib/apt/lists/*
 
 # ── Grackle CLI + agent runtimes (pinned via lockfile) ────────────
+ARG GRACKLE_VERSION=latest
 COPY docker/server/package.json /opt/grackle/package.json
-RUN npm install --prefix /opt/grackle --omit=dev
+RUN sed -i "s/\"@grackle-ai\/cli\": \"latest\"/\"@grackle-ai\/cli\": \"${GRACKLE_VERSION}\"/" /opt/grackle/package.json \
+    && npm install --prefix /opt/grackle --omit=dev
 ENV PATH="/opt/grackle/node_modules/.bin:$PATH"
 
 # ── Remove build toolchain (only needed for native addon compilation) ──
