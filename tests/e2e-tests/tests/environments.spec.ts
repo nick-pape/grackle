@@ -1,7 +1,7 @@
 import { test, expect } from "./fixtures.js";
 
-function getEnvironmentRow(page: import("@playwright/test").Page, name: string) {
-  return page.getByTestId("env-row").filter({ hasText: name }).first();
+function getEnvironmentNavItem(page: import("@playwright/test").Page, name: string) {
+  return page.getByTestId("env-nav-item").filter({ hasText: name }).first();
 }
 
 test.describe("Environment Display", () => {
@@ -11,13 +11,13 @@ test.describe("Environment Display", () => {
   });
 
   test("environment card renders with name", async ({ appPage }) => {
-    await expect(getEnvironmentRow(appPage, "test-local")).toBeVisible();
+    await expect(getEnvironmentNavItem(appPage, "test-local")).toBeVisible();
   });
 
   test("status dot is accent-colored when connected", async ({ appPage }) => {
-    // The environment list has a status dot span colored with --accent-green (theme-dependent)
-    const envSection = getEnvironmentRow(appPage, "test-local");
-    const dot = envSection.locator("span").first();
+    // The environment nav item has a status dot span colored with --accent-green (theme-dependent)
+    const envItem = getEnvironmentNavItem(appPage, "test-local");
+    const dot = envItem.locator("span").first();
     // Verify it's NOT the default gray text color (rgb(107, 114, 128)) — it should be accent-colored
     await expect(dot).not.toHaveCSS("color", "rgb(107, 114, 128)", { timeout: 5_000 });
   });
@@ -37,7 +37,7 @@ test.describe("Environment Display", () => {
   });
 
   test("environment card is visible in list", async ({ appPage }) => {
-    // Verify the environment entry renders (may show "(idle)" or session count)
-    await expect(getEnvironmentRow(appPage, "test-local")).toBeVisible();
+    // Verify the environment entry renders in the nav
+    await expect(getEnvironmentNavItem(appPage, "test-local")).toBeVisible();
   });
 });

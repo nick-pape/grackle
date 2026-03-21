@@ -3,12 +3,18 @@ import type { Page } from "@playwright/test";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type WsPayload = Record<string, any>;
 
-/** Get the sidebar label locator for a workspace name. */
+/**
+ * @deprecated Workspaces are no longer shown in the sidebar. Use {@link navigateToWorkspace} instead.
+ * Get a locator for a workspace name in the main content area (not sidebar).
+ */
 export function getSidebarWorkspaceLabel(page: Page, workspaceName: string) {
-  return page.getByTestId("sidebar").getByText(workspaceName, { exact: true }).first();
+  return page.getByText(workspaceName, { exact: true }).first();
 }
 
-/** Get the sidebar row locator for a workspace name. */
+/**
+ * @deprecated Workspaces are no longer shown in the sidebar. Use {@link navigateToWorkspace} instead.
+ * Get the parent row locator for a workspace name in the main content area.
+ */
 export function getSidebarWorkspaceRow(page: Page, workspaceName: string) {
   return getSidebarWorkspaceLabel(page, workspaceName).locator("..");
 }
@@ -147,21 +153,36 @@ export async function createWorkspace(page: Page, name: string, environmentId: s
 /** @deprecated Use {@link createWorkspace} instead. */
 export const createProject = createWorkspace;
 
-/** Click a label row in the sidebar without matching dashboard cards. */
-export async function clickSidebarLabel(page: Page, label: string): Promise<void> {
-  await getSidebarWorkspaceLabel(page, label).click();
+/**
+ * Navigate to a workspace page by looking up its ID via WebSocket and then
+ * navigating to `/workspaces/:workspaceId`. Replaces the old sidebar-click
+ * approach since workspaces are no longer listed in the sidebar.
+ */
+export async function navigateToWorkspace(page: Page, workspaceName: string): Promise<void> {
+  const workspaceId = await getWorkspaceId(page, workspaceName);
+  await page.goto(`/workspaces/${workspaceId}`);
+  await page.waitForFunction(
+    () => document.body.innerText.includes("Connected"),
+    { timeout: 10_000 },
+  );
+  // Wait for workspace page to load — workspace name should be visible
+  await page.locator('[data-testid="workspace-name"]').waitFor({ timeout: 5_000 });
 }
 
-/** Alias of {@link clickSidebarLabel} for backwards compatibility. */
+/** @deprecated Use {@link navigateToWorkspace} instead. */
+export async function clickSidebarLabel(page: Page, label: string): Promise<void> {
+  await navigateToWorkspace(page, label);
+}
+
+/** @deprecated Use {@link navigateToWorkspace} instead. */
 export const clickSidebarWorkspace = clickSidebarLabel;
 
 /**
- * Create a task under a workspace and wait for it to appear in the sidebar.
+ * Create a task under a workspace via WebSocket.
  *
- * When `envName` is provided the task is created via WebSocket so the
- * environment can be carried through (task creation UI no longer has an env
- * dropdown). When `envName` is omitted the new full-panel TaskEditPanel UI
- * is exercised.
+ * Tasks are always created via the WS API now since the sidebar no longer shows
+ * workspace rows with "New task" buttons. The task is created server-side and
+ * will appear in the TaskList sidebar or workspace pages on next render.
  */
 export async function createTask(
   page: Page,
@@ -170,61 +191,59 @@ export async function createTask(
   envName?: string,
   options?: { canDecompose?: boolean },
 ): Promise<void> {
-  if (envName) {
-    // Environment must be set at creation via WS (UI no longer has env field).
-    // Navigate to the task edit form via the "New task" sidebar button (this uses
-    // stopPropagation so it never toggles the workspace's expand/collapse state —
-    // unlike clicking the workspace name which collapses if already selected).
-    await getSidebarWorkspaceRow(page, workspaceName)
-      .locator('button[title="New task"]')
-      .first()
-      .click();
-    await page.locator('[data-testid="task-edit-title"]').waitFor({ timeout: 5_000 });
-
-    // Create the task via WS while the form is visible.
-    const wsId = await getWorkspaceId(page, workspaceName);
-    await createTaskViaWs(page, wsId, title, { environmentId: envName, canDecompose: options?.canDecompose });
-
-    // Cancel the form — this navigates to workspace view which auto-expands
-    // the workspace in the sidebar via useEffect in WorkspaceList.
-    await page.locator("button", { hasText: "Cancel" }).click();
-
-    await page
-      .getByText(title, { exact: true })
-      .first()
-      .waitFor({ timeout: 5_000 });
-    return;
-  }
-
-  // No env specified — exercise the new full-panel TaskEditPanel UI.
-  // Click "New task" button (uses stopPropagation, doesn't toggle expansion)
-  await getSidebarWorkspaceRow(page, workspaceName)
-    .locator('button[title="New task"]')
-    .first()
-    .click();
-
-  // Fill in task title in the new full-panel form
-  await page.locator('[data-testid="task-edit-title"]').fill(title);
-  await page.locator('[data-testid="task-edit-save"]').click();
-
-  // After "Create", viewMode goes to workspace → auto-expand. Wait for task in sidebar.
-  // Use .first() because AnimatePresence may briefly keep an exiting copy alongside the
-  // entering copy, causing two <span class="taskTitle"> elements with the same text.
-  await page
-    .getByText(title, { exact: true })
-    .first()
-    .waitFor({ timeout: 5_000 });
+  const wsId = await getWorkspaceId(page, workspaceName);
+  await createTaskViaWs(page, wsId, title, {
+    environmentId: envName || "",
+    canDecompose: options?.canDecompose,
+  });
 }
 
-/** Navigate to a task view by clicking its name in the sidebar. */
+/**
+ * Navigate to a task view by clicking its name on the page.
+ * Falls back to looking up the task ID via WebSocket and navigating by URL.
+ */
 export async function navigateToTask(
   page: Page,
   taskTitle: string,
 ): Promise<void> {
-  await page.getByText(taskTitle).first().click();
+  // Try to click the task name if it's visible on the current page
+  const taskLink = page.getByText(taskTitle, { exact: true }).first();
+  const isVisible = await taskLink.isVisible().catch(() => false);
+
+  if (isVisible) {
+    await taskLink.click();
+  } else {
+    // Task not visible — look up the workspace and task ID, then navigate by URL.
+    // First, find which workspace this task belongs to by listing all workspaces.
+    const wsResponse = await sendWsAndWaitFor(
+      page,
+      { type: "list_workspaces" },
+      "workspaces",
+    );
+    const workspaces = (wsResponse.payload?.workspaces || []) as Array<{ id: string }>;
+
+    let taskId: string | undefined;
+    for (const ws of workspaces) {
+      try {
+        taskId = await getTaskId(page, ws.id, taskTitle);
+        break;
+      } catch {
+        // Task not in this workspace, try next
+      }
+    }
+
+    if (!taskId) {
+      throw new Error(`Task "${taskTitle}" not found in any workspace`);
+    }
+
+    await page.goto(`/tasks/${taskId}`);
+    await page.waitForFunction(
+      () => document.body.innerText.includes("Connected"),
+      { timeout: 10_000 },
+    );
+  }
+
   // Wait for the task detail header to show this specific task's title.
-  // Using data-testid="task-title" (which wraps only the title text) to avoid strict-mode
-  // violations from the task name appearing in both the sidebar and the header.
   await page.locator(`[data-testid="task-title"]:has-text("${taskTitle}")`).waitFor({ timeout: 5_000 });
 }
 

@@ -1,13 +1,11 @@
 import { test, expect } from "./fixtures.js";
 import {
-  clickSidebarWorkspace,
   createWorkspace,
   createTask,
   navigateToTask,
   patchWsForStubRuntime,
   runStubTaskToCompletion,
   installWsTracker,
-  injectWsMessage,
 } from "./helpers.js";
 
 test.describe("Stream smart scroll", () => {
@@ -15,7 +13,6 @@ test.describe("Stream smart scroll", () => {
     const page = appPage;
 
     await createWorkspace(page, "scroll-init");
-    await clickSidebarWorkspace(page, "scroll-init");
     await createTask(page, "scroll-init", "init-task", "test-local");
     await navigateToTask(page, "init-task");
     await patchWsForStubRuntime(page);
@@ -39,7 +36,6 @@ test.describe("Stream smart scroll", () => {
     const page = appPage;
 
     await createWorkspace(page, "scroll-dir");
-    await clickSidebarWorkspace(page, "scroll-dir");
     await createTask(page, "scroll-dir", "dir-task", "test-local");
     await navigateToTask(page, "dir-task");
     await patchWsForStubRuntime(page);
@@ -62,7 +58,7 @@ test.describe("Stream smart scroll", () => {
     expect(textBefore).not.toEqual(textAfter);
   });
 
-  test("scroll-to-anchor FAB appears when scrolled away", async ({ page, baseURL }) => {
+  test("scroll-to-anchor FAB appears when scrolled away", async ({ page }) => {
     await installWsTracker(page);
     await page.goto("/");
     await page.waitForFunction(
@@ -71,7 +67,6 @@ test.describe("Stream smart scroll", () => {
     );
 
     await createWorkspace(page, "scroll-fab");
-    await clickSidebarWorkspace(page, "scroll-fab");
     await createTask(page, "scroll-fab", "fab-task", "test-local");
     await navigateToTask(page, "fab-task");
     await patchWsForStubRuntime(page);

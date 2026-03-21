@@ -11,10 +11,9 @@ test.describe("Task Lifecycle (stub runtime)", () => {
     // --- Step 2: Create a task with test-local environment (env is set at creation via WS
     //     so it is available at start time; the UI no longer has an env dropdown) ---
     await createTask(page, "lifecycle-proj", "test task", "test-local");
-    await expect(page.getByText("test task", { exact: true }).first()).toBeVisible({ timeout: 5_000 });
 
     // --- Step 3: Navigate to task view ---
-    await page.getByText("test task", { exact: true }).click();
+    await navigateToTask(page, "test task");
     await expect(page.locator('[data-testid="task-status"]')).toContainText("not_started");
     // Overview tab should be active for not_started task
     await expect(page.getByRole("tab", { name: "Overview", exact: true })).toHaveAttribute("class", /active/);

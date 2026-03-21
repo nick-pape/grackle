@@ -1,6 +1,5 @@
 import { test, expect } from "./fixtures.js";
 import {
-  clickSidebarWorkspace,
   createWorkspace,
   createTask,
   navigateToTask,
@@ -14,7 +13,6 @@ test.describe("Complete and resume flow", () => {
 
     // --- Setup: Create workspace, task, navigate, patch runtime ---
     await createWorkspace(page, "complete-flow");
-    await clickSidebarWorkspace(page, "complete-flow");
     await createTask(page, "complete-flow", "complete task", "test-local");
     await navigateToTask(page, "complete task");
     await patchWsForStubRuntime(page);

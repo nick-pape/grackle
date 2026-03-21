@@ -1,6 +1,6 @@
 import { test, expect } from "./fixtures.js";
 import {
-  clickSidebarWorkspace,
+  navigateToWorkspace,
   createWorkspace,
   createTask,
   navigateToTask,
@@ -10,19 +10,13 @@ import {
 } from "./helpers.js";
 
 test.describe("Unified task create/edit experience", () => {
-  test("clicking New task opens full-panel form with title and description fields", async ({ appPage }) => {
+  test("clicking Create Task opens full-panel form with title and description fields", async ({ appPage }) => {
     const page = appPage;
     await createWorkspace(page, "create-panel-proj");
+    await navigateToWorkspace(page, "create-panel-proj");
 
-    // Click "New task" button in the sidebar
-    await page
-      .getByTestId("sidebar")
-      .getByText("create-panel-proj", { exact: true })
-      .first()
-      .locator("..")
-      .locator('button[title="New task"]')
-      .first()
-      .click();
+    // Click "Create Task" CTA on the empty workspace page
+    await page.getByText("Create Task").first().click();
 
     // Full-panel form must be visible (not a bottom-bar form)
     await expect(page.locator('[data-testid="task-edit-title"]')).toBeVisible({ timeout: 5_000 });
@@ -35,16 +29,10 @@ test.describe("Unified task create/edit experience", () => {
   test("creating a task via the panel fills title and description, then navigates to workspace", async ({ appPage }) => {
     const page = appPage;
     await createWorkspace(page, "create-full-proj");
+    await navigateToWorkspace(page, "create-full-proj");
 
     // Open new task form
-    await page
-      .getByTestId("sidebar")
-      .getByText("create-full-proj", { exact: true })
-      .first()
-      .locator("..")
-      .locator('button[title="New task"]')
-      .first()
-      .click();
+    await page.getByText("Create Task").first().click();
 
     await page.locator('[data-testid="task-edit-title"]').fill("panel-created-task");
     await page.locator('[data-testid="task-edit-description"]').fill("A description with **markdown**");
@@ -53,7 +41,7 @@ test.describe("Unified task create/edit experience", () => {
     await expect(page.locator('[data-testid="task-edit-save"]')).toBeEnabled();
     await page.locator('[data-testid="task-edit-save"]').click();
 
-    // Task should appear in the sidebar
+    // Task should appear on the page
     await expect(page.getByText("panel-created-task", { exact: true }).first()).toBeVisible({ timeout: 5_000 });
 
     // Navigate to the task — description should render as markdown in overview
@@ -66,16 +54,10 @@ test.describe("Unified task create/edit experience", () => {
   test("Cancel button in new task form returns to workspace view", async ({ appPage }) => {
     const page = appPage;
     await createWorkspace(page, "cancel-create-proj");
+    await navigateToWorkspace(page, "cancel-create-proj");
 
     // Open new task form
-    await page
-      .getByTestId("sidebar")
-      .getByText("cancel-create-proj", { exact: true })
-      .first()
-      .locator("..")
-      .locator('button[title="New task"]')
-      .first()
-      .click();
+    await page.getByText("Create Task").first().click();
 
     await expect(page.locator('[data-testid="task-edit-title"]')).toBeVisible({ timeout: 5_000 });
     await page.locator('[data-testid="task-edit-title"]').fill("will not be saved");
@@ -103,15 +85,16 @@ test.describe("Unified task create/edit experience", () => {
   test("clicking Edit opens the edit form pre-populated with existing task data", async ({ appPage }) => {
     const page = appPage;
     await createWorkspace(page, "edit-form-proj");
-    // Expand the workspace in the sidebar so tasks will become visible
-    await clickSidebarWorkspace(page, "edit-form-proj");
     const workspaceId = await getWorkspaceId(page, "edit-form-proj");
 
     // Create task with description via WS so we can verify pre-population
-    await createTaskViaWs(page, workspaceId,"editable-task", {
+    await createTaskViaWs(page, workspaceId, "editable-task", {
       environmentId: "test-local",
       description: "Original description",
     });
+
+    // Navigate to workspace page to see the task
+    await navigateToWorkspace(page, "edit-form-proj");
     await page.getByText("editable-task", { exact: true }).first().waitFor({ timeout: 5_000 });
 
     // Navigate to task
@@ -132,14 +115,15 @@ test.describe("Unified task create/edit experience", () => {
   test("saving edits updates the task title and description", async ({ appPage }) => {
     const page = appPage;
     await createWorkspace(page, "save-edit-proj");
-    // Expand the workspace in the sidebar so tasks will become visible
-    await clickSidebarWorkspace(page, "save-edit-proj");
     const workspaceId = await getWorkspaceId(page, "save-edit-proj");
 
-    await createTaskViaWs(page, workspaceId,"old-title-task", {
+    await createTaskViaWs(page, workspaceId, "old-title-task", {
       environmentId: "test-local",
       description: "Old description",
     });
+
+    // Navigate to workspace page to see the task
+    await navigateToWorkspace(page, "save-edit-proj");
     await page.getByText("old-title-task", { exact: true }).first().waitFor({ timeout: 5_000 });
 
     // Navigate and edit
@@ -154,23 +138,17 @@ test.describe("Unified task create/edit experience", () => {
     // Should navigate back to task view with updated title
     await expect(page.locator('[data-testid="task-title"]')).toContainText("new-title-task", { timeout: 5_000 });
 
-    // Updated title should appear in sidebar
+    // Updated title should appear on the page
     await expect(page.getByText("new-title-task", { exact: true }).first()).toBeVisible({ timeout: 5_000 });
   });
 
   test("task creation form has no environment dropdown", async ({ appPage }) => {
     const page = appPage;
     await createWorkspace(page, "no-env-proj");
+    await navigateToWorkspace(page, "no-env-proj");
 
-    // Open new task form
-    await page
-      .getByTestId("sidebar")
-      .getByText("no-env-proj", { exact: true })
-      .first()
-      .locator("..")
-      .locator('button[title="New task"]')
-      .first()
-      .click();
+    // Open new task form via Create Task CTA
+    await page.getByText("Create Task").first().click();
 
     await expect(page.locator('[data-testid="task-edit-title"]')).toBeVisible({ timeout: 5_000 });
 
@@ -183,13 +161,14 @@ test.describe("Unified task create/edit experience", () => {
   test("task edit form shows dependency multi-select with sibling tasks", async ({ appPage }) => {
     const page = appPage;
     await createWorkspace(page, "deps-edit-proj");
-    // Expand the workspace in the sidebar so tasks will become visible
-    await clickSidebarWorkspace(page, "deps-edit-proj");
     const workspaceId = await getWorkspaceId(page, "deps-edit-proj");
 
     // Create two tasks
-    await createTaskViaWs(page, workspaceId,"task-alpha-dep", { environmentId: "test-local" });
-    await createTaskViaWs(page, workspaceId,"task-beta-dep", { environmentId: "test-local" });
+    await createTaskViaWs(page, workspaceId, "task-alpha-dep", { environmentId: "test-local" });
+    await createTaskViaWs(page, workspaceId, "task-beta-dep", { environmentId: "test-local" });
+
+    // Navigate to workspace page to see tasks
+    await navigateToWorkspace(page, "deps-edit-proj");
     await page.getByText("task-beta-dep", { exact: true }).first().waitFor({ timeout: 5_000 });
 
     // Edit task-beta and set task-alpha as a dependency
