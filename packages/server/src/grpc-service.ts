@@ -545,19 +545,8 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         pipe: req.pipe,
       });
 
-      // Push fresh credentials before spawning (best-effort).
-      // For local envs, skip file tokens — the PowerLine is on the same machine.
-      await tokenBroker.refreshTokensForTask(req.environmentId, runtime,
-        env.adapterType === "local" ? { excludeFileTokens: true } : undefined);
-
-      processEventStream(conn.client.spawn(powerlineReq), {
-        sessionId,
-        logPath,
-        systemContext,
-        prompt: req.prompt,
-      });
-
-      // Set up IPC stream if a pipe mode is requested (already validated above)
+      // Set up IPC stream BEFORE starting the child spawn, so the stream
+      // exists when the event processor observes terminal status events.
       let pipeFd = 0;
       if (pipeMode && pipeMode !== "detach" && req.parentSessionId) {
         const ipcStream = streamRegistry.createStream(`pipe:${sessionId}`);
@@ -576,6 +565,18 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
           setupAsyncPipeDelivery(req.parentSessionId);
         }
       }
+
+      // Push fresh credentials before spawning (best-effort).
+      // For local envs, skip file tokens — the PowerLine is on the same machine.
+      await tokenBroker.refreshTokensForTask(req.environmentId, runtime,
+        env.adapterType === "local" ? { excludeFileTokens: true } : undefined);
+
+      processEventStream(conn.client.spawn(powerlineReq), {
+        sessionId,
+        logPath,
+        systemContext,
+        prompt: req.prompt,
+      });
 
       const row = sessionStore.getSession(sessionId);
       const proto = sessionRowToProto(row!);

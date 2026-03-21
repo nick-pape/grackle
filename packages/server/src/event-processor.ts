@@ -356,6 +356,7 @@ export function processEventStream(
       const current = sessionStore.getSession(sessionId);
       if (current && !TERMINAL_STATUSES.includes(current.status)) {
         sessionStore.updateSession(sessionId, SESSION_STATUS.COMPLETED);
+        publishChildCompletion(sessionId, "completed");
         if (ctx.taskId) {
           emit("task.updated", { taskId: ctx.taskId, workspaceId: ctx.workspaceId });
         }
@@ -366,6 +367,7 @@ export function processEventStream(
         // Session was idle (agent finished work). Transport error is not a task failure.
         logger.info({ sessionId, err: String(err) }, "Stream ended while session idle — marking completed");
         sessionStore.updateSession(sessionId, SESSION_STATUS.COMPLETED);
+        publishChildCompletion(sessionId, "completed");
         streamHub.publish(create(grackle.SessionEventSchema, {
           sessionId,
           type: grackle.EventType.STATUS,
@@ -375,6 +377,7 @@ export function processEventStream(
       } else {
         // Genuine failure during active work.
         sessionStore.updateSession(sessionId, SESSION_STATUS.FAILED, undefined, String(err));
+        publishChildCompletion(sessionId, "failed");
         streamHub.publish(create(grackle.SessionEventSchema, {
           sessionId,
           type: grackle.EventType.STATUS,

@@ -161,7 +161,9 @@ function buildCompletionMessage(session: { logPath: string | null; error: string
 
 /**
  * Read the session log and extract the content of the last "text" entry.
- * Uses tail-reading to avoid loading the full log file into memory.
+ * Uses tail-reading to reduce worst-case work on large logs (reads from
+ * the end of the file rather than parsing the entire JSONL). Still uses
+ * synchronous filesystem calls.
  * Returns an empty string if no text entries exist or the log cannot be read.
  */
 function extractLastTextMessage(logPath: string | undefined): string {
