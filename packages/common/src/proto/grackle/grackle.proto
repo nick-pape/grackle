@@ -182,6 +182,19 @@ message CloseFdResponse {
   bool hibernated = 1;         // True if the child was hibernated (last fd closed)
 }
 
+message SessionFds {
+  repeated FdInfo fds = 1;
+}
+
+message FdInfo {
+  int32 fd = 1;
+  string stream_name = 2;
+  string permission = 3;
+  string delivery_mode = 4;
+  bool owned = 5;              // true = opened via spawn, false = inherited
+  string target_session_id = 6; // the other session on this stream
+}
+
 // ─── Streaming Events ───────────────────────────────────────
 
 message SessionEvent {
@@ -575,4 +588,5 @@ service Grackle {
   rpc WaitForPipe(WaitForPipeRequest) returns (WaitForPipeResponse);
   rpc WriteToFd(WriteToFdRequest) returns (Empty);
   rpc CloseFd(CloseFdRequest) returns (CloseFdResponse);
+  rpc GetSessionFds(SessionId) returns (SessionFds);
 }
