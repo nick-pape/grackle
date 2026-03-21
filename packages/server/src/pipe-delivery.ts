@@ -10,12 +10,25 @@
  */
 
 import { create } from "@bufbuild/protobuf";
-import { powerline } from "@grackle-ai/common";
+import { powerline, SESSION_STATUS } from "@grackle-ai/common";
 import * as sessionStore from "./session-store.js";
 import * as adapterManager from "./adapter-manager.js";
 import * as streamRegistry from "./stream-registry.js";
 import type { Subscription } from "./stream-registry.js";
+import { readLog } from "./log-writer.js";
 import { logger } from "./logger.js";
+
+/** Maximum length for the child's last text message in pipe delivery. */
+const MAX_LAST_MESSAGE_LENGTH: number = 4000;
+
+/** Human-readable status labels. */
+const STATUS_LABELS: Record<string, string> = {
+  [SESSION_STATUS.IDLE]: "finished working",
+  [SESSION_STATUS.COMPLETED]: "completed",
+  [SESSION_STATUS.FAILED]: "failed",
+  [SESSION_STATUS.INTERRUPTED]: "was interrupted",
+  [SESSION_STATUS.HIBERNATING]: "hibernated",
+};
 
 /** Stored unsubscribe functions for async listeners, keyed by parent session ID. */
 const asyncListenerCleanups: Map<string, () => void> = new Map();
@@ -79,8 +92,11 @@ export function publishChildCompletion(childSessionId: string, status: string): 
     return;
   }
 
+  // Build rich completion message with child's actual output
+  const message = buildCompletionMessage(session, status);
+
   try {
-    streamRegistry.publish(pipeStream.id, childSessionId, `Child session ${status}`);
+    streamRegistry.publish(pipeStream.id, childSessionId, message);
   } catch (err) {
     logger.warn({ err, childSessionId }, "Failed to publish child completion to IPC stream");
   }
@@ -107,6 +123,53 @@ function cleanupAsyncPipe(streamId: string, parentSessionId: string): void {
       cleanup();
       asyncListenerCleanups.delete(parentSessionId);
     }
+  }
+}
+
+/**
+ * Build a rich completion message from the child session's log,
+ * including the status and the child's last text output.
+ */
+// eslint-disable-next-line @rushstack/no-new-null -- matches DB schema types
+function buildCompletionMessage(session: { logPath: string | null; error: string | null }, status: string): string {
+  const statusLabel = STATUS_LABELS[status] || status;
+  let message = `Child session ${statusLabel}.`;
+
+  // Extract the last text message from the child's session log
+  const lastText = extractLastTextMessage(session.logPath || undefined);
+  if (lastText) {
+    const truncated = lastText.length > MAX_LAST_MESSAGE_LENGTH
+      ? lastText.slice(0, MAX_LAST_MESSAGE_LENGTH) + "..."
+      : lastText;
+    message += `\n\nChild's last message:\n${truncated}`;
+  }
+
+  if (session.error) {
+    message += `\n\nError: ${session.error}`;
+  }
+
+  return message;
+}
+
+/**
+ * Read the session log and extract the content of the last "text" entry.
+ * Returns an empty string if no text entries exist or the log cannot be read.
+ */
+function extractLastTextMessage(logPath: string | undefined): string {
+  if (!logPath) {
+    return "";
+  }
+
+  try {
+    const entries = readLog(logPath);
+    for (let i = entries.length - 1; i >= 0; i--) {
+      if (entries[i].type === "text") {
+        return entries[i].content;
+      }
+    }
+    return "";
+  } catch {
+    return "";
   }
 }
 
