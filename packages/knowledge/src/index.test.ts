@@ -22,6 +22,7 @@ describe("@grackle-ai/knowledge", () => {
     const mod = await import("./index.js");
     expect(mod.createLocalEmbedder).toBeTypeOf("function");
     expect(mod.createPassThroughChunker).toBeTypeOf("function");
+    expect(mod.createTranscriptChunker).toBeTypeOf("function");
     expect(mod.ingest).toBeTypeOf("function");
   });
 

@@ -29,3 +29,5 @@ export type { Chunk, Chunker } from "./chunker.js";
 export { createPassThroughChunker } from "./pass-through-chunker.js";
 export type { EmbeddedChunk } from "./ingest.js";
 export { ingest } from "./ingest.js";
+export type { TranscriptChunkerOptions } from "./transcript-chunker.js";
+export { createTranscriptChunker } from "./transcript-chunker.js";
