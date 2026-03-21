@@ -68,7 +68,7 @@ test.describe("Chat Page (root task)", () => {
     await input.fill("Hello system");
     await page.getByRole("button", { name: "Send" }).click();
 
-    // The stub runtime echoes input; verify the message was delivered
-    await expect(page.locator("text=Hello system")).toBeVisible({ timeout: 15_000 });
+    // The stub runtime echoes input as "You said: ..."; verify the message was delivered
+    await expect(page.getByText("You said: Hello system")).toBeVisible({ timeout: 15_000 });
   });
 });
