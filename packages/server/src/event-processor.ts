@@ -12,6 +12,7 @@ import { slugify } from "./utils/slugify.js";
 import { writeTranscript } from "./transcript.js";
 import { emit } from "./event-bus.js";
 import { logger } from "./logger.js";
+import { publishChildCompletion } from "./pipe-delivery.js";
 import type { ProcessorContext } from "./processor-registry.js";
 
 /** Terminal session statuses that indicate the session has already ended. */
@@ -310,6 +311,11 @@ export function processEventStream(
             sessionStore.updateSession(sessionId, SESSION_STATUS.INTERRUPTED);
           } else if (event.content === "hibernating") {
             sessionStore.updateSession(sessionId, SESSION_STATUS.HIBERNATING);
+          }
+
+          // Publish child completion to IPC stream (for parent pipe delivery)
+          if (["completed", "failed", "killed", "hibernating"].includes(event.content)) {
+            publishChildCompletion(sessionId, event.content);
           }
 
           // Broadcast task_updated on status changes so frontend re-fetches computed status.

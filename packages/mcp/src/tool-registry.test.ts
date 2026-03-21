@@ -109,7 +109,7 @@ describe("ToolRegistry", () => {
 describe("Full tool registry", () => {
   it("contains exactly the expected number of tools", () => {
     const registry = createToolRegistry();
-    expect(registry.list()).toHaveLength(42);
+    expect(registry.list()).toHaveLength(43);
   });
 
   it("every tool name matches snake_case pattern", () => {
@@ -165,7 +165,7 @@ describe("Full tool registry", () => {
   it("groups are consistent within tool files", () => {
     const registry = createToolRegistry();
     const expectedGroups = new Set([
-      "env", "session", "workspace", "task", "finding", "persona", "logs", "credential", "token", "config",
+      "env", "session", "workspace", "task", "finding", "persona", "logs", "credential", "token", "config", "ipc",
     ]);
     for (const tool of registry.list()) {
       expect(expectedGroups.has(tool.group), `unexpected group: ${tool.group}`).toBe(true);

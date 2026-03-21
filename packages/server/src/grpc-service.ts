@@ -51,6 +51,8 @@ import { importGitHubIssues as executeGitHubImport } from "./github-import.js";
 import { generatePairingCode } from "./pairing.js";
 import { detectLanIp } from "./utils/network.js";
 import * as credentialProviders from "./credential-providers.js";
+import * as streamRegistry from "./stream-registry.js";
+import { setupAsyncPipeDelivery } from "./pipe-delivery.js";
 
 /**
  * Map a bind host to a dialable URL host. Wildcard addresses become loopback,
@@ -490,7 +492,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         logPath,
         "",                      // taskId
         resolved.personaId,      // personaId
-        "",                      // parentSessionId
+        req.parentSessionId || "",  // parentSessionId
         (req.pipe as PipeMode) || "",  // pipeMode
       );
 
@@ -534,8 +536,31 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         prompt: req.prompt,
       });
 
+      // Set up IPC stream if a pipe mode is requested with a parent session
+      let pipeFd = 0;
+      const pipeMode = req.pipe as PipeMode;
+      if (pipeMode && pipeMode !== "detach" && req.parentSessionId) {
+        const ipcStream = streamRegistry.createStream(`pipe:${sessionId}`);
+        const parentSub = streamRegistry.subscribe(
+          ipcStream.id, req.parentSessionId, "rw",
+          pipeMode === "sync" ? "sync" : "async",
+          true,  // parent opened this via spawn
+        );
+        streamRegistry.subscribe(
+          ipcStream.id, sessionId, "rw", "async",
+          false, // child inherits
+        );
+        pipeFd = parentSub.fd;
+
+        if (pipeMode === "async") {
+          setupAsyncPipeDelivery(req.parentSessionId, parentSub);
+        }
+      }
+
       const row = sessionStore.getSession(sessionId);
-      return sessionRowToProto(row!);
+      const proto = sessionRowToProto(row!);
+      proto.pipeFd = pipeFd;
+      return proto;
     },
 
     async resumeAgent(req: grackle.ResumeRequest) {
@@ -568,6 +593,22 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       );
 
       return create(grackle.EmptySchema, {});
+    },
+
+    async waitForPipe(req: grackle.WaitForPipeRequest) {
+      const sub = streamRegistry.getSubscription(req.sessionId, req.fd);
+      if (!sub) {
+        throw new ConnectError(
+          `No subscription found for session ${req.sessionId} fd ${req.fd}`,
+          Code.NotFound,
+        );
+      }
+
+      const msg = await streamRegistry.consumeSync(sub.id);
+      return create(grackle.WaitForPipeResponseSchema, {
+        content: msg.content,
+        senderSessionId: msg.senderId,
+      });
     },
 
     async killAgent(req: grackle.SessionId) {

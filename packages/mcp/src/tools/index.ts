@@ -9,6 +9,7 @@ import { logsTools } from "./logs.js";
 import { credentialTools } from "./credential.js";
 import { tokenTools } from "./token.js";
 import { configTools } from "./config.js";
+import { ipcTools } from "./ipc.js";
 
 /** Create a ToolRegistry pre-populated with all available MCP tools. */
 export function createToolRegistry(): ToolRegistry {
@@ -23,5 +24,6 @@ export function createToolRegistry(): ToolRegistry {
   registry.registerAll(credentialTools);
   registry.registerAll(tokenTools);
   registry.registerAll(configTools);
+  registry.registerAll(ipcTools);
   return registry;
 }
