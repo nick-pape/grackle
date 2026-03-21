@@ -1,5 +1,5 @@
 import { useState, type FormEvent, type JSX } from "react";
-import { useMatch, useSearchParams } from "react-router";
+import { useLocation, useMatch, useSearchParams } from "react-router";
 import { useGrackle } from "../../context/GrackleContext.js";
 import { useToast } from "../../context/ToastContext.js";
 import type { Environment } from "../../hooks/useGrackleSocket.js";
@@ -51,6 +51,7 @@ export function UnifiedBar(): JSX.Element {
   } = useGrackle();
   const { showToast } = useToast();
   const navigate = useAppNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
 
   // Match current route (both global and workspace-scoped task URLs)
@@ -64,8 +65,8 @@ export function UnifiedBar(): JSX.Element {
   const wsTaskFindingsMatch = useMatch("/workspaces/:workspaceId/tasks/:taskId/findings");
   const wsTaskEditMatch = useMatch("/workspaces/:workspaceId/tasks/:taskId/edit");
   const newChatMatch = useMatch("/sessions/new");
-  const newEnvMatch = useMatch("/environments/new");
-  const envEditMatch = useMatch("/environments/:environmentId");
+  /** All /environments/* routes use page-level forms — no UnifiedBar needed. */
+  const isEnvironments = location.pathname.startsWith("/environments");
   const workspaceMatch = useMatch("/workspaces/:workspaceId");
   const newTaskMatch = useMatch("/tasks/new");
   const chatMatch = useMatch("/chat");
@@ -78,12 +79,10 @@ export function UnifiedBar(): JSX.Element {
     ?? wsTaskMatch?.params.taskId ?? wsTaskStreamMatch?.params.taskId ?? wsTaskFindingsMatch?.params.taskId ?? wsTaskEditMatch?.params.taskId;
   const isChat = !!chatMatch;
   const isNewChat = !!newChatMatch;
-  const isNewEnv = !!newEnvMatch;
-  const isEnvEdit = !!envEditMatch && !isNewEnv;
   const isWorkspace = !!workspaceMatch && !wsTaskMatch && !wsTaskStreamMatch && !wsTaskFindingsMatch && !wsTaskEditMatch;
   const isNewTask = !!newTaskMatch;
   const isTaskEdit = !!taskEditMatch || !!wsTaskEditMatch;
-  const isEmpty = !!emptyMatch && !isNewChat && !isNewEnv && !isWorkspace && !isNewTask;
+  const isEmpty = !!emptyMatch && !isNewChat && !isWorkspace && !isNewTask;
   const isSettings = !!settingsMatch;
 
   // New chat params
@@ -177,8 +176,8 @@ export function UnifiedBar(): JSX.Element {
     return <></>;
   }
 
-  // --- edit_task / new_task / new_env / edit_env — form is in main panel, bar is hidden ---
-  if (isTaskEdit || isNewTask || isNewEnv || isEnvEdit) {
+  // --- edit_task / new_task / environments — form is in main panel, bar is hidden ---
+  if (isTaskEdit || isNewTask || isEnvironments) {
     return <></>;
   }
 
