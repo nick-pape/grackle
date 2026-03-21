@@ -484,6 +484,13 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         : builderPrompt;
 
       // Validate pipe inputs before creating the session or spawning the child
+      const validPipeModes: readonly string[] = ["", "sync", "async", "detach"];
+      if (req.pipe && !validPipeModes.includes(req.pipe)) {
+        throw new ConnectError(
+          `Invalid pipe mode: "${req.pipe}". Must be "sync", "async", "detach", or empty.`,
+          Code.InvalidArgument,
+        );
+      }
       const pipeMode = req.pipe as PipeMode;
       if (pipeMode && pipeMode !== "detach" && !req.parentSessionId) {
         throw new ConnectError(
@@ -561,7 +568,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         pipeFd = parentSub.fd;
 
         if (pipeMode === "async") {
-          setupAsyncPipeDelivery(req.parentSessionId, parentSub);
+          setupAsyncPipeDelivery(req.parentSessionId);
         }
       }
 

@@ -14,7 +14,6 @@ import { powerline, SESSION_STATUS } from "@grackle-ai/common";
 import * as sessionStore from "./session-store.js";
 import * as adapterManager from "./adapter-manager.js";
 import * as streamRegistry from "./stream-registry.js";
-import type { Subscription } from "./stream-registry.js";
 import { readLog } from "./log-writer.js";
 import { logger } from "./logger.js";
 
@@ -41,7 +40,7 @@ const asyncListenerCleanups: Map<string, () => void> = new Map();
  * which causes the stream-registry to leave the message as undelivered. This ensures
  * `hasUndeliveredMessages()` remains accurate for close() buffer drain checks.
  */
-export function setupAsyncPipeDelivery(parentSessionId: string, _parentSub: Subscription): void {
+export function setupAsyncPipeDelivery(parentSessionId: string): void {
   const unsubscribe = streamRegistry.registerAsyncListener(parentSessionId, (sub, msg) => {
     const session = sessionStore.getSession(parentSessionId);
     if (!session) {
@@ -101,10 +100,18 @@ export function publishChildCompletion(childSessionId: string, status: string): 
     logger.warn({ err, childSessionId }, "Failed to publish child completion to IPC stream");
   }
 
-  // For async pipes, clean up immediately (the listener already fired).
-  // For sync pipes, the WaitForPipe handler will clean up after consumeSync returns.
+  // For async pipes, only clean up if all messages were successfully delivered.
+  // If delivery failed (listener threw), keep the stream so hasUndeliveredMessages
+  // stays accurate for close() buffer drain checks.
+  // For sync pipes, the WaitForPipe handler cleans up after consumeSync returns.
   if (session.pipeMode === "async") {
-    cleanupAsyncPipe(pipeStream.id, session.parentSessionId);
+    // Check all parent subscriptions — if any have undelivered messages, keep the stream
+    const parentSubs = streamRegistry.getSubscriptionsForSession(session.parentSessionId)
+      .filter((s) => s.streamId === pipeStream.id);
+    const allDelivered = parentSubs.every((s) => !streamRegistry.hasUndeliveredMessages(s.id));
+    if (allDelivered) {
+      cleanupAsyncPipe(pipeStream.id, session.parentSessionId);
+    }
   }
 }
 
