@@ -617,6 +617,47 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       return create(grackle.EmptySchema, {});
     },
 
+    async getUsage(req: grackle.GetUsageRequest) {
+      switch (req.scope) {
+        case "session": {
+          const session = sessionStore.getSession(req.id);
+          if (!session) {
+            throw new ConnectError(`Session not found: ${req.id}`, Code.NotFound);
+          }
+          return create(grackle.UsageStatsSchema, {
+            inputTokens: session.inputTokens,
+            outputTokens: session.outputTokens,
+            costUsd: session.costUsd,
+            sessionCount: 1,
+          });
+        }
+        case "task": {
+          const usage = sessionStore.aggregateUsage({ taskId: req.id });
+          return create(grackle.UsageStatsSchema, usage);
+        }
+        case "task_tree": {
+          const descendants = taskStore.getDescendants(req.id);
+          const taskIds = [req.id, ...descendants.map((d) => d.id)];
+          const usage = sessionStore.aggregateUsage({ taskIds });
+          return create(grackle.UsageStatsSchema, usage);
+        }
+        case "workspace": {
+          const tasks = taskStore.listTasks(req.id);
+          const taskIds = tasks.map((t) => t.id);
+          const usage = taskIds.length > 0
+            ? sessionStore.aggregateUsage({ taskIds })
+            : { inputTokens: 0, outputTokens: 0, costUsd: 0, sessionCount: 0 };
+          return create(grackle.UsageStatsSchema, usage);
+        }
+        case "environment": {
+          const usage = sessionStore.aggregateUsage({ environmentId: req.id });
+          return create(grackle.UsageStatsSchema, usage);
+        }
+        default:
+          throw new ConnectError(`Invalid usage scope: ${req.scope}`, Code.InvalidArgument);
+      }
+    },
+
     async waitForPipe(req: grackle.WaitForPipeRequest) {
       const sub = streamRegistry.getSubscription(req.sessionId, req.fd);
       if (!sub) {

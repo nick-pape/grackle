@@ -1473,6 +1473,30 @@ async function handleMessage(
       break;
     }
 
+    // ─── Usage ────────────────────────────────────────────
+
+    case "get_usage": {
+      const scope = (msg.payload?.scope as string) || "";
+      const id = (msg.payload?.id as string) || "";
+      let usage = { inputTokens: 0, outputTokens: 0, costUsd: 0, sessionCount: 0 };
+      if (scope === "session") {
+        const s = sessionStore.getSession(id);
+        if (s) { usage = { inputTokens: s.inputTokens, outputTokens: s.outputTokens, costUsd: s.costUsd, sessionCount: 1 }; }
+      } else if (scope === "task") {
+        usage = sessionStore.aggregateUsage({ taskId: id });
+      } else if (scope === "task_tree") {
+        const descendants = taskStore.getDescendants(id);
+        usage = sessionStore.aggregateUsage({ taskIds: [id, ...descendants.map((d) => d.id)] });
+      } else if (scope === "workspace") {
+        const wsTasks = taskStore.listTasks(id);
+        if (wsTasks.length > 0) { usage = sessionStore.aggregateUsage({ taskIds: wsTasks.map((t) => t.id) }); }
+      } else if (scope === "environment") {
+        usage = sessionStore.aggregateUsage({ environmentId: id });
+      }
+      sendWs(ws, { type: "usage_stats", payload: { scope, id, ...usage } });
+      break;
+    }
+
     // ─── Findings ──────────────────────────────────────────
 
     case "list_findings": {
