@@ -1185,6 +1185,9 @@ export function taskStatusToEnum(s: string): TaskStatus_2;
 export function taskStatusToString(e: TaskStatus_2): string;
 
 // @public
+export const TERMINAL_SESSION_STATUSES: ReadonlySet<SessionStatus>;
+
+// @public
 type TokenBundle = Message<"grackle.powerline.TokenBundle"> & {
     tokens: TokenItem[];
 };

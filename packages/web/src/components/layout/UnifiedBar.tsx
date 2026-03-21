@@ -134,16 +134,7 @@ export function UnifiedBar(): JSX.Element {
       );
     }
 
-    if (latestRootSession?.status === "running") {
-      return (
-        <div className={styles.bar}>
-          <input type="text" disabled placeholder="Agent is working..." className={styles.input} />
-          <button onClick={() => kill(latestRootSession.id)} className={styles.btnDanger} title="Stop session">Stop</button>
-        </div>
-      );
-    }
-
-    if (latestRootSession?.status === "idle") {
+    if (latestRootSession && !["completed", "failed", "interrupted"].includes(latestRootSession.status)) {
       const rootEnvDisconnected = isEnvDisconnected(latestRootSession.environmentId, environments);
       const handleChatSend = (e: FormEvent): void => {
         e.preventDefault();
@@ -228,11 +219,11 @@ export function UnifiedBar(): JSX.Element {
       );
     }
 
-    // Working / paused — show chat input when session is idle, "agent working" otherwise
+    // Working / paused — show chat input + Stop when session is active
     if (task.status === "working" || task.status === "paused") {
-      const isWaiting = taskSession?.status === "idle";
+      const isActive = taskSession && !["completed", "failed", "interrupted"].includes(taskSession.status);
 
-      if (isWaiting) {
+      if (isActive) {
         const effectiveEnvId = taskSession.environmentId;
         const taskEnvDisconnected = isEnvDisconnected(effectiveEnvId, environments);
 
@@ -254,13 +245,14 @@ export function UnifiedBar(): JSX.Element {
             <span title={taskEnvDisconnected ? "Environment is unavailable — reconnect first" : undefined}>
               <button type="submit" disabled={!text.trim() || taskEnvDisconnected} className={styles.btnPrimary}>Send</button>
             </span>
+            <button type="button" onClick={() => kill(taskSession.id)} className={styles.btnDanger} title="Stop session">Stop</button>
           </form>
         );
       }
 
       return (
         <div className={styles.bar}>
-          <input type="text" disabled placeholder="Agent is working..." className={styles.input} />
+          <span className={styles.hintText}>Waiting for agent...</span>
         </div>
       );
     }
@@ -326,20 +318,10 @@ export function UnifiedBar(): JSX.Element {
 
   // --- session mode ---
   if (sessionId) {
-    const isRunning = session?.status === "running";
-    const isWaiting = session?.status === "idle";
     const isEnded = session !== undefined && ["completed", "failed", "interrupted"].includes(session.status);
+    const isActive = session !== undefined && !isEnded;
 
-    if (isRunning) {
-      return (
-        <div className={styles.bar}>
-          <input type="text" disabled placeholder="Agent is working..." className={styles.input} />
-          <button onClick={() => kill(sessionId)} className={styles.btnDanger} title="Stop session">Stop</button>
-        </div>
-      );
-    }
-
-    if (isWaiting) {
+    if (isActive) {
       const sessionEnvDisconnected = isEnvDisconnected(session.environmentId, environments);
 
       const handleSend = (e: FormEvent): void => {

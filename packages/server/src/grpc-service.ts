@@ -24,6 +24,8 @@ import {
   DEFAULT_MCP_PORT,
   MAX_TASK_DEPTH,
   SESSION_STATUS,
+  TERMINAL_SESSION_STATUSES,
+  type SessionStatus,
   TASK_STATUS,
   ROOT_TASK_ID,
   taskStatusToEnum,
@@ -540,9 +542,9 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       if (!session) {
         throw new ConnectError(`Session not found: ${req.sessionId}`, Code.NotFound);
       }
-      if (session.status !== SESSION_STATUS.IDLE) {
+      if (TERMINAL_SESSION_STATUSES.has(session.status as SessionStatus)) {
         throw new ConnectError(
-          `Session ${req.sessionId} is not idle (status: ${session.status})`,
+          `Session ${req.sessionId} has ended (status: ${session.status})`,
           Code.FailedPrecondition,
         );
       }
