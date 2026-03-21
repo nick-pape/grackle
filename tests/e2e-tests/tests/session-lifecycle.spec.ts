@@ -7,8 +7,9 @@ test.describe("Session Lifecycle (stub runtime)", () => {
     // Navigate to the Environments tab
     await page.locator('[data-testid="sidebar-tab-environments"]').click();
 
-    // Click "+" on the environment card to enter new_chat mode
-    await page.locator('button[title="New chat"]').click();
+    // Click the environment nav item, then click New Chat to enter new_chat mode
+    await page.getByTestId("env-nav-item").first().click();
+    await page.getByRole("button", { name: "New Chat" }).click();
 
     // UnifiedBar shows prompt input, persona selector, and Go button
     await expect(page.getByText("new chat", { exact: true })).toBeVisible();

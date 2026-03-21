@@ -28,11 +28,12 @@ test.describe("Environment Display", () => {
     await expect(plusButton).toBeEnabled();
   });
 
-  test("new chat + button is visible and enabled for connected environment", async ({ appPage }) => {
-    // Wait for the environment to be connected before checking for the + button
-    const plusButton = appPage.locator('button[title="New chat"]');
-    await expect(plusButton).toBeVisible({ timeout: 10_000 });
-    await expect(plusButton).toBeEnabled();
+  test("new chat button is visible and enabled for connected environment", async ({ appPage }) => {
+    // Navigate to the environment detail page to find the New Chat button
+    await appPage.getByTestId("env-nav-item").first().click();
+    const newChatButton = appPage.getByRole("button", { name: "New Chat" });
+    await expect(newChatButton).toBeVisible({ timeout: 10_000 });
+    await expect(newChatButton).toBeEnabled();
   });
 
   test("environment card is visible in list", async ({ appPage }) => {

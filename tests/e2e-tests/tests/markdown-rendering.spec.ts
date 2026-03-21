@@ -15,7 +15,8 @@ test.describe("Markdown Rendering in EventRenderer", () => {
 
     // Navigate to the Environments tab
     await page.locator('[data-testid="sidebar-tab-environments"]').click();
-    await page.locator('button[title="New chat"]').click();
+    await page.getByTestId("env-nav-item").first().click();
+    await page.getByRole("button", { name: "New Chat" }).click();
     const promptInput = page.locator('input[placeholder="Enter prompt..."]');
     await promptInput.fill("md test");
     await page.locator("button", { hasText: "Go" }).click();
@@ -39,7 +40,8 @@ test.describe("Markdown Rendering in EventRenderer", () => {
 
     // Navigate to the Environments tab
     await page.locator('[data-testid="sidebar-tab-environments"]').click();
-    await page.locator('button[title="New chat"]').click();
+    await page.getByTestId("env-nav-item").first().click();
+    await page.getByRole("button", { name: "New Chat" }).click();
 
     await page.locator('input[placeholder="Enter prompt..."]').fill("code test");
     await page.locator("button", { hasText: "Go" }).click();
@@ -70,7 +72,8 @@ test.describe("Markdown Rendering in EventRenderer", () => {
 
     // Navigate to the Environments tab
     await page.locator('[data-testid="sidebar-tab-environments"]').click();
-    await page.locator('button[title="New chat"]').click();
+    await page.getByTestId("env-nav-item").first().click();
+    await page.getByRole("button", { name: "New Chat" }).click();
 
     await page.locator('input[placeholder="Enter prompt..."]').fill("group test");
     await page.locator("button", { hasText: "Go" }).click();
@@ -103,7 +106,8 @@ test.describe("Markdown Rendering in EventRenderer", () => {
 
     // Start a stub session to get a session context — navigate to Environments tab
     await page.locator('[data-testid="sidebar-tab-environments"]').click();
-    await page.locator('button[title="New chat"]').click();
+    await page.getByTestId("env-nav-item").first().click();
+    await page.getByRole("button", { name: "New Chat" }).click();
 
     await page.locator('input[placeholder="Enter prompt..."]').fill("table test");
     await page.locator("button", { hasText: "Go" }).click();

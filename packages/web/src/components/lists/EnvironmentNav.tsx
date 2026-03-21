@@ -58,43 +58,47 @@ export function EnvironmentNav(): JSX.Element {
     buttons[nextIndex].focus();
   }, [activeId, environments, navigate]);
 
+  /** When no environment is selected, the first tab should be focusable. */
+  const focusableId = activeId ?? (environments.length > 0 ? environments[0].id : undefined);
+
   return (
-    <nav
-      className={styles.nav}
-      ref={tabListRef}
-      role="tablist"
-      aria-orientation="vertical"
-      aria-label="Environments"
-      onKeyDown={handleKeyDown}
-      data-testid="environment-nav"
-    >
-      {environments.map((env) => {
-        const isActive = env.id === activeId;
-        const statusColor = STATUS_COLORS[env.status] || "var(--text-tertiary)";
-        const isConnected = env.status === "connected";
-        return (
-          <button
-            key={env.id}
-            role="tab"
-            type="button"
-            aria-selected={isActive}
-            tabIndex={isActive ? 0 : -1}
-            className={`${styles.tab} ${isActive ? styles.tabActive : ""}`}
-            onClick={() => handleClick(env.id)}
-            data-testid="env-nav-item"
-          >
-            <span
-              className={`${styles.statusDot} ${isConnected ? styles.pulse : ""}`}
-              style={{ color: statusColor }}
+    <div className={styles.nav} data-testid="environment-nav">
+      <nav
+        ref={tabListRef}
+        role="tablist"
+        aria-orientation="vertical"
+        aria-label="Environments"
+        onKeyDown={handleKeyDown}
+      >
+        {environments.map((env) => {
+          const isActive = env.id === activeId;
+          const isFocusable = env.id === focusableId;
+          const statusColor = STATUS_COLORS[env.status] || "var(--text-tertiary)";
+          const isConnected = env.status === "connected";
+          return (
+            <button
+              key={env.id}
+              role="tab"
+              type="button"
+              aria-selected={isActive}
+              tabIndex={isFocusable ? 0 : -1}
+              className={`${styles.tab} ${isActive ? styles.tabActive : ""}`}
+              onClick={() => handleClick(env.id)}
+              data-testid="env-nav-item"
             >
-              {"\u25CF"}
-            </span>
-            <span className={styles.tabLabel} title={env.displayName || env.id}>
-              {env.displayName || env.id}
-            </span>
-          </button>
-        );
-      })}
+              <span
+                className={`${styles.statusDot} ${isConnected ? styles.pulse : ""}`}
+                style={{ color: statusColor }}
+              >
+                {"\u25CF"}
+              </span>
+              <span className={styles.tabLabel} title={env.displayName || env.id}>
+                {env.displayName || env.id}
+              </span>
+            </button>
+          );
+        })}
+      </nav>
 
       <button
         type="button"
@@ -111,6 +115,6 @@ export function EnvironmentNav(): JSX.Element {
           No environments yet.
         </div>
       )}
-    </nav>
+    </div>
   );
 }

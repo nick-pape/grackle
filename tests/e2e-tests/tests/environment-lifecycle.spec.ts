@@ -105,10 +105,11 @@ test.describe("Environment List — Expand/Collapse", () => {
   test("+ button click does not toggle expansion", async ({ appPage }) => {
     const page = appPage;
 
-    // Click the + button (should use stopPropagation)
-    await page.locator('button[title="New chat"]').click();
+    // Click the environment nav item to go to the detail page, then click New Chat
+    await page.getByTestId("env-nav-item").first().click();
+    await page.getByRole("button", { name: "New Chat" }).click();
 
-    // The action row should NOT appear (+ button stops propagation)
+    // The action row should NOT appear
     await expect(page.locator("button", { hasText: "Stop" })).not.toBeVisible({ timeout: 2_000 });
 
     // Instead, we should be in new_chat mode

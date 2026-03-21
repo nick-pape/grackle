@@ -8,7 +8,8 @@ test.describe("Kill Session", () => {
     await page.locator('[data-testid="sidebar-tab-environments"]').click();
 
     // Start a stub session (uses default stub persona)
-    await page.locator('button[title="New chat"]').click();
+    await page.getByTestId("env-nav-item").first().click();
+    await page.getByRole("button", { name: "New Chat" }).click();
     const promptInput = page.locator('input[placeholder="Enter prompt..."]');
     await promptInput.fill("kill test");
     await page.locator("button", { hasText: "Go" }).click();

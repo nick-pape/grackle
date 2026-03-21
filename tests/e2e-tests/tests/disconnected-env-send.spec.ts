@@ -286,7 +286,8 @@ test.describe("Disconnected environment blocks message send", () => {
     // Spawn a real session using the stub runtime (no PowerLine gRPC needed).
     // Environments tab → click "+" on the environment card → select stub → submit.
     await page.locator('[data-testid="sidebar-tab-environments"]').click();
-    await page.locator('button[title="New chat"]').click();
+    await page.getByTestId("env-nav-item").first().click();
+    await page.getByRole("button", { name: "New Chat" }).click();
 
     const promptInput = page.locator('input[placeholder="Enter prompt..."]');
     await promptInput.fill("hello stub");

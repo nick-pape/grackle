@@ -26,12 +26,13 @@ async function archiveAllWorkspaces(page: import("@playwright/test").Page): Prom
 }
 
 test.describe("Workspaces", () => {
-  test("Environments tab shows workspace list", async ({ appPage }) => {
+  test("Environments tab shows environment nav", async ({ appPage }) => {
     const page = appPage;
 
-    // Switch to Environments tab — header label visible
+    // Switch to Environments tab — environment nav visible
     await page.locator('[data-testid="sidebar-tab-environments"]').click();
-    await expect(page.locator("text=WORKSPACES").first()).toBeVisible();
+    await expect(page.getByTestId("environment-nav")).toBeVisible();
+    await expect(page.getByTestId("env-nav-item")).toBeVisible();
   });
 
   test("welcome CTA creates workspace inline", async ({ appPage }) => {

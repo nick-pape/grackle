@@ -220,7 +220,7 @@ export function EnvironmentDetailPage(): JSX.Element {
 interface WorkspaceCardProps {
   /** Workspace data to display. */
   workspace: Workspace;
-  /** ID of the workspace pending archive confirmation, or null. */
+  /** ID of the workspace pending archive confirmation, or undefined. */
   confirmArchiveId: string | undefined;
   /** Navigate to the workspace detail page. */
   onOpen: () => void;
