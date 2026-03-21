@@ -1,43 +1,85 @@
-import { test } from "./fixtures.js";
+import { test, expect } from "./fixtures.js";
+import { createWorkspace, createTask } from "./helpers.js";
 
 /**
- * Sidebar search filter tests are skipped because the sidebar no longer shows
- * workspaces. The sidebar now shows environment navigation (EnvironmentNav)
- * and a global task list (TaskList), neither of which has the workspace search
- * filter that these tests were exercising. The search functionality would need
- * to be reimplemented (e.g., in the TaskList sidebar) before these tests can
- * be rewritten.
+ * Sidebar search filter tests for the TaskList sidebar on the Tasks tab.
+ * The search input filters tasks by title using fuzzy matching.
  */
+
+/** Navigate to the Tasks tab so the TaskList sidebar is visible. */
+async function goToTasksTab(page: import("@playwright/test").Page): Promise<void> {
+  await page.locator('[data-testid="sidebar-tab-tasks"]').click();
+}
+
 test.describe("Sidebar search filter", () => {
-  test.skip("search input is visible when workspaces exist", async () => {
-    // Skipped: sidebar no longer contains workspace search
+  test("search input is visible when tasks exist", async ({ appPage }) => {
+    const page = appPage;
+
+    await createWorkspace(page, "search-vis");
+    await createTask(page, "search-vis", "visible-task");
+
+    await goToTasksTab(page);
+    await expect(page.getByTestId("sidebar-search")).toBeVisible({ timeout: 5_000 });
   });
 
-  test.skip("typing filters workspaces by name", async () => {
-    // Skipped: sidebar no longer contains workspace search
+  test("typing filters tasks by title", async ({ appPage }) => {
+    const page = appPage;
+
+    await createWorkspace(page, "search-filter");
+    await createTask(page, "search-filter", "alpha-task");
+    await createTask(page, "search-filter", "beta-task");
+
+    await goToTasksTab(page);
+    await expect(page.getByTestId("sidebar-search")).toBeVisible({ timeout: 5_000 });
+
+    // Type a filter that matches only one task
+    await page.getByTestId("sidebar-search").fill("alpha");
+
+    // Only the matching task should be visible
+    await expect(page.getByText("alpha-task", { exact: true }).first()).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText("beta-task", { exact: true })).not.toBeVisible({ timeout: 3_000 });
   });
 
-  test.skip("typing filters tasks by title", async () => {
-    // Skipped: sidebar no longer contains workspace search
+  test("clearing filter restores full list", async ({ appPage }) => {
+    const page = appPage;
+
+    await createWorkspace(page, "search-clear");
+    await createTask(page, "search-clear", "clear-alpha");
+    await createTask(page, "search-clear", "clear-beta");
+
+    await goToTasksTab(page);
+    const searchInput = page.getByTestId("sidebar-search");
+    await expect(searchInput).toBeVisible({ timeout: 5_000 });
+
+    // Filter to one task
+    await searchInput.fill("clear-alpha");
+    await expect(page.getByText("clear-beta", { exact: true })).not.toBeVisible({ timeout: 3_000 });
+
+    // Clear the filter
+    await searchInput.fill("");
+
+    // Both tasks should be visible again
+    await expect(page.getByText("clear-alpha", { exact: true }).first()).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText("clear-beta", { exact: true }).first()).toBeVisible({ timeout: 5_000 });
   });
 
-  test.skip("clearing filter restores full list", async () => {
-    // Skipped: sidebar no longer contains workspace search
-  });
+  test("matching text in task titles is highlighted", async ({ appPage }) => {
+    const page = appPage;
 
-  test.skip("search works in grouped-by-status view", async () => {
-    // Skipped: sidebar no longer contains workspace search
-  });
+    await createWorkspace(page, "search-highlight");
+    await createTask(page, "search-highlight", "Fix login bug");
 
-  test.skip("matching text in task titles is highlighted", async () => {
-    // Skipped: sidebar no longer contains workspace search
-  });
+    await goToTasksTab(page);
 
-  test.skip("workspace match shows all its tasks", async () => {
-    // Skipped: sidebar no longer contains workspace search
-  });
+    // Wait for the task to appear in the sidebar
+    await page.getByTestId("sidebar").locator('[data-task-id]', { hasText: "Fix login bug" }).waitFor({ timeout: 15_000 });
 
-  test.skip("search finds tasks in unexpanded workspaces", async () => {
-    // Skipped: sidebar no longer contains workspace search
+    const searchInput = page.getByTestId("sidebar-search");
+    await searchInput.fill("login");
+
+    // The task should be visible with "login" highlighted in a <mark> element
+    const mark = page.locator('[data-task-id] mark');
+    await expect(mark.first()).toBeVisible({ timeout: 15_000 });
+    await expect(mark.first()).toHaveText("login");
   });
 });
