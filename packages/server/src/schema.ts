@@ -50,6 +50,8 @@ export const sessions = sqliteTable("sessions", {
   error: text("error"),
   taskId: text("task_id").notNull().default(""),
   personaId: text("persona_id").notNull().default(""),
+  parentSessionId: text("parent_session_id").notNull().default(""),
+  pipeMode: text("pipe_mode").notNull().default(""),
 });
 
 /** Row shape returned by a SELECT on the sessions table. */

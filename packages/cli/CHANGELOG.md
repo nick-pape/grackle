@@ -1,6 +1,18 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sat, 21 Mar 2026 05:03:11 GMT and should not be manually modified.
+This log was last generated on Sat, 21 Mar 2026 14:51:13 GMT and should not be manually modified.
+
+## 0.54.0
+Sat, 21 Mar 2026 14:51:13 GMT
+
+### Minor changes
+
+- Add HIBERNATING session status and parentSessionId column for streams IPC model
+- Add pipe field to SpawnRequest proto and PipeMode type for streams IPC
+
+### Patches
+
+- Fix System task chat: use user message as prompt instead of title, handle read-only SDK config dir, recover session state on sendInput failure
 
 ## 0.53.5
 Sat, 21 Mar 2026 05:03:11 GMT

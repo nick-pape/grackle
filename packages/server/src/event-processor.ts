@@ -15,7 +15,7 @@ import { logger } from "./logger.js";
 import type { ProcessorContext } from "./processor-registry.js";
 
 /** Terminal session statuses that indicate the session has already ended. */
-const TERMINAL_STATUSES: string[] = [SESSION_STATUS.COMPLETED, SESSION_STATUS.FAILED, SESSION_STATUS.INTERRUPTED];
+const TERMINAL_STATUSES: string[] = [SESSION_STATUS.COMPLETED, SESSION_STATUS.FAILED, SESSION_STATUS.INTERRUPTED, SESSION_STATUS.HIBERNATING];
 
 /** Options for processing an agent event stream. */
 export interface EventStreamOptions {
@@ -308,12 +308,14 @@ export function processEventStream(
             sessionStore.updateSession(sessionId, SESSION_STATUS.FAILED);
           } else if (event.content === "killed") {
             sessionStore.updateSession(sessionId, SESSION_STATUS.INTERRUPTED);
+          } else if (event.content === "hibernating") {
+            sessionStore.updateSession(sessionId, SESSION_STATUS.HIBERNATING);
           }
 
           // Broadcast task_updated on status changes so frontend re-fetches computed status.
           // This covers both terminal events (completed/failed/killed) and non-terminal
           // transitions (running, waiting_input) that affect the computed task status.
-          if (ctx.taskId && ["completed", "failed", "killed", "running", "waiting_input"].includes(event.content)) {
+          if (ctx.taskId && ["completed", "failed", "killed", "hibernating", "running", "waiting_input"].includes(event.content)) {
             emit("task.updated", { taskId: ctx.taskId, workspaceId: ctx.workspaceId });
           }
         }

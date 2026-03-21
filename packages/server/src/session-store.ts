@@ -2,7 +2,7 @@ import db from "./db.js";
 import { sessions, type SessionRow } from "./schema.js";
 import { eq, and, inArray, desc, asc, sql } from "drizzle-orm";
 import { SESSION_STATUS } from "@grackle-ai/common";
-import type { SessionStatus } from "@grackle-ai/common";
+import type { SessionStatus, PipeMode } from "@grackle-ai/common";
 
 export type { SessionRow };
 
@@ -16,6 +16,8 @@ export function createSession(
   logPath: string,
   taskId: string = "",
   personaId: string = "",
+  parentSessionId: string = "",
+  pipeMode: PipeMode = "",
 ): void {
   db.insert(sessions).values({
     id,
@@ -26,6 +28,8 @@ export function createSession(
     logPath,
     taskId,
     personaId,
+    parentSessionId,
+    pipeMode,
     // We always set startedAt explicitly (ISO 8601 format with milliseconds).
     // The schema default also produces ISO format via strftime, but we set it
     // here for consistency. ISO format sorts lexicographically correctly.
@@ -71,7 +75,7 @@ export function updateSession(
   runtimeSessionId?: string,
   error?: string,
 ): void {
-  const endedAt = ([SESSION_STATUS.COMPLETED, SESSION_STATUS.FAILED, SESSION_STATUS.INTERRUPTED] as string[]).includes(status)
+  const endedAt = ([SESSION_STATUS.COMPLETED, SESSION_STATUS.FAILED, SESSION_STATUS.INTERRUPTED, SESSION_STATUS.HIBERNATING] as string[]).includes(status)
     ? new Date().toISOString()
     : null;
   const patch: Partial<typeof sessions.$inferInsert> = {
@@ -181,6 +185,25 @@ export function listSessionsByTaskIds(taskIds: string[]): SessionRow[] {
   }
   return db.select().from(sessions)
     .where(inArray(sessions.taskId, taskIds))
+    .orderBy(asc(sessions.startedAt), asc(sessions.id))
+    .all();
+}
+
+/** Transition a session to HIBERNATING — process dead, JSONL persists, reanimate-safe. */
+export function hibernateSession(id: string): void {
+  db.update(sessions)
+    .set({
+      status: SESSION_STATUS.HIBERNATING,
+      endedAt: new Date().toISOString(),
+    })
+    .where(eq(sessions.id, id))
+    .run();
+}
+
+/** List all child sessions spawned by a parent session. */
+export function getChildSessions(parentSessionId: string): SessionRow[] {
+  return db.select().from(sessions)
+    .where(eq(sessions.parentSessionId, parentSessionId))
     .orderBy(asc(sessions.startedAt), asc(sessions.id))
     .all();
 }

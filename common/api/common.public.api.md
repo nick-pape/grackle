@@ -816,6 +816,9 @@ const PersonaListSchema: GenMessage<PersonaList>;
 const PersonaSchema: GenMessage<Persona>;
 
 // @public
+export type PipeMode = "sync" | "async" | "detach" | "";
+
+// @public
 type Pong = Message<"grackle.powerline.Pong"> & {
     timestamp: bigint;
 };
@@ -958,6 +961,7 @@ export const SESSION_STATUS: {
     readonly PENDING: "pending";
     readonly RUNNING: "running";
     readonly IDLE: "idle";
+    readonly HIBERNATING: "hibernating";
     readonly COMPLETED: "completed";
     readonly FAILED: "failed";
     readonly INTERRUPTED: "interrupted";
@@ -1068,6 +1072,7 @@ type SpawnRequest = Message<"grackle.SpawnRequest"> & {
     systemContext: string;
     personaId: string;
     worktreeBasePath: string;
+    pipe: string;
 };
 
 // @public
@@ -1087,6 +1092,7 @@ type SpawnRequest_2 = Message<"grackle.powerline.SpawnRequest"> & {
     mcpToken: string;
     scriptContent: string;
     useWorktrees?: boolean;
+    pipe: string;
 };
 
 // @public
