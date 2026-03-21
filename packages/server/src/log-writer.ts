@@ -91,13 +91,18 @@ export function readLastTextEntry(logPath: string): LogEntry | undefined {
   const readSize = Math.min(stats.size, LOG_TAIL_BYTES);
   const buffer = Buffer.alloc(readSize);
   const fd = openSync(streamPath, "r");
+  let bytesRead = 0;
   try {
-    readSync(fd, buffer, 0, readSize, stats.size - readSize);
+    bytesRead = readSync(fd, buffer, 0, readSize, stats.size - readSize);
   } finally {
     closeSync(fd);
   }
 
-  const lines = buffer.toString("utf-8").split("\n");
+  if (bytesRead <= 0) {
+    return undefined;
+  }
+
+  const lines = buffer.subarray(0, bytesRead).toString("utf-8").split("\n");
   for (let i = lines.length - 1; i >= 0; i--) {
     const line = lines[i].trim();
     if (!line) {
