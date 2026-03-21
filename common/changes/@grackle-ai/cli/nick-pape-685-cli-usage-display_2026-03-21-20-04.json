@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Display session token usage and cost in status and task show commands",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
