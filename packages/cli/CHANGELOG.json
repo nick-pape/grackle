@@ -2,6 +2,30 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.61.1",
+      "tag": "@grackle-ai/cli_v0.61.1",
+      "date": "Sat, 21 Mar 2026 22:42:52 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Add semantic vector search to @grackle-ai/knowledge"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.61.0",
+      "tag": "@grackle-ai/cli_v0.61.0",
+      "date": "Sat, 21 Mar 2026 22:01:36 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Make task_start pipe-aware: add pipe and parent_session_id to StartTaskRequest for structured IPC"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.60.0",
       "tag": "@grackle-ai/cli_v0.60.0",
       "date": "Sat, 21 Mar 2026 21:49:59 GMT",
