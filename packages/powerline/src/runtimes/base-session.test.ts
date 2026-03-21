@@ -3,16 +3,16 @@ import { BaseAgentSession } from "./base-session.js";
 import type { AgentEvent } from "./runtime.js";
 
 /** A deferred promise that can be resolved externally. */
-interface Deferred<T> {
-  promise: Promise<T>;
-  resolve: (value: T) => void;
+interface Deferred {
+  promise: Promise<void>;
+  resolve: () => void;
   reject: (reason: unknown) => void;
 }
 
-function createDeferred<T>(): Deferred<T> {
-  let resolve!: (value: T) => void;
+function createDeferred(): Deferred {
+  let resolve!: () => void;
   let reject!: (reason: unknown) => void;
-  const promise = new Promise<T>((res, rej) => {
+  const promise = new Promise<void>((res, rej) => {
     resolve = res;
     reject = rej;
   });
@@ -38,14 +38,14 @@ class TestSession extends BaseAgentSession {
    * Queue of deferreds that control when each executeFollowUp resolves.
    * If empty, executeFollowUp resolves immediately.
    */
-  private gates: Array<Deferred<void>> = [];
+  private gates: Deferred[] = [];
 
   /**
    * Add a gate — executeFollowUp will block on each gate in order.
    * Call gate.resolve() to let the follow-up complete.
    */
-  public addGate(): Deferred<void> {
-    const d = createDeferred<void>();
+  public addGate(): Deferred {
+    const d = createDeferred();
     this.gates.push(d);
     return d;
   }

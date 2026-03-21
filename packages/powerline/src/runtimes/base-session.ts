@@ -239,7 +239,14 @@ export abstract class BaseAgentSession implements AgentSession {
   /** Fire-and-forget launch of the input processing loop. */
   private startInputLoop(): void {
     this.processInputLoop().catch((err) => {
+      const ts = new Date().toISOString();
       logger.error({ err }, `Input loop crashed in ${this.runtimeDisplayName} session`);
+      this.status = SESSION_STATUS.FAILED;
+      this.eventQueue.push({ type: "error", timestamp: ts, content: String(err) });
+      this.eventQueue.push({ type: "status", timestamp: ts, content: "failed" });
+      this.inputQueue.close();
+      this.releaseResources();
+      this.eventQueue.close();
     });
   }
 
