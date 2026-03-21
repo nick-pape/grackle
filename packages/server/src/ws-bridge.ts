@@ -237,14 +237,7 @@ async function autoProvisionEnvironment(
   }
 }
 
-/**
- * Start a new agent session for a task. Handles environment lookup,
- * auto-provisioning, session creation, spawning, and completion wiring.
- *
- * Returns undefined on success (or if the failure was already reported
- * to the client via WS, e.g. provisioning errors), or an error message
- * string for failures that need the caller to surface to the client.
- */
+/** Start a new agent session for a task. Returns an error message string on failure, undefined on success. */
 export async function startTaskSession(
   ws: WebSocket | undefined,
   task: taskStore.TaskRow,
