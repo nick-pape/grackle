@@ -304,9 +304,15 @@ export function processEventStream(
               output_tokens?: number;
               cost_usd?: number;
             };
-            const inputTokens = typeof data.input_tokens === "number" ? data.input_tokens : 0;
-            const outputTokens = typeof data.output_tokens === "number" ? data.output_tokens : 0;
-            const costUsd = typeof data.cost_usd === "number" ? data.cost_usd : 0;
+            const inputTokens = Number.isFinite(data.input_tokens)
+              ? Math.max(0, Math.trunc(data.input_tokens as number))
+              : 0;
+            const outputTokens = Number.isFinite(data.output_tokens)
+              ? Math.max(0, Math.trunc(data.output_tokens as number))
+              : 0;
+            const costUsd = Number.isFinite(data.cost_usd)
+              ? Math.max(0, data.cost_usd as number)
+              : 0;
             if (inputTokens > 0 || outputTokens > 0 || costUsd > 0) {
               sessionStore.updateSessionUsage(sessionId, inputTokens, outputTokens, costUsd);
             }
