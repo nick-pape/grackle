@@ -235,9 +235,11 @@ function SignalEvent({ content }: { content: string }): JSX.Element {
 function UsageEvent({ content }: { content: string }): JSX.Element {
   let label = content;
   try {
-    const data = JSON.parse(content) as { input_tokens?: number; output_tokens?: number; cost_usd?: number };
-    const tokens = formatTokens((data.input_tokens ?? 0) + (data.output_tokens ?? 0));
-    const cost = formatCost(data.cost_usd ?? 0);
+    const data = JSON.parse(content) as Record<string, unknown>;
+    const inTok = Number(data.input_tokens) || 0;
+    const outTok = Number(data.output_tokens) || 0;
+    const tokens = formatTokens(inTok + outTok);
+    const cost = formatCost(Number(data.cost_usd) || 0);
     label = `${tokens} tokens \u00b7 ${cost}`;
   } catch { /* show raw content if JSON fails */ }
   return (

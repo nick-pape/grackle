@@ -618,6 +618,9 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
     },
 
     async getUsage(req: grackle.GetUsageRequest) {
+      if (!req.id) {
+        throw new ConnectError("id is required", Code.InvalidArgument);
+      }
       switch (req.scope) {
         case "session": {
           const session = sessionStore.getSession(req.id);

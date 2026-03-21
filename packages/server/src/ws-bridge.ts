@@ -1478,6 +1478,9 @@ async function handleMessage(
     case "get_usage": {
       const scope = (msg.payload?.scope as string) || "";
       const id = (msg.payload?.id as string) || "";
+      if (!id || !scope) {
+        return;
+      }
       let usage = { inputTokens: 0, outputTokens: 0, costUsd: 0, sessionCount: 0 };
       if (scope === "session") {
         const s = sessionStore.getSession(id);
