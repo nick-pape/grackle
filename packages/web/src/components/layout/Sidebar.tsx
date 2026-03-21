@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, type JSX } from "react";
 import { useLocation } from "react-router";
 import { getActiveView } from "./AppNav.js";
 import { TaskList } from "../lists/TaskList.js";
-import { WorkspaceList } from "../lists/WorkspaceList.js";
+import { EnvironmentNav } from "../lists/EnvironmentNav.js";
 import { SettingsNav } from "../settings/SettingsNav.js";
 import styles from "./Sidebar.module.scss";
 
@@ -75,7 +75,7 @@ export function Sidebar(): JSX.Element {
     <div className={styles.container} ref={containerRef} data-testid="sidebar" style={{ width }}>
       <div className={styles.content}>
         {activeView === "tasks" && <TaskList />}
-        {activeView === "workspaces" && <WorkspaceList />}
+        {activeView === "environments" && <EnvironmentNav />}
         {activeView === "settings" && <SettingsNav />}
       </div>
     </div>

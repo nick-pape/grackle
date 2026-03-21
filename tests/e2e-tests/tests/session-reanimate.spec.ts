@@ -48,8 +48,9 @@ test.describe("Session Reanimate (stub runtime)", () => {
     const page = appPage;
 
     // ── 1. Spawn a stub session from the UI (uses default stub persona) ──
-    await page.locator('[data-testid="sidebar-tab-settings"]').click();
-    await page.locator('button[title="New chat"]').click();
+    await page.locator('[data-testid="sidebar-tab-environments"]').click();
+    await page.getByTestId("env-nav-item").first().click();
+    await page.getByRole("button", { name: "New Chat" }).click();
 
     const promptInput = page.locator('input[placeholder="Enter prompt..."]');
     await promptInput.fill("reanimate me");
@@ -125,8 +126,9 @@ test.describe("Session Reanimate (stub runtime)", () => {
     const page = appPage;
 
     // Spawn and wait for the stub session to reach waiting_input (idle)
-    await page.locator('[data-testid="sidebar-tab-settings"]').click();
-    await page.locator('button[title="New chat"]').click();
+    await page.locator('[data-testid="sidebar-tab-environments"]').click();
+    await page.getByTestId("env-nav-item").first().click();
+    await page.getByRole("button", { name: "New Chat" }).click();
 
     await page.locator('input[placeholder="Enter prompt..."]').fill("keep idle");
     await page.locator("button", { hasText: "Go" }).click();

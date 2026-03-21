@@ -5,6 +5,7 @@ import {
   createTaskViaWs,
   getWorkspaceId,
   getTaskId,
+  navigateToWorkspace,
 } from "./helpers.js";
 
 test.describe("DAG View", () => {
@@ -15,6 +16,9 @@ test.describe("DAG View", () => {
     await createWorkspace(page, "dag-basic");
     await createTask(page, "dag-basic", "dag-task-a", "test-local");
     await createTask(page, "dag-basic", "dag-task-b", "test-local");
+
+    // Navigate to workspace page to see the tabs
+    await navigateToWorkspace(page, "dag-basic");
 
     // Default tab is Tasks — verify summary is visible
     await expect(page.getByText(/tasks complete/)).toBeVisible({ timeout: 5_000 });
@@ -39,6 +43,9 @@ test.describe("DAG View", () => {
 
     await createWorkspace(page, "dag-nav");
     await createTask(page, "dag-nav", "dag-nav-task", "test-local");
+
+    // Navigate to workspace page
+    await navigateToWorkspace(page, "dag-nav");
 
     // Switch to Graph tab
     await page.getByRole("tab", { name: "Graph" }).click();
@@ -66,7 +73,9 @@ test.describe("DAG View", () => {
       environmentId: "test-local",
       dependsOn: [blockerId],
     });
-    await page.getByText("dep-blocked").first().waitFor({ timeout: 5_000 });
+
+    // Navigate to workspace page
+    await navigateToWorkspace(page, "dag-deps");
 
     // Switch to Graph tab
     await page.getByRole("tab", { name: "Graph" }).click();

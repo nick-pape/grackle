@@ -1,5 +1,5 @@
 import type { TaskData, Workspace } from "../hooks/useGrackleSocket.js";
-import { HOME_URL, SETTINGS_URL, taskUrl, workspaceUrl } from "./navigation.js";
+import { ENVIRONMENTS_URL, HOME_URL, SETTINGS_URL, taskUrl, workspaceUrl } from "./navigation.js";
 
 /** A single segment in the breadcrumb trail. */
 export interface BreadcrumbSegment {
@@ -49,9 +49,17 @@ export function buildSettingsBreadcrumbs(tabLabel?: string): BreadcrumbSegment[]
   return [HOME_SEGMENT, { label: "Settings", url: undefined }];
 }
 
+/** Environments breadcrumb segment. */
+const ENVIRONMENTS_SEGMENT: BreadcrumbSegment = { label: "Environments", url: ENVIRONMENTS_URL };
+
+/** Build breadcrumbs for the environments landing page. */
+export function buildEnvironmentsBreadcrumbs(): BreadcrumbSegment[] {
+  return [HOME_SEGMENT, { label: "Environments", url: undefined }];
+}
+
 /** Build breadcrumbs for the new environment page. */
 export function buildNewEnvironmentBreadcrumbs(): BreadcrumbSegment[] {
-  return [HOME_SEGMENT, { label: "New Environment", url: undefined }];
+  return [HOME_SEGMENT, ENVIRONMENTS_SEGMENT, { label: "New Environment", url: undefined }];
 }
 
 /** Build breadcrumbs for the new chat page. */

@@ -1,6 +1,5 @@
 import { test, expect } from "./fixtures.js";
 import {
-  clickSidebarWorkspace,
   createWorkspace,
   createTask,
   navigateToTask,
@@ -13,7 +12,6 @@ test.describe("Task Retry (failed → in_progress)", () => {
 
     // --- Setup: create workspace and task ---
     await createWorkspace(page, "retry-proj");
-    await clickSidebarWorkspace(page, "retry-proj");
     await createTask(page, "retry-proj", "retry task", "test-local");
     await navigateToTask(page, "retry task");
     await patchWsForStubRuntime(page);

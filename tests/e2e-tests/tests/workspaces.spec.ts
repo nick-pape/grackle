@@ -1,8 +1,10 @@
 import { test, expect } from "./fixtures.js";
 import {
-  clickSidebarWorkspace,
   createWorkspace,
-  getSidebarWorkspaceRow,
+  createTaskViaWs,
+  getWorkspaceId,
+  navigateToWorkspace,
+  navigateToTask,
   sendWsAndWaitFor,
 } from "./helpers.js";
 
@@ -26,12 +28,13 @@ async function archiveAllWorkspaces(page: import("@playwright/test").Page): Prom
 }
 
 test.describe("Workspaces", () => {
-  test("Workspaces tab shows workspace list", async ({ appPage }) => {
+  test("Environments tab shows environment nav", async ({ appPage }) => {
     const page = appPage;
 
-    // Switch to Workspaces tab — header label visible
-    await page.locator('[data-testid="sidebar-tab-workspaces"]').click();
-    await expect(page.locator("text=WORKSPACES").first()).toBeVisible();
+    // Switch to Environments tab — environment nav visible
+    await page.locator('[data-testid="sidebar-tab-environments"]').click();
+    await expect(page.getByTestId("environment-nav")).toBeVisible();
+    await expect(page.getByTestId("env-nav-item")).toBeVisible();
   });
 
   test("welcome CTA creates workspace inline", async ({ appPage }) => {
@@ -55,9 +58,10 @@ test.describe("Workspaces", () => {
     await input.fill("cta-workspace");
     await page.locator('[data-testid="welcome-create-ok"]').click();
 
-    // Switch to Workspaces tab — workspace should appear in sidebar
-    await page.locator('[data-testid="sidebar-tab-workspaces"]').click();
-    await expect(page.getByTestId("sidebar").getByText("cta-workspace", { exact: true })).toBeVisible({ timeout: 5_000 });
+    // Navigate to the environment detail page — workspace card should appear there
+    await page.locator('[data-testid="sidebar-tab-environments"]').click();
+    await page.getByTestId("env-nav-item").first().click();
+    await expect(page.getByTestId("workspace-card").filter({ hasText: "cta-workspace" })).toBeVisible({ timeout: 5_000 });
 
     // Welcome CTA should no longer be visible (workspaces exist now — dashboard shows instead)
     await page.goto("/");
@@ -87,65 +91,38 @@ test.describe("Workspaces", () => {
   });
 
 
-  test("create a workspace and see it in sidebar", async ({ appPage }) => {
+  test("create a workspace and see it on environment detail page", async ({ appPage }) => {
     const page = appPage;
 
-    // Navigate to Workspaces tab
-    await page.locator('[data-testid="sidebar-tab-workspaces"]').click();
+    // Create a workspace via WS
+    await createWorkspace(page, "my-workspace");
 
-    // Click + in the Workspaces header to open create form
-    await page.locator("button", { hasText: "+" }).first().click();
-
-    // Workspace name input appears
-    const nameInput = page.locator('input[placeholder="Workspace name..."]');
-    await expect(nameInput).toBeVisible();
-
-    // Type workspace name and click OK
-    await nameInput.fill("my-workspace");
-    await page.locator("button", { hasText: "OK" }).click();
-
-    // Workspace should appear in the sidebar
-    await expect(page.getByTestId("sidebar").getByText("my-workspace", { exact: true })).toBeVisible({ timeout: 5_000 });
+    // Navigate to environment detail page — workspace card should appear
+    await page.locator('[data-testid="sidebar-tab-environments"]').click();
+    await page.getByTestId("env-nav-item").first().click();
+    await expect(page.getByTestId("workspace-card").filter({ hasText: "my-workspace" })).toBeVisible({ timeout: 5_000 });
   });
 
-  test("expand workspace shows empty task list and workspace view", async ({ appPage }) => {
+  test("navigate to workspace shows empty task list and workspace view", async ({ appPage }) => {
     const page = appPage;
 
-    // Navigate to Workspaces tab
-    await page.locator('[data-testid="sidebar-tab-workspaces"]').click();
+    // Create a workspace via WS and navigate to it
+    await createWorkspace(page, "expand-test");
+    await navigateToWorkspace(page, "expand-test");
 
-    // Create a workspace
-    await page.locator("button", { hasText: "+" }).first().click();
-    const nameInput = page.locator('input[placeholder="Workspace name..."]');
-    await nameInput.fill("expand-test");
-    await page.locator("button", { hasText: "OK" }).click();
-    await expect(page.getByTestId("sidebar").getByText("expand-test", { exact: true })).toBeVisible({ timeout: 5_000 });
-
-    // Click workspace to expand and select
-    await clickSidebarWorkspace(page, "expand-test");
-
-    // Main panel shows workspace view with task summary (use .first() — text appears in both panel and bar)
-    await expect(page.getByText("Select a task or click + to create one").first()).toBeVisible({ timeout: 5_000 });
+    // Main panel shows workspace view with empty state CTA
+    await expect(page.getByText("Create Task").first()).toBeVisible({ timeout: 5_000 });
   });
 
-  test("create task from workspace", async ({ appPage }) => {
+  test("create task from workspace page", async ({ appPage }) => {
     const page = appPage;
 
-    // Navigate to Workspaces tab
-    await page.locator('[data-testid="sidebar-tab-workspaces"]').click();
+    // Create a workspace via WS and navigate to it
+    await createWorkspace(page, "task-test");
+    await navigateToWorkspace(page, "task-test");
 
-    // Create a workspace
-    await page.locator("button", { hasText: "+" }).first().click();
-    const nameInput = page.locator('input[placeholder="Workspace name..."]');
-    await nameInput.fill("task-test");
-    await page.locator("button", { hasText: "OK" }).click();
-    await expect(page.getByTestId("sidebar").getByText("task-test", { exact: true })).toBeVisible({ timeout: 5_000 });
-
-    // Click workspace to expand
-    await clickSidebarWorkspace(page, "task-test");
-
-    // Click the "New task" + button scoped to this workspace's row
-    await getSidebarWorkspaceRow(page, "task-test").locator('button[title="New task"]').first().click();
+    // Click the "Create Task" button on the workspace page
+    await page.getByText("Create Task").first().click();
 
     // Full-panel TaskEditPanel should open with title and description fields
     await expect(page.locator('[data-testid="task-edit-title"]')).toBeVisible({ timeout: 5_000 });
@@ -159,31 +136,21 @@ test.describe("Workspaces", () => {
     await page.locator('[data-testid="task-edit-title"]').fill("implement feature");
     await page.locator('[data-testid="task-edit-save"]').click();
 
-    // Task should appear in the sidebar under the workspace
-    await expect(page.getByText("implement feature").first()).toBeVisible({ timeout: 5_000 });
+    // After save, navigate to tasks tab to verify task was created
+    await page.locator('[data-testid="sidebar-tab-tasks"]').click();
+    await expect(page.getByText("implement feature").first()).toBeVisible({ timeout: 10_000 });
   });
 
   test("task view shows header and tabs", async ({ appPage }) => {
     const page = appPage;
 
-    // Navigate to Workspaces tab
-    await page.locator('[data-testid="sidebar-tab-workspaces"]').click();
+    // Create workspace and task via WS
+    await createWorkspace(page, "view-test");
+    const workspaceId = await getWorkspaceId(page, "view-test");
+    await createTaskViaWs(page, workspaceId, "my task");
 
-    // Create workspace and task
-    await page.locator("button", { hasText: "+" }).first().click();
-    const nameInput = page.locator('input[placeholder="Workspace name..."]');
-    await nameInput.fill("view-test");
-    await page.locator("button", { hasText: "OK" }).click();
-    await expect(page.getByTestId("sidebar").getByText("view-test", { exact: true })).toBeVisible({ timeout: 5_000 });
-
-    await getSidebarWorkspaceRow(page, "view-test").locator('button[title="New task"]').first().click();
-    await page.locator('[data-testid="task-edit-title"]').waitFor({ timeout: 5_000 });
-    await page.locator('[data-testid="task-edit-title"]').fill("my task");
-    await page.locator('[data-testid="task-edit-save"]').click();
-    await expect(page.getByText("my task").first()).toBeVisible({ timeout: 5_000 });
-
-    // Click task to navigate to task view
-    await page.getByText("my task").first().click();
+    // Navigate to the task directly
+    await navigateToTask(page, "my task");
 
     // Task header should be visible with title and status
     await expect(page.locator('[data-testid="task-status"]')).toContainText("not_started", { timeout: 5_000 });
@@ -204,24 +171,22 @@ test.describe("Workspaces", () => {
     await expect(page.getByText("No findings yet")).toBeVisible({ timeout: 5_000 });
   });
 
-  test("environments are accessible via Settings tab", async ({ appPage }) => {
+  test("environments are accessible via Environments tab", async ({ appPage }) => {
     const page = appPage;
 
-    // Environments live in Settings. Click the Settings tab in sidebar.
-    await page.locator('[data-testid="sidebar-tab-settings"]').click();
+    // Environments have their own tab in the sidebar.
+    await page.locator('[data-testid="sidebar-tab-environments"]').click();
 
-    // Should see the test-local environment in the Settings panel
-    await expect(page.getByTestId("env-row").getByText("test-local", { exact: true })).toBeVisible();
+    // Should see the test-local environment in the EnvironmentNav
+    await expect(page.getByTestId("env-nav-item").filter({ hasText: "test-local" })).toBeVisible();
   });
 
   // ─── Workspace Detail View Tests ───────────────────────────────
 
-  /** Helper: create a workspace and select it in the sidebar */
+  /** Helper: create a workspace via WS and navigate to its detail page */
   async function createAndSelectWorkspace(page: import("@playwright/test").Page, name: string) {
-    // Navigate to Workspaces tab so workspace name is visible in sidebar
-    await page.locator('[data-testid="sidebar-tab-workspaces"]').click();
     await createWorkspace(page, name);
-    await clickSidebarWorkspace(page, name);
+    await navigateToWorkspace(page, name);
   }
 
   test("workspace detail shows metadata section", async ({ appPage }) => {
@@ -346,8 +311,8 @@ test.describe("Workspaces", () => {
     // Confirm archive
     await page.getByRole("dialog", { name: "Archive Workspace?" }).getByRole("button", { name: "Archive" }).click();
 
-    // Workspace should no longer be in sidebar
-    await expect(page.getByTestId("sidebar").getByText("archive-test")).not.toBeVisible({ timeout: 5_000 });
+    // Should navigate away from workspace page (redirected to home)
+    await expect(page.locator('[data-testid="workspace-name"]')).not.toBeVisible({ timeout: 5_000 });
   });
 
   test("change default environment", async ({ appPage }) => {
@@ -476,15 +441,11 @@ test.describe("Workspaces", () => {
     // No progress bar when no tasks
     await expect(page.locator('[data-testid="progress-bar"]')).not.toBeVisible();
 
-    // Create a task via the full-panel form (no environment selector — env is chosen at start time)
-    await getSidebarWorkspaceRow(page, "progress-test").locator('button[title="New task"]').first().click();
-    await page.locator('[data-testid="task-edit-title"]').fill("progress task");
-    await page.locator('[data-testid="task-edit-save"]').click();
-    // After server confirms, the app navigates to the workspace view and the
-    // task appears in the sidebar.
-    await expect(page.getByTestId("sidebar").getByText("progress task")).toBeVisible({ timeout: 5_000 });
+    // Create a task via WS — the app receives the WS event in real-time
+    const workspaceId = await getWorkspaceId(page, "progress-test");
+    await createTaskViaWs(page, workspaceId, "progress task");
 
-    // Progress bar should now be visible
+    // Progress bar should now be visible (app updates via WS push)
     await expect(page.locator('[data-testid="progress-bar"]')).toBeVisible({ timeout: 5_000 });
     await expect(page.locator('[data-testid="progress-bar"]')).toContainText("0/1");
   });

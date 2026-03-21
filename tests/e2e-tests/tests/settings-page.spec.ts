@@ -2,14 +2,14 @@ import { test, expect } from "./fixtures.js";
 import { sendWsAndWaitFor, goToSettings } from "./helpers.js";
 
 test.describe("Settings Page", () => {
-  test("gear icon navigates to settings page with Environments tab", async ({ appPage }) => {
+  test("gear icon navigates to settings page with Credentials tab", async ({ appPage }) => {
     const page = appPage;
 
     await goToSettings(appPage);
 
-    // Should redirect to /settings/environments
-    await expect(page).toHaveURL(/\/settings\/environments/);
-    await expect(page.getByRole("tab", { name: "Environments" })).toHaveAttribute("aria-selected", "true");
+    // Should redirect to /settings/credentials (default settings tab)
+    await expect(page).toHaveURL(/\/settings\/credentials/);
+    await expect(page.getByRole("tab", { name: "Credentials" })).toHaveAttribute("aria-selected", "true");
   });
 
   test("settings page renders token section after clicking Credentials tab", async ({ appPage }) => {

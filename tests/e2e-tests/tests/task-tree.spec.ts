@@ -1,8 +1,8 @@
 import { test, expect } from "./fixtures.js";
 import {
-  clickSidebarWorkspace,
   createWorkspace,
   createTask,
+  navigateToTask,
   getWorkspaceId,
   getTaskId,
   createTaskViaWs,
@@ -10,13 +10,21 @@ import {
   sendWsAndWaitForError,
 } from "./helpers.js";
 
+/** Navigate to the Tasks sidebar tab so the TaskList with tree structure is visible. */
+async function goToTasksTab(page: import("@playwright/test").Page): Promise<void> {
+  await page.locator('[data-testid="sidebar-tab-tasks"]').click();
+}
+
 test.describe("Task tree hierarchy", () => {
   test("creates a child task and displays tree structure with expand/collapse", async ({ appPage }) => {
     const page = appPage;
 
-    // Create workspace and root task via UI
+    // Create workspace and root task via WS
     await createWorkspace(page, "tree-basic");
     await createTask(page, "tree-basic", "root-task", "test-local", { canDecompose: true });
+
+    // Navigate to Tasks tab so the task tree is visible in the sidebar
+    await goToTasksTab(page);
 
     // Get IDs for WS-based child creation
     const workspaceId = await getWorkspaceId(page, "tree-basic");
@@ -49,6 +57,9 @@ test.describe("Task tree hierarchy", () => {
     await createWorkspace(page, "tree-badge");
     await createTask(page, "tree-badge", "badge-parent", "test-local", { canDecompose: true });
 
+    // Navigate to Tasks tab
+    await goToTasksTab(page);
+
     const workspaceId = await getWorkspaceId(page, "tree-badge");
     const parentId = await getTaskId(page, workspaceId, "badge-parent");
 
@@ -69,6 +80,9 @@ test.describe("Task tree hierarchy", () => {
 
     await createWorkspace(page, "tree-multi");
     await createTask(page, "tree-multi", "level-0", "test-local", { canDecompose: true });
+
+    // Navigate to Tasks tab
+    await goToTasksTab(page);
 
     const workspaceId = await getWorkspaceId(page, "tree-multi");
     const level0Id = await getTaskId(page, workspaceId, "level-0");
@@ -101,6 +115,9 @@ test.describe("Task tree hierarchy", () => {
     await createWorkspace(page, "tree-add-child");
     await createTask(page, "tree-add-child", "ac-parent", "test-local", { canDecompose: true });
 
+    // Navigate to Tasks tab
+    await goToTasksTab(page);
+
     const workspaceId = await getWorkspaceId(page, "tree-add-child");
     const parentId = await getTaskId(page, workspaceId, "ac-parent");
 
@@ -120,11 +137,17 @@ test.describe("Task tree hierarchy", () => {
     await page.locator('[data-testid="task-edit-title"]').fill("ac-child");
     await page.locator('[data-testid="task-edit-save"]').click();
 
-    // Child should appear in the sidebar under the parent
+    // Navigate back to Tasks tab to see the updated tree
+    await goToTasksTab(page);
+
+    // Child should appear in the task list
     await expect(page.getByText("ac-child")).toBeVisible({ timeout: 5_000 });
 
+    // Re-locate parent row (DOM may have re-rendered after navigation)
+    const updatedParentRow = page.locator(`[data-task-id="${parentId}"]`);
+
     // Parent should now have an expand arrow and child count badge
-    const badge = parentRow.locator('[class*="childCountBadge"]');
+    const badge = updatedParentRow.locator('[class*="childCountBadge"]');
     await expect(badge).toBeVisible({ timeout: 5_000 });
     await expect(badge).toHaveText("0/1");
   });
@@ -134,6 +157,9 @@ test.describe("Task tree hierarchy", () => {
 
     await createWorkspace(page, "tree-del");
     await createTask(page, "tree-del", "del-parent", "test-local", { canDecompose: true });
+
+    // Navigate to Tasks tab so tasks are visible
+    await goToTasksTab(page);
 
     const workspaceId = await getWorkspaceId(page, "tree-del");
     const parentId = await getTaskId(page, workspaceId, "del-parent");
@@ -154,7 +180,7 @@ test.describe("Task tree hierarchy", () => {
     // Now delete parent — should succeed
     await sendWsMessage(page, { type: "delete_task", payload: { taskId: parentId } });
 
-    // Parent task should be gone from sidebar
+    // Parent task should be gone from the page
     await expect(page.getByText("del-parent")).not.toBeVisible({ timeout: 5_000 });
   });
 
@@ -170,8 +196,8 @@ test.describe("Task tree hierarchy", () => {
     // Create a child task
     await createTaskViaWs(page, workspaceId, "bc-child", { parentTaskId: rootId });
 
-    // Click the child task in the sidebar
-    await clickSidebarWorkspace(page, "bc-child");
+    // Navigate to the child task
+    await navigateToTask(page, "bc-child");
 
     // Breadcrumb nav should be visible
     const breadcrumbs = page.getByTestId("breadcrumbs");
@@ -196,7 +222,7 @@ test.describe("Task tree hierarchy", () => {
     await createTaskViaWs(page, workspaceId, "nav-child", { parentTaskId: rootId });
 
     // Navigate to child
-    await clickSidebarWorkspace(page, "nav-child");
+    await navigateToTask(page, "nav-child");
     await expect(page.locator('[data-testid="task-title"]')).toContainText("nav-child", { timeout: 5_000 });
 
     // Click the parent task in the breadcrumb trail

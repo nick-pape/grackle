@@ -29,21 +29,21 @@ test.describe("Chat Page (root task)", () => {
     await expect(chatTab).toHaveAttribute("aria-selected", "true");
   });
 
-  test("sidebar Workspaces tab navigates away from chat", async ({ appPage }) => {
+  test("sidebar Environments tab navigates away from chat", async ({ appPage }) => {
     const page = appPage;
 
     await page.getByTestId("sidebar-tab-chat").click();
     await expect(page).toHaveURL(/\/chat/);
 
-    // Click Workspaces tab
-    await page.getByTestId("sidebar-tab-workspaces").click();
+    // Click Environments tab
+    await page.getByTestId("sidebar-tab-environments").click();
 
-    // Should navigate to /workspaces
-    await expect(page).toHaveURL(/\/workspaces/);
+    // Should navigate to /environments
+    await expect(page).toHaveURL(/\/environments/);
 
-    // Workspaces tab should now be active
-    const workspacesTab = page.getByTestId("sidebar-tab-workspaces");
-    await expect(workspacesTab).toHaveAttribute("aria-selected", "true");
+    // Environments tab should now be active
+    const environmentsTab = page.getByTestId("sidebar-tab-environments");
+    await expect(environmentsTab).toHaveAttribute("aria-selected", "true");
   });
 
   test("chat input is present with local env", async ({ appPage }) => {

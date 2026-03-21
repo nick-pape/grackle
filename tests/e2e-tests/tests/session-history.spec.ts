@@ -1,6 +1,5 @@
 import { test, expect } from "./fixtures.js";
 import {
-  clickSidebarWorkspace,
   createWorkspace,
   createTask,
   navigateToTask,
@@ -13,7 +12,6 @@ test.describe("Session history", () => {
     const page = appPage;
 
     await createWorkspace(page, "single-sess");
-    await clickSidebarWorkspace(page, "single-sess");
     await createTask(page, "single-sess", "simple-task", "test-local");
     await navigateToTask(page, "simple-task");
     await patchWsForStubRuntime(page);

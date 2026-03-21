@@ -1,6 +1,6 @@
 import { test, expect } from "./fixtures.js";
 import {
-  clickSidebarWorkspace,
+  navigateToWorkspace,
   createWorkspace,
   createTask,
   navigateToTask,
@@ -9,7 +9,7 @@ import {
 } from "./helpers.js";
 
 test.describe("Multi-Task", () => {
-  test("sidebar shows multiple tasks under a workspace", async ({ appPage }) => {
+  test("tasks sidebar shows multiple tasks", async ({ appPage }) => {
     const page = appPage;
 
     // Create workspace with 3 tasks
@@ -18,15 +18,12 @@ test.describe("Multi-Task", () => {
     await createTask(page, "multi-sidebar", "task-bravo", "test-local");
     await createTask(page, "multi-sidebar", "task-charlie", "test-local");
 
-    // Verify all 3 tasks appear in the sidebar
+    // Navigate to Tasks tab — all 3 tasks should appear in the sidebar
+    await page.locator('[data-testid="sidebar-tab-tasks"]').click();
     const sidebar = page.getByTestId("sidebar");
-    await expect(sidebar.getByText("task-alpha")).toBeVisible();
-    await expect(sidebar.getByText("task-bravo")).toBeVisible();
-    await expect(sidebar.getByText("task-charlie")).toBeVisible();
-
-    // Verify pending status icons (○) are visible for each
-    const pendingIcons = page.locator("text=○");
-    await expect(pendingIcons.first()).toBeVisible();
+    await expect(sidebar.getByText("task-alpha")).toBeVisible({ timeout: 5_000 });
+    await expect(sidebar.getByText("task-bravo")).toBeVisible({ timeout: 5_000 });
+    await expect(sidebar.getByText("task-charlie")).toBeVisible({ timeout: 5_000 });
   });
 
   test("switching between tasks preserves state", async ({ appPage }) => {
@@ -57,57 +54,52 @@ test.describe("Multi-Task", () => {
     await expect(page.locator("button", { hasText: "Resume" })).toBeVisible({ timeout: 5_000 });
   });
 
-  test("multiple workspaces shown simultaneously in sidebar", async ({ appPage }) => {
+  test("multiple workspaces with tasks are navigable via board", async ({ appPage }) => {
     const page = appPage;
 
-    // Create two workspaces
+    // Create two workspaces with tasks
     await createWorkspace(page, "multi-proj-x");
     await createWorkspace(page, "multi-proj-y");
-
-    // Both should appear in the sidebar
-    await expect(page.getByTestId("sidebar").getByText("multi-proj-x", { exact: true }).first()).toBeVisible();
-    await expect(page.getByTestId("sidebar").getByText("multi-proj-y", { exact: true }).first()).toBeVisible();
-
-    // Create tasks in each workspace
     await createTask(page, "multi-proj-x", "x-task-1", "test-local");
     await createTask(page, "multi-proj-y", "y-task-1", "test-local");
 
-    // Expand workspace X by clicking it
-    await clickSidebarWorkspace(page, "multi-proj-x");
+    // Navigate to workspace X board — task card should be visible
+    await navigateToWorkspace(page, "multi-proj-x");
+    await page.getByTestId("board-tab").click();
     await expect(page.getByText("x-task-1")).toBeVisible({ timeout: 5_000 });
 
-    // Expand workspace Y by clicking it
-    await clickSidebarWorkspace(page, "multi-proj-y");
+    // Navigate to workspace Y board — task card should be visible
+    await navigateToWorkspace(page, "multi-proj-y");
+    await page.getByTestId("board-tab").click();
     await expect(page.getByText("y-task-1")).toBeVisible({ timeout: 5_000 });
   });
 
-  test("task status badges update in sidebar during lifecycle", async ({ appPage }) => {
+  test("task status badges update during lifecycle", async ({ appPage }) => {
     const page = appPage;
 
     // Create workspace and task
     await createWorkspace(page, "multi-badge");
     await createTask(page, "multi-badge", "badge-task", "test-local");
 
-    // Verify pending icon (○) is shown
-    await expect(page.locator("text=○").first()).toBeVisible();
-
     // Navigate to the task and start it
     await navigateToTask(page, "badge-task");
     await patchWsForStubRuntime(page);
     await page.locator("button", { hasText: "Start" }).click();
 
-    // Wait for active state — sidebar icon should change to ● (working) or ◉ (paused)
-    await expect(page.locator("text=/(●|◉)/").first()).toBeVisible({ timeout: 15_000 });
+    // Wait for active state — task status should change to working or paused
+    await expect(page.locator('[data-testid="task-status"]')).toContainText(/working|paused/, { timeout: 15_000 });
 
-    // Complete to review — sidebar icon should change to ◉ (yellow)
+    // Complete to review
     const inputField = page.locator('input[placeholder="Type a message..."]');
     await inputField.waitFor({ timeout: 15_000 });
     await inputField.fill("continue");
     await page.locator("button", { hasText: "Send" }).click();
-    await expect(page.locator("text=◉").first()).toBeVisible({ timeout: 15_000 });
 
-    // Complete — sidebar icon should change to ✓ (green)
+    // Wait for paused (review) state
+    await page.locator("button", { hasText: "Resume" }).waitFor({ timeout: 15_000 });
+
+    // Complete — stop the task
     await page.locator("button", { hasText: "Stop" }).click();
-    await expect(page.locator("text=✓").first()).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText("Task completed")).toBeVisible({ timeout: 5_000 });
   });
 });

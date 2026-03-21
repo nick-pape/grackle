@@ -80,7 +80,7 @@ test.describe("Dashboard", () => {
     await expect(page.locator('[data-testid="workspace-row"]').first()).toBeVisible();
   });
 
-  test("Home sidebar item navigates to dashboard", async ({ appPage }) => {
+  test("Dashboard sidebar tab navigates to dashboard", async ({ appPage }) => {
     const page = appPage;
 
     await createWorkspace(page, "home-nav-test");
@@ -88,8 +88,8 @@ test.describe("Dashboard", () => {
     // Navigate away from root
     await page.locator('[data-testid="workspace-row"]').first().click();
 
-    // Now click Home in sidebar
-    await page.locator('[data-testid="sidebar-home"]').click();
+    // Now click the Dashboard tab in the sidebar
+    await page.locator('[data-testid="sidebar-tab-dashboard"]').click();
 
     // Should be at root and dashboard visible
     await expect(page).toHaveURL("/");

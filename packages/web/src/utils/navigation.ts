@@ -79,12 +79,20 @@ export function newChatUrl(environmentId: string): string {
   return `/sessions/new?${params.toString()}`;
 }
 
+/** URL for the environments landing page. */
+export const ENVIRONMENTS_URL: string = "/environments";
+
 /** URL for the new environment form. */
 export const NEW_ENVIRONMENT_URL: string = "/environments/new";
 
+/** Build URL for an environment detail page. */
+export function environmentUrl(environmentId: string): string {
+  return `/environments/${encodeURIComponent(environmentId)}`;
+}
+
 /** Build URL for the environment edit page. */
 export function environmentEditUrl(environmentId: string): string {
-  return `/environments/${encodeURIComponent(environmentId)}`;
+  return `/environments/${encodeURIComponent(environmentId)}/edit`;
 }
 
 /** URL for the settings page. */
