@@ -80,6 +80,7 @@ export function computeTaskStatus(
   let status: string;
   switch (latest.status) {
     case SESSION_STATUS.COMPLETED:
+    case SESSION_STATUS.HIBERNATING:
       status = TASK_STATUS.PAUSED;
       break;
     case SESSION_STATUS.FAILED:
