@@ -62,4 +62,20 @@ describe("@grackle-ai/knowledge", () => {
     expect(mod.VECTOR_INDEX_NAME).toBe("knowledge_embedding_index");
     expect(mod.EMBEDDING_DIMENSIONS).toBe(1536);
   });
+
+  it("exports node store functions", async () => {
+    const mod = await import("./index.js");
+    expect(typeof mod.createReferenceNode).toBe("function");
+    expect(typeof mod.createNativeNode).toBe("function");
+    expect(typeof mod.getNode).toBe("function");
+    expect(typeof mod.deleteNode).toBe("function");
+    expect(typeof mod.updateNode).toBe("function");
+    expect(typeof mod.recordToNode).toBe("function");
+  });
+
+  it("exports edge store functions", async () => {
+    const mod = await import("./index.js");
+    expect(typeof mod.createEdge).toBe("function");
+    expect(typeof mod.removeEdge).toBe("function");
+  });
 });
