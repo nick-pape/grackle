@@ -3,10 +3,15 @@
  * dynamically based on the session type (task vs ad-hoc).
  */
 
+/** Build the user-facing prompt from task title and description. */
+export function buildTaskPrompt(title: string, description: string): string {
+  return description ? `${title}\n\n${description}` : title;
+}
+
 /** Options for building a system prompt. */
 export interface SystemPromptOptions {
-  /** Task metadata. When absent, this is an ad-hoc session. */
-  task?: { title: string; description: string; notes: string };
+  /** When true, includes task-specific sections (completion, subtasks, signals, findings). */
+  isTaskSession?: boolean;
   /** Whether the agent is allowed to create subtasks. */
   canDecompose?: boolean;
   /** Persona behavioral instructions (prepended when non-empty). */
@@ -16,8 +21,10 @@ export interface SystemPromptOptions {
 /**
  * Assembles a system prompt from discrete sections based on session type.
  *
- * Task sessions get task context, completion contract, signal docs, and findings guidance.
+ * Task sessions get completion contract, signal docs, and findings guidance.
  * Ad-hoc sessions get only the MCP note and persona prompt.
+ * Task title and description are NOT included here — they belong in the user prompt
+ * (see {@link buildTaskPrompt}).
  */
 export class SystemPromptBuilder {
   private readonly options: SystemPromptOptions;
@@ -35,8 +42,7 @@ export class SystemPromptBuilder {
       sections.push(this.options.personaPrompt);
     }
 
-    if (this.options.task) {
-      sections.push(this.buildTaskContext());
+    if (this.options.isTaskSession) {
       sections.push(this.buildCompletionContract());
       sections.push(this.buildSubtaskSection());
       sections.push(this.buildSignalSection());
@@ -47,19 +53,6 @@ export class SystemPromptBuilder {
     sections.push(this.buildMcpNote());
 
     return sections.filter(Boolean).join("\n\n");
-  }
-
-  /** Task title, description, and notes. */
-  private buildTaskContext(): string {
-    const { title, description, notes } = this.options.task!;
-    const parts = [
-      `## Task: ${title}`,
-      description,
-    ];
-    if (notes) {
-      parts.push(`## Notes (from previous attempt or user feedback)\n${notes}`);
-    }
-    return parts.filter(Boolean).join("\n\n");
   }
 
   /** Contract for signaling task completion. */

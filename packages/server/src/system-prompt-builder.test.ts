@@ -1,16 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { SystemPromptBuilder } from "./system-prompt-builder.js";
+import { SystemPromptBuilder, buildTaskPrompt } from "./system-prompt-builder.js";
 
 describe("SystemPromptBuilder", () => {
-  it("includes task title, description, notes, completion contract, signals, findings, and MCP note for task sessions", () => {
+  it("includes completion contract, signals, findings, and MCP note for task sessions", () => {
     const result = new SystemPromptBuilder({
-      task: { title: "My Task", description: "Do the thing", notes: "Fix the bug" },
+      isTaskSession: true,
     }).build();
 
-    expect(result).toContain("## Task: My Task");
-    expect(result).toContain("Do the thing");
-    expect(result).toContain("## Notes");
-    expect(result).toContain("Fix the bug");
     expect(result).toContain("## Completion");
     expect(result).toContain("task_complete");
     expect(result).toContain("## Signals");
@@ -20,17 +16,18 @@ describe("SystemPromptBuilder", () => {
     expect(result).toContain("grackle");
   });
 
-  it("omits notes section when notes are empty", () => {
+  it("does not include task title or description in system prompt", () => {
     const result = new SystemPromptBuilder({
-      task: { title: "Task", description: "desc", notes: "" },
+      isTaskSession: true,
     }).build();
 
+    expect(result).not.toContain("## Task:");
     expect(result).not.toContain("## Notes");
   });
 
   it("includes subtask guidance when canDecompose is true", () => {
     const result = new SystemPromptBuilder({
-      task: { title: "Task", description: "desc", notes: "" },
+      isTaskSession: true,
       canDecompose: true,
     }).build();
 
@@ -42,7 +39,7 @@ describe("SystemPromptBuilder", () => {
 
   it("says subtasks are disabled when canDecompose is false", () => {
     const result = new SystemPromptBuilder({
-      task: { title: "Task", description: "desc", notes: "" },
+      isTaskSession: true,
       canDecompose: false,
     }).build();
 
@@ -58,7 +55,6 @@ describe("SystemPromptBuilder", () => {
 
     expect(result).toContain("You are a helpful assistant.");
     expect(result).toContain("grackle");
-    expect(result).not.toContain("## Task:");
     expect(result).not.toContain("## Completion");
     expect(result).not.toContain("## Signals");
     expect(result).not.toContain("## Findings");
@@ -73,16 +69,16 @@ describe("SystemPromptBuilder", () => {
 
   it("prepends persona prompt when provided", () => {
     const result = new SystemPromptBuilder({
-      task: { title: "Task", description: "desc", notes: "" },
+      isTaskSession: true,
       personaPrompt: "Be concise and direct.",
     }).build();
 
-    expect(result.indexOf("Be concise and direct.")).toBeLessThan(result.indexOf("## Task:"));
+    expect(result.indexOf("Be concise and direct.")).toBeLessThan(result.indexOf("## Completion"));
   });
 
   it("does not add extra whitespace when persona prompt is empty", () => {
     const result = new SystemPromptBuilder({
-      task: { title: "Task", description: "desc", notes: "" },
+      isTaskSession: true,
       personaPrompt: "",
     }).build();
 
@@ -91,7 +87,7 @@ describe("SystemPromptBuilder", () => {
 
   it("uses short tool names without mcp__grackle__ prefix", () => {
     const result = new SystemPromptBuilder({
-      task: { title: "Task", description: "desc", notes: "" },
+      isTaskSession: true,
       canDecompose: true,
     }).build();
 
@@ -100,5 +96,15 @@ describe("SystemPromptBuilder", () => {
     expect(result).toContain("task_create");
     expect(result).toContain("finding_post");
     expect(result).toContain("finding_list");
+  });
+});
+
+describe("buildTaskPrompt", () => {
+  it("returns title + description separated by blank line", () => {
+    expect(buildTaskPrompt("My Task", "Do the thing")).toBe("My Task\n\nDo the thing");
+  });
+
+  it("returns just the title when description is empty", () => {
+    expect(buildTaskPrompt("My Task", "")).toBe("My Task");
   });
 });

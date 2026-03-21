@@ -106,6 +106,7 @@ vi.mock("./adapters/adapter.js", () => ({
 
 vi.mock("./system-prompt-builder.js", () => ({
   SystemPromptBuilder: vi.fn().mockImplementation(() => ({ build: () => "" })),
+  buildTaskPrompt: vi.fn((title: string) => title),
 }));
 
 vi.mock("./utils/slugify.js", () => ({

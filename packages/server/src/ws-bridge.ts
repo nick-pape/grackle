@@ -34,7 +34,7 @@ import { grackleHome } from "./paths.js";
 import * as logWriter from "./log-writer.js";
 import { safeParseJsonArray } from "./json-helpers.js";
 import { logger } from "./logger.js";
-import { SystemPromptBuilder } from "./system-prompt-builder.js";
+import { SystemPromptBuilder, buildTaskPrompt } from "./system-prompt-builder.js";
 import { slugify } from "./utils/slugify.js";
 import { processEventStream } from "./event-processor.js";
 import * as processorRegistry from "./processor-registry.js";
@@ -285,8 +285,9 @@ async function startTaskSession(
   const logPath = join(grackleHome, LOGS_DIR, sessionId);
 
   const freshTask = taskStore.getTask(task.id) || task;
+  const taskPrompt = buildTaskPrompt(freshTask.title, freshTask.description);
   const systemContext = new SystemPromptBuilder({
-    task: { title: freshTask.title, description: freshTask.description, notes: options?.notes || "" },
+    isTaskSession: true,
     canDecompose: freshTask.canDecompose,
     personaPrompt: systemPrompt,
   }).build();
@@ -344,7 +345,7 @@ async function startTaskSession(
   const powerlineReq = create(powerline.SpawnRequestSchema, {
     sessionId,
     runtime,
-    prompt: freshTask.title,
+    prompt: taskPrompt,
     model,
     maxTurns,
     branch: freshTask.branch,
@@ -366,7 +367,7 @@ async function startTaskSession(
     workspaceId: freshTask.workspaceId ?? undefined,
     taskId: freshTask.id,
     systemContext,
-    prompt: freshTask.title,
+    prompt: taskPrompt,
   });
 
   return undefined;
