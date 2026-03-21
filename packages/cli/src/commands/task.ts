@@ -1,4 +1,5 @@
 import type { Command } from "commander";
+import { ConnectError, Code } from "@connectrpc/connect";
 import { createGrackleClient } from "../client.js";
 import {
   taskStatusToString,
@@ -116,9 +117,8 @@ export function registerTaskCommands(program: Command): void {
           }
         } catch (err: unknown) {
           // Only suppress NotFound (session cleaned up); surface other errors
-          const code = (err as { code?: string }).code;
-          if (code !== "not_found") {
-            console.log(chalk.yellow(`Usage:       (unavailable)`));
+          if (!(err instanceof ConnectError && err.code === Code.NotFound)) {
+            console.log(chalk.yellow(`Tokens:      (unavailable)`));
           }
         }
       }
