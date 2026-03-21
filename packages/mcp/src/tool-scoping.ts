@@ -7,7 +7,7 @@ export const SCOPED_TOOLS: ReadonlySet<string> = new Set([
   "task_create", "task_list", "task_show", "task_start", "task_complete",
   "session_send_input",
   "persona_list", "persona_show",
-  "ipc_spawn", "ipc_write", "ipc_close",
+  "ipc_spawn", "ipc_write", "ipc_close", "ipc_list_fds",
 ]);
 
 /** Auth types that receive full tool access. */

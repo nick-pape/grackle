@@ -48,12 +48,13 @@ describe("SystemPromptBuilder", () => {
     expect(result).not.toContain("task_create");
   });
 
-  it("ad-hoc session (no task) only includes MCP note and persona prompt", () => {
+  it("ad-hoc session (no task) includes persona prompt, IPC section, and MCP note", () => {
     const result = new SystemPromptBuilder({
       personaPrompt: "You are a helpful assistant.",
     }).build();
 
     expect(result).toContain("You are a helpful assistant.");
+    expect(result).toContain("## IPC File Descriptors");
     expect(result).toContain("grackle");
     expect(result).not.toContain("## Completion");
     expect(result).not.toContain("## Signals");
@@ -61,10 +62,13 @@ describe("SystemPromptBuilder", () => {
     expect(result).not.toContain("## Subtasks");
   });
 
-  it("ad-hoc session with no persona just has MCP note", () => {
+  it("ad-hoc session with no persona has IPC fd section and MCP note", () => {
     const result = new SystemPromptBuilder({}).build();
 
-    expect(result).toBe("You have tools on your `grackle` MCP server.");
+    expect(result).toContain("## IPC File Descriptors");
+    expect(result).toContain("ipc_list_fds");
+    expect(result).toContain("ipc_close");
+    expect(result).toContain("You have tools on your `grackle` MCP server.");
   });
 
   it("prepends persona prompt when provided", () => {

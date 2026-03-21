@@ -237,6 +237,19 @@ export function eventTypeToEnum(s: string): EventType_2;
 export function eventTypeToString(e: EventType_2): string;
 
 // @public
+type FdInfo = Message<"grackle.FdInfo"> & {
+    fd: number;
+    streamName: string;
+    permission: string;
+    deliveryMode: string;
+    owned: boolean;
+    targetSessionId: string;
+};
+
+// @public
+const FdInfoSchema: GenMessage<FdInfo>;
+
+// @public
 const file_grackle_grackle: GenFile;
 
 // @public
@@ -534,6 +547,11 @@ const Grackle: GenService<{
         input: typeof CloseFdRequestSchema;
         output: typeof CloseFdResponseSchema;
     };
+    getSessionFds: {
+        methodKind: "unary";
+        input: typeof SessionIdSchema;
+        output: typeof SessionFdsSchema;
+    };
 }>;
 
 declare namespace grackle {
@@ -575,6 +593,10 @@ declare namespace grackle {
         CloseFdRequestSchema,
         CloseFdResponse,
         CloseFdResponseSchema,
+        SessionFds,
+        SessionFdsSchema,
+        FdInfo,
+        FdInfoSchema,
         SessionEvent,
         SessionEventSchema,
         TokenEntry,
@@ -1034,6 +1056,14 @@ type SessionEvent = Message<"grackle.SessionEvent"> & {
 
 // @public
 const SessionEventSchema: GenMessage<SessionEvent>;
+
+// @public
+type SessionFds = Message<"grackle.SessionFds"> & {
+    fds: FdInfo[];
+};
+
+// @public
+const SessionFdsSchema: GenMessage<SessionFds>;
 
 // @public
 type SessionFilter = Message<"grackle.SessionFilter"> & {
