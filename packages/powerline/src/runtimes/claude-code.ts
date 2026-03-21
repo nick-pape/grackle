@@ -3,7 +3,7 @@ import { BaseAgentSession } from "./base-session.js";
 import { BaseAgentRuntime } from "./base-runtime.js";
 import { resolveWorkingDirectory, resolveMcpServers } from "./runtime-utils.js";
 import { logger } from "../logger.js";
-import { accessSync, mkdirSync, copyFileSync, constants as fsConstants } from "node:fs";
+import { accessSync, mkdirSync, copyFileSync, chmodSync, constants as fsConstants } from "node:fs";
 import { join } from "node:path";
 import { homedir, tmpdir } from "node:os";
 
@@ -180,7 +180,12 @@ class ClaudeCodeSession extends BaseAgentSession {
           // Copy credential/config files so the SDK can authenticate from
           // the fallback directory (it reads .credentials.json from CLAUDE_CONFIG_DIR).
           for (const file of [".credentials.json", "settings.json", "settings.local.json"]) {
-            try { copyFileSync(join(configDir, file), join(fallbackRoot, file)); } catch { /* missing is fine */ }
+            try {
+              copyFileSync(join(configDir, file), join(fallbackRoot, file));
+              if (file === ".credentials.json") {
+                chmodSync(join(fallbackRoot, file), 0o600);
+              }
+            } catch { /* missing is fine */ }
           }
           sdkOptions.env = { ...process.env, CLAUDE_CONFIG_DIR: fallbackRoot };
           logger.warn(
