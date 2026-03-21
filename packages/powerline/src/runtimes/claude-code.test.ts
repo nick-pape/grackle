@@ -439,6 +439,33 @@ describe("ClaudeCodeRuntime — usage event emission", () => {
     expect(data.cost_usd).toBe(0.005916);
   });
 
+  it("includes cache tokens in total input count", async () => {
+    mockQuery.mockReturnValue(asyncIterableFrom([
+      { type: "system", subtype: "init", session_id: "sdk-cache-test", model: "claude-sonnet-4" },
+      { type: "assistant", message: { role: "assistant", content: [{ type: "text", text: "hello" }] } },
+      {
+        type: "result",
+        subtype: "success",
+        is_error: false,
+        result: "hello",
+        total_cost_usd: 0.048,
+        usage: { input_tokens: 3, output_tokens: 4, cache_creation_input_tokens: 5000, cache_read_input_tokens: 10000 },
+      },
+    ]));
+
+    const runtime = new ClaudeCodeRuntime();
+    const session = runtime.spawn({ sessionId: "cc-cache-test", prompt: "hi", model: "claude-sonnet-4", maxTurns: 1 });
+    const events = await collectUntilIdle(session);
+
+    const usageEvents = events.filter((e) => e.type === "usage");
+    expect(usageEvents).toHaveLength(1);
+    const data = JSON.parse(usageEvents[0].content) as Record<string, number>;
+    // Total input = 3 (non-cached) + 5000 (cache creation) + 10000 (cache read)
+    expect(data.input_tokens).toBe(15003);
+    expect(data.output_tokens).toBe(4);
+    expect(data.cost_usd).toBe(0.048);
+  });
+
   it("does not emit usage event for error results", async () => {
     mockQuery.mockReturnValue(asyncIterableFrom([
       { type: "system", subtype: "init", session_id: "sdk-err-test", model: "claude-sonnet-4" },
