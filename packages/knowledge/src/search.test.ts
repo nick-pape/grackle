@@ -119,6 +119,10 @@ describe("knowledgeSearch", () => {
     const results = await knowledgeSearch("auth", embedder);
     expect(results).toHaveLength(2);
 
+    // Verify Cypher includes ORDER BY score DESC
+    const cypher = mockSessionRun.mock.calls[0][0] as string;
+    expect(cypher).toContain("ORDER BY score DESC");
+
     expect(results[0].score).toBe(0.95);
     expect(results[0].node.id).toBe("node-1");
     expect(results[0].edges).toHaveLength(1);

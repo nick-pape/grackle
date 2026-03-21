@@ -25,7 +25,7 @@ export interface SearchOptions {
   limit?: number;
   /** Filter to specific node kinds (reference, native, or both). */
   nodeKinds?: NodeKind[];
-  /** Minimum similarity score threshold, 0-1 (default 0). */
+  /** Minimum similarity score threshold (default 0). Passed directly to the Cypher WHERE clause. */
   minScore?: number;
   /** Filter to a specific workspace. */
   workspaceId?: string;
@@ -147,7 +147,7 @@ export async function knowledgeSearch(
   const { vector: queryVector } = await embedder.embed(query);
 
   // Over-fetch when filtering so we still get enough results after post-filter
-  const hasFilters: boolean = !!(options?.nodeKinds?.length || options?.workspaceId);
+  const hasFilters: boolean = !!(options?.nodeKinds?.length || options?.workspaceId !== undefined);
   const candidateLimit: number = hasFilters ? limit * 3 : limit;
 
   const cypher: string = buildSearchCypher({
