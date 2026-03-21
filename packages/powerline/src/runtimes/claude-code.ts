@@ -7,16 +7,19 @@ import { accessSync, mkdirSync, copyFileSync, chmodSync, constants as fsConstant
 import { join } from "node:path";
 import { homedir, tmpdir } from "node:os";
 
+import { ensureRuntimeInstalled, importFromRuntime } from "../runtime-installer.js";
+
 // Dynamic import — try @anthropic-ai/claude-agent-sdk first, then @anthropic-ai/claude-code
 type QueryFn = (opts: Record<string, unknown>) => Promise<unknown>;
 let queryFn: QueryFn | undefined = undefined;
 
-async function getQuery(): Promise<QueryFn> {
+async function getQuery(eventCallback?: (message: string) => void): Promise<QueryFn> {
   if (queryFn) return queryFn;
+  await ensureRuntimeInstalled("claude-code", { eventCallback });
   // Try the agent SDK first (the proper library package)
   for (const pkg of ["@anthropic-ai/claude-agent-sdk", "@anthropic-ai/claude-code"]) {
     try {
-      const mod = await import(pkg) as Record<string, unknown>;
+      const mod = await importFromRuntime<Record<string, unknown>>("claude-code", pkg);
       if (typeof mod.query === "function") {
         queryFn = mod.query as QueryFn;
         return queryFn;

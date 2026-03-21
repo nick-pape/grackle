@@ -929,7 +929,16 @@ const ResumeRequestSchema_2: GenMessage<ResumeRequest_2>;
 export const ROOT_TASK_ID: string;
 
 // @public
+export const RUNTIME_MANIFESTS: Readonly<Record<string, RuntimePackageManifest>>;
+
+// @public
 export type RuntimeName = "claude-code" | "copilot" | "codex" | "stub";
+
+// @public
+export interface RuntimePackageManifest {
+    needsJsonRpcHook?: boolean;
+    packages: Record<string, string>;
+}
 
 // @public
 export const SEED_PERSONA_ID: string;

@@ -362,6 +362,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       emit("environment.changed", {});
 
       const config = JSON.parse(env.adapterConfig) as Record<string, unknown>;
+      config.defaultRuntime = env.defaultRuntime;
       const powerlineToken = env.powerlineToken;
 
       try {

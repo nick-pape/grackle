@@ -21,6 +21,12 @@ vi.mock("node:util", () => ({
 vi.mock("../worktree.js", () => ({
   ensureWorktree: vi.fn(),
 }));
+vi.mock("../runtime-installer.js", () => ({
+  ensureRuntimeInstalled: vi.fn(async () => ""),
+  importFromRuntime: vi.fn(async (_runtime: string, pkg: string) => import(pkg)),
+  getRuntimeBinDirectory: vi.fn(() => ""),
+  isDevMode: vi.fn(() => true),
+}));
 
 /** Creates an async iterable from an array of events. */
 function asyncIterableFrom<T>(items: T[]): AsyncIterable<T> {

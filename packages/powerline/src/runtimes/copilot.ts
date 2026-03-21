@@ -3,6 +3,7 @@ import { BaseAgentSession } from "./base-session.js";
 import { BaseAgentRuntime } from "./base-runtime.js";
 import { resolveWorkingDirectory, resolveMcpServers } from "./runtime-utils.js";
 import { logger } from "../logger.js";
+import { ensureRuntimeInstalled, importFromRuntime } from "../runtime-installer.js";
 
 // ─── Environment variable names ────────────────────────────
 // All configuration is driven by environment variables so the
@@ -45,7 +46,8 @@ function getCopilotSdk(): Promise<CopilotSdkModule> {
   if (!sdkPromise) {
     sdkPromise = (async (): Promise<CopilotSdkModule> => {
       try {
-        const mod = await import("@github/copilot-sdk") as Record<string, unknown>;
+        await ensureRuntimeInstalled("copilot");
+        const mod = await importFromRuntime<Record<string, unknown>>("copilot", "@github/copilot-sdk");
         if (typeof mod.CopilotClient !== "function") {
           throw new Error("CopilotClient not found in @github/copilot-sdk");
         }

@@ -3,6 +3,7 @@ import { BaseAgentSession } from "./base-session.js";
 import { BaseAgentRuntime } from "./base-runtime.js";
 import { resolveWorkingDirectory, resolveMcpServers } from "./runtime-utils.js";
 import { logger } from "../logger.js";
+import { ensureRuntimeInstalled, importFromRuntime } from "../runtime-installer.js";
 
 // ─── Environment variable names ────────────────────────────
 // All configuration is driven by environment variables so the
@@ -26,7 +27,8 @@ function getCodexSdk(): Promise<CodexSdkModule> {
   if (!sdkPromise) {
     sdkPromise = (async (): Promise<CodexSdkModule> => {
       try {
-        const mod = await import("@openai/codex-sdk") as Record<string, unknown>;
+        await ensureRuntimeInstalled("codex");
+        const mod = await importFromRuntime<Record<string, unknown>>("codex", "@openai/codex-sdk");
         if (typeof mod.Codex !== "function") {
           throw new Error("Codex not found in @openai/codex-sdk");
         }
