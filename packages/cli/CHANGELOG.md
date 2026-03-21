@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sat, 21 Mar 2026 15:32:23 GMT and should not be manually modified.
+This log was last generated on Sat, 21 Mar 2026 16:01:10 GMT and should not be manually modified.
+
+## 0.55.0
+Sat, 21 Mar 2026 16:01:10 GMT
+
+### Minor changes
+
+- Add stream-registry: in-memory streams and subscriptions model for agent IPC
 
 ## 0.54.1
 Sat, 21 Mar 2026 15:32:23 GMT
