@@ -2,6 +2,10 @@ import type { AgentEvent, AgentSession } from "./runtime.js";
 import { BaseAgentSession } from "./base-session.js";
 import { BaseAgentRuntime } from "./base-runtime.js";
 import { resolveWorkingDirectory, resolveMcpServers } from "./runtime-utils.js";
+import { logger } from "../logger.js";
+import { accessSync, mkdirSync, constants as fsConstants } from "node:fs";
+import { join } from "node:path";
+import { homedir, tmpdir } from "node:os";
 
 // Dynamic import — try @anthropic-ai/claude-agent-sdk first, then @anthropic-ai/claude-code
 type QueryFn = (opts: Record<string, unknown>) => Promise<unknown>;
@@ -159,6 +163,36 @@ class ClaudeCodeSession extends BaseAgentSession {
       sdkOptions.hooks = this.hooks;
     }
 
+    // Ensure the SDK session storage directory is writable so that multi-turn
+    // conversations can be resumed. If ~/.claude is read-only (common in Docker
+    // with bind-mounted host config), redirect session writes via CLAUDE_CONFIG_DIR.
+    const configDir = process.env.CLAUDE_CONFIG_DIR || join(homedir(), ".claude");
+    const projectsDir = join(configDir, "projects");
+    if (!isDirectoryWritable(projectsDir)) {
+      const fallback = join(tmpdir(), ".claude-sdk", "projects");
+      try {
+        mkdirSync(fallback, { recursive: true });
+        if (isDirectoryWritable(fallback)) {
+          const fallbackRoot = join(tmpdir(), ".claude-sdk");
+          sdkOptions.env = { ...process.env, CLAUDE_CONFIG_DIR: fallbackRoot };
+          logger.warn(
+            { configDir, fallback: fallbackRoot },
+            "Claude config directory is read-only — redirecting session writes to writable fallback",
+          );
+        } else {
+          logger.warn(
+            { configDir },
+            "Claude config directory is read-only and no writable fallback available — multi-turn conversations will fail",
+          );
+        }
+      } catch (err) {
+        logger.warn(
+          { configDir, err },
+          "Failed to create writable fallback for Claude config — multi-turn conversations will fail",
+        );
+      }
+    }
+
     this.cachedSdkOptions = sdkOptions;
   }
 
@@ -171,16 +205,31 @@ class ClaudeCodeSession extends BaseAgentSession {
   }
 
   protected async runInitialQuery(prompt: string): Promise<number> {
+    if (!prompt) {
+      // No initial prompt (e.g. System task) — skip the query and wait for
+      // the first user message, which will be handled as an initial query
+      // in executeFollowUp().
+      return 0;
+    }
     return this.consumeQuery(prompt, this.cachedSdkOptions!);
   }
 
   protected async executeFollowUp(text: string): Promise<void> {
-    const resumeOptions = { ...this.cachedSdkOptions!, resume: this.runtimeSessionId };
-    await this.consumeQuery(text, resumeOptions);
+    if (this.runtimeSessionId) {
+      // Resume the existing conversation
+      const resumeOptions = { ...this.cachedSdkOptions!, resume: this.runtimeSessionId };
+      await this.consumeQuery(text, resumeOptions);
+    } else {
+      // No prior session (first message after empty-prompt start) — run as
+      // initial query, which will establish the runtimeSessionId.
+      await this.consumeQuery(text, this.cachedSdkOptions!);
+    }
   }
 
   protected canAcceptInput(): boolean {
-    return !!this.runtimeSessionId && !!this.cachedSdkOptions;
+    // Allow input even without runtimeSessionId — the first sendInput after
+    // an empty-prompt start acts as the initial query.
+    return !!this.cachedSdkOptions;
   }
 
   protected abortActive(): void {
@@ -239,6 +288,16 @@ class ClaudeCodeSession extends BaseAgentSession {
     }
 
     return messageCount;
+  }
+}
+
+/** Check if a directory exists and is writable. */
+function isDirectoryWritable(dir: string): boolean {
+  try {
+    accessSync(dir, fsConstants.W_OK);
+    return true;
+  } catch {
+    return false;
   }
 }
 

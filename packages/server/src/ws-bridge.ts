@@ -341,10 +341,17 @@ async function startTaskSession(
   );
 
   const useWorktrees = workspace?.useWorktrees ?? false;
+  // For the root/System task, use the user's chat message (passed as notes)
+  // as the initial prompt instead of the task title "System".
+  // For regular tasks, the task title IS the prompt.
+  const initialPrompt = freshTask.id === ROOT_TASK_ID
+    ? (options?.notes || "")
+    : freshTask.title;
+
   const powerlineReq = create(powerline.SpawnRequestSchema, {
     sessionId,
     runtime,
-    prompt: freshTask.title,
+    prompt: initialPrompt,
     model,
     maxTurns,
     branch: freshTask.branch,
@@ -366,7 +373,7 @@ async function startTaskSession(
     workspaceId: freshTask.workspaceId ?? undefined,
     taskId: freshTask.id,
     systemContext,
-    prompt: freshTask.title,
+    prompt: initialPrompt,
   });
 
   return undefined;

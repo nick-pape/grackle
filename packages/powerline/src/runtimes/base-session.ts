@@ -212,6 +212,10 @@ export abstract class BaseAgentSession implements AgentSession {
       .catch((err: unknown) => {
         logger.warn({ err }, `Failed to process follow-up input in ${this.runtimeDisplayName} session`);
         this.eventQueue.push({ type: "error", timestamp: ts(), content: String(err) });
+        // Reset to idle so the task doesn't get stuck in "working" state
+        // and the user can retry their input.
+        this.status = SESSION_STATUS.IDLE;
+        this.eventQueue.push({ type: "status", timestamp: ts(), content: "waiting_input" });
       });
   }
 
