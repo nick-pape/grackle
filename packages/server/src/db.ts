@@ -491,6 +491,12 @@ export function initDatabase(sqliteOverride?: InstanceType<typeof Database>): In
     );
   });
 
+  tryMigration("add-sessions-parent-session-id", () => {
+    conn.exec(
+      "ALTER TABLE sessions ADD COLUMN parent_session_id TEXT NOT NULL DEFAULT ''",
+    );
+  });
+
   // Migration: make workspace_id nullable on tasks.
   // SQLite doesn't support ALTER COLUMN, so we recreate the table.
   // Guard: only run if the column currently has NOT NULL.

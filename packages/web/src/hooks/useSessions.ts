@@ -56,7 +56,7 @@ export interface UseSessionsResult {
 /** Set of session statuses considered active. */
 const ACTIVE_STATUSES: ReadonlySet<string> = new Set(["pending", "running", "idle"]);
 /** Set of session statuses considered terminal. */
-const TERMINAL_STATUSES: ReadonlySet<string> = new Set(["completed", "failed", "interrupted"]);
+const TERMINAL_STATUSES: ReadonlySet<string> = new Set(["completed", "failed", "interrupted", "hibernating"]);
 /** Ordered list of active statuses from least to most progressed. */
 const ACTIVE_ORDER: readonly string[] = ["pending", "running", "idle"];
 

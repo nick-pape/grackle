@@ -7,6 +7,7 @@ export const SESSION_STATUS = {
   PENDING: "pending",
   RUNNING: "running",
   IDLE: "idle",
+  HIBERNATING: "hibernating",
   COMPLETED: "completed",
   FAILED: "failed",
   INTERRUPTED: "interrupted",
