@@ -5,7 +5,7 @@
  */
 
 /** Default Neo4j Bolt connection URL. */
-export const DEFAULT_NEO4J_URL: string = "bolt://localhost:7687";
+export const DEFAULT_NEO4J_URL: string = "bolt://127.0.0.1:7687";
 
 /** Default Neo4j username. */
 export const DEFAULT_NEO4J_USER: string = "neo4j";

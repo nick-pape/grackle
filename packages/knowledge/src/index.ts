@@ -31,3 +31,20 @@ export type { EmbeddedChunk } from "./ingest.js";
 export { ingest } from "./ingest.js";
 export type { TranscriptChunkerOptions } from "./transcript-chunker.js";
 export { createTranscriptChunker } from "./transcript-chunker.js";
+export {
+  createReferenceNode,
+  createNativeNode,
+  getNode,
+  deleteNode,
+  updateNode,
+  recordToNode,
+} from "./node-store.js";
+export type {
+  CreateReferenceNodeInput,
+  CreateNativeNodeInput,
+  UpdateReferenceNodeInput,
+  UpdateNativeNodeInput,
+  UpdateNodeInput,
+  NodeWithEdges,
+} from "./node-store.js";
+export { createEdge, removeEdge } from "./edge-store.js";
