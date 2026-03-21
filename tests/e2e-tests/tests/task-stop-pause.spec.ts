@@ -1,7 +1,7 @@
 import { test, expect } from "./fixtures.js";
 import { createWorkspace, createTask, navigateToTask, patchWsForStubRuntime, runStubTaskToCompletion } from "./helpers.js";
 
-test.describe("Task Stop & Pause buttons", () => {
+test.describe("Task Stop & Pause buttons", { tag: ["@task"] }, () => {
   test("Stop button completes a paused task", async ({ appPage }) => {
     const page = appPage;
 

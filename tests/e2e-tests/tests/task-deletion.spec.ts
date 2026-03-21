@@ -14,7 +14,7 @@ async function goToTasksTab(page: import("@playwright/test").Page): Promise<void
   await page.locator('[data-testid="sidebar-tab-tasks"]').click();
 }
 
-test.describe("Task Deletion", () => {
+test.describe("Task Deletion", { tag: ["@task"] }, () => {
   test("delete pending task removes it from task list", async ({ appPage }) => {
     const page = appPage;
 

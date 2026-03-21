@@ -10,7 +10,7 @@ async function goToTasksTab(page: import("@playwright/test").Page): Promise<void
   await page.locator('[data-testid="sidebar-tab-tasks"]').click();
 }
 
-test.describe("Group-by-status toggle", () => {
+test.describe("Group-by-status toggle", { tag: ["@workspace"] }, () => {
   // Clean up localStorage after each test to prevent state leakage
   test.afterEach(async ({ page }) => {
     await page.evaluate(() => localStorage.removeItem("grackle-task-group-by-status"));

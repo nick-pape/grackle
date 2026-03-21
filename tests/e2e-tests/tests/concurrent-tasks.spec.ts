@@ -6,7 +6,7 @@ import {
   patchWsForStubRuntime,
 } from "./helpers.js";
 
-test.describe("Concurrent Tasks", () => {
+test.describe("Concurrent Tasks", { tag: ["@task"] }, () => {
   test("two tasks run concurrently without event leakage", async ({ appPage }) => {
     const page = appPage;
 

@@ -3,7 +3,7 @@ import { test, expect } from "./fixtures.js";
 /** Mobile viewport dimensions (iPhone X / 11 Pro). */
 const MOBILE_VIEWPORT = { width: 375, height: 812 };
 
-test.describe("Mobile Drawer", () => {
+test.describe("Mobile Drawer", { tag: ["@webui"] }, () => {
   test.use({ viewport: MOBILE_VIEWPORT });
 
   test("hamburger button is visible on mobile", async ({ appPage }) => {

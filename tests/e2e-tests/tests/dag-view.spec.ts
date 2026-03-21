@@ -8,7 +8,7 @@ import {
   navigateToWorkspace,
 } from "./helpers.js";
 
-test.describe("DAG View", () => {
+test.describe("DAG View", { tag: ["@workspace"] }, () => {
   test("Graph tab renders task nodes after switching from default Tasks tab", async ({ appPage }) => {
     const page = appPage;
 

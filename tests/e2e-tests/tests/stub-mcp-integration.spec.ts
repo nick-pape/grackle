@@ -7,7 +7,7 @@ import {
   runStubMcpTaskToCompletion,
 } from "./helpers.js";
 
-test.describe("Stub MCP Integration", () => {
+test.describe("Stub MCP Integration", { tag: ["@persona"] }, () => {
   test("real MCP tool_use and tool_result rendered in UI", async ({ appPage }) => {
     const page = appPage;
 

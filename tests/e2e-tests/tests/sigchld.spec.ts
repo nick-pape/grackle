@@ -105,7 +105,7 @@ async function waitForSessionText(
   throw new Error(`Session ${sessionId} events never contained "${pattern}" within ${timeoutMs}ms`);
 }
 
-test.describe("SIGCHLD — child completion notification", () => {
+test.describe("SIGCHLD — child completion notification", { tag: ["@error"] }, () => {
   test("parent receives SIGCHLD when child task goes idle", async ({ appPage: page }) => {
     // 1. Create workspace
     await createWorkspace(page, "SIGCHLD Test");

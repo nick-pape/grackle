@@ -1,6 +1,6 @@
 import { test, expect } from "./fixtures.js";
 
-test.describe("Session Lifecycle (stub runtime)", () => {
+test.describe("Session Lifecycle (stub runtime)", { tag: ["@session"] }, () => {
   test("full stub session flow", async ({ appPage }) => {
     const page = appPage;
 

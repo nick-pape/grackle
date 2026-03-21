@@ -7,7 +7,7 @@
 import { test, expect } from "./fixtures.js";
 import { sendWsAndWaitFor, sendWsAndWaitForError, sendWsMessage } from "./helpers.js";
 
-test.describe("Session Reanimate (stub runtime)", () => {
+test.describe("Session Reanimate (stub runtime)", { tag: ["@session"] }, () => {
   // Kill any stale active sessions from previous specs so the shared
   // test-local environment is clean before each test in this file.
   test.beforeEach(async ({ appPage }) => {

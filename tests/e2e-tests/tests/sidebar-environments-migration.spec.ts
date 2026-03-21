@@ -4,7 +4,7 @@ import {
   sendWsMessage,
 } from "./helpers.js";
 
-test.describe("App Navigation Bar", () => {
+test.describe("App Navigation Bar", { tag: ["@environment"] }, () => {
   test("app nav bar has Chat, Tasks, Environments, and Settings tabs", async ({ appPage }) => {
     const page = appPage;
 
@@ -37,7 +37,7 @@ test.describe("App Navigation Bar", () => {
   });
 });
 
-test.describe("Environments Page", () => {
+test.describe("Environments Page", { tag: ["@environment"] }, () => {
   test.beforeEach(async ({ appPage }) => {
     await appPage.locator('[data-testid="sidebar-tab-environments"]').click();
   });
@@ -103,7 +103,7 @@ test.describe("Environments Page", () => {
   });
 });
 
-test.describe("Navigation Between Settings and Environments", () => {
+test.describe("Navigation Between Settings and Environments", { tag: ["@environment"] }, () => {
   test("clicking Grackle brand from Settings returns to home", async ({ appPage }) => {
     const page = appPage;
 

@@ -4,7 +4,7 @@ import {
   injectWsMessage,
 } from "./helpers.js";
 
-test.describe("Markdown Rendering in EventRenderer", () => {
+test.describe("Markdown Rendering in EventRenderer", { tag: ["@webui"] }, () => {
   test("renders markdown headings, bold, and links in text events", async ({ page }) => {
     await installWsTracker(page);
     await page.goto("/");

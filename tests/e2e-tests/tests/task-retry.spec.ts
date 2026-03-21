@@ -6,7 +6,7 @@ import {
   patchWsForStubRuntime,
 } from "./helpers.js";
 
-test.describe("Task Retry (failed → in_progress)", () => {
+test.describe("Task Retry (failed → in_progress)", { tag: ["@task"] }, () => {
   test("retry button restarts a failed task", async ({ appPage }) => {
     const page = appPage;
 

@@ -31,7 +31,7 @@ async function reprovisionTestLocal(page: import("@playwright/test").Page): Prom
   await expect(page.locator("button", { hasText: "Stop" })).toBeVisible({ timeout: 15_000 });
 }
 
-test.describe("Environment Detail Page — Lifecycle Actions", () => {
+test.describe("Environment Detail Page — Lifecycle Actions", { tag: ["@environment"] }, () => {
   test.beforeEach(async ({ appPage }) => {
     // Navigate to the environment detail page
     await navigateToEnvDetailPage(appPage);
@@ -71,7 +71,7 @@ test.describe("Environment Detail Page — Lifecycle Actions", () => {
   });
 });
 
-test.describe("Environment Lifecycle — WebSocket Handlers", () => {
+test.describe("Environment Lifecycle — WebSocket Handlers", { tag: ["@environment"] }, () => {
   test("stop_environment changes status to disconnected", async ({ page }) => {
     // Use raw page (not appPage) so we can install WS tracker first
     await installWsTracker(page);
@@ -265,7 +265,7 @@ test.describe("Environment Lifecycle — WebSocket Handlers", () => {
   });
 });
 
-test.describe("Environment Lifecycle — Delete with Confirmation", () => {
+test.describe("Environment Lifecycle — Delete with Confirmation", { tag: ["@environment"] }, () => {
   test("delete button shows confirmation dialog", async ({ appPage }) => {
     const page = appPage;
 

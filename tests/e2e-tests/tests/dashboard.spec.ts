@@ -21,7 +21,7 @@ async function archiveAllWorkspaces(page: import("@playwright/test").Page): Prom
   }
 }
 
-test.describe("Dashboard", () => {
+test.describe("Dashboard", { tag: ["@webui", "@smoke"] }, () => {
   test("shows onboarding CTA when no workspaces exist", async ({ appPage }) => {
     const page = appPage;
     await archiveAllWorkspaces(page);

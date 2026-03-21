@@ -7,7 +7,7 @@ import {
   runStubTaskToCompletion,
 } from "./helpers.js";
 
-test.describe("Tab Auto-Switching", () => {
+test.describe("Tab Auto-Switching", { tag: ["@webui"] }, () => {
   test("stream tab becomes active when task starts", async ({ appPage }) => {
     const page = appPage;
 

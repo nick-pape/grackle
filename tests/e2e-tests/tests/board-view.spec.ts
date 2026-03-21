@@ -10,7 +10,7 @@ import {
   patchWsForStubRuntime,
 } from "./helpers.js";
 
-test.describe("Board View", () => {
+test.describe("Board View", { tag: ["@workspace"] }, () => {
   test("Board tab is visible after selecting a workspace", async ({ appPage }) => {
     const page = appPage;
 

@@ -12,7 +12,7 @@ const test = base.extend<{ mockPage: import("@playwright/test").Page }>({
   },
 });
 
-test.describe("Settings Tabs", () => {
+test.describe("Settings Tabs", { tag: ["@settings"] }, () => {
   test("default tab is Credentials", async ({ mockPage }) => {
     const page = mockPage;
 

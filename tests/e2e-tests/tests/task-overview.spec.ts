@@ -15,7 +15,7 @@ async function goToTasksTab(page: import("@playwright/test").Page): Promise<void
   await page.locator('[data-testid="sidebar-tab-tasks"]').click();
 }
 
-test.describe("Task Overview Tab", () => {
+test.describe("Task Overview Tab", { tag: ["@task"] }, () => {
   test("overview tab is default for pending tasks", async ({ appPage }) => {
     const page = appPage;
 

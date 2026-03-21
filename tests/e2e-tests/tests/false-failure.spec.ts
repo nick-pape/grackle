@@ -7,7 +7,7 @@ import {
   runStubTaskToCompletion,
 } from "./helpers.js";
 
-test.describe("False failure prevention", () => {
+test.describe("False failure prevention", { tag: ["@error"] }, () => {
   test("task reaches paused status after stub session completes without false failure", async ({ appPage }) => {
     const page = appPage;
 

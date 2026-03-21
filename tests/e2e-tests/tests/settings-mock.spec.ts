@@ -25,7 +25,7 @@ const test = base.extend<{ mockPage: import("@playwright/test").Page }>({
   },
 });
 
-test.describe("Settings Page (Mock Mode)", () => {
+test.describe("Settings Page (Mock Mode)", { tag: ["@settings"] }, () => {
   test("gear icon is visible and navigates to settings", async ({ mockPage }) => {
     const page = mockPage;
 
