@@ -22,6 +22,8 @@ import { join } from "node:path";
 import {
   LOGS_DIR,
   SESSION_STATUS,
+  TERMINAL_SESSION_STATUSES,
+  type SessionStatus,
   TASK_STATUS,
   DEFAULT_MCP_PORT,
   ROOT_TASK_ID,
@@ -618,11 +620,11 @@ async function handleMessage(
         return;
       }
 
-      if (session.status !== SESSION_STATUS.IDLE) {
+      if (TERMINAL_SESSION_STATUSES.has(session.status as SessionStatus)) {
         sendWs(ws, {
           type: "error",
           payload: {
-            message: `Session ${sessionId} is not currently idle (status: ${session.status})`,
+            message: `Session ${sessionId} has ended (status: ${session.status})`,
           },
         });
         return;

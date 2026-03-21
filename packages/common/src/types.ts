@@ -16,6 +16,14 @@ export const SESSION_STATUS = {
 /** Lifecycle status of an agent session. */
 export type SessionStatus = typeof SESSION_STATUS[keyof typeof SESSION_STATUS];
 
+/** Session statuses that represent a terminal (ended) state. */
+export const TERMINAL_SESSION_STATUSES: ReadonlySet<SessionStatus> = new Set([
+  SESSION_STATUS.COMPLETED,
+  SESSION_STATUS.FAILED,
+  SESSION_STATUS.INTERRUPTED,
+  SESSION_STATUS.HIBERNATING,
+]);
+
 /** Pipe mode for parent↔child IPC on spawn. */
 export type PipeMode = "sync" | "async" | "detach" | "";
 
