@@ -71,14 +71,19 @@ describe("session-store", () => {
 
   describe("getChildSessions", () => {
     it("returns child sessions ordered by startedAt then id", () => {
-      sessionStore.createSession("child-b", "test-env", "claude-code", "b", "model", "/tmp/b", "", "", "parent-1");
-      sessionStore.createSession("child-a", "test-env", "claude-code", "a", "model", "/tmp/a", "", "", "parent-1");
-      sessionStore.createSession("unrelated", "test-env", "claude-code", "x", "model", "/tmp/x", "", "", "parent-2");
+      // Insert with explicit timestamps to ensure deterministic ordering
+      sqlite.exec(`
+        INSERT INTO sessions (id, env_id, runtime, prompt, model, log_path, task_id, persona_id, parent_session_id, pipe_mode, started_at)
+        VALUES
+          ('child-b', 'test-env', 'claude-code', 'b', 'model', '/tmp/b', '', '', 'parent-1', '', '2026-01-01T00:00:01.000Z'),
+          ('child-a', 'test-env', 'claude-code', 'a', 'model', '/tmp/a', '', '', 'parent-1', '', '2026-01-01T00:00:02.000Z'),
+          ('unrelated', 'test-env', 'claude-code', 'x', 'model', '/tmp/x', '', '', 'parent-2', '', '2026-01-01T00:00:03.000Z')
+      `);
 
       const children = sessionStore.getChildSessions("parent-1");
       expect(children).toHaveLength(2);
-      // Same startedAt → ordered by id ascending
-      expect(children.map((c) => c.id)).toEqual(["child-a", "child-b"]);
+      // child-b started earlier → comes first; child-a second
+      expect(children.map((c) => c.id)).toEqual(["child-b", "child-a"]);
     });
 
     it("returns empty array when no children exist", () => {
