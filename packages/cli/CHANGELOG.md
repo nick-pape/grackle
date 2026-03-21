@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sat, 21 Mar 2026 21:49:59 GMT and should not be manually modified.
+This log was last generated on Sat, 21 Mar 2026 22:01:36 GMT and should not be manually modified.
+
+## 0.61.0
+Sat, 21 Mar 2026 22:01:36 GMT
+
+### Minor changes
+
+- Make task_start pipe-aware: add pipe and parent_session_id to StartTaskRequest for structured IPC
 
 ## 0.60.0
 Sat, 21 Mar 2026 21:49:59 GMT

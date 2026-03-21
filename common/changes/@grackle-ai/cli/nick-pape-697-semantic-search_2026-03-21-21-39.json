@@ -1,8 +1,8 @@
 {
   "changes": [
     {
-      "comment": "Make task_start pipe-aware: add pipe and parent_session_id to StartTaskRequest for structured IPC",
-      "type": "minor",
+      "comment": "Add semantic vector search to @grackle-ai/knowledge",
+      "type": "patch",
       "packageName": "@grackle-ai/cli"
     }
   ],

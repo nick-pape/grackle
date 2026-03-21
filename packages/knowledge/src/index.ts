@@ -48,3 +48,5 @@ export type {
   NodeWithEdges,
 } from "./node-store.js";
 export { createEdge, removeEdge } from "./edge-store.js";
+export type { SearchOptions, SearchResult } from "./search.js";
+export { knowledgeSearch } from "./search.js";
