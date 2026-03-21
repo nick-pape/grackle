@@ -1,6 +1,18 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sat, 21 Mar 2026 21:09:49 GMT and should not be manually modified.
+This log was last generated on Sat, 21 Mar 2026 21:49:59 GMT and should not be manually modified.
+
+## 0.60.0
+Sat, 21 Mar 2026 21:49:59 GMT
+
+### Minor changes
+
+- Add GetUsage RPC for scoped usage rollups and render usage events as compact badges in web UI
+- Add node and edge CRUD operations to the knowledge graph subsystem
+
+### Patches
+
+- fix(powerline): surface lazy runtime installer errors with actionable details instead of failing silently
 
 ## 0.59.1
 Sat, 21 Mar 2026 21:09:49 GMT

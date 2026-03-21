@@ -2,6 +2,26 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.60.0",
+      "tag": "@grackle-ai/cli_v0.60.0",
+      "date": "Sat, 21 Mar 2026 21:49:59 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Add GetUsage RPC for scoped usage rollups and render usage events as compact badges in web UI"
+          },
+          {
+            "comment": "Add node and edge CRUD operations to the knowledge graph subsystem"
+          }
+        ],
+        "patch": [
+          {
+            "comment": "fix(powerline): surface lazy runtime installer errors with actionable details instead of failing silently"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.59.1",
       "tag": "@grackle-ai/cli_v0.59.1",
       "date": "Sat, 21 Mar 2026 21:09:49 GMT",
