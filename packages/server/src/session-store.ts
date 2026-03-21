@@ -120,6 +120,23 @@ export function incrementTurns(id: string): void {
     .run();
 }
 
+/** Accumulate token usage and cost for a session (additive — call once per usage event). */
+export function updateSessionUsage(
+  id: string,
+  inputTokens: number,
+  outputTokens: number,
+  costUsd: number,
+): void {
+  db.update(sessions)
+    .set({
+      inputTokens: sql`${sessions.inputTokens} + ${inputTokens}`,
+      outputTokens: sql`${sessions.outputTokens} + ${outputTokens}`,
+      costUsd: sql`${sessions.costUsd} + ${costUsd}`,
+    })
+    .where(eq(sessions.id, id))
+    .run();
+}
+
 /** Delete all sessions belonging to a specific environment. */
 export function deleteByEnvironment(environmentId: string): void {
   db.delete(sessions).where(eq(sessions.environmentId, environmentId)).run();

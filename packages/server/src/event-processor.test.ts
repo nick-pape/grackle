@@ -97,7 +97,10 @@ function applySchema(): void {
       task_id       TEXT NOT NULL DEFAULT '',
       persona_id    TEXT NOT NULL DEFAULT '',
       parent_session_id TEXT NOT NULL DEFAULT '',
-      pipe_mode         TEXT NOT NULL DEFAULT ''
+      pipe_mode         TEXT NOT NULL DEFAULT '',
+      input_tokens      INTEGER NOT NULL DEFAULT 0,
+      output_tokens     INTEGER NOT NULL DEFAULT 0,
+      cost_usd          REAL NOT NULL DEFAULT 0
     );
 
     CREATE TABLE IF NOT EXISTS findings (
@@ -1086,5 +1089,108 @@ describe("late-binding", () => {
     // Wait for cleanup
     await new Promise((r) => setTimeout(r, 100));
     expect(processorRegistry.get("sess1")).toBeUndefined();
+  });
+});
+
+describe("event-processor usage event handling", () => {
+  beforeEach(() => {
+    sqlite.exec("DROP TABLE IF EXISTS findings");
+    sqlite.exec("DROP TABLE IF EXISTS tasks");
+    sqlite.exec("DROP TABLE IF EXISTS sessions");
+    sqlite.exec("DROP TABLE IF EXISTS workspaces");
+    applySchema();
+    vi.clearAllMocks();
+  });
+
+  it("accumulates token usage from a usage event", async () => {
+    sessionStore.createSession("sess-usage", "env1", "claude-code", "test", "sonnet", "/tmp/log");
+
+    const usageEvent = create(powerline.AgentEventSchema, {
+      sessionId: "sess-usage",
+      type: "usage",
+      timestamp: new Date().toISOString(),
+      content: JSON.stringify({ input_tokens: 1000, output_tokens: 50, cost_usd: 0.005 }),
+    });
+
+    const statusEvent = create(powerline.AgentEventSchema, {
+      sessionId: "sess-usage",
+      type: "status",
+      timestamp: new Date().toISOString(),
+      content: "completed",
+    });
+
+    await waitForProcessing([usageEvent, statusEvent], {
+      sessionId: "sess-usage",
+      logPath: "/tmp/log",
+    });
+
+    const session = sessionStore.getSession("sess-usage");
+    expect(session?.inputTokens).toBe(1000);
+    expect(session?.outputTokens).toBe(50);
+    expect(session?.costUsd).toBeCloseTo(0.005);
+  });
+
+  it("accumulates multiple usage events", async () => {
+    sessionStore.createSession("sess-multi", "env1", "claude-code", "test", "sonnet", "/tmp/log");
+
+    const usage1 = create(powerline.AgentEventSchema, {
+      sessionId: "sess-multi",
+      type: "usage",
+      timestamp: new Date().toISOString(),
+      content: JSON.stringify({ input_tokens: 500, output_tokens: 25, cost_usd: 0.003 }),
+    });
+
+    const usage2 = create(powerline.AgentEventSchema, {
+      sessionId: "sess-multi",
+      type: "usage",
+      timestamp: new Date().toISOString(),
+      content: JSON.stringify({ input_tokens: 300, output_tokens: 75, cost_usd: 0.007 }),
+    });
+
+    const statusEvent = create(powerline.AgentEventSchema, {
+      sessionId: "sess-multi",
+      type: "status",
+      timestamp: new Date().toISOString(),
+      content: "completed",
+    });
+
+    await waitForProcessing([usage1, usage2, statusEvent], {
+      sessionId: "sess-multi",
+      logPath: "/tmp/log",
+    });
+
+    const session = sessionStore.getSession("sess-multi");
+    expect(session?.inputTokens).toBe(800);
+    expect(session?.outputTokens).toBe(100);
+    expect(session?.costUsd).toBeCloseTo(0.010);
+  });
+
+  it("handles malformed usage event content gracefully", async () => {
+    sessionStore.createSession("sess-bad", "env1", "claude-code", "test", "sonnet", "/tmp/log");
+
+    const badEvent = create(powerline.AgentEventSchema, {
+      sessionId: "sess-bad",
+      type: "usage",
+      timestamp: new Date().toISOString(),
+      content: "not valid json",
+    });
+
+    const statusEvent = create(powerline.AgentEventSchema, {
+      sessionId: "sess-bad",
+      type: "status",
+      timestamp: new Date().toISOString(),
+      content: "completed",
+    });
+
+    // Should not throw — malformed content is logged and skipped
+    await waitForProcessing([badEvent, statusEvent], {
+      sessionId: "sess-bad",
+      logPath: "/tmp/log",
+    });
+
+    const session = sessionStore.getSession("sess-bad");
+    expect(session?.inputTokens).toBe(0);
+    expect(session?.outputTokens).toBe(0);
+    expect(session?.costUsd).toBe(0);
   });
 });

@@ -503,6 +503,24 @@ export function initDatabase(sqliteOverride?: InstanceType<typeof Database>): In
     );
   });
 
+  tryMigration("add-sessions-input-tokens", () => {
+    conn.exec(
+      "ALTER TABLE sessions ADD COLUMN input_tokens INTEGER NOT NULL DEFAULT 0",
+    );
+  });
+
+  tryMigration("add-sessions-output-tokens", () => {
+    conn.exec(
+      "ALTER TABLE sessions ADD COLUMN output_tokens INTEGER NOT NULL DEFAULT 0",
+    );
+  });
+
+  tryMigration("add-sessions-cost-usd", () => {
+    conn.exec(
+      "ALTER TABLE sessions ADD COLUMN cost_usd REAL NOT NULL DEFAULT 0",
+    );
+  });
+
   // Migration: make workspace_id nullable on tasks.
   // SQLite doesn't support ALTER COLUMN, so we recreate the table.
   // Guard: only run if the column currently has NOT NULL.

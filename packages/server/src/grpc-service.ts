@@ -103,6 +103,9 @@ function sessionRowToProto(row: SessionRow): grackle.Session {
     error: row.error ?? "",
     taskId: row.taskId,
     personaId: row.personaId,
+    inputTokens: row.inputTokens,
+    outputTokens: row.outputTokens,
+    costUsd: row.costUsd,
   });
 }
 

@@ -55,7 +55,6 @@ import { formatGhError } from "./utils/format-gh-error.js";
 const GH_CODESPACE_LIST_TIMEOUT_MS: number = 30_000;
 const GH_CODESPACE_CREATE_TIMEOUT_MS: number = 300_000;
 const GH_CODESPACE_LIST_LIMIT: number = 50;
-
 const WS_PING_INTERVAL_MS: number = 30_000;
 const WS_CLOSE_UNAUTHORIZED: number = 4001;
 
@@ -88,7 +87,6 @@ export function createWsBridge(
     }
 
     const subscriptions = new Map<string, { cancel(): void }>();
-
     // eslint-disable-next-line @typescript-eslint/no-misused-promises
     ws.on("message", async (data: Buffer) => {
       try {
@@ -104,19 +102,16 @@ export function createWsBridge(
         sub.cancel();
       }
     });
-
     const pingInterval = setInterval(() => {
       if (ws.readyState === WebSocket.OPEN) {
         ws.ping();
       }
     }, WS_PING_INTERVAL_MS);
-
     ws.on("close", () => clearInterval(pingInterval));
   });
 
   return wss;
 }
-
 
 /** Safely parse an adapter config string, returning an empty object on failure. */
 function safeParseAdapterConfig(
@@ -415,6 +410,9 @@ async function handleMessage(
             prompt: r.prompt,
             startedAt: r.startedAt,
             personaId: r.personaId,
+            inputTokens: r.inputTokens,
+            outputTokens: r.outputTokens,
+            costUsd: r.costUsd,
           })),
         },
       });
@@ -1466,6 +1464,9 @@ async function handleMessage(
             endedAt: r.endedAt ?? "",
             error: r.error ?? "",
             personaId: r.personaId,
+            inputTokens: r.inputTokens,
+            outputTokens: r.outputTokens,
+            costUsd: r.costUsd,
           })),
         },
       });

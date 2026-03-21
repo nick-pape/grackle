@@ -57,7 +57,8 @@ export type AgentEventType =
   | "system"
   | "finding"
   | "subtask_create"
-  | "runtime_session_id";
+  | "runtime_session_id"
+  | "usage";
 
 /** Discriminator for all session events, including user input and signals. */
 export type EventType = AgentEventType | "user_input" | "signal";
