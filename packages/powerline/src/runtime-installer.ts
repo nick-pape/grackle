@@ -248,12 +248,13 @@ async function doInstall(
   };
   writeFileSync(join(runtimeDir, "package.json"), JSON.stringify(packageJson, null, 2));
 
-  // Run npm install asynchronously to avoid blocking the event loop
+  // Run npm install asynchronously to avoid blocking the event loop.
+  // shell:true is needed on Windows where npm is a .cmd batch file.
   await new Promise<void>((resolve, reject) => {
     execFile(
       "npm",
       ["install", "--omit=dev", "--registry=https://registry.npmjs.org"],
-      { cwd: runtimeDir, timeout: 120_000 },
+      { cwd: runtimeDir, timeout: 120_000, shell: true },
       (err) => {
         if (err) {
           const detail = err.message || String(err);
