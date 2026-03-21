@@ -114,7 +114,7 @@ describe("buildTaskPrompt", () => {
     );
   });
 
-  it("omits notes when not provided", () => {
+  it("omits notes when notes are empty", () => {
     expect(buildTaskPrompt("My Task", "Do the thing", "")).toBe("My Task\n\nDo the thing");
   });
 });

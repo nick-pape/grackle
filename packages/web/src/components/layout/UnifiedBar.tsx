@@ -93,6 +93,8 @@ export function UnifiedBar(): JSX.Element {
   const [spawnPersonaId, setSpawnPersonaId] = useState("");
   /** Queued chat message to send via sendInput once the root task session goes idle. */
   const pendingChatRef = useRef<string | undefined>(undefined);
+  /** Session ID at the time the message was queued, to avoid sending to an unrelated session. */
+  const pendingChatSessionRef = useRef<string | undefined>(undefined);
 
   const session = sessionId
     ? sessions.find((s) => s.id === sessionId)
@@ -125,11 +127,18 @@ export function UnifiedBar(): JSX.Element {
     : undefined;
 
   // Auto-send queued chat message once the root task session goes idle.
+  // Only sends if the session changed since queueing (new session spawned by startTask).
   useEffect(() => {
-    if (latestRootSession?.status === "idle" && pendingChatRef.current) {
-      sendInput(latestRootSession.id, pendingChatRef.current);
-      pendingChatRef.current = undefined;
+    if (!pendingChatRef.current || !latestRootSession?.id || latestRootSession.status !== "idle") {
+      return;
     }
+    // Only send to the new session that was created after we queued the message.
+    if (latestRootSession.id === pendingChatSessionRef.current) {
+      return; // Same session as before queueing — still waiting for the new one.
+    }
+    sendInput(latestRootSession.id, pendingChatRef.current);
+    pendingChatRef.current = undefined;
+    pendingChatSessionRef.current = undefined;
   }, [latestRootSession?.status, latestRootSession?.id, sendInput]);
 
   if (isChat) {
@@ -185,6 +194,7 @@ export function UnifiedBar(): JSX.Element {
         return;
       }
       pendingChatRef.current = text;
+      pendingChatSessionRef.current = latestRootSession?.id;
       startTask(ROOT_TASK_ID, undefined, localEnv.id);
       setText("");
     };
