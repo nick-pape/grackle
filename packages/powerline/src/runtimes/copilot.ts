@@ -59,6 +59,7 @@ function getCopilotSdk(): Promise<CopilotSdkModule> {
       } catch (err: unknown) {
         // Reset so the next attempt retries the import
         sdkPromise = undefined;
+        logger.warn({ error: err }, "Failed to import Copilot SDK");
         const detail = err instanceof Error ? err.message : String(err);
         throw new Error(
           `Copilot SDK failed to load: ${detail}\n` +

@@ -46,6 +46,16 @@ describe("importFromRuntime", () => {
     const mod = await importFromRuntime<typeof import("node:path")>("claude-code", "node:path");
     expect(typeof mod.join).toBe("function");
   });
+
+  it("throws actionable error when package cannot be resolved from runtime directory", async () => {
+    const { importFromRuntime } = await import("./runtime-installer.js");
+    // Import a nonexistent package for an unknown runtime (no manifest, so
+    // the dev-mode catch rethrows MODULE_NOT_FOUND, which then falls through
+    // to the resolve-from-runtime-dir path which should fail with context).
+    await expect(
+      importFromRuntime("claude-code", "@nonexistent/pkg-that-does-not-exist"),
+    ).rejects.toThrow(/Failed to resolve|not found|MODULE_NOT_FOUND/);
+  });
 });
 
 describe("getRuntimeBinDirectory", () => {

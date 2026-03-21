@@ -116,9 +116,9 @@ export function ensureRuntimeInstalled(
     registerJsonRpcHook();
   }
 
-  // Dev mode: packages may be available via Rush devDependencies.
-  // Return early — importFromRuntime() will try standard import first,
-  // falling back to the runtime directory if the package isn't in the monorepo.
+  // Dev mode: skip the install guard — importFromRuntime() will try a
+  // standard import first, falling back to the isolated runtime directory
+  // (and running doInstall on demand) if the package isn't in the monorepo.
   if (isDevMode()) {
     return Promise.resolve("");
   }
@@ -183,15 +183,28 @@ export async function importFromRuntime<T>(runtimeName: string, packageName: str
       const manifest = RUNTIME_MANIFESTS[runtimeName]!;
       const runtimeDir = join(RUNTIMES_BASE_DIR, runtimeName);
       if (!isManifestCurrent(runtimeDir, manifest)) {
+        logger.info(
+          { runtimeName, packageName },
+          "Package not found in monorepo — installing via lazy runtime installer",
+        );
         await doInstall(runtimeName, runtimeDir, manifest, {});
       }
     }
   }
 
   const runtimeDir = join(RUNTIMES_BASE_DIR, runtimeName);
-  const require = createRequire(join(runtimeDir, "package.json"));
-  const resolved = require.resolve(packageName);
-  return import(pathToFileURL(resolved).href) as Promise<T>;
+  try {
+    const esmRequire = createRequire(join(runtimeDir, "package.json"));
+    const resolved = esmRequire.resolve(packageName);
+    return import(pathToFileURL(resolved).href) as Promise<T>;
+  } catch (resolveErr: unknown) {
+    throw new Error(
+      `Failed to resolve "${packageName}" from runtime directory ${runtimeDir}. `
+      + `The lazy installer may have failed — check the logs above for details. `
+      + `Manual fix: cd ${runtimeDir} && npm install`,
+      { cause: resolveErr },
+    );
+  }
 }
 
 /**
@@ -276,13 +289,19 @@ async function doInstall(
       "npm",
       ["install", "--omit=dev", "--registry=https://registry.npmjs.org"],
       { cwd: runtimeDir, timeout: 120_000, shell: true, maxBuffer: 10 * 1024 * 1024 },
-      (err) => {
+      (err, _stdout, stderr) => {
         if (err) {
           const detail = err.message || String(err);
+          const stderrSnippet = stderr ? stderr.slice(0, 500) : "";
+          logger.error(
+            { runtimeName, runtimeDir, error: detail, stderr: stderrSnippet },
+            "npm install failed for runtime packages",
+          );
           reject(new Error(
             `Failed to install ${runtimeName} runtime packages. Run manually:\n`
             + `  cd ${runtimeDir} && npm install\n`
-            + `Cause: ${detail}`,
+            + `Cause: ${detail}`
+            + (stderrSnippet ? `\nStderr: ${stderrSnippet}` : ""),
           ));
         } else {
           resolve();
