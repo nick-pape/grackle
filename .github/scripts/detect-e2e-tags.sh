@@ -39,7 +39,7 @@ while IFS= read -r file; do
     packages/cli/*)         CHANGED_PACKAGES[cli]=1 ;;
     packages/knowledge/*)   CHANGED_PACKAGES[knowledge]=1 ;;
     tests/e2e-tests/*)      CHANGED_PACKAGES[e2e-tests]=1 ;;
-    # CI config, rush config, root files, rigs → run everything
+    # CI config, rush config, lockfile, rigs → run everything
     .github/*|common/config/*|rush.json|pnpm-lock.yaml) CHANGED_PACKAGES[infra]=1 ;;
     rigs/*)                 CHANGED_PACKAGES[infra]=1 ;;
   esac
@@ -79,13 +79,17 @@ fi
 # Always include smoke tests in selective runs
 TAGS[smoke]=1
 
-# Build comma-separated output with @ prefix
+# Build comma-separated output with @ prefix in deterministic order
+ALL_TAGS=(task workspace environment session settings persona error smoke)
+
 RESULT=""
-for tag in "${!TAGS[@]}"; do
-  if [ -n "$RESULT" ]; then
-    RESULT="$RESULT,@$tag"
-  else
-    RESULT="@$tag"
+for tag in "${ALL_TAGS[@]}"; do
+  if [[ -v "TAGS[$tag]" ]]; then
+    if [ -n "$RESULT" ]; then
+      RESULT="$RESULT,@$tag"
+    else
+      RESULT="@$tag"
+    fi
   fi
 done
 

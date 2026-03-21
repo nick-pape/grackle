@@ -11,8 +11,16 @@ MISSING=()
 
 for spec in "$TESTS_DIR"/*.spec.ts; do
   [ -f "$spec" ] || continue
-  if ! grep -q '{ tag: \[' "$spec"; then
-    MISSING+=("$(basename "$spec")")
+
+  # Count all test.describe() calls in the spec
+  total_describes=$(grep -c 'test\.describe\s*(' "$spec" || true)
+
+  # Count test.describe() calls whose options object includes a tag property
+  tagged_describes=$(grep -c -E 'test\.describe\s*\([^,]+,\s*\{\s*tag\s*:\s*\[' "$spec" || true)
+
+  # A spec is missing tags if it has no describes, or if any describe lacks tags
+  if [ "$total_describes" -eq 0 ] || [ "$tagged_describes" -lt "$total_describes" ]; then
+    MISSING+=("$(basename "$spec") ($tagged_describes/$total_describes tagged)")
   fi
 done
 
