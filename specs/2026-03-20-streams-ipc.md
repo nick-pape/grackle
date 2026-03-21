@@ -29,7 +29,7 @@ This replaces the earlier "pipes" and "file descriptors" concepts from the kerne
 
 A **global, named, buffered message channel**. Streams are system-level resources — not scoped to a parent↔child relationship. Any session with a reference (subscription) can interact with a stream, and references can be passed between sessions.
 
-Streams are created explicitly (`createStream`) or implicitly (via `spawn` with a pipe option). They persist as long as at least one subscription exists or the stream is explicitly retained.
+Streams are created explicitly (`createStream`) or implicitly via `spawn` when `pipe: "sync"` or `pipe: "async"` is used (`pipe: "detach"` does not create a stream). They persist as long as at least one subscription exists or the stream is explicitly retained.
 
 ### 2.2 Subscription (fd)
 
@@ -255,9 +255,9 @@ The current `reanimate-agent.ts` flow remains valid but is reframed: it's creati
 
 ## 9. Streaming: Always On
 
-Today, the server only streams events from sessions while they are "alive" (the PowerLine gRPC stream). With the stream model, **event streaming is always on** regardless of whether the session will be kept alive:
+Today, the server only streams events from sessions while they are "alive" via the PowerLine gRPC stream; at the Grackle layer, `spawnAgent` is unary and events are streamed via `streamSession` / `streamAll`. With the stream model, **event streaming is always on** regardless of whether the session will be kept alive:
 
-- The spawn gRPC call returns a server-stream of events (this exists today)
+- At the PowerLine layer, the `spawn` gRPC call returns a server-stream of events (this exists today)
 - The stream stays open as long as the parent holds the fd
 - When the child goes IDLE with a pipe, the stream stays open (process alive, waiting)
 - When the child goes IDLE without a pipe (detach), the stream closes and the child hibernates
@@ -268,7 +268,11 @@ This also means tool calls should be streamed. Today, tool call events may not b
 
 ## 10. Removing the IDLE Gate
 
-The current `sendInput` implementation (`grpc-service.ts:543`) rejects input unless the session status is IDLE:
+The current `sendInput` implementation rejects input unless the session status is IDLE. This gate exists in multiple places:
+
+- `grpc-service.ts:543` — gRPC `sendInput` handler
+- `ws-bridge.ts` — WebSocket `send_input` handler
+- `UnifiedBar.tsx` — web UI disables input unless session is idle
 
 ```typescript
 if (session.status !== SESSION_STATUS.IDLE) {
@@ -279,9 +283,11 @@ if (session.status !== SESSION_STATUS.IDLE) {
 }
 ```
 
-This gate must be removed. All four runtimes (Claude Agent SDK, Codex SDK, Copilot SDK, ACP) support mid-turn message delivery. Messages sent to a running session are queued and delivered at the next natural break (between tool calls).
+The long-term goal is to remove this gate and allow mid-turn input. All four runtimes (Claude Agent SDK, Codex SDK, Copilot SDK, ACP) conceptually support mid-turn message delivery, where messages sent to a running session are queued and delivered at the next natural break (between tool calls).
 
-The web UI should also allow typing while the agent is running, not just when idle.
+However, the current PowerLine `sendInput()` implementation immediately starts a new `executeFollowUp()` with no input queue or turn serialization. Before the IDLE gate can be safely removed, PowerLine **must** introduce an input-queue / turn-serialization mechanism so that mid-turn inputs are enqueued and processed sequentially at natural breaks, never causing overlapping follow-ups.
+
+Once that queuing/serialization layer is in place, all three IDLE gates (gRPC, WebSocket, web UI) should be removed to allow typing while the agent is running.
 
 ---
 
