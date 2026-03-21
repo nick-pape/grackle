@@ -3,6 +3,7 @@ import { BaseAgentSession } from "./base-session.js";
 import { BaseAgentRuntime } from "./base-runtime.js";
 import { resolveWorkingDirectory, resolveMcpServers } from "./runtime-utils.js";
 import { logger } from "../logger.js";
+import { ensureRuntimeInstalled, importFromRuntime } from "../runtime-installer.js";
 
 // ─── Environment variable names ────────────────────────────
 // All configuration is driven by environment variables so the
@@ -45,7 +46,8 @@ function getCopilotSdk(): Promise<CopilotSdkModule> {
   if (!sdkPromise) {
     sdkPromise = (async (): Promise<CopilotSdkModule> => {
       try {
-        const mod = await import("@github/copilot-sdk") as Record<string, unknown>;
+        await ensureRuntimeInstalled("copilot");
+        const mod = await importFromRuntime<Record<string, unknown>>("copilot", "@github/copilot-sdk");
         if (typeof mod.CopilotClient !== "function") {
           throw new Error("CopilotClient not found in @github/copilot-sdk");
         }
@@ -54,11 +56,13 @@ function getCopilotSdk(): Promise<CopilotSdkModule> {
           defineTool: mod.defineTool as CopilotSdkModule["defineTool"],
           approveAll: mod.approveAll,
         };
-      } catch {
+      } catch (err: unknown) {
         // Reset so the next attempt retries the import
         sdkPromise = undefined;
+        const detail = err instanceof Error ? err.message : String(err);
         throw new Error(
-          "Copilot SDK not installed. Run: npm install @github/copilot-sdk\n" +
+          `Copilot SDK failed to load: ${detail}\n` +
+          "Runtime packages are installed in ~/.grackle/runtimes/copilot/.\n" +
           "The Copilot CLI must also be installed and available in PATH (or set COPILOT_CLI_URL for an external server)."
         );
       }

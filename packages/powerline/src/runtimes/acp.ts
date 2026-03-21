@@ -1,18 +1,12 @@
 import { spawn } from "node:child_process";
 import { Readable, Writable } from "node:stream";
 import type { ChildProcess } from "node:child_process";
-import { fileURLToPath } from "node:url";
-import { dirname, join } from "node:path";
 import type { AgentSession, AgentEvent } from "./runtime.js";
 import { BaseAgentSession } from "./base-session.js";
 import { BaseAgentRuntime } from "./base-runtime.js";
 import { resolveWorkingDirectory, resolveMcpServers, convertMcpServers } from "./runtime-utils.js";
 import { logger } from "../logger.js";
-
-const __dirname: string = dirname(fileURLToPath(import.meta.url));
-
-/** Path to the PowerLine package's node_modules/.bin directory, for resolving ACP bridge binaries. */
-const NODE_MODULES_BIN: string = join(__dirname, "../../node_modules/.bin");
+import { ensureRuntimeInstalled, importFromRuntime, getRuntimeBinDirectory } from "../runtime-installer.js";
 
 // ─── Configuration ──────────────────────────────────────────
 
@@ -39,42 +33,58 @@ export interface AcpSdkModule {
   PROTOCOL_VERSION: number;
 }
 
-/** Promise for the one-time SDK import, cached to avoid race conditions. */
-let sdkPromise: Promise<AcpSdkModule> | undefined;
+/** Per-runtime cached SDK import promises to avoid race conditions. */
+const sdkPromiseMap: Map<string, Promise<AcpSdkModule>> = new Map();
+
+/** Global mock SDK for testing — when set, all getAcpSdk() calls return this. */
+let globalMockSdk: AcpSdkModule | undefined;
 
 /**
  * @internal For testing only — inject a mock SDK to bypass the dynamic import.
  * Pass `undefined` to reset the cache so the real import is attempted again.
  */
 export function _setAcpSdkForTesting(mock: AcpSdkModule | undefined): void {
-  sdkPromise = mock !== undefined ? Promise.resolve(mock) : undefined;
+  globalMockSdk = mock;
+  sdkPromiseMap.clear();
 }
 
-/** Lazily import the ACP SDK to avoid loading it until first use. */
-function getAcpSdk(): Promise<AcpSdkModule> {
-  if (!sdkPromise) {
-    sdkPromise = (async (): Promise<AcpSdkModule> => {
-      try {
-        const mod = await import("@agentclientprotocol/sdk") as Record<string, unknown>;
-        if (typeof mod.ClientSideConnection !== "function") {
-          throw new Error("ClientSideConnection not found in @agentclientprotocol/sdk");
-        }
-        return {
-          ClientSideConnection: mod.ClientSideConnection as AcpSdkModule["ClientSideConnection"],
-          ndJsonStream: mod.ndJsonStream as AcpSdkModule["ndJsonStream"],
-          PROTOCOL_VERSION: (mod.PROTOCOL_VERSION ?? 1) as number,
-        };
-      } catch (importErr: unknown) {
-        sdkPromise = undefined;
-        const detail = importErr instanceof Error ? importErr.message : String(importErr);
-        throw new Error(
-          `ACP SDK not installed or failed to load: ${detail}\n` +
-          "Run: npm install @agentclientprotocol/sdk",
-        );
-      }
-    })();
+/** Lazily import the ACP SDK for the given runtime, installing packages on demand. */
+function getAcpSdk(runtimeName: string): Promise<AcpSdkModule> {
+  // Test mock bypass
+  if (globalMockSdk) {
+    return Promise.resolve(globalMockSdk);
   }
-  return sdkPromise;
+
+  const existing = sdkPromiseMap.get(runtimeName);
+  if (existing) {
+    return existing;
+  }
+
+  const promise = (async (): Promise<AcpSdkModule> => {
+    try {
+      await ensureRuntimeInstalled(runtimeName);
+      const mod = await importFromRuntime<Record<string, unknown>>(runtimeName, "@agentclientprotocol/sdk");
+      if (typeof mod.ClientSideConnection !== "function") {
+        throw new Error("ClientSideConnection not found in @agentclientprotocol/sdk");
+      }
+      return {
+        ClientSideConnection: mod.ClientSideConnection as AcpSdkModule["ClientSideConnection"],
+        ndJsonStream: mod.ndJsonStream as AcpSdkModule["ndJsonStream"],
+        PROTOCOL_VERSION: (mod.PROTOCOL_VERSION ?? 1) as number,
+      };
+    } catch (importErr: unknown) {
+      sdkPromiseMap.delete(runtimeName);
+      const detail = importErr instanceof Error ? importErr.message : String(importErr);
+      throw new Error(
+        `ACP SDK not installed or failed to load for runtime "${runtimeName}": ${detail}\n` +
+        `ACP runtimes are installed in isolated directories (e.g. ~/.grackle/runtimes/${runtimeName}/).\n` +
+        "Please check that directory or rerun/repair the runtime installation for this ACP runtime.",
+      );
+    }
+  })();
+
+  sdkPromiseMap.set(runtimeName, promise);
+  return promise;
 }
 
 // ─── Pure helper functions ──────────────────────────────────
@@ -245,7 +255,7 @@ class AcpSession extends BaseAgentSession {
 
   protected async setupSdk(): Promise<void> {
     const ts: () => string = () => new Date().toISOString();
-    const sdk = await getAcpSdk();
+    const sdk = await getAcpSdk(this.config.name);
 
     // Resolve working directory
     const cwd = await resolveWorkingDirectory({
@@ -261,10 +271,11 @@ class AcpSession extends BaseAgentSession {
     // Spawn agent subprocess in the resolved working directory
     const spawnCwd = cwd || process.cwd();
     const pathSeparator = process.platform === "win32" ? ";" : ":";
+    const runtimeBinDir = getRuntimeBinDirectory(this.config.name);
     const childEnv = {
       ...process.env,
       ...this.config.env,
-      PATH: `${NODE_MODULES_BIN}${pathSeparator}${process.env.PATH || ""}`,
+      PATH: `${runtimeBinDir}${pathSeparator}${process.env.PATH || ""}`,
     };
     this.child = spawn(this.config.command, this.config.args, {
       stdio: ["pipe", "pipe", "inherit"],

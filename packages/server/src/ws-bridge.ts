@@ -175,6 +175,7 @@ async function autoProvisionEnvironment(
 
   try {
     const config = safeParseAdapterConfig(env.adapterConfig, environmentId);
+    config.defaultRuntime = env.defaultRuntime;
     const powerlineToken = env.powerlineToken || "";
 
     for await (const provEvent of reconnectOrProvision(
@@ -1568,6 +1569,7 @@ async function handleMessage(
             env.adapterConfig,
             environmentId,
           );
+          config.defaultRuntime = env.defaultRuntime;
           const powerlineToken = env.powerlineToken || "";
 
           for await (const event of reconnectOrProvision(

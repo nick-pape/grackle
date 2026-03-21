@@ -208,6 +208,7 @@ export class SshAdapter implements EnvironmentAdapter {
     yield* bootstrapPowerLine(executor, powerlineToken, {
       extraEnv: cfg.env,
       isGitHubProviderEnabled: () => getCredentialProviders().github !== "off",
+      defaultRuntime: (config.defaultRuntime as string) || undefined,
     });
 
     // Open SSH tunnel
