@@ -650,6 +650,102 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       });
     },
 
+    async writeToFd(req: grackle.WriteToFdRequest) {
+      const sub = streamRegistry.getSubscription(req.sessionId, req.fd);
+      if (!sub) {
+        throw new ConnectError(
+          `No subscription found for session ${req.sessionId} fd ${req.fd}`,
+          Code.NotFound,
+        );
+      }
+      if (sub.permission !== "w" && sub.permission !== "rw") {
+        throw new ConnectError(
+          `Subscription fd ${req.fd} does not have write permission (permission: ${sub.permission})`,
+          Code.FailedPrecondition,
+        );
+      }
+
+      streamRegistry.publish(sub.streamId, req.sessionId, req.message);
+
+      // Deliver to other sessions on this stream via sendInput
+      const stream = streamRegistry.getStream(sub.streamId);
+      if (stream) {
+        for (const targetSub of stream.subscriptions.values()) {
+          if (targetSub.sessionId === req.sessionId) {
+            continue;
+          }
+          const targetSession = sessionStore.getSession(targetSub.sessionId);
+          if (!targetSession) {
+            continue;
+          }
+          const conn = adapterManager.getConnection(targetSession.environmentId);
+          if (conn) {
+            await conn.client.sendInput(
+              create(powerline.InputMessageSchema, {
+                sessionId: targetSub.sessionId,
+                text: req.message,
+              }),
+            );
+          }
+        }
+      }
+
+      return create(grackle.EmptySchema, {});
+    },
+
+    async closeFd(req: grackle.CloseFdRequest) {
+      const sub = streamRegistry.getSubscription(req.sessionId, req.fd);
+      if (!sub) {
+        throw new ConnectError(
+          `No subscription found for session ${req.sessionId} fd ${req.fd}`,
+          Code.NotFound,
+        );
+      }
+      if (streamRegistry.hasUndeliveredMessages(sub.id)) {
+        throw new ConnectError(
+          `Cannot close fd ${req.fd}: undelivered messages pending. Process or consume them first.`,
+          Code.FailedPrecondition,
+        );
+      }
+
+      // Identify child session(s) on this stream before unsubscribing
+      const stream = streamRegistry.getStream(sub.streamId);
+      const childSessionIds: string[] = [];
+      if (stream) {
+        for (const s of stream.subscriptions.values()) {
+          if (s.sessionId !== req.sessionId) {
+            childSessionIds.push(s.sessionId);
+          }
+        }
+      }
+
+      streamRegistry.unsubscribe(sub.id);
+
+      // If the stream was deleted (last subscription removed), hibernate children
+      let hibernated = false;
+      if (!streamRegistry.getStream(sub.streamId)) {
+        for (const childId of childSessionIds) {
+          sessionStore.hibernateSession(childId);
+          const childSession = sessionStore.getSession(childId);
+          if (childSession) {
+            const conn = adapterManager.getConnection(childSession.environmentId);
+            if (conn) {
+              try {
+                await conn.client.kill(
+                  create(powerline.SessionIdSchema, { id: childId }),
+                );
+              } catch {
+                // Best-effort kill — child may have already exited
+              }
+            }
+          }
+          hibernated = true;
+        }
+      }
+
+      return create(grackle.CloseFdResponseSchema, { hibernated });
+    },
+
     async killAgent(req: grackle.SessionId) {
       const session = sessionStore.getSession(req.id);
       if (!session) {

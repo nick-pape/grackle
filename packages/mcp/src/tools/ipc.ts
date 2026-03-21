@@ -71,4 +71,64 @@ export const ipcTools: ToolDefinition[] = [
       }
     },
   },
+  {
+    name: "ipc_write",
+    group: "ipc",
+    description: "Write a message to a child session via an open file descriptor. The message is delivered to the child via sendInput.",
+    inputSchema: z.object({
+      fd: z.number().int().describe("File descriptor (from ipc_spawn)"),
+      message: z.string().describe("Message content to send"),
+    }),
+    rpcMethod: "writeToFd",
+    mutating: true,
+    async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>, authContext?: AuthContext) {
+      try {
+        const sessionId = authContext?.type === "scoped" ? authContext.taskSessionId : "";
+        if (!sessionId) {
+          return {
+            content: [{ type: "text" as const, text: "Error: ipc_write requires scoped auth (agent context)" }],
+            isError: true,
+          };
+        }
+
+        await client.writeToFd({
+          sessionId,
+          fd: args.fd as number,
+          message: args.message as string,
+        });
+        return jsonResult({ success: true });
+      } catch (error) {
+        return grpcErrorToToolResult(error);
+      }
+    },
+  },
+  {
+    name: "ipc_close",
+    group: "ipc",
+    description: "Close a file descriptor, dropping the connection to the child session. If this is the last fd to the child, the child is hibernated. Fails if there are undelivered messages — process them first.",
+    inputSchema: z.object({
+      fd: z.number().int().describe("File descriptor to close"),
+    }),
+    rpcMethod: "closeFd",
+    mutating: true,
+    async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>, authContext?: AuthContext) {
+      try {
+        const sessionId = authContext?.type === "scoped" ? authContext.taskSessionId : "";
+        if (!sessionId) {
+          return {
+            content: [{ type: "text" as const, text: "Error: ipc_close requires scoped auth (agent context)" }],
+            isError: true,
+          };
+        }
+
+        const result = await client.closeFd({
+          sessionId,
+          fd: args.fd as number,
+        });
+        return jsonResult({ success: true, hibernated: result.hibernated });
+      } catch (error) {
+        return grpcErrorToToolResult(error);
+      }
+    },
+  },
 ];
