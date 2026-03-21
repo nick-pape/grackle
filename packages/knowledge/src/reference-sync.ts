@@ -44,11 +44,11 @@ export interface SyncReferenceNodeInput {
 // ---------------------------------------------------------------------------
 
 const FIND_BY_SOURCE_CYPHER: string = `
-  MATCH (n:${NODE_LABEL} {sourceType: $sourceType, sourceId: $sourceId})
+  MATCH (n:${NODE_LABEL} {kind: 'reference', sourceType: $sourceType, sourceId: $sourceId})
   RETURN n`;
 
 const DELETE_BY_SOURCE_CYPHER: string = `
-  MATCH (n:${NODE_LABEL} {sourceType: $sourceType, sourceId: $sourceId})
+  MATCH (n:${NODE_LABEL} {kind: 'reference', sourceType: $sourceType, sourceId: $sourceId})
   DETACH DELETE n
   RETURN count(n) AS deleted`;
 
