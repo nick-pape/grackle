@@ -11,6 +11,7 @@
  */
 
 import { v4 as uuid } from "uuid";
+import { logger } from "./logger.js";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -55,15 +56,19 @@ export type AsyncMessageListener = (sub: Subscription, msg: StreamMessage) => vo
 
 // ─── Async Queue (blocking reads for sync subscriptions) ──────────────────────
 
-/** Simple async queue for blocking consume. Matches powerline's AsyncQueue pattern. */
+/** Simple async queue for blocking consume. Rejects pending waiters on close. */
 class AsyncQueue<T> {
   private queue: T[] = [];
-  private waiters: Array<(value: T) => void> = [];
+  private waiters: Array<{ resolve: (value: T) => void; reject: (reason: unknown) => void }> = [];
+  private closed: boolean = false;
 
   public push(item: T): void {
+    if (this.closed) {
+      return;
+    }
     if (this.waiters.length > 0) {
       const waiter = this.waiters.shift()!;
-      waiter(item);
+      waiter.resolve(item);
     } else {
       this.queue.push(item);
     }
@@ -73,9 +78,22 @@ class AsyncQueue<T> {
     if (this.queue.length > 0) {
       return this.queue.shift()!;
     }
-    return new Promise<T>((resolve) => {
-      this.waiters.push(resolve);
+    if (this.closed) {
+      throw new Error("Queue is closed");
+    }
+    return new Promise<T>((resolve, reject) => {
+      this.waiters.push({ resolve, reject });
     });
+  }
+
+  /** Close the queue. Rejects all pending waiters so blocked consumers unblock. */
+  public close(): void {
+    this.closed = true;
+    const err = new Error("Subscription closed");
+    for (const waiter of this.waiters) {
+      waiter.reject(err);
+    }
+    this.waiters.length = 0;
   }
 }
 
@@ -83,6 +101,9 @@ class AsyncQueue<T> {
 
 /** All active streams, keyed by stream ID. */
 const streams: Map<string, Stream> = new Map();
+
+/** Name → stream ID index for unique-name lookup. */
+const streamsByName: Map<string, string> = new Map();
 
 /** All subscriptions for each session, keyed by sessionId → fd → Subscription. */
 const subscriptionsBySession: Map<string, Map<number, Subscription>> = new Map();
@@ -118,10 +139,55 @@ function getSessionFdMap(sessionId: string): Map<number, Subscription> {
   return fdMap;
 }
 
+/** Clean up session state when it has no more subscriptions. */
+function cleanupSessionIfEmpty(sessionId: string): void {
+  const fdMap = subscriptionsBySession.get(sessionId);
+  if (fdMap?.size === 0) {
+    subscriptionsBySession.delete(sessionId);
+    fdCounters.delete(sessionId);
+  }
+}
+
+/** Check if a subscription can receive messages (has read permission). */
+function canReceive(sub: Subscription): boolean {
+  return sub.permission === "rw" || sub.permission === "r";
+}
+
+/**
+ * Prune messages that have been delivered to all readable subscriptions.
+ * Keeps memory bounded by removing messages no longer needed for hasUndeliveredMessages.
+ */
+function pruneDeliveredMessages(stream: Stream): void {
+  const readableSubs = Array.from(stream.subscriptions.values()).filter(canReceive);
+  if (readableSubs.length === 0) {
+    stream.messages.length = 0;
+    return;
+  }
+
+  let pruneCount = 0;
+  for (const msg of stream.messages) {
+    const allDelivered = readableSubs.every(
+      (sub) => msg.deliveredTo.has(sub.id) || msg.senderId === sub.sessionId,
+    );
+    if (allDelivered) {
+      pruneCount++;
+    } else {
+      break; // Messages are ordered; stop at first undelivered
+    }
+  }
+  if (pruneCount > 0) {
+    stream.messages.splice(0, pruneCount);
+  }
+}
+
 // ─── Stream Lifecycle ─────────────────────────────────────────────────────────
 
-/** Create a new named stream. Returns the stream. */
+/** Create a new named stream. Names must be unique — throws if a stream with the same name exists. */
 export function createStream(name: string): Stream {
+  if (streamsByName.has(name)) {
+    throw new Error(`Stream with name "${name}" already exists`);
+  }
+
   const stream: Stream = {
     id: uuid(),
     name,
@@ -129,12 +195,19 @@ export function createStream(name: string): Stream {
     subscriptions: new Map(),
   };
   streams.set(stream.id, stream);
+  streamsByName.set(name, stream.id);
   return stream;
 }
 
 /** Retrieve a stream by ID. */
 export function getStream(id: string): Stream | undefined {
   return streams.get(id);
+}
+
+/** Retrieve a stream by name. */
+export function getStreamByName(name: string): Stream | undefined {
+  const id = streamsByName.get(name);
+  return id ? streams.get(id) : undefined;
 }
 
 /** Remove a stream and all its subscriptions. */
@@ -146,15 +219,18 @@ export function deleteStream(id: string): void {
   // Clean up all subscriptions on this stream
   for (const sub of stream.subscriptions.values()) {
     subscriptionsById.delete(sub.id);
-    syncQueues.delete(sub.id);
+    const queue = syncQueues.get(sub.id);
+    if (queue) {
+      queue.close();
+      syncQueues.delete(sub.id);
+    }
     const fdMap = subscriptionsBySession.get(sub.sessionId);
     if (fdMap) {
       fdMap.delete(sub.fd);
-      if (fdMap.size === 0) {
-        subscriptionsBySession.delete(sub.sessionId);
-      }
+      cleanupSessionIfEmpty(sub.sessionId);
     }
   }
+  streamsByName.delete(stream.name);
   streams.delete(id);
 }
 
@@ -173,6 +249,11 @@ export function subscribe(
     throw new Error(`Stream not found: ${streamId}`);
   }
 
+  // w-only subscriptions cannot have sync or async delivery (they never receive)
+  if (permission === "w" && (deliveryMode === "sync" || deliveryMode === "async")) {
+    throw new Error(`Write-only subscription cannot use "${deliveryMode}" delivery mode`);
+  }
+
   const fd = nextFd(sessionId);
   const sub: Subscription = {
     id: uuid(),
@@ -188,8 +269,8 @@ export function subscribe(
   getSessionFdMap(sessionId).set(fd, sub);
   subscriptionsById.set(sub.id, sub);
 
-  // Create a blocking queue for sync subscriptions
-  if (deliveryMode === "sync") {
+  // Create a blocking queue for sync subscriptions (only readable ones)
+  if (deliveryMode === "sync" && canReceive(sub)) {
     syncQueues.set(sub.id, new AsyncQueue<StreamMessage>());
   }
 
@@ -203,11 +284,19 @@ export function unsubscribe(subscriptionId: string): void {
     return;
   }
 
+  // Close and remove sync queue (unblocks any pending consumeSync)
+  const queue = syncQueues.get(sub.id);
+  if (queue) {
+    queue.close();
+    syncQueues.delete(sub.id);
+  }
+
   // Remove from stream
   const stream = streams.get(sub.streamId);
   if (stream) {
     stream.subscriptions.delete(sub.id);
     if (stream.subscriptions.size === 0) {
+      streamsByName.delete(stream.name);
       streams.delete(sub.streamId);
     }
   }
@@ -216,14 +305,11 @@ export function unsubscribe(subscriptionId: string): void {
   const fdMap = subscriptionsBySession.get(sub.sessionId);
   if (fdMap) {
     fdMap.delete(sub.fd);
-    if (fdMap.size === 0) {
-      subscriptionsBySession.delete(sub.sessionId);
-    }
+    cleanupSessionIfEmpty(sub.sessionId);
   }
 
   // Remove from lookup maps
   subscriptionsById.delete(sub.id);
-  syncQueues.delete(sub.id);
 }
 
 /** Look up a subscription by session ID and fd number. */
@@ -264,19 +350,27 @@ export function publish(streamId: string, senderId: string, content: string): St
 
   stream.messages.push(msg);
 
-  // Notify subscribers (skip the sender)
+  // Notify subscribers (skip the sender and write-only subscriptions)
   for (const sub of stream.subscriptions.values()) {
     if (sub.sessionId === senderId) {
       continue;
     }
+    if (!canReceive(sub)) {
+      continue;
+    }
 
     if (sub.deliveryMode === "async") {
-      // Mark as delivered and invoke the async listener
-      msg.deliveredTo.add(sub.id);
+      // Only mark as delivered if the listener exists and succeeds
       const listener = asyncListeners.get(sub.sessionId);
       if (listener) {
-        listener(sub, msg);
+        try {
+          listener(sub, msg);
+          msg.deliveredTo.add(sub.id);
+        } catch (err) {
+          logger.warn({ err, subscriptionId: sub.id }, "Async listener threw — message left undelivered");
+        }
       }
+      // No listener registered: message stays undelivered (buffered)
     } else if (sub.deliveryMode === "sync") {
       // Enqueue for blocking consumeSync()
       const queue = syncQueues.get(sub.id);
@@ -286,6 +380,9 @@ export function publish(streamId: string, senderId: string, content: string): St
     }
     // "detach" mode: message stays in buffer, no notification
   }
+
+  // Prune messages that have been fully delivered
+  pruneDeliveredMessages(stream);
 
   return msg;
 }
@@ -335,9 +432,14 @@ export function registerAsyncListener(sessionId: string, callback: AsyncMessageL
 /** Clear all state. For testing only. */
 export function _resetForTesting(): void {
   streams.clear();
+  streamsByName.clear();
   subscriptionsBySession.clear();
   subscriptionsById.clear();
   fdCounters.clear();
   asyncListeners.clear();
+  // Close all sync queues before clearing
+  for (const queue of syncQueues.values()) {
+    queue.close();
+  }
   syncQueues.clear();
 }
