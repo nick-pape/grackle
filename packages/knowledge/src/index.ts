@@ -48,3 +48,11 @@ export type {
   NodeWithEdges,
 } from "./node-store.js";
 export { createEdge, removeEdge } from "./edge-store.js";
+export {
+  findReferenceNodeBySource,
+  deleteReferenceNodeBySource,
+  syncReferenceNode,
+  deriveTaskText,
+  deriveFindingText,
+} from "./reference-sync.js";
+export type { SyncReferenceNodeInput } from "./reference-sync.js";
