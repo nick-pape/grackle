@@ -116,7 +116,9 @@ export function ensureRuntimeInstalled(
     registerJsonRpcHook();
   }
 
-  // Dev mode: packages already available via Rush
+  // Dev mode: packages may be available via Rush devDependencies.
+  // Return early — importFromRuntime() will try standard import first,
+  // falling back to the runtime directory if the package isn't in the monorepo.
   if (isDevMode()) {
     return Promise.resolve("");
   }
@@ -164,7 +166,26 @@ export function ensureRuntimeInstalled(
  */
 export async function importFromRuntime<T>(runtimeName: string, packageName: string): Promise<T> {
   if (isDevMode()) {
-    return import(packageName) as Promise<T>;
+    try {
+      return await (import(packageName) as Promise<T>);
+    } catch (err: unknown) {
+      // Only fall back to runtime directory for module-not-found errors.
+      // Rethrow real runtime errors (init failures, syntax errors, etc.)
+      const code = (err as { code?: string }).code;
+      if (code !== "ERR_MODULE_NOT_FOUND" && code !== "MODULE_NOT_FOUND") {
+        throw err;
+      }
+      // Package not in monorepo devDependencies — install on demand and
+      // resolve from the isolated runtime directory below.
+      if (!(runtimeName in RUNTIME_MANIFESTS)) {
+        throw err;
+      }
+      const manifest = RUNTIME_MANIFESTS[runtimeName]!;
+      const runtimeDir = join(RUNTIMES_BASE_DIR, runtimeName);
+      if (!isManifestCurrent(runtimeDir, manifest)) {
+        await doInstall(runtimeName, runtimeDir, manifest, {});
+      }
+    }
   }
 
   const runtimeDir = join(RUNTIMES_BASE_DIR, runtimeName);

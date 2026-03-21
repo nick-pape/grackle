@@ -297,6 +297,23 @@ class ClaudeCodeSession extends BaseAgentSession {
         continue;
       }
 
+      // Extract usage data from successful result messages
+      if (msg.type === "result" && !msg.is_error) {
+        const usage = msg.usage as { input_tokens?: number; output_tokens?: number } | undefined;
+        const costUsd = msg.total_cost_usd as number | undefined;
+        if (usage !== undefined || costUsd !== undefined) {
+          this.eventQueue.push({
+            type: "usage",
+            timestamp: ts(),
+            content: JSON.stringify({
+              input_tokens: (usage?.input_tokens ?? 0) as number,
+              output_tokens: (usage?.output_tokens ?? 0) as number,
+              cost_usd: (costUsd ?? 0) as number,
+            }),
+          });
+        }
+      }
+
       const events = mapMessage(msg);
       for (const event of events) {
         messageCount++;
