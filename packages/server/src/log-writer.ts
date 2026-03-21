@@ -74,8 +74,8 @@ const LOG_TAIL_BYTES: number = 65536; // 64 KB
 
 /**
  * Read the last "text" entry from a session's JSONL log file without parsing the whole file.
- * Reads only the tail of the file (up to LOG_TAIL_BYTES) to avoid blocking the event loop
- * on large sessions.
+ * Reads only the tail of the file (up to LOG_TAIL_BYTES) to limit the amount of synchronous
+ * work and reduce event-loop blocking time for large sessions.
  */
 export function readLastTextEntry(logPath: string): LogEntry | undefined {
   const streamPath = join(logPath, "stream.jsonl");
