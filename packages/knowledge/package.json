@@ -22,7 +22,8 @@
     "_phase:test": "vitest run"
   },
   "dependencies": {
-    "@grackle-ai/common": "workspace:*"
+    "@grackle-ai/common": "workspace:*",
+    "@huggingface/transformers": "^3.4.0"
   },
   "devDependencies": {
     "@grackle-ai/heft-rig": "workspace:*",
