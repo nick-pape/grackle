@@ -39,6 +39,7 @@ message SpawnRequest {
   string mcp_token = 15;       // Pre-created scoped token for this session
   string script_content = 16;  // Script source code (for script personas)
   optional bool use_worktrees = 17; // When set, controls worktree behavior; when unset, defaults to true
+  string pipe = 18; // Propagated from server SpawnRequest ("sync", "async", "detach", or "")
 }
 
 message ResumeRequest {
