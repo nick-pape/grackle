@@ -26,6 +26,14 @@ runs:
         restore-keys: |
           pnpm-${{ runner.os }}-
 
+    - name: Cache HuggingFace models
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/huggingface
+        key: huggingface-${{ runner.os }}-${{ hashFiles('packages/knowledge/package.json') }}
+        restore-keys: |
+          huggingface-${{ runner.os }}-
+
     - name: Rush install
       shell: bash
       run: node common/scripts/install-run-rush.js install

@@ -1,8 +1,8 @@
 import { describe, it, expect } from "vitest";
 
 describe("@grackle-ai/knowledge", () => {
-  it("should be importable", async () => {
+  it("should export the expected public API", async () => {
     const mod = await import("./index.js");
-    expect(mod).toBeDefined();
+    expect(mod.createLocalEmbedder).toBeTypeOf("function");
   });
 });
