@@ -91,5 +91,5 @@ export function createLocalEmbedder(options?: EmbedderOptions): Embedder {
  */
 async function initPipeline(modelId: string): Promise<FeatureExtractionPipeline> {
   const { pipeline } = await import("@huggingface/transformers");
-  return pipeline("feature-extraction", modelId);
+  return pipeline("feature-extraction", modelId, { dtype: "fp32" });
 }
