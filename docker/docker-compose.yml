@@ -3,6 +3,8 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile.server
+      args:
+        GRACKLE_VERSION: ${GRACKLE_VERSION:-latest}
     container_name: grackle
     ports:
       - "7434:7434"   # gRPC
@@ -17,6 +19,8 @@ services:
       - "${HOME}/.claude:/home/node/.claude:ro"                          # Claude auth + config
       - "${HOME}/.copilot:/home/node/.copilot:ro"                        # Copilot auth
       - "${HOME}/.codex:/home/node/.codex:ro"                            # Codex auth
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       # GitHub CLI auth — set GH_TOKEN before running docker compose:
       #   export GH_TOKEN=$(gh auth token)
@@ -27,6 +31,8 @@ services:
       - GRACKLE_DOCKER_NETWORK=grackle
       # Container name used by sibling containers to reach this server's MCP/gRPC.
       - GRACKLE_DOCKER_HOST=grackle
+      # Host address for qdrant-search MCP (runs on host, accessed by agents in container).
+      - QDRANT_MCP_HOST=${QDRANT_MCP_HOST:-host.docker.internal}
     networks:
       - grackle
     restart: unless-stopped
