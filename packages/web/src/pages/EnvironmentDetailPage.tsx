@@ -4,6 +4,7 @@ import { useGrackle } from "../context/GrackleContext.js";
 import { ConfirmDialog, Spinner } from "../components/display/index.js";
 import { environmentEditUrl, workspaceUrl, newChatUrl, useAppNavigate, ENVIRONMENTS_URL } from "../utils/navigation.js";
 import type { Workspace } from "../hooks/useGrackleSocket.js";
+import { formatCost } from "../utils/format.js";
 import styles from "./EnvironmentDetailPage.module.scss";
 
 /** Status-color mapping for the environment status badge. */
@@ -44,6 +45,7 @@ export function EnvironmentDetailPage(): JSX.Element {
 
   const envWorkspaces = workspaces.filter((w) => w.environmentId === env.id);
   const envSessions = sessions.filter((s) => s.environmentId === env.id);
+  const envCost = envSessions.reduce((sum, s) => sum + (s.costUsd ?? 0), 0);
   const statusColor = STATUS_COLORS[env.status] || "var(--text-tertiary)";
   const isConnected = env.status === "connected";
   const isConnecting = env.status === "connecting";
@@ -100,6 +102,9 @@ export function EnvironmentDetailPage(): JSX.Element {
           <span className={styles.metaTag}>Adapter: {env.adapterType}</span>
           {envSessions.length > 0 && (
             <span className={styles.metaTag}>{envSessions.length} session{envSessions.length !== 1 ? "s" : ""}</span>
+          )}
+          {envCost > 0 && (
+            <span className={styles.metaTag}>Cost: {formatCost(envCost)}</span>
           )}
         </div>
       </div>

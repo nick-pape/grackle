@@ -139,6 +139,29 @@ export function useSessions(send: SendFunction): UseSessionsResult {
         if (dropped > 0) {
           setEventsDropped((n) => n + dropped);
         }
+        // Update session usage when a usage event streams in
+        if (event.eventType === "usage") {
+          try {
+            const data = JSON.parse(event.content) as Record<string, unknown>;
+            const inputTokens = Number(data.input_tokens) || 0;
+            const outputTokens = Number(data.output_tokens) || 0;
+            const costUsd = Number(data.cost_usd) || 0;
+            if (inputTokens > 0 || outputTokens > 0 || costUsd > 0) {
+              setSessions((prev) =>
+                prev.map((s) =>
+                  s.id === event.sessionId
+                    ? {
+                        ...s,
+                        inputTokens: (s.inputTokens ?? 0) + inputTokens,
+                        outputTokens: (s.outputTokens ?? 0) + outputTokens,
+                        costUsd: (s.costUsd ?? 0) + costUsd,
+                      }
+                    : s,
+                ),
+              );
+            }
+          } catch { /* ignore malformed usage events */ }
+        }
         if (event.eventType === "status") {
           const mappedStatus = mapSessionStatus(event.content);
           setSessions((prev) => {

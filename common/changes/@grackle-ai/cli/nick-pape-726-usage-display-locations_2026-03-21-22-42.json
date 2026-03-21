@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Display session usage in web UI session headers and environment detail with live streaming updates",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}

@@ -7,6 +7,7 @@ import { Breadcrumbs } from "../components/display/index.js";
 import { buildSessionBreadcrumbs } from "../utils/breadcrumbs.js";
 import type { Session } from "../hooks/useGrackleSocket.js";
 import { groupConsecutiveTextEvents, pairToolEvents } from "../utils/sessionEvents.js";
+import { formatTokens, formatCost } from "../utils/format.js";
 import styles from "../components/panels/SessionPanel.module.scss";
 
 /** Props for the SessionHeader subcomponent. */
@@ -24,6 +25,9 @@ function SessionHeader({ sessionId, session, isActive, onKill }: SessionHeaderPr
       <span>
         Session: {sessionId.slice(0, 8)}
         {session && ` | ${session.runtime} | ${session.status}`}
+        {(session?.inputTokens || session?.outputTokens || session?.costUsd)
+          ? ` | ${formatTokens((session!.inputTokens ?? 0) + (session!.outputTokens ?? 0))} tokens · ${formatCost(session!.costUsd ?? 0)}`
+          : ""}
       </span>
       <span className={styles.headerInfo}>
         {session && (
