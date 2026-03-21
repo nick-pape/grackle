@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Add ipc_spawn MCP tool with sync/async/detach pipe modes and WaitForPipe gRPC endpoint",
+      "type": "minor",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
