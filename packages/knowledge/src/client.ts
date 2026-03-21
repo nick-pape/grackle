@@ -25,7 +25,7 @@ import {
 
 /** Configuration for the Neo4j connection. */
 export interface Neo4jClientConfig {
-  /** Bolt URL (default: bolt://localhost:7687). */
+  /** Bolt URL (default: bolt://127.0.0.1:7687). */
   url?: string;
   /** Username (default: neo4j). */
   username?: string;

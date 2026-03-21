@@ -103,7 +103,7 @@ describe("openNeo4j", () => {
 
     expect(mockBasicAuth).toHaveBeenCalledWith("neo4j", "grackle-dev");
     expect(mockDriverConstructor).toHaveBeenCalledWith(
-      "bolt://localhost:7687",
+      "bolt://127.0.0.1:7687",
       { scheme: "basic" },
       expect.objectContaining({ disableLosslessIntegers: true }),
     );
