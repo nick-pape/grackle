@@ -171,8 +171,8 @@ export async function importFromRuntime<T>(runtimeName: string, packageName: str
     } catch {
       // Package not in monorepo devDependencies — install on demand and
       // resolve from the isolated runtime directory below.
-      const manifest = RUNTIME_MANIFESTS[runtimeName];
-      if (manifest) {
+      if (runtimeName in RUNTIME_MANIFESTS) {
+        const manifest = RUNTIME_MANIFESTS[runtimeName]!;
         const runtimeDir = join(RUNTIMES_BASE_DIR, runtimeName);
         if (!isManifestCurrent(runtimeDir, manifest)) {
           await doInstall(runtimeName, runtimeDir, manifest, {});
