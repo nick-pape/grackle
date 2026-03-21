@@ -3,6 +3,7 @@ import chalk from "chalk";
 import { createGrackleClient } from "../client.js";
 import { grackle, SESSION_STATUS } from "@grackle-ai/common";
 import Table from "cli-table3";
+import { formatTokens, formatCost } from "../format.js";
 
 /** Register agent-related commands: `spawn`, `resume`, `status`, `kill`, and `attach`. */
 export function registerAgentCommands(program: Command): void {
@@ -61,16 +62,21 @@ export function registerAgentCommands(program: Command): void {
         return;
       }
       const table = new Table({
-        head: ["ID", "Env", "Runtime", "Status", "Prompt", "Started"],
+        head: ["ID", "Env", "Runtime", "Status", "Tokens", "Cost", "Prompt", "Started"],
       });
       for (const s of sessions) {
         const prompt =
           s.prompt.length > 40 ? s.prompt.slice(0, 40) + "..." : s.prompt;
+        const tokens = (s.inputTokens || s.outputTokens)
+          ? `${formatTokens(s.inputTokens)}→${formatTokens(s.outputTokens)}`
+          : "-";
         table.push([
           s.id.slice(0, 8),
           s.environmentId,
           s.runtime,
           s.status,
+          tokens,
+          formatCost(s.costUsd),
           prompt,
           s.startedAt,
         ]);

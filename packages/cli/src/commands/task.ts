@@ -7,6 +7,7 @@ import {
 } from "@grackle-ai/common";
 import Table from "cli-table3";
 import chalk from "chalk";
+import { formatTokens, formatCost } from "../format.js";
 
 export function registerTaskCommands(program: Command): void {
   const task = program.command("task").description("Create, start, and manage tasks");
@@ -102,7 +103,21 @@ export function registerTaskCommands(program: Command): void {
         `Depends On:  ${t.dependsOn.length > 0 ? t.dependsOn.join(", ") : "none"}`,
       );
       console.log(`Decompose:   ${t.canDecompose ? "yes" : "no"}`);
-      if (t.description) console.log(`Description: ${t.description}`);
+      if (t.description) {
+        console.log(`Description: ${t.description}`);
+      }
+      // Show usage from the latest session if available
+      if (t.latestSessionId) {
+        try {
+          const session = await client.getSession({ id: t.latestSessionId });
+          if (session.inputTokens || session.outputTokens || session.costUsd) {
+            console.log(`Tokens:      ${formatTokens(session.inputTokens)} in / ${formatTokens(session.outputTokens)} out`);
+            console.log(`Cost:        ${formatCost(session.costUsd)}`);
+          }
+        } catch {
+          // Session may have been cleaned up — skip usage display
+        }
+      }
     });
 
   task

@@ -1,0 +1,21 @@
+/** Format a token count in compact notation (e.g. 1952 → "2.0k", 1234567 → "1.2M"). */
+export function formatTokens(n: number): string {
+  if (n >= 1_000_000) {
+    return `${(n / 1_000_000).toFixed(1)}M`;
+  }
+  if (n >= 1_000) {
+    return `${(n / 1_000).toFixed(1)}k`;
+  }
+  return String(n);
+}
+
+/** Format a USD cost for display (e.g. 0.005 → "$0.0050", 1.23 → "$1.23"). */
+export function formatCost(usd: number): string {
+  if (usd === 0) {
+    return "-";
+  }
+  if (usd < 0.01) {
+    return `$${usd.toFixed(4)}`;
+  }
+  return `$${usd.toFixed(2)}`;
+}
