@@ -66,20 +66,27 @@ export function createTranscriptChunker(options?: TranscriptChunkerOptions): Chu
   return {
     chunk(content: string, metadata?: Record<string, unknown>): Chunk[] {
       const entries: LogEntry[] = parseJsonl(content);
-      const filtered: LogEntry[] = entries.filter((e) => !skipTypes.has(e.type));
 
-      if (filtered.length === 0) {
+      if (entries.length === 0) {
         return [];
       }
 
-      const turns: LogEntry[][] = groupByTurn(filtered);
+      // Group on all entries first so user_input boundaries are preserved
+      // even if user_input is in skipTypes. Filter when rendering.
+      const turns: LogEntry[][] = groupByTurn(entries);
       const chunks: Chunk[] = [];
 
       for (let turnIndex = 0; turnIndex < turns.length; turnIndex++) {
         const turnEntries: LogEntry[] = turns[turnIndex];
-        const text: string = renderTurn(turnEntries);
-        const timestamps: string[] = turnEntries.map((e) => e.timestamp);
-        const eventTypes: string[] = [...new Set(turnEntries.map((e) => e.type))];
+        const visible: LogEntry[] = turnEntries.filter((e) => !skipTypes.has(e.type));
+
+        if (visible.length === 0) {
+          continue;
+        }
+
+        const text: string = renderTurn(visible);
+        const timestamps: string[] = visible.map((e) => e.timestamp);
+        const eventTypes: string[] = [...new Set(visible.map((e) => e.type))];
 
         const turnMetadata: Record<string, unknown> = {
           ...metadata,
@@ -151,7 +158,10 @@ function renderTurn(entries: LogEntry[]): string {
     .join("\n");
 }
 
-/** Split text into sub-chunks at line boundaries, each at most maxSize characters. */
+/**
+ * Split text into sub-chunks at line boundaries, targeting at most maxSize characters.
+ * A single line longer than maxSize will be emitted as-is (not split mid-line).
+ */
 function splitText(text: string, maxSize: number): string[] {
   const lines: string[] = text.split("\n");
   const subChunks: string[] = [];
