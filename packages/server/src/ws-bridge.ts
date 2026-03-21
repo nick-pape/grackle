@@ -285,7 +285,7 @@ async function startTaskSession(
   const logPath = join(grackleHome, LOGS_DIR, sessionId);
 
   const freshTask = taskStore.getTask(task.id) || task;
-  const taskPrompt = buildTaskPrompt(freshTask.title, freshTask.description);
+  const taskPrompt = buildTaskPrompt(freshTask.title, freshTask.description, options?.notes);
   const systemContext = new SystemPromptBuilder({
     isTaskSession: true,
     canDecompose: freshTask.canDecompose,

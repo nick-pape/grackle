@@ -3,9 +3,16 @@
  * dynamically based on the session type (task vs ad-hoc).
  */
 
-/** Build the user-facing prompt from task title and description. */
-export function buildTaskPrompt(title: string, description: string): string {
-  return description ? `${title}\n\n${description}` : title;
+/** Build the user-facing prompt from task title, description, and optional notes. */
+export function buildTaskPrompt(title: string, description: string, notes?: string): string {
+  const parts = [title];
+  if (description) {
+    parts.push(description);
+  }
+  if (notes) {
+    parts.push(`## Notes\n${notes}`);
+  }
+  return parts.join("\n\n");
 }
 
 /** Options for building a system prompt. */

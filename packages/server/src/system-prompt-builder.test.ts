@@ -107,4 +107,14 @@ describe("buildTaskPrompt", () => {
   it("returns just the title when description is empty", () => {
     expect(buildTaskPrompt("My Task", "")).toBe("My Task");
   });
+
+  it("includes notes section when notes are provided", () => {
+    expect(buildTaskPrompt("My Task", "Do the thing", "Fix the bug")).toBe(
+      "My Task\n\nDo the thing\n\n## Notes\nFix the bug",
+    );
+  });
+
+  it("omits notes when not provided", () => {
+    expect(buildTaskPrompt("My Task", "Do the thing", "")).toBe("My Task\n\nDo the thing");
+  });
 });

@@ -989,7 +989,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       const { runtime, model, maxTurns, systemPrompt, persona } = resolved;
       const logPath = join(grackleHome, LOGS_DIR, sessionId);
 
-      const taskPrompt = buildTaskPrompt(task.title, task.description);
+      const taskPrompt = buildTaskPrompt(task.title, task.description, req.notes);
       const systemContext = new SystemPromptBuilder({
         isTaskSession: true,
         canDecompose: task.canDecompose,
