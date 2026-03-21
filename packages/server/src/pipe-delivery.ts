@@ -4,8 +4,9 @@
  * - `setupAsyncPipeDelivery()`: registers an async listener that calls sendInput on the
  *   parent session when a child publishes a message to the pipe stream.
  * - `publishChildCompletion()`: called from the event processor when a child session with
- *   a pipe reaches terminal status, publishing the result to the IPC stream and cleaning
- *   up the stream resources.
+ *   a pipe reaches terminal status, publishing the result to the IPC stream.
+ *   For async pipes, cleans up after publish. For sync pipes, cleanup is handled
+ *   by the WaitForPipe consumer after it reads the message.
  */
 
 import { create } from "@bufbuild/protobuf";
@@ -55,9 +56,11 @@ export function setupAsyncPipeDelivery(parentSessionId: string, _parentSub: Subs
 
 /**
  * Publish a completion message to the IPC stream when a child session with a pipe
- * reaches terminal status. Called from the event processor. After publishing,
- * defers cleanup to the next microtask so sync consumers have time to process
- * the message before the stream is deleted.
+ * reaches terminal status. Called from the event processor.
+ *
+ * For async pipes: cleans up the stream and listener immediately after publish.
+ * For sync pipes: does NOT clean up — the WaitForPipe consumer handles cleanup
+ * after it reads the message (avoids race where cleanup runs before consumer reads).
  */
 export function publishChildCompletion(childSessionId: string, status: string): void {
   const session = sessionStore.getSession(childSessionId);
@@ -82,26 +85,29 @@ export function publishChildCompletion(childSessionId: string, status: string): 
     logger.warn({ err, childSessionId }, "Failed to publish child completion to IPC stream");
   }
 
-  // Defer cleanup to next microtask so sync consumers (consumeSync / WaitForPipe)
-  // have time to dequeue the message before the stream is deleted.
-  const streamId = pipeStream.id;
-  const parentSessionId = session.parentSessionId;
-  queueMicrotask(() => {
-    cleanupPipeStream(streamId, parentSessionId);
-  });
+  // For async pipes, clean up immediately (the listener already fired).
+  // For sync pipes, the WaitForPipe handler will clean up after consumeSync returns.
+  if (session.pipeMode === "async") {
+    cleanupAsyncPipe(pipeStream.id, session.parentSessionId);
+  }
 }
 
-/** Remove all subscriptions on a pipe stream and clean up the async listener. */
-function cleanupPipeStream(streamId: string, parentSessionId: string): void {
-  // Clean up async listener
-  const cleanup = asyncListenerCleanups.get(parentSessionId);
-  if (cleanup) {
-    cleanup();
-    asyncListenerCleanups.delete(parentSessionId);
-  }
-
+/** Clean up an async pipe stream and its listener (only if no remaining async subs for parent). */
+function cleanupAsyncPipe(streamId: string, parentSessionId: string): void {
   // Delete the stream (which unsubscribes everyone)
   streamRegistry.deleteStream(streamId);
+
+  // Only remove the async listener if the parent has no remaining async subscriptions.
+  // A parent with multiple concurrent async children should keep the listener alive.
+  const remainingAsyncSubs = streamRegistry.getSubscriptionsForSession(parentSessionId)
+    .filter((s) => s.deliveryMode === "async");
+  if (remainingAsyncSubs.length === 0) {
+    const cleanup = asyncListenerCleanups.get(parentSessionId);
+    if (cleanup) {
+      cleanup();
+      asyncListenerCleanups.delete(parentSessionId);
+    }
+  }
 }
 
 /** Clear all state. For testing only. */

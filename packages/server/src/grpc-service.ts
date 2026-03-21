@@ -483,6 +483,15 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         ? builderPrompt + "\n\n" + req.systemContext
         : builderPrompt;
 
+      // Validate pipe inputs before creating the session or spawning the child
+      const pipeMode = req.pipe as PipeMode;
+      if (pipeMode && pipeMode !== "detach" && !req.parentSessionId) {
+        throw new ConnectError(
+          `Pipe mode "${pipeMode}" requires parent_session_id`,
+          Code.InvalidArgument,
+        );
+      }
+
       sessionStore.createSession(
         sessionId,
         req.environmentId,
@@ -493,7 +502,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         "",                      // taskId
         resolved.personaId,      // personaId
         req.parentSessionId || "",  // parentSessionId
-        (req.pipe as PipeMode) || "",  // pipeMode
+        pipeMode || "",          // pipeMode
       );
 
       const mcpServersJson = personaMcpServersToJson(persona);
@@ -536,16 +545,9 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         prompt: req.prompt,
       });
 
-      // Set up IPC stream if a pipe mode is requested
+      // Set up IPC stream if a pipe mode is requested (already validated above)
       let pipeFd = 0;
-      const pipeMode = req.pipe as PipeMode;
-      if (pipeMode && pipeMode !== "detach") {
-        if (!req.parentSessionId) {
-          throw new ConnectError(
-            `Pipe mode "${pipeMode}" requires parent_session_id`,
-            Code.InvalidArgument,
-          );
-        }
+      if (pipeMode && pipeMode !== "detach" && req.parentSessionId) {
         const ipcStream = streamRegistry.createStream(`pipe:${sessionId}`);
         const parentSub = streamRegistry.subscribe(
           ipcStream.id, req.parentSessionId, "rw",
@@ -618,6 +620,14 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       }
 
       const msg = await streamRegistry.consumeSync(sub.id);
+
+      // Clean up the pipe stream after the sync consumer has read the message.
+      // This is safe because the message has been dequeued and we have the data.
+      const stream = streamRegistry.getStream(sub.streamId);
+      if (stream) {
+        streamRegistry.deleteStream(sub.streamId);
+      }
+
       return create(grackle.WaitForPipeResponseSchema, {
         content: msg.content,
         senderSessionId: msg.senderId,
