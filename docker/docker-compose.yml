@@ -33,8 +33,33 @@ services:
       - GRACKLE_DOCKER_HOST=grackle
       # Host address for qdrant-search MCP (runs on host, accessed by agents in container).
       - QDRANT_MCP_HOST=${QDRANT_MCP_HOST:-host.docker.internal}
+      # Knowledge graph — Neo4j connection for the knowledge subsystem.
+      - GRACKLE_NEO4J_URL=bolt://neo4j:7687
+    depends_on:
+      neo4j:
+        condition: service_healthy
     networks:
       - grackle
+    restart: unless-stopped
+
+  neo4j:
+    image: neo4j:5.25.1-community
+    container_name: grackle-neo4j
+    ports:
+      - "7474:7474"   # Browser UI
+      - "7687:7687"   # Bolt protocol
+    environment:
+      - NEO4J_AUTH=neo4j/grackle-dev
+    volumes:
+      - neo4j-data:/data
+    networks:
+      - grackle
+    healthcheck:
+      test: ["CMD", "neo4j", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     restart: unless-stopped
 
 networks:
@@ -43,3 +68,4 @@ networks:
 
 volumes:
   grackle-data:
+  neo4j-data:

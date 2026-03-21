@@ -1,13 +1,28 @@
 /**
  * Knowledge graph subsystem for Grackle.
  *
- * Provides pluggable text embedding, content chunking, and an ingestion
- * pipeline so that agents can share and reuse contextual information
- * across sessions.
+ * Provides pluggable text embedding, content chunking, an ingestion
+ * pipeline, and structured knowledge storage and retrieval via Neo4j,
+ * so that agents can share and reuse contextual information across sessions.
  *
  * @packageDocumentation
  */
 
+export { openNeo4j, closeNeo4j, healthCheck, getSession, getDriver } from "./client.js";
+export type { Neo4jClientConfig } from "./client.js";
+export { initSchema, SCHEMA_STATEMENTS } from "./schema.js";
+export * from "./types.js";
+export {
+  DEFAULT_NEO4J_URL,
+  DEFAULT_NEO4J_USER,
+  DEFAULT_NEO4J_DATABASE,
+  NEO4J_MAX_POOL_SIZE,
+  NEO4J_CONNECTION_ACQUISITION_TIMEOUT,
+  NODE_LABEL,
+  VECTOR_INDEX_NAME,
+  EMBEDDING_DIMENSIONS,
+  VECTOR_SIMILARITY_FUNCTION,
+} from "./constants.js";
 export type { Embedder, EmbedderOptions, EmbeddingResult } from "./embedder.js";
 export { createLocalEmbedder } from "./local-embedder.js";
 export type { Chunk, Chunker } from "./chunker.js";
