@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.56.1",
+      "tag": "@grackle-ai/cli_v0.56.1",
+      "date": "Sat, 21 Mar 2026 17:58:15 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Move task title and description from system prompt to user prompt so agents receive work instructions as the first message"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.56.0",
       "tag": "@grackle-ai/cli_v0.56.0",
       "date": "Sat, 21 Mar 2026 17:06:15 GMT",

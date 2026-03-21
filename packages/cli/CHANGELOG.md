@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sat, 21 Mar 2026 17:06:15 GMT and should not be manually modified.
+This log was last generated on Sat, 21 Mar 2026 17:58:15 GMT and should not be manually modified.
+
+## 0.56.1
+Sat, 21 Mar 2026 17:58:15 GMT
+
+### Patches
+
+- Move task title and description from system prompt to user prompt so agents receive work instructions as the first message
 
 ## 0.56.0
 Sat, 21 Mar 2026 17:06:15 GMT
