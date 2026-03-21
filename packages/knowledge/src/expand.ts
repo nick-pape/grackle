@@ -147,7 +147,7 @@ export async function expandNode(
   nodeId: string,
   options?: ExpandOptions,
 ): Promise<ExpansionResult> {
-  const depth: number = options?.depth ?? DEFAULT_DEPTH;
+  const depth: number = Math.max(1, Math.floor(options?.depth ?? DEFAULT_DEPTH));
   const cypher: string = buildExpandCypher(options?.edgeTypes);
 
   const session = getSession();

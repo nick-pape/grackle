@@ -26,7 +26,6 @@ vi.mock("./logger.js", () => ({
 }));
 
 import { expandNode, expandResults } from "./expand.js";
-import type { ExpandOptions } from "./expand.js";
 
 // ---------------------------------------------------------------------------
 // Helpers
