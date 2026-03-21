@@ -10,9 +10,12 @@ import { logger } from "../logger.js";
  * Provides the shared session lifecycle:
  * - `stream()` yields an initial system message, drives `runSession()` in the background,
  *   and yields events from the queue.
- * - `runSession()` calls `setupSdk()`, handles resume vs initial query, transitions to waiting_input.
- * - `sendInput()` transitions to running, delegates to `executeFollowUp()`, transitions back.
- * - `kill()` aborts active work, releases resources, and closes the queue.
+ * - `runSession()` calls `setupSdk()`, handles resume vs initial query, transitions to waiting_input,
+ *   then starts the input processing loop.
+ * - `sendInput()` enqueues input for sequential processing by the input loop.
+ * - `processInputLoop()` dequeues inputs and calls `executeFollowUp()` one at a time,
+ *   preventing concurrent follow-ups across all runtimes.
+ * - `kill()` aborts active work, closes the input queue, releases resources, and closes the event queue.
  *
  * Subclasses implement the SDK-specific abstract methods.
  */
@@ -23,6 +26,7 @@ export abstract class BaseAgentSession implements AgentSession {
   public status: SessionStatus = SESSION_STATUS.RUNNING;
 
   protected readonly eventQueue: AsyncQueue<AgentEvent> = new AsyncQueue<AgentEvent>();
+  private readonly inputQueue: AsyncQueue<string> = new AsyncQueue<string>();
   protected killed: boolean = false;
   protected readonly prompt: string;
   protected readonly model: string;
@@ -157,6 +161,7 @@ export abstract class BaseAgentSession implements AgentSession {
         await this.setupForResume();
         this.status = SESSION_STATUS.IDLE;
         this.eventQueue.push({ type: "status", timestamp: ts(), content: "waiting_input" });
+        this.startInputLoop();
         return;
       }
 
@@ -176,9 +181,10 @@ export abstract class BaseAgentSession implements AgentSession {
       }
 
       // Session is idle — ready for follow-up input via sendInput().
-      // The queue stays open so sendInput() can push more events.
+      // The input loop owns the eventQueue lifecycle from this point.
       this.status = SESSION_STATUS.IDLE;
       this.eventQueue.push({ type: "status", timestamp: ts(), content: "waiting_input" });
+      this.startInputLoop();
     } catch (err) {
       this.status = SESSION_STATUS.FAILED;
       this.eventQueue.push({ type: "error", timestamp: ts(), content: String(err) });
@@ -188,31 +194,53 @@ export abstract class BaseAgentSession implements AgentSession {
     }
   }
 
-  /** Send follow-up input by delegating to the SDK-specific `executeFollowUp()`. */
+  /** Queue follow-up input for sequential processing by the input loop. */
   public sendInput(text: string): void {
     if (this.killed || !this.canAcceptInput()) {
       return;
     }
-    const ts: () => string = () => new Date().toISOString();
-    this.status = SESSION_STATUS.RUNNING;
-    this.eventQueue.push({ type: "status", timestamp: ts(), content: "running" });
+    this.inputQueue.push(text);
+  }
 
-    this.executeFollowUp(text)
-      .then(() => {
-        if (this.killed) {
-          // Session was terminated during follow-up (e.g. maxTurns reached).
-          // Release resources and close the queue so stream() callers don't hang.
-          this.releaseResources();
-          this.eventQueue.close();
-        } else {
-          this.status = SESSION_STATUS.IDLE;
-          this.eventQueue.push({ type: "status", timestamp: ts(), content: "waiting_input" });
-        }
-      })
-      .catch((err: unknown) => {
+  /**
+   * Background loop that dequeues input and calls `executeFollowUp()` sequentially.
+   * Started after the initial query (or resume setup) completes. Owns the eventQueue
+   * lifecycle — closes it when the loop exits.
+   */
+  private async processInputLoop(): Promise<void> {
+    const ts: () => string = () => new Date().toISOString();
+    for await (const text of this.inputQueue) {
+      if (this.killed) {
+        break;
+      }
+      this.status = SESSION_STATUS.RUNNING;
+      this.eventQueue.push({ type: "status", timestamp: ts(), content: "running" });
+
+      try {
+        await this.executeFollowUp(text);
+      } catch (err: unknown) {
         logger.warn({ err }, `Failed to process follow-up input in ${this.runtimeDisplayName} session`);
         this.eventQueue.push({ type: "error", timestamp: ts(), content: String(err) });
-      });
+      }
+
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- killed changes asynchronously via kill()
+      if (this.killed) {
+        break;
+      }
+      this.status = SESSION_STATUS.IDLE;
+      this.eventQueue.push({ type: "status", timestamp: ts(), content: "waiting_input" });
+    }
+
+    // Loop exited — queue closed (kill) or drained.
+    this.releaseResources();
+    this.eventQueue.close();
+  }
+
+  /** Fire-and-forget launch of the input processing loop. */
+  private startInputLoop(): void {
+    this.processInputLoop().catch((err) => {
+      logger.error({ err }, `Input loop crashed in ${this.runtimeDisplayName} session`);
+    });
   }
 
   /** Forcefully terminate the session. */
@@ -220,6 +248,11 @@ export abstract class BaseAgentSession implements AgentSession {
     this.killed = true;
     this.status = SESSION_STATUS.INTERRUPTED;
     this.abortActive();
+    this.inputQueue.close();
+    // releaseResources() and eventQueue.close() are also called by processInputLoop()
+    // when it exits, but we call them here too for the case where kill() is called
+    // before the input loop starts (e.g. during the initial query).
+    // Both are idempotent — safe to call multiple times.
     this.releaseResources();
     this.eventQueue.close();
   }
