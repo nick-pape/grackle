@@ -1,0 +1,33 @@
+{
+  "name": "@grackle-ai/knowledge",
+  "version": "0.55.0",
+  "description": "Knowledge graph subsystem for Grackle — vector search and graph traversal over Neo4j",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nick-pape/grackle.git",
+    "directory": "packages/knowledge"
+  },
+  "keywords": ["grackle", "knowledge-graph", "neo4j", "vector-search"],
+  "engines": { "node": ">=22.0.0" },
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist/"],
+  "scripts": {
+    "build": "heft build --clean",
+    "test": "vitest run",
+    "clean": "heft clean",
+    "_phase:build": "heft run --only build -- --clean",
+    "_phase:test": "vitest run"
+  },
+  "dependencies": {
+    "@grackle-ai/common": "workspace:*"
+  },
+  "devDependencies": {
+    "@grackle-ai/heft-rig": "workspace:*",
+    "@rushstack/heft": "1.2.4",
+    "@types/node": "^22.0.0",
+    "vitest": "^3.1.1"
+  }
+}
