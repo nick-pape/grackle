@@ -149,6 +149,9 @@ export class SystemPromptBuilder {
       }
     }
 
+    // IPC fd cleanup instructions (always included — harmless if agent doesn't use IPC)
+    sections.push(this.buildIpcFdSection());
+
     // MCP note (always included)
     sections.push(this.buildMcpNote());
 
@@ -412,6 +415,21 @@ export class SystemPromptBuilder {
     return [
       `## Findings`,
       `Use \`finding_post\` to share discoveries (architecture decisions, bugs, patterns) with other agents. Check \`finding_list\` before posting to avoid duplicates.`,
+    ].join("\n");
+  }
+
+  /** IPC fd cleanup instructions — advisory enforcement for closing child fds before exit. */
+  private buildIpcFdSection(): string {
+    return [
+      "## IPC File Descriptors",
+      "",
+      "If you spawn child sessions using `ipc_spawn`, you receive file descriptors (fds).",
+      "Before finishing your work, you MUST:",
+      "1. Call `ipc_list_fds` to check for open fds",
+      "2. For each owned fd (`owned: true`), call `ipc_close` to close it",
+      "3. Only then should you stop working",
+      "",
+      "Failing to close your fds will leave child sessions running indefinitely.",
     ].join("\n");
   }
 

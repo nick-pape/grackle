@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type JSX } from "react";
 import { useParams, useLocation } from "react-router";
 import { useGrackle } from "../context/GrackleContext.js";
 import { EventStream } from "../components/display/EventStream.js";
+import { ChatInput } from "../components/chat/index.js";
 import { FindingsPanel } from "../components/panels/FindingsPanel.js";
 import { Breadcrumbs, ConfirmDialog } from "../components/display/index.js";
 import { buildTaskBreadcrumbs } from "../utils/breadcrumbs.js";
@@ -304,7 +305,7 @@ export function TaskPage(): JSX.Element {
   const location = useLocation();
   const navigate = useAppNavigate();
   const {
-    events, eventsDropped, tasks, environments,
+    events, eventsDropped, tasks, sessions, environments,
     loadSessionEvents, loadFindings,
     kill, startTask, stopTask, resumeTask, deleteTask,
     workspaces, taskSessions: taskSessionsMap, loadTaskSessions,
@@ -539,6 +540,24 @@ export function TaskPage(): JSX.Element {
           </motion.div>
         )}
       </AnimatePresence>
+      {(() => {
+        if (!task || (task.status !== "working" && task.status !== "paused")) {
+          return undefined;
+        }
+        const taskSessionForChat = sessionId
+          ? sessions.find((s) => s.id === sessionId)
+          : undefined;
+        if (!taskSessionForChat || ["completed", "failed", "interrupted", "hibernating"].includes(taskSessionForChat.status)) {
+          return undefined;
+        }
+        return (
+          <ChatInput
+            mode="send"
+            sessionId={taskSessionForChat.id}
+            environmentId={taskSessionForChat.environmentId}
+          />
+        );
+      })()}
       {task && (
         <ConfirmDialog
           isOpen={showDeleteConfirm}

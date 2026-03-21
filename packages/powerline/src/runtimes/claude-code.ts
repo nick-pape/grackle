@@ -299,14 +299,23 @@ class ClaudeCodeSession extends BaseAgentSession {
 
       // Extract usage data from successful result messages
       if (msg.type === "result" && !msg.is_error) {
-        const usage = msg.usage as { input_tokens?: number; output_tokens?: number } | undefined;
+        const usage = msg.usage as {
+          input_tokens?: number;
+          output_tokens?: number;
+          cache_read_input_tokens?: number;
+          cache_creation_input_tokens?: number;
+        } | undefined;
         const costUsd = msg.total_cost_usd as number | undefined;
         if (usage !== undefined || costUsd !== undefined) {
+          // Total input includes non-cached + cache reads + cache creation
+          const totalInput = (usage?.input_tokens ?? 0)
+            + (usage?.cache_read_input_tokens ?? 0)
+            + (usage?.cache_creation_input_tokens ?? 0);
           this.eventQueue.push({
             type: "usage",
             timestamp: ts(),
             content: JSON.stringify({
-              input_tokens: (usage?.input_tokens ?? 0) as number,
+              input_tokens: totalInput as number,
               output_tokens: (usage?.output_tokens ?? 0) as number,
               cost_usd: (costUsd ?? 0) as number,
             }),

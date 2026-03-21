@@ -109,7 +109,7 @@ describe("ToolRegistry", () => {
 describe("Full tool registry", () => {
   it("contains exactly the expected number of tools", () => {
     const registry = createToolRegistry();
-    expect(registry.list()).toHaveLength(45);
+    expect(registry.list()).toHaveLength(46);
   });
 
   it("every tool name matches snake_case pattern", () => {

@@ -131,4 +131,37 @@ export const ipcTools: ToolDefinition[] = [
       }
     },
   },
+  {
+    name: "ipc_list_fds",
+    group: "ipc",
+    description: "List your open file descriptors (IPC pipe connections). Check this before exiting to ensure all owned child fds are closed. Owned fds (owned=true) must be closed with ipc_close before you stop working.",
+    inputSchema: z.object({}),
+    rpcMethod: "getSessionFds",
+    mutating: false,
+    async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>, authContext?: AuthContext) {
+      try {
+        const sessionId = authContext?.type === "scoped" ? authContext.taskSessionId : "";
+        if (!sessionId) {
+          return {
+            content: [{ type: "text" as const, text: "Error: ipc_list_fds requires scoped auth (agent context)" }],
+            isError: true,
+          };
+        }
+
+        const result = await client.getSessionFds({ id: sessionId });
+        return jsonResult({
+          fds: result.fds.map((fd) => ({
+            fd: fd.fd,
+            streamName: fd.streamName,
+            permission: fd.permission,
+            deliveryMode: fd.deliveryMode,
+            owned: fd.owned,
+            targetSessionId: fd.targetSessionId,
+          })),
+        });
+      } catch (error) {
+        return grpcErrorToToolResult(error);
+      }
+    },
+  },
 ];

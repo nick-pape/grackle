@@ -764,6 +764,31 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       return create(grackle.CloseFdResponseSchema, { hibernated });
     },
 
+    getSessionFds(req: grackle.SessionId) {
+      const subs = streamRegistry.getSubscriptionsForSession(req.id);
+      const fds = subs.map((sub) => {
+        const stream = streamRegistry.getStream(sub.streamId);
+        let targetSessionId = "";
+        if (stream) {
+          for (const s of stream.subscriptions.values()) {
+            if (s.sessionId !== req.id) {
+              targetSessionId = s.sessionId;
+              break;
+            }
+          }
+        }
+        return create(grackle.FdInfoSchema, {
+          fd: sub.fd,
+          streamName: stream?.name || "",
+          permission: sub.permission,
+          deliveryMode: sub.deliveryMode,
+          owned: sub.createdBySpawn,
+          targetSessionId,
+        });
+      });
+      return create(grackle.SessionFdsSchema, { fds });
+    },
+
     async killAgent(req: grackle.SessionId) {
       const session = sessionStore.getSession(req.id);
       if (!session) {
