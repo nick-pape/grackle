@@ -254,7 +254,7 @@ async function doInstall(
     execFile(
       "npm",
       ["install", "--omit=dev", "--registry=https://registry.npmjs.org"],
-      { cwd: runtimeDir, timeout: 120_000, shell: true },
+      { cwd: runtimeDir, timeout: 120_000, shell: true, maxBuffer: 10 * 1024 * 1024 },
       (err) => {
         if (err) {
           const detail = err.message || String(err);

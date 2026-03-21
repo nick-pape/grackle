@@ -525,7 +525,7 @@ export async function* bootstrapPowerLine(
         let runtimeUpToDate = false;
         try {
           await executor.exec(
-            `cd ${runtimeDir} && node -e "const fs=require('fs');let c;try{c=JSON.parse(fs.readFileSync('manifest.json','utf8'));}catch(e){process.exit(1);}const e=JSON.parse(Buffer.from(process.argv[1],'base64').toString('utf8'));if(c.powerlineVersion===e.powerlineVersion&&JSON.stringify(c.packages)===JSON.stringify(e.packages)){process.exit(0);}process.exit(1);" '${shellEscape(manifestBase64)}'`,
+            `cd ${runtimeDir} && node -e "const fs=require('fs');let c;try{c=JSON.parse(fs.readFileSync('manifest.json','utf8'));}catch(e){process.exit(1);}const e=JSON.parse(Buffer.from(process.argv[1],'base64').toString('utf8'));function pkgsEqual(a,b){if(!a||!b)return false;const ak=Object.keys(a).sort(),bk=Object.keys(b).sort();if(ak.length!==bk.length)return false;for(let i=0;i<ak.length;i++){if(ak[i]!==bk[i]||a[ak[i]]!==b[bk[i]])return false;}return true;}if(c.powerlineVersion===e.powerlineVersion&&pkgsEqual(c.packages,e.packages)){process.exit(0);}process.exit(1);" '${shellEscape(manifestBase64)}'`,
             { timeout: REMOTE_EXEC_DEFAULT_TIMEOUT_MS },
           );
           runtimeUpToDate = true;
