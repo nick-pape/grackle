@@ -113,26 +113,24 @@ export function UnifiedBar(): JSX.Element {
     })
     : false;
 
-  // --- chat mode (root task) ---
-  const rootTask = isChat ? tasks.find((t) => t.id === ROOT_TASK_ID) : undefined;
-  // Resolve latest session from the already-loaded sessions list first (available
-  // immediately on connect), falling back to taskSessions (requires roundtrip).
-  const latestRootSession = rootTask?.latestSessionId
-    ? (sessions.find((s) => s.id === rootTask.latestSessionId) ??
-       (taskSessions[ROOT_TASK_ID] ?? []).find((s) => s.id === rootTask.latestSessionId))
-    : undefined;
-
   if (isChat) {
-    if (latestRootSession?.status === "running") {
+    const rootTask = tasks.find((t) => t.id === ROOT_TASK_ID);
+    const latestRootSession = rootTask?.latestSessionId
+      ? (sessions.find((s) => s.id === rootTask.latestSessionId) ??
+         (taskSessions[ROOT_TASK_ID] ?? []).find((s) => s.id === rootTask.latestSessionId))
+      : undefined;
+    const localEnv = environments.find((e) => e.adapterType === "local" && e.status === "connected");
+
+    if (!localEnv) {
       return (
         <div className={styles.bar}>
-          <input type="text" disabled placeholder="Agent is working..." className={styles.input} />
-          <button onClick={() => kill(latestRootSession.id)} className={styles.btnDanger} title="Stop session">Stop</button>
+          <span className={styles.hintText}>Add a local environment to start chatting</span>
         </div>
       );
     }
 
-    if (latestRootSession?.status === "idle") {
+    // Active session (running or idle) — show chat input with sendInput
+    if (latestRootSession && !["completed", "failed", "interrupted", "hibernating"].includes(latestRootSession.status)) {
       const rootEnvDisconnected = isEnvDisconnected(latestRootSession.environmentId, environments);
       const handleChatSend = (e: FormEvent): void => {
         e.preventDefault();
@@ -156,17 +154,8 @@ export function UnifiedBar(): JSX.Element {
       );
     }
 
-    // Root task not yet ready — server normally auto-starts it on boot.
-    // Show a fallback start button in case auto-start failed or was skipped.
-    const localEnv = environments.find((e) => e.adapterType === "local" && e.status === "connected");
-    if (!localEnv) {
-      return (
-        <div className={styles.bar}>
-          <span className={styles.hintText}>Add a local environment to start chatting</span>
-        </div>
-      );
-    }
-
+    // No active session — server normally auto-starts the root task on boot.
+    // Fallback: let the user start it manually if auto-start was skipped or failed.
     const handleChatStart = (e: FormEvent): void => {
       e.preventDefault();
       if (!text.trim()) {
@@ -227,11 +216,11 @@ export function UnifiedBar(): JSX.Element {
       );
     }
 
-    // Working / paused — show chat input when session is idle, "agent working" otherwise
+    // Working / paused — show chat input + Stop when session is active
     if (task.status === "working" || task.status === "paused") {
-      const isWaiting = taskSession?.status === "idle";
+      const isActive = taskSession && !["completed", "failed", "interrupted", "hibernating"].includes(taskSession.status);
 
-      if (isWaiting) {
+      if (isActive) {
         const effectiveEnvId = taskSession.environmentId;
         const taskEnvDisconnected = isEnvDisconnected(effectiveEnvId, environments);
 
@@ -259,7 +248,7 @@ export function UnifiedBar(): JSX.Element {
 
       return (
         <div className={styles.bar}>
-          <input type="text" disabled placeholder="Agent is working..." className={styles.input} />
+          <span className={styles.hintText}>Waiting for agent...</span>
         </div>
       );
     }
@@ -325,20 +314,10 @@ export function UnifiedBar(): JSX.Element {
 
   // --- session mode ---
   if (sessionId) {
-    const isRunning = session?.status === "running";
-    const isWaiting = session?.status === "idle";
-    const isEnded = session !== undefined && ["completed", "failed", "interrupted"].includes(session.status);
+    const isEnded = session !== undefined && ["completed", "failed", "interrupted", "hibernating"].includes(session.status);
+    const isActive = session !== undefined && !isEnded;
 
-    if (isRunning) {
-      return (
-        <div className={styles.bar}>
-          <input type="text" disabled placeholder="Agent is working..." className={styles.input} />
-          <button onClick={() => kill(sessionId)} className={styles.btnDanger} title="Stop session">Stop</button>
-        </div>
-      );
-    }
-
-    if (isWaiting) {
+    if (isActive) {
       const sessionEnvDisconnected = isEnvDisconnected(session.environmentId, environments);
 
       const handleSend = (e: FormEvent): void => {

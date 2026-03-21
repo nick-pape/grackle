@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sat, 21 Mar 2026 14:51:13 GMT and should not be manually modified.
+This log was last generated on Sat, 21 Mar 2026 15:32:23 GMT and should not be manually modified.
+
+## 0.54.1
+Sat, 21 Mar 2026 15:32:23 GMT
+
+### Patches
+
+- Allow sendInput while agent is running by only rejecting terminal session statuses
 
 ## 0.54.0
 Sat, 21 Mar 2026 14:51:13 GMT
