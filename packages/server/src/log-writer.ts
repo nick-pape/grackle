@@ -1,4 +1,14 @@
-import { createWriteStream, mkdirSync, readFileSync, existsSync, type WriteStream } from "node:fs";
+import {
+  createWriteStream,
+  mkdirSync,
+  readFileSync,
+  existsSync,
+  statSync,
+  openSync,
+  readSync,
+  closeSync,
+  type WriteStream,
+} from "node:fs";
 import { join } from "node:path";
 import { type grackle, eventTypeToString } from "@grackle-ai/common";
 
@@ -57,6 +67,57 @@ export interface LogEntry {
   timestamp: string;
   content: string;
   raw?: string;
+}
+
+/** Number of bytes to read from the tail of a log file when searching for the last text entry. */
+const LOG_TAIL_BYTES: number = 65536; // 64 KB
+
+/**
+ * Read the last "text" entry from a session's JSONL log file without parsing the whole file.
+ * Reads only the tail of the file (up to LOG_TAIL_BYTES) to limit the amount of synchronous
+ * work and reduce event-loop blocking time for large sessions.
+ */
+export function readLastTextEntry(logPath: string): LogEntry | undefined {
+  const streamPath = join(logPath, "stream.jsonl");
+  if (!existsSync(streamPath)) {
+    return undefined;
+  }
+
+  const stats = statSync(streamPath);
+  if (stats.size === 0) {
+    return undefined;
+  }
+
+  const readSize = Math.min(stats.size, LOG_TAIL_BYTES);
+  const buffer = Buffer.alloc(readSize);
+  const fd = openSync(streamPath, "r");
+  let bytesRead = 0;
+  try {
+    bytesRead = readSync(fd, buffer, 0, readSize, stats.size - readSize);
+  } finally {
+    closeSync(fd);
+  }
+
+  if (bytesRead <= 0) {
+    return undefined;
+  }
+
+  const lines = buffer.subarray(0, bytesRead).toString("utf-8").split("\n");
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const line = lines[i].trim();
+    if (!line) {
+      continue;
+    }
+    try {
+      const entry = JSON.parse(line) as LogEntry;
+      if (entry.type === "text") {
+        return entry;
+      }
+    } catch {
+      // Skip malformed lines (the first line may be partial when reading from a byte offset)
+    }
+  }
+  return undefined;
 }
 
 /** Read and parse all log entries from a session's JSONL log file. */

@@ -502,6 +502,11 @@ const Grackle: GenService<{
         input: typeof EmptySchema;
         output: typeof PairingCodeResponseSchema;
     };
+    waitForPipe: {
+        methodKind: "unary";
+        input: typeof WaitForPipeRequestSchema;
+        output: typeof WaitForPipeResponseSchema;
+    };
 }>;
 
 declare namespace grackle {
@@ -533,6 +538,10 @@ declare namespace grackle {
         ResumeRequestSchema,
         InputMessage,
         InputMessageSchema,
+        WaitForPipeRequest,
+        WaitForPipeRequestSchema,
+        WaitForPipeResponse,
+        WaitForPipeResponseSchema,
         SessionEvent,
         SessionEventSchema,
         TokenEntry,
@@ -967,6 +976,7 @@ type Session = Message<"grackle.Session"> & {
     inputTokens: number;
     outputTokens: number;
     costUsd: number;
+    pipeFd: number;
 };
 
 // @public
@@ -1086,6 +1096,7 @@ type SpawnRequest = Message<"grackle.SpawnRequest"> & {
     personaId: string;
     worktreeBasePath: string;
     pipe: string;
+    parentSessionId: string;
 };
 
 // @public
@@ -1325,6 +1336,24 @@ type UpdateWorkspaceRequest = Message<"grackle.UpdateWorkspaceRequest"> & {
 
 // @public
 const UpdateWorkspaceRequestSchema: GenMessage<UpdateWorkspaceRequest>;
+
+// @public
+type WaitForPipeRequest = Message<"grackle.WaitForPipeRequest"> & {
+    sessionId: string;
+    fd: number;
+};
+
+// @public
+const WaitForPipeRequestSchema: GenMessage<WaitForPipeRequest>;
+
+// @public
+type WaitForPipeResponse = Message<"grackle.WaitForPipeResponse"> & {
+    content: string;
+    senderSessionId: string;
+};
+
+// @public
+const WaitForPipeResponseSchema: GenMessage<WaitForPipeResponse>;
 
 // @public
 type Workspace = Message<"grackle.Workspace"> & {

@@ -1,8 +1,9 @@
 /**
  * Knowledge graph subsystem for Grackle.
  *
- * Provides structured knowledge storage and retrieval via Neo4j, enabling
- * agents to share and reuse contextual information across sessions.
+ * Provides pluggable text embedding, structured knowledge storage and
+ * retrieval via Neo4j, and graph traversal so that agents can share and
+ * reuse contextual information across sessions.
  *
  * @packageDocumentation
  */
@@ -12,3 +13,5 @@ export type { Neo4jClientConfig } from "./client.js";
 export { initSchema, SCHEMA_STATEMENTS } from "./schema.js";
 export * from "./types.js";
 export * from "./constants.js";
+export type { Embedder, EmbedderOptions, EmbeddingResult } from "./embedder.js";
+export { createLocalEmbedder } from "./local-embedder.js";

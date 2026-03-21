@@ -52,6 +52,8 @@ import { importGitHubIssues as executeGitHubImport } from "./github-import.js";
 import { generatePairingCode } from "./pairing.js";
 import { detectLanIp } from "./utils/network.js";
 import * as credentialProviders from "./credential-providers.js";
+import * as streamRegistry from "./stream-registry.js";
+import { setupAsyncPipeDelivery } from "./pipe-delivery.js";
 
 /**
  * Map a bind host to a dialable URL host. Wildcard addresses become loopback,
@@ -486,6 +488,22 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         ? builderPrompt + "\n\n" + req.systemContext
         : builderPrompt;
 
+      // Validate pipe inputs before creating the session or spawning the child
+      const validPipeModes: readonly string[] = ["", "sync", "async", "detach"];
+      if (req.pipe && !validPipeModes.includes(req.pipe)) {
+        throw new ConnectError(
+          `Invalid pipe mode: "${req.pipe}". Must be "sync", "async", "detach", or empty.`,
+          Code.InvalidArgument,
+        );
+      }
+      const pipeMode = req.pipe as PipeMode;
+      if (pipeMode && pipeMode !== "detach" && !req.parentSessionId) {
+        throw new ConnectError(
+          `Pipe mode "${pipeMode}" requires parent_session_id`,
+          Code.InvalidArgument,
+        );
+      }
+
       sessionStore.createSession(
         sessionId,
         req.environmentId,
@@ -495,8 +513,8 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         logPath,
         "",                      // taskId
         resolved.personaId,      // personaId
-        "",                      // parentSessionId
-        (req.pipe as PipeMode) || "",  // pipeMode
+        req.parentSessionId || "",  // parentSessionId
+        pipeMode || "",          // pipeMode
       );
 
       const mcpServersJson = personaMcpServersToJson(persona);
@@ -527,6 +545,27 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         pipe: req.pipe,
       });
 
+      // Set up IPC stream BEFORE starting the child spawn, so the stream
+      // exists when the event processor observes terminal status events.
+      let pipeFd = 0;
+      if (pipeMode && pipeMode !== "detach" && req.parentSessionId) {
+        const ipcStream = streamRegistry.createStream(`pipe:${sessionId}`);
+        const parentSub = streamRegistry.subscribe(
+          ipcStream.id, req.parentSessionId, "rw",
+          pipeMode === "sync" ? "sync" : "async",
+          true,  // parent opened this via spawn
+        );
+        streamRegistry.subscribe(
+          ipcStream.id, sessionId, "rw", "async",
+          false, // child inherits
+        );
+        pipeFd = parentSub.fd;
+
+        if (pipeMode === "async") {
+          setupAsyncPipeDelivery(req.parentSessionId);
+        }
+      }
+
       // Push fresh credentials before spawning (best-effort).
       // For local envs, skip file tokens — the PowerLine is on the same machine.
       await tokenBroker.refreshTokensForTask(req.environmentId, runtime,
@@ -540,7 +579,9 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       });
 
       const row = sessionStore.getSession(sessionId);
-      return sessionRowToProto(row!);
+      const proto = sessionRowToProto(row!);
+      proto.pipeFd = pipeFd;
+      return proto;
     },
 
     async resumeAgent(req: grackle.ResumeRequest) {
@@ -573,6 +614,40 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       );
 
       return create(grackle.EmptySchema, {});
+    },
+
+    async waitForPipe(req: grackle.WaitForPipeRequest) {
+      const sub = streamRegistry.getSubscription(req.sessionId, req.fd);
+      if (!sub) {
+        throw new ConnectError(
+          `No subscription found for session ${req.sessionId} fd ${req.fd}`,
+          Code.NotFound,
+        );
+      }
+
+      if (sub.deliveryMode !== "sync") {
+        throw new ConnectError(
+          `Subscription fd ${req.fd} is not a sync subscription (mode: ${sub.deliveryMode})`,
+          Code.FailedPrecondition,
+        );
+      }
+
+      // Use try/finally so the pipe stream is cleaned up even if consumeSync rejects
+      // (e.g., the request is cancelled or times out) to prevent unbounded memory growth.
+      let msg: Awaited<ReturnType<typeof streamRegistry.consumeSync>>;
+      try {
+        msg = await streamRegistry.consumeSync(sub.id);
+      } finally {
+        const stream = streamRegistry.getStream(sub.streamId);
+        if (stream) {
+          streamRegistry.deleteStream(sub.streamId);
+        }
+      }
+
+      return create(grackle.WaitForPipeResponseSchema, {
+        content: msg.content,
+        senderSessionId: msg.senderId,
+      });
     },
 
     async killAgent(req: grackle.SessionId) {

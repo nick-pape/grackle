@@ -57,6 +57,7 @@ describe("SCOPED_TOOLS", () => {
   it("contains the expected scoped tools", () => {
     expect([...SCOPED_TOOLS].sort()).toEqual([
       "finding_list", "finding_post",
+      "ipc_spawn",
       "persona_list", "persona_show",
       "session_send_input",
       "task_complete", "task_create", "task_list", "task_show", "task_start",
