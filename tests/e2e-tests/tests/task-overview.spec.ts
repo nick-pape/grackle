@@ -153,7 +153,7 @@ test.describe("Task Overview Tab", () => {
     await page.getByText("badge-blocked", { exact: true }).first().waitFor({ timeout: 5_000 });
 
     // The sidebar badge should say "blocked" (not "dep") and have blocked styling
-    const badge = page.locator('span[title^="Depends on:"]');
+    const badge = page.locator('span[title^="Depends on:"]').first();
     await expect(badge).toHaveText("blocked");
     await expect(badge).toHaveAttribute("class", /blockedBadge/);
   });
