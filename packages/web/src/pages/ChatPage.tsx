@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, type JSX } from "react";
 import { ROOT_TASK_ID } from "@grackle-ai/common";
 import { useGrackle } from "../context/GrackleContext.js";
 import { EventStream } from "../components/display/EventStream.js";
+import { ChatInput } from "../components/chat/index.js";
 import { groupConsecutiveTextEvents, pairToolEvents } from "../utils/sessionEvents.js";
 import styles from "./ChatPage.module.scss";
 
@@ -28,7 +29,7 @@ function ChatEmptyState({ hasLocalEnvironment }: { hasLocalEnvironment: boolean 
 export function ChatPage(): JSX.Element {
   const {
     tasks, sessions, events, eventsDropped, environments,
-    loadTaskSessions, loadSessionEvents,
+    loadTaskSessions, loadSessionEvents, kill,
     taskSessions,
   } = useGrackle();
 
@@ -77,6 +78,10 @@ export function ChatPage(): JSX.Element {
     (e) => e.adapterType === "local" && e.status === "connected",
   );
 
+  // Determine if the latest session is active (running or idle)
+  const isSessionActive = latestSession !== undefined
+    && !["completed", "failed", "interrupted", "hibernating"].includes(latestSession.status);
+
   return (
     <div className={styles.panelContainer} data-testid="chat-page">
       <EventStream
@@ -84,6 +89,22 @@ export function ChatPage(): JSX.Element {
         eventsDropped={eventsDropped}
         emptyState={<ChatEmptyState hasLocalEnvironment={!!localEnvironment} />}
       />
+      {localEnvironment && isSessionActive && (
+        <ChatInput
+          mode="send"
+          sessionId={latestSession!.id}
+          environmentId={latestSession!.environmentId}
+          showStop
+          onSessionKill={() => kill(latestSession!.id)}
+        />
+      )}
+      {localEnvironment && !isSessionActive && (
+        <ChatInput
+          mode="start"
+          taskId={ROOT_TASK_ID}
+          environmentId={localEnvironment.id}
+        />
+      )}
     </div>
   );
 }
