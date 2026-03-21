@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sat, 21 Mar 2026 22:01:36 GMT and should not be manually modified.
+This log was last generated on Sat, 21 Mar 2026 22:42:52 GMT and should not be manually modified.
+
+## 0.61.1
+Sat, 21 Mar 2026 22:42:52 GMT
+
+### Patches
+
+- Add semantic vector search to @grackle-ai/knowledge
 
 ## 0.61.0
 Sat, 21 Mar 2026 22:01:36 GMT
