@@ -1,10 +1,14 @@
 /**
- * Scaffold for a knowledge graph subsystem for Grackle.
+ * Knowledge graph subsystem for Grackle.
  *
- * Defines the surface area for integrating structured knowledge storage and
- * retrieval so that agents can share and reuse contextual information across
- * sessions. Concrete storage technologies and capabilities are provided by
- * implementations that build on this package.
+ * Provides structured knowledge storage and retrieval via Neo4j, enabling
+ * agents to share and reuse contextual information across sessions.
  *
  * @packageDocumentation
  */
+
+export { openNeo4j, closeNeo4j, healthCheck, getSession, getDriver } from "./client.js";
+export type { Neo4jClientConfig } from "./client.js";
+export { initSchema, SCHEMA_STATEMENTS } from "./schema.js";
+export * from "./types.js";
+export * from "./constants.js";

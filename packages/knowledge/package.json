@@ -1,7 +1,7 @@
 {
   "name": "@grackle-ai/knowledge",
   "version": "0.56.0",
-  "description": "Scaffold for the Knowledge Graph subsystem for Grackle",
+  "description": "Knowledge graph subsystem for Grackle (Neo4j + vector search)",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -22,7 +22,9 @@
     "_phase:test": "vitest run"
   },
   "dependencies": {
-    "@grackle-ai/common": "workspace:*"
+    "@grackle-ai/common": "workspace:*",
+    "neo4j-driver": "^6.0.1",
+    "pino": "^10.3.1"
   },
   "devDependencies": {
     "@grackle-ai/heft-rig": "workspace:*",
