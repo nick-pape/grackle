@@ -114,8 +114,12 @@ export function registerTaskCommands(program: Command): void {
             console.log(`Tokens:      ${formatTokens(session.inputTokens)} in / ${formatTokens(session.outputTokens)} out`);
             console.log(`Cost:        ${formatCost(session.costUsd)}`);
           }
-        } catch {
-          // Session may have been cleaned up — skip usage display
+        } catch (err: unknown) {
+          // Only suppress NotFound (session cleaned up); surface other errors
+          const code = (err as { code?: string }).code;
+          if (code !== "not_found") {
+            console.log(chalk.yellow(`Usage:       (unavailable)`));
+          }
         }
       }
     });

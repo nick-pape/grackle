@@ -12,7 +12,7 @@ describe("formatTokens", () => {
     expect(formatTokens(1000)).toBe("1.0k");
     expect(formatTokens(1952)).toBe("2.0k");
     expect(formatTokens(12345)).toBe("12.3k");
-    expect(formatTokens(999999)).toBe("1000.0k");
+    expect(formatTokens(999999)).toBe("1.0M");
   });
 
   it("formats millions with M suffix", () => {

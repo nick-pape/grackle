@@ -4,7 +4,11 @@ export function formatTokens(n: number): string {
     return `${(n / 1_000_000).toFixed(1)}M`;
   }
   if (n >= 1_000) {
-    return `${(n / 1_000).toFixed(1)}k`;
+    const kValue = Number((n / 1_000).toFixed(1));
+    if (kValue >= 1_000) {
+      return `${(n / 1_000_000).toFixed(1)}M`;
+    }
+    return `${kValue.toFixed(1)}k`;
   }
   return String(n);
 }
