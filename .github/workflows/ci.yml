@@ -31,6 +31,11 @@ jobs:
             exit 1
           fi
 
+      - name: Lint E2E test tags
+        run: |
+          chmod +x .github/scripts/lint-e2e-tags.sh
+          .github/scripts/lint-e2e-tags.sh tests/e2e-tests/tests
+
       - name: Detect E2E test scope
         if: github.event_name == 'pull_request'
         id: e2e-scope
