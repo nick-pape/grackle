@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Add pipe field to SpawnRequest proto and PipeMode type for streams IPC",
+      "type": "minor",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
