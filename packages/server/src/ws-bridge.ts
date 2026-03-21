@@ -243,8 +243,8 @@ async function autoProvisionEnvironment(
  * to the client via WS, e.g. provisioning errors), or an error message
  * string for failures that need the caller to surface to the client.
  */
-async function startTaskSession(
-  ws: WebSocket,
+export async function startTaskSession(
+  ws: WebSocket | undefined,
   task: taskStore.TaskRow,
   options?: { personaId?: string; environmentId?: string; notes?: string },
 ): Promise<string | undefined> {
@@ -267,11 +267,16 @@ async function startTaskSession(
     return `Environment not found: ${environmentId}`;
   }
 
-  const conn = await autoProvisionEnvironment(ws, environmentId, env, {
-    taskId: task.id,
-  });
+  let conn: PowerLineConnection | undefined;
+  if (ws) {
+    conn = await autoProvisionEnvironment(ws, environmentId, env, {
+      taskId: task.id,
+    });
+  } else {
+    conn = adapterManager.getConnection(environmentId) ?? undefined;
+  }
   if (!conn) {
-    return undefined;
+    return ws ? undefined : `Environment not connected: ${environmentId}`;
   }
 
   // Resolve persona via cascade (request → task → workspace → app default)

@@ -13,9 +13,8 @@ import { LocalAdapter } from "./adapters/local.js";
 import { SshAdapter } from "./adapters/ssh.js";
 import { CodespaceAdapter } from "./adapters/codespace.js";
 import { closeAllTunnels, reconnectOrProvision } from "@grackle-ai/adapter-sdk";
-import { createWsBridge } from "./ws-bridge.js";
-import { bootRootTask } from "./boot-root-task.js";
-import { DEFAULT_SERVER_PORT, DEFAULT_WEB_PORT, DEFAULT_MCP_PORT, DEFAULT_POWERLINE_PORT } from "@grackle-ai/common";
+import { createWsBridge, startTaskSession } from "./ws-bridge.js";
+import { DEFAULT_SERVER_PORT, DEFAULT_WEB_PORT, DEFAULT_MCP_PORT, DEFAULT_POWERLINE_PORT, ROOT_TASK_ID } from "@grackle-ai/common";
 import { startLocalPowerLine, type LocalPowerLineHandle } from "./local-powerline.js";
 import * as adapterManager from "./adapter-manager.js";
 import * as envRegistry from "./env-registry.js";
@@ -718,7 +717,15 @@ async function main(): Promise<void> {
 
     // Auto-start the root task (process 1) now that the local env is ready.
     try {
-      await bootRootTask("local");
+      const rootTask = (await import("./task-store.js")).getTask(ROOT_TASK_ID);
+      if (rootTask) {
+        const err = await startTaskSession(undefined, rootTask, { environmentId: "local" });
+        if (err) {
+          logger.warn({ err }, "Root task auto-start failed");
+        } else {
+          logger.info("Root task auto-started");
+        }
+      }
     } catch (bootErr) {
       logger.warn({ err: bootErr }, "Root task auto-start failed — chat will not be available until manually started");
     }
