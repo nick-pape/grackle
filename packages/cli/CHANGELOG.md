@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sun, 22 Mar 2026 05:42:46 GMT and should not be manually modified.
+This log was last generated on Sun, 22 Mar 2026 05:56:14 GMT and should not be manually modified.
+
+## 0.68.2
+Sun, 22 Mar 2026 05:56:14 GMT
+
+### Patches
+
+- feat(web): surface SUSPENDED session state with yellow status dot in dashboard
 
 ## 0.68.1
 Sun, 22 Mar 2026 05:42:46 GMT
