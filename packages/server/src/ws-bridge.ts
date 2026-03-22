@@ -101,7 +101,7 @@ export function isAllowedOrigin(
   webPort: number,
   allowNetwork: boolean,
 ): boolean {
-  if (!origin) {
+  if (origin === undefined) {
     return true;
   }
 

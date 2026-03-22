@@ -124,8 +124,8 @@ describe("isAllowedOrigin", () => {
     expect(isAllowedOrigin(undefined, WEB_PORT, false)).toBe(true);
   });
 
-  it("allows connections with empty-string origin", () => {
-    expect(isAllowedOrigin("", WEB_PORT, false)).toBe(true);
+  it("rejects connections with empty-string origin", () => {
+    expect(isAllowedOrigin("", WEB_PORT, false)).toBe(false);
   });
 
   it("allows http://localhost on the correct port", () => {
