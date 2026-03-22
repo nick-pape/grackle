@@ -102,6 +102,16 @@ export function clearReconnectState(environmentId: string): void {
   // complete or fail on its own.
 }
 
+/**
+ * Reset reconnect state so the environment is immediately eligible on the
+ * next heartbeat tick. Unlike {@link clearReconnectState} (which deletes state,
+ * causing the next tick to re-initialize with an initial delay), this sets
+ * attempts to zero and nextRetryAt to now.
+ */
+export function resetReconnectState(environmentId: string): void {
+  reconnectStates.set(environmentId, { attempts: 0, nextRetryAt: Date.now() });
+}
+
 /** @internal Reset all reconnect state for testing. */
 export function _resetForTesting(): void {
   reconnectStates.clear();

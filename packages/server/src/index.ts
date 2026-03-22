@@ -16,12 +16,12 @@ import { CodespaceAdapter } from "./adapters/codespace.js";
 import { closeAllTunnels, reconnectOrProvision } from "@grackle-ai/adapter-sdk";
 import { createWsBridge, startTaskSession } from "./ws-bridge.js";
 import { DEFAULT_SERVER_PORT, DEFAULT_WEB_PORT, DEFAULT_MCP_PORT, DEFAULT_POWERLINE_PORT, ROOT_TASK_ID, TASK_STATUS } from "@grackle-ai/common";
-import { startLocalPowerLine, type LocalPowerLineHandle } from "./local-powerline.js";
+import { LocalPowerLineManager } from "./local-powerline-manager.js";
 import * as adapterManager from "./adapter-manager.js";
 import * as envRegistry from "./env-registry.js";
 import * as sessionStore from "./session-store.js";
 import * as tokenBroker from "./token-broker.js";
-import { attemptReconnects } from "./auto-reconnect.js";
+import { attemptReconnects, resetReconnectState } from "./auto-reconnect.js";
 import { createMcpServer } from "@grackle-ai/mcp";
 import { isKnowledgeEnabled, initKnowledge } from "./knowledge-init.js";
 import { readFileSync, existsSync } from "node:fs";
@@ -619,8 +619,8 @@ function isWildcardAddress(host: string): boolean {
   return host === "0.0.0.0" || host === "::" || host === "0:0:0:0:0:0:0:0";
 }
 
-/** Handle for the auto-started local PowerLine child process. */
-let localPowerLineHandle: LocalPowerLineHandle | undefined;
+/** Manager for local PowerLine lifecycle (start, stop, auto-restart). */
+let localPowerLineManager: LocalPowerLineManager | undefined;
 
 async function main(): Promise<void> {
   // Open the database and run migrations before anything else
@@ -667,29 +667,20 @@ async function main(): Promise<void> {
       localEnv = envRegistry.getEnvironment("local")!;
     }
 
-    // Spawn the PowerLine child process
-    let stoppingGracefully: boolean = false;
-    localPowerLineHandle = await startLocalPowerLine({
+    // Spawn the PowerLine child process with auto-restart on crash
+    localPowerLineManager = new LocalPowerLineManager({
       port: powerlinePort,
       host: plBindHost,
       token: localEnv.powerlineToken,
-      onExit: (code, signal) => {
-        if (stoppingGracefully) {
-          return;
-        }
-        logger.error({ code, signal }, "Local PowerLine exited unexpectedly");
-        envRegistry.updateEnvironmentStatus("local", "disconnected");
+      onStatusChange: (status) => {
+        envRegistry.updateEnvironmentStatus("local", status);
         emit("environment.changed", {});
-        localPowerLineHandle = undefined;
+      },
+      onRestarted: () => {
+        resetReconnectState("local");
       },
     });
-
-    // Mark graceful shutdown so onExit doesn't log spurious errors
-    const originalStop = localPowerLineHandle.stop;
-    localPowerLineHandle.stop = async (): Promise<void> => {
-      stoppingGracefully = true;
-      await originalStop();
-    };
+    await localPowerLineManager.start();
 
     // Auto-provision: connect the local adapter
     const localAdapter = adapterManager.getAdapter("local")!;
@@ -720,10 +711,10 @@ async function main(): Promise<void> {
     logger.info({ port: powerlinePort }, "Local environment auto-connected");
   } catch (err) {
     // Clean up the PowerLine child if it started but provisioning/connection failed
-    const failedHandle: LocalPowerLineHandle | undefined = localPowerLineHandle;
-    if (failedHandle) {
-      localPowerLineHandle = undefined;
-      await failedHandle.stop();
+    const failedManager: LocalPowerLineManager | undefined = localPowerLineManager;
+    localPowerLineManager = undefined;
+    if (failedManager) {
+      await failedManager.stop();
     }
     envRegistry.updateEnvironmentStatus("local", "error");
     emit("environment.changed", {});
@@ -987,10 +978,10 @@ async function main(): Promise<void> {
     }, SHUTDOWN_TIMEOUT_MS);
 
     // Stop the local PowerLine child process first
-    const plHandle: LocalPowerLineHandle | undefined = localPowerLineHandle;
-    if (plHandle) {
-      localPowerLineHandle = undefined;
-      await plHandle.stop();
+    const plManager: LocalPowerLineManager | undefined = localPowerLineManager;
+    localPowerLineManager = undefined;
+    if (plManager) {
+      await plManager.stop();
     }
 
     if (knowledgeCleanup) {
