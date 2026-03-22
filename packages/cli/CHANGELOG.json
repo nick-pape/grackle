@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.70.4",
+      "tag": "@grackle-ai/cli_v0.70.4",
+      "date": "Sun, 22 Mar 2026 21:01:41 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Add Content-Security-Policy, X-Frame-Options, and X-Content-Type-Options headers to all web responses"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.70.3",
       "tag": "@grackle-ai/cli_v0.70.3",
       "date": "Sun, 22 Mar 2026 19:10:10 GMT",

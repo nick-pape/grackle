@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sun, 22 Mar 2026 19:10:10 GMT and should not be manually modified.
+This log was last generated on Sun, 22 Mar 2026 21:01:41 GMT and should not be manually modified.
+
+## 0.70.4
+Sun, 22 Mar 2026 21:01:41 GMT
+
+### Patches
+
+- Add Content-Security-Policy, X-Frame-Options, and X-Content-Type-Options headers to all web responses
 
 ## 0.70.3
 Sun, 22 Mar 2026 19:10:10 GMT
