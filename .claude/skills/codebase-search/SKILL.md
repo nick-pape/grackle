@@ -24,7 +24,7 @@ Search the codebase using semantic search (concept/intent-based) backed by the `
 Use `mcp__qdrant-search__semantic_search` with the user's query. Always scope to the current catalog.
 
 ```
-mcp__qdrant-search__semantic_search(query: "<user's question>", catalog: "grackle6")
+mcp__qdrant-search__semantic_search(query: "<user's question>", catalog: "<folder-name>")
 ```
 
 Review the results — they're ranked by relevance with breadcrumbs showing the code path.
@@ -33,22 +33,22 @@ Review the results — they're ranked by relevance with breadcrumbs showing the 
 
 **Conceptual question** — "how does the pairing flow work?"
 ```
-mcp__qdrant-search__semantic_search(query: "pairing code generation and redemption flow", catalog: "grackle6")
+mcp__qdrant-search__semantic_search(query: "pairing code generation and redemption flow", catalog: "<folder-name>")
 ```
 
 **Tracing behavior** — "what happens when an agent session completes?"
 ```
-mcp__qdrant-search__semantic_search(query: "session completion event processing status transition", catalog: "grackle6")
+mcp__qdrant-search__semantic_search(query: "session completion event processing status transition", catalog: "<folder-name>")
 ```
 
 **Finding related code** — "where are tokens injected into sessions?"
 ```
-mcp__qdrant-search__semantic_search(query: "token injection push credentials to PowerLine before spawn", catalog: "grackle6")
+mcp__qdrant-search__semantic_search(query: "token injection push credentials to PowerLine before spawn", catalog: "<folder-name>")
 ```
 
 **Cross-cutting concern** — "how does error handling work across the WebSocket bridge?"
 ```
-mcp__qdrant-search__semantic_search(query: "WebSocket error handling disconnect reconnection", catalog: "grackle6")
+mcp__qdrant-search__semantic_search(query: "WebSocket error handling disconnect reconnection", catalog: "<folder-name>")
 ```
 
 ### Step 2: View top results
@@ -96,7 +96,7 @@ Use Grep/Glob directly when you:
 ## Rules
 
 1. **Always start with semantic search** — don't skip to Grep for conceptual questions
-2. **Always use `catalog: "grackle6"`** — scope to this clone
+2. **Always scope to this clone's catalog** — use the repo folder name (e.g., `grackle6` for `~/src/grackle6/`). Run `basename $(git rev-parse --show-toplevel)` if unsure.
 3. **Use Grep for follow-up, not initial discovery** — Grep finds exact strings, semantic search finds concepts
 4. **Include file:line references** in your response
 5. **Run multiple semantic searches if needed** — different phrasings surface different results. If the first query doesn't find what you need, rephrase.
