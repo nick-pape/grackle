@@ -64,10 +64,12 @@ export function KnowledgeGraph({
   // Zoom to fit on initial load
   useEffect(() => {
     if (graphData.nodes.length > 0 && graphRef.current) {
-      setTimeout(() => {
+      const timer: ReturnType<typeof setTimeout> = setTimeout(() => {
         graphRef.current?.zoomToFit(400, 50);
       }, 500);
+      return () => { clearTimeout(timer); };
     }
+    return undefined;
   }, [graphData.nodes.length]);
 
   /** Custom node renderer with labels. */

@@ -86,10 +86,11 @@ export function KnowledgeDetailPanel({
           <div className={styles.section}>
             <div className={styles.sectionLabel}>Edges ({edges.length})</div>
             <ul className={styles.edgeList}>
-              {edges.map((edge, i) => {
-                const otherId = edge.fromId === node.id ? edge.toId : edge.fromId;
+              {edges.map((edge) => {
+                const otherId: string = edge.fromId === node.id ? edge.toId : edge.fromId;
+                const edgeKey: string = `${edge.fromId}:${edge.toId}:${edge.type}`;
                 return (
-                  <li key={i} className={styles.edgeItem}>
+                  <li key={edgeKey} className={styles.edgeItem}>
                     <span className={styles.edgeType}>{edge.type}</span>
                     <button
                       className={styles.edgeNodeLink}

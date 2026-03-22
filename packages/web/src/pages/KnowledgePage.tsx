@@ -7,10 +7,11 @@
  * @module
  */
 
-import { useCallback, useEffect, useState, type JSX } from "react";
+import { useCallback, useEffect, useState, type FormEvent, type JSX } from "react";
 import { Breadcrumbs } from "../components/display/index.js";
 import { KnowledgeGraph, KnowledgeDetailPanel } from "../components/knowledge/index.js";
 import { useGrackle } from "../context/GrackleContext.js";
+import { KNOWLEDGE_URL } from "../utils/navigation.js";
 import styles from "./KnowledgePage.module.scss";
 
 /** Knowledge Graph explorer page. */
@@ -25,7 +26,7 @@ export function KnowledgePage(): JSX.Element {
     // eslint-disable-next-line @typescript-eslint/unbound-method -- loadRecent is a stable useCallback
   }, [knowledge.loadRecent]);
 
-  const handleSearch = useCallback((e: React.FormEvent) => {
+  const handleSearch = useCallback((e: FormEvent) => {
     e.preventDefault();
     if (searchInput.trim()) {
       knowledge.search(searchInput.trim());
@@ -56,7 +57,7 @@ export function KnowledgePage(): JSX.Element {
     knowledge.selectNode(nodeId);
   }, [knowledge]);
 
-  const breadcrumbs = [{ label: "Knowledge", url: "/knowledge" }];
+  const breadcrumbs = [{ label: "Knowledge", url: KNOWLEDGE_URL }];
 
   return (
     <div className={styles.layout} data-testid="knowledge-page">

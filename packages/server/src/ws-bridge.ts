@@ -2028,7 +2028,7 @@ async function handleMessage(
       try {
         const query: string = (msg.payload?.query as string) || "";
         const limit: number = (msg.payload?.limit as number) || 10;
-        const workspaceId: string | undefined = (msg.payload?.workspaceId as string) || undefined;
+        const workspaceId: string | undefined = msg.payload?.workspaceId !== undefined ? (msg.payload.workspaceId as string) : undefined;
         const results: SearchResult[] = await knowledgeSearch(query, embedder, { limit, workspaceId });
         sendWs(ws, {
           type: "knowledge.search.result",
@@ -2105,7 +2105,7 @@ async function handleMessage(
       }
       try {
         const limit: number = (msg.payload?.limit as number) || 20;
-        const workspaceId: string | undefined = (msg.payload?.workspaceId as string) || undefined;
+        const workspaceId: string | undefined = msg.payload?.workspaceId !== undefined ? (msg.payload.workspaceId as string) : undefined;
         const result = await listRecentNodes(limit, workspaceId);
         sendWs(ws, {
           type: "knowledge.listRecent.result",
