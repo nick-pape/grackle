@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sun, 22 Mar 2026 13:29:43 GMT and should not be manually modified.
+This log was last generated on Sun, 22 Mar 2026 14:07:12 GMT and should not be manually modified.
+
+## 0.69.1
+Sun, 22 Mar 2026 14:07:12 GMT
+
+### Patches
+
+- Nest workspace URLs under /environments and fix breadcrumbs
 
 ## 0.69.0
 Sun, 22 Mar 2026 13:29:43 GMT
