@@ -2,6 +2,23 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.70.1",
+      "tag": "@grackle-ai/cli_v0.70.1",
+      "date": "Sun, 22 Mar 2026 18:06:20 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Escape error strings in pairing and authorize HTML pages to prevent potential XSS"
+          }
+        ],
+        "none": [
+          {
+            "comment": "Add polished README for npm"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.70.0",
       "tag": "@grackle-ai/cli_v0.70.0",
       "date": "Sun, 22 Mar 2026 15:10:22 GMT",

@@ -1,6 +1,17 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sun, 22 Mar 2026 15:10:22 GMT and should not be manually modified.
+This log was last generated on Sun, 22 Mar 2026 18:06:20 GMT and should not be manually modified.
+
+## 0.70.1
+Sun, 22 Mar 2026 18:06:20 GMT
+
+### Patches
+
+- Escape error strings in pairing and authorize HTML pages to prevent potential XSS
+
+### Updates
+
+- Add polished README for npm
 
 ## 0.70.0
 Sun, 22 Mar 2026 15:10:22 GMT
