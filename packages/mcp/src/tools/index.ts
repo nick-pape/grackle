@@ -11,6 +11,7 @@ import { tokenTools } from "./token.js";
 import { configTools } from "./config.js";
 import { ipcTools } from "./ipc.js";
 import { usageTools } from "./usage.js";
+import { knowledgeTools } from "./knowledge.js";
 
 /** Create a ToolRegistry pre-populated with all available MCP tools. */
 export function createToolRegistry(): ToolRegistry {
@@ -27,5 +28,8 @@ export function createToolRegistry(): ToolRegistry {
   registry.registerAll(configTools);
   registry.registerAll(ipcTools);
   registry.registerAll(usageTools);
+  registry.registerAll(knowledgeTools);
   return registry;
 }
+
+export { setKnowledgeEmbedder } from "./knowledge.js";
