@@ -162,8 +162,20 @@ export function mapSessionUpdate(update: Record<string, unknown>): AgentEvent[] 
       return [{ type: "system", timestamp: ts, content: formatted, raw }];
     }
 
+    case "usage_update": {
+      const cost = update.cost as { amount?: number; currency?: string } | undefined;
+      const rawAmount = cost?.currency === "USD" ? Number(cost.amount) : 0;
+      const costAmount = Number.isFinite(rawAmount) ? rawAmount : 0;
+      if (costAmount > 0) {
+        return [{ type: "usage", timestamp: ts, content: JSON.stringify({
+          input_tokens: 0, output_tokens: 0, cost_usd: costAmount,
+        }), raw }];
+      }
+      return [];
+    }
+
     default:
-      // Skip unrecognized update types (usage_update, config_option_update, etc.)
+      // Skip unrecognized update types (config_option_update, etc.)
       return [];
   }
 }
@@ -227,6 +239,8 @@ class AcpSession extends BaseAgentSession {
   private connection?: any;
   private acpSessionId?: string;
   private messageCount: number = 0;
+  /** Last cumulative cost reported by usage_update (for delta computation). */
+  private lastReportedCost: number = 0;
 
   public constructor(
     config: AcpAgentConfig,
@@ -325,6 +339,20 @@ class AcpSession extends BaseAgentSession {
           const update = params.update as Record<string, unknown>;
           const events = mapSessionUpdate(update);
           for (const event of events) {
+            // Apply cumulative→delta conversion for ACP usage_update cost
+            if (event.type === "usage") {
+              try {
+                const data = JSON.parse(event.content) as { input_tokens: number; output_tokens: number; cost_usd: number };
+                if (data.cost_usd > 0) {
+                  const delta = data.cost_usd - this.lastReportedCost;
+                  this.lastReportedCost = data.cost_usd;
+                  if (delta <= 0) { continue; }
+                  this.eventQueue.push({ ...event, content: JSON.stringify({ ...data, cost_usd: delta }) });
+                  this.messageCount++;
+                  continue;
+                }
+              } catch { /* fall through to normal push */ }
+            }
             this.eventQueue.push(event);
             this.messageCount++;
           }

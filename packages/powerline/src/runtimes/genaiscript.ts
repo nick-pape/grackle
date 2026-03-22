@@ -17,6 +17,12 @@ interface GenAIResult {
   statusText?: string;
   text?: string;
   annotations?: Array<{ severity?: string; message?: string }>;
+  usage?: {
+    prompt: number;
+    completion: number;
+    total: number;
+    cost?: number;
+  };
 }
 
 /**
@@ -152,6 +158,18 @@ class GenAIScriptSession implements AgentSession {
         result = JSON.parse(resJson) as GenAIResult;
       } catch {
         logger.warn({ sessionId: this.id, outputDir }, "genaiscript: res.json not found or invalid");
+      }
+
+      // Emit usage data from the result
+      if (result?.usage) {
+        const inputTokens = result.usage.prompt;
+        const outputTokens = result.usage.completion;
+        const costUsd = result.usage.cost ?? 0;
+        if (inputTokens > 0 || outputTokens > 0 || costUsd > 0) {
+          yield { type: "usage", timestamp: ts(), content: JSON.stringify({
+            input_tokens: inputTokens, output_tokens: outputTokens, cost_usd: costUsd,
+          }) };
+        }
       }
 
       yield { type: "system", timestamp: ts(), content: "GenAIScript finished" };

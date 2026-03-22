@@ -372,6 +372,23 @@ class CodexSession extends BaseAgentSession {
         }
 
         case "turn.completed": {
+          // Extract usage from turn.completed event (per-turn, incremental)
+          const usage = (event as Record<string, unknown>).usage as {
+            input_tokens?: number;
+            cached_input_tokens?: number;
+            output_tokens?: number;
+          } | undefined;
+          if (usage) {
+            const inputTokens = (usage.input_tokens ?? 0) + (usage.cached_input_tokens ?? 0);
+            const outputTokens = usage.output_tokens ?? 0;
+            if (inputTokens > 0 || outputTokens > 0) {
+              this.eventQueue.push({
+                type: "usage",
+                timestamp: ts(),
+                content: JSON.stringify({ input_tokens: inputTokens, output_tokens: outputTokens, cost_usd: 0 }),
+              });
+            }
+          }
           this.turnCount++;
           if (this.maxTurns > 0 && this.turnCount >= this.maxTurns) {
             logger.info({ turnCount: this.turnCount, maxTurns: this.maxTurns }, "Codex max turns reached, stopping session");
