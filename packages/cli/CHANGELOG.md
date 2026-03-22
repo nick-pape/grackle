@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sun, 22 Mar 2026 02:55:30 GMT and should not be manually modified.
+This log was last generated on Sun, 22 Mar 2026 03:15:17 GMT and should not be manually modified.
+
+## 0.64.1
+Sun, 22 Mar 2026 03:15:17 GMT
+
+### Patches
+
+- Add usage_get MCP tool for querying token usage and cost by scope
 
 ## 0.64.0
 Sun, 22 Mar 2026 02:55:30 GMT

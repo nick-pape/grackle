@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.64.1",
+      "tag": "@grackle-ai/cli_v0.64.1",
+      "date": "Sun, 22 Mar 2026 03:15:17 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Add usage_get MCP tool for querying token usage and cost by scope"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.64.0",
       "tag": "@grackle-ai/cli_v0.64.0",
       "date": "Sun, 22 Mar 2026 02:55:30 GMT",
