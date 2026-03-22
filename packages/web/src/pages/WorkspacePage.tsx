@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type JSX } from "react";
+import { useEffect, useRef, useState, useMemo, type JSX } from "react";
 import { useParams } from "react-router";
 import { useGrackle } from "../context/GrackleContext.js";
 import { DagView } from "../components/dag/DagView.js";
@@ -14,6 +14,7 @@ import {
   EnvironmentSelect,
 } from "../components/editable/index.js";
 import Markdown from "react-markdown";
+import { formatCost } from "../utils/format.js";
 import remarkGfm from "remark-gfm";
 import styles from "../components/panels/SessionPanel.module.scss";
 
@@ -47,6 +48,7 @@ export function WorkspacePage(): JSX.Element {
   const navigate = useAppNavigate();
   const {
     tasks, environments, workspaces, personas, archiveWorkspace, updateWorkspace,
+    usageCache, loadUsage,
   } = useGrackle();
 
   const [workspaceTab, setWorkspaceTab] = useState<WorkspaceTab>("tasks");
@@ -69,6 +71,14 @@ export function WorkspacePage(): JSX.Element {
       setActiveFieldId(null);
     }
   }, [workspaceId, activeFieldId]);
+
+  // Load usage stats for the workspace
+  useEffect(() => {
+    if (workspaceId) {
+      loadUsage("workspace", workspaceId);
+    }
+  }, [workspaceId, loadUsage]);
+  const wsUsage = workspaceId ? usageCache[`workspace:${workspaceId}`] : undefined;
 
   const workspaceTasks = tasks.filter((t) => t.workspaceId === workspaceId);
   const done = workspaceTasks.filter((t) => t.status === "complete").length;
@@ -286,6 +296,15 @@ export function WorkspacePage(): JSX.Element {
             <div className={styles.progressFill} style={{ width: `${progressPct}%` }} />
           </div>
           <span className={styles.progressLabel}>{done}/{total}</span>
+        </div>
+      )}
+
+      {/* Usage summary */}
+      {wsUsage && wsUsage.costUsd > 0 && (
+        <div className={styles.progressBarContainer}>
+          <span className={styles.progressLabel}>
+            Usage: {formatCost(wsUsage.costUsd)} ({wsUsage.sessionCount} session{wsUsage.sessionCount !== 1 ? "s" : ""})
+          </span>
         </div>
       )}
 
