@@ -108,7 +108,7 @@ describe("initKnowledge", () => {
     expect(mockInitSchema).toHaveBeenCalledTimes(1);
   });
 
-  it("creates a local embedder and injects it into MCP", async () => {
+  it("creates a local embedder for gRPC handlers", async () => {
     await initKnowledge();
     expect(mockCreateLocalEmbedder).toHaveBeenCalledTimes(1);
     // Embedder is now accessible via getKnowledgeEmbedder() — verified by server gRPC handlers
