@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { usageTools } from "./usage.js";
 
 const mockGetUsage = vi.fn();
@@ -6,6 +6,10 @@ const mockClient = { getUsage: mockGetUsage } as unknown as Parameters<(typeof u
 
 describe("usage_get", () => {
   const tool = usageTools.find((t) => t.name === "usage_get")!;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   it("exists and is read-only", () => {
     expect(tool).toBeDefined();
