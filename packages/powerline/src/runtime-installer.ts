@@ -207,11 +207,14 @@ export async function importFromRuntime<T>(runtimeName: string, packageName: str
         exports?: Record<string, unknown>;
       };
       const exportsRoot = pkg.exports?.["."] as Record<string, string> | string | undefined;
-      const entryPoint = typeof exportsRoot === "string"
-        ? exportsRoot
-        : (typeof exportsRoot === "object" ? (exportsRoot.import ?? exportsRoot.default) : undefined)
-          ?? pkg.main
-          ?? "index.js";
+      let entryPoint: string;
+      if (typeof exportsRoot === "string") {
+        entryPoint = exportsRoot;
+      } else if (typeof exportsRoot === "object") {
+        entryPoint = exportsRoot.import || exportsRoot.default || pkg.main || "index.js";
+      } else {
+        entryPoint = pkg.main || "index.js";
+      }
       resolved = join(runtimeDir, "node_modules", ...packageName.split("/"), entryPoint as string);
     }
     return import(pathToFileURL(resolved).href) as Promise<T>;
