@@ -30,7 +30,6 @@ export function BottomStatusBar(): JSX.Element {
   const wsTaskFindingsMatch = useMatch("/environments/:environmentId/workspaces/:workspaceId/tasks/:taskId/findings");
   const wsTaskEditMatch = useMatch("/environments/:environmentId/workspaces/:workspaceId/tasks/:taskId/edit");
   const newChatMatch = useMatch("/sessions/new");
-  const isEnvironments = location.pathname.startsWith("/environments");
   const workspaceMatch = useMatch("/environments/:environmentId/workspaces/:workspaceId");
   const newTaskMatch = useMatch("/tasks/new");
   const chatMatch = useMatch("/chat");
@@ -43,6 +42,7 @@ export function BottomStatusBar(): JSX.Element {
     ?? wsTaskMatch?.params.taskId ?? wsTaskStreamMatch?.params.taskId ?? wsTaskFindingsMatch?.params.taskId ?? wsTaskEditMatch?.params.taskId;
   const wsMatch = wsTaskMatch ?? wsTaskStreamMatch ?? wsTaskFindingsMatch ?? wsTaskEditMatch;
   const routeEnvironmentId = wsMatch?.params.environmentId ?? workspaceMatch?.params.environmentId;
+  const isEnvironments = location.pathname.startsWith("/environments") && !workspaceMatch && !wsMatch;
   const isChat = !!chatMatch;
   const isNewChat = !!newChatMatch;
   const isWorkspace = !!workspaceMatch && !wsTaskMatch && !wsTaskStreamMatch && !wsTaskFindingsMatch && !wsTaskEditMatch;
