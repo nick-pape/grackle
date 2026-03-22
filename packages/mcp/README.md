@@ -39,7 +39,7 @@ All configuration is via environment variables:
 | `GRACKLE_MCP_PORT` | `7435` | Port the MCP server listens on |
 | `GRACKLE_HOST` | `127.0.0.1` | Bind address (must be a loopback address) |
 | `GRACKLE_URL` | `http://127.0.0.1:7434` | URL of the Grackle gRPC server to connect to |
-| `GRACKLE_API_KEY` | *(auto-loaded)* | API key for authenticating with the gRPC server. If not set, reads from `~/.grackle/api_key` |
+| `GRACKLE_API_KEY` | *(auto-loaded)* | API key for authenticating with the gRPC server. If not set, reads from `~/.grackle/api-key` |
 | `LOG_LEVEL` | `info` | Logging level (`debug`, `info`, `warn`, `error`) |
 
 ## Programmatic Usage

@@ -47,10 +47,10 @@ The CLI connects to a running Grackle server over gRPC. Connection is configured
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `GRACKLE_URL` | Server gRPC address | `http://127.0.0.1:7434` |
-| `GRACKLE_API_KEY` | API key for authentication | Read from `~/.grackle/api.key` |
+| `GRACKLE_API_KEY` | API key for authentication | Read from `${GRACKLE_HOME:-~}/.grackle/api-key` |
 | `GRACKLE_HOME` | Override the Grackle home directory | `~` |
 
-The API key is generated automatically when the server starts for the first time. If `GRACKLE_API_KEY` is not set, the CLI reads the key from `~/.grackle/api.key`.
+The API key is generated automatically when the server starts for the first time. If `GRACKLE_API_KEY` is not set, the CLI reads the key from `${GRACKLE_HOME:-~}/.grackle/api-key`.
 
 ## Command Reference
 

@@ -457,10 +457,9 @@ const customEmbedder = createLocalEmbedder({
 });
 ```
 
-**Important:** The default local embedder produces 384-dimensional vectors, while the Neo4j vector index is configured for 1536 dimensions (the `EMBEDDING_DIMENSIONS` constant). If you use the local embedder, you will need to either:
-- Adjust the `EMBEDDING_DIMENSIONS` constant to 384 before calling `initSchema()`, or
-- Use a 1536-dimensional embedding model, or
-- Create the vector index manually with the correct dimensions.
+**Important:** The default local embedder produces 384-dimensional vectors, while the default Neo4j vector index schema created by `initSchema()` is configured for 1536 dimensions (see the `EMBEDDING_DIMENSIONS` constant in the library source). Because that constant is baked into the schema definition, downstream applications cannot realistically change it at runtime. If you use the local embedder, you should either:
+- Use an embedding model that produces 1536-dimensional vectors so it matches the default schema created by `initSchema()`, or
+- Skip `initSchema()` and create a custom Neo4j vector index whose dimensions match your embedder (for example, 384 for the default local model).
 
 ### Chunkers
 
