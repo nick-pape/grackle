@@ -183,9 +183,7 @@ export function useKnowledge(send: SendFunction): UseKnowledgeResult {
         for (const result of results) {
           const rawNode = result.node as Record<string, unknown>;
           const resultEdges = (result.edges ?? []) as Record<string, unknown>[];
-          if (rawNode) {
-            nodeMap.set(rawNode.id as string, toGraphNode(rawNode, resultEdges.length));
-          }
+          nodeMap.set(rawNode.id as string, toGraphNode(rawNode, resultEdges.length));
           for (const edge of resultEdges) {
             linkList.push(toGraphLink(edge));
           }
@@ -204,17 +202,15 @@ export function useKnowledge(send: SendFunction): UseKnowledgeResult {
         }
         const rawNode = payload.node as Record<string, unknown>;
         const rawEdges = (payload.edges ?? []) as Record<string, unknown>[];
-        if (rawNode) {
-          setSelectedNode({
-            node: toGraphNode(rawNode, rawEdges.length),
-            edges: rawEdges.map((e) => ({
-              fromId: e.fromId as string,
-              toId: e.toId as string,
-              type: e.type as string,
-              metadata: e.metadata as Record<string, unknown> | undefined,
-            })),
-          });
-        }
+        setSelectedNode({
+          node: toGraphNode(rawNode, rawEdges.length),
+          edges: rawEdges.map((e) => ({
+            fromId: e.fromId as string,
+            toId: e.toId as string,
+            type: e.type as string,
+            metadata: e.metadata as Record<string, unknown> | undefined,
+          })),
+        });
         return true;
       }
 

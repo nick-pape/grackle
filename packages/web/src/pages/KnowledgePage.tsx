@@ -22,6 +22,7 @@ export function KnowledgePage(): JSX.Element {
   // Load recent nodes on mount
   useEffect(() => {
     knowledge.loadRecent();
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- loadRecent is a stable useCallback
   }, [knowledge.loadRecent]);
 
   const handleSearch = useCallback((e: React.FormEvent) => {
