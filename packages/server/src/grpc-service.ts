@@ -978,6 +978,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         github: providerToggleToEnum(config.github),
         copilot: providerToggleToEnum(config.copilot),
         codex: providerToggleToEnum(config.codex),
+        goose: providerToggleToEnum(config.goose),
       });
     },
 
@@ -1011,6 +1012,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         github: providerToggleToEnum(updated.github),
         copilot: providerToggleToEnum(updated.copilot),
         codex: providerToggleToEnum(updated.codex),
+        goose: providerToggleToEnum(updated.goose),
       });
     },
 

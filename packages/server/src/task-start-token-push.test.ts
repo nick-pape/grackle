@@ -139,6 +139,7 @@ vi.mock("./credential-providers.js", () => ({
     github: "off",
     copilot: "off",
     codex: "off",
+    goose: "off",
   })),
   setCredentialProviders: vi.fn(),
 }));

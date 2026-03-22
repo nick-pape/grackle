@@ -47,7 +47,7 @@ export function registerPersonaCommands(program: Command): void {
     .option("--desc <text>", "Description")
     .option(
       "--runtime <runtime>",
-      "Default runtime (claude-code, copilot, codex, genaiscript)",
+      "Default runtime (claude-code, copilot, codex, goose, genaiscript)",
     )
     .option("--model <model>", "Default model")
     .option("--max-turns <n>", "Maximum turns", parseInt)

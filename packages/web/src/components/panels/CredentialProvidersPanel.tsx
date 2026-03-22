@@ -50,6 +50,15 @@ const PROVIDERS: ProviderDef[] = [
       { value: "on", label: "On" },
     ],
   },
+  {
+    key: "goose",
+    label: "Goose",
+    description: "Forward Goose config and API keys for Goose agent access.",
+    options: [
+      { value: "off", label: "Off" },
+      { value: "on", label: "On" },
+    ],
+  },
 ];
 
 /** Panel for configuring which credential providers are auto-forwarded to environments. */

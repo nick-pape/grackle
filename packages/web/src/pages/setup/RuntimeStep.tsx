@@ -13,6 +13,7 @@ const RUNTIMES: RuntimeOption[] = [
   { id: "claude-code", name: "Claude Code", description: "Anthropic's agentic coding tool" },
   { id: "copilot", name: "Copilot Coding Agent", description: "GitHub's AI pair programmer" },
   { id: "codex", name: "Codex CLI", description: "OpenAI's coding agent" },
+  { id: "goose", name: "Goose", description: "Block's open-source AI coding agent" },
 ];
 
 /** Props for the {@link RuntimeStep} component. */

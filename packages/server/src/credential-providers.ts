@@ -21,6 +21,7 @@ export interface CredentialProviderConfig {
   github: "off" | "on";
   copilot: "off" | "on";
   codex: "off" | "on";
+  goose: "off" | "on";
 }
 
 /** Settings table key for credential provider configuration. */
@@ -32,10 +33,11 @@ const DEFAULT_CONFIG: CredentialProviderConfig = {
   github: "off",
   copilot: "off",
   codex: "off",
+  goose: "off",
 };
 
 /** Valid provider names. */
-export const VALID_PROVIDERS: readonly string[] = ["claude", "github", "copilot", "codex"];
+export const VALID_PROVIDERS: readonly string[] = ["claude", "github", "copilot", "codex", "goose"];
 
 /** Valid values for the Claude provider. */
 export const VALID_CLAUDE_VALUES: ReadonlySet<string> = new Set(["off", "subscription", "api_key"]);
@@ -62,6 +64,7 @@ export function parseCredentialProviderConfig(rawJson: string): CredentialProvid
     github: VALID_TOGGLE_VALUES.has(parsed.github ?? "") ? parsed.github! : DEFAULT_CONFIG.github,
     copilot: VALID_TOGGLE_VALUES.has(parsed.copilot ?? "") ? parsed.copilot! : DEFAULT_CONFIG.copilot,
     codex: VALID_TOGGLE_VALUES.has(parsed.codex ?? "") ? parsed.codex! : DEFAULT_CONFIG.codex,
+    goose: VALID_TOGGLE_VALUES.has(parsed.goose ?? "") ? parsed.goose! : DEFAULT_CONFIG.goose,
   };
 }
 
@@ -102,7 +105,8 @@ export function isValidCredentialProviderConfig(value: unknown): value is Creden
     VALID_CLAUDE_VALUES.has(v.claude as string) &&
     VALID_TOGGLE_VALUES.has(v.github as string) &&
     VALID_TOGGLE_VALUES.has(v.copilot as string) &&
-    VALID_TOGGLE_VALUES.has(v.codex as string)
+    VALID_TOGGLE_VALUES.has(v.codex as string) &&
+    VALID_TOGGLE_VALUES.has(v.goose as string)
   );
 }
 
@@ -129,6 +133,7 @@ const RUNTIME_PROVIDERS: Record<string, (keyof CredentialProviderConfig)[]> = {
   "claude-code": ["claude", "github"],
   "copilot": ["copilot", "github"],
   "codex": ["codex", "github"],
+  "goose": ["goose", "github"],
   "stub": [],
   // ACP runtimes (experimental) — auth via ACP authenticate method, not credential files
   "claude-code-acp": ["claude", "github"],
@@ -268,6 +273,46 @@ export function buildProviderTokenBundle(runtime?: string, database?: DatabaseIn
           value: openaiKey,
         }),
       );
+    }
+  }
+
+  // Goose provider — forward config file and provider-related env vars.
+  // Goose is provider-agnostic so we forward whichever API keys are available.
+  if ((!allowedProviders || allowedProviders.has("goose")) && config.goose === "on") {
+    const gooseConfigPath = process.platform === "win32"
+      ? join(process.env.APPDATA || join(homedir(), "AppData", "Roaming"), "Block", "goose", "config", "config.yaml")
+      : join(homedir(), ".config", "goose", "config.yaml");
+    if (existsSync(gooseConfigPath)) {
+      const value = readFileSync(gooseConfigPath, "utf-8");
+      if (value.trim()) {
+        items.push(
+          create(powerline.TokenItemSchema, {
+            name: "goose-config",
+            type: "file",
+            filePath: "~/.config/goose/config.yaml",
+            value,
+          }),
+        );
+      }
+    }
+    for (const varName of [
+      "GOOSE_PROVIDER",
+      "GOOSE_MODEL",
+      "ANTHROPIC_API_KEY",
+      "OPENAI_API_KEY",
+      "GOOGLE_API_KEY",
+    ]) {
+      const value = process.env[varName];
+      if (value) {
+        items.push(
+          create(powerline.TokenItemSchema, {
+            name: varName.toLowerCase().replace(/_/g, "-"),
+            type: "env_var",
+            envVar: varName,
+            value,
+          }),
+        );
+      }
     }
   }
 
