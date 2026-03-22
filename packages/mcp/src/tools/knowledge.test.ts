@@ -263,6 +263,30 @@ describe("knowledge_search — workspace scoping", () => {
 
     expect(content.neighbors).toHaveLength(1);
     expect(content.neighbors[0].id).toBe("node-2");
+    expect(content.neighborEdges).toHaveLength(1);
+    expect(content.neighborEdges[0]).toMatchObject({
+      fromId: "node-1",
+      toId: "node-2",
+    });
+  });
+
+  it("should enforce filtering for scoped callers without workspaceId", async () => {
+    const scopedNoWs: AuthContext = {
+      type: "scoped",
+      taskId: "t1",
+      personaId: "p1",
+      taskSessionId: "s1",
+    };
+
+    await tool.handler(
+      { query: "test", workspaceId: "ws-other" },
+      client as never,
+      scopedNoWs,
+    );
+
+    expect(client.searchKnowledge).toHaveBeenCalledWith(
+      expect.objectContaining({ workspaceId: "" }),
+    );
   });
 });
 
@@ -343,6 +367,25 @@ describe("knowledge_get_node — workspace scoping", () => {
     expect(content.neighbors[0].id).toBe("node-2");
     expect(content.neighborEdges).toHaveLength(1);
     expect(content.neighborEdges[0].toId).toBe("node-2");
+  });
+
+  it("should deny access for scoped callers without workspaceId when node has a workspace", async () => {
+    const scopedNoWs: AuthContext = {
+      type: "scoped",
+      taskId: "t1",
+      personaId: "p1",
+      taskSessionId: "s1",
+    };
+
+    client.getKnowledgeNode.mockResolvedValue(
+      create(grackle.GetKnowledgeNodeResponseSchema, {
+        node: makeProtoNode({ id: "node-1", workspaceId: "ws-1" }),
+        edges: [],
+      }),
+    );
+
+    const result = await tool.handler({ id: "node-1" }, client as never, scopedNoWs);
+    expect((result as { isError: boolean }).isError).toBe(true);
   });
 });
 

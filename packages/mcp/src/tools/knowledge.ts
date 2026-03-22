@@ -211,17 +211,22 @@ export const knowledgeTools: ToolDefinition[] = [
         neighborEdges = allEdges;
 
         // Filter expanded neighbors to the caller's workspace for scoped callers.
-        if (authContext?.type === "scoped" && authContext.workspaceId) {
+        if (authContext?.type === "scoped") {
+          const allowedWorkspaceId: string = authContext.workspaceId ?? "";
           const allowedIds: Set<string> = new Set<string>();
           neighbors = neighbors.filter((n) => {
-            const allowed = n.workspaceId === authContext.workspaceId;
+            const allowed = n.workspaceId === allowedWorkspaceId;
             if (allowed) {
               allowedIds.add(n.id as string);
             }
             return allowed;
           });
+          const allowedEdgeNodeIds: Set<string> = new Set<string>([
+            ...startIds,
+            ...allowedIds,
+          ]);
           neighborEdges = neighborEdges.filter(
-            (e) => allowedIds.has(e.fromId as string) || startIds.has(e.fromId as string),
+            (e) => allowedEdgeNodeIds.has(e.fromId as string) && allowedEdgeNodeIds.has(e.toId as string),
           );
         }
       }
@@ -291,8 +296,8 @@ export const knowledgeTools: ToolDefinition[] = [
 
       // For scoped callers, deny access to nodes outside their workspace.
       // Return "not found" to avoid leaking that the node exists.
-      if (authContext?.type === "scoped" && authContext.workspaceId) {
-        if (response.node.workspaceId !== authContext.workspaceId) {
+      if (authContext?.type === "scoped") {
+        if (response.node.workspaceId !== (authContext.workspaceId ?? "")) {
           return {
             content: [
               {
@@ -318,10 +323,11 @@ export const knowledgeTools: ToolDefinition[] = [
         let expandedEdges: Record<string, unknown>[] = expansion.edges.map(formatEdge);
 
         // Filter expanded neighbors to the caller's workspace for scoped callers.
-        if (authContext?.type === "scoped" && authContext.workspaceId) {
+        if (authContext?.type === "scoped") {
+          const allowedWorkspaceId: string = authContext.workspaceId ?? "";
           const allowedIds: Set<string> = new Set<string>([id]);
           expandedNodes = expandedNodes.filter((n) => {
-            const allowed = n.workspaceId === authContext.workspaceId;
+            const allowed = n.workspaceId === allowedWorkspaceId;
             if (allowed) {
               allowedIds.add(n.id as string);
             }
