@@ -142,10 +142,6 @@ function waitForProcessing(
 
     processEventStream(eventStream(events), {
       ...options,
-      onError: (err: unknown) => {
-        clearInterval(interval);
-        reject(err);
-      },
     });
   });
 }
@@ -494,20 +490,11 @@ describe("stream error handling", () => {
       content: "waiting_input",
     });
 
-    let onErrorCalled = false;
-
     await new Promise<void>((resolve) => {
       processEventStream(
         throwingStream([waitingEvent], new Error("transport closed")),
-        {
-          sessionId: "sess1",
-          logPath: "/tmp/log",
-          onError: () => {
-            onErrorCalled = true;
-          },
-        },
+        { sessionId: "sess1", logPath: "/tmp/log" },
       );
-      // Poll for session to reach terminal status
       const interval = setInterval(() => {
         const s = sessionStore.getSession("sess1");
         if (s && ["completed", "failed", "interrupted", "suspended"].includes(s.status)) {
@@ -521,7 +508,6 @@ describe("stream error handling", () => {
     expect(session?.status).toBe("suspended");
     expect(session?.suspendedAt).toBeTruthy();
     expect(session?.endedAt).toBeNull();
-    expect(onErrorCalled).toBe(false);
     expect(logger.info).toHaveBeenCalledWith(
       expect.objectContaining({ sessionId: "sess1" }),
       "Stream lost — suspending session for recovery",
@@ -538,20 +524,11 @@ describe("stream error handling", () => {
       content: "some output",
     });
 
-    let onErrorCalled = false;
-
     await new Promise<void>((resolve) => {
       processEventStream(
         throwingStream([textEvent], new Error("connection reset")),
-        {
-          sessionId: "sess1",
-          logPath: "/tmp/log",
-          onError: () => {
-            onErrorCalled = true;
-          },
-        },
+        { sessionId: "sess1", logPath: "/tmp/log" },
       );
-      // Poll for session to reach terminal status
       const interval = setInterval(() => {
         const s = sessionStore.getSession("sess1");
         if (s && ["completed", "failed", "interrupted", "suspended"].includes(s.status)) {
@@ -565,8 +542,6 @@ describe("stream error handling", () => {
     expect(session?.status).toBe("suspended");
     expect(session?.suspendedAt).toBeTruthy();
     expect(session?.endedAt).toBeNull();
-    // onError is NOT called for SUSPENDED (recoverable, not a failure)
-    expect(onErrorCalled).toBe(false);
   });
 
   it("task broadcast fires when session suspends via idle disconnect", async () => {

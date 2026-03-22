@@ -28,7 +28,6 @@ export interface EventStreamOptions {
   systemContext?: string;
   /** Initial user prompt sent to the agent. Emitted as a user_input event after systemContext. */
   prompt?: string;
-  onError?: (error: unknown) => void;
 }
 
 /**
@@ -204,7 +203,7 @@ function replayLoggedEvents(ctx: ProcessorContext, subtaskLocalIdMap: Map<string
  * Handles event transformation, logging, finding interception, status updates, and cleanup.
  *
  * This function is fire-and-forget: it runs in the background and does not throw.
- * Callers should use `onComplete` and `onError` callbacks for post-processing.
+ * Callers should use `onComplete` callback for post-processing.
  *
  * Supports late-binding: if a task is associated with the session after the stream starts,
  * the processor registry notifies this function via a bind listener, and pre-association

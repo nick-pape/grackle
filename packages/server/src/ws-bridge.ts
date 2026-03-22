@@ -591,17 +591,6 @@ async function handleMessage(
         logPath,
         systemContext: finalSystemContext,
         prompt,
-        onError: (err) => {
-          sendWs(ws, {
-            type: "session_event",
-            payload: {
-              sessionId,
-              eventType: "error",
-              timestamp: new Date().toISOString(),
-              content: `Spawn failed: ${err instanceof Error ? err.message : String(err)}`,
-            },
-          });
-        },
       });
       break;
     }
