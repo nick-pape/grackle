@@ -11,6 +11,8 @@ const {
   mockCreateLocalEmbedder,
   mockSyncReferenceNode,
   mockDeleteReferenceNodeBySource,
+  mockFindReferenceNodeBySource,
+  mockCreateEdge,
   mockSetKnowledgeEmbedder,
   mockSubscribe,
   mockGetTask,
@@ -22,6 +24,8 @@ const {
   mockCreateLocalEmbedder: vi.fn().mockReturnValue({ dimensions: 384, embed: vi.fn(), embedBatch: vi.fn() }),
   mockSyncReferenceNode: vi.fn().mockResolvedValue("node-id"),
   mockDeleteReferenceNodeBySource: vi.fn().mockResolvedValue(true),
+  mockFindReferenceNodeBySource: vi.fn().mockResolvedValue(undefined),
+  mockCreateEdge: vi.fn().mockResolvedValue({ fromId: "a", toId: "b", type: "RELATES_TO", createdAt: "" }),
   mockSetKnowledgeEmbedder: vi.fn(),
   mockSubscribe: vi.fn().mockReturnValue(vi.fn()),
   mockGetTask: vi.fn(),
@@ -35,8 +39,17 @@ vi.mock("@grackle-ai/knowledge", () => ({
   createLocalEmbedder: mockCreateLocalEmbedder,
   syncReferenceNode: mockSyncReferenceNode,
   deleteReferenceNodeBySource: mockDeleteReferenceNodeBySource,
+  findReferenceNodeBySource: mockFindReferenceNodeBySource,
+  createEdge: mockCreateEdge,
   deriveTaskText: (title: string, desc: string) => `[Task] ${title} - ${desc}`,
   deriveFindingText: (title: string, content: string, tags: string[]) => `[Finding] ${title} - ${content}`,
+  EDGE_TYPE: {
+    RELATES_TO: "RELATES_TO",
+    DEPENDS_ON: "DEPENDS_ON",
+    DERIVED_FROM: "DERIVED_FROM",
+    MENTIONS: "MENTIONS",
+    PART_OF: "PART_OF",
+  },
 }));
 
 vi.mock("@grackle-ai/mcp", () => ({
@@ -145,7 +158,11 @@ describe("entity sync handler", () => {
 
   beforeEach(async () => {
     mockSyncReferenceNode.mockClear();
+    mockSyncReferenceNode.mockResolvedValue("node-id");
     mockDeleteReferenceNodeBySource.mockClear();
+    mockFindReferenceNodeBySource.mockClear();
+    mockFindReferenceNodeBySource.mockResolvedValue(undefined);
+    mockCreateEdge.mockClear();
     mockGetTask.mockClear();
     mockQueryFindings.mockClear();
 
@@ -164,6 +181,8 @@ describe("entity sync handler", () => {
       title: "Fix bug",
       description: "Auth is broken",
       workspaceId: "ws-1",
+      parentTaskId: "",
+      dependsOn: "[]",
     });
 
     eventHandler({
@@ -193,6 +212,8 @@ describe("entity sync handler", () => {
       title: "Updated title",
       description: "New desc",
       workspaceId: "ws-1",
+      parentTaskId: "",
+      dependsOn: "[]",
     });
 
     eventHandler({
@@ -268,6 +289,8 @@ describe("entity sync handler", () => {
       title: "T",
       description: "D",
       workspaceId: "",
+      parentTaskId: "",
+      dependsOn: "[]",
     });
     mockSyncReferenceNode.mockRejectedValueOnce(new Error("Neo4j down"));
 
@@ -280,5 +303,127 @@ describe("entity sync handler", () => {
 
     // Should not throw
     await new Promise((r) => setTimeout(r, 10));
+  });
+
+  it("creates PART_OF edge for task with parent", async () => {
+    mockGetTask.mockReturnValue({
+      id: "child-1",
+      title: "Child task",
+      description: "Subtask",
+      workspaceId: "ws-1",
+      parentTaskId: "parent-1",
+      dependsOn: "[]",
+    });
+    // ensureTaskReferenceNode: parent not yet synced, getTask returns parent
+    mockFindReferenceNodeBySource.mockResolvedValue(undefined);
+    mockSyncReferenceNode
+      .mockResolvedValueOnce("child-node-id")   // child sync
+      .mockResolvedValueOnce("parent-node-id"); // parent ensure
+
+    eventHandler({
+      id: "evt-10",
+      type: "task.created",
+      timestamp: new Date().toISOString(),
+      payload: { taskId: "child-1", workspaceId: "ws-1" },
+    });
+
+    await new Promise((r) => setTimeout(r, 50));
+
+    expect(mockCreateEdge).toHaveBeenCalledWith("child-node-id", "parent-node-id", "PART_OF");
+  });
+
+  it("creates DEPENDS_ON edges for task with dependencies", async () => {
+    mockGetTask
+      .mockReturnValueOnce({
+        id: "t1",
+        title: "Task 1",
+        description: "Desc",
+        workspaceId: "ws-1",
+        parentTaskId: "",
+        dependsOn: '["dep-1","dep-2"]',
+      })
+      .mockReturnValueOnce({ id: "dep-1", title: "Dep 1", description: "D", workspaceId: "ws-1", parentTaskId: "", dependsOn: "[]" })
+      .mockReturnValueOnce({ id: "dep-2", title: "Dep 2", description: "D", workspaceId: "ws-1", parentTaskId: "", dependsOn: "[]" });
+
+    mockSyncReferenceNode
+      .mockResolvedValueOnce("t1-node")
+      .mockResolvedValueOnce("dep1-node")
+      .mockResolvedValueOnce("dep2-node");
+
+    eventHandler({
+      id: "evt-11",
+      type: "task.created",
+      timestamp: new Date().toISOString(),
+      payload: { taskId: "t1", workspaceId: "ws-1" },
+    });
+
+    await new Promise((r) => setTimeout(r, 50));
+
+    expect(mockCreateEdge).toHaveBeenCalledWith("t1-node", "dep1-node", "DEPENDS_ON");
+    expect(mockCreateEdge).toHaveBeenCalledWith("t1-node", "dep2-node", "DEPENDS_ON");
+  });
+
+  it("creates DERIVED_FROM edge for finding with taskId", async () => {
+    mockQueryFindings.mockReturnValue([
+      { id: "f1", title: "Auth issue", content: "JWT expired", tags: '["auth"]', taskId: "t1" },
+    ]);
+    mockGetTask.mockReturnValue({
+      id: "t1", title: "Fix auth", description: "D", workspaceId: "ws-1", parentTaskId: "", dependsOn: "[]",
+    });
+    mockSyncReferenceNode
+      .mockResolvedValueOnce("finding-node-id")
+      .mockResolvedValueOnce("task-node-id");
+
+    eventHandler({
+      id: "evt-12",
+      type: "finding.posted",
+      timestamp: new Date().toISOString(),
+      payload: { findingId: "f1", workspaceId: "ws-1" },
+    });
+
+    await new Promise((r) => setTimeout(r, 50));
+
+    expect(mockCreateEdge).toHaveBeenCalledWith("finding-node-id", "task-node-id", "DERIVED_FROM");
+  });
+
+  it("skips DERIVED_FROM edge when finding has no taskId", async () => {
+    mockQueryFindings.mockReturnValue([
+      { id: "f2", title: "Orphan finding", content: "No task", tags: "[]", taskId: "" },
+    ]);
+
+    eventHandler({
+      id: "evt-13",
+      type: "finding.posted",
+      timestamp: new Date().toISOString(),
+      payload: { findingId: "f2", workspaceId: "ws-1" },
+    });
+
+    await new Promise((r) => setTimeout(r, 50));
+
+    expect(mockCreateEdge).not.toHaveBeenCalled();
+  });
+
+  it("skips edge when parent task not found", async () => {
+    mockGetTask
+      .mockReturnValueOnce({
+        id: "child-1",
+        title: "Child",
+        description: "D",
+        workspaceId: "ws-1",
+        parentTaskId: "missing-parent",
+        dependsOn: "[]",
+      })
+      .mockReturnValueOnce(undefined); // parent not found
+
+    eventHandler({
+      id: "evt-14",
+      type: "task.created",
+      timestamp: new Date().toISOString(),
+      payload: { taskId: "child-1", workspaceId: "ws-1" },
+    });
+
+    await new Promise((r) => setTimeout(r, 50));
+
+    expect(mockCreateEdge).not.toHaveBeenCalled();
   });
 });
