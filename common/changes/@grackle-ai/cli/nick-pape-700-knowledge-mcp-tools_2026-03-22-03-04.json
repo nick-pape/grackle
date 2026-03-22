@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Add knowledge graph MCP tools: knowledge_search, knowledge_get_node, knowledge_create_node",
+      "type": "minor",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
