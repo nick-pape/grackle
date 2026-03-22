@@ -304,37 +304,48 @@ class ClaudeCodeSession extends BaseAgentSession {
     const abort = new AbortController();
     this.activeAbort = abort;
 
-    // Create a prompt queue — the SDK reads from this AsyncIterable and keeps
-    // the process alive waiting for the next yield. Push messages to deliver them.
-    this.promptQueue = new AsyncQueue<Record<string, unknown>>();
+    try {
+      // Create a prompt queue — the SDK reads from this AsyncIterable and keeps
+      // the process alive waiting for the next yield. Push messages to deliver them.
+      this.promptQueue = new AsyncQueue<Record<string, unknown>>();
 
-    // Push the initial user message
-    this.promptQueue.push({
-      type: "user",
-      message: { role: "user", content: [{ type: "text", text: initialPrompt }] },
-    });
+      // Push the initial user message
+      this.promptQueue.push({
+        type: "user",
+        message: { role: "user", content: [{ type: "text", text: initialPrompt }] },
+      });
 
-    // Start query with AsyncIterable prompt — process stays alive
-    const queryInput: Record<string, unknown> = {
-      prompt: this.promptQueue,
-      options: { ...this.cachedSdkOptions!, abortController: abort },
-    };
-    const conversation = query(queryInput) as unknown as AsyncIterable<Record<string, unknown>> & {
-      close?: () => void;
-    };
+      // Start query with AsyncIterable prompt — process stays alive
+      const queryInput: Record<string, unknown> = {
+        prompt: this.promptQueue,
+        options: { ...this.cachedSdkOptions!, abortController: abort },
+      };
+      const conversation = query(queryInput) as unknown as AsyncIterable<Record<string, unknown>> & {
+        close?: () => void;
+      };
 
-    this.persistentQuery = conversation;
+      this.persistentQuery = conversation;
 
-    // Start background consumer that reads ALL messages from the persistent query
-    // and pushes them to the event queue. This runs for the lifetime of the query.
-    this.consumePersistentStream(conversation).catch((err) => {
-      if (!this.killed) {
-        logger.warn({ err }, "Persistent query stream ended unexpectedly");
-      }
-    });
+      // Start background consumer that reads ALL messages from the persistent query
+      // and pushes them to the event queue. This runs for the lifetime of the query.
+      this.consumePersistentStream(conversation).catch((err) => {
+        if (!this.killed) {
+          logger.warn({ err }, "Persistent query stream ended unexpectedly");
+        }
+        // Clear persistent state so follow-ups fall back to resume-per-input
+        this.promptQueue = undefined;
+        this.persistentQuery = undefined;
+      });
 
-    // Wait for the first turn to complete (result message)
-    return this.waitForTurnComplete();
+      // Wait for the first turn to complete (result message)
+      return this.waitForTurnComplete();
+    } catch (err) {
+      // Persistent mode failed — fall back to resume-per-input
+      logger.warn({ err }, "Persistent process mode failed — falling back to resume-per-input");
+      this.promptQueue = undefined;
+      this.persistentQuery = undefined;
+      return this.consumeQuery(initialPrompt, this.cachedSdkOptions!);
+    }
   }
 
   /**
@@ -423,10 +434,12 @@ class ClaudeCodeSession extends BaseAgentSession {
       }
     }
 
-    // Stream ended — resolve any pending turn wait (prevents hangs when
-    // the conversation ends without a result message, e.g. in tests or
-    // when the process exits unexpectedly)
+    // Stream ended — resolve any pending turn wait and clear persistent state
+    // so follow-ups fall back to resume-per-input instead of trying to push
+    // into a dead prompt queue.
     this.turnCompleteResolve?.();
+    this.promptQueue = undefined;
+    this.persistentQuery = undefined;
   }
 
   /** Wait for the current turn to complete (result message received from SDK). */
@@ -440,61 +453,6 @@ class ClaudeCodeSession extends BaseAgentSession {
   }
 
   // ─── Resume-per-input fallback ──────────────────────────
-
-  /**
-   * Consume an already-started conversation (fallback when streamInput not available).
-   * Uses the same full message processing as consumeQuery (includes usage extraction).
-   */
-  private async consumeConversation(conversation: AsyncIterable<Record<string, unknown>>): Promise<number> {
-    const ts: () => string = () => new Date().toISOString();
-    let messageCount = 0;
-
-    for await (const msg of conversation) {
-      if (this.killed) {
-        break;
-      }
-      if (msg.type === "system" && msg.session_id) {
-        const wasEmpty = !this.runtimeSessionId;
-        this.runtimeSessionId = msg.session_id as string;
-        if (wasEmpty) {
-          this.eventQueue.push({ type: "runtime_session_id", timestamp: ts(), content: this.runtimeSessionId });
-        }
-      }
-      if (msg.type === "result" && msg.is_error) {
-        this.eventQueue.push({ type: "error", timestamp: ts(), content: (msg.result as string) || "Error", raw: msg });
-        continue;
-      }
-      if (msg.type === "result" && !msg.is_error) {
-        const usage = msg.usage as {
-          input_tokens?: number;
-          output_tokens?: number;
-          cache_read_input_tokens?: number;
-          cache_creation_input_tokens?: number;
-        } | undefined;
-        const costUsd = msg.total_cost_usd as number | undefined;
-        if (usage !== undefined || costUsd !== undefined) {
-          const totalInput = (usage?.input_tokens ?? 0)
-            + (usage?.cache_read_input_tokens ?? 0)
-            + (usage?.cache_creation_input_tokens ?? 0);
-          this.eventQueue.push({
-            type: "usage",
-            timestamp: ts(),
-            content: JSON.stringify({
-              input_tokens: totalInput as number,
-              output_tokens: (usage?.output_tokens ?? 0) as number,
-              cost_usd: (costUsd ?? 0) as number,
-            }),
-          });
-        }
-      }
-      const events = mapMessage(msg);
-      for (const event of events) {
-        messageCount++;
-        this.eventQueue.push(event);
-      }
-    }
-    return messageCount;
-  }
 
   /**
    * Consume all messages from a query() conversation, pushing events to the queue.
