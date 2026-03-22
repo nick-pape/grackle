@@ -133,7 +133,7 @@ function waitForProcessing(
     // Poll for session to reach a terminal status
     const interval = setInterval(() => {
       const s = sessionStore.getSession(options.sessionId);
-      if (s && ["completed", "failed", "interrupted"].includes(s.status)) {
+      if (s && ["completed", "failed", "interrupted", "suspended"].includes(s.status)) {
         clearInterval(interval);
         // Give the finally block time to run
         setTimeout(resolve, 50);
@@ -142,10 +142,6 @@ function waitForProcessing(
 
     processEventStream(eventStream(events), {
       ...options,
-      onError: (err: unknown) => {
-        clearInterval(interval);
-        reject(err);
-      },
     });
   });
 }
@@ -494,23 +490,14 @@ describe("stream error handling", () => {
       content: "waiting_input",
     });
 
-    let onErrorCalled = false;
-
     await new Promise<void>((resolve) => {
       processEventStream(
         throwingStream([waitingEvent], new Error("transport closed")),
-        {
-          sessionId: "sess1",
-          logPath: "/tmp/log",
-          onError: () => {
-            onErrorCalled = true;
-          },
-        },
+        { sessionId: "sess1", logPath: "/tmp/log" },
       );
-      // Poll for session to reach terminal status
       const interval = setInterval(() => {
         const s = sessionStore.getSession("sess1");
-        if (s && ["completed", "failed", "interrupted"].includes(s.status)) {
+        if (s && ["completed", "failed", "interrupted", "suspended"].includes(s.status)) {
           clearInterval(interval);
           setTimeout(resolve, 50);
         }
@@ -518,15 +505,16 @@ describe("stream error handling", () => {
     });
 
     const session = sessionStore.getSession("sess1");
-    expect(session?.status).toBe("completed");
-    expect(onErrorCalled).toBe(false);
+    expect(session?.status).toBe("suspended");
+    expect(session?.suspendedAt).toBeTruthy();
+    expect(session?.endedAt).toBeNull();
     expect(logger.info).toHaveBeenCalledWith(
       expect.objectContaining({ sessionId: "sess1" }),
-      "Stream ended while session idle — marking completed",
+      "Stream lost — suspending session for recovery",
     );
   });
 
-  it("marks session failed when stream errors during running", async () => {
+  it("marks session suspended when stream errors during running", async () => {
     sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
 
     const textEvent = create(powerline.AgentEventSchema, {
@@ -536,23 +524,14 @@ describe("stream error handling", () => {
       content: "some output",
     });
 
-    let onErrorCalled = false;
-
     await new Promise<void>((resolve) => {
       processEventStream(
         throwingStream([textEvent], new Error("connection reset")),
-        {
-          sessionId: "sess1",
-          logPath: "/tmp/log",
-          onError: () => {
-            onErrorCalled = true;
-          },
-        },
+        { sessionId: "sess1", logPath: "/tmp/log" },
       );
-      // Poll for session to reach terminal status
       const interval = setInterval(() => {
         const s = sessionStore.getSession("sess1");
-        if (s && ["completed", "failed", "interrupted"].includes(s.status)) {
+        if (s && ["completed", "failed", "interrupted", "suspended"].includes(s.status)) {
           clearInterval(interval);
           setTimeout(resolve, 50);
         }
@@ -560,11 +539,12 @@ describe("stream error handling", () => {
     });
 
     const session = sessionStore.getSession("sess1");
-    expect(session?.status).toBe("failed");
-    expect(onErrorCalled).toBe(true);
+    expect(session?.status).toBe("suspended");
+    expect(session?.suspendedAt).toBeTruthy();
+    expect(session?.endedAt).toBeNull();
   });
 
-  it("task broadcast fires when session completes via idle disconnect", async () => {
+  it("task broadcast fires when session suspends via idle disconnect", async () => {
     sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
     taskStore.createTask("task1", "proj1", "Test Task", "desc", [], "test-workspace");
 
@@ -591,7 +571,7 @@ describe("stream error handling", () => {
       // Poll for session to reach terminal status
       const interval = setInterval(() => {
         const s = sessionStore.getSession("sess1");
-        if (s && ["completed", "failed", "interrupted"].includes(s.status)) {
+        if (s && ["completed", "failed", "interrupted", "suspended"].includes(s.status)) {
           clearInterval(interval);
           setTimeout(resolve, 50);
         }
@@ -599,7 +579,7 @@ describe("stream error handling", () => {
     });
 
     const session = sessionStore.getSession("sess1");
-    expect(session?.status).toBe("completed");
+    expect(session?.status).toBe("suspended");
 
     // Verify task.updated was emitted so the frontend can re-fetch computed status
     expect(emit).toHaveBeenCalledWith(
@@ -844,7 +824,7 @@ describe("late-binding", () => {
     return new Promise<void>((resolve) => {
       const interval = setInterval(() => {
         const s = sessionStore.getSession(sessionId);
-        if (s && ["completed", "failed", "interrupted"].includes(s.status)) {
+        if (s && ["completed", "failed", "interrupted", "suspended"].includes(s.status)) {
           clearInterval(interval);
           setTimeout(resolve, 50);
         }

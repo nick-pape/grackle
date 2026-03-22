@@ -28,7 +28,6 @@ export interface EventStreamOptions {
   systemContext?: string;
   /** Initial user prompt sent to the agent. Emitted as a user_input event after systemContext. */
   prompt?: string;
-  onError?: (error: unknown) => void;
 }
 
 /**
@@ -204,7 +203,7 @@ function replayLoggedEvents(ctx: ProcessorContext, subtaskLocalIdMap: Map<string
  * Handles event transformation, logging, finding interception, status updates, and cleanup.
  *
  * This function is fire-and-forget: it runs in the background and does not throw.
- * Callers should use `onComplete` and `onError` callbacks for post-processing.
+ * Callers should use `onComplete` callback for post-processing.
  *
  * Supports late-binding: if a task is associated with the session after the stream starts,
  * the processor registry notifies this function via a bind listener, and pre-association
@@ -214,7 +213,7 @@ export function processEventStream(
   events: AsyncIterable<powerline.AgentEvent>,
   options: EventStreamOptions,
 ): void {
-  const { sessionId, logPath, onError } = options;
+  const { sessionId, logPath } = options;
 
   // Create a mutable context that can be updated via the processor registry
   const ctx: ProcessorContext = {
@@ -355,9 +354,10 @@ export function processEventStream(
         }
       }
 
-      // Fallback: if stream ended without a terminal status event, mark completed
+      // Fallback: if stream ended without a terminal status event, mark completed.
+      // Guard against overwriting SUSPENDED (set by heartbeat sweep during disconnect).
       const current = sessionStore.getSession(sessionId);
-      if (current && !TERMINAL_STATUSES.includes(current.status)) {
+      if (current && !TERMINAL_STATUSES.includes(current.status) && current.status !== SESSION_STATUS.SUSPENDED) {
         sessionStore.updateSession(sessionId, SESSION_STATUS.COMPLETED);
         publishChildCompletion(sessionId, "completed");
         if (ctx.taskId) {
@@ -366,30 +366,20 @@ export function processEventStream(
       }
     } catch (err) {
       const current = sessionStore.getSession(sessionId);
-      if (current?.status === SESSION_STATUS.IDLE) {
-        // Session was idle (agent finished work). Transport error is not a task failure.
-        logger.info({ sessionId, err: String(err) }, "Stream ended while session idle — marking completed");
-        sessionStore.updateSession(sessionId, SESSION_STATUS.COMPLETED);
-        publishChildCompletion(sessionId, "completed");
+      if (current && !TERMINAL_STATUSES.includes(current.status)) {
+        // Transport error during active or idle session — suspend for auto-recovery
+        // on reconnect. Don't publish child completion (session will resume).
+        logger.info({ sessionId, err: String(err) }, "Stream lost — suspending session for recovery");
+        sessionStore.suspendSession(sessionId);
         streamHub.publish(create(grackle.SessionEventSchema, {
           sessionId,
           type: grackle.EventType.STATUS,
           timestamp: new Date().toISOString(),
-          content: SESSION_STATUS.COMPLETED,
+          content: SESSION_STATUS.SUSPENDED,
         }));
-      } else {
-        // Genuine failure during active work.
-        sessionStore.updateSession(sessionId, SESSION_STATUS.FAILED, undefined, String(err));
-        publishChildCompletion(sessionId, "failed");
-        streamHub.publish(create(grackle.SessionEventSchema, {
-          sessionId,
-          type: grackle.EventType.STATUS,
-          timestamp: new Date().toISOString(),
-          content: SESSION_STATUS.FAILED,
-          raw: String(err),
-        }));
-        onError?.(err);
       }
+      // If already terminal (agent pushed completed/failed/etc. before transport
+      // died), the session is already in its correct final state — nothing to do.
       if (ctx.taskId) {
         emit("task.updated", { taskId: ctx.taskId, workspaceId: ctx.workspaceId });
       }
