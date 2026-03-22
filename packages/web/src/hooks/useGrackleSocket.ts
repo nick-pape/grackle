@@ -7,7 +7,7 @@
  */
 
 import { useCallback, useState } from "react";
-import type { WsMessage, SendFunction, GrackleEvent } from "./types.js";
+import type { WsMessage, SendFunction, GrackleEvent, UsageStats } from "./types.js";
 import { isGrackleEvent } from "./types.js";
 import { useWebSocket } from "./useWebSocket.js";
 import { useEnvironments } from "./useEnvironments.js";
@@ -196,6 +196,10 @@ export interface UseGrackleSocketResult {
   onboardingCompleted: boolean | undefined;
   /** Mark onboarding as complete (persisted via server settings). */
   completeOnboarding: () => void;
+  /** Cached usage stats keyed by "scope:id" (e.g. "workspace:abc123"). */
+  usageCache: Record<string, import("./types.js").UsageStats>;
+  /** Request aggregated usage stats from the server for a given scope and entity ID. */
+  loadUsage: (scope: string, id: string) => void;
 }
 
 // ─── Composition hook ─────────────────────────────────────────────────────────
@@ -217,6 +221,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
 
   const [appDefaultPersonaId, setAppDefaultPersonaIdState] = useState("");
   const [onboardingCompleted, setOnboardingCompleted] = useState<boolean | undefined>(undefined);
+  const [usageCache, setUsageCache] = useState<Record<string, UsageStats>>({});
 
   // --- Transport (must be first to provide `send`) ---
 
@@ -265,6 +270,13 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
     });
   }, [send]);
 
+  const loadUsage = useCallback(
+    (scope: string, id: string) => {
+      send({ type: "get_usage", payload: { scope, id } });
+    },
+    [send],
+  );
+
   // --- Message routing ---
 
   /** Route a domain event (dot-notation type) to the appropriate hook. */
@@ -296,6 +308,25 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
     // Domain events from event bus — already validated by parseWsMessage
     if (isGrackleEvent(msg)) {
       routeDomainEvent(msg);
+      return;
+    }
+
+    // Handle usage stats response
+    if (msg.type === "usage_stats") {
+      const scope = msg.payload?.scope as string || "";
+      const id = msg.payload?.id as string || "";
+      if (scope && id) {
+        const key = `${scope}:${id}`;
+        setUsageCache((prev) => ({
+          ...prev,
+          [key]: {
+            inputTokens: Number(msg.payload?.inputTokens) || 0,
+            outputTokens: Number(msg.payload?.outputTokens) || 0,
+            costUsd: Number(msg.payload?.costUsd) || 0,
+            sessionCount: Number(msg.payload?.sessionCount) || 0,
+          },
+        }));
+      }
       return;
     }
 
@@ -415,5 +446,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
     setAppDefaultPersonaId,
     onboardingCompleted,
     completeOnboarding,
+    usageCache,
+    loadUsage,
   };
 }
