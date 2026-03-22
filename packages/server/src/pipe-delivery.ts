@@ -34,23 +34,25 @@ const STATUS_LABELS: Record<string, string> = {
 const asyncListenerCleanups: Map<string, () => void> = new Map();
 
 /**
- * Register an async listener that delivers IPC stream messages to a parent session
- * via sendInput. Called when a pipe with "async" mode is created.
+ * Register an async delivery listener for a session. When messages arrive on any
+ * async subscription for this session, the listener calls sendInput to inject them.
  *
- * The listener throws if delivery fails (session not found, environment disconnected),
- * which causes the stream-registry to leave the message as undelivered. This ensures
- * `hasUndeliveredMessages()` remains accurate for close() buffer drain checks.
+ * Idempotent — safe to call multiple times for the same session.
+ *
+ * The listener throws if pre-dispatch checks fail (session not found, environment
+ * disconnected), which causes the stream-registry to leave the message as undelivered.
+ * Note: once sendInput is dispatched, the message is marked delivered even if the
+ * gRPC call later fails — delivery tracking covers pre-dispatch failures only.
  */
-export function setupAsyncPipeDelivery(parentSessionId: string): void {
-  // Idempotent: if a listener is already registered for this parent, skip
-  if (asyncListenerCleanups.has(parentSessionId)) {
+export function ensureAsyncDeliveryListener(sessionId: string): void {
+  if (asyncListenerCleanups.has(sessionId)) {
     return;
   }
 
-  const unsubscribe = streamRegistry.registerAsyncListener(parentSessionId, (sub, msg) => {
-    const session = sessionStore.getSession(parentSessionId);
+  const unsubscribe = streamRegistry.registerAsyncListener(sessionId, (sub, msg) => {
+    const session = sessionStore.getSession(sessionId);
     if (!session) {
-      throw new Error(`Async pipe delivery: parent session ${parentSessionId} not found`);
+      throw new Error(`Async pipe delivery: session ${sessionId} not found`);
     }
 
     const conn = adapterManager.getConnection(session.environmentId);
@@ -59,17 +61,19 @@ export function setupAsyncPipeDelivery(parentSessionId: string): void {
     }
 
     const text = `[fd:${sub.fd}] ${msg.content}`;
-    // Fire sendInput — this is async but we've verified the connection exists.
-    // If the gRPC call fails later, the message is already marked delivered.
-    // This is an acceptable trade-off: the connection was live at check time.
     conn.client.sendInput(
-      create(powerline.InputMessageSchema, { sessionId: parentSessionId, text }),
+      create(powerline.InputMessageSchema, { sessionId, text }),
     ).catch((err: unknown) => {
-      logger.warn({ err, parentSessionId }, "Async pipe delivery: sendInput failed after dispatch");
+      logger.warn({ err, sessionId }, "Async pipe delivery: sendInput failed after dispatch");
     });
   });
 
-  asyncListenerCleanups.set(parentSessionId, unsubscribe);
+  asyncListenerCleanups.set(sessionId, unsubscribe);
+}
+
+/** @deprecated Use ensureAsyncDeliveryListener instead. */
+export function setupAsyncPipeDelivery(parentSessionId: string): void {
+  ensureAsyncDeliveryListener(parentSessionId);
 }
 
 /**
@@ -123,19 +127,22 @@ export function publishChildCompletion(childSessionId: string, status: string): 
 
 /** Clean up an async pipe stream and its listener (only if no remaining async subs for parent). */
 function cleanupAsyncPipe(streamId: string, parentSessionId: string): void {
+  // Collect all session IDs on this stream before deleting (for listener cleanup)
+  const stream = streamRegistry.getStream(streamId);
+  const sessionIds: string[] = [];
+  if (stream) {
+    for (const sub of stream.subscriptions.values()) {
+      sessionIds.push(sub.sessionId);
+    }
+  }
+
   // Delete the stream (which unsubscribes everyone)
   streamRegistry.deleteStream(streamId);
 
-  // Only remove the async listener if the parent has no remaining async subscriptions.
-  // A parent with multiple concurrent async children should keep the listener alive.
-  const remainingAsyncSubs = streamRegistry.getSubscriptionsForSession(parentSessionId)
-    .filter((s) => s.deliveryMode === "async");
-  if (remainingAsyncSubs.length === 0) {
-    const cleanup = asyncListenerCleanups.get(parentSessionId);
-    if (cleanup) {
-      cleanup();
-      asyncListenerCleanups.delete(parentSessionId);
-    }
+  // Clean up async listeners for all sessions that were on this stream
+  // (both parent and child). Only removes if no remaining async subscriptions.
+  for (const sid of sessionIds) {
+    cleanupAsyncListenerIfEmpty(sid);
   }
 }
 
@@ -185,16 +192,16 @@ function extractLastTextMessage(logPath: string | undefined): string {
 
 /**
  * Remove the async listener for a session if it has no remaining async subscriptions.
- * Called from closeFd when a parent closes an async pipe fd.
+ * Called from closeFd when closing a pipe fd.
  */
-export function cleanupAsyncListenerIfEmpty(parentSessionId: string): void {
-  const remainingAsyncSubs = streamRegistry.getSubscriptionsForSession(parentSessionId)
+export function cleanupAsyncListenerIfEmpty(sessionId: string): void {
+  const remainingAsyncSubs = streamRegistry.getSubscriptionsForSession(sessionId)
     .filter((s) => s.deliveryMode === "async");
   if (remainingAsyncSubs.length === 0) {
-    const cleanup = asyncListenerCleanups.get(parentSessionId);
+    const cleanup = asyncListenerCleanups.get(sessionId);
     if (cleanup) {
       cleanup();
-      asyncListenerCleanups.delete(parentSessionId);
+      asyncListenerCleanups.delete(sessionId);
     }
   }
 }
