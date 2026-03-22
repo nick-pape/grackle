@@ -1,11 +1,98 @@
+@use '../../styles/mixins' as *;
+
 .graphContainer {
   flex: 1;
   width: 100%;
   height: 100%;
   position: relative;
   overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(var(--accent-blue-rgb, 74, 158, 255), 0.03) 0%, transparent 70%);
+}
 
-  canvas {
-    display: block;
+.svg {
+  display: block;
+  cursor: grab;
+
+  &:active {
+    cursor: grabbing;
   }
+}
+
+// ── Links ──────────────────────────────────────────────────
+
+.link {
+  stroke: var(--border-default, rgba(255, 255, 255, 0.08));
+  stroke-width: 1.5;
+  stroke-dasharray: 6 4;
+  opacity: 0.5;
+  transition: opacity 0.3s ease, stroke 0.3s ease;
+
+  &:hover {
+    opacity: 1;
+    stroke: var(--text-secondary, rgba(255, 255, 255, 0.4));
+    stroke-width: 2;
+  }
+}
+
+// ── Nodes ──────────────────────────────────────────────────
+
+.node {
+  cursor: pointer;
+  transition: opacity 0.3s ease;
+
+  &:hover {
+    .nodeCard {
+      filter: url(#glow);
+      stroke: var(--node-color, var(--accent-blue));
+      stroke-width: 1.5;
+      fill-opacity: 0.95;
+    }
+
+    .nodeLabel {
+      fill-opacity: 1;
+    }
+  }
+}
+
+.selected {
+  .nodeCard {
+    filter: url(#glow);
+    stroke: var(--node-color, var(--accent-blue));
+    stroke-width: 2;
+    fill-opacity: 1;
+  }
+}
+
+.nodeCard {
+  fill: var(--bg-surface, rgba(30, 30, 50, 0.85));
+  stroke: var(--border-default, rgba(255, 255, 255, 0.06));
+  stroke-width: 1;
+  fill-opacity: 0.8;
+  transition: fill-opacity 0.3s ease, stroke 0.3s ease, stroke-width 0.2s ease;
+}
+
+.nodeIndicator {
+  opacity: 0.9;
+}
+
+.nodeLabel {
+  fill: var(--text-primary, #e0e0e0);
+  font-family: var(--font-sans, system-ui, -apple-system, sans-serif);
+  font-size: 12px;
+  font-weight: 500;
+  fill-opacity: 0.9;
+  pointer-events: none;
+  user-select: none;
+}
+
+.nodeBadge {
+  fill: var(--text-disabled, #666);
+  font-family: var(--font-mono, monospace);
+  font-size: 9px;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  pointer-events: none;
+  user-select: none;
 }
