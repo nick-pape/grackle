@@ -1,39 +1,30 @@
 {
-  "name": "@grackle-ai/powerline",
+  "name": "@grackle-ai/knowledge-core",
   "version": "0.63.0",
-  "description": "gRPC PowerLine server for Grackle AI agent integration",
+  "description": "Generic knowledge graph SDK on top of Neo4j with vector search, graph traversal, and pluggable embedders/chunkers",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/nick-pape/grackle.git",
-    "directory": "packages/powerline"
+    "directory": "packages/knowledge-core"
   },
-  "keywords": ["grackle", "grpc", "powerline", "ai-agents"],
+  "keywords": ["knowledge-graph", "neo4j", "vector-search", "embeddings", "graph-traversal"],
   "engines": { "node": ">=22.0.0" },
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "bin": {
-    "grackle-powerline": "dist/index.js"
-  },
   "files": ["dist/"],
   "scripts": {
     "build": "heft build --clean",
-    "start": "node dist/index.js",
-    "clean": "heft clean",
     "test": "vitest run",
+    "clean": "heft clean",
     "_phase:build": "heft run --only build -- --clean",
     "_phase:test": "vitest run"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.27.0",
-    "@bufbuild/protobuf": "^2.5.0",
-    "@connectrpc/connect": "^2.0.0",
-    "@connectrpc/connect-node": "^2.0.0",
-    "@grackle-ai/common": "workspace:*",
-    "commander": "^13.0.0",
-    "pino": "^10.3.1",
-    "zod": "^4.0.0"
+    "@huggingface/transformers": "^3.4.0",
+    "neo4j-driver": "^6.0.1",
+    "pino": "^10.3.1"
   },
   "devDependencies": {
     "@grackle-ai/heft-rig": "workspace:*",

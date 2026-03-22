@@ -25,24 +25,22 @@ const {
   };
 });
 
-vi.mock("./client.js", () => ({
-  getSession: vi.fn(() => mockSession),
-}));
-
-vi.mock("./logger.js", () => ({
-  logger: {
-    info: vi.fn(),
-    debug: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-  },
-}));
-
-vi.mock("./node-store.js", () => ({
-  createReferenceNode: mockCreateReferenceNode,
-  updateNode: mockUpdateNode,
-  recordToNode: (props: Record<string, unknown>) => props,
-}));
+vi.mock("@grackle-ai/knowledge-core", async () => {
+  const actual = await vi.importActual<Record<string, unknown>>("@grackle-ai/knowledge-core");
+  return {
+    ...actual,
+    getSession: vi.fn(() => mockSession),
+    logger: {
+      info: vi.fn(),
+      debug: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+    },
+    createReferenceNode: mockCreateReferenceNode,
+    updateNode: mockUpdateNode,
+    recordToNode: (props: Record<string, unknown>) => props,
+  };
+});
 
 import {
   findReferenceNodeBySource,
@@ -51,8 +49,8 @@ import {
   deriveTaskText,
   deriveFindingText,
 } from "./reference-sync.js";
-import { REFERENCE_SOURCE } from "./types.js";
-import type { Embedder } from "./embedder.js";
+import { REFERENCE_SOURCE } from "@grackle-ai/knowledge-core";
+import type { Embedder } from "@grackle-ai/knowledge-core";
 
 // ---------------------------------------------------------------------------
 // Helpers

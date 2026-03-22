@@ -1,6 +1,17 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sun, 22 Mar 2026 01:37:20 GMT and should not be manually modified.
+This log was last generated on Sun, 22 Mar 2026 02:21:37 GMT and should not be manually modified.
+
+## 0.63.0
+Sun, 22 Mar 2026 02:21:37 GMT
+
+### Minor changes
+
+- Extract @grackle-ai/knowledge-core as a generic, reusable knowledge graph SDK
+
+### Patches
+
+- Add workspace usage display with loadUsage hook for server-side aggregation
 
 ## 0.62.2
 Sun, 22 Mar 2026 01:37:20 GMT
