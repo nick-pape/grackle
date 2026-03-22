@@ -37,7 +37,7 @@ test.describe("Workspaces", { tag: ["@workspace"] }, () => {
     await expect(page.getByTestId("env-nav-item")).toBeVisible();
   });
 
-  test("welcome CTA creates workspace inline", async ({ appPage }) => {
+  test("welcome CTA navigates to create workspace page", async ({ appPage }) => {
     const page = appPage;
 
     // Ensure no workspaces exist so the welcome CTA is visible
@@ -46,17 +46,20 @@ test.describe("Workspaces", { tag: ["@workspace"] }, () => {
     // On fresh load (no workspaces), the welcome CTA should be visible
     await expect(page.locator('[data-testid="welcome-cta"]')).toBeVisible();
 
-    // Click the CTA button to show the inline form (no browser prompt())
+    // Click the CTA button — should navigate to /workspaces/new
     await page.locator('[data-testid="welcome-create-button"]').click();
+    await expect(page).toHaveURL(/\/workspaces\/new/);
 
-    // Input should be visible and focused
-    const input = page.locator('[data-testid="welcome-create-input"]');
-    await expect(input).toBeVisible();
-    await expect(input).toBeFocused();
+    // Create form fields should be visible
+    await expect(page.locator('[data-testid="workspace-form-name"]')).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator('[data-testid="workspace-form-environment"]')).toBeVisible();
 
-    // Fill in workspace name and click OK
-    await input.fill("cta-workspace");
-    await page.locator('[data-testid="welcome-create-ok"]').click();
+    // Fill in workspace name and submit
+    await page.locator('[data-testid="workspace-form-name"]').fill("cta-workspace");
+    await page.locator('[data-testid="workspace-create-save"]').click();
+
+    // Should navigate back to home
+    await page.waitForURL("/", { timeout: 5_000 });
 
     // Navigate to the environment detail page — workspace card should appear there
     await page.locator('[data-testid="sidebar-tab-environments"]').click();
@@ -69,25 +72,21 @@ test.describe("Workspaces", { tag: ["@workspace"] }, () => {
     await expect(page.locator('[data-testid="welcome-cta"]')).not.toBeVisible({ timeout: 5_000 });
   });
 
-  test("welcome CTA cancel with Escape", async ({ appPage }) => {
+  test("workspace create page cancel navigates back", async ({ appPage }) => {
     const page = appPage;
 
-    // Ensure no workspaces exist so the welcome CTA is visible
-    await archiveAllWorkspaces(page);
+    // Navigate to the workspace create page
+    await page.goto("/workspaces/new");
+    await page.waitForFunction(() => document.body.innerText.includes("Connected"), { timeout: 10_000 });
 
-    // Click the CTA button to show the inline form
-    await page.locator('[data-testid="welcome-create-button"]').click();
+    // Create form should be visible
+    await expect(page.locator('[data-testid="workspace-form-name"]')).toBeVisible({ timeout: 5_000 });
 
-    // Input should be visible
-    const input = page.locator('[data-testid="welcome-create-input"]');
-    await expect(input).toBeVisible();
+    // Click cancel to go back
+    await page.locator('[data-testid="workspace-create-cancel"]').click();
 
-    // Press Escape to cancel
-    await input.press("Escape");
-
-    // Input should be gone, button should be back
-    await expect(input).not.toBeVisible();
-    await expect(page.locator('[data-testid="welcome-create-button"]')).toBeVisible();
+    // Should not be on /workspaces/new anymore
+    await expect(page).not.toHaveURL(/\/workspaces\/new/);
   });
 
 

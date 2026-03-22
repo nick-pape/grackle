@@ -10,6 +10,7 @@ import {
   SETTINGS_URL,
   PERSONAS_URL,
   NEW_ENVIRONMENT_URL,
+  NEW_WORKSPACE_URL,
 } from "./navigation.js";
 
 describe("URL builder functions", () => {
@@ -68,5 +69,6 @@ describe("URL builder functions", () => {
     expect(HOME_URL).toBe("/");
     expect(PERSONAS_URL).toBe("/settings/personas");
     expect(NEW_ENVIRONMENT_URL).toBe("/environments/new");
+    expect(NEW_WORKSPACE_URL).toBe("/workspaces/new");
   });
 });

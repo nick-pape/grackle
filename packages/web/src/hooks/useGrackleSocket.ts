@@ -79,6 +79,8 @@ export interface UseGrackleSocketResult {
     repoUrl?: string,
     environmentId?: string,
     defaultPersonaId?: string,
+    useWorktrees?: boolean,
+    worktreeBasePath?: string,
   ) => void;
   archiveWorkspace: (workspaceId: string) => void;
   updateWorkspace: (

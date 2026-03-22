@@ -17,6 +17,7 @@ import { ChatPage } from "./pages/ChatPage.js";
 import { NewChatPage } from "./pages/NewChatPage.js";
 import { SessionPage } from "./pages/SessionPage.js";
 import { WorkspacePage } from "./pages/WorkspacePage.js";
+import { WorkspaceCreatePage } from "./pages/WorkspaceCreatePage.js";
 import { NewTaskPage } from "./pages/NewTaskPage.js";
 import { TaskEditPage } from "./pages/TaskEditPage.js";
 import { TaskPage } from "./pages/TaskPage.js";
@@ -129,6 +130,7 @@ function AppRoutes(): JSX.Element {
         <Route path="tasks/:taskId/findings" element={<TaskPage />} />
         <Route path="tasks/:taskId/edit" element={<TaskEditPage />} />
         <Route path="workspaces" element={<Navigate to="/environments" replace />} />
+        <Route path="workspaces/new" element={<WorkspaceCreatePage />} />
         <Route path="workspaces/:workspaceId" element={<WorkspacePage />} />
         <Route path="workspaces/:workspaceId/tasks/:taskId" element={<TaskPage />} />
         <Route path="workspaces/:workspaceId/tasks/:taskId/stream" element={<TaskPage />} />
