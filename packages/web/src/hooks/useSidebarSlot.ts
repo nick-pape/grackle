@@ -1,9 +1,12 @@
-import { useEffect, type ReactNode } from "react";
+import { useLayoutEffect, type ReactNode } from "react";
 import { useSidebarSetter } from "../context/SidebarContext.js";
 
 /**
  * Declares sidebar content for the current component's lifetime.
- * Sets content on mount and clears it on unmount.
+ * Sets content before paint and clears it on unmount.
+ *
+ * Uses `useLayoutEffect` so the sidebar/hamburger state is synchronised with
+ * route changes before the browser paints, avoiding flicker.
  *
  * @param content - The ReactNode to render in the sidebar slot. Callers should
  *   memoize this value (e.g. via `useMemo`) to avoid unnecessary effect re-runs.
@@ -11,7 +14,7 @@ import { useSidebarSetter } from "../context/SidebarContext.js";
 export function useSidebarSlot(content: ReactNode): void {
   const setContent = useSidebarSetter();
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     setContent(content);
     return () => { setContent(undefined); };
   }, [content, setContent]);

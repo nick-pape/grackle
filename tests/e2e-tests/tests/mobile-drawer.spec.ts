@@ -16,9 +16,11 @@ test.describe("Mobile Drawer", { tag: ["@webui"] }, () => {
   });
 
   test("hamburger button is hidden on pages without sidebar", async ({ appPage }) => {
-    // Dashboard has no sidebar, so hamburger should not be shown
+    // Dashboard has no sidebar, so hamburger should not be rendered at all
+    await appPage.goto("/");
+    await appPage.waitForFunction(() => document.body.innerText.includes("Connected"), { timeout: 10_000 });
     const hamburger = appPage.getByRole("button", { name: "Toggle sidebar" });
-    await expect(hamburger).not.toBeVisible();
+    await expect(hamburger).toHaveCount(0);
   });
 
   test("sidebar is hidden by default on mobile", async ({ appPage }) => {
