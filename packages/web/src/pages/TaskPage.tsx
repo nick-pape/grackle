@@ -12,6 +12,7 @@ import type { Session, TaskData, Environment, Workspace } from "../hooks/useGrac
 import { AnimatePresence, motion } from "motion/react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { formatCost } from "../utils/format.js";
 import { groupConsecutiveTextEvents, pairToolEvents } from "../utils/sessionEvents.js";
 import styles from "../components/panels/SessionPanel.module.scss";
 
@@ -72,6 +73,22 @@ interface TaskOverviewProps {
 }
 
 function TaskOverview({ task, tasksById, environments, workspaces, taskSessions, selectedEnvId }: TaskOverviewProps): JSX.Element {
+  const { loadUsage, usageCache } = useGrackle();
+
+  // Load usage stats for this task (and tree if it has children)
+  const sessionCostSum = taskSessions.reduce((s, sess) => s + (sess.costUsd ?? 0), 0);
+  useEffect(() => {
+    loadUsage("task", task.id);
+    if (task.childTaskIds.length > 0) {
+      loadUsage("task_tree", task.id);
+    }
+  }, [task.id, task.childTaskIds.length, loadUsage, sessionCostSum]);
+
+  const taskUsageKey = `task:${task.id}`;
+  const taskUsage = taskUsageKey in usageCache ? usageCache[taskUsageKey] : undefined;
+  const treeUsageKey = `task_tree:${task.id}`;
+  const treeUsage = task.childTaskIds.length > 0 && treeUsageKey in usageCache ? usageCache[treeUsageKey] : undefined;
+
   const latestSession = taskSessions.length > 0 ? taskSessions[taskSessions.length - 1] : undefined;
   const envId = latestSession?.environmentId ?? "";
   const env = envId ? environments.find((e) => e.id === envId) : undefined;
@@ -185,6 +202,25 @@ function TaskOverview({ task, tasksById, environments, workspaces, taskSessions,
           )}
         </div>
       </div>
+      {taskUsage && taskUsage.costUsd > 0 && (
+        <div className={styles.overviewSection}>
+          <div className={styles.overviewLabel}>Usage</div>
+          <div className={styles.timeline}>
+            <div className={styles.timelineRow}>
+              <span className={styles.timelineKey}>Cost</span>
+              <span className={styles.timelineValue}>{formatCost(taskUsage.costUsd)}</span>
+              <span className={styles.timelineDelta}>{taskUsage.sessionCount} session{taskUsage.sessionCount !== 1 ? "s" : ""}</span>
+            </div>
+            {treeUsage && treeUsage.costUsd > taskUsage.costUsd && (
+              <div className={styles.timelineRow}>
+                <span className={styles.timelineKey}>Total (incl. subtasks)</span>
+                <span className={styles.timelineValue}>{formatCost(treeUsage.costUsd)}</span>
+                <span className={styles.timelineDelta}>{treeUsage.sessionCount} session{treeUsage.sessionCount !== 1 ? "s" : ""}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
       {task.reviewNotes && (
         <div className={styles.overviewSection}>
           <div className={styles.overviewLabel}>Review Notes</div>
