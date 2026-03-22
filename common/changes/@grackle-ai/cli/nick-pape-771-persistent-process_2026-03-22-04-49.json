@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Persistent process mode for Claude Code runtime — hold agent alive between turns via AsyncIterable prompt",
+      "type": "minor",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
