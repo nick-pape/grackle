@@ -281,6 +281,9 @@ importers:
       '@grackle-ai/common':
         specifier: workspace:*
         version: link:../common
+      '@grackle-ai/knowledge':
+        specifier: workspace:*
+        version: link:../knowledge
       '@grackle-ai/mcp':
         specifier: workspace:*
         version: link:../mcp

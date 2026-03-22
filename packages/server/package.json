@@ -28,6 +28,7 @@
     "@connectrpc/connect-node": "^2.0.0",
     "@grackle-ai/adapter-sdk": "workspace:*",
     "@grackle-ai/common": "workspace:*",
+    "@grackle-ai/knowledge": "workspace:*",
     "@grackle-ai/powerline": "workspace:*",
     "@grackle-ai/mcp": "workspace:*",
     "@grackle-ai/web": "workspace:*",
