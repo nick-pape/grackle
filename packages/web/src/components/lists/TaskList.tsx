@@ -55,7 +55,6 @@ interface StatusGroupAccordionProps {
   navigate: ReturnType<typeof useAppNavigate>;
   titleHighlights: Map<string, readonly MatchIndex[]>;
   workspaceNames: Map<string, string>;
-
 }
 
 /** Collapsible accordion for a status group. */
@@ -67,7 +66,6 @@ function StatusGroupAccordion({
   navigate,
   titleHighlights,
   workspaceNames,
-
 }: StatusGroupAccordionProps): JSX.Element {
   return (
     <div data-testid={`status-group-${group.status}`}>
@@ -146,7 +144,6 @@ interface TaskTreeNodeProps {
   taskStatusById: Map<string, string>;
   titleHighlights: Map<string, readonly MatchIndex[]>;
   workspaceNames: Map<string, string>;
-
 }
 
 /** Renders a single task tree node with optional children. */
@@ -160,7 +157,6 @@ function TaskTreeNode({
   taskStatusById,
   titleHighlights,
   workspaceNames,
-
 }: TaskTreeNodeProps): JSX.Element {
   const statusStyle = getStatusStyle(node.status);
   const isBlocked = node.dependsOn.length > 0 &&
@@ -256,7 +252,6 @@ function TaskTreeNode({
                 taskStatusById={taskStatusById}
                 titleHighlights={titleHighlights}
                 workspaceNames={workspaceNames}
-    
               />
             ))}
           </motion.div>
@@ -449,7 +444,6 @@ export function TaskList(): JSX.Element {
             navigate={navigate}
             titleHighlights={titleHighlights}
             workspaceNames={workspaceNames}
-
           />
         ))
       ) : (
@@ -465,7 +459,6 @@ export function TaskList(): JSX.Element {
             taskStatusById={taskStatusById}
             titleHighlights={titleHighlights}
             workspaceNames={workspaceNames}
-
           />
         ))
       )}
