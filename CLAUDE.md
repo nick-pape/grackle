@@ -131,18 +131,21 @@ Multiple Claude Code sessions may be running concurrently against the same repo.
 
 ## Semantic Search (qdrant-search MCP)
 
-A `rush-qdrant mcp` daemon provides **semantic search** over the codebase via the `qdrant-search` MCP server. **Prefer `semantic_search` over Grep/Glob** when looking for code by concept, behavior, or intent rather than exact keywords. It understands natural language queries like "how does authentication work" or "websocket reconnection logic".
+A `rush-qdrant mcp` daemon provides **semantic search** over the codebase via the `qdrant-search` MCP server.
 
-- **`semantic_search`** — Use for exploratory/conceptual searches. Returns ranked results with file IDs, similarity scores, breadcrumbs, and code previews.
-- **`view_chunks`** — Retrieve full source content by file ID from search results. Supports selectors (`:3`, `:2-5`, `:3-end`).
-- **When to use Grep instead**: exact string matches, regex patterns, symbol names you already know.
+**USE SEMANTIC SEARCH FIRST** when exploring code by concept, behavior, or intent. It understands natural language queries like "how does authentication work" or "websocket reconnection logic." Use `/codebase-search` to invoke the full search workflow, or call the MCP tools directly:
+
+- **`mcp__qdrant-search__semantic_search`** — Conceptual/exploratory search. Returns ranked results with file IDs, similarity scores, breadcrumbs, and code previews. **Always pass `catalog: "grackle6"`**.
+- **`mcp__qdrant-search__view_chunks`** — Retrieve full source content by file ID from search results. Supports selectors (`:3`, `:2-5`, `:3-end`).
+
+**When to use Grep/Glob instead**: exact string matches (`class SessionStore`), regex patterns, or symbol names you already know. If you don't know the exact name, start with semantic search.
 
 ### Catalog naming
 
-Each grackle clone is a separate catalog named after its folder (`grackle`, `grackle2`, ..., `grackle5`). This clone is catalog `"grackle5"`. Always scope searches to avoid mixing results from other clones:
+Each grackle clone is a separate catalog named after its folder (`grackle`, `grackle2`, ..., `grackle6`). This clone is catalog `"grackle6"`. Always scope searches to avoid mixing results from other clones:
 
 ```
-semantic_search(query: "session spawning", catalog: "grackle5")
+semantic_search(query: "session spawning", catalog: "grackle6")
 ```
 
 Omit `catalog` only when you intentionally want to search across all repos.
