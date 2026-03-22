@@ -1,6 +1,7 @@
 import type { AgentEvent, AgentSession } from "./runtime.js";
 import { BaseAgentSession } from "./base-session.js";
 import { BaseAgentRuntime } from "./base-runtime.js";
+import { AsyncQueue } from "../utils/async-queue.js";
 import { resolveWorkingDirectory, resolveMcpServers } from "./runtime-utils.js";
 import { logger } from "../logger.js";
 import { accessSync, mkdirSync, copyFileSync, chmodSync, constants as fsConstants } from "node:fs";
@@ -108,6 +109,17 @@ class ClaudeCodeSession extends BaseAgentSession {
   private activeAbort?: AbortController;
   /** Cached SDK options built once during setupSdk(), reused for follow-up queries. */
   private cachedSdkOptions?: Record<string, unknown>;
+
+  // ─── Persistent process mode ────────────────────────────────
+  // When active, ONE query() stays alive across multiple turns. The SDK's
+  // AsyncIterable prompt mode keeps the process running and waiting for input.
+
+  /** The persistent Query object (AsyncGenerator). Null when using resume-per-input. */
+  private persistentQuery?: AsyncIterable<Record<string, unknown>> & { close?: () => void };
+  /** Input queue fed to the SDK as AsyncIterable prompt — pushing yields new turns. */
+  private promptQueue?: AsyncQueue<Record<string, unknown>>;
+  /** Resolves when the current turn's response is complete (result message received). */
+  private turnCompleteResolve?: () => void;
 
   /** System context is injected via sdkOptions.systemPrompt, not prepended to the prompt. */
   protected override buildInitialPrompt(): string {
@@ -236,18 +248,20 @@ class ClaudeCodeSession extends BaseAgentSession {
       // misleading noMessagesError.
       return 1;
     }
-    return this.consumeQuery(prompt, this.cachedSdkOptions!);
+    return this.startPersistentQuery(prompt);
   }
 
   protected async executeFollowUp(text: string): Promise<void> {
-    if (this.runtimeSessionId) {
-      // Resume the existing conversation
+    if (this.promptQueue) {
+      // Persistent mode: push into live AsyncIterable prompt queue
+      await this.sendToPersistentQuery(text);
+    } else if (this.runtimeSessionId) {
+      // Resume-per-input fallback (resumed sessions, or persistent query failed to start)
       const resumeOptions = { ...this.cachedSdkOptions!, resume: this.runtimeSessionId };
       await this.consumeQuery(text, resumeOptions);
     } else {
-      // No prior session (first message after empty-prompt start) — run as
-      // initial query, which will establish the runtimeSessionId.
-      await this.consumeQuery(text, this.cachedSdkOptions!);
+      // No prior session (first message after empty-prompt start) — start persistent query
+      await this.startPersistentQuery(text);
     }
   }
 
@@ -261,13 +275,189 @@ class ClaudeCodeSession extends BaseAgentSession {
     if (this.activeAbort) {
       this.activeAbort.abort();
     }
+    // Close the prompt queue (ends the AsyncIterable → SDK exits)
+    if (this.promptQueue) {
+      this.promptQueue.close();
+    }
+    // Close the persistent query if it has a close method
+    const pq = this.persistentQuery as { close?: () => void } | undefined;
+    if (pq?.close) {
+      pq.close();
+    }
   }
 
-  // ─── Claude-specific internals ───────────────────────────
+  protected override releaseResources(): void {
+    this.persistentQuery = undefined;
+    this.promptQueue = undefined;
+    this.turnCompleteResolve = undefined;
+  }
+
+  // ─── Persistent process mode ─────────────────────────────
+
+  /**
+   * Start a persistent query using AsyncIterable prompt mode. The SDK process
+   * stays alive across multiple turns. Follow-up messages are sent via
+   * the Query's streamInput() method.
+   */
+  private async startPersistentQuery(initialPrompt: string): Promise<number> {
+    const query: QueryFn = await getQuery();
+    const abort = new AbortController();
+    this.activeAbort = abort;
+
+    try {
+      // Create a prompt queue — the SDK reads from this AsyncIterable and keeps
+      // the process alive waiting for the next yield. Push messages to deliver them.
+      this.promptQueue = new AsyncQueue<Record<string, unknown>>();
+
+      // Push the initial user message
+      this.promptQueue.push({
+        type: "user",
+        message: { role: "user", content: [{ type: "text", text: initialPrompt }] },
+      });
+
+      // Start query with AsyncIterable prompt — process stays alive
+      const queryInput: Record<string, unknown> = {
+        prompt: this.promptQueue,
+        options: { ...this.cachedSdkOptions!, abortController: abort },
+      };
+      const conversation = query(queryInput) as unknown as AsyncIterable<Record<string, unknown>> & {
+        close?: () => void;
+      };
+
+      this.persistentQuery = conversation;
+
+      // Start background consumer that reads ALL messages from the persistent query
+      // and pushes them to the event queue. This runs for the lifetime of the query.
+      this.consumePersistentStream(conversation).catch((err) => {
+        if (!this.killed) {
+          logger.warn({ err }, "Persistent query stream ended unexpectedly");
+        }
+        // Clear persistent state so follow-ups fall back to resume-per-input
+        this.promptQueue = undefined;
+        this.persistentQuery = undefined;
+      });
+
+      // Wait for the first turn to complete (result message)
+      return this.waitForTurnComplete();
+    } catch (err) {
+      // Persistent mode failed — fall back to resume-per-input
+      logger.warn({ err }, "Persistent process mode failed — falling back to resume-per-input");
+      this.promptQueue = undefined;
+      this.persistentQuery = undefined;
+      return this.consumeQuery(initialPrompt, this.cachedSdkOptions!);
+    }
+  }
+
+  /**
+   * Send a follow-up message to the persistent query by pushing into the prompt queue.
+   * The SDK process picks it up immediately (no restart). Blocks until the turn completes.
+   */
+  private async sendToPersistentQuery(text: string): Promise<void> {
+    if (!this.promptQueue) {
+      throw new Error("No active prompt queue for persistent query");
+    }
+
+    // Push user message into the prompt queue — SDK reads it from the AsyncIterable
+    this.promptQueue.push({
+      type: "user",
+      message: { role: "user", content: [{ type: "text", text }] },
+    });
+
+    // Wait for this turn's response to complete
+    await this.waitForTurnComplete();
+  }
+
+  /**
+   * Background consumer for the persistent query stream. Reads messages
+   * and pushes events to the queue for the lifetime of the query.
+   * Signals turn completion via turnCompleteResolve when a result message arrives.
+   */
+  private async consumePersistentStream(
+    conversation: AsyncIterable<Record<string, unknown>>,
+  ): Promise<void> {
+    const ts: () => string = () => new Date().toISOString();
+
+    for await (const msg of conversation) {
+      if (this.killed) {
+        break;
+      }
+
+      // Extract session ID from system init message
+      if (msg.type === "system" && msg.session_id) {
+        const wasEmpty = !this.runtimeSessionId;
+        this.runtimeSessionId = msg.session_id as string;
+        if (wasEmpty) {
+          this.eventQueue.push({ type: "runtime_session_id", timestamp: ts(), content: this.runtimeSessionId });
+        }
+      }
+
+      // Check for result errors
+      if (msg.type === "result" && msg.is_error) {
+        const errorMsg = (msg.result as string) || "Claude Code returned an error";
+        this.eventQueue.push({ type: "error", timestamp: ts(), content: errorMsg, raw: msg });
+      }
+
+      // Extract usage data from successful result messages
+      if (msg.type === "result" && !msg.is_error) {
+        const usage = msg.usage as {
+          input_tokens?: number;
+          output_tokens?: number;
+          cache_read_input_tokens?: number;
+          cache_creation_input_tokens?: number;
+        } | undefined;
+        const costUsd = msg.total_cost_usd as number | undefined;
+        if (usage !== undefined || costUsd !== undefined) {
+          const totalInput = (usage?.input_tokens ?? 0)
+            + (usage?.cache_read_input_tokens ?? 0)
+            + (usage?.cache_creation_input_tokens ?? 0);
+          this.eventQueue.push({
+            type: "usage",
+            timestamp: ts(),
+            content: JSON.stringify({
+              input_tokens: totalInput as number,
+              output_tokens: (usage?.output_tokens ?? 0) as number,
+              cost_usd: (costUsd ?? 0) as number,
+            }),
+          });
+        }
+      }
+
+      // Map SDK messages to Grackle events
+      const events = mapMessage(msg);
+      for (const event of events) {
+        this.eventQueue.push(event);
+      }
+
+      // Signal turn completion on result message
+      if (msg.type === "result") {
+        this.turnCompleteResolve?.();
+      }
+    }
+
+    // Stream ended — resolve any pending turn wait and clear persistent state
+    // so follow-ups fall back to resume-per-input instead of trying to push
+    // into a dead prompt queue.
+    this.turnCompleteResolve?.();
+    this.promptQueue = undefined;
+    this.persistentQuery = undefined;
+  }
+
+  /** Wait for the current turn to complete (result message received from SDK). */
+  private waitForTurnComplete(): Promise<number> {
+    return new Promise<number>((resolve) => {
+      this.turnCompleteResolve = () => {
+        this.turnCompleteResolve = undefined;
+        resolve(1);
+      };
+    });
+  }
+
+  // ─── Resume-per-input fallback ──────────────────────────
 
   /**
    * Consume all messages from a query() conversation, pushing events to the queue.
    * Returns the number of meaningful messages processed.
+   * Used as fallback when persistent mode is not available (resume-per-input).
    */
   private async consumeQuery(prompt: string, sdkOptions: Record<string, unknown>): Promise<number> {
     const query: QueryFn = await getQuery();

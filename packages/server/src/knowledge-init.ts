@@ -14,8 +14,11 @@ import {
   createLocalEmbedder,
   syncReferenceNode,
   deleteReferenceNodeBySource,
+  findReferenceNodeBySource,
+  createEdge,
   deriveTaskText,
   deriveFindingText,
+  EDGE_TYPE,
   type Embedder,
 } from "@grackle-ai/knowledge";
 import { setKnowledgeEmbedder } from "@grackle-ai/mcp";
@@ -50,6 +53,73 @@ function createEntitySyncHandler(embedder: Embedder): (event: GrackleEvent) => v
   };
 }
 
+/**
+ * Ensure a task's reference node exists in the knowledge graph.
+ *
+ * If the node already exists, returns its ID. Otherwise syncs it from
+ * the task store and returns the new ID. Returns `undefined` if the
+ * task is not found in the store.
+ */
+async function ensureTaskReferenceNode(
+  embedder: Embedder,
+  taskId: string,
+): Promise<string | undefined> {
+  const existing = await findReferenceNodeBySource("task", taskId);
+  if (existing) {
+    return existing.id;
+  }
+
+  const task = taskStore.getTask(taskId);
+  if (!task) {
+    return undefined;
+  }
+
+  return syncReferenceNode(embedder, {
+    sourceType: "task",
+    sourceId: taskId,
+    label: task.title,
+    text: deriveTaskText(task.title, task.description),
+    workspaceId: task.workspaceId ?? "",
+  });
+}
+
+/**
+ * Create edges from a task reference node to its parent and dependencies.
+ *
+ * Best-effort — edge creation failures are logged but don't block sync.
+ */
+async function syncTaskEdges(
+  embedder: Embedder,
+  taskNodeId: string,
+  task: { parentTaskId: string; dependsOn: string },
+): Promise<void> {
+  // Parent task → PART_OF edge
+  if (task.parentTaskId) {
+    try {
+      const parentNodeId = await ensureTaskReferenceNode(embedder, task.parentTaskId);
+      if (parentNodeId) {
+        await createEdge(taskNodeId, parentNodeId, EDGE_TYPE.PART_OF);
+      }
+    } catch (err) {
+      logger.warn({ taskNodeId, parentTaskId: task.parentTaskId, err }, "Failed to create PART_OF edge");
+    }
+  }
+
+  // Dependencies → DEPENDS_ON edges
+  const deps: string[] = safeParseJsonArray(task.dependsOn);
+
+  for (const depId of deps) {
+    try {
+      const depNodeId = await ensureTaskReferenceNode(embedder, depId);
+      if (depNodeId) {
+        await createEdge(taskNodeId, depNodeId, EDGE_TYPE.DEPENDS_ON);
+      }
+    } catch (err) {
+      logger.warn({ taskNodeId, depId, err }, "Failed to create DEPENDS_ON edge");
+    }
+  }
+}
+
 /** Handle a single entity event. */
 async function handleEvent(embedder: Embedder, event: GrackleEvent): Promise<void> {
   try {
@@ -67,13 +137,14 @@ async function handleEvent(embedder: Embedder, event: GrackleEvent): Promise<voi
           logger.warn({ taskId }, "Knowledge sync: task not found, skipping");
           return;
         }
-        await syncReferenceNode(embedder, {
+        const taskNodeId: string = await syncReferenceNode(embedder, {
           sourceType: "task",
           sourceId: taskId,
           label: task.title,
           text: deriveTaskText(task.title, task.description),
           workspaceId: task.workspaceId ?? "",
         });
+        await syncTaskEdges(embedder, taskNodeId, task);
         break;
       }
 
@@ -102,13 +173,25 @@ async function handleEvent(embedder: Embedder, event: GrackleEvent): Promise<voi
         const tags: string[] = safeParseJsonArray(
           typeof finding.tags === "string" ? finding.tags : null,
         );
-        await syncReferenceNode(embedder, {
+        const findingNodeId: string = await syncReferenceNode(embedder, {
           sourceType: "finding",
           sourceId: findingId,
           label: finding.title,
           text: deriveFindingText(finding.title, finding.content, tags),
           workspaceId,
         });
+
+        // Link finding to its task
+        if (finding.taskId) {
+          try {
+            const taskNodeId = await ensureTaskReferenceNode(embedder, finding.taskId);
+            if (taskNodeId) {
+              await createEdge(findingNodeId, taskNodeId, EDGE_TYPE.DERIVED_FROM);
+            }
+          } catch (err) {
+            logger.warn({ findingNodeId, taskId: finding.taskId, err }, "Failed to create DERIVED_FROM edge");
+          }
+        }
         break;
       }
 
