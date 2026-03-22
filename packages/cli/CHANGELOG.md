@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sun, 22 Mar 2026 14:07:12 GMT and should not be manually modified.
+This log was last generated on Sun, 22 Mar 2026 15:10:22 GMT and should not be manually modified.
+
+## 0.70.0
+Sun, 22 Mar 2026 15:10:22 GMT
+
+### Minor changes
+
+- Add Goose runtime (ACP-based) with credential provider, CLI, and web UI support
 
 ## 0.69.1
 Sun, 22 Mar 2026 14:07:12 GMT

@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.70.0",
+      "tag": "@grackle-ai/cli_v0.70.0",
+      "date": "Sun, 22 Mar 2026 15:10:22 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Add Goose runtime (ACP-based) with credential provider, CLI, and web UI support"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.69.1",
       "tag": "@grackle-ai/cli_v0.69.1",
       "date": "Sun, 22 Mar 2026 14:07:12 GMT",
