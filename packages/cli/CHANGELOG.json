@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.68.1",
+      "tag": "@grackle-ai/cli_v0.68.1",
+      "date": "Sun, 22 Mar 2026 05:42:46 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Emit usage events from Codex, ACP, and GenAIScript runtimes"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.68.0",
       "tag": "@grackle-ai/cli_v0.68.0",
       "date": "Sun, 22 Mar 2026 05:34:41 GMT",

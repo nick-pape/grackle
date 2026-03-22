@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sun, 22 Mar 2026 05:34:41 GMT and should not be manually modified.
+This log was last generated on Sun, 22 Mar 2026 05:42:46 GMT and should not be manually modified.
+
+## 0.68.1
+Sun, 22 Mar 2026 05:42:46 GMT
+
+### Patches
+
+- Emit usage events from Codex, ACP, and GenAIScript runtimes
 
 ## 0.68.0
 Sun, 22 Mar 2026 05:34:41 GMT
