@@ -1,14 +1,15 @@
 /**
  * Data hook for the Knowledge Graph explorer.
  *
- * Sends WebSocket messages to the server and processes responses
- * to maintain a local graph state for rendering.
+ * Follows the same pattern as other domain hooks (environments, tasks, etc.):
+ * exposes a `handleMessage` function for WS message routing and action
+ * functions that call `send()`.
  *
  * @module
  */
 
-import { useState, useCallback, useRef } from "react";
-import { useGrackle } from "../context/GrackleContext.js";
+import { useState, useCallback } from "react";
+import type { WsMessage, SendFunction } from "./types.js";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -47,7 +48,7 @@ export interface NodeDetail {
 /** Result returned by useKnowledge. */
 export interface UseKnowledgeResult {
   graphData: { nodes: GraphNode[]; links: GraphLink[] };
-  selectedNode: NodeDetail | null;
+  selectedNode: NodeDetail | undefined;
   loading: boolean;
   searchQuery: string;
   search(query: string): void;
@@ -55,6 +56,8 @@ export interface UseKnowledgeResult {
   selectNode(id: string): void;
   expandNode(id: string): void;
   loadRecent(workspaceId?: string): void;
+  /** Handle incoming WS messages — called by useGrackleSocket. */
+  handleMessage(msg: WsMessage): boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -88,36 +91,39 @@ function toGraphLink(raw: Record<string, unknown>): GraphLink {
   };
 }
 
+/** Knowledge-related WS message types. */
+const KNOWLEDGE_MSG_TYPES: ReadonlySet<string> = new Set([
+  "knowledge.listRecent.result",
+  "knowledge.search.result",
+  "knowledge.getNode.result",
+  "knowledge.expand.result",
+]);
+
 // ---------------------------------------------------------------------------
 // Hook
 // ---------------------------------------------------------------------------
 
 /** Hook for managing Knowledge Graph state and WebSocket communication. */
-export function useKnowledge(): UseKnowledgeResult {
-  const { send, connected } = useGrackle();
-
+export function useKnowledge(send: SendFunction): UseKnowledgeResult {
   const [nodes, setNodes] = useState<Map<string, GraphNode>>(new Map());
   const [links, setLinks] = useState<GraphLink[]>([]);
-  const [selectedNode, setSelectedNode] = useState<NodeDetail | null>(null);
+  const [selectedNode, setSelectedNode] = useState<NodeDetail | undefined>(undefined);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
   const loadRecent = useCallback((workspaceId?: string) => {
-    if (!connected) {
-      return;
-    }
     setLoading(true);
     send({ type: "knowledge.listRecent", payload: { limit: 30, workspaceId } });
-  }, [connected, send]);
+  }, [send]);
 
   const search = useCallback((query: string) => {
-    if (!connected || !query.trim()) {
+    if (!query.trim()) {
       return;
     }
     setSearchQuery(query);
     setLoading(true);
     send({ type: "knowledge.search", payload: { query, limit: 20 } });
-  }, [connected, send]);
+  }, [send]);
 
   const clearSearch = useCallback(() => {
     setSearchQuery("");
@@ -125,77 +131,76 @@ export function useKnowledge(): UseKnowledgeResult {
   }, [loadRecent]);
 
   const selectNode = useCallback((id: string) => {
-    if (!connected) {
-      return;
-    }
     send({ type: "knowledge.getNode", payload: { id } });
-  }, [connected, send]);
+  }, [send]);
 
   const expandNode = useCallback((id: string) => {
-    if (!connected) {
-      return;
-    }
     send({ type: "knowledge.expand", payload: { id, depth: 1 } });
-  }, [connected, send]);
+  }, [send]);
 
-  // Process incoming WS messages — this needs to be wired into useGrackleSocket
-  // For now, expose a processMessage method that the parent can call
-  const processMessage = useCallback((msg: { type: string; payload?: Record<string, unknown> }) => {
-    const payload = msg.payload ?? {};
+  /** Handle incoming WS messages. Returns true if handled. */
+  const handleMessage = useCallback((msg: WsMessage): boolean => {
+    if (!KNOWLEDGE_MSG_TYPES.has(msg.type)) {
+      return false;
+    }
+
+    const payload: Record<string, unknown> = (msg.payload ?? {}) as Record<string, unknown>;
 
     switch (msg.type) {
-      case "knowledge.listRecent.result":
-      case "knowledge.search.result": {
-        const rawNodes = (payload.nodes ?? payload.results) as Record<string, unknown>[] | undefined;
+      case "knowledge.listRecent.result": {
+        const rawNodes = (payload.nodes ?? []) as Record<string, unknown>[];
         const rawEdges = (payload.edges ?? []) as Record<string, unknown>[];
 
         const nodeMap = new Map<string, GraphNode>();
         const linkList: GraphLink[] = [];
 
-        if (msg.type === "knowledge.search.result" && payload.results) {
-          // Search results have a different shape: { results: [{ score, node, edges }] }
-          const results = payload.results as Array<Record<string, unknown>>;
-          for (const result of results) {
-            const rawNode = result.node as Record<string, unknown>;
-            const resultEdges = (result.edges ?? []) as Record<string, unknown>[];
-            if (rawNode) {
-              nodeMap.set(rawNode.id as string, toGraphNode(rawNode, resultEdges.length));
-            }
-            for (const edge of resultEdges) {
-              linkList.push(toGraphLink(edge));
-            }
-          }
-        } else if (rawNodes) {
-          for (const rawNode of rawNodes) {
-            nodeMap.set(rawNode.id as string, toGraphNode(rawNode));
-          }
-          for (const edge of rawEdges) {
-            linkList.push(toGraphLink(edge));
-          }
+        for (const rawNode of rawNodes) {
+          nodeMap.set(rawNode.id as string, toGraphNode(rawNode));
+        }
+        for (const edge of rawEdges) {
+          linkList.push(toGraphLink(edge));
         }
 
         // Update edge counts
         for (const link of linkList) {
           const src = nodeMap.get(link.source);
-          if (src) {
-            src.val = (src.val || 0) + 1;
-          }
+          if (src) { src.val += 1; }
           const tgt = nodeMap.get(link.target);
-          if (tgt) {
-            tgt.val = (tgt.val || 0) + 1;
+          if (tgt) { tgt.val += 1; }
+        }
+
+        setNodes(nodeMap);
+        setLinks(linkList);
+        setLoading(false);
+        return true;
+      }
+
+      case "knowledge.search.result": {
+        const results = (payload.results ?? []) as Array<Record<string, unknown>>;
+        const nodeMap = new Map<string, GraphNode>();
+        const linkList: GraphLink[] = [];
+
+        for (const result of results) {
+          const rawNode = result.node as Record<string, unknown>;
+          const resultEdges = (result.edges ?? []) as Record<string, unknown>[];
+          if (rawNode) {
+            nodeMap.set(rawNode.id as string, toGraphNode(rawNode, resultEdges.length));
+          }
+          for (const edge of resultEdges) {
+            linkList.push(toGraphLink(edge));
           }
         }
 
         setNodes(nodeMap);
         setLinks(linkList);
         setLoading(false);
-        break;
+        return true;
       }
 
       case "knowledge.getNode.result": {
         if (payload.error) {
-          setSelectedNode(null);
-          return;
+          setSelectedNode(undefined);
+          return true;
         }
         const rawNode = payload.node as Record<string, unknown>;
         const rawEdges = (payload.edges ?? []) as Record<string, unknown>[];
@@ -210,7 +215,7 @@ export function useKnowledge(): UseKnowledgeResult {
             })),
           });
         }
-        break;
+        return true;
       }
 
       case "knowledge.expand.result": {
@@ -239,9 +244,11 @@ export function useKnowledge(): UseKnowledgeResult {
           }
           return [...prev, ...additions];
         });
-        break;
+        return true;
       }
     }
+
+    return false;
   }, []);
 
   return {
@@ -254,7 +261,6 @@ export function useKnowledge(): UseKnowledgeResult {
     selectNode,
     expandNode,
     loadRecent,
-    // @ts-expect-error — processMessage is exposed for parent wiring
-    processMessage,
+    handleMessage,
   };
 }

@@ -10,14 +10,14 @@
 import { useCallback, useEffect, useState, type JSX } from "react";
 import { Breadcrumbs } from "../components/display/index.js";
 import { KnowledgeGraph, KnowledgeDetailPanel } from "../components/knowledge/index.js";
-import { useKnowledge } from "../hooks/useKnowledge.js";
+import { useGrackle } from "../context/GrackleContext.js";
 import styles from "./KnowledgePage.module.scss";
 
 /** Knowledge Graph explorer page. */
 export function KnowledgePage(): JSX.Element {
-  const knowledge = useKnowledge();
+  const { knowledge } = useGrackle();
   const [searchInput, setSearchInput] = useState("");
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
 
   // Load recent nodes on mount
   useEffect(() => {
@@ -34,7 +34,7 @@ export function KnowledgePage(): JSX.Element {
   const handleClear = useCallback(() => {
     setSearchInput("");
     knowledge.clearSearch();
-    setSelectedId(null);
+    setSelectedId(undefined);
   }, [knowledge]);
 
   const handleNodeClick = useCallback((nodeId: string) => {
@@ -47,7 +47,7 @@ export function KnowledgePage(): JSX.Element {
   }, [knowledge]);
 
   const handleCloseDetail = useCallback(() => {
-    setSelectedId(null);
+    setSelectedId(undefined);
   }, []);
 
   const handleSelectFromPanel = useCallback((nodeId: string) => {
@@ -78,7 +78,9 @@ export function KnowledgePage(): JSX.Element {
             Clear
           </button>
         )}
-        {knowledge.loading && <span className={styles.spinner}>Loading...</span>}
+        {knowledge.loading && knowledge.graphData.nodes.length === 0 && (
+          <span className={styles.spinner}>Loading...</span>
+        )}
       </form>
 
       <div className={styles.graphArea}>
@@ -90,7 +92,7 @@ export function KnowledgePage(): JSX.Element {
         ) : (
           <KnowledgeGraph
             graphData={knowledge.graphData}
-            selectedNodeId={selectedId ?? undefined}
+            selectedNodeId={selectedId}
             onNodeClick={handleNodeClick}
             onNodeDoubleClick={handleNodeDoubleClick}
           />

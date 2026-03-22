@@ -947,6 +947,18 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       loadUsage: (scope: string, id: string) => {
         console.log(`[MockGrackle] loadUsage(${scope}, ${id})`);
       },
+      knowledge: {
+        graphData: { nodes: [], links: [] },
+        selectedNode: undefined,
+        loading: false,
+        searchQuery: "",
+        search: () => {},
+        clearSearch: () => {},
+        selectNode: () => {},
+        expandNode: () => {},
+        loadRecent: () => {},
+        handleMessage: () => false,
+      },
     }),
     [
       environments,
