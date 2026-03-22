@@ -1,5 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
-import type { WsMessage } from "./types.js";
+import { describe, it, expect } from "vitest";
 
 // We can't easily test hooks with renderHook in this setup,
 // so test the message handler logic directly by extracting it.
