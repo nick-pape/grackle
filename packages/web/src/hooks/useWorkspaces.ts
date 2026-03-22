@@ -72,6 +72,10 @@ export function useWorkspaces(send: SendFunction): UseWorkspacesResult {
     new Map(),
   );
 
+  const syncWorkspaceCreating = useCallback((): void => {
+    setWorkspaceCreating(pendingCreatesRef.current.size > 0);
+  }, []);
+
   const handleEvent = useCallback((event: GrackleEvent): boolean => {
     switch (event.type) {
       case "workspace.created": {
@@ -84,10 +88,10 @@ export function useWorkspaces(send: SendFunction): UseWorkspacesResult {
           if (pending) {
             clearTimeout(pending.timer);
             pendingCreatesRef.current.delete(requestId);
+            syncWorkspaceCreating();
             pending.onSuccess();
           }
         }
-        setWorkspaceCreating(false);
         send({ type: "list_workspaces" });
         return true;
       }
@@ -127,24 +131,35 @@ export function useWorkspaces(send: SendFunction): UseWorkspacesResult {
           if (pending) {
             clearTimeout(pending.timer);
             pendingCreatesRef.current.delete(requestId);
+            syncWorkspaceCreating();
             pending.onError(errorMessage);
+          } else {
+            console.error(
+              "Received create_workspace_error for unknown requestId",
+              { requestId, errorMessage },
+            );
           }
+        } else {
+          console.error(
+            "Received create_workspace_error without requestId",
+            { errorMessage },
+          );
         }
         return true;
       }
       default:
         return false;
     }
-  }, []);
+  }, [syncWorkspaceCreating]);
 
   const onDisconnect = useCallback(() => {
-    setWorkspaceCreating(false);
     for (const [, pending] of pendingCreatesRef.current) {
       clearTimeout(pending.timer);
       pending.onError("Disconnected");
     }
     pendingCreatesRef.current.clear();
-  }, []);
+    syncWorkspaceCreating();
+  }, [syncWorkspaceCreating]);
 
   const createWorkspace = useCallback(
     (
@@ -158,7 +173,6 @@ export function useWorkspaces(send: SendFunction): UseWorkspacesResult {
       onSuccess?: () => void,
       onError?: (message: string) => void,
     ) => {
-      setWorkspaceCreating(true);
       const payload: Record<string, unknown> = {
         name,
         description: description || "",
@@ -168,28 +182,27 @@ export function useWorkspaces(send: SendFunction): UseWorkspacesResult {
         useWorktrees: useWorktrees ?? true,
         worktreeBasePath: worktreeBasePath || "",
       };
-      if (onSuccess || onError) {
-        const requestId = crypto.randomUUID();
-        payload.requestId = requestId;
-        const errorCallback = onError ?? (() => {});
-        const timer = setTimeout(() => {
-          if (pendingCreatesRef.current.delete(requestId)) {
-            setWorkspaceCreating(false);
-            errorCallback("Request timed out");
-          }
-        }, CREATE_WORKSPACE_TIMEOUT_MS);
-        pendingCreatesRef.current.set(requestId, {
-          onSuccess: onSuccess ?? (() => {}),
-          onError: errorCallback,
-          timer,
-        });
-      }
+      const requestId = crypto.randomUUID();
+      payload.requestId = requestId;
+      const errorCallback = onError ?? (() => {});
+      const timer = setTimeout(() => {
+        if (pendingCreatesRef.current.delete(requestId)) {
+          syncWorkspaceCreating();
+          errorCallback("Request timed out");
+        }
+      }, CREATE_WORKSPACE_TIMEOUT_MS);
+      pendingCreatesRef.current.set(requestId, {
+        onSuccess: onSuccess ?? (() => {}),
+        onError: errorCallback,
+        timer,
+      });
+      syncWorkspaceCreating();
       send({
         type: "create_workspace",
         payload,
       });
     },
-    [send],
+    [send, syncWorkspaceCreating],
   );
 
   const archiveWorkspace = useCallback(

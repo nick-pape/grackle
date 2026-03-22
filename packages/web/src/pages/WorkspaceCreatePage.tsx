@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router";
 import { useGrackle } from "../context/GrackleContext.js";
 import { useToast } from "../context/ToastContext.js";
 import { Breadcrumbs, Spinner } from "../components/display/index.js";
-import { HOME_URL, useAppNavigate } from "../utils/navigation.js";
+import { environmentUrl, HOME_URL, useAppNavigate } from "../utils/navigation.js";
 import {
   WorkspaceFormFields,
   defaultFormValues,
@@ -90,7 +90,7 @@ export function WorkspaceCreatePage(): JSX.Element {
   };
 
   const handleCancel = (): void => {
-    navigate(-1);
+    navigate(presetEnvironmentId ? environmentUrl(presetEnvironmentId) : HOME_URL, { replace: true });
   };
 
   return (
