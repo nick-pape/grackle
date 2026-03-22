@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sat, 21 Mar 2026 23:55:29 GMT and should not be manually modified.
+This log was last generated on Sun, 22 Mar 2026 00:48:48 GMT and should not be manually modified.
+
+## 0.62.0
+Sun, 22 Mar 2026 00:48:48 GMT
+
+### Minor changes
+
+- Add reference node sync primitives for syncing Grackle entities to the knowledge graph
 
 ## 0.61.3
 Sat, 21 Mar 2026 23:55:29 GMT

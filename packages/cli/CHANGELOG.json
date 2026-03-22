@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.62.0",
+      "tag": "@grackle-ai/cli_v0.62.0",
+      "date": "Sun, 22 Mar 2026 00:48:48 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Add reference node sync primitives for syncing Grackle entities to the knowledge graph"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.61.3",
       "tag": "@grackle-ai/cli_v0.61.3",
       "date": "Sat, 21 Mar 2026 23:55:29 GMT",
