@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sun, 22 Mar 2026 03:31:33 GMT and should not be manually modified.
+This log was last generated on Sun, 22 Mar 2026 03:46:09 GMT and should not be manually modified.
+
+## 0.65.0
+Sun, 22 Mar 2026 03:46:09 GMT
+
+### Minor changes
+
+- Add knowledge graph MCP tools: knowledge_search, knowledge_get_node, knowledge_create_node
 
 ## 0.64.2
 Sun, 22 Mar 2026 03:31:33 GMT
