@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sun, 22 Mar 2026 18:06:20 GMT and should not be manually modified.
+This log was last generated on Sun, 22 Mar 2026 18:48:36 GMT and should not be manually modified.
+
+## 0.70.2
+Sun, 22 Mar 2026 18:48:36 GMT
+
+### Patches
+
+- Fix workspace authorization bypass in knowledge_search and knowledge_get_node MCP tools (GHSA-647h-p824-99w7)
 
 ## 0.70.1
 Sun, 22 Mar 2026 18:06:20 GMT
