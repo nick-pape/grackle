@@ -44,6 +44,7 @@ import * as processorRegistry from "./processor-registry.js";
 import { setWssInstance, envRowToWs } from "./ws-broadcast.js";
 import { emit } from "./event-bus.js";
 import { recoverSuspendedSessions } from "./session-recovery.js";
+import { clearReconnectState } from "./auto-reconnect.js";
 import { buildMcpServersJson, toDialableHost } from "./grpc-service.js";
 import { createScopedToken } from "@grackle-ai/mcp";
 import { loadOrCreateApiKey } from "./api-key.js";
@@ -1559,6 +1560,8 @@ async function handleMessage(
         });
         return;
       }
+      // Manual provision overrides auto-reconnect
+      clearReconnectState(environmentId);
 
       const env = envRegistry.getEnvironment(environmentId);
       if (!env) {
@@ -1828,6 +1831,7 @@ async function handleMessage(
         });
         return;
       }
+      clearReconnectState(environmentId);
 
       // Block deletion if workspaces still reference this environment
       const wsCount = workspaceStore.countWorkspacesByEnvironment(environmentId);

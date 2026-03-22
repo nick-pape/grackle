@@ -19,6 +19,7 @@ import { emit } from "./event-bus.js";
 import { processEventStream } from "./event-processor.js";
 import * as processorRegistry from "./processor-registry.js";
 import { recoverSuspendedSessions } from "./session-recovery.js";
+import { clearReconnectState } from "./auto-reconnect.js";
 import { join } from "node:path";
 import {
   LOGS_DIR,
@@ -347,6 +348,8 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
           Code.FailedPrecondition,
         );
       }
+      // Stop auto-reconnect attempts for this environment
+      clearReconnectState(req.id);
       // Disconnect the adapter if currently connected
       const env = envRegistry.getEnvironment(req.id);
       if (env) {
@@ -369,6 +372,8 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
     },
 
     async *provisionEnvironment(req: grackle.EnvironmentId) {
+      // Manual provision overrides auto-reconnect
+      clearReconnectState(req.id);
       const env = envRegistry.getEnvironment(req.id);
       if (!env) {
         yield create(grackle.ProvisionEventSchema, {
