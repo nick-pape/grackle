@@ -93,21 +93,21 @@ Rush monorepo with 6 packages under `packages/`:
 ### React Component Architecture
 
 - **New components must be pure presentational.** Components in `components/` should accept data and callbacks as props. Only page-level components (`pages/*.tsx`) should call `useGrackle()`.
-- **Boy scout rule ([#805](https://github.com/nick-pape/grackle/issues/805))**: If your PR touches any of the following coupled components, you **must** decouple it from `useGrackle()` as part of the PR. Move the hook call up to the parent page/container and pass data + callbacks as props. Link #805 in your PR and check off the component once done.
-  - `components/workspace/WorkspaceBoard.tsx`
-  - `components/personas/PersonaManager.tsx`
-  - `components/panels/TaskEditPanel.tsx`
-  - `components/lists/TaskList.tsx`
-  - `components/panels/CredentialProvidersPanel.tsx`
-  - `components/lists/EnvironmentNav.tsx`
-  - `components/layout/BottomStatusBar.tsx`
-  - `components/dag/DagView.tsx`
-  - `components/chat/ChatInput.tsx`
-  - `components/panels/EnvironmentEditPanel.tsx`
-  - `components/layout/StatusBar.tsx`
-  - `components/panels/FindingsPanel.tsx`
-  - `components/panels/AboutPanel.tsx`
-  - `components/panels/TokensPanel.tsx`
+- **Boy scout rule ([#805](https://github.com/nick-pape/grackle/issues/805))**: If your PR touches any of the following coupled components, you **must** decouple it from `useGrackle()` as part of the PR. Move the hook call up to the parent page/container and pass data + callbacks as props, and link #805 in your PR.
+  - `packages/web/src/components/workspace/WorkspaceBoard.tsx`
+  - `packages/web/src/components/personas/PersonaManager.tsx`
+  - `packages/web/src/components/panels/TaskEditPanel.tsx`
+  - `packages/web/src/components/lists/TaskList.tsx`
+  - `packages/web/src/components/panels/CredentialProvidersPanel.tsx`
+  - `packages/web/src/components/lists/EnvironmentNav.tsx`
+  - `packages/web/src/components/layout/BottomStatusBar.tsx`
+  - `packages/web/src/components/dag/DagView.tsx`
+  - `packages/web/src/components/chat/ChatInput.tsx`
+  - `packages/web/src/components/panels/EnvironmentEditPanel.tsx`
+  - `packages/web/src/components/layout/StatusBar.tsx`
+  - `packages/web/src/components/panels/FindingsPanel.tsx`
+  - `packages/web/src/components/panels/AboutPanel.tsx`
+  - `packages/web/src/components/panels/TokensPanel.tsx`
 - Once a component is fully decoupled, remove it from this list.
 
 ### Dependencies
