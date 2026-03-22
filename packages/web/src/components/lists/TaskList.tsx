@@ -55,7 +55,7 @@ interface StatusGroupAccordionProps {
   navigate: ReturnType<typeof useAppNavigate>;
   titleHighlights: Map<string, readonly MatchIndex[]>;
   workspaceNames: Map<string, string>;
-  workspaceEnvironmentIds: Map<string, string>;
+
 }
 
 /** Collapsible accordion for a status group. */
@@ -67,7 +67,7 @@ function StatusGroupAccordion({
   navigate,
   titleHighlights,
   workspaceNames,
-  workspaceEnvironmentIds,
+
 }: StatusGroupAccordionProps): JSX.Element {
   return (
     <div data-testid={`status-group-${group.status}`}>
@@ -107,11 +107,10 @@ function StatusGroupAccordion({
               const statusStyle = getStatusStyle(task.status);
               const isSelected = selectedTaskId === task.id;
               const wsName = task.parentTaskId || !task.workspaceId ? undefined : workspaceNames.get(task.workspaceId);
-              const envId = task.workspaceId ? workspaceEnvironmentIds.get(task.workspaceId) : undefined;
               return (
                 <div
                   key={task.id}
-                  onClick={() => navigate(taskUrl(task.id, undefined, task.workspaceId, envId))}
+                  onClick={() => navigate(taskUrl(task.id))}
                   className={`${styles.taskRow} ${isSelected ? styles.selected : ""}`}
                   style={{ '--task-indent': `${TASK_BASE_INDENT_PX}px` } as CSSProperties}
                   data-task-id={task.id}
@@ -147,7 +146,7 @@ interface TaskTreeNodeProps {
   taskStatusById: Map<string, string>;
   titleHighlights: Map<string, readonly MatchIndex[]>;
   workspaceNames: Map<string, string>;
-  workspaceEnvironmentIds: Map<string, string>;
+
 }
 
 /** Renders a single task tree node with optional children. */
@@ -161,7 +160,7 @@ function TaskTreeNode({
   taskStatusById,
   titleHighlights,
   workspaceNames,
-  workspaceEnvironmentIds,
+
 }: TaskTreeNodeProps): JSX.Element {
   const statusStyle = getStatusStyle(node.status);
   const isBlocked = node.dependsOn.length > 0 &&
@@ -172,12 +171,10 @@ function TaskTreeNode({
   const indent = TASK_BASE_INDENT_PX + depth * TASK_DEPTH_INDENT_PX;
   const isRoot = depth === 0;
   const wsName = isRoot && !node.parentTaskId && node.workspaceId ? workspaceNames.get(node.workspaceId) : undefined;
-  const envId = node.workspaceId ? workspaceEnvironmentIds.get(node.workspaceId) : undefined;
-
   return (
     <>
       <div
-        onClick={() => navigate(taskUrl(node.id, undefined, node.workspaceId, envId))}
+        onClick={() => navigate(taskUrl(node.id))}
         className={`${styles.taskRow} ${isSelected ? styles.selected : ""}`}
         style={{ '--task-indent': `${indent}px` } as CSSProperties}
         data-task-id={node.id}
@@ -227,7 +224,7 @@ function TaskTreeNode({
           <button
             onClick={(e) => {
               e.stopPropagation();
-              navigate(newTaskUrl(node.workspaceId, node.id, envId));
+              navigate(newTaskUrl(node.workspaceId, node.id));
             }}
             title="Add child task"
             aria-label="Add child task"
@@ -259,7 +256,7 @@ function TaskTreeNode({
                 taskStatusById={taskStatusById}
                 titleHighlights={titleHighlights}
                 workspaceNames={workspaceNames}
-                workspaceEnvironmentIds={workspaceEnvironmentIds}
+    
               />
             ))}
           </motion.div>
@@ -297,11 +294,6 @@ export function TaskList(): JSX.Element {
     [workspaces],
   );
 
-  /** Map workspaceId → environmentId for building scoped URLs. */
-  const workspaceEnvironmentIds = useMemo(
-    () => new Map(workspaces.map((w) => [w.id, w.environmentId])),
-    [workspaces],
-  );
 
   /** Toggle group-by-status mode. */
   const toggleGroupByStatus = (): void => {
@@ -457,7 +449,7 @@ export function TaskList(): JSX.Element {
             navigate={navigate}
             titleHighlights={titleHighlights}
             workspaceNames={workspaceNames}
-            workspaceEnvironmentIds={workspaceEnvironmentIds}
+
           />
         ))
       ) : (
@@ -473,7 +465,7 @@ export function TaskList(): JSX.Element {
             taskStatusById={taskStatusById}
             titleHighlights={titleHighlights}
             workspaceNames={workspaceNames}
-            workspaceEnvironmentIds={workspaceEnvironmentIds}
+
           />
         ))
       )}
