@@ -1,5 +1,5 @@
-import type { TaskData, Workspace } from "../hooks/useGrackleSocket.js";
-import { ENVIRONMENTS_URL, HOME_URL, SETTINGS_URL, taskUrl, workspaceUrl } from "./navigation.js";
+import type { Environment, TaskData, Workspace } from "../hooks/useGrackleSocket.js";
+import { ENVIRONMENTS_URL, environmentUrl, HOME_URL, SETTINGS_URL, taskUrl, workspaceUrl } from "./navigation.js";
 
 /** A single segment in the breadcrumb trail. */
 export interface BreadcrumbSegment {
@@ -72,32 +72,49 @@ export function buildSessionBreadcrumbs(sessionId: string): BreadcrumbSegment[] 
   return [HOME_SEGMENT, { label: `Session ${sessionId.slice(0, 8)}`, url: undefined }];
 }
 
-/** Build breadcrumbs for a workspace page. */
+/** Build breadcrumbs for a workspace page: Home > Environments > [Env] > [Workspace]. */
 export function buildWorkspaceBreadcrumbs(
   workspaceId: string,
+  environmentId: string,
   workspaces: Workspace[],
+  environments: Environment[],
 ): BreadcrumbSegment[] {
   const workspace = workspaces.find((p) => p.id === workspaceId);
-  return [HOME_SEGMENT, { label: workspace?.name ?? "Workspace", url: undefined }];
+  const environment = environments.find((e) => e.id === environmentId);
+  return [
+    HOME_SEGMENT,
+    ENVIRONMENTS_SEGMENT,
+    { label: environment?.displayName ?? "Environment", url: environmentUrl(environmentId) },
+    { label: workspace?.name ?? "Workspace", url: undefined },
+  ];
 }
 
-/** Build breadcrumbs for a task page. */
+/** Build breadcrumbs for a task page: Home > Environments > [Env] > [Workspace] > [ancestors...] > [Task]. */
 export function buildTaskBreadcrumbs(
   taskId: string,
+  routeEnvironmentId: string | undefined,
   workspaces: Workspace[],
+  environments: Environment[],
   tasksById: Map<string, TaskData>,
 ): BreadcrumbSegment[] {
   const ancestors = buildTaskAncestorChain(taskId, tasksById);
   const task = tasksById.get(taskId);
   const taskWorkspaceId = task?.workspaceId;
   const workspace = taskWorkspaceId ? workspaces.find((p) => p.id === taskWorkspaceId) : undefined;
+  const environmentId = routeEnvironmentId ?? workspace?.environmentId;
+  const environment = environmentId ? environments.find((e) => e.id === environmentId) : undefined;
 
   const segments: BreadcrumbSegment[] = [HOME_SEGMENT];
 
-  if (workspace) {
+  if (environment && environmentId) {
+    segments.push(ENVIRONMENTS_SEGMENT);
+    segments.push({ label: environment.displayName, url: environmentUrl(environmentId) });
+  }
+
+  if (workspace && environmentId) {
     segments.push({
       label: workspace.name,
-      url: workspaceUrl(workspace.id),
+      url: workspaceUrl(workspace.id, environmentId),
     });
   }
 
@@ -105,7 +122,7 @@ export function buildTaskBreadcrumbs(
   for (let i = 0; i < ancestors.length - 1; i++) {
     segments.push({
       label: ancestors[i].title,
-      url: taskUrl(ancestors[i].id),
+      url: taskUrl(ancestors[i].id, undefined, taskWorkspaceId, environmentId),
     });
   }
 
@@ -123,18 +140,34 @@ export function buildTaskBreadcrumbs(
 /** Build breadcrumbs for the new task page. */
 export function buildNewTaskBreadcrumbs(
   workspaceIdParam: string,
+  environmentId: string | undefined,
   parentTaskId: string | undefined,
   workspaces: Workspace[],
+  environments: Environment[],
   tasksById: Map<string, TaskData>,
 ): BreadcrumbSegment[] {
   const workspace = workspaces.find((p) => p.id === workspaceIdParam);
-  const segments: BreadcrumbSegment[] = [
-    HOME_SEGMENT,
-    {
+  const envId = environmentId ?? workspace?.environmentId;
+  const environment = envId ? environments.find((e) => e.id === envId) : undefined;
+
+  const segments: BreadcrumbSegment[] = [HOME_SEGMENT];
+
+  if (environment && envId) {
+    segments.push(ENVIRONMENTS_SEGMENT);
+    segments.push({ label: environment.displayName, url: environmentUrl(envId) });
+  }
+
+  if (envId) {
+    segments.push({
       label: workspace?.name ?? "Workspace",
-      url: workspaceUrl(workspaceIdParam),
-    },
-  ];
+      url: workspaceUrl(workspaceIdParam, envId),
+    });
+  } else {
+    segments.push({
+      label: workspace?.name ?? "Workspace",
+      url: undefined,
+    });
+  }
 
   // If creating a child task, show parent ancestors
   if (parentTaskId) {
@@ -142,7 +175,7 @@ export function buildNewTaskBreadcrumbs(
     for (const ancestor of ancestors) {
       segments.push({
         label: ancestor.title,
-        url: taskUrl(ancestor.id),
+        url: taskUrl(ancestor.id, undefined, workspaceIdParam, envId),
       });
     }
   }

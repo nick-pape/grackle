@@ -337,7 +337,7 @@ function SessionAttemptSelector({ taskSessions, selectedSessionId, onSelect }: S
 
 /** Task detail page with overview/stream/findings tabs. */
 export function TaskPage(): JSX.Element {
-  const { taskId, workspaceId: routeWorkspaceId } = useParams<{ taskId: string; workspaceId?: string }>();
+  const { taskId, workspaceId: routeWorkspaceId, environmentId: routeEnvironmentId } = useParams<{ taskId: string; workspaceId?: string; environmentId?: string }>();
   const location = useLocation();
   const navigate = useAppNavigate();
   const {
@@ -407,7 +407,8 @@ export function TaskPage(): JSX.Element {
     if (!task) return;
     deleteTask(task.id);
     setShowDeleteConfirm(false);
-    navigate(task.workspaceId ? workspaceUrl(task.workspaceId) : "/", { replace: true });
+    const envId = routeEnvironmentId ?? workspace?.environmentId;
+    navigate(task.workspaceId && envId ? workspaceUrl(task.workspaceId, envId) : "/", { replace: true });
   };
 
   // Reset state when switching tasks
@@ -471,8 +472,8 @@ export function TaskPage(): JSX.Element {
     : false;
 
   const breadcrumbs = useMemo(
-    () => buildTaskBreadcrumbs(taskId!, workspaces, tasksById),
-    [taskId, workspaces, tasksById],
+    () => buildTaskBreadcrumbs(taskId!, routeEnvironmentId, workspaces, environments, tasksById),
+    [taskId, routeEnvironmentId, workspaces, environments, tasksById],
   );
 
   // Load historical events when the session changes. The session_events
@@ -494,7 +495,7 @@ export function TaskPage(): JSX.Element {
 
   const handleTabChange = (tab: TaskTab): void => {
     setActiveTaskTab(tab);
-    navigate(taskUrl(taskId!, tab === "overview" ? undefined : tab, routeWorkspaceId));
+    navigate(taskUrl(taskId!, tab === "overview" ? undefined : tab, routeWorkspaceId, routeEnvironmentId));
   };
 
   return (
@@ -518,7 +519,7 @@ export function TaskPage(): JSX.Element {
             onStop={() => stopTask(task.id)}
             onPause={() => sessionId && kill(sessionId)}
             onDelete={handleDeleteTask}
-            onEdit={() => navigate(taskEditUrl(task.id, routeWorkspaceId))}
+            onEdit={() => navigate(taskEditUrl(task.id, routeWorkspaceId, routeEnvironmentId))}
           />
         )}
       </div>

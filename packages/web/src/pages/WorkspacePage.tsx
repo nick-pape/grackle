@@ -4,8 +4,8 @@ import { useGrackle } from "../context/GrackleContext.js";
 import { DagView } from "../components/dag/DagView.js";
 import { WorkspaceBoard } from "../components/workspace/WorkspaceBoard.js";
 import { Breadcrumbs, ConfirmDialog } from "../components/display/index.js";
-import type { BreadcrumbSegment } from "../utils/breadcrumbs.js";
-import { HOME_URL, newTaskUrl, useAppNavigate } from "../utils/navigation.js";
+import { buildWorkspaceBreadcrumbs } from "../utils/breadcrumbs.js";
+import { newTaskUrl, useAppNavigate } from "../utils/navigation.js";
 import {
   EditableTextField,
   EditableTextArea,
@@ -44,7 +44,7 @@ type WorkspaceTab = "tasks" | "board" | "graph";
 
 /** Workspace overview page with inline editing, progress bar, and DAG/task views. */
 export function WorkspacePage(): JSX.Element {
-  const { workspaceId } = useParams<{ workspaceId: string }>();
+  const { workspaceId, environmentId: routeEnvironmentId } = useParams<{ workspaceId: string; environmentId: string }>();
   const navigate = useAppNavigate();
   const {
     tasks, environments, workspaces, personas, sessions, archiveWorkspace, updateWorkspace,
@@ -58,7 +58,8 @@ export function WorkspacePage(): JSX.Element {
   const previousWorkspaceIdRef = useRef<string | undefined>(undefined);
 
   const workspace = workspaces.find((p) => p.id === workspaceId);
-  const breadcrumbs: BreadcrumbSegment[] = [{ label: "Home", url: HOME_URL }, { label: workspace?.name ?? "Workspace", url: undefined }];
+  const environmentId = routeEnvironmentId ?? workspace?.environmentId ?? "";
+  const breadcrumbs = buildWorkspaceBreadcrumbs(workspaceId!, environmentId, workspaces, environments);
 
   // Reset edit state when workspaceId changes
   useEffect(() => {
@@ -350,7 +351,7 @@ export function WorkspacePage(): JSX.Element {
         <div className={styles.emptyCta}>
           <button
             className={styles.ctaButton}
-            onClick={() => navigate(newTaskUrl(workspaceId!))}
+            onClick={() => navigate(newTaskUrl(workspaceId!, undefined, environmentId))}
           >
             Create Task
           </button>
@@ -360,10 +361,10 @@ export function WorkspacePage(): JSX.Element {
         </div>
       )}
       {workspaceTab === "board" && (
-        <WorkspaceBoard workspaceId={workspaceId!} />
+        <WorkspaceBoard workspaceId={workspaceId!} environmentId={environmentId} />
       )}
       {workspaceTab === "graph" && (
-        <DagView workspaceId={workspaceId!} />
+        <DagView workspaceId={workspaceId!} environmentId={environmentId} />
       )}
 
       {/* Archive confirmation dialog */}
