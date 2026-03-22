@@ -74,9 +74,7 @@ test.describe("Task Overview Tab", { tag: ["@task"] }, () => {
     await expect(page.getByTestId("task-overview-environment").getByText("test-local", { exact: true })).toBeVisible({ timeout: 5_000 });
   });
 
-  // FIXME: session recovery race — auto-reconnect tries to reanimate suspended sessions
-  // that conflict with active sessions, causing task overview rendering to fail.
-  test.fixme("overview shows blocked dependencies in yellow", async ({ appPage }) => {
+  test("overview shows blocked dependencies in yellow", async ({ appPage }) => {
     const page = appPage;
 
     await createWorkspace(page, "overview-deps");

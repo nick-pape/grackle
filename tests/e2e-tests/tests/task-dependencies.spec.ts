@@ -52,9 +52,7 @@ test.describe("Task Dependencies", { tag: ["@task"] }, () => {
     await expect(page.locator("button", { hasText: "Start" })).not.toBeVisible();
   });
 
-  // FIXME: session recovery race — auto-reconnect tries to reanimate suspended sessions
-  // that conflict with active sessions, causing stub task completion to fail.
-  test.fixme("completing blocker unblocks dependent task", async ({ appPage }) => {
+  test("completing blocker unblocks dependent task", async ({ appPage }) => {
     const page = appPage;
 
     // Create workspace and tasks
@@ -89,8 +87,7 @@ test.describe("Task Dependencies", { tag: ["@task"] }, () => {
     await expect(page.locator("button", { hasText: "Start" })).toBeVisible({ timeout: 10_000 });
   });
 
-  // FIXME: session recovery race — same as above
-  test.fixme("task with multiple dependencies requires all blockers complete", async ({ appPage }) => {
+  test("task with multiple dependencies requires all blockers complete", async ({ appPage }) => {
     const page = appPage;
 
     // Create workspace and two blocker tasks

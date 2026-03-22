@@ -26,9 +26,7 @@ test.describe("Multi-Task", { tag: ["@task"] }, () => {
     await expect(sidebar.getByText("task-charlie")).toBeVisible({ timeout: 5_000 });
   });
 
-  // FIXME: session recovery race — auto-reconnect tries to reanimate suspended sessions
-  // that conflict with active sessions, causing stub task switching to fail.
-  test.fixme("switching between tasks preserves state", async ({ appPage }) => {
+  test("switching between tasks preserves state", async ({ appPage }) => {
     const page = appPage;
 
     // Create workspace with two tasks
