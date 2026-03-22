@@ -20,6 +20,7 @@ import {
   expandNode,
   expandResults,
   NATIVE_CATEGORY,
+  EDGE_TYPE,
   type Embedder,
   type EdgeType,
   type SearchResult,
@@ -29,6 +30,7 @@ import {
 } from "@grackle-ai/knowledge";
 import type { ToolDefinition } from "../tool-registry.js";
 import { jsonResult } from "../result-helpers.js";
+import { logger } from "@grackle-ai/knowledge";
 
 // ---------------------------------------------------------------------------
 // Embedder accessor — set by the server at startup
@@ -41,8 +43,9 @@ let embedder: Embedder | undefined;
  * Set the shared embedder instance for knowledge tools.
  *
  * Called once by the server at startup (before MCP serves requests).
+ * Pass `undefined` to clear the embedder (e.g., for testing).
  */
-export function setKnowledgeEmbedder(e: Embedder): void {
+export function setKnowledgeEmbedder(e: Embedder | undefined): void {
   embedder = e;
 }
 
@@ -55,6 +58,16 @@ function requireEmbedder(): Embedder {
   }
   return embedder;
 }
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+/** Maximum allowed search results. */
+const MAX_SEARCH_LIMIT: number = 50;
+
+/** Maximum allowed expansion depth. */
+const MAX_EXPAND_DEPTH: number = 5;
 
 // ---------------------------------------------------------------------------
 // Response formatting — hide internal details from agents
@@ -103,6 +116,14 @@ function formatSearchResult(result: SearchResult): Record<string, unknown> {
   };
 }
 
+/** Clamp a numeric input to a safe integer range. */
+function clampInt(value: number | undefined, min: number, max: number, defaultValue: number): number {
+  if (value === undefined) {
+    return defaultValue;
+  }
+  return Math.max(min, Math.min(max, Math.floor(value)));
+}
+
 // ---------------------------------------------------------------------------
 // Tool definitions
 // ---------------------------------------------------------------------------
@@ -119,8 +140,11 @@ export const knowledgeTools: ToolDefinition[] = [
       query: z.string().describe("Natural language search query"),
       limit: z
         .number()
+        .int()
+        .min(1)
+        .max(MAX_SEARCH_LIMIT)
         .optional()
-        .describe("Maximum number of results to return (default 10)"),
+        .describe(`Maximum number of results to return (default 10, max ${MAX_SEARCH_LIMIT})`),
       workspaceId: z
         .string()
         .optional()
@@ -133,8 +157,11 @@ export const knowledgeTools: ToolDefinition[] = [
         ),
       expandDepth: z
         .number()
+        .int()
+        .min(1)
+        .max(MAX_EXPAND_DEPTH)
         .optional()
-        .describe("How many hops to traverse when expanding (default 1)"),
+        .describe(`How many hops to traverse when expanding (default 1, max ${MAX_EXPAND_DEPTH})`),
     }),
     rpcMethod: "knowledgeSearch",
     mutating: false,
@@ -160,25 +187,29 @@ export const knowledgeTools: ToolDefinition[] = [
       };
 
       try {
+        const safeLimit: number = clampInt(limit, 1, MAX_SEARCH_LIMIT, 10);
         const results: SearchResult[] = await knowledgeSearch(
           query,
           requireEmbedder(),
-          { limit, workspaceId },
+          { limit: safeLimit, workspaceId },
         );
 
         const formattedResults = results.map(formatSearchResult);
 
         let neighbors: Record<string, unknown>[] | undefined;
+        let neighborEdges: Record<string, unknown>[] | undefined;
         if (expand && results.length > 0) {
+          const safeDepth: number = clampInt(expandDepth, 1, MAX_EXPAND_DEPTH, 1);
           const expansion: ExpansionResult = await expandResults(results, {
-            depth: expandDepth,
+            depth: safeDepth,
           });
           neighbors = expansion.nodes.map(formatNode);
+          neighborEdges = expansion.edges.map(formatEdge);
         }
 
         return jsonResult({
           results: formattedResults,
-          ...(neighbors !== undefined ? { neighbors } : {}),
+          ...(neighbors !== undefined ? { neighbors, neighborEdges } : {}),
         });
       } catch (error) {
         return {
@@ -219,8 +250,11 @@ export const knowledgeTools: ToolDefinition[] = [
         ),
       expandDepth: z
         .number()
+        .int()
+        .min(1)
+        .max(MAX_EXPAND_DEPTH)
         .optional()
-        .describe("How many hops to traverse when expanding (default 1)"),
+        .describe(`How many hops to traverse when expanding (default 1, max ${MAX_EXPAND_DEPTH})`),
     }),
     rpcMethod: "knowledgeGetNode",
     mutating: false,
@@ -262,8 +296,9 @@ export const knowledgeTools: ToolDefinition[] = [
         };
 
         if (expand) {
+          const safeDepth: number = clampInt(expandDepth, 1, MAX_EXPAND_DEPTH, 1);
           const expansion: ExpansionResult = await expandNode(id, {
-            depth: expandDepth,
+            depth: safeDepth,
           });
           response.neighbors = expansion.nodes.map(formatNode);
           response.neighborEdges = expansion.edges.map(formatEdge);
@@ -324,7 +359,13 @@ export const knowledgeTools: ToolDefinition[] = [
           z.object({
             toId: z.string().describe("ID of the node to link to"),
             type: z
-              .string()
+              .enum([
+                EDGE_TYPE.RELATES_TO,
+                EDGE_TYPE.DEPENDS_ON,
+                EDGE_TYPE.DERIVED_FROM,
+                EDGE_TYPE.MENTIONS,
+                EDGE_TYPE.PART_OF,
+              ])
               .describe(
                 "Relationship type: RELATES_TO, DEPENDS_ON, DERIVED_FROM, MENTIONS, PART_OF",
               ),
@@ -355,19 +396,19 @@ export const knowledgeTools: ToolDefinition[] = [
         category?: string;
         tags?: string[];
         workspaceId?: string;
-        edges?: Array<{ toId: string; type: string }>;
+        edges?: Array<{ toId: string; type: EdgeType }>;
       };
 
       try {
         const emb = requireEmbedder();
         const { vector } = await emb.embed(`${title} ${content}`);
 
-        // Use scoped workspace if available and not explicitly provided
+        // For scoped callers, always use the auth context workspace.
+        // For full-access callers, use the provided workspace or empty.
         const resolvedWorkspaceId: string =
-          workspaceId ??
-          (authContext?.type === "scoped"
+          authContext?.type === "scoped"
             ? authContext.workspaceId ?? ""
-            : "");
+            : workspaceId ?? "";
 
         const nodeId: string = await createNativeNode({
           category: category ?? NATIVE_CATEGORY.INSIGHT,
@@ -379,25 +420,25 @@ export const knowledgeTools: ToolDefinition[] = [
         });
 
         // Create edges if requested
-        const createdEdges: Array<{ toId: string; type: string }> = [];
+        const createdEdges: Array<Record<string, unknown>> = [];
         if (edges) {
           for (const edge of edges) {
             try {
-              await createEdge(
-                nodeId,
-                edge.toId,
-                edge.type as EdgeType,
-              );
-              createdEdges.push(edge);
+              await createEdge(nodeId, edge.toId, edge.type);
+              createdEdges.push({ toId: edge.toId, type: edge.type });
             } catch (edgeError) {
-              // Log but don't fail the whole operation for edge errors
+              logger.warn(
+                { nodeId, toId: edge.toId, type: edge.type, err: edgeError },
+                "Failed to create edge for knowledge node",
+              );
               createdEdges.push({
-                ...edge,
+                toId: edge.toId,
+                type: edge.type,
                 error:
                   edgeError instanceof Error
                     ? edgeError.message
                     : "Failed to create edge",
-              } as { toId: string; type: string });
+              });
             }
           }
         }

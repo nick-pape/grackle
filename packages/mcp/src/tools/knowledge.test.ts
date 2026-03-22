@@ -35,6 +35,19 @@ vi.mock("@grackle-ai/knowledge", () => ({
     CONCEPT: "concept",
     SNIPPET: "snippet",
   },
+  EDGE_TYPE: {
+    RELATES_TO: "RELATES_TO",
+    DEPENDS_ON: "DEPENDS_ON",
+    DERIVED_FROM: "DERIVED_FROM",
+    MENTIONS: "MENTIONS",
+    PART_OF: "PART_OF",
+  },
+  logger: {
+    info: vi.fn(),
+    debug: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+  },
 }));
 
 import { knowledgeTools, setKnowledgeEmbedder } from "./knowledge.js";
@@ -196,7 +209,7 @@ describe("knowledge_search", () => {
   });
 
   it("returns error when embedder not initialized", async () => {
-    setKnowledgeEmbedder(undefined as unknown as Embedder);
+    setKnowledgeEmbedder(undefined);
 
     const result = await tool.handler({ query: "test" }, MOCK_CLIENT);
     expect(result.isError).toBe(true);
@@ -333,7 +346,7 @@ describe("knowledge_create_node", () => {
     );
   });
 
-  it("prefers explicit workspaceId over scoped", async () => {
+  it("scoped callers always use auth context workspace (ignores explicit)", async () => {
     await tool.handler(
       { title: "T", content: "C", workspaceId: "ws-explicit" },
       MOCK_CLIENT,
@@ -341,12 +354,12 @@ describe("knowledge_create_node", () => {
     );
 
     expect(mockCreateNativeNode).toHaveBeenCalledWith(
-      expect.objectContaining({ workspaceId: "ws-explicit" }),
+      expect.objectContaining({ workspaceId: "ws-scoped" }),
     );
   });
 
   it("returns error when embedder not initialized", async () => {
-    setKnowledgeEmbedder(undefined as unknown as Embedder);
+    setKnowledgeEmbedder(undefined);
 
     const result = await tool.handler(
       { title: "T", content: "C" },
