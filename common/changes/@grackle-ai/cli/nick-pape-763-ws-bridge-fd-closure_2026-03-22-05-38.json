@@ -1,7 +1,7 @@
 {
   "changes": [
     {
-      "comment": "Emit usage events from Codex, ACP, and GenAIScript runtimes",
+      "comment": "Refactor ws-bridge session termination to use fd closure instead of direct INTERRUPTED status",
       "type": "patch",
       "packageName": "@grackle-ai/cli"
     }

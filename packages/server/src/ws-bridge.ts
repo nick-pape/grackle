@@ -47,6 +47,8 @@ import { recoverSuspendedSessions } from "./session-recovery.js";
 import { clearReconnectState } from "./auto-reconnect.js";
 import { buildMcpServersJson, toDialableHost } from "./grpc-service.js";
 import { createScopedToken } from "@grackle-ai/mcp";
+import { cleanupLifecycleStream } from "./lifecycle.js";
+import * as streamRegistry from "./stream-registry.js";
 import { loadOrCreateApiKey } from "./api-key.js";
 import { reanimateAgent } from "./reanimate-agent.js";
 import { ConnectError } from "@connectrpc/connect";
@@ -386,6 +388,62 @@ export async function startTaskSession(
   return undefined;
 }
 
+/**
+ * Terminate a session using the fd-closure pattern.
+ *
+ * Deletes the lifecycle stream (triggering auto-hibernate via the orphan
+ * callback), closes all other subscriptions, and falls back to direct
+ * INTERRUPTED for legacy sessions without lifecycle streams.
+ *
+ * Matches the pattern used by `killAgent` in grpc-service.ts.
+ */
+async function terminateSession(sessionId: string): Promise<void> {
+  const session = sessionStore.getSession(sessionId);
+  if (!session) {
+    return;
+  }
+
+  // 1. Delete lifecycle stream → triggers orphan callback → auto-hibernate
+  cleanupLifecycleStream(sessionId);
+
+  // 2. Close other subscriptions (pipe streams etc.)
+  const subs = streamRegistry.getSubscriptionsForSession(sessionId);
+  for (const sub of subs) {
+    streamRegistry.unsubscribe(sub.id);
+  }
+
+  // 3. Fallback for legacy sessions without lifecycle streams
+  const current = sessionStore.getSession(sessionId);
+  if (current && !TERMINAL_SESSION_STATUSES.has(current.status as SessionStatus)) {
+    const conn = adapterManager.getConnection(session.environmentId);
+    if (conn) {
+      try {
+        await conn.client.kill(
+          create(powerline.SessionIdSchema, { id: sessionId }),
+        );
+      } catch (err) {
+        logger.warn({ sessionId, err }, "PowerLine kill failed during session termination");
+      }
+    }
+    sessionStore.updateSession(sessionId, SESSION_STATUS.INTERRUPTED);
+    streamHub.publish(
+      create(grackle.SessionEventSchema, {
+        sessionId,
+        type: grackle.EventType.STATUS,
+        timestamp: new Date().toISOString(),
+        content: SESSION_STATUS.INTERRUPTED,
+        raw: "",
+      }),
+    );
+    if (session.taskId) {
+      const task = taskStore.getTask(session.taskId);
+      if (task) {
+        emit("task.updated", { taskId: task.id, workspaceId: task.workspaceId || "" });
+      }
+    }
+  }
+}
+
 async function handleMessage(
   ws: WebSocket,
   msg: WsMessage,
@@ -668,40 +726,7 @@ async function handleMessage(
       if (!sessionId) {
         return;
       }
-
-      const session = sessionStore.getSession(sessionId);
-      if (!session) {
-        return;
-      }
-
-      const conn = adapterManager.getConnection(session.environmentId);
-      if (conn) {
-        try {
-          await conn.client.kill(
-            create(powerline.SessionIdSchema, { id: sessionId }),
-          );
-        } catch (err) {
-          logger.warn({ sessionId, err }, "PowerLine kill failed — marking session interrupted anyway");
-        }
-      }
-      sessionStore.updateSession(sessionId, SESSION_STATUS.INTERRUPTED);
-      streamHub.publish(
-        create(grackle.SessionEventSchema, {
-          sessionId,
-          type: grackle.EventType.STATUS,
-          timestamp: new Date().toISOString(),
-          content: SESSION_STATUS.INTERRUPTED,
-          raw: "",
-        }),
-      );
-
-      // Broadcast task_updated so frontend re-fetches computed status
-      if (session.taskId) {
-        const task = taskStore.getTask(session.taskId);
-        if (task) {
-          emit("task.updated", { taskId: task.id, workspaceId: task.workspaceId || "" });
-        }
-      }
+      await terminateSession(sessionId);
       break;
     }
 
@@ -709,29 +734,10 @@ async function handleMessage(
       const taskId = msg.payload?.taskId as string;
       if (!taskId) return;
 
-      // Kill all active sessions for this task (server-authoritative lookup)
+      // Terminate all active sessions for this task via fd closure
       const activeSessions = sessionStore.getActiveSessionsForTask(taskId);
       for (const session of activeSessions) {
-        const conn = adapterManager.getConnection(session.environmentId);
-        if (conn) {
-          try {
-            await conn.client.kill(
-              create(powerline.SessionIdSchema, { id: session.id }),
-            );
-          } catch (err) {
-            logger.warn({ sessionId: session.id, err }, "PowerLine kill failed — marking session interrupted anyway");
-          }
-        }
-        sessionStore.updateSession(session.id, SESSION_STATUS.INTERRUPTED);
-        streamHub.publish(
-          create(grackle.SessionEventSchema, {
-            sessionId: session.id,
-            type: grackle.EventType.STATUS,
-            timestamp: new Date().toISOString(),
-            content: SESSION_STATUS.INTERRUPTED,
-            raw: "",
-          }),
-        );
+        await terminateSession(session.id);
       }
 
       // Mark task complete (same as "complete_task" handler)
@@ -1406,25 +1412,10 @@ async function handleMessage(
         return;
       }
 
-      // Kill all active sessions before deleting the task
-      const activeSessions = sessionStore.getActiveSessionsForTask(taskId);
-      for (const activeSession of activeSessions) {
-        const conn = adapterManager.getConnection(activeSession.environmentId);
-        if (conn) {
-          try {
-            await conn.client.kill(create(powerline.SessionIdSchema, { id: activeSession.id }));
-          } catch (err) {
-            logger.warn({ taskId, sessionId: activeSession.id, err }, "Failed to kill session during task deletion");
-          }
-        }
-        sessionStore.updateSession(activeSession.id, SESSION_STATUS.INTERRUPTED);
-        streamHub.publish(create(grackle.SessionEventSchema, {
-          sessionId: activeSession.id,
-          type: grackle.EventType.STATUS,
-          timestamp: new Date().toISOString(),
-          content: SESSION_STATUS.INTERRUPTED,
-          raw: "",
-        }));
+      // Terminate all active sessions via fd closure before deleting the task
+      const deleteTaskSessions = sessionStore.getActiveSessionsForTask(taskId);
+      for (const activeSession of deleteTaskSessions) {
+        await terminateSession(activeSession.id);
       }
 
       const changes = taskStore.deleteTask(taskId);
