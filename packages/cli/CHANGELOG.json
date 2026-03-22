@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.66.0",
+      "tag": "@grackle-ai/cli_v0.66.0",
+      "date": "Sun, 22 Mar 2026 04:14:36 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Lifecycle streams for all sessions: auto-hibernate when last fd closed, killAgent via fd closure"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.65.0",
       "tag": "@grackle-ai/cli_v0.65.0",
       "date": "Sun, 22 Mar 2026 03:46:09 GMT",

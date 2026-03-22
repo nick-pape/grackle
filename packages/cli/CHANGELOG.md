@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sun, 22 Mar 2026 03:46:09 GMT and should not be manually modified.
+This log was last generated on Sun, 22 Mar 2026 04:14:36 GMT and should not be manually modified.
+
+## 0.66.0
+Sun, 22 Mar 2026 04:14:36 GMT
+
+### Minor changes
+
+- Lifecycle streams for all sessions: auto-hibernate when last fd closed, killAgent via fd closure
 
 ## 0.65.0
 Sun, 22 Mar 2026 03:46:09 GMT
