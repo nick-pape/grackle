@@ -166,6 +166,10 @@ export function KnowledgeGraph({
       .append("line")
       .attr("class", styles.link);
 
+    // Edge type tooltip on hover
+    linkEls.append("title")
+      .text((d: SimLink) => d.type);
+
     linkElsRef.current = linkEls;
 
     // Create node groups

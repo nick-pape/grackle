@@ -7,7 +7,7 @@
  * @module
  */
 
-import { useCallback, useEffect, useState, type JSX } from "react";
+import { useCallback, useEffect, type JSX } from "react";
 import { Breadcrumbs } from "../components/display/index.js";
 import { KnowledgeGraph, KnowledgeDetailPanel } from "../components/knowledge/index.js";
 import { useGrackle } from "../context/GrackleContext.js";
@@ -17,7 +17,6 @@ import styles from "./KnowledgePage.module.scss";
 /** Knowledge Graph explorer page. */
 export function KnowledgePage(): JSX.Element {
   const { knowledge } = useGrackle();
-  const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
 
   // Load recent nodes on mount
   const loadRecentFn = useCallback(
@@ -30,7 +29,6 @@ export function KnowledgePage(): JSX.Element {
   }, [loadRecentFn]);
 
   const handleNodeClick = useCallback((nodeId: string) => {
-    setSelectedId(nodeId);
     knowledge.selectNode(nodeId);
   }, [knowledge]);
 
@@ -39,12 +37,7 @@ export function KnowledgePage(): JSX.Element {
   }, [knowledge]);
 
   const handleCloseDetail = useCallback(() => {
-    setSelectedId(undefined);
-  }, []);
-
-  const handleSelectFromPanel = useCallback((nodeId: string) => {
-    setSelectedId(nodeId);
-    knowledge.selectNode(nodeId);
+    knowledge.clearSelection();
   }, [knowledge]);
 
   const breadcrumbs = [{ label: "Knowledge", url: KNOWLEDGE_URL }];
@@ -62,17 +55,17 @@ export function KnowledgePage(): JSX.Element {
         ) : (
           <KnowledgeGraph
             graphData={knowledge.graphData}
-            selectedNodeId={selectedId}
+            selectedNodeId={knowledge.selectedId}
             onNodeClick={handleNodeClick}
             onNodeDoubleClick={handleNodeDoubleClick}
           />
         )}
 
-        {knowledge.selectedNode && selectedId && (
+        {knowledge.selectedNode && knowledge.selectedId && (
           <KnowledgeDetailPanel
             detail={knowledge.selectedNode}
             onClose={handleCloseDetail}
-            onSelectNode={handleSelectFromPanel}
+            onSelectNode={handleNodeClick}
           />
         )}
       </div>

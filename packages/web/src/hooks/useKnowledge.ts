@@ -49,11 +49,14 @@ export interface NodeDetail {
 export interface UseKnowledgeResult {
   graphData: { nodes: GraphNode[]; links: GraphLink[] };
   selectedNode: NodeDetail | undefined;
+  /** Currently selected node ID. */
+  selectedId: string | undefined;
   loading: boolean;
   searchQuery: string;
   search(query: string): void;
   clearSearch(): void;
   selectNode(id: string): void;
+  clearSelection(): void;
   expandNode(id: string): void;
   loadRecent(workspaceId?: string): void;
   /** Handle incoming WS messages — called by useGrackleSocket. */
@@ -108,6 +111,7 @@ export function useKnowledge(send: SendFunction): UseKnowledgeResult {
   const [nodes, setNodes] = useState<Map<string, GraphNode>>(new Map());
   const [links, setLinks] = useState<GraphLink[]>([]);
   const [selectedNode, setSelectedNode] = useState<NodeDetail | undefined>(undefined);
+  const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -121,6 +125,8 @@ export function useKnowledge(send: SendFunction): UseKnowledgeResult {
       return;
     }
     setSearchQuery(query);
+    setSelectedId(undefined);
+    setSelectedNode(undefined);
     setLoading(true);
     send({ type: "knowledge.search", payload: { query, limit: 20 } });
   }, [send]);
@@ -131,8 +137,14 @@ export function useKnowledge(send: SendFunction): UseKnowledgeResult {
   }, [loadRecent]);
 
   const selectNode = useCallback((id: string) => {
+    setSelectedId(id);
     send({ type: "knowledge.getNode", payload: { id } });
   }, [send]);
+
+  const clearSelection = useCallback(() => {
+    setSelectedId(undefined);
+    setSelectedNode(undefined);
+  }, []);
 
   const expandNode = useCallback((id: string) => {
     send({ type: "knowledge.expand", payload: { id, depth: 1 } });
@@ -258,11 +270,13 @@ export function useKnowledge(send: SendFunction): UseKnowledgeResult {
   return {
     graphData: { nodes: [...nodes.values()], links },
     selectedNode,
+    selectedId,
     loading,
     searchQuery,
     search,
     clearSearch,
     selectNode,
+    clearSelection,
     expandNode,
     loadRecent,
     handleMessage,
