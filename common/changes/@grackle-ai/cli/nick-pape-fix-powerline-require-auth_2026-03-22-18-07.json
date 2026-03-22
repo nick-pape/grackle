@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Require auth token or explicit --no-auth flag for PowerLine startup",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
