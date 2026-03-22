@@ -62,6 +62,8 @@ const DEFAULT_MIN_SCORE: number = 0;
  * directly, so we apply post-filters on the yielded results.
  */
 function buildSearchCypher(options: {
+  limit: number;
+  candidateLimit: number;
   nodeKinds?: NodeKind[];
   workspaceId?: string;
 }): string {
@@ -78,13 +80,14 @@ function buildSearchCypher(options: {
     ? `WHERE ${filters.join(" AND ")}`
     : "";
 
+  // Neo4j requires integer literals for LIMIT and the vector query count.
   return `
-    CALL db.index.vector.queryNodes($indexName, $candidateLimit, $queryVector)
+    CALL db.index.vector.queryNodes($indexName, ${options.candidateLimit}, $queryVector)
     YIELD node, score
     ${whereClause}
     WITH node, score
     ORDER BY score DESC
-    LIMIT $limit
+    LIMIT ${options.limit}
     OPTIONAL MATCH (node)-[r]-(m:${NODE_LABEL})
     RETURN node, score,
       collect(DISTINCT {
@@ -127,6 +130,8 @@ export async function knowledgeSearch(
   const candidateLimit: number = hasFilters ? limit * 3 : limit;
 
   const cypher: string = buildSearchCypher({
+    limit,
+    candidateLimit,
     nodeKinds: options?.nodeKinds,
     workspaceId: options?.workspaceId,
   });
@@ -134,8 +139,6 @@ export async function knowledgeSearch(
   const params: Record<string, unknown> = {
     indexName: VECTOR_INDEX_NAME,
     queryVector,
-    limit,
-    candidateLimit,
     minScore,
     ...(options?.nodeKinds ? { nodeKinds: options.nodeKinds } : {}),
     ...(options?.workspaceId !== undefined ? { workspaceId: options.workspaceId } : {}),
