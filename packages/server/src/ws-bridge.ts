@@ -866,17 +866,30 @@ async function handleMessage(
 
     case "create_workspace": {
       const name = msg.payload?.name as string;
+      const requestId =
+        typeof msg.payload?.requestId === "string"
+          ? msg.payload.requestId
+          : "";
       if (!name) {
-        sendWs(ws, { type: "error", payload: { message: "name required" } });
+        sendWs(ws, {
+          type: "create_workspace_error",
+          payload: { message: "name required", requestId },
+        });
         return;
       }
       const createEnvironmentId = (msg.payload?.environmentId as string) || "";
       if (!createEnvironmentId) {
-        sendWs(ws, { type: "error", payload: { message: "environmentId required" } });
+        sendWs(ws, {
+          type: "create_workspace_error",
+          payload: { message: "environmentId required", requestId },
+        });
         return;
       }
       if (!envRegistry.getEnvironment(createEnvironmentId)) {
-        sendWs(ws, { type: "error", payload: { message: `Environment not found: ${createEnvironmentId}` } });
+        sendWs(ws, {
+          type: "create_workspace_error",
+          payload: { message: `Environment not found: ${createEnvironmentId}`, requestId },
+        });
         return;
       }
       const baseWorkspaceId = slugify(name) || uuid().slice(0, 8);
@@ -893,17 +906,26 @@ async function handleMessage(
       }
       // useWorktrees defaults to true when not specified
       const createUseWorktrees = (msg.payload?.useWorktrees as boolean | undefined) ?? true;
-      workspaceStore.createWorkspace(
-        id,
-        name,
-        (msg.payload?.description as string) || "",
-        (msg.payload?.repoUrl as string) || "",
-        createEnvironmentId,
-        createUseWorktrees,
-        typeof msg.payload?.worktreeBasePath === "string" ? msg.payload.worktreeBasePath.trim() : "",
-        (msg.payload?.defaultPersonaId as string) || "",
-      );
-      emit("workspace.created", { workspaceId: id });
+      try {
+        workspaceStore.createWorkspace(
+          id,
+          name,
+          (msg.payload?.description as string) || "",
+          (msg.payload?.repoUrl as string) || "",
+          createEnvironmentId,
+          createUseWorktrees,
+          typeof msg.payload?.worktreeBasePath === "string" ? msg.payload.worktreeBasePath.trim() : "",
+          (msg.payload?.defaultPersonaId as string) || "",
+        );
+        emit("workspace.created", { workspaceId: id, requestId });
+      } catch (error: unknown) {
+        const message =
+          error instanceof Error ? error.message : "Failed to create workspace";
+        sendWs(ws, {
+          type: "create_workspace_error",
+          payload: { message, requestId },
+        });
+      }
       break;
     }
 

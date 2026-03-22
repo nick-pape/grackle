@@ -43,6 +43,8 @@ interface WorkspaceFormFieldsProps {
   errors?: Partial<Record<keyof WorkspaceFormValues, string>>;
   /** Whether the form is in a submitting state. */
   disabled?: boolean;
+  /** Whether the name field should receive autofocus on mount. */
+  autoFocusName?: boolean;
 }
 
 const MAX_NAME_LENGTH: number = 100;
@@ -55,6 +57,7 @@ export function WorkspaceFormFields({
   personas,
   errors,
   disabled,
+  autoFocusName,
 }: WorkspaceFormFieldsProps): JSX.Element {
   const set = <K extends keyof WorkspaceFormValues>(key: K, val: WorkspaceFormValues[K]): void => {
     onChange({ ...values, [key]: val });
@@ -73,11 +76,11 @@ export function WorkspaceFormFields({
           onChange={(e) => set("name", e.target.value)}
           placeholder="Workspace name"
           maxLength={MAX_NAME_LENGTH}
-          autoFocus
+          autoFocus={autoFocusName}
           disabled={disabled}
           data-testid="workspace-form-name"
         />
-        {errors?.name && <span className={styles.fieldError} data-testid="workspace-form-error">{errors.name}</span>}
+        {errors?.name && <span className={styles.fieldError} data-testid="workspace-form-error-name">{errors.name}</span>}
       </div>
 
       {/* Description */}
@@ -107,7 +110,7 @@ export function WorkspaceFormFields({
           disabled={disabled}
           data-testid="workspace-form-repo"
         />
-        {errors?.repoUrl && <span className={styles.fieldError} data-testid="workspace-form-error">{errors.repoUrl}</span>}
+        {errors?.repoUrl && <span className={styles.fieldError} data-testid="workspace-form-error-repoUrl">{errors.repoUrl}</span>}
       </div>
 
       {/* Environment */}
@@ -128,7 +131,7 @@ export function WorkspaceFormFields({
             </option>
           ))}
         </select>
-        {errors?.environmentId && <span className={styles.fieldError} data-testid="workspace-form-error">{errors.environmentId}</span>}
+        {errors?.environmentId && <span className={styles.fieldError} data-testid="workspace-form-error-environmentId">{errors.environmentId}</span>}
       </div>
 
       {/* Default Persona */}

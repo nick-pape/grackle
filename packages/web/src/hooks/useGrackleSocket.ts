@@ -81,6 +81,8 @@ export interface UseGrackleSocketResult {
     defaultPersonaId?: string,
     useWorktrees?: boolean,
     worktreeBasePath?: string,
+    onSuccess?: () => void,
+    onError?: (message: string) => void,
   ) => void;
   archiveWorkspace: (workspaceId: string) => void;
   updateWorkspace: (
