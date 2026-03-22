@@ -50,6 +50,8 @@ export type {
 export { createEdge, removeEdge } from "./edge-store.js";
 export type { SearchOptions, SearchResult } from "./search.js";
 export { knowledgeSearch } from "./search.js";
+export type { ExpandOptions, ExpansionResult } from "./expand.js";
+export { expandNode, expandResults } from "./expand.js";
 export {
   findReferenceNodeBySource,
   deleteReferenceNodeBySource,

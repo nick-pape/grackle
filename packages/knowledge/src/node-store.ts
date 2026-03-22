@@ -163,8 +163,10 @@ export function recordToNode(
 
 /**
  * Convert a raw edge object from Cypher `collect()` to a {@link KnowledgeEdge}.
+ *
+ * @internal Exported for use by search and expand modules within this package.
  */
-function recordToEdge(raw: Record<string, unknown>): KnowledgeEdge {
+export function recordToEdge(raw: Record<string, unknown>): KnowledgeEdge {
   let metadata: Record<string, unknown> | undefined;
   if (raw.metadata !== undefined && raw.metadata !== null) {
     try {

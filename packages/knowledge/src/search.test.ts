@@ -136,15 +136,15 @@ describe("knowledgeSearch", () => {
   it("should use default limit of 10", async () => {
     await knowledgeSearch("query", embedder);
 
-    const params = mockSessionRun.mock.calls[0][1] as Record<string, unknown>;
-    expect(params.limit).toBe(10);
+    const cypher = mockSessionRun.mock.calls[0][0] as string;
+    expect(cypher).toContain("LIMIT 10");
   });
 
   it("should respect custom limit", async () => {
     await knowledgeSearch("query", embedder, { limit: 5 });
 
-    const params = mockSessionRun.mock.calls[0][1] as Record<string, unknown>;
-    expect(params.limit).toBe(5);
+    const cypher = mockSessionRun.mock.calls[0][0] as string;
+    expect(cypher).toContain("LIMIT 5");
   });
 
   it("should pass minScore to the query", async () => {
@@ -203,15 +203,15 @@ describe("knowledgeSearch", () => {
   it("should over-fetch candidates when filters are applied", async () => {
     await knowledgeSearch("query", embedder, { limit: 5, nodeKinds: ["native"] });
 
-    const params = mockSessionRun.mock.calls[0][1] as Record<string, unknown>;
-    expect(params.candidateLimit).toBe(15); // 5 * 3
+    const cypher = mockSessionRun.mock.calls[0][0] as string;
+    expect(cypher).toContain("queryNodes($indexName, 15,"); // 5 * 3
   });
 
   it("should not over-fetch when no filters", async () => {
     await knowledgeSearch("query", embedder, { limit: 5 });
 
-    const params = mockSessionRun.mock.calls[0][1] as Record<string, unknown>;
-    expect(params.candidateLimit).toBe(5);
+    const cypher = mockSessionRun.mock.calls[0][0] as string;
+    expect(cypher).toContain("queryNodes($indexName, 5,");
   });
 
   it("should always close the session", async () => {
