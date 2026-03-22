@@ -1,6 +1,42 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sun, 22 Mar 2026 01:37:20 GMT and should not be manually modified.
+This log was last generated on Sun, 22 Mar 2026 03:31:33 GMT and should not be manually modified.
+
+## 0.64.2
+Sun, 22 Mar 2026 03:31:33 GMT
+
+### Patches
+
+- feat(powerline): session parking on disconnect — kill agent, buffer events, drain on reconnect
+
+## 0.64.1
+Sun, 22 Mar 2026 03:15:17 GMT
+
+### Patches
+
+- Add usage_get MCP tool for querying token usage and cost by scope
+
+## 0.64.0
+Sun, 22 Mar 2026 02:55:30 GMT
+
+### Minor changes
+
+- feat(common,powerline): add SUSPENDED session status and DrainBufferedEvents proto for graceful disconnect epic
+
+### Patches
+
+- Display task usage cost in overview tab with subtask tree rollup
+
+## 0.63.0
+Sun, 22 Mar 2026 02:21:37 GMT
+
+### Minor changes
+
+- Extract @grackle-ai/knowledge-core as a generic, reusable knowledge graph SDK
+
+### Patches
+
+- Add workspace usage display with loadUsage hook for server-side aggregation
 
 ## 0.62.2
 Sun, 22 Mar 2026 01:37:20 GMT

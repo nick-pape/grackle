@@ -87,6 +87,11 @@ class StubSession implements AgentSession {
     }
   }
 
+  /** Stub sessions have no buffered events to drain. */
+  public drainBufferedEvents(): AgentEvent[] {
+    return [];
+  }
+
 }
 
 /** A mock runtime that echoes prompts and waits for one round of user input. Useful for testing. */

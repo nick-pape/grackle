@@ -212,6 +212,11 @@ class StubMcpSession implements AgentSession {
       this.inputResolve("");
     }
   }
+
+  /** Stub MCP sessions have no buffered events to drain. */
+  public drainBufferedEvents(): AgentEvent[] {
+    return [];
+  }
 }
 
 /**

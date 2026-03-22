@@ -942,6 +942,10 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       completeOnboarding: () => {
         console.log("[MockGrackle] completeOnboarding");
       },
+      usageCache: {},
+      loadUsage: (scope: string, id: string) => {
+        console.log(`[MockGrackle] loadUsage(${scope}, ${id})`);
+      },
     }),
     [
       environments,
