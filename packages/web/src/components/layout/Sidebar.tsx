@@ -4,6 +4,7 @@ import { getActiveView } from "./AppNav.js";
 import { TaskList } from "../lists/TaskList.js";
 import { EnvironmentNav } from "../lists/EnvironmentNav.js";
 import { SettingsNav } from "../settings/SettingsNav.js";
+import { KnowledgeNav } from "../knowledge/KnowledgeNav.js";
 import styles from "./Sidebar.module.scss";
 
 /** Default sidebar width in pixels. */
@@ -77,6 +78,7 @@ export function Sidebar(): JSX.Element {
         {activeView === "tasks" && <TaskList />}
         {activeView === "environments" && <EnvironmentNav />}
         {activeView === "settings" && <SettingsNav />}
+        {activeView === "knowledge" && <KnowledgeNav />}
       </div>
     </div>
   );
