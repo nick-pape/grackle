@@ -2027,7 +2027,8 @@ async function handleMessage(
       }
       try {
         const query: string = (msg.payload?.query as string) || "";
-        const limit: number = (msg.payload?.limit as number) || 10;
+        const rawLimit: number = Number(msg.payload?.limit) || 10;
+        const limit: number = Math.max(1, Math.min(50, Math.floor(rawLimit)));
         const workspaceId: string | undefined = msg.payload?.workspaceId !== undefined ? (msg.payload.workspaceId as string) : undefined;
         const results: SearchResult[] = await knowledgeSearch(query, embedder, { limit, workspaceId });
         sendWs(ws, {

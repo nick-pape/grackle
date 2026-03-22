@@ -52,11 +52,11 @@ export function KnowledgeGraph({
     if (selectedNodeId && graphRef.current) {
       const node = graphData.nodes.find((n) => n.id === selectedNodeId);
       if (node) {
-        graphRef.current.centerAt(
-          (node as unknown as { x: number }).x,
-          (node as unknown as { y: number }).y,
-          500,
-        );
+        const x: number = (node as unknown as { x?: number }).x ?? 0;
+        const y: number = (node as unknown as { y?: number }).y ?? 0;
+        if (Number.isFinite(x) && Number.isFinite(y)) {
+          graphRef.current.centerAt(x, y, 500);
+        }
       }
     }
   }, [selectedNodeId, graphData.nodes]);

@@ -78,7 +78,7 @@ function toGraphNode(raw: Record<string, unknown>, edgeCount: number = 1): Graph
     workspaceId: raw.workspaceId as string | undefined,
     createdAt: raw.createdAt as string | undefined,
     updatedAt: raw.updatedAt as string | undefined,
-    val: Math.max(1, edgeCount),
+    val: edgeCount,
   };
 }
 
@@ -148,6 +148,10 @@ export function useKnowledge(send: SendFunction): UseKnowledgeResult {
 
     switch (msg.type) {
       case "knowledge.listRecent.result": {
+        if (payload.error) {
+          setLoading(false);
+          return true;
+        }
         const rawNodes = (payload.nodes ?? []) as Record<string, unknown>[];
         const rawEdges = (payload.edges ?? []) as Record<string, unknown>[];
 
@@ -176,6 +180,10 @@ export function useKnowledge(send: SendFunction): UseKnowledgeResult {
       }
 
       case "knowledge.search.result": {
+        if (payload.error) {
+          setLoading(false);
+          return true;
+        }
         const results = (payload.results ?? []) as Array<Record<string, unknown>>;
         const nodeMap = new Map<string, GraphNode>();
         const linkList: GraphLink[] = [];

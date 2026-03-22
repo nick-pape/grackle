@@ -29,6 +29,7 @@ export function KnowledgePage(): JSX.Element {
   const handleSearch = useCallback((e: FormEvent) => {
     e.preventDefault();
     if (searchInput.trim()) {
+      setSelectedId(undefined);
       knowledge.search(searchInput.trim());
     }
   }, [searchInput, knowledge]);
