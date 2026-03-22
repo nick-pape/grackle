@@ -5,7 +5,7 @@ import { ThemeProvider } from "./context/ThemeContext.js";
 import { StatusBar, AppNav, Sidebar, BottomStatusBar } from "./components/layout/index.js";
 import { ToastContainer } from "./components/notifications/index.js";
 import { SplashScreen } from "./components/display/index.js";
-import { useCallback, useEffect, useState, type JSX } from "react";
+import { useCallback, useEffect, useState, Suspense, lazy, type LazyExoticComponent, type JSX } from "react";
 import { useGrackle } from "./context/GrackleContext.js";
 import { useToast } from "./context/ToastContext.js";
 import { useEnvironmentToasts } from "./hooks/useEnvironmentToasts.js";
@@ -30,8 +30,10 @@ import { SettingsPersonasTab } from "./pages/settings/SettingsPersonasTab.js";
 import { SettingsAppearanceTab } from "./pages/settings/SettingsAppearanceTab.js";
 import { SettingsAboutTab } from "./pages/settings/SettingsAboutTab.js";
 import { SetupWizard } from "./pages/SetupWizard.js";
-import { KnowledgePage } from "./pages/KnowledgePage.js";
 import styles from "./App.module.scss";
+
+// Lazy-loaded to keep the main bundle under the chunk size limit
+const KnowledgePage: LazyExoticComponent<() => JSX.Element> = lazy(() => import("./pages/KnowledgePage.js").then((m) => ({ default: m.KnowledgePage })));
 
 /** Whether the app is running in mock mode (`?mock` query parameter). */
 const IS_MOCK_MODE: boolean =
@@ -137,7 +139,7 @@ function AppRoutes(): JSX.Element {
         <Route path="workspaces/:workspaceId/tasks/:taskId/edit" element={<TaskEditPage />} />
         <Route path="sessions/new" element={<NewChatPage />} />
         <Route path="sessions/:sessionId" element={<SessionPage />} />
-        <Route path="knowledge" element={<KnowledgePage />} />
+        <Route path="knowledge" element={<Suspense fallback={<SplashScreen />}><KnowledgePage /></Suspense>} />
         <Route path="environments" element={<EnvironmentsPage />}>
           <Route index element={<EnvironmentsEmptyPage />} />
           <Route path="new" element={<NewEnvironmentPage />} />
