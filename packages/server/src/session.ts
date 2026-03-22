@@ -77,9 +77,19 @@ export function createSession(apiKey: string, options?: { secure?: boolean }): s
   const signature = sign(sessionId, apiKey);
   const cookieValue = `${sessionId}.${signature}`;
   const maxAge = Math.floor(SESSION_TTL_MS / 1000);
-  const securePart = options?.secure ? "; Secure" : "";
 
-  return `${SESSION_COOKIE_NAME}=${cookieValue}; HttpOnly; SameSite=Lax; Path=/${securePart}; Max-Age=${maxAge}`;
+  const parts = [
+    `${SESSION_COOKIE_NAME}=${cookieValue}`,
+    "HttpOnly",
+    "SameSite=Lax",
+    "Path=/",
+    `Max-Age=${maxAge}`,
+  ];
+  if (options?.secure) {
+    parts.push("Secure");
+  }
+
+  return parts.join("; ");
 }
 
 /**
