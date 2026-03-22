@@ -194,7 +194,7 @@ describe("deliverSignalToTask", () => {
     vi.spyOn(sessionStore, "getLatestSessionForTask").mockReturnValue({
       id: "sess-dead",
       environmentId: "env-1",
-      status: "completed",
+      status: "hibernating",
       runtime: "stub",
       runtimeSessionId: "rt-dead",
       prompt: "",
@@ -207,6 +207,7 @@ describe("deliverSignalToTask", () => {
       error: null,
       taskId: "task-parent",
       personaId: null,
+      endReason: "completed",
     });
 
     // After reanimate, getSession returns IDLE
@@ -259,7 +260,7 @@ describe("deliverSignalToTask", () => {
     vi.spyOn(sessionStore, "getLatestSessionForTask").mockReturnValue({
       id: "sess-fail",
       environmentId: "env-1",
-      status: "failed",
+      status: "hibernating",
       runtime: "stub",
       runtimeSessionId: "rt-fail",
       prompt: "",
@@ -272,6 +273,7 @@ describe("deliverSignalToTask", () => {
       error: "boom",
       taskId: "task-parent",
       personaId: null,
+      endReason: "failed",
     });
 
     vi.mocked(reanimateAgent).mockImplementation(() => {

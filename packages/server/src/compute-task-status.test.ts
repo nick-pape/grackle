@@ -2,14 +2,15 @@ import { describe, it, expect } from "vitest";
 import { computeTaskStatus } from "./compute-task-status.js";
 import type { SessionRow } from "./schema.js";
 
-type SessionInput = Pick<SessionRow, "id" | "status" | "startedAt">;
+type SessionInput = Pick<SessionRow, "id" | "status" | "startedAt" | "endReason">;
 
 function makeSession(
   id: string,
   status: string,
   startedAt: string = "2025-01-01T00:00:00Z",
+  endReason: string | null = null,
 ): SessionInput {
-  return { id, status, startedAt };
+  return { id, status, startedAt, endReason };
 }
 
 describe("computeTaskStatus", () => {
@@ -116,23 +117,25 @@ describe("computeTaskStatus", () => {
 
   // ── Terminal sessions ────────────────────────────────────────────
   describe("terminal sessions", () => {
-    it("completed session → 'paused'", () => {
-      const sessions = [makeSession("s1", "completed")];
+    it("idle session with endReason='completed' → 'paused'", () => {
+      const sessions = [makeSession("s1", "idle", "2025-01-01T00:00:00Z", "completed")];
+      // IDLE with endReason is still "active" per ACTIVE_SESSION_STATUSES,
+      // so this goes through the active branch and returns paused (has idle).
       expect(computeTaskStatus("not_started", sessions)).toEqual({
         status: "paused",
         latestSessionId: "s1",
       });
     });
 
-    it("failed session → 'failed'", () => {
-      const sessions = [makeSession("s1", "failed")];
+    it("hibernating session with endReason='failed' → 'failed'", () => {
+      const sessions = [makeSession("s1", "hibernating", "2025-01-01T00:00:00Z", "failed")];
       expect(computeTaskStatus("not_started", sessions)).toEqual({
         status: "failed",
         latestSessionId: "s1",
       });
     });
 
-    it("hibernating session → 'paused'", () => {
+    it("hibernating session without endReason → 'paused'", () => {
       const sessions = [makeSession("s1", "hibernating")];
       expect(computeTaskStatus("not_started", sessions)).toEqual({
         status: "paused",
@@ -140,8 +143,8 @@ describe("computeTaskStatus", () => {
       });
     });
 
-    it("interrupted session → 'not_started' (retryable)", () => {
-      const sessions = [makeSession("s1", "interrupted")];
+    it("hibernating session with endReason='interrupted' → 'not_started' (retryable)", () => {
+      const sessions = [makeSession("s1", "hibernating", "2025-01-01T00:00:00Z", "interrupted")];
       expect(computeTaskStatus("not_started", sessions)).toEqual({
         status: "not_started",
         latestSessionId: "s1",
@@ -150,8 +153,8 @@ describe("computeTaskStatus", () => {
 
     it("uses latest terminal session by startedAt", () => {
       const sessions = [
-        makeSession("s1", "failed", "2025-01-01T00:00:00Z"),
-        makeSession("s2", "completed", "2025-01-01T00:01:00Z"),
+        makeSession("s1", "hibernating", "2025-01-01T00:00:00Z", "failed"),
+        makeSession("s2", "hibernating", "2025-01-01T00:01:00Z", "completed"),
       ];
       expect(computeTaskStatus("not_started", sessions)).toEqual({
         status: "paused",
@@ -164,7 +167,7 @@ describe("computeTaskStatus", () => {
   describe("mixed sessions", () => {
     it("active session takes precedence over older terminal sessions", () => {
       const sessions = [
-        makeSession("s1", "completed", "2025-01-01T00:00:00Z"),
+        makeSession("s1", "hibernating", "2025-01-01T00:00:00Z", "completed"),
         makeSession("s2", "running", "2025-01-01T00:01:00Z"),
       ];
       expect(computeTaskStatus("not_started", sessions)).toEqual({
@@ -178,17 +181,17 @@ describe("computeTaskStatus", () => {
   describe("latestSessionId", () => {
     it("returns the session with the latest startedAt", () => {
       const sessions = [
-        makeSession("s1", "completed", "2025-01-01T00:00:00Z"),
-        makeSession("s2", "completed", "2025-01-01T00:02:00Z"),
-        makeSession("s3", "completed", "2025-01-01T00:01:00Z"),
+        makeSession("s1", "hibernating", "2025-01-01T00:00:00Z", "completed"),
+        makeSession("s2", "hibernating", "2025-01-01T00:02:00Z", "completed"),
+        makeSession("s3", "hibernating", "2025-01-01T00:01:00Z", "completed"),
       ];
       expect(computeTaskStatus("not_started", sessions).latestSessionId).toBe("s2");
     });
 
     it("breaks ties by ID", () => {
       const sessions = [
-        makeSession("a", "completed", "2025-01-01T00:00:00Z"),
-        makeSession("b", "completed", "2025-01-01T00:00:00Z"),
+        makeSession("a", "hibernating", "2025-01-01T00:00:00Z", "completed"),
+        makeSession("b", "hibernating", "2025-01-01T00:00:00Z", "completed"),
       ];
       expect(computeTaskStatus("not_started", sessions).latestSessionId).toBe("b");
     });

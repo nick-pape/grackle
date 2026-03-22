@@ -2,7 +2,7 @@ import db from "./db.js";
 import { sessions, type SessionRow } from "./schema.js";
 import { eq, and, inArray, desc, asc, sql } from "drizzle-orm";
 import { SESSION_STATUS } from "@grackle-ai/common";
-import type { SessionStatus, PipeMode } from "@grackle-ai/common";
+import type { SessionStatus, PipeMode, EndReason } from "@grackle-ai/common";
 
 export type { SessionRow };
 
@@ -67,15 +67,19 @@ export function listByEnv(environmentId: string): SessionRow[] {
     .all();
 }
 
-/** Update a session's status and error; auto-sets `endedAt` for terminal states.
- * Only updates `runtimeSessionId` when explicitly provided (omitting preserves the current value). */
+/** Update a session's status and error; auto-sets `endedAt` for HIBERNATING.
+ * Only updates `runtimeSessionId` when explicitly provided (omitting preserves the current value).
+ * Pass `endReason` to record why the session ended ("completed", "failed", "interrupted"). */
 export function updateSession(
   id: string,
   status: SessionStatus,
   runtimeSessionId?: string,
   error?: string,
+  endReason?: EndReason,
 ): void {
-  const endedAt = ([SESSION_STATUS.COMPLETED, SESSION_STATUS.FAILED, SESSION_STATUS.INTERRUPTED, SESSION_STATUS.HIBERNATING] as string[]).includes(status)
+  // Only set endedAt for HIBERNATING (the one true terminal lifecycle status).
+  // IDLE is non-terminal even with endReason="completed" — the process may still be alive.
+  const endedAt = status === SESSION_STATUS.HIBERNATING
     ? new Date().toISOString()
     : null;
   const patch: Partial<typeof sessions.$inferInsert> = {
@@ -85,6 +89,9 @@ export function updateSession(
   };
   if (runtimeSessionId !== undefined) {
     patch.runtimeSessionId = runtimeSessionId;
+  }
+  if (endReason !== undefined) {
+    patch.endReason = endReason;
   }
   db.update(sessions)
     .set(patch)
@@ -207,10 +214,10 @@ export function getSuspendedForEnv(environmentId: string): SessionRow[] {
     .all();
 }
 
-/** Clear terminal state for reanimate — reset status to running, clear endedAt/error/suspendedAt. */
+/** Clear terminal state for reanimate — reset status to running, clear endedAt/error/suspendedAt/endReason. */
 export function reanimateSession(id: string): void {
   db.update(sessions)
-    .set({ status: SESSION_STATUS.RUNNING, endedAt: null, error: null, suspendedAt: null })
+    .set({ status: SESSION_STATUS.RUNNING, endedAt: null, error: null, suspendedAt: null, endReason: null })
     .where(eq(sessions.id, id))
     .run();
 }
@@ -255,13 +262,26 @@ export function listSessionsByTaskIds(taskIds: string[]): SessionRow[] {
     .all();
 }
 
-/** Transition a session to HIBERNATING — process dead, JSONL persists, reanimate-safe. */
-export function hibernateSession(id: string): void {
+/** Transition a session to HIBERNATING — process dead, JSONL persists, reanimate-safe.
+ * If `endReason` is provided, sets it; otherwise preserves any existing endReason. */
+export function hibernateSession(id: string, endReason?: EndReason): void {
+  const patch: Partial<typeof sessions.$inferInsert> = {
+    status: SESSION_STATUS.HIBERNATING,
+    endedAt: new Date().toISOString(),
+  };
+  if (endReason !== undefined) {
+    patch.endReason = endReason;
+  }
   db.update(sessions)
-    .set({
-      status: SESSION_STATUS.HIBERNATING,
-      endedAt: new Date().toISOString(),
-    })
+    .set(patch)
+    .where(eq(sessions.id, id))
+    .run();
+}
+
+/** Set the end reason on a session without changing its status. */
+export function setEndReason(id: string, endReason: EndReason): void {
+  db.update(sessions)
+    .set({ endReason })
     .where(eq(sessions.id, id))
     .run();
 }

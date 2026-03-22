@@ -51,6 +51,8 @@ interface BuildColumnsOptions {
   taskStatusById: Map<string, string>;
   /** Map of taskId → latest session status (used for paused sub-badges). */
   sessionStatusByTaskId?: Map<string, string>;
+  /** Map of taskId → latest session endReason (used for paused sub-badges). */
+  sessionEndReasonByTaskId?: Map<string, string>;
 }
 
 /**
@@ -66,6 +68,7 @@ export function buildBoardColumns({
   tasks,
   taskStatusById,
   sessionStatusByTaskId,
+  sessionEndReasonByTaskId,
 }: BuildColumnsOptions): BoardColumn[] {
   // Index children by parent
   const childrenByParent = new Map<string, TaskData[]>();
@@ -98,10 +101,11 @@ export function buildBoardColumns({
     let pausedSubBadge: BoardTask["pausedSubBadge"];
     if (column === "paused" && sessionStatusByTaskId) {
       const sessionStatus = sessionStatusByTaskId.get(task.id);
-      if (sessionStatus === "idle") {
-        pausedSubBadge = "Needs input";
-      } else if (sessionStatus === "completed") {
+      const endReason = sessionEndReasonByTaskId?.get(task.id);
+      if (sessionStatus === "idle" && endReason === "completed") {
         pausedSubBadge = "Ready to complete";
+      } else if (sessionStatus === "idle") {
+        pausedSubBadge = "Needs input";
       }
     }
 

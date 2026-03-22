@@ -1,4 +1,4 @@
-import { SESSION_STATUS } from "@grackle-ai/common";
+import { SESSION_STATUS, END_REASON } from "@grackle-ai/common";
 import { subscribe, type GrackleEvent } from "../event-bus.js";
 import * as taskStore from "../task-store.js";
 import * as sessionStore from "../session-store.js";
@@ -11,17 +11,13 @@ const MAX_LAST_MESSAGE_LENGTH: number = 2000;
 
 /**
  * Session statuses that trigger SIGCHLD. LLM agents don't reliably exit() —
- * they go IDLE when they stop working. COMPLETED fires when the session's event
- * stream ends (agent-initiated, not user-initiated — the user marking a task
- * "Complete" emits task.completed which this subscriber does not listen to).
- * Dedup prevents double notification if both IDLE and COMPLETED fire for the
- * same session.
+ * they go IDLE when they stop working. HIBERNATING fires when the session's
+ * process dies. Dedup prevents double notification if multiple events fire
+ * for the same session.
  */
 const SIGCHLD_STATUSES: ReadonlySet<string> = new Set([
   SESSION_STATUS.IDLE,
-  SESSION_STATUS.COMPLETED,
-  SESSION_STATUS.FAILED,
-  SESSION_STATUS.INTERRUPTED,
+  SESSION_STATUS.HIBERNATING,
 ]);
 
 /** How long (ms) to remember a delivered notification before allowing re-delivery. */
@@ -30,12 +26,20 @@ const DEDUP_TTL_MS: number = 3_600_000; // 1 hour
 /** Track delivered notifications to prevent duplicates: key → delivery timestamp. */
 const delivered: Map<string, number> = new Map();
 
-/** Human-readable status labels for the notification text. */
+/**
+ * Human-readable labels for notification text, keyed by endReason.
+ * When endReason is null/undefined, the label depends on lifecycle status.
+ */
+const END_REASON_LABELS: Record<string, string> = {
+  [END_REASON.COMPLETED]: "finished working (awaiting review)",
+  [END_REASON.FAILED]: "failed",
+  [END_REASON.INTERRUPTED]: "was interrupted",
+};
+
+/** Fallback labels when no endReason is set, keyed by lifecycle status. */
 const STATUS_LABELS: Record<string, string> = {
-  [SESSION_STATUS.IDLE]: "finished working (awaiting review)",
-  [SESSION_STATUS.COMPLETED]: "completed successfully",
-  [SESSION_STATUS.FAILED]: "failed",
-  [SESSION_STATUS.INTERRUPTED]: "was interrupted",
+  [SESSION_STATUS.IDLE]: "waiting for input",
+  [SESSION_STATUS.HIBERNATING]: "hibernated",
 };
 
 /**
@@ -116,8 +120,12 @@ async function handleTaskUpdated(childTaskId: string): Promise<void> {
   // Extract the last text message from the child's session log
   const lastTextMessage = extractLastTextMessage(latestSession.logPath || undefined);
 
-  // Format the notification with actionable instructions for the parent
-  const statusLabel = STATUS_LABELS[latestSession.status] || latestSession.status;
+  // Format the notification with actionable instructions for the parent.
+  // Use endReason for label selection; fall back to lifecycle status.
+  const endReason = latestSession.endReason;
+  const statusLabel = (endReason && END_REASON_LABELS[endReason])
+    || STATUS_LABELS[latestSession.status]
+    || latestSession.status;
   let message = `[SIGCHLD] Child task "${childTask.title}" (${childTaskId}) ${statusLabel}.`;
 
   if (lastTextMessage) {
@@ -127,11 +135,11 @@ async function handleTaskUpdated(childTaskId: string): Promise<void> {
     message += `\n\nLast message from child:\n> ${truncated}`;
   }
 
-  if (latestSession.status === SESSION_STATUS.IDLE) {
+  if (endReason === END_REASON.COMPLETED || (latestSession.status === SESSION_STATUS.IDLE && !endReason)) {
     message += "\n\nReview the child's work. If satisfactory, mark it complete with "
       + `task_complete({ taskId: "${childTaskId}" }). `
       + "If more work is needed, send additional input to the child's session.";
-  } else if (latestSession.status === SESSION_STATUS.FAILED) {
+  } else if (endReason === END_REASON.FAILED) {
     message += "\n\nThe child task failed. Review the error and decide whether to retry or reassign the work.";
   }
 

@@ -273,15 +273,15 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       // 2. Remove any pending resume steps
       pendingResumeRef.current.delete(sessionId);
 
-      // 3. Update session status to "interrupted"
-      updateSessionStatus(sessionId, "interrupted");
+      // 3. Update session status to "hibernating" (killed → hibernating + endReason)
+      updateSessionStatus(sessionId, "hibernating");
 
-      // 4. Append a status event
+      // 4. Append a status event (raw content "killed" maps to hibernating on the frontend)
       appendEvent({
         sessionId,
         eventType: "status",
         timestamp: new Date().toISOString(),
-        content: "interrupted",
+        content: "killed",
       });
 
       // 5. With computed status, killing a session makes the task retryable

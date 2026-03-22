@@ -100,7 +100,8 @@ function applySchema(): void {
       pipe_mode         TEXT NOT NULL DEFAULT '',
       input_tokens      INTEGER NOT NULL DEFAULT 0,
       output_tokens     INTEGER NOT NULL DEFAULT 0,
-      cost_usd          REAL NOT NULL DEFAULT 0
+      cost_usd          REAL NOT NULL DEFAULT 0,
+      end_reason        TEXT
     );
 
     CREATE TABLE IF NOT EXISTS findings (
@@ -124,16 +125,17 @@ async function* eventStream(events: powerline.AgentEvent[]): AsyncIterable<power
   }
 }
 
-/** Helper to wait for processEventStream to complete by polling session status. */
+/** Helper to wait for processEventStream to complete by polling session status/endReason. */
 function waitForProcessing(
   events: powerline.AgentEvent[],
   options: { sessionId: string; logPath: string; workspaceId?: string; taskId?: string },
 ): Promise<void> {
   return new Promise<void>((resolve, reject) => {
-    // Poll for session to reach a terminal status
+    // Poll for session to reach a terminal status or have an endReason set.
+    // With the new model: hibernating is terminal, IDLE + endReason means stream ended.
     const interval = setInterval(() => {
       const s = sessionStore.getSession(options.sessionId);
-      if (s && ["completed", "failed", "interrupted", "suspended"].includes(s.status)) {
+      if (s && (s.status === "hibernating" || s.status === "suspended" || s.endReason)) {
         clearInterval(interval);
         // Give the finally block time to run
         setTimeout(resolve, 50);
@@ -451,9 +453,10 @@ describe("event-processor SUBTASK_CREATE handling", () => {
       "Failed to create subtask",
     );
 
-    // Session should still complete normally
+    // Session should still complete normally (idle + endReason="completed")
     const session = sessionStore.getSession("sess1");
-    expect(session?.status).toBe("completed");
+    expect(session?.status).toBe("idle");
+    expect(session?.endReason).toBe("completed");
   });
 });
 
@@ -497,7 +500,7 @@ describe("stream error handling", () => {
       );
       const interval = setInterval(() => {
         const s = sessionStore.getSession("sess1");
-        if (s && ["completed", "failed", "interrupted", "suspended"].includes(s.status)) {
+        if (s && ["hibernating", "suspended"].includes(s.status) || s.endReason) {
           clearInterval(interval);
           setTimeout(resolve, 50);
         }
@@ -531,7 +534,7 @@ describe("stream error handling", () => {
       );
       const interval = setInterval(() => {
         const s = sessionStore.getSession("sess1");
-        if (s && ["completed", "failed", "interrupted", "suspended"].includes(s.status)) {
+        if (s && ["hibernating", "suspended"].includes(s.status) || s.endReason) {
           clearInterval(interval);
           setTimeout(resolve, 50);
         }
@@ -571,7 +574,7 @@ describe("stream error handling", () => {
       // Poll for session to reach terminal status
       const interval = setInterval(() => {
         const s = sessionStore.getSession("sess1");
-        if (s && ["completed", "failed", "interrupted", "suspended"].includes(s.status)) {
+        if (s && ["hibernating", "suspended"].includes(s.status) || s.endReason) {
           clearInterval(interval);
           setTimeout(resolve, 50);
         }
@@ -819,12 +822,12 @@ describe("late-binding", () => {
     };
   }
 
-  /** Helper to poll until a session reaches a terminal status. */
+  /** Helper to poll until a session reaches a terminal status or has endReason set. */
   function waitForSessionTerminal(sessionId: string): Promise<void> {
     return new Promise<void>((resolve) => {
       const interval = setInterval(() => {
         const s = sessionStore.getSession(sessionId);
-        if (s && ["completed", "failed", "interrupted", "suspended"].includes(s.status)) {
+        if (s && (s.status === "hibernating" || s.status === "suspended" || s.endReason)) {
           clearInterval(interval);
           setTimeout(resolve, 50);
         }

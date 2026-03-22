@@ -454,6 +454,26 @@ export function initDatabase(sqliteOverride?: InstanceType<typeof Database>): In
     UPDATE sessions SET status = 'interrupted' WHERE status = 'killed';
   `);
 
+  // Migration: add end_reason column to sessions
+  tryMigration("add-sessions-end-reason", () => {
+    conn.exec(
+      "ALTER TABLE sessions ADD COLUMN end_reason TEXT",
+    );
+  });
+
+  // Migration: collapse terminal session statuses into lifecycle statuses + end_reason.
+  // completed → idle + end_reason='completed'
+  // failed → hibernating + end_reason='failed'
+  // interrupted → hibernating + end_reason='interrupted'
+  conn.exec(`
+    UPDATE sessions SET status = 'idle', end_reason = 'completed'
+      WHERE status = 'completed' AND (end_reason IS NULL OR end_reason = '');
+    UPDATE sessions SET status = 'hibernating', end_reason = 'failed'
+      WHERE status = 'failed' AND (end_reason IS NULL OR end_reason = '');
+    UPDATE sessions SET status = 'hibernating', end_reason = 'interrupted'
+      WHERE status = 'interrupted' AND (end_reason IS NULL OR end_reason = '');
+  `);
+
   // Migration: drop stale columns from tasks
   tryMigration("drop-tasks-assigned-at", () => {
     conn.exec("ALTER TABLE tasks DROP COLUMN assigned_at");

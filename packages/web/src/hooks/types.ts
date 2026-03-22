@@ -46,6 +46,8 @@ export interface Session {
   inputTokens?: number;
   outputTokens?: number;
   costUsd?: number;
+  /** Why the session ended: "completed", "failed", "interrupted", or undefined (active/hibernated). */
+  endReason?: string;
 }
 
 /** Aggregated usage statistics for a scope (session, task, workspace, environment). */
@@ -464,14 +466,17 @@ export function parseWsMessage(data: string): WsMessage | GrackleEvent | undefin
 
 /**
  * Map runtime status event content to normalized session status strings.
- * The PowerLine runtime emits "waiting_input" and "killed" as event content,
- * but the server stores "idle" and "interrupted". The frontend needs to use
- * the same strings as the server for consistency with list_sessions responses.
+ * The PowerLine runtime emits raw event content ("waiting_input", "killed",
+ * "completed", "failed") but the server stores lifecycle statuses ("idle",
+ * "hibernating"). The frontend needs to use the same strings as the server
+ * for consistency with list_sessions responses.
  */
 export function mapSessionStatus(rawStatus: string): string {
   switch (rawStatus) {
     case "waiting_input": return "idle";
-    case "killed": return "interrupted";
+    case "completed": return "idle";
+    case "killed": return "hibernating";
+    case "failed": return "hibernating";
     default: return rawStatus;
   }
 }

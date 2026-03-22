@@ -121,6 +121,7 @@ message Session {
   int32 output_tokens = 17;
   double cost_usd = 18;
   int32 pipe_fd = 19; // fd assigned to parent for pipe IPC (0 = no pipe)
+  string end_reason = 20; // why the session ended: "completed", "failed", "interrupted", or "" (active)
 }
 
 message SessionList {

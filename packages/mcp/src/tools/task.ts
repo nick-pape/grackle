@@ -363,7 +363,7 @@ export const taskTools: ToolDefinition[] = [
     name: "task_resume",
     group: "task",
     description:
-      "Resume the latest interrupted or completed session for a task.",
+      "Resume the latest hibernating, suspended, or idle session for a task.",
     inputSchema: z.object({
       taskId: z.string().describe("The ID of the task to resume"),
     }),

@@ -1,5 +1,5 @@
 import type { SessionRow } from "./schema.js";
-import { SESSION_STATUS, TASK_STATUS } from "@grackle-ai/common";
+import { SESSION_STATUS, TASK_STATUS, END_REASON } from "@grackle-ai/common";
 
 /** Result of computing a task's effective status from its session history. */
 export interface TaskStatusResult {
@@ -40,7 +40,7 @@ const ACTIVE_SESSION_STATUSES: ReadonlySet<string> = new Set([
  */
 export function computeTaskStatus(
   storedStatus: string,
-  sessions: Pick<SessionRow, "id" | "status" | "startedAt">[],
+  sessions: Pick<SessionRow, "id" | "status" | "startedAt" | "endReason">[],
 ): TaskStatusResult {
   // "complete" and "failed" are sticky — human-authoritative when no sessions contradict
   if (storedStatus === TASK_STATUS.COMPLETE || storedStatus === TASK_STATUS.FAILED) {
@@ -75,24 +75,22 @@ export function computeTaskStatus(
     };
   }
 
-  // All sessions are terminal — use the latest one to determine status
+  // All sessions are terminal — use the latest one's endReason to determine status.
+  // With the new model, lifecycle status is IDLE or HIBERNATING; the *reason* is in endReason.
   const latest = getLatestSession(sessions);
 
   let status: string;
-  switch (latest.status) {
-    case SESSION_STATUS.COMPLETED:
-    case SESSION_STATUS.HIBERNATING:
-    case SESSION_STATUS.SUSPENDED:
-      status = TASK_STATUS.PAUSED;
-      break;
-    case SESSION_STATUS.FAILED:
+  switch (latest.endReason) {
+    case END_REASON.FAILED:
       status = TASK_STATUS.FAILED;
       break;
-    case SESSION_STATUS.INTERRUPTED:
+    case END_REASON.INTERRUPTED:
       status = TASK_STATUS.NOT_STARTED;
       break;
+    case END_REASON.COMPLETED:
     default:
-      status = TASK_STATUS.NOT_STARTED;
+      // completed, null/undefined (hibernated without reason), or unknown → paused
+      status = TASK_STATUS.PAUSED;
       break;
   }
 
@@ -101,9 +99,9 @@ export function computeTaskStatus(
 
 /** Get the most recent session by startedAt (descending), breaking ties by ID. */
 function getLatestSession(
-  sessions: Pick<SessionRow, "id" | "status" | "startedAt">[],
-): Pick<SessionRow, "id" | "status" | "startedAt"> {
-  return sessions.reduce((latest, current) => {
+  sessions: Pick<SessionRow, "id" | "status" | "startedAt" | "endReason">[],
+): Pick<SessionRow, "id" | "status" | "startedAt" | "endReason"> {
+  return sessions.reduce<Pick<SessionRow, "id" | "status" | "startedAt" | "endReason">>((latest, current) => {
     if (current.startedAt > latest.startedAt) {
       return current;
     }
@@ -111,5 +109,5 @@ function getLatestSession(
       return current;
     }
     return latest;
-  });
+  }, sessions[0]);
 }

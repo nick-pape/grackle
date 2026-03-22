@@ -114,7 +114,8 @@ function applySchema(): void {
       cost_usd REAL NOT NULL DEFAULT 0,
       pipe_mode TEXT NOT NULL DEFAULT '',
       parent_session_id TEXT NOT NULL DEFAULT '',
-      pipe_fd INTEGER
+      pipe_fd INTEGER,
+      end_reason TEXT
     );
     CREATE TABLE IF NOT EXISTS findings (
       id TEXT PRIMARY KEY,
@@ -208,7 +209,7 @@ describe("session recovery", () => {
     await recoverSuspendedSessions("env1", conn);
 
     const session = sessionStore.getSession("sess1");
-    expect(session?.status).toBe(SESSION_STATUS.FAILED);
+    expect(session?.status).toBe(SESSION_STATUS.HIBERNATING);
     expect(session?.error).toContain("SDK session expired");
   });
 

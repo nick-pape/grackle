@@ -1,5 +1,5 @@
 import { create } from "@bufbuild/protobuf";
-import { grackle, powerline, eventTypeToEnum, SESSION_STATUS } from "@grackle-ai/common";
+import { grackle, powerline, eventTypeToEnum, SESSION_STATUS, END_REASON } from "@grackle-ai/common";
 import { v4 as uuid } from "uuid";
 import * as sessionStore from "./session-store.js";
 import * as streamHub from "./stream-hub.js";
@@ -16,7 +16,7 @@ import { publishChildCompletion } from "./pipe-delivery.js";
 import type { ProcessorContext } from "./processor-registry.js";
 
 /** Terminal session statuses that indicate the session has already ended. */
-const TERMINAL_STATUSES: string[] = [SESSION_STATUS.COMPLETED, SESSION_STATUS.FAILED, SESSION_STATUS.INTERRUPTED, SESSION_STATUS.HIBERNATING];
+const TERMINAL_STATUSES: string[] = [SESSION_STATUS.HIBERNATING];
 
 /** Options for processing an agent event stream. */
 export interface EventStreamOptions {
@@ -322,17 +322,22 @@ export function processEventStream(
         }
 
         if (event.type === "status") {
-          // Map runtime status strings to our session status model
+          // Map runtime status strings to our session status model.
+          // Terminal statuses (completed/failed/killed) become lifecycle statuses
+          // (IDLE/HIBERNATING) plus an endReason metadata field.
           if (event.content === "waiting_input") {
             sessionStore.updateSessionStatus(sessionId, SESSION_STATUS.IDLE);
           } else if (event.content === "running") {
             sessionStore.updateSessionStatus(sessionId, SESSION_STATUS.RUNNING);
           } else if (event.content === "completed") {
-            sessionStore.updateSession(sessionId, SESSION_STATUS.COMPLETED);
+            // Agent done but alive — IDLE with endReason
+            sessionStore.updateSession(sessionId, SESSION_STATUS.IDLE, undefined, undefined, END_REASON.COMPLETED);
           } else if (event.content === "failed") {
-            sessionStore.updateSession(sessionId, SESSION_STATUS.FAILED);
+            // Agent process dead — HIBERNATING with endReason
+            sessionStore.updateSession(sessionId, SESSION_STATUS.HIBERNATING, undefined, undefined, END_REASON.FAILED);
           } else if (event.content === "killed") {
-            sessionStore.updateSession(sessionId, SESSION_STATUS.INTERRUPTED);
+            // Agent killed — HIBERNATING with endReason
+            sessionStore.updateSession(sessionId, SESSION_STATUS.HIBERNATING, undefined, undefined, END_REASON.INTERRUPTED);
           } else if (event.content === "hibernating") {
             sessionStore.updateSession(sessionId, SESSION_STATUS.HIBERNATING);
           }
@@ -354,11 +359,13 @@ export function processEventStream(
         }
       }
 
-      // Fallback: if stream ended without a terminal status event, mark completed.
+      // Fallback: if stream ended without a terminal status event, mark IDLE + endReason="completed".
       // Guard against overwriting SUSPENDED (set by heartbeat sweep during disconnect).
+      // Also guard against overwriting an existing endReason (e.g. session already went IDLE
+      // with endReason="completed" from a status event).
       const current = sessionStore.getSession(sessionId);
-      if (current && !TERMINAL_STATUSES.includes(current.status) && current.status !== SESSION_STATUS.SUSPENDED) {
-        sessionStore.updateSession(sessionId, SESSION_STATUS.COMPLETED);
+      if (current && !TERMINAL_STATUSES.includes(current.status) && current.status !== SESSION_STATUS.SUSPENDED && !current.endReason) {
+        sessionStore.updateSession(sessionId, SESSION_STATUS.IDLE, undefined, undefined, END_REASON.COMPLETED);
         publishChildCompletion(sessionId, "completed");
         if (ctx.taskId) {
           emit("task.updated", { taskId: ctx.taskId, workspaceId: ctx.workspaceId });

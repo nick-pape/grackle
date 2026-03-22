@@ -189,7 +189,7 @@ function makeSession(overrides: Partial<{
     runtimeSessionId: "rt-abc",
     prompt: "hello",
     model: "stub-model",
-    status: "completed",
+    status: "hibernating",
     logPath: "/logs/sess-1",
     turns: 1,
     startedAt: "2026-01-01T00:00:00Z",
@@ -198,6 +198,7 @@ function makeSession(overrides: Partial<{
     error: null,
     taskId: "",
     personaId: "",
+    endReason: "completed",
     ...overrides,
   };
 }
@@ -257,7 +258,7 @@ describe("gRPC resumeAgent", () => {
 
   it("throws FailedPrecondition when terminal session has no runtimeSessionId", async () => {
     vi.mocked(sessionStore.getSession).mockReturnValue(
-      makeSession({ status: "completed", runtimeSessionId: null }),
+      makeSession({ status: "hibernating", runtimeSessionId: null }),
     );
 
     const err = await handlers.resumeAgent({ sessionId: "sess-1" }).catch((e: unknown) => e) as ConnectError;
@@ -267,7 +268,7 @@ describe("gRPC resumeAgent", () => {
   });
 
   it("throws FailedPrecondition when another active session exists on the environment", async () => {
-    vi.mocked(sessionStore.getSession).mockReturnValue(makeSession({ status: "completed" }));
+    vi.mocked(sessionStore.getSession).mockReturnValue(makeSession({ status: "hibernating" }));
     vi.mocked(sessionStore.getActiveForEnv).mockReturnValue(
       makeSession({ id: "sess-other", status: "running" }),
     );
@@ -279,7 +280,7 @@ describe("gRPC resumeAgent", () => {
   });
 
   it("throws FailedPrecondition when environment is offline (no connection)", async () => {
-    vi.mocked(sessionStore.getSession).mockReturnValue(makeSession({ status: "completed" }));
+    vi.mocked(sessionStore.getSession).mockReturnValue(makeSession({ status: "hibernating" }));
     vi.mocked(sessionStore.getActiveForEnv).mockReturnValue(undefined);
     vi.mocked(adapterManager.getConnection).mockReturnValue(undefined);
 
@@ -289,9 +290,9 @@ describe("gRPC resumeAgent", () => {
     expect(err.message).toContain("not connected");
   });
 
-  it("reanimates a COMPLETED session: calls reanimateSession and processEventStream", async () => {
-    const completedSession = makeSession({ status: "completed" });
-    const runningSession = makeSession({ status: "running", endedAt: null });
+  it("reanimates a HIBERNATING session: calls reanimateSession and processEventStream", async () => {
+    const completedSession = makeSession({ status: "hibernating", endReason: "completed" });
+    const runningSession = makeSession({ status: "running", endedAt: null, endReason: null });
     vi.mocked(sessionStore.getSession)
       .mockReturnValueOnce(completedSession)
       .mockReturnValueOnce(runningSession);
@@ -308,8 +309,8 @@ describe("gRPC resumeAgent", () => {
   });
 
   it("reanimates a FAILED session successfully", async () => {
-    const failedSession = makeSession({ status: "failed", error: "timeout" });
-    const runningSession = makeSession({ status: "running", error: null });
+    const failedSession = makeSession({ status: "hibernating", endReason: "failed", error: "timeout" });
+    const runningSession = makeSession({ status: "running", error: null, endReason: null });
     vi.mocked(sessionStore.getSession)
       .mockReturnValueOnce(failedSession)
       .mockReturnValueOnce(runningSession);
@@ -323,8 +324,8 @@ describe("gRPC resumeAgent", () => {
   });
 
   it("reanimates an INTERRUPTED session successfully", async () => {
-    const interruptedSession = makeSession({ status: "interrupted" });
-    const runningSession = makeSession({ status: "running" });
+    const interruptedSession = makeSession({ status: "hibernating", endReason: "interrupted" });
+    const runningSession = makeSession({ status: "running", endReason: null });
     vi.mocked(sessionStore.getSession)
       .mockReturnValueOnce(interruptedSession)
       .mockReturnValueOnce(runningSession);
@@ -338,9 +339,9 @@ describe("gRPC resumeAgent", () => {
   });
 
   it("can reanimate a session a second time after it completes again", async () => {
-    const completedSession = makeSession({ status: "completed" });
-    const runningSession = makeSession({ status: "running", endedAt: null });
-    const completedAgain = makeSession({ status: "completed" });
+    const completedSession = makeSession({ status: "hibernating", endReason: "completed" });
+    const runningSession = makeSession({ status: "running", endedAt: null, endReason: null });
+    const completedAgain = makeSession({ status: "hibernating", endReason: "completed" });
 
     vi.mocked(sessionStore.getSession)
       .mockReturnValueOnce(completedSession)  // first reanimate: lookup
@@ -386,7 +387,7 @@ describe("gRPC resumeTask", () => {
   it("throws FailedPrecondition when latest session has no runtimeSessionId", async () => {
     vi.mocked(taskStore.getTask).mockReturnValue({ id: "task-1", workspaceId: "proj-1" } as never);
     vi.mocked(sessionStore.getLatestSessionForTask).mockReturnValue(
-      makeSession({ status: "completed", runtimeSessionId: null }),
+      makeSession({ status: "hibernating", runtimeSessionId: null }),
     );
 
     const err = await handlers.resumeTask({ id: "task-1" }).catch((e: unknown) => e) as ConnectError;
@@ -397,8 +398,8 @@ describe("gRPC resumeTask", () => {
 
   it("succeeds when latest session has a runtimeSessionId (happy path)", async () => {
     const task = { id: "task-1", workspaceId: "proj-1" };
-    const session = makeSession({ status: "completed", runtimeSessionId: "rt-abc" });
-    const runningSession = makeSession({ status: "running" });
+    const session = makeSession({ status: "hibernating", runtimeSessionId: "rt-abc" });
+    const runningSession = makeSession({ status: "running", endReason: null });
     vi.mocked(taskStore.getTask).mockReturnValue(task as never);
     vi.mocked(sessionStore.getLatestSessionForTask).mockReturnValue(session);
     vi.mocked(sessionStore.getSession).mockReturnValue(runningSession);

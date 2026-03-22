@@ -182,8 +182,9 @@ function waitForSessionIdle(
             if (event.content === "waiting_input") {
               return true;
             }
-            // If the session hit a terminal state, stop waiting
-            if (["completed", "failed", "killed", "interrupted"].includes(event.content)) {
+            // If the session hit a terminal state, stop waiting.
+            // "completed" is now IDLE (not terminal) — only truly dead states stop the wait.
+            if (["failed", "killed"].includes(event.content)) {
               return false;
             }
           }

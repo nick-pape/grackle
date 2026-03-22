@@ -80,7 +80,7 @@ export function ChatPage(): JSX.Element {
 
   // Determine if the latest session is active (running or idle)
   const isSessionActive = latestSession !== undefined
-    && !["completed", "failed", "interrupted", "hibernating", "suspended"].includes(latestSession.status);
+    && !["hibernating", "suspended"].includes(latestSession.status);
 
   return (
     <div className={styles.panelContainer} data-testid="chat-page">

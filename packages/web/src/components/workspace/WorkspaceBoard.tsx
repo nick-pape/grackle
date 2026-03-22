@@ -38,6 +38,7 @@ export function WorkspaceBoard({ workspaceId, environmentId }: WorkspaceBoardPro
     const personaById = new Map(personas.map((p) => [p.id, p]));
     const environmentById = new Map(environments.map((e) => [e.id, e]));
     const sessionStatusByTaskId = new Map<string, string>();
+    const sessionEndReasonByTaskId = new Map<string, string>();
     const personaNameByTaskId = new Map<string, string>();
     const environmentNameByTaskId = new Map<string, string>();
 
@@ -46,6 +47,9 @@ export function WorkspaceBoard({ workspaceId, environmentId }: WorkspaceBoardPro
         const session = sessionById.get(task.latestSessionId);
         if (session) {
           sessionStatusByTaskId.set(task.id, session.status);
+          if (session.endReason) {
+            sessionEndReasonByTaskId.set(task.id, session.endReason);
+          }
 
           if (session.personaId) {
             const persona = personaById.get(session.personaId);
@@ -66,6 +70,7 @@ export function WorkspaceBoard({ workspaceId, environmentId }: WorkspaceBoardPro
 
     return {
       sessionStatusByTaskId,
+      sessionEndReasonByTaskId,
       personaNameByTaskId,
       environmentNameByTaskId,
     };
@@ -76,6 +81,7 @@ export function WorkspaceBoard({ workspaceId, environmentId }: WorkspaceBoardPro
       tasks: workspaceTasks,
       taskStatusById,
       sessionStatusByTaskId: boardMetadataByTaskId.sessionStatusByTaskId,
+      sessionEndReasonByTaskId: boardMetadataByTaskId.sessionEndReasonByTaskId,
     }),
     [workspaceTasks, taskStatusById, boardMetadataByTaskId],
   );

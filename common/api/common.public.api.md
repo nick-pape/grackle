@@ -191,6 +191,16 @@ const EmptySchema: GenMessage<Empty>;
 const EmptySchema_2: GenMessage<Empty_2>;
 
 // @public
+export const END_REASON: {
+    readonly COMPLETED: "completed";
+    readonly FAILED: "failed";
+    readonly INTERRUPTED: "interrupted";
+};
+
+// @public
+export type EndReason = typeof END_REASON[keyof typeof END_REASON];
+
+// @public
 type Environment = Message<"grackle.Environment"> & {
     id: string;
     displayName: string;
@@ -1250,6 +1260,7 @@ type Session = Message<"grackle.Session"> & {
     outputTokens: number;
     costUsd: number;
     pipeFd: number;
+    endReason: string;
 };
 
 // @public

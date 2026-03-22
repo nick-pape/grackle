@@ -23,6 +23,7 @@ import {
   LOGS_DIR,
   SESSION_STATUS,
   TERMINAL_SESSION_STATUSES,
+  END_REASON,
   type SessionStatus,
   TASK_STATUS,
   DEFAULT_MCP_PORT,
@@ -490,13 +491,13 @@ async function terminateSession(sessionId: string): Promise<void> {
         logger.warn({ sessionId, err }, "PowerLine kill failed during session termination");
       }
     }
-    sessionStore.updateSession(sessionId, SESSION_STATUS.INTERRUPTED);
+    sessionStore.updateSession(sessionId, SESSION_STATUS.HIBERNATING, undefined, undefined, END_REASON.INTERRUPTED);
     streamHub.publish(
       create(grackle.SessionEventSchema, {
         sessionId,
         type: grackle.EventType.STATUS,
         timestamp: new Date().toISOString(),
-        content: SESSION_STATUS.INTERRUPTED,
+        content: SESSION_STATUS.HIBERNATING,
         raw: "",
       }),
     );
@@ -1255,8 +1256,7 @@ async function handleMessage(
           sendWs(ws, { type: "error", payload: { message: `Session not found: ${lateBindSessionId}` } });
           return;
         }
-        const terminalStatuses: string[] = [SESSION_STATUS.COMPLETED, SESSION_STATUS.FAILED, SESSION_STATUS.INTERRUPTED];
-        if (terminalStatuses.includes(session.status)) {
+        if (TERMINAL_SESSION_STATUSES.has(session.status as SessionStatus)) {
           sendWs(ws, {
             type: "error",
             payload: { message: `Cannot bind terminal session ${lateBindSessionId} (status: ${session.status})` },
@@ -1413,7 +1413,8 @@ async function handleMessage(
         sendWs(ws, { type: "error", payload: { message: `Task ${taskId} has no sessions to resume` } });
         return;
       }
-      if (!([SESSION_STATUS.INTERRUPTED, SESSION_STATUS.COMPLETED] as string[]).includes(latestSession.status)) {
+      const resumableStatuses: string[] = [SESSION_STATUS.HIBERNATING, SESSION_STATUS.SUSPENDED, SESSION_STATUS.IDLE];
+      if (!resumableStatuses.includes(latestSession.status)) {
         sendWs(ws, {
           type: "error",
           payload: { message: `Latest session ${latestSession.id} is not resumable (status: ${latestSession.status})` },

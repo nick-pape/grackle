@@ -58,7 +58,8 @@ function applySchema(): void {
       pipe_mode          TEXT NOT NULL DEFAULT '',
       input_tokens       INTEGER NOT NULL DEFAULT 0,
       output_tokens      INTEGER NOT NULL DEFAULT 0,
-      cost_usd           REAL NOT NULL DEFAULT 0
+      cost_usd           REAL NOT NULL DEFAULT 0,
+      end_reason         TEXT
     );
   `);
   sqlite.exec("INSERT OR IGNORE INTO environments (id) VALUES ('test-env')");
@@ -111,16 +112,16 @@ describe("lifecycle manager", () => {
 
   it("does not hibernate already-terminal sessions", () => {
     sessionStore.createSession("sess-1", "test-env", "claude-code", "test", "sonnet", "/tmp/log");
-    sessionStore.updateSession("sess-1", "completed");
+    sessionStore.hibernateSession("sess-1");
 
     const stream = streamRegistry.createStream("lifecycle:sess-1");
     const sub = streamRegistry.subscribe(stream.id, "sess-1", "rw", "detach", false);
 
     streamRegistry.unsubscribe(sub.id);
 
-    // Should still be completed, not hibernating
+    // Should still be hibernating (not re-hibernated with a new endedAt)
     const session = sessionStore.getSession("sess-1");
-    expect(session?.status).toBe("completed");
+    expect(session?.status).toBe("hibernating");
   });
 
   it("kills PowerLine process on auto-hibernate", () => {

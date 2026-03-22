@@ -124,7 +124,7 @@ export function BottomStatusBar(): JSX.Element {
       const taskSession = taskSessionId
         ? sessions.find((s) => s.id === taskSessionId)
         : undefined;
-      const isActive = taskSession && !["completed", "failed", "interrupted", "hibernating"].includes(taskSession.status);
+      const isActive = taskSession && !["hibernating", "suspended"].includes(taskSession.status);
 
       // Active session — ChatInput on the page handles this; return empty
       if (isActive) {
@@ -170,7 +170,7 @@ export function BottomStatusBar(): JSX.Element {
   // --- session mode ---
   if (sessionId) {
     const session = sessions.find((s) => s.id === sessionId);
-    const isEnded = session !== undefined && ["completed", "failed", "interrupted", "hibernating"].includes(session.status);
+    const isEnded = session !== undefined && ["hibernating", "suspended"].includes(session.status);
     const isActive = session !== undefined && !isEnded;
 
     // Active session — ChatInput on the page handles this; return empty

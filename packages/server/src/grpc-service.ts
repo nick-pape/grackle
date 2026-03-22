@@ -28,6 +28,7 @@ import {
   MAX_TASK_DEPTH,
   SESSION_STATUS,
   TERMINAL_SESSION_STATUSES,
+  END_REASON,
   type SessionStatus,
   TASK_STATUS,
   ROOT_TASK_ID,
@@ -146,6 +147,7 @@ function sessionRowToProto(row: SessionRow): grackle.Session {
     inputTokens: row.inputTokens,
     outputTokens: row.outputTokens,
     costUsd: row.costUsd,
+    endReason: row.endReason ?? "",
   });
 }
 
@@ -879,13 +881,13 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       const currentSession = sessionStore.getSession(req.id);
       const alreadyTerminal = currentSession && TERMINAL_SESSION_STATUSES.has(currentSession.status as SessionStatus);
       if (!alreadyTerminal && currentSession) {
-        sessionStore.updateSession(req.id, SESSION_STATUS.INTERRUPTED);
+        sessionStore.updateSession(req.id, SESSION_STATUS.HIBERNATING, undefined, undefined, END_REASON.INTERRUPTED);
         streamHub.publish(
           create(grackle.SessionEventSchema, {
             sessionId: req.id,
             type: grackle.EventType.STATUS,
             timestamp: new Date().toISOString(),
-            content: SESSION_STATUS.INTERRUPTED,
+            content: SESSION_STATUS.HIBERNATING,
             raw: "",
           }),
         );
@@ -1212,8 +1214,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         if (!session) {
           throw new ConnectError(`Session not found: ${req.sessionId}`, Code.NotFound);
         }
-        const terminalStatuses: string[] = [SESSION_STATUS.COMPLETED, SESSION_STATUS.FAILED, SESSION_STATUS.INTERRUPTED];
-        if (terminalStatuses.includes(session.status)) {
+        if (TERMINAL_SESSION_STATUSES.has(session.status as SessionStatus)) {
           throw new ConnectError(
             `Cannot bind terminal session ${req.sessionId} (status: ${session.status})`,
             Code.FailedPrecondition,
@@ -1451,7 +1452,11 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       if (!latestSession) {
         throw new ConnectError(`Task ${req.id} has no sessions to resume`, Code.FailedPrecondition);
       }
-      if (!([SESSION_STATUS.INTERRUPTED, SESSION_STATUS.COMPLETED] as string[]).includes(latestSession.status)) {
+      // Resumable: HIBERNATING or SUSPENDED (dead sessions that need reanimate).
+      // IDLE with endReason="completed" also qualifies — the agent thinks it's done
+      // but the user wants more work.
+      const resumableStatuses: string[] = [SESSION_STATUS.HIBERNATING, SESSION_STATUS.SUSPENDED, SESSION_STATUS.IDLE];
+      if (!resumableStatuses.includes(latestSession.status)) {
         throw new ConnectError(
           `Latest session ${latestSession.id} is not resumable (status: ${latestSession.status})`,
           Code.FailedPrecondition,
@@ -1517,13 +1522,13 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
             logger.warn({ taskId: req.id, sessionId: activeSession.id, err }, "Failed to kill session during task deletion");
           }
         }
-        sessionStore.updateSession(activeSession.id, SESSION_STATUS.INTERRUPTED);
+        sessionStore.updateSession(activeSession.id, SESSION_STATUS.HIBERNATING, undefined, undefined, END_REASON.INTERRUPTED);
         streamHub.publish(
           create(grackle.SessionEventSchema, {
             sessionId: activeSession.id,
             type: grackle.EventType.STATUS,
             timestamp: new Date().toISOString(),
-            content: SESSION_STATUS.INTERRUPTED,
+            content: SESSION_STATUS.HIBERNATING,
             raw: "",
           }),
         );

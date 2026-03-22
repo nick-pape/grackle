@@ -141,7 +141,8 @@ function applySchema(): void {
       pipe_mode          TEXT NOT NULL DEFAULT '',
       input_tokens       INTEGER NOT NULL DEFAULT 0,
       output_tokens      INTEGER NOT NULL DEFAULT 0,
-      cost_usd           REAL NOT NULL DEFAULT 0
+      cost_usd           REAL NOT NULL DEFAULT 0,
+      end_reason         TEXT
     );
   `);
 }
@@ -250,9 +251,9 @@ describe("ws-bridge send_input error handling", () => {
     expect((msg.payload as Record<string, unknown>).message).toMatch(/Session not found: no-such-session/i);
   });
 
-  it("returns error when session is completed", async () => {
+  it("returns error when session is hibernating (with endReason=completed)", async () => {
     sessionStore.createSession("sess-completed", "env-1", "node", "test", "claude", "/tmp/log");
-    sessionStore.updateSession("sess-completed", "completed");
+    sessionStore.updateSession("sess-completed", "hibernating", undefined, undefined, "completed");
 
     const ws = await connectWs(port);
     const msgPromise = nextMessage(ws);
@@ -263,12 +264,12 @@ describe("ws-bridge send_input error handling", () => {
     await closeWs(ws);
 
     expect(msg.type).toBe("error");
-    expect((msg.payload as Record<string, unknown>).message).toMatch(/has ended.*completed/i);
+    expect((msg.payload as Record<string, unknown>).message).toMatch(/has ended.*hibernating/i);
   });
 
-  it("returns error when session is failed", async () => {
+  it("returns error when session is hibernating (with endReason=failed)", async () => {
     sessionStore.createSession("sess-failed", "env-1", "node", "test", "claude", "/tmp/log");
-    sessionStore.updateSession("sess-failed", "failed");
+    sessionStore.updateSession("sess-failed", "hibernating", undefined, undefined, "failed");
 
     const ws = await connectWs(port);
     const msgPromise = nextMessage(ws);
@@ -279,12 +280,12 @@ describe("ws-bridge send_input error handling", () => {
     await closeWs(ws);
 
     expect(msg.type).toBe("error");
-    expect((msg.payload as Record<string, unknown>).message).toMatch(/has ended.*failed/i);
+    expect((msg.payload as Record<string, unknown>).message).toMatch(/has ended.*hibernating/i);
   });
 
-  it("returns error when session is interrupted", async () => {
+  it("returns error when session is hibernating (with endReason=interrupted)", async () => {
     sessionStore.createSession("sess-interrupted", "env-1", "node", "test", "claude", "/tmp/log");
-    sessionStore.updateSession("sess-interrupted", "interrupted");
+    sessionStore.updateSession("sess-interrupted", "hibernating", undefined, undefined, "interrupted");
 
     const ws = await connectWs(port);
     const msgPromise = nextMessage(ws);
@@ -295,10 +296,10 @@ describe("ws-bridge send_input error handling", () => {
     await closeWs(ws);
 
     expect(msg.type).toBe("error");
-    expect((msg.payload as Record<string, unknown>).message).toMatch(/has ended.*interrupted/i);
+    expect((msg.payload as Record<string, unknown>).message).toMatch(/has ended.*hibernating/i);
   });
 
-  it("returns error when session is hibernating", async () => {
+  it("returns error when session is hibernating (no endReason)", async () => {
     sessionStore.createSession("sess-hibernating", "env-1", "node", "test", "claude", "/tmp/log");
     sessionStore.hibernateSession("sess-hibernating");
 

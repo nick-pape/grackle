@@ -19,11 +19,18 @@ export type SessionStatus = typeof SESSION_STATUS[keyof typeof SESSION_STATUS];
 
 /** Session statuses that represent a terminal (ended) state. */
 export const TERMINAL_SESSION_STATUSES: ReadonlySet<SessionStatus> = new Set([
-  SESSION_STATUS.COMPLETED,
-  SESSION_STATUS.FAILED,
-  SESSION_STATUS.INTERRUPTED,
   SESSION_STATUS.HIBERNATING,
 ]);
+
+/** Reason a session ended — orthogonal to lifecycle status. */
+export const END_REASON = {
+  COMPLETED: "completed",
+  FAILED: "failed",
+  INTERRUPTED: "interrupted",
+} as const;
+
+/** Why a session ended (agent finished, crashed, or killed). `null` means still active or hibernated without a reason. */
+export type EndReason = typeof END_REASON[keyof typeof END_REASON];
 
 /** Pipe mode for parent↔child IPC on spawn. */
 export type PipeMode = "sync" | "async" | "detach" | "";

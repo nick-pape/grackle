@@ -1,5 +1,5 @@
 import { create } from "@bufbuild/protobuf";
-import { grackle, powerline, eventTypeToEnum, SESSION_STATUS, LOGS_DIR } from "@grackle-ai/common";
+import { grackle, powerline, eventTypeToEnum, SESSION_STATUS, END_REASON, LOGS_DIR } from "@grackle-ai/common";
 import type { PowerLineConnection } from "@grackle-ai/adapter-sdk";
 import { join } from "node:path";
 import * as sessionStore from "./session-store.js";
@@ -114,7 +114,7 @@ export async function recoverSuspendedSessions(
         { sessionId: session.id, err },
         "Failed to recover suspended session — marking failed",
       );
-      sessionStore.updateSession(session.id, SESSION_STATUS.FAILED, undefined, `Recovery failed: ${String(err)}`);
+      sessionStore.updateSession(session.id, SESSION_STATUS.HIBERNATING, undefined, `Recovery failed: ${String(err)}`, END_REASON.FAILED);
       emitTaskUpdated(session.taskId);
     }
   } finally {

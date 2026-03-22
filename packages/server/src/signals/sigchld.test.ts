@@ -105,7 +105,7 @@ function makeSession(overrides: Record<string, unknown> = {}) {
   return {
     id: "sess-child",
     environmentId: "env-1",
-    status: "completed",
+    status: "idle",
     runtime: "stub",
     runtimeSessionId: "rt-1",
     prompt: "",
@@ -114,10 +114,11 @@ function makeSession(overrides: Record<string, unknown> = {}) {
     turns: 5,
     startedAt: new Date().toISOString(),
     suspendedAt: null,
-    endedAt: new Date().toISOString(),
+    endedAt: null,
     error: null,
     taskId: "task-child",
     personaId: null,
+    endReason: "completed",
     ...overrides,
   };
 }
@@ -146,14 +147,14 @@ describe("initSigchldSubscriber", () => {
     initSigchldSubscriber();
   });
 
-  it("calls deliverSignalToTask with correct args when child goes idle", async () => {
+  it("calls deliverSignalToTask with correct args when child goes idle with endReason", async () => {
     vi.spyOn(taskStore, "getTask").mockReturnValue(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       makeTask() as any,
     );
     vi.spyOn(sessionStore, "getLatestSessionForTask").mockReturnValue(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      makeSession({ status: "idle" }) as any,
+      makeSession({ status: "idle", endReason: "completed" }) as any,
     );
     vi.mocked(readLog).mockReturnValue([
       { session_id: "sess-child", type: "text", timestamp: "", content: "Created PR #42." },
@@ -181,7 +182,7 @@ describe("initSigchldSubscriber", () => {
     );
     vi.spyOn(sessionStore, "getLatestSessionForTask").mockReturnValue(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      makeSession({ status: "failed" }) as any,
+      makeSession({ status: "hibernating", endReason: "failed" }) as any,
     );
     vi.mocked(readLog).mockReturnValue([]);
 
@@ -202,7 +203,7 @@ describe("initSigchldSubscriber", () => {
     );
     vi.spyOn(sessionStore, "getLatestSessionForTask").mockReturnValue(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      makeSession({ status: "interrupted" }) as any,
+      makeSession({ status: "hibernating", endReason: "interrupted" }) as any,
     );
     vi.mocked(readLog).mockReturnValue([]);
 
@@ -250,7 +251,7 @@ describe("initSigchldSubscriber", () => {
     );
     vi.spyOn(sessionStore, "getLatestSessionForTask").mockReturnValue(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      makeSession({ status: "idle" }) as any,
+      makeSession({ status: "idle", endReason: "completed" }) as any,
     );
     vi.mocked(readLog).mockReturnValue([]);
 
@@ -270,7 +271,7 @@ describe("initSigchldSubscriber", () => {
     );
     vi.spyOn(sessionStore, "getLatestSessionForTask").mockReturnValue(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      makeSession({ status: "idle" }) as any,
+      makeSession({ status: "idle", endReason: "completed" }) as any,
     );
     vi.mocked(readLog).mockReturnValue([
       { session_id: "sess-child", type: "tool_use", timestamp: "", content: "ran tests" },
