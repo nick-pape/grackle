@@ -120,18 +120,18 @@ describe("expandNode", () => {
     expect(result.edges[0].type).toBe("RELATES_TO");
   });
 
-  it("should pass depth parameter to Cypher", async () => {
+  it("should interpolate depth into Cypher as a literal", async () => {
     await expandNode("node-a", { depth: 3 });
 
-    const params = mockSessionRun.mock.calls[0][1] as Record<string, unknown>;
-    expect(params.depth).toBe(3);
+    const cypher = mockSessionRun.mock.calls[0][0] as string;
+    expect(cypher).toContain("*1..3]");
   });
 
   it("should default to depth 1", async () => {
     await expandNode("node-a");
 
-    const params = mockSessionRun.mock.calls[0][1] as Record<string, unknown>;
-    expect(params.depth).toBe(1);
+    const cypher = mockSessionRun.mock.calls[0][0] as string;
+    expect(cypher).toContain("*1..1]");
   });
 
   it("should include edge type filter in Cypher when specified", async () => {
@@ -146,7 +146,7 @@ describe("expandNode", () => {
 
     const cypher = mockSessionRun.mock.calls[0][0] as string;
     expect(cypher).not.toContain("RELATES_TO");
-    expect(cypher).toContain("[*1..$depth]");
+    expect(cypher).toContain("[*1..1]");
   });
 
   it("should deduplicate nodes reachable via multiple paths", async () => {

@@ -55,7 +55,8 @@ const VALID_EDGE_TYPES: ReadonlySet<string> = new Set(Object.values(EDGE_TYPE));
  * pattern (e.g., `[:RELATES_TO|DEPENDS_ON*1..2]`). This is safe because
  * values are validated against the closed {@link EdgeType} union.
  */
-function buildExpandCypher(edgeTypes?: EdgeType[]): string {
+function buildExpandCypher(depth: number, edgeTypes?: EdgeType[]): string {
+  // Neo4j requires integer literals for variable-length ranges — cannot parameterize.
   let relPattern: string;
   if (edgeTypes && edgeTypes.length > 0) {
     for (const t of edgeTypes) {
@@ -65,9 +66,9 @@ function buildExpandCypher(edgeTypes?: EdgeType[]): string {
         );
       }
     }
-    relPattern = `[:${edgeTypes.join("|")}*1..$depth]`;
+    relPattern = `[:${edgeTypes.join("|")}*1..${depth}]`;
   } else {
-    relPattern = "[*1..$depth]";
+    relPattern = `[*1..${depth}]`;
   }
 
   return `
@@ -125,11 +126,11 @@ export async function expandNode(
 ): Promise<ExpansionResult> {
   const rawDepth: number = options?.depth ?? DEFAULT_DEPTH;
   const depth: number = Number.isFinite(rawDepth) ? Math.max(1, Math.floor(rawDepth)) : DEFAULT_DEPTH;
-  const cypher: string = buildExpandCypher(options?.edgeTypes);
+  const cypher: string = buildExpandCypher(depth, options?.edgeTypes);
 
   const session = getSession();
   try {
-    const result = await session.run(cypher, { startId: nodeId, depth });
+    const result = await session.run(cypher, { startId: nodeId });
 
     const nodeMap = new Map<string, KnowledgeNode>();
     const edgeSet = new Set<string>();
