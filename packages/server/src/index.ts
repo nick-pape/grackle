@@ -8,6 +8,7 @@ import { updateEnvironmentStatus, resetAllStatuses } from "./env-registry.js";
 import { initWsSubscriber } from "./ws-broadcast.js";
 import { initSigchldSubscriber } from "./signals/sigchld.js";
 import { initLifecycleManager } from "./lifecycle.js";
+import { parseAdapterConfig } from "./adapter-config.js";
 import { emit, subscribe } from "./event-bus.js";
 import { DockerAdapter } from "./adapters/docker.js";
 import { LocalAdapter } from "./adapters/local.js";
@@ -266,7 +267,8 @@ function createWebHandler(
   bindHost: string,
 ): (req: http.IncomingMessage, res: http.ServerResponse) => void {
   /** Map wildcard bind hosts to a dialable host for OAuth URLs. */
-  const dialableHost = isWildcardAddress(bindHost) ? "127.0.0.1" : bindHost;
+  const allowNetwork = isWildcardAddress(bindHost);
+  const dialableHost = allowNetwork ? "127.0.0.1" : bindHost;
   const urlHost = dialableHost.includes(":") ? `[${dialableHost}]` : dialableHost;
   const webBaseUrl = `http://${urlHost}:${webPort}`;
 
@@ -482,7 +484,7 @@ function createWebHandler(
           }
 
           // Pairing succeeded — also create a browser session
-          const setCookie = createSession(apiKey);
+          const setCookie = createSession(apiKey, { secure: allowNetwork });
           responseHeaders["Set-Cookie"] = setCookie;
           hasPairedSession = true;
         }
@@ -577,7 +579,7 @@ function createWebHandler(
       if (code) {
         const remoteIp = getRemoteIp(req);
         if (redeemPairingCode(code, remoteIp)) {
-          const setCookie = createSession(apiKey);
+          const setCookie = createSession(apiKey, { secure: allowNetwork });
           res.writeHead(302, {
             Location: "/",
             "Set-Cookie": setCookie,
@@ -687,7 +689,7 @@ async function main(): Promise<void> {
 
     // Auto-provision: connect the local adapter
     const localAdapter = adapterManager.getAdapter("local")!;
-    const config = JSON.parse(localEnv.adapterConfig) as Record<string, unknown>;
+    const config = parseAdapterConfig(localEnv.adapterConfig);
 
     envRegistry.updateEnvironmentStatus("local", "connecting");
     emit("environment.changed", {});

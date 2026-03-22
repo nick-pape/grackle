@@ -1,6 +1,12 @@
 import { test, expect } from "./fixtures.js";
 
 test.describe("Sidebar Resize", { tag: ["@webui"] }, () => {
+  test.beforeEach(async ({ appPage }) => {
+    // Navigate to a page that has a sidebar (dashboard has none after slot refactor)
+    await appPage.locator('[data-testid="sidebar-tab-tasks"]').click();
+    await appPage.waitForSelector('[data-testid="sidebar"]', { timeout: 5_000 });
+  });
+
   test("sidebar renders with default width", async ({ appPage }) => {
     const page = appPage;
     const sidebar = page.locator('[data-testid="sidebar"]');
@@ -49,12 +55,14 @@ test.describe("Sidebar Resize", { tag: ["@webui"] }, () => {
     // Set a custom width in localStorage
     await page.evaluate(() => localStorage.setItem("grackle-sidebar-width", "400"));
 
-    // Reload the page
+    // Reload the page and navigate to a sidebar page
     await page.reload();
     await page.waitForFunction(
       () => document.body.innerText.includes("Connected"),
       { timeout: 10_000 },
     );
+    await page.locator('[data-testid="sidebar-tab-tasks"]').click();
+    await page.waitForSelector('[data-testid="sidebar"]', { timeout: 5_000 });
 
     const sidebar = page.locator('[data-testid="sidebar"]');
     const box = await sidebar.boundingBox();
@@ -72,11 +80,14 @@ test.describe("Sidebar Resize", { tag: ["@webui"] }, () => {
     // Set an invalid value
     await page.evaluate(() => localStorage.setItem("grackle-sidebar-width", "not-a-number"));
 
+    // Reload the page and navigate to a sidebar page
     await page.reload();
     await page.waitForFunction(
       () => document.body.innerText.includes("Connected"),
       { timeout: 10_000 },
     );
+    await page.locator('[data-testid="sidebar-tab-tasks"]').click();
+    await page.waitForSelector('[data-testid="sidebar"]', { timeout: 5_000 });
 
     const sidebar = page.locator('[data-testid="sidebar"]');
     const box = await sidebar.boundingBox();
@@ -95,11 +106,14 @@ test.describe("Sidebar Resize", { tag: ["@webui"] }, () => {
     // Set a value below minimum
     await page.evaluate(() => localStorage.setItem("grackle-sidebar-width", "50"));
 
+    // Reload the page and navigate to a sidebar page
     await page.reload();
     await page.waitForFunction(
       () => document.body.innerText.includes("Connected"),
       { timeout: 10_000 },
     );
+    await page.locator('[data-testid="sidebar-tab-tasks"]').click();
+    await page.waitForSelector('[data-testid="sidebar"]', { timeout: 5_000 });
 
     const sidebar = page.locator('[data-testid="sidebar"]');
     const box = await sidebar.boundingBox();
