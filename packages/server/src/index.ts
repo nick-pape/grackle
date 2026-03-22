@@ -769,6 +769,9 @@ async function main(): Promise<void> {
     const activeSession = sessionStore.getActiveForEnv(environmentId);
     if (activeSession) {
       sessionStore.suspendSession(activeSession.id);
+      if (activeSession.taskId) {
+        emit("task.updated", { taskId: activeSession.taskId, workspaceId: "" });
+      }
     }
     emit("environment.changed", {});
   });

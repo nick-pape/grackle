@@ -352,9 +352,10 @@ export function processEventStream(
         }
       }
 
-      // Fallback: if stream ended without a terminal status event, mark completed
+      // Fallback: if stream ended without a terminal status event, mark completed.
+      // Guard against overwriting SUSPENDED (set by heartbeat sweep during disconnect).
       const current = sessionStore.getSession(sessionId);
-      if (current && !TERMINAL_STATUSES.includes(current.status)) {
+      if (current && !TERMINAL_STATUSES.includes(current.status) && current.status !== SESSION_STATUS.SUSPENDED) {
         sessionStore.updateSession(sessionId, SESSION_STATUS.COMPLETED);
         publishChildCompletion(sessionId, "completed");
         if (ctx.taskId) {
