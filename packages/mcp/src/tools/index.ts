@@ -31,5 +31,3 @@ export function createToolRegistry(): ToolRegistry {
   registry.registerAll(knowledgeTools);
   return registry;
 }
-
-export { setKnowledgeEmbedder } from "./knowledge.js";

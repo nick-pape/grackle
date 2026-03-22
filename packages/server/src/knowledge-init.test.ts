@@ -11,7 +11,6 @@ const {
   mockCreateLocalEmbedder,
   mockSyncReferenceNode,
   mockDeleteReferenceNodeBySource,
-  mockSetKnowledgeEmbedder,
   mockSubscribe,
   mockGetTask,
   mockQueryFindings,
@@ -22,7 +21,6 @@ const {
   mockCreateLocalEmbedder: vi.fn().mockReturnValue({ dimensions: 384, embed: vi.fn(), embedBatch: vi.fn() }),
   mockSyncReferenceNode: vi.fn().mockResolvedValue("node-id"),
   mockDeleteReferenceNodeBySource: vi.fn().mockResolvedValue(true),
-  mockSetKnowledgeEmbedder: vi.fn(),
   mockSubscribe: vi.fn().mockReturnValue(vi.fn()),
   mockGetTask: vi.fn(),
   mockQueryFindings: vi.fn().mockReturnValue([]),
@@ -37,10 +35,6 @@ vi.mock("@grackle-ai/knowledge", () => ({
   deleteReferenceNodeBySource: mockDeleteReferenceNodeBySource,
   deriveTaskText: (title: string, desc: string) => `[Task] ${title} - ${desc}`,
   deriveFindingText: (title: string, content: string, tags: string[]) => `[Finding] ${title} - ${content}`,
-}));
-
-vi.mock("@grackle-ai/mcp", () => ({
-  setKnowledgeEmbedder: mockSetKnowledgeEmbedder,
 }));
 
 vi.mock("./event-bus.js", () => ({
@@ -104,7 +98,6 @@ describe("initKnowledge", () => {
     mockInitSchema.mockClear();
     mockCloseNeo4j.mockClear();
     mockCreateLocalEmbedder.mockClear();
-    mockSetKnowledgeEmbedder.mockClear();
     mockSubscribe.mockClear();
     mockSubscribe.mockReturnValue(vi.fn());
   });
@@ -118,7 +111,7 @@ describe("initKnowledge", () => {
   it("creates a local embedder and injects it into MCP", async () => {
     await initKnowledge();
     expect(mockCreateLocalEmbedder).toHaveBeenCalledTimes(1);
-    expect(mockSetKnowledgeEmbedder).toHaveBeenCalledWith(expect.objectContaining({ dimensions: 384 }));
+    // Embedder is now accessible via getKnowledgeEmbedder() — verified by server gRPC handlers
   });
 
   it("subscribes to the event bus", async () => {
@@ -135,7 +128,7 @@ describe("initKnowledge", () => {
     await cleanup();
 
     expect(mockUnsubscribe).toHaveBeenCalledTimes(1);
-    expect(mockSetKnowledgeEmbedder).toHaveBeenLastCalledWith(undefined);
+    // setKnowledgeEmbedder no longer called — MCP uses gRPC now
     expect(mockCloseNeo4j).toHaveBeenCalledTimes(1);
   });
 });

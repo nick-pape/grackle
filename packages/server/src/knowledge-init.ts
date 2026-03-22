@@ -18,7 +18,6 @@ import {
   deriveFindingText,
   type Embedder,
 } from "@grackle-ai/knowledge";
-import { setKnowledgeEmbedder } from "@grackle-ai/mcp";
 import { subscribe, type GrackleEvent } from "./event-bus.js";
 import * as taskStore from "./task-store.js";
 import * as findingStore from "./finding-store.js";
@@ -158,7 +157,6 @@ export async function initKnowledge(): Promise<() => Promise<void>> {
 
     const embedder: Embedder = createLocalEmbedder();
     knowledgeEmbedder = embedder;
-    setKnowledgeEmbedder(embedder);
 
     const unsubscribe: () => void = subscribe(createEntitySyncHandler(embedder));
 
@@ -168,14 +166,12 @@ export async function initKnowledge(): Promise<() => Promise<void>> {
       logger.info("Shutting down knowledge graph subsystem");
       unsubscribe();
       knowledgeEmbedder = undefined;
-      setKnowledgeEmbedder(undefined);
       await closeNeo4j();
       logger.info("Knowledge graph subsystem stopped");
     };
   } catch (err) {
     // Clean up Neo4j if a later step fails
     knowledgeEmbedder = undefined;
-    setKnowledgeEmbedder(undefined);
     await closeNeo4j().catch(() => {});
     throw err;
   }
