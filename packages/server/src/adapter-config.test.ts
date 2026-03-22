@@ -9,13 +9,30 @@ describe("parseAdapterConfig", () => {
   });
 
   it("throws ConnectError with Code.Internal for invalid JSON", () => {
-    expect(() => parseAdapterConfig("not-json")).toThrow(ConnectError);
-    try {
-      parseAdapterConfig("{broken");
-    } catch (err) {
-      expect(err).toBeInstanceOf(ConnectError);
-      expect((err as ConnectError).code).toBe(Code.Internal);
-      expect((err as ConnectError).message).toContain("Invalid adapter configuration");
-    }
+    expect(() => parseAdapterConfig("{broken")).toThrowError(
+      expect.objectContaining({
+        code: Code.Internal,
+        message: expect.stringContaining("Invalid adapter configuration"),
+      }),
+    );
+  });
+
+  it("throws ConnectError with Code.Internal for null", () => {
+    expect(() => parseAdapterConfig("null")).toThrow(ConnectError);
+    expect(() => parseAdapterConfig("null")).toThrowError(
+      expect.objectContaining({ code: Code.Internal }),
+    );
+  });
+
+  it("throws ConnectError with Code.Internal for arrays", () => {
+    expect(() => parseAdapterConfig("[1,2]")).toThrow(ConnectError);
+    expect(() => parseAdapterConfig("[1,2]")).toThrowError(
+      expect.objectContaining({ code: Code.Internal }),
+    );
+  });
+
+  it("throws ConnectError with Code.Internal for primitives", () => {
+    expect(() => parseAdapterConfig("42")).toThrow(ConnectError);
+    expect(() => parseAdapterConfig('"string"')).toThrow(ConnectError);
   });
 });

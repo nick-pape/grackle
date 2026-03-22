@@ -8,6 +8,7 @@ import { updateEnvironmentStatus, resetAllStatuses } from "./env-registry.js";
 import { initWsSubscriber } from "./ws-broadcast.js";
 import { initSigchldSubscriber } from "./signals/sigchld.js";
 import { initLifecycleManager } from "./lifecycle.js";
+import { parseAdapterConfig } from "./adapter-config.js";
 import { emit, subscribe } from "./event-bus.js";
 import { DockerAdapter } from "./adapters/docker.js";
 import { LocalAdapter } from "./adapters/local.js";
@@ -684,7 +685,7 @@ async function main(): Promise<void> {
 
     // Auto-provision: connect the local adapter
     const localAdapter = adapterManager.getAdapter("local")!;
-    const config = JSON.parse(localEnv.adapterConfig) as Record<string, unknown>;
+    const config = parseAdapterConfig(localEnv.adapterConfig);
 
     envRegistry.updateEnvironmentStatus("local", "connecting");
     emit("environment.changed", {});
