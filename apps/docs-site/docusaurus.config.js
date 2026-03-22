@@ -9,7 +9,13 @@ const config = {
   organizationName: 'nick-pape',
   projectName: 'grackle',
   onBrokenLinks: 'throw',
-  onBrokenMarkdownLinks: 'warn',
+  markdown: {
+    mermaid: true,
+    hooks: {
+      onBrokenMarkdownLinks: 'warn',
+    },
+  },
+  themes: ['@docusaurus/theme-mermaid'],
   favicon: 'img/favicon.ico',
 
   presets: [
@@ -19,11 +25,11 @@ const config = {
         docs: {
           path: 'docs',
           routeBasePath: '/',
-          sidebarPath: require.resolve('./sidebars.js'),
+          sidebarPath: './sidebars.js',
           editUrl: 'https://github.com/nick-pape/grackle/edit/main/apps/docs-site/',
         },
         blog: false,
-        theme: { customCss: require.resolve('./src/css/custom.css') },
+        theme: { customCss: './src/css/custom.css' },
       },
     ],
   ],
