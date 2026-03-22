@@ -55,6 +55,7 @@ import * as credentialProviders from "./credential-providers.js";
 import * as streamRegistry from "./stream-registry.js";
 import * as pipeDelivery from "./pipe-delivery.js";
 import { ensureAsyncDeliveryListener } from "./pipe-delivery.js";
+import { cleanupLifecycleStream } from "./lifecycle.js";
 
 /** Valid pipe mode values for SpawnRequest and StartTaskRequest. */
 const VALID_PIPE_MODES: ReadonlySet<string> = new Set(["", "sync", "async", "detach"]);
@@ -835,27 +836,22 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         throw new ConnectError(`Session not found: ${req.id}`, Code.NotFound);
       }
 
-      // Kill the PowerLine process first (best-effort)
-      const conn = adapterManager.getConnection(session.environmentId);
-      if (conn) {
-        try {
-          await conn.client.kill(
-            create(powerline.SessionIdSchema, { id: req.id }),
-          );
-        } catch (err) {
-          logger.warn({ sessionId: req.id, err }, "PowerLine kill failed");
-        }
-      }
+      // Delete the lifecycle stream FIRST — this triggers auto-hibernate via
+      // the orphan callback (which also kills the PowerLine process).
+      // Must happen before any direct kill to avoid a race where the event
+      // processor marks the session terminal before the orphan fires.
+      cleanupLifecycleStream(req.id);
 
-      // Close all subscriptions for this session → triggers auto-hibernate
-      // via the lifecycle manager's orphan callback
+      // Also close any other subscriptions (pipe streams etc.)
       const subs = streamRegistry.getSubscriptionsForSession(req.id);
       for (const sub of subs) {
         streamRegistry.unsubscribe(sub.id);
       }
 
-      // Fallback for legacy sessions without lifecycle streams
-      if (subs.length === 0) {
+      // Fallback for legacy sessions without lifecycle streams.
+      // Check current status — orphan callback may have already set HIBERNATING.
+      const currentSession = sessionStore.getSession(req.id);
+      if (subs.length === 0 && currentSession && currentSession.status !== SESSION_STATUS.HIBERNATING) {
         sessionStore.updateSession(req.id, SESSION_STATUS.INTERRUPTED);
         streamHub.publish(
           create(grackle.SessionEventSchema, {
