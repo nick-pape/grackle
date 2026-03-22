@@ -46,17 +46,20 @@ npx @grackle-ai/powerline --port 7433 --token <secret>
 ## Usage
 
 ```bash
-# Start with default settings (port 7433, no auth)
-grackle-powerline
-
-# Start with authentication (recommended)
+# Start with authentication (required by default)
 grackle-powerline --token my-secret-token
 
+# Or use an environment variable
+GRACKLE_POWERLINE_TOKEN=my-secret-token grackle-powerline
+
+# Start without authentication (development only)
+grackle-powerline --no-auth
+
 # Start on a custom port and host
-grackle-powerline --port 9000 --host 0.0.0.0
+grackle-powerline --port 9000 --host 0.0.0.0 --token my-secret-token
 ```
 
-The `--token` flag (or `GRACKLE_POWERLINE_TOKEN` environment variable) enables bearer-token authentication on all gRPC calls. Without it, the server runs unauthenticated — suitable only for local development.
+A token is required by default via `--token` or the `GRACKLE_POWERLINE_TOKEN` environment variable. To run without authentication for local development, pass `--no-auth` explicitly. When `--no-auth` is set, any token from `--token` or the environment variable is ignored.
 
 ## Requirements
 
