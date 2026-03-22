@@ -28,6 +28,7 @@ import { readFileSync, existsSync } from "node:fs";
 import { join, dirname, extname, normalize, resolve, relative } from "node:path";
 import { createRequire } from "node:module";
 import { loadOrCreateApiKey, verifyApiKey } from "./api-key.js";
+import { setSecurityHeaders } from "./security-headers.js";
 import { createSession, validateSessionCookie } from "./session.js";
 import { startSessionCleanup, stopSessionCleanup } from "./session.js";
 import { generatePairingCode, redeemPairingCode, startPairingCleanup, stopPairingCleanup } from "./pairing.js";
@@ -271,6 +272,8 @@ function createWebHandler(
 
   // eslint-disable-next-line @typescript-eslint/no-misused-promises
   return async (req: http.IncomingMessage, res: http.ServerResponse) => {
+    setSecurityHeaders(res);
+
     let rawPath: string;
     let queryString = "";
     try {
