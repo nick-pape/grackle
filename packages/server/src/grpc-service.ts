@@ -15,6 +15,7 @@ import * as workspaceStore from "./workspace-store.js";
 import * as taskStore from "./task-store.js";
 import * as findingStore from "./finding-store.js";
 import * as personaStore from "./persona-store.js";
+import { parseAdapterConfig } from "./adapter-config.js";
 import { emit } from "./event-bus.js";
 import { processEventStream } from "./event-processor.js";
 import * as processorRegistry from "./processor-registry.js";
@@ -412,7 +413,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       envRegistry.updateEnvironmentStatus(req.id, "connecting");
       emit("environment.changed", {});
 
-      const config = JSON.parse(env.adapterConfig) as Record<string, unknown>;
+      const config = parseAdapterConfig(env.adapterConfig);
       config.defaultRuntime = env.defaultRuntime;
       const powerlineToken = env.powerlineToken;
 
@@ -479,7 +480,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
 
       const adapter = adapterManager.getAdapter(env.adapterType);
       if (adapter) {
-        await adapter.stop(req.id, JSON.parse(env.adapterConfig) as Record<string, unknown>);
+        await adapter.stop(req.id, parseAdapterConfig(env.adapterConfig));
       }
       adapterManager.removeConnection(req.id);
       envRegistry.updateEnvironmentStatus(req.id, "disconnected");
@@ -495,7 +496,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
 
       const adapter = adapterManager.getAdapter(env.adapterType);
       if (adapter) {
-        await adapter.destroy(req.id, JSON.parse(env.adapterConfig) as Record<string, unknown>);
+        await adapter.destroy(req.id, parseAdapterConfig(env.adapterConfig));
       }
       adapterManager.removeConnection(req.id);
       envRegistry.updateEnvironmentStatus(req.id, "disconnected");

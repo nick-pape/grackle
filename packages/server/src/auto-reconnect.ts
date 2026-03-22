@@ -3,6 +3,7 @@ import * as envRegistry from "./env-registry.js";
 import * as adapterManager from "./adapter-manager.js";
 import * as tokenBroker from "./token-broker.js";
 import { recoverSuspendedSessions } from "./session-recovery.js";
+import { parseAdapterConfig } from "./adapter-config.js";
 import { emit } from "./event-bus.js";
 import { logger } from "./logger.js";
 
@@ -145,7 +146,7 @@ async function tryReconnect(environmentId: string): Promise<void> {
     envRegistry.updateEnvironmentStatus(environmentId, "connecting");
     emit("environment.changed", {});
 
-    const config = JSON.parse(env.adapterConfig) as Record<string, unknown>;
+    const config = parseAdapterConfig(env.adapterConfig);
     config.defaultRuntime = env.defaultRuntime;
     const powerlineToken = env.powerlineToken;
 
