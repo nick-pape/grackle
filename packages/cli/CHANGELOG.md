@@ -1,6 +1,17 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sun, 22 Mar 2026 21:18:31 GMT and should not be manually modified.
+This log was last generated on Sun, 22 Mar 2026 23:08:49 GMT and should not be manually modified.
+
+## 0.71.0
+Sun, 22 Mar 2026 23:08:49 GMT
+
+### Minor changes
+
+- Add Knowledge Graph explorer page with force-directed visualization
+
+### Updates
+
+- placeholder
 
 ## 0.70.6
 Sun, 22 Mar 2026 21:18:31 GMT

@@ -2,6 +2,23 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.71.0",
+      "tag": "@grackle-ai/cli_v0.71.0",
+      "date": "Sun, 22 Mar 2026 23:08:49 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Add Knowledge Graph explorer page with force-directed visualization"
+          }
+        ],
+        "none": [
+          {
+            "comment": "placeholder"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.70.6",
       "tag": "@grackle-ai/cli_v0.70.6",
       "date": "Sun, 22 Mar 2026 21:18:31 GMT",
