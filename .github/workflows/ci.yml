@@ -31,22 +31,5 @@ jobs:
             exit 1
           fi
 
-      - name: Lint E2E test tags
-        run: |
-          chmod +x .github/scripts/lint-e2e-tags.sh
-          .github/scripts/lint-e2e-tags.sh tests/e2e-tests/tests
-
-      - name: Detect E2E test scope
-        if: github.event_name == 'pull_request'
-        id: e2e-scope
-        run: |
-          chmod +x .github/scripts/detect-e2e-tags.sh
-          TAGS=$(.github/scripts/detect-e2e-tags.sh "origin/${{ github.event.pull_request.base.ref }}")
-          echo "tags=$TAGS" >> "$GITHUB_OUTPUT"
-          echo "E2E scope: $TAGS"
-
       - name: Build and test
         uses: ./.github/actions/build-and-test
-        with:
-          skip-e2e: ${{ github.event_name == 'push' && 'true' || 'false' }}
-          e2e-tags: ${{ steps.e2e-scope.outputs.tags }}
