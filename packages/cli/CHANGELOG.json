@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.70.6",
+      "tag": "@grackle-ai/cli_v0.70.6",
+      "date": "Sun, 22 Mar 2026 21:18:31 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Wrap JSON.parse of adapterConfig in try-catch to prevent unhandled exceptions from corrupted DB data"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.70.5",
       "tag": "@grackle-ai/cli_v0.70.5",
       "date": "Sun, 22 Mar 2026 21:10:14 GMT",
