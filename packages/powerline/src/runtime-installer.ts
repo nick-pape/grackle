@@ -237,8 +237,8 @@ export async function importFromRuntime<T>(runtimeName: string, packageName: str
  */
 export function getRuntimeBinDirectory(runtimeName: string): string {
   if (isDevMode()) {
-    // In dev mode, prefer the monorepo's bin if it exists; fall back to the
-    // isolated runtime directory (packages removed from devDependencies).
+    // In dev mode, prefer the isolated runtime directory if it exists (packages
+    // removed from devDependencies); fall back to the monorepo's bin.
     const monoBin = resolve(import.meta.dirname, "../node_modules/.bin");
     const runtimeBin = join(RUNTIMES_BASE_DIR, runtimeName, "node_modules", ".bin");
     return existsSync(runtimeBin) ? runtimeBin : monoBin;
