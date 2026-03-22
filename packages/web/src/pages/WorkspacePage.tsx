@@ -47,7 +47,7 @@ export function WorkspacePage(): JSX.Element {
   const { workspaceId } = useParams<{ workspaceId: string }>();
   const navigate = useAppNavigate();
   const {
-    tasks, environments, workspaces, personas, archiveWorkspace, updateWorkspace,
+    tasks, environments, workspaces, personas, sessions, archiveWorkspace, updateWorkspace,
     usageCache, loadUsage,
   } = useGrackle();
 
@@ -72,12 +72,14 @@ export function WorkspacePage(): JSX.Element {
     }
   }, [workspaceId, activeFieldId]);
 
-  // Load usage stats for the workspace
+  // Load usage stats for the workspace.
+  // Re-fetch when sessions change (e.g. usage event updates a session's costUsd).
+  const totalSessionCost = sessions.reduce((s, sess) => s + (sess.costUsd ?? 0), 0);
   useEffect(() => {
     if (workspaceId) {
       loadUsage("workspace", workspaceId);
     }
-  }, [workspaceId, loadUsage]);
+  }, [workspaceId, loadUsage, totalSessionCost]);
   const wsUsage = workspaceId ? usageCache[`workspace:${workspaceId}`] : undefined;
 
   const workspaceTasks = tasks.filter((t) => t.workspaceId === workspaceId);
