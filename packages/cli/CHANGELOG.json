@@ -2,6 +2,23 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.69.0",
+      "tag": "@grackle-ai/cli_v0.69.0",
+      "date": "Sun, 22 Mar 2026 13:29:43 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Auto-restart local PowerLine on unexpected exit with circuit-breaker protection"
+          }
+        ],
+        "patch": [
+          {
+            "comment": "Bump ESLint, Rush/Heft toolchain, and Docusaurus dependencies to reduce audit vulnerabilities"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.68.3",
       "tag": "@grackle-ai/cli_v0.68.3",
       "date": "Sun, 22 Mar 2026 06:07:06 GMT",
