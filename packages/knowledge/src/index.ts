@@ -50,3 +50,11 @@ export type {
 export { createEdge, removeEdge } from "./edge-store.js";
 export type { SearchOptions, SearchResult } from "./search.js";
 export { knowledgeSearch } from "./search.js";
+export {
+  findReferenceNodeBySource,
+  deleteReferenceNodeBySource,
+  syncReferenceNode,
+  deriveTaskText,
+  deriveFindingText,
+} from "./reference-sync.js";
+export type { SyncReferenceNodeInput } from "./reference-sync.js";
