@@ -263,4 +263,9 @@ export abstract class BaseAgentSession implements AgentSession {
     this.releaseResources();
     this.eventQueue.close();
   }
+
+  /** Drain any buffered events that were not yet consumed by the stream. */
+  public drainBufferedEvents(): AgentEvent[] {
+    return this.eventQueue.drain();
+  }
 }

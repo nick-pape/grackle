@@ -206,6 +206,11 @@ class GenAIScriptSession implements AgentSession {
       this.child.kill("SIGTERM");
     }
   }
+
+  /** GenAIScript sessions have no buffered events to drain. */
+  public drainBufferedEvents(): AgentEvent[] {
+    return [];
+  }
 }
 
 /**

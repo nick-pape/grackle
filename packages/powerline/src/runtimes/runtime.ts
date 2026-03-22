@@ -50,6 +50,8 @@ export interface AgentSession {
   sendInput(text: string): void;
   /** Forcefully terminate the session. */
   kill(): void;
+  /** Drain any buffered events that were not yet consumed by the stream. */
+  drainBufferedEvents(): AgentEvent[];
 }
 
 /** Contract for pluggable agent runtime implementations (e.g. Claude Code, stub). */

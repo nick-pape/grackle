@@ -97,6 +97,39 @@ describe("AsyncQueue", () => {
     expect(items).toEqual([1, 2, 3]);
   });
 
+  it("drain() returns empty array when queue is empty", () => {
+    const queue = new AsyncQueue<number>();
+    expect(queue.drain()).toEqual([]);
+  });
+
+  it("drain() returns all buffered items and empties the queue", () => {
+    const queue = new AsyncQueue<number>();
+    queue.push(1);
+    queue.push(2);
+    queue.push(3);
+    expect(queue.drain()).toEqual([1, 2, 3]);
+    expect(queue.drain()).toEqual([]);
+  });
+
+  it("drain() returns unconsumed items after close()", () => {
+    const queue = new AsyncQueue<number>();
+    queue.push(10);
+    queue.push(20);
+    queue.close();
+    // Items buffered before close survive — drain retrieves them
+    expect(queue.drain()).toEqual([10, 20]);
+  });
+
+  it("drain() returns empty after full consumption", async () => {
+    const queue = new AsyncQueue<number>();
+    queue.push(1);
+    queue.push(2);
+    // Consume all items via shift
+    await queue.shift();
+    await queue.shift();
+    expect(queue.drain()).toEqual([]);
+  });
+
   it("interleaved push/iteration works correctly", async () => {
     const queue = new AsyncQueue<string>();
 
