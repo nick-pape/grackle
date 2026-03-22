@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useMemo, type JSX } from "react";
+import { useEffect, useRef, useState, type JSX } from "react";
 import { useParams } from "react-router";
 import { useGrackle } from "../context/GrackleContext.js";
 import { DagView } from "../components/dag/DagView.js";
