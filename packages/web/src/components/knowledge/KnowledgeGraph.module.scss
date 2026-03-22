@@ -38,7 +38,7 @@
 
 .node {
   cursor: pointer;
-  transition: opacity 0.3s ease;
+  transition: opacity 0.4s ease;
 
   &:hover {
     .nodeCard {
@@ -61,6 +61,15 @@
     stroke-width: 2;
     fill-opacity: 1;
   }
+}
+
+.dimmed {
+  opacity: 0.15;
+  pointer-events: none;
+}
+
+.dimmedLink {
+  opacity: 0.05;
 }
 
 .nodeCard {

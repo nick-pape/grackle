@@ -53,8 +53,8 @@ function getNodeColor(node: GraphNode): string {
   return NODE_COLORS[node.category ?? "insight"] ?? NODE_COLORS.insight;
 }
 
-const NODE_WIDTH: number = 160;
-const NODE_HEIGHT: number = 48;
+const NODE_WIDTH: number = 200;
+const NODE_HEIGHT: number = 52;
 const NODE_RADIUS: number = 12;
 
 // ---------------------------------------------------------------------------
@@ -174,9 +174,7 @@ export function KnowledgeGraph({
       .data(simNodes)
       .enter()
       .append("g")
-      .attr("class", (d: SimNode) =>
-        `kg-node ${styles.node}${d.id === selectedNodeId ? ` ${styles.selected}` : ""}`
-      )
+      .attr("class", `kg-node ${styles.node}`)
       .style("cursor", "pointer")
       .on("click", (_event: MouseEvent, d: SimNode) => {
         onClickRef.current(d.id);
@@ -211,7 +209,7 @@ export function KnowledgeGraph({
       .attr("y", NODE_HEIGHT / 2 - 4)
       .attr("text-anchor", "middle")
       .attr("dominant-baseline", "central")
-      .text((d: SimNode) => d.label.length > 20 ? d.label.substring(0, 18) + "..." : d.label);
+      .text((d: SimNode) => d.label.length > 26 ? d.label.substring(0, 24) + "..." : d.label);
 
     // Category badge
     nodeEls.append("text")
@@ -259,7 +257,45 @@ export function KnowledgeGraph({
       clearTimeout(fitTimer);
       sim.stop();
     };
-  }, [graphData, dimensions, selectedNodeId]);
+  }, [graphData, dimensions]);
+
+  // Update selection styling without rebuilding simulation
+  useEffect(() => {
+    if (!gRef.current || !nodeElsRef.current || !linkElsRef.current) {
+      return;
+    }
+
+    if (!selectedNodeId) {
+      // No selection — full opacity on everything
+      nodeElsRef.current.classed(styles.dimmed, false).classed(styles.selected, false);
+      linkElsRef.current.classed(styles.dimmedLink, false);
+      return;
+    }
+
+    // Build set of connected node IDs
+    const connectedIds: Set<string> = new Set([selectedNodeId]);
+    linkElsRef.current.each((d: SimLink) => {
+      const srcId: string = (d.source as SimNode).id;
+      const tgtId: string = (d.target as SimNode).id;
+      if (srcId === selectedNodeId || tgtId === selectedNodeId) {
+        connectedIds.add(srcId);
+        connectedIds.add(tgtId);
+      }
+    });
+
+    // Update node classes
+    nodeElsRef.current
+      .classed(styles.selected, (d: SimNode) => d.id === selectedNodeId)
+      .classed(styles.dimmed, (d: SimNode) => !connectedIds.has(d.id));
+
+    // Dim unconnected links
+    linkElsRef.current
+      .classed(styles.dimmedLink, (d: SimLink) => {
+        const srcId: string = (d.source as SimNode).id;
+        const tgtId: string = (d.target as SimNode).id;
+        return !connectedIds.has(srcId) || !connectedIds.has(tgtId);
+      });
+  }, [selectedNodeId]);
 
   // Center on selected node
   const handleCenterOnNode = useCallback(() => {
