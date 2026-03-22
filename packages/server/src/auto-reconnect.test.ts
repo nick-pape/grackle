@@ -255,4 +255,33 @@ describe("auto-reconnect", () => {
 
     expect(tokenBroker.pushToEnv).toHaveBeenCalledWith("local-env", { excludeFileTokens: true });
   });
+
+  it("concurrent lock prevents overlapping reconnect attempts", async () => {
+    insertEnv("env1");
+    // Make connect slow so we can test overlap
+    const adapter = makeAdapter();
+    let connectCount = 0;
+    (adapter.connect as ReturnType<typeof vi.fn>).mockImplementation(() => {
+      connectCount++;
+      return new Promise((resolve) => setTimeout(() => resolve({
+        client: {} as PowerLineConnection["client"],
+        environmentId: "env1",
+        port: 7433,
+      }), 100));
+    });
+    adapterManager.registerAdapter(adapter);
+
+    // Initialize state
+    await attemptReconnects();
+    vi.spyOn(Date, "now").mockReturnValue(Date.now() + 15_000);
+
+    // Fire two reconnect attempts concurrently
+    const p1 = attemptReconnects();
+    const p2 = attemptReconnects();
+    await Promise.all([p1, p2]);
+    await new Promise((r) => setTimeout(r, 150));
+
+    // Only one connect should have been made
+    expect(connectCount).toBe(1);
+  });
 });

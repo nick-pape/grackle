@@ -174,6 +174,9 @@ async function tryReconnect(environmentId: string): Promise<void> {
     reconnectStates.delete(environmentId);
 
   } catch (err) {
+    // Clean up any partially-established connection to avoid leaking state
+    adapterManager.removeConnection(environmentId);
+
     const state = reconnectStates.get(environmentId) ?? { attempts: 0, nextRetryAt: 0 };
     state.attempts++;
 
@@ -193,7 +196,7 @@ async function tryReconnect(environmentId: string): Promise<void> {
       reconnectStates.set(environmentId, state);
 
       logger.info(
-        { environmentId, attempts: state.attempts, nextRetryInMs: delay, err: String(err) },
+        { environmentId, attempts: state.attempts, nextRetryInMs: delay, err },
         "Auto-reconnect failed — will retry",
       );
       envRegistry.updateEnvironmentStatus(environmentId, "disconnected");
