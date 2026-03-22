@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sun, 22 Mar 2026 03:15:17 GMT and should not be manually modified.
+This log was last generated on Sun, 22 Mar 2026 03:31:33 GMT and should not be manually modified.
+
+## 0.64.2
+Sun, 22 Mar 2026 03:31:33 GMT
+
+### Patches
+
+- feat(powerline): session parking on disconnect — kill agent, buffer events, drain on reconnect
 
 ## 0.64.1
 Sun, 22 Mar 2026 03:15:17 GMT

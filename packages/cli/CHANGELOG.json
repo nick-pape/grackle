@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.64.2",
+      "tag": "@grackle-ai/cli_v0.64.2",
+      "date": "Sun, 22 Mar 2026 03:31:33 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "feat(powerline): session parking on disconnect — kill agent, buffer events, drain on reconnect"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.64.1",
       "tag": "@grackle-ai/cli_v0.64.1",
       "date": "Sun, 22 Mar 2026 03:15:17 GMT",
