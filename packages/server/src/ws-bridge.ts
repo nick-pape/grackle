@@ -47,6 +47,17 @@ import { recoverSuspendedSessions } from "./session-recovery.js";
 import { clearReconnectState } from "./auto-reconnect.js";
 import { buildMcpServersJson, toDialableHost } from "./grpc-service.js";
 import { createScopedToken } from "@grackle-ai/mcp";
+import { getKnowledgeEmbedder, isKnowledgeEnabled } from "./knowledge-init.js";
+import {
+  knowledgeSearch,
+  getNode as getKnowledgeNodeById,
+  expandNode,
+  listRecentNodes,
+  type KnowledgeNode,
+  type KnowledgeEdge,
+  type SearchResult,
+  type EdgeType,
+} from "@grackle-ai/knowledge";
 import { cleanupLifecycleStream } from "./lifecycle.js";
 import * as streamRegistry from "./stream-registry.js";
 import { loadOrCreateApiKey } from "./api-key.js";
@@ -2070,7 +2081,147 @@ async function handleMessage(
       emit("credential.providers_changed", credentialProviders.getCredentialProviders() as unknown as Record<string, unknown>);
       break;
     }
+
+    // ── Knowledge Graph ─────────────────────────────────────────
+
+    case "knowledge.search": {
+      const embedder = getKnowledgeEmbedder();
+      if (!embedder) {
+        sendWs(ws, { type: "knowledge.search.result", payload: { error: "Knowledge graph not available", results: [] } });
+        return;
+      }
+      try {
+        const query: string = (msg.payload?.query as string) || "";
+        const rawLimit: number = Number(msg.payload?.limit) || 10;
+        const limit: number = Math.max(1, Math.min(50, Math.floor(rawLimit)));
+        const workspaceId: string | undefined = msg.payload?.workspaceId !== undefined ? (msg.payload.workspaceId as string) : undefined;
+        const results: SearchResult[] = await knowledgeSearch(query, embedder, { limit, workspaceId });
+        sendWs(ws, {
+          type: "knowledge.search.result",
+          payload: {
+            results: results.map((r: SearchResult) => ({
+              score: r.score,
+              node: formatKnowledgeNode(r.node),
+              edges: r.edges.map(formatKnowledgeEdge),
+            })),
+          },
+        });
+      } catch (err) {
+        logger.error({ err }, "Knowledge search failed");
+        sendWs(ws, { type: "knowledge.search.result", payload: { error: "Search failed", results: [] } });
+      }
+      break;
+    }
+
+    case "knowledge.getNode": {
+      if (!isKnowledgeEnabled()) {
+        sendWs(ws, { type: "knowledge.getNode.result", payload: { error: "Knowledge graph not available" } });
+        return;
+      }
+      try {
+        const id: string = (msg.payload?.id as string) || "";
+        const result = await getKnowledgeNodeById(id);
+        if (!result) {
+          sendWs(ws, { type: "knowledge.getNode.result", payload: { error: `Node not found: ${id}` } });
+          return;
+        }
+        sendWs(ws, {
+          type: "knowledge.getNode.result",
+          payload: {
+            node: formatKnowledgeNode(result.node),
+            edges: result.edges.map(formatKnowledgeEdge),
+          },
+        });
+      } catch (err) {
+        logger.error({ err }, "Knowledge getNode failed");
+        sendWs(ws, { type: "knowledge.getNode.result", payload: { error: "Failed to get node" } });
+      }
+      break;
+    }
+
+    case "knowledge.expand": {
+      if (!isKnowledgeEnabled()) {
+        sendWs(ws, { type: "knowledge.expand.result", payload: { error: "Knowledge graph not available", nodes: [], edges: [] } });
+        return;
+      }
+      try {
+        const id: string = (msg.payload?.id as string) || "";
+        const rawDepth: number = Number(msg.payload?.depth) || 1;
+        const depth: number = Math.max(1, Math.min(5, Math.floor(rawDepth)));
+        const rawEdgeTypes = msg.payload?.edgeTypes as EdgeType[] | undefined;
+        const edgeTypes: EdgeType[] | undefined = rawEdgeTypes?.length ? rawEdgeTypes : undefined;
+        const result = await expandNode(id, { depth, edgeTypes });
+        sendWs(ws, {
+          type: "knowledge.expand.result",
+          payload: {
+            nodes: result.nodes.map(formatKnowledgeNode),
+            edges: result.edges.map(formatKnowledgeEdge),
+          },
+        });
+      } catch (err) {
+        logger.error({ err }, "Knowledge expand failed");
+        sendWs(ws, { type: "knowledge.expand.result", payload: { error: "Expand failed", nodes: [], edges: [] } });
+      }
+      break;
+    }
+
+    case "knowledge.listRecent": {
+      if (!isKnowledgeEnabled()) {
+        sendWs(ws, { type: "knowledge.listRecent.result", payload: { error: "Knowledge graph not available", nodes: [], edges: [] } });
+        return;
+      }
+      try {
+        const rawLimit: number = Number(msg.payload?.limit) || 20;
+        const limit: number = Math.max(1, Math.min(100, Math.floor(rawLimit)));
+        const workspaceId: string | undefined = msg.payload?.workspaceId !== undefined ? (msg.payload.workspaceId as string) : undefined;
+        const result = await listRecentNodes(limit, workspaceId);
+        sendWs(ws, {
+          type: "knowledge.listRecent.result",
+          payload: {
+            nodes: result.nodes.map(formatKnowledgeNode),
+            edges: result.edges.map(formatKnowledgeEdge),
+          },
+        });
+      } catch (err) {
+        logger.error({ err }, "Knowledge listRecent failed");
+        sendWs(ws, { type: "knowledge.listRecent.result", payload: { error: "Failed to list recent", nodes: [], edges: [] } });
+      }
+      break;
+    }
   }
+}
+
+/** Format a KnowledgeNode for WS transport (omit embedding). */
+function formatKnowledgeNode(node: KnowledgeNode): Record<string, unknown> {
+  const base: Record<string, unknown> = {
+    id: node.id,
+    kind: node.kind,
+    workspaceId: node.workspaceId,
+    createdAt: node.createdAt,
+    updatedAt: node.updatedAt,
+  };
+  if (node.kind === "reference") {
+    base.sourceType = node.sourceType;
+    base.sourceId = node.sourceId;
+    base.label = node.label;
+  } else {
+    base.category = node.category;
+    base.title = node.title;
+    base.content = node.content;
+    base.tags = node.tags;
+  }
+  return base;
+}
+
+/** Format a KnowledgeEdge for WS transport. */
+function formatKnowledgeEdge(edge: KnowledgeEdge): Record<string, unknown> {
+  return {
+    fromId: edge.fromId,
+    toId: edge.toId,
+    type: edge.type,
+    ...(edge.metadata ? { metadata: edge.metadata } : {}),
+    createdAt: edge.createdAt,
+  };
 }
 
 function sendWs(

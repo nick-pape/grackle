@@ -351,6 +351,18 @@ importers:
       '@xyflow/react':
         specifier: ^12.10.0
         version: 12.10.1(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      d3-force:
+        specifier: ^3.0.0
+        version: 3.0.0
+      d3-selection:
+        specifier: ^3.0.0
+        version: 3.0.0
+      d3-transition:
+        specifier: ^3.0.0
+        version: 3.0.1(d3-selection@3.0.0)
+      d3-zoom:
+        specifier: ^3.0.0
+        version: 3.0.0
       motion:
         specifier: ^11.18.0
         version: 11.18.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -385,6 +397,18 @@ importers:
       '@testing-library/react':
         specifier: ^16.3.2
         version: 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@types/d3-force':
+        specifier: ^3.0.0
+        version: 3.0.10
+      '@types/d3-selection':
+        specifier: ^3.0.0
+        version: 3.0.11
+      '@types/d3-transition':
+        specifier: ^3.0.0
+        version: 3.0.9
+      '@types/d3-zoom':
+        specifier: ^3.0.0
+        version: 3.0.8
       '@types/react':
         specifier: ^19.0.0
         version: 19.2.14

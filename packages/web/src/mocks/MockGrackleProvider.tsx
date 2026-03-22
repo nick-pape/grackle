@@ -809,6 +809,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
     () => ({
       // State
       connected: true,
+      send: () => {},
       environments,
       sessions,
       events,
@@ -953,6 +954,20 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       },
       loadUsage: (scope: string, id: string) => {
         console.log(`[MockGrackle] loadUsage(${scope}, ${id})`);
+      },
+      knowledge: {
+        graphData: { nodes: [], links: [] },
+        selectedNode: undefined,
+        loading: false,
+        selectedId: undefined,
+        searchQuery: "",
+        search: () => {},
+        clearSearch: () => {},
+        selectNode: () => {},
+        clearSelection: () => {},
+        expandNode: () => {},
+        loadRecent: () => {},
+        handleMessage: () => false,
       },
     }),
     [

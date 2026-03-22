@@ -143,6 +143,9 @@ export const HOME_URL: string = "/";
 /** URL for the tasks landing page. */
 export const TASKS_URL: string = "/tasks";
 
+/** URL for the knowledge graph explorer page. */
+export const KNOWLEDGE_URL: string = "/knowledge";
+
 /** Build URL for the root-task chat page. */
 export function chatUrl(): string {
   return CHAT_URL;
