@@ -1,8 +1,8 @@
 {
   "changes": [
     {
-      "comment": "Auto-restart local PowerLine on unexpected exit with circuit-breaker protection",
-      "type": "minor",
+      "comment": "Nest workspace URLs under /environments and fix breadcrumbs",
+      "type": "patch",
       "packageName": "@grackle-ai/cli"
     }
   ],

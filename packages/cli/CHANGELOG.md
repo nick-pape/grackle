@@ -1,6 +1,17 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sun, 22 Mar 2026 06:07:06 GMT and should not be manually modified.
+This log was last generated on Sun, 22 Mar 2026 13:29:43 GMT and should not be manually modified.
+
+## 0.69.0
+Sun, 22 Mar 2026 13:29:43 GMT
+
+### Minor changes
+
+- Auto-restart local PowerLine on unexpected exit with circuit-breaker protection
+
+### Patches
+
+- Bump ESLint, Rush/Heft toolchain, and Docusaurus dependencies to reduce audit vulnerabilities
 
 ## 0.68.3
 Sun, 22 Mar 2026 06:07:06 GMT
