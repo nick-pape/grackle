@@ -151,8 +151,10 @@ function cleanupSessionIfEmpty(sessionId: string): void {
     fdCounters.delete(sessionId);
     try {
       orphanCallback?.(sessionId);
-    } catch {
-      // Best-effort — orphan callback errors must not break stream-registry cleanup
+    } catch (err) {
+      // Best-effort — orphan callback errors must not break stream-registry cleanup.
+      // Log at debug level for diagnosability.
+      try { console.debug("stream-registry: orphan callback error for", sessionId, err); } catch { /* ignore */ }
     }
   }
 }

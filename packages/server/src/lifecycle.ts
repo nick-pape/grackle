@@ -87,9 +87,13 @@ export function initLifecycleManager(): void {
 }
 
 /**
- * Clean up lifecycle stream subscriptions for a session that has reached terminal status.
- * Called from the event processor when a session completes, fails, or is interrupted.
- * This ensures lifecycle streams don't grow unbounded for server-spawned sessions.
+ * Clean up lifecycle stream for a session. Deletes the stream and all its
+ * subscriptions, which triggers the orphan callback (auto-hibernate).
+ *
+ * Called from killAgent when explicitly terminating a session. For sessions
+ * that complete normally, lifecycle streams persist until the UI or
+ * reconciliation loop closes them — this is intentional (the session stays
+ * "alive" and reanimate-safe until someone decides to close the fd).
  */
 export function cleanupLifecycleStream(sessionId: string): void {
   const lifecycleStream = streamRegistry.getStreamByName(`lifecycle:${sessionId}`);

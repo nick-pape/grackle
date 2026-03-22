@@ -849,9 +849,11 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       }
 
       // Fallback for legacy sessions without lifecycle streams.
-      // Check current status — orphan callback may have already set HIBERNATING.
+      // Check current status — orphan callback may have already set HIBERNATING
+      // via lifecycle stream deletion or pipe subscription removal.
       const currentSession = sessionStore.getSession(req.id);
-      if (subs.length === 0 && currentSession && currentSession.status !== SESSION_STATUS.HIBERNATING) {
+      const alreadyTerminal = currentSession && TERMINAL_SESSION_STATUSES.has(currentSession.status as SessionStatus);
+      if (!alreadyTerminal && currentSession) {
         sessionStore.updateSession(req.id, SESSION_STATUS.INTERRUPTED);
         streamHub.publish(
           create(grackle.SessionEventSchema, {
