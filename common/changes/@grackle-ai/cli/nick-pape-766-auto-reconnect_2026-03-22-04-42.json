@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "feat(server): auto-reconnect disconnected environments with exponential backoff on heartbeat",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}

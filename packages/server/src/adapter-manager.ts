@@ -38,8 +38,15 @@ export function listConnections(): Map<string, PowerLineConnection> {
   return connections;
 }
 
-/** Start a periodic health-check loop that calls `onDisconnect` when a PowerLine becomes unreachable. */
-export function startHeartbeat(onDisconnect: (environmentId: string) => void): void {
+/**
+ * Start a periodic health-check loop that calls `onDisconnect` when a
+ * PowerLine becomes unreachable. Optionally calls `onHeartbeatComplete`
+ * after each tick (used for auto-reconnect of disconnected environments).
+ */
+export function startHeartbeat(
+  onDisconnect: (environmentId: string) => void,
+  onHeartbeatComplete?: () => Promise<void>,
+): void {
   if (heartbeatInterval !== undefined) {
     return;
   }
@@ -65,6 +72,15 @@ export function startHeartbeat(onDisconnect: (environmentId: string) => void): v
       } catch {
         logger.warn({ environmentId }, "Connection lost");
         onDisconnect(environmentId);
+      }
+    }
+
+    // After health checks, attempt reconnection of disconnected environments
+    if (onHeartbeatComplete) {
+      try {
+        await onHeartbeatComplete();
+      } catch (err) {
+        logger.error({ err }, "onHeartbeatComplete callback failed");
       }
     }
   }, HEARTBEAT_INTERVAL_MS);

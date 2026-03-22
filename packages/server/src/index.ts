@@ -21,6 +21,7 @@ import * as adapterManager from "./adapter-manager.js";
 import * as envRegistry from "./env-registry.js";
 import * as sessionStore from "./session-store.js";
 import * as tokenBroker from "./token-broker.js";
+import { attemptReconnects } from "./auto-reconnect.js";
 import { createMcpServer } from "@grackle-ai/mcp";
 import { isKnowledgeEnabled, initKnowledge } from "./knowledge-init.js";
 import { readFileSync, existsSync } from "node:fs";
@@ -762,21 +763,26 @@ async function main(): Promise<void> {
       }
     });
 
-  // Start heartbeat
-  startHeartbeat((environmentId) => {
-    updateEnvironmentStatus(environmentId, "disconnected");
-    // Suspend any active sessions on this environment. The event-processor
-    // catch block handles stream-level suspension for sessions with active
-    // streams; this sweep catches edge cases (e.g., PENDING sessions).
-    const activeSession = sessionStore.getActiveForEnv(environmentId);
-    if (activeSession) {
-      sessionStore.suspendSession(activeSession.id);
-      if (activeSession.taskId) {
-        emit("task.updated", { taskId: activeSession.taskId, workspaceId: "" });
+  // Start heartbeat with auto-reconnect
+  startHeartbeat(
+    (environmentId) => {
+      // Clean up the stale connection so the heartbeat doesn't keep probing it
+      adapterManager.removeConnection(environmentId);
+      updateEnvironmentStatus(environmentId, "disconnected");
+      // Suspend any active sessions on this environment. The event-processor
+      // catch block handles stream-level suspension for sessions with active
+      // streams; this sweep catches edge cases (e.g., PENDING sessions).
+      const activeSession = sessionStore.getActiveForEnv(environmentId);
+      if (activeSession) {
+        sessionStore.suspendSession(activeSession.id);
+        if (activeSession.taskId) {
+          emit("task.updated", { taskId: activeSession.taskId, workspaceId: "" });
+        }
       }
-    }
-    emit("environment.changed", {});
-  });
+      emit("environment.changed", {});
+    },
+    () => attemptReconnects(),
+  );
 
   // Start periodic cleanup timers
   startPairingCleanup();
