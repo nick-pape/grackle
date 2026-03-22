@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sun, 22 Mar 2026 21:01:41 GMT and should not be manually modified.
+This log was last generated on Sun, 22 Mar 2026 21:10:14 GMT and should not be manually modified.
+
+## 0.70.5
+Sun, 22 Mar 2026 21:10:14 GMT
+
+### Patches
+
+- Add Secure flag to session cookie when --allow-network is enabled
 
 ## 0.70.4
 Sun, 22 Mar 2026 21:01:41 GMT
