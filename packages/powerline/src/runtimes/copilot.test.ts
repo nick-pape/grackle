@@ -315,3 +315,71 @@ describe("CopilotRuntime — runtime_session_id emission", () => {
     expect(rtIdEvent!.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
   });
 });
+
+describe("CopilotRuntime — usage event emission", () => {
+  beforeEach(() => {
+    vi.stubEnv("GRACKLE_MCP_CONFIG", "");
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const handlers: Record<string, (...args: any[]) => void> = {};
+    const mockCopilotSession = {
+      sessionId: "copilot-usage-session",
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      on: vi.fn((event: string, fn: (...args: any[]) => void) => { handlers[event] = fn; }),
+      send: vi.fn(async () => {
+        // Simulate: usage event fires before idle
+        setTimeout(() => {
+          handlers["assistant.usage"]?.({
+            data: { inputTokens: 100, outputTokens: 20, cacheReadTokens: 500, cacheWriteTokens: 0, cost: 0.003, model: "gpt-4o" },
+          });
+          handlers["session.idle"]?.();
+        }, 0);
+      }),
+      destroy: vi.fn(async () => {}),
+      abort: vi.fn(),
+    };
+    const mockCopilotClient = {
+      start: vi.fn(async () => {}),
+      stop: vi.fn(async () => []),
+      createSession: vi.fn(async () => mockCopilotSession),
+      resumeSession: vi.fn(async () => mockCopilotSession),
+    };
+
+    _setCopilotSdkForTesting({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      CopilotClient: vi.fn(() => mockCopilotClient) as any,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      defineTool: vi.fn() as any,
+      approveAll: vi.fn(),
+    });
+  });
+
+  afterEach(() => {
+    _setCopilotSdkForTesting(undefined);
+    vi.unstubAllEnvs();
+  });
+
+  it("emits usage event from assistant.usage with cache tokens included", async () => {
+    const runtime = new CopilotRuntime();
+    const session = runtime.spawn({ sessionId: "cop-usage-test", prompt: "hi", model: "gpt-4o", maxTurns: 1 });
+
+    const events: AgentEvent[] = [];
+    for await (const event of session.stream()) {
+      events.push(event);
+      if (event.type === "status" && event.content === "waiting_input") {
+        session.kill();
+        break;
+      }
+      if (event.type === "status" && event.content === "failed") break;
+    }
+
+    const usageEvents = events.filter((e) => e.type === "usage");
+    expect(usageEvents).toHaveLength(1);
+    const data = JSON.parse(usageEvents[0].content) as Record<string, number>;
+    // input = 100 (input) + 500 (cacheRead) + 0 (cacheWrite) = 600
+    expect(data.input_tokens).toBe(600);
+    expect(data.output_tokens).toBe(20);
+    // Copilot SDK cost is in nano-AIU, not USD — we emit 0 until conversion is available
+    expect(data.cost_usd).toBe(0);
+  });
+});

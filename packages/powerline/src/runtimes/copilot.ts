@@ -310,6 +310,25 @@ export class CopilotSession extends BaseAgentSession {
       this.idleResolve?.();
     });
 
+    // Usage data — fires after each LLM API call with per-request token counts
+    // Note: Copilot SDK's `cost` field is in nano-AIU (GitHub billing units), not USD.
+    // We emit tokens only; cost_usd is 0 until a conversion rate is available.
+    this.copilotSession.on("assistant.usage", (event: Record<string, unknown>) => {
+      if (this.killed) { return; }
+      const data = event.data as Record<string, unknown> | undefined;
+      const inputTokens = (Number(data?.inputTokens) || 0)
+        + (Number(data?.cacheReadTokens) || 0)
+        + (Number(data?.cacheWriteTokens) || 0);
+      const outputTokens = Number(data?.outputTokens) || 0;
+      if (inputTokens > 0 || outputTokens > 0) {
+        this.eventQueue.push({
+          type: "usage",
+          timestamp: ts(),
+          content: JSON.stringify({ input_tokens: inputTokens, output_tokens: outputTokens, cost_usd: 0 }),
+        });
+      }
+    });
+
     // Session error — data: { errorType, message, stack?, statusCode? }
     this.copilotSession.on("session.error", (event: Record<string, unknown>) => {
       const data = event.data as Record<string, unknown> | undefined;

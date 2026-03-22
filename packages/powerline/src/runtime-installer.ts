@@ -195,7 +195,28 @@ export async function importFromRuntime<T>(runtimeName: string, packageName: str
   const runtimeDir = join(RUNTIMES_BASE_DIR, runtimeName);
   try {
     const esmRequire = createRequire(join(runtimeDir, "package.json"));
-    const resolved = esmRequire.resolve(packageName);
+    let resolved: string;
+    try {
+      resolved = esmRequire.resolve(packageName);
+    } catch {
+      // CJS resolve fails for ESM-only packages (exports map without "require" condition).
+      // Fall back to reading the package's main/exports field directly.
+      const pkgJsonPath = join(runtimeDir, "node_modules", ...packageName.split("/"), "package.json");
+      const pkg = JSON.parse(readFileSync(pkgJsonPath, "utf8")) as {
+        main?: string;
+        exports?: Record<string, unknown>;
+      };
+      const exportsRoot = pkg.exports?.["."] as Record<string, string> | string | undefined;
+      let entryPoint: string;
+      if (typeof exportsRoot === "string") {
+        entryPoint = exportsRoot;
+      } else if (typeof exportsRoot === "object") {
+        entryPoint = exportsRoot.import || exportsRoot.default || pkg.main || "index.js";
+      } else {
+        entryPoint = pkg.main || "index.js";
+      }
+      resolved = join(runtimeDir, "node_modules", ...packageName.split("/"), entryPoint as string);
+    }
     return import(pathToFileURL(resolved).href) as Promise<T>;
   } catch (resolveErr: unknown) {
     throw new Error(
