@@ -164,12 +164,20 @@ export function useSessions(send: SendFunction): UseSessionsResult {
         }
         if (event.eventType === "status") {
           const mappedStatus = mapSessionStatus(event.content);
+          // Derive endReason from raw event content for terminal events.
+          // "completed" → endReason="completed", "failed" → "failed", "killed" → "interrupted"
+          const endReasonMap: Record<string, string> = {
+            completed: "completed",
+            failed: "failed",
+            killed: "interrupted",
+          };
+          const endReason = endReasonMap[event.content];
           setSessions((prev) => {
             const exists = prev.some((s) => s.id === event.sessionId);
             if (exists) {
               return prev.map((s) =>
                 s.id === event.sessionId
-                  ? { ...s, status: mappedStatus }
+                  ? { ...s, status: mappedStatus, ...(endReason ? { endReason } : {}) }
                   : s,
               );
             }
@@ -185,6 +193,7 @@ export function useSessions(send: SendFunction): UseSessionsResult {
                 status: mappedStatus,
                 prompt: "",
                 startedAt: event.timestamp,
+                ...(endReason ? { endReason } : {}),
               },
             ];
           });

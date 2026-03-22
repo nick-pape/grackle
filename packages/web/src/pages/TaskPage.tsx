@@ -585,7 +585,8 @@ export function TaskPage(): JSX.Element {
         const taskSessionForChat = sessionId
           ? sessions.find((s) => s.id === sessionId)
           : undefined;
-        if (!taskSessionForChat || ["hibernating", "suspended"].includes(taskSessionForChat.status)) {
+        if (!taskSessionForChat || ["hibernating", "suspended"].includes(taskSessionForChat.status)
+          || (taskSessionForChat.status === "idle" && !!taskSessionForChat.endReason)) {
           return undefined;
         }
         return (

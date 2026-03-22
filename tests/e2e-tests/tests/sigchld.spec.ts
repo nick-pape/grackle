@@ -201,6 +201,6 @@ test.describe("SIGCHLD — child completion notification", { tag: ["@error"] }, 
       30_000,
     );
     expect(sigchldContent).toContain("Child For Reanimate");
-    expect(sigchldContent).toContain("completed");
+    expect(sigchldContent).toContain("finished working");
   });
 });

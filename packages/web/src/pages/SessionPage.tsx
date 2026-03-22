@@ -49,7 +49,10 @@ function SessionHeader({ sessionId, session, isActive, onKill }: SessionHeaderPr
 
 /** Empty-state message for session streams. */
 function SessionEmptyState({ session }: { session: Session | undefined }): JSX.Element {
-  const isTerminal = session && ["hibernating", "suspended"].includes(session.status);
+  const isTerminal = session && (
+    ["hibernating", "suspended"].includes(session.status)
+    || (session.status === "idle" && !!session.endReason)
+  );
   const emptyMessage = isTerminal
     ? `Session ${session.status} with no events recorded.`
     : "Waiting for events...";

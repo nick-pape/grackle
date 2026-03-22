@@ -229,8 +229,8 @@ describe("gRPC resumeAgent", () => {
     expect(err.message).toContain("no-such");
   });
 
-  it("throws FailedPrecondition when status is IDLE", async () => {
-    vi.mocked(sessionStore.getSession).mockReturnValue(makeSession({ status: "idle" }));
+  it("throws FailedPrecondition when status is IDLE (no endReason — truly active)", async () => {
+    vi.mocked(sessionStore.getSession).mockReturnValue(makeSession({ status: "idle", endReason: null }));
 
     const err = await handlers.resumeAgent({ sessionId: "sess-1" }).catch((e: unknown) => e) as ConnectError;
     expect(err).toBeInstanceOf(ConnectError);

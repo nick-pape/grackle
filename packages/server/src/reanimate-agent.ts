@@ -24,8 +24,11 @@ export function reanimateAgent(sessionId: string): SessionRow {
     throw new ConnectError(`Session not found: ${sessionId}`, Code.NotFound);
   }
 
+  // IDLE without endReason means truly active (waiting for input) — reject reanimate.
+  // IDLE with endReason="completed" means the agent is done — allow reanimate.
+  const isActiveIdle = session.status === SESSION_STATUS.IDLE && !session.endReason;
   if (
-    session.status === SESSION_STATUS.IDLE ||
+    isActiveIdle ||
     session.status === SESSION_STATUS.RUNNING ||
     session.status === SESSION_STATUS.PENDING
   ) {

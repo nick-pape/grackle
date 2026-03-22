@@ -38,7 +38,7 @@ const END_REASON_LABELS: Record<string, string> = {
 
 /** Fallback labels when no endReason is set, keyed by lifecycle status. */
 const STATUS_LABELS: Record<string, string> = {
-  [SESSION_STATUS.IDLE]: "waiting for input",
+  [SESSION_STATUS.IDLE]: "finished working (awaiting review)",
   [SESSION_STATUS.HIBERNATING]: "hibernated",
 };
 
@@ -135,7 +135,7 @@ async function handleTaskUpdated(childTaskId: string): Promise<void> {
     message += `\n\nLast message from child:\n> ${truncated}`;
   }
 
-  if (endReason === END_REASON.COMPLETED || (latestSession.status === SESSION_STATUS.IDLE && !endReason)) {
+  if (endReason === END_REASON.COMPLETED || latestSession.status === SESSION_STATUS.IDLE) {
     message += "\n\nReview the child's work. If satisfactory, mark it complete with "
       + `task_complete({ taskId: "${childTaskId}" }). `
       + "If more work is needed, send additional input to the child's session.";

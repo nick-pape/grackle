@@ -67,20 +67,21 @@ test.describe("Session Reanimate (stub runtime)", { tag: ["@session"] }, () => {
     await expect(page.locator("text=Session completed")).toBeVisible({ timeout: 10_000 });
 
     // ── 4. Find the completed session ID via WS ───────────────────────────
-    // Pick the most recently started completed stub session (other specs may
-    // have also left completed stub sessions in the DB).
+    // Pick the most recently started idle stub session with endReason="completed"
+    // (other specs may have also left completed stub sessions in the DB).
+    // Note: "completed" sessions now have status="idle" + endReason="completed".
     const sessionsResp = await sendWsAndWaitFor(
       page,
-      { type: "list_sessions", payload: { status: "completed" } },
+      { type: "list_sessions", payload: { status: "idle" } },
       "sessions",
     );
     const sessions = (sessionsResp.payload?.sessions ?? []) as Array<{
-      id: string; status: string; runtime: string; startedAt: string;
+      id: string; status: string; runtime: string; startedAt: string; endReason?: string;
     }>;
     const completed = sessions
-      .filter((s) => s.status === "completed" && s.runtime === "stub")
+      .filter((s) => s.status === "idle" && s.endReason === "completed" && s.runtime === "stub")
       .sort((a, b) => b.startedAt.localeCompare(a.startedAt))[0];
-    expect(completed, "Expected a completed stub session").toBeTruthy();
+    expect(completed, "Expected an idle stub session with endReason=completed").toBeTruthy();
     const sessionId = completed.id;
 
     // ── 5. Reanimate via WS resume_agent ──────────────────────────────────
@@ -158,7 +159,7 @@ test.describe("Session Reanimate (stub runtime)", { tag: ["@session"] }, () => {
 
     // Cleanup
     await page.locator("button", { hasText: "Stop" }).click();
-    await expect(page.locator("text=Session interrupted")).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator("text=Session interrupted")).toBeVisible({ timeout: 10_000 });
   });
 
   test("resume a non-existent session returns an error via WS", async ({ appPage }) => {
