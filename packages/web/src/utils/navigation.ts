@@ -128,6 +128,9 @@ export const TASKS_URL: string = "/tasks";
 /** URL for the workspaces landing page. */
 export const WORKSPACES_URL: string = "/workspaces";
 
+/** URL for the knowledge graph explorer page. */
+export const KNOWLEDGE_URL: string = "/knowledge";
+
 /** Build URL for the root-task chat page. */
 export function chatUrl(): string {
   return CHAT_URL;

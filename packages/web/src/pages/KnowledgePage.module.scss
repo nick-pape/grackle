@@ -1,0 +1,84 @@
+@use '../styles/mixins' as *;
+
+.layout {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border-default);
+}
+
+.searchInput {
+  flex: 1;
+  max-width: 400px;
+  padding: 6px 12px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-inset);
+  color: var(--text-primary);
+  font-size: 14px;
+
+  &::placeholder {
+    color: var(--text-disabled);
+  }
+
+  &:focus {
+    outline: none;
+    border-color: var(--accent-blue);
+  }
+}
+
+.searchButton {
+  @include btn-primary;
+  padding: 6px 16px;
+  font-size: 13px;
+}
+
+.clearButton {
+  background: none;
+  border: 1px solid var(--border-default);
+  color: var(--text-secondary);
+  padding: 6px 12px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-size: 13px;
+
+  &:hover {
+    color: var(--text-primary);
+    border-color: var(--text-secondary);
+  }
+}
+
+.spinner {
+  font-size: 13px;
+  color: var(--text-disabled);
+}
+
+.graphArea {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-secondary);
+  text-align: center;
+  padding: 32px;
+
+  p {
+    margin: 4px 0;
+    font-size: 14px;
+  }
+}

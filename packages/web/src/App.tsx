@@ -30,6 +30,7 @@ import { SettingsPersonasTab } from "./pages/settings/SettingsPersonasTab.js";
 import { SettingsAppearanceTab } from "./pages/settings/SettingsAppearanceTab.js";
 import { SettingsAboutTab } from "./pages/settings/SettingsAboutTab.js";
 import { SetupWizard } from "./pages/SetupWizard.js";
+import { KnowledgePage } from "./pages/KnowledgePage.js";
 import styles from "./App.module.scss";
 
 /** Whether the app is running in mock mode (`?mock` query parameter). */
@@ -136,6 +137,7 @@ function AppRoutes(): JSX.Element {
         <Route path="workspaces/:workspaceId/tasks/:taskId/edit" element={<TaskEditPage />} />
         <Route path="sessions/new" element={<NewChatPage />} />
         <Route path="sessions/:sessionId" element={<SessionPage />} />
+        <Route path="knowledge" element={<KnowledgePage />} />
         <Route path="environments" element={<EnvironmentsPage />}>
           <Route index element={<EnvironmentsEmptyPage />} />
           <Route path="new" element={<NewEnvironmentPage />} />

@@ -1,0 +1,162 @@
+.panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 350px;
+  height: 100%;
+  background: var(--bg-surface, #1a1a2e);
+  border-left: 1px solid var(--border-default, #333);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  z-index: 10;
+  animation: slideIn 0.2s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  border-bottom: 1px solid var(--border-default, #333);
+}
+
+.title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.closeButton {
+  background: none;
+  border: none;
+  color: var(--text-secondary, #999);
+  font-size: 24px;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+
+  &:hover {
+    color: var(--text-primary, #fff);
+  }
+}
+
+.body {
+  padding: 16px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  background: var(--bg-inset, #222);
+  color: var(--text-secondary, #999);
+  margin-bottom: 12px;
+}
+
+.section {
+  margin-bottom: 16px;
+}
+
+.sectionLabel {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--text-disabled, #666);
+  margin-bottom: 6px;
+}
+
+.content {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-primary, #eee);
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  background: var(--bg-inset, #222);
+  color: var(--text-secondary, #aaa);
+}
+
+.viewLink {
+  background: none;
+  border: 1px solid var(--accent-blue, #4A9EFF);
+  color: var(--accent-blue, #4A9EFF);
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+
+  &:hover {
+    background: var(--accent-blue, #4A9EFF);
+    color: #fff;
+  }
+}
+
+.edgeList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.edgeItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--border-default, #2a2a2a);
+  font-size: 13px;
+}
+
+.edgeType {
+  font-family: monospace;
+  font-size: 11px;
+  color: var(--text-disabled, #666);
+}
+
+.edgeNodeLink {
+  background: none;
+  border: none;
+  color: var(--accent-blue, #4A9EFF);
+  cursor: pointer;
+  font-size: 12px;
+  font-family: monospace;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.timestamps {
+  margin-top: 16px;
+  font-size: 12px;
+  color: var(--text-disabled, #666);
+}

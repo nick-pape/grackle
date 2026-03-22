@@ -808,6 +808,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
     () => ({
       // State
       connected: true,
+      send: () => {},
       environments,
       sessions,
       events,

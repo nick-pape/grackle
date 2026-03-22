@@ -47,6 +47,8 @@ export { isGrackleEvent } from "./types.js";
 /** Return type for the {@link useGrackleSocket} hook. */
 export interface UseGrackleSocketResult {
   connected: boolean;
+  /** Raw send function for WebSocket messages. */
+  send: import("./types.js").SendFunction;
   environments: import("./types.js").Environment[];
   sessions: import("./types.js").Session[];
   events: import("./types.js").SessionEvent[];
@@ -388,6 +390,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
 
   return {
     connected,
+    send,
     environments: environmentsHook.environments,
     sessions: sessionsHook.sessions,
     events: sessionsHook.events,
