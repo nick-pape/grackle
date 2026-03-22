@@ -265,7 +265,8 @@ function createWebHandler(
   bindHost: string,
 ): (req: http.IncomingMessage, res: http.ServerResponse) => void {
   /** Map wildcard bind hosts to a dialable host for OAuth URLs. */
-  const dialableHost = isWildcardAddress(bindHost) ? "127.0.0.1" : bindHost;
+  const allowNetwork = isWildcardAddress(bindHost);
+  const dialableHost = allowNetwork ? "127.0.0.1" : bindHost;
   const urlHost = dialableHost.includes(":") ? `[${dialableHost}]` : dialableHost;
   const webBaseUrl = `http://${urlHost}:${webPort}`;
 
@@ -479,7 +480,7 @@ function createWebHandler(
           }
 
           // Pairing succeeded — also create a browser session
-          const setCookie = createSession(apiKey);
+          const setCookie = createSession(apiKey, { secure: allowNetwork });
           responseHeaders["Set-Cookie"] = setCookie;
           hasPairedSession = true;
         }
@@ -574,7 +575,7 @@ function createWebHandler(
       if (code) {
         const remoteIp = getRemoteIp(req);
         if (redeemPairingCode(code, remoteIp)) {
-          const setCookie = createSession(apiKey);
+          const setCookie = createSession(apiKey, { secure: allowNetwork });
           res.writeHead(302, {
             Location: "/",
             "Set-Cookie": setCookie,
