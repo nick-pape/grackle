@@ -47,6 +47,21 @@ import { computeTaskStatus } from "./compute-task-status.js";
 import { loadOrCreateApiKey } from "./api-key.js";
 import { logger } from "./logger.js";
 import { reanimateAgent } from "./reanimate-agent.js";
+import { getKnowledgeEmbedder, isKnowledgeEnabled } from "./knowledge-init.js";
+import {
+  knowledgeSearch,
+  getNode as getKnowledgeNodeById,
+  expandNode,
+  createNativeNode,
+  ingest,
+  createPassThroughChunker,
+  listRecentNodes,
+  type KnowledgeNode,
+  type KnowledgeEdge,
+  type SearchResult,
+  type Embedder,
+  type EdgeType,
+} from "@grackle-ai/knowledge";
 import { slugify } from "./utils/slugify.js";
 import { SystemPromptBuilder, buildTaskPrompt } from "./system-prompt-builder.js";
 import { importGitHubIssues as executeGitHubImport } from "./github-import.js";
@@ -1767,5 +1782,134 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       return create(grackle.PairingCodeResponseSchema, { code, url });
     },
 
+    // ── Knowledge Graph ────────────────────────────────────────
+
+    async searchKnowledge(req: grackle.SearchKnowledgeRequest) {
+      const embedder: Embedder | undefined = getKnowledgeEmbedder();
+      if (!embedder) {
+        throw new ConnectError("Knowledge graph not available", Code.Unavailable);
+      }
+
+      const results = await knowledgeSearch(req.query, embedder, {
+        limit: req.limit || 10,
+        workspaceId: req.workspaceId || undefined,
+      });
+
+      return create(grackle.SearchKnowledgeResponseSchema, {
+        results: results.map((r: SearchResult) =>
+          create(grackle.SearchKnowledgeResultSchema, {
+            score: r.score,
+            node: knowledgeNodeToProto(r.node),
+            edges: r.edges.map(knowledgeEdgeToProto),
+          }),
+        ),
+      });
+    },
+
+    async getKnowledgeNode(req: grackle.GetKnowledgeNodeRequest) {
+      if (!isKnowledgeEnabled()) {
+        throw new ConnectError("Knowledge graph not available", Code.Unavailable);
+      }
+
+      const result = await getKnowledgeNodeById(req.id);
+      if (!result) {
+        throw new ConnectError(`Knowledge node not found: ${req.id}`, Code.NotFound);
+      }
+
+      return create(grackle.GetKnowledgeNodeResponseSchema, {
+        node: knowledgeNodeToProto(result.node),
+        edges: result.edges.map(knowledgeEdgeToProto),
+      });
+    },
+
+    async expandKnowledgeNode(req: grackle.ExpandKnowledgeNodeRequest) {
+      if (!isKnowledgeEnabled()) {
+        throw new ConnectError("Knowledge graph not available", Code.Unavailable);
+      }
+
+      const result = await expandNode(req.id, {
+        depth: req.depth || 1,
+        edgeTypes: req.edgeTypes.length > 0 ? (req.edgeTypes as EdgeType[]) : undefined,
+      });
+
+      return create(grackle.ExpandKnowledgeNodeResponseSchema, {
+        nodes: result.nodes.map(knowledgeNodeToProto),
+        edges: result.edges.map(knowledgeEdgeToProto),
+      });
+    },
+
+    async listRecentKnowledgeNodes(req: grackle.ListRecentKnowledgeNodesRequest) {
+      if (!isKnowledgeEnabled()) {
+        throw new ConnectError("Knowledge graph not available", Code.Unavailable);
+      }
+
+      const result = await listRecentNodes(
+        req.limit || 20,
+        req.workspaceId || undefined,
+      );
+
+      return create(grackle.ListRecentKnowledgeNodesResponseSchema, {
+        nodes: result.nodes.map(knowledgeNodeToProto),
+        edges: result.edges.map(knowledgeEdgeToProto),
+      });
+    },
+
+    async createKnowledgeNode(req: grackle.CreateKnowledgeNodeRequest) {
+      const embedder: Embedder | undefined = getKnowledgeEmbedder();
+      if (!embedder) {
+        throw new ConnectError("Knowledge graph not available", Code.Unavailable);
+      }
+
+      const chunker = createPassThroughChunker();
+      const embedded = await ingest(req.content, chunker, embedder);
+      if (embedded.length === 0) {
+        throw new ConnectError("Content produced no embeddings", Code.InvalidArgument);
+      }
+
+      const id: string = await createNativeNode({
+        category: (req.category || "insight") as "decision" | "insight" | "concept" | "snippet",
+        title: req.title,
+        content: req.content,
+        tags: [...req.tags],
+        embedding: embedded[0].vector,
+        workspaceId: req.workspaceId || "",
+      });
+
+      return create(grackle.CreateKnowledgeNodeResponseSchema, { id });
+    },
+
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Knowledge graph proto converters
+// ---------------------------------------------------------------------------
+
+/** Convert a KnowledgeNode to its proto representation. */
+function knowledgeNodeToProto(node: KnowledgeNode): grackle.KnowledgeNodeProto {
+  return create(grackle.KnowledgeNodeProtoSchema, {
+    id: node.id,
+    kind: node.kind,
+    workspaceId: node.workspaceId,
+    createdAt: node.createdAt,
+    updatedAt: node.updatedAt,
+    sourceType: node.kind === "reference" ? node.sourceType : "",
+    sourceId: node.kind === "reference" ? node.sourceId : "",
+    label: node.kind === "reference" ? node.label : "",
+    category: node.kind === "native" ? node.category : "",
+    title: node.kind === "native" ? node.title : "",
+    content: node.kind === "native" ? node.content : "",
+    tags: node.kind === "native" ? node.tags : [],
+  });
+}
+
+/** Convert a KnowledgeEdge to its proto representation. */
+function knowledgeEdgeToProto(edge: KnowledgeEdge): grackle.KnowledgeEdgeProto {
+  return create(grackle.KnowledgeEdgeProtoSchema, {
+    fromId: edge.fromId,
+    toId: edge.toId,
+    type: edge.type,
+    metadataJson: edge.metadata ? JSON.stringify(edge.metadata) : "",
+    createdAt: edge.createdAt,
   });
 }

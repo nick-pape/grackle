@@ -76,6 +76,26 @@ type CloseFdResponse = Message<"grackle.CloseFdResponse"> & {
 const CloseFdResponseSchema: GenMessage<CloseFdResponse>;
 
 // @public
+type CreateKnowledgeNodeRequest = Message<"grackle.CreateKnowledgeNodeRequest"> & {
+    title: string;
+    content: string;
+    category: string;
+    tags: string[];
+    workspaceId: string;
+};
+
+// @public
+const CreateKnowledgeNodeRequestSchema: GenMessage<CreateKnowledgeNodeRequest>;
+
+// @public
+type CreateKnowledgeNodeResponse = Message<"grackle.CreateKnowledgeNodeResponse"> & {
+    id: string;
+};
+
+// @public
+const CreateKnowledgeNodeResponseSchema: GenMessage<CreateKnowledgeNodeResponse>;
+
+// @public
 type CreatePersonaRequest = Message<"grackle.CreatePersonaRequest"> & {
     name: string;
     description: string;
@@ -245,6 +265,25 @@ export function eventTypeToEnum(s: string): EventType_2;
 export function eventTypeToString(e: EventType_2): string;
 
 // @public
+type ExpandKnowledgeNodeRequest = Message<"grackle.ExpandKnowledgeNodeRequest"> & {
+    id: string;
+    depth: number;
+    edgeTypes: string[];
+};
+
+// @public
+const ExpandKnowledgeNodeRequestSchema: GenMessage<ExpandKnowledgeNodeRequest>;
+
+// @public
+type ExpandKnowledgeNodeResponse = Message<"grackle.ExpandKnowledgeNodeResponse"> & {
+    nodes: KnowledgeNodeProto[];
+    edges: KnowledgeEdgeProto[];
+};
+
+// @public
+const ExpandKnowledgeNodeResponseSchema: GenMessage<ExpandKnowledgeNodeResponse>;
+
+// @public
 type FdInfo = Message<"grackle.FdInfo"> & {
     fd: number;
     streamName: string;
@@ -314,6 +353,23 @@ export interface FuzzySearchOptions {
     limit?: number;
     threshold?: number;
 }
+
+// @public
+type GetKnowledgeNodeRequest = Message<"grackle.GetKnowledgeNodeRequest"> & {
+    id: string;
+};
+
+// @public
+const GetKnowledgeNodeRequestSchema: GenMessage<GetKnowledgeNodeRequest>;
+
+// @public
+type GetKnowledgeNodeResponse = Message<"grackle.GetKnowledgeNodeResponse"> & {
+    node?: KnowledgeNodeProto;
+    edges: KnowledgeEdgeProto[];
+};
+
+// @public
+const GetKnowledgeNodeResponseSchema: GenMessage<GetKnowledgeNodeResponse>;
 
 // @public
 type GetSettingRequest = Message<"grackle.GetSettingRequest"> & {
@@ -574,6 +630,31 @@ const Grackle: GenService<{
         input: typeof SessionIdSchema;
         output: typeof SessionFdsSchema;
     };
+    searchKnowledge: {
+        methodKind: "unary";
+        input: typeof SearchKnowledgeRequestSchema;
+        output: typeof SearchKnowledgeResponseSchema;
+    };
+    getKnowledgeNode: {
+        methodKind: "unary";
+        input: typeof GetKnowledgeNodeRequestSchema;
+        output: typeof GetKnowledgeNodeResponseSchema;
+    };
+    expandKnowledgeNode: {
+        methodKind: "unary";
+        input: typeof ExpandKnowledgeNodeRequestSchema;
+        output: typeof ExpandKnowledgeNodeResponseSchema;
+    };
+    listRecentKnowledgeNodes: {
+        methodKind: "unary";
+        input: typeof ListRecentKnowledgeNodesRequestSchema;
+        output: typeof ListRecentKnowledgeNodesResponseSchema;
+    };
+    createKnowledgeNode: {
+        methodKind: "unary";
+        input: typeof CreateKnowledgeNodeRequestSchema;
+        output: typeof CreateKnowledgeNodeResponseSchema;
+    };
 }>;
 
 declare namespace grackle {
@@ -697,6 +778,32 @@ declare namespace grackle {
         GetUsageRequestSchema,
         UsageStats,
         UsageStatsSchema,
+        KnowledgeNodeProto,
+        KnowledgeNodeProtoSchema,
+        KnowledgeEdgeProto,
+        KnowledgeEdgeProtoSchema,
+        SearchKnowledgeRequest,
+        SearchKnowledgeRequestSchema,
+        SearchKnowledgeResult,
+        SearchKnowledgeResultSchema,
+        SearchKnowledgeResponse,
+        SearchKnowledgeResponseSchema,
+        GetKnowledgeNodeRequest,
+        GetKnowledgeNodeRequestSchema,
+        GetKnowledgeNodeResponse,
+        GetKnowledgeNodeResponseSchema,
+        ExpandKnowledgeNodeRequest,
+        ExpandKnowledgeNodeRequestSchema,
+        ExpandKnowledgeNodeResponse,
+        ExpandKnowledgeNodeResponseSchema,
+        ListRecentKnowledgeNodesRequest,
+        ListRecentKnowledgeNodesRequestSchema,
+        ListRecentKnowledgeNodesResponse,
+        ListRecentKnowledgeNodesResponseSchema,
+        CreateKnowledgeNodeRequest,
+        CreateKnowledgeNodeRequestSchema,
+        CreateKnowledgeNodeResponse,
+        CreateKnowledgeNodeResponseSchema,
         EventType_2 as EventType,
         EventTypeSchema,
         TaskStatus_2 as TaskStatus,
@@ -827,6 +934,55 @@ export function issueStateToEnum(s: string): IssueState;
 
 // @public
 export function issueStateToString(e: IssueState): string;
+
+// @public
+type KnowledgeEdgeProto = Message<"grackle.KnowledgeEdgeProto"> & {
+    fromId: string;
+    toId: string;
+    type: string;
+    metadataJson: string;
+    createdAt: string;
+};
+
+// @public
+const KnowledgeEdgeProtoSchema: GenMessage<KnowledgeEdgeProto>;
+
+// @public
+type KnowledgeNodeProto = Message<"grackle.KnowledgeNodeProto"> & {
+    id: string;
+    kind: string;
+    workspaceId: string;
+    createdAt: string;
+    updatedAt: string;
+    sourceType: string;
+    sourceId: string;
+    label: string;
+    category: string;
+    title: string;
+    content: string;
+    tags: string[];
+};
+
+// @public
+const KnowledgeNodeProtoSchema: GenMessage<KnowledgeNodeProto>;
+
+// @public
+type ListRecentKnowledgeNodesRequest = Message<"grackle.ListRecentKnowledgeNodesRequest"> & {
+    limit: number;
+    workspaceId: string;
+};
+
+// @public
+const ListRecentKnowledgeNodesRequestSchema: GenMessage<ListRecentKnowledgeNodesRequest>;
+
+// @public
+type ListRecentKnowledgeNodesResponse = Message<"grackle.ListRecentKnowledgeNodesResponse"> & {
+    nodes: KnowledgeNodeProto[];
+    edges: KnowledgeEdgeProto[];
+};
+
+// @public
+const ListRecentKnowledgeNodesResponseSchema: GenMessage<ListRecentKnowledgeNodesResponse>;
 
 // @public
 type ListTasksRequest = Message<"grackle.ListTasksRequest"> & {
@@ -1040,6 +1196,34 @@ export interface RuntimePackageManifest {
     needsJsonRpcHook?: boolean;
     packages: Record<string, string>;
 }
+
+// @public
+type SearchKnowledgeRequest = Message<"grackle.SearchKnowledgeRequest"> & {
+    query: string;
+    limit: number;
+    workspaceId: string;
+};
+
+// @public
+const SearchKnowledgeRequestSchema: GenMessage<SearchKnowledgeRequest>;
+
+// @public
+type SearchKnowledgeResponse = Message<"grackle.SearchKnowledgeResponse"> & {
+    results: SearchKnowledgeResult[];
+};
+
+// @public
+const SearchKnowledgeResponseSchema: GenMessage<SearchKnowledgeResponse>;
+
+// @public
+type SearchKnowledgeResult = Message<"grackle.SearchKnowledgeResult"> & {
+    score: number;
+    node?: KnowledgeNodeProto;
+    edges: KnowledgeEdgeProto[];
+};
+
+// @public
+const SearchKnowledgeResultSchema: GenMessage<SearchKnowledgeResult>;
 
 // @public
 export const SEED_PERSONA_ID: string;

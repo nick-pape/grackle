@@ -34,6 +34,14 @@ export function isKnowledgeEnabled(): boolean {
   return process.env.GRACKLE_KNOWLEDGE_ENABLED === "true";
 }
 
+/** Module-level embedder, available after initKnowledge() completes. */
+let knowledgeEmbedder: Embedder | undefined;
+
+/** Get the knowledge embedder. Returns undefined if knowledge is not initialized. */
+export function getKnowledgeEmbedder(): Embedder | undefined {
+  return knowledgeEmbedder;
+}
+
 // ---------------------------------------------------------------------------
 // Event handler
 // ---------------------------------------------------------------------------
@@ -149,6 +157,7 @@ export async function initKnowledge(): Promise<() => Promise<void>> {
     await initSchema();
 
     const embedder: Embedder = createLocalEmbedder();
+    knowledgeEmbedder = embedder;
     setKnowledgeEmbedder(embedder);
 
     const unsubscribe: () => void = subscribe(createEntitySyncHandler(embedder));
@@ -158,12 +167,14 @@ export async function initKnowledge(): Promise<() => Promise<void>> {
     return async (): Promise<void> => {
       logger.info("Shutting down knowledge graph subsystem");
       unsubscribe();
+      knowledgeEmbedder = undefined;
       setKnowledgeEmbedder(undefined);
       await closeNeo4j();
       logger.info("Knowledge graph subsystem stopped");
     };
   } catch (err) {
     // Clean up Neo4j if a later step fails
+    knowledgeEmbedder = undefined;
     setKnowledgeEmbedder(undefined);
     await closeNeo4j().catch(() => {});
     throw err;
