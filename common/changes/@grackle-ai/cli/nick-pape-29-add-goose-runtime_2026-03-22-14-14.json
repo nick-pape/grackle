@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Add Goose runtime (ACP-based) with credential provider, CLI, and web UI support",
+      "type": "minor",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
