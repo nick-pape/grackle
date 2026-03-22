@@ -1,7 +1,7 @@
 {
   "changes": [
     {
-      "comment": "feat(web): surface SUSPENDED session state with yellow status dot in dashboard",
+      "comment": "Refactor ws-bridge session termination to use fd closure instead of direct INTERRUPTED status",
       "type": "patch",
       "packageName": "@grackle-ai/cli"
     }
