@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sun, 22 Mar 2026 00:48:48 GMT and should not be manually modified.
+This log was last generated on Sun, 22 Mar 2026 01:26:28 GMT and should not be manually modified.
+
+## 0.62.1
+Sun, 22 Mar 2026 01:26:28 GMT
+
+### Patches
+
+- Add graph expansion (multi-hop traversal) to @grackle-ai/knowledge
 
 ## 0.62.0
 Sun, 22 Mar 2026 00:48:48 GMT
