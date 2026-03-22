@@ -92,6 +92,12 @@ message WorktreeCleanupRequest {
   string worktree_base_path = 2;
 }
 
+// ─── Drain ─────────────────────────────────────────────────
+
+message DrainRequest {
+  string session_id = 1;
+}
+
 // ─── Service ────────────────────────────────────────────────
 
 service GracklePowerLine {
@@ -104,4 +110,5 @@ service GracklePowerLine {
   rpc Ping(Empty) returns (Pong);
   rpc PushTokens(TokenBundle) returns (Empty);
   rpc CleanupWorktree(WorktreeCleanupRequest) returns (Empty);
+  rpc DrainBufferedEvents(DrainRequest) returns (stream AgentEvent);
 }

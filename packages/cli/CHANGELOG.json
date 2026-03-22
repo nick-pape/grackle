@@ -2,6 +2,40 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.64.0",
+      "tag": "@grackle-ai/cli_v0.64.0",
+      "date": "Sun, 22 Mar 2026 02:55:30 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Display task usage cost in overview tab with subtask tree rollup"
+          }
+        ],
+        "minor": [
+          {
+            "comment": "feat(common,powerline): add SUSPENDED session status and DrainBufferedEvents proto for graceful disconnect epic"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.63.0",
+      "tag": "@grackle-ai/cli_v0.63.0",
+      "date": "Sun, 22 Mar 2026 02:21:37 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Add workspace usage display with loadUsage hook for server-side aggregation"
+          }
+        ],
+        "minor": [
+          {
+            "comment": "Extract @grackle-ai/knowledge-core as a generic, reusable knowledge graph SDK"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.62.2",
       "tag": "@grackle-ai/cli_v0.62.2",
       "date": "Sun, 22 Mar 2026 01:37:20 GMT",

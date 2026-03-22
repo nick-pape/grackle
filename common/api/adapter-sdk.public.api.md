@@ -77,6 +77,14 @@ export function createPowerLineClient(baseUrl: string, powerlineToken: string): 
 export const defaultLogger: AdapterLogger;
 
 // @public
+type DrainRequest = Message<"grackle.powerline.DrainRequest"> & {
+    sessionId: string;
+};
+
+// @public
+const DrainRequestSchema: GenMessage<DrainRequest>;
+
+// @public
 type Empty = Message<"grackle.powerline.Empty"> & {};
 
 // @public
@@ -166,6 +174,11 @@ const GracklePowerLine: GenService<{
         input: typeof WorktreeCleanupRequestSchema;
         output: typeof EmptySchema;
     };
+    drainBufferedEvents: {
+        methodKind: "server_streaming";
+        input: typeof DrainRequestSchema;
+        output: typeof AgentEventSchema;
+    };
 }>;
 
 // @public
@@ -222,6 +235,8 @@ declare namespace powerline {
         TokenBundleSchema,
         WorktreeCleanupRequest,
         WorktreeCleanupRequestSchema,
+        DrainRequest,
+        DrainRequestSchema,
         GracklePowerLine
     }
 }
