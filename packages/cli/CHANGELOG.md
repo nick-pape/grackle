@@ -1,6 +1,14 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sun, 22 Mar 2026 18:48:36 GMT and should not be manually modified.
+This log was last generated on Sun, 22 Mar 2026 19:10:10 GMT and should not be manually modified.
+
+## 0.70.3
+Sun, 22 Mar 2026 19:10:10 GMT
+
+### Patches
+
+- Require auth token or explicit --no-auth flag for PowerLine startup
+- Validate WebSocket Origin header to prevent cross-origin hijacking (GHSA-w3hv-x4fp-6h6j)
 
 ## 0.70.2
 Sun, 22 Mar 2026 18:48:36 GMT
