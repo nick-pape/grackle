@@ -54,7 +54,7 @@ import { detectLanIp } from "./utils/network.js";
 import * as credentialProviders from "./credential-providers.js";
 import * as streamRegistry from "./stream-registry.js";
 import * as pipeDelivery from "./pipe-delivery.js";
-import { setupAsyncPipeDelivery } from "./pipe-delivery.js";
+import { ensureAsyncDeliveryListener } from "./pipe-delivery.js";
 
 /** Valid pipe mode values for SpawnRequest and StartTaskRequest. */
 const VALID_PIPE_MODES: ReadonlySet<string> = new Set(["", "sync", "async", "detach"]);
@@ -570,7 +570,8 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         pipeFd = parentSub.fd;
 
         if (pipeMode === "async") {
-          setupAsyncPipeDelivery(req.parentSessionId);
+          ensureAsyncDeliveryListener(req.parentSessionId);  // parent receives child messages
+          ensureAsyncDeliveryListener(sessionId);             // child receives parent messages
         }
       }
 
@@ -717,40 +718,29 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         );
       }
 
-      // Find target sessions on this stream and deliver via sendInput
       const stream = streamRegistry.getStream(sub.streamId);
       if (!stream) {
         throw new ConnectError("Stream no longer exists", Code.FailedPrecondition);
       }
 
-      let delivered = false;
+      // Publish to stream — delivery is handled by async listeners registered
+      // at spawn time via ensureAsyncDeliveryListener. This is the same path
+      // used by publishChildCompletion for child→parent delivery.
+      const msg = streamRegistry.publish(sub.streamId, req.sessionId, req.message);
+
+      // Verify delivery to async subscribers — check if the published message
+      // was marked as delivered for each async target. Sync and detach subscribers
+      // are excluded (sync waits for consumeSync, detach buffers silently).
       for (const targetSub of stream.subscriptions.values()) {
         if (targetSub.sessionId === req.sessionId) {
           continue;
         }
-        const targetSession = sessionStore.getSession(targetSub.sessionId);
-        if (!targetSession) {
-          continue;
-        }
-        const conn = adapterManager.getConnection(targetSession.environmentId);
-        if (!conn) {
+        if (targetSub.deliveryMode === "async" && !msg.deliveredTo.has(targetSub.id)) {
           throw new ConnectError(
-            `Environment ${targetSession.environmentId} not connected — cannot deliver message`,
+            "Message delivery failed — target environment may be disconnected",
             Code.FailedPrecondition,
           );
         }
-        await conn.client.sendInput(
-          create(powerline.InputMessageSchema, {
-            sessionId: targetSub.sessionId,
-            text: req.message,
-          }),
-        );
-        delivered = true;
-      }
-
-      // Only publish to stream registry after successful delivery
-      if (delivered) {
-        streamRegistry.publish(sub.streamId, req.sessionId, req.message);
       }
 
       return create(grackle.EmptySchema, {});
@@ -809,8 +799,11 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         hibernated = true;
       }
 
-      // Clean up async listener if no remaining async subs for this session
+      // Clean up async listeners for caller and any unsubscribed children
       pipeDelivery.cleanupAsyncListenerIfEmpty(req.sessionId);
+      for (const child of childSubs) {
+        pipeDelivery.cleanupAsyncListenerIfEmpty(child.sessionId);
+      }
 
       return create(grackle.CloseFdResponseSchema, { hibernated });
     },
@@ -1361,7 +1354,8 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         taskPipeFd = parentSub.fd;
 
         if (taskPipeMode === "async") {
-          setupAsyncPipeDelivery(req.parentSessionId);
+          ensureAsyncDeliveryListener(req.parentSessionId);  // parent receives child messages
+          ensureAsyncDeliveryListener(sessionId);             // child receives parent messages
         }
       }
 
