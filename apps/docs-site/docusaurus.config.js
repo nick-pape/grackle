@@ -18,6 +18,24 @@ const config = {
   themes: ['@docusaurus/theme-mermaid'],
   favicon: 'img/favicon.ico',
 
+  plugins: [
+    function suppressMermaidWarning() {
+      return {
+        name: 'suppress-mermaid-warning',
+        configureWebpack() {
+          return {
+            ignoreWarnings: [
+              {
+                module: /vscode-languageserver-types/,
+                message: /Critical dependency/,
+              },
+            ],
+          };
+        },
+      };
+    },
+  ],
+
   presets: [
     [
       'classic',
