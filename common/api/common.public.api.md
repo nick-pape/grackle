@@ -150,6 +150,14 @@ export const DEFAULT_SERVER_PORT: number;
 export const DEFAULT_WEB_PORT: number;
 
 // @public
+type DrainRequest = Message<"grackle.powerline.DrainRequest"> & {
+    sessionId: string;
+};
+
+// @public
+const DrainRequestSchema: GenMessage<DrainRequest>;
+
+// @public
 type Empty = Message<"grackle.Empty"> & {};
 
 // @public
@@ -755,6 +763,11 @@ const GracklePowerLine: GenService<{
         input: typeof WorktreeCleanupRequestSchema;
         output: typeof EmptySchema_2;
     };
+    drainBufferedEvents: {
+        methodKind: "server_streaming";
+        input: typeof DrainRequestSchema;
+        output: typeof AgentEventSchema;
+    };
 }>;
 
 // @public
@@ -952,6 +965,8 @@ declare namespace powerline {
         TokenBundleSchema,
         WorktreeCleanupRequest,
         WorktreeCleanupRequestSchema,
+        DrainRequest,
+        DrainRequestSchema,
         GracklePowerLine
     }
 }
@@ -1058,6 +1073,7 @@ export const SESSION_STATUS: {
     readonly RUNNING: "running";
     readonly IDLE: "idle";
     readonly HIBERNATING: "hibernating";
+    readonly SUSPENDED: "suspended";
     readonly COMPLETED: "completed";
     readonly FAILED: "failed";
     readonly INTERRUPTED: "interrupted";

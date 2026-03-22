@@ -8,6 +8,7 @@ export const SESSION_STATUS = {
   RUNNING: "running",
   IDLE: "idle",
   HIBERNATING: "hibernating",
+  SUSPENDED: "suspended",
   COMPLETED: "completed",
   FAILED: "failed",
   INTERRUPTED: "interrupted",
