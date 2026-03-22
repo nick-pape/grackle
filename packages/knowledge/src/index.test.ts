@@ -89,4 +89,13 @@ describe("@grackle-ai/knowledge", () => {
     expect(typeof mod.expandNode).toBe("function");
     expect(typeof mod.expandResults).toBe("function");
   });
+
+  it("exports reference sync functions", async () => {
+    const mod = await import("./index.js");
+    expect(typeof mod.findReferenceNodeBySource).toBe("function");
+    expect(typeof mod.deleteReferenceNodeBySource).toBe("function");
+    expect(typeof mod.syncReferenceNode).toBe("function");
+    expect(typeof mod.deriveTaskText).toBe("function");
+    expect(typeof mod.deriveFindingText).toBe("function");
+  });
 });

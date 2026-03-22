@@ -2,6 +2,30 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.61.3",
+      "tag": "@grackle-ai/cli_v0.61.3",
+      "date": "Sat, 21 Mar 2026 23:55:29 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Display session usage in web UI session headers and environment detail with live streaming updates"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.61.2",
+      "tag": "@grackle-ai/cli_v0.61.2",
+      "date": "Sat, 21 Mar 2026 23:43:23 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Add integration tests for pipe delivery flow (async/sync delivery, cleanup, no-ops)"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.61.1",
       "tag": "@grackle-ai/cli_v0.61.1",
       "date": "Sat, 21 Mar 2026 22:42:52 GMT",

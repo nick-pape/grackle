@@ -52,3 +52,11 @@ export type { SearchOptions, SearchResult } from "./search.js";
 export { knowledgeSearch } from "./search.js";
 export type { ExpandOptions, ExpansionResult } from "./expand.js";
 export { expandNode, expandResults } from "./expand.js";
+export {
+  findReferenceNodeBySource,
+  deleteReferenceNodeBySource,
+  syncReferenceNode,
+  deriveTaskText,
+  deriveFindingText,
+} from "./reference-sync.js";
+export type { SyncReferenceNodeInput } from "./reference-sync.js";

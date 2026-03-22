@@ -1,6 +1,20 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sat, 21 Mar 2026 22:42:52 GMT and should not be manually modified.
+This log was last generated on Sat, 21 Mar 2026 23:55:29 GMT and should not be manually modified.
+
+## 0.61.3
+Sat, 21 Mar 2026 23:55:29 GMT
+
+### Patches
+
+- Display session usage in web UI session headers and environment detail with live streaming updates
+
+## 0.61.2
+Sat, 21 Mar 2026 23:43:23 GMT
+
+### Patches
+
+- Add integration tests for pipe delivery flow (async/sync delivery, cleanup, no-ops)
 
 ## 0.61.1
 Sat, 21 Mar 2026 22:42:52 GMT

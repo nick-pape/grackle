@@ -1,8 +1,8 @@
 {
   "changes": [
     {
-      "comment": "Add integration tests for pipe delivery flow (async/sync delivery, cleanup, no-ops)",
-      "type": "patch",
+      "comment": "Add reference node sync primitives for syncing Grackle entities to the knowledge graph",
+      "type": "minor",
       "packageName": "@grackle-ai/cli"
     }
   ],
