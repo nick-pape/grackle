@@ -119,7 +119,7 @@ export function getActiveForEnv(environmentId: string): SessionRow | undefined {
     )
     .get();
   // Exclude IDLE sessions with endReason — they're done, not truly active
-  if (row && row.status === SESSION_STATUS.IDLE && row.endReason) {
+  if (row?.status === SESSION_STATUS.IDLE && row.endReason) {
     return undefined;
   }
   return row;
