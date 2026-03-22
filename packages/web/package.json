@@ -35,7 +35,7 @@
   },
   "devDependencies": {
     "@grackle-ai/heft-rig": "workspace:*",
-    "@rushstack/heft": "1.2.4",
+    "@rushstack/heft": "1.2.7",
     "@vitejs/plugin-react": "^4.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
