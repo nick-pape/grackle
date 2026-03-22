@@ -61,6 +61,14 @@ const GH_CODESPACE_CREATE_TIMEOUT_MS: number = 300_000;
 const GH_CODESPACE_LIST_LIMIT: number = 50;
 const WS_PING_INTERVAL_MS: number = 30_000;
 const WS_CLOSE_UNAUTHORIZED: number = 4001;
+const WS_CLOSE_FORBIDDEN_ORIGIN: number = 4003;
+
+/** Loopback hostnames accepted as valid WebSocket origins in local mode. */
+const LOOPBACK_HOSTNAMES: ReadonlySet<string> = new Set([
+  "localhost",
+  "127.0.0.1",
+  "[::1]",
+]);
 
 interface WsMessage {
   type: string;
@@ -68,21 +76,78 @@ interface WsMessage {
   id?: string;
 }
 
+/** Options for {@link createWsBridge}. */
+export interface WsBridgeOptions {
+  /** Verify a Bearer-token API key. */
+  verifyApiKey: (token: string) => boolean;
+  /** Verify a session cookie. */
+  validateCookie?: (cookieHeader: string) => boolean;
+  /** The port the web/WS server is listening on (used for origin validation). */
+  webPort: number;
+  /** Whether the server is bound to a wildcard address (`--allow-network`). */
+  allowNetwork: boolean;
+}
+
+/**
+ * Check whether a WebSocket connection's Origin header is acceptable.
+ *
+ * - If no Origin is present (CLI/SDK clients), the connection is allowed.
+ * - If Origin is present, it must target the expected web port.
+ * - In local mode the Origin hostname must be a loopback address.
+ * - In network mode (`--allow-network`) any hostname on the correct port is accepted.
+ */
+export function isAllowedOrigin(
+  origin: string | undefined,
+  webPort: number,
+  allowNetwork: boolean,
+): boolean {
+  if (!origin) {
+    return true;
+  }
+
+  let parsed: URL;
+  try {
+    parsed = new URL(origin);
+  } catch {
+    return false;
+  }
+
+  const originPort = parsed.port
+    ? parseInt(parsed.port, 10)
+    : (parsed.protocol === "https:" ? 443 : 80);
+
+  if (originPort !== webPort) {
+    return false;
+  }
+
+  if (allowNetwork) {
+    return true;
+  }
+
+  return LOOPBACK_HOSTNAMES.has(parsed.hostname);
+}
+
 /** Create a WebSocket server on top of an HTTP server that bridges JSON messages to gRPC operations. */
 export function createWsBridge(
   httpServer: HttpServer,
-  verifyApiKey: (token: string) => boolean,
-  validateCookie?: (cookieHeader: string) => boolean,
+  options: WsBridgeOptions,
 ): WebSocketServer {
   const wss = new WebSocketServer({ server: httpServer });
   setWssInstance(wss);
 
   wss.on("connection", (ws: WebSocket, req: IncomingMessage) => {
+    const origin = req.headers.origin;
+    if (!isAllowedOrigin(origin, options.webPort, options.allowNetwork)) {
+      logger.warn({ origin }, "Rejected WebSocket connection from disallowed origin");
+      ws.close(WS_CLOSE_FORBIDDEN_ORIGIN, "Forbidden origin");
+      return;
+    }
+
     const url = new URL(req.url || "/", "http://localhost");
     const token = url.searchParams.get("token") || "";
-    const hasValidToken = token.length > 0 && verifyApiKey(token);
-    const hasValidCookie = validateCookie
-      ? validateCookie(req.headers.cookie || "")
+    const hasValidToken = token.length > 0 && options.verifyApiKey(token);
+    const hasValidCookie = options.validateCookie
+      ? options.validateCookie(req.headers.cookie || "")
       : false;
 
     if (!hasValidToken && !hasValidCookie) {

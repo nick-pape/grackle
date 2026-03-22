@@ -821,9 +821,13 @@ async function main(): Promise<void> {
   const mcpPort = parseInt(process.env.GRACKLE_MCP_PORT || String(DEFAULT_MCP_PORT), 10);
   const webServer = http.createServer(createWebHandler(apiKey, webPort, bindHost));
 
-  createWsBridge(webServer, verifyApiKey, (cookieHeader: string) =>
-    validateSessionCookie(cookieHeader, apiKey),
-  );
+  createWsBridge(webServer, {
+    verifyApiKey,
+    validateCookie: (cookieHeader: string) =>
+      validateSessionCookie(cookieHeader, apiKey),
+    webPort,
+    allowNetwork,
+  });
 
   // Wire the event bus to forward domain events over WebSocket
   initWsSubscriber();
