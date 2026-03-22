@@ -24,7 +24,7 @@ Search the codebase using semantic search (concept/intent-based) backed by the `
 Use `mcp__qdrant-search__semantic_search` with the user's query. Always scope to the current catalog.
 
 ```
-semantic_search(query: "<user's question>", catalog: "grackle6")
+mcp__qdrant-search__semantic_search(query: "<user's question>", catalog: "grackle6")
 ```
 
 Review the results — they're ranked by relevance with breadcrumbs showing the code path.
@@ -33,22 +33,22 @@ Review the results — they're ranked by relevance with breadcrumbs showing the 
 
 **Conceptual question** — "how does the pairing flow work?"
 ```
-semantic_search(query: "pairing code generation and redemption flow", catalog: "grackle6")
+mcp__qdrant-search__semantic_search(query: "pairing code generation and redemption flow", catalog: "grackle6")
 ```
 
 **Tracing behavior** — "what happens when an agent session completes?"
 ```
-semantic_search(query: "session completion event processing status transition", catalog: "grackle6")
+mcp__qdrant-search__semantic_search(query: "session completion event processing status transition", catalog: "grackle6")
 ```
 
 **Finding related code** — "where are tokens injected into sessions?"
 ```
-semantic_search(query: "token injection push credentials to PowerLine before spawn", catalog: "grackle6")
+mcp__qdrant-search__semantic_search(query: "token injection push credentials to PowerLine before spawn", catalog: "grackle6")
 ```
 
 **Cross-cutting concern** — "how does error handling work across the WebSocket bridge?"
 ```
-semantic_search(query: "WebSocket error handling disconnect reconnection", catalog: "grackle6")
+mcp__qdrant-search__semantic_search(query: "WebSocket error handling disconnect reconnection", catalog: "grackle6")
 ```
 
 ### Step 2: View top results
@@ -56,9 +56,9 @@ semantic_search(query: "WebSocket error handling disconnect reconnection", catal
 Use `mcp__qdrant-search__view_chunks` to read the full source of the most relevant hits (top 3-5). Use selectors to get specific chunks:
 
 ```
-view_chunks(ids: ["abc123"])       // all chunks for that file
-view_chunks(ids: ["abc123:2-4"])   // chunks 2 through 4
-view_chunks(ids: ["abc123:3"])     // single chunk
+mcp__qdrant-search__view_chunks(ids: ["abc123"])       // all chunks for that file
+mcp__qdrant-search__view_chunks(ids: ["abc123:2-4"])   // chunks 2 through 4
+mcp__qdrant-search__view_chunks(ids: ["abc123:3"])     // single chunk
 ```
 
 #### Example
@@ -66,20 +66,20 @@ view_chunks(ids: ["abc123:3"])     // single chunk
 Semantic search returns a hit `f7a2b3c1:2` with breadcrumb `@grackle-ai/server > src > pairing.ts > redeemPairingCode`. To read the full function:
 
 ```
-view_chunks(ids: ["f7a2b3c1:2-3"])
+mcp__qdrant-search__view_chunks(ids: ["f7a2b3c1:2-3"])
 ```
 
 ### Step 3: Follow references with Grep/Read
 
-Once you've identified the key files from semantic search, use Grep to find exact symbol references and Read to examine specific implementations.
+Once you've identified the key files from semantic search, use Grep to find exact symbol references and Read to examine specific implementations. Semantic search finds the *area*, Grep/Read finds the *details*.
 
 #### Example
 
 Semantic search found that `redeemPairingCode` in `pairing.ts` is the core function. Now trace who calls it:
 
 ```
-Grep: pattern="redeemPairingCode" → finds call sites in grpc-service.ts, ws-bridge.ts
-Read: grpc-service.ts lines 200-230 → see how the gRPC handler invokes it
+Grep: pattern="redeemPairingCode" → finds call sites across the server package
+Read: the relevant handler file to see how the gRPC/HTTP layer invokes it
 ```
 
 ### Step 4: Synthesize
