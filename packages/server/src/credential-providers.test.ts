@@ -300,7 +300,10 @@ describe("credential-providers", () => {
       const fileTokens = bundle.tokens.filter((t) => t.type === "file");
       const envTokens = bundle.tokens.filter((t) => t.type === "env_var");
       expect(fileTokens).toHaveLength(1);
-      expect(fileTokens[0].filePath).toBe("~/.config/goose/config.yaml");
+      const expectedPath = process.platform === "win32"
+        ? "%APPDATA%/Block/goose/config/config.yaml"
+        : "~/.config/goose/config.yaml";
+      expect(fileTokens[0].filePath).toBe(expectedPath);
       expect(envTokens.some((t) => t.envVar === "GOOSE_PROVIDER")).toBe(true);
       expect(envTokens.some((t) => t.envVar === "GOOSE_MODEL")).toBe(true);
     });

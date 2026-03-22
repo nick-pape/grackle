@@ -279,9 +279,13 @@ export function buildProviderTokenBundle(runtime?: string, database?: DatabaseIn
   // Goose provider — forward config file and provider-related env vars.
   // Goose is provider-agnostic so we forward whichever API keys are available.
   if ((!allowedProviders || allowedProviders.has("goose")) && config.goose === "on") {
-    const gooseConfigPath = process.platform === "win32"
+    const isWindows = process.platform === "win32";
+    const gooseConfigPath = isWindows
       ? join(process.env.APPDATA || join(homedir(), "AppData", "Roaming"), "Block", "goose", "config", "config.yaml")
       : join(homedir(), ".config", "goose", "config.yaml");
+    const gooseConfigFilePath = isWindows
+      ? "%APPDATA%/Block/goose/config/config.yaml"
+      : "~/.config/goose/config.yaml";
     if (existsSync(gooseConfigPath)) {
       const value = readFileSync(gooseConfigPath, "utf-8");
       if (value.trim()) {
@@ -289,7 +293,7 @@ export function buildProviderTokenBundle(runtime?: string, database?: DatabaseIn
           create(powerline.TokenItemSchema, {
             name: "goose-config",
             type: "file",
-            filePath: "~/.config/goose/config.yaml",
+            filePath: gooseConfigFilePath,
             value,
           }),
         );
