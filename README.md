@@ -93,7 +93,7 @@ A **workspace** is a place inside an environment where work gets done — typica
 
 ### 🧠 Agents that actually coordinate
 
-Agents coordinate through kernel primitives — pipes, file descriptors, and structured IPC — not just by sharing a database. A parent session can spawn child sessions with bidirectional pipes, wait for structured results, and react to lifecycle signals. Tasks move through a defined lifecycle: created, started, paused, completed, failed, with review gates at each transition. See the [Task Lifecycle epic](https://github.com/nick-pape/grackle/issues/462) and [Signals & Process Control epic](https://github.com/nick-pape/grackle/issues/468) for the full roadmap.
+Agents coordinate through kernel primitives — pipes, file descriptors, and structured IPC — not just by sharing a database. A parent session can spawn child sessions with bidirectional pipes, wait for structured results, and react to lifecycle signals. Tasks move through a defined lifecycle with review gates at each transition. See the [Task Lifecycle epic](https://github.com/nick-pape/grackle/issues/462) and [Signals & Process Control epic](https://github.com/nick-pape/grackle/issues/468) for the full roadmap.
 
 Grackle deploys a **knowledge graph** backed by semantic search — agents write findings to it, and other agents query it by concept, not just keyword. One agent's architectural insight becomes another agent's context automatically. The knowledge graph UI explorer is [in progress](https://github.com/nick-pape/grackle/issues/764); the backend is shipped ([Epic #692](https://github.com/nick-pape/grackle/issues/692)).
 
@@ -198,7 +198,7 @@ npx @grackle-ai/cli serve
 npx @grackle-ai/cli env add my-env --docker
 ```
 
-> **Docker image**: A pre-built Docker image is [coming soon](https://github.com/nick-pape/grackle/issues/792). In the meantime, you can build one from the `docker/` directory in this repo.
+> **Docker image**: A pre-built Docker image is [coming soon](https://github.com/nick-pape/grackle/issues/792). In the meantime, you can use `docker compose up` from the `docker/` directory in this repo.
 
 > **pnpm users**: pnpm v8+ blocks package install scripts by default. If `grackle serve` crashes with a `Could not locate the bindings file` error, run `pnpm approve-builds` after installing and then reinstall, or add the following to your `package.json` before installing:
 >
