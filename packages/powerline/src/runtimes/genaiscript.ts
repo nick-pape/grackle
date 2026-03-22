@@ -2,7 +2,7 @@ import { spawn as spawnProcess } from "node:child_process";
 import type { ChildProcess } from "node:child_process";
 import { writeFile, readFile, mkdtemp, rm } from "node:fs/promises";
 import { join, dirname } from "node:path";
-import { tmpdir } from "node:os";
+import { tmpdir, homedir } from "node:os";
 import { createInterface } from "node:readline";
 import { createRequire } from "node:module";
 import type { AgentRuntime, AgentSession, AgentEvent, SpawnOptions, ResumeOptions } from "./runtime.js";
@@ -34,17 +34,24 @@ interface GenAIResult {
  * @param runtimeDir - The isolated runtime directory (empty string in dev mode)
  */
 function resolveGenAIScriptBin(runtimeDir: string): string {
-  const requireBase = runtimeDir
-    ? join(runtimeDir, "package.json")
-    : import.meta.url;
-  const esmRequire = createRequire(requireBase);
-  const pkgPath = esmRequire.resolve("genaiscript/package.json");
-  const pkgDir = dirname(pkgPath);
-  const pkg = esmRequire(pkgPath) as { bin?: Record<string, string> | string };
-  const binRelative = typeof pkg.bin === "string"
-    ? pkg.bin
-    : (pkg.bin?.genaiscript ?? "built/genaiscript.cjs");
-  return join(pkgDir, binRelative);
+  // Try the provided base first; fall back to the runtime directory if the
+  // monorepo doesn't have genaiscript (removed from devDependencies).
+  const bases = runtimeDir
+    ? [join(runtimeDir, "package.json")]
+    : [import.meta.url, join(homedir(), ".grackle", "runtimes", "genaiscript", "package.json")];
+  for (const base of bases) {
+    try {
+      const esmRequire = createRequire(base);
+      const pkgPath = esmRequire.resolve("genaiscript/package.json");
+      const pkgDir = dirname(pkgPath);
+      const pkg = esmRequire(pkgPath) as { bin?: Record<string, string> | string };
+      const binRelative = typeof pkg.bin === "string"
+        ? pkg.bin
+        : (pkg.bin?.genaiscript ?? "built/genaiscript.cjs");
+      return join(pkgDir, binRelative);
+    } catch { /* try next base */ }
+  }
+  throw new Error("Cannot resolve genaiscript binary. Run: npm install genaiscript");
 }
 
 /**
