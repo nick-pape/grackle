@@ -58,7 +58,7 @@ describe("SCOPED_TOOLS", () => {
     expect([...SCOPED_TOOLS].sort()).toEqual([
       "finding_list", "finding_post",
       "ipc_close", "ipc_list_fds", "ipc_spawn", "ipc_write",
-      "knowledge_create_node", "knowledge_get_node", "knowledge_search",
+      "knowledge_get_node", "knowledge_search",
       "persona_list", "persona_show",
       "session_send_input",
       "task_complete", "task_create", "task_list", "task_show", "task_start",

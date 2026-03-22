@@ -6,7 +6,7 @@ export { verifyScopedToken } from "./scoped-token.js";
 export { createOAuthAccessToken, verifyOAuthAccessToken } from "./oauth-token.js";
 export { OAUTH_ACCESS_TOKEN_TTL_MS, OAUTH_REFRESH_TOKEN_TTL_MS } from "./oauth-token.js";
 export type { OAuthTokenClaims } from "./oauth-token.js";
-export { createToolRegistry } from "./tools/index.js";
+export { createToolRegistry, setKnowledgeEmbedder } from "./tools/index.js";
 export { ToolRegistry } from "./tool-registry.js";
 export type { ToolDefinition, ToolResult } from "./tool-registry.js";
 export { authenticateMcpRequest } from "./auth-middleware.js";

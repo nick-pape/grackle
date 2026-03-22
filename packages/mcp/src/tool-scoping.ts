@@ -8,7 +8,7 @@ export const SCOPED_TOOLS: ReadonlySet<string> = new Set([
   "session_send_input",
   "persona_list", "persona_show",
   "ipc_spawn", "ipc_write", "ipc_close", "ipc_list_fds",
-  "knowledge_search", "knowledge_get_node", "knowledge_create_node",
+  "knowledge_search", "knowledge_get_node",
 ]);
 
 /** Auth types that receive full tool access. */
