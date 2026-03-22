@@ -59,7 +59,7 @@ grackle-powerline --no-auth
 grackle-powerline --port 9000 --host 0.0.0.0 --token my-secret-token
 ```
 
-A token is required by default via `--token` or the `GRACKLE_POWERLINE_TOKEN` environment variable. To run without authentication for local development, pass `--no-auth` explicitly.
+A token is required by default via `--token` or the `GRACKLE_POWERLINE_TOKEN` environment variable. To run without authentication for local development, pass `--no-auth` explicitly. When `--no-auth` is set, any token from `--token` or the environment variable is ignored.
 
 ## Requirements
 

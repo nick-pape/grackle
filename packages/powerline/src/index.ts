@@ -43,8 +43,9 @@ function main(): void {
     .action((opts: { port: string; token?: string; auth: boolean; host: string }) => {
       const port = parseInt(opts.port, 10);
       const host = opts.host;
-      const powerlineToken =
-        opts.token || process.env.GRACKLE_POWERLINE_TOKEN || "";
+      const powerlineToken = opts.auth
+        ? (opts.token || process.env.GRACKLE_POWERLINE_TOKEN || "")
+        : "";
 
       if (!powerlineToken && opts.auth) {
         logger.fatal(
