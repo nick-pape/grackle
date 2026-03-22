@@ -9,12 +9,12 @@
     "_phase:build": "tsc"
   },
   "peerDependencies": {
-    "@rushstack/heft": "1.2.4",
+    "@rushstack/heft": "1.2.7",
     "@playwright/test": "^1.49.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.49.0",
-    "@rushstack/heft": "1.2.4",
+    "@rushstack/heft": "1.2.7",
     "typescript": "~5.7.0"
   }
 }
