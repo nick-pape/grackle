@@ -13,6 +13,8 @@ interface Props {
   workspaceId?: string;
   /** Parent task ID — optional in new mode. */
   parentTaskId?: string;
+  /** Environment ID — used for scoped navigation. */
+  environmentId?: string;
 }
 
 /**
@@ -23,7 +25,7 @@ interface Props {
  * - edit: pre-populated form; calls updateTask on save, then navigates
  *         back to the task overview.
  */
-export function TaskEditPanel({ mode, taskId, workspaceId: workspaceIdProp, parentTaskId: parentTaskIdProp }: Props): JSX.Element {
+export function TaskEditPanel({ mode, taskId, workspaceId: workspaceIdProp, parentTaskId: parentTaskIdProp, environmentId: environmentIdProp }: Props): JSX.Element {
   const { tasks, workspaces, personas, createTask, updateTask } = useGrackle();
   const { showToast } = useToast();
   const navigate = useAppNavigate();
@@ -37,6 +39,10 @@ export function TaskEditPanel({ mode, taskId, workspaceId: workspaceIdProp, pare
 
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState(initialWorkspaceId);
   const workspaceId = initialWorkspaceId || selectedWorkspaceId;
+
+  /** Resolve environmentId from prop, or from the workspace's environmentId. */
+  const resolvedWorkspace = workspaces.find((w) => w.id === workspaceId);
+  const environmentId = environmentIdProp ?? resolvedWorkspace?.environmentId;
 
   /** Whether the workspace dropdown should be shown (new mode without pre-set workspace). */
   const showWorkspaceSelector = !isEdit && !workspaceIdProp;
@@ -102,7 +108,7 @@ export function TaskEditPanel({ mode, taskId, workspaceId: workspaceIdProp, pare
     if (isEdit && taskId) {
       updateTask(taskId, title.trim(), description, selectedDeps, defaultPersonaId);
       showToast("Task updated", "success");
-      navigate(taskUrl(taskId, undefined, workspaceId), { replace: true });
+      navigate(taskUrl(taskId, undefined, workspaceId, environmentId), { replace: true });
     } else {
       setCreating(true);
       createTask(
@@ -115,7 +121,7 @@ export function TaskEditPanel({ mode, taskId, workspaceId: workspaceIdProp, pare
         canDecompose,
         () => {
           showToast("Task created", "success");
-          navigate(workspaceIdProp ? workspaceUrl(workspaceIdProp) : "/tasks", { replace: true });
+          navigate(workspaceIdProp && environmentId ? workspaceUrl(workspaceIdProp, environmentId) : "/tasks", { replace: true });
         },
         (message: string) => {
           showToast(message, "error");
@@ -127,9 +133,9 @@ export function TaskEditPanel({ mode, taskId, workspaceId: workspaceIdProp, pare
 
   const handleCancel = (): void => {
     if (isEdit && taskId) {
-      navigate(taskUrl(taskId, undefined, workspaceId));
+      navigate(taskUrl(taskId, undefined, workspaceId, environmentId));
     } else {
-      navigate(workspaceIdProp ? workspaceUrl(workspaceIdProp) : "/tasks");
+      navigate(workspaceIdProp && environmentId ? workspaceUrl(workspaceIdProp, environmentId) : "/tasks");
     }
   };
 

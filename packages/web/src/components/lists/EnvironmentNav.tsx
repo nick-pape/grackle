@@ -21,7 +21,10 @@ export function EnvironmentNav(): JSX.Element {
 
   const envMatch = useMatch("/environments/:environmentId");
   const editMatch = useMatch("/environments/:environmentId/edit");
-  const rawId = envMatch?.params.environmentId ?? editMatch?.params.environmentId;
+  const workspaceMatch = useMatch("/environments/:environmentId/workspaces/:workspaceId");
+  const workspaceSubMatch = useMatch("/environments/:environmentId/workspaces/:workspaceId/*");
+  const rawId = envMatch?.params.environmentId ?? editMatch?.params.environmentId
+    ?? workspaceMatch?.params.environmentId ?? workspaceSubMatch?.params.environmentId;
   /** Filter out the "new" pseudo-ID so /environments/new doesn't highlight a real tab. */
   const activeId = rawId === "new" ? undefined : rawId;
 

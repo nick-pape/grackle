@@ -35,16 +35,16 @@ export function sessionUrl(sessionId: string): string {
   return `/sessions/${encodeURIComponent(sessionId)}`;
 }
 
-/** Build URL for a workspace overview page. */
-export function workspaceUrl(workspaceId: string): string {
-  return `/workspaces/${encodeURIComponent(workspaceId)}`;
+/** Build URL for a workspace overview page, nested under its environment. */
+export function workspaceUrl(workspaceId: string, environmentId: string): string {
+  return `/environments/${encodeURIComponent(environmentId)}/workspaces/${encodeURIComponent(workspaceId)}`;
 }
 
-/** Build URL for a task detail page, optionally targeting a specific tab and workspace scope. */
-export function taskUrl(taskId: string, tab?: "stream" | "findings", workspaceId?: string): string {
+/** Build URL for a task detail page, optionally targeting a specific tab and workspace/environment scope. */
+export function taskUrl(taskId: string, tab?: "stream" | "findings", workspaceId?: string, environmentId?: string): string {
   const encodedTaskId = encodeURIComponent(taskId);
-  const base = workspaceId
-    ? `/workspaces/${encodeURIComponent(workspaceId)}/tasks/${encodedTaskId}`
+  const base = workspaceId && environmentId
+    ? `/environments/${encodeURIComponent(environmentId)}/workspaces/${encodeURIComponent(workspaceId)}/tasks/${encodedTaskId}`
     : `/tasks/${encodedTaskId}`;
   if (tab) {
     return `${base}/${tab}`;
@@ -53,15 +53,15 @@ export function taskUrl(taskId: string, tab?: "stream" | "findings", workspaceId
 }
 
 /** Build URL for the task edit page. */
-export function taskEditUrl(taskId: string, workspaceId?: string): string {
-  if (workspaceId) {
-    return `/workspaces/${encodeURIComponent(workspaceId)}/tasks/${encodeURIComponent(taskId)}/edit`;
+export function taskEditUrl(taskId: string, workspaceId?: string, environmentId?: string): string {
+  if (workspaceId && environmentId) {
+    return `/environments/${encodeURIComponent(environmentId)}/workspaces/${encodeURIComponent(workspaceId)}/tasks/${encodeURIComponent(taskId)}/edit`;
   }
   return `/tasks/${encodeURIComponent(taskId)}/edit`;
 }
 
 /** Build URL for the new task form. */
-export function newTaskUrl(workspaceId?: string, parentTaskId?: string): string {
+export function newTaskUrl(workspaceId?: string, parentTaskId?: string, environmentId?: string): string {
   const params = new URLSearchParams();
   if (workspaceId) {
     params.set("workspace", workspaceId);
@@ -70,6 +70,10 @@ export function newTaskUrl(workspaceId?: string, parentTaskId?: string): string 
     params.set("parent", parentTaskId);
   }
   const qs = params.toString();
+  if (workspaceId && environmentId) {
+    const base = `/environments/${encodeURIComponent(environmentId)}/workspaces/${encodeURIComponent(workspaceId)}/tasks/new`;
+    return parentTaskId ? `${base}?parent=${encodeURIComponent(parentTaskId)}` : base;
+  }
   return qs ? `/tasks/new?${qs}` : "/tasks/new";
 }
 
@@ -124,9 +128,6 @@ export const HOME_URL: string = "/";
 
 /** URL for the tasks landing page. */
 export const TASKS_URL: string = "/tasks";
-
-/** URL for the workspaces landing page. */
-export const WORKSPACES_URL: string = "/workspaces";
 
 /** Build URL for the root-task chat page. */
 export function chatUrl(): string {

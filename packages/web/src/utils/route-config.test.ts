@@ -19,9 +19,9 @@ describe("URL builder functions", () => {
     expect(sessionUrl("special/chars")).toBe("/sessions/special%2Fchars");
   });
 
-  it("workspaceUrl encodes workspaceId", () => {
-    expect(workspaceUrl("proj-1")).toBe("/workspaces/proj-1");
-    expect(workspaceUrl("proj with space")).toBe("/workspaces/proj%20with%20space");
+  it("workspaceUrl encodes workspaceId under environments", () => {
+    expect(workspaceUrl("proj-1", "env-1")).toBe("/environments/env-1/workspaces/proj-1");
+    expect(workspaceUrl("proj with space", "env-1")).toBe("/environments/env-1/workspaces/proj%20with%20space");
   });
 
   it("taskUrl without tab produces base path", () => {

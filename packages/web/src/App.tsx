@@ -10,7 +10,7 @@ import { useGrackle } from "./context/GrackleContext.js";
 import { useToast } from "./context/ToastContext.js";
 import { useEnvironmentToasts } from "./hooks/useEnvironmentToasts.js";
 import { AnimatePresence, motion } from "motion/react";
-import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from "react-router";
+import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation, useParams } from "react-router";
 import { sessionUrl, useAppNavigate } from "./utils/navigation.js";
 import { EmptyPage, TasksEmptyPage, EnvironmentsEmptyPage } from "./pages/EmptyPage.js";
 import { ChatPage } from "./pages/ChatPage.js";
@@ -114,6 +114,26 @@ function AppShell(): JSX.Element {
   );
 }
 
+/**
+ * Redirect component for legacy `/workspaces/:workspaceId` URLs.
+ * Looks up the workspace's environmentId and redirects to the new
+ * `/environments/:envId/workspaces/:wsId` path, preserving any sub-path.
+ */
+function WorkspaceRedirect(): JSX.Element {
+  const { workspaceId } = useParams<{ workspaceId: string }>();
+  const { workspaces } = useGrackle();
+  const location = useLocation();
+
+  const workspace = workspaces.find((w) => w.id === workspaceId);
+  if (!workspace?.environmentId) {
+    return <Navigate to="/environments" replace />;
+  }
+
+  // Rewrite /workspaces/:wsId/... → /environments/:envId/workspaces/:wsId/...
+  const suffix = location.pathname.replace(`/workspaces/${workspaceId}`, "");
+  return <Navigate to={`/environments/${workspace.environmentId}/workspaces/${workspaceId}${suffix}`} replace />;
+}
+
 /** Route configuration for the application. */
 function AppRoutes(): JSX.Element {
   return (
@@ -129,11 +149,15 @@ function AppRoutes(): JSX.Element {
         <Route path="tasks/:taskId/findings" element={<TaskPage />} />
         <Route path="tasks/:taskId/edit" element={<TaskEditPage />} />
         <Route path="workspaces" element={<Navigate to="/environments" replace />} />
-        <Route path="workspaces/:workspaceId" element={<WorkspacePage />} />
-        <Route path="workspaces/:workspaceId/tasks/:taskId" element={<TaskPage />} />
-        <Route path="workspaces/:workspaceId/tasks/:taskId/stream" element={<TaskPage />} />
-        <Route path="workspaces/:workspaceId/tasks/:taskId/findings" element={<TaskPage />} />
-        <Route path="workspaces/:workspaceId/tasks/:taskId/edit" element={<TaskEditPage />} />
+        <Route path="workspaces/:workspaceId" element={<WorkspaceRedirect />} />
+        <Route path="workspaces/:workspaceId/tasks/:taskId" element={<WorkspaceRedirect />} />
+        <Route path="workspaces/:workspaceId/tasks/:taskId/*" element={<WorkspaceRedirect />} />
+        <Route path="environments/:environmentId/workspaces/:workspaceId" element={<WorkspacePage />} />
+        <Route path="environments/:environmentId/workspaces/:workspaceId/tasks/new" element={<NewTaskPage />} />
+        <Route path="environments/:environmentId/workspaces/:workspaceId/tasks/:taskId" element={<TaskPage />} />
+        <Route path="environments/:environmentId/workspaces/:workspaceId/tasks/:taskId/stream" element={<TaskPage />} />
+        <Route path="environments/:environmentId/workspaces/:workspaceId/tasks/:taskId/findings" element={<TaskPage />} />
+        <Route path="environments/:environmentId/workspaces/:workspaceId/tasks/:taskId/edit" element={<TaskEditPage />} />
         <Route path="sessions/new" element={<NewChatPage />} />
         <Route path="sessions/:sessionId" element={<SessionPage />} />
         <Route path="environments" element={<EnvironmentsPage />}>
