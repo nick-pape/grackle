@@ -2081,7 +2081,8 @@ async function handleMessage(
       }
       try {
         const id: string = (msg.payload?.id as string) || "";
-        const depth: number = (msg.payload?.depth as number) || 1;
+        const rawDepth: number = Number(msg.payload?.depth) || 1;
+        const depth: number = Math.max(1, Math.min(5, Math.floor(rawDepth)));
         const rawEdgeTypes = msg.payload?.edgeTypes as EdgeType[] | undefined;
         const edgeTypes: EdgeType[] | undefined = rawEdgeTypes?.length ? rawEdgeTypes : undefined;
         const result = await expandNode(id, { depth, edgeTypes });

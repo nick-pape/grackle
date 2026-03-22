@@ -68,7 +68,7 @@ export interface UseKnowledgeResult {
 // ---------------------------------------------------------------------------
 
 /** Convert a raw WS node to a GraphNode. */
-function toGraphNode(raw: Record<string, unknown>, edgeCount: number = 1): GraphNode {
+function toGraphNode(raw: Record<string, unknown>, edgeCount: number = 0): GraphNode {
   return {
     id: raw.id as string,
     label: (raw.title as string) || (raw.label as string) || (raw.id as string),

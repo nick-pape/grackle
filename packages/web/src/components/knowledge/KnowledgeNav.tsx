@@ -33,6 +33,8 @@ export function KnowledgeNav(): JSX.Element {
   }, [knowledge]);
 
   const handleWorkspaceChange = useCallback((wsId: string) => {
+    setSearchInput("");
+    knowledge.clearSearch();
     knowledge.loadRecent(wsId || undefined);
   }, [knowledge]);
 
@@ -80,6 +82,7 @@ export function KnowledgeNav(): JSX.Element {
             key={node.id}
             className={styles.nodeItem}
             onClick={() => { handleNodeClick(node.id); }}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleNodeClick(node.id); } }}
             role="button"
             tabIndex={0}
           >

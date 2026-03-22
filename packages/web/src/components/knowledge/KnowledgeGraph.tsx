@@ -299,7 +299,7 @@ export function KnowledgeGraph({
         const tgtId: string = (d.target as SimNode).id;
         return !connectedIds.has(srcId) || !connectedIds.has(tgtId);
       });
-  }, [selectedNodeId]);
+  }, [selectedNodeId, graphData]);
 
   // Center on selected node
   const handleCenterOnNode = useCallback(() => {
