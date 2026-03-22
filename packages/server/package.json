@@ -1,6 +1,6 @@
 {
   "name": "@grackle-ai/server",
-  "version": "0.64.2",
+  "version": "0.65.0",
   "description": "Central gRPC server with SQLite storage and WebSocket bridge for Grackle",
   "license": "MIT",
   "repository": {

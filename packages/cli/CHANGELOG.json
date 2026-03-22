@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.65.0",
+      "tag": "@grackle-ai/cli_v0.65.0",
+      "date": "Sun, 22 Mar 2026 03:46:09 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Add knowledge graph MCP tools: knowledge_search, knowledge_get_node, knowledge_create_node"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.64.2",
       "tag": "@grackle-ai/cli_v0.64.2",
       "date": "Sun, 22 Mar 2026 03:31:33 GMT",
