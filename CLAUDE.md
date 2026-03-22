@@ -101,6 +101,26 @@ Rush monorepo with 6 packages under `packages/`:
 - Web UI uses pairing-code → session-cookie auth. The API key is never injected into HTML. gRPC uses Bearer token auth. WebSocket accepts either session cookie or `?token=` query param.
 - The server binds to `127.0.0.1` by default. Use `grackle serve --allow-network` to bind to `0.0.0.0` for LAN access (e.g., phone). Use `grackle pair` to generate new pairing codes.
 
+### React Component Architecture
+
+- **New components must be pure presentational.** Components in `components/` should accept data and callbacks as props. Only page-level components (`pages/*.tsx`) should call `useGrackle()`.
+- **Boy scout rule ([#805](https://github.com/nick-pape/grackle/issues/805))**: If your PR touches any of the following coupled components, you **must** decouple it from `useGrackle()` as part of the PR. Move the hook call up to the parent page/container and pass data + callbacks as props, and link #805 in your PR.
+  - `packages/web/src/components/workspace/WorkspaceBoard.tsx`
+  - `packages/web/src/components/personas/PersonaManager.tsx`
+  - `packages/web/src/components/panels/TaskEditPanel.tsx`
+  - `packages/web/src/components/lists/TaskList.tsx`
+  - `packages/web/src/components/panels/CredentialProvidersPanel.tsx`
+  - `packages/web/src/components/lists/EnvironmentNav.tsx`
+  - `packages/web/src/components/layout/BottomStatusBar.tsx`
+  - `packages/web/src/components/dag/DagView.tsx`
+  - `packages/web/src/components/chat/ChatInput.tsx`
+  - `packages/web/src/components/panels/EnvironmentEditPanel.tsx`
+  - `packages/web/src/components/layout/StatusBar.tsx`
+  - `packages/web/src/components/panels/FindingsPanel.tsx`
+  - `packages/web/src/components/panels/AboutPanel.tsx`
+  - `packages/web/src/components/panels/TokensPanel.tsx`
+- Once a component is fully decoupled, remove it from this list.
+
 ### Dependencies
 - Cross-package deps use `"workspace:*"` (pnpm rewrites to real versions at publish time)
 - `@bufbuild/protobuf` must be a direct dependency in any package using `create()`
