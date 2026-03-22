@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.62.2",
+      "tag": "@grackle-ai/cli_v0.62.2",
+      "date": "Sun, 22 Mar 2026 01:37:20 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Unify writeToFd delivery via stream-registry async listeners instead of direct sendInput"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.62.1",
       "tag": "@grackle-ai/cli_v0.62.1",
       "date": "Sun, 22 Mar 2026 01:26:28 GMT",

@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sun, 22 Mar 2026 01:26:28 GMT and should not be manually modified.
+This log was last generated on Sun, 22 Mar 2026 01:37:20 GMT and should not be manually modified.
+
+## 0.62.2
+Sun, 22 Mar 2026 01:37:20 GMT
+
+### Patches
+
+- Unify writeToFd delivery via stream-registry async listeners instead of direct sendInput
 
 ## 0.62.1
 Sun, 22 Mar 2026 01:26:28 GMT
