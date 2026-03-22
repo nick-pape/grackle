@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Add Content-Security-Policy, X-Frame-Options, and X-Content-Type-Options headers to all web responses",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
