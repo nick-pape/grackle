@@ -483,9 +483,19 @@ async function terminateSession(sessionId: string): Promise<void> {
   // but without endReason — always stamp it so the UI shows "interrupted".
   const current = sessionStore.getSession(sessionId);
   if (current && TERMINAL_SESSION_STATUSES.has(current.status as SessionStatus)) {
-    // Already hibernated by lifecycle manager — just set the endReason
+    // Already hibernated by lifecycle manager — stamp endReason and broadcast
+    // a "killed" event so the frontend derives endReason="interrupted".
     if (!current.endReason) {
       sessionStore.setEndReason(sessionId, END_REASON.INTERRUPTED);
+      streamHub.publish(
+        create(grackle.SessionEventSchema, {
+          sessionId,
+          type: grackle.EventType.STATUS,
+          timestamp: new Date().toISOString(),
+          content: "killed",
+          raw: "",
+        }),
+      );
     }
   } else if (current) {
     // Legacy session without lifecycle stream — kill directly

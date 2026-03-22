@@ -883,6 +883,15 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       const alreadyTerminal = currentSession && TERMINAL_SESSION_STATUSES.has(currentSession.status as SessionStatus);
       if (alreadyTerminal && !currentSession.endReason) {
         sessionStore.setEndReason(req.id, END_REASON.INTERRUPTED);
+        streamHub.publish(
+          create(grackle.SessionEventSchema, {
+            sessionId: req.id,
+            type: grackle.EventType.STATUS,
+            timestamp: new Date().toISOString(),
+            content: "killed",
+            raw: "",
+          }),
+        );
       } else if (!alreadyTerminal && currentSession) {
         sessionStore.updateSession(req.id, SESSION_STATUS.HIBERNATING, undefined, undefined, END_REASON.INTERRUPTED);
         streamHub.publish(
