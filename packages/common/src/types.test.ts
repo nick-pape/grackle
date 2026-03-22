@@ -20,5 +20,8 @@ describe("DrainBufferedEvents proto", () => {
   it("GracklePowerLine service descriptor is defined", () => {
     expect(powerline.GracklePowerLine).toBeDefined();
     expect(powerline.GracklePowerLine.typeName).toBe("grackle.powerline.GracklePowerLine");
+    // Verify DrainBufferedEvents is in the service method list
+    const methods = powerline.GracklePowerLine.methods as unknown as Array<{ name: string }>;
+    expect(methods.some((m) => m.name === "DrainBufferedEvents")).toBe(true);
   });
 });
