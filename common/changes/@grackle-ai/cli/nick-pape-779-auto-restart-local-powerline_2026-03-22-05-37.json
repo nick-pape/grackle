@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Auto-restart local PowerLine on unexpected exit with circuit-breaker protection",
+      "type": "minor",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
