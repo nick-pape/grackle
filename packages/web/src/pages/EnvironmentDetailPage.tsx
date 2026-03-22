@@ -157,7 +157,7 @@ export function EnvironmentDetailPage(): JSX.Element {
               key={ws.id}
               workspace={ws}
               confirmArchiveId={confirmArchiveId}
-              onOpen={() => navigate(workspaceUrl(ws.id))}
+              onOpen={() => navigate(workspaceUrl(ws.id, env.id))}
               onArchive={() => setConfirmArchiveId(ws.id)}
               onConfirmArchive={() => handleArchive(ws.id)}
               onCancelArchive={() => setConfirmArchiveId(undefined)}

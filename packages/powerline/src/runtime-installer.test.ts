@@ -23,7 +23,7 @@ describe("ensureRuntimeInstalled", () => {
 
   it("returns empty string for any known runtime in dev mode", async () => {
     const { ensureRuntimeInstalled } = await import("./runtime-installer.js");
-    for (const name of ["copilot", "codex", "codex-acp", "copilot-acp", "claude-code-acp", "genaiscript"]) {
+    for (const name of ["copilot", "codex", "goose", "codex-acp", "copilot-acp", "claude-code-acp", "genaiscript"]) {
       const result = await ensureRuntimeInstalled(name);
       expect(result).toBe("");
     }

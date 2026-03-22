@@ -15,12 +15,15 @@ A **runtime** is the AI agent engine that actually does the work inside a sessio
 | **Claude Code** | `claude-code` | `sonnet` | Anthropic Claude Agent SDK |
 | **GitHub Copilot** | `copilot` | `gpt-4o` | GitHub Copilot SDK |
 | **OpenAI Codex** | `codex` | `o3` | OpenAI Codex SDK |
+| **Goose** | `goose` | *(provider-dependent)* | ACP (native) |
 
-All three runtimes support the same Grackle features: streaming, tool use, session resume, MCP integration, and worktree isolation.
+All four runtimes support the same Grackle features: streaming, tool use, session resume, MCP integration, and worktree isolation.
+
+Goose is provider-agnostic — it can use Anthropic, OpenAI, Google, and many other LLM providers. Configure your Goose provider and model via `goose configure` or environment variables (`GOOSE_PROVIDER`, `GOOSE_MODEL`). Goose must be [installed](https://block.github.io/goose/docs/getting-started/installation/) separately on the system.
 
 ### ACP (Agent Client Protocol)
 
-Grackle also supports runtimes that implement the **Agent Client Protocol** — a cross-vendor standard for agent communication. ACP variants exist for Claude, Copilot, and Codex. These use a stdio-based protocol instead of the native SDKs.
+Grackle also supports runtimes that implement the **Agent Client Protocol** — a cross-vendor standard for agent communication. ACP variants exist for Claude, Copilot, and Codex. Goose natively speaks ACP, so it uses this protocol directly. The other ACP variants use a stdio-based bridge instead of the native SDKs.
 
 ## How runtimes work
 
@@ -64,6 +67,7 @@ Each runtime needs credentials to authenticate with its AI provider. Grackle man
 | **GitHub** | `off`, `on` | GitHub token for Copilot and Codespace access |
 | **Copilot** | `off`, `on` | GitHub Copilot authentication |
 | **Codex** | `off`, `on` | OpenAI API access |
+| **Goose** | `off`, `on` | Goose config and provider API keys |
 
 Configure them from the CLI:
 

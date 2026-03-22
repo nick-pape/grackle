@@ -240,10 +240,11 @@ message CredentialProviderConfig {
   ProviderToggle github = 2;
   ProviderToggle copilot = 3;
   ProviderToggle codex = 4;
+  ProviderToggle goose = 5;
 }
 
 message SetCredentialProviderRequest {
-  string provider = 1;  // "claude", "github", "copilot", or "codex"
+  string provider = 1;  // "claude", "github", "copilot", "codex", or "goose"
   string value = 2;     // "off", "on", "subscription", "api_key"
 }
 

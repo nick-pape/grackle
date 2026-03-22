@@ -10,10 +10,11 @@ import styles from "./WorkspaceBoard.module.scss";
 /** Props for the WorkspaceBoard component. */
 interface WorkspaceBoardProps {
   workspaceId: string;
+  environmentId: string;
 }
 
 /** Kanban-style board view with fixed columns for each task status. */
-export function WorkspaceBoard({ workspaceId }: WorkspaceBoardProps): JSX.Element {
+export function WorkspaceBoard({ workspaceId, environmentId }: WorkspaceBoardProps): JSX.Element {
   const { tasks, sessions, personas, environments } = useGrackle();
   const navigate = useAppNavigate();
 
@@ -84,7 +85,7 @@ export function WorkspaceBoard({ workspaceId }: WorkspaceBoardProps): JSX.Elemen
       <div className={styles.emptyCta} data-testid="board-empty-cta">
         <button
           className={styles.ctaButton}
-          onClick={() => navigate(newTaskUrl(workspaceId))}
+          onClick={() => navigate(newTaskUrl(workspaceId, undefined, environmentId))}
         >
           Create Task
         </button>
@@ -132,7 +133,7 @@ export function WorkspaceBoard({ workspaceId }: WorkspaceBoardProps): JSX.Elemen
                       tasksById={tasksById}
                       personaName={boardMetadataByTaskId.personaNameByTaskId.get(bt.task.id)}
                       envName={boardMetadataByTaskId.environmentNameByTaskId.get(bt.task.id)}
-                      onClick={() => navigate(taskUrl(bt.task.id, undefined, workspaceId))}
+                      onClick={() => navigate(taskUrl(bt.task.id, undefined, workspaceId, environmentId))}
                     />
                   </motion.div>
                 ))}

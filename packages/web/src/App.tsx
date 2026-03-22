@@ -10,7 +10,7 @@ import { useGrackle } from "./context/GrackleContext.js";
 import { useToast } from "./context/ToastContext.js";
 import { useEnvironmentToasts } from "./hooks/useEnvironmentToasts.js";
 import { AnimatePresence, motion } from "motion/react";
-import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from "react-router";
+import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation, useParams } from "react-router";
 import { sessionUrl, useAppNavigate } from "./utils/navigation.js";
 import { EmptyPage, TasksEmptyPage, EnvironmentsEmptyPage } from "./pages/EmptyPage.js";
 import { ChatPage } from "./pages/ChatPage.js";
@@ -115,6 +115,37 @@ function AppShell(): JSX.Element {
   );
 }
 
+/**
+ * Redirect component for legacy `/workspaces/:workspaceId` URLs.
+ * Looks up the workspace's environmentId and redirects to the new
+ * `/environments/:envId/workspaces/:wsId` path, preserving sub-path,
+ * query parameters, and hash.
+ */
+function WorkspaceRedirect(): JSX.Element | undefined {
+  const { workspaceId } = useParams<{ workspaceId: string }>();
+  const { workspaces } = useGrackle();
+  const location = useLocation();
+
+  const workspace = workspaces.find((w) => w.id === workspaceId);
+  if (!workspace?.environmentId) {
+    // Workspaces load asynchronously — avoid redirecting before data arrives.
+    if (workspaces.length === 0) {
+      return undefined;
+    }
+    return <Navigate to="/environments" replace />;
+  }
+
+  // Rewrite /workspaces/:wsId/... → /environments/:envId/workspaces/:wsId/...,
+  // preserving query parameters and hash. Use encoded IDs for reliable matching.
+  const encodedWorkspaceId = encodeURIComponent(workspaceId!);
+  const encodedPrefix = `/workspaces/${encodedWorkspaceId}`;
+  const suffix = location.pathname.startsWith(encodedPrefix)
+    ? location.pathname.slice(encodedPrefix.length)
+    : "";
+  const target = `/environments/${encodeURIComponent(workspace.environmentId)}/workspaces/${encodedWorkspaceId}${suffix}${location.search}${location.hash}`;
+  return <Navigate to={target} replace />;
+}
+
 /** Route configuration for the application. */
 function AppRoutes(): JSX.Element {
   return (
@@ -131,11 +162,15 @@ function AppRoutes(): JSX.Element {
         <Route path="tasks/:taskId/edit" element={<TaskEditPage />} />
         <Route path="workspaces" element={<Navigate to="/environments" replace />} />
         <Route path="workspaces/new" element={<WorkspaceCreatePage />} />
-        <Route path="workspaces/:workspaceId" element={<WorkspacePage />} />
-        <Route path="workspaces/:workspaceId/tasks/:taskId" element={<TaskPage />} />
-        <Route path="workspaces/:workspaceId/tasks/:taskId/stream" element={<TaskPage />} />
-        <Route path="workspaces/:workspaceId/tasks/:taskId/findings" element={<TaskPage />} />
-        <Route path="workspaces/:workspaceId/tasks/:taskId/edit" element={<TaskEditPage />} />
+        <Route path="workspaces/:workspaceId" element={<WorkspaceRedirect />} />
+        <Route path="workspaces/:workspaceId/tasks/:taskId" element={<WorkspaceRedirect />} />
+        <Route path="workspaces/:workspaceId/tasks/:taskId/*" element={<WorkspaceRedirect />} />
+        <Route path="environments/:environmentId/workspaces/:workspaceId" element={<WorkspacePage />} />
+        <Route path="environments/:environmentId/workspaces/:workspaceId/tasks/new" element={<NewTaskPage />} />
+        <Route path="environments/:environmentId/workspaces/:workspaceId/tasks/:taskId" element={<TaskPage />} />
+        <Route path="environments/:environmentId/workspaces/:workspaceId/tasks/:taskId/stream" element={<TaskPage />} />
+        <Route path="environments/:environmentId/workspaces/:workspaceId/tasks/:taskId/findings" element={<TaskPage />} />
+        <Route path="environments/:environmentId/workspaces/:workspaceId/tasks/:taskId/edit" element={<TaskEditPage />} />
         <Route path="sessions/new" element={<NewChatPage />} />
         <Route path="sessions/:sessionId" element={<SessionPage />} />
         <Route path="environments" element={<EnvironmentsPage />}>

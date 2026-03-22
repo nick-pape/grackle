@@ -261,8 +261,9 @@ class AcpSession extends BaseAgentSession {
     this.config = config;
     this.runtimeName = config.name;
     this.runtimeDisplayName = config.name;
+    const fullCommand = [config.command, ...config.args].join(" ");
     this.noMessagesError =
-      `${config.name} returned no messages. Check that '${config.command}' is installed and supports --acp.`;
+      `${config.name} returned no messages. Check that '${fullCommand}' is installed and supports ACP.`;
   }
 
   // ─── BaseAgentSession hooks ──────────────────────────────
