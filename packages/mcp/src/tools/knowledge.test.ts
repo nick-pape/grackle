@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { create } from "@bufbuild/protobuf";
 import { grackle } from "@grackle-ai/common";
+import type { AuthContext } from "../auth-context.js";
 import { knowledgeTools } from "./knowledge.js";
 
 // ---------------------------------------------------------------------------
@@ -177,6 +178,214 @@ describe("knowledge_get_node", () => {
       id: "node-1",
       depth: 1,
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Auth context helpers
+// ---------------------------------------------------------------------------
+
+const SCOPED_AUTH: AuthContext = {
+  type: "scoped",
+  taskId: "t1",
+  workspaceId: "ws-1",
+  personaId: "p1",
+  taskSessionId: "s1",
+};
+
+// ---------------------------------------------------------------------------
+// Workspace scoping tests
+// ---------------------------------------------------------------------------
+
+describe("knowledge_search — workspace scoping", () => {
+  const tool = findTool("knowledge_search");
+  let client: ReturnType<typeof createMockClient>;
+
+  beforeEach(() => {
+    client = createMockClient();
+  });
+
+  it("should override user-supplied workspaceId for scoped callers", async () => {
+    await tool.handler(
+      { query: "test", workspaceId: "ws-other" },
+      client as never,
+      SCOPED_AUTH,
+    );
+
+    expect(client.searchKnowledge).toHaveBeenCalledWith(
+      expect.objectContaining({ workspaceId: "ws-1" }),
+    );
+  });
+
+  it("should allow user-supplied workspaceId for api-key callers", async () => {
+    await tool.handler(
+      { query: "test", workspaceId: "ws-other" },
+      client as never,
+      { type: "api-key" },
+    );
+
+    expect(client.searchKnowledge).toHaveBeenCalledWith(
+      expect.objectContaining({ workspaceId: "ws-other" }),
+    );
+  });
+
+  it("should filter expanded neighbors to the scoped workspace", async () => {
+    client.searchKnowledge.mockResolvedValue(
+      create(grackle.SearchKnowledgeResponseSchema, {
+        results: [
+          create(grackle.SearchKnowledgeResultSchema, {
+            score: 0.9,
+            node: makeProtoNode({ id: "node-1", workspaceId: "ws-1" }),
+            edges: [],
+          }),
+        ],
+      }),
+    );
+    client.expandKnowledgeNode.mockResolvedValue(
+      create(grackle.ExpandKnowledgeNodeResponseSchema, {
+        nodes: [
+          makeProtoNode({ id: "node-2", workspaceId: "ws-1", title: "Same WS" }),
+          makeProtoNode({ id: "node-3", workspaceId: "ws-other", title: "Other WS" }),
+        ],
+        edges: [
+          makeProtoEdge({ fromId: "node-1", toId: "node-2" }),
+          makeProtoEdge({ fromId: "node-1", toId: "node-3" }),
+        ],
+      }),
+    );
+
+    const result = await tool.handler(
+      { query: "test", expand: true },
+      client as never,
+      SCOPED_AUTH,
+    );
+    const content = JSON.parse((result as { content: Array<{ text: string }> }).content[0].text);
+
+    expect(content.neighbors).toHaveLength(1);
+    expect(content.neighbors[0].id).toBe("node-2");
+    expect(content.neighborEdges).toHaveLength(1);
+    expect(content.neighborEdges[0]).toMatchObject({
+      fromId: "node-1",
+      toId: "node-2",
+    });
+  });
+
+  it("should enforce filtering for scoped callers without workspaceId", async () => {
+    const scopedNoWs: AuthContext = {
+      type: "scoped",
+      taskId: "t1",
+      personaId: "p1",
+      taskSessionId: "s1",
+    };
+
+    await tool.handler(
+      { query: "test", workspaceId: "ws-other" },
+      client as never,
+      scopedNoWs,
+    );
+
+    expect(client.searchKnowledge).toHaveBeenCalledWith(
+      expect.objectContaining({ workspaceId: "" }),
+    );
+  });
+});
+
+describe("knowledge_get_node — workspace scoping", () => {
+  const tool = findTool("knowledge_get_node");
+  let client: ReturnType<typeof createMockClient>;
+
+  beforeEach(() => {
+    client = createMockClient();
+  });
+
+  it("should deny access to nodes outside the scoped workspace", async () => {
+    client.getKnowledgeNode.mockResolvedValue(
+      create(grackle.GetKnowledgeNodeResponseSchema, {
+        node: makeProtoNode({ id: "node-1", workspaceId: "ws-other" }),
+        edges: [],
+      }),
+    );
+
+    const result = await tool.handler({ id: "node-1" }, client as never, SCOPED_AUTH);
+    expect((result as { isError: boolean }).isError).toBe(true);
+    const content = JSON.parse((result as { content: Array<{ text: string }> }).content[0].text);
+    expect(content.error).toContain("Node not found");
+  });
+
+  it("should allow access to nodes in the scoped workspace", async () => {
+    client.getKnowledgeNode.mockResolvedValue(
+      create(grackle.GetKnowledgeNodeResponseSchema, {
+        node: makeProtoNode({ id: "node-1", workspaceId: "ws-1" }),
+        edges: [],
+      }),
+    );
+
+    const result = await tool.handler({ id: "node-1" }, client as never, SCOPED_AUTH);
+    expect((result as { isError?: boolean }).isError).toBeUndefined();
+  });
+
+  it("should allow api-key callers to access any workspace", async () => {
+    client.getKnowledgeNode.mockResolvedValue(
+      create(grackle.GetKnowledgeNodeResponseSchema, {
+        node: makeProtoNode({ id: "node-1", workspaceId: "ws-other" }),
+        edges: [],
+      }),
+    );
+
+    const result = await tool.handler({ id: "node-1" }, client as never, { type: "api-key" });
+    expect((result as { isError?: boolean }).isError).toBeUndefined();
+  });
+
+  it("should filter expanded neighbors to the scoped workspace", async () => {
+    client.getKnowledgeNode.mockResolvedValue(
+      create(grackle.GetKnowledgeNodeResponseSchema, {
+        node: makeProtoNode({ id: "node-1", workspaceId: "ws-1" }),
+        edges: [],
+      }),
+    );
+    client.expandKnowledgeNode.mockResolvedValue(
+      create(grackle.ExpandKnowledgeNodeResponseSchema, {
+        nodes: [
+          makeProtoNode({ id: "node-2", workspaceId: "ws-1" }),
+          makeProtoNode({ id: "node-3", workspaceId: "ws-other" }),
+        ],
+        edges: [
+          makeProtoEdge({ fromId: "node-1", toId: "node-2" }),
+          makeProtoEdge({ fromId: "node-1", toId: "node-3" }),
+        ],
+      }),
+    );
+
+    const result = await tool.handler(
+      { id: "node-1", expand: true },
+      client as never,
+      SCOPED_AUTH,
+    );
+    const content = JSON.parse((result as { content: Array<{ text: string }> }).content[0].text);
+
+    expect(content.neighbors).toHaveLength(1);
+    expect(content.neighbors[0].id).toBe("node-2");
+    expect(content.neighborEdges).toHaveLength(1);
+    expect(content.neighborEdges[0].toId).toBe("node-2");
+  });
+
+  it("should deny access for scoped callers without workspaceId when node has a workspace", async () => {
+    const scopedNoWs: AuthContext = {
+      type: "scoped",
+      taskId: "t1",
+      personaId: "p1",
+      taskSessionId: "s1",
+    };
+
+    client.getKnowledgeNode.mockResolvedValue(
+      create(grackle.GetKnowledgeNodeResponseSchema, {
+        node: makeProtoNode({ id: "node-1", workspaceId: "ws-1" }),
+        edges: [],
+      }),
+    );
+
+    const result = await tool.handler({ id: "node-1" }, client as never, scopedNoWs);
+    expect((result as { isError: boolean }).isError).toBe(true);
   });
 });
 
