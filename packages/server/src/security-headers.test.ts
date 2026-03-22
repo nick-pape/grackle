@@ -126,7 +126,8 @@ describe("security headers", () => {
       expect(WEB_CONTENT_SECURITY_POLICY).toContain("style-src 'self' 'unsafe-inline'");
       expect(WEB_CONTENT_SECURITY_POLICY).toContain("img-src 'self' data:");
       expect(WEB_CONTENT_SECURITY_POLICY).toContain("font-src 'self'");
-      expect(WEB_CONTENT_SECURITY_POLICY).toContain("connect-src 'self' ws: wss:");
+      expect(WEB_CONTENT_SECURITY_POLICY).toContain("connect-src 'self'");
+      expect(WEB_CONTENT_SECURITY_POLICY).toContain("object-src 'none'");
       expect(WEB_CONTENT_SECURITY_POLICY).toContain("form-action 'self'");
       expect(WEB_CONTENT_SECURITY_POLICY).toContain("frame-ancestors 'none'");
       expect(WEB_CONTENT_SECURITY_POLICY).toContain("base-uri 'self'");
