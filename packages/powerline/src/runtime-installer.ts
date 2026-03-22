@@ -237,8 +237,11 @@ export async function importFromRuntime<T>(runtimeName: string, packageName: str
  */
 export function getRuntimeBinDirectory(runtimeName: string): string {
   if (isDevMode()) {
-    // In dev mode, return the PowerLine package's own node_modules/.bin
-    return resolve(import.meta.dirname, "../node_modules/.bin");
+    // In dev mode, prefer the monorepo's bin if it exists; fall back to the
+    // isolated runtime directory (packages removed from devDependencies).
+    const monoBin = resolve(import.meta.dirname, "../node_modules/.bin");
+    const runtimeBin = join(RUNTIMES_BASE_DIR, runtimeName, "node_modules", ".bin");
+    return existsSync(runtimeBin) ? runtimeBin : monoBin;
   }
   return join(RUNTIMES_BASE_DIR, runtimeName, "node_modules", ".bin");
 }

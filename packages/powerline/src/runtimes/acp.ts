@@ -295,6 +295,7 @@ class AcpSession extends BaseAgentSession {
       stdio: ["pipe", "pipe", "inherit"],
       cwd: spawnCwd,
       env: childEnv,
+      shell: process.platform === "win32",
     });
 
     this.eventQueue.push({
