@@ -540,4 +540,22 @@ describe("Codex streaming field extraction", () => {
     expect(myStdio.args).toEqual(["server.js"]);
     expect(myStdio.env).toEqual({ FOO: "bar" });
   });
+
+  it("emits usage event from turn.completed with cached tokens", async () => {
+    mockRunStreamedEvents = [
+      { type: "thread.started", thread_id: "t1" },
+      { type: "turn.completed", usage: { input_tokens: 500, cached_input_tokens: 200, output_tokens: 30 } },
+    ];
+
+    const runtime = new CodexRuntime();
+    const session = runtime.spawn({ sessionId: "codex-usage", prompt: "hi", model: "o3-mini", maxTurns: 1 });
+    const events = await collectEvents(session);
+
+    const usageEvents = events.filter((e) => e.type === "usage");
+    expect(usageEvents).toHaveLength(1);
+    const data = JSON.parse(usageEvents[0].content) as Record<string, number>;
+    expect(data.input_tokens).toBe(700); // 500 + 200 cached
+    expect(data.output_tokens).toBe(30);
+    expect(data.cost_usd).toBe(0); // Codex SDK doesn't provide USD cost
+  });
 });

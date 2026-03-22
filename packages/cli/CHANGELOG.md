@@ -1,6 +1,40 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sun, 22 Mar 2026 04:43:26 GMT and should not be manually modified.
+This log was last generated on Sun, 22 Mar 2026 06:07:06 GMT and should not be manually modified.
+
+## 0.68.3
+Sun, 22 Mar 2026 06:07:06 GMT
+
+### Patches
+
+- Refactor ws-bridge session termination to use fd closure instead of direct INTERRUPTED status
+
+## 0.68.2
+Sun, 22 Mar 2026 05:56:14 GMT
+
+### Patches
+
+- feat(web): surface SUSPENDED session state with yellow status dot in dashboard
+
+## 0.68.1
+Sun, 22 Mar 2026 05:42:46 GMT
+
+### Patches
+
+- Emit usage events from Codex, ACP, and GenAIScript runtimes
+
+## 0.68.0
+Sun, 22 Mar 2026 05:34:41 GMT
+
+### Minor changes
+
+- Persistent process mode for Claude Code runtime — hold agent alive between turns via AsyncIterable prompt
+- Add knowledge graph gRPC endpoints and refactor MCP tools to use gRPC
+
+### Patches
+
+- feat(server): auto-reconnect disconnected environments with exponential backoff on heartbeat
+- Add relationship edges (PART_OF, DEPENDS_ON, DERIVED_FROM) when syncing entities to knowledge graph
 
 ## 0.67.0
 Sun, 22 Mar 2026 04:43:26 GMT

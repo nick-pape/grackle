@@ -183,9 +183,42 @@ describe("mapSessionUpdate", () => {
   });
 
   it("skips unrecognized update types", () => {
-    expect(mapSessionUpdate({ sessionUpdate: "usage_update" })).toHaveLength(0);
     expect(mapSessionUpdate({ sessionUpdate: "config_option_update" })).toHaveLength(0);
     expect(mapSessionUpdate({ sessionUpdate: "session_info_update" })).toHaveLength(0);
+  });
+
+  it("maps usage_update with USD cost to a usage event", () => {
+    const events = mapSessionUpdate({
+      sessionUpdate: "usage_update",
+      used: 5000,
+      size: 128000,
+      cost: { amount: 0.05, currency: "USD" },
+    });
+    expect(events).toHaveLength(1);
+    expect(events[0].type).toBe("usage");
+    const data = JSON.parse(events[0].content) as Record<string, number>;
+    expect(data.cost_usd).toBe(0.05);
+    expect(data.input_tokens).toBe(0);
+    expect(data.output_tokens).toBe(0);
+  });
+
+  it("skips usage_update with non-USD currency", () => {
+    const events = mapSessionUpdate({
+      sessionUpdate: "usage_update",
+      used: 5000,
+      size: 128000,
+      cost: { amount: 100, currency: "JPY" },
+    });
+    expect(events).toHaveLength(0);
+  });
+
+  it("skips usage_update with no cost", () => {
+    const events = mapSessionUpdate({
+      sessionUpdate: "usage_update",
+      used: 5000,
+      size: 128000,
+    });
+    expect(events).toHaveLength(0);
   });
 });
 
