@@ -21,7 +21,7 @@ import * as adapterManager from "./adapter-manager.js";
 import * as envRegistry from "./env-registry.js";
 import * as sessionStore from "./session-store.js";
 import * as tokenBroker from "./token-broker.js";
-import { attemptReconnects, clearReconnectState } from "./auto-reconnect.js";
+import { attemptReconnects, resetReconnectState } from "./auto-reconnect.js";
 import { createMcpServer } from "@grackle-ai/mcp";
 import { isKnowledgeEnabled, initKnowledge } from "./knowledge-init.js";
 import { readFileSync, existsSync } from "node:fs";
@@ -677,7 +677,7 @@ async function main(): Promise<void> {
         emit("environment.changed", {});
       },
       onRestarted: () => {
-        clearReconnectState("local");
+        resetReconnectState("local");
       },
     });
     await localPowerLineManager.start();

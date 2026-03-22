@@ -43,6 +43,8 @@ export class LocalPowerLineManager {
   private handle: LocalPowerLineHandle | undefined;
   private stoppingGracefully: boolean = false;
   private restarting: boolean = false;
+  private restartPending: boolean = false;
+  private restartPromise: Promise<void> | undefined;
   private readonly restartTimestamps: number[] = [];
   private readonly options: Required<Pick<LocalPowerLineManagerOptions, "port" | "host" | "token" | "maxRestarts" | "restartWindowMs">>
     & Pick<LocalPowerLineManagerOptions, "onStatusChange" | "onRestarted" | "processFactory" | "portProbe" | "resolveEntryPoint">;
@@ -71,6 +73,12 @@ export class LocalPowerLineManager {
    */
   public async stop(): Promise<void> {
     this.stoppingGracefully = true;
+
+    // Wait for any in-flight restart to finish so we can stop the new handle
+    if (this.restartPromise) {
+      await this.restartPromise;
+    }
+
     const currentHandle: LocalPowerLineHandle | undefined = this.handle;
     if (currentHandle) {
       this.handle = undefined;
@@ -110,8 +118,18 @@ export class LocalPowerLineManager {
     this.handle = undefined;
     this.options.onStatusChange?.("disconnected");
 
-    // Fire-and-forget restart attempt
-    this.restart().catch((err) => {
+    // If a restart is already in progress, mark a pending restart so it retries
+    // after the current attempt finishes. Otherwise, start a new restart.
+    if (this.restarting) {
+      this.restartPending = true;
+    } else {
+      this.scheduleRestart();
+    }
+  }
+
+  /** Fire-and-forget wrapper that stores the restart promise for stop() to await. */
+  private scheduleRestart(): void {
+    this.restartPromise = this.restart().catch((err) => {
       logger.error({ err }, "Unhandled error during PowerLine restart");
     });
   }
@@ -149,6 +167,13 @@ export class LocalPowerLineManager {
 
       this.handle = await this.spawnProcess();
 
+      // If stop() was called while we were spawning, leave handle set — stop()
+      // awaits this promise and will clean up the handle afterwards.
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- stoppingGracefully may flip during async spawnProcess
+      if (this.stoppingGracefully) {
+        return;
+      }
+
       logger.info({ port: this.options.port, pid: this.handle.process.pid }, "Local PowerLine restarted successfully");
       this.options.onRestarted?.();
 
@@ -158,6 +183,14 @@ export class LocalPowerLineManager {
       this.options.onStatusChange?.("error");
     } finally {
       this.restarting = false;
+      this.restartPromise = undefined;
+
+      // If another exit occurred while this restart was in progress, retry
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- stoppingGracefully may flip during async restart
+      if (this.restartPending && !this.stoppingGracefully) {
+        this.restartPending = false;
+        this.scheduleRestart();
+      }
     }
   }
 }

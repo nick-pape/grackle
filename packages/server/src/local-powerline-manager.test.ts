@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { EventEmitter } from "node:events";
 import { PassThrough } from "node:stream";
 import type { ChildProcess } from "node:child_process";
@@ -146,6 +146,48 @@ describe("LocalPowerLineManager", () => {
     expect(onStatusChange).not.toHaveBeenCalled();
   });
 
+  it("stop during in-flight restart awaits and cleans up new handle", async () => {
+    let resolveProbe: (() => void) | undefined;
+    let probeCallCount = 0;
+    const slowPortProbe: PortProbe = {
+      waitForPort: vi.fn(async () => {
+        probeCallCount++;
+        if (probeCallCount > 1) {
+          await new Promise<void>((r) => { resolveProbe = r; });
+        }
+      }),
+    };
+
+    const opts = createOptions({ portProbe: slowPortProbe });
+    const manager = new LocalPowerLineManager(opts);
+
+    await manager.start();
+
+    // Simulate crash — restart starts but blocks on port probe
+    (opts.mockProcesses[0] as unknown as EventEmitter).emit("exit", 1, null);
+    await vi.waitFor(() => {
+      expect(opts.mockProcesses).toHaveLength(2);
+    });
+
+    // Call stop while restart is in progress — stop() awaits the restart promise
+    const stopPromise = manager.stop();
+
+    // Unblock the restart — restart returns early (stoppingGracefully), then
+    // stop() sees the new handle and stops it
+    resolveProbe!();
+
+    // stop() will call handle.stop() → SIGTERM on the new process
+    await vi.waitFor(() => {
+      expect((opts.mockProcesses[1].kill as ReturnType<typeof vi.fn>)).toHaveBeenCalledWith("SIGTERM");
+    });
+
+    // Simulate the new process exiting so stop() can complete
+    (opts.mockProcesses[1] as unknown as EventEmitter).emit("exit", 0, null);
+
+    await stopPromise;
+    expect(manager.getHandle()).toBeUndefined();
+  });
+
   it("trips circuit breaker after max restarts in window", async () => {
     const onStatusChange = vi.fn();
     const onRestarted = vi.fn();
@@ -207,16 +249,16 @@ describe("LocalPowerLineManager", () => {
     });
   });
 
-  it("prevents concurrent restarts", async () => {
+  it("prevents concurrent restarts but retries pending exit", async () => {
     // Use a slow port probe to simulate a restart in progress
-    let resolveProbe: (() => void) | undefined;
+    const probeResolvers: (() => void)[] = [];
     let probeCallCount = 0;
     const slowPortProbe: PortProbe = {
       waitForPort: vi.fn(async () => {
         probeCallCount++;
         if (probeCallCount > 1) {
           // Second+ calls: slow to simulate in-progress restart
-          await new Promise<void>((r) => { resolveProbe = r; });
+          await new Promise<void>((r) => { probeResolvers.push(r); });
         }
       }),
     };
@@ -230,33 +272,39 @@ describe("LocalPowerLineManager", () => {
     // Simulate first crash — restart starts but blocks on port probe
     (opts.mockProcesses[0] as unknown as EventEmitter).emit("exit", 1, null);
 
-    // Wait for spawn to be called
+    // Wait for spawn to be called (restart #1 in progress)
     await vi.waitFor(() => {
       expect(opts.mockProcesses).toHaveLength(2);
     });
 
-    // Simulate second crash while first restart is still in progress
-    // This should be a no-op (restarting flag is true)
+    // Simulate second exit while first restart is still in progress.
+    // This should not spawn concurrently, but should queue a pending restart.
     (opts.mockProcesses[1] as unknown as EventEmitter).emit("exit", 1, null);
 
     // Give time for any concurrent restart to start
     await new Promise((r) => setTimeout(r, 50));
 
-    // Should still only have 2 processes (no 3rd spawn from the 2nd exit)
+    // Should still only have 2 processes (no concurrent spawn)
     expect(opts.mockProcesses).toHaveLength(2);
 
-    // Unblock the first restart
-    resolveProbe!();
-    await new Promise((r) => setTimeout(r, 50));
+    // Unblock the first restart — it completes, then the pending restart fires
+    probeResolvers[0]();
 
-    expect(onRestarted).toHaveBeenCalledTimes(1);
+    // Wait for the pending restart to spawn a 3rd process and complete
+    await vi.waitFor(() => {
+      expect(probeResolvers).toHaveLength(2);
+    });
+    probeResolvers[1]();
+
+    await vi.waitFor(() => {
+      expect(onRestarted).toHaveBeenCalledTimes(2);
+    });
+
+    expect(opts.mockProcesses).toHaveLength(3);
   });
 
   it("sets error status when restart fails", async () => {
     const onStatusChange = vi.fn();
-    const failingPortProbe: PortProbe = {
-      waitForPort: vi.fn(async () => {}),
-    };
     let callCount = 0;
 
     const opts = createOptions({
