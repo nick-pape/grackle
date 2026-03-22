@@ -99,6 +99,12 @@ Agents don't just run in parallel — they share knowledge. One agent's architec
 
 ![Personas — specialized agent templates with runtime, model, and system prompt configuration](screenshots/persona-management-view.png)
 
+### 🎨 Themeable
+
+10 built-in themes — dark, light, and everything in between. Grackle, Glassmorphism, Matrix, Neubrutalism, Monokai, Ubuntu, Sandstone, Verdigris, and Primer. Switch in Settings or match your system preference.
+
+![Theme grid — Grackle, Grackle Light, Matrix, Neubrutalism, Monokai, Sandstone](screenshots/theme-grid.png)
+
 ## 🏗️ Example Topology
 
 ```mermaid
