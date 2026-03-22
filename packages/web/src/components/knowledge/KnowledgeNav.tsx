@@ -34,7 +34,7 @@ export function KnowledgeNav(): JSX.Element {
 
   const handleWorkspaceChange = useCallback((wsId: string) => {
     setSearchInput("");
-    knowledge.clearSearch();
+    // loadRecent handles clearing search state and fetching with the new filter
     knowledge.loadRecent(wsId || undefined);
   }, [knowledge]);
 

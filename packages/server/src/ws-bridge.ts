@@ -2171,7 +2171,8 @@ async function handleMessage(
         return;
       }
       try {
-        const limit: number = (msg.payload?.limit as number) || 20;
+        const rawLimit: number = Number(msg.payload?.limit) || 20;
+        const limit: number = Math.max(1, Math.min(100, Math.floor(rawLimit)));
         const workspaceId: string | undefined = msg.payload?.workspaceId !== undefined ? (msg.payload.workspaceId as string) : undefined;
         const result = await listRecentNodes(limit, workspaceId);
         sendWs(ws, {
