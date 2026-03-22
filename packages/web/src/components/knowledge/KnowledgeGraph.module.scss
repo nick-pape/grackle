@@ -22,15 +22,14 @@
 // ── Links ──────────────────────────────────────────────────
 
 .link {
-  stroke: var(--border-default, rgba(255, 255, 255, 0.08));
+  stroke: var(--text-disabled, rgba(255, 255, 255, 0.2));
   stroke-width: 1.5;
-  stroke-dasharray: 6 4;
-  opacity: 0.5;
+  opacity: 0.7;
   transition: opacity 0.3s ease, stroke 0.3s ease;
 
   &:hover {
     opacity: 1;
-    stroke: var(--text-secondary, rgba(255, 255, 255, 0.4));
+    stroke: var(--text-secondary, rgba(255, 255, 255, 0.5));
     stroke-width: 2;
   }
 }
