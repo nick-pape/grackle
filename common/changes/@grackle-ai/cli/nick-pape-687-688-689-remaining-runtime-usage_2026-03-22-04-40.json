@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Emit usage events from Codex, ACP, and GenAIScript runtimes",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
