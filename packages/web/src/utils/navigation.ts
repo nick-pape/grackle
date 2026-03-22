@@ -35,9 +35,13 @@ export function sessionUrl(sessionId: string): string {
   return `/sessions/${encodeURIComponent(sessionId)}`;
 }
 
-/** Build URL for a workspace overview page, nested under its environment. */
-export function workspaceUrl(workspaceId: string, environmentId: string): string {
-  return `/environments/${encodeURIComponent(environmentId)}/workspaces/${encodeURIComponent(workspaceId)}`;
+/** Build URL for a workspace overview page, nested under its environment when available. */
+export function workspaceUrl(workspaceId: string, environmentId?: string): string {
+  if (environmentId) {
+    return `/environments/${encodeURIComponent(environmentId)}/workspaces/${encodeURIComponent(workspaceId)}`;
+  }
+  // Fallback to legacy route so WorkspaceRedirect can resolve the environment.
+  return `/workspaces/${encodeURIComponent(workspaceId)}`;
 }
 
 /** Build URL for a task detail page, optionally targeting a specific tab and workspace/environment scope. */
