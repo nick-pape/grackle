@@ -142,10 +142,10 @@ A `rush-qdrant mcp` daemon provides **semantic search** over the codebase via th
 
 ### Catalog naming
 
-Each grackle clone is a separate catalog named after its folder (`grackle`, `grackle2`, ..., `grackle6`). This clone is catalog `"grackle6"`. Always scope searches to avoid mixing results from other clones:
+Each grackle clone is a separate catalog named after its folder (e.g., `grackle`, `grackle2`, `grackle6`). **Use the folder name of this repo as the catalog value** — run `basename $(git rev-parse --show-toplevel)` if unsure. Always scope searches to avoid mixing results from other clones:
 
 ```
-mcp__qdrant-search__semantic_search(query: "session spawning", catalog: "grackle6")
+mcp__qdrant-search__semantic_search(query: "session spawning", catalog: "<folder-name>")
 ```
 
 Omit `catalog` only when you intentionally want to search across all repos.
