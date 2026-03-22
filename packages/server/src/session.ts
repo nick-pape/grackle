@@ -60,8 +60,13 @@ function sign(value: string, secret: string): string {
  *
  * The cookie format is `<sessionId>.<signature>` where the signature
  * is an HMAC-SHA256 of the session ID using the API key as secret.
+ *
+ * When `options.secure` is true the cookie includes the `Secure` flag,
+ * which tells browsers to only send it over HTTPS. This should be
+ * enabled when the server is network-accessible (`--allow-network`)
+ * behind a TLS-terminating reverse proxy.
  */
-export function createSession(apiKey: string): string {
+export function createSession(apiKey: string, options?: { secure?: boolean }): string {
   const sessionId = randomBytes(SESSION_ID_BYTES).toString("hex");
   const now = Date.now();
   sessions.set(sessionId, {
@@ -73,7 +78,18 @@ export function createSession(apiKey: string): string {
   const cookieValue = `${sessionId}.${signature}`;
   const maxAge = Math.floor(SESSION_TTL_MS / 1000);
 
-  return `${SESSION_COOKIE_NAME}=${cookieValue}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${maxAge}`;
+  const parts = [
+    `${SESSION_COOKIE_NAME}=${cookieValue}`,
+    "HttpOnly",
+    "SameSite=Lax",
+    "Path=/",
+    `Max-Age=${maxAge}`,
+  ];
+  if (options?.secure) {
+    parts.push("Secure");
+  }
+
+  return parts.join("; ");
 }
 
 /**

@@ -4,6 +4,17 @@
 
 When you encounter unexpected issues, workarounds, or non-obvious behavior (CI quirks, tooling gotchas, environment-specific problems), **update this CLAUDE.md** with the finding so future sessions don't repeat the investigation. Add the note to the most relevant existing section, or create a new one if needed.
 
+### Package READMEs
+
+Each package under `packages/` has a `README.md` that is published to npm. **When you change a package's public behavior** (new commands, renamed options, new MCP tools, new API methods, changed configuration, etc.), **update that package's README to match.** Do not let READMEs drift out of sync with the code.
+
+- **CLI** (`packages/cli/README.md`): documents every command, subcommand, and flag. Update when adding/removing/renaming commands or options.
+- **MCP** (`packages/mcp/README.md`): documents every MCP tool with parameters. Update when adding/removing/renaming tools.
+- **Knowledge Core** (`packages/knowledge-core/README.md`): detailed API reference. Update when the public API changes.
+- **All other packages**: concise overviews. Update if the package's purpose, key concepts, or usage instructions change.
+
+Do **not** update the root `README.md` as part of this process — it is a separate marketing/overview document maintained independently.
+
 ## Git Workflow
 
 - **Never push directly to main.** All changes must go through a pull request. Always create a feature branch and open a PR — never commit and push to `main`.

@@ -1,8 +1,8 @@
 {
   "changes": [
     {
-      "comment": "Nest workspace URLs under /environments and fix breadcrumbs",
-      "type": "patch",
+      "comment": "placeholder",
+      "type": "none",
       "packageName": "@grackle-ai/cli"
     }
   ],

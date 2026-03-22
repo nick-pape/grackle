@@ -54,6 +54,7 @@ describe("credential-providers", () => {
         github: "on",
         copilot: "on",
         codex: "off",
+        goose: "off",
       });
     });
 
@@ -64,6 +65,7 @@ describe("credential-providers", () => {
         github: "off",
         copilot: "off",
         codex: "off",
+        goose: "off",
       });
     });
 
@@ -79,6 +81,7 @@ describe("credential-providers", () => {
           github: "off",
           copilot: "off",
           codex: "off",
+          goose: "off",
         });
       }
     });
@@ -97,6 +100,7 @@ describe("credential-providers", () => {
         github: "off",
         copilot: "on",
         codex: "off",
+        goose: "off",
       });
     });
 
@@ -107,6 +111,7 @@ describe("credential-providers", () => {
         github: "off",
         copilot: "off",
         codex: "off",
+        goose: "off",
       });
     });
   });
@@ -119,6 +124,7 @@ describe("credential-providers", () => {
         github: "off",
         copilot: "off",
         codex: "off",
+        goose: "off",
       });
     });
   });
@@ -130,6 +136,7 @@ describe("credential-providers", () => {
         github: "on" as const,
         copilot: "off" as const,
         codex: "on" as const,
+        goose: "off" as const,
       };
 
       setCredentialProviders(config, testDb);
@@ -144,12 +151,14 @@ describe("credential-providers", () => {
         github: "off",
         copilot: "off",
         codex: "off",
+        goose: "off",
       }, testDb);
       setCredentialProviders({
         claude: "subscription",
         github: "on",
         copilot: "on",
         codex: "on",
+        goose: "off",
       }, testDb);
 
       const result = getCredentialProviders(testDb);
@@ -169,6 +178,9 @@ describe("credential-providers", () => {
       delete process.env.COPILOT_CLI_PATH;
       delete process.env.COPILOT_PROVIDER_CONFIG;
       delete process.env.OPENAI_API_KEY;
+      delete process.env.GOOSE_PROVIDER;
+      delete process.env.GOOSE_MODEL;
+      delete process.env.GOOGLE_API_KEY;
     });
 
     it("returns empty bundle when all providers are off", () => {
@@ -182,6 +194,7 @@ describe("credential-providers", () => {
         github: "off",
         copilot: "off",
         codex: "off",
+        goose: "off",
       }, testDb);
       process.env.ANTHROPIC_API_KEY = "sk-test-123";
 
@@ -198,6 +211,7 @@ describe("credential-providers", () => {
         github: "off",
         copilot: "off",
         codex: "off",
+        goose: "off",
       }, testDb);
       mockExistsSync.mockReturnValue(true);
       mockReadFileSync.mockReturnValue('{"oauth_token":"abc"}');
@@ -215,6 +229,7 @@ describe("credential-providers", () => {
         github: "on",
         copilot: "off",
         codex: "off",
+        goose: "off",
       }, testDb);
       process.env.GITHUB_TOKEN = "ghp_test";
       process.env.GH_TOKEN = "gho_test";
@@ -232,6 +247,7 @@ describe("credential-providers", () => {
         github: "off",
         copilot: "on",
         codex: "off",
+        goose: "off",
       }, testDb);
       mockExistsSync.mockReturnValue(true);
       mockReadFileSync.mockReturnValue('{"logged_in_users":[]}');
@@ -251,6 +267,7 @@ describe("credential-providers", () => {
         github: "off",
         copilot: "off",
         codex: "on",
+        goose: "off",
       }, testDb);
       mockExistsSync.mockReturnValue(true);
       mockReadFileSync.mockReturnValue('{"auth_mode":"chatgpt"}');
@@ -266,12 +283,38 @@ describe("credential-providers", () => {
       expect(envTokens[0].value).toBe("sk-openai-test");
     });
 
+    it("includes Goose config file and env vars when goose is on", () => {
+      setCredentialProviders({
+        claude: "off",
+        github: "off",
+        copilot: "off",
+        codex: "off",
+        goose: "on",
+      }, testDb);
+      mockExistsSync.mockReturnValue(true);
+      mockReadFileSync.mockReturnValue("provider: anthropic\nmodel: claude-sonnet-4-20250514");
+      process.env.GOOSE_PROVIDER = "anthropic";
+      process.env.GOOSE_MODEL = "claude-sonnet-4-20250514";
+
+      const bundle = buildProviderTokenBundle(undefined, testDb);
+      const fileTokens = bundle.tokens.filter((t) => t.type === "file");
+      const envTokens = bundle.tokens.filter((t) => t.type === "env_var");
+      expect(fileTokens).toHaveLength(1);
+      const expectedPath = process.platform === "win32"
+        ? "%APPDATA%/Block/goose/config/config.yaml"
+        : "~/.config/goose/config.yaml";
+      expect(fileTokens[0].filePath).toBe(expectedPath);
+      expect(envTokens.some((t) => t.envVar === "GOOSE_PROVIDER")).toBe(true);
+      expect(envTokens.some((t) => t.envVar === "GOOSE_MODEL")).toBe(true);
+    });
+
     it("skips env vars that are not set in process.env", () => {
       setCredentialProviders({
         claude: "api_key",
         github: "on",
         copilot: "off",
         codex: "off",
+        goose: "off",
       }, testDb);
       // Don't set any env vars
 
@@ -286,6 +329,9 @@ describe("credential-providers", () => {
       delete process.env.GITHUB_TOKEN;
       delete process.env.COPILOT_GITHUB_TOKEN;
       delete process.env.OPENAI_API_KEY;
+      delete process.env.GOOSE_PROVIDER;
+      delete process.env.GOOSE_MODEL;
+      delete process.env.GOOGLE_API_KEY;
     });
 
     it("claude-code runtime only includes Claude and GitHub tokens", () => {
@@ -294,6 +340,7 @@ describe("credential-providers", () => {
         github: "on",
         copilot: "on",
         codex: "on",
+        goose: "off",
       }, testDb);
       process.env.ANTHROPIC_API_KEY = "sk-test";
       process.env.GITHUB_TOKEN = "ghp_test";
@@ -314,6 +361,7 @@ describe("credential-providers", () => {
         github: "on",
         copilot: "on",
         codex: "on",
+        goose: "off",
       }, testDb);
       process.env.ANTHROPIC_API_KEY = "sk-test";
       process.env.GITHUB_TOKEN = "ghp_test";
@@ -334,6 +382,7 @@ describe("credential-providers", () => {
         github: "on",
         copilot: "on",
         codex: "on",
+        goose: "off",
       }, testDb);
       process.env.ANTHROPIC_API_KEY = "sk-test";
       process.env.GITHUB_TOKEN = "ghp_test";
@@ -348,12 +397,39 @@ describe("credential-providers", () => {
       expect(envVars).toContain("OPENAI_API_KEY");
     });
 
+    it("goose runtime only includes Goose and GitHub tokens", () => {
+      setCredentialProviders({
+        claude: "api_key",
+        github: "on",
+        copilot: "on",
+        codex: "on",
+        goose: "on",
+      }, testDb);
+      process.env.ANTHROPIC_API_KEY = "sk-test";
+      process.env.GITHUB_TOKEN = "ghp_test";
+      process.env.COPILOT_GITHUB_TOKEN = "ghu_test";
+      process.env.OPENAI_API_KEY = "sk-openai";
+      process.env.GOOSE_PROVIDER = "anthropic";
+
+      const bundle = buildProviderTokenBundle("goose", testDb);
+      const envVars = bundle.tokens.map((t) => t.envVar);
+      // Goose provider forwards its own env vars and API keys
+      expect(envVars).toContain("GOOSE_PROVIDER");
+      expect(envVars).toContain("ANTHROPIC_API_KEY");
+      expect(envVars).toContain("OPENAI_API_KEY");
+      // GitHub is in goose's provider list
+      expect(envVars).toContain("GITHUB_TOKEN");
+      // Copilot should not be included
+      expect(envVars).not.toContain("COPILOT_GITHUB_TOKEN");
+    });
+
     it("unrecognized runtime includes no providers (fails safe)", () => {
       setCredentialProviders({
         claude: "api_key",
         github: "on",
         copilot: "on",
         codex: "on",
+        goose: "off",
       }, testDb);
       process.env.ANTHROPIC_API_KEY = "sk-test";
       process.env.GITHUB_TOKEN = "ghp_test";
@@ -371,6 +447,7 @@ describe("credential-providers", () => {
         github: "on",
         copilot: "on",
         codex: "on",
+        goose: "off",
       }, testDb);
       process.env.ANTHROPIC_API_KEY = "sk-test";
       process.env.GITHUB_TOKEN = "ghp_test";
@@ -387,6 +464,7 @@ describe("credential-providers", () => {
         github: "on",
         copilot: "on",
         codex: "on",
+        goose: "off",
       }, testDb);
       process.env.ANTHROPIC_API_KEY = "sk-test";
       process.env.GITHUB_TOKEN = "ghp_test";

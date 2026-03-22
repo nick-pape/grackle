@@ -8,6 +8,7 @@ import { updateEnvironmentStatus, resetAllStatuses } from "./env-registry.js";
 import { initWsSubscriber } from "./ws-broadcast.js";
 import { initSigchldSubscriber } from "./signals/sigchld.js";
 import { initLifecycleManager } from "./lifecycle.js";
+import { parseAdapterConfig } from "./adapter-config.js";
 import { emit, subscribe } from "./event-bus.js";
 import { DockerAdapter } from "./adapters/docker.js";
 import { LocalAdapter } from "./adapters/local.js";
@@ -28,6 +29,7 @@ import { readFileSync, existsSync } from "node:fs";
 import { join, dirname, extname, normalize, resolve, relative } from "node:path";
 import { createRequire } from "node:module";
 import { loadOrCreateApiKey, verifyApiKey } from "./api-key.js";
+import { setSecurityHeaders } from "./security-headers.js";
 import { createSession, validateSessionCookie } from "./session.js";
 import { startSessionCleanup, stopSessionCleanup } from "./session.js";
 import { generatePairingCode, redeemPairingCode, startPairingCleanup, stopPairingCleanup } from "./pairing.js";
@@ -62,7 +64,7 @@ const WEB_DIST_DIR: string = resolve(
 
 /** Minimal HTML page shown when the user needs to enter a pairing code. */
 function renderPairingPage(error?: string): string {
-  const errorHtml = error ? `<p style="color:#e74c3c;margin-bottom:1rem">${error}</p>` : "";
+  const errorHtml = error ? `<p style="color:#e74c3c;margin-bottom:1rem">${escapeHtml(error)}</p>` : "";
   return `<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Grackle — Pair Device</title>
@@ -114,7 +116,7 @@ function renderAuthorizePage(
   hasPairedSession: boolean,
   error?: string,
 ): string {
-  const errorHtml = error ? `<p style="color:#e74c3c;margin-bottom:1rem">${error}</p>` : "";
+  const errorHtml = error ? `<p style="color:#e74c3c;margin-bottom:1rem">${escapeHtml(error)}</p>` : "";
   const pairingField = hasPairedSession
     ? ""
     : `<p>Enter the pairing code shown in your terminal to pair and authorize.</p>
@@ -265,12 +267,15 @@ function createWebHandler(
   bindHost: string,
 ): (req: http.IncomingMessage, res: http.ServerResponse) => void {
   /** Map wildcard bind hosts to a dialable host for OAuth URLs. */
-  const dialableHost = isWildcardAddress(bindHost) ? "127.0.0.1" : bindHost;
+  const allowNetwork = isWildcardAddress(bindHost);
+  const dialableHost = allowNetwork ? "127.0.0.1" : bindHost;
   const urlHost = dialableHost.includes(":") ? `[${dialableHost}]` : dialableHost;
   const webBaseUrl = `http://${urlHost}:${webPort}`;
 
   // eslint-disable-next-line @typescript-eslint/no-misused-promises
   return async (req: http.IncomingMessage, res: http.ServerResponse) => {
+    setSecurityHeaders(res);
+
     let rawPath: string;
     let queryString = "";
     try {
@@ -479,7 +484,7 @@ function createWebHandler(
           }
 
           // Pairing succeeded — also create a browser session
-          const setCookie = createSession(apiKey);
+          const setCookie = createSession(apiKey, { secure: allowNetwork });
           responseHeaders["Set-Cookie"] = setCookie;
           hasPairedSession = true;
         }
@@ -574,7 +579,7 @@ function createWebHandler(
       if (code) {
         const remoteIp = getRemoteIp(req);
         if (redeemPairingCode(code, remoteIp)) {
-          const setCookie = createSession(apiKey);
+          const setCookie = createSession(apiKey, { secure: allowNetwork });
           res.writeHead(302, {
             Location: "/",
             "Set-Cookie": setCookie,
@@ -684,7 +689,7 @@ async function main(): Promise<void> {
 
     // Auto-provision: connect the local adapter
     const localAdapter = adapterManager.getAdapter("local")!;
-    const config = JSON.parse(localEnv.adapterConfig) as Record<string, unknown>;
+    const config = parseAdapterConfig(localEnv.adapterConfig);
 
     envRegistry.updateEnvironmentStatus("local", "connecting");
     emit("environment.changed", {});
@@ -821,9 +826,13 @@ async function main(): Promise<void> {
   const mcpPort = parseInt(process.env.GRACKLE_MCP_PORT || String(DEFAULT_MCP_PORT), 10);
   const webServer = http.createServer(createWebHandler(apiKey, webPort, bindHost));
 
-  createWsBridge(webServer, verifyApiKey, (cookieHeader: string) =>
-    validateSessionCookie(cookieHeader, apiKey),
-  );
+  createWsBridge(webServer, {
+    verifyApiKey,
+    validateCookie: (cookieHeader: string) =>
+      validateSessionCookie(cookieHeader, apiKey),
+    webPort,
+    allowNetwork,
+  });
 
   // Wire the event bus to forward domain events over WebSocket
   initWsSubscriber();

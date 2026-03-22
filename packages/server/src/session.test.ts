@@ -52,6 +52,16 @@ describe("session", () => {
       expect(sessionId.length).toBe(64); // 32 bytes hex
       expect(signature.length).toBe(64); // sha256 hex
     });
+
+    it("does not include Secure flag by default", () => {
+      const cookie = createSession(TEST_API_KEY);
+      expect(cookie).not.toContain("; Secure");
+    });
+
+    it("includes Secure flag when options.secure is true", () => {
+      const cookie = createSession(TEST_API_KEY, { secure: true });
+      expect(cookie).toContain("; Secure");
+    });
   });
 
   describe("validateSessionCookie", () => {

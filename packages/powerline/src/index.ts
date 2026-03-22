@@ -38,12 +38,22 @@ function main(): void {
       String(DEFAULT_POWERLINE_PORT),
     )
     .option("--token <token>", "Authentication token")
+    .option("--no-auth", "Run without authentication (development only)")
     .option("--host <host>", "Host to bind to", "127.0.0.1")
-    .action((opts: { port: string; token?: string; host: string }) => {
+    .action((opts: { port: string; token?: string; auth: boolean; host: string }) => {
       const port = parseInt(opts.port, 10);
       const host = opts.host;
-      const powerlineToken =
-        opts.token || process.env.GRACKLE_POWERLINE_TOKEN || "";
+      const powerlineToken = opts.auth
+        ? (opts.token || process.env.GRACKLE_POWERLINE_TOKEN || "")
+        : "";
+
+      if (!powerlineToken && opts.auth) {
+        logger.fatal(
+          "No authentication token provided. Set --token, GRACKLE_POWERLINE_TOKEN, or pass --no-auth for development.",
+        );
+        process.exitCode = 1;
+        return;
+      }
 
       // Register runtimes
       registerRuntime(new StubRuntime());
@@ -52,6 +62,7 @@ function main(): void {
       registerRuntime(new ClaudeCodeRuntime());
       registerRuntime(new CopilotRuntime());
       registerRuntime(new CodexRuntime());
+      registerRuntime(new AcpRuntime({ name: "goose", command: "goose", args: ["acp"] }));
       registerRuntime(new AcpRuntime({ name: "codex-acp", command: "codex-acp", args: [] }));
       registerRuntime(new AcpRuntime({ name: "copilot-acp", command: "copilot", args: ["--acp", "--stdio"] }));
       registerRuntime(new AcpRuntime({ name: "claude-code-acp", command: "claude-agent-acp", args: [] }));

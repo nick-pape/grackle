@@ -24,7 +24,7 @@ message Pong {
 
 message SpawnRequest {
   string session_id = 1; // Server-assigned session ID
-  string runtime = 2; // "claude-code" | "stub" | ...
+  string runtime = 2; // "claude-code" | "copilot" | "codex" | "goose" | "stub" | ...
   string prompt = 3;
   string model = 4;
   int32 max_turns = 5;
