@@ -38,12 +38,20 @@ function main(): void {
       String(DEFAULT_POWERLINE_PORT),
     )
     .option("--token <token>", "Authentication token")
+    .option("--no-auth", "Run without authentication (development only)")
     .option("--host <host>", "Host to bind to", "127.0.0.1")
-    .action((opts: { port: string; token?: string; host: string }) => {
+    .action((opts: { port: string; token?: string; auth: boolean; host: string }) => {
       const port = parseInt(opts.port, 10);
       const host = opts.host;
       const powerlineToken =
         opts.token || process.env.GRACKLE_POWERLINE_TOKEN || "";
+
+      if (!powerlineToken && opts.auth) {
+        logger.fatal(
+          "No authentication token provided. Set --token, GRACKLE_POWERLINE_TOKEN, or pass --no-auth for development.",
+        );
+        process.exit(1);
+      }
 
       // Register runtimes
       registerRuntime(new StubRuntime());
