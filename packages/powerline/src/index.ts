@@ -51,7 +51,8 @@ function main(): void {
         logger.fatal(
           "No authentication token provided. Set --token, GRACKLE_POWERLINE_TOKEN, or pass --no-auth for development.",
         );
-        process.exit(1);
+        process.exitCode = 1;
+        return;
       }
 
       // Register runtimes
