@@ -107,9 +107,10 @@ export function updateSessionStatus(id: string, status: SessionStatus): void {
     .run();
 }
 
-/** Get the currently active (pending/running/waiting_input) session for an environment, if any. */
+/** Get the currently active (pending/running/idle-without-endReason) session for an environment, if any.
+ * IDLE sessions with an endReason are "done" (agent finished) and are not considered active. */
 export function getActiveForEnv(environmentId: string): SessionRow | undefined {
-  return db.select().from(sessions)
+  const row = db.select().from(sessions)
     .where(
       and(
         eq(sessions.environmentId, environmentId),
@@ -117,6 +118,11 @@ export function getActiveForEnv(environmentId: string): SessionRow | undefined {
       ),
     )
     .get();
+  // Exclude IDLE sessions with endReason — they're done, not truly active
+  if (row && row.status === SESSION_STATUS.IDLE && row.endReason) {
+    return undefined;
+  }
+  return row;
 }
 
 /** Increment the turn counter for a session. */
@@ -239,9 +245,10 @@ export function getLatestSessionForTask(taskId: string): SessionRow | undefined 
     .get();
 }
 
-/** Get all active (non-terminal) sessions for a task. */
+/** Get all active (non-terminal) sessions for a task.
+ * Excludes IDLE sessions with endReason — they're "done", not truly active. */
 export function getActiveSessionsForTask(taskId: string): SessionRow[] {
-  return db.select().from(sessions)
+  const rows = db.select().from(sessions)
     .where(
       and(
         eq(sessions.taskId, taskId),
@@ -249,6 +256,7 @@ export function getActiveSessionsForTask(taskId: string): SessionRow[] {
       ),
     )
     .all();
+  return rows.filter((r) => !(r.status === SESSION_STATUS.IDLE && r.endReason));
 }
 
 /** Batch-fetch all sessions for a set of task IDs. Avoids N+1 queries for listTasks. */

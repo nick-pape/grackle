@@ -469,53 +469,17 @@ async function terminateSession(sessionId: string): Promise<void> {
     return;
   }
 
-  // 1. Delete lifecycle stream → triggers orphan callback → auto-hibernate
-  cleanupLifecycleStream(sessionId);
-
-  // 2. Close other subscriptions (pipe streams etc.)
-  const subs = streamRegistry.getSubscriptionsForSession(sessionId);
-  for (const sub of subs) {
-    streamRegistry.unsubscribe(sub.id);
-  }
-
-  // 3. Ensure endReason is set for the kill, then handle legacy fallback.
-  // The lifecycle orphan callback (step 1) may have already set HIBERNATING
-  // but without endReason — always stamp it so the UI shows "interrupted".
-  const current = sessionStore.getSession(sessionId);
-  if (current && TERMINAL_SESSION_STATUSES.has(current.status as SessionStatus)) {
-    // Already hibernated by lifecycle manager — stamp endReason and broadcast
-    // a "killed" event so the frontend derives endReason="interrupted".
-    if (!current.endReason) {
-      sessionStore.setEndReason(sessionId, END_REASON.INTERRUPTED);
-      streamHub.publish(
-        create(grackle.SessionEventSchema, {
-          sessionId,
-          type: grackle.EventType.STATUS,
-          timestamp: new Date().toISOString(),
-          content: "killed",
-          raw: "",
-        }),
-      );
-    }
-  } else if (current) {
-    // Legacy session without lifecycle stream — kill directly
-    const conn = adapterManager.getConnection(session.environmentId);
-    if (conn) {
-      try {
-        await conn.client.kill(
-          create(powerline.SessionIdSchema, { id: sessionId }),
-        );
-      } catch (err) {
-        logger.warn({ sessionId, err }, "PowerLine kill failed during session termination");
-      }
-    }
+  // Pre-stamp endReason BEFORE lifecycle cleanup so the orphan callback
+  // sees the session already has an endReason set. This ensures the
+  // frontend receives "interrupted" immediately, not "hibernating" first.
+  if (!TERMINAL_SESSION_STATUSES.has(session.status as SessionStatus)) {
     sessionStore.updateSession(sessionId, SESSION_STATUS.HIBERNATING, undefined, undefined, END_REASON.INTERRUPTED);
     streamHub.publish(
       create(grackle.SessionEventSchema, {
         sessionId,
         type: grackle.EventType.STATUS,
         timestamp: new Date().toISOString(),
-        content: SESSION_STATUS.HIBERNATING,
+        content: "killed",
         raw: "",
       }),
     );
@@ -524,6 +488,27 @@ async function terminateSession(sessionId: string): Promise<void> {
       if (task) {
         emit("task.updated", { taskId: task.id, workspaceId: task.workspaceId || "" });
       }
+    }
+  }
+
+  // Delete lifecycle stream — orphan callback skips because already terminal
+  cleanupLifecycleStream(sessionId);
+
+  // Close other subscriptions (pipe streams etc.)
+  const subs = streamRegistry.getSubscriptionsForSession(sessionId);
+  for (const sub of subs) {
+    streamRegistry.unsubscribe(sub.id);
+  }
+
+  // Kill the PowerLine process (best-effort)
+  const conn = adapterManager.getConnection(session.environmentId);
+  if (conn) {
+    try {
+      await conn.client.kill(
+        create(powerline.SessionIdSchema, { id: sessionId }),
+      );
+    } catch (err) {
+      logger.warn({ sessionId, err }, "PowerLine kill failed during session termination");
     }
   }
 }
