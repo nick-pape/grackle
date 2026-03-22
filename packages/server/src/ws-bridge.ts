@@ -478,9 +478,17 @@ async function terminateSession(sessionId: string): Promise<void> {
     streamRegistry.unsubscribe(sub.id);
   }
 
-  // 3. Fallback for legacy sessions without lifecycle streams
+  // 3. Ensure endReason is set for the kill, then handle legacy fallback.
+  // The lifecycle orphan callback (step 1) may have already set HIBERNATING
+  // but without endReason — always stamp it so the UI shows "interrupted".
   const current = sessionStore.getSession(sessionId);
-  if (current && !TERMINAL_SESSION_STATUSES.has(current.status as SessionStatus)) {
+  if (current && TERMINAL_SESSION_STATUSES.has(current.status as SessionStatus)) {
+    // Already hibernated by lifecycle manager — just set the endReason
+    if (!current.endReason) {
+      sessionStore.setEndReason(sessionId, END_REASON.INTERRUPTED);
+    }
+  } else if (current) {
+    // Legacy session without lifecycle stream — kill directly
     const conn = adapterManager.getConnection(session.environmentId);
     if (conn) {
       try {
@@ -543,6 +551,7 @@ async function handleMessage(
             inputTokens: r.inputTokens,
             outputTokens: r.outputTokens,
             costUsd: r.costUsd,
+            endReason: r.endReason ?? undefined,
           })),
         },
       });
@@ -1519,6 +1528,7 @@ async function handleMessage(
             inputTokens: r.inputTokens,
             outputTokens: r.outputTokens,
             costUsd: r.costUsd,
+            endReason: r.endReason ?? undefined,
           })),
         },
       });
