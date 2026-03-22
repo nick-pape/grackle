@@ -41,6 +41,8 @@ export function BottomStatusBar(): JSX.Element {
   const sessionId = sessionMatch?.params.sessionId;
   const taskId = taskMatch?.params.taskId ?? taskStreamMatch?.params.taskId ?? taskFindingsMatch?.params.taskId
     ?? wsTaskMatch?.params.taskId ?? wsTaskStreamMatch?.params.taskId ?? wsTaskFindingsMatch?.params.taskId ?? wsTaskEditMatch?.params.taskId;
+  const wsMatch = wsTaskMatch ?? wsTaskStreamMatch ?? wsTaskFindingsMatch ?? wsTaskEditMatch;
+  const routeEnvironmentId = wsMatch?.params.environmentId ?? workspaceMatch?.params.environmentId;
   const isChat = !!chatMatch;
   const isNewChat = !!newChatMatch;
   const isWorkspace = !!workspaceMatch && !wsTaskMatch && !wsTaskStreamMatch && !wsTaskFindingsMatch && !wsTaskEditMatch;
@@ -144,7 +146,7 @@ export function BottomStatusBar(): JSX.Element {
             Task completed
           </span>
           <button
-            onClick={() => navigate(newTaskUrl(task.workspaceId))}
+            onClick={() => navigate(newTaskUrl(task.workspaceId, undefined, routeEnvironmentId))}
             className={styles.btnPrimary}
           >
             + New Task

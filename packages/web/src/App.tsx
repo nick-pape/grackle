@@ -117,21 +117,32 @@ function AppShell(): JSX.Element {
 /**
  * Redirect component for legacy `/workspaces/:workspaceId` URLs.
  * Looks up the workspace's environmentId and redirects to the new
- * `/environments/:envId/workspaces/:wsId` path, preserving any sub-path.
+ * `/environments/:envId/workspaces/:wsId` path, preserving sub-path,
+ * query parameters, and hash.
  */
-function WorkspaceRedirect(): JSX.Element {
+function WorkspaceRedirect(): JSX.Element | undefined {
   const { workspaceId } = useParams<{ workspaceId: string }>();
   const { workspaces } = useGrackle();
   const location = useLocation();
 
   const workspace = workspaces.find((w) => w.id === workspaceId);
   if (!workspace?.environmentId) {
+    // Workspaces load asynchronously — avoid redirecting before data arrives.
+    if (workspaces.length === 0) {
+      return undefined;
+    }
     return <Navigate to="/environments" replace />;
   }
 
-  // Rewrite /workspaces/:wsId/... → /environments/:envId/workspaces/:wsId/...
-  const suffix = location.pathname.replace(`/workspaces/${workspaceId}`, "");
-  return <Navigate to={`/environments/${workspace.environmentId}/workspaces/${workspaceId}${suffix}`} replace />;
+  // Rewrite /workspaces/:wsId/... → /environments/:envId/workspaces/:wsId/...,
+  // preserving query parameters and hash. Use encoded IDs for reliable matching.
+  const encodedWorkspaceId = encodeURIComponent(workspaceId!);
+  const encodedPrefix = `/workspaces/${encodedWorkspaceId}`;
+  const suffix = location.pathname.startsWith(encodedPrefix)
+    ? location.pathname.slice(encodedPrefix.length)
+    : "";
+  const target = `/environments/${encodeURIComponent(workspace.environmentId)}/workspaces/${encodedWorkspaceId}${suffix}${location.search}${location.hash}`;
+  return <Navigate to={target} replace />;
 }
 
 /** Route configuration for the application. */
