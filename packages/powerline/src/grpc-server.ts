@@ -164,5 +164,10 @@ export function registerPowerLineRoutes(router: ConnectRouter): void {
       }
       return create(powerline.EmptySchema, {});
     },
+
+    async *drainBufferedEvents(_req: powerline.DrainRequest) {
+      // Stub — real implementation in #750 (session parking).
+      // Yields nothing (empty stream) until parking is implemented.
+    },
   });
 }
