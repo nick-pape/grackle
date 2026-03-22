@@ -2,6 +2,29 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.68.0",
+      "tag": "@grackle-ai/cli_v0.68.0",
+      "date": "Sun, 22 Mar 2026 05:34:41 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "feat(server): auto-reconnect disconnected environments with exponential backoff on heartbeat"
+          },
+          {
+            "comment": "Add relationship edges (PART_OF, DEPENDS_ON, DERIVED_FROM) when syncing entities to knowledge graph"
+          }
+        ],
+        "minor": [
+          {
+            "comment": "Persistent process mode for Claude Code runtime — hold agent alive between turns via AsyncIterable prompt"
+          },
+          {
+            "comment": "Add knowledge graph gRPC endpoints and refactor MCP tools to use gRPC"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.67.0",
       "tag": "@grackle-ai/cli_v0.67.0",
       "date": "Sun, 22 Mar 2026 04:43:26 GMT",
