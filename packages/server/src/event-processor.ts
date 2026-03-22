@@ -13,6 +13,7 @@ import { writeTranscript } from "./transcript.js";
 import { emit } from "./event-bus.js";
 import { logger } from "./logger.js";
 import { publishChildCompletion } from "./pipe-delivery.js";
+import { cleanupLifecycleStream } from "./lifecycle.js";
 import type { ProcessorContext } from "./processor-registry.js";
 
 /** Terminal session statuses that indicate the session has already ended. */
@@ -338,9 +339,10 @@ export function processEventStream(
             sessionStore.updateSession(sessionId, SESSION_STATUS.HIBERNATING);
           }
 
-          // Publish child completion to IPC stream (for parent pipe delivery)
+          // On terminal status: publish child completion and clean up lifecycle stream
           if (["completed", "failed", "killed", "hibernating"].includes(event.content)) {
             publishChildCompletion(sessionId, event.content);
+            cleanupLifecycleStream(sessionId);
           }
 
           // Broadcast task_updated on status changes so frontend re-fetches computed status.
@@ -357,6 +359,7 @@ export function processEventStream(
       if (current && !TERMINAL_STATUSES.includes(current.status)) {
         sessionStore.updateSession(sessionId, SESSION_STATUS.COMPLETED);
         publishChildCompletion(sessionId, "completed");
+        cleanupLifecycleStream(sessionId);
         if (ctx.taskId) {
           emit("task.updated", { taskId: ctx.taskId, workspaceId: ctx.workspaceId });
         }
@@ -368,6 +371,7 @@ export function processEventStream(
         logger.info({ sessionId, err: String(err) }, "Stream ended while session idle — marking completed");
         sessionStore.updateSession(sessionId, SESSION_STATUS.COMPLETED);
         publishChildCompletion(sessionId, "completed");
+        cleanupLifecycleStream(sessionId);
         streamHub.publish(create(grackle.SessionEventSchema, {
           sessionId,
           type: grackle.EventType.STATUS,
@@ -378,6 +382,7 @@ export function processEventStream(
         // Genuine failure during active work.
         sessionStore.updateSession(sessionId, SESSION_STATUS.FAILED, undefined, String(err));
         publishChildCompletion(sessionId, "failed");
+        cleanupLifecycleStream(sessionId);
         streamHub.publish(create(grackle.SessionEventSchema, {
           sessionId,
           type: grackle.EventType.STATUS,

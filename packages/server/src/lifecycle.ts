@@ -58,8 +58,8 @@ export function initLifecycleManager(): void {
     if (conn) {
       conn.client.kill(
         create(powerline.SessionIdSchema, { id: sessionId }),
-      ).catch(() => {
-        // Best-effort — process may have already exited
+      ).catch((err: unknown) => {
+        logger.debug({ err, sessionId }, "Lifecycle: PowerLine kill failed (process may have already exited)");
       });
     }
 
@@ -84,6 +84,18 @@ export function initLifecycleManager(): void {
   });
 
   logger.info("Lifecycle manager initialized");
+}
+
+/**
+ * Clean up lifecycle stream subscriptions for a session that has reached terminal status.
+ * Called from the event processor when a session completes, fails, or is interrupted.
+ * This ensures lifecycle streams don't grow unbounded for server-spawned sessions.
+ */
+export function cleanupLifecycleStream(sessionId: string): void {
+  const lifecycleStream = streamRegistry.getStreamByName(`lifecycle:${sessionId}`);
+  if (lifecycleStream) {
+    streamRegistry.deleteStream(lifecycleStream.id);
+  }
 }
 
 /**

@@ -135,7 +135,7 @@ describe("lifecycle manager", () => {
     expect(mockKill).toHaveBeenCalledOnce();
   });
 
-  it("auto-hibernates child when parent closes lifecycle fd", () => {
+  it("auto-hibernates child when all subscriptions removed (parent + child)", () => {
     sessionStore.createSession("parent", "test-env", "claude-code", "p", "sonnet", "/tmp/p");
     sessionStore.createSession("child", "test-env", "claude-code", "c", "sonnet", "/tmp/c", "", "", "parent");
     sessionStore.updateSessionStatus("child", "idle");

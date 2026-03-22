@@ -149,7 +149,11 @@ function cleanupSessionIfEmpty(sessionId: string): void {
   if (fdMap?.size === 0) {
     subscriptionsBySession.delete(sessionId);
     fdCounters.delete(sessionId);
-    orphanCallback?.(sessionId);
+    try {
+      orphanCallback?.(sessionId);
+    } catch {
+      // Best-effort — orphan callback errors must not break stream-registry cleanup
+    }
   }
 }
 
