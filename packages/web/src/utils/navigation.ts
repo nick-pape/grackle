@@ -47,9 +47,15 @@ export function workspaceUrl(workspaceId: string, environmentId?: string): strin
 /** Build URL for a task detail page, optionally targeting a specific tab and workspace/environment scope. */
 export function taskUrl(taskId: string, tab?: "stream" | "findings", workspaceId?: string, environmentId?: string): string {
   const encodedTaskId = encodeURIComponent(taskId);
-  const base = workspaceId && environmentId
-    ? `/environments/${encodeURIComponent(environmentId)}/workspaces/${encodeURIComponent(workspaceId)}/tasks/${encodedTaskId}`
-    : `/tasks/${encodedTaskId}`;
+  let base: string;
+  if (workspaceId && environmentId) {
+    base = `/environments/${encodeURIComponent(environmentId)}/workspaces/${encodeURIComponent(workspaceId)}/tasks/${encodedTaskId}`;
+  } else if (workspaceId) {
+    // Fallback to legacy route so WorkspaceRedirect can resolve the environment.
+    base = `/workspaces/${encodeURIComponent(workspaceId)}/tasks/${encodedTaskId}`;
+  } else {
+    base = `/tasks/${encodedTaskId}`;
+  }
   if (tab) {
     return `${base}/${tab}`;
   }
@@ -60,6 +66,10 @@ export function taskUrl(taskId: string, tab?: "stream" | "findings", workspaceId
 export function taskEditUrl(taskId: string, workspaceId?: string, environmentId?: string): string {
   if (workspaceId && environmentId) {
     return `/environments/${encodeURIComponent(environmentId)}/workspaces/${encodeURIComponent(workspaceId)}/tasks/${encodeURIComponent(taskId)}/edit`;
+  }
+  if (workspaceId) {
+    // Fallback to legacy route so WorkspaceRedirect can resolve the environment.
+    return `/workspaces/${encodeURIComponent(workspaceId)}/tasks/${encodeURIComponent(taskId)}/edit`;
   }
   return `/tasks/${encodeURIComponent(taskId)}/edit`;
 }

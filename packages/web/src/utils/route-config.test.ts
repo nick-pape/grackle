@@ -47,8 +47,8 @@ describe("URL builder functions", () => {
     expect(taskUrl("task-1", "findings", "ws-1", "env-1")).toBe("/environments/env-1/workspaces/ws-1/tasks/task-1/findings");
   });
 
-  it("taskUrl with only workspaceId (no environmentId) falls back to global path", () => {
-    expect(taskUrl("task-1", undefined, "ws-1")).toBe("/tasks/task-1");
+  it("taskUrl with only workspaceId (no environmentId) falls back to legacy workspace path", () => {
+    expect(taskUrl("task-1", undefined, "ws-1")).toBe("/workspaces/ws-1/tasks/task-1");
   });
 
   it("taskEditUrl produces correct path", () => {
