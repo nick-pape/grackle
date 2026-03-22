@@ -53,6 +53,11 @@
       "versionPolicyName": "grackle"
     },
     {
+      "packageName": "@grackle-ai/knowledge-core",
+      "projectFolder": "packages/knowledge-core",
+      "versionPolicyName": "grackle"
+    },
+    {
       "packageName": "@grackle-ai/knowledge",
       "projectFolder": "packages/knowledge",
       "versionPolicyName": "grackle"

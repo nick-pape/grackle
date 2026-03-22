@@ -1,57 +1,16 @@
 /**
- * Knowledge graph subsystem for Grackle.
+ * Grackle knowledge graph subsystem.
  *
- * Provides pluggable text embedding, content chunking, an ingestion
- * pipeline, and structured knowledge storage and retrieval via Neo4j,
- * so that agents can share and reuse contextual information across sessions.
+ * Re-exports the generic {@link @grackle-ai/knowledge-core} SDK and adds
+ * Grackle-specific reference node sync helpers for tasks and findings.
  *
  * @packageDocumentation
  */
 
-export { openNeo4j, closeNeo4j, healthCheck, getSession, getDriver } from "./client.js";
-export type { Neo4jClientConfig } from "./client.js";
-export { initSchema, SCHEMA_STATEMENTS } from "./schema.js";
-export * from "./types.js";
-export {
-  DEFAULT_NEO4J_URL,
-  DEFAULT_NEO4J_USER,
-  DEFAULT_NEO4J_DATABASE,
-  NEO4J_MAX_POOL_SIZE,
-  NEO4J_CONNECTION_ACQUISITION_TIMEOUT,
-  NODE_LABEL,
-  VECTOR_INDEX_NAME,
-  EMBEDDING_DIMENSIONS,
-  VECTOR_SIMILARITY_FUNCTION,
-} from "./constants.js";
-export type { Embedder, EmbedderOptions, EmbeddingResult } from "./embedder.js";
-export { createLocalEmbedder } from "./local-embedder.js";
-export type { Chunk, Chunker } from "./chunker.js";
-export { createPassThroughChunker } from "./pass-through-chunker.js";
-export type { EmbeddedChunk } from "./ingest.js";
-export { ingest } from "./ingest.js";
-export type { TranscriptChunkerOptions } from "./transcript-chunker.js";
-export { createTranscriptChunker } from "./transcript-chunker.js";
-export {
-  createReferenceNode,
-  createNativeNode,
-  getNode,
-  deleteNode,
-  updateNode,
-  recordToNode,
-} from "./node-store.js";
-export type {
-  CreateReferenceNodeInput,
-  CreateNativeNodeInput,
-  UpdateReferenceNodeInput,
-  UpdateNativeNodeInput,
-  UpdateNodeInput,
-  NodeWithEdges,
-} from "./node-store.js";
-export { createEdge, removeEdge } from "./edge-store.js";
-export type { SearchOptions, SearchResult } from "./search.js";
-export { knowledgeSearch } from "./search.js";
-export type { ExpandOptions, ExpansionResult } from "./expand.js";
-export { expandNode, expandResults } from "./expand.js";
+// Re-export everything from the generic core
+export * from "@grackle-ai/knowledge-core";
+
+// Grackle-specific additions
 export {
   findReferenceNodeBySource,
   deleteReferenceNodeBySource,

@@ -26,7 +26,12 @@ export type NodeKind = (typeof NODE_KIND)[keyof typeof NODE_KIND];
 // Reference node source types
 // ---------------------------------------------------------------------------
 
-/** Entity types that a reference node can point to. */
+/**
+ * Recommended reference source values.
+ *
+ * Consumers can use these or define their own — the {@link ReferenceSource}
+ * type accepts any string.
+ */
 export const REFERENCE_SOURCE = {
   TASK: "task",
   SESSION: "session",
@@ -34,15 +39,24 @@ export const REFERENCE_SOURCE = {
   WORKSPACE: "workspace",
 } as const;
 
-/** Union of all reference source values. */
-export type ReferenceSource =
-  (typeof REFERENCE_SOURCE)[keyof typeof REFERENCE_SOURCE];
+/**
+ * Entity type that a reference node points to.
+ *
+ * Open `string` type — not restricted to the values in {@link REFERENCE_SOURCE}.
+ * Consumers can define their own source types (e.g., `"ado-work-item"`, `"webpage"`).
+ */
+export type ReferenceSource = string;
 
 // ---------------------------------------------------------------------------
 // Native node categories
 // ---------------------------------------------------------------------------
 
-/** Categories for native nodes that exist only in the knowledge graph. */
+/**
+ * Recommended native node categories.
+ *
+ * Consumers can use these or define their own — the {@link NativeCategory}
+ * type accepts any string.
+ */
 export const NATIVE_CATEGORY = {
   DECISION: "decision",
   INSIGHT: "insight",
@@ -50,9 +64,13 @@ export const NATIVE_CATEGORY = {
   SNIPPET: "snippet",
 } as const;
 
-/** Union of all native category values. */
-export type NativeCategory =
-  (typeof NATIVE_CATEGORY)[keyof typeof NATIVE_CATEGORY];
+/**
+ * Category for native nodes that exist only in the knowledge graph.
+ *
+ * Open `string` type — not restricted to the values in {@link NATIVE_CATEGORY}.
+ * Consumers can define their own categories (e.g., `"research-note"`, `"requirement"`).
+ */
+export type NativeCategory = string;
 
 // ---------------------------------------------------------------------------
 // Edge types
