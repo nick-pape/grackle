@@ -24,6 +24,11 @@ export class AsyncQueue<T> {
     });
   }
 
+  /** Remove and return all items currently buffered in the queue. */
+  public drain(): T[] {
+    return this.queue.splice(0);
+  }
+
   public close(): void {
     this.closed = true;
     for (const waiter of this.waiters) {

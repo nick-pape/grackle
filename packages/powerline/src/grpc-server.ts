@@ -7,31 +7,65 @@ import {
   getSession,
   removeSession,
   listAllSessions,
+  parkSession,
+  drainParkedSession,
 } from "./session-mgr.js";
 import { writeTokens } from "./token-writer.js";
 import { removeWorktree } from "./worktree.js";
 import os from "node:os";
-import type { AgentSession } from "./runtimes/runtime.js";
+import type { AgentEvent, AgentSession } from "./runtimes/runtime.js";
 
 const startTime: number = Date.now();
 
-/** Stream events from an agent session as proto messages, cleaning up the session when done. */
+/** Convert an internal AgentEvent to a proto AgentEvent message. */
+function toProtoEvent(sessionId: string, event: AgentEvent): powerline.AgentEvent {
+  return create(powerline.AgentEventSchema, {
+    sessionId,
+    type: event.type,
+    timestamp: event.timestamp,
+    content: event.content,
+    raw: event.raw ? JSON.stringify(event.raw) : "",
+  });
+}
+
+/**
+ * Stream events from an agent session as proto messages.
+ *
+ * On clean exit (session completes naturally or throws an internal error),
+ * removes the session without parking.
+ * On gRPC abort (consumer disconnected — ConnectRPC calls return() on the
+ * generator), kills the agent loop, drains any buffered events, and parks
+ * them for later retrieval via `DrainBufferedEvents`.
+ */
 async function* streamSession(
   sessionId: string,
   session: AgentSession,
 ): AsyncGenerator<powerline.AgentEvent> {
   addSession(session);
+  // Tracks whether the stream exited via normal completion or an internal
+  // error (both are "handled" exits). If neither, the generator was aborted
+  // by ConnectRPC (gRPC consumer disconnected) — that's the parking case.
+  let handledExit = false;
   try {
-    for await (const event of session.stream()) {
-      yield create(powerline.AgentEventSchema, {
-        sessionId,
-        type: event.type,
-        timestamp: event.timestamp,
-        content: event.content,
-        raw: event.raw ? JSON.stringify(event.raw) : "",
-      });
+    try {
+      for await (const event of session.stream()) {
+        yield toProtoEvent(sessionId, event);
+      }
+    } catch {
+      // Internal error (session threw, proto conversion failed, etc.)
+      // — not a gRPC disconnect. Don't park; let the session fail normally.
     }
+    handledExit = true;
   } finally {
+    if (!handledExit) {
+      // Generator was aborted by ConnectRPC (gRPC consumer disconnected).
+      // Kill the agent and park any buffered events for later drain.
+      session.kill();
+      const buffered = session.drainBufferedEvents();
+      if (buffered.length > 0) {
+        parkSession(sessionId, buffered);
+      }
+    }
     removeSession(sessionId);
   }
 }
@@ -165,9 +199,13 @@ export function registerPowerLineRoutes(router: ConnectRouter): void {
       return create(powerline.EmptySchema, {});
     },
 
-    async *drainBufferedEvents(_req: powerline.DrainRequest) {
-      // Stub — real implementation in #750 (session parking).
-      // Yields nothing (empty stream) until parking is implemented.
+    async *drainBufferedEvents(req: powerline.DrainRequest) {
+      const events = drainParkedSession(req.sessionId);
+      if (events) {
+        for (const event of events) {
+          yield toProtoEvent(req.sessionId, event);
+        }
+      }
     },
   });
 }
