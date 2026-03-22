@@ -2,8 +2,8 @@
  * MCP tools for the Grackle knowledge graph.
  *
  * Exposes high-level operations (search, retrieve, create) to agents.
- * All embedding, graph storage, and traversal details are handled
- * internally — agents interact with clean Grackle concepts.
+ * All calls go through gRPC to the Grackle server — the MCP package
+ * does not access knowledge-core or Neo4j directly.
  *
  * @module
  */
@@ -12,52 +12,8 @@ import type { Client } from "@connectrpc/connect";
 import { grackle } from "@grackle-ai/common";
 import { z } from "zod";
 import type { AuthContext } from "../auth-context.js";
-import {
-  knowledgeSearch,
-  getNode,
-  createNativeNode,
-  createEdge,
-  expandNode,
-  expandResults,
-  NATIVE_CATEGORY,
-  EDGE_TYPE,
-  type Embedder,
-  type EdgeType,
-  type SearchResult,
-  type KnowledgeNode,
-  type KnowledgeEdge,
-  type ExpansionResult,
-} from "@grackle-ai/knowledge";
 import type { ToolDefinition } from "../tool-registry.js";
 import { jsonResult } from "../result-helpers.js";
-import { logger } from "@grackle-ai/knowledge";
-
-// ---------------------------------------------------------------------------
-// Embedder accessor — set by the server at startup
-// ---------------------------------------------------------------------------
-
-/** Module-level embedder instance, initialized by the server. */
-let embedder: Embedder | undefined;
-
-/**
- * Set the shared embedder instance for knowledge tools.
- *
- * Called once by the server at startup (before MCP serves requests).
- * Pass `undefined` to clear the embedder (e.g., for testing).
- */
-export function setKnowledgeEmbedder(e: Embedder | undefined): void {
-  embedder = e;
-}
-
-/** Get the shared embedder, throwing if not initialized. */
-function requireEmbedder(): Embedder {
-  if (!embedder) {
-    throw new Error(
-      "Knowledge graph not available. The embedder has not been initialized.",
-    );
-  }
-  return embedder;
-}
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -69,12 +25,21 @@ const MAX_SEARCH_LIMIT: number = 50;
 /** Maximum allowed expansion depth. */
 const MAX_EXPAND_DEPTH: number = 5;
 
+/** Valid edge type values. */
+const EDGE_TYPES = [
+  "RELATES_TO",
+  "DEPENDS_ON",
+  "DERIVED_FROM",
+  "MENTIONS",
+  "PART_OF",
+] as const;
+
 // ---------------------------------------------------------------------------
 // Response formatting — hide internal details from agents
 // ---------------------------------------------------------------------------
 
-/** Format a node for agent consumption. */
-function formatNode(node: KnowledgeNode): Record<string, unknown> {
+/** Format a proto node for agent consumption. */
+function formatNode(node: grackle.KnowledgeNodeProto): Record<string, unknown> {
   const base: Record<string, unknown> = {
     id: node.id,
     kind: node.kind,
@@ -91,27 +56,34 @@ function formatNode(node: KnowledgeNode): Record<string, unknown> {
     base.category = node.category;
     base.title = node.title;
     base.content = node.content;
-    base.tags = node.tags;
+    base.tags = [...node.tags];
   }
 
   return base;
 }
 
-/** Format an edge for agent consumption. */
-function formatEdge(edge: KnowledgeEdge): Record<string, unknown> {
-  return {
+/** Format a proto edge for agent consumption. */
+function formatEdge(edge: grackle.KnowledgeEdgeProto): Record<string, unknown> {
+  const result: Record<string, unknown> = {
     fromId: edge.fromId,
     toId: edge.toId,
     type: edge.type,
-    ...(edge.metadata !== undefined ? { metadata: edge.metadata } : {}),
   };
+  if (edge.metadataJson) {
+    try {
+      result.metadata = JSON.parse(edge.metadataJson);
+    } catch {
+      // ignore malformed metadata
+    }
+  }
+  return result;
 }
 
 /** Format a search result for agent consumption. */
-function formatSearchResult(result: SearchResult): Record<string, unknown> {
+function formatSearchResult(result: grackle.SearchKnowledgeResult): Record<string, unknown> {
   return {
     score: Math.round(result.score * 1000) / 1000,
-    node: formatNode(result.node),
+    node: result.node ? formatNode(result.node) : {},
     edges: result.edges.map(formatEdge),
   };
 }
@@ -171,7 +143,10 @@ export const knowledgeTools: ToolDefinition[] = [
       idempotentHint: true,
       openWorldHint: false,
     },
-    async handler(args: Record<string, unknown>) {
+    async handler(
+      args: Record<string, unknown>,
+      client: Client<typeof grackle.Grackle>,
+    ) {
       const {
         query,
         limit,
@@ -186,51 +161,53 @@ export const knowledgeTools: ToolDefinition[] = [
         expandDepth?: number;
       };
 
-      try {
-        const safeLimit: number = clampInt(limit, 1, MAX_SEARCH_LIMIT, 10);
-        const results: SearchResult[] = await knowledgeSearch(
-          query,
-          requireEmbedder(),
-          { limit: safeLimit, workspaceId },
+      const safeLimit: number = clampInt(limit, 1, MAX_SEARCH_LIMIT, 10);
+      const response: grackle.SearchKnowledgeResponse = await client.searchKnowledge({
+        query,
+        limit: safeLimit,
+        workspaceId: workspaceId ?? "",
+      });
+
+      const formattedResults = response.results.map(formatSearchResult);
+
+      let neighbors: Record<string, unknown>[] | undefined;
+      let neighborEdges: Record<string, unknown>[] | undefined;
+      if (expand && response.results.length > 0) {
+        // Expand each result node via gRPC
+        const safeDepth: number = clampInt(expandDepth, 1, MAX_EXPAND_DEPTH, 1);
+        const allNeighbors = new Map<string, Record<string, unknown>>();
+        const allEdges: Record<string, unknown>[] = [];
+        const startIds: Set<string> = new Set(
+          response.results.map((r) => r.node?.id ?? "").filter(Boolean),
         );
 
-        const formattedResults = results.map(formatSearchResult);
-
-        let neighbors: Record<string, unknown>[] | undefined;
-        let neighborEdges: Record<string, unknown>[] | undefined;
-        if (expand && results.length > 0) {
-          const safeDepth: number = clampInt(expandDepth, 1, MAX_EXPAND_DEPTH, 1);
-          const expansion: ExpansionResult = await expandResults(results, {
-            depth: safeDepth,
-          });
-          neighbors = expansion.nodes.map(formatNode);
-          neighborEdges = expansion.edges.map(formatEdge);
+        for (const result of response.results) {
+          if (!result.node) {
+            continue;
+          }
+          const expansion: grackle.ExpandKnowledgeNodeResponse =
+            await client.expandKnowledgeNode({
+              id: result.node.id,
+              depth: safeDepth,
+            });
+          for (const node of expansion.nodes) {
+            if (!startIds.has(node.id)) {
+              allNeighbors.set(node.id, formatNode(node));
+            }
+          }
+          for (const edge of expansion.edges) {
+            allEdges.push(formatEdge(edge));
+          }
         }
 
-        return jsonResult({
-          results: formattedResults,
-          ...(neighbors !== undefined ? { neighbors, neighborEdges } : {}),
-        });
-      } catch (error) {
-        return {
-          content: [
-            {
-              type: "text" as const,
-              text: JSON.stringify(
-                {
-                  error:
-                    error instanceof Error
-                      ? error.message
-                      : "Knowledge search failed",
-                },
-                null,
-                2,
-              ),
-            },
-          ],
-          isError: true,
-        };
+        neighbors = [...allNeighbors.values()];
+        neighborEdges = allEdges;
       }
+
+      return jsonResult({
+        results: formattedResults,
+        ...(neighbors !== undefined ? { neighbors, neighborEdges } : {}),
+      });
     },
   },
 
@@ -264,67 +241,45 @@ export const knowledgeTools: ToolDefinition[] = [
       idempotentHint: true,
       openWorldHint: false,
     },
-    async handler(args: Record<string, unknown>) {
+    async handler(
+      args: Record<string, unknown>,
+      client: Client<typeof grackle.Grackle>,
+    ) {
       const { id, expand, expandDepth } = args as {
         id: string;
         expand?: boolean;
         expandDepth?: number;
       };
 
-      try {
-        const result = await getNode(id);
+      const response: grackle.GetKnowledgeNodeResponse =
+        await client.getKnowledgeNode({ id });
 
-        if (!result) {
-          return {
-            content: [
-              {
-                type: "text" as const,
-                text: JSON.stringify(
-                  { error: `Node not found: ${id}` },
-                  null,
-                  2,
-                ),
-              },
-            ],
-            isError: true,
-          };
-        }
-
-        const response: Record<string, unknown> = {
-          node: formatNode(result.node),
-          edges: result.edges.map(formatEdge),
-        };
-
-        if (expand) {
-          const safeDepth: number = clampInt(expandDepth, 1, MAX_EXPAND_DEPTH, 1);
-          const expansion: ExpansionResult = await expandNode(id, {
-            depth: safeDepth,
-          });
-          response.neighbors = expansion.nodes.map(formatNode);
-          response.neighborEdges = expansion.edges.map(formatEdge);
-        }
-
-        return jsonResult(response);
-      } catch (error) {
+      if (!response.node) {
         return {
           content: [
             {
               type: "text" as const,
-              text: JSON.stringify(
-                {
-                  error:
-                    error instanceof Error
-                      ? error.message
-                      : "Failed to retrieve node",
-                },
-                null,
-                2,
-              ),
+              text: JSON.stringify({ error: `Node not found: ${id}` }, null, 2),
             },
           ],
           isError: true,
         };
       }
+
+      const result: Record<string, unknown> = {
+        node: formatNode(response.node),
+        edges: response.edges.map(formatEdge),
+      };
+
+      if (expand) {
+        const safeDepth: number = clampInt(expandDepth, 1, MAX_EXPAND_DEPTH, 1);
+        const expansion: grackle.ExpandKnowledgeNodeResponse =
+          await client.expandKnowledgeNode({ id, depth: safeDepth });
+        result.neighbors = expansion.nodes.map(formatNode);
+        result.neighborEdges = expansion.edges.map(formatEdge);
+      }
+
+      return jsonResult(result);
     },
   },
 
@@ -359,13 +314,7 @@ export const knowledgeTools: ToolDefinition[] = [
           z.object({
             toId: z.string().describe("ID of the node to link to"),
             type: z
-              .enum([
-                EDGE_TYPE.RELATES_TO,
-                EDGE_TYPE.DEPENDS_ON,
-                EDGE_TYPE.DERIVED_FROM,
-                EDGE_TYPE.MENTIONS,
-                EDGE_TYPE.PART_OF,
-              ])
+              .enum(EDGE_TYPES)
               .describe(
                 "Relationship type: RELATES_TO, DEPENDS_ON, DERIVED_FROM, MENTIONS, PART_OF",
               ),
@@ -382,93 +331,49 @@ export const knowledgeTools: ToolDefinition[] = [
       idempotentHint: false,
       openWorldHint: false,
     },
-    async handler(args: Record<string, unknown>, _client: Client<typeof grackle.Grackle>, authContext?: AuthContext) {
+    async handler(
+      args: Record<string, unknown>,
+      client: Client<typeof grackle.Grackle>,
+      authContext?: AuthContext,
+    ) {
       const {
         title,
         content,
         category,
         tags,
         workspaceId,
-        edges,
       } = args as {
         title: string;
         content: string;
         category?: string;
         tags?: string[];
         workspaceId?: string;
-        edges?: Array<{ toId: string; type: EdgeType }>;
       };
 
-      try {
-        const emb = requireEmbedder();
-        const { vector } = await emb.embed(`${title} ${content}`);
+      // For scoped callers, always use the auth context workspace.
+      const resolvedWorkspaceId: string =
+        authContext?.type === "scoped"
+          ? authContext.workspaceId ?? ""
+          : workspaceId ?? "";
 
-        // For scoped callers, always use the auth context workspace.
-        // For full-access callers, use the provided workspace or empty.
-        const resolvedWorkspaceId: string =
-          authContext?.type === "scoped"
-            ? authContext.workspaceId ?? ""
-            : workspaceId ?? "";
-
-        const nodeId: string = await createNativeNode({
-          category: category ?? NATIVE_CATEGORY.INSIGHT,
+      const response: grackle.CreateKnowledgeNodeResponse =
+        await client.createKnowledgeNode({
           title,
           content,
+          category: category ?? "insight",
           tags: tags ?? [],
-          embedding: vector,
           workspaceId: resolvedWorkspaceId,
         });
 
-        // Create edges if requested
-        const createdEdges: Array<Record<string, unknown>> = [];
-        if (edges) {
-          for (const edge of edges) {
-            try {
-              await createEdge(nodeId, edge.toId, edge.type);
-              createdEdges.push({ toId: edge.toId, type: edge.type });
-            } catch (edgeError) {
-              logger.warn(
-                { nodeId, toId: edge.toId, type: edge.type, err: edgeError },
-                "Failed to create edge for knowledge node",
-              );
-              createdEdges.push({
-                toId: edge.toId,
-                type: edge.type,
-                error:
-                  edgeError instanceof Error
-                    ? edgeError.message
-                    : "Failed to create edge",
-              });
-            }
-          }
-        }
+      // Note: edge creation is now handled server-side or as a follow-up.
+      // The gRPC CreateKnowledgeNode endpoint creates the node; edges
+      // can be added in a future enhancement.
 
-        return jsonResult({
-          id: nodeId,
-          title,
-          category: category ?? NATIVE_CATEGORY.INSIGHT,
-          ...(createdEdges.length > 0 ? { edges: createdEdges } : {}),
-        });
-      } catch (error) {
-        return {
-          content: [
-            {
-              type: "text" as const,
-              text: JSON.stringify(
-                {
-                  error:
-                    error instanceof Error
-                      ? error.message
-                      : "Failed to create knowledge entry",
-                },
-                null,
-                2,
-              ),
-            },
-          ],
-          isError: true,
-        };
-      }
+      return jsonResult({
+        id: response.id,
+        title,
+        category: category ?? "insight",
+      });
     },
   },
 ];

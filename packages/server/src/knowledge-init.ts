@@ -21,7 +21,6 @@ import {
   EDGE_TYPE,
   type Embedder,
 } from "@grackle-ai/knowledge";
-import { setKnowledgeEmbedder } from "@grackle-ai/mcp";
 import { subscribe, type GrackleEvent } from "./event-bus.js";
 import * as taskStore from "./task-store.js";
 import * as findingStore from "./finding-store.js";
@@ -35,6 +34,14 @@ import { logger } from "./logger.js";
 /** Whether the knowledge graph subsystem is enabled. */
 export function isKnowledgeEnabled(): boolean {
   return process.env.GRACKLE_KNOWLEDGE_ENABLED === "true";
+}
+
+/** Module-level embedder, available after initKnowledge() completes. */
+let knowledgeEmbedder: Embedder | undefined;
+
+/** Get the knowledge embedder. Returns undefined if knowledge is not initialized. */
+export function getKnowledgeEmbedder(): Embedder | undefined {
+  return knowledgeEmbedder;
 }
 
 // ---------------------------------------------------------------------------
@@ -232,7 +239,7 @@ export async function initKnowledge(): Promise<() => Promise<void>> {
     await initSchema();
 
     const embedder: Embedder = createLocalEmbedder();
-    setKnowledgeEmbedder(embedder);
+    knowledgeEmbedder = embedder;
 
     const unsubscribe: () => void = subscribe(createEntitySyncHandler(embedder));
 
@@ -241,13 +248,13 @@ export async function initKnowledge(): Promise<() => Promise<void>> {
     return async (): Promise<void> => {
       logger.info("Shutting down knowledge graph subsystem");
       unsubscribe();
-      setKnowledgeEmbedder(undefined);
+      knowledgeEmbedder = undefined;
       await closeNeo4j();
       logger.info("Knowledge graph subsystem stopped");
     };
   } catch (err) {
     // Clean up Neo4j if a later step fails
-    setKnowledgeEmbedder(undefined);
+    knowledgeEmbedder = undefined;
     await closeNeo4j().catch(() => {});
     throw err;
   }
