@@ -85,28 +85,29 @@ export function useSessions(send: SendFunction): UseSessionsResult {
             "sessions",
             "sessions",
           );
-          // Build a map of previous session statuses that were updated via
+          // Build a map of previous sessions that were updated via
           // real-time session_event status messages (which may be more
           // recent than the list_sessions DB snapshot).  Prefer the
           // real-time status for active sessions to avoid overwriting
           // "idle" with a stale "running" from the query.
-          const prevMap = new Map(prev.map((s) => [s.id, s.status]));
+          const prevMap = new Map(prev.map((s) => [s.id, s]));
           return incoming.map((s) => {
-            const prevStatus = prevMap.get(s.id);
-            if (!prevStatus || prevStatus === s.status) {
+            const prevSession = prevMap.get(s.id);
+            if (!prevSession || prevSession.status === s.status) {
               return s;
             }
+            const prevStatus = prevSession.status;
             // If the previous status is terminal and the incoming is
             // active, the list_sessions response is stale — keep the
             // terminal status from the real-time event.
             if (TERMINAL_STATUSES.has(prevStatus) && ACTIVE_STATUSES.has(s.status)) {
-              return { ...s, status: prevStatus };
+              return { ...s, status: prevStatus, endReason: prevSession.endReason };
             }
             if (ACTIVE_STATUSES.has(prevStatus) && ACTIVE_STATUSES.has(s.status)) {
               // If the previous status is "ahead" of the incoming status
               // (e.g. waiting_input > running > pending), keep the previous.
               if (ACTIVE_ORDER.indexOf(prevStatus) > ACTIVE_ORDER.indexOf(s.status)) {
-                return { ...s, status: prevStatus };
+                return { ...s, status: prevStatus, endReason: prevSession.endReason };
               }
             }
             return s;
@@ -177,7 +178,7 @@ export function useSessions(send: SendFunction): UseSessionsResult {
             if (exists) {
               return prev.map((s) =>
                 s.id === event.sessionId
-                  ? { ...s, status: mappedStatus, ...(endReason ? { endReason } : {}) }
+                  ? { ...s, status: mappedStatus, endReason }
                   : s,
               );
             }
@@ -193,7 +194,7 @@ export function useSessions(send: SendFunction): UseSessionsResult {
                 status: mappedStatus,
                 prompt: "",
                 startedAt: event.timestamp,
-                ...(endReason ? { endReason } : {}),
+                endReason,
               },
             ];
           });

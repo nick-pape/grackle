@@ -466,7 +466,7 @@ export function initDatabase(sqliteOverride?: InstanceType<typeof Database>): In
   // failed → hibernating + end_reason='failed'
   // interrupted → hibernating + end_reason='interrupted'
   conn.exec(`
-    UPDATE sessions SET status = 'idle', end_reason = 'completed'
+    UPDATE sessions SET status = 'idle', end_reason = 'completed', ended_at = NULL
       WHERE status = 'completed' AND (end_reason IS NULL OR end_reason = '');
     UPDATE sessions SET status = 'hibernating', end_reason = 'failed'
       WHERE status = 'failed' AND (end_reason IS NULL OR end_reason = '');

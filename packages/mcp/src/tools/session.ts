@@ -17,8 +17,8 @@ const MAX_TIMEOUT_SECONDS: number = 300;
 /** Session statuses considered "active" for filtering purposes. */
 const ACTIVE_STATUSES: string[] = [SESSION_STATUS.PENDING, SESSION_STATUS.RUNNING, SESSION_STATUS.IDLE];
 
-/** Session statuses that indicate no further events will arrive. */
-const TERMINAL_STATUSES: string[] = [SESSION_STATUS.HIBERNATING];
+/** Session statuses and raw event content values that indicate no further events will arrive. Includes raw PowerLine event content for session_attach streaming. */
+const TERMINAL_STATUSES: string[] = [SESSION_STATUS.HIBERNATING, SESSION_STATUS.COMPLETED, SESSION_STATUS.FAILED, SESSION_STATUS.INTERRUPTED];
 
 /** MCP tools for managing Grackle agent sessions. */
 export const sessionTools: ToolDefinition[] = [
@@ -60,7 +60,7 @@ export const sessionTools: ToolDefinition[] = [
   {
     name: "session_resume",
     group: "session",
-    description: "Resume a terminated agent session (hibernating or suspended). Starts a new runtime process that loads the existing conversation via the runtime's native resume mechanism, returning the session in running state. Errors if the session is still active (running or pending).",
+    description: "Resume a terminated agent session (hibernating, suspended, or idle with endReason). Starts a new runtime process that loads the existing conversation via the runtime's native resume mechanism, returning the session in running state. Errors if the session is still active (idle without endReason, running, or pending).",
     inputSchema: z.object({
       sessionId: z.string().describe("The ID of the session to resume"),
     }),

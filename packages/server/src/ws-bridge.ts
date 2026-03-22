@@ -1417,8 +1417,10 @@ async function handleMessage(
         sendWs(ws, { type: "error", payload: { message: `Task ${taskId} has no sessions to resume` } });
         return;
       }
-      const resumableStatuses: string[] = [SESSION_STATUS.HIBERNATING, SESSION_STATUS.SUSPENDED, SESSION_STATUS.IDLE];
-      if (!resumableStatuses.includes(latestSession.status)) {
+      const isResumable = latestSession.status === SESSION_STATUS.HIBERNATING
+        || latestSession.status === SESSION_STATUS.SUSPENDED
+        || (latestSession.status === SESSION_STATUS.IDLE && !!latestSession.endReason);
+      if (!isResumable) {
         sendWs(ws, {
           type: "error",
           payload: { message: `Latest session ${latestSession.id} is not resumable (status: ${latestSession.status})` },

@@ -899,7 +899,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
             sessionId: req.id,
             type: grackle.EventType.STATUS,
             timestamp: new Date().toISOString(),
-            content: SESSION_STATUS.HIBERNATING,
+            content: "killed",
             raw: "",
           }),
         );
@@ -1467,8 +1467,10 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       // Resumable: HIBERNATING or SUSPENDED (dead sessions that need reanimate).
       // IDLE with endReason="completed" also qualifies — the agent thinks it's done
       // but the user wants more work.
-      const resumableStatuses: string[] = [SESSION_STATUS.HIBERNATING, SESSION_STATUS.SUSPENDED, SESSION_STATUS.IDLE];
-      if (!resumableStatuses.includes(latestSession.status)) {
+      const isResumable = latestSession.status === SESSION_STATUS.HIBERNATING
+        || latestSession.status === SESSION_STATUS.SUSPENDED
+        || (latestSession.status === SESSION_STATUS.IDLE && !!latestSession.endReason);
+      if (!isResumable) {
         throw new ConnectError(
           `Latest session ${latestSession.id} is not resumable (status: ${latestSession.status})`,
           Code.FailedPrecondition,
@@ -1540,7 +1542,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
             sessionId: activeSession.id,
             type: grackle.EventType.STATUS,
             timestamp: new Date().toISOString(),
-            content: SESSION_STATUS.HIBERNATING,
+            content: "killed",
             raw: "",
           }),
         );

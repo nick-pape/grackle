@@ -54,7 +54,7 @@ function SessionEmptyState({ session }: { session: Session | undefined }): JSX.E
     || (session.status === "idle" && !!session.endReason)
   );
   const emptyMessage = isTerminal
-    ? `Session ${session.status} with no events recorded.`
+    ? `Session ${session.endReason || session.status} with no events recorded.`
     : "Waiting for events...";
   return (
     <div className={isTerminal ? styles.errorMessage : styles.waitingMessage}>{emptyMessage}</div>
@@ -96,7 +96,7 @@ export function SessionPage(): JSX.Element {
     );
   }
 
-  const isActive = session?.status === "running" || session?.status === "idle";
+  const isActive = session?.status === "running" || (session?.status === "idle" && !session.endReason);
 
   return (
     <div className={styles.panelContainer}>
