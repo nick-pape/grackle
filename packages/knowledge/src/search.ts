@@ -11,9 +11,9 @@ import type { Record as Neo4jRecord } from "neo4j-driver";
 import { getSession } from "./client.js";
 import { logger } from "./logger.js";
 import { NODE_LABEL, VECTOR_INDEX_NAME } from "./constants.js";
-import { recordToNode } from "./node-store.js";
+import { recordToNode, recordToEdge } from "./node-store.js";
 import type { Embedder } from "./embedder.js";
-import type { KnowledgeNode, KnowledgeEdge, NodeKind, EdgeType } from "./types.js";
+import type { KnowledgeNode, KnowledgeEdge, NodeKind } from "./types.js";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -97,30 +97,6 @@ function buildSearchCypher(options: {
 }
 
 // ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/** Convert a raw edge record from Cypher collect() to a KnowledgeEdge. */
-function rawToEdge(raw: Record<string, unknown>): KnowledgeEdge {
-  let metadata: Record<string, unknown> | undefined;
-  if (raw.metadata !== undefined && raw.metadata !== null) {
-    try {
-      metadata = JSON.parse(raw.metadata as string) as Record<string, unknown>;
-    } catch {
-      metadata = undefined;
-    }
-  }
-
-  return {
-    fromId: raw.fromId as string,
-    toId: raw.toId as string,
-    type: raw.type as EdgeType,
-    metadata,
-    createdAt: raw.createdAt as string,
-  };
-}
-
-// ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
 
@@ -179,7 +155,7 @@ export async function knowledgeSearch(
       // Filter out null edges (from OPTIONAL MATCH with no relationships)
       const edges: KnowledgeEdge[] = rawEdges
         .filter((e) => e.fromId !== null && e.toId !== null)
-        .map(rawToEdge);
+        .map(recordToEdge);
 
       return {
         node: recordToNode(nodeProps),

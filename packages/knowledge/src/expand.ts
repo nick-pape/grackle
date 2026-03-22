@@ -9,7 +9,7 @@ import type { Record as Neo4jRecord } from "neo4j-driver";
 import { getSession } from "./client.js";
 import { logger } from "./logger.js";
 import { NODE_LABEL } from "./constants.js";
-import { recordToNode } from "./node-store.js";
+import { recordToNode, recordToEdge } from "./node-store.js";
 import type { KnowledgeNode, KnowledgeEdge, EdgeType } from "./types.js";
 import { EDGE_TYPE } from "./types.js";
 import type { SearchResult } from "./search.js";
@@ -85,30 +85,6 @@ function buildExpandCypher(edgeTypes?: EdgeType[]): string {
     RETURN neighbor, rels`;
 }
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/** Convert a raw edge record from Cypher collect() to a KnowledgeEdge. */
-function rawToEdge(raw: Record<string, unknown>): KnowledgeEdge {
-  let metadata: Record<string, unknown> | undefined;
-  if (raw.metadata !== undefined && raw.metadata !== null) {
-    try {
-      metadata = JSON.parse(raw.metadata as string) as Record<string, unknown>;
-    } catch {
-      metadata = undefined;
-    }
-  }
-
-  return {
-    fromId: raw.fromId as string,
-    toId: raw.toId as string,
-    type: raw.type as EdgeType,
-    metadata,
-    createdAt: raw.createdAt as string,
-  };
-}
-
 /**
  * Merge two expansion results, deduplicating nodes by ID and edges by
  * (fromId, toId, type) triple.
@@ -169,7 +145,7 @@ export async function expandNode(
         if (raw.fromId === null || raw.toId === null) {
           continue;
         }
-        const edge: KnowledgeEdge = rawToEdge(raw);
+        const edge: KnowledgeEdge = recordToEdge(raw);
         const key: string = `${edge.fromId}:${edge.toId}:${edge.type}`;
         if (!edgeSet.has(key)) {
           edgeSet.add(key);

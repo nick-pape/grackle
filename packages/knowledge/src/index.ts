@@ -38,6 +38,7 @@ export {
   deleteNode,
   updateNode,
   recordToNode,
+  recordToEdge,
 } from "./node-store.js";
 export type {
   CreateReferenceNodeInput,
