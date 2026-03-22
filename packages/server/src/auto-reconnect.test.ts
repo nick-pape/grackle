@@ -59,7 +59,7 @@ import * as adapterManager from "./adapter-manager.js";
 import * as tokenBroker from "./token-broker.js";
 import { recoverSuspendedSessions } from "./session-recovery.js";
 import { emit } from "./event-bus.js";
-import { attemptReconnects, clearReconnectState, _resetForTesting } from "./auto-reconnect.js";
+import { attemptReconnects, clearReconnectState, resetReconnectState, _resetForTesting } from "./auto-reconnect.js";
 import type { EnvironmentAdapter, PowerLineConnection } from "@grackle-ai/adapter-sdk";
 
 // ── Schema ──────────────────────────────────────────────────
@@ -283,5 +283,62 @@ describe("auto-reconnect", () => {
 
     // Only one connect should have been made
     expect(connectCount).toBe(1);
+  });
+
+  it("resetReconnectState makes environment immediately eligible", async () => {
+    insertEnv("env1");
+    const adapter = makeAdapter();
+    adapterManager.registerAdapter(adapter);
+
+    // Initialize state (creates entry with initial delay)
+    await attemptReconnects();
+    expect(adapter.connect).not.toHaveBeenCalled();
+
+    // Reset state to immediately eligible (nextRetryAt = now)
+    resetReconnectState("env1");
+
+    // Next call should attempt reconnect immediately (no delay)
+    await attemptReconnects();
+    await new Promise((r) => setTimeout(r, 50));
+
+    expect(adapter.connect).toHaveBeenCalledWith("env1", expect.any(Object), "tok-env1");
+    expect(envRegistry.getEnvironment("env1")?.status).toBe("connected");
+  });
+
+  it("resetReconnectState resets attempt count for fresh retries", async () => {
+    insertEnv("env1");
+    const adapter = makeAdapter();
+    (adapter.connect as ReturnType<typeof vi.fn>).mockRejectedValue(new Error("unreachable"));
+    adapterManager.registerAdapter(adapter);
+
+    // Exhaust some retries
+    for (let i = 0; i < 4; i++) {
+      vi.spyOn(Date, "now").mockReturnValue(Date.now() + 200_000 * (i + 1));
+      await attemptReconnects();
+      await new Promise((r) => setTimeout(r, 50));
+    }
+
+    // 3 attempts used (first call initializes, then 3 actual attempts)
+    expect(adapter.connect).toHaveBeenCalledTimes(3);
+
+    // Reset state — should get fresh retries
+    resetReconnectState("env1");
+    (adapter.connect as ReturnType<typeof vi.fn>).mockClear();
+
+    // Make connect succeed now
+    const conn: PowerLineConnection = {
+      client: {} as PowerLineConnection["client"],
+      environmentId: "env1",
+      port: 7433,
+    };
+    (adapter.connect as ReturnType<typeof vi.fn>).mockResolvedValue(conn);
+
+    // Next attempt should succeed (fresh state, no delay)
+    vi.spyOn(Date, "now").mockReturnValue(Date.now() + 300_000);
+    await attemptReconnects();
+    await new Promise((r) => setTimeout(r, 50));
+
+    expect(adapter.connect).toHaveBeenCalledTimes(1);
+    expect(envRegistry.getEnvironment("env1")?.status).toBe("connected");
   });
 });
