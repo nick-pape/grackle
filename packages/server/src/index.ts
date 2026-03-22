@@ -62,7 +62,7 @@ const WEB_DIST_DIR: string = resolve(
 
 /** Minimal HTML page shown when the user needs to enter a pairing code. */
 function renderPairingPage(error?: string): string {
-  const errorHtml = error ? `<p style="color:#e74c3c;margin-bottom:1rem">${error}</p>` : "";
+  const errorHtml = error ? `<p style="color:#e74c3c;margin-bottom:1rem">${escapeHtml(error)}</p>` : "";
   return `<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Grackle — Pair Device</title>
@@ -114,7 +114,7 @@ function renderAuthorizePage(
   hasPairedSession: boolean,
   error?: string,
 ): string {
-  const errorHtml = error ? `<p style="color:#e74c3c;margin-bottom:1rem">${error}</p>` : "";
+  const errorHtml = error ? `<p style="color:#e74c3c;margin-bottom:1rem">${escapeHtml(error)}</p>` : "";
   const pairingField = hasPairedSession
     ? ""
     : `<p>Enter the pairing code shown in your terminal to pair and authorize.</p>
