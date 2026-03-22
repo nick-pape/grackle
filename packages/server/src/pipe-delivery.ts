@@ -39,9 +39,10 @@ const asyncListenerCleanups: Map<string, () => void> = new Map();
  *
  * Idempotent — safe to call multiple times for the same session.
  *
- * The listener throws if delivery fails (session not found, environment disconnected),
- * which causes the stream-registry to leave the message as undelivered. This ensures
- * `hasUndeliveredMessages()` remains accurate for close() buffer drain checks.
+ * The listener throws if pre-dispatch checks fail (session not found, environment
+ * disconnected), which causes the stream-registry to leave the message as undelivered.
+ * Note: once sendInput is dispatched, the message is marked delivered even if the
+ * gRPC call later fails — delivery tracking covers pre-dispatch failures only.
  */
 export function ensureAsyncDeliveryListener(sessionId: string): void {
   if (asyncListenerCleanups.has(sessionId)) {
@@ -126,19 +127,22 @@ export function publishChildCompletion(childSessionId: string, status: string): 
 
 /** Clean up an async pipe stream and its listener (only if no remaining async subs for parent). */
 function cleanupAsyncPipe(streamId: string, parentSessionId: string): void {
+  // Collect all session IDs on this stream before deleting (for listener cleanup)
+  const stream = streamRegistry.getStream(streamId);
+  const sessionIds: string[] = [];
+  if (stream) {
+    for (const sub of stream.subscriptions.values()) {
+      sessionIds.push(sub.sessionId);
+    }
+  }
+
   // Delete the stream (which unsubscribes everyone)
   streamRegistry.deleteStream(streamId);
 
-  // Only remove the async listener if the parent has no remaining async subscriptions.
-  // A parent with multiple concurrent async children should keep the listener alive.
-  const remainingAsyncSubs = streamRegistry.getSubscriptionsForSession(parentSessionId)
-    .filter((s) => s.deliveryMode === "async");
-  if (remainingAsyncSubs.length === 0) {
-    const cleanup = asyncListenerCleanups.get(parentSessionId);
-    if (cleanup) {
-      cleanup();
-      asyncListenerCleanups.delete(parentSessionId);
-    }
+  // Clean up async listeners for all sessions that were on this stream
+  // (both parent and child). Only removes if no remaining async subscriptions.
+  for (const sid of sessionIds) {
+    cleanupAsyncListenerIfEmpty(sid);
   }
 }
 

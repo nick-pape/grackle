@@ -726,12 +726,16 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       // Publish to stream — delivery is handled by async listeners registered
       // at spawn time via ensureAsyncDeliveryListener. This is the same path
       // used by publishChildCompletion for child→parent delivery.
-      streamRegistry.publish(sub.streamId, req.sessionId, req.message);
+      const msg = streamRegistry.publish(sub.streamId, req.sessionId, req.message);
 
-      // Verify delivery succeeded — if any readable subscriber has undelivered
-      // messages, the async listener threw (env disconnected, session missing).
+      // Verify delivery to async subscribers — check if the published message
+      // was marked as delivered for each async target. Sync and detach subscribers
+      // are excluded (sync waits for consumeSync, detach buffers silently).
       for (const targetSub of stream.subscriptions.values()) {
-        if (targetSub.sessionId !== req.sessionId && streamRegistry.hasUndeliveredMessages(targetSub.id)) {
+        if (targetSub.sessionId === req.sessionId) {
+          continue;
+        }
+        if (targetSub.deliveryMode === "async" && !msg.deliveredTo.has(targetSub.id)) {
           throw new ConnectError(
             "Message delivery failed — target environment may be disconnected",
             Code.FailedPrecondition,
@@ -795,8 +799,11 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         hibernated = true;
       }
 
-      // Clean up async listener if no remaining async subs for this session
+      // Clean up async listeners for caller and any unsubscribed children
       pipeDelivery.cleanupAsyncListenerIfEmpty(req.sessionId);
+      for (const child of childSubs) {
+        pipeDelivery.cleanupAsyncListenerIfEmpty(child.sessionId);
+      }
 
       return create(grackle.CloseFdResponseSchema, { hibernated });
     },
