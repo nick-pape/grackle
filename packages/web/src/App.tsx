@@ -2,7 +2,8 @@ import { GrackleProvider } from "./context/GrackleContext.js";
 import { MockGrackleProvider } from "./mocks/MockGrackleProvider.js";
 import { ToastProvider } from "./context/ToastContext.js";
 import { ThemeProvider } from "./context/ThemeContext.js";
-import { StatusBar, AppNav, Sidebar, BottomStatusBar } from "./components/layout/index.js";
+import { StatusBar, AppNav, Sidebar, WithTaskSidebar, WithEnvironmentSidebar, WithSettingsSidebar, BottomStatusBar } from "./components/layout/index.js";
+import { SidebarProvider, useSidebarContent } from "./context/SidebarContext.js";
 import { ToastContainer } from "./components/notifications/index.js";
 import { SplashScreen } from "./components/display/index.js";
 import { useCallback, useEffect, useState, type JSX } from "react";
@@ -36,14 +37,11 @@ import styles from "./App.module.scss";
 const IS_MOCK_MODE: boolean =
   typeof window !== "undefined" && new URLSearchParams(window.location.search).has("mock");
 
-/** Application shell layout with StatusBar, Sidebar, Outlet, and BottomStatusBar. */
-function AppShell(): JSX.Element {
-  const { lastSpawnedId, environments, connected, onboardingCompleted } = useGrackle();
-  const { showToast } = useToast();
-  useEnvironmentToasts(environments, showToast);
-  const navigate = useAppNavigate();
-
+/** Inner layout body that conditionally renders the sidebar based on context content. */
+function AppShellBody(): JSX.Element {
   const location = useLocation();
+  const sidebarContent = useSidebarContent();
+  const hasSidebar = sidebarContent !== undefined;
 
   // Sidebar drawer state for mobile
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -66,32 +64,20 @@ function AppShell(): JSX.Element {
     return () => { document.removeEventListener("keydown", handleKeyDown); };
   }, [sidebarOpen]);
 
-  // Auto-select newly spawned sessions — but only if the user is not
-  // already viewing a task (task-spawned sessions should keep the user on
-  // the task page rather than redirecting to the raw session view).
-  useEffect(() => {
-    if (lastSpawnedId && !location.pathname.includes("/tasks/")) {
-      navigate(sessionUrl(lastSpawnedId), { replace: true });
-    }
-  }, [lastSpawnedId, navigate, location.pathname]);
-
-  // Redirect to setup wizard if onboarding hasn't been completed
-  if (connected && onboardingCompleted === false) {
-    return <Navigate to="/setup" replace />;
-  }
-
   return (
-    <div className={styles.root}>
-      <StatusBar onToggleSidebar={toggleSidebar} sidebarOpen={sidebarOpen} />
+    <>
+      <StatusBar onToggleSidebar={hasSidebar ? toggleSidebar : undefined} sidebarOpen={sidebarOpen} />
       <AppNav />
       <div className={styles.body}>
-        <div
-          className={styles.sidebarWrapper}
-          data-sidebar-open={sidebarOpen}
-        >
-          <Sidebar />
-        </div>
-        {sidebarOpen && (
+        {hasSidebar && (
+          <div
+            className={styles.sidebarWrapper}
+            data-sidebar-open={sidebarOpen}
+          >
+            <Sidebar />
+          </div>
+        )}
+        {hasSidebar && sidebarOpen && (
           <div
             className={styles.overlay}
             data-testid="drawer-overlay"
@@ -110,7 +96,39 @@ function AppShell(): JSX.Element {
           tests when matching resource names that may also appear in transient
           toasts. */}
       <ToastContainer />
-    </div>
+    </>
+  );
+}
+
+/** Application shell layout with StatusBar, Sidebar, Outlet, and BottomStatusBar. */
+function AppShell(): JSX.Element {
+  const { lastSpawnedId, environments, connected, onboardingCompleted } = useGrackle();
+  const { showToast } = useToast();
+  useEnvironmentToasts(environments, showToast);
+  const navigate = useAppNavigate();
+
+  const location = useLocation();
+
+  // Auto-select newly spawned sessions — but only if the user is not
+  // already viewing a task (task-spawned sessions should keep the user on
+  // the task page rather than redirecting to the raw session view).
+  useEffect(() => {
+    if (lastSpawnedId && !location.pathname.includes("/tasks/")) {
+      navigate(sessionUrl(lastSpawnedId), { replace: true });
+    }
+  }, [lastSpawnedId, navigate, location.pathname]);
+
+  // Redirect to setup wizard if onboarding hasn't been completed
+  if (connected && onboardingCompleted === false) {
+    return <Navigate to="/setup" replace />;
+  }
+
+  return (
+    <SidebarProvider>
+      <div className={styles.root}>
+        <AppShellBody />
+      </div>
+    </SidebarProvider>
   );
 }
 
@@ -151,41 +169,55 @@ function AppRoutes(): JSX.Element {
     <Routes>
       <Route path="setup" element={<SetupWizard />} />
       <Route element={<AppShell />}>
+        {/* Pages without sidebar */}
         <Route index element={<EmptyPage />} />
         <Route path="chat" element={<ChatPage />} />
-        <Route path="tasks" element={<TasksEmptyPage />} />
-        <Route path="tasks/new" element={<NewTaskPage />} />
-        <Route path="tasks/:taskId" element={<TaskPage />} />
-        <Route path="tasks/:taskId/stream" element={<TaskPage />} />
-        <Route path="tasks/:taskId/findings" element={<TaskPage />} />
-        <Route path="tasks/:taskId/edit" element={<TaskEditPage />} />
-        <Route path="workspaces" element={<Navigate to="/environments" replace />} />
-        <Route path="workspaces/:workspaceId" element={<WorkspaceRedirect />} />
-        <Route path="workspaces/:workspaceId/tasks/:taskId" element={<WorkspaceRedirect />} />
-        <Route path="workspaces/:workspaceId/tasks/:taskId/*" element={<WorkspaceRedirect />} />
-        <Route path="environments/:environmentId/workspaces/:workspaceId" element={<WorkspacePage />} />
-        <Route path="environments/:environmentId/workspaces/:workspaceId/tasks/new" element={<NewTaskPage />} />
-        <Route path="environments/:environmentId/workspaces/:workspaceId/tasks/:taskId" element={<TaskPage />} />
-        <Route path="environments/:environmentId/workspaces/:workspaceId/tasks/:taskId/stream" element={<TaskPage />} />
-        <Route path="environments/:environmentId/workspaces/:workspaceId/tasks/:taskId/findings" element={<TaskPage />} />
-        <Route path="environments/:environmentId/workspaces/:workspaceId/tasks/:taskId/edit" element={<TaskEditPage />} />
         <Route path="sessions/new" element={<NewChatPage />} />
         <Route path="sessions/:sessionId" element={<SessionPage />} />
-        <Route path="environments" element={<EnvironmentsPage />}>
-          <Route index element={<EnvironmentsEmptyPage />} />
-          <Route path="new" element={<NewEnvironmentPage />} />
-          <Route path=":environmentId" element={<EnvironmentDetailPage />} />
-          <Route path=":environmentId/edit" element={<EnvironmentEditPage />} />
+
+        {/* Tasks sidebar */}
+        <Route element={<WithTaskSidebar />}>
+          <Route path="tasks" element={<TasksEmptyPage />} />
+          <Route path="tasks/new" element={<NewTaskPage />} />
+          <Route path="tasks/:taskId" element={<TaskPage />} />
+          <Route path="tasks/:taskId/stream" element={<TaskPage />} />
+          <Route path="tasks/:taskId/findings" element={<TaskPage />} />
+          <Route path="tasks/:taskId/edit" element={<TaskEditPage />} />
         </Route>
-        <Route path="settings" element={<SettingsPage />}>
-          <Route index element={<Navigate to="credentials" replace />} />
-          <Route path="environments" element={<Navigate to="/environments" replace />} />
-          <Route path="credentials" element={<SettingsCredentialsTab />} />
-          <Route path="tokens" element={<Navigate to="../credentials" replace />} />
-          <Route path="personas" element={<SettingsPersonasTab />} />
-          <Route path="appearance" element={<SettingsAppearanceTab />} />
-          <Route path="about" element={<SettingsAboutTab />} />
+
+        {/* Environments sidebar */}
+        <Route element={<WithEnvironmentSidebar />}>
+          <Route path="workspaces" element={<Navigate to="/environments" replace />} />
+          <Route path="workspaces/:workspaceId" element={<WorkspaceRedirect />} />
+          <Route path="workspaces/:workspaceId/tasks/:taskId" element={<WorkspaceRedirect />} />
+          <Route path="workspaces/:workspaceId/tasks/:taskId/*" element={<WorkspaceRedirect />} />
+          <Route path="environments/:environmentId/workspaces/:workspaceId" element={<WorkspacePage />} />
+          <Route path="environments/:environmentId/workspaces/:workspaceId/tasks/new" element={<NewTaskPage />} />
+          <Route path="environments/:environmentId/workspaces/:workspaceId/tasks/:taskId" element={<TaskPage />} />
+          <Route path="environments/:environmentId/workspaces/:workspaceId/tasks/:taskId/stream" element={<TaskPage />} />
+          <Route path="environments/:environmentId/workspaces/:workspaceId/tasks/:taskId/findings" element={<TaskPage />} />
+          <Route path="environments/:environmentId/workspaces/:workspaceId/tasks/:taskId/edit" element={<TaskEditPage />} />
+          <Route path="environments" element={<EnvironmentsPage />}>
+            <Route index element={<EnvironmentsEmptyPage />} />
+            <Route path="new" element={<NewEnvironmentPage />} />
+            <Route path=":environmentId" element={<EnvironmentDetailPage />} />
+            <Route path=":environmentId/edit" element={<EnvironmentEditPage />} />
+          </Route>
         </Route>
+
+        {/* Settings sidebar */}
+        <Route element={<WithSettingsSidebar />}>
+          <Route path="settings" element={<SettingsPage />}>
+            <Route index element={<Navigate to="credentials" replace />} />
+            <Route path="environments" element={<Navigate to="/environments" replace />} />
+            <Route path="credentials" element={<SettingsCredentialsTab />} />
+            <Route path="tokens" element={<Navigate to="../credentials" replace />} />
+            <Route path="personas" element={<SettingsPersonasTab />} />
+            <Route path="appearance" element={<SettingsAppearanceTab />} />
+            <Route path="about" element={<SettingsAboutTab />} />
+          </Route>
+        </Route>
+
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

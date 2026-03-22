@@ -6,17 +6,37 @@ const MOBILE_VIEWPORT = { width: 375, height: 812 };
 test.describe("Mobile Drawer", { tag: ["@webui"] }, () => {
   test.use({ viewport: MOBILE_VIEWPORT });
 
-  test("hamburger button is visible on mobile", async ({ appPage }) => {
+  test("hamburger button is visible on sidebar pages", async ({ appPage }) => {
+    // Navigate to a page with sidebar content
+    await appPage.goto("/tasks");
+    await appPage.waitForFunction(() => document.body.innerText.includes("Connected"), { timeout: 10_000 });
+
     const hamburger = appPage.getByRole("button", { name: "Toggle sidebar" });
     await expect(hamburger).toBeVisible();
   });
 
+  test("hamburger button is hidden on pages without sidebar", async ({ appPage }) => {
+    // Dashboard has no sidebar, so hamburger should not be rendered at all
+    await appPage.goto("/");
+    await appPage.waitForFunction(() => document.body.innerText.includes("Connected"), { timeout: 10_000 });
+    const hamburger = appPage.getByRole("button", { name: "Toggle sidebar" });
+    await expect(hamburger).toHaveCount(0);
+  });
+
   test("sidebar is hidden by default on mobile", async ({ appPage }) => {
+    // Navigate to a page with sidebar content
+    await appPage.goto("/tasks");
+    await appPage.waitForFunction(() => document.body.innerText.includes("Connected"), { timeout: 10_000 });
+
     const sidebar = appPage.getByTestId("sidebar");
     await expect(sidebar).not.toBeVisible();
   });
 
   test("hamburger opens and closes the sidebar drawer", async ({ appPage }) => {
+    // Navigate to a page with sidebar content
+    await appPage.goto("/tasks");
+    await appPage.waitForFunction(() => document.body.innerText.includes("Connected"), { timeout: 10_000 });
+
     const hamburger = appPage.getByRole("button", { name: "Toggle sidebar" });
     const sidebar = appPage.getByTestId("sidebar");
 
@@ -32,6 +52,10 @@ test.describe("Mobile Drawer", { tag: ["@webui"] }, () => {
   });
 
   test("overlay click closes the drawer", async ({ appPage }) => {
+    // Navigate to a page with sidebar content
+    await appPage.goto("/tasks");
+    await appPage.waitForFunction(() => document.body.innerText.includes("Connected"), { timeout: 10_000 });
+
     const hamburger = appPage.getByRole("button", { name: "Toggle sidebar" });
     const sidebar = appPage.getByTestId("sidebar");
 
@@ -44,6 +68,10 @@ test.describe("Mobile Drawer", { tag: ["@webui"] }, () => {
   });
 
   test("Escape key closes the drawer", async ({ appPage }) => {
+    // Navigate to a page with sidebar content
+    await appPage.goto("/tasks");
+    await appPage.waitForFunction(() => document.body.innerText.includes("Connected"), { timeout: 10_000 });
+
     const hamburger = appPage.getByRole("button", { name: "Toggle sidebar" });
     const sidebar = appPage.getByTestId("sidebar");
 
@@ -73,10 +101,12 @@ test.describe("Mobile Drawer", { tag: ["@webui"] }, () => {
     await expect(sidebar).not.toBeVisible({ timeout: 5_000 });
   });
 
-  test("hamburger is visible on all pages including settings", async ({ appPage }) => {
+  test("hamburger is visible on all sidebar pages including settings", async ({ appPage }) => {
     const hamburger = appPage.getByRole("button", { name: "Toggle sidebar" });
 
-    // Hamburger should be visible on the default page
+    // Navigate to tasks — hamburger should be visible
+    await appPage.goto("/tasks");
+    await appPage.waitForFunction(() => document.body.innerText.includes("Connected"), { timeout: 10_000 });
     await expect(hamburger).toBeVisible();
 
     // Navigate to settings programmatically

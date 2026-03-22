@@ -1,9 +1,5 @@
 import { useState, useRef, useEffect, type JSX } from "react";
-import { useLocation } from "react-router";
-import { getActiveView } from "./AppNav.js";
-import { TaskList } from "../lists/TaskList.js";
-import { EnvironmentNav } from "../lists/EnvironmentNav.js";
-import { SettingsNav } from "../settings/SettingsNav.js";
+import { useSidebarContent } from "../../context/SidebarContext.js";
 import styles from "./Sidebar.module.scss";
 
 /** Default sidebar width in pixels. */
@@ -40,12 +36,11 @@ function saveWidth(width: number): void {
   }
 }
 
-/** Left sidebar showing view-specific content based on the active app navigation tab. */
-export function Sidebar(): JSX.Element {
+/** Left sidebar rendering slot content provided via SidebarContext. */
+export function Sidebar(): JSX.Element | undefined {
   const [width] = useState<number>(loadWidth);
   const containerRef = useRef<HTMLDivElement>(null);
-  const location = useLocation();
-  const activeView = getActiveView(location.pathname);
+  const content = useSidebarContent();
 
   /** Observe container resizes and persist width to localStorage. */
   useEffect(() => {
@@ -71,12 +66,14 @@ export function Sidebar(): JSX.Element {
     return () => { observer.disconnect(); };
   }, []);
 
+  if (content === undefined) {
+    return undefined;
+  }
+
   return (
     <div className={styles.container} ref={containerRef} data-testid="sidebar" style={{ width }}>
       <div className={styles.content}>
-        {activeView === "tasks" && <TaskList />}
-        {activeView === "environments" && <EnvironmentNav />}
-        {activeView === "settings" && <SettingsNav />}
+        {content}
       </div>
     </div>
   );
