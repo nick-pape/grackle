@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Collapse terminal session statuses into lifecycle + endReason: session lifecycle is now PENDING→RUNNING→IDLE→HIBERNATING with a separate end_reason column for completed/failed/interrupted",
+      "type": "minor",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
