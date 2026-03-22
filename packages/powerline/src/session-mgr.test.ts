@@ -1,5 +1,13 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { addSession, getSession, removeSession, listAllSessions } from "./session-mgr.js";
+import {
+  addSession,
+  getSession,
+  removeSession,
+  listAllSessions,
+  parkSession,
+  drainParkedSession,
+  isParked,
+} from "./session-mgr.js";
 import type { AgentSession } from "./runtimes/runtime.js";
 
 function makeMockSession(id: string): AgentSession {
@@ -11,6 +19,7 @@ function makeMockSession(id: string): AgentSession {
     stream: async function* () {},
     sendInput: () => {},
     kill: () => {},
+    drainBufferedEvents: () => [],
   };
 }
 
@@ -72,5 +81,36 @@ describe("session-mgr", () => {
     expect(getSession("b")).toBeUndefined();
     expect(getSession("c")).toBe(s3);
     expect(listAllSessions()).toHaveLength(2);
+  });
+});
+
+describe("parked sessions", () => {
+  beforeEach(() => {
+    // Drain any parked sessions from previous tests
+    drainParkedSession("parked-1");
+    drainParkedSession("parked-2");
+  });
+
+  it("parkSession + drainParkedSession roundtrip", () => {
+    const events = [
+      { type: "text" as const, timestamp: "t1", content: "hello" },
+      { type: "text" as const, timestamp: "t2", content: "world" },
+    ];
+    parkSession("parked-1", events);
+
+    expect(isParked("parked-1")).toBe(true);
+    const drained = drainParkedSession("parked-1");
+    expect(drained).toEqual(events);
+    expect(isParked("parked-1")).toBe(false);
+  });
+
+  it("drainParkedSession returns undefined for unknown session", () => {
+    expect(drainParkedSession("nonexistent")).toBeUndefined();
+  });
+
+  it("drain is one-shot — second drain returns undefined", () => {
+    parkSession("parked-2", [{ type: "text" as const, timestamp: "t1", content: "data" }]);
+    expect(drainParkedSession("parked-2")).toHaveLength(1);
+    expect(drainParkedSession("parked-2")).toBeUndefined();
   });
 });

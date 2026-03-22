@@ -7,31 +7,55 @@ import {
   getSession,
   removeSession,
   listAllSessions,
+  parkSession,
+  drainParkedSession,
 } from "./session-mgr.js";
 import { writeTokens } from "./token-writer.js";
 import { removeWorktree } from "./worktree.js";
 import os from "node:os";
-import type { AgentSession } from "./runtimes/runtime.js";
+import type { AgentEvent, AgentSession } from "./runtimes/runtime.js";
 
 const startTime: number = Date.now();
 
-/** Stream events from an agent session as proto messages, cleaning up the session when done. */
+/** Convert an internal AgentEvent to a proto AgentEvent message. */
+function toProtoEvent(sessionId: string, event: AgentEvent): powerline.AgentEvent {
+  return create(powerline.AgentEventSchema, {
+    sessionId,
+    type: event.type,
+    timestamp: event.timestamp,
+    content: event.content,
+    raw: event.raw ? JSON.stringify(event.raw) : "",
+  });
+}
+
+/**
+ * Stream events from an agent session as proto messages.
+ *
+ * On clean exit (session completes naturally), removes the session.
+ * On abort (gRPC consumer disconnected), kills the agent loop, drains
+ * any buffered events, and parks them for later retrieval via
+ * `DrainBufferedEvents`.
+ */
 async function* streamSession(
   sessionId: string,
   session: AgentSession,
 ): AsyncGenerator<powerline.AgentEvent> {
   addSession(session);
+  let cleanExit = false;
   try {
     for await (const event of session.stream()) {
-      yield create(powerline.AgentEventSchema, {
-        sessionId,
-        type: event.type,
-        timestamp: event.timestamp,
-        content: event.content,
-        raw: event.raw ? JSON.stringify(event.raw) : "",
-      });
+      yield toProtoEvent(sessionId, event);
     }
+    cleanExit = true;
   } finally {
+    if (!cleanExit) {
+      // gRPC consumer disconnected — kill the agent and park buffered events.
+      session.kill();
+      const buffered = session.drainBufferedEvents();
+      if (buffered.length > 0) {
+        parkSession(sessionId, buffered);
+      }
+    }
     removeSession(sessionId);
   }
 }
@@ -165,9 +189,13 @@ export function registerPowerLineRoutes(router: ConnectRouter): void {
       return create(powerline.EmptySchema, {});
     },
 
-    async *drainBufferedEvents(_req: powerline.DrainRequest) {
-      // Stub — real implementation in #750 (session parking).
-      // Yields nothing (empty stream) until parking is implemented.
+    async *drainBufferedEvents(req: powerline.DrainRequest) {
+      const events = drainParkedSession(req.sessionId);
+      if (events) {
+        for (const event of events) {
+          yield toProtoEvent(req.sessionId, event);
+        }
+      }
     },
   });
 }
