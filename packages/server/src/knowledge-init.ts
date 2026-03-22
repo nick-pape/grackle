@@ -22,6 +22,7 @@ import { setKnowledgeEmbedder } from "@grackle-ai/mcp";
 import { subscribe, type GrackleEvent } from "./event-bus.js";
 import * as taskStore from "./task-store.js";
 import * as findingStore from "./finding-store.js";
+import { safeParseJsonArray } from "./json-helpers.js";
 import { logger } from "./logger.js";
 
 // ---------------------------------------------------------------------------
@@ -57,7 +58,10 @@ async function handleEvent(embedder: Embedder, event: GrackleEvent): Promise<voi
     switch (event.type) {
       case "task.created":
       case "task.updated": {
-        const taskId: string = payload.taskId as string;
+        const taskId: unknown = payload.taskId;
+        if (typeof taskId !== "string" || !taskId) {
+          return;
+        }
         const task = taskStore.getTask(taskId);
         if (!task) {
           logger.warn({ taskId }, "Knowledge sync: task not found, skipping");
@@ -74,24 +78,30 @@ async function handleEvent(embedder: Embedder, event: GrackleEvent): Promise<voi
       }
 
       case "task.deleted": {
-        const taskId: string = payload.taskId as string;
+        const taskId: unknown = payload.taskId;
+        if (typeof taskId !== "string" || !taskId) {
+          return;
+        }
         await deleteReferenceNodeBySource("task", taskId);
         break;
       }
 
       case "finding.posted": {
-        const findingId: string = payload.findingId as string;
-        const workspaceId: string = (payload.workspaceId as string | undefined) ?? "";
-        // queryFindings returns arrays; find by ID
+        const findingId: unknown = payload.findingId;
+        if (typeof findingId !== "string" || !findingId) {
+          return;
+        }
+        const workspaceId: string =
+          typeof payload.workspaceId === "string" ? payload.workspaceId : "";
         const findings = findingStore.queryFindings(workspaceId);
         const finding = findings.find((f) => f.id === findingId);
         if (!finding) {
           logger.warn({ findingId }, "Knowledge sync: finding not found, skipping");
           return;
         }
-        const tags: string[] = typeof finding.tags === "string"
-          ? JSON.parse(finding.tags) as string[]
-          : [];
+        const tags: string[] = safeParseJsonArray(
+          typeof finding.tags === "string" ? finding.tags : null,
+        );
         await syncReferenceNode(embedder, {
           sourceType: "finding",
           sourceId: findingId,
@@ -125,26 +135,37 @@ async function handleEvent(embedder: Embedder, event: GrackleEvent): Promise<voi
  * injects it into MCP tools, and subscribes to the event bus for
  * automatic reference node sync.
  *
+ * If any step after Neo4j connection fails, cleans up the connection
+ * before re-throwing.
+ *
  * @returns A cleanup function that closes Neo4j and unsubscribes from events.
  */
 export async function initKnowledge(): Promise<() => Promise<void>> {
   logger.info("Initializing knowledge graph subsystem");
 
   await openNeo4j();
-  await initSchema();
 
-  const embedder: Embedder = createLocalEmbedder();
-  setKnowledgeEmbedder(embedder);
+  try {
+    await initSchema();
 
-  const unsubscribe: () => void = subscribe(createEntitySyncHandler(embedder));
+    const embedder: Embedder = createLocalEmbedder();
+    setKnowledgeEmbedder(embedder);
 
-  logger.info("Knowledge graph subsystem ready");
+    const unsubscribe: () => void = subscribe(createEntitySyncHandler(embedder));
 
-  return async (): Promise<void> => {
-    logger.info("Shutting down knowledge graph subsystem");
-    unsubscribe();
+    logger.info("Knowledge graph subsystem ready");
+
+    return async (): Promise<void> => {
+      logger.info("Shutting down knowledge graph subsystem");
+      unsubscribe();
+      setKnowledgeEmbedder(undefined);
+      await closeNeo4j();
+      logger.info("Knowledge graph subsystem stopped");
+    };
+  } catch (err) {
+    // Clean up Neo4j if a later step fails
     setKnowledgeEmbedder(undefined);
-    await closeNeo4j();
-    logger.info("Knowledge graph subsystem stopped");
-  };
+    await closeNeo4j().catch(() => {});
+    throw err;
+  }
 }
