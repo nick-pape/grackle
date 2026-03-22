@@ -782,7 +782,7 @@ export const MOCK_PERSONAS: PersonaData[] = [
     createdAt: "2026-02-21T09:00:00Z",
     updatedAt: "2026-02-21T09:00:00Z",
     type: "script",
-    script: 'const files = env.files.filter(f => /\\.(ts|tsx|js)$/.test(f.filename));\nfor (const f of files) {\n  const result = await host.exec("npx", ["eslint", "--fix", f.filename]);\n  if (result.exitCode !== 0) {\n    env.findings.push({ category: "lint", title: `Lint issues in ${f.filename}`, content: result.stderr });\n  }\n}\nenv.findings.push({ category: "summary", title: "Lint pass complete", content: `Checked ${files.length} files` });',
+    script: 'const files = env.files.filter(f => /\\.(ts|tsx|js)$/.test(f.filename));\nfor (const f of files) {\n  const eslintResult = await host.exec("npx", ["eslint", "--fix", f.filename]);\n  if (eslintResult.exitCode !== 0) {\n    env.findings.push({ category: "lint", title: `Lint issues in ${f.filename}`, content: eslintResult.stderr });\n  }\n  const prettierResult = await host.exec("npx", ["prettier", "--write", f.filename]);\n  if (prettierResult.exitCode !== 0) {\n    env.findings.push({ category: "format", title: `Prettier issues in ${f.filename}`, content: prettierResult.stderr });\n  }\n}\nenv.findings.push({ category: "summary", title: "Lint & format pass complete", content: `Ran ESLint and Prettier on ${files.length} files` });',
   },
 ];
 

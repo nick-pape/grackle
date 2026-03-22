@@ -21,7 +21,7 @@ Docker, local, SSH, and GitHub Codespaces — it shouldn't matter where an agent
 
 ### 🔄 Runtime agnostic by design
 
-The agent loop landscape is wildly unstable. Claude Code, Copilot, Codex, GenAIScript — whatever ships next month. Grackle wraps them all behind a standard interface so you can swap runtimes without changing your workflow. Your tooling shouldn't be coupled to whichever vendor is winning this quarter.
+The agent loop landscape is wildly unstable. Claude Code, Copilot, Codex, Goose, GenAIScript — whatever ships next month. Grackle wraps them all behind a standard interface so you can swap runtimes without changing your workflow. Your tooling shouldn't be coupled to whichever vendor is winning this quarter.
 
 ### 🧰 Primitives, not opinions
 
@@ -101,7 +101,7 @@ Agents don't just run in parallel — they share knowledge. One agent's architec
 
 ### 🎨 Themeable
 
-10 built-in themes — dark, light, and everything in between. Grackle, Glassmorphism, Matrix, Neubrutalism, Monokai, Ubuntu, Sandstone, Verdigris, and Primer. Switch in Settings or match your system preference.
+10 built-in themes — dark, light, and everything in between. Grackle, Grackle Light, Glassmorphism, Matrix, Neubrutalism, Monokai, Ubuntu, Sandstone, Verdigris, and Primer. Switch in Settings or match your system preference.
 
 ![Theme grid — Grackle, Grackle Light, Matrix, Neubrutalism, Monokai, Sandstone](screenshots/theme-grid.png)
 
@@ -141,7 +141,7 @@ graph TD
 | 📡 | **Real-time streaming** | Watch agent tool calls and output as they happen, bridged from gRPC to WebSocket |
 | 🌳 | **Git worktree isolation** | Every task gets its own branch in its own worktree — zero interference between agents |
 | 💬 | **Findings & knowledge sharing** | Agents post categorized discoveries that become context for other agents |
-| 🔄 | **Multi-runtime support** | Claude Code, Copilot, Codex, and GenAIScript — swap runtimes per persona or per task |
+| 🔄 | **Multi-runtime support** | Claude Code, Copilot, Codex, Goose, and GenAIScript — swap runtimes per persona or per task |
 | 🌲 | **Task tree hierarchy** | Decompose tasks into parent/child subtrees up to 5 levels deep — with recursive tree view, expand/collapse, and progress badges |
 | 🔗 | **Task dependencies** | Dependency gating — blocked tasks wait for their dependencies to complete |
 | 🎭 | **Agent personas** | Specialized agents with focused system prompts, configurable runtime/model, and tool allowlists. Script personas run GenAIScript programs as single-turn agents |
