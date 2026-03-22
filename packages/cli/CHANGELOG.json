@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.68.3",
+      "tag": "@grackle-ai/cli_v0.68.3",
+      "date": "Sun, 22 Mar 2026 06:07:06 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Refactor ws-bridge session termination to use fd closure instead of direct INTERRUPTED status"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.68.2",
       "tag": "@grackle-ai/cli_v0.68.2",
       "date": "Sun, 22 Mar 2026 05:56:14 GMT",

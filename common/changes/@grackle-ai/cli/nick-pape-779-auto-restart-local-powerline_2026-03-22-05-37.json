@@ -1,8 +1,8 @@
 {
   "changes": [
     {
-      "comment": "Refactor ws-bridge session termination to use fd closure instead of direct INTERRUPTED status",
-      "type": "patch",
+      "comment": "Auto-restart local PowerLine on unexpected exit with circuit-breaker protection",
+      "type": "minor",
       "packageName": "@grackle-ai/cli"
     }
   ],

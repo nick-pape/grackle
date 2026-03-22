@@ -1,6 +1,6 @@
 {
   "name": "@grackle-ai/adapter-sdk",
-  "version": "0.68.2",
+  "version": "0.68.3",
   "description": "SDK for building Grackle environment adapters",
   "license": "MIT",
   "repository": {
@@ -29,7 +29,7 @@
   },
   "devDependencies": {
     "@grackle-ai/heft-rig": "workspace:*",
-    "@rushstack/heft": "1.2.4",
+    "@rushstack/heft": "1.2.7",
     "@types/node": "^22.0.0",
     "vitest": "^3.1.1"
   }

@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sun, 22 Mar 2026 05:56:14 GMT and should not be manually modified.
+This log was last generated on Sun, 22 Mar 2026 06:07:06 GMT and should not be manually modified.
+
+## 0.68.3
+Sun, 22 Mar 2026 06:07:06 GMT
+
+### Patches
+
+- Refactor ws-bridge session termination to use fd closure instead of direct INTERRUPTED status
 
 ## 0.68.2
 Sun, 22 Mar 2026 05:56:14 GMT
