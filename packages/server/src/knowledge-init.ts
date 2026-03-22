@@ -95,35 +95,27 @@ async function syncTaskEdges(
 ): Promise<void> {
   // Parent task → PART_OF edge
   if (task.parentTaskId) {
-    const parentNodeId = await ensureTaskReferenceNode(embedder, task.parentTaskId);
-    if (parentNodeId) {
-      try {
+    try {
+      const parentNodeId = await ensureTaskReferenceNode(embedder, task.parentTaskId);
+      if (parentNodeId) {
         await createEdge(taskNodeId, parentNodeId, EDGE_TYPE.PART_OF);
-      } catch (err) {
-        logger.warn({ taskNodeId, parentTaskId: task.parentTaskId, err }, "Failed to create PART_OF edge");
       }
+    } catch (err) {
+      logger.warn({ taskNodeId, parentTaskId: task.parentTaskId, err }, "Failed to create PART_OF edge");
     }
   }
 
   // Dependencies → DEPENDS_ON edges
-  let deps: string[] = [];
-  try {
-    const parsed: unknown = JSON.parse(task.dependsOn || "[]");
-    if (Array.isArray(parsed)) {
-      deps = parsed.filter((d): d is string => typeof d === "string" && d.length > 0);
-    }
-  } catch {
-    // Invalid JSON in dependsOn — skip
-  }
+  const deps: string[] = safeParseJsonArray(task.dependsOn);
 
   for (const depId of deps) {
-    const depNodeId = await ensureTaskReferenceNode(embedder, depId);
-    if (depNodeId) {
-      try {
+    try {
+      const depNodeId = await ensureTaskReferenceNode(embedder, depId);
+      if (depNodeId) {
         await createEdge(taskNodeId, depNodeId, EDGE_TYPE.DEPENDS_ON);
-      } catch (err) {
-        logger.warn({ taskNodeId, depId, err }, "Failed to create DEPENDS_ON edge");
       }
+    } catch (err) {
+      logger.warn({ taskNodeId, depId, err }, "Failed to create DEPENDS_ON edge");
     }
   }
 }
@@ -191,13 +183,13 @@ async function handleEvent(embedder: Embedder, event: GrackleEvent): Promise<voi
 
         // Link finding to its task
         if (finding.taskId) {
-          const taskNodeId = await ensureTaskReferenceNode(embedder, finding.taskId);
-          if (taskNodeId) {
-            try {
+          try {
+            const taskNodeId = await ensureTaskReferenceNode(embedder, finding.taskId);
+            if (taskNodeId) {
               await createEdge(findingNodeId, taskNodeId, EDGE_TYPE.DERIVED_FROM);
-            } catch (err) {
-              logger.warn({ findingNodeId, taskId: finding.taskId, err }, "Failed to create DERIVED_FROM edge");
             }
+          } catch (err) {
+            logger.warn({ findingNodeId, taskId: finding.taskId, err }, "Failed to create DERIVED_FROM edge");
           }
         }
         break;
