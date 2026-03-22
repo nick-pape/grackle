@@ -379,6 +379,7 @@ describe("CopilotRuntime — usage event emission", () => {
     // input = 100 (input) + 500 (cacheRead) + 0 (cacheWrite) = 600
     expect(data.input_tokens).toBe(600);
     expect(data.output_tokens).toBe(20);
-    expect(data.cost_usd).toBe(0.003);
+    // Copilot SDK cost is in nano-AIU, not USD — we emit 0 until conversion is available
+    expect(data.cost_usd).toBe(0);
   });
 });
