@@ -145,6 +145,53 @@ describe("pipe-delivery integration", () => {
     });
   });
 
+  // ─── Bidirectional Delivery (parent→child via unified path) ─
+
+  describe("parent→child delivery via ensureAsyncDeliveryListener", () => {
+    it("delivers parent write to child via async listener", () => {
+      sessionStore.createSession("parent", "test-env", "claude-code", "p", "sonnet", "/tmp/p");
+      sessionStore.createSession("child", "test-env", "claude-code", "c", "sonnet", "/tmp/c", "", "", "parent", "async");
+
+      const stream = streamRegistry.createStream("pipe:child");
+      streamRegistry.subscribe(stream.id, "parent", "rw", "async", true);
+      streamRegistry.subscribe(stream.id, "child", "rw", "async", false);
+
+      // Register listeners for BOTH directions (mimics new spawnAgent behavior)
+      pipeDelivery.ensureAsyncDeliveryListener("parent");
+      pipeDelivery.ensureAsyncDeliveryListener("child");
+
+      // Parent publishes to stream (mimics writeToFd calling streamRegistry.publish)
+      streamRegistry.publish(stream.id, "parent", "Hello from parent");
+
+      // Child should receive via sendInput (listener for child session fires)
+      expect(mockSendInput).toHaveBeenCalledOnce();
+      const call = mockSendInput.mock.calls[0][0];
+      expect(call.sessionId).toBe("child");
+      expect(call.text).toContain("Hello from parent");
+    });
+
+    it("delivers child publish to parent via async listener", () => {
+      sessionStore.createSession("parent", "test-env", "claude-code", "p", "sonnet", "/tmp/p");
+      sessionStore.createSession("child", "test-env", "claude-code", "c", "sonnet", "/tmp/c", "", "", "parent", "async");
+
+      const stream = streamRegistry.createStream("pipe:child");
+      streamRegistry.subscribe(stream.id, "parent", "rw", "async", true);
+      streamRegistry.subscribe(stream.id, "child", "rw", "async", false);
+
+      pipeDelivery.ensureAsyncDeliveryListener("parent");
+      pipeDelivery.ensureAsyncDeliveryListener("child");
+
+      // Child publishes to stream
+      streamRegistry.publish(stream.id, "child", "Result from child");
+
+      // Parent should receive
+      expect(mockSendInput).toHaveBeenCalledOnce();
+      const call = mockSendInput.mock.calls[0][0];
+      expect(call.sessionId).toBe("parent");
+      expect(call.text).toContain("Result from child");
+    });
+  });
+
   // ─── Sync Pipe ─────────────────────────────────────────────
 
   describe("sync pipe: child completion unblocks consumeSync", () => {
