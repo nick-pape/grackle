@@ -78,6 +78,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
     github: "off",
     copilot: "off",
     codex: "off",
+    goose: "off",
   });
   const [personas, setPersonas] = useState<PersonaData[]>(MOCK_PERSONAS);
   const [taskSessions] = useState<Record<string, Session[]>>(MOCK_TASK_SESSIONS);

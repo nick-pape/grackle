@@ -52,6 +52,7 @@ function main(): void {
       registerRuntime(new ClaudeCodeRuntime());
       registerRuntime(new CopilotRuntime());
       registerRuntime(new CodexRuntime());
+      registerRuntime(new AcpRuntime({ name: "goose", command: "goose", args: ["acp"] }));
       registerRuntime(new AcpRuntime({ name: "codex-acp", command: "codex-acp", args: [] }));
       registerRuntime(new AcpRuntime({ name: "copilot-acp", command: "copilot", args: ["--acp", "--stdio"] }));
       registerRuntime(new AcpRuntime({ name: "claude-code-acp", command: "claude-agent-acp", args: [] }));

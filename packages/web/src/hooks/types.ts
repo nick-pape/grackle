@@ -135,6 +135,7 @@ export interface CredentialProviderConfig {
   github: "off" | "on";
   copilot: "off" | "on";
   codex: "off" | "on";
+  goose: "off" | "on";
 }
 
 /** A GitHub Codespace returned from `gh codespace list`. */
@@ -344,7 +345,8 @@ export function isCredentialProviderConfig(v: unknown): v is CredentialProviderC
     VALID_CLAUDE_MODES.has(v.claude as string) &&
     VALID_TOGGLE_MODES.has(v.github as string) &&
     VALID_TOGGLE_MODES.has(v.copilot as string) &&
-    VALID_TOGGLE_MODES.has(v.codex as string)
+    VALID_TOGGLE_MODES.has(v.codex as string) &&
+    VALID_TOGGLE_MODES.has(v.goose as string)
   );
 }
 

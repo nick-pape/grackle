@@ -32,6 +32,7 @@ export function useCredentials(send: SendFunction): UseCredentialsResult {
     github: "off",
     copilot: "off",
     codex: "off",
+    goose: "off",
   });
 
   const handleEvent = useCallback((event: GrackleEvent): boolean => {

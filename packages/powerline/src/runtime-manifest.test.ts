@@ -7,6 +7,7 @@ describe("RUNTIME_MANIFESTS", () => {
       "claude-code",
       "copilot",
       "codex",
+      "goose",
       "codex-acp",
       "copilot-acp",
       "claude-code-acp",
@@ -52,7 +53,7 @@ describe("RUNTIME_MANIFESTS", () => {
   });
 
   it("ACP runtimes include @agentclientprotocol/sdk", () => {
-    for (const name of ["codex-acp", "copilot-acp", "claude-code-acp"]) {
+    for (const name of ["goose", "codex-acp", "copilot-acp", "claude-code-acp"]) {
       const manifest = RUNTIME_MANIFESTS[name]!;
       expect(manifest.packages["@agentclientprotocol/sdk"]).toBeDefined();
     }

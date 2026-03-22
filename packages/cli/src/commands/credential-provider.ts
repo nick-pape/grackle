@@ -8,7 +8,7 @@ import {
 } from "@grackle-ai/common";
 
 /** Valid provider names. */
-const VALID_PROVIDERS: readonly string[] = ["claude", "github", "copilot", "codex"];
+const VALID_PROVIDERS: readonly string[] = ["claude", "github", "copilot", "codex", "goose"];
 
 /** Valid values per provider. */
 const VALID_VALUES: Record<string, readonly string[]> = {
@@ -16,6 +16,7 @@ const VALID_VALUES: Record<string, readonly string[]> = {
   github: ["off", "on"],
   copilot: ["off", "on"],
   codex: ["off", "on"],
+  goose: ["off", "on"],
 };
 
 /** Register the `credential-provider` subcommands on the CLI program. */
@@ -37,6 +38,7 @@ export function registerCredentialProviderCommands(program: Command): void {
         ["github", providerToggleToString(config.github) || "off"],
         ["copilot", providerToggleToString(config.copilot) || "off"],
         ["codex", providerToggleToString(config.codex) || "off"],
+        ["goose", providerToggleToString(config.goose) || "off"],
       );
       console.log(table.toString());
     });
@@ -68,7 +70,8 @@ export function registerCredentialProviderCommands(program: Command): void {
         `  claude: ${claudeProviderModeToString(updated.claude) || "off"}  ` +
         `github: ${providerToggleToString(updated.github) || "off"}  ` +
         `copilot: ${providerToggleToString(updated.copilot) || "off"}  ` +
-        `codex: ${providerToggleToString(updated.codex) || "off"}`,
+        `codex: ${providerToggleToString(updated.codex) || "off"}  ` +
+        `goose: ${providerToggleToString(updated.goose) || "off"}`,
       );
     });
 }
