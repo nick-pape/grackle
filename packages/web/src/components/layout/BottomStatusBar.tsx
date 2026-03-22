@@ -25,13 +25,12 @@ export function BottomStatusBar(): JSX.Element {
   const taskStreamMatch = useMatch("/tasks/:taskId/stream");
   const taskFindingsMatch = useMatch("/tasks/:taskId/findings");
   const taskEditMatch = useMatch("/tasks/:taskId/edit");
-  const wsTaskMatch = useMatch("/workspaces/:workspaceId/tasks/:taskId");
-  const wsTaskStreamMatch = useMatch("/workspaces/:workspaceId/tasks/:taskId/stream");
-  const wsTaskFindingsMatch = useMatch("/workspaces/:workspaceId/tasks/:taskId/findings");
-  const wsTaskEditMatch = useMatch("/workspaces/:workspaceId/tasks/:taskId/edit");
+  const wsTaskMatch = useMatch("/environments/:environmentId/workspaces/:workspaceId/tasks/:taskId");
+  const wsTaskStreamMatch = useMatch("/environments/:environmentId/workspaces/:workspaceId/tasks/:taskId/stream");
+  const wsTaskFindingsMatch = useMatch("/environments/:environmentId/workspaces/:workspaceId/tasks/:taskId/findings");
+  const wsTaskEditMatch = useMatch("/environments/:environmentId/workspaces/:workspaceId/tasks/:taskId/edit");
   const newChatMatch = useMatch("/sessions/new");
-  const isEnvironments = location.pathname.startsWith("/environments");
-  const workspaceMatch = useMatch("/workspaces/:workspaceId");
+  const workspaceMatch = useMatch("/environments/:environmentId/workspaces/:workspaceId");
   const newTaskMatch = useMatch("/tasks/new");
   const chatMatch = useMatch("/chat");
   const emptyMatch = useMatch("/");
@@ -41,6 +40,9 @@ export function BottomStatusBar(): JSX.Element {
   const sessionId = sessionMatch?.params.sessionId;
   const taskId = taskMatch?.params.taskId ?? taskStreamMatch?.params.taskId ?? taskFindingsMatch?.params.taskId
     ?? wsTaskMatch?.params.taskId ?? wsTaskStreamMatch?.params.taskId ?? wsTaskFindingsMatch?.params.taskId ?? wsTaskEditMatch?.params.taskId;
+  const wsMatch = wsTaskMatch ?? wsTaskStreamMatch ?? wsTaskFindingsMatch ?? wsTaskEditMatch;
+  const routeEnvironmentId = wsMatch?.params.environmentId ?? workspaceMatch?.params.environmentId;
+  const isEnvironments = location.pathname.startsWith("/environments") && !workspaceMatch && !wsMatch;
   const isChat = !!chatMatch;
   const isNewChat = !!newChatMatch;
   const isWorkspace = !!workspaceMatch && !wsTaskMatch && !wsTaskStreamMatch && !wsTaskFindingsMatch && !wsTaskEditMatch;
@@ -144,7 +146,7 @@ export function BottomStatusBar(): JSX.Element {
             Task completed
           </span>
           <button
-            onClick={() => navigate(newTaskUrl(task.workspaceId))}
+            onClick={() => navigate(newTaskUrl(task.workspaceId, undefined, routeEnvironmentId))}
             className={styles.btnPrimary}
           >
             + New Task

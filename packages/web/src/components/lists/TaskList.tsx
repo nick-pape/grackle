@@ -167,7 +167,6 @@ function TaskTreeNode({
   const indent = TASK_BASE_INDENT_PX + depth * TASK_DEPTH_INDENT_PX;
   const isRoot = depth === 0;
   const wsName = isRoot && !node.parentTaskId && node.workspaceId ? workspaceNames.get(node.workspaceId) : undefined;
-
   return (
     <>
       <div
@@ -289,6 +288,7 @@ export function TaskList(): JSX.Element {
     () => new Map(workspaces.map((w) => [w.id, w.name])),
     [workspaces],
   );
+
 
   /** Toggle group-by-status mode. */
   const toggleGroupByStatus = (): void => {
