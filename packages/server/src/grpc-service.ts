@@ -553,8 +553,14 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         pipe: req.pipe,
       });
 
-      // Set up IPC stream BEFORE starting the child spawn, so the stream
-      // exists when the event processor observes terminal status events.
+      // Create lifecycle stream — every session gets one. The spawner holds
+      // a lifecycle fd; when it's closed, the session auto-hibernates.
+      const lifecycleStream = streamRegistry.createStream(`lifecycle:${sessionId}`);
+      const spawnerId = req.parentSessionId || "__server__";
+      streamRegistry.subscribe(lifecycleStream.id, spawnerId, "rw", "detach", true);
+      streamRegistry.subscribe(lifecycleStream.id, sessionId, "rw", "detach", false);
+
+      // Set up IPC pipe stream (optional, on top of lifecycle stream)
       let pipeFd = 0;
       if (pipeMode && pipeMode !== "detach" && req.parentSessionId) {
         const ipcStream = streamRegistry.createStream(`pipe:${sessionId}`);
@@ -777,26 +783,16 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       // Unsubscribe the caller
       streamRegistry.unsubscribe(sub.id);
 
-      // Also unsubscribe children and delete the stream — the parent closing
-      // its fd means it's done with the pipe. Hibernate the children.
+      // Also unsubscribe children — when their last subscription is removed,
+      // the lifecycle manager's orphan callback auto-hibernates them.
       let hibernated = false;
       for (const child of childSubs) {
         streamRegistry.unsubscribe(child.subId);
-        sessionStore.hibernateSession(child.sessionId);
+        // Check if the child was orphaned (auto-hibernated)
         const childSession = sessionStore.getSession(child.sessionId);
-        if (childSession) {
-          const conn = adapterManager.getConnection(childSession.environmentId);
-          if (conn) {
-            try {
-              await conn.client.kill(
-                create(powerline.SessionIdSchema, { id: child.sessionId }),
-              );
-            } catch {
-              // Best-effort kill — child may have already exited
-            }
-          }
+        if (childSession?.status === SESSION_STATUS.HIBERNATING) {
+          hibernated = true;
         }
-        hibernated = true;
       }
 
       // Clean up async listeners for caller and any unsubscribed children
@@ -839,6 +835,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         throw new ConnectError(`Session not found: ${req.id}`, Code.NotFound);
       }
 
+      // Kill the PowerLine process first (best-effort)
       const conn = adapterManager.getConnection(session.environmentId);
       if (conn) {
         try {
@@ -846,26 +843,34 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
             create(powerline.SessionIdSchema, { id: req.id }),
           );
         } catch (err) {
-          logger.warn({ sessionId: req.id, err }, "PowerLine kill failed — marking session interrupted anyway");
+          logger.warn({ sessionId: req.id, err }, "PowerLine kill failed");
         }
       }
 
-      sessionStore.updateSession(req.id, SESSION_STATUS.INTERRUPTED);
-      streamHub.publish(
-        create(grackle.SessionEventSchema, {
-          sessionId: req.id,
-          type: grackle.EventType.STATUS,
-          timestamp: new Date().toISOString(),
-          content: SESSION_STATUS.INTERRUPTED,
-          raw: "",
-        }),
-      );
+      // Close all subscriptions for this session → triggers auto-hibernate
+      // via the lifecycle manager's orphan callback
+      const subs = streamRegistry.getSubscriptionsForSession(req.id);
+      for (const sub of subs) {
+        streamRegistry.unsubscribe(sub.id);
+      }
 
-      // Broadcast task_updated so frontend re-fetches computed status
-      if (session.taskId) {
-        const task = taskStore.getTask(session.taskId);
-        if (task) {
-          emit("task.updated", { taskId: task.id, workspaceId: task.workspaceId || "" });
+      // Fallback for legacy sessions without lifecycle streams
+      if (subs.length === 0) {
+        sessionStore.updateSession(req.id, SESSION_STATUS.INTERRUPTED);
+        streamHub.publish(
+          create(grackle.SessionEventSchema, {
+            sessionId: req.id,
+            type: grackle.EventType.STATUS,
+            timestamp: new Date().toISOString(),
+            content: SESSION_STATUS.INTERRUPTED,
+            raw: "",
+          }),
+        );
+        if (session.taskId) {
+          const task = taskStore.getTask(session.taskId);
+          if (task) {
+            emit("task.updated", { taskId: task.id, workspaceId: task.workspaceId || "" });
+          }
         }
       }
 
@@ -1338,7 +1343,13 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         pipe: req.pipe,
       });
 
-      // Set up IPC stream BEFORE starting the child spawn (avoid race with fast completion)
+      // Create lifecycle stream for the task session
+      const taskLifecycleStream = streamRegistry.createStream(`lifecycle:${sessionId}`);
+      const taskSpawnerId = req.parentSessionId || "__server__";
+      streamRegistry.subscribe(taskLifecycleStream.id, taskSpawnerId, "rw", "detach", true);
+      streamRegistry.subscribe(taskLifecycleStream.id, sessionId, "rw", "detach", false);
+
+      // Set up IPC pipe stream (optional)
       let taskPipeFd = 0;
       if (taskPipeMode && taskPipeMode !== "detach" && req.parentSessionId) {
         const ipcStream = streamRegistry.createStream(`pipe:${sessionId}`);

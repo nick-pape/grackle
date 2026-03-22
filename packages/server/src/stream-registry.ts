@@ -120,6 +120,10 @@ const asyncListeners: Map<string, AsyncMessageListener> = new Map();
 /** Blocking queues for sync subscriptions, keyed by subscription ID. */
 const syncQueues: Map<string, AsyncQueue<StreamMessage>> = new Map();
 
+/** Callback invoked when a session has zero remaining subscriptions (orphaned). */
+type OrphanCallback = (sessionId: string) => void;
+let orphanCallback: OrphanCallback | undefined;
+
 // ─── Internal Helpers ─────────────────────────────────────────────────────────
 
 /** Allocate the next fd number for a session. */
@@ -139,12 +143,13 @@ function getSessionFdMap(sessionId: string): Map<number, Subscription> {
   return fdMap;
 }
 
-/** Clean up session state when it has no more subscriptions. */
+/** Clean up session state when it has no more subscriptions. Fires orphan callback. */
 function cleanupSessionIfEmpty(sessionId: string): void {
   const fdMap = subscriptionsBySession.get(sessionId);
   if (fdMap?.size === 0) {
     subscriptionsBySession.delete(sessionId);
     fdCounters.delete(sessionId);
+    orphanCallback?.(sessionId);
   }
 }
 
@@ -427,6 +432,16 @@ export function registerAsyncListener(sessionId: string, callback: AsyncMessageL
   };
 }
 
+// ─── Lifecycle Callbacks ──────────────────────────────────────────────────────
+
+/**
+ * Register a callback invoked when a session has zero remaining subscriptions.
+ * Used by the lifecycle manager to auto-hibernate orphaned sessions.
+ */
+export function onSessionOrphaned(cb: OrphanCallback): void {
+  orphanCallback = cb;
+}
+
 // ─── Testing ──────────────────────────────────────────────────────────────────
 
 /** Clear all state. For testing only. */
@@ -442,4 +457,5 @@ export function _resetForTesting(): void {
     queue.close();
   }
   syncQueues.clear();
+  orphanCallback = undefined;
 }
