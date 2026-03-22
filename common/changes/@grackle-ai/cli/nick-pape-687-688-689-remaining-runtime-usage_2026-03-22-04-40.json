@@ -1,7 +1,7 @@
 {
   "changes": [
     {
-      "comment": "feat(server): auto-reconnect disconnected environments with exponential backoff on heartbeat",
+      "comment": "Emit usage events from Codex, ACP, and GenAIScript runtimes",
       "type": "patch",
       "packageName": "@grackle-ai/cli"
     }

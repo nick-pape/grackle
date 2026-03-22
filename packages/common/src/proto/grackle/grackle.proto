@@ -530,6 +530,91 @@ message UsageStats {
   int32 session_count = 4;
 }
 
+// ─── Knowledge Graph ─────────────────────────────────────────
+
+message KnowledgeNodeProto {
+  string id = 1;
+  string kind = 2;
+  string workspace_id = 3;
+  string created_at = 4;
+  string updated_at = 5;
+  // Reference node fields
+  string source_type = 6;
+  string source_id = 7;
+  string label = 8;
+  // Native node fields
+  string category = 9;
+  string title = 10;
+  string content = 11;
+  repeated string tags = 12;
+}
+
+message KnowledgeEdgeProto {
+  string from_id = 1;
+  string to_id = 2;
+  string type = 3;
+  string metadata_json = 4;
+  string created_at = 5;
+}
+
+message SearchKnowledgeRequest {
+  string query = 1;
+  int32 limit = 2;
+  string workspace_id = 3;
+}
+
+message SearchKnowledgeResult {
+  double score = 1;
+  KnowledgeNodeProto node = 2;
+  repeated KnowledgeEdgeProto edges = 3;
+}
+
+message SearchKnowledgeResponse {
+  repeated SearchKnowledgeResult results = 1;
+}
+
+message GetKnowledgeNodeRequest {
+  string id = 1;
+}
+
+message GetKnowledgeNodeResponse {
+  KnowledgeNodeProto node = 1;
+  repeated KnowledgeEdgeProto edges = 2;
+}
+
+message ExpandKnowledgeNodeRequest {
+  string id = 1;
+  int32 depth = 2;
+  repeated string edge_types = 3;
+}
+
+message ExpandKnowledgeNodeResponse {
+  repeated KnowledgeNodeProto nodes = 1;
+  repeated KnowledgeEdgeProto edges = 2;
+}
+
+message ListRecentKnowledgeNodesRequest {
+  int32 limit = 1;
+  string workspace_id = 2;
+}
+
+message ListRecentKnowledgeNodesResponse {
+  repeated KnowledgeNodeProto nodes = 1;
+  repeated KnowledgeEdgeProto edges = 2;
+}
+
+message CreateKnowledgeNodeRequest {
+  string title = 1;
+  string content = 2;
+  string category = 3;
+  repeated string tags = 4;
+  string workspace_id = 5;
+}
+
+message CreateKnowledgeNodeResponse {
+  string id = 1;
+}
+
 // ─── Service ────────────────────────────────────────────────
 
 service Grackle {
@@ -608,4 +693,11 @@ service Grackle {
   rpc WriteToFd(WriteToFdRequest) returns (Empty);
   rpc CloseFd(CloseFdRequest) returns (CloseFdResponse);
   rpc GetSessionFds(SessionId) returns (SessionFds);
+
+  // Knowledge Graph
+  rpc SearchKnowledge(SearchKnowledgeRequest) returns (SearchKnowledgeResponse);
+  rpc GetKnowledgeNode(GetKnowledgeNodeRequest) returns (GetKnowledgeNodeResponse);
+  rpc ExpandKnowledgeNode(ExpandKnowledgeNodeRequest) returns (ExpandKnowledgeNodeResponse);
+  rpc ListRecentKnowledgeNodes(ListRecentKnowledgeNodesRequest) returns (ListRecentKnowledgeNodesResponse);
+  rpc CreateKnowledgeNode(CreateKnowledgeNodeRequest) returns (CreateKnowledgeNodeResponse);
 }

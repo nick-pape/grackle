@@ -54,3 +54,5 @@ export type { SearchOptions, SearchResult } from "./search.js";
 export { knowledgeSearch } from "./search.js";
 export type { ExpandOptions, ExpansionResult } from "./expand.js";
 export { expandNode, expandResults } from "./expand.js";
+export type { RecentNodesResult } from "./list-recent.js";
+export { listRecentNodes } from "./list-recent.js";
