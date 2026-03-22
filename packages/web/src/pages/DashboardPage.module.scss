@@ -221,6 +221,10 @@
   background: var(--accent-blue);
 }
 
+.statusDot[data-status="suspended"] {
+  background: var(--accent-yellow);
+}
+
 .statusDot[data-status="ended"] {
   background: var(--text-tertiary);
 }
