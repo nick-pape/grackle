@@ -1,14 +1,14 @@
 {
-  "name": "@grackle-ai/knowledge",
+  "name": "@grackle-ai/knowledge-core",
   "version": "0.62.2",
-  "description": "Knowledge graph subsystem for Grackle (Neo4j + vector search)",
+  "description": "Generic knowledge graph SDK on top of Neo4j with vector search, graph traversal, and pluggable embedders/chunkers",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/nick-pape/grackle.git",
-    "directory": "packages/knowledge"
+    "directory": "packages/knowledge-core"
   },
-  "keywords": ["grackle", "knowledge-graph", "neo4j", "vector-search"],
+  "keywords": ["knowledge-graph", "neo4j", "vector-search", "embeddings", "graph-traversal"],
   "engines": { "node": ">=22.0.0" },
   "type": "module",
   "main": "dist/index.js",
@@ -22,7 +22,9 @@
     "_phase:test": "vitest run"
   },
   "dependencies": {
-    "@grackle-ai/knowledge-core": "workspace:*"
+    "@huggingface/transformers": "^3.4.0",
+    "neo4j-driver": "^6.0.1",
+    "pino": "^10.3.1"
   },
   "devDependencies": {
     "@grackle-ai/heft-rig": "workspace:*",

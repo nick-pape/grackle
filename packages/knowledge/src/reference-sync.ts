@@ -10,16 +10,18 @@
  * @module
  */
 
-import { getSession } from "./client.js";
-import { logger } from "./logger.js";
-import { NODE_LABEL } from "./constants.js";
 import {
+  getSession,
+  logger,
+  NODE_LABEL,
   type ReferenceSource,
   type ReferenceNode,
   isReferenceNode,
-} from "./types.js";
-import type { Embedder } from "./embedder.js";
-import { createReferenceNode, updateNode, recordToNode } from "./node-store.js";
+  type Embedder,
+  createReferenceNode,
+  updateNode,
+  recordToNode,
+} from "@grackle-ai/knowledge-core";
 
 // ---------------------------------------------------------------------------
 // Input types
