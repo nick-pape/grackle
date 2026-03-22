@@ -192,7 +192,11 @@ describe("ws-bridge send_input error handling", () => {
     vi.clearAllMocks();
 
     httpServer = createServer();
-    createWsBridge(httpServer, (token) => token === "test-token");
+    createWsBridge(httpServer, {
+      verifyApiKey: (token) => token === "test-token",
+      webPort: 0,
+      allowNetwork: false,
+    });
 
     await new Promise<void>((resolve) => {
       httpServer.listen(0, "127.0.0.1", () => resolve());

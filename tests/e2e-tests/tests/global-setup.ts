@@ -146,10 +146,10 @@ export default async function globalSetup(_config: FullConfig): Promise<void> {
   const [powerlinePort, serverPort, webPort, mcpPort] = await findDistinctPorts(4);
   console.log(`[e2e] Ports: powerline=${powerlinePort}, server=${serverPort}, web=${webPort}, mcp=${mcpPort}`);
 
-  // 3. Start PowerLine (no --token = no auth)
+  // 3. Start PowerLine (no auth needed for E2E tests — local loopback only)
   const powerline: ChildProcess = spawn(
     process.execPath,
-    [join(repoRoot, "packages/powerline/dist/index.js"), "--port", String(powerlinePort)],
+    [join(repoRoot, "packages/powerline/dist/index.js"), "--port", String(powerlinePort), "--no-auth"],
     {
       env: { ...process.env, GRACKLE_HOME: grackleHome },
       stdio: "pipe",

@@ -2,6 +2,33 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.70.3",
+      "tag": "@grackle-ai/cli_v0.70.3",
+      "date": "Sun, 22 Mar 2026 19:10:10 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Require auth token or explicit --no-auth flag for PowerLine startup"
+          },
+          {
+            "comment": "Validate WebSocket Origin header to prevent cross-origin hijacking (GHSA-w3hv-x4fp-6h6j)"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.70.2",
+      "tag": "@grackle-ai/cli_v0.70.2",
+      "date": "Sun, 22 Mar 2026 18:48:36 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Fix workspace authorization bypass in knowledge_search and knowledge_get_node MCP tools (GHSA-647h-p824-99w7)"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.70.1",
       "tag": "@grackle-ai/cli_v0.70.1",
       "date": "Sun, 22 Mar 2026 18:06:20 GMT",
