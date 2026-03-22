@@ -63,6 +63,7 @@ export class LocalPowerLineManager {
    */
   public async start(): Promise<void> {
     this.stoppingGracefully = false;
+    this.restartPending = false;
     this.handle = await this.spawnProcess();
     logger.info({ port: this.options.port, pid: this.handle.process.pid }, "Local PowerLine started");
   }
@@ -73,6 +74,7 @@ export class LocalPowerLineManager {
    */
   public async stop(): Promise<void> {
     this.stoppingGracefully = true;
+    this.restartPending = false;
 
     // Wait for any in-flight restart to finish so we can stop the new handle
     if (this.restartPromise) {
