@@ -22,6 +22,7 @@ import * as envRegistry from "./env-registry.js";
 import * as sessionStore from "./session-store.js";
 import * as tokenBroker from "./token-broker.js";
 import { createMcpServer } from "@grackle-ai/mcp";
+import { isKnowledgeEnabled, initKnowledge } from "./knowledge-init.js";
 import { readFileSync, existsSync } from "node:fs";
 import { join, dirname, extname, normalize, resolve, relative } from "node:path";
 import { createRequire } from "node:module";
@@ -935,6 +936,16 @@ async function main(): Promise<void> {
     }
   });
 
+  // --- Knowledge graph subsystem (opt-in) ---
+  let knowledgeCleanup: (() => Promise<void>) | undefined;
+  if (isKnowledgeEnabled()) {
+    try {
+      knowledgeCleanup = await initKnowledge();
+    } catch (err) {
+      logger.error({ err }, "Failed to initialize knowledge graph — continuing without it");
+    }
+  }
+
   // --- MCP server (HTTP/1.1, Streamable HTTP) ---
   // Use dialable host for OAuth URLs (wildcard → 127.0.0.1)
   const dialableHost = isWildcardAddress(bindHost) ? "127.0.0.1" : bindHost;
@@ -974,6 +985,14 @@ async function main(): Promise<void> {
     if (plHandle) {
       localPowerLineHandle = undefined;
       await plHandle.stop();
+    }
+
+    if (knowledgeCleanup) {
+      try {
+        await knowledgeCleanup();
+      } catch (err) {
+        logger.error({ err }, "Error while shutting down knowledge graph");
+      }
     }
 
     await closeAllTunnels();
