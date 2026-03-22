@@ -18,6 +18,7 @@ import * as personaStore from "./persona-store.js";
 import { emit } from "./event-bus.js";
 import { processEventStream } from "./event-processor.js";
 import * as processorRegistry from "./processor-registry.js";
+import { recoverSuspendedSessions } from "./session-recovery.js";
 import { join } from "node:path";
 import {
   LOGS_DIR,
@@ -428,6 +429,10 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         envRegistry.updateEnvironmentStatus(req.id, "connected");
         envRegistry.markBootstrapped(req.id);
         emit("environment.changed", {});
+        // Auto-recover suspended sessions (fire-and-forget)
+        recoverSuspendedSessions(req.id, conn).catch((err) => {
+          logger.error({ environmentId: req.id, err }, "Session recovery failed");
+        });
 
         yield create(grackle.ProvisionEventSchema, {
           stage: "ready",

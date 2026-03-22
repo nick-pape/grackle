@@ -82,6 +82,7 @@ export function computeTaskStatus(
   switch (latest.status) {
     case SESSION_STATUS.COMPLETED:
     case SESSION_STATUS.HIBERNATING:
+    case SESSION_STATUS.SUSPENDED:
       status = TASK_STATUS.PAUSED;
       break;
     case SESSION_STATUS.FAILED:

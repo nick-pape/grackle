@@ -182,6 +182,31 @@ export function updateRuntimeSessionId(id: string, runtimeSessionId: string): vo
     .run();
 }
 
+/** Transition a session to SUSPENDED — transport lost, pending auto-recovery on reconnect. */
+export function suspendSession(id: string): void {
+  db.update(sessions)
+    .set({
+      status: SESSION_STATUS.SUSPENDED,
+      suspendedAt: new Date().toISOString(),
+      error: null,
+    })
+    .where(eq(sessions.id, id))
+    .run();
+}
+
+/** Get all SUSPENDED sessions for an environment, ordered by startedAt (oldest first). */
+export function getSuspendedForEnv(environmentId: string): SessionRow[] {
+  return db.select().from(sessions)
+    .where(
+      and(
+        eq(sessions.environmentId, environmentId),
+        eq(sessions.status, SESSION_STATUS.SUSPENDED),
+      ),
+    )
+    .orderBy(asc(sessions.startedAt))
+    .all();
+}
+
 /** Clear terminal state for reanimate — reset status to running, clear endedAt/error/suspendedAt. */
 export function reanimateSession(id: string): void {
   db.update(sessions)

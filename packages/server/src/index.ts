@@ -18,6 +18,7 @@ import { DEFAULT_SERVER_PORT, DEFAULT_WEB_PORT, DEFAULT_MCP_PORT, DEFAULT_POWERL
 import { startLocalPowerLine, type LocalPowerLineHandle } from "./local-powerline.js";
 import * as adapterManager from "./adapter-manager.js";
 import * as envRegistry from "./env-registry.js";
+import * as sessionStore from "./session-store.js";
 import * as tokenBroker from "./token-broker.js";
 import { createMcpServer } from "@grackle-ai/mcp";
 import { readFileSync, existsSync } from "node:fs";
@@ -762,6 +763,13 @@ async function main(): Promise<void> {
   // Start heartbeat
   startHeartbeat((environmentId) => {
     updateEnvironmentStatus(environmentId, "disconnected");
+    // Suspend any active sessions on this environment. The event-processor
+    // catch block handles stream-level suspension for sessions with active
+    // streams; this sweep catches edge cases (e.g., PENDING sessions).
+    const activeSession = sessionStore.getActiveForEnv(environmentId);
+    if (activeSession) {
+      sessionStore.suspendSession(activeSession.id);
+    }
     emit("environment.changed", {});
   });
 

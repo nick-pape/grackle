@@ -43,6 +43,7 @@ import { processEventStream } from "./event-processor.js";
 import * as processorRegistry from "./processor-registry.js";
 import { setWssInstance, envRowToWs } from "./ws-broadcast.js";
 import { emit } from "./event-bus.js";
+import { recoverSuspendedSessions } from "./session-recovery.js";
 import { buildMcpServersJson, toDialableHost } from "./grpc-service.js";
 import { createScopedToken } from "@grackle-ai/mcp";
 import { loadOrCreateApiKey } from "./api-key.js";
@@ -200,6 +201,10 @@ async function autoProvisionEnvironment(
     envRegistry.updateEnvironmentStatus(environmentId, "connected");
     envRegistry.markBootstrapped(environmentId);
     emit("environment.changed", {});
+    // Auto-recover suspended sessions (fire-and-forget)
+    recoverSuspendedSessions(environmentId, conn).catch((err) => {
+      logger.error({ environmentId, err }, "Session recovery failed");
+    });
     logger.info({ environmentId, ...logContext }, "Auto-provision complete");
     emit("environment.provision_progress", {
       environmentId,
@@ -1635,6 +1640,10 @@ async function handleMessage(
           await tokenBroker.pushToEnv(environmentId);
           envRegistry.updateEnvironmentStatus(environmentId, "connected");
           envRegistry.markBootstrapped(environmentId);
+          // Auto-recover suspended sessions (fire-and-forget)
+          recoverSuspendedSessions(environmentId, conn).catch((err) => {
+            logger.error({ environmentId, err }, "Session recovery failed");
+          });
           logger.info({ environmentId }, "Environment connected");
           emit("environment.provision_progress", {
             environmentId,
