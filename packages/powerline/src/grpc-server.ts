@@ -31,25 +31,35 @@ function toProtoEvent(sessionId: string, event: AgentEvent): powerline.AgentEven
 /**
  * Stream events from an agent session as proto messages.
  *
- * On clean exit (session completes naturally), removes the session.
- * On abort (gRPC consumer disconnected), kills the agent loop, drains
- * any buffered events, and parks them for later retrieval via
- * `DrainBufferedEvents`.
+ * On clean exit (session completes naturally or throws an internal error),
+ * removes the session without parking.
+ * On gRPC abort (consumer disconnected — ConnectRPC calls return() on the
+ * generator), kills the agent loop, drains any buffered events, and parks
+ * them for later retrieval via `DrainBufferedEvents`.
  */
 async function* streamSession(
   sessionId: string,
   session: AgentSession,
 ): AsyncGenerator<powerline.AgentEvent> {
   addSession(session);
-  let cleanExit = false;
+  // Tracks whether the stream exited via normal completion or an internal
+  // error (both are "handled" exits). If neither, the generator was aborted
+  // by ConnectRPC (gRPC consumer disconnected) — that's the parking case.
+  let handledExit = false;
   try {
-    for await (const event of session.stream()) {
-      yield toProtoEvent(sessionId, event);
+    try {
+      for await (const event of session.stream()) {
+        yield toProtoEvent(sessionId, event);
+      }
+    } catch {
+      // Internal error (session threw, proto conversion failed, etc.)
+      // — not a gRPC disconnect. Don't park; let the session fail normally.
     }
-    cleanExit = true;
+    handledExit = true;
   } finally {
-    if (!cleanExit) {
-      // gRPC consumer disconnected — kill the agent and park buffered events.
+    if (!handledExit) {
+      // Generator was aborted by ConnectRPC (gRPC consumer disconnected).
+      // Kill the agent and park any buffered events for later drain.
       session.kill();
       const buffered = session.drainBufferedEvents();
       if (buffered.length > 0) {
