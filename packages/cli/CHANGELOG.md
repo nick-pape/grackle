@@ -1,6 +1,18 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sun, 22 Mar 2026 04:14:36 GMT and should not be manually modified.
+This log was last generated on Sun, 22 Mar 2026 04:43:26 GMT and should not be manually modified.
+
+## 0.67.0
+Sun, 22 Mar 2026 04:43:26 GMT
+
+### Minor changes
+
+- Wire knowledge graph into server lifecycle with opt-in initialization, event-driven entity sync, and graceful shutdown
+
+### Patches
+
+- Emit usage events from Copilot runtime via assistant.usage SDK event
+- feat(server): SUSPENDED status on transport disconnect + auto-recovery of sessions on reconnect
 
 ## 0.66.0
 Sun, 22 Mar 2026 04:14:36 GMT
