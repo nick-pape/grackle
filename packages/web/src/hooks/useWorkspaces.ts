@@ -102,7 +102,7 @@ export function useWorkspaces(send: SendFunction): UseWorkspacesResult {
       default:
         return false;
     }
-  }, [send]);
+  }, [send, syncWorkspaceCreating]);
 
   const handleMessage = useCallback((msg: WsMessage): boolean => {
     switch (msg.type) {

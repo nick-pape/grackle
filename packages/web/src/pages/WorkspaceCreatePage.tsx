@@ -74,7 +74,7 @@ export function WorkspaceCreatePage(): JSX.Element {
     createWorkspace(
       values.name.trim(),
       values.description,
-      values.repoUrl,
+      values.repoUrl.trim(),
       values.environmentId,
       values.defaultPersonaId,
       values.useWorktrees,
