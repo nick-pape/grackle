@@ -338,7 +338,10 @@ export function processEventStream(
             sessionStore.updateSession(sessionId, SESSION_STATUS.HIBERNATING);
           }
 
-          // Publish child completion to IPC stream (for parent pipe delivery)
+          // On terminal status: publish child completion to IPC pipe stream.
+          // Note: lifecycle streams are NOT cleaned up here — they persist until
+          // the spawner explicitly closes the fd (killAgent, closeFd). This is the
+          // emergent lifecycle model: fd closure drives hibernation, not status events.
           if (["completed", "failed", "killed", "hibernating"].includes(event.content)) {
             publishChildCompletion(sessionId, event.content);
           }

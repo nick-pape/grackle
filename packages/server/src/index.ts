@@ -7,6 +7,7 @@ import { registerAdapter, startHeartbeat } from "./adapter-manager.js";
 import { updateEnvironmentStatus, resetAllStatuses } from "./env-registry.js";
 import { initWsSubscriber } from "./ws-broadcast.js";
 import { initSigchldSubscriber } from "./signals/sigchld.js";
+import { initLifecycleManager } from "./lifecycle.js";
 import { emit, subscribe } from "./event-bus.js";
 import { DockerAdapter } from "./adapters/docker.js";
 import { LocalAdapter } from "./adapters/local.js";
@@ -820,6 +821,9 @@ async function main(): Promise<void> {
 
   // Wire SIGCHLD: notify parent tasks when child sessions reach terminal status
   initSigchldSubscriber();
+
+  // Wire lifecycle manager: auto-hibernate sessions when all fds are closed
+  initLifecycleManager();
 
   // Auto-start the root task (process 1) when any environment connects.
   // Skipped in E2E tests where the root task session would conflict with test sessions.
