@@ -18,7 +18,7 @@ test.describe("Environment Status Broadcast + Toasts", { tag: ["@environment"] }
     await installWsTracker(page);
     await page.goto("/");
     await page.waitForFunction(
-      () => document.body.innerText.includes("Connected"),
+      () => document.body.innerText.includes("Connected") && document.body.innerText.includes("env"),
       { timeout: 10_000 },
     );
 
@@ -49,7 +49,7 @@ test.describe("Environment Status Broadcast + Toasts", { tag: ["@environment"] }
     await installWsTracker(page);
     await page.goto("/");
     await page.waitForFunction(
-      () => document.body.innerText.includes("Connected"),
+      () => document.body.innerText.includes("Connected") && document.body.innerText.includes("env"),
       { timeout: 10_000 },
     );
 
@@ -77,7 +77,7 @@ test.describe("Environment Status Broadcast + Toasts", { tag: ["@environment"] }
     await installWsTracker(page);
     await page.goto("/");
     await page.waitForFunction(
-      () => document.body.innerText.includes("Connected"),
+      () => document.body.innerText.includes("Connected") && document.body.innerText.includes("env"),
       { timeout: 10_000 },
     );
 
