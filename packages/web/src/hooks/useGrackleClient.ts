@@ -20,8 +20,8 @@ import { grackle } from "@grackle-ai/common";
  * current `globalThis.fetch`, making test patches visible.
  */
 const customFetch: typeof globalThis.fetch = new Proxy(globalThis.fetch, {
-  apply(_target, thisArg, args) {
-    return Reflect.apply(globalThis.fetch, thisArg, args);
+  apply(_target: typeof globalThis.fetch, thisArg: unknown, args: Parameters<typeof globalThis.fetch>): Promise<Response> {
+    return Reflect.apply(globalThis.fetch, thisArg, args) as Promise<Response>;
   },
 });
 
