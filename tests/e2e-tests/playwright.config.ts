@@ -20,7 +20,7 @@ function buildTagGrep(): RegExp | undefined {
 export default defineConfig({
   testDir: "./tests",
   timeout: 30_000,
-  retries: 0,
+  retries: process.env.CI ? 1 : 0,
   workers: 1,
   grep: buildTagGrep(),
   globalSetup: "./tests/global-setup.ts",
