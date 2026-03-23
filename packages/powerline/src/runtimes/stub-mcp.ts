@@ -29,6 +29,7 @@ class StubMcpSession implements AgentSession {
   private emitter: EventEmitter = new EventEmitter();
   private inputResolve: ((text: string) => void) | null = null;
   private killed: boolean = false;
+  private killReason: string = "killed";
   private prompt: string;
   private mcpBroker: { url: string; token: string } | undefined;
   private workspaceId: string | undefined;
@@ -207,9 +208,6 @@ class StubMcpSession implements AgentSession {
   public sendInput(text: string): void {
     this.emitter.emit("input", text);
   }
-
-  /** The reason passed to kill(), used as the final status event content. */
-  private killReason: string = "killed";
 
   public kill(reason?: string): void {
     this.killed = true;

@@ -71,6 +71,7 @@ class GenAIScriptSession implements AgentSession {
   private mcpBroker: { url: string; token: string } | undefined;
   private child: ChildProcess | null = null;
   private killed: boolean = false;
+  private killReason: string = "killed";
   private tmpDir: string | null = null;
 
   public constructor(opts: SpawnOptions) {
@@ -223,9 +224,6 @@ class GenAIScriptSession implements AgentSession {
   public sendInput(_text: string): void {
     logger.warn({ sessionId: this.id }, "GenAIScript sessions do not accept interactive input");
   }
-
-  /** The reason passed to kill(), used as the final status event content. */
-  private killReason: string = "killed";
 
   public kill(reason?: string): void {
     this.killed = true;
