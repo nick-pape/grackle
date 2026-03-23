@@ -146,7 +146,7 @@ export async function sendWsAndWaitFor(
                 ws.close();
                 reject(err);
               });
-            }, 50);
+            }, 200);
           };
         });
       }
@@ -455,7 +455,7 @@ export async function sendWsAndWaitFor(
                     ws.close();
                     reject(err);
                   });
-                }, 50);
+                }, 200);
               };
             });
           }
