@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sun, 22 Mar 2026 23:08:49 GMT and should not be manually modified.
+This log was last generated on Mon, 23 Mar 2026 05:01:39 GMT and should not be manually modified.
+
+## 0.71.1
+Mon, 23 Mar 2026 05:01:39 GMT
+
+### Patches
+
+- fix: seed default workspace for system task so it can start on the local environment
 
 ## 0.71.0
 Sun, 22 Mar 2026 23:08:49 GMT
