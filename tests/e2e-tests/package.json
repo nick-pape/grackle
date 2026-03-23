@@ -6,9 +6,9 @@
   "description": "End-to-end Playwright tests for the Grackle platform",
   "scripts": {
     "build": "",
-    "test": "node node_modules/@playwright/test/cli.js test",
+    "test": "playwright test",
     "_phase:build": "",
-    "_phase:e2e": "node node_modules/@playwright/test/cli.js test"
+    "_phase:e2e": "playwright test"
   },
   "devDependencies": {
     "@grackle-ai/cli": "workspace:*",
