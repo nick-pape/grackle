@@ -139,7 +139,7 @@ export async function sendWsAndWaitFor(
             payload = { taskId: result.id || "", workspaceId: result.workspaceId || body.workspaceId || "" };
             break;
           case "task.started":
-            payload = { taskId: body.taskId || "", sessionId: result.id || "", workspaceId: result.taskId || "" };
+            payload = { taskId: body.taskId || "", sessionId: result.id || "", workspaceId: result.workspaceId || body.workspaceId || "" };
             break;
           case "task.completed":
           case "task.deleted":

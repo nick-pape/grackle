@@ -21,6 +21,10 @@ export default defineConfig({
       },
     },
   },
+  // Dev-server proxy: when running `vite dev` (port 5173), forward WebSocket
+  // and ConnectRPC requests to the Grackle server on port 3000. This is only
+  // active in local development; the production build is served by the Grackle
+  // server itself (same origin, port 3000) so no proxy is needed there.
   server: {
     port: 5173,
     proxy: {
