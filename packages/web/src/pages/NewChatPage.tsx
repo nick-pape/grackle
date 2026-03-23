@@ -1,5 +1,6 @@
 import { type JSX } from "react";
 import { useSearchParams } from "react-router";
+import { useGrackle } from "../context/GrackleContext.js";
 import { Breadcrumbs } from "../components/display/index.js";
 import { ChatInput } from "../components/chat/index.js";
 import { buildNewChatBreadcrumbs } from "../utils/breadcrumbs.js";
@@ -10,6 +11,7 @@ export function NewChatPage(): JSX.Element {
   const breadcrumbs = buildNewChatBreadcrumbs();
   const [searchParams] = useSearchParams();
   const envId = searchParams.get("env") ?? "";
+  const { sendInput, spawn, startTask, personas, environments, provisionEnvironment } = useGrackle();
 
   return (
     <div className={styles.panelContainer}>
@@ -17,7 +19,17 @@ export function NewChatPage(): JSX.Element {
       <div className={styles.emptyState}>
         Enter a prompt below to start a new session
       </div>
-      <ChatInput mode="spawn" environmentId={envId} showPersonaSelect />
+      <ChatInput
+        mode="spawn"
+        environmentId={envId}
+        showPersonaSelect
+        personas={personas}
+        environments={environments}
+        onSendInput={sendInput}
+        onSpawn={spawn}
+        onStartTask={startTask}
+        onProvisionEnvironment={provisionEnvironment}
+      />
     </div>
   );
 }
