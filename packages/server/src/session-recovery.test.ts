@@ -56,6 +56,7 @@ import * as logWriter from "./log-writer.js";
 import { reanimateAgent } from "./reanimate-agent.js";
 import { emit } from "./event-bus.js";
 import { recoverSuspendedSessions, _resetForTesting } from "./session-recovery.js";
+import { ConnectError, Code } from "@connectrpc/connect";
 import { SESSION_STATUS } from "@grackle-ai/common";
 import type { PowerLineConnection } from "@grackle-ai/adapter-sdk";
 
@@ -255,6 +256,54 @@ describe("session recovery", () => {
     // Session should have been suspended first (so reanimate accepts it),
     // then reanimated
     expect(reanimateAgent).toHaveBeenCalledWith("sess1");
+  });
+
+  it("skips recovery when environment acquires an active session during drain", async () => {
+    sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
+    sessionStore.suspendSession("sess1");
+
+    // Simulate: another session is spawned on env1 during the async drain window
+    const conn = {
+      client: {
+        drainBufferedEvents: vi.fn(() => (async function* () {
+          // Mid-drain, a new session appears on the same environment
+          sessionStore.createSession("sess-new", "env1", "claude-code", "test2", "sonnet", "/tmp/log2");
+          sessionStore.updateSessionStatus("sess-new", SESSION_STATUS.RUNNING);
+        })()),
+      },
+      environmentId: "env1",
+      port: 7433,
+    } as unknown as PowerLineConnection;
+
+    await recoverSuspendedSessions("env1", conn);
+
+    // reanimateAgent should NOT be called — the pre-check detected the active session
+    expect(reanimateAgent).not.toHaveBeenCalled();
+    // The suspended session should remain SUSPENDED (not marked STOPPED)
+    const session = sessionStore.getSession("sess1");
+    expect(session?.status).toBe(SESSION_STATUS.SUSPENDED);
+  });
+
+  it("leaves session SUSPENDED when reanimateAgent throws FailedPrecondition for active session", async () => {
+    sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
+    sessionStore.suspendSession("sess1");
+
+    vi.mocked(reanimateAgent).mockImplementationOnce(() => {
+      throw new ConnectError(
+        "Environment already has active session sess-other",
+        Code.FailedPrecondition,
+      );
+    });
+
+    const conn = makeConnection([]);
+    await recoverSuspendedSessions("env1", conn);
+
+    // Session should remain SUSPENDED — not marked STOPPED/INTERRUPTED
+    const session = sessionStore.getSession("sess1");
+    expect(session?.status).toBe(SESSION_STATUS.SUSPENDED);
+    expect(session?.endReason).toBeNull();
+    // task.updated should NOT be emitted for this benign skip
+    expect(emit).not.toHaveBeenCalled();
   });
 
   it("closes log stream even when drain fails mid-stream", async () => {
