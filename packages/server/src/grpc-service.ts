@@ -56,12 +56,8 @@ import {
   type Embedder,
   type EdgeType,
 } from "@grackle-ai/knowledge";
-<<<<<<< HEAD
 import { exec } from "./utils/exec.js";
 import { formatGhError } from "./utils/format-gh-error.js";
-import { slugify } from "./utils/slugify.js";
-=======
->>>>>>> origin/main
 import { SystemPromptBuilder, buildTaskPrompt } from "./system-prompt-builder.js";
 import { importGitHubIssues as executeGitHubImport } from "./github-import.js";
 import { detectLanIp } from "./utils/network.js";

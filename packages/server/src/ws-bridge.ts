@@ -3,8 +3,7 @@ import type { Server as HttpServer } from "node:http";
 import type { IncomingMessage } from "node:http";
 import { create } from "@bufbuild/protobuf";
 import { powerline } from "@grackle-ai/common";
-import * as envRegistry from "./env-registry.js";
-import * as sessionStore from "./session-store.js";
+import { envRegistry, sessionStore, workspaceStore, taskStore, grackleHome } from "@grackle-ai/database";
 import * as adapterManager from "./adapter-manager.js";
 import {
   type PowerLineConnection,
@@ -12,8 +11,6 @@ import {
 } from "@grackle-ai/adapter-sdk";
 import * as streamHub from "./stream-hub.js";
 import * as tokenPush from "./token-push.js";
-import * as workspaceStore from "./workspace-store.js";
-import * as taskStore from "./task-store.js";
 import { v4 as uuid } from "uuid";
 import { join } from "node:path";
 import {
@@ -24,7 +21,6 @@ import {
 } from "@grackle-ai/common";
 import { resolvePersona } from "./resolve-persona.js";
 import { fetchOrchestratorContext } from "./orchestrator-context.js";
-import { grackleHome } from "./paths.js";
 import { logger } from "./logger.js";
 import { SystemPromptBuilder, buildTaskPrompt } from "./system-prompt-builder.js";
 import { processEventStream } from "./event-processor.js";
