@@ -5,6 +5,7 @@ import {
   taskStatusToString,
   taskStatusToEnum,
   issueStateToEnum,
+  ROOT_TASK_ID,
 } from "@grackle-ai/common";
 import Table from "cli-table3";
 import chalk from "chalk";
@@ -137,6 +138,12 @@ export function registerTaskCommands(program: Command): void {
     .option("--session <session-id>", "Bind an existing session to this task")
     .option("--persona <id>", "Default persona ID for this task")
     .action(async (taskId: string, opts: { status?: string; dependsOn?: string; title?: string; desc?: string; session?: string; persona?: string }) => {
+      if (taskId === ROOT_TASK_ID && opts.status) {
+        console.error(chalk.red("Cannot change the status of the system task"));
+        process.exitCode = 1;
+        return;
+      }
+
       const VALID_STATUSES = new Set([
         "not_started",
         "working",
@@ -197,6 +204,11 @@ export function registerTaskCommands(program: Command): void {
     .command("delete <task-id>")
     .description("Delete a task")
     .action(async (taskId: string) => {
+      if (taskId === ROOT_TASK_ID) {
+        console.error(chalk.red("Cannot delete the system task"));
+        process.exitCode = 1;
+        return;
+      }
       const client = createGrackleClient();
       await client.deleteTask({ id: taskId });
       console.log(`Deleted: ${taskId}`);
@@ -206,6 +218,11 @@ export function registerTaskCommands(program: Command): void {
     .command("complete <task-id>")
     .description("Mark a task as complete")
     .action(async (taskId: string) => {
+      if (taskId === ROOT_TASK_ID) {
+        console.error(chalk.red("Cannot complete the system task"));
+        process.exitCode = 1;
+        return;
+      }
       const client = createGrackleClient();
       const t = await client.completeTask({ id: taskId });
       console.log(`Completed: ${t.id} → ${taskStatusToString(t.status)}`);

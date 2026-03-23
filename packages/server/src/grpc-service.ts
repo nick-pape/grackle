@@ -1189,6 +1189,9 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
 
       let reqStatus = existing.status;
       if (req.status !== grackle.TaskStatus.UNSPECIFIED) {
+        if (req.id === ROOT_TASK_ID) {
+          throw new ConnectError("Cannot change the status of the system task", Code.PermissionDenied);
+        }
         const converted = taskStatusToString(req.status);
         if (!converted) {
           throw new ConnectError(`Unknown task status enum value: ${req.status}`, Code.InvalidArgument);
@@ -1412,6 +1415,9 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
     },
 
     async completeTask(req: grackle.TaskId) {
+      if (req.id === ROOT_TASK_ID) {
+        throw new ConnectError("Cannot complete the system task", Code.PermissionDenied);
+      }
       const task = taskStore.getTask(req.id);
       if (!task) throw new ConnectError(`Task not found: ${req.id}`, Code.NotFound);
 
@@ -1493,6 +1499,9 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
     },
 
     async deleteTask(req: grackle.TaskId) {
+      if (req.id === ROOT_TASK_ID) {
+        throw new ConnectError("Cannot delete the system task", Code.PermissionDenied);
+      }
       const task = taskStore.getTask(req.id);
       if (!task) {
         throw new ConnectError(`Task not found: ${req.id}`, Code.NotFound);
