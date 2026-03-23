@@ -21,7 +21,8 @@ const CLIENT_TTL_MS: number = 7 * 24 * 60 * 60 * 1000;
 
 // ─── Client Registration ──────────────────────────────────────────────
 
-interface ClientRecord {
+/** Registered OAuth client record. */
+export interface ClientRecord {
   clientId: string;
   redirectUris: string[];
   clientName: string;
@@ -76,7 +77,8 @@ export function getClient(clientId: string): ClientRecord | undefined {
 
 // ─── Authorization Codes ──────────────────────────────────────────────
 
-interface AuthCodeRecord {
+/** Authorization code record bound to PKCE parameters. */
+export interface AuthCodeRecord {
   code: string;
   clientId: string;
   redirectUri: string;
@@ -195,7 +197,8 @@ export function consumeAuthorizationCode(
 
 // ─── Refresh Tokens ───────────────────────────────────────────────────
 
-interface RefreshTokenRecord {
+/** Refresh token record with client and resource binding. */
+export interface RefreshTokenRecord {
   token: string;
   clientId: string;
   resource: string;

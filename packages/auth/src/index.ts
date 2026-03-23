@@ -26,6 +26,7 @@ export {
 } from "./pairing.js";
 
 // ─── OAuth (server-side state) ──────────────────────────────
+export type { ClientRecord, AuthCodeRecord, RefreshTokenRecord } from "./oauth.js";
 export {
   registerClient,
   getClient,
@@ -44,6 +45,7 @@ export {
 export type { OAuthTokenClaims } from "./oauth-token.js";
 export {
   OAUTH_ACCESS_TOKEN_TTL_MS,
+  OAUTH_REFRESH_TOKEN_TTL_MS,
   createOAuthAccessToken,
   verifyOAuthAccessToken,
 } from "./oauth-token.js";

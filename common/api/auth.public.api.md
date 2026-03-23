@@ -8,6 +8,24 @@ import type http from 'node:http';
 import type { ServerResponse } from 'node:http';
 
 // @public
+export interface AuthCodeRecord {
+    // (undocumented)
+    clientId: string;
+    // (undocumented)
+    code: string;
+    // (undocumented)
+    codeChallenge: string;
+    // (undocumented)
+    createdAt: number;
+    // (undocumented)
+    expiresAt: number;
+    // (undocumented)
+    redirectUri: string;
+    // (undocumented)
+    resource: string;
+}
+
+// @public
 export type AuthContext = {
     type: "api-key";
 } | {
@@ -42,15 +60,23 @@ export function clearPairing(): void;
 export function clearSessions(): void;
 
 // @public
+export interface ClientRecord {
+    // (undocumented)
+    clientId: string;
+    // (undocumented)
+    clientName: string;
+    // (undocumented)
+    createdAt: number;
+    // (undocumented)
+    redirectUris: string[];
+}
+
+// @public
 export function computeCodeChallenge(codeVerifier: string): string;
 
-// Warning: (ae-forgotten-export) The symbol "AuthCodeRecord" needs to be exported by the entry point index.d.ts
-//
 // @public
 export function consumeAuthorizationCode(code: string, clientId: string, redirectUri: string, codeVerifier: string, resource: string): AuthCodeRecord | undefined;
 
-// Warning: (ae-forgotten-export) The symbol "RefreshTokenRecord" needs to be exported by the entry point index.d.ts
-//
 // @public
 export function consumeRefreshToken(token: string, clientId: string): RefreshTokenRecord | undefined;
 
@@ -77,8 +103,6 @@ export const defaultAuthLogger: AuthLogger;
 // @public
 export function generatePairingCode(): string | undefined;
 
-// Warning: (ae-forgotten-export) The symbol "ClientRecord" needs to be exported by the entry point index.d.ts
-//
 // @public
 export function getClient(clientId: string): ClientRecord | undefined;
 
@@ -90,6 +114,9 @@ export function loadOrCreateApiKey(homePath: string): string;
 
 // @public
 export const OAUTH_ACCESS_TOKEN_TTL_MS: number;
+
+// @public
+export const OAUTH_REFRESH_TOKEN_TTL_MS: number;
 
 // @public
 export interface OAuthTokenClaims {
@@ -108,6 +135,20 @@ export function pruneRevocations(ttlMs?: number): void;
 
 // @public
 export function redeemPairingCode(code: string, remoteIp: string): boolean;
+
+// @public
+export interface RefreshTokenRecord {
+    // (undocumented)
+    clientId: string;
+    // (undocumented)
+    createdAt: number;
+    // (undocumented)
+    expiresAt: number;
+    // (undocumented)
+    resource: string;
+    // (undocumented)
+    token: string;
+}
 
 // @public
 export function registerClient(redirectUris: string[], clientName?: string): ClientRecord | undefined;

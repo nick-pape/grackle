@@ -9,6 +9,6 @@ export type { AuthContext, OAuthTokenClaims } from "@grackle-ai/auth";
 export {
   createScopedToken, revokeTask, verifyScopedToken,
   createOAuthAccessToken, verifyOAuthAccessToken,
-  OAUTH_ACCESS_TOKEN_TTL_MS,
+  OAUTH_ACCESS_TOKEN_TTL_MS, OAUTH_REFRESH_TOKEN_TTL_MS,
   authenticateMcpRequest,
 } from "@grackle-ai/auth";
