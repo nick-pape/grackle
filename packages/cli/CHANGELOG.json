@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.73.0",
+      "tag": "@grackle-ai/cli_v0.73.0",
+      "date": "Mon, 23 Mar 2026 18:49:25 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Extract @grackle-ai/database package — stores, schema, migrations, and crypto moved out of server"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.72.6",
       "tag": "@grackle-ai/cli_v0.72.6",
       "date": "Mon, 23 Mar 2026 18:28:31 GMT",
