@@ -33,8 +33,7 @@ import {
   claudeProviderModeToEnum,
   providerToggleToEnum,
 } from "@grackle-ai/common";
-import { resolvePersona } from "./resolve-persona.js";
-import { fetchOrchestratorContext } from "./orchestrator-context.js";
+import { resolvePersona, fetchOrchestratorContext, SystemPromptBuilder, buildTaskPrompt } from "@grackle-ai/prompt";
 import { createScopedToken, loadOrCreateApiKey, generatePairingCode } from "@grackle-ai/auth";
 import { computeTaskStatus } from "./compute-task-status.js";
 import { logger } from "./logger.js";
@@ -54,7 +53,6 @@ import {
   type Embedder,
   type EdgeType,
 } from "@grackle-ai/knowledge";
-import { SystemPromptBuilder, buildTaskPrompt } from "./system-prompt-builder.js";
 import { importGitHubIssues as executeGitHubImport } from "./github-import.js";
 import { detectLanIp } from "./utils/network.js";
 import * as streamRegistry from "./stream-registry.js";

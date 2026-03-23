@@ -43,6 +43,11 @@
       "versionPolicyName": "grackle"
     },
     {
+      "packageName": "@grackle-ai/prompt",
+      "projectFolder": "packages/prompt",
+      "versionPolicyName": "grackle"
+    },
+    {
       "packageName": "@grackle-ai/adapter-local",
       "projectFolder": "packages/adapter-local",
       "versionPolicyName": "grackle"
