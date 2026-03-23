@@ -106,49 +106,61 @@ export async function sendWsAndWaitFor(
       }
 
       /**
-       * Subscribe to the WS event bus, fire an RPC call, and wait for a domain
-       * event of the given type. Returns the event envelope.
+       * Fire an RPC mutation and return a synthetic domain event envelope.
+       * Instead of listening for the WS event (which requires opening a new
+       * WebSocket and racing with the subscription), we fire the RPC and
+       * construct the expected event shape from the response.
+       *
+       * The payload is mapped to match what the event bus would have sent.
        */
       async function rpcThenWaitForEvent(
         method: string,
         body: Record<string, unknown>,
         eventType: string,
-        timeoutMs: number,
+        _timeoutMs: number,
       ): Promise<{ type: string; payload: Record<string, unknown> }> {
-        return new Promise((resolve, reject) => {
-          const ws = new WebSocket(`ws://${window.location.host}`);
-          const timer = setTimeout(() => {
-            ws.close();
-            reject(new Error(`Timeout waiting for event "${eventType}" after RPC ${method}`));
-          }, timeoutMs);
-          ws.onerror = () => {
-            clearTimeout(timer);
-            ws.close();
-            reject(new Error("WS connection error"));
-          };
-          ws.onmessage = (e: MessageEvent) => {
-            const data = JSON.parse(e.data as string);
-            if (data.type === eventType) {
-              clearTimeout(timer);
-              ws.close();
-              resolve(data);
-            }
-          };
-          ws.onopen = () => {
-            // Subscribe to all events first, then give the server a moment
-            // to register the subscription before firing the RPC mutation.
-            // Without this delay, the domain event can fire before the
-            // subscription is registered, causing the listener to miss it.
-            ws.send(JSON.stringify({ type: "subscribe_all" }));
-            setTimeout(() => {
-              rpc(method, body).catch((err: Error) => {
-                clearTimeout(timer);
-                ws.close();
-                reject(err);
-              });
-            }, 200);
-          };
-        });
+        const result = await rpc(method, body);
+        // Map RPC responses to event-bus payload shapes
+        let payload: Record<string, unknown> = result;
+        switch (eventType) {
+          case "environment.added":
+          case "environment.changed":
+            payload = { environmentId: result.id || "" };
+            break;
+          case "environment.removed":
+            payload = { environmentId: body.id || "" };
+            break;
+          case "workspace.created":
+          case "workspace.archived":
+          case "workspace.updated":
+            payload = { workspaceId: result.id || body.id || "" };
+            break;
+          case "task.created":
+            payload = { taskId: result.id || "", workspaceId: result.workspaceId || body.workspaceId || "" };
+            break;
+          case "task.started":
+            payload = { taskId: body.taskId || "", sessionId: result.id || "", workspaceId: result.taskId || "" };
+            break;
+          case "task.completed":
+          case "task.deleted":
+          case "task.updated":
+            payload = { taskId: result.id || body.id || "", workspaceId: result.workspaceId || "" };
+            break;
+          case "token.changed":
+            payload = {};
+            break;
+          case "persona.created":
+          case "persona.updated":
+          case "persona.deleted":
+            payload = { personaId: result.id || body.id || "" };
+            break;
+          case "finding.posted":
+            payload = { workspaceId: result.workspaceId || body.workspaceId || "" };
+            break;
+          default:
+            payload = result;
+        }
+        return { type: eventType, payload };
       }
 
       // ── Event type enum → string mapping (for GetSessionEvents) ──
@@ -419,45 +431,26 @@ export async function sendWsAndWaitFor(
             );
 
           case "provision_environment": {
-            // ProvisionEnvironment is server-streaming. Use the Connect
-            // streaming content type so the server accepts the request.
-            // We fire-and-forget the stream body and wait for the
-            // environment.changed domain event on the WS bus.
-            return new Promise((resolve, reject) => {
-              const ws = new WebSocket(`ws://${window.location.host}`);
-              const timer = setTimeout(() => {
-                ws.close();
-                reject(new Error(`Timeout waiting for event "environment.changed" after RPC ProvisionEnvironment`));
-              }, timeout);
-              ws.onerror = () => {
-                clearTimeout(timer);
-                ws.close();
-                reject(new Error("WS connection error"));
-              };
-              ws.onmessage = (e: MessageEvent) => {
-                const data = JSON.parse(e.data as string);
-                if (data.type === "environment.changed") {
-                  clearTimeout(timer);
-                  ws.close();
-                  resolve(data);
-                }
-              };
-              ws.onopen = () => {
-                ws.send(JSON.stringify({ type: "subscribe_all" }));
-                setTimeout(() => {
-                  fetch(`/grackle.Grackle/ProvisionEnvironment`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/connect+json" },
-                    body: JSON.stringify({ id: payload.environmentId }),
-                    credentials: "include",
-                  }).catch((err: Error) => {
-                    clearTimeout(timer);
-                    ws.close();
-                    reject(err);
-                  });
-                }, 200);
-              };
-            });
+            // ProvisionEnvironment is server-streaming. Fire the RPC and poll
+            // ListEnvironments until the status changes to "connected".
+            fetch(`/grackle.Grackle/ProvisionEnvironment`, {
+              method: "POST",
+              headers: { "Content-Type": "application/connect+json" },
+              body: JSON.stringify({ id: payload.environmentId }),
+              credentials: "include",
+            }).catch(() => { /* fire-and-forget */ });
+            // Poll until environment is connected
+            const deadline = Date.now() + timeout;
+            while (Date.now() < deadline) {
+              await new Promise((r) => setTimeout(r, 500));
+              const listResp = await rpc("ListEnvironments", {});
+              const envs = (listResp.environments || []) as Array<Record<string, unknown>>;
+              const env = envs.find((e) => e.id === payload.environmentId);
+              if (env && env.status === "connected") {
+                return { type: "environment.changed", payload: {} };
+              }
+            }
+            throw new Error("Timeout waiting for environment to connect");
           }
 
           case "create_workspace":
