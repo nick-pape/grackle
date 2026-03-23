@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.71.1",
+      "tag": "@grackle-ai/cli_v0.71.1",
+      "date": "Mon, 23 Mar 2026 05:01:39 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "fix: seed default workspace for system task so it can start on the local environment"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.71.0",
       "tag": "@grackle-ai/cli_v0.71.0",
       "date": "Sun, 22 Mar 2026 23:08:49 GMT",

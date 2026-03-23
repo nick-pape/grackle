@@ -159,6 +159,17 @@ export function updateTask(
     .run();
 }
 
+/** Assign a workspace to a task. */
+export function setTaskWorkspace(id: string, workspaceId: string): void {
+  db.update(tasks)
+    .set({
+      workspaceId,
+      updatedAt: sql`datetime('now')`,
+    })
+    .where(eq(tasks.id, id))
+    .run();
+}
+
 /** Update only the dependsOn array of a task. */
 export function setTaskDependsOn(id: string, dependsOn: string[]): void {
   db.update(tasks)
