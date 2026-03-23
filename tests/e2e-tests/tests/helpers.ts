@@ -293,11 +293,20 @@ export async function sendWsAndWaitFor(
       if (respType === "create_task_error") {
         try {
           await dispatchRpc(wsType, payload, respType, timeout);
-          // Unexpected success — return as-is
           return { type: "task.created", payload: {} };
         } catch (err: unknown) {
           const errMsg = err instanceof Error ? err.message : String(err);
           return { type: "create_task_error", payload: { message: errMsg } };
+        }
+      }
+
+      if (respType === "create_workspace_error") {
+        try {
+          await dispatchRpc(wsType, payload, respType, timeout);
+          return { type: "workspace.created", payload: {} };
+        } catch (err: unknown) {
+          const errMsg = err instanceof Error ? err.message : String(err);
+          return { type: "create_workspace_error", payload: { message: errMsg } };
         }
       }
 
@@ -374,7 +383,21 @@ export async function sendWsAndWaitFor(
 
           case "add_environment": {
             let adapterConfig = payload.adapterConfig;
+            // Validate adapterConfig type (matches old WS bridge validation)
+            if (adapterConfig !== undefined && adapterConfig !== null
+                && typeof adapterConfig !== "object" && typeof adapterConfig !== "string") {
+              throw new Error("adapterConfig must be an object or JSON string");
+            }
+            if (typeof adapterConfig === "string") {
+              // Validate JSON
+              try { JSON.parse(adapterConfig || "{}"); } catch {
+                throw new Error("adapterConfig string is not valid JSON");
+              }
+            }
             if (typeof adapterConfig === "object" && adapterConfig !== null) {
+              if (Array.isArray(adapterConfig)) {
+                throw new Error("adapterConfig must be an object or JSON string");
+              }
               adapterConfig = JSON.stringify(adapterConfig);
             }
             return rpcThenWaitForEvent(
@@ -382,7 +405,7 @@ export async function sendWsAndWaitFor(
               {
                 displayName: payload.displayName || "",
                 adapterType: payload.adapterType || "",
-                adapterConfig: adapterConfig || "",
+                adapterConfig: (adapterConfig as string) || "",
               },
               "environment.added",
               timeout,
