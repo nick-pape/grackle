@@ -500,25 +500,30 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         recoverSuspendedSessions(req.id, conn).catch((err) => {
           logger.error({ environmentId: req.id, err }, "Session recovery failed");
         });
-
-        yield create(grackle.ProvisionEventSchema, {
-          stage: "ready",
-          message: "Environment connected",
-          progress: 1,
-        });
       } catch (err) {
-        // If the environment already connected successfully but the yield
-        // threw (e.g. client disconnected), don't overwrite the status.
-        const current = envRegistry.getEnvironment(req.id);
-        if (current?.status !== "connected") {
-          envRegistry.updateEnvironmentStatus(req.id, "error");
-          emit("environment.changed", {});
-        }
+        // adapter.connect() actually failed
+        envRegistry.updateEnvironmentStatus(req.id, "error");
+        emit("environment.changed", {});
         yield create(grackle.ProvisionEventSchema, {
           stage: "error",
           message: `Connection failed: ${err instanceof Error ? err.message : String(err)}`,
           progress: 0,
         });
+        return;
+      }
+
+      // Best-effort: notify client that provision completed.
+      // If the client already disconnected (e.g. fire-and-forget fetch in
+      // test helpers), the yield throws — but the environment IS connected,
+      // so we must NOT revert the status to "error".
+      try {
+        yield create(grackle.ProvisionEventSchema, {
+          stage: "ready",
+          message: "Environment connected",
+          progress: 1,
+        });
+      } catch {
+        // Client disconnected after successful provision — ignore
       }
     },
 

@@ -1256,66 +1256,29 @@ export async function goToEnvironments(page: Page): Promise<void> {
  * Reads gRPC port and API key from the E2E state file.
  */
 /**
- * Provision an environment by calling the gRPC server (HTTP/2) directly
- * from the Node.js test context using the http2 module. Polls until connected.
+ * Provision an environment using the CLI, which is the same mechanism
+ * global-setup uses and is known to work reliably. Calls the gRPC server
+ * via ConnectRPC (HTTP/2) under the hood.
  */
 export async function provisionEnvironmentDirect(environmentId: string): Promise<void> {
   const { readFileSync } = await import("node:fs");
-  const http2 = await import("node:http2");
+  const { execSync } = await import("node:child_process");
+  const { resolve: pathResolve } = await import("node:path");
   const { STATE_FILE } = await import("./state-file.js");
   const state = JSON.parse(readFileSync(STATE_FILE, "utf8"));
-  const grpcUrl = `http://127.0.0.1:${state.serverPort}`;
-  const apiKey = state.apiKey;
 
-  // Fire the streaming provision RPC via HTTP/2
-  await new Promise<void>((resolve) => {
-    const client = http2.connect(grpcUrl);
-    const req = client.request({
-      ":method": "POST",
-      ":path": "/grackle.Grackle/ProvisionEnvironment",
-      "content-type": "application/json",
-      "authorization": `Bearer ${apiKey}`,
+  const cliPath = pathResolve("packages/cli/dist/index.js");
+  try {
+    execSync(`node "${cliPath}" env provision ${environmentId}`, {
+      env: {
+        ...process.env,
+        GRACKLE_URL: `http://127.0.0.1:${state.serverPort}`,
+        GRACKLE_API_KEY: state.apiKey,
+      },
+      timeout: 15_000,
+      stdio: "pipe",
     });
-    req.write(JSON.stringify({ id: environmentId }));
-    req.end();
-    // Consume data so the server generator runs to completion
-    req.on("data", () => {});
-    req.on("end", () => { client.close(); resolve(); });
-    req.on("error", () => { client.close(); resolve(); });
-    // Timeout safety
-    setTimeout(() => { client.close(); resolve(); }, 15_000);
-  });
-
-  // Poll via HTTP/2 until environment is connected
-  const deadline = Date.now() + 10_000;
-  while (Date.now() < deadline) {
-    const status = await new Promise<string | undefined>((resolve) => {
-      const client = http2.connect(grpcUrl);
-      const req = client.request({
-        ":method": "POST",
-        ":path": "/grackle.Grackle/ListEnvironments",
-        "content-type": "application/json",
-        "authorization": `Bearer ${apiKey}`,
-      });
-      req.write("{}");
-      req.end();
-      let body = "";
-      req.on("data", (chunk: Buffer) => { body += chunk.toString(); });
-      req.on("end", () => {
-        client.close();
-        try {
-          const data = JSON.parse(body);
-          const env = data.environments?.find((e: { id: string }) => e.id === environmentId);
-          resolve(env?.status);
-        } catch { resolve(undefined); }
-      });
-      req.on("error", () => { client.close(); resolve(undefined); });
-    });
-    if (status === "connected") {
-      return;
-    }
-    await new Promise((r) => setTimeout(r, 300));
+  } catch {
+    // May fail if already connected — that's fine
   }
-  // If we get here, the environment didn't reach "connected" — but don't
-  // throw, as the env may already be connected (idempotent call).
 }
