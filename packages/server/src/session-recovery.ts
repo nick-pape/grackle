@@ -3,11 +3,9 @@ import { create } from "@bufbuild/protobuf";
 import { grackle, powerline, eventTypeToEnum, SESSION_STATUS, LOGS_DIR, END_REASON } from "@grackle-ai/common";
 import type { PowerLineConnection } from "@grackle-ai/adapter-sdk";
 import { join } from "node:path";
-import * as sessionStore from "./session-store.js";
-import * as taskStore from "./task-store.js";
+import { sessionStore, taskStore, grackleHome } from "@grackle-ai/database";
 import * as logWriter from "./log-writer.js";
 import { reanimateAgent } from "./reanimate-agent.js";
-import { grackleHome } from "./paths.js";
 import { logger } from "./logger.js";
 import { emit } from "./event-bus.js";
 

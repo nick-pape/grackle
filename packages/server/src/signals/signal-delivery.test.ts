@@ -2,8 +2,9 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 
 // ── Mock dependencies ────────────────────────────────────────
 
-vi.mock("../db.js", async () => {
-  return await import("../test-db.js");
+vi.mock("@grackle-ai/database", async () => {
+  const { createDatabaseMock } = await import("../test-utils/mock-database.js");
+  return createDatabaseMock();
 });
 
 vi.mock("../logger.js", () => ({
@@ -40,20 +41,11 @@ vi.mock("../event-bus.js", () => ({
   subscribe: vi.fn(),
 }));
 
-vi.mock("../env-registry.js", () => ({
-  listEnvironments: vi.fn(() => []),
-  getEnvironment: vi.fn(() => ({ adapterType: "local" })),
-  addEnvironment: vi.fn(),
-  removeEnvironment: vi.fn(),
-  updateEnvironmentStatus: vi.fn(),
-  markBootstrapped: vi.fn(),
-}));
-
 vi.mock("../reanimate-agent.js", () => ({
   reanimateAgent: vi.fn(),
 }));
 
-import * as sessionStore from "../session-store.js";
+import { sessionStore } from "@grackle-ai/database";
 import * as adapterManager from "../adapter-manager.js";
 import * as streamHub from "../stream-hub.js";
 import { reanimateAgent } from "../reanimate-agent.js";

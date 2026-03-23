@@ -6,8 +6,51 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 
 // ── Mock heavy dependencies before importing the module ──────────
 
-vi.mock("./db.js", async () => {
-  return await import("./test-db.js");
+vi.mock("@grackle-ai/database", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@grackle-ai/database")>();
+  actual.openDatabase(":memory:");
+  actual.initDatabase();
+  return {
+    ...actual,
+    tokenStore: {
+      listTokens: vi.fn(() => []),
+      setToken: vi.fn(),
+      deleteToken: vi.fn(),
+    },
+    envRegistry: {
+      listEnvironments: vi.fn(() => []),
+      getEnvironment: vi.fn(),
+      addEnvironment: vi.fn(),
+      removeEnvironment: vi.fn(),
+      updateEnvironmentStatus: vi.fn(),
+      markBootstrapped: vi.fn(),
+      resetAllStatuses: vi.fn(),
+    },
+    sessionStore: {
+      createSession: vi.fn(),
+      getSession: vi.fn(() => undefined),
+      listSessions: vi.fn(() => []),
+      listSessionsForTask: vi.fn(() => []),
+      listSessionsByTaskIds: vi.fn(() => []),
+      getLatestSessionForTask: vi.fn(() => undefined),
+      getActiveSessionsForTask: vi.fn(() => []),
+      updateSession: vi.fn(),
+      deleteByEnvironment: vi.fn(),
+      setSessionTask: vi.fn(),
+    },
+    findingStore: {
+      queryFindings: vi.fn(() => []),
+      postFinding: vi.fn(),
+    },
+    personaStore: {
+      listPersonas: vi.fn(() => []),
+      getPersona: vi.fn(() => undefined),
+      getPersonaByName: vi.fn(() => undefined),
+      createPersona: vi.fn(),
+      updatePersona: vi.fn(),
+      deletePersona: vi.fn(),
+    },
+  };
 });
 
 vi.mock("./logger.js", () => ({
@@ -44,39 +87,10 @@ vi.mock("./event-bus.js", () => ({
   emit: vi.fn(),
 }));
 
-vi.mock("./token-store.js", () => ({
-  listTokens: vi.fn(() => []),
-  setToken: vi.fn(),
-  deleteToken: vi.fn(),
-}));
-
 vi.mock("./token-push.js", () => ({
   pushToEnv: vi.fn(),
   pushProviderCredentialsToEnv: vi.fn(),
   refreshTokensForTask: vi.fn(),
-}));
-
-vi.mock("./env-registry.js", () => ({
-  listEnvironments: vi.fn(() => []),
-  getEnvironment: vi.fn(),
-  addEnvironment: vi.fn(),
-  removeEnvironment: vi.fn(),
-  updateEnvironmentStatus: vi.fn(),
-  markBootstrapped: vi.fn(),
-  resetAllStatuses: vi.fn(),
-}));
-
-vi.mock("./session-store.js", () => ({
-  createSession: vi.fn(),
-  getSession: vi.fn(() => undefined),
-  listSessions: vi.fn(() => []),
-  listSessionsForTask: vi.fn(() => []),
-  listSessionsByTaskIds: vi.fn(() => []),
-  getLatestSessionForTask: vi.fn(() => undefined),
-  getActiveSessionsForTask: vi.fn(() => []),
-  updateSession: vi.fn(),
-  deleteByEnvironment: vi.fn(),
-  setSessionTask: vi.fn(),
 }));
 
 vi.mock("./adapter-manager.js", () => ({
@@ -86,20 +100,6 @@ vi.mock("./adapter-manager.js", () => ({
   removeConnection: vi.fn(),
   registerAdapter: vi.fn(),
   startHeartbeat: vi.fn(),
-}));
-
-vi.mock("./finding-store.js", () => ({
-  queryFindings: vi.fn(() => []),
-  postFinding: vi.fn(),
-}));
-
-vi.mock("./persona-store.js", () => ({
-  listPersonas: vi.fn(() => []),
-  getPersona: vi.fn(() => undefined),
-  getPersonaByName: vi.fn(() => undefined),
-  createPersona: vi.fn(),
-  updatePersona: vi.fn(),
-  deletePersona: vi.fn(),
 }));
 
 vi.mock("@grackle-ai/adapter-sdk", async (importOriginal) => ({
@@ -139,11 +139,9 @@ vi.mock("./github-import.js", () => ({
 // ── Import AFTER mocks ──────────────────────────────────────────
 
 import { registerGrackleRoutes } from "./grpc-service.js";
-import * as workspaceStore from "./workspace-store.js";
-import * as taskStore from "./task-store.js";
-import * as sessionStore from "./session-store.js";
+import { sqlite as _sqlite, workspaceStore, taskStore, sessionStore } from "@grackle-ai/database";
+const sqlite = _sqlite!;
 import { computeTaskStatus } from "./compute-task-status.js";
-import { sqlite } from "./test-db.js";
 import { grackle } from "@grackle-ai/common";
 import type { ConnectRouter } from "@connectrpc/connect";
 

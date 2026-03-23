@@ -1,6 +1,5 @@
-import * as personaStore from "./persona-store.js";
-import * as settingsStore from "./settings-store.js";
-import type { PersonaRow } from "./schema.js";
+import { personaStore, settingsStore } from "@grackle-ai/database";
+import type { PersonaRow } from "@grackle-ai/database";
 
 /** Resolved persona fields needed to start a session. */
 export interface ResolvedPersona {

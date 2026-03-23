@@ -1,6 +1,6 @@
 import { create } from "@bufbuild/protobuf";
 import { grackle, powerline, SESSION_STATUS } from "@grackle-ai/common";
-import * as sessionStore from "../session-store.js";
+import { sessionStore } from "@grackle-ai/database";
 import * as adapterManager from "../adapter-manager.js";
 import { reanimateAgent } from "../reanimate-agent.js";
 import * as streamHub from "../stream-hub.js";

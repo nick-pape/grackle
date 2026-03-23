@@ -33,6 +33,7 @@
     "@grackle-ai/auth": "workspace:*",
     "@grackle-ai/adapter-ssh": "workspace:*",
     "@grackle-ai/common": "workspace:*",
+    "@grackle-ai/database": "workspace:*",
     "@grackle-ai/knowledge": "workspace:*",
     "@grackle-ai/powerline": "workspace:*",
     "@grackle-ai/mcp": "workspace:*",

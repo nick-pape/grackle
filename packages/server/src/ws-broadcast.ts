@@ -1,5 +1,5 @@
 import type { WebSocketServer } from "ws";
-import * as envRegistry from "./env-registry.js";
+import { envRegistry } from "@grackle-ai/database";
 import { subscribe, type GrackleEvent } from "./event-bus.js";
 
 let wssInstance: WebSocketServer | undefined = undefined;

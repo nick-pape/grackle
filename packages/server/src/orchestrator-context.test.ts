@@ -3,60 +3,17 @@
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-vi.mock("./db.js", async () => {
-  return await import("./test-db.js");
+vi.mock("@grackle-ai/database", async () => {
+  const { createDatabaseMock } = await import("./test-utils/mock-database.js");
+  return createDatabaseMock();
 });
 
 vi.mock("./logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
 
-vi.mock("./task-store.js", () => ({
-  listTasks: vi.fn(() => []),
-  getTask: vi.fn(),
-  buildChildIdsMap: vi.fn(() => new Map()),
-  getChildren: vi.fn(() => []),
-  createTask: vi.fn(),
-  areDependenciesMet: vi.fn(() => true),
-  updateTask: vi.fn(),
-  deleteTask: vi.fn(),
-  checkAndUnblock: vi.fn(() => []),
-  markTaskComplete: vi.fn(),
-}));
-
-vi.mock("./persona-store.js", () => ({
-  listPersonas: vi.fn(() => []),
-  getPersona: vi.fn(),
-}));
-
-vi.mock("./env-registry.js", () => ({
-  listEnvironments: vi.fn(() => []),
-  getEnvironment: vi.fn(),
-  addEnvironment: vi.fn(),
-  removeEnvironment: vi.fn(),
-  updateEnvironmentStatus: vi.fn(),
-  markBootstrapped: vi.fn(),
-}));
-
-vi.mock("./workspace-store.js", () => ({
-  getWorkspace: vi.fn(() => undefined),
-  listWorkspaces: vi.fn(() => []),
-  createWorkspace: vi.fn(),
-  archiveWorkspace: vi.fn(),
-  countWorkspacesByEnvironment: vi.fn(() => 0),
-}));
-
-vi.mock("./finding-store.js", () => ({
-  queryFindings: vi.fn(() => []),
-  postFinding: vi.fn(),
-}));
-
 import { fetchOrchestratorContext } from "./orchestrator-context.js";
-import * as taskStore from "./task-store.js";
-import * as personaStore from "./persona-store.js";
-import * as envRegistry from "./env-registry.js";
-import * as workspaceStore from "./workspace-store.js";
-import * as findingStore from "./finding-store.js";
+import { taskStore, personaStore, envRegistry, workspaceStore, findingStore } from "@grackle-ai/database";
 
 describe("fetchOrchestratorContext", () => {
   beforeEach(() => {

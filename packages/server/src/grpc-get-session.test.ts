@@ -7,8 +7,9 @@ import { ConnectError, Code } from "@connectrpc/connect";
 
 // ── Mock heavy dependencies before importing the module ──────────
 
-vi.mock("./db.js", async () => {
-  return await import("./test-db.js");
+vi.mock("@grackle-ai/database", async () => {
+  const { createDatabaseMock } = await import("./test-utils/mock-database.js");
+  return createDatabaseMock();
 });
 
 vi.mock("./logger.js", () => ({
@@ -45,39 +46,10 @@ vi.mock("./event-bus.js", () => ({
   emit: vi.fn(),
 }));
 
-vi.mock("./token-store.js", () => ({
-  listTokens: vi.fn(() => []),
-  setToken: vi.fn(),
-  deleteToken: vi.fn(),
-}));
-
 vi.mock("./token-push.js", () => ({
   pushToEnv: vi.fn(),
   pushProviderCredentialsToEnv: vi.fn(),
   refreshTokensForTask: vi.fn(),
-}));
-
-vi.mock("./env-registry.js", () => ({
-  listEnvironments: vi.fn(() => []),
-  getEnvironment: vi.fn(),
-  addEnvironment: vi.fn(),
-  removeEnvironment: vi.fn(),
-  updateEnvironmentStatus: vi.fn(),
-  markBootstrapped: vi.fn(),
-  resetAllStatuses: vi.fn(),
-}));
-
-vi.mock("./session-store.js", () => ({
-  createSession: vi.fn(),
-  getSession: vi.fn(() => undefined),
-  listSessions: vi.fn(() => []),
-  listSessionsForTask: vi.fn(() => []),
-  listSessionsByTaskIds: vi.fn(() => []),
-  getLatestSessionForTask: vi.fn(() => undefined),
-  getActiveSessionsForTask: vi.fn(() => []),
-  updateSession: vi.fn(),
-  deleteByEnvironment: vi.fn(),
-  setSessionTask: vi.fn(),
 }));
 
 vi.mock("./adapter-manager.js", () => ({
@@ -87,20 +59,6 @@ vi.mock("./adapter-manager.js", () => ({
   removeConnection: vi.fn(),
   registerAdapter: vi.fn(),
   startHeartbeat: vi.fn(),
-}));
-
-vi.mock("./finding-store.js", () => ({
-  queryFindings: vi.fn(() => []),
-  postFinding: vi.fn(),
-}));
-
-vi.mock("./persona-store.js", () => ({
-  listPersonas: vi.fn(() => []),
-  getPersona: vi.fn(() => undefined),
-  getPersonaByName: vi.fn(() => undefined),
-  createPersona: vi.fn(),
-  updatePersona: vi.fn(),
-  deletePersona: vi.fn(),
 }));
 
 vi.mock("./adapters/adapter.js", () => ({
@@ -136,7 +94,7 @@ vi.mock("./github-import.js", () => ({
 // ── Import AFTER mocks ──────────────────────────────────────────
 
 import { registerGrackleRoutes } from "./grpc-service.js";
-import * as sessionStore from "./session-store.js";
+import { sessionStore } from "@grackle-ai/database";
 import type { ConnectRouter } from "@connectrpc/connect";
 import type { grackle } from "@grackle-ai/common";
 

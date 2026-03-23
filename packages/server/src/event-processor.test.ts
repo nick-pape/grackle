@@ -3,10 +3,6 @@ import { create } from "@bufbuild/protobuf";
 import { powerline } from "@grackle-ai/common";
 
 // ── Mock all heavy dependencies before importing ──────────────
-vi.mock("./db.js", async () => {
-  return await import("./test-db.js");
-});
-
 vi.mock("./logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
@@ -31,16 +27,15 @@ vi.mock("./transcript.js", () => ({
 }));
 
 // Import AFTER mocks
+import { openDatabase, initDatabase, sqlite as _sqlite, sessionStore, taskStore, workspaceStore, findingStore } from "@grackle-ai/database";
+openDatabase(":memory:");
+initDatabase();
+const sqlite = _sqlite!;
 import { processEventStream } from "./event-processor.js";
-import * as sessionStore from "./session-store.js";
-import * as taskStore from "./task-store.js";
-import * as workspaceStore from "./workspace-store.js";
 import * as processorRegistry from "./processor-registry.js";
-import * as findingStore from "./finding-store.js";
 import { emit } from "./event-bus.js";
 import * as logWriter from "./log-writer.js";
 import { logger } from "./logger.js";
-import { sqlite } from "./test-db.js";
 
 /** Apply the minimal schema needed for tests. */
 function applySchema(): void {

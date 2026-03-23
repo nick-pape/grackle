@@ -1,5 +1,5 @@
 import { ulid } from "ulid";
-import { persistEvent } from "./event-store.js";
+import { persistEvent } from "@grackle-ai/database";
 import { logger } from "./logger.js";
 
 // ─── Event Types ──────────────────────────────────────────

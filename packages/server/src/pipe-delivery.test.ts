@@ -1,10 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
 // ── Mocks (must be before imports) ──────────────────────────
-vi.mock("./db.js", async () => {
-  return await import("./test-db.js");
-});
-
 vi.mock("./logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
@@ -18,11 +14,13 @@ vi.mock("./log-writer.js", () => ({
 }));
 
 // ── Imports (after mocks) ───────────────────────────────────
-import * as sessionStore from "./session-store.js";
+import { openDatabase, initDatabase, sqlite as _sqlite, sessionStore } from "@grackle-ai/database";
+openDatabase(":memory:");
+initDatabase();
+const sqlite = _sqlite!;
 import * as streamRegistry from "./stream-registry.js";
 import * as adapterManager from "./adapter-manager.js";
 import * as pipeDelivery from "./pipe-delivery.js";
-import { sqlite } from "./test-db.js";
 
 /** Apply minimal schema for sessions + environments. */
 function applySchema(): void {
