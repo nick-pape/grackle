@@ -47,6 +47,7 @@ export const sessions = sqliteTable("sessions", {
     .default(sql`(datetime('now'))`),
   suspendedAt: text("suspended_at"),
   endedAt: text("ended_at"),
+  endReason: text("end_reason"),
   error: text("error"),
   taskId: text("task_id").notNull().default(""),
   personaId: text("persona_id").notNull().default(""),

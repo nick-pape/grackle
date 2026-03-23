@@ -58,7 +58,8 @@ function applySchema(): void {
       pipe_mode          TEXT NOT NULL DEFAULT '',
       input_tokens       INTEGER NOT NULL DEFAULT 0,
       output_tokens      INTEGER NOT NULL DEFAULT 0,
-      cost_usd           REAL NOT NULL DEFAULT 0
+      cost_usd           REAL NOT NULL DEFAULT 0,
+      end_reason         TEXT
     );
   `);
   sqlite.exec("INSERT OR IGNORE INTO environments (id) VALUES ('test-env')");
@@ -84,7 +85,7 @@ describe("lifecycle manager", () => {
     } as unknown as ReturnType<typeof adapterManager.getConnection>);
   });
 
-  it("auto-hibernates session when last subscription removed", () => {
+  it("auto-stops session when last subscription removed", () => {
     sessionStore.createSession("sess-1", "test-env", "claude-code", "test", "sonnet", "/tmp/log");
     sessionStore.updateSessionStatus("sess-1", "running");
 
@@ -100,30 +101,32 @@ describe("lifecycle manager", () => {
     const session1 = sessionStore.getSession("sess-1");
     expect(session1?.status).toBe("running");
 
-    // Remove session's own subscription → orphaned → auto-hibernate
+    // Remove session's own subscription → orphaned → auto-stop
     const sessSub = streamRegistry.getSubscriptionsForSession("sess-1")[0];
     streamRegistry.unsubscribe(sessSub.id);
 
     const session2 = sessionStore.getSession("sess-1");
-    expect(session2?.status).toBe("hibernating");
+    expect(session2?.status).toBe("stopped");
     expect(session2?.endedAt).toBeTruthy();
+    expect(session2?.endReason).toBe("killed");
   });
 
-  it("does not hibernate already-terminal sessions", () => {
+  it("does not stop already-terminal sessions", () => {
     sessionStore.createSession("sess-1", "test-env", "claude-code", "test", "sonnet", "/tmp/log");
-    sessionStore.updateSession("sess-1", "completed");
+    sessionStore.updateSession("sess-1", "stopped", undefined, undefined, "completed");
 
     const stream = streamRegistry.createStream("lifecycle:sess-1");
     const sub = streamRegistry.subscribe(stream.id, "sess-1", "rw", "detach", false);
 
     streamRegistry.unsubscribe(sub.id);
 
-    // Should still be completed, not hibernating
+    // Should still be stopped with completed reason, not re-stopped
     const session = sessionStore.getSession("sess-1");
-    expect(session?.status).toBe("completed");
+    expect(session?.status).toBe("stopped");
+    expect(session?.endReason).toBe("completed");
   });
 
-  it("kills PowerLine process on auto-hibernate", () => {
+  it("kills PowerLine process on auto-stop", () => {
     sessionStore.createSession("sess-1", "test-env", "claude-code", "test", "sonnet", "/tmp/log");
     sessionStore.updateSessionStatus("sess-1", "idle");
 
@@ -135,7 +138,7 @@ describe("lifecycle manager", () => {
     expect(mockKill).toHaveBeenCalledOnce();
   });
 
-  it("auto-hibernates child when all subscriptions removed (parent + child)", () => {
+  it("auto-stops child when all subscriptions removed (parent + child)", () => {
     sessionStore.createSession("parent", "test-env", "claude-code", "p", "sonnet", "/tmp/p");
     sessionStore.createSession("child", "test-env", "claude-code", "c", "sonnet", "/tmp/c", "", "", "parent");
     sessionStore.updateSessionStatus("child", "idle");
@@ -154,7 +157,8 @@ describe("lifecycle manager", () => {
     // Child's subscription removed (e.g., via closeFd or stream cleanup)
     streamRegistry.unsubscribe(childSub.id);
 
-    // Now child is orphaned → auto-hibernated
-    expect(sessionStore.getSession("child")?.status).toBe("hibernating");
+    // Now child is orphaned → auto-stopped (idle → completed end reason)
+    expect(sessionStore.getSession("child")?.status).toBe("stopped");
+    expect(sessionStore.getSession("child")?.endReason).toBe("completed");
   });
 });

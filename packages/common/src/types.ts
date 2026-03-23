@@ -7,11 +7,8 @@ export const SESSION_STATUS = {
   PENDING: "pending",
   RUNNING: "running",
   IDLE: "idle",
-  HIBERNATING: "hibernating",
+  STOPPED: "stopped",
   SUSPENDED: "suspended",
-  COMPLETED: "completed",
-  FAILED: "failed",
-  INTERRUPTED: "interrupted",
 } as const;
 
 /** Lifecycle status of an agent session. */
@@ -19,11 +16,18 @@ export type SessionStatus = typeof SESSION_STATUS[keyof typeof SESSION_STATUS];
 
 /** Session statuses that represent a terminal (ended) state. */
 export const TERMINAL_SESSION_STATUSES: ReadonlySet<SessionStatus> = new Set([
-  SESSION_STATUS.COMPLETED,
-  SESSION_STATUS.FAILED,
-  SESSION_STATUS.INTERRUPTED,
-  SESSION_STATUS.HIBERNATING,
+  SESSION_STATUS.STOPPED,
 ]);
+
+/** Why a session stopped. Only meaningful when status is STOPPED. */
+export const END_REASON = {
+  COMPLETED: "completed",
+  KILLED: "killed",
+  INTERRUPTED: "interrupted",
+} as const;
+
+/** The reason a session transitioned to STOPPED. */
+export type EndReason = typeof END_REASON[keyof typeof END_REASON];
 
 /** Pipe mode for parent↔child IPC on spawn. */
 export type PipeMode = "sync" | "async" | "detach" | "";

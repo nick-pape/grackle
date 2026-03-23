@@ -12,6 +12,7 @@ class StubSession implements AgentSession {
   private emitter: EventEmitter = new EventEmitter();
   private inputResolve: ((text: string) => void) | null = null;
   private killed: boolean = false;
+  private killReason: string = "killed";
   private prompt: string;
 
   public constructor(id: string, prompt: string) {
@@ -27,7 +28,7 @@ class StubSession implements AgentSession {
     yield { type: "runtime_session_id", timestamp: ts(), content: this.runtimeSessionId };
     yield { type: "text", timestamp: ts(), content: `Echo: ${this.prompt}` };
 
-    if (this.killed as boolean) return;
+    if (this.killed as boolean) { yield { type: "status", timestamp: ts(), content: this.killReason }; return; }
 
     yield {
       type: "tool_use",
@@ -41,20 +42,20 @@ class StubSession implements AgentSession {
       content: `Tool output: "${this.prompt}"`,
     };
 
-    if (this.killed as boolean) return;
+    if (this.killed as boolean) { yield { type: "status", timestamp: ts(), content: this.killReason }; return; }
 
     // Wait for user input
     this.status = SESSION_STATUS.IDLE;
     yield { type: "status", timestamp: ts(), content: "waiting_input" };
 
-    if (this.killed as boolean) return;
+    if (this.killed as boolean) { yield { type: "status", timestamp: ts(), content: this.killReason }; return; }
 
     const input = await this.waitForInput();
-    if (this.killed) return;
+    if (this.killed) { yield { type: "status", timestamp: ts(), content: this.killReason }; return; }
 
     // Simulate failure when input is "fail"
     if (input === "fail") {
-      this.status = SESSION_STATUS.FAILED;
+      this.status = SESSION_STATUS.STOPPED;
       yield { type: "status", timestamp: ts(), content: "failed" };
       return;
     }
@@ -63,9 +64,9 @@ class StubSession implements AgentSession {
     yield { type: "status", timestamp: ts(), content: "running" };
     yield { type: "text", timestamp: ts(), content: `You said: ${input}` };
 
-    // Complete
-    this.status = SESSION_STATUS.COMPLETED;
-    yield { type: "status", timestamp: ts(), content: "completed" };
+    // Agent finished turn — go idle, not "completed"
+    this.status = SESSION_STATUS.IDLE;
+    yield { type: "status", timestamp: ts(), content: "waiting_input" };
   }
 
   private waitForInput(): Promise<string> {
@@ -79,9 +80,10 @@ class StubSession implements AgentSession {
     this.emitter.emit("input", text);
   }
 
-  public kill(): void {
+  public kill(reason?: string): void {
     this.killed = true;
-    this.status = SESSION_STATUS.INTERRUPTED;
+    this.killReason = reason || "killed";
+    this.status = SESSION_STATUS.STOPPED;
     if (this.inputResolve) {
       this.inputResolve("");
     }

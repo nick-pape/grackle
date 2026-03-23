@@ -226,9 +226,15 @@ describe("BaseAgentSession input serialization", () => {
     // Release gate so the follow-up can finish (but session is killed)
     gate.resolve();
 
-    expect(session.status).toBe("interrupted");
+    expect(session.status).toBe("stopped");
 
-    // Stream should end
+    // kill() emits a final "killed" status event before closing the stream
+    const killedEvent = await nextEvent();
+    expect(killedEvent).toBeDefined();
+    expect(killedEvent!.type).toBe("status");
+    expect(killedEvent!.content).toBe("killed");
+
+    // Stream should end after the killed event
     const event = await nextEvent();
     expect(event).toBeUndefined();
 
@@ -241,6 +247,9 @@ describe("BaseAgentSession input serialization", () => {
 
     await drainUntilStatus(nextEvent, "waiting_input");
     session.kill();
+
+    // Drain the final "killed" status event emitted by kill()
+    await drainUntilStatus(nextEvent, "killed");
 
     session.sendInput("should-be-ignored");
 

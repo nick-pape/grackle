@@ -10,6 +10,11 @@ message SessionId {
   string id = 1;
 }
 
+message KillRequest {
+  string id = 1;
+  string reason = 2; // "completed", "killed", or "interrupted"
+}
+
 message EnvironmentInfo {
   string hostname = 1;
   string os = 2;
@@ -105,7 +110,7 @@ service GracklePowerLine {
   rpc Spawn(SpawnRequest) returns (stream AgentEvent);
   rpc Resume(ResumeRequest) returns (stream AgentEvent);
   rpc SendInput(InputMessage) returns (Empty);
-  rpc Kill(SessionId) returns (Empty);
+  rpc Kill(KillRequest) returns (Empty);
   rpc ListSessions(Empty) returns (SessionList);
   rpc Ping(Empty) returns (Pong);
   rpc PushTokens(TokenBundle) returns (Empty);

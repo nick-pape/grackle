@@ -195,7 +195,7 @@ describe("CopilotSession.kill — abort path (UT-1 through UT-4)", () => {
 
     expect(() => session.kill()).not.toThrow();
     // Status must still be killed even though abort() threw
-    expect(session.status).toBe("interrupted");
+    expect(session.status).toBe("stopped");
 
     // releaseResources() fires cleanup() as a fire-and-forget; drain the microtask
     // queue so the async cleanup path (destroy()) settles before we assert on it.
@@ -213,7 +213,7 @@ describe("CopilotSession.kill — abort path (UT-1 through UT-4)", () => {
     injectMockCopilotSession(session, mockSdkSession);
 
     expect(() => session.kill()).not.toThrow();
-    expect(session.status).toBe("interrupted");
+    expect(session.status).toBe("stopped");
     // Drain microtasks — the rejection must be swallowed, not unhandled,
     // and the cleanup (destroy) path must still execute.
     await new Promise((resolve) => setTimeout(resolve, 0));
@@ -234,17 +234,21 @@ describe("CopilotSession.kill — abort path (UT-1 through UT-4)", () => {
 
     session.kill();
 
-    expect(session.status).toBe("interrupted");
+    expect(session.status).toBe("stopped");
 
     // The event queue must be closed — draining it should not hang.
+    // kill() now emits a final "killed" status event before closing.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const queue = (session as any).eventQueue;
-    const collected: unknown[] = [];
+    const collected: AgentEvent[] = [];
     for await (const item of queue) {
       collected.push(item);
     }
-    // Queue closed cleanly; nothing to assert on items (may be empty)
-    expect(session.status).toBe("interrupted");
+    // Queue closed cleanly; the "killed" status event should be the only item.
+    expect(collected).toHaveLength(1);
+    expect(collected[0].type).toBe("status");
+    expect(collected[0].content).toBe("killed");
+    expect(session.status).toBe("stopped");
   });
 
   /**
@@ -255,7 +259,7 @@ describe("CopilotSession.kill — abort path (UT-1 through UT-4)", () => {
     const session = new CopilotSession("s5", "prompt", "model", 0);
     // Do NOT inject a mock — copilotSession is undefined
     expect(() => session.kill()).not.toThrow();
-    expect(session.status).toBe("interrupted");
+    expect(session.status).toBe("stopped");
   });
 });
 

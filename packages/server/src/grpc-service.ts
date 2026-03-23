@@ -30,6 +30,7 @@ import {
   SESSION_STATUS,
   TERMINAL_SESSION_STATUSES,
   type SessionStatus,
+  END_REASON,
   TASK_STATUS,
   ROOT_TASK_ID,
   taskStatusToEnum,
@@ -160,6 +161,7 @@ function sessionRowToProto(row: SessionRow): grackle.Session {
     inputTokens: row.inputTokens,
     outputTokens: row.outputTokens,
     costUsd: row.costUsd,
+    endReason: row.endReason ?? "",
   });
 }
 
@@ -634,7 +636,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       });
 
       // Create lifecycle stream — every session gets one. The spawner holds
-      // a lifecycle fd; when it's closed, the session auto-hibernates.
+      // a lifecycle fd; when it's closed, the session auto-stops.
       const lifecycleStream = streamRegistry.createStream(`lifecycle:${sessionId}`);
       const spawnerId = req.parentSessionId || "__server__";
       streamRegistry.subscribe(lifecycleStream.id, spawnerId, "rw", "detach", true);
@@ -877,14 +879,14 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       streamRegistry.unsubscribe(sub.id);
 
       // Also unsubscribe children — when their last subscription is removed,
-      // the lifecycle manager's orphan callback auto-hibernates them.
-      let hibernated = false;
+      // the lifecycle manager's orphan callback auto-stops them.
+      let stopped = false;
       for (const child of childSubs) {
         streamRegistry.unsubscribe(child.subId);
-        // Check if the child was orphaned (auto-hibernated)
+        // Check if the child was orphaned (auto-stopped)
         const childSession = sessionStore.getSession(child.sessionId);
-        if (childSession?.status === SESSION_STATUS.HIBERNATING) {
-          hibernated = true;
+        if (childSession?.status === SESSION_STATUS.STOPPED) {
+          stopped = true;
         }
       }
 
@@ -894,7 +896,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         pipeDelivery.cleanupAsyncListenerIfEmpty(child.sessionId);
       }
 
-      return create(grackle.CloseFdResponseSchema, { hibernated });
+      return create(grackle.CloseFdResponseSchema, { stopped });
     },
 
     getSessionFds(req: grackle.SessionId) {
@@ -928,31 +930,18 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         throw new ConnectError(`Session not found: ${req.id}`, Code.NotFound);
       }
 
-      // Delete the lifecycle stream FIRST — this triggers auto-hibernate via
-      // the orphan callback (which also kills the PowerLine process).
-      // Must happen before any direct kill to avoid a race where the event
-      // processor marks the session terminal before the orphan fires.
-      cleanupLifecycleStream(req.id);
-
-      // Also close any other subscriptions (pipe streams etc.)
-      const subs = streamRegistry.getSubscriptionsForSession(req.id);
-      for (const sub of subs) {
-        streamRegistry.unsubscribe(sub.id);
-      }
-
-      // Fallback for legacy sessions without lifecycle streams.
-      // Check current status — orphan callback may have already set HIBERNATING
-      // via lifecycle stream deletion or pipe subscription removal.
-      const currentSession = sessionStore.getSession(req.id);
-      const alreadyTerminal = currentSession && TERMINAL_SESSION_STATUSES.has(currentSession.status as SessionStatus);
-      if (!alreadyTerminal && currentSession) {
-        sessionStore.updateSession(req.id, SESSION_STATUS.INTERRUPTED);
+      // Set STOPPED + killed BEFORE closing the lifecycle FD so the orphan
+      // callback sees the session is already terminal and skips. Without this,
+      // the orphan callback would see IDLE → reason="completed", which is wrong
+      // for an explicit kill.
+      if (!TERMINAL_SESSION_STATUSES.has(session.status as SessionStatus)) {
+        sessionStore.updateSession(req.id, SESSION_STATUS.STOPPED, undefined, undefined, END_REASON.KILLED);
         streamHub.publish(
           create(grackle.SessionEventSchema, {
             sessionId: req.id,
             type: grackle.EventType.STATUS,
             timestamp: new Date().toISOString(),
-            content: SESSION_STATUS.INTERRUPTED,
+            content: END_REASON.KILLED,
             raw: "",
           }),
         );
@@ -962,6 +951,16 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
             emit("task.updated", { taskId: task.id, workspaceId: task.workspaceId || "" });
           }
         }
+      }
+
+      // Delete the lifecycle stream — orphan callback sees session is already
+      // STOPPED and skips status change, but still kills the PowerLine process.
+      cleanupLifecycleStream(req.id);
+
+      // Also close any other subscriptions (pipe streams etc.)
+      const subs = streamRegistry.getSubscriptionsForSession(req.id);
+      for (const sub of subs) {
+        streamRegistry.unsubscribe(sub.id);
       }
 
       return create(grackle.EmptySchema, {});
@@ -1329,8 +1328,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         if (!session) {
           throw new ConnectError(`Session not found: ${req.sessionId}`, Code.NotFound);
         }
-        const terminalStatuses: string[] = [SESSION_STATUS.COMPLETED, SESSION_STATUS.FAILED, SESSION_STATUS.INTERRUPTED];
-        if (terminalStatuses.includes(session.status)) {
+        if (TERMINAL_SESSION_STATUSES.has(session.status as SessionStatus)) {
           throw new ConnectError(
             `Cannot bind terminal session ${req.sessionId} (status: ${session.status})`,
             Code.FailedPrecondition,
@@ -1538,6 +1536,16 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
 
       taskStore.markTaskComplete(task.id, TASK_STATUS.COMPLETE);
 
+      // Close lifecycle FDs for any active sessions — cascades to STOPPED via orphan callback
+      const activeSessions = sessionStore.getActiveSessionsForTask(req.id);
+      for (const activeSession of activeSessions) {
+        cleanupLifecycleStream(activeSession.id);
+        const subs = streamRegistry.getSubscriptionsForSession(activeSession.id);
+        for (const sub of subs) {
+          streamRegistry.unsubscribe(sub.id);
+        }
+      }
+
       // Check for newly unblocked tasks
       if (task.workspaceId) {
         const unblocked = taskStore.checkAndUnblock(task.workspaceId);
@@ -1573,7 +1581,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       if (!latestSession) {
         throw new ConnectError(`Task ${req.id} has no sessions to resume`, Code.FailedPrecondition);
       }
-      if (!([SESSION_STATUS.INTERRUPTED, SESSION_STATUS.COMPLETED] as string[]).includes(latestSession.status)) {
+      if (!([SESSION_STATUS.STOPPED, SESSION_STATUS.SUSPENDED] as string[]).includes(latestSession.status)) {
         throw new ConnectError(
           `Latest session ${latestSession.id} is not resumable (status: ${latestSession.status})`,
           Code.FailedPrecondition,
@@ -1629,13 +1637,13 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         }
         const current = sessionStore.getSession(activeSession.id);
         if (current && !TERMINAL_SESSION_STATUSES.has(current.status as SessionStatus)) {
-          sessionStore.updateSession(activeSession.id, SESSION_STATUS.INTERRUPTED);
+          sessionStore.updateSession(activeSession.id, SESSION_STATUS.STOPPED);
           streamHub.publish(
             create(grackle.SessionEventSchema, {
               sessionId: activeSession.id,
               type: grackle.EventType.STATUS,
               timestamp: new Date().toISOString(),
-              content: SESSION_STATUS.INTERRUPTED,
+              content: SESSION_STATUS.STOPPED,
               raw: "",
             }),
           );
@@ -1673,29 +1681,14 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         );
       }
 
-      // Kill all active sessions before deleting the task
+      // Terminate all active sessions via lifecycle cleanup before deleting the task
       const activeSessions = sessionStore.getActiveSessionsForTask(req.id);
       for (const activeSession of activeSessions) {
-        const conn = adapterManager.getConnection(activeSession.environmentId);
-        if (conn) {
-          try {
-            await conn.client.kill(
-              create(powerline.SessionIdSchema, { id: activeSession.id }),
-            );
-          } catch (err) {
-            logger.warn({ taskId: req.id, sessionId: activeSession.id, err }, "Failed to kill session during task deletion");
-          }
+        cleanupLifecycleStream(activeSession.id);
+        const subs = streamRegistry.getSubscriptionsForSession(activeSession.id);
+        for (const sub of subs) {
+          streamRegistry.unsubscribe(sub.id);
         }
-        sessionStore.updateSession(activeSession.id, SESSION_STATUS.INTERRUPTED);
-        streamHub.publish(
-          create(grackle.SessionEventSchema, {
-            sessionId: activeSession.id,
-            type: grackle.EventType.STATUS,
-            timestamp: new Date().toISOString(),
-            content: SESSION_STATUS.INTERRUPTED,
-            raw: "",
-          }),
-        );
       }
 
       const changes = taskStore.deleteTask(req.id);

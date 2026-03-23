@@ -100,7 +100,8 @@ function applySchema(): void {
       pipe_mode         TEXT NOT NULL DEFAULT '',
       input_tokens      INTEGER NOT NULL DEFAULT 0,
       output_tokens     INTEGER NOT NULL DEFAULT 0,
-      cost_usd          REAL NOT NULL DEFAULT 0
+      cost_usd          REAL NOT NULL DEFAULT 0,
+      end_reason        TEXT
     );
 
     CREATE TABLE IF NOT EXISTS findings (
@@ -124,18 +125,25 @@ async function* eventStream(events: powerline.AgentEvent[]): AsyncIterable<power
   }
 }
 
-/** Helper to wait for processEventStream to complete by polling session status. */
+/** Helper to wait for processEventStream to complete by polling session status
+ *  or detecting the finally block has run (endSession called). */
 function waitForProcessing(
   events: powerline.AgentEvent[],
   options: { sessionId: string; logPath: string; workspaceId?: string; taskId?: string },
 ): Promise<void> {
+  const endSessionCallsBefore = vi.mocked(logWriter.endSession).mock.calls.length;
   return new Promise<void>((resolve, reject) => {
-    // Poll for session to reach a terminal status
     const interval = setInterval(() => {
       const s = sessionStore.getSession(options.sessionId);
-      if (s && ["completed", "failed", "interrupted", "suspended"].includes(s.status)) {
+      // Resolve when session reaches terminal status
+      if (s && ["stopped", "suspended"].includes(s.status)) {
         clearInterval(interval);
-        // Give the finally block time to run
+        setTimeout(resolve, 50);
+        return;
+      }
+      // Also resolve when the finally block has run (stream ended without terminal status)
+      if (vi.mocked(logWriter.endSession).mock.calls.length > endSessionCallsBefore) {
+        clearInterval(interval);
         setTimeout(resolve, 50);
       }
     }, 20);
@@ -451,9 +459,9 @@ describe("event-processor SUBTASK_CREATE handling", () => {
       "Failed to create subtask",
     );
 
-    // Session should still complete normally
+    // Session should still complete normally (mapped to stopped + completed end reason)
     const session = sessionStore.getSession("sess1");
-    expect(session?.status).toBe("completed");
+    expect(session?.status).toBe("stopped");
   });
 });
 
@@ -497,7 +505,7 @@ describe("stream error handling", () => {
       );
       const interval = setInterval(() => {
         const s = sessionStore.getSession("sess1");
-        if (s && ["completed", "failed", "interrupted", "suspended"].includes(s.status)) {
+        if (s && ["stopped", "suspended"].includes(s.status)) {
           clearInterval(interval);
           setTimeout(resolve, 50);
         }
@@ -531,7 +539,7 @@ describe("stream error handling", () => {
       );
       const interval = setInterval(() => {
         const s = sessionStore.getSession("sess1");
-        if (s && ["completed", "failed", "interrupted", "suspended"].includes(s.status)) {
+        if (s && ["stopped", "suspended"].includes(s.status)) {
           clearInterval(interval);
           setTimeout(resolve, 50);
         }
@@ -571,7 +579,7 @@ describe("stream error handling", () => {
       // Poll for session to reach terminal status
       const interval = setInterval(() => {
         const s = sessionStore.getSession("sess1");
-        if (s && ["completed", "failed", "interrupted", "suspended"].includes(s.status)) {
+        if (s && ["stopped", "suspended"].includes(s.status)) {
           clearInterval(interval);
           setTimeout(resolve, 50);
         }
@@ -819,12 +827,18 @@ describe("late-binding", () => {
     };
   }
 
-  /** Helper to poll until a session reaches a terminal status. */
+  /** Helper to poll until a session reaches a terminal status or processing ends. */
   function waitForSessionTerminal(sessionId: string): Promise<void> {
+    const endSessionCallsBefore = vi.mocked(logWriter.endSession).mock.calls.length;
     return new Promise<void>((resolve) => {
       const interval = setInterval(() => {
         const s = sessionStore.getSession(sessionId);
-        if (s && ["completed", "failed", "interrupted", "suspended"].includes(s.status)) {
+        if (s && ["stopped", "suspended"].includes(s.status)) {
+          clearInterval(interval);
+          setTimeout(resolve, 50);
+          return;
+        }
+        if (vi.mocked(logWriter.endSession).mock.calls.length > endSessionCallsBefore) {
           clearInterval(interval);
           setTimeout(resolve, 50);
         }

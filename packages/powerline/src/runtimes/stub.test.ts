@@ -48,7 +48,7 @@ describe("StubRuntime", () => {
     expect(textEvent!.content).toBe("Echo: (resumed session)");
   });
 
-  it("full stream lifecycle: system → text → tool_use → tool_result → waiting_input → sendInput → running → text → completed", async () => {
+  it("full stream lifecycle: system → text → tool_use → tool_result → waiting_input → sendInput → running → text → waiting_input", async () => {
     const runtime = new StubRuntime();
     const session = runtime.spawn({
       sessionId: "lifecycle-1",
@@ -58,14 +58,21 @@ describe("StubRuntime", () => {
     });
 
     const events: AgentEvent[] = [];
+    let inputSent = false;
 
     // Start streaming in the background and collect events
     const streamDone = (async () => {
       for await (const event of session.stream()) {
         events.push(event);
-        // When we see waiting_input, send input after a tick
-        if (event.type === "status" && event.content === "waiting_input") {
+        // When we see the first waiting_input, send input after a tick
+        if (event.type === "status" && event.content === "waiting_input" && !inputSent) {
+          inputSent = true;
           setTimeout(() => session.sendInput("user reply"), 0);
+        }
+        // When we see the second waiting_input (after reply), kill to finish
+        if (event.type === "status" && event.content === "waiting_input" && inputSent && events.filter((e) => e.type === "status" && e.content === "waiting_input").length === 2) {
+          session.kill();
+          break;
         }
       }
     })();
@@ -83,7 +90,7 @@ describe("StubRuntime", () => {
       "status",     // waiting_input
       "status",     // running
       "text",       // user reply echo
-      "status",     // completed
+      "status",     // waiting_input (stub goes idle, not completed)
     ]);
 
     // Verify content
@@ -98,15 +105,15 @@ describe("StubRuntime", () => {
     expect(events[5].content).toBe("waiting_input");
     expect(events[6].content).toBe("running");
     expect(events[7].content).toBe("You said: user reply");
-    expect(events[8].content).toBe("completed");
+    expect(events[8].content).toBe("waiting_input");
 
     // Verify timestamps are ISO strings
     for (const event of events) {
       expect(event.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
     }
 
-    // Verify final status
-    expect(session.status).toBe("completed");
+    // Verify final status (killed after second waiting_input)
+    expect(session.status).toBe("stopped");
   });
 
   it("status transitions are correct at each step", async () => {
@@ -120,22 +127,29 @@ describe("StubRuntime", () => {
 
     expect(session.status).toBe("running");
 
+    let inputSent = false;
     const statusHistory: string[] = [];
     const streamDone = (async () => {
       for await (const event of session.stream()) {
         if (event.type === "status") {
           statusHistory.push(event.content);
-          if (event.content === "waiting_input") {
+          if (event.content === "waiting_input" && !inputSent) {
             expect(session.status).toBe("idle");
+            inputSent = true;
             setTimeout(() => session.sendInput("go"), 0);
+          } else if (event.content === "waiting_input" && inputSent) {
+            // Second waiting_input — stub goes idle instead of completing; kill to end
+            expect(session.status).toBe("idle");
+            session.kill();
+            break;
           }
         }
       }
     })();
 
     await streamDone;
-    expect(statusHistory).toEqual(["waiting_input", "running", "completed"]);
-    expect(session.status).toBe("completed");
+    expect(statusHistory).toEqual(["waiting_input", "running", "waiting_input"]);
+    expect(session.status).toBe("stopped");
   });
 
   it("kill() before input results in early termination", async () => {
@@ -158,12 +172,13 @@ describe("StubRuntime", () => {
     })();
 
     await streamDone;
-    expect(session.status).toBe("interrupted");
+    expect(session.status).toBe("stopped");
 
-    // Should not have any events after waiting_input
+    // Should have waiting_input followed by killed
     const statusEvents = events.filter((e) => e.type === "status");
-    expect(statusEvents).toHaveLength(1);
+    expect(statusEvents).toHaveLength(2);
     expect(statusEvents[0].content).toBe("waiting_input");
+    expect(statusEvents[1].content).toBe("killed");
   });
 
   it("emits runtime_session_id event early in the stream", async () => {
@@ -239,7 +254,7 @@ describe("StubRuntime", () => {
     })();
 
     await streamDone;
-    expect(session.status).toBe("interrupted");
+    expect(session.status).toBe("stopped");
 
     // Should have system, text, tool_use but NOT tool_result or later
     const types = events.map((e) => e.type);
@@ -247,9 +262,9 @@ describe("StubRuntime", () => {
     expect(types).toContain("text");
     expect(types).toContain("tool_use");
     // The tool_result might still appear since kill happens between yields
-    // but no status events for waiting_input, running, or completed
+    // but no status events for waiting_input, running, or waiting_input
     const statusEvents = events.filter(
-      (e) => e.type === "status" && (e.content === "running" || e.content === "completed"),
+      (e) => e.type === "status" && (e.content === "running" || e.content === "waiting_input"),
     );
     expect(statusEvents).toHaveLength(0);
   });

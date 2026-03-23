@@ -209,6 +209,7 @@ export function initDatabase(sqliteOverride?: InstanceType<typeof Database>): In
       started_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
       suspended_at  TEXT,
       ended_at      TEXT,
+      end_reason    TEXT,
       error         TEXT,
       task_id       TEXT NOT NULL DEFAULT '',
       persona_id    TEXT NOT NULL DEFAULT ''
@@ -520,6 +521,23 @@ export function initDatabase(sqliteOverride?: InstanceType<typeof Database>): In
       "ALTER TABLE sessions ADD COLUMN cost_usd REAL NOT NULL DEFAULT 0",
     );
   });
+
+  // Migration: add end_reason column to sessions if missing (older databases)
+  tryMigration("add-sessions-end-reason", () => {
+    conn.exec(
+      "ALTER TABLE sessions ADD COLUMN end_reason TEXT",
+    );
+  });
+
+  // Migration: normalize old session statuses to STOPPED + end_reason
+  conn.exec(`
+    UPDATE sessions SET end_reason = 'completed', status = 'stopped'
+      WHERE status = 'completed';
+    UPDATE sessions SET end_reason = 'interrupted', status = 'stopped'
+      WHERE status IN ('failed', 'interrupted');
+    UPDATE sessions SET end_reason = 'completed', status = 'stopped'
+      WHERE status = 'hibernating';
+  `);
 
   // Migration: make workspace_id nullable on tasks.
   // SQLite doesn't support ALTER COLUMN, so we recreate the table.

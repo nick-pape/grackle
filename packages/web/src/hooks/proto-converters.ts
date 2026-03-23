@@ -52,6 +52,7 @@ export function protoToSession(p: grackle.Session): Session {
     startedAt: p.startedAt,
     endedAt: p.endedAt || undefined,
     error: p.error || undefined,
+    endReason: p.endReason || undefined,
     personaId: p.personaId || undefined,
     inputTokens: p.inputTokens,
     outputTokens: p.outputTokens,

@@ -105,7 +105,7 @@ function makeSession(overrides: Record<string, unknown> = {}) {
   return {
     id: "sess-child",
     environmentId: "env-1",
-    status: "completed",
+    status: "stopped",
     runtime: "stub",
     runtimeSessionId: "rt-1",
     prompt: "",
@@ -118,6 +118,7 @@ function makeSession(overrides: Record<string, unknown> = {}) {
     error: null,
     taskId: "task-child",
     personaId: null,
+    endReason: "completed",
     ...overrides,
   };
 }
@@ -174,14 +175,14 @@ describe("initSigchldSubscriber", () => {
     );
   });
 
-  it("calls deliverSignalToTask when child fails", async () => {
+  it("calls deliverSignalToTask when child stopped with killed reason", async () => {
     vi.spyOn(taskStore, "getTask").mockReturnValue(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       makeTask() as any,
     );
     vi.spyOn(sessionStore, "getLatestSessionForTask").mockReturnValue(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      makeSession({ status: "failed" }) as any,
+      makeSession({ status: "stopped", endReason: "killed" }) as any,
     );
     vi.mocked(readLog).mockReturnValue([]);
 
@@ -191,18 +192,18 @@ describe("initSigchldSubscriber", () => {
     expect(deliverSignalToTask).toHaveBeenCalledWith(
       "task-parent",
       "sigchld",
-      expect.stringContaining("failed"),
+      expect.stringContaining("was killed"),
     );
   });
 
-  it("calls deliverSignalToTask when child is interrupted", async () => {
+  it("calls deliverSignalToTask when child stopped with interrupted reason", async () => {
     vi.spyOn(taskStore, "getTask").mockReturnValue(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       makeTask() as any,
     );
     vi.spyOn(sessionStore, "getLatestSessionForTask").mockReturnValue(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      makeSession({ status: "interrupted" }) as any,
+      makeSession({ status: "stopped", endReason: "interrupted" }) as any,
     );
     vi.mocked(readLog).mockReturnValue([]);
 
@@ -212,7 +213,7 @@ describe("initSigchldSubscriber", () => {
     expect(deliverSignalToTask).toHaveBeenCalledWith(
       "task-parent",
       "sigchld",
-      expect.stringContaining("was interrupted"),
+      expect.stringContaining("crashed unexpectedly"),
     );
   });
 

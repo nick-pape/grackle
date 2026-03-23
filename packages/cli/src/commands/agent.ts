@@ -42,7 +42,7 @@ export function registerAgentCommands(program: Command): void {
     .command("status")
     .description("List agent sessions")
     .option("--env <env-id>", "Filter by environment")
-    .option("--all", "Show all sessions including completed")
+    .option("--all", "Show all sessions including stopped")
     .action(async (opts: { env?: string; all?: boolean }) => {
       const client = createGrackleClient();
       const res = await client.listSessions({
@@ -70,11 +70,12 @@ export function registerAgentCommands(program: Command): void {
         const tokens = (s.inputTokens || s.outputTokens)
           ? `${formatTokens(s.inputTokens)}→${formatTokens(s.outputTokens)}`
           : "-";
+        const statusDisplay = s.status === "stopped" && s.endReason ? `${s.status} (${s.endReason})` : s.status;
         table.push([
           s.id.slice(0, 8),
           s.environmentId,
           s.runtime,
-          s.status,
+          statusDisplay,
           tokens,
           formatCost(s.costUsd),
           prompt,

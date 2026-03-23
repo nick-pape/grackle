@@ -127,6 +127,7 @@ message Session {
   int32 output_tokens = 17;
   double cost_usd = 18;
   int32 pipe_fd = 19; // fd assigned to parent for pipe IPC (0 = no pipe)
+  string end_reason = 20; // Why the session stopped: "completed", "killed", "interrupted"
 }
 
 message SessionList {
@@ -185,7 +186,7 @@ message CloseFdRequest {
 }
 
 message CloseFdResponse {
-  bool hibernated = 1;         // True if the child was hibernated (last fd closed)
+  bool stopped = 1;            // True if the child was stopped (last fd closed)
 }
 
 message SessionFds {

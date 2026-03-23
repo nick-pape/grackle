@@ -13,6 +13,7 @@ import {
   isSessionEvent,
   warnBadPayload,
   mapSessionStatus,
+  mapEndReason,
   MAX_EVENTS,
 } from "./types.js";
 import { grackleClient } from "./useGrackleClient.js";
@@ -88,15 +89,16 @@ export function useSessions(): UseSessionsResult {
       (resp) => {
         const incoming = resp.sessions.map(protoToSession);
         setSessions((prev) => {
-          // Preserve real-time status updates that may be more recent
-          const prevMap = new Map(prev.map((s) => [s.id, s.status]));
+          // Preserve real-time status/endReason updates that may be more recent
+          const prevMap = new Map(prev.map((s) => [s.id, s]));
           return incoming.map((s) => {
-            const prevStatus = prevMap.get(s.id);
+            const prevSession = prevMap.get(s.id);
+            const prevStatus = prevSession?.status;
             if (!prevStatus || prevStatus === s.status) {
               return s;
             }
             if (TERMINAL_STATUSES.has(prevStatus) && ACTIVE_STATUSES.has(s.status)) {
-              return { ...s, status: prevStatus };
+              return { ...s, status: prevStatus, ...(prevSession.endReason !== undefined ? { endReason: prevSession.endReason } : {}) };
             }
             if (ACTIVE_STATUSES.has(prevStatus) && ACTIVE_STATUSES.has(s.status)) {
               if (ACTIVE_ORDER.indexOf(prevStatus) > ACTIVE_ORDER.indexOf(s.status)) {
@@ -162,12 +164,13 @@ export function useSessions(): UseSessionsResult {
     }
     if (event.eventType === "status") {
       const mappedStatus = mapSessionStatus(event.content);
+      const endReason = mapEndReason(event.content);
       setSessions((prev) => {
         const exists = prev.some((s) => s.id === event.sessionId);
         if (exists) {
           return prev.map((s) =>
             s.id === event.sessionId
-              ? { ...s, status: mappedStatus }
+              ? { ...s, status: mappedStatus, ...(endReason !== undefined ? { endReason } : {}) }
               : s,
           );
         }
@@ -180,6 +183,7 @@ export function useSessions(): UseSessionsResult {
             status: mappedStatus,
             prompt: "",
             startedAt: event.timestamp,
+            ...(endReason !== undefined ? { endReason } : {}),
           },
         ];
       });

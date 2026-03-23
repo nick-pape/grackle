@@ -140,7 +140,7 @@ export abstract class BaseAgentSession implements AgentSession {
     this.runSession().catch((err) => {
       this.eventQueue.push({ type: "error", timestamp: ts(), content: String(err) });
       this.eventQueue.push({ type: "status", timestamp: ts(), content: "failed" });
-      this.status = SESSION_STATUS.FAILED;
+      this.status = SESSION_STATUS.STOPPED;
       this.eventQueue.close();
     });
 
@@ -186,7 +186,7 @@ export abstract class BaseAgentSession implements AgentSession {
       this.eventQueue.push({ type: "status", timestamp: ts(), content: "waiting_input" });
       this.startInputLoop();
     } catch (err) {
-      this.status = SESSION_STATUS.FAILED;
+      this.status = SESSION_STATUS.STOPPED;
       this.eventQueue.push({ type: "error", timestamp: ts(), content: String(err) });
       this.eventQueue.push({ type: "status", timestamp: ts(), content: "failed" });
       this.releaseResources();
@@ -241,7 +241,7 @@ export abstract class BaseAgentSession implements AgentSession {
     this.processInputLoop().catch((err) => {
       const ts = new Date().toISOString();
       logger.error({ err }, `Input loop crashed in ${this.runtimeDisplayName} session`);
-      this.status = SESSION_STATUS.FAILED;
+      this.status = SESSION_STATUS.STOPPED;
       this.eventQueue.push({ type: "error", timestamp: ts, content: String(err) });
       this.eventQueue.push({ type: "status", timestamp: ts, content: "failed" });
       this.inputQueue.close();
@@ -250,12 +250,18 @@ export abstract class BaseAgentSession implements AgentSession {
     });
   }
 
-  /** Forcefully terminate the session. */
-  public kill(): void {
+  /** Forcefully terminate the session. Emits a final status event with the given reason. */
+  public kill(reason: string = "killed"): void {
     this.killed = true;
-    this.status = SESSION_STATUS.INTERRUPTED;
+    this.status = SESSION_STATUS.STOPPED;
     this.abortActive();
     this.inputQueue.close();
+    // Emit a final status event BEFORE closing the queue so the server receives it.
+    this.eventQueue.push({
+      type: "status",
+      timestamp: new Date().toISOString(),
+      content: reason,
+    });
     // releaseResources() and eventQueue.close() are also called by processInputLoop()
     // when it exits, but we call them here too for the case where kill() is called
     // before the input loop starts (e.g. during the initial query).

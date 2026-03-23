@@ -17,8 +17,6 @@ const MAX_TIMEOUT_SECONDS: number = 300;
 /** Session statuses considered "active" for filtering purposes. */
 const ACTIVE_STATUSES: string[] = [SESSION_STATUS.PENDING, SESSION_STATUS.RUNNING, SESSION_STATUS.IDLE];
 
-/** Session statuses that indicate no further events will arrive. */
-const TERMINAL_STATUSES: string[] = [SESSION_STATUS.COMPLETED, SESSION_STATUS.FAILED, SESSION_STATUS.INTERRUPTED];
 
 /** MCP tools for managing Grackle agent sessions. */
 export const sessionTools: ToolDefinition[] = [
@@ -60,7 +58,7 @@ export const sessionTools: ToolDefinition[] = [
   {
     name: "session_resume",
     group: "session",
-    description: "Resume a terminated agent session (completed, failed, or interrupted). Starts a new runtime process that loads the existing conversation via the runtime's native resume mechanism, returning the session in running state. Errors if the session is still active (idle, running, or pending).",
+    description: "Resume a stopped agent session. Starts a new runtime process that loads the existing conversation via the runtime's native resume mechanism, returning the session in running state. Errors if the session is still active (idle, running, or pending).",
     inputSchema: z.object({
       sessionId: z.string().describe("The ID of the session to resume"),
     }),
@@ -117,6 +115,7 @@ export const sessionTools: ToolDefinition[] = [
           environmentId: session.environmentId,
           runtime: session.runtime,
           status: session.status,
+          endReason: session.endReason || undefined,
           prompt: session.prompt,
           model: session.model,
           turns: session.turns,
@@ -200,7 +199,7 @@ export const sessionTools: ToolDefinition[] = [
             if (maxEvents && events.length >= maxEvents) {
               break;
             }
-            if (event.type === grackle.EventType.STATUS && TERMINAL_STATUSES.includes(event.content)) {
+            if (event.type === grackle.EventType.STATUS && ["completed", "killed", "failed"].includes(event.content)) {
               break;
             }
           }
