@@ -358,6 +358,9 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
     },
 
     async addEnvironment(req: grackle.AddEnvironmentRequest) {
+      if (!req.displayName || !req.adapterType) {
+        throw new ConnectError("displayName and adapterType required", Code.InvalidArgument);
+      }
       const id = req.displayName.toLowerCase().replace(/[^a-z0-9-]/g, "-");
       envRegistry.addEnvironment(
         id,
@@ -560,6 +563,9 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
     },
 
     async spawnAgent(req: grackle.SpawnRequest) {
+      if (!req.environmentId) {
+        throw new ConnectError("environment_id is required", Code.InvalidArgument);
+      }
       const env = envRegistry.getEnvironment(req.environmentId);
       if (!env) {
         throw new ConnectError(`Environment not found: ${req.environmentId}`, Code.NotFound);
@@ -1139,6 +1145,9 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
     },
 
     async createWorkspace(req: grackle.CreateWorkspaceRequest) {
+      if (!req.name) {
+        throw new ConnectError("name is required", Code.InvalidArgument);
+      }
       if (!req.environmentId) {
         throw new ConnectError("environment_id is required", Code.InvalidArgument);
       }
@@ -1242,6 +1251,9 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
     },
 
     async createTask(req: grackle.CreateTaskRequest) {
+      if (!req.title) {
+        throw new ConnectError("title is required", Code.InvalidArgument);
+      }
       const workspaceId = req.workspaceId || undefined;
       let workspace: ReturnType<typeof workspaceStore.getWorkspace>;
       if (workspaceId) {
@@ -1637,13 +1649,13 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         }
         const current = sessionStore.getSession(activeSession.id);
         if (current && !TERMINAL_SESSION_STATUSES.has(current.status as SessionStatus)) {
-          sessionStore.updateSession(activeSession.id, SESSION_STATUS.STOPPED);
+          sessionStore.updateSession(activeSession.id, SESSION_STATUS.STOPPED, undefined, undefined, END_REASON.INTERRUPTED);
           streamHub.publish(
             create(grackle.SessionEventSchema, {
               sessionId: activeSession.id,
               type: grackle.EventType.STATUS,
               timestamp: new Date().toISOString(),
-              content: SESSION_STATUS.STOPPED,
+              content: END_REASON.INTERRUPTED,
               raw: "",
             }),
           );
@@ -1881,6 +1893,9 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
     // ─── Findings ────────────────────────────────────────────
 
     async postFinding(req: grackle.PostFindingRequest) {
+      if (!req.title) {
+        throw new ConnectError("title is required", Code.InvalidArgument);
+      }
       const id = uuid().slice(0, 8);
       findingStore.postFinding(
         id,
