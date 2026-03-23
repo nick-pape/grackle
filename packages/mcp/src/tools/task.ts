@@ -4,6 +4,7 @@ import {
   taskStatusToEnum,
   taskStatusToString,
   issueStateToEnum,
+  ROOT_TASK_ID,
 } from "@grackle-ai/common";
 import { z } from "zod";
 import type { ToolDefinition } from "../tool-registry.js";
@@ -195,6 +196,10 @@ export const taskTools: ToolDefinition[] = [
     },
     async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) {
       try {
+        const taskId = args.taskId as string;
+        if (taskId === ROOT_TASK_ID && args.status) {
+          return { content: [{ type: "text", text: "Cannot change the status of the system task" }], isError: true };
+        }
         const statusString = args.status as string | undefined;
         const statusValue = statusString
           ? taskStatusToEnum(statusString)
@@ -318,9 +323,11 @@ export const taskTools: ToolDefinition[] = [
     },
     async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) {
       try {
-        await client.deleteTask({
-          id: args.taskId as string,
-        });
+        const taskId = args.taskId as string;
+        if (taskId === ROOT_TASK_ID) {
+          return { content: [{ type: "text", text: "Cannot delete the system task" }], isError: true };
+        }
+        await client.deleteTask({ id: taskId });
         return jsonResult({ success: true });
       } catch (error) {
         return grpcErrorToToolResult(error);
@@ -347,10 +354,12 @@ export const taskTools: ToolDefinition[] = [
     },
     async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>, authContext?: AuthContext) {
       try {
-        await assertCallerIsAncestor(client, authContext, args.taskId as string);
-        const task = await client.completeTask({
-          id: args.taskId as string,
-        });
+        const taskId = args.taskId as string;
+        if (taskId === ROOT_TASK_ID) {
+          return { content: [{ type: "text", text: "Cannot complete the system task" }], isError: true };
+        }
+        await assertCallerIsAncestor(client, authContext, taskId);
+        const task = await client.completeTask({ id: taskId });
         return jsonResult(taskToJson(task));
       } catch (error) {
         return grpcErrorToToolResult(error);
