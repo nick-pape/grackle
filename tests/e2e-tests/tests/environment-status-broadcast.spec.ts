@@ -133,35 +133,13 @@ test.describe("Environment Status Broadcast + Toasts", { tag: ["@environment"] }
     await expect(page.getByText("1/1 env")).toBeVisible({ timeout: 5_000 });
   });
 
-  // TODO(#786): This test relies on injecting fake WS response data that the
-  // ConnectRPC-migrated hooks no longer handle. Needs rewrite to use a real
-  // server error state or mock the ConnectRPC transport.
-  test.skip("injected error status shows provision failed toast", async ({ page }) => {
-    await installWsTracker(page);
-    await page.goto("/");
-    await page.waitForFunction(
-      () => document.body.innerText.includes("Connected"),
-      { timeout: 10_000 },
-    );
-
-    // Inject environment in error status
-    await injectWsMessage(page, {
-      type: "environments",
-      payload: {
-        environments: [
-          {
-            id: "test-local",
-            displayName: "test-local",
-            adapterType: "local",
-
-            status: "error",
-            bootstrapped: false,
-          },
-        ],
-      },
-    });
-
-    // Generic error toast should appear
-    await expect(page.getByText("Environment provision failed")).toBeVisible({ timeout: 5_000 });
+  // This test injected fake WS "environments" data with status "error" to trigger
+  // the "provision failed" toast. After the ConnectRPC migration (#786), environment
+  // state comes from the ListEnvironments RPC, not WS messages. The hooks no longer
+  // handle the "environments" WS message type, so injection doesn't update state.
+  // Rewrite needed: either use a server-side mock to return an error environment,
+  // or test the provision error path through the ProvisionEnvironment RPC.
+  test("injected error status shows provision failed toast @skip-reason:connectrpc-migration", async ({ page }) => {
+    test.skip(true, "Incompatible with ConnectRPC migration — environment state now comes from RPC, not WS injection");
   });
 });
