@@ -16,6 +16,7 @@ export default defineConfig({
         manualChunks: {
           markdown: ["react-markdown", "remark-gfm", "rehype-prism-plus"],
           dagview: ["@xyflow/react", "@dagrejs/dagre"],
+          grpc: ["@connectrpc/connect", "@connectrpc/connect-web", "@bufbuild/protobuf", "@grackle-ai/common"],
         },
       },
     },
