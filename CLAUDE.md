@@ -105,7 +105,6 @@ Rush monorepo with 6 packages under `packages/`:
 
 - **New components must be pure presentational.** Components in `components/` should accept data and callbacks as props. Only page-level components (`pages/*.tsx`) should call `useGrackle()`.
 - **Boy scout rule ([#805](https://github.com/nick-pape/grackle/issues/805))**: If your PR touches any of the following coupled components, you **must** decouple it from `useGrackle()` as part of the PR. Move the hook call up to the parent page/container and pass data + callbacks as props, and link #805 in your PR.
-  - `packages/web/src/components/personas/PersonaManager.tsx`
   - `packages/web/src/components/chat/ChatInput.tsx`
   - `packages/web/src/components/panels/EnvironmentEditPanel.tsx`
 - Once a component is fully decoupled, remove it from this list.
