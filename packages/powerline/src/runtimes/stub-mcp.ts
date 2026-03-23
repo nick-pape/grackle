@@ -77,7 +77,7 @@ class StubMcpSession implements AgentSession {
     }
 
     if (this.killed as boolean) {
-      yield { type: "status", timestamp: ts(), content: "killed" };
+      yield { type: "status", timestamp: ts(), content: this.killReason };
       return;
     }
 
@@ -86,13 +86,13 @@ class StubMcpSession implements AgentSession {
     yield { type: "status", timestamp: ts(), content: "waiting_input" };
 
     if (this.killed as boolean) {
-      yield { type: "status", timestamp: ts(), content: "killed" };
+      yield { type: "status", timestamp: ts(), content: this.killReason };
       return;
     }
 
     const input = await this.waitForInput();
     if (this.killed) {
-      yield { type: "status", timestamp: ts(), content: "killed" };
+      yield { type: "status", timestamp: ts(), content: this.killReason };
       return;
     }
 
@@ -208,8 +208,12 @@ class StubMcpSession implements AgentSession {
     this.emitter.emit("input", text);
   }
 
-  public kill(_reason?: string): void {
+  /** The reason passed to kill(), used as the final status event content. */
+  private killReason: string = "killed";
+
+  public kill(reason?: string): void {
     this.killed = true;
+    this.killReason = reason || "killed";
     this.status = SESSION_STATUS.STOPPED;
     if (this.inputResolve) {
       this.inputResolve("");

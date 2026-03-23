@@ -154,7 +154,7 @@ class GenAIScriptSession implements AgentSession {
 
       if (this.killed) {
         this.status = SESSION_STATUS.STOPPED;
-        yield { type: "status", timestamp: ts(), content: "killed" };
+        yield { type: "status", timestamp: ts(), content: this.killReason };
         return;
       }
 
@@ -224,8 +224,12 @@ class GenAIScriptSession implements AgentSession {
     logger.warn({ sessionId: this.id }, "GenAIScript sessions do not accept interactive input");
   }
 
-  public kill(_reason?: string): void {
+  /** The reason passed to kill(), used as the final status event content. */
+  private killReason: string = "killed";
+
+  public kill(reason?: string): void {
     this.killed = true;
+    this.killReason = reason || "killed";
     this.status = SESSION_STATUS.STOPPED;
     if (this.child && !this.child.killed) {
       this.child.kill("SIGTERM");
