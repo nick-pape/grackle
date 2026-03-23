@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Mon, 23 Mar 2026 18:28:31 GMT and should not be manually modified.
+This log was last generated on Mon, 23 Mar 2026 18:49:25 GMT and should not be manually modified.
+
+## 0.73.0
+Mon, 23 Mar 2026 18:49:25 GMT
+
+### Minor changes
+
+- Extract @grackle-ai/database package — stores, schema, migrations, and crypto moved out of server
 
 ## 0.72.6
 Mon, 23 Mar 2026 18:28:31 GMT
