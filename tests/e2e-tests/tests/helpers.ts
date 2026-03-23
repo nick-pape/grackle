@@ -1275,7 +1275,7 @@ export async function provisionEnvironmentDirect(environmentId: string): Promise
         GRACKLE_URL: `http://127.0.0.1:${state.serverPort}`,
         GRACKLE_API_KEY: state.apiKey,
       },
-      timeout: 15_000,
+      timeout: 30_000,
       stdio: "pipe",
     });
   } catch {

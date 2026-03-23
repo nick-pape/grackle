@@ -46,15 +46,7 @@ test.describe("Environment Status Broadcast + Toasts", { tag: ["@environment"] }
 
     // A generic "disconnected" toast should appear
     await expect(page.getByText("Environment disconnected")).toBeVisible({ timeout: 5_000 });
-
-    // Re-provision so other tests aren't affected
-    await provisionEnvironmentDirect("test-local");
-    // Reload to pick up the new status (the WS event may have been missed)
-    await page.reload();
-    await page.waitForFunction(
-      () => document.body.innerText.includes("1/1 env"),
-      { timeout: 15_000 },
-    );
+    // NOTE: env left disconnected — next test provisions it as part of its flow
   });
 
   test("provision environment shows connected toast and updates StatusBar", async ({ page }) => {
