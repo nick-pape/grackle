@@ -19,6 +19,7 @@ import { useTokens } from "./useTokens.js";
 import { useCredentials } from "./useCredentials.js";
 import { useCodespaces } from "./useCodespaces.js";
 import { usePersonas } from "./usePersonas.js";
+import { useKnowledge } from "./useKnowledge.js";
 import { grackleClient } from "./useGrackleClient.js";
 import { protoToUsageStats } from "./proto-converters.js";
 
@@ -49,6 +50,8 @@ export { isGrackleEvent } from "./types.js";
 /** Return type for the {@link useGrackleSocket} hook. */
 export interface UseGrackleSocketResult {
   connected: boolean;
+  /** Raw send function for WebSocket messages. */
+  send: import("./types.js").SendFunction;
   environments: import("./types.js").Environment[];
   sessions: import("./types.js").Session[];
   events: import("./types.js").SessionEvent[];
@@ -206,6 +209,8 @@ export interface UseGrackleSocketResult {
   usageCache: Record<string, import("./types.js").UsageStats>;
   /** Request aggregated usage stats from the server for a given scope and entity ID. */
   loadUsage: (scope: string, id: string) => void;
+  /** Knowledge graph hook. */
+  knowledge: import("./useKnowledge.js").UseKnowledgeResult;
 }
 
 // ─── Composition hook ─────────────────────────────────────────────────────────
@@ -231,7 +236,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
 
   // --- Transport (must be first to provide `send`) ---
 
-  const { connected } = useWebSocket(url, {
+  const { connected, send } = useWebSocket(url, {
     onMessage,
     onConnect,
     onDisconnect,
@@ -248,6 +253,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
   const credentialsHook = useCredentials();
   const codespacesHook = useCodespaces();
   const personasHook = usePersonas();
+  const knowledgeHook = useKnowledge(send);
 
   // --- Settings helpers ---
 
@@ -332,7 +338,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
 
     // Real-time session events from subscribe_all (the only remaining WS handler)
     if (sessionsHook.handleMessage(msg)) { return; }
-
+    if (knowledgeHook.handleMessage(msg)) { return; }
     if (msg.type === "error") {
       console.error("[ws]", msg.payload?.message);
       return;
@@ -374,6 +380,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
 
   return {
     connected,
+    send,
     environments: environmentsHook.environments,
     sessions: sessionsHook.sessions,
     events: sessionsHook.events,
@@ -436,5 +443,6 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
     completeOnboarding,
     usageCache,
     loadUsage,
+    knowledge: knowledgeHook,
   };
 }

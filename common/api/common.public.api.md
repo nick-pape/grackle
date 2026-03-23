@@ -184,6 +184,7 @@ type CredentialProviderConfig = Message<"grackle.CredentialProviderConfig"> & {
     github: ProviderToggle;
     copilot: ProviderToggle;
     codex: ProviderToggle;
+    goose: ProviderToggle;
 };
 
 // @public
@@ -1269,7 +1270,7 @@ export const ROOT_TASK_ID: string;
 export const RUNTIME_MANIFESTS: Readonly<Record<string, RuntimePackageManifest>>;
 
 // @public
-export type RuntimeName = "claude-code" | "copilot" | "codex" | "stub";
+export type RuntimeName = "claude-code" | "copilot" | "codex" | "goose" | "stub";
 
 // @public
 export interface RuntimePackageManifest {

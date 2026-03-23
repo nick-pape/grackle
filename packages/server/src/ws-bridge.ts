@@ -45,11 +45,20 @@ interface WsMessage {
 }
 
 /** Create a WebSocket server on top of an HTTP server that bridges JSON messages to gRPC operations. */
+/** Options for creating the WebSocket bridge. */
+interface WsBridgeOptions {
+  verifyApiKey: (token: string) => boolean;
+  validateCookie?: (cookieHeader: string) => boolean;
+  webPort?: number;
+  allowNetwork?: boolean;
+}
+
+/** Create a WebSocket server on top of an HTTP server for real-time event streaming. */
 export function createWsBridge(
   httpServer: HttpServer,
-  verifyApiKey: (token: string) => boolean,
-  validateCookie?: (cookieHeader: string) => boolean,
+  options: WsBridgeOptions,
 ): WebSocketServer {
+  const { verifyApiKey, validateCookie } = options;
   const wss = new WebSocketServer({ server: httpServer });
   setWssInstance(wss);
 

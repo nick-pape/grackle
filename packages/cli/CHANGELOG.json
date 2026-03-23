@@ -2,6 +2,115 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.71.0",
+      "tag": "@grackle-ai/cli_v0.71.0",
+      "date": "Sun, 22 Mar 2026 23:08:49 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Add Knowledge Graph explorer page with force-directed visualization"
+          }
+        ],
+        "none": [
+          {
+            "comment": "placeholder"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.70.6",
+      "tag": "@grackle-ai/cli_v0.70.6",
+      "date": "Sun, 22 Mar 2026 21:18:31 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Wrap JSON.parse of adapterConfig in try-catch to prevent unhandled exceptions from corrupted DB data"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.70.5",
+      "tag": "@grackle-ai/cli_v0.70.5",
+      "date": "Sun, 22 Mar 2026 21:10:14 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Add Secure flag to session cookie when --allow-network is enabled"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.70.4",
+      "tag": "@grackle-ai/cli_v0.70.4",
+      "date": "Sun, 22 Mar 2026 21:01:41 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Add Content-Security-Policy, X-Frame-Options, and X-Content-Type-Options headers to all web responses"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.70.3",
+      "tag": "@grackle-ai/cli_v0.70.3",
+      "date": "Sun, 22 Mar 2026 19:10:10 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Require auth token or explicit --no-auth flag for PowerLine startup"
+          },
+          {
+            "comment": "Validate WebSocket Origin header to prevent cross-origin hijacking (GHSA-w3hv-x4fp-6h6j)"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.70.2",
+      "tag": "@grackle-ai/cli_v0.70.2",
+      "date": "Sun, 22 Mar 2026 18:48:36 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Fix workspace authorization bypass in knowledge_search and knowledge_get_node MCP tools (GHSA-647h-p824-99w7)"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.70.1",
+      "tag": "@grackle-ai/cli_v0.70.1",
+      "date": "Sun, 22 Mar 2026 18:06:20 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Escape error strings in pairing and authorize HTML pages to prevent potential XSS"
+          }
+        ],
+        "none": [
+          {
+            "comment": "Add polished README for npm"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.70.0",
+      "tag": "@grackle-ai/cli_v0.70.0",
+      "date": "Sun, 22 Mar 2026 15:10:22 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Add Goose runtime (ACP-based) with credential provider, CLI, and web UI support"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.69.1",
       "tag": "@grackle-ai/cli_v0.69.1",
       "date": "Sun, 22 Mar 2026 14:07:12 GMT",

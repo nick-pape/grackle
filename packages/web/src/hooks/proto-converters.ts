@@ -143,6 +143,7 @@ export function protoToCredentialConfig(p: grackle.CredentialProviderConfig): Cr
     github: providerToggleToString(p.github) as CredentialProviderConfig["github"],
     copilot: providerToggleToString(p.copilot) as CredentialProviderConfig["copilot"],
     codex: providerToggleToString(p.codex) as CredentialProviderConfig["codex"],
+    goose: providerToggleToString(p.goose) as CredentialProviderConfig["goose"],
   };
 }
 

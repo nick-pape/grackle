@@ -146,6 +146,7 @@ export const knowledgeTools: ToolDefinition[] = [
     async handler(
       args: Record<string, unknown>,
       client: Client<typeof grackle.Grackle>,
+      authContext?: AuthContext,
     ) {
       const {
         query,
@@ -161,11 +162,17 @@ export const knowledgeTools: ToolDefinition[] = [
         expandDepth?: number;
       };
 
+      // For scoped callers, always use the auth context workspace.
+      const resolvedWorkspaceId: string =
+        authContext?.type === "scoped"
+          ? authContext.workspaceId ?? ""
+          : workspaceId ?? "";
+
       const safeLimit: number = clampInt(limit, 1, MAX_SEARCH_LIMIT, 10);
       const response: grackle.SearchKnowledgeResponse = await client.searchKnowledge({
         query,
         limit: safeLimit,
-        workspaceId: workspaceId ?? "",
+        workspaceId: resolvedWorkspaceId,
       });
 
       const formattedResults = response.results.map(formatSearchResult);
@@ -202,6 +209,26 @@ export const knowledgeTools: ToolDefinition[] = [
 
         neighbors = [...allNeighbors.values()];
         neighborEdges = allEdges;
+
+        // Filter expanded neighbors to the caller's workspace for scoped callers.
+        if (authContext?.type === "scoped") {
+          const allowedWorkspaceId: string = authContext.workspaceId ?? "";
+          const allowedIds: Set<string> = new Set<string>();
+          neighbors = neighbors.filter((n) => {
+            const allowed = n.workspaceId === allowedWorkspaceId;
+            if (allowed) {
+              allowedIds.add(n.id as string);
+            }
+            return allowed;
+          });
+          const allowedEdgeNodeIds: Set<string> = new Set<string>([
+            ...startIds,
+            ...allowedIds,
+          ]);
+          neighborEdges = neighborEdges.filter(
+            (e) => allowedEdgeNodeIds.has(e.fromId as string) && allowedEdgeNodeIds.has(e.toId as string),
+          );
+        }
       }
 
       return jsonResult({
@@ -244,6 +271,7 @@ export const knowledgeTools: ToolDefinition[] = [
     async handler(
       args: Record<string, unknown>,
       client: Client<typeof grackle.Grackle>,
+      authContext?: AuthContext,
     ) {
       const { id, expand, expandDepth } = args as {
         id: string;
@@ -266,6 +294,22 @@ export const knowledgeTools: ToolDefinition[] = [
         };
       }
 
+      // For scoped callers, deny access to nodes outside their workspace.
+      // Return "not found" to avoid leaking that the node exists.
+      if (authContext?.type === "scoped") {
+        if (response.node.workspaceId !== (authContext.workspaceId ?? "")) {
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: JSON.stringify({ error: `Node not found: ${id}` }, null, 2),
+              },
+            ],
+            isError: true,
+          };
+        }
+      }
+
       const result: Record<string, unknown> = {
         node: formatNode(response.node),
         edges: response.edges.map(formatEdge),
@@ -275,8 +319,27 @@ export const knowledgeTools: ToolDefinition[] = [
         const safeDepth: number = clampInt(expandDepth, 1, MAX_EXPAND_DEPTH, 1);
         const expansion: grackle.ExpandKnowledgeNodeResponse =
           await client.expandKnowledgeNode({ id, depth: safeDepth });
-        result.neighbors = expansion.nodes.map(formatNode);
-        result.neighborEdges = expansion.edges.map(formatEdge);
+        let expandedNodes: Record<string, unknown>[] = expansion.nodes.map(formatNode);
+        let expandedEdges: Record<string, unknown>[] = expansion.edges.map(formatEdge);
+
+        // Filter expanded neighbors to the caller's workspace for scoped callers.
+        if (authContext?.type === "scoped") {
+          const allowedWorkspaceId: string = authContext.workspaceId ?? "";
+          const allowedIds: Set<string> = new Set<string>([id]);
+          expandedNodes = expandedNodes.filter((n) => {
+            const allowed = n.workspaceId === allowedWorkspaceId;
+            if (allowed) {
+              allowedIds.add(n.id as string);
+            }
+            return allowed;
+          });
+          expandedEdges = expandedEdges.filter(
+            (e) => allowedIds.has(e.fromId as string) && allowedIds.has(e.toId as string),
+          );
+        }
+
+        result.neighbors = expandedNodes;
+        result.neighborEdges = expandedEdges;
       }
 
       return jsonResult(result);

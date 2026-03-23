@@ -4,6 +4,17 @@
 
 When you encounter unexpected issues, workarounds, or non-obvious behavior (CI quirks, tooling gotchas, environment-specific problems), **update this CLAUDE.md** with the finding so future sessions don't repeat the investigation. Add the note to the most relevant existing section, or create a new one if needed.
 
+### Package READMEs
+
+Each package under `packages/` has a `README.md` that is published to npm. **When you change a package's public behavior** (new commands, renamed options, new MCP tools, new API methods, changed configuration, etc.), **update that package's README to match.** Do not let READMEs drift out of sync with the code.
+
+- **CLI** (`packages/cli/README.md`): documents every command, subcommand, and flag. Update when adding/removing/renaming commands or options.
+- **MCP** (`packages/mcp/README.md`): documents every MCP tool with parameters. Update when adding/removing/renaming tools.
+- **Knowledge Core** (`packages/knowledge-core/README.md`): detailed API reference. Update when the public API changes.
+- **All other packages**: concise overviews. Update if the package's purpose, key concepts, or usage instructions change.
+
+Do **not** update the root `README.md` as part of this process — it is a separate marketing/overview document maintained independently.
+
 ## Git Workflow
 
 - **Never push directly to main.** All changes must go through a pull request. Always create a feature branch and open a PR — never commit and push to `main`.
@@ -89,6 +100,26 @@ Rush monorepo with 6 packages under `packages/`:
 - Constant-time comparison for API key verification
 - Web UI uses pairing-code → session-cookie auth. The API key is never injected into HTML. gRPC uses Bearer token auth. WebSocket accepts either session cookie or `?token=` query param.
 - The server binds to `127.0.0.1` by default. Use `grackle serve --allow-network` to bind to `0.0.0.0` for LAN access (e.g., phone). Use `grackle pair` to generate new pairing codes.
+
+### React Component Architecture
+
+- **New components must be pure presentational.** Components in `components/` should accept data and callbacks as props. Only page-level components (`pages/*.tsx`) should call `useGrackle()`.
+- **Boy scout rule ([#805](https://github.com/nick-pape/grackle/issues/805))**: If your PR touches any of the following coupled components, you **must** decouple it from `useGrackle()` as part of the PR. Move the hook call up to the parent page/container and pass data + callbacks as props, and link #805 in your PR.
+  - `packages/web/src/components/workspace/WorkspaceBoard.tsx`
+  - `packages/web/src/components/personas/PersonaManager.tsx`
+  - `packages/web/src/components/panels/TaskEditPanel.tsx`
+  - `packages/web/src/components/lists/TaskList.tsx`
+  - `packages/web/src/components/panels/CredentialProvidersPanel.tsx`
+  - `packages/web/src/components/lists/EnvironmentNav.tsx`
+  - `packages/web/src/components/layout/BottomStatusBar.tsx`
+  - `packages/web/src/components/dag/DagView.tsx`
+  - `packages/web/src/components/chat/ChatInput.tsx`
+  - `packages/web/src/components/panels/EnvironmentEditPanel.tsx`
+  - `packages/web/src/components/layout/StatusBar.tsx`
+  - `packages/web/src/components/panels/FindingsPanel.tsx`
+  - `packages/web/src/components/panels/AboutPanel.tsx`
+  - `packages/web/src/components/panels/TokensPanel.tsx`
+- Once a component is fully decoupled, remove it from this list.
 
 ### Dependencies
 - Cross-package deps use `"workspace:*"` (pnpm rewrites to real versions at publish time)

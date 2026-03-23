@@ -36,6 +36,7 @@ export function useCredentials(): UseCredentialsResult {
     github: "off",
     copilot: "off",
     codex: "off",
+    goose: "off",
   });
 
   const loadCredentials = useCallback(() => {

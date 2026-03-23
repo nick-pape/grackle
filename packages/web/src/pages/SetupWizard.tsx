@@ -17,6 +17,7 @@ const DEFAULT_MODELS: Record<string, string> = {
   "claude-code": "sonnet",
   "copilot": "gpt-4o",
   "codex": "o3",
+  "goose": "",
 };
 
 /** First-run experience wizard — guides new users through initial setup. */

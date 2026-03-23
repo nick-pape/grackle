@@ -28,6 +28,9 @@ export const RUNTIME_MANIFESTS: Readonly<Record<string, RuntimePackageManifest>>
   "codex": {
     packages: { "@openai/codex-sdk": "^0.111.0" },
   },
+  "goose": {
+    packages: { "@agentclientprotocol/sdk": "^0.16.1" },
+  },
   "codex-acp": {
     packages: { "@agentclientprotocol/sdk": "^0.16.1", "@zed-industries/codex-acp": "^0.10.0" },
   },
