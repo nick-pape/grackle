@@ -34,13 +34,8 @@ import {
   providerToggleToEnum,
   eventTypeToEnum,
 } from "@grackle-ai/common";
-<<<<<<< HEAD
 import * as logWriter from "./log-writer.js";
-import { resolvePersona } from "./resolve-persona.js";
-import { fetchOrchestratorContext } from "./orchestrator-context.js";
-=======
 import { resolvePersona, fetchOrchestratorContext, SystemPromptBuilder, buildTaskPrompt } from "@grackle-ai/prompt";
->>>>>>> origin/main
 import { createScopedToken, loadOrCreateApiKey, generatePairingCode } from "@grackle-ai/auth";
 import { computeTaskStatus } from "./compute-task-status.js";
 import { logger } from "./logger.js";
@@ -60,12 +55,8 @@ import {
   type Embedder,
   type EdgeType,
 } from "@grackle-ai/knowledge";
-<<<<<<< HEAD
 import { exec } from "./utils/exec.js";
 import { formatGhError } from "./utils/format-gh-error.js";
-import { SystemPromptBuilder, buildTaskPrompt } from "./system-prompt-builder.js";
-=======
->>>>>>> origin/main
 import { importGitHubIssues as executeGitHubImport } from "./github-import.js";
 import { detectLanIp } from "./utils/network.js";
 import * as streamRegistry from "./stream-registry.js";
