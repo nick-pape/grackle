@@ -676,14 +676,21 @@ async function main(): Promise<void> {
 
     // Seed: ensure the default workspace exists (tied to the local environment).
     // The system task needs a workspace to resolve an environment for execution.
-    if (!workspaceStore.getWorkspace(DEFAULT_WORKSPACE_ID)) {
+    const defaultWorkspace = workspaceStore.getWorkspace(DEFAULT_WORKSPACE_ID);
+    if (!defaultWorkspace) {
       workspaceStore.createWorkspace(DEFAULT_WORKSPACE_ID, "Default", "", "", "local", false);
       logger.info("Created default workspace for local environment");
+    } else if (defaultWorkspace.environmentId !== "local") {
+      logger.warn(
+        { workspaceId: DEFAULT_WORKSPACE_ID, environmentId: defaultWorkspace.environmentId },
+        "Default workspace is not bound to local environment; skipping system task association",
+      );
     }
     // Backfill: assign the default workspace to the system task if it has none.
     const systemTask = taskStore.getTask(ROOT_TASK_ID);
-    if (systemTask && !systemTask.workspaceId) {
-      sqlite!.prepare("UPDATE tasks SET workspace_id = ? WHERE id = ?").run(DEFAULT_WORKSPACE_ID, ROOT_TASK_ID);
+    const resolvedDefault = workspaceStore.getWorkspace(DEFAULT_WORKSPACE_ID);
+    if (systemTask && !systemTask.workspaceId && resolvedDefault?.environmentId === "local") {
+      sqlite!.prepare("UPDATE tasks SET workspace_id = ?, updated_at = datetime('now') WHERE id = ?").run(DEFAULT_WORKSPACE_ID, ROOT_TASK_ID);
       logger.info("Assigned default workspace to system task");
     }
 
