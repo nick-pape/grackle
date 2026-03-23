@@ -2,11 +2,11 @@ import { GrackleProvider } from "./context/GrackleContext.js";
 import { MockGrackleProvider } from "./mocks/MockGrackleProvider.js";
 import { ToastProvider } from "./context/ToastContext.js";
 import { ThemeProvider } from "./context/ThemeContext.js";
-import { StatusBar, AppNav, Sidebar, WithTaskSidebar, WithEnvironmentSidebar, WithSettingsSidebar, BottomStatusBar } from "./components/layout/index.js";
+import { StatusBar, AppNav, Sidebar, WithTaskSidebar, WithEnvironmentSidebar, WithSettingsSidebar, WithKnowledgeSidebar, BottomStatusBar } from "./components/layout/index.js";
 import { SidebarProvider, useSidebarContent } from "./context/SidebarContext.js";
 import { ToastContainer } from "./components/notifications/index.js";
 import { SplashScreen } from "./components/display/index.js";
-import { useCallback, useEffect, useState, type JSX } from "react";
+import { useCallback, useEffect, useState, Suspense, lazy, type LazyExoticComponent, type JSX } from "react";
 import { useGrackle } from "./context/GrackleContext.js";
 import { useToast } from "./context/ToastContext.js";
 import { useEnvironmentToasts } from "./hooks/useEnvironmentToasts.js";
@@ -33,6 +33,9 @@ import { SettingsAppearanceTab } from "./pages/settings/SettingsAppearanceTab.js
 import { SettingsAboutTab } from "./pages/settings/SettingsAboutTab.js";
 import { SetupWizard } from "./pages/SetupWizard.js";
 import styles from "./App.module.scss";
+
+// Lazy-loaded to keep the main bundle under the chunk size limit
+const KnowledgePage: LazyExoticComponent<() => JSX.Element> = lazy(() => import("./pages/KnowledgePage.js").then((m) => ({ default: m.KnowledgePage })));
 
 /** Whether the app is running in mock mode (`?mock` query parameter). */
 const IS_MOCK_MODE: boolean =
@@ -175,6 +178,11 @@ function AppRoutes(): JSX.Element {
         <Route path="chat" element={<ChatPage />} />
         <Route path="sessions/new" element={<NewChatPage />} />
         <Route path="sessions/:sessionId" element={<SessionPage />} />
+
+        {/* Knowledge sidebar */}
+        <Route element={<WithKnowledgeSidebar />}>
+          <Route path="knowledge" element={<Suspense fallback={<SplashScreen />}><KnowledgePage /></Suspense>} />
+        </Route>
 
         {/* Tasks sidebar */}
         <Route element={<WithTaskSidebar />}>

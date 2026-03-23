@@ -1,10 +1,10 @@
 import { useCallback, useRef, type JSX, type KeyboardEvent } from "react";
 import { useLocation } from "react-router";
-import { CHAT_URL, ENVIRONMENTS_URL, HOME_URL, SETTINGS_URL, SETTINGS_CREDENTIALS_URL, TASKS_URL, useAppNavigate } from "../../utils/navigation.js";
+import { CHAT_URL, ENVIRONMENTS_URL, HOME_URL, KNOWLEDGE_URL, SETTINGS_URL, SETTINGS_CREDENTIALS_URL, TASKS_URL, useAppNavigate } from "../../utils/navigation.js";
 import styles from "./AppNav.module.scss";
 
 /** Application view identifiers. */
-export type AppView = "dashboard" | "chat" | "tasks" | "environments" | "settings";
+export type AppView = "dashboard" | "chat" | "tasks" | "environments" | "knowledge" | "settings";
 
 /** Tab definition for the application navigation bar. */
 interface AppTab {
@@ -26,6 +26,7 @@ const TABS: AppTab[] = [
   { view: "chat", label: "Chat", icon: "\uD83D\uDCAC", route: CHAT_URL, testId: "sidebar-tab-chat" },
   { view: "tasks", label: "Tasks", icon: "\uD83D\uDCCB", route: TASKS_URL, testId: "sidebar-tab-tasks" },
   { view: "environments", label: "Environments", icon: "\uD83D\uDDA5\uFE0F", route: ENVIRONMENTS_URL, testId: "sidebar-tab-environments" },
+  { view: "knowledge", label: "Knowledge", icon: "\uD83E\uDDE0", route: KNOWLEDGE_URL, testId: "sidebar-tab-knowledge" },
   { view: "settings", label: "Settings", icon: "\u2699\uFE0F", route: SETTINGS_CREDENTIALS_URL, testId: "sidebar-tab-settings" },
 ];
 
@@ -39,6 +40,9 @@ export function getActiveView(pathname: string): AppView {
   }
   if (pathname.startsWith("/workspaces") || pathname.startsWith("/environments")) {
     return "environments";
+  }
+  if (pathname.startsWith(KNOWLEDGE_URL)) {
+    return "knowledge";
   }
   if (pathname.startsWith(SETTINGS_URL)) {
     return "settings";

@@ -101,5 +101,7 @@ export const MAX_TASK_DEPTH: number = 8;
 export const SYSTEM_PERSONA_ID: string = "system";
 /** Display name for the System persona. */
 export const SYSTEM_PERSONA_NAME: string = "System";
-/** Well-known ID for the root task (always present, workspace-less). */
+/** Well-known ID for the root task (always present). */
 export const ROOT_TASK_ID: string = "system";
+/** Well-known ID for the default workspace (created on first run, tied to local env). */
+export const DEFAULT_WORKSPACE_ID: string = "default";
