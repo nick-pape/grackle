@@ -3,7 +3,7 @@
  * are enabled and persists the configuration to the database.
  *
  * The token bundle builder that reads `process.env` / disk lives in
- * {@link ./token-push.ts} to keep this module a pure persistence layer.
+ * {@link ./credential-bundle.ts} to keep this module a pure persistence layer.
  */
 import { eq } from "drizzle-orm";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
