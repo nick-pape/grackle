@@ -362,4 +362,15 @@ describe("task-store tree operations", () => {
     });
   });
 
+  describe("setTaskWorkspace", () => {
+    it("reassigns a task to a different workspace", () => {
+      workspaceStore.createWorkspace("ws-2", "Second Workspace", "", "", "");
+      taskStore.createTask("t1", "test-proj", "Task", "desc", [], "proj");
+      expect(taskStore.getTask("t1")!.workspaceId).toBe("test-proj");
+
+      taskStore.setTaskWorkspace("t1", "ws-2");
+      expect(taskStore.getTask("t1")!.workspaceId).toBe("ws-2");
+    });
+  });
+
 });
