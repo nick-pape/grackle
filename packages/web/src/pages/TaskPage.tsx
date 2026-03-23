@@ -341,7 +341,7 @@ export function TaskPage(): JSX.Element {
   const location = useLocation();
   const navigate = useAppNavigate();
   const {
-    events, eventsDropped, tasks, sessions, environments,
+    events, eventsDropped, tasks, sessions, environments, findings,
     loadSessionEvents, loadFindings,
     kill, startTask, stopTask, resumeTask, deleteTask,
     workspaces, taskSessions: taskSessionsMap, loadTaskSessions,
@@ -570,7 +570,7 @@ export function TaskPage(): JSX.Element {
         {activeTaskTab === "findings" && (
           <motion.div key="findings" initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.15 }} className={styles.tabContent}>
             {workspaceId ? (
-              <FindingsPanel workspaceId={workspaceId} />
+              <FindingsPanel findings={findings.filter((f) => f.workspaceId === workspaceId)} />
             ) : (
               <div className={styles.noContext}>Navigate to a task within a workspace to view findings</div>
             )}
