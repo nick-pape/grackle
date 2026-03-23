@@ -248,11 +248,25 @@ export async function sendWsAndWaitFor(
       /** Map a proto Persona to the WS persona shape (stringify sub-objects). */
       function mapPersona(p: Record<string, unknown>): Record<string, unknown> {
         const mapped = { ...p };
+        // Proto3 omits default values (empty strings) from JSON. Restore
+        // them so test assertions that expect "" don't get undefined.
+        for (const key of ["description", "systemPrompt", "runtime", "model", "type", "script"]) {
+          if (mapped[key] === undefined) {
+            mapped[key] = "";
+          }
+        }
         if (typeof mapped.toolConfig === "object" && mapped.toolConfig !== null) {
           mapped.toolConfig = JSON.stringify(mapped.toolConfig);
+        } else if (mapped.toolConfig === undefined) {
+          mapped.toolConfig = "{}";
         }
         if (Array.isArray(mapped.mcpServers)) {
           mapped.mcpServers = JSON.stringify(mapped.mcpServers);
+        } else if (mapped.mcpServers === undefined) {
+          mapped.mcpServers = "[]";
+        }
+        if (mapped.maxTurns === undefined) {
+          mapped.maxTurns = 0;
         }
         return mapped;
       }
@@ -730,15 +744,27 @@ export async function sendWsMessage(
         await rpc("StopEnvironment", { id: payload.environmentId as string });
         break;
 
-      case "provision_environment":
-        // ProvisionEnvironment is server-streaming — use Connect streaming content type
-        await fetch(`/grackle.Grackle/ProvisionEnvironment`, {
+      case "provision_environment": {
+        // ProvisionEnvironment is server-streaming. Fire the RPC then poll
+        // until the environment reaches "connected" status.
+        fetch(`/grackle.Grackle/ProvisionEnvironment`, {
           method: "POST",
           headers: { "Content-Type": "application/connect+json" },
           body: JSON.stringify({ id: payload.environmentId }),
           credentials: "include",
-        });
+        }).catch(() => { /* fire-and-forget */ });
+        const provDeadline: number = Date.now() + 15_000;
+        while (Date.now() < provDeadline) {
+          await new Promise((r) => setTimeout(r, 500));
+          const listResp = await rpc("ListEnvironments", {});
+          const envs = (listResp.environments || []) as Array<Record<string, unknown>>;
+          const env = envs.find((e: Record<string, unknown>) => e.id === payload.environmentId);
+          if (env && env.status === "connected") {
+            break;
+          }
+        }
         break;
+      }
 
       case "delete_task":
         await rpc("DeleteTask", { id: payload.taskId as string });
