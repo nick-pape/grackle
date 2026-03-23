@@ -18,9 +18,9 @@ vi.mock("node:fs", async (importOriginal) => {
 import {
   getCredentialProviders,
   setCredentialProviders,
-  buildProviderTokenBundle,
   parseCredentialProviderConfig,
 } from "./credential-providers.js";
+import { buildProviderTokenBundle } from "./credential-bundle.js";
 import testDb, { sqlite } from "./test-db.js";
 
 function applySchema(): void {

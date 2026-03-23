@@ -132,8 +132,11 @@ const { mockBuildProviderTokenBundle } = vi.hoisted(() => ({
   mockBuildProviderTokenBundle: vi.fn(),
 }));
 
-vi.mock("./credential-providers.js", () => ({
+vi.mock("./credential-bundle.js", () => ({
   buildProviderTokenBundle: mockBuildProviderTokenBundle,
+}));
+
+vi.mock("./credential-providers.js", () => ({
   getCredentialProviders: vi.fn(() => ({
     claude: "off",
     github: "off",
@@ -145,7 +148,7 @@ vi.mock("./credential-providers.js", () => ({
 }));
 
 // Import AFTER mocks
-import * as tokenBroker from "./token-broker.js";
+import * as tokenBroker from "./token-push.js";
 import * as adapterManager from "./adapter-manager.js";
 import * as taskStore from "./task-store.js";
 import { sqlite } from "./test-db.js";

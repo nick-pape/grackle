@@ -47,7 +47,6 @@ vi.mock("./workspace-store.js", () => ({
 }));
 
 vi.mock("./finding-store.js", () => ({
-  buildFindingsContext: vi.fn(() => ""),
   queryFindings: vi.fn(() => []),
   postFinding: vi.fn(),
 }));
@@ -67,7 +66,7 @@ describe("fetchOrchestratorContext", () => {
     vi.mocked(personaStore.listPersonas).mockReturnValue([]);
     vi.mocked(envRegistry.listEnvironments).mockReturnValue([]);
     vi.mocked(workspaceStore.getWorkspace).mockReturnValue(undefined);
-    vi.mocked(findingStore.buildFindingsContext).mockReturnValue("");
+    vi.mocked(findingStore.queryFindings).mockReturnValue([]);
   });
 
   it("returns workspace metadata when workspace exists", () => {
@@ -148,12 +147,16 @@ describe("fetchOrchestratorContext", () => {
   });
 
   it("returns findings context string", () => {
-    vi.mocked(findingStore.buildFindingsContext).mockReturnValue("## Workspace Findings\n\nSome findings here.");
+    vi.mocked(findingStore.queryFindings).mockReturnValue([
+      { id: "f1", workspaceId: "ws-1", taskId: "t1", sessionId: "s1", category: "decision", title: "Used React", content: "Chose React for the frontend.", tags: "[]", createdAt: "2026-01-01" },
+    ]);
 
     const result = fetchOrchestratorContext("ws-1");
 
-    expect(result.findingsContext).toBe("## Workspace Findings\n\nSome findings here.");
-    expect(findingStore.buildFindingsContext).toHaveBeenCalledWith("ws-1");
+    expect(result.findingsContext).toContain("## Workspace Findings");
+    expect(result.findingsContext).toContain("[decision] Used React");
+    expect(result.findingsContext).toContain("Chose React for the frontend.");
+    expect(findingStore.queryFindings).toHaveBeenCalledWith("ws-1", undefined, undefined, 20);
   });
 
   it("handles empty stores gracefully", () => {

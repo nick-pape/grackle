@@ -9,7 +9,60 @@ import { slugify } from "./utils/slugify.js";
 
 export type { TaskRow };
 
-/** Insert a new task with auto-generated branch name and sort order. */
+/** Fields required to insert a task row directly (no business logic). */
+export interface InsertTaskFields {
+  id: string;
+  workspaceId?: string;
+  title: string;
+  description: string;
+  branch: string;
+  dependsOn: string[];
+  parentTaskId: string;
+  depth: number;
+  canDecompose: boolean;
+  defaultPersonaId: string;
+}
+
+/**
+ * Low-level insert — writes a task row with all fields pre-computed.
+ * Auto-assigns `sortOrder` based on the workspace's current max.
+ * No business logic (parent validation, branch generation, depth limits).
+ */
+export function insertTask(fields: InsertTaskFields): void {
+  const depsJson = JSON.stringify(fields.dependsOn);
+  const sortOrderConditions: SQL[] = [];
+  if (fields.workspaceId) {
+    sortOrderConditions.push(eq(tasks.workspaceId, fields.workspaceId));
+  }
+  const maxRowQuery = db
+    .select({ maxOrder: sql<number>`max(sort_order)` })
+    .from(tasks);
+  const maxRow = sortOrderConditions.length > 0
+    ? maxRowQuery.where(and(...sortOrderConditions)).get()
+    : maxRowQuery.get();
+  const sortOrder = (maxRow?.maxOrder ?? -1) + 1;
+  db.insert(tasks)
+    .values({
+      id: fields.id,
+      workspaceId: fields.workspaceId || null,
+      title: fields.title,
+      description: fields.description,
+      branch: fields.branch,
+      dependsOn: depsJson,
+      sortOrder,
+      parentTaskId: fields.parentTaskId,
+      depth: fields.depth,
+      canDecompose: fields.canDecompose,
+      defaultPersonaId: fields.defaultPersonaId,
+    })
+    .run();
+}
+
+/**
+ * Create a task with business logic: validates parent, enforces depth limits,
+ * auto-generates branch name, and derives canDecompose.
+ * Delegates the actual insert to {@link insertTask}.
+ */
 export function createTask(
   id: string,
   workspaceId: string | undefined,
@@ -47,33 +100,18 @@ export function createTask(
   // Derive canDecompose when not explicitly set: root=true, child=false
   const resolvedCanDecompose = canDecompose ?? !parentTaskId;
 
-  const depsJson = JSON.stringify(dependsOn);
-  const sortOrderConditions: SQL[] = [];
-  if (workspaceId) {
-    sortOrderConditions.push(eq(tasks.workspaceId, workspaceId));
-  }
-  const maxRowQuery = db
-    .select({ maxOrder: sql<number>`max(sort_order)` })
-    .from(tasks);
-  const maxRow = sortOrderConditions.length > 0
-    ? maxRowQuery.where(and(...sortOrderConditions)).get()
-    : maxRowQuery.get();
-  const sortOrder = (maxRow?.maxOrder ?? -1) + 1;
-  db.insert(tasks)
-    .values({
-      id,
-      workspaceId: workspaceId || null,
-      title,
-      description,
-      branch,
-      dependsOn: depsJson,
-      sortOrder,
-      parentTaskId,
-      depth,
-      canDecompose: resolvedCanDecompose,
-      defaultPersonaId,
-    })
-    .run();
+  insertTask({
+    id,
+    workspaceId,
+    title,
+    description,
+    branch,
+    dependsOn,
+    parentTaskId,
+    depth,
+    canDecompose: resolvedCanDecompose,
+    defaultPersonaId,
+  });
 }
 
 /** Retrieve a single task by ID. */
