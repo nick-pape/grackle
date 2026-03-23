@@ -107,9 +107,9 @@ export function useWorkspaces(): UseWorkspacesResult {
         description: description || "",
         repoUrl: repoUrl || "",
         environmentId: environmentId || "",
-        defaultPersonaId: defaultPersonaId || "",
+        defaultPersonaId: defaultPersonaId || undefined,
         useWorktrees: useWorktrees ?? true,
-        worktreeBasePath: worktreeBasePath || "",
+        worktreeBasePath: worktreeBasePath || undefined,
       }).then(
         () => {
           onSuccess?.();

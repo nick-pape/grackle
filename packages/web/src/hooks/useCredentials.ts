@@ -63,6 +63,7 @@ export function useCredentials(): UseCredentialsResult {
         { provider: "github", value: config.github },
         { provider: "copilot", value: config.copilot },
         { provider: "codex", value: config.codex },
+        { provider: "goose", value: config.goose },
       ];
       for (const { provider, value } of entries) {
         grackleClient.setCredentialProvider({ provider, value }).catch(

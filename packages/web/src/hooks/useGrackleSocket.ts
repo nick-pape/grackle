@@ -318,7 +318,12 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
       return;
     }
 
-    if (environmentsHook.handleEvent(event)) { return; }
+    if (environmentsHook.handleEvent(event)) {
+      if (event.type === "environment.removed" || event.type === "environment.changed") {
+        sessionsHook.loadSessions();
+      }
+      return;
+    }
     if (workspacesHook.handleEvent(event)) { return; }
     if (tasksHook.handleEvent(event)) {
       // task.started also needs a session refresh (cross-concern)

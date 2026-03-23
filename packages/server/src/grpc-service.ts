@@ -701,16 +701,18 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         throw new ConnectError(`Environment ${session.environmentId} not connected`, Code.FailedPrecondition);
       }
 
-      // Publish user input event so subscribers see the text in the event stream
-      streamHub.publish(
-        create(grackle.SessionEventSchema, {
-          sessionId: req.sessionId,
-          type: grackle.EventType.USER_INPUT,
-          timestamp: new Date().toISOString(),
-          content: req.text,
-          raw: "",
-        }),
-      );
+      // Persist and publish user input event so subscribers see the text in the event stream
+      const userInputEvent = create(grackle.SessionEventSchema, {
+        sessionId: req.sessionId,
+        type: grackle.EventType.USER_INPUT,
+        timestamp: new Date().toISOString(),
+        content: req.text,
+        raw: "",
+      });
+      if (session.logPath) {
+        logWriter.writeEvent(session.logPath, userInputEvent);
+      }
+      streamHub.publish(userInputEvent);
 
       await conn.client.sendInput(
         create(powerline.InputMessageSchema, {

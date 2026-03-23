@@ -187,8 +187,8 @@ export function useTasks(): UseTasksResult {
         description: description || "",
         dependsOn: dependsOn || [],
         parentTaskId: parentTaskId || "",
-        defaultPersonaId: defaultPersonaId || "",
-        canDecompose: canDecompose || false,
+        defaultPersonaId: defaultPersonaId || undefined,
+        canDecompose: canDecompose ?? undefined,
       }).then(
         () => { onSuccess?.(); },
         (err) => {
@@ -256,7 +256,7 @@ export function useTasks(): UseTasksResult {
         title,
         description,
         dependsOn,
-        defaultPersonaId: defaultPersonaId ?? "",
+        ...(defaultPersonaId !== undefined ? { defaultPersonaId } : {}),
       }).catch((err) => { console.error("[grpc] updateTask failed:", err); });
     },
     [],
