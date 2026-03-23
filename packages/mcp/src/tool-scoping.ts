@@ -1,5 +1,5 @@
 import { ROOT_TASK_ID } from "@grackle-ai/common";
-import type { AuthContext } from "./auth-context.js";
+import type { AuthContext } from "@grackle-ai/auth";
 import type { ToolRegistry, ToolDefinition } from "./tool-registry.js";
 
 /** Tools exposed to scoped-token (agent) callers. */

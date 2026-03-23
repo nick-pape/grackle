@@ -1,0 +1,33 @@
+{
+  "name": "@grackle-ai/auth",
+  "version": "0.72.2",
+  "description": "Authentication and authorization primitives for Grackle",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nick-pape/grackle.git",
+    "directory": "packages/auth"
+  },
+  "keywords": ["grackle", "auth", "oauth", "pairing", "security"],
+  "engines": { "node": ">=22.0.0" },
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist/"],
+  "scripts": {
+    "build": "heft build --clean",
+    "test": "vitest run",
+    "clean": "heft clean",
+    "_phase:build": "heft run --only build -- --clean",
+    "_phase:test": "vitest run"
+  },
+  "dependencies": {
+    "@grackle-ai/common": "workspace:*"
+  },
+  "devDependencies": {
+    "@grackle-ai/heft-rig": "workspace:*",
+    "@rushstack/heft": "1.2.7",
+    "@types/node": "^22.0.0",
+    "vitest": "^3.1.1"
+  }
+}

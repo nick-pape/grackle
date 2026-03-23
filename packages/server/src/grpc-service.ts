@@ -46,11 +46,10 @@ import { resolvePersona } from "./resolve-persona.js";
 import { fetchOrchestratorContext } from "./orchestrator-context.js";
 import * as settingsStore from "./settings-store.js";
 import { isAllowedSettingKey } from "./settings-store.js";
-import { createScopedToken } from "@grackle-ai/mcp";
+import { createScopedToken, loadOrCreateApiKey, generatePairingCode } from "@grackle-ai/auth";
 import { grackleHome } from "./paths.js";
 import { safeParseJsonArray } from "./json-helpers.js";
 import { computeTaskStatus } from "./compute-task-status.js";
-import { loadOrCreateApiKey } from "./api-key.js";
 import { logger } from "./logger.js";
 import { reanimateAgent } from "./reanimate-agent.js";
 import { getKnowledgeEmbedder, isKnowledgeEnabled } from "./knowledge-init.js";
@@ -73,7 +72,6 @@ import { formatGhError } from "./utils/format-gh-error.js";
 import { slugify } from "./utils/slugify.js";
 import { SystemPromptBuilder, buildTaskPrompt } from "./system-prompt-builder.js";
 import { importGitHubIssues as executeGitHubImport } from "./github-import.js";
-import { generatePairingCode } from "./pairing.js";
 import { detectLanIp } from "./utils/network.js";
 import * as credentialProviders from "./credential-providers.js";
 import * as streamRegistry from "./stream-registry.js";
@@ -621,7 +619,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       const mcpUrl = `http://${mcpDialHost}:${mcpPort}/mcp`;
       const mcpToken = createScopedToken(
         { sub: sessionId, pid: "", per: resolved.personaId, sid: sessionId },
-        loadOrCreateApiKey(),
+        loadOrCreateApiKey(grackleHome),
       );
 
       const powerlineReq = create(powerline.SpawnRequestSchema, {
@@ -1476,7 +1474,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       const taskMcpUrl = `http://${taskMcpDialHost}:${taskMcpPort}/mcp`;
       const taskMcpToken = createScopedToken(
         { sub: task.id, pid: task.workspaceId || "", per: resolved.personaId, sid: sessionId },
-        loadOrCreateApiKey(),
+        loadOrCreateApiKey(grackleHome),
       );
 
       const powerlineReq = create(powerline.SpawnRequestSchema, {

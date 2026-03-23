@@ -13,6 +13,14 @@ import type { Message } from '@bufbuild/protobuf';
 import { SpawnOptions } from 'node:child_process';
 
 // @public
+export interface AdapterDependencies {
+    exec?: ExecFunction;
+    isGitHubProviderEnabled?: () => boolean;
+    logger?: AdapterLogger;
+    sleep?: (ms: number) => Promise<void>;
+}
+
+// @public
 export interface AdapterLogger {
     // (undocumented)
     debug(obj: object, msg: string): void;
@@ -114,6 +122,28 @@ type EnvironmentInfo = Message<"grackle.powerline.EnvironmentInfo"> & {
 
 // @public
 const EnvironmentInfoSchema: GenMessage<EnvironmentInfo>;
+
+// @public
+export function exec(cmd: string, args: string[], opts?: {
+    timeout?: number;
+    cwd?: string;
+    env?: NodeJS.ProcessEnv;
+}): Promise<ExecResult>;
+
+// @public
+export type ExecFunction = (cmd: string, args: string[], opts?: {
+    timeout?: number;
+    cwd?: string;
+    env?: NodeJS.ProcessEnv;
+}) => Promise<ExecResult>;
+
+// @public
+export interface ExecResult {
+    // (undocumented)
+    stderr: string;
+    // (undocumented)
+    stdout: string;
+}
 
 // @public
 const file_grackle_powerline_powerline: GenFile;

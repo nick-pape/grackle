@@ -10,10 +10,10 @@ import { initSigchldSubscriber } from "./signals/sigchld.js";
 import { initLifecycleManager } from "./lifecycle.js";
 import { parseAdapterConfig } from "./adapter-config.js";
 import { emit, subscribe } from "./event-bus.js";
-import { DockerAdapter } from "./adapters/docker.js";
-import { LocalAdapter } from "./adapters/local.js";
-import { SshAdapter } from "./adapters/ssh.js";
-import { CodespaceAdapter } from "./adapters/codespace.js";
+import { DockerAdapter } from "@grackle-ai/adapter-docker";
+import { LocalAdapter } from "@grackle-ai/adapter-local";
+import { SshAdapter } from "@grackle-ai/adapter-ssh";
+import { CodespaceAdapter } from "@grackle-ai/adapter-codespace";
 import { closeAllTunnels, reconnectOrProvision } from "@grackle-ai/adapter-sdk";
 import { createWsBridge, startTaskSession } from "./ws-bridge.js";
 import { DEFAULT_SERVER_PORT, DEFAULT_WEB_PORT, DEFAULT_MCP_PORT, DEFAULT_POWERLINE_PORT, ROOT_TASK_ID, DEFAULT_WORKSPACE_ID, TASK_STATUS } from "@grackle-ai/common";
@@ -30,23 +30,25 @@ import { isKnowledgeEnabled, initKnowledge } from "./knowledge-init.js";
 import { readFileSync, existsSync } from "node:fs";
 import { join, dirname, extname, normalize, resolve, relative } from "node:path";
 import { createRequire } from "node:module";
-import { loadOrCreateApiKey, verifyApiKey } from "./api-key.js";
-import { setSecurityHeaders } from "./security-headers.js";
-import { createSession, validateSessionCookie } from "./session.js";
-import { startSessionCleanup, stopSessionCleanup } from "./session.js";
-import { generatePairingCode, redeemPairingCode, startPairingCleanup, stopPairingCleanup } from "./pairing.js";
 import {
+  loadOrCreateApiKey, verifyApiKey,
+  setSecurityHeaders, setAuthLogger,
+  createSession, validateSessionCookie,
+  startSessionCleanup, stopSessionCleanup,
+  generatePairingCode, redeemPairingCode, startPairingCleanup, stopPairingCleanup,
   registerClient, getClient,
   createAuthorizationCode, consumeAuthorizationCode,
   createRefreshToken, consumeRefreshToken,
   startOAuthCleanup, stopOAuthCleanup,
-} from "./oauth.js";
-import { createOAuthAccessToken, OAUTH_ACCESS_TOKEN_TTL_MS } from "@grackle-ai/mcp";
+  createOAuthAccessToken, OAUTH_ACCESS_TOKEN_TTL_MS,
+} from "@grackle-ai/auth";
 import { logger } from "./logger.js";
 import { exec } from "./utils/exec.js";
 import { detectLanIp } from "./utils/network.js";
 import { openDatabase, initDatabase, sqlite } from "./db.js";
+import { grackleHome } from "./paths.js";
 import { seedDatabase } from "./db-seed.js";
+import { getCredentialProviders } from "./credential-providers.js";
 
 const MIME_TYPES: Record<string, string> = {
   ".html": "text/html",
@@ -667,14 +669,22 @@ async function main(): Promise<void> {
   // Reset all environment statuses on startup — in-memory connections are lost
   resetAllStatuses();
 
-  // Load (or generate) the API key on startup
-  const apiKey = loadOrCreateApiKey();
+  // Configure auth logger to use the server's pino instance
+  setAuthLogger(logger);
 
-  // Register adapters
-  registerAdapter(new DockerAdapter());
+  // Load (or generate) the API key on startup
+  const apiKey = loadOrCreateApiKey(grackleHome);
+
+  // Register adapters with server dependencies injected
+  const adapterDeps = {
+    exec,
+    logger,
+    isGitHubProviderEnabled: (): boolean => getCredentialProviders().github !== "off",
+  };
+  registerAdapter(new DockerAdapter(adapterDeps));
   registerAdapter(new LocalAdapter());
-  registerAdapter(new SshAdapter());
-  registerAdapter(new CodespaceAdapter());
+  registerAdapter(new SshAdapter(adapterDeps));
+  registerAdapter(new CodespaceAdapter(adapterDeps));
 
   // --- Auto-start local PowerLine ---
   const skipLocalPowerLine = process.env.GRACKLE_SKIP_LOCAL_POWERLINE === "1";

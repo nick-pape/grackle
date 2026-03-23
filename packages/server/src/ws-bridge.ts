@@ -32,8 +32,7 @@ import { setWssInstance } from "./ws-broadcast.js";
 import { emit } from "./event-bus.js";
 import { recoverSuspendedSessions } from "./session-recovery.js";
 import { buildMcpServersJson, toDialableHost } from "./grpc-service.js";
-import { createScopedToken } from "@grackle-ai/mcp";
-import { loadOrCreateApiKey } from "./api-key.js";
+import { createScopedToken, loadOrCreateApiKey } from "@grackle-ai/auth";
 
 const WS_PING_INTERVAL_MS: number = 30_000;
 const WS_CLOSE_UNAUTHORIZED: number = 4001;
@@ -392,7 +391,7 @@ export async function startTaskSession(
   const mcpUrl = `http://${mcpDialHost}:${mcpPort}/mcp`;
   const mcpToken = createScopedToken(
     { sub: freshTask.id, pid: freshTask.workspaceId || "", per: resolved.personaId, sid: sessionId },
-    loadOrCreateApiKey(),
+    loadOrCreateApiKey(grackleHome),
   );
 
   const useWorktrees = workspace?.useWorktrees ?? false;

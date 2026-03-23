@@ -16,10 +16,9 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import pino, { type Logger } from "pino";
 import { z } from "zod";
-import type { AuthContext } from "./auth-context.js";
-import { authenticateMcpRequest } from "./auth-middleware.js";
+import type { AuthContext } from "@grackle-ai/auth";
+import { authenticateMcpRequest, pruneRevocations } from "@grackle-ai/auth";
 import { grpcErrorToToolResult } from "./error-handler.js";
-import { pruneRevocations } from "./scoped-token.js";
 import { createToolRegistry } from "./tools/index.js";
 import { resolveToolForAuth, listToolsForAuth } from "./tool-scoping.js";
 
