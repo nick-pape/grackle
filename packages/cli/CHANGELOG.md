@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Mon, 23 Mar 2026 13:34:53 GMT and should not be manually modified.
+This log was last generated on Mon, 23 Mar 2026 15:03:48 GMT and should not be manually modified.
+
+## 0.72.3
+Mon, 23 Mar 2026 15:03:48 GMT
+
+### Patches
+
+- Extract auth/security primitives into standalone @grackle-ai/auth package (api-key, sessions, pairing, OAuth, tokens, MCP auth middleware)
 
 ## 0.72.2
 Mon, 23 Mar 2026 13:34:53 GMT
