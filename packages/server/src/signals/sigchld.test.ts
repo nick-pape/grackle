@@ -2,8 +2,9 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 
 // ── Mock dependencies ────────────────────────────────────────
 
-vi.mock("../db.js", async () => {
-  return await import("../test-db.js");
+vi.mock("@grackle-ai/database", async () => {
+  const { createDatabaseMock } = await import("../test-utils/mock-database.js");
+  return createDatabaseMock();
 });
 
 vi.mock("../logger.js", () => ({
@@ -52,15 +53,6 @@ vi.mock("../event-bus.js", () => {
   };
 });
 
-vi.mock("../env-registry.js", () => ({
-  listEnvironments: vi.fn(() => []),
-  getEnvironment: vi.fn(() => ({ adapterType: "local" })),
-  addEnvironment: vi.fn(),
-  removeEnvironment: vi.fn(),
-  updateEnvironmentStatus: vi.fn(),
-  markBootstrapped: vi.fn(),
-}));
-
 vi.mock("../reanimate-agent.js", () => ({
   reanimateAgent: vi.fn(),
 }));
@@ -69,8 +61,7 @@ vi.mock("./signal-delivery.js", () => ({
   deliverSignalToTask: vi.fn().mockResolvedValue(true),
 }));
 
-import * as taskStore from "../task-store.js";
-import * as sessionStore from "../session-store.js";
+import { taskStore, sessionStore } from "@grackle-ai/database";
 import { readLog } from "../log-writer.js";
 import { deliverSignalToTask } from "./signal-delivery.js";
 import { initSigchldSubscriber, _resetForTesting } from "./sigchld.js";

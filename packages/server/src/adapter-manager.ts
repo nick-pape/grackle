@@ -1,5 +1,5 @@
 import type { EnvironmentAdapter, PowerLineConnection } from "@grackle-ai/adapter-sdk";
-import * as envRegistry from "./env-registry.js";
+import { envRegistry } from "@grackle-ai/database";
 import { logger } from "./logger.js";
 
 const HEARTBEAT_INTERVAL_MS: number = 30_000;

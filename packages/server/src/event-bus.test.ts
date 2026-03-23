@@ -1,16 +1,15 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
 // ── Mock dependencies before importing ──────────────
-vi.mock("./db.js", async () => {
-  return await import("./test-db.js");
-});
-
 vi.mock("./logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
 
+import { openDatabase, initDatabase, sqlite as _sqlite } from "@grackle-ai/database";
+openDatabase(":memory:");
+initDatabase();
+const sqlite = _sqlite!;
 import { emit, subscribe, _resetForTesting, type GrackleEvent } from "./event-bus.js";
-import { sqlite } from "./test-db.js";
 
 /** Apply the minimal schema needed for event-bus tests. */
 function applySchema(): void {

@@ -1,6 +1,6 @@
 {
   "name": "@grackle-ai/server",
-  "version": "0.72.3",
+  "version": "0.72.6",
   "description": "Central gRPC server with SQLite storage and WebSocket bridge for Grackle",
   "license": "MIT",
   "repository": {
@@ -33,6 +33,7 @@
     "@grackle-ai/auth": "workspace:*",
     "@grackle-ai/adapter-ssh": "workspace:*",
     "@grackle-ai/common": "workspace:*",
+    "@grackle-ai/database": "workspace:*",
     "@grackle-ai/knowledge": "workspace:*",
     "@grackle-ai/powerline": "workspace:*",
     "@grackle-ai/mcp": "workspace:*",

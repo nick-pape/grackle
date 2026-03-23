@@ -1,10 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
-// ── Mock ./db.js to use our in-memory test database ──────────────
-vi.mock("./db.js", async () => {
-  return await import("./test-db.js");
-});
-
 // ── Mock ws-broadcast to avoid WebSocket dependency in tests ─────
 vi.mock("./event-bus.js", () => ({
   emit: vi.fn(),
@@ -26,6 +21,10 @@ vi.mock("node:child_process", () => ({
 }));
 
 // Import modules AFTER mocks are set up
+import { openDatabase, initDatabase, sqlite as _sqlite, taskStore, workspaceStore } from "@grackle-ai/database";
+openDatabase(":memory:");
+initDatabase();
+const sqlite = _sqlite!;
 import {
   topologicalSortIssues,
   fetchGitHubIssues,
@@ -41,9 +40,6 @@ import type {
   ImportLock,
   GitHubClient,
 } from "./github-import.js";
-import * as taskStore from "./task-store.js";
-import * as workspaceStore from "./workspace-store.js";
-import { sqlite } from "./test-db.js";
 import { emit } from "./event-bus.js";
 
 /** Helper to build a minimal issue-like object for topological sort tests. */

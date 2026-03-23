@@ -364,7 +364,7 @@ export function WorkspacePage(): JSX.Element {
         <WorkspaceBoard workspaceId={workspaceId!} environmentId={environmentId} />
       )}
       {workspaceTab === "graph" && (
-        <DagView workspaceId={workspaceId!} environmentId={environmentId} />
+        <DagView workspaceId={workspaceId!} environmentId={environmentId} tasks={tasks} />
       )}
 
       {/* Archive confirmation dialog */}

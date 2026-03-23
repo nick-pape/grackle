@@ -409,9 +409,14 @@ export async function* bootstrapPowerLine(
     // Resolve local artifact paths relative to adapter-sdk's built location.
     // import.meta.dirname = packages/adapter-sdk/dist → up 2 levels → packages/
     const sdkDistDir = resolve(import.meta.dirname);
-    const commonPackageDir = resolve(sdkDistDir, "../../common");
     const powerlinePackageDir = resolve(sdkDistDir, "../../powerline");
-    const mcpPackageDir = resolve(sdkDistDir, "../../mcp");
+
+    /** Workspace packages that PowerLine needs at runtime (besides powerline itself). */
+    const workspacePackages: Array<[string, string]> = [
+      ["common", resolve(sdkDistDir, "../../common")],
+      ["mcp", resolve(sdkDistDir, "../../mcp")],
+      ["auth", resolve(sdkDistDir, "../../auth")],
+    ];
 
     yield { stage: "bootstrapping", message: "Copying PowerLine artifacts...", progress: 0.25 };
     await executor.copyTo(
@@ -423,9 +428,9 @@ export async function* bootstrapPowerLine(
       `${REMOTE_POWERLINE_DIRECTORY}/package.json`,
     );
 
-    // Collect non-workspace deps from @grackle-ai/common and @grackle-ai/mcp
+    // Collect non-workspace deps from all workspace packages
     const extraDeps: Record<string, string> = {};
-    for (const dir of [commonPackageDir, mcpPackageDir]) {
+    for (const [, dir] of workspacePackages) {
       const pkg = JSON.parse(readFileSync(join(dir, "package.json"), "utf8")) as { dependencies?: Record<string, string> };
       for (const [k, v] of Object.entries(pkg.dependencies || {})) {
         if (!k.startsWith("@grackle-ai/")) {
@@ -452,7 +457,7 @@ export async function* bootstrapPowerLine(
     );
 
     // Copy @grackle-ai/* packages AFTER all npm installs (npm wipes unmanaged dirs)
-    for (const [name, dir] of [["common", commonPackageDir], ["mcp", mcpPackageDir]] as const) {
+    for (const [name, dir] of workspacePackages) {
       const remotePkgDir = `${REMOTE_POWERLINE_DIRECTORY}/node_modules/@grackle-ai/${name}`;
       yield { stage: "bootstrapping", message: `Copying @grackle-ai/${name}...`, progress: name === "common" ? 0.57 : 0.59 };
       await executor.exec(`mkdir -p ${remotePkgDir}`, { timeout: REMOTE_EXEC_DEFAULT_TIMEOUT_MS });

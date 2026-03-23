@@ -7,10 +7,6 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 
 // ── Mock dependencies before importing ──────────────────────
 
-vi.mock("./db.js", async () => {
-  return await import("./test-db.js");
-});
-
 vi.mock("./logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
@@ -53,8 +49,10 @@ vi.mock("./reanimate-agent.js", () => ({
 
 // ── Imports (after mocks) ───────────────────────────────────
 
-import { sqlite } from "./test-db.js";
-import * as envRegistry from "./env-registry.js";
+import { openDatabase, initDatabase, sqlite as _sqlite, envRegistry } from "@grackle-ai/database";
+openDatabase(":memory:");
+initDatabase();
+const sqlite = _sqlite!;
 import * as adapterManager from "./adapter-manager.js";
 import * as tokenPush from "./token-push.js";
 import { recoverSuspendedSessions } from "./session-recovery.js";

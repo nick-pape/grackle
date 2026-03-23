@@ -11,7 +11,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { create } from "@bufbuild/protobuf";
 import { powerline, type RuntimeName } from "@grackle-ai/common";
-import { getCredentialProviders, type CredentialProviderConfig, type DatabaseInstance } from "./credential-providers.js";
+import { credentialProviders, type CredentialProviderConfig, type DatabaseInstance } from "@grackle-ai/database";
 
 /** Maps each runtime to the credential providers it needs. */
 const RUNTIME_PROVIDERS: Record<string, (keyof CredentialProviderConfig)[]> = {
@@ -35,7 +35,7 @@ const RUNTIME_PROVIDERS: Record<string, (keyof CredentialProviderConfig)[]> = {
  * Reads values fresh from `process.env` or disk at call time.
  */
 export function buildProviderTokenBundle(runtime?: string, database?: DatabaseInstance): powerline.TokenBundle {
-  const config = getCredentialProviders(database);
+  const config = credentialProviders.getCredentialProviders(database);
   // When runtime is given, look it up in the map. Unknown runtimes get [] (empty, not all providers).
   const runtimeProviders = runtime !== undefined
     ? (Object.hasOwn(RUNTIME_PROVIDERS, runtime) ? RUNTIME_PROVIDERS[runtime as RuntimeName] : [])

@@ -54,13 +54,13 @@ vi.mock("./event-bus.js", () => ({
   subscribe: mockSubscribe,
 }));
 
-vi.mock("./task-store.js", () => ({
-  getTask: mockGetTask,
-}));
-
-vi.mock("./finding-store.js", () => ({
-  queryFindings: mockQueryFindings,
-}));
+vi.mock("@grackle-ai/database", async () => {
+  const { createDatabaseMock } = await import("./test-utils/mock-database.js");
+  const mock = createDatabaseMock();
+  mock.taskStore.getTask = mockGetTask;
+  mock.findingStore.queryFindings = mockQueryFindings;
+  return mock;
+});
 
 vi.mock("./logger.js", () => ({
   logger: {

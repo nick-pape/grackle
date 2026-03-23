@@ -1,6 +1,27 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Mon, 23 Mar 2026 15:03:48 GMT and should not be manually modified.
+This log was last generated on Mon, 23 Mar 2026 18:28:31 GMT and should not be manually modified.
+
+## 0.72.6
+Mon, 23 Mar 2026 18:28:31 GMT
+
+### Patches
+
+- Decouple FindingsPanel, DagView, and TokensPanel from useGrackle() hook
+
+## 0.72.5
+Mon, 23 Mar 2026 18:09:06 GMT
+
+### Patches
+
+- Fix dev mode bootstrap to include @grackle-ai/auth package on remote hosts, fixing codespace provisioning
+
+## 0.72.4
+Mon, 23 Mar 2026 17:24:08 GMT
+
+### Patches
+
+- Fix session recovery race condition that caused flaky E2E failures when an environment acquired a new active session during the async drain window
 
 ## 0.72.3
 Mon, 23 Mar 2026 15:03:48 GMT

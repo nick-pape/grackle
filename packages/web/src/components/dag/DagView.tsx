@@ -9,8 +9,8 @@ import {
   type Node,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { useGrackle } from "../../context/GrackleContext.js";
 import { useThemeContext } from "../../context/ThemeContext.js";
+import type { TaskData } from "../../hooks/types.js";
 import { useDagLayout, type TaskNodeData } from "./useDagLayout.js";
 import { TaskNode } from "./TaskNode.js";
 import { taskUrl, newTaskUrl, useAppNavigate } from "../../utils/navigation.js";
@@ -21,6 +21,8 @@ import styles from "./DagView.module.scss";
 interface Props {
   workspaceId: string;
   environmentId: string;
+  /** All tasks — filtered internally by workspaceId. */
+  tasks: TaskData[];
 }
 
 /** CSS variable mapping for MiniMap node coloring by task status. */
@@ -32,8 +34,7 @@ const nodeTypes: NodeTypes = {
 };
 
 /** Interactive DAG visualization of task hierarchy and dependency relationships. */
-export function DagView({ workspaceId, environmentId }: Props): JSX.Element {
-  const { tasks } = useGrackle();
+export function DagView({ workspaceId, environmentId, tasks }: Props): JSX.Element {
   const navigate = useAppNavigate();
   const { resolvedThemeId } = useThemeContext();
 
