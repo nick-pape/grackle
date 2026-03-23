@@ -1,5 +1,5 @@
 import { randomUUID, randomBytes, createHash } from "node:crypto";
-import { logger } from "./logger.js";
+import { getAuthLogger } from "./auth-logger.js";
 
 /** Time-to-live for authorization codes: 30 seconds. */
 const AUTH_CODE_TTL_MS: number = 30 * 1000;
@@ -48,7 +48,7 @@ export function registerClient(redirectUris: string[], clientName?: string): Cli
   }
 
   if (clients.size >= MAX_CLIENTS) {
-    logger.warn("Maximum registered OAuth clients reached (%d)", MAX_CLIENTS);
+    getAuthLogger().warn({}, "Maximum registered OAuth clients reached (%d)");
     return undefined;
   }
 
@@ -60,7 +60,7 @@ export function registerClient(redirectUris: string[], clientName?: string): Cli
     createdAt: now,
   };
   clients.set(clientId, record);
-  logger.info({ clientId, clientName: record.clientName }, "OAuth client registered");
+  getAuthLogger().info({ clientId, clientName: record.clientName }, "OAuth client registered");
   return record;
 }
 
@@ -116,7 +116,7 @@ export function createAuthorizationCode(
     expiresAt: now + AUTH_CODE_TTL_MS,
   };
   authCodes.set(code, record);
-  logger.info({ clientId }, "Authorization code created");
+  getAuthLogger().info({ clientId }, "Authorization code created");
   return code;
 }
 

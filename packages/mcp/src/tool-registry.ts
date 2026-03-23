@@ -1,7 +1,7 @@
 import type { Client } from "@connectrpc/connect";
 import type { grackle } from "@grackle-ai/common";
 import type { ZodType } from "zod";
-import type { AuthContext } from "./auth-context.js";
+import type { AuthContext } from "@grackle-ai/auth";
 
 /** Content item returned by an MCP tool handler. */
 export interface ToolContent {

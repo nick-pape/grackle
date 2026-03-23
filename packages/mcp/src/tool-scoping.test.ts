@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { z } from "zod";
 import { ToolRegistry } from "./tool-registry.js";
 import type { ToolDefinition } from "./tool-registry.js";
-import type { AuthContext } from "./auth-context.js";
+import type { AuthContext } from "@grackle-ai/auth";
 import {
   SCOPED_TOOLS,
   resolveToolForAuth,
