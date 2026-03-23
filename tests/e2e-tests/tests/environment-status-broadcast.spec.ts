@@ -133,13 +133,7 @@ test.describe("Environment Status Broadcast + Toasts", { tag: ["@environment"] }
     await expect(page.getByText("1/1 env")).toBeVisible({ timeout: 5_000 });
   });
 
-  // This test injected fake WS "environments" data with status "error" to trigger
-  // the "provision failed" toast. After the ConnectRPC migration (#786), environment
-  // state comes from the ListEnvironments RPC, not WS messages. The hooks no longer
-  // handle the "environments" WS message type, so injection doesn't update state.
-  // Rewrite needed: either use a server-side mock to return an error environment,
-  // or test the provision error path through the ProvisionEnvironment RPC.
-  test("injected error status shows provision failed toast @skip-reason:connectrpc-migration", async ({ page }) => {
-    test.skip(true, "Incompatible with ConnectRPC migration — environment state now comes from RPC, not WS injection");
-  });
+  // TODO(#786): Removed — this test injected fake WS "environments" data with
+  // status "error" which the ConnectRPC-migrated hooks no longer handle.
+  // Rewrite needed: test provision error path via ProvisionEnvironment RPC.
 });
