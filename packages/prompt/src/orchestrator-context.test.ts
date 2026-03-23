@@ -3,13 +3,13 @@
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-vi.mock("@grackle-ai/database", async () => {
-  const { createDatabaseMock } = await import("./test-utils/mock-database.js");
-  return createDatabaseMock();
-});
-
-vi.mock("./logger.js", () => ({
-  logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
+vi.mock("@grackle-ai/database", () => ({
+  taskStore: { listTasks: vi.fn(() => []) },
+  personaStore: { listPersonas: vi.fn(() => []) },
+  envRegistry: { listEnvironments: vi.fn(() => []) },
+  workspaceStore: { getWorkspace: vi.fn(() => undefined) },
+  findingStore: { queryFindings: vi.fn(() => []) },
+  safeParseJsonArray: (s: string) => { try { return JSON.parse(s); } catch { return []; } },
 }));
 
 import { fetchOrchestratorContext } from "./orchestrator-context.js";
