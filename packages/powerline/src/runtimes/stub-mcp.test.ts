@@ -122,8 +122,9 @@ describe("StubMcpRuntime", () => {
     expect(session.status).toBe("stopped");
 
     const statusEvents = events.filter((e) => e.type === "status");
-    expect(statusEvents).toHaveLength(1);
+    expect(statusEvents).toHaveLength(2);
     expect(statusEvents[0].content).toBe("waiting_input");
+    expect(statusEvents[1].content).toBe("killed");
   });
 
   it("sendInput('fail') triggers failure status", async () => {

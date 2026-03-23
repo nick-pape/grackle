@@ -174,10 +174,11 @@ describe("StubRuntime", () => {
     await streamDone;
     expect(session.status).toBe("stopped");
 
-    // Should not have any events after waiting_input
+    // Should have waiting_input followed by killed
     const statusEvents = events.filter((e) => e.type === "status");
-    expect(statusEvents).toHaveLength(1);
+    expect(statusEvents).toHaveLength(2);
     expect(statusEvents[0].content).toBe("waiting_input");
+    expect(statusEvents[1].content).toBe("killed");
   });
 
   it("emits runtime_session_id event early in the stream", async () => {

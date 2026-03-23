@@ -23,7 +23,7 @@ const MAX_LAST_MESSAGE_LENGTH: number = 4000;
 /** Human-readable status labels keyed by runtime event content strings. */
 const STATUS_LABELS: Record<string, string> = {
   completed: "completed",
-  killed: "was interrupted",
+  killed: "was killed",
   failed: "failed",
 };
 

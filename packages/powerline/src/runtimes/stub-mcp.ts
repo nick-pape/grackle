@@ -77,6 +77,7 @@ class StubMcpSession implements AgentSession {
     }
 
     if (this.killed as boolean) {
+      yield { type: "status", timestamp: ts(), content: "killed" };
       return;
     }
 
@@ -85,11 +86,13 @@ class StubMcpSession implements AgentSession {
     yield { type: "status", timestamp: ts(), content: "waiting_input" };
 
     if (this.killed as boolean) {
+      yield { type: "status", timestamp: ts(), content: "killed" };
       return;
     }
 
     const input = await this.waitForInput();
     if (this.killed) {
+      yield { type: "status", timestamp: ts(), content: "killed" };
       return;
     }
 

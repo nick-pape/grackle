@@ -545,7 +545,7 @@ async function handleMessage(
             inputTokens: r.inputTokens,
             outputTokens: r.outputTokens,
             costUsd: r.costUsd,
-            endReason: r.endReason ?? "",
+            endReason: r.endReason || undefined,
           })),
         },
       });
@@ -1521,7 +1521,7 @@ async function handleMessage(
             inputTokens: r.inputTokens,
             outputTokens: r.outputTokens,
             costUsd: r.costUsd,
-            endReason: r.endReason ?? "",
+            endReason: r.endReason || undefined,
           })),
         },
       });
