@@ -1,6 +1,6 @@
 import type { JSX } from "react";
-import { useGrackle } from "../../context/GrackleContext.js";
 import { motion } from "motion/react";
+import type { FindingData } from "../../hooks/types.js";
 import styles from "./FindingsPanel.module.scss";
 import { formatRelativeTime } from "../../utils/time.js";
 
@@ -17,16 +17,13 @@ const CATEGORY_COLORS: Record<string, { text: string; bg: string }> = {
 
 /** Props for the FindingsPanel component. */
 interface Props {
-  workspaceId: string;
+  /** Pre-filtered findings to display. */
+  findings: FindingData[];
 }
 
 /** Displays workspace findings as styled cards with staggered entrance animation. */
-export function FindingsPanel({ workspaceId }: Props): JSX.Element {
-  const { findings } = useGrackle();
-
-  const workspaceFindings = findings.filter((f) => f.workspaceId === workspaceId);
-
-  if (workspaceFindings.length === 0) {
+export function FindingsPanel({ findings }: Props): JSX.Element {
+  if (findings.length === 0) {
     return (
       <div className={styles.emptyState}>
         No findings yet. Agents will post discoveries here.
@@ -36,7 +33,7 @@ export function FindingsPanel({ workspaceId }: Props): JSX.Element {
 
   return (
     <div className={styles.container}>
-      {workspaceFindings.map((f, index) => {
+      {findings.map((f, index) => {
         // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- category may not be in the map
         const categoryColor = CATEGORY_COLORS[f.category] || CATEGORY_COLORS.general;
         return (

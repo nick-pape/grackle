@@ -1,6 +1,6 @@
 import { useState, type JSX, type FormEvent } from "react";
-import { useGrackle } from "../../context/GrackleContext.js";
 import { useToast } from "../../context/ToastContext.js";
+import type { TokenInfo } from "../../hooks/types.js";
 import { ConfirmDialog } from "../display/index.js";
 import styles from "./SettingsPanel.module.scss";
 
@@ -10,9 +10,18 @@ const TOKEN_TYPES: Array<{ value: string; label: string }> = [
   { value: "file", label: "File" },
 ];
 
+/** Props for the TokensPanel component. */
+interface TokensPanelProps {
+  /** List of stored token metadata. */
+  tokens: TokenInfo[];
+  /** Stores or updates a token. */
+  onSetToken: (name: string, value: string, tokenType: string, envVar: string, filePath: string) => void;
+  /** Deletes a token by name. */
+  onDeleteToken: (name: string) => void;
+}
+
 /** Token management panel with list, add form, and delete confirmation. */
-export function TokensPanel(): JSX.Element {
-  const { tokens, setToken, deleteToken } = useGrackle();
+export function TokensPanel({ tokens, onSetToken, onDeleteToken }: TokensPanelProps): JSX.Element {
   const { showToast } = useToast();
 
   const [name, setName] = useState("");
@@ -28,7 +37,7 @@ export function TokensPanel(): JSX.Element {
     }
     const envVar = tokenType === "env_var" ? (target || name.toUpperCase() + "_TOKEN") : "";
     const filePath = tokenType === "file" ? target : "";
-    setToken(name, value, tokenType, envVar, filePath);
+    onSetToken(name, value, tokenType, envVar, filePath);
     showToast("Token saved successfully", "success");
     setName("");
     setValue("");
@@ -41,7 +50,7 @@ export function TokensPanel(): JSX.Element {
 
   const handleConfirmDelete = (): void => {
     if (confirmDeleteToken) {
-      deleteToken(confirmDeleteToken);
+      onDeleteToken(confirmDeleteToken);
       showToast("Token deleted", "info");
     }
     setConfirmDeleteToken(null);
