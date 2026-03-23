@@ -1,7 +1,7 @@
-import { useState, type JSX } from "react";
+import { type JSX } from "react";
 import { useGrackle } from "../context/GrackleContext.js";
-import { Spinner } from "../components/display/index.js";
 import { DashboardPage } from "./DashboardPage.js";
+import { NEW_WORKSPACE_URL, useAppNavigate } from "../utils/navigation.js";
 import styles from "../components/panels/SessionPanel.module.scss";
 
 /** Empty page shown at /tasks when no task is selected. */
@@ -24,19 +24,10 @@ export function EnvironmentsEmptyPage(): JSX.Element {
 
 /** Home page — shows the operations dashboard when workspaces exist, or the welcome CTA for first-time users. */
 export function EmptyPage(): JSX.Element {
-  const { workspaces, environments, createWorkspace, workspaceCreating } = useGrackle();
-  const [showCreateForm, setShowCreateForm] = useState(false);
-  const [newWorkspaceName, setNewWorkspaceName] = useState("");
+  const { workspaces, environments } = useGrackle();
+  const navigate = useAppNavigate();
 
   const hasEnvironments = environments.length > 0;
-
-  /** Submit the inline create form. */
-  const handleCreateWorkspace = (): void => {
-    if (!newWorkspaceName.trim() || workspaceCreating || !hasEnvironments) {
-      return;
-    }
-    createWorkspace(newWorkspaceName.trim(), undefined, undefined, environments[0].id);
-  };
 
   // Show dashboard when workspaces exist
   if (workspaces.length > 0) {
@@ -50,49 +41,14 @@ export function EmptyPage(): JSX.Element {
       <div className={styles.ctaDescription}>
         Organize your work into workspaces and let agents tackle the tasks.
       </div>
-      {showCreateForm ? (
-        <div className={styles.ctaCreateForm}>
-          <input
-            type="text"
-            value={newWorkspaceName}
-            onChange={(e) => setNewWorkspaceName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                handleCreateWorkspace();
-              } else if (e.key === "Escape") {
-                setShowCreateForm(false);
-                setNewWorkspaceName("");
-              }
-            }}
-            placeholder="Workspace name..."
-            aria-label="Workspace name"
-            autoFocus
-            disabled={workspaceCreating}
-            className={styles.ctaCreateInput}
-            data-testid="welcome-create-input"
-          />
-          <button
-            onClick={handleCreateWorkspace}
-            className={styles.ctaCreateOk}
-            disabled={workspaceCreating}
-            aria-label={workspaceCreating ? "Creating workspace" : undefined}
-            data-testid="welcome-create-ok"
-          >
-            {workspaceCreating
-              ? <Spinner size="sm" label="Creating workspace" />
-              : "OK"}
-          </button>
-        </div>
-      ) : (
-        <button
-          className={styles.ctaButton}
-          onClick={() => setShowCreateForm(true)}
-          disabled={workspaceCreating || !hasEnvironments}
-          data-testid="welcome-create-button"
-        >
-          Create Your First Workspace
-        </button>
-      )}
+      <button
+        className={styles.ctaButton}
+        onClick={() => navigate(NEW_WORKSPACE_URL)}
+        disabled={!hasEnvironments}
+        data-testid="welcome-create-button"
+      >
+        Create Your First Workspace
+      </button>
       {!hasEnvironments && (
         <div className={styles.ctaDescription}>
           Add an environment first before creating a workspace.

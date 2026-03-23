@@ -8,6 +8,7 @@
  */
 
 import { useState, useCallback } from "react";
+import { ConnectError } from "@connectrpc/connect";
 import type { Workspace, GrackleEvent } from "./types.js";
 import { grackleClient } from "./useGrackleClient.js";
 import { protoToWorkspace } from "./proto-converters.js";
@@ -27,6 +28,10 @@ export interface UseWorkspacesResult {
     repoUrl?: string,
     environmentId?: string,
     defaultPersonaId?: string,
+    useWorktrees?: boolean,
+    worktreeBasePath?: string,
+    onSuccess?: () => void,
+    onError?: (message: string) => void,
   ) => void;
   /** Archive a workspace by ID. */
   archiveWorkspace: (workspaceId: string) => void;
@@ -91,6 +96,10 @@ export function useWorkspaces(): UseWorkspacesResult {
       repoUrl?: string,
       environmentId?: string,
       defaultPersonaId?: string,
+      useWorktrees?: boolean,
+      worktreeBasePath?: string,
+      onSuccess?: () => void,
+      onError?: (message: string) => void,
     ) => {
       setWorkspaceCreating(true);
       grackleClient.createWorkspace({
@@ -99,9 +108,16 @@ export function useWorkspaces(): UseWorkspacesResult {
         repoUrl: repoUrl || "",
         environmentId: environmentId || "",
         defaultPersonaId: defaultPersonaId || "",
-      }).catch(
+        useWorktrees: useWorktrees ?? true,
+        worktreeBasePath: worktreeBasePath || "",
+      }).then(
+        () => {
+          onSuccess?.();
+        },
         (err) => {
           setWorkspaceCreating(false);
+          const message = err instanceof ConnectError ? err.message : "Failed to create workspace";
+          onError?.(message);
           console.error("[grpc] createWorkspace failed:", err);
         },
       );

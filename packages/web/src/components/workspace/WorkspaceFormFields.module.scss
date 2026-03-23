@@ -1,0 +1,79 @@
+@use '../../styles/mixins' as *;
+
+.formContent {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  max-width: 680px;
+
+  @include mobile {
+    max-width: 100%;
+  }
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.label {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.titleInput {
+  @include input-field;
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  padding: var(--space-sm) var(--space-md);
+  width: 100%;
+}
+
+.descriptionTextarea {
+  @include input-field;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  resize: vertical;
+  min-height: 120px;
+  padding: var(--space-sm) var(--space-md);
+  width: 100%;
+  font-family: var(--font-mono);
+  line-height: 1.5;
+}
+
+.selectField {
+  @include input-field;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  padding: var(--space-xs) var(--space-sm);
+  width: 100%;
+  max-width: 320px;
+  cursor: pointer;
+}
+
+.checkboxRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  cursor: pointer;
+
+  input[type="checkbox"] {
+    accent-color: var(--accent-green);
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+  }
+}
+
+.checkboxLabel {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.fieldError {
+  font-size: var(--font-size-xs);
+  color: var(--accent-red);
+}

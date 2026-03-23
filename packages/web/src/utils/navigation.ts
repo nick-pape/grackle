@@ -143,6 +143,12 @@ export const HOME_URL: string = "/";
 /** URL for the tasks landing page. */
 export const TASKS_URL: string = "/tasks";
 
+/** URL for the workspaces landing page. */
+export const WORKSPACES_URL: string = "/workspaces";
+
+/** URL for the new workspace form. */
+export const NEW_WORKSPACE_URL: string = "/workspaces/new";
+
 /** URL for the knowledge graph explorer page. */
 export const KNOWLEDGE_URL: string = "/knowledge";
 
