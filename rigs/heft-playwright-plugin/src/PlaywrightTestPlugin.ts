@@ -1,4 +1,4 @@
-import { execFileSync } from "child_process";
+import { spawnSync } from "child_process";
 import type {
   HeftConfiguration,
   IHeftTaskPlugin,
@@ -13,17 +13,20 @@ class PlaywrightTestPlugin implements IHeftTaskPlugin {
   public apply(session: IHeftTaskSession, heftConfiguration: HeftConfiguration): void {
     session.hooks.run.tapPromise(PLUGIN_NAME, async (_runOptions: IHeftTaskRunHookOptions) => {
       const buildFolder: string = heftConfiguration.buildFolderPath;
-      // Use @playwright/test's CLI entry point directly to ensure correct exit
-      // code semantics. The base `playwright` package binary at node_modules/.bin
-      // may have different behavior (e.g., exit 1 even when all tests pass).
       const playwrightCliPath: string = require.resolve("@playwright/test/cli", { paths: [buildFolder] });
 
-      session.logger.terminal.writeLine("Running Playwright tests...");
-      execFileSync(process.execPath, [playwrightCliPath, "test"], {
+      session.logger.terminal.writeLine(`Running Playwright tests via ${playwrightCliPath}`);
+      const result = spawnSync(process.execPath, [playwrightCliPath, "test"], {
         cwd: buildFolder,
         stdio: "inherit",
-        shell: false
       });
+      if (result.error) {
+        throw result.error;
+      }
+      session.logger.terminal.writeLine(`Playwright exited with code ${result.status}`);
+      if (result.status !== 0) {
+        throw new Error(`Playwright tests exited with code ${result.status}`);
+      }
       session.logger.terminal.writeLine("Playwright tests completed.");
     });
   }
