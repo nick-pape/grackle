@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "fix: seed default workspace for system task so it can start on the local environment",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
