@@ -39,7 +39,9 @@ function loadMasterKey(): string {
   try {
     chmodSync(keyPath, 0o600);
   } catch { /* Windows may not support this */ }
-  process.stderr.write("Generated new master key for token encryption. Set GRACKLE_MASTER_KEY env var for explicit control.\n");
+  // Informational only — logged to stdout to avoid Rush interpreting stderr as a build warning.
+  // eslint-disable-next-line no-console
+  console.log("Generated new master key for token encryption. Set GRACKLE_MASTER_KEY env var for explicit control.");
 
   return key;
 }
