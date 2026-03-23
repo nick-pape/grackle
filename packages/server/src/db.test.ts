@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import Database from "better-sqlite3";
 import { SYSTEM_PERSONA_ID, ROOT_TASK_ID } from "@grackle-ai/common";
 import { initDatabase } from "./db.js";
+import { seedDatabase } from "./db-seed.js";
 
 /** Expected tables created by initDatabase. */
 const EXPECTED_TABLES: string[] = [
@@ -63,6 +64,7 @@ describe("initDatabase", () => {
     mem.pragma("foreign_keys = ON");
 
     initDatabase(mem);
+    seedDatabase(mem);
 
     const persona = mem
       .prepare("SELECT * FROM personas WHERE id = 'claude-code'")
@@ -78,6 +80,7 @@ describe("initDatabase", () => {
     mem.pragma("foreign_keys = ON");
 
     initDatabase(mem);
+    seedDatabase(mem);
 
     const persona = mem
       .prepare("SELECT * FROM personas WHERE id = ?")
@@ -92,6 +95,7 @@ describe("initDatabase", () => {
     mem.pragma("foreign_keys = ON");
 
     initDatabase(mem);
+    seedDatabase(mem);
 
     const task = mem
       .prepare("SELECT * FROM tasks WHERE id = ?")
@@ -108,6 +112,7 @@ describe("initDatabase", () => {
     mem.pragma("foreign_keys = ON");
 
     initDatabase(mem);
+    seedDatabase(mem);
 
     const setting = mem
       .prepare("SELECT value FROM settings WHERE key = 'onboarding_completed'")
@@ -121,6 +126,7 @@ describe("initDatabase", () => {
     mem.pragma("foreign_keys = ON");
 
     initDatabase(mem);
+    seedDatabase(mem);
 
     const setting = mem
       .prepare("SELECT value FROM settings WHERE key = 'default_persona_id'")

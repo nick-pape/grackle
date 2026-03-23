@@ -23,7 +23,7 @@ import * as envRegistry from "./env-registry.js";
 import * as sessionStore from "./session-store.js";
 import * as workspaceStore from "./workspace-store.js";
 import * as taskStore from "./task-store.js";
-import * as tokenBroker from "./token-broker.js";
+import * as tokenPush from "./token-push.js";
 import { attemptReconnects, resetReconnectState } from "./auto-reconnect.js";
 import { createMcpServer } from "@grackle-ai/mcp";
 import { isKnowledgeEnabled, initKnowledge } from "./knowledge-init.js";
@@ -45,7 +45,8 @@ import { createOAuthAccessToken, OAUTH_ACCESS_TOKEN_TTL_MS } from "@grackle-ai/m
 import { logger } from "./logger.js";
 import { exec } from "./utils/exec.js";
 import { detectLanIp } from "./utils/network.js";
-import { openDatabase, initDatabase } from "./db.js";
+import { openDatabase, initDatabase, sqlite } from "./db.js";
+import { seedDatabase } from "./db-seed.js";
 import { getCredentialProviders } from "./credential-providers.js";
 
 const MIME_TYPES: Record<string, string> = {
@@ -631,7 +632,7 @@ function isWildcardAddress(host: string): boolean {
 let localPowerLineManager: LocalPowerLineManager | undefined;
 
 async function main(): Promise<void> {
-  // Open the database and run migrations before anything else
+  // Open the database, run schema migrations, then seed application defaults
   openDatabase();
   const { migrationErrors } = initDatabase();
   if (migrationErrors.length > 0) {
@@ -641,6 +642,7 @@ async function main(): Promise<void> {
       migrationErrors.length,
     );
   }
+  seedDatabase(sqlite!);
 
   // Reset all environment statuses on startup — in-memory connections are lost
   resetAllStatuses();
@@ -736,7 +738,7 @@ async function main(): Promise<void> {
     adapterManager.setConnection("local", conn);
     // Push env-var tokens only — file tokens would just overwrite local credential
     // files (e.g. ~/.claude/credentials.json) with their own content.
-    await tokenBroker.pushToEnv("local", { excludeFileTokens: true });
+    await tokenPush.pushToEnv("local", { excludeFileTokens: true });
     envRegistry.updateEnvironmentStatus("local", "connected");
     envRegistry.markBootstrapped("local");
     emit("environment.changed", {});

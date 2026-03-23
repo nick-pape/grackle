@@ -56,7 +56,7 @@ vi.mock("./reanimate-agent.js", () => ({
 import { sqlite } from "./test-db.js";
 import * as envRegistry from "./env-registry.js";
 import * as adapterManager from "./adapter-manager.js";
-import * as tokenBroker from "./token-broker.js";
+import * as tokenPush from "./token-push.js";
 import { recoverSuspendedSessions } from "./session-recovery.js";
 import { emit } from "./event-bus.js";
 import { attemptReconnects, clearReconnectState, resetReconnectState, _resetForTesting } from "./auto-reconnect.js";
@@ -115,8 +115,8 @@ describe("auto-reconnect", () => {
     applySchema();
     vi.clearAllMocks();
     _resetForTesting();
-    // Spy on tokenBroker
-    vi.spyOn(tokenBroker, "pushToEnv").mockResolvedValue();
+    // Spy on tokenPush
+    vi.spyOn(tokenPush, "pushToEnv").mockResolvedValue();
   });
 
   it("reconnects a disconnected environment after initial delay", async () => {
@@ -253,7 +253,7 @@ describe("auto-reconnect", () => {
     await attemptReconnects();
     await new Promise((r) => setTimeout(r, 50));
 
-    expect(tokenBroker.pushToEnv).toHaveBeenCalledWith("local-env", { excludeFileTokens: true });
+    expect(tokenPush.pushToEnv).toHaveBeenCalledWith("local-env", { excludeFileTokens: true });
   });
 
   it("concurrent lock prevents overlapping reconnect attempts", async () => {

@@ -46,13 +46,16 @@ vi.mock("./event-bus.js", () => ({
   emit: vi.fn(),
 }));
 
-vi.mock("./token-broker.js", () => ({
-  pushToEnv: vi.fn(),
-  pushProviderCredentialsToEnv: vi.fn(),
-  refreshTokensForTask: vi.fn(),
+vi.mock("./token-store.js", () => ({
   listTokens: vi.fn(() => []),
   setToken: vi.fn(),
   deleteToken: vi.fn(),
+}));
+
+vi.mock("./token-push.js", () => ({
+  pushToEnv: vi.fn(),
+  pushProviderCredentialsToEnv: vi.fn(),
+  refreshTokensForTask: vi.fn(),
 }));
 
 vi.mock("./env-registry.js", () => ({

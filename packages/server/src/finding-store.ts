@@ -66,29 +66,3 @@ export function queryFindings(
   return results;
 }
 
-/** Build a summarized text context of recent findings for a workspace. */
-export function buildFindingsContext(workspaceId: string): string {
-  const allFindings = queryFindings(workspaceId, undefined, undefined, 20);
-  if (allFindings.length === 0) {
-    return "";
-  }
-
-  const lines = ["## Workspace Findings (shared knowledge from other agents)\n"];
-  let totalChars = lines[0].length;
-  const MAX_CHARS = 8000;
-  const MAX_PER_FINDING = 500;
-
-  for (const f of allFindings) {
-    const content = f.content.length > MAX_PER_FINDING
-      ? f.content.slice(0, MAX_PER_FINDING) + "..."
-      : f.content;
-    const entry = `### [${f.category}] ${f.title}\n${content}\n`;
-    if (totalChars + entry.length > MAX_CHARS) {
-      break;
-    }
-    lines.push(entry);
-    totalChars += entry.length;
-  }
-
-  return lines.join("\n");
-}
