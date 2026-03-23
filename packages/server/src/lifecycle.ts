@@ -43,8 +43,29 @@ export function initLifecycleManager(): void {
       return;
     }
 
-    // Don't stop if already in a terminal state
-    if (TERMINAL_SESSION_STATUSES.has(session.status as SessionStatus)) {
+    const alreadyTerminal = TERMINAL_SESSION_STATUSES.has(session.status as SessionStatus);
+
+    // Always kill the PowerLine process (best-effort — may have already exited).
+    // Even if the session is already STOPPED (e.g. killAgent pre-set it), the
+    // process may still be running and needs to be terminated.
+    const conn = adapterManager.getConnection(session.environmentId);
+    if (conn) {
+      // Use the session's endReason if already set (killAgent pre-set it),
+      // otherwise determine from the session's status at time of orphaning.
+      const reason: EndReason = alreadyTerminal
+        ? (session.endReason as EndReason) || END_REASON.KILLED
+        : session.status === SESSION_STATUS.IDLE
+          ? END_REASON.COMPLETED
+          : END_REASON.KILLED;
+      conn.client.kill(
+        create(powerline.KillRequestSchema, { id: sessionId, reason }),
+      ).catch((err: unknown) => {
+        logger.debug({ err, sessionId }, "Lifecycle: PowerLine kill failed (process may have already exited)");
+      });
+    }
+
+    // Skip status change and broadcast if already terminal (killAgent already handled it)
+    if (alreadyTerminal) {
       return;
     }
 
@@ -56,16 +77,6 @@ export function initLifecycleManager(): void {
     logger.info({ sessionId, previousStatus: session.status, reason }, "Session orphaned (no remaining fds) — stopping");
 
     sessionStore.updateSession(sessionId, SESSION_STATUS.STOPPED, undefined, undefined, reason);
-
-    // Kill the PowerLine process (best-effort — may have already exited)
-    const conn = adapterManager.getConnection(session.environmentId);
-    if (conn) {
-      conn.client.kill(
-        create(powerline.KillRequestSchema, { id: sessionId, reason }),
-      ).catch((err: unknown) => {
-        logger.debug({ err, sessionId }, "Lifecycle: PowerLine kill failed (process may have already exited)");
-      });
-    }
 
     // Broadcast end reason to UI clients
     streamHub.publish(

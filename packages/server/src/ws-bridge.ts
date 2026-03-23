@@ -466,13 +466,11 @@ export async function startTaskSession(
 }
 
 /**
- * Terminate a session using the fd-closure pattern.
+ * Terminate a session: set STOPPED+killed, then close lifecycle FDs.
  *
- * Deletes the lifecycle stream (triggering auto-stop via the orphan
- * callback), closes all other subscriptions, and falls back to direct
- * STOPPED+killed for legacy sessions without lifecycle streams.
- *
- * Matches the pattern used by `killAgent` in grpc-service.ts.
+ * Sets the session to STOPPED+killed first, then deletes the lifecycle
+ * stream. The orphan callback still sends the PowerLine kill request
+ * (even for already-terminal sessions) to ensure the process is stopped.
  */
 async function terminateSession(sessionId: string): Promise<void> {
   const session = sessionStore.getSession(sessionId);
