@@ -4,7 +4,14 @@ SDK for building [Grackle](https://github.com/nick-pape/grackle) environment ada
 
 Grackle runs AI coding agents on remote environments — Docker containers, SSH hosts, GitHub Codespaces, and more. Each environment type is backed by an **adapter**: a small module that knows how to provision, connect, health-check, and tear down that particular kind of compute.
 
-This package provides the interfaces, base classes, and helpers you need to write a custom adapter. If your infrastructure isn't covered by the built-in adapters (Docker, SSH, Local, Codespace), you can implement the `EnvironmentAdapter` interface and plug it into the Grackle server.
+This package provides the interfaces, base classes, and helpers you need to write a custom adapter. If your infrastructure isn't covered by the built-in adapters, you can implement the `EnvironmentAdapter` interface and plug it into the Grackle server.
+
+### Built-in Adapter Packages
+
+- [`@grackle-ai/adapter-local`](https://www.npmjs.com/package/@grackle-ai/adapter-local) — local PowerLine
+- [`@grackle-ai/adapter-ssh`](https://www.npmjs.com/package/@grackle-ai/adapter-ssh) — remote hosts via SSH
+- [`@grackle-ai/adapter-codespace`](https://www.npmjs.com/package/@grackle-ai/adapter-codespace) — GitHub Codespaces
+- [`@grackle-ai/adapter-docker`](https://www.npmjs.com/package/@grackle-ai/adapter-docker) — Docker containers
 
 ## Install
 

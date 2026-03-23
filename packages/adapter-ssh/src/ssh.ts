@@ -1,4 +1,4 @@
-import type { EnvironmentAdapter, BaseEnvironmentConfig, PowerLineConnection, ProvisionEvent } from "@grackle-ai/adapter-sdk";
+import type { EnvironmentAdapter, BaseEnvironmentConfig, PowerLineConnection, ProvisionEvent, AdapterDependencies, ExecFunction } from "@grackle-ai/adapter-sdk";
 import { DEFAULT_POWERLINE_PORT, DEFAULT_MCP_PORT } from "@grackle-ai/common";
 import {
   type RemoteExecutor,
@@ -15,12 +15,11 @@ import {
   remoteDestroy,
   remoteHealthCheck,
   startRemotePowerLine,
+  exec as defaultExec,
+  sleep as defaultSleep,
   SSH_CONNECTIVITY_TIMEOUT_MS,
   REMOTE_EXEC_DEFAULT_TIMEOUT_MS,
 } from "@grackle-ai/adapter-sdk";
-import { getCredentialProviders } from "../credential-providers.js";
-import { exec } from "../utils/exec.js";
-import { sleep } from "../utils/sleep.js";
 
 const REMOTE_COPY_TIMEOUT_MS: number = 120_000;
 
@@ -76,15 +75,17 @@ function buildDestination(cfg: SshEnvironmentConfig): string {
 /** Execute commands on a remote host via SSH. */
 class SshExecutor implements RemoteExecutor {
   private readonly cfg: SshEnvironmentConfig;
+  private readonly execFn: ExecFunction;
 
-  public constructor(cfg: SshEnvironmentConfig) {
+  public constructor(cfg: SshEnvironmentConfig, execFn: ExecFunction) {
     this.cfg = cfg;
+    this.execFn = execFn;
   }
 
   /** Execute a shell command on the remote host and return trimmed stdout. */
   public async exec(command: string, opts?: { timeout?: number }): Promise<string> {
     const args = [...buildSshFlags(this.cfg), buildDestination(this.cfg), command];
-    const result = await exec("ssh", args, { timeout: opts?.timeout ?? REMOTE_EXEC_DEFAULT_TIMEOUT_MS });
+    const result = await this.execFn("ssh", args, { timeout: opts?.timeout ?? REMOTE_EXEC_DEFAULT_TIMEOUT_MS });
     return result.stdout;
   }
 
@@ -94,7 +95,7 @@ class SshExecutor implements RemoteExecutor {
     // scp uses -P (uppercase) instead of -p for port
     const scpFlags = flags.map((f, i) => (f === "-p" && i > 0 && flags[i - 1] !== "-o") ? "-P" : f);
     const args = ["-r", ...scpFlags, localPath, `${buildDestination(this.cfg)}:${remotePath}`];
-    await exec("scp", args, { timeout: REMOTE_COPY_TIMEOUT_MS });
+    await this.execFn("scp", args, { timeout: REMOTE_COPY_TIMEOUT_MS });
   }
 }
 
@@ -137,17 +138,20 @@ class SshTunnel extends ProcessTunnel {
 class SshReverseTunnel extends ProcessTunnel {
   private readonly cfg: SshEnvironmentConfig;
   private readonly remotePort: number;
+  private readonly sleepFn: (ms: number) => Promise<void>;
 
   public constructor(
     localPort: number,
     remotePort: number,
     cfg: SshEnvironmentConfig,
+    sleepFn: (ms: number) => Promise<void>,
     processFactory?: TunnelProcessFactory,
     portProbe?: TunnelPortProbe,
   ) {
     super(localPort, undefined, processFactory, portProbe);
     this.cfg = cfg;
     this.remotePort = remotePort;
+    this.sleepFn = sleepFn;
   }
 
   /** Return the ssh command with -R for reverse port forwarding. */
@@ -170,7 +174,7 @@ class SshReverseTunnel extends ProcessTunnel {
    * We can't probe the remote port, so wait a fixed delay for SSH to establish.
    */
   protected async waitForReady(): Promise<void> {
-    await sleep(REVERSE_TUNNEL_SETTLE_MS);
+    await this.sleepFn(REVERSE_TUNNEL_SETTLE_MS);
     if (this.process?.exitCode !== null) {
       throw new Error(`Reverse tunnel exited immediately with code ${this.process?.exitCode}`);
     }
@@ -182,6 +186,15 @@ class SshReverseTunnel extends ProcessTunnel {
 /** Environment adapter that provisions and manages remote environments via SSH. */
 export class SshAdapter implements EnvironmentAdapter {
   public type: string = "ssh";
+  private readonly execFn: ExecFunction;
+  private readonly sleepFn: (ms: number) => Promise<void>;
+  private readonly isGitHubProviderEnabled: () => boolean;
+
+  public constructor(deps: AdapterDependencies = {}) {
+    this.execFn = deps.exec ?? defaultExec;
+    this.sleepFn = deps.sleep ?? defaultSleep;
+    this.isGitHubProviderEnabled = deps.isGitHubProviderEnabled ?? (() => false);
+  }
 
   /** Provision the remote host: test connectivity, bootstrap PowerLine, open tunnel. */
   public async *provision(
@@ -194,7 +207,7 @@ export class SshAdapter implements EnvironmentAdapter {
       throw new Error("SSH adapter requires a 'host' in the configuration");
     }
 
-    const executor = new SshExecutor(cfg);
+    const executor = new SshExecutor(cfg, this.execFn);
 
     // Test SSH connectivity
     yield { stage: "connecting", message: `Testing SSH connectivity to ${cfg.host}...`, progress: 0.05 };
@@ -207,7 +220,7 @@ export class SshAdapter implements EnvironmentAdapter {
     // Bootstrap PowerLine on the remote host
     yield* bootstrapPowerLine(executor, powerlineToken, {
       extraEnv: cfg.env,
-      isGitHubProviderEnabled: () => getCredentialProviders().github !== "off",
+      isGitHubProviderEnabled: this.isGitHubProviderEnabled,
       defaultRuntime: (config.defaultRuntime as string) || undefined,
     });
 
@@ -220,7 +233,7 @@ export class SshAdapter implements EnvironmentAdapter {
 
     // Open reverse tunnel (remote → host MCP server) for agent tool calls
     const mcpPort = parseInt(process.env.GRACKLE_MCP_PORT || String(DEFAULT_MCP_PORT), 10);
-    const reverseTunnel = new SshReverseTunnel(mcpPort, mcpPort, cfg);
+    const reverseTunnel = new SshReverseTunnel(mcpPort, mcpPort, cfg, this.sleepFn);
     await reverseTunnel.open();
 
     registerTunnel(environmentId, { tunnel, reverseTunnel });
@@ -247,7 +260,7 @@ export class SshAdapter implements EnvironmentAdapter {
       throw new Error("SSH adapter requires a 'host' in the configuration");
     }
 
-    const executor = new SshExecutor(cfg);
+    const executor = new SshExecutor(cfg, this.execFn);
 
     // 1. Close any stale tunnel
     yield { stage: "reconnecting", message: "Closing stale tunnel...", progress: 0.10 };
@@ -270,7 +283,7 @@ export class SshAdapter implements EnvironmentAdapter {
     await tunnel.open();
 
     const mcpPort = parseInt(process.env.GRACKLE_MCP_PORT || String(DEFAULT_MCP_PORT), 10);
-    const reverseTunnel = new SshReverseTunnel(mcpPort, mcpPort, cfg);
+    const reverseTunnel = new SshReverseTunnel(mcpPort, mcpPort, cfg, this.sleepFn);
     await reverseTunnel.open();
 
     registerTunnel(environmentId, { tunnel, reverseTunnel });
@@ -299,13 +312,13 @@ export class SshAdapter implements EnvironmentAdapter {
   /** Stop the remote PowerLine process and close the tunnel. */
   public async stop(environmentId: string, config: Record<string, unknown>): Promise<void> {
     const cfg = config as unknown as SshEnvironmentConfig;
-    await remoteStop(environmentId, new SshExecutor(cfg));
+    await remoteStop(environmentId, new SshExecutor(cfg, this.execFn));
   }
 
   /** Stop the remote PowerLine, remove artifacts, and close the tunnel. */
   public async destroy(environmentId: string, config: Record<string, unknown>): Promise<void> {
     const cfg = config as unknown as SshEnvironmentConfig;
-    await remoteDestroy(environmentId, new SshExecutor(cfg));
+    await remoteDestroy(environmentId, new SshExecutor(cfg, this.execFn));
   }
 
   /** Check that the tunnel is alive and the PowerLine responds to a ping. */

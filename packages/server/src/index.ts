@@ -10,10 +10,10 @@ import { initSigchldSubscriber } from "./signals/sigchld.js";
 import { initLifecycleManager } from "./lifecycle.js";
 import { parseAdapterConfig } from "./adapter-config.js";
 import { emit, subscribe } from "./event-bus.js";
-import { DockerAdapter } from "./adapters/docker.js";
-import { LocalAdapter } from "./adapters/local.js";
-import { SshAdapter } from "./adapters/ssh.js";
-import { CodespaceAdapter } from "./adapters/codespace.js";
+import { DockerAdapter } from "@grackle-ai/adapter-docker";
+import { LocalAdapter } from "@grackle-ai/adapter-local";
+import { SshAdapter } from "@grackle-ai/adapter-ssh";
+import { CodespaceAdapter } from "@grackle-ai/adapter-codespace";
 import { closeAllTunnels, reconnectOrProvision } from "@grackle-ai/adapter-sdk";
 import { createWsBridge, startTaskSession } from "./ws-bridge.js";
 import { DEFAULT_SERVER_PORT, DEFAULT_WEB_PORT, DEFAULT_MCP_PORT, DEFAULT_POWERLINE_PORT, ROOT_TASK_ID, DEFAULT_WORKSPACE_ID, TASK_STATUS } from "@grackle-ai/common";
@@ -46,6 +46,7 @@ import { logger } from "./logger.js";
 import { exec } from "./utils/exec.js";
 import { detectLanIp } from "./utils/network.js";
 import { openDatabase, initDatabase } from "./db.js";
+import { getCredentialProviders } from "./credential-providers.js";
 
 const MIME_TYPES: Record<string, string> = {
   ".html": "text/html",
@@ -647,11 +648,16 @@ async function main(): Promise<void> {
   // Load (or generate) the API key on startup
   const apiKey = loadOrCreateApiKey();
 
-  // Register adapters
-  registerAdapter(new DockerAdapter());
+  // Register adapters with server dependencies injected
+  const adapterDeps = {
+    exec,
+    logger,
+    isGitHubProviderEnabled: (): boolean => getCredentialProviders().github !== "off",
+  };
+  registerAdapter(new DockerAdapter(adapterDeps));
   registerAdapter(new LocalAdapter());
-  registerAdapter(new SshAdapter());
-  registerAdapter(new CodespaceAdapter());
+  registerAdapter(new SshAdapter(adapterDeps));
+  registerAdapter(new CodespaceAdapter(adapterDeps));
 
   // --- Auto-start local PowerLine ---
   const skipLocalPowerLine = process.env.GRACKLE_SKIP_LOCAL_POWERLINE === "1";

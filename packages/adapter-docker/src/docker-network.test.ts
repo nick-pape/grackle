@@ -12,16 +12,6 @@ const ORIGINAL_NETWORK = vi.hoisted(() => {
   return orig;
 });
 
-// ── Mock logger ─────────────────────────────────────────────
-vi.mock("../logger.js", () => ({
-  logger: {
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-    debug: vi.fn(),
-  },
-}));
-
 // ── Mock adapter-sdk ────────────────────────────────────────
 vi.mock("@grackle-ai/adapter-sdk", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@grackle-ai/adapter-sdk")>()),
@@ -44,8 +34,15 @@ afterAll(() => {
   }
 });
 
+const mockLogger = {
+  info: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+  debug: vi.fn(),
+};
+
 describe("DockerAdapter with GRACKLE_DOCKER_NETWORK set (DooD mode)", () => {
-  const adapter = new DockerAdapter();
+  const adapter = new DockerAdapter({ logger: mockLogger });
   const containerName = "grackle-dood-test";
   const localPort = 9999;
   const image = "test-image:latest";

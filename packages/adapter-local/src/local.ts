@@ -1,7 +1,6 @@
 import { DEFAULT_POWERLINE_PORT } from "@grackle-ai/common";
-import type { EnvironmentAdapter, BaseEnvironmentConfig, PowerLineConnection, ProvisionEvent } from "@grackle-ai/adapter-sdk";
-import { createPowerLineClient } from "@grackle-ai/adapter-sdk";
-import { sleep } from "../utils/sleep.js";
+import type { EnvironmentAdapter, BaseEnvironmentConfig, PowerLineConnection, ProvisionEvent, AdapterDependencies } from "@grackle-ai/adapter-sdk";
+import { createPowerLineClient, sleep as defaultSleep } from "@grackle-ai/adapter-sdk";
 
 const POWERLINE_RETRY_DELAY_MS: number = 1_000;
 const POWERLINE_MAX_RETRIES: number = 5;
@@ -14,6 +13,11 @@ export interface LocalEnvironmentConfig extends BaseEnvironmentConfig {
 /** Environment adapter that connects to a locally-running PowerLine process. */
 export class LocalAdapter implements EnvironmentAdapter {
   public type: string = "local";
+  private readonly sleep: (ms: number) => Promise<void>;
+
+  public constructor(deps: AdapterDependencies = {}) {
+    this.sleep = deps.sleep ?? defaultSleep;
+  }
 
   public async *provision(environmentId: string, config: Record<string, unknown>, powerlineToken: string): AsyncGenerator<ProvisionEvent> {
     const cfg = config as unknown as LocalEnvironmentConfig;
@@ -33,7 +37,7 @@ export class LocalAdapter implements EnvironmentAdapter {
       } catch (err) {
         lastErr = err;
         yield { stage: "connecting", message: `Waiting for PowerLine (attempt ${attempt + 1}/${POWERLINE_MAX_RETRIES})...`, progress: 0.5 + attempt * 0.1 };
-        await sleep(POWERLINE_RETRY_DELAY_MS);
+        await this.sleep(POWERLINE_RETRY_DELAY_MS);
       }
     }
 

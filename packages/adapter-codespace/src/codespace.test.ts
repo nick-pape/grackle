@@ -1,28 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { ProvisionEvent } from "@grackle-ai/adapter-sdk";
 
-// ── Mock logger ─────────────────────────────────────────────
-vi.mock("../logger.js", () => ({
-  logger: {
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-    debug: vi.fn(),
-  },
-}));
-
-// ── Mock exec utility ───────────────────────────────────────
-const mockExec = vi.hoisted(() => vi.fn().mockResolvedValue({ stdout: "", stderr: "" }));
-vi.mock("../utils/exec.js", () => ({
-  exec: mockExec,
-}));
-
-// ── Mock sleep (used by SshReverseTunnel.waitForReady) ──────
-vi.mock("../utils/sleep.js", () => ({
-  sleep: vi.fn().mockResolvedValue(undefined),
-}));
-
-// ── Mock remote-adapter-utils ───────────────────────────────
+// ── Mock adapter-sdk (tunnel/process functions that can't be DI'd) ──
 const mocks = vi.hoisted(() => ({
   closeTunnel: vi.fn().mockResolvedValue(undefined),
   registerTunnel: vi.fn(),
@@ -38,7 +17,7 @@ vi.mock("@grackle-ai/adapter-sdk", async (importOriginal) => {
     registerTunnel: mocks.registerTunnel,
     findFreePort: mocks.findFreePort,
     startRemotePowerLine: mocks.startRemotePowerLine,
-    // Stub ProcessTunnel so SshTunnel doesn't spawn real processes (tested in tunnel.test.ts)
+    // Stub ProcessTunnel so CodespaceTunnel doesn't spawn real processes (tested in tunnel.test.ts)
     ProcessTunnel: class {
       public localPort: number;
       public constructor(localPort: number) { this.localPort = localPort; }
@@ -49,9 +28,12 @@ vi.mock("@grackle-ai/adapter-sdk", async (importOriginal) => {
   };
 });
 
-import { SshAdapter } from "./ssh.js";
+import { CodespaceAdapter } from "./codespace.js";
 
 // ── Helpers ─────────────────────────────────────────────────
+
+const mockExec = vi.fn().mockResolvedValue({ stdout: "", stderr: "" });
+const mockSleep = vi.fn().mockResolvedValue(undefined);
 
 /** Collect all events from an async generator. */
 async function collectEvents(gen: AsyncGenerator<ProvisionEvent>): Promise<ProvisionEvent[]> {
@@ -64,16 +46,19 @@ async function collectEvents(gen: AsyncGenerator<ProvisionEvent>): Promise<Provi
 
 // ── Tests ───────────────────────────────────────────────────
 
-describe("SshAdapter.reconnect()", () => {
-  let adapter: SshAdapter;
-  const config = { host: "example.com" };
+describe("CodespaceAdapter.reconnect()", () => {
+  let adapter: CodespaceAdapter;
+  const config = { codespaceName: "test-cs" };
   const token = "test-token";
-  const envId = "env-ssh-1";
+  const envId = "env-1";
 
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.startRemotePowerLine.mockResolvedValue({ alreadyRunning: true });
-    adapter = new SshAdapter();
+    adapter = new CodespaceAdapter({
+      exec: mockExec,
+      sleep: mockSleep,
+    });
   });
 
   it("yields reconnecting progress events on happy path", async () => {
@@ -89,10 +74,9 @@ describe("SshAdapter.reconnect()", () => {
 
     expect(mocks.closeTunnel).toHaveBeenCalledWith(envId);
     expect(mocks.startRemotePowerLine).toHaveBeenCalledOnce();
-    // Verify probeFirst option (SSH adapter does NOT set autoDetectWorkspace)
+    // Verify probeFirst and autoDetectWorkspace options
     const options = mocks.startRemotePowerLine.mock.calls[0][2];
-    expect(options).toMatchObject({ probeFirst: true });
-    expect(options.autoDetectWorkspace).toBeUndefined();
+    expect(options).toMatchObject({ probeFirst: true, autoDetectWorkspace: true });
     expect(mocks.registerTunnel).toHaveBeenCalledWith(envId, expect.objectContaining({
       tunnel: expect.objectContaining({ localPort: 9999 }),
     }));
@@ -131,16 +115,8 @@ describe("SshAdapter.reconnect()", () => {
       .rejects.toThrow("ssh connection refused");
   });
 
-  it("throws if host is missing", async () => {
+  it("throws if codespaceName is missing", async () => {
     await expect(collectEvents(adapter.reconnect!(envId, {} as Record<string, unknown>, token)))
-      .rejects.toThrow("host");
-  });
-
-  it("forwards extraEnv from config", async () => {
-    const cfgWithEnv = { host: "example.com", env: { MY_VAR: "value" } };
-    await collectEvents(adapter.reconnect!(envId, cfgWithEnv as Record<string, unknown>, token));
-
-    const options = mocks.startRemotePowerLine.mock.calls[0][2];
-    expect(options.extraEnv).toEqual({ MY_VAR: "value" });
+      .rejects.toThrow("codespaceName");
   });
 });
