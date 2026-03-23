@@ -4,9 +4,19 @@
  * @module
  */
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import type { Workspace, WsMessage, SendFunction, GrackleEvent } from "./types.js";
 import { asValidArray, isWorkspace } from "./types.js";
+
+/** Pending create-workspace callback entry keyed by requestId. */
+interface PendingCreateWorkspaceCallback {
+  onSuccess: () => void;
+  onError: (message: string) => void;
+  timer: ReturnType<typeof setTimeout>;
+}
+
+/** How long to wait for a create-workspace response before timing out. */
+const CREATE_WORKSPACE_TIMEOUT_MS: number = 15_000;
 
 /** Values returned by {@link useWorkspaces}. */
 export interface UseWorkspacesResult {
@@ -21,6 +31,10 @@ export interface UseWorkspacesResult {
     repoUrl?: string,
     environmentId?: string,
     defaultPersonaId?: string,
+    useWorktrees?: boolean,
+    worktreeBasePath?: string,
+    onSuccess?: () => void,
+    onError?: (message: string) => void,
   ) => void;
   /** Archive a workspace by ID. */
   archiveWorkspace: (workspaceId: string) => void;
@@ -54,13 +68,33 @@ export interface UseWorkspacesResult {
 export function useWorkspaces(send: SendFunction): UseWorkspacesResult {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [workspaceCreating, setWorkspaceCreating] = useState(false);
+  const pendingCreatesRef = useRef<Map<string, PendingCreateWorkspaceCallback>>(
+    new Map(),
+  );
+
+  const syncWorkspaceCreating = useCallback((): void => {
+    setWorkspaceCreating(pendingCreatesRef.current.size > 0);
+  }, []);
 
   const handleEvent = useCallback((event: GrackleEvent): boolean => {
     switch (event.type) {
-      case "workspace.created":
-        setWorkspaceCreating(false);
+      case "workspace.created": {
+        const requestId =
+          typeof event.payload.requestId === "string"
+            ? event.payload.requestId
+            : "";
+        if (requestId) {
+          const pending = pendingCreatesRef.current.get(requestId);
+          if (pending) {
+            clearTimeout(pending.timer);
+            pendingCreatesRef.current.delete(requestId);
+            syncWorkspaceCreating();
+            pending.onSuccess();
+          }
+        }
         send({ type: "list_workspaces" });
         return true;
+      }
       case "workspace.archived":
       case "workspace.updated":
         send({ type: "list_workspaces" });
@@ -68,7 +102,7 @@ export function useWorkspaces(send: SendFunction): UseWorkspacesResult {
       default:
         return false;
     }
-  }, [send]);
+  }, [send, syncWorkspaceCreating]);
 
   const handleMessage = useCallback((msg: WsMessage): boolean => {
     switch (msg.type) {
@@ -82,14 +116,50 @@ export function useWorkspaces(send: SendFunction): UseWorkspacesResult {
           ),
         );
         return true;
+      case "create_workspace_error": {
+        const requestId =
+          typeof msg.payload?.requestId === "string"
+            ? msg.payload.requestId
+            : "";
+        const errorMessage =
+          typeof msg.payload?.message === "string"
+            ? msg.payload.message
+            : "Failed to create workspace";
+        setWorkspaceCreating(false);
+        if (requestId) {
+          const pending = pendingCreatesRef.current.get(requestId);
+          if (pending) {
+            clearTimeout(pending.timer);
+            pendingCreatesRef.current.delete(requestId);
+            syncWorkspaceCreating();
+            pending.onError(errorMessage);
+          } else {
+            console.error(
+              "Received create_workspace_error for unknown requestId",
+              { requestId, errorMessage },
+            );
+          }
+        } else {
+          console.error(
+            "Received create_workspace_error without requestId",
+            { errorMessage },
+          );
+        }
+        return true;
+      }
       default:
         return false;
     }
-  }, []);
+  }, [syncWorkspaceCreating]);
 
   const onDisconnect = useCallback(() => {
-    setWorkspaceCreating(false);
-  }, []);
+    for (const [, pending] of pendingCreatesRef.current) {
+      clearTimeout(pending.timer);
+      pending.onError("Disconnected");
+    }
+    pendingCreatesRef.current.clear();
+    syncWorkspaceCreating();
+  }, [syncWorkspaceCreating]);
 
   const createWorkspace = useCallback(
     (
@@ -98,20 +168,41 @@ export function useWorkspaces(send: SendFunction): UseWorkspacesResult {
       repoUrl?: string,
       environmentId?: string,
       defaultPersonaId?: string,
+      useWorktrees?: boolean,
+      worktreeBasePath?: string,
+      onSuccess?: () => void,
+      onError?: (message: string) => void,
     ) => {
-      setWorkspaceCreating(true);
+      const payload: Record<string, unknown> = {
+        name,
+        description: description || "",
+        repoUrl: repoUrl || "",
+        environmentId: environmentId || "",
+        defaultPersonaId: defaultPersonaId || "",
+        useWorktrees: useWorktrees ?? true,
+        worktreeBasePath: worktreeBasePath || "",
+      };
+      const requestId = crypto.randomUUID();
+      payload.requestId = requestId;
+      const errorCallback = onError ?? (() => {});
+      const timer = setTimeout(() => {
+        if (pendingCreatesRef.current.delete(requestId)) {
+          syncWorkspaceCreating();
+          errorCallback("Request timed out");
+        }
+      }, CREATE_WORKSPACE_TIMEOUT_MS);
+      pendingCreatesRef.current.set(requestId, {
+        onSuccess: onSuccess ?? (() => {}),
+        onError: errorCallback,
+        timer,
+      });
+      syncWorkspaceCreating();
       send({
         type: "create_workspace",
-        payload: {
-          name,
-          description: description || "",
-          repoUrl: repoUrl || "",
-          environmentId: environmentId || "",
-          defaultPersonaId: defaultPersonaId || "",
-        },
+        payload,
       });
     },
-    [send],
+    [send, syncWorkspaceCreating],
   );
 
   const archiveWorkspace = useCallback(

@@ -1,8 +1,8 @@
-import { useState, type JSX, type KeyboardEvent } from "react";
+import { useState, type JSX } from "react";
 import { useParams, Navigate } from "react-router";
 import { useGrackle } from "../context/GrackleContext.js";
-import { ConfirmDialog, Spinner } from "../components/display/index.js";
-import { environmentEditUrl, workspaceUrl, newChatUrl, useAppNavigate, ENVIRONMENTS_URL } from "../utils/navigation.js";
+import { ConfirmDialog } from "../components/display/index.js";
+import { environmentEditUrl, workspaceUrl, newChatUrl, useAppNavigate, ENVIRONMENTS_URL, NEW_WORKSPACE_URL } from "../utils/navigation.js";
 import type { Workspace } from "../hooks/useGrackleSocket.js";
 import { formatCost } from "../utils/format.js";
 import styles from "./EnvironmentDetailPage.module.scss";
@@ -28,15 +28,11 @@ export function EnvironmentDetailPage(): JSX.Element {
     provisionEnvironment,
     stopEnvironment,
     removeEnvironment,
-    createWorkspace,
     archiveWorkspace,
-    workspaceCreating,
   } = useGrackle();
 
   const [showDeleteEnv, setShowDeleteEnv] = useState(false);
   const [confirmArchiveId, setConfirmArchiveId] = useState<string | undefined>(undefined);
-  const [showCreateForm, setShowCreateForm] = useState(false);
-  const [newWorkspaceName, setNewWorkspaceName] = useState("");
 
   const env = environments.find((e) => e.id === environmentId);
   if (!environmentId || !env) {
@@ -56,24 +52,6 @@ export function EnvironmentDetailPage(): JSX.Element {
     removeEnvironment(env.id);
     setShowDeleteEnv(false);
     navigate(ENVIRONMENTS_URL, { replace: true });
-  };
-
-  const handleCreateWorkspace = (): void => {
-    if (!newWorkspaceName.trim() || workspaceCreating) {
-      return;
-    }
-    createWorkspace(newWorkspaceName.trim(), undefined, undefined, env.id);
-    setNewWorkspaceName("");
-    setShowCreateForm(false);
-  };
-
-  const handleCreateKeyDown = (e: KeyboardEvent<HTMLInputElement>): void => {
-    if (e.key === "Enter") {
-      handleCreateWorkspace();
-    } else if (e.key === "Escape") {
-      setShowCreateForm(false);
-      setNewWorkspaceName("");
-    }
   };
 
   const handleArchive = (workspaceId: string): void => {
@@ -162,44 +140,14 @@ export function EnvironmentDetailPage(): JSX.Element {
           <h3>Workspaces</h3>
           <button
             className={styles.btnPrimary}
-            onClick={() => setShowCreateForm(true)}
-            disabled={workspaceCreating}
+            onClick={() => navigate(`${NEW_WORKSPACE_URL}?environment=${encodeURIComponent(env.id)}`)}
+            data-testid="workspace-create-button"
           >
             + New Workspace
           </button>
         </div>
 
-        {showCreateForm && (
-          <div className={styles.createForm}>
-            <input
-              type="text"
-              value={newWorkspaceName}
-              onChange={(e) => setNewWorkspaceName(e.target.value)}
-              onKeyDown={handleCreateKeyDown}
-              placeholder="Workspace name..."
-              autoFocus
-              disabled={workspaceCreating}
-              className={styles.createInput}
-              data-testid="workspace-create-input"
-            />
-            <button
-              onClick={handleCreateWorkspace}
-              className={styles.btnPrimary}
-              disabled={workspaceCreating || !newWorkspaceName.trim()}
-              data-testid="workspace-create-submit"
-            >
-              {workspaceCreating ? <Spinner size="sm" label="Creating" /> : "Create"}
-            </button>
-            <button
-              onClick={() => { setShowCreateForm(false); setNewWorkspaceName(""); }}
-              className={styles.btnOutline}
-            >
-              Cancel
-            </button>
-          </div>
-        )}
-
-        {envWorkspaces.length === 0 && !showCreateForm && (
+        {envWorkspaces.length === 0 && (
           <p className={styles.empty}>No workspaces yet. Create one to get started.</p>
         )}
 

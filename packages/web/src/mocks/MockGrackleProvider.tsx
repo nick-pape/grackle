@@ -318,7 +318,17 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
 
   /** Creates a new workspace and adds it to state. */
   const createWorkspace: UseGrackleSocketResult["createWorkspace"] = useCallback(
-    (name: string, description?: string, repoUrl?: string, environmentId?: string, defaultPersonaId?: string) => {
+    (
+      name: string,
+      description?: string,
+      repoUrl?: string,
+      environmentId?: string,
+      defaultPersonaId?: string,
+      useWorktrees?: boolean,
+      worktreeBasePath?: string,
+      onSuccess?: () => void,
+      _onError?: (message: string) => void,
+    ) => {
       console.log("[MockGrackle] createWorkspace", { name, description });
 
       const newWorkspace: Workspace = {
@@ -328,14 +338,17 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
         repoUrl: repoUrl || "",
         environmentId: environmentId || "",
         status: "active",
-        worktreeBasePath: "",
-        useWorktrees: true,
+        worktreeBasePath: worktreeBasePath || "",
+        useWorktrees: useWorktrees ?? true,
         defaultPersonaId: defaultPersonaId || "",
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
 
       setWorkspaces((prev) => [...prev, newWorkspace]);
+      if (onSuccess) {
+        onSuccess();
+      }
     },
     [nextId],
   );
