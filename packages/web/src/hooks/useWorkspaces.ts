@@ -112,6 +112,7 @@ export function useWorkspaces(): UseWorkspacesResult {
         worktreeBasePath: worktreeBasePath || undefined,
       }).then(
         () => {
+          setWorkspaceCreating(false);
           onSuccess?.();
         },
         (err) => {

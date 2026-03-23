@@ -43,6 +43,7 @@ const WS_CLOSE_FORBIDDEN_ORIGIN: number = 4003;
 const LOOPBACK_HOSTNAMES: ReadonlySet<string> = new Set([
   "localhost",
   "127.0.0.1",
+  "::1",
   "[::1]",
 ]);
 

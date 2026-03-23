@@ -135,13 +135,18 @@ export async function sendWsAndWaitFor(
             }
           };
           ws.onopen = () => {
-            // First subscribe to all events, then fire the RPC
+            // Subscribe to all events first, then give the server a moment
+            // to register the subscription before firing the RPC mutation.
+            // Without this delay, the domain event can fire before the
+            // subscription is registered, causing the listener to miss it.
             ws.send(JSON.stringify({ type: "subscribe_all" }));
-            rpc(method, body).catch((err: Error) => {
-              clearTimeout(timer);
-              ws.close();
-              reject(err);
-            });
+            setTimeout(() => {
+              rpc(method, body).catch((err: Error) => {
+                clearTimeout(timer);
+                ws.close();
+                reject(err);
+              });
+            }, 50);
           };
         });
       }
@@ -439,17 +444,18 @@ export async function sendWsAndWaitFor(
               };
               ws.onopen = () => {
                 ws.send(JSON.stringify({ type: "subscribe_all" }));
-                // Fire the streaming RPC (Connect streaming content type)
-                fetch(`/grackle.Grackle/ProvisionEnvironment`, {
-                  method: "POST",
-                  headers: { "Content-Type": "application/connect+json" },
-                  body: JSON.stringify({ id: payload.environmentId }),
-                  credentials: "include",
-                }).catch((err: Error) => {
-                  clearTimeout(timer);
-                  ws.close();
-                  reject(err);
-                });
+                setTimeout(() => {
+                  fetch(`/grackle.Grackle/ProvisionEnvironment`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/connect+json" },
+                    body: JSON.stringify({ id: payload.environmentId }),
+                    credentials: "include",
+                  }).catch((err: Error) => {
+                    clearTimeout(timer);
+                    ws.close();
+                    reject(err);
+                  });
+                }, 50);
               };
             });
           }
