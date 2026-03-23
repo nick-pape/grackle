@@ -189,7 +189,7 @@ function makeSession(overrides: Partial<{
     runtimeSessionId: "rt-abc",
     prompt: "hello",
     model: "stub-model",
-    status: "completed",
+    status: "stopped",
     logPath: "/logs/sess-1",
     turns: 1,
     startedAt: "2026-01-01T00:00:00Z",
@@ -257,7 +257,7 @@ describe("gRPC resumeAgent", () => {
 
   it("throws FailedPrecondition when terminal session has no runtimeSessionId", async () => {
     vi.mocked(sessionStore.getSession).mockReturnValue(
-      makeSession({ status: "completed", runtimeSessionId: null }),
+      makeSession({ status: "stopped", runtimeSessionId: null }),
     );
 
     const err = await handlers.resumeAgent({ sessionId: "sess-1" }).catch((e: unknown) => e) as ConnectError;
@@ -267,7 +267,7 @@ describe("gRPC resumeAgent", () => {
   });
 
   it("throws FailedPrecondition when another active session exists on the environment", async () => {
-    vi.mocked(sessionStore.getSession).mockReturnValue(makeSession({ status: "completed" }));
+    vi.mocked(sessionStore.getSession).mockReturnValue(makeSession({ status: "stopped" }));
     vi.mocked(sessionStore.getActiveForEnv).mockReturnValue(
       makeSession({ id: "sess-other", status: "running" }),
     );
@@ -279,7 +279,7 @@ describe("gRPC resumeAgent", () => {
   });
 
   it("throws FailedPrecondition when environment is offline (no connection)", async () => {
-    vi.mocked(sessionStore.getSession).mockReturnValue(makeSession({ status: "completed" }));
+    vi.mocked(sessionStore.getSession).mockReturnValue(makeSession({ status: "stopped" }));
     vi.mocked(sessionStore.getActiveForEnv).mockReturnValue(undefined);
     vi.mocked(adapterManager.getConnection).mockReturnValue(undefined);
 
@@ -289,11 +289,11 @@ describe("gRPC resumeAgent", () => {
     expect(err.message).toContain("not connected");
   });
 
-  it("reanimates a COMPLETED session: calls reanimateSession and processEventStream", async () => {
-    const completedSession = makeSession({ status: "completed" });
+  it("reanimates a STOPPED session: calls reanimateSession and processEventStream", async () => {
+    const stoppedSession = makeSession({ status: "stopped" });
     const runningSession = makeSession({ status: "running", endedAt: null });
     vi.mocked(sessionStore.getSession)
-      .mockReturnValueOnce(completedSession)
+      .mockReturnValueOnce(stoppedSession)
       .mockReturnValueOnce(runningSession);
     vi.mocked(sessionStore.getActiveForEnv).mockReturnValue(undefined);
     const conn = makeConnection();
@@ -307,11 +307,11 @@ describe("gRPC resumeAgent", () => {
     expect(result.id).toBe("sess-1");
   });
 
-  it("reanimates a FAILED session successfully", async () => {
-    const failedSession = makeSession({ status: "failed", error: "timeout" });
+  it("reanimates a SUSPENDED session successfully", async () => {
+    const suspendedSession = makeSession({ status: "suspended" });
     const runningSession = makeSession({ status: "running", error: null });
     vi.mocked(sessionStore.getSession)
-      .mockReturnValueOnce(failedSession)
+      .mockReturnValueOnce(suspendedSession)
       .mockReturnValueOnce(runningSession);
     vi.mocked(sessionStore.getActiveForEnv).mockReturnValue(undefined);
     vi.mocked(adapterManager.getConnection).mockReturnValue(makeConnection() as never);
@@ -322,30 +322,15 @@ describe("gRPC resumeAgent", () => {
     expect(result.id).toBe("sess-1");
   });
 
-  it("reanimates an INTERRUPTED session successfully", async () => {
-    const interruptedSession = makeSession({ status: "interrupted" });
-    const runningSession = makeSession({ status: "running" });
-    vi.mocked(sessionStore.getSession)
-      .mockReturnValueOnce(interruptedSession)
-      .mockReturnValueOnce(runningSession);
-    vi.mocked(sessionStore.getActiveForEnv).mockReturnValue(undefined);
-    vi.mocked(adapterManager.getConnection).mockReturnValue(makeConnection() as never);
-
-    const result = await handlers.resumeAgent({ sessionId: "sess-1" }) as grackle.Session;
-
-    expect(sessionStore.reanimateSession).toHaveBeenCalledWith("sess-1");
-    expect(result.id).toBe("sess-1");
-  });
-
-  it("can reanimate a session a second time after it completes again", async () => {
-    const completedSession = makeSession({ status: "completed" });
+  it("can reanimate a session a second time after it stops again", async () => {
+    const stoppedSession = makeSession({ status: "stopped" });
     const runningSession = makeSession({ status: "running", endedAt: null });
-    const completedAgain = makeSession({ status: "completed" });
+    const stoppedAgain = makeSession({ status: "stopped" });
 
     vi.mocked(sessionStore.getSession)
-      .mockReturnValueOnce(completedSession)  // first reanimate: lookup
+      .mockReturnValueOnce(stoppedSession)    // first reanimate: lookup
       .mockReturnValueOnce(runningSession)    // first reanimate: return value
-      .mockReturnValueOnce(completedAgain)    // second reanimate: lookup
+      .mockReturnValueOnce(stoppedAgain)      // second reanimate: lookup
       .mockReturnValueOnce(runningSession);   // second reanimate: return value
     vi.mocked(sessionStore.getActiveForEnv).mockReturnValue(undefined);
     vi.mocked(adapterManager.getConnection).mockReturnValue(makeConnection() as never);
@@ -386,7 +371,7 @@ describe("gRPC resumeTask", () => {
   it("throws FailedPrecondition when latest session has no runtimeSessionId", async () => {
     vi.mocked(taskStore.getTask).mockReturnValue({ id: "task-1", workspaceId: "proj-1" } as never);
     vi.mocked(sessionStore.getLatestSessionForTask).mockReturnValue(
-      makeSession({ status: "completed", runtimeSessionId: null }),
+      makeSession({ status: "stopped", runtimeSessionId: null }),
     );
 
     const err = await handlers.resumeTask({ id: "task-1" }).catch((e: unknown) => e) as ConnectError;
@@ -397,7 +382,7 @@ describe("gRPC resumeTask", () => {
 
   it("succeeds when latest session has a runtimeSessionId (happy path)", async () => {
     const task = { id: "task-1", workspaceId: "proj-1" };
-    const session = makeSession({ status: "completed", runtimeSessionId: "rt-abc" });
+    const session = makeSession({ status: "stopped", runtimeSessionId: "rt-abc" });
     const runningSession = makeSession({ status: "running" });
     vi.mocked(taskStore.getTask).mockReturnValue(task as never);
     vi.mocked(sessionStore.getLatestSessionForTask).mockReturnValue(session);

@@ -10,7 +10,7 @@
  */
 
 import { create } from "@bufbuild/protobuf";
-import { powerline, SESSION_STATUS } from "@grackle-ai/common";
+import { powerline } from "@grackle-ai/common";
 import * as sessionStore from "./session-store.js";
 import * as adapterManager from "./adapter-manager.js";
 import * as streamRegistry from "./stream-registry.js";
@@ -20,14 +20,11 @@ import { logger } from "./logger.js";
 /** Maximum length for the child's last text message in pipe delivery. */
 const MAX_LAST_MESSAGE_LENGTH: number = 4000;
 
-/** Human-readable status labels. */
+/** Human-readable status labels keyed by runtime event content strings. */
 const STATUS_LABELS: Record<string, string> = {
-  [SESSION_STATUS.IDLE]: "finished working",
-  [SESSION_STATUS.COMPLETED]: "completed",
-  [SESSION_STATUS.FAILED]: "failed",
-  [SESSION_STATUS.INTERRUPTED]: "was interrupted",
-  [SESSION_STATUS.HIBERNATING]: "hibernated",
-  "killed": "was interrupted",  // runtime emits "killed", maps to INTERRUPTED
+  completed: "completed",
+  killed: "was interrupted",
+  failed: "failed",
 };
 
 /** Stored unsubscribe functions for async listeners, keyed by parent session ID. */

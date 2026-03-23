@@ -135,7 +135,7 @@ describe("dashboard selectors", () => {
       makeSession({ id: "session-1", status: "running" }),
       makeSession({ id: "session-2", status: "idle" }),
       makeSession({ id: "session-3", status: "waiting" }),
-      makeSession({ id: "session-4", status: "ended" }),
+      makeSession({ id: "session-4", status: "stopped" }),
     ];
     const environments: Environment[] = [
       makeEnvironment("env-1", "primary", "connected"),

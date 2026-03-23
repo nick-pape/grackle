@@ -114,7 +114,8 @@ function applySchema(): void {
       cost_usd REAL NOT NULL DEFAULT 0,
       pipe_mode TEXT NOT NULL DEFAULT '',
       parent_session_id TEXT NOT NULL DEFAULT '',
-      pipe_fd INTEGER
+      pipe_fd INTEGER,
+      end_reason TEXT
     );
     CREATE TABLE IF NOT EXISTS findings (
       id TEXT PRIMARY KEY,
@@ -196,7 +197,7 @@ describe("session recovery", () => {
     expect(reanimateAgent).toHaveBeenCalledWith("sess1");
   });
 
-  it("marks session FAILED when reanimate throws", async () => {
+  it("marks session STOPPED with interrupted endReason when reanimate throws", async () => {
     sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
     sessionStore.suspendSession("sess1");
 
@@ -208,7 +209,8 @@ describe("session recovery", () => {
     await recoverSuspendedSessions("env1", conn);
 
     const session = sessionStore.getSession("sess1");
-    expect(session?.status).toBe(SESSION_STATUS.FAILED);
+    expect(session?.status).toBe(SESSION_STATUS.STOPPED);
+    expect(session?.endReason).toBe("interrupted");
     expect(session?.error).toContain("SDK session expired");
   });
 

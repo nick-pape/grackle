@@ -176,7 +176,8 @@ function applySchema(): void {
       pipe_mode          TEXT NOT NULL DEFAULT '',
       input_tokens       INTEGER NOT NULL DEFAULT 0,
       output_tokens      INTEGER NOT NULL DEFAULT 0,
-      cost_usd           REAL NOT NULL DEFAULT 0
+      cost_usd           REAL NOT NULL DEFAULT 0,
+      end_reason         TEXT
     );
     CREATE TABLE IF NOT EXISTS tokens (
       id     TEXT PRIMARY KEY,

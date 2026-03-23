@@ -54,7 +54,7 @@ class StubSession implements AgentSession {
 
     // Simulate failure when input is "fail"
     if (input === "fail") {
-      this.status = SESSION_STATUS.FAILED;
+      this.status = SESSION_STATUS.STOPPED;
       yield { type: "status", timestamp: ts(), content: "failed" };
       return;
     }
@@ -63,9 +63,9 @@ class StubSession implements AgentSession {
     yield { type: "status", timestamp: ts(), content: "running" };
     yield { type: "text", timestamp: ts(), content: `You said: ${input}` };
 
-    // Complete
-    this.status = SESSION_STATUS.COMPLETED;
-    yield { type: "status", timestamp: ts(), content: "completed" };
+    // Agent finished turn — go idle, not "completed"
+    this.status = SESSION_STATUS.IDLE;
+    yield { type: "status", timestamp: ts(), content: "waiting_input" };
   }
 
   private waitForInput(): Promise<string> {
@@ -79,9 +79,9 @@ class StubSession implements AgentSession {
     this.emitter.emit("input", text);
   }
 
-  public kill(): void {
+  public kill(_reason?: string): void {
     this.killed = true;
-    this.status = SESSION_STATUS.INTERRUPTED;
+    this.status = SESSION_STATUS.STOPPED;
     if (this.inputResolve) {
       this.inputResolve("");
     }

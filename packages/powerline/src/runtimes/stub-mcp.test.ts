@@ -75,7 +75,7 @@ describe("StubMcpRuntime", () => {
       "status",     // waiting_input
       "status",     // running
       "text",       // user reply echo
-      "status",     // completed
+      "status",     // waiting_input (idle after processing input)
     ]);
 
     // Verify content
@@ -89,14 +89,14 @@ describe("StubMcpRuntime", () => {
     expect(events[4].content).toBe("waiting_input");
     expect(events[5].content).toBe("running");
     expect(events[6].content).toBe("You said: user reply");
-    expect(events[7].content).toBe("completed");
+    expect(events[7].content).toBe("waiting_input");
 
     // Verify timestamps are ISO strings
     for (const event of events) {
       expect(event.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
     }
 
-    expect(session.status).toBe("completed");
+    expect(session.status).toBe("idle");
   });
 
   it("kill() before input results in early termination", async () => {
@@ -119,7 +119,7 @@ describe("StubMcpRuntime", () => {
     })();
 
     await streamDone;
-    expect(session.status).toBe("interrupted");
+    expect(session.status).toBe("stopped");
 
     const statusEvents = events.filter((e) => e.type === "status");
     expect(statusEvents).toHaveLength(1);
@@ -146,7 +146,7 @@ describe("StubMcpRuntime", () => {
     })();
 
     await streamDone;
-    expect(session.status).toBe("failed");
+    expect(session.status).toBe("stopped");
 
     const statusEvents = events.filter((e) => e.type === "status");
     expect(statusEvents.map((e) => e.content)).toEqual(["waiting_input", "failed"]);
@@ -195,7 +195,7 @@ describe("StubMcpRuntime", () => {
 
     // Verify MCP client was closed
     expect(mockClose).toHaveBeenCalled();
-    expect(session.status).toBe("completed");
+    expect(session.status).toBe("idle");
   });
 
   it("MCP connect error yields is_error tool_result and continues to waiting_input", async () => {
@@ -233,8 +233,8 @@ describe("StubMcpRuntime", () => {
     const resultContent = JSON.parse(toolResult!.content);
     expect(resultContent.error).toBe("Connection refused");
 
-    // Session should still complete (error doesn't kill it)
-    expect(session.status).toBe("completed");
+    // Session should still reach idle (error doesn't kill it)
+    expect(session.status).toBe("idle");
   });
 
   it("resume() uses '(resumed session)' prompt", async () => {

@@ -119,7 +119,7 @@ Manage AI agent sessions — spawn, monitor, interact, and terminate.
 | Tool | Description | Parameters |
 |------|-------------|------------|
 | `session_spawn` | Spawn a new agent session with a prompt and optional model config. | `environmentId` (string), `prompt` (string), `maxTurns?` (int), `personaId?` (string), `worktreeBasePath?` (string) |
-| `session_resume` | Resume a terminated session (completed, failed, or interrupted). | `sessionId` (string) |
+| `session_resume` | Resume a stopped agent session. | `sessionId` (string) |
 | `session_status` | List sessions with optional filtering by environment and status. | `environmentId?` (string), `all?` (boolean, default false) |
 | `session_kill` | Terminate a running session immediately. | `sessionId` (string) |
 | `session_attach` | Stream events from a running session for a limited duration. | `sessionId` (string), `timeoutSeconds?` (int, default 30, max 300), `maxEvents?` (int) |
@@ -192,7 +192,7 @@ Inter-process communication between parent and child agent sessions.
 |------|-------------|------------|
 | `ipc_spawn` | Spawn a child agent session with an IPC pipe. | `prompt` (string), `pipe` (`sync` \| `async` \| `detach`), `environmentId` (string), `personaId?` (string), `maxTurns?` (int) |
 | `ipc_write` | Write a message to a child session via a file descriptor. | `fd` (int), `message` (string) |
-| `ipc_close` | Close a file descriptor, optionally hibernating the child. | `fd` (int) |
+| `ipc_close` | Close a file descriptor, optionally stopping the child. | `fd` (int) |
 | `ipc_list_fds` | List your open file descriptors (IPC connections). | *(none)* |
 
 ### Log Tools

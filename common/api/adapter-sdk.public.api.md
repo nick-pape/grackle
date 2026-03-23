@@ -151,7 +151,7 @@ const GracklePowerLine: GenService<{
     };
     kill: {
         methodKind: "unary";
-        input: typeof SessionIdSchema;
+        input: typeof KillRequestSchema;
         output: typeof EmptySchema;
     };
     listSessions: {
@@ -194,6 +194,15 @@ const InputMessageSchema: GenMessage<InputMessage>;
 export function isDevMode(): boolean;
 
 // @public
+type KillRequest = Message<"grackle.powerline.KillRequest"> & {
+    id: string;
+    reason: string;
+};
+
+// @public
+const KillRequestSchema: GenMessage<KillRequest>;
+
+// @public
 type Pong = Message<"grackle.powerline.Pong"> & {
     timestamp: bigint;
 };
@@ -213,6 +222,8 @@ declare namespace powerline {
         EmptySchema,
         SessionId,
         SessionIdSchema,
+        KillRequest,
+        KillRequestSchema,
         EnvironmentInfo,
         EnvironmentInfoSchema,
         Pong,

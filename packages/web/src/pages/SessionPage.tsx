@@ -24,7 +24,7 @@ function SessionHeader({ sessionId, session, isActive, onKill }: SessionHeaderPr
     <div className={styles.header}>
       <span>
         Session: {sessionId.slice(0, 8)}
-        {session && ` | ${session.runtime} | ${session.status}`}
+        {session && ` | ${session.runtime} | ${session.endReason || session.status}`}
         {(session?.inputTokens || session?.outputTokens || session?.costUsd)
           ? ` | ${formatTokens((session!.inputTokens ?? 0) + (session!.outputTokens ?? 0))} tokens · ${formatCost(session!.costUsd ?? 0)}`
           : ""}
@@ -49,9 +49,9 @@ function SessionHeader({ sessionId, session, isActive, onKill }: SessionHeaderPr
 
 /** Empty-state message for session streams. */
 function SessionEmptyState({ session }: { session: Session | undefined }): JSX.Element {
-  const isTerminal = session && ["completed", "failed", "interrupted", "suspended"].includes(session.status);
+  const isTerminal = session && (session.status === "stopped" || session.status === "suspended");
   const emptyMessage = isTerminal
-    ? `Session ${session.status} with no events recorded.`
+    ? `Session ${session.endReason || session.status} with no events recorded.`
     : "Waiting for events...";
   return (
     <div className={isTerminal ? styles.errorMessage : styles.waitingMessage}>{emptyMessage}</div>

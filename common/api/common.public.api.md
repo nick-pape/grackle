@@ -69,7 +69,7 @@ const CloseFdRequestSchema: GenMessage<CloseFdRequest>;
 
 // @public
 type CloseFdResponse = Message<"grackle.CloseFdResponse"> & {
-    hibernated: boolean;
+    stopped: boolean;
 };
 
 // @public
@@ -189,6 +189,16 @@ const EmptySchema: GenMessage<Empty>;
 
 // @public
 const EmptySchema_2: GenMessage<Empty_2>;
+
+// @public
+export const END_REASON: {
+    readonly COMPLETED: "completed";
+    readonly KILLED: "killed";
+    readonly INTERRUPTED: "interrupted";
+};
+
+// @public
+export type EndReason = typeof END_REASON[keyof typeof END_REASON];
 
 // @public
 type Environment = Message<"grackle.Environment"> & {
@@ -848,7 +858,7 @@ const GracklePowerLine: GenService<{
     };
     kill: {
         methodKind: "unary";
-        input: typeof SessionIdSchema_2;
+        input: typeof KillRequestSchema;
         output: typeof EmptySchema_2;
     };
     listSessions: {
@@ -935,6 +945,15 @@ export function issueStateToEnum(s: string): IssueState;
 
 // @public
 export function issueStateToString(e: IssueState): string;
+
+// @public
+type KillRequest = Message<"grackle.powerline.KillRequest"> & {
+    id: string;
+    reason: string;
+};
+
+// @public
+const KillRequestSchema: GenMessage<KillRequest>;
 
 // @public
 type KnowledgeEdgeProto = Message<"grackle.KnowledgeEdgeProto"> & {
@@ -1100,6 +1119,8 @@ declare namespace powerline {
         EmptySchema_2 as EmptySchema,
         SessionId_2 as SessionId,
         SessionIdSchema_2 as SessionIdSchema,
+        KillRequest,
+        KillRequestSchema,
         EnvironmentInfo,
         EnvironmentInfoSchema,
         Pong,
@@ -1250,6 +1271,7 @@ type Session = Message<"grackle.Session"> & {
     outputTokens: number;
     costUsd: number;
     pipeFd: number;
+    endReason: string;
 };
 
 // @public
@@ -1257,11 +1279,8 @@ export const SESSION_STATUS: {
     readonly PENDING: "pending";
     readonly RUNNING: "running";
     readonly IDLE: "idle";
-    readonly HIBERNATING: "hibernating";
+    readonly STOPPED: "stopped";
     readonly SUSPENDED: "suspended";
-    readonly COMPLETED: "completed";
-    readonly FAILED: "failed";
-    readonly INTERRUPTED: "interrupted";
 };
 
 // @public

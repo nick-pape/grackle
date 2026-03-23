@@ -181,7 +181,7 @@ List active agent sessions. Shows ID, environment, runtime, status, token usage,
 ```bash
 grackle status
 grackle status --env my-env    # filter by environment
-grackle status --all           # include completed sessions
+grackle status --all           # include stopped sessions
 ```
 
 #### `grackle attach <session-id>`
@@ -194,7 +194,7 @@ grackle attach abc12345
 
 #### `grackle resume <session-id>`
 
-Resume a paused or suspended session.
+Resume a stopped or suspended session.
 
 #### `grackle kill <session-id>`
 
@@ -345,7 +345,7 @@ Mark a task as complete.
 
 #### `grackle task resume <task-id>`
 
-Resume the latest interrupted or completed session for a task.
+Resume the latest stopped session for a task.
 
 #### `grackle task delete <task-id>`
 

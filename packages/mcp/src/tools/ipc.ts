@@ -105,7 +105,7 @@ export const ipcTools: ToolDefinition[] = [
   {
     name: "ipc_close",
     group: "ipc",
-    description: "Close a file descriptor, dropping the connection to the child session. If this is the last fd to the child, the child is hibernated. Fails if there are undelivered messages — process them first.",
+    description: "Close a file descriptor, dropping the connection to the child session. If this is the last fd to the child, the child is stopped. Fails if there are undelivered messages — process them first.",
     inputSchema: z.object({
       fd: z.number().int().describe("File descriptor to close"),
     }),
@@ -125,7 +125,7 @@ export const ipcTools: ToolDefinition[] = [
           sessionId,
           fd: args.fd as number,
         });
-        return jsonResult({ success: true, hibernated: result.hibernated });
+        return jsonResult({ success: true, stopped: result.stopped });
       } catch (error) {
         return grpcErrorToToolResult(error);
       }

@@ -312,8 +312,8 @@ function SessionAttemptSelector({ taskSessions, selectedSessionId, onSelect }: S
       <span className={styles.attemptLabel}>Attempts:</span>
       {taskSessions.map((s, i) => {
         const isActive = s.id === selectedSessionId;
-        const statusIcon = s.status === "completed" ? "\u2713"
-          : s.status === "failed" ? "\u2717"
+        const statusIcon = s.status === "stopped" && s.endReason === "completed" ? "\u2713"
+          : s.status === "stopped" ? "\u2717"
           : s.status === "running" || s.status === "idle" ? "\u25CF"
           : "";
         return (
@@ -584,7 +584,7 @@ export function TaskPage(): JSX.Element {
         const taskSessionForChat = sessionId
           ? sessions.find((s) => s.id === sessionId)
           : undefined;
-        if (!taskSessionForChat || ["completed", "failed", "interrupted", "hibernating"].includes(taskSessionForChat.status)) {
+        if (!taskSessionForChat || taskSessionForChat.status === "stopped") {
           return undefined;
         }
         return (

@@ -24,6 +24,7 @@ import {
   SESSION_STATUS,
   TERMINAL_SESSION_STATUSES,
   type SessionStatus,
+  END_REASON,
   TASK_STATUS,
   DEFAULT_MCP_PORT,
   ROOT_TASK_ID,
@@ -467,9 +468,9 @@ export async function startTaskSession(
 /**
  * Terminate a session using the fd-closure pattern.
  *
- * Deletes the lifecycle stream (triggering auto-hibernate via the orphan
+ * Deletes the lifecycle stream (triggering auto-stop via the orphan
  * callback), closes all other subscriptions, and falls back to direct
- * INTERRUPTED for legacy sessions without lifecycle streams.
+ * STOPPED+killed for legacy sessions without lifecycle streams.
  *
  * Matches the pattern used by `killAgent` in grpc-service.ts.
  */
@@ -479,7 +480,7 @@ async function terminateSession(sessionId: string): Promise<void> {
     return;
   }
 
-  // 1. Delete lifecycle stream → triggers orphan callback → auto-hibernate
+  // 1. Delete lifecycle stream → triggers orphan callback → auto-stop
   cleanupLifecycleStream(sessionId);
 
   // 2. Close other subscriptions (pipe streams etc.)
@@ -495,19 +496,19 @@ async function terminateSession(sessionId: string): Promise<void> {
     if (conn) {
       try {
         await conn.client.kill(
-          create(powerline.SessionIdSchema, { id: sessionId }),
+          create(powerline.KillRequestSchema, { id: sessionId, reason: END_REASON.KILLED }),
         );
       } catch (err) {
         logger.warn({ sessionId, err }, "PowerLine kill failed during session termination");
       }
     }
-    sessionStore.updateSession(sessionId, SESSION_STATUS.INTERRUPTED);
+    sessionStore.updateSession(sessionId, SESSION_STATUS.STOPPED, undefined, undefined, END_REASON.KILLED);
     streamHub.publish(
       create(grackle.SessionEventSchema, {
         sessionId,
         type: grackle.EventType.STATUS,
         timestamp: new Date().toISOString(),
-        content: SESSION_STATUS.INTERRUPTED,
+        content: END_REASON.KILLED,
         raw: "",
       }),
     );
@@ -553,6 +554,7 @@ async function handleMessage(
             inputTokens: r.inputTokens,
             outputTokens: r.outputTokens,
             costUsd: r.costUsd,
+            endReason: r.endReason ?? "",
           })),
         },
       });
@@ -1266,8 +1268,7 @@ async function handleMessage(
           sendWs(ws, { type: "error", payload: { message: `Session not found: ${lateBindSessionId}` } });
           return;
         }
-        const terminalStatuses: string[] = [SESSION_STATUS.COMPLETED, SESSION_STATUS.FAILED, SESSION_STATUS.INTERRUPTED];
-        if (terminalStatuses.includes(session.status)) {
+        if (TERMINAL_SESSION_STATUSES.has(session.status as SessionStatus)) {
           sendWs(ws, {
             type: "error",
             payload: { message: `Cannot bind terminal session ${lateBindSessionId} (status: ${session.status})` },
@@ -1424,7 +1425,7 @@ async function handleMessage(
         sendWs(ws, { type: "error", payload: { message: `Task ${taskId} has no sessions to resume` } });
         return;
       }
-      if (!([SESSION_STATUS.INTERRUPTED, SESSION_STATUS.COMPLETED] as string[]).includes(latestSession.status)) {
+      if (!([SESSION_STATUS.STOPPED, SESSION_STATUS.SUSPENDED] as string[]).includes(latestSession.status)) {
         sendWs(ws, {
           type: "error",
           payload: { message: `Latest session ${latestSession.id} is not resumable (status: ${latestSession.status})` },
@@ -1529,6 +1530,7 @@ async function handleMessage(
             inputTokens: r.inputTokens,
             outputTokens: r.outputTokens,
             costUsd: r.costUsd,
+            endReason: r.endReason ?? "",
           })),
         },
       });

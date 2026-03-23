@@ -1,5 +1,6 @@
 import type { AgentSession } from "./runtime.js";
 import { BaseAgentSession } from "./base-session.js";
+import { SESSION_STATUS } from "@grackle-ai/common";
 import { BaseAgentRuntime } from "./base-runtime.js";
 import { resolveWorkingDirectory, resolveMcpServers } from "./runtime-utils.js";
 import { logger } from "../logger.js";
@@ -391,10 +392,9 @@ class CodexSession extends BaseAgentSession {
           }
           this.turnCount++;
           if (this.maxTurns > 0 && this.turnCount >= this.maxTurns) {
-            logger.info({ turnCount: this.turnCount, maxTurns: this.maxTurns }, "Codex max turns reached, stopping session");
-            this.killed = true;
-            this.status = "completed";
-            this.eventQueue.push({ type: "status", timestamp: ts(), content: "completed" });
+            logger.info({ turnCount: this.turnCount, maxTurns: this.maxTurns }, "Codex max turns reached — going idle");
+            this.status = SESSION_STATUS.IDLE;
+            this.eventQueue.push({ type: "status", timestamp: ts(), content: "waiting_input" });
             if (this.activeStream && typeof this.activeStream.abort === "function") {
               this.activeStream.abort();
             }

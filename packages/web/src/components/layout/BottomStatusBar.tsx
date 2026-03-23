@@ -124,7 +124,7 @@ export function BottomStatusBar(): JSX.Element {
       const taskSession = taskSessionId
         ? sessions.find((s) => s.id === taskSessionId)
         : undefined;
-      const isActive = taskSession && !["completed", "failed", "interrupted", "hibernating"].includes(taskSession.status);
+      const isActive = taskSession && taskSession.status !== "stopped";
 
       // Active session — ChatInput on the page handles this; return empty
       if (isActive) {
@@ -170,7 +170,7 @@ export function BottomStatusBar(): JSX.Element {
   // --- session mode ---
   if (sessionId) {
     const session = sessions.find((s) => s.id === sessionId);
-    const isEnded = session !== undefined && ["completed", "failed", "interrupted", "hibernating"].includes(session.status);
+    const isEnded = session?.status === "stopped";
     const isActive = session !== undefined && !isEnded;
 
     // Active session — ChatInput on the page handles this; return empty
@@ -181,7 +181,7 @@ export function BottomStatusBar(): JSX.Element {
     if (isEnded) {
       return (
         <div className={styles.bar}>
-          <span className={`${styles.statusText} ${styles.hintText}`}>Session {session.status}</span>
+          <span className={`${styles.statusText} ${styles.hintText}`}>Session {session.endReason || session.status}</span>
           <button onClick={() => navigate(newChatUrl(session.environmentId))} className={styles.btnPrimary}>
             + New Chat
           </button>

@@ -42,7 +42,8 @@ function applySchema(): void {
       pipe_mode          TEXT NOT NULL DEFAULT '',
       input_tokens       INTEGER NOT NULL DEFAULT 0,
       output_tokens      INTEGER NOT NULL DEFAULT 0,
-      cost_usd           REAL NOT NULL DEFAULT 0
+      cost_usd           REAL NOT NULL DEFAULT 0,
+      end_reason         TEXT
     );
   `);
 
@@ -57,18 +58,19 @@ describe("session-store", () => {
     applySchema();
   });
 
-  describe("hibernateSession", () => {
-    it("sets status to hibernating and endedAt", () => {
+  describe("updateSession to STOPPED", () => {
+    it("sets status to stopped and endedAt", () => {
       sessionStore.createSession("s1", "test-env", "claude-code", "test", "model", "/tmp/log");
       const before = sessionStore.getSession("s1");
       expect(before?.status).toBe("pending");
       expect(before?.endedAt).toBeNull();
 
-      sessionStore.hibernateSession("s1");
+      sessionStore.updateSession("s1", "stopped", undefined, undefined, "completed");
 
       const after = sessionStore.getSession("s1");
-      expect(after?.status).toBe("hibernating");
+      expect(after?.status).toBe("stopped");
       expect(after?.endedAt).toBeTruthy();
+      expect(after?.endReason).toBe("completed");
     });
   });
 

@@ -31,6 +31,7 @@ import type {
   PersonaData,
   CredentialProviderConfig,
 } from "../hooks/useGrackleSocket.js";
+import { mapSessionStatus, mapEndReason } from "../hooks/types.js";
 import {
   MOCK_ENVIRONMENTS,
   MOCK_SESSIONS,
@@ -154,10 +155,10 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
     }
   }, []);
 
-  /** Updates a single session's status in state. */
-  const updateSessionStatus = useCallback((sessionId: string, status: string): void => {
+  /** Updates a single session's status (and optionally endReason) in state. */
+  const updateSessionStatus = useCallback((sessionId: string, status: string, endReason?: string): void => {
     setSessions((prev) =>
-      prev.map((s) => (s.id === sessionId ? { ...s, status } : s)),
+      prev.map((s) => (s.id === sessionId ? { ...s, status, ...(endReason !== undefined ? { endReason } : {}) } : s)),
     );
   }, []);
 
@@ -186,9 +187,13 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
             };
             appendEvent(event);
 
-            // Status events also update the session record
+            // Status events also update the session record (apply mapping
+            // so raw PowerLine values like "completed"/"failed"/"killed" are
+            // stored as "stopped" with the appropriate endReason).
             if (step.event.eventType === "status") {
-              updateSessionStatus(sessionId, step.event.content);
+              const mappedStatus = mapSessionStatus(step.event.content);
+              const endReason = mapEndReason(step.event.content);
+              updateSessionStatus(sessionId, mappedStatus, endReason);
             }
 
             // Fire onComplete after the last step
@@ -262,7 +267,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
     [nextId, nextScenario, playScenario, schedule, updateSessionStatus, appendEvent],
   );
 
-  /** Kills a session: cancels timers, sets status to interrupted, resets associated tasks. */
+  /** Kills a session: cancels timers, sets status to stopped with endReason killed, resets associated tasks. */
   const kill: UseGrackleSocketResult["kill"] = useCallback(
     (sessionId: string) => {
       console.log("[MockGrackle] kill", sessionId);
@@ -273,15 +278,15 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       // 2. Remove any pending resume steps
       pendingResumeRef.current.delete(sessionId);
 
-      // 3. Update session status to "interrupted"
-      updateSessionStatus(sessionId, "interrupted");
+      // 3. Update session status to "stopped" with endReason "killed"
+      updateSessionStatus(sessionId, "stopped", "killed");
 
       // 4. Append a status event
       appendEvent({
         sessionId,
         eventType: "status",
         timestamp: new Date().toISOString(),
-        content: "interrupted",
+        content: "killed",
       });
 
       // 5. With computed status, killing a session makes the task retryable
