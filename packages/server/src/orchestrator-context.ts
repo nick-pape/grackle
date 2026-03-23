@@ -79,7 +79,7 @@ export function fetchOrchestratorContext(workspaceId: string): OrchestratorConte
 
   // Findings context (pre-formatted markdown with 8K char budget)
   const findingsContext = workspaceId
-    ? findingStore.buildFindingsContext(workspaceId)
+    ? buildFindingsContext(workspaceId)
     : "";
 
   return {
@@ -93,4 +93,37 @@ export function fetchOrchestratorContext(workspaceId: string): OrchestratorConte
     availableEnvironments,
     findingsContext,
   };
+}
+
+// ─── Findings Context Builder ──────────────────────────────
+
+/** Maximum total characters for the findings context block. */
+const FINDINGS_MAX_CHARS: number = 8000;
+
+/** Maximum characters per individual finding's content. */
+const FINDINGS_MAX_PER_FINDING: number = 500;
+
+/** Build a summarized text context of recent findings for a workspace. */
+function buildFindingsContext(workspaceId: string): string {
+  const allFindings = findingStore.queryFindings(workspaceId, undefined, undefined, 20);
+  if (allFindings.length === 0) {
+    return "";
+  }
+
+  const lines = ["## Workspace Findings (shared knowledge from other agents)\n"];
+  let totalChars = lines[0].length;
+
+  for (const f of allFindings) {
+    const content = f.content.length > FINDINGS_MAX_PER_FINDING
+      ? f.content.slice(0, FINDINGS_MAX_PER_FINDING) + "..."
+      : f.content;
+    const entry = `### [${f.category}] ${f.title}\n${content}\n`;
+    if (totalChars + entry.length > FINDINGS_MAX_CHARS) {
+      break;
+    }
+    lines.push(entry);
+    totalChars += entry.length;
+  }
+
+  return lines.join("\n");
 }
