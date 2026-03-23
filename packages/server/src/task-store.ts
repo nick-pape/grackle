@@ -159,8 +159,8 @@ export function updateTask(
     .run();
 }
 
-/** Assign (or clear) the workspace for a task. */
-export function setTaskWorkspace(id: string, workspaceId: string | undefined): void {
+/** Assign a workspace to a task. */
+export function setTaskWorkspace(id: string, workspaceId: string): void {
   db.update(tasks)
     .set({
       workspaceId,
