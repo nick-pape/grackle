@@ -20,7 +20,6 @@ import {
   eventTypeToString,
 } from "@grackle-ai/common";
 import { resolvePersona, fetchOrchestratorContext, SystemPromptBuilder, buildTaskPrompt } from "@grackle-ai/prompt";
-import * as logWriter from "./log-writer.js";
 import { logger } from "./logger.js";
 import { processEventStream } from "./event-processor.js";
 import { setWssInstance } from "./ws-broadcast.js";
