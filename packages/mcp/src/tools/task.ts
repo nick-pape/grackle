@@ -198,7 +198,7 @@ export const taskTools: ToolDefinition[] = [
       try {
         const taskId = args.taskId as string;
         if (taskId === ROOT_TASK_ID && args.status) {
-          return jsonResult({ error: "Cannot change the status of the system task" });
+          return { content: [{ type: "text", text: "Cannot change the status of the system task" }], isError: true };
         }
         const statusString = args.status as string | undefined;
         const statusValue = statusString
@@ -325,7 +325,7 @@ export const taskTools: ToolDefinition[] = [
       try {
         const taskId = args.taskId as string;
         if (taskId === ROOT_TASK_ID) {
-          return jsonResult({ error: "Cannot delete the system task" });
+          return { content: [{ type: "text", text: "Cannot delete the system task" }], isError: true };
         }
         await client.deleteTask({ id: taskId });
         return jsonResult({ success: true });
@@ -356,7 +356,7 @@ export const taskTools: ToolDefinition[] = [
       try {
         const taskId = args.taskId as string;
         if (taskId === ROOT_TASK_ID) {
-          return jsonResult({ error: "Cannot complete the system task" });
+          return { content: [{ type: "text", text: "Cannot complete the system task" }], isError: true };
         }
         await assertCallerIsAncestor(client, authContext, taskId);
         const task = await client.completeTask({ id: taskId });
