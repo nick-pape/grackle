@@ -38,6 +38,11 @@
       "versionPolicyName": "grackle"
     },
     {
+      "packageName": "@grackle-ai/auth",
+      "projectFolder": "packages/auth",
+      "versionPolicyName": "grackle"
+    },
+    {
       "packageName": "@grackle-ai/adapter-local",
       "projectFolder": "packages/adapter-local",
       "versionPolicyName": "grackle"

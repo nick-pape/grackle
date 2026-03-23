@@ -1,10 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import http from "node:http";
 import { createHash } from "node:crypto";
-import { SESSION_COOKIE_NAME } from "./session.js";
-import { clearSessions } from "./session.js";
-import { clearPairing, generatePairingCode } from "./pairing.js";
-import { clearOAuthState } from "./oauth.js";
+import { SESSION_COOKIE_NAME, clearSessions, clearPairing, generatePairingCode, clearOAuthState } from "@grackle-ai/auth";
 
 // Mock logger
 vi.mock("./logger.js", () => ({
@@ -79,14 +76,14 @@ describe("OAuth flow integration", () => {
     clearOAuthState();
 
     // Dynamically import modules after mocks are applied
-    const { createSession, validateSessionCookie } = await import("./session.js");
-    const { redeemPairingCode } = await import("./pairing.js");
     const {
+      createSession, validateSessionCookie,
+      redeemPairingCode,
       registerClient, getClient,
       createAuthorizationCode, consumeAuthorizationCode,
       createRefreshToken, consumeRefreshToken,
-    } = await import("./oauth.js");
-    const { createOAuthAccessToken, OAUTH_ACCESS_TOKEN_TTL_MS } = await import("@grackle-ai/mcp");
+      createOAuthAccessToken, OAUTH_ACCESS_TOKEN_TTL_MS,
+    } = await import("@grackle-ai/auth");
 
     server = http.createServer(async (req, res) => {
       const urlParts = (req.url || "/").split("?");
@@ -328,7 +325,7 @@ describe("OAuth flow integration", () => {
     const pairRes = await request(server, "GET", `/pair?code=${pairingCode}`);
     // This is a simplified server without static file serving for /pair, so just get the cookie
     // For this test, use the actual import to create a session directly
-    const { createSession } = await import("./session.js");
+    const { createSession } = await import("@grackle-ai/auth");
     const setCookie = createSession(MOCK_API_KEY);
     const cookieValue = setCookie.split(";")[0];
 
@@ -473,7 +470,7 @@ describe("OAuth flow integration", () => {
     const { client_id: clientId } = JSON.parse(regRes.body) as { client_id: string };
 
     // Create session
-    const { createSession } = await import("./session.js");
+    const { createSession } = await import("@grackle-ai/auth");
     const setCookie = createSession(MOCK_API_KEY);
     const cookieValue = setCookie.split(";")[0];
 
@@ -504,7 +501,7 @@ describe("OAuth flow integration", () => {
     const { client_id: clientId } = JSON.parse(regRes.body) as { client_id: string };
 
     // Create session and authorize
-    const { createSession } = await import("./session.js");
+    const { createSession } = await import("@grackle-ai/auth");
     const setCookie = createSession(MOCK_API_KEY);
     const cookieValue = setCookie.split(";")[0];
 
@@ -566,7 +563,7 @@ describe("OAuth flow integration", () => {
     });
     const { client_id: clientId } = JSON.parse(regRes.body) as { client_id: string };
 
-    const { createSession } = await import("./session.js");
+    const { createSession } = await import("@grackle-ai/auth");
     const setCookie = createSession(MOCK_API_KEY);
     const cookieValue = setCookie.split(";")[0];
 

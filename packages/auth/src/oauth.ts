@@ -1,5 +1,5 @@
 import { randomUUID, randomBytes, createHash } from "node:crypto";
-import { logger } from "./logger.js";
+import { getAuthLogger } from "./auth-logger.js";
 
 /** Time-to-live for authorization codes: 30 seconds. */
 const AUTH_CODE_TTL_MS: number = 30 * 1000;
@@ -21,7 +21,8 @@ const CLIENT_TTL_MS: number = 7 * 24 * 60 * 60 * 1000;
 
 // ─── Client Registration ──────────────────────────────────────────────
 
-interface ClientRecord {
+/** Registered OAuth client record. */
+export interface ClientRecord {
   clientId: string;
   redirectUris: string[];
   clientName: string;
@@ -48,7 +49,7 @@ export function registerClient(redirectUris: string[], clientName?: string): Cli
   }
 
   if (clients.size >= MAX_CLIENTS) {
-    logger.warn("Maximum registered OAuth clients reached (%d)", MAX_CLIENTS);
+    getAuthLogger().warn({}, "Maximum registered OAuth clients reached (%d)");
     return undefined;
   }
 
@@ -60,7 +61,7 @@ export function registerClient(redirectUris: string[], clientName?: string): Cli
     createdAt: now,
   };
   clients.set(clientId, record);
-  logger.info({ clientId, clientName: record.clientName }, "OAuth client registered");
+  getAuthLogger().info({ clientId, clientName: record.clientName }, "OAuth client registered");
   return record;
 }
 
@@ -76,7 +77,8 @@ export function getClient(clientId: string): ClientRecord | undefined {
 
 // ─── Authorization Codes ──────────────────────────────────────────────
 
-interface AuthCodeRecord {
+/** Authorization code record bound to PKCE parameters. */
+export interface AuthCodeRecord {
   code: string;
   clientId: string;
   redirectUri: string;
@@ -116,7 +118,7 @@ export function createAuthorizationCode(
     expiresAt: now + AUTH_CODE_TTL_MS,
   };
   authCodes.set(code, record);
-  logger.info({ clientId }, "Authorization code created");
+  getAuthLogger().info({ clientId }, "Authorization code created");
   return code;
 }
 
@@ -195,7 +197,8 @@ export function consumeAuthorizationCode(
 
 // ─── Refresh Tokens ───────────────────────────────────────────────────
 
-interface RefreshTokenRecord {
+/** Refresh token record with client and resource binding. */
+export interface RefreshTokenRecord {
   token: string;
   clientId: string;
   resource: string;

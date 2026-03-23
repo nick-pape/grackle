@@ -5,16 +5,12 @@ import {
   clearPairing,
 } from "./pairing.js";
 
-// Mock the logger to avoid pino output during tests
-vi.mock("./logger.js", () => ({
-  logger: {
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-    debug: vi.fn(),
-    fatal: vi.fn(),
-  },
-}));
+// Suppress logger output during tests
+import { setAuthLogger } from "./auth-logger.js";
+setAuthLogger({
+  info: vi.fn(),
+  warn: vi.fn(),
+});
 
 describe("pairing", () => {
   beforeEach(() => {

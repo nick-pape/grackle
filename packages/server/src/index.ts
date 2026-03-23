@@ -26,18 +26,18 @@ import { isKnowledgeEnabled, initKnowledge } from "./knowledge-init.js";
 import { readFileSync, existsSync } from "node:fs";
 import { join, dirname, extname, normalize, resolve, relative } from "node:path";
 import { createRequire } from "node:module";
-import { loadOrCreateApiKey, verifyApiKey } from "./api-key.js";
-import { setSecurityHeaders } from "./security-headers.js";
-import { createSession, validateSessionCookie } from "./session.js";
-import { startSessionCleanup, stopSessionCleanup } from "./session.js";
-import { generatePairingCode, redeemPairingCode, startPairingCleanup, stopPairingCleanup } from "./pairing.js";
 import {
+  loadOrCreateApiKey, verifyApiKey,
+  setSecurityHeaders, setAuthLogger,
+  createSession, validateSessionCookie,
+  startSessionCleanup, stopSessionCleanup,
+  generatePairingCode, redeemPairingCode, startPairingCleanup, stopPairingCleanup,
   registerClient, getClient,
   createAuthorizationCode, consumeAuthorizationCode,
   createRefreshToken, consumeRefreshToken,
   startOAuthCleanup, stopOAuthCleanup,
-} from "./oauth.js";
-import { createOAuthAccessToken, OAUTH_ACCESS_TOKEN_TTL_MS } from "@grackle-ai/mcp";
+  createOAuthAccessToken, OAUTH_ACCESS_TOKEN_TTL_MS,
+} from "@grackle-ai/auth";
 import { logger } from "./logger.js";
 import { exec } from "./utils/exec.js";
 import { detectLanIp } from "./utils/network.js";
@@ -640,8 +640,11 @@ async function main(): Promise<void> {
   // Reset all environment statuses on startup — in-memory connections are lost
   envRegistry.resetAllStatuses();
 
+  // Configure auth logger to use the server's pino instance
+  setAuthLogger(logger);
+
   // Load (or generate) the API key on startup
-  const apiKey = loadOrCreateApiKey();
+  const apiKey = loadOrCreateApiKey(grackleHome);
 
   // Register adapters with server dependencies injected
   const adapterDeps = {

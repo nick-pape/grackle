@@ -11,16 +11,12 @@ import {
   clearOAuthState,
 } from "./oauth.js";
 
-// Mock logger
-vi.mock("./logger.js", () => ({
-  logger: {
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-    debug: vi.fn(),
-    fatal: vi.fn(),
-  },
-}));
+// Suppress logger output during tests
+import { setAuthLogger } from "./auth-logger.js";
+setAuthLogger({
+  info: vi.fn(),
+  warn: vi.fn(),
+});
 
 const REDIRECT_URI = "http://127.0.0.1:12345/callback";
 const RESOURCE = "http://127.0.0.1:7435";

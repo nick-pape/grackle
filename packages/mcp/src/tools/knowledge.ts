@@ -11,7 +11,7 @@
 import type { Client } from "@connectrpc/connect";
 import { grackle } from "@grackle-ai/common";
 import { z } from "zod";
-import type { AuthContext } from "../auth-context.js";
+import type { AuthContext } from "@grackle-ai/auth";
 import type { ToolDefinition } from "../tool-registry.js";
 import { jsonResult } from "../result-helpers.js";
 

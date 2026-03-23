@@ -2,7 +2,7 @@ import type { Client } from "@connectrpc/connect";
 import { ConnectError, Code } from "@connectrpc/connect";
 import type { grackle } from "@grackle-ai/common";
 import { MAX_TASK_DEPTH } from "@grackle-ai/common";
-import type { AuthContext } from "./auth-context.js";
+import type { AuthContext } from "@grackle-ai/auth";
 
 /**
  * Assert that the caller (identified by scoped auth) is an ancestor of the target task.
