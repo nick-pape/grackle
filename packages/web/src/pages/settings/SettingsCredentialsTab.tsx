@@ -5,11 +5,11 @@ import { TokensPanel } from "../../components/panels/TokensPanel.js";
 
 /** Settings tab combining credential providers and custom tokens. */
 export function SettingsCredentialsTab(): JSX.Element {
-  const { tokens, setToken, deleteToken } = useGrackle();
+  const { tokens, setToken, deleteToken, credentialProviders, updateCredentialProviders } = useGrackle();
 
   return (
     <>
-      <CredentialProvidersPanel />
+      <CredentialProvidersPanel credentialProviders={credentialProviders} onUpdateCredentialProviders={updateCredentialProviders} />
       <TokensPanel tokens={tokens} onSetToken={setToken} onDeleteToken={deleteToken} />
     </>
   );
