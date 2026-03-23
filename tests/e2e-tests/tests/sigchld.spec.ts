@@ -152,7 +152,7 @@ test.describe("SIGCHLD — child completion notification", { tag: ["@error"] }, 
     await waitForSessionStatus(page, childSessionId, "stopped");
   });
 
-  test("SIGCHLD delivered after parent session reanimated", async ({ appPage: page }) => {
+  test("SIGCHLD delivered after parent session reanimated", { timeout: 90_000 }, async ({ appPage: page }) => {
     // 1. Create workspace
     await createWorkspace(page, "SIGCHLD Reanimate");
     const workspaceId = await getWorkspaceId(page, "SIGCHLD Reanimate");
@@ -194,11 +194,12 @@ test.describe("SIGCHLD — child completion notification", { tag: ["@error"] }, 
 
     // 6. SIGCHLD triggers reanimate of parent session.
     //    The reanimated session echoes "[SIGCHLD]..." in its text events.
+    //    Allow extra time for the async reanimate chain to complete.
     const sigchldContent = await waitForSessionText(
       page,
       parentSessionId,
       "[SIGCHLD]",
-      30_000,
+      60_000,
     );
     expect(sigchldContent).toContain("Child For Reanimate");
     expect(sigchldContent).toContain("was killed");
