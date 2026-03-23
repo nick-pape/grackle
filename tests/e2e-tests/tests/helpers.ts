@@ -720,20 +720,23 @@ export async function sendWsMessage(
   message: WsPayload,
 ): Promise<void> {
   await page.evaluate(async (msg) => {
-    /** Call a ConnectRPC endpoint. */
+    /** Call a ConnectRPC endpoint and return the parsed JSON response. */
     async function rpc(
       method: string,
       body: Record<string, unknown>,
-    ): Promise<void> {
+    ): Promise<Record<string, unknown>> {
       const resp = await fetch(`/grackle.Grackle/${method}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
         credentials: "include",
       });
+      const text = await resp.text();
       if (!resp.ok) {
         // Swallow errors for fire-and-forget
+        return {};
       }
+      return text ? JSON.parse(text) : {};
     }
 
     const wsType = msg.type as string;
@@ -993,7 +996,7 @@ export async function patchWsForStubRuntime(page: Page, environmentId: string = 
 
     window.fetch = async function (input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
       const url = typeof input === "string" ? input : (input instanceof URL ? input.toString() : input.url);
-      if (url.includes("/grackle.Grackle/StartTask") && init?.body) {
+      if ((url.includes("/grackle.Grackle/StartTask") || url.includes("/grackle.Grackle/SpawnAgent")) && init?.body) {
         try {
           const body = JSON.parse(init.body as string);
           body.personaId = "stub";
@@ -1166,7 +1169,7 @@ export async function patchWsForStubMcpRuntime(page: Page, environmentId: string
 
     window.fetch = async function (input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
       const url = typeof input === "string" ? input : (input instanceof URL ? input.toString() : input.url);
-      if (url.includes("/grackle.Grackle/StartTask") && init?.body) {
+      if ((url.includes("/grackle.Grackle/StartTask") || url.includes("/grackle.Grackle/SpawnAgent")) && init?.body) {
         try {
           const body = JSON.parse(init.body as string);
           body.personaId = "stub-mcp";
