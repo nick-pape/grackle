@@ -14,15 +14,16 @@ class PlaywrightTestPlugin implements IHeftTaskPlugin {
   public apply(session: IHeftTaskSession, heftConfiguration: HeftConfiguration): void {
     session.hooks.run.tapPromise(PLUGIN_NAME, async (_runOptions: IHeftTaskRunHookOptions) => {
       const buildFolder: string = heftConfiguration.buildFolderPath;
-      const isWindows: boolean = process.platform === "win32";
-      const executableName: string = isWindows ? "playwright.cmd" : "playwright";
-      const playwrightBin: string = path.join(buildFolder, "node_modules", ".bin", executableName);
+      // Use @playwright/test's CLI entry point directly to ensure correct exit
+      // code semantics. The base `playwright` package binary at node_modules/.bin
+      // may have different behavior (e.g., exit 1 even when all tests pass).
+      const playwrightCliPath: string = require.resolve("@playwright/test/cli", { paths: [buildFolder] });
 
       session.logger.terminal.writeLine("Running Playwright tests...");
-      execFileSync(playwrightBin, ["test"], {
+      execFileSync(process.execPath, [playwrightCliPath, "test"], {
         cwd: buildFolder,
         stdio: "inherit",
-        shell: isWindows
+        shell: false
       });
       session.logger.terminal.writeLine("Playwright tests completed.");
     });
