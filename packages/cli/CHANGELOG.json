@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.72.4",
+      "tag": "@grackle-ai/cli_v0.72.4",
+      "date": "Mon, 23 Mar 2026 17:24:08 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Fix session recovery race condition that caused flaky E2E failures when an environment acquired a new active session during the async drain window"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.72.3",
       "tag": "@grackle-ai/cli_v0.72.3",
       "date": "Mon, 23 Mar 2026 15:03:48 GMT",
