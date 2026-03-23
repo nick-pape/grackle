@@ -1,12 +1,16 @@
 /**
  * Domain hook for token management.
  *
+ * Uses ConnectRPC for all CRUD operations. Domain events from the WebSocket
+ * event bus trigger re-fetches.
+ *
  * @module
  */
 
 import { useState, useCallback } from "react";
-import type { TokenInfo, WsMessage, SendFunction, GrackleEvent } from "./types.js";
-import { asValidArray, isTokenInfo } from "./types.js";
+import type { TokenInfo, GrackleEvent } from "./types.js";
+import { grackleClient } from "./useGrackleClient.js";
+import { protoToToken } from "./proto-converters.js";
 
 /** Values returned by {@link useTokens}. */
 export interface UseTokensResult {
@@ -24,49 +28,32 @@ export interface UseTokensResult {
   ) => void;
   /** Delete a token by name. */
   deleteToken: (name: string) => void;
-  /** Handle an incoming WebSocket message. Returns `true` if handled. */
-  handleMessage: (msg: WsMessage) => boolean;
   /** Handle a domain event from the event bus. Returns `true` if handled. */
   handleEvent: (event: GrackleEvent) => boolean;
 }
 
 /**
- * Hook that manages token state and CRUD actions.
+ * Hook that manages token state and CRUD actions via ConnectRPC.
  *
- * @param send - Function to send WebSocket messages.
- * @returns Token state, actions, and a message handler.
+ * @returns Token state, actions, and an event handler.
  */
-export function useTokens(send: SendFunction): UseTokensResult {
+export function useTokens(): UseTokensResult {
   const [tokens, setTokens] = useState<TokenInfo[]>([]);
+
+  const loadTokens = useCallback(() => {
+    grackleClient.listTokens({}).then(
+      (resp) => { setTokens(resp.tokens.map(protoToToken)); },
+      (err) => { console.error("[grpc] listTokens failed:", err); },
+    );
+  }, []);
 
   const handleEvent = useCallback((event: GrackleEvent): boolean => {
     if (event.type === "token.changed") {
-      send({ type: "list_tokens" });
+      loadTokens();
       return true;
     }
     return false;
-  }, [send]);
-
-  const handleMessage = useCallback((msg: WsMessage): boolean => {
-    switch (msg.type) {
-      case "tokens":
-        setTokens(
-          asValidArray(
-            msg.payload?.tokens,
-            isTokenInfo,
-            "tokens",
-            "tokens",
-          ),
-        );
-        return true;
-      default:
-        return false;
-    }
-  }, []);
-
-  const loadTokens = useCallback(() => {
-    send({ type: "list_tokens" });
-  }, [send]);
+  }, [loadTokens]);
 
   const setToken = useCallback(
     (
@@ -76,20 +63,21 @@ export function useTokens(send: SendFunction): UseTokensResult {
       envVar: string,
       filePath: string,
     ) => {
-      send({
-        type: "set_token",
-        payload: { name, value, tokenType, envVar, filePath },
-      });
+      grackleClient.setToken({ name, value, type: tokenType, envVar, filePath }).catch(
+        (err) => { console.error("[grpc] setToken failed:", err); },
+      );
     },
-    [send],
+    [],
   );
 
   const deleteToken = useCallback(
     (name: string) => {
-      send({ type: "delete_token", payload: { name } });
+      grackleClient.deleteToken({ name }).catch(
+        (err) => { console.error("[grpc] deleteToken failed:", err); },
+      );
     },
-    [send],
+    [],
   );
 
-  return { tokens, loadTokens, setToken, deleteToken, handleMessage, handleEvent };
+  return { tokens, loadTokens, setToken, deleteToken, handleEvent };
 }

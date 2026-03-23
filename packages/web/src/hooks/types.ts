@@ -19,18 +19,6 @@ export interface Environment {
   bootstrapped: boolean;
 }
 
-/**
- * Raw environment shape from the server — `adapterConfig` may be absent
- * on older servers. Use {@link normalizeEnvironment} to fill in defaults.
- */
-interface RawEnvironment {
-  id: string;
-  displayName: string;
-  adapterType: string;
-  adapterConfig?: string;
-  status: string;
-  bootstrapped: boolean;
-}
 
 /** An agent session running inside an environment. */
 export interface Session {
@@ -218,45 +206,6 @@ export function isGrackleEvent(v: unknown): v is GrackleEvent {
   );
 }
 
-/** Type guard for {@link RawEnvironment} (pre-normalization). */
-export function isEnvironment(v: unknown): v is RawEnvironment {
-  return (
-    isObject(v) &&
-    typeof v.id === "string" &&
-    typeof v.displayName === "string" &&
-    typeof v.adapterType === "string" &&
-    typeof v.status === "string" &&
-    typeof v.bootstrapped === "boolean" &&
-    (typeof v.adapterConfig === "string" || v.adapterConfig === undefined)
-  );
-}
-
-/**
- * Normalize a raw environment from the server into a fully-typed {@link Environment}.
- * Defaults `adapterConfig` to `"{}"` when missing (backwards compat with older servers).
- */
-export function normalizeEnvironment(raw: RawEnvironment): Environment {
-  return {
-    ...raw,
-    adapterConfig: raw.adapterConfig ?? "{}",
-  };
-}
-
-/** Type guard for {@link Session}. */
-export function isSession(v: unknown): v is Session {
-  return (
-    isObject(v) &&
-    typeof v.id === "string" &&
-    typeof v.environmentId === "string" &&
-    typeof v.runtime === "string" &&
-    typeof v.status === "string" &&
-    typeof v.prompt === "string" &&
-    typeof v.startedAt === "string" &&
-    (v.endedAt === undefined || typeof v.endedAt === "string") &&
-    (v.error === undefined || typeof v.error === "string")
-  );
-}
-
 /** Type guard for {@link SessionEvent}. */
 export function isSessionEvent(v: unknown): v is SessionEvent {
   return (
@@ -266,69 +215,6 @@ export function isSessionEvent(v: unknown): v is SessionEvent {
     typeof v.timestamp === "string" &&
     typeof v.content === "string" &&
     (v.raw === undefined || typeof v.raw === "string")
-  );
-}
-
-/** Type guard for {@link Workspace}. */
-export function isWorkspace(v: unknown): v is Workspace {
-  return (
-    isObject(v) &&
-    typeof v.id === "string" &&
-    typeof v.name === "string" &&
-    typeof v.description === "string" &&
-    typeof v.repoUrl === "string" &&
-    typeof v.environmentId === "string" &&
-    typeof v.status === "string" &&
-    typeof v.worktreeBasePath === "string" &&
-    typeof v.useWorktrees === "boolean" &&
-    (v.defaultPersonaId === undefined || typeof v.defaultPersonaId === "string") &&
-    typeof v.createdAt === "string" &&
-    typeof v.updatedAt === "string"
-  );
-}
-
-/** Type guard for {@link TaskData}. */
-export function isTaskData(v: unknown): v is TaskData {
-  return (
-    isObject(v) &&
-    typeof v.id === "string" &&
-    (typeof v.workspaceId === "string" || v.workspaceId === undefined) &&
-    typeof v.title === "string" &&
-    typeof v.status === "string" &&
-    typeof v.branch === "string" &&
-    typeof v.sortOrder === "number" &&
-    typeof v.depth === "number" &&
-    (v.defaultPersonaId === undefined || typeof v.defaultPersonaId === "string") &&
-    Array.isArray(v.dependsOn) &&
-    Array.isArray(v.childTaskIds)
-  );
-}
-
-/** Type guard for {@link FindingData}. */
-export function isFindingData(v: unknown): v is FindingData {
-  return (
-    isObject(v) &&
-    typeof v.id === "string" &&
-    typeof v.workspaceId === "string" &&
-    typeof v.taskId === "string" &&
-    typeof v.sessionId === "string" &&
-    typeof v.category === "string" &&
-    typeof v.title === "string" &&
-    typeof v.content === "string" &&
-    Array.isArray(v.tags) &&
-    typeof v.createdAt === "string"
-  );
-}
-
-/** Type guard for {@link TokenInfo}. */
-export function isTokenInfo(v: unknown): v is TokenInfo {
-  return (
-    isObject(v) &&
-    typeof v.name === "string" &&
-    typeof v.tokenType === "string" &&
-    typeof v.envVar === "string" &&
-    typeof v.filePath === "string" &&
-    typeof v.expiresAt === "string"
   );
 }
 
@@ -348,80 +234,7 @@ export function isCredentialProviderConfig(v: unknown): v is CredentialProviderC
   );
 }
 
-/** Type guard for a provision progress payload (includes `environmentId`). */
-export function isProvisionProgress(
-  v: unknown,
-): v is ProvisionStatus & { environmentId: string } {
-  return (
-    isObject(v) &&
-    typeof v.environmentId === "string" &&
-    typeof v.stage === "string" &&
-    typeof v.message === "string" &&
-    typeof v.progress === "number"
-  );
-}
-
-/** Type guard for {@link Codespace}. */
-export function isCodespace(v: unknown): v is Codespace {
-  return (
-    isObject(v) &&
-    typeof v.name === "string" &&
-    typeof v.repository === "string" &&
-    typeof v.state === "string" &&
-    typeof v.gitStatus === "string"
-  );
-}
-
-/** Type guard for {@link PersonaData}. */
-export function isPersonaData(v: unknown): v is PersonaData {
-  return (
-    isObject(v) &&
-    typeof v.id === "string" &&
-    typeof v.name === "string" &&
-    typeof v.description === "string" &&
-    typeof v.systemPrompt === "string" &&
-    typeof v.toolConfig === "string" &&
-    typeof v.runtime === "string" &&
-    typeof v.model === "string" &&
-    typeof v.maxTurns === "number" &&
-    typeof v.mcpServers === "string" &&
-    typeof v.createdAt === "string" &&
-    typeof v.updatedAt === "string" &&
-    typeof v.type === "string" &&
-    typeof v.script === "string"
-  );
-}
-
 // ─── Utility functions ────────────────────────────────────────────────────────
-
-/**
- * Filter an unknown value to a typed array, discarding items that fail the
- * guard and warning about each one.
- */
-export function asValidArray<T>(
-  v: unknown,
-  guard: (item: unknown) => item is T,
-  msgType: string,
-  fieldName: string,
-): T[] {
-  if (!Array.isArray(v)) {
-    warnBadPayload(
-      msgType,
-      `expected "${fieldName}" to be an array, got ${typeof v}`,
-    );
-    return [];
-  }
-  return (v as unknown[]).filter((item: unknown, i: number): item is T => {
-    if (guard(item)) {
-      return true;
-    }
-    warnBadPayload(
-      msgType,
-      `item at index ${i} in "${fieldName}" has unexpected shape`,
-    );
-    return false;
-  });
-}
 
 /**
  * Parse a raw WebSocket message string into a {@link WsMessage} or

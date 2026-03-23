@@ -1,12 +1,16 @@
 /**
  * Domain hook for findings management.
  *
+ * Uses ConnectRPC for all operations. Domain events from the WebSocket
+ * event bus trigger re-fetches.
+ *
  * @module
  */
 
 import { useState, useCallback } from "react";
-import type { FindingData, WsMessage, SendFunction, GrackleEvent } from "./types.js";
-import { asValidArray, isFindingData } from "./types.js";
+import type { FindingData, GrackleEvent } from "./types.js";
+import { grackleClient } from "./useGrackleClient.js";
+import { protoToFinding } from "./proto-converters.js";
 
 /** Values returned by {@link useFindings}. */
 export interface UseFindingsResult {
@@ -22,55 +26,35 @@ export interface UseFindingsResult {
     category?: string,
     tags?: string[],
   ) => void;
-  /** Handle an incoming WebSocket message. Returns `true` if handled. */
-  handleMessage: (msg: WsMessage) => boolean;
   /** Handle a domain event from the event bus. Returns `true` if handled. */
   handleEvent: (event: GrackleEvent) => boolean;
 }
 
 /**
- * Hook that manages findings state and actions.
+ * Hook that manages findings state and actions via ConnectRPC.
  *
- * @param send - Function to send WebSocket messages.
- * @returns Findings state, actions, and a message handler.
+ * @returns Findings state, actions, and an event handler.
  */
-export function useFindings(send: SendFunction): UseFindingsResult {
+export function useFindings(): UseFindingsResult {
   const [findings, setFindings] = useState<FindingData[]>([]);
+
+  const loadFindings = useCallback((workspaceId: string) => {
+    grackleClient.queryFindings({ workspaceId }).then(
+      (resp) => { setFindings(resp.findings.map(protoToFinding)); },
+      (err) => { console.error("[grpc] queryFindings failed:", err); },
+    );
+  }, []);
 
   const handleEvent = useCallback((event: GrackleEvent): boolean => {
     if (event.type === "finding.posted") {
       const pid = typeof event.payload.workspaceId === "string" ? event.payload.workspaceId : "";
       if (pid) {
-        send({ type: "list_findings", payload: { workspaceId: pid } });
+        loadFindings(pid);
       }
       return true;
     }
     return false;
-  }, [send]);
-
-  const handleMessage = useCallback((msg: WsMessage): boolean => {
-    switch (msg.type) {
-      case "findings":
-        setFindings(
-          asValidArray(
-            msg.payload?.findings,
-            isFindingData,
-            "findings",
-            "findings",
-          ),
-        );
-        return true;
-      default:
-        return false;
-    }
-  }, []);
-
-  const loadFindings = useCallback(
-    (workspaceId: string) => {
-      send({ type: "list_findings", payload: { workspaceId } });
-    },
-    [send],
-  );
+  }, [loadFindings]);
 
   const postFinding = useCallback(
     (
@@ -80,19 +64,18 @@ export function useFindings(send: SendFunction): UseFindingsResult {
       category?: string,
       tags?: string[],
     ) => {
-      send({
-        type: "post_finding",
-        payload: {
-          workspaceId,
-          title,
-          content,
-          category: category || "general",
-          tags: tags || [],
-        },
-      });
+      grackleClient.postFinding({
+        workspaceId,
+        title,
+        content,
+        category: category ?? "general",
+        tags: tags ?? [],
+      }).catch(
+        (err) => { console.error("[grpc] postFinding failed:", err); },
+      );
     },
-    [send],
+    [],
   );
 
-  return { findings, loadFindings, postFinding, handleMessage, handleEvent };
+  return { findings, loadFindings, postFinding, handleEvent };
 }

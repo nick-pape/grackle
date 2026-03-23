@@ -269,6 +269,11 @@ function createWebHandler(
   const urlHost = dialableHost.includes(":") ? `[${dialableHost}]` : dialableHost;
   const webBaseUrl = `http://${urlHost}:${webPort}`;
 
+  /** ConnectRPC handler for browser gRPC calls (Connect protocol over HTTP/1.1). */
+  const webConnectHandler = connectNodeAdapter({
+    routes: registerGrackleRoutes,
+  });
+
   // eslint-disable-next-line @typescript-eslint/no-misused-promises
   return async (req: http.IncomingMessage, res: http.ServerResponse) => {
     let rawPath: string;
@@ -602,9 +607,25 @@ function createWebHandler(
       return;
     }
 
-    // --- All other routes require a valid session cookie ---
+    // --- All other routes require a valid session cookie or Bearer token ---
     const cookieHeader = req.headers.cookie || "";
-    if (!validateSessionCookie(cookieHeader, apiKey)) {
+    const authHeader = req.headers.authorization || "";
+    const bearerToken = authHeader.replace(/^Bearer\s+/i, "");
+    const hasValidSession = validateSessionCookie(cookieHeader, apiKey);
+    const hasValidBearer = bearerToken.length > 0 && verifyApiKey(bearerToken);
+
+    // --- ConnectRPC routes (Connect protocol over HTTP/1.1) ---
+    if (rawPath.startsWith("/grackle.Grackle/")) {
+      if (!hasValidSession && !hasValidBearer) {
+        res.writeHead(401, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "Unauthorized" }));
+        return;
+      }
+      webConnectHandler(req, res);
+      return;
+    }
+
+    if (!hasValidSession) {
       res.writeHead(302, { Location: "/pair" });
       res.end();
       return;

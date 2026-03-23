@@ -1,12 +1,16 @@
 /**
  * Domain hook for workspace management.
  *
+ * Uses ConnectRPC for all CRUD operations. Domain events from the WebSocket
+ * event bus trigger re-fetches.
+ *
  * @module
  */
 
 import { useState, useCallback } from "react";
-import type { Workspace, WsMessage, SendFunction, GrackleEvent } from "./types.js";
-import { asValidArray, isWorkspace } from "./types.js";
+import type { Workspace, GrackleEvent } from "./types.js";
+import { grackleClient } from "./useGrackleClient.js";
+import { protoToWorkspace } from "./proto-converters.js";
 
 /** Values returned by {@link useWorkspaces}. */
 export interface UseWorkspacesResult {
@@ -14,6 +18,8 @@ export interface UseWorkspacesResult {
   workspaces: Workspace[];
   /** Whether a workspace creation is currently in progress. */
   workspaceCreating: boolean;
+  /** Request the current workspace list from the server. */
+  loadWorkspaces: () => void;
   /** Create a new workspace. */
   createWorkspace: (
     name: string,
@@ -37,8 +43,6 @@ export interface UseWorkspacesResult {
       defaultPersonaId?: string;
     },
   ) => void;
-  /** Handle an incoming WebSocket message. Returns `true` if handled. */
-  handleMessage: (msg: WsMessage) => boolean;
   /** Handle a domain event from the event bus. Returns `true` if handled. */
   handleEvent: (event: GrackleEvent) => boolean;
   /** Reset transient state (e.g. `workspaceCreating`) on disconnect. */
@@ -46,46 +50,35 @@ export interface UseWorkspacesResult {
 }
 
 /**
- * Hook that manages workspace state and CRUD actions.
+ * Hook that manages workspace state and CRUD actions via ConnectRPC.
  *
- * @param send - Function to send WebSocket messages.
- * @returns Workspace state, actions, a message handler, and a disconnect callback.
+ * @returns Workspace state, actions, an event handler, and a disconnect callback.
  */
-export function useWorkspaces(send: SendFunction): UseWorkspacesResult {
+export function useWorkspaces(): UseWorkspacesResult {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [workspaceCreating, setWorkspaceCreating] = useState(false);
+
+  const loadWorkspaces = useCallback(() => {
+    grackleClient.listWorkspaces({}).then(
+      (resp) => { setWorkspaces(resp.workspaces.map(protoToWorkspace)); },
+      (err) => { console.error("[grpc] listWorkspaces failed:", err); },
+    );
+  }, []);
 
   const handleEvent = useCallback((event: GrackleEvent): boolean => {
     switch (event.type) {
       case "workspace.created":
         setWorkspaceCreating(false);
-        send({ type: "list_workspaces" });
+        loadWorkspaces();
         return true;
       case "workspace.archived":
       case "workspace.updated":
-        send({ type: "list_workspaces" });
+        loadWorkspaces();
         return true;
       default:
         return false;
     }
-  }, [send]);
-
-  const handleMessage = useCallback((msg: WsMessage): boolean => {
-    switch (msg.type) {
-      case "workspaces":
-        setWorkspaces(
-          asValidArray(
-            msg.payload?.workspaces,
-            isWorkspace,
-            "workspaces",
-            "workspaces",
-          ),
-        );
-        return true;
-      default:
-        return false;
-    }
-  }, []);
+  }, [loadWorkspaces]);
 
   const onDisconnect = useCallback(() => {
     setWorkspaceCreating(false);
@@ -100,25 +93,29 @@ export function useWorkspaces(send: SendFunction): UseWorkspacesResult {
       defaultPersonaId?: string,
     ) => {
       setWorkspaceCreating(true);
-      send({
-        type: "create_workspace",
-        payload: {
-          name,
-          description: description || "",
-          repoUrl: repoUrl || "",
-          environmentId: environmentId || "",
-          defaultPersonaId: defaultPersonaId || "",
+      grackleClient.createWorkspace({
+        name,
+        description: description || "",
+        repoUrl: repoUrl || "",
+        environmentId: environmentId || "",
+        defaultPersonaId: defaultPersonaId || "",
+      }).catch(
+        (err) => {
+          setWorkspaceCreating(false);
+          console.error("[grpc] createWorkspace failed:", err);
         },
-      });
+      );
     },
-    [send],
+    [],
   );
 
   const archiveWorkspace = useCallback(
     (workspaceId: string) => {
-      send({ type: "archive_workspace", payload: { workspaceId } });
+      grackleClient.archiveWorkspace({ id: workspaceId }).catch(
+        (err) => { console.error("[grpc] archiveWorkspace failed:", err); },
+      );
     },
-    [send],
+    [],
   );
 
   const updateWorkspace = useCallback(
@@ -134,21 +131,20 @@ export function useWorkspaces(send: SendFunction): UseWorkspacesResult {
         defaultPersonaId?: string;
       },
     ) => {
-      send({
-        type: "update_workspace",
-        payload: { workspaceId, ...fields },
-      });
+      grackleClient.updateWorkspace({ id: workspaceId, ...fields }).catch(
+        (err) => { console.error("[grpc] updateWorkspace failed:", err); },
+      );
     },
-    [send],
+    [],
   );
 
   return {
     workspaces,
     workspaceCreating,
+    loadWorkspaces,
     createWorkspace,
     archiveWorkspace,
     updateWorkspace,
-    handleMessage,
     handleEvent,
     onDisconnect,
   };

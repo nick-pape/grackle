@@ -1,22 +1,17 @@
 /**
  * Domain hook for task management.
  *
+ * Uses ConnectRPC for all CRUD operations. Domain events from the WebSocket
+ * event bus trigger re-fetches.
+ *
  * @module
  */
 
-import { useState, useCallback, useRef } from "react";
-import type { TaskData, WsMessage, SendFunction, GrackleEvent } from "./types.js";
-import { asValidArray, isTaskData } from "./types.js";
-
-/** Pending create-task callback entry keyed by requestId. */
-interface PendingCreateCallback {
-  onSuccess: () => void;
-  onError: (message: string) => void;
-  timer: ReturnType<typeof setTimeout>;
-}
-
-/** How long to wait for a server response before timing out a create request. */
-const CREATE_TASK_TIMEOUT_MS: number = 15_000;
+import { useState, useCallback } from "react";
+import { ConnectError } from "@connectrpc/connect";
+import type { TaskData, GrackleEvent } from "./types.js";
+import { grackleClient } from "./useGrackleClient.js";
+import { protoToTask } from "./proto-converters.js";
 
 /** Values returned by {@link useTasks}. */
 export interface UseTasksResult {
@@ -63,8 +58,6 @@ export interface UseTasksResult {
   ) => void;
   /** Delete a task by ID. */
   deleteTask: (taskId: string) => void;
-  /** Handle an incoming WebSocket message. Returns `true` if handled. */
-  handleMessage: (msg: WsMessage) => boolean;
   /** Handle a domain event from the event bus. Returns `true` if handled. */
   handleEvent: (event: GrackleEvent) => boolean;
   /** Reset transient state (e.g. `taskStartingId`) on disconnect. */
@@ -72,36 +65,71 @@ export interface UseTasksResult {
 }
 
 /**
- * Hook that manages task state and lifecycle actions.
+ * Hook that manages task state and lifecycle actions via ConnectRPC.
  *
- * @param send - Function to send WebSocket messages.
- * @returns Task state, actions, a message handler, and a disconnect callback.
+ * @returns Task state, actions, an event handler, and a disconnect callback.
  */
-export function useTasks(send: SendFunction): UseTasksResult {
+export function useTasks(): UseTasksResult {
   const [tasks, setTasks] = useState<TaskData[]>([]);
   const [taskStartingId, setTaskStartingId] = useState<string | undefined>(
     undefined,
   );
-  const pendingCreatesRef = useRef<Map<string, PendingCreateCallback>>(
-    new Map(),
-  );
+
+  /** Fetch tasks for a single workspace and merge into state. */
+  const loadTasks = useCallback((workspaceId: string) => {
+    grackleClient.listTasks({ workspaceId }).then(
+      (resp) => {
+        const incoming = resp.tasks.map(protoToTask);
+        setTasks((prev) => [
+          ...prev.filter((t) => t.workspaceId !== workspaceId),
+          ...incoming,
+        ]);
+      },
+      (err) => { console.error("[grpc] listTasks failed:", err); },
+    );
+  }, []);
+
+  /** Fetch all tasks (global, including workspace-less) and upsert into state. */
+  const loadAllTasks = useCallback(() => {
+    grackleClient.listTasks({}).then(
+      (resp) => {
+        const incoming = resp.tasks.map(protoToTask);
+        setTasks((prev) => {
+          const incomingIds = new Set(incoming.map((t) => t.id));
+          return [
+            ...prev.filter((t) => !incomingIds.has(t.id)),
+            ...incoming,
+          ];
+        });
+      },
+      (err) => { console.error("[grpc] listTasks (all) failed:", err); },
+    );
+  }, []);
+
+  /** Helper to refresh tasks for a given workspace or globally. */
+  const refreshTasksForEvent = useCallback((workspaceId: string, taskId: string) => {
+    if (workspaceId) {
+      loadTasks(workspaceId);
+    } else if (taskId) {
+      setTasks((prev) => {
+        const found = prev.find((t) => t.id === taskId);
+        if (found?.workspaceId) {
+          loadTasks(found.workspaceId);
+        } else {
+          loadAllTasks();
+        }
+        return prev;
+      });
+    }
+  }, [loadTasks, loadAllTasks]);
 
   const handleEvent = useCallback((event: GrackleEvent): boolean => {
     const p = event.payload;
     switch (event.type) {
       case "task.created": {
-        const reqId = typeof p.requestId === "string" ? p.requestId : "";
-        if (reqId) {
-          const pending = pendingCreatesRef.current.get(reqId);
-          if (pending) {
-            clearTimeout(pending.timer);
-            pendingCreatesRef.current.delete(reqId);
-            pending.onSuccess();
-          }
-        }
         const createdWsId = typeof p.workspaceId === "string" ? p.workspaceId : "";
         if (createdWsId) {
-          send({ type: "list_tasks", payload: { workspaceId: createdWsId } });
+          loadTasks(createdWsId);
         }
         return true;
       }
@@ -113,32 +141,15 @@ export function useTasks(send: SendFunction): UseTasksResult {
         setTaskStartingId((prev) =>
           taskId && prev === taskId ? undefined : prev,
         );
-        if (sessionId) {
-          send({ type: "list_sessions" });
-          if (taskId) {
-            setTasks((prev) =>
-              prev.map((t) =>
-                t.id === taskId ? { ...t, latestSessionId: sessionId } : t,
-              ),
-            );
-          }
+        if (sessionId && taskId) {
+          setTasks((prev) =>
+            prev.map((t) =>
+              t.id === taskId ? { ...t, latestSessionId: sessionId } : t,
+            ),
+          );
         }
-        if (startedWsId) {
-          send({ type: "list_tasks", payload: { workspaceId: startedWsId } });
-        } else if (taskId) {
-          // Workspace-less task (e.g. root task) — refetch all workspace-less tasks
-          // or look up the task's workspace to refresh.
-          setTasks((prev) => {
-            const found = prev.find((t) => t.id === taskId);
-            if (found?.workspaceId) {
-              send({ type: "list_tasks", payload: { workspaceId: found.workspaceId } });
-            } else {
-              // Workspace-less task — refetch global tasks
-              send({ type: "list_tasks", payload: {} });
-            }
-            return prev;
-          });
-        }
+        refreshTasksForEvent(startedWsId, taskId);
+        // Note: session refresh is handled by useGrackleSocket.routeDomainEvent
         return true;
       }
       case "task.completed":
@@ -146,112 +157,17 @@ export function useTasks(send: SendFunction): UseTasksResult {
       case "task.updated": {
         const eventWsId = typeof p.workspaceId === "string" ? p.workspaceId : "";
         const eventTaskId = typeof p.taskId === "string" ? p.taskId : "";
-        if (eventWsId) {
-          send({ type: "list_tasks", payload: { workspaceId: eventWsId } });
-        } else if (eventTaskId) {
-          setTasks((prev) => {
-            const found = prev.find((t) => t.id === eventTaskId);
-            if (found?.workspaceId) {
-              send({ type: "list_tasks", payload: { workspaceId: found.workspaceId } });
-            } else {
-              // Workspace-less task — refetch global tasks
-              send({ type: "list_tasks", payload: {} });
-            }
-            return prev;
-          });
-        }
+        refreshTasksForEvent(eventWsId, eventTaskId);
         return true;
       }
       default:
         return false;
     }
-  }, [send]);
-
-  const handleMessage = useCallback((msg: WsMessage): boolean => {
-    switch (msg.type) {
-      case "tasks": {
-        const incoming = asValidArray(
-          msg.payload?.tasks,
-          isTaskData,
-          "tasks",
-          "tasks",
-        );
-        // When workspaceId is explicitly present, merge per-workspace.
-        // When absent (global list_tasks {}), treat as a full snapshot.
-        const pid =
-          typeof msg.payload?.workspaceId === "string" && msg.payload.workspaceId
-            ? msg.payload.workspaceId
-            : "";
-        if (!pid) {
-          // Global response (no workspaceId in payload) — includes tasks from
-          // all workspaces plus workspace-less tasks like the root task.
-          // Upsert by ID to avoid clobbering workspace-scoped tasks that may
-          // have been loaded separately or filtered differently.
-          setTasks((prev) => {
-            const incomingIds = new Set(incoming.map((t) => t.id));
-            return [
-              ...prev.filter((t) => !incomingIds.has(t.id)),
-              ...incoming,
-            ];
-          });
-          return true;
-        }
-        setTasks((prev) => [
-          ...prev.filter((t) => t.workspaceId !== pid),
-          ...incoming,
-        ]);
-        return true;
-      }
-      case "create_task_error": {
-        const errorReqId =
-          typeof msg.payload?.requestId === "string"
-            ? msg.payload.requestId
-            : "";
-        const errorMessage =
-          typeof msg.payload?.message === "string"
-            ? msg.payload.message
-            : "Failed to create task";
-        if (errorReqId) {
-          const pending = pendingCreatesRef.current.get(errorReqId);
-          if (pending) {
-            clearTimeout(pending.timer);
-            pendingCreatesRef.current.delete(errorReqId);
-            pending.onError(errorMessage);
-          } else {
-            console.error("[useTasks] create_task_error with unknown requestId:", errorMessage);
-          }
-        } else {
-          console.error("[useTasks] create_task_error:", errorMessage);
-        }
-        return true;
-      }
-      default:
-        return false;
-    }
-  }, []);
+  }, [loadTasks, refreshTasksForEvent]);
 
   const onDisconnect = useCallback(() => {
     setTaskStartingId(undefined);
-    for (const [, pending] of pendingCreatesRef.current) {
-      clearTimeout(pending.timer);
-      pending.onError("Disconnected");
-    }
-    pendingCreatesRef.current.clear();
   }, []);
-
-  const loadTasks = useCallback(
-    (workspaceId: string) => {
-      send({ type: "list_tasks", payload: { workspaceId } });
-    },
-    [send],
-  );
-
-  const loadAllTasks = useCallback(
-    () => {
-      send({ type: "list_tasks", payload: {} });
-    },
-    [send],
-  );
 
   const createTask = useCallback(
     (
@@ -265,7 +181,7 @@ export function useTasks(send: SendFunction): UseTasksResult {
       onSuccess?: () => void,
       onError?: (message: string) => void,
     ) => {
-      const payload: Record<string, unknown> = {
+      grackleClient.createTask({
         workspaceId,
         title,
         description: description || "",
@@ -273,62 +189,58 @@ export function useTasks(send: SendFunction): UseTasksResult {
         parentTaskId: parentTaskId || "",
         defaultPersonaId: defaultPersonaId || "",
         canDecompose: canDecompose || false,
-      };
-      if (onSuccess || onError) {
-        const requestId = crypto.randomUUID();
-        payload.requestId = requestId;
-        const errorCb = onError ?? (() => {});
-        const timer = setTimeout(() => {
-          if (pendingCreatesRef.current.delete(requestId)) {
-            errorCb("Request timed out");
-          }
-        }, CREATE_TASK_TIMEOUT_MS);
-        pendingCreatesRef.current.set(requestId, {
-          onSuccess: onSuccess ?? (() => {}),
-          onError: errorCb,
-          timer,
-        });
-      }
-      send({ type: "create_task", payload });
+      }).then(
+        () => { onSuccess?.(); },
+        (err) => {
+          const message = err instanceof ConnectError ? err.message : "Failed to create task";
+          onError?.(message);
+        },
+      );
     },
-    [send],
+    [],
   );
 
   const startTask = useCallback(
     (taskId: string, personaId?: string, environmentId?: string, notes?: string) => {
       setTaskStartingId(taskId);
-      send({
-        type: "start_task",
-        payload: {
-          taskId,
-          personaId: personaId || "",
-          environmentId: environmentId || "",
-          notes: notes || "",
-        },
+      grackleClient.startTask({
+        taskId,
+        personaId: personaId || "",
+        environmentId: environmentId || "",
+        notes: notes || "",
+      }).catch((err) => {
+        setTaskStartingId(undefined);
+        console.error("[grpc] startTask failed:", err);
       });
     },
-    [send],
+    [],
   );
 
   const stopTask = useCallback(
     (taskId: string) => {
-      send({ type: "stop_task", payload: { taskId } });
+      grackleClient.stopTask({ id: taskId }).catch(
+        (err) => { console.error("[grpc] stopTask failed:", err); },
+      );
     },
-    [send],
+    [],
   );
 
   const completeTask = useCallback(
     (taskId: string) => {
-      send({ type: "complete_task", payload: { taskId } });
+      grackleClient.completeTask({ id: taskId }).catch(
+        (err) => { console.error("[grpc] completeTask failed:", err); },
+      );
     },
-    [send],
+    [],
   );
 
   const resumeTask = useCallback(
     (taskId: string) => {
-      send({ type: "resume_task", payload: { taskId } });
+      grackleClient.resumeTask({ id: taskId }).catch(
+        (err) => { console.error("[grpc] resumeTask failed:", err); },
+      );
     },
-    [send],
+    [],
   );
 
   const updateTask = useCallback(
@@ -339,28 +251,24 @@ export function useTasks(send: SendFunction): UseTasksResult {
       dependsOn: string[],
       defaultPersonaId?: string,
     ) => {
-      const payload: Record<string, unknown> = {
-        taskId,
+      grackleClient.updateTask({
+        id: taskId,
         title,
         description,
         dependsOn,
-      };
-      if (defaultPersonaId !== undefined) {
-        payload.defaultPersonaId = defaultPersonaId;
-      }
-      send({
-        type: "update_task",
-        payload,
-      });
+        defaultPersonaId: defaultPersonaId ?? "",
+      }).catch((err) => { console.error("[grpc] updateTask failed:", err); });
     },
-    [send],
+    [],
   );
 
   const deleteTask = useCallback(
     (taskId: string) => {
-      send({ type: "delete_task", payload: { taskId } });
+      grackleClient.deleteTask({ id: taskId }).catch(
+        (err) => { console.error("[grpc] deleteTask failed:", err); },
+      );
     },
-    [send],
+    [],
   );
 
   return {
@@ -375,7 +283,6 @@ export function useTasks(send: SendFunction): UseTasksResult {
     resumeTask,
     updateTask,
     deleteTask,
-    handleMessage,
     handleEvent,
     onDisconnect,
   };

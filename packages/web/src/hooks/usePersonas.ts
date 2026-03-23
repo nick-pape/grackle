@@ -1,17 +1,23 @@
 /**
  * Domain hook for persona management.
  *
+ * Uses ConnectRPC for all CRUD operations. Domain events from the WebSocket
+ * event bus trigger re-fetches.
+ *
  * @module
  */
 
 import { useState, useCallback } from "react";
-import type { PersonaData, WsMessage, SendFunction, GrackleEvent } from "./types.js";
-import { asValidArray, isPersonaData } from "./types.js";
+import type { PersonaData, GrackleEvent } from "./types.js";
+import { grackleClient } from "./useGrackleClient.js";
+import { protoToPersona } from "./proto-converters.js";
 
 /** Values returned by {@link usePersonas}. */
 export interface UsePersonasResult {
   /** All known personas. */
   personas: PersonaData[];
+  /** Request the current persona list from the server. */
+  loadPersonas: () => void;
   /** Create a new persona. */
   createPersona: (
     name: string,
@@ -37,49 +43,36 @@ export interface UsePersonasResult {
   ) => void;
   /** Delete a persona by ID. */
   deletePersona: (personaId: string) => void;
-  /** Handle an incoming WebSocket message. Returns `true` if handled. */
-  handleMessage: (msg: WsMessage) => boolean;
   /** Handle a domain event from the event bus. Returns `true` if handled. */
   handleEvent: (event: GrackleEvent) => boolean;
 }
 
 /**
- * Hook that manages persona state and CRUD actions.
+ * Hook that manages persona state and CRUD actions via ConnectRPC.
  *
- * @param send - Function to send WebSocket messages.
- * @returns Persona state, actions, and a message handler.
+ * @returns Persona state, actions, and an event handler.
  */
-export function usePersonas(send: SendFunction): UsePersonasResult {
+export function usePersonas(): UsePersonasResult {
   const [personas, setPersonas] = useState<PersonaData[]>([]);
+
+  const loadPersonas = useCallback(() => {
+    grackleClient.listPersonas({}).then(
+      (resp) => { setPersonas(resp.personas.map(protoToPersona)); },
+      (err) => { console.error("[grpc] listPersonas failed:", err); },
+    );
+  }, []);
 
   const handleEvent = useCallback((event: GrackleEvent): boolean => {
     switch (event.type) {
       case "persona.created":
       case "persona.updated":
       case "persona.deleted":
-        send({ type: "list_personas" });
+        loadPersonas();
         return true;
       default:
         return false;
     }
-  }, [send]);
-
-  const handleMessage = useCallback((msg: WsMessage): boolean => {
-    switch (msg.type) {
-      case "personas": {
-        const list = asValidArray(
-          msg.payload?.personas,
-          isPersonaData,
-          "personas",
-          "personas",
-        );
-        setPersonas(list);
-        return true;
-      }
-      default:
-        return false;
-    }
-  }, []);
+  }, [loadPersonas]);
 
   const createPersona = useCallback(
     (
@@ -92,21 +85,20 @@ export function usePersonas(send: SendFunction): UsePersonasResult {
       type?: string,
       script?: string,
     ) => {
-      send({
-        type: "create_persona",
-        payload: {
-          name,
-          description,
-          systemPrompt,
-          runtime: runtime || "",
-          model: model || "",
-          maxTurns: maxTurns || 0,
-          type: type || "agent",
-          script: script || "",
-        },
-      });
+      grackleClient.createPersona({
+        name,
+        description,
+        systemPrompt,
+        runtime: runtime || "",
+        model: model || "",
+        maxTurns: maxTurns || 0,
+        type: type || "agent",
+        script: script || "",
+      }).catch(
+        (err) => { console.error("[grpc] createPersona failed:", err); },
+      );
     },
-    [send],
+    [],
   );
 
   const updatePersona = useCallback(
@@ -121,29 +113,32 @@ export function usePersonas(send: SendFunction): UsePersonasResult {
       type?: string,
       script?: string,
     ) => {
-      // Only include fields that were explicitly provided so the server can
-      // distinguish "not provided" (keep existing) from "set to empty" (clear).
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const payload: Record<string, any> = { personaId };
-      if (name !== undefined) { payload.name = name; }
-      if (description !== undefined) { payload.description = description; }
-      if (systemPrompt !== undefined) { payload.systemPrompt = systemPrompt; }
-      if (runtime !== undefined) { payload.runtime = runtime; }
-      if (model !== undefined) { payload.model = model; }
-      if (maxTurns !== undefined) { payload.maxTurns = maxTurns; }
-      if (type !== undefined) { payload.type = type; }
-      if (script !== undefined) { payload.script = script; }
-      send({ type: "update_persona", payload });
+      // Build the request with only defined fields so the server can distinguish
+      // "not provided" (keep existing) from "set to empty" (clear).
+      const request: Record<string, unknown> = { id: personaId };
+      if (name !== undefined) { request.name = name; }
+      if (description !== undefined) { request.description = description; }
+      if (systemPrompt !== undefined) { request.systemPrompt = systemPrompt; }
+      if (runtime !== undefined) { request.runtime = runtime; }
+      if (model !== undefined) { request.model = model; }
+      if (maxTurns !== undefined) { request.maxTurns = maxTurns; }
+      if (type !== undefined) { request.type = type; }
+      if (script !== undefined) { request.script = script; }
+      grackleClient.updatePersona(request).catch(
+        (err) => { console.error("[grpc] updatePersona failed:", err); },
+      );
     },
-    [send],
+    [],
   );
 
   const deletePersona = useCallback(
     (personaId: string) => {
-      send({ type: "delete_persona", payload: { personaId } });
+      grackleClient.deletePersona({ id: personaId }).catch(
+        (err) => { console.error("[grpc] deletePersona failed:", err); },
+      );
     },
-    [send],
+    [],
   );
 
-  return { personas, createPersona, updatePersona, deletePersona, handleMessage, handleEvent };
+  return { personas, loadPersonas, createPersona, updatePersona, deletePersona, handleEvent };
 }

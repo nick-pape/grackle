@@ -1,12 +1,17 @@
 /**
  * Domain hook for environment management.
  *
+ * Uses ConnectRPC for all CRUD/lifecycle operations. Domain events from the
+ * WebSocket event bus trigger re-fetches or direct state updates.
+ *
  * @module
  */
 
 import { useState, useCallback } from "react";
-import type { Environment, ProvisionStatus, WsMessage, SendFunction, GrackleEvent } from "./types.js";
-import { asValidArray, isEnvironment, normalizeEnvironment, warnBadPayload } from "./types.js";
+import type { Environment, ProvisionStatus, GrackleEvent } from "./types.js";
+import { warnBadPayload } from "./types.js";
+import { grackleClient } from "./useGrackleClient.js";
+import { protoToEnvironment } from "./proto-converters.js";
 
 /** Delay in milliseconds before clearing a successful provision status. */
 const PROVISION_STATUS_CLEAR_DELAY_MS: number = 5_000;
@@ -17,6 +22,8 @@ export interface UseEnvironmentsResult {
   environments: Environment[];
   /** Per-environment provisioning progress. */
   provisionStatus: Record<string, ProvisionStatus>;
+  /** Request the current environment list from the server. */
+  loadEnvironments: () => void;
   /** Add a new environment. */
   addEnvironment: (
     displayName: string,
@@ -34,28 +41,32 @@ export interface UseEnvironmentsResult {
   stopEnvironment: (environmentId: string) => void;
   /** Remove an environment by ID. */
   removeEnvironment: (environmentId: string) => void;
-  /** Handle an incoming WebSocket message. Returns `true` if handled. */
-  handleMessage: (msg: WsMessage) => boolean;
   /** Handle a domain event from the event bus. Returns `true` if handled. */
   handleEvent: (event: GrackleEvent) => boolean;
 }
 
 /**
- * Hook that manages environment state and lifecycle actions.
+ * Hook that manages environment state and lifecycle actions via ConnectRPC.
  *
- * @param send - Function to send WebSocket messages.
- * @returns Environment state, actions, and a message handler.
+ * @returns Environment state, actions, and an event handler.
  */
-export function useEnvironments(send: SendFunction): UseEnvironmentsResult {
+export function useEnvironments(): UseEnvironmentsResult {
   const [environments, setEnvironments] = useState<Environment[]>([]);
   const [provisionStatus, setProvisionStatus] = useState<
     Record<string, ProvisionStatus>
   >({});
 
+  const loadEnvironments = useCallback(() => {
+    grackleClient.listEnvironments({}).then(
+      (resp) => { setEnvironments(resp.environments.map(protoToEnvironment)); },
+      (err) => { console.error("[grpc] listEnvironments failed:", err); },
+    );
+  }, []);
+
   const handleEvent = useCallback((event: GrackleEvent): boolean => {
     switch (event.type) {
       case "environment.added":
-        // Signal only — re-fetch handled by environment.changed
+        // Signal only — re-fetch triggered by environment.changed
         return true;
       case "environment.removed": {
         const removedId = event.payload.environmentId as string | undefined;
@@ -67,11 +78,11 @@ export function useEnvironments(send: SendFunction): UseEnvironmentsResult {
             return next;
           });
         }
-        send({ type: "list_sessions" });
+        // Sessions refresh is a sessions concern; useGrackleSocket handles it.
         return true;
       }
       case "environment.changed":
-        send({ type: "list_environments" });
+        loadEnvironments();
         return true;
       case "environment.provision_progress": {
         const pp = event.payload;
@@ -107,24 +118,7 @@ export function useEnvironments(send: SendFunction): UseEnvironmentsResult {
       default:
         return false;
     }
-  }, [send]);
-
-  const handleMessage = useCallback((msg: WsMessage): boolean => {
-    switch (msg.type) {
-      case "environments":
-        setEnvironments(
-          asValidArray(
-            msg.payload?.environments,
-            isEnvironment,
-            "environments",
-            "environments",
-          ).map(normalizeEnvironment),
-        );
-        return true;
-      default:
-        return false;
-    }
-  }, []);
+  }, [loadEnvironments]);
 
   const addEnvironment = useCallback(
     (
@@ -132,14 +126,15 @@ export function useEnvironments(send: SendFunction): UseEnvironmentsResult {
       adapterType: string,
       adapterConfig?: Record<string, unknown>,
     ) => {
-      const payload: Record<string, unknown> = {
+      grackleClient.addEnvironment({
         displayName,
         adapterType,
-        adapterConfig: adapterConfig || {},
-      };
-      send({ type: "add_environment", payload });
+        adapterConfig: JSON.stringify(adapterConfig ?? {}),
+      }).catch(
+        (err) => { console.error("[grpc] addEnvironment failed:", err); },
+      );
     },
-    [send],
+    [],
   );
 
   const updateEnvironment = useCallback(
@@ -147,42 +142,82 @@ export function useEnvironments(send: SendFunction): UseEnvironmentsResult {
       environmentId: string,
       fields: { displayName?: string; adapterConfig?: Record<string, unknown> },
     ) => {
-      const payload: Record<string, unknown> = { environmentId, ...fields };
-      send({ type: "update_environment", payload });
+      grackleClient.updateEnvironment({
+        id: environmentId,
+        displayName: fields.displayName,
+        adapterConfig: fields.adapterConfig ? JSON.stringify(fields.adapterConfig) : undefined,
+      }).catch(
+        (err) => { console.error("[grpc] updateEnvironment failed:", err); },
+      );
     },
-    [send],
+    [],
   );
 
   const provisionEnvironment = useCallback(
     (environmentId: string) => {
-      send({ type: "provision_environment", payload: { environmentId } });
+      const runProvision = async (): Promise<void> => {
+        try {
+          const stream = grackleClient.provisionEnvironment({ id: environmentId });
+          for await (const event of stream) {
+            setProvisionStatus((prev) => ({
+              ...prev,
+              [environmentId]: {
+                stage: event.stage,
+                message: event.message,
+                progress: event.progress,
+              },
+            }));
+            if (event.stage === "ready") {
+              setTimeout(() => {
+                setProvisionStatus((prev) => {
+                  const next = { ...prev };
+                  delete next[environmentId];
+                  return next;
+                });
+              }, PROVISION_STATUS_CLEAR_DELAY_MS);
+            }
+          }
+        } catch (err) {
+          console.error("[grpc] provisionEnvironment failed:", err);
+          setProvisionStatus((prev) => {
+            const next = { ...prev };
+            delete next[environmentId];
+            return next;
+          });
+        }
+      };
+      runProvision().catch((err) => { console.error("[grpc] provisionEnvironment unexpected:", err); });
     },
-    [send],
+    [],
   );
 
   const stopEnvironment = useCallback(
     (environmentId: string) => {
-      send({ type: "stop_environment", payload: { environmentId } });
+      grackleClient.stopEnvironment({ id: environmentId }).catch(
+        (err) => { console.error("[grpc] stopEnvironment failed:", err); },
+      );
     },
-    [send],
+    [],
   );
 
   const removeEnvironment = useCallback(
     (environmentId: string) => {
-      send({ type: "remove_environment", payload: { environmentId } });
+      grackleClient.removeEnvironment({ id: environmentId }).catch(
+        (err) => { console.error("[grpc] removeEnvironment failed:", err); },
+      );
     },
-    [send],
+    [],
   );
 
   return {
     environments,
     provisionStatus,
+    loadEnvironments,
     addEnvironment,
     updateEnvironment,
     provisionEnvironment,
     stopEnvironment,
     removeEnvironment,
-    handleMessage,
     handleEvent,
   };
 }

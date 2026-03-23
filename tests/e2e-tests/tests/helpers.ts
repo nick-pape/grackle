@@ -20,8 +20,46 @@ export function getSidebarWorkspaceRow(page: Page, workspaceName: string) {
 }
 
 /**
- * Open a second WebSocket from the page context, send a message, and wait for
- * a response matching the given type. Resolves with the full response object.
+ * Call a ConnectRPC method on the Grackle service from the browser page context.
+ * Returns the parsed JSON response body on success, or throws on error.
+ */
+async function callRpc(
+  page: Page,
+  method: string,
+  body: WsPayload,
+): Promise<WsPayload> {
+  return page.evaluate(
+    async ({ method: m, body: b }) => {
+      const resp = await fetch(`/grackle.Grackle/${m}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(b),
+        credentials: "include",
+      });
+      const text = await resp.text();
+      if (!resp.ok) {
+        let errMsg = text;
+        try {
+          const errObj = JSON.parse(text);
+          errMsg = errObj.message || errObj.code || text;
+        } catch { /* raw text */ }
+        throw new Error(errMsg);
+      }
+      return text ? JSON.parse(text) : {};
+    },
+    { method, body },
+  );
+}
+
+/**
+ * Send a CRUD request via ConnectRPC and wait for either a direct response
+ * or a domain event via WebSocket. This is a backward-compatible shim that
+ * replaces the old WS-only approach now that CRUD routes through ConnectRPC.
+ *
+ * For list/query operations the RPC response is wrapped in the expected WS
+ * envelope. For mutations that produce domain events the function subscribes
+ * to the event bus over WS, fires the RPC call, then waits for the matching
+ * event broadcast.
  */
 export async function sendWsAndWaitFor(
   page: Page,
@@ -31,61 +69,710 @@ export async function sendWsAndWaitFor(
 ): Promise<WsPayload> {
   return page.evaluate(
     async ({ msg, respType, timeout }) => {
-      return new Promise<WsPayload>((resolve, reject) => {
-        const ws = new WebSocket(
-          `ws://${window.location.host}`,
-        );
-        const timer = setTimeout(() => {
-          ws.close();
-          reject(new Error(`WS timeout waiting for "${respType}"`));
-        }, timeout);
-        ws.onmessage = (e: MessageEvent) => {
-          const data = JSON.parse(e.data);
-          if (data.type === respType) {
+      // ── Helpers ──────────────────────────────────────────────
+
+      /** Call a ConnectRPC endpoint and return the parsed JSON response. */
+      async function rpc(
+        method: string,
+        body: Record<string, unknown>,
+      ): Promise<Record<string, unknown>> {
+        const resp = await fetch(`/grackle.Grackle/${method}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+          credentials: "include",
+        });
+        const text = await resp.text();
+        if (!resp.ok) {
+          let errMsg = text;
+          try {
+            const errObj = JSON.parse(text);
+            errMsg = errObj.message || errObj.code || text;
+          } catch { /* raw text */ }
+          throw new Error(errMsg);
+        }
+        return text ? JSON.parse(text) : {};
+      }
+
+      /** Call RPC and wrap success as a WS-style envelope, or throw on error. */
+      async function rpcWrapped(
+        method: string,
+        body: Record<string, unknown>,
+        wrapType: string,
+        wrapFn: (r: Record<string, unknown>) => Record<string, unknown>,
+      ): Promise<{ type: string; payload: Record<string, unknown> }> {
+        const r = await rpc(method, body);
+        return { type: wrapType, payload: wrapFn(r) };
+      }
+
+      /**
+       * Subscribe to the WS event bus, fire an RPC call, and wait for a domain
+       * event of the given type. Returns the event envelope.
+       */
+      async function rpcThenWaitForEvent(
+        method: string,
+        body: Record<string, unknown>,
+        eventType: string,
+        timeoutMs: number,
+      ): Promise<{ type: string; payload: Record<string, unknown> }> {
+        return new Promise((resolve, reject) => {
+          const ws = new WebSocket(`ws://${window.location.host}`);
+          const timer = setTimeout(() => {
+            ws.close();
+            reject(new Error(`Timeout waiting for event "${eventType}" after RPC ${method}`));
+          }, timeoutMs);
+          ws.onerror = () => {
             clearTimeout(timer);
             ws.close();
-            resolve(data);
+            reject(new Error("WS connection error"));
+          };
+          ws.onmessage = (e: MessageEvent) => {
+            const data = JSON.parse(e.data as string);
+            if (data.type === eventType) {
+              clearTimeout(timer);
+              ws.close();
+              resolve(data);
+            }
+          };
+          ws.onopen = () => {
+            // First subscribe to all events, then fire the RPC
+            ws.send(JSON.stringify({ type: "subscribe_all" }));
+            rpc(method, body).catch((err: Error) => {
+              clearTimeout(timer);
+              ws.close();
+              reject(err);
+            });
+          };
+        });
+      }
+
+      // ── Event type enum → string mapping (for GetSessionEvents) ──
+
+      const EVENT_TYPE_MAP: Record<number, string> = {
+        0: "", 1: "text", 2: "tool_use", 3: "tool_result",
+        4: "error", 5: "status", 6: "system", 7: "finding",
+        8: "subtask_create", 9: "user_input", 10: "signal", 11: "usage",
+      };
+
+      // Also accept string values (if already converted by proto JSON)
+      const EVENT_TYPE_STRING_MAP: Record<string, string> = {
+        EVENT_TYPE_UNSPECIFIED: "", EVENT_TYPE_TEXT: "text",
+        EVENT_TYPE_TOOL_USE: "tool_use", EVENT_TYPE_TOOL_RESULT: "tool_result",
+        EVENT_TYPE_ERROR: "error", EVENT_TYPE_STATUS: "status",
+        EVENT_TYPE_SYSTEM: "system", EVENT_TYPE_FINDING: "finding",
+        EVENT_TYPE_SUBTASK_CREATE: "subtask_create",
+        EVENT_TYPE_USER_INPUT: "user_input",
+        EVENT_TYPE_SIGNAL: "signal", EVENT_TYPE_USAGE: "usage",
+      };
+
+      /** Convert proto eventType (number or enum string) to WS string. */
+      function mapEventType(val: unknown): string {
+        if (typeof val === "number") return EVENT_TYPE_MAP[val] ?? "";
+        if (typeof val === "string") {
+          if (EVENT_TYPE_STRING_MAP[val] !== undefined) return EVENT_TYPE_STRING_MAP[val];
+          // Already a WS-style string (e.g. "text")
+          return val;
+        }
+        return "";
+      }
+
+      // Task status enum → string
+      const TASK_STATUS_MAP: Record<number, string> = {
+        0: "", 1: "not_started", 3: "working", 4: "paused", 5: "complete", 6: "failed",
+      };
+      const TASK_STATUS_STRING_MAP: Record<string, string> = {
+        TASK_STATUS_UNSPECIFIED: "", TASK_STATUS_NOT_STARTED: "not_started",
+        TASK_STATUS_WORKING: "working", TASK_STATUS_PAUSED: "paused",
+        TASK_STATUS_COMPLETE: "complete", TASK_STATUS_FAILED: "failed",
+      };
+
+      function mapTaskStatus(val: unknown): string {
+        if (typeof val === "number") return TASK_STATUS_MAP[val] ?? "";
+        if (typeof val === "string") {
+          if (TASK_STATUS_STRING_MAP[val] !== undefined) return TASK_STATUS_STRING_MAP[val];
+          return val;
+        }
+        return "";
+      }
+
+      // Workspace status enum → string
+      const WORKSPACE_STATUS_MAP: Record<number, string> = {
+        0: "", 1: "active", 2: "archived",
+      };
+      const WORKSPACE_STATUS_STRING_MAP: Record<string, string> = {
+        WORKSPACE_STATUS_UNSPECIFIED: "", WORKSPACE_STATUS_ACTIVE: "active",
+        WORKSPACE_STATUS_ARCHIVED: "archived",
+      };
+
+      function mapWorkspaceStatus(val: unknown): string {
+        if (typeof val === "number") return WORKSPACE_STATUS_MAP[val] ?? "";
+        if (typeof val === "string") {
+          if (WORKSPACE_STATUS_STRING_MAP[val] !== undefined) return WORKSPACE_STATUS_STRING_MAP[val];
+          return val;
+        }
+        return "";
+      }
+
+      /** Map a proto Task to the WS task shape (status as string). */
+      function mapTask(t: Record<string, unknown>): Record<string, unknown> {
+        return { ...t, status: mapTaskStatus(t.status) };
+      }
+
+      /** Map a proto Workspace to the WS workspace shape (status as string). */
+      function mapWorkspace(w: Record<string, unknown>): Record<string, unknown> {
+        return { ...w, status: mapWorkspaceStatus(w.status) };
+      }
+
+      /** Map a proto TokenInfo to the WS token shape (type → tokenType). */
+      function mapToken(t: Record<string, unknown>): Record<string, unknown> {
+        return { ...t, tokenType: t.type as string };
+      }
+
+      /** Map a proto Persona to the WS persona shape (stringify sub-objects). */
+      function mapPersona(p: Record<string, unknown>): Record<string, unknown> {
+        const mapped = { ...p };
+        if (typeof mapped.toolConfig === "object" && mapped.toolConfig !== null) {
+          mapped.toolConfig = JSON.stringify(mapped.toolConfig);
+        }
+        if (Array.isArray(mapped.mcpServers)) {
+          mapped.mcpServers = JSON.stringify(mapped.mcpServers);
+        }
+        return mapped;
+      }
+
+      /** Map a proto SessionEvent to the WS event shape. */
+      function mapSessionEvent(e: Record<string, unknown>): Record<string, unknown> {
+        return { ...e, eventType: mapEventType(e.type) };
+      }
+
+      /** Map a proto Session to the WS session shape. */
+      function mapSession(s: Record<string, unknown>): Record<string, unknown> {
+        return s;
+      }
+
+      // ── Payload extraction ───────────────────────────────────
+
+      const wsType = msg.type as string;
+      const payload = (msg.payload || {}) as Record<string, unknown>;
+
+      // ── Error response handling ──────────────────────────────
+
+      // If the caller expects an "error" response type, we call the RPC and
+      // catch the thrown ConnectRPC error, wrapping it in a WS error envelope.
+      if (respType === "error") {
+        // Build the RPC call from the WS message type, then catch the error
+        try {
+          const result = await dispatchRpc(wsType, payload, respType, timeout);
+          // If it unexpectedly succeeds, return the result anyway (caller may
+          // be surprised but at least it won't hang).
+          return result;
+        } catch (err: unknown) {
+          const errMsg = err instanceof Error ? err.message : String(err);
+          return { type: "error", payload: { message: errMsg } };
+        }
+      }
+
+      // For create_task with non-error response types that look like error types:
+      if (respType === "create_task_error") {
+        try {
+          await dispatchRpc(wsType, payload, respType, timeout);
+          // Unexpected success — return as-is
+          return { type: "task.created", payload: {} };
+        } catch (err: unknown) {
+          const errMsg = err instanceof Error ? err.message : String(err);
+          return { type: "create_task_error", payload: { message: errMsg } };
+        }
+      }
+
+      return dispatchRpc(wsType, payload, respType, timeout);
+
+      // ── Main dispatch ──────────────────────────────────────────
+
+      async function dispatchRpc(
+        wsType: string,
+        payload: Record<string, unknown>,
+        respType: string,
+        timeout: number,
+      ): Promise<{ type: string; payload: Record<string, unknown> }> {
+        switch (wsType) {
+          // ── List / Query operations (direct RPC response) ──────
+
+          case "list_environments":
+            return rpcWrapped("ListEnvironments", {}, "environments", (r) => ({
+              environments: ((r.environments || []) as Record<string, unknown>[]),
+            }));
+
+          case "list_sessions":
+            return rpcWrapped(
+              "ListSessions",
+              {
+                environmentId: payload.environmentId || "",
+                status: payload.status || "",
+              },
+              "sessions",
+              (r) => ({
+                sessions: ((r.sessions || []) as Record<string, unknown>[]).map(mapSession),
+              }),
+            );
+
+          case "list_workspaces":
+            return rpcWrapped("ListWorkspaces", {
+              environmentId: payload.environmentId || "",
+            }, "workspaces", (r) => ({
+              workspaces: ((r.workspaces || []) as Record<string, unknown>[]).map(mapWorkspace),
+            }));
+
+          case "list_tasks":
+            return rpcWrapped("ListTasks", {
+              workspaceId: payload.workspaceId || "",
+              search: payload.search || "",
+              status: payload.status || "",
+            }, "tasks", (r) => ({
+              tasks: ((r.tasks || []) as Record<string, unknown>[]).map(mapTask),
+              workspaceId: payload.workspaceId || "",
+            }));
+
+          case "list_tokens":
+            return rpcWrapped("ListTokens", {}, "tokens", (r) => ({
+              tokens: ((r.tokens || []) as Record<string, unknown>[]).map(mapToken),
+            }));
+
+          case "list_personas":
+            return rpcWrapped("ListPersonas", {}, "personas", (r) => ({
+              personas: ((r.personas || []) as Record<string, unknown>[]).map(mapPersona),
+            }));
+
+          case "get_session_events":
+            return rpcWrapped("GetSessionEvents", {
+              id: payload.sessionId as string,
+            }, "session_events", (r) => ({
+              sessionId: (r.sessionId || payload.sessionId) as string,
+              events: ((r.events || []) as Record<string, unknown>[]).map(mapSessionEvent),
+            }));
+
+          case "get_credential_providers":
+            return rpcWrapped("GetCredentialProviders", {}, "credential_providers", (r) => r);
+
+          // ── Mutations with domain events ───────────────────────
+
+          case "add_environment": {
+            let adapterConfig = payload.adapterConfig;
+            if (typeof adapterConfig === "object" && adapterConfig !== null) {
+              adapterConfig = JSON.stringify(adapterConfig);
+            }
+            return rpcThenWaitForEvent(
+              "AddEnvironment",
+              {
+                displayName: payload.displayName || "",
+                adapterType: payload.adapterType || "",
+                adapterConfig: adapterConfig || "",
+              },
+              "environment.added",
+              timeout,
+            );
           }
-        };
-        ws.onerror = () => {
-          clearTimeout(timer);
-          ws.close();
-          reject(new Error("WS connection error"));
-        };
-        ws.onopen = () => {
-          ws.send(JSON.stringify(msg));
-        };
-      });
+
+          case "update_environment": {
+            let adapterConfig = payload.adapterConfig;
+            if (typeof adapterConfig === "object" && adapterConfig !== null) {
+              adapterConfig = JSON.stringify(adapterConfig);
+            }
+            const updateBody: Record<string, unknown> = {
+              id: payload.environmentId as string,
+            };
+            if (payload.displayName !== undefined) {
+              updateBody.displayName = payload.displayName;
+            }
+            if (adapterConfig !== undefined) {
+              updateBody.adapterConfig = adapterConfig;
+            }
+            // If caller expects "environments", just call RPC and then list
+            if (respType === "environments") {
+              await rpc("UpdateEnvironment", updateBody);
+              return rpcWrapped("ListEnvironments", {}, "environments", (r) => ({
+                environments: ((r.environments || []) as Record<string, unknown>[]),
+              }));
+            }
+            return rpcThenWaitForEvent("UpdateEnvironment", updateBody, respType, timeout);
+          }
+
+          case "remove_environment":
+            return rpcThenWaitForEvent(
+              "RemoveEnvironment",
+              { id: payload.environmentId as string },
+              "environment.removed",
+              timeout,
+            );
+
+          case "stop_environment":
+            // StopEnvironment returns Empty, then broadcasts environment.changed
+            return rpcThenWaitForEvent(
+              "StopEnvironment",
+              { id: payload.environmentId as string },
+              "environment.changed",
+              timeout,
+            );
+
+          case "provision_environment": {
+            // ProvisionEnvironment is server-streaming. Use the Connect
+            // streaming content type so the server accepts the request.
+            // We fire-and-forget the stream body and wait for the
+            // environment.changed domain event on the WS bus.
+            return new Promise((resolve, reject) => {
+              const ws = new WebSocket(`ws://${window.location.host}`);
+              const timer = setTimeout(() => {
+                ws.close();
+                reject(new Error(`Timeout waiting for event "environment.changed" after RPC ProvisionEnvironment`));
+              }, timeout);
+              ws.onerror = () => {
+                clearTimeout(timer);
+                ws.close();
+                reject(new Error("WS connection error"));
+              };
+              ws.onmessage = (e: MessageEvent) => {
+                const data = JSON.parse(e.data as string);
+                if (data.type === "environment.changed") {
+                  clearTimeout(timer);
+                  ws.close();
+                  resolve(data);
+                }
+              };
+              ws.onopen = () => {
+                ws.send(JSON.stringify({ type: "subscribe_all" }));
+                // Fire the streaming RPC (Connect streaming content type)
+                fetch(`/grackle.Grackle/ProvisionEnvironment`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/connect+json" },
+                  body: JSON.stringify({ id: payload.environmentId }),
+                  credentials: "include",
+                }).catch((err: Error) => {
+                  clearTimeout(timer);
+                  ws.close();
+                  reject(err);
+                });
+              };
+            });
+          }
+
+          case "create_workspace":
+            return rpcThenWaitForEvent(
+              "CreateWorkspace",
+              {
+                name: payload.name || "",
+                description: payload.description || "",
+                repoUrl: payload.repoUrl || "",
+                environmentId: payload.environmentId || "",
+                defaultPersonaId: payload.defaultPersonaId || undefined,
+              },
+              "workspace.created",
+              timeout,
+            );
+
+          case "archive_workspace":
+            return rpcThenWaitForEvent(
+              "ArchiveWorkspace",
+              { id: payload.workspaceId as string },
+              "workspace.archived",
+              timeout,
+            );
+
+          case "create_task":
+            return rpcThenWaitForEvent(
+              "CreateTask",
+              {
+                workspaceId: payload.workspaceId || undefined,
+                title: payload.title || "",
+                description: payload.description || "",
+                dependsOn: payload.dependsOn || [],
+                parentTaskId: payload.parentTaskId || "",
+                canDecompose: payload.canDecompose,
+                defaultPersonaId: payload.defaultPersonaId || undefined,
+              },
+              "task.created",
+              timeout,
+            );
+
+          case "start_task":
+            return rpcThenWaitForEvent(
+              "StartTask",
+              {
+                taskId: payload.taskId as string,
+                personaId: payload.personaId || "",
+                environmentId: payload.environmentId || "",
+                notes: payload.notes || "",
+              },
+              "task.started",
+              timeout,
+            );
+
+          case "delete_task":
+            return rpcThenWaitForEvent(
+              "DeleteTask",
+              { id: payload.taskId as string },
+              "task.deleted",
+              timeout,
+            );
+
+          case "set_token":
+            return rpcThenWaitForEvent(
+              "SetToken",
+              {
+                name: payload.name || "",
+                value: payload.value || "",
+                type: payload.tokenType || "",
+                envVar: payload.envVar || "",
+                filePath: payload.filePath || "",
+              },
+              "token.changed",
+              timeout,
+            );
+
+          case "delete_token":
+            return rpcThenWaitForEvent(
+              "DeleteToken",
+              { name: payload.name as string },
+              "token.changed",
+              timeout,
+            );
+
+          case "set_credential_providers":
+            return rpcThenWaitForEvent(
+              "SetCredentialProvider",
+              payload,
+              "credential.providers_changed",
+              timeout,
+            );
+
+          case "create_persona":
+            return rpcThenWaitForEvent(
+              "CreatePersona",
+              {
+                name: payload.name || "",
+                description: payload.description || "",
+                systemPrompt: payload.systemPrompt || "",
+                runtime: payload.runtime || "",
+                model: payload.model || "",
+                maxTurns: payload.maxTurns || 0,
+                type: payload.type || "",
+                script: payload.script || "",
+              },
+              "persona.created",
+              timeout,
+            );
+
+          case "update_persona":
+            return rpcThenWaitForEvent(
+              "UpdatePersona",
+              {
+                id: payload.personaId as string,
+                name: payload.name || "",
+                description: payload.description || "",
+                systemPrompt: payload.systemPrompt || "",
+                runtime: payload.runtime || "",
+                model: payload.model || "",
+                maxTurns: payload.maxTurns || 0,
+              },
+              "persona.updated",
+              timeout,
+            );
+
+          case "delete_persona":
+            return rpcThenWaitForEvent(
+              "DeletePersona",
+              { id: payload.personaId as string },
+              "persona.deleted",
+              timeout,
+            );
+
+          case "post_finding":
+            return rpcThenWaitForEvent(
+              "PostFinding",
+              {
+                workspaceId: payload.workspaceId || "",
+                taskId: payload.taskId || "",
+                sessionId: payload.sessionId || "",
+                category: payload.category || "",
+                title: payload.title || "",
+                content: payload.content || "",
+                tags: payload.tags || [],
+              },
+              "finding.posted",
+              timeout,
+            );
+
+          case "spawn": {
+            const r = await rpc("SpawnAgent", {
+              environmentId: payload.environmentId || "",
+              prompt: payload.prompt || "",
+              personaId: payload.personaId || "",
+              worktreeBasePath: payload.worktreeBasePath || "",
+            });
+            return { type: "spawned", payload: { sessionId: r.id as string } };
+          }
+
+          case "send_input": {
+            await rpc("SendInput", {
+              sessionId: payload.sessionId as string,
+              text: payload.text as string,
+            });
+            return { type: "input_sent", payload: {} };
+          }
+
+          case "kill": {
+            await rpc("KillAgent", { id: payload.sessionId as string });
+            return { type: "killed", payload: {} };
+          }
+
+          case "resume_agent": {
+            const r = await rpc("ResumeAgent", {
+              sessionId: payload.sessionId as string,
+            });
+            return { type: "agent_resumed", payload: { sessionId: r.id as string, ...r } };
+          }
+
+          case "set_setting": {
+            await rpc("SetSetting", {
+              key: payload.key as string,
+              value: payload.value as string,
+            });
+            return { type: "setting.changed", payload: { key: payload.key, value: payload.value } };
+          }
+
+          // ── Fallback to raw WebSocket ──────────────────────────
+
+          default:
+            return new Promise((resolve, reject) => {
+              const ws = new WebSocket(`ws://${window.location.host}`);
+              const timer = setTimeout(() => {
+                ws.close();
+                reject(new Error(`WS timeout waiting for "${respType}"`));
+              }, timeout);
+              ws.onmessage = (e: MessageEvent) => {
+                const data = JSON.parse(e.data as string);
+                if (data.type === respType) {
+                  clearTimeout(timer);
+                  ws.close();
+                  resolve(data);
+                }
+              };
+              ws.onerror = () => {
+                clearTimeout(timer);
+                ws.close();
+                reject(new Error("WS connection error"));
+              };
+              ws.onopen = () => {
+                ws.send(JSON.stringify(msg));
+              };
+            });
+        }
+      }
     },
     { msg: message, respType: responseType, timeout: timeoutMs },
   );
 }
 
 /**
- * Send a WS message without waiting for a specific response.
- * Opens a second WS, sends the message, waits briefly for server processing, then closes.
+ * Send a CRUD request via ConnectRPC without waiting for a specific response.
+ * Fire-and-forget: calls the RPC endpoint and ignores the result.
  */
 export async function sendWsMessage(
   page: Page,
   message: WsPayload,
 ): Promise<void> {
   await page.evaluate(async (msg) => {
-    return new Promise<void>((resolve, reject) => {
-      const ws = new WebSocket(
-        `ws://${window.location.host}`,
-      );
-      ws.onerror = () => {
-        ws.close();
-        reject(new Error("WS error"));
-      };
-      ws.onopen = () => {
-        ws.send(JSON.stringify(msg));
-        setTimeout(() => {
-          ws.close();
-          resolve();
-        }, 500);
-      };
-    });
+    /** Call a ConnectRPC endpoint. */
+    async function rpc(
+      method: string,
+      body: Record<string, unknown>,
+    ): Promise<void> {
+      const resp = await fetch(`/grackle.Grackle/${method}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+        credentials: "include",
+      });
+      if (!resp.ok) {
+        // Swallow errors for fire-and-forget
+      }
+    }
+
+    const wsType = msg.type as string;
+    const payload = (msg.payload || {}) as Record<string, unknown>;
+
+    switch (wsType) {
+      case "remove_environment":
+        await rpc("RemoveEnvironment", { id: payload.environmentId as string });
+        break;
+
+      case "stop_environment":
+        await rpc("StopEnvironment", { id: payload.environmentId as string });
+        break;
+
+      case "provision_environment":
+        // ProvisionEnvironment is server-streaming — use Connect streaming content type
+        await fetch(`/grackle.Grackle/ProvisionEnvironment`, {
+          method: "POST",
+          headers: { "Content-Type": "application/connect+json" },
+          body: JSON.stringify({ id: payload.environmentId }),
+          credentials: "include",
+        });
+        break;
+
+      case "delete_task":
+        await rpc("DeleteTask", { id: payload.taskId as string });
+        break;
+
+      case "send_input":
+        await rpc("SendInput", {
+          sessionId: payload.sessionId as string,
+          text: payload.text as string,
+        });
+        break;
+
+      case "kill":
+        await rpc("KillAgent", { id: payload.sessionId as string });
+        break;
+
+      case "post_finding":
+        await rpc("PostFinding", {
+          workspaceId: payload.workspaceId || "",
+          taskId: payload.taskId || "",
+          sessionId: payload.sessionId || "",
+          category: payload.category || "",
+          title: payload.title || "",
+          content: payload.content || "",
+          tags: payload.tags || [],
+        });
+        break;
+
+      case "set_setting":
+        await rpc("SetSetting", {
+          key: payload.key as string,
+          value: payload.value as string,
+        });
+        break;
+
+      default:
+        // Fallback: send via raw WebSocket
+        await new Promise<void>((resolve, reject) => {
+          const ws = new WebSocket(`ws://${window.location.host}`);
+          ws.onerror = () => {
+            ws.close();
+            reject(new Error("WS error"));
+          };
+          ws.onopen = () => {
+            ws.send(JSON.stringify(msg));
+            setTimeout(() => {
+              ws.close();
+              resolve();
+            }, 500);
+          };
+        });
+        break;
+    }
+
+    // Brief delay to let the server process the request
+    await new Promise((resolve) => setTimeout(resolve, 200));
   }, message);
 }
 
@@ -94,12 +781,8 @@ export async function getWorkspaceId(
   page: Page,
   workspaceName: string,
 ): Promise<string> {
-  const response = await sendWsAndWaitFor(
-    page,
-    { type: "list_workspaces" },
-    "workspaces",
-  );
-  const workspaces = (response.payload?.workspaces || []) as Array<{
+  const rpcResp = await callRpc(page, "ListWorkspaces", {});
+  const workspaces = (rpcResp.workspaces || []) as Array<{
     id: string;
     name: string;
   }>;
@@ -119,12 +802,8 @@ export async function getTaskId(
   workspaceId: string,
   taskTitle: string,
 ): Promise<string> {
-  const response = await sendWsAndWaitFor(
-    page,
-    { type: "list_tasks", payload: { workspaceId } },
-    "tasks",
-  );
-  const tasks = (response.payload?.tasks || []) as Array<{
+  const rpcResp = await callRpc(page, "ListTasks", { workspaceId });
+  const tasks = (rpcResp.tasks || []) as Array<{
     id: string;
     title: string;
   }>;
@@ -136,7 +815,7 @@ export async function getTaskId(
 }
 
 /**
- * Create a workspace via WebSocket and wait for the server to confirm creation.
+ * Create a workspace via ConnectRPC and wait for the server to confirm creation.
  * Requires the test environment ("test-local") to already exist.
  */
 export async function createWorkspace(page: Page, name: string, environmentId: string = "test-local"): Promise<void> {
@@ -154,7 +833,7 @@ export async function createWorkspace(page: Page, name: string, environmentId: s
 export const createProject = createWorkspace;
 
 /**
- * Navigate to a workspace page by looking up its ID via WebSocket and then
+ * Navigate to a workspace page by looking up its ID via ConnectRPC and then
  * navigating to `/workspaces/:workspaceId`. Replaces the old sidebar-click
  * approach since workspaces are no longer listed in the sidebar.
  */
@@ -178,9 +857,9 @@ export async function clickSidebarLabel(page: Page, label: string): Promise<void
 export const clickSidebarWorkspace = clickSidebarLabel;
 
 /**
- * Create a task under a workspace via WebSocket.
+ * Create a task under a workspace via ConnectRPC.
  *
- * Tasks are always created via the WS API now since the sidebar no longer shows
+ * Tasks are always created via the API now since the sidebar no longer shows
  * workspace rows with "New task" buttons. The task is created server-side and
  * will appear in the TaskList sidebar or workspace pages on next render.
  */
@@ -200,7 +879,7 @@ export async function createTask(
 
 /**
  * Navigate to a task view by clicking its name on the page.
- * Falls back to looking up the task ID via WebSocket and navigating by URL.
+ * Falls back to looking up the task ID via ConnectRPC and navigating by URL.
  */
 export async function navigateToTask(
   page: Page,
@@ -214,13 +893,8 @@ export async function navigateToTask(
     await taskLink.click();
   } else {
     // Task not visible — look up the workspace and task ID, then navigate by URL.
-    // First, find which workspace this task belongs to by listing all workspaces.
-    const wsResponse = await sendWsAndWaitFor(
-      page,
-      { type: "list_workspaces" },
-      "workspaces",
-    );
-    const workspaces = (wsResponse.payload?.workspaces || []) as Array<{ id: string }>;
+    const rpcResp = await callRpc(page, "ListWorkspaces", {});
+    const workspaces = (rpcResp.workspaces || []) as Array<{ id: string }>;
 
     let taskId: string | undefined;
     for (const ws of workspaces) {
@@ -248,39 +922,40 @@ export async function navigateToTask(
 }
 
 /**
- * Monkey-patch WebSocket.prototype.send to force the "Stub" persona and inject
- * environmentId on start_task messages. The server resolves the runtime from
- * the persona (not a runtime field), so we set personaId to "stub" which maps
- * to the "Stub" persona created in global-setup. Environment is now a
- * start-time param (not stored on the task), so tests must provide it explicitly.
+ * Monkey-patch fetch() to force the "Stub" persona and inject environmentId on
+ * StartTask requests. The server resolves the runtime from the persona (not a
+ * runtime field), so we set personaId to "stub" which maps to the "Stub" persona
+ * created in global-setup. Environment is now a start-time param (not stored on
+ * the task), so tests must provide it explicitly.
  */
 export async function patchWsForStubRuntime(page: Page, environmentId: string = "test-local"): Promise<void> {
   await page.evaluate((envId: string) => {
-    const origSend = WebSocket.prototype.send;
-    WebSocket.prototype.send = function (
-      data: string | ArrayBuffer | Blob | ArrayBufferView,
-    ) {
-      if (typeof data === "string") {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const origFetch = (window as any).__origFetch__ || window.fetch;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (window as any).__origFetch__ = origFetch;
+
+    window.fetch = async function (input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+      const url = typeof input === "string" ? input : (input instanceof URL ? input.toString() : input.url);
+      if (url.includes("/grackle.Grackle/StartTask") && init?.body) {
         try {
-          const msg = JSON.parse(data);
-          if (msg.type === "start_task") {
-            msg.payload.personaId = "stub";
-            if (!msg.payload.environmentId) {
-              msg.payload.environmentId = envId;
-            }
-            data = JSON.stringify(msg);
+          const body = JSON.parse(init.body as string);
+          body.personaId = "stub";
+          if (!body.environmentId) {
+            body.environmentId = envId;
           }
+          init = { ...init, body: JSON.stringify(body) };
         } catch {
           /* not JSON, pass through */
         }
       }
-      return origSend.call(this, data);
+      return origFetch.call(this, input, init);
     };
   }, environmentId);
 }
 
 /**
- * Run a stub task through its full lifecycle: start → working → idle → send input → paused.
+ * Run a stub task through its full lifecycle: start -> working -> idle -> send input -> paused.
  * Requires patchWsForStubRuntime to have been called on the page beforehand.
  */
 export async function runStubTaskToCompletion(page: Page): Promise<void> {
@@ -380,7 +1055,7 @@ export async function installWsTracker(page: Page): Promise<void> {
   });
 }
 
-/** Create a task via WebSocket with custom options (e.g., dependsOn, parentTaskId). Returns the created task data. */
+/** Create a task via ConnectRPC with custom options (e.g., dependsOn, parentTaskId). Returns the created task data. */
 export async function createTaskViaWs(
   page: Page,
   workspaceId: string,
@@ -393,70 +1068,61 @@ export async function createTaskViaWs(
     canDecompose?: boolean;
   },
 ): Promise<WsPayload> {
-  const payload: WsPayload = {
-    workspaceId,
-    title,
-    description: options?.description || "",
-    environmentId: options?.environmentId || "",
-    dependsOn: options?.dependsOn || [],
-    parentTaskId: options?.parentTaskId || "",
-  };
-  if (options?.canDecompose !== undefined) {
-    payload.canDecompose = options.canDecompose;
-  }
-  const response = await sendWsAndWaitFor(
+  // Create the task via ConnectRPC (fires task.created event)
+  await sendWsAndWaitFor(
     page,
     {
       type: "create_task",
-      payload,
+      payload: {
+        workspaceId,
+        title,
+        description: options?.description || "",
+        dependsOn: options?.dependsOn || [],
+        parentTaskId: options?.parentTaskId || "",
+        canDecompose: options?.canDecompose,
+      },
     },
     "task.created",
   );
-  // The event bus sends { taskId, workspaceId } — fetch the full task row
-  const taskId = response.payload?.taskId as string;
-  if (taskId) {
-    const listResp = await sendWsAndWaitFor(
-      page,
-      { type: "list_tasks", payload: { workspaceId } },
-      "tasks",
-    );
-    const tasks = (listResp.payload?.tasks || []) as WsPayload[];
-    const task = tasks.find((t) => t.id === taskId);
-    if (task) {
-      return task;
-    }
+  // Fetch the full task list to find the created task by title
+  const rpcResp = await callRpc(page, "ListTasks", { workspaceId });
+  const tasks = (rpcResp.tasks || []) as WsPayload[];
+  const task = tasks.find((t) => t.title === title);
+  if (task) {
+    return task;
   }
-  // Fallback: return the event payload itself
-  return (response.payload ?? {}) as WsPayload;
+  // Fallback: return minimal data
+  return { title, workspaceId };
 }
 
 /**
- * Monkey-patch WebSocket.prototype.send to force the "Stub MCP" persona and
- * inject environmentId on start_task messages. The server resolves the runtime
+ * Monkey-patch fetch() to force the "Stub MCP" persona and inject
+ * environmentId on StartTask requests. The server resolves the runtime
  * from the persona (not a runtime field), so we set personaId to "stub-mcp"
  * which maps to the "Stub MCP" persona created in global-setup.
  */
 export async function patchWsForStubMcpRuntime(page: Page, environmentId: string = "test-local"): Promise<void> {
   await page.evaluate((envId: string) => {
-    const origSend = WebSocket.prototype.send;
-    WebSocket.prototype.send = function (
-      data: string | ArrayBuffer | Blob | ArrayBufferView,
-    ) {
-      if (typeof data === "string") {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const origFetch = (window as any).__origFetch__ || window.fetch;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (window as any).__origFetch__ = origFetch;
+
+    window.fetch = async function (input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+      const url = typeof input === "string" ? input : (input instanceof URL ? input.toString() : input.url);
+      if (url.includes("/grackle.Grackle/StartTask") && init?.body) {
         try {
-          const msg = JSON.parse(data);
-          if (msg.type === "start_task") {
-            msg.payload.personaId = "stub-mcp";
-            if (!msg.payload.environmentId) {
-              msg.payload.environmentId = envId;
-            }
-            data = JSON.stringify(msg);
+          const body = JSON.parse(init.body as string);
+          body.personaId = "stub-mcp";
+          if (!body.environmentId) {
+            body.environmentId = envId;
           }
+          init = { ...init, body: JSON.stringify(body) };
         } catch {
           /* not JSON, pass through */
         }
       }
-      return origSend.call(this, data);
+      return origFetch.call(this, input, init);
     };
   }, environmentId);
 }
