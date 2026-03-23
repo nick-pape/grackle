@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Mon, 23 Mar 2026 18:09:06 GMT and should not be manually modified.
+This log was last generated on Mon, 23 Mar 2026 18:28:31 GMT and should not be manually modified.
+
+## 0.72.6
+Mon, 23 Mar 2026 18:28:31 GMT
+
+### Patches
+
+- Decouple FindingsPanel, DagView, and TokensPanel from useGrackle() hook
 
 ## 0.72.5
 Mon, 23 Mar 2026 18:09:06 GMT

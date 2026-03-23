@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.72.6",
+      "tag": "@grackle-ai/cli_v0.72.6",
+      "date": "Mon, 23 Mar 2026 18:28:31 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Decouple FindingsPanel, DagView, and TokensPanel from useGrackle() hook"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.72.5",
       "tag": "@grackle-ai/cli_v0.72.5",
       "date": "Mon, 23 Mar 2026 18:09:06 GMT",
