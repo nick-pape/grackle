@@ -1316,4 +1316,6 @@ export async function provisionEnvironmentDirect(environmentId: string): Promise
     }
     await new Promise((r) => setTimeout(r, 300));
   }
+  // If we get here, the environment didn't reach "connected" — but don't
+  // throw, as the env may already be connected (idempotent call).
 }
