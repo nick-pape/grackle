@@ -1,7 +1,6 @@
 import { useState, type FormEvent, type JSX } from "react";
-import { useGrackle } from "../../context/GrackleContext.js";
 import { useToast } from "../../context/ToastContext.js";
-import type { Environment } from "../../hooks/useGrackleSocket.js";
+import type { Environment, PersonaData } from "../../hooks/types.js";
 import styles from "./ChatInput.module.scss";
 
 // --- Helpers ---
@@ -60,6 +59,18 @@ export interface ChatInputProps {
   showPersonaSelect?: boolean;
   /** Callback for Stop button */
   onSessionKill?: () => void;
+  /** All personas (for persona selector in spawn mode). */
+  personas: PersonaData[];
+  /** All environments (for disconnect detection). */
+  environments: Environment[];
+  /** Send text input to an existing session. */
+  onSendInput: (sessionId: string, text: string) => void;
+  /** Spawn a new session. */
+  onSpawn: (environmentId: string, prompt: string, personaId?: string) => void;
+  /** Start a task. */
+  onStartTask: (taskId: string, personaId?: string, environmentId?: string, notes?: string) => void;
+  /** Reconnect a disconnected environment. */
+  onProvisionEnvironment: (environmentId: string) => void;
 }
 
 /** Reusable form component for sending messages to agent sessions. */
@@ -71,10 +82,13 @@ export function ChatInput({
   showStop,
   showPersonaSelect,
   onSessionKill,
+  personas,
+  environments,
+  onSendInput,
+  onSpawn,
+  onStartTask,
+  onProvisionEnvironment,
 }: ChatInputProps): JSX.Element {
-  const {
-    sendInput, spawn, startTask, personas, environments, provisionEnvironment,
-  } = useGrackle();
   const { showToast } = useToast();
 
   const [text, setText] = useState("");
@@ -92,13 +106,13 @@ export function ChatInput({
       if (!sessionId || envDisconnected) {
         return;
       }
-      sendInput(sessionId, text);
+      onSendInput(sessionId, text);
       setText("");
     } else if (mode === "spawn") {
       if (!environmentId) {
         return;
       }
-      spawn(environmentId, text, spawnPersonaId);
+      onSpawn(environmentId, text, spawnPersonaId);
       showToast("Session started", "success");
       setText("");
       setSpawnPersonaId("");
@@ -107,7 +121,7 @@ export function ChatInput({
       if (!taskId) {
         return;
       }
-      startTask(taskId, undefined, environmentId, text);
+      onStartTask(taskId, undefined, environmentId, text);
       setText("");
     }
   };
@@ -147,7 +161,7 @@ export function ChatInput({
   return (
     <form onSubmit={handleSubmit} className={styles.bar}>
       {envDisconnected && environmentId && (
-        <DisconnectedBanner environmentId={environmentId} onReconnect={provisionEnvironment} />
+        <DisconnectedBanner environmentId={environmentId} onReconnect={onProvisionEnvironment} />
       )}
       <input type="text" value={text} onChange={(e) => setText(e.target.value)} placeholder="Type a message..." autoFocus={!envDisconnected} disabled={envDisconnected} className={styles.input} />
       <span title={envDisconnected ? "Environment is unavailable — reconnect first" : undefined}>
