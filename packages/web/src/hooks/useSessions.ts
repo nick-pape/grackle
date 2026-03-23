@@ -60,6 +60,8 @@ export interface UseSessionsResult {
    * Only handles real-time `session_event` push messages from subscribe_all.
    */
   handleMessage: (msg: WsMessage) => boolean;
+  /** Handle legacy WS messages injected by E2E tests. */
+  handleLegacyMessage?: (msg: WsMessage) => boolean;
 }
 
 /** Set of session statuses considered active. */
@@ -191,6 +193,42 @@ export function useSessions(): UseSessionsResult {
     return true;
   }, []);
 
+  const handleLegacyMessage = useCallback((msg: WsMessage): boolean => {
+    switch (msg.type) {
+      case "sessions": {
+        const incoming = Array.isArray(msg.payload?.sessions) ? msg.payload.sessions as Session[] : [];
+        setSessions(incoming);
+        return true;
+      }
+      case "spawned": {
+        const spawnedId = msg.payload?.sessionId;
+        if (typeof spawnedId === "string" && spawnedId) {
+          setLastSpawnedId(spawnedId);
+        }
+        loadSessions();
+        return true;
+      }
+      case "session_events": {
+        // Legacy replay — just set events directly
+        const replayEvents = Array.isArray(msg.payload?.events) ? msg.payload.events as SessionEvent[] : [];
+        if (replayEvents.length > 0) {
+          setEvents(replayEvents);
+        }
+        return true;
+      }
+      case "task_sessions": {
+        const taskId = msg.payload?.taskId;
+        if (typeof taskId === "string" && taskId) {
+          const sessionsArr = Array.isArray(msg.payload?.sessions) ? msg.payload.sessions as Session[] : [];
+          setTaskSessions((prev) => ({ ...prev, [taskId]: sessionsArr }));
+        }
+        return true;
+      }
+      default:
+        return false;
+    }
+  }, [loadSessions]);
+
   const spawn = useCallback(
     (
       environmentId: string,
@@ -306,5 +344,6 @@ export function useSessions(): UseSessionsResult {
     clearEvents,
     loadTaskSessions,
     handleMessage,
+    handleLegacyMessage,
   };
 }

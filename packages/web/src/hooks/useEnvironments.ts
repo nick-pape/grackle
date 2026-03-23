@@ -8,7 +8,7 @@
  */
 
 import { useState, useCallback } from "react";
-import type { Environment, ProvisionStatus, GrackleEvent } from "./types.js";
+import type { Environment, ProvisionStatus, GrackleEvent, WsMessage } from "./types.js";
 import { warnBadPayload } from "./types.js";
 import { grackleClient } from "./useGrackleClient.js";
 import { protoToEnvironment } from "./proto-converters.js";
@@ -43,6 +43,8 @@ export interface UseEnvironmentsResult {
   removeEnvironment: (environmentId: string) => void;
   /** Handle a domain event from the event bus. Returns `true` if handled. */
   handleEvent: (event: GrackleEvent) => boolean;
+  /** Handle legacy WS messages injected by E2E tests. */
+  handleLegacyMessage?: (msg: WsMessage) => boolean;
 }
 
 /**
@@ -119,6 +121,15 @@ export function useEnvironments(): UseEnvironmentsResult {
         return false;
     }
   }, [loadEnvironments]);
+
+  const handleLegacyMessage = useCallback((msg: WsMessage): boolean => {
+    if (msg.type === "environments") {
+      const incoming = Array.isArray(msg.payload?.environments) ? msg.payload.environments as Environment[] : [];
+      setEnvironments(incoming);
+      return true;
+    }
+    return false;
+  }, []);
 
   const addEnvironment = useCallback(
     (
@@ -219,5 +230,6 @@ export function useEnvironments(): UseEnvironmentsResult {
     stopEnvironment,
     removeEnvironment,
     handleEvent,
+    handleLegacyMessage,
   };
 }

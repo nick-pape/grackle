@@ -9,7 +9,7 @@
 
 import { useState, useCallback } from "react";
 import { ConnectError } from "@connectrpc/connect";
-import type { TaskData, GrackleEvent } from "./types.js";
+import type { TaskData, GrackleEvent, WsMessage } from "./types.js";
 import { grackleClient } from "./useGrackleClient.js";
 import { protoToTask } from "./proto-converters.js";
 
@@ -62,6 +62,8 @@ export interface UseTasksResult {
   handleEvent: (event: GrackleEvent) => boolean;
   /** Reset transient state (e.g. `taskStartingId`) on disconnect. */
   onDisconnect: () => void;
+  /** Handle legacy WS messages injected by E2E tests. */
+  handleLegacyMessage?: (msg: WsMessage) => boolean;
 }
 
 /**
@@ -167,6 +169,24 @@ export function useTasks(): UseTasksResult {
 
   const onDisconnect = useCallback(() => {
     setTaskStartingId(undefined);
+  }, []);
+
+  const handleLegacyMessage = useCallback((msg: WsMessage): boolean => {
+    if (msg.type === "tasks") {
+      const incoming = Array.isArray(msg.payload?.tasks) ? msg.payload.tasks as TaskData[] : [];
+      const pid = typeof msg.payload?.workspaceId === "string" && msg.payload.workspaceId
+        ? msg.payload.workspaceId : "";
+      if (!pid) {
+        setTasks((prev) => {
+          const incomingIds = new Set(incoming.map((t) => t.id));
+          return [...prev.filter((t) => !incomingIds.has(t.id)), ...incoming];
+        });
+      } else {
+        setTasks((prev) => [...prev.filter((t) => t.workspaceId !== pid), ...incoming]);
+      }
+      return true;
+    }
+    return false;
   }, []);
 
   const createTask = useCallback(
@@ -285,5 +305,6 @@ export function useTasks(): UseTasksResult {
     deleteTask,
     handleEvent,
     onDisconnect,
+    handleLegacyMessage,
   };
 }

@@ -345,9 +345,16 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
       return;
     }
 
-    // Real-time session events from subscribe_all (the only remaining WS handler)
+    // Real-time session events from subscribe_all
     if (sessionsHook.handleMessage(msg)) { return; }
     if (knowledgeHook.handleMessage(msg)) { return; }
+
+    // Legacy WS message handlers — these only fire when E2E tests inject
+    // fake data via injectWsMessage(). Normal operation uses ConnectRPC.
+    if (sessionsHook.handleLegacyMessage?.(msg)) { return; }
+    if (environmentsHook.handleLegacyMessage?.(msg)) { return; }
+    if (tasksHook.handleLegacyMessage?.(msg)) { return; }
+
     if (msg.type === "error") {
       console.error("[ws]", msg.payload?.message);
       return;
