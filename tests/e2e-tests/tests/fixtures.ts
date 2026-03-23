@@ -48,9 +48,12 @@ export const test = base.extend<{ grackle: { apiKey: string; baseURL: string; ws
 
   appPage: async ({ page }, use) => {
     await page.goto("/");
-    // Wait for the WebSocket to connect and initial data to load
+    // Wait for the WebSocket to connect and initial data to load.
+    // "Connected" appears when WS connects; "env" appears in the StatusBar
+    // (e.g., "1/1 env") once ListEnvironments completes via ConnectRPC.
     await page.waitForFunction(
-      () => document.body.innerText.includes("Connected"),
+      () => document.body.innerText.includes("Connected") &&
+            document.body.innerText.includes("env"),
       { timeout: 10_000 },
     );
     await use(page);
