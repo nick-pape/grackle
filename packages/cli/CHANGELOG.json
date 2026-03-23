@@ -2,6 +2,23 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.73.1",
+      "tag": "@grackle-ai/cli_v0.73.1",
+      "date": "Mon, 23 Mar 2026 19:41:20 GMT",
+      "comments": {
+        "none": [
+          {
+            "comment": "placeholder"
+          }
+        ],
+        "patch": [
+          {
+            "comment": "Extract system prompt building, orchestrator context, and persona resolution into @grackle-ai/prompt"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.73.0",
       "tag": "@grackle-ai/cli_v0.73.0",
       "date": "Mon, 23 Mar 2026 18:49:25 GMT",
