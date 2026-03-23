@@ -1,10 +1,16 @@
 import type { JSX } from "react";
-import { useGrackle } from "../../context/GrackleContext.js";
+import type { Environment, Session } from "../../hooks/types.js";
 import { HOME_URL, useAppNavigate } from "../../utils/navigation.js";
 import styles from "./StatusBar.module.scss";
 
 /** Props for the StatusBar component. */
 interface StatusBarProps {
+  /** Whether the WebSocket connection to the server is active. */
+  connected: boolean;
+  /** List of all environments. */
+  environments: Environment[];
+  /** List of all sessions. */
+  sessions: Session[];
   /** Callback to toggle the mobile sidebar drawer. */
   onToggleSidebar?: () => void;
   /** Whether the sidebar drawer is currently open (for aria-expanded). */
@@ -12,8 +18,7 @@ interface StatusBarProps {
 }
 
 /** Top status bar showing connection state, environment counts, and active session count. */
-export function StatusBar({ onToggleSidebar, sidebarOpen }: StatusBarProps): JSX.Element {
-  const { connected, environments, sessions } = useGrackle();
+export function StatusBar({ connected, environments, sessions, onToggleSidebar, sidebarOpen }: StatusBarProps): JSX.Element {
   const navigate = useAppNavigate();
   const totalEnvs = environments.length;
   const connectedEnvs = environments.filter((e) => e.status === "connected").length;

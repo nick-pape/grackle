@@ -414,6 +414,25 @@ importers:
         specifier: ^3.1.1
         version: 3.2.4(@types/debug@4.1.13)(@types/node@22.19.15)(jiti@1.21.7)(jsdom@29.0.1)(sass@1.98.0)(terser@5.46.1)
 
+  ../../packages/prompt:
+    dependencies:
+      '@grackle-ai/database':
+        specifier: workspace:*
+        version: link:../database
+    devDependencies:
+      '@grackle-ai/heft-rig':
+        specifier: workspace:*
+        version: link:../../rigs/heft-rig
+      '@rushstack/heft':
+        specifier: 1.2.7
+        version: 1.2.7(@types/node@22.19.15)
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.19.15
+      vitest:
+        specifier: ^3.1.1
+        version: 3.2.4(@types/debug@4.1.12)(@types/node@22.19.15)(jiti@1.21.7)(jsdom@29.0.0)(sass@1.98.0)(terser@5.46.1)
+
   ../../packages/server:
     dependencies:
       '@bufbuild/protobuf':
@@ -458,6 +477,9 @@ importers:
       '@grackle-ai/powerline':
         specifier: workspace:*
         version: link:../powerline
+      '@grackle-ai/prompt':
+        specifier: workspace:*
+        version: link:../prompt
       '@grackle-ai/web':
         specifier: workspace:*
         version: link:../web

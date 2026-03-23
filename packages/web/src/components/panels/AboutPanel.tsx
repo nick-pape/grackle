@@ -1,12 +1,21 @@
 import type { JSX } from "react";
-import { useGrackle } from "../../context/GrackleContext.js";
+import type { Environment, Session } from "../../hooks/types.js";
 import styles from "./SettingsPanel.module.scss";
 
 declare const __APP_VERSION__: string;
 
+/** Props for the AboutPanel component. */
+interface AboutPanelProps {
+  /** Whether the WebSocket connection to the server is active. */
+  connected: boolean;
+  /** List of all environments. */
+  environments: Environment[];
+  /** List of all sessions. */
+  sessions: Session[];
+}
+
 /** About panel showing connection status, environment summary, session count, and version. */
-export function AboutPanel(): JSX.Element {
-  const { connected, environments, sessions } = useGrackle();
+export function AboutPanel({ connected, environments, sessions }: AboutPanelProps): JSX.Element {
   const connectedEnvs = environments.filter((e) => e.status === "connected").length;
   const totalEnvs = environments.length;
   const activeSessionCount = sessions.filter((s) => ["running", "idle"].includes(s.status)).length;

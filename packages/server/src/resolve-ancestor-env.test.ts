@@ -89,7 +89,7 @@ vi.mock("./github-import.js", () => ({
   importGitHubIssues: vi.fn(),
 }));
 
-vi.mock("./resolve-persona.js", () => ({
+vi.mock("@grackle-ai/prompt", () => ({
   resolvePersona: vi.fn(() => undefined),
 }));
 

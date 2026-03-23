@@ -3,10 +3,10 @@ import type { PersonaRow } from "@grackle-ai/database";
 
 // ── Mock persona-store and settings-store ────────────────────────
 
-vi.mock("@grackle-ai/database", async () => {
-  const { createDatabaseMock } = await import("./test-utils/mock-database.js");
-  return createDatabaseMock();
-});
+vi.mock("@grackle-ai/database", () => ({
+  personaStore: { getPersona: vi.fn(() => undefined) },
+  settingsStore: { getSetting: vi.fn(() => undefined) },
+}));
 
 // Import modules AFTER mocks are set up
 import { resolvePersona } from "./resolve-persona.js";

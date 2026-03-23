@@ -19,10 +19,9 @@ import {
   ROOT_TASK_ID,
   eventTypeToString,
 } from "@grackle-ai/common";
-import { resolvePersona } from "./resolve-persona.js";
-import { fetchOrchestratorContext } from "./orchestrator-context.js";
+import { resolvePersona, fetchOrchestratorContext, SystemPromptBuilder, buildTaskPrompt } from "@grackle-ai/prompt";
+import * as logWriter from "./log-writer.js";
 import { logger } from "./logger.js";
-import { SystemPromptBuilder, buildTaskPrompt } from "./system-prompt-builder.js";
 import { processEventStream } from "./event-processor.js";
 import { setWssInstance } from "./ws-broadcast.js";
 import { emit } from "./event-bus.js";

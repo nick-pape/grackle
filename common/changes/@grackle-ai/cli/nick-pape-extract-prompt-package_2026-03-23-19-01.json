@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Extract system prompt building, orchestrator context, and persona resolution into @grackle-ai/prompt",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}

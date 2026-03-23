@@ -110,12 +110,9 @@ Rush monorepo with 6 packages under `packages/`:
   - `packages/web/src/components/panels/TaskEditPanel.tsx`
   - `packages/web/src/components/lists/TaskList.tsx`
   - `packages/web/src/components/panels/CredentialProvidersPanel.tsx`
-  - `packages/web/src/components/lists/EnvironmentNav.tsx`
   - `packages/web/src/components/layout/BottomStatusBar.tsx`
   - `packages/web/src/components/chat/ChatInput.tsx`
   - `packages/web/src/components/panels/EnvironmentEditPanel.tsx`
-  - `packages/web/src/components/layout/StatusBar.tsx`
-  - `packages/web/src/components/panels/AboutPanel.tsx`
 - Once a component is fully decoupled, remove it from this list.
 
 ### Dependencies
@@ -134,7 +131,7 @@ PRs that modify publishable packages need a change file. The `/create-pr` skill 
 - If `/create-pr` or CI indicates a lockstep change is required for `@grackle-ai/cli`, do not delete that generated change file just because the visible code changes are in `@grackle-ai/web`; `rush change --verify` can still require the lockstep main project change description for this repo's release policy.
 
 **Publishable packages** (lockstep versioning):
-- `@grackle-ai/adapter-sdk`, `@grackle-ai/adapter-local`, `@grackle-ai/adapter-ssh`, `@grackle-ai/adapter-codespace`, `@grackle-ai/adapter-docker`, `@grackle-ai/auth`, `@grackle-ai/cli`, `@grackle-ai/common`, `@grackle-ai/powerline`, `@grackle-ai/server`
+- `@grackle-ai/adapter-sdk`, `@grackle-ai/adapter-local`, `@grackle-ai/adapter-ssh`, `@grackle-ai/adapter-codespace`, `@grackle-ai/adapter-docker`, `@grackle-ai/auth`, `@grackle-ai/cli`, `@grackle-ai/common`, `@grackle-ai/powerline`, `@grackle-ai/prompt`, `@grackle-ai/server`
 
 **Not publishable** (never need change files):
 - `@grackle-ai/web`, `@grackle-ai/heft-rig`, `@grackle-ai/heft-buf-plugin`, `@grackle-ai/heft-playwright-plugin`, `@grackle-ai/heft-vite-plugin`

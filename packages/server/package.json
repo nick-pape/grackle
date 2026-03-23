@@ -37,6 +37,7 @@
     "@grackle-ai/knowledge": "workspace:*",
     "@grackle-ai/powerline": "workspace:*",
     "@grackle-ai/mcp": "workspace:*",
+    "@grackle-ai/prompt": "workspace:*",
     "@grackle-ai/web": "workspace:*",
     "better-sqlite3": "^11.0.0",
     "drizzle-orm": "^0.38.0",
