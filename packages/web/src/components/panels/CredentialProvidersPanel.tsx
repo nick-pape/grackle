@@ -1,6 +1,5 @@
 import type { JSX } from "react";
-import { useGrackle } from "../../context/GrackleContext.js";
-import type { CredentialProviderConfig } from "../../hooks/useGrackleSocket.js";
+import type { CredentialProviderConfig } from "../../hooks/types.js";
 import styles from "./SettingsPanel.module.scss";
 
 /** Provider descriptor for rendering toggle rows. */
@@ -61,9 +60,16 @@ const PROVIDERS: ProviderDef[] = [
   },
 ];
 
+/** Props for the CredentialProvidersPanel component. */
+interface CredentialProvidersPanelProps {
+  /** Current credential provider configuration. */
+  credentialProviders: CredentialProviderConfig;
+  /** Callback to update the credential provider configuration. */
+  onUpdateCredentialProviders: (config: CredentialProviderConfig) => void;
+}
+
 /** Panel for configuring which credential providers are auto-forwarded to environments. */
-export function CredentialProvidersPanel(): JSX.Element {
-  const { credentialProviders, updateCredentialProviders } = useGrackle();
+export function CredentialProvidersPanel({ credentialProviders, onUpdateCredentialProviders }: CredentialProvidersPanelProps): JSX.Element {
 
   const handleChange = (key: keyof CredentialProviderConfig, value: string): void => {
     const updated: CredentialProviderConfig = { ...credentialProviders };
@@ -72,7 +78,7 @@ export function CredentialProvidersPanel(): JSX.Element {
     } else {
       updated[key] = value as "off" | "on";
     }
-    updateCredentialProviders(updated);
+    onUpdateCredentialProviders(updated);
   };
 
   return (

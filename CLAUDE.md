@@ -108,9 +108,6 @@ Rush monorepo with 6 packages under `packages/`:
   - `packages/web/src/components/workspace/WorkspaceBoard.tsx`
   - `packages/web/src/components/personas/PersonaManager.tsx`
   - `packages/web/src/components/panels/TaskEditPanel.tsx`
-  - `packages/web/src/components/lists/TaskList.tsx`
-  - `packages/web/src/components/panels/CredentialProvidersPanel.tsx`
-  - `packages/web/src/components/layout/BottomStatusBar.tsx`
   - `packages/web/src/components/chat/ChatInput.tsx`
   - `packages/web/src/components/panels/EnvironmentEditPanel.tsx`
 - Once a component is fully decoupled, remove it from this list.
