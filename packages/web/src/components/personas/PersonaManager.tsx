@@ -1,11 +1,28 @@
 import { useState, type JSX, type FormEvent } from "react";
-import { useGrackle } from "../../context/GrackleContext.js";
-import type { PersonaData } from "../../hooks/useGrackleSocket.js";
+import type { PersonaData } from "../../hooks/types.js";
 import styles from "./PersonaManager.module.scss";
 
+/** Props for the PersonaManager component. */
+interface PersonaManagerProps {
+  /** All personas. */
+  personas: PersonaData[];
+  /** The app-level default persona ID. */
+  appDefaultPersonaId: string;
+  /** Callback to create a new persona. */
+  onCreatePersona: (name: string, description: string, systemPrompt: string,
+    runtime?: string, model?: string, maxTurns?: number, type?: string, script?: string) => void;
+  /** Callback to update an existing persona. */
+  onUpdatePersona: (personaId: string, name?: string, description?: string,
+    systemPrompt?: string, runtime?: string, model?: string, maxTurns?: number,
+    type?: string, script?: string) => void;
+  /** Callback to delete a persona. */
+  onDeletePersona: (personaId: string) => void;
+  /** Callback to set the app-level default persona. */
+  onSetAppDefaultPersonaId: (personaId: string) => void;
+}
+
 /** Full CRUD management view for personas. */
-export function PersonaManager(): JSX.Element {
-  const { personas, createPersona, updatePersona, deletePersona, appDefaultPersonaId, setAppDefaultPersonaId } = useGrackle();
+export function PersonaManager({ personas, appDefaultPersonaId, onCreatePersona, onUpdatePersona, onDeletePersona, onSetAppDefaultPersonaId }: PersonaManagerProps): JSX.Element {
   const [editing, setEditing] = useState<PersonaData | null>(null);
   const [creating, setCreating] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
@@ -76,17 +93,17 @@ export function PersonaManager(): JSX.Element {
       }
     }
     if (editing) {
-      updatePersona(editing.id, name, description, systemPrompt, runtime, model, maxTurns, personaType, script);
+      onUpdatePersona(editing.id, name, description, systemPrompt, runtime, model, maxTurns, personaType, script);
       setEditing(null);
     } else {
-      createPersona(name, description, systemPrompt, runtime, model, maxTurns, personaType, script);
+      onCreatePersona(name, description, systemPrompt, runtime, model, maxTurns, personaType, script);
       setCreating(false);
     }
     resetForm();
   };
 
   const handleDelete = (id: string): void => {
-    deletePersona(id);
+    onDeletePersona(id);
     setConfirmDelete(null);
     if (editing?.id === id) {
       setEditing(null);
@@ -274,7 +291,7 @@ export function PersonaManager(): JSX.Element {
                 <div className={styles.cardActions}>
                   {!isAppDefault && (
                     <button
-                      onClick={() => setAppDefaultPersonaId(p.id)}
+                      onClick={() => onSetAppDefaultPersonaId(p.id)}
                       className={styles.btnSmall}
                       data-testid={`persona-set-default-${p.id}`}
                       title="Set as app default persona"
