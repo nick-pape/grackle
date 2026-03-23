@@ -1,14 +1,14 @@
 {
-  "name": "@grackle-ai/server",
+  "name": "@grackle-ai/database",
   "version": "0.72.0",
-  "description": "Central gRPC server with SQLite storage and WebSocket bridge for Grackle",
+  "description": "SQLite persistence layer for Grackle — schema, stores, and migrations",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/nick-pape/grackle.git",
-    "directory": "packages/server"
+    "directory": "packages/database"
   },
-  "keywords": ["grackle", "grpc", "server", "sqlite", "websocket"],
+  "keywords": ["grackle", "sqlite", "database", "drizzle-orm"],
   "engines": { "node": ">=22.0.0" },
   "type": "module",
   "main": "dist/index.js",
@@ -16,7 +16,6 @@
   "files": ["dist/"],
   "scripts": {
     "build": "heft build --clean",
-    "start": "node dist/index.js",
     "test": "vitest run",
     "clean": "heft clean",
     "_phase:build": "heft run --only build -- --clean",
@@ -24,22 +23,10 @@
   },
   "dependencies": {
     "@bufbuild/protobuf": "^2.5.0",
-    "@connectrpc/connect": "^2.0.0",
-    "@connectrpc/connect-node": "^2.0.0",
-    "@grackle-ai/adapter-sdk": "workspace:*",
     "@grackle-ai/common": "workspace:*",
-    "@grackle-ai/database": "workspace:*",
-    "@grackle-ai/knowledge": "workspace:*",
-    "@grackle-ai/powerline": "workspace:*",
-    "@grackle-ai/mcp": "workspace:*",
-    "@grackle-ai/web": "workspace:*",
     "better-sqlite3": "^11.0.0",
     "drizzle-orm": "^0.38.0",
-    "pino": "^10.3.1",
-    "qrcode": "^1.5.4",
-    "ulid": "^2.3.0",
-    "uuid": "^11.0.0",
-    "ws": "^8.0.0"
+    "uuid": "^11.0.0"
   },
   "devDependencies": {
     "@grackle-ai/heft-rig": "workspace:*",
@@ -47,7 +34,6 @@
     "@types/better-sqlite3": "^7.6.0",
     "@types/node": "^22.0.0",
     "@types/uuid": "^10.0.0",
-    "@types/ws": "^8.0.0",
     "vitest": "^3.1.1"
   },
   "pnpm": {

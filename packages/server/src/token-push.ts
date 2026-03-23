@@ -8,8 +8,7 @@
  * {@link ./credential-bundle.ts}.
  */
 import * as adapterManager from "./adapter-manager.js";
-import * as envRegistry from "./env-registry.js";
-import { getBundle } from "./token-store.js";
+import { envRegistry, tokenStore } from "@grackle-ai/database";
 import { buildProviderTokenBundle } from "./credential-bundle.js";
 import { logger } from "./logger.js";
 
@@ -26,7 +25,7 @@ export async function pushToEnv(environmentId: string, options?: PushToEnvOption
     return;
   }
 
-  const bundle = getBundle();
+  const bundle = tokenStore.getBundle();
 
   if (options?.excludeFileTokens) {
     bundle.tokens = bundle.tokens.filter((t) => t.type !== "file");

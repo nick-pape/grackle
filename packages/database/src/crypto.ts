@@ -2,7 +2,6 @@ import { randomBytes, createCipheriv, createDecipheriv, pbkdf2Sync } from "node:
 import { readFileSync, writeFileSync, existsSync, mkdirSync, chmodSync } from "node:fs";
 import { join } from "node:path";
 import { grackleHome } from "./paths.js";
-import { logger } from "./logger.js";
 
 const ALGORITHM: "aes-256-gcm" = "aes-256-gcm";
 const IV_LENGTH: number = 12;
@@ -40,7 +39,7 @@ function loadMasterKey(): string {
   try {
     chmodSync(keyPath, 0o600);
   } catch { /* Windows may not support this */ }
-  logger.warn("Generated new master key for token encryption. Set GRACKLE_MASTER_KEY env var for explicit control.");
+  console.warn("Generated new master key for token encryption. Set GRACKLE_MASTER_KEY env var for explicit control.");
 
   return key;
 }

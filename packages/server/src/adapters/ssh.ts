@@ -18,7 +18,7 @@ import {
   SSH_CONNECTIVITY_TIMEOUT_MS,
   REMOTE_EXEC_DEFAULT_TIMEOUT_MS,
 } from "@grackle-ai/adapter-sdk";
-import { getCredentialProviders } from "../credential-providers.js";
+import { credentialProviders } from "@grackle-ai/database";
 import { exec } from "../utils/exec.js";
 import { sleep } from "../utils/sleep.js";
 
@@ -207,7 +207,7 @@ export class SshAdapter implements EnvironmentAdapter {
     // Bootstrap PowerLine on the remote host
     yield* bootstrapPowerLine(executor, powerlineToken, {
       extraEnv: cfg.env,
-      isGitHubProviderEnabled: () => getCredentialProviders().github !== "off",
+      isGitHubProviderEnabled: () => credentialProviders.getCredentialProviders().github !== "off",
       defaultRuntime: (config.defaultRuntime as string) || undefined,
     });
 

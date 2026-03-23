@@ -146,6 +146,43 @@ importers:
         specifier: ^3.1.1
         version: 3.2.4(@types/debug@4.1.12)(@types/node@22.19.15)(jiti@1.21.7)(jsdom@29.0.0)(sass@1.98.0)(terser@5.46.1)
 
+  ../../packages/database:
+    dependencies:
+      '@bufbuild/protobuf':
+        specifier: ^2.5.0
+        version: 2.11.0
+      '@grackle-ai/common':
+        specifier: workspace:*
+        version: link:../common
+      better-sqlite3:
+        specifier: ^11.0.0
+        version: 11.10.0
+      drizzle-orm:
+        specifier: ^0.38.0
+        version: 0.38.4(@types/better-sqlite3@7.6.13)(@types/react@19.2.14)(better-sqlite3@11.10.0)(react@19.2.4)
+      uuid:
+        specifier: ^11.0.0
+        version: 11.1.0
+    devDependencies:
+      '@grackle-ai/heft-rig':
+        specifier: workspace:*
+        version: link:../../rigs/heft-rig
+      '@rushstack/heft':
+        specifier: 1.2.7
+        version: 1.2.7(@types/node@22.19.15)
+      '@types/better-sqlite3':
+        specifier: ^7.6.0
+        version: 7.6.13
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.19.15
+      '@types/uuid':
+        specifier: ^10.0.0
+        version: 10.0.0
+      vitest:
+        specifier: ^3.1.1
+        version: 3.2.4(@types/debug@4.1.12)(@types/node@22.19.15)(jiti@1.21.7)(jsdom@29.0.0)(sass@1.98.0)(terser@5.46.1)
+
   ../../packages/knowledge:
     dependencies:
       '@grackle-ai/knowledge-core':
@@ -284,6 +321,9 @@ importers:
       '@grackle-ai/common':
         specifier: workspace:*
         version: link:../common
+      '@grackle-ai/database':
+        specifier: workspace:*
+        version: link:../database
       '@grackle-ai/knowledge':
         specifier: workspace:*
         version: link:../knowledge

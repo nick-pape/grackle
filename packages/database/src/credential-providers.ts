@@ -3,13 +3,12 @@
  * are enabled and persists the configuration to the database.
  *
  * The token bundle builder that reads `process.env` / disk lives in
- * {@link ./credential-bundle.ts} to keep this module a pure persistence layer.
+ * `@grackle-ai/server` to keep this module a pure persistence layer.
  */
 import { eq } from "drizzle-orm";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import db from "./db.js";
 import * as schema from "./schema.js";
-import { logger } from "./logger.js";
 
 // ─── Types ─────────────────────────────────────────────────
 
@@ -85,7 +84,7 @@ export function getCredentialProviders(database?: DatabaseInstance): CredentialP
   try {
     return parseCredentialProviderConfig(row.value);
   } catch {
-    logger.warn("Invalid credential_providers setting; returning defaults");
+    console.warn("Invalid credential_providers setting; returning defaults");
     return { ...DEFAULT_CONFIG };
   }
 }

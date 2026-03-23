@@ -6,7 +6,7 @@ import {
   bootstrapPowerLine,
   startRemotePowerLine,
 } from "@grackle-ai/adapter-sdk";
-import { getCredentialProviders } from "../credential-providers.js";
+import { credentialProviders } from "@grackle-ai/database";
 import { exec } from "../utils/exec.js";
 import { findFreePort } from "../utils/ports.js";
 import { sleep } from "../utils/sleep.js";
@@ -297,7 +297,7 @@ export class DockerAdapter implements EnvironmentAdapter {
         extraEnv: cfg.env,
         workingDirectory: WORKSPACE_PATH,
         host: "0.0.0.0",
-        isGitHubProviderEnabled: () => getCredentialProviders().github !== "off",
+        isGitHubProviderEnabled: () => credentialProviders.getCredentialProviders().github !== "off",
         defaultRuntime: (config.defaultRuntime as string) || undefined,
       });
     } else {

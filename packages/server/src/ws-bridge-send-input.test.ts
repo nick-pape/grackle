@@ -10,10 +10,6 @@ import WebSocket from "ws";
 
 // ── Mock heavy dependencies before importing the bridge ──────────
 
-vi.mock("./db.js", async () => {
-  return await import("./test-db.js");
-});
-
 vi.mock("./logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
@@ -46,51 +42,10 @@ vi.mock("./event-bus.js", () => ({
   emit: vi.fn(),
 }));
 
-vi.mock("./token-store.js", () => ({
-  listTokens: vi.fn(() => []),
-  setToken: vi.fn(),
-  deleteToken: vi.fn(),
-}));
-
 vi.mock("./token-push.js", () => ({
   pushToEnv: vi.fn(),
   pushProviderCredentialsToEnv: vi.fn(),
   refreshTokensForTask: vi.fn(),
-}));
-
-vi.mock("./env-registry.js", () => ({
-  listEnvironments: vi.fn(() => []),
-  getEnvironment: vi.fn(() => undefined),
-  addEnvironment: vi.fn(),
-  removeEnvironment: vi.fn(),
-  updateEnvironmentStatus: vi.fn(),
-  markBootstrapped: vi.fn(),
-}));
-
-vi.mock("./workspace-store.js", () => ({
-  listWorkspaces: vi.fn(() => []),
-  getWorkspace: vi.fn(() => undefined),
-  createWorkspace: vi.fn(),
-  archiveWorkspace: vi.fn(),
-  countWorkspacesByEnvironment: vi.fn(() => 0),
-}));
-
-vi.mock("./task-store.js", () => ({
-  listTasks: vi.fn(() => []),
-  buildChildIdsMap: vi.fn(() => new Map()),
-  getTask: vi.fn(() => undefined),
-  createTask: vi.fn(),
-  markTaskComplete: vi.fn(),
-  checkAndUnblock: vi.fn(() => []),
-  areDependenciesMet: vi.fn(() => true),
-  updateTask: vi.fn(),
-  deleteTask: vi.fn(),
-  getChildren: vi.fn(() => []),
-}));
-
-vi.mock("./finding-store.js", () => ({
-  queryFindings: vi.fn(() => []),
-  postFinding: vi.fn(),
 }));
 
 vi.mock("@grackle-ai/adapter-sdk", async (importOriginal) => ({
@@ -116,10 +71,12 @@ vi.mock("./utils/exec.js", () => ({
 }));
 
 // Import AFTER mocks
+import { openDatabase, initDatabase, sqlite as _sqlite, sessionStore } from "@grackle-ai/database";
+openDatabase(":memory:");
+initDatabase();
+const sqlite = _sqlite!;
 import { createWsBridge } from "./ws-bridge.js";
-import * as sessionStore from "./session-store.js";
 import * as adapterManager from "./adapter-manager.js";
-import { sqlite } from "./test-db.js";
 
 /** Apply the minimal SQLite schema needed for session tests. */
 function applySchema(): void {

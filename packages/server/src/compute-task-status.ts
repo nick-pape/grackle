@@ -1,4 +1,4 @@
-import type { SessionRow } from "./schema.js";
+import type { SessionRow } from "@grackle-ai/database";
 import { SESSION_STATUS, TASK_STATUS } from "@grackle-ai/common";
 
 /** Result of computing a task's effective status from its session history. */

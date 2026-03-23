@@ -1,7 +1,6 @@
 import { SESSION_STATUS } from "@grackle-ai/common";
 import { subscribe, type GrackleEvent } from "../event-bus.js";
-import * as taskStore from "../task-store.js";
-import * as sessionStore from "../session-store.js";
+import { taskStore, sessionStore } from "@grackle-ai/database";
 import { readLog } from "../log-writer.js";
 import { deliverSignalToTask } from "./signal-delivery.js";
 import { logger } from "../logger.js";

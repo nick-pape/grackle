@@ -10,9 +10,87 @@ import WebSocket from "ws";
 
 // ── Mock heavy dependencies before importing the bridge ──────────
 
-vi.mock("./db.js", async () => {
-  return await import("./test-db.js");
-});
+vi.mock("@grackle-ai/database", () => ({
+  db: {},
+  sqlite: undefined,
+  openDatabase: vi.fn(),
+  initDatabase: vi.fn(),
+  schema: {},
+  tokenStore: {
+    listTokens: vi.fn(() => []),
+    setToken: vi.fn(),
+    deleteToken: vi.fn(),
+  },
+  envRegistry: {
+    listEnvironments: vi.fn(() => []),
+    getEnvironment: vi.fn(() => undefined),
+    addEnvironment: vi.fn(),
+    removeEnvironment: vi.fn(),
+    updateEnvironmentStatus: vi.fn(),
+    markBootstrapped: vi.fn(),
+  },
+  sessionStore: {
+    createSession: vi.fn(),
+    getSession: vi.fn(() => undefined),
+    listSessions: vi.fn(() => []),
+    updateSession: vi.fn(),
+  },
+  workspaceStore: {
+    listWorkspaces: vi.fn(() => []),
+    getWorkspace: vi.fn(() => undefined),
+    createWorkspace: vi.fn(),
+    archiveWorkspace: vi.fn(),
+    countWorkspacesByEnvironment: vi.fn(() => 0),
+  },
+  taskStore: {
+    listTasks: vi.fn(() => []),
+    buildChildIdsMap: vi.fn(() => new Map()),
+    getTask: vi.fn(() => undefined),
+    createTask: vi.fn(),
+    markTaskComplete: vi.fn(),
+    checkAndUnblock: vi.fn(() => []),
+    areDependenciesMet: vi.fn(() => true),
+    updateTask: vi.fn(),
+    deleteTask: vi.fn(),
+    getChildren: vi.fn(() => []),
+  },
+  findingStore: {
+    queryFindings: vi.fn(() => []),
+    postFinding: vi.fn(),
+  },
+  personaStore: {
+    listPersonas: vi.fn(() => []),
+    getPersona: vi.fn(() => undefined),
+    getPersonaByName: vi.fn(() => undefined),
+    createPersona: vi.fn(),
+    updatePersona: vi.fn(),
+    deletePersona: vi.fn(),
+  },
+  settingsStore: {
+    getSetting: vi.fn(),
+    setSetting: vi.fn(),
+    isAllowedSettingKey: vi.fn(() => true),
+    WRITABLE_SETTING_KEYS: new Set(["default_persona_id", "onboarding_completed"]),
+  },
+  isAllowedSettingKey: vi.fn(() => true),
+  WRITABLE_SETTING_KEYS: new Set(["default_persona_id", "onboarding_completed"]),
+  credentialProviders: {
+    getCredentialProviders: vi.fn(() => ({ claude: "off", github: "off", copilot: "off", codex: "off", goose: "off" })),
+    setCredentialProviders: vi.fn(),
+    isValidCredentialProviderConfig: vi.fn(() => true),
+    VALID_PROVIDERS: ["claude", "github", "copilot", "codex", "goose"],
+    VALID_CLAUDE_VALUES: new Set(["off", "subscription", "api_key"]),
+    VALID_TOGGLE_VALUES: new Set(["off", "on"]),
+    parseCredentialProviderConfig: vi.fn(),
+  },
+  grackleHome: "/tmp/test-grackle",
+  safeParseJsonArray: (value: unknown) => { if (!value) return []; try { const p = JSON.parse(value as string); return Array.isArray(p) ? p.filter((i: unknown) => typeof i === "string") : []; } catch { return []; } },
+  slugify: (text: string) => text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40),
+  encrypt: vi.fn((x: unknown) => x),
+  decrypt: vi.fn((x: unknown) => x),
+  persistEvent: vi.fn(),
+  seedDatabase: vi.fn(),
+}));
 
 vi.mock("./logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -46,51 +124,10 @@ vi.mock("./event-bus.js", () => ({
   emit: vi.fn(),
 }));
 
-vi.mock("./token-store.js", () => ({
-  listTokens: vi.fn(() => []),
-  setToken: vi.fn(),
-  deleteToken: vi.fn(),
-}));
-
 vi.mock("./token-push.js", () => ({
   pushToEnv: vi.fn(),
   pushProviderCredentialsToEnv: vi.fn(),
   refreshTokensForTask: vi.fn(),
-}));
-
-vi.mock("./env-registry.js", () => ({
-  listEnvironments: vi.fn(() => []),
-  getEnvironment: vi.fn(() => undefined),
-  addEnvironment: vi.fn(),
-  removeEnvironment: vi.fn(),
-  updateEnvironmentStatus: vi.fn(),
-  markBootstrapped: vi.fn(),
-}));
-
-vi.mock("./workspace-store.js", () => ({
-  listWorkspaces: vi.fn(() => []),
-  getWorkspace: vi.fn(() => undefined),
-  createWorkspace: vi.fn(),
-  archiveWorkspace: vi.fn(),
-  countWorkspacesByEnvironment: vi.fn(() => 0),
-}));
-
-vi.mock("./task-store.js", () => ({
-  listTasks: vi.fn(() => []),
-  buildChildIdsMap: vi.fn(() => new Map()),
-  getTask: vi.fn(() => undefined),
-  createTask: vi.fn(),
-  markTaskComplete: vi.fn(),
-  checkAndUnblock: vi.fn(() => []),
-  areDependenciesMet: vi.fn(() => true),
-  updateTask: vi.fn(),
-  deleteTask: vi.fn(),
-  getChildren: vi.fn(() => []),
-}));
-
-vi.mock("./finding-store.js", () => ({
-  queryFindings: vi.fn(() => []),
-  postFinding: vi.fn(),
 }));
 
 vi.mock("@grackle-ai/adapter-sdk", async (importOriginal) => ({

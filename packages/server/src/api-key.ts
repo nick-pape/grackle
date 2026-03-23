@@ -3,7 +3,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync, chmodSync } from "n
 import { join } from "node:path";
 import { API_KEY_FILENAME } from "@grackle-ai/common";
 import { logger } from "./logger.js";
-import { grackleHome } from "./paths.js";
+import { grackleHome } from "@grackle-ai/database";
 
 const API_KEY_BYTE_LENGTH: number = 32;
 

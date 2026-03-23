@@ -7,9 +7,94 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 
 // ── Mock heavy dependencies before importing the module ──────────
 
-vi.mock("./db.js", async () => {
-  return await import("./test-db.js");
-});
+vi.mock("@grackle-ai/database", () => ({
+  db: {},
+  sqlite: undefined,
+  openDatabase: vi.fn(),
+  initDatabase: vi.fn(),
+  schema: {},
+  tokenStore: {
+    listTokens: vi.fn(() => []),
+    setToken: vi.fn(),
+    deleteToken: vi.fn(),
+  },
+  envRegistry: {
+    listEnvironments: vi.fn(() => []),
+    getEnvironment: vi.fn(),
+    addEnvironment: vi.fn(),
+    removeEnvironment: vi.fn(),
+    updateEnvironmentStatus: vi.fn(),
+    markBootstrapped: vi.fn(),
+    resetAllStatuses: vi.fn(),
+  },
+  sessionStore: {
+    createSession: vi.fn(),
+    getSession: vi.fn(() => undefined),
+    listSessions: vi.fn(() => []),
+    listSessionsForTask: vi.fn(() => []),
+    listSessionsByTaskIds: vi.fn(() => []),
+    getLatestSessionForTask: vi.fn(() => undefined),
+    getActiveSessionsForTask: vi.fn(() => []),
+    updateSession: vi.fn(),
+    deleteByEnvironment: vi.fn(),
+    setSessionTask: vi.fn(),
+  },
+  workspaceStore: {
+    listWorkspaces: vi.fn(() => []),
+    getWorkspace: vi.fn(() => undefined),
+    createWorkspace: vi.fn(),
+    archiveWorkspace: vi.fn(),
+    countWorkspacesByEnvironment: vi.fn(() => 0),
+  },
+  taskStore: {
+    listTasks: vi.fn(() => []),
+    buildChildIdsMap: vi.fn(() => new Map()),
+    getTask: vi.fn(() => undefined),
+    createTask: vi.fn(),
+    markTaskComplete: vi.fn(),
+    checkAndUnblock: vi.fn(() => []),
+    areDependenciesMet: vi.fn(() => true),
+    updateTask: vi.fn(),
+    deleteTask: vi.fn(),
+    getChildren: vi.fn(() => []),
+  },
+  findingStore: {
+    queryFindings: vi.fn(() => []),
+    postFinding: vi.fn(),
+  },
+  personaStore: {
+    listPersonas: vi.fn(() => []),
+    getPersona: vi.fn(() => undefined),
+    getPersonaByName: vi.fn(() => undefined),
+    createPersona: vi.fn(),
+    updatePersona: vi.fn(),
+    deletePersona: vi.fn(),
+  },
+  settingsStore: {
+    getSetting: vi.fn(),
+    setSetting: vi.fn(),
+    isAllowedSettingKey: vi.fn(() => true),
+    WRITABLE_SETTING_KEYS: new Set(["default_persona_id", "onboarding_completed"]),
+  },
+  isAllowedSettingKey: vi.fn(() => true),
+  WRITABLE_SETTING_KEYS: new Set(["default_persona_id", "onboarding_completed"]),
+  credentialProviders: {
+    getCredentialProviders: vi.fn(() => ({ claude: "off", github: "off", copilot: "off", codex: "off", goose: "off" })),
+    setCredentialProviders: vi.fn(),
+    isValidCredentialProviderConfig: vi.fn(() => true),
+    VALID_PROVIDERS: ["claude", "github", "copilot", "codex", "goose"],
+    VALID_CLAUDE_VALUES: new Set(["off", "subscription", "api_key"]),
+    VALID_TOGGLE_VALUES: new Set(["off", "on"]),
+    parseCredentialProviderConfig: vi.fn(),
+  },
+  grackleHome: "/tmp/test-grackle",
+  safeParseJsonArray: (value: unknown) => { if (!value) return []; try { const p = JSON.parse(value as string); return Array.isArray(p) ? p.filter((i: unknown) => typeof i === "string") : []; } catch { return []; } },
+  slugify: (text: string) => text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40),
+  encrypt: vi.fn((x: unknown) => x),
+  decrypt: vi.fn((x: unknown) => x),
+  persistEvent: vi.fn(),
+  seedDatabase: vi.fn(),
+}));
 
 vi.mock("./logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -45,39 +130,10 @@ vi.mock("./event-bus.js", () => ({
   emit: vi.fn(),
 }));
 
-vi.mock("./token-store.js", () => ({
-  listTokens: vi.fn(() => []),
-  setToken: vi.fn(),
-  deleteToken: vi.fn(),
-}));
-
 vi.mock("./token-push.js", () => ({
   pushToEnv: vi.fn(),
   pushProviderCredentialsToEnv: vi.fn(),
   refreshTokensForTask: vi.fn(),
-}));
-
-vi.mock("./env-registry.js", () => ({
-  listEnvironments: vi.fn(() => []),
-  getEnvironment: vi.fn(),
-  addEnvironment: vi.fn(),
-  removeEnvironment: vi.fn(),
-  updateEnvironmentStatus: vi.fn(),
-  markBootstrapped: vi.fn(),
-  resetAllStatuses: vi.fn(),
-}));
-
-vi.mock("./session-store.js", () => ({
-  createSession: vi.fn(),
-  getSession: vi.fn(() => undefined),
-  listSessions: vi.fn(() => []),
-  listSessionsForTask: vi.fn(() => []),
-  listSessionsByTaskIds: vi.fn(() => []),
-  getLatestSessionForTask: vi.fn(() => undefined),
-  getActiveSessionsForTask: vi.fn(() => []),
-  updateSession: vi.fn(),
-  deleteByEnvironment: vi.fn(),
-  setSessionTask: vi.fn(),
 }));
 
 vi.mock("./adapter-manager.js", () => ({
@@ -87,41 +143,6 @@ vi.mock("./adapter-manager.js", () => ({
   removeConnection: vi.fn(),
   registerAdapter: vi.fn(),
   startHeartbeat: vi.fn(),
-}));
-
-vi.mock("./workspace-store.js", () => ({
-  listWorkspaces: vi.fn(() => []),
-  getWorkspace: vi.fn(() => undefined),
-  createWorkspace: vi.fn(),
-  archiveWorkspace: vi.fn(),
-  countWorkspacesByEnvironment: vi.fn(() => 0),
-}));
-
-vi.mock("./task-store.js", () => ({
-  listTasks: vi.fn(() => []),
-  buildChildIdsMap: vi.fn(() => new Map()),
-  getTask: vi.fn(() => undefined),
-  createTask: vi.fn(),
-  markTaskComplete: vi.fn(),
-  checkAndUnblock: vi.fn(() => []),
-  areDependenciesMet: vi.fn(() => true),
-  updateTask: vi.fn(),
-  deleteTask: vi.fn(),
-  getChildren: vi.fn(() => []),
-}));
-
-vi.mock("./finding-store.js", () => ({
-  queryFindings: vi.fn(() => []),
-  postFinding: vi.fn(),
-}));
-
-vi.mock("./persona-store.js", () => ({
-  listPersonas: vi.fn(() => []),
-  getPersona: vi.fn(() => undefined),
-  getPersonaByName: vi.fn(() => undefined),
-  createPersona: vi.fn(),
-  updatePersona: vi.fn(),
-  deletePersona: vi.fn(),
 }));
 
 vi.mock("@grackle-ai/adapter-sdk", async (importOriginal) => ({
@@ -158,7 +179,7 @@ vi.mock("./github-import.js", () => ({
 // Import AFTER mocks — use the mocked versions
 import { registerGrackleRoutes } from "./grpc-service.js";
 import { emit } from "./event-bus.js";
-import * as envRegistry from "./env-registry.js";
+import { envRegistry } from "@grackle-ai/database";
 import * as adapterManager from "./adapter-manager.js";
 import type { ConnectRouter } from "@connectrpc/connect";
 

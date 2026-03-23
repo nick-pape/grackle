@@ -6,8 +6,81 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 
 // ── Mock heavy dependencies before importing modules under test ─────
 
-vi.mock("./db.js", async () => {
-  return await import("./test-db.js");
+vi.mock("@grackle-ai/database", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@grackle-ai/database")>();
+  actual.openDatabase(":memory:");
+  actual.initDatabase();
+  return {
+    ...actual,
+    envRegistry: {
+      listEnvironments: vi.fn(() => []),
+      getEnvironment: vi.fn(() => ({ adapterType: "local" })),
+      addEnvironment: vi.fn(),
+      removeEnvironment: vi.fn(),
+      updateEnvironmentStatus: vi.fn(),
+      markBootstrapped: vi.fn(),
+    },
+    workspaceStore: {
+      listWorkspaces: vi.fn(() => []),
+      getWorkspace: vi.fn(() => ({
+        id: "proj-1",
+        name: "Test Workspace",
+        environmentId: "env-1",
+        status: "active",
+        createdAt: new Date().toISOString(),
+      })),
+      createWorkspace: vi.fn(),
+      archiveWorkspace: vi.fn(),
+      countWorkspacesByEnvironment: vi.fn(() => 0),
+    },
+    taskStore: {
+      listTasks: vi.fn(() => []),
+      buildChildIdsMap: vi.fn(() => new Map()),
+      getTask: vi.fn(() => undefined),
+      createTask: vi.fn(),
+      markTaskComplete: vi.fn(),
+      checkAndUnblock: vi.fn(() => []),
+      areDependenciesMet: vi.fn(() => true),
+      updateTask: vi.fn(),
+      deleteTask: vi.fn(),
+      getChildren: vi.fn(() => []),
+    },
+    findingStore: {
+      queryFindings: vi.fn(() => []),
+      postFinding: vi.fn(),
+    },
+    personaStore: {
+      listPersonas: vi.fn(() => []),
+      getPersona: vi.fn(() => ({
+        id: "claude-code",
+        name: "Claude Code",
+        runtime: "claude-code",
+        model: "sonnet",
+        maxTurns: 0,
+        systemPrompt: "",
+        toolConfig: "{}",
+        mcpServers: "[]",
+      })),
+      getPersonaByName: vi.fn(() => undefined),
+      createPersona: vi.fn(),
+      updatePersona: vi.fn(),
+      deletePersona: vi.fn(),
+    },
+    settingsStore: {
+      getSetting: vi.fn((key: string) => key === "default_persona_id" ? "claude-code" : undefined),
+      setSetting: vi.fn(),
+    },
+    credentialProviders: {
+      getCredentialProviders: vi.fn(() => ({
+        claude: "off",
+        github: "off",
+        copilot: "off",
+        codex: "off",
+        goose: "off",
+      })),
+      setCredentialProviders: vi.fn(),
+    },
+  };
 });
 
 vi.mock("./logger.js", () => ({
@@ -42,70 +115,6 @@ vi.mock("./event-bus.js", () => ({
   emit: vi.fn(),
 }));
 
-vi.mock("./env-registry.js", () => ({
-  listEnvironments: vi.fn(() => []),
-  getEnvironment: vi.fn(() => ({ adapterType: "local" })),
-  addEnvironment: vi.fn(),
-  removeEnvironment: vi.fn(),
-  updateEnvironmentStatus: vi.fn(),
-  markBootstrapped: vi.fn(),
-}));
-
-vi.mock("./workspace-store.js", () => ({
-  listWorkspaces: vi.fn(() => []),
-  getWorkspace: vi.fn(() => ({
-    id: "proj-1",
-    name: "Test Workspace",
-    environmentId: "env-1",
-    status: "active",
-    createdAt: new Date().toISOString(),
-  })),
-  createWorkspace: vi.fn(),
-  archiveWorkspace: vi.fn(),
-  countWorkspacesByEnvironment: vi.fn(() => 0),
-}));
-
-vi.mock("./task-store.js", () => ({
-  listTasks: vi.fn(() => []),
-  buildChildIdsMap: vi.fn(() => new Map()),
-  getTask: vi.fn(() => undefined),
-  createTask: vi.fn(),
-  markTaskComplete: vi.fn(),
-  checkAndUnblock: vi.fn(() => []),
-  areDependenciesMet: vi.fn(() => true),
-  updateTask: vi.fn(),
-  deleteTask: vi.fn(),
-  getChildren: vi.fn(() => []),
-}));
-
-vi.mock("./finding-store.js", () => ({
-  queryFindings: vi.fn(() => []),
-  postFinding: vi.fn(),
-}));
-
-vi.mock("./persona-store.js", () => ({
-  listPersonas: vi.fn(() => []),
-  getPersona: vi.fn(() => ({
-    id: "claude-code",
-    name: "Claude Code",
-    runtime: "claude-code",
-    model: "sonnet",
-    maxTurns: 0,
-    systemPrompt: "",
-    toolConfig: "{}",
-    mcpServers: "[]",
-  })),
-  getPersonaByName: vi.fn(() => undefined),
-  createPersona: vi.fn(),
-  updatePersona: vi.fn(),
-  deletePersona: vi.fn(),
-}));
-
-vi.mock("./settings-store.js", () => ({
-  getSetting: vi.fn((key: string) => key === "default_persona_id" ? "claude-code" : undefined),
-  setSetting: vi.fn(),
-}));
-
 vi.mock("@grackle-ai/adapter-sdk", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@grackle-ai/adapter-sdk")>()),
   reconnectOrProvision: vi.fn(async function* () {}),
@@ -136,22 +145,11 @@ vi.mock("./credential-bundle.js", () => ({
   buildProviderTokenBundle: mockBuildProviderTokenBundle,
 }));
 
-vi.mock("./credential-providers.js", () => ({
-  getCredentialProviders: vi.fn(() => ({
-    claude: "off",
-    github: "off",
-    copilot: "off",
-    codex: "off",
-    goose: "off",
-  })),
-  setCredentialProviders: vi.fn(),
-}));
-
 // Import AFTER mocks
+import { sqlite as _sqlite, taskStore } from "@grackle-ai/database";
+const sqlite = _sqlite!;
 import * as tokenBroker from "./token-push.js";
 import * as adapterManager from "./adapter-manager.js";
-import * as taskStore from "./task-store.js";
-import { sqlite } from "./test-db.js";
 import { logger } from "./logger.js";
 import { create } from "@bufbuild/protobuf";
 import { powerline } from "@grackle-ai/common";

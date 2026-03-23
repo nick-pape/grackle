@@ -1,9 +1,7 @@
 import { execFile } from "node:child_process";
 import { v4 as uuid } from "uuid";
-import * as taskStore from "./task-store.js";
-import * as workspaceStore from "./workspace-store.js";
+import { taskStore, workspaceStore, slugify } from "@grackle-ai/database";
 import { emit } from "./event-bus.js";
-import { slugify } from "./utils/slugify.js";
 import { logger } from "./logger.js";
 
 /** Maximum buffer size for `gh` CLI output (50 MB). */
