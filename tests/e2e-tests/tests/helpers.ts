@@ -480,11 +480,15 @@ export async function sendWsAndWaitFor(
             const deadline = Date.now() + timeout;
             while (Date.now() < deadline) {
               await new Promise((r) => setTimeout(r, 500));
-              const listResp = await rpc("ListEnvironments", {});
-              const envs = (listResp.environments || []) as Array<Record<string, unknown>>;
-              const env = envs.find((e) => e.id === payload.environmentId);
-              if (env && env.status === "connected") {
-                return { type: "environment.changed", payload: {} };
+              try {
+                const listResp = await rpc("ListEnvironments", {});
+                const envs = (listResp?.environments || []) as Array<Record<string, unknown>>;
+                const env = envs.find((e) => e.id === payload.environmentId);
+                if (env && env.status === "connected") {
+                  return { type: "environment.changed", payload: {} };
+                }
+              } catch {
+                // RPC may fail transiently during provision — keep polling
               }
             }
             throw new Error("Timeout waiting for environment to connect");
@@ -756,11 +760,15 @@ export async function sendWsMessage(
         const provDeadline: number = Date.now() + 15_000;
         while (Date.now() < provDeadline) {
           await new Promise((r) => setTimeout(r, 500));
-          const listResp = await rpc("ListEnvironments", {});
-          const envs = (listResp.environments || []) as Array<Record<string, unknown>>;
-          const env = envs.find((e: Record<string, unknown>) => e.id === payload.environmentId);
-          if (env && env.status === "connected") {
-            break;
+          try {
+            const listResp = await rpc("ListEnvironments", {});
+            const envs = (listResp?.environments || []) as Array<Record<string, unknown>>;
+            const env = envs.find((e: Record<string, unknown>) => e.id === payload.environmentId);
+            if (env && env.status === "connected") {
+              break;
+            }
+          } catch {
+            // RPC may fail transiently during provision — keep polling
           }
         }
         break;
