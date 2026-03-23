@@ -144,12 +144,17 @@ test.describe("SIGCHLD — child completion notification", { tag: ["@error"] }, 
     expect(sigchldContent).toContain("Child Worker");
     expect(sigchldContent).toContain("finished working");
 
-    // Cleanup: kill the child session so it frees the environment for subsequent tests
+    // Cleanup: kill both sessions to free the environment for subsequent tests
     await sendWsMessage(page, {
       type: "kill",
       payload: { sessionId: childSessionId },
     });
     await waitForSessionStatus(page, childSessionId, "stopped");
+    await sendWsMessage(page, {
+      type: "kill",
+      payload: { sessionId: parentSessionId },
+    });
+    await waitForSessionStatus(page, parentSessionId, "stopped");
   });
 
   test("SIGCHLD delivered after parent session reanimated", { timeout: 90_000 }, async ({ appPage: page }) => {
