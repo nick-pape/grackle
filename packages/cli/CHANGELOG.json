@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.71.3",
+      "tag": "@grackle-ai/cli_v0.71.3",
+      "date": "Mon, 23 Mar 2026 06:41:40 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "feat: make system task immortal (cannot be closed/deleted) and grant it full MCP tool access"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.71.2",
       "tag": "@grackle-ai/cli_v0.71.2",
       "date": "Mon, 23 Mar 2026 05:44:01 GMT",

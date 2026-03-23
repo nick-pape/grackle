@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Mon, 23 Mar 2026 05:44:01 GMT and should not be manually modified.
+This log was last generated on Mon, 23 Mar 2026 06:41:40 GMT and should not be manually modified.
+
+## 0.71.3
+Mon, 23 Mar 2026 06:41:40 GMT
+
+### Patches
+
+- feat: make system task immortal (cannot be closed/deleted) and grant it full MCP tool access
 
 ## 0.71.2
 Mon, 23 Mar 2026 05:44:01 GMT
