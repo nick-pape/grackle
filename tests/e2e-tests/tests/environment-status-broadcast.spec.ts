@@ -15,6 +15,12 @@ import {
  */
 
 test.describe("Environment Status Broadcast + Toasts", { tag: ["@environment"] }, () => {
+  // Ensure the environment is connected before each test — previous tests
+  // may have stopped it and the reprovision may not have completed.
+  test.beforeEach(async () => {
+    await provisionEnvironmentDirect("test-local");
+  });
+
   test("stop environment shows disconnected toast and updates StatusBar", async ({ page }) => {
     await installWsTracker(page);
     await page.goto("/");
