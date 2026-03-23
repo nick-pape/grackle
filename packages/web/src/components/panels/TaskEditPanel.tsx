@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, type JSX } from "react";
-import { useGrackle } from "../../context/GrackleContext.js";
 import { useToast } from "../../context/ToastContext.js";
+import type { TaskData, Workspace, PersonaData } from "../../hooks/types.js";
 import { taskUrl, workspaceUrl, useAppNavigate } from "../../utils/navigation.js";
 import styles from "./TaskEditPanel.module.scss";
 
@@ -15,6 +15,23 @@ interface Props {
   parentTaskId?: string;
   /** Environment ID — used for scoped navigation. */
   environmentId?: string;
+  /** All tasks (used for lookups and sibling dependency list). */
+  tasks: TaskData[];
+  /** All workspaces (used for workspace selector and environment resolution). */
+  workspaces: Workspace[];
+  /** All personas (used for persona dropdown). */
+  personas: PersonaData[];
+  /** Callback to create a new task. */
+  onCreateTask: (
+    workspaceId: string, title: string, description?: string,
+    dependsOn?: string[], parentTaskId?: string, defaultPersonaId?: string,
+    canDecompose?: boolean, onSuccess?: () => void, onError?: (message: string) => void,
+  ) => void;
+  /** Callback to update an existing task. */
+  onUpdateTask: (
+    taskId: string, title: string, description: string,
+    dependsOn: string[], defaultPersonaId?: string,
+  ) => void;
 }
 
 /**
@@ -25,8 +42,7 @@ interface Props {
  * - edit: pre-populated form; calls updateTask on save, then navigates
  *         back to the task overview.
  */
-export function TaskEditPanel({ mode, taskId, workspaceId: workspaceIdProp, parentTaskId: parentTaskIdProp, environmentId: environmentIdProp }: Props): JSX.Element {
-  const { tasks, workspaces, personas, createTask, updateTask } = useGrackle();
+export function TaskEditPanel({ mode, taskId, workspaceId: workspaceIdProp, parentTaskId: parentTaskIdProp, environmentId: environmentIdProp, tasks, workspaces, personas, onCreateTask, onUpdateTask }: Props): JSX.Element {
   const { showToast } = useToast();
   const navigate = useAppNavigate();
 
@@ -106,12 +122,12 @@ export function TaskEditPanel({ mode, taskId, workspaceId: workspaceIdProp, pare
       return;
     }
     if (isEdit && taskId) {
-      updateTask(taskId, title.trim(), description, selectedDeps, defaultPersonaId);
+      onUpdateTask(taskId, title.trim(), description, selectedDeps, defaultPersonaId);
       showToast("Task updated", "success");
       navigate(taskUrl(taskId, undefined, workspaceId, environmentId), { replace: true });
     } else {
       setCreating(true);
-      createTask(
+      onCreateTask(
         workspaceId,
         title.trim(),
         description,
