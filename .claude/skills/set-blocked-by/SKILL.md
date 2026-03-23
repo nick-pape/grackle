@@ -22,10 +22,14 @@ REPO_NAME="grackle"
 Fetch node IDs for both issues:
 
 ```bash
-gh api graphql -f query='{ repository(owner: "'"$REPO_OWNER"'", name: "'"$REPO_NAME"'") {
-  blocked: issue(number: <BLOCKED_NUMBER>) { id title }
-  blocker: issue(number: <BLOCKER_NUMBER>) { id title }
-} }'
+gh api graphql -f query='
+  query($owner: String!, $name: String!, $blocked: Int!, $blocker: Int!) {
+    repository(owner: $owner, name: $name) {
+      blocked: issue(number: $blocked) { id title }
+      blocker: issue(number: $blocker) { id title }
+    }
+  }
+' -f owner="$REPO_OWNER" -f name="$REPO_NAME" -F blocked=<BLOCKED_NUMBER> -F blocker=<BLOCKER_NUMBER>
 ```
 
 ## Step 2: Mutate

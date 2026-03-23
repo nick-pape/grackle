@@ -1,6 +1,6 @@
 ---
 name: set-parent
-description: Set or remove a GitHub sub-issue (parent/child) relationship. Run with /set-parent <child> <parent> or /set-parent remove <child> <parent>.
+description: Set or remove a GitHub sub-issue (parent/child) relationship. Run with /set-parent <child#> <parent#> or /set-parent remove <child#> <parent#>.
 ---
 
 # Set Parent — GitHub Sub-Issue Relationships
@@ -22,10 +22,14 @@ REPO_NAME="grackle"
 Fetch node IDs for both issues:
 
 ```bash
-gh api graphql -f query='{ repository(owner: "'"$REPO_OWNER"'", name: "'"$REPO_NAME"'") {
-  parent: issue(number: <PARENT_NUMBER>) { id title }
-  child: issue(number: <CHILD_NUMBER>) { id title }
-} }'
+gh api graphql -f query='
+  query($owner: String!, $name: String!, $parent: Int!, $child: Int!) {
+    repository(owner: $owner, name: $name) {
+      parent: issue(number: $parent) { id title }
+      child: issue(number: $child) { id title }
+    }
+  }
+' -f owner="$REPO_OWNER" -f name="$REPO_NAME" -F parent=<PARENT_NUMBER> -F child=<CHILD_NUMBER>
 ```
 
 ## Step 2: Mutate
