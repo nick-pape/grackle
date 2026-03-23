@@ -45,7 +45,7 @@ export function createDatabaseMock() {
       reanimateSession: vi.fn(),
       setSessionTask: vi.fn(),
       deleteByEnvironment: vi.fn(),
-      aggregateUsage: vi.fn(() => ({ inputTokens: 0, outputTokens: 0, costUsd: 0 })),
+      aggregateUsage: vi.fn(() => ({ inputTokens: 0, outputTokens: 0, costUsd: 0, sessionCount: 0 })),
     },
 
     taskStore: {
@@ -116,7 +116,7 @@ export function createDatabaseMock() {
       setToken: vi.fn(),
       deleteToken: vi.fn(),
       listTokens: vi.fn(() => []),
-      getBundle: vi.fn(),
+      getBundle: vi.fn(() => ({ tokens: [] })),
     },
 
     credentialProviders: {

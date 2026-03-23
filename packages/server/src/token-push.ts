@@ -4,7 +4,7 @@
  *
  * This is service-level logic that depends on adapter-manager (network) and
  * env-registry (lookup). The pure persistence layer lives in
- * {@link ./token-store.ts}, and credential bundle building lives in
+ * `@grackle-ai/database` (tokenStore), and credential bundle building lives in
  * {@link ./credential-bundle.ts}.
  */
 import * as adapterManager from "./adapter-manager.js";
