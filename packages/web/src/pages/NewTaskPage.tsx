@@ -1,5 +1,6 @@
 import { type JSX } from "react";
 import { useParams, useSearchParams } from "react-router";
+import { useGrackle } from "../context/GrackleContext.js";
 import { TaskEditPanel } from "../components/panels/TaskEditPanel.js";
 
 /** Page for creating a new task, reading workspaceId and parentTaskId from route or query params. */
@@ -8,6 +9,7 @@ export function NewTaskPage(): JSX.Element {
   const [searchParams] = useSearchParams();
   const workspaceId = routeWorkspaceId ?? searchParams.get("workspace") ?? "";
   const parentTaskId = searchParams.get("parent") ?? undefined;
+  const { tasks, workspaces, personas, createTask, updateTask } = useGrackle();
 
   return (
     <TaskEditPanel
@@ -15,6 +17,11 @@ export function NewTaskPage(): JSX.Element {
       workspaceId={workspaceId}
       parentTaskId={parentTaskId}
       environmentId={routeEnvironmentId}
+      tasks={tasks}
+      workspaces={workspaces}
+      personas={personas}
+      onCreateTask={createTask}
+      onUpdateTask={updateTask}
     />
   );
 }
