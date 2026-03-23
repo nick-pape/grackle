@@ -1,4 +1,4 @@
-import type { EnvironmentAdapter, BaseEnvironmentConfig, PowerLineConnection, ProvisionEvent } from "@grackle-ai/adapter-sdk";
+import type { EnvironmentAdapter, BaseEnvironmentConfig, PowerLineConnection, ProvisionEvent, AdapterDependencies, ExecFunction } from "@grackle-ai/adapter-sdk";
 import { DEFAULT_POWERLINE_PORT, DEFAULT_MCP_PORT } from "@grackle-ai/common";
 import {
   type RemoteExecutor,
@@ -15,12 +15,11 @@ import {
   remoteDestroy,
   remoteHealthCheck,
   startRemotePowerLine,
+  exec as defaultExec,
+  sleep as defaultSleep,
   SSH_CONNECTIVITY_TIMEOUT_MS,
   REMOTE_EXEC_DEFAULT_TIMEOUT_MS,
 } from "@grackle-ai/adapter-sdk";
-import { credentialProviders } from "@grackle-ai/database";
-import { exec } from "../utils/exec.js";
-import { sleep } from "../utils/sleep.js";
 
 const REMOTE_COPY_TIMEOUT_MS: number = 120_000;
 
@@ -44,15 +43,17 @@ export interface CodespaceEnvironmentConfig extends BaseEnvironmentConfig {
 /** Execute commands inside a GitHub Codespace via the `gh` CLI. */
 class CodespaceExecutor implements RemoteExecutor {
   private readonly codespaceName: string;
+  private readonly execFn: ExecFunction;
 
-  public constructor(codespaceName: string) {
+  public constructor(codespaceName: string, execFn: ExecFunction) {
     this.codespaceName = codespaceName;
+    this.execFn = execFn;
   }
 
   /** Execute a shell command inside the codespace and return trimmed stdout. */
   public async exec(command: string, opts?: { timeout?: number }): Promise<string> {
     const args = ["codespace", "ssh", "-c", this.codespaceName, "--", command];
-    const result = await exec("gh", args, { timeout: opts?.timeout ?? REMOTE_EXEC_DEFAULT_TIMEOUT_MS });
+    const result = await this.execFn("gh", args, { timeout: opts?.timeout ?? REMOTE_EXEC_DEFAULT_TIMEOUT_MS });
     return result.stdout;
   }
 
@@ -70,7 +71,7 @@ class CodespaceExecutor implements RemoteExecutor {
       localPath,
       `remote:${resolvedPath}`,
     ];
-    await exec("gh", args, { timeout: REMOTE_COPY_TIMEOUT_MS });
+    await this.execFn("gh", args, { timeout: REMOTE_COPY_TIMEOUT_MS });
   }
 }
 
@@ -109,17 +110,20 @@ class CodespaceTunnel extends ProcessTunnel {
 class CodespaceReverseTunnel extends ProcessTunnel {
   private readonly codespaceName: string;
   private readonly remotePort: number;
+  private readonly sleepFn: (ms: number) => Promise<void>;
 
   public constructor(
     localPort: number,
     remotePort: number,
     codespaceName: string,
+    sleepFn: (ms: number) => Promise<void>,
     processFactory?: TunnelProcessFactory,
     portProbe?: TunnelPortProbe,
   ) {
     super(localPort, undefined, processFactory, portProbe);
     this.remotePort = remotePort;
     this.codespaceName = codespaceName;
+    this.sleepFn = sleepFn;
   }
 
   /** Return the gh codespace ssh command with -R for reverse port forwarding. */
@@ -139,7 +143,7 @@ class CodespaceReverseTunnel extends ProcessTunnel {
    * We can't probe the remote port, so wait a fixed delay for SSH to establish.
    */
   protected async waitForReady(): Promise<void> {
-    await sleep(REVERSE_TUNNEL_SETTLE_MS);
+    await this.sleepFn(REVERSE_TUNNEL_SETTLE_MS);
     if (this.process?.exitCode !== null) {
       throw new Error(`Reverse tunnel exited immediately with code ${this.process?.exitCode}`);
     }
@@ -151,6 +155,15 @@ class CodespaceReverseTunnel extends ProcessTunnel {
 /** Environment adapter that provisions and manages GitHub Codespaces running the PowerLine. */
 export class CodespaceAdapter implements EnvironmentAdapter {
   public type: string = "codespace";
+  private readonly execFn: ExecFunction;
+  private readonly sleepFn: (ms: number) => Promise<void>;
+  private readonly isGitHubProviderEnabled: () => boolean;
+
+  public constructor(deps: AdapterDependencies = {}) {
+    this.execFn = deps.exec ?? defaultExec;
+    this.sleepFn = deps.sleep ?? defaultSleep;
+    this.isGitHubProviderEnabled = deps.isGitHubProviderEnabled ?? (() => false);
+  }
 
   /** Provision the codespace: verify connectivity, bootstrap PowerLine, open port-forward. */
   public async *provision(
@@ -163,7 +176,7 @@ export class CodespaceAdapter implements EnvironmentAdapter {
       throw new Error("Codespace adapter requires a 'codespaceName' in the configuration");
     }
 
-    const executor = new CodespaceExecutor(cfg.codespaceName);
+    const executor = new CodespaceExecutor(cfg.codespaceName, this.execFn);
 
     // Test codespace connectivity
     yield { stage: "connecting", message: `Connecting to codespace ${cfg.codespaceName}...`, progress: 0.05 };
@@ -191,7 +204,7 @@ export class CodespaceAdapter implements EnvironmentAdapter {
     yield* bootstrapPowerLine(executor, powerlineToken, {
       extraEnv: cfg.env,
       workingDirectory,
-      isGitHubProviderEnabled: () => credentialProviders.getCredentialProviders().github !== "off",
+      isGitHubProviderEnabled: this.isGitHubProviderEnabled,
       defaultRuntime: (config.defaultRuntime as string) || undefined,
     });
 
@@ -204,7 +217,7 @@ export class CodespaceAdapter implements EnvironmentAdapter {
 
     // Open reverse tunnel (codespace → host MCP server) for agent tool calls
     const mcpPort = parseInt(process.env.GRACKLE_MCP_PORT || String(DEFAULT_MCP_PORT), 10);
-    const reverseTunnel = new CodespaceReverseTunnel(mcpPort, mcpPort, cfg.codespaceName);
+    const reverseTunnel = new CodespaceReverseTunnel(mcpPort, mcpPort, cfg.codespaceName, this.sleepFn);
     await reverseTunnel.open();
 
     registerTunnel(environmentId, { tunnel, reverseTunnel });
@@ -214,12 +227,6 @@ export class CodespaceAdapter implements EnvironmentAdapter {
 
   /**
    * Attempt fast reconnect: probe PowerLine, restart if needed, re-open tunnel.
-   *
-   * Any failure (SSH unreachable, PowerLine won't start, tunnel error) throws
-   * and falls through to the caller, which should trigger a full provision.
-   *
-   * Minimizes SSH round trips — probe and conditional restart run in a single
-   * SSH call via `startRemotePowerLine({ probeFirst: true })`.
    */
   public async *reconnect(
     environmentId: string,
@@ -231,15 +238,13 @@ export class CodespaceAdapter implements EnvironmentAdapter {
       throw new Error("Codespace adapter requires a 'codespaceName' in the configuration");
     }
 
-    const executor = new CodespaceExecutor(cfg.codespaceName);
+    const executor = new CodespaceExecutor(cfg.codespaceName, this.execFn);
 
     // 1. Close any stale tunnel
     yield { stage: "reconnecting", message: "Closing stale tunnel...", progress: 0.10 };
     await closeTunnel(environmentId);
 
     // 2. Probe + conditional restart in a single SSH call.
-    //    probeFirst checks if PowerLine is already listening; if not, writes
-    //    env vars, detects workspace, starts the process, and re-probes.
     yield { stage: "reconnecting", message: `Checking PowerLine on ${cfg.codespaceName}...`, progress: 0.30 };
     const { alreadyRunning } = await startRemotePowerLine(executor, powerlineToken, {
       extraEnv: cfg.env,
@@ -257,7 +262,7 @@ export class CodespaceAdapter implements EnvironmentAdapter {
     await tunnel.open();
 
     const mcpPort = parseInt(process.env.GRACKLE_MCP_PORT || String(DEFAULT_MCP_PORT), 10);
-    const reverseTunnel = new CodespaceReverseTunnel(mcpPort, mcpPort, cfg.codespaceName);
+    const reverseTunnel = new CodespaceReverseTunnel(mcpPort, mcpPort, cfg.codespaceName, this.sleepFn);
     await reverseTunnel.open();
 
     registerTunnel(environmentId, { tunnel, reverseTunnel });
@@ -286,7 +291,7 @@ export class CodespaceAdapter implements EnvironmentAdapter {
   /** Stop the remote PowerLine process and close the tunnel. */
   public async stop(environmentId: string, config: Record<string, unknown>): Promise<void> {
     const cfg = config as unknown as CodespaceEnvironmentConfig;
-    await remoteStop(environmentId, new CodespaceExecutor(cfg.codespaceName));
+    await remoteStop(environmentId, new CodespaceExecutor(cfg.codespaceName, this.execFn));
   }
 
   /**
@@ -295,7 +300,7 @@ export class CodespaceAdapter implements EnvironmentAdapter {
    */
   public async destroy(environmentId: string, config: Record<string, unknown>): Promise<void> {
     const cfg = config as unknown as CodespaceEnvironmentConfig;
-    await remoteDestroy(environmentId, new CodespaceExecutor(cfg.codespaceName));
+    await remoteDestroy(environmentId, new CodespaceExecutor(cfg.codespaceName, this.execFn));
   }
 
   /** Check that the tunnel is alive and the PowerLine responds to a ping. */

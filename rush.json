@@ -38,6 +38,26 @@
       "versionPolicyName": "grackle"
     },
     {
+      "packageName": "@grackle-ai/adapter-local",
+      "projectFolder": "packages/adapter-local",
+      "versionPolicyName": "grackle"
+    },
+    {
+      "packageName": "@grackle-ai/adapter-ssh",
+      "projectFolder": "packages/adapter-ssh",
+      "versionPolicyName": "grackle"
+    },
+    {
+      "packageName": "@grackle-ai/adapter-codespace",
+      "projectFolder": "packages/adapter-codespace",
+      "versionPolicyName": "grackle"
+    },
+    {
+      "packageName": "@grackle-ai/adapter-docker",
+      "projectFolder": "packages/adapter-docker",
+      "versionPolicyName": "grackle"
+    },
+    {
       "packageName": "@grackle-ai/database",
       "projectFolder": "packages/database",
       "versionPolicyName": "grackle"

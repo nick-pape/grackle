@@ -1,6 +1,20 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Mon, 23 Mar 2026 07:13:27 GMT and should not be manually modified.
+This log was last generated on Mon, 23 Mar 2026 13:34:53 GMT and should not be manually modified.
+
+## 0.72.2
+Mon, 23 Mar 2026 13:34:53 GMT
+
+### Patches
+
+- Extract adapter implementations into standalone packages (adapter-local, adapter-ssh, adapter-codespace, adapter-docker) with constructor dependency injection
+
+## 0.72.1
+Mon, 23 Mar 2026 13:21:08 GMT
+
+### Patches
+
+- Decouple database layer from business/service logic in preparation for @grackle-ai/database extraction
 
 ## 0.72.0
 Mon, 23 Mar 2026 07:13:27 GMT

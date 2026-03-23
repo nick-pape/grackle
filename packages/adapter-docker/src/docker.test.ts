@@ -1,22 +1,6 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import type { DockerExecFactory } from "./docker.js";
 
-// ── Mock logger ─────────────────────────────────────────────
-vi.mock("../logger.js", () => ({
-  logger: {
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-    debug: vi.fn(),
-  },
-}));
-
-// ── Mock sleep ──────────────────────────────────────────────
-vi.mock("../utils/sleep.js", () => ({
-  sleep: vi.fn().mockResolvedValue(undefined),
-}));
-
-// ── Mock remote-adapter-utils ────────────────────────────────
+// ── Mock adapter-sdk ────────────────────────────────────────
 vi.mock("@grackle-ai/adapter-sdk", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@grackle-ai/adapter-sdk")>()),
   isDevMode: vi.fn().mockReturnValue(false),
@@ -56,16 +40,27 @@ function getVolumes(args: string[]): string[] {
   return vols;
 }
 
-function createMockExecFactory(): DockerExecFactory & { exec: ReturnType<typeof vi.fn> } {
-  return {
-    exec: vi.fn().mockResolvedValue({ stdout: "", stderr: "" }),
-  };
+const mockExec = vi.fn().mockResolvedValue({ stdout: "", stderr: "" });
+const mockSleep = vi.fn().mockResolvedValue(undefined);
+const mockLogger = {
+  info: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+  debug: vi.fn(),
+};
+
+function createAdapter(): DockerAdapter {
+  return new DockerAdapter({
+    exec: mockExec,
+    sleep: mockSleep,
+    logger: mockLogger,
+  });
 }
 
 // ── Tests ───────────────────────────────────────────────────
 
 describe("DockerAdapter.buildRunArgs() — credential handling", () => {
-  const adapter = new DockerAdapter();
+  const adapter = createAdapter();
   const containerName = "grackle-test";
   const localPort = 9999;
   const image = "test-image:latest";
@@ -141,56 +136,53 @@ describe("DockerAdapter.buildRunArgs() — credential handling", () => {
   });
 });
 
-describe("DockerAdapter — ExecFactory injection", () => {
-  it("calls injected exec factory for stop()", async () => {
-    const mockFactory = createMockExecFactory();
-    const adapter = new DockerAdapter(mockFactory);
+describe("DockerAdapter — DI exec for stop/destroy", () => {
+  it("calls injected exec for stop()", async () => {
+    const execFn = vi.fn().mockResolvedValue({ stdout: "", stderr: "" });
+    const adapter = new DockerAdapter({ exec: execFn, logger: mockLogger });
 
     await adapter.stop("env-1", { containerName: "test-container" });
 
-    expect(mockFactory.exec).toHaveBeenCalledWith(
+    expect(execFn).toHaveBeenCalledWith(
       "docker",
       ["stop", "test-container"],
     );
   });
 
-  it("calls injected exec factory for destroy()", async () => {
-    const mockFactory = createMockExecFactory();
-    const adapter = new DockerAdapter(mockFactory);
+  it("calls injected exec for destroy()", async () => {
+    const execFn = vi.fn().mockResolvedValue({ stdout: "", stderr: "" });
+    const adapter = new DockerAdapter({ exec: execFn, logger: mockLogger });
 
     await adapter.destroy("env-1", { containerName: "test-container" });
 
-    expect(mockFactory.exec).toHaveBeenCalledWith(
+    expect(execFn).toHaveBeenCalledWith(
       "docker",
       ["rm", "-f", "test-container"],
     );
   });
 
   it("uses default container name derived from environmentId", async () => {
-    const mockFactory = createMockExecFactory();
-    const adapter = new DockerAdapter(mockFactory);
+    const execFn = vi.fn().mockResolvedValue({ stdout: "", stderr: "" });
+    const adapter = new DockerAdapter({ exec: execFn, logger: mockLogger });
 
     await adapter.stop("env-42", {});
 
-    expect(mockFactory.exec).toHaveBeenCalledWith(
+    expect(execFn).toHaveBeenCalledWith(
       "docker",
       ["stop", "grackle-env-42"],
     );
   });
 
   it("does not throw when stop fails (container already stopped)", async () => {
-    const mockFactory = createMockExecFactory();
-    mockFactory.exec.mockRejectedValueOnce(new Error("container not running"));
-    const adapter = new DockerAdapter(mockFactory);
+    const execFn = vi.fn().mockRejectedValueOnce(new Error("container not running"));
+    const adapter = new DockerAdapter({ exec: execFn, logger: mockLogger });
 
-    // Should not throw — Docker adapter catches stop errors
     await expect(adapter.stop("env-1", { containerName: "test" })).resolves.toBeUndefined();
   });
 
   it("does not throw when destroy fails (container not found)", async () => {
-    const mockFactory = createMockExecFactory();
-    mockFactory.exec.mockRejectedValueOnce(new Error("no such container"));
-    const adapter = new DockerAdapter(mockFactory);
+    const execFn = vi.fn().mockRejectedValueOnce(new Error("no such container"));
+    const adapter = new DockerAdapter({ exec: execFn, logger: mockLogger });
 
     await expect(adapter.destroy("env-1", { containerName: "test" })).resolves.toBeUndefined();
   });

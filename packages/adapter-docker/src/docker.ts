@@ -1,18 +1,18 @@
 import { DEFAULT_POWERLINE_PORT } from "@grackle-ai/common";
-import type { EnvironmentAdapter, BaseEnvironmentConfig, PowerLineConnection, ProvisionEvent, RemoteExecutor } from "@grackle-ai/adapter-sdk";
+import type { EnvironmentAdapter, BaseEnvironmentConfig, PowerLineConnection, ProvisionEvent, AdapterDependencies, AdapterLogger, ExecFunction, ExecResult } from "@grackle-ai/adapter-sdk";
 import {
   createPowerLineClient,
   isDevMode,
   bootstrapPowerLine,
   startRemotePowerLine,
+  findFreePort,
+  exec as defaultExec,
+  sleep as defaultSleep,
+  defaultLogger,
+  type RemoteExecutor,
 } from "@grackle-ai/adapter-sdk";
-import { credentialProviders } from "@grackle-ai/database";
-import { exec } from "../utils/exec.js";
-import { findFreePort } from "../utils/ports.js";
-import { sleep } from "../utils/sleep.js";
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
-import { logger } from "../logger.js";
 
 const DOCKER_PULL_TIMEOUT_MS: number = 120_000;
 /** Timeout for `docker build` when building the base image. */
@@ -56,18 +56,15 @@ export interface DockerExecFactory {
   exec(command: string, args: string[], options?: { timeout?: number }): Promise<{ stdout: string; stderr: string }>;
 }
 
-/** Default implementation that delegates to the real `exec` utility. */
-const NODE_DOCKER_EXEC_FACTORY: DockerExecFactory = { exec };
-
 /** Callable exec function type extracted from the factory. */
-type ExecFunction = DockerExecFactory["exec"];
+type LocalExecFunction = (command: string, args: string[], options?: { timeout?: number }) => Promise<ExecResult>;
 
 const containerPorts: Map<string, number> = new Map<string, number>();
 
 // ─── Docker CLI Helpers ────────────────────────────────────
 
 /** Pull a Docker image, suppressing errors if the image exists locally. */
-async function pullImage(execFn: ExecFunction, image: string): Promise<void> {
+async function pullImage(execFn: LocalExecFunction, image: string, logger: AdapterLogger): Promise<void> {
   try {
     await execFn("docker", ["pull", image], { timeout: DOCKER_PULL_TIMEOUT_MS });
   } catch {
@@ -76,7 +73,7 @@ async function pullImage(execFn: ExecFunction, image: string): Promise<void> {
 }
 
 /** Start a new Docker container with the given arguments. Returns true if created; false if it already existed. */
-async function createOrStartContainer(execFn: ExecFunction, containerName: string, runArgs: string[]): Promise<boolean> {
+async function createOrStartContainer(execFn: LocalExecFunction, containerName: string, runArgs: string[]): Promise<boolean> {
   try {
     await execFn("docker", ["inspect", containerName]);
     // Container exists — just start it
@@ -90,7 +87,7 @@ async function createOrStartContainer(execFn: ExecFunction, containerName: strin
 }
 
 /** Discover the host-mapped port of an existing container. */
-async function discoverHostPort(execFn: ExecFunction, containerName: string, containerPort: number, fallback: number): Promise<number> {
+async function discoverHostPort(execFn: LocalExecFunction, containerName: string, containerPort: number, fallback: number, logger: AdapterLogger): Promise<number> {
   try {
     const { stdout } = await execFn("docker", [
       "inspect", "-f",
@@ -108,7 +105,7 @@ async function discoverHostPort(execFn: ExecFunction, containerName: string, con
 }
 
 /** Poll until a Docker container reaches the Running state. */
-async function waitForContainerRunning(execFn: ExecFunction, containerName: string): Promise<void> {
+async function waitForContainerRunning(execFn: LocalExecFunction, sleepFn: (ms: number) => Promise<void>, containerName: string, logger: AdapterLogger): Promise<void> {
   for (let i = 0; i < CONTAINER_POLL_MAX_ATTEMPTS; i++) {
     try {
       const { stdout } = await execFn("docker", ["inspect", "-f", "{{.State.Running}}", containerName]);
@@ -118,13 +115,13 @@ async function waitForContainerRunning(execFn: ExecFunction, containerName: stri
     } catch {
       logger.debug({ containerName, attempt: i }, "Container not yet running");
     }
-    await sleep(CONTAINER_POLL_DELAY_MS);
+    await sleepFn(CONTAINER_POLL_DELAY_MS);
   }
   throw new Error(`Container ${containerName} did not reach Running state after ${CONTAINER_POLL_MAX_ATTEMPTS} attempts`);
 }
 
 /** Clone or pull a git repo inside a container's workspace. */
-async function ensureRepoInContainer(execFn: ExecFunction, containerName: string, repo: string): Promise<void> {
+async function ensureRepoInContainer(execFn: LocalExecFunction, containerName: string, repo: string, logger: AdapterLogger): Promise<void> {
   // Check if already cloned
   try {
     const { stdout } = await execFn("docker", [
@@ -142,7 +139,7 @@ async function ensureRepoInContainer(execFn: ExecFunction, containerName: string
     // Not cloned — proceed to clone below
   }
 
-  const ghToken = await getGitHubToken(execFn);
+  const ghToken = await getGitHubToken(execFn, logger);
   const cloneUrl = repo.startsWith("https://") ? repo : `https://github.com/${repo}.git`;
 
   if (ghToken) {
@@ -169,14 +166,14 @@ async function ensureRepoInContainer(execFn: ExecFunction, containerName: string
 const SAFE_TOKEN_PATTERN: RegExp = /^[a-zA-Z0-9_\-]+$/;
 
 /** Get a GitHub token from the local `gh` CLI for private repo cloning. */
-async function getGitHubToken(execFn: ExecFunction): Promise<string | undefined> {
+async function getGitHubToken(execFn: LocalExecFunction, logger: AdapterLogger): Promise<string | undefined> {
   try {
     const { stdout } = await execFn("gh", ["auth", "token"]);
     if (!stdout) {
       return undefined;
     }
     if (!SAFE_TOKEN_PATTERN.test(stdout)) {
-      logger.warn("GitHub token contains unexpected characters, skipping credential setup");
+      logger.warn({}, "GitHub token contains unexpected characters, skipping credential setup");
       return undefined;
     }
     return stdout;
@@ -189,7 +186,7 @@ async function getGitHubToken(execFn: ExecFunction): Promise<string | undefined>
  * Build the base Docker image from the docker/Dockerfile.powerline.
  * Resolves the monorepo root from import.meta.dirname (dist/adapters → 4 levels up).
  */
-async function buildBaseImage(execFn: ExecFunction, tag: string): Promise<void> {
+async function buildBaseImage(execFn: LocalExecFunction, tag: string, logger: AdapterLogger): Promise<void> {
   const monorepoRoot = resolve(import.meta.dirname, "../../../../");
   logger.info({ tag, monorepoRoot }, "Building base PowerLine image");
   await execFn("docker", [
@@ -205,14 +202,13 @@ async function buildBaseImage(execFn: ExecFunction, tag: string): Promise<void> 
 /** Remote executor that runs commands inside a Docker container. */
 class DockerExecutor implements RemoteExecutor {
   private containerName: string;
-  private readonly execFn: ExecFunction;
+  private readonly execFn: LocalExecFunction;
   /** Cached resolved $HOME path. */
   private resolvedHome?: string;
 
-  public constructor(containerName: string, execFactory?: DockerExecFactory) {
+  public constructor(containerName: string, execFn: LocalExecFunction) {
     this.containerName = containerName;
-    const factory = execFactory ?? NODE_DOCKER_EXEC_FACTORY;
-    this.execFn = factory.exec.bind(factory);
+    this.execFn = execFn;
   }
 
   /** Execute a shell command inside the container and return stdout. */
@@ -248,12 +244,16 @@ class DockerExecutor implements RemoteExecutor {
 /** Environment adapter that provisions and manages Docker containers running the PowerLine. */
 export class DockerAdapter implements EnvironmentAdapter {
   public type: string = "docker";
-  private readonly execFn: ExecFunction;
-  private readonly execFactory: DockerExecFactory;
+  private readonly execFn: LocalExecFunction;
+  private readonly sleepFn: (ms: number) => Promise<void>;
+  private readonly logger: AdapterLogger;
+  private readonly isGitHubProviderEnabled: () => boolean;
 
-  public constructor(execFactory?: DockerExecFactory) {
-    this.execFactory = execFactory ?? NODE_DOCKER_EXEC_FACTORY;
-    this.execFn = this.execFactory.exec.bind(this.execFactory);
+  public constructor(deps: AdapterDependencies = {}) {
+    this.execFn = deps.exec ?? defaultExec;
+    this.sleepFn = deps.sleep ?? defaultSleep;
+    this.logger = deps.logger ?? defaultLogger;
+    this.isGitHubProviderEnabled = deps.isGitHubProviderEnabled ?? (() => false);
   }
 
   public async *provision(environmentId: string, config: Record<string, unknown>, powerlineToken: string): AsyncGenerator<ProvisionEvent> {
@@ -267,10 +267,10 @@ export class DockerAdapter implements EnvironmentAdapter {
     const dockerfilePath = resolve(import.meta.dirname, "../../../../docker/Dockerfile.powerline");
     if (isDevMode() && isDefault && existsSync(dockerfilePath)) {
       yield { stage: "creating", message: "Building base image...", progress: 0.05 };
-      await buildBaseImage(this.execFn, image);
+      await buildBaseImage(this.execFn, image, this.logger);
     } else {
       yield { stage: "creating", message: `Pulling image ${image}...`, progress: 0.05 };
-      await pullImage(this.execFn, image);
+      await pullImage(this.execFn, image, this.logger);
     }
 
     yield { stage: "creating", message: `Creating container ${containerName}...`, progress: 0.10 };
@@ -281,23 +281,23 @@ export class DockerAdapter implements EnvironmentAdapter {
     let actualPort = localPort;
     if (!isNew) {
       yield { stage: "starting", message: "Container exists, starting...", progress: 0.12 };
-      actualPort = await discoverHostPort(this.execFn, containerName, DEFAULT_POWERLINE_PORT, localPort);
+      actualPort = await discoverHostPort(this.execFn, containerName, DEFAULT_POWERLINE_PORT, localPort, this.logger);
     }
 
     containerPorts.set(environmentId, actualPort);
 
     yield { stage: "starting", message: "Waiting for container...", progress: 0.15 };
-    await waitForContainerRunning(this.execFn, containerName);
+    await waitForContainerRunning(this.execFn, this.sleepFn, containerName, this.logger);
 
     // Bootstrap PowerLine inside the container (same flow as SSH/Codespace).
     // Docker containers need host=0.0.0.0 because port mapping can't reach 127.0.0.1.
-    const executor = new DockerExecutor(containerName, this.execFactory);
+    const executor = new DockerExecutor(containerName, this.execFn);
     if (isNew) {
       yield* bootstrapPowerLine(executor, powerlineToken, {
         extraEnv: cfg.env,
         workingDirectory: WORKSPACE_PATH,
         host: "0.0.0.0",
-        isGitHubProviderEnabled: () => credentialProviders.getCredentialProviders().github !== "off",
+        isGitHubProviderEnabled: this.isGitHubProviderEnabled,
         defaultRuntime: (config.defaultRuntime as string) || undefined,
       });
     } else {
@@ -312,7 +312,7 @@ export class DockerAdapter implements EnvironmentAdapter {
 
     if (cfg.repo) {
       yield { stage: "cloning", message: `Cloning ${cfg.repo}...`, progress: 0.80 };
-      await ensureRepoInContainer(this.execFn, containerName, cfg.repo);
+      await ensureRepoInContainer(this.execFn, containerName, cfg.repo, this.logger);
       yield { stage: "cloning", message: "Repo ready", progress: 0.85 };
     }
 
@@ -338,7 +338,7 @@ export class DockerAdapter implements EnvironmentAdapter {
         return { client, environmentId, port: localPort };
       } catch (err) {
         lastErr = err;
-        await sleep(CONNECT_RETRY_DELAY_MS);
+        await this.sleepFn(CONNECT_RETRY_DELAY_MS);
       }
     }
 
@@ -355,7 +355,7 @@ export class DockerAdapter implements EnvironmentAdapter {
     try {
       await this.execFn("docker", ["stop", containerName]);
     } catch (err) {
-      logger.debug({ environmentId, err }, "Container may already be stopped");
+      this.logger.debug({ environmentId, err }, "Container may already be stopped");
     }
     containerPorts.delete(environmentId);
   }
@@ -366,7 +366,7 @@ export class DockerAdapter implements EnvironmentAdapter {
     try {
       await this.execFn("docker", ["rm", "-f", containerName]);
     } catch (err) {
-      logger.debug({ environmentId, err }, "Container may not exist");
+      this.logger.debug({ environmentId, err }, "Container may not exist");
     }
     containerPorts.delete(environmentId);
   }

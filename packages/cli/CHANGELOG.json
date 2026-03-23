@@ -2,6 +2,30 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.72.2",
+      "tag": "@grackle-ai/cli_v0.72.2",
+      "date": "Mon, 23 Mar 2026 13:34:53 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Extract adapter implementations into standalone packages (adapter-local, adapter-ssh, adapter-codespace, adapter-docker) with constructor dependency injection"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.72.1",
+      "tag": "@grackle-ai/cli_v0.72.1",
+      "date": "Mon, 23 Mar 2026 13:21:08 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Decouple database layer from business/service logic in preparation for @grackle-ai/database extraction"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.72.0",
       "tag": "@grackle-ai/cli_v0.72.0",
       "date": "Mon, 23 Mar 2026 07:13:27 GMT",

@@ -44,6 +44,72 @@ importers:
         specifier: ^6.0.1
         version: 6.1.3
 
+  ../../packages/adapter-codespace:
+    dependencies:
+      '@grackle-ai/adapter-sdk':
+        specifier: workspace:*
+        version: link:../adapter-sdk
+      '@grackle-ai/common':
+        specifier: workspace:*
+        version: link:../common
+    devDependencies:
+      '@grackle-ai/heft-rig':
+        specifier: workspace:*
+        version: link:../../rigs/heft-rig
+      '@rushstack/heft':
+        specifier: 1.2.7
+        version: 1.2.7(@types/node@22.19.15)
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.19.15
+      vitest:
+        specifier: ^3.1.1
+        version: 3.2.4(@types/debug@4.1.12)(@types/node@22.19.15)(jiti@1.21.7)(jsdom@29.0.0)(sass@1.98.0)(terser@5.46.1)
+
+  ../../packages/adapter-docker:
+    dependencies:
+      '@grackle-ai/adapter-sdk':
+        specifier: workspace:*
+        version: link:../adapter-sdk
+      '@grackle-ai/common':
+        specifier: workspace:*
+        version: link:../common
+    devDependencies:
+      '@grackle-ai/heft-rig':
+        specifier: workspace:*
+        version: link:../../rigs/heft-rig
+      '@rushstack/heft':
+        specifier: 1.2.7
+        version: 1.2.7(@types/node@22.19.15)
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.19.15
+      vitest:
+        specifier: ^3.1.1
+        version: 3.2.4(@types/debug@4.1.12)(@types/node@22.19.15)(jiti@1.21.7)(jsdom@29.0.0)(sass@1.98.0)(terser@5.46.1)
+
+  ../../packages/adapter-local:
+    dependencies:
+      '@grackle-ai/adapter-sdk':
+        specifier: workspace:*
+        version: link:../adapter-sdk
+      '@grackle-ai/common':
+        specifier: workspace:*
+        version: link:../common
+    devDependencies:
+      '@grackle-ai/heft-rig':
+        specifier: workspace:*
+        version: link:../../rigs/heft-rig
+      '@rushstack/heft':
+        specifier: 1.2.7
+        version: 1.2.7(@types/node@22.19.15)
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.19.15
+      vitest:
+        specifier: ^3.1.1
+        version: 3.2.4(@types/debug@4.1.12)(@types/node@22.19.15)(jiti@1.21.7)(jsdom@29.0.0)(sass@1.98.0)(terser@5.46.1)
+
   ../../packages/adapter-sdk:
     dependencies:
       '@bufbuild/protobuf':
@@ -55,6 +121,28 @@ importers:
       '@connectrpc/connect-node':
         specifier: ^2.0.0
         version: 2.1.1(@bufbuild/protobuf@2.11.0)(@connectrpc/connect@2.1.1(@bufbuild/protobuf@2.11.0))
+      '@grackle-ai/common':
+        specifier: workspace:*
+        version: link:../common
+    devDependencies:
+      '@grackle-ai/heft-rig':
+        specifier: workspace:*
+        version: link:../../rigs/heft-rig
+      '@rushstack/heft':
+        specifier: 1.2.7
+        version: 1.2.7(@types/node@22.19.15)
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.19.15
+      vitest:
+        specifier: ^3.1.1
+        version: 3.2.4(@types/debug@4.1.12)(@types/node@22.19.15)(jiti@1.21.7)(jsdom@29.0.0)(sass@1.98.0)(terser@5.46.1)
+
+  ../../packages/adapter-ssh:
+    dependencies:
+      '@grackle-ai/adapter-sdk':
+        specifier: workspace:*
+        version: link:../adapter-sdk
       '@grackle-ai/common':
         specifier: workspace:*
         version: link:../common
@@ -315,9 +403,21 @@ importers:
       '@connectrpc/connect-node':
         specifier: ^2.0.0
         version: 2.1.1(@bufbuild/protobuf@2.11.0)(@connectrpc/connect@2.1.1(@bufbuild/protobuf@2.11.0))
+      '@grackle-ai/adapter-codespace':
+        specifier: workspace:*
+        version: link:../adapter-codespace
+      '@grackle-ai/adapter-docker':
+        specifier: workspace:*
+        version: link:../adapter-docker
+      '@grackle-ai/adapter-local':
+        specifier: workspace:*
+        version: link:../adapter-local
       '@grackle-ai/adapter-sdk':
         specifier: workspace:*
         version: link:../adapter-sdk
+      '@grackle-ai/adapter-ssh':
+        specifier: workspace:*
+        version: link:../adapter-ssh
       '@grackle-ai/common':
         specifier: workspace:*
         version: link:../common
