@@ -171,6 +171,9 @@ export const DEFAULT_SERVER_PORT: number;
 export const DEFAULT_WEB_PORT: number;
 
 // @public
+export const DEFAULT_WORKSPACE_ID: string;
+
+// @public
 type DrainRequest = Message<"grackle.powerline.DrainRequest"> & {
     sessionId: string;
 };

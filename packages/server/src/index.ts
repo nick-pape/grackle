@@ -16,11 +16,13 @@ import { SshAdapter } from "./adapters/ssh.js";
 import { CodespaceAdapter } from "./adapters/codespace.js";
 import { closeAllTunnels, reconnectOrProvision } from "@grackle-ai/adapter-sdk";
 import { createWsBridge, startTaskSession } from "./ws-bridge.js";
-import { DEFAULT_SERVER_PORT, DEFAULT_WEB_PORT, DEFAULT_MCP_PORT, DEFAULT_POWERLINE_PORT, ROOT_TASK_ID, TASK_STATUS } from "@grackle-ai/common";
+import { DEFAULT_SERVER_PORT, DEFAULT_WEB_PORT, DEFAULT_MCP_PORT, DEFAULT_POWERLINE_PORT, ROOT_TASK_ID, DEFAULT_WORKSPACE_ID, TASK_STATUS } from "@grackle-ai/common";
 import { LocalPowerLineManager } from "./local-powerline-manager.js";
 import * as adapterManager from "./adapter-manager.js";
 import * as envRegistry from "./env-registry.js";
 import * as sessionStore from "./session-store.js";
+import * as workspaceStore from "./workspace-store.js";
+import * as taskStore from "./task-store.js";
 import * as tokenBroker from "./token-broker.js";
 import { attemptReconnects, resetReconnectState } from "./auto-reconnect.js";
 import { createMcpServer } from "@grackle-ai/mcp";
@@ -43,7 +45,7 @@ import { createOAuthAccessToken, OAUTH_ACCESS_TOKEN_TTL_MS } from "@grackle-ai/m
 import { logger } from "./logger.js";
 import { exec } from "./utils/exec.js";
 import { detectLanIp } from "./utils/network.js";
-import { openDatabase, initDatabase } from "./db.js";
+import { openDatabase, initDatabase, sqlite } from "./db.js";
 
 const MIME_TYPES: Record<string, string> = {
   ".html": "text/html",
@@ -670,6 +672,19 @@ async function main(): Promise<void> {
     } else {
       envRegistry.addEnvironment("local", "Local", "local", adapterConfig);
       localEnv = envRegistry.getEnvironment("local")!;
+    }
+
+    // Seed: ensure the default workspace exists (tied to the local environment).
+    // The system task needs a workspace to resolve an environment for execution.
+    if (!workspaceStore.getWorkspace(DEFAULT_WORKSPACE_ID)) {
+      workspaceStore.createWorkspace(DEFAULT_WORKSPACE_ID, "Default", "", "", "local", false);
+      logger.info("Created default workspace for local environment");
+    }
+    // Backfill: assign the default workspace to the system task if it has none.
+    const systemTask = taskStore.getTask(ROOT_TASK_ID);
+    if (systemTask && !systemTask.workspaceId) {
+      sqlite!.prepare("UPDATE tasks SET workspace_id = ? WHERE id = ?").run(DEFAULT_WORKSPACE_ID, ROOT_TASK_ID);
+      logger.info("Assigned default workspace to system task");
     }
 
     // Spawn the PowerLine child process with auto-restart on crash
