@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Mon, 23 Mar 2026 17:24:08 GMT and should not be manually modified.
+This log was last generated on Mon, 23 Mar 2026 18:09:06 GMT and should not be manually modified.
+
+## 0.72.5
+Mon, 23 Mar 2026 18:09:06 GMT
+
+### Patches
+
+- Fix dev mode bootstrap to include @grackle-ai/auth package on remote hosts, fixing codespace provisioning
 
 ## 0.72.4
 Mon, 23 Mar 2026 17:24:08 GMT

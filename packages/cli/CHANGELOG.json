@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.72.5",
+      "tag": "@grackle-ai/cli_v0.72.5",
+      "date": "Mon, 23 Mar 2026 18:09:06 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Fix dev mode bootstrap to include @grackle-ai/auth package on remote hosts, fixing codespace provisioning"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.72.4",
       "tag": "@grackle-ai/cli_v0.72.4",
       "date": "Mon, 23 Mar 2026 17:24:08 GMT",
