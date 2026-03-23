@@ -809,6 +809,10 @@ async function handleMessage(
     case "stop_task": {
       const taskId = msg.payload?.taskId as string;
       if (!taskId) return;
+      if (taskId === ROOT_TASK_ID) {
+        sendWs(ws, { type: "error", payload: { message: "Cannot stop the system task" } });
+        return;
+      }
 
       // Terminate all active sessions for this task via fd closure
       const activeSessions = sessionStore.getActiveSessionsForTask(taskId);
@@ -1414,6 +1418,10 @@ async function handleMessage(
     case "complete_task": {
       const taskId = msg.payload?.taskId as string;
       if (!taskId) return;
+      if (taskId === ROOT_TASK_ID) {
+        sendWs(ws, { type: "error", payload: { message: "Cannot complete the system task" } });
+        return;
+      }
 
       taskStore.markTaskComplete(taskId, TASK_STATUS.COMPLETE);
       const task = taskStore.getTask(taskId);
@@ -1494,6 +1502,10 @@ async function handleMessage(
     case "delete_task": {
       const taskId = msg.payload?.taskId as string;
       if (!taskId) return;
+      if (taskId === ROOT_TASK_ID) {
+        sendWs(ws, { type: "error", payload: { message: "Cannot delete the system task" } });
+        return;
+      }
       const deletedTask = taskStore.getTask(taskId);
       if (!deletedTask) {
         sendWs(ws, { type: "error", payload: { message: `Task not found: ${taskId}` } });
