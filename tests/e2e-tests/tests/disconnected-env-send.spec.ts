@@ -135,7 +135,7 @@ test.describe("Disconnected environment blocks message send", { tag: ["@error"] 
     await installWsTracker(page);
     await page.goto("/");
     await page.waitForFunction(
-      () => document.body.innerText.includes("Connected") && document.body.innerText.includes("env"),
+      () => document.body.innerText.includes("Connected") && /\d+\/\d+ env/.test(document.body.innerText),
       { timeout: 10_000 },
     );
 
@@ -158,7 +158,7 @@ test.describe("Disconnected environment blocks message send", { tag: ["@error"] 
     await installWsTracker(page);
     await page.goto("/");
     await page.waitForFunction(
-      () => document.body.innerText.includes("Connected") && document.body.innerText.includes("env"),
+      () => document.body.innerText.includes("Connected") && /\d+\/\d+ env/.test(document.body.innerText),
       { timeout: 10_000 },
     );
 
@@ -184,7 +184,7 @@ test.describe("Disconnected environment blocks message send", { tag: ["@error"] 
     await installWsTracker(page);
     await page.goto("/");
     await page.waitForFunction(
-      () => document.body.innerText.includes("Connected") && document.body.innerText.includes("env"),
+      () => document.body.innerText.includes("Connected") && /\d+\/\d+ env/.test(document.body.innerText),
       { timeout: 10_000 },
     );
 
@@ -206,7 +206,7 @@ test.describe("Disconnected environment blocks message send", { tag: ["@error"] 
     await installWsTracker(page);
     await page.goto("/");
     await page.waitForFunction(
-      () => document.body.innerText.includes("Connected") && document.body.innerText.includes("env"),
+      () => document.body.innerText.includes("Connected") && /\d+\/\d+ env/.test(document.body.innerText),
       { timeout: 10_000 },
     );
 
@@ -225,7 +225,7 @@ test.describe("Disconnected environment blocks message send", { tag: ["@error"] 
     await installWsTracker(page);
     await page.goto("/");
     await page.waitForFunction(
-      () => document.body.innerText.includes("Connected") && document.body.innerText.includes("env"),
+      () => document.body.innerText.includes("Connected") && /\d+\/\d+ env/.test(document.body.innerText),
       { timeout: 10_000 },
     );
 
@@ -266,7 +266,7 @@ test.describe("Disconnected environment blocks message send", { tag: ["@error"] 
     await installWsTracker(page);
     await page.goto("/");
     await page.waitForFunction(
-      () => document.body.innerText.includes("Connected") && document.body.innerText.includes("env"),
+      () => document.body.innerText.includes("Connected") && /\d+\/\d+ env/.test(document.body.innerText),
       { timeout: 10_000 },
     );
 
@@ -324,7 +324,7 @@ test.describe("Disconnected environment blocks message send", { tag: ["@error"] 
     await installWsTracker(page);
     await page.goto("/");
     await page.waitForFunction(
-      () => document.body.innerText.includes("Connected") && document.body.innerText.includes("env"),
+      () => document.body.innerText.includes("Connected") && /\d+\/\d+ env/.test(document.body.innerText),
       { timeout: 10_000 },
     );
 
@@ -375,7 +375,7 @@ test.describe("Disconnected environment blocks message send", { tag: ["@error"] 
     await installWsTracker(page);
     await page.goto("/");
     await page.waitForFunction(
-      () => document.body.innerText.includes("Connected") && document.body.innerText.includes("env"),
+      () => document.body.innerText.includes("Connected") && /\d+\/\d+ env/.test(document.body.innerText),
       { timeout: 10_000 },
     );
 
