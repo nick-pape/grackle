@@ -52,11 +52,14 @@ export function initLifecycleManager(): void {
     if (conn) {
       // Use the session's endReason if already set (killAgent pre-set it),
       // otherwise determine from the session's status at time of orphaning.
-      const reason: EndReason = alreadyTerminal
-        ? (session.endReason as EndReason) || END_REASON.KILLED
-        : session.status === SESSION_STATUS.IDLE
-          ? END_REASON.COMPLETED
-          : END_REASON.KILLED;
+      let reason: EndReason;
+      if (alreadyTerminal && session.endReason) {
+        reason = session.endReason as EndReason;
+      } else if (!alreadyTerminal && session.status === SESSION_STATUS.IDLE) {
+        reason = END_REASON.COMPLETED;
+      } else {
+        reason = END_REASON.KILLED;
+      }
       conn.client.kill(
         create(powerline.KillRequestSchema, { id: sessionId, reason }),
       ).catch((err: unknown) => {
