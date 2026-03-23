@@ -4,7 +4,7 @@ import http2 from "node:http2";
 import http from "node:http";
 import { registerGrackleRoutes } from "./grpc-service.js";
 import { registerAdapter, startHeartbeat } from "./adapter-manager.js";
-import { envRegistry, sessionStore, workspaceStore, taskStore, openDatabase, initDatabase, sqlite, seedDatabase, credentialProviders } from "@grackle-ai/database";
+import { envRegistry, sessionStore, workspaceStore, taskStore, openDatabase, initDatabase, sqlite, seedDatabase, credentialProviders, grackleHome } from "@grackle-ai/database";
 import { initWsSubscriber } from "./ws-broadcast.js";
 import { initSigchldSubscriber } from "./signals/sigchld.js";
 import { initLifecycleManager } from "./lifecycle.js";
