@@ -45,7 +45,7 @@ import { createOAuthAccessToken, OAUTH_ACCESS_TOKEN_TTL_MS } from "@grackle-ai/m
 import { logger } from "./logger.js";
 import { exec } from "./utils/exec.js";
 import { detectLanIp } from "./utils/network.js";
-import { openDatabase, initDatabase, sqlite } from "./db.js";
+import { openDatabase, initDatabase } from "./db.js";
 
 const MIME_TYPES: Record<string, string> = {
   ".html": "text/html",
@@ -690,7 +690,7 @@ async function main(): Promise<void> {
     const systemTask = taskStore.getTask(ROOT_TASK_ID);
     const resolvedDefault = workspaceStore.getWorkspace(DEFAULT_WORKSPACE_ID);
     if (systemTask && !systemTask.workspaceId && resolvedDefault?.environmentId === "local") {
-      sqlite!.prepare("UPDATE tasks SET workspace_id = ?, updated_at = datetime('now') WHERE id = ?").run(DEFAULT_WORKSPACE_ID, ROOT_TASK_ID);
+      taskStore.setTaskWorkspace(ROOT_TASK_ID, DEFAULT_WORKSPACE_ID);
       logger.info("Assigned default workspace to system task");
     }
 
