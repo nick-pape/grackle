@@ -1,6 +1,7 @@
 import { test as base, type Page } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { STATE_FILE } from "./state-file.js";
+import { provisionEnvironmentDirect } from "./helpers.js";
 
 interface E2EState {
   grackleHome: string;
@@ -47,6 +48,10 @@ export const test = base.extend<{ grackle: { apiKey: string; baseURL: string; ws
   },
 
   appPage: async ({ page }, use) => {
+    // Ensure the test-local environment is connected before each test.
+    // Previous spec files may have stopped it.
+    await provisionEnvironmentDirect("test-local");
+
     // Expose gRPC server details so test helpers can call server-streaming
     // RPCs (like ProvisionEnvironment) on the HTTP/2 gRPC port directly.
     const state = loadState();
