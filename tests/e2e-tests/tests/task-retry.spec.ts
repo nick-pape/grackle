@@ -6,8 +6,8 @@ import {
   patchWsForStubRuntime,
 } from "./helpers.js";
 
-test.describe("Task Retry (failed → in_progress)", { tag: ["@task"] }, () => {
-  test("retry button restarts a failed task", async ({ appPage }) => {
+test.describe("Task Resume after crash (paused → working)", { tag: ["@task"] }, () => {
+  test("resume button restarts a crashed (paused) task", async ({ appPage }) => {
     const page = appPage;
 
     // --- Setup: create workspace and task ---
@@ -27,12 +27,12 @@ test.describe("Task Retry (failed → in_progress)", { tag: ["@task"] }, () => {
     await inputField.fill("fail");
     await page.getByRole("button", { name: "Send", exact: true }).click();
 
-    // --- Verify task is in failed state ---
-    await expect(page.getByText("Task failed")).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByRole("button", { name: "Retry", exact: true })).toBeVisible();
+    // --- Verify task is in paused state (crashed sessions → all terminal → paused) ---
+    await expect(page.locator('[data-testid="task-status"]')).toContainText("paused", { timeout: 15_000 });
+    await expect(page.getByRole("button", { name: "Resume", exact: true })).toBeVisible();
 
-    // --- Click Retry ---
-    await page.getByRole("button", { name: "Retry", exact: true }).click();
+    // --- Click Resume ---
+    await page.getByRole("button", { name: "Resume", exact: true }).click();
 
     // --- Verify task restarts: stub runtime events appear again ---
     // The stub emits "Stub runtime initialized" on each start
