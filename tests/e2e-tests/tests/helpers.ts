@@ -752,17 +752,26 @@ export async function sendWsMessage(
         break;
 
       case "provision_environment": {
-        // ProvisionEnvironment is server-streaming. Fire the RPC then poll
-        // until the environment reaches "connected" status.
+        // ProvisionEnvironment is server-streaming and doesn't work over
+        // the HTTP/1.1 web server ConnectRPC mount. Instead, trigger it
+        // via the app's UI (which calls grackleClient.provisionEnvironment)
+        // by injecting an environment.changed event to trigger a re-fetch,
+        // OR just use the gRPC port directly. Simplest: fire-and-forget via
+        // the app's own provisionEnvironment function (click the Connect
+        // button), then poll ListEnvironments for "connected" status.
+        //
+        // Since we can't reliably call the streaming RPC from a raw fetch,
+        // fire it and immediately start polling.
         fetch(`/grackle.Grackle/ProvisionEnvironment`, {
           method: "POST",
-          headers: { "Content-Type": "application/connect+json" },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ id: payload.environmentId }),
           credentials: "include",
-        }).catch(() => { /* fire-and-forget */ });
+        }).catch(() => { /* fire-and-forget — streaming may error */ });
+        // Poll until the environment is connected
         const provDeadline: number = Date.now() + 15_000;
         while (Date.now() < provDeadline) {
-          await new Promise((r) => setTimeout(r, 500));
+          await new Promise((r) => setTimeout(r, 300));
           try {
             const listResp = await rpc("ListEnvironments", {});
             const envs = (listResp?.environments || []) as Array<Record<string, unknown>>;
@@ -770,9 +779,7 @@ export async function sendWsMessage(
             if (env && env.status === "connected") {
               break;
             }
-          } catch {
-            // RPC may fail transiently during provision — keep polling
-          }
+          } catch { /* keep polling */ }
         }
         break;
       }
@@ -998,12 +1005,20 @@ export async function patchWsForStubRuntime(page: Page, environmentId: string = 
       const url = typeof input === "string" ? input : (input instanceof URL ? input.toString() : input.url);
       if ((url.includes("/grackle.Grackle/StartTask") || url.includes("/grackle.Grackle/SpawnAgent")) && init?.body) {
         try {
-          const body = JSON.parse(init.body as string);
+          // ConnectRPC may serialize the body as Uint8Array, not a JSON string
+          let bodyStr: string;
+          if (init.body instanceof Uint8Array) {
+            bodyStr = new TextDecoder().decode(init.body);
+          } else {
+            bodyStr = init.body as string;
+          }
+          const body = JSON.parse(bodyStr);
           body.personaId = "stub";
           if (!body.environmentId) {
             body.environmentId = envId;
           }
-          init = { ...init, body: JSON.stringify(body) };
+          const newBodyStr = JSON.stringify(body);
+          init = { ...init, body: new TextEncoder().encode(newBodyStr) };
         } catch {
           /* not JSON, pass through */
         }
@@ -1171,12 +1186,19 @@ export async function patchWsForStubMcpRuntime(page: Page, environmentId: string
       const url = typeof input === "string" ? input : (input instanceof URL ? input.toString() : input.url);
       if ((url.includes("/grackle.Grackle/StartTask") || url.includes("/grackle.Grackle/SpawnAgent")) && init?.body) {
         try {
-          const body = JSON.parse(init.body as string);
+          let bodyStr: string;
+          if (init.body instanceof Uint8Array) {
+            bodyStr = new TextDecoder().decode(init.body);
+          } else {
+            bodyStr = init.body as string;
+          }
+          const body = JSON.parse(bodyStr);
           body.personaId = "stub-mcp";
           if (!body.environmentId) {
             body.environmentId = envId;
           }
-          init = { ...init, body: JSON.stringify(body) };
+          const newBodyStr = JSON.stringify(body);
+          init = { ...init, body: new TextEncoder().encode(newBodyStr) };
         } catch {
           /* not JSON, pass through */
         }

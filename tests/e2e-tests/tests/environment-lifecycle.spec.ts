@@ -22,11 +22,11 @@ async function navigateToEnvDetailPage(page: import("@playwright/test").Page): P
  * subsequent tests (and subsequent spec files) are not affected.
  */
 async function reprovisionTestLocal(page: import("@playwright/test").Page): Promise<void> {
-  await sendWsMessage(page, {
+  await sendWsAndWaitFor(page, {
     type: "provision_environment",
     payload: { environmentId: "test-local" },
-  });
-  // Wait for the status to change — navigate to detail page and check for Stop button
+  }, "environment.changed", 15_000);
+  // Navigate to detail page and confirm it shows the Stop button (connected)
   await navigateToEnvDetailPage(page);
   await expect(page.locator("button", { hasText: "Stop" })).toBeVisible({ timeout: 15_000 });
 }
@@ -77,7 +77,7 @@ test.describe("Environment Lifecycle — WebSocket Handlers", { tag: ["@environm
     await installWsTracker(page);
     await page.goto("/");
     await page.waitForFunction(
-      () => document.body.innerText.includes("Connected") && document.body.innerText.includes("env"),
+      () => document.body.innerText.includes("Connected") && /\d+\/\d+ env/.test(document.body.innerText),
       { timeout: 10_000 },
     );
 
@@ -104,7 +104,7 @@ test.describe("Environment Lifecycle — WebSocket Handlers", { tag: ["@environm
     await installWsTracker(page);
     await page.goto("/");
     await page.waitForFunction(
-      () => document.body.innerText.includes("Connected") && document.body.innerText.includes("env"),
+      () => document.body.innerText.includes("Connected") && /\d+\/\d+ env/.test(document.body.innerText),
       { timeout: 10_000 },
     );
 
@@ -134,7 +134,7 @@ test.describe("Environment Lifecycle — WebSocket Handlers", { tag: ["@environm
     await installWsTracker(page);
     await page.goto("/");
     await page.waitForFunction(
-      () => document.body.innerText.includes("Connected") && document.body.innerText.includes("env"),
+      () => document.body.innerText.includes("Connected") && /\d+\/\d+ env/.test(document.body.innerText),
       { timeout: 10_000 },
     );
 
@@ -161,7 +161,7 @@ test.describe("Environment Lifecycle — WebSocket Handlers", { tag: ["@environm
     await installWsTracker(page);
     await page.goto("/");
     await page.waitForFunction(
-      () => document.body.innerText.includes("Connected") && document.body.innerText.includes("env"),
+      () => document.body.innerText.includes("Connected") && /\d+\/\d+ env/.test(document.body.innerText),
       { timeout: 10_000 },
     );
 
@@ -226,7 +226,7 @@ test.describe("Environment Lifecycle — WebSocket Handlers", { tag: ["@environm
     await installWsTracker(page);
     await page.goto("/");
     await page.waitForFunction(
-      () => document.body.innerText.includes("Connected") && document.body.innerText.includes("env"),
+      () => document.body.innerText.includes("Connected") && /\d+\/\d+ env/.test(document.body.innerText),
       { timeout: 10_000 },
     );
 

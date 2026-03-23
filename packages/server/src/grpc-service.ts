@@ -475,8 +475,11 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         }
       } catch (err) {
         logger.error({ environmentId: req.id, err }, "Provision/bootstrap failed");
-        envRegistry.updateEnvironmentStatus(req.id, "error");
-        emit("environment.changed", {});
+        const currentEnv = envRegistry.getEnvironment(req.id);
+        if (currentEnv?.status !== "connected") {
+          envRegistry.updateEnvironmentStatus(req.id, "error");
+          emit("environment.changed", {});
+        }
         yield create(grackle.ProvisionEventSchema, {
           stage: "error",
           message: `Provision failed: ${err instanceof Error ? err.message : String(err)}`,
@@ -504,8 +507,13 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
           progress: 1,
         });
       } catch (err) {
-        envRegistry.updateEnvironmentStatus(req.id, "error");
-        emit("environment.changed", {});
+        // If the environment already connected successfully but the yield
+        // threw (e.g. client disconnected), don't overwrite the status.
+        const current = envRegistry.getEnvironment(req.id);
+        if (current?.status !== "connected") {
+          envRegistry.updateEnvironmentStatus(req.id, "error");
+          emit("environment.changed", {});
+        }
         yield create(grackle.ProvisionEventSchema, {
           stage: "error",
           message: `Connection failed: ${err instanceof Error ? err.message : String(err)}`,
@@ -555,9 +563,68 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         throw new ConnectError(`Environment not found: ${req.environmentId}`, Code.NotFound);
       }
 
-      const conn = adapterManager.getConnection(req.environmentId);
+      let conn = adapterManager.getConnection(req.environmentId);
       if (!conn) {
-        throw new ConnectError(`Environment ${req.environmentId} not connected`, Code.FailedPrecondition);
+        // Auto-provision: attempt to reconnect/provision a disconnected environment
+        const adapter = adapterManager.getAdapter(env.adapterType);
+        if (!adapter) {
+          throw new ConnectError(`No adapter for type: ${env.adapterType}`, Code.FailedPrecondition);
+        }
+
+        logger.info({ environmentId: req.environmentId }, "Auto-provisioning environment for SpawnAgent");
+        envRegistry.updateEnvironmentStatus(req.environmentId, "connecting");
+        emit("environment.changed", {});
+
+        const config = parseAdapterConfig(env.adapterConfig);
+        config.defaultRuntime = env.defaultRuntime;
+        const powerlineToken = env.powerlineToken;
+
+        try {
+          for await (const provEvent of reconnectOrProvision(
+            req.environmentId,
+            adapter,
+            config,
+            powerlineToken,
+            !!env.bootstrapped,
+          )) {
+            logger.info(
+              { environmentId: req.environmentId, stage: provEvent.stage },
+              "Auto-provision progress (SpawnAgent)",
+            );
+            emit("environment.provision_progress", {
+              environmentId: req.environmentId,
+              stage: provEvent.stage,
+              message: provEvent.message,
+              progress: provEvent.progress,
+            });
+          }
+
+          conn = await adapter.connect(req.environmentId, config, powerlineToken);
+          adapterManager.setConnection(req.environmentId, conn);
+          await tokenPush.pushToEnv(req.environmentId);
+          envRegistry.updateEnvironmentStatus(req.environmentId, "connected");
+          envRegistry.markBootstrapped(req.environmentId);
+          emit("environment.changed", {});
+          // Auto-recover suspended sessions (fire-and-forget)
+          recoverSuspendedSessions(req.environmentId, conn).catch((err) => {
+            logger.error({ environmentId: req.environmentId, err }, "Session recovery failed");
+          });
+          logger.info({ environmentId: req.environmentId }, "Auto-provision complete (SpawnAgent)");
+          emit("environment.provision_progress", {
+            environmentId: req.environmentId,
+            stage: "ready",
+            message: "Environment connected",
+            progress: 1,
+          });
+        } catch (err) {
+          logger.error({ environmentId: req.environmentId, err }, "Auto-provision failed (SpawnAgent)");
+          envRegistry.updateEnvironmentStatus(req.environmentId, "error");
+          emit("environment.changed", {});
+          throw new ConnectError(
+            `Failed to auto-connect environment ${req.environmentId}: ${err instanceof Error ? err.message : String(err)}`,
+            Code.FailedPrecondition,
+          );
+        }
       }
 
       // Resolve persona via cascade (request → app default)
