@@ -3,49 +3,10 @@ import type { PersonaRow } from "@grackle-ai/database";
 
 // ── Mock persona-store and settings-store ────────────────────────
 
-vi.mock("@grackle-ai/database", () => ({
-  db: {},
-  sqlite: undefined,
-  openDatabase: vi.fn(),
-  initDatabase: vi.fn(),
-  schema: {},
-  personaStore: {
-    getPersona: vi.fn(),
-    listPersonas: vi.fn(() => []),
-    createPersona: vi.fn(),
-    updatePersona: vi.fn(),
-    deletePersona: vi.fn(),
-    getPersonaByName: vi.fn(),
-  },
-  settingsStore: {
-    getSetting: vi.fn(),
-    setSetting: vi.fn(),
-    isAllowedSettingKey: vi.fn(() => true),
-    WRITABLE_SETTING_KEYS: new Set(["default_persona_id", "onboarding_completed"]),
-  },
-  isAllowedSettingKey: vi.fn(() => true),
-  WRITABLE_SETTING_KEYS: new Set(["default_persona_id", "onboarding_completed"]),
-  findingStore: {
-    postFinding: vi.fn(),
-    queryFindings: vi.fn(() => []),
-  },
-  credentialProviders: {
-    getCredentialProviders: vi.fn(() => ({ claude: "off", github: "off", copilot: "off", codex: "off", goose: "off" })),
-    setCredentialProviders: vi.fn(),
-    isValidCredentialProviderConfig: vi.fn(() => true),
-    VALID_PROVIDERS: ["claude", "github", "copilot", "codex", "goose"],
-    VALID_CLAUDE_VALUES: new Set(["off", "subscription", "api_key"]),
-    VALID_TOGGLE_VALUES: new Set(["off", "on"]),
-    parseCredentialProviderConfig: vi.fn(),
-  },
-  grackleHome: "/tmp/test-grackle",
-  safeParseJsonArray: (value: unknown) => { if (!value) return []; try { const p = JSON.parse(value as string); return Array.isArray(p) ? p.filter((i: unknown) => typeof i === "string") : []; } catch { return []; } },
-  slugify: (text: string) => text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40),
-  encrypt: vi.fn((x: unknown) => x),
-  decrypt: vi.fn((x: unknown) => x),
-  persistEvent: vi.fn(),
-  seedDatabase: vi.fn(),
-}));
+vi.mock("@grackle-ai/database", async () => {
+  const { createDatabaseMock } = await import("./test-utils/mock-database.js");
+  return createDatabaseMock();
+});
 
 // Import modules AFTER mocks are set up
 import { resolvePersona } from "./resolve-persona.js";

@@ -6,90 +6,10 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 
 // ── Mock heavy dependencies before importing the module ──────────
 
-vi.mock("@grackle-ai/database", () => ({
-  db: {},
-  sqlite: undefined,
-  openDatabase: vi.fn(),
-  initDatabase: vi.fn(),
-  schema: {},
-  tokenStore: {
-    listTokens: vi.fn(() => []),
-    setToken: vi.fn(),
-    deleteToken: vi.fn(),
-  },
-  envRegistry: {
-    listEnvironments: vi.fn(() => []),
-    getEnvironment: vi.fn(),
-    addEnvironment: vi.fn(),
-    removeEnvironment: vi.fn(),
-    updateEnvironmentStatus: vi.fn(),
-    markBootstrapped: vi.fn(),
-    resetAllStatuses: vi.fn(),
-  },
-  sessionStore: {
-    createSession: vi.fn(),
-    getSession: vi.fn(() => undefined),
-    listSessions: vi.fn(() => []),
-    listSessionsForTask: vi.fn(() => []),
-    listSessionsByTaskIds: vi.fn(() => []),
-    getLatestSessionForTask: vi.fn(() => undefined),
-    getActiveSessionsForTask: vi.fn(() => []),
-    updateSession: vi.fn(),
-    deleteByEnvironment: vi.fn(),
-    setSessionTask: vi.fn(),
-  },
-  findingStore: {
-    queryFindings: vi.fn(() => []),
-    postFinding: vi.fn(),
-  },
-  personaStore: {
-    listPersonas: vi.fn(() => []),
-    getPersona: vi.fn(() => undefined),
-    getPersonaByName: vi.fn(() => undefined),
-    createPersona: vi.fn(),
-    updatePersona: vi.fn(),
-    deletePersona: vi.fn(),
-  },
-  settingsStore: {
-    getSetting: vi.fn(() => undefined),
-    setSetting: vi.fn(),
-    deleteSetting: vi.fn(),
-    listSettings: vi.fn(() => []),
-    isAllowedSettingKey: vi.fn(() => true),
-  },
-  isAllowedSettingKey: vi.fn(() => true),
-  grackleHome: "/mock/home",
-  safeParseJsonArray: vi.fn(() => []),
-  taskStore: {
-    createTask: vi.fn(),
-    getTask: vi.fn(() => undefined),
-    listTasks: vi.fn(() => []),
-    updateTask: vi.fn(),
-    deleteTask: vi.fn(),
-  },
-  workspaceStore: {
-    createWorkspace: vi.fn(),
-    getWorkspace: vi.fn(() => undefined),
-    listWorkspaces: vi.fn(() => []),
-    updateWorkspace: vi.fn(),
-    deleteWorkspace: vi.fn(),
-  },
-  credentialProviders: {
-    getCredentialProviders: vi.fn(() => ({ claude: "off", github: "off", copilot: "off", codex: "off", goose: "off" })),
-    setCredentialProviders: vi.fn(),
-    isValidCredentialProviderConfig: vi.fn(() => true),
-    VALID_PROVIDERS: ["claude", "github", "copilot", "codex", "goose"],
-    VALID_CLAUDE_VALUES: new Set(["off", "subscription", "api_key"]),
-    VALID_TOGGLE_VALUES: new Set(["off", "on"]),
-    parseCredentialProviderConfig: vi.fn(),
-  },
-  WRITABLE_SETTING_KEYS: new Set(["default_persona_id", "onboarding_completed"]),
-  slugify: (text: string) => text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40),
-  encrypt: vi.fn((x: unknown) => x),
-  decrypt: vi.fn((x: unknown) => x),
-  persistEvent: vi.fn(),
-  seedDatabase: vi.fn(),
-}));
+vi.mock("@grackle-ai/database", async () => {
+  const { createDatabaseMock } = await import("./test-utils/mock-database.js");
+  return createDatabaseMock();
+});
 
 vi.mock("./logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
