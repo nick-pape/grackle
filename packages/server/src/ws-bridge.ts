@@ -11,7 +11,7 @@ import {
   reconnectOrProvision,
 } from "@grackle-ai/adapter-sdk";
 import * as streamHub from "./stream-hub.js";
-import * as tokenBroker from "./token-broker.js";
+import * as tokenPush from "./token-push.js";
 import * as workspaceStore from "./workspace-store.js";
 import * as taskStore from "./task-store.js";
 import { v4 as uuid } from "uuid";
@@ -240,7 +240,7 @@ async function autoProvisionEnvironment(
     conn = await adapter.connect(environmentId, config, powerlineToken);
     adapterManager.setConnection(environmentId, conn);
     // Push stored tokens to newly connected environment
-    await tokenBroker.pushToEnv(environmentId);
+    await tokenPush.pushToEnv(environmentId);
     envRegistry.updateEnvironmentStatus(environmentId, "connected");
     envRegistry.markBootstrapped(environmentId);
     emit("environment.changed", {});
@@ -365,7 +365,7 @@ export async function startTaskSession(
 
   // Re-push stored tokens + provider credentials (scoped to runtime) so they're fresh for this session.
   // For local envs, skip file tokens — the PowerLine is on the same machine.
-  await tokenBroker.refreshTokensForTask(environmentId, runtime,
+  await tokenPush.refreshTokensForTask(environmentId, runtime,
     env.adapterType === "local" ? { excludeFileTokens: true } : undefined);
 
   let mcpServersJson = "";
