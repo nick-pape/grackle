@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { computeTaskStatus } from "./compute-task-status.js";
-import type { SessionRow } from "./schema.js";
+import type { SessionRow } from "@grackle-ai/database";
 
 type SessionInput = Pick<SessionRow, "id" | "status" | "startedAt">;
 

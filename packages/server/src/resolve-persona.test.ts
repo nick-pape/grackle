@@ -1,20 +1,16 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import type { PersonaRow } from "./schema.js";
+import type { PersonaRow } from "@grackle-ai/database";
 
 // ── Mock persona-store and settings-store ────────────────────────
 
-vi.mock("./persona-store.js", () => ({
-  getPersona: vi.fn(),
-}));
-
-vi.mock("./settings-store.js", () => ({
-  getSetting: vi.fn(),
-}));
+vi.mock("@grackle-ai/database", async () => {
+  const { createDatabaseMock } = await import("./test-utils/mock-database.js");
+  return createDatabaseMock();
+});
 
 // Import modules AFTER mocks are set up
 import { resolvePersona } from "./resolve-persona.js";
-import * as personaStore from "./persona-store.js";
-import * as settingsStore from "./settings-store.js";
+import { personaStore, settingsStore } from "@grackle-ai/database";
 
 /** Build a mock PersonaRow with sensible defaults. */
 function makePersonaRow(overrides: Partial<PersonaRow> = {}): PersonaRow {

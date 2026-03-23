@@ -6,8 +6,9 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 
 // ── Mock heavy dependencies before importing the module ──────────
 
-vi.mock("./db.js", async () => {
-  return await import("./test-db.js");
+vi.mock("@grackle-ai/database", async () => {
+  const { createDatabaseMock } = await import("./test-utils/mock-database.js");
+  return createDatabaseMock();
 });
 
 vi.mock("./logger.js", () => ({
@@ -44,39 +45,10 @@ vi.mock("./event-bus.js", () => ({
   emit: vi.fn(),
 }));
 
-vi.mock("./token-store.js", () => ({
-  listTokens: vi.fn(() => []),
-  setToken: vi.fn(),
-  deleteToken: vi.fn(),
-}));
-
 vi.mock("./token-push.js", () => ({
   pushToEnv: vi.fn(),
   pushProviderCredentialsToEnv: vi.fn(),
   refreshTokensForTask: vi.fn(),
-}));
-
-vi.mock("./env-registry.js", () => ({
-  listEnvironments: vi.fn(() => []),
-  getEnvironment: vi.fn(),
-  addEnvironment: vi.fn(),
-  removeEnvironment: vi.fn(),
-  updateEnvironmentStatus: vi.fn(),
-  markBootstrapped: vi.fn(),
-  resetAllStatuses: vi.fn(),
-}));
-
-vi.mock("./session-store.js", () => ({
-  createSession: vi.fn(),
-  getSession: vi.fn(() => undefined),
-  listSessions: vi.fn(() => []),
-  listSessionsForTask: vi.fn(() => []),
-  listSessionsByTaskIds: vi.fn(() => []),
-  getLatestSessionForTask: vi.fn(() => undefined),
-  getActiveSessionsForTask: vi.fn(() => []),
-  updateSession: vi.fn(),
-  deleteByEnvironment: vi.fn(),
-  setSessionTask: vi.fn(),
 }));
 
 vi.mock("./adapter-manager.js", () => ({
@@ -86,20 +58,6 @@ vi.mock("./adapter-manager.js", () => ({
   removeConnection: vi.fn(),
   registerAdapter: vi.fn(),
   startHeartbeat: vi.fn(),
-}));
-
-vi.mock("./finding-store.js", () => ({
-  queryFindings: vi.fn(() => []),
-  postFinding: vi.fn(),
-}));
-
-vi.mock("./persona-store.js", () => ({
-  listPersonas: vi.fn(() => []),
-  getPersona: vi.fn(() => undefined),
-  getPersonaByName: vi.fn(() => undefined),
-  createPersona: vi.fn(),
-  updatePersona: vi.fn(),
-  deletePersona: vi.fn(),
 }));
 
 vi.mock("@grackle-ai/adapter-sdk", () => ({
@@ -135,24 +93,8 @@ vi.mock("./resolve-persona.js", () => ({
   resolvePersona: vi.fn(() => undefined),
 }));
 
-vi.mock("./settings-store.js", () => ({
-  getSetting: vi.fn(() => undefined),
-  setSetting: vi.fn(),
-  deleteSetting: vi.fn(),
-  listSettings: vi.fn(() => []),
-  isAllowedSettingKey: vi.fn(() => true),
-}));
-
 vi.mock("@grackle-ai/mcp", () => ({
   createScopedToken: vi.fn(() => "mock-token"),
-}));
-
-vi.mock("./paths.js", () => ({
-  grackleHome: vi.fn(() => "/mock/home"),
-}));
-
-vi.mock("./json-helpers.js", () => ({
-  safeParseJsonArray: vi.fn(() => []),
 }));
 
 vi.mock("./api-key.js", () => ({
@@ -163,22 +105,6 @@ vi.mock("./reanimate-agent.js", () => ({
   reanimateAgent: vi.fn(),
 }));
 
-vi.mock("./task-store.js", () => ({
-  createTask: vi.fn(),
-  getTask: vi.fn(() => undefined),
-  listTasks: vi.fn(() => []),
-  updateTask: vi.fn(),
-  deleteTask: vi.fn(),
-}));
-
-vi.mock("./workspace-store.js", () => ({
-  createWorkspace: vi.fn(),
-  getWorkspace: vi.fn(() => undefined),
-  listWorkspaces: vi.fn(() => []),
-  updateWorkspace: vi.fn(),
-  deleteWorkspace: vi.fn(),
-}));
-
 vi.mock("./pairing.js", () => ({
   generatePairingCode: vi.fn(() => "1234"),
 }));
@@ -187,17 +113,11 @@ vi.mock("./utils/network.js", () => ({
   detectLanIp: vi.fn(() => "127.0.0.1"),
 }));
 
-vi.mock("./credential-providers.js", () => ({
-  listCredentialProviders: vi.fn(() => []),
-  setCredentialProvider: vi.fn(),
-}));
-
 // ── Import AFTER mocks ──────────────────────────────────────────
 
 import { resolveAncestorEnvironmentId } from "./grpc-service.js";
-import * as sessionStore from "./session-store.js";
-import * as taskStore from "./task-store.js";
-import type { SessionRow, TaskRow } from "./schema.js";
+import { sessionStore, taskStore } from "@grackle-ai/database";
+import type { SessionRow, TaskRow } from "@grackle-ai/database";
 
 /** Helper to build a minimal SessionRow with an environmentId. */
 function makeSession(environmentId: string): SessionRow {

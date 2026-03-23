@@ -11,7 +11,7 @@
 
 import { create } from "@bufbuild/protobuf";
 import { powerline } from "@grackle-ai/common";
-import * as sessionStore from "./session-store.js";
+import { sessionStore } from "@grackle-ai/database";
 import * as adapterManager from "./adapter-manager.js";
 import * as streamRegistry from "./stream-registry.js";
 import { readLastTextEntry } from "./log-writer.js";

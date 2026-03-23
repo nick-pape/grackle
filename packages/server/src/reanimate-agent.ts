@@ -2,12 +2,10 @@ import { ConnectError, Code } from "@connectrpc/connect";
 import { create } from "@bufbuild/protobuf";
 import { powerline, SESSION_STATUS, LOGS_DIR } from "@grackle-ai/common";
 import { join } from "node:path";
-import * as sessionStore from "./session-store.js";
+import { sessionStore, taskStore, grackleHome } from "@grackle-ai/database";
+import type { SessionRow } from "@grackle-ai/database";
 import * as adapterManager from "./adapter-manager.js";
-import * as taskStore from "./task-store.js";
 import { processEventStream } from "./event-processor.js";
-import { grackleHome } from "./paths.js";
-import type { SessionRow } from "./session-store.js";
 
 /**
  * Reanimate a terminal session: validate state, reset the DB record, and fire a

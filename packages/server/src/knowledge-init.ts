@@ -22,9 +22,7 @@ import {
   type Embedder,
 } from "@grackle-ai/knowledge";
 import { subscribe, type GrackleEvent } from "./event-bus.js";
-import * as taskStore from "./task-store.js";
-import * as findingStore from "./finding-store.js";
-import { safeParseJsonArray } from "./json-helpers.js";
+import { taskStore, findingStore, safeParseJsonArray } from "@grackle-ai/database";
 import { logger } from "./logger.js";
 
 // ---------------------------------------------------------------------------

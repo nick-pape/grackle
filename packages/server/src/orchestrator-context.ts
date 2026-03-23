@@ -4,12 +4,7 @@
  * the same data-fetching logic.
  */
 import type { TaskTreeNode, PersonaSummary, EnvironmentSummary } from "./system-prompt-builder.js";
-import * as taskStore from "./task-store.js";
-import * as personaStore from "./persona-store.js";
-import * as envRegistry from "./env-registry.js";
-import * as findingStore from "./finding-store.js";
-import * as workspaceStore from "./workspace-store.js";
-import { safeParseJsonArray } from "./json-helpers.js";
+import { taskStore, personaStore, envRegistry, findingStore, workspaceStore, safeParseJsonArray } from "@grackle-ai/database";
 
 /** Pre-fetched orchestrator data matching SystemPromptOptions fields. */
 export interface OrchestratorContext {

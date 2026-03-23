@@ -4,7 +4,7 @@ import http2 from "node:http2";
 import http from "node:http";
 import { registerGrackleRoutes } from "./grpc-service.js";
 import { registerAdapter, startHeartbeat } from "./adapter-manager.js";
-import { updateEnvironmentStatus, resetAllStatuses } from "./env-registry.js";
+import { envRegistry, sessionStore, workspaceStore, taskStore, openDatabase, initDatabase, sqlite, seedDatabase, credentialProviders, grackleHome } from "@grackle-ai/database";
 import { initWsSubscriber } from "./ws-broadcast.js";
 import { initSigchldSubscriber } from "./signals/sigchld.js";
 import { initLifecycleManager } from "./lifecycle.js";
@@ -19,10 +19,6 @@ import { createWsBridge, startTaskSession } from "./ws-bridge.js";
 import { DEFAULT_SERVER_PORT, DEFAULT_WEB_PORT, DEFAULT_MCP_PORT, DEFAULT_POWERLINE_PORT, ROOT_TASK_ID, DEFAULT_WORKSPACE_ID, TASK_STATUS } from "@grackle-ai/common";
 import { LocalPowerLineManager } from "./local-powerline-manager.js";
 import * as adapterManager from "./adapter-manager.js";
-import * as envRegistry from "./env-registry.js";
-import * as sessionStore from "./session-store.js";
-import * as workspaceStore from "./workspace-store.js";
-import * as taskStore from "./task-store.js";
 import * as tokenPush from "./token-push.js";
 import { attemptReconnects, resetReconnectState } from "./auto-reconnect.js";
 import { createMcpServer } from "@grackle-ai/mcp";
@@ -45,10 +41,6 @@ import {
 import { logger } from "./logger.js";
 import { exec } from "./utils/exec.js";
 import { detectLanIp } from "./utils/network.js";
-import { openDatabase, initDatabase, sqlite } from "./db.js";
-import { grackleHome } from "./paths.js";
-import { seedDatabase } from "./db-seed.js";
-import { getCredentialProviders } from "./credential-providers.js";
 
 const MIME_TYPES: Record<string, string> = {
   ".html": "text/html",
@@ -646,7 +638,7 @@ async function main(): Promise<void> {
   seedDatabase(sqlite!);
 
   // Reset all environment statuses on startup — in-memory connections are lost
-  resetAllStatuses();
+  envRegistry.resetAllStatuses();
 
   // Configure auth logger to use the server's pino instance
   setAuthLogger(logger);
@@ -658,7 +650,7 @@ async function main(): Promise<void> {
   const adapterDeps = {
     exec,
     logger,
-    isGitHubProviderEnabled: (): boolean => getCredentialProviders().github !== "off",
+    isGitHubProviderEnabled: (): boolean => credentialProviders.getCredentialProviders().github !== "off",
   };
   registerAdapter(new DockerAdapter(adapterDeps));
   registerAdapter(new LocalAdapter());
@@ -798,7 +790,7 @@ async function main(): Promise<void> {
     (environmentId) => {
       // Clean up the stale connection so the heartbeat doesn't keep probing it
       adapterManager.removeConnection(environmentId);
-      updateEnvironmentStatus(environmentId, "disconnected");
+      envRegistry.updateEnvironmentStatus(environmentId, "disconnected");
       // Suspend any active sessions on this environment. The event-processor
       // catch block handles stream-level suspension for sessions with active
       // streams; this sweep catches edge cases (e.g., PENDING sessions).
@@ -887,8 +879,7 @@ async function main(): Promise<void> {
       }
       starting = true;
       try {
-        const taskStoreModule = await import("./task-store.js");
-        const sessionStoreModule = await import("./session-store.js");
+        const { taskStore: taskStoreModule, sessionStore: sessionStoreModule, envRegistry: envRegistryModule } = await import("@grackle-ai/database");
         const { computeTaskStatus } = await import("./compute-task-status.js");
 
         const rootTask = taskStoreModule.getTask(ROOT_TASK_ID);
@@ -903,9 +894,9 @@ async function main(): Promise<void> {
         }
 
         // Find any connected environment (prefer local)
-        const allEnvs = (await import("./env-registry.js")).listEnvironments();
-        const connectedEnv = allEnvs.find((e) => e.status === "connected" && e.adapterType === "local")
-          || allEnvs.find((e) => e.status === "connected");
+        const allEnvs = envRegistryModule.listEnvironments();
+        const connectedEnv = allEnvs.find((e: { status: string; adapterType: string }) => e.status === "connected" && e.adapterType === "local")
+          || allEnvs.find((e: { status: string }) => e.status === "connected");
         if (!connectedEnv) {
           return;
         }

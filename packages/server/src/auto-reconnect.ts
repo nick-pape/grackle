@@ -1,5 +1,5 @@
 import { reconnectOrProvision } from "@grackle-ai/adapter-sdk";
-import * as envRegistry from "./env-registry.js";
+import { envRegistry } from "@grackle-ai/database";
 import * as adapterManager from "./adapter-manager.js";
 import * as tokenPush from "./token-push.js";
 import { recoverSuspendedSessions } from "./session-recovery.js";

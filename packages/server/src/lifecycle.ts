@@ -15,11 +15,10 @@
 import { create } from "@bufbuild/protobuf";
 import { grackle, SESSION_STATUS, TERMINAL_SESSION_STATUSES, END_REASON, powerline } from "@grackle-ai/common";
 import type { SessionStatus, EndReason } from "@grackle-ai/common";
+import { sessionStore, taskStore } from "@grackle-ai/database";
 import * as streamRegistry from "./stream-registry.js";
-import * as sessionStore from "./session-store.js";
 import * as adapterManager from "./adapter-manager.js";
 import * as streamHub from "./stream-hub.js";
-import * as taskStore from "./task-store.js";
 import { emit } from "./event-bus.js";
 import { logger } from "./logger.js";
 
