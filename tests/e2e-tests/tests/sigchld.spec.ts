@@ -31,7 +31,7 @@ async function startTaskAndGetSessionId(
 }
 
 /**
- * Helper: poll session events until a status event with the target status appears.
+ * Helper: poll list_sessions until the session reaches the target status.
  */
 async function waitForSessionStatus(
   page: import("@playwright/test").Page,
@@ -43,16 +43,16 @@ async function waitForSessionStatus(
   while (Date.now() < deadline) {
     const resp = await sendWsAndWaitFor(
       page,
-      { type: "get_session_events", payload: { sessionId } },
-      "session_events",
+      { type: "list_sessions", payload: {} },
+      "sessions",
     );
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const events = (resp.payload?.events || []) as any[];
-    const hasStatus = events.some(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (e: any) => e.eventType === "status" && e.content === targetStatus,
-    );
-    if (hasStatus) return;
+    const sessions = (resp.payload?.sessions || []) as any[];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const session = sessions.find((s: any) => s.id === sessionId);
+    if (session && session.status === targetStatus) {
+      return;
+    }
     await page.waitForTimeout(500);
   }
   throw new Error(`Session ${sessionId} did not reach status "${targetStatus}" within ${timeoutMs}ms`);
@@ -127,11 +127,11 @@ test.describe("SIGCHLD — child completion notification", { tag: ["@error"] }, 
 
     // 4. Start parent task → wait for IDLE (waiting_input)
     const parentSessionId = await startTaskAndGetSessionId(page, parentTaskId);
-    await waitForSessionStatus(page, parentSessionId, "waiting_input");
+    await waitForSessionStatus(page, parentSessionId, "idle");
 
     // 5. Start child task → it works, goes idle → SIGCHLD fires immediately
     const childSessionId = await startTaskAndGetSessionId(page, childTaskId);
-    await waitForSessionStatus(page, childSessionId, "waiting_input");
+    await waitForSessionStatus(page, childSessionId, "idle");
 
     // 6. SIGCHLD is delivered to parent when child goes idle.
     //    Stub runtime echoes the signal as "You said: [SIGCHLD] ..."
@@ -149,7 +149,7 @@ test.describe("SIGCHLD — child completion notification", { tag: ["@error"] }, 
       type: "kill",
       payload: { sessionId: childSessionId },
     });
-    await waitForSessionStatus(page, childSessionId, "killed");
+    await waitForSessionStatus(page, childSessionId, "stopped");
   });
 
   test("SIGCHLD delivered after parent session reanimated", async ({ appPage: page }) => {
@@ -173,24 +173,24 @@ test.describe("SIGCHLD — child completion notification", { tag: ["@error"] }, 
 
     // 4. Start parent → IDLE → kill it to make it dead (STOPPED)
     const parentSessionId = await startTaskAndGetSessionId(page, parentTaskId);
-    await waitForSessionStatus(page, parentSessionId, "waiting_input");
+    await waitForSessionStatus(page, parentSessionId, "idle");
     await sendWsMessage(page, {
       type: "kill",
       payload: { sessionId: parentSessionId },
     });
-    await waitForSessionStatus(page, parentSessionId, "killed");
+    await waitForSessionStatus(page, parentSessionId, "stopped");
 
     // 5. Start child → idle (SIGCHLD fires but reanimate fails: env busy).
     //    Kill child → STOPPED, freeing the env.
     //    SIGCHLD fires again for "killed" (dedup allows retry after failure).
     //    This time reanimate succeeds.
     const childSessionId = await startTaskAndGetSessionId(page, childTaskId);
-    await waitForSessionStatus(page, childSessionId, "waiting_input");
+    await waitForSessionStatus(page, childSessionId, "idle");
     await sendWsMessage(page, {
       type: "kill",
       payload: { sessionId: childSessionId },
     });
-    await waitForSessionStatus(page, childSessionId, "killed");
+    await waitForSessionStatus(page, childSessionId, "stopped");
 
     // 6. SIGCHLD triggers reanimate of parent session.
     //    The reanimated session echoes "[SIGCHLD]..." in its text events.
