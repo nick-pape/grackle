@@ -58,8 +58,13 @@ test.describe("Session Lifecycle (stub runtime)", { tag: ["@session"] }, () => {
     // "You said: follow up" text appears
     await expect(page.locator("text=You said: follow up")).toBeVisible({ timeout: 10_000 });
 
-    // Session completes — UnifiedBar shows "Session completed" + "+ New Chat"
-    await expect(page.locator("text=Session completed")).toBeVisible({ timeout: 10_000 });
+    // Session returns to idle (stub no longer self-completes).
+    // The input field reappears — click Stop to end the session.
+    await expect(inputField).toBeVisible({ timeout: 10_000 });
+    await page.locator("button", { hasText: "Stop" }).click();
+
+    // Session killed — UnifiedBar shows "Session killed" + "+ New Chat"
+    await expect(page.locator("text=Session killed")).toBeVisible({ timeout: 10_000 });
     await expect(page.locator("button", { hasText: "+ New Chat" })).toBeVisible();
   });
 });

@@ -12,6 +12,7 @@ import {
   isSessionEvent,
   warnBadPayload,
   mapSessionStatus,
+  mapEndReason,
   MAX_EVENTS,
 } from "./types.js";
 
@@ -56,7 +57,7 @@ export interface UseSessionsResult {
 /** Set of session statuses considered active. */
 const ACTIVE_STATUSES: ReadonlySet<string> = new Set(["pending", "running", "idle"]);
 /** Set of session statuses considered terminal. */
-const TERMINAL_STATUSES: ReadonlySet<string> = new Set(["completed", "failed", "interrupted", "hibernating", "suspended"]);
+const TERMINAL_STATUSES: ReadonlySet<string> = new Set(["stopped", "suspended"]);
 /** Ordered list of active statuses from least to most progressed. */
 const ACTIVE_ORDER: readonly string[] = ["pending", "running", "idle"];
 
@@ -90,17 +91,18 @@ export function useSessions(send: SendFunction): UseSessionsResult {
           // recent than the list_sessions DB snapshot).  Prefer the
           // real-time status for active sessions to avoid overwriting
           // "idle" with a stale "running" from the query.
-          const prevMap = new Map(prev.map((s) => [s.id, s.status]));
+          const prevMap = new Map(prev.map((s) => [s.id, s]));
           return incoming.map((s) => {
-            const prevStatus = prevMap.get(s.id);
+            const prevSession = prevMap.get(s.id);
+            const prevStatus = prevSession?.status;
             if (!prevStatus || prevStatus === s.status) {
               return s;
             }
             // If the previous status is terminal and the incoming is
             // active, the list_sessions response is stale — keep the
-            // terminal status from the real-time event.
+            // terminal status (and endReason) from the real-time event.
             if (TERMINAL_STATUSES.has(prevStatus) && ACTIVE_STATUSES.has(s.status)) {
-              return { ...s, status: prevStatus };
+              return { ...s, status: prevStatus, ...(prevSession.endReason !== undefined ? { endReason: prevSession.endReason } : {}) };
             }
             if (ACTIVE_STATUSES.has(prevStatus) && ACTIVE_STATUSES.has(s.status)) {
               // If the previous status is "ahead" of the incoming status
@@ -164,12 +166,13 @@ export function useSessions(send: SendFunction): UseSessionsResult {
         }
         if (event.eventType === "status") {
           const mappedStatus = mapSessionStatus(event.content);
+          const endReason = mapEndReason(event.content);
           setSessions((prev) => {
             const exists = prev.some((s) => s.id === event.sessionId);
             if (exists) {
               return prev.map((s) =>
                 s.id === event.sessionId
-                  ? { ...s, status: mappedStatus }
+                  ? { ...s, status: mappedStatus, ...(endReason !== undefined ? { endReason } : {}) }
                   : s,
               );
             }
@@ -185,6 +188,7 @@ export function useSessions(send: SendFunction): UseSessionsResult {
                 status: mappedStatus,
                 prompt: "",
                 startedAt: event.timestamp,
+                ...(endReason !== undefined ? { endReason } : {}),
               },
             ];
           });

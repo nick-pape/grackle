@@ -11,17 +11,15 @@ const MAX_LAST_MESSAGE_LENGTH: number = 2000;
 
 /**
  * Session statuses that trigger SIGCHLD. LLM agents don't reliably exit() —
- * they go IDLE when they stop working. COMPLETED fires when the session's event
+ * they go IDLE when they stop working. STOPPED fires when the session's event
  * stream ends (agent-initiated, not user-initiated — the user marking a task
  * "Complete" emits task.completed which this subscriber does not listen to).
- * Dedup prevents double notification if both IDLE and COMPLETED fire for the
+ * Dedup prevents double notification if both IDLE and STOPPED fire for the
  * same session.
  */
 const SIGCHLD_STATUSES: ReadonlySet<string> = new Set([
   SESSION_STATUS.IDLE,
-  SESSION_STATUS.COMPLETED,
-  SESSION_STATUS.FAILED,
-  SESSION_STATUS.INTERRUPTED,
+  SESSION_STATUS.STOPPED,
 ]);
 
 /** How long (ms) to remember a delivered notification before allowing re-delivery. */
@@ -30,12 +28,9 @@ const DEDUP_TTL_MS: number = 3_600_000; // 1 hour
 /** Track delivered notifications to prevent duplicates: key → delivery timestamp. */
 const delivered: Map<string, number> = new Map();
 
-/** Human-readable status labels for the notification text. */
+/** Human-readable status labels for the notification text (non-STOPPED statuses only). */
 const STATUS_LABELS: Record<string, string> = {
   [SESSION_STATUS.IDLE]: "finished working (awaiting review)",
-  [SESSION_STATUS.COMPLETED]: "completed successfully",
-  [SESSION_STATUS.FAILED]: "failed",
-  [SESSION_STATUS.INTERRUPTED]: "was interrupted",
 };
 
 /**
@@ -117,7 +112,16 @@ async function handleTaskUpdated(childTaskId: string): Promise<void> {
   const lastTextMessage = extractLastTextMessage(latestSession.logPath || undefined);
 
   // Format the notification with actionable instructions for the parent
-  const statusLabel = STATUS_LABELS[latestSession.status] || latestSession.status;
+  let statusLabel: string;
+  if (latestSession.status === SESSION_STATUS.STOPPED) {
+    statusLabel = latestSession.endReason === "completed"
+      ? "completed successfully"
+      : latestSession.endReason === "killed"
+        ? "was killed"
+        : "crashed unexpectedly";
+  } else {
+    statusLabel = STATUS_LABELS[latestSession.status] || latestSession.status;
+  }
   let message = `[SIGCHLD] Child task "${childTask.title}" (${childTaskId}) ${statusLabel}.`;
 
   if (lastTextMessage) {
@@ -131,8 +135,8 @@ async function handleTaskUpdated(childTaskId: string): Promise<void> {
     message += "\n\nReview the child's work. If satisfactory, mark it complete with "
       + `task_complete({ taskId: "${childTaskId}" }). `
       + "If more work is needed, send additional input to the child's session.";
-  } else if (latestSession.status === SESSION_STATUS.FAILED) {
-    message += "\n\nThe child task failed. Review the error and decide whether to retry or reassign the work.";
+  } else if (latestSession.status === SESSION_STATUS.STOPPED && latestSession.endReason === "interrupted") {
+    message += "\n\nThe child task crashed unexpectedly. Review the error and decide whether to retry or reassign the work.";
   }
 
   logger.info(

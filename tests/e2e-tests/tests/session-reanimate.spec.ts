@@ -1,8 +1,9 @@
 /**
  * E2E tests for unified session resume (issue #576).
  *
- * Verifies that `resume_agent` correctly reanimates a completed stub session,
- * and that active sessions (idle/running/pending) are rejected with an error.
+ * Verifies that `resume_agent` correctly reanimates a stopped (killed) stub
+ * session, and that active sessions (idle/running/pending) are rejected with
+ * an error.
  */
 import { test, expect } from "./fixtures.js";
 import { sendWsAndWaitFor, sendWsAndWaitForError, sendWsMessage } from "./helpers.js";
@@ -44,7 +45,7 @@ test.describe("Session Reanimate (stub runtime)", { tag: ["@session"] }, () => {
     }
   });
 
-  test("resume a completed session reanimates it to idle, accepts input, and completes again", async ({ appPage }) => {
+  test("resume a killed session reanimates it to idle, accepts input, and can be killed again", async ({ appPage }) => {
     const page = appPage;
 
     // ── 1. Spawn a stub session from the UI (uses default stub persona) ──
@@ -61,27 +62,26 @@ test.describe("Session Reanimate (stub runtime)", { tag: ["@session"] }, () => {
     await expect(inputField).toBeVisible({ timeout: 10_000 });
     await expect(page.locator("text=Echo: reanimate me")).toBeVisible();
 
-    // ── 3. Send input to complete the session ────────────────────────────
-    await inputField.fill("finish");
-    await page.locator("button", { hasText: "Send" }).click();
-    await expect(page.locator("text=Session completed")).toBeVisible({ timeout: 10_000 });
+    // ── 3. Session is idle — kill it to move to STOPPED ──────────────────
+    await page.locator("button", { hasText: "Stop" }).click();
+    await expect(page.locator("text=Session killed")).toBeVisible({ timeout: 10_000 });
 
-    // ── 4. Find the completed session ID via WS ───────────────────────────
-    // Pick the most recently started completed stub session (other specs may
-    // have also left completed stub sessions in the DB).
+    // ── 4. Find the killed session ID via WS ────────────────────────────
+    // Pick the most recently started stopped/killed stub session (other specs may
+    // have also left stopped stub sessions in the DB).
     const sessionsResp = await sendWsAndWaitFor(
       page,
-      { type: "list_sessions", payload: { status: "completed" } },
+      { type: "list_sessions", payload: { status: "stopped" } },
       "sessions",
     );
     const sessions = (sessionsResp.payload?.sessions ?? []) as Array<{
-      id: string; status: string; runtime: string; startedAt: string;
+      id: string; status: string; endReason: string; runtime: string; startedAt: string;
     }>;
-    const completed = sessions
-      .filter((s) => s.status === "completed" && s.runtime === "stub")
+    const killed = sessions
+      .filter((s) => s.status === "stopped" && s.endReason === "killed" && s.runtime === "stub")
       .sort((a, b) => b.startedAt.localeCompare(a.startedAt))[0];
-    expect(completed, "Expected a completed stub session").toBeTruthy();
-    const sessionId = completed.id;
+    expect(killed, "Expected a killed stub session").toBeTruthy();
+    const sessionId = killed.id;
 
     // ── 5. Reanimate via WS resume_agent ──────────────────────────────────
     // Use page.evaluate directly so we can capture either agent_resumed or
@@ -118,8 +118,10 @@ test.describe("Session Reanimate (stub runtime)", { tag: ["@session"] }, () => {
 
     await expect(page.locator("text=You said: hello after resume")).toBeVisible({ timeout: 10_000 });
 
-    // ── 8. Session completes again ────────────────────────────────────────
-    await expect(page.locator("text=Session completed")).toBeVisible({ timeout: 10_000 });
+    // ── 8. Session returns to idle — kill it to stop ─────────────────────
+    await expect(resumedInput).toBeVisible({ timeout: 10_000 });
+    await page.locator("button", { hasText: "Stop" }).click();
+    await expect(page.locator("text=Session killed")).toBeVisible({ timeout: 10_000 });
   });
 
   test("resume an idle (active) session returns an error", async ({ appPage }) => {
@@ -158,7 +160,7 @@ test.describe("Session Reanimate (stub runtime)", { tag: ["@session"] }, () => {
 
     // Cleanup
     await page.locator("button", { hasText: "Stop" }).click();
-    await expect(page.locator("text=Session interrupted")).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator("text=Session killed")).toBeVisible({ timeout: 5_000 });
   });
 
   test("resume a non-existent session returns an error via WS", async ({ appPage }) => {

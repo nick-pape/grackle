@@ -48,8 +48,8 @@ export interface AgentSession {
   stream(): AsyncIterable<AgentEvent>;
   /** Send user input to a session that is waiting for it. */
   sendInput(text: string): void;
-  /** Forcefully terminate the session. */
-  kill(): void;
+  /** Forcefully terminate the session with an optional reason. */
+  kill(reason?: string): void;
   /** Drain any buffered events that were not yet consumed by the stream. */
   drainBufferedEvents(): AgentEvent[];
 }

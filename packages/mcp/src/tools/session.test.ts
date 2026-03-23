@@ -107,9 +107,9 @@ describe("session_status", () => {
     { id: "s1", environmentId: "env-1", runtime: "cc", status: "pending", prompt: "p1", model: "m1", turns: 0, startedAt: "t1", taskId: "" },
     { id: "s2", environmentId: "env-1", runtime: "cc", status: "running", prompt: "p2", model: "m1", turns: 3, startedAt: "t2", taskId: "" },
     { id: "s3", environmentId: "env-1", runtime: "cc", status: "idle", prompt: "p3", model: "m1", turns: 1, startedAt: "t3", taskId: "" },
-    { id: "s4", environmentId: "env-1", runtime: "cc", status: "completed", prompt: "p4", model: "m1", turns: 5, startedAt: "t4", taskId: "" },
-    { id: "s5", environmentId: "env-1", runtime: "cc", status: "failed", prompt: "p5", model: "m1", turns: 2, startedAt: "t5", taskId: "" },
-    { id: "s6", environmentId: "env-1", runtime: "cc", status: "interrupted", prompt: "p6", model: "m1", turns: 1, startedAt: "t6", taskId: "" },
+    { id: "s4", environmentId: "env-1", runtime: "cc", status: "stopped", prompt: "p4", model: "m1", turns: 5, startedAt: "t4", taskId: "" },
+    { id: "s5", environmentId: "env-1", runtime: "cc", status: "stopped", prompt: "p5", model: "m1", turns: 2, startedAt: "t5", taskId: "" },
+    { id: "s6", environmentId: "env-1", runtime: "cc", status: "stopped", prompt: "p6", model: "m1", turns: 1, startedAt: "t6", taskId: "" },
   ];
 
   /** Should filter to only active sessions when all=false (default). */

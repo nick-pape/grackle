@@ -29,6 +29,7 @@ class StubMcpSession implements AgentSession {
   private emitter: EventEmitter = new EventEmitter();
   private inputResolve: ((text: string) => void) | null = null;
   private killed: boolean = false;
+  private killReason: string = "killed";
   private prompt: string;
   private mcpBroker: { url: string; token: string } | undefined;
   private workspaceId: string | undefined;
@@ -77,6 +78,7 @@ class StubMcpSession implements AgentSession {
     }
 
     if (this.killed as boolean) {
+      yield { type: "status", timestamp: ts(), content: this.killReason };
       return;
     }
 
@@ -85,17 +87,19 @@ class StubMcpSession implements AgentSession {
     yield { type: "status", timestamp: ts(), content: "waiting_input" };
 
     if (this.killed as boolean) {
+      yield { type: "status", timestamp: ts(), content: this.killReason };
       return;
     }
 
     const input = await this.waitForInput();
     if (this.killed) {
+      yield { type: "status", timestamp: ts(), content: this.killReason };
       return;
     }
 
     // Simulate failure when input is "fail"
     if (input === "fail") {
-      this.status = SESSION_STATUS.FAILED;
+      this.status = SESSION_STATUS.STOPPED;
       yield { type: "status", timestamp: ts(), content: "failed" };
       return;
     }
@@ -104,9 +108,9 @@ class StubMcpSession implements AgentSession {
     yield { type: "status", timestamp: ts(), content: "running" };
     yield { type: "text", timestamp: ts(), content: `You said: ${input}` };
 
-    // Complete
-    this.status = SESSION_STATUS.COMPLETED;
-    yield { type: "status", timestamp: ts(), content: "completed" };
+    // Agent finished turn — go idle, not "completed"
+    this.status = SESSION_STATUS.IDLE;
+    yield { type: "status", timestamp: ts(), content: "waiting_input" };
   }
 
   /**
@@ -205,9 +209,10 @@ class StubMcpSession implements AgentSession {
     this.emitter.emit("input", text);
   }
 
-  public kill(): void {
+  public kill(reason?: string): void {
     this.killed = true;
-    this.status = SESSION_STATUS.INTERRUPTED;
+    this.killReason = reason || "killed";
+    this.status = SESSION_STATUS.STOPPED;
     if (this.inputResolve) {
       this.inputResolve("");
     }

@@ -28,11 +28,7 @@ const ACTIVE_SESSION_STATUSES: ReadonlySet<string> = new Set([
  * 4. Any active session (pending/running/idle):
  *    - Any "idle" → "paused"
  *    - Otherwise → "working"
- * 5. All sessions terminal, latest determines status:
- *    - completed → "paused" (agent thinks done, human reviews)
- *    - hibernating → "paused" (agent paged out, reanimate-safe)
- *    - failed → "failed"
- *    - interrupted → "not_started" (resumable)
+ * 5. All sessions terminal → "paused" (work was done, now stopped)
  *
  * @param storedStatus - The task's status as stored in the DB.
  * @param sessions - All sessions for this task, in any order.
@@ -75,28 +71,10 @@ export function computeTaskStatus(
     };
   }
 
-  // All sessions are terminal — use the latest one to determine status
+  // All sessions are terminal — task is paused (work was done, now stopped)
   const latest = getLatestSession(sessions);
 
-  let status: string;
-  switch (latest.status) {
-    case SESSION_STATUS.COMPLETED:
-    case SESSION_STATUS.HIBERNATING:
-    case SESSION_STATUS.SUSPENDED:
-      status = TASK_STATUS.PAUSED;
-      break;
-    case SESSION_STATUS.FAILED:
-      status = TASK_STATUS.FAILED;
-      break;
-    case SESSION_STATUS.INTERRUPTED:
-      status = TASK_STATUS.NOT_STARTED;
-      break;
-    default:
-      status = TASK_STATUS.NOT_STARTED;
-      break;
-  }
-
-  return { status, latestSessionId: latest.id };
+  return { status: TASK_STATUS.PAUSED, latestSessionId: latest.id };
 }
 
 /** Get the most recent session by startedAt (descending), breaking ties by ID. */

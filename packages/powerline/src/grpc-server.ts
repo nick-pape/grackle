@@ -152,12 +152,12 @@ export function registerPowerLineRoutes(router: ConnectRouter): void {
       return create(powerline.EmptySchema, {});
     },
 
-    async kill(req: powerline.SessionId) {
+    async kill(req: powerline.KillRequest) {
       const session = getSession(req.id);
       if (!session) {
         throw new Error(`Session not found: ${req.id}`);
       }
-      session.kill();
+      session.kill(req.reason || "killed");
       return create(powerline.EmptySchema, {});
     },
 

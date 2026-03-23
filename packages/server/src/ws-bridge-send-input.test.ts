@@ -141,7 +141,8 @@ function applySchema(): void {
       pipe_mode          TEXT NOT NULL DEFAULT '',
       input_tokens       INTEGER NOT NULL DEFAULT 0,
       output_tokens      INTEGER NOT NULL DEFAULT 0,
-      cost_usd           REAL NOT NULL DEFAULT 0
+      cost_usd           REAL NOT NULL DEFAULT 0,
+      end_reason         TEXT
     );
   `);
 }
@@ -250,68 +251,20 @@ describe("ws-bridge send_input error handling", () => {
     expect((msg.payload as Record<string, unknown>).message).toMatch(/Session not found: no-such-session/i);
   });
 
-  it("returns error when session is completed", async () => {
-    sessionStore.createSession("sess-completed", "env-1", "node", "test", "claude", "/tmp/log");
-    sessionStore.updateSession("sess-completed", "completed");
+  it("returns error when session is stopped", async () => {
+    sessionStore.createSession("sess-stopped", "env-1", "node", "test", "claude", "/tmp/log");
+    sessionStore.updateSession("sess-stopped", "stopped", undefined, undefined, "completed");
 
     const ws = await connectWs(port);
     const msgPromise = nextMessage(ws);
 
-    ws.send(JSON.stringify({ type: "send_input", payload: { sessionId: "sess-completed", text: "hello" } }));
+    ws.send(JSON.stringify({ type: "send_input", payload: { sessionId: "sess-stopped", text: "hello" } }));
 
     const msg = await msgPromise;
     await closeWs(ws);
 
     expect(msg.type).toBe("error");
-    expect((msg.payload as Record<string, unknown>).message).toMatch(/has ended.*completed/i);
-  });
-
-  it("returns error when session is failed", async () => {
-    sessionStore.createSession("sess-failed", "env-1", "node", "test", "claude", "/tmp/log");
-    sessionStore.updateSession("sess-failed", "failed");
-
-    const ws = await connectWs(port);
-    const msgPromise = nextMessage(ws);
-
-    ws.send(JSON.stringify({ type: "send_input", payload: { sessionId: "sess-failed", text: "hello" } }));
-
-    const msg = await msgPromise;
-    await closeWs(ws);
-
-    expect(msg.type).toBe("error");
-    expect((msg.payload as Record<string, unknown>).message).toMatch(/has ended.*failed/i);
-  });
-
-  it("returns error when session is interrupted", async () => {
-    sessionStore.createSession("sess-interrupted", "env-1", "node", "test", "claude", "/tmp/log");
-    sessionStore.updateSession("sess-interrupted", "interrupted");
-
-    const ws = await connectWs(port);
-    const msgPromise = nextMessage(ws);
-
-    ws.send(JSON.stringify({ type: "send_input", payload: { sessionId: "sess-interrupted", text: "hello" } }));
-
-    const msg = await msgPromise;
-    await closeWs(ws);
-
-    expect(msg.type).toBe("error");
-    expect((msg.payload as Record<string, unknown>).message).toMatch(/has ended.*interrupted/i);
-  });
-
-  it("returns error when session is hibernating", async () => {
-    sessionStore.createSession("sess-hibernating", "env-1", "node", "test", "claude", "/tmp/log");
-    sessionStore.hibernateSession("sess-hibernating");
-
-    const ws = await connectWs(port);
-    const msgPromise = nextMessage(ws);
-
-    ws.send(JSON.stringify({ type: "send_input", payload: { sessionId: "sess-hibernating", text: "hello" } }));
-
-    const msg = await msgPromise;
-    await closeWs(ws);
-
-    expect(msg.type).toBe("error");
-    expect((msg.payload as Record<string, unknown>).message).toMatch(/has ended.*hibernating/i);
+    expect((msg.payload as Record<string, unknown>).message).toMatch(/has ended.*stopped/i);
   });
 
   it("returns error when environment is not connected", async () => {

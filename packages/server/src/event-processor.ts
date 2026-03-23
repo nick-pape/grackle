@@ -1,5 +1,6 @@
 import { create } from "@bufbuild/protobuf";
-import { grackle, powerline, eventTypeToEnum, SESSION_STATUS } from "@grackle-ai/common";
+import { grackle, powerline, eventTypeToEnum, SESSION_STATUS, TERMINAL_SESSION_STATUSES, END_REASON } from "@grackle-ai/common";
+import type { SessionStatus } from "@grackle-ai/common";
 import { v4 as uuid } from "uuid";
 import * as sessionStore from "./session-store.js";
 import * as streamHub from "./stream-hub.js";
@@ -13,10 +14,8 @@ import { writeTranscript } from "./transcript.js";
 import { emit } from "./event-bus.js";
 import { logger } from "./logger.js";
 import { publishChildCompletion } from "./pipe-delivery.js";
+import { cleanupLifecycleStream } from "./lifecycle.js";
 import type { ProcessorContext } from "./processor-registry.js";
-
-/** Terminal session statuses that indicate the session has already ended. */
-const TERMINAL_STATUSES: string[] = [SESSION_STATUS.COMPLETED, SESSION_STATUS.FAILED, SESSION_STATUS.INTERRUPTED, SESSION_STATUS.HIBERNATING];
 
 /** Options for processing an agent event stream. */
 export interface EventStreamOptions {
@@ -328,45 +327,42 @@ export function processEventStream(
           } else if (event.content === "running") {
             sessionStore.updateSessionStatus(sessionId, SESSION_STATUS.RUNNING);
           } else if (event.content === "completed") {
-            sessionStore.updateSession(sessionId, SESSION_STATUS.COMPLETED);
-          } else if (event.content === "failed") {
-            sessionStore.updateSession(sessionId, SESSION_STATUS.FAILED);
+            sessionStore.updateSession(sessionId, SESSION_STATUS.STOPPED, undefined, undefined, END_REASON.COMPLETED);
           } else if (event.content === "killed") {
-            sessionStore.updateSession(sessionId, SESSION_STATUS.INTERRUPTED);
-          } else if (event.content === "hibernating") {
-            sessionStore.updateSession(sessionId, SESSION_STATUS.HIBERNATING);
+            sessionStore.updateSession(sessionId, SESSION_STATUS.STOPPED, undefined, undefined, END_REASON.KILLED);
+          } else if (event.content === "failed") {
+            sessionStore.updateSession(sessionId, SESSION_STATUS.STOPPED, undefined, undefined, END_REASON.INTERRUPTED);
+            cleanupLifecycleStream(sessionId);
           }
 
           // On terminal status: publish child completion to IPC pipe stream.
           // Note: lifecycle streams are NOT cleaned up here — they persist until
           // the spawner explicitly closes the fd (killAgent, closeFd). This is the
           // emergent lifecycle model: fd closure drives hibernation, not status events.
-          if (["completed", "failed", "killed", "hibernating"].includes(event.content)) {
+          if (["completed", "killed", "failed"].includes(event.content)) {
             publishChildCompletion(sessionId, event.content);
           }
 
           // Broadcast task_updated on status changes so frontend re-fetches computed status.
-          // This covers both terminal events (completed/failed/killed) and non-terminal
+          // This covers both terminal events (completed/killed/failed) and non-terminal
           // transitions (running, waiting_input) that affect the computed task status.
-          if (ctx.taskId && ["completed", "failed", "killed", "hibernating", "running", "waiting_input"].includes(event.content)) {
+          if (ctx.taskId && ["completed", "killed", "failed", "running", "waiting_input"].includes(event.content)) {
             emit("task.updated", { taskId: ctx.taskId, workspaceId: ctx.workspaceId });
           }
         }
       }
 
-      // Fallback: if stream ended without a terminal status event, mark completed.
-      // Guard against overwriting SUSPENDED (set by heartbeat sweep during disconnect).
+      // Fallback: if stream ended without a terminal status event, emit a UI refresh
+      // without changing status. Guard against overwriting terminal or SUSPENDED states.
       const current = sessionStore.getSession(sessionId);
-      if (current && !TERMINAL_STATUSES.includes(current.status) && current.status !== SESSION_STATUS.SUSPENDED) {
-        sessionStore.updateSession(sessionId, SESSION_STATUS.COMPLETED);
-        publishChildCompletion(sessionId, "completed");
+      if (current && !TERMINAL_SESSION_STATUSES.has(current.status as SessionStatus) && current.status !== SESSION_STATUS.SUSPENDED) {
         if (ctx.taskId) {
           emit("task.updated", { taskId: ctx.taskId, workspaceId: ctx.workspaceId });
         }
       }
     } catch (err) {
       const current = sessionStore.getSession(sessionId);
-      if (current && !TERMINAL_STATUSES.includes(current.status)) {
+      if (current && !TERMINAL_SESSION_STATUSES.has(current.status as SessionStatus)) {
         // Transport error during active or idle session — suspend for auto-recovery
         // on reconnect. Don't publish child completion (session will resume).
         logger.info({ sessionId, err: String(err) }, "Stream lost — suspending session for recovery");

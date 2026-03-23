@@ -71,6 +71,7 @@ class GenAIScriptSession implements AgentSession {
   private mcpBroker: { url: string; token: string } | undefined;
   private child: ChildProcess | null = null;
   private killed: boolean = false;
+  private killReason: string = "killed";
   private tmpDir: string | null = null;
 
   public constructor(opts: SpawnOptions) {
@@ -85,7 +86,7 @@ class GenAIScriptSession implements AgentSession {
 
     if (!this.scriptContent) {
       yield { type: "error", timestamp: ts(), content: "No script content provided" };
-      this.status = SESSION_STATUS.FAILED;
+      this.status = SESSION_STATUS.STOPPED;
       yield { type: "status", timestamp: ts(), content: "failed" };
       return;
     }
@@ -153,8 +154,8 @@ class GenAIScriptSession implements AgentSession {
       });
 
       if (this.killed) {
-        this.status = SESSION_STATUS.INTERRUPTED;
-        yield { type: "status", timestamp: ts(), content: "interrupted" };
+        this.status = SESSION_STATUS.STOPPED;
+        yield { type: "status", timestamp: ts(), content: this.killReason };
         return;
       }
 
@@ -199,19 +200,19 @@ class GenAIScriptSession implements AgentSession {
         }
       }
 
-      // Final status
+      // Final status — GenAIScript is a one-shot runtime, so it goes IDLE when done
       if (exitCode === 0 || result?.status === "success") {
-        this.status = SESSION_STATUS.COMPLETED;
-        yield { type: "status", timestamp: ts(), content: "completed" };
+        this.status = SESSION_STATUS.IDLE;
+        yield { type: "status", timestamp: ts(), content: "waiting_input" };
       } else {
         const errorText = result?.statusText ?? result?.status ?? `Process exited with code ${exitCode}`;
         yield { type: "error", timestamp: ts(), content: String(errorText) };
-        this.status = SESSION_STATUS.FAILED;
+        this.status = SESSION_STATUS.STOPPED;
         yield { type: "status", timestamp: ts(), content: "failed" };
       }
     } catch (err) {
       yield { type: "error", timestamp: ts(), content: err instanceof Error ? err.message : String(err) };
-      this.status = SESSION_STATUS.FAILED;
+      this.status = SESSION_STATUS.STOPPED;
       yield { type: "status", timestamp: ts(), content: "failed" };
     } finally {
       if (this.tmpDir) {
@@ -224,9 +225,10 @@ class GenAIScriptSession implements AgentSession {
     logger.warn({ sessionId: this.id }, "GenAIScript sessions do not accept interactive input");
   }
 
-  public kill(): void {
+  public kill(reason?: string): void {
     this.killed = true;
-    this.status = SESSION_STATUS.INTERRUPTED;
+    this.killReason = reason || "killed";
+    this.status = SESSION_STATUS.STOPPED;
     if (this.child && !this.child.killed) {
       this.child.kill("SIGTERM");
     }

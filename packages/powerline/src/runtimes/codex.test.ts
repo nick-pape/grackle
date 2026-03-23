@@ -68,12 +68,12 @@ import { existsSync, readFileSync } from "node:fs";
 
 // ─── Helpers ────────────────────────────────────────────────
 
-/** Collect events from a session stream until it reaches a terminal status (waiting_input, failed, completed). */
+/** Collect events from a session stream until it reaches a terminal status (waiting_input or failed). */
 async function collectEvents(session: { stream(): AsyncIterable<AgentEvent>; kill(): void }): Promise<AgentEvent[]> {
   const events: AgentEvent[] = [];
   for await (const event of session.stream()) {
     events.push(event);
-    if (event.type === "status" && (event.content === "waiting_input" || event.content === "failed" || event.content === "completed")) {
+    if (event.type === "status" && (event.content === "waiting_input" || event.content === "failed")) {
       session.kill();
       break;
     }

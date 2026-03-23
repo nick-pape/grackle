@@ -45,7 +45,7 @@ export function WorkspaceBoard({ workspaceId, environmentId }: WorkspaceBoardPro
       if (task.latestSessionId) {
         const session = sessionById.get(task.latestSessionId);
         if (session) {
-          sessionStatusByTaskId.set(task.id, session.status);
+          sessionStatusByTaskId.set(task.id, session.endReason || session.status);
 
           if (session.personaId) {
             const persona = personaById.get(session.personaId);

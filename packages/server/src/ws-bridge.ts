@@ -24,6 +24,7 @@ import {
   SESSION_STATUS,
   TERMINAL_SESSION_STATUSES,
   type SessionStatus,
+  END_REASON,
   TASK_STATUS,
   DEFAULT_MCP_PORT,
   ROOT_TASK_ID,
@@ -465,13 +466,11 @@ export async function startTaskSession(
 }
 
 /**
- * Terminate a session using the fd-closure pattern.
+ * Terminate a session: set STOPPED+killed, then close lifecycle FDs.
  *
- * Deletes the lifecycle stream (triggering auto-hibernate via the orphan
- * callback), closes all other subscriptions, and falls back to direct
- * INTERRUPTED for legacy sessions without lifecycle streams.
- *
- * Matches the pattern used by `killAgent` in grpc-service.ts.
+ * Sets the session to STOPPED+killed first, then deletes the lifecycle
+ * stream. The orphan callback still sends the PowerLine kill request
+ * (even for already-terminal sessions) to ensure the process is stopped.
  */
 async function terminateSession(sessionId: string): Promise<void> {
   const session = sessionStore.getSession(sessionId);
@@ -479,35 +478,16 @@ async function terminateSession(sessionId: string): Promise<void> {
     return;
   }
 
-  // 1. Delete lifecycle stream → triggers orphan callback → auto-hibernate
-  cleanupLifecycleStream(sessionId);
-
-  // 2. Close other subscriptions (pipe streams etc.)
-  const subs = streamRegistry.getSubscriptionsForSession(sessionId);
-  for (const sub of subs) {
-    streamRegistry.unsubscribe(sub.id);
-  }
-
-  // 3. Fallback for legacy sessions without lifecycle streams
-  const current = sessionStore.getSession(sessionId);
-  if (current && !TERMINAL_SESSION_STATUSES.has(current.status as SessionStatus)) {
-    const conn = adapterManager.getConnection(session.environmentId);
-    if (conn) {
-      try {
-        await conn.client.kill(
-          create(powerline.SessionIdSchema, { id: sessionId }),
-        );
-      } catch (err) {
-        logger.warn({ sessionId, err }, "PowerLine kill failed during session termination");
-      }
-    }
-    sessionStore.updateSession(sessionId, SESSION_STATUS.INTERRUPTED);
+  // 1. Set STOPPED + killed BEFORE closing the lifecycle FD so the orphan
+  //    callback sees the session is already terminal and skips.
+  if (!TERMINAL_SESSION_STATUSES.has(session.status as SessionStatus)) {
+    sessionStore.updateSession(sessionId, SESSION_STATUS.STOPPED, undefined, undefined, END_REASON.KILLED);
     streamHub.publish(
       create(grackle.SessionEventSchema, {
         sessionId,
         type: grackle.EventType.STATUS,
         timestamp: new Date().toISOString(),
-        content: SESSION_STATUS.INTERRUPTED,
+        content: END_REASON.KILLED,
         raw: "",
       }),
     );
@@ -517,6 +497,16 @@ async function terminateSession(sessionId: string): Promise<void> {
         emit("task.updated", { taskId: task.id, workspaceId: task.workspaceId || "" });
       }
     }
+  }
+
+  // 2. Delete lifecycle stream — orphan callback sees session is already
+  //    STOPPED and skips status change, but still kills the PowerLine process.
+  cleanupLifecycleStream(sessionId);
+
+  // 3. Close other subscriptions (pipe streams etc.)
+  const subs = streamRegistry.getSubscriptionsForSession(sessionId);
+  for (const sub of subs) {
+    streamRegistry.unsubscribe(sub.id);
   }
 }
 
@@ -553,6 +543,7 @@ async function handleMessage(
             inputTokens: r.inputTokens,
             outputTokens: r.outputTokens,
             costUsd: r.costUsd,
+            endReason: r.endReason || undefined,
           })),
         },
       });
@@ -1292,8 +1283,7 @@ async function handleMessage(
           sendWs(ws, { type: "error", payload: { message: `Session not found: ${lateBindSessionId}` } });
           return;
         }
-        const terminalStatuses: string[] = [SESSION_STATUS.COMPLETED, SESSION_STATUS.FAILED, SESSION_STATUS.INTERRUPTED];
-        if (terminalStatuses.includes(session.status)) {
+        if (TERMINAL_SESSION_STATUSES.has(session.status as SessionStatus)) {
           sendWs(ws, {
             type: "error",
             payload: { message: `Cannot bind terminal session ${lateBindSessionId} (status: ${session.status})` },
@@ -1454,7 +1444,7 @@ async function handleMessage(
         sendWs(ws, { type: "error", payload: { message: `Task ${taskId} has no sessions to resume` } });
         return;
       }
-      if (!([SESSION_STATUS.INTERRUPTED, SESSION_STATUS.COMPLETED] as string[]).includes(latestSession.status)) {
+      if (!([SESSION_STATUS.STOPPED, SESSION_STATUS.SUSPENDED] as string[]).includes(latestSession.status)) {
         sendWs(ws, {
           type: "error",
           payload: { message: `Latest session ${latestSession.id} is not resumable (status: ${latestSession.status})` },
@@ -1563,6 +1553,7 @@ async function handleMessage(
             inputTokens: r.inputTokens,
             outputTokens: r.outputTokens,
             costUsd: r.costUsd,
+            endReason: r.endReason || undefined,
           })),
         },
       });
