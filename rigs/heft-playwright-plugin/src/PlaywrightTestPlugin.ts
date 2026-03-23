@@ -35,7 +35,10 @@ class PlaywrightTestPlugin implements IHeftTaskPlugin {
       // binary resolution issue where the base `playwright` package (not
       // `@playwright/test`) is used, which has different exit code semantics.
       if (result.status !== 0) {
-        const allPassed: boolean = /\d+ passed/.test(stdout) && !/\d+ failed/.test(stdout);
+        // Check only the last few lines for the final summary (Playwright
+        // outputs both first-attempt and final summaries in the same stream).
+        const lastLines: string = stdout.split("\n").slice(-10).join("\n");
+        const allPassed: boolean = /\d+ passed/.test(lastLines) && !/\d+ failed/.test(lastLines);
         if (allPassed) {
           session.logger.terminal.writeLine(
             "Playwright exited non-zero but all tests passed — treating as success."
