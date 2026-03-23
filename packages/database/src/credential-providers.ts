@@ -84,7 +84,7 @@ export function getCredentialProviders(database?: DatabaseInstance): CredentialP
   try {
     return parseCredentialProviderConfig(row.value);
   } catch {
-    console.warn("Invalid credential_providers setting; returning defaults");
+    process.stderr.write("Invalid credential_providers setting; returning defaults\n");
     return { ...DEFAULT_CONFIG };
   }
 }

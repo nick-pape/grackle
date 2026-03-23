@@ -39,7 +39,7 @@ function loadMasterKey(): string {
   try {
     chmodSync(keyPath, 0o600);
   } catch { /* Windows may not support this */ }
-  console.warn("Generated new master key for token encryption. Set GRACKLE_MASTER_KEY env var for explicit control.");
+  process.stderr.write("Generated new master key for token encryption. Set GRACKLE_MASTER_KEY env var for explicit control.\n");
 
   return key;
 }
