@@ -70,7 +70,7 @@ export function registerAgentCommands(program: Command): void {
         const tokens = (s.inputTokens || s.outputTokens)
           ? `${formatTokens(s.inputTokens)}→${formatTokens(s.outputTokens)}`
           : "-";
-        const statusDisplay = s.endReason ? `${s.status} (${s.endReason})` : s.status;
+        const statusDisplay = s.status === "stopped" && s.endReason ? `${s.status} (${s.endReason})` : s.status;
         table.push([
           s.id.slice(0, 8),
           s.environmentId,
