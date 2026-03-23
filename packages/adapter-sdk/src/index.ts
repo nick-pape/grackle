@@ -42,6 +42,13 @@ export {
 // ─── Shared Operations ─────────────────────────────────────
 export { remoteStop, remoteDestroy, remoteHealthCheck } from "./shared-operations.js";
 
+// ─── Exec ────────────────────────────────────────────────────
+export type { ExecResult } from "./exec.js";
+export { exec } from "./exec.js";
+
+// ─── Adapter Dependencies ───────────────────────────────────
+export type { ExecFunction, AdapterDependencies } from "./adapter-dependencies.js";
+
 // ─── Utilities ──────────────────────────────────────────────
 export {
   sleep,

@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Extract adapter implementations into standalone packages (adapter-local, adapter-ssh, adapter-codespace, adapter-docker) with constructor dependency injection",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
