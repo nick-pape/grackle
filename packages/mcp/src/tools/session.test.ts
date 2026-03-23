@@ -2,7 +2,7 @@ import { describe, test, expect, vi } from "vitest";
 import { ConnectError, Code } from "@connectrpc/connect";
 import type { Client } from "@connectrpc/connect";
 import type { grackle } from "@grackle-ai/common";
-import type { AuthContext } from "../auth-context.js";
+import type { AuthContext } from "@grackle-ai/auth";
 import { sessionTools } from "./session.js";
 
 type GrackleClient = Client<typeof grackle.Grackle>;

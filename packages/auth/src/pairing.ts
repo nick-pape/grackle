@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { logger } from "./logger.js";
+import { getAuthLogger } from "./auth-logger.js";
 
 /** How long a pairing code is valid after generation. */
 const PAIRING_CODE_TTL_MS: number = 5 * 60 * 1000;
@@ -88,7 +88,7 @@ export function generatePairingCode(): string | undefined {
   }
 
   if (activeCodes.size >= MAX_ACTIVE_CODES) {
-    logger.warn("Maximum active pairing codes reached (%d)", MAX_ACTIVE_CODES);
+    getAuthLogger().warn({}, "Maximum active pairing codes reached (%d)");
     return undefined;
   }
 
@@ -108,7 +108,7 @@ export function generatePairingCode(): string | undefined {
     expiresAt: now + PAIRING_CODE_TTL_MS,
   };
   activeCodes.set(code, record);
-  logger.info({ expiresIn: PAIRING_CODE_TTL_MS / 1000 }, "Generated pairing code");
+  getAuthLogger().info({ expiresIn: PAIRING_CODE_TTL_MS / 1000 }, "Generated pairing code");
   return code;
 }
 
@@ -126,7 +126,7 @@ export function redeemPairingCode(code: string, remoteIp: string): boolean {
   // Check rate limit
   const limit = rateLimits.get(remoteIp);
   if (limit && now < limit.blockedUntil) {
-    logger.warn({ remoteIp }, "Pairing attempt blocked by rate limit");
+    getAuthLogger().warn({ remoteIp }, "Pairing attempt blocked by rate limit");
     return false;
   }
 
@@ -141,7 +141,7 @@ export function redeemPairingCode(code: string, remoteIp: string): boolean {
         limit.attempts++;
         if (limit.attempts >= MAX_FAILED_ATTEMPTS) {
           limit.blockedUntil = now + RATE_LIMIT_BLOCK_MS;
-          logger.warn({ remoteIp, attempts: limit.attempts }, "Rate limit triggered for pairing attempts");
+          getAuthLogger().warn({ remoteIp, attempts: limit.attempts }, "Rate limit triggered for pairing attempts");
         }
       }
     } else {
@@ -156,7 +156,7 @@ export function redeemPairingCode(code: string, remoteIp: string): boolean {
 
   // Burn the code — single use
   activeCodes.delete(normalised);
-  logger.info("Pairing code redeemed");
+  getAuthLogger().info({}, "Pairing code redeemed");
   return true;
 }
 

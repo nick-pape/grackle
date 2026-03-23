@@ -48,7 +48,7 @@ import { emit } from "./event-bus.js";
 import { recoverSuspendedSessions } from "./session-recovery.js";
 import { clearReconnectState } from "./auto-reconnect.js";
 import { buildMcpServersJson, toDialableHost } from "./grpc-service.js";
-import { createScopedToken } from "@grackle-ai/mcp";
+import { createScopedToken, loadOrCreateApiKey } from "@grackle-ai/auth";
 import { getKnowledgeEmbedder, isKnowledgeEnabled } from "./knowledge-init.js";
 import {
   knowledgeSearch,
@@ -62,7 +62,6 @@ import {
 } from "@grackle-ai/knowledge";
 import { cleanupLifecycleStream } from "./lifecycle.js";
 import * as streamRegistry from "./stream-registry.js";
-import { loadOrCreateApiKey } from "./api-key.js";
 import { reanimateAgent } from "./reanimate-agent.js";
 import { ConnectError } from "@connectrpc/connect";
 import { computeTaskStatus } from "./compute-task-status.js";
@@ -430,7 +429,7 @@ export async function startTaskSession(
   const mcpUrl = `http://${mcpDialHost}:${mcpPort}/mcp`;
   const mcpToken = createScopedToken(
     { sub: freshTask.id, pid: freshTask.workspaceId || "", per: resolved.personaId, sid: sessionId },
-    loadOrCreateApiKey(),
+    loadOrCreateApiKey(grackleHome),
   );
 
   const useWorktrees = workspace?.useWorktrees ?? false;

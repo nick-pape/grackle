@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { create } from "@bufbuild/protobuf";
 import { grackle } from "@grackle-ai/common";
-import type { AuthContext } from "../auth-context.js";
+import type { AuthContext } from "@grackle-ai/auth";
 import { knowledgeTools } from "./knowledge.js";
 
 // ---------------------------------------------------------------------------
