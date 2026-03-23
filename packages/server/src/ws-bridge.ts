@@ -37,6 +37,54 @@ import { loadOrCreateApiKey } from "./api-key.js";
 
 const WS_PING_INTERVAL_MS: number = 30_000;
 const WS_CLOSE_UNAUTHORIZED: number = 4001;
+const WS_CLOSE_FORBIDDEN_ORIGIN: number = 4003;
+
+/** Loopback hostnames accepted as valid WebSocket origins in local mode. */
+const LOOPBACK_HOSTNAMES: ReadonlySet<string> = new Set([
+  "localhost",
+  "127.0.0.1",
+  "[::1]",
+]);
+
+/**
+ * Check whether a WebSocket Origin header is allowed.
+ *
+ * Rules:
+ * - Missing origin (non-browser clients, extensions) → always allowed
+ * - Origin port must match the web server port
+ * - In local mode (`allowNetwork === false`), hostname must be loopback
+ * - In network mode (`allowNetwork === true`), any hostname on the right port is allowed
+ */
+export function isAllowedOrigin(
+  origin: string | undefined,
+  webPort: number,
+  allowNetwork: boolean,
+): boolean {
+  if (origin === undefined) {
+    return true;
+  }
+
+  let parsed: URL;
+  try {
+    parsed = new URL(origin);
+  } catch {
+    return false;
+  }
+
+  const originPort = parsed.port
+    ? parseInt(parsed.port, 10)
+    : (parsed.protocol === "https:" ? 443 : 80);
+
+  if (originPort !== webPort) {
+    return false;
+  }
+
+  if (allowNetwork) {
+    return true;
+  }
+
+  return LOOPBACK_HOSTNAMES.has(parsed.hostname);
+}
 
 interface WsMessage {
   type: string;
@@ -58,16 +106,22 @@ export function createWsBridge(
   httpServer: HttpServer,
   options: WsBridgeOptions,
 ): WebSocketServer {
-  const { verifyApiKey, validateCookie } = options;
   const wss = new WebSocketServer({ server: httpServer });
   setWssInstance(wss);
 
   wss.on("connection", (ws: WebSocket, req: IncomingMessage) => {
+    const origin = req.headers.origin;
+    if (!isAllowedOrigin(origin, options.webPort ?? 0, options.allowNetwork ?? false)) {
+      logger.warn({ origin }, "Rejected WebSocket connection from disallowed origin");
+      ws.close(WS_CLOSE_FORBIDDEN_ORIGIN, "Forbidden origin");
+      return;
+    }
+
     const url = new URL(req.url || "/", "http://localhost");
     const token = url.searchParams.get("token") || "";
-    const hasValidToken = token.length > 0 && verifyApiKey(token);
-    const hasValidCookie = validateCookie
-      ? validateCookie(req.headers.cookie || "")
+    const hasValidToken = token.length > 0 && options.verifyApiKey(token);
+    const hasValidCookie = options.validateCookie
+      ? options.validateCookie(req.headers.cookie || "")
       : false;
 
     if (!hasValidToken && !hasValidCookie) {
