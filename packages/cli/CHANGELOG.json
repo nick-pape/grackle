@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.71.2",
+      "tag": "@grackle-ai/cli_v0.71.2",
+      "date": "Mon, 23 Mar 2026 05:44:01 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Add a dedicated workspace creation page and confirm workspace creation before the UI reports success."
+          }
+        ]
+      }
+    },
+    {
       "version": "0.71.1",
       "tag": "@grackle-ai/cli_v0.71.1",
       "date": "Mon, 23 Mar 2026 05:01:39 GMT",

@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Mon, 23 Mar 2026 05:01:39 GMT and should not be manually modified.
+This log was last generated on Mon, 23 Mar 2026 05:44:01 GMT and should not be manually modified.
+
+## 0.71.2
+Mon, 23 Mar 2026 05:44:01 GMT
+
+### Patches
+
+- Add a dedicated workspace creation page and confirm workspace creation before the UI reports success.
 
 ## 0.71.1
 Mon, 23 Mar 2026 05:01:39 GMT
