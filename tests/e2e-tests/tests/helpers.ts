@@ -468,14 +468,23 @@ export async function sendWsAndWaitFor(
             );
 
           case "provision_environment": {
-            // ProvisionEnvironment is server-streaming. Fire the RPC and poll
-            // ListEnvironments until the status changes to "connected".
-            fetch(`/grackle.Grackle/ProvisionEnvironment`, {
-              method: "POST",
-              headers: { "Content-Type": "application/connect+json" },
-              body: JSON.stringify({ id: payload.environmentId }),
-              credentials: "include",
-            }).catch(() => { /* fire-and-forget */ });
+            // ProvisionEnvironment is server-streaming — must call the HTTP/2
+            // gRPC server directly (the HTTP/1.1 web server can't do streaming).
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const grpcPort = (window as any).__GRACKLE_GRPC_PORT__;
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const apiKey = (window as any).__GRACKLE_API_KEY__;
+            if (grpcPort && apiKey) {
+              // Call gRPC server directly via HTTP/2 — fire and forget
+              fetch(`http://127.0.0.1:${grpcPort}/grackle.Grackle/ProvisionEnvironment`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "Authorization": `Bearer ${apiKey}`,
+                },
+                body: JSON.stringify({ id: payload.environmentId }),
+              }).catch(() => { /* fire-and-forget */ });
+            }
             // Poll until environment is connected
             const deadline = Date.now() + timeout;
             while (Date.now() < deadline) {
@@ -752,22 +761,21 @@ export async function sendWsMessage(
         break;
 
       case "provision_environment": {
-        // ProvisionEnvironment is server-streaming and doesn't work over
-        // the HTTP/1.1 web server ConnectRPC mount. Instead, trigger it
-        // via the app's UI (which calls grackleClient.provisionEnvironment)
-        // by injecting an environment.changed event to trigger a re-fetch,
-        // OR just use the gRPC port directly. Simplest: fire-and-forget via
-        // the app's own provisionEnvironment function (click the Connect
-        // button), then poll ListEnvironments for "connected" status.
-        //
-        // Since we can't reliably call the streaming RPC from a raw fetch,
-        // fire it and immediately start polling.
-        fetch(`/grackle.Grackle/ProvisionEnvironment`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ id: payload.environmentId }),
-          credentials: "include",
-        }).catch(() => { /* fire-and-forget — streaming may error */ });
+        // ProvisionEnvironment is server-streaming — call gRPC server directly
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const grpcPort = (window as any).__GRACKLE_GRPC_PORT__;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const apiKey = (window as any).__GRACKLE_API_KEY__;
+        if (grpcPort && apiKey) {
+          fetch(`http://127.0.0.1:${grpcPort}/grackle.Grackle/ProvisionEnvironment`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${apiKey}`,
+            },
+            body: JSON.stringify({ id: payload.environmentId }),
+          }).catch(() => { /* fire-and-forget */ });
+        }
         // Poll until the environment is connected
         const provDeadline: number = Date.now() + 15_000;
         while (Date.now() < provDeadline) {
@@ -1238,4 +1246,74 @@ export async function goToSettings(page: Page): Promise<void> {
 /** Navigate to the Environments tab in the sidebar. */
 export async function goToEnvironments(page: Page): Promise<void> {
   await page.locator('[data-testid="sidebar-tab-environments"]').click();
+}
+
+/**
+ * Provision an environment by calling the gRPC server (HTTP/2) directly
+ * from the Node.js test context. This bypasses the browser and avoids
+ * CORS issues with cross-port requests. Polls until connected.
+ *
+ * Reads gRPC port and API key from the E2E state file.
+ */
+/**
+ * Provision an environment by calling the gRPC server (HTTP/2) directly
+ * from the Node.js test context using the http2 module. Polls until connected.
+ */
+export async function provisionEnvironmentDirect(environmentId: string): Promise<void> {
+  const { readFileSync } = await import("node:fs");
+  const http2 = await import("node:http2");
+  const { STATE_FILE } = await import("./state-file.js");
+  const state = JSON.parse(readFileSync(STATE_FILE, "utf8"));
+  const grpcUrl = `http://127.0.0.1:${state.serverPort}`;
+  const apiKey = state.apiKey;
+
+  // Fire the streaming provision RPC via HTTP/2
+  await new Promise<void>((resolve) => {
+    const client = http2.connect(grpcUrl);
+    const req = client.request({
+      ":method": "POST",
+      ":path": "/grackle.Grackle/ProvisionEnvironment",
+      "content-type": "application/json",
+      "authorization": `Bearer ${apiKey}`,
+    });
+    req.write(JSON.stringify({ id: environmentId }));
+    req.end();
+    // Consume data so the server generator runs to completion
+    req.on("data", () => {});
+    req.on("end", () => { client.close(); resolve(); });
+    req.on("error", () => { client.close(); resolve(); });
+    // Timeout safety
+    setTimeout(() => { client.close(); resolve(); }, 15_000);
+  });
+
+  // Poll via HTTP/2 until environment is connected
+  const deadline = Date.now() + 10_000;
+  while (Date.now() < deadline) {
+    const status = await new Promise<string | undefined>((resolve) => {
+      const client = http2.connect(grpcUrl);
+      const req = client.request({
+        ":method": "POST",
+        ":path": "/grackle.Grackle/ListEnvironments",
+        "content-type": "application/json",
+        "authorization": `Bearer ${apiKey}`,
+      });
+      req.write("{}");
+      req.end();
+      let body = "";
+      req.on("data", (chunk: Buffer) => { body += chunk.toString(); });
+      req.on("end", () => {
+        client.close();
+        try {
+          const data = JSON.parse(body);
+          const env = data.environments?.find((e: { id: string }) => e.id === environmentId);
+          resolve(env?.status);
+        } catch { resolve(undefined); }
+      });
+      req.on("error", () => { client.close(); resolve(undefined); });
+    });
+    if (status === "connected") {
+      return;
+    }
+    await new Promise((r) => setTimeout(r, 300));
+  }
 }

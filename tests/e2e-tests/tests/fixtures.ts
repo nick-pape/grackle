@@ -19,7 +19,7 @@ function loadState(): E2EState {
 }
 
 /** Extended Playwright test fixture that provides the Grackle API key and navigates to the app. */
-export const test = base.extend<{ grackle: { apiKey: string; baseURL: string; wsUrl: string; mcpPort: number }; appPage: Page }>({
+export const test = base.extend<{ grackle: { apiKey: string; baseURL: string; wsUrl: string; mcpPort: number; grpcPort: number }; appPage: Page }>({
   // Override Playwright's built-in baseURL so page.goto("/") resolves to the dynamic port
   baseURL: async ({}, use) => {
     const state = loadState();
@@ -43,17 +43,25 @@ export const test = base.extend<{ grackle: { apiKey: string; baseURL: string; ws
   grackle: async ({ baseURL }, use) => {
     const state = loadState();
     const wsUrl = `ws://127.0.0.1:${state.webPort}`;
-    await use({ apiKey: state.apiKey, baseURL: baseURL!, wsUrl, mcpPort: state.mcpPort });
+    await use({ apiKey: state.apiKey, baseURL: baseURL!, wsUrl, mcpPort: state.mcpPort, grpcPort: state.serverPort });
   },
 
   appPage: async ({ page }, use) => {
+    // Expose gRPC server details so test helpers can call server-streaming
+    // RPCs (like ProvisionEnvironment) on the HTTP/2 gRPC port directly.
+    const state = loadState();
+    await page.addInitScript(`
+      window.__GRACKLE_GRPC_PORT__ = ${state.serverPort};
+      window.__GRACKLE_API_KEY__ = ${JSON.stringify(state.apiKey)};
+    `);
+
     await page.goto("/");
     // Wait for the WebSocket to connect and initial data to load.
-    // "Connected" appears when WS connects; "env" appears in the StatusBar
-    // (e.g., "1/1 env") once ListEnvironments completes via ConnectRPC.
+    // "Connected" appears when WS connects; the env count appears once
+    // ListEnvironments completes via ConnectRPC.
     await page.waitForFunction(
       () => document.body.innerText.includes("Connected") &&
-            document.body.innerText.includes("env"),
+            /\d+\/\d+ env/.test(document.body.innerText),
       { timeout: 10_000 },
     );
     await use(page);

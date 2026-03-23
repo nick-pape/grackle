@@ -3,6 +3,7 @@ import {
   sendWsMessage,
   installWsTracker,
   injectWsMessage,
+  provisionEnvironmentDirect,
 } from "./helpers.js";
 
 /**
@@ -18,7 +19,7 @@ test.describe("Environment Status Broadcast + Toasts", { tag: ["@environment"] }
     await installWsTracker(page);
     await page.goto("/");
     await page.waitForFunction(
-      () => document.body.innerText.includes("Connected") && document.body.innerText.includes("env"),
+      () => document.body.innerText.includes("Connected") && /\d+\/\d+ env/.test(document.body.innerText),
       { timeout: 10_000 },
     );
 
@@ -49,7 +50,7 @@ test.describe("Environment Status Broadcast + Toasts", { tag: ["@environment"] }
     await installWsTracker(page);
     await page.goto("/");
     await page.waitForFunction(
-      () => document.body.innerText.includes("Connected") && document.body.innerText.includes("env"),
+      () => document.body.innerText.includes("Connected") && /\d+\/\d+ env/.test(document.body.innerText),
       { timeout: 10_000 },
     );
 
@@ -60,11 +61,8 @@ test.describe("Environment Status Broadcast + Toasts", { tag: ["@environment"] }
     });
     await expect(page.getByText("0/1 env")).toBeVisible({ timeout: 10_000 });
 
-    // Now re-provision
-    await sendWsMessage(page, {
-      type: "provision_environment",
-      payload: { environmentId: "test-local" },
-    });
+    // Re-provision via direct gRPC call (HTTP/2)
+    await provisionEnvironmentDirect("test-local");
 
     // StatusBar should show 1/1 again
     await expect(page.getByText("1/1 env")).toBeVisible({ timeout: 15_000 });
@@ -77,7 +75,7 @@ test.describe("Environment Status Broadcast + Toasts", { tag: ["@environment"] }
     await installWsTracker(page);
     await page.goto("/");
     await page.waitForFunction(
-      () => document.body.innerText.includes("Connected") && document.body.innerText.includes("env"),
+      () => document.body.innerText.includes("Connected") && /\d+\/\d+ env/.test(document.body.innerText),
       { timeout: 10_000 },
     );
 
