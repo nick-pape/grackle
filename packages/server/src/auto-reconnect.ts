@@ -1,7 +1,7 @@
 import { reconnectOrProvision } from "@grackle-ai/adapter-sdk";
 import * as envRegistry from "./env-registry.js";
 import * as adapterManager from "./adapter-manager.js";
-import * as tokenBroker from "./token-broker.js";
+import * as tokenPush from "./token-push.js";
 import { recoverSuspendedSessions } from "./session-recovery.js";
 import { parseAdapterConfig } from "./adapter-config.js";
 import { emit } from "./event-bus.js";
@@ -167,9 +167,9 @@ async function tryReconnect(environmentId: string): Promise<void> {
 
     // Push tokens (local environments exclude file tokens)
     if (env.adapterType === "local") {
-      await tokenBroker.pushToEnv(environmentId, { excludeFileTokens: true });
+      await tokenPush.pushToEnv(environmentId, { excludeFileTokens: true });
     } else {
-      await tokenBroker.pushToEnv(environmentId);
+      await tokenPush.pushToEnv(environmentId);
     }
 
     envRegistry.updateEnvironmentStatus(environmentId, "connected");

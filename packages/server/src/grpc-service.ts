@@ -10,7 +10,8 @@ import * as sessionStore from "./session-store.js";
 import * as adapterManager from "./adapter-manager.js";
 import { reconnectOrProvision } from "@grackle-ai/adapter-sdk";
 import * as streamHub from "./stream-hub.js";
-import * as tokenBroker from "./token-broker.js";
+import * as tokenStore from "./token-store.js";
+import * as tokenPush from "./token-push.js";
 import * as workspaceStore from "./workspace-store.js";
 import * as taskStore from "./task-store.js";
 import * as findingStore from "./finding-store.js";
@@ -505,7 +506,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         const conn = await adapter.connect(req.id, config, powerlineToken);
         adapterManager.setConnection(req.id, conn);
         // Push stored tokens to newly connected environment
-        await tokenBroker.pushToEnv(req.id);
+        await tokenPush.pushToEnv(req.id);
         envRegistry.updateEnvironmentStatus(req.id, "connected");
         envRegistry.markBootstrapped(req.id);
         emit("environment.changed", {});
@@ -671,7 +672,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
 
       // Push fresh credentials before spawning (best-effort).
       // For local envs, skip file tokens — the PowerLine is on the same machine.
-      await tokenBroker.refreshTokensForTask(req.environmentId, runtime,
+      await tokenPush.refreshTokensForTask(req.environmentId, runtime,
         env.adapterType === "local" ? { excludeFileTokens: true } : undefined);
 
       processEventStream(conn.client.spawn(powerlineReq), {
@@ -1052,7 +1053,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       if (!req.value) {
         throw new ConnectError("value is required", Code.InvalidArgument);
       }
-      await tokenBroker.setToken({
+      tokenStore.setToken({
         name: req.name,
         type: req.type,
         envVar: req.envVar,
@@ -1061,11 +1062,12 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         expiresAt: req.expiresAt,
       });
       emit("token.changed", {});
+      await tokenPush.pushToAll();
       return create(grackle.EmptySchema, {});
     },
 
     async listTokens() {
-      const items = tokenBroker.listTokens();
+      const items = tokenStore.listTokens();
       return create(grackle.TokenListSchema, {
         tokens: items.map((t) =>
           create(grackle.TokenInfoSchema, {
@@ -1083,8 +1085,9 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       if (!req.name) {
         throw new ConnectError("name is required", Code.InvalidArgument);
       }
-      await tokenBroker.deleteToken(req.name);
+      tokenStore.deleteToken(req.name);
       emit("token.changed", {});
+      await tokenPush.pushToAll();
       return create(grackle.EmptySchema, {});
     },
 
@@ -1455,7 +1458,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
 
       // Re-push stored tokens + provider credentials (scoped to runtime) so they're fresh for this session.
       // For local envs, skip file tokens — the PowerLine is on the same machine.
-      await tokenBroker.refreshTokensForTask(environmentId, runtime,
+      await tokenPush.refreshTokensForTask(environmentId, runtime,
         env?.adapterType === "local" ? { excludeFileTokens: true } : undefined);
 
       const mcpServersJson = personaMcpServersToJson(persona);

@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Mon, 23 Mar 2026 06:41:40 GMT and should not be manually modified.
+This log was last generated on Mon, 23 Mar 2026 07:13:27 GMT and should not be manually modified.
+
+## 0.72.0
+Mon, 23 Mar 2026 07:13:27 GMT
+
+### Minor changes
+
+- Collapse session terminal states (COMPLETED/FAILED/INTERRUPTED/HIBERNATING) into STOPPED + endReason. Add KillRequest with reason to PowerLine protocol. Simplify task status derivation.
 
 ## 0.71.3
 Mon, 23 Mar 2026 06:41:40 GMT
