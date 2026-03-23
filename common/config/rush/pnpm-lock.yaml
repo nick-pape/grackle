@@ -416,9 +416,6 @@ importers:
 
   ../../packages/prompt:
     dependencies:
-      '@grackle-ai/common':
-        specifier: workspace:*
-        version: link:../common
       '@grackle-ai/database':
         specifier: workspace:*
         version: link:../database

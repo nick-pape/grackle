@@ -22,7 +22,6 @@
     "_phase:test": "vitest run"
   },
   "dependencies": {
-    "@grackle-ai/common": "workspace:*",
     "@grackle-ai/database": "workspace:*"
   },
   "devDependencies": {

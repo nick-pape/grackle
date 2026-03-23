@@ -120,9 +120,11 @@ vi.mock("@grackle-ai/adapter-sdk", async (importOriginal) => ({
   reconnectOrProvision: vi.fn(async function* () {}),
 }));
 
-vi.mock("./system-prompt-builder.js", () => ({
+vi.mock("@grackle-ai/prompt", () => ({
   SystemPromptBuilder: vi.fn().mockImplementation(() => ({ build: () => "" })),
   buildTaskPrompt: vi.fn((title: string) => title),
+  resolvePersona: vi.fn(() => ({ personaId: "p1", runtime: "claude-code", model: "sonnet", maxTurns: 0, systemPrompt: "", toolConfig: "{}", mcpServers: "[]", type: "agent", script: "", persona: {} })),
+  fetchOrchestratorContext: vi.fn(() => undefined),
 }));
 
 vi.mock("./utils/slugify.js", () => ({
