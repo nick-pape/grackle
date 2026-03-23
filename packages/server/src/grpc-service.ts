@@ -1039,6 +1039,12 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
     },
 
     async setToken(req: grackle.TokenEntry) {
+      if (!req.name) {
+        throw new ConnectError("name is required", Code.InvalidArgument);
+      }
+      if (!req.value) {
+        throw new ConnectError("value is required", Code.InvalidArgument);
+      }
       await tokenBroker.setToken({
         name: req.name,
         type: req.type,
@@ -1067,6 +1073,9 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
     },
 
     async deleteToken(req: grackle.TokenName) {
+      if (!req.name) {
+        throw new ConnectError("name is required", Code.InvalidArgument);
+      }
       await tokenBroker.deleteToken(req.name);
       emit("token.changed", {});
       return create(grackle.EmptySchema, {});
