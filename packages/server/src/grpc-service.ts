@@ -864,24 +864,11 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         throw new ConnectError(`Session not found: ${req.id}`, Code.NotFound);
       }
 
-      // Delete the lifecycle stream FIRST — this triggers auto-stop via
-      // the orphan callback (which also kills the PowerLine process).
-      // Must happen before any direct kill to avoid a race where the event
-      // processor marks the session terminal before the orphan fires.
-      cleanupLifecycleStream(req.id);
-
-      // Also close any other subscriptions (pipe streams etc.)
-      const subs = streamRegistry.getSubscriptionsForSession(req.id);
-      for (const sub of subs) {
-        streamRegistry.unsubscribe(sub.id);
-      }
-
-      // Fallback for legacy sessions without lifecycle streams.
-      // Check current status — orphan callback may have already set STOPPED
-      // via lifecycle stream deletion or pipe subscription removal.
-      const currentSession = sessionStore.getSession(req.id);
-      const alreadyTerminal = currentSession && TERMINAL_SESSION_STATUSES.has(currentSession.status as SessionStatus);
-      if (!alreadyTerminal && currentSession) {
+      // Set STOPPED + killed BEFORE closing the lifecycle FD so the orphan
+      // callback sees the session is already terminal and skips. Without this,
+      // the orphan callback would see IDLE → reason="completed", which is wrong
+      // for an explicit kill.
+      if (!TERMINAL_SESSION_STATUSES.has(session.status as SessionStatus)) {
         sessionStore.updateSession(req.id, SESSION_STATUS.STOPPED, undefined, undefined, END_REASON.KILLED);
         streamHub.publish(
           create(grackle.SessionEventSchema, {
@@ -898,6 +885,16 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
             emit("task.updated", { taskId: task.id, workspaceId: task.workspaceId || "" });
           }
         }
+      }
+
+      // Delete the lifecycle stream — orphan callback sees session is already
+      // STOPPED and skips status change, but still kills the PowerLine process.
+      cleanupLifecycleStream(req.id);
+
+      // Also close any other subscriptions (pipe streams etc.)
+      const subs = streamRegistry.getSubscriptionsForSession(req.id);
+      for (const sub of subs) {
+        streamRegistry.unsubscribe(sub.id);
       }
 
       return create(grackle.EmptySchema, {});

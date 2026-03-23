@@ -480,28 +480,9 @@ async function terminateSession(sessionId: string): Promise<void> {
     return;
   }
 
-  // 1. Delete lifecycle stream → triggers orphan callback → auto-stop
-  cleanupLifecycleStream(sessionId);
-
-  // 2. Close other subscriptions (pipe streams etc.)
-  const subs = streamRegistry.getSubscriptionsForSession(sessionId);
-  for (const sub of subs) {
-    streamRegistry.unsubscribe(sub.id);
-  }
-
-  // 3. Fallback for legacy sessions without lifecycle streams
-  const current = sessionStore.getSession(sessionId);
-  if (current && !TERMINAL_SESSION_STATUSES.has(current.status as SessionStatus)) {
-    const conn = adapterManager.getConnection(session.environmentId);
-    if (conn) {
-      try {
-        await conn.client.kill(
-          create(powerline.KillRequestSchema, { id: sessionId, reason: END_REASON.KILLED }),
-        );
-      } catch (err) {
-        logger.warn({ sessionId, err }, "PowerLine kill failed during session termination");
-      }
-    }
+  // 1. Set STOPPED + killed BEFORE closing the lifecycle FD so the orphan
+  //    callback sees the session is already terminal and skips.
+  if (!TERMINAL_SESSION_STATUSES.has(session.status as SessionStatus)) {
     sessionStore.updateSession(sessionId, SESSION_STATUS.STOPPED, undefined, undefined, END_REASON.KILLED);
     streamHub.publish(
       create(grackle.SessionEventSchema, {
@@ -518,6 +499,16 @@ async function terminateSession(sessionId: string): Promise<void> {
         emit("task.updated", { taskId: task.id, workspaceId: task.workspaceId || "" });
       }
     }
+  }
+
+  // 2. Delete lifecycle stream — orphan callback sees session is already
+  //    STOPPED and skips status change, but still kills the PowerLine process.
+  cleanupLifecycleStream(sessionId);
+
+  // 3. Close other subscriptions (pipe streams etc.)
+  const subs = streamRegistry.getSubscriptionsForSession(sessionId);
+  for (const sub of subs) {
+    streamRegistry.unsubscribe(sub.id);
   }
 }
 
