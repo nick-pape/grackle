@@ -1,7 +1,7 @@
 {
   "changes": [
     {
-      "comment": "Extract HTTP web server (static files, pairing, OAuth, ConnectRPC proxy) into @grackle-ai/web-server",
+      "comment": "Move 35 WebSocket API tests from Playwright E2E to server-side Vitest integration tests",
       "type": "patch",
       "packageName": "@grackle-ai/cli"
     }
