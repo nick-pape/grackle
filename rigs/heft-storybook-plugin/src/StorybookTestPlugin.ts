@@ -1,5 +1,4 @@
 import { execFileSync, spawn, type ChildProcess } from "child_process";
-import * as fs from "fs";
 import * as path from "path";
 import * as net from "net";
 import type {
@@ -58,9 +57,6 @@ class StorybookTestPlugin implements IHeftTaskPlugin {
       const httpServerBin: string = path.join(buildFolder, "node_modules", ".bin", isWindows ? "http-server.cmd" : "http-server");
       const testStorybookBin: string = path.join(buildFolder, "node_modules", ".bin", isWindows ? "test-storybook.cmd" : "test-storybook");
 
-      const port: number = await findFreePort();
-      session.logger.terminal.writeLine(`Starting Storybook static server on port ${port}...`);
-
       const suppressWarningsEnv: NodeJS.ProcessEnv = {
         ...process.env,
         STORYBOOK_DISABLE_TELEMETRY: "1",
@@ -68,30 +64,58 @@ class StorybookTestPlugin implements IHeftTaskPlugin {
         NODE_NO_WARNINGS: "1",
       };
 
+      const port: number = await findFreePort();
+      session.logger.terminal.writeLine(`Starting Storybook static server on port ${port}...`);
+
+      // Spawn http-server with piped stdio so we can capture errors
       const server: ChildProcess = spawn(
         httpServerBin,
         [staticDir, "--port", String(port), "--silent"],
-        { cwd: buildFolder, stdio: "ignore", shell: isWindows, env: suppressWarningsEnv },
+        { cwd: buildFolder, stdio: "pipe", shell: isWindows, env: suppressWarningsEnv },
       );
 
+      // Collect stderr for diagnostics if server fails
+      let serverStderr: string = "";
+      server.stderr?.on("data", (chunk: Buffer) => { serverStderr += chunk.toString(); });
+
+      // Fail fast if the server exits unexpectedly before tests run
+      let serverExited: boolean = false;
+      server.on("exit", (code: number | null) => {
+        serverExited = true;
+        if (code !== null && code !== 0) {
+          session.logger.terminal.writeErrorLine(`http-server exited with code ${code}: ${serverStderr}`);
+        }
+      });
+      server.on("error", (err: Error) => {
+        session.logger.terminal.writeErrorLine(`http-server spawn error: ${err.message}`);
+      });
+
       try {
+        // Check server didn't already crash
+        if (serverExited) {
+          throw new Error(`http-server exited before accepting connections: ${serverStderr}`);
+        }
+
         await waitForPort(port, SERVER_READY_TIMEOUT_MS);
         session.logger.terminal.writeLine("Storybook server ready. Running interaction tests...");
 
-        // Jest (used by test-storybook) writes test results to stderr, which
-        // heft interprets as warnings — causing rush to exit 1 even when all
-        // tests pass. Pipe stderr to devNull; stdout still shows results.
-        const isWin: boolean = process.platform === "win32";
-        const devNull: number = fs.openSync(isWin ? "NUL" : "/dev/null", "w");
+        // Run test-storybook — capture stderr so heft doesn't treat Jest
+        // output as warnings (causing rush to exit 1). On failure, the
+        // captured stderr is printed for debugging.
         try {
           execFileSync(testStorybookBin, ["--url", `http://127.0.0.1:${port}`], {
             cwd: buildFolder,
-            stdio: ["ignore", "inherit", devNull],
+            stdio: ["ignore", "inherit", "pipe"],
             shell: isWindows,
             env: suppressWarningsEnv,
           });
-        } finally {
-          fs.closeSync(devNull);
+        } catch (err: unknown) {
+          // execFileSync throws on non-zero exit — print captured stderr
+          const execErr: { stderr?: Buffer } = err as { stderr?: Buffer };
+          if (execErr.stderr && execErr.stderr.length > 0) {
+            session.logger.terminal.writeErrorLine(execErr.stderr.toString());
+          }
+          throw err;
         }
 
         session.logger.terminal.writeLine("Storybook interaction tests completed.");
