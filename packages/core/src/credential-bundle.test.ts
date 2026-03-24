@@ -4,7 +4,6 @@
  * caching behavior.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { create } from "@bufbuild/protobuf";
 import { powerline } from "@grackle-ai/common";
 
 // ── Mock dependencies before importing module under test ──────────────
