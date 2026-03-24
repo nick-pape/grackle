@@ -134,10 +134,10 @@ test.describe("Error States", { tag: ["@error"] }, () => {
   test("create_workspace with empty name returns error", async ({ appPage }) => {
     const page = appPage;
 
-    const error = await sendWsAndWaitFor(page, {
+    const error = await sendWsAndWaitForError(page, {
       type: "create_workspace",
       payload: { name: "" },
-    }, "create_workspace_error");
+    });
 
     expect(error.payload?.message).toContain("required");
   });
