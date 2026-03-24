@@ -107,7 +107,7 @@ export function registerPowerLineRoutes(router: ConnectRouter): void {
         model: req.model,
         maxTurns: req.maxTurns,
         branch: req.branch || undefined,
-        worktreeBasePath: req.worktreeBasePath || undefined,
+        workingDirectory: req.workingDirectory || undefined,
         useWorktrees: req.useWorktrees ?? undefined,
         systemContext: req.systemContext || undefined,
         workspaceId: req.workspaceId || undefined,
@@ -193,8 +193,8 @@ export function registerPowerLineRoutes(router: ConnectRouter): void {
     },
 
     async cleanupWorktree(req: powerline.WorktreeCleanupRequest) {
-      if (req.branch && req.worktreeBasePath) {
-        await removeWorktree(req.worktreeBasePath, req.branch);
+      if (req.branch && req.workingDirectory) {
+        await removeWorktree(req.workingDirectory, req.branch);
       }
       return create(powerline.EmptySchema, {});
     },

@@ -170,7 +170,7 @@ type CreateWorkspaceRequest = Message<"grackle.CreateWorkspaceRequest"> & {
     description: string;
     repoUrl: string;
     useWorktrees?: boolean;
-    worktreeBasePath?: string;
+    workingDirectory?: string;
     defaultPersonaId?: string;
     environmentId: string;
 };
@@ -1436,7 +1436,7 @@ type SpawnRequest = Message<"grackle.SpawnRequest"> & {
     branch: string;
     systemContext: string;
     personaId: string;
-    worktreeBasePath: string;
+    workingDirectory: string;
     pipe: string;
     parentSessionId: string;
 };
@@ -1449,7 +1449,7 @@ type SpawnRequest_2 = Message<"grackle.powerline.SpawnRequest"> & {
     model: string;
     maxTurns: number;
     branch: string;
-    worktreeBasePath: string;
+    workingDirectory: string;
     systemContext: string;
     workspaceId?: string;
     taskId: string;
@@ -1683,7 +1683,7 @@ type UpdateWorkspaceRequest = Message<"grackle.UpdateWorkspaceRequest"> & {
     description?: string;
     repoUrl?: string;
     useWorktrees?: boolean;
-    worktreeBasePath?: string;
+    workingDirectory?: string;
     defaultPersonaId?: string;
     environmentId?: string;
 };
@@ -1730,7 +1730,7 @@ type Workspace = Message<"grackle.Workspace"> & {
     createdAt: string;
     updatedAt: string;
     useWorktrees: boolean;
-    worktreeBasePath: string;
+    workingDirectory: string;
     defaultPersonaId: string;
     environmentId: string;
 };
@@ -1773,7 +1773,7 @@ export function workspaceStatusToString(e: WorkspaceStatus): string;
 // @public
 type WorktreeCleanupRequest = Message<"grackle.powerline.WorktreeCleanupRequest"> & {
     branch: string;
-    worktreeBasePath: string;
+    workingDirectory: string;
 };
 
 // @public

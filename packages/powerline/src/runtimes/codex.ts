@@ -98,7 +98,7 @@ class CodexSession extends BaseAgentSession {
     // ── Resolve working directory ──
     const workingDirectory = await resolveWorkingDirectory({
       branch: this.branch,
-      worktreeBasePath: this.worktreeBasePath,
+      workingDirectory: this.workingDirectory,
       useWorktrees: this.useWorktrees,
       eventQueue: this.eventQueue,
     });
@@ -438,13 +438,13 @@ export class CodexRuntime extends BaseAgentRuntime {
     maxTurns: number,
     resumeSessionId?: string,
     branch?: string,
-    worktreeBasePath?: string,
+    workingDirectory?: string,
     systemContext?: string,
     mcpServers?: Record<string, unknown>,
     _hooks?: Record<string, unknown>, // Hooks not supported by Codex SDK — accepted for interface compatibility
     mcpBroker?: { url: string; token: string },
     useWorktrees?: boolean,
   ): AgentSession {
-    return new CodexSession(id, prompt, model, maxTurns, resumeSessionId, branch, worktreeBasePath, systemContext, mcpServers, undefined, mcpBroker, useWorktrees);
+    return new CodexSession(id, prompt, model, maxTurns, resumeSessionId, branch, workingDirectory, systemContext, mcpServers, undefined, mcpBroker, useWorktrees);
   }
 }

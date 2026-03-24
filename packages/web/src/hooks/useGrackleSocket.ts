@@ -71,7 +71,7 @@ export interface UseGrackleSocketResult {
     environmentId: string,
     prompt: string,
     personaId?: string,
-    worktreeBasePath?: string,
+    workingDirectory?: string,
   ) => void;
   sendInput: (sessionId: string, text: string) => void;
   kill: (sessionId: string) => void;
@@ -87,7 +87,7 @@ export interface UseGrackleSocketResult {
     environmentId?: string,
     defaultPersonaId?: string,
     useWorktrees?: boolean,
-    worktreeBasePath?: string,
+    workingDirectory?: string,
     onSuccess?: () => void,
     onError?: (message: string) => void,
   ) => void;
@@ -99,7 +99,7 @@ export interface UseGrackleSocketResult {
       description?: string;
       repoUrl?: string;
       environmentId?: string;
-      worktreeBasePath?: string;
+      workingDirectory?: string;
       useWorktrees?: boolean;
       defaultPersonaId?: string;
     },

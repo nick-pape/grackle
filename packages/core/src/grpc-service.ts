@@ -159,7 +159,7 @@ function workspaceRowToProto(row: workspaceStore.WorkspaceRow): grackle.Workspac
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
     useWorktrees: row.useWorktrees,
-    worktreeBasePath: row.worktreeBasePath,
+    workingDirectory: row.workingDirectory,
     defaultPersonaId: row.defaultPersonaId,
   });
 }
@@ -685,8 +685,8 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         model,
         maxTurns,
         branch: req.branch,
-        worktreeBasePath: req.branch
-          ? (req.worktreeBasePath.trim() || process.env.GRACKLE_WORKTREE_BASE || "/workspace")
+        workingDirectory: req.branch
+          ? (req.workingDirectory.trim() || process.env.GRACKLE_WORKING_DIRECTORY || process.env.GRACKLE_WORKTREE_BASE || "/workspace")
           : "",
         systemContext,
         mcpServersJson,
@@ -1226,7 +1226,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         req.repoUrl,
         req.environmentId,
         useWorktrees,
-        req.worktreeBasePath ?? "",
+        req.workingDirectory ?? "",
         req.defaultPersonaId ?? "",
       );
       emit("workspace.created", { workspaceId: id });
@@ -1269,7 +1269,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         repoUrl: req.repoUrl,
         environmentId: req.environmentId,
         useWorktrees: req.useWorktrees ?? undefined,
-        worktreeBasePath: req.worktreeBasePath,
+        workingDirectory: req.workingDirectory,
         defaultPersonaId: req.defaultPersonaId,
       });
       if (!row) {
@@ -1540,8 +1540,8 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         model,
         maxTurns,
         branch: task.branch,
-        worktreeBasePath: task.branch
-          ? (workspace?.worktreeBasePath || process.env.GRACKLE_WORKTREE_BASE || "/workspace")
+        workingDirectory: task.branch
+          ? (workspace?.workingDirectory || process.env.GRACKLE_WORKTREE_BASE || "/workspace")
           : "",
         useWorktrees,
         systemContext,
