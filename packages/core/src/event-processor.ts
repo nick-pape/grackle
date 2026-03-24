@@ -331,11 +331,11 @@ export function processEventStream(
             cleanupLifecycleStream(sessionId);
           }
 
-          // On terminal status: publish child completion to IPC pipe stream.
-          // Note: lifecycle streams are NOT cleaned up here — they persist until
-          // the spawner explicitly closes the fd (killAgent, closeFd). This is the
-          // emergent lifecycle model: fd closure drives hibernation, not status events.
-          if (["completed", "killed", "failed"].includes(event.content)) {
+          // On terminal status (or idle for sync pipes): publish child completion
+          // to IPC pipe stream. `waiting_input` is included so that sync pipes
+          // unblock when a child goes idle without calling task_complete (#824).
+          // publishChildCompletion internally skips waiting_input for async pipes.
+          if (["completed", "killed", "failed", "waiting_input"].includes(event.content)) {
             publishChildCompletion(sessionId, event.content);
           }
 

@@ -847,16 +847,15 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         );
       }
 
-      // Use try/finally so the pipe stream is cleaned up even if consumeSync rejects
-      // (e.g., the request is cancelled or times out) to prevent unbounded memory growth.
+      // Use try/finally so the pipe stream (and lifecycle stream) are cleaned up
+      // even if consumeSync rejects (e.g., the request is cancelled or times out)
+      // to prevent unbounded memory growth. Lifecycle cleanup also orphans the child,
+      // triggering auto-stop so it doesn't linger in waiting_input (#824).
       let msg: Awaited<ReturnType<typeof streamRegistry.consumeSync>>;
       try {
         msg = await streamRegistry.consumeSync(sub.id);
       } finally {
-        const stream = streamRegistry.getStream(sub.streamId);
-        if (stream) {
-          streamRegistry.deleteStream(sub.streamId);
-        }
+        pipeDelivery.cleanupSyncPipeAndLifecycle(sub.streamId);
       }
 
       return create(grackle.WaitForPipeResponseSchema, {

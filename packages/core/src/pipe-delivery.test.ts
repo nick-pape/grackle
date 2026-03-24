@@ -228,6 +228,104 @@ describe("pipe-delivery integration", () => {
     });
   });
 
+  // ─── Sync Pipe: waiting_input (idle) delivery (#824) ───────
+
+  describe("sync pipe: waiting_input triggers delivery", () => {
+    it("unblocks consumeSync with idle completion message", async () => {
+      sessionStore.createSession("parent", "test-env", "claude-code", "p", "sonnet", "/tmp/p");
+      sessionStore.createSession("child", "test-env", "claude-code", "c", "sonnet", "/tmp/c", "", "", "parent", "sync");
+
+      const stream = streamRegistry.createStream("pipe:child");
+      const parentSub = streamRegistry.subscribe(stream.id, "parent", "rw", "sync", true);
+      streamRegistry.subscribe(stream.id, "child", "rw", "async", false);
+
+      // Start blocking consume
+      const consumePromise = streamRegistry.consumeSync(parentSub.id);
+
+      // Trigger child idle (should publish to stream, unblocking consumeSync)
+      pipeDelivery.publishChildCompletion("child", "waiting_input");
+
+      const msg = await consumePromise;
+      expect(msg.content).toContain("finished (idle)");
+      expect(msg.content).toContain("Child's final output");
+    });
+
+    it("does NOT clean up stream (waitForPipe handles that)", () => {
+      sessionStore.createSession("parent", "test-env", "claude-code", "p", "sonnet", "/tmp/p");
+      sessionStore.createSession("child", "test-env", "claude-code", "c", "sonnet", "/tmp/c", "", "", "parent", "sync");
+
+      const stream = streamRegistry.createStream("pipe:child");
+      streamRegistry.subscribe(stream.id, "parent", "rw", "sync", true);
+      streamRegistry.subscribe(stream.id, "child", "rw", "async", false);
+
+      pipeDelivery.publishChildCompletion("child", "waiting_input");
+
+      // Stream should still exist (sync cleanup is consumer's responsibility)
+      expect(streamRegistry.getStreamByName("pipe:child")).toBeDefined();
+    });
+  });
+
+  describe("async pipe: waiting_input is a no-op", () => {
+    it("does not deliver or clean up on waiting_input", () => {
+      sessionStore.createSession("parent", "test-env", "claude-code", "p", "sonnet", "/tmp/p");
+      sessionStore.createSession("child", "test-env", "claude-code", "c", "sonnet", "/tmp/c", "", "", "parent", "async");
+
+      const stream = streamRegistry.createStream("pipe:child");
+      streamRegistry.subscribe(stream.id, "parent", "rw", "async", true);
+      streamRegistry.subscribe(stream.id, "child", "rw", "async", false);
+      pipeDelivery.setupAsyncPipeDelivery("parent");
+
+      pipeDelivery.publishChildCompletion("child", "waiting_input");
+
+      // Async pipe should ignore waiting_input — child can still accept input
+      expect(mockSendInput).not.toHaveBeenCalled();
+      expect(streamRegistry.getStreamByName("pipe:child")).toBeDefined();
+    });
+  });
+
+  // ─── Sync Pipe Lifecycle Cleanup (#824 Part B) ────────────
+
+  describe("cleanupSyncPipeAndLifecycle", () => {
+    it("deletes both pipe and lifecycle streams", () => {
+      sessionStore.createSession("parent", "test-env", "claude-code", "p", "sonnet", "/tmp/p");
+      sessionStore.createSession("child", "test-env", "claude-code", "c", "sonnet", "/tmp/c", "", "", "parent", "sync");
+
+      // Create both streams (mimics spawnAgent)
+      const lifecycleStream = streamRegistry.createStream("lifecycle:child");
+      streamRegistry.subscribe(lifecycleStream.id, "parent", "rw", "detach", true);
+      streamRegistry.subscribe(lifecycleStream.id, "child", "rw", "detach", false);
+
+      const pipeStream = streamRegistry.createStream("pipe:child");
+      streamRegistry.subscribe(pipeStream.id, "parent", "rw", "sync", true);
+      streamRegistry.subscribe(pipeStream.id, "child", "rw", "async", false);
+
+      pipeDelivery.cleanupSyncPipeAndLifecycle(pipeStream.id);
+
+      expect(streamRegistry.getStreamByName("pipe:child")).toBeUndefined();
+      expect(streamRegistry.getStreamByName("lifecycle:child")).toBeUndefined();
+    });
+
+    it("handles missing lifecycle stream gracefully", () => {
+      sessionStore.createSession("parent", "test-env", "claude-code", "p", "sonnet", "/tmp/p");
+      sessionStore.createSession("child", "test-env", "claude-code", "c", "sonnet", "/tmp/c", "", "", "parent", "sync");
+
+      // Only pipe stream, no lifecycle stream
+      const pipeStream = streamRegistry.createStream("pipe:child");
+      streamRegistry.subscribe(pipeStream.id, "parent", "rw", "sync", true);
+      streamRegistry.subscribe(pipeStream.id, "child", "rw", "async", false);
+
+      // Should not throw
+      pipeDelivery.cleanupSyncPipeAndLifecycle(pipeStream.id);
+
+      expect(streamRegistry.getStreamByName("pipe:child")).toBeUndefined();
+    });
+
+    it("is a no-op for nonexistent stream", () => {
+      // Should not throw
+      pipeDelivery.cleanupSyncPipeAndLifecycle("nonexistent-id");
+    });
+  });
+
   // ─── No-ops ────────────────────────────────────────────────
 
   describe("no-op cases", () => {
