@@ -118,7 +118,7 @@ Manage AI agent sessions — spawn, monitor, interact, and terminate.
 
 | Tool | Description | Parameters |
 |------|-------------|------------|
-| `session_spawn` | Spawn a new agent session with a prompt and optional model config. | `environmentId` (string), `prompt` (string), `maxTurns?` (int), `personaId?` (string), `worktreeBasePath?` (string) |
+| `session_spawn` | Spawn a new agent session with a prompt and optional model config. | `environmentId` (string), `prompt` (string), `maxTurns?` (int), `personaId?` (string), `workingDirectory?` (string) |
 | `session_resume` | Resume a stopped agent session. | `sessionId` (string) |
 | `session_status` | List sessions with optional filtering by environment and status. | `environmentId?` (string), `all?` (boolean, default false) |
 | `session_kill` | Terminate a running session immediately. | `sessionId` (string) |
@@ -132,9 +132,9 @@ Manage workspaces that group tasks, agents, and repositories.
 | Tool | Description | Parameters |
 |------|-------------|------------|
 | `workspace_list` | List all workspaces with names, descriptions, repos, and status. | `environmentId?` (string) |
-| `workspace_create` | Create a new workspace. | `name` (string), `environmentId` (string), `description?` (string), `repoUrl?` (string), `worktreeBasePath?` (string), `useWorktrees?` (boolean), `defaultPersonaId?` (string) |
+| `workspace_create` | Create a new workspace. | `name` (string), `environmentId` (string), `description?` (string), `repoUrl?` (string), `workingDirectory?` (string), `useWorktrees?` (boolean), `defaultPersonaId?` (string) |
 | `workspace_get` | Get full details of a workspace by ID. | `workspaceId` (string) |
-| `workspace_update` | Update a workspace's name, description, repo, or settings. | `workspaceId` (string), `name?`, `description?`, `repoUrl?`, `environmentId?`, `worktreeBasePath?`, `useWorktrees?`, `defaultPersonaId?` |
+| `workspace_update` | Update a workspace's name, description, repo, or settings. | `workspaceId` (string), `name?`, `description?`, `repoUrl?`, `environmentId?`, `workingDirectory?`, `useWorktrees?`, `defaultPersonaId?` |
 | `workspace_archive` | Archive a workspace, marking it as inactive. | `workspaceId` (string) |
 
 ### Task Tools

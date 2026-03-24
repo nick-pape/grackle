@@ -10,7 +10,7 @@ function makeWorkspace(id: string, name: string, environmentId: string = "env-1"
     repoUrl: "",
     environmentId,
     status: "active",
-    worktreeBasePath: "",
+    workingDirectory: "",
     useWorktrees: true,
     defaultPersonaId: "",
     createdAt: "",

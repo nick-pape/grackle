@@ -20,7 +20,7 @@ function applySchema(): void {
       environment_id    TEXT NOT NULL DEFAULT '',
       status            TEXT NOT NULL DEFAULT 'active',
       use_worktrees     INTEGER NOT NULL DEFAULT 1,
-      worktree_base_path TEXT NOT NULL DEFAULT '',
+      working_directory TEXT NOT NULL DEFAULT '',
       default_persona_id TEXT NOT NULL DEFAULT '',
       created_at        TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at        TEXT NOT NULL DEFAULT (datetime('now'))
@@ -196,37 +196,37 @@ describe("workspace-store", () => {
     });
   });
 
-  // UT-1 through UT-4: worktreeBasePath field
-  describe("worktreeBasePath", () => {
-    it("creates workspace with worktreeBasePath set", () => {
+  // UT-1 through UT-4: workingDirectory field
+  describe("workingDirectory", () => {
+    it("creates workspace with workingDirectory set", () => {
       workspaceStore.createWorkspace("p1", "Name", "", "", "", true, "/workspaces/odsp-web");
       const p = workspaceStore.getWorkspace("p1");
       expect(p).toBeDefined();
-      expect(p!.worktreeBasePath).toBe("/workspaces/odsp-web");
+      expect(p!.workingDirectory).toBe("/workspaces/odsp-web");
     });
 
-    it("defaults worktreeBasePath to empty string when not specified", () => {
+    it("defaults workingDirectory to empty string when not specified", () => {
       workspaceStore.createWorkspace("p1", "Name", "", "", "");
       const p = workspaceStore.getWorkspace("p1");
-      expect(p!.worktreeBasePath).toBe("");
+      expect(p!.workingDirectory).toBe("");
     });
 
-    it("updates worktreeBasePath", () => {
+    it("updates workingDirectory", () => {
       workspaceStore.createWorkspace("p1", "Name", "", "", "");
-      const updated = workspaceStore.updateWorkspace("p1", { worktreeBasePath: "/workspaces/my-repo" });
-      expect(updated!.worktreeBasePath).toBe("/workspaces/my-repo");
+      const updated = workspaceStore.updateWorkspace("p1", { workingDirectory: "/workspaces/my-repo" });
+      expect(updated!.workingDirectory).toBe("/workspaces/my-repo");
     });
 
-    it("leaves worktreeBasePath unchanged when not in patch", () => {
+    it("leaves workingDirectory unchanged when not in patch", () => {
       workspaceStore.createWorkspace("p1", "Name", "", "", "", true, "/workspaces/foo");
       const updated = workspaceStore.updateWorkspace("p1", { name: "New Name" });
-      expect(updated!.worktreeBasePath).toBe("/workspaces/foo");
+      expect(updated!.workingDirectory).toBe("/workspaces/foo");
     });
 
-    it("clears worktreeBasePath with empty string", () => {
+    it("clears workingDirectory with empty string", () => {
       workspaceStore.createWorkspace("p1", "Name", "", "", "", true, "/workspaces/foo");
-      const updated = workspaceStore.updateWorkspace("p1", { worktreeBasePath: "" });
-      expect(updated!.worktreeBasePath).toBe("");
+      const updated = workspaceStore.updateWorkspace("p1", { workingDirectory: "" });
+      expect(updated!.workingDirectory).toBe("");
     });
   });
 });

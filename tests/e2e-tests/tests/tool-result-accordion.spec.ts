@@ -106,50 +106,7 @@ test.describe("Tool result preview and accordion (#303)", { tag: ["@webui"] }, (
     );
   });
 
-  test("multi-line result (>5 lines) shows toggle and expands/collapses", async ({ page }) => {
-    await setupSessionView(page);
-
-    // 8 lines — exceeds PREVIEW_LINES=5
-    const multiLineContent = Array.from(
-      { length: 8 },
-      (_, i) => `Line ${i + 1} of output`,
-    ).join("\n");
-
-    await injectToolResult(page, multiLineContent);
-
-    const lastPre = page.locator('[class*="toolResultPre"]').last();
-    await expect(lastPre).toBeVisible({ timeout: 5_000 });
-
-    // Toggle chevron must be present
-    const toggle = page.locator('[class*="toolResultToggle"]').last();
-    await expect(toggle).toBeVisible();
-
-    // Preview shows lines 1–5 but NOT line 6
-    await expect(lastPre).toContainText("Line 5 of output");
-    await expect(lastPre).not.toContainText("Line 6 of output");
-
-    // Ellipsis hint visible when collapsed
-    await expect(
-      page.locator('[class*="toolResultEllipsis"]').last(),
-    ).toBeVisible();
-
-    // Expand — all 8 lines should now be visible
-    const headerButton = page
-      .locator('[class*="toolResultHeader"]:is(button)')
-      .last();
-    await headerButton.click();
-    await expect(lastPre).toContainText("Line 6 of output");
-    await expect(lastPre).toContainText("Line 8 of output");
-
-    // Ellipsis disappears when expanded
-    await expect(
-      page.locator('[class*="toolResultEllipsis"]').last(),
-    ).not.toBeVisible();
-
-    // Collapse — line 6 disappears again
-    await headerButton.click();
-    await expect(lastPre).not.toContainText("Line 6 of output");
-  });
+  // "multi-line result expand/collapse" removed — covered by EventRenderer.stories.tsx (MultiLineExpandCollapse).
 
   test("success indicator used when raw field has is_error=false", async ({ page }) => {
     await setupSessionView(page);

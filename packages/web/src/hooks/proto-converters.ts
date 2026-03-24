@@ -80,7 +80,7 @@ export function protoToWorkspace(p: grackle.Workspace): Workspace {
     repoUrl: p.repoUrl,
     environmentId: p.environmentId,
     status: workspaceStatusToString(p.status),
-    worktreeBasePath: p.worktreeBasePath,
+    workingDirectory: p.workingDirectory,
     useWorktrees: p.useWorktrees,
     defaultPersonaId: p.defaultPersonaId,
     createdAt: p.createdAt,

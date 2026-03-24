@@ -78,7 +78,7 @@ export function WorkspaceCreatePage(): JSX.Element {
       values.environmentId,
       values.defaultPersonaId,
       values.useWorktrees,
-      values.worktreeBasePath,
+      values.workingDirectory,
       () => {
         showToast("Workspace created", "success");
         navigate(HOME_URL, { replace: true });

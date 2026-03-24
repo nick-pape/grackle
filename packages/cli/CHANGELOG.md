@@ -1,6 +1,18 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Tue, 24 Mar 2026 13:18:20 GMT and should not be manually modified.
+This log was last generated on Tue, 24 Mar 2026 15:28:52 GMT and should not be manually modified.
+
+## 0.75.5
+Tue, 24 Mar 2026 15:28:52 GMT
+
+### Patches
+
+- Rename worktree_base_path to working_directory across proto, DB, server, CLI, MCP, and web UI
+
+### Updates
+
+- placeholder
+- placeholder
 
 ## 0.75.4
 Tue, 24 Mar 2026 13:18:20 GMT

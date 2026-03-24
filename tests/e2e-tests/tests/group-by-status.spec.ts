@@ -50,19 +50,7 @@ test.describe("Group-by-status toggle", { tag: ["@workspace"] }, () => {
     expect(storedAfter).toBe("true");
   });
 
-  test("empty status groups are hidden", async ({ appPage, grackle: { client } }) => {
-    const page = appPage;
-
-    await createWorkspace(client, "gbs-empty");
-    await createTask(client, "gbs-empty", "only-not-started");
-
-    await goToTasksTab(page);
-    await page.getByTestId("task-group-by-status-toggle").click();
-
-    // The not_started group should be visible (our task is there).
-    // Other groups may exist from tasks created by prior tests in the shared server state.
-    await expect(page.getByTestId("status-group-not_started").first()).toBeVisible({ timeout: 5_000 });
-  });
+  // "empty status groups are hidden" removed — covered by TaskList.stories.tsx (EmptyGroupsHidden).
 
   test("task navigation from grouped view", async ({ appPage, grackle: { client } }) => {
     const page = appPage;

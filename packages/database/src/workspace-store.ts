@@ -12,7 +12,7 @@ export function createWorkspace(
   repoUrl: string,
   environmentId: string,
   useWorktrees: boolean = true,
-  worktreeBasePath: string = "",
+  workingDirectory: string = "",
   defaultPersonaId: string = "",
 ): void {
   db.insert(workspaces).values({
@@ -22,7 +22,7 @@ export function createWorkspace(
     repoUrl,
     environmentId,
     useWorktrees,
-    worktreeBasePath: worktreeBasePath.trim(),
+    workingDirectory: workingDirectory.trim(),
     defaultPersonaId,
   }).run();
 }
@@ -71,7 +71,7 @@ export interface UpdateWorkspaceFields {
   /** When false, agents work directly in the main checkout instead of creating a worktree. */
   useWorktrees?: boolean;
   /** Custom base path for worktrees (e.g. /workspaces/my-repo). Empty means use default. */
-  worktreeBasePath?: string;
+  workingDirectory?: string;
   /** Default persona for tasks in this workspace. */
   defaultPersonaId?: string;
 }
@@ -94,8 +94,8 @@ export function updateWorkspace(id: string, fields: UpdateWorkspaceFields): Work
   if (fields.useWorktrees !== undefined) {
     sets.useWorktrees = fields.useWorktrees;
   }
-  if (fields.worktreeBasePath !== undefined) {
-    sets.worktreeBasePath = fields.worktreeBasePath.trim();
+  if (fields.workingDirectory !== undefined) {
+    sets.workingDirectory = fields.workingDirectory.trim();
   }
   if (fields.defaultPersonaId !== undefined) {
     sets.defaultPersonaId = fields.defaultPersonaId;

@@ -89,7 +89,7 @@ export const workspaces = sqliteTable("workspaces", {
   useWorktrees: integer("use_worktrees", { mode: "boolean" })
     .notNull()
     .default(true),
-  worktreeBasePath: text("worktree_base_path").notNull().default(""),
+  workingDirectory: text("working_directory").notNull().default(""),
   defaultPersonaId: text("default_persona_id").notNull().default(""),
   createdAt: text("created_at")
     .notNull()

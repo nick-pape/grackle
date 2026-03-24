@@ -250,14 +250,14 @@ class AcpSession extends BaseAgentSession {
     maxTurns: number,
     resumeSessionId?: string,
     branch?: string,
-    worktreeBasePath?: string,
+    workingDirectory?: string,
     systemContext?: string,
     mcpServers?: Record<string, unknown>,
     hooks?: Record<string, unknown>,
     mcpBroker?: { url: string; token: string },
     useWorktrees?: boolean,
   ) {
-    super(id, prompt, model, maxTurns, resumeSessionId, branch, worktreeBasePath, systemContext, mcpServers, hooks, mcpBroker, useWorktrees);
+    super(id, prompt, model, maxTurns, resumeSessionId, branch, workingDirectory, systemContext, mcpServers, hooks, mcpBroker, useWorktrees);
     this.config = config;
     this.runtimeName = config.name;
     this.runtimeDisplayName = config.name;
@@ -275,7 +275,7 @@ class AcpSession extends BaseAgentSession {
     // Resolve working directory
     const cwd = await resolveWorkingDirectory({
       branch: this.branch,
-      worktreeBasePath: this.worktreeBasePath,
+      workingDirectory: this.workingDirectory,
       useWorktrees: this.useWorktrees,
       eventQueue: this.eventQueue,
     });
@@ -550,7 +550,7 @@ export class AcpRuntime extends BaseAgentRuntime {
     maxTurns: number,
     resumeSessionId?: string,
     branch?: string,
-    worktreeBasePath?: string,
+    workingDirectory?: string,
     systemContext?: string,
     mcpServers?: Record<string, unknown>,
     _hooks?: Record<string, unknown>,
@@ -565,7 +565,7 @@ export class AcpRuntime extends BaseAgentRuntime {
       maxTurns,
       resumeSessionId,
       branch,
-      worktreeBasePath,
+      workingDirectory,
       systemContext,
       mcpServers,
       undefined, // hooks — not supported by ACP

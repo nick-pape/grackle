@@ -396,8 +396,8 @@ export async function startTaskSession(
     model,
     maxTurns,
     branch: freshTask.branch,
-    worktreeBasePath: freshTask.branch
-      ? (workspace?.worktreeBasePath || process.env.GRACKLE_WORKTREE_BASE || "/workspace")
+    workingDirectory: freshTask.branch
+      ? (workspace?.workingDirectory || process.env.GRACKLE_WORKING_DIRECTORY || process.env.GRACKLE_WORKTREE_BASE || "/workspace")
       : "",
     useWorktrees,
     systemContext,
