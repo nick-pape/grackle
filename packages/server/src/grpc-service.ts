@@ -1106,6 +1106,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         value: req.value,
         expiresAt: req.expiresAt,
       });
+      emit("token.changed", {});
       await tokenPush.pushToAll();
       return create(grackle.EmptySchema, {});
     },
@@ -1130,6 +1131,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         throw new ConnectError("name is required", Code.InvalidArgument);
       }
       tokenStore.deleteToken(req.name);
+      emit("token.changed", {});
       await tokenPush.pushToAll();
       return create(grackle.EmptySchema, {});
     },
@@ -1405,6 +1407,8 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         processorRegistry.lateBind(req.sessionId, req.id, existing.workspaceId || undefined);
         emit("task.started", { taskId: req.id, sessionId: req.sessionId, workspaceId: existing.workspaceId || "" });
       }
+
+      emit("task.updated", { taskId: req.id, workspaceId: existing.workspaceId || "" });
 
       const row = taskStore.getTask(req.id);
       const taskSessions = sessionStore.listSessionsForTask(req.id);
