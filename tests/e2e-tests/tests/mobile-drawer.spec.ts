@@ -6,22 +6,8 @@ const MOBILE_VIEWPORT = { width: 375, height: 812 };
 test.describe("Mobile Drawer", { tag: ["@webui"] }, () => {
   test.use({ viewport: MOBILE_VIEWPORT });
 
-  test("hamburger button is visible on sidebar pages", async ({ appPage }) => {
-    // Navigate to a page with sidebar content
-    await appPage.goto("/tasks");
-    await appPage.waitForFunction(() => document.body.innerText.includes("Connected"), { timeout: 10_000 });
-
-    const hamburger = appPage.getByRole("button", { name: "Toggle sidebar" });
-    await expect(hamburger).toBeVisible();
-  });
-
-  test("hamburger button is hidden on pages without sidebar", async ({ appPage }) => {
-    // Dashboard has no sidebar, so hamburger should not be rendered at all
-    await appPage.goto("/");
-    await appPage.waitForFunction(() => document.body.innerText.includes("Connected"), { timeout: 10_000 });
-    const hamburger = appPage.getByRole("button", { name: "Toggle sidebar" });
-    await expect(hamburger).toHaveCount(0);
-  });
+  // "hamburger visible on sidebar pages" removed — covered by StatusBar.stories.tsx (HamburgerVisible).
+  // "hamburger hidden on pages without sidebar" removed — covered by StatusBar.stories.tsx (HamburgerHidden).
 
   test("sidebar is hidden by default on mobile", async ({ appPage }) => {
     // Navigate to a page with sidebar content
@@ -101,21 +87,7 @@ test.describe("Mobile Drawer", { tag: ["@webui"] }, () => {
     await expect(sidebar).not.toBeVisible({ timeout: 5_000 });
   });
 
-  test("hamburger is visible on all sidebar pages including settings", async ({ appPage }) => {
-    const hamburger = appPage.getByRole("button", { name: "Toggle sidebar" });
-
-    // Navigate to tasks — hamburger should be visible
-    await appPage.goto("/tasks");
-    await appPage.waitForFunction(() => document.body.innerText.includes("Connected"), { timeout: 10_000 });
-    await expect(hamburger).toBeVisible();
-
-    // Navigate to settings programmatically
-    await appPage.goto("/settings/credentials");
-    await appPage.waitForFunction(() => document.body.innerText.includes("Connected"), { timeout: 10_000 });
-
-    // Hamburger should still be visible on settings pages
-    await expect(hamburger).toBeVisible();
-  });
+  // "hamburger visible on all sidebar pages" removed — covered by StatusBar.stories.tsx (HamburgerVisible).
 
   test("settings tabs visible when drawer is opened on settings page", async ({ appPage }) => {
     const hamburger = appPage.getByRole("button", { name: "Toggle sidebar" });
