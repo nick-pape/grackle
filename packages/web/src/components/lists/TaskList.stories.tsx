@@ -1,8 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent, waitFor } from "@storybook/test";
 import { TaskList } from "./TaskList.js";
-import type { Workspace } from "../../hooks/types.js";
-import { buildTask, buildWorkspace } from "../../test-utils/storybook-helpers.js";
+import type { TaskData, Workspace } from "../../hooks/types.js";
+import { buildTask, buildWorkspace, withMockGrackleRoute } from "../../test-utils/storybook-helpers.js";
 
 const WORKSPACE_ID: string = "ws-tasklist";
 
@@ -358,5 +358,64 @@ export const TreeWithParentAndChild: Story = {
     const parentRow = canvas.getByText("bc-root").closest("[data-task-id]");
     await expect(parentRow).toBeInTheDocument();
     await expect(parentRow).toHaveTextContent(/0\/1/);
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Issue #642: task selection highlight with workspace-scoped URLs
+// ---------------------------------------------------------------------------
+
+const highlightTasks: TaskData[] = [
+  buildTask({ id: "t-alpha", workspaceId: WORKSPACE_ID, title: "task-alpha", sortOrder: 1 }),
+  buildTask({ id: "t-bravo", workspaceId: WORKSPACE_ID, title: "task-bravo", sortOrder: 2 }),
+];
+
+/**
+ * Sidebar highlights the selected task when navigating via a global /tasks/:taskId URL.
+ */
+export const HighlightGlobalRoute: Story = {
+  name: "Highlight selected task (global URL)",
+  decorators: [withMockGrackleRoute(["/tasks/t-alpha"], "/tasks/:taskId/*")],
+  parameters: { skipRouter: true },
+  args: {
+    tasks: highlightTasks,
+  },
+  play: async ({ canvasElement }) => {
+    const selectedRow = canvasElement.querySelector('[data-task-id="t-alpha"]');
+    await expect(selectedRow).toBeInTheDocument();
+    await expect(selectedRow).toHaveAttribute("data-selected");
+
+    // Other task should NOT be selected
+    const otherRow = canvasElement.querySelector('[data-task-id="t-bravo"]');
+    await expect(otherRow).toBeInTheDocument();
+    await expect(otherRow).not.toHaveAttribute("data-selected");
+  },
+};
+
+/**
+ * Sidebar highlights the selected task when navigating via a workspace-scoped URL.
+ * Regression test for https://github.com/nick-pape/grackle/issues/642.
+ */
+export const HighlightWorkspaceScopedRoute: Story = {
+  name: "Highlight selected task (workspace-scoped URL)",
+  decorators: [
+    withMockGrackleRoute(
+      ["/environments/env-1/workspaces/ws-tasklist/tasks/t-alpha"],
+      "/environments/:environmentId/workspaces/:workspaceId/tasks/:taskId/*",
+    ),
+  ],
+  parameters: { skipRouter: true },
+  args: {
+    tasks: highlightTasks,
+  },
+  play: async ({ canvasElement }) => {
+    const selectedRow = canvasElement.querySelector('[data-task-id="t-alpha"]');
+    await expect(selectedRow).toBeInTheDocument();
+    await expect(selectedRow).toHaveAttribute("data-selected");
+
+    // Other task should NOT be selected
+    const otherRow = canvasElement.querySelector('[data-task-id="t-bravo"]');
+    await expect(otherRow).toBeInTheDocument();
+    await expect(otherRow).not.toHaveAttribute("data-selected");
   },
 };

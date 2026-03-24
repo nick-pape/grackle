@@ -112,6 +112,7 @@ function StatusGroupAccordion({
                   className={`${styles.taskRow} ${isSelected ? styles.selected : ""}`}
                   style={{ '--task-indent': `${TASK_BASE_INDENT_PX}px` } as CSSProperties}
                   data-task-id={task.id}
+                  data-selected={isSelected || undefined}
                 >
                   <span className={styles.leafSpacer} />
                   <span className={styles.taskStatusIcon} style={{ color: statusStyle.color }}>
@@ -174,6 +175,7 @@ function TaskTreeNode({
         className={`${styles.taskRow} ${isSelected ? styles.selected : ""}`}
         style={{ '--task-indent': `${indent}px` } as CSSProperties}
         data-task-id={node.id}
+        data-selected={isSelected || undefined}
       >
         {hasChildren && (
           <span
@@ -282,9 +284,11 @@ export function TaskList({ workspaces, tasks }: TaskListProps): JSX.Element {
   const [groupExpandDefault, setGroupExpandDefault] = useState(getGroupByStatus);
   const [groupExpandOverrides, setGroupExpandOverrides] = useState<Map<string, boolean>>(new Map());
 
-  // Derive selected state from router
+  // Derive selected state from router (both global and workspace-scoped task URLs)
   const taskMatch = useMatch("/tasks/:taskId/*");
-  const selectedTaskId = taskMatch?.params.taskId !== "new" ? taskMatch?.params.taskId : undefined;
+  const wsTaskMatch = useMatch("/environments/:environmentId/workspaces/:workspaceId/tasks/:taskId/*");
+  const rawTaskId = taskMatch?.params.taskId ?? wsTaskMatch?.params.taskId;
+  const selectedTaskId = rawTaskId !== "new" ? rawTaskId : undefined;
 
   const taskStatusById = useMemo(
     () => new Map(tasks.map((t) => [t.id, t.status])),
