@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect } from "@storybook/test";
+import { expect, fn, userEvent } from "@storybook/test";
 import { StatusBar } from "./StatusBar.js";
 import { makeEnvironment, makeSession } from "../../test-utils/storybook-helpers.js";
 
@@ -36,6 +36,50 @@ export const Disconnected: Story = {
     await expect(canvas.getByText("Disconnected")).toBeInTheDocument();
     await expect(canvas.getByText("0/0 envs")).toBeInTheDocument();
     await expect(canvas.getByText("0 active")).toBeInTheDocument();
+  },
+};
+
+/** Hamburger button is visible when onToggleSidebar is provided (mobile drawer). */
+export const HamburgerVisible: Story = {
+  args: {
+    onToggleSidebar: fn(),
+    sidebarOpen: false,
+  },
+  play: async ({ canvas }) => {
+    const hamburger = canvas.getByRole("button", { name: "Toggle sidebar" });
+    await expect(hamburger).toBeInTheDocument();
+    await expect(hamburger).toHaveAttribute("aria-expanded", "false");
+  },
+};
+
+/** Hamburger button is hidden when onToggleSidebar is not provided (no sidebar page). */
+export const HamburgerHidden: Story = {
+  args: {
+    onToggleSidebar: undefined,
+  },
+  play: async ({ canvas }) => {
+    await expect(canvas.queryByRole("button", { name: "Toggle sidebar" })).not.toBeInTheDocument();
+  },
+};
+
+/** Hamburger fires callback and shows aria-expanded=true when sidebar is open. */
+export const HamburgerToggle: Story = {
+  args: {
+    onToggleSidebar: fn(),
+    sidebarOpen: true,
+  },
+  play: async ({ canvas, args }) => {
+    const hamburger = canvas.getByRole("button", { name: "Toggle sidebar" });
+    await expect(hamburger).toHaveAttribute("aria-expanded", "true");
+    await userEvent.click(hamburger);
+    await expect(args.onToggleSidebar).toHaveBeenCalled();
+  },
+};
+
+/** Persona button is NOT rendered in the StatusBar (removed in favor of Settings tab). */
+export const NoPersonaButton: Story = {
+  play: async ({ canvas }) => {
+    await expect(canvas.queryByRole("button", { name: "Personas" })).not.toBeInTheDocument();
   },
 };
 

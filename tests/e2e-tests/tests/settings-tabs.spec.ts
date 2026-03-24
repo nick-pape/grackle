@@ -67,42 +67,11 @@ test.describe("Settings Tabs", { tag: ["@settings"] }, () => {
     await expect(page.getByRole("tab", { name: "About" })).toHaveAttribute("aria-selected", "true");
   });
 
-  // "keyboard navigation with arrow keys" removed — covered by SettingsNav.stories.tsx (KeyboardNavigation).
-  // "Personas tab shows PersonaManager" removed — covered by SettingsPage.stories.tsx (PersonasTab).
-  // "About tab shows connection info and version" removed — covered by SettingsPage.stories.tsx (AboutTab).
-
-  test("persona button removed from StatusBar", async ({ mockPage }) => {
-    const page = mockPage;
-
-    // The persona button should not exist
-    await expect(page.locator('button[title="Personas"]')).not.toBeVisible();
-
-    // The settings sidebar tab should still exist
-    await expect(page.locator('[data-testid="sidebar-tab-settings"]')).toBeVisible();
-  });
-
-  test("breadcrumbs always show Home > Settings on all tabs", async ({ mockPage }) => {
-    const page = mockPage;
-
-    await goToSettings(mockPage);
-    const breadcrumbs = page.getByTestId("breadcrumbs");
-
-    const tabs = ["Credentials", "Personas", "Appearance", "About"];
-    for (const tab of tabs) {
-      await page.getByRole("tab", { name: tab }).click();
-      await expect(breadcrumbs).toContainText("Home");
-      await expect(breadcrumbs).toContainText("Settings");
-    }
-  });
-
-  test("Appearance tab shows theme picker", async ({ mockPage }) => {
-    const page = mockPage;
-
-    await goToSettings(mockPage);
-    await page.getByRole("tab", { name: "Appearance" }).click();
-
-    await expect(page.getByRole("heading", { name: "Appearance" })).toBeVisible();
-    await expect(page.getByText("Choose how Grackle looks")).toBeVisible();
-    await expect(page.getByText("Match system light/dark preference")).toBeVisible();
-  });
+  // Tests removed — covered by Storybook stories:
+  // - "keyboard navigation" → SettingsNav.stories.tsx (KeyboardNavigation)
+  // - "Personas tab shows PersonaManager" → SettingsPage.stories.tsx (PersonasTab)
+  // - "About tab shows connection info" → SettingsPage.stories.tsx (AboutTab)
+  // - "persona button removed from StatusBar" → StatusBar.stories.tsx (NoPersonaButton)
+  // - "breadcrumbs show Home > Settings" → SettingsPage.stories.tsx (BreadcrumbsVisible)
+  // - "Appearance tab shows theme picker" → SettingsPage.stories.tsx (AppearanceTab)
 });

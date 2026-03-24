@@ -7,6 +7,7 @@ import { SettingsPage } from "./SettingsPage.js";
 import { SettingsCredentialsTab } from "./settings/SettingsCredentialsTab.js";
 import { SettingsPersonasTab } from "./settings/SettingsPersonasTab.js";
 import { SettingsAboutTab } from "./settings/SettingsAboutTab.js";
+import { SettingsAppearanceTab } from "./settings/SettingsAppearanceTab.js";
 
 /** Wrapper that sets up the nested settings routes with the given initial URL. */
 function SettingsRouteWrapper({ initialEntry }: { initialEntry: string }): JSX.Element {
@@ -16,6 +17,7 @@ function SettingsRouteWrapper({ initialEntry }: { initialEntry: string }): JSX.E
         <Route path="/settings" element={<SettingsPage />}>
           <Route path="credentials" element={<SettingsCredentialsTab />} />
           <Route path="personas" element={<SettingsPersonasTab />} />
+          <Route path="appearance" element={<SettingsAppearanceTab />} />
           <Route path="about" element={<SettingsAboutTab />} />
         </Route>
       </Routes>
@@ -59,5 +61,26 @@ export const AboutTab: Story = {
     await expect(canvas.getByTestId("about-panel")).toBeInTheDocument();
     // Connection status label should be visible
     await expect(canvas.getByText("Connection")).toBeInTheDocument();
+  },
+};
+
+/** Appearance tab shows the theme picker. */
+export const AppearanceTab: Story = {
+  render: () => <SettingsRouteWrapper initialEntry="/settings/appearance" />,
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole("heading", { name: "Appearance" })).toBeInTheDocument();
+    await expect(canvas.getByText("Choose how Grackle looks")).toBeInTheDocument();
+    await expect(canvas.getByText("Match system light/dark preference")).toBeInTheDocument();
+  },
+};
+
+/** Breadcrumbs show Home > Settings on the credentials tab. */
+export const BreadcrumbsVisible: Story = {
+  render: () => <SettingsRouteWrapper initialEntry="/settings/credentials" />,
+  play: async ({ canvas }) => {
+    const breadcrumbs = canvas.getByTestId("breadcrumbs");
+    await expect(breadcrumbs).toBeInTheDocument();
+    await expect(breadcrumbs).toHaveTextContent(/Home/);
+    await expect(breadcrumbs).toHaveTextContent(/Settings/);
   },
 };

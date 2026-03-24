@@ -39,7 +39,7 @@ Do **not** update the root `README.md` as part of this process — it is a separ
 - After switching branches or merging main (lockfile may have changed)
 - After changing any `package.json` (then `rush update` if install tells you to)
 
-`rush build` does NOT install dependencies — you must run `rush install` separately.
+`rush build` does NOT install dependencies — you must run `rush install` separately. If dependencies seem broken (empty `node_modules`, missing binaries like `tsc`), use `rush install --purge` to blow away all `node_modules` and reinstall from scratch.
 
 ```bash
 # Install dependencies and build all packages
