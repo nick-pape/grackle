@@ -10,10 +10,10 @@ test.describe("Markdown Rendering in EventRenderer", { tag: ["@webui"] }, () => 
   test("renders headings as h1-h3 elements", async ({ stubTask }) => {
     const { page } = stubTask;
 
+    // Emit all headings in a single text event so markdown can parse them
+    // (separate emitText calls get grouped/concatenated without newlines)
     await stubTask.createAndNavigate("heading-test", stubScenario(
-      emitText("# Heading One"),
-      emitText("## Heading Two"),
-      emitText("### Heading Three"),
+      emitText("# Heading One\n\n## Heading Two\n\n### Heading Three"),
       onInput("next"),
       idle(),
     ));
@@ -28,9 +28,9 @@ test.describe("Markdown Rendering in EventRenderer", { tag: ["@webui"] }, () => 
     await expect(textEvents.first()).toBeVisible({ timeout: 5_000 });
 
     // react-markdown should render # as <h1>, ## as <h2>, ### as <h3>
-    await expect(page.locator("h1").filter({ hasText: "Heading One" })).toBeVisible();
-    await expect(page.locator("h2").filter({ hasText: "Heading Two" })).toBeVisible();
-    await expect(page.locator("h3").filter({ hasText: "Heading Three" })).toBeVisible();
+    await expect(textEvents.locator("h1").filter({ hasText: "Heading One" })).toBeVisible();
+    await expect(textEvents.locator("h2").filter({ hasText: "Heading Two" })).toBeVisible();
+    await expect(textEvents.locator("h3").filter({ hasText: "Heading Three" })).toBeVisible();
   });
 
   test("renders bold, italic, and links", async ({ stubTask }) => {
@@ -51,9 +51,9 @@ test.describe("Markdown Rendering in EventRenderer", { tag: ["@webui"] }, () => 
     await expect(textEvents.first()).toBeVisible({ timeout: 5_000 });
 
     // Verify inline markdown elements are rendered
-    await expect(page.locator("strong").filter({ hasText: "bold text" })).toBeVisible();
-    await expect(page.locator("em").filter({ hasText: "italic text" })).toBeVisible();
-    await expect(page.locator("a").filter({ hasText: "a link" })).toHaveAttribute("href", "https://example.com");
+    await expect(textEvents.locator("strong").filter({ hasText: "bold text" })).toBeVisible();
+    await expect(textEvents.locator("em").filter({ hasText: "italic text" })).toBeVisible();
+    await expect(textEvents.locator("a").filter({ hasText: "a link" })).toHaveAttribute("href", "https://example.com");
   });
 
   test("renders fenced code blocks with pre > code elements", async ({ stubTask }) => {
@@ -74,7 +74,7 @@ test.describe("Markdown Rendering in EventRenderer", { tag: ["@webui"] }, () => 
     await expect(textEvents.first()).toBeVisible({ timeout: 5_000 });
 
     // Fenced code blocks should render as <pre><code>
-    const codeBlock = textEvents.locator("pre code");
+    const codeBlock = textEvents.first().locator("pre code");
     await expect(codeBlock.first()).toBeVisible();
     await expect(codeBlock.first()).toContainText("const x = 42");
   });
@@ -95,13 +95,15 @@ test.describe("Markdown Rendering in EventRenderer", { tag: ["@webui"] }, () => 
 
     await page.locator("button", { hasText: "Stream" }).click();
 
-    // All three consecutive text events should be grouped into a single textEvent div
-    await expect(page.locator("text=Line one of grouped text")).toBeVisible({ timeout: 5_000 });
-    await expect(page.locator("text=Line two of grouped text")).toBeVisible();
-    await expect(page.locator("text=Line three of grouped text")).toBeVisible();
+    // All three consecutive text events should be grouped into a single textEvent div.
+    // Scope locators to textEvent divs to avoid matching the scenario JSON in the prompt.
+    const textEventDivs = page.locator('div[class*="textEvent"]');
+    await expect(textEventDivs.first()).toBeVisible({ timeout: 5_000 });
+    await expect(textEventDivs).toContainText(["Line one of grouped text"]);
+    await expect(textEventDivs).toContainText(["Line two of grouped text"]);
+    await expect(textEventDivs).toContainText(["Line three of grouped text"]);
 
     // Grouped consecutive text events produce fewer divs than individual events
-    const textEventDivs = page.locator('div[class*="textEvent"]');
     const count = await textEventDivs.count();
     expect(count).toBe(1);
   });
