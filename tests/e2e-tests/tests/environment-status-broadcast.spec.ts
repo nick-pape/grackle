@@ -46,7 +46,10 @@ test.describe("Environment Status Broadcast + Toasts", { tag: ["@environment"] }
 
     // A generic "disconnected" toast should appear
     await expect(page.getByText("Environment disconnected")).toBeVisible({ timeout: 5_000 });
-    // NOTE: env left disconnected — next test provisions it as part of its flow
+
+    // Re-provision so other tests aren't affected
+    await provisionEnvironmentDirect("test-local");
+    await expect(page.getByText("1/1 env")).toBeVisible({ timeout: 15_000 });
   });
 
   test("provision environment shows connected toast and updates StatusBar", async ({ page }) => {
@@ -135,7 +138,32 @@ test.describe("Environment Status Broadcast + Toasts", { tag: ["@environment"] }
     await expect(page.getByText("1/1 env")).toBeVisible({ timeout: 5_000 });
   });
 
-  // TODO(#786): Removed — this test injected fake WS "environments" data with
-  // status "error" which the ConnectRPC-migrated hooks no longer handle.
-  // Rewrite needed: test provision error path via ProvisionEnvironment RPC.
+  test("injected error status shows provision failed toast", async ({ page }) => {
+    await installWsTracker(page);
+    await page.goto("/");
+    await page.waitForFunction(
+      () => document.body.innerText.includes("Connected"),
+      { timeout: 10_000 },
+    );
+
+    // Inject environment in error status
+    await injectWsMessage(page, {
+      type: "environments",
+      payload: {
+        environments: [
+          {
+            id: "test-local",
+            displayName: "test-local",
+            adapterType: "local",
+
+            status: "error",
+            bootstrapped: false,
+          },
+        ],
+      },
+    });
+
+    // Generic error toast should appear
+    await expect(page.getByText("Environment provision failed")).toBeVisible({ timeout: 5_000 });
+  });
 });
