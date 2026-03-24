@@ -1,6 +1,32 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Tue, 24 Mar 2026 15:56:44 GMT and should not be manually modified.
+This log was last generated on Tue, 24 Mar 2026 19:32:32 GMT and should not be manually modified.
+
+## 0.75.9
+Tue, 24 Mar 2026 19:32:32 GMT
+
+### Patches
+
+- Fix persistent stream throw leaving waitForTurnComplete dangling
+
+## 0.75.8
+Tue, 24 Mar 2026 19:03:57 GMT
+
+### Patches
+
+- Add multi-turn integration tests for all PowerLine runtimes
+
+## 0.75.7
+Tue, 24 Mar 2026 16:30:39 GMT
+
+### Patches
+
+- Fix sync pipe deadlock when child goes idle instead of terminal
+- fix: recreate lifecycle stream on session reanimate, fix resumeTask missing reanimateSession call
+
+### Updates
+
+- placeholder
 
 ## 0.75.6
 Tue, 24 Mar 2026 15:56:44 GMT
