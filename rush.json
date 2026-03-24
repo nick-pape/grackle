@@ -23,6 +23,10 @@
       "projectFolder": "rigs/heft-vite-plugin"
     },
     {
+      "packageName": "@grackle-ai/heft-storybook-plugin",
+      "projectFolder": "rigs/heft-storybook-plugin"
+    },
+    {
       "packageName": "@grackle-ai/common",
       "projectFolder": "packages/common",
       "versionPolicyName": "grackle"

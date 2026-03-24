@@ -3,7 +3,8 @@
   "phasesByName": {
     "build": {
       "cleanFiles": [
-        { "sourcePath": "dist" }
+        { "sourcePath": "dist" },
+        { "sourcePath": "storybook-static" }
       ],
       "tasksByName": {
         "typescript": {
@@ -23,6 +24,13 @@
             "pluginPackage": "@grackle-ai/heft-vite-plugin",
             "pluginName": "vite-build-plugin"
           }
+        },
+        "storybook-build": {
+          "taskDependencies": ["typescript"],
+          "taskPlugin": {
+            "pluginPackage": "@grackle-ai/heft-storybook-plugin",
+            "pluginName": "storybook-build-plugin"
+          }
         }
       }
     },
@@ -33,6 +41,12 @@
           "taskPlugin": {
             "pluginPackage": "@grackle-ai/heft-playwright-plugin",
             "pluginName": "playwright-test-plugin"
+          }
+        },
+        "storybook-test": {
+          "taskPlugin": {
+            "pluginPackage": "@grackle-ai/heft-storybook-plugin",
+            "pluginName": "storybook-test-plugin"
           }
         }
       }

@@ -4,6 +4,9 @@ const config: StorybookConfig = {
   stories: ["../src/**/*.stories.@(ts|tsx)"],
   framework: "@storybook/react-vite",
   addons: [],
+  core: {
+    disableTelemetry: true,
+  },
 };
 
 export default config;
