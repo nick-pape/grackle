@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, fn } from "@storybook/test";
+import { expect, fn, userEvent } from "@storybook/test";
 import { PersonaManager } from "./PersonaManager.js";
 import { buildPersona } from "../../test-utils/storybook-helpers.js";
 
@@ -69,7 +69,7 @@ export const WithPersonas: Story = {
 
 /** Clicking "+ New Persona" opens the create form. */
 export const OpenCreateForm: Story = {
-  play: async ({ canvas, userEvent }) => {
+  play: async ({ canvas }) => {
     const newButton = canvas.getByRole("button", { name: "+ New Persona" });
     await userEvent.click(newButton);
 
@@ -93,7 +93,7 @@ export const EditPersona: Story = {
       }),
     ],
   },
-  play: async ({ canvas, userEvent }) => {
+  play: async ({ canvas }) => {
     const editButton = canvas.getByRole("button", { name: "Edit" });
     await userEvent.click(editButton);
 
@@ -109,7 +109,7 @@ export const DeletePersonaFlow: Story = {
       buildPersona({ id: "p-del", name: "Disposable Persona" }),
     ],
   },
-  play: async ({ canvas, userEvent }) => {
+  play: async ({ canvas }) => {
     // Click Delete
     const deleteButton = canvas.getByRole("button", { name: "Delete" });
     await userEvent.click(deleteButton);

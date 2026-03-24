@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent } from "@storybook/test";
+import { expect, userEvent, waitFor } from "@storybook/test";
 import { TaskList } from "./TaskList.js";
 import type { Workspace } from "../../hooks/types.js";
 import { buildTask, buildWorkspace } from "../../test-utils/storybook-helpers.js";
@@ -12,11 +12,17 @@ const meta: Meta<typeof TaskList> = {
   title: "Lists/TaskList",
   component: TaskList,
   decorators: [
-    (Story) => (
-      <div style={{ width: "300px", height: "600px", overflow: "auto" }}>
-        <Story />
-      </div>
-    ),
+    (Story) => {
+      // Clear localStorage to prevent state pollution between stories.
+      // TaskList persists groupByStatus and stream direction in localStorage.
+      localStorage.removeItem("grackle-task-group-by-status");
+      localStorage.removeItem("grackle-stream-direction");
+      return (
+        <div style={{ width: "300px", height: "600px", overflow: "auto" }}>
+          <Story />
+        </div>
+      );
+    },
   ],
   args: {
     workspaces: [defaultWorkspace],
@@ -107,14 +113,16 @@ export const GroupCollapseExpand: Story = {
     const collapseButton = groupHeader.querySelector('[role="button"]') as HTMLElement;
     await userEvent.click(collapseButton);
 
-    // Task should be hidden after collapse
-    await expect(canvas.queryByText("collapse-task")).not.toBeInTheDocument();
+    // Task should be hidden after collapse (wait for exit animation to complete)
+    await waitFor(async () => {
+      await expect(canvas.queryByText("collapse-task")).not.toBeInTheDocument();
+    });
 
     // Click again to expand
     await userEvent.click(collapseButton);
 
     // Task should reappear
-    await expect(canvas.getByText("collapse-task")).toBeInTheDocument();
+    await expect(await canvas.findByText("collapse-task")).toBeInTheDocument();
   },
 };
 
@@ -239,9 +247,13 @@ export const SearchFiltersTasksByTitle: Story = {
     await userEvent.clear(searchInput);
     await userEvent.type(searchInput, "alpha");
 
-    // Only the matching task should remain
-    await expect(canvas.getByText("alpha-task")).toBeInTheDocument();
-    await expect(canvas.queryByText("beta-task")).not.toBeInTheDocument();
+    // Only the matching task should remain.
+    // After search, HighlightedText splits text into <mark>/<span> fragments,
+    // so use the title attribute on the task title span instead of getByText.
+    await waitFor(async () => {
+      await expect(canvas.getByTitle("alpha-task")).toBeInTheDocument();
+    });
+    await expect(canvas.queryByTitle("beta-task")).not.toBeInTheDocument();
   },
 };
 
@@ -339,12 +351,12 @@ export const TreeWithParentAndChild: Story = {
     // Parent task should be visible
     await expect(canvas.getByText("bc-root")).toBeInTheDocument();
 
-    // Child task should be visible (auto-expanded)
-    await expect(canvas.getByText("bc-child")).toBeInTheDocument();
+    // Child task should be visible (auto-expanded via useEffect, wait for async render)
+    await expect(await canvas.findByText("bc-child")).toBeInTheDocument();
 
     // Parent row should show a child count badge "0/1" (0 complete out of 1)
     const parentRow = canvas.getByText("bc-root").closest("[data-task-id]");
     await expect(parentRow).toBeInTheDocument();
-    await expect(parentRow).toHaveTextContent("0/1");
+    await expect(parentRow).toHaveTextContent(/0\/1/);
   },
 };

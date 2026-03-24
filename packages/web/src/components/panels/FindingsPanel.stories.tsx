@@ -76,8 +76,10 @@ export const MultipleFindings: Story = {
     ],
   },
   play: async ({ canvas }) => {
+    // Use getAllByText for "api" since it appears as both a category badge and a tag
     await expect(canvas.getByText("bug")).toBeInTheDocument();
-    await expect(canvas.getByText("api")).toBeInTheDocument();
+    const apiElements = canvas.getAllByText("api");
+    await expect(apiElements.length).toBeGreaterThanOrEqual(1);
     await expect(canvas.getByText("decision")).toBeInTheDocument();
     await expect(canvas.getByText("Race condition in session cleanup")).toBeInTheDocument();
     await expect(canvas.getByText("Missing pagination on list endpoints")).toBeInTheDocument();

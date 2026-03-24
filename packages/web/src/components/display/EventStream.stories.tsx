@@ -26,7 +26,7 @@ export const Default: Story = {};
 /** Direction toggle button is present. */
 export const DirectionToggle: Story = {
   play: async ({ canvas }) => {
-    const toggle = canvas.getByTitle(/newest/i);
+    const toggle = canvas.getByTestId("direction-toggle");
     await expect(toggle).toBeInTheDocument();
   },
 };

@@ -13,11 +13,11 @@ type Story = StoryObj<typeof meta>;
 /** Dashboard sections render correctly with mock data. */
 export const SectionsRender: Story = {
   play: async ({ canvas }) => {
-    // Active Sessions section
-    await expect(canvas.getByText("Active Sessions")).toBeInTheDocument();
+    // Active Sessions section (use data-testid to avoid duplicate text matches)
+    await expect(canvas.getByTestId("dashboard-active-sessions")).toBeInTheDocument();
     // Environment Health section
-    await expect(canvas.getByText("Environment Health")).toBeInTheDocument();
+    await expect(canvas.getByTestId("dashboard-env-health")).toBeInTheDocument();
     // Workspaces section
-    await expect(canvas.getByText("Workspaces")).toBeInTheDocument();
+    await expect(canvas.getByTestId("dashboard-workspace-snapshot")).toBeInTheDocument();
   },
 };

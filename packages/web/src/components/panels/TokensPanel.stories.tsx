@@ -82,12 +82,14 @@ export const DeleteRemovesFromList: Story = {
     const deleteButton = canvas.getByTitle("Delete anthropic");
     await userEvent.click(deleteButton);
 
-    // Confirm dialog should appear
-    await expect(canvas.getByText("Delete Token?")).toBeInTheDocument();
-    await expect(canvas.getByText(/anthropic/)).toBeInTheDocument();
+    // Confirm dialog should appear (use findBy for async rendering after animation)
+    await expect(await canvas.findByText("Delete Token?")).toBeInTheDocument();
+    // "anthropic" appears in both the dialog description and the token list
+    const anthropicElements = canvas.getAllByText(/anthropic/);
+    await expect(anthropicElements.length).toBeGreaterThanOrEqual(1);
 
-    // Confirm deletion
-    const confirmButton = canvas.getByRole("button", { name: "Delete" });
+    // Confirm deletion — the ConfirmDialog button label defaults to "Delete"
+    const confirmButton = await canvas.findByRole("button", { name: "Delete" });
     await userEvent.click(confirmButton);
 
     await expect(args.onDeleteToken).toHaveBeenCalledWith("anthropic");

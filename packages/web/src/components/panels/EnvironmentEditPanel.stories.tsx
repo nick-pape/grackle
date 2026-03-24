@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, fn } from "@storybook/test";
+import { expect, fn, userEvent } from "@storybook/test";
 import { ToastProvider } from "../../context/ToastContext.js";
 import { EnvironmentEditPanel } from "./EnvironmentEditPanel.js";
 import { buildEnvironment } from "../../test-utils/storybook-helpers.js";
@@ -59,7 +59,7 @@ export const CreateDisabledWhenEmpty: Story = {
 
 /** Create button is enabled when a name is provided for the local adapter. */
 export const CreateEnabledWhenNameFilled: Story = {
-  play: async ({ canvas, userEvent }) => {
+  play: async ({ canvas }) => {
     const nameInput = canvas.getByTestId("env-create-name");
     await userEvent.type(nameInput, "my-local");
 
@@ -70,7 +70,7 @@ export const CreateEnabledWhenNameFilled: Story = {
 
 /** SSH adapter requires a host field — Create stays disabled without it. */
 export const SshRequiresHost: Story = {
-  play: async ({ canvas, userEvent }) => {
+  play: async ({ canvas }) => {
     // Select SSH adapter
     const adapterSelect = canvas.getByTestId("env-create-adapter");
     await userEvent.selectOptions(adapterSelect, "ssh");
@@ -91,7 +91,7 @@ export const SshRequiresHost: Story = {
 
 /** Create button is disabled when port value is out of the valid range (1-65535). */
 export const PortValidation: Story = {
-  play: async ({ canvas, userEvent }) => {
+  play: async ({ canvas }) => {
     const nameInput = canvas.getByTestId("env-create-name");
     await userEvent.type(nameInput, "port-test");
 
@@ -125,7 +125,7 @@ export const PortValidation: Story = {
 
 /** Switching adapter type shows the correct conditional fields. */
 export const SwitchingAdapterShowsFields: Story = {
-  play: async ({ canvas, userEvent }) => {
+  play: async ({ canvas }) => {
     const adapterSelect = canvas.getByTestId("env-create-adapter");
 
     // Local shows host and port
@@ -151,7 +151,7 @@ export const CodespaceManualEntry: Story = {
   args: {
     codespaceListError: "Could not find the `gh` CLI.",
   },
-  play: async ({ canvas, userEvent }) => {
+  play: async ({ canvas }) => {
     // Select codespace adapter
     const adapterSelect = canvas.getByTestId("env-create-adapter");
     await userEvent.selectOptions(adapterSelect, "codespace");
@@ -173,7 +173,7 @@ export const CodespaceManualEntryEnablesCreate: Story = {
   args: {
     codespaceListError: "Could not find the `gh` CLI.",
   },
-  play: async ({ canvas, userEvent }) => {
+  play: async ({ canvas }) => {
     // Select codespace adapter
     const adapterSelect = canvas.getByTestId("env-create-adapter");
     await userEvent.selectOptions(adapterSelect, "codespace");

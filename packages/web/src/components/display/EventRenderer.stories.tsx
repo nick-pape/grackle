@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, within } from "@storybook/test";
+import { expect, userEvent, within } from "@storybook/test";
 import { EventRenderer } from "./EventRenderer.js";
 import { makeEvent } from "../../test-utils/storybook-helpers.js";
 
@@ -47,20 +47,20 @@ export const MultiLineExpandCollapse: Story = {
       content: Array.from({ length: 10 }, (_, i) => `Line ${i + 1} of output`).join("\n"),
     }),
   },
-  play: async ({ canvas, userEvent }) => {
+  play: async ({ canvas }) => {
     // Initially collapsed — line 6+ not visible
-    await expect(canvas.queryByText("Line 6 of output")).not.toBeInTheDocument();
+    await expect(canvas.queryByText(/Line 6 of output/)).not.toBeInTheDocument();
 
     // Click to expand
     const header = canvas.getByTestId("tool-result-header");
     await userEvent.click(header);
 
-    // Now line 6 should be visible
-    await expect(canvas.getByText("Line 6 of output")).toBeInTheDocument();
+    // Now line 6 should be visible (use regex since text is inside a <pre>)
+    await expect(canvas.getByText(/Line 6 of output/)).toBeInTheDocument();
 
     // Click to collapse
     await userEvent.click(header);
-    await expect(canvas.queryByText("Line 6 of output")).not.toBeInTheDocument();
+    await expect(canvas.queryByText(/Line 6 of output/)).not.toBeInTheDocument();
   },
 };
 
@@ -124,8 +124,9 @@ export const PairedToolUseResult: Story = {
 export const SystemContext: Story = {
   args: {
     event: makeEvent({
-      eventType: "system_context",
+      eventType: "system",
       content: "You are a helpful assistant.\nYou write clean code.\nYou follow best practices.\nLine 4.\nLine 5.\nLine 6.",
+      raw: JSON.stringify({ systemContext: true }),
     }),
   },
   play: async ({ canvas }) => {

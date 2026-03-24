@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, fn } from "@storybook/test";
+import { expect, fn, userEvent } from "@storybook/test";
 import { CredentialProvidersPanel } from "./CredentialProvidersPanel.js";
 import { buildCredentialProviderConfig } from "../../test-utils/storybook-helpers.js";
 
@@ -49,9 +49,9 @@ export const ChangingProviderFiresCallback: Story = {
   args: {
     onUpdateCredentialProviders: fn(),
   },
-  play: async ({ canvas, userEvent, args }) => {
-    // Find the GitHub provider's select (the second toggle-style provider)
-    const selects = canvas.getAllByRole("combobox");
+  play: async ({ canvas, args }) => {
+    // Find all select elements — one per provider (Claude, GitHub, Copilot, Codex, Goose)
+    const selects = canvas.getAllByDisplayValue("Off");
     // The second select should be GitHub (Claude=0, GitHub=1, Copilot=2, Codex=3, Goose=4)
     const githubSelect = selects[1];
 
