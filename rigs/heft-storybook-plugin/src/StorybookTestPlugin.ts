@@ -60,6 +60,7 @@ class StorybookTestPlugin implements IHeftTaskPlugin {
 
         execFileSync(npxName, ["test-storybook", "--url", `http://127.0.0.1:${STORYBOOK_PORT}`], {
           cwd: buildFolder,
+          stdio: "inherit",
           shell: isWindows,
           env: { ...process.env, STORYBOOK_DISABLE_TELEMETRY: "1", CI: "true" },
         });
