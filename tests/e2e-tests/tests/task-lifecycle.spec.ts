@@ -42,7 +42,8 @@ test.describe("Task Lifecycle (stub runtime)", { tag: ["@task", "@smoke"] }, () 
 
     // --- Step 6: Verify scenario events stream in ---
     await expect(page.locator("text=Stub runtime initialized")).toBeVisible({ timeout: 15_000 });
-    await expect(page.locator("text=Working on test task...")).toBeVisible({ timeout: 10_000 });
+    // Use exact match to avoid matching the scenario JSON blob in the prompt content
+    await expect(page.getByText("Working on test task...", { exact: true })).toBeVisible({ timeout: 10_000 });
 
     // Task header should show active status (may transition to idle quickly)
     await expect(page.locator('[data-testid="task-status"]')).toContainText(/working|paused/, { timeout: 5_000 });

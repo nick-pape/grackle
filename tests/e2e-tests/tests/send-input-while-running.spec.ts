@@ -6,23 +6,22 @@ import {
   patchWsForStubRuntime,
   stubScenario,
   emitText,
-  waitMs,
+  emitToolUse,
+  emitToolResult,
   idle,
-  onInput,
 } from "./helpers.js";
 
 test.describe("Send input while agent is running", { tag: ["@session"] }, () => {
   test("input field is enabled during active session", async ({ appPage }) => {
     const page = appPage;
 
-    // Scenario with a wait step to keep the session "running" long enough
-    // to verify the input field is enabled, followed by an idle step.
+    // Scenario: emit events, go idle, echo input by default
     await createWorkspace(page, "input-while-running");
     await createTaskWithScenario(page, "input-while-running", "echo task", stubScenario(
       emitText("Starting work..."),
-      waitMs(2000),           // keep session running for 2s
-      idle(),                 // then go idle for input
-      onInput("echo"),        // echo the input back
+      emitToolUse("echo", { message: "test" }),
+      emitToolResult("done"),
+      idle(),                 // go idle for input (default handler: echo)
     ));
     await navigateToTask(page, "echo task");
 
@@ -33,19 +32,18 @@ test.describe("Send input while agent is running", { tag: ["@session"] }, () => 
     await page.getByRole("button", { name: "Start", exact: true }).click();
 
     // Wait for scenario events to appear (session becomes active)
-    await expect(page.locator("text=Starting work...")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("Starting work...", { exact: true })).toBeVisible({ timeout: 15_000 });
 
     // The input field should be visible and enabled — not disabled with "Agent is working..."
     const inputField = page.locator('input[placeholder="Type a message..."]');
     await expect(inputField).toBeVisible({ timeout: 10_000 });
     await expect(inputField).toBeEnabled();
 
-    // Wait for idle, then send input and verify it appears in the stream
-    await inputField.waitFor({ timeout: 15_000 });
+    // Send input and verify it appears in the stream
     await inputField.fill("test input");
     await page.getByRole("button", { name: "Send", exact: true }).click();
 
     // The scenario echoes input back as "You said: ..."
-    await expect(page.locator("text=You said: test input")).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText("You said: test input", { exact: true })).toBeVisible({ timeout: 10_000 });
   });
 });
