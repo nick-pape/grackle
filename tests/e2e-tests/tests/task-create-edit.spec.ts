@@ -6,29 +6,16 @@ import {
   navigateToTask,
   getWorkspaceId,
   getTaskId,
-  createTaskViaWs,
+  createTaskDirect,
 } from "./helpers.js";
+import type { GrackleClient } from "./rpc-client.js";
 
 test.describe("Unified task create/edit experience", { tag: ["@task"] }, () => {
-  test("clicking Create Task opens full-panel form with title and description fields", async ({ appPage }) => {
+  // "clicking Create Task opens full-panel form" removed — covered by TaskEditPanel.stories.tsx (FormFieldsVisible).
+
+  test("creating a task via the panel fills title and description, then navigates to workspace", async ({ appPage, grackle: { client } }) => {
     const page = appPage;
-    await createWorkspace(page, "create-panel-proj");
-    await navigateToWorkspace(page, "create-panel-proj");
-
-    // Click "Create Task" CTA on the empty workspace page
-    await page.getByText("Create Task").first().click();
-
-    // Full-panel form must be visible (not a bottom-bar form)
-    await expect(page.locator('[data-testid="task-edit-title"]')).toBeVisible({ timeout: 5_000 });
-    await expect(page.locator('[data-testid="task-edit-description"]')).toBeVisible();
-    await expect(page.locator('[data-testid="task-edit-save"]')).toBeVisible();
-    // Save button should be disabled while title is empty
-    await expect(page.locator('[data-testid="task-edit-save"]')).toBeDisabled();
-  });
-
-  test("creating a task via the panel fills title and description, then navigates to workspace", async ({ appPage }) => {
-    const page = appPage;
-    await createWorkspace(page, "create-full-proj");
+    await createWorkspace(client, "create-full-proj");
     await navigateToWorkspace(page, "create-full-proj");
 
     // Open new task form
@@ -48,9 +35,9 @@ test.describe("Unified task create/edit experience", { tag: ["@task"] }, () => {
     await expect(page.locator('.overviewMarkdown, [class*="overviewMarkdown"]')).toBeVisible({ timeout: 5_000 });
   });
 
-  test("Cancel button in new task form returns to workspace view", async ({ appPage }) => {
+  test("Cancel button in new task form returns to workspace view", async ({ appPage, grackle: { client } }) => {
     const page = appPage;
-    await createWorkspace(page, "cancel-create-proj");
+    await createWorkspace(client, "cancel-create-proj");
     await navigateToWorkspace(page, "cancel-create-proj");
 
     // Open new task form
@@ -67,10 +54,10 @@ test.describe("Unified task create/edit experience", { tag: ["@task"] }, () => {
     await expect(page.getByText("will not be saved", { exact: true })).not.toBeVisible();
   });
 
-  test("pending task header shows an Edit button", async ({ appPage }) => {
+  test("pending task header shows an Edit button", async ({ appPage, grackle: { client } }) => {
     const page = appPage;
-    await createWorkspace(page, "edit-btn-proj");
-    await createTask(page, "edit-btn-proj", "edit-btn-task", "test-local");
+    await createWorkspace(client, "edit-btn-proj");
+    await createTask(client, "edit-btn-proj", "edit-btn-task", "test-local");
 
     // Navigate to the task
     await navigateToTask(page, "edit-btn-task");
@@ -79,13 +66,13 @@ test.describe("Unified task create/edit experience", { tag: ["@task"] }, () => {
     await expect(page.locator("button", { hasText: /^Edit$/ })).toBeVisible({ timeout: 5_000 });
   });
 
-  test("clicking Edit opens the edit form pre-populated with existing task data", async ({ appPage }) => {
+  test("clicking Edit opens the edit form pre-populated with existing task data", async ({ appPage, grackle: { client } }) => {
     const page = appPage;
-    await createWorkspace(page, "edit-form-proj");
-    const workspaceId = await getWorkspaceId(page, "edit-form-proj");
+    await createWorkspace(client, "edit-form-proj");
+    const workspaceId = await getWorkspaceId(client, "edit-form-proj");
 
-    // Create task with description via WS so we can verify pre-population
-    await createTaskViaWs(page, workspaceId, "editable-task", {
+    // Create task with description via RPC so we can verify pre-population
+    await createTaskDirect(client, workspaceId, "editable-task", {
       environmentId: "test-local",
       description: "Original description",
     });
@@ -105,12 +92,12 @@ test.describe("Unified task create/edit experience", { tag: ["@task"] }, () => {
     await expect(page.locator('[data-testid="task-edit-save"]')).toHaveText("Save Changes");
   });
 
-  test("saving edits updates the task title and description", async ({ appPage }) => {
+  test("saving edits updates the task title and description", async ({ appPage, grackle: { client } }) => {
     const page = appPage;
-    await createWorkspace(page, "save-edit-proj");
-    const workspaceId = await getWorkspaceId(page, "save-edit-proj");
+    await createWorkspace(client, "save-edit-proj");
+    const workspaceId = await getWorkspaceId(client, "save-edit-proj");
 
-    await createTaskViaWs(page, workspaceId, "old-title-task", {
+    await createTaskDirect(client, workspaceId, "old-title-task", {
       environmentId: "test-local",
       description: "Old description",
     });
@@ -133,30 +120,16 @@ test.describe("Unified task create/edit experience", { tag: ["@task"] }, () => {
     await expect(page.getByText("new-title-task", { exact: true }).first()).toBeVisible({ timeout: 5_000 });
   });
 
-  test("task creation form has no environment dropdown", async ({ appPage }) => {
+  // "task creation form has no environment dropdown" removed — covered by TaskEditPanel.stories.tsx (NoEnvironmentDropdown).
+
+  test("task edit form shows dependency multi-select with sibling tasks", async ({ appPage, grackle: { client } }) => {
     const page = appPage;
-    await createWorkspace(page, "no-env-proj");
-    await navigateToWorkspace(page, "no-env-proj");
-
-    // Open new task form via Create Task CTA
-    await page.getByText("Create Task").first().click();
-
-    await expect(page.locator('[data-testid="task-edit-title"]')).toBeVisible({ timeout: 5_000 });
-
-    // There should be no environment select in the task creation form
-    // (environment is assigned at start time, not creation time)
-    await expect(page.locator('select option:has-text("Default env")')).not.toBeVisible();
-    await expect(page.locator('select option:has-text("test-local")')).not.toBeVisible();
-  });
-
-  test("task edit form shows dependency multi-select with sibling tasks", async ({ appPage }) => {
-    const page = appPage;
-    await createWorkspace(page, "deps-edit-proj");
-    const workspaceId = await getWorkspaceId(page, "deps-edit-proj");
+    await createWorkspace(client, "deps-edit-proj");
+    const workspaceId = await getWorkspaceId(client, "deps-edit-proj");
 
     // Create two tasks
-    await createTaskViaWs(page, workspaceId, "task-alpha-dep", { environmentId: "test-local" });
-    await createTaskViaWs(page, workspaceId, "task-beta-dep", { environmentId: "test-local" });
+    await createTaskDirect(client, workspaceId, "task-alpha-dep", { environmentId: "test-local" });
+    await createTaskDirect(client, workspaceId, "task-beta-dep", { environmentId: "test-local" });
 
     // Navigate directly to task-beta and edit
     await navigateToTask(page, "task-beta-dep");
@@ -168,7 +141,7 @@ test.describe("Unified task create/edit experience", { tag: ["@task"] }, () => {
     await expect(page.locator('[data-testid^="dep-option-"]', { hasText: "task-alpha-dep" })).toBeVisible({ timeout: 5_000 });
 
     // Select task-alpha as a dependency
-    const alphaId = await getTaskId(page, workspaceId, "task-alpha-dep");
+    const alphaId = await getTaskId(client, workspaceId, "task-alpha-dep");
     await page.locator(`[data-testid="dep-option-${alphaId}"] input[type="checkbox"]`).check();
 
     // Save

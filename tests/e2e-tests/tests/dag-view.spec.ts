@@ -2,20 +2,21 @@ import { test, expect } from "./fixtures.js";
 import {
   createWorkspace,
   createTask,
-  createTaskViaWs,
+  createTaskDirect,
   getWorkspaceId,
   getTaskId,
   navigateToWorkspace,
 } from "./helpers.js";
+import type { GrackleClient } from "./rpc-client.js";
 
 test.describe("DAG View", { tag: ["@workspace"] }, () => {
-  test("Graph tab renders task nodes after switching from default Tasks tab", async ({ appPage }) => {
+  test("Graph tab renders task nodes after switching from default Tasks tab", async ({ appPage, grackle: { client } }) => {
     const page = appPage;
 
     // Create workspace with two tasks
-    await createWorkspace(page, "dag-basic");
-    await createTask(page, "dag-basic", "dag-task-a", "test-local");
-    await createTask(page, "dag-basic", "dag-task-b", "test-local");
+    await createWorkspace(client, "dag-basic");
+    await createTask(client, "dag-basic", "dag-task-a", "test-local");
+    await createTask(client, "dag-basic", "dag-task-b", "test-local");
 
     // Navigate to workspace page to see the tabs
     await navigateToWorkspace(page, "dag-basic");
@@ -38,11 +39,11 @@ test.describe("DAG View", { tag: ["@workspace"] }, () => {
     await expect(page.getByRole("tab", { name: "Graph" })).not.toBeVisible();
   });
 
-  test("clicking a graph node navigates to task detail", async ({ appPage }) => {
+  test("clicking a graph node navigates to task detail", async ({ appPage, grackle: { client } }) => {
     const page = appPage;
 
-    await createWorkspace(page, "dag-nav");
-    await createTask(page, "dag-nav", "dag-nav-task", "test-local");
+    await createWorkspace(client, "dag-nav");
+    await createTask(client, "dag-nav", "dag-nav-task", "test-local");
 
     // Navigate to workspace page
     await navigateToWorkspace(page, "dag-nav");
@@ -59,17 +60,17 @@ test.describe("DAG View", { tag: ["@workspace"] }, () => {
     await expect(page.locator('[data-testid="task-status"]')).toBeVisible({ timeout: 5_000 });
   });
 
-  test("dependency edges render for tasks with dependsOn", async ({ appPage }) => {
+  test("dependency edges render for tasks with dependsOn", async ({ appPage, grackle: { client } }) => {
     const page = appPage;
 
-    await createWorkspace(page, "dag-deps");
-    await createTask(page, "dag-deps", "dep-blocker", "test-local");
+    await createWorkspace(client, "dag-deps");
+    await createTask(client, "dag-deps", "dep-blocker", "test-local");
 
-    const workspaceId = await getWorkspaceId(page, "dag-deps");
-    const blockerId = await getTaskId(page, workspaceId, "dep-blocker");
+    const workspaceId = await getWorkspaceId(client, "dag-deps");
+    const blockerId = await getTaskId(client, workspaceId, "dep-blocker");
 
-    // Create dependent task via WS
-    await createTaskViaWs(page, workspaceId, "dep-blocked", {
+    // Create dependent task via RPC
+    await createTaskDirect(client, workspaceId, "dep-blocked", {
       environmentId: "test-local",
       dependsOn: [blockerId],
     });

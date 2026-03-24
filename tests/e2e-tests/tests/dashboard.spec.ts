@@ -1,41 +1,35 @@
 import { test, expect } from "./fixtures.js";
-import { createWorkspace, sendWsAndWaitFor } from "./helpers.js";
+import { createWorkspace } from "./helpers.js";
+import type { GrackleClient } from "./rpc-client.js";
 
 /** Archive all existing workspaces so we start from a clean slate. */
-async function archiveAllWorkspaces(page: import("@playwright/test").Page): Promise<void> {
-  const response = await sendWsAndWaitFor(page, { type: "list_workspaces" }, "workspaces");
-  const workspaces = (response.payload?.workspaces || []) as Array<{ id: string }>;
-  for (const workspace of workspaces) {
-    await sendWsAndWaitFor(
-      page,
-      { type: "archive_workspace", payload: { workspaceId: workspace.id } },
-      "workspace.archived",
-    );
+async function archiveAllWorkspaces(client: GrackleClient): Promise<void> {
+  const response = await client.listWorkspaces({});
+  for (const workspace of response.workspaces) {
+    await client.archiveWorkspace({ id: workspace.id });
   }
-  if (workspaces.length > 0) {
+}
+
+test.describe("Dashboard", { tag: ["@webui", "@smoke"] }, () => {
+  test("shows onboarding CTA when no workspaces exist", async ({ appPage, grackle: { client } }) => {
+    const page = appPage;
+    await archiveAllWorkspaces(client);
     await page.goto("/");
     await page.waitForFunction(
       () => document.body.innerText.includes("Connected"),
       { timeout: 10_000 },
     );
-  }
-}
-
-test.describe("Dashboard", { tag: ["@webui", "@smoke"] }, () => {
-  test("shows onboarding CTA when no workspaces exist", async ({ appPage }) => {
-    const page = appPage;
-    await archiveAllWorkspaces(page);
 
     // Welcome CTA should be visible, dashboard should not
     await expect(page.locator('[data-testid="welcome-cta"]')).toBeVisible({ timeout: 5_000 });
     await expect(page.locator('[data-testid="dashboard"]')).not.toBeVisible();
   });
 
-  test("shows dashboard when workspaces exist", async ({ appPage }) => {
+  test("shows dashboard when workspaces exist", async ({ appPage, grackle: { client } }) => {
     const page = appPage;
 
     // Create a workspace so dashboard appears
-    await createWorkspace(page, "dashboard-test");
+    await createWorkspace(client, "dashboard-test");
     await page.goto("/");
     await page.waitForFunction(
       () => document.body.innerText.includes("Connected"),
@@ -53,10 +47,10 @@ test.describe("Dashboard", { tag: ["@webui", "@smoke"] }, () => {
     await expect(page.locator('[data-testid="kpi-unhealthy-envs"]')).toBeVisible();
   });
 
-  test("dashboard sections render correctly", async ({ appPage }) => {
+  test("dashboard sections render correctly", async ({ appPage, grackle: { client } }) => {
     const page = appPage;
 
-    await createWorkspace(page, "sections-test");
+    await createWorkspace(client, "sections-test");
     await page.goto("/");
     await page.waitForFunction(
       () => document.body.innerText.includes("Connected"),
@@ -80,12 +74,17 @@ test.describe("Dashboard", { tag: ["@webui", "@smoke"] }, () => {
     await expect(page.locator('[data-testid="workspace-row"]').first()).toBeVisible();
   });
 
-  test("Dashboard sidebar tab navigates to dashboard", async ({ appPage }) => {
+  test("Dashboard sidebar tab navigates to dashboard", async ({ appPage, grackle: { client } }) => {
     const page = appPage;
 
-    await createWorkspace(page, "home-nav-test");
+    await createWorkspace(client, "home-nav-test");
 
     // Navigate away from root
+    await page.goto("/");
+    await page.waitForFunction(
+      () => document.body.innerText.includes("Connected"),
+      { timeout: 10_000 },
+    );
     await page.locator('[data-testid="workspace-row"]').first().click();
 
     // Now click the Dashboard tab in the sidebar
@@ -96,10 +95,10 @@ test.describe("Dashboard", { tag: ["@webui", "@smoke"] }, () => {
     await expect(page.locator('[data-testid="dashboard"]')).toBeVisible({ timeout: 5_000 });
   });
 
-  test("workspace card click navigates to workspace", async ({ appPage }) => {
+  test("workspace card click navigates to workspace", async ({ appPage, grackle: { client } }) => {
     const page = appPage;
 
-    await createWorkspace(page, "click-nav-test");
+    await createWorkspace(client, "click-nav-test");
     await page.goto("/");
     await page.waitForFunction(
       () => document.body.innerText.includes("Connected"),

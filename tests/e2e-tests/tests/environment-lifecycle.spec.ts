@@ -1,7 +1,5 @@
 import { test, expect } from "./fixtures.js";
 import {
-  sendWsAndWaitFor,
-  sendWsMessage,
   installWsTracker,
   injectWsMessage,
   goToEnvironments,
@@ -79,7 +77,7 @@ test.describe("Environment Detail Page — Lifecycle Actions", { tag: ["@environ
 });
 
 test.describe("Environment Lifecycle — WebSocket Handlers", { tag: ["@environment"] }, () => {
-  test("stop_environment changes status to disconnected", async ({ page }) => {
+  test("stop_environment changes status to disconnected", async ({ page, grackle: { client } }) => {
     // Use raw page (not appPage) so we can install WS tracker first
     await installWsTracker(page);
     await page.goto("/");
@@ -94,11 +92,8 @@ test.describe("Environment Lifecycle — WebSocket Handlers", { tag: ["@environm
     // Verify connected — Stop button should be visible
     await expect(page.locator("button", { hasText: "Stop" })).toBeVisible({ timeout: 5_000 });
 
-    // Send stop_environment via WS
-    await sendWsMessage(page, {
-      type: "stop_environment",
-      payload: { environmentId: "test-local" },
-    });
+    // Stop environment via RPC
+    await client.stopEnvironment({ id: "test-local" });
 
     // Wait for Connect button to appear (indicates disconnected)
     await expect(page.locator("button", { hasText: "Connect" })).toBeVisible({ timeout: 5_000 });
@@ -107,7 +102,7 @@ test.describe("Environment Lifecycle — WebSocket Handlers", { tag: ["@environm
     await reprovisionTestLocal(page);
   });
 
-  test("provision_environment connects a disconnected environment", async ({ page }) => {
+  test("provision_environment connects a disconnected environment", async ({ page, grackle: { client } }) => {
     await installWsTracker(page);
     await page.goto("/");
     await page.waitForFunction(
@@ -119,10 +114,7 @@ test.describe("Environment Lifecycle — WebSocket Handlers", { tag: ["@environm
     await navigateToEnvDetailPage(page);
 
     // First stop the environment
-    await sendWsMessage(page, {
-      type: "stop_environment",
-      payload: { environmentId: "test-local" },
-    });
+    await client.stopEnvironment({ id: "test-local" });
 
     // Wait for disconnected state — Connect button should appear
     await expect(page.locator("button", { hasText: "Connect" })).toBeVisible({ timeout: 5_000 });
@@ -134,7 +126,7 @@ test.describe("Environment Lifecycle — WebSocket Handlers", { tag: ["@environm
     await expect(page.locator("button", { hasText: "Stop" })).toBeVisible({ timeout: 15_000 });
   });
 
-  test("provision_progress messages update UI during provisioning", async ({ page }) => {
+  test("provision_progress messages update UI during provisioning", async ({ page, grackle: { client } }) => {
     await installWsTracker(page);
     await page.goto("/");
     await page.waitForFunction(
@@ -146,10 +138,7 @@ test.describe("Environment Lifecycle — WebSocket Handlers", { tag: ["@environm
     await navigateToEnvDetailPage(page);
 
     // Stop the environment first
-    await sendWsMessage(page, {
-      type: "stop_environment",
-      payload: { environmentId: "test-local" },
-    });
+    await client.stopEnvironment({ id: "test-local" });
 
     // Wait for it to show as disconnected
     await expect(page.locator("button", { hasText: "Connect" })).toBeVisible({ timeout: 5_000 });
@@ -226,7 +215,7 @@ test.describe("Environment Lifecycle — WebSocket Handlers", { tag: ["@environm
     await expect(navItems).toHaveCount(1, { timeout: 5_000 });
   });
 
-  test("auto-provision on spawn when environment is disconnected", async ({ page }) => {
+  test("auto-provision on spawn when environment is disconnected", async ({ page, grackle: { client } }) => {
     await installWsTracker(page);
     await page.goto("/");
     await page.waitForFunction(
@@ -238,31 +227,20 @@ test.describe("Environment Lifecycle — WebSocket Handlers", { tag: ["@environm
     await navigateToEnvDetailPage(page);
 
     // Stop the environment
-    await sendWsMessage(page, {
-      type: "stop_environment",
-      payload: { environmentId: "test-local" },
-    });
+    await client.stopEnvironment({ id: "test-local" });
 
     // Verify environment is disconnected — Connect button should appear
     await expect(page.locator("button", { hasText: "Connect" })).toBeVisible({ timeout: 5_000 });
 
-    // Send a spawn message directly via WS — the server should auto-provision
-    const response = await sendWsAndWaitFor(
-      page,
-      {
-        type: "spawn",
-        payload: {
-          environmentId: "test-local",
-          prompt: "auto-provision test",
-          runtime: "stub",
-        },
-      },
-      "spawned",
-      30_000,
-    );
+    // Spawn via RPC — the server should auto-provision
+    const response = await client.spawnAgent({
+      environmentId: "test-local",
+      prompt: "auto-provision test",
+      personaId: "stub",
+    });
 
-    // The server auto-provisioned and returned a spawned message with a session ID
-    expect(response.payload?.sessionId).toBeTruthy();
+    // The server auto-provisioned and returned a session with an ID
+    expect(response.id).toBeTruthy();
 
     // Verify the environment is now connected again — Stop button should appear
     await expect(page.locator("button", { hasText: "Stop" })).toBeVisible({ timeout: 10_000 });

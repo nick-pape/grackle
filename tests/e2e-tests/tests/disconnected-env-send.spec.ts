@@ -12,11 +12,12 @@
  * gRPC connection) and keeps the tests fast and hermetic.
  */
 import { test, expect } from "./fixtures.js";
+import type { GrackleClient } from "./rpc-client.js";
 import {
   installWsTracker,
   injectWsMessage,
   createWorkspace,
-  createTaskViaWs,
+  createTaskDirect,
   getWorkspaceId,
   navigateToTask,
 } from "./helpers.js";
@@ -29,7 +30,7 @@ test.describe("Disconnected environment blocks message send", { tag: ["@error"] 
    * connection that is not available in all environments).
    *
    * The approach:
-   * 1. Create a workspace + task (task creation via WS always works).
+   * 1. Create a workspace + task (task creation via RPC always works).
    * 2. Navigate to the task so the app is in `task` view mode.
    * 3. Inject a fake `sessions` message: one session with
    *    `status = "idle"` and `environmentId = "test-local"`.
@@ -44,16 +45,17 @@ test.describe("Disconnected environment blocks message send", { tag: ["@error"] 
    */
   async function setupWaitingInputWithDisconnectedEnv(
     page: import("@playwright/test").Page,
+    client: GrackleClient,
     workspaceName: string,
     taskTitle: string,
   ): Promise<void> {
     // --- 1. Create workspace and task -----------------------------------------
-    await createWorkspace(page, workspaceName);
+    await createWorkspace(client, workspaceName);
 
-    const workspaceId = await getWorkspaceId(page, workspaceName);
-    // createTaskViaWs returns the full task row from the server, including all
+    const workspaceId = await getWorkspaceId(client, workspaceName);
+    // createTaskDirect returns the full task row from the server, including all
     // fields required by the app's `isTaskData` validator.
-    const task = await createTaskViaWs(page, workspaceId, taskTitle, {
+    const task = await createTaskDirect(client, workspaceId, taskTitle, {
       environmentId: "test-local",
     });
 
@@ -131,7 +133,7 @@ test.describe("Disconnected environment blocks message send", { tag: ["@error"] 
       .waitFor({ state: "visible", timeout: 5_000 });
   }
 
-  test("Send button is disabled when task environment is disconnected", async ({ page }) => {
+  test("Send button is disabled when task environment is disconnected", async ({ page, grackle: { client } }) => {
     await installWsTracker(page);
     await page.goto("/");
     await page.waitForFunction(
@@ -141,6 +143,7 @@ test.describe("Disconnected environment blocks message send", { tag: ["@error"] 
 
     await setupWaitingInputWithDisconnectedEnv(
       page,
+      client,
       "disc-env-proj-1",
       "disc-env-task-1",
     );
@@ -154,7 +157,7 @@ test.describe("Disconnected environment blocks message send", { tag: ["@error"] 
     await expect(inputField).toBeDisabled({ timeout: 5_000 });
   });
 
-  test("Send button wrapper has explanatory title when environment is disconnected", async ({ page }) => {
+  test("Send button wrapper has explanatory title when environment is disconnected", async ({ page, grackle: { client } }) => {
     await installWsTracker(page);
     await page.goto("/");
     await page.waitForFunction(
@@ -164,6 +167,7 @@ test.describe("Disconnected environment blocks message send", { tag: ["@error"] 
 
     await setupWaitingInputWithDisconnectedEnv(
       page,
+      client,
       "disc-env-proj-2",
       "disc-env-task-2",
     );
@@ -180,7 +184,7 @@ test.describe("Disconnected environment blocks message send", { tag: ["@error"] 
     );
   });
 
-  test("disconnect hint text is visible when environment is disconnected", async ({ page }) => {
+  test("disconnect hint text is visible when environment is disconnected", async ({ page, grackle: { client } }) => {
     await installWsTracker(page);
     await page.goto("/");
     await page.waitForFunction(
@@ -190,6 +194,7 @@ test.describe("Disconnected environment blocks message send", { tag: ["@error"] 
 
     await setupWaitingInputWithDisconnectedEnv(
       page,
+      client,
       "disc-env-proj-3",
       "disc-env-task-3",
     );
@@ -202,7 +207,7 @@ test.describe("Disconnected environment blocks message send", { tag: ["@error"] 
     ).toContainText(/unavailable/i);
   });
 
-  test("Reconnect button is visible when environment is disconnected", async ({ page }) => {
+  test("Reconnect button is visible when environment is disconnected", async ({ page, grackle: { client } }) => {
     await installWsTracker(page);
     await page.goto("/");
     await page.waitForFunction(
@@ -212,6 +217,7 @@ test.describe("Disconnected environment blocks message send", { tag: ["@error"] 
 
     await setupWaitingInputWithDisconnectedEnv(
       page,
+      client,
       "disc-env-proj-4",
       "disc-env-task-4",
     );
@@ -221,7 +227,7 @@ test.describe("Disconnected environment blocks message send", { tag: ["@error"] 
     await expect(reconnectBtn).toContainText("Reconnect");
   });
 
-  test("clicking Reconnect button sends provision_environment to server", async ({ page }) => {
+  test("clicking Reconnect button sends provision_environment to server", async ({ page, grackle: { client } }) => {
     await installWsTracker(page);
     await page.goto("/");
     await page.waitForFunction(
@@ -231,6 +237,7 @@ test.describe("Disconnected environment blocks message send", { tag: ["@error"] 
 
     await setupWaitingInputWithDisconnectedEnv(
       page,
+      client,
       "disc-env-proj-5",
       "disc-env-task-5",
     );
@@ -320,7 +327,7 @@ test.describe("Disconnected environment blocks message send", { tag: ["@error"] 
     ).toBeVisible({ timeout: 5_000 });
   });
 
-  test("Send button re-enables when environment reconnects", async ({ page }) => {
+  test("Send button re-enables when environment reconnects", async ({ page, grackle: { client } }) => {
     await installWsTracker(page);
     await page.goto("/");
     await page.waitForFunction(
@@ -330,6 +337,7 @@ test.describe("Disconnected environment blocks message send", { tag: ["@error"] 
 
     await setupWaitingInputWithDisconnectedEnv(
       page,
+      client,
       "disc-env-proj-6",
       "disc-env-task-6",
     );
@@ -371,7 +379,7 @@ test.describe("Disconnected environment blocks message send", { tag: ["@error"] 
     ).not.toBeVisible({ timeout: 5_000 });
   });
 
-  test("Send button is disabled when task environment is in error state", async ({ page }) => {
+  test("Send button is disabled when task environment is in error state", async ({ page, grackle: { client } }) => {
     await installWsTracker(page);
     await page.goto("/");
     await page.waitForFunction(
@@ -380,10 +388,10 @@ test.describe("Disconnected environment blocks message send", { tag: ["@error"] 
     );
 
     // Set up the waiting_input state via WS injection
-    await createWorkspace(page, "disc-env-proj-err");
+    await createWorkspace(client, "disc-env-proj-err");
 
-    const workspaceId = await getWorkspaceId(page, "disc-env-proj-err");
-    const task = await createTaskViaWs(page, workspaceId, "disc-env-task-err", {
+    const workspaceId = await getWorkspaceId(client, "disc-env-proj-err");
+    const task = await createTaskDirect(client, workspaceId, "disc-env-task-err", {
       environmentId: "test-local",
     });
 

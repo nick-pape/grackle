@@ -1,5 +1,5 @@
 import { test, expect } from "./fixtures.js";
-import { sendWsAndWaitFor, goToSettings } from "./helpers.js";
+import { goToSettings } from "./helpers.js";
 
 test.describe("Settings Page", { tag: ["@settings"] }, () => {
   test("gear icon navigates to settings page with Credentials tab", async ({ appPage }) => {
@@ -50,7 +50,7 @@ test.describe("Settings Page", { tag: ["@settings"] }, () => {
     await expect(page.locator("html")).toHaveAttribute("data-theme", "grackle-light");
   });
 
-  test("add token via settings form", async ({ appPage }) => {
+  test("add token via settings form", async ({ appPage, grackle: { client } }) => {
     const page = appPage;
 
     await goToSettings(appPage);
@@ -66,32 +66,21 @@ test.describe("Settings Page", { tag: ["@settings"] }, () => {
     await expect(page.getByText("ui-test-token", { exact: true })).toBeVisible({ timeout: 5_000 });
     await expect(page.getByText("UI_TEST_TOKEN", { exact: true })).toBeVisible();
 
-    // Clean up via WS
-    await sendWsAndWaitFor(
-      page,
-      { type: "delete_token", payload: { name: "ui-test-token" } },
-      "token.changed",
-    );
+    // Clean up via RPC
+    await client.deleteToken({ name: "ui-test-token" });
   });
 
-  test("delete token via settings page", async ({ appPage }) => {
+  test("delete token via settings page", async ({ appPage, grackle: { client } }) => {
     const page = appPage;
 
-    // First create a token via WS
-    await sendWsAndWaitFor(
-      page,
-      {
-        type: "set_token",
-        payload: {
-          name: "ui-delete-test",
-          value: "to-delete",
-          tokenType: "env_var",
-          envVar: "DELETE_ME_UI",
-          filePath: "",
-        },
-      },
-      "token.changed",
-    );
+    // First create a token via RPC
+    await client.setToken({
+      name: "ui-delete-test",
+      value: "to-delete",
+      type: "env_var",
+      envVar: "DELETE_ME_UI",
+      filePath: "",
+    });
 
     await goToSettings(appPage);
     await page.getByRole("tab", { name: "Credentials" }).click();
@@ -112,37 +101,9 @@ test.describe("Settings Page", { tag: ["@settings"] }, () => {
     await expect(page.getByText("ui-delete-test", { exact: true })).not.toBeVisible({ timeout: 5_000 });
   });
 
-  test("add token with file type shows file path field", async ({ appPage }) => {
-    const page = appPage;
+  // "add token with file type shows file path field" removed — field switching covered by TokensPanel.stories.tsx (TypeSelectorSwitchesFields).
 
-    await goToSettings(appPage);
-    await page.getByRole("tab", { name: "Credentials" }).click();
-
-    // Select "File" type (use token type select, not provider dropdowns)
-    await page.locator("select", { hasText: "Environment Variable" }).selectOption("file");
-
-    // The placeholder should change to file path
-    await expect(page.locator('input[placeholder*="File path"]')).toBeVisible();
-
-    // Fill and submit
-    await page.locator('input[placeholder="Token name"]').fill("file-ui-token");
-    await page.locator('input[placeholder="Value"]').fill("filesecret");
-    await page.locator('input[placeholder*="File path"]').fill("/tmp/.token");
-    await page.locator("button", { hasText: "Add Token" }).click();
-
-    // Verify token appears with file type badge
-    await expect(page.getByText("file-ui-token", { exact: true })).toBeVisible({ timeout: 5_000 });
-    await expect(page.getByText("/tmp/.token", { exact: true })).toBeVisible();
-
-    // Clean up
-    await sendWsAndWaitFor(
-      page,
-      { type: "delete_token", payload: { name: "file-ui-token" } },
-      "token.changed",
-    );
-  });
-
-  test("token form clears after successful add", async ({ appPage }) => {
+  test("token form clears after successful add", async ({ appPage, grackle: { client } }) => {
     const page = appPage;
 
     await goToSettings(appPage);
@@ -163,11 +124,7 @@ test.describe("Settings Page", { tag: ["@settings"] }, () => {
     await expect(valueInput).toHaveValue("");
 
     // Clean up
-    await sendWsAndWaitFor(
-      page,
-      { type: "delete_token", payload: { name: "clear-test-token" } },
-      "token.changed",
-    );
+    await client.deleteToken({ name: "clear-test-token" });
   });
 
   test("settings page description text is visible in Credentials tab", async ({ appPage }) => {
