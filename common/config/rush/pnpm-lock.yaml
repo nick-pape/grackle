@@ -674,12 +674,12 @@ importers:
       '@grackle-ai/heft-playwright-plugin':
         specifier: workspace:*
         version: link:../heft-playwright-plugin
-      '@grackle-ai/heft-storybook-plugin':
-        specifier: workspace:*
-        version: link:../heft-storybook-plugin
       '@grackle-ai/heft-vite-plugin':
         specifier: workspace:*
         version: link:../heft-vite-plugin
+      '@grackle-ai/heft-web-test-plugin':
+        specifier: workspace:*
+        version: link:../heft-storybook-plugin
       '@microsoft/api-extractor':
         specifier: ~7.57.7
         version: 7.57.7(@types/node@22.19.15)

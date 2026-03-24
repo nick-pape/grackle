@@ -10,7 +10,7 @@
   "dependencies": {
     "@grackle-ai/heft-buf-plugin": "workspace:*",
     "@grackle-ai/heft-playwright-plugin": "workspace:*",
-    "@grackle-ai/heft-storybook-plugin": "workspace:*",
+    "@grackle-ai/heft-web-test-plugin": "workspace:*",
     "@grackle-ai/heft-vite-plugin": "workspace:*",
     "@rushstack/eslint-config": "4.6.4",
     "@rushstack/heft": "1.2.7",

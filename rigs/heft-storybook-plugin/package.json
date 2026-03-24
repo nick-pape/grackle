@@ -1,8 +1,8 @@
 {
-  "name": "@grackle-ai/heft-storybook-plugin",
+  "name": "@grackle-ai/heft-web-test-plugin",
   "version": "0.0.1",
   "private": true,
-  "description": "Heft task plugins for building and testing Storybook",
+  "description": "Heft task plugins for web package testing (Storybook and Vitest)",
   "main": "lib/index.js",
   "scripts": {
     "build": "tsc",

@@ -23,7 +23,7 @@
       "projectFolder": "rigs/heft-vite-plugin"
     },
     {
-      "packageName": "@grackle-ai/heft-storybook-plugin",
+      "packageName": "@grackle-ai/heft-web-test-plugin",
       "projectFolder": "rigs/heft-storybook-plugin"
     },
     {

@@ -28,7 +28,7 @@
         "storybook-build": {
           "taskDependencies": ["typescript"],
           "taskPlugin": {
-            "pluginPackage": "@grackle-ai/heft-storybook-plugin",
+            "pluginPackage": "@grackle-ai/heft-web-test-plugin",
             "pluginName": "storybook-build-plugin"
           }
         }
@@ -39,13 +39,13 @@
       "tasksByName": {
         "vitest": {
           "taskPlugin": {
-            "pluginPackage": "@grackle-ai/heft-storybook-plugin",
+            "pluginPackage": "@grackle-ai/heft-web-test-plugin",
             "pluginName": "vitest-plugin"
           }
         },
         "storybook-test": {
           "taskPlugin": {
-            "pluginPackage": "@grackle-ai/heft-storybook-plugin",
+            "pluginPackage": "@grackle-ai/heft-web-test-plugin",
             "pluginName": "storybook-test-plugin"
           }
         }

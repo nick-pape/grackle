@@ -50,14 +50,13 @@ export const ChangingProviderFiresCallback: Story = {
     onUpdateCredentialProviders: fn(),
   },
   play: async ({ canvas, args }) => {
-    // Find all select elements — one per provider (Claude, GitHub, Copilot, Codex, Goose)
-    const selects = canvas.getAllByDisplayValue("Off");
-    // The second select should be GitHub (Claude=0, GitHub=1, Copilot=2, Codex=3, Goose=4)
-    const githubSelect = selects[1];
+    // Find the GitHub provider row by its label, then get its select element
+    const githubLabel: HTMLElement = canvas.getByText("GitHub");
+    const githubRow: HTMLElement = githubLabel.closest("div")!;
+    const githubSelect: HTMLSelectElement = githubRow.querySelector("select")!;
 
     await userEvent.selectOptions(githubSelect, "on");
 
-    // The callback should have been called
     await expect(args.onUpdateCredentialProviders).toHaveBeenCalled();
   },
 };
