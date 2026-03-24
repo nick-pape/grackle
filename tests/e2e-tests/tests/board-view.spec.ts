@@ -3,9 +3,6 @@ import {
   navigateToWorkspace,
   createWorkspace,
   createTask,
-  createTaskViaWs,
-  getWorkspaceId,
-  getTaskId,
   navigateToTask,
   patchWsForStubRuntime,
 } from "./helpers.js";
@@ -28,64 +25,6 @@ test.describe("Board View", { tag: ["@workspace"] }, () => {
 
     // Without selecting a workspace, Board tab should not exist
     await expect(page.getByTestId("board-tab")).not.toBeVisible();
-  });
-
-  test("empty workspace shows CTA on board view", async ({ appPage }) => {
-    const page = appPage;
-
-    await createWorkspace(page, "board-empty");
-    await navigateToWorkspace(page, "board-empty");
-
-    // Navigate to board tab
-    await page.getByTestId("board-tab").click();
-
-    // Should show empty CTA
-    await expect(page.getByTestId("board-empty-cta")).toBeVisible({ timeout: 5_000 });
-    await expect(page.getByTestId("board-empty-cta").getByRole("button", { name: "Create Task" })).toBeVisible();
-  });
-
-  test("tasks appear in correct columns based on status", async ({ appPage }) => {
-    const page = appPage;
-
-    await createWorkspace(page, "board-columns");
-    await createTask(page, "board-columns", "col-task-a");
-    await createTask(page, "board-columns", "col-task-b");
-    await navigateToWorkspace(page, "board-columns");
-
-    // Switch to Board tab
-    await page.getByTestId("board-tab").click();
-
-    // Verify board container is visible
-    await expect(page.getByTestId("board-container")).toBeVisible({ timeout: 5_000 });
-
-    // Both tasks should be in the Not Started column (default status)
-    const notStartedColumn = page.getByTestId("board-column-not_started");
-    await expect(notStartedColumn).toBeVisible();
-
-    // Verify count badge shows 2
-    await expect(page.getByTestId("board-count-not_started")).toContainText("2");
-
-    // Other columns should show 0
-    await expect(page.getByTestId("board-count-working")).toContainText("0");
-    await expect(page.getByTestId("board-count-complete")).toContainText("0");
-  });
-
-  test("all five columns are always rendered", async ({ appPage }) => {
-    const page = appPage;
-
-    await createWorkspace(page, "board-all-cols");
-    await createTask(page, "board-all-cols", "all-cols-task");
-    await navigateToWorkspace(page, "board-all-cols");
-
-    await page.getByTestId("board-tab").click();
-    await expect(page.getByTestId("board-container")).toBeVisible({ timeout: 5_000 });
-
-    // All five columns should be present
-    await expect(page.getByTestId("board-column-not_started")).toBeVisible();
-    await expect(page.getByTestId("board-column-working")).toBeVisible();
-    await expect(page.getByTestId("board-column-paused")).toBeVisible();
-    await expect(page.getByTestId("board-column-complete")).toBeVisible();
-    await expect(page.getByTestId("board-column-failed")).toBeVisible();
   });
 
   test("clicking a card navigates to task detail", async ({ appPage }) => {
@@ -124,59 +63,6 @@ test.describe("Board View", { tag: ["@workspace"] }, () => {
 
     await page.keyboard.press("Enter");
     await expect(page.locator('[data-testid="task-status"]')).toBeVisible({ timeout: 5_000 });
-  });
-
-  test("blocked task shows blocked badge in its status column", async ({ appPage }) => {
-    const page = appPage;
-
-    await createWorkspace(page, "board-blocked");
-    await createTask(page, "board-blocked", "blocker-task");
-
-    const workspaceId = await getWorkspaceId(page, "board-blocked");
-    const blockerId = await getTaskId(page, workspaceId, "blocker-task");
-
-    // Create a dependent task
-    await createTaskViaWs(page, workspaceId, "blocked-task", {
-      dependsOn: [blockerId],
-    });
-
-    // Navigate to workspace page to see board
-    await navigateToWorkspace(page, "board-blocked");
-
-    // Switch to board
-    await page.getByTestId("board-tab").click();
-    await expect(page.getByTestId("board-container")).toBeVisible({ timeout: 5_000 });
-
-    // The blocked task should still be in Not Started column (not a separate column)
-    await expect(page.getByTestId("board-count-not_started")).toContainText("2");
-
-    // And it should have a "blocked" badge on the card
-    const blockedBadge = page.locator("[data-testid^='board-card-']").filter({ hasText: "blocked" });
-    await expect(blockedBadge).toBeVisible({ timeout: 5_000 });
-  });
-
-  test("child progress badge shows on parent cards", async ({ appPage }) => {
-    const page = appPage;
-
-    await createWorkspace(page, "board-children");
-    const workspaceId = await getWorkspaceId(page, "board-children");
-    const parentTask = await createTaskViaWs(page, workspaceId, "parent-task", { canDecompose: true });
-    const parentId = parentTask.id as string;
-
-    // Create child tasks
-    await createTaskViaWs(page, workspaceId, "child-1", { parentTaskId: parentId });
-    await createTaskViaWs(page, workspaceId, "child-2", { parentTaskId: parentId });
-
-    // Navigate to workspace page to see board
-    await navigateToWorkspace(page, "board-children");
-
-    // Switch to board
-    await page.getByTestId("board-tab").click();
-    await expect(page.getByTestId("board-container")).toBeVisible({ timeout: 5_000 });
-
-    // Parent card should show child progress badge "0/2"
-    const parentCard = page.locator("[data-testid^='board-card-']").filter({ hasText: "parent-task" });
-    await expect(parentCard.locator("text=0/2")).toBeVisible({ timeout: 5_000 });
   });
 
   test("real-time update moves card between columns", async ({ appPage }) => {

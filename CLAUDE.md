@@ -50,6 +50,37 @@ npx buf generate
 - **CLI uses `GRACKLE_URL`, not `GRACKLE_PORT`**: The CLI client reads `GRACKLE_URL` (e.g., `http://127.0.0.1:7500`) to find the gRPC server. Setting `GRACKLE_PORT` only affects the server's listen port, not the CLI's connection target.
 - **Playwright runs in parallel**: Each worker spawns its own isolated Grackle stack (4 ports + GRACKLE_HOME). Worker count defaults to `min(4, cpuCount/2)` locally, 2 in CI. Override via `E2E_WORKERS` env var.
 
+### Storybook Component Tests
+
+Components in `packages/web/src/components/` have Storybook stories (`.stories.tsx` files) with interaction tests (`play` functions). These test UI behavior in a real browser without the server stack.
+
+```bash
+# Run Storybook locally
+cd packages/web && npm run storybook
+
+# Build + run interaction tests headlessly
+cd packages/web && npm run build-storybook
+npx concurrently -k -s first \
+  "npx http-server storybook-static --port 6006 --silent" \
+  "npx wait-on tcp:127.0.0.1:6006 && npx test-storybook --url http://127.0.0.1:6006"
+```
+
+Storybook is integrated into the Heft build pipeline via `@grackle-ai/heft-web-test-plugin`:
+- **`rush build`** runs `storybook build` as a heft build task (produces `storybook-static/`)
+- **`rush test`** runs both vitest and `test-storybook` via heft test phase
+- No separate CI step needed — it's part of the standard build/test flow
+
+**When to use Storybook vs E2E:**
+- **Storybook:** Pure component rendering, form validation, keyboard interaction, CSS checks, toggle behavior — anything that doesn't need the server
+- **E2E (Playwright):** Flows requiring real WebSocket/gRPC (session spawning, task lifecycle, event streaming, server-side validation)
+
+**Writing stories:**
+- Place `.stories.tsx` next to the component file
+- Import `expect, fn, userEvent` from `"@storybook/test"`
+- Import mock data from `../../test-utils/storybook-helpers.js`
+- Use `play` functions with `canvas.getByTestId()` / `canvas.getByRole()` for assertions
+- Components needing `useGrackle()` require the `withMockGrackle` decorator from `src/test-utils/storybook-helpers.js`
+
 ## Manual Testing
 
 **After finishing code changes, always manually test if the change is testable.** Don't rely solely on unit tests — unit tests mock everything and only verify wiring, not real behavior.
