@@ -9,11 +9,11 @@ import {
 
 test.describe("Multi-Task", { tag: ["@task"] }, () => {
   test("switching between tasks preserves state", async ({ stubTask }) => {
-    const { page, workspaceName } = stubTask;
+    const { page, client, workspaceName } = stubTask;
 
     // Create two tasks
-    await createTask(page, workspaceName, "preserve-task-a", "test-local");
-    await createTask(page, workspaceName, "preserve-task-b", "test-local");
+    await createTask(client, workspaceName, "preserve-task-a", "test-local");
+    await createTask(client, workspaceName, "preserve-task-b", "test-local");
 
     // Navigate to task A, run it to review state
     await navigateToTask(page, "preserve-task-a");
@@ -35,13 +35,13 @@ test.describe("Multi-Task", { tag: ["@task"] }, () => {
   });
 
   test("multiple workspaces with tasks are navigable via board", async ({ stubTask }) => {
-    const { page, workspaceName } = stubTask;
+    const { page, client, workspaceName } = stubTask;
 
     // Use the fixture workspace as workspace X, create workspace Y manually
-    await createTask(page, workspaceName, "x-task-1", "test-local");
+    await createTask(client, workspaceName, "x-task-1", "test-local");
 
-    await createWorkspace(page, "multi-proj-y");
-    await createTask(page, "multi-proj-y", "y-task-1", "test-local");
+    await createWorkspace(client, "multi-proj-y");
+    await createTask(client, "multi-proj-y", "y-task-1", "test-local");
 
     // Navigate to workspace X board — task card should be visible
     await navigateToWorkspace(page, workspaceName);
@@ -55,10 +55,10 @@ test.describe("Multi-Task", { tag: ["@task"] }, () => {
   });
 
   test("task status badges update during lifecycle", async ({ stubTask }) => {
-    const { page, workspaceName } = stubTask;
+    const { page, client, workspaceName } = stubTask;
 
     // Create task
-    await createTask(page, workspaceName, "badge-task", "test-local");
+    await createTask(client, workspaceName, "badge-task", "test-local");
 
     // Navigate to the task and start it
     await navigateToTask(page, "badge-task");

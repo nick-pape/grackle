@@ -5,32 +5,28 @@ import {
   navigateToTask,
   getWorkspaceId,
   getTaskId,
-  sendWsMessage,
 } from "./helpers.js";
 
 test.describe("Findings", { tag: ["@error"] }, () => {
-  test("post finding and see it in Findings tab", async ({ appPage }) => {
+  test("post finding and see it in Findings tab", async ({ appPage, grackle: { client } }) => {
     const page = appPage;
 
     // Create workspace and task
-    await createWorkspace(page, "find-single");
-    await createTask(page, "find-single", "find-task-1", "test-local");
+    await createWorkspace(client, "find-single");
+    await createTask(client, "find-single", "find-task-1", "test-local");
 
     // Get IDs for posting a finding
-    const workspaceId = await getWorkspaceId(page, "find-single");
-    const taskId = await getTaskId(page, workspaceId, "find-task-1");
+    const workspaceId = await getWorkspaceId(client, "find-single");
+    const taskId = await getTaskId(client, workspaceId, "find-task-1");
 
-    // Post a finding via WS
-    await sendWsMessage(page, {
-      type: "post_finding",
-      payload: {
-        workspaceId: workspaceId,
-        taskId,
-        category: "bug",
-        title: "Found a null pointer issue",
-        content: "The handler at line 42 dereferences a null value when input is empty.",
-        tags: ["critical", "backend"],
-      },
+    // Post a finding via RPC
+    await client.postFinding({
+      workspaceId,
+      taskId,
+      category: "bug",
+      title: "Found a null pointer issue",
+      content: "The handler at line 42 dereferences a null value when input is empty.",
+      tags: ["critical", "backend"],
     });
 
     // Navigate to task and switch to Findings tab
@@ -47,51 +43,42 @@ test.describe("Findings", { tag: ["@error"] }, () => {
     await expect(page.getByText("backend")).toBeVisible();
   });
 
-  test("multiple findings with different categories render correctly", async ({ appPage }) => {
+  test("multiple findings with different categories render correctly", async ({ appPage, grackle: { client } }) => {
     const page = appPage;
 
     // Create workspace and task
-    await createWorkspace(page, "find-multi");
-    await createTask(page, "find-multi", "find-task-2", "test-local");
+    await createWorkspace(client, "find-multi");
+    await createTask(client, "find-multi", "find-task-2", "test-local");
 
-    const workspaceId = await getWorkspaceId(page, "find-multi");
-    const taskId = await getTaskId(page, workspaceId, "find-task-2");
+    const workspaceId = await getWorkspaceId(client, "find-multi");
+    const taskId = await getTaskId(client, workspaceId, "find-task-2");
 
     // Post 3 findings with different categories
-    await sendWsMessage(page, {
-      type: "post_finding",
-      payload: {
-        workspaceId: workspaceId,
-        taskId,
-        category: "bug",
-        title: "Memory leak in cache",
-        content: "Cache entries are never evicted.",
-        tags: [],
-      },
+    await client.postFinding({
+      workspaceId,
+      taskId,
+      category: "bug",
+      title: "Memory leak in cache",
+      content: "Cache entries are never evicted.",
+      tags: [],
     });
 
-    await sendWsMessage(page, {
-      type: "post_finding",
-      payload: {
-        workspaceId: workspaceId,
-        taskId,
-        category: "architecture",
-        title: "Consider event sourcing",
-        content: "The current approach stores only final state.",
-        tags: ["design"],
-      },
+    await client.postFinding({
+      workspaceId,
+      taskId,
+      category: "architecture",
+      title: "Consider event sourcing",
+      content: "The current approach stores only final state.",
+      tags: ["design"],
     });
 
-    await sendWsMessage(page, {
-      type: "post_finding",
-      payload: {
-        workspaceId: workspaceId,
-        taskId,
-        category: "general",
-        title: "Code style note",
-        content: "Inconsistent naming in utils module.",
-        tags: [],
-      },
+    await client.postFinding({
+      workspaceId,
+      taskId,
+      category: "general",
+      title: "Code style note",
+      content: "Inconsistent naming in utils module.",
+      tags: [],
     });
 
     // Navigate to task → Findings tab
@@ -109,27 +96,24 @@ test.describe("Findings", { tag: ["@error"] }, () => {
     await expect(page.getByText("general")).toBeVisible();
   });
 
-  test("findings persist across tab switches", async ({ appPage }) => {
+  test("findings persist across tab switches", async ({ appPage, grackle: { client } }) => {
     const page = appPage;
 
     // Create workspace and task
-    await createWorkspace(page, "find-persist");
-    await createTask(page, "find-persist", "find-task-3", "test-local");
+    await createWorkspace(client, "find-persist");
+    await createTask(client, "find-persist", "find-task-3", "test-local");
 
-    const workspaceId = await getWorkspaceId(page, "find-persist");
-    const taskId = await getTaskId(page, workspaceId, "find-task-3");
+    const workspaceId = await getWorkspaceId(client, "find-persist");
+    const taskId = await getTaskId(client, workspaceId, "find-task-3");
 
     // Post a finding
-    await sendWsMessage(page, {
-      type: "post_finding",
-      payload: {
-        workspaceId: workspaceId,
-        taskId,
-        category: "decision",
-        title: "Use PostgreSQL over MySQL",
-        content: "Better JSON support and ACID compliance.",
-        tags: ["database"],
-      },
+    await client.postFinding({
+      workspaceId,
+      taskId,
+      category: "decision",
+      title: "Use PostgreSQL over MySQL",
+      content: "Better JSON support and ACID compliance.",
+      tags: ["database"],
     });
 
     // Navigate to task → Findings tab

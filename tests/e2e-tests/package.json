@@ -11,7 +11,10 @@
     "_phase:e2e": "playwright test"
   },
   "devDependencies": {
+    "@connectrpc/connect": "^2.0.0",
+    "@connectrpc/connect-node": "^2.0.0",
     "@grackle-ai/cli": "workspace:*",
+    "@grackle-ai/common": "workspace:*",
     "@grackle-ai/server": "workspace:*",
     "@grackle-ai/web": "workspace:*",
     "@playwright/test": "^1.49.0"

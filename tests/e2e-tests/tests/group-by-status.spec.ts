@@ -16,11 +16,11 @@ test.describe("Group-by-status toggle", { tag: ["@workspace"] }, () => {
     await page.evaluate(() => localStorage.removeItem("grackle-task-group-by-status"));
   });
 
-  test("toggle persists across page reload", async ({ appPage }) => {
+  test("toggle persists across page reload", async ({ appPage, grackle: { client } }) => {
     const page = appPage;
 
-    await createWorkspace(page, "gbs-persist");
-    await createTask(page, "gbs-persist", "persist-task");
+    await createWorkspace(client, "gbs-persist");
+    await createTask(client, "gbs-persist", "persist-task");
 
     await goToTasksTab(page);
 
@@ -50,11 +50,11 @@ test.describe("Group-by-status toggle", { tag: ["@workspace"] }, () => {
     expect(storedAfter).toBe("true");
   });
 
-  test("empty status groups are hidden", async ({ appPage }) => {
+  test("empty status groups are hidden", async ({ appPage, grackle: { client } }) => {
     const page = appPage;
 
-    await createWorkspace(page, "gbs-empty");
-    await createTask(page, "gbs-empty", "only-not-started");
+    await createWorkspace(client, "gbs-empty");
+    await createTask(client, "gbs-empty", "only-not-started");
 
     await goToTasksTab(page);
     await page.getByTestId("task-group-by-status-toggle").click();
@@ -64,11 +64,11 @@ test.describe("Group-by-status toggle", { tag: ["@workspace"] }, () => {
     await expect(page.getByTestId("status-group-not_started").first()).toBeVisible({ timeout: 5_000 });
   });
 
-  test("task navigation from grouped view", async ({ appPage }) => {
+  test("task navigation from grouped view", async ({ appPage, grackle: { client } }) => {
     const page = appPage;
 
-    await createWorkspace(page, "gbs-nav");
-    await createTask(page, "gbs-nav", "nav-target");
+    await createWorkspace(client, "gbs-nav");
+    await createTask(client, "gbs-nav", "nav-target");
 
     await goToTasksTab(page);
 

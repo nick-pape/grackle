@@ -1,29 +1,22 @@
 import { test, expect } from "./fixtures.js";
-import { sendWsMessage } from "./helpers.js";
+import type { GrackleClient } from "./rpc-client.js";
 
 /**
- * Helper: set onboarding_completed via a direct WebSocket connection.
- * Uses sendWsMessage which opens a WS, sends the message, waits briefly
- * for server processing, then closes. Works regardless of current route.
+ * Helper: set onboarding_completed via direct RPC.
  */
 async function setOnboardingCompleted(
-  page: import("@playwright/test").Page,
+  client: GrackleClient,
   value: "true" | "false",
 ): Promise<void> {
-  await page.goto("/");
-  await page.waitForLoadState("networkidle");
-  await sendWsMessage(page, {
-    type: "set_setting",
-    payload: { key: "onboarding_completed", value },
-  });
+  await client.setSetting({ key: "onboarding_completed", value });
 }
 
 // Run tests serially — they share server state (onboarding_completed setting).
 test.describe.configure({ mode: "serial" });
 
 test.describe("Setup Wizard (FRE)", { tag: ["@settings"] }, () => {
-  test("redirects to /setup when onboarding is incomplete", async ({ page }) => {
-    await setOnboardingCompleted(page, "false");
+  test("redirects to /setup when onboarding is incomplete", async ({ page, grackle: { client } }) => {
+    await setOnboardingCompleted(client, "false");
 
     await page.goto("/");
     await page.waitForURL("**/setup", { timeout: 10_000 });
@@ -105,7 +98,7 @@ test.describe("Setup Wizard (FRE)", { tag: ["@settings"] }, () => {
   });
 
   // Restore onboarding_completed so other specs sharing this worker aren't affected.
-  test("cleanup: restore onboarding state", async ({ page }) => {
-    await setOnboardingCompleted(page, "true");
+  test("cleanup: restore onboarding state", async ({ grackle: { client } }) => {
+    await setOnboardingCompleted(client, "true");
   });
 });

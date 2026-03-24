@@ -1,59 +1,5 @@
 import { test, expect } from "./fixtures.js";
-import { sendWsAndWaitFor } from "./helpers.js";
-
-/**
- * Helper: create a persona via WebSocket and wait for the server acknowledgment.
- * Returns the full WS response payload.
- */
-async function createPersonaViaWs(
-  page: import("@playwright/test").Page,
-  fields: {
-    name: string;
-    description?: string;
-    systemPrompt: string;
-    runtime?: string;
-    model?: string;
-    maxTurns?: number;
-  },
-): Promise<Record<string, unknown>> {
-  return sendWsAndWaitFor(
-    page,
-    {
-      type: "create_persona",
-      payload: {
-        name: fields.name,
-        description: fields.description ?? "",
-        systemPrompt: fields.systemPrompt,
-        runtime: fields.runtime ?? "stub",
-        model: fields.model ?? "",
-        maxTurns: fields.maxTurns ?? 0,
-      },
-    },
-    "persona.created",
-  );
-}
-
-/**
- * Helper: list all personas via WebSocket and return the array.
- */
-async function listPersonasViaWs(
-  page: import("@playwright/test").Page,
-): Promise<Array<{ id: string; name: string; runtime: string; description: string; systemPrompt: string; model: string; maxTurns: number }>> {
-  const response = await sendWsAndWaitFor(
-    page,
-    { type: "list_personas" },
-    "personas",
-  );
-  return (response.payload?.personas ?? []) as Array<{
-    id: string;
-    name: string;
-    runtime: string;
-    description: string;
-    systemPrompt: string;
-    model: string;
-    maxTurns: number;
-  }>;
-}
+import type { GrackleClient } from "./rpc-client.js";
 
 // Pure protocol tests (create, delete, update, validation) have been migrated to
 // packages/server/src/grpc-persona.test.ts as integration tests.
@@ -61,11 +7,12 @@ async function listPersonasViaWs(
 test.describe("Persona Management — UI", { tag: ["@persona"] }, () => {
   test("persona management view shows created personas", async ({
     appPage,
+    grackle: { client },
   }) => {
     const page = appPage;
 
     // Create a persona
-    await createPersonaViaWs(page, {
+    await client.createPersona({
       name: "Security Reviewer",
       description: "Reviews code for vulnerabilities",
       systemPrompt: "You review code for security issues.",
@@ -89,10 +36,11 @@ test.describe("Persona Management — UI", { tag: ["@persona"] }, () => {
 
   test("created persona appears in management view with all details", async ({
     appPage,
+    grackle: { client },
   }) => {
     const page = appPage;
 
-    await createPersonaViaWs(page, {
+    await client.createPersona({
       name: "Detailed Persona",
       description: "A persona with full details",
       systemPrompt: "You are detailed.",
@@ -114,11 +62,12 @@ test.describe("Persona Management — UI", { tag: ["@persona"] }, () => {
 
   test("delete persona removes it from management view", async ({
     appPage,
+    grackle: { client },
   }) => {
     const page = appPage;
 
     // Create a persona
-    await createPersonaViaWs(page, {
+    await client.createPersona({
       name: "Soon Deleted",
       systemPrompt: "Will be deleted",
     });
@@ -131,16 +80,12 @@ test.describe("Persona Management — UI", { tag: ["@persona"] }, () => {
       timeout: 5_000,
     });
 
-    // Delete via WS
-    const personas = await listPersonasViaWs(page);
-    const toDelete = personas.find((p) => p.name === "Soon Deleted");
+    // Delete via RPC
+    const personas = await client.listPersonas({});
+    const toDelete = personas.personas.find((p) => p.name === "Soon Deleted");
     expect(toDelete).toBeDefined();
 
-    await sendWsAndWaitFor(
-      page,
-      { type: "delete_persona", payload: { personaId: toDelete!.id } },
-      "persona.deleted",
-    );
+    await client.deletePersona({ id: toDelete!.id });
 
     // The management view should no longer show the persona
     await expect(page.getByText("Soon Deleted")).not.toBeVisible({

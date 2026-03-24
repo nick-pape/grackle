@@ -1,23 +1,18 @@
 import { test, expect } from "./fixtures.js";
 import {
   createWorkspace,
-  createTaskViaWs,
+  createTaskDirect,
   getWorkspaceId,
   navigateToWorkspace,
   navigateToTask,
-  sendWsAndWaitFor,
 } from "./helpers.js";
+import type { GrackleClient } from "./rpc-client.js";
 
-/** Archive all existing workspaces via WS so the welcome CTA appears. */
-async function archiveAllWorkspaces(page: import("@playwright/test").Page): Promise<void> {
-  const response = await sendWsAndWaitFor(page, { type: "list_workspaces" }, "workspaces");
-  const workspaces = (response.payload?.workspaces || []) as Array<{ id: string }>;
-  for (const workspace of workspaces) {
-    await sendWsAndWaitFor(
-      page,
-      { type: "archive_workspace", payload: { workspaceId: workspace.id } },
-      "workspace.archived",
-    );
+/** Archive all existing workspaces via RPC so the welcome CTA appears. */
+async function archiveAllWorkspaces(client: GrackleClient, page: import("@playwright/test").Page): Promise<void> {
+  const resp = await client.listWorkspaces({});
+  for (const workspace of resp.workspaces) {
+    await client.archiveWorkspace({ id: workspace.id });
   }
   // Navigate to home so the UI reflects the empty state (welcome CTA is on the home page)
   await page.goto("/");
@@ -37,11 +32,11 @@ test.describe("Workspaces", { tag: ["@workspace"] }, () => {
     await expect(page.getByTestId("env-nav-item")).toBeVisible();
   });
 
-  test("welcome CTA navigates to create workspace page", async ({ appPage }) => {
+  test("welcome CTA navigates to create workspace page", async ({ appPage, grackle: { client } }) => {
     const page = appPage;
 
     // Ensure no workspaces exist so the welcome CTA is visible
-    await archiveAllWorkspaces(page);
+    await archiveAllWorkspaces(client, page);
 
     // On fresh load (no workspaces), the welcome CTA should be visible
     await expect(page.locator('[data-testid="welcome-cta"]')).toBeVisible();
@@ -91,11 +86,11 @@ test.describe("Workspaces", { tag: ["@workspace"] }, () => {
   });
 
 
-  test("create a workspace and see it on environment detail page", async ({ appPage }) => {
+  test("create a workspace and see it on environment detail page", async ({ appPage, grackle: { client } }) => {
     const page = appPage;
 
-    // Create a workspace via WS
-    await createWorkspace(page, "my-workspace");
+    // Create a workspace via RPC
+    await createWorkspace(client, "my-workspace");
 
     // Navigate to environment detail page — workspace card should appear
     await page.locator('[data-testid="sidebar-tab-environments"]').click();
@@ -103,22 +98,22 @@ test.describe("Workspaces", { tag: ["@workspace"] }, () => {
     await expect(page.getByTestId("workspace-card").filter({ hasText: "my-workspace" })).toBeVisible({ timeout: 5_000 });
   });
 
-  test("navigate to workspace shows empty task list and workspace view", async ({ appPage }) => {
+  test("navigate to workspace shows empty task list and workspace view", async ({ appPage, grackle: { client } }) => {
     const page = appPage;
 
-    // Create a workspace via WS and navigate to it
-    await createWorkspace(page, "expand-test");
+    // Create a workspace via RPC and navigate to it
+    await createWorkspace(client, "expand-test");
     await navigateToWorkspace(page, "expand-test");
 
     // Main panel shows workspace view with empty state CTA
     await expect(page.getByText("Create Task").first()).toBeVisible({ timeout: 5_000 });
   });
 
-  test("create task from workspace page", async ({ appPage }) => {
+  test("create task from workspace page", async ({ appPage, grackle: { client } }) => {
     const page = appPage;
 
-    // Create a workspace via WS and navigate to it
-    await createWorkspace(page, "task-test");
+    // Create a workspace via RPC and navigate to it
+    await createWorkspace(client, "task-test");
     await navigateToWorkspace(page, "task-test");
 
     // Click the "Create Task" button on the workspace page
@@ -141,13 +136,13 @@ test.describe("Workspaces", { tag: ["@workspace"] }, () => {
     await expect(page.getByText("implement feature").first()).toBeVisible({ timeout: 10_000 });
   });
 
-  test("task view shows header and tabs", async ({ appPage }) => {
+  test("task view shows header and tabs", async ({ appPage, grackle: { client } }) => {
     const page = appPage;
 
-    // Create workspace and task via WS
-    await createWorkspace(page, "view-test");
-    const workspaceId = await getWorkspaceId(page, "view-test");
-    await createTaskViaWs(page, workspaceId, "my task");
+    // Create workspace and task via RPC
+    await createWorkspace(client, "view-test");
+    const workspaceId = await getWorkspaceId(client, "view-test");
+    await createTaskDirect(client, workspaceId, "my task");
 
     // Navigate to the task directly
     await navigateToTask(page, "my task");
@@ -183,15 +178,15 @@ test.describe("Workspaces", { tag: ["@workspace"] }, () => {
 
   // ─── Workspace Detail View Tests ───────────────────────────────
 
-  /** Helper: create a workspace via WS and navigate to its detail page */
-  async function createAndSelectWorkspace(page: import("@playwright/test").Page, name: string) {
-    await createWorkspace(page, name);
+  /** Helper: create a workspace via RPC and navigate to its detail page */
+  async function createAndSelectWorkspace(client: GrackleClient, page: import("@playwright/test").Page, name: string) {
+    await createWorkspace(client, name);
     await navigateToWorkspace(page, name);
   }
 
-  test("workspace detail shows metadata section", async ({ appPage }) => {
+  test("workspace detail shows metadata section", async ({ appPage, grackle: { client } }) => {
     const page = appPage;
-    await createAndSelectWorkspace(page, "detail-test");
+    await createAndSelectWorkspace(client, page, "detail-test");
 
     // Workspace name should be visible in header
     await expect(page.locator('[data-testid="workspace-name"]')).toContainText("detail-test");
@@ -213,9 +208,9 @@ test.describe("Workspaces", { tag: ["@workspace"] }, () => {
     await expect(page.getByText(/Created/)).toBeVisible();
   });
 
-  test("edit workspace name inline", async ({ appPage }) => {
+  test("edit workspace name inline", async ({ appPage, grackle: { client } }) => {
     const page = appPage;
-    await createAndSelectWorkspace(page, "name-edit-test");
+    await createAndSelectWorkspace(client, page, "name-edit-test");
 
     await page.locator('[data-testid="edit-name-button"]').click();
     const nameInput = page.locator('[data-testid="edit-name-input"]');
@@ -231,9 +226,9 @@ test.describe("Workspaces", { tag: ["@workspace"] }, () => {
     await expect(page.locator('[data-testid="workspace-name"]')).toContainText("renamed-workspace", { timeout: 10_000 });
   });
 
-  test("cancel name edit with Escape", async ({ appPage }) => {
+  test("cancel name edit with Escape", async ({ appPage, grackle: { client } }) => {
     const page = appPage;
-    await createAndSelectWorkspace(page, "escape-test");
+    await createAndSelectWorkspace(client, page, "escape-test");
 
     const nameInput = page.locator('[data-testid="edit-name-input"]');
     await page.locator('[data-testid="edit-name-button"]').click();
@@ -248,9 +243,9 @@ test.describe("Workspaces", { tag: ["@workspace"] }, () => {
     await expect(nameInput).not.toBeVisible();
   });
 
-  test("edit workspace description", async ({ appPage }) => {
+  test("edit workspace description", async ({ appPage, grackle: { client } }) => {
     const page = appPage;
-    await createAndSelectWorkspace(page, "desc-edit-test");
+    await createAndSelectWorkspace(client, page, "desc-edit-test");
 
     const descInput = page.locator('[data-testid="edit-description-input"]');
     await page.locator('[data-testid="edit-description-button"]').click();
@@ -268,9 +263,9 @@ test.describe("Workspaces", { tag: ["@workspace"] }, () => {
     await expect(page.getByText("No description")).not.toBeVisible();
   });
 
-  test("edit repo URL", async ({ appPage }) => {
+  test("edit repo URL", async ({ appPage, grackle: { client } }) => {
     const page = appPage;
-    await createAndSelectWorkspace(page, "repo-edit-test");
+    await createAndSelectWorkspace(client, page, "repo-edit-test");
 
     const repoInput = page.locator('[data-testid="edit-repo-input"]');
     await page.locator('[data-testid="edit-repo-button"]').click();
@@ -287,9 +282,9 @@ test.describe("Workspaces", { tag: ["@workspace"] }, () => {
     await expect(page.getByText("No repository")).not.toBeVisible();
   });
 
-  test("pencil edit icons are visible", async ({ appPage }) => {
+  test("pencil edit icons are visible", async ({ appPage, grackle: { client } }) => {
     const page = appPage;
-    await createAndSelectWorkspace(page, "pencil-test");
+    await createAndSelectWorkspace(client, page, "pencil-test");
 
     // All edit buttons should be present
     await expect(page.locator('[data-testid="edit-name-button"]')).toBeVisible();
@@ -298,9 +293,9 @@ test.describe("Workspaces", { tag: ["@workspace"] }, () => {
     await expect(page.locator('[data-testid="edit-env-button"]')).toBeVisible();
   });
 
-  test("archive workspace flow", async ({ appPage }) => {
+  test("archive workspace flow", async ({ appPage, grackle: { client } }) => {
     const page = appPage;
-    await createAndSelectWorkspace(page, "archive-test");
+    await createAndSelectWorkspace(client, page, "archive-test");
 
     // Click Archive button
     await page.locator('[data-testid="archive-workspace-button"]').click();
@@ -315,9 +310,9 @@ test.describe("Workspaces", { tag: ["@workspace"] }, () => {
     await expect(page.locator('[data-testid="workspace-name"]')).not.toBeVisible({ timeout: 5_000 });
   });
 
-  test("change default environment", async ({ appPage }) => {
+  test("change default environment", async ({ appPage, grackle: { client } }) => {
     const page = appPage;
-    await createAndSelectWorkspace(page, "env-edit-test");
+    await createAndSelectWorkspace(client, page, "env-edit-test");
 
     const envSelect = page.locator('[data-testid="edit-env-select"]');
     await page.locator('[data-testid="edit-env-button"]').click();
@@ -328,9 +323,9 @@ test.describe("Workspaces", { tag: ["@workspace"] }, () => {
     await expect(page.getByTestId("workspace-meta").getByText("test-local", { exact: true })).toBeVisible({ timeout: 5_000 });
   });
 
-  test("click-to-edit on field values", async ({ appPage }) => {
+  test("click-to-edit on field values", async ({ appPage, grackle: { client } }) => {
     const page = appPage;
-    await createAndSelectWorkspace(page, "click-edit-test");
+    await createAndSelectWorkspace(client, page, "click-edit-test");
 
     // Clicking the value area (not just the pencil) should open edit mode
     await page.locator('[data-testid="edit-name-button"]').click();
@@ -348,9 +343,9 @@ test.describe("Workspaces", { tag: ["@workspace"] }, () => {
     await page.keyboard.press("Escape");
   });
 
-  test("keyboard activation of edit button (Enter/Space)", async ({ appPage }) => {
+  test("keyboard activation of edit button (Enter/Space)", async ({ appPage, grackle: { client } }) => {
     const page = appPage;
-    await createAndSelectWorkspace(page, "keyboard-activate-test");
+    await createAndSelectWorkspace(client, page, "keyboard-activate-test");
 
     // Focus the name edit button and press Enter to activate edit mode
     const nameButton = page.locator('[data-testid="edit-name-button"]');
@@ -368,9 +363,9 @@ test.describe("Workspaces", { tag: ["@workspace"] }, () => {
     await page.keyboard.press("Escape");
   });
 
-  test("keyboard hints shown while editing", async ({ appPage }) => {
+  test("keyboard hints shown while editing", async ({ appPage, grackle: { client } }) => {
     const page = appPage;
-    await createAndSelectWorkspace(page, "hint-test");
+    await createAndSelectWorkspace(client, page, "hint-test");
 
     // Edit name — should show keyboard hint
     await page.locator('[data-testid="edit-name-button"]').click();
@@ -384,9 +379,9 @@ test.describe("Workspaces", { tag: ["@workspace"] }, () => {
     await page.keyboard.press("Escape");
   });
 
-  test("validation error for empty name", async ({ appPage }) => {
+  test("validation error for empty name", async ({ appPage, grackle: { client } }) => {
     const page = appPage;
-    await createAndSelectWorkspace(page, "validation-test");
+    await createAndSelectWorkspace(client, page, "validation-test");
 
     // Edit name and clear it
     await page.locator('[data-testid="edit-name-button"]').click();
@@ -403,9 +398,9 @@ test.describe("Workspaces", { tag: ["@workspace"] }, () => {
     await expect(nameInput).not.toBeVisible();
   });
 
-  test("validation error for invalid repo URL", async ({ appPage }) => {
+  test("validation error for invalid repo URL", async ({ appPage, grackle: { client } }) => {
     const page = appPage;
-    await createAndSelectWorkspace(page, "repo-validate-test");
+    await createAndSelectWorkspace(client, page, "repo-validate-test");
 
     await page.locator('[data-testid="edit-repo-button"]').click();
     const repoInput = page.locator('[data-testid="edit-repo-input"]');
@@ -418,9 +413,9 @@ test.describe("Workspaces", { tag: ["@workspace"] }, () => {
     await page.keyboard.press("Escape");
   });
 
-  test("collapsible metadata section", async ({ appPage }) => {
+  test("collapsible metadata section", async ({ appPage, grackle: { client } }) => {
     const page = appPage;
-    await createAndSelectWorkspace(page, "collapse-test");
+    await createAndSelectWorkspace(client, page, "collapse-test");
 
     // Metadata should be visible by default
     await expect(page.locator('[data-testid="workspace-meta"]')).toBeVisible();
@@ -434,16 +429,16 @@ test.describe("Workspaces", { tag: ["@workspace"] }, () => {
     await expect(page.locator('[data-testid="workspace-meta"]')).toBeVisible();
   });
 
-  test("task progress bar appears with tasks", async ({ appPage }) => {
+  test("task progress bar appears with tasks", async ({ appPage, grackle: { client } }) => {
     const page = appPage;
-    await createAndSelectWorkspace(page, "progress-test");
+    await createAndSelectWorkspace(client, page, "progress-test");
 
     // No progress bar when no tasks
     await expect(page.locator('[data-testid="progress-bar"]')).not.toBeVisible();
 
-    // Create a task via WS — the app receives the WS event in real-time
-    const workspaceId = await getWorkspaceId(page, "progress-test");
-    await createTaskViaWs(page, workspaceId, "progress task");
+    // Create a task via RPC — the app receives the WS event in real-time
+    const workspaceId = await getWorkspaceId(client, "progress-test");
+    await createTaskDirect(client, workspaceId, "progress task");
 
     // Progress bar should now be visible (app updates via WS push)
     await expect(page.locator('[data-testid="progress-bar"]')).toBeVisible({ timeout: 5_000 });

@@ -1,11 +1,12 @@
 import { test as base, type Page, type TestInfo } from "@playwright/test";
 import { startGrackleStack, stopGrackleStack, type E2EState } from "./server-manager.js";
+import { createTestClient, type GrackleClient } from "./rpc-client.js";
 import {
   provisionEnvironmentDirect,
   createWorkspace,
   createTaskWithScenario,
   createTask as createTaskHelper,
-  createTaskViaWs,
+  createTaskDirect,
   navigateToTask,
   patchWsForStubRuntime,
   getWorkspaceId,
@@ -20,13 +21,15 @@ type WsPayload = Record<string, any>;
 export interface StubTaskContext {
   /** The underlying Playwright page (same as `appPage`). */
   page: Page;
+  /** Typed gRPC client for data operations. */
+  client: GrackleClient;
   /** Unique workspace name created for this test. */
   workspaceName: string;
   /** Create a scenario task, navigate to it, and return. */
   createAndNavigate(title: string, scenario: { steps: ScenarioStep[] }): Promise<void>;
   /** Create a task (no scenario) and navigate to it. */
   createAndNavigateSimple(title: string, environmentId?: string): Promise<void>;
-  /** Create a task via WS (for tests needing task IDs or custom options). */
+  /** Create a task via RPC (for tests needing task IDs or custom options). */
   createTask(title: string, options?: {
     environmentId?: string;
     dependsOn?: string[];
@@ -66,7 +69,7 @@ interface WorkerFixtures {
 }
 
 interface TestFixtures {
-  grackle: { apiKey: string; baseURL: string; wsUrl: string; mcpPort: number; grpcPort: number };
+  grackle: { client: GrackleClient; apiKey: string; baseURL: string; wsUrl: string; mcpPort: number; grpcPort: number };
   appPage: Page;
   stubTask: StubTaskContext;
 }
@@ -100,8 +103,9 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
   },
 
   grackle: async ({ baseURL, workerServer }, use) => {
+    const client = createTestClient(workerServer.serverPort, workerServer.apiKey);
     const wsUrl = `ws://127.0.0.1:${workerServer.webPort}`;
-    await use({ apiKey: workerServer.apiKey, baseURL: baseURL!, wsUrl, mcpPort: workerServer.mcpPort, grpcPort: workerServer.serverPort });
+    await use({ client, apiKey: workerServer.apiKey, baseURL: baseURL!, wsUrl, mcpPort: workerServer.mcpPort, grpcPort: workerServer.serverPort });
   },
 
   appPage: async ({ page, workerServer }, use) => {
@@ -132,12 +136,13 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
     await use(page);
   },
 
-  stubTask: async ({ appPage }, use, testInfo) => {
+  stubTask: async ({ appPage, grackle }, use, testInfo) => {
     const page = appPage;
+    const { client } = grackle;
     const workspaceName = workspaceNameFromTest(testInfo);
 
     // Create a unique workspace for this test
-    await createWorkspace(page, workspaceName);
+    await createWorkspace(client, workspaceName);
 
     // Install stub runtime patch via addInitScript so it persists across
     // page.goto navigations (e.g. navigateToWorkspace). Also apply to the
@@ -176,15 +181,16 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
 
     const context: StubTaskContext = {
       page,
+      client,
       workspaceName,
 
       async createAndNavigate(title: string, scenario: { steps: ScenarioStep[] }): Promise<void> {
-        await createTaskWithScenario(page, workspaceName, title, scenario);
+        await createTaskWithScenario(client, workspaceName, title, scenario);
         await navigateToTask(page, title);
       },
 
       async createAndNavigateSimple(title: string, environmentId?: string): Promise<void> {
-        await createTaskHelper(page, workspaceName, title, environmentId || "test-local");
+        await createTaskHelper(client, workspaceName, title, environmentId || "test-local");
         await navigateToTask(page, title);
       },
 
@@ -195,8 +201,8 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
         parentTaskId?: string;
         canDecompose?: boolean;
       }): Promise<WsPayload> {
-        const wsId = await getWorkspaceId(page, workspaceName);
-        return createTaskViaWs(page, wsId, title, options);
+        const wsId = await getWorkspaceId(client, workspaceName);
+        return createTaskDirect(client, wsId, title, options);
       },
     };
 
