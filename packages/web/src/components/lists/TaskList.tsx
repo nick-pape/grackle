@@ -112,7 +112,6 @@ function StatusGroupAccordion({
                   className={`${styles.taskRow} ${isSelected ? styles.selected : ""}`}
                   style={{ '--task-indent': `${TASK_BASE_INDENT_PX}px` } as CSSProperties}
                   data-task-id={task.id}
-                  data-selected={isSelected || undefined}
                 >
                   <span className={styles.leafSpacer} />
                   <span className={styles.taskStatusIcon} style={{ color: statusStyle.color }}>
@@ -175,7 +174,6 @@ function TaskTreeNode({
         className={`${styles.taskRow} ${isSelected ? styles.selected : ""}`}
         style={{ '--task-indent': `${indent}px` } as CSSProperties}
         data-task-id={node.id}
-        data-selected={isSelected || undefined}
       >
         {hasChildren && (
           <span

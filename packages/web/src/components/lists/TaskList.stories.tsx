@@ -381,14 +381,13 @@ export const HighlightGlobalRoute: Story = {
     tasks: highlightTasks,
   },
   play: async ({ canvasElement }) => {
-    const selectedRow = canvasElement.querySelector('[data-task-id="t-alpha"]');
+    // Task alpha should have the selected CSS module class
+    const selectedRow = canvasElement.querySelector('[data-task-id="t-alpha"][class*="selected"]');
     await expect(selectedRow).toBeInTheDocument();
-    await expect(selectedRow).toHaveAttribute("data-selected");
 
-    // Other task should NOT be selected
-    const otherRow = canvasElement.querySelector('[data-task-id="t-bravo"]');
-    await expect(otherRow).toBeInTheDocument();
-    await expect(otherRow).not.toHaveAttribute("data-selected");
+    // Task bravo should NOT have the selected class
+    const otherRow = canvasElement.querySelector('[data-task-id="t-bravo"][class*="selected"]');
+    await expect(otherRow).not.toBeInTheDocument();
   },
 };
 
@@ -409,13 +408,12 @@ export const HighlightWorkspaceScopedRoute: Story = {
     tasks: highlightTasks,
   },
   play: async ({ canvasElement }) => {
-    const selectedRow = canvasElement.querySelector('[data-task-id="t-alpha"]');
+    // Task alpha should have the selected CSS module class
+    const selectedRow = canvasElement.querySelector('[data-task-id="t-alpha"][class*="selected"]');
     await expect(selectedRow).toBeInTheDocument();
-    await expect(selectedRow).toHaveAttribute("data-selected");
 
-    // Other task should NOT be selected
-    const otherRow = canvasElement.querySelector('[data-task-id="t-bravo"]');
-    await expect(otherRow).toBeInTheDocument();
-    await expect(otherRow).not.toHaveAttribute("data-selected");
+    // Task bravo should NOT have the selected class
+    const otherRow = canvasElement.querySelector('[data-task-id="t-bravo"][class*="selected"]');
+    await expect(otherRow).not.toBeInTheDocument();
   },
 };
