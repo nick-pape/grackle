@@ -58,7 +58,12 @@ export function PersonaManager({
                 onClick={() => onNavigateToPersona(p.id)}
                 role="button"
                 tabIndex={0}
-                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onNavigateToPersona(p.id); } }}
+                onKeyDown={(e) => {
+                  if (e.currentTarget === e.target && (e.key === "Enter" || e.key === " ")) {
+                    e.preventDefault();
+                    onNavigateToPersona(p.id);
+                  }
+                }}
               >
                 <div className={styles.cardHeader}>
                   <span className={styles.cardTitle}>
@@ -109,4 +114,3 @@ export function PersonaManager({
     </div>
   );
 }
-

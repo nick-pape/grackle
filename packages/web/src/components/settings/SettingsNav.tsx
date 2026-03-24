@@ -27,7 +27,10 @@ export function SettingsNav(): JSX.Element {
   const navigate = useAppNavigate();
   const tabListRef = useRef<HTMLElement>(null);
 
-  const activeTab = TABS.find((t) => location.pathname === `${SETTINGS_URL}/${t.path}`)?.path ?? TABS[0].path;
+  const activeTab = TABS.find((tab) => {
+    const tabPath = `${SETTINGS_URL}/${tab.path}`;
+    return location.pathname === tabPath || location.pathname.startsWith(`${tabPath}/`);
+  })?.path ?? TABS[0].path;
 
   const handleClick = useCallback((path: string) => {
     navigate(`${SETTINGS_URL}/${path}`);

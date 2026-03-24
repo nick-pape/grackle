@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, fn, userEvent } from "@storybook/test";
+import { expect, fn, userEvent, within } from "@storybook/test";
 import { PersonaManager } from "./PersonaManager.js";
 import { buildPersona } from "../../test-utils/storybook-helpers.js";
 
@@ -104,13 +104,18 @@ export const DeletePersonaFlow: Story = {
       buildPersona({ id: "p-del", name: "Disposable Persona" }),
     ],
   },
-  play: async ({ canvas }) => {
+  play: async ({ canvas, args }) => {
     // Click Delete within the card actions
     const deleteButton = canvas.getByTestId("persona-delete-p-del");
     await userEvent.click(deleteButton);
 
     // Confirmation dialog should appear
     await expect(canvas.getByText("Delete Persona?")).toBeInTheDocument();
+
+    const dialog = canvas.getByRole("dialog", { name: "Delete Persona?" });
+    await userEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
+
+    await expect(args.onDeletePersona).toHaveBeenCalledWith("p-del");
   },
 };
 

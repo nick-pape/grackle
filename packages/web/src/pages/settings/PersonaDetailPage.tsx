@@ -115,8 +115,12 @@ function PersonaForm({
     }
   };
 
+  const isLoadingExisting = !isNew && existing === undefined;
+
   const canSubmit = name.trim().length > 0
-    && (personaType === "script" ? script.trim().length > 0 : (systemPrompt.trim().length > 0 && !!runtime && !!model));
+    && !isLoadingExisting
+    && systemPrompt.trim().length > 0
+    && (personaType === "script" ? script.trim().length > 0 : (!!runtime && !!model));
 
   const isAppDefault = !isNew && appDefaultPersonaId === existing?.id;
 
@@ -126,7 +130,7 @@ function PersonaForm({
 
   const handleSubmit = (e: FormEvent): void => {
     e.preventDefault();
-    if (!canSubmit) {
+    if (isLoadingExisting || !canSubmit) {
       return;
     }
     if (existing) {
@@ -149,6 +153,12 @@ function PersonaForm({
 
   return (
     <>
+      {isLoadingExisting ? (
+        <div className={styles.form}>
+          <h3>Edit Persona</h3>
+          <p>Loading persona...</p>
+        </div>
+      ) : (
       <form onSubmit={handleSubmit} className={styles.form}>
         <h3>{isNew ? "Create Persona" : "Edit Persona"}</h3>
         <div className={styles.typeToggle} data-testid="persona-type-toggle">
@@ -259,12 +269,13 @@ function PersonaForm({
               />
             </label>
             <label>
-              System Prompt <span className={styles.optional}>(optional)</span>
+              System Prompt
               <textarea
                 value={systemPrompt}
                 onChange={(e) => setSystemPrompt(e.target.value)}
-                placeholder="Optional context for the script..."
+                placeholder="Context for the script..."
                 rows={4}
+                required
               />
             </label>
             <label>
@@ -322,6 +333,7 @@ function PersonaForm({
           </p>
         )}
       </form>
+      )}
 
       <ConfirmDialog
         isOpen={showDeleteConfirm}

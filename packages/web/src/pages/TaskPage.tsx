@@ -360,12 +360,13 @@ export function TaskPage(): JSX.Element {
     location.pathname.endsWith("/stream") ? "stream"
     : location.pathname.endsWith("/findings") ? "findings"
     : "overview";
+  const isEditRoute = location.pathname.endsWith("/edit");
 
   const [activeTaskTab, setActiveTaskTab] = useState<TaskTab>(tabFromUrl);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [selectedSessionId, setSelectedSessionId] = useState<string | undefined>(undefined);
   const [selectedEnvId, setSelectedEnvId] = useState<string>("");
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditing, setIsEditing] = useState<boolean>(isEditRoute);
 
   // Sync tab with URL only when the URL-derived tab actually changes.
   // Use a ref to avoid fighting with the auto-switch-by-status logic.
@@ -374,6 +375,14 @@ export function TaskPage(): JSX.Element {
     prevTabFromUrlRef.current = tabFromUrl;
     if (tabFromUrl !== activeTaskTab) {
       setActiveTaskTab(tabFromUrl);
+    }
+  }
+
+  const prevIsEditRouteRef = useRef(isEditRoute);
+  if (isEditRoute !== prevIsEditRouteRef.current) {
+    prevIsEditRouteRef.current = isEditRoute;
+    if (isEditRoute !== isEditing) {
+      setIsEditing(isEditRoute);
     }
   }
 
@@ -422,6 +431,9 @@ export function TaskPage(): JSX.Element {
     }
     if (selectedEnvId !== "") {
       setSelectedEnvId("");
+    }
+    if (isEditing !== isEditRoute) {
+      setIsEditing(isEditRoute);
     }
   }
 
@@ -555,7 +567,13 @@ export function TaskPage(): JSX.Element {
                 personas={personas}
                 onCreateTask={createTask}
                 onUpdateTask={updateTask}
-                onEditDone={() => setIsEditing(false)}
+                onEditDone={() => {
+                  if (isEditRoute) {
+                    navigate(taskUrl(task.id, undefined, routeWorkspaceId, routeEnvironmentId), { replace: true });
+                  } else {
+                    setIsEditing(false);
+                  }
+                }}
               />
             ) : task ? (
               <TaskOverview task={task} tasksById={tasksById} environments={environments} workspaces={workspaces} taskSessions={currentTaskSessions} selectedEnvId={selectedEnvId} />

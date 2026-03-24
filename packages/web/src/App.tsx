@@ -190,6 +190,7 @@ function AppRoutes(): JSX.Element {
           <Route path="tasks" element={<TasksEmptyPage />} />
           <Route path="tasks/new" element={<NewTaskPage />} />
           <Route path="tasks/:taskId" element={<TaskPage />} />
+          <Route path="tasks/:taskId/edit" element={<TaskPage />} />
           <Route path="tasks/:taskId/stream" element={<TaskPage />} />
           <Route path="tasks/:taskId/findings" element={<TaskPage />} />
         </Route>
@@ -204,6 +205,7 @@ function AppRoutes(): JSX.Element {
           <Route path="environments/:environmentId/workspaces/:workspaceId" element={<WorkspacePage />} />
           <Route path="environments/:environmentId/workspaces/:workspaceId/tasks/new" element={<NewTaskPage />} />
           <Route path="environments/:environmentId/workspaces/:workspaceId/tasks/:taskId" element={<TaskPage />} />
+          <Route path="environments/:environmentId/workspaces/:workspaceId/tasks/:taskId/edit" element={<TaskPage />} />
           <Route path="environments/:environmentId/workspaces/:workspaceId/tasks/:taskId/stream" element={<TaskPage />} />
           <Route path="environments/:environmentId/workspaces/:workspaceId/tasks/:taskId/findings" element={<TaskPage />} />
           <Route path="environments" element={<EnvironmentsPage />}>
