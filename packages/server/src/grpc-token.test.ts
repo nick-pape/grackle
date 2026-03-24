@@ -208,7 +208,7 @@ describe("gRPC token handlers", () => {
     const found = result.tokens.find((t) => t.name === "test-no-value");
     expect(found).toBeDefined();
     // Value must not be present in the response
-    expect(found?.value).toBeFalsy();
+    expect("value" in (found as Record<string, unknown>)).toBe(false);
 
     await handlers.deleteToken({ name: "test-no-value" });
   });

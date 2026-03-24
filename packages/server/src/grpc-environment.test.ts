@@ -64,13 +64,17 @@ interface EnvironmentInfo {
   adapterConfig: string;
 }
 
-describe("gRPC addEnvironment handlers", () => {
-  let handlers: ReturnType<typeof getHandlers>;
+// Initialize database once for all describes in this file.
+// openDatabase(":memory:") is a no-op after first call, so a single
+// beforeAll at the top level ensures both describes share one DB.
+let handlers: ReturnType<typeof getHandlers>;
 
-  beforeAll(() => {
-    initTestDatabase();
-    handlers = getHandlers();
-  });
+beforeAll(() => {
+  initTestDatabase();
+  handlers = getHandlers();
+});
+
+describe("gRPC addEnvironment handlers", () => {
 
   /** Helper to list all environments. */
   async function listEnvironments(): Promise<EnvironmentInfo[]> {
@@ -131,12 +135,6 @@ describe("gRPC addEnvironment handlers", () => {
 });
 
 describe("gRPC updateEnvironment handlers", () => {
-  let handlers: ReturnType<typeof getHandlers>;
-
-  beforeAll(() => {
-    initTestDatabase();
-    handlers = getHandlers();
-  });
 
   /** Helper to create an environment and return its ID. */
   async function createEnv(displayName: string): Promise<string> {

@@ -4,8 +4,7 @@
  * Provides an in-memory SQLite database (real stores, no database mocks)
  * and a helper to extract handler methods from {@link registerGrackleRoutes}.
  */
-import { openDatabase, initDatabase, sqlite } from "@grackle-ai/database";
-import { seedDatabase } from "@grackle-ai/database";
+import { openDatabase, initDatabase, sqlite, seedDatabase } from "@grackle-ai/database";
 import { registerGrackleRoutes } from "../grpc-service.js";
 import type { ConnectRouter } from "@connectrpc/connect";
 
