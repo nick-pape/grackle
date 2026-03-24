@@ -22,23 +22,6 @@ async function setOnboardingCompleted(
 test.describe.configure({ mode: "serial" });
 
 test.describe("Setup Wizard (FRE)", { tag: ["@settings"] }, () => {
-  test.afterAll(async ({ browser }) => {
-    // Restore onboarding_completed to true so other test suites aren't affected
-    const ctx = await browser.newContext();
-    const page = await ctx.newPage();
-    const { readFileSync } = await import("node:fs");
-    const { STATE_FILE } = await import("./state-file.js");
-    const state = JSON.parse(readFileSync(STATE_FILE, "utf8"));
-    const eqIdx = state.pairingCookie.indexOf("=");
-    await ctx.addCookies([{
-      name: state.pairingCookie.slice(0, eqIdx),
-      value: state.pairingCookie.slice(eqIdx + 1),
-      url: `http://127.0.0.1:${state.webPort}`,
-    }]);
-    await setOnboardingCompleted(page, "true");
-    await ctx.close();
-  });
-
   test("redirects to /setup when onboarding is incomplete", async ({ page }) => {
     await setOnboardingCompleted(page, "false");
 
@@ -119,5 +102,10 @@ test.describe("Setup Wizard (FRE)", { tag: ["@settings"] }, () => {
       { timeout: 10_000 },
     );
     await expect(page.getByTestId("setup-wizard")).not.toBeVisible();
+  });
+
+  // Restore onboarding_completed so other specs sharing this worker aren't affected.
+  test("cleanup: restore onboarding state", async ({ page }) => {
+    await setOnboardingCompleted(page, "true");
   });
 });

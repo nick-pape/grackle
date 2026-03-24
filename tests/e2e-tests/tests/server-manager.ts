@@ -1,15 +1,23 @@
+/**
+ * Manages the lifecycle of an isolated Grackle server stack for E2E tests.
+ *
+ * Each call to {@link startGrackleStack} spawns a fully independent stack
+ * (PowerLine + Server on 4 unique ports, with its own GRACKLE_HOME and SQLite DB).
+ * Multiple stacks can run in parallel for Playwright worker-level parallelism.
+ */
 import { execSync, spawn, type ChildProcess } from "node:child_process";
 import { createServer } from "node:net";
-import { mkdtempSync, writeFileSync, readFileSync, existsSync } from "node:fs";
+import { mkdtempSync, readFileSync, existsSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import type { FullConfig } from "@playwright/test";
-import { STATE_FILE } from "./state-file.js";
 
 const POLL_INTERVAL_MS = 300;
 const POLL_TIMEOUT_MS = 15_000;
+const MAX_PORT_RETRIES = 10;
+const TEARDOWN_GRACE_MS = 500;
 
-interface E2EState {
+/** State produced by {@link startGrackleStack}, consumed by fixtures and {@link stopGrackleStack}. */
+export interface E2EState {
   grackleHome: string;
   apiKey: string;
   pairingCookie: string;
@@ -37,8 +45,6 @@ async function findAvailablePort(): Promise<number> {
     srv.on("error", reject);
   });
 }
-
-const MAX_PORT_RETRIES = 10;
 
 /** Find N distinct available ports, retrying if the OS returns duplicates. */
 async function findDistinctPorts(count: number): Promise<number[]> {
@@ -79,9 +85,7 @@ async function waitForPort(port: number, timeoutMs: number): Promise<void> {
   });
 }
 
-/**
- * Generate a pairing code via the CLI and redeem it via HTTP to obtain a session cookie.
- */
+/** Generate a pairing code via the CLI and redeem it via HTTP to obtain a session cookie. */
 async function obtainSessionCookie(serverPort: number, webPort: number, apiKey: string, grackleHome: string): Promise<string> {
   const repoRoot = join(import.meta.dirname, "../../..");
   const cliPath = join(repoRoot, "packages/cli/dist/index.js");
@@ -135,16 +139,22 @@ async function obtainSessionCookie(serverPort: number, webPort: number, apiKey: 
   });
 }
 
-export default async function globalSetup(_config: FullConfig): Promise<void> {
+/**
+ * Start a fully isolated Grackle stack: PowerLine + Server on 4 unique ports
+ * with a dedicated GRACKLE_HOME and SQLite database.
+ */
+export async function startGrackleStack(): Promise<E2EState> {
+  const tag = `[e2e:${process.pid}]`;
+
   // 1. Create isolated temp directory
   const grackleHome = mkdtempSync(join(tmpdir(), "grackle-e2e-"));
-  console.log(`[e2e] GRACKLE_HOME=${grackleHome}`);
+  console.log(`${tag} GRACKLE_HOME=${grackleHome}`);
 
   const repoRoot = join(import.meta.dirname, "../../..");
 
   // 2. Find available ports (guaranteed distinct)
   const [powerlinePort, serverPort, webPort, mcpPort] = await findDistinctPorts(4);
-  console.log(`[e2e] Ports: powerline=${powerlinePort}, server=${serverPort}, web=${webPort}, mcp=${mcpPort}`);
+  console.log(`${tag} Ports: powerline=${powerlinePort}, server=${serverPort}, web=${webPort}, mcp=${mcpPort}`);
 
   // 3. Start PowerLine (no auth needed for E2E tests — local loopback only)
   const powerline: ChildProcess = spawn(
@@ -156,8 +166,8 @@ export default async function globalSetup(_config: FullConfig): Promise<void> {
     },
   );
 
-  powerline.stderr?.on("data", (d: Buffer) => process.stderr.write(`[powerline] ${d}`));
-  powerline.stdout?.on("data", (d: Buffer) => process.stdout.write(`[powerline] ${d}`));
+  powerline.stderr?.on("data", (d: Buffer) => process.stderr.write(`${tag} [powerline] ${d}`));
+  powerline.stdout?.on("data", (d: Buffer) => process.stdout.write(`${tag} [powerline] ${d}`));
 
   // 4. Start server
   const server: ChildProcess = spawn(
@@ -178,17 +188,17 @@ export default async function globalSetup(_config: FullConfig): Promise<void> {
     },
   );
 
-  server.stderr?.on("data", (d: Buffer) => process.stderr.write(`[server] ${d}`));
-  server.stdout?.on("data", (d: Buffer) => process.stdout.write(`[server] ${d}`));
+  server.stderr?.on("data", (d: Buffer) => process.stderr.write(`${tag} [server] ${d}`));
+  server.stdout?.on("data", (d: Buffer) => process.stdout.write(`${tag} [server] ${d}`));
 
-  // 5. Wait for both ports
-  console.log(`[e2e] Waiting for PowerLine on :${powerlinePort}...`);
+  // 5. Wait for all ports
+  console.log(`${tag} Waiting for PowerLine on :${powerlinePort}...`);
   await waitForPort(powerlinePort, POLL_TIMEOUT_MS);
-  console.log(`[e2e] Waiting for server on :${webPort}...`);
+  console.log(`${tag} Waiting for server on :${webPort}...`);
   await waitForPort(webPort, POLL_TIMEOUT_MS);
-  console.log(`[e2e] Waiting for MCP server on :${mcpPort}...`);
+  console.log(`${tag} Waiting for MCP server on :${mcpPort}...`);
   await waitForPort(mcpPort, POLL_TIMEOUT_MS);
-  console.log("[e2e] All servers ready");
+  console.log(`${tag} All servers ready`);
 
   // 6. Read the auto-generated API key (may not exist immediately after port opens)
   const apiKeyPath = join(grackleHome, ".grackle", "api-key");
@@ -200,7 +210,7 @@ export default async function globalSetup(_config: FullConfig): Promise<void> {
     await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
   }
   const apiKey = readFileSync(apiKeyPath, "utf8").trim();
-  console.log(`[e2e] API key loaded (${apiKey.length} chars)`);
+  console.log(`${tag} API key loaded (${apiKey.length} chars)`);
 
   // 7. Seed an environment via CLI
   const cliPath = join(repoRoot, "packages/cli/dist/index.js");
@@ -215,7 +225,7 @@ export default async function globalSetup(_config: FullConfig): Promise<void> {
     env: cliEnv,
     stdio: "pipe",
   });
-  console.log("[e2e] Environment added");
+  console.log(`${tag} Environment added`);
 
   // Create a stub persona and set it as the app default for E2E tests.
   // --model sonnet is required because resolvePersona() validates non-empty model;
@@ -236,20 +246,20 @@ export default async function globalSetup(_config: FullConfig): Promise<void> {
     env: cliEnv,
     stdio: "pipe",
   });
-  console.log("[e2e] Stub and Stub MCP personas created; Stub set as default; onboarding completed");
+  console.log(`${tag} Stub and Stub MCP personas created; Stub set as default; onboarding completed`);
 
   execSync(`node "${cliPath}" env provision test-local`, {
     env: cliEnv,
     stdio: "pipe",
   });
-  console.log("[e2e] Environment provisioned");
+  console.log(`${tag} Environment provisioned`);
 
   // 8. Obtain a session cookie by generating and redeeming a pairing code
   const pairingCookie = await obtainSessionCookie(serverPort, webPort, apiKey, grackleHome);
-  console.log("[e2e] Session cookie obtained");
+  console.log(`${tag} Session cookie obtained`);
 
-  // 9. Save state for tests and teardown
-  const state: E2EState = {
+  console.log(`${tag} Setup complete`);
+  return {
     grackleHome,
     apiKey,
     pairingCookie,
@@ -260,6 +270,32 @@ export default async function globalSetup(_config: FullConfig): Promise<void> {
     webPort,
     mcpPort,
   };
-  writeFileSync(STATE_FILE, JSON.stringify(state));
-  console.log("[e2e] Setup complete");
+}
+
+/** Tear down a Grackle stack: kill processes and remove the temp directory. */
+export async function stopGrackleStack(state: E2EState): Promise<void> {
+  const tag = `[e2e:${process.pid}]`;
+
+  // Kill server + PowerLine
+  for (const pid of [state.serverPid, state.powerlinePid]) {
+    try {
+      process.kill(pid, "SIGTERM");
+      console.log(`${tag} Killed process ${pid}`);
+    } catch {
+      // Process may already be dead
+    }
+  }
+
+  // Small delay to let processes exit
+  await new Promise((resolve) => setTimeout(resolve, TEARDOWN_GRACE_MS));
+
+  // Remove temp directory
+  try {
+    rmSync(state.grackleHome, { recursive: true, force: true });
+    console.log(`${tag} Removed temp dir: ${state.grackleHome}`);
+  } catch {
+    console.warn(`${tag} Could not remove temp dir: ${state.grackleHome}`);
+  }
+
+  console.log(`${tag} Teardown complete`);
 }

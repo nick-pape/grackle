@@ -1252,13 +1252,18 @@ export async function goToEnvironments(page: Page): Promise<void> {
  * global-setup uses and is known to work reliably. Calls the gRPC server
  * via ConnectRPC (HTTP/2) under the hood.
  */
-export async function provisionEnvironmentDirect(environmentId: string): Promise<void> {
-  const { readFileSync } = await import("node:fs");
+export async function provisionEnvironmentDirect(
+  environmentId: string,
+  serverPort?: number,
+  apiKey?: string,
+): Promise<void> {
   const { execSync } = await import("node:child_process");
   const { resolve: pathResolve, dirname } = await import("node:path");
   const { fileURLToPath } = await import("node:url");
-  const { STATE_FILE } = await import("./state-file.js");
-  const state = JSON.parse(readFileSync(STATE_FILE, "utf8"));
+
+  // If port/key not provided, read from environment variables (set by fixtures)
+  const port = serverPort ?? Number(process.env.GRACKLE_E2E_SERVER_PORT);
+  const key = apiKey ?? process.env.GRACKLE_E2E_API_KEY ?? "";
 
   // Resolve CLI path relative to this file's location (not CWD, which is tests/e2e-tests/)
   const thisDir = dirname(fileURLToPath(import.meta.url));
@@ -1267,8 +1272,8 @@ export async function provisionEnvironmentDirect(environmentId: string): Promise
     execSync(`node "${cliPath}" env provision ${environmentId}`, {
       env: {
         ...process.env,
-        GRACKLE_URL: `http://127.0.0.1:${state.serverPort}`,
-        GRACKLE_API_KEY: state.apiKey,
+        GRACKLE_URL: `http://127.0.0.1:${port}`,
+        GRACKLE_API_KEY: key,
       },
       timeout: 30_000,
       stdio: "pipe",
