@@ -2,6 +2,21 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.75.3",
+      "tag": "@grackle-ai/cli_v0.75.3",
+      "date": "Tue, 24 Mar 2026 07:26:12 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Remove GitHub import from server/CLI/MCP — extracted to standalone script in scripts/github-import/"
+          },
+          {
+            "comment": "Replace logo with new mech-grackle design"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.75.2",
       "tag": "@grackle-ai/cli_v0.75.2",
       "date": "Tue, 24 Mar 2026 06:50:00 GMT",
