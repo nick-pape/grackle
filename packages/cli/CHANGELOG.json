@@ -2,6 +2,26 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.75.7",
+      "tag": "@grackle-ai/cli_v0.75.7",
+      "date": "Tue, 24 Mar 2026 16:30:39 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Fix sync pipe deadlock when child goes idle instead of terminal"
+          },
+          {
+            "comment": "fix: recreate lifecycle stream on session reanimate, fix resumeTask missing reanimateSession call"
+          }
+        ],
+        "none": [
+          {
+            "comment": "placeholder"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.75.6",
       "tag": "@grackle-ai/cli_v0.75.6",
       "date": "Tue, 24 Mar 2026 15:56:44 GMT",
