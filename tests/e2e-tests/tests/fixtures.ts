@@ -139,7 +139,39 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
     // Create a unique workspace for this test
     await createWorkspace(page, workspaceName);
 
-    // Patch fetch() to force stub runtime — done once per test
+    // Install stub runtime patch via addInitScript so it persists across
+    // page.goto navigations (e.g. navigateToWorkspace). Also apply to the
+    // current document via patchWsForStubRuntime for immediate effect.
+    const stubPatchFn = (envId: string): void => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const origFetch = (window as any).__origFetch__ || window.fetch;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (window as any).__origFetch__ = origFetch;
+      window.fetch = async function (input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+        const url = typeof input === "string" ? input : (input instanceof URL ? input.toString() : input.url);
+        if ((url.includes("/grackle.Grackle/StartTask") || url.includes("/grackle.Grackle/SpawnAgent")) && init?.body) {
+          try {
+            let bodyStr: string;
+            if (init.body instanceof Uint8Array) {
+              bodyStr = new TextDecoder().decode(init.body);
+            } else {
+              bodyStr = init.body as string;
+            }
+            const body = JSON.parse(bodyStr);
+            body.personaId = "stub";
+            if (!body.environmentId) {
+              body.environmentId = envId;
+            }
+            const newBodyStr = JSON.stringify(body);
+            init = { ...init, body: new TextEncoder().encode(newBodyStr) };
+          } catch {
+            /* not JSON, pass through */
+          }
+        }
+        return origFetch.call(this, input, init);
+      };
+    };
+    await page.addInitScript(stubPatchFn, "test-local");
     await patchWsForStubRuntime(page);
 
     const context: StubTaskContext = {
