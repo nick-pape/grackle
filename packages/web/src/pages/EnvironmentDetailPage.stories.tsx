@@ -30,5 +30,7 @@ export const NewChatButtonVisible: Story = {
   play: async ({ canvas }) => {
     const newChatButton = canvas.getByRole("button", { name: "New Chat" });
     await expect(newChatButton).toBeInTheDocument();
+    await expect(newChatButton).toBeVisible();
+    await expect(newChatButton).toBeEnabled();
   },
 };
