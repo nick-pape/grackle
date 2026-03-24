@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, fn, userEvent } from "@storybook/test";
+import { expect, fn } from "@storybook/test";
 import { PersonaManager } from "./PersonaManager.js";
 import { buildPersona } from "../../test-utils/storybook-helpers.js";
 
@@ -131,7 +131,7 @@ export const SetDefaultButton: Story = {
   },
   play: async ({ canvas }) => {
     // The default persona should NOT have a "Set Default" button
-    expect(canvas.queryByTestId("persona-set-default-p-default")).not.toBeInTheDocument();
+    await expect(canvas.queryByTestId("persona-set-default-p-default")).not.toBeInTheDocument();
 
     // The non-default persona should have a "Set Default" button
     await expect(canvas.getByTestId("persona-set-default-p-other")).toBeInTheDocument();

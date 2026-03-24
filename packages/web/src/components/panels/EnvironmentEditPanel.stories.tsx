@@ -167,7 +167,7 @@ export const CodespaceManualEntry: Story = {
 
     // Select dropdown should NOT be in the document when list error is present
     const selectEl = canvas.queryByTestId("env-codespace-select");
-    expect(selectEl).not.toBeInTheDocument();
+    await expect(selectEl).not.toBeInTheDocument();
   },
 };
 

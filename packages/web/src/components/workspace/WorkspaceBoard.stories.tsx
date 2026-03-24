@@ -1,11 +1,11 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, fn, userEvent } from "@storybook/test";
+import { expect, userEvent } from "@storybook/test";
 import { MemoryRouter } from "react-router";
 import { WorkspaceBoard } from "./WorkspaceBoard.js";
-import { buildTask, buildSession, buildPersona, buildEnvironment } from "../../test-utils/storybook-helpers.js";
+import { buildTask, buildEnvironment } from "../../test-utils/storybook-helpers.js";
 
-const WORKSPACE_ID = "ws-board";
-const ENVIRONMENT_ID = "env-board";
+const WORKSPACE_ID: string = "ws-board";
+const ENVIRONMENT_ID: string = "env-board";
 
 const meta: Meta<typeof WorkspaceBoard> = {
   title: "Workspace/WorkspaceBoard",

@@ -30,7 +30,7 @@ export const DefaultTabIsCredentials: Story = {
 export const KeyboardNavigation: Story = {
   play: async ({ canvas }) => {
     const credentialsTab = canvas.getByRole("tab", { name: /Credentials/ });
-    await credentialsTab.focus();
+    credentialsTab.focus();
 
     // ArrowDown should move to Personas
     await userEvent.keyboard("{ArrowDown}");

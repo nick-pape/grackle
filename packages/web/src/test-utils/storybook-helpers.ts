@@ -189,6 +189,10 @@ export function makeCredentialProviders(overrides: Partial<CredentialProviderCon
 // eslint-disable-next-line @typescript-eslint/no-empty-function
 export const noop = (): void => {};
 
+// ─── Storybook decorators ───────────────────────────────────────────────────
+
+export { withMockGrackle } from "./storybook-decorators.js";
+
 // ─── Aliases (some stories use "build" prefix) ──────────────────────────────
 
 export const buildEnvironment = makeEnvironment;

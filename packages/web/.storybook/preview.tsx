@@ -1,10 +1,8 @@
-import type { Preview, Decorator } from "@storybook/react";
+import type { Preview } from "@storybook/react";
 import type { JSX } from "react";
 import { MemoryRouter } from "react-router";
 import { ToastProvider } from "../src/context/ToastContext.js";
 import { ThemeProvider } from "../src/context/ThemeContext.js";
-import { MockGrackleProvider } from "../src/mocks/MockGrackleProvider.js";
-import { SidebarProvider } from "../src/context/SidebarContext.js";
 import "../src/styles/global.scss";
 
 /** Wraps every story in the providers components need (theme, toast, router). */
@@ -31,16 +29,4 @@ const preview: Preview = {
 };
 
 export default preview;
-
-/**
- * Decorator for stories that test page-level components which call useGrackle().
- * Apply via `decorators: [withMockGrackle]` in the story meta.
- */
-export const withMockGrackle: Decorator = (Story) => (
-  <MockGrackleProvider>
-    <SidebarProvider>
-      <Story />
-    </SidebarProvider>
-  </MockGrackleProvider>
-);
 
