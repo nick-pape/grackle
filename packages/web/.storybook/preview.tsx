@@ -5,26 +5,24 @@ import { ToastProvider } from "../src/context/ToastContext.js";
 import { ThemeProvider } from "../src/context/ThemeContext.js";
 import "../src/styles/global.scss";
 
-/** Wraps every story in the providers components need (theme, toast, router). */
-function StoryProviders({ children }: { children: JSX.Element }): JSX.Element {
-  return (
-    <ThemeProvider>
-      <ToastProvider>
-        <MemoryRouter>
-          {children}
-        </MemoryRouter>
-      </ToastProvider>
-    </ThemeProvider>
-  );
-}
-
+/**
+ * Wraps every story in the providers components need (theme, toast, router).
+ * Stories that set `parameters.skipRouter: true` get no MemoryRouter —
+ * they provide their own (e.g., page stories with initialEntries).
+ */
 const preview: Preview = {
   decorators: [
-    (Story) => (
-      <StoryProviders>
-        <Story />
-      </StoryProviders>
-    ),
+    (Story, context) => {
+      const skipRouter: boolean = context.parameters?.skipRouter === true;
+      const inner: JSX.Element = (
+        <ThemeProvider>
+          <ToastProvider>
+            <Story />
+          </ToastProvider>
+        </ThemeProvider>
+      );
+      return skipRouter ? inner : <MemoryRouter>{inner}</MemoryRouter>;
+    },
   ],
 };
 
