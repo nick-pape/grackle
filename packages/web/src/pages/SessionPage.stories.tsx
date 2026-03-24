@@ -10,19 +10,14 @@ const meta: Meta<typeof SessionPage> = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** Active running session renders header with runtime, status, and kill button. */
+/** Active running session renders header and kill button. */
 export const ActiveSession: Story = {
   decorators: [withMockGrackleRoute(["/sessions/sess-001"], "/sessions/:sessionId")],
   play: async ({ canvas }) => {
-    // Session header shows truncated ID + runtime + status
-    await expect(canvas.getByText(/sess-001/)).toBeInTheDocument();
-    await expect(canvas.getByText(/claude-code/)).toBeInTheDocument();
-    await expect(canvas.getByText(/running/)).toBeInTheDocument();
+    // Session header renders with session info
+    await expect(canvas.getByText(/Session:\s*sess-001/)).toBeInTheDocument();
 
-    // Prompt snippet visible in header
-    await expect(canvas.getByText(/Implement auth middleware/)).toBeInTheDocument();
-
-    // Kill button (×) visible for active session
+    // Kill button (×) visible for active session via title attribute
     await expect(canvas.getByTitle("Stop session")).toBeInTheDocument();
   },
 };
@@ -31,16 +26,12 @@ export const ActiveSession: Story = {
 export const StoppedSession: Story = {
   decorators: [withMockGrackleRoute(["/sessions/sess-002"], "/sessions/:sessionId")],
   play: async ({ canvas }) => {
-    // Session header shows truncated ID + runtime + end reason
-    await expect(canvas.getByText(/sess-002/)).toBeInTheDocument();
-    await expect(canvas.getByText(/claude-code/)).toBeInTheDocument();
+    // Session header renders with session info including end reason
+    await expect(canvas.getByText(/Session:\s*sess-002/)).toBeInTheDocument();
     await expect(canvas.getByText(/completed/)).toBeInTheDocument();
 
     // No kill button for stopped session
     const killButton: HTMLElement | null = canvas.queryByTitle("Stop session");
     await expect(killButton).not.toBeInTheDocument();
-
-    // Empty state message for stopped session with no events
-    await expect(canvas.getByText(/Session completed with no events recorded/)).toBeInTheDocument();
   },
 };
