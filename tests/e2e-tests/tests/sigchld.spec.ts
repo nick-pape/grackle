@@ -106,6 +106,35 @@ async function waitForSessionText(
 }
 
 test.describe("SIGCHLD — child completion notification", { tag: ["@error"] }, () => {
+  // Kill any stale active sessions on test-local so the environment is free.
+  // Without this, sessions from earlier tests (or session recovery) can block
+  // reanimateAgent with "Environment already has active session".
+  test.beforeEach(async ({ appPage }) => {
+    const sessionsResp = await sendWsAndWaitFor(
+      appPage,
+      { type: "list_sessions", payload: {} },
+      "sessions",
+    );
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const all = (sessionsResp.payload?.sessions ?? []) as Array<{ id: string; status: string }>;
+    const active = all.filter((s) => s.status === "idle" || s.status === "running" || s.status === "pending");
+    for (const s of active) {
+      await sendWsMessage(appPage, { type: "kill", payload: { sessionId: s.id } });
+    }
+    if (active.length > 0) {
+      const deadline = Date.now() + 5_000;
+      while (Date.now() < deadline) {
+        const recheck = await sendWsAndWaitFor(appPage, { type: "list_sessions", payload: {} }, "sessions");
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const remaining = (recheck.payload?.sessions ?? []) as Array<{ status: string }>;
+        if (!remaining.some((s) => s.status === "idle" || s.status === "running" || s.status === "pending")) {
+          break;
+        }
+        await appPage.waitForTimeout(250);
+      }
+    }
+  });
+
   test("parent receives SIGCHLD when child task goes idle", async ({ appPage: page }) => {
     // 1. Create workspace
     await createWorkspace(page, "SIGCHLD Test");
@@ -157,7 +186,9 @@ test.describe("SIGCHLD — child completion notification", { tag: ["@error"] }, 
     await waitForSessionStatus(page, parentSessionId, "stopped");
   });
 
-  test("SIGCHLD delivered after parent session reanimated", { timeout: 90_000 }, async ({ appPage: page }) => {
+  test("SIGCHLD delivered after parent session reanimated", async ({ appPage: page }) => {
+    test.setTimeout(90_000);
+
     // 1. Create workspace
     await createWorkspace(page, "SIGCHLD Reanimate");
     const workspaceId = await getWorkspaceId(page, "SIGCHLD Reanimate");
