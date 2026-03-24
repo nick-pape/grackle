@@ -7,16 +7,14 @@ import {
   getWorkspaceId,
   getTaskId,
   navigateToTask,
-  patchWsForStubRuntime,
 } from "./helpers.js";
 
 test.describe("Board View", { tag: ["@workspace"] }, () => {
-  test("Board tab is visible after selecting a workspace", async ({ appPage }) => {
-    const page = appPage;
+  test("Board tab is visible after selecting a workspace", async ({ stubTask }) => {
+    const { page, workspaceName } = stubTask;
 
-    await createWorkspace(page, "board-tab-vis");
-    await createTask(page, "board-tab-vis", "board-vis-task");
-    await navigateToWorkspace(page, "board-tab-vis");
+    await createTask(page, workspaceName, "board-vis-task");
+    await navigateToWorkspace(page, workspaceName);
 
     // Board tab should be visible
     const boardTab = page.getByTestId("board-tab");
@@ -30,11 +28,10 @@ test.describe("Board View", { tag: ["@workspace"] }, () => {
     await expect(page.getByTestId("board-tab")).not.toBeVisible();
   });
 
-  test("empty workspace shows CTA on board view", async ({ appPage }) => {
-    const page = appPage;
+  test("empty workspace shows CTA on board view", async ({ stubTask }) => {
+    const { page, workspaceName } = stubTask;
 
-    await createWorkspace(page, "board-empty");
-    await navigateToWorkspace(page, "board-empty");
+    await navigateToWorkspace(page, workspaceName);
 
     // Navigate to board tab
     await page.getByTestId("board-tab").click();
@@ -44,13 +41,12 @@ test.describe("Board View", { tag: ["@workspace"] }, () => {
     await expect(page.getByTestId("board-empty-cta").getByRole("button", { name: "Create Task" })).toBeVisible();
   });
 
-  test("tasks appear in correct columns based on status", async ({ appPage }) => {
-    const page = appPage;
+  test("tasks appear in correct columns based on status", async ({ stubTask }) => {
+    const { page, workspaceName } = stubTask;
 
-    await createWorkspace(page, "board-columns");
-    await createTask(page, "board-columns", "col-task-a");
-    await createTask(page, "board-columns", "col-task-b");
-    await navigateToWorkspace(page, "board-columns");
+    await createTask(page, workspaceName, "col-task-a");
+    await createTask(page, workspaceName, "col-task-b");
+    await navigateToWorkspace(page, workspaceName);
 
     // Switch to Board tab
     await page.getByTestId("board-tab").click();
@@ -70,12 +66,11 @@ test.describe("Board View", { tag: ["@workspace"] }, () => {
     await expect(page.getByTestId("board-count-complete")).toContainText("0");
   });
 
-  test("all five columns are always rendered", async ({ appPage }) => {
-    const page = appPage;
+  test("all five columns are always rendered", async ({ stubTask }) => {
+    const { page, workspaceName } = stubTask;
 
-    await createWorkspace(page, "board-all-cols");
-    await createTask(page, "board-all-cols", "all-cols-task");
-    await navigateToWorkspace(page, "board-all-cols");
+    await createTask(page, workspaceName, "all-cols-task");
+    await navigateToWorkspace(page, workspaceName);
 
     await page.getByTestId("board-tab").click();
     await expect(page.getByTestId("board-container")).toBeVisible({ timeout: 5_000 });
@@ -88,12 +83,11 @@ test.describe("Board View", { tag: ["@workspace"] }, () => {
     await expect(page.getByTestId("board-column-failed")).toBeVisible();
   });
 
-  test("clicking a card navigates to task detail", async ({ appPage }) => {
-    const page = appPage;
+  test("clicking a card navigates to task detail", async ({ stubTask }) => {
+    const { page, workspaceName } = stubTask;
 
-    await createWorkspace(page, "board-nav");
-    await createTask(page, "board-nav", "board-nav-task");
-    await navigateToWorkspace(page, "board-nav");
+    await createTask(page, workspaceName, "board-nav-task");
+    await navigateToWorkspace(page, workspaceName);
 
     // Switch to Board
     await page.getByTestId("board-tab").click();
@@ -107,12 +101,11 @@ test.describe("Board View", { tag: ["@workspace"] }, () => {
     await expect(page.locator('[data-testid="task-status"]')).toBeVisible({ timeout: 5_000 });
   });
 
-  test("card is focusable via keyboard", async ({ appPage }) => {
-    const page = appPage;
+  test("card is focusable via keyboard", async ({ stubTask }) => {
+    const { page, workspaceName } = stubTask;
 
-    await createWorkspace(page, "board-focus");
-    await createTask(page, "board-focus", "focus-task");
-    await navigateToWorkspace(page, "board-focus");
+    await createTask(page, workspaceName, "focus-task");
+    await navigateToWorkspace(page, workspaceName);
 
     await page.getByTestId("board-tab").click();
     await expect(page.getByTestId("board-container")).toBeVisible({ timeout: 5_000 });
@@ -126,13 +119,12 @@ test.describe("Board View", { tag: ["@workspace"] }, () => {
     await expect(page.locator('[data-testid="task-status"]')).toBeVisible({ timeout: 5_000 });
   });
 
-  test("blocked task shows blocked badge in its status column", async ({ appPage }) => {
-    const page = appPage;
+  test("blocked task shows blocked badge in its status column", async ({ stubTask }) => {
+    const { page, workspaceName } = stubTask;
 
-    await createWorkspace(page, "board-blocked");
-    await createTask(page, "board-blocked", "blocker-task");
+    await createTask(page, workspaceName, "blocker-task");
 
-    const workspaceId = await getWorkspaceId(page, "board-blocked");
+    const workspaceId = await getWorkspaceId(page, workspaceName);
     const blockerId = await getTaskId(page, workspaceId, "blocker-task");
 
     // Create a dependent task
@@ -141,7 +133,7 @@ test.describe("Board View", { tag: ["@workspace"] }, () => {
     });
 
     // Navigate to workspace page to see board
-    await navigateToWorkspace(page, "board-blocked");
+    await navigateToWorkspace(page, workspaceName);
 
     // Switch to board
     await page.getByTestId("board-tab").click();
@@ -155,11 +147,10 @@ test.describe("Board View", { tag: ["@workspace"] }, () => {
     await expect(blockedBadge).toBeVisible({ timeout: 5_000 });
   });
 
-  test("child progress badge shows on parent cards", async ({ appPage }) => {
-    const page = appPage;
+  test("child progress badge shows on parent cards", async ({ stubTask }) => {
+    const { page, workspaceName } = stubTask;
 
-    await createWorkspace(page, "board-children");
-    const workspaceId = await getWorkspaceId(page, "board-children");
+    const workspaceId = await getWorkspaceId(page, workspaceName);
     const parentTask = await createTaskViaWs(page, workspaceId, "parent-task", { canDecompose: true });
     const parentId = parentTask.id as string;
 
@@ -168,7 +159,7 @@ test.describe("Board View", { tag: ["@workspace"] }, () => {
     await createTaskViaWs(page, workspaceId, "child-2", { parentTaskId: parentId });
 
     // Navigate to workspace page to see board
-    await navigateToWorkspace(page, "board-children");
+    await navigateToWorkspace(page, workspaceName);
 
     // Switch to board
     await page.getByTestId("board-tab").click();
@@ -179,12 +170,11 @@ test.describe("Board View", { tag: ["@workspace"] }, () => {
     await expect(parentCard.locator("text=0/2")).toBeVisible({ timeout: 5_000 });
   });
 
-  test("real-time update moves card between columns", async ({ appPage }) => {
-    const page = appPage;
+  test("real-time update moves card between columns", async ({ stubTask }) => {
+    const { page, workspaceName } = stubTask;
 
-    await createWorkspace(page, "board-realtime");
-    await createTask(page, "board-realtime", "rt-task", "test-local");
-    await navigateToWorkspace(page, "board-realtime");
+    await createTask(page, workspaceName, "rt-task", "test-local");
+    await navigateToWorkspace(page, workspaceName);
 
     // Switch to board — card should be in Not Started
     await page.getByTestId("board-tab").click();
@@ -192,19 +182,17 @@ test.describe("Board View", { tag: ["@workspace"] }, () => {
     await expect(page.getByTestId("board-count-not_started")).toContainText("1");
     await expect(page.getByTestId("board-count-working")).toContainText("0");
 
-    // Navigate to the task to start it
+    // Navigate to the task to start it (stub runtime patched by fixture)
     await navigateToTask(page, "rt-task");
     await expect(page.locator('[data-testid="task-status"]')).toContainText("not_started", { timeout: 5_000 });
 
-    // Patch WS and start the task with stub runtime
-    await patchWsForStubRuntime(page);
     await page.getByRole("button", { name: "Start", exact: true }).click();
 
     // Wait for task to transition to working
     await expect(page.locator('[data-testid="task-status"]')).toContainText(/working|paused/, { timeout: 15_000 });
 
     // Navigate back to the workspace and switch to board
-    await navigateToWorkspace(page, "board-realtime");
+    await navigateToWorkspace(page, workspaceName);
     await page.getByTestId("board-tab").click();
     await expect(page.getByTestId("board-container")).toBeVisible({ timeout: 5_000 });
 

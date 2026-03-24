@@ -4,19 +4,17 @@ import {
   createWorkspace,
   createTask,
   navigateToTask,
-  patchWsForStubRuntime,
   runStubTaskToCompletion,
 } from "./helpers.js";
 
 test.describe("Multi-Task", { tag: ["@task"] }, () => {
-  test("tasks sidebar shows multiple tasks", async ({ appPage }) => {
-    const page = appPage;
+  test("tasks sidebar shows multiple tasks", async ({ stubTask }) => {
+    const { page, workspaceName } = stubTask;
 
-    // Create workspace with 3 tasks
-    await createWorkspace(page, "multi-sidebar");
-    await createTask(page, "multi-sidebar", "task-alpha", "test-local");
-    await createTask(page, "multi-sidebar", "task-bravo", "test-local");
-    await createTask(page, "multi-sidebar", "task-charlie", "test-local");
+    // Create 3 tasks in the fixture's workspace
+    await createTask(page, workspaceName, "task-alpha", "test-local");
+    await createTask(page, workspaceName, "task-bravo", "test-local");
+    await createTask(page, workspaceName, "task-charlie", "test-local");
 
     // Navigate to Tasks tab — all 3 tasks should appear in the sidebar
     await page.locator('[data-testid="sidebar-tab-tasks"]').click();
@@ -26,17 +24,15 @@ test.describe("Multi-Task", { tag: ["@task"] }, () => {
     await expect(sidebar.getByText("task-charlie")).toBeVisible({ timeout: 5_000 });
   });
 
-  test("switching between tasks preserves state", async ({ appPage }) => {
-    const page = appPage;
+  test("switching between tasks preserves state", async ({ stubTask }) => {
+    const { page, workspaceName } = stubTask;
 
-    // Create workspace with two tasks
-    await createWorkspace(page, "multi-preserve");
-    await createTask(page, "multi-preserve", "preserve-task-a", "test-local");
-    await createTask(page, "multi-preserve", "preserve-task-b", "test-local");
+    // Create two tasks
+    await createTask(page, workspaceName, "preserve-task-a", "test-local");
+    await createTask(page, workspaceName, "preserve-task-b", "test-local");
 
     // Navigate to task A, run it to review state
     await navigateToTask(page, "preserve-task-a");
-    await patchWsForStubRuntime(page);
     await runStubTaskToCompletion(page);
 
     // Verify task A is in paused state (Resume only appears in paused)
@@ -54,17 +50,17 @@ test.describe("Multi-Task", { tag: ["@task"] }, () => {
     await expect(page.locator("button", { hasText: "Resume" })).toBeVisible({ timeout: 5_000 });
   });
 
-  test("multiple workspaces with tasks are navigable via board", async ({ appPage }) => {
-    const page = appPage;
+  test("multiple workspaces with tasks are navigable via board", async ({ stubTask }) => {
+    const { page, workspaceName } = stubTask;
 
-    // Create two workspaces with tasks
-    await createWorkspace(page, "multi-proj-x");
+    // Use the fixture workspace as workspace X, create workspace Y manually
+    await createTask(page, workspaceName, "x-task-1", "test-local");
+
     await createWorkspace(page, "multi-proj-y");
-    await createTask(page, "multi-proj-x", "x-task-1", "test-local");
     await createTask(page, "multi-proj-y", "y-task-1", "test-local");
 
     // Navigate to workspace X board — task card should be visible
-    await navigateToWorkspace(page, "multi-proj-x");
+    await navigateToWorkspace(page, workspaceName);
     await page.getByTestId("board-tab").click();
     await expect(page.getByText("x-task-1")).toBeVisible({ timeout: 5_000 });
 
@@ -74,16 +70,14 @@ test.describe("Multi-Task", { tag: ["@task"] }, () => {
     await expect(page.getByText("y-task-1")).toBeVisible({ timeout: 5_000 });
   });
 
-  test("task status badges update during lifecycle", async ({ appPage }) => {
-    const page = appPage;
+  test("task status badges update during lifecycle", async ({ stubTask }) => {
+    const { page, workspaceName } = stubTask;
 
-    // Create workspace and task
-    await createWorkspace(page, "multi-badge");
-    await createTask(page, "multi-badge", "badge-task", "test-local");
+    // Create task
+    await createTask(page, workspaceName, "badge-task", "test-local");
 
     // Navigate to the task and start it
     await navigateToTask(page, "badge-task");
-    await patchWsForStubRuntime(page);
     await page.locator("button", { hasText: "Start" }).click();
 
     // Wait for active state — task status should change to working or paused

@@ -1,6 +1,54 @@
-import { test as base, type Page } from "@playwright/test";
+import { test as base, type Page, type TestInfo } from "@playwright/test";
 import { startGrackleStack, stopGrackleStack, type E2EState } from "./server-manager.js";
-import { provisionEnvironmentDirect } from "./helpers.js";
+import {
+  provisionEnvironmentDirect,
+  createWorkspace,
+  createTaskWithScenario,
+  createTask as createTaskHelper,
+  createTaskViaWs,
+  navigateToTask,
+  patchWsForStubRuntime,
+  getWorkspaceId,
+} from "./helpers.js";
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type ScenarioStep = Record<string, any>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type WsPayload = Record<string, any>;
+
+/** Context object provided by the `stubTask` fixture. */
+export interface StubTaskContext {
+  /** The underlying Playwright page (same as `appPage`). */
+  page: Page;
+  /** Unique workspace name created for this test. */
+  workspaceName: string;
+  /** Create a scenario task, navigate to it, and return. */
+  createAndNavigate(title: string, scenario: { steps: ScenarioStep[] }): Promise<void>;
+  /** Create a task (no scenario) and navigate to it. */
+  createAndNavigateSimple(title: string, environmentId?: string): Promise<void>;
+  /** Create a task via WS (for tests needing task IDs or custom options). */
+  createTask(title: string, options?: {
+    environmentId?: string;
+    dependsOn?: string[];
+    description?: string;
+    parentTaskId?: string;
+    canDecompose?: boolean;
+  }): Promise<WsPayload>;
+}
+
+/** Derive a unique workspace name from the test's title path. */
+function workspaceNameFromTest(testInfo: TestInfo): string {
+  // titlePath is e.g. ["", "Task Lifecycle (stub runtime)", "full task flow: ..."]
+  // Take the last segment, slugify, and add workerIndex for uniqueness
+  const slug = testInfo.titlePath
+    .slice(1)
+    .join("-")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 40);
+  return `ws-${slug}-w${testInfo.workerIndex}`;
+}
 
 interface WorkerFixtures {
   workerServer: E2EState;
@@ -9,6 +57,7 @@ interface WorkerFixtures {
 interface TestFixtures {
   grackle: { apiKey: string; baseURL: string; wsUrl: string; mcpPort: number; grpcPort: number };
   appPage: Page;
+  stubTask: StubTaskContext;
 }
 
 /** Extended Playwright test fixture that spawns a per-worker Grackle stack. */
@@ -71,6 +120,46 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
     );
     await use(page);
   },
+
+  stubTask: async ({ appPage }, use, testInfo) => {
+    const page = appPage;
+    const workspaceName = workspaceNameFromTest(testInfo);
+
+    // Create a unique workspace for this test
+    await createWorkspace(page, workspaceName);
+
+    // Patch fetch() to force stub runtime — done once per test
+    await patchWsForStubRuntime(page);
+
+    const context: StubTaskContext = {
+      page,
+      workspaceName,
+
+      async createAndNavigate(title: string, scenario: { steps: ScenarioStep[] }): Promise<void> {
+        await createTaskWithScenario(page, workspaceName, title, scenario);
+        await navigateToTask(page, title);
+      },
+
+      async createAndNavigateSimple(title: string, environmentId?: string): Promise<void> {
+        await createTaskHelper(page, workspaceName, title, environmentId || "test-local");
+        await navigateToTask(page, title);
+      },
+
+      async createTask(title: string, options?: {
+        environmentId?: string;
+        dependsOn?: string[];
+        description?: string;
+        parentTaskId?: string;
+        canDecompose?: boolean;
+      }): Promise<WsPayload> {
+        const wsId = await getWorkspaceId(page, workspaceName);
+        return createTaskViaWs(page, wsId, title, options);
+      },
+    };
+
+    await use(context);
+  },
 });
 
 export { expect } from "@playwright/test";
+export type { StubTaskContext };

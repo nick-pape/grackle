@@ -1,9 +1,7 @@
 import { test, expect } from "./fixtures.js";
 import {
-  createWorkspace,
   createTaskWithScenario,
   navigateToTask,
-  patchWsForStubRuntime,
   stubScenario,
   emitText,
   idle,
@@ -20,16 +18,12 @@ function idleScenario(label: string): { steps: ReturnType<typeof emitText>[] } {
 }
 
 test.describe("Concurrent Tasks", { tag: ["@task"] }, () => {
-  test("two tasks run concurrently without event leakage", async ({ appPage }) => {
-    const page = appPage;
+  test("two tasks run concurrently without event leakage", async ({ stubTask }) => {
+    const { page, workspaceName } = stubTask;
 
-    // Create workspace with two scenario tasks
-    await createWorkspace(page, "conc-leak");
-    await createTaskWithScenario(page, "conc-leak", "conc-task-a", idleScenario("task-a"));
-    await createTaskWithScenario(page, "conc-leak", "conc-task-b", idleScenario("task-b"));
-
-    // Patch WS to use stub runtime
-    await patchWsForStubRuntime(page);
+    // Create two scenario tasks in the fixture's workspace
+    await createTaskWithScenario(page, workspaceName, "conc-task-a", idleScenario("task-a"));
+    await createTaskWithScenario(page, workspaceName, "conc-task-b", idleScenario("task-b"));
 
     // Start task A
     await navigateToTask(page, "conc-task-a");
@@ -73,16 +67,12 @@ test.describe("Concurrent Tasks", { tag: ["@task"] }, () => {
     await expect(page.locator("button", { hasText: "Resume" })).toBeVisible({ timeout: 5_000 });
   });
 
-  test("concurrent tasks show correct sidebar status simultaneously", async ({ appPage }) => {
-    const page = appPage;
+  test("concurrent tasks show correct sidebar status simultaneously", async ({ stubTask }) => {
+    const { page, workspaceName } = stubTask;
 
-    // Create workspace with two scenario tasks
-    await createWorkspace(page, "conc-status");
-    await createTaskWithScenario(page, "conc-status", "status-task-x", idleScenario("task-x"));
-    await createTaskWithScenario(page, "conc-status", "status-task-y", idleScenario("task-y"));
-
-    // Patch WS to use stub runtime
-    await patchWsForStubRuntime(page);
+    // Create two scenario tasks in the fixture's workspace
+    await createTaskWithScenario(page, workspaceName, "status-task-x", idleScenario("task-x"));
+    await createTaskWithScenario(page, workspaceName, "status-task-y", idleScenario("task-y"));
 
     // Start task X
     await navigateToTask(page, "status-task-x");
