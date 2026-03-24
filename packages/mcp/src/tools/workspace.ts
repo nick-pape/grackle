@@ -38,7 +38,7 @@ export const workspaceTools: ToolDefinition[] = [
             description: p.description,
             repoUrl: p.repoUrl,
             environmentId: p.environmentId,
-            worktreeBasePath: p.worktreeBasePath,
+            workingDirectory: p.workingDirectory,
             useWorktrees: p.useWorktrees,
             status: workspaceStatusToString(p.status) || "unspecified",
           })),
@@ -66,10 +66,10 @@ export const workspaceTools: ToolDefinition[] = [
         .string()
         .optional()
         .describe("Optional repository URL associated with the workspace"),
-      worktreeBasePath: z
+      workingDirectory: z
         .string()
         .optional()
-        .describe("Optional base path for worktrees (e.g. /workspaces/my-repo)"),
+        .describe("Working directory / repo root on the environment (e.g. /workspaces/my-repo)"),
       useWorktrees: z
         .boolean()
         .optional()
@@ -94,7 +94,7 @@ export const workspaceTools: ToolDefinition[] = [
           description: (args.description as string | undefined) ?? "",
           repoUrl: (args.repoUrl as string | undefined) ?? "",
           environmentId: args.environmentId as string,
-          worktreeBasePath: (args.worktreeBasePath as string | undefined) ?? "",
+          workingDirectory: (args.workingDirectory as string | undefined) ?? "",
           useWorktrees: args.useWorktrees as boolean | undefined,
           defaultPersonaId: (args.defaultPersonaId as string | undefined) ?? "",
         });
@@ -105,7 +105,7 @@ export const workspaceTools: ToolDefinition[] = [
           repoUrl: workspace.repoUrl,
           environmentId: workspace.environmentId,
           defaultPersonaId: workspace.defaultPersonaId,
-          worktreeBasePath: workspace.worktreeBasePath,
+          workingDirectory: workspace.workingDirectory,
           useWorktrees: workspace.useWorktrees,
           status: workspaceStatusToString(workspace.status) || "unspecified",
           createdAt: workspace.createdAt,
@@ -143,7 +143,7 @@ export const workspaceTools: ToolDefinition[] = [
           description: workspace.description,
           repoUrl: workspace.repoUrl,
           environmentId: workspace.environmentId,
-          worktreeBasePath: workspace.worktreeBasePath,
+          workingDirectory: workspace.workingDirectory,
           useWorktrees: workspace.useWorktrees,
           status: workspaceStatusToString(workspace.status) || "unspecified",
           createdAt: workspace.createdAt,
@@ -177,10 +177,10 @@ export const workspaceTools: ToolDefinition[] = [
         .string()
         .optional()
         .describe("Reparent workspace to a different environment"),
-      worktreeBasePath: z
+      workingDirectory: z
         .string()
         .optional()
-        .describe("New base path for worktrees (e.g. /workspaces/my-repo)"),
+        .describe("New working directory / repo root (e.g. /workspaces/my-repo)"),
       useWorktrees: z
         .boolean()
         .optional()
@@ -206,7 +206,7 @@ export const workspaceTools: ToolDefinition[] = [
           description: args.description as string | undefined,
           repoUrl: args.repoUrl as string | undefined,
           environmentId: args.environmentId as string | undefined,
-          worktreeBasePath: args.worktreeBasePath as string | undefined,
+          workingDirectory: args.workingDirectory as string | undefined,
           useWorktrees: args.useWorktrees as boolean | undefined,
           defaultPersonaId: args.defaultPersonaId as string | undefined,
         });
@@ -217,7 +217,7 @@ export const workspaceTools: ToolDefinition[] = [
           repoUrl: workspace.repoUrl,
           environmentId: workspace.environmentId,
           defaultPersonaId: workspace.defaultPersonaId,
-          worktreeBasePath: workspace.worktreeBasePath,
+          workingDirectory: workspace.workingDirectory,
           useWorktrees: workspace.useWorktrees,
           status: workspaceStatusToString(workspace.status) || "unspecified",
           createdAt: workspace.createdAt,

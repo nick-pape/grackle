@@ -35,7 +35,7 @@ describe("fetchOrchestratorContext", () => {
       environmentId: "env-1",
       status: "active",
       useWorktrees: true,
-      worktreeBasePath: "",
+      workingDirectory: "",
       defaultPersonaId: "",
       createdAt: "2026-01-01",
       updatedAt: "2026-01-01",

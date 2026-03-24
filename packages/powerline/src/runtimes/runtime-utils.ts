@@ -82,7 +82,7 @@ export interface ResolveWorkingDirectoryOptions {
   /** Git branch to check out in a worktree. */
   branch?: string;
   /** Base path for worktree creation or working directory override. */
-  worktreeBasePath?: string;
+  workingDirectory?: string;
   /** When true, create git worktrees for branch isolation. When false, checkout in place. Defaults to true when undefined. */
   useWorktrees?: boolean;
   /** Event queue to push system messages to. */
@@ -182,7 +182,7 @@ function findWorkspaceDir(
 export async function resolveWorkingDirectory(options: ResolveWorkingDirectoryOptions): Promise<string | undefined> {
   const {
     branch,
-    worktreeBasePath,
+    workingDirectory,
     useWorktrees = true,
     eventQueue,
     requireNonEmpty,
@@ -191,12 +191,12 @@ export async function resolveWorkingDirectory(options: ResolveWorkingDirectoryOp
   } = options;
   const ts = (): string => new Date().toISOString();
 
-  if (branch && worktreeBasePath && useWorktrees) {
+  if (branch && workingDirectory && useWorktrees) {
     // Worktrees enabled — create a worktree for the branch.
     // Auto-detect the actual git repo path — the server may send a default
     // like "/workspace" that doesn't match the actual layout (e.g. Codespaces
     // use /workspaces/<repo>).
-    const repoPath = await findGitRepoPath(worktreeBasePath, git, locator);
+    const repoPath = await findGitRepoPath(workingDirectory, git, locator);
 
     if (repoPath) {
       try {
@@ -207,11 +207,11 @@ export async function resolveWorkingDirectory(options: ResolveWorkingDirectoryOp
         eventQueue.push({ type: "system", timestamp: ts(), content: `Worktree setup failed (${wtErr instanceof Error ? wtErr.message : String(wtErr)}), falling back to workspace` });
       }
     } else {
-      eventQueue.push({ type: "system", timestamp: ts(), content: `No git repo found at ${worktreeBasePath} or well-known paths, falling back to workspace` });
+      eventQueue.push({ type: "system", timestamp: ts(), content: `No git repo found at ${workingDirectory} or well-known paths, falling back to workspace` });
     }
 
     // Worktree failed — fall back to best available workspace
-    const fallback = findWorkspaceDir(worktreeBasePath, requireNonEmpty, locator);
+    const fallback = findWorkspaceDir(workingDirectory, requireNonEmpty, locator);
     if (fallback) {
       return fallback;
     }
@@ -220,8 +220,8 @@ export async function resolveWorkingDirectory(options: ResolveWorkingDirectoryOp
 
   if (branch && !useWorktrees) {
     // Worktrees disabled — check out the branch in the main working tree.
-    // Use worktreeBasePath as the repo hint if provided.
-    const repoPath = await findGitRepoPath(worktreeBasePath, git, locator);
+    // Use workingDirectory as the repo hint if provided.
+    const repoPath = await findGitRepoPath(workingDirectory, git, locator);
 
     if (repoPath) {
       try {
@@ -232,11 +232,11 @@ export async function resolveWorkingDirectory(options: ResolveWorkingDirectoryOp
         eventQueue.push({ type: "system", timestamp: ts(), content: `Branch checkout failed (${checkoutErr instanceof Error ? checkoutErr.message : String(checkoutErr)}), falling back to workspace` });
       }
     } else {
-      eventQueue.push({ type: "system", timestamp: ts(), content: `No git repo found${worktreeBasePath ? ` at ${worktreeBasePath}` : ""} for branch checkout, falling back to workspace` });
+      eventQueue.push({ type: "system", timestamp: ts(), content: `No git repo found${workingDirectory ? ` at ${workingDirectory}` : ""} for branch checkout, falling back to workspace` });
     }
 
     // Checkout failed — fall back to best available workspace
-    const fallback = findWorkspaceDir(worktreeBasePath, requireNonEmpty, locator);
+    const fallback = findWorkspaceDir(workingDirectory, requireNonEmpty, locator);
     if (fallback) {
       return fallback;
     }
@@ -244,7 +244,7 @@ export async function resolveWorkingDirectory(options: ResolveWorkingDirectoryOp
   }
 
   // No branch requested — just find a workspace directory
-  return findWorkspaceDir(worktreeBasePath, requireNonEmpty, locator);
+  return findWorkspaceDir(workingDirectory, requireNonEmpty, locator);
 }
 
 // ─── ACP MCP server conversion ─────────────────────────────

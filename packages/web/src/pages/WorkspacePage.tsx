@@ -264,14 +264,14 @@ export function WorkspacePage(): JSX.Element {
             <span className={styles.metaLabel}>Working Dir</span>
             <div className={styles.metaValue}>
               <EditableTextField
-                value={workspace?.worktreeBasePath || ""}
-                onSave={(v) => { if (workspace) { updateWorkspace(workspace.id, { worktreeBasePath: v }); } }}
-                fieldId="worktreeBasePath"
+                value={workspace?.workingDirectory || ""}
+                onSave={(v) => { if (workspace) { updateWorkspace(workspace.id, { workingDirectory: v }); } }}
+                fieldId="workingDirectory"
                 activeFieldId={activeFieldId}
                 onActivate={setActiveFieldId}
                 placeholder="Default (server default)"
                 ariaLabel="Working directory"
-                data-testid="edit-worktree-base-path"
+                data-testid="edit-working-directory"
               />
             </div>
           </div>

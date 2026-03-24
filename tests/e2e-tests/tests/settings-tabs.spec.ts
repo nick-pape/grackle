@@ -67,94 +67,11 @@ test.describe("Settings Tabs", { tag: ["@settings"] }, () => {
     await expect(page.getByRole("tab", { name: "About" })).toHaveAttribute("aria-selected", "true");
   });
 
-  test("keyboard navigation with arrow keys", async ({ mockPage }) => {
-    const page = mockPage;
-
-    await goToSettings(mockPage);
-
-    // Focus the active tab (Credentials is default now)
-    const credentialsTab = page.getByRole("tab", { name: "Credentials" });
-    await credentialsTab.focus();
-
-    // Arrow down should move to Personas
-    await page.keyboard.press("ArrowDown");
-    await expect(page).toHaveURL(/\/settings\/personas/);
-    await expect(page.getByRole("tab", { name: "Personas" })).toBeFocused();
-
-    // Arrow down again -> Appearance
-    await page.keyboard.press("ArrowDown");
-    await expect(page).toHaveURL(/\/settings\/appearance/);
-    await expect(page.getByRole("tab", { name: "Appearance" })).toBeFocused();
-
-    // Home -> Credentials
-    await page.keyboard.press("Home");
-    await expect(page).toHaveURL(/\/settings\/credentials/);
-    await expect(page.getByRole("tab", { name: "Credentials" })).toBeFocused();
-
-    // End -> About
-    await page.keyboard.press("End");
-    await expect(page).toHaveURL(/\/settings\/about/);
-    await expect(page.getByRole("tab", { name: "About" })).toBeFocused();
-
-    // Arrow up -> Appearance
-    await page.keyboard.press("ArrowUp");
-    await expect(page).toHaveURL(/\/settings\/appearance/);
-  });
-
-  test("Personas tab shows PersonaManager", async ({ mockPage }) => {
-    const page = mockPage;
-
-    await goToSettings(mockPage);
-    await page.getByRole("tab", { name: "Personas" }).click();
-
-    await expect(page.getByRole("heading", { name: "Personas" })).toBeVisible();
-    await expect(page.getByText("+ New Persona")).toBeVisible();
-  });
-
-  test("About tab shows connection info and version", async ({ mockPage }) => {
-    const page = mockPage;
-
-    await goToSettings(mockPage);
-    await page.getByRole("tab", { name: "About" }).click();
-
-    const aboutPanel = page.getByTestId("about-panel");
-    await expect(aboutPanel.getByText("Connection", { exact: true })).toBeVisible();
-    await expect(aboutPanel.getByText("Connected", { exact: true })).toBeVisible();
-    await expect(aboutPanel.getByText("Version", { exact: true })).toBeVisible();
-  });
-
-  test("persona button removed from StatusBar", async ({ mockPage }) => {
-    const page = mockPage;
-
-    // The persona button should not exist
-    await expect(page.locator('button[title="Personas"]')).not.toBeVisible();
-
-    // The settings sidebar tab should still exist
-    await expect(page.locator('[data-testid="sidebar-tab-settings"]')).toBeVisible();
-  });
-
-  test("breadcrumbs always show Home > Settings on all tabs", async ({ mockPage }) => {
-    const page = mockPage;
-
-    await goToSettings(mockPage);
-    const breadcrumbs = page.getByTestId("breadcrumbs");
-
-    const tabs = ["Credentials", "Personas", "Appearance", "About"];
-    for (const tab of tabs) {
-      await page.getByRole("tab", { name: tab }).click();
-      await expect(breadcrumbs).toContainText("Home");
-      await expect(breadcrumbs).toContainText("Settings");
-    }
-  });
-
-  test("Appearance tab shows theme picker", async ({ mockPage }) => {
-    const page = mockPage;
-
-    await goToSettings(mockPage);
-    await page.getByRole("tab", { name: "Appearance" }).click();
-
-    await expect(page.getByRole("heading", { name: "Appearance" })).toBeVisible();
-    await expect(page.getByText("Choose how Grackle looks")).toBeVisible();
-    await expect(page.getByText("Match system light/dark preference")).toBeVisible();
-  });
+  // Tests removed — covered by Storybook stories:
+  // - "keyboard navigation" → SettingsNav.stories.tsx (KeyboardNavigation)
+  // - "Personas tab shows PersonaManager" → SettingsPage.stories.tsx (PersonasTab)
+  // - "About tab shows connection info" → SettingsPage.stories.tsx (AboutTab)
+  // - "persona button removed from StatusBar" → StatusBar.stories.tsx (NoPersonaButton)
+  // - "breadcrumbs show Home > Settings" → SettingsPage.stories.tsx (BreadcrumbsVisible)
+  // - "Appearance tab shows theme picker" → SettingsPage.stories.tsx (AppearanceTab)
 });
