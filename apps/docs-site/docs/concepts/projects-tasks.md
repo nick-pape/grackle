@@ -132,7 +132,7 @@ Agents work in isolated [git worktrees](https://git-scm.com/docs/git-worktree), 
 The worktree base path defaults to `../.grackle-worktrees/` relative to the repo, but you can customize it per-project:
 
 ```bash
-grackle project create "My Project" --worktree-base-path /workspaces/my-repo
+grackle project create "My Project" --working-directory /workspaces/my-repo
 ```
 
 ## Importing from GitHub

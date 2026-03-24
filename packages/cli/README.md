@@ -238,7 +238,7 @@ grackle workspace create "Quick Fix" --env my-env --no-worktrees
 | `--repo <url>` | Repository URL |
 | `--desc <description>` | Workspace description |
 | `--no-worktrees` | Disable git worktree isolation |
-| `--worktree-base-path <path>` | Base path for worktrees on the environment |
+| `--working-directory <path>` | Base path for worktrees on the environment |
 
 #### `grackle workspace get <id>`
 
@@ -260,7 +260,7 @@ grackle workspace update ws-123 --env other-env    # reparent to different envir
 | `--repo <url>` | New repository URL |
 | `--env <env-id>` | Reparent to a different environment |
 | `--worktrees` / `--no-worktrees` | Toggle worktree isolation |
-| `--worktree-base-path <path>` | New worktree base path |
+| `--working-directory <path>` | New worktree base path |
 
 #### `grackle workspace archive <id>`
 

@@ -653,7 +653,7 @@ export async function sendWsAndWaitFor(
               environmentId: payload.environmentId || "",
               prompt: payload.prompt || "",
               personaId: payload.personaId || "",
-              worktreeBasePath: payload.worktreeBasePath || "",
+              workingDirectory: payload.workingDirectory || "",
             });
             return { type: "spawned", payload: { sessionId: r.id as string } };
           }

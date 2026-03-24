@@ -29,7 +29,7 @@ export const sessionTools: ToolDefinition[] = [
       prompt: z.string().describe("The prompt or task description for the agent"),
       maxTurns: z.number().int().positive().optional().describe("Maximum number of turns the agent may take"),
       personaId: z.string().optional().describe("Persona ID to configure agent behavior (falls back to app default)"),
-      worktreeBasePath: z.string().optional().describe("Base path for worktrees (e.g. /workspaces/my-repo)"),
+      workingDirectory: z.string().optional().describe("Base path for worktrees (e.g. /workspaces/my-repo)"),
     }),
     rpcMethod: "spawnAgent",
     mutating: true,
@@ -46,7 +46,7 @@ export const sessionTools: ToolDefinition[] = [
           prompt: args.prompt as string,
           maxTurns: args.maxTurns as number | undefined,
           personaId: args.personaId as string | undefined,
-          worktreeBasePath: (args.worktreeBasePath as string | undefined) ?? "",
+          workingDirectory: (args.workingDirectory as string | undefined) ?? "",
         });
         return jsonResult(session);
       } catch (error) {

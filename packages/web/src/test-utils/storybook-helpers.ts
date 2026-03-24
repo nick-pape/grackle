@@ -72,7 +72,7 @@ export function makeWorkspace(overrides: Partial<Workspace> = {}): Workspace {
     repoUrl: "",
     environmentId: "env-1",
     status: "active",
-    worktreeBasePath: "",
+    workingDirectory: "",
     useWorktrees: false,
     defaultPersonaId: "",
     createdAt: "2026-01-01T00:00:00Z",

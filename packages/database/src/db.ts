@@ -388,6 +388,7 @@ export function initDatabase(sqliteOverride?: InstanceType<typeof Database>): In
   });
 
   // Migration: add worktree_base_path column to workspaces if missing (older databases)
+  // NOTE: column was later renamed to working_directory — see rename-worktree-base-path migration below.
   tryMigration("add-workspaces-worktree-base-path", () => {
     conn.exec(
       "ALTER TABLE workspaces ADD COLUMN worktree_base_path TEXT NOT NULL DEFAULT ''",
@@ -582,6 +583,13 @@ export function initDatabase(sqliteOverride?: InstanceType<typeof Database>): In
   conn.exec(
     "CREATE INDEX IF NOT EXISTS idx_workspaces_environment_id ON workspaces(environment_id)",
   );
+
+  // Migration: rename worktree_base_path → working_directory on workspaces table (#547)
+  tryMigration("rename-worktree-base-path", () => {
+    conn.exec(
+      "ALTER TABLE workspaces RENAME COLUMN worktree_base_path TO working_directory",
+    );
+  });
 
   return { migrationErrors };
 }

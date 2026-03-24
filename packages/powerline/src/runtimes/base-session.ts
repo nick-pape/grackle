@@ -33,7 +33,7 @@ export abstract class BaseAgentSession implements AgentSession {
   protected readonly maxTurns: number;
   protected readonly resumeSessionId?: string;
   protected readonly branch?: string;
-  protected readonly worktreeBasePath?: string;
+  protected readonly workingDirectory?: string;
   protected readonly useWorktrees: boolean;
   protected readonly systemContext?: string;
   protected readonly mcpServers?: Record<string, unknown>;
@@ -53,7 +53,7 @@ export abstract class BaseAgentSession implements AgentSession {
     maxTurns: number,
     resumeSessionId?: string,
     branch?: string,
-    worktreeBasePath?: string,
+    workingDirectory?: string,
     systemContext?: string,
     mcpServers?: Record<string, unknown>,
     hooks?: Record<string, unknown>,
@@ -66,7 +66,7 @@ export abstract class BaseAgentSession implements AgentSession {
     this.maxTurns = maxTurns;
     this.resumeSessionId = resumeSessionId;
     this.branch = branch;
-    this.worktreeBasePath = worktreeBasePath;
+    this.workingDirectory = workingDirectory;
     this.useWorktrees = useWorktrees ?? true;
     this.systemContext = systemContext;
     this.mcpServers = mcpServers;
