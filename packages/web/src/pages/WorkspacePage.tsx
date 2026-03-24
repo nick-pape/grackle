@@ -361,7 +361,7 @@ export function WorkspacePage(): JSX.Element {
         </div>
       )}
       {workspaceTab === "board" && (
-        <WorkspaceBoard workspaceId={workspaceId!} environmentId={environmentId} />
+        <WorkspaceBoard workspaceId={workspaceId!} environmentId={environmentId} tasks={tasks} sessions={sessions} personas={personas} environments={environments} />
       )}
       {workspaceTab === "graph" && (
         <DagView workspaceId={workspaceId!} environmentId={environmentId} tasks={tasks} />

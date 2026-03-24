@@ -9,7 +9,8 @@ import { KnowledgeNav } from "../knowledge/KnowledgeNav.js";
 
 /** Layout route wrapper that shows the TaskList in the sidebar. */
 export function WithTaskSidebar(): JSX.Element {
-  const sidebar = useMemo(() => <TaskList />, []);
+  const { workspaces, tasks } = useGrackle();
+  const sidebar = useMemo(() => <TaskList workspaces={workspaces} tasks={tasks} />, [workspaces, tasks]);
   useSidebarSlot(sidebar);
   return <Outlet />;
 }

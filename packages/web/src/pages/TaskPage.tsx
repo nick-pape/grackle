@@ -345,6 +345,7 @@ export function TaskPage(): JSX.Element {
     loadSessionEvents, loadFindings,
     kill, startTask, stopTask, resumeTask, deleteTask,
     workspaces, taskSessions: taskSessionsMap, loadTaskSessions,
+    sendInput, spawn, personas, provisionEnvironment,
   } = useGrackle();
 
   const loadedRef = useRef<string | undefined>(undefined);
@@ -592,6 +593,12 @@ export function TaskPage(): JSX.Element {
             mode="send"
             sessionId={taskSessionForChat.id}
             environmentId={taskSessionForChat.environmentId}
+            personas={personas}
+            environments={environments}
+            onSendInput={sendInput}
+            onSpawn={spawn}
+            onStartTask={startTask}
+            onProvisionEnvironment={provisionEnvironment}
           />
         );
       })()}

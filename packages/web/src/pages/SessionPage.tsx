@@ -63,6 +63,7 @@ export function SessionPage(): JSX.Element {
   const { sessionId } = useParams<{ sessionId: string }>();
   const {
     events, eventsDropped, sessions, kill, loadSessionEvents,
+    sendInput, spawn, startTask, personas, environments, provisionEnvironment,
   } = useGrackle();
   const loadedRef = useRef<string | undefined>(undefined);
 
@@ -116,6 +117,12 @@ export function SessionPage(): JSX.Element {
           environmentId={session!.environmentId}
           showStop
           onSessionKill={() => kill(sessionId)}
+          personas={personas}
+          environments={environments}
+          onSendInput={sendInput}
+          onSpawn={spawn}
+          onStartTask={startTask}
+          onProvisionEnvironment={provisionEnvironment}
         />
       )}
     </div>

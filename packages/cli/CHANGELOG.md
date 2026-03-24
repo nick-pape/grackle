@@ -1,6 +1,32 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Mon, 23 Mar 2026 18:49:25 GMT and should not be manually modified.
+This log was last generated on Tue, 24 Mar 2026 04:08:14 GMT and should not be manually modified.
+
+## 0.74.0
+Tue, 24 Mar 2026 04:08:14 GMT
+
+### Minor changes
+
+- feat(powerline): scriptable stub runtime via JSON scenario in prompt
+
+### Updates
+
+- placeholder
+- placeholder
+- placeholder
+- placeholder
+- placeholder
+
+## 0.73.1
+Mon, 23 Mar 2026 19:41:20 GMT
+
+### Patches
+
+- Extract system prompt building, orchestrator context, and persona resolution into @grackle-ai/prompt
+
+### Updates
+
+- placeholder
 
 ## 0.73.0
 Mon, 23 Mar 2026 18:49:25 GMT

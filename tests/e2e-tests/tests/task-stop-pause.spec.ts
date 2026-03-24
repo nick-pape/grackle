@@ -1,16 +1,40 @@
 import { test, expect } from "./fixtures.js";
-import { createWorkspace, createTask, navigateToTask, patchWsForStubRuntime, runStubTaskToCompletion } from "./helpers.js";
+import {
+  createWorkspace,
+  createTaskWithScenario,
+  navigateToTask,
+  patchWsForStubRuntime,
+  stubScenario,
+  emitText,
+  idle,
+  onInput,
+} from "./helpers.js";
+
+/** Start a task, wait for idle, send input to advance past idle. */
+async function runScenarioToCompletion(page: import("@playwright/test").Page): Promise<void> {
+  await page.getByRole("button", { name: "Start", exact: true }).click();
+
+  const inputField = page.locator('input[placeholder="Type a message..."]');
+  await inputField.waitFor({ timeout: 15_000 });
+  await inputField.fill("continue");
+  await page.getByRole("button", { name: "Send", exact: true }).click();
+
+  await page.getByRole("button", { name: "Resume", exact: true }).waitFor({ timeout: 15_000 });
+}
 
 test.describe("Task Stop & Pause buttons", { tag: ["@task"] }, () => {
   test("Stop button completes a paused task", async ({ appPage }) => {
     const page = appPage;
 
-    // Create workspace and task, run stub to paused (review) state
     await createWorkspace(page, "stop-task-proj");
-    await createTask(page, "stop-task-proj", "stop task", "test-local");
+    await createTaskWithScenario(page, "stop-task-proj", "stop task", stubScenario(
+      emitText("Processing..."),
+      onInput("next"),
+      idle(),
+    ));
     await navigateToTask(page, "stop task");
     await patchWsForStubRuntime(page);
-    await runStubTaskToCompletion(page);
+    await runScenarioToCompletion(page);
 
     // Task is now paused — Resume confirms paused state
     await expect(page.getByRole("button", { name: "Resume", exact: true })).toBeVisible({ timeout: 5_000 });
@@ -28,15 +52,16 @@ test.describe("Task Stop & Pause buttons", { tag: ["@task"] }, () => {
   test("paused state shows Stop and Resume buttons", async ({ appPage }) => {
     const page = appPage;
 
-    // Create workspace and task
+    // Scenario with just an idle step — task goes to paused immediately
     await createWorkspace(page, "pause-task-proj");
-    await createTask(page, "pause-task-proj", "pause task", "test-local");
+    await createTaskWithScenario(page, "pause-task-proj", "pause task", stubScenario(
+      emitText("Working..."),
+      idle(),
+    ));
     await navigateToTask(page, "pause task");
     await patchWsForStubRuntime(page);
 
-    // Start the task — the stub runtime transitions to idle quickly, which
-    // causes the computed task status to become "paused". This verifies the
-    // button layout in the paused state (Stop, Resume, Delete).
+    // Start the task — the scenario transitions to idle, causing paused state
     await page.getByRole("button", { name: "Start", exact: true }).click();
 
     // Wait for the task to reach paused state (Resume only appears in paused)
@@ -50,12 +75,15 @@ test.describe("Task Stop & Pause buttons", { tag: ["@task"] }, () => {
   test("paused task can be resumed", async ({ appPage }) => {
     const page = appPage;
 
-    // Create workspace and task, run stub to paused (review) state
     await createWorkspace(page, "resume-task-proj");
-    await createTask(page, "resume-task-proj", "resume task", "test-local");
+    await createTaskWithScenario(page, "resume-task-proj", "resume task", stubScenario(
+      emitText("Processing..."),
+      onInput("next"),
+      idle(),
+    ));
     await navigateToTask(page, "resume task");
     await patchWsForStubRuntime(page);
-    await runStubTaskToCompletion(page);
+    await runScenarioToCompletion(page);
 
     // Task is paused — Resume button should be visible
     await expect(page.getByRole("button", { name: "Resume", exact: true })).toBeVisible({ timeout: 5_000 });

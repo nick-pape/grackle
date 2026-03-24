@@ -31,6 +31,7 @@ export function ChatPage(): JSX.Element {
     tasks, sessions, events, eventsDropped, environments,
     loadTaskSessions, loadSessionEvents, kill,
     taskSessions,
+    sendInput, spawn, startTask, personas, provisionEnvironment,
   } = useGrackle();
 
   const loadedSessionRef = useRef<string | undefined>(undefined);
@@ -96,6 +97,12 @@ export function ChatPage(): JSX.Element {
           environmentId={latestSession!.environmentId}
           showStop
           onSessionKill={() => kill(latestSession!.id)}
+          personas={personas}
+          environments={environments}
+          onSendInput={sendInput}
+          onSpawn={spawn}
+          onStartTask={startTask}
+          onProvisionEnvironment={provisionEnvironment}
         />
       )}
       {localEnvironment && !isSessionActive && (
@@ -103,6 +110,12 @@ export function ChatPage(): JSX.Element {
           mode="start"
           taskId={ROOT_TASK_ID}
           environmentId={localEnvironment.id}
+          personas={personas}
+          environments={environments}
+          onSendInput={sendInput}
+          onSpawn={spawn}
+          onStartTask={startTask}
+          onProvisionEnvironment={provisionEnvironment}
         />
       )}
     </div>
