@@ -205,7 +205,11 @@ class StubSession implements AgentSession {
     this.killReason = reason || "killed";
     this.status = SESSION_STATUS.STOPPED;
     if (this.inputResolve) {
+      // Remove the EventEmitter listener to prevent a stale callback if
+      // sendInput() is called after kill().
+      this.emitter.removeAllListeners("input");
       this.inputResolve("");
+      this.inputResolve = null;
     }
     if (this.killResolve) {
       this.killResolve();

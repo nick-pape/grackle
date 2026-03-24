@@ -29,8 +29,8 @@ test.describe("Task Stop & Pause buttons", { tag: ["@task"] }, () => {
     await createWorkspace(page, "stop-task-proj");
     await createTaskWithScenario(page, "stop-task-proj", "stop task", stubScenario(
       emitText("Processing..."),
-      idle(),
       onInput("next"),
+      idle(),
     ));
     await navigateToTask(page, "stop task");
     await patchWsForStubRuntime(page);
@@ -78,8 +78,8 @@ test.describe("Task Stop & Pause buttons", { tag: ["@task"] }, () => {
     await createWorkspace(page, "resume-task-proj");
     await createTaskWithScenario(page, "resume-task-proj", "resume task", stubScenario(
       emitText("Processing..."),
-      idle(),
       onInput("next"),
+      idle(),
     ));
     await navigateToTask(page, "resume task");
     await patchWsForStubRuntime(page);

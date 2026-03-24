@@ -24,8 +24,8 @@ test.describe("Task Lifecycle (stub runtime)", { tag: ["@task", "@smoke"] }, () 
       emitText("Working on test task..."),
       emitToolUse("echo", { message: "test task" }),
       emitToolResult('Tool output: "test task"'),
-      idle(),                  // goes idle, waits for input
       onInput("next"),         // input silently advances to completion
+      idle(),                  // goes idle, waits for input
     ));
 
     // --- Step 3: Navigate to task view ---
@@ -75,8 +75,8 @@ test.describe("Task Lifecycle (stub runtime)", { tag: ["@task", "@smoke"] }, () 
     await createWorkspace(page, "complete-task-proj");
     await createTaskWithScenario(page, "complete-task-proj", "complete task", stubScenario(
       emitText("Processing..."),
-      idle(),
       onInput("next"),
+      idle(),
     ));
     await navigateToTask(page, "complete task");
     await patchWsForStubRuntime(page);

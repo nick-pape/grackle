@@ -23,8 +23,8 @@ function scrollableScenario(): { steps: ReturnType<typeof emitText>[] } {
     emitToolResult("File contents that span multiple lines\nLine 2\nLine 3\nLine 4\nLine 5"),
     emitText("Line 4 of output"),
     emitText("Line 5 of output"),
-    idle(),
     onInput("next"),
+    idle(),
   );
 }
 
