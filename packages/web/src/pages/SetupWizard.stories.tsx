@@ -19,7 +19,7 @@ function OnboardingOverride({ children }: { children: ReactNode }): JSX.Element 
   if (!ctx) {
     throw new Error("OnboardingOverride must be used within MockGrackleProvider");
   }
-  const overridden = { ...ctx, onboardingCompleted: false as boolean | undefined };
+  const overridden = { ...ctx, onboardingCompleted: false };
   return (
     <GrackleContext.Provider value={overridden}>
       {children}
