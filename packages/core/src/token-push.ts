@@ -66,7 +66,7 @@ export async function pushProviderCredentialsToEnv(environmentId: string, runtim
     return;
   }
 
-  const bundle = buildProviderTokenBundle(runtime);
+  const bundle = await buildProviderTokenBundle(runtime);
 
   if (options?.excludeFileTokens) {
     bundle.tokens = bundle.tokens.filter((t) => t.type !== "file");
