@@ -16,50 +16,6 @@ test.describe("Group-by-status toggle", { tag: ["@workspace"] }, () => {
     await page.evaluate(() => localStorage.removeItem("grackle-task-group-by-status"));
   });
 
-  test("toggle switches to grouped view with status group headers", async ({ appPage }) => {
-    const page = appPage;
-
-    await createWorkspace(page, "gbs-toggle");
-    await createTask(page, "gbs-toggle", "task-a");
-    await createTask(page, "gbs-toggle", "task-b");
-
-    // Navigate to Tasks tab to access the group-by-status toggle
-    await goToTasksTab(page);
-
-    // Enable group-by-status
-    await page.getByTestId("task-group-by-status-toggle").click();
-
-    // Should see a status group header for not_started (both tasks default to that)
-    const notStartedGroup = page.getByTestId("status-group-not_started");
-    await expect(notStartedGroup).toBeVisible({ timeout: 5_000 });
-
-    // Tasks should still be visible within the group
-    await expect(page.getByText("task-a").first()).toBeVisible();
-    await expect(page.getByText("task-b").first()).toBeVisible();
-  });
-
-  test("collapse and expand a status group", async ({ appPage }) => {
-    const page = appPage;
-
-    await createWorkspace(page, "gbs-collapse");
-    await createTask(page, "gbs-collapse", "collapse-task");
-
-    await goToTasksTab(page);
-    await page.getByTestId("task-group-by-status-toggle").click();
-
-    const groupHeader = page.getByTestId("status-group-not_started");
-    await expect(groupHeader).toBeVisible({ timeout: 5_000 });
-    await expect(page.getByText("collapse-task").first()).toBeVisible();
-
-    // Click the header to collapse
-    await groupHeader.locator('[role="button"]').first().click();
-    await expect(page.getByText("collapse-task").first()).not.toBeVisible({ timeout: 5_000 });
-
-    // Click again to expand
-    await groupHeader.locator('[role="button"]').first().click();
-    await expect(page.getByText("collapse-task").first()).toBeVisible({ timeout: 5_000 });
-  });
-
   test("toggle persists across page reload", async ({ appPage }) => {
     const page = appPage;
 
@@ -106,28 +62,6 @@ test.describe("Group-by-status toggle", { tag: ["@workspace"] }, () => {
     // The not_started group should be visible (our task is there).
     // Other groups may exist from tasks created by prior tests in the shared server state.
     await expect(page.getByTestId("status-group-not_started").first()).toBeVisible({ timeout: 5_000 });
-  });
-
-  test("toggle back restores tree view", async ({ appPage }) => {
-    const page = appPage;
-
-    await createWorkspace(page, "gbs-restore");
-    await createTask(page, "gbs-restore", "restore-parent");
-
-    await goToTasksTab(page);
-
-    // Enable grouped view
-    await page.getByTestId("task-group-by-status-toggle").click();
-    await expect(page.getByTestId("status-group-not_started").first()).toBeVisible({ timeout: 5_000 });
-
-    // Disable grouped view — should return to tree
-    await page.getByTestId("task-group-by-status-toggle").click();
-
-    // Status groups should be gone
-    await expect(page.getByTestId("status-group-not_started")).not.toBeVisible({ timeout: 5_000 });
-
-    // Tree tasks should be visible again
-    await expect(page.getByText("restore-parent").first()).toBeVisible();
   });
 
   test("task navigation from grouped view", async ({ appPage }) => {

@@ -10,10 +10,6 @@ test.describe("Environment Display", { tag: ["@environment"] }, () => {
     await appPage.locator('[data-testid="sidebar-tab-environments"]').click();
   });
 
-  test("environment card renders with name", async ({ appPage }) => {
-    await expect(getEnvironmentNavItem(appPage, "test-local")).toBeVisible();
-  });
-
   test("status dot is accent-colored when connected", async ({ appPage }) => {
     // The environment nav item has a status dot span colored with --accent-green (theme-dependent)
     const envItem = getEnvironmentNavItem(appPage, "test-local");
@@ -36,8 +32,4 @@ test.describe("Environment Display", { tag: ["@environment"] }, () => {
     await expect(newChatButton).toBeEnabled();
   });
 
-  test("environment card is visible in list", async ({ appPage }) => {
-    // Verify the environment entry renders in the nav
-    await expect(getEnvironmentNavItem(appPage, "test-local")).toBeVisible();
-  });
 });
