@@ -1,4 +1,5 @@
 import { execFileSync } from "child_process";
+import * as path from "path";
 import type {
   HeftConfiguration,
   IHeftTaskPlugin,
@@ -13,16 +14,15 @@ class PlaywrightTestPlugin implements IHeftTaskPlugin {
   public apply(session: IHeftTaskSession, heftConfiguration: HeftConfiguration): void {
     session.hooks.run.tapPromise(PLUGIN_NAME, async (_runOptions: IHeftTaskRunHookOptions) => {
       const buildFolder: string = heftConfiguration.buildFolderPath;
-      // Resolve @playwright/test's CLI directly from lockfile-installed packages.
-      // Do NOT use node_modules/.bin/playwright — pnpm may hoist the base
-      // `playwright` package there instead of `@playwright/test`, and the base
-      // package exits 1 for flaky tests while @playwright/test exits 0.
-      const playwrightCliPath: string = require.resolve("@playwright/test/cli", { paths: [buildFolder] });
+      const isWindows: boolean = process.platform === "win32";
+      const executableName: string = isWindows ? "playwright.cmd" : "playwright";
+      const playwrightBin: string = path.join(buildFolder, "node_modules", ".bin", executableName);
 
       session.logger.terminal.writeLine("Running Playwright tests...");
-      execFileSync(process.execPath, [playwrightCliPath, "test"], {
+      execFileSync(playwrightBin, ["test"], {
         cwd: buildFolder,
         stdio: "inherit",
+        shell: isWindows
       });
       session.logger.terminal.writeLine("Playwright tests completed.");
     });
