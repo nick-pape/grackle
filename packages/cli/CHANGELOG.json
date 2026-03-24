@@ -2,6 +2,26 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.75.5",
+      "tag": "@grackle-ai/cli_v0.75.5",
+      "date": "Tue, 24 Mar 2026 15:28:52 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Rename worktree_base_path to working_directory across proto, DB, server, CLI, MCP, and web UI"
+          }
+        ],
+        "none": [
+          {
+            "comment": "placeholder"
+          },
+          {
+            "comment": "placeholder"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.75.4",
       "tag": "@grackle-ai/cli_v0.75.4",
       "date": "Tue, 24 Mar 2026 13:18:20 GMT",
