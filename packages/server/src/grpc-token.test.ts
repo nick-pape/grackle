@@ -68,6 +68,7 @@ describe("gRPC token handlers", () => {
     const result = (await handlers.listTokens()) as { tokens: unknown[] };
     expect(result.tokens).toBeDefined();
     expect(Array.isArray(result.tokens)).toBe(true);
+    expect(result.tokens.length).toBe(0);
   });
 
   it("setToken + listTokens round-trip", async () => {

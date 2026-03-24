@@ -5,7 +5,7 @@
  * Migrated from tests/e2e-tests/tests/persona.spec.ts (9 of 13 tests).
  */
 import { describe, it, expect, beforeAll, vi } from "vitest";
-import { ConnectError, Code } from "@connectrpc/connect";
+import { ConnectError } from "@connectrpc/connect";
 
 // ── Mock side-effect modules (resolved via __mocks__/ directory) ──
 vi.mock("./logger.js");
