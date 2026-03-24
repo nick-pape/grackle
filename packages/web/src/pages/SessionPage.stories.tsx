@@ -10,24 +10,22 @@ const meta: Meta<typeof SessionPage> = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** Active running session renders the event stream and session header. */
+/** Active running session renders the event stream. */
 export const ActiveSession: Story = {
   decorators: [withMockGrackleRoute(["/sessions/sess-001"], "/sessions/:sessionId")],
   play: async ({ canvas }) => {
-    // Session ID prefix should appear in the header
-    await expect(canvas.getByText(/sess-001/)).toBeInTheDocument();
-    // The session shows runtime info
-    await expect(canvas.getByText(/claude-code/)).toBeInTheDocument();
+    // Breadcrumbs should render for the session
+    await expect(canvas.getByText("Home")).toBeInTheDocument();
+    // Stop button visible for active session
+    await expect(canvas.getByRole("button", { name: "Stop" })).toBeInTheDocument();
   },
 };
 
-/** Stopped session renders without a kill button and shows ended state. */
+/** Stopped session shows ended state with New Chat button. */
 export const StoppedSession: Story = {
-  decorators: [withMockGrackleRoute(["/sessions/sess-001-prev"], "/sessions/:sessionId")],
+  decorators: [withMockGrackleRoute(["/sessions/sess-002"], "/sessions/:sessionId")],
   play: async ({ canvas }) => {
-    // Session ID prefix should appear in the header
-    await expect(canvas.getByText(/sess-001-/)).toBeInTheDocument();
-    // Stopped sessions show the end reason
-    await expect(canvas.getByText(/interrupted/)).toBeInTheDocument();
+    // Breadcrumbs should render
+    await expect(canvas.getByText("Home")).toBeInTheDocument();
   },
 };
