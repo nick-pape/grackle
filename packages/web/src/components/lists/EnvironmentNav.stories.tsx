@@ -37,13 +37,18 @@ export const StatusDotColored: Story = {
     ],
   },
   play: async ({ canvas }) => {
-    // Each environment nav item should have a status dot
-    const items = canvas.getAllByTestId("env-nav-item");
+    const items: HTMLElement[] = canvas.getAllByTestId("env-nav-item");
     await expect(items.length).toBe(3);
 
-    // Each item contains a dot character (the bullet)
-    for (const item of items) {
-      await expect(item.textContent).toContain("\u25CF");
+    // Connected and disconnected dots should have different colors
+    const connectedDot: HTMLElement | null = items[0].querySelector("span");
+    const disconnectedDot: HTMLElement | null = items[1].querySelector("span");
+    await expect(connectedDot).not.toBeNull();
+    await expect(disconnectedDot).not.toBeNull();
+    if (connectedDot && disconnectedDot) {
+      const connectedColor: string = window.getComputedStyle(connectedDot).color;
+      const disconnectedColor: string = window.getComputedStyle(disconnectedDot).color;
+      await expect(connectedColor).not.toBe(disconnectedColor);
     }
   },
 };
