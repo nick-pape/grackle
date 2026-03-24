@@ -475,8 +475,11 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         }
       } catch (err) {
         logger.error({ environmentId: req.id, err }, "Provision/bootstrap failed");
-        envRegistry.updateEnvironmentStatus(req.id, "error");
-        emit("environment.changed", {});
+        const currentEnv = envRegistry.getEnvironment(req.id);
+        if (currentEnv?.status !== "connected") {
+          envRegistry.updateEnvironmentStatus(req.id, "error");
+          emit("environment.changed", {});
+        }
         yield create(grackle.ProvisionEventSchema, {
           stage: "error",
           message: `Provision failed: ${err instanceof Error ? err.message : String(err)}`,
@@ -509,11 +512,19 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         return;
       }
 
-      yield create(grackle.ProvisionEventSchema, {
-        stage: "ready",
-        message: "Environment connected",
-        progress: 1,
-      });
+      // Best-effort: notify client that provision completed.
+      // If the client already disconnected (e.g. fire-and-forget fetch in
+      // test helpers), the yield throws — but the environment IS connected,
+      // so we must NOT revert the status to "error".
+      try {
+        yield create(grackle.ProvisionEventSchema, {
+          stage: "ready",
+          message: "Environment connected",
+          progress: 1,
+        });
+      } catch {
+        // Client disconnected after successful provision — ignore
+      }
     },
 
     async stopEnvironment(req: grackle.EnvironmentId) {
