@@ -1,20 +1,23 @@
 /**
  * Domain hook for session management.
  *
+ * Uses ConnectRPC for CRUD operations (list, spawn, kill, events, task sessions).
+ * Real-time session events still flow via WebSocket (subscribe_all push).
+ *
  * @module
  */
 
 import { useState, useCallback } from "react";
-import type { Session, SessionEvent, WsMessage, SendFunction } from "./types.js";
+import type { Session, SessionEvent, WsMessage } from "./types.js";
 import {
-  asValidArray,
-  isSession,
   isSessionEvent,
   warnBadPayload,
   mapSessionStatus,
   mapEndReason,
   MAX_EVENTS,
 } from "./types.js";
+import { grackleClient } from "./useGrackleClient.js";
+import { protoToSession, protoToSessionEvent } from "./proto-converters.js";
 
 /** Values returned by {@link useSessions}. */
 export interface UseSessionsResult {
@@ -33,6 +36,8 @@ export interface UseSessionsResult {
   lastSpawnedId: string | undefined;
   /** Sessions grouped by task ID. */
   taskSessions: Record<string, Session[]>;
+  /** Refresh the session list from the server. */
+  loadSessions: () => void;
   /** Spawn a new session in an environment. */
   spawn: (
     environmentId: string,
@@ -50,24 +55,28 @@ export interface UseSessionsResult {
   clearEvents: () => void;
   /** Load sessions associated with a task. */
   loadTaskSessions: (taskId: string) => void;
-  /** Handle an incoming WebSocket message. Returns `true` if handled. */
+  /**
+   * Handle an incoming WebSocket message. Returns `true` if handled.
+   * Only handles real-time `session_event` push messages from subscribe_all.
+   */
   handleMessage: (msg: WsMessage) => boolean;
+  /** Handle legacy WS messages injected by E2E tests. */
+  handleLegacyMessage?: (msg: WsMessage) => boolean;
 }
 
 /** Set of session statuses considered active. */
 const ACTIVE_STATUSES: ReadonlySet<string> = new Set(["pending", "running", "idle"]);
 /** Set of session statuses considered terminal. */
-const TERMINAL_STATUSES: ReadonlySet<string> = new Set(["stopped", "suspended"]);
+const TERMINAL_STATUSES: ReadonlySet<string> = new Set(["completed", "failed", "interrupted", "hibernating", "suspended"]);
 /** Ordered list of active statuses from least to most progressed. */
 const ACTIVE_ORDER: readonly string[] = ["pending", "running", "idle"];
 
 /**
  * Hook that manages session state, events, and session lifecycle actions.
  *
- * @param send - Function to send WebSocket messages.
- * @returns Session state, actions, and a message handler.
+ * @returns Session state, actions, and a message handler for real-time events.
  */
-export function useSessions(send: SendFunction): UseSessionsResult {
+export function useSessions(): UseSessionsResult {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [events, setEvents] = useState<SessionEvent[]>([]);
   const [eventsDropped, setEventsDropped] = useState<number>(0);
@@ -76,21 +85,13 @@ export function useSessions(send: SendFunction): UseSessionsResult {
   );
   const [taskSessions, setTaskSessions] = useState<Record<string, Session[]>>({});
 
-  const handleMessage = useCallback((msg: WsMessage): boolean => {
-    switch (msg.type) {
-      case "sessions":
+  /** Fetch the session list from the server via ConnectRPC. */
+  const loadSessions = useCallback(() => {
+    grackleClient.listSessions({}).then(
+      (resp) => {
+        const incoming = resp.sessions.map(protoToSession);
         setSessions((prev) => {
-          const incoming = asValidArray(
-            msg.payload?.sessions,
-            isSession,
-            "sessions",
-            "sessions",
-          );
-          // Build a map of previous session statuses that were updated via
-          // real-time session_event status messages (which may be more
-          // recent than the list_sessions DB snapshot).  Prefer the
-          // real-time status for active sessions to avoid overwriting
-          // "idle" with a stale "running" from the query.
+          // Preserve real-time status/endReason updates that may be more recent
           const prevMap = new Map(prev.map((s) => [s.id, s]));
           return incoming.map((s) => {
             const prevSession = prevMap.get(s.id);
@@ -98,15 +99,10 @@ export function useSessions(send: SendFunction): UseSessionsResult {
             if (!prevStatus || prevStatus === s.status) {
               return s;
             }
-            // If the previous status is terminal and the incoming is
-            // active, the list_sessions response is stale — keep the
-            // terminal status (and endReason) from the real-time event.
             if (TERMINAL_STATUSES.has(prevStatus) && ACTIVE_STATUSES.has(s.status)) {
               return { ...s, status: prevStatus, ...(prevSession.endReason !== undefined ? { endReason: prevSession.endReason } : {}) };
             }
             if (ACTIVE_STATUSES.has(prevStatus) && ACTIVE_STATUSES.has(s.status)) {
-              // If the previous status is "ahead" of the incoming status
-              // (e.g. waiting_input > running > pending), keep the previous.
               if (ACTIVE_ORDER.indexOf(prevStatus) > ACTIVE_ORDER.indexOf(s.status)) {
                 return { ...s, status: prevStatus };
               }
@@ -114,164 +110,124 @@ export function useSessions(send: SendFunction): UseSessionsResult {
             return s;
           });
         });
-        return true;
+      },
+      () => {},
+    );
+  }, []);
 
-      case "session_event": {
-        if (!isSessionEvent(msg.payload)) {
-          warnBadPayload(
-            "session_event",
-            "payload is not a valid SessionEvent",
+  /**
+   * Handle real-time session_event push messages from subscribe_all.
+   * This is the only WS message type still handled by this hook.
+   */
+  const handleMessage = useCallback((msg: WsMessage): boolean => {
+    if (msg.type !== "session_event") {
+      return false;
+    }
+
+    if (!isSessionEvent(msg.payload)) {
+      warnBadPayload("session_event", "payload is not a valid SessionEvent");
+      return true;
+    }
+    const event: SessionEvent = msg.payload;
+    let dropped = 0;
+    setEvents((prev) => {
+      const next = [...prev, event];
+      if (next.length > MAX_EVENTS) {
+        dropped = next.length - MAX_EVENTS;
+        return next.slice(-MAX_EVENTS);
+      }
+      return next;
+    });
+    if (dropped > 0) {
+      setEventsDropped((n) => n + dropped);
+    }
+    // Update session usage when a usage event streams in
+    if (event.eventType === "usage") {
+      try {
+        const data = JSON.parse(event.content) as Record<string, unknown>;
+        const inputTokens = Number(data.input_tokens) || 0;
+        const outputTokens = Number(data.output_tokens) || 0;
+        const costUsd = Number(data.cost_usd) || 0;
+        if (inputTokens > 0 || outputTokens > 0 || costUsd > 0) {
+          setSessions((prev) =>
+            prev.map((s) =>
+              s.id === event.sessionId
+                ? {
+                    ...s,
+                    inputTokens: (s.inputTokens ?? 0) + inputTokens,
+                    outputTokens: (s.outputTokens ?? 0) + outputTokens,
+                    costUsd: (s.costUsd ?? 0) + costUsd,
+                  }
+                : s,
+            ),
           );
-          return true;
         }
-        const event: SessionEvent = msg.payload;
-        /* Track drops outside the updater to avoid impure side-effects
-           inside React state updaters (StrictMode may invoke updaters
-           more than once). The closure variable is assigned (not accumulated),
-           so repeated invocations with the same prev yield the same value. */
-        let dropped = 0;
-        setEvents((prev) => {
-          const next = [...prev, event];
-          if (next.length > MAX_EVENTS) {
-            dropped = next.length - MAX_EVENTS;
-            return next.slice(-MAX_EVENTS);
-          }
-          return next;
-        });
-        if (dropped > 0) {
-          setEventsDropped((n) => n + dropped);
+      } catch { /* ignore malformed usage events */ }
+    }
+    if (event.eventType === "status") {
+      const mappedStatus = mapSessionStatus(event.content);
+      const endReason = mapEndReason(event.content);
+      setSessions((prev) => {
+        const exists = prev.some((s) => s.id === event.sessionId);
+        if (exists) {
+          return prev.map((s) =>
+            s.id === event.sessionId
+              ? { ...s, status: mappedStatus, ...(endReason !== undefined ? { endReason } : {}) }
+              : s,
+          );
         }
-        // Update session usage when a usage event streams in
-        if (event.eventType === "usage") {
-          try {
-            const data = JSON.parse(event.content) as Record<string, unknown>;
-            const inputTokens = Number(data.input_tokens) || 0;
-            const outputTokens = Number(data.output_tokens) || 0;
-            const costUsd = Number(data.cost_usd) || 0;
-            if (inputTokens > 0 || outputTokens > 0 || costUsd > 0) {
-              setSessions((prev) =>
-                prev.map((s) =>
-                  s.id === event.sessionId
-                    ? {
-                        ...s,
-                        inputTokens: (s.inputTokens ?? 0) + inputTokens,
-                        outputTokens: (s.outputTokens ?? 0) + outputTokens,
-                        costUsd: (s.costUsd ?? 0) + costUsd,
-                      }
-                    : s,
-                ),
-              );
-            }
-          } catch { /* ignore malformed usage events */ }
-        }
-        if (event.eventType === "status") {
-          const mappedStatus = mapSessionStatus(event.content);
-          const endReason = mapEndReason(event.content);
-          setSessions((prev) => {
-            const exists = prev.some((s) => s.id === event.sessionId);
-            if (exists) {
-              return prev.map((s) =>
-                s.id === event.sessionId
-                  ? { ...s, status: mappedStatus, ...(endReason !== undefined ? { endReason } : {}) }
-                  : s,
-              );
-            }
-            // Session not yet in the array (e.g. retry session created
-            // server-side before list_sessions response arrived).  Add a
-            // placeholder entry so the UI can react to the status change.
-            return [
-              ...prev,
-              {
-                id: event.sessionId,
-                environmentId: "",
-                runtime: "",
-                status: mappedStatus,
-                prompt: "",
-                startedAt: event.timestamp,
-                ...(endReason !== undefined ? { endReason } : {}),
-              },
-            ];
-          });
-        }
+        return [
+          ...prev,
+          {
+            id: event.sessionId,
+            environmentId: "",
+            runtime: "",
+            status: mappedStatus,
+            prompt: "",
+            startedAt: event.timestamp,
+            ...(endReason !== undefined ? { endReason } : {}),
+          },
+        ];
+      });
+    }
+    return true;
+  }, []);
+
+  const handleLegacyMessage = useCallback((msg: WsMessage): boolean => {
+    switch (msg.type) {
+      case "sessions": {
+        const incoming = Array.isArray(msg.payload?.sessions) ? msg.payload.sessions as Session[] : [];
+        setSessions(incoming);
         return true;
       }
-
-      case "session_events": {
-        const replayEvents = asValidArray(
-          msg.payload?.events,
-          isSessionEvent,
-          "session_events",
-          "events",
-        );
-        const replaySessionId = msg.payload?.sessionId;
-        if (typeof replaySessionId !== "string") {
-          warnBadPayload(
-            "session_events",
-            "missing or non-string sessionId",
-          );
-          return true;
-        }
-        if (replayEvents.length > 0) {
-          let replayDropped = 0;
-          setEvents((prev) => {
-            // Build a Set of existing event keys for this session
-            const existingKeys = new Set<string>();
-            for (const e of prev) {
-              if (e.sessionId === replaySessionId) {
-                existingKeys.add(`${e.timestamp}|${e.eventType}`);
-              }
-            }
-            // Add replay events that aren't already present
-            const newFromReplay = replayEvents.filter(
-              (e) =>
-                !existingKeys.has(`${e.timestamp}|${e.eventType}`),
-            );
-            // Keep all existing events, append new replay events,
-            // sort by timestamp within each session
-            const merged = [...prev, ...newFromReplay].sort(
-              (a, b) => {
-                if (a.sessionId !== b.sessionId) {
-                  return 0;
-                }
-                return a.timestamp.localeCompare(b.timestamp);
-              },
-            );
-            if (merged.length > MAX_EVENTS) {
-              replayDropped = merged.length - MAX_EVENTS;
-              return merged.slice(-MAX_EVENTS);
-            }
-            return merged;
-          });
-          if (replayDropped > 0) {
-            setEventsDropped((n) => n + replayDropped);
-          }
-        }
-        return true;
-      }
-
       case "spawned": {
         const spawnedId = msg.payload?.sessionId;
         if (typeof spawnedId === "string" && spawnedId) {
           setLastSpawnedId(spawnedId);
         }
-        send({ type: "list_sessions" });
+        loadSessions();
         return true;
       }
-
+      case "session_events": {
+        // Legacy replay — just set events directly
+        const replayEvents = Array.isArray(msg.payload?.events) ? msg.payload.events as SessionEvent[] : [];
+        if (replayEvents.length > 0) {
+          setEvents(replayEvents);
+        }
+        return true;
+      }
       case "task_sessions": {
         const taskId = msg.payload?.taskId;
-        if (typeof taskId !== "string" || !taskId) {
-          return true;
+        if (typeof taskId === "string" && taskId) {
+          const sessionsArr = Array.isArray(msg.payload?.sessions) ? msg.payload.sessions as Session[] : [];
+          setTaskSessions((prev) => ({ ...prev, [taskId]: sessionsArr }));
         }
-        const sessionsArr = asValidArray(msg.payload?.sessions, isSession, "task_sessions", "sessions");
-        setTaskSessions((prev) => ({ ...prev, [taskId]: sessionsArr }));
         return true;
       }
-
       default:
         return false;
     }
-  }, [send]);
+  }, [loadSessions]);
 
   const spawn = useCallback(
     (
@@ -280,38 +236,80 @@ export function useSessions(send: SendFunction): UseSessionsResult {
       personaId?: string,
       worktreeBasePath?: string,
     ) => {
-      send({
-        type: "spawn",
-        payload: {
-          environmentId,
-          prompt,
-          personaId: personaId || "",
-          worktreeBasePath: worktreeBasePath || "",
+      grackleClient.spawnAgent({
+        environmentId,
+        prompt,
+        personaId: personaId || "",
+        worktreeBasePath: worktreeBasePath || "",
+      }).then(
+        (session) => {
+          setLastSpawnedId(session.id);
+          loadSessions();
         },
-      });
+        () => {},
+      );
     },
-    [send],
+    [loadSessions],
   );
 
   const sendInput = useCallback(
     (sessionId: string, text: string) => {
-      send({ type: "send_input", payload: { sessionId, text } });
+      grackleClient.sendInput({ sessionId, text }).catch(
+        () => {},
+      );
     },
-    [send],
+    [],
   );
 
   const kill = useCallback(
     (sessionId: string) => {
-      send({ type: "kill", payload: { sessionId } });
+      grackleClient.killAgent({ id: sessionId }).catch(
+        () => {},
+      );
     },
-    [send],
+    [],
   );
 
   const loadSessionEvents = useCallback(
     (sessionId: string) => {
-      send({ type: "get_session_events", payload: { sessionId } });
+      grackleClient.getSessionEvents({ id: sessionId }).then(
+        (resp) => {
+          const replayEvents = resp.events.map(protoToSessionEvent);
+          if (replayEvents.length > 0) {
+            let replayDropped = 0;
+            setEvents((prev) => {
+              const existingKeys = new Set<string>();
+              for (const e of prev) {
+                if (e.sessionId === sessionId) {
+                  existingKeys.add(`${e.timestamp}|${e.eventType}`);
+                }
+              }
+              const newFromReplay = replayEvents.filter(
+                (e) => !existingKeys.has(`${e.timestamp}|${e.eventType}`),
+              );
+              const merged = [...prev, ...newFromReplay].sort(
+                (a, b) => {
+                  if (a.sessionId !== b.sessionId) {
+                    return 0;
+                  }
+                  return a.timestamp.localeCompare(b.timestamp);
+                },
+              );
+              if (merged.length > MAX_EVENTS) {
+                replayDropped = merged.length - MAX_EVENTS;
+                return merged.slice(-MAX_EVENTS);
+              }
+              return merged;
+            });
+            if (replayDropped > 0) {
+              setEventsDropped((n) => n + replayDropped);
+            }
+          }
+        },
+        () => {},
+      );
     },
-    [send],
+    [],
   );
 
   const clearEvents = useCallback(() => {
@@ -321,9 +319,15 @@ export function useSessions(send: SendFunction): UseSessionsResult {
 
   const loadTaskSessions = useCallback(
     (taskId: string) => {
-      send({ type: "get_task_sessions", payload: { taskId } });
+      grackleClient.getTaskSessions({ id: taskId }).then(
+        (resp) => {
+          const sessionsArr = resp.sessions.map(protoToSession);
+          setTaskSessions((prev) => ({ ...prev, [taskId]: sessionsArr }));
+        },
+        () => {},
+      );
     },
-    [send],
+    [],
   );
 
   return {
@@ -332,6 +336,7 @@ export function useSessions(send: SendFunction): UseSessionsResult {
     eventsDropped,
     lastSpawnedId,
     taskSessions,
+    loadSessions,
     spawn,
     sendInput,
     kill,
@@ -339,5 +344,6 @@ export function useSessions(send: SendFunction): UseSessionsResult {
     clearEvents,
     loadTaskSessions,
     handleMessage,
+    handleLegacyMessage,
   };
 }

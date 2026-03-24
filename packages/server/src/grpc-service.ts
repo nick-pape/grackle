@@ -32,7 +32,9 @@ import {
   workspaceStatusToEnum,
   claudeProviderModeToEnum,
   providerToggleToEnum,
+  eventTypeToEnum,
 } from "@grackle-ai/common";
+import * as logWriter from "./log-writer.js";
 import { resolvePersona, fetchOrchestratorContext, SystemPromptBuilder, buildTaskPrompt } from "@grackle-ai/prompt";
 import { createScopedToken, loadOrCreateApiKey, generatePairingCode } from "@grackle-ai/auth";
 import { computeTaskStatus } from "./compute-task-status.js";
@@ -53,6 +55,8 @@ import {
   type Embedder,
   type EdgeType,
 } from "@grackle-ai/knowledge";
+import { exec } from "./utils/exec.js";
+import { formatGhError } from "./utils/format-gh-error.js";
 import { importGitHubIssues as executeGitHubImport } from "./github-import.js";
 import { detectLanIp } from "./utils/network.js";
 import * as streamRegistry from "./stream-registry.js";
@@ -62,6 +66,15 @@ import { cleanupLifecycleStream } from "./lifecycle.js";
 
 /** Valid pipe mode values for SpawnRequest and StartTaskRequest. */
 const VALID_PIPE_MODES: ReadonlySet<string> = new Set(["", "sync", "async", "detach"]);
+
+/** Timeout for `gh codespace list` in milliseconds. */
+const GH_CODESPACE_LIST_TIMEOUT_MS: number = 30_000;
+
+/** Timeout for `gh codespace create` in milliseconds. */
+const GH_CODESPACE_CREATE_TIMEOUT_MS: number = 300_000;
+
+/** Maximum number of codespaces returned by `gh codespace list`. */
+const GH_CODESPACE_LIST_LIMIT: number = 50;
 
 /** Validate pipe mode and parentSessionId. Throws ConnectError on invalid input. */
 function validatePipeInputs(pipe: string, parentSessionId: string): void {
@@ -329,6 +342,9 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
     },
 
     async addEnvironment(req: grackle.AddEnvironmentRequest) {
+      if (!req.displayName || !req.adapterType) {
+        throw new ConnectError("displayName and adapterType required", Code.InvalidArgument);
+      }
       const id = req.displayName.toLowerCase().replace(/[^a-z0-9-]/g, "-");
       envRegistry.addEnvironment(
         id,
@@ -339,6 +355,46 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       emit("environment.changed", {});
       const row = envRegistry.getEnvironment(id);
       return envRowToProto(row!);
+    },
+
+    async updateEnvironment(req: grackle.UpdateEnvironmentRequest) {
+      if (!req.id) {
+        throw new ConnectError("id is required", Code.InvalidArgument);
+      }
+      const existing = envRegistry.getEnvironment(req.id);
+      if (!existing) {
+        throw new ConnectError(`Environment not found: ${req.id}`, Code.NotFound);
+      }
+      const displayName = req.displayName !== undefined ? req.displayName : undefined;
+      if (displayName?.trim() === "") {
+        throw new ConnectError("Environment name cannot be empty", Code.InvalidArgument);
+      }
+      let adapterConfig: string | undefined;
+      if (req.adapterConfig !== undefined) {
+        const raw = req.adapterConfig.trim() || "{}";
+        let parsed: unknown;
+        try {
+          parsed = JSON.parse(raw);
+        } catch {
+          throw new ConnectError("adapterConfig is not valid JSON", Code.InvalidArgument);
+        }
+        if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+          throw new ConnectError("adapterConfig must be a JSON object", Code.InvalidArgument);
+        }
+        adapterConfig = raw;
+      }
+      const trimmedName = displayName !== undefined ? displayName.trim() : undefined;
+      if (trimmedName === undefined && adapterConfig === undefined) {
+        throw new ConnectError("No updatable fields provided", Code.InvalidArgument);
+      }
+      envRegistry.updateEnvironment(req.id, {
+        displayName: trimmedName,
+        adapterConfig,
+      });
+      logger.info({ environmentId: req.id, displayName: trimmedName }, "Environment updated");
+      emit("environment.changed", {});
+      const updated = envRegistry.getEnvironment(req.id);
+      return envRowToProto(updated!);
     },
 
     async removeEnvironment(req: grackle.EnvironmentId) {
@@ -419,8 +475,11 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         }
       } catch (err) {
         logger.error({ environmentId: req.id, err }, "Provision/bootstrap failed");
-        envRegistry.updateEnvironmentStatus(req.id, "error");
-        emit("environment.changed", {});
+        const currentEnv = envRegistry.getEnvironment(req.id);
+        if (currentEnv?.status !== "connected") {
+          envRegistry.updateEnvironmentStatus(req.id, "error");
+          emit("environment.changed", {});
+        }
         yield create(grackle.ProvisionEventSchema, {
           stage: "error",
           message: `Provision failed: ${err instanceof Error ? err.message : String(err)}`,
@@ -441,13 +500,8 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         recoverSuspendedSessions(req.id, conn).catch((err) => {
           logger.error({ environmentId: req.id, err }, "Session recovery failed");
         });
-
-        yield create(grackle.ProvisionEventSchema, {
-          stage: "ready",
-          message: "Environment connected",
-          progress: 1,
-        });
       } catch (err) {
+        // adapter.connect() actually failed
         envRegistry.updateEnvironmentStatus(req.id, "error");
         emit("environment.changed", {});
         yield create(grackle.ProvisionEventSchema, {
@@ -455,6 +509,21 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
           message: `Connection failed: ${err instanceof Error ? err.message : String(err)}`,
           progress: 0,
         });
+        return;
+      }
+
+      // Best-effort: notify client that provision completed.
+      // If the client already disconnected (e.g. fire-and-forget fetch in
+      // test helpers), the yield throws — but the environment IS connected,
+      // so we must NOT revert the status to "error".
+      try {
+        yield create(grackle.ProvisionEventSchema, {
+          stage: "ready",
+          message: "Environment connected",
+          progress: 1,
+        });
+      } catch {
+        // Client disconnected after successful provision — ignore
       }
     },
 
@@ -491,14 +560,76 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
     },
 
     async spawnAgent(req: grackle.SpawnRequest) {
+      if (!req.environmentId) {
+        throw new ConnectError("environment_id is required", Code.InvalidArgument);
+      }
       const env = envRegistry.getEnvironment(req.environmentId);
       if (!env) {
         throw new ConnectError(`Environment not found: ${req.environmentId}`, Code.NotFound);
       }
 
-      const conn = adapterManager.getConnection(req.environmentId);
+      let conn = adapterManager.getConnection(req.environmentId);
       if (!conn) {
-        throw new ConnectError(`Environment ${req.environmentId} not connected`, Code.FailedPrecondition);
+        // Auto-provision: attempt to reconnect/provision a disconnected environment
+        const adapter = adapterManager.getAdapter(env.adapterType);
+        if (!adapter) {
+          throw new ConnectError(`No adapter for type: ${env.adapterType}`, Code.FailedPrecondition);
+        }
+
+        logger.info({ environmentId: req.environmentId }, "Auto-provisioning environment for SpawnAgent");
+        envRegistry.updateEnvironmentStatus(req.environmentId, "connecting");
+        emit("environment.changed", {});
+
+        const config = parseAdapterConfig(env.adapterConfig);
+        config.defaultRuntime = env.defaultRuntime;
+        const powerlineToken = env.powerlineToken;
+
+        try {
+          for await (const provEvent of reconnectOrProvision(
+            req.environmentId,
+            adapter,
+            config,
+            powerlineToken,
+            !!env.bootstrapped,
+          )) {
+            logger.info(
+              { environmentId: req.environmentId, stage: provEvent.stage },
+              "Auto-provision progress (SpawnAgent)",
+            );
+            emit("environment.provision_progress", {
+              environmentId: req.environmentId,
+              stage: provEvent.stage,
+              message: provEvent.message,
+              progress: provEvent.progress,
+            });
+          }
+
+          conn = await adapter.connect(req.environmentId, config, powerlineToken);
+          adapterManager.setConnection(req.environmentId, conn);
+          await tokenPush.pushToEnv(req.environmentId);
+          envRegistry.updateEnvironmentStatus(req.environmentId, "connected");
+          envRegistry.markBootstrapped(req.environmentId);
+          emit("environment.changed", {});
+          // Auto-recover suspended sessions (fire-and-forget)
+          recoverSuspendedSessions(req.environmentId, conn).catch((err) => {
+            logger.error({ environmentId: req.environmentId, err }, "Session recovery failed");
+          });
+          logger.info({ environmentId: req.environmentId }, "Auto-provision complete (SpawnAgent)");
+          emit("environment.provision_progress", {
+            environmentId: req.environmentId,
+            stage: "ready",
+            message: "Environment connected",
+            progress: 1,
+          });
+        } catch (err) {
+          logger.error({ environmentId: req.environmentId, err }, "Auto-provision failed (SpawnAgent)");
+          envRegistry.updateEnvironmentStatus(req.environmentId, "error");
+          emit("environment.changed", {});
+          throw new ConnectError(
+            `Failed to auto-connect environment ${req.environmentId}: ${err instanceof Error ? err.message : String(err)}`,
+            Code.FailedPrecondition,
+          );
+        }
       }
 
       // Resolve persona via cascade (request → app default)
@@ -633,6 +764,19 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       if (!conn) {
         throw new ConnectError(`Environment ${session.environmentId} not connected`, Code.FailedPrecondition);
       }
+
+      // Persist and publish user input event so subscribers see the text in the event stream
+      const userInputEvent = create(grackle.SessionEventSchema, {
+        sessionId: req.sessionId,
+        type: grackle.EventType.USER_INPUT,
+        timestamp: new Date().toISOString(),
+        content: req.text,
+        raw: "",
+      });
+      if (session.logPath) {
+        logWriter.writeEvent(session.logPath, userInputEvent);
+      }
+      streamHub.publish(userInputEvent);
 
       await conn.client.sendInput(
         create(powerline.InputMessageSchema, {
@@ -899,6 +1043,42 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       return sessionRowToProto(row);
     },
 
+    async getSessionEvents(req: grackle.SessionId) {
+      const session = sessionStore.getSession(req.id);
+      if (!session) {
+        throw new ConnectError(`Session not found: ${req.id}`, Code.NotFound);
+      }
+      if (!session.logPath) {
+        return create(grackle.SessionEventListSchema, {
+          sessionId: req.id,
+          events: [],
+        });
+      }
+      const entries = logWriter.readLog(session.logPath);
+      return create(grackle.SessionEventListSchema, {
+        sessionId: req.id,
+        events: entries.map((e) =>
+          create(grackle.SessionEventSchema, {
+            sessionId: e.session_id,
+            type: eventTypeToEnum(e.type),
+            timestamp: e.timestamp,
+            content: e.content,
+            raw: e.raw || "",
+          }),
+        ),
+      });
+    },
+
+    async getTaskSessions(req: grackle.TaskId) {
+      if (!req.id) {
+        throw new ConnectError("task id is required", Code.InvalidArgument);
+      }
+      const rows = sessionStore.listSessionsForTask(req.id);
+      return create(grackle.SessionListSchema, {
+        sessions: rows.map(sessionRowToProto),
+      });
+    },
+
     async *streamSession(req: grackle.SessionId) {
       const stream = streamHub.createStream(req.id);
       try {
@@ -922,6 +1102,12 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
     },
 
     async setToken(req: grackle.TokenEntry) {
+      if (!req.name) {
+        throw new ConnectError("name is required", Code.InvalidArgument);
+      }
+      if (!req.value) {
+        throw new ConnectError("value is required", Code.InvalidArgument);
+      }
       tokenStore.setToken({
         name: req.name,
         type: req.type,
@@ -930,6 +1116,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         value: req.value,
         expiresAt: req.expiresAt,
       });
+      emit("token.changed", {});
       await tokenPush.pushToAll();
       return create(grackle.EmptySchema, {});
     },
@@ -950,7 +1137,11 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
     },
 
     async deleteToken(req: grackle.TokenName) {
+      if (!req.name) {
+        throw new ConnectError("name is required", Code.InvalidArgument);
+      }
       tokenStore.deleteToken(req.name);
+      emit("token.changed", {});
       await tokenPush.pushToAll();
       return create(grackle.EmptySchema, {});
     },
@@ -1012,6 +1203,9 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
     },
 
     async createWorkspace(req: grackle.CreateWorkspaceRequest) {
+      if (!req.name) {
+        throw new ConnectError("name is required", Code.InvalidArgument);
+      }
       if (!req.environmentId) {
         throw new ConnectError("environment_id is required", Code.InvalidArgument);
       }
@@ -1115,6 +1309,9 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
     },
 
     async createTask(req: grackle.CreateTaskRequest) {
+      if (!req.title) {
+        throw new ConnectError("title is required", Code.InvalidArgument);
+      }
       const workspaceId = req.workspaceId || undefined;
       let workspace: ReturnType<typeof workspaceStore.getWorkspace>;
       if (workspaceId) {
@@ -1220,6 +1417,8 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         processorRegistry.lateBind(req.sessionId, req.id, existing.workspaceId || undefined);
         emit("task.started", { taskId: req.id, sessionId: req.sessionId, workspaceId: existing.workspaceId || "" });
       }
+
+      emit("task.updated", { taskId: req.id, workspaceId: existing.workspaceId || "" });
 
       const row = taskStore.getTask(req.id);
       const taskSessions = sessionStore.listSessionsForTask(req.id);
@@ -1492,6 +1691,50 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       return sessionRowToProto(row!);
     },
 
+    async stopTask(req: grackle.TaskId) {
+      const task = taskStore.getTask(req.id);
+      if (!task) {
+        throw new ConnectError(`Task not found: ${req.id}`, Code.NotFound);
+      }
+
+      // Terminate all active sessions for this task using the fd-closure pattern
+      const activeSessions = sessionStore.getActiveSessionsForTask(req.id);
+      for (const activeSession of activeSessions) {
+        cleanupLifecycleStream(activeSession.id);
+        const subs = streamRegistry.getSubscriptionsForSession(activeSession.id);
+        for (const sub of subs) {
+          streamRegistry.unsubscribe(sub.id);
+        }
+        const current = sessionStore.getSession(activeSession.id);
+        if (current && !TERMINAL_SESSION_STATUSES.has(current.status as SessionStatus)) {
+          sessionStore.updateSession(activeSession.id, SESSION_STATUS.STOPPED, undefined, undefined, END_REASON.INTERRUPTED);
+          streamHub.publish(
+            create(grackle.SessionEventSchema, {
+              sessionId: activeSession.id,
+              type: grackle.EventType.STATUS,
+              timestamp: new Date().toISOString(),
+              content: END_REASON.INTERRUPTED,
+              raw: "",
+            }),
+          );
+        }
+      }
+
+      // Mark task complete
+      taskStore.markTaskComplete(req.id, TASK_STATUS.COMPLETE);
+
+      // Check for newly unblocked tasks
+      if (task.workspaceId) {
+        taskStore.checkAndUnblock(task.workspaceId);
+      }
+
+      emit("task.completed", { taskId: task.id, workspaceId: task.workspaceId || "" });
+      const updated = taskStore.getTask(req.id);
+      const taskSessions = sessionStore.listSessionsForTask(req.id);
+      const { status, latestSessionId } = computeTaskStatus(updated!.status, taskSessions);
+      return taskRowToProto(updated!, undefined, status, latestSessionId);
+    },
+
     async deleteTask(req: grackle.TaskId) {
       if (req.id === ROOT_TASK_ID) {
         throw new ConnectError("Cannot delete the system task", Code.PermissionDenied);
@@ -1708,6 +1951,9 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
     // ─── Findings ────────────────────────────────────────────
 
     async postFinding(req: grackle.PostFindingRequest) {
+      if (!req.title) {
+        throw new ConnectError("title is required", Code.InvalidArgument);
+      }
       const id = uuid().slice(0, 8);
       findingStore.postFinding(
         id,
@@ -1735,6 +1981,68 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       return create(grackle.FindingListSchema, {
         findings: rows.map(findingRowToProto),
       });
+    },
+
+    // ─── Codespaces ────────────────────────────────────────────
+
+    async listCodespaces() {
+      try {
+        const result = await exec(
+          "gh",
+          [
+            "codespace",
+            "list",
+            "--json",
+            "name,repository,state,gitStatus",
+            "--limit",
+            String(GH_CODESPACE_LIST_LIMIT),
+          ],
+          { timeout: GH_CODESPACE_LIST_TIMEOUT_MS },
+        );
+        const entries = JSON.parse(result.stdout || "[]") as Array<Record<string, unknown>>;
+        return create(grackle.CodespaceListSchema, {
+          codespaces: entries.map((e) =>
+            create(grackle.CodespaceInfoSchema, {
+              name: String(e.name ?? ""),
+              repository: String(e.repository ?? ""),
+              state: String(e.state ?? ""),
+              gitStatus: String(e.gitStatus ?? ""),
+            }),
+          ),
+        });
+      } catch (err) {
+        logger.warn({ err }, "Failed to list codespaces");
+        return create(grackle.CodespaceListSchema, {
+          codespaces: [],
+          error: formatGhError(err, "list codespaces"),
+        });
+      }
+    },
+
+    async createCodespace(req: grackle.CreateCodespaceRequest) {
+      if (!req.repo.trim()) {
+        throw new ConnectError("repo is required", Code.InvalidArgument);
+      }
+      const trimmedRepo = req.repo.trim();
+      const createArgs = ["codespace", "create", "--repo", trimmedRepo];
+      if (req.machine.trim()) {
+        createArgs.push("--machine", req.machine.trim());
+      }
+      try {
+        const result = await exec("gh", createArgs, {
+          timeout: GH_CODESPACE_CREATE_TIMEOUT_MS,
+        });
+        return create(grackle.CreateCodespaceResponseSchema, {
+          name: result.stdout.trim(),
+          repository: trimmedRepo,
+        });
+      } catch (err) {
+        logger.error({ err, repo: trimmedRepo }, "Failed to create codespace");
+        throw new ConnectError(
+          formatGhError(err, "create codespace"),
+          Code.Internal,
+        );
+      }
     },
 
     // ─── GitHub Import ────────────────────────────────────────

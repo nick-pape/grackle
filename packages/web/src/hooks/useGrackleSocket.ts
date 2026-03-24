@@ -20,6 +20,8 @@ import { useCredentials } from "./useCredentials.js";
 import { useCodespaces } from "./useCodespaces.js";
 import { usePersonas } from "./usePersonas.js";
 import { useKnowledge } from "./useKnowledge.js";
+import { grackleClient } from "./useGrackleClient.js";
+import { protoToUsageStats } from "./proto-converters.js";
 
 // ─── Re-exports ───────────────────────────────────────────────────────────────
 // Keep consumer imports (e.g. `from "../hooks/useGrackleSocket.js"`) working.
@@ -76,6 +78,8 @@ export interface UseGrackleSocketResult {
   refresh: () => void;
   loadSessionEvents: (sessionId: string) => void;
   clearEvents: () => void;
+  /** Request the current workspace list from the server. */
+  loadWorkspaces: () => void;
   createWorkspace: (
     name: string,
     description?: string,
@@ -138,6 +142,8 @@ export interface UseGrackleSocketResult {
     category?: string,
     tags?: string[],
   ) => void;
+  /** Request the current environment list from the server. */
+  loadEnvironments: () => void;
   addEnvironment: (
     displayName: string,
     adapterType: string,
@@ -242,15 +248,15 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
 
   // --- Domain hooks (all receive stable `send`) ---
 
-  const environmentsHook = useEnvironments(send);
-  const sessionsHook = useSessions(send);
-  const workspacesHook = useWorkspaces(send);
-  const tasksHook = useTasks(send);
-  const findingsHook = useFindings(send);
-  const tokensHook = useTokens(send);
-  const credentialsHook = useCredentials(send);
-  const codespacesHook = useCodespaces(send, connected);
-  const personasHook = usePersonas(send);
+  const environmentsHook = useEnvironments();
+  const sessionsHook = useSessions();
+  const workspacesHook = useWorkspaces();
+  const tasksHook = useTasks();
+  const findingsHook = useFindings();
+  const tokensHook = useTokens();
+  const credentialsHook = useCredentials();
+  const codespacesHook = useCodespaces();
+  const personasHook = usePersonas();
   const knowledgeHook = useKnowledge(send);
 
   // --- Settings helpers ---
@@ -264,27 +270,34 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
   const setAppDefaultPersonaId = useCallback(
     (personaId: string) => {
       setAppDefaultPersonaIdState(personaId);
-      send({
-        type: "set_setting",
-        payload: { key: SETTING_KEY_DEFAULT_PERSONA, value: personaId },
-      });
+      grackleClient.setSetting({ key: SETTING_KEY_DEFAULT_PERSONA, value: personaId }).catch(
+        () => {},
+      );
     },
-    [send],
+    [],
   );
 
   const completeOnboarding = useCallback(() => {
     setOnboardingCompleted(true);
-    send({
-      type: "set_setting",
-      payload: { key: SETTING_KEY_ONBOARDING_COMPLETED, value: "true" },
-    });
-  }, [send]);
+    grackleClient.setSetting({ key: SETTING_KEY_ONBOARDING_COMPLETED, value: "true" }).catch(
+      () => {},
+    );
+  }, []);
 
   const loadUsage = useCallback(
     (scope: string, id: string) => {
-      send({ type: "get_usage", payload: { scope, id } });
+      grackleClient.getUsage({ scope, id }).then(
+        (resp) => {
+          const key = `${scope}:${id}`;
+          setUsageCache((prev) => ({
+            ...prev,
+            [key]: protoToUsageStats(resp),
+          }));
+        },
+        () => {},
+      );
     },
-    [send],
+    [],
   );
 
   // --- Message routing ---
@@ -305,9 +318,20 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
       return;
     }
 
-    if (environmentsHook.handleEvent(event)) { return; }
+    if (environmentsHook.handleEvent(event)) {
+      if (event.type === "environment.removed" || event.type === "environment.changed") {
+        sessionsHook.loadSessions();
+      }
+      return;
+    }
     if (workspacesHook.handleEvent(event)) { return; }
-    if (tasksHook.handleEvent(event)) { return; }
+    if (tasksHook.handleEvent(event)) {
+      // task.started also needs a session refresh (cross-concern)
+      if (event.type === "task.started") {
+        sessionsHook.loadSessions();
+      }
+      return;
+    }
     if (findingsHook.handleEvent(event)) { return; }
     if (tokensHook.handleEvent(event)) { return; }
     if (credentialsHook.handleEvent(event)) { return; }
@@ -321,49 +345,16 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
       return;
     }
 
-    // Handle usage stats response
-    if (msg.type === "usage_stats") {
-      const scope = msg.payload?.scope as string || "";
-      const id = msg.payload?.id as string || "";
-      if (scope && id) {
-        const key = `${scope}:${id}`;
-        setUsageCache((prev) => ({
-          ...prev,
-          [key]: {
-            inputTokens: Number(msg.payload?.inputTokens) || 0,
-            outputTokens: Number(msg.payload?.outputTokens) || 0,
-            costUsd: Number(msg.payload?.costUsd) || 0,
-            sessionCount: Number(msg.payload?.sessionCount) || 0,
-          },
-        }));
-      }
-      return;
-    }
-
-    // Handle settings response (request/response, not event bus)
-    if (msg.type === "setting") {
-      const key = msg.payload?.key as string | undefined;
-      const value = msg.payload?.value as string | undefined;
-      if (key === SETTING_KEY_DEFAULT_PERSONA) {
-        setAppDefaultPersonaIdState(value ?? "");
-      }
-      if (key === SETTING_KEY_ONBOARDING_COMPLETED) {
-        setOnboardingCompleted(value === "true");
-      }
-      return;
-    }
-
-    // Request/response messages (existing routing)
-    if (environmentsHook.handleMessage(msg)) { return; }
+    // Real-time session events from subscribe_all
     if (sessionsHook.handleMessage(msg)) { return; }
-    if (workspacesHook.handleMessage(msg)) { return; }
-    if (tasksHook.handleMessage(msg)) { return; }
-    if (findingsHook.handleMessage(msg)) { return; }
-    if (tokensHook.handleMessage(msg)) { return; }
-    if (credentialsHook.handleMessage(msg)) { return; }
-    if (codespacesHook.handleMessage(msg)) { return; }
-    if (personasHook.handleMessage(msg)) { return; }
     if (knowledgeHook.handleMessage(msg)) { return; }
+
+    // Legacy WS message handlers — these only fire when E2E tests inject
+    // fake data via injectWsMessage(). Normal operation uses ConnectRPC.
+    if (sessionsHook.handleLegacyMessage?.(msg)) { return; }
+    if (environmentsHook.handleLegacyMessage?.(msg)) { return; }
+    if (tasksHook.handleLegacyMessage?.(msg)) { return; }
+
     if (msg.type === "error") {
       console.error("[ws]", msg.payload?.message);
       return;
@@ -371,17 +362,23 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
   }
 
   function onConnect(sendFn: SendFunction): void {
-    sendFn({ type: "list_environments" });
-    sendFn({ type: "list_sessions" });
-    sendFn({ type: "list_workspaces" });
-    sendFn({ type: "list_tokens" });
-    sendFn({ type: "get_credential_providers" });
-    sendFn({ type: "list_personas" });
-    sendFn({ type: "get_setting", payload: { key: SETTING_KEY_DEFAULT_PERSONA } });
-    sendFn({ type: "get_setting", payload: { key: SETTING_KEY_ONBOARDING_COMPLETED } });
+    environmentsHook.loadEnvironments();
+    sessionsHook.loadSessions();
+    workspacesHook.loadWorkspaces();
+    tokensHook.loadTokens();
+    credentialsHook.loadCredentials();
+    personasHook.loadPersonas();
+    grackleClient.getSetting({ key: SETTING_KEY_DEFAULT_PERSONA }).then(
+      (resp) => { setAppDefaultPersonaIdState(resp.value); },
+      () => {},
+    );
+    grackleClient.getSetting({ key: SETTING_KEY_ONBOARDING_COMPLETED }).then(
+      (resp) => { setOnboardingCompleted(resp.value === "true"); },
+      () => {},
+    );
     // Load an initial/global task list (server treats omitted workspaceId as "all workspaces",
     // which includes any workspace-less tasks such as the root task)
-    sendFn({ type: "list_tasks", payload: {} });
+    tasksHook.loadAllTasks();
     sendFn({ type: "subscribe_all" });
   }
 
@@ -391,11 +388,11 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
   }
 
   const refresh = useCallback(() => {
-    send({ type: "list_environments" });
-    send({ type: "list_sessions" });
-    send({ type: "list_workspaces" });
-    send({ type: "list_tokens" });
-  }, [send]);
+    environmentsHook.loadEnvironments();
+    sessionsHook.loadSessions();
+    workspacesHook.loadWorkspaces();
+    tokensHook.loadTokens();
+  }, [environmentsHook.loadEnvironments, sessionsHook.loadSessions, workspacesHook.loadWorkspaces, tokensHook.loadTokens]);
 
   return {
     connected,
@@ -415,6 +412,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
     refresh,
     loadSessionEvents: sessionsHook.loadSessionEvents,
     clearEvents: sessionsHook.clearEvents,
+    loadWorkspaces: workspacesHook.loadWorkspaces,
     createWorkspace: workspacesHook.createWorkspace,
     archiveWorkspace: workspacesHook.archiveWorkspace,
     updateWorkspace: workspacesHook.updateWorkspace,
@@ -429,6 +427,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
     deleteTask: tasksHook.deleteTask,
     loadFindings: findingsHook.loadFindings,
     postFinding: findingsHook.postFinding,
+    loadEnvironments: environmentsHook.loadEnvironments,
     addEnvironment: environmentsHook.addEnvironment,
     updateEnvironment: environmentsHook.updateEnvironment,
     loadTokens: tokensHook.loadTokens,

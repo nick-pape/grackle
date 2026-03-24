@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Migrate web UI from WebSocket RPC to ConnectRPC; add 6 new gRPC RPCs; slim ws-bridge to pub/sub only",
+      "type": "minor",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
