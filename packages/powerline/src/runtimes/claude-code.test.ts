@@ -494,3 +494,316 @@ describe("ClaudeCodeRuntime — usage event emission", () => {
     expect(usageEvents).toHaveLength(0);
   });
 });
+
+// ─── Multi-turn integration tests ──────────────────────────
+
+/** Drain events from a stream iterator until a status event with the given content. */
+async function drainUntilStatus(
+  nextEvent: () => Promise<AgentEvent | undefined>,
+  statusContent: string,
+): Promise<AgentEvent[]> {
+  const collected: AgentEvent[] = [];
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- loop until match
+  while (true) {
+    const event = await nextEvent();
+    if (!event) {
+      throw new Error(`Stream ended before status "${statusContent}"`);
+    }
+    collected.push(event);
+    if (event.type === "status" && event.content === statusContent) {
+      return collected;
+    }
+  }
+}
+
+describe("ClaudeCodeRuntime — multi-turn persistent mode", () => {
+  beforeEach(() => {
+    vi.stubEnv("GRACKLE_MCP_CONFIG", "");
+    mockQuery.mockReset();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  /**
+   * Create a mock query() for persistent mode. The real SDK receives an AsyncIterable
+   * prompt queue and yields response messages for each user message consumed from it.
+   * This mock reads from the prompt iterable and yields `turnResponses[i]` for each turn.
+   */
+  function mockQueryPersistent(turnResponses: Record<string, unknown>[][]): void {
+    // The real SDK's query() returns an AsyncIterable directly (not a Promise).
+    // The code casts `query(queryInput)` to AsyncIterable without awaiting.
+    mockQuery.mockImplementation((queryInput: Record<string, unknown>) => {
+      const promptIterable = queryInput.prompt as AsyncIterable<Record<string, unknown>>;
+
+      return {
+        async *[Symbol.asyncIterator]() {
+          let turnIndex = 0;
+          for await (const _userMessage of promptIterable) {
+            const responses = turnResponses[turnIndex] ?? [];
+            for (const msg of responses) {
+              yield msg;
+            }
+            // Always yield a result message to signal turn completion
+            yield { type: "result", subtype: "success", is_error: false, result: "ok" };
+            turnIndex++;
+          }
+        },
+      };
+    });
+  }
+
+  /** Spawn a session and return an iterator-based event consumer. */
+  function spawnSession(prompt: string = "hello") {
+    const runtime = new ClaudeCodeRuntime();
+    const session = runtime.spawn({
+      sessionId: "cc-mt",
+      prompt,
+      model: "claude-sonnet-4",
+      maxTurns: 0,
+    });
+    const streamIterator = session.stream()[Symbol.asyncIterator]();
+    const nextEvent = async (): Promise<AgentEvent | undefined> => {
+      const result = await streamIterator.next();
+      return result.done ? undefined : result.value;
+    };
+    return { session, nextEvent };
+  }
+
+  it("follow-up events appear via prompt queue after sendInput", async () => {
+    mockQueryPersistent([
+      // Turn 1: system init + assistant text
+      [
+        { type: "system", subtype: "init", session_id: "sess-mt", model: "claude-sonnet-4" },
+        { type: "assistant", message: { role: "assistant", content: [{ type: "text", text: "turn1 response" }] } },
+      ],
+      // Turn 2: assistant text only
+      [
+        { type: "assistant", message: { role: "assistant", content: [{ type: "text", text: "turn2 response" }] } },
+      ],
+    ]);
+
+    const { session, nextEvent } = spawnSession();
+
+    // Drain initial turn
+    const turn1Events = await drainUntilStatus(nextEvent, "waiting_input");
+    expect(turn1Events.some((e) => e.type === "text" && e.content === "turn1 response")).toBe(true);
+
+    // Send follow-up
+    session.sendInput("follow-up");
+    await drainUntilStatus(nextEvent, "running");
+    const turn2Events = await drainUntilStatus(nextEvent, "waiting_input");
+    expect(turn2Events.some((e) => e.type === "text" && e.content === "turn2 response")).toBe(true);
+
+    session.kill();
+  });
+
+  it("query() is called exactly once across multiple turns (persistent mode)", async () => {
+    mockQueryPersistent([
+      [
+        { type: "system", subtype: "init", session_id: "sess-once", model: "claude-sonnet-4" },
+        { type: "assistant", message: { role: "assistant", content: [{ type: "text", text: "t1" }] } },
+      ],
+      [
+        { type: "assistant", message: { role: "assistant", content: [{ type: "text", text: "t2" }] } },
+      ],
+      [
+        { type: "assistant", message: { role: "assistant", content: [{ type: "text", text: "t3" }] } },
+      ],
+    ]);
+
+    const { session, nextEvent } = spawnSession();
+    await drainUntilStatus(nextEvent, "waiting_input");
+
+    // Second turn
+    session.sendInput("second");
+    await drainUntilStatus(nextEvent, "running");
+    await drainUntilStatus(nextEvent, "waiting_input");
+
+    // Third turn
+    session.sendInput("third");
+    await drainUntilStatus(nextEvent, "running");
+    await drainUntilStatus(nextEvent, "waiting_input");
+
+    // query() called exactly once — all turns go through the same persistent query
+    expect(mockQuery).toHaveBeenCalledTimes(1);
+
+    // The prompt argument was an AsyncIterable (the prompt queue), not a string
+    const callArg = mockQuery.mock.calls[0][0] as Record<string, unknown>;
+    expect(typeof callArg.prompt).not.toBe("string");
+    expect((callArg.prompt as AsyncIterable<unknown>)[Symbol.asyncIterator]).toBeDefined();
+
+    session.kill();
+  });
+
+  it("fallback to resume-per-input when persistent query throws", async () => {
+    // First call: persistent mode throws during query()
+    let callCount = 0;
+    mockQuery.mockImplementation((queryInput: Record<string, unknown>) => {
+      callCount++;
+      if (callCount === 1 && typeof queryInput.prompt !== "string") {
+        // Persistent mode — simulate failure
+        throw new Error("Persistent mode not supported");
+      }
+      // Fallback calls use string prompt — return a simple async iterable
+      return asyncIterableFrom([
+        { type: "system", subtype: "init", session_id: "sess-fallback", model: "claude-sonnet-4" },
+        { type: "assistant", message: { role: "assistant", content: [{ type: "text", text: `call${callCount} response` }] } },
+        { type: "result", subtype: "success", is_error: false, result: "ok" },
+      ]);
+    });
+
+    const { session, nextEvent } = spawnSession("initial prompt");
+
+    // Initial turn: persistent mode fails, falls back to consumeQuery with string prompt
+    const turn1Events = await drainUntilStatus(nextEvent, "waiting_input");
+    expect(turn1Events.some((e) => e.type === "text" && e.content.includes("response"))).toBe(true);
+
+    // Follow-up: uses resume-per-input (query called again with string + resume option)
+    session.sendInput("follow-up");
+    await drainUntilStatus(nextEvent, "running");
+    const turn2Events = await drainUntilStatus(nextEvent, "waiting_input");
+    expect(turn2Events.some((e) => e.type === "text" && e.content.includes("response"))).toBe(true);
+
+    // Exact call sequence:
+    // Call 1: persistent mode (AsyncIterable prompt) — throws
+    // Call 2: fallback consumeQuery (string prompt, no resume — first turn)
+    // Call 3: follow-up consumeQuery (string prompt, with resume)
+    expect(mockQuery).toHaveBeenCalledTimes(3);
+
+    // Call 1: persistent mode attempted with AsyncIterable prompt
+    const call1 = mockQuery.mock.calls[0][0] as Record<string, unknown>;
+    expect(typeof call1.prompt).not.toBe("string");
+
+    // Call 2: fallback with string prompt, no resume option
+    const call2 = mockQuery.mock.calls[1][0] as Record<string, unknown>;
+    expect(typeof call2.prompt).toBe("string");
+    expect(call2.prompt).toBe("initial prompt");
+    const call2Opts = call2.options as Record<string, unknown>;
+    expect(call2Opts.resume).toBeUndefined();
+
+    // Call 3: follow-up with string prompt and resume option set to session ID from call 2
+    const call3 = mockQuery.mock.calls[2][0] as Record<string, unknown>;
+    expect(typeof call3.prompt).toBe("string");
+    expect(call3.prompt).toBe("follow-up");
+    const call3Opts = call3.options as Record<string, unknown>;
+    expect(call3Opts.resume).toBe("sess-fallback");
+
+    session.kill();
+  });
+
+  it("usage events emitted for both turns in persistent mode", async () => {
+    mockQueryPersistent([
+      [
+        { type: "system", subtype: "init", session_id: "sess-usage", model: "claude-sonnet-4" },
+        { type: "assistant", message: { role: "assistant", content: [{ type: "text", text: "t1" }] } },
+        // Note: usage is extracted from result messages; add usage to the result
+      ],
+      [
+        { type: "assistant", message: { role: "assistant", content: [{ type: "text", text: "t2" }] } },
+      ],
+    ]);
+
+    // Override the mock to include usage data in result messages
+    mockQuery.mockImplementation((queryInput: Record<string, unknown>) => {
+      const promptIterable = queryInput.prompt as AsyncIterable<Record<string, unknown>>;
+      return {
+        async *[Symbol.asyncIterator]() {
+          let turnIndex = 0;
+          for await (const _userMessage of promptIterable) {
+            if (turnIndex === 0) {
+              yield { type: "system", subtype: "init", session_id: "sess-usage-mt", model: "claude-sonnet-4" };
+              yield { type: "assistant", message: { role: "assistant", content: [{ type: "text", text: "t1" }] } };
+              yield {
+                type: "result", subtype: "success", is_error: false, result: "ok",
+                total_cost_usd: 0.01,
+                usage: { input_tokens: 100, output_tokens: 10, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 },
+              };
+            } else {
+              yield { type: "assistant", message: { role: "assistant", content: [{ type: "text", text: "t2" }] } };
+              yield {
+                type: "result", subtype: "success", is_error: false, result: "ok",
+                total_cost_usd: 0.02,
+                usage: { input_tokens: 200, output_tokens: 20, cache_read_input_tokens: 50, cache_creation_input_tokens: 0 },
+              };
+            }
+            turnIndex++;
+          }
+        },
+      };
+    });
+
+    const { session, nextEvent } = spawnSession();
+    const turn1Events = await drainUntilStatus(nextEvent, "waiting_input");
+
+    session.sendInput("more");
+    await drainUntilStatus(nextEvent, "running");
+    const turn2Events = await drainUntilStatus(nextEvent, "waiting_input");
+
+    const allEvents = [...turn1Events, ...turn2Events];
+    const usageEvents = allEvents.filter((e) => e.type === "usage");
+    expect(usageEvents).toHaveLength(2);
+
+    const usage1 = JSON.parse(usageEvents[0].content) as Record<string, number>;
+    expect(usage1.input_tokens).toBe(100);
+    expect(usage1.output_tokens).toBe(10);
+    expect(usage1.cost_usd).toBe(0.01);
+
+    const usage2 = JSON.parse(usageEvents[1].content) as Record<string, number>;
+    expect(usage2.input_tokens).toBe(250); // 200 + 50 cached
+    expect(usage2.output_tokens).toBe(20);
+    expect(usage2.cost_usd).toBe(0.02);
+
+    session.kill();
+  });
+
+  it("session degrades to resume-per-input when persistent stream ends early", async () => {
+    // Simulate: persistent mode works for turn 1, then the stream closes normally
+    // (e.g. process exits). The consumePersistentStream cleanup resolves
+    // turnCompleteResolve and clears promptQueue, so follow-ups fall back to
+    // resume-per-input.
+    let callCount = 0;
+    mockQuery.mockImplementation((queryInput: Record<string, unknown>) => {
+      callCount++;
+      if (callCount === 1 && typeof queryInput.prompt !== "string") {
+        // Persistent mode: yield turn 1 then close the stream (process exited)
+        const promptIterable = queryInput.prompt as AsyncIterable<Record<string, unknown>>;
+        return {
+          async *[Symbol.asyncIterator]() {
+            // Consume only the first prompt, yield response, then exit
+            const iter = promptIterable[Symbol.asyncIterator]();
+            await iter.next(); // consume initial prompt
+            yield { type: "system", subtype: "init", session_id: "sess-degrade", model: "claude-sonnet-4" };
+            yield { type: "assistant", message: { role: "assistant", content: [{ type: "text", text: "turn1" }] } };
+            yield { type: "result", subtype: "success", is_error: false, result: "ok" };
+            // Stream ends here — consumePersistentStream cleanup fires
+          },
+        };
+      }
+      // Resume-per-input fallback
+      return asyncIterableFrom([
+        { type: "assistant", message: { role: "assistant", content: [{ type: "text", text: `resumed-call${callCount}` }] } },
+        { type: "result", subtype: "success", is_error: false, result: "ok" },
+      ]);
+    });
+
+    const { session, nextEvent } = spawnSession();
+    await drainUntilStatus(nextEvent, "waiting_input");
+
+    // Follow-up: persistent stream already ended, so promptQueue was cleared.
+    // executeFollowUp falls back to resume-per-input via runtimeSessionId.
+    session.sendInput("after-stream-end");
+    await drainUntilStatus(nextEvent, "running");
+    const turn2Events = await drainUntilStatus(nextEvent, "waiting_input");
+    expect(turn2Events.some((e) => e.type === "text" && e.content.includes("resumed"))).toBe(true);
+
+    // The follow-up call should use resume-per-input (string prompt + resume option)
+    const followUpCall = mockQuery.mock.calls[callCount - 1][0] as Record<string, unknown>;
+    expect(typeof followUpCall.prompt).toBe("string");
+    const followUpOpts = followUpCall.options as Record<string, unknown>;
+    expect(followUpOpts.resume).toBe("sess-degrade");
+
+    session.kill();
+  });
+});
