@@ -342,6 +342,9 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
     },
 
     async addEnvironment(req: grackle.AddEnvironmentRequest) {
+      if (!req.displayName || !req.adapterType) {
+        throw new ConnectError("displayName and adapterType required", Code.InvalidArgument);
+      }
       const id = req.displayName.toLowerCase().replace(/[^a-z0-9-]/g, "-");
       envRegistry.addEnvironment(
         id,
@@ -546,6 +549,9 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
     },
 
     async spawnAgent(req: grackle.SpawnRequest) {
+      if (!req.environmentId) {
+        throw new ConnectError("environment_id is required", Code.InvalidArgument);
+      }
       const env = envRegistry.getEnvironment(req.environmentId);
       if (!env) {
         throw new ConnectError(`Environment not found: ${req.environmentId}`, Code.NotFound);
@@ -1016,6 +1022,12 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
     },
 
     async setToken(req: grackle.TokenEntry) {
+      if (!req.name) {
+        throw new ConnectError("name is required", Code.InvalidArgument);
+      }
+      if (!req.value) {
+        throw new ConnectError("value is required", Code.InvalidArgument);
+      }
       tokenStore.setToken({
         name: req.name,
         type: req.type,
@@ -1044,6 +1056,9 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
     },
 
     async deleteToken(req: grackle.TokenName) {
+      if (!req.name) {
+        throw new ConnectError("name is required", Code.InvalidArgument);
+      }
       tokenStore.deleteToken(req.name);
       await tokenPush.pushToAll();
       return create(grackle.EmptySchema, {});
@@ -1106,6 +1121,9 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
     },
 
     async createWorkspace(req: grackle.CreateWorkspaceRequest) {
+      if (!req.name) {
+        throw new ConnectError("name is required", Code.InvalidArgument);
+      }
       if (!req.environmentId) {
         throw new ConnectError("environment_id is required", Code.InvalidArgument);
       }
@@ -1209,6 +1227,9 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
     },
 
     async createTask(req: grackle.CreateTaskRequest) {
+      if (!req.title) {
+        throw new ConnectError("title is required", Code.InvalidArgument);
+      }
       const workspaceId = req.workspaceId || undefined;
       let workspace: ReturnType<typeof workspaceStore.getWorkspace>;
       if (workspaceId) {
@@ -1846,6 +1867,9 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
     // ─── Findings ────────────────────────────────────────────
 
     async postFinding(req: grackle.PostFindingRequest) {
+      if (!req.title) {
+        throw new ConnectError("title is required", Code.InvalidArgument);
+      }
       const id = uuid().slice(0, 8);
       findingStore.postFinding(
         id,
