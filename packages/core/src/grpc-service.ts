@@ -1677,6 +1677,10 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       const logPath =
         latestSession.logPath || join(grackleHome, LOGS_DIR, latestSession.id);
 
+      // Initiate the stream before mutating the DB. If resume() throws
+      // synchronously the DB is never touched, so no rollback is needed.
+      const resumeStream = conn.client.resume(powerlineReq);
+
       // Reset session DB row to RUNNING (clears endedAt, error, etc.)
       sessionStore.reanimateSession(latestSession.id);
 
@@ -1684,7 +1688,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       const resumeSpawnerId = latestSession.parentSessionId || "__server__";
       ensureLifecycleStream(latestSession.id, resumeSpawnerId);
 
-      processEventStream(conn.client.resume(powerlineReq), {
+      processEventStream(resumeStream, {
         sessionId: latestSession.id,
         logPath,
         workspaceId: task.workspaceId ?? undefined,
