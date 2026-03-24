@@ -1263,11 +1263,14 @@ export async function goToEnvironments(page: Page): Promise<void> {
 export async function provisionEnvironmentDirect(environmentId: string): Promise<void> {
   const { readFileSync } = await import("node:fs");
   const { execSync } = await import("node:child_process");
-  const { resolve: pathResolve } = await import("node:path");
+  const { resolve: pathResolve, dirname } = await import("node:path");
+  const { fileURLToPath } = await import("node:url");
   const { STATE_FILE } = await import("./state-file.js");
   const state = JSON.parse(readFileSync(STATE_FILE, "utf8"));
 
-  const cliPath = pathResolve("packages/cli/dist/index.js");
+  // Resolve CLI path relative to this file's location (not CWD, which is tests/e2e-tests/)
+  const thisDir = dirname(fileURLToPath(import.meta.url));
+  const cliPath = pathResolve(thisDir, "..", "..", "..", "packages", "cli", "dist", "index.js");
   try {
     execSync(`node "${cliPath}" env provision ${environmentId}`, {
       env: {
@@ -1278,7 +1281,10 @@ export async function provisionEnvironmentDirect(environmentId: string): Promise
       timeout: 30_000,
       stdio: "pipe",
     });
-  } catch {
-    // May fail if already connected — that's fine
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (!msg.includes("already connected") && !msg.includes("Already connected")) {
+      throw err;
+    }
   }
 }
