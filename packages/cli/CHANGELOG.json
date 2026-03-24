@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.74.1",
+      "tag": "@grackle-ai/cli_v0.74.1",
+      "date": "Tue, 24 Mar 2026 04:46:48 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Normalize create_workspace WS error type to match all other handlers"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.74.0",
       "tag": "@grackle-ai/cli_v0.74.0",
       "date": "Tue, 24 Mar 2026 04:08:14 GMT",
