@@ -1,8 +1,8 @@
 {
   "changes": [
     {
-      "comment": "placeholder",
-      "type": "none",
+      "comment": "Normalize create_workspace WS error type to match all other handlers",
+      "type": "patch",
       "packageName": "@grackle-ai/cli"
     }
   ],

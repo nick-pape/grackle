@@ -864,7 +864,7 @@ async function handleMessage(
           : "";
       if (!name) {
         sendWs(ws, {
-          type: "create_workspace_error",
+          type: "error",
           payload: { message: "name required", requestId },
         });
         return;
@@ -872,14 +872,14 @@ async function handleMessage(
       const createEnvironmentId = (msg.payload?.environmentId as string) || "";
       if (!createEnvironmentId) {
         sendWs(ws, {
-          type: "create_workspace_error",
+          type: "error",
           payload: { message: "environmentId required", requestId },
         });
         return;
       }
       if (!envRegistry.getEnvironment(createEnvironmentId)) {
         sendWs(ws, {
-          type: "create_workspace_error",
+          type: "error",
           payload: { message: `Environment not found: ${createEnvironmentId}`, requestId },
         });
         return;
@@ -914,7 +914,7 @@ async function handleMessage(
         const message =
           error instanceof Error ? error.message : "Failed to create workspace";
         sendWs(ws, {
-          type: "create_workspace_error",
+          type: "error",
           payload: { message, requestId },
         });
       }
