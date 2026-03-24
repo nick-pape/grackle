@@ -30,7 +30,7 @@ export const withMockGrackle: Decorator = (Story) => (
  * ```tsx
  * const meta = {
  *   component: TaskPage,
- *   decorators: [withMockGrackleRoute(["/tasks/task-001"])],
+ *   decorators: [withMockGrackleRoute(["/tasks/task-001"], "/tasks/:taskId")],
  *   parameters: { skipRouter: true },
  * };
  * ```
