@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Tue, 24 Mar 2026 04:46:48 GMT and should not be manually modified.
+This log was last generated on Tue, 24 Mar 2026 05:12:35 GMT and should not be manually modified.
+
+## 0.75.0
+Tue, 24 Mar 2026 05:12:35 GMT
+
+### Minor changes
+
+- Migrate web UI from WebSocket RPC to ConnectRPC; add 6 new gRPC RPCs; slim ws-bridge to pub/sub only
 
 ## 0.74.1
 Tue, 24 Mar 2026 04:46:48 GMT
