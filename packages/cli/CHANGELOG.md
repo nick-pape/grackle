@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Tue, 24 Mar 2026 04:08:14 GMT and should not be manually modified.
+This log was last generated on Tue, 24 Mar 2026 04:46:48 GMT and should not be manually modified.
+
+## 0.74.1
+Tue, 24 Mar 2026 04:46:48 GMT
+
+### Patches
+
+- Normalize create_workspace WS error type to match all other handlers
 
 ## 0.74.0
 Tue, 24 Mar 2026 04:08:14 GMT

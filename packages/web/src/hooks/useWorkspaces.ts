@@ -1,22 +1,17 @@
 /**
  * Domain hook for workspace management.
  *
+ * Uses ConnectRPC for all CRUD operations. Domain events from the WebSocket
+ * event bus trigger re-fetches.
+ *
  * @module
  */
 
-import { useState, useCallback, useRef } from "react";
-import type { Workspace, WsMessage, SendFunction, GrackleEvent } from "./types.js";
-import { asValidArray, isWorkspace } from "./types.js";
-
-/** Pending create-workspace callback entry keyed by requestId. */
-interface PendingCreateWorkspaceCallback {
-  onSuccess: () => void;
-  onError: (message: string) => void;
-  timer: ReturnType<typeof setTimeout>;
-}
-
-/** How long to wait for a create-workspace response before timing out. */
-const CREATE_WORKSPACE_TIMEOUT_MS: number = 15_000;
+import { useState, useCallback } from "react";
+import { ConnectError } from "@connectrpc/connect";
+import type { Workspace, GrackleEvent } from "./types.js";
+import { grackleClient } from "./useGrackleClient.js";
+import { protoToWorkspace } from "./proto-converters.js";
 
 /** Values returned by {@link useWorkspaces}. */
 export interface UseWorkspacesResult {
@@ -24,6 +19,8 @@ export interface UseWorkspacesResult {
   workspaces: Workspace[];
   /** Whether a workspace creation is currently in progress. */
   workspaceCreating: boolean;
+  /** Request the current workspace list from the server. */
+  loadWorkspaces: () => void;
   /** Create a new workspace. */
   createWorkspace: (
     name: string,
@@ -51,8 +48,6 @@ export interface UseWorkspacesResult {
       defaultPersonaId?: string;
     },
   ) => void;
-  /** Handle an incoming WebSocket message. Returns `true` if handled. */
-  handleMessage: (msg: WsMessage) => boolean;
   /** Handle a domain event from the event bus. Returns `true` if handled. */
   handleEvent: (event: GrackleEvent) => boolean;
   /** Reset transient state (e.g. `workspaceCreating`) on disconnect. */
@@ -60,106 +55,39 @@ export interface UseWorkspacesResult {
 }
 
 /**
- * Hook that manages workspace state and CRUD actions.
+ * Hook that manages workspace state and CRUD actions via ConnectRPC.
  *
- * @param send - Function to send WebSocket messages.
- * @returns Workspace state, actions, a message handler, and a disconnect callback.
+ * @returns Workspace state, actions, an event handler, and a disconnect callback.
  */
-export function useWorkspaces(send: SendFunction): UseWorkspacesResult {
+export function useWorkspaces(): UseWorkspacesResult {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [workspaceCreating, setWorkspaceCreating] = useState(false);
-  const pendingCreatesRef = useRef<Map<string, PendingCreateWorkspaceCallback>>(
-    new Map(),
-  );
 
-  const syncWorkspaceCreating = useCallback((): void => {
-    setWorkspaceCreating(pendingCreatesRef.current.size > 0);
+  const loadWorkspaces = useCallback(() => {
+    grackleClient.listWorkspaces({}).then(
+      (resp) => { setWorkspaces(resp.workspaces.map(protoToWorkspace)); },
+      () => {},
+    );
   }, []);
 
   const handleEvent = useCallback((event: GrackleEvent): boolean => {
     switch (event.type) {
-      case "workspace.created": {
-        const requestId =
-          typeof event.payload.requestId === "string"
-            ? event.payload.requestId
-            : "";
-        if (requestId) {
-          const pending = pendingCreatesRef.current.get(requestId);
-          if (pending) {
-            clearTimeout(pending.timer);
-            pendingCreatesRef.current.delete(requestId);
-            syncWorkspaceCreating();
-            pending.onSuccess();
-          }
-        }
-        send({ type: "list_workspaces" });
+      case "workspace.created":
+        setWorkspaceCreating(false);
+        loadWorkspaces();
         return true;
-      }
       case "workspace.archived":
       case "workspace.updated":
-        send({ type: "list_workspaces" });
+        loadWorkspaces();
         return true;
       default:
         return false;
     }
-  }, [send, syncWorkspaceCreating]);
-
-  const handleMessage = useCallback((msg: WsMessage): boolean => {
-    switch (msg.type) {
-      case "workspaces":
-        setWorkspaces(
-          asValidArray(
-            msg.payload?.workspaces,
-            isWorkspace,
-            "workspaces",
-            "workspaces",
-          ),
-        );
-        return true;
-      case "create_workspace_error": {
-        const requestId =
-          typeof msg.payload?.requestId === "string"
-            ? msg.payload.requestId
-            : "";
-        const errorMessage =
-          typeof msg.payload?.message === "string"
-            ? msg.payload.message
-            : "Failed to create workspace";
-        setWorkspaceCreating(false);
-        if (requestId) {
-          const pending = pendingCreatesRef.current.get(requestId);
-          if (pending) {
-            clearTimeout(pending.timer);
-            pendingCreatesRef.current.delete(requestId);
-            syncWorkspaceCreating();
-            pending.onError(errorMessage);
-          } else {
-            console.error(
-              "Received create_workspace_error for unknown requestId",
-              { requestId, errorMessage },
-            );
-          }
-        } else {
-          console.error(
-            "Received create_workspace_error without requestId",
-            { errorMessage },
-          );
-        }
-        return true;
-      }
-      default:
-        return false;
-    }
-  }, [syncWorkspaceCreating]);
+  }, [loadWorkspaces]);
 
   const onDisconnect = useCallback(() => {
-    for (const [, pending] of pendingCreatesRef.current) {
-      clearTimeout(pending.timer);
-      pending.onError("Disconnected");
-    }
-    pendingCreatesRef.current.clear();
-    syncWorkspaceCreating();
-  }, [syncWorkspaceCreating]);
+    setWorkspaceCreating(false);
+  }, []);
 
   const createWorkspace = useCallback(
     (
@@ -173,43 +101,37 @@ export function useWorkspaces(send: SendFunction): UseWorkspacesResult {
       onSuccess?: () => void,
       onError?: (message: string) => void,
     ) => {
-      const payload: Record<string, unknown> = {
+      setWorkspaceCreating(true);
+      grackleClient.createWorkspace({
         name,
         description: description || "",
         repoUrl: repoUrl || "",
         environmentId: environmentId || "",
-        defaultPersonaId: defaultPersonaId || "",
+        defaultPersonaId: defaultPersonaId || undefined,
         useWorktrees: useWorktrees ?? true,
-        worktreeBasePath: worktreeBasePath || "",
-      };
-      const requestId = crypto.randomUUID();
-      payload.requestId = requestId;
-      const errorCallback = onError ?? (() => {});
-      const timer = setTimeout(() => {
-        if (pendingCreatesRef.current.delete(requestId)) {
-          syncWorkspaceCreating();
-          errorCallback("Request timed out");
-        }
-      }, CREATE_WORKSPACE_TIMEOUT_MS);
-      pendingCreatesRef.current.set(requestId, {
-        onSuccess: onSuccess ?? (() => {}),
-        onError: errorCallback,
-        timer,
-      });
-      syncWorkspaceCreating();
-      send({
-        type: "create_workspace",
-        payload,
-      });
+        worktreeBasePath: worktreeBasePath || undefined,
+      }).then(
+        () => {
+          setWorkspaceCreating(false);
+          onSuccess?.();
+        },
+        (err) => {
+          setWorkspaceCreating(false);
+          const message = err instanceof ConnectError ? err.message : "Failed to create workspace";
+          onError?.(message);
+        },
+      );
     },
-    [send, syncWorkspaceCreating],
+    [],
   );
 
   const archiveWorkspace = useCallback(
     (workspaceId: string) => {
-      send({ type: "archive_workspace", payload: { workspaceId } });
+      grackleClient.archiveWorkspace({ id: workspaceId }).catch(
+        () => {},
+      );
     },
-    [send],
+    [],
   );
 
   const updateWorkspace = useCallback(
@@ -225,21 +147,20 @@ export function useWorkspaces(send: SendFunction): UseWorkspacesResult {
         defaultPersonaId?: string;
       },
     ) => {
-      send({
-        type: "update_workspace",
-        payload: { workspaceId, ...fields },
-      });
+      grackleClient.updateWorkspace({ id: workspaceId, ...fields }).catch(
+        () => {},
+      );
     },
-    [send],
+    [],
   );
 
   return {
     workspaces,
     workspaceCreating,
+    loadWorkspaces,
     createWorkspace,
     archiveWorkspace,
     updateWorkspace,
-    handleMessage,
     handleEvent,
     onDisconnect,
   };

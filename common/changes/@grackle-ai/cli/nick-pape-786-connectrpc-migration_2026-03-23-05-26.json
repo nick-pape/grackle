@@ -1,8 +1,8 @@
 {
   "changes": [
     {
-      "comment": "Normalize create_workspace WS error type to match all other handlers",
-      "type": "patch",
+      "comment": "Migrate web UI from WebSocket RPC to ConnectRPC; add 6 new gRPC RPCs; slim ws-bridge to pub/sub only",
+      "type": "minor",
       "packageName": "@grackle-ai/cli"
     }
   ],

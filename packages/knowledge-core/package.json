@@ -1,6 +1,6 @@
 {
   "name": "@grackle-ai/knowledge-core",
-  "version": "0.74.0",
+  "version": "0.74.1",
   "description": "Generic knowledge graph SDK on top of Neo4j with vector search, graph traversal, and pluggable embedders/chunkers",
   "license": "MIT",
   "repository": {
