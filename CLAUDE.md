@@ -80,6 +80,7 @@ Storybook is integrated into the Heft build pipeline via `@grackle-ai/heft-web-t
 - Import mock data from `../../test-utils/storybook-helpers.js`
 - Use `play` functions with `canvas.getByTestId()` / `canvas.getByRole()` for assertions
 - Components needing `useGrackle()` require the `withMockGrackle` decorator from `src/test-utils/storybook-helpers.js`
+- Page-level stories needing route params use `withMockGrackleRoute(["/tasks/task-001"], "/tasks/:taskId")` + `parameters: { skipRouter: true }` to provide their own MemoryRouter with `initialEntries`
 
 ## Manual Testing
 
