@@ -53,10 +53,12 @@ const mockRunStreamed = vi.fn(async () => ({
 }));
 const mockStartThread = vi.fn(() => ({ runStreamed: mockRunStreamed }));
 const mockResumeThread = vi.fn(() => ({ runStreamed: mockRunStreamed }));
-const MockCodex = vi.fn(() => ({
-  startThread: mockStartThread,
-  resumeThread: mockResumeThread,
-}));
+// Use a class instead of vi.fn(() => obj) — arrow functions are not valid JS constructors.
+// The source calls `new Codex(opts)`, so the mock must support `new`.
+const MockCodex = vi.fn(function (this: Record<string, unknown>) {
+  this.startThread = mockStartThread;
+  this.resumeThread = mockResumeThread;
+});
 
 vi.mock("@openai/codex-sdk", () => ({
   Codex: MockCodex,
@@ -542,6 +544,7 @@ describe("Codex streaming field extraction", () => {
   });
 
   it("emits usage event from turn.completed with cached tokens", async () => {
+    // Note: this test uses the shared mockRunStreamedEvents pattern (single turn only)
     mockRunStreamedEvents = [
       { type: "thread.started", thread_id: "t1" },
       { type: "turn.completed", usage: { input_tokens: 500, cached_input_tokens: 200, output_tokens: 30 } },
@@ -557,5 +560,196 @@ describe("Codex streaming field extraction", () => {
     expect(data.input_tokens).toBe(700); // 500 + 200 cached
     expect(data.output_tokens).toBe(30);
     expect(data.cost_usd).toBe(0); // Codex SDK doesn't provide USD cost
+  });
+});
+
+// ─── Multi-turn integration tests ──────────────────────────
+
+/** Drain events from a stream iterator until a status event with the given content. */
+async function drainUntilStatus(
+  nextEvent: () => Promise<AgentEvent | undefined>,
+  statusContent: string,
+): Promise<AgentEvent[]> {
+  const collected: AgentEvent[] = [];
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- loop until match
+  while (true) {
+    const event = await nextEvent();
+    if (!event) {
+      throw new Error(`Stream ended before status "${statusContent}"`);
+    }
+    collected.push(event);
+    if (event.type === "status" && event.content === statusContent) {
+      return collected;
+    }
+  }
+}
+
+describe("CodexRuntime — multi-turn", () => {
+  beforeEach(() => {
+    vi.stubEnv("OPENAI_API_KEY", "test-key");
+    vi.stubEnv("GRACKLE_MCP_CONFIG", "");
+    vi.mocked(existsSync).mockReturnValue(false);
+    MockCodex.mockClear();
+    mockStartThread.mockClear();
+    mockRunStreamed.mockClear();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  /** Spawn a session and return an iterator-based event consumer. */
+  function spawnSession(prompt: string = "hello") {
+    const runtime = new CodexRuntime();
+    const session = runtime.spawn({
+      sessionId: "cdx-mt",
+      prompt,
+      model: "codex-mini",
+      maxTurns: 0,
+    });
+    const streamIterator = session.stream()[Symbol.asyncIterator]();
+    const nextEvent = async (): Promise<AgentEvent | undefined> => {
+      const result = await streamIterator.next();
+      return result.done ? undefined : result.value;
+    };
+    return { session, nextEvent };
+  }
+
+  it("follow-up events appear in stream after sendInput", async () => {
+    // Turn 1: initial query yields a text response
+    mockRunStreamed.mockResolvedValueOnce({
+      events: asyncIterableFrom([
+        { type: "thread.started", thread_id: "thread-mt" },
+        { type: "item.completed", item: { type: "agent_message", text: "turn1 response" } },
+      ]),
+      abort: vi.fn(),
+    });
+    // Turn 2: follow-up yields a different text response
+    mockRunStreamed.mockResolvedValueOnce({
+      events: asyncIterableFrom([
+        { type: "item.completed", item: { type: "agent_message", text: "turn2 response" } },
+      ]),
+      abort: vi.fn(),
+    });
+
+    const { session, nextEvent } = spawnSession();
+
+    // Drain initial turn
+    const turn1Events = await drainUntilStatus(nextEvent, "waiting_input");
+    expect(turn1Events.some((e) => e.type === "text" && e.content === "turn1 response")).toBe(true);
+
+    // Send follow-up
+    session.sendInput("follow-up");
+    await drainUntilStatus(nextEvent, "running");
+    const turn2Events = await drainUntilStatus(nextEvent, "waiting_input");
+    expect(turn2Events.some((e) => e.type === "text" && e.content === "turn2 response")).toBe(true);
+
+    session.kill();
+  });
+
+  it("thread is reused across turns (startThread once, runStreamed per turn)", async () => {
+    mockRunStreamed.mockResolvedValueOnce({
+      events: asyncIterableFrom([
+        { type: "thread.started", thread_id: "thread-reuse" },
+        { type: "item.completed", item: { type: "agent_message", text: "t1" } },
+      ]),
+      abort: vi.fn(),
+    });
+    mockRunStreamed.mockResolvedValueOnce({
+      events: asyncIterableFrom([
+        { type: "item.completed", item: { type: "agent_message", text: "t2" } },
+      ]),
+      abort: vi.fn(),
+    });
+
+    const { session, nextEvent } = spawnSession();
+    await drainUntilStatus(nextEvent, "waiting_input");
+
+    session.sendInput("second turn");
+    await drainUntilStatus(nextEvent, "running");
+    await drainUntilStatus(nextEvent, "waiting_input");
+
+    // Thread created once, runStreamed called once per turn
+    expect(mockStartThread).toHaveBeenCalledTimes(1);
+    expect(mockRunStreamed).toHaveBeenCalledTimes(2);
+
+    session.kill();
+  });
+
+  it("usage events emitted per turn", async () => {
+    mockRunStreamed.mockResolvedValueOnce({
+      events: asyncIterableFrom([
+        { type: "thread.started", thread_id: "thread-usage" },
+        { type: "item.completed", item: { type: "agent_message", text: "t1" } },
+        { type: "turn.completed", usage: { input_tokens: 100, cached_input_tokens: 0, output_tokens: 10 } },
+      ]),
+      abort: vi.fn(),
+    });
+    mockRunStreamed.mockResolvedValueOnce({
+      events: asyncIterableFrom([
+        { type: "item.completed", item: { type: "agent_message", text: "t2" } },
+        { type: "turn.completed", usage: { input_tokens: 200, cached_input_tokens: 50, output_tokens: 20 } },
+      ]),
+      abort: vi.fn(),
+    });
+
+    const { session, nextEvent } = spawnSession();
+    const turn1Events = await drainUntilStatus(nextEvent, "waiting_input");
+
+    session.sendInput("more");
+    await drainUntilStatus(nextEvent, "running");
+    const turn2Events = await drainUntilStatus(nextEvent, "waiting_input");
+
+    const allEvents = [...turn1Events, ...turn2Events];
+    const usageEvents = allEvents.filter((e) => e.type === "usage");
+    expect(usageEvents).toHaveLength(2);
+
+    const usage1 = JSON.parse(usageEvents[0].content) as Record<string, number>;
+    expect(usage1.input_tokens).toBe(100);
+    expect(usage1.output_tokens).toBe(10);
+
+    const usage2 = JSON.parse(usageEvents[1].content) as Record<string, number>;
+    expect(usage2.input_tokens).toBe(250); // 200 + 50 cached
+    expect(usage2.output_tokens).toBe(20);
+
+    session.kill();
+  });
+
+  it("error in follow-up does not crash the session", async () => {
+    // Turn 1: success
+    mockRunStreamed.mockResolvedValueOnce({
+      events: asyncIterableFrom([
+        { type: "thread.started", thread_id: "thread-err" },
+        { type: "item.completed", item: { type: "agent_message", text: "ok" } },
+      ]),
+      abort: vi.fn(),
+    });
+    // Turn 2: runStreamed throws
+    mockRunStreamed.mockRejectedValueOnce(new Error("SDK connection lost"));
+    // Turn 3: recovery
+    mockRunStreamed.mockResolvedValueOnce({
+      events: asyncIterableFrom([
+        { type: "item.completed", item: { type: "agent_message", text: "recovered" } },
+      ]),
+      abort: vi.fn(),
+    });
+
+    const { session, nextEvent } = spawnSession();
+    await drainUntilStatus(nextEvent, "waiting_input");
+
+    // Follow-up that throws
+    session.sendInput("bad input");
+    await drainUntilStatus(nextEvent, "running");
+    // Should get an error event then return to waiting_input (loop survives)
+    const errorTurnEvents = await drainUntilStatus(nextEvent, "waiting_input");
+    expect(errorTurnEvents.some((e) => e.type === "error")).toBe(true);
+
+    // Send another input — session should still be alive
+    session.sendInput("retry");
+    await drainUntilStatus(nextEvent, "running");
+    const recoveryEvents = await drainUntilStatus(nextEvent, "waiting_input");
+    expect(recoveryEvents.some((e) => e.type === "text" && e.content === "recovered")).toBe(true);
+
+    session.kill();
   });
 });
