@@ -1,6 +1,57 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Mon, 23 Mar 2026 18:49:25 GMT and should not be manually modified.
+This log was last generated on Tue, 24 Mar 2026 06:19:57 GMT and should not be manually modified.
+
+## 0.75.1
+Tue, 24 Mar 2026 06:19:57 GMT
+
+### Patches
+
+- Extract HTTP web server (static files, pairing, OAuth, ConnectRPC proxy) into @grackle-ai/web-server
+
+### Updates
+
+- placeholder
+
+## 0.75.0
+Tue, 24 Mar 2026 05:12:35 GMT
+
+### Minor changes
+
+- Migrate web UI from WebSocket RPC to ConnectRPC; add 6 new gRPC RPCs; slim ws-bridge to pub/sub only
+
+## 0.74.1
+Tue, 24 Mar 2026 04:46:48 GMT
+
+### Patches
+
+- Normalize create_workspace WS error type to match all other handlers
+
+## 0.74.0
+Tue, 24 Mar 2026 04:08:14 GMT
+
+### Minor changes
+
+- feat(powerline): scriptable stub runtime via JSON scenario in prompt
+
+### Updates
+
+- placeholder
+- placeholder
+- placeholder
+- placeholder
+- placeholder
+
+## 0.73.1
+Mon, 23 Mar 2026 19:41:20 GMT
+
+### Patches
+
+- Extract system prompt building, orchestrator context, and persona resolution into @grackle-ai/prompt
+
+### Updates
+
+- placeholder
 
 ## 0.73.0
 Mon, 23 Mar 2026 18:49:25 GMT

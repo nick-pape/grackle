@@ -107,7 +107,7 @@ vi.mock("@grackle-ai/adapter-sdk", async (importOriginal) => ({
   reconnectOrProvision: vi.fn(async function* () {}),
 }));
 
-vi.mock("./system-prompt-builder.js", () => ({
+vi.mock("@grackle-ai/prompt", () => ({
   SystemPromptBuilder: vi.fn().mockImplementation(() => ({ build: () => "" })),
   buildTaskPrompt: vi.fn((title: string) => title),
 }));

@@ -1,28 +1,35 @@
 import { test, expect } from "./fixtures.js";
 import {
-  createWorkspace,
-  createTask,
+  createTaskWithScenario,
   navigateToTask,
-  patchWsForStubRuntime,
+  stubScenario,
+  emitText,
+  idle,
+  onInput,
 } from "./helpers.js";
 
+/** Scenario that emits text, goes idle, then completes on any input. */
+function idleScenario(label: string): { steps: ReturnType<typeof emitText>[] } {
+  return stubScenario(
+    emitText(`Working on ${label}...`),
+    onInput("next"),
+    idle(),
+  );
+}
+
 test.describe("Concurrent Tasks", { tag: ["@task"] }, () => {
-  test("two tasks run concurrently without event leakage", async ({ appPage }) => {
-    const page = appPage;
+  test("two tasks run concurrently without event leakage", async ({ stubTask }) => {
+    const { page, workspaceName } = stubTask;
 
-    // Create workspace with two tasks
-    await createWorkspace(page, "conc-leak");
-    await createTask(page, "conc-leak", "conc-task-a", "test-local");
-    await createTask(page, "conc-leak", "conc-task-b", "test-local");
-
-    // Patch WS to use stub runtime
-    await patchWsForStubRuntime(page);
+    // Create two scenario tasks in the fixture's workspace
+    await createTaskWithScenario(page, workspaceName, "conc-task-a", idleScenario("task-a"));
+    await createTaskWithScenario(page, workspaceName, "conc-task-b", idleScenario("task-b"));
 
     // Start task A
     await navigateToTask(page, "conc-task-a");
     await page.locator("button", { hasText: "Start" }).click();
 
-    // Wait for task A to reach waiting_input (stub emits events then waits)
+    // Wait for task A to reach waiting_input (scenario goes idle)
     const inputField = page.locator('input[placeholder="Type a message..."]');
     await inputField.waitFor({ timeout: 15_000 });
 
@@ -34,7 +41,6 @@ test.describe("Concurrent Tasks", { tag: ["@task"] }, () => {
     await inputField.waitFor({ timeout: 15_000 });
 
     // Verify task B's stream shows events for task B (not task A)
-    // The Stream tab should show content related to this task's session
     await expect(page.locator('[data-testid="task-status"]')).toBeVisible();
 
     // Navigate back to task A — its stream should still be intact
@@ -61,16 +67,12 @@ test.describe("Concurrent Tasks", { tag: ["@task"] }, () => {
     await expect(page.locator("button", { hasText: "Resume" })).toBeVisible({ timeout: 5_000 });
   });
 
-  test("concurrent tasks show correct sidebar status simultaneously", async ({ appPage }) => {
-    const page = appPage;
+  test("concurrent tasks show correct sidebar status simultaneously", async ({ stubTask }) => {
+    const { page, workspaceName } = stubTask;
 
-    // Create workspace with two tasks
-    await createWorkspace(page, "conc-status");
-    await createTask(page, "conc-status", "status-task-x", "test-local");
-    await createTask(page, "conc-status", "status-task-y", "test-local");
-
-    // Patch WS to use stub runtime
-    await patchWsForStubRuntime(page);
+    // Create two scenario tasks in the fixture's workspace
+    await createTaskWithScenario(page, workspaceName, "status-task-x", idleScenario("task-x"));
+    await createTaskWithScenario(page, workspaceName, "status-task-y", idleScenario("task-y"));
 
     // Start task X
     await navigateToTask(page, "status-task-x");

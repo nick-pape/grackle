@@ -43,6 +43,7 @@ const IS_MOCK_MODE: boolean =
 
 /** Inner layout body that conditionally renders the sidebar based on context content. */
 function AppShellBody(): JSX.Element {
+  const { connected, environments, sessions, tasks } = useGrackle();
   const location = useLocation();
   const sidebarContent = useSidebarContent();
   const hasSidebar = sidebarContent !== undefined;
@@ -70,7 +71,7 @@ function AppShellBody(): JSX.Element {
 
   return (
     <>
-      <StatusBar onToggleSidebar={hasSidebar ? toggleSidebar : undefined} sidebarOpen={sidebarOpen} />
+      <StatusBar connected={connected} environments={environments} sessions={sessions} onToggleSidebar={hasSidebar ? toggleSidebar : undefined} sidebarOpen={sidebarOpen} />
       <AppNav />
       <div className={styles.body}>
         {hasSidebar && (
@@ -90,7 +91,7 @@ function AppShellBody(): JSX.Element {
         )}
         <div className={styles.main}>
           <Outlet />
-          <BottomStatusBar />
+          <BottomStatusBar sessions={sessions} tasks={tasks} environments={environments} />
         </div>
       </div>
       {/* Toast messages (including environment status toasts from

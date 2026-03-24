@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type CSSProperties, type JSX } from "react";
 import { useMatch } from "react-router";
-import { useGrackle } from "../../context/GrackleContext.js";
 import { AnimatePresence, motion } from "motion/react";
+import type { Workspace, TaskData } from "../../hooks/types.js";
 import { MAX_TASK_DEPTH, fuzzySearch, type FuzzyKey, type MatchIndex } from "@grackle-ai/common";
 import { taskUrl, newTaskUrl, useAppNavigate } from "../../utils/navigation.js";
 import { getStatusStyle } from "../../utils/taskStatus.js";
@@ -265,9 +265,16 @@ function TaskTreeNode({
 // TaskList (main export)
 // ---------------------------------------------------------------------------
 
+/** Props for the TaskList component. */
+interface TaskListProps {
+  /** All workspaces (used for workspace name lookup). */
+  workspaces: Workspace[];
+  /** All tasks to display. */
+  tasks: TaskData[];
+}
+
 /** Global task tree sidebar view — shows all tasks across all workspaces. */
-export function TaskList(): JSX.Element {
-  const { workspaces, tasks } = useGrackle();
+export function TaskList({ workspaces, tasks }: TaskListProps): JSX.Element {
   const navigate = useAppNavigate();
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
   const [manuallyCollapsed, setManuallyCollapsed] = useState<Set<string>>(new Set());

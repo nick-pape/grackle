@@ -48,7 +48,38 @@ npx buf generate
 
 - **Rebuild before manual testing**: After making code changes to any package, you must run `rush build -t @grackle-ai/<package>` before starting or restarting the server. The server runs compiled JS from `dist/`, not TypeScript source files.
 - **CLI uses `GRACKLE_URL`, not `GRACKLE_PORT`**: The CLI client reads `GRACKLE_URL` (e.g., `http://127.0.0.1:7500`) to find the gRPC server. Setting `GRACKLE_PORT` only affects the server's listen port, not the CLI's connection target.
-- **Run Playwright suites sequentially when invoking them manually**: `tests/e2e-tests/tests/global-setup.ts` and `global-teardown.ts` share a temp state file for the isolated stack. Launching separate `playwright test` commands in parallel can make one teardown remove the other run's state file and kill its server, causing `ENOENT` / connection-refused failures.
+- **Playwright runs in parallel**: Each worker spawns its own isolated Grackle stack (4 ports + GRACKLE_HOME). Worker count defaults to `min(4, cpuCount/2)` locally, 2 in CI. Override via `E2E_WORKERS` env var.
+
+### Storybook Component Tests
+
+Components in `packages/web/src/components/` have Storybook stories (`.stories.tsx` files) with interaction tests (`play` functions). These test UI behavior in a real browser without the server stack.
+
+```bash
+# Run Storybook locally
+cd packages/web && npm run storybook
+
+# Build + run interaction tests headlessly
+cd packages/web && npm run build-storybook
+npx concurrently -k -s first \
+  "npx http-server storybook-static --port 6006 --silent" \
+  "npx wait-on tcp:127.0.0.1:6006 && npx test-storybook --url http://127.0.0.1:6006"
+```
+
+Storybook is integrated into the Heft build pipeline via `@grackle-ai/heft-web-test-plugin`:
+- **`rush build`** runs `storybook build` as a heft build task (produces `storybook-static/`)
+- **`rush test`** runs both vitest and `test-storybook` via heft test phase
+- No separate CI step needed — it's part of the standard build/test flow
+
+**When to use Storybook vs E2E:**
+- **Storybook:** Pure component rendering, form validation, keyboard interaction, CSS checks, toggle behavior — anything that doesn't need the server
+- **E2E (Playwright):** Flows requiring real WebSocket/gRPC (session spawning, task lifecycle, event streaming, server-side validation)
+
+**Writing stories:**
+- Place `.stories.tsx` next to the component file
+- Import `expect, fn, userEvent` from `"@storybook/test"`
+- Import mock data from `../../test-utils/storybook-helpers.js`
+- Use `play` functions with `canvas.getByTestId()` / `canvas.getByRole()` for assertions
+- Components needing `useGrackle()` require the `withMockGrackle` decorator from `src/test-utils/storybook-helpers.js`
 
 ## Manual Testing
 
@@ -104,19 +135,7 @@ Rush monorepo with 6 packages under `packages/`:
 ### React Component Architecture
 
 - **New components must be pure presentational.** Components in `components/` should accept data and callbacks as props. Only page-level components (`pages/*.tsx`) should call `useGrackle()`.
-- **Boy scout rule ([#805](https://github.com/nick-pape/grackle/issues/805))**: If your PR touches any of the following coupled components, you **must** decouple it from `useGrackle()` as part of the PR. Move the hook call up to the parent page/container and pass data + callbacks as props, and link #805 in your PR.
-  - `packages/web/src/components/workspace/WorkspaceBoard.tsx`
-  - `packages/web/src/components/personas/PersonaManager.tsx`
-  - `packages/web/src/components/panels/TaskEditPanel.tsx`
-  - `packages/web/src/components/lists/TaskList.tsx`
-  - `packages/web/src/components/panels/CredentialProvidersPanel.tsx`
-  - `packages/web/src/components/lists/EnvironmentNav.tsx`
-  - `packages/web/src/components/layout/BottomStatusBar.tsx`
-  - `packages/web/src/components/chat/ChatInput.tsx`
-  - `packages/web/src/components/panels/EnvironmentEditPanel.tsx`
-  - `packages/web/src/components/layout/StatusBar.tsx`
-  - `packages/web/src/components/panels/AboutPanel.tsx`
-- Once a component is fully decoupled, remove it from this list.
+- **All components decoupled from `useGrackle()`** ([#805](https://github.com/nick-pape/grackle/issues/805)). Only page-level components (`pages/*.tsx`) should call `useGrackle()`. If you add a new component, follow this pattern: accept data and callbacks as props.
 
 ### Dependencies
 - Cross-package deps use `"workspace:*"` (pnpm rewrites to real versions at publish time)
@@ -134,7 +153,7 @@ PRs that modify publishable packages need a change file. The `/create-pr` skill 
 - If `/create-pr` or CI indicates a lockstep change is required for `@grackle-ai/cli`, do not delete that generated change file just because the visible code changes are in `@grackle-ai/web`; `rush change --verify` can still require the lockstep main project change description for this repo's release policy.
 
 **Publishable packages** (lockstep versioning):
-- `@grackle-ai/adapter-sdk`, `@grackle-ai/adapter-local`, `@grackle-ai/adapter-ssh`, `@grackle-ai/adapter-codespace`, `@grackle-ai/adapter-docker`, `@grackle-ai/auth`, `@grackle-ai/cli`, `@grackle-ai/common`, `@grackle-ai/powerline`, `@grackle-ai/server`
+- `@grackle-ai/adapter-sdk`, `@grackle-ai/adapter-local`, `@grackle-ai/adapter-ssh`, `@grackle-ai/adapter-codespace`, `@grackle-ai/adapter-docker`, `@grackle-ai/auth`, `@grackle-ai/cli`, `@grackle-ai/common`, `@grackle-ai/powerline`, `@grackle-ai/prompt`, `@grackle-ai/server`, `@grackle-ai/web-server`
 
 **Not publishable** (never need change files):
 - `@grackle-ai/web`, `@grackle-ai/heft-rig`, `@grackle-ai/heft-buf-plugin`, `@grackle-ai/heft-playwright-plugin`, `@grackle-ai/heft-vite-plugin`

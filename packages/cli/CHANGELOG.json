@@ -2,6 +2,93 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.75.1",
+      "tag": "@grackle-ai/cli_v0.75.1",
+      "date": "Tue, 24 Mar 2026 06:19:57 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Extract HTTP web server (static files, pairing, OAuth, ConnectRPC proxy) into @grackle-ai/web-server"
+          }
+        ],
+        "none": [
+          {
+            "comment": "placeholder"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.75.0",
+      "tag": "@grackle-ai/cli_v0.75.0",
+      "date": "Tue, 24 Mar 2026 05:12:35 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Migrate web UI from WebSocket RPC to ConnectRPC; add 6 new gRPC RPCs; slim ws-bridge to pub/sub only"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.74.1",
+      "tag": "@grackle-ai/cli_v0.74.1",
+      "date": "Tue, 24 Mar 2026 04:46:48 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Normalize create_workspace WS error type to match all other handlers"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.74.0",
+      "tag": "@grackle-ai/cli_v0.74.0",
+      "date": "Tue, 24 Mar 2026 04:08:14 GMT",
+      "comments": {
+        "none": [
+          {
+            "comment": "placeholder"
+          },
+          {
+            "comment": "placeholder"
+          },
+          {
+            "comment": "placeholder"
+          },
+          {
+            "comment": "placeholder"
+          },
+          {
+            "comment": "placeholder"
+          }
+        ],
+        "minor": [
+          {
+            "comment": "feat(powerline): scriptable stub runtime via JSON scenario in prompt"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.73.1",
+      "tag": "@grackle-ai/cli_v0.73.1",
+      "date": "Mon, 23 Mar 2026 19:41:20 GMT",
+      "comments": {
+        "none": [
+          {
+            "comment": "placeholder"
+          }
+        ],
+        "patch": [
+          {
+            "comment": "Extract system prompt building, orchestrator context, and persona resolution into @grackle-ai/prompt"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.73.0",
       "tag": "@grackle-ai/cli_v0.73.0",
       "date": "Mon, 23 Mar 2026 18:49:25 GMT",

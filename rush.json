@@ -23,6 +23,10 @@
       "projectFolder": "rigs/heft-vite-plugin"
     },
     {
+      "packageName": "@grackle-ai/heft-web-test-plugin",
+      "projectFolder": "rigs/heft-storybook-plugin"
+    },
+    {
       "packageName": "@grackle-ai/common",
       "projectFolder": "packages/common",
       "versionPolicyName": "grackle"
@@ -40,6 +44,11 @@
     {
       "packageName": "@grackle-ai/auth",
       "projectFolder": "packages/auth",
+      "versionPolicyName": "grackle"
+    },
+    {
+      "packageName": "@grackle-ai/prompt",
+      "projectFolder": "packages/prompt",
       "versionPolicyName": "grackle"
     },
     {
@@ -95,6 +104,11 @@
     {
       "packageName": "@grackle-ai/web",
       "projectFolder": "packages/web",
+      "versionPolicyName": "grackle"
+    },
+    {
+      "packageName": "@grackle-ai/web-server",
+      "projectFolder": "packages/web-server",
       "versionPolicyName": "grackle"
     },
     {

@@ -1,5 +1,6 @@
 import { useMemo, type JSX } from "react";
 import { Outlet } from "react-router";
+import { useGrackle } from "../../context/GrackleContext.js";
 import { useSidebarSlot } from "../../hooks/useSidebarSlot.js";
 import { TaskList } from "../lists/TaskList.js";
 import { EnvironmentNav } from "../lists/EnvironmentNav.js";
@@ -8,14 +9,16 @@ import { KnowledgeNav } from "../knowledge/KnowledgeNav.js";
 
 /** Layout route wrapper that shows the TaskList in the sidebar. */
 export function WithTaskSidebar(): JSX.Element {
-  const sidebar = useMemo(() => <TaskList />, []);
+  const { workspaces, tasks } = useGrackle();
+  const sidebar = useMemo(() => <TaskList workspaces={workspaces} tasks={tasks} />, [workspaces, tasks]);
   useSidebarSlot(sidebar);
   return <Outlet />;
 }
 
 /** Layout route wrapper that shows the EnvironmentNav in the sidebar. */
 export function WithEnvironmentSidebar(): JSX.Element {
-  const sidebar = useMemo(() => <EnvironmentNav />, []);
+  const { environments } = useGrackle();
+  const sidebar = useMemo(() => <EnvironmentNav environments={environments} />, [environments]);
   useSidebarSlot(sidebar);
   return <Outlet />;
 }

@@ -1,6 +1,5 @@
 import { useMemo, type JSX } from "react";
-import type { TaskData } from "../../hooks/useGrackleSocket.js";
-import { useGrackle } from "../../context/GrackleContext.js";
+import type { TaskData, Session, PersonaData, Environment } from "../../hooks/types.js";
 import { buildBoardColumns, type BoardTask } from "../../utils/boardColumns.js";
 import { getStatusStyle } from "../../utils/taskStatus.js";
 import { taskUrl, newTaskUrl, useAppNavigate } from "../../utils/navigation.js";
@@ -11,11 +10,18 @@ import styles from "./WorkspaceBoard.module.scss";
 interface WorkspaceBoardProps {
   workspaceId: string;
   environmentId: string;
+  /** All tasks — filtered internally by workspaceId. */
+  tasks: TaskData[];
+  /** All sessions (used for metadata lookup). */
+  sessions: Session[];
+  /** All personas (used for metadata lookup). */
+  personas: PersonaData[];
+  /** All environments (used for metadata lookup). */
+  environments: Environment[];
 }
 
 /** Kanban-style board view with fixed columns for each task status. */
-export function WorkspaceBoard({ workspaceId, environmentId }: WorkspaceBoardProps): JSX.Element {
-  const { tasks, sessions, personas, environments } = useGrackle();
+export function WorkspaceBoard({ workspaceId, environmentId, tasks, sessions, personas, environments }: WorkspaceBoardProps): JSX.Element {
   const navigate = useAppNavigate();
 
   const workspaceTasks = useMemo(

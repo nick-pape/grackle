@@ -1,68 +1,53 @@
 import { test, expect } from "./fixtures.js";
-import { createWorkspace, createTask, navigateToTask, patchWsForStubRuntime, runStubTaskToCompletion } from "./helpers.js";
+import {
+  stubScenario,
+  emitText,
+  emitToolUse,
+  emitToolResult,
+  idle,
+  onInput,
+} from "./helpers.js";
 
 test.describe("Task Lifecycle (stub runtime)", { tag: ["@task", "@smoke"] }, () => {
-  test("full task flow: create, start, stream, review, approve", async ({ appPage }) => {
-    const page = appPage;
+  test("full task flow: create, start, stream, review, approve", async ({ stubTask }) => {
+    const { page } = stubTask;
 
-    // --- Step 1: Create a workspace ---
-    await createWorkspace(page, "lifecycle-proj");
+    // --- Step 1+2: Create a task with a scenario that defines exact lifecycle events ---
+    await stubTask.createAndNavigate("test task", stubScenario(
+      emitText("Working on test task..."),
+      emitToolUse("echo", { message: "test task" }),
+      emitToolResult('Tool output: "test task"'),
+      onInput("next"),         // input silently advances to completion
+      idle(),                  // goes idle, waits for input
+    ));
 
-    // --- Step 2: Create a task with test-local environment (env is set at creation via WS
-    //     so it is available at start time; the UI no longer has an env dropdown) ---
-    await createTask(page, "lifecycle-proj", "test task", "test-local");
-
-    // --- Step 3: Navigate to task view ---
-    await navigateToTask(page, "test task");
+    // --- Step 3: Verify initial state ---
     await expect(page.locator('[data-testid="task-status"]')).toContainText("not_started");
     // Overview tab should be active for not_started task
     await expect(page.getByRole("tab", { name: "Overview", exact: true })).toHaveAttribute("class", /active/);
 
-    // --- Step 4: Monkey-patch WS to force stub runtime on start_task ---
-    await page.evaluate(() => {
-      const origSend = WebSocket.prototype.send;
-      WebSocket.prototype.send = function (data: string | ArrayBuffer | Blob | ArrayBufferView) {
-        if (typeof data === "string") {
-          try {
-            const msg = JSON.parse(data);
-            if (msg.type === "start_task") {
-              msg.payload.runtime = "stub";
-              if (!msg.payload.environmentId) {
-                msg.payload.environmentId = "test-local";
-              }
-              data = JSON.stringify(msg);
-            }
-          } catch { /* not JSON, pass through */ }
-        }
-        return origSend.call(this, data);
-      };
-    });
-
-    // --- Step 5: Click "Start" ---
+    // --- Step 4: Click "Start" (stub runtime patched by fixture) ---
     await page.getByRole("button", { name: "Start", exact: true }).click();
 
-    // --- Step 6: Verify stub runtime events stream in ---
-    // System event: "Stub runtime initialized"
+    // --- Step 5: Verify scenario events stream in ---
     await expect(page.locator("text=Stub runtime initialized")).toBeVisible({ timeout: 15_000 });
-
-    // Echo event: "Echo: test task"
-    await expect(page.locator("text=Echo: test task")).toBeVisible({ timeout: 10_000 });
+    // Use exact match to avoid matching the scenario JSON blob in the prompt content
+    await expect(page.getByText("Working on test task...", { exact: true })).toBeVisible({ timeout: 10_000 });
 
     // Task header should show active status (may transition to idle quickly)
     await expect(page.locator('[data-testid="task-status"]')).toContainText(/working|paused/, { timeout: 5_000 });
 
-    // --- Step 7: Session reaches idle — send input ---
+    // --- Step 6: Session reaches idle — send input ---
     const inputField = page.locator('input[placeholder="Type a message..."]');
     await expect(inputField).toBeVisible({ timeout: 15_000 });
     await inputField.fill("continue work");
     await page.getByRole("button", { name: "Send", exact: true }).click();
 
-    // --- Step 8: Session completes -> task auto-moves to paused ---
-    // The stub runtime completes quickly after input, auto-moving to paused.
-    // Wait for "Resume" which only appears in paused state (not working).
+    // --- Step 7: Session completes -> task auto-moves to paused ---
+    // The scenario completes after input (on_input "next" + no more steps → completed).
     await expect(page.getByRole("button", { name: "Resume", exact: true })).toBeVisible({ timeout: 15_000 });
 
-    // --- Step 9: Stop the task (kill session + mark complete) ---
+    // --- Step 8: Stop the task (kill session + mark complete) ---
     await page.getByRole("button", { name: "Stop", exact: true }).click();
 
     // Task status changes to complete
@@ -72,17 +57,27 @@ test.describe("Task Lifecycle (stub runtime)", { tag: ["@task", "@smoke"] }, () 
     await expect(page.locator("button", { hasText: "+ New Task" })).toBeVisible();
   });
 
-  test("paused task can be stopped (completed)", async ({ appPage }) => {
-    const page = appPage;
+  test("paused task can be stopped (completed)", async ({ stubTask }) => {
+    const { page } = stubTask;
 
-    // --- Create workspace and task (env set via WS so it is available at start time) ---
-    await createWorkspace(page, "complete-task-proj");
-    await createTask(page, "complete-task-proj", "complete task", "test-local");
-    await navigateToTask(page, "complete task");
-    await patchWsForStubRuntime(page);
+    // --- Create task with scenario ---
+    await stubTask.createAndNavigate("complete task", stubScenario(
+      emitText("Processing..."),
+      onInput("next"),
+      idle(),
+    ));
 
-    // Run task through to paused (review)
-    await runStubTaskToCompletion(page);
+    // Start task
+    await page.getByRole("button", { name: "Start", exact: true }).click();
+
+    // Wait for idle state, send input to advance to completed
+    const inputField = page.locator('input[placeholder="Type a message..."]');
+    await inputField.waitFor({ timeout: 15_000 });
+    await inputField.fill("continue");
+    await page.getByRole("button", { name: "Send", exact: true }).click();
+
+    // Wait for paused (review) state
+    await page.getByRole("button", { name: "Resume", exact: true }).waitFor({ timeout: 15_000 });
 
     // Stop the task (kill session + mark complete)
     await page.getByRole("button", { name: "Stop", exact: true }).click();

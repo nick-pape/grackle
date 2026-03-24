@@ -93,6 +93,12 @@ message ProvisionEvent {
   double progress = 3; // 0.0 - 1.0
 }
 
+message UpdateEnvironmentRequest {
+  string id = 1;
+  optional string display_name = 2;
+  optional string adapter_config = 3; // JSON
+}
+
 // ─── Session ────────────────────────────────────────────────
 
 message Session {
@@ -198,6 +204,11 @@ message SessionEvent {
   string timestamp = 3;
   string content = 4;
   string raw = 5; // JSON, optional original payload
+}
+
+message SessionEventList {
+  string session_id = 1;
+  repeated SessionEvent events = 2;
 }
 
 // ─── Tokens ─────────────────────────────────────────────────
@@ -471,6 +482,30 @@ message UpdatePersonaRequest {
   string script = 11; // Script source code (for script personas)
 }
 
+// ─── Codespaces ────────────────────────────────────────────
+
+message CodespaceInfo {
+  string name = 1;
+  string repository = 2;
+  string state = 3;
+  string git_status = 4;
+}
+
+message CodespaceList {
+  repeated CodespaceInfo codespaces = 1;
+  string error = 2; // non-fatal error (e.g. gh CLI not available)
+}
+
+message CreateCodespaceRequest {
+  string repo = 1;
+  string machine = 2; // optional machine type
+}
+
+message CreateCodespaceResponse {
+  string name = 1;
+  string repository = 2;
+}
+
 // ─── Settings ───────────────────────────────────────────────
 
 message GetSettingRequest {
@@ -601,6 +636,7 @@ service Grackle {
   rpc AddEnvironment(AddEnvironmentRequest) returns (Environment);
   rpc RemoveEnvironment(EnvironmentId) returns (Empty);
   rpc ProvisionEnvironment(EnvironmentId) returns (stream ProvisionEvent);
+  rpc UpdateEnvironment(UpdateEnvironmentRequest) returns (Environment);
   rpc StopEnvironment(EnvironmentId) returns (Empty);
   rpc DestroyEnvironment(EnvironmentId) returns (Empty);
 
@@ -611,6 +647,8 @@ service Grackle {
   rpc KillAgent(SessionId) returns (Empty);
   rpc ListSessions(SessionFilter) returns (SessionList);
   rpc GetSession(SessionId) returns (Session);
+  rpc GetSessionEvents(SessionId) returns (SessionEventList);
+  rpc GetTaskSessions(TaskId) returns (SessionList);
 
   // Streaming
   rpc StreamSession(SessionId) returns (stream SessionEvent);
@@ -640,6 +678,7 @@ service Grackle {
   rpc StartTask(StartTaskRequest) returns (Session);
   rpc CompleteTask(TaskId) returns (Task);
   rpc ResumeTask(TaskId) returns (Session);
+  rpc StopTask(TaskId) returns (Task);
   rpc DeleteTask(TaskId) returns (Empty);
 
   // Personas
@@ -652,6 +691,10 @@ service Grackle {
   // Findings
   rpc PostFinding(PostFindingRequest) returns (Finding);
   rpc QueryFindings(QueryFindingsRequest) returns (FindingList);
+
+  // Codespaces
+  rpc ListCodespaces(Empty) returns (CodespaceList);
+  rpc CreateCodespace(CreateCodespaceRequest) returns (CreateCodespaceResponse);
 
   // Settings
   rpc GetSetting(GetSettingRequest) returns (SettingResponse);

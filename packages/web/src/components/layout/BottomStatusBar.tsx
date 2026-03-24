@@ -1,6 +1,6 @@
 import type { JSX } from "react";
 import { useLocation, useMatch } from "react-router";
-import { useGrackle } from "../../context/GrackleContext.js";
+import type { Session, TaskData, Environment } from "../../hooks/types.js";
 import { newTaskUrl, newChatUrl, useAppNavigate } from "../../utils/navigation.js";
 import styles from "./BottomStatusBar.module.scss";
 
@@ -12,10 +12,17 @@ import styles from "./BottomStatusBar.module.scss";
  * Returns an empty fragment when the current page is showing a ChatInput or
  * when the route has no meaningful hint to display.
  */
-export function BottomStatusBar(): JSX.Element {
-  const {
-    sessions, tasks, environments,
-  } = useGrackle();
+/** Props for the BottomStatusBar component. */
+interface BottomStatusBarProps {
+  /** All sessions. */
+  sessions: Session[];
+  /** All tasks. */
+  tasks: TaskData[];
+  /** All environments. */
+  environments: Environment[];
+}
+
+export function BottomStatusBar({ sessions, tasks, environments }: BottomStatusBarProps): JSX.Element {
   const navigate = useAppNavigate();
   const location = useLocation();
 

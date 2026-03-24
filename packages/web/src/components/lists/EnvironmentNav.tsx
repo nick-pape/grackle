@@ -1,6 +1,6 @@
 import { useCallback, useRef, type JSX, type KeyboardEvent } from "react";
 import { useMatch } from "react-router";
-import { useGrackle } from "../../context/GrackleContext.js";
+import type { Environment } from "../../hooks/types.js";
 import { environmentUrl, NEW_ENVIRONMENT_URL, useAppNavigate } from "../../utils/navigation.js";
 import styles from "./EnvironmentNav.module.scss";
 
@@ -13,9 +13,14 @@ const STATUS_COLORS: Record<string, string> = {
   connecting: "var(--accent-blue)",
 };
 
+/** Props for the EnvironmentNav component. */
+interface EnvironmentNavProps {
+  /** List of all environments to display in the nav. */
+  environments: Environment[];
+}
+
 /** Vertical nav rail listing environments with status dots. */
-export function EnvironmentNav(): JSX.Element {
-  const { environments } = useGrackle();
+export function EnvironmentNav({ environments }: EnvironmentNavProps): JSX.Element {
   const navigate = useAppNavigate();
   const tabListRef = useRef<HTMLElement>(null);
 

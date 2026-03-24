@@ -1,6 +1,6 @@
 import { useState, useCallback, type JSX } from "react";
-import { useGrackle } from "../../context/GrackleContext.js";
 import { useToast } from "../../context/ToastContext.js";
+import type { Environment, Codespace } from "../../hooks/types.js";
 import { ENVIRONMENTS_URL, environmentUrl, useAppNavigate } from "../../utils/navigation.js";
 import { EditableTextField } from "../editable/EditableTextField.js";
 import styles from "./EnvironmentEditPanel.module.scss";
@@ -15,6 +15,24 @@ interface Props {
   mode: "new" | "edit";
   /** Environment ID — required in edit mode. */
   environmentId?: string;
+  /** All environments (for lookup in edit mode). */
+  environments: Environment[];
+  /** Callback to add a new environment. */
+  onAddEnvironment: (displayName: string, adapterType: string, adapterConfig?: Record<string, unknown>) => void;
+  /** Callback to update an existing environment. */
+  onUpdateEnvironment: (environmentId: string, fields: { displayName?: string; adapterConfig?: Record<string, unknown> }) => void;
+  /** Callback to list available codespaces. */
+  onListCodespaces: () => void;
+  /** Available codespaces. */
+  codespaces: Codespace[];
+  /** Error from codespace operations. */
+  codespaceError: string;
+  /** Error from listing codespaces. */
+  codespaceListError: string;
+  /** Whether a codespace is being created. */
+  codespaceCreating: boolean;
+  /** Callback to create a new codespace. */
+  onCreateCodespace: (repo: string, machine?: string) => void;
 }
 
 /** Returns true if portStr is empty (optional) or a valid integer in [1, 65535]. */
@@ -46,14 +64,20 @@ interface CodespacePickerProps {
   onCodespaceNameChange: (name: string) => void;
   envName: string;
   onEnvNameChange: (name: string) => void;
+  /** Available codespaces. */
+  codespaces: Codespace[];
+  /** Error from codespace operations. */
+  codespaceError: string;
+  /** Error from listing codespaces. */
+  codespaceListError: string;
+  /** Whether a codespace is being created. */
+  codespaceCreating: boolean;
+  /** Callback to create a new codespace. */
+  onCreateCodespace: (repo: string, machine?: string) => void;
 }
 
 /** Codespace picker subcomponent — pick an existing or create a new codespace. */
-function CodespacePicker({ codespaceName, onCodespaceNameChange, envName, onEnvNameChange }: CodespacePickerProps): JSX.Element {
-  const {
-    codespaces, codespaceError, codespaceListError, codespaceCreating,
-    createCodespace,
-  } = useGrackle();
+function CodespacePicker({ codespaceName, onCodespaceNameChange, envName, onEnvNameChange, codespaces, codespaceError, codespaceListError, codespaceCreating, onCreateCodespace }: CodespacePickerProps): JSX.Element {
 
   const [mode, setMode] = useState<"pick" | "create">("pick");
   const [createRepo, setCreateRepo] = useState("");
@@ -88,7 +112,7 @@ function CodespacePicker({ codespaceName, onCodespaceNameChange, envName, onEnvN
           <button
             onClick={() => {
               if (createRepo.trim()) {
-                createCodespace(createRepo.trim(), createMachine.trim() || undefined);
+                onCreateCodespace(createRepo.trim(), createMachine.trim() || undefined);
                 setMode("pick");
                 setCreateRepo("");
                 setCreateMachine("");
@@ -174,10 +198,7 @@ function CodespacePicker({ codespaceName, onCodespaceNameChange, envName, onEnvN
  * - edit: pre-populated form; uses click-to-edit fields that auto-save via
  *         updateEnvironment.
  */
-export function EnvironmentEditPanel({ mode, environmentId }: Props): JSX.Element {
-  const {
-    environments, addEnvironment, updateEnvironment, listCodespaces,
-  } = useGrackle();
+export function EnvironmentEditPanel({ mode, environmentId, environments, onAddEnvironment, onUpdateEnvironment, onListCodespaces, codespaces, codespaceError, codespaceListError, codespaceCreating, onCreateCodespace }: Props): JSX.Element {
   const { showToast } = useToast();
   const navigate = useAppNavigate();
 
@@ -264,7 +285,7 @@ export function EnvironmentEditPanel({ mode, environmentId }: Props): JSX.Elemen
     if (!isCreateValid()) {
       return;
     }
-    addEnvironment(envName.trim(), adapterType, buildCreateConfig());
+    onAddEnvironment(envName.trim(), adapterType, buildCreateConfig());
     showToast("Environment added successfully", "success");
     navigate(ENVIRONMENTS_URL, { replace: true });
   };
@@ -290,9 +311,9 @@ export function EnvironmentEditPanel({ mode, environmentId }: Props): JSX.Elemen
       } else {
         delete current[fieldName];
       }
-      updateEnvironment(environmentId, { adapterConfig: current });
+      onUpdateEnvironment(environmentId, { adapterConfig: current });
     },
-    [existingEnv, environmentId, updateEnvironment],
+    [existingEnv, environmentId, onUpdateEnvironment],
   );
 
   /** Save a numeric config field in edit mode. */
@@ -310,9 +331,9 @@ export function EnvironmentEditPanel({ mode, environmentId }: Props): JSX.Elemen
       } else {
         delete current[fieldName];
       }
-      updateEnvironment(environmentId, { adapterConfig: current });
+      onUpdateEnvironment(environmentId, { adapterConfig: current });
     },
-    [existingEnv, environmentId, updateEnvironment],
+    [existingEnv, environmentId, onUpdateEnvironment],
   );
 
   // ─── Edit mode ─────────────────────────────────────
@@ -362,7 +383,7 @@ export function EnvironmentEditPanel({ mode, environmentId }: Props): JSX.Elemen
                 value={existingEnv.displayName}
                 onSave={(value) => {
                   if (environmentId) {
-                    updateEnvironment(environmentId, { displayName: value });
+                    onUpdateEnvironment(environmentId, { displayName: value });
                   }
                 }}
                 validate={(v) => v.trim() === "" ? "Name cannot be empty" : undefined}
@@ -598,7 +619,7 @@ export function EnvironmentEditPanel({ mode, environmentId }: Props): JSX.Elemen
               onChange={(e) => {
                 setAdapterType(e.target.value);
                 if (e.target.value === "codespace") {
-                  listCodespaces();
+                  onListCodespaces();
                 }
               }}
               className={styles.adapterSelect}
@@ -749,6 +770,11 @@ export function EnvironmentEditPanel({ mode, environmentId }: Props): JSX.Elemen
               onCodespaceNameChange={setCodespaceName}
               envName={envName}
               onEnvNameChange={setEnvName}
+              codespaces={codespaces}
+              codespaceError={codespaceError}
+              codespaceListError={codespaceListError}
+              codespaceCreating={codespaceCreating}
+              onCreateCodespace={onCreateCodespace}
             />
           )}
         </div>

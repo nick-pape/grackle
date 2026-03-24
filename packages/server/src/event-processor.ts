@@ -369,12 +369,13 @@ export function processEventStream(
           timestamp: new Date().toISOString(),
           content: SESSION_STATUS.SUSPENDED,
         }));
+        if (ctx.taskId) {
+          emit("task.updated", { taskId: ctx.taskId, workspaceId: ctx.workspaceId });
+        }
       }
-      // If already terminal (agent pushed completed/failed/etc. before transport
-      // died), the session is already in its correct final state — nothing to do.
-      if (ctx.taskId) {
-        emit("task.updated", { taskId: ctx.taskId, workspaceId: ctx.workspaceId });
-      }
+      // If already terminal (killAgent/completed/failed set status before transport
+      // died), the session is in its correct final state and task.updated was already
+      // emitted — skip the duplicate to avoid interfering with SIGCHLD delivery.
     } finally {
       processorRegistry.unregister(sessionId);
       logWriter.endSession(logPath);
