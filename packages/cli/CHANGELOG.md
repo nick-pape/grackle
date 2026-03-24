@@ -1,6 +1,14 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Tue, 24 Mar 2026 06:50:00 GMT and should not be manually modified.
+This log was last generated on Tue, 24 Mar 2026 07:26:12 GMT and should not be manually modified.
+
+## 0.75.3
+Tue, 24 Mar 2026 07:26:12 GMT
+
+### Patches
+
+- Remove GitHub import from server/CLI/MCP — extracted to standalone script in scripts/github-import/
+- Replace logo with new mech-grackle design
 
 ## 0.75.2
 Tue, 24 Mar 2026 06:50:00 GMT
