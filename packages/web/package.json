@@ -22,7 +22,7 @@
     "build-storybook": "storybook build",
     "test-storybook": "test-storybook",
     "_phase:build": "heft run --only build -- --clean",
-    "_phase:test": "vitest run"
+    "_phase:test": "heft run --only test"
   },
   "dependencies": {
     "@grackle-ai/common": "workspace:*",

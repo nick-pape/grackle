@@ -8,6 +8,10 @@
     {
       "pluginName": "storybook-test-plugin",
       "entryPoint": "./lib/StorybookTestPlugin.js"
+    },
+    {
+      "pluginName": "vitest-plugin",
+      "entryPoint": "./lib/VitestPlugin.js"
     }
   ]
 }

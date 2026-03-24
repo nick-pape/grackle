@@ -37,10 +37,10 @@
     "test": {
       "phaseDependencies": ["build"],
       "tasksByName": {
-        "playwright": {
+        "vitest": {
           "taskPlugin": {
-            "pluginPackage": "@grackle-ai/heft-playwright-plugin",
-            "pluginName": "playwright-test-plugin"
+            "pluginPackage": "@grackle-ai/heft-storybook-plugin",
+            "pluginName": "vitest-plugin"
           }
         },
         "storybook-test": {
