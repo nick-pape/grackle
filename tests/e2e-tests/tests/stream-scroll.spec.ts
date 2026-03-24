@@ -82,7 +82,7 @@ test.describe("Stream smart scroll", { tag: ["@webui"] }, () => {
     expect(textBefore).not.toEqual(textAfter);
   });
 
-  test("scroll-to-anchor FAB appears when scrolled away", async ({ page }) => {
+  test("scroll-to-anchor FAB appears when scrolled away", async ({ page, grackle: { client } }) => {
     await installWsTracker(page);
     await page.goto("/");
     await page.waitForFunction(
@@ -90,8 +90,8 @@ test.describe("Stream smart scroll", { tag: ["@webui"] }, () => {
       { timeout: 10_000 },
     );
 
-    await createWorkspace(page, "scroll-fab");
-    await createTaskWithScenario(page, "scroll-fab", "fab-task", scrollableScenario());
+    await createWorkspace(client, "scroll-fab");
+    await createTaskWithScenario(client, "scroll-fab", "fab-task", scrollableScenario());
     await navigateToTask(page, "fab-task");
     await patchWsForStubRuntime(page);
     await runScenarioToCompletion(page);

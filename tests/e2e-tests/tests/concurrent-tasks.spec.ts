@@ -19,11 +19,11 @@ function idleScenario(label: string): { steps: ReturnType<typeof emitText>[] } {
 
 test.describe("Concurrent Tasks", { tag: ["@task"] }, () => {
   test("two tasks run concurrently without event leakage", async ({ stubTask }) => {
-    const { page, workspaceName } = stubTask;
+    const { page, client, workspaceName } = stubTask;
 
     // Create two scenario tasks in the fixture's workspace
-    await createTaskWithScenario(page, workspaceName, "conc-task-a", idleScenario("task-a"));
-    await createTaskWithScenario(page, workspaceName, "conc-task-b", idleScenario("task-b"));
+    await createTaskWithScenario(client, workspaceName, "conc-task-a", idleScenario("task-a"));
+    await createTaskWithScenario(client, workspaceName, "conc-task-b", idleScenario("task-b"));
 
     // Start task A
     await navigateToTask(page, "conc-task-a");
@@ -68,11 +68,11 @@ test.describe("Concurrent Tasks", { tag: ["@task"] }, () => {
   });
 
   test("concurrent tasks show correct sidebar status simultaneously", async ({ stubTask }) => {
-    const { page, workspaceName } = stubTask;
+    const { page, client, workspaceName } = stubTask;
 
     // Create two scenario tasks in the fixture's workspace
-    await createTaskWithScenario(page, workspaceName, "status-task-x", idleScenario("task-x"));
-    await createTaskWithScenario(page, workspaceName, "status-task-y", idleScenario("task-y"));
+    await createTaskWithScenario(client, workspaceName, "status-task-x", idleScenario("task-x"));
+    await createTaskWithScenario(client, workspaceName, "status-task-y", idleScenario("task-y"));
 
     // Start task X
     await navigateToTask(page, "status-task-x");

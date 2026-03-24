@@ -1,8 +1,4 @@
 import { test, expect } from "./fixtures.js";
-import {
-  sendWsAndWaitFor,
-  sendWsMessage,
-} from "./helpers.js";
 
 test.describe("App Navigation Bar", { tag: ["@environment"] }, () => {
   test("app nav bar has Chat, Tasks, Environments, and Settings tabs", async ({ appPage }) => {
@@ -66,7 +62,7 @@ test.describe("Environments Page", { tag: ["@environment"] }, () => {
     await expect(page.getByTestId("env-edit-btn")).toBeVisible({ timeout: 5_000 });
   });
 
-  test("clicking + Add Environment opens form panel and returns to list after submit", async ({ appPage }) => {
+  test("clicking + Add Environment opens form panel and returns to list after submit", async ({ appPage, grackle: { client } }) => {
     const page = appPage;
 
     // Click + Add Environment
@@ -87,18 +83,11 @@ test.describe("Environments Page", { tag: ["@environment"] }, () => {
     await expect(page.getByText("settings-test-env", { exact: true })).toBeVisible({ timeout: 5_000 });
 
     // Clean up
-    const listResponse = await sendWsAndWaitFor(
-      page,
-      { type: "list_environments" },
-      "environments",
-    );
-    const envs = (listResponse.payload?.environments || []) as Array<{ id: string; displayName: string }>;
+    const listResponse = await client.listEnvironments({});
+    const envs = listResponse.environments as Array<{ id: string; displayName: string }>;
     const added = envs.find((e) => e.displayName === "settings-test-env");
     if (added) {
-      await sendWsMessage(page, {
-        type: "remove_environment",
-        payload: { environmentId: added.id },
-      });
+      await client.removeEnvironment({ id: added.id });
     }
   });
 });

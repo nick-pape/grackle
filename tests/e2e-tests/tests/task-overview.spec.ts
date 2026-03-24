@@ -1,7 +1,7 @@
 import { test, expect } from "./fixtures.js";
 import {
   createTask,
-  createTaskViaWs,
+  createTaskDirect,
   navigateToTask,
   getWorkspaceId,
   getTaskId,
@@ -29,14 +29,14 @@ test.describe("Task Overview Tab", { tag: ["@task"] }, () => {
   });
 
   test("overview shows task description", async ({ stubTask }) => {
-    const { page, workspaceName } = stubTask;
+    const { page, client, workspaceName } = stubTask;
 
     // Create a placeholder task first to expand the workspace tree
-    await createTask(page, workspaceName, "desc-placeholder", "test-local");
+    await createTask(client, workspaceName, "desc-placeholder", "test-local");
 
-    const workspaceId = await getWorkspaceId(page, workspaceName);
+    const workspaceId = await getWorkspaceId(client, workspaceName);
 
-    await createTaskViaWs(page, workspaceId, "desc-task", {
+    await createTaskDirect(client, workspaceId, "desc-task", {
       environmentId: "test-local",
       description: "This is a detailed task description for testing",
     });
@@ -67,14 +67,14 @@ test.describe("Task Overview Tab", { tag: ["@task"] }, () => {
   });
 
   test("overview shows blocked dependencies in yellow", async ({ stubTask }) => {
-    const { page, workspaceName } = stubTask;
+    const { page, client, workspaceName } = stubTask;
 
-    await createTask(page, workspaceName, "dep-blocker", "test-local");
+    await createTask(client, workspaceName, "dep-blocker", "test-local");
 
-    const workspaceId = await getWorkspaceId(page, workspaceName);
-    const blockerTaskId = await getTaskId(page, workspaceId, "dep-blocker");
+    const workspaceId = await getWorkspaceId(client, workspaceName);
+    const blockerTaskId = await getTaskId(client, workspaceId, "dep-blocker");
 
-    await createTaskViaWs(page, workspaceId, "dep-blocked", {
+    await createTaskDirect(client, workspaceId, "dep-blocked", {
       environmentId: "test-local",
       dependsOn: [blockerTaskId],
     });
@@ -93,9 +93,9 @@ test.describe("Task Overview Tab", { tag: ["@task"] }, () => {
   });
 
   test("overview shows done dependencies in green", async ({ stubTask }) => {
-    const { page, workspaceName } = stubTask;
+    const { page, client, workspaceName } = stubTask;
 
-    await createTask(page, workspaceName, "done-blocker", "test-local");
+    await createTask(client, workspaceName, "done-blocker", "test-local");
 
     // Complete the blocker task
     await navigateToTask(page, "done-blocker");
@@ -103,11 +103,11 @@ test.describe("Task Overview Tab", { tag: ["@task"] }, () => {
     await page.getByRole("button", { name: "Stop", exact: true }).click();
     await expect(page.getByText("Task completed")).toBeVisible({ timeout: 5_000 });
 
-    const workspaceId = await getWorkspaceId(page, workspaceName);
-    const blockerTaskId = await getTaskId(page, workspaceId, "done-blocker");
+    const workspaceId = await getWorkspaceId(client, workspaceName);
+    const blockerTaskId = await getTaskId(client, workspaceId, "done-blocker");
 
     // Create a dependent task (its dep is already done)
-    await createTaskViaWs(page, workspaceId, "unblocked-task", {
+    await createTaskDirect(client, workspaceId, "unblocked-task", {
       environmentId: "test-local",
       dependsOn: [blockerTaskId],
     });
@@ -124,14 +124,14 @@ test.describe("Task Overview Tab", { tag: ["@task"] }, () => {
   });
 
   test("sidebar shows blocked badge for tasks with incomplete dependencies", async ({ stubTask }) => {
-    const { page, workspaceName } = stubTask;
+    const { page, client, workspaceName } = stubTask;
 
-    await createTask(page, workspaceName, "badge-blocker", "test-local");
+    await createTask(client, workspaceName, "badge-blocker", "test-local");
 
-    const workspaceId = await getWorkspaceId(page, workspaceName);
-    const blockerTaskId = await getTaskId(page, workspaceId, "badge-blocker");
+    const workspaceId = await getWorkspaceId(client, workspaceName);
+    const blockerTaskId = await getTaskId(client, workspaceId, "badge-blocker");
 
-    await createTaskViaWs(page, workspaceId, "badge-blocked", {
+    await createTaskDirect(client, workspaceId, "badge-blocked", {
       environmentId: "test-local",
       dependsOn: [blockerTaskId],
     });
