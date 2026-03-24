@@ -50,7 +50,7 @@ test.describe("Task Dependencies", { tag: ["@task"] }, () => {
 
     // Switch to Stream tab — CTA should also be hidden for blocked tasks
     await page.getByRole("tab", { name: "Stream" }).click();
-    await expect(page.locator('[data-testid="stream-start-cta"]')).not.toBeVisible();
+    await expect(page.locator('[data-testid="stream-start-cta"]')).toHaveCount(0);
     await expect(page.locator('[data-testid="stream-blocked-message"]')).toBeVisible();
   });
 
