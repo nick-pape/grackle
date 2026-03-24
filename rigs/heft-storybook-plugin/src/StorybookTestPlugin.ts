@@ -60,10 +60,17 @@ class StorybookTestPlugin implements IHeftTaskPlugin {
       const port: number = await findFreePort();
       session.logger.terminal.writeLine(`Starting Storybook static server on port ${port}...`);
 
+      const suppressWarningsEnv: NodeJS.ProcessEnv = {
+        ...process.env,
+        STORYBOOK_DISABLE_TELEMETRY: "1",
+        CI: "true",
+        NODE_NO_WARNINGS: "1",
+      };
+
       const server: ChildProcess = spawn(
         httpServerBin,
         [staticDir, "--port", String(port), "--silent"],
-        { cwd: buildFolder, stdio: "inherit", shell: isWindows },
+        { cwd: buildFolder, stdio: "ignore", shell: isWindows, env: suppressWarningsEnv },
       );
 
       try {
@@ -74,7 +81,7 @@ class StorybookTestPlugin implements IHeftTaskPlugin {
           cwd: buildFolder,
           stdio: "inherit",
           shell: isWindows,
-          env: { ...process.env, STORYBOOK_DISABLE_TELEMETRY: "1", CI: "true" },
+          env: suppressWarningsEnv,
         });
 
         session.logger.terminal.writeLine("Storybook interaction tests completed.");
