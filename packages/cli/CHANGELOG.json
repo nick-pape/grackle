@@ -2,6 +2,35 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.74.0",
+      "tag": "@grackle-ai/cli_v0.74.0",
+      "date": "Tue, 24 Mar 2026 04:08:14 GMT",
+      "comments": {
+        "none": [
+          {
+            "comment": "placeholder"
+          },
+          {
+            "comment": "placeholder"
+          },
+          {
+            "comment": "placeholder"
+          },
+          {
+            "comment": "placeholder"
+          },
+          {
+            "comment": "placeholder"
+          }
+        ],
+        "minor": [
+          {
+            "comment": "feat(powerline): scriptable stub runtime via JSON scenario in prompt"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.73.1",
       "tag": "@grackle-ai/cli_v0.73.1",
       "date": "Mon, 23 Mar 2026 19:41:20 GMT",
