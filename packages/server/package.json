@@ -35,6 +35,7 @@
     "@grackle-ai/core": "workspace:*",
     "@grackle-ai/database": "workspace:*",
     "@grackle-ai/mcp": "workspace:*",
+    "@grackle-ai/powerline": "workspace:*",
     "@grackle-ai/web-server": "workspace:*",
     "pino": "^10.3.1",
     "qrcode": "^1.5.4"
