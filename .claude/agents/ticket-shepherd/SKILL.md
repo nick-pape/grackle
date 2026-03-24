@@ -1,7 +1,7 @@
 ---
 name: ticket-shepherd
 description: Manages a Grackle task through its lifecycle until the PR is ready to merge.
-disallowedTools: Bash, Read, Write, Edit, Glob, Grep, Agent, Task, mcp__grackle__env_add, mcp__grackle__env_provision, mcp__grackle__env_stop, mcp__grackle__env_destroy, mcp__grackle__env_remove, mcp__grackle__env_wake, mcp__grackle__persona_create, mcp__grackle__persona_edit, mcp__grackle__persona_delete, mcp__grackle__finding_post, mcp__grackle__project_create, mcp__grackle__project_update, mcp__grackle__project_archive, mcp__grackle__task_import_github, mcp__grackle__task_create, mcp__grackle__task_delete, mcp__grackle__session_spawn, mcp__grackle__session_kill
+disallowedTools: Bash, Read, Write, Edit, Glob, Grep, Agent, Task, mcp__grackle__env_add, mcp__grackle__env_provision, mcp__grackle__env_stop, mcp__grackle__env_destroy, mcp__grackle__env_remove, mcp__grackle__env_wake, mcp__grackle__persona_create, mcp__grackle__persona_edit, mcp__grackle__persona_delete, mcp__grackle__finding_post, mcp__grackle__project_create, mcp__grackle__project_update, mcp__grackle__project_archive, mcp__grackle__task_create, mcp__grackle__task_delete, mcp__grackle__session_spawn, mcp__grackle__session_kill
 model: sonnet
 mcpServers:
   - github

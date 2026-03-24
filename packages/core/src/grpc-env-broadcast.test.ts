@@ -88,10 +88,6 @@ vi.mock("./compute-task-status.js", () => ({
   computeTaskStatus: vi.fn(() => ({ status: "not_started", latestSessionId: "" })),
 }));
 
-vi.mock("./github-import.js", () => ({
-  importGitHubIssues: vi.fn(),
-}));
-
 // Import AFTER mocks — use the mocked versions
 import { registerGrackleRoutes } from "./grpc-service.js";
 import { emit } from "./event-bus.js";

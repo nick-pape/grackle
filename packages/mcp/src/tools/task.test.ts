@@ -21,7 +21,6 @@ function createMockClient(): GrackleClient {
     deleteTask: vi.fn(),
     completeTask: vi.fn(),
     resumeTask: vi.fn(),
-    importGitHubIssues: vi.fn(),
   } as unknown as GrackleClient;
 }
 
@@ -567,76 +566,3 @@ describe("task_resume", () => {
   });
 });
 
-describe("task_import_github", () => {
-  /** Should convert state string via issueStateToEnum and apply defaults. */
-  test("happy path with defaults", async () => {
-    const mockClient = createMockClient();
-    (mockClient.importGitHubIssues as ReturnType<typeof vi.fn>).mockResolvedValue({
-      imported: 3,
-      linked: 1,
-      skipped: 0,
-    });
-
-    const result = await getTool("task_import_github").handler(
-      { workspaceId: "proj-1", repo: "octocat/hello-world" },
-      mockClient,
-    );
-    const parsed = JSON.parse(result.content[0].text);
-
-    expect(parsed.imported).toBe(3);
-    expect(parsed.linked).toBe(1);
-    expect(parsed.skipped).toBe(0);
-
-    const callArgs = (mockClient.importGitHubIssues as ReturnType<typeof vi.fn>).mock.calls[0][0];
-    expect(callArgs.workspaceId).toBe("proj-1");
-    expect(callArgs.repo).toBe("octocat/hello-world");
-    expect(callArgs.label).toBe("");
-    // state should be a numeric enum value from issueStateToEnum("open")
-    expect(typeof callArgs.state).toBe("number");
-    expect(callArgs.environmentId).toBe("");
-    expect(callArgs.includeComments).toBe(true);
-  });
-
-  /** Should pass explicit label and state. */
-  test("passes explicit label and state", async () => {
-    const mockClient = createMockClient();
-    (mockClient.importGitHubIssues as ReturnType<typeof vi.fn>).mockResolvedValue({
-      imported: 1,
-      linked: 0,
-      skipped: 2,
-    });
-
-    await getTool("task_import_github").handler(
-      {
-        workspaceId: "proj-1",
-        repo: "octocat/hello-world",
-        label: "bug",
-        state: "closed",
-        includeComments: false,
-      },
-      mockClient,
-    );
-
-    const callArgs = (mockClient.importGitHubIssues as ReturnType<typeof vi.fn>).mock.calls[0][0];
-    expect(callArgs.label).toBe("bug");
-    expect(typeof callArgs.state).toBe("number");
-    expect(callArgs.includeComments).toBe(false);
-  });
-
-  /** Should return a structured error on ConnectError. */
-  test("ConnectError returns isError result", async () => {
-    const mockClient = createMockClient();
-    (mockClient.importGitHubIssues as ReturnType<typeof vi.fn>).mockRejectedValue(
-      new ConnectError("unavailable", Code.Unavailable),
-    );
-
-    const result = await getTool("task_import_github").handler(
-      { workspaceId: "proj-1", repo: "octocat/hello-world" },
-      mockClient,
-    );
-
-    expect(result.isError).toBe(true);
-    const parsed = JSON.parse(result.content[0].text);
-    expect(parsed.code).toBe("UNAVAILABLE");
-  });
-});
