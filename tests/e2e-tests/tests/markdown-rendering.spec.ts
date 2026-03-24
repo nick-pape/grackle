@@ -1,10 +1,8 @@
 import { test, expect } from "./fixtures.js";
-import {
-  installWsTracker,
-} from "./helpers.js";
+import { installWsTracker } from "./helpers.js";
 
 test.describe("Markdown Rendering in EventRenderer", { tag: ["@webui"] }, () => {
-  test("renders markdown headings, bold, and links in text events", async ({ page }) => {
+  test("text events render inside markdown-wrapped textEvent divs", async ({ page }) => {
     await installWsTracker(page);
     await page.goto("/");
     await page.waitForFunction(
@@ -32,7 +30,7 @@ test.describe("Markdown Rendering in EventRenderer", { tag: ["@webui"] }, () => 
     await expect(textEventDivs.first().locator("p")).toBeVisible();
   });
 
-  test("renders fenced code blocks with syntax highlighting", async ({ page }) => {
+  test("text events are wrapped in paragraph elements by react-markdown", async ({ page }) => {
     await installWsTracker(page);
     await page.goto("/");
     await page.waitForFunction(
