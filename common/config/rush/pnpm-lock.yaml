@@ -64,7 +64,7 @@ importers:
         version: 22.19.15
       vitest:
         specifier: ^3.1.1
-        version: 3.2.4(@types/debug@4.1.12)(@types/node@22.19.15)(jiti@1.21.7)(jsdom@29.0.0)(sass@1.98.0)(terser@5.46.1)
+        version: 3.2.4(@types/debug@4.1.13)(@types/node@22.19.15)(jiti@1.21.7)(jsdom@29.0.1)(sass@1.98.0)(terser@5.46.1)
 
   ../../packages/adapter-docker:
     dependencies:
@@ -86,7 +86,7 @@ importers:
         version: 22.19.15
       vitest:
         specifier: ^3.1.1
-        version: 3.2.4(@types/debug@4.1.12)(@types/node@22.19.15)(jiti@1.21.7)(jsdom@29.0.0)(sass@1.98.0)(terser@5.46.1)
+        version: 3.2.4(@types/debug@4.1.13)(@types/node@22.19.15)(jiti@1.21.7)(jsdom@29.0.1)(sass@1.98.0)(terser@5.46.1)
 
   ../../packages/adapter-local:
     dependencies:
@@ -108,7 +108,7 @@ importers:
         version: 22.19.15
       vitest:
         specifier: ^3.1.1
-        version: 3.2.4(@types/debug@4.1.12)(@types/node@22.19.15)(jiti@1.21.7)(jsdom@29.0.0)(sass@1.98.0)(terser@5.46.1)
+        version: 3.2.4(@types/debug@4.1.13)(@types/node@22.19.15)(jiti@1.21.7)(jsdom@29.0.1)(sass@1.98.0)(terser@5.46.1)
 
   ../../packages/adapter-sdk:
     dependencies:
@@ -158,7 +158,7 @@ importers:
         version: 22.19.15
       vitest:
         specifier: ^3.1.1
-        version: 3.2.4(@types/debug@4.1.12)(@types/node@22.19.15)(jiti@1.21.7)(jsdom@29.0.0)(sass@1.98.0)(terser@5.46.1)
+        version: 3.2.4(@types/debug@4.1.13)(@types/node@22.19.15)(jiti@1.21.7)(jsdom@29.0.1)(sass@1.98.0)(terser@5.46.1)
 
   ../../packages/auth:
     dependencies:
@@ -177,7 +177,7 @@ importers:
         version: 22.19.15
       vitest:
         specifier: ^3.1.1
-        version: 3.2.4(@types/debug@4.1.12)(@types/node@22.19.15)(jiti@1.21.7)(jsdom@29.0.0)(sass@1.98.0)(terser@5.46.1)
+        version: 3.2.4(@types/debug@4.1.13)(@types/node@22.19.15)(jiti@1.21.7)(jsdom@29.0.1)(sass@1.98.0)(terser@5.46.1)
 
   ../../packages/cli:
     dependencies:
@@ -288,7 +288,7 @@ importers:
         version: 10.0.0
       vitest:
         specifier: ^3.1.1
-        version: 3.2.4(@types/debug@4.1.12)(@types/node@22.19.15)(jiti@1.21.7)(jsdom@29.0.0)(sass@1.98.0)(terser@5.46.1)
+        version: 3.2.4(@types/debug@4.1.13)(@types/node@22.19.15)(jiti@1.21.7)(jsdom@29.0.1)(sass@1.98.0)(terser@5.46.1)
 
   ../../packages/knowledge:
     dependencies:
@@ -431,7 +431,7 @@ importers:
         version: 22.19.15
       vitest:
         specifier: ^3.1.1
-        version: 3.2.4(@types/debug@4.1.12)(@types/node@22.19.15)(jiti@1.21.7)(jsdom@29.0.0)(sass@1.98.0)(terser@5.46.1)
+        version: 3.2.4(@types/debug@4.1.13)(@types/node@22.19.15)(jiti@1.21.7)(jsdom@29.0.1)(sass@1.98.0)(terser@5.46.1)
 
   ../../packages/server:
     dependencies:
@@ -483,6 +483,9 @@ importers:
       '@grackle-ai/web':
         specifier: workspace:*
         version: link:../web
+      '@grackle-ai/web-server':
+        specifier: workspace:*
+        version: link:../web-server
       better-sqlite3:
         specifier: ^11.0.0
         version: 11.10.0
@@ -623,6 +626,34 @@ importers:
       vite:
         specifier: ^6.0.0
         version: 6.4.1(@types/node@22.19.15)(jiti@1.21.7)(sass@1.98.0)(terser@5.46.1)
+      vitest:
+        specifier: ^3.1.1
+        version: 3.2.4(@types/debug@4.1.13)(@types/node@22.19.15)(jiti@1.21.7)(jsdom@29.0.1)(sass@1.98.0)(terser@5.46.1)
+
+  ../../packages/web-server:
+    dependencies:
+      '@connectrpc/connect':
+        specifier: ^2.0.0
+        version: 2.1.1(@bufbuild/protobuf@2.11.0)
+      '@connectrpc/connect-node':
+        specifier: ^2.0.0
+        version: 2.1.1(@bufbuild/protobuf@2.11.0)(@connectrpc/connect@2.1.1(@bufbuild/protobuf@2.11.0))
+      '@grackle-ai/auth':
+        specifier: workspace:*
+        version: link:../auth
+      '@grackle-ai/web':
+        specifier: workspace:*
+        version: link:../web
+    devDependencies:
+      '@grackle-ai/heft-rig':
+        specifier: workspace:*
+        version: link:../../rigs/heft-rig
+      '@rushstack/heft':
+        specifier: 1.2.7
+        version: 1.2.7(@types/node@22.19.15)
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.19.15
       vitest:
         specifier: ^3.1.1
         version: 3.2.4(@types/debug@4.1.13)(@types/node@22.19.15)(jiti@1.21.7)(jsdom@29.0.1)(sass@1.98.0)(terser@5.46.1)

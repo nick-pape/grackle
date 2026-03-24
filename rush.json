@@ -103,6 +103,11 @@
       "versionPolicyName": "grackle"
     },
     {
+      "packageName": "@grackle-ai/web-server",
+      "projectFolder": "packages/web-server",
+      "versionPolicyName": "grackle"
+    },
+    {
       "packageName": "@grackle-ai/e2e-tests",
       "projectFolder": "tests/e2e-tests"
     },
