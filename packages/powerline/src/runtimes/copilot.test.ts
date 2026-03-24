@@ -387,3 +387,187 @@ describe("CopilotRuntime — usage event emission", () => {
     expect(data.cost_usd).toBe(0);
   });
 });
+
+// ─── Multi-turn integration tests ──────────────────────────
+
+/** Drain events from a stream iterator until a status event with the given content. */
+async function drainUntilStatus(
+  nextEvent: () => Promise<AgentEvent | undefined>,
+  statusContent: string,
+): Promise<AgentEvent[]> {
+  const collected: AgentEvent[] = [];
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- loop until match
+  while (true) {
+    const event = await nextEvent();
+    if (!event) {
+      throw new Error(`Stream ended before status "${statusContent}"`);
+    }
+    collected.push(event);
+    if (event.type === "status" && event.content === statusContent) {
+      return collected;
+    }
+  }
+}
+
+describe("CopilotRuntime — multi-turn", () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let handlers: Record<string, (...args: any[]) => void>;
+  let sendCallCount: number;
+  let mockCopilotClient: Record<string, ReturnType<typeof vi.fn>>;
+
+  beforeEach(() => {
+    vi.stubEnv("GRACKLE_MCP_CONFIG", "");
+
+    handlers = {};
+    sendCallCount = 0;
+
+    const mockCopilotSession = {
+      sessionId: "copilot-mt-session",
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      on: vi.fn((event: string, fn: (...args: any[]) => void) => { handlers[event] = fn; }),
+      send: vi.fn(async () => {
+        sendCallCount++;
+        const turn = sendCallCount;
+        setTimeout(() => {
+          // Fire a text delta with per-turn content
+          handlers["assistant.message_delta"]?.({
+            data: { messageId: `m${turn}`, deltaContent: `turn${turn} response` },
+          });
+          handlers["session.idle"]?.();
+        }, 0);
+      }),
+      destroy: vi.fn(async () => {}),
+      abort: vi.fn(),
+    };
+    mockCopilotClient = {
+      start: vi.fn(async () => {}),
+      stop: vi.fn(async () => []),
+      createSession: vi.fn(async () => mockCopilotSession),
+      resumeSession: vi.fn(async () => mockCopilotSession),
+    };
+
+    _setCopilotSdkForTesting({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      CopilotClient: vi.fn(() => mockCopilotClient) as any,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      defineTool: vi.fn() as any,
+      approveAll: vi.fn(),
+    });
+  });
+
+  afterEach(() => {
+    _setCopilotSdkForTesting(undefined);
+    vi.unstubAllEnvs();
+  });
+
+  /** Spawn a session and return an iterator-based event consumer. */
+  function spawnSession(prompt: string = "hello") {
+    const runtime = new CopilotRuntime();
+    const session = runtime.spawn({
+      sessionId: "cop-mt",
+      prompt,
+      model: "gpt-4o",
+      maxTurns: 0,
+    });
+    const streamIterator = session.stream()[Symbol.asyncIterator]();
+    const nextEvent = async (): Promise<AgentEvent | undefined> => {
+      const result = await streamIterator.next();
+      return result.done ? undefined : result.value;
+    };
+    return { session, nextEvent };
+  }
+
+  it("follow-up events appear in stream after sendInput", async () => {
+    const { session, nextEvent } = spawnSession();
+
+    // Drain initial turn
+    const turn1Events = await drainUntilStatus(nextEvent, "waiting_input");
+    expect(turn1Events.some((e) => e.type === "text" && e.content === "turn1 response")).toBe(true);
+
+    // Send follow-up
+    session.sendInput("follow-up");
+    await drainUntilStatus(nextEvent, "running");
+    const turn2Events = await drainUntilStatus(nextEvent, "waiting_input");
+    expect(turn2Events.some((e) => e.type === "text" && e.content === "turn2 response")).toBe(true);
+
+    session.kill();
+  });
+
+  it("copilotSession is reused across turns (createSession once, send per turn)", async () => {
+    const { session, nextEvent } = spawnSession();
+    await drainUntilStatus(nextEvent, "waiting_input");
+
+    session.sendInput("second turn");
+    await drainUntilStatus(nextEvent, "running");
+    await drainUntilStatus(nextEvent, "waiting_input");
+
+    expect(mockCopilotClient.createSession).toHaveBeenCalledTimes(1);
+    expect(sendCallCount).toBe(2); // once per turn (initial + follow-up)
+
+    session.kill();
+  });
+
+  it("usage events emitted per turn", async () => {
+    // Override send to also fire usage events
+    sendCallCount = 0;
+    const mockSession = mockCopilotClient.createSession.mock.results[0]?.value;
+    // We need to re-setup with usage-producing send. Easiest: just override the send in beforeEach mock.
+    // The beforeEach send already fires message_delta + idle. Let's enhance it to also fire usage.
+    // Since we can't easily change the mock after construction, let's just add usage handlers to the existing flow.
+
+    // Actually, let's set up a fresh mock with usage
+    let usageSendCount = 0;
+    const usageHandlers: Record<string, (...args: any[]) => void> = {};
+    const usageMockSession = {
+      sessionId: "copilot-usage-mt",
+      on: vi.fn((event: string, fn: (...args: any[]) => void) => { usageHandlers[event] = fn; }),
+      send: vi.fn(async () => {
+        usageSendCount++;
+        const turn = usageSendCount;
+        setTimeout(() => {
+          usageHandlers["assistant.message_delta"]?.({
+            data: { messageId: `m${turn}`, deltaContent: `t${turn}` },
+          });
+          usageHandlers["assistant.usage"]?.({
+            data: { inputTokens: turn * 100, outputTokens: turn * 10, cacheReadTokens: 0, cacheWriteTokens: 0, cost: 0, model: "gpt-4o" },
+          });
+          usageHandlers["session.idle"]?.();
+        }, 0);
+      }),
+      destroy: vi.fn(async () => {}),
+      abort: vi.fn(),
+    };
+
+    _setCopilotSdkForTesting({
+      CopilotClient: vi.fn(() => ({
+        start: vi.fn(async () => {}),
+        stop: vi.fn(async () => []),
+        createSession: vi.fn(async () => usageMockSession),
+        resumeSession: vi.fn(async () => usageMockSession),
+      })) as any,
+      defineTool: vi.fn() as any,
+      approveAll: vi.fn(),
+    });
+
+    const { session, nextEvent } = spawnSession();
+    const turn1Events = await drainUntilStatus(nextEvent, "waiting_input");
+
+    session.sendInput("more");
+    await drainUntilStatus(nextEvent, "running");
+    const turn2Events = await drainUntilStatus(nextEvent, "waiting_input");
+
+    const allEvents = [...turn1Events, ...turn2Events];
+    const usageEvents = allEvents.filter((e) => e.type === "usage");
+    expect(usageEvents).toHaveLength(2);
+
+    const usage1 = JSON.parse(usageEvents[0].content) as Record<string, number>;
+    expect(usage1.input_tokens).toBe(100);
+    expect(usage1.output_tokens).toBe(10);
+
+    const usage2 = JSON.parse(usageEvents[1].content) as Record<string, number>;
+    expect(usage2.input_tokens).toBe(200);
+    expect(usage2.output_tokens).toBe(20);
+
+    session.kill();
+  });
+});
