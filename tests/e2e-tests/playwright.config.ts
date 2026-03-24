@@ -1,4 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
+import { cpus } from "node:os";
 
 /**
  * Build a grep RegExp from the E2E_TAGS environment variable.
@@ -17,13 +18,30 @@ function buildTagGrep(): RegExp | undefined {
   return tags.length > 0 ? new RegExp(tags.join("|")) : undefined;
 }
 
+/** Default parallel workers: override via E2E_WORKERS, else 2 in CI, else min(4, cpuCount/2). */
+function getWorkerCount(): number | string {
+  const envWorkers = process.env.E2E_WORKERS?.trim();
+  if (envWorkers) {
+    if (envWorkers.endsWith("%")) {
+      return envWorkers;
+    }
+    const n = parseInt(envWorkers, 10);
+    if (!isNaN(n) && n > 0) {
+      return n;
+    }
+  }
+  if (process.env.CI) {
+    return 2;
+  }
+  return Math.max(1, Math.min(4, Math.floor(cpus().length / 2)));
+}
+
 export default defineConfig({
   testDir: "./tests",
   timeout: 30_000,
   retries: process.env.CI ? 1 : 0,
-  workers: 1,
+  workers: getWorkerCount(),
+  fullyParallel: true,
   grep: buildTagGrep(),
-  globalSetup: "./tests/global-setup.ts",
-  globalTeardown: "./tests/global-teardown.ts",
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
 });

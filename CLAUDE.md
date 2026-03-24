@@ -48,7 +48,7 @@ npx buf generate
 
 - **Rebuild before manual testing**: After making code changes to any package, you must run `rush build -t @grackle-ai/<package>` before starting or restarting the server. The server runs compiled JS from `dist/`, not TypeScript source files.
 - **CLI uses `GRACKLE_URL`, not `GRACKLE_PORT`**: The CLI client reads `GRACKLE_URL` (e.g., `http://127.0.0.1:7500`) to find the gRPC server. Setting `GRACKLE_PORT` only affects the server's listen port, not the CLI's connection target.
-- **Run Playwright suites sequentially when invoking them manually**: `tests/e2e-tests/tests/global-setup.ts` and `global-teardown.ts` share a temp state file for the isolated stack. Launching separate `playwright test` commands in parallel can make one teardown remove the other run's state file and kill its server, causing `ENOENT` / connection-refused failures.
+- **Playwright runs in parallel**: Each worker spawns its own isolated Grackle stack (4 ports + GRACKLE_HOME). Worker count defaults to `min(4, cpuCount/2)` locally, 2 in CI. Override via `E2E_WORKERS` env var.
 
 ## Manual Testing
 
