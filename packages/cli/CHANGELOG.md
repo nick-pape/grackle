@@ -1,6 +1,17 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Tue, 24 Mar 2026 06:19:57 GMT and should not be manually modified.
+This log was last generated on Tue, 24 Mar 2026 06:50:00 GMT and should not be manually modified.
+
+## 0.75.2
+Tue, 24 Mar 2026 06:50:00 GMT
+
+### Patches
+
+- Move 35 WebSocket API tests from Playwright E2E to server-side Vitest integration tests
+
+### Updates
+
+- placeholder
 
 ## 0.75.1
 Tue, 24 Mar 2026 06:19:57 GMT
