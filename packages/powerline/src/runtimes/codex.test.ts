@@ -541,6 +541,21 @@ describe("Codex streaming field extraction", () => {
     expect(myStdio.env).toEqual({ FOO: "bar" });
   });
 
+  it("passes skipGitRepoCheck: true to startThread (#535)", async () => {
+    mockRunStreamedEvents = [
+      { type: "item.completed", item: { type: "agent_message", text: "done" } },
+    ];
+
+    const session = runtime.spawn({ sessionId: "cdx-skip-git", prompt: "test", model: "codex-mini", maxTurns: 1 });
+    await collectEvents(session);
+
+    expect(mockStartThread).toHaveBeenCalledTimes(1);
+    const threadOpts = mockStartThread.mock.calls[0][0] as Record<string, unknown>;
+    expect(threadOpts.skipGitRepoCheck).toBe(true);
+    expect(threadOpts.sandboxMode).toBe("workspace-write");
+    expect(threadOpts.approvalPolicy).toBe("never");
+  });
+
   it("emits usage event from turn.completed with cached tokens", async () => {
     mockRunStreamedEvents = [
       { type: "thread.started", thread_id: "t1" },
