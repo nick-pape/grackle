@@ -54,6 +54,15 @@ describe("parseScenario", () => {
     expect(result!.steps[0]).toEqual({ emit: "text", content: "hello" });
   });
 
+  it("parses pretty-printed scenario JSON in task prompt", () => {
+    const scenario = JSON.stringify({ steps: [{ emit: "text", content: "hi" }] }, null, 2);
+    const prompt = `task title\n\n${scenario}`;
+    const result = parseScenario(prompt);
+    expect(result).toBeDefined();
+    expect(result!.steps).toHaveLength(1);
+    expect(result!.steps[0]).toEqual({ emit: "text", content: "hi" });
+  });
+
   it("ignores non-scenario JSON lines in multi-line prompt", () => {
     // A line with { but not a valid scenario should not match
     const prompt = 'task title\n\n{"notAScenario": true}\n\nmore text';

@@ -107,15 +107,16 @@ export function parseScenario(prompt: string): Scenario | undefined {
     return tryParse(jsonPart);
   }
 
-  // Case 3: prompt is multi-line (e.g. "title\n\n{...}") — scan for a line
-  // starting with "{" that parses as a valid scenario. This handles prompts
-  // built by buildTaskPrompt(title, description) where the description is
-  // the scenario JSON.
+  // Case 3: prompt is multi-line (e.g. "title\n\n{...}") — find the first
+  // line starting with "{" and try to parse everything from that line onward.
+  // This handles prompts built by buildTaskPrompt(title, description) where
+  // the description is the scenario JSON, which may be single-line or
+  // pretty-printed across multiple lines.
   const lines = trimmed.split("\n");
-  for (const line of lines) {
-    const stripped = line.trim();
-    if (stripped.startsWith("{")) {
-      const result = tryParse(stripped);
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].trim().startsWith("{")) {
+      const jsonBlock = lines.slice(i).join("\n").trim();
+      const result = tryParse(jsonBlock);
       if (result) {
         return result;
       }
