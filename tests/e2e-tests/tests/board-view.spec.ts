@@ -1,19 +1,16 @@
 import { test, expect } from "./fixtures.js";
 import {
   navigateToWorkspace,
-  createWorkspace,
   createTask,
   navigateToTask,
-  patchWsForStubRuntime,
 } from "./helpers.js";
 
 test.describe("Board View", { tag: ["@workspace"] }, () => {
-  test("Board tab is visible after selecting a workspace", async ({ appPage }) => {
-    const page = appPage;
+  test("Board tab is visible after selecting a workspace", async ({ stubTask }) => {
+    const { page, workspaceName } = stubTask;
 
-    await createWorkspace(page, "board-tab-vis");
-    await createTask(page, "board-tab-vis", "board-vis-task");
-    await navigateToWorkspace(page, "board-tab-vis");
+    await createTask(page, workspaceName, "board-vis-task");
+    await navigateToWorkspace(page, workspaceName);
 
     // Board tab should be visible
     const boardTab = page.getByTestId("board-tab");
@@ -27,12 +24,11 @@ test.describe("Board View", { tag: ["@workspace"] }, () => {
     await expect(page.getByTestId("board-tab")).not.toBeVisible();
   });
 
-  test("clicking a card navigates to task detail", async ({ appPage }) => {
-    const page = appPage;
+  test("clicking a card navigates to task detail", async ({ stubTask }) => {
+    const { page, workspaceName } = stubTask;
 
-    await createWorkspace(page, "board-nav");
-    await createTask(page, "board-nav", "board-nav-task");
-    await navigateToWorkspace(page, "board-nav");
+    await createTask(page, workspaceName, "board-nav-task");
+    await navigateToWorkspace(page, workspaceName);
 
     // Switch to Board
     await page.getByTestId("board-tab").click();
@@ -46,12 +42,11 @@ test.describe("Board View", { tag: ["@workspace"] }, () => {
     await expect(page.locator('[data-testid="task-status"]')).toBeVisible({ timeout: 5_000 });
   });
 
-  test("card is focusable via keyboard", async ({ appPage }) => {
-    const page = appPage;
+  test("card is focusable via keyboard", async ({ stubTask }) => {
+    const { page, workspaceName } = stubTask;
 
-    await createWorkspace(page, "board-focus");
-    await createTask(page, "board-focus", "focus-task");
-    await navigateToWorkspace(page, "board-focus");
+    await createTask(page, workspaceName, "focus-task");
+    await navigateToWorkspace(page, workspaceName);
 
     await page.getByTestId("board-tab").click();
     await expect(page.getByTestId("board-container")).toBeVisible({ timeout: 5_000 });
@@ -65,12 +60,11 @@ test.describe("Board View", { tag: ["@workspace"] }, () => {
     await expect(page.locator('[data-testid="task-status"]')).toBeVisible({ timeout: 5_000 });
   });
 
-  test("real-time update moves card between columns", async ({ appPage }) => {
-    const page = appPage;
+  test("real-time update moves card between columns", async ({ stubTask }) => {
+    const { page, workspaceName } = stubTask;
 
-    await createWorkspace(page, "board-realtime");
-    await createTask(page, "board-realtime", "rt-task", "test-local");
-    await navigateToWorkspace(page, "board-realtime");
+    await createTask(page, workspaceName, "rt-task", "test-local");
+    await navigateToWorkspace(page, workspaceName);
 
     // Switch to board — card should be in Not Started
     await page.getByTestId("board-tab").click();
@@ -78,19 +72,17 @@ test.describe("Board View", { tag: ["@workspace"] }, () => {
     await expect(page.getByTestId("board-count-not_started")).toContainText("1");
     await expect(page.getByTestId("board-count-working")).toContainText("0");
 
-    // Navigate to the task to start it
+    // Navigate to the task to start it (stub runtime patched by fixture)
     await navigateToTask(page, "rt-task");
     await expect(page.locator('[data-testid="task-status"]')).toContainText("not_started", { timeout: 5_000 });
 
-    // Patch WS and start the task with stub runtime
-    await patchWsForStubRuntime(page);
     await page.getByRole("button", { name: "Start", exact: true }).click();
 
     // Wait for task to transition to working
     await expect(page.locator('[data-testid="task-status"]')).toContainText(/working|paused/, { timeout: 15_000 });
 
     // Navigate back to the workspace and switch to board
-    await navigateToWorkspace(page, "board-realtime");
+    await navigateToWorkspace(page, workspaceName);
     await page.getByTestId("board-tab").click();
     await expect(page.getByTestId("board-container")).toBeVisible({ timeout: 5_000 });
 

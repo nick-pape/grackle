@@ -1,20 +1,11 @@
 import { test, expect } from "./fixtures.js";
-import {
-  createWorkspace,
-  createTask,
-  navigateToTask,
-  patchWsForStubRuntime,
-  runStubTaskToCompletion,
-} from "./helpers.js";
+import { runStubTaskToCompletion } from "./helpers.js";
 
 test.describe("Session history", { tag: ["@session"] }, () => {
-  test("single-session task hides attempt selector", async ({ appPage }) => {
-    const page = appPage;
+  test("single-session task hides attempt selector", async ({ stubTask }) => {
+    const { page } = stubTask;
 
-    await createWorkspace(page, "single-sess");
-    await createTask(page, "single-sess", "simple-task", "test-local");
-    await navigateToTask(page, "simple-task");
-    await patchWsForStubRuntime(page);
+    await stubTask.createAndNavigateSimple("simple-task");
 
     await runStubTaskToCompletion(page);
     await page.locator("button", { hasText: "Stream" }).click();
