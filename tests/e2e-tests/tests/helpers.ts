@@ -117,7 +117,6 @@ export async function sendWsAndWaitFor(
         method: string,
         body: Record<string, unknown>,
         eventType: string,
-        _timeoutMs: number,
       ): Promise<{ type: string; payload: Record<string, unknown> }> {
         const result = await rpc(method, body);
         // Map RPC responses to event-bus payload shapes
@@ -447,7 +446,7 @@ export async function sendWsAndWaitFor(
                 environments: ((r.environments || []) as Record<string, unknown>[]),
               }));
             }
-            return rpcThenWaitForEvent("UpdateEnvironment", updateBody, respType, timeout);
+            return rpcThenWaitForEvent("UpdateEnvironment", updateBody, respType);
           }
 
           case "remove_environment":
