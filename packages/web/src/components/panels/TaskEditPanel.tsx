@@ -32,6 +32,8 @@ interface Props {
     taskId: string, title: string, description: string,
     dependsOn: string[], defaultPersonaId?: string,
   ) => void;
+  /** Optional callback invoked when inline edit completes (save or cancel). When provided, navigation is skipped. */
+  onEditDone?: () => void;
 }
 
 /**
@@ -42,7 +44,7 @@ interface Props {
  * - edit: pre-populated form; calls updateTask on save, then navigates
  *         back to the task overview.
  */
-export function TaskEditPanel({ mode, taskId, workspaceId: workspaceIdProp, parentTaskId: parentTaskIdProp, environmentId: environmentIdProp, tasks, workspaces, personas, onCreateTask, onUpdateTask }: Props): JSX.Element {
+export function TaskEditPanel({ mode, taskId, workspaceId: workspaceIdProp, parentTaskId: parentTaskIdProp, environmentId: environmentIdProp, tasks, workspaces, personas, onCreateTask, onUpdateTask, onEditDone }: Props): JSX.Element {
   const { showToast } = useToast();
   const navigate = useAppNavigate();
 
@@ -124,7 +126,11 @@ export function TaskEditPanel({ mode, taskId, workspaceId: workspaceIdProp, pare
     if (isEdit && taskId) {
       onUpdateTask(taskId, title.trim(), description, selectedDeps, defaultPersonaId);
       showToast("Task updated", "success");
-      navigate(taskUrl(taskId, undefined, workspaceId, environmentId), { replace: true });
+      if (onEditDone) {
+        onEditDone();
+      } else {
+        navigate(taskUrl(taskId, undefined, workspaceId, environmentId), { replace: true });
+      }
     } else {
       setCreating(true);
       onCreateTask(
@@ -148,6 +154,10 @@ export function TaskEditPanel({ mode, taskId, workspaceId: workspaceIdProp, pare
   };
 
   const handleCancel = (): void => {
+    if (onEditDone) {
+      onEditDone();
+      return;
+    }
     if (isEdit && taskId) {
       navigate(taskUrl(taskId, undefined, workspaceId, environmentId));
     } else {

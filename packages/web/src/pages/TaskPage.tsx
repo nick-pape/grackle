@@ -4,9 +4,10 @@ import { useGrackle } from "../context/GrackleContext.js";
 import { EventStream } from "../components/display/EventStream.js";
 import { ChatInput } from "../components/chat/index.js";
 import { FindingsPanel } from "../components/panels/FindingsPanel.js";
+import { TaskEditPanel } from "../components/panels/TaskEditPanel.js";
 import { Breadcrumbs, ConfirmDialog } from "../components/display/index.js";
 import { buildTaskBreadcrumbs } from "../utils/breadcrumbs.js";
-import { taskEditUrl, taskUrl, workspaceUrl, useAppNavigate } from "../utils/navigation.js";
+import { taskUrl, workspaceUrl, useAppNavigate } from "../utils/navigation.js";
 import { getStatusBadgeClassKey, getStatusStyle } from "../utils/taskStatus.js";
 import type { Session, TaskData, Environment, Workspace } from "../hooks/useGrackleSocket.js";
 import { AnimatePresence, motion } from "motion/react";
@@ -343,7 +344,7 @@ export function TaskPage(): JSX.Element {
   const {
     events, eventsDropped, tasks, sessions, environments, findings,
     loadSessionEvents, loadFindings,
-    kill, startTask, stopTask, resumeTask, deleteTask,
+    kill, startTask, stopTask, resumeTask, deleteTask, createTask, updateTask,
     workspaces, taskSessions: taskSessionsMap, loadTaskSessions,
     sendInput, spawn, personas, provisionEnvironment,
   } = useGrackle();
@@ -364,6 +365,7 @@ export function TaskPage(): JSX.Element {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [selectedSessionId, setSelectedSessionId] = useState<string | undefined>(undefined);
   const [selectedEnvId, setSelectedEnvId] = useState<string>("");
+  const [isEditing, setIsEditing] = useState(false);
 
   // Sync tab with URL only when the URL-derived tab actually changes.
   // Use a ref to avoid fighting with the auto-switch-by-status logic.
@@ -520,7 +522,7 @@ export function TaskPage(): JSX.Element {
             onStop={() => stopTask(task.id)}
             onPause={() => sessionId && kill(sessionId)}
             onDelete={handleDeleteTask}
-            onEdit={() => navigate(taskEditUrl(task.id, routeWorkspaceId, routeEnvironmentId))}
+            onEdit={() => setIsEditing(true)}
           />
         )}
       </div>
@@ -542,7 +544,20 @@ export function TaskPage(): JSX.Element {
       <AnimatePresence mode="wait">
         {activeTaskTab === "overview" && (
           <motion.div key="overview" initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.15 }} className={styles.overviewContent} data-testid="task-overview">
-            {task ? (
+            {isEditing && task ? (
+              <TaskEditPanel
+                mode="edit"
+                taskId={task.id}
+                workspaceId={workspaceId}
+                environmentId={routeEnvironmentId}
+                tasks={tasks}
+                workspaces={workspaces}
+                personas={personas}
+                onCreateTask={createTask}
+                onUpdateTask={updateTask}
+                onEditDone={() => setIsEditing(false)}
+              />
+            ) : task ? (
               <TaskOverview task={task} tasksById={tasksById} environments={environments} workspaces={workspaces} taskSessions={currentTaskSessions} selectedEnvId={selectedEnvId} />
             ) : (
               <div className={styles.waitingMessage}>No additional details</div>

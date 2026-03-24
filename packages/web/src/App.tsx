@@ -20,7 +20,6 @@ import { SessionPage } from "./pages/SessionPage.js";
 import { WorkspacePage } from "./pages/WorkspacePage.js";
 import { WorkspaceCreatePage } from "./pages/WorkspaceCreatePage.js";
 import { NewTaskPage } from "./pages/NewTaskPage.js";
-import { TaskEditPage } from "./pages/TaskEditPage.js";
 import { TaskPage } from "./pages/TaskPage.js";
 import { NewEnvironmentPage } from "./pages/NewEnvironmentPage.js";
 import { EnvironmentEditPage } from "./pages/EnvironmentEditPage.js";
@@ -29,6 +28,7 @@ import { EnvironmentDetailPage } from "./pages/EnvironmentDetailPage.js";
 import { SettingsPage } from "./pages/SettingsPage.js";
 import { SettingsCredentialsTab } from "./pages/settings/SettingsCredentialsTab.js";
 import { SettingsPersonasTab } from "./pages/settings/SettingsPersonasTab.js";
+import { PersonaDetailPage } from "./pages/settings/PersonaDetailPage.js";
 import { SettingsAppearanceTab } from "./pages/settings/SettingsAppearanceTab.js";
 import { SettingsAboutTab } from "./pages/settings/SettingsAboutTab.js";
 import { SetupWizard } from "./pages/SetupWizard.js";
@@ -192,7 +192,6 @@ function AppRoutes(): JSX.Element {
           <Route path="tasks/:taskId" element={<TaskPage />} />
           <Route path="tasks/:taskId/stream" element={<TaskPage />} />
           <Route path="tasks/:taskId/findings" element={<TaskPage />} />
-          <Route path="tasks/:taskId/edit" element={<TaskEditPage />} />
         </Route>
 
         {/* Environments sidebar */}
@@ -207,7 +206,6 @@ function AppRoutes(): JSX.Element {
           <Route path="environments/:environmentId/workspaces/:workspaceId/tasks/:taskId" element={<TaskPage />} />
           <Route path="environments/:environmentId/workspaces/:workspaceId/tasks/:taskId/stream" element={<TaskPage />} />
           <Route path="environments/:environmentId/workspaces/:workspaceId/tasks/:taskId/findings" element={<TaskPage />} />
-          <Route path="environments/:environmentId/workspaces/:workspaceId/tasks/:taskId/edit" element={<TaskEditPage />} />
           <Route path="environments" element={<EnvironmentsPage />}>
             <Route index element={<EnvironmentsEmptyPage />} />
             <Route path="new" element={<NewEnvironmentPage />} />
@@ -224,6 +222,8 @@ function AppRoutes(): JSX.Element {
             <Route path="credentials" element={<SettingsCredentialsTab />} />
             <Route path="tokens" element={<Navigate to="../credentials" replace />} />
             <Route path="personas" element={<SettingsPersonasTab />} />
+            <Route path="personas/new" element={<PersonaDetailPage />} />
+            <Route path="personas/:personaId" element={<PersonaDetailPage />} />
             <Route path="appearance" element={<SettingsAppearanceTab />} />
             <Route path="about" element={<SettingsAboutTab />} />
           </Route>
