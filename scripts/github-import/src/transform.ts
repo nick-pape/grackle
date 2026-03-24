@@ -35,7 +35,7 @@ export interface TaskCreateInstruction {
   title: string;
   /** Full task description including comments. */
   description: string;
-  /** Resolved parent task ID, or empty string for root tasks. */
+  /** Parent task ID (may be provisional within a plan, or a real existing task ID). */
   parentTaskId: string;
   /** Original GitHub issue number. */
   issueNumber: number;

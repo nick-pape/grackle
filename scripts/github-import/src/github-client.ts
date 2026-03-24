@@ -10,15 +10,7 @@ const GH_CLI_TIMEOUT_MS: number = 5 * 60 * 1000;
 /** Number of issues fetched per GraphQL page. */
 const ISSUES_PER_PAGE: number = 100;
 
-/**
- * Maximum number of comments fetched per issue in a single GraphQL page.
- *
- * Kept at 25 as a practical upper bound. Fetching 100 issues x N comments
- * per issue in one GraphQL request can produce very large payloads for
- * active repositories. Issues with more than this many comments will have
- * their descriptions annotated with a truncation notice.
- */
-const COMMENTS_PER_ISSUE: number = 25;
+import { COMMENTS_PER_ISSUE } from "./transform.js";
 
 /** Maximum number of blockedBy relationships fetched per issue. */
 const BLOCKED_BY_PER_ISSUE: number = 25;

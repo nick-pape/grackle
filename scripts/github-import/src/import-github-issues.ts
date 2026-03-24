@@ -128,7 +128,7 @@ async function main(): Promise<void> {
         process.exit(1);
       }
 
-      const normalizedState = options.state.toLowerCase();
+      const normalizedState = options.state.trim().toLowerCase();
       if (normalizedState !== "open" && normalizedState !== "closed") {
         console.error(`Error: --state must be "open" or "closed" (received: "${options.state}")`);
         process.exit(1);
@@ -156,4 +156,7 @@ async function main(): Promise<void> {
   await program.parseAsync(process.argv);
 }
 
-main();
+main().catch((err) => {
+  console.error(err instanceof Error ? err.message : String(err));
+  process.exit(1);
+});
