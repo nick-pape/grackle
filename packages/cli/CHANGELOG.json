@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.75.6",
+      "tag": "@grackle-ai/cli_v0.75.6",
+      "date": "Tue, 24 Mar 2026 15:56:44 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Reject subtask creation when depends_on references an unknown local_id instead of silently dropping the dependency"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.75.5",
       "tag": "@grackle-ai/cli_v0.75.5",
       "date": "Tue, 24 Mar 2026 15:28:52 GMT",
