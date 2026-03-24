@@ -53,10 +53,12 @@ const mockRunStreamed = vi.fn(async () => ({
 }));
 const mockStartThread = vi.fn(() => ({ runStreamed: mockRunStreamed }));
 const mockResumeThread = vi.fn(() => ({ runStreamed: mockRunStreamed }));
-const MockCodex = vi.fn(() => ({
-  startThread: mockStartThread,
-  resumeThread: mockResumeThread,
-}));
+// Use a class instead of vi.fn(() => obj) — arrow functions are not valid JS constructors.
+// The source calls `new Codex(opts)`, so the mock must support `new`.
+const MockCodex = vi.fn(function (this: Record<string, unknown>) {
+  this.startThread = mockStartThread;
+  this.resumeThread = mockResumeThread;
+});
 
 vi.mock("@openai/codex-sdk", () => ({
   Codex: MockCodex,
@@ -709,6 +711,44 @@ describe("CodexRuntime — multi-turn", () => {
     const usage2 = JSON.parse(usageEvents[1].content) as Record<string, number>;
     expect(usage2.input_tokens).toBe(250); // 200 + 50 cached
     expect(usage2.output_tokens).toBe(20);
+
+    session.kill();
+  });
+
+  it("error in follow-up does not crash the session", async () => {
+    // Turn 1: success
+    mockRunStreamed.mockResolvedValueOnce({
+      events: asyncIterableFrom([
+        { type: "thread.started", thread_id: "thread-err" },
+        { type: "item.completed", item: { type: "agent_message", text: "ok" } },
+      ]),
+      abort: vi.fn(),
+    });
+    // Turn 2: runStreamed throws
+    mockRunStreamed.mockRejectedValueOnce(new Error("SDK connection lost"));
+    // Turn 3: recovery
+    mockRunStreamed.mockResolvedValueOnce({
+      events: asyncIterableFrom([
+        { type: "item.completed", item: { type: "agent_message", text: "recovered" } },
+      ]),
+      abort: vi.fn(),
+    });
+
+    const { session, nextEvent } = spawnSession();
+    await drainUntilStatus(nextEvent, "waiting_input");
+
+    // Follow-up that throws
+    session.sendInput("bad input");
+    await drainUntilStatus(nextEvent, "running");
+    // Should get an error event then return to waiting_input (loop survives)
+    const errorTurnEvents = await drainUntilStatus(nextEvent, "waiting_input");
+    expect(errorTurnEvents.some((e) => e.type === "error")).toBe(true);
+
+    // Send another input — session should still be alive
+    session.sendInput("retry");
+    await drainUntilStatus(nextEvent, "running");
+    const recoveryEvents = await drainUntilStatus(nextEvent, "waiting_input");
+    expect(recoveryEvents.some((e) => e.type === "text" && e.content === "recovered")).toBe(true);
 
     session.kill();
   });

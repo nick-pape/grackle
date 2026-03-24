@@ -499,15 +499,18 @@ describe("AcpRuntime — runtime_session_id emission", () => {
   beforeEach(() => {
     vi.stubEnv("GRACKLE_MCP_CONFIG", "");
 
+    // Use a class instead of vi.fn(() => obj) — arrow functions are not valid JS constructors.
+    // The source calls `new sdk.ClientSideConnection(...)`, so the mock must support `new`.
+    const mockConnectionObj = {
+      initialize: vi.fn(async () => ({ authMethods: [] })),
+      newSession: vi.fn(async () => ({ sessionId: "acp-test-session-xyz" })),
+      prompt: vi.fn(async () => {}),
+      cancel: vi.fn(async () => {}),
+    };
     const mockSdk: AcpSdkModule = {
       ndJsonStream: vi.fn(() => ({})),
       PROTOCOL_VERSION: 1,
-      ClientSideConnection: vi.fn(() => ({
-        initialize: vi.fn(async () => ({ authMethods: [] })),
-        newSession: vi.fn(async () => ({ sessionId: "acp-test-session-xyz" })),
-        prompt: vi.fn(async () => {}),
-        cancel: vi.fn(async () => {}),
-      })) as unknown as AcpSdkModule["ClientSideConnection"],
+      ClientSideConnection: class { constructor() { return mockConnectionObj; } } as unknown as AcpSdkModule["ClientSideConnection"],
     };
 
     _setAcpSdkForTesting(mockSdk);
@@ -604,13 +607,17 @@ describe("AcpRuntime — multi-turn", () => {
       cancel: vi.fn(async () => {}),
     };
 
+    // Use a class instead of vi.fn(() => obj) — arrow functions are not valid JS constructors.
+    // The source calls `new sdk.ClientSideConnection(handlerFactory, stream)`.
     const mockSdk: AcpSdkModule = {
       ndJsonStream: vi.fn(() => ({})),
       PROTOCOL_VERSION: 1,
-      ClientSideConnection: vi.fn((handlerFactory: () => Record<string, unknown>) => {
-        capturedHandlerFactory = handlerFactory as typeof capturedHandlerFactory;
-        return mockConnection;
-      }) as unknown as AcpSdkModule["ClientSideConnection"],
+      ClientSideConnection: class {
+        constructor(handlerFactory: () => Record<string, unknown>) {
+          capturedHandlerFactory = handlerFactory as typeof capturedHandlerFactory;
+          return mockConnection as unknown;
+        }
+      } as unknown as AcpSdkModule["ClientSideConnection"],
     };
 
     _setAcpSdkForTesting(mockSdk);
@@ -703,6 +710,43 @@ describe("AcpRuntime — multi-turn", () => {
     const parsed = JSON.parse(toolUse.content);
     expect(parsed.tool).toBe("read_file");
     expect(parsed.args).toEqual({ path: "/tmp/test" });
+
+    session.kill();
+  });
+
+  it("error in follow-up does not crash the session", async () => {
+    let localCallCount = 0;
+    mockConnection.prompt.mockImplementation(async () => {
+      localCallCount++;
+      if (localCallCount === 1) {
+        const handler = capturedHandlerFactory!();
+        handler.sessionUpdate({
+          update: { sessionUpdate: "agent_message_chunk", content: { type: "text", text: "initial" } },
+        });
+      } else if (localCallCount === 2) {
+        throw new Error("ACP subprocess crashed");
+      } else {
+        const handler = capturedHandlerFactory!();
+        handler.sessionUpdate({
+          update: { sessionUpdate: "agent_message_chunk", content: { type: "text", text: "recovered" } },
+        });
+      }
+    });
+
+    const { session, nextEvent } = spawnSession();
+    await drainUntilStatus(nextEvent, "waiting_input");
+
+    // Follow-up that throws
+    session.sendInput("bad");
+    await drainUntilStatus(nextEvent, "running");
+    const errorTurnEvents = await drainUntilStatus(nextEvent, "waiting_input");
+    expect(errorTurnEvents.some((e) => e.type === "error")).toBe(true);
+
+    // Session still alive
+    session.sendInput("retry");
+    await drainUntilStatus(nextEvent, "running");
+    const recoveryEvents = await drainUntilStatus(nextEvent, "waiting_input");
+    expect(recoveryEvents.some((e) => e.type === "text" && e.content === "recovered")).toBe(true);
 
     session.kill();
   });

@@ -507,6 +507,61 @@ describe("CopilotRuntime — multi-turn", () => {
     session.kill();
   });
 
+  it("error in follow-up does not crash the session", async () => {
+    // Override send: first call succeeds, second throws, third succeeds
+    let localSendCount = 0;
+    const mockCopilotSession = {
+      sessionId: "copilot-err-session",
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      on: vi.fn((event: string, fn: (...args: any[]) => void) => { handlers[event] = fn; }),
+      send: vi.fn(async () => {
+        localSendCount++;
+        const turn = localSendCount;
+        if (turn === 2) {
+          throw new Error("Copilot SDK connection lost");
+        }
+        setTimeout(() => {
+          handlers["assistant.message_delta"]?.({
+            data: { messageId: `m${turn}`, deltaContent: `turn${turn} ok` },
+          });
+          handlers["session.idle"]?.();
+        }, 0);
+      }),
+      destroy: vi.fn(async () => {}),
+      abort: vi.fn(),
+    };
+    mockCopilotClient = {
+      start: vi.fn(async () => {}),
+      stop: vi.fn(async () => []),
+      createSession: vi.fn(async () => mockCopilotSession),
+      resumeSession: vi.fn(async () => mockCopilotSession),
+    };
+    _setCopilotSdkForTesting({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      CopilotClient: class { constructor() { return mockCopilotClient; } } as any,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      defineTool: vi.fn() as any,
+      approveAll: vi.fn(),
+    });
+
+    const { session, nextEvent } = spawnSession();
+    await drainUntilStatus(nextEvent, "waiting_input");
+
+    // Follow-up that throws
+    session.sendInput("bad");
+    await drainUntilStatus(nextEvent, "running");
+    const errorTurnEvents = await drainUntilStatus(nextEvent, "waiting_input");
+    expect(errorTurnEvents.some((e) => e.type === "error")).toBe(true);
+
+    // Session still alive — send another input
+    session.sendInput("retry");
+    await drainUntilStatus(nextEvent, "running");
+    const recoveryEvents = await drainUntilStatus(nextEvent, "waiting_input");
+    expect(recoveryEvents.some((e) => e.type === "text" && e.content === "turn3 ok")).toBe(true);
+
+    session.kill();
+  });
+
   it("usage events emitted per turn", async () => {
     // Set up a fresh mock session that also emits usage events
     let usageSendCount = 0;

@@ -666,21 +666,29 @@ describe("ClaudeCodeRuntime — multi-turn persistent mode", () => {
     const turn2Events = await drainUntilStatus(nextEvent, "waiting_input");
     expect(turn2Events.some((e) => e.type === "text" && e.content.includes("response"))).toBe(true);
 
-    // query() called multiple times (persistent failed + fallback + follow-up)
-    expect(mockQuery.mock.calls.length).toBeGreaterThanOrEqual(2);
+    // Exact call sequence:
+    // Call 1: persistent mode (AsyncIterable prompt) — throws
+    // Call 2: fallback consumeQuery (string prompt, no resume — first turn)
+    // Call 3: follow-up consumeQuery (string prompt, with resume)
+    expect(mockQuery).toHaveBeenCalledTimes(3);
 
-    // The fallback calls should have string prompt (not AsyncIterable)
-    const fallbackCall = mockQuery.mock.calls.find(
-      (call) => typeof (call[0] as Record<string, unknown>).prompt === "string",
-    );
-    expect(fallbackCall).toBeDefined();
+    // Call 1: persistent mode attempted with AsyncIterable prompt
+    const call1 = mockQuery.mock.calls[0][0] as Record<string, unknown>;
+    expect(typeof call1.prompt).not.toBe("string");
 
-    // The follow-up call should have resume option
-    const resumeCall = mockQuery.mock.calls.find((call) => {
-      const opts = (call[0] as Record<string, unknown>).options as Record<string, unknown> | undefined;
-      return opts?.resume;
-    });
-    expect(resumeCall).toBeDefined();
+    // Call 2: fallback with string prompt, no resume option
+    const call2 = mockQuery.mock.calls[1][0] as Record<string, unknown>;
+    expect(typeof call2.prompt).toBe("string");
+    expect(call2.prompt).toBe("initial prompt");
+    const call2Opts = call2.options as Record<string, unknown>;
+    expect(call2Opts.resume).toBeUndefined();
+
+    // Call 3: follow-up with string prompt and resume option set to session ID from call 2
+    const call3 = mockQuery.mock.calls[2][0] as Record<string, unknown>;
+    expect(typeof call3.prompt).toBe("string");
+    expect(call3.prompt).toBe("follow-up");
+    const call3Opts = call3.options as Record<string, unknown>;
+    expect(call3Opts.resume).toBe("sess-fallback");
 
     session.kill();
   });
@@ -746,6 +754,55 @@ describe("ClaudeCodeRuntime — multi-turn persistent mode", () => {
     expect(usage2.input_tokens).toBe(250); // 200 + 50 cached
     expect(usage2.output_tokens).toBe(20);
     expect(usage2.cost_usd).toBe(0.02);
+
+    session.kill();
+  });
+
+  it("session degrades to resume-per-input when persistent stream ends early", async () => {
+    // Simulate: persistent mode works for turn 1, then the stream closes normally
+    // (e.g. process exits). The consumePersistentStream cleanup resolves
+    // turnCompleteResolve and clears promptQueue, so follow-ups fall back to
+    // resume-per-input.
+    let callCount = 0;
+    mockQuery.mockImplementation((queryInput: Record<string, unknown>) => {
+      callCount++;
+      if (callCount === 1 && typeof queryInput.prompt !== "string") {
+        // Persistent mode: yield turn 1 then close the stream (process exited)
+        const promptIterable = queryInput.prompt as AsyncIterable<Record<string, unknown>>;
+        return {
+          async *[Symbol.asyncIterator]() {
+            // Consume only the first prompt, yield response, then exit
+            const iter = promptIterable[Symbol.asyncIterator]();
+            await iter.next(); // consume initial prompt
+            yield { type: "system", subtype: "init", session_id: "sess-degrade", model: "claude-sonnet-4" };
+            yield { type: "assistant", message: { role: "assistant", content: [{ type: "text", text: "turn1" }] } };
+            yield { type: "result", subtype: "success", is_error: false, result: "ok" };
+            // Stream ends here — consumePersistentStream cleanup fires
+          },
+        };
+      }
+      // Resume-per-input fallback
+      return asyncIterableFrom([
+        { type: "assistant", message: { role: "assistant", content: [{ type: "text", text: `resumed-call${callCount}` }] } },
+        { type: "result", subtype: "success", is_error: false, result: "ok" },
+      ]);
+    });
+
+    const { session, nextEvent } = spawnSession();
+    await drainUntilStatus(nextEvent, "waiting_input");
+
+    // Follow-up: persistent stream already ended, so promptQueue was cleared.
+    // executeFollowUp falls back to resume-per-input via runtimeSessionId.
+    session.sendInput("after-stream-end");
+    await drainUntilStatus(nextEvent, "running");
+    const turn2Events = await drainUntilStatus(nextEvent, "waiting_input");
+    expect(turn2Events.some((e) => e.type === "text" && e.content.includes("resumed"))).toBe(true);
+
+    // The follow-up call should use resume-per-input (string prompt + resume option)
+    const followUpCall = mockQuery.mock.calls[callCount - 1][0] as Record<string, unknown>;
+    expect(typeof followUpCall.prompt).toBe("string");
+    const followUpOpts = followUpCall.options as Record<string, unknown>;
+    expect(followUpOpts.resume).toBe("sess-degrade");
 
     session.kill();
   });
