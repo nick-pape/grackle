@@ -1,9 +1,5 @@
 import { test, expect } from "./fixtures.js";
 import {
-  createWorkspace,
-  createTaskWithScenario,
-  navigateToTask,
-  patchWsForStubRuntime,
   stubScenario,
   emitText,
   idle,
@@ -23,17 +19,14 @@ async function runScenarioToCompletion(page: import("@playwright/test").Page): P
 }
 
 test.describe("Task Stop & Pause buttons", { tag: ["@task"] }, () => {
-  test("Stop button completes a paused task", async ({ appPage }) => {
-    const page = appPage;
+  test("Stop button completes a paused task", async ({ stubTask }) => {
+    const { page } = stubTask;
 
-    await createWorkspace(page, "stop-task-proj");
-    await createTaskWithScenario(page, "stop-task-proj", "stop task", stubScenario(
+    await stubTask.createAndNavigate("stop task", stubScenario(
       emitText("Processing..."),
       onInput("next"),
       idle(),
     ));
-    await navigateToTask(page, "stop task");
-    await patchWsForStubRuntime(page);
     await runScenarioToCompletion(page);
 
     // Task is now paused — Resume confirms paused state
@@ -49,17 +42,14 @@ test.describe("Task Stop & Pause buttons", { tag: ["@task"] }, () => {
     await expect(page.getByRole("button", { name: "Delete", exact: true })).toBeVisible({ timeout: 5_000 });
   });
 
-  test("paused state shows Stop and Resume buttons", async ({ appPage }) => {
-    const page = appPage;
+  test("paused state shows Stop and Resume buttons", async ({ stubTask }) => {
+    const { page } = stubTask;
 
     // Scenario with just an idle step — task goes to paused immediately
-    await createWorkspace(page, "pause-task-proj");
-    await createTaskWithScenario(page, "pause-task-proj", "pause task", stubScenario(
+    await stubTask.createAndNavigate("pause task", stubScenario(
       emitText("Working..."),
       idle(),
     ));
-    await navigateToTask(page, "pause task");
-    await patchWsForStubRuntime(page);
 
     // Start the task — the scenario transitions to idle, causing paused state
     await page.getByRole("button", { name: "Start", exact: true }).click();
@@ -72,17 +62,14 @@ test.describe("Task Stop & Pause buttons", { tag: ["@task"] }, () => {
     await expect(page.getByRole("button", { name: "Delete", exact: true })).toBeVisible({ timeout: 5_000 });
   });
 
-  test("paused task can be resumed", async ({ appPage }) => {
-    const page = appPage;
+  test("paused task can be resumed", async ({ stubTask }) => {
+    const { page } = stubTask;
 
-    await createWorkspace(page, "resume-task-proj");
-    await createTaskWithScenario(page, "resume-task-proj", "resume task", stubScenario(
+    await stubTask.createAndNavigate("resume task", stubScenario(
       emitText("Processing..."),
       onInput("next"),
       idle(),
     ));
-    await navigateToTask(page, "resume task");
-    await patchWsForStubRuntime(page);
     await runScenarioToCompletion(page);
 
     // Task is paused — Resume button should be visible

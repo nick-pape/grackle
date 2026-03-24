@@ -1,12 +1,10 @@
 import { test, expect } from "./fixtures.js";
 import {
-  createWorkspace,
   createTask,
   createTaskViaWs,
   navigateToTask,
   getWorkspaceId,
   getTaskId,
-  patchWsForStubRuntime,
   runStubTaskToCompletion,
 } from "./helpers.js";
 
@@ -16,12 +14,10 @@ async function goToTasksTab(page: import("@playwright/test").Page): Promise<void
 }
 
 test.describe("Task Overview Tab", { tag: ["@task"] }, () => {
-  test("overview tab is default for pending tasks", async ({ appPage }) => {
-    const page = appPage;
+  test("overview tab is default for pending tasks", async ({ stubTask }) => {
+    const { page } = stubTask;
 
-    await createWorkspace(page, "overview-default");
-    await createTask(page, "overview-default", "pending-overview", "test-local");
-    await navigateToTask(page, "pending-overview");
+    await stubTask.createAndNavigateSimple("pending-overview");
 
     // Overview tab should be active
     const overviewTab = page.getByRole("tab", { name: "Overview", exact: true });
@@ -32,14 +28,13 @@ test.describe("Task Overview Tab", { tag: ["@task"] }, () => {
     await expect(streamTab).not.toHaveAttribute("class", /active/);
   });
 
-  test("overview shows task description", async ({ appPage }) => {
-    const page = appPage;
+  test("overview shows task description", async ({ stubTask }) => {
+    const { page, workspaceName } = stubTask;
 
-    await createWorkspace(page, "overview-desc");
-    // Create a UI task first to expand the workspace tree
-    await createTask(page, "overview-desc", "desc-placeholder", "test-local");
+    // Create a placeholder task first to expand the workspace tree
+    await createTask(page, workspaceName, "desc-placeholder", "test-local");
 
-    const workspaceId = await getWorkspaceId(page, "overview-desc");
+    const workspaceId = await getWorkspaceId(page, workspaceName);
 
     await createTaskViaWs(page, workspaceId, "desc-task", {
       environmentId: "test-local",
@@ -55,16 +50,13 @@ test.describe("Task Overview Tab", { tag: ["@task"] }, () => {
     await expect(page.getByText("This is a detailed task description for testing")).toBeVisible({ timeout: 5_000 });
   });
 
-  test("overview shows environment name", async ({ appPage }) => {
-    const page = appPage;
+  test("overview shows environment name", async ({ stubTask }) => {
+    const { page } = stubTask;
 
-    await createWorkspace(page, "overview-env");
-    await createTask(page, "overview-env", "env-task", "test-local");
-    await navigateToTask(page, "env-task");
+    await stubTask.createAndNavigateSimple("env-task");
 
     // Environment is now derived from the latest session, so we must start the
     // task to create a session that carries the environmentId.
-    await patchWsForStubRuntime(page);
     await runStubTaskToCompletion(page);
 
     // Switch to Overview tab to check environment display
@@ -74,13 +66,12 @@ test.describe("Task Overview Tab", { tag: ["@task"] }, () => {
     await expect(page.getByTestId("task-overview-environment").getByText("test-local", { exact: true })).toBeVisible({ timeout: 5_000 });
   });
 
-  test("overview shows blocked dependencies in yellow", async ({ appPage }) => {
-    const page = appPage;
+  test("overview shows blocked dependencies in yellow", async ({ stubTask }) => {
+    const { page, workspaceName } = stubTask;
 
-    await createWorkspace(page, "overview-deps");
-    await createTask(page, "overview-deps", "dep-blocker", "test-local");
+    await createTask(page, workspaceName, "dep-blocker", "test-local");
 
-    const workspaceId = await getWorkspaceId(page, "overview-deps");
+    const workspaceId = await getWorkspaceId(page, workspaceName);
     const blockerTaskId = await getTaskId(page, workspaceId, "dep-blocker");
 
     await createTaskViaWs(page, workspaceId, "dep-blocked", {
@@ -101,20 +92,18 @@ test.describe("Task Overview Tab", { tag: ["@task"] }, () => {
     await expect(depItem).toContainText("dep-blocker");
   });
 
-  test("overview shows done dependencies in green", async ({ appPage }) => {
-    const page = appPage;
+  test("overview shows done dependencies in green", async ({ stubTask }) => {
+    const { page, workspaceName } = stubTask;
 
-    await createWorkspace(page, "overview-done-dep");
-    await createTask(page, "overview-done-dep", "done-blocker", "test-local");
+    await createTask(page, workspaceName, "done-blocker", "test-local");
 
     // Complete the blocker task
     await navigateToTask(page, "done-blocker");
-    await patchWsForStubRuntime(page);
     await runStubTaskToCompletion(page);
     await page.getByRole("button", { name: "Stop", exact: true }).click();
     await expect(page.getByText("Task completed")).toBeVisible({ timeout: 5_000 });
 
-    const workspaceId = await getWorkspaceId(page, "overview-done-dep");
+    const workspaceId = await getWorkspaceId(page, workspaceName);
     const blockerTaskId = await getTaskId(page, workspaceId, "done-blocker");
 
     // Create a dependent task (its dep is already done)
@@ -134,13 +123,12 @@ test.describe("Task Overview Tab", { tag: ["@task"] }, () => {
     await expect(depItem).toContainText("done-blocker");
   });
 
-  test("sidebar shows blocked badge for tasks with incomplete dependencies", async ({ appPage }) => {
-    const page = appPage;
+  test("sidebar shows blocked badge for tasks with incomplete dependencies", async ({ stubTask }) => {
+    const { page, workspaceName } = stubTask;
 
-    await createWorkspace(page, "overview-badge");
-    await createTask(page, "overview-badge", "badge-blocker", "test-local");
+    await createTask(page, workspaceName, "badge-blocker", "test-local");
 
-    const workspaceId = await getWorkspaceId(page, "overview-badge");
+    const workspaceId = await getWorkspaceId(page, workspaceName);
     const blockerTaskId = await getTaskId(page, workspaceId, "badge-blocker");
 
     await createTaskViaWs(page, workspaceId, "badge-blocked", {
@@ -158,15 +146,12 @@ test.describe("Task Overview Tab", { tag: ["@task"] }, () => {
     await expect(badge).toHaveAttribute("class", /blockedBadge/);
   });
 
-  test("completing paused task switches to findings tab", async ({ appPage }) => {
-    const page = appPage;
+  test("completing paused task switches to findings tab", async ({ stubTask }) => {
+    const { page } = stubTask;
 
-    await createWorkspace(page, "overview-assigned");
-    await createTask(page, "overview-assigned", "assigned-task", "test-local");
-    await navigateToTask(page, "assigned-task");
+    await stubTask.createAndNavigateSimple("assigned-task");
 
     // Run task through to paused, then complete it
-    await patchWsForStubRuntime(page);
     await runStubTaskToCompletion(page);
     await page.getByRole("button", { name: "Stop", exact: true }).click();
 
@@ -174,15 +159,12 @@ test.describe("Task Overview Tab", { tag: ["@task"] }, () => {
     await expect(page.getByText("Task completed")).toBeVisible({ timeout: 10_000 });
   });
 
-  test("can manually switch to overview tab on working task", async ({ appPage }) => {
-    const page = appPage;
+  test("can manually switch to overview tab on working task", async ({ stubTask }) => {
+    const { page } = stubTask;
 
-    await createWorkspace(page, "overview-manual");
-    await createTask(page, "overview-manual", "manual-task", "test-local");
-    await navigateToTask(page, "manual-task");
+    await stubTask.createAndNavigateSimple("manual-task");
 
     // Start the task
-    await patchWsForStubRuntime(page);
     await page.getByRole("button", { name: "Start", exact: true }).click();
 
     // Wait for working auto-switch to stream tab

@@ -1,9 +1,5 @@
 import { test, expect } from "./fixtures.js";
 import {
-  createWorkspace,
-  createTaskWithScenario,
-  navigateToTask,
-  patchWsForStubRuntime,
   stubScenario,
   emitText,
   emitToolUse,
@@ -12,21 +8,16 @@ import {
 } from "./helpers.js";
 
 test.describe("Send input while agent is running", { tag: ["@session"] }, () => {
-  test("input field is enabled during active session", async ({ appPage }) => {
-    const page = appPage;
+  test("input field is enabled during active session", async ({ stubTask }) => {
+    const { page } = stubTask;
 
     // Scenario: emit events, go idle, echo input by default
-    await createWorkspace(page, "input-while-running");
-    await createTaskWithScenario(page, "input-while-running", "echo task", stubScenario(
+    await stubTask.createAndNavigate("echo task", stubScenario(
       emitText("Starting work..."),
       emitToolUse("echo", { message: "test" }),
       emitToolResult("done"),
       idle(),                 // go idle for input (default handler: echo)
     ));
-    await navigateToTask(page, "echo task");
-
-    // Patch to use stub runtime
-    await patchWsForStubRuntime(page);
 
     // Start the task
     await page.getByRole("button", { name: "Start", exact: true }).click();
