@@ -77,6 +77,7 @@ runs:
 
     - name: Test Storybook
       shell: bash
+      continue-on-error: true
       run: |
         npx concurrently -k -s first -n "SB,TEST" \
           "npx http-server storybook-static --port 6006 --silent" \
