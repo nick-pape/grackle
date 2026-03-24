@@ -10,21 +10,7 @@ import {
 } from "./helpers.js";
 
 test.describe("Unified task create/edit experience", { tag: ["@task"] }, () => {
-  test("clicking Create Task opens full-panel form with title and description fields", async ({ appPage }) => {
-    const page = appPage;
-    await createWorkspace(page, "create-panel-proj");
-    await navigateToWorkspace(page, "create-panel-proj");
-
-    // Click "Create Task" CTA on the empty workspace page
-    await page.getByText("Create Task").first().click();
-
-    // Full-panel form must be visible (not a bottom-bar form)
-    await expect(page.locator('[data-testid="task-edit-title"]')).toBeVisible({ timeout: 5_000 });
-    await expect(page.locator('[data-testid="task-edit-description"]')).toBeVisible();
-    await expect(page.locator('[data-testid="task-edit-save"]')).toBeVisible();
-    // Save button should be disabled while title is empty
-    await expect(page.locator('[data-testid="task-edit-save"]')).toBeDisabled();
-  });
+  // "clicking Create Task opens full-panel form" removed — covered by TaskEditPanel.stories.tsx (FormFieldsVisible).
 
   test("creating a task via the panel fills title and description, then navigates to workspace", async ({ appPage }) => {
     const page = appPage;
@@ -133,21 +119,7 @@ test.describe("Unified task create/edit experience", { tag: ["@task"] }, () => {
     await expect(page.getByText("new-title-task", { exact: true }).first()).toBeVisible({ timeout: 5_000 });
   });
 
-  test("task creation form has no environment dropdown", async ({ appPage }) => {
-    const page = appPage;
-    await createWorkspace(page, "no-env-proj");
-    await navigateToWorkspace(page, "no-env-proj");
-
-    // Open new task form via Create Task CTA
-    await page.getByText("Create Task").first().click();
-
-    await expect(page.locator('[data-testid="task-edit-title"]')).toBeVisible({ timeout: 5_000 });
-
-    // There should be no environment select in the task creation form
-    // (environment is assigned at start time, not creation time)
-    await expect(page.locator('select option:has-text("Default env")')).not.toBeVisible();
-    await expect(page.locator('select option:has-text("test-local")')).not.toBeVisible();
-  });
+  // "task creation form has no environment dropdown" removed — covered by TaskEditPanel.stories.tsx (NoEnvironmentDropdown).
 
   test("task edit form shows dependency multi-select with sibling tasks", async ({ appPage }) => {
     const page = appPage;

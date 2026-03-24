@@ -112,35 +112,7 @@ test.describe("Settings Page", { tag: ["@settings"] }, () => {
     await expect(page.getByText("ui-delete-test", { exact: true })).not.toBeVisible({ timeout: 5_000 });
   });
 
-  test("add token with file type shows file path field", async ({ appPage }) => {
-    const page = appPage;
-
-    await goToSettings(appPage);
-    await page.getByRole("tab", { name: "Credentials" }).click();
-
-    // Select "File" type (use token type select, not provider dropdowns)
-    await page.locator("select", { hasText: "Environment Variable" }).selectOption("file");
-
-    // The placeholder should change to file path
-    await expect(page.locator('input[placeholder*="File path"]')).toBeVisible();
-
-    // Fill and submit
-    await page.locator('input[placeholder="Token name"]').fill("file-ui-token");
-    await page.locator('input[placeholder="Value"]').fill("filesecret");
-    await page.locator('input[placeholder*="File path"]').fill("/tmp/.token");
-    await page.locator("button", { hasText: "Add Token" }).click();
-
-    // Verify token appears with file type badge
-    await expect(page.getByText("file-ui-token", { exact: true })).toBeVisible({ timeout: 5_000 });
-    await expect(page.getByText("/tmp/.token", { exact: true })).toBeVisible();
-
-    // Clean up
-    await sendWsAndWaitFor(
-      page,
-      { type: "delete_token", payload: { name: "file-ui-token" } },
-      "token.changed",
-    );
-  });
+  // "add token with file type shows file path field" removed — field switching covered by TokensPanel.stories.tsx (TypeSelectorSwitchesFields).
 
   test("token form clears after successful add", async ({ appPage }) => {
     const page = appPage;
