@@ -56,52 +56,6 @@ test.describe("Task Deletion", { tag: ["@task"] }, () => {
     await expect(page.getByText("active-task")).not.toBeVisible({ timeout: 5_000 });
   });
 
-  test("UI delete button shows confirm dialog and removes task on accept", async ({ stubTask }) => {
-    const { page } = stubTask;
-
-    await stubTask.createAndNavigateSimple("tdel-accept-task");
-
-    await expect(page.locator("button", { hasText: "Delete" })).toBeVisible({ timeout: 5_000 });
-
-    // Click Delete — the in-app ConfirmDialog should appear
-    await page.locator("button", { hasText: "Delete" }).click();
-
-    // Verify the dialog is visible with correct title and task name
-    await expect(page.getByText("Delete Task?")).toBeVisible({ timeout: 5_000 });
-    await expect(page.getByText(/"tdel-accept-task"/)).toBeVisible();
-
-    // Confirm deletion via the dialog's danger button
-    await page.locator('[role="dialog"] button', { hasText: "Delete" }).click();
-
-    // Navigate to Tasks tab and verify task is gone
-    await goToTasksTab(page);
-    const sidebarTask = page.locator('[class*="taskTitle"]', { hasText: "tdel-accept-task" });
-    await expect(sidebarTask).not.toBeVisible({ timeout: 5_000 });
-  });
-
-  test("UI delete confirm dialog can be dismissed to cancel deletion", async ({ stubTask }) => {
-    const { page } = stubTask;
-
-    await stubTask.createAndNavigateSimple("tdel-dismiss-task");
-
-    // Click Delete — the in-app ConfirmDialog should appear
-    await page.locator("button", { hasText: "Delete" }).click();
-
-    // Verify the dialog is visible
-    await expect(page.getByText("Delete Task?")).toBeVisible({ timeout: 5_000 });
-
-    // Cancel via the Cancel button
-    await page.locator('[role="dialog"] button', { hasText: "Cancel" }).click();
-
-    // Dialog should be gone and task should still exist
-    await expect(page.getByText("Delete Task?")).not.toBeVisible({ timeout: 5_000 });
-
-    // Verify the task header is still showing (task was not deleted)
-    await expect(page.locator('[data-testid="task-title"]')).toHaveText("tdel-dismiss-task", { timeout: 5_000 });
-
-    // Also verify the task is still in the Tasks tab
-    await goToTasksTab(page);
-    const sidebarTask = page.locator('[class*="taskTitle"]', { hasText: "tdel-dismiss-task" });
-    await expect(sidebarTask).toBeVisible({ timeout: 5_000 });
-  });
+  // ConfirmDialog UI tests (accept/dismiss) removed — covered by
+  // ConfirmDialog.stories.tsx (ConfirmAction, DismissViaCancelButton).
 });

@@ -34,6 +34,13 @@ Do **not** update the root `README.md` as part of this process — it is a separ
 
 - **Never disable or skip failing tests to make CI pass.** If tests fail, investigate the root cause and fix the actual bug. Do not use `test.skip`, `test.fixme`, or equivalent to silence failures — the tests exist for a reason. If tests fail on your branch but pass on main, your changes broke them.
 
+**Run `rush install` frequently.** Always run it:
+- Before starting work (ensures dependencies are linked)
+- After switching branches or merging main (lockfile may have changed)
+- After changing any `package.json` (then `rush update` if install tells you to)
+
+`rush build` does NOT install dependencies — you must run `rush install` separately. If dependencies seem broken (empty `node_modules`, missing binaries like `tsc`), use `rush install --purge` to blow away all `node_modules` and reinstall from scratch.
+
 ```bash
 # Install dependencies and build all packages
 rush install && rush build
@@ -46,6 +53,7 @@ rush build -t @grackle-ai/<package>
 npx buf generate
 ```
 
+- **Do not introduce new bare `tsc`, `npx`, or package-local script usages for builds/tests/tooling.** All *new* build, test, and tooling commands MUST go through Rush (`rush build`, `rush install`, `rushx`) or Heft (`heft build`, `heft test`). Bare commands like `npx tsc`, `npx vitest`, or `node_modules/.bin/...` bypass Rush's orchestration, miss dependency resolution, and may use wrong tool versions. The only exceptions are explicitly documented ones in this repo (e.g., `npx buf generate` for proto codegen and Storybook commands documented below).
 - **Rebuild before manual testing**: After making code changes to any package, you must run `rush build -t @grackle-ai/<package>` before starting or restarting the server. The server runs compiled JS from `dist/`, not TypeScript source files.
 - **CLI uses `GRACKLE_URL`, not `GRACKLE_PORT`**: The CLI client reads `GRACKLE_URL` (e.g., `http://127.0.0.1:7500`) to find the gRPC server. Setting `GRACKLE_PORT` only affects the server's listen port, not the CLI's connection target.
 - **Playwright runs in parallel**: Each worker spawns its own isolated Grackle stack (4 ports + GRACKLE_HOME). Worker count defaults to `min(4, cpuCount/2)` locally, 2 in CI. Override via `E2E_WORKERS` env var.
