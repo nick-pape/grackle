@@ -287,7 +287,7 @@ describe("CopilotRuntime — runtime_session_id emission", () => {
 
     _setCopilotSdkForTesting({
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      CopilotClient: vi.fn(() => mockCopilotClient) as any,
+      CopilotClient: class { constructor() { return mockCopilotClient; } } as any,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       defineTool: vi.fn() as any,
       approveAll: vi.fn(),
@@ -351,7 +351,7 @@ describe("CopilotRuntime — usage event emission", () => {
 
     _setCopilotSdkForTesting({
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      CopilotClient: vi.fn(() => mockCopilotClient) as any,
+      CopilotClient: class { constructor() { return mockCopilotClient; } } as any,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       defineTool: vi.fn() as any,
       approveAll: vi.fn(),
@@ -448,7 +448,7 @@ describe("CopilotRuntime — multi-turn", () => {
 
     _setCopilotSdkForTesting({
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      CopilotClient: vi.fn(() => mockCopilotClient) as any,
+      CopilotClient: class { constructor() { return mockCopilotClient; } } as any,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       defineTool: vi.fn() as any,
       approveAll: vi.fn(),
@@ -508,18 +508,13 @@ describe("CopilotRuntime — multi-turn", () => {
   });
 
   it("usage events emitted per turn", async () => {
-    // Override send to also fire usage events
-    sendCallCount = 0;
-    const mockSession = mockCopilotClient.createSession.mock.results[0]?.value;
-    // We need to re-setup with usage-producing send. Easiest: just override the send in beforeEach mock.
-    // The beforeEach send already fires message_delta + idle. Let's enhance it to also fire usage.
-    // Since we can't easily change the mock after construction, let's just add usage handlers to the existing flow.
-
-    // Actually, let's set up a fresh mock with usage
+    // Set up a fresh mock session that also emits usage events
     let usageSendCount = 0;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const usageHandlers: Record<string, (...args: any[]) => void> = {};
     const usageMockSession = {
       sessionId: "copilot-usage-mt",
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       on: vi.fn((event: string, fn: (...args: any[]) => void) => { usageHandlers[event] = fn; }),
       send: vi.fn(async () => {
         usageSendCount++;
@@ -538,13 +533,16 @@ describe("CopilotRuntime — multi-turn", () => {
       abort: vi.fn(),
     };
 
+    const usageMockClient = {
+      start: vi.fn(async () => {}),
+      stop: vi.fn(async () => []),
+      createSession: vi.fn(async () => usageMockSession),
+      resumeSession: vi.fn(async () => usageMockSession),
+    };
     _setCopilotSdkForTesting({
-      CopilotClient: vi.fn(() => ({
-        start: vi.fn(async () => {}),
-        stop: vi.fn(async () => []),
-        createSession: vi.fn(async () => usageMockSession),
-        resumeSession: vi.fn(async () => usageMockSession),
-      })) as any,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      CopilotClient: class { constructor() { return usageMockClient; } } as any,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       defineTool: vi.fn() as any,
       approveAll: vi.fn(),
     });
