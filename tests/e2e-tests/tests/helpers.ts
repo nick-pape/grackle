@@ -492,3 +492,94 @@ export async function goToSettings(page: Page): Promise<void> {
 export async function goToEnvironments(page: Page): Promise<void> {
   await page.locator('[data-testid="sidebar-tab-environments"]').click();
 }
+
+// ─── Scriptable Stub Runtime Helpers ────────────────────────
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type ScenarioStep = Record<string, any>;
+
+/**
+ * Create a task with a JSON scenario as the description.
+ * The stub runtime will parse the scenario from the prompt and
+ * execute the defined step sequence instead of its hardcoded behavior.
+ */
+export async function createTaskWithScenario(
+  page: Page,
+  workspaceName: string,
+  title: string,
+  scenario: { steps: ScenarioStep[] },
+  envName: string = "test-local",
+): Promise<void> {
+  const wsId = await getWorkspaceId(page, workspaceName);
+  await createTaskViaWs(page, wsId, title, {
+    description: JSON.stringify(scenario),
+    environmentId: envName,
+  });
+}
+
+// ─── Scenario Builder Helpers ───────────────────────────────
+// Convenience functions for building readable scenario step arrays.
+
+/** Build a complete scenario object from steps. */
+export function stubScenario(...steps: ScenarioStep[]): { steps: ScenarioStep[] } {
+  return { steps };
+}
+
+/** Emit a text event. */
+export function emitText(content: string): ScenarioStep {
+  return { emit: "text", content };
+}
+
+/** Emit a tool_use event with auto-generated content and raw fields. */
+export function emitToolUse(tool: string, args: Record<string, unknown> = {}): ScenarioStep {
+  return { emit: "tool_use", tool, args };
+}
+
+/** Emit a tool_result event. */
+export function emitToolResult(content: string, raw?: Record<string, unknown>): ScenarioStep {
+  const step: ScenarioStep = { emit: "tool_result", content };
+  if (raw) {
+    step.raw = raw;
+  }
+  return step;
+}
+
+/** Emit a finding event. */
+export function emitFinding(content: string): ScenarioStep {
+  return { emit: "finding", content };
+}
+
+/** Emit a subtask_create event. */
+export function emitSubtaskCreate(title: string, description: string): ScenarioStep {
+  return { emit: "subtask_create", title, description };
+}
+
+/** Emit a usage event. */
+export function emitUsage(data: Record<string, unknown>): ScenarioStep {
+  return { emit: "usage", content: JSON.stringify(data) };
+}
+
+/** Emit an error event. */
+export function emitError(content: string): ScenarioStep {
+  return { emit: "error", content };
+}
+
+/** Go idle and wait for user input. */
+export function idle(): ScenarioStep {
+  return { idle: true };
+}
+
+/** Sleep for N milliseconds. */
+export function waitMs(ms: number): ScenarioStep {
+  return { wait: ms };
+}
+
+/** Set the default input handling action for subsequent idle steps. */
+export function onInput(action: "echo" | "fail" | "ignore" | "next"): ScenarioStep {
+  return { on_input: action };
+}
+
+/** Set pattern-matching rules for input handling. Use "*" as the fallback key. */
+export function onInputMatch(rules: Record<string, "echo" | "fail" | "ignore" | "next">): ScenarioStep {
+  return { on_input_match: rules };
+}
