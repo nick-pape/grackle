@@ -61,7 +61,7 @@ import { detectLanIp } from "./utils/network.js";
 import * as streamRegistry from "./stream-registry.js";
 import * as pipeDelivery from "./pipe-delivery.js";
 import { ensureAsyncDeliveryListener } from "./pipe-delivery.js";
-import { cleanupLifecycleStream } from "./lifecycle.js";
+import { cleanupLifecycleStream, ensureLifecycleStream } from "./lifecycle.js";
 
 /** Valid pipe mode values for SpawnRequest and StartTaskRequest. */
 const VALID_PIPE_MODES: ReadonlySet<string> = new Set(["", "sync", "async", "detach"]);
@@ -1677,7 +1677,18 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       const logPath =
         latestSession.logPath || join(grackleHome, LOGS_DIR, latestSession.id);
 
-      processEventStream(conn.client.resume(powerlineReq), {
+      // Initiate the stream before mutating the DB. If resume() throws
+      // synchronously the DB is never touched, so no rollback is needed.
+      const resumeStream = conn.client.resume(powerlineReq);
+
+      // Reset session DB row to RUNNING (clears endedAt, error, etc.)
+      sessionStore.reanimateSession(latestSession.id);
+
+      // Re-create lifecycle stream if it was deleted during kill/stop
+      const resumeSpawnerId = latestSession.parentSessionId || "__server__";
+      ensureLifecycleStream(latestSession.id, resumeSpawnerId);
+
+      processEventStream(resumeStream, {
         sessionId: latestSession.id,
         logPath,
         workspaceId: task.workspaceId ?? undefined,
