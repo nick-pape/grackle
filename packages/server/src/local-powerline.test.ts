@@ -4,7 +4,7 @@ import { PassThrough } from "node:stream";
 import type { ChildProcess } from "node:child_process";
 
 // ── Mock logger before importing ──────────────
-vi.mock("./logger.js", () => ({
+vi.mock("@grackle-ai/core", () => ({
   logger: {
     child: vi.fn(() => ({
       info: vi.fn(),
@@ -25,7 +25,7 @@ import {
   type PortProbe,
   type StartLocalPowerLineOptions,
 } from "./local-powerline.js";
-import { logger as parentLogger } from "./logger.js";
+import { logger as parentLogger } from "@grackle-ai/core";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const childLogger = (parentLogger.child as Mock).mock.results[0]?.value as any;
