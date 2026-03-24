@@ -111,7 +111,7 @@ export function useSessions(): UseSessionsResult {
           });
         });
       },
-      (err) => { console.error("[grpc] listSessions failed:", err); },
+      () => {},
     );
   }, []);
 
@@ -246,7 +246,7 @@ export function useSessions(): UseSessionsResult {
           setLastSpawnedId(session.id);
           loadSessions();
         },
-        (err) => { console.error("[grpc] spawnAgent failed:", err); },
+        () => {},
       );
     },
     [loadSessions],
@@ -255,7 +255,7 @@ export function useSessions(): UseSessionsResult {
   const sendInput = useCallback(
     (sessionId: string, text: string) => {
       grackleClient.sendInput({ sessionId, text }).catch(
-        (err) => { console.error("[grpc] sendInput failed:", err); },
+        () => {},
       );
     },
     [],
@@ -264,7 +264,7 @@ export function useSessions(): UseSessionsResult {
   const kill = useCallback(
     (sessionId: string) => {
       grackleClient.killAgent({ id: sessionId }).catch(
-        (err) => { console.error("[grpc] killAgent failed:", err); },
+        () => {},
       );
     },
     [],
@@ -306,7 +306,7 @@ export function useSessions(): UseSessionsResult {
             }
           }
         },
-        (err) => { console.error("[grpc] getSessionEvents failed:", err); },
+        () => {},
       );
     },
     [],
@@ -324,7 +324,7 @@ export function useSessions(): UseSessionsResult {
           const sessionsArr = resp.sessions.map(protoToSession);
           setTaskSessions((prev) => ({ ...prev, [taskId]: sessionsArr }));
         },
-        (err) => { console.error("[grpc] getTaskSessions failed:", err); },
+        () => {},
       );
     },
     [],

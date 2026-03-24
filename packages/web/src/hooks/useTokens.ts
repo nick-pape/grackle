@@ -43,7 +43,7 @@ export function useTokens(): UseTokensResult {
   const loadTokens = useCallback(() => {
     grackleClient.listTokens({}).then(
       (resp) => { setTokens(resp.tokens.map(protoToToken)); },
-      (err) => { console.error("[grpc] listTokens failed:", err); },
+      () => {},
     );
   }, []);
 
@@ -64,7 +64,7 @@ export function useTokens(): UseTokensResult {
       filePath: string,
     ) => {
       grackleClient.setToken({ name, value, type: tokenType, envVar, filePath }).catch(
-        (err) => { console.error("[grpc] setToken failed:", err); },
+        () => {},
       );
     },
     [],
@@ -73,7 +73,7 @@ export function useTokens(): UseTokensResult {
   const deleteToken = useCallback(
     (name: string) => {
       grackleClient.deleteToken({ name }).catch(
-        (err) => { console.error("[grpc] deleteToken failed:", err); },
+        () => {},
       );
     },
     [],

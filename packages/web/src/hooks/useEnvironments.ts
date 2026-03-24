@@ -61,7 +61,7 @@ export function useEnvironments(): UseEnvironmentsResult {
   const loadEnvironments = useCallback(() => {
     grackleClient.listEnvironments({}).then(
       (resp) => { setEnvironments(resp.environments.map(protoToEnvironment)); },
-      (err) => { console.error("[grpc] listEnvironments failed:", err); },
+      () => {},
     );
   }, []);
 
@@ -142,7 +142,7 @@ export function useEnvironments(): UseEnvironmentsResult {
         adapterType,
         adapterConfig: JSON.stringify(adapterConfig ?? {}),
       }).catch(
-        (err) => { console.error("[grpc] addEnvironment failed:", err); },
+        () => {},
       );
     },
     [],
@@ -158,7 +158,7 @@ export function useEnvironments(): UseEnvironmentsResult {
         displayName: fields.displayName,
         adapterConfig: fields.adapterConfig ? JSON.stringify(fields.adapterConfig) : undefined,
       }).catch(
-        (err) => { console.error("[grpc] updateEnvironment failed:", err); },
+        () => {},
       );
     },
     [],
@@ -188,8 +188,7 @@ export function useEnvironments(): UseEnvironmentsResult {
               }, PROVISION_STATUS_CLEAR_DELAY_MS);
             }
           }
-        } catch (err) {
-          console.error("[grpc] provisionEnvironment failed:", err);
+        } catch {
           setProvisionStatus((prev) => {
             const next = { ...prev };
             delete next[environmentId];
@@ -197,7 +196,7 @@ export function useEnvironments(): UseEnvironmentsResult {
           });
         }
       };
-      runProvision().catch((err) => { console.error("[grpc] provisionEnvironment unexpected:", err); });
+      runProvision().catch(() => {});
     },
     [],
   );
@@ -205,7 +204,7 @@ export function useEnvironments(): UseEnvironmentsResult {
   const stopEnvironment = useCallback(
     (environmentId: string) => {
       grackleClient.stopEnvironment({ id: environmentId }).catch(
-        (err) => { console.error("[grpc] stopEnvironment failed:", err); },
+        () => {},
       );
     },
     [],
@@ -214,7 +213,7 @@ export function useEnvironments(): UseEnvironmentsResult {
   const removeEnvironment = useCallback(
     (environmentId: string) => {
       grackleClient.removeEnvironment({ id: environmentId }).catch(
-        (err) => { console.error("[grpc] removeEnvironment failed:", err); },
+        () => {},
       );
     },
     [],

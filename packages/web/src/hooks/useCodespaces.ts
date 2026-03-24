@@ -45,7 +45,7 @@ export function useCodespaces(): UseCodespacesResult {
         setCodespaces(resp.codespaces.map(protoToCodespace));
         setCodespaceListError(resp.error);
       },
-      (err) => { console.error("[grpc] listCodespaces failed:", err); },
+      () => {},
     );
   }, []);
 

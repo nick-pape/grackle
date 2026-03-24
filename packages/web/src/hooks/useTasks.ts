@@ -87,7 +87,7 @@ export function useTasks(): UseTasksResult {
           ...incoming,
         ]);
       },
-      (err) => { console.error("[grpc] listTasks failed:", err); },
+      () => {},
     );
   }, []);
 
@@ -104,7 +104,7 @@ export function useTasks(): UseTasksResult {
           ];
         });
       },
-      (err) => { console.error("[grpc] listTasks (all) failed:", err); },
+      () => {},
     );
   }, []);
 
@@ -228,9 +228,8 @@ export function useTasks(): UseTasksResult {
         personaId: personaId || "",
         environmentId: environmentId || "",
         notes: notes || "",
-      }).catch((err) => {
+      }).catch(() => {
         setTaskStartingId(undefined);
-        console.error("[grpc] startTask failed:", err);
       });
     },
     [],
@@ -239,7 +238,7 @@ export function useTasks(): UseTasksResult {
   const stopTask = useCallback(
     (taskId: string) => {
       grackleClient.stopTask({ id: taskId }).catch(
-        (err) => { console.error("[grpc] stopTask failed:", err); },
+        () => {},
       );
     },
     [],
@@ -248,7 +247,7 @@ export function useTasks(): UseTasksResult {
   const completeTask = useCallback(
     (taskId: string) => {
       grackleClient.completeTask({ id: taskId }).catch(
-        (err) => { console.error("[grpc] completeTask failed:", err); },
+        () => {},
       );
     },
     [],
@@ -257,7 +256,7 @@ export function useTasks(): UseTasksResult {
   const resumeTask = useCallback(
     (taskId: string) => {
       grackleClient.resumeTask({ id: taskId }).catch(
-        (err) => { console.error("[grpc] resumeTask failed:", err); },
+        () => {},
       );
     },
     [],
@@ -277,7 +276,7 @@ export function useTasks(): UseTasksResult {
         description,
         dependsOn,
         ...(defaultPersonaId !== undefined ? { defaultPersonaId } : {}),
-      }).catch((err) => { console.error("[grpc] updateTask failed:", err); });
+      }).catch(() => {});
     },
     [],
   );
@@ -285,7 +284,7 @@ export function useTasks(): UseTasksResult {
   const deleteTask = useCallback(
     (taskId: string) => {
       grackleClient.deleteTask({ id: taskId }).catch(
-        (err) => { console.error("[grpc] deleteTask failed:", err); },
+        () => {},
       );
     },
     [],

@@ -66,7 +66,7 @@ export function useWorkspaces(): UseWorkspacesResult {
   const loadWorkspaces = useCallback(() => {
     grackleClient.listWorkspaces({}).then(
       (resp) => { setWorkspaces(resp.workspaces.map(protoToWorkspace)); },
-      (err) => { console.error("[grpc] listWorkspaces failed:", err); },
+      () => {},
     );
   }, []);
 
@@ -119,7 +119,6 @@ export function useWorkspaces(): UseWorkspacesResult {
           setWorkspaceCreating(false);
           const message = err instanceof ConnectError ? err.message : "Failed to create workspace";
           onError?.(message);
-          console.error("[grpc] createWorkspace failed:", err);
         },
       );
     },
@@ -129,7 +128,7 @@ export function useWorkspaces(): UseWorkspacesResult {
   const archiveWorkspace = useCallback(
     (workspaceId: string) => {
       grackleClient.archiveWorkspace({ id: workspaceId }).catch(
-        (err) => { console.error("[grpc] archiveWorkspace failed:", err); },
+        () => {},
       );
     },
     [],
@@ -149,7 +148,7 @@ export function useWorkspaces(): UseWorkspacesResult {
       },
     ) => {
       grackleClient.updateWorkspace({ id: workspaceId, ...fields }).catch(
-        (err) => { console.error("[grpc] updateWorkspace failed:", err); },
+        () => {},
       );
     },
     [],

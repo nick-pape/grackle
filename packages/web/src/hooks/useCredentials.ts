@@ -42,7 +42,7 @@ export function useCredentials(): UseCredentialsResult {
   const loadCredentials = useCallback(() => {
     grackleClient.getCredentialProviders({}).then(
       (resp) => { setCredentialProviders(protoToCredentialConfig(resp)); },
-      (err) => { console.error("[grpc] getCredentialProviders failed:", err); },
+      () => {},
     );
   }, []);
 
@@ -67,7 +67,7 @@ export function useCredentials(): UseCredentialsResult {
       ];
       for (const { provider, value } of entries) {
         grackleClient.setCredentialProvider({ provider, value }).catch(
-          (err) => { console.error(`[grpc] setCredentialProvider(${provider}) failed:`, err); },
+          () => {},
         );
       }
     },

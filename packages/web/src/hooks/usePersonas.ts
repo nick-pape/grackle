@@ -58,7 +58,7 @@ export function usePersonas(): UsePersonasResult {
   const loadPersonas = useCallback(() => {
     grackleClient.listPersonas({}).then(
       (resp) => { setPersonas(resp.personas.map(protoToPersona)); },
-      (err) => { console.error("[grpc] listPersonas failed:", err); },
+      () => {},
     );
   }, []);
 
@@ -95,7 +95,7 @@ export function usePersonas(): UsePersonasResult {
         type: type || "agent",
         script: script || "",
       }).catch(
-        (err) => { console.error("[grpc] createPersona failed:", err); },
+        () => {},
       );
     },
     [],
@@ -125,7 +125,7 @@ export function usePersonas(): UsePersonasResult {
       if (type !== undefined) { request.type = type; }
       if (script !== undefined) { request.script = script; }
       grackleClient.updatePersona(request).catch(
-        (err) => { console.error("[grpc] updatePersona failed:", err); },
+        () => {},
       );
     },
     [],
@@ -134,7 +134,7 @@ export function usePersonas(): UsePersonasResult {
   const deletePersona = useCallback(
     (personaId: string) => {
       grackleClient.deletePersona({ id: personaId }).catch(
-        (err) => { console.error("[grpc] deletePersona failed:", err); },
+        () => {},
       );
     },
     [],

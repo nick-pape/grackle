@@ -41,7 +41,7 @@ export function useFindings(): UseFindingsResult {
   const loadFindings = useCallback((workspaceId: string) => {
     grackleClient.queryFindings({ workspaceId }).then(
       (resp) => { setFindings(resp.findings.map(protoToFinding)); },
-      (err) => { console.error("[grpc] queryFindings failed:", err); },
+      () => {},
     );
   }, []);
 
@@ -71,7 +71,7 @@ export function useFindings(): UseFindingsResult {
         category: category ?? "general",
         tags: tags ?? [],
       }).catch(
-        (err) => { console.error("[grpc] postFinding failed:", err); },
+        () => {},
       );
     },
     [],

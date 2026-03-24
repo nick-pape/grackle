@@ -271,7 +271,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
     (personaId: string) => {
       setAppDefaultPersonaIdState(personaId);
       grackleClient.setSetting({ key: SETTING_KEY_DEFAULT_PERSONA, value: personaId }).catch(
-        (err) => { console.error("[grpc] setSetting failed:", err); },
+        () => {},
       );
     },
     [],
@@ -280,7 +280,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
   const completeOnboarding = useCallback(() => {
     setOnboardingCompleted(true);
     grackleClient.setSetting({ key: SETTING_KEY_ONBOARDING_COMPLETED, value: "true" }).catch(
-      (err) => { console.error("[grpc] setSetting failed:", err); },
+      () => {},
     );
   }, []);
 
@@ -294,7 +294,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
             [key]: protoToUsageStats(resp),
           }));
         },
-        (err) => { console.error("[grpc] getUsage failed:", err); },
+        () => {},
       );
     },
     [],
@@ -370,11 +370,11 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
     personasHook.loadPersonas();
     grackleClient.getSetting({ key: SETTING_KEY_DEFAULT_PERSONA }).then(
       (resp) => { setAppDefaultPersonaIdState(resp.value); },
-      (err) => { console.error("[grpc] getSetting failed:", err); },
+      () => {},
     );
     grackleClient.getSetting({ key: SETTING_KEY_ONBOARDING_COMPLETED }).then(
       (resp) => { setOnboardingCompleted(resp.value === "true"); },
-      (err) => { console.error("[grpc] getSetting failed:", err); },
+      () => {},
     );
     // Load an initial/global task list (server treats omitted workspaceId as "all workspaces",
     // which includes any workspace-less tasks such as the root task)
