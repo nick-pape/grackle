@@ -993,16 +993,6 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       });
     },
 
-    async getTaskSessions(req: grackle.TaskId) {
-      if (!req.id) {
-        throw new ConnectError("task id is required", Code.InvalidArgument);
-      }
-      const rows = sessionStore.listSessionsForTask(req.id);
-      return create(grackle.SessionListSchema, {
-        sessions: rows.map(sessionRowToProto),
-      });
-    },
-
     async *streamSession(req: grackle.SessionId) {
       const stream = streamHub.createStream(req.id);
       try {
