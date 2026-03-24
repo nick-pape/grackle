@@ -1,9 +1,5 @@
 import { test, expect } from "./fixtures.js";
 import {
-  createWorkspace,
-  createTaskWithScenario,
-  navigateToTask,
-  patchWsForStubRuntime,
   stubScenario,
   emitText,
   idle,
@@ -11,19 +7,16 @@ import {
 } from "./helpers.js";
 
 test.describe("Task Resume after crash (paused → working)", { tag: ["@task"] }, () => {
-  test("resume button restarts a crashed (paused) task", async ({ appPage }) => {
-    const page = appPage;
+  test("resume button restarts a crashed (paused) task", async ({ stubTask }) => {
+    const { page } = stubTask;
 
     // Scenario: emit text, then idle with input matching —
     // "fail" triggers failure, anything else advances
-    await createWorkspace(page, "retry-proj");
-    await createTaskWithScenario(page, "retry-proj", "retry task", stubScenario(
+    await stubTask.createAndNavigate("retry task", stubScenario(
       emitText("Working on retry task..."),
       onInputMatch({ fail: "fail", "*": "next" }),
       idle(),
     ));
-    await navigateToTask(page, "retry task");
-    await patchWsForStubRuntime(page);
 
     // --- Start the task ---
     await page.getByRole("button", { name: "Start", exact: true }).click();

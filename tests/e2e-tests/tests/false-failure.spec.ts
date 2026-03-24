@@ -1,21 +1,12 @@
 import { test, expect } from "./fixtures.js";
-import {
-  createWorkspace,
-  createTask,
-  navigateToTask,
-  patchWsForStubRuntime,
-  runStubTaskToCompletion,
-} from "./helpers.js";
+import { runStubTaskToCompletion } from "./helpers.js";
 
 test.describe("False failure prevention", { tag: ["@error"] }, () => {
-  test("task reaches paused status after stub session completes without false failure", async ({ appPage }) => {
-    const page = appPage;
+  test("task reaches paused status after stub session completes without false failure", async ({ stubTask }) => {
+    const { page } = stubTask;
 
-    await createWorkspace(page, "no-false-fail");
-    await createTask(page, "no-false-fail", "clean-task", "test-local");
-    await navigateToTask(page, "clean-task");
+    await stubTask.createAndNavigateSimple("clean-task");
 
-    await patchWsForStubRuntime(page);
     await runStubTaskToCompletion(page);
 
     // Task should be in paused (review) — Complete button visible

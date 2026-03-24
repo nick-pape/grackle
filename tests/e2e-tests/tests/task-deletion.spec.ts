@@ -1,11 +1,9 @@
 import { test, expect } from "./fixtures.js";
 import {
-  createWorkspace,
   createTask,
   navigateToTask,
   getWorkspaceId,
   getTaskId,
-  patchWsForStubRuntime,
   sendWsMessage,
 } from "./helpers.js";
 
@@ -15,12 +13,11 @@ async function goToTasksTab(page: import("@playwright/test").Page): Promise<void
 }
 
 test.describe("Task Deletion", { tag: ["@task"] }, () => {
-  test("delete pending task removes it from task list", async ({ appPage }) => {
-    const page = appPage;
+  test("delete pending task removes it from task list", async ({ stubTask }) => {
+    const { page, workspaceName } = stubTask;
 
-    // Create workspace and task
-    await createWorkspace(page, "del-remove");
-    await createTask(page, "del-remove", "doomed-task", "test-local");
+    // Create task
+    await createTask(page, workspaceName, "doomed-task", "test-local");
 
     // Navigate to Tasks tab to see the task in the TaskList sidebar
     await goToTasksTab(page);
@@ -29,7 +26,7 @@ test.describe("Task Deletion", { tag: ["@task"] }, () => {
     await expect(page.getByText("doomed-task").first()).toBeVisible({ timeout: 5_000 });
 
     // Get task ID and delete via WS
-    const workspaceId = await getWorkspaceId(page, "del-remove");
+    const workspaceId = await getWorkspaceId(page, workspaceName);
     const taskId = await getTaskId(page, workspaceId, "doomed-task");
     await sendWsMessage(page, { type: "delete_task", payload: { taskId } });
 
@@ -37,23 +34,21 @@ test.describe("Task Deletion", { tag: ["@task"] }, () => {
     await expect(page.getByText("doomed-task")).not.toBeVisible({ timeout: 5_000 });
   });
 
-  test("delete in-progress task removes it and returns to workspace view", async ({ appPage }) => {
-    const page = appPage;
+  test("delete in-progress task removes it and returns to workspace view", async ({ stubTask }) => {
+    const { page, workspaceName } = stubTask;
 
-    // Create workspace and task
-    await createWorkspace(page, "del-active");
-    await createTask(page, "del-active", "active-task", "test-local");
+    // Create task
+    await createTask(page, workspaceName, "active-task", "test-local");
 
-    // Navigate to the task and start it
+    // Navigate to the task and start it (stub runtime patched by fixture)
     await navigateToTask(page, "active-task");
-    await patchWsForStubRuntime(page);
     await page.locator("button", { hasText: "Start" }).click();
 
     // Wait for active state (task may be working or paused depending on stub timing)
     await expect(page.locator('[data-testid="task-status"]')).toContainText(/working|paused/, { timeout: 15_000 });
 
     // Delete the task via WS while it's running
-    const workspaceId = await getWorkspaceId(page, "del-active");
+    const workspaceId = await getWorkspaceId(page, workspaceName);
     const taskId = await getTaskId(page, workspaceId, "active-task");
     await sendWsMessage(page, { type: "delete_task", payload: { taskId } });
 
@@ -62,13 +57,10 @@ test.describe("Task Deletion", { tag: ["@task"] }, () => {
     await expect(page.getByText("active-task")).not.toBeVisible({ timeout: 5_000 });
   });
 
-  test("UI delete button shows confirm dialog and removes task on accept", async ({ appPage }) => {
-    const page = appPage;
+  test("UI delete button shows confirm dialog and removes task on accept", async ({ stubTask }) => {
+    const { page } = stubTask;
 
-    await createWorkspace(page, "tdel-confirm");
-    await createTask(page, "tdel-confirm", "tdel-accept-task", "test-local");
-
-    await navigateToTask(page, "tdel-accept-task");
+    await stubTask.createAndNavigateSimple("tdel-accept-task");
 
     await expect(page.locator("button", { hasText: "Delete" })).toBeVisible({ timeout: 5_000 });
 
@@ -88,13 +80,10 @@ test.describe("Task Deletion", { tag: ["@task"] }, () => {
     await expect(sidebarTask).not.toBeVisible({ timeout: 5_000 });
   });
 
-  test("UI delete confirm dialog can be dismissed to cancel deletion", async ({ appPage }) => {
-    const page = appPage;
+  test("UI delete confirm dialog can be dismissed to cancel deletion", async ({ stubTask }) => {
+    const { page } = stubTask;
 
-    await createWorkspace(page, "tdel-dismiss");
-    await createTask(page, "tdel-dismiss", "tdel-dismiss-task", "test-local");
-
-    await navigateToTask(page, "tdel-dismiss-task");
+    await stubTask.createAndNavigateSimple("tdel-dismiss-task");
 
     // Click Delete — the in-app ConfirmDialog should appear
     await page.locator("button", { hasText: "Delete" }).click();

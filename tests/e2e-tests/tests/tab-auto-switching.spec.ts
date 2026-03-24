@@ -1,29 +1,22 @@
 import { test, expect } from "./fixtures.js";
 import {
-  createWorkspace,
   createTask,
   navigateToTask,
-  patchWsForStubRuntime,
   runStubTaskToCompletion,
 } from "./helpers.js";
 
 test.describe("Tab Auto-Switching", { tag: ["@webui"] }, () => {
-  test("stream tab becomes active when task starts", async ({ appPage }) => {
-    const page = appPage;
+  test("stream tab becomes active when task starts", async ({ stubTask }) => {
+    const { page } = stubTask;
 
-    // Create workspace and task
-    await createWorkspace(page, "tab-stream");
-    await createTask(page, "tab-stream", "tab-start-task", "test-local");
-
-    // Navigate to task, switch to Findings tab first
-    await navigateToTask(page, "tab-start-task");
+    // Create task, switch to Findings tab first
+    await stubTask.createAndNavigateSimple("tab-start-task");
     await page.locator("button", { hasText: "Findings" }).click();
 
     // Verify Findings tab content is visible
     await expect(page.getByText("No findings yet")).toBeVisible({ timeout: 10_000 });
 
-    // Start the task with stub runtime
-    await patchWsForStubRuntime(page);
+    // Start the task with stub runtime (patched by fixture)
     await page.locator("button", { hasText: "Start" }).click();
 
     // Wait for task status to update in sidebar (● = in_progress or ⧖ = waiting_input)
@@ -34,16 +27,12 @@ test.describe("Tab Auto-Switching", { tag: ["@webui"] }, () => {
     await expect(page.locator("text=Stub runtime initialized")).toBeVisible({ timeout: 10_000 });
   });
 
-  test("stream tab becomes active on review state", async ({ appPage }) => {
-    const page = appPage;
+  test("stream tab becomes active on review state", async ({ stubTask }) => {
+    const { page } = stubTask;
 
-    // Create workspace and task
-    await createWorkspace(page, "tab-review");
-    await createTask(page, "tab-review", "tab-review-task", "test-local");
-    await navigateToTask(page, "tab-review-task");
+    await stubTask.createAndNavigateSimple("tab-review-task");
 
     // Start and complete the task to reach review
-    await patchWsForStubRuntime(page);
     await runStubTaskToCompletion(page);
 
     // Verify Stream tab is now active (auto-switch on review status)
@@ -51,16 +40,12 @@ test.describe("Tab Auto-Switching", { tag: ["@webui"] }, () => {
     await expect(page.locator("text=Stub runtime initialized")).toBeVisible({ timeout: 10_000 });
   });
 
-  test("findings tab becomes active on done state", async ({ appPage }) => {
-    const page = appPage;
+  test("findings tab becomes active on done state", async ({ stubTask }) => {
+    const { page } = stubTask;
 
-    // Create workspace and task
-    await createWorkspace(page, "tab-findings");
-    await createTask(page, "tab-findings", "tab-done-task", "test-local");
-    await navigateToTask(page, "tab-done-task");
+    await stubTask.createAndNavigateSimple("tab-done-task");
 
     // Run through full lifecycle: start → review → approve (done)
-    await patchWsForStubRuntime(page);
     await runStubTaskToCompletion(page);
     await page.locator("button", { hasText: "Stop" }).click();
 
@@ -74,16 +59,15 @@ test.describe("Tab Auto-Switching", { tag: ["@webui"] }, () => {
     await expect(page.locator("text=Stub runtime initialized")).not.toBeVisible();
   });
 
-  test("clicking task in sidebar resets to overview tab for pending tasks", async ({ appPage }) => {
-    const page = appPage;
+  test("clicking task in sidebar resets to overview tab for pending tasks", async ({ stubTask }) => {
+    const { page, workspaceName } = stubTask;
 
-    // Create workspace with two tasks
-    await createWorkspace(page, "tab-sidebar");
-    await createTask(page, "tab-sidebar", "sidebar-task-a", "test-local");
-    await createTask(page, "tab-sidebar", "sidebar-task-b", "test-local");
+    // Create two tasks — first one navigates to it
+    await stubTask.createAndNavigateSimple("sidebar-task-a");
+    // Create second task without navigating
+    await createTask(page, workspaceName, "sidebar-task-b", "test-local");
 
-    // Navigate to task A, switch to Findings tab
-    await navigateToTask(page, "sidebar-task-a");
+    // We're on task A — switch to Findings tab
     await page.locator("button", { hasText: "Findings" }).click();
 
     // Verify Findings content is visible

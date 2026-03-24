@@ -1,12 +1,10 @@
 import { test, expect } from "./fixtures.js";
 import {
-  createWorkspace,
   createTask,
   createTaskViaWs,
   navigateToTask,
   getWorkspaceId,
   getTaskId,
-  patchWsForStubRuntime,
   runStubTaskToCompletion,
 } from "./helpers.js";
 
@@ -16,15 +14,14 @@ async function goToTasksTab(page: import("@playwright/test").Page): Promise<void
 }
 
 test.describe("Task Dependencies", { tag: ["@task"] }, () => {
-  test("blocked task shows Blocked by text and no Start button", async ({ appPage }) => {
-    const page = appPage;
+  test("blocked task shows Blocked by text and no Start button", async ({ stubTask }) => {
+    const { page, workspaceName } = stubTask;
 
-    // Create workspace and a blocker task via UI
-    await createWorkspace(page, "deps-blocked");
-    await createTask(page, "deps-blocked", "blocker-alpha", "test-local");
+    // Create a blocker task
+    await createTask(page, workspaceName, "blocker-alpha", "test-local");
 
     // Get IDs for creating dependent task via WS
-    const workspaceId = await getWorkspaceId(page, "deps-blocked");
+    const workspaceId = await getWorkspaceId(page, workspaceName);
     const blockerTaskId = await getTaskId(page, workspaceId, "blocker-alpha");
 
     // Create a dependent task via WS with dependsOn
@@ -52,14 +49,13 @@ test.describe("Task Dependencies", { tag: ["@task"] }, () => {
     await expect(page.locator("button", { hasText: "Start" })).not.toBeVisible();
   });
 
-  test("completing blocker unblocks dependent task", async ({ appPage }) => {
-    const page = appPage;
+  test("completing blocker unblocks dependent task", async ({ stubTask }) => {
+    const { page, workspaceName } = stubTask;
 
-    // Create workspace and tasks
-    await createWorkspace(page, "deps-unblock");
-    await createTask(page, "deps-unblock", "unblock-blocker", "test-local");
+    // Create tasks
+    await createTask(page, workspaceName, "unblock-blocker", "test-local");
 
-    const workspaceId = await getWorkspaceId(page, "deps-unblock");
+    const workspaceId = await getWorkspaceId(page, workspaceName);
     const blockerTaskId = await getTaskId(page, workspaceId, "unblock-blocker");
 
     await createTaskViaWs(page, workspaceId, "unblock-dependent", {
@@ -75,8 +71,7 @@ test.describe("Task Dependencies", { tag: ["@task"] }, () => {
     await navigateToTask(page, "unblock-dependent");
     await expect(page.getByText("Blocked by:")).toBeVisible({ timeout: 5_000 });
 
-    // Complete the blocker task: navigate, start with stub, send input, approve
-    await patchWsForStubRuntime(page);
+    // Complete the blocker task: navigate, start with stub (patched by fixture), send input, approve
     await navigateToTask(page, "unblock-blocker");
     await runStubTaskToCompletion(page);
     await page.locator("button", { hasText: "Stop" }).click();
@@ -87,15 +82,14 @@ test.describe("Task Dependencies", { tag: ["@task"] }, () => {
     await expect(page.locator("button", { hasText: "Start" })).toBeVisible({ timeout: 10_000 });
   });
 
-  test("task with multiple dependencies requires all blockers complete", async ({ appPage }) => {
-    const page = appPage;
+  test("task with multiple dependencies requires all blockers complete", async ({ stubTask }) => {
+    const { page, workspaceName } = stubTask;
 
-    // Create workspace and two blocker tasks
-    await createWorkspace(page, "deps-multi");
-    await createTask(page, "deps-multi", "multi-blocker-a", "test-local");
-    await createTask(page, "deps-multi", "multi-blocker-b", "test-local");
+    // Create two blocker tasks
+    await createTask(page, workspaceName, "multi-blocker-a", "test-local");
+    await createTask(page, workspaceName, "multi-blocker-b", "test-local");
 
-    const workspaceId = await getWorkspaceId(page, "deps-multi");
+    const workspaceId = await getWorkspaceId(page, workspaceName);
     const taskAId = await getTaskId(page, workspaceId, "multi-blocker-a");
     const taskBId = await getTaskId(page, workspaceId, "multi-blocker-b");
 
@@ -114,8 +108,7 @@ test.describe("Task Dependencies", { tag: ["@task"] }, () => {
     await expect(page.getByText(/Blocked by:.*multi-blocker-a/)).toBeVisible({ timeout: 5_000 });
     await expect(page.getByText(/Blocked by:.*multi-blocker-b/)).toBeVisible();
 
-    // Complete task A only
-    await patchWsForStubRuntime(page);
+    // Complete task A only (stub runtime patched by fixture)
     await navigateToTask(page, "multi-blocker-a");
     await runStubTaskToCompletion(page);
     await page.locator("button", { hasText: "Stop" }).click();
