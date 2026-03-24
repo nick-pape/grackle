@@ -1,0 +1,16 @@
+import { vi } from "vitest";
+export const createStream = vi.fn();
+export const getStream = vi.fn();
+export const getStreamByName = vi.fn();
+export const deleteStream = vi.fn();
+export const subscribe = vi.fn();
+export const unsubscribe = vi.fn();
+export const getSubscription = vi.fn();
+export const getSubscriptionsForSession = vi.fn(() => []);
+export const getOwnedSubscriptions = vi.fn(() => []);
+export const publish = vi.fn();
+export const consumeSync = vi.fn();
+export const hasUndeliveredMessages = vi.fn(() => false);
+export const registerAsyncListener = vi.fn();
+export const onSessionOrphaned = vi.fn();
+export const _resetForTesting = vi.fn();

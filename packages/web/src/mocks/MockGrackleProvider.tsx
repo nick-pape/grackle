@@ -738,6 +738,11 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
     [nextId],
   );
 
+  /** No-op in mock mode (environments are pre-seeded). */
+  const loadEnvironments: UseGrackleSocketResult["loadEnvironments"] = useCallback(() => {
+    console.log("[MockGrackle] loadEnvironments");
+  }, []);
+
   /** Logs an add-environment call (mock does not persist). */
   const addEnvironment: UseGrackleSocketResult["addEnvironment"] = useCallback(
     (
@@ -846,6 +851,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       refresh,
       loadSessionEvents,
       clearEvents,
+      loadWorkspaces: () => { console.log("[MockGrackle] loadWorkspaces"); },
       createWorkspace,
       archiveWorkspace,
       updateWorkspace: (workspaceId: string, fields: { name?: string; description?: string; repoUrl?: string; environmentId?: string; worktreeBasePath?: string; useWorktrees?: boolean; defaultPersonaId?: string }) => {
@@ -885,6 +891,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       deleteTask,
       loadFindings,
       postFinding,
+      loadEnvironments,
       addEnvironment,
       updateEnvironment,
       loadTokens,
@@ -1018,6 +1025,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       deleteTask,
       loadFindings,
       postFinding,
+      loadEnvironments,
       addEnvironment,
       updateEnvironment,
       loadTokens,

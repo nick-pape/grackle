@@ -5,6 +5,7 @@ import {
   installWsTracker,
   injectWsMessage,
   goToEnvironments,
+  provisionEnvironmentDirect,
 } from "./helpers.js";
 
 /**
@@ -22,13 +23,19 @@ async function navigateToEnvDetailPage(page: import("@playwright/test").Page): P
  * subsequent tests (and subsequent spec files) are not affected.
  */
 async function reprovisionTestLocal(page: import("@playwright/test").Page): Promise<void> {
-  await sendWsMessage(page, {
-    type: "provision_environment",
-    payload: { environmentId: "test-local" },
-  });
-  // Wait for the status to change — navigate to detail page and check for Stop button
+  // Navigate to the environment detail page and click Connect
   await navigateToEnvDetailPage(page);
-  await expect(page.locator("button", { hasText: "Stop" })).toBeVisible({ timeout: 15_000 });
+  const connectBtn = page.locator("button", { hasText: "Connect" });
+  // If already connected (Stop visible), nothing to do
+  const stopBtn = page.locator("button", { hasText: "Stop" });
+  const isConnected = await stopBtn.isVisible().catch(() => false);
+  if (isConnected) {
+    return;
+  }
+  // Click Connect and wait for Stop button to appear
+  await expect(connectBtn).toBeVisible({ timeout: 5_000 });
+  await connectBtn.click();
+  await expect(stopBtn).toBeVisible({ timeout: 15_000 });
 }
 
 test.describe("Environment Detail Page — Lifecycle Actions", { tag: ["@environment"] }, () => {
@@ -77,7 +84,7 @@ test.describe("Environment Lifecycle — WebSocket Handlers", { tag: ["@environm
     await installWsTracker(page);
     await page.goto("/");
     await page.waitForFunction(
-      () => document.body.innerText.includes("Connected"),
+      () => document.body.innerText.includes("Connected") && /\d+\/\d+ env/.test(document.body.innerText),
       { timeout: 10_000 },
     );
 
@@ -104,7 +111,7 @@ test.describe("Environment Lifecycle — WebSocket Handlers", { tag: ["@environm
     await installWsTracker(page);
     await page.goto("/");
     await page.waitForFunction(
-      () => document.body.innerText.includes("Connected"),
+      () => document.body.innerText.includes("Connected") && /\d+\/\d+ env/.test(document.body.innerText),
       { timeout: 10_000 },
     );
 
@@ -120,11 +127,8 @@ test.describe("Environment Lifecycle — WebSocket Handlers", { tag: ["@environm
     // Wait for disconnected state — Connect button should appear
     await expect(page.locator("button", { hasText: "Connect" })).toBeVisible({ timeout: 5_000 });
 
-    // Now provision it back via WS message
-    await sendWsMessage(page, {
-      type: "provision_environment",
-      payload: { environmentId: "test-local" },
-    });
+    // Provision it back by clicking Connect in the UI
+    await page.locator("button", { hasText: "Connect" }).click();
 
     // Wait for environment to become connected again — Stop button appears
     await expect(page.locator("button", { hasText: "Stop" })).toBeVisible({ timeout: 15_000 });
@@ -134,7 +138,7 @@ test.describe("Environment Lifecycle — WebSocket Handlers", { tag: ["@environm
     await installWsTracker(page);
     await page.goto("/");
     await page.waitForFunction(
-      () => document.body.innerText.includes("Connected"),
+      () => document.body.innerText.includes("Connected") && /\d+\/\d+ env/.test(document.body.innerText),
       { timeout: 10_000 },
     );
 
@@ -161,7 +165,7 @@ test.describe("Environment Lifecycle — WebSocket Handlers", { tag: ["@environm
     await installWsTracker(page);
     await page.goto("/");
     await page.waitForFunction(
-      () => document.body.innerText.includes("Connected"),
+      () => document.body.innerText.includes("Connected") && /\d+\/\d+ env/.test(document.body.innerText),
       { timeout: 10_000 },
     );
 
@@ -226,7 +230,7 @@ test.describe("Environment Lifecycle — WebSocket Handlers", { tag: ["@environm
     await installWsTracker(page);
     await page.goto("/");
     await page.waitForFunction(
-      () => document.body.innerText.includes("Connected"),
+      () => document.body.innerText.includes("Connected") && /\d+\/\d+ env/.test(document.body.innerText),
       { timeout: 10_000 },
     );
 

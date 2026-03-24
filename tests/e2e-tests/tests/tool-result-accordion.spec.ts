@@ -106,22 +106,6 @@ test.describe("Tool result preview and accordion (#303)", { tag: ["@webui"] }, (
     );
   });
 
-  test("short result has no expand toggle", async ({ page }) => {
-    await setupSessionView(page);
-
-    // Single-line content — fewer than PREVIEW_LINES=5 lines
-    await injectToolResult(page, "Single line result");
-
-    await expect(
-      page.locator('[class*="toolResultEvent"]'),
-    ).toBeVisible({ timeout: 5_000 });
-
-    // No toggle chevron for short content
-    await expect(
-      page.locator('[class*="toolResultToggle"]'),
-    ).not.toBeVisible();
-  });
-
   test("multi-line result (>5 lines) shows toggle and expands/collapses", async ({ page }) => {
     await setupSessionView(page);
 
@@ -167,26 +151,6 @@ test.describe("Tool result preview and accordion (#303)", { tag: ["@webui"] }, (
     await expect(lastPre).not.toContainText("Line 6 of output");
   });
 
-  test("error indicator shown when raw field has is_error=true", async ({ page }) => {
-    await setupSessionView(page);
-
-    await injectToolResult(
-      page,
-      "Error: file not found",
-      JSON.stringify({ type: "tool_result", is_error: true }),
-    );
-
-    // Error indicator (✗) should appear
-    await expect(
-      page.locator('[class*="toolResultIndicatorError"]'),
-    ).toBeVisible({ timeout: 5_000 });
-
-    // Label should read "Tool error"
-    await expect(
-      page.locator('[class*="toolResultLabel"]').last(),
-    ).toHaveText("Tool error");
-  });
-
   test("success indicator used when raw field has is_error=false", async ({ page }) => {
     await setupSessionView(page);
 
@@ -202,17 +166,6 @@ test.describe("Tool result preview and accordion (#303)", { tag: ["@webui"] }, (
     await expect(
       page.locator('[class*="toolResultLabel"]').last(),
     ).toHaveText("Tool output");
-  });
-
-  test("success indicator used when raw field is absent", async ({ page }) => {
-    await setupSessionView(page);
-
-    // No raw field — should default to success
-    await injectToolResult(page, "Result without raw");
-
-    await expect(
-      page.locator('[class*="toolResultIndicatorOk"]'),
-    ).toBeVisible({ timeout: 5_000 });
   });
 
   test("paired tool_use+tool_result shows tool name, command preview, and hides standalone tool_use card", async ({ page }) => {

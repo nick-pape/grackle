@@ -3,7 +3,8 @@
   "phasesByName": {
     "build": {
       "cleanFiles": [
-        { "sourcePath": "dist" }
+        { "sourcePath": "dist" },
+        { "sourcePath": "storybook-static" }
       ],
       "tasksByName": {
         "typescript": {
@@ -23,16 +24,29 @@
             "pluginPackage": "@grackle-ai/heft-vite-plugin",
             "pluginName": "vite-build-plugin"
           }
+        },
+        "storybook-build": {
+          "taskDependencies": ["typescript"],
+          "taskPlugin": {
+            "pluginPackage": "@grackle-ai/heft-web-test-plugin",
+            "pluginName": "storybook-build-plugin"
+          }
         }
       }
     },
     "test": {
       "phaseDependencies": ["build"],
       "tasksByName": {
-        "playwright": {
+        "vitest": {
           "taskPlugin": {
-            "pluginPackage": "@grackle-ai/heft-playwright-plugin",
-            "pluginName": "playwright-test-plugin"
+            "pluginPackage": "@grackle-ai/heft-web-test-plugin",
+            "pluginName": "vitest-plugin"
+          }
+        },
+        "storybook-test": {
+          "taskPlugin": {
+            "pluginPackage": "@grackle-ai/heft-web-test-plugin",
+            "pluginName": "storybook-test-plugin"
           }
         }
       }

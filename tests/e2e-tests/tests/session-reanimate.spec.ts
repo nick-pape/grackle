@@ -24,24 +24,23 @@ test.describe("Session Reanimate (stub runtime)", { tag: ["@session"] }, () => {
     }
     // Wait until the environment has no active sessions before proceeding.
     if (active.length > 0) {
-      await appPage.waitForFunction(async () => {
-        // Re-query via a fresh WS connection from within the page context
-        return new Promise<boolean>((resolve) => {
-          const ws = new WebSocket(`ws://${window.location.host}`);
-          ws.onmessage = (e: MessageEvent) => {
-            const data = JSON.parse(e.data as string) as { type: string; payload: { sessions?: Array<{ status: string }> } };
-            if (data.type === "sessions") {
-              const anyActive = (data.payload.sessions ?? []).some(
-                (s) => s.status === "idle" || s.status === "running" || s.status === "pending",
-              );
-              ws.close();
-              resolve(!anyActive);
-            }
-          };
-          ws.onerror = () => { ws.close(); resolve(false); };
-          ws.onopen = () => ws.send(JSON.stringify({ type: "list_sessions" }));
-        });
-      }, undefined, { timeout: 5_000 });
+      // Poll via ConnectRPC until no active sessions remain
+      const deadline = Date.now() + 5_000;
+      while (Date.now() < deadline) {
+        const recheck = await sendWsAndWaitFor(
+          appPage,
+          { type: "list_sessions" },
+          "sessions",
+        );
+        const remaining = (recheck.payload?.sessions ?? []) as Array<{ status: string }>;
+        const anyActive = remaining.some(
+          (s) => s.status === "idle" || s.status === "running" || s.status === "pending",
+        );
+        if (!anyActive) {
+          break;
+        }
+        await appPage.waitForTimeout(250);
+      }
     }
   });
 
@@ -83,25 +82,12 @@ test.describe("Session Reanimate (stub runtime)", { tag: ["@session"] }, () => {
     expect(killed, "Expected a killed stub session").toBeTruthy();
     const sessionId = killed.id;
 
-    // ── 5. Reanimate via WS resume_agent ──────────────────────────────────
-    // Use page.evaluate directly so we can capture either agent_resumed or
-    // error (sendWsAndWaitFor times out silently on error).
-    const resumeResult = await page.evaluate(
-      async ({ sessionId: sid }): Promise<{ type: string; payload: Record<string, unknown> }> => {
-        return new Promise((resolve, reject) => {
-          const ws = new WebSocket(`ws://${window.location.host}`);
-          const timer = setTimeout(() => { ws.close(); reject(new Error("WS timeout waiting for resume response")); }, 10_000);
-          ws.onmessage = (e: MessageEvent) => {
-            const data = JSON.parse(e.data as string) as { type: string; payload: Record<string, unknown> };
-            if (data.type === "agent_resumed" || data.type === "error") {
-              clearTimeout(timer); ws.close(); resolve(data);
-            }
-          };
-          ws.onerror = () => { clearTimeout(timer); ws.close(); reject(new Error("WS error")); };
-          ws.onopen = () => { ws.send(JSON.stringify({ type: "resume_agent", payload: { sessionId: sid } })); };
-        });
-      },
-      { sessionId },
+    // ── 5. Reanimate via ConnectRPC resume_agent ───────────────────────────
+    const resumeResult = await sendWsAndWaitFor(
+      page,
+      { type: "resume_agent", payload: { sessionId } },
+      "agent_resumed",
+      10_000,
     );
     expect(resumeResult.type, `resume_agent failed: ${JSON.stringify(resumeResult.payload)}`).toBe("agent_resumed");
     expect(resumeResult.payload?.sessionId).toBe(sessionId);

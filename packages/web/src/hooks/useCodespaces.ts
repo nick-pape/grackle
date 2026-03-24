@@ -1,12 +1,16 @@
 /**
  * Domain hook for GitHub Codespace management.
  *
+ * Uses ConnectRPC for all operations.
+ *
  * @module
  */
 
 import { useState, useCallback } from "react";
-import type { Codespace, WsMessage, SendFunction } from "./types.js";
-import { asValidArray, isCodespace } from "./types.js";
+import { ConnectError } from "@connectrpc/connect";
+import type { Codespace } from "./types.js";
+import { grackleClient } from "./useGrackleClient.js";
+import { protoToCodespace } from "./proto-converters.js";
 
 /** Values returned by {@link useCodespaces}. */
 export interface UseCodespacesResult {
@@ -22,77 +26,48 @@ export interface UseCodespacesResult {
   listCodespaces: () => void;
   /** Create a new codespace for the given repo. */
   createCodespace: (repo: string, machine?: string) => void;
-  /** Handle an incoming WebSocket message. Returns `true` if handled. */
-  handleMessage: (msg: WsMessage) => boolean;
 }
 
 /**
- * Hook that manages codespace state and actions.
+ * Hook that manages codespace state and actions via ConnectRPC.
  *
- * @param send - Function to send WebSocket messages.
- * @param connected - Whether the WebSocket is currently connected.
- * @returns Codespace state, actions, and a message handler.
+ * @returns Codespace state and actions.
  */
-export function useCodespaces(send: SendFunction, connected: boolean): UseCodespacesResult {
+export function useCodespaces(): UseCodespacesResult {
   const [codespaces, setCodespaces] = useState<Codespace[]>([]);
   const [codespaceError, setCodespaceError] = useState("");
   const [codespaceListError, setCodespaceListError] = useState("");
   const [codespaceCreating, setCodespaceCreating] = useState(false);
 
-  const handleMessage = useCallback((msg: WsMessage): boolean => {
-    switch (msg.type) {
-      case "codespaces_list": {
-        const list = asValidArray(
-          msg.payload?.codespaces,
-          isCodespace,
-          "codespaces_list",
-          "codespaces",
-        );
-        const listError =
-          typeof msg.payload?.error === "string" ? msg.payload.error : "";
-        setCodespaces(list);
-        setCodespaceListError(listError);
-        return true;
-      }
-      case "codespace_created":
-        setCodespaceCreating(false);
-        send({ type: "list_codespaces" });
-        return true;
-      case "codespace_create_error": {
-        setCodespaceCreating(false);
-        const createError =
-          typeof msg.payload?.message === "string"
-            ? msg.payload.message
-            : "Failed to create codespace";
-        setCodespaceError(createError);
-        return true;
-      }
-      default:
-        return false;
-    }
-  }, [send]);
-
   const listCodespaces = useCallback(() => {
-    send({ type: "list_codespaces" });
-  }, [send]);
+    grackleClient.listCodespaces({}).then(
+      (resp) => {
+        setCodespaces(resp.codespaces.map(protoToCodespace));
+        setCodespaceListError(resp.error);
+      },
+      () => {},
+    );
+  }, []);
 
   const createCodespace = useCallback(
     (repo: string, machine?: string) => {
-      if (!connected) {
-        setCodespaceError(
-          "Not connected to server. Please try again once the connection is restored.",
-        );
-        return;
-      }
       setCodespaceCreating(true);
       setCodespaceError("");
-      const payload: Record<string, string> = { repo };
-      if (machine) {
-        payload.machine = machine;
-      }
-      send({ type: "create_codespace", payload });
+      grackleClient.createCodespace({ repo, machine: machine ?? "" }).then(
+        () => {
+          setCodespaceCreating(false);
+          listCodespaces();
+        },
+        (err) => {
+          setCodespaceCreating(false);
+          const message = err instanceof ConnectError
+            ? err.message
+            : "Failed to create codespace";
+          setCodespaceError(message);
+        },
+      );
     },
-    [send, connected],
+    [listCodespaces],
   );
 
   return {
@@ -102,6 +77,5 @@ export function useCodespaces(send: SendFunction, connected: boolean): UseCodesp
     codespaceCreating,
     listCodespaces,
     createCodespace,
-    handleMessage,
   };
 }

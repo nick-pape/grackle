@@ -1,6 +1,6 @@
 {
   "name": "@grackle-ai/web",
-  "version": "0.73.1",
+  "version": "0.75.1",
   "description": "React web UI for the Grackle multi-agent coordination platform",
   "license": "MIT",
   "repository": {
@@ -18,10 +18,16 @@
     "preview": "vite preview",
     "clean": "heft clean",
     "test": "vitest run",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build",
+    "test-storybook": "test-storybook",
     "_phase:build": "heft run --only build -- --clean",
-    "_phase:test": "vitest run"
+    "_phase:test": "heft run --only test"
   },
   "dependencies": {
+    "@bufbuild/protobuf": "^2.5.0",
+    "@connectrpc/connect": "^2.0.0",
+    "@connectrpc/connect-web": "^2.0.0",
     "@grackle-ai/common": "workspace:*",
     "@dagrejs/dagre": "^2.0.4",
     "@xyflow/react": "^12.10.0",
@@ -52,6 +58,14 @@
     "vitest": "^3.1.1",
     "@testing-library/react": "^16.3.2",
     "jsdom": "^29.0.0",
-    "@testing-library/dom": "^10.4.1"
+    "@testing-library/dom": "^10.4.1",
+    "storybook": "8.6.18",
+    "@storybook/react": "8.6.18",
+    "@storybook/react-vite": "8.6.18",
+    "@storybook/test": "8.6.18",
+    "@storybook/test-runner": "^0.21.0",
+    "concurrently": "^9.1.0",
+    "http-server": "^14.1.1",
+    "wait-on": "^8.0.0"
   }
 }

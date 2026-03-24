@@ -3,6 +3,7 @@ import {
   sendWsMessage,
   installWsTracker,
   injectWsMessage,
+  provisionEnvironmentDirect,
 } from "./helpers.js";
 
 /**
@@ -14,12 +15,21 @@ import {
  */
 
 test.describe("Environment Status Broadcast + Toasts", { tag: ["@environment"] }, () => {
+  // Ensure the environment is connected before each test — previous tests
+  // may have stopped it and the reprovision may not have completed.
+  // No beforeEach needed — global-setup provisions the env. Tests that
+  // stop the env must reprovision at the end (afterEach or inline).
+
   test("stop environment shows disconnected toast and updates StatusBar", async ({ page }) => {
+    // Ensure connected before starting (may have been left disconnected)
+    await provisionEnvironmentDirect("test-local");
+
     await installWsTracker(page);
     await page.goto("/");
     await page.waitForFunction(
-      () => document.body.innerText.includes("Connected"),
-      { timeout: 10_000 },
+      () => document.body.innerText.includes("Connected") &&
+            document.body.innerText.includes("1/1 env"),
+      { timeout: 15_000 },
     );
 
     // Verify StatusBar initially shows connected count (1/1)
@@ -38,10 +48,7 @@ test.describe("Environment Status Broadcast + Toasts", { tag: ["@environment"] }
     await expect(page.getByText("Environment disconnected")).toBeVisible({ timeout: 5_000 });
 
     // Re-provision so other tests aren't affected
-    await sendWsMessage(page, {
-      type: "provision_environment",
-      payload: { environmentId: "test-local" },
-    });
+    await provisionEnvironmentDirect("test-local");
     await expect(page.getByText("1/1 env")).toBeVisible({ timeout: 15_000 });
   });
 
@@ -49,7 +56,8 @@ test.describe("Environment Status Broadcast + Toasts", { tag: ["@environment"] }
     await installWsTracker(page);
     await page.goto("/");
     await page.waitForFunction(
-      () => document.body.innerText.includes("Connected"),
+      () => document.body.innerText.includes("Connected") &&
+            /\d+\/\d+ env/.test(document.body.innerText),
       { timeout: 10_000 },
     );
 
@@ -60,11 +68,8 @@ test.describe("Environment Status Broadcast + Toasts", { tag: ["@environment"] }
     });
     await expect(page.getByText("0/1 env")).toBeVisible({ timeout: 10_000 });
 
-    // Now re-provision
-    await sendWsMessage(page, {
-      type: "provision_environment",
-      payload: { environmentId: "test-local" },
-    });
+    // Re-provision via direct gRPC call (HTTP/2)
+    await provisionEnvironmentDirect("test-local");
 
     // StatusBar should show 1/1 again
     await expect(page.getByText("1/1 env")).toBeVisible({ timeout: 15_000 });
@@ -77,7 +82,7 @@ test.describe("Environment Status Broadcast + Toasts", { tag: ["@environment"] }
     await installWsTracker(page);
     await page.goto("/");
     await page.waitForFunction(
-      () => document.body.innerText.includes("Connected"),
+      () => document.body.innerText.includes("Connected") && /\d+\/\d+ env/.test(document.body.innerText),
       { timeout: 10_000 },
     );
 

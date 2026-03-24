@@ -39,13 +39,10 @@ async function runScenarioToCompletion(page: import("@playwright/test").Page): P
 }
 
 test.describe("Stream smart scroll", { tag: ["@webui"] }, () => {
-  test("scrolled to bottom on initial load with events", async ({ appPage }) => {
-    const page = appPage;
+  test("scrolled to bottom on initial load with events", async ({ stubTask }) => {
+    const { page } = stubTask;
 
-    await createWorkspace(page, "scroll-init");
-    await createTaskWithScenario(page, "scroll-init", "init-task", scrollableScenario());
-    await navigateToTask(page, "init-task");
-    await patchWsForStubRuntime(page);
+    await stubTask.createAndNavigate("init-task", scrollableScenario());
     await runScenarioToCompletion(page);
 
     // Switch to stream tab
@@ -62,13 +59,10 @@ test.describe("Stream smart scroll", { tag: ["@webui"] }, () => {
     expect(isNearBottom).toBe(true);
   });
 
-  test("direction toggle reverses event order", async ({ appPage }) => {
-    const page = appPage;
+  test("direction toggle reverses event order", async ({ stubTask }) => {
+    const { page } = stubTask;
 
-    await createWorkspace(page, "scroll-dir");
-    await createTaskWithScenario(page, "scroll-dir", "dir-task", scrollableScenario());
-    await navigateToTask(page, "dir-task");
-    await patchWsForStubRuntime(page);
+    await stubTask.createAndNavigate("dir-task", scrollableScenario());
     await runScenarioToCompletion(page);
 
     await page.locator("button", { hasText: "Stream" }).click();

@@ -76,6 +76,44 @@ type CloseFdResponse = Message<"grackle.CloseFdResponse"> & {
 const CloseFdResponseSchema: GenMessage<CloseFdResponse>;
 
 // @public
+type CodespaceInfo = Message<"grackle.CodespaceInfo"> & {
+    name: string;
+    repository: string;
+    state: string;
+    gitStatus: string;
+};
+
+// @public
+const CodespaceInfoSchema: GenMessage<CodespaceInfo>;
+
+// @public
+type CodespaceList = Message<"grackle.CodespaceList"> & {
+    codespaces: CodespaceInfo[];
+    error: string;
+};
+
+// @public
+const CodespaceListSchema: GenMessage<CodespaceList>;
+
+// @public
+type CreateCodespaceRequest = Message<"grackle.CreateCodespaceRequest"> & {
+    repo: string;
+    machine: string;
+};
+
+// @public
+const CreateCodespaceRequestSchema: GenMessage<CreateCodespaceRequest>;
+
+// @public
+type CreateCodespaceResponse = Message<"grackle.CreateCodespaceResponse"> & {
+    name: string;
+    repository: string;
+};
+
+// @public
+const CreateCodespaceResponseSchema: GenMessage<CreateCodespaceResponse>;
+
+// @public
 type CreateKnowledgeNodeRequest = Message<"grackle.CreateKnowledgeNodeRequest"> & {
     title: string;
     content: string;
@@ -424,6 +462,11 @@ const Grackle: GenService<{
         input: typeof EnvironmentIdSchema;
         output: typeof ProvisionEventSchema;
     };
+    updateEnvironment: {
+        methodKind: "unary";
+        input: typeof UpdateEnvironmentRequestSchema;
+        output: typeof EnvironmentSchema;
+    };
     stopEnvironment: {
         methodKind: "unary";
         input: typeof EnvironmentIdSchema;
@@ -463,6 +506,16 @@ const Grackle: GenService<{
         methodKind: "unary";
         input: typeof SessionIdSchema;
         output: typeof SessionSchema;
+    };
+    getSessionEvents: {
+        methodKind: "unary";
+        input: typeof SessionIdSchema;
+        output: typeof SessionEventListSchema;
+    };
+    getTaskSessions: {
+        methodKind: "unary";
+        input: typeof TaskIdSchema;
+        output: typeof SessionListSchema;
     };
     streamSession: {
         methodKind: "server_streaming";
@@ -559,6 +612,11 @@ const Grackle: GenService<{
         input: typeof TaskIdSchema;
         output: typeof SessionSchema;
     };
+    stopTask: {
+        methodKind: "unary";
+        input: typeof TaskIdSchema;
+        output: typeof TaskSchema;
+    };
     deleteTask: {
         methodKind: "unary";
         input: typeof TaskIdSchema;
@@ -598,6 +656,16 @@ const Grackle: GenService<{
         methodKind: "unary";
         input: typeof QueryFindingsRequestSchema;
         output: typeof FindingListSchema;
+    };
+    listCodespaces: {
+        methodKind: "unary";
+        input: typeof EmptySchema;
+        output: typeof CodespaceListSchema;
+    };
+    createCodespace: {
+        methodKind: "unary";
+        input: typeof CreateCodespaceRequestSchema;
+        output: typeof CreateCodespaceResponseSchema;
     };
     importGitHubIssues: {
         methodKind: "unary";
@@ -688,6 +756,8 @@ declare namespace grackle {
         AddEnvironmentRequestSchema,
         ProvisionEvent,
         ProvisionEventSchema,
+        UpdateEnvironmentRequest,
+        UpdateEnvironmentRequestSchema,
         Session,
         SessionSchema,
         SessionList,
@@ -716,6 +786,8 @@ declare namespace grackle {
         FdInfoSchema,
         SessionEvent,
         SessionEventSchema,
+        SessionEventList,
+        SessionEventListSchema,
         TokenEntry,
         TokenEntrySchema,
         TokenList,
@@ -780,6 +852,14 @@ declare namespace grackle {
         CreatePersonaRequestSchema,
         UpdatePersonaRequest,
         UpdatePersonaRequestSchema,
+        CodespaceInfo,
+        CodespaceInfoSchema,
+        CodespaceList,
+        CodespaceListSchema,
+        CreateCodespaceRequest,
+        CreateCodespaceRequestSchema,
+        CreateCodespaceResponse,
+        CreateCodespaceResponseSchema,
         GetSettingRequest,
         GetSettingRequestSchema,
         SetSettingRequest,
@@ -1296,6 +1376,15 @@ type SessionEvent = Message<"grackle.SessionEvent"> & {
 };
 
 // @public
+type SessionEventList = Message<"grackle.SessionEventList"> & {
+    sessionId: string;
+    events: SessionEvent[];
+};
+
+// @public
+const SessionEventListSchema: GenMessage<SessionEventList>;
+
+// @public
 const SessionEventSchema: GenMessage<SessionEvent>;
 
 // @public
@@ -1595,6 +1684,16 @@ type ToolConfig = Message<"grackle.ToolConfig"> & {
 
 // @public
 const ToolConfigSchema: GenMessage<ToolConfig>;
+
+// @public
+type UpdateEnvironmentRequest = Message<"grackle.UpdateEnvironmentRequest"> & {
+    id: string;
+    displayName?: string;
+    adapterConfig?: string;
+};
+
+// @public
+const UpdateEnvironmentRequestSchema: GenMessage<UpdateEnvironmentRequest>;
 
 // @public
 type UpdatePersonaRequest = Message<"grackle.UpdatePersonaRequest"> & {

@@ -1,21 +1,12 @@
 import { test, expect } from "./fixtures.js";
-import {
-  createWorkspace,
-  createTask,
-  navigateToTask,
-  patchWsForStubRuntime,
-  runStubTaskToCompletion,
-} from "./helpers.js";
+import { runStubTaskToCompletion } from "./helpers.js";
 
 test.describe("Complete and resume flow", { tag: ["@error"] }, () => {
-  test("paused task can be completed", async ({ appPage }) => {
-    const page = appPage;
+  test("paused task can be completed", async ({ stubTask }) => {
+    const { page } = stubTask;
 
-    // --- Setup: Create workspace, task, navigate, patch runtime ---
-    await createWorkspace(page, "complete-flow");
-    await createTask(page, "complete-flow", "complete task", "test-local");
-    await navigateToTask(page, "complete task");
-    await patchWsForStubRuntime(page);
+    // --- Setup: Create task and navigate ---
+    await stubTask.createAndNavigateSimple("complete task");
 
     // --- Run task to paused (review) state ---
     await runStubTaskToCompletion(page);

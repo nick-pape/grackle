@@ -46,7 +46,8 @@ test.describe("Workspaces", { tag: ["@workspace"] }, () => {
     // On fresh load (no workspaces), the welcome CTA should be visible
     await expect(page.locator('[data-testid="welcome-cta"]')).toBeVisible();
 
-    // Click the CTA button — should navigate to /workspaces/new
+    // Wait for button to be enabled (environments must load before it's clickable)
+    await expect(page.locator('[data-testid="welcome-create-button"]')).toBeEnabled({ timeout: 5_000 });
     await page.locator('[data-testid="welcome-create-button"]').click();
     await expect(page).toHaveURL(/\/workspaces\/new/);
 
@@ -79,8 +80,8 @@ test.describe("Workspaces", { tag: ["@workspace"] }, () => {
     await page.goto("/workspaces/new");
     await page.waitForFunction(() => document.body.innerText.includes("Connected"), { timeout: 10_000 });
 
-    // Create form should be visible
-    await expect(page.locator('[data-testid="workspace-form-name"]')).toBeVisible({ timeout: 5_000 });
+    // Create form should be visible (wait for router to fully render the page)
+    await expect(page.locator('[data-testid="workspace-form-name"]')).toBeVisible({ timeout: 10_000 });
 
     // Click cancel to go back
     await page.locator('[data-testid="workspace-create-cancel"]').click();
