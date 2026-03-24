@@ -847,6 +847,13 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         );
       }
 
+      // Capture child session ID before blocking — the pipe stream may be
+      // removed by a concurrent fd close while consumeSync is awaiting.
+      const pipeStream = streamRegistry.getStream(sub.streamId);
+      const childSessionId = pipeStream?.name.startsWith("pipe:")
+        ? pipeStream.name.slice("pipe:".length)
+        : undefined;
+
       // Use try/finally so the pipe stream (and lifecycle stream) are cleaned up
       // even if consumeSync rejects (e.g., the request is cancelled or times out)
       // to prevent unbounded memory growth. Lifecycle cleanup also orphans the child,
@@ -855,7 +862,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       try {
         msg = await streamRegistry.consumeSync(sub.id);
       } finally {
-        pipeDelivery.cleanupSyncPipeAndLifecycle(sub.streamId);
+        pipeDelivery.cleanupSyncPipeAndLifecycle(sub.streamId, childSessionId);
       }
 
       return create(grackle.WaitForPipeResponseSchema, {

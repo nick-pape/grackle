@@ -222,22 +222,30 @@ export function cleanupAsyncListenerIfEmpty(sessionId: string): void {
  * subscriptions), which triggers auto-stop via the lifecycle manager.
  * This prevents idle children from lingering after sync pipe delivery.
  */
-export function cleanupSyncPipeAndLifecycle(pipeStreamId: string): void {
+export function cleanupSyncPipeAndLifecycle(
+  pipeStreamId: string,
+  childSessionId?: string,
+): void {
   const stream = streamRegistry.getStream(pipeStreamId);
-  if (!stream) {
-    return;
+
+  // Prefer explicitly provided childSessionId; fall back to extracting from
+  // the stream name convention: "pipe:{childSessionId}".
+  let effectiveChildSessionId = childSessionId;
+  if (!effectiveChildSessionId && stream?.name.startsWith("pipe:")) {
+    effectiveChildSessionId = stream.name.slice("pipe:".length);
   }
 
-  // Extract child session ID from stream name convention: "pipe:{childSessionId}"
-  const childSessionId = stream.name.startsWith("pipe:")
-    ? stream.name.slice("pipe:".length)
-    : undefined;
+  // Delete the pipe stream if it still exists (may already be gone if a
+  // concurrent fd close removed it while consumeSync was blocked).
+  if (stream) {
+    streamRegistry.deleteStream(pipeStreamId);
+  }
 
-  streamRegistry.deleteStream(pipeStreamId);
-
-  // Auto-close the lifecycle stream so the child gets orphaned and stopped
-  if (childSessionId) {
-    const lifecycleStream = streamRegistry.getStreamByName(`lifecycle:${childSessionId}`);
+  // Auto-close the lifecycle stream so the child gets orphaned and stopped.
+  // This still runs even if the pipe stream was already deleted, as long as
+  // a childSessionId was provided by the caller.
+  if (effectiveChildSessionId) {
+    const lifecycleStream = streamRegistry.getStreamByName(`lifecycle:${effectiveChildSessionId}`);
     if (lifecycleStream) {
       streamRegistry.deleteStream(lifecycleStream.id);
     }

@@ -324,6 +324,29 @@ describe("pipe-delivery integration", () => {
       // Should not throw
       pipeDelivery.cleanupSyncPipeAndLifecycle("nonexistent-id");
     });
+
+    it("cleans up lifecycle stream even when pipe stream is already gone", () => {
+      sessionStore.createSession("parent", "test-env", "claude-code", "p", "sonnet", "/tmp/p");
+      sessionStore.createSession("child", "test-env", "claude-code", "c", "sonnet", "/tmp/c", "", "", "parent", "sync");
+
+      // Create both streams
+      const lifecycleStream = streamRegistry.createStream("lifecycle:child");
+      streamRegistry.subscribe(lifecycleStream.id, "parent", "rw", "detach", true);
+      streamRegistry.subscribe(lifecycleStream.id, "child", "rw", "detach", false);
+
+      const pipeStream = streamRegistry.createStream("pipe:child");
+      streamRegistry.subscribe(pipeStream.id, "parent", "rw", "sync", true);
+      streamRegistry.subscribe(pipeStream.id, "child", "rw", "async", false);
+
+      // Simulate pipe stream being removed by a concurrent fd close
+      streamRegistry.deleteStream(pipeStream.id);
+      expect(streamRegistry.getStream(pipeStream.id)).toBeUndefined();
+
+      // With explicit childSessionId, lifecycle cleanup still runs
+      pipeDelivery.cleanupSyncPipeAndLifecycle(pipeStream.id, "child");
+
+      expect(streamRegistry.getStreamByName("lifecycle:child")).toBeUndefined();
+    });
   });
 
   // ─── No-ops ────────────────────────────────────────────────
