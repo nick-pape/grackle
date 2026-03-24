@@ -30,7 +30,7 @@ export {
 
 // ─── Factory functions ──────────────────────────────────────────────────────
 
-let idCounter = 0;
+let idCounter: number = 0;
 
 /** Generate a unique ID for test entities. */
 function nextId(prefix: string): string {
@@ -186,7 +186,6 @@ export function makeCredentialProviders(overrides: Partial<CredentialProviderCon
 }
 
 /** No-op callback for story args. */
-// eslint-disable-next-line @typescript-eslint/no-empty-function
 export const noop = (): void => {};
 
 // ─── Storybook decorators ───────────────────────────────────────────────────
@@ -195,13 +194,13 @@ export { withMockGrackle } from "./storybook-decorators.js";
 
 // ─── Aliases (some stories use "build" prefix) ──────────────────────────────
 
-export const buildEnvironment = makeEnvironment;
-export const buildSession = makeSession;
-export const buildWorkspace = makeWorkspace;
-export const buildTask = makeTask;
-export const buildFinding = makeFinding;
-export const buildToken = makeToken;
-export const buildPersona = makePersona;
-export const buildEvent = makeEvent;
-export const buildCodespace = makeCodespace;
-export const buildCredentialProviderConfig = makeCredentialProviders;
+export const buildEnvironment: typeof makeEnvironment = makeEnvironment;
+export const buildSession: typeof makeSession = makeSession;
+export const buildWorkspace: typeof makeWorkspace = makeWorkspace;
+export const buildTask: typeof makeTask = makeTask;
+export const buildFinding: typeof makeFinding = makeFinding;
+export const buildToken: typeof makeToken = makeToken;
+export const buildPersona: typeof makePersona = makePersona;
+export const buildEvent: typeof makeEvent = makeEvent;
+export const buildCodespace: typeof makeCodespace = makeCodespace;
+export const buildCredentialProviderConfig: typeof makeCredentialProviders = makeCredentialProviders;

@@ -2,10 +2,11 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { expect, fn } from "@storybook/test";
 import { MemoryRouter } from "react-router";
 import { ToastProvider } from "../../context/ToastContext.js";
+import type { Workspace } from "../../hooks/types.js";
 import { buildWorkspace, buildPersona } from "../../test-utils/storybook-helpers.js";
 import { TaskEditPanel } from "./TaskEditPanel.js";
 
-const defaultWorkspace = buildWorkspace({ id: "ws-001", name: "Test Workspace" });
+const defaultWorkspace: Workspace = buildWorkspace({ id: "ws-001", name: "Test Workspace" });
 
 const meta: Meta<typeof TaskEditPanel> = {
   title: "Panels/TaskEditPanel",

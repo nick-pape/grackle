@@ -1,12 +1,13 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, fn, userEvent } from "@storybook/test";
+import { expect, userEvent } from "@storybook/test";
 import { MemoryRouter } from "react-router";
 import { TaskList } from "./TaskList.js";
+import type { Workspace } from "../../hooks/types.js";
 import { buildTask, buildWorkspace } from "../../test-utils/storybook-helpers.js";
 
-const WORKSPACE_ID = "ws-tasklist";
+const WORKSPACE_ID: string = "ws-tasklist";
 
-const defaultWorkspace = buildWorkspace({ id: WORKSPACE_ID, name: "Test Workspace" });
+const defaultWorkspace: Workspace = buildWorkspace({ id: WORKSPACE_ID, name: "Test Workspace" });
 
 const meta: Meta<typeof TaskList> = {
   title: "Lists/TaskList",

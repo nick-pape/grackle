@@ -53,13 +53,13 @@ export const MultiLineExpandCollapse: Story = {
 
     // Click to expand
     const header = canvas.getByTestId("tool-result-header");
-    await header.click();
+    header.click();
 
     // Now line 6 should be visible
     await expect(canvas.getByText("Line 6 of output")).toBeInTheDocument();
 
     // Click to collapse
-    await header.click();
+    header.click();
     await expect(canvas.queryByText("Line 6 of output")).not.toBeInTheDocument();
   },
 };

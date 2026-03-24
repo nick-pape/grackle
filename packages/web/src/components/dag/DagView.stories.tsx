@@ -1,13 +1,13 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, fn, userEvent } from "@storybook/test";
+import { expect, userEvent } from "@storybook/test";
 import { MemoryRouter } from "react-router";
 import { ReactFlowProvider } from "@xyflow/react";
 import { ThemeProvider } from "../../context/ThemeContext.js";
 import { DagView } from "./DagView.js";
 import { buildTask } from "../../test-utils/storybook-helpers.js";
 
-const WORKSPACE_ID = "ws-dag";
-const ENVIRONMENT_ID = "env-dag";
+const WORKSPACE_ID: string = "ws-dag";
+const ENVIRONMENT_ID: string = "env-dag";
 
 /**
  * DagView uses @xyflow/react which requires a parent ReactFlowProvider

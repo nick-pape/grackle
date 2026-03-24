@@ -1,9 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, fn } from "@storybook/test";
 import { ChatInput } from "./ChatInput.js";
+import type { Environment } from "../../hooks/types.js";
 import { makeEnvironment, makePersona } from "../../test-utils/storybook-helpers.js";
 
-const connectedEnv = makeEnvironment({ id: "local", displayName: "Local", status: "connected" });
+const connectedEnv: Environment = makeEnvironment({ id: "local", displayName: "Local", status: "connected" });
 
 const meta: Meta<typeof ChatInput> = {
   component: ChatInput,

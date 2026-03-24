@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, fn, userEvent } from "@storybook/test";
+import { expect, fn } from "@storybook/test";
 import { MemoryRouter } from "react-router";
 import { ToastProvider } from "../../context/ToastContext.js";
 import { EnvironmentEditPanel } from "./EnvironmentEditPanel.js";

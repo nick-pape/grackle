@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, fn, userEvent } from "@storybook/test";
+import { expect, fn } from "@storybook/test";
 import { CredentialProvidersPanel } from "./CredentialProvidersPanel.js";
 import { buildCredentialProviderConfig } from "../../test-utils/storybook-helpers.js";
 
