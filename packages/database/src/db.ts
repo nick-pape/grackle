@@ -585,10 +585,14 @@ export function initDatabase(sqliteOverride?: InstanceType<typeof Database>): In
   );
 
   // Migration: rename worktree_base_path → working_directory on workspaces table (#547)
+  // Guard: only run if the old column still exists (new databases already have working_directory).
   tryMigration("rename-worktree-base-path", () => {
-    conn.exec(
-      "ALTER TABLE workspaces RENAME COLUMN worktree_base_path TO working_directory",
-    );
+    const tableInfo = conn.prepare("PRAGMA table_info(workspaces)").all() as Array<{ name: string }>;
+    if (tableInfo.some((c) => c.name === "worktree_base_path")) {
+      conn.exec(
+        "ALTER TABLE workspaces RENAME COLUMN worktree_base_path TO working_directory",
+      );
+    }
   });
 
   return { migrationErrors };

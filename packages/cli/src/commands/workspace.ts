@@ -33,8 +33,9 @@ export function registerWorkspaceCommands(program: Command): void {
     .option("--repo <url>", "Repository URL")
     .option("--desc <description>", "Workspace description")
     .option("--no-worktrees", "Disable worktree isolation (agents share the main checkout)")
-    .option("--working-directory <path>", "Base path for worktrees (e.g. /workspaces/my-repo)")
-    .action(async (name: string, opts: { worktrees?: boolean; desc?: string; repo?: string; env: string; workingDirectory?: string }) => {
+    .option("--working-directory <path>", "Working directory / repo root on the environment (e.g. /workspaces/my-repo)")
+    .option("--worktree-base-path <path>", "(deprecated, use --working-directory)")
+    .action(async (name: string, opts: { worktrees?: boolean; desc?: string; repo?: string; env: string; workingDirectory?: string; worktreeBasePath?: string }) => {
       const client = createGrackleClient();
       // Commander sets opts.worktrees = false when --no-worktrees is passed, true otherwise
       const useWorktrees = opts.worktrees !== false;
@@ -44,7 +45,7 @@ export function registerWorkspaceCommands(program: Command): void {
         repoUrl: opts.repo || "",
         environmentId: opts.env,
         useWorktrees,
-        workingDirectory: opts.workingDirectory || "",
+        workingDirectory: opts.workingDirectory || opts.worktreeBasePath || "",
       });
       console.log(`Created workspace: ${p.id} (${p.name}) [worktrees: ${p.useWorktrees ? "enabled" : "disabled"}]`);
     });
@@ -80,8 +81,9 @@ export function registerWorkspaceCommands(program: Command): void {
     .option("--env <env-id>", "Reparent to a different environment")
     .option("--no-worktrees", "Disable worktree isolation (agents share the main checkout)")
     .option("--worktrees", "Enable worktree isolation (default)")
-    .option("--working-directory <path>", "Base path for worktrees (e.g. /workspaces/my-repo)")
-    .action(async (id: string, opts: { worktrees?: boolean; name?: string; desc?: string; repo?: string; env?: string; workingDirectory?: string }) => {
+    .option("--working-directory <path>", "Working directory / repo root on the environment (e.g. /workspaces/my-repo)")
+    .option("--worktree-base-path <path>", "(deprecated, use --working-directory)")
+    .action(async (id: string, opts: { worktrees?: boolean; name?: string; desc?: string; repo?: string; env?: string; workingDirectory?: string; worktreeBasePath?: string }) => {
       const client = createGrackleClient();
       // Determine useWorktrees: explicit --worktrees → true, --no-worktrees → false, neither → undefined (no change)
       let useWorktrees: boolean | undefined;
@@ -97,7 +99,7 @@ export function registerWorkspaceCommands(program: Command): void {
         repoUrl: opts.repo,
         environmentId: opts.env,
         useWorktrees,
-        workingDirectory: opts.workingDirectory,
+        workingDirectory: opts.workingDirectory || opts.worktreeBasePath,
       });
       console.log(`Updated workspace: ${p.id} (${p.name}) [worktrees: ${p.useWorktrees ? "enabled" : "disabled"}]`);
     });

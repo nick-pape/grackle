@@ -69,7 +69,7 @@ export const workspaceTools: ToolDefinition[] = [
       workingDirectory: z
         .string()
         .optional()
-        .describe("Optional base path for worktrees (e.g. /workspaces/my-repo)"),
+        .describe("Working directory / repo root on the environment (e.g. /workspaces/my-repo)"),
       useWorktrees: z
         .boolean()
         .optional()
@@ -180,7 +180,7 @@ export const workspaceTools: ToolDefinition[] = [
       workingDirectory: z
         .string()
         .optional()
-        .describe("New base path for worktrees (e.g. /workspaces/my-repo)"),
+        .describe("New working directory / repo root (e.g. /workspaces/my-repo)"),
       useWorktrees: z
         .boolean()
         .optional()

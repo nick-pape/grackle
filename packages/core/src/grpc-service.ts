@@ -686,7 +686,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         maxTurns,
         branch: req.branch,
         workingDirectory: req.branch
-          ? (req.workingDirectory.trim() || process.env.GRACKLE_WORKTREE_BASE || "/workspace")
+          ? (req.workingDirectory.trim() || process.env.GRACKLE_WORKING_DIRECTORY || process.env.GRACKLE_WORKTREE_BASE || "/workspace")
           : "",
         systemContext,
         mcpServersJson,

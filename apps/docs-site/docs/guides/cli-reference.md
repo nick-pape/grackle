@@ -133,7 +133,7 @@ List all active projects.
 | `--env <id>` | Default environment |
 | `--desc <text>` | Description |
 | `--no-worktrees` | Disable worktree isolation |
-| `--working-directory <path>` | Custom worktree base path |
+| `--working-directory <path>` | Working directory / repo root on the environment |
 
 ### `grackle project get <id>`
 
