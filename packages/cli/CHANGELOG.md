@@ -1,6 +1,17 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Tue, 24 Mar 2026 05:12:35 GMT and should not be manually modified.
+This log was last generated on Tue, 24 Mar 2026 06:19:57 GMT and should not be manually modified.
+
+## 0.75.1
+Tue, 24 Mar 2026 06:19:57 GMT
+
+### Patches
+
+- Extract HTTP web server (static files, pairing, OAuth, ConnectRPC proxy) into @grackle-ai/web-server
+
+### Updates
+
+- placeholder
 
 ## 0.75.0
 Tue, 24 Mar 2026 05:12:35 GMT
