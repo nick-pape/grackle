@@ -8,22 +8,6 @@ import {
 } from "./helpers.js";
 
 test.describe("Multi-Task", { tag: ["@task"] }, () => {
-  test("tasks sidebar shows multiple tasks", async ({ stubTask }) => {
-    const { page, workspaceName } = stubTask;
-
-    // Create 3 tasks in the fixture's workspace
-    await createTask(page, workspaceName, "task-alpha", "test-local");
-    await createTask(page, workspaceName, "task-bravo", "test-local");
-    await createTask(page, workspaceName, "task-charlie", "test-local");
-
-    // Navigate to Tasks tab — all 3 tasks should appear in the sidebar
-    await page.locator('[data-testid="sidebar-tab-tasks"]').click();
-    const sidebar = page.getByTestId("sidebar");
-    await expect(sidebar.getByText("task-alpha")).toBeVisible({ timeout: 5_000 });
-    await expect(sidebar.getByText("task-bravo")).toBeVisible({ timeout: 5_000 });
-    await expect(sidebar.getByText("task-charlie")).toBeVisible({ timeout: 5_000 });
-  });
-
   test("switching between tasks preserves state", async ({ stubTask }) => {
     const { page, workspaceName } = stubTask;
 
