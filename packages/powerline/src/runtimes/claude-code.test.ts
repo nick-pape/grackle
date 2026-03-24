@@ -794,6 +794,11 @@ describe("ClaudeCodeRuntime — multi-turn persistent mode", () => {
     const { session, nextEvent } = spawnSession();
     await drainUntilStatus(nextEvent, "waiting_input");
 
+    // Verify persistent mode was used: query() called exactly once with AsyncIterable prompt
+    expect(mockQuery).toHaveBeenCalledTimes(1);
+    const persistentCall = mockQuery.mock.calls[0][0] as Record<string, unknown>;
+    expect((persistentCall.prompt as AsyncIterable<unknown>)[Symbol.asyncIterator]).toBeDefined();
+
     // Follow-up triggers persistent stream throw → turnCompleteResolve fires →
     // session returns to waiting_input (does NOT hang)
     session.sendInput("trigger-crash");
@@ -806,9 +811,11 @@ describe("ClaudeCodeRuntime — multi-turn persistent mode", () => {
     const recoveryEvents = await drainUntilStatus(nextEvent, "waiting_input");
     expect(recoveryEvents.some((e) => e.type === "text" && e.content.includes("resumed"))).toBe(true);
 
-    // Verify the retry used resume-per-input (string prompt + resume option)
-    const retryCall = mockQuery.mock.calls[callCount - 1][0] as Record<string, unknown>;
+    // Verify: query() was called again for retry (persistent crashed, fell back to resume-per-input)
+    expect(mockQuery).toHaveBeenCalledTimes(2);
+    const retryCall = mockQuery.mock.calls[1][0] as Record<string, unknown>;
     expect(typeof retryCall.prompt).toBe("string");
+    expect(retryCall.prompt).toBe("retry");
     const retryOpts = retryCall.options as Record<string, unknown>;
     expect(retryOpts.resume).toBe("sess-throw");
 
