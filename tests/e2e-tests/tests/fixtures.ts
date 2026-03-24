@@ -36,18 +36,29 @@ export interface StubTaskContext {
   }): Promise<WsPayload>;
 }
 
+/** Simple deterministic hash to avoid workspace name collisions. */
+function shortHash(input: string): string {
+  let hash = 0;
+  for (let i = 0; i < input.length; i++) {
+    hash = ((hash << 5) - hash + input.charCodeAt(i)) | 0;
+  }
+  return Math.abs(hash).toString(36).slice(0, 6);
+}
+
 /** Derive a unique workspace name from the test's title path. */
 function workspaceNameFromTest(testInfo: TestInfo): string {
   // titlePath is e.g. ["", "Task Lifecycle (stub runtime)", "full task flow: ..."]
-  // Take the last segment, slugify, and add workerIndex for uniqueness
-  const slug = testInfo.titlePath
-    .slice(1)
-    .join("-")
+  // Combine all non-empty segments, slugify, and add workerIndex for uniqueness
+  const baseTitle = testInfo.titlePath.slice(1).join("-");
+  const slug = baseTitle
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "")
     .slice(0, 40);
-  return `ws-${slug}-w${testInfo.workerIndex}`;
+  const hash = shortHash(baseTitle);
+  const retryPart = testInfo.retry ? `-r${testInfo.retry}` : "";
+  const repeatPart = testInfo.repeatEachIndex ? `-re${testInfo.repeatEachIndex}` : "";
+  return `ws-${slug}-w${testInfo.workerIndex}${retryPart}${repeatPart}-${hash}`;
 }
 
 interface WorkerFixtures {
