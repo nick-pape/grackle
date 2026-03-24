@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Tue, 24 Mar 2026 16:30:39 GMT and should not be manually modified.
+This log was last generated on Tue, 24 Mar 2026 19:03:57 GMT and should not be manually modified.
+
+## 0.75.8
+Tue, 24 Mar 2026 19:03:57 GMT
+
+### Patches
+
+- Add multi-turn integration tests for all PowerLine runtimes
 
 ## 0.75.7
 Tue, 24 Mar 2026 16:30:39 GMT
