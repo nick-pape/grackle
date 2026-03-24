@@ -2,6 +2,23 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.75.4",
+      "tag": "@grackle-ai/cli_v0.75.4",
+      "date": "Tue, 24 Mar 2026 13:18:20 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Rename @grackle-ai/server to @grackle-ai/core; create thin @grackle-ai/server orchestrator that spawns core, web-server, MCP, and PowerLine"
+          }
+        ],
+        "none": [
+          {
+            "comment": "placeholder"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.75.3",
       "tag": "@grackle-ai/cli_v0.75.3",
       "date": "Tue, 24 Mar 2026 07:26:12 GMT",
