@@ -15,6 +15,12 @@ export interface EmitStep {
   title?: string;
   /** Convenience: used as subtask description. */
   description?: string;
+  /** Convenience: subtask local_id for dependency resolution. */
+  local_id?: string;
+  /** Convenience: subtask depends_on local_ids. */
+  depends_on?: string[];
+  /** Convenience: whether the subtask can decompose further. */
+  can_decompose?: boolean;
   /** Forwarded verbatim to AgentEvent.raw. */
   raw?: unknown;
 }
@@ -187,7 +193,20 @@ export function buildEventFromEmitStep(
   }
 
   if (step.emit === "subtask_create" && !content && (step.title || step.description)) {
-    content = JSON.stringify({ title: step.title ?? "", description: step.description ?? "" });
+    const subtaskPayload: Record<string, unknown> = {
+      title: step.title ?? "",
+      description: step.description ?? "",
+    };
+    if (step.local_id) {
+      subtaskPayload.local_id = step.local_id;
+    }
+    if (step.depends_on) {
+      subtaskPayload.depends_on = step.depends_on;
+    }
+    if (step.can_decompose !== undefined) {
+      subtaskPayload.can_decompose = step.can_decompose;
+    }
+    content = JSON.stringify(subtaskPayload);
   }
 
   const event: AgentEvent = { type: step.emit, timestamp, content };
