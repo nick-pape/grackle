@@ -1,7 +1,6 @@
 import { test, expect } from "./fixtures.js";
 import {
   installWsTracker,
-  injectWsMessage,
 } from "./helpers.js";
 
 test.describe("Markdown Rendering in EventRenderer", { tag: ["@webui"] }, () => {
@@ -28,6 +27,9 @@ test.describe("Markdown Rendering in EventRenderer", { tag: ["@webui"] }, () => 
     // using the Markdown component (react-markdown).
     const textEventDivs = page.locator('div[class*="textEvent"]');
     await expect(textEventDivs.first()).toBeVisible({ timeout: 5_000 });
+    // Verify rendered content and markdown paragraph wrapping
+    await expect(textEventDivs.first()).toContainText("Echo:");
+    await expect(textEventDivs.first().locator("p")).toBeVisible();
   });
 
   test("renders fenced code blocks with syntax highlighting", async ({ page }) => {
@@ -60,6 +62,7 @@ test.describe("Markdown Rendering in EventRenderer", { tag: ["@webui"] }, () => 
     const paragraphs = textEventDivs.first().locator("p");
     // Stub emits "Echo: code test" which should be wrapped in a <p>
     await expect(paragraphs.first()).toBeVisible({ timeout: 5_000 });
+    await expect(paragraphs.first()).toContainText("Echo: code test");
   });
 
   test("consecutive text events are grouped into a single block", async ({ page }) => {
@@ -96,7 +99,7 @@ test.describe("Markdown Rendering in EventRenderer", { tag: ["@webui"] }, () => 
     expect(count).toBe(1);
   });
 
-  test("markdown tables render with proper structure", async ({ page }) => {
+  test("text events are rendered with markdown paragraph wrapping", async ({ page }) => {
     await installWsTracker(page);
     await page.goto("/");
     await page.waitForFunction(
@@ -113,47 +116,11 @@ test.describe("Markdown Rendering in EventRenderer", { tag: ["@webui"] }, () => 
     await page.locator("button", { hasText: "Go" }).click();
     await expect(page.locator("text=Stub runtime initialized")).toBeVisible({ timeout: 10_000 });
 
-    // Wait for the stub session to reach waiting_input, then inject a markdown table
-    const inputField = page.locator('input[placeholder="Type a message..."]');
-    await expect(inputField).toBeVisible({ timeout: 10_000 });
-
-    // Inject a GFM table via the tracked websocket as a session_event
-    const tableMarkdown = "| Column A | Column B |\n| --- | --- |\n| Value 1 | Value 2 |";
-
-    // Find the session ID from the page
-    const sessionId = await page.evaluate(() => {
-      // The session row in the sidebar contains the session info
-      const rows = document.querySelectorAll('[class*="sessionRow"]');
-      // Fallback: look at the app state
-      return rows.length > 0 ? "has-session" : "no-session";
-    });
-
-    // Since we can inject via WS, inject a session_event with table markdown
-    // The app listens for "session_event" messages and appends to events state
-    await injectWsMessage(page, {
-      type: "session_event",
-      payload: {
-        sessionId: "any",
-        event: {
-          sessionId: "any",
-          eventType: "text",
-          content: tableMarkdown,
-          timestamp: new Date().toISOString(),
-        },
-      },
-    });
-
-    // Verify table element appears within a textEvent div
-    // The remark-gfm plugin converts markdown tables to <table> elements
+    // Verify that stub text events are wrapped in <p> tags by react-markdown
     const textEventDivs = page.locator('div[class*="textEvent"]');
-
-    // Check for table headers rendered by remark-gfm
-    // The stub text events already have "Echo: table test" and "You said: ..."
-    // Our injected event may or may not match the session filter.
-    // Instead, verify that the existing textEvent divs use markdown rendering.
-    // The stub "Echo: table test" should be wrapped in <p> tags by react-markdown.
     const firstText = textEventDivs.first();
     await expect(firstText).toBeVisible({ timeout: 5_000 });
+    await expect(firstText).toContainText("Echo: table test");
     await expect(firstText.locator("p")).toBeVisible();
   });
 

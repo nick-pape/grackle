@@ -15,6 +15,12 @@ async function setOnboardingCompleted(
 test.describe.configure({ mode: "serial" });
 
 test.describe("Setup Wizard (FRE)", { tag: ["@settings"] }, () => {
+  // Always restore onboarding state after each test so that failures
+  // cannot cascade to other tests sharing this worker.
+  test.afterEach(async ({ grackle: { client } }) => {
+    await setOnboardingCompleted(client, "true");
+  });
+
   test("redirects to /setup when onboarding is incomplete", async ({ page, grackle: { client } }) => {
     await setOnboardingCompleted(client, "false");
 
@@ -97,8 +103,4 @@ test.describe("Setup Wizard (FRE)", { tag: ["@settings"] }, () => {
     await expect(page.getByTestId("setup-wizard")).not.toBeVisible();
   });
 
-  // Restore onboarding_completed so other specs sharing this worker aren't affected.
-  test("cleanup: restore onboarding state", async ({ grackle: { client } }) => {
-    await setOnboardingCompleted(client, "true");
-  });
 });
