@@ -1,0 +1,17 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/heft/v0/heft-plugin.schema.json",
+  "taskPlugins": [
+    {
+      "pluginName": "storybook-build-plugin",
+      "entryPoint": "./lib/StorybookBuildPlugin.js"
+    },
+    {
+      "pluginName": "storybook-test-plugin",
+      "entryPoint": "./lib/StorybookTestPlugin.js"
+    },
+    {
+      "pluginName": "vitest-plugin",
+      "entryPoint": "./lib/VitestPlugin.js"
+    }
+  ]
+}
