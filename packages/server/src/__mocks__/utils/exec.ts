@@ -1,2 +1,2 @@
 import { vi } from "vitest";
-export const exec = vi.fn();
+export const exec: ReturnType<typeof vi.fn> = vi.fn();

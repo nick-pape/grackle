@@ -1,2 +1,2 @@
 import { vi } from "vitest";
-export const detectLanIp = vi.fn(() => undefined);
+export const detectLanIp: ReturnType<typeof vi.fn> = vi.fn(() => undefined);
