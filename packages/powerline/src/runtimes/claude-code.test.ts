@@ -758,6 +758,70 @@ describe("ClaudeCodeRuntime — multi-turn persistent mode", () => {
     session.kill();
   });
 
+  it("session recovers when persistent stream throws mid-turn", async () => {
+    // Simulate: persistent mode works for turn 1, then the stream THROWS on
+    // the second prompt (e.g. SDK process crash). The .catch() handler must
+    // resolve turnCompleteResolve so the input loop doesn't hang.
+    let callCount = 0;
+    mockQuery.mockImplementation((queryInput: Record<string, unknown>) => {
+      callCount++;
+      if (callCount === 1 && typeof queryInput.prompt !== "string") {
+        const promptIterable = queryInput.prompt as AsyncIterable<Record<string, unknown>>;
+        return {
+          async *[Symbol.asyncIterator]() {
+            let first = true;
+            for await (const _msg of promptIterable) {
+              if (first) {
+                yield { type: "system", subtype: "init", session_id: "sess-throw", model: "claude-sonnet-4" };
+                yield { type: "assistant", message: { role: "assistant", content: [{ type: "text", text: "turn1" }] } };
+                yield { type: "result", subtype: "success", is_error: false, result: "ok" };
+                first = false;
+              } else {
+                // Second prompt: stream throws (process crash)
+                throw new Error("Process crashed");
+              }
+            }
+          },
+        };
+      }
+      // Resume-per-input fallback
+      return asyncIterableFrom([
+        { type: "assistant", message: { role: "assistant", content: [{ type: "text", text: `resumed-call${callCount}` }] } },
+        { type: "result", subtype: "success", is_error: false, result: "ok" },
+      ]);
+    });
+
+    const { session, nextEvent } = spawnSession();
+    await drainUntilStatus(nextEvent, "waiting_input");
+
+    // Verify persistent mode was used: query() called exactly once with AsyncIterable prompt
+    expect(mockQuery).toHaveBeenCalledTimes(1);
+    const persistentCall = mockQuery.mock.calls[0][0] as Record<string, unknown>;
+    expect((persistentCall.prompt as AsyncIterable<unknown>)[Symbol.asyncIterator]).toBeDefined();
+
+    // Follow-up triggers persistent stream throw → turnCompleteResolve fires →
+    // session returns to waiting_input (does NOT hang)
+    session.sendInput("trigger-crash");
+    await drainUntilStatus(nextEvent, "running");
+    await drainUntilStatus(nextEvent, "waiting_input");
+
+    // Session still alive — next follow-up uses resume-per-input
+    session.sendInput("retry");
+    await drainUntilStatus(nextEvent, "running");
+    const recoveryEvents = await drainUntilStatus(nextEvent, "waiting_input");
+    expect(recoveryEvents.some((e) => e.type === "text" && e.content.includes("resumed"))).toBe(true);
+
+    // Verify: query() was called again for retry (persistent crashed, fell back to resume-per-input)
+    expect(mockQuery).toHaveBeenCalledTimes(2);
+    const retryCall = mockQuery.mock.calls[1][0] as Record<string, unknown>;
+    expect(typeof retryCall.prompt).toBe("string");
+    expect(retryCall.prompt).toBe("retry");
+    const retryOpts = retryCall.options as Record<string, unknown>;
+    expect(retryOpts.resume).toBe("sess-throw");
+
+    session.kill();
+  });
+
   it("session degrades to resume-per-input when persistent stream ends early", async () => {
     // Simulate: persistent mode works for turn 1, then the stream closes normally
     // (e.g. process exits). The consumePersistentStream cleanup resolves
