@@ -1,8 +1,8 @@
 {
   "changes": [
     {
-      "comment": "placeholder",
-      "type": "none",
+      "comment": "Add regression tests for Codex runtime on Docker without git repo",
+      "type": "patch",
       "packageName": "@grackle-ai/cli"
     }
   ],

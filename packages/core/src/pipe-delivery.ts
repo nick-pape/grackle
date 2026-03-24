@@ -25,6 +25,7 @@ const STATUS_LABELS: Record<string, string> = {
   completed: "completed",
   killed: "was killed",
   failed: "failed",
+  waiting_input: "finished (idle)",
 };
 
 /** Stored unsubscribe functions for async listeners, keyed by parent session ID. */
@@ -75,7 +76,11 @@ export function setupAsyncPipeDelivery(parentSessionId: string): void {
 
 /**
  * Publish a completion message to the IPC stream when a child session with a pipe
- * reaches terminal status. Called from the event processor.
+ * reaches terminal status (or idle for sync pipes). Called from the event processor.
+ *
+ * For sync pipes: also triggers on `waiting_input` (idle) to unblock the parent's
+ * `consumeSync()` when a child goes idle without calling `task_complete`.
+ * For async pipes: `waiting_input` is ignored — the child can still accept input.
  *
  * For async pipes: cleans up the stream and listener immediately after publish.
  * For sync pipes: does NOT clean up — the WaitForPipe consumer handles cleanup
@@ -89,6 +94,12 @@ export function publishChildCompletion(childSessionId: string, status: string): 
 
   // Only publish for sessions that have a parent and a non-detach pipe
   if (!session.parentSessionId || !session.pipeMode || session.pipeMode === "detach") {
+    return;
+  }
+
+  // For non-sync pipes, idle is not a completion signal — the child can still accept input.
+  // Only sync pipes treat waiting_input as delivery-worthy (unblocks parent's consumeSync).
+  if (status === "waiting_input" && session.pipeMode !== "sync") {
     return;
   }
 
@@ -199,6 +210,46 @@ export function cleanupAsyncListenerIfEmpty(sessionId: string): void {
     if (cleanup) {
       cleanup();
       asyncListenerCleanups.delete(sessionId);
+    }
+  }
+}
+
+/**
+ * Clean up both the pipe stream and its associated lifecycle stream after
+ * a sync pipe has been consumed (or cancelled). Called from the `waitForPipe`
+ * handler's `finally` block, so it runs on both success and failure
+ * (e.g., when `consumeSync()` is rejected due to cancellation or stream deletion).
+ *
+ * Deleting the lifecycle stream orphans the child session (no remaining
+ * subscriptions), which triggers auto-stop via the lifecycle manager.
+ * This prevents idle children from lingering after sync pipe delivery.
+ */
+export function cleanupSyncPipeAndLifecycle(
+  pipeStreamId: string,
+  childSessionId?: string,
+): void {
+  const stream = streamRegistry.getStream(pipeStreamId);
+
+  // Prefer explicitly provided childSessionId; fall back to extracting from
+  // the stream name convention: "pipe:{childSessionId}".
+  let effectiveChildSessionId = childSessionId;
+  if (!effectiveChildSessionId && stream?.name.startsWith("pipe:")) {
+    effectiveChildSessionId = stream.name.slice("pipe:".length);
+  }
+
+  // Delete the pipe stream if it still exists (may already be gone if a
+  // concurrent fd close removed it while consumeSync was blocked).
+  if (stream) {
+    streamRegistry.deleteStream(pipeStreamId);
+  }
+
+  // Auto-close the lifecycle stream so the child gets orphaned and stopped.
+  // This still runs even if the pipe stream was already deleted, as long as
+  // a childSessionId was provided by the caller.
+  if (effectiveChildSessionId) {
+    const lifecycleStream = streamRegistry.getStreamByName(`lifecycle:${effectiveChildSessionId}`);
+    if (lifecycleStream) {
+      streamRegistry.deleteStream(lifecycleStream.id);
     }
   }
 }

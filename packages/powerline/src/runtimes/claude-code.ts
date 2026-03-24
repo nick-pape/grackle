@@ -332,6 +332,8 @@ class ClaudeCodeSession extends BaseAgentSession {
         if (!this.killed) {
           logger.warn({ err }, "Persistent query stream ended unexpectedly");
         }
+        // Unblock any pending waitForTurnComplete so the input loop can recover
+        this.turnCompleteResolve?.();
         // Clear persistent state so follow-ups fall back to resume-per-input
         this.promptQueue = undefined;
         this.persistentQuery = undefined;

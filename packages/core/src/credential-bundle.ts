@@ -1,6 +1,7 @@
 /**
  * Builds token bundles from enabled credential providers by reading
- * `process.env` and credential files from disk.
+ * `process.env`, credential files from disk, and (as a fallback) the
+ * `gh` CLI's credential store.
  *
  * Separated from {@link ./credential-providers.ts} (persistence layer) and
  * {@link ./token-push.ts} (network orchestration) to keep each module
@@ -12,6 +13,7 @@ import { join } from "node:path";
 import { create } from "@bufbuild/protobuf";
 import { powerline, type RuntimeName } from "@grackle-ai/common";
 import { credentialProviders, type CredentialProviderConfig, type DatabaseInstance } from "@grackle-ai/database";
+import { exec } from "./utils/exec.js";
 
 /** Maps each runtime to the credential providers it needs. */
 const RUNTIME_PROVIDERS: Record<string, (keyof CredentialProviderConfig)[]> = {
@@ -26,15 +28,32 @@ const RUNTIME_PROVIDERS: Record<string, (keyof CredentialProviderConfig)[]> = {
   "copilot-acp": ["copilot", "github"],
 };
 
+/** Timeout for the `gh auth token` subprocess call. */
+const GH_AUTH_TOKEN_TIMEOUT_MS: number = 5_000;
+
+/**
+ * Resolve a GitHub token from the `gh` CLI's credential store.
+ * Returns `undefined` if the CLI is unavailable, not authenticated, or errors.
+ * @internal Exported for testing.
+ */
+export async function resolveGitHubTokenFromCli(): Promise<string | undefined> {
+  try {
+    const { stdout } = await exec("gh", ["auth", "token"], { timeout: GH_AUTH_TOKEN_TIMEOUT_MS });
+    return stdout || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 /**
  * Build a token bundle containing enabled provider credentials.
  * When `runtime` is a known {@link RuntimeName}, only providers mapped to that runtime are included.
  * When `runtime` is omitted, all enabled providers are included.
  * When `runtime` is provided but not a recognized {@link RuntimeName}, no providers are included
  * (fails safe rather than exposing all credentials for an unrecognized runtime).
- * Reads values fresh from `process.env` or disk at call time.
+ * Reads values fresh from `process.env`, disk, or the `gh` CLI at call time.
  */
-export function buildProviderTokenBundle(runtime?: string, database?: DatabaseInstance): powerline.TokenBundle {
+export async function buildProviderTokenBundle(runtime?: string, database?: DatabaseInstance): Promise<powerline.TokenBundle> {
   const config = credentialProviders.getCredentialProviders(database);
   // When runtime is given, look it up in the map. Unknown runtimes get [] (empty, not all providers).
   const runtimeProviders = runtime !== undefined
@@ -44,6 +63,17 @@ export function buildProviderTokenBundle(runtime?: string, database?: DatabaseIn
     ? new Set(runtimeProviders)
     : undefined;
   const items: powerline.TokenItem[] = [];
+
+  // Lazily resolved GitHub token from the `gh` CLI — shared across provider blocks
+  // to avoid spawning the subprocess more than once per call. Stores a Promise
+  // (not the resolved value) so concurrent reads share the same in-flight call.
+  let cliTokenPromise: Promise<string | undefined> | undefined;
+  function getCliToken(): Promise<string | undefined> {
+    if (!cliTokenPromise) {
+      cliTokenPromise = resolveGitHubTokenFromCli();
+    }
+    return cliTokenPromise;
+  }
 
   // Claude provider
   if ((!allowedProviders || allowedProviders.has("claude")) && config.claude === "subscription") {
@@ -77,9 +107,11 @@ export function buildProviderTokenBundle(runtime?: string, database?: DatabaseIn
 
   // GitHub provider
   if ((!allowedProviders || allowedProviders.has("github")) && config.github === "on") {
+    let hasGitHubEnvVar = false;
     for (const varName of ["GITHUB_TOKEN", "GH_TOKEN"]) {
       const value = process.env[varName];
       if (value) {
+        hasGitHubEnvVar = true;
         items.push(
           create(powerline.TokenItemSchema, {
             name: varName.toLowerCase().replace(/_/g, "-"),
@@ -90,10 +122,29 @@ export function buildProviderTokenBundle(runtime?: string, database?: DatabaseIn
         );
       }
     }
+    // Fallback: resolve from `gh auth token` when no env vars are set.
+    // This covers dev workstations where `gh auth login` stores tokens in the
+    // gh CLI config rather than in GITHUB_TOKEN / GH_TOKEN env vars.
+    if (!hasGitHubEnvVar) {
+      const cliToken = await getCliToken();
+      if (cliToken) {
+        items.push(
+          create(powerline.TokenItemSchema, {
+            name: "github-token",
+            type: "env_var",
+            envVar: "GITHUB_TOKEN",
+            value: cliToken,
+          }),
+        );
+      }
+    }
   }
 
-  // Copilot provider — push the config file so the SDK's useLoggedInUser path works.
-  // Also forward env vars for explicit token / BYOK scenarios.
+  // Copilot provider — push the config file and forward env vars.
+  // Also ensures a GitHub token is available for Copilot auth, even when the
+  // GitHub credential provider is disabled. Without a token, the Copilot SDK
+  // falls back to `useLoggedInUser` which fails on Docker / SSH environments
+  // that lack platform-injected GITHUB_TOKEN. (See #534.)
   if ((!allowedProviders || allowedProviders.has("copilot")) && config.copilot === "on") {
     const copilotConfigPath = join(homedir(), ".copilot", "config.json");
     if (existsSync(copilotConfigPath)) {
@@ -109,6 +160,7 @@ export function buildProviderTokenBundle(runtime?: string, database?: DatabaseIn
         );
       }
     }
+    let hasGitHubToken = false;
     for (const varName of [
       "COPILOT_GITHUB_TOKEN",
       "COPILOT_CLI_URL",
@@ -117,6 +169,9 @@ export function buildProviderTokenBundle(runtime?: string, database?: DatabaseIn
     ]) {
       const value = process.env[varName];
       if (value) {
+        if (varName === "COPILOT_GITHUB_TOKEN") {
+          hasGitHubToken = true;
+        }
         items.push(
           create(powerline.TokenItemSchema, {
             name: varName.toLowerCase().replace(/_/g, "-"),
@@ -125,6 +180,40 @@ export function buildProviderTokenBundle(runtime?: string, database?: DatabaseIn
             value,
           }),
         );
+      }
+    }
+    // Ensure Copilot gets a GitHub token for SDK authentication even when the
+    // GitHub credential provider is disabled. Check env vars first, then fall
+    // back to `gh auth token`. The Copilot SDK's resolveGithubToken() checks
+    // COPILOT_GITHUB_TOKEN → GH_TOKEN → GITHUB_TOKEN, so pushing GITHUB_TOKEN
+    // covers the fallback path.
+    if (!hasGitHubToken) {
+      const envToken = process.env.GH_TOKEN || process.env.GITHUB_TOKEN;
+      if (envToken) {
+        const envVarName = process.env.GH_TOKEN ? "GH_TOKEN" : "GITHUB_TOKEN";
+        // Only push if not already included by the GitHub provider block above
+        if (!items.some((item) => item.envVar === envVarName)) {
+          items.push(
+            create(powerline.TokenItemSchema, {
+              name: envVarName.toLowerCase().replace(/_/g, "-"),
+              type: "env_var",
+              envVar: envVarName,
+              value: envToken,
+            }),
+          );
+        }
+      } else {
+        const cliToken = await getCliToken();
+        if (cliToken && !items.some((item) => item.envVar === "GITHUB_TOKEN")) {
+          items.push(
+            create(powerline.TokenItemSchema, {
+              name: "github-token",
+              type: "env_var",
+              envVar: "GITHUB_TOKEN",
+              value: cliToken,
+            }),
+          );
+        }
       }
     }
   }

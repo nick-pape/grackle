@@ -83,12 +83,20 @@ vi.mock("./compute-task-status.js", () => ({
   computeTaskStatus: vi.fn(() => ({ status: "not_started", latestSessionId: "" })),
 }));
 
+vi.mock("./lifecycle.js", () => ({
+  cleanupLifecycleStream: vi.fn(),
+  ensureLifecycleStream: vi.fn(),
+  initLifecycleManager: vi.fn(),
+  _resetForTesting: vi.fn(),
+}));
+
 // ── Import AFTER mocks ──────────────────────────────────────────
 
 import { registerGrackleRoutes } from "./grpc-service.js";
 import { sessionStore, taskStore } from "@grackle-ai/database";
 import * as adapterManager from "./adapter-manager.js";
 import { processEventStream } from "./event-processor.js";
+import { ensureLifecycleStream } from "./lifecycle.js";
 import type { ConnectRouter } from "@connectrpc/connect";
 import type { grackle } from "@grackle-ai/common";
 
@@ -124,6 +132,12 @@ function makeSession(overrides: Partial<{
   error: string | null;
   taskId: string;
   personaId: string;
+  parentSessionId: string;
+  pipeMode: string;
+  endReason: string | null;
+  inputTokens: number;
+  outputTokens: number;
+  costUsd: number;
 }> = {}) {
   return {
     id: "sess-1",
@@ -141,6 +155,12 @@ function makeSession(overrides: Partial<{
     error: null,
     taskId: "",
     personaId: "",
+    parentSessionId: "",
+    pipeMode: "",
+    endReason: null,
+    inputTokens: 0,
+    outputTokens: 0,
+    costUsd: 0,
     ...overrides,
   };
 }
@@ -245,6 +265,7 @@ describe("gRPC resumeAgent", () => {
     const result = await handlers.resumeAgent({ sessionId: "sess-1" }) as grackle.Session;
 
     expect(sessionStore.reanimateSession).toHaveBeenCalledWith("sess-1");
+    expect(ensureLifecycleStream).toHaveBeenCalledWith("sess-1", "__server__");
     expect(conn.client.resume).toHaveBeenCalled();
     expect(processEventStream).toHaveBeenCalled();
     expect(result.id).toBe("sess-1");
@@ -262,7 +283,22 @@ describe("gRPC resumeAgent", () => {
     const result = await handlers.resumeAgent({ sessionId: "sess-1" }) as grackle.Session;
 
     expect(sessionStore.reanimateSession).toHaveBeenCalledWith("sess-1");
+    expect(ensureLifecycleStream).toHaveBeenCalledWith("sess-1", "__server__");
     expect(result.id).toBe("sess-1");
+  });
+
+  it("uses parentSessionId as spawner when available", async () => {
+    const session = makeSession({ status: "stopped", parentSessionId: "parent-sess" });
+    const runningSession = makeSession({ status: "running", endedAt: null });
+    vi.mocked(sessionStore.getSession)
+      .mockReturnValueOnce(session)
+      .mockReturnValueOnce(runningSession);
+    vi.mocked(sessionStore.getActiveForEnv).mockReturnValue(undefined);
+    vi.mocked(adapterManager.getConnection).mockReturnValue(makeConnection() as never);
+
+    await handlers.resumeAgent({ sessionId: "sess-1" });
+
+    expect(ensureLifecycleStream).toHaveBeenCalledWith("sess-1", "parent-sess");
   });
 
   it("can reanimate a session a second time after it stops again", async () => {
@@ -334,6 +370,8 @@ describe("gRPC resumeTask", () => {
 
     const result = await handlers.resumeTask({ id: "task-1" }) as grackle.Session;
 
+    expect(sessionStore.reanimateSession).toHaveBeenCalledWith("sess-1");
+    expect(ensureLifecycleStream).toHaveBeenCalledWith("sess-1", "__server__");
     expect(processEventStream).toHaveBeenCalled();
     expect(result.id).toBe("sess-1");
   });
