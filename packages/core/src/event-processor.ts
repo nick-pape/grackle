@@ -110,14 +110,20 @@ export function processSubtaskEvent(
     const localId = typeof data.local_id === "string" ? data.local_id.trim() : "";
     const canDecompose = typeof data.can_decompose === "boolean" ? data.can_decompose : false;
 
-    // Resolve depends_on local IDs to real task IDs
+    // Resolve depends_on local IDs to real task IDs — all must exist
     const resolvedDeps: string[] = [];
     for (const localDep of dependsOn) {
       const realId = subtaskLocalIdMap.get(localDep);
       if (realId) {
         resolvedDeps.push(realId);
       } else {
-        logger.warn({ localDep, taskId: ctx.taskId }, "Subtask dependency local_id not found, skipping");
+        const subtaskIdentifier = localId
+          ? `Subtask local_id "${localId}"`
+          : `Subtask "${title}"`;
+        throw new Error(
+          `${subtaskIdentifier} references unknown depends_on local_id "${localDep}". ` +
+          `Dependencies must be created before dependents (topological order).`,
+        );
       }
     }
 
