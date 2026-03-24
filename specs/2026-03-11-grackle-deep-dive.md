@@ -341,7 +341,7 @@ timestamp, content, raw (optional JSON)
 **SpawnRequest** (PowerLine variant includes extra fields):
 ```
 session_id, runtime, prompt, model, max_turns,
-branch, worktree_base_path, system_context,
+branch, working_directory, system_context,
 project_id, task_id
 ```
 

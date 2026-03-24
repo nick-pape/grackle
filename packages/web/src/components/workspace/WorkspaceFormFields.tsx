@@ -17,7 +17,7 @@ export interface WorkspaceFormValues {
   environmentId: string;
   defaultPersonaId: string;
   useWorktrees: boolean;
-  worktreeBasePath: string;
+  workingDirectory: string;
 }
 
 /** Build a blank set of defaults, optionally seeded from a workspace. */
@@ -29,7 +29,7 @@ export function defaultFormValues(ws?: Workspace, environmentId?: string): Works
     environmentId: ws?.environmentId ?? environmentId ?? "",
     defaultPersonaId: ws?.defaultPersonaId ?? "",
     useWorktrees: ws?.useWorktrees ?? true,
-    worktreeBasePath: ws?.worktreeBasePath ?? "",
+    workingDirectory: ws?.workingDirectory ?? "",
   };
 }
 
@@ -173,8 +173,8 @@ export function WorkspaceFormFields({
           id="ws-workdir"
           className={styles.titleInput}
           type="text"
-          value={values.worktreeBasePath}
-          onChange={(e) => set("worktreeBasePath", e.target.value)}
+          value={values.workingDirectory}
+          onChange={(e) => set("workingDirectory", e.target.value)}
           placeholder="Default (server default)"
           disabled={disabled}
           data-testid="workspace-form-workdir"

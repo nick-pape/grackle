@@ -63,7 +63,7 @@ export interface Workspace {
   repoUrl: string;
   environmentId: string;
   status: string;
-  worktreeBasePath: string;
+  workingDirectory: string;
   useWorktrees: boolean;
   defaultPersonaId: string;
   createdAt: string;

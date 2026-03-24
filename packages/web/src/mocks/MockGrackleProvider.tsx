@@ -330,7 +330,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       environmentId?: string,
       defaultPersonaId?: string,
       useWorktrees?: boolean,
-      worktreeBasePath?: string,
+      workingDirectory?: string,
       onSuccess?: () => void,
       _onError?: (message: string) => void,
     ) => {
@@ -343,7 +343,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
         repoUrl: repoUrl || "",
         environmentId: environmentId || "",
         status: "active",
-        worktreeBasePath: worktreeBasePath || "",
+        workingDirectory: workingDirectory || "",
         useWorktrees: useWorktrees ?? true,
         defaultPersonaId: defaultPersonaId || "",
         createdAt: new Date().toISOString(),
@@ -854,7 +854,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       loadWorkspaces: () => { console.log("[MockGrackle] loadWorkspaces"); },
       createWorkspace,
       archiveWorkspace,
-      updateWorkspace: (workspaceId: string, fields: { name?: string; description?: string; repoUrl?: string; environmentId?: string; worktreeBasePath?: string; useWorktrees?: boolean; defaultPersonaId?: string }) => {
+      updateWorkspace: (workspaceId: string, fields: { name?: string; description?: string; repoUrl?: string; environmentId?: string; workingDirectory?: string; useWorktrees?: boolean; defaultPersonaId?: string }) => {
         console.log("[MockGrackle] updateWorkspace", { workspaceId, ...fields });
         setWorkspaces((prev) =>
           prev.map((p) => {
@@ -867,7 +867,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
               ...(fields.description !== undefined ? { description: fields.description } : {}),
               ...(fields.repoUrl !== undefined ? { repoUrl: fields.repoUrl } : {}),
               ...(fields.environmentId !== undefined ? { environmentId: fields.environmentId } : {}),
-              ...(fields.worktreeBasePath !== undefined ? { worktreeBasePath: fields.worktreeBasePath } : {}),
+              ...(fields.workingDirectory !== undefined ? { workingDirectory: fields.workingDirectory } : {}),
               ...(fields.useWorktrees !== undefined ? { useWorktrees: fields.useWorktrees } : {}),
               ...(fields.defaultPersonaId !== undefined ? { defaultPersonaId: fields.defaultPersonaId } : {}),
               updatedAt: new Date().toISOString(),
