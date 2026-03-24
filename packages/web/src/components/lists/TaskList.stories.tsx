@@ -1,6 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent } from "@storybook/test";
-import { MemoryRouter } from "react-router";
 import { TaskList } from "./TaskList.js";
 import type { Workspace } from "../../hooks/types.js";
 import { buildTask, buildWorkspace } from "../../test-utils/storybook-helpers.js";
@@ -14,11 +13,9 @@ const meta: Meta<typeof TaskList> = {
   component: TaskList,
   decorators: [
     (Story) => (
-      <MemoryRouter>
-        <div style={{ width: "300px", height: "600px", overflow: "auto" }}>
-          <Story />
-        </div>
-      </MemoryRouter>
+      <div style={{ width: "300px", height: "600px", overflow: "auto" }}>
+        <Story />
+      </div>
     ),
   ],
   args: {

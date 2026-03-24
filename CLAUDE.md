@@ -74,7 +74,7 @@ npx concurrently -k -s first \
 - Import `expect, fn, userEvent` from `"@storybook/test"`
 - Import mock data from `../../test-utils/storybook-helpers.js`
 - Use `play` functions with `canvas.getByTestId()` / `canvas.getByRole()` for assertions
-- Components needing `useGrackle()` require the `withMockGrackle` decorator from `.storybook/preview.tsx`
+- Components needing `useGrackle()` require the `withMockGrackle` decorator from `src/test-utils/storybook-helpers.js`
 
 ## Manual Testing
 

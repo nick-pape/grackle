@@ -1,18 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect } from "@storybook/test";
-import { MemoryRouter } from "react-router";
 import { Breadcrumbs } from "./Breadcrumbs.js";
 
 const meta: Meta<typeof Breadcrumbs> = {
   title: "Display/Breadcrumbs",
   component: Breadcrumbs,
-  decorators: [
-    (Story) => (
-      <MemoryRouter>
-        <Story />
-      </MemoryRouter>
-    ),
-  ],
   args: {
     segments: [
       { label: "Home", url: "/" },

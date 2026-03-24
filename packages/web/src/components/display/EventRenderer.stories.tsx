@@ -47,19 +47,19 @@ export const MultiLineExpandCollapse: Story = {
       content: Array.from({ length: 10 }, (_, i) => `Line ${i + 1} of output`).join("\n"),
     }),
   },
-  play: async ({ canvas }) => {
+  play: async ({ canvas, userEvent }) => {
     // Initially collapsed — line 6+ not visible
     await expect(canvas.queryByText("Line 6 of output")).not.toBeInTheDocument();
 
     // Click to expand
     const header = canvas.getByTestId("tool-result-header");
-    header.click();
+    await userEvent.click(header);
 
     // Now line 6 should be visible
     await expect(canvas.getByText("Line 6 of output")).toBeInTheDocument();
 
     // Click to collapse
-    header.click();
+    await userEvent.click(header);
     await expect(canvas.queryByText("Line 6 of output")).not.toBeInTheDocument();
   },
 };

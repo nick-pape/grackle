@@ -1,19 +1,11 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect } from "@storybook/test";
-import { MemoryRouter } from "react-router";
 import { EnvironmentNav } from "./EnvironmentNav.js";
 import { buildEnvironment } from "../../test-utils/storybook-helpers.js";
 
 const meta: Meta<typeof EnvironmentNav> = {
   title: "Lists/EnvironmentNav",
   component: EnvironmentNav,
-  decorators: [
-    (Story) => (
-      <MemoryRouter initialEntries={["/environments"]}>
-        <Story />
-      </MemoryRouter>
-    ),
-  ],
   args: {
     environments: [
       buildEnvironment({ id: "env-1", displayName: "test-local", status: "connected" }),

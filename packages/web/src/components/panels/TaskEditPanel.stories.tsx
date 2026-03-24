@@ -1,6 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, fn } from "@storybook/test";
-import { MemoryRouter } from "react-router";
 import { ToastProvider } from "../../context/ToastContext.js";
 import type { Workspace } from "../../hooks/types.js";
 import { buildWorkspace, buildPersona } from "../../test-utils/storybook-helpers.js";
@@ -13,11 +12,9 @@ const meta: Meta<typeof TaskEditPanel> = {
   component: TaskEditPanel,
   decorators: [
     (Story) => (
-      <MemoryRouter>
-        <ToastProvider>
-          <Story />
-        </ToastProvider>
-      </MemoryRouter>
+      <ToastProvider>
+        <Story />
+      </ToastProvider>
     ),
   ],
   args: {

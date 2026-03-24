@@ -1,6 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent } from "@storybook/test";
-import { MemoryRouter } from "react-router";
 import { WorkspaceBoard } from "./WorkspaceBoard.js";
 import { buildTask, buildEnvironment } from "../../test-utils/storybook-helpers.js";
 
@@ -10,13 +9,6 @@ const ENVIRONMENT_ID: string = "env-board";
 const meta: Meta<typeof WorkspaceBoard> = {
   title: "Workspace/WorkspaceBoard",
   component: WorkspaceBoard,
-  decorators: [
-    (Story) => (
-      <MemoryRouter>
-        <Story />
-      </MemoryRouter>
-    ),
-  ],
   args: {
     workspaceId: WORKSPACE_ID,
     environmentId: ENVIRONMENT_ID,
