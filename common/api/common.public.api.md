@@ -599,11 +599,6 @@ const Grackle: GenService<{
         input: typeof QueryFindingsRequestSchema;
         output: typeof FindingListSchema;
     };
-    importGitHubIssues: {
-        methodKind: "unary";
-        input: typeof ImportGitHubIssuesRequestSchema;
-        output: typeof ImportGitHubIssuesResponseSchema;
-    };
     getSetting: {
         methodKind: "unary";
         input: typeof GetSettingRequestSchema;
@@ -762,10 +757,6 @@ declare namespace grackle {
         PostFindingRequestSchema,
         QueryFindingsRequest,
         QueryFindingsRequestSchema,
-        ImportGitHubIssuesRequest,
-        ImportGitHubIssuesRequestSchema,
-        ImportGitHubIssuesResponse,
-        ImportGitHubIssuesResponseSchema,
         McpServerConfig,
         McpServerConfigSchema,
         ToolConfig,
@@ -824,8 +815,6 @@ declare namespace grackle {
         TaskStatusSchema,
         WorkspaceStatus,
         WorkspaceStatusSchema,
-        IssueState,
-        IssueStateSchema,
         ClaudeProviderMode,
         ClaudeProviderModeSchema,
         ProviderToggle,
@@ -892,30 +881,6 @@ const GracklePowerLine: GenService<{
 }>;
 
 // @public
-type ImportGitHubIssuesRequest = Message<"grackle.ImportGitHubIssuesRequest"> & {
-    workspaceId: string;
-    repo: string;
-    label?: string;
-    state: IssueState;
-    environmentId?: string;
-    includeComments?: boolean;
-};
-
-// @public
-const ImportGitHubIssuesRequestSchema: GenMessage<ImportGitHubIssuesRequest>;
-
-// @public
-type ImportGitHubIssuesResponse = Message<"grackle.ImportGitHubIssuesResponse"> & {
-    imported: number;
-    linked: number;
-    skipped: number;
-    dependencies: number;
-};
-
-// @public
-const ImportGitHubIssuesResponseSchema: GenMessage<ImportGitHubIssuesResponse>;
-
-// @public
 type InputMessage = Message<"grackle.InputMessage"> & {
     sessionId: string;
     text: string;
@@ -932,22 +897,6 @@ const InputMessageSchema: GenMessage<InputMessage>;
 
 // @public
 const InputMessageSchema_2: GenMessage<InputMessage_2>;
-
-// @public
-enum IssueState {
-    CLOSED = 2,
-    OPEN = 1,
-    UNSPECIFIED = 0
-}
-
-// @public
-const IssueStateSchema: GenEnum<IssueState>;
-
-// @public
-export function issueStateToEnum(s: string): IssueState;
-
-// @public
-export function issueStateToString(e: IssueState): string;
 
 // @public
 type KillRequest = Message<"grackle.powerline.KillRequest"> & {

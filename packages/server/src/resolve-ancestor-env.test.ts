@@ -85,10 +85,6 @@ vi.mock("./compute-task-status.js", () => ({
   computeTaskStatus: vi.fn(() => ({ status: "not_started", latestSessionId: "" })),
 }));
 
-vi.mock("./github-import.js", () => ({
-  importGitHubIssues: vi.fn(),
-}));
-
 vi.mock("./resolve-persona.js", () => ({
   resolvePersona: vi.fn(() => undefined),
 }));

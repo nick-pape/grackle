@@ -55,7 +55,6 @@ import {
   type EdgeType,
 } from "@grackle-ai/knowledge";
 import { SystemPromptBuilder, buildTaskPrompt } from "./system-prompt-builder.js";
-import { importGitHubIssues as executeGitHubImport } from "./github-import.js";
 import { detectLanIp } from "./utils/network.js";
 import * as streamRegistry from "./stream-registry.js";
 import * as pipeDelivery from "./pipe-delivery.js";
@@ -1737,28 +1736,6 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       return create(grackle.FindingListSchema, {
         findings: rows.map(findingRowToProto),
       });
-    },
-
-    // ─── GitHub Import ────────────────────────────────────────
-
-    async importGitHubIssues(req: grackle.ImportGitHubIssuesRequest) {
-      if (req.state === grackle.IssueState.UNSPECIFIED) {
-        throw new ConnectError("state must be OPEN or CLOSED", Code.InvalidArgument);
-      }
-      const stateStr =
-        req.state === grackle.IssueState.CLOSED ? "closed" : "open";
-      // include_comments defaults to true when not set (opt-out behaviour)
-      const includeComments = req.includeComments ?? true;
-      const result = await executeGitHubImport(
-        req.workspaceId,
-        req.repo,
-        stateStr,
-        req.label ?? undefined,
-        req.environmentId ?? undefined,
-        includeComments,
-      );
-
-      return create(grackle.ImportGitHubIssuesResponseSchema, result);
     },
 
     async generatePairingCode() {

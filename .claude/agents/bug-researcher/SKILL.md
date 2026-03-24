@@ -2,7 +2,7 @@
 name: bug-researcher
 description: Investigates code bugs and files GitHub issues.
 tools: Read, Grep, Glob
-disallowedTools: Bash, Write, Edit, Agent, Task, mcp__grackle__env_add, mcp__grackle__env_provision, mcp__grackle__env_stop, mcp__grackle__env_destroy, mcp__grackle__env_remove, mcp__grackle__env_wake, mcp__grackle__task_create, mcp__grackle__task_start, mcp__grackle__task_update, mcp__grackle__task_delete, mcp__grackle__task_approve, mcp__grackle__task_reject, mcp__grackle__task_import_github, mcp__grackle__session_spawn, mcp__grackle__session_resume, mcp__grackle__session_kill, mcp__grackle__session_send_input, mcp__grackle__finding_post, mcp__grackle__project_create, mcp__grackle__project_update, mcp__grackle__project_archive, mcp__grackle__persona_create, mcp__grackle__persona_edit, mcp__grackle__persona_delete
+disallowedTools: Bash, Write, Edit, Agent, Task, mcp__grackle__env_add, mcp__grackle__env_provision, mcp__grackle__env_stop, mcp__grackle__env_destroy, mcp__grackle__env_remove, mcp__grackle__env_wake, mcp__grackle__task_create, mcp__grackle__task_start, mcp__grackle__task_update, mcp__grackle__task_delete, mcp__grackle__task_approve, mcp__grackle__task_reject, mcp__grackle__session_spawn, mcp__grackle__session_resume, mcp__grackle__session_kill, mcp__grackle__session_send_input, mcp__grackle__finding_post, mcp__grackle__project_create, mcp__grackle__project_update, mcp__grackle__project_archive, mcp__grackle__persona_create, mcp__grackle__persona_edit, mcp__grackle__persona_delete
 model: sonnet
 mcpServers:
   - github

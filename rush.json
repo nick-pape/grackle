@@ -104,6 +104,10 @@
     {
       "packageName": "@grackle-ai/docs-site",
       "projectFolder": "apps/docs-site"
+    },
+    {
+      "packageName": "@grackle-ai/github-import",
+      "projectFolder": "scripts/github-import"
     }
   ]
 }
