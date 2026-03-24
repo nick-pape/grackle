@@ -1,39 +1,22 @@
 import { test as baseTest, expect } from "./fixtures.js";
 
 /**
- * Custom fixture that intercepts WebSocket traffic to replace
- * codespace list responses with an error, simulating gh CLI failure.
+ * Custom fixture that intercepts the ConnectRPC ListCodespaces call
+ * and returns an error response, simulating gh CLI failure.
  */
 const test = baseTest.extend<{ codespaceErrorPage: import("@playwright/test").Page }>({
   codespaceErrorPage: async ({ page }, use) => {
-    // Intercept WS before navigating so the first codespace list is replaced
-    await page.routeWebSocket(/.*/, (ws) => {
-      const server = ws.connectToServer();
-
-      ws.onMessage((message) => {
-        server.send(message);
-      });
-
-      server.onMessage((message) => {
-        if (typeof message === "string") {
-          try {
-            const parsed = JSON.parse(message);
-            if (parsed.type === "codespaces_list") {
-              // Replace successful list with an error
-              ws.send(JSON.stringify({
-                type: "codespaces_list",
-                payload: {
-                  codespaces: [],
-                  error: "Could not find the `gh` CLI. Ensure GitHub CLI is installed and available on your system PATH, then restart the Grackle server.",
-                },
-              }));
-              return;
-            }
-          } catch {
-            // Not JSON, pass through
-          }
-        }
-        ws.send(message);
+    // Intercept the gRPC ListCodespaces call and return an error payload.
+    // The WS bridge no longer handles list_codespaces — codespace listing
+    // was migrated to ConnectRPC, so we intercept the HTTP route instead.
+    await page.route("**/grackle.Grackle/ListCodespaces", (route) => {
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          codespaces: [],
+          error: "Could not find the `gh` CLI. Ensure GitHub CLI is installed and available on your system PATH, then restart the Grackle server.",
+        }),
       });
     });
 
