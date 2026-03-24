@@ -1,14 +1,14 @@
 {
-  "name": "@grackle-ai/server",
+  "name": "@grackle-ai/core",
   "version": "0.75.3",
-  "description": "Grackle server orchestrator — spawns and wires core (gRPC), web-server (HTTP), MCP, and PowerLine",
+  "description": "Core gRPC business logic for Grackle — RPC handlers, event system, streaming, session lifecycle",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/nick-pape/grackle.git",
-    "directory": "packages/server"
+    "directory": "packages/core"
   },
-  "keywords": ["grackle", "server", "orchestrator"],
+  "keywords": ["grackle", "core", "grpc", "event-system", "streaming"],
   "engines": { "node": ">=22.0.0" },
   "type": "module",
   "main": "dist/index.js",
@@ -16,34 +16,34 @@
   "files": ["dist/"],
   "scripts": {
     "build": "heft build --clean",
-    "start": "node dist/index.js",
     "test": "vitest run",
     "clean": "heft clean",
     "_phase:build": "heft run --only build -- --clean",
     "_phase:test": "vitest run"
   },
   "dependencies": {
+    "@bufbuild/protobuf": "^2.5.0",
     "@connectrpc/connect": "^2.0.0",
     "@connectrpc/connect-node": "^2.0.0",
-    "@grackle-ai/adapter-codespace": "workspace:*",
-    "@grackle-ai/adapter-docker": "workspace:*",
-    "@grackle-ai/adapter-local": "workspace:*",
     "@grackle-ai/adapter-sdk": "workspace:*",
-    "@grackle-ai/adapter-ssh": "workspace:*",
     "@grackle-ai/auth": "workspace:*",
     "@grackle-ai/common": "workspace:*",
-    "@grackle-ai/core": "workspace:*",
     "@grackle-ai/database": "workspace:*",
-    "@grackle-ai/mcp": "workspace:*",
-    "@grackle-ai/powerline": "workspace:*",
-    "@grackle-ai/web-server": "workspace:*",
+    "@grackle-ai/knowledge": "workspace:*",
+    "@grackle-ai/prompt": "workspace:*",
     "pino": "^10.3.1",
-    "qrcode": "^1.5.4"
+    "ulid": "^2.3.0",
+    "uuid": "^11.0.0",
+    "ws": "^8.0.0"
   },
   "devDependencies": {
     "@grackle-ai/heft-rig": "workspace:*",
     "@rushstack/heft": "1.2.7",
     "@types/node": "^22.0.0",
+    "@types/uuid": "^10.0.0",
+    "@types/ws": "^8.0.0",
     "vitest": "^3.1.1"
+  },
+  "pnpm": {
   }
 }

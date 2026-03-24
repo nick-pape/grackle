@@ -1,6 +1,6 @@
 import { startLocalPowerLine, type LocalPowerLineHandle, type ProcessFactory, type PortProbe } from "./local-powerline.js";
 import type { EnvironmentStatus } from "@grackle-ai/common";
-import { logger as parentLogger } from "./logger.js";
+import { logger as parentLogger } from "@grackle-ai/core";
 
 // eslint-disable-next-line @rushstack/typedef-var
 const logger = parentLogger.child({ component: "powerline-manager" });

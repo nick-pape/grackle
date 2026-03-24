@@ -77,6 +77,11 @@
       "versionPolicyName": "grackle"
     },
     {
+      "packageName": "@grackle-ai/core",
+      "projectFolder": "packages/core",
+      "versionPolicyName": "grackle"
+    },
+    {
       "packageName": "@grackle-ai/server",
       "projectFolder": "packages/server",
       "versionPolicyName": "grackle"

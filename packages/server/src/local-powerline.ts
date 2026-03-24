@@ -1,7 +1,7 @@
 import { spawn, type ChildProcess, type SpawnOptions } from "node:child_process";
 import net from "node:net";
 import { createRequire } from "node:module";
-import { logger as parentLogger } from "./logger.js";
+import { logger as parentLogger } from "@grackle-ai/core";
 
 const PORT_PROBE_TIMEOUT_MS: number = 15_000;
 const PORT_PROBE_INTERVAL_MS: number = 300;

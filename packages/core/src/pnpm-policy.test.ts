@@ -16,10 +16,10 @@ function readPackageJson(packageDir: string): Record<string, unknown> {
 }
 
 describe("pnpm onlyBuiltDependencies policy", () => {
-  it("UT-1: @grackle-ai/server/package.json includes better-sqlite3 in pnpm.onlyBuiltDependencies", () => {
-    // __dirname is packages/server/src — one level up reaches packages/server
-    const pkg = readPackageJson("..");
-    expect(pkg.name).toBe("@grackle-ai/server");
+  it("UT-1: @grackle-ai/database/package.json includes better-sqlite3 in pnpm.onlyBuiltDependencies", () => {
+    // __dirname is packages/core/src — two levels up reaches packages/, then into database
+    const pkg = readPackageJson("../../database");
+    expect(pkg.name).toBe("@grackle-ai/database");
 
     const pnpmConfig = pkg.pnpm as Record<string, unknown> | undefined;
     expect(pnpmConfig, "pnpm section must exist in package.json").toBeDefined();
