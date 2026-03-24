@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Tue, 24 Mar 2026 19:03:57 GMT and should not be manually modified.
+This log was last generated on Tue, 24 Mar 2026 19:32:32 GMT and should not be manually modified.
+
+## 0.75.9
+Tue, 24 Mar 2026 19:32:32 GMT
+
+### Patches
+
+- Fix persistent stream throw leaving waitForTurnComplete dangling
 
 ## 0.75.8
 Tue, 24 Mar 2026 19:03:57 GMT
