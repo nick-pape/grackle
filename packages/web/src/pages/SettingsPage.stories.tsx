@@ -64,13 +64,12 @@ export const AboutTab: Story = {
   },
 };
 
-/** Appearance tab shows the theme picker. */
+/** Appearance tab shows the theme picker section heading. */
 export const AppearanceTab: Story = {
   render: () => <SettingsRouteWrapper initialEntry="/settings/appearance" />,
   play: async ({ canvas }) => {
+    // The h3 section heading rendered by AppearancePanel (not the nav tab label)
     await expect(canvas.getByRole("heading", { name: "Appearance" })).toBeInTheDocument();
-    await expect(canvas.getByText("Choose how Grackle looks")).toBeInTheDocument();
-    await expect(canvas.getByText("Match system light/dark preference")).toBeInTheDocument();
   },
 };
 

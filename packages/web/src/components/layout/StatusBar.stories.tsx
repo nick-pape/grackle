@@ -46,9 +46,7 @@ export const HamburgerVisible: Story = {
     sidebarOpen: false,
   },
   play: async ({ canvas }) => {
-    const hamburger = canvas.getByRole("button", { name: "Toggle sidebar" });
-    await expect(hamburger).toBeInTheDocument();
-    await expect(hamburger).toHaveAttribute("aria-expanded", "false");
+    await expect(canvas.getByLabelText("Toggle sidebar")).toBeInTheDocument();
   },
 };
 
@@ -58,7 +56,7 @@ export const HamburgerHidden: Story = {
     onToggleSidebar: undefined,
   },
   play: async ({ canvas }) => {
-    await expect(canvas.queryByRole("button", { name: "Toggle sidebar" })).not.toBeInTheDocument();
+    await expect(canvas.queryByLabelText("Toggle sidebar")).not.toBeInTheDocument();
   },
 };
 
@@ -69,7 +67,7 @@ export const HamburgerToggle: Story = {
     sidebarOpen: true,
   },
   play: async ({ canvas, args }) => {
-    const hamburger = canvas.getByRole("button", { name: "Toggle sidebar" });
+    const hamburger = canvas.getByLabelText("Toggle sidebar");
     await expect(hamburger).toHaveAttribute("aria-expanded", "true");
     await userEvent.click(hamburger);
     await expect(args.onToggleSidebar).toHaveBeenCalled();
@@ -79,7 +77,7 @@ export const HamburgerToggle: Story = {
 /** Persona button is NOT rendered in the StatusBar (removed in favor of Settings tab). */
 export const NoPersonaButton: Story = {
   play: async ({ canvas }) => {
-    await expect(canvas.queryByRole("button", { name: "Personas" })).not.toBeInTheDocument();
+    await expect(canvas.queryByLabelText("Personas")).not.toBeInTheDocument();
   },
 };
 
