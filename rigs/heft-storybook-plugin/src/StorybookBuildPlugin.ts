@@ -1,5 +1,6 @@
 import { execFileSync } from "child_process";
 import * as fs from "fs";
+import * as path from "path";
 import type {
   HeftConfiguration,
   IHeftTaskPlugin,
@@ -15,7 +16,8 @@ class StorybookBuildPlugin implements IHeftTaskPlugin {
     session.hooks.run.tapPromise(PLUGIN_NAME, async (_runOptions: IHeftTaskRunHookOptions) => {
       const buildFolder: string = heftConfiguration.buildFolderPath;
       const isWindows: boolean = process.platform === "win32";
-      const npxName: string = isWindows ? "npx.cmd" : "npx";
+      const executableName: string = isWindows ? "storybook.cmd" : "storybook";
+      const storybookBin: string = path.join(buildFolder, "node_modules", ".bin", executableName);
 
       session.logger.terminal.writeLine("Building Storybook...");
 
@@ -24,7 +26,7 @@ class StorybookBuildPlugin implements IHeftTaskPlugin {
       const devNull: number = fs.openSync(isWindows ? "NUL" : "/dev/null", "w");
 
       try {
-        execFileSync(npxName, ["storybook", "build", "--quiet"], {
+        execFileSync(storybookBin, ["build", "--quiet"], {
           cwd: buildFolder,
           stdio: ["ignore", "ignore", devNull],
           shell: isWindows,

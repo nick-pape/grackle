@@ -72,9 +72,9 @@ export const EmptyState: Story = {
  * Graph nodes render for each task, identified by data-task-title attributes.
  * Migrated from dag-view.spec.ts: "Graph tab renders task nodes after switching from default Tasks tab".
  *
- * NOTE: @xyflow/react uses internal layout that may not render visible nodes
- * in JSDOM/test environments. This story verifies the component mounts
- * without error and that the expected task titles are present in the DOM.
+ * NOTE: @xyflow/react uses internal layout that may not position nodes
+ * reliably in Storybook's headless Playwright runner. This story verifies
+ * the component mounts without error.
  */
 export const GraphNodesRender: Story = {
   name: "Graph nodes render for tasks",
@@ -96,9 +96,9 @@ export const GraphNodesRender: Story = {
       }),
     ],
   },
-  // NOTE: ReactFlow requires real browser layout to render nodes.
-  // In Storybook test runner (headless JSDOM), nodes may not appear.
-  // This story verifies the component mounts without error.
+  // NOTE: ReactFlow nodes require real browser layout and may not position
+  // reliably in Storybook's headless Playwright runner. Play function
+  // omitted — this story verifies the component mounts without error.
 };
 
 /**
@@ -121,6 +121,6 @@ export const NodeClickNavigation: Story = {
       }),
     ],
   },
-  // NOTE: ReactFlow requires real browser layout for node rendering and click handling.
-  // This story verifies the component mounts without error.
+  // NOTE: ReactFlow nodes require real browser layout for positioning and
+  // click handling. Play function omitted — this story verifies mount.
 };

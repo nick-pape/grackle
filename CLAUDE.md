@@ -65,10 +65,10 @@ npx concurrently -k -s first \
   "npx wait-on tcp:127.0.0.1:6006 && npx test-storybook --url http://127.0.0.1:6006"
 ```
 
-Storybook is integrated into the Rush/Heft build pipeline via `@grackle-ai/heft-storybook-plugin`:
-- **`rush build`** runs `storybook build` (produces `storybook-static/`)
-- **`rush test`** serves the static build and runs `test-storybook` interaction tests
-- No separate CI step needed — it's part of the standard build/test flow
+Storybook is integrated into the Heft build pipeline via `@grackle-ai/heft-storybook-plugin`:
+- **`rush build`** runs `storybook build` as a heft build task (produces `storybook-static/`)
+- **`heft test`** serves the static build and runs `test-storybook` interaction tests
+- Note: `rush test` currently runs `vitest run` directly (not via heft), so storybook tests run via `heft test` or the build phase. The test phase integration is wired in heft.json but requires invoking heft directly until `_phase:test` is updated.
 
 **When to use Storybook vs E2E:**
 - **Storybook:** Pure component rendering, form validation, keyboard interaction, CSS checks, toggle behavior — anything that doesn't need the server

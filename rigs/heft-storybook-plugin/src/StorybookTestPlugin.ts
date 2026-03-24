@@ -44,21 +44,22 @@ class StorybookTestPlugin implements IHeftTaskPlugin {
       const buildFolder: string = heftConfiguration.buildFolderPath;
       const staticDir: string = path.join(buildFolder, "storybook-static");
       const isWindows: boolean = process.platform === "win32";
-      const npxName: string = isWindows ? "npx.cmd" : "npx";
+      const httpServerBin: string = path.join(buildFolder, "node_modules", ".bin", isWindows ? "http-server.cmd" : "http-server");
+      const testStorybookBin: string = path.join(buildFolder, "node_modules", ".bin", isWindows ? "test-storybook.cmd" : "test-storybook");
 
       session.logger.terminal.writeLine("Starting Storybook static server...");
 
       const server: ChildProcess = spawn(
-        npxName,
-        ["http-server", staticDir, "--port", String(STORYBOOK_PORT), "--silent"],
-        { cwd: buildFolder, stdio: "ignore", shell: isWindows },
+        httpServerBin,
+        [staticDir, "--port", String(STORYBOOK_PORT), "--silent"],
+        { cwd: buildFolder, stdio: "inherit", shell: isWindows },
       );
 
       try {
         await waitForPort(STORYBOOK_PORT, SERVER_READY_TIMEOUT_MS);
         session.logger.terminal.writeLine("Storybook server ready. Running interaction tests...");
 
-        execFileSync(npxName, ["test-storybook", "--url", `http://127.0.0.1:${STORYBOOK_PORT}`], {
+        execFileSync(testStorybookBin, ["--url", `http://127.0.0.1:${STORYBOOK_PORT}`], {
           cwd: buildFolder,
           stdio: "inherit",
           shell: isWindows,
