@@ -37,17 +37,18 @@ export const StatusDotColored: Story = {
     ],
   },
   play: async ({ canvas }) => {
-    // Each environment nav item should have a status dot
     const items: HTMLElement[] = canvas.getAllByTestId("env-nav-item");
     await expect(items.length).toBe(3);
 
-    // The connected env's status dot should NOT be the default gray
+    // Connected and disconnected dots should have different colors
     const connectedDot: HTMLElement | null = items[0].querySelector("span");
+    const disconnectedDot: HTMLElement | null = items[1].querySelector("span");
     await expect(connectedDot).not.toBeNull();
-    if (connectedDot) {
-      const color: string = window.getComputedStyle(connectedDot).color;
-      // Should be accent-green, not the default text-tertiary gray
-      await expect(color).not.toBe("rgb(107, 114, 128)");
+    await expect(disconnectedDot).not.toBeNull();
+    if (connectedDot && disconnectedDot) {
+      const connectedColor: string = window.getComputedStyle(connectedDot).color;
+      const disconnectedColor: string = window.getComputedStyle(disconnectedDot).color;
+      await expect(connectedColor).not.toBe(disconnectedColor);
     }
   },
 };
