@@ -9,6 +9,8 @@
     "directory": "packages/web-server"
   },
   "keywords": ["grackle", "web-server", "http", "oauth", "pairing"],
+  "homepage": "https://github.com/nick-pape/grackle#readme",
+  "bugs": { "url": "https://github.com/nick-pape/grackle/issues" },
   "engines": { "node": ">=22.0.0" },
   "type": "module",
   "main": "dist/index.js",

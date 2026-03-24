@@ -1,5 +1,15 @@
 # @grackle-ai/server
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/nick-pape/grackle/main/apps/docs-site/static/img/grackle-logo.png" alt="Grackle" width="200" />
+</p>
+
+<p align="center">
+  <a href="https://www.npmjs.com/package/@grackle-ai/server"><img src="https://img.shields.io/npm/v/@grackle-ai/server.svg" alt="npm version" /></a>
+  <a href="https://github.com/nick-pape/grackle/actions/workflows/ci.yml"><img src="https://github.com/nick-pape/grackle/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI" /></a>
+  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT" /></a>
+</p>
+
 Grackle server orchestrator — spawns and wires together the four subsystems:
 
 1. **Core** (`@grackle-ai/core`) — gRPC business logic

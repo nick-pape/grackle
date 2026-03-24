@@ -9,6 +9,8 @@
     "directory": "packages/adapter-local"
   },
   "keywords": ["grackle", "adapter", "local", "environment"],
+  "homepage": "https://github.com/nick-pape/grackle#readme",
+  "bugs": { "url": "https://github.com/nick-pape/grackle/issues" },
   "engines": { "node": ">=22.0.0" },
   "type": "module",
   "main": "dist/index.js",
