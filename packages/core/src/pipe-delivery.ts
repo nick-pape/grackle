@@ -216,7 +216,9 @@ export function cleanupAsyncListenerIfEmpty(sessionId: string): void {
 
 /**
  * Clean up both the pipe stream and its associated lifecycle stream after
- * a sync pipe has been consumed. Called from the `waitForPipe` handler.
+ * a sync pipe has been consumed (or cancelled). Called from the `waitForPipe`
+ * handler's `finally` block, so it runs on both success and failure
+ * (e.g., when `consumeSync()` is rejected due to cancellation or stream deletion).
  *
  * Deleting the lifecycle stream orphans the child session (no remaining
  * subscriptions), which triggers auto-stop via the lifecycle manager.

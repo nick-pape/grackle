@@ -12,7 +12,7 @@ import type { GrackleClient } from "./rpc-client.js";
 import { stubScenario, emitText, idle, createWorkspace } from "./helpers.js";
 
 /**
- * Poll listSessions until the session reaches the target status.
+ * Poll getSession until the session reaches the target status.
  */
 async function waitForSessionStatus(
   client: GrackleClient,
