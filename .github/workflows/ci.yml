@@ -48,5 +48,4 @@ jobs:
       - name: Build and test
         uses: ./.github/actions/build-and-test
         with:
-          skip-e2e: ${{ github.event_name == 'push' && 'true' || 'false' }}
           e2e-tags: ${{ steps.e2e-scope.outputs.tags }}

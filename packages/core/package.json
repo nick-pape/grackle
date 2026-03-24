@@ -1,0 +1,49 @@
+{
+  "name": "@grackle-ai/core",
+  "version": "0.75.4",
+  "description": "Core gRPC business logic for Grackle — RPC handlers, event system, streaming, session lifecycle",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nick-pape/grackle.git",
+    "directory": "packages/core"
+  },
+  "keywords": ["grackle", "core", "grpc", "event-system", "streaming"],
+  "engines": { "node": ">=22.0.0" },
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist/"],
+  "scripts": {
+    "build": "heft build --clean",
+    "test": "vitest run",
+    "clean": "heft clean",
+    "_phase:build": "heft run --only build -- --clean",
+    "_phase:test": "vitest run"
+  },
+  "dependencies": {
+    "@bufbuild/protobuf": "^2.5.0",
+    "@connectrpc/connect": "^2.0.0",
+    "@connectrpc/connect-node": "^2.0.0",
+    "@grackle-ai/adapter-sdk": "workspace:*",
+    "@grackle-ai/auth": "workspace:*",
+    "@grackle-ai/common": "workspace:*",
+    "@grackle-ai/database": "workspace:*",
+    "@grackle-ai/knowledge": "workspace:*",
+    "@grackle-ai/prompt": "workspace:*",
+    "pino": "^10.3.1",
+    "ulid": "^2.3.0",
+    "uuid": "^11.0.0",
+    "ws": "^8.0.0"
+  },
+  "devDependencies": {
+    "@grackle-ai/heft-rig": "workspace:*",
+    "@rushstack/heft": "1.2.7",
+    "@types/node": "^22.0.0",
+    "@types/uuid": "^10.0.0",
+    "@types/ws": "^8.0.0",
+    "vitest": "^3.1.1"
+  },
+  "pnpm": {
+  }
+}

@@ -253,6 +253,67 @@ importers:
         specifier: ^3.1.1
         version: 3.2.4(@types/debug@4.1.13)(@types/node@22.19.15)(jiti@1.21.7)(jsdom@29.0.1)(sass@1.98.0)(terser@5.46.1)
 
+  ../../packages/core:
+    dependencies:
+      '@bufbuild/protobuf':
+        specifier: ^2.5.0
+        version: 2.11.0
+      '@connectrpc/connect':
+        specifier: ^2.0.0
+        version: 2.1.1(@bufbuild/protobuf@2.11.0)
+      '@connectrpc/connect-node':
+        specifier: ^2.0.0
+        version: 2.1.1(@bufbuild/protobuf@2.11.0)(@connectrpc/connect@2.1.1(@bufbuild/protobuf@2.11.0))
+      '@grackle-ai/adapter-sdk':
+        specifier: workspace:*
+        version: link:../adapter-sdk
+      '@grackle-ai/auth':
+        specifier: workspace:*
+        version: link:../auth
+      '@grackle-ai/common':
+        specifier: workspace:*
+        version: link:../common
+      '@grackle-ai/database':
+        specifier: workspace:*
+        version: link:../database
+      '@grackle-ai/knowledge':
+        specifier: workspace:*
+        version: link:../knowledge
+      '@grackle-ai/prompt':
+        specifier: workspace:*
+        version: link:../prompt
+      pino:
+        specifier: ^10.3.1
+        version: 10.3.1
+      ulid:
+        specifier: ^2.3.0
+        version: 2.4.0
+      uuid:
+        specifier: ^11.0.0
+        version: 11.1.0
+      ws:
+        specifier: ^8.0.0
+        version: 8.20.0
+    devDependencies:
+      '@grackle-ai/heft-rig':
+        specifier: workspace:*
+        version: link:../../rigs/heft-rig
+      '@rushstack/heft':
+        specifier: 1.2.7
+        version: 1.2.7(@types/node@22.19.15)
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.19.15
+      '@types/uuid':
+        specifier: ^10.0.0
+        version: 10.0.0
+      '@types/ws':
+        specifier: ^8.0.0
+        version: 8.18.1
+      vitest:
+        specifier: ^3.1.1
+        version: 3.2.4(@types/debug@4.1.13)(@types/node@22.19.15)(jiti@1.21.7)(jsdom@29.0.1)(sass@1.98.0)(terser@5.46.1)
+
   ../../packages/database:
     dependencies:
       '@bufbuild/protobuf':
@@ -435,9 +496,6 @@ importers:
 
   ../../packages/server:
     dependencies:
-      '@bufbuild/protobuf':
-        specifier: ^2.5.0
-        version: 2.11.0
       '@connectrpc/connect':
         specifier: ^2.0.0
         version: 2.1.1(@bufbuild/protobuf@2.11.0)
@@ -465,48 +523,27 @@ importers:
       '@grackle-ai/common':
         specifier: workspace:*
         version: link:../common
+      '@grackle-ai/core':
+        specifier: workspace:*
+        version: link:../core
       '@grackle-ai/database':
         specifier: workspace:*
         version: link:../database
-      '@grackle-ai/knowledge':
-        specifier: workspace:*
-        version: link:../knowledge
       '@grackle-ai/mcp':
         specifier: workspace:*
         version: link:../mcp
       '@grackle-ai/powerline':
         specifier: workspace:*
         version: link:../powerline
-      '@grackle-ai/prompt':
-        specifier: workspace:*
-        version: link:../prompt
-      '@grackle-ai/web':
-        specifier: workspace:*
-        version: link:../web
       '@grackle-ai/web-server':
         specifier: workspace:*
         version: link:../web-server
-      better-sqlite3:
-        specifier: ^11.0.0
-        version: 11.10.0
-      drizzle-orm:
-        specifier: ^0.38.0
-        version: 0.38.4(@types/better-sqlite3@7.6.13)(@types/react@19.2.14)(better-sqlite3@11.10.0)(react@19.2.4)
       pino:
         specifier: ^10.3.1
         version: 10.3.1
       qrcode:
         specifier: ^1.5.4
         version: 1.5.4
-      ulid:
-        specifier: ^2.3.0
-        version: 2.4.0
-      uuid:
-        specifier: ^11.0.0
-        version: 11.1.0
-      ws:
-        specifier: ^8.0.0
-        version: 8.20.0
     devDependencies:
       '@grackle-ai/heft-rig':
         specifier: workspace:*
@@ -514,18 +551,9 @@ importers:
       '@rushstack/heft':
         specifier: 1.2.7
         version: 1.2.7(@types/node@22.19.15)
-      '@types/better-sqlite3':
-        specifier: ^7.6.0
-        version: 7.6.13
       '@types/node':
         specifier: ^22.0.0
         version: 22.19.15
-      '@types/uuid':
-        specifier: ^10.0.0
-        version: 10.0.0
-      '@types/ws':
-        specifier: ^8.0.0
-        version: 8.18.1
       vitest:
         specifier: ^3.1.1
         version: 3.2.4(@types/debug@4.1.13)(@types/node@22.19.15)(jiti@1.21.7)(jsdom@29.0.1)(sass@1.98.0)(terser@5.46.1)

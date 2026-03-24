@@ -190,7 +190,7 @@ export const noop = (): void => {};
 
 // ─── Storybook decorators ───────────────────────────────────────────────────
 
-export { withMockGrackle } from "./storybook-decorators.js";
+export { withMockGrackle, withMockGrackleRoute } from "./storybook-decorators.js";
 
 // ─── Aliases (some stories use "build" prefix) ──────────────────────────────
 

@@ -1,27 +1,26 @@
 import { connectNodeAdapter } from "@connectrpc/connect-node";
 import { ConnectError, Code } from "@connectrpc/connect";
 import http2 from "node:http2";
-import { registerGrackleRoutes } from "./grpc-service.js";
-import { registerAdapter, startHeartbeat } from "./adapter-manager.js";
+import {
+  registerGrackleRoutes,
+  registerAdapter, startHeartbeat, getAdapter, setConnection, removeConnection,
+  initWsSubscriber, initSigchldSubscriber, initLifecycleManager,
+  emit, subscribe,
+  createWsBridge, startTaskSession,
+  pushToEnv, attemptReconnects, resetReconnectState,
+  parseAdapterConfig, isKnowledgeEnabled, initKnowledge,
+  computeTaskStatus,
+  logger, exec, detectLanIp,
+} from "@grackle-ai/core";
 import { envRegistry, sessionStore, workspaceStore, taskStore, openDatabase, initDatabase, sqlite, seedDatabase, credentialProviders, grackleHome } from "@grackle-ai/database";
-import { initWsSubscriber } from "./ws-broadcast.js";
-import { initSigchldSubscriber } from "./signals/sigchld.js";
-import { initLifecycleManager } from "./lifecycle.js";
-import { parseAdapterConfig } from "./adapter-config.js";
-import { emit, subscribe } from "./event-bus.js";
 import { DockerAdapter } from "@grackle-ai/adapter-docker";
 import { LocalAdapter } from "@grackle-ai/adapter-local";
 import { SshAdapter } from "@grackle-ai/adapter-ssh";
 import { CodespaceAdapter } from "@grackle-ai/adapter-codespace";
 import { closeAllTunnels, reconnectOrProvision } from "@grackle-ai/adapter-sdk";
-import { createWsBridge, startTaskSession } from "./ws-bridge.js";
 import { DEFAULT_SERVER_PORT, DEFAULT_WEB_PORT, DEFAULT_MCP_PORT, DEFAULT_POWERLINE_PORT, ROOT_TASK_ID, DEFAULT_WORKSPACE_ID, TASK_STATUS } from "@grackle-ai/common";
 import { LocalPowerLineManager } from "./local-powerline-manager.js";
-import * as adapterManager from "./adapter-manager.js";
-import * as tokenPush from "./token-push.js";
-import { attemptReconnects, resetReconnectState } from "./auto-reconnect.js";
 import { createMcpServer } from "@grackle-ai/mcp";
-import { isKnowledgeEnabled, initKnowledge } from "./knowledge-init.js";
 import {
   loadOrCreateApiKey, verifyApiKey, setAuthLogger,
   generatePairingCode,
@@ -32,9 +31,6 @@ import {
 } from "@grackle-ai/auth";
 import { createWebServer, isWildcardAddress } from "@grackle-ai/web-server";
 import { createRequire } from "node:module";
-import { logger } from "./logger.js";
-import { exec } from "./utils/exec.js";
-import { detectLanIp } from "./utils/network.js";
 
 /** Require function for loading optional native modules (qrcode). */
 const esmRequire: NodeRequire = createRequire(import.meta.url);
@@ -132,7 +128,7 @@ async function main(): Promise<void> {
     await localPowerLineManager.start();
 
     // Auto-provision: connect the local adapter
-    const localAdapter = adapterManager.getAdapter("local")!;
+    const localAdapter = getAdapter("local")!;
     const config = parseAdapterConfig(localEnv.adapterConfig);
 
     envRegistry.updateEnvironmentStatus("local", "connecting");
@@ -149,10 +145,10 @@ async function main(): Promise<void> {
     }
 
     const conn = await localAdapter.connect("local", config, localEnv.powerlineToken);
-    adapterManager.setConnection("local", conn);
+    setConnection("local", conn);
     // Push env-var tokens only — file tokens would just overwrite local credential
     // files (e.g. ~/.claude/credentials.json) with their own content.
-    await tokenPush.pushToEnv("local", { excludeFileTokens: true });
+    await pushToEnv("local", { excludeFileTokens: true });
     envRegistry.updateEnvironmentStatus("local", "connected");
     envRegistry.markBootstrapped("local");
     emit("environment.changed", {});
@@ -207,7 +203,7 @@ async function main(): Promise<void> {
   startHeartbeat(
     (environmentId) => {
       // Clean up the stale connection so the heartbeat doesn't keep probing it
-      adapterManager.removeConnection(environmentId);
+      removeConnection(environmentId);
       envRegistry.updateEnvironmentStatus(environmentId, "disconnected");
       // Suspend any active sessions on this environment. The event-processor
       // catch block handles stream-level suspension for sessions with active
@@ -302,22 +298,19 @@ async function main(): Promise<void> {
       }
       starting = true;
       try {
-        const { taskStore: taskStoreModule, sessionStore: sessionStoreModule, envRegistry: envRegistryModule } = await import("@grackle-ai/database");
-        const { computeTaskStatus } = await import("./compute-task-status.js");
-
-        const rootTask = taskStoreModule.getTask(ROOT_TASK_ID);
+        const rootTask = taskStore.getTask(ROOT_TASK_ID);
         if (!rootTask) {
           return;
         }
 
-        const taskSessions = sessionStoreModule.listSessionsForTask(ROOT_TASK_ID);
+        const taskSessions = sessionStore.listSessionsForTask(ROOT_TASK_ID);
         const { status } = computeTaskStatus(rootTask.status, taskSessions);
         if (status === TASK_STATUS.WORKING) {
           return; // Already running
         }
 
         // Find any connected environment (prefer local)
-        const allEnvs = envRegistryModule.listEnvironments();
+        const allEnvs = envRegistry.listEnvironments();
         const connectedEnv = allEnvs.find((e: { status: string; adapterType: string }) => e.status === "connected" && e.adapterType === "local")
           || allEnvs.find((e: { status: string }) => e.status === "connected");
         if (!connectedEnv) {

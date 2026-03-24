@@ -1,14 +1,14 @@
 {
   "name": "@grackle-ai/server",
-  "version": "0.75.2",
-  "description": "Central gRPC server with SQLite storage and WebSocket bridge for Grackle",
+  "version": "0.75.4",
+  "description": "Grackle server orchestrator — spawns and wires core (gRPC), web-server (HTTP), MCP, and PowerLine",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/nick-pape/grackle.git",
     "directory": "packages/server"
   },
-  "keywords": ["grackle", "grpc", "server", "sqlite", "websocket"],
+  "keywords": ["grackle", "server", "orchestrator"],
   "engines": { "node": ">=22.0.0" },
   "type": "module",
   "main": "dist/index.js",
@@ -23,41 +23,27 @@
     "_phase:test": "vitest run"
   },
   "dependencies": {
-    "@bufbuild/protobuf": "^2.5.0",
     "@connectrpc/connect": "^2.0.0",
     "@connectrpc/connect-node": "^2.0.0",
     "@grackle-ai/adapter-codespace": "workspace:*",
     "@grackle-ai/adapter-docker": "workspace:*",
     "@grackle-ai/adapter-local": "workspace:*",
     "@grackle-ai/adapter-sdk": "workspace:*",
-    "@grackle-ai/auth": "workspace:*",
     "@grackle-ai/adapter-ssh": "workspace:*",
+    "@grackle-ai/auth": "workspace:*",
     "@grackle-ai/common": "workspace:*",
+    "@grackle-ai/core": "workspace:*",
     "@grackle-ai/database": "workspace:*",
-    "@grackle-ai/knowledge": "workspace:*",
-    "@grackle-ai/powerline": "workspace:*",
     "@grackle-ai/mcp": "workspace:*",
-    "@grackle-ai/prompt": "workspace:*",
-    "@grackle-ai/web": "workspace:*",
+    "@grackle-ai/powerline": "workspace:*",
     "@grackle-ai/web-server": "workspace:*",
-    "better-sqlite3": "^11.0.0",
-    "drizzle-orm": "^0.38.0",
     "pino": "^10.3.1",
-    "qrcode": "^1.5.4",
-    "ulid": "^2.3.0",
-    "uuid": "^11.0.0",
-    "ws": "^8.0.0"
+    "qrcode": "^1.5.4"
   },
   "devDependencies": {
     "@grackle-ai/heft-rig": "workspace:*",
     "@rushstack/heft": "1.2.7",
-    "@types/better-sqlite3": "^7.6.0",
     "@types/node": "^22.0.0",
-    "@types/uuid": "^10.0.0",
-    "@types/ws": "^8.0.0",
     "vitest": "^3.1.1"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": ["better-sqlite3"]
   }
 }
