@@ -39,6 +39,7 @@
     "@grackle-ai/mcp": "workspace:*",
     "@grackle-ai/prompt": "workspace:*",
     "@grackle-ai/web": "workspace:*",
+    "@grackle-ai/web-server": "workspace:*",
     "better-sqlite3": "^11.0.0",
     "drizzle-orm": "^0.38.0",
     "pino": "^10.3.1",
