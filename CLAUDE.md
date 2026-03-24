@@ -34,6 +34,13 @@ Do **not** update the root `README.md` as part of this process — it is a separ
 
 - **Never disable or skip failing tests to make CI pass.** If tests fail, investigate the root cause and fix the actual bug. Do not use `test.skip`, `test.fixme`, or equivalent to silence failures — the tests exist for a reason. If tests fail on your branch but pass on main, your changes broke them.
 
+**Run `rush install` frequently.** Always run it:
+- Before starting work (ensures dependencies are linked)
+- After switching branches or merging main (lockfile may have changed)
+- After changing any `package.json` (then `rush update` if install tells you to)
+
+`rush build` does NOT install dependencies — you must run `rush install` separately.
+
 ```bash
 # Install dependencies and build all packages
 rush install && rush build
