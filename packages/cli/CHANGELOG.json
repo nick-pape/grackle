@@ -2,6 +2,23 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.75.2",
+      "tag": "@grackle-ai/cli_v0.75.2",
+      "date": "Tue, 24 Mar 2026 06:50:00 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Move 35 WebSocket API tests from Playwright E2E to server-side Vitest integration tests"
+          }
+        ],
+        "none": [
+          {
+            "comment": "placeholder"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.75.1",
       "tag": "@grackle-ai/cli_v0.75.1",
       "date": "Tue, 24 Mar 2026 06:19:57 GMT",
