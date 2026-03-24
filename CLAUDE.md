@@ -65,7 +65,7 @@ npx concurrently -k -s first \
   "npx wait-on tcp:127.0.0.1:6006 && npx test-storybook --url http://127.0.0.1:6006"
 ```
 
-Storybook is integrated into the Heft build pipeline via `@grackle-ai/heft-storybook-plugin`:
+Storybook is integrated into the Heft build pipeline via `@grackle-ai/heft-web-test-plugin`:
 - **`rush build`** runs `storybook build` as a heft build task (produces `storybook-static/`)
 - **`rush test`** runs both vitest and `test-storybook` via heft test phase
 - No separate CI step needed — it's part of the standard build/test flow

@@ -1,5 +1,4 @@
 import { execFileSync } from "child_process";
-import * as fs from "fs";
 import * as path from "path";
 import type {
   HeftConfiguration,
@@ -21,19 +20,22 @@ class StorybookBuildPlugin implements IHeftTaskPlugin {
 
       session.logger.terminal.writeLine("Building Storybook...");
 
-      // Pipe stderr to /dev/null to suppress Rollup eval/chunk-size warnings
-      // that Heft would otherwise treat as warnings (causing rush to exit 1).
-      const devNull: number = fs.openSync(isWindows ? "NUL" : "/dev/null", "w");
-
+      // Capture stderr via pipe. On success, discard it (suppresses Rollup
+      // eval/chunk-size warnings that heft would treat as warnings, causing
+      // rush to exit 1). On failure, print the captured stderr for debugging.
       try {
         execFileSync(storybookBin, ["build", "--quiet"], {
           cwd: buildFolder,
-          stdio: ["ignore", "ignore", devNull],
+          stdio: ["ignore", "ignore", "pipe"],
           shell: isWindows,
           env: { ...process.env, STORYBOOK_DISABLE_TELEMETRY: "1", CI: "true" },
         });
-      } finally {
-        fs.closeSync(devNull);
+      } catch (err: unknown) {
+        const execErr: { stderr?: Buffer } = err as { stderr?: Buffer };
+        if (execErr.stderr && execErr.stderr.length > 0) {
+          session.logger.terminal.writeErrorLine(execErr.stderr.toString());
+        }
+        throw err;
       }
 
       session.logger.terminal.writeLine("Storybook build completed.");
