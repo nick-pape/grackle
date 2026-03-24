@@ -86,7 +86,6 @@ interface WsMessage {
   id?: string;
 }
 
-/** Create a WebSocket server on top of an HTTP server for real-time event streaming (subscribe/subscribe_all). */
 /** Options for creating the WebSocket bridge. */
 interface WsBridgeOptions {
   verifyApiKey: (token: string) => boolean;
