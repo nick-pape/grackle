@@ -1,4 +1,5 @@
 import { execFileSync, spawn, type ChildProcess } from "child_process";
+import * as fs from "fs";
 import * as path from "path";
 import * as net from "net";
 import type {
@@ -77,12 +78,21 @@ class StorybookTestPlugin implements IHeftTaskPlugin {
         await waitForPort(port, SERVER_READY_TIMEOUT_MS);
         session.logger.terminal.writeLine("Storybook server ready. Running interaction tests...");
 
-        execFileSync(testStorybookBin, ["--url", `http://127.0.0.1:${port}`], {
-          cwd: buildFolder,
-          stdio: "inherit",
-          shell: isWindows,
-          env: suppressWarningsEnv,
-        });
+        // Jest (used by test-storybook) writes test results to stderr, which
+        // heft interprets as warnings — causing rush to exit 1 even when all
+        // tests pass. Pipe stderr to devNull; stdout still shows results.
+        const isWin: boolean = process.platform === "win32";
+        const devNull: number = fs.openSync(isWin ? "NUL" : "/dev/null", "w");
+        try {
+          execFileSync(testStorybookBin, ["--url", `http://127.0.0.1:${port}`], {
+            cwd: buildFolder,
+            stdio: ["ignore", "inherit", devNull],
+            shell: isWindows,
+            env: suppressWarningsEnv,
+          });
+        } finally {
+          fs.closeSync(devNull);
+        }
 
         session.logger.terminal.writeLine("Storybook interaction tests completed.");
       } finally {
