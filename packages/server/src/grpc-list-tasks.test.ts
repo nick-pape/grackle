@@ -132,10 +132,6 @@ vi.mock("./compute-task-status.js", () => ({
   })),
 }));
 
-vi.mock("./github-import.js", () => ({
-  importGitHubIssues: vi.fn(),
-}));
-
 // ── Import AFTER mocks ──────────────────────────────────────────
 
 import { registerGrackleRoutes } from "./grpc-service.js";

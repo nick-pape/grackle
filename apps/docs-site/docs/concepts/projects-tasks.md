@@ -137,10 +137,4 @@ grackle project create "My Project" --worktree-base-path /workspaces/my-repo
 
 ## Importing from GitHub
 
-You can bulk-import GitHub issues as tasks:
-
-```bash
-grackle task import-github <project-id> --repo owner/repo --label "agent-work"
-```
-
-This creates one task per issue, preserving titles, descriptions, and comments. Issue cross-references (`#123`) are converted to task dependencies.
+You can bulk-import GitHub issues as tasks using the standalone `import-github-issues` script in `scripts/github-import/`. See that package's README for usage.

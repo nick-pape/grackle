@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Remove GitHub import from server/CLI/MCP — extracted to standalone script in scripts/github-import/",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}

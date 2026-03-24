@@ -4,7 +4,6 @@ import { createGrackleClient } from "../client.js";
 import {
   taskStatusToString,
   taskStatusToEnum,
-  issueStateToEnum,
   ROOT_TASK_ID,
 } from "@grackle-ai/common";
 import Table from "cli-table3";
@@ -237,47 +236,4 @@ export function registerTaskCommands(program: Command): void {
       console.log(`Resumed task. Session: ${session.id}`);
     });
 
-  task
-    .command("import-github <workspace-id>")
-    .description("Bulk import GitHub issues as tasks")
-    .requiredOption("--repo <owner/repo>", "GitHub repository (owner/repo)")
-    .option("--label <label>", "Filter issues by label name")
-    .option("--state <state>", "Issue state to fetch", "open")
-    .option("--env <env-id>", "Environment ID to assign to created tasks")
-    .option("--no-include-comments", "Exclude issue comments from imported task descriptions")
-    .action(
-      async (
-        workspaceId: string,
-        opts: { repo: string; label?: string; state: string; env?: string; includeComments: boolean },
-      ) => {
-        const normalizedState = opts.state.trim().toLowerCase();
-        if (normalizedState !== "open" && normalizedState !== "closed") {
-          console.error(
-            chalk.red(
-              `Invalid --state "${opts.state}". Must be "open" or "closed".`,
-            ),
-          );
-          process.exitCode = 1;
-          return;
-        }
-        const client = createGrackleClient();
-        const res = await client.importGitHubIssues({
-          workspaceId,
-          repo: opts.repo,
-          label: opts.label,
-          state: issueStateToEnum(normalizedState),
-          environmentId: opts.env,
-          includeComments: opts.includeComments,
-        });
-        const parts = [`Imported ${chalk.green(res.imported)} tasks`];
-        if (res.linked > 0) {
-          parts.push(`${chalk.cyan(res.linked)} linked to parents`);
-        }
-        if (res.dependencies > 0) {
-          parts.push(`${chalk.yellow(res.dependencies)} blocking relationships`);
-        }
-        parts.push(`skipped ${res.skipped} already imported`);
-        console.log(parts.join(", "));
-      },
-    );
 }
