@@ -117,25 +117,15 @@ test.describe("Stream smart scroll", { tag: ["@webui"] }, () => {
 
       // Click FAB, wait for scroll animation to reach the bottom
       await fab.click();
-      await scrollContainer.evaluate(
-        (el) =>
-          new Promise<void>((resolve) => {
-            const check = (): void => {
-              if (el.scrollHeight - el.scrollTop - el.clientHeight < 60) {
-                resolve();
-              } else {
-                requestAnimationFrame(check);
-              }
-            };
-            check();
-          }),
-      );
-
-      const isNearBottom = await scrollContainer.evaluate((el) => {
-        const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
-        return distanceFromBottom < 60;
-      });
-      expect(isNearBottom).toBe(true);
+      await expect
+        .poll(
+          async () =>
+            scrollContainer.evaluate(
+              (el) => el.scrollHeight - el.scrollTop - el.clientHeight,
+            ),
+          { timeout: 2_000 },
+        )
+        .toBeLessThan(60);
 
       await expect(fab).not.toBeVisible({ timeout: 2_000 });
     }
