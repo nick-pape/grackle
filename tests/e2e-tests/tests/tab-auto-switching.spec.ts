@@ -60,12 +60,12 @@ test.describe("Tab Auto-Switching", { tag: ["@webui"] }, () => {
   });
 
   test("clicking task in sidebar resets to overview tab for pending tasks", async ({ stubTask }) => {
-    const { page, workspaceName } = stubTask;
+    const { page, client, workspaceName } = stubTask;
 
     // Create two tasks — first one navigates to it
     await stubTask.createAndNavigateSimple("sidebar-task-a");
     // Create second task without navigating
-    await createTask(page, workspaceName, "sidebar-task-b", "test-local");
+    await createTask(client, workspaceName, "sidebar-task-b", "test-local");
 
     // We're on task A — switch to Findings tab
     await page.locator("button", { hasText: "Findings" }).click();

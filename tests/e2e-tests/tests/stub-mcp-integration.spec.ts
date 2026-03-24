@@ -8,12 +8,12 @@ import {
 } from "./helpers.js";
 
 test.describe("Stub MCP Integration", { tag: ["@persona"] }, () => {
-  test("real MCP tool_use and tool_result rendered in UI", async ({ appPage }) => {
+  test("real MCP tool_use and tool_result rendered in UI", async ({ appPage, grackle: { client } }) => {
     const page = appPage;
 
     // Create workspace + task (task gives the spawn a real workspaceId for the scoped MCP token)
-    await createWorkspace(page, "mcp-int-proj");
-    await createTask(page, "mcp-int-proj", "mcp test task", "test-local");
+    await createWorkspace(client, "mcp-int-proj");
+    await createTask(client, "mcp-int-proj", "mcp test task", "test-local");
     await navigateToTask(page, "mcp test task");
 
     // Patch WS to use stub-mcp runtime
@@ -50,11 +50,11 @@ test.describe("Stub MCP Integration", { tag: ["@persona"] }, () => {
       .waitFor({ timeout: 15_000 });
   });
 
-  test("stub-mcp renders paired tool_use + tool_result correctly", async ({ appPage }) => {
+  test("stub-mcp renders paired tool_use + tool_result correctly", async ({ appPage, grackle: { client } }) => {
     const page = appPage;
 
-    await createWorkspace(page, "mcp-pair-proj");
-    await createTask(page, "mcp-pair-proj", "mcp pair task", "test-local");
+    await createWorkspace(client, "mcp-pair-proj");
+    await createTask(client, "mcp-pair-proj", "mcp pair task", "test-local");
     await navigateToTask(page, "mcp pair task");
     await patchWsForStubMcpRuntime(page);
 

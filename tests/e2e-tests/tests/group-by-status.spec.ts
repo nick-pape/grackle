@@ -16,11 +16,11 @@ test.describe("Group-by-status toggle", { tag: ["@workspace"] }, () => {
     await page.evaluate(() => localStorage.removeItem("grackle-task-group-by-status"));
   });
 
-  test("toggle persists across page reload", async ({ appPage }) => {
+  test("toggle persists across page reload", async ({ appPage, grackle: { client } }) => {
     const page = appPage;
 
-    await createWorkspace(page, "gbs-persist");
-    await createTask(page, "gbs-persist", "persist-task");
+    await createWorkspace(client, "gbs-persist");
+    await createTask(client, "gbs-persist", "persist-task");
 
     await goToTasksTab(page);
 
@@ -52,11 +52,11 @@ test.describe("Group-by-status toggle", { tag: ["@workspace"] }, () => {
 
   // "empty status groups are hidden" removed — covered by TaskList.stories.tsx (EmptyGroupsHidden).
 
-  test("task navigation from grouped view", async ({ appPage }) => {
+  test("task navigation from grouped view", async ({ appPage, grackle: { client } }) => {
     const page = appPage;
 
-    await createWorkspace(page, "gbs-nav");
-    await createTask(page, "gbs-nav", "nav-target");
+    await createWorkspace(client, "gbs-nav");
+    await createTask(client, "gbs-nav", "nav-target");
 
     await goToTasksTab(page);
 

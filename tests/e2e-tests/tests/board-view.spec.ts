@@ -7,9 +7,9 @@ import {
 
 test.describe("Board View", { tag: ["@workspace"] }, () => {
   test("Board tab is visible after selecting a workspace", async ({ stubTask }) => {
-    const { page, workspaceName } = stubTask;
+    const { page, client, workspaceName } = stubTask;
 
-    await createTask(page, workspaceName, "board-vis-task");
+    await createTask(client, workspaceName, "board-vis-task");
     await navigateToWorkspace(page, workspaceName);
 
     // Board tab should be visible
@@ -25,9 +25,9 @@ test.describe("Board View", { tag: ["@workspace"] }, () => {
   });
 
   test("clicking a card navigates to task detail", async ({ stubTask }) => {
-    const { page, workspaceName } = stubTask;
+    const { page, client, workspaceName } = stubTask;
 
-    await createTask(page, workspaceName, "board-nav-task");
+    await createTask(client, workspaceName, "board-nav-task");
     await navigateToWorkspace(page, workspaceName);
 
     // Switch to Board
@@ -43,9 +43,9 @@ test.describe("Board View", { tag: ["@workspace"] }, () => {
   });
 
   test("card is focusable via keyboard", async ({ stubTask }) => {
-    const { page, workspaceName } = stubTask;
+    const { page, client, workspaceName } = stubTask;
 
-    await createTask(page, workspaceName, "focus-task");
+    await createTask(client, workspaceName, "focus-task");
     await navigateToWorkspace(page, workspaceName);
 
     await page.getByTestId("board-tab").click();
@@ -61,9 +61,9 @@ test.describe("Board View", { tag: ["@workspace"] }, () => {
   });
 
   test("real-time update moves card between columns", async ({ stubTask }) => {
-    const { page, workspaceName } = stubTask;
+    const { page, client, workspaceName } = stubTask;
 
-    await createTask(page, workspaceName, "rt-task", "test-local");
+    await createTask(client, workspaceName, "rt-task", "test-local");
     await navigateToWorkspace(page, workspaceName);
 
     // Switch to board — card should be in Not Started
