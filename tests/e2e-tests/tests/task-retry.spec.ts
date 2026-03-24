@@ -1,18 +1,27 @@
 import { test, expect } from "./fixtures.js";
 import {
   createWorkspace,
-  createTask,
+  createTaskWithScenario,
   navigateToTask,
   patchWsForStubRuntime,
+  stubScenario,
+  emitText,
+  idle,
+  onInputMatch,
 } from "./helpers.js";
 
 test.describe("Task Resume after crash (paused → working)", { tag: ["@task"] }, () => {
   test("resume button restarts a crashed (paused) task", async ({ appPage }) => {
     const page = appPage;
 
-    // --- Setup: create workspace and task ---
+    // Scenario: emit text, then idle with input matching —
+    // "fail" triggers failure, anything else advances
     await createWorkspace(page, "retry-proj");
-    await createTask(page, "retry-proj", "retry task", "test-local");
+    await createTaskWithScenario(page, "retry-proj", "retry task", stubScenario(
+      emitText("Working on retry task..."),
+      onInputMatch({ fail: "fail", "*": "next" }),
+      idle(),
+    ));
     await navigateToTask(page, "retry task");
     await patchWsForStubRuntime(page);
 
@@ -23,7 +32,7 @@ test.describe("Task Resume after crash (paused → working)", { tag: ["@task"] }
     const inputField = page.locator('input[placeholder="Type a message..."]');
     await expect(inputField).toBeVisible({ timeout: 15_000 });
 
-    // --- Send "fail" to trigger stub failure ---
+    // --- Send "fail" to trigger scenario failure ---
     await inputField.fill("fail");
     await page.getByRole("button", { name: "Send", exact: true }).click();
 
@@ -35,7 +44,6 @@ test.describe("Task Resume after crash (paused → working)", { tag: ["@task"] }
     await page.getByRole("button", { name: "Resume", exact: true }).click();
 
     // --- Verify task restarts: stub runtime events appear again ---
-    // The stub emits "Stub runtime initialized" on each start
     await expect(page.locator('[data-testid="task-status"]')).toContainText(/working|paused/, { timeout: 15_000 });
 
     // Wait for waiting_input and send normal input to complete

@@ -1,22 +1,52 @@
 import { test, expect } from "./fixtures.js";
 import {
   createWorkspace,
-  createTask,
+  createTaskWithScenario,
   navigateToTask,
   patchWsForStubRuntime,
-  runStubTaskToCompletion,
   installWsTracker,
+  stubScenario,
+  emitText,
+  emitToolUse,
+  emitToolResult,
+  idle,
+  onInput,
 } from "./helpers.js";
+
+/** Scenario with enough events to produce scrollable content. */
+function scrollableScenario(): { steps: ReturnType<typeof emitText>[] } {
+  return stubScenario(
+    emitText("Line 1 of output"),
+    emitText("Line 2 of output"),
+    emitText("Line 3 of output"),
+    emitToolUse("read_file", { path: "/some/long/path" }),
+    emitToolResult("File contents that span multiple lines\nLine 2\nLine 3\nLine 4\nLine 5"),
+    emitText("Line 4 of output"),
+    emitText("Line 5 of output"),
+    idle(),
+    onInput("next"),
+  );
+}
+
+/** Start task, wait for idle, send input to complete. */
+async function runScenarioToCompletion(page: import("@playwright/test").Page): Promise<void> {
+  await page.getByRole("button", { name: "Start", exact: true }).click();
+  const inputField = page.locator('input[placeholder="Type a message..."]');
+  await inputField.waitFor({ timeout: 15_000 });
+  await inputField.fill("continue");
+  await page.getByRole("button", { name: "Send", exact: true }).click();
+  await page.getByRole("button", { name: "Resume", exact: true }).waitFor({ timeout: 15_000 });
+}
 
 test.describe("Stream smart scroll", { tag: ["@webui"] }, () => {
   test("scrolled to bottom on initial load with events", async ({ appPage }) => {
     const page = appPage;
 
     await createWorkspace(page, "scroll-init");
-    await createTask(page, "scroll-init", "init-task", "test-local");
+    await createTaskWithScenario(page, "scroll-init", "init-task", scrollableScenario());
     await navigateToTask(page, "init-task");
     await patchWsForStubRuntime(page);
-    await runStubTaskToCompletion(page);
+    await runScenarioToCompletion(page);
 
     // Switch to stream tab
     await page.locator("button", { hasText: "Stream" }).click();
@@ -36,10 +66,10 @@ test.describe("Stream smart scroll", { tag: ["@webui"] }, () => {
     const page = appPage;
 
     await createWorkspace(page, "scroll-dir");
-    await createTask(page, "scroll-dir", "dir-task", "test-local");
+    await createTaskWithScenario(page, "scroll-dir", "dir-task", scrollableScenario());
     await navigateToTask(page, "dir-task");
     await patchWsForStubRuntime(page);
-    await runStubTaskToCompletion(page);
+    await runScenarioToCompletion(page);
 
     await page.locator("button", { hasText: "Stream" }).click();
     const scrollContainer = page.getByTestId("event-stream-scroll");
@@ -67,10 +97,10 @@ test.describe("Stream smart scroll", { tag: ["@webui"] }, () => {
     );
 
     await createWorkspace(page, "scroll-fab");
-    await createTask(page, "scroll-fab", "fab-task", "test-local");
+    await createTaskWithScenario(page, "scroll-fab", "fab-task", scrollableScenario());
     await navigateToTask(page, "fab-task");
     await patchWsForStubRuntime(page);
-    await runStubTaskToCompletion(page);
+    await runScenarioToCompletion(page);
 
     await page.locator("button", { hasText: "Stream" }).click();
     const scrollContainer = page.getByTestId("event-stream-scroll");
