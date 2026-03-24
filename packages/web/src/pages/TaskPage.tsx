@@ -557,10 +557,16 @@ export function TaskPage(): JSX.Element {
               eventsDropped={eventsDropped}
               emptyState={
                 !sessionId && task ? (
-                  <div className={styles.emptyCta}>
-                    <button className={styles.ctaButton} onClick={() => startTask(task.id, undefined, selectedEnvId)}>Start Task</button>
-                    <div className={styles.ctaDescription}>Click to begin agent execution</div>
-                  </div>
+                  isTaskBlocked ? (
+                    <div className={styles.emptyCta} data-testid="stream-blocked-message">
+                      <div className={styles.ctaDescription}>This task is blocked by incomplete dependencies</div>
+                    </div>
+                  ) : (
+                    <div className={styles.emptyCta}>
+                      <button data-testid="stream-start-cta" className={styles.ctaButton} onClick={() => startTask(task.id, undefined, selectedEnvId)}>Start Task</button>
+                      <div className={styles.ctaDescription}>Click to begin agent execution</div>
+                    </div>
+                  )
                 ) : sessionId && groupedEvents.length === 0 ? (
                   <div className={styles.waitingMessage}>Waiting for events...</div>
                 ) : undefined
