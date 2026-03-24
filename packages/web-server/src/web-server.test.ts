@@ -6,7 +6,6 @@ vi.mock("@grackle-ai/auth", () => ({
   setSecurityHeaders: vi.fn(),
   validateSessionCookie: vi.fn(() => false),
   verifyApiKey: vi.fn(() => false),
-  generatePairingCode: vi.fn(() => "ABC123"),
   redeemPairingCode: vi.fn(() => false),
   createSession: vi.fn(() => "grackle_session=test; HttpOnly"),
   registerClient: vi.fn(),
@@ -46,13 +45,14 @@ function request(
 describe("createWebServer", () => {
   let server: http.Server;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
     server = createWebServer({
       apiKey: "x".repeat(64),
       webPort: 0,
       bindHost: "127.0.0.1",
     });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   });
 
   afterEach(async () => {
@@ -64,7 +64,6 @@ describe("createWebServer", () => {
   });
 
   it("shows pairing page at /pair when no code provided", async () => {
-    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
 
     const res = await request(server, "/pair");
 
@@ -74,7 +73,6 @@ describe("createWebServer", () => {
   });
 
   it("redirects to /pair when unauthenticated", async () => {
-    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
 
     const res = await request(server, "/");
 
@@ -83,7 +81,6 @@ describe("createWebServer", () => {
   });
 
   it("serves OAuth metadata at /.well-known/oauth-authorization-server", async () => {
-    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
 
     const res = await request(server, "/.well-known/oauth-authorization-server");
 
@@ -97,7 +94,6 @@ describe("createWebServer", () => {
     vi.mocked(redeemPairingCode).mockReturnValueOnce(true);
     vi.mocked(createSession).mockReturnValueOnce("grackle_session=test123; HttpOnly");
 
-    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
 
     const res = await request(server, "/pair?code=ABC123");
 
