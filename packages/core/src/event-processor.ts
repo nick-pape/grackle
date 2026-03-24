@@ -1,5 +1,4 @@
 import { create } from "@bufbuild/protobuf";
-import { ConnectError, Code } from "@connectrpc/connect";
 import { grackle, powerline, eventTypeToEnum, SESSION_STATUS, TERMINAL_SESSION_STATUSES, END_REASON } from "@grackle-ai/common";
 import type { SessionStatus } from "@grackle-ai/common";
 import { v4 as uuid } from "uuid";
@@ -118,10 +117,12 @@ export function processSubtaskEvent(
       if (realId) {
         resolvedDeps.push(realId);
       } else {
-        throw new ConnectError(
-          `Subtask "${title}" references unknown depends_on local_id "${localDep}". ` +
+        const subtaskIdentifier = localId
+          ? `Subtask local_id "${localId}"`
+          : `Subtask "${title}"`;
+        throw new Error(
+          `${subtaskIdentifier} references unknown depends_on local_id "${localDep}". ` +
           `Dependencies must be created before dependents (topological order).`,
-          Code.FailedPrecondition,
         );
       }
     }
