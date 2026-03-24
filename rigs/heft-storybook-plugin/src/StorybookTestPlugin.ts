@@ -67,41 +67,37 @@ class StorybookTestPlugin implements IHeftTaskPlugin {
       const port: number = await findFreePort();
       session.logger.terminal.writeLine(`Starting Storybook static server on port ${port}...`);
 
-      // Spawn http-server with piped stdio so we can capture errors
       const server: ChildProcess = spawn(
         httpServerBin,
         [staticDir, "--port", String(port), "--silent"],
         { cwd: buildFolder, stdio: "pipe", shell: isWindows, env: suppressWarningsEnv },
       );
 
-      // Collect stderr for diagnostics if server fails
+      // Collect stderr for diagnostics
       let serverStderr: string = "";
       server.stderr?.on("data", (chunk: Buffer) => { serverStderr += chunk.toString(); });
 
-      // Fail fast if the server exits unexpectedly before tests run
-      let serverExited: boolean = false;
-      server.on("exit", (code: number | null) => {
-        serverExited = true;
-        if (code !== null && code !== 0) {
-          session.logger.terminal.writeErrorLine(`http-server exited with code ${code}: ${serverStderr}`);
-        }
-      });
-      server.on("error", (err: Error) => {
-        session.logger.terminal.writeErrorLine(`http-server spawn error: ${err.message}`);
+      // Promise that rejects if server exits or errors before tests start
+      const serverFailure: Promise<never> = new Promise<never>((_resolve, reject) => {
+        server.on("exit", (code: number | null) => {
+          reject(new Error(`http-server exited with code ${code ?? "null"}: ${serverStderr}`));
+        });
+        server.on("error", (err: Error) => {
+          reject(new Error(`http-server spawn error: ${err.message}`));
+        });
       });
 
       try {
-        // Check server didn't already crash
-        if (serverExited) {
-          throw new Error(`http-server exited before accepting connections: ${serverStderr}`);
-        }
+        // Race: wait for port OR server crash — whichever comes first
+        await Promise.race([
+          waitForPort(port, SERVER_READY_TIMEOUT_MS),
+          serverFailure,
+        ]);
 
-        await waitForPort(port, SERVER_READY_TIMEOUT_MS);
         session.logger.terminal.writeLine("Storybook server ready. Running interaction tests...");
 
-        // Run test-storybook — capture stderr so heft doesn't treat Jest
-        // output as warnings (causing rush to exit 1). On failure, the
-        // captured stderr is printed for debugging.
+        // Capture stderr via pipe — on success discard it (suppresses Jest
+        // noise that heft treats as warnings); on failure print it.
         try {
           execFileSync(testStorybookBin, ["--url", `http://127.0.0.1:${port}`], {
             cwd: buildFolder,
@@ -110,7 +106,6 @@ class StorybookTestPlugin implements IHeftTaskPlugin {
             env: suppressWarningsEnv,
           });
         } catch (err: unknown) {
-          // execFileSync throws on non-zero exit — print captured stderr
           const execErr: { stderr?: Buffer } = err as { stderr?: Buffer };
           if (execErr.stderr && execErr.stderr.length > 0) {
             session.logger.terminal.writeErrorLine(execErr.stderr.toString());

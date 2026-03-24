@@ -75,7 +75,7 @@ export const NoEnvironmentDropdown: Story = {
       // None of the selects should contain environment-like options
       const options = select.querySelectorAll("option");
       for (const option of options) {
-        await expect(option.textContent).not.toMatch(/Default env|test-local/);
+        await expect(option.textContent ?? "").not.toMatch(/Default env|test-local/);
       }
     }
   },
