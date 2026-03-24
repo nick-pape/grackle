@@ -302,7 +302,7 @@ describe("event-processor SUBTASK_CREATE handling", () => {
     expect(allTasks).toHaveLength(0);
   });
 
-  it("warns on unknown local_id in depends_on but still creates the subtask", async () => {
+  it("rejects subtask with unresolvable depends_on local_id", async () => {
     taskStore.createTask("parent1", "proj1", "Parent Task", "desc", [], "test-workspace", "", true);
     sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
 
@@ -324,15 +324,139 @@ describe("event-processor SUBTASK_CREATE handling", () => {
       taskId: "parent1",
     });
 
-    // Subtask should still be created, but with no resolved deps
+    // Subtask should NOT be created
+    const children = taskStore.getChildren("parent1");
+    expect(children).toHaveLength(0);
+
+    // Should log error (caught by the internal catch block)
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.objectContaining({ taskId: "parent1" }),
+      "Failed to create subtask",
+    );
+  });
+
+  it("rejects subtask when any depends_on local_id is unresolvable, even if others resolve", async () => {
+    taskStore.createTask("parent1", "proj1", "Parent Task", "desc", [], "test-workspace", "", true);
+    sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
+
+    const event1 = create(powerline.AgentEventSchema, {
+      sessionId: "sess1",
+      type: "subtask_create",
+      timestamp: new Date().toISOString(),
+      content: JSON.stringify({
+        title: "Research",
+        description: "Do research",
+        local_id: "research",
+        depends_on: [],
+      }),
+    });
+
+    const event2 = create(powerline.AgentEventSchema, {
+      sessionId: "sess1",
+      type: "subtask_create",
+      timestamp: new Date().toISOString(),
+      content: JSON.stringify({
+        title: "Implement",
+        description: "Do implementation",
+        local_id: "impl",
+        depends_on: ["research", "nonexistent"],
+      }),
+    });
+
+    await waitForProcessing([event1, event2], {
+      sessionId: "sess1",
+      logPath: "/tmp/log",
+      workspaceId: "proj1",
+      taskId: "parent1",
+    });
+
+    // Only the first subtask should be created; the second is rejected
     const children = taskStore.getChildren("parent1");
     expect(children).toHaveLength(1);
-    expect(JSON.parse(children[0].dependsOn)).toEqual([]);
+    expect(children[0].title).toBe("Research");
+  });
 
-    expect(logger.warn).toHaveBeenCalledWith(
-      expect.objectContaining({ localDep: "nonexistent_id" }),
-      "Subtask dependency local_id not found, skipping",
-    );
+  it("continues processing events after a subtask is rejected for unresolvable depends_on", async () => {
+    taskStore.createTask("parent1", "proj1", "Parent Task", "desc", [], "test-workspace", "", true);
+    sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
+
+    const badEvent = create(powerline.AgentEventSchema, {
+      sessionId: "sess1",
+      type: "subtask_create",
+      timestamp: new Date().toISOString(),
+      content: JSON.stringify({
+        title: "Bad Subtask",
+        description: "Has unresolvable dep",
+        local_id: "bad",
+        depends_on: ["nonexistent"],
+      }),
+    });
+
+    const goodEvent = create(powerline.AgentEventSchema, {
+      sessionId: "sess1",
+      type: "subtask_create",
+      timestamp: new Date().toISOString(),
+      content: JSON.stringify({
+        title: "Good Subtask",
+        description: "No deps",
+        local_id: "good",
+        depends_on: [],
+      }),
+    });
+
+    await waitForProcessing([badEvent, goodEvent], {
+      sessionId: "sess1",
+      logPath: "/tmp/log",
+      workspaceId: "proj1",
+      taskId: "parent1",
+    });
+
+    // Only the good subtask should be created
+    const children = taskStore.getChildren("parent1");
+    expect(children).toHaveLength(1);
+    expect(children[0].title).toBe("Good Subtask");
+  });
+
+  it("does not register local_id for a rejected subtask, causing dependents to also fail", async () => {
+    taskStore.createTask("parent1", "proj1", "Parent Task", "desc", [], "test-workspace", "", true);
+    sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
+
+    // First subtask has unresolvable dep — rejected, its local_id "a" is never registered
+    const event1 = create(powerline.AgentEventSchema, {
+      sessionId: "sess1",
+      type: "subtask_create",
+      timestamp: new Date().toISOString(),
+      content: JSON.stringify({
+        title: "First",
+        description: "Depends on ghost",
+        local_id: "a",
+        depends_on: ["ghost"],
+      }),
+    });
+
+    // Second subtask depends on "a" which was never registered — also rejected
+    const event2 = create(powerline.AgentEventSchema, {
+      sessionId: "sess1",
+      type: "subtask_create",
+      timestamp: new Date().toISOString(),
+      content: JSON.stringify({
+        title: "Second",
+        description: "Depends on first",
+        local_id: "b",
+        depends_on: ["a"],
+      }),
+    });
+
+    await waitForProcessing([event1, event2], {
+      sessionId: "sess1",
+      logPath: "/tmp/log",
+      workspaceId: "proj1",
+      taskId: "parent1",
+    });
+
+    // Neither subtask should be created
+    const children = taskStore.getChildren("parent1");
+    expect(children).toHaveLength(0);
   });
 
   it("rejects subtask with empty title or description", async () => {
