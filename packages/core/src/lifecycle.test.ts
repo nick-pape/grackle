@@ -20,7 +20,12 @@ initDatabase();
 const sqlite = _sqlite!;
 import * as streamRegistry from "./stream-registry.js";
 import * as adapterManager from "./adapter-manager.js";
-import { initLifecycleManager, _resetForTesting as resetLifecycle } from "./lifecycle.js";
+import {
+  initLifecycleManager,
+  cleanupLifecycleStream,
+  ensureLifecycleStream,
+  _resetForTesting as resetLifecycle,
+} from "./lifecycle.js";
 
 /** Apply minimal schema. */
 function applySchema(): void {
@@ -158,5 +163,102 @@ describe("lifecycle manager", () => {
     // Now child is orphaned → auto-stopped (idle → completed end reason)
     expect(sessionStore.getSession("child")?.status).toBe("stopped");
     expect(sessionStore.getSession("child")?.endReason).toBe("completed");
+  });
+});
+
+describe("ensureLifecycleStream", () => {
+  let mockKill: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    sqlite.exec("DROP TABLE IF EXISTS sessions");
+    sqlite.exec("DROP TABLE IF EXISTS environments");
+    applySchema();
+    vi.clearAllMocks();
+    streamRegistry._resetForTesting();
+    resetLifecycle();
+
+    initLifecycleManager();
+
+    mockKill = vi.fn().mockResolvedValue({});
+    vi.spyOn(adapterManager, "getConnection").mockReturnValue({
+      client: { kill: mockKill },
+    } as unknown as ReturnType<typeof adapterManager.getConnection>);
+  });
+
+  it("creates lifecycle stream when none exists", () => {
+    sessionStore.createSession("sess-1", "test-env", "claude-code", "test", "sonnet", "/tmp/log");
+    sessionStore.updateSession("sess-1", "stopped", undefined, undefined, "killed");
+
+    ensureLifecycleStream("sess-1", "__server__");
+
+    const stream = streamRegistry.getStreamByName("lifecycle:sess-1");
+    expect(stream).toBeDefined();
+    expect(stream!.subscriptions.size).toBe(2);
+
+    const subs = Array.from(stream!.subscriptions.values());
+    const sessionIds = subs.map((s) => s.sessionId);
+    expect(sessionIds).toContain("__server__");
+    expect(sessionIds).toContain("sess-1");
+  });
+
+  it("is idempotent when lifecycle stream already exists", () => {
+    sessionStore.createSession("sess-1", "test-env", "claude-code", "test", "sonnet", "/tmp/log");
+    sessionStore.updateSessionStatus("sess-1", "idle");
+
+    // Manually create lifecycle stream (simulates session that went idle naturally)
+    const original = streamRegistry.createStream("lifecycle:sess-1");
+    streamRegistry.subscribe(original.id, "__server__", "rw", "detach", true);
+    streamRegistry.subscribe(original.id, "sess-1", "rw", "detach", false);
+
+    // Should not throw or create duplicates
+    ensureLifecycleStream("sess-1", "__server__");
+
+    const stream = streamRegistry.getStreamByName("lifecycle:sess-1");
+    expect(stream!.id).toBe(original.id);
+    expect(stream!.subscriptions.size).toBe(2);
+  });
+
+  it("full cycle — kill then reanimate restores orphan cascade", () => {
+    sessionStore.createSession("sess-1", "test-env", "claude-code", "test", "sonnet", "/tmp/log");
+    sessionStore.updateSessionStatus("sess-1", "running");
+
+    // Spawn: create lifecycle stream with 2 subs
+    const stream = streamRegistry.createStream("lifecycle:sess-1");
+    streamRegistry.subscribe(stream.id, "__server__", "rw", "detach", true);
+    streamRegistry.subscribe(stream.id, "sess-1", "rw", "detach", false);
+
+    // Kill: cleanup lifecycle stream (simulates killAgent).
+    // In real killAgent, status is set to STOPPED before cleanup so the orphan
+    // callback skips the status change. Here we do the same.
+    sessionStore.updateSession("sess-1", "stopped", undefined, undefined, "killed");
+    cleanupLifecycleStream("sess-1");
+    expect(streamRegistry.getStreamByName("lifecycle:sess-1")).toBeUndefined();
+
+    // Reset mock — the kill above may have triggered a PowerLine kill call
+    mockKill.mockClear();
+
+    // Reanimate: reset DB and recreate lifecycle stream
+    sessionStore.reanimateSession("sess-1");
+    ensureLifecycleStream("sess-1", "__server__");
+
+    const recreated = streamRegistry.getStreamByName("lifecycle:sess-1");
+    expect(recreated).toBeDefined();
+    expect(recreated!.subscriptions.size).toBe(2);
+
+    // Verify orphan cascade still works: remove both subs → auto-stop
+    const serverSub = Array.from(recreated!.subscriptions.values()).find((s) => s.sessionId === "__server__")!;
+    streamRegistry.unsubscribe(serverSub.id);
+
+    // Session still running (one sub remains)
+    expect(sessionStore.getSession("sess-1")?.status).toBe("running");
+
+    const sessSub = streamRegistry.getSubscriptionsForSession("sess-1")[0];
+    streamRegistry.unsubscribe(sessSub.id);
+
+    // Orphan callback should have fired → session auto-stopped
+    const final = sessionStore.getSession("sess-1");
+    expect(final?.status).toBe("stopped");
+    expect(final?.endReason).toBe("killed");
+    expect(mockKill).toHaveBeenCalledOnce();
   });
 });

@@ -121,6 +121,22 @@ export function cleanupLifecycleStream(sessionId: string): void {
 }
 
 /**
+ * Ensure a lifecycle stream exists for a session. Creates the stream with
+ * spawner + session subscriptions if it was previously deleted (e.g. by
+ * killAgent or a "failed" event). No-op if the stream still exists (e.g.
+ * session went idle naturally and lifecycle stream was preserved).
+ */
+export function ensureLifecycleStream(sessionId: string, spawnerId: string): void {
+  const existing = streamRegistry.getStreamByName(`lifecycle:${sessionId}`);
+  if (existing) {
+    return;
+  }
+  const stream = streamRegistry.createStream(`lifecycle:${sessionId}`);
+  streamRegistry.subscribe(stream.id, spawnerId, "rw", "detach", true);
+  streamRegistry.subscribe(stream.id, sessionId, "rw", "detach", false);
+}
+
+/**
  * Reset module state. For testing only.
  * @internal
  */

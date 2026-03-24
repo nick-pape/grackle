@@ -1,7 +1,7 @@
 {
   "changes": [
     {
-      "comment": "Reject subtask creation when depends_on references an unknown local_id instead of silently dropping the dependency",
+      "comment": "Fix persistent stream throw leaving waitForTurnComplete dangling",
       "type": "patch",
       "packageName": "@grackle-ai/cli"
     }
