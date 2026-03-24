@@ -4,7 +4,7 @@ import { PassThrough } from "node:stream";
 import type { ChildProcess } from "node:child_process";
 
 // ── Mock logger before importing ──────────────
-vi.mock("./logger.js", () => ({
+vi.mock("@grackle-ai/core", () => ({
   logger: {
     child: vi.fn(() => ({
       info: vi.fn(),

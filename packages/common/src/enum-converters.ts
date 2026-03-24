@@ -9,7 +9,6 @@ import {
   EventType,
   TaskStatus,
   WorkspaceStatus,
-  IssueState,
   ClaudeProviderMode,
   ProviderToggle,
 } from "./gen/grackle/grackle_pb.js";
@@ -116,30 +115,6 @@ export function workspaceStatusToEnum(s: string): WorkspaceStatus {
 /** Convert a proto enum workspace status to its string value. */
 export function workspaceStatusToString(e: WorkspaceStatus): string {
   return (workspaceStatusToStringMap as Partial<Record<number, string>>)[e] ?? "";
-}
-
-// ─── IssueState ─────────────────────────────────────────────
-
-const issueStateToEnumMap: Record<string, IssueState> = Object.assign(Object.create(null) as Record<string, IssueState>, {
-  "": IssueState.UNSPECIFIED,
-  "open": IssueState.OPEN,
-  "closed": IssueState.CLOSED,
-});
-
-const issueStateToStringMap: Record<number, string> = {
-  [IssueState.UNSPECIFIED]: "",
-  [IssueState.OPEN]: "open",
-  [IssueState.CLOSED]: "closed",
-};
-
-/** Convert a string issue state to its proto enum value. */
-export function issueStateToEnum(s: string): IssueState {
-  return issueStateToEnumMap[s] ?? IssueState.UNSPECIFIED;
-}
-
-/** Convert a proto enum issue state to its string value. */
-export function issueStateToString(e: IssueState): string {
-  return (issueStateToStringMap as Partial<Record<number, string>>)[e] ?? "";
 }
 
 // ─── ClaudeProviderMode ─────────────────────────────────────

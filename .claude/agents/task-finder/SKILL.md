@@ -61,7 +61,7 @@ Once you have a GitHub issue number, ensure a corresponding Grackle task exists:
    - If none exists, create one with `project_create` (name: "grackle", repoUrl: "https://github.com/nick-pape/grackle")
 2. **Check for existing task** — use `task_list` on the project and look for a task that references this issue number (in title or description)
 3. **If task exists**: use its ID
-4. **If task doesn't exist**: use `task_import_github` to import it (repo: `nick-pape/grackle`, **includeComments: true** — comments contain the BRD/spec), or fall back to `task_create` if import doesn't support single-issue targeting
+4. **If task doesn't exist**: use `task_create` to create a task for this issue (include the issue number in the title, e.g., "#123: Issue title")
 
 ## Response Format
 

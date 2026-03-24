@@ -3,7 +3,6 @@ import {
   type grackle,
   taskStatusToEnum,
   taskStatusToString,
-  issueStateToEnum,
   ROOT_TASK_ID,
 } from "@grackle-ai/common";
 import { z } from "zod";
@@ -396,63 +395,4 @@ export const taskTools: ToolDefinition[] = [
     },
   },
 
-  // ── task_import_github ──────────────────────────────────────────────────
-  {
-    name: "task_import_github",
-    group: "task",
-    description:
-      "Import GitHub issues from a repository as tasks into a Grackle workspace, with optional label and state filtering.",
-    inputSchema: z.object({
-      workspaceId: z.string().describe("The workspace ID to import tasks into"),
-      repo: z
-        .string()
-        .describe("GitHub repository in owner/repo format (e.g. octocat/hello-world)"),
-      label: z
-        .string()
-        .optional()
-        .describe("Only import issues with this label"),
-      state: z
-        .enum(["open", "closed"])
-        .optional()
-        .default("open")
-        .describe("Issue state to filter by (open or closed, defaults to open)"),
-      environmentId: z
-        .string()
-        .optional()
-        .describe("Environment ID to associate with imported tasks"),
-      includeComments: z
-        .boolean()
-        .optional()
-        .describe("Whether to include issue comments in the task description"),
-    }),
-    rpcMethod: "importGitHubIssues",
-    mutating: true,
-    annotations: {
-      readOnlyHint: false,
-      destructiveHint: false,
-      idempotentHint: false,
-      openWorldHint: true,
-    },
-    async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) {
-      try {
-        const stateString = (args.state as string | undefined) ?? "open";
-        const stateValue = issueStateToEnum(stateString);
-        const response = await client.importGitHubIssues({
-          workspaceId: args.workspaceId as string,
-          repo: args.repo as string,
-          label: (args.label as string | undefined) ?? "",
-          state: stateValue,
-          environmentId: (args.environmentId as string | undefined) ?? "",
-          includeComments: (args.includeComments as boolean | undefined) ?? true,
-        });
-        return jsonResult({
-          imported: response.imported,
-          linked: response.linked,
-          skipped: response.skipped,
-        });
-      } catch (error) {
-        return grpcErrorToToolResult(error);
-      }
-    },
-  },
 ];

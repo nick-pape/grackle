@@ -351,24 +351,6 @@ Resume the latest stopped session for a task.
 
 Delete a task.
 
-#### `grackle task import-github <workspace-id>`
-
-Bulk import GitHub issues as tasks.
-
-```bash
-grackle task import-github ws-123 --repo nick-pape/grackle
-grackle task import-github ws-123 --repo nick-pape/grackle --label "good first issue"
-grackle task import-github ws-123 --repo nick-pape/grackle --state closed --no-include-comments
-```
-
-| Option | Description |
-|--------|-------------|
-| `--repo <owner/repo>` | GitHub repository (required) |
-| `--label <label>` | Filter issues by label |
-| `--state <state>` | Issue state: `open` (default) or `closed` |
-| `--env <env-id>` | Environment ID to assign to created tasks |
-| `--no-include-comments` | Exclude issue comments from descriptions |
-
 ---
 
 ### Personas

@@ -1,7 +1,7 @@
 import { test, expect } from "./fixtures.js";
 import {
   createTask,
-  createTaskViaWs,
+  createTaskDirect,
   navigateToTask,
   getWorkspaceId,
   getTaskId,
@@ -15,17 +15,17 @@ async function goToTasksTab(page: import("@playwright/test").Page): Promise<void
 
 test.describe("Task Dependencies", { tag: ["@task"] }, () => {
   test("blocked task shows Blocked by text and no Start button", async ({ stubTask }) => {
-    const { page, workspaceName } = stubTask;
+    const { page, client, workspaceName } = stubTask;
 
     // Create a blocker task
-    await createTask(page, workspaceName, "blocker-alpha", "test-local");
+    await createTask(client, workspaceName, "blocker-alpha", "test-local");
 
-    // Get IDs for creating dependent task via WS
-    const workspaceId = await getWorkspaceId(page, workspaceName);
-    const blockerTaskId = await getTaskId(page, workspaceId, "blocker-alpha");
+    // Get IDs for creating dependent task
+    const workspaceId = await getWorkspaceId(client, workspaceName);
+    const blockerTaskId = await getTaskId(client, workspaceId, "blocker-alpha");
 
-    // Create a dependent task via WS with dependsOn
-    await createTaskViaWs(page, workspaceId, "blocked-beta", {
+    // Create a dependent task with dependsOn
+    await createTaskDirect(client, workspaceId, "blocked-beta", {
       environmentId: "test-local",
       dependsOn: [blockerTaskId],
     });
@@ -50,15 +50,15 @@ test.describe("Task Dependencies", { tag: ["@task"] }, () => {
   });
 
   test("completing blocker unblocks dependent task", async ({ stubTask }) => {
-    const { page, workspaceName } = stubTask;
+    const { page, client, workspaceName } = stubTask;
 
     // Create tasks
-    await createTask(page, workspaceName, "unblock-blocker", "test-local");
+    await createTask(client, workspaceName, "unblock-blocker", "test-local");
 
-    const workspaceId = await getWorkspaceId(page, workspaceName);
-    const blockerTaskId = await getTaskId(page, workspaceId, "unblock-blocker");
+    const workspaceId = await getWorkspaceId(client, workspaceName);
+    const blockerTaskId = await getTaskId(client, workspaceId, "unblock-blocker");
 
-    await createTaskViaWs(page, workspaceId, "unblock-dependent", {
+    await createTaskDirect(client, workspaceId, "unblock-dependent", {
       environmentId: "test-local",
       dependsOn: [blockerTaskId],
     });
@@ -83,18 +83,18 @@ test.describe("Task Dependencies", { tag: ["@task"] }, () => {
   });
 
   test("task with multiple dependencies requires all blockers complete", async ({ stubTask }) => {
-    const { page, workspaceName } = stubTask;
+    const { page, client, workspaceName } = stubTask;
 
     // Create two blocker tasks
-    await createTask(page, workspaceName, "multi-blocker-a", "test-local");
-    await createTask(page, workspaceName, "multi-blocker-b", "test-local");
+    await createTask(client, workspaceName, "multi-blocker-a", "test-local");
+    await createTask(client, workspaceName, "multi-blocker-b", "test-local");
 
-    const workspaceId = await getWorkspaceId(page, workspaceName);
-    const taskAId = await getTaskId(page, workspaceId, "multi-blocker-a");
-    const taskBId = await getTaskId(page, workspaceId, "multi-blocker-b");
+    const workspaceId = await getWorkspaceId(client, workspaceName);
+    const taskAId = await getTaskId(client, workspaceId, "multi-blocker-a");
+    const taskBId = await getTaskId(client, workspaceId, "multi-blocker-b");
 
     // Create task C dependent on both A and B
-    await createTaskViaWs(page, workspaceId, "multi-dependent-c", {
+    await createTaskDirect(client, workspaceId, "multi-dependent-c", {
       environmentId: "test-local",
       dependsOn: [taskAId, taskBId],
     });

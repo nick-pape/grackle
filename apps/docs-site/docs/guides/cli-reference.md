@@ -200,18 +200,6 @@ Resume the latest session for a task.
 
 Delete a task (kills active sessions first).
 
-### `grackle task import-github <project-id>`
-
-Bulk import GitHub issues as tasks.
-
-| Flag | Description |
-|------|-------------|
-| `--repo <owner/repo>` | GitHub repository (required) |
-| `--label <label>` | Filter by issue label |
-| `--state <state>` | Issue state: open or closed (default: open) |
-| `--env <id>` | Environment for imported tasks |
-| `--no-include-comments` | Exclude issue comments |
-
 ## Personas
 
 ### `grackle persona list`

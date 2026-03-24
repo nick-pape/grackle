@@ -151,7 +151,6 @@ Create, manage, and run tasks within workspaces. Supports hierarchical task tree
 | `task_delete` | Permanently delete a task. | `taskId` (string) |
 | `task_complete` | Mark a task as complete (sticky status). | `taskId` (string) |
 | `task_resume` | Resume the latest session for a task. | `taskId` (string) |
-| `task_import_github` | Import GitHub issues as tasks. | `workspaceId` (string), `repo` (string, `owner/repo`), `label?` (string), `state?` (`open` \| `closed`), `environmentId?` (string), `includeComments?` (boolean) |
 
 ### Finding Tools
 

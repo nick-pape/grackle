@@ -15,12 +15,12 @@ test.describe("Deep linking", { tag: ["@webui"] }, () => {
     await expect(page.getByRole("tablist", { name: "Settings" })).toBeVisible({ timeout: 5_000 });
   });
 
-  test("deep link to /workspaces/:id loads workspace", async ({ appPage }) => {
+  test("deep link to /workspaces/:id loads workspace", async ({ appPage, grackle: { client } }) => {
     const page = appPage;
 
     // Create a workspace via WS
-    await createWorkspace(page, "deep-link-proj");
-    const workspaceId = await getWorkspaceId(page, "deep-link-proj");
+    await createWorkspace(client, "deep-link-proj");
+    const workspaceId = await getWorkspaceId(client, "deep-link-proj");
 
     // Navigate away then deep link directly
     await page.goto(`/workspaces/${workspaceId}`);
@@ -33,14 +33,14 @@ test.describe("Deep linking", { tag: ["@webui"] }, () => {
     await expect(page.getByText("deep-link-proj").first()).toBeVisible({ timeout: 5_000 });
   });
 
-  test("deep link to /tasks/:id loads task detail", async ({ appPage }) => {
+  test("deep link to /tasks/:id loads task detail", async ({ appPage, grackle: { client } }) => {
     const page = appPage;
 
     // Create workspace and task via WS
-    await createWorkspace(page, "deep-link-task-proj");
-    const workspaceId = await getWorkspaceId(page, "deep-link-task-proj");
-    await createTask(page, "deep-link-task-proj", "deep-link-task");
-    const taskId = await getTaskId(page, workspaceId, "deep-link-task");
+    await createWorkspace(client, "deep-link-task-proj");
+    const workspaceId = await getWorkspaceId(client, "deep-link-task-proj");
+    await createTask(client, "deep-link-task-proj", "deep-link-task");
+    const taskId = await getTaskId(client, workspaceId, "deep-link-task");
 
     // Deep link via full page navigation
     await page.goto(`/tasks/${taskId}`);
@@ -74,11 +74,11 @@ test.describe("Deep linking", { tag: ["@webui"] }, () => {
     expect(page.url()).toContain("/settings");
   });
 
-  test("back/forward navigation works between pages", async ({ appPage }) => {
+  test("back/forward navigation works between pages", async ({ appPage, grackle: { client } }) => {
     const page = appPage;
 
     // Create a workspace and navigate to it via URL
-    await createWorkspace(page, "back-fwd-proj");
+    await createWorkspace(client, "back-fwd-proj");
     await navigateToWorkspace(page, "back-fwd-proj");
     await page.waitForTimeout(500);
 
@@ -109,14 +109,14 @@ test.describe("Deep linking", { tag: ["@webui"] }, () => {
     expect(new URL(page.url()).pathname).toBe("/");
   });
 
-  test("deep link to /tasks/:id/stream loads stream tab", async ({ appPage }) => {
+  test("deep link to /tasks/:id/stream loads stream tab", async ({ appPage, grackle: { client } }) => {
     const page = appPage;
 
     // Create workspace and task via WS
-    await createWorkspace(page, "deep-stream-proj");
-    const workspaceId = await getWorkspaceId(page, "deep-stream-proj");
-    await createTask(page, "deep-stream-proj", "deep-stream-task");
-    const taskId = await getTaskId(page, workspaceId, "deep-stream-task");
+    await createWorkspace(client, "deep-stream-proj");
+    const workspaceId = await getWorkspaceId(client, "deep-stream-proj");
+    await createTask(client, "deep-stream-proj", "deep-stream-task");
+    const taskId = await getTaskId(client, workspaceId, "deep-stream-task");
 
     // Deep link to the stream tab
     await page.goto(`/tasks/${taskId}/stream`);

@@ -1,6 +1,47 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Tue, 24 Mar 2026 05:12:35 GMT and should not be manually modified.
+This log was last generated on Tue, 24 Mar 2026 13:18:20 GMT and should not be manually modified.
+
+## 0.75.4
+Tue, 24 Mar 2026 13:18:20 GMT
+
+### Patches
+
+- Rename @grackle-ai/server to @grackle-ai/core; create thin @grackle-ai/server orchestrator that spawns core, web-server, MCP, and PowerLine
+
+### Updates
+
+- placeholder
+
+## 0.75.3
+Tue, 24 Mar 2026 07:26:12 GMT
+
+### Patches
+
+- Remove GitHub import from server/CLI/MCP — extracted to standalone script in scripts/github-import/
+- Replace logo with new mech-grackle design
+
+## 0.75.2
+Tue, 24 Mar 2026 06:50:00 GMT
+
+### Patches
+
+- Move 35 WebSocket API tests from Playwright E2E to server-side Vitest integration tests
+
+### Updates
+
+- placeholder
+
+## 0.75.1
+Tue, 24 Mar 2026 06:19:57 GMT
+
+### Patches
+
+- Extract HTTP web server (static files, pairing, OAuth, ConnectRPC proxy) into @grackle-ai/web-server
+
+### Updates
+
+- placeholder
 
 ## 0.75.0
 Tue, 24 Mar 2026 05:12:35 GMT

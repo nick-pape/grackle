@@ -21,7 +21,6 @@
       "mcp__grackle__session_spawn",
       "mcp__grackle__session_status",
       "mcp__grackle__task_create",
-      "mcp__grackle__task_import_github",
       "mcp__grackle__task_list",
       "mcp__grackle__task_show",
       "mcp__grackle__task_start"

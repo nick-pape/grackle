@@ -1,6 +1,5 @@
 import { test, expect } from "./fixtures.js";
 import {
-  sendWsMessage,
   installWsTracker,
   injectWsMessage,
   provisionEnvironmentDirect,
@@ -20,7 +19,7 @@ test.describe("Environment Status Broadcast + Toasts", { tag: ["@environment"] }
   // No beforeEach needed — global-setup provisions the env. Tests that
   // stop the env must reprovision at the end (afterEach or inline).
 
-  test("stop environment shows disconnected toast and updates StatusBar", async ({ page }) => {
+  test("stop environment shows disconnected toast and updates StatusBar", async ({ page, grackle: { client } }) => {
     // Ensure connected before starting (may have been left disconnected)
     await provisionEnvironmentDirect("test-local");
 
@@ -35,11 +34,8 @@ test.describe("Environment Status Broadcast + Toasts", { tag: ["@environment"] }
     // Verify StatusBar initially shows connected count (1/1)
     await expect(page.getByText("1/1 env")).toBeVisible({ timeout: 5_000 });
 
-    // Stop the environment via WS
-    await sendWsMessage(page, {
-      type: "stop_environment",
-      payload: { environmentId: "test-local" },
-    });
+    // Stop the environment via RPC
+    await client.stopEnvironment({ id: "test-local" });
 
     // StatusBar should update to show 0 connected (0/1)
     await expect(page.getByText("0/1 env")).toBeVisible({ timeout: 10_000 });
@@ -52,7 +48,7 @@ test.describe("Environment Status Broadcast + Toasts", { tag: ["@environment"] }
     await expect(page.getByText("1/1 env")).toBeVisible({ timeout: 15_000 });
   });
 
-  test("provision environment shows connected toast and updates StatusBar", async ({ page }) => {
+  test("provision environment shows connected toast and updates StatusBar", async ({ page, grackle: { client } }) => {
     await installWsTracker(page);
     await page.goto("/");
     await page.waitForFunction(
@@ -62,10 +58,7 @@ test.describe("Environment Status Broadcast + Toasts", { tag: ["@environment"] }
     );
 
     // Stop the environment first
-    await sendWsMessage(page, {
-      type: "stop_environment",
-      payload: { environmentId: "test-local" },
-    });
+    await client.stopEnvironment({ id: "test-local" });
     await expect(page.getByText("0/1 env")).toBeVisible({ timeout: 10_000 });
 
     // Re-provision via direct gRPC call (HTTP/2)
