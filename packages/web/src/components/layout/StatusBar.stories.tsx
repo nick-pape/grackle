@@ -18,6 +18,7 @@ type Story = StoryObj<typeof meta>;
 /** Connected state with 1 environment and 1 active session. */
 export const Connected: Story = {
   play: async ({ canvas }) => {
+    await expect(canvas.getByLabelText("Connected")).toBeInTheDocument();
     await expect(canvas.getByText("Connected")).toBeInTheDocument();
     await expect(canvas.getByText("1/1 env")).toBeInTheDocument();
     await expect(canvas.getByText("1 active")).toBeInTheDocument();

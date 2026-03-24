@@ -38,12 +38,16 @@ export const StatusDotColored: Story = {
   },
   play: async ({ canvas }) => {
     // Each environment nav item should have a status dot
-    const items = canvas.getAllByTestId("env-nav-item");
+    const items: HTMLElement[] = canvas.getAllByTestId("env-nav-item");
     await expect(items.length).toBe(3);
 
-    // Each item contains a dot character (the bullet)
-    for (const item of items) {
-      await expect(item.textContent).toContain("\u25CF");
+    // The connected env's status dot should NOT be the default gray
+    const connectedDot: HTMLElement | null = items[0].querySelector("span");
+    await expect(connectedDot).not.toBeNull();
+    if (connectedDot) {
+      const color: string = window.getComputedStyle(connectedDot).color;
+      // Should be accent-green, not the default text-tertiary gray
+      await expect(color).not.toBe("rgb(107, 114, 128)");
     }
   },
 };
