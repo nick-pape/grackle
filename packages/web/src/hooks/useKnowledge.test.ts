@@ -4,15 +4,15 @@ import { renderHook, act, waitFor } from "@testing-library/react";
 import { useKnowledge } from "./useKnowledge.js";
 
 // ---------------------------------------------------------------------------
-// Mock grackleClient
+// Mock grackleClient (vi.hoisted ensures the object exists before vi.mock runs)
 // ---------------------------------------------------------------------------
 
-const mockClient = {
+const mockClient = vi.hoisted(() => ({
   listRecentKnowledgeNodes: vi.fn(),
   searchKnowledge: vi.fn(),
   getKnowledgeNode: vi.fn(),
   expandKnowledgeNode: vi.fn(),
-};
+}));
 
 vi.mock("./useGrackleClient.js", () => ({
   grackleClient: mockClient,
@@ -85,7 +85,7 @@ describe("useKnowledge", () => {
       mockClient.listRecentKnowledgeNodes.mockResolvedValue({
         nodes: [
           makeProtoNode({ id: "n1", title: "Node 1" }),
-          makeProtoNode({ id: "n2", kind: "reference", label: "Ref 1", sourceType: "task", sourceId: "t1" }),
+          makeProtoNode({ id: "n2", kind: "reference", title: "Ref 1", sourceType: "task", sourceId: "t1" }),
         ],
         edges: [makeProtoEdge({ fromId: "n1", toId: "n2", type: "RELATES_TO" })],
       });
@@ -172,6 +172,7 @@ describe("useKnowledge", () => {
     });
 
     it("clears selection when searching", () => {
+      mockClient.getKnowledgeNode.mockResolvedValue({ node: makeProtoNode(), edges: [] });
       const { result } = setup();
       act(() => { result.current.selectNode("n1"); });
       expect(result.current.selectedId).toBe("n1");
