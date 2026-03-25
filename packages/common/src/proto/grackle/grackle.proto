@@ -385,7 +385,7 @@ message StartTaskRequest {
 
 message SetWorkpadRequest {
   string task_id = 1;
-  string workpad = 2; // JSON string: { status, summary, extra }
+  string workpad = 2; // JSON string with status, summary, and extra fields
 }
 
 // ─── Findings ──────────────────────────────────────────────
