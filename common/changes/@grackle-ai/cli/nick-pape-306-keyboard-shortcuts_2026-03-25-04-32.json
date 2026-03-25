@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Add keyboard shortcuts to the web UI with a new Settings > Shortcuts reference tab",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
