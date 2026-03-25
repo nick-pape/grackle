@@ -1,3 +1,3 @@
 #!/command/with-contenv bash
 
-exec s6-setuidgid node grackle serve --allow-network
+exec gosu node grackle serve --allow-network
