@@ -738,6 +738,11 @@ const Grackle: GenService<{
         input: typeof CreateKnowledgeNodeRequestSchema;
         output: typeof CreateKnowledgeNodeResponseSchema;
     };
+    getVersionStatus: {
+        methodKind: "unary";
+        input: typeof EmptySchema;
+        output: typeof VersionStatusSchema;
+    };
 }>;
 
 declare namespace grackle {
@@ -901,6 +906,8 @@ declare namespace grackle {
         CreateKnowledgeNodeRequestSchema,
         CreateKnowledgeNodeResponse,
         CreateKnowledgeNodeResponseSchema,
+        VersionStatus,
+        VersionStatusSchema,
         EventType_2 as EventType,
         EventTypeSchema,
         TaskStatus_2 as TaskStatus,
@@ -1744,6 +1751,17 @@ type UsageStats = Message<"grackle.UsageStats"> & {
 
 // @public
 const UsageStatsSchema: GenMessage<UsageStats>;
+
+// @public
+type VersionStatus = Message<"grackle.VersionStatus"> & {
+    currentVersion: string;
+    latestVersion: string;
+    updateAvailable: boolean;
+    isDocker: boolean;
+};
+
+// @public
+const VersionStatusSchema: GenMessage<VersionStatus>;
 
 // @public
 type WaitForPipeRequest = Message<"grackle.WaitForPipeRequest"> & {

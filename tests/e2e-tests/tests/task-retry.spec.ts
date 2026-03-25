@@ -19,7 +19,7 @@ test.describe("Task Resume after crash (paused → working)", { tag: ["@task"] }
     ));
 
     // --- Start the task ---
-    await page.getByRole("button", { name: "Start", exact: true }).click();
+    await page.getByTestId("task-header-start").click();
 
     // Wait for stub to reach waiting_input
     const inputField = page.locator('input[placeholder="Type a message..."]');

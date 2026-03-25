@@ -2,6 +2,35 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.77.0",
+      "tag": "@grackle-ai/cli_v0.77.0",
+      "date": "Wed, 25 Mar 2026 16:30:59 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Add update-available notification: GetVersionStatus gRPC endpoint, web UI banner, CLI startup notice, and get_version_status MCP tool"
+          }
+        ],
+        "none": [
+          {
+            "comment": "placeholder"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.76.3",
+      "tag": "@grackle-ai/cli_v0.76.3",
+      "date": "Wed, 25 Mar 2026 15:08:59 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Add Storybook and E2E test coverage for knowledge graph components, refactor KnowledgeNav to presentational"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.76.2",
       "tag": "@grackle-ai/cli_v0.76.2",
       "date": "Wed, 25 Mar 2026 14:21:23 GMT",

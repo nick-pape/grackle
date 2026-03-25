@@ -159,7 +159,7 @@ test.describe("Workspaces", { tag: ["@workspace"] }, () => {
     await expect(page.getByRole("tab", { name: "Overview", exact: true })).toHaveAttribute("class", /active/);
 
     // Header shows "Start" button
-    await expect(page.getByRole("button", { name: "Start", exact: true })).toBeVisible();
+    await expect(page.getByTestId("task-header-start")).toBeVisible();
 
     // Click Findings tab — shows empty state
     await page.getByRole("tab", { name: "Findings", exact: true }).click();

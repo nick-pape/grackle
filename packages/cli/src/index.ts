@@ -17,6 +17,8 @@ import { registerCredentialProviderCommands } from "./commands/credential-provid
 import { registerPairCommand } from "./commands/pair.js";
 import { registerConfigCommands } from "./commands/config.js";
 import { renderBanner, getHelpFooter } from "./banner.js";
+import { checkVersionStatus } from "@grackle-ai/core";
+import { formatVersionNotice } from "./version-notice.js";
 
 const esmRequire: NodeRequire = createRequire(import.meta.url);
 const { version } = esmRequire("../package.json") as { version: string };
@@ -58,6 +60,20 @@ registerPersonaCommands(program);
 registerCredentialProviderCommands(program);
 registerPairCommand(program);
 registerConfigCommands(program);
+
+// Print update notice after command execution (non-blocking).
+// checkVersionStatus has its own 5s fetch timeout internally.
+program.hook("postAction", async () => {
+  try {
+    const status = await checkVersionStatus();
+    const notice = formatVersionNotice(status);
+    if (notice) {
+      console.error(notice);
+    }
+  } catch {
+    // Silent — version check is non-critical
+  }
+});
 
 program.parseAsync(process.argv).catch((err: unknown) => {
   if (err instanceof ConnectError) {
