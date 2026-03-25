@@ -258,7 +258,6 @@ describe("gRPC provisionEnvironment with force", () => {
       expect.anything(),
       "tok-123",
       true,
-      undefined,
       true,
     );
   });

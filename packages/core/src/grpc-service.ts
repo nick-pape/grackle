@@ -331,6 +331,39 @@ export function resolveAncestorEnvironmentId(parentTaskId: string): string {
   return "";
 }
 
+/**
+ * Terminate a session and clean up all associated streams and subscriptions.
+ *
+ * If the session is already in a terminal state the status update is skipped,
+ * but lifecycle and subscription streams are always removed so stale handles
+ * do not accumulate.
+ */
+function killSessionAndCleanup(session: SessionRow): void {
+  if (!TERMINAL_SESSION_STATUSES.has(session.status as SessionStatus)) {
+    sessionStore.updateSession(session.id, SESSION_STATUS.STOPPED, undefined, undefined, END_REASON.KILLED);
+    streamHub.publish(
+      create(grackle.SessionEventSchema, {
+        sessionId: session.id,
+        type: grackle.EventType.STATUS,
+        timestamp: new Date().toISOString(),
+        content: END_REASON.KILLED,
+        raw: "",
+      }),
+    );
+    if (session.taskId) {
+      const task = taskStore.getTask(session.taskId);
+      if (task) {
+        emit("task.updated", { taskId: task.id, workspaceId: task.workspaceId || "" });
+      }
+    }
+  }
+  cleanupLifecycleStream(session.id);
+  const subs = streamRegistry.getSubscriptionsForSession(session.id);
+  for (const sub of subs) {
+    streamRegistry.unsubscribe(sub.id);
+  }
+}
+
 /** Register all Grackle gRPC service handlers on the given ConnectRPC router. */
 export function registerGrackleRoutes(router: ConnectRouter): void {
   router.service(grackle.Grackle, {
@@ -455,28 +488,8 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       // Force teardown: kill active session, disconnect adapter, clear connection
       if (req.force) {
         const activeSession = sessionStore.getActiveForEnv(req.id);
-        if (activeSession && !TERMINAL_SESSION_STATUSES.has(activeSession.status as SessionStatus)) {
-          sessionStore.updateSession(activeSession.id, SESSION_STATUS.STOPPED, undefined, undefined, END_REASON.KILLED);
-          streamHub.publish(
-            create(grackle.SessionEventSchema, {
-              sessionId: activeSession.id,
-              type: grackle.EventType.STATUS,
-              timestamp: new Date().toISOString(),
-              content: END_REASON.KILLED,
-              raw: "",
-            }),
-          );
-          if (activeSession.taskId) {
-            const task = taskStore.getTask(activeSession.taskId);
-            if (task) {
-              emit("task.updated", { taskId: task.id, workspaceId: task.workspaceId || "" });
-            }
-          }
-          cleanupLifecycleStream(activeSession.id);
-          const subs = streamRegistry.getSubscriptionsForSession(activeSession.id);
-          for (const sub of subs) {
-            streamRegistry.unsubscribe(sub.id);
-          }
+        if (activeSession) {
+          killSessionAndCleanup(activeSession);
         }
         try {
           await adapter.disconnect(req.id);
@@ -500,7 +513,6 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
           config,
           powerlineToken,
           !!env.bootstrapped,
-          undefined,
           req.force,
         )) {
           yield create(grackle.ProvisionEventSchema, {
@@ -1038,34 +1050,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       // callback sees the session is already terminal and skips. Without this,
       // the orphan callback would see IDLE → reason="completed", which is wrong
       // for an explicit kill.
-      if (!TERMINAL_SESSION_STATUSES.has(session.status as SessionStatus)) {
-        sessionStore.updateSession(req.id, SESSION_STATUS.STOPPED, undefined, undefined, END_REASON.KILLED);
-        streamHub.publish(
-          create(grackle.SessionEventSchema, {
-            sessionId: req.id,
-            type: grackle.EventType.STATUS,
-            timestamp: new Date().toISOString(),
-            content: END_REASON.KILLED,
-            raw: "",
-          }),
-        );
-        if (session.taskId) {
-          const task = taskStore.getTask(session.taskId);
-          if (task) {
-            emit("task.updated", { taskId: task.id, workspaceId: task.workspaceId || "" });
-          }
-        }
-      }
-
-      // Delete the lifecycle stream — orphan callback sees session is already
-      // STOPPED and skips status change, but still kills the PowerLine process.
-      cleanupLifecycleStream(req.id);
-
-      // Also close any other subscriptions (pipe streams etc.)
-      const subs = streamRegistry.getSubscriptionsForSession(req.id);
-      for (const sub of subs) {
-        streamRegistry.unsubscribe(sub.id);
-      }
+      killSessionAndCleanup(session);
 
       return create(grackle.EmptySchema, {});
     },

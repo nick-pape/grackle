@@ -39,7 +39,7 @@ describe("reconnectOrProvision", () => {
   it("uses reconnect when bootstrapped and force is false", async () => {
     const adapter = createMockAdapter();
     const events = await collect(
-      reconnectOrProvision("env-1", adapter, {}, "token", true, silentLogger, false),
+      reconnectOrProvision("env-1", adapter, {}, "token", true, false, silentLogger),
     );
 
     expect(adapter.reconnect).toHaveBeenCalledOnce();
@@ -50,7 +50,7 @@ describe("reconnectOrProvision", () => {
   it("skips reconnect and uses provision when force is true", async () => {
     const adapter = createMockAdapter();
     const events = await collect(
-      reconnectOrProvision("env-1", adapter, {}, "token", true, silentLogger, true),
+      reconnectOrProvision("env-1", adapter, {}, "token", true, true, silentLogger),
     );
 
     expect(adapter.reconnect).not.toHaveBeenCalled();
@@ -61,7 +61,7 @@ describe("reconnectOrProvision", () => {
   it("uses provision when not bootstrapped (force omitted)", async () => {
     const adapter = createMockAdapter();
     const events = await collect(
-      reconnectOrProvision("env-1", adapter, {}, "token", false, silentLogger),
+      reconnectOrProvision("env-1", adapter, {}, "token", false, false, silentLogger),
     );
 
     expect(adapter.reconnect).not.toHaveBeenCalled();
@@ -76,7 +76,7 @@ describe("reconnectOrProvision", () => {
       }),
     });
     const events = await collect(
-      reconnectOrProvision("env-1", adapter, {}, "token", true, silentLogger, false),
+      reconnectOrProvision("env-1", adapter, {}, "token", true, false, silentLogger),
     );
 
     expect(adapter.reconnect).toHaveBeenCalledOnce();
@@ -87,7 +87,7 @@ describe("reconnectOrProvision", () => {
   it("defaults force to false when omitted", async () => {
     const adapter = createMockAdapter();
     const events = await collect(
-      reconnectOrProvision("env-1", adapter, {}, "token", true, silentLogger),
+      reconnectOrProvision("env-1", adapter, {}, "token", true, false, silentLogger),
     );
 
     expect(adapter.reconnect).toHaveBeenCalledOnce();

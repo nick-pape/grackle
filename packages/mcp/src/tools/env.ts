@@ -96,7 +96,7 @@ export const envTools: ToolDefinition[] = [
     mutating: true,
     annotations: {
       readOnlyHint: false,
-      destructiveHint: false,
+      destructiveHint: true,
       idempotentHint: true,
       openWorldHint: false,
     },
