@@ -998,7 +998,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
         clearSelection: () => {},
         expandNode: () => {},
         loadRecent: () => {},
-        handleMessage: () => false,
+        handleEvent: () => false,
       },
     }),
     [
