@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Add workpad: persistent structured context for tasks with writeWorkpad/readWorkpad MCP tools",
+      "type": "minor",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
