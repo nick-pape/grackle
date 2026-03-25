@@ -8,7 +8,7 @@ import {
 
 /** Start a task, wait for idle, send input to advance past idle. */
 async function runScenarioToCompletion(page: import("@playwright/test").Page): Promise<void> {
-  await page.getByRole("button", { name: "Start", exact: true }).click();
+  await page.getByTestId("task-header-start").click();
 
   const inputField = page.locator('input[placeholder="Type a message..."]');
   await inputField.waitFor({ timeout: 15_000 });
@@ -52,7 +52,7 @@ test.describe("Task Stop & Pause buttons", { tag: ["@task"] }, () => {
     ));
 
     // Start the task — the scenario transitions to idle, causing paused state
-    await page.getByRole("button", { name: "Start", exact: true }).click();
+    await page.getByTestId("task-header-start").click();
 
     // Wait for the task to reach paused state (Resume only appears in paused)
     await expect(page.getByRole("button", { name: "Resume", exact: true })).toBeVisible({ timeout: 15_000 });

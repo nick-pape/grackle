@@ -143,7 +143,7 @@ function TaskOverview({ task, tasksById, environments, workspaces, taskSessions,
           <div className={styles.overviewMuted}>Set in workspace settings</div>
         )}
       </div>
-      <div className={styles.overviewSection}>
+      <div className={styles.overviewSection} data-testid="task-overview-dependencies">
         <div className={styles.overviewLabel}>Dependencies</div>
         {task.dependsOn.length === 0 ? (
           <div className={styles.overviewMuted}>None</div>
@@ -262,7 +262,7 @@ function TaskActionButtons({
     }
     return (
       <div className={styles.headerActions}>
-        <button onClick={onStart} className={styles.btnPrimary}>Start</button>
+        <button data-testid="task-header-start" onClick={onStart} className={styles.btnPrimary}>Start</button>
         <button onClick={onEdit} className={styles.btnGhost}>Edit</button>
         <button onClick={onDelete} className={styles.btnDanger}>Delete</button>
       </div>
