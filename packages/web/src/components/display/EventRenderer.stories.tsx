@@ -162,11 +162,11 @@ export const MarkdownCodeBlock: Story = {
     }),
   },
   play: async ({ canvas }) => {
-    const codeText = canvas.getByText(/const x = 42/);
-    await expect(codeText).toBeInTheDocument();
-    // Code block should be inside a <pre><code> structure
-    await expect(codeText.closest("code")).toBeTruthy();
-    await expect(codeText.closest("pre")).toBeTruthy();
+    // rehype-prism-plus splits code into <span> tokens for highlighting,
+    // so getByText can't find the full string. Query the <pre> directly.
+    const pre = canvas.getByRole("generic").querySelector("pre.language-js");
+    await expect(pre).toBeTruthy();
+    await expect(pre!.textContent).toContain("const x = 42");
   },
 };
 
