@@ -10,15 +10,19 @@ import { createWorkspace } from "./helpers.js";
  * UNAVAILABLE.
  */
 test.describe("Knowledge Graph", { tag: ["@webui"] }, () => {
-  /** Probe knowledge availability via a lightweight RPC. Skip if unavailable. */
+  /**
+   * Probe knowledge availability via SearchKnowledge RPC (requires the
+   * embedder, unlike listRecentKnowledgeNodes which only checks the enabled
+   * flag). Skip the test if the server returns UNAVAILABLE.
+   */
   async function skipIfKnowledgeUnavailable(
     client: ReturnType<typeof import("./rpc-client.js").createTestClient>,
   ): Promise<void> {
     try {
-      await client.listRecentKnowledgeNodes({ limit: 1 });
+      await client.searchKnowledge({ query: "probe", limit: 1 });
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
-      if (message.includes("not available") || message.includes("Unavailable")) {
+      if (message.includes("not available") || message.includes("Unavailable") || message.includes("unavailable")) {
         test.skip(true, "Knowledge graph not available in this environment");
       }
       throw error;
@@ -68,9 +72,11 @@ test.describe("Knowledge Graph", { tag: ["@webui"] }, () => {
     await page.locator('[data-testid="sidebar-tab-knowledge"]').click();
     await page.locator('[data-testid="knowledge-page"]').waitFor({ timeout: 5_000 });
 
-    // Nodes should appear in the sidebar nav
-    await expect(page.locator('[data-testid="knowledge-nav"]')).toContainText("Nodes (2)", { timeout: 10_000 });
-    await expect(page.getByText("Auth Flow Design")).toBeVisible();
+    // Filter to the workspace where we seeded nodes to avoid cross-test contamination
+    await page.locator('[data-testid="knowledge-workspace-filter"]').selectOption(wsId);
+
+    // Seeded nodes should appear in the sidebar nav
+    await expect(page.getByText("Auth Flow Design")).toBeVisible({ timeout: 10_000 });
     await expect(page.getByText("Database Schema Choice")).toBeVisible();
 
     // Graph container should be visible with SVG content
@@ -94,6 +100,9 @@ test.describe("Knowledge Graph", { tag: ["@webui"] }, () => {
     // Navigate to Knowledge tab
     await page.locator('[data-testid="sidebar-tab-knowledge"]').click();
     await page.locator('[data-testid="knowledge-page"]').waitFor({ timeout: 5_000 });
+
+    // Filter to the workspace to isolate from other tests
+    await page.locator('[data-testid="knowledge-workspace-filter"]').selectOption(wsId);
 
     // Wait for nodes to load, then click in the sidebar nav
     await expect(page.getByText("Click Target Node")).toBeVisible({ timeout: 10_000 });
@@ -130,8 +139,12 @@ test.describe("Knowledge Graph", { tag: ["@webui"] }, () => {
     await page.locator('[data-testid="sidebar-tab-knowledge"]').click();
     await page.locator('[data-testid="knowledge-page"]').waitFor({ timeout: 5_000 });
 
-    // Wait for both nodes to load
-    await expect(page.locator('[data-testid="knowledge-nav"]')).toContainText("Nodes (2)", { timeout: 10_000 });
+    // Filter to workspace to isolate from other tests
+    await page.locator('[data-testid="knowledge-workspace-filter"]').selectOption(wsId);
+
+    // Wait for nodes to load
+    await expect(page.getByText("Unique Alpha Topic")).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText("Unique Beta Topic")).toBeVisible();
 
     // Search for "Alpha"
     await page.locator('[data-testid="knowledge-search-input"]').fill("Alpha");
