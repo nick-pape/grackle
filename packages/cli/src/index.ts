@@ -62,18 +62,21 @@ registerPairCommand(program);
 registerConfigCommands(program);
 
 // Print update notice after command execution (non-blocking).
-// checkVersionStatus has its own 5s fetch timeout internally.
-program.hook("postAction", async () => {
-  try {
-    const status = await checkVersionStatus();
-    const notice = formatVersionNotice(status);
-    if (notice) {
-      console.error(notice);
+// Skip in CI and non-interactive environments to avoid adding 5s latency
+// to every CLI invocation during E2E setup and automated pipelines.
+if (!process.env.CI && process.stderr.isTTY) {
+  program.hook("postAction", async () => {
+    try {
+      const status = await checkVersionStatus();
+      const notice = formatVersionNotice(status);
+      if (notice) {
+        console.error(notice);
+      }
+    } catch {
+      // Silent — version check is non-critical
     }
-  } catch {
-    // Silent — version check is non-critical
-  }
-});
+  });
+}
 
 program.parseAsync(process.argv).catch((err: unknown) => {
   if (err instanceof ConnectError) {
