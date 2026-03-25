@@ -164,7 +164,7 @@ export const MarkdownCodeBlock: Story = {
   play: async ({ canvas }) => {
     // rehype-prism-plus splits code into <span> tokens for highlighting,
     // so getByText can't find the full string. Query the <pre> directly.
-    const pre = canvas.getByRole("generic").querySelector("pre.language-js");
+    const pre = canvas.canvasElement.querySelector("pre.language-js");
     await expect(pre).toBeTruthy();
     await expect(pre!.textContent).toContain("const x = 42");
   },
