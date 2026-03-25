@@ -1,12 +1,9 @@
 #!/command/with-contenv bash
 
-# Source all s6 container_environment vars explicitly — with-contenv should
-# inject them, but gosu's exec can lose them on some platforms.
-for f in /run/s6/container_environment/*; do
-  [ -r "$f" ] || continue
-  varname="$(basename "$f")"
-  varvalue="$(<"$f")"
-  export "$varname"="$varvalue"
-done
+# Source CLAUDE_CONFIG_DIR explicitly — with-contenv should inject it, but
+# gosu's exec can lose s6 container_environment vars on some platforms.
+if [ -r /run/s6/container_environment/CLAUDE_CONFIG_DIR ]; then
+  export CLAUDE_CONFIG_DIR="$(<"/run/s6/container_environment/CLAUDE_CONFIG_DIR")"
+fi
 
 exec gosu node grackle serve --allow-network
