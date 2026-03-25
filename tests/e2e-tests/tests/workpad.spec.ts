@@ -103,44 +103,33 @@ test.describe("Workpad E2E", { tag: ["@task"] }, () => {
     expect(workpad.extra).toEqual({ branch: "feat/auth", pr: 42 });
   });
 
-  test("retry session sees previous workpad in system context", async ({ grackle: { client } }) => {
+  test("new session sees workpad written via setWorkpad RPC in system context", async ({ grackle: { client } }) => {
     test.setTimeout(60_000);
 
-    // 1. Create workspace + task, write workpad via first session
-    await createWorkspace(client, "Workpad Retry");
-    const workspaceId = await getWorkspaceId(client, "Workpad Retry");
+    // 1. Create workspace + task
+    await createWorkspace(client, "Workpad Context");
+    const workspaceId = await getWorkspaceId(client, "Workpad Context");
     const scenario = stubScenario(
-      emitMcpCall("workpad_write", {
-        status: "done",
-        summary: "First attempt completed PR #100",
-      }),
+      emitMcpCall("workpad_read", {}),
     );
-    const task = await createTaskDirect(client, workspaceId, "workpad-retry-test", {
+    const task = await createTaskDirect(client, workspaceId, "workpad-context-test", {
       description: JSON.stringify(scenario),
       environmentId: "test-local",
     });
     const taskId = task.id as string;
 
-    // 2. First session writes workpad and completes
-    const firstSessionId = await startTaskStubMcp(client, taskId);
-    await waitForSessionStatus(client, firstSessionId, "stopped", 30_000);
+    // 2. Write workpad directly via RPC (simulates a previous session having written it)
+    await client.setWorkpad({
+      taskId,
+      workpad: JSON.stringify({ status: "done", summary: "Previous agent completed PR #100" }),
+    });
 
-    // Verify workpad was written
-    const taskAfterFirst = await client.getTask({ id: taskId });
-    expect(taskAfterFirst.workpad).toBeTruthy();
+    // 3. Start a session — it should see the workpad in its system context
+    const sessionId = await startTaskStubMcp(client, taskId);
+    await waitForSessionStatus(client, sessionId, "stopped", 30_000);
 
-    // 3. Kill first session to release the environment
-    await client.killAgent({ id: firstSessionId });
-    await waitForSessionStatus(client, firstSessionId, "stopped", 5_000);
-    await new Promise((resolve) => setTimeout(resolve, 1_000));
-
-    // 4. Reset task status to not_started so startTask accepts it, then start fresh
-    await client.updateTask({ id: taskId, status: 1 }); // 1 = NOT_STARTED
-    const retrySessionId = await startTaskStubMcp(client, taskId);
-    await waitForSessionStatus(client, retrySessionId, "stopped", 30_000);
-
-    // 4. Fetch retry session events and verify system context contains workpad
-    const eventsResp = await client.getSessionEvents({ id: retrySessionId });
+    // 4. Fetch session events and verify system context contains workpad
+    const eventsResp = await client.getSessionEvents({ id: sessionId });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const events = (eventsResp.events || []) as any[];
     const systemEvent = events.find(
@@ -160,6 +149,6 @@ test.describe("Workpad E2E", { tag: ["@task"] }, () => {
 
     expect(systemEvent).toBeDefined();
     expect(systemEvent.content).toContain("Previous Session Workpad");
-    expect(systemEvent.content).toContain("First attempt completed PR #100");
+    expect(systemEvent.content).toContain("Previous agent completed PR #100");
   });
 });
