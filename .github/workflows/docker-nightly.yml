@@ -2,8 +2,12 @@ name: Docker Nightly
 
 on:
   schedule:
-    - cron: '0 11 * * *'  # 5 AM Central (11:00 UTC)
+    - cron: '0 11 * * *'  # 11:00 UTC (05:00 CST / 06:00 CDT)
   workflow_dispatch:        # Manual trigger
+
+concurrency:
+  group: docker-nightly
+  cancel-in-progress: false
 
 jobs:
   build-and-push:
@@ -39,3 +43,4 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           no-cache: true  # Always pull fresh @latest npm packages
+          pull: true       # Always pull fresh base images
