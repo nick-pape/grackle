@@ -3,7 +3,6 @@ import type { GrackleClient } from "./rpc-client.js";
 import {
   createWorkspace,
   createTaskDirect,
-  getWorkspaceId,
   stubScenario,
   emitMcpCall,
 } from "./helpers.js";
@@ -34,7 +33,7 @@ async function waitForSessionStatus(
   client: GrackleClient,
   sessionId: string,
   targetStatus: string,
-  timeoutMs: number = 30_000,
+  timeoutMs: number = 20_000,
 ): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
@@ -72,9 +71,10 @@ test.describe("Workpad E2E", { tag: ["@task"] }, () => {
   });
 
   test("agent writes workpad via MCP, persists on task", async ({ grackle: { client } }) => {
+    test.setTimeout(60_000);
+
     // 1. Create workspace + task with mcp_call scenario as description
-    await createWorkspace(client, "Workpad E2E");
-    const workspaceId = await getWorkspaceId(client, "Workpad E2E");
+    const workspaceId = await createWorkspace(client, "Workpad Write");
     const scenario = stubScenario(
       emitMcpCall("workpad_write", {
         status: "completed",
@@ -84,7 +84,6 @@ test.describe("Workpad E2E", { tag: ["@task"] }, () => {
     );
     const task = await createTaskDirect(client, workspaceId, "workpad-write-test", {
       description: JSON.stringify(scenario),
-      environmentId: "test-local",
     });
     const taskId = task.id as string;
 
@@ -92,7 +91,7 @@ test.describe("Workpad E2E", { tag: ["@task"] }, () => {
     const sessionId = await startTaskStubMcp(client, taskId);
 
     // 3. Wait for session to complete (scenario runs mcp_call then emits "completed")
-    await waitForSessionStatus(client, sessionId, "stopped", 30_000);
+    await waitForSessionStatus(client, sessionId, "stopped");
 
     // 4. Fetch task and verify workpad was persisted
     const updatedTask = await client.getTask({ id: taskId });
@@ -103,18 +102,16 @@ test.describe("Workpad E2E", { tag: ["@task"] }, () => {
     expect(workpad.extra).toEqual({ branch: "feat/auth", pr: 42 });
   });
 
-  test("new session sees workpad written via setWorkpad RPC in system context", async ({ grackle: { client } }) => {
+  test("new session sees workpad in system context", async ({ grackle: { client } }) => {
     test.setTimeout(60_000);
 
     // 1. Create workspace + task
-    await createWorkspace(client, "Workpad Context");
-    const workspaceId = await getWorkspaceId(client, "Workpad Context");
+    const workspaceId = await createWorkspace(client, "Workpad Context");
     const scenario = stubScenario(
       emitMcpCall("workpad_read", {}),
     );
     const task = await createTaskDirect(client, workspaceId, "workpad-context-test", {
       description: JSON.stringify(scenario),
-      environmentId: "test-local",
     });
     const taskId = task.id as string;
 
@@ -126,7 +123,7 @@ test.describe("Workpad E2E", { tag: ["@task"] }, () => {
 
     // 3. Start a session — it should see the workpad in its system context
     const sessionId = await startTaskStubMcp(client, taskId);
-    await waitForSessionStatus(client, sessionId, "stopped", 30_000);
+    await waitForSessionStatus(client, sessionId, "stopped");
 
     // 4. Fetch session events and verify system context contains workpad
     const eventsResp = await client.getSessionEvents({ id: sessionId });
