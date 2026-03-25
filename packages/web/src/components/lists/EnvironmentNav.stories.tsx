@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect } from "@storybook/test";
+import { expect, userEvent } from "@storybook/test";
 import { EnvironmentNav } from "./EnvironmentNav.js";
 import { buildEnvironment } from "../../test-utils/storybook-helpers.js";
 
@@ -67,6 +67,43 @@ export const CardsInList: Story = {
   play: async ({ canvas }) => {
     const navItems = canvas.getAllByTestId("env-nav-item");
     await expect(navItems.length).toBe(3);
+  },
+};
+
+/** Arrow keys navigate between environment items. */
+export const KeyboardNavigation: Story = {
+  play: async ({ canvas }) => {
+    const tabs = canvas.getAllByRole("tab");
+    tabs[0].focus();
+    await expect(tabs[0]).toHaveFocus();
+
+    // ArrowDown moves to next
+    await userEvent.keyboard("{ArrowDown}");
+    await expect(tabs[1]).toHaveFocus();
+
+    // ArrowUp moves back
+    await userEvent.keyboard("{ArrowUp}");
+    await expect(tabs[0]).toHaveFocus();
+
+    // Home jumps to first
+    await userEvent.keyboard("{End}");
+    await expect(tabs[tabs.length - 1]).toHaveFocus();
+    await userEvent.keyboard("{Home}");
+    await expect(tabs[0]).toHaveFocus();
+  },
+};
+
+/** J/K keys navigate between environment items (vim-style aliases). */
+export const JKNavigation: Story = {
+  play: async ({ canvas }) => {
+    const tabs = canvas.getAllByRole("tab");
+    tabs[0].focus();
+
+    await userEvent.keyboard("j");
+    await expect(tabs[1]).toHaveFocus();
+
+    await userEvent.keyboard("k");
+    await expect(tabs[0]).toHaveFocus();
   },
 };
 

@@ -71,10 +71,10 @@ export function AppNav(): JSX.Element {
     const currentIndex = focusedIndex >= 0 ? focusedIndex : TABS.findIndex((t) => t.view === activeView);
     let nextIndex = currentIndex;
 
-    if (e.key === "ArrowRight") {
+    if (e.key === "ArrowRight" || e.key === "j" || e.key === "J") {
       e.preventDefault();
       nextIndex = (currentIndex + 1) % TABS.length;
-    } else if (e.key === "ArrowLeft") {
+    } else if (e.key === "ArrowLeft" || e.key === "k" || e.key === "K") {
       e.preventDefault();
       nextIndex = (currentIndex - 1 + TABS.length) % TABS.length;
     } else if (e.key === "Home") {
