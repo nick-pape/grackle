@@ -106,7 +106,7 @@ Manage compute environments where agents run (Docker, SSH, Codespace, local).
 |------|-------------|------------|
 | `env_list` | List all registered environments with status, adapter type, and runtime. | *(none)* |
 | `env_add` | Register a new environment. | `displayName` (string), `adapterType` (string), `adapterConfig?` (object) |
-| `env_provision` | Provision an environment — start resources, install the agent, and connect. | `environmentId` (string) |
+| `env_provision` | Provision an environment — start resources, install the agent, and connect. | `environmentId` (string), `force?` (boolean) |
 | `env_stop` | Stop a running environment without destroying its resources. | `environmentId` (string) |
 | `env_destroy` | Destroy an environment's backing resources (e.g., delete the container). | `environmentId` (string) |
 | `env_remove` | Remove an environment registration. Must be stopped first. | `environmentId` (string) |

@@ -93,6 +93,11 @@ message ProvisionEvent {
   double progress = 3; // 0.0 - 1.0
 }
 
+message ProvisionEnvironmentRequest {
+  string id = 1;
+  bool force = 2; // When true, skip reconnect, kill active sessions, and force full provision
+}
+
 message UpdateEnvironmentRequest {
   string id = 1;
   optional string display_name = 2;
@@ -635,7 +640,7 @@ service Grackle {
   rpc ListEnvironments(Empty) returns (EnvironmentList);
   rpc AddEnvironment(AddEnvironmentRequest) returns (Environment);
   rpc RemoveEnvironment(EnvironmentId) returns (Empty);
-  rpc ProvisionEnvironment(EnvironmentId) returns (stream ProvisionEvent);
+  rpc ProvisionEnvironment(ProvisionEnvironmentRequest) returns (stream ProvisionEvent);
   rpc UpdateEnvironment(UpdateEnvironmentRequest) returns (Environment);
   rpc StopEnvironment(EnvironmentId) returns (Empty);
   rpc DestroyEnvironment(EnvironmentId) returns (Empty);

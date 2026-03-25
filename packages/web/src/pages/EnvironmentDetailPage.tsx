@@ -32,6 +32,7 @@ export function EnvironmentDetailPage(): JSX.Element {
   } = useGrackle();
 
   const [showDeleteEnv, setShowDeleteEnv] = useState(false);
+  const [showReprovision, setShowReprovision] = useState(false);
   const [confirmArchiveId, setConfirmArchiveId] = useState<string | undefined>(undefined);
 
   const env = environments.find((e) => e.id === environmentId);
@@ -54,6 +55,11 @@ export function EnvironmentDetailPage(): JSX.Element {
     navigate(ENVIRONMENTS_URL, { replace: true });
   };
 
+  const handleReprovision = (): void => {
+    setShowReprovision(false);
+    provisionEnvironment(env.id, true);
+  };
+
   const handleArchive = (workspaceId: string): void => {
     archiveWorkspace(workspaceId);
     setConfirmArchiveId(undefined);
@@ -67,6 +73,14 @@ export function EnvironmentDetailPage(): JSX.Element {
         description={`"${env.displayName || env.id}" will be permanently removed along with all its data.`}
         onConfirm={handleDeleteEnv}
         onCancel={() => setShowDeleteEnv(false)}
+      />
+      <ConfirmDialog
+        isOpen={showReprovision}
+        title="Reprovision Environment?"
+        description="This will kill any active session and force a fresh provision cycle. The environment will be temporarily disconnected."
+        confirmLabel="Reprovision"
+        onConfirm={handleReprovision}
+        onCancel={() => setShowReprovision(false)}
       />
 
       {/* Environment header */}
@@ -102,6 +116,14 @@ export function EnvironmentDetailPage(): JSX.Element {
               onClick={() => stopEnvironment(env.id)}
             >
               Stop
+            </button>
+            <button
+              className={styles.btnOutline}
+              onClick={() => setShowReprovision(true)}
+              disabled={progress !== undefined}
+              data-testid="env-reprovision-btn"
+            >
+              Reprovision
             </button>
           </>
         )}
