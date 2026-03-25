@@ -219,6 +219,17 @@ export function setWorkpad(id: string, workpad: string): void {
     .run();
 }
 
+/** Set the schedule ID that created this task. */
+export function setTaskScheduleId(id: string, scheduleId: string): void {
+  db.update(tasks)
+    .set({
+      scheduleId,
+      updatedAt: sql`datetime('now')`,
+    })
+    .where(eq(tasks.id, id))
+    .run();
+}
+
 /** Update only the dependsOn array of a task. */
 export function setTaskDependsOn(id: string, dependsOn: string[]): void {
   db.update(tasks)

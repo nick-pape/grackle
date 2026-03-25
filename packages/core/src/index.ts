@@ -28,6 +28,12 @@ export { computeTaskStatus } from "./compute-task-status.js";
 // ─── Knowledge ─────────────────────────────────────────────
 export { isKnowledgeEnabled, initKnowledge } from "./knowledge-init.js";
 
+// ─── Cron / Scheduling ────────────────────────────────────
+export { CronManager } from "./cron-manager.js";
+export type { CronManagerDeps } from "./cron-manager.js";
+export { findFirstConnectedEnvironment } from "./find-connected-environment.js";
+export { validateExpression, computeNextRunAt } from "./schedule-expression.js";
+
 // ─── Version Check ────────────────────────────────────────
 export { checkVersionStatus, clearVersionCache, type VersionStatus } from "./version-check.js";
 

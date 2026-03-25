@@ -133,6 +133,7 @@ export const tasks = sqliteTable("tasks", {
     .default(false),
   defaultPersonaId: text("default_persona_id").notNull().default(""),
   workpad: text("workpad").notNull().default(""),
+  scheduleId: text("schedule_id").notNull().default(""),
 });
 
 /** Row shape returned by a SELECT on the tasks table. */
@@ -202,6 +203,35 @@ export type PersonaRow = typeof personas.$inferSelect;
 
 /** Shape accepted by INSERT into the personas table. */
 export type NewPersona = typeof personas.$inferInsert;
+
+// ─── Schedules ───────────────────────────────────────────
+
+export const schedules = sqliteTable("schedules", {
+  id: text("id").primaryKey(),
+  title: text("title").notNull(),
+  description: text("description").notNull().default(""),
+  scheduleExpression: text("schedule_expression").notNull(),
+  personaId: text("persona_id").notNull(),
+  environmentId: text("environment_id").notNull().default(""),
+  workspaceId: text("workspace_id").notNull().default(""),
+  parentTaskId: text("parent_task_id").notNull().default(""),
+  enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+  lastRunAt: text("last_run_at"),
+  nextRunAt: text("next_run_at"),
+  runCount: integer("run_count").notNull().default(0),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`(datetime('now'))`),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`(datetime('now'))`),
+});
+
+/** Row shape returned by a SELECT on the schedules table. */
+export type ScheduleRow = typeof schedules.$inferSelect;
+
+/** Shape accepted by INSERT into the schedules table. */
+export type NewSchedule = typeof schedules.$inferInsert;
 
 // ─── Domain Events ───────────────────────────────────────
 

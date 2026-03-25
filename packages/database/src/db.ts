@@ -250,7 +250,8 @@ export function initDatabase(sqliteOverride?: InstanceType<typeof Database>): In
       depth         INTEGER NOT NULL DEFAULT 0,
       can_decompose INTEGER NOT NULL DEFAULT 0,
       default_persona_id TEXT NOT NULL DEFAULT '',
-      workpad       TEXT NOT NULL DEFAULT ''
+      workpad       TEXT NOT NULL DEFAULT '',
+      schedule_id   TEXT NOT NULL DEFAULT ''
     );
 
     CREATE TABLE IF NOT EXISTS findings (
@@ -573,13 +574,15 @@ export function initDatabase(sqliteOverride?: InstanceType<typeof Database>): In
           depth          INTEGER NOT NULL DEFAULT 0,
           can_decompose  INTEGER NOT NULL DEFAULT 0,
           default_persona_id TEXT NOT NULL DEFAULT '',
-          workpad        TEXT NOT NULL DEFAULT ''
+          workpad        TEXT NOT NULL DEFAULT '',
+          schedule_id    TEXT NOT NULL DEFAULT ''
         );
         INSERT INTO tasks_new SELECT
           id, workspace_id, title, description, status, branch, depends_on,
           started_at, completed_at, created_at, updated_at, sort_order,
           parent_task_id, depth, can_decompose, default_persona_id,
-          COALESCE(workpad, '')
+          COALESCE(workpad, ''),
+          COALESCE(schedule_id, '')
         FROM tasks;
         DROP TABLE tasks;
         ALTER TABLE tasks_new RENAME TO tasks;
@@ -608,6 +611,34 @@ export function initDatabase(sqliteOverride?: InstanceType<typeof Database>): In
         "ALTER TABLE workspaces RENAME COLUMN worktree_base_path TO working_directory",
       );
     }
+  });
+
+  // ─── Schedules table ──────────────────────────────────────
+  conn.exec(`
+    CREATE TABLE IF NOT EXISTS schedules (
+      id                  TEXT PRIMARY KEY,
+      title               TEXT NOT NULL,
+      description         TEXT NOT NULL DEFAULT '',
+      schedule_expression TEXT NOT NULL,
+      persona_id          TEXT NOT NULL,
+      environment_id      TEXT NOT NULL DEFAULT '',
+      workspace_id        TEXT NOT NULL DEFAULT '',
+      parent_task_id      TEXT NOT NULL DEFAULT '',
+      enabled             INTEGER NOT NULL DEFAULT 1,
+      last_run_at         TEXT,
+      next_run_at         TEXT,
+      run_count           INTEGER NOT NULL DEFAULT 0,
+      created_at          TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at          TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_schedules_due ON schedules(enabled, next_run_at);
+  `);
+
+  // Migration: add schedule_id to tasks table
+  tryMigration("add-tasks-schedule-id", () => {
+    conn.exec(
+      "ALTER TABLE tasks ADD COLUMN schedule_id TEXT NOT NULL DEFAULT ''",
+    );
   });
 
   return { migrationErrors };
