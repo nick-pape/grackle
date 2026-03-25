@@ -59,8 +59,21 @@
 
 .formActions {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-sm);
   margin-top: var(--space-md);
+}
+
+.editableSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+
+  label {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+  }
 }
 
 .list {

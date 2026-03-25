@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, fn, userEvent } from "@storybook/test";
+import { expect, fn, userEvent, within } from "@storybook/test";
 import { PersonaManager } from "./PersonaManager.js";
 import { buildPersona } from "../../test-utils/storybook-helpers.js";
 
@@ -9,10 +9,10 @@ const meta: Meta<typeof PersonaManager> = {
   args: {
     personas: [],
     appDefaultPersonaId: "",
-    onCreatePersona: fn(),
-    onUpdatePersona: fn(),
     onDeletePersona: fn(),
     onSetAppDefaultPersonaId: fn(),
+    onNavigateToNew: fn(),
+    onNavigateToPersona: fn(),
   },
 };
 
@@ -67,22 +67,18 @@ export const WithPersonas: Story = {
   },
 };
 
-/** Clicking "+ New Persona" opens the create form. */
-export const OpenCreateForm: Story = {
-  play: async ({ canvas }) => {
+/** Clicking "+ New Persona" calls onNavigateToNew. */
+export const ClickNewPersona: Story = {
+  play: async ({ canvas, args }) => {
     const newButton = canvas.getByRole("button", { name: "+ New Persona" });
     await userEvent.click(newButton);
 
-    // The form heading should appear
-    await expect(canvas.getByText("Create Persona")).toBeInTheDocument();
-
-    // Form fields should be visible
-    await expect(canvas.getByPlaceholderText("e.g. Frontend Engineer")).toBeInTheDocument();
+    await expect(args.onNavigateToNew).toHaveBeenCalled();
   },
 };
 
-/** Clicking "Edit" on a persona card opens the edit form. */
-export const EditPersona: Story = {
+/** Clicking a persona card calls onNavigateToPersona. */
+export const ClickPersonaCard: Story = {
   args: {
     personas: [
       buildPersona({
@@ -93,30 +89,33 @@ export const EditPersona: Story = {
       }),
     ],
   },
-  play: async ({ canvas }) => {
-    const editButton = canvas.getByRole("button", { name: "Edit" });
-    await userEvent.click(editButton);
+  play: async ({ canvas, args }) => {
+    const card = canvas.getByTestId("persona-card-p-edit");
+    await userEvent.click(card);
 
-    // Edit form heading should appear
-    await expect(canvas.getByText("Edit Persona")).toBeInTheDocument();
+    await expect(args.onNavigateToPersona).toHaveBeenCalledWith("p-edit");
   },
 };
 
-/** Delete flow: clicking "Delete" shows a confirmation, clicking "Confirm" fires the callback. */
+/** Delete flow: clicking "Delete" shows a confirmation dialog. */
 export const DeletePersonaFlow: Story = {
   args: {
     personas: [
       buildPersona({ id: "p-del", name: "Disposable Persona" }),
     ],
   },
-  play: async ({ canvas }) => {
-    // Click Delete
-    const deleteButton = canvas.getByRole("button", { name: "Delete" });
+  play: async ({ canvas, args }) => {
+    // Click Delete within the card actions
+    const deleteButton = canvas.getByTestId("persona-delete-p-del");
     await userEvent.click(deleteButton);
 
-    // Confirmation should appear
-    await expect(canvas.getByRole("button", { name: "Confirm" })).toBeInTheDocument();
-    await expect(canvas.getByRole("button", { name: "Cancel" })).toBeInTheDocument();
+    // Confirmation dialog should appear
+    await expect(canvas.getByText("Delete Persona?")).toBeInTheDocument();
+
+    const dialog = canvas.getByRole("dialog", { name: "Delete Persona?" });
+    await userEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
+
+    await expect(args.onDeletePersona).toHaveBeenCalledWith("p-del");
   },
 };
 

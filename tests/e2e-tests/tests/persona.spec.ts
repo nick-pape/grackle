@@ -104,4 +104,77 @@ test.describe("Persona Management — UI", { tag: ["@persona"] }, () => {
     await expect(breadcrumbs).toContainText("Home");
     await expect(breadcrumbs).toContainText("Settings");
   });
+
+  test("persona detail routes support create, edit, and delete", async ({
+    appPage,
+    grackle: { client },
+  }) => {
+    const page = appPage;
+
+    await page.locator('[data-testid="sidebar-tab-settings"]').click();
+    await page.getByRole("tab", { name: "Personas" }).click();
+    await page.getByTestId("persona-new-button").click();
+
+    await page.waitForURL("**/settings/personas/new", { timeout: 5_000 });
+    await expect(page.getByRole("tab", { name: "Personas", selected: true })).toBeVisible();
+
+    await page.getByTestId("persona-detail-name").fill("Route Created Persona");
+    await page.getByTestId("persona-detail-description").fill("Created from the persona detail page");
+    await page.getByTestId("persona-detail-prompt").fill("You help validate persona detail routes.");
+    await page.getByTestId("persona-detail-save").click();
+
+    // Wait for navigation to the new persona's detail page before querying the server
+    await page.waitForURL(/\/settings\/personas\/[^/]+$/, { timeout: 5_000 });
+
+    // Poll listPersonas until the created persona appears (avoids racing the create RPC)
+    let createdPersona: { id: string; name: string } | undefined;
+    await expect.poll(async () => {
+      const personasAfterCreate = await client.listPersonas({});
+      createdPersona = personasAfterCreate.personas.find((persona) => persona.name === "Route Created Persona");
+      return createdPersona;
+    }, { timeout: 5_000 }).toBeDefined();
+
+    await page.waitForURL(`**/settings/personas/${createdPersona!.id}`, { timeout: 5_000 });
+    await expect(page.getByRole("heading", { name: "Edit Persona" })).toBeVisible({ timeout: 5_000 });
+
+    await page.getByTestId("persona-detail-cancel").click();
+    await expect(page).toHaveURL(/\/settings\/personas$/, { timeout: 5_000 });
+    await expect(page.getByTestId(`persona-card-${createdPersona!.id}`)).toContainText("Route Created Persona", { timeout: 5_000 });
+
+    await page.getByTestId(`persona-card-${createdPersona!.id}`).click();
+    await page.waitForURL(`**/settings/personas/${createdPersona!.id}`, { timeout: 5_000 });
+    await expect(page.getByRole("tab", { name: "Personas", selected: true })).toBeVisible();
+
+    await page.getByTestId("persona-detail-name-button").click();
+    await page.getByTestId("persona-detail-name-input").fill("Route Updated Persona");
+    await page.getByTestId("persona-detail-name-input").press("Enter");
+
+    await page.getByTestId("persona-detail-description-button").click();
+    await page.getByTestId("persona-detail-description-input").fill("Updated from the persona detail page");
+    await page.getByTestId("persona-detail-description-input").press("Enter");
+
+    await page.getByTestId("persona-detail-cancel").click();
+
+    // Poll listPersonas until the update is reflected (avoids racing the update RPC)
+    let updatedPersona: { id: string; name: string } | undefined;
+    await expect.poll(async () => {
+      const personasAfterUpdate = await client.listPersonas({});
+      updatedPersona = personasAfterUpdate.personas.find((persona) => persona.name === "Route Updated Persona");
+      return updatedPersona;
+    }, { timeout: 5_000 }).toBeDefined();
+
+    await expect(page).toHaveURL(/\/settings\/personas$/, { timeout: 5_000 });
+    await expect(page.getByTestId(`persona-card-${updatedPersona!.id}`)).toContainText("Route Updated Persona", { timeout: 5_000 });
+
+    await page.getByTestId(`persona-card-${updatedPersona!.id}`).click();
+    await page.waitForURL(`**/settings/personas/${updatedPersona!.id}`, { timeout: 5_000 });
+    await page.getByTestId("persona-detail-delete").click();
+
+    const dialog = page.getByRole("dialog", { name: "Delete Persona?" });
+    await expect(dialog).toBeVisible({ timeout: 5_000 });
+    await dialog.getByRole("button", { name: "Delete" }).click();
+
+    await expect(page).toHaveURL(/\/settings\/personas$/, { timeout: 5_000 });
+    await expect(page.getByTestId(`persona-card-${updatedPersona!.id}`)).toHaveCount(0);
+  });
 });

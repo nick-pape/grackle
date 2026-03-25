@@ -4,10 +4,11 @@ import { useGrackle } from "../context/GrackleContext.js";
 import { EventStream } from "../components/display/EventStream.js";
 import { ChatInput } from "../components/chat/index.js";
 import { FindingsPanel } from "../components/panels/FindingsPanel.js";
+import { TaskEditPanel } from "../components/panels/TaskEditPanel.js";
 import { WorkpadPanel } from "../components/panels/WorkpadPanel.js";
 import { Breadcrumbs, ConfirmDialog } from "../components/display/index.js";
 import { buildTaskBreadcrumbs } from "../utils/breadcrumbs.js";
-import { taskEditUrl, taskUrl, workspaceUrl, useAppNavigate } from "../utils/navigation.js";
+import { taskUrl, workspaceUrl, useAppNavigate } from "../utils/navigation.js";
 import { getStatusBadgeClassKey, getStatusStyle } from "../utils/taskStatus.js";
 import type { Session, TaskData, Environment, Workspace } from "../hooks/useGrackleSocket.js";
 import { AnimatePresence, motion } from "motion/react";
@@ -346,7 +347,7 @@ export function TaskPage(): JSX.Element {
   const {
     events, eventsDropped, tasks, sessions, environments, findings,
     loadSessionEvents, loadFindings,
-    kill, startTask, stopTask, resumeTask, deleteTask,
+    kill, startTask, stopTask, resumeTask, deleteTask, createTask, updateTask,
     workspaces, taskSessions: taskSessionsMap, loadTaskSessions,
     sendInput, spawn, personas, provisionEnvironment,
   } = useGrackle();
@@ -362,25 +363,40 @@ export function TaskPage(): JSX.Element {
     location.pathname.endsWith("/stream") ? "stream"
     : location.pathname.endsWith("/findings") ? "findings"
     : "overview";
+  const isEditRoute = location.pathname.endsWith("/edit");
 
   const [activeTaskTab, setActiveTaskTab] = useState<TaskTab>(tabFromUrl);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [selectedSessionId, setSelectedSessionId] = useState<string | undefined>(undefined);
   const [selectedEnvId, setSelectedEnvId] = useState<string>("");
+  const [isEditing, setIsEditing] = useState<boolean>(isEditRoute);
 
-  // Sync tab with URL only when the URL-derived tab actually changes.
-  // Use a ref to avoid fighting with the auto-switch-by-status logic.
   const prevTabFromUrlRef = useRef(tabFromUrl);
-  if (tabFromUrl !== prevTabFromUrlRef.current) {
-    prevTabFromUrlRef.current = tabFromUrl;
-    if (tabFromUrl !== activeTaskTab) {
-      setActiveTaskTab(tabFromUrl);
-    }
-  }
+  const prevIsEditRouteRef = useRef(isEditRoute);
 
   const task = tasks.find((t) => t.id === taskId);
   const workspaceId = task?.workspaceId || undefined;
   const workspace = workspaces.find((p) => p.id === workspaceId);
+
+  // Sync tab with URL only when the URL-derived tab actually changes.
+  // Use a ref to avoid fighting with the auto-switch-by-status logic.
+  useEffect(() => {
+    if (tabFromUrl !== prevTabFromUrlRef.current) {
+      prevTabFromUrlRef.current = tabFromUrl;
+      if (tabFromUrl !== activeTaskTab) {
+        setActiveTaskTab(tabFromUrl);
+      }
+    }
+  }, [tabFromUrl, activeTaskTab]);
+
+  useEffect(() => {
+    if (isEditRoute !== prevIsEditRouteRef.current) {
+      prevIsEditRouteRef.current = isEditRoute;
+      if (isEditRoute !== isEditing) {
+        setIsEditing(isEditRoute);
+      }
+    }
+  }, [isEditRoute, isEditing]);
 
   // Initialize env selector from workspace default when task/workspace loads
   useEffect(() => {
@@ -416,15 +432,14 @@ export function TaskPage(): JSX.Element {
   };
 
   // Reset state when switching tasks
-  if (task?.id !== prevTaskIdRef.current) {
-    prevTaskIdRef.current = task?.id;
-    if (selectedSessionId !== undefined) {
+  useEffect(() => {
+    if (task?.id !== prevTaskIdRef.current) {
+      prevTaskIdRef.current = task?.id;
       setSelectedSessionId(undefined);
-    }
-    if (selectedEnvId !== "") {
       setSelectedEnvId("");
+      setIsEditing(isEditRoute);
     }
-  }
+  }, [task?.id, isEditRoute]);
 
   // Load task sessions
   useEffect(() => {
@@ -442,19 +457,21 @@ export function TaskPage(): JSX.Element {
   // Skip the initial status transition (undefined → first status) when the URL
   // explicitly targets a non-default tab, so deep links like /tasks/:id/stream
   // are not overridden by the status-based auto-switch.
-  if (task?.status !== prevTaskStatusRef.current) {
-    const isInitialLoad = prevTaskStatusRef.current === undefined;
-    prevTaskStatusRef.current = task?.status;
-    const newTab: TaskTab | undefined =
-      task?.status === "not_started" ? "overview"
-      : task?.status === "working" ? "stream"
-      : task?.status === "paused" ? "stream"
-      : task?.status === "complete" ? "findings"
-      : undefined;
-    if (newTab && newTab !== activeTaskTab && !(isInitialLoad && tabFromUrl !== "overview")) {
-      setActiveTaskTab(newTab);
+  useEffect(() => {
+    if (task?.status !== prevTaskStatusRef.current) {
+      const isInitialLoad = prevTaskStatusRef.current === undefined;
+      prevTaskStatusRef.current = task?.status;
+      const newTab: TaskTab | undefined =
+        task?.status === "not_started" ? "overview"
+        : task?.status === "working" ? "stream"
+        : task?.status === "paused" ? "stream"
+        : task?.status === "complete" ? "findings"
+        : undefined;
+      if (newTab && newTab !== activeTaskTab && !(isInitialLoad && tabFromUrl !== "overview")) {
+        setActiveTaskTab(newTab);
+      }
     }
-  }
+  }, [task?.status, activeTaskTab, tabFromUrl]);
 
   const tasksById = useMemo(
     () => new Map(tasks.map((t) => [t.id, t])),
@@ -528,7 +545,7 @@ export function TaskPage(): JSX.Element {
             onStop={() => stopTask(task.id)}
             onPause={() => sessionId && kill(sessionId)}
             onDelete={handleDeleteTask}
-            onEdit={() => navigate(taskEditUrl(task.id, routeWorkspaceId, routeEnvironmentId))}
+            onEdit={() => setIsEditing(true)}
           />
         )}
       </div>
@@ -550,7 +567,26 @@ export function TaskPage(): JSX.Element {
       <AnimatePresence mode="wait">
         {activeTaskTab === "overview" && (
           <motion.div key="overview" initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.15 }} className={styles.overviewContent} data-testid="task-overview">
-            {task ? (
+            {isEditing && task ? (
+              <TaskEditPanel
+                mode="edit"
+                taskId={task.id}
+                workspaceId={workspaceId}
+                environmentId={routeEnvironmentId}
+                tasks={tasks}
+                workspaces={workspaces}
+                personas={personas}
+                onCreateTask={createTask}
+                onUpdateTask={updateTask}
+                onEditDone={() => {
+                  if (isEditRoute) {
+                    navigate(taskUrl(task.id, undefined, routeWorkspaceId, routeEnvironmentId), { replace: true });
+                  } else {
+                    setIsEditing(false);
+                  }
+                }}
+              />
+            ) : task ? (
               <TaskOverview task={task} tasksById={tasksById} environments={environments} workspaces={workspaces} taskSessions={currentTaskSessions} selectedEnvId={selectedEnvId} />
             ) : (
               <div className={styles.waitingMessage}>No additional details</div>

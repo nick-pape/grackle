@@ -125,6 +125,14 @@ export const SETTINGS_CREDENTIALS_URL: string = "/settings/credentials";
 /** URL for the persona management tab. */
 export const PERSONAS_URL: string = "/settings/personas";
 
+/** URL for the new persona form. */
+export const NEW_PERSONA_URL: string = "/settings/personas/new";
+
+/** Build URL for a persona detail page. */
+export function personaUrl(personaId: string): string {
+  return `/settings/personas/${encodeURIComponent(personaId)}`;
+}
+
 /** URL for the settings appearance tab. */
 export const SETTINGS_APPEARANCE_URL: string = "/settings/appearance";
 
