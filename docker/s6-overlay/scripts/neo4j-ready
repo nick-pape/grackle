@@ -1,0 +1,21 @@
+#!/command/with-contenv bash
+set -euo pipefail
+
+# If Neo4j is not supposed to run, skip the readiness check.
+if [ "${GRACKLE_KNOWLEDGE_ENABLED:-}" != "true" ] || [ -n "${GRACKLE_NEO4J_URL:-}" ]; then
+  exit 0
+fi
+
+# Wait for Neo4j bolt port (7687) to accept connections.
+# neo4j status reports success once the PID exists, not when bolt is ready.
+MAX_WAIT=60
+ELAPSED=0
+while ! bash -c 'echo > /dev/tcp/127.0.0.1/7687' 2>/dev/null; do
+  if [ "$ELAPSED" -ge "$MAX_WAIT" ]; then
+    echo "WARN: Neo4j did not become ready within ${MAX_WAIT}s, starting Grackle anyway"
+    exit 0  # Non-fatal: Grackle handles Neo4j unavailability gracefully
+  fi
+  sleep 2
+  ELAPSED=$((ELAPSED + 2))
+done
+echo "Neo4j bolt port is ready"
