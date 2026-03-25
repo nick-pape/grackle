@@ -1,6 +1,17 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Wed, 25 Mar 2026 16:30:59 GMT and should not be manually modified.
+This log was last generated on Wed, 25 Mar 2026 17:14:49 GMT and should not be manually modified.
+
+## 0.78.0
+Wed, 25 Mar 2026 17:14:49 GMT
+
+### Minor changes
+
+- Graceful shutdown signal (SIGTERM) for agents: two-mode KillAgent with graceful flag, new ipc_terminate MCP tool, system prompt SIGTERM instructions, and bug fix for PowerLine kill forwarding
+
+### Patches
+
+- Fix knowledge sidebar workspace filter scope not preserved across search/clear
 
 ## 0.77.0
 Wed, 25 Mar 2026 16:30:59 GMT
