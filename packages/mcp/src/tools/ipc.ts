@@ -164,4 +164,60 @@ export const ipcTools: ToolDefinition[] = [
       }
     },
   },
+  {
+    name: "ipc_terminate",
+    group: "ipc",
+    description: "Send a graceful termination signal (SIGTERM) to a child session via its file descriptor. The child receives a [SIGTERM] message and is expected to wrap up, save work, and stop. The fd stays open — use ipc_close to close it after.",
+    inputSchema: z.object({
+      fd: z.number().int().describe("File descriptor of the child session to terminate"),
+    }),
+    rpcMethod: "killAgent",
+    mutating: true,
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
+    async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>, authContext?: AuthContext) {
+      try {
+        const sessionId = authContext?.type === "scoped" ? authContext.taskSessionId : "";
+        if (!sessionId) {
+          return {
+            content: [{ type: "text" as const, text: "Error: ipc_terminate requires scoped auth (agent context)" }],
+            isError: true,
+          };
+        }
+
+        // Resolve fd → target session
+        const fd = args.fd as number;
+        const fdsResult = await client.getSessionFds({ id: sessionId });
+        const fdInfo = fdsResult.fds.find((f) => f.fd === fd);
+        if (!fdInfo) {
+          return {
+            content: [{ type: "text" as const, text: `Error: fd ${String(fd)} not found` }],
+            isError: true,
+          };
+        }
+        if (!fdInfo.targetSessionId) {
+          return {
+            content: [{ type: "text" as const, text: `Error: fd ${String(fd)} has no target session` }],
+            isError: true,
+          };
+        }
+        if (!fdInfo.owned) {
+          return {
+            content: [{ type: "text" as const, text: `Error: fd ${String(fd)} is not an owned child fd — only owned fds from ipc_spawn can be terminated` }],
+            isError: true,
+          };
+        }
+
+        // Send graceful kill (SIGTERM)
+        await client.killAgent({ id: fdInfo.targetSessionId, graceful: true });
+        return jsonResult({ success: true, targetSessionId: fdInfo.targetSessionId });
+      } catch (error) {
+        return grpcErrorToToolResult(error);
+      }
+    },
+  },
 ];

@@ -263,7 +263,7 @@ export function useSessions(): UseSessionsResult {
 
   const kill = useCallback(
     (sessionId: string) => {
-      grackleClient.killAgent({ id: sessionId }).catch(
+      grackleClient.killAgent({ id: sessionId, graceful: false }).catch(
         () => {},
       );
     },

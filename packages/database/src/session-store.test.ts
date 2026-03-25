@@ -43,7 +43,8 @@ function applySchema(): void {
       input_tokens       INTEGER NOT NULL DEFAULT 0,
       output_tokens      INTEGER NOT NULL DEFAULT 0,
       cost_usd           REAL NOT NULL DEFAULT 0,
-      end_reason         TEXT
+      end_reason         TEXT,
+      sigterm_sent_at    TEXT
     );
   `);
 
@@ -159,6 +160,21 @@ describe("session-store", () => {
       expect(session?.inputTokens).toBe(0);
       expect(session?.outputTokens).toBe(0);
       expect(session?.costUsd).toBe(0);
+    });
+  });
+
+  describe("setSigtermSentAt", () => {
+    it("sets sigterm_sent_at timestamp on a session", () => {
+      sessionStore.createSession("sig-1", "test-env", "claude-code", "test", "model", "/tmp/log");
+      sessionStore.setSigtermSentAt("sig-1");
+      const session = sessionStore.getSession("sig-1");
+      expect(session?.sigtermSentAt).toBeTruthy();
+    });
+
+    it("returns sigtermSentAt as null by default", () => {
+      sessionStore.createSession("sig-2", "test-env", "claude-code", "test", "model", "/tmp/log");
+      const session = sessionStore.getSession("sig-2");
+      expect(session?.sigtermSentAt).toBeNull();
     });
   });
 

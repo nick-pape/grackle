@@ -11,6 +11,8 @@ describe("SystemPromptBuilder", () => {
     expect(result).toContain("task_complete");
     expect(result).toContain("## Signals");
     expect(result).toContain("[SIGCHLD]");
+    expect(result).toContain("[SIGTERM]");
+    expect(result).toContain("ipc_close");
     expect(result).toContain("## Findings");
     expect(result).toContain("finding_post");
     expect(result).toContain("grackle");

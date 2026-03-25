@@ -95,7 +95,7 @@ export async function deliverSignalToTask(
  * Bypasses the server-side IDLE guard — the agent runtime accepts input at any
  * time and picks it up at the next turn boundary.
  */
-async function sendInputToSession(
+export async function sendInputToSession(
   sessionId: string,
   environmentId: string,
   text: string,
@@ -183,7 +183,7 @@ function waitForSessionIdle(
               return true;
             }
             // If the session hit a terminal state, stop waiting
-            if (["completed", "failed", "killed", "interrupted"].includes(event.content)) {
+            if (["completed", "failed", "killed", "interrupted", "terminated"].includes(event.content)) {
               return false;
             }
           }

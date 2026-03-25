@@ -56,6 +56,7 @@ export const sessions = sqliteTable("sessions", {
   inputTokens: integer("input_tokens").notNull().default(0),
   outputTokens: integer("output_tokens").notNull().default(0),
   costUsd: real("cost_usd").notNull().default(0),
+  sigtermSentAt: text("sigterm_sent_at"),
 });
 
 /** Row shape returned by a SELECT on the sessions table. */

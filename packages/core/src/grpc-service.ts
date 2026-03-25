@@ -64,6 +64,7 @@ import * as streamRegistry from "./stream-registry.js";
 import * as pipeDelivery from "./pipe-delivery.js";
 import { ensureAsyncDeliveryListener } from "./pipe-delivery.js";
 import { cleanupLifecycleStream, ensureLifecycleStream } from "./lifecycle.js";
+import { sendInputToSession } from "./signals/signal-delivery.js";
 
 /** Valid pipe mode values for SpawnRequest and StartTaskRequest. */
 const VALID_PIPE_MODES: ReadonlySet<string> = new Set(["", "sync", "async", "detach"]);
@@ -359,6 +360,19 @@ function killSessionAndCleanup(session: SessionRow): void {
       }
     }
   }
+
+  // Forward kill to PowerLine so the agent process is actually terminated.
+  // The orphan callback also sends a kill, but that fires asynchronously
+  // after subscription cleanup — this ensures immediate process termination.
+  const conn = adapterManager.getConnection(session.environmentId);
+  if (conn) {
+    conn.client.kill(
+      create(powerline.KillRequestSchema, { id: session.id, reason: END_REASON.KILLED }),
+    ).catch((err: unknown) => {
+      logger.debug({ err, sessionId: session.id }, "PowerLine kill failed (process may have already exited)");
+    });
+  }
+
   cleanupLifecycleStream(session.id);
   const subs = streamRegistry.getSubscriptionsForSession(session.id);
   for (const sub of subs) {
@@ -1042,12 +1056,34 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       return create(grackle.SessionFdsSchema, { fds });
     },
 
-    async killAgent(req: grackle.SessionId) {
+    async killAgent(req: grackle.KillAgentRequest) {
       const session = sessionStore.getSession(req.id);
       if (!session) {
         throw new ConnectError(`Session not found: ${req.id}`, Code.NotFound);
       }
 
+      if (req.graceful) {
+        // ── SIGTERM: deliver signal message, return immediately ──
+        if (!TERMINAL_SESSION_STATUSES.has(session.status as SessionStatus)) {
+          const message =
+            "[SIGTERM] You have been asked to stop gracefully. " +
+            "Finish your current operation, save your work, close any open IPC fds " +
+            "(ipc_close for each owned fd), then call task_complete (if applicable) and stop.";
+          // Set sigtermSentAt BEFORE delivering so that if the session
+          // completes instantly (race), the event-processor sees the flag.
+          sessionStore.setSigtermSentAt(session.id);
+          const delivered = await sendInputToSession(session.id, session.environmentId, message, "sigterm");
+          if (delivered) {
+            return create(grackle.EmptySchema, {});
+          }
+          // Delivery failed — clear the flag since SIGTERM wasn't actually sent
+          sessionStore.clearSigtermSentAt(session.id);
+          // If delivery failed (env disconnected), fall through to hard kill
+          logger.warn({ sessionId: session.id }, "SIGTERM delivery failed, falling back to hard kill");
+        }
+      }
+
+      // ── SIGKILL: terminate immediately ──
       // Set STOPPED + killed BEFORE closing the lifecycle FD so the orphan
       // callback sees the session is already terminal and skips. Without this,
       // the orphan callback would see IDLE → reason="completed", which is wrong

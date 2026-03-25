@@ -174,7 +174,25 @@ describe("session_kill", () => {
     const parsed = JSON.parse(result.content[0].text);
 
     expect(parsed.success).toBe(true);
-    expect(mockClient.killAgent).toHaveBeenCalledWith({ id: "session-99" });
+    expect(mockClient.killAgent).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "session-99" }),
+    );
+    // graceful defaults to false when not provided
+    const callArgs = (mockClient.killAgent as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(callArgs.graceful).toBe(false);
+  });
+
+  /** Should pass graceful=true when specified. */
+  test("passes graceful=true when specified", async () => {
+    const mockClient = createMockClient();
+    (mockClient.killAgent as ReturnType<typeof vi.fn>).mockResolvedValue({});
+
+    await getTool("session_kill").handler(
+      { sessionId: "session-99", graceful: true },
+      mockClient,
+    );
+
+    expect(mockClient.killAgent).toHaveBeenCalledWith({ id: "session-99", graceful: true });
   });
 
   /** Should return a structured error on ConnectError. */

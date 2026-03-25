@@ -51,7 +51,7 @@ import * as streamHub from "../stream-hub.js";
 import { reanimateAgent } from "../reanimate-agent.js";
 import { logger } from "../logger.js";
 import { grackle } from "@grackle-ai/common";
-import { deliverSignalToTask } from "./signal-delivery.js";
+import { deliverSignalToTask, sendInputToSession } from "./signal-delivery.js";
 
 // ── Helpers ──────────────────────────────────────────────────
 
@@ -276,6 +276,61 @@ describe("deliverSignalToTask", () => {
     expect(logger.error).toHaveBeenCalledWith(
       expect.objectContaining({ signalType: "sigchld" }),
       expect.stringContaining("Failed to reanimate"),
+    );
+  });
+});
+
+describe("sendInputToSession", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("delivers signal to session via adapter connection", async () => {
+    vi.spyOn(sessionStore, "getSession").mockReturnValue({
+      id: "sess-1",
+      environmentId: "env-1",
+      status: "idle",
+      runtime: "stub",
+      runtimeSessionId: "rt-1",
+      prompt: "",
+      model: "claude",
+      logPath: "/tmp/log",
+      turns: 0,
+      startedAt: new Date().toISOString(),
+      suspendedAt: null,
+      endedAt: null,
+      error: null,
+      taskId: "",
+      personaId: null,
+    });
+
+    const mockConn = makeMockConnection();
+    vi.spyOn(adapterManager, "getConnection").mockReturnValue(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      mockConn as any,
+    );
+
+    const result = await sendInputToSession("sess-1", "env-1", "[SIGTERM] stop", "sigterm");
+
+    expect(result).toBe(true);
+    expect(mockConn.client.sendInput).toHaveBeenCalledOnce();
+    expect(streamHub.publish).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: grackle.EventType.SIGNAL,
+        content: "[SIGTERM] stop",
+      }),
+    );
+  });
+
+  it("returns false when environment not connected", async () => {
+    vi.spyOn(adapterManager, "getConnection").mockReturnValue(undefined);
+
+    const result = await sendInputToSession("sess-1", "env-1", "[SIGTERM] stop", "sigterm");
+
+    expect(result).toBe(false);
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.objectContaining({ sessionId: "sess-1", signalType: "sigterm" }),
+      expect.stringContaining("not connected"),
     );
   });
 });

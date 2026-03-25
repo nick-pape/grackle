@@ -329,19 +329,25 @@ export function processEventStream(
           } else if (event.content === "running") {
             sessionStore.updateSessionStatus(sessionId, SESSION_STATUS.RUNNING);
           } else if (event.content === "completed") {
-            sessionStore.updateSession(sessionId, SESSION_STATUS.STOPPED, undefined, undefined, END_REASON.COMPLETED);
+            // If SIGTERM was sent and the session completed naturally, use
+            // TERMINATED to distinguish graceful shutdowns from normal completion.
+            const session = sessionStore.getSession(sessionId);
+            const endReason = session?.sigtermSentAt ? END_REASON.TERMINATED : END_REASON.COMPLETED;
+            sessionStore.updateSession(sessionId, SESSION_STATUS.STOPPED, undefined, undefined, endReason);
           } else if (event.content === "killed") {
             sessionStore.updateSession(sessionId, SESSION_STATUS.STOPPED, undefined, undefined, END_REASON.KILLED);
           } else if (event.content === "failed") {
             sessionStore.updateSession(sessionId, SESSION_STATUS.STOPPED, undefined, undefined, END_REASON.INTERRUPTED);
             cleanupLifecycleStream(sessionId);
+          } else if (event.content === "terminated") {
+            sessionStore.updateSession(sessionId, SESSION_STATUS.STOPPED, undefined, undefined, END_REASON.TERMINATED);
           }
 
           // On terminal status (or idle for sync pipes): publish child completion
           // to IPC pipe stream. `waiting_input` is included so that sync pipes
           // unblock when a child goes idle without calling task_complete (#824).
           // publishChildCompletion internally skips waiting_input for async pipes.
-          if (["completed", "killed", "failed", "waiting_input"].includes(event.content)) {
+          if (["completed", "killed", "failed", "terminated", "waiting_input"].includes(event.content)) {
             publishChildCompletion(sessionId, event.content);
           }
 
@@ -366,7 +372,7 @@ export function processEventStream(
           // Broadcast task_updated on status changes so frontend re-fetches computed status.
           // This covers both terminal events (completed/killed/failed) and non-terminal
           // transitions (running, waiting_input) that affect the computed task status.
-          if (ctx.taskId && ["completed", "killed", "failed", "running", "waiting_input"].includes(event.content)) {
+          if (ctx.taskId && ["completed", "killed", "failed", "terminated", "running", "waiting_input"].includes(event.content)) {
             emit("task.updated", { taskId: ctx.taskId, workspaceId: ctx.workspaceId });
           }
         }

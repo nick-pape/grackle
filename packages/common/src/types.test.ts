@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { SESSION_STATUS, TERMINAL_SESSION_STATUSES } from "./types.js";
+import { SESSION_STATUS, TERMINAL_SESSION_STATUSES, END_REASON } from "./types.js";
 import { powerline } from "./index.js";
 
 describe("SESSION_STATUS", () => {
@@ -9,6 +9,12 @@ describe("SESSION_STATUS", () => {
 
   it("SUSPENDED is not a terminal status", () => {
     expect(TERMINAL_SESSION_STATUSES.has(SESSION_STATUS.SUSPENDED)).toBe(false);
+  });
+});
+
+describe("END_REASON", () => {
+  it("includes TERMINATED end reason", () => {
+    expect(END_REASON.TERMINATED).toBe("terminated");
   });
 });
 
