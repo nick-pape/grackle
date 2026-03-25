@@ -43,6 +43,19 @@ const MAX_NAME_LENGTH: number = 100;
 
 type WorkspaceTab = "tasks" | "board" | "graph";
 
+/** Returns a safe external repository URL, or undefined when invalid. */
+function toSafeRepositoryUrl(value: string): string | undefined {
+  try {
+    const parsedUrl = new URL(value);
+    if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
+      return undefined;
+    }
+    return parsedUrl.toString();
+  } catch {
+    return undefined;
+  }
+}
+
 /** Workspace overview page with inline editing, progress bar, and DAG/task views. */
 export function WorkspacePage(): JSX.Element {
   const { workspaceId, environmentId: routeEnvironmentId } = useParams<{ workspaceId: string; environmentId: string }>();
@@ -182,11 +195,12 @@ export function WorkspacePage(): JSX.Element {
                 activeFieldId={activeFieldId}
                 onActivate={setActiveFieldId}
                 renderDisplay={(v) => {
-                  if (v && /^https?:\/\//i.test(v)) {
+                  const safeRepositoryUrl = toSafeRepositoryUrl(v);
+                  if (safeRepositoryUrl) {
                     return (
                       <a
                         className={styles.repoLink}
-                        href={v}
+                        href={safeRepositoryUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={(e) => e.stopPropagation()}

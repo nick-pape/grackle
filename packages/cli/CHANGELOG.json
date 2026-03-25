@@ -2,6 +2,26 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.76.1",
+      "tag": "@grackle-ai/cli_v0.76.1",
+      "date": "Wed, 25 Mar 2026 13:29:39 GMT",
+      "comments": {
+        "none": [
+          {
+            "comment": "Update the UI to share components"
+          },
+          {
+            "comment": "placeholder"
+          }
+        ],
+        "patch": [
+          {
+            "comment": "Fix knowledge graph integration: migrate useKnowledge to ConnectRPC, fix vector dimension mismatch, add Neo4j schema retry logic"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.76.0",
       "tag": "@grackle-ai/cli_v0.76.0",
       "date": "Wed, 25 Mar 2026 06:32:16 GMT",

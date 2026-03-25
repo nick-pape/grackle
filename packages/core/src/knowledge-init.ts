@@ -231,12 +231,13 @@ async function handleEvent(embedder: Embedder, event: GrackleEvent): Promise<voi
 export async function initKnowledge(): Promise<() => Promise<void>> {
   logger.info("Initializing knowledge graph subsystem");
 
+  const embedder: Embedder = createLocalEmbedder();
+
   await openNeo4j();
 
   try {
-    await initSchema();
+    await initSchema(embedder.dimensions);
 
-    const embedder: Embedder = createLocalEmbedder();
     knowledgeEmbedder = embedder;
 
     const unsubscribe: () => void = subscribe(createEntitySyncHandler(embedder));

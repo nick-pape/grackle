@@ -34,13 +34,13 @@ export function SetupWizard(): JSX.Element {
       if (seedPersona && runtime !== seedPersona.runtime) {
         // Set the model to a valid default for the chosen runtime
         const model = DEFAULT_MODELS[runtime] ?? "sonnet";
-        updatePersona(seedPersona.id, undefined, undefined, undefined, runtime, model);
+        updatePersona(seedPersona.id, undefined, undefined, undefined, runtime, model).catch(() => {});
       }
       // Sync System persona runtime to match
       const systemPersona = personas.find((p) => p.id === SYSTEM_PERSONA_ID);
       if (systemPersona && runtime !== systemPersona.runtime) {
         const model = DEFAULT_MODELS[runtime] ?? "sonnet";
-        updatePersona(SYSTEM_PERSONA_ID, undefined, undefined, undefined, runtime, model);
+        updatePersona(SYSTEM_PERSONA_ID, undefined, undefined, undefined, runtime, model).catch(() => {});
       }
       completeOnboarding();
       navigate("/", { replace: true });

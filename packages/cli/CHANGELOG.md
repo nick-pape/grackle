@@ -1,6 +1,18 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Wed, 25 Mar 2026 06:32:16 GMT and should not be manually modified.
+This log was last generated on Wed, 25 Mar 2026 13:29:39 GMT and should not be manually modified.
+
+## 0.76.1
+Wed, 25 Mar 2026 13:29:39 GMT
+
+### Patches
+
+- Fix knowledge graph integration: migrate useKnowledge to ConnectRPC, fix vector dimension mismatch, add Neo4j schema retry logic
+
+### Updates
+
+- Update the UI to share components
+- placeholder
 
 ## 0.76.0
 Wed, 25 Mar 2026 06:32:16 GMT

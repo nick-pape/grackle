@@ -6,9 +6,11 @@ import {
   taskEditUrl,
   newTaskUrl,
   newChatUrl,
+  personaUrl,
   HOME_URL,
   SETTINGS_URL,
   PERSONAS_URL,
+  NEW_PERSONA_URL,
   NEW_ENVIRONMENT_URL,
   NEW_WORKSPACE_URL,
 } from "./navigation.js";
@@ -87,7 +89,13 @@ describe("URL builder functions", () => {
     expect(SETTINGS_URL).toBe("/settings");
     expect(HOME_URL).toBe("/");
     expect(PERSONAS_URL).toBe("/settings/personas");
+    expect(NEW_PERSONA_URL).toBe("/settings/personas/new");
     expect(NEW_ENVIRONMENT_URL).toBe("/environments/new");
     expect(NEW_WORKSPACE_URL).toBe("/workspaces/new");
+  });
+
+  it("personaUrl encodes personaId", () => {
+    expect(personaUrl("p-1")).toBe("/settings/personas/p-1");
+    expect(personaUrl("has space")).toBe("/settings/personas/has%20space");
   });
 });
