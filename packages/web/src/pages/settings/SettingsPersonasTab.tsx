@@ -12,8 +12,12 @@ export function SettingsPersonasTab(): JSX.Element {
     <PersonaManager
       personas={personas}
       appDefaultPersonaId={appDefaultPersonaId}
-      onDeletePersona={deletePersona}
-      onSetAppDefaultPersonaId={setAppDefaultPersonaId}
+      onDeletePersona={(personaId) => {
+        deletePersona(personaId).catch(() => {});
+      }}
+      onSetAppDefaultPersonaId={(personaId) => {
+        setAppDefaultPersonaId(personaId).catch(() => {});
+      }}
       onNavigateToNew={() => navigate(NEW_PERSONA_URL)}
       onNavigateToPersona={(id) => navigate(personaUrl(id))}
     />

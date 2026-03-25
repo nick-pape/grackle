@@ -330,7 +330,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       environmentId?: string,
       defaultPersonaId?: string,
       useWorktrees?: boolean,
-      worktreeBasePath?: string,
+      workingDirectory?: string,
       onSuccess?: () => void,
       _onError?: (message: string) => void,
     ) => {
@@ -343,7 +343,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
         repoUrl: repoUrl || "",
         environmentId: environmentId || "",
         status: "active",
-        worktreeBasePath: worktreeBasePath || "",
+        workingDirectory: workingDirectory || "",
         useWorktrees: useWorktrees ?? true,
         defaultPersonaId: defaultPersonaId || "",
         createdAt: new Date().toISOString(),
