@@ -1,7 +1,7 @@
 {
   "changes": [
     {
-      "comment": "placeholder",
+      "comment": "Add toast notifications for task state changes in the web UI",
       "type": "none",
       "packageName": "@grackle-ai/cli"
     }

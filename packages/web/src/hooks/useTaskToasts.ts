@@ -7,8 +7,8 @@ import { diffTasksForToasts } from "./taskToastHelpers.js";
  * Diffs the previous and current task lists and fires toast
  * notifications for meaningful status transitions.
  *
- * Skips toasts on initial load (when the previous ref is null) and
- * for transitions to `not_started` (no user action needed).
+ * Skips toasts on initial load (when the previous ref is undefined)
+ * and for transitions to `not_started` (no user action needed).
  */
 export function useTaskToasts(
   tasks: TaskData[],
