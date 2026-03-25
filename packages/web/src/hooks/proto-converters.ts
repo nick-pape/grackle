@@ -28,6 +28,7 @@ import type {
   PersonaData,
   UsageStats,
 } from "./types.js";
+import type { GraphNode, GraphLink } from "./useKnowledge.js";
 
 /** Convert a proto Environment to the UI Environment type. */
 export function protoToEnvironment(p: grackle.Environment): Environment {
@@ -193,5 +194,34 @@ export function protoToUsageStats(p: grackle.UsageStats): UsageStats {
     outputTokens: p.outputTokens,
     costUsd: p.costUsd,
     sessionCount: p.sessionCount,
+  };
+}
+
+// ─── Knowledge Graph ──────────────────────────────────────────────────────
+
+/** Convert a proto KnowledgeNodeProto to a GraphNode. */
+export function protoToGraphNode(p: grackle.KnowledgeNodeProto, edgeCount: number = 0): GraphNode {
+  return {
+    id: p.id,
+    label: p.title || p.label || p.id,
+    kind: p.kind,
+    category: p.category || undefined,
+    sourceType: p.sourceType || undefined,
+    sourceId: p.sourceId || undefined,
+    content: p.content || undefined,
+    tags: p.tags.length > 0 ? [...p.tags] : undefined,
+    workspaceId: p.workspaceId || undefined,
+    createdAt: p.createdAt || undefined,
+    updatedAt: p.updatedAt || undefined,
+    val: edgeCount,
+  };
+}
+
+/** Convert a proto KnowledgeEdgeProto to a GraphLink. */
+export function protoToGraphLink(p: grackle.KnowledgeEdgeProto): GraphLink {
+  return {
+    source: p.fromId,
+    target: p.toId,
+    type: p.type,
   };
 }

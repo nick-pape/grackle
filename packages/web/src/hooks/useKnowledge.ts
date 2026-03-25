@@ -1,15 +1,16 @@
 /**
  * Data hook for the Knowledge Graph explorer.
  *
- * Follows the same pattern as other domain hooks (environments, tasks, etc.):
- * exposes a `handleMessage` function for WS message routing and action
- * functions that call `send()`.
+ * Uses ConnectRPC for all operations, following the same pattern as
+ * other domain hooks (useFindings, useTasks, etc.).
  *
  * @module
  */
 
 import { useState, useCallback } from "react";
-import type { WsMessage, SendFunction } from "./types.js";
+import type { GrackleEvent } from "./types.js";
+import { grackleClient } from "./useGrackleClient.js";
+import { protoToGraphNode, protoToGraphLink } from "./proto-converters.js";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -59,55 +60,32 @@ export interface UseKnowledgeResult {
   clearSelection(): void;
   expandNode(id: string): void;
   loadRecent(workspaceId?: string): void;
-  /** Handle incoming WS messages — called by useGrackleSocket. */
-  handleMessage(msg: WsMessage): boolean;
+  /** Handle domain events from the event bus. Returns true if handled. */
+  handleEvent(event: GrackleEvent): boolean;
 }
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Convert a raw WS node to a GraphNode. */
-function toGraphNode(raw: Record<string, unknown>, edgeCount: number = 0): GraphNode {
-  return {
-    id: raw.id as string,
-    label: (raw.title as string) || (raw.label as string) || (raw.id as string),
-    kind: raw.kind as string,
-    category: raw.category as string | undefined,
-    sourceType: raw.sourceType as string | undefined,
-    sourceId: raw.sourceId as string | undefined,
-    content: raw.content as string | undefined,
-    tags: raw.tags as string[] | undefined,
-    workspaceId: raw.workspaceId as string | undefined,
-    createdAt: raw.createdAt as string | undefined,
-    updatedAt: raw.updatedAt as string | undefined,
-    val: edgeCount,
-  };
+/** Safely parse a JSON string, returning undefined on failure. */
+function safeParseJson(json: string): Record<string, unknown> | undefined {
+  if (!json) {
+    return undefined;
+  }
+  try {
+    return JSON.parse(json) as Record<string, unknown>;
+  } catch {
+    return undefined;
+  }
 }
-
-/** Convert a raw WS edge to a GraphLink. */
-function toGraphLink(raw: Record<string, unknown>): GraphLink {
-  return {
-    source: raw.fromId as string,
-    target: raw.toId as string,
-    type: raw.type as string,
-  };
-}
-
-/** Knowledge-related WS message types. */
-const KNOWLEDGE_MSG_TYPES: ReadonlySet<string> = new Set([
-  "knowledge.listRecent.result",
-  "knowledge.search.result",
-  "knowledge.getNode.result",
-  "knowledge.expand.result",
-]);
 
 // ---------------------------------------------------------------------------
 // Hook
 // ---------------------------------------------------------------------------
 
-/** Hook for managing Knowledge Graph state and WebSocket communication. */
-export function useKnowledge(send: SendFunction): UseKnowledgeResult {
+/** Hook for managing Knowledge Graph state via ConnectRPC. */
+export function useKnowledge(): UseKnowledgeResult {
   const [nodes, setNodes] = useState<Map<string, GraphNode>>(new Map());
   const [links, setLinks] = useState<GraphLink[]>([]);
   const [selectedNode, setSelectedNode] = useState<NodeDetail | undefined>(undefined);
@@ -117,64 +95,19 @@ export function useKnowledge(send: SendFunction): UseKnowledgeResult {
 
   const loadRecent = useCallback((workspaceId?: string) => {
     setLoading(true);
-    send({ type: "knowledge.listRecent", payload: { limit: 30, workspaceId } });
-  }, [send]);
-
-  const search = useCallback((query: string) => {
-    if (!query.trim()) {
-      return;
-    }
-    setSearchQuery(query);
-    setSelectedId(undefined);
-    setSelectedNode(undefined);
-    setLoading(true);
-    send({ type: "knowledge.search", payload: { query, limit: 20 } });
-  }, [send]);
-
-  const clearSearch = useCallback(() => {
-    setSearchQuery("");
-    loadRecent();
-  }, [loadRecent]);
-
-  const selectNode = useCallback((id: string) => {
-    setSelectedId(id);
-    send({ type: "knowledge.getNode", payload: { id } });
-  }, [send]);
-
-  const clearSelection = useCallback(() => {
-    setSelectedId(undefined);
-    setSelectedNode(undefined);
-  }, []);
-
-  const expandNode = useCallback((id: string) => {
-    send({ type: "knowledge.expand", payload: { id, depth: 1 } });
-  }, [send]);
-
-  /** Handle incoming WS messages. Returns true if handled. */
-  const handleMessage = useCallback((msg: WsMessage): boolean => {
-    if (!KNOWLEDGE_MSG_TYPES.has(msg.type)) {
-      return false;
-    }
-
-    const payload: Record<string, unknown> = (msg.payload ?? {}) as Record<string, unknown>;
-
-    switch (msg.type) {
-      case "knowledge.listRecent.result": {
-        if (payload.error) {
-          setLoading(false);
-          return true;
-        }
-        const rawNodes = (payload.nodes ?? []) as Record<string, unknown>[];
-        const rawEdges = (payload.edges ?? []) as Record<string, unknown>[];
-
+    grackleClient.listRecentKnowledgeNodes({
+      limit: 30,
+      workspaceId: workspaceId ?? "",
+    }).then(
+      (resp) => {
         const nodeMap = new Map<string, GraphNode>();
         const linkList: GraphLink[] = [];
 
-        for (const rawNode of rawNodes) {
-          nodeMap.set(rawNode.id as string, toGraphNode(rawNode));
+        for (const p of resp.nodes) {
+          nodeMap.set(p.id, protoToGraphNode(p));
         }
-        for (const edge of rawEdges) {
-          linkList.push(toGraphLink(edge));
+        for (const e of resp.edges) {
+          linkList.push(protoToGraphLink(e));
         }
 
         // Update edge counts
@@ -188,61 +121,81 @@ export function useKnowledge(send: SendFunction): UseKnowledgeResult {
         setNodes(nodeMap);
         setLinks(linkList);
         setLoading(false);
-        return true;
-      }
+      },
+      () => { setLoading(false); },
+    );
+  }, []);
 
-      case "knowledge.search.result": {
-        if (payload.error) {
-          setLoading(false);
-          return true;
-        }
-        const results = (payload.results ?? []) as Array<Record<string, unknown>>;
+  const search = useCallback((query: string) => {
+    if (!query.trim()) {
+      return;
+    }
+    setSearchQuery(query);
+    setSelectedId(undefined);
+    setSelectedNode(undefined);
+    setLoading(true);
+    grackleClient.searchKnowledge({ query, limit: 20 }).then(
+      (resp) => {
         const nodeMap = new Map<string, GraphNode>();
         const linkList: GraphLink[] = [];
 
-        for (const result of results) {
-          const rawNode = result.node as Record<string, unknown>;
-          const resultEdges = (result.edges ?? []) as Record<string, unknown>[];
-          nodeMap.set(rawNode.id as string, toGraphNode(rawNode, resultEdges.length));
-          for (const edge of resultEdges) {
-            linkList.push(toGraphLink(edge));
+        for (const result of resp.results) {
+          if (result.node) {
+            nodeMap.set(result.node.id, protoToGraphNode(result.node, result.edges.length));
+          }
+          for (const e of result.edges) {
+            linkList.push(protoToGraphLink(e));
           }
         }
 
         setNodes(nodeMap);
         setLinks(linkList);
         setLoading(false);
-        return true;
-      }
+      },
+      () => { setLoading(false); },
+    );
+  }, []);
 
-      case "knowledge.getNode.result": {
-        if (payload.error) {
+  const clearSearch = useCallback(() => {
+    setSearchQuery("");
+    loadRecent();
+  }, [loadRecent]);
+
+  const selectNode = useCallback((id: string) => {
+    setSelectedId(id);
+    grackleClient.getKnowledgeNode({ id }).then(
+      (resp) => {
+        if (!resp.node) {
           setSelectedNode(undefined);
-          return true;
+          return;
         }
-        const rawNode = payload.node as Record<string, unknown>;
-        const rawEdges = (payload.edges ?? []) as Record<string, unknown>[];
         setSelectedNode({
-          node: toGraphNode(rawNode, rawEdges.length),
-          edges: rawEdges.map((e) => ({
-            fromId: e.fromId as string,
-            toId: e.toId as string,
-            type: e.type as string,
-            metadata: e.metadata as Record<string, unknown> | undefined,
+          node: protoToGraphNode(resp.node, resp.edges.length),
+          edges: resp.edges.map((e) => ({
+            fromId: e.fromId,
+            toId: e.toId,
+            type: e.type,
+            metadata: safeParseJson(e.metadataJson),
           })),
         });
-        return true;
-      }
+      },
+      () => { setSelectedNode(undefined); },
+    );
+  }, []);
 
-      case "knowledge.expand.result": {
-        const newNodes = (payload.nodes ?? []) as Record<string, unknown>[];
-        const newEdges = (payload.edges ?? []) as Record<string, unknown>[];
+  const clearSelection = useCallback(() => {
+    setSelectedId(undefined);
+    setSelectedNode(undefined);
+  }, []);
 
+  const expandNode = useCallback((id: string) => {
+    grackleClient.expandKnowledgeNode({ id, depth: 1 }).then(
+      (resp) => {
         setNodes((prev) => {
           const updated = new Map(prev);
-          for (const rawNode of newNodes) {
-            if (!updated.has(rawNode.id as string)) {
-              updated.set(rawNode.id as string, toGraphNode(rawNode));
+          for (const p of resp.nodes) {
+            if (!updated.has(p.id)) {
+              updated.set(p.id, protoToGraphNode(p));
             }
           }
           return updated;
@@ -251,8 +204,8 @@ export function useKnowledge(send: SendFunction): UseKnowledgeResult {
         setLinks((prev) => {
           const existing = new Set(prev.map((l) => `${l.source}:${l.target}:${l.type}`));
           const additions: GraphLink[] = [];
-          for (const edge of newEdges) {
-            const link = toGraphLink(edge);
+          for (const e of resp.edges) {
+            const link = protoToGraphLink(e);
             const key = `${link.source}:${link.target}:${link.type}`;
             if (!existing.has(key)) {
               additions.push(link);
@@ -260,10 +213,15 @@ export function useKnowledge(send: SendFunction): UseKnowledgeResult {
           }
           return [...prev, ...additions];
         });
-        return true;
-      }
-    }
+      },
+      () => {},
+    );
+  }, []);
 
+  /** Handle domain events from the event bus. */
+  const handleEvent = useCallback((_event: GrackleEvent): boolean => {
+    // No knowledge-specific events are emitted yet.
+    // Future: react to knowledge.node.created, etc.
     return false;
   }, []);
 
@@ -279,6 +237,6 @@ export function useKnowledge(send: SendFunction): UseKnowledgeResult {
     clearSelection,
     expandNode,
     loadRecent,
-    handleMessage,
+    handleEvent,
   };
 }

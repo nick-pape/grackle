@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Fix knowledge graph integration: migrate useKnowledge to ConnectRPC, fix vector dimension mismatch, add Neo4j schema retry logic",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
