@@ -188,6 +188,52 @@ Docker spins up a container with PowerLine pre-installed. Local connects to a Po
 
 ## 🚀 Quick Start
 
+### Docker (recommended)
+
+One command — includes the server, web UI, knowledge graph (Neo4j), and a local agent environment:
+
+```bash
+docker run -d --name grackle -p 3000:3000 \
+  -v ~/.claude:/home/node/.claude:ro \
+  ghcr.io/nick-pape/grackle:latest
+```
+
+Open **http://localhost:3000**, pair with the code from `docker logs grackle`, and start working.
+
+<details>
+<summary>Mount credentials for all runtimes</summary>
+
+```bash
+docker run -d --name grackle \
+  -p 3000:3000 -p 7434:7434 -p 7435:7435 -p 7433:7433 \
+  -v ~/.claude:/home/node/.claude:ro \
+  -v ~/.copilot:/home/node/.copilot \
+  -v ~/.codex:/home/node/.codex \
+  -e GH_TOKEN=$(gh auth token) \
+  ghcr.io/nick-pape/grackle:latest
+```
+
+- **Claude**: mounted read-only (redirected via `CLAUDE_CONFIG_DIR`)
+- **Copilot / Codex**: mounted writable (their CLIs write session state with no config dir override)
+- **GH_TOKEN**: enables the GitHub CLI and Codespace adapter inside the container
+
+</details>
+
+<details>
+<summary>Docker Compose</summary>
+
+For a more complete setup with Docker-in-Docker, credential mounts, and networking:
+
+```bash
+cd docker && docker compose up -d
+```
+
+See [`docker/docker-compose.yml`](docker/docker-compose.yml) for the full configuration.
+
+</details>
+
+### npm
+
 ```bash
 # 1. Install the CLI
 npm install -g @grackle-ai/cli
@@ -208,8 +254,6 @@ npx @grackle-ai/cli serve
 npx @grackle-ai/cli env add my-env --docker
 ```
 
-> **Docker image**: A pre-built Docker image is [coming soon](https://github.com/nick-pape/grackle/issues/792). In the meantime, you can use `docker compose up` from the `docker/` directory in this repo.
-
 > **pnpm users**: pnpm v8+ blocks package install scripts by default. If `grackle serve` crashes with a `Could not locate the bindings file` error, run `pnpm approve-builds` after installing and then reinstall, or add the following to your `package.json` before installing:
 >
 > ```json
@@ -228,8 +272,8 @@ node packages/cli/dist/index.js serve
 
 ## 📋 Requirements
 
-- Node.js >= 22
-- Docker (for containerized environments)
+- Docker (recommended — everything is bundled in the image)
+- Node.js >= 22 (for npm install)
 
 ## 📄 License
 
