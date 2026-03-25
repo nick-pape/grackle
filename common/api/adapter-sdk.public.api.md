@@ -418,7 +418,7 @@ type SpawnRequest = Message<"grackle.powerline.SpawnRequest"> & {
     model: string;
     maxTurns: number;
     branch: string;
-    worktreeBasePath: string;
+    workingDirectory: string;
     systemContext: string;
     workspaceId?: string;
     taskId: string;
@@ -503,7 +503,7 @@ export interface WaitForLocalPortOptions {
 // @public
 type WorktreeCleanupRequest = Message<"grackle.powerline.WorktreeCleanupRequest"> & {
     branch: string;
-    worktreeBasePath: string;
+    workingDirectory: string;
 };
 
 // @public

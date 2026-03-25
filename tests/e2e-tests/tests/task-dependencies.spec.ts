@@ -47,6 +47,11 @@ test.describe("Task Dependencies", { tag: ["@task"] }, () => {
 
     // Verify "Start" button is NOT visible (blocked tasks show status instead)
     await expect(page.locator("button", { hasText: "Start" })).not.toBeVisible();
+
+    // Switch to Stream tab — CTA should also be hidden for blocked tasks
+    await page.getByRole("tab", { name: "Stream" }).click();
+    await expect(page.locator('[data-testid="stream-start-cta"]')).toHaveCount(0);
+    await expect(page.locator('[data-testid="stream-blocked-message"]')).toBeVisible();
   });
 
   test("completing blocker unblocks dependent task", async ({ stubTask }) => {

@@ -1,6 +1,6 @@
 {
   "name": "@grackle-ai/web-server",
-  "version": "0.75.4",
+  "version": "0.75.12",
   "description": "HTTP web server for Grackle — static file serving, pairing, OAuth, and ConnectRPC proxy",
   "license": "MIT",
   "repository": {
@@ -9,6 +9,8 @@
     "directory": "packages/web-server"
   },
   "keywords": ["grackle", "web-server", "http", "oauth", "pairing"],
+  "homepage": "https://github.com/nick-pape/grackle#readme",
+  "bugs": { "url": "https://github.com/nick-pape/grackle/issues" },
   "engines": { "node": ">=22.0.0" },
   "type": "module",
   "main": "dist/index.js",

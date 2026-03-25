@@ -1,5 +1,15 @@
 # @grackle-ai/cli
 
+<p align="center">
+  <a href="https://www.npmjs.com/package/@grackle-ai/cli"><img src="https://img.shields.io/npm/v/@grackle-ai/cli.svg" alt="npm version" /></a>
+  <a href="https://github.com/nick-pape/grackle/actions/workflows/ci.yml"><img src="https://github.com/nick-pape/grackle/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI" /></a>
+  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT" /></a>
+</p>
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/nick-pape/grackle/main/apps/docs-site/static/img/grackle-logo.png" alt="Grackle" width="200" />
+</p>
+
 Command-line interface for [Grackle](https://github.com/nick-pape/grackle) — run any AI coding agent on any remote environment. Manage environments, workspaces, tasks, agent sessions, personas, and more from your terminal.
 
 ## Install
@@ -238,7 +248,7 @@ grackle workspace create "Quick Fix" --env my-env --no-worktrees
 | `--repo <url>` | Repository URL |
 | `--desc <description>` | Workspace description |
 | `--no-worktrees` | Disable git worktree isolation |
-| `--worktree-base-path <path>` | Base path for worktrees on the environment |
+| `--working-directory <path>` | Working directory / repo root on the environment |
 
 #### `grackle workspace get <id>`
 
@@ -260,7 +270,7 @@ grackle workspace update ws-123 --env other-env    # reparent to different envir
 | `--repo <url>` | New repository URL |
 | `--env <env-id>` | Reparent to a different environment |
 | `--worktrees` / `--no-worktrees` | Toggle worktree isolation |
-| `--worktree-base-path <path>` | New worktree base path |
+| `--working-directory <path>` | New working directory / repo root |
 
 #### `grackle workspace archive <id>`
 

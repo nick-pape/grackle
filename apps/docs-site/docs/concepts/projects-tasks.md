@@ -129,10 +129,10 @@ project-slug/task-slug/subtask  # child task
 
 Agents work in isolated [git worktrees](https://git-scm.com/docs/git-worktree), so multiple agents can work on the same repo simultaneously without conflicting. Each agent sees its own branch with its own working tree.
 
-The worktree base path defaults to `../.grackle-worktrees/` relative to the repo, but you can customize it per-project:
+The working directory defaults to the repo root, but you can customize it per-workspace:
 
 ```bash
-grackle project create "My Project" --worktree-base-path /workspaces/my-repo
+grackle project create "My Project" --working-directory /workspaces/my-repo
 ```
 
 ## Importing from GitHub

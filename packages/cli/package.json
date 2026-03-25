@@ -1,6 +1,6 @@
 {
   "name": "@grackle-ai/cli",
-  "version": "0.75.4",
+  "version": "0.75.12",
   "description": "Command-line interface for managing Grackle environments and agents",
   "license": "MIT",
   "repository": {
@@ -9,6 +9,8 @@
     "directory": "packages/cli"
   },
   "keywords": ["grackle", "cli", "grpc", "ai-agents"],
+  "homepage": "https://github.com/nick-pape/grackle#readme",
+  "bugs": { "url": "https://github.com/nick-pape/grackle/issues" },
   "engines": { "node": ">=22.0.0" },
   "type": "module",
   "main": "dist/index.js",

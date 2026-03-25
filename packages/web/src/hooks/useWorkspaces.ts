@@ -29,7 +29,7 @@ export interface UseWorkspacesResult {
     environmentId?: string,
     defaultPersonaId?: string,
     useWorktrees?: boolean,
-    worktreeBasePath?: string,
+    workingDirectory?: string,
     onSuccess?: () => void,
     onError?: (message: string) => void,
   ) => void;
@@ -43,7 +43,7 @@ export interface UseWorkspacesResult {
       description?: string;
       repoUrl?: string;
       environmentId?: string;
-      worktreeBasePath?: string;
+      workingDirectory?: string;
       useWorktrees?: boolean;
       defaultPersonaId?: string;
     },
@@ -97,7 +97,7 @@ export function useWorkspaces(): UseWorkspacesResult {
       environmentId?: string,
       defaultPersonaId?: string,
       useWorktrees?: boolean,
-      worktreeBasePath?: string,
+      workingDirectory?: string,
       onSuccess?: () => void,
       onError?: (message: string) => void,
     ) => {
@@ -109,7 +109,7 @@ export function useWorkspaces(): UseWorkspacesResult {
         environmentId: environmentId || "",
         defaultPersonaId: defaultPersonaId || undefined,
         useWorktrees: useWorktrees ?? true,
-        worktreeBasePath: worktreeBasePath || undefined,
+        workingDirectory: workingDirectory || undefined,
       }).then(
         () => {
           setWorkspaceCreating(false);
@@ -142,7 +142,7 @@ export function useWorkspaces(): UseWorkspacesResult {
         description?: string;
         repoUrl?: string;
         environmentId?: string;
-        worktreeBasePath?: string;
+        workingDirectory?: string;
         useWorktrees?: boolean;
         defaultPersonaId?: string;
       },

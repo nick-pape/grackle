@@ -47,3 +47,17 @@ export const NotStartedTask: Story = {
     await expect(overviewTab).toHaveAttribute("aria-selected", "true");
   },
 };
+
+/** Blocked task on Stream tab hides Start CTA and shows blocked message. */
+export const BlockedTaskStreamHidesStart: Story = {
+  decorators: [withMockGrackleRoute(["/tasks/task-001c/stream"], "/tasks/:taskId/stream")],
+  play: async ({ canvas }) => {
+    // Stream tab should be selected
+    const streamTab = canvas.getByRole("tab", { name: "Stream" });
+    await expect(streamTab).toHaveAttribute("aria-selected", "true");
+    // Start CTA should NOT be present (task is blocked by task-001b which is "working")
+    await expect(canvas.queryByTestId("stream-start-cta")).toBeNull();
+    // Blocked message should be visible instead
+    await expect(canvas.getByTestId("stream-blocked-message")).toBeInTheDocument();
+  },
+};

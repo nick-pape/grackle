@@ -136,7 +136,7 @@ describe("resolveWorkingDirectory", () => {
 
     const result = await resolveWorkingDirectory({
       branch: "my-branch",
-      worktreeBasePath: "/repo",
+      workingDirectory: "/repo",
       useWorktrees: true,
       eventQueue: queue,
       git,
@@ -158,7 +158,7 @@ describe("resolveWorkingDirectory", () => {
 
     const result = await resolveWorkingDirectory({
       branch: "my-branch",
-      worktreeBasePath: "/repo",
+      workingDirectory: "/repo",
       useWorktrees: true,
       eventQueue: queue,
       git,
@@ -180,7 +180,7 @@ describe("resolveWorkingDirectory", () => {
 
     const result = await resolveWorkingDirectory({
       branch: "my-branch",
-      worktreeBasePath: "/repo",
+      workingDirectory: "/repo",
       useWorktrees: true,
       eventQueue: queue,
       git,
@@ -276,7 +276,7 @@ describe("resolveWorkingDirectory", () => {
 
     const result = await resolveWorkingDirectory({
       branch: "feature/my-branch",
-      worktreeBasePath: "",
+      workingDirectory: "",
       useWorktrees: false,
       eventQueue: queue,
       git,
@@ -293,7 +293,7 @@ describe("resolveWorkingDirectory", () => {
     queue.close();
   });
 
-  it("falls back to workspace when branch checkout fails and worktreeBasePath is empty", async () => {
+  it("falls back to workspace when branch checkout fails and workingDirectory is empty", async () => {
     const git = createFakeGitRepository({
       repos: { "/workspace": "/workspace" },
       checkoutError: new Error("checkout failed"),
@@ -303,7 +303,7 @@ describe("resolveWorkingDirectory", () => {
 
     const result = await resolveWorkingDirectory({
       branch: "feature/bad-branch",
-      worktreeBasePath: "",
+      workingDirectory: "",
       useWorktrees: false,
       eventQueue: queue,
       git,
@@ -317,14 +317,14 @@ describe("resolveWorkingDirectory", () => {
     queue.close();
   });
 
-  it("returns undefined when branch checkout fails and no workspace exists (worktreeBasePath empty)", async () => {
+  it("returns undefined when branch checkout fails and no workspace exists (workingDirectory empty)", async () => {
     const git = createFakeGitRepository({ checkoutError: new Error("checkout failed") });
     const locator = createFakeWorkspaceLocator(new Set());
     const queue = new AsyncQueue<AgentEvent>();
 
     const result = await resolveWorkingDirectory({
       branch: "feature/bad-branch",
-      worktreeBasePath: "",
+      workingDirectory: "",
       useWorktrees: false,
       eventQueue: queue,
       git,
@@ -335,7 +335,7 @@ describe("resolveWorkingDirectory", () => {
     queue.close();
   });
 
-  it("creates worktree when both branch and worktreeBasePath are set (existing behavior preserved)", async () => {
+  it("creates worktree when both branch and workingDirectory are set (existing behavior preserved)", async () => {
     const git = createFakeGitRepository({ repos: { "/repo": "/repo" } });
     const locator = createFakeWorkspaceLocator(new Set(["/repo"]));
     vi.mocked(ensureWorktree).mockResolvedValue({
@@ -348,7 +348,7 @@ describe("resolveWorkingDirectory", () => {
 
     const result = await resolveWorkingDirectory({
       branch: "my-branch",
-      worktreeBasePath: "/repo",
+      workingDirectory: "/repo",
       useWorktrees: true,
       eventQueue: queue,
       git,
@@ -357,6 +357,27 @@ describe("resolveWorkingDirectory", () => {
 
     expect(result).toBe("/worktrees/my-branch");
     expect(ensureWorktree).toHaveBeenCalled();
+    queue.close();
+  });
+
+  it("falls back to /workspace when branch is set but no git repo exists (Docker without repo, #535)", async () => {
+    const git = createFakeGitRepository();
+    const locator = createFakeWorkspaceLocator(new Set(["/workspace"]), { "/workspace": [] });
+    const queue = new AsyncQueue<AgentEvent>();
+
+    const result = await resolveWorkingDirectory({
+      branch: "task/my-task",
+      workingDirectory: "/workspace",
+      useWorktrees: true,
+      eventQueue: queue,
+      git,
+      locator,
+    });
+
+    expect(result).toBe("/workspace");
+    const event = await queue.shift();
+    expect(event?.type).toBe("system");
+    expect(event?.content).toContain("No git repo found");
     queue.close();
   });
 

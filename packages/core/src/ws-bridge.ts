@@ -332,7 +332,7 @@ export async function startTaskSession(
   const orchestratorCtx = freshTask.canDecompose && freshTask.depth <= 1
     ? fetchOrchestratorContext(freshTask.workspaceId || "") : undefined;
   const systemContext = new SystemPromptBuilder({
-    task: { title: freshTask.title, description: freshTask.description, notes: options?.notes || "" },
+    task: { title: freshTask.title, description: freshTask.description, notes: freshTask.id === ROOT_TASK_ID ? "" : (options?.notes || "") },
     taskId: freshTask.id, canDecompose: freshTask.canDecompose, personaPrompt: systemPrompt,
     taskDepth: freshTask.depth, ...orchestratorCtx,
     ...(orchestratorCtx && { triggerMode: "fresh" as const }),
@@ -396,8 +396,8 @@ export async function startTaskSession(
     model,
     maxTurns,
     branch: freshTask.branch,
-    worktreeBasePath: freshTask.branch
-      ? (workspace?.worktreeBasePath || process.env.GRACKLE_WORKTREE_BASE || "/workspace")
+    workingDirectory: freshTask.branch
+      ? (workspace?.workingDirectory || process.env.GRACKLE_WORKING_DIRECTORY || process.env.GRACKLE_WORKTREE_BASE || "/workspace")
       : "",
     useWorktrees,
     systemContext,

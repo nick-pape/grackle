@@ -110,14 +110,20 @@ export function processSubtaskEvent(
     const localId = typeof data.local_id === "string" ? data.local_id.trim() : "";
     const canDecompose = typeof data.can_decompose === "boolean" ? data.can_decompose : false;
 
-    // Resolve depends_on local IDs to real task IDs
+    // Resolve depends_on local IDs to real task IDs — all must exist
     const resolvedDeps: string[] = [];
     for (const localDep of dependsOn) {
       const realId = subtaskLocalIdMap.get(localDep);
       if (realId) {
         resolvedDeps.push(realId);
       } else {
-        logger.warn({ localDep, taskId: ctx.taskId }, "Subtask dependency local_id not found, skipping");
+        const subtaskIdentifier = localId
+          ? `Subtask local_id "${localId}"`
+          : `Subtask "${title}"`;
+        throw new Error(
+          `${subtaskIdentifier} references unknown depends_on local_id "${localDep}". ` +
+          `Dependencies must be created before dependents (topological order).`,
+        );
       }
     }
 
@@ -331,11 +337,11 @@ export function processEventStream(
             cleanupLifecycleStream(sessionId);
           }
 
-          // On terminal status: publish child completion to IPC pipe stream.
-          // Note: lifecycle streams are NOT cleaned up here — they persist until
-          // the spawner explicitly closes the fd (killAgent, closeFd). This is the
-          // emergent lifecycle model: fd closure drives hibernation, not status events.
-          if (["completed", "killed", "failed"].includes(event.content)) {
+          // On terminal status (or idle for sync pipes): publish child completion
+          // to IPC pipe stream. `waiting_input` is included so that sync pipes
+          // unblock when a child goes idle without calling task_complete (#824).
+          // publishChildCompletion internally skips waiting_input for async pipes.
+          if (["completed", "killed", "failed", "waiting_input"].includes(event.content)) {
             publishChildCompletion(sessionId, event.content);
           }
 

@@ -27,6 +27,7 @@ import {
   END_REASON,
   TASK_STATUS,
   ROOT_TASK_ID,
+  ROOT_TASK_INITIAL_PROMPT,
   taskStatusToEnum,
   taskStatusToString,
   workspaceStatusToEnum,
@@ -61,7 +62,7 @@ import { detectLanIp } from "./utils/network.js";
 import * as streamRegistry from "./stream-registry.js";
 import * as pipeDelivery from "./pipe-delivery.js";
 import { ensureAsyncDeliveryListener } from "./pipe-delivery.js";
-import { cleanupLifecycleStream } from "./lifecycle.js";
+import { cleanupLifecycleStream, ensureLifecycleStream } from "./lifecycle.js";
 
 /** Valid pipe mode values for SpawnRequest and StartTaskRequest. */
 const VALID_PIPE_MODES: ReadonlySet<string> = new Set(["", "sync", "async", "detach"]);
@@ -159,7 +160,7 @@ function workspaceRowToProto(row: workspaceStore.WorkspaceRow): grackle.Workspac
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
     useWorktrees: row.useWorktrees,
-    worktreeBasePath: row.worktreeBasePath,
+    workingDirectory: row.workingDirectory,
     defaultPersonaId: row.defaultPersonaId,
   });
 }
@@ -685,8 +686,8 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         model,
         maxTurns,
         branch: req.branch,
-        worktreeBasePath: req.branch
-          ? (req.worktreeBasePath.trim() || process.env.GRACKLE_WORKTREE_BASE || "/workspace")
+        workingDirectory: req.branch
+          ? (req.workingDirectory.trim() || process.env.GRACKLE_WORKING_DIRECTORY || process.env.GRACKLE_WORKTREE_BASE || "/workspace")
           : "",
         systemContext,
         mcpServersJson,
@@ -847,16 +848,22 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         );
       }
 
-      // Use try/finally so the pipe stream is cleaned up even if consumeSync rejects
-      // (e.g., the request is cancelled or times out) to prevent unbounded memory growth.
+      // Capture child session ID before blocking — the pipe stream may be
+      // removed by a concurrent fd close while consumeSync is awaiting.
+      const pipeStream = streamRegistry.getStream(sub.streamId);
+      const childSessionId = pipeStream?.name.startsWith("pipe:")
+        ? pipeStream.name.slice("pipe:".length)
+        : undefined;
+
+      // Use try/finally so the pipe stream (and lifecycle stream) are cleaned up
+      // even if consumeSync rejects (e.g., the request is cancelled or times out)
+      // to prevent unbounded memory growth. Lifecycle cleanup also orphans the child,
+      // triggering auto-stop so it doesn't linger in waiting_input (#824).
       let msg: Awaited<ReturnType<typeof streamRegistry.consumeSync>>;
       try {
         msg = await streamRegistry.consumeSync(sub.id);
       } finally {
-        const stream = streamRegistry.getStream(sub.streamId);
-        if (stream) {
-          streamRegistry.deleteStream(sub.streamId);
-        }
+        pipeDelivery.cleanupSyncPipeAndLifecycle(sub.streamId, childSessionId);
       }
 
       return create(grackle.WaitForPipeResponseSchema, {
@@ -1226,7 +1233,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         req.repoUrl,
         req.environmentId,
         useWorktrees,
-        req.worktreeBasePath ?? "",
+        req.workingDirectory ?? "",
         req.defaultPersonaId ?? "",
       );
       emit("workspace.created", { workspaceId: id });
@@ -1269,7 +1276,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         repoUrl: req.repoUrl,
         environmentId: req.environmentId,
         useWorktrees: req.useWorktrees ?? undefined,
-        worktreeBasePath: req.worktreeBasePath,
+        workingDirectory: req.workingDirectory,
         defaultPersonaId: req.defaultPersonaId,
       });
       if (!row) {
@@ -1480,14 +1487,18 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       const { runtime, model, maxTurns, systemPrompt, persona } = resolved;
       const logPath = join(grackleHome, LOGS_DIR, sessionId);
 
-      const taskPrompt = buildTaskPrompt(task.title, task.description, req.notes);
+      // Root task always starts with the hardcoded greeting prompt; user messages
+      // are sent as follow-ups via sendInput.  Other tasks use buildTaskPrompt.
+      const taskPrompt = task.id === ROOT_TASK_ID
+        ? ROOT_TASK_INITIAL_PROMPT
+        : buildTaskPrompt(task.title, task.description, req.notes);
       const isOrchestrator = task.canDecompose && task.depth <= 1;
       const orchestratorCtx = isOrchestrator
         ? fetchOrchestratorContext(task.workspaceId || "")
         : undefined;
 
       const systemContext = new SystemPromptBuilder({
-        task: { title: task.title, description: task.description, notes: req.notes || "" },
+        task: { title: task.title, description: task.description, notes: task.id === ROOT_TASK_ID ? "" : (req.notes || "") },
         taskId: task.id,
         canDecompose: task.canDecompose,
         personaPrompt: systemPrompt,
@@ -1540,8 +1551,8 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         model,
         maxTurns,
         branch: task.branch,
-        worktreeBasePath: task.branch
-          ? (workspace?.worktreeBasePath || process.env.GRACKLE_WORKTREE_BASE || "/workspace")
+        workingDirectory: task.branch
+          ? (workspace?.workingDirectory || process.env.GRACKLE_WORKTREE_BASE || "/workspace")
           : "",
         useWorktrees,
         systemContext,
@@ -1677,7 +1688,18 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       const logPath =
         latestSession.logPath || join(grackleHome, LOGS_DIR, latestSession.id);
 
-      processEventStream(conn.client.resume(powerlineReq), {
+      // Initiate the stream before mutating the DB. If resume() throws
+      // synchronously the DB is never touched, so no rollback is needed.
+      const resumeStream = conn.client.resume(powerlineReq);
+
+      // Reset session DB row to RUNNING (clears endedAt, error, etc.)
+      sessionStore.reanimateSession(latestSession.id);
+
+      // Re-create lifecycle stream if it was deleted during kill/stop
+      const resumeSpawnerId = latestSession.parentSessionId || "__server__";
+      ensureLifecycleStream(latestSession.id, resumeSpawnerId);
+
+      processEventStream(resumeStream, {
         sessionId: latestSession.id,
         logPath,
         workspaceId: task.workspaceId ?? undefined,

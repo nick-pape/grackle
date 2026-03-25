@@ -38,6 +38,7 @@ test-results/
 !packages/web/public/*.png
 !apps/docs-site/static/img/*.png
 !tools/grackle-source-1024.png
+!tools/social-preview.png
 *.mp4
 tools/demo-recorder/test-output/
 tools/demo-recorder/voices/*.bak

@@ -43,7 +43,7 @@ export interface UseSessionsResult {
     environmentId: string,
     prompt: string,
     personaId?: string,
-    worktreeBasePath?: string,
+    workingDirectory?: string,
   ) => void;
   /** Send text input to a running session. */
   sendInput: (sessionId: string, text: string) => void;
@@ -234,13 +234,13 @@ export function useSessions(): UseSessionsResult {
       environmentId: string,
       prompt: string,
       personaId?: string,
-      worktreeBasePath?: string,
+      workingDirectory?: string,
     ) => {
       grackleClient.spawnAgent({
         environmentId,
         prompt,
         personaId: personaId || "",
-        worktreeBasePath: worktreeBasePath || "",
+        workingDirectory: workingDirectory || "",
       }).then(
         (session) => {
           setLastSpawnedId(session.id);

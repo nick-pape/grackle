@@ -466,8 +466,22 @@ export function emitFinding(content: string): ScenarioStep {
 }
 
 /** Emit a subtask_create event. */
-export function emitSubtaskCreate(title: string, description: string): ScenarioStep {
-  return { emit: "subtask_create", title, description };
+export function emitSubtaskCreate(
+  title: string,
+  description: string,
+  options?: { localId?: string; dependsOn?: string[]; canDecompose?: boolean },
+): ScenarioStep {
+  const step: ScenarioStep = { emit: "subtask_create", title, description };
+  if (options?.localId) {
+    step.local_id = options.localId;
+  }
+  if (options?.dependsOn) {
+    step.depends_on = options.dependsOn;
+  }
+  if (options?.canDecompose !== undefined) {
+    step.can_decompose = options.canDecompose;
+  }
+  return step;
 }
 
 /** Emit a usage event. */

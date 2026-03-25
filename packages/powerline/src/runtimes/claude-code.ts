@@ -132,7 +132,7 @@ class ClaudeCodeSession extends BaseAgentSession {
     // Determine cwd: worktree > /workspace > default
     const cwd = await resolveWorkingDirectory({
       branch: this.branch,
-      worktreeBasePath: this.worktreeBasePath,
+      workingDirectory: this.workingDirectory,
       useWorktrees: this.useWorktrees,
       eventQueue: this.eventQueue,
       requireNonEmpty: true,
@@ -332,6 +332,8 @@ class ClaudeCodeSession extends BaseAgentSession {
         if (!this.killed) {
           logger.warn({ err }, "Persistent query stream ended unexpectedly");
         }
+        // Unblock any pending waitForTurnComplete so the input loop can recover
+        this.turnCompleteResolve?.();
         // Clear persistent state so follow-ups fall back to resume-per-input
         this.promptQueue = undefined;
         this.persistentQuery = undefined;
@@ -554,13 +556,13 @@ export class ClaudeCodeRuntime extends BaseAgentRuntime {
     maxTurns: number,
     resumeSessionId?: string,
     branch?: string,
-    worktreeBasePath?: string,
+    workingDirectory?: string,
     systemContext?: string,
     mcpServers?: Record<string, unknown>,
     hooks?: Record<string, unknown>,
     mcpBroker?: { url: string; token: string },
     useWorktrees?: boolean,
   ): AgentSession {
-    return new ClaudeCodeSession(id, prompt, model, maxTurns, resumeSessionId, branch, worktreeBasePath, systemContext, mcpServers, hooks, mcpBroker, useWorktrees);
+    return new ClaudeCodeSession(id, prompt, model, maxTurns, resumeSessionId, branch, workingDirectory, systemContext, mcpServers, hooks, mcpBroker, useWorktrees);
   }
 }

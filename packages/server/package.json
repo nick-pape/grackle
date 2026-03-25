@@ -1,6 +1,6 @@
 {
   "name": "@grackle-ai/server",
-  "version": "0.75.4",
+  "version": "0.75.12",
   "description": "Grackle server orchestrator — spawns and wires core (gRPC), web-server (HTTP), MCP, and PowerLine",
   "license": "MIT",
   "repository": {
@@ -9,6 +9,8 @@
     "directory": "packages/server"
   },
   "keywords": ["grackle", "server", "orchestrator"],
+  "homepage": "https://github.com/nick-pape/grackle#readme",
+  "bugs": { "url": "https://github.com/nick-pape/grackle/issues" },
   "engines": { "node": ">=22.0.0" },
   "type": "module",
   "main": "dist/index.js",
