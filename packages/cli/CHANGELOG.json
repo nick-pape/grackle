@@ -2,6 +2,29 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.76.0",
+      "tag": "@grackle-ai/cli_v0.76.0",
+      "date": "Wed, 25 Mar 2026 06:32:16 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Add keyboard shortcuts to the web UI with a new Settings > Shortcuts reference tab"
+          },
+          {
+            "comment": "Add force-provision flag to reprovision connected environments (new proto message, CLI --force flag, MCP force param, web Reprovision button)"
+          },
+          {
+            "comment": "Add workpad: persistent structured context for tasks with workpad_write/workpad_read MCP tools"
+          }
+        ],
+        "none": [
+          {
+            "comment": "Add toast notifications for task state changes in the web UI"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.75.13",
       "tag": "@grackle-ai/cli_v0.75.13",
       "date": "Wed, 25 Mar 2026 04:51:42 GMT",
