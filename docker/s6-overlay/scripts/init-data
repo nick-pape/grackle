@@ -80,9 +80,9 @@ fi
 # config dir override. Their CLIs write directly to ~/.codex/ and ~/.copilot/.
 # These MUST be mounted writable (no :ro flag) or auth/session state will fail.
 for sdk_dir in /home/node/.codex /home/node/.copilot; do
-  if [ -d "$sdk_dir" ] && ! test -w "$sdk_dir"; then
-    echo "ERROR: $sdk_dir is mounted read-only but must be writable."
-    echo "       Change the mount from ':ro' to writable in docker-compose.yml."
+  if [ -d "$sdk_dir" ] && ! gosu node test -w "$sdk_dir"; then
+    echo "ERROR: $sdk_dir is mounted read-only but must be writable." >&2
+    echo "       Change the mount from ':ro' to writable in docker-compose.yml." >&2
   fi
 done
 
