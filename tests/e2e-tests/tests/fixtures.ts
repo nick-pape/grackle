@@ -78,8 +78,11 @@ interface TestFixtures {
 export const test = base.extend<TestFixtures, WorkerFixtures>({
   // Worker-scoped: starts one Grackle stack per worker (4 ports + isolated DB).
   // Teardown kills processes and removes the temp directory when the worker exits.
-  workerServer: [async ({}, use) => {
-    const state = await startGrackleStack();
+  // Knowledge graph is only enabled for the "knowledge" project to avoid
+  // Neo4j contention and reference-node sync overhead in other tests.
+  workerServer: [async ({}, use, workerInfo) => {
+    const knowledgeEnabled = workerInfo.project.name === "knowledge";
+    const state = await startGrackleStack({ knowledgeEnabled });
     await use(state);
     await stopGrackleStack(state);
   }, { scope: "worker" }],
