@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type JSX } from "react";
 import { useParams } from "react-router";
 import { useGrackle } from "../context/GrackleContext.js";
+import { useHotkey } from "../hooks/useHotkey.js";
 import { DagView } from "../components/dag/DagView.js";
 import { WorkspaceBoard } from "../components/workspace/WorkspaceBoard.js";
 import { Breadcrumbs, ConfirmDialog } from "../components/display/index.js";
@@ -60,6 +61,11 @@ export function WorkspacePage(): JSX.Element {
   const workspace = workspaces.find((p) => p.id === workspaceId);
   const environmentId = routeEnvironmentId ?? workspace?.environmentId ?? "";
   const breadcrumbs = buildWorkspaceBreadcrumbs(workspaceId!, environmentId, workspaces, environments);
+
+  // Keyboard shortcuts: 1/2/3 to switch views
+  useHotkey({ key: "1" }, () => setWorkspaceTab("graph"));
+  useHotkey({ key: "2" }, () => setWorkspaceTab("board"));
+  useHotkey({ key: "3" }, () => setWorkspaceTab("tasks"));
 
   // Reset edit state when workspaceId changes
   useEffect(() => {

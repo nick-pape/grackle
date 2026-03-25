@@ -32,6 +32,8 @@ import { SettingsCredentialsTab } from "./pages/settings/SettingsCredentialsTab.
 import { SettingsPersonasTab } from "./pages/settings/SettingsPersonasTab.js";
 import { SettingsAppearanceTab } from "./pages/settings/SettingsAppearanceTab.js";
 import { SettingsAboutTab } from "./pages/settings/SettingsAboutTab.js";
+import { SettingsShortcutsTab } from "./pages/settings/SettingsShortcutsTab.js";
+import { GlobalShortcuts } from "./components/layout/GlobalShortcuts.js";
 import { SetupWizard } from "./pages/SetupWizard.js";
 import styles from "./App.module.scss";
 
@@ -102,6 +104,7 @@ function AppShellBody(): JSX.Element {
           tests when matching resource names that may also appear in transient
           toasts. */}
       <ToastContainer />
+      <GlobalShortcuts />
     </>
   );
 }
@@ -227,6 +230,7 @@ function AppRoutes(): JSX.Element {
             <Route path="tokens" element={<Navigate to="../credentials" replace />} />
             <Route path="personas" element={<SettingsPersonasTab />} />
             <Route path="appearance" element={<SettingsAppearanceTab />} />
+            <Route path="shortcuts" element={<SettingsShortcutsTab />} />
             <Route path="about" element={<SettingsAboutTab />} />
           </Route>
         </Route>

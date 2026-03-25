@@ -14,6 +14,7 @@ import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { formatCost } from "../utils/format.js";
 import { groupConsecutiveTextEvents, pairToolEvents } from "../utils/sessionEvents.js";
+import { useHotkey } from "../hooks/useHotkey.js";
 import styles from "../components/panels/SessionPanel.module.scss";
 
 type TaskTab = "overview" | "stream" | "findings";
@@ -498,6 +499,11 @@ export function TaskPage(): JSX.Element {
     setActiveTaskTab(tab);
     navigate(taskUrl(taskId!, tab === "overview" ? undefined : tab, routeWorkspaceId, routeEnvironmentId));
   };
+
+  // Keyboard shortcuts: 1/2/3 to switch tabs
+  useHotkey({ key: "1" }, () => handleTabChange("overview"));
+  useHotkey({ key: "2" }, () => handleTabChange("stream"));
+  useHotkey({ key: "3" }, () => handleTabChange("findings"));
 
   return (
     <div className={styles.panelContainer}>

@@ -10,6 +10,7 @@ const SETTINGS_TAB_LABELS: Record<string, string> = {
   personas: "Personas",
   appearance: "Appearance",
   about: "About",
+  shortcuts: "Shortcuts",
 };
 
 /** Settings hub with breadcrumbs and tab content area. */
