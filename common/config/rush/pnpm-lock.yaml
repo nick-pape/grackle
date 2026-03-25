@@ -190,6 +190,9 @@ importers:
       '@grackle-ai/common':
         specifier: workspace:*
         version: link:../common
+      '@grackle-ai/core':
+        specifier: workspace:*
+        version: link:../core
       '@grackle-ai/server':
         specifier: workspace:*
         version: link:../server
