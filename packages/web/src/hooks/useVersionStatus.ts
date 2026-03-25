@@ -21,7 +21,7 @@ export interface VersionStatusInfo {
 /**
  * Fetch the version status from the server on mount.
  *
- * @returns The version status, or `null` if not yet loaded or on error.
+ * @returns The version status, or `undefined` if not yet loaded or on error.
  */
 export function useVersionStatus(): VersionStatusInfo | undefined {
   const [status, setStatus] = useState<VersionStatusInfo | undefined>(undefined);
