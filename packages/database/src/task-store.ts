@@ -208,6 +208,17 @@ export function setTaskWorkspace(id: string, workspaceId: string): void {
     .run();
 }
 
+/** Update the workpad (persistent structured context) of a task. */
+export function setWorkpad(id: string, workpad: string): void {
+  db.update(tasks)
+    .set({
+      workpad,
+      updatedAt: sql`datetime('now')`,
+    })
+    .where(eq(tasks.id, id))
+    .run();
+}
+
 /** Update only the dependsOn array of a task. */
 export function setTaskDependsOn(id: string, dependsOn: string[]): void {
   db.update(tasks)

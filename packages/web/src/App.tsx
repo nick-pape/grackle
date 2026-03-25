@@ -10,6 +10,7 @@ import { useCallback, useEffect, useState, Suspense, lazy, type LazyExoticCompon
 import { useGrackle } from "./context/GrackleContext.js";
 import { useToast } from "./context/ToastContext.js";
 import { useEnvironmentToasts } from "./hooks/useEnvironmentToasts.js";
+import { useTaskToasts } from "./hooks/useTaskToasts.js";
 import { AnimatePresence, motion } from "motion/react";
 import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation, useParams } from "react-router";
 import { sessionUrl, useAppNavigate } from "./utils/navigation.js";
@@ -31,6 +32,8 @@ import { SettingsPersonasTab } from "./pages/settings/SettingsPersonasTab.js";
 import { PersonaDetailPage } from "./pages/settings/PersonaDetailPage.js";
 import { SettingsAppearanceTab } from "./pages/settings/SettingsAppearanceTab.js";
 import { SettingsAboutTab } from "./pages/settings/SettingsAboutTab.js";
+import { SettingsShortcutsTab } from "./pages/settings/SettingsShortcutsTab.js";
+import { GlobalShortcuts } from "./components/layout/GlobalShortcuts.js";
 import { SetupWizard } from "./pages/SetupWizard.js";
 import styles from "./App.module.scss";
 
@@ -101,15 +104,17 @@ function AppShellBody(): JSX.Element {
           tests when matching resource names that may also appear in transient
           toasts. */}
       <ToastContainer />
+      <GlobalShortcuts />
     </>
   );
 }
 
 /** Application shell layout with StatusBar, Sidebar, Outlet, and BottomStatusBar. */
 function AppShell(): JSX.Element {
-  const { lastSpawnedId, environments, connected, onboardingCompleted } = useGrackle();
+  const { lastSpawnedId, environments, tasks, connected, onboardingCompleted } = useGrackle();
   const { showToast } = useToast();
   useEnvironmentToasts(environments, showToast);
+  useTaskToasts(tasks, showToast);
   const navigate = useAppNavigate();
 
   const location = useLocation();
@@ -227,6 +232,7 @@ function AppRoutes(): JSX.Element {
             <Route path="personas/new" element={<PersonaDetailPage />} />
             <Route path="personas/:personaId" element={<PersonaDetailPage />} />
             <Route path="appearance" element={<SettingsAppearanceTab />} />
+            <Route path="shortcuts" element={<SettingsShortcutsTab />} />
             <Route path="about" element={<SettingsAboutTab />} />
           </Route>
         </Route>

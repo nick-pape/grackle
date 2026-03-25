@@ -90,21 +90,23 @@ export const envTools: ToolDefinition[] = [
       "Provision an environment — start its backing resources, install the PowerLine agent, and connect it to the server.",
     inputSchema: z.object({
       environmentId: z.string().describe("ID of the environment to provision"),
+      force: z.boolean().optional().describe("Force full reprovision, killing active sessions"),
     }),
     rpcMethod: "provisionEnvironment",
     mutating: true,
     annotations: {
       readOnlyHint: false,
-      destructiveHint: false,
+      destructiveHint: true,
       idempotentHint: true,
       openWorldHint: false,
     },
     async handler(args: Record<string, unknown>, client: Client<typeof grackle.Grackle>) {
-      const { environmentId } = args as { environmentId: string };
+      const { environmentId, force } = args as { environmentId: string; force?: boolean };
       const events: { stage: string; message: string; progress: number }[] = [];
       try {
         for await (const event of client.provisionEnvironment({
           id: environmentId,
+          force: force ?? false,
         })) {
           events.push({
             stage: event.stage,

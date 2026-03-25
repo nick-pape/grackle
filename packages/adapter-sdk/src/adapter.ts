@@ -61,10 +61,11 @@ export async function* reconnectOrProvision(
   config: Record<string, unknown>,
   powerlineToken: string,
   bootstrapped: boolean,
+  force: boolean = false,
   logger: AdapterLogger = defaultLogger,
 ): AsyncGenerator<ProvisionEvent> {
   let reconnected = false;
-  if (bootstrapped && adapter.reconnect) {
+  if (!force && bootstrapped && adapter.reconnect) {
     try {
       yield* adapter.reconnect(environmentId, config, powerlineToken);
       reconnected = true;

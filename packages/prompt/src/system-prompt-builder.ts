@@ -98,6 +98,8 @@ export interface SystemPromptOptions {
   findingsContext?: string;
   /** Invocation mode: fresh (first time) or resume (re-invoked after child completion). */
   triggerMode?: "fresh" | "resume";
+  /** Workpad JSON from a previous session on this task (included on retry/resume). */
+  workpad?: string;
 }
 
 // ─── Builder ─────────────────────────────────────────────────
@@ -138,11 +140,15 @@ export class SystemPromptBuilder {
         sections.push(this.buildTriggerContext());
         sections.push(this.buildDecompositionGuidelines());
         sections.push(this.buildOrchestratorTools());
+        sections.push(this.buildWorkpadSection());
+        sections.push(this.buildWorkpadWriteSection());
         sections.push(this.buildOrchestratorCompletionContract());
         sections.push(this.buildSignalSection());
       } else {
         // Leaf task: title/description go in the user prompt (buildTaskPrompt), not here.
+        sections.push(this.buildWorkpadSection());
         sections.push(this.buildCompletionContract());
+        sections.push(this.buildWorkpadWriteSection());
         sections.push(this.buildSubtaskSection());
         sections.push(this.buildSignalSection());
         sections.push(this.buildFindingsSection());
@@ -415,6 +421,28 @@ export class SystemPromptBuilder {
     return [
       `## Findings`,
       `Use \`finding_post\` to share discoveries (architecture decisions, bugs, patterns) with other agents. Check \`finding_list\` before posting to avoid duplicates.`,
+    ].join("\n");
+  }
+
+  /** Previous session workpad (included when retrying a task that has workpad data). */
+  private buildWorkpadSection(): string {
+    if (!this.options.workpad) {
+      return "";
+    }
+    return [
+      `## Previous Session Workpad`,
+      `A previous session on this task wrote the following workpad. Use this context to understand what was already accomplished and pick up where it left off.`,
+      `\`\`\`json`,
+      this.options.workpad,
+      `\`\`\``,
+    ].join("\n");
+  }
+
+  /** Instructions for writing to the workpad before completing. */
+  private buildWorkpadWriteSection(): string {
+    return [
+      `## Workpad`,
+      `Before completing your work, call \`workpad_write\` to record what you accomplished. Include a status, summary, and any structured data (branch, PR, files changed, blockers) in the extra field. This persists across sessions and helps retry agents pick up where you left off.`,
     ].join("\n");
   }
 

@@ -105,6 +105,7 @@ export function registerEnvCommands(program: Command): void {
   env
     .command("provision <id>")
     .description("Provision and connect an environment")
+    .option("--force", "Force full reprovision, killing active sessions")
     .action(provisionAction);
 
   env
@@ -135,9 +136,9 @@ export function registerEnvCommands(program: Command): void {
     });
 
   /** Shared action for provisioning / waking an environment. */
-  async function provisionAction(id: string): Promise<void> {
+  async function provisionAction(id: string, options: { force?: boolean } = {}): Promise<void> {
     const client = createGrackleClient();
-    for await (const event of client.provisionEnvironment({ id })) {
+    for await (const event of client.provisionEnvironment({ id, force: options.force ?? false })) {
       const pct = Math.round(event.progress * 100);
       console.log(`[${pct}%] ${event.stage}: ${event.message}`);
     }

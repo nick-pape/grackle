@@ -1,0 +1,3 @@
+# s6-overlay files must have Unix line endings (LF only).
+# Windows CRLF causes "invalid type" errors at container startup.
+* text eol=lf

@@ -46,10 +46,10 @@ export function EnvironmentNav({ environments }: EnvironmentNavProps): JSX.Eleme
     const currentIndex = focusedIndex >= 0 ? focusedIndex : environments.findIndex((env) => env.id === activeId);
     let nextIndex = currentIndex;
 
-    if (e.key === "ArrowDown") {
+    if (e.key === "ArrowDown" || e.key === "j" || e.key === "J") {
       e.preventDefault();
       nextIndex = (currentIndex + 1) % buttons.length;
-    } else if (e.key === "ArrowUp") {
+    } else if (e.key === "ArrowUp" || e.key === "k" || e.key === "K") {
       e.preventDefault();
       nextIndex = (currentIndex - 1 + buttons.length) % buttons.length;
     } else if (e.key === "Home") {

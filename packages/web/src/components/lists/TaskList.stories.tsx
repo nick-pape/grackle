@@ -207,6 +207,44 @@ export const TaskNavigationFromGroupedView: Story = {
 };
 
 // ---------------------------------------------------------------------------
+// keyboard interaction
+// ---------------------------------------------------------------------------
+
+/**
+ * Pressing Enter on a status group header toggles collapse/expand.
+ */
+export const KeyboardToggleGroup: Story = {
+  name: "Enter toggles group collapse",
+  args: {
+    tasks: [
+      buildTask({ id: "t-kb", workspaceId: WORKSPACE_ID, title: "kb-toggle-task", status: "not_started", sortOrder: 1 }),
+    ],
+  },
+  play: async ({ canvas }) => {
+    // Enable group-by-status
+    const toggle = canvas.getByTestId("task-group-by-status-toggle");
+    await userEvent.click(toggle);
+
+    const groupHeader = canvas.getByTestId("status-group-not_started");
+    await expect(groupHeader).toBeInTheDocument();
+
+    // Focus the collapse button and press Enter
+    const collapseButton = groupHeader.querySelector('[role="button"]') as HTMLElement;
+    collapseButton.focus();
+    await userEvent.keyboard("{Enter}");
+
+    // Task should be hidden
+    await waitFor(async () => {
+      await expect(canvas.queryByText("kb-toggle-task")).not.toBeInTheDocument();
+    });
+
+    // Press Enter again to expand
+    await userEvent.keyboard("{Enter}");
+    await expect(await canvas.findByText("kb-toggle-task")).toBeInTheDocument();
+  },
+};
+
+// ---------------------------------------------------------------------------
 // sidebar-search.spec.ts
 // ---------------------------------------------------------------------------
 

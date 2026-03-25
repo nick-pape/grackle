@@ -165,7 +165,7 @@ export interface UseGrackleSocketResult {
   credentialProviders: import("./types.js").CredentialProviderConfig;
   updateCredentialProviders: (config: import("./types.js").CredentialProviderConfig) => void;
   provisionStatus: Record<string, import("./types.js").ProvisionStatus>;
-  provisionEnvironment: (environmentId: string) => void;
+  provisionEnvironment: (environmentId: string, force?: boolean) => void;
   stopEnvironment: (environmentId: string) => void;
   removeEnvironment: (environmentId: string) => void;
   codespaces: import("./types.js").Codespace[];

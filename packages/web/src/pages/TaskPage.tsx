@@ -5,6 +5,7 @@ import { EventStream } from "../components/display/EventStream.js";
 import { ChatInput } from "../components/chat/index.js";
 import { FindingsPanel } from "../components/panels/FindingsPanel.js";
 import { TaskEditPanel } from "../components/panels/TaskEditPanel.js";
+import { WorkpadPanel } from "../components/panels/WorkpadPanel.js";
 import { Breadcrumbs, ConfirmDialog } from "../components/display/index.js";
 import { buildTaskBreadcrumbs } from "../utils/breadcrumbs.js";
 import { taskUrl, workspaceUrl, useAppNavigate } from "../utils/navigation.js";
@@ -15,6 +16,7 @@ import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { formatCost } from "../utils/format.js";
 import { groupConsecutiveTextEvents, pairToolEvents } from "../utils/sessionEvents.js";
+import { useHotkey } from "../hooks/useHotkey.js";
 import styles from "../components/panels/SessionPanel.module.scss";
 
 type TaskTab = "overview" | "stream" | "findings";
@@ -123,6 +125,7 @@ function TaskOverview({ task, tasksById, environments, workspaces, taskSessions,
           </div>
         </div>
       )}
+      {task.workpad && <WorkpadPanel workpad={task.workpad} />}
       <div className={styles.overviewSection}>
         <div className={styles.overviewLabel}>Environment</div>
         {envId && env ? (
@@ -512,6 +515,11 @@ export function TaskPage(): JSX.Element {
     setActiveTaskTab(tab);
     navigate(taskUrl(taskId!, tab === "overview" ? undefined : tab, routeWorkspaceId, routeEnvironmentId));
   };
+
+  // Keyboard shortcuts: 1/2/3 to switch tabs
+  useHotkey({ key: "1" }, () => handleTabChange("overview"));
+  useHotkey({ key: "2" }, () => handleTabChange("stream"));
+  useHotkey({ key: "3" }, () => handleTabChange("findings"));
 
   return (
     <div className={styles.panelContainer}>

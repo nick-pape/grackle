@@ -18,6 +18,7 @@ const TABS: SettingsTab[] = [
   { path: "credentials", label: "Credentials", icon: "\uD83D\uDD11" },
   { path: "personas", label: "Personas", icon: "\uD83D\uDC64" },
   { path: "appearance", label: "Appearance", icon: "\uD83C\uDFA8" },
+  { path: "shortcuts", label: "Shortcuts", icon: "\u2328\uFE0F" },
   { path: "about", label: "About", icon: "\u2139\uFE0F" },
 ];
 
@@ -47,10 +48,10 @@ export function SettingsNav(): JSX.Element {
     const currentIndex = focusedIndex >= 0 ? focusedIndex : TABS.findIndex((t) => t.path === activeTab);
     let nextIndex = currentIndex;
 
-    if (e.key === "ArrowDown") {
+    if (e.key === "ArrowDown" || e.key === "j" || e.key === "J") {
       e.preventDefault();
       nextIndex = (currentIndex + 1) % TABS.length;
-    } else if (e.key === "ArrowUp") {
+    } else if (e.key === "ArrowUp" || e.key === "k" || e.key === "K") {
       e.preventDefault();
       nextIndex = (currentIndex - 1 + TABS.length) % TABS.length;
     } else if (e.key === "Home") {
