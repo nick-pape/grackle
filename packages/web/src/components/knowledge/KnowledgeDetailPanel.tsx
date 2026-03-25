@@ -5,13 +5,14 @@
  */
 
 import type { JSX } from "react";
-import type { NodeDetail } from "../../hooks/useKnowledge.js";
+import type { GraphNode, NodeDetail } from "../../hooks/useKnowledge.js";
 import { taskUrl, sessionUrl } from "../../utils/navigation.js";
 import { useAppNavigate } from "../../utils/navigation.js";
 import styles from "./KnowledgeDetailPanel.module.scss";
 
 interface KnowledgeDetailPanelProps {
   detail: NodeDetail;
+  nodes: GraphNode[];
   onClose: () => void;
   onSelectNode: (id: string) => void;
 }
@@ -19,11 +20,13 @@ interface KnowledgeDetailPanelProps {
 /** Slide-in panel showing full details for a selected knowledge node. */
 export function KnowledgeDetailPanel({
   detail,
+  nodes,
   onClose,
   onSelectNode,
 }: KnowledgeDetailPanelProps): JSX.Element {
   const navigate = useAppNavigate();
   const { node, edges } = detail;
+  const nodeById = new Map(nodes.map((n) => [n.id, n]));
 
   /** Navigate to the source entity for reference nodes. */
   function handleViewInGrackle(): void {
@@ -90,13 +93,14 @@ export function KnowledgeDetailPanel({
                 const otherId: string = edge.fromId === node.id ? edge.toId : edge.fromId;
                 const edgeKey: string = `${edge.fromId}:${edge.toId}:${edge.type}`;
                 return (
-                  <li key={edgeKey} className={styles.edgeItem}>
-                    <span className={styles.edgeType}>{edge.type}</span>
+                  <li key={edgeKey} className={styles.edgeItem} data-testid="edge-item">
+                    <span className={styles.edgeType} data-testid="edge-type">{edge.type}</span>
                     <button
                       className={styles.edgeNodeLink}
+                      data-testid="edge-node-link"
                       onClick={() => { onSelectNode(otherId); }}
                     >
-                      {otherId.substring(0, 8)}...
+                      {nodeById.get(otherId)?.label ?? `${otherId.substring(0, 8)}...`}
                     </button>
                   </li>
                 );
