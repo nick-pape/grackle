@@ -47,8 +47,10 @@ export interface UseSessionsResult {
   ) => void;
   /** Send text input to a running session. */
   sendInput: (sessionId: string, text: string) => void;
-  /** Kill a running session. */
+  /** Kill a running session (hard kill / SIGKILL). */
   kill: (sessionId: string) => void;
+  /** Gracefully stop a running session (SIGTERM). */
+  stopGraceful: (sessionId: string) => void;
   /** Load stored events for a session from the server. */
   loadSessionEvents: (sessionId: string) => void;
   /** Clear all in-memory events and reset the drop counter. */
@@ -270,6 +272,15 @@ export function useSessions(): UseSessionsResult {
     [],
   );
 
+  const stopGraceful = useCallback(
+    (sessionId: string) => {
+      grackleClient.killAgent({ id: sessionId, graceful: true }).catch(
+        () => {},
+      );
+    },
+    [],
+  );
+
   const loadSessionEvents = useCallback(
     (sessionId: string) => {
       grackleClient.getSessionEvents({ id: sessionId }).then(
@@ -340,6 +351,7 @@ export function useSessions(): UseSessionsResult {
     spawn,
     sendInput,
     kill,
+    stopGraceful,
     loadSessionEvents,
     clearEvents,
     loadTaskSessions,

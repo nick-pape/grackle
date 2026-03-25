@@ -1,6 +1,7 @@
 import { useState, type FormEvent, type JSX } from "react";
 import { useToast } from "../../context/ToastContext.js";
 import type { Environment, PersonaData } from "../../hooks/types.js";
+import { SplitButton } from "../display/SplitButton.js";
 import styles from "./ChatInput.module.scss";
 
 // --- Helpers ---
@@ -57,7 +58,9 @@ export interface ChatInputProps {
   showStop?: boolean;
   /** Show persona selector dropdown (mode="spawn") */
   showPersonaSelect?: boolean;
-  /** Callback for Stop button */
+  /** Callback for graceful stop (SIGTERM). */
+  onSessionStop?: () => void;
+  /** Callback for force kill (SIGKILL). */
   onSessionKill?: () => void;
   /** All personas (for persona selector in spawn mode). */
   personas: PersonaData[];
@@ -81,6 +84,7 @@ export function ChatInput({
   taskId,
   showStop,
   showPersonaSelect,
+  onSessionStop,
   onSessionKill,
   personas,
   environments,
@@ -167,8 +171,18 @@ export function ChatInput({
       <span title={envDisconnected ? "Environment is unavailable — reconnect first" : undefined}>
         <button type="submit" disabled={!text.trim() || envDisconnected} className={styles.btnPrimary}>Send</button>
       </span>
-      {showStop && onSessionKill && (
-        <button type="button" onClick={onSessionKill} className={styles.btnDanger} title="Stop session">Stop</button>
+      {showStop && onSessionStop && onSessionKill && (
+        <SplitButton
+          label="Stop"
+          onClick={onSessionStop}
+          variant="danger"
+          size="sm"
+          data-testid="stop-split-button"
+          options={[
+            { label: "Stop", description: "Graceful shutdown", onClick: onSessionStop },
+            { label: "Kill", description: "Force kill", onClick: onSessionKill },
+          ]}
+        />
       )}
     </form>
   );

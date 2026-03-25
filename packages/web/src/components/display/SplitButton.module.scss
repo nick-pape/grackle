@@ -1,0 +1,146 @@
+@use '../../styles/mixins' as *;
+
+// =============================================================================
+// SplitButton — compound button with main action + chevron dropdown
+// =============================================================================
+
+.container {
+  position: relative;
+  display: inline-flex;
+}
+
+// --- Shared button base (main + chevron) ------------------------------------
+
+%splitBase {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-family: var(--font-ui);
+  border: none;
+  transition: background var(--transition-fast),
+              box-shadow var(--transition-fast);
+
+  &:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+}
+
+.mainButton {
+  @extend %splitBase;
+  border-radius: var(--radius-md) 0 0 var(--radius-md);
+}
+
+.chevronButton {
+  @extend %splitBase;
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  border-left: 1px solid rgba(255, 255, 255, 0.25);
+  padding-left: var(--space-xs);
+  padding-right: var(--space-xs);
+  font-size: 0.6em;
+}
+
+// --- Sizes ------------------------------------------------------------------
+
+.sm {
+  font-size: var(--font-size-xs);
+  padding: 2px var(--space-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.md {
+  font-size: var(--font-size-sm);
+  padding: var(--space-xs) var(--space-md);
+  font-weight: var(--font-weight-bold);
+}
+
+.lg {
+  font-size: var(--font-size-sm);
+  padding: var(--space-sm) var(--space-lg);
+  font-weight: var(--font-weight-bold);
+}
+
+// --- Variants ---------------------------------------------------------------
+
+.primary {
+  background: var(--accent-green);
+  color: #ffffff;
+  box-shadow: var(--shadow-xs);
+
+  &:hover {
+    box-shadow: var(--shadow-glow-green);
+  }
+}
+
+.danger {
+  background: var(--accent-red);
+  color: #ffffff;
+  box-shadow: var(--shadow-xs);
+
+  &:hover {
+    box-shadow: var(--shadow-glow-red);
+  }
+}
+
+.outline {
+  background: var(--bg-surface);
+  color: var(--accent-green);
+  box-shadow: var(--shadow-xs);
+
+  &:hover {
+    background: var(--bg-overlay);
+  }
+}
+
+.ghost {
+  background: none;
+  color: var(--text-secondary);
+
+  &:hover {
+    background: var(--bg-overlay);
+  }
+}
+
+// --- Dropdown menu ----------------------------------------------------------
+
+.dropdown {
+  position: absolute;
+  top: calc(100% + var(--space-xs));
+  right: 0;
+  z-index: var(--z-dropdown, 100);
+  min-width: 160px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  padding: var(--space-xs) 0;
+}
+
+.option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  padding: var(--space-xs) var(--space-md);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-ui);
+  color: var(--text-primary);
+  text-align: left;
+
+  &:hover {
+    background: var(--bg-overlay);
+  }
+}
+
+.optionLabel {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.optionDesc {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+}

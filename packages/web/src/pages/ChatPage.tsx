@@ -29,7 +29,7 @@ function ChatEmptyState({ hasLocalEnvironment }: { hasLocalEnvironment: boolean 
 export function ChatPage(): JSX.Element {
   const {
     tasks, sessions, events, eventsDropped, environments,
-    loadTaskSessions, loadSessionEvents, kill,
+    loadTaskSessions, loadSessionEvents, kill, stopGraceful,
     taskSessions,
     sendInput, spawn, startTask, personas, provisionEnvironment,
   } = useGrackle();
@@ -122,6 +122,7 @@ export function ChatPage(): JSX.Element {
           sessionId={latestSession!.id}
           environmentId={latestSession!.environmentId}
           showStop
+          onSessionStop={() => stopGraceful(latestSession!.id)}
           onSessionKill={() => kill(latestSession!.id)}
           personas={personas}
           environments={environments}

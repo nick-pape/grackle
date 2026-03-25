@@ -62,7 +62,7 @@ function SessionEmptyState({ session }: { session: Session | undefined }): JSX.E
 export function SessionPage(): JSX.Element {
   const { sessionId } = useParams<{ sessionId: string }>();
   const {
-    events, eventsDropped, sessions, kill, loadSessionEvents,
+    events, eventsDropped, sessions, kill, stopGraceful, loadSessionEvents,
     sendInput, spawn, startTask, personas, environments, provisionEnvironment,
   } = useGrackle();
   const loadedRef = useRef<string | undefined>(undefined);
@@ -116,7 +116,8 @@ export function SessionPage(): JSX.Element {
           sessionId={sessionId}
           environmentId={session!.environmentId}
           showStop
-          onSessionKill={() => kill(sessionId)}
+          onSessionStop={() => stopGraceful(sessionId!)}
+          onSessionKill={() => kill(sessionId!)}
           personas={personas}
           environments={environments}
           onSendInput={sendInput}

@@ -75,6 +75,7 @@ export interface UseGrackleSocketResult {
   ) => void;
   sendInput: (sessionId: string, text: string) => void;
   kill: (sessionId: string) => void;
+  stopGraceful: (sessionId: string) => void;
   refresh: () => void;
   loadSessionEvents: (sessionId: string) => void;
   clearEvents: () => void;
@@ -407,6 +408,7 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
     spawn: sessionsHook.spawn,
     sendInput: sessionsHook.sendInput,
     kill: sessionsHook.kill,
+    stopGraceful: sessionsHook.stopGraceful,
     refresh,
     loadSessionEvents: sessionsHook.loadSessionEvents,
     clearEvents: sessionsHook.clearEvents,

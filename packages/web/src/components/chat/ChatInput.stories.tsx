@@ -74,16 +74,19 @@ export const StartMode: Story = {
   },
 };
 
-/** Send mode with Stop button visible. */
+/** Send mode with Stop split button visible. */
 export const SendModeWithStop: Story = {
   args: {
     mode: "send",
     sessionId: "sess-1",
     environmentId: "local",
     showStop: true,
+    onSessionStop: fn(),
     onSessionKill: fn(),
   },
   play: async ({ canvas }) => {
-    await expect(canvas.getByRole("button", { name: "Stop" })).toBeInTheDocument();
+    await expect(canvas.getByTestId("stop-split-button-main")).toBeInTheDocument();
+    await expect(canvas.getByTestId("stop-split-button-main")).toHaveTextContent("Stop");
+    await expect(canvas.getByTestId("stop-split-button-chevron")).toBeInTheDocument();
   },
 };

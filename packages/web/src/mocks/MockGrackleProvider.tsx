@@ -302,6 +302,23 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
     [cancelSessionTimers, updateSessionStatus, appendEvent],
   );
 
+  /** Graceful stop — in the mock, behaves the same as kill but with "terminated" end reason. */
+  const stopGraceful: UseGrackleSocketResult["stopGraceful"] = useCallback(
+    (sessionId: string) => {
+      console.log("[MockGrackle] stopGraceful", sessionId);
+      cancelSessionTimers(sessionId);
+      pendingResumeRef.current.delete(sessionId);
+      updateSessionStatus(sessionId, "stopped", "terminated");
+      appendEvent({
+        sessionId,
+        eventType: "status",
+        timestamp: new Date().toISOString(),
+        content: "terminated",
+      });
+    },
+    [cancelSessionTimers, updateSessionStatus, appendEvent],
+  );
+
   /** No-op refresh — the mock has no server to re-fetch from. */
   const refresh: UseGrackleSocketResult["refresh"] = useCallback(() => {
     console.log("[MockGrackle] refresh");
@@ -849,6 +866,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       spawn,
       sendInput,
       kill,
+      stopGraceful,
       refresh,
       loadSessionEvents,
       clearEvents,
@@ -1017,6 +1035,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       spawn,
       sendInput,
       kill,
+      stopGraceful,
       refresh,
       loadSessionEvents,
       clearEvents,
