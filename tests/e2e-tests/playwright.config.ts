@@ -40,8 +40,21 @@ export default defineConfig({
   testDir: "./tests",
   timeout: 30_000,
   retries: process.env.CI ? 1 : 0,
-  workers: getWorkerCount(),
   fullyParallel: true,
   grep: buildTagGrep(),
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [
+    {
+      name: "chromium",
+      use: { ...devices["Desktop Chrome"] },
+      testIgnore: /knowledge\.spec\.ts/,
+      workers: getWorkerCount(),
+    },
+    {
+      name: "knowledge",
+      use: { ...devices["Desktop Chrome"] },
+      testMatch: /knowledge\.spec\.ts/,
+      // Run knowledge tests in a single serial worker to isolate Neo4j usage
+      workers: 1,
+    },
+  ],
 });

@@ -1,26 +1,20 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, fn, userEvent } from "@storybook/test";
 import type { GraphNode, NodeDetail } from "../../hooks/useKnowledge.js";
+import { makeGraphNode } from "../../test-utils/storybook-helpers.js";
 import { KnowledgeDetailPanel } from "./KnowledgeDetailPanel.js";
 
 // ---------------------------------------------------------------------------
 // Mock data
 // ---------------------------------------------------------------------------
 
-function makeGraphNode(overrides: Partial<GraphNode> = {}): GraphNode {
-  return {
-    id: "node-001",
-    label: "Authentication Flow",
-    kind: "knowledge",
-    category: "concept",
-    content: "OAuth2 flow with PKCE for CLI clients.",
-    tags: ["auth", "security"],
-    createdAt: "2026-01-15T10:00:00Z",
-    updatedAt: "2026-02-20T14:30:00Z",
-    val: 3,
-    ...overrides,
-  };
-}
+const defaultNode: GraphNode = makeGraphNode({
+  id: "node-001",
+  label: "Authentication Flow",
+  content: "OAuth2 flow with PKCE for CLI clients.",
+  tags: ["auth", "security"],
+  val: 3,
+});
 
 const connectedNodeA: GraphNode = makeGraphNode({
   id: "node-002",
@@ -37,8 +31,6 @@ const connectedNodeB: GraphNode = makeGraphNode({
 });
 
 const unknownNodeId: string = "62d111f7-aaaa-bbbb-cccc-123456789abc";
-
-const defaultNode: GraphNode = makeGraphNode();
 
 const defaultDetail: NodeDetail = {
   node: defaultNode,
@@ -194,6 +186,7 @@ export const MinimalNode: Story = {
   args: {
     detail: {
       node: makeGraphNode({
+        label: "Minimal Node",
         content: undefined,
         tags: undefined,
         createdAt: undefined,
@@ -205,7 +198,7 @@ export const MinimalNode: Story = {
   },
   play: async ({ canvas }) => {
     // Title renders
-    await expect(canvas.getByText("Authentication Flow")).toBeInTheDocument();
+    await expect(canvas.getByText("Minimal Node")).toBeInTheDocument();
 
     // No Content or Tags sections
     const panel = canvas.getByTestId("knowledge-detail-panel");
