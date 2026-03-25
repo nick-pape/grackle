@@ -346,7 +346,7 @@ export function processEventStream(
           }
 
           // On abnormal exit (killed/failed), write a minimal server-enriched workpad
-          // if the agent didn't write one during its session.
+          // if no workpad exists yet on the task.
           if (ctx.taskId && ["killed", "failed"].includes(event.content)) {
             try {
               const task = taskStore.getTask(ctx.taskId);

@@ -572,12 +572,14 @@ export function initDatabase(sqliteOverride?: InstanceType<typeof Database>): In
           parent_task_id TEXT NOT NULL DEFAULT '',
           depth          INTEGER NOT NULL DEFAULT 0,
           can_decompose  INTEGER NOT NULL DEFAULT 0,
-          default_persona_id TEXT NOT NULL DEFAULT ''
+          default_persona_id TEXT NOT NULL DEFAULT '',
+          workpad        TEXT NOT NULL DEFAULT ''
         );
         INSERT INTO tasks_new SELECT
           id, workspace_id, title, description, status, branch, depends_on,
           started_at, completed_at, created_at, updated_at, sort_order,
-          parent_task_id, depth, can_decompose, default_persona_id
+          parent_task_id, depth, can_decompose, default_persona_id,
+          COALESCE(workpad, '')
         FROM tasks;
         DROP TABLE tasks;
         ALTER TABLE tasks_new RENAME TO tasks;
