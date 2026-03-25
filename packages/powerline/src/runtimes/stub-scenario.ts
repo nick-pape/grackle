@@ -45,11 +45,17 @@ export interface OnInputMatchStep {
   on_input_match: Record<string, InputAction>;
 }
 
+/** A step that makes a real MCP tool call via the broker. Requires mcpBroker and workspaceId in SpawnOptions. */
+export interface McpCallStep {
+  mcp_call: string;
+  args?: Record<string, unknown>;
+}
+
 /** Actions that can be taken when user input is received during an idle step. */
 export type InputAction = "echo" | "fail" | "ignore" | "next";
 
 /** A single step in a scenario. */
-export type ScenarioStep = EmitStep | WaitStep | IdleStep | OnInputStep | OnInputMatchStep;
+export type ScenarioStep = EmitStep | WaitStep | IdleStep | OnInputStep | OnInputMatchStep | McpCallStep;
 
 /** A JSON scenario that defines the exact sequence of events for a stub session. */
 export interface Scenario {
@@ -81,6 +87,11 @@ export function isOnInputStep(step: ScenarioStep): step is OnInputStep {
 /** Check if a step is an OnInputMatchStep. */
 export function isOnInputMatchStep(step: ScenarioStep): step is OnInputMatchStep {
   return "on_input_match" in step;
+}
+
+/** Check if a step is an McpCallStep. */
+export function isMcpCallStep(step: ScenarioStep): step is McpCallStep {
+  return "mcp_call" in step;
 }
 
 // ─── Parser ─────────────────────────────────────────────────

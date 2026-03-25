@@ -10,12 +10,42 @@ import {
   isIdleStep,
   isOnInputStep,
   isOnInputMatchStep,
+  isMcpCallStep,
 } from "./stub-scenario.js";
 import type { Scenario, InputAction } from "./stub-scenario.js";
+import { logger } from "../logger.js";
 
-class StubSession implements AgentSession {
+/** Timeout for connecting to the MCP server and completing a tool call. */
+const MCP_CONNECT_TIMEOUT_MS: number = 5_000;
+
+/** Auto-incrementing counter for generating unique tool_use IDs within MCP calls. */
+let mcpToolUseCounter: number = 0;
+
+/** Race a promise against a timeout, clearing the timer on resolution to avoid leaks. */
+async function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<never>((_resolve, reject) => {
+    timer = setTimeout(() => reject(new Error(message)), ms);
+  });
+  try {
+    return await Promise.race([promise, timeout]);
+  } finally {
+    clearTimeout(timer!);
+  }
+}
+
+/**
+ * Unified stub session supporting both scenario execution and real MCP tool calls.
+ *
+ * When `mcpBroker` and `workspaceId` are provided (via SpawnOptions), the session
+ * can make real MCP tool calls — either through `mcp_call` scenario steps or via
+ * the legacy fallback path (replacing fake echo tools with a real `task_list` call).
+ *
+ * When no MCP broker is available, the session falls back to fake echo tool events.
+ */
+export class StubSession implements AgentSession {
   public id: string;
-  public runtimeName: string = "stub";
+  public runtimeName: string;
   public runtimeSessionId: string;
   public status: SessionStatus = SESSION_STATUS.RUNNING;
 
@@ -28,11 +58,22 @@ class StubSession implements AgentSession {
   private scenario: Scenario | undefined;
   private inputHandler: InputAction = "echo";
   private inputMatchRules: Record<string, InputAction> | undefined;
+  private mcpBroker: { url: string; token: string } | undefined;
+  private workspaceId: string | undefined;
 
-  public constructor(id: string, prompt: string) {
+  public constructor(
+    id: string,
+    prompt: string,
+    runtimeName: string = "stub",
+    mcpBroker?: { url: string; token: string },
+    workspaceId?: string,
+  ) {
     this.id = id;
     this.prompt = prompt;
-    this.runtimeSessionId = `stub-${id}`;
+    this.runtimeName = runtimeName;
+    this.runtimeSessionId = `${runtimeName}-${id}`;
+    this.mcpBroker = mcpBroker;
+    this.workspaceId = workspaceId;
     this.scenario = parseScenario(prompt);
   }
 
@@ -54,17 +95,23 @@ class StubSession implements AgentSession {
 
     if (this.killed as boolean) { yield { type: "status", timestamp: ts(), content: this.killReason }; return; }
 
-    yield {
-      type: "tool_use",
-      timestamp: ts(),
-      content: JSON.stringify({ tool: "echo", args: { message: this.prompt } }),
-    };
+    if (this.mcpBroker && this.workspaceId) {
+      // Real MCP tool call when broker is available
+      yield* this.performMcpToolCall(ts, "task_list", {});
+    } else {
+      // Fallback: fake echo tool events
+      yield {
+        type: "tool_use",
+        timestamp: ts(),
+        content: JSON.stringify({ tool: "echo", args: { message: this.prompt } }),
+      };
 
-    yield {
-      type: "tool_result",
-      timestamp: ts(),
-      content: `Tool output: "${this.prompt}"`,
-    };
+      yield {
+        type: "tool_result",
+        timestamp: ts(),
+        content: `Tool output: "${this.prompt}"`,
+      };
+    }
 
     if (this.killed as boolean) { yield { type: "status", timestamp: ts(), content: this.killReason }; return; }
 
@@ -152,12 +199,120 @@ class StubSession implements AgentSession {
         this.inputHandler = step.on_input;
       } else if (isOnInputMatchStep(step)) {
         this.inputMatchRules = step.on_input_match;
+      } else if (isMcpCallStep(step)) {
+        if (!this.mcpBroker || !this.workspaceId) {
+          const toolUseId = `toolu_stub_mcp_${++mcpToolUseCounter}`;
+          logger.warn(`${this.runtimeName}: mcp_call step "${step.mcp_call}" but no MCP broker/workspace configured`);
+          yield {
+            type: "tool_use",
+            timestamp: ts(),
+            content: JSON.stringify({ tool: step.mcp_call, args: step.args ?? {} }),
+            raw: { type: "tool_use", id: toolUseId, name: step.mcp_call, input: step.args ?? {} },
+          };
+          yield {
+            type: "tool_result",
+            timestamp: ts(),
+            content: JSON.stringify({ error: `Cannot execute MCP tool "${step.mcp_call}": session not spawned with MCP broker/workspace` }),
+            raw: { type: "tool_result", tool_use_id: toolUseId, is_error: true },
+          };
+        } else {
+          yield* this.performMcpToolCall(ts, step.mcp_call, step.args ?? {});
+        }
       }
     }
 
     // All steps completed
     this.status = SESSION_STATUS.STOPPED;
     yield { type: "status", timestamp: ts(), content: "completed" };
+  }
+
+  /**
+   * Connect to the MCP server and call a tool by name.
+   * Yields tool_use and tool_result events with proper raw metadata.
+   */
+  private async *performMcpToolCall(
+    ts: () => string,
+    toolName: string,
+    toolArgs: Record<string, unknown>,
+  ): AsyncIterable<AgentEvent> {
+    const toolUseId = `toolu_stub_mcp_${++mcpToolUseCounter}`;
+    let mcpClient: InstanceType<typeof import("@modelcontextprotocol/sdk/client/index.js").Client> | undefined;
+    let yieldedToolUse = false;
+
+    try {
+      const { Client } = await import("@modelcontextprotocol/sdk/client/index.js");
+      const { StreamableHTTPClientTransport } = await import("@modelcontextprotocol/sdk/client/streamableHttp.js");
+
+      const transport = new StreamableHTTPClientTransport(
+        new URL(this.mcpBroker!.url),
+        {
+          requestInit: {
+            headers: {
+              Authorization: `Bearer ${this.mcpBroker!.token}`,
+            },
+          },
+        },
+      );
+
+      mcpClient = new Client({ name: "stub-mcp-runtime", version: "1.0.0" });
+
+      // Connect with a timeout to prevent hangs
+      await withTimeout(mcpClient.connect(transport), MCP_CONNECT_TIMEOUT_MS, "MCP connect timeout");
+
+      // Yield the tool_use event
+      yieldedToolUse = true;
+      yield {
+        type: "tool_use",
+        timestamp: ts(),
+        content: JSON.stringify({ tool: toolName, args: toolArgs }),
+        raw: { type: "tool_use", id: toolUseId, name: toolName, input: toolArgs },
+      };
+
+      // Call the tool
+      const result = await withTimeout(
+        mcpClient.callTool({ name: toolName, arguments: toolArgs }),
+        MCP_CONNECT_TIMEOUT_MS,
+        "MCP tool call timeout",
+      );
+
+      // Yield the tool_result event with the real MCP response
+      yield {
+        type: "tool_result",
+        timestamp: ts(),
+        content: JSON.stringify(result),
+        raw: { type: "tool_result", tool_use_id: toolUseId, is_error: false },
+      };
+    } catch (err) {
+      logger.warn({ err, runtimeName: this.runtimeName }, `${this.runtimeName}: MCP tool call failed`);
+
+      // Yield tool_use if we haven't already (error during connect)
+      if (!yieldedToolUse) {
+        yield {
+          type: "tool_use",
+          timestamp: ts(),
+          content: JSON.stringify({ tool: toolName, args: toolArgs }),
+          raw: { type: "tool_use", id: toolUseId, name: toolName, input: toolArgs },
+        };
+      }
+
+      // Yield error tool_result
+      yield {
+        type: "tool_result",
+        timestamp: ts(),
+        content: JSON.stringify({
+          error: err instanceof Error ? err.message : String(err),
+        }),
+        raw: { type: "tool_result", tool_use_id: toolUseId, is_error: true },
+      };
+    } finally {
+      if (mcpClient) {
+        try {
+          await mcpClient.close();
+        } catch {
+          // Ignore close errors
+        }
+      }
+    }
   }
 
   /** Resolve which input action to take based on match rules and default handler. */
@@ -220,7 +375,11 @@ class StubSession implements AgentSession {
   public drainBufferedEvents(): AgentEvent[] {
     return [];
   }
+}
 
+/** Reset the MCP tool_use counter (for testing). */
+export function resetMcpToolUseCounter(): void {
+  mcpToolUseCounter = 0;
 }
 
 /** A mock runtime that echoes prompts and waits for one round of user input. Useful for testing. */
@@ -228,7 +387,7 @@ export class StubRuntime implements AgentRuntime {
   public name: string = "stub";
 
   public spawn(opts: SpawnOptions): AgentSession {
-    return new StubSession(opts.sessionId, opts.prompt);
+    return new StubSession(opts.sessionId, opts.prompt, "stub", opts.mcpBroker, opts.workspaceId);
   }
 
   public resume(opts: ResumeOptions): AgentSession {

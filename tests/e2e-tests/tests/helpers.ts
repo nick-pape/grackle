@@ -513,3 +513,12 @@ export function onInput(action: "echo" | "fail" | "ignore" | "next"): ScenarioSt
 export function onInputMatch(rules: Record<string, "echo" | "fail" | "ignore" | "next">): ScenarioStep {
   return { on_input_match: rules };
 }
+
+/** Make a real MCP tool call via the broker. Requires a broker-enabled stub session (spawned with mcpBroker/workspaceId). */
+export function emitMcpCall(tool: string, args?: Record<string, unknown>): ScenarioStep {
+  const step: ScenarioStep = { mcp_call: tool };
+  if (args) {
+    step.args = args;
+  }
+  return step;
+}
