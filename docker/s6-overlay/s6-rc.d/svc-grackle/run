@@ -3,9 +3,10 @@
 # Source all s6 container_environment vars explicitly — with-contenv should
 # inject them, but gosu's exec can lose them on some platforms.
 for f in /run/s6/container_environment/*; do
-  [ -f "$f" ] || continue
+  [ -r "$f" ] || continue
   varname="$(basename "$f")"
-  export "$varname"="$(cat "$f")"
+  varvalue="$(<"$f")"
+  export "$varname"="$varvalue"
 done
 
 exec gosu node grackle serve --allow-network
