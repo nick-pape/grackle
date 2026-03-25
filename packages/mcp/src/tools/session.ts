@@ -132,9 +132,10 @@ export const sessionTools: ToolDefinition[] = [
   {
     name: "session_kill",
     group: "session",
-    description: "Terminate a running agent session immediately, stopping any in-progress work.",
+    description: "Terminate a running agent session. By default, kills immediately (SIGKILL). With graceful=true, sends a SIGTERM signal giving the agent a chance to clean up.",
     inputSchema: z.object({
       sessionId: z.string().describe("The ID of the session to kill"),
+      graceful: z.boolean().default(false).describe("When true, send SIGTERM for graceful shutdown instead of killing immediately"),
     }),
     rpcMethod: "killAgent",
     mutating: true,
@@ -148,6 +149,7 @@ export const sessionTools: ToolDefinition[] = [
       try {
         await client.killAgent({
           id: args.sessionId as string,
+          graceful: (args.graceful as boolean | undefined) ?? false,
         });
         return jsonResult({ success: true });
       } catch (error) {
@@ -199,7 +201,7 @@ export const sessionTools: ToolDefinition[] = [
             if (maxEvents && events.length >= maxEvents) {
               break;
             }
-            if (event.type === grackle.EventType.STATUS && ["completed", "killed", "failed"].includes(event.content)) {
+            if (event.type === grackle.EventType.STATUS && ["completed", "killed", "failed", "terminated"].includes(event.content)) {
               break;
             }
           }

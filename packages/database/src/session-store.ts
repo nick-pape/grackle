@@ -95,6 +95,22 @@ export function updateSession(
     .run();
 }
 
+/** Record that a SIGTERM signal was sent to a session. */
+export function setSigtermSentAt(id: string): void {
+  db.update(sessions)
+    .set({ sigtermSentAt: new Date().toISOString() })
+    .where(eq(sessions.id, id))
+    .run();
+}
+
+/** Clear the SIGTERM sent flag (e.g. when delivery fails after optimistic set). */
+export function clearSigtermSentAt(id: string): void {
+  db.update(sessions)
+    .set({ sigtermSentAt: null })
+    .where(eq(sessions.id, id))
+    .run();
+}
+
 /** Update only the status column of a session. */
 export function updateSessionStatus(id: string, status: SessionStatus): void {
   db.update(sessions)

@@ -250,6 +250,7 @@ export const END_REASON: {
     readonly COMPLETED: "completed";
     readonly KILLED: "killed";
     readonly INTERRUPTED: "interrupted";
+    readonly TERMINATED: "terminated";
 };
 
 // @public
@@ -508,7 +509,7 @@ const Grackle: GenService<{
     };
     killAgent: {
         methodKind: "unary";
-        input: typeof SessionIdSchema;
+        input: typeof KillAgentRequestSchema;
         output: typeof EmptySchema;
     };
     listSessions: {
@@ -792,6 +793,8 @@ declare namespace grackle {
         EnvironmentIdSchema,
         SessionId,
         SessionIdSchema,
+        KillAgentRequest,
+        KillAgentRequestSchema,
         Environment,
         EnvironmentSchema,
         EnvironmentList,
@@ -1044,6 +1047,15 @@ const InputMessageSchema: GenMessage<InputMessage>;
 
 // @public
 const InputMessageSchema_2: GenMessage<InputMessage_2>;
+
+// @public
+type KillAgentRequest = Message<"grackle.KillAgentRequest"> & {
+    id: string;
+    graceful: boolean;
+};
+
+// @public
+const KillAgentRequestSchema: GenMessage<KillAgentRequest>;
 
 // @public
 type KillRequest = Message<"grackle.powerline.KillRequest"> & {

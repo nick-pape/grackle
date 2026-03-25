@@ -57,7 +57,7 @@ describe("SCOPED_TOOLS", () => {
   it("contains the expected scoped tools", () => {
     expect([...SCOPED_TOOLS].sort()).toEqual([
       "finding_list", "finding_post",
-      "ipc_close", "ipc_list_fds", "ipc_spawn", "ipc_write",
+      "ipc_close", "ipc_list_fds", "ipc_spawn", "ipc_terminate", "ipc_write",
       "knowledge_get_node", "knowledge_search",
       "persona_list", "persona_show",
       "schedule_list", "schedule_show",

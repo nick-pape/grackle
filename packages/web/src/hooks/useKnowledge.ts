@@ -7,7 +7,7 @@
  * @module
  */
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import type { GrackleEvent } from "./types.js";
 import { grackleClient } from "./useGrackleClient.js";
 import { protoToGraphNode, protoToGraphLink } from "./proto-converters.js";
@@ -93,11 +93,17 @@ export function useKnowledge(): UseKnowledgeResult {
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
+  /** Tracks the active workspace filter so search and clearSearch can use it. */
+  const workspaceIdRef = useRef("");
+
   const loadRecent = useCallback((workspaceId?: string) => {
+    const effectiveWsId = workspaceId ?? "";
+    workspaceIdRef.current = effectiveWsId;
+    setSearchQuery("");
     setLoading(true);
     grackleClient.listRecentKnowledgeNodes({
       limit: 30,
-      workspaceId: workspaceId ?? "",
+      workspaceId: effectiveWsId,
     }).then(
       (resp) => {
         const nodeMap = new Map<string, GraphNode>();
@@ -134,7 +140,7 @@ export function useKnowledge(): UseKnowledgeResult {
     setSelectedId(undefined);
     setSelectedNode(undefined);
     setLoading(true);
-    grackleClient.searchKnowledge({ query, limit: 20 }).then(
+    grackleClient.searchKnowledge({ query, limit: 20, workspaceId: workspaceIdRef.current }).then(
       (resp) => {
         const nodeMap = new Map<string, GraphNode>();
         const linkList: GraphLink[] = [];
@@ -157,8 +163,7 @@ export function useKnowledge(): UseKnowledgeResult {
   }, []);
 
   const clearSearch = useCallback(() => {
-    setSearchQuery("");
-    loadRecent();
+    loadRecent(workspaceIdRef.current);
   }, [loadRecent]);
 
   const selectNode = useCallback((id: string) => {

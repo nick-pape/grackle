@@ -88,10 +88,11 @@ export function registerAgentCommands(program: Command): void {
   program
     .command("kill <session-id>")
     .description("Stop a running session")
-    .action(async (sessionId: string) => {
+    .option("-g, --graceful", "Send SIGTERM for graceful shutdown instead of hard kill")
+    .action(async (sessionId: string, opts: { graceful?: boolean }) => {
       const client = createGrackleClient();
-      await client.killAgent({ id: sessionId });
-      console.log(`Killed: ${sessionId}`);
+      await client.killAgent({ id: sessionId, graceful: opts.graceful ?? false });
+      console.log(opts.graceful ? `Sent SIGTERM to: ${sessionId}` : `Killed: ${sessionId}`);
     });
 
   program

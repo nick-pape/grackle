@@ -8,7 +8,7 @@ export const SCOPED_TOOLS: ReadonlySet<string> = new Set([
   "task_create", "task_list", "task_show", "task_start", "task_complete",
   "session_send_input",
   "persona_list", "persona_show",
-  "ipc_spawn", "ipc_write", "ipc_close", "ipc_list_fds",
+  "ipc_spawn", "ipc_write", "ipc_close", "ipc_terminate", "ipc_list_fds",
   "knowledge_search", "knowledge_get_node",
   "workpad_write", "workpad_read",
   "schedule_list", "schedule_show",

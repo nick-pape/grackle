@@ -405,7 +405,7 @@ export class SystemPromptBuilder {
     ].join("\n");
   }
 
-  /** SIGCHLD signal documentation. */
+  /** Signal documentation (SIGCHLD + SIGTERM). */
   private buildSignalSection(): string {
     return [
       `## Signals`,
@@ -413,6 +413,14 @@ export class SystemPromptBuilder {
       `1. Review the child's status and last output (included in the signal).`,
       `2. If the child succeeded, check whether all subtasks are done and mark your task complete if so.`,
       `3. If the child failed or was interrupted, decide whether to retry, reassign, or handle the failure yourself.`,
+      ``,
+      `You may receive a \`[SIGTERM]\` message requesting graceful shutdown. When you receive one:`,
+      `1. Finish your current operation (do not start new work).`,
+      `2. Save any in-progress work (commit, push, or post findings).`,
+      `3. If you have a parent pipe, write a final summary via \`ipc_write\`.`,
+      `4. Close all **owned** child fds with \`ipc_close\` (do not close non-owned parent fds).`,
+      `5. Call \`task_complete\` if your task is finished, or leave it for resumption if not.`,
+      `6. Stop working after completing these steps.`,
     ].join("\n");
   }
 

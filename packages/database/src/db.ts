@@ -596,6 +596,12 @@ export function initDatabase(sqliteOverride?: InstanceType<typeof Database>): In
     "CREATE INDEX IF NOT EXISTS idx_workspaces_environment_id ON workspaces(environment_id)",
   );
 
+  tryMigration("add-sessions-sigterm-sent-at", () => {
+    conn.exec(
+      "ALTER TABLE sessions ADD COLUMN sigterm_sent_at TEXT",
+    );
+  });
+
   // Migration: rename worktree_base_path → working_directory on workspaces table (#547)
   // Guard: only run if the old column still exists (new databases already have working_directory).
   tryMigration("rename-worktree-base-path", () => {

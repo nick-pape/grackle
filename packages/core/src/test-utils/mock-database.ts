@@ -43,6 +43,8 @@ export function createDatabaseMock() {
       incrementTurns: vi.fn(),
       suspendSession: vi.fn(),
       reanimateSession: vi.fn(),
+      setSigtermSentAt: vi.fn(),
+      clearSigtermSentAt: vi.fn(),
       setSessionTask: vi.fn(),
       deleteByEnvironment: vi.fn(),
       aggregateUsage: vi.fn(() => ({ inputTokens: 0, outputTokens: 0, costUsd: 0, sessionCount: 0 })),

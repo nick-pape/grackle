@@ -280,9 +280,9 @@ export function parseWsMessage(data: string): WsMessage | GrackleEvent | undefin
 /**
  * Map runtime status event content to normalized session status strings.
  * The PowerLine runtime emits "waiting_input" as event content, but the
- * server stores "idle". Terminal statuses ("completed", "killed", "failed")
- * all map to "stopped". The frontend needs to use the same strings as the
- * server for consistency with list_sessions responses.
+ * server stores "idle". Terminal statuses ("completed", "killed", "failed",
+ * "interrupted", "terminated") all map to "stopped". The frontend needs to
+ * use the same strings as the server for consistency with list_sessions responses.
  */
 export function mapSessionStatus(rawStatus: string): string {
   switch (rawStatus) {
@@ -291,6 +291,7 @@ export function mapSessionStatus(rawStatus: string): string {
     case "killed": return "stopped";
     case "failed": return "stopped";
     case "interrupted": return "stopped";
+    case "terminated": return "stopped";
     default: return rawStatus;
   }
 }
@@ -305,6 +306,7 @@ export function mapEndReason(rawContent: string): string | undefined {
     case "killed": return "killed";
     case "failed": return "interrupted";
     case "interrupted": return "interrupted";
+    case "terminated": return "terminated";
     default: return undefined;
   }
 }
