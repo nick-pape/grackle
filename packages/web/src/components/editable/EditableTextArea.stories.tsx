@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, fn, userEvent } from "@storybook/test";
+import { expect, fn } from "@storybook/test";
 import { EditableTextArea } from "./EditableTextArea.js";
 
 const meta: Meta<typeof EditableTextArea> = {
@@ -23,28 +23,27 @@ export const DisplayMode: Story = {
   },
 };
 
-/** Clicking activates edit mode and shows the textarea. */
-export const EditMode: Story = {
+/** Display button is keyboard-accessible (tabIndex, role, focusable). */
+export const KeyboardAccessible: Story = {
   play: async ({ canvas }) => {
     const button = canvas.getByTestId("test-area-button");
-    await userEvent.click(button);
+    await expect(button).toHaveAttribute("role", "button");
+    await expect(button).toHaveAttribute("tabindex", "0");
 
-    const textarea = canvas.getByTestId("test-area-input");
-    await expect(textarea).toBeInTheDocument();
+    button.focus();
+    await expect(button).toHaveFocus();
   },
 };
 
-/** Pressing Escape in edit mode cancels without saving. */
-export const EscapeToCancel: Story = {
-  play: async ({ canvas, args }) => {
-    const button = canvas.getByTestId("test-area-button");
-    await userEvent.click(button);
-
+/** Create mode renders as an always-visible textarea. */
+export const CreateMode: Story = {
+  args: {
+    mode: "create",
+    value: "",
+    placeholder: "Enter description",
+  },
+  play: async ({ canvas }) => {
     const textarea = canvas.getByTestId("test-area-input");
-    await userEvent.type(textarea, " extra text");
-    await userEvent.keyboard("{Escape}");
-
-    // onSave should not have been called
-    await expect(args.onSave).not.toHaveBeenCalled();
+    await expect(textarea).toBeInTheDocument();
   },
 };

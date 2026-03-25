@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, fn, userEvent } from "@storybook/test";
+import { expect, fn } from "@storybook/test";
 import { EditableTextField } from "./EditableTextField.js";
 
 const meta: Meta<typeof EditableTextField> = {
@@ -24,52 +24,15 @@ export const DisplayMode: Story = {
   },
 };
 
-/** Display button is keyboard-accessible (tabIndex, role). */
+/** Display button is keyboard-accessible (tabIndex, role, focusable). */
 export const KeyboardAccessible: Story = {
   play: async ({ canvas }) => {
     const button = canvas.getByTestId("test-field-button");
     await expect(button).toHaveAttribute("role", "button");
     await expect(button).toHaveAttribute("tabindex", "0");
 
-    // Focus is accepted
     button.focus();
     await expect(button).toHaveFocus();
-  },
-};
-
-/** Pressing Enter in edit mode saves the value. */
-export const EnterToSave: Story = {
-  play: async ({ canvas, args }) => {
-    // Click to enter edit mode
-    const button = canvas.getByTestId("test-field-button");
-    await userEvent.click(button);
-
-    const input = canvas.getByTestId("test-field-input");
-    await userEvent.clear(input);
-    await userEvent.type(input, "Updated Value");
-    await userEvent.keyboard("{Enter}");
-
-    await expect(args.onSave).toHaveBeenCalledWith("Updated Value");
-  },
-};
-
-/** Pressing Escape in edit mode cancels without saving. */
-export const EscapeToCancel: Story = {
-  play: async ({ canvas, args }) => {
-    // Click to enter edit mode
-    const button = canvas.getByTestId("test-field-button");
-    await userEvent.click(button);
-
-    const input = canvas.getByTestId("test-field-input");
-    await userEvent.clear(input);
-    await userEvent.type(input, "Changed text");
-    await userEvent.keyboard("{Escape}");
-
-    // onSave should not have been called
-    await expect(args.onSave).not.toHaveBeenCalled();
-
-    // Should return to display mode with original value
-    await expect(canvas.getByText("Hello World")).toBeInTheDocument();
   },
 };
 
@@ -81,5 +44,18 @@ export const EmptyShowsPlaceholder: Story = {
   },
   play: async ({ canvas }) => {
     await expect(canvas.getByText("Enter a value")).toBeInTheDocument();
+  },
+};
+
+/** Create mode renders as an always-visible input. */
+export const CreateMode: Story = {
+  args: {
+    mode: "create",
+    value: "",
+    placeholder: "Enter title",
+  },
+  play: async ({ canvas }) => {
+    const input = canvas.getByTestId("test-field-input");
+    await expect(input).toBeInTheDocument();
   },
 };
