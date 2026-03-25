@@ -83,6 +83,13 @@ ENV PATH="/opt/grackle/node_modules/.bin:$PATH"
 RUN apt-get purge -y --auto-remove python3 make g++ \
     && rm -rf /var/lib/apt/lists/*
 
+# ── Fix HuggingFace transformers cache permissions ──────────
+# The @huggingface/transformers library caches ONNX models relative to its
+# own __dirname (node_modules/@huggingface/transformers/.cache/). The npm
+# install runs as root, so the node user can't write there at runtime.
+RUN mkdir -p /opt/grackle/node_modules/@huggingface/transformers/.cache \
+    && chown -R node:node /opt/grackle/node_modules/@huggingface/transformers/.cache
+
 # ── Run as node user with correct HOME ───────────────────────
 ENV HOME=/home/node
 
@@ -96,6 +103,8 @@ VOLUME /data
 # Set GRACKLE_NEO4J_URL to use an external Neo4j and skip the embedded one.
 # Set GRACKLE_KNOWLEDGE_ENABLED=false to disable knowledge entirely.
 ENV GRACKLE_KNOWLEDGE_ENABLED=true
+# HuggingFace model cache — writable by node user, persists across restarts.
+ENV HF_HOME=/data/.hf-cache
 
 # ── s6-overlay service definitions ──────────────────────────
 COPY docker/s6-overlay/ /etc/s6-overlay/
