@@ -28,6 +28,7 @@ import type {
   PersonaData,
   UsageStats,
 } from "./types.js";
+import type { GraphNode, GraphLink } from "./useKnowledge.js";
 
 /** Convert a proto Environment to the UI Environment type. */
 export function protoToEnvironment(p: grackle.Environment): Environment {
@@ -197,8 +198,6 @@ export function protoToUsageStats(p: grackle.UsageStats): UsageStats {
 }
 
 // ─── Knowledge Graph ──────────────────────────────────────────────────────
-
-import type { GraphNode, GraphLink } from "./useKnowledge.js";
 
 /** Convert a proto KnowledgeNodeProto to a GraphNode. */
 export function protoToGraphNode(p: grackle.KnowledgeNodeProto, edgeCount: number = 0): GraphNode {

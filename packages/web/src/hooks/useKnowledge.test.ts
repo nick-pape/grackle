@@ -244,6 +244,7 @@ describe("useKnowledge", () => {
 
   describe("clearSelection", () => {
     it("resets selectedId and selectedNode", () => {
+      mockClient.getKnowledgeNode.mockResolvedValue({ node: makeProtoNode(), edges: [] });
       const { result } = setup();
       act(() => { result.current.selectNode("n1"); });
       expect(result.current.selectedId).toBe("n1");

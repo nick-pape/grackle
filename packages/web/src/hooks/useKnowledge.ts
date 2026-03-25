@@ -65,6 +65,22 @@ export interface UseKnowledgeResult {
 }
 
 // ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/** Safely parse a JSON string, returning undefined on failure. */
+function safeParseJson(json: string): Record<string, unknown> | undefined {
+  if (!json) {
+    return undefined;
+  }
+  try {
+    return JSON.parse(json) as Record<string, unknown>;
+  } catch {
+    return undefined;
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Hook
 // ---------------------------------------------------------------------------
 
@@ -159,7 +175,7 @@ export function useKnowledge(): UseKnowledgeResult {
             fromId: e.fromId,
             toId: e.toId,
             type: e.type,
-            metadata: e.metadataJson ? JSON.parse(e.metadataJson) as Record<string, unknown> : undefined,
+            metadata: safeParseJson(e.metadataJson),
           })),
         });
       },
