@@ -899,7 +899,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       deleteToken: mockDeleteToken,
       updateCredentialProviders: mockUpdateCredentialProviders,
       provisionStatus: {},
-      provisionEnvironment: () => { },
+      provisionEnvironment: (_environmentId: string, _force?: boolean) => { },
       stopEnvironment: () => { },
       removeEnvironment: () => { },
       codespaces: [],

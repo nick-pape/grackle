@@ -140,11 +140,18 @@ grackle env add local --local --host 127.0.0.1 --port 7433
 
 Provision and connect an environment. Streams progress events.
 
+| Option | Description |
+|--------|-------------|
+| `--force` | Force full reprovision, killing active sessions and tearing down the existing connection. Skips fast reconnect. |
+
 ```bash
 grackle env provision my-env
 # [10%] pulling: Pulling Docker image...
 # [50%] starting: Starting container...
 # [100%] connected: Environment ready
+
+# Force reprovision a connected environment
+grackle env provision my-env --force
 ```
 
 #### `grackle env stop <id>`

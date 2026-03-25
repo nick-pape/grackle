@@ -35,8 +35,8 @@ export interface UseEnvironmentsResult {
     environmentId: string,
     fields: { displayName?: string; adapterConfig?: Record<string, unknown> },
   ) => void;
-  /** Provision an environment by ID. */
-  provisionEnvironment: (environmentId: string) => void;
+  /** Provision an environment by ID. When force is true, kills active sessions and forces full provision. */
+  provisionEnvironment: (environmentId: string, force?: boolean) => void;
   /** Stop an environment by ID. */
   stopEnvironment: (environmentId: string) => void;
   /** Remove an environment by ID. */
@@ -165,10 +165,10 @@ export function useEnvironments(): UseEnvironmentsResult {
   );
 
   const provisionEnvironment = useCallback(
-    (environmentId: string) => {
+    (environmentId: string, force?: boolean) => {
       const runProvision = async (): Promise<void> => {
         try {
-          const stream = grackleClient.provisionEnvironment({ id: environmentId });
+          const stream = grackleClient.provisionEnvironment({ id: environmentId, force: force ?? false });
           for await (const event of stream) {
             setProvisionStatus((prev) => ({
               ...prev,

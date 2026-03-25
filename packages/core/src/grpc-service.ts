@@ -429,7 +429,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       return create(grackle.EmptySchema, {});
     },
 
-    async *provisionEnvironment(req: grackle.EnvironmentId) {
+    async *provisionEnvironment(req: grackle.ProvisionEnvironmentRequest) {
       // Manual provision overrides auto-reconnect
       clearReconnectState(req.id);
       const env = envRegistry.getEnvironment(req.id);
@@ -452,6 +452,40 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         return;
       }
 
+      // Force teardown: kill active session, disconnect adapter, clear connection
+      if (req.force) {
+        const activeSession = sessionStore.getActiveForEnv(req.id);
+        if (activeSession && !TERMINAL_SESSION_STATUSES.has(activeSession.status as SessionStatus)) {
+          sessionStore.updateSession(activeSession.id, SESSION_STATUS.STOPPED, undefined, undefined, END_REASON.KILLED);
+          streamHub.publish(
+            create(grackle.SessionEventSchema, {
+              sessionId: activeSession.id,
+              type: grackle.EventType.STATUS,
+              timestamp: new Date().toISOString(),
+              content: END_REASON.KILLED,
+              raw: "",
+            }),
+          );
+          if (activeSession.taskId) {
+            const task = taskStore.getTask(activeSession.taskId);
+            if (task) {
+              emit("task.updated", { taskId: task.id, workspaceId: task.workspaceId || "" });
+            }
+          }
+          cleanupLifecycleStream(activeSession.id);
+          const subs = streamRegistry.getSubscriptionsForSession(activeSession.id);
+          for (const sub of subs) {
+            streamRegistry.unsubscribe(sub.id);
+          }
+        }
+        try {
+          await adapter.disconnect(req.id);
+        } catch {
+          // best-effort teardown
+        }
+        adapterManager.removeConnection(req.id);
+      }
+
       envRegistry.updateEnvironmentStatus(req.id, "connecting");
       emit("environment.changed", {});
 
@@ -466,6 +500,8 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
           config,
           powerlineToken,
           !!env.bootstrapped,
+          undefined,
+          req.force,
         )) {
           yield create(grackle.ProvisionEventSchema, {
             stage: event.stage,

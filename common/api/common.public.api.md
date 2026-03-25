@@ -459,7 +459,7 @@ const Grackle: GenService<{
     };
     provisionEnvironment: {
         methodKind: "server_streaming";
-        input: typeof EnvironmentIdSchema;
+        input: typeof ProvisionEnvironmentRequestSchema;
         output: typeof ProvisionEventSchema;
     };
     updateEnvironment: {
@@ -751,6 +751,8 @@ declare namespace grackle {
         AddEnvironmentRequestSchema,
         ProvisionEvent,
         ProvisionEventSchema,
+        ProvisionEnvironmentRequest,
+        ProvisionEnvironmentRequestSchema,
         UpdateEnvironmentRequest,
         UpdateEnvironmentRequestSchema,
         Session,
@@ -1196,6 +1198,15 @@ export function providerToggleToEnum(s: string): ProviderToggle;
 
 // @public
 export function providerToggleToString(e: ProviderToggle): string;
+
+// @public
+type ProvisionEnvironmentRequest = Message<"grackle.ProvisionEnvironmentRequest"> & {
+    id: string;
+    force: boolean;
+};
+
+// @public
+const ProvisionEnvironmentRequestSchema: GenMessage<ProvisionEnvironmentRequest>;
 
 // @public
 type ProvisionEvent = Message<"grackle.ProvisionEvent"> & {
