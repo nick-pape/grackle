@@ -1068,11 +1068,15 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
             "[SIGTERM] You have been asked to stop gracefully. " +
             "Finish your current operation, save your work, close any open IPC fds " +
             "(ipc_close for each owned fd), then call task_complete (if applicable) and stop.";
+          // Set sigtermSentAt BEFORE delivering so that if the session
+          // completes instantly (race), the event-processor sees the flag.
+          sessionStore.setSigtermSentAt(session.id);
           const delivered = await sendInputToSession(session.id, session.environmentId, message, "sigterm");
           if (delivered) {
-            sessionStore.setSigtermSentAt(session.id);
             return create(grackle.EmptySchema, {});
           }
+          // Delivery failed — clear the flag since SIGTERM wasn't actually sent
+          sessionStore.clearSigtermSentAt(session.id);
           // If delivery failed (env disconnected), fall through to hard kill
           logger.warn({ sessionId: session.id }, "SIGTERM delivery failed, falling back to hard kill");
         }

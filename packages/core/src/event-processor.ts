@@ -329,7 +329,11 @@ export function processEventStream(
           } else if (event.content === "running") {
             sessionStore.updateSessionStatus(sessionId, SESSION_STATUS.RUNNING);
           } else if (event.content === "completed") {
-            sessionStore.updateSession(sessionId, SESSION_STATUS.STOPPED, undefined, undefined, END_REASON.COMPLETED);
+            // If SIGTERM was sent and the session completed naturally, use
+            // TERMINATED to distinguish graceful shutdowns from normal completion.
+            const session = sessionStore.getSession(sessionId);
+            const endReason = session?.sigtermSentAt ? END_REASON.TERMINATED : END_REASON.COMPLETED;
+            sessionStore.updateSession(sessionId, SESSION_STATUS.STOPPED, undefined, undefined, endReason);
           } else if (event.content === "killed") {
             sessionStore.updateSession(sessionId, SESSION_STATUS.STOPPED, undefined, undefined, END_REASON.KILLED);
           } else if (event.content === "failed") {

@@ -306,6 +306,8 @@ describe("gRPC killAgent", () => {
 
       await handlers.killAgent({ id: "sess-1", graceful: true });
 
+      // Should have cleared the optimistic sigtermSentAt flag
+      expect(sessionStore.clearSigtermSentAt).toHaveBeenCalledWith("sess-1");
       // Should have fallen through to hard kill
       expect(sessionStore.updateSession).toHaveBeenCalledWith(
         "sess-1",
