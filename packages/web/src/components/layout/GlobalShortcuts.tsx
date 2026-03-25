@@ -1,10 +1,9 @@
 import type { JSX } from "react";
 import { useHotkey } from "../../hooks/useHotkey.js";
-import { SETTINGS_SHORTCUTS_URL, useAppNavigate } from "../../utils/navigation.js";
-import { TASKS_URL } from "../../utils/navigation.js";
+import { SETTINGS_SHORTCUTS_URL, newTaskUrl, useAppNavigate } from "../../utils/navigation.js";
 
-/** URL for the new task form. */
-const NEW_TASK_URL: string = `${TASKS_URL}/new`;
+/** URL for the new task form (no workspace/environment scope from global context). */
+const NEW_TASK_URL: string = newTaskUrl();
 
 /**
  * Registers global keyboard shortcuts that work from any page.
