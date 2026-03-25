@@ -2,7 +2,7 @@
   "changes": [
     {
       "comment": "Audit and fix flaky E2E tests, move markdown rendering to Storybook",
-      "type": "patch",
+      "type": "none",
       "packageName": "@grackle-ai/cli"
     }
   ],
