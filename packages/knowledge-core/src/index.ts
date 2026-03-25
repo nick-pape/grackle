@@ -10,7 +10,7 @@
 
 export { openNeo4j, closeNeo4j, healthCheck, getSession, getDriver } from "./client.js";
 export type { Neo4jClientConfig } from "./client.js";
-export { initSchema, buildSchemaStatements, SCHEMA_STATEMENTS } from "./schema.js";
+export { initSchema, SCHEMA_STATEMENTS } from "./schema.js";
 export { logger } from "./logger.js";
 export * from "./types.js";
 export {
