@@ -20,7 +20,7 @@ test.describe("Send input while agent is running", { tag: ["@session"] }, () => 
     ));
 
     // Start the task
-    await page.getByRole("button", { name: "Start", exact: true }).click();
+    await page.getByTestId("task-header-start").click();
 
     // Wait for scenario events to appear (session becomes active)
     await expect(page.getByText("Starting work...", { exact: true })).toBeVisible({ timeout: 15_000 });
