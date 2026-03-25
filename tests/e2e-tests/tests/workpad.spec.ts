@@ -129,14 +129,19 @@ test.describe("Workpad E2E", { tag: ["@task"] }, () => {
     const taskAfterFirst = await client.getTask({ id: taskId });
     expect(taskAfterFirst.workpad).toBeTruthy();
 
-    // 3. Kill first session to fully release the environment, then start retry
+    // 3. Kill first session to release the environment, then resume the task (retry)
     await client.killAgent({ id: firstSessionId });
     await waitForSessionStatus(client, firstSessionId, "stopped", 5_000);
 
     // Small delay to let lifecycle cleanup complete
     await new Promise((resolve) => setTimeout(resolve, 1_000));
 
-    const retrySessionId = await startTaskStubMcp(client, taskId);
+    // Use resumeTask for retry — startTask rejects tasks in "paused" status
+    const retryResp = await client.resumeTask({ id: taskId });
+    const retrySessionId = retryResp.id;
+    if (!retrySessionId) {
+      throw new Error(`No session ID in resumeTask response for task ${taskId}`);
+    }
     await waitForSessionStatus(client, retrySessionId, "stopped", 30_000);
 
     // 4. Fetch retry session events and verify system context contains workpad
