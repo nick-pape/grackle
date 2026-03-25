@@ -934,30 +934,28 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       },
       updatePersona: async (personaId: string, name?: string, description?: string, systemPrompt?: string, runtime?: string, model?: string, maxTurns?: number, type?: string, script?: string) => {
         console.log("[MockGrackle] updatePersona", { personaId, name });
-        let updatedPersona: PersonaData | undefined;
-        setPersonas((prev) =>
-          prev.map((p) => {
-            if (p.id !== personaId) {
-              return p;
-            }
-            updatedPersona = {
-              ...p,
-              ...(name !== undefined ? { name } : {}),
-              ...(description !== undefined ? { description } : {}),
-              ...(systemPrompt !== undefined ? { systemPrompt } : {}),
-              ...(runtime !== undefined ? { runtime } : {}),
-              ...(model !== undefined ? { model } : {}),
-              ...(maxTurns !== undefined ? { maxTurns } : {}),
-              ...(type !== undefined ? { type } : {}),
-              ...(script !== undefined ? { script } : {}),
-              updatedAt: new Date().toISOString(),
-            };
-            return updatedPersona;
-          }),
-        );
-        if (!updatedPersona) {
+        const existingPersona = personas.find((persona) => persona.id === personaId);
+        if (!existingPersona) {
           throw new Error(`Persona not found: ${personaId}`);
         }
+
+        const updatedAt = new Date().toISOString();
+        const updatedPersona: PersonaData = {
+          ...existingPersona,
+          ...(name !== undefined ? { name } : {}),
+          ...(description !== undefined ? { description } : {}),
+          ...(systemPrompt !== undefined ? { systemPrompt } : {}),
+          ...(runtime !== undefined ? { runtime } : {}),
+          ...(model !== undefined ? { model } : {}),
+          ...(maxTurns !== undefined ? { maxTurns } : {}),
+          ...(type !== undefined ? { type } : {}),
+          ...(script !== undefined ? { script } : {}),
+          updatedAt,
+        };
+
+        setPersonas((prev) =>
+          prev.map((persona) => (persona.id === personaId ? updatedPersona : persona)),
+        );
         return updatedPersona;
       },
       deletePersona: async (personaId: string) => {

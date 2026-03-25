@@ -11,9 +11,9 @@ export interface PersonaManagerProps {
   /** The app-level default persona ID. */
   appDefaultPersonaId: string;
   /** Callback to delete a persona. */
-  onDeletePersona: (personaId: string) => void;
+  onDeletePersona: (personaId: string) => Promise<void>;
   /** Callback to set the app-level default persona. */
-  onSetAppDefaultPersonaId: (personaId: string) => void;
+  onSetAppDefaultPersonaId: (personaId: string) => Promise<void>;
   /** Navigate to the new persona page. */
   onNavigateToNew: () => void;
   /** Navigate to a persona's detail page for editing. */
@@ -29,8 +29,8 @@ export function PersonaManager({
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const personaToDelete = confirmDelete ? personas.find((p) => p.id === confirmDelete) : undefined;
 
-  const handleDelete = (id: string): void => {
-    onDeletePersona(id);
+  const handleDelete = async (id: string): Promise<void> => {
+    await onDeletePersona(id);
     setConfirmDelete(null);
   };
 
@@ -77,13 +77,15 @@ export function PersonaManager({
                   </span>
                   <div className={styles.cardActions} onClick={(e) => e.stopPropagation()}>
                     {!isAppDefault && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onSetAppDefaultPersonaId(p.id)}
-                        data-testid={`persona-set-default-${p.id}`}
-                        title="Set as app default persona"
-                      >
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            onSetAppDefaultPersonaId(p.id).catch(() => undefined);
+                          }}
+                          data-testid={`persona-set-default-${p.id}`}
+                          title="Set as app default persona"
+                        >
                         Set Default
                       </Button>
                     )}
@@ -108,7 +110,11 @@ export function PersonaManager({
         title="Delete Persona?"
         description={`"${personaToDelete?.name ?? ""}" will be permanently removed.`}
         confirmLabel="Delete"
-        onConfirm={() => { if (confirmDelete) { handleDelete(confirmDelete); } }}
+        onConfirm={() => {
+          if (confirmDelete) {
+            handleDelete(confirmDelete).catch(() => undefined);
+          }
+        }}
         onCancel={() => setConfirmDelete(null)}
       />
     </div>
