@@ -11,4 +11,4 @@ fi
 # since the embedded Neo4j only listens on 127.0.0.1 inside the container.
 
 # Run Neo4j in foreground as the node user.
-exec s6-setuidgid node neo4j console
+exec gosu node neo4j console
