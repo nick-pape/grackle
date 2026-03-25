@@ -55,7 +55,7 @@ export function initLifecycleManager(): void {
       if (alreadyTerminal && session.endReason) {
         reason = session.endReason as EndReason;
       } else if (!alreadyTerminal && session.status === SESSION_STATUS.IDLE) {
-        reason = END_REASON.COMPLETED;
+        reason = session.sigtermSentAt ? END_REASON.TERMINATED : END_REASON.COMPLETED;
       } else {
         reason = END_REASON.KILLED;
       }

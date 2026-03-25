@@ -335,6 +335,8 @@ export function processEventStream(
           } else if (event.content === "failed") {
             sessionStore.updateSession(sessionId, SESSION_STATUS.STOPPED, undefined, undefined, END_REASON.INTERRUPTED);
             cleanupLifecycleStream(sessionId);
+          } else if (event.content === "terminated") {
+            sessionStore.updateSession(sessionId, SESSION_STATUS.STOPPED, undefined, undefined, END_REASON.TERMINATED);
           }
 
           // On terminal status (or idle for sync pipes): publish child completion

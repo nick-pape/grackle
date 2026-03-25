@@ -205,6 +205,12 @@ export const ipcTools: ToolDefinition[] = [
             isError: true,
           };
         }
+        if (!fdInfo.owned) {
+          return {
+            content: [{ type: "text" as const, text: `Error: fd ${String(fd)} is not an owned child fd — only owned fds from ipc_spawn can be terminated` }],
+            isError: true,
+          };
+        }
 
         // Send graceful kill (SIGTERM)
         await client.killAgent({ id: fdInfo.targetSessionId, graceful: true });

@@ -99,6 +99,31 @@ describe("ipc_terminate", () => {
     expect(result.content[0].text).toContain("no target session");
   });
 
+  test("returns error when fd is not owned", async () => {
+    const mockClient = createMockClient();
+    (mockClient.getSessionFds as ReturnType<typeof vi.fn>).mockResolvedValue({
+      fds: [
+        {
+          fd: 3,
+          targetSessionId: "parent-sess",
+          owned: false,
+          streamName: "lifecycle:parent-sess",
+          permission: "rw",
+          deliveryMode: "detach",
+        },
+      ],
+    });
+
+    const result = await getTool("ipc_terminate").handler(
+      { fd: 3 },
+      mockClient,
+      SCOPED_AUTH,
+    );
+
+    expect(result.isError).toBe(true);
+    expect(result.content[0].text).toContain("not an owned child fd");
+  });
+
   test("requires scoped auth", async () => {
     const mockClient = createMockClient();
 

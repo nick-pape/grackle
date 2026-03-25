@@ -417,9 +417,10 @@ export class SystemPromptBuilder {
       `You may receive a \`[SIGTERM]\` message requesting graceful shutdown. When you receive one:`,
       `1. Finish your current operation (do not start new work).`,
       `2. Save any in-progress work (commit, push, or post findings).`,
-      `3. Close all open IPC file descriptors with \`ipc_close\`.`,
-      `4. Call \`task_complete\` if your task is finished, or leave it for resumption if not.`,
-      `5. Stop working after completing these steps.`,
+      `3. If you have a parent pipe, write a final summary via \`ipc_write\`.`,
+      `4. Close all **owned** child fds with \`ipc_close\` (do not close non-owned parent fds).`,
+      `5. Call \`task_complete\` if your task is finished, or leave it for resumption if not.`,
+      `6. Stop working after completing these steps.`,
     ].join("\n");
   }
 
