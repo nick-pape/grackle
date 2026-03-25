@@ -4,6 +4,7 @@ import { useGrackle } from "../context/GrackleContext.js";
 import { EventStream } from "../components/display/EventStream.js";
 import { ChatInput } from "../components/chat/index.js";
 import { FindingsPanel } from "../components/panels/FindingsPanel.js";
+import { WorkpadPanel } from "../components/panels/WorkpadPanel.js";
 import { Breadcrumbs, ConfirmDialog } from "../components/display/index.js";
 import { buildTaskBreadcrumbs } from "../utils/breadcrumbs.js";
 import { taskEditUrl, taskUrl, workspaceUrl, useAppNavigate } from "../utils/navigation.js";
@@ -123,6 +124,7 @@ function TaskOverview({ task, tasksById, environments, workspaces, taskSessions,
           </div>
         </div>
       )}
+      {task.workpad && <WorkpadPanel workpad={task.workpad} />}
       <div className={styles.overviewSection}>
         <div className={styles.overviewLabel}>Environment</div>
         {envId && env ? (

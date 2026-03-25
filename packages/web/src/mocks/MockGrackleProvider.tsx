@@ -423,6 +423,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
           childTaskIds: [],
           canDecompose: canDecompose ?? !parentTaskId,
           defaultPersonaId: defaultPersonaId || "",
+          workpad: "",
         };
 
         return [...prev, newTask];
