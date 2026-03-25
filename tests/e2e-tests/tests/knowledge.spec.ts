@@ -29,12 +29,18 @@ test.describe("Knowledge Graph", { tag: ["@webui"] }, () => {
     await skipIfKnowledgeUnavailable(client);
     const page = appPage;
 
+    // Create a fresh workspace with no knowledge nodes to avoid cross-test contamination
+    const wsId = await createWorkspace(client, "kg-empty");
+
     // Navigate to Knowledge tab
     await page.locator('[data-testid="sidebar-tab-knowledge"]').click();
     await page.locator('[data-testid="knowledge-page"]').waitFor({ timeout: 5_000 });
 
+    // Filter to the empty workspace
+    await page.locator('[data-testid="knowledge-workspace-filter"]').selectOption(wsId);
+
     // Empty state message
-    await expect(page.getByText("No knowledge nodes found.")).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText("No knowledge nodes found.")).toBeVisible({ timeout: 10_000 });
   });
 
   test("knowledge page shows seeded nodes in nav and graph", async ({ appPage, grackle: { client } }) => {
