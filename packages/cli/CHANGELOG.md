@@ -1,6 +1,17 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Wed, 25 Mar 2026 15:08:59 GMT and should not be manually modified.
+This log was last generated on Wed, 25 Mar 2026 16:30:59 GMT and should not be manually modified.
+
+## 0.77.0
+Wed, 25 Mar 2026 16:30:59 GMT
+
+### Minor changes
+
+- Add update-available notification: GetVersionStatus gRPC endpoint, web UI banner, CLI startup notice, and get_version_status MCP tool
+
+### Updates
+
+- placeholder
 
 ## 0.76.3
 Wed, 25 Mar 2026 15:08:59 GMT
