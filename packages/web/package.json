@@ -1,6 +1,6 @@
 {
   "name": "@grackle-ai/web",
-  "version": "0.75.9",
+  "version": "0.75.12",
   "description": "React web UI for the Grackle multi-agent coordination platform",
   "license": "MIT",
   "repository": {
@@ -9,6 +9,8 @@
     "directory": "packages/web"
   },
   "keywords": ["grackle", "web", "dashboard", "react"],
+  "homepage": "https://github.com/nick-pape/grackle#readme",
+  "bugs": { "url": "https://github.com/nick-pape/grackle/issues" },
   "engines": { "node": ">=22.0.0" },
   "type": "module",
   "files": ["dist/"],

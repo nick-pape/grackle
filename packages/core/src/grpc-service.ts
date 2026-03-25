@@ -27,6 +27,7 @@ import {
   END_REASON,
   TASK_STATUS,
   ROOT_TASK_ID,
+  ROOT_TASK_INITIAL_PROMPT,
   taskStatusToEnum,
   taskStatusToString,
   workspaceStatusToEnum,
@@ -1486,14 +1487,18 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       const { runtime, model, maxTurns, systemPrompt, persona } = resolved;
       const logPath = join(grackleHome, LOGS_DIR, sessionId);
 
-      const taskPrompt = buildTaskPrompt(task.title, task.description, req.notes);
+      // Root task always starts with the hardcoded greeting prompt; user messages
+      // are sent as follow-ups via sendInput.  Other tasks use buildTaskPrompt.
+      const taskPrompt = task.id === ROOT_TASK_ID
+        ? ROOT_TASK_INITIAL_PROMPT
+        : buildTaskPrompt(task.title, task.description, req.notes);
       const isOrchestrator = task.canDecompose && task.depth <= 1;
       const orchestratorCtx = isOrchestrator
         ? fetchOrchestratorContext(task.workspaceId || "")
         : undefined;
 
       const systemContext = new SystemPromptBuilder({
-        task: { title: task.title, description: task.description, notes: req.notes || "" },
+        task: { title: task.title, description: task.description, notes: task.id === ROOT_TASK_ID ? "" : (req.notes || "") },
         taskId: task.id,
         canDecompose: task.canDecompose,
         personaPrompt: systemPrompt,

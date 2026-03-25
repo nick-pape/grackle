@@ -1240,6 +1240,9 @@ const ResumeRequestSchema_2: GenMessage<ResumeRequest_2>;
 export const ROOT_TASK_ID: string;
 
 // @public
+export const ROOT_TASK_INITIAL_PROMPT: string;
+
+// @public
 export const RUNTIME_MANIFESTS: Readonly<Record<string, RuntimePackageManifest>>;
 
 // @public

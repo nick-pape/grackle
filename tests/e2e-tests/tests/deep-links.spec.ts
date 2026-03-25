@@ -80,7 +80,6 @@ test.describe("Deep linking", { tag: ["@webui"] }, () => {
     // Create a workspace and navigate to it via URL
     await createWorkspace(client, "back-fwd-proj");
     await navigateToWorkspace(page, "back-fwd-proj");
-    await page.waitForTimeout(500);
 
     await page.locator('[data-testid="sidebar-tab-settings"]').click();
     await expect(page.getByRole("tablist", { name: "Settings" })).toBeVisible({ timeout: 5_000 });
