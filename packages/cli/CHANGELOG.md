@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Wed, 25 Mar 2026 14:21:23 GMT and should not be manually modified.
+This log was last generated on Wed, 25 Mar 2026 15:08:59 GMT and should not be manually modified.
+
+## 0.76.3
+Wed, 25 Mar 2026 15:08:59 GMT
+
+### Patches
+
+- Add Storybook and E2E test coverage for knowledge graph components, refactor KnowledgeNav to presentational
 
 ## 0.76.2
 Wed, 25 Mar 2026 14:21:23 GMT

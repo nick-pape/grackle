@@ -27,7 +27,7 @@ test.describe("Task Lifecycle (stub runtime)", { tag: ["@task", "@smoke"] }, () 
     await expect(page.getByRole("tab", { name: "Overview", exact: true })).toHaveAttribute("class", /active/);
 
     // --- Step 4: Click "Start" (stub runtime patched by fixture) ---
-    await page.getByRole("button", { name: "Start", exact: true }).click();
+    await page.getByTestId("task-header-start").click();
 
     // --- Step 5: Verify scenario events stream in ---
     await expect(page.locator("text=Stub runtime initialized")).toBeVisible({ timeout: 15_000 });
@@ -68,7 +68,7 @@ test.describe("Task Lifecycle (stub runtime)", { tag: ["@task", "@smoke"] }, () 
     ));
 
     // Start task
-    await page.getByRole("button", { name: "Start", exact: true }).click();
+    await page.getByTestId("task-header-start").click();
 
     // Wait for idle state, send input to advance to completed
     const inputField = page.locator('input[placeholder="Type a message..."]');

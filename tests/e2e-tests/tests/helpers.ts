@@ -349,7 +349,7 @@ export async function patchWsForStubMcpRuntime(page: Page, environmentId: string
  * Requires patchWsForStubRuntime to have been called on the page beforehand.
  */
 export async function runStubTaskToCompletion(page: Page): Promise<void> {
-  await page.getByRole("button", { name: "Start", exact: true }).click();
+  await page.getByTestId("task-header-start").click();
 
   const inputField = page.locator('input[placeholder="Type a message..."]');
   await inputField.waitFor({ timeout: 15_000 });
@@ -366,7 +366,7 @@ export async function runStubTaskToCompletion(page: Page): Promise<void> {
  * Requires patchWsForStubMcpRuntime to have been called on the page beforehand.
  */
 export async function runStubMcpTaskToCompletion(page: Page): Promise<void> {
-  await page.getByRole("button", { name: "Start", exact: true }).click();
+  await page.getByTestId("task-header-start").click();
 
   const inputField = page.locator('input[placeholder="Type a message..."]');
   await inputField.waitFor({ timeout: 15_000 });

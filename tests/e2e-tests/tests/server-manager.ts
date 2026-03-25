@@ -139,11 +139,17 @@ async function obtainSessionCookie(serverPort: number, webPort: number, apiKey: 
   });
 }
 
+/** Options for starting a Grackle stack. */
+export interface GrackleStackOptions {
+  /** Enable the knowledge graph subsystem (requires Neo4j). Default: false. */
+  knowledgeEnabled?: boolean;
+}
+
 /**
  * Start a fully isolated Grackle stack: PowerLine + Server on 4 unique ports
  * with a dedicated GRACKLE_HOME and SQLite database.
  */
-export async function startGrackleStack(): Promise<E2EState> {
+export async function startGrackleStack(options: GrackleStackOptions = {}): Promise<E2EState> {
   const tag = `[e2e:${process.pid}]`;
 
   // 1. Create isolated temp directory
@@ -183,8 +189,9 @@ export async function startGrackleStack(): Promise<E2EState> {
         GRACKLE_WEB_DIR: join(repoRoot, "packages/web/dist"),
         GRACKLE_SKIP_LOCAL_POWERLINE: "1",
         GRACKLE_SKIP_ROOT_AUTOSTART: "1",
-        // Enable knowledge graph when Neo4j is available (CI service container)
-        GRACKLE_KNOWLEDGE_ENABLED: process.env.GRACKLE_KNOWLEDGE_ENABLED ?? "",
+        // Only enable knowledge for the knowledge project to avoid Neo4j
+        // contention and reference-node sync overhead in other tests.
+        GRACKLE_KNOWLEDGE_ENABLED: options.knowledgeEnabled ? "true" : "",
       },
       stdio: "pipe",
     },

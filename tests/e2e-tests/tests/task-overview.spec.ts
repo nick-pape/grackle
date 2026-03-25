@@ -84,8 +84,8 @@ test.describe("Task Overview Tab", { tag: ["@task"] }, () => {
     await page.getByText("dep-blocked", { exact: true }).first().waitFor({ timeout: 5_000 });
     await navigateToTask(page, "dep-blocked");
 
-    // Overview should show the dependency with the blocker name
-    await expect(page.getByText("Dependencies")).toBeVisible({ timeout: 5_000 });
+    // Overview should show the dependency section with the blocker name
+    await expect(page.getByTestId("task-overview-dependencies")).toBeVisible({ timeout: 5_000 });
     // The blocker task title should appear in the dependencies list
     const depItem = page.locator('[class*="depBlocked"]');
     await expect(depItem).toBeVisible();
@@ -164,8 +164,8 @@ test.describe("Task Overview Tab", { tag: ["@task"] }, () => {
 
     await stubTask.createAndNavigateSimple("manual-task");
 
-    // Start the task
-    await page.getByRole("button", { name: "Start", exact: true }).click();
+    // Start the task via header button (scoped to avoid stream CTA collision)
+    await page.getByTestId("task-header-start").click();
 
     // Wait for working auto-switch to stream tab
     await expect(page.locator("text=Stub runtime initialized")).toBeVisible({ timeout: 15_000 });

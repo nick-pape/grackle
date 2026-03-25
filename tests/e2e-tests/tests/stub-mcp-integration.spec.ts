@@ -20,7 +20,7 @@ test.describe("Stub MCP Integration", { tag: ["@persona"] }, () => {
     await patchWsForStubMcpRuntime(page);
 
     // Start the task
-    await page.getByRole("button", { name: "Start", exact: true }).click();
+    await page.getByTestId("task-header-start").click();
 
     // Wait for system message from stub runtime (unified: both "stub" and "stub-mcp" use the same session)
     await expect(page.locator("text=Stub runtime initialized")).toBeVisible({ timeout: 15_000 });

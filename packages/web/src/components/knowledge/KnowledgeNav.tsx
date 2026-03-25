@@ -7,36 +7,63 @@
  */
 
 import { useState, useCallback, type FormEvent, type JSX } from "react";
-import { useGrackle } from "../../context/GrackleContext.js";
+import type { Workspace } from "../../hooks/types.js";
 import type { GraphNode } from "../../hooks/useKnowledge.js";
 import styles from "./KnowledgeNav.module.scss";
 
+/** Props for the KnowledgeNav sidebar component. */
+export interface KnowledgeNavProps {
+  /** Nodes currently in the graph. */
+  nodes: GraphNode[];
+  /** All workspaces for the filter dropdown. */
+  workspaces: Workspace[];
+  /** Whether a search or load operation is in progress. */
+  loading: boolean;
+  /** Active search query (non-empty means search is active). */
+  searchQuery: string;
+  /** Execute a semantic search. */
+  onSearch: (query: string) => void;
+  /** Clear search and reload recent nodes. */
+  onClearSearch: () => void;
+  /** Select a node by ID (e.g., open detail panel). */
+  onSelectNode: (nodeId: string) => void;
+  /** Filter by workspace (empty string means all workspaces). */
+  onWorkspaceChange: (workspaceId: string) => void;
+}
+
 /** Sidebar content for the Knowledge tab. */
-export function KnowledgeNav(): JSX.Element {
-  const { knowledge, workspaces } = useGrackle();
+export function KnowledgeNav({
+  nodes,
+  workspaces,
+  loading,
+  searchQuery,
+  onSearch,
+  onClearSearch,
+  onSelectNode,
+  onWorkspaceChange,
+}: KnowledgeNavProps): JSX.Element {
   const [searchInput, setSearchInput] = useState("");
 
   const handleSearch = useCallback((e: FormEvent) => {
     e.preventDefault();
     if (searchInput.trim()) {
-      knowledge.search(searchInput.trim());
+      onSearch(searchInput.trim());
     }
-  }, [searchInput, knowledge]);
+  }, [searchInput, onSearch]);
 
   const handleClear = useCallback(() => {
     setSearchInput("");
-    knowledge.clearSearch();
-  }, [knowledge]);
+    onClearSearch();
+  }, [onClearSearch]);
 
   const handleNodeClick = useCallback((nodeId: string) => {
-    knowledge.selectNode(nodeId);
-  }, [knowledge]);
+    onSelectNode(nodeId);
+  }, [onSelectNode]);
 
   const handleWorkspaceChange = useCallback((wsId: string) => {
     setSearchInput("");
-    // loadRecent handles clearing search state and fetching with the new filter
-    knowledge.loadRecent(wsId || undefined);
-  }, [knowledge]);
+    onWorkspaceChange(wsId);
+  }, [onWorkspaceChange]);
 
   return (
     <div className={styles.nav} data-testid="knowledge-nav">
@@ -50,11 +77,11 @@ export function KnowledgeNav(): JSX.Element {
           onChange={(e) => { setSearchInput(e.target.value); }}
           data-testid="knowledge-search-input"
         />
-        <button type="submit" className={styles.searchButton} disabled={knowledge.loading}>
+        <button type="submit" className={styles.searchButton} disabled={loading}>
           Go
         </button>
       </form>
-      {knowledge.searchQuery && (
+      {searchQuery && (
         <button type="button" className={styles.clearButton} onClick={handleClear}>
           Clear search
         </button>
@@ -74,10 +101,10 @@ export function KnowledgeNav(): JSX.Element {
 
       {/* Node list */}
       <div className={styles.listHeader}>
-        Nodes ({knowledge.graphData.nodes.length})
+        Nodes ({nodes.length})
       </div>
       <ul className={styles.nodeList}>
-        {knowledge.graphData.nodes.map((node: GraphNode) => (
+        {nodes.map((node: GraphNode) => (
           <li
             key={node.id}
             className={styles.nodeItem}
