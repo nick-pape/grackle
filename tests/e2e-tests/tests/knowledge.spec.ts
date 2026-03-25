@@ -1,20 +1,17 @@
 import { test, expect } from "./fixtures.js";
+import type { Page } from "@playwright/test";
 import { createWorkspace } from "./helpers.js";
 
 /**
  * Knowledge Graph E2E tests.
  *
  * These tests require the knowledge graph subsystem (embedding model) to be
- * available on the server. In CI the embedder is typically absent, so each
- * test probes availability first and skips gracefully if the backend returns
- * UNAVAILABLE.
+ * available on the server. In CI the embedder is typically absent without
+ * the Neo4j service container, so each test probes availability first and
+ * skips gracefully if the backend returns UNAVAILABLE.
  */
 test.describe("Knowledge Graph", { tag: ["@webui"] }, () => {
-  /**
-   * Probe knowledge availability via SearchKnowledge RPC (requires the
-   * embedder, unlike listRecentKnowledgeNodes which only checks the enabled
-   * flag). Skip the test if the server returns UNAVAILABLE.
-   */
+  /** Probe knowledge availability via SearchKnowledge RPC. Skip if unavailable. */
   async function skipIfKnowledgeUnavailable(
     client: ReturnType<typeof import("./rpc-client.js").createTestClient>,
   ): Promise<void> {
@@ -29,19 +26,32 @@ test.describe("Knowledge Graph", { tag: ["@webui"] }, () => {
     }
   }
 
+  /** Navigate to the Knowledge tab and wait for the page to load. */
+  async function navigateToKnowledge(page: Page): Promise<void> {
+    await page.locator('[data-testid="sidebar-tab-knowledge"]').click();
+    await page.locator('[data-testid="knowledge-page"]').waitFor({ timeout: 5_000 });
+  }
+
+  /**
+   * Wait for the workspace option to appear in the filter dropdown, then select it.
+   * The workspace list refreshes asynchronously via event bus after RPC creation.
+   */
+  async function selectWorkspaceFilter(page: Page, workspaceId: string): Promise<void> {
+    const filter = page.locator('[data-testid="knowledge-workspace-filter"]');
+    // Wait for the option to appear (workspace may not be in the dropdown yet)
+    await filter.locator(`option[value="${workspaceId}"]`).waitFor({ timeout: 10_000 });
+    await filter.selectOption(workspaceId);
+  }
+
   test("knowledge page renders with empty state", async ({ appPage, grackle: { client } }) => {
     await skipIfKnowledgeUnavailable(client);
     const page = appPage;
 
-    // Create a fresh workspace with no knowledge nodes to avoid cross-test contamination
+    // Create a fresh workspace with no knowledge nodes
     const wsId = await createWorkspace(client, "kg-empty");
 
-    // Navigate to Knowledge tab
-    await page.locator('[data-testid="sidebar-tab-knowledge"]').click();
-    await page.locator('[data-testid="knowledge-page"]').waitFor({ timeout: 5_000 });
-
-    // Filter to the empty workspace
-    await page.locator('[data-testid="knowledge-workspace-filter"]').selectOption(wsId);
+    await navigateToKnowledge(page);
+    await selectWorkspaceFilter(page, wsId);
 
     // Empty state message
     await expect(page.getByText("No knowledge nodes found.")).toBeVisible({ timeout: 10_000 });
@@ -68,12 +78,8 @@ test.describe("Knowledge Graph", { tag: ["@webui"] }, () => {
       workspaceId: wsId,
     });
 
-    // Navigate to Knowledge tab
-    await page.locator('[data-testid="sidebar-tab-knowledge"]').click();
-    await page.locator('[data-testid="knowledge-page"]').waitFor({ timeout: 5_000 });
-
-    // Filter to the workspace where we seeded nodes to avoid cross-test contamination
-    await page.locator('[data-testid="knowledge-workspace-filter"]').selectOption(wsId);
+    await navigateToKnowledge(page);
+    await selectWorkspaceFilter(page, wsId);
 
     // Seeded nodes should appear in the sidebar nav
     await expect(page.getByText("Auth Flow Design")).toBeVisible({ timeout: 10_000 });
@@ -97,12 +103,8 @@ test.describe("Knowledge Graph", { tag: ["@webui"] }, () => {
       workspaceId: wsId,
     });
 
-    // Navigate to Knowledge tab
-    await page.locator('[data-testid="sidebar-tab-knowledge"]').click();
-    await page.locator('[data-testid="knowledge-page"]').waitFor({ timeout: 5_000 });
-
-    // Filter to the workspace to isolate from other tests
-    await page.locator('[data-testid="knowledge-workspace-filter"]').selectOption(wsId);
+    await navigateToKnowledge(page);
+    await selectWorkspaceFilter(page, wsId);
 
     // Wait for nodes to load, then click in the sidebar nav
     await expect(page.getByText("Click Target Node")).toBeVisible({ timeout: 10_000 });
@@ -135,12 +137,8 @@ test.describe("Knowledge Graph", { tag: ["@webui"] }, () => {
       workspaceId: wsId,
     });
 
-    // Navigate to Knowledge tab
-    await page.locator('[data-testid="sidebar-tab-knowledge"]').click();
-    await page.locator('[data-testid="knowledge-page"]').waitFor({ timeout: 5_000 });
-
-    // Filter to workspace to isolate from other tests
-    await page.locator('[data-testid="knowledge-workspace-filter"]').selectOption(wsId);
+    await navigateToKnowledge(page);
+    await selectWorkspaceFilter(page, wsId);
 
     // Wait for nodes to load
     await expect(page.getByText("Unique Alpha Topic")).toBeVisible({ timeout: 10_000 });
