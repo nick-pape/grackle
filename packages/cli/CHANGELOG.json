@@ -2,6 +2,18 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.75.11",
+      "tag": "@grackle-ai/cli_v0.75.11",
+      "date": "Wed, 25 Mar 2026 00:31:42 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Add logo, badges, homepage, and bugs fields to all package READMEs and package.json files"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.75.10",
       "tag": "@grackle-ai/cli_v0.75.10",
       "date": "Tue, 24 Mar 2026 23:59:57 GMT",
