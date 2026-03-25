@@ -1,9 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { checkVersionStatus, clearVersionCache } from "./version-check.js";
 
-// Mock global fetch
+// Mock global fetch — must be unstubbed in afterEach
 const mockFetch = vi.fn();
-vi.stubGlobal("fetch", mockFetch);
 
 // Mock fs.existsSync for Docker detection
 vi.mock("node:fs", () => ({
@@ -15,6 +14,7 @@ const mockExistsSync = vi.mocked(existsSync);
 
 describe("checkVersionStatus", () => {
   beforeEach(() => {
+    vi.stubGlobal("fetch", mockFetch);
     clearVersionCache();
     mockFetch.mockReset();
     mockExistsSync.mockReset();
@@ -22,7 +22,9 @@ describe("checkVersionStatus", () => {
   });
 
   afterEach(() => {
+    vi.unstubAllGlobals();
     vi.restoreAllMocks();
+    clearVersionCache();
   });
 
   it("returns update available when registry has newer version", async () => {
@@ -39,7 +41,7 @@ describe("checkVersionStatus", () => {
   });
 
   it("returns no update when versions match", async () => {
-    // Use the actual current version from the package
+    // First call with unconfigured mock hits the catch path → gets currentVersion
     const result1 = await checkVersionStatus();
     const currentVersion = result1.currentVersion;
 

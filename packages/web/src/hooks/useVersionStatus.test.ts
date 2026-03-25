@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { renderHook, waitFor } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { renderHook, waitFor, cleanup } from "@testing-library/react";
 import { useVersionStatus } from "./useVersionStatus.js";
 
 // Mock the gRPC client
@@ -16,6 +16,11 @@ const mockGetVersionStatus = vi.mocked(grackleClient.getVersionStatus);
 describe("useVersionStatus", () => {
   beforeEach(() => {
     mockGetVersionStatus.mockReset();
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
   });
 
   it("returns undefined initially", () => {
