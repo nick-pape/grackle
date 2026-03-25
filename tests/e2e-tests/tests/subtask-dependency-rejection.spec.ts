@@ -35,7 +35,7 @@ test.describe("Subtask dependency rejection", { tag: ["@task"] }, () => {
 
     // Navigate to parent task and start it
     await navigateToTask(page, "Decomposable Parent");
-    await page.getByRole("button", { name: "Start", exact: true }).click();
+    await page.getByTestId("task-header-start").click();
 
     // Wait for the stub scenario to complete — the "Done creating subtasks" text appears
     await page.getByText("Done creating subtasks").waitFor({ timeout: 15_000 });

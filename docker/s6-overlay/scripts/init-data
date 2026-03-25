@@ -7,6 +7,29 @@ GRACKLE_DATA="${GRACKLE_HOME}/.grackle"
 mkdir -p "$GRACKLE_DATA"
 chown node:node "$GRACKLE_DATA"
 
+# ── Volume migration: old layout → new layout ───────────────
+# Old compose mounted grackle-data:/grackle-home/.grackle → files at volume root.
+# New compose mounts grackle-data:/data → app expects files at /data/.grackle/.
+# Detect old layout and migrate.
+if [ -f "/data/grackle.db" ] && [ ! -f "$GRACKLE_DATA/grackle.db" ]; then
+  echo "Migrating data from old volume layout..."
+  migrate_error=0
+  for f in /data/*; do
+    name="$(basename "$f")"
+    case "$name" in .grackle|neo4j|.hf-cache|.claude-sdk) continue ;; esac
+    if ! mv "$f" "$GRACKLE_DATA/$name"; then
+      echo "WARN: Failed to migrate '$f' to '$GRACKLE_DATA/$name'" >&2
+      migrate_error=1
+    fi
+  done
+  chown -R node:node "$GRACKLE_DATA"
+  if [ "$migrate_error" -eq 0 ]; then
+    echo "Volume migration complete"
+  else
+    echo "Volume migration completed with errors; see warnings above." >&2
+  fi
+fi
+
 # Neo4j data directories (created unconditionally — harmless if Neo4j is disabled)
 mkdir -p /data/neo4j/data /data/neo4j/logs /data/neo4j/run
 chown -R node:node /data/neo4j
@@ -33,7 +56,7 @@ fi
 # there via CLAUDE_CONFIG_DIR.
 CLAUDE_RO="/home/node/.claude"
 CLAUDE_RW="${GRACKLE_HOME}/.claude-sdk"
-if [ -d "$CLAUDE_RO" ] && ! su -s /bin/sh node -c "touch '$CLAUDE_RO/.write-test'" 2>/dev/null; then
+if [ -d "$CLAUDE_RO" ] && ! gosu node touch "$CLAUDE_RO/.write-test" 2>/dev/null; then
   mkdir -p "$CLAUDE_RW/projects"
   # Sync credential/config files from the RO mount (skip directories —
   # they'll be created fresh in the writable dir by the SDK as needed).
@@ -51,3 +74,31 @@ if [ -d "$CLAUDE_RO" ] && ! su -s /bin/sh node -c "touch '$CLAUDE_RO/.write-test
 else
   rm -f "$CLAUDE_RO/.write-test" 2>/dev/null || true
 fi
+
+# ── Credential mount warnings ───────────────────────────────
+# For the local adapter, file tokens are NOT pushed via gRPC
+# (excludeFileTokens: true). Runtimes read credential files directly
+# from the filesystem. Missing mounts cause silent auth failure.
+warn_missing() {
+  local path="$1" name="$2" primary_envalt="$3"
+  shift 3
+
+  # If any of the provided env vars (primary + optional fallbacks) is set,
+  # skip the warning — credentials are already configured via env.
+  local envalt
+  for envalt in "$primary_envalt" "$@"; do
+    if [ -n "${!envalt:-}" ]; then
+      return 0
+    fi
+  done
+
+  # Check for the specific credential file so that an empty bind-mounted
+  # directory still triggers a warning.
+  if [ ! -f "$path" ]; then
+    echo "WARN: $name not found at $path — mount via -v or set $primary_envalt"
+  fi
+}
+
+warn_missing "/home/node/.claude/.credentials.json" "Claude credentials" "ANTHROPIC_API_KEY"
+warn_missing "/home/node/.copilot/config.json" "Copilot credentials" "COPILOT_GITHUB_TOKEN" "GH_TOKEN" "GITHUB_TOKEN"
+warn_missing "/home/node/.codex/auth.json" "Codex credentials" "OPENAI_API_KEY"

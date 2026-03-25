@@ -349,7 +349,7 @@ export async function patchWsForStubMcpRuntime(page: Page, environmentId: string
  * Requires patchWsForStubRuntime to have been called on the page beforehand.
  */
 export async function runStubTaskToCompletion(page: Page): Promise<void> {
-  await page.getByRole("button", { name: "Start", exact: true }).click();
+  await page.getByTestId("task-header-start").click();
 
   const inputField = page.locator('input[placeholder="Type a message..."]');
   await inputField.waitFor({ timeout: 15_000 });
@@ -366,7 +366,7 @@ export async function runStubTaskToCompletion(page: Page): Promise<void> {
  * Requires patchWsForStubMcpRuntime to have been called on the page beforehand.
  */
 export async function runStubMcpTaskToCompletion(page: Page): Promise<void> {
-  await page.getByRole("button", { name: "Start", exact: true }).click();
+  await page.getByTestId("task-header-start").click();
 
   const inputField = page.locator('input[placeholder="Type a message..."]');
   await inputField.waitFor({ timeout: 15_000 });
@@ -512,4 +512,13 @@ export function onInput(action: "echo" | "fail" | "ignore" | "next"): ScenarioSt
 /** Set pattern-matching rules for input handling. Use "*" as the fallback key. */
 export function onInputMatch(rules: Record<string, "echo" | "fail" | "ignore" | "next">): ScenarioStep {
   return { on_input_match: rules };
+}
+
+/** Make a real MCP tool call via the broker. Requires a broker-enabled stub session (spawned with mcpBroker/workspaceId). */
+export function emitMcpCall(tool: string, args?: Record<string, unknown>): ScenarioStep {
+  const step: ScenarioStep = { mcp_call: tool };
+  if (args) {
+    step.args = args;
+  }
+  return step;
 }

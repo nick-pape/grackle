@@ -3,8 +3,10 @@ import {
   parseScenario,
   buildEventFromEmitStep,
   resetToolUseCounter,
+  isMcpCallStep,
+  isEmitStep,
 } from "./stub-scenario.js";
-import type { EmitStep } from "./stub-scenario.js";
+import type { EmitStep, McpCallStep, ScenarioStep } from "./stub-scenario.js";
 
 describe("parseScenario", () => {
   it("parses raw JSON prompt", () => {
@@ -197,5 +199,42 @@ describe("buildEventFromEmitStep", () => {
     const [event] = buildEventFromEmitStep(step, undefined);
 
     expect(event.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+  });
+});
+
+describe("McpCallStep", () => {
+  it("isMcpCallStep identifies mcp_call steps", () => {
+    const mcpStep: McpCallStep = { mcp_call: "workpad_write", args: { status: "done" } };
+    const emitStep: ScenarioStep = { emit: "text", content: "hi" };
+
+    expect(isMcpCallStep(mcpStep)).toBe(true);
+    expect(isMcpCallStep(emitStep)).toBe(false);
+    expect(isEmitStep(mcpStep)).toBe(false);
+  });
+
+  it("parseScenario parses mcp_call steps", () => {
+    const scenario = parseScenario(JSON.stringify({
+      steps: [
+        { mcp_call: "workpad_write", args: { status: "completed", summary: "Done" } },
+        { mcp_call: "task_list" },
+      ],
+    }));
+
+    expect(scenario).toBeDefined();
+    expect(scenario!.steps).toHaveLength(2);
+    expect(isMcpCallStep(scenario!.steps[0])).toBe(true);
+    const step = scenario!.steps[0] as McpCallStep;
+    expect(step.mcp_call).toBe("workpad_write");
+    expect(step.args).toEqual({ status: "completed", summary: "Done" });
+  });
+
+  it("mcp_call step without args defaults to undefined", () => {
+    const scenario = parseScenario(JSON.stringify({
+      steps: [{ mcp_call: "task_list" }],
+    }));
+
+    const step = scenario!.steps[0] as McpCallStep;
+    expect(step.mcp_call).toBe("task_list");
+    expect(step.args).toBeUndefined();
   });
 });

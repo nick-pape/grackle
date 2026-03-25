@@ -20,10 +20,10 @@ test.describe("Stub MCP Integration", { tag: ["@persona"] }, () => {
     await patchWsForStubMcpRuntime(page);
 
     // Start the task
-    await page.getByRole("button", { name: "Start", exact: true }).click();
+    await page.getByTestId("task-header-start").click();
 
-    // Wait for system message from stub-mcp runtime
-    await expect(page.locator("text=Stub MCP runtime initialized")).toBeVisible({ timeout: 15_000 });
+    // Wait for system message from stub runtime (unified: both "stub" and "stub-mcp" use the same session)
+    await expect(page.locator("text=Stub runtime initialized")).toBeVisible({ timeout: 15_000 });
 
     // Verify tool result card shows "task_list" as label (real MCP tool, not "echo")
     await expect(page.getByTestId("tool-result-label").first()).toContainText("task_list", { timeout: 10_000 });

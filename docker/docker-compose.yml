@@ -12,13 +12,20 @@ services:
       - "7435:7435"   # MCP
       - "7433:7433"   # Local PowerLine
     volumes:
-      - grackle-data:/data                                                      # Persistent DB, Neo4j, API key
+      - grackle-data:/data                                               # Persistent DB, Neo4j, API key
       # WARNING: Grants the container root-equivalent access to the host Docker daemon.
       # Required for the Docker adapter (DooD pattern). Remove if not using Docker environments.
       - /var/run/docker.sock:/var/run/docker.sock
+      # ── Agent file-based credential mounts ──
+      # Required only if you use file-based credentials. The local adapter does NOT push
+      # credential files via gRPC — runtimes read them directly from the filesystem.
+      # As an alternative, you can configure auth via env vars (e.g. ANTHROPIC_API_KEY,
+      # OPENAI_API_KEY, COPILOT_GITHUB_TOKEN/GH_TOKEN/GITHUB_TOKEN). Omit any mount you
+      # don't need (e.g. skip .copilot if not using Copilot).
       - "${HOME}/.claude:/home/node/.claude:ro"                          # Claude auth + config
       - "${HOME}/.copilot:/home/node/.copilot:ro"                        # Copilot auth
       - "${HOME}/.codex:/home/node/.codex:ro"                            # Codex auth
+      # - "${HOME}/.config/goose:/home/node/.config/goose:ro"            # Goose auth (uncomment if using Goose)
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:

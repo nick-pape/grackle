@@ -17,6 +17,7 @@ import type {
   CredentialProviderConfig,
   Codespace,
 } from "../hooks/types.js";
+import type { GraphNode, GraphLink } from "../hooks/useKnowledge.js";
 
 export {
   MOCK_ENVIRONMENTS,
@@ -186,6 +187,32 @@ export function makeCredentialProviders(overrides: Partial<CredentialProviderCon
   };
 }
 
+/** Create a GraphNode with sensible defaults. */
+export function makeGraphNode(overrides: Partial<GraphNode> = {}): GraphNode {
+  return {
+    id: nextId("kn"),
+    label: "Test Knowledge Node",
+    kind: "knowledge",
+    category: "concept",
+    content: "Test node content.",
+    tags: [],
+    createdAt: "2026-01-15T10:00:00Z",
+    updatedAt: "2026-02-20T14:30:00Z",
+    val: 1,
+    ...overrides,
+  };
+}
+
+/** Create a GraphLink with sensible defaults. */
+export function makeGraphLink(overrides: Partial<GraphLink> = {}): GraphLink {
+  return {
+    source: "kn-1",
+    target: "kn-2",
+    type: "relates_to",
+    ...overrides,
+  };
+}
+
 /** No-op callback for story args. */
 export const noop = (): void => {};
 
@@ -205,3 +232,5 @@ export const buildPersona: typeof makePersona = makePersona;
 export const buildEvent: typeof makeEvent = makeEvent;
 export const buildCodespace: typeof makeCodespace = makeCodespace;
 export const buildCredentialProviderConfig: typeof makeCredentialProviders = makeCredentialProviders;
+export const buildGraphNode: typeof makeGraphNode = makeGraphNode;
+export const buildGraphLink: typeof makeGraphLink = makeGraphLink;

@@ -71,6 +71,13 @@ RUN install -m 0755 -d /etc/apt/keyrings \
     && apt-get update && apt-get install -y --no-install-recommends docker-ce-cli \
     && rm -rf /var/lib/apt/lists/*
 
+# ── gosu (drop privileges with supplementary groups) ─────────
+# s6-setuidgid only sets UID/primary GID. gosu calls initgroups() to load
+# supplementary groups from /etc/group — required for Docker socket access
+# after init-data runs usermod -aG.
+RUN apt-get update && apt-get install -y --no-install-recommends gosu \
+    && rm -rf /var/lib/apt/lists/*
+
 # ── Grackle CLI + agent runtimes ──────────────────────────────
 ARG GRACKLE_VERSION=latest
 COPY docker/server/package.json /opt/grackle/package.json
