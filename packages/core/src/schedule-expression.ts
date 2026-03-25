@@ -59,8 +59,8 @@ export function isIntervalExpression(expr: string): boolean {
 /**
  * Compute the next run time for a schedule expression.
  *
- * For intervals: `max(lastRunAt + interval, now + interval)` — anchored to
- * prevent drift, capped to prevent burst-firing after downtime.
+ * For intervals: if `lastRunAt + interval` is in the future, use that (prevents
+ * drift). Otherwise use `now + interval` (prevents burst-firing after downtime).
  *
  * For cron: next occurrence after now.
  *

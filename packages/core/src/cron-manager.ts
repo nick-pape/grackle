@@ -254,10 +254,4 @@ export class CronManager {
       this.deps.advanceSchedule(schedule.id, now, nextRunAt);
     }
   }
-
-  /** Resolve environment ID via auto-selection. */
-  private resolveEnvironment(): string | undefined {
-    const env = this.deps.findFirstConnectedEnvironment();
-    return env?.id;
-  }
 }
