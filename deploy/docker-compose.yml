@@ -17,6 +17,7 @@ services:
       # ── Docker adapter (DooD) ──────────────────────────────────
       # Uncomment to let Grackle spawn sibling Docker containers for environments.
       # WARNING: Grants root-equivalent access to the host Docker daemon.
+      # Also uncomment the networks section below and the GRACKLE_DOCKER_* env vars.
       # - /var/run/docker.sock:/var/run/docker.sock
 
       # ── Agent credential mounts ────────────────────────────────
@@ -31,16 +32,30 @@ services:
 
       # ── Docker adapter networking ──────────────────────────────
       # Uncomment if you enabled the Docker socket mount above.
+      # Sibling containers join this network so the server can reach them.
       # - GRACKLE_DOCKER_NETWORK=grackle
       # - GRACKLE_DOCKER_HOST=grackle
 
       # ── Knowledge graph ────────────────────────────────────────
       # Neo4j runs inside the container by default. Uncomment to use an external Neo4j:
       # - GRACKLE_NEO4J_URL=bolt://your-neo4j:7687
+      # - GRACKLE_NEO4J_USER=neo4j
       # - GRACKLE_NEO4J_PASSWORD=your-password
+      # - GRACKLE_NEO4J_DATABASE=neo4j
       # To disable the knowledge graph entirely:
       # - GRACKLE_KNOWLEDGE_ENABLED=false
+
+    # ── Docker adapter network ─────────────────────────────────
+    # Uncomment if you enabled the Docker socket mount and GRACKLE_DOCKER_NETWORK above.
+    # networks:
+    #   - grackle
+
     restart: unless-stopped
+
+# Uncomment if using the Docker adapter (DooD):
+# networks:
+#   grackle:
+#     name: grackle
 
 volumes:
   grackle-data:
