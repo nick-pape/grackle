@@ -72,7 +72,8 @@ function applySchema(): void {
       parent_task_id TEXT NOT NULL DEFAULT '',
       depth         INTEGER NOT NULL DEFAULT 0,
       can_decompose INTEGER NOT NULL DEFAULT 0,
-      default_persona_id TEXT NOT NULL DEFAULT ''
+      default_persona_id TEXT NOT NULL DEFAULT '',
+      workpad   TEXT NOT NULL DEFAULT ''
     );
 
     CREATE TABLE IF NOT EXISTS sessions (
@@ -879,6 +880,58 @@ describe("task status broadcast on terminal events", () => {
     const taskUpdatedCalls = (emit as ReturnType<typeof vi.fn>).mock.calls
       .filter((c: unknown[]) => c[0] === "task.updated");
     expect(taskUpdatedCalls.length).toBe(0);
+  });
+
+  it("writes server-enriched workpad on killed session when task has no workpad", async () => {
+    sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
+    taskStore.createTask("task1", "proj1", "Test Task", "desc", [], "test-workspace");
+    taskStore.updateTaskStatus("task1", "working");
+
+    const killedEvent = create(powerline.AgentEventSchema, {
+      sessionId: "sess1",
+      type: "status",
+      timestamp: new Date().toISOString(),
+      content: "killed",
+    });
+
+    await waitForProcessing([killedEvent], {
+      sessionId: "sess1",
+      logPath: "/tmp/log",
+      workspaceId: "proj1",
+      taskId: "task1",
+    });
+
+    const task = taskStore.getTask("task1");
+    expect(task!.workpad).toBeTruthy();
+    const workpad = JSON.parse(task!.workpad);
+    expect(workpad.status).toBe("killed");
+    expect(workpad.summary).toContain("abnormally");
+    expect(workpad.extra.sessionId).toBe("sess1");
+  });
+
+  it("does not overwrite existing workpad on abnormal exit", async () => {
+    sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
+    taskStore.createTask("task1", "proj1", "Test Task", "desc", [], "test-workspace");
+    taskStore.updateTaskStatus("task1", "working");
+    taskStore.setWorkpad("task1", JSON.stringify({ status: "in progress", summary: "Already working" }));
+
+    const failedEvent = create(powerline.AgentEventSchema, {
+      sessionId: "sess1",
+      type: "status",
+      timestamp: new Date().toISOString(),
+      content: "failed",
+    });
+
+    await waitForProcessing([failedEvent], {
+      sessionId: "sess1",
+      logPath: "/tmp/log",
+      workspaceId: "proj1",
+      taskId: "task1",
+    });
+
+    const task = taskStore.getTask("task1");
+    const workpad = JSON.parse(task!.workpad);
+    expect(workpad.summary).toBe("Already working");
   });
 });
 

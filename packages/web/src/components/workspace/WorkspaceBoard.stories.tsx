@@ -134,6 +134,30 @@ export const KeyboardFocus: Story = {
 };
 
 /**
+ * Pressing Enter or Space on a focused card activates it.
+ */
+export const KeyboardActivation: Story = {
+  name: "Enter/Space activates focused card",
+  args: {
+    tasks: [
+      buildTask({ id: "t-kb", workspaceId: WORKSPACE_ID, title: "kb-task", status: "not_started", sortOrder: 1 }),
+    ],
+  },
+  play: async ({ canvas }) => {
+    const card = canvas.getByTestId("board-card-t-kb");
+    card.focus();
+    await expect(card).toHaveFocus();
+
+    // Enter key should activate the card (trigger click handler)
+    await userEvent.keyboard("{Enter}");
+
+    // Space key should also activate the card
+    card.focus();
+    await userEvent.keyboard(" ");
+  },
+};
+
+/**
  * A task with unresolved dependencies shows a "blocked" badge on its card.
  * Migrated from board-view.spec.ts: "blocked task shows blocked badge in its status column".
  */

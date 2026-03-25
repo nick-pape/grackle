@@ -1,0 +1,110 @@
+@use '../../styles/mixins' as *;
+
+// =============================================================================
+// Button — shared component with variant × size matrix
+// =============================================================================
+
+// --- Base -------------------------------------------------------------------
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-xs);
+  white-space: nowrap;
+  cursor: pointer;
+  font-family: var(--font-ui);
+  border-radius: var(--radius-md);
+  transition: background var(--transition-fast),
+              box-shadow var(--transition-fast),
+              transform var(--transition-fast),
+              border-color var(--transition-fast);
+
+  &:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.64;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+}
+
+// --- Sizes ------------------------------------------------------------------
+
+.sm {
+  font-size: var(--font-size-xs);
+  padding: 2px var(--space-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.md {
+  font-size: var(--font-size-sm);
+  padding: var(--space-xs) var(--space-md);
+  font-weight: var(--font-weight-bold);
+}
+
+.lg {
+  font-size: var(--font-size-sm);
+  padding: var(--space-sm) var(--space-lg);
+  font-weight: var(--font-weight-bold);
+}
+
+// --- Variants ---------------------------------------------------------------
+
+.primary {
+  background: var(--accent-green);
+  border: 1px solid var(--accent-green);
+  color: #ffffff;
+  box-shadow: var(--shadow-xs);
+
+  &:hover {
+    box-shadow: var(--shadow-glow-green);
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: translateY(0);
+    box-shadow: none;
+  }
+}
+
+.danger {
+  background: var(--accent-red);
+  border: 1px solid var(--accent-red);
+  color: #ffffff;
+  box-shadow: var(--shadow-xs);
+
+  &:hover {
+    box-shadow: var(--shadow-glow-red);
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: translateY(0);
+    box-shadow: none;
+  }
+}
+
+.outline {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-input);
+  color: var(--accent-green);
+  box-shadow: var(--shadow-xs);
+
+  &:hover {
+    background: var(--bg-overlay);
+  }
+}
+
+.ghost {
+  background: none;
+  border: 1px solid transparent;
+  color: var(--text-secondary);
+
+  &:hover {
+    background: var(--bg-overlay);
+  }
+}

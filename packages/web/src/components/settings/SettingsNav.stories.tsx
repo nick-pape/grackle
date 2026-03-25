@@ -8,12 +8,13 @@ const meta: Meta<typeof SettingsNav> = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** All four tabs are rendered with correct labels. */
+/** All five tabs are rendered with correct labels. */
 export const AllTabsRendered: Story = {
   play: async ({ canvas }) => {
     await expect(canvas.getByRole("tab", { name: /Credentials/ })).toBeInTheDocument();
     await expect(canvas.getByRole("tab", { name: /Personas/ })).toBeInTheDocument();
     await expect(canvas.getByRole("tab", { name: /Appearance/ })).toBeInTheDocument();
+    await expect(canvas.getByRole("tab", { name: /Shortcuts/ })).toBeInTheDocument();
     await expect(canvas.getByRole("tab", { name: /About/ })).toBeInTheDocument();
   },
 };
@@ -50,6 +51,23 @@ export const KeyboardNavigation: Story = {
     await userEvent.keyboard("{End}");
     const aboutTab = canvas.getByRole("tab", { name: /About/ });
     await expect(aboutTab).toHaveFocus();
+  },
+};
+
+/** J/K keys navigate between tabs (vim-style aliases). */
+export const JKNavigation: Story = {
+  play: async ({ canvas }) => {
+    const credentialsTab = canvas.getByRole("tab", { name: /Credentials/ });
+    credentialsTab.focus();
+
+    // J moves down to Personas
+    await userEvent.keyboard("j");
+    const personasTab = canvas.getByRole("tab", { name: /Personas/ });
+    await expect(personasTab).toHaveFocus();
+
+    // K moves back up to Credentials
+    await userEvent.keyboard("k");
+    await expect(credentialsTab).toHaveFocus();
   },
 };
 

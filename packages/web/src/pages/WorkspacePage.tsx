@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type JSX } from "react";
 import { useParams } from "react-router";
 import { useGrackle } from "../context/GrackleContext.js";
+import { useHotkey } from "../hooks/useHotkey.js";
 import { DagView } from "../components/dag/DagView.js";
 import { WorkspaceBoard } from "../components/workspace/WorkspaceBoard.js";
 import { Breadcrumbs, ConfirmDialog } from "../components/display/index.js";
@@ -42,6 +43,19 @@ const MAX_NAME_LENGTH: number = 100;
 
 type WorkspaceTab = "tasks" | "board" | "graph";
 
+/** Returns a safe external repository URL, or undefined when invalid. */
+function toSafeRepositoryUrl(value: string): string | undefined {
+  try {
+    const parsedUrl = new URL(value);
+    if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
+      return undefined;
+    }
+    return parsedUrl.toString();
+  } catch {
+    return undefined;
+  }
+}
+
 /** Workspace overview page with inline editing, progress bar, and DAG/task views. */
 export function WorkspacePage(): JSX.Element {
   const { workspaceId, environmentId: routeEnvironmentId } = useParams<{ workspaceId: string; environmentId: string }>();
@@ -60,6 +74,11 @@ export function WorkspacePage(): JSX.Element {
   const workspace = workspaces.find((p) => p.id === workspaceId);
   const environmentId = routeEnvironmentId ?? workspace?.environmentId ?? "";
   const breadcrumbs = buildWorkspaceBreadcrumbs(workspaceId!, environmentId, workspaces, environments);
+
+  // Keyboard shortcuts: 1/2/3 to switch views
+  useHotkey({ key: "1" }, () => setWorkspaceTab("graph"));
+  useHotkey({ key: "2" }, () => setWorkspaceTab("board"));
+  useHotkey({ key: "3" }, () => setWorkspaceTab("tasks"));
 
   // Reset edit state when workspaceId changes
   useEffect(() => {
@@ -176,11 +195,12 @@ export function WorkspacePage(): JSX.Element {
                 activeFieldId={activeFieldId}
                 onActivate={setActiveFieldId}
                 renderDisplay={(v) => {
-                  if (v && /^https?:\/\//i.test(v)) {
+                  const safeRepositoryUrl = toSafeRepositoryUrl(v);
+                  if (safeRepositoryUrl) {
                     return (
                       <a
                         className={styles.repoLink}
-                        href={v}
+                        href={safeRepositoryUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={(e) => e.stopPropagation()}

@@ -80,6 +80,7 @@ export interface SystemPromptOptions {
     taskId?: string;
     taskTree?: TaskTreeNode[];
     triggerMode?: "fresh" | "resume";
+    workpad?: string;
     workspace?: {
         name: string;
         description: string;

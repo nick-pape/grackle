@@ -354,4 +354,43 @@ describe("SystemPromptBuilder (orchestrator)", () => {
     expect(result).toContain("### Notes");
     expect(result).toContain("Retry after auth fix");
   });
+
+  it("includes workpad section when workpad is non-empty (leaf)", () => {
+    const workpad = JSON.stringify({ status: "in progress", summary: "Opened PR #42" });
+    const result = new SystemPromptBuilder({
+      task: { title: "Task", description: "desc", notes: "" },
+      workpad,
+    }).build();
+
+    expect(result).toContain("## Previous Session Workpad");
+    expect(result).toContain("Opened PR #42");
+  });
+
+  it("omits workpad section when workpad is empty", () => {
+    const result = new SystemPromptBuilder({
+      task: { title: "Task", description: "desc", notes: "" },
+      workpad: "",
+    }).build();
+
+    expect(result).not.toContain("## Previous Session Workpad");
+  });
+
+  it("includes workpad section in orchestrator prompt when non-empty", () => {
+    const workpad = JSON.stringify({ status: "blocked", summary: "Waiting on auth" });
+    const result = new SystemPromptBuilder(
+      orchestratorOptions({ workpad }),
+    ).build();
+
+    expect(result).toContain("## Previous Session Workpad");
+    expect(result).toContain("Waiting on auth");
+  });
+
+  it("includes workpad write instructions for leaf tasks", () => {
+    const result = new SystemPromptBuilder({
+      task: { title: "Task", description: "desc", notes: "" },
+    }).build();
+
+    expect(result).toContain("## Workpad");
+    expect(result).toContain("workpad_write");
+  });
 });

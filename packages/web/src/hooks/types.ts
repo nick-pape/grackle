@@ -94,6 +94,7 @@ export interface TaskData {
   childTaskIds: string[];
   canDecompose: boolean;
   defaultPersonaId: string;
+  workpad: string;
 }
 
 /** A finding posted by an agent or user. */

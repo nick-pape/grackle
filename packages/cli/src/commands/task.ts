@@ -122,6 +122,23 @@ export function registerTaskCommands(program: Command): void {
           }
         }
       }
+      if (t.workpad) {
+        try {
+          const workpad = JSON.parse(t.workpad) as Record<string, unknown>;
+          console.log(chalk.bold(`\nWorkpad:`));
+          if (workpad.status) {
+            console.log(`  Status:  ${String(workpad.status)}`);
+          }
+          if (workpad.summary) {
+            console.log(`  Summary: ${String(workpad.summary)}`);
+          }
+          if (workpad.extra) {
+            console.log(`  Extra:   ${JSON.stringify(workpad.extra)}`);
+          }
+        } catch {
+          console.log(`Workpad:     ${t.workpad}`);
+        }
+      }
     });
 
   task

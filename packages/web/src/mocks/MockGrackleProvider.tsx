@@ -423,6 +423,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
           childTaskIds: [],
           canDecompose: canDecompose ?? !parentTaskId,
           defaultPersonaId: defaultPersonaId || "",
+          workpad: "",
         };
 
         return [...prev, newTask];
@@ -899,7 +900,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       deleteToken: mockDeleteToken,
       updateCredentialProviders: mockUpdateCredentialProviders,
       provisionStatus: {},
-      provisionEnvironment: () => { },
+      provisionEnvironment: (_environmentId: string, _force?: boolean) => { },
       stopEnvironment: () => { },
       removeEnvironment: () => { },
       codespaces: [],
@@ -911,7 +912,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       workspaceCreating: false,
       taskStartingId: undefined,
       personas,
-      createPersona: (name: string, description: string, systemPrompt: string, runtime?: string, model?: string, maxTurns?: number, type?: string, script?: string) => {
+      createPersona: async (name: string, description: string, systemPrompt: string, runtime?: string, model?: string, maxTurns?: number, type?: string, script?: string) => {
         console.log("[MockGrackle] createPersona", { name });
         const newPersona: PersonaData = {
           id: `mock-persona-${Date.now()}`,
@@ -929,30 +930,35 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
           script: script || "",
         };
         setPersonas((prev) => [...prev, newPersona]);
+        return newPersona;
       },
-      updatePersona: (personaId: string, name?: string, description?: string, systemPrompt?: string, runtime?: string, model?: string, maxTurns?: number, type?: string, script?: string) => {
+      updatePersona: async (personaId: string, name?: string, description?: string, systemPrompt?: string, runtime?: string, model?: string, maxTurns?: number, type?: string, script?: string) => {
         console.log("[MockGrackle] updatePersona", { personaId, name });
+        const existingPersona = personas.find((persona) => persona.id === personaId);
+        if (!existingPersona) {
+          throw new Error(`Persona not found: ${personaId}`);
+        }
+
+        const updatedAt = new Date().toISOString();
+        const updatedPersona: PersonaData = {
+          ...existingPersona,
+          ...(name !== undefined ? { name } : {}),
+          ...(description !== undefined ? { description } : {}),
+          ...(systemPrompt !== undefined ? { systemPrompt } : {}),
+          ...(runtime !== undefined ? { runtime } : {}),
+          ...(model !== undefined ? { model } : {}),
+          ...(maxTurns !== undefined ? { maxTurns } : {}),
+          ...(type !== undefined ? { type } : {}),
+          ...(script !== undefined ? { script } : {}),
+          updatedAt,
+        };
+
         setPersonas((prev) =>
-          prev.map((p) => {
-            if (p.id !== personaId) {
-              return p;
-            }
-            return {
-              ...p,
-              ...(name !== undefined ? { name } : {}),
-              ...(description !== undefined ? { description } : {}),
-              ...(systemPrompt !== undefined ? { systemPrompt } : {}),
-              ...(runtime !== undefined ? { runtime } : {}),
-              ...(model !== undefined ? { model } : {}),
-              ...(maxTurns !== undefined ? { maxTurns } : {}),
-              ...(type !== undefined ? { type } : {}),
-              ...(script !== undefined ? { script } : {}),
-              updatedAt: new Date().toISOString(),
-            };
-          }),
+          prev.map((persona) => (persona.id === personaId ? updatedPersona : persona)),
         );
+        return updatedPersona;
       },
-      deletePersona: (personaId: string) => {
+      deletePersona: async (personaId: string) => {
         console.log("[MockGrackle] deletePersona", personaId);
         setPersonas((prev) => prev.filter((p) => p.id !== personaId));
       },
@@ -961,7 +967,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
         console.log("[MockGrackle] loadTaskSessions", taskId);
       },
       appDefaultPersonaId,
-      setAppDefaultPersonaId: (personaId: string) => {
+      setAppDefaultPersonaId: async (personaId: string) => {
         console.log("[MockGrackle] setAppDefaultPersonaId", personaId);
         setAppDefaultPersonaIdState(personaId);
       },
@@ -992,7 +998,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
         clearSelection: () => {},
         expandNode: () => {},
         loadRecent: () => {},
-        handleMessage: () => false,
+        handleEvent: () => false,
       },
     }),
     [

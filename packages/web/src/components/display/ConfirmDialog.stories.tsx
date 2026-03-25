@@ -54,6 +54,19 @@ export const ConfirmAction: Story = {
   },
 };
 
+/** Pressing Escape calls onCancel to dismiss the dialog. */
+export const EscapeKeyCloses: Story = {
+  play: async ({ canvas, args }) => {
+    await expect(canvas.getByText("Delete Task?")).toBeInTheDocument();
+
+    // Press Escape to dismiss
+    await userEvent.keyboard("{Escape}");
+
+    await expect(args.onCancel).toHaveBeenCalled();
+    await expect(args.onConfirm).not.toHaveBeenCalled();
+  },
+};
+
 /** When isOpen is false the dialog renders nothing visible. */
 export const ClosedDialog: Story = {
   args: {

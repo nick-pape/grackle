@@ -100,6 +100,7 @@ export function makeTask(overrides: Partial<TaskData> = {}): TaskData {
     childTaskIds: [],
     canDecompose: false,
     defaultPersonaId: "",
+    workpad: "",
     ...overrides,
   };
 }

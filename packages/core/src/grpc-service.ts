@@ -190,6 +190,7 @@ function taskRowToProto(
     childTaskIds: childIds ?? taskStore.getChildren(row.id).map((c) => c.id),
     canDecompose: row.canDecompose,
     defaultPersonaId: row.defaultPersonaId,
+    workpad: row.workpad,
   });
 }
 
@@ -331,6 +332,39 @@ export function resolveAncestorEnvironmentId(parentTaskId: string): string {
   return "";
 }
 
+/**
+ * Terminate a session and clean up all associated streams and subscriptions.
+ *
+ * If the session is already in a terminal state the status update is skipped,
+ * but lifecycle and subscription streams are always removed so stale handles
+ * do not accumulate.
+ */
+function killSessionAndCleanup(session: SessionRow): void {
+  if (!TERMINAL_SESSION_STATUSES.has(session.status as SessionStatus)) {
+    sessionStore.updateSession(session.id, SESSION_STATUS.STOPPED, undefined, undefined, END_REASON.KILLED);
+    streamHub.publish(
+      create(grackle.SessionEventSchema, {
+        sessionId: session.id,
+        type: grackle.EventType.STATUS,
+        timestamp: new Date().toISOString(),
+        content: END_REASON.KILLED,
+        raw: "",
+      }),
+    );
+    if (session.taskId) {
+      const task = taskStore.getTask(session.taskId);
+      if (task) {
+        emit("task.updated", { taskId: task.id, workspaceId: task.workspaceId || "" });
+      }
+    }
+  }
+  cleanupLifecycleStream(session.id);
+  const subs = streamRegistry.getSubscriptionsForSession(session.id);
+  for (const sub of subs) {
+    streamRegistry.unsubscribe(sub.id);
+  }
+}
+
 /** Register all Grackle gRPC service handlers on the given ConnectRPC router. */
 export function registerGrackleRoutes(router: ConnectRouter): void {
   router.service(grackle.Grackle, {
@@ -429,7 +463,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       return create(grackle.EmptySchema, {});
     },
 
-    async *provisionEnvironment(req: grackle.EnvironmentId) {
+    async *provisionEnvironment(req: grackle.ProvisionEnvironmentRequest) {
       // Manual provision overrides auto-reconnect
       clearReconnectState(req.id);
       const env = envRegistry.getEnvironment(req.id);
@@ -452,6 +486,20 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         return;
       }
 
+      // Force teardown: kill active session, disconnect adapter, clear connection
+      if (req.force) {
+        const activeSession = sessionStore.getActiveForEnv(req.id);
+        if (activeSession) {
+          killSessionAndCleanup(activeSession);
+        }
+        try {
+          await adapter.disconnect(req.id);
+        } catch {
+          // best-effort teardown
+        }
+        adapterManager.removeConnection(req.id);
+      }
+
       envRegistry.updateEnvironmentStatus(req.id, "connecting");
       emit("environment.changed", {});
 
@@ -466,6 +514,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
           config,
           powerlineToken,
           !!env.bootstrapped,
+          req.force,
         )) {
           yield create(grackle.ProvisionEventSchema, {
             stage: event.stage,
@@ -1002,34 +1051,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       // callback sees the session is already terminal and skips. Without this,
       // the orphan callback would see IDLE → reason="completed", which is wrong
       // for an explicit kill.
-      if (!TERMINAL_SESSION_STATUSES.has(session.status as SessionStatus)) {
-        sessionStore.updateSession(req.id, SESSION_STATUS.STOPPED, undefined, undefined, END_REASON.KILLED);
-        streamHub.publish(
-          create(grackle.SessionEventSchema, {
-            sessionId: req.id,
-            type: grackle.EventType.STATUS,
-            timestamp: new Date().toISOString(),
-            content: END_REASON.KILLED,
-            raw: "",
-          }),
-        );
-        if (session.taskId) {
-          const task = taskStore.getTask(session.taskId);
-          if (task) {
-            emit("task.updated", { taskId: task.id, workspaceId: task.workspaceId || "" });
-          }
-        }
-      }
-
-      // Delete the lifecycle stream — orphan callback sees session is already
-      // STOPPED and skips status change, but still kills the PowerLine process.
-      cleanupLifecycleStream(req.id);
-
-      // Also close any other subscriptions (pipe streams etc.)
-      const subs = streamRegistry.getSubscriptionsForSession(req.id);
-      for (const sub of subs) {
-        streamRegistry.unsubscribe(sub.id);
-      }
+      killSessionAndCleanup(session);
 
       return create(grackle.EmptySchema, {});
     },
@@ -1503,6 +1525,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         canDecompose: task.canDecompose,
         personaPrompt: systemPrompt,
         taskDepth: task.depth,
+        workpad: task.workpad || undefined,
         ...orchestratorCtx,
         ...(orchestratorCtx && { triggerMode: "fresh" as const }),
       }).build();
@@ -1651,6 +1674,35 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       const taskSessions = sessionStore.listSessionsForTask(task.id);
       const { status, latestSessionId } = computeTaskStatus(row!.status, taskSessions);
       return taskRowToProto(row!, undefined, status, latestSessionId);
+    },
+
+    async setWorkpad(req: grackle.SetWorkpadRequest) {
+      const task = taskStore.getTask(req.taskId);
+      if (!task) {
+        throw new ConnectError(`Task not found: ${req.taskId}`, Code.NotFound);
+      }
+      // Validate workpad is a valid JSON object
+      try {
+        const parsed: unknown = JSON.parse(req.workpad);
+        if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+          throw new ConnectError("Workpad must be a JSON object", Code.InvalidArgument);
+        }
+      } catch (err) {
+        if (err instanceof ConnectError) {
+          throw err;
+        }
+        throw new ConnectError("Workpad must be valid JSON", Code.InvalidArgument);
+      }
+      const MAX_WORKPAD_BYTES = 64 * 1024; // 64 KB
+      const workpadBytes = Buffer.byteLength(req.workpad, "utf8");
+      if (workpadBytes > MAX_WORKPAD_BYTES) {
+        throw new ConnectError(`Workpad exceeds maximum size of ${MAX_WORKPAD_BYTES} bytes`, Code.InvalidArgument);
+      }
+      taskStore.setWorkpad(req.taskId, req.workpad);
+      const row = taskStore.getTask(req.taskId)!;
+      const taskSessions = sessionStore.listSessionsForTask(req.taskId);
+      const { status, latestSessionId } = computeTaskStatus(row.status, taskSessions);
+      return taskRowToProto(row, undefined, status, latestSessionId);
     },
 
     async resumeTask(req: grackle.TaskId) {

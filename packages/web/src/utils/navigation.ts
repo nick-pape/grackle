@@ -125,11 +125,22 @@ export const SETTINGS_CREDENTIALS_URL: string = "/settings/credentials";
 /** URL for the persona management tab. */
 export const PERSONAS_URL: string = "/settings/personas";
 
+/** URL for the new persona form. */
+export const NEW_PERSONA_URL: string = "/settings/personas/new";
+
+/** Build URL for a persona detail page. */
+export function personaUrl(personaId: string): string {
+  return `/settings/personas/${encodeURIComponent(personaId)}`;
+}
+
 /** URL for the settings appearance tab. */
 export const SETTINGS_APPEARANCE_URL: string = "/settings/appearance";
 
 /** URL for the settings about tab. */
 export const SETTINGS_ABOUT_URL: string = "/settings/about";
+
+/** URL for the keyboard shortcuts reference tab. */
+export const SETTINGS_SHORTCUTS_URL: string = "/settings/shortcuts";
 
 /** URL for the device pairing page. */
 export const PAIR_PATH: string = "/pair";

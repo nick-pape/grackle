@@ -131,6 +131,7 @@ export const tasks = sqliteTable("tasks", {
     .notNull()
     .default(false),
   defaultPersonaId: text("default_persona_id").notNull().default(""),
+  workpad: text("workpad").notNull().default(""),
 });
 
 /** Row shape returned by a SELECT on the tasks table. */

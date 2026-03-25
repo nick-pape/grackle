@@ -1,5 +1,6 @@
 # Production Grackle server image.
 # Installs from npm, not from source.
+# Bundles Neo4j Community (via s6-overlay) for the knowledge graph subsystem.
 # Includes Docker CLI (for Docker adapter) and GitHub CLI (for Codespace adapter).
 FROM node:22-bookworm-slim
 
@@ -8,7 +9,50 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 make g++ git curl ca-certificates gnupg openssh-client \
     && rm -rf /var/lib/apt/lists/*
 
-# ── GitHub CLI ────────────────────────────────────────────────────
+# ── s6-overlay (PID 1 + service supervision) ────────────────
+ARG S6_OVERLAY_VERSION=3.2.0.2
+ADD https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-noarch.tar.xz /tmp
+ADD https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-x86_64.tar.xz /tmp
+RUN apt-get update && apt-get install -y --no-install-recommends xz-utils \
+    && tar -C / -Jxpf /tmp/s6-overlay-noarch.tar.xz \
+    && tar -C / -Jxpf /tmp/s6-overlay-x86_64.tar.xz \
+    && rm /tmp/s6-overlay-*.tar.xz \
+    && apt-get purge -y --auto-remove xz-utils \
+    && rm -rf /var/lib/apt/lists/*
+
+# ── Eclipse Temurin 21 JRE (required by Neo4j 5.x) ─────────
+RUN apt-get update && apt-get install -y --no-install-recommends wget \
+    && install -m 0755 -d /etc/apt/keyrings \
+    && wget -qO - https://packages.adoptium.net/artifactory/api/gpg/key/public \
+       | gpg --dearmor -o /etc/apt/keyrings/adoptium.gpg \
+    && echo "deb [signed-by=/etc/apt/keyrings/adoptium.gpg] https://packages.adoptium.net/artifactory/deb bookworm main" \
+       > /etc/apt/sources.list.d/adoptium.list \
+    && apt-get update && apt-get install -y --no-install-recommends temurin-21-jre \
+    && apt-get purge -y --auto-remove wget \
+    && rm -rf /var/lib/apt/lists/*
+
+# ── Neo4j Community ─────────────────────────────────────────
+ARG NEO4J_VERSION=5.25.1
+RUN curl -fsSL "https://dist.neo4j.org/neo4j-community-${NEO4J_VERSION}-unix.tar.gz" \
+      | tar -xz -C /opt \
+    && mv "/opt/neo4j-community-${NEO4J_VERSION}" /opt/neo4j \
+    && chown -R node:node /opt/neo4j
+ENV NEO4J_HOME=/opt/neo4j
+ENV PATH="${NEO4J_HOME}/bin:${PATH}"
+
+# ── Neo4j configuration for embedded use ────────────────────
+RUN { \
+      echo 'server.default_listen_address=127.0.0.1'; \
+      echo 'server.directories.data=/data/neo4j/data'; \
+      echo 'server.directories.logs=/data/neo4j/logs'; \
+      echo 'server.directories.run=/data/neo4j/run'; \
+      echo 'server.memory.heap.initial_size=256m'; \
+      echo 'server.memory.heap.max_size=512m'; \
+      echo 'server.memory.pagecache.size=128m'; \
+      echo 'dbms.security.auth_enabled=false'; \
+    } >> /opt/neo4j/conf/neo4j.conf
+
+# ── GitHub CLI ────────────────────────────────────────────────
 RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
       | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg \
     && chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg \
@@ -27,11 +71,7 @@ RUN install -m 0755 -d /etc/apt/keyrings \
     && apt-get update && apt-get install -y --no-install-recommends docker-ce-cli \
     && rm -rf /var/lib/apt/lists/*
 
-# ── gosu (drop privileges in entrypoint) ─────────────────────────
-RUN apt-get update && apt-get install -y --no-install-recommends gosu \
-    && rm -rf /var/lib/apt/lists/*
-
-# ── Grackle CLI + agent runtimes ──────────────────────────────────
+# ── Grackle CLI + agent runtimes ──────────────────────────────
 ARG GRACKLE_VERSION=latest
 COPY docker/server/package.json /opt/grackle/package.json
 RUN cd /opt/grackle \
@@ -43,18 +83,32 @@ ENV PATH="/opt/grackle/node_modules/.bin:$PATH"
 RUN apt-get purge -y --auto-remove python3 make g++ \
     && rm -rf /var/lib/apt/lists/*
 
-# ── Run as node user with correct HOME ───────────────────────────
+# ── Fix HuggingFace transformers cache permissions ──────────
+# The @huggingface/transformers library caches ONNX models relative to its
+# own __dirname (node_modules/@huggingface/transformers/.cache/). The npm
+# install runs as root, so the node user can't write there at runtime.
+RUN mkdir -p /opt/grackle/node_modules/@huggingface/transformers/.cache \
+    && chown -R node:node /opt/grackle/node_modules/@huggingface/transformers/.cache
+
+# ── Run as node user with correct HOME ───────────────────────
 ENV HOME=/home/node
-ENV GRACKLE_HOME=/grackle-home
 
-# ── Data directory (non-default to avoid collision with ~/.grackle) ──
-RUN mkdir -p /grackle-home/.grackle && chown -R node:node /grackle-home
-VOLUME /grackle-home/.grackle
+# ── Data directory (single volume for all persistent state) ──
+ENV GRACKLE_HOME=/data
+RUN mkdir -p /data && chown node:node /data
+VOLUME /data
 
-# ── Entrypoint ────────────────────────────────────────────────────
-COPY docker/server-entrypoint.sh /usr/local/bin/server-entrypoint.sh
-RUN chmod +x /usr/local/bin/server-entrypoint.sh
+# ── Default environment ─────────────────────────────────────
+# Enable knowledge graph by default (Neo4j runs inside the container).
+# Set GRACKLE_NEO4J_URL to use an external Neo4j and skip the embedded one.
+# Set GRACKLE_KNOWLEDGE_ENABLED=false to disable knowledge entirely.
+ENV GRACKLE_KNOWLEDGE_ENABLED=true
+# HuggingFace model cache — writable by node user, persists across restarts.
+ENV HF_HOME=/data/.hf-cache
+
+# ── s6-overlay service definitions ──────────────────────────
+COPY docker/s6-overlay/ /etc/s6-overlay/
+RUN chmod +x /etc/s6-overlay/scripts/*
 
 EXPOSE 7434 3000 7435 7433
-ENTRYPOINT ["/usr/local/bin/server-entrypoint.sh"]
-CMD ["grackle", "serve", "--allow-network"]
+ENTRYPOINT ["/init"]

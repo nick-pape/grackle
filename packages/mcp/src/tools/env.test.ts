@@ -193,6 +193,43 @@ describe("env_provision", () => {
     expect(parsed.events).toHaveLength(1);
     expect(parsed.events[0].stage).toBe("init");
   });
+  /** Should pass force flag through to provisionEnvironment. */
+  test("force flag is passed through to gRPC call", async () => {
+    const mockClient = createMockClient();
+    const mockStream = (async function* () {
+      yield { stage: "done", message: "Complete", progress: 100 };
+    })();
+    (mockClient.provisionEnvironment as ReturnType<typeof vi.fn>).mockReturnValue(mockStream);
+
+    await getTool("env_provision").handler(
+      { environmentId: "env-1", force: true },
+      mockClient,
+    );
+
+    expect(mockClient.provisionEnvironment).toHaveBeenCalledWith({
+      id: "env-1",
+      force: true,
+    });
+  });
+
+  /** Should default force to false when omitted. */
+  test("force defaults to false when omitted", async () => {
+    const mockClient = createMockClient();
+    const mockStream = (async function* () {
+      yield { stage: "done", message: "Complete", progress: 100 };
+    })();
+    (mockClient.provisionEnvironment as ReturnType<typeof vi.fn>).mockReturnValue(mockStream);
+
+    await getTool("env_provision").handler(
+      { environmentId: "env-1" },
+      mockClient,
+    );
+
+    expect(mockClient.provisionEnvironment).toHaveBeenCalledWith({
+      id: "env-1",
+      force: false,
+    });
+  });
 });
 
 describe("env_stop", () => {

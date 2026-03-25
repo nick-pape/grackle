@@ -332,7 +332,7 @@ export interface ProvisionEvent {
 }
 
 // @public
-export function reconnectOrProvision(environmentId: string, adapter: EnvironmentAdapter, config: Record<string, unknown>, powerlineToken: string, bootstrapped: boolean, logger?: AdapterLogger): AsyncGenerator<ProvisionEvent>;
+export function reconnectOrProvision(environmentId: string, adapter: EnvironmentAdapter, config: Record<string, unknown>, powerlineToken: string, bootstrapped: boolean, force?: boolean, logger?: AdapterLogger): AsyncGenerator<ProvisionEvent>;
 
 // @public
 export function registerTunnel(environmentId: string, state: TunnelState, logger?: AdapterLogger): void;
