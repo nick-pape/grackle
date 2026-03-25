@@ -198,6 +198,8 @@ docker run -d --name grackle -p 3000:3000 \
   ghcr.io/nick-pape/grackle:latest
 ```
 
+> If `~/.claude` doesn't exist yet, run `claude` once on the host to create it, or use `-e ANTHROPIC_API_KEY=sk-...` instead of the volume mount.
+
 Open **http://localhost:3000**, pair with the code from `docker logs grackle`, and start working.
 
 <details>
@@ -222,7 +224,7 @@ docker run -d --name grackle \
 <details>
 <summary>Docker Compose</summary>
 
-For a more complete setup with Docker-in-Docker, credential mounts, and networking:
+For a more complete setup with host Docker integration (via `/var/run/docker.sock`), credential mounts, and networking:
 
 ```bash
 cd docker && docker compose up -d
@@ -272,8 +274,10 @@ node packages/cli/dist/index.js serve
 
 ## 📋 Requirements
 
-- Docker (recommended — everything is bundled in the image)
+- Docker (recommended — the Grackle app and its dependencies are bundled in the image)
 - Node.js >= 22 (for npm install)
+
+> You still need to provide your own model credentials (via environment variables or mounted config files). Some features like the Docker adapter require access to the host Docker socket.
 
 ## 📄 License
 
