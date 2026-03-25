@@ -6,7 +6,7 @@
  * - **Cron expressions**: Standard 5-field cron syntax via `cron-parser`
  */
 
-import { parseExpression } from "cron-parser";
+import cronParser from "cron-parser";
 
 const INTERVAL_RE: RegExp = /^(\d+)([smhd])$/;
 const MINIMUM_INTERVAL_MS: number = 10_000; // 10 seconds
@@ -90,7 +90,7 @@ export function computeNextRunAt(expr: string, lastRunAt?: string): string {
   }
 
   // Cron expression: compute next occurrence after now
-  const interval = parseExpression(expr, { utc: true });
+  const interval = cronParser.parseExpression(expr, { utc: true });
   return interval.next().toISOString();
 }
 
@@ -113,7 +113,7 @@ export function validateExpression(expr: string): void {
 
   // Try to parse as cron
   try {
-    parseExpression(expr, { utc: true });
+    cronParser.parseExpression(expr, { utc: true });
   } catch {
     throw new Error(
       `Invalid schedule expression: "${expr}". Must be interval shorthand (e.g. "30s", "5m") or 5-field cron (e.g. "0 9 * * MON")`,
