@@ -45,7 +45,7 @@ export interface OnInputMatchStep {
   on_input_match: Record<string, InputAction>;
 }
 
-/** A step that makes a real MCP tool call via the broker. Requires mcpBroker in SpawnOptions. */
+/** A step that makes a real MCP tool call via the broker. Requires mcpBroker and workspaceId in SpawnOptions. */
 export interface McpCallStep {
   mcp_call: string;
   args?: Record<string, unknown>;

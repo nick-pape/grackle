@@ -200,7 +200,24 @@ export class StubSession implements AgentSession {
       } else if (isOnInputMatchStep(step)) {
         this.inputMatchRules = step.on_input_match;
       } else if (isMcpCallStep(step)) {
-        yield* this.performMcpToolCall(ts, step.mcp_call, step.args ?? {});
+        if (!this.mcpBroker || !this.workspaceId) {
+          const toolUseId = `toolu_stub_mcp_${++mcpToolUseCounter}`;
+          logger.warn(`${this.runtimeName}: mcp_call step "${step.mcp_call}" but no MCP broker/workspace configured`);
+          yield {
+            type: "tool_use",
+            timestamp: ts(),
+            content: JSON.stringify({ tool: step.mcp_call, args: step.args ?? {} }),
+            raw: { type: "tool_use", id: toolUseId, name: step.mcp_call, input: step.args ?? {} },
+          };
+          yield {
+            type: "tool_result",
+            timestamp: ts(),
+            content: JSON.stringify({ error: `Cannot execute MCP tool "${step.mcp_call}": session not spawned with MCP broker/workspace` }),
+            raw: { type: "tool_result", tool_use_id: toolUseId, is_error: true },
+          };
+        } else {
+          yield* this.performMcpToolCall(ts, step.mcp_call, step.args ?? {});
+        }
       }
     }
 
@@ -266,7 +283,7 @@ export class StubSession implements AgentSession {
         raw: { type: "tool_result", tool_use_id: toolUseId, is_error: false },
       };
     } catch (err) {
-      logger.warn({ err }, "stub: MCP tool call failed");
+      logger.warn({ err, runtimeName: this.runtimeName }, `${this.runtimeName}: MCP tool call failed`);
 
       // Yield tool_use if we haven't already (error during connect)
       if (!yieldedToolUse) {

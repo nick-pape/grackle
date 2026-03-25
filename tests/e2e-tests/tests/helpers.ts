@@ -514,7 +514,7 @@ export function onInputMatch(rules: Record<string, "echo" | "fail" | "ignore" | 
   return { on_input_match: rules };
 }
 
-/** Make a real MCP tool call via the broker. Requires stub-mcp persona with mcpBroker. */
+/** Make a real MCP tool call via the broker. Requires a broker-enabled stub session (spawned with mcpBroker/workspaceId). */
 export function emitMcpCall(tool: string, args?: Record<string, unknown>): ScenarioStep {
   const step: ScenarioStep = { mcp_call: tool };
   if (args) {
