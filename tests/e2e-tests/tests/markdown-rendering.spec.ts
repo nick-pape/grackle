@@ -74,7 +74,8 @@ test.describe("Markdown Rendering in EventRenderer", { tag: ["@webui"] }, () => 
     await expect(textEvents.first()).toBeVisible({ timeout: 5_000 });
 
     // Fenced code blocks should render as <pre><code>
-    const codeBlock = textEvents.first().locator("pre code");
+    // Search all textEvent divs (first one is "Stub runtime initialized")
+    const codeBlock = textEvents.locator("pre code");
     await expect(codeBlock.first()).toBeVisible();
     await expect(codeBlock.first()).toContainText("const x = 42");
   });
@@ -95,17 +96,18 @@ test.describe("Markdown Rendering in EventRenderer", { tag: ["@webui"] }, () => 
 
     await page.locator("button", { hasText: "Stream" }).click();
 
-    // All three consecutive text events should be grouped into a single textEvent div.
-    // Scope locators to textEvent divs to avoid matching the scenario JSON in the prompt.
+    // The 3 scenario text events should be grouped into a single textEvent div.
+    // (The "Stub runtime initialized" event forms a separate div since a non-text
+    // event separates it from the scenario events.)
     const textEventDivs = page.locator('div[class*="textEvent"]');
     await expect(textEventDivs.first()).toBeVisible({ timeout: 5_000 });
-    await expect(textEventDivs).toContainText(["Line one of grouped text"]);
-    await expect(textEventDivs).toContainText(["Line two of grouped text"]);
-    await expect(textEventDivs).toContainText(["Line three of grouped text"]);
 
-    // Grouped consecutive text events produce fewer divs than individual events
-    const count = await textEventDivs.count();
-    expect(count).toBe(1);
+    // Find the div that contains our grouped scenario text
+    const groupedDiv = textEventDivs.filter({ hasText: "Line one of grouped text" });
+    await expect(groupedDiv).toHaveCount(1);
+    await expect(groupedDiv).toContainText("Line one of grouped text");
+    await expect(groupedDiv).toContainText("Line two of grouped text");
+    await expect(groupedDiv).toContainText("Line three of grouped text");
   });
 
   test("prism theme CSS is loaded for syntax highlighting", async ({ page }) => {
