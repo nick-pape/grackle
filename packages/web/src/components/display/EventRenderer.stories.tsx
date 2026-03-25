@@ -161,10 +161,10 @@ export const MarkdownCodeBlock: Story = {
       content: "```js\nconst x = 42;\nconsole.log(x);\n```",
     }),
   },
-  play: async ({ canvas }) => {
+  play: async ({ canvasElement }) => {
     // rehype-prism-plus splits code into <span> tokens for highlighting,
-    // so getByText can't find the full string. Query the <pre> directly.
-    const pre = canvas.canvasElement.querySelector("pre.language-js");
+    // so getByText can't find the full string. Query the DOM directly.
+    const pre = canvasElement.querySelector("pre");
     await expect(pre).toBeTruthy();
     await expect(pre!.textContent).toContain("const x = 42");
   },
