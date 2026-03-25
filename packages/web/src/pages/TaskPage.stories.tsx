@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect } from "@storybook/test";
+import { expect, userEvent } from "@storybook/test";
 import { withMockGrackleRoute } from "../test-utils/storybook-helpers.js";
 import { TaskPage } from "./TaskPage.js";
 
@@ -44,6 +44,30 @@ export const NotStartedTask: Story = {
     await expect(canvas.getByTestId("task-title")).toBeInTheDocument();
     // Overview tab should be selected by default for not_started tasks
     const overviewTab = canvas.getByRole("tab", { name: "Overview" });
+    await expect(overviewTab).toHaveAttribute("aria-selected", "true");
+  },
+};
+
+/** Pressing 1/2/3 switches between tabs via keyboard shortcuts. */
+export const KeyboardTabSwitching: Story = {
+  decorators: [withMockGrackleRoute(["/tasks/task-001"], "/tasks/:taskId")],
+  play: async ({ canvas }) => {
+    // Overview tab should be selected initially
+    const overviewTab = canvas.getByRole("tab", { name: "Overview" });
+    await expect(overviewTab).toHaveAttribute("aria-selected", "true");
+
+    // Press 2 to switch to Stream tab
+    await userEvent.keyboard("2");
+    const streamTab = canvas.getByRole("tab", { name: "Stream" });
+    await expect(streamTab).toHaveAttribute("aria-selected", "true");
+
+    // Press 3 to switch to Findings tab
+    await userEvent.keyboard("3");
+    const findingsTab = canvas.getByRole("tab", { name: "Findings" });
+    await expect(findingsTab).toHaveAttribute("aria-selected", "true");
+
+    // Press 1 to switch back to Overview
+    await userEvent.keyboard("1");
     await expect(overviewTab).toHaveAttribute("aria-selected", "true");
   },
 };

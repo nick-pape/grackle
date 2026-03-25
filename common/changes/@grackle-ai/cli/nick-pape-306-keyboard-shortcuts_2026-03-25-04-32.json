@@ -2,7 +2,7 @@
   "changes": [
     {
       "comment": "Add keyboard shortcuts to the web UI with a new Settings > Shortcuts reference tab",
-      "type": "patch",
+      "type": "minor",
       "packageName": "@grackle-ai/cli"
     }
   ],

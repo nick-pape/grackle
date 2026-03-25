@@ -1,12 +1,10 @@
 import type { JSX } from "react";
 import { useHotkey } from "../../hooks/useHotkey.js";
-import { useAppNavigate } from "../../utils/navigation.js";
+import { SETTINGS_SHORTCUTS_URL, useAppNavigate } from "../../utils/navigation.js";
+import { TASKS_URL } from "../../utils/navigation.js";
 
-/** Keyboard shortcut reference page URL. */
-const SHORTCUTS_URL: string = "/settings/shortcuts";
-
-/** New task form URL. */
-const NEW_TASK_URL: string = "/tasks/new";
+/** URL for the new task form. */
+const NEW_TASK_URL: string = `${TASKS_URL}/new`;
 
 /**
  * Registers global keyboard shortcuts that work from any page.
@@ -16,7 +14,7 @@ export function GlobalShortcuts(): JSX.Element {
   const navigate = useAppNavigate();
 
   useHotkey({ key: "?" }, () => {
-    navigate(SHORTCUTS_URL);
+    navigate(SETTINGS_SHORTCUTS_URL);
   });
 
   useHotkey({ key: "n" }, () => {
