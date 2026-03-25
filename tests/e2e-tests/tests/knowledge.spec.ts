@@ -1,8 +1,32 @@
 import { test, expect } from "./fixtures.js";
 import { createWorkspace } from "./helpers.js";
 
+/**
+ * Knowledge Graph E2E tests.
+ *
+ * These tests require the knowledge graph subsystem (embedding model) to be
+ * available on the server. In CI the embedder is typically absent, so each
+ * test probes availability first and skips gracefully if the backend returns
+ * UNAVAILABLE.
+ */
 test.describe("Knowledge Graph", { tag: ["@webui"] }, () => {
-  test("knowledge page renders with empty state", async ({ appPage }) => {
+  /** Probe knowledge availability via a lightweight RPC. Skip if unavailable. */
+  async function skipIfKnowledgeUnavailable(
+    client: ReturnType<typeof import("./rpc-client.js").createTestClient>,
+  ): Promise<void> {
+    try {
+      await client.listRecentKnowledgeNodes({ limit: 1 });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (message.includes("not available") || message.includes("Unavailable")) {
+        test.skip(true, "Knowledge graph not available in this environment");
+      }
+      throw error;
+    }
+  }
+
+  test("knowledge page renders with empty state", async ({ appPage, grackle: { client } }) => {
+    await skipIfKnowledgeUnavailable(client);
     const page = appPage;
 
     // Navigate to Knowledge tab
@@ -14,6 +38,7 @@ test.describe("Knowledge Graph", { tag: ["@webui"] }, () => {
   });
 
   test("knowledge page shows seeded nodes in nav and graph", async ({ appPage, grackle: { client } }) => {
+    await skipIfKnowledgeUnavailable(client);
     const page = appPage;
 
     // Seed knowledge data
@@ -47,6 +72,7 @@ test.describe("Knowledge Graph", { tag: ["@webui"] }, () => {
   });
 
   test("clicking a node opens the detail panel", async ({ appPage, grackle: { client } }) => {
+    await skipIfKnowledgeUnavailable(client);
     const page = appPage;
 
     // Seed a knowledge node
@@ -74,6 +100,7 @@ test.describe("Knowledge Graph", { tag: ["@webui"] }, () => {
   });
 
   test("search filters knowledge nodes", async ({ appPage, grackle: { client } }) => {
+    await skipIfKnowledgeUnavailable(client);
     const page = appPage;
 
     // Seed two distinct knowledge nodes
