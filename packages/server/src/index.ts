@@ -18,7 +18,7 @@ import { LocalAdapter } from "@grackle-ai/adapter-local";
 import { SshAdapter } from "@grackle-ai/adapter-ssh";
 import { CodespaceAdapter } from "@grackle-ai/adapter-codespace";
 import { closeAllTunnels, reconnectOrProvision } from "@grackle-ai/adapter-sdk";
-import { DEFAULT_SERVER_PORT, DEFAULT_WEB_PORT, DEFAULT_MCP_PORT, DEFAULT_POWERLINE_PORT, ROOT_TASK_ID, DEFAULT_WORKSPACE_ID, TASK_STATUS } from "@grackle-ai/common";
+import { DEFAULT_SERVER_PORT, DEFAULT_WEB_PORT, DEFAULT_MCP_PORT, DEFAULT_POWERLINE_PORT, ROOT_TASK_ID, ROOT_TASK_INITIAL_PROMPT, DEFAULT_WORKSPACE_ID, TASK_STATUS } from "@grackle-ai/common";
 import { LocalPowerLineManager } from "./local-powerline-manager.js";
 import { createMcpServer } from "@grackle-ai/mcp";
 import {
@@ -317,7 +317,10 @@ async function main(): Promise<void> {
           return;
         }
 
-        const err = await startTaskSession(undefined, rootTask, { environmentId: connectedEnv.id });
+        const err = await startTaskSession(undefined, rootTask, {
+          environmentId: connectedEnv.id,
+          notes: ROOT_TASK_INITIAL_PROMPT,
+        });
         if (err) {
           logger.warn({ err }, "Root task auto-start failed");
         } else {
