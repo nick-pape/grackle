@@ -1,4 +1,4 @@
-import { useMemo, type JSX } from "react";
+import { useCallback, useMemo, type JSX } from "react";
 import { Outlet } from "react-router";
 import { useGrackle } from "../../context/GrackleContext.js";
 import { useSidebarSlot } from "../../hooks/useSidebarSlot.js";
@@ -32,7 +32,36 @@ export function WithSettingsSidebar(): JSX.Element {
 
 /** Layout route wrapper that shows the KnowledgeNav in the sidebar. */
 export function WithKnowledgeSidebar(): JSX.Element {
-  const sidebar = useMemo(() => <KnowledgeNav />, []);
+  const { knowledge, workspaces } = useGrackle();
+
+  const handleSearch = useCallback((query: string) => {
+    knowledge.search(query);
+  }, [knowledge]);
+
+  const handleClearSearch = useCallback(() => {
+    knowledge.clearSearch();
+  }, [knowledge]);
+
+  const handleSelectNode = useCallback((nodeId: string) => {
+    knowledge.selectNode(nodeId);
+  }, [knowledge]);
+
+  const handleWorkspaceChange = useCallback((wsId: string) => {
+    knowledge.loadRecent(wsId || undefined);
+  }, [knowledge]);
+
+  const sidebar = useMemo(() => (
+    <KnowledgeNav
+      nodes={knowledge.graphData.nodes}
+      workspaces={workspaces}
+      loading={knowledge.loading}
+      searchQuery={knowledge.searchQuery}
+      onSearch={handleSearch}
+      onClearSearch={handleClearSearch}
+      onSelectNode={handleSelectNode}
+      onWorkspaceChange={handleWorkspaceChange}
+    />
+  ), [knowledge, workspaces, handleSearch, handleClearSearch, handleSelectNode, handleWorkspaceChange]);
   useSidebarSlot(sidebar);
   return <Outlet />;
 }

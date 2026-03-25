@@ -75,5 +75,4 @@ runs:
       shell: bash
       env:
         E2E_TAGS: ${{ inputs.e2e-tags }}
-        GRACKLE_KNOWLEDGE_ENABLED: "true"
       run: node common/scripts/install-run-rush.js e2e --verbose
