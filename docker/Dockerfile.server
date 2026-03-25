@@ -22,6 +22,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends xz-utils \
 
 # ── Eclipse Temurin 21 JRE (required by Neo4j 5.x) ─────────
 RUN apt-get update && apt-get install -y --no-install-recommends wget \
+    && install -m 0755 -d /etc/apt/keyrings \
     && wget -qO - https://packages.adoptium.net/artifactory/api/gpg/key/public \
        | gpg --dearmor -o /etc/apt/keyrings/adoptium.gpg \
     && echo "deb [signed-by=/etc/apt/keyrings/adoptium.gpg] https://packages.adoptium.net/artifactory/deb bookworm main" \
