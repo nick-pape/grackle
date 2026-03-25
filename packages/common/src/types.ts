@@ -107,5 +107,7 @@ export const SYSTEM_PERSONA_ID: string = "system";
 export const SYSTEM_PERSONA_NAME: string = "System";
 /** Well-known ID for the root task (always present). */
 export const ROOT_TASK_ID: string = "system";
+/** Initial prompt sent to the root task on auto-start (and manual restart). */
+export const ROOT_TASK_INITIAL_PROMPT: string = "Introduce yourself and Grackle!";
 /** Well-known ID for the default workspace (created on first run, tied to local env). */
 export const DEFAULT_WORKSPACE_ID: string = "default";

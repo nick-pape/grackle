@@ -19,19 +19,14 @@ test.describe("Session Reanimate (stub runtime)", { tag: ["@session"] }, () => {
     }
     // Wait until the environment has no active sessions before proceeding.
     if (active.length > 0) {
-      // Poll via ConnectRPC until no active sessions remain
-      const deadline = Date.now() + 5_000;
-      while (Date.now() < deadline) {
+      await expect(async () => {
         const recheck = await client.listSessions({});
         const remaining = recheck.sessions as Array<{ status: string }>;
         const anyActive = remaining.some(
           (s) => s.status === "idle" || s.status === "running" || s.status === "pending",
         );
-        if (!anyActive) {
-          break;
-        }
-        await appPage.waitForTimeout(250);
-      }
+        expect(anyActive).toBe(false);
+      }).toPass({ timeout: 5_000, intervals: [250] });
     }
   });
 
