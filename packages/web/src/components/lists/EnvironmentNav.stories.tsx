@@ -85,7 +85,7 @@ export const KeyboardNavigation: Story = {
     await userEvent.keyboard("{ArrowUp}");
     await expect(tabs[0]).toHaveFocus();
 
-    // Home jumps to first
+    // End jumps to last, Home jumps to first
     await userEvent.keyboard("{End}");
     await expect(tabs[tabs.length - 1]).toHaveFocus();
     await userEvent.keyboard("{Home}");
