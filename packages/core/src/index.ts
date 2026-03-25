@@ -34,6 +34,9 @@ export type { CronManagerDeps } from "./cron-manager.js";
 export { findFirstConnectedEnvironment } from "./find-connected-environment.js";
 export { validateExpression, computeNextRunAt } from "./schedule-expression.js";
 
+// ─── Version Check ────────────────────────────────────────
+export { checkVersionStatus, clearVersionCache, type VersionStatus } from "./version-check.js";
+
 // ─── Logger ────────────────────────────────────────────────
 export { logger } from "./logger.js";
 
