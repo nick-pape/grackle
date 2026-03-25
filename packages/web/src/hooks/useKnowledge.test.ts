@@ -329,4 +329,65 @@ describe("useKnowledge", () => {
       expect(handled).toBe(false);
     });
   });
+
+  // ── workspace scope (#898) ──────────────────────────────────
+
+  describe("workspace scope", () => {
+    it("clearSearch preserves the active workspace filter", async () => {
+      mockClient.listRecentKnowledgeNodes.mockResolvedValue({ nodes: [], edges: [] });
+      mockClient.searchKnowledge.mockResolvedValue({ results: [] });
+
+      const { result } = setup();
+
+      // Select a workspace
+      act(() => { result.current.loadRecent("ws-1"); });
+      await waitFor(() => { expect(result.current.loading).toBe(false); });
+      mockClient.listRecentKnowledgeNodes.mockClear();
+
+      // Search, then clear
+      act(() => { result.current.search("query"); });
+      await waitFor(() => { expect(result.current.loading).toBe(false); });
+
+      act(() => { result.current.clearSearch(); });
+      await waitFor(() => { expect(result.current.loading).toBe(false); });
+
+      // Should re-fetch with the original workspace, not empty
+      expect(mockClient.listRecentKnowledgeNodes).toHaveBeenCalledWith(
+        expect.objectContaining({ workspaceId: "ws-1" }),
+      );
+    });
+
+    it("search scopes to the active workspace", async () => {
+      mockClient.listRecentKnowledgeNodes.mockResolvedValue({ nodes: [], edges: [] });
+      mockClient.searchKnowledge.mockResolvedValue({ results: [] });
+
+      const { result } = setup();
+
+      // Select a workspace
+      act(() => { result.current.loadRecent("ws-1"); });
+      await waitFor(() => { expect(result.current.loading).toBe(false); });
+
+      // Search
+      act(() => { result.current.search("query"); });
+
+      expect(mockClient.searchKnowledge).toHaveBeenCalledWith(
+        expect.objectContaining({ workspaceId: "ws-1" }),
+      );
+    });
+
+    it("loadRecent with workspace clears searchQuery", async () => {
+      mockClient.listRecentKnowledgeNodes.mockResolvedValue({ nodes: [], edges: [] });
+      mockClient.searchKnowledge.mockResolvedValue({ results: [] });
+
+      const { result } = setup();
+
+      // Perform a search
+      act(() => { result.current.search("active query"); });
+      expect(result.current.searchQuery).toBe("active query");
+
+      // Change workspace
+      act(() => { result.current.loadRecent("ws-2"); });
+      expect(result.current.searchQuery).toBe("");
+    });
+  });
 });
