@@ -12,7 +12,7 @@ services:
       - "7435:7435"   # MCP
       - "7433:7433"   # Local PowerLine
     volumes:
-      - grackle-data:/grackle-home/.grackle                              # Persistent DB + API key
+      - grackle-data:/data                                                      # Persistent DB, Neo4j, API key
       # WARNING: Grants the container root-equivalent access to the host Docker daemon.
       # Required for the Docker adapter (DooD pattern). Remove if not using Docker environments.
       - /var/run/docker.sock:/var/run/docker.sock
@@ -25,7 +25,6 @@ services:
       # GitHub CLI auth — set GH_TOKEN before running docker compose:
       #   export GH_TOKEN=$(gh auth token)
       - GH_TOKEN=${GH_TOKEN:-}
-      - GRACKLE_HOME=/grackle-home
       # Docker adapter networking — sibling containers join this network
       # so the server can reach them directly (required for DooD).
       - GRACKLE_DOCKER_NETWORK=grackle
@@ -33,33 +32,11 @@ services:
       - GRACKLE_DOCKER_HOST=grackle
       # Host address for qdrant-search MCP (runs on host, accessed by agents in container).
       - QDRANT_MCP_HOST=${QDRANT_MCP_HOST:-host.docker.internal}
-      # Knowledge graph — Neo4j connection for the knowledge subsystem.
-      - GRACKLE_NEO4J_URL=bolt://neo4j:7687
-    depends_on:
-      neo4j:
-        condition: service_healthy
+      # Knowledge graph is enabled by default (Neo4j runs inside the container).
+      # To use an external Neo4j, set GRACKLE_NEO4J_URL and the embedded one won't start.
+      # To disable knowledge entirely, set GRACKLE_KNOWLEDGE_ENABLED=false.
     networks:
       - grackle
-    restart: unless-stopped
-
-  neo4j:
-    image: neo4j:5.25.1-community
-    container_name: grackle-neo4j
-    ports:
-      - "7474:7474"   # Browser UI
-      - "7687:7687"   # Bolt protocol
-    environment:
-      - NEO4J_AUTH=neo4j/grackle-dev
-    volumes:
-      - neo4j-data:/data
-    networks:
-      - grackle
-    healthcheck:
-      test: ["CMD", "neo4j", "status"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
     restart: unless-stopped
 
 networks:
@@ -68,4 +45,3 @@ networks:
 
 volumes:
   grackle-data:
-  neo4j-data:

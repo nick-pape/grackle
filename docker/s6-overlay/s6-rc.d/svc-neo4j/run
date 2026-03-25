@@ -1,0 +1,14 @@
+#!/command/with-contenv bash
+
+# ── Conditional start: skip if knowledge is disabled or external Neo4j is configured ──
+if [ "${GRACKLE_KNOWLEDGE_ENABLED:-}" != "true" ] || [ -n "${GRACKLE_NEO4J_URL:-}" ]; then
+  echo "Neo4j skipped (GRACKLE_KNOWLEDGE_ENABLED=${GRACKLE_KNOWLEDGE_ENABLED:-unset}, GRACKLE_NEO4J_URL=${GRACKLE_NEO4J_URL:-unset})"
+  s6-svc -Od .
+  exec sleep infinity
+fi
+
+# Auth is disabled in neo4j.conf (dbms.security.auth_enabled=false)
+# since the embedded Neo4j only listens on 127.0.0.1 inside the container.
+
+# Run Neo4j in foreground as the node user.
+exec s6-setuidgid node neo4j console
