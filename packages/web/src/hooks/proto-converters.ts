@@ -108,6 +108,7 @@ export function protoToTask(p: grackle.Task): TaskData {
     childTaskIds: [...p.childTaskIds],
     canDecompose: p.canDecompose,
     defaultPersonaId: p.defaultPersonaId,
+    workpad: p.workpad,
   };
 }
 
