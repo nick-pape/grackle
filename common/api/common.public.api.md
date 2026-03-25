@@ -151,6 +151,20 @@ type CreatePersonaRequest = Message<"grackle.CreatePersonaRequest"> & {
 const CreatePersonaRequestSchema: GenMessage<CreatePersonaRequest>;
 
 // @public
+type CreateScheduleRequest = Message<"grackle.CreateScheduleRequest"> & {
+    title: string;
+    description: string;
+    scheduleExpression: string;
+    personaId: string;
+    environmentId: string;
+    workspaceId: string;
+    parentTaskId: string;
+};
+
+// @public
+const CreateScheduleRequestSchema: GenMessage<CreateScheduleRequest>;
+
+// @public
 type CreateTaskRequest = Message<"grackle.CreateTaskRequest"> & {
     workspaceId?: string;
     title: string;
@@ -662,6 +676,31 @@ const Grackle: GenService<{
         input: typeof QueryFindingsRequestSchema;
         output: typeof FindingListSchema;
     };
+    createSchedule: {
+        methodKind: "unary";
+        input: typeof CreateScheduleRequestSchema;
+        output: typeof ScheduleSchema;
+    };
+    listSchedules: {
+        methodKind: "unary";
+        input: typeof ListSchedulesRequestSchema;
+        output: typeof ScheduleListSchema;
+    };
+    getSchedule: {
+        methodKind: "unary";
+        input: typeof ScheduleIdSchema;
+        output: typeof ScheduleSchema;
+    };
+    updateSchedule: {
+        methodKind: "unary";
+        input: typeof UpdateScheduleRequestSchema;
+        output: typeof ScheduleSchema;
+    };
+    deleteSchedule: {
+        methodKind: "unary";
+        input: typeof ScheduleIdSchema;
+        output: typeof EmptySchema;
+    };
     listCodespaces: {
         methodKind: "unary";
         input: typeof EmptySchema;
@@ -852,6 +891,18 @@ declare namespace grackle {
         CreatePersonaRequestSchema,
         UpdatePersonaRequest,
         UpdatePersonaRequestSchema,
+        Schedule,
+        ScheduleSchema,
+        ScheduleId,
+        ScheduleIdSchema,
+        ScheduleList,
+        ScheduleListSchema,
+        CreateScheduleRequest,
+        CreateScheduleRequestSchema,
+        UpdateScheduleRequest,
+        UpdateScheduleRequestSchema,
+        ListSchedulesRequest,
+        ListSchedulesRequestSchema,
         CodespaceInfo,
         CodespaceInfoSchema,
         CodespaceList,
@@ -1044,6 +1095,14 @@ type ListRecentKnowledgeNodesResponse = Message<"grackle.ListRecentKnowledgeNode
 
 // @public
 const ListRecentKnowledgeNodesResponseSchema: GenMessage<ListRecentKnowledgeNodesResponse>;
+
+// @public
+type ListSchedulesRequest = Message<"grackle.ListSchedulesRequest"> & {
+    workspaceId: string;
+};
+
+// @public
+const ListSchedulesRequestSchema: GenMessage<ListSchedulesRequest>;
 
 // @public
 type ListTasksRequest = Message<"grackle.ListTasksRequest"> & {
@@ -1271,6 +1330,43 @@ export interface RuntimePackageManifest {
     needsJsonRpcHook?: boolean;
     packages: Record<string, string>;
 }
+
+// @public
+type Schedule = Message<"grackle.Schedule"> & {
+    id: string;
+    title: string;
+    description: string;
+    scheduleExpression: string;
+    personaId: string;
+    environmentId: string;
+    workspaceId: string;
+    parentTaskId: string;
+    enabled: boolean;
+    lastRunAt: string;
+    nextRunAt: string;
+    runCount: number;
+    createdAt: string;
+    updatedAt: string;
+};
+
+// @public
+type ScheduleId = Message<"grackle.ScheduleId"> & {
+    id: string;
+};
+
+// @public
+const ScheduleIdSchema: GenMessage<ScheduleId>;
+
+// @public
+type ScheduleList = Message<"grackle.ScheduleList"> & {
+    schedules: Schedule[];
+};
+
+// @public
+const ScheduleListSchema: GenMessage<ScheduleList>;
+
+// @public
+const ScheduleSchema: GenMessage<Schedule>;
 
 // @public
 type SearchKnowledgeRequest = Message<"grackle.SearchKnowledgeRequest"> & {
@@ -1537,6 +1633,7 @@ type Task = Message<"grackle.Task"> & {
     canDecompose: boolean;
     defaultPersonaId: string;
     workpad: string;
+    scheduleId: string;
 };
 
 // @public
@@ -1692,6 +1789,20 @@ type UpdatePersonaRequest = Message<"grackle.UpdatePersonaRequest"> & {
 
 // @public
 const UpdatePersonaRequestSchema: GenMessage<UpdatePersonaRequest>;
+
+// @public
+type UpdateScheduleRequest = Message<"grackle.UpdateScheduleRequest"> & {
+    id: string;
+    title?: string;
+    description?: string;
+    scheduleExpression?: string;
+    personaId?: string;
+    environmentId?: string;
+    enabled?: boolean;
+};
+
+// @public
+const UpdateScheduleRequestSchema: GenMessage<UpdateScheduleRequest>;
 
 // @public
 type UpdateTaskRequest = Message<"grackle.UpdateTaskRequest"> & {

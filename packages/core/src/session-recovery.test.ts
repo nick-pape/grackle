@@ -91,7 +91,8 @@ function applySchema(): void {
       pr_url TEXT NOT NULL DEFAULT '',
       depends_on TEXT NOT NULL DEFAULT '[]',
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      workpad TEXT NOT NULL DEFAULT ''
+      workpad TEXT NOT NULL DEFAULT '',
+      schedule_id TEXT NOT NULL DEFAULT ''
     );
     CREATE TABLE IF NOT EXISTS sessions (
       id TEXT PRIMARY KEY,

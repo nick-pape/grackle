@@ -46,7 +46,8 @@ function applySchema(): void {
       depth         INTEGER NOT NULL DEFAULT 0,
       can_decompose INTEGER NOT NULL DEFAULT 0,
       default_persona_id TEXT NOT NULL DEFAULT '',
-      workpad       TEXT NOT NULL DEFAULT ''
+      workpad       TEXT NOT NULL DEFAULT '',
+      schedule_id   TEXT NOT NULL DEFAULT ''
     );
   `);
 }
