@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Graceful shutdown signal (SIGTERM) for agents: two-mode KillAgent with graceful flag, new ipc_terminate MCP tool, system prompt SIGTERM instructions, and bug fix for PowerLine kill forwarding",
+      "type": "minor",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
