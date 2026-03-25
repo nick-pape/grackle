@@ -617,6 +617,11 @@ const Grackle: GenService<{
         input: typeof TaskIdSchema;
         output: typeof TaskSchema;
     };
+    setWorkpad: {
+        methodKind: "unary";
+        input: typeof SetWorkpadRequestSchema;
+        output: typeof TaskSchema;
+    };
     deleteTask: {
         methodKind: "unary";
         input: typeof TaskIdSchema;
@@ -823,6 +828,8 @@ declare namespace grackle {
         UpdateTaskRequestSchema,
         StartTaskRequest,
         StartTaskRequestSchema,
+        SetWorkpadRequest,
+        SetWorkpadRequestSchema,
         Finding,
         FindingSchema,
         FindingList,
@@ -1443,6 +1450,15 @@ type SettingResponse = Message<"grackle.SettingResponse"> & {
 const SettingResponseSchema: GenMessage<SettingResponse>;
 
 // @public
+type SetWorkpadRequest = Message<"grackle.SetWorkpadRequest"> & {
+    taskId: string;
+    workpad: string;
+};
+
+// @public
+const SetWorkpadRequestSchema: GenMessage<SetWorkpadRequest>;
+
+// @public
 type SpawnRequest = Message<"grackle.SpawnRequest"> & {
     environmentId: string;
     prompt: string;
@@ -1520,6 +1536,7 @@ type Task = Message<"grackle.Task"> & {
     childTaskIds: string[];
     canDecompose: boolean;
     defaultPersonaId: string;
+    workpad: string;
 };
 
 // @public

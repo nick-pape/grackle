@@ -10,6 +10,7 @@ export const SCOPED_TOOLS: ReadonlySet<string> = new Set([
   "persona_list", "persona_show",
   "ipc_spawn", "ipc_write", "ipc_close", "ipc_list_fds",
   "knowledge_search", "knowledge_get_node",
+  "workpad_write", "workpad_read",
 ]);
 
 /** Auth types that receive full tool access. */
