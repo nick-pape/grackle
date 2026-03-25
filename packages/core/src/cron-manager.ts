@@ -199,17 +199,18 @@ export class CronManager {
         personaId: schedule.personaId,
       });
 
+      // Advance schedule regardless of session start outcome
+      this.deps.advanceSchedule(schedule.id, now, nextRunAt);
+
       if (error) {
         logger.warn(
           { scheduleId: schedule.id, taskId, error },
-          "Schedule fire: startTaskSession returned error",
+          "Schedule fire: task created but session start failed",
         );
+        return;
       }
 
-      // Advance schedule
-      this.deps.advanceSchedule(schedule.id, now, nextRunAt);
-
-      // Emit event
+      // Emit event only on successful fire
       this.deps.emit("schedule.fired", {
         scheduleId: schedule.id,
         taskId,

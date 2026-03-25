@@ -2009,19 +2009,20 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
     async createSchedule(req: grackle.CreateScheduleRequest) {
       const title = req.title.trim();
       const expr = req.scheduleExpression.trim();
+      const personaId = req.personaId.trim();
       if (!title) {
         throw new ConnectError("title is required", Code.InvalidArgument);
       }
       if (!expr) {
         throw new ConnectError("schedule_expression is required", Code.InvalidArgument);
       }
-      if (!req.personaId.trim()) {
+      if (!personaId) {
         throw new ConnectError("persona_id is required", Code.InvalidArgument);
       }
       // Validate persona exists
-      const persona = personaStore.getPersona(req.personaId);
+      const persona = personaStore.getPersona(personaId);
       if (!persona) {
-        throw new ConnectError(`Persona not found: ${req.personaId}`, Code.NotFound);
+        throw new ConnectError(`Persona not found: ${personaId}`, Code.NotFound);
       }
       // Validate expression
       try {
@@ -2039,7 +2040,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         title,
         req.description,
         expr,
-        req.personaId,
+        personaId,
         req.environmentId,
         req.workspaceId,
         req.parentTaskId,
@@ -2072,18 +2073,19 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       }
 
       const update: scheduleStore.ScheduleUpdate = {};
-      if (req.title !== undefined && req.title !== "") {
-        update.title = req.title;
+      if (req.title !== undefined && req.title.trim() !== "") {
+        update.title = req.title.trim();
       }
-      if (req.description !== undefined && req.description !== "") {
+      if (req.description !== undefined) {
         update.description = req.description;
       }
-      if (req.personaId !== undefined && req.personaId !== "") {
-        const persona = personaStore.getPersona(req.personaId);
+      if (req.personaId !== undefined && req.personaId.trim() !== "") {
+        const trimmedPersonaId = req.personaId.trim();
+        const persona = personaStore.getPersona(trimmedPersonaId);
         if (!persona) {
-          throw new ConnectError(`Persona not found: ${req.personaId}`, Code.NotFound);
+          throw new ConnectError(`Persona not found: ${trimmedPersonaId}`, Code.NotFound);
         }
-        update.personaId = req.personaId;
+        update.personaId = trimmedPersonaId;
       }
       if (req.environmentId !== undefined) {
         update.environmentId = req.environmentId;

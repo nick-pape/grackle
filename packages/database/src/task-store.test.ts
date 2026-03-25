@@ -375,4 +375,15 @@ describe("task-store tree operations", () => {
     });
   });
 
+  describe("setTaskScheduleId", () => {
+    it("sets the schedule_id on a task", () => {
+      taskStore.createTask("t1", "test-proj", "Task", "desc", [], "proj");
+      expect(taskStore.getTask("t1")!.scheduleId).toBe("");
+
+      taskStore.setTaskScheduleId("t1", "sched-1");
+      const task = taskStore.getTask("t1");
+      expect(task!.scheduleId).toBe("sched-1");
+    });
+  });
+
 });
