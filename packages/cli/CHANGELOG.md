@@ -1,6 +1,17 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Wed, 25 Mar 2026 03:23:53 GMT and should not be manually modified.
+This log was last generated on Wed, 25 Mar 2026 04:51:42 GMT and should not be manually modified.
+
+## 0.75.13
+Wed, 25 Mar 2026 04:51:42 GMT
+
+### Patches
+
+- Show connected node titles instead of truncated UUIDs in knowledge graph edge links
+
+### Updates
+
+- placeholder
 
 ## 0.75.12
 Wed, 25 Mar 2026 03:23:53 GMT

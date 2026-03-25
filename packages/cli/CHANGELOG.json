@@ -2,6 +2,23 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.75.13",
+      "tag": "@grackle-ai/cli_v0.75.13",
+      "date": "Wed, 25 Mar 2026 04:51:42 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Show connected node titles instead of truncated UUIDs in knowledge graph edge links"
+          }
+        ],
+        "none": [
+          {
+            "comment": "placeholder"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.75.12",
       "tag": "@grackle-ai/cli_v0.75.12",
       "date": "Wed, 25 Mar 2026 03:23:53 GMT",
