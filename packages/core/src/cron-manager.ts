@@ -50,6 +50,7 @@ export interface CronManagerDeps {
   /** Look up a task by ID (to pass to startTaskSession). */
   getTask: (id: string) => TaskRow | undefined;
   /** Enable or disable a schedule, setting or clearing nextRunAt. */
+  // eslint-disable-next-line @rushstack/no-new-null
   setScheduleEnabled: (id: string, enabled: boolean, nextRunAt: string | null) => void;
   /** Check if an environment is connected. */
   isEnvironmentConnected: (environmentId: string) => boolean;
