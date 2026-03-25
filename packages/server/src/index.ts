@@ -237,6 +237,11 @@ async function main(): Promise<void> {
     findFirstConnectedEnvironment,
     getPersona: personaStore.getPersona,
     getTask: taskStore.getTask,
+    setScheduleEnabled: scheduleStore.setScheduleEnabled,
+    isEnvironmentConnected: (id: string) => {
+      const env = envRegistry.getEnvironment(id);
+      return env?.status === "connected";
+    },
   });
   cronManager.start();
 

@@ -56,6 +56,8 @@ function createMockDeps(): CronManagerDeps {
     findFirstConnectedEnvironment: vi.fn().mockReturnValue(makeEnv()),
     getPersona: vi.fn().mockReturnValue({ id: "persona-1", name: "Test", runtime: "stub" }),
     getTask: vi.fn().mockReturnValue({ id: "task-1", title: "Test Task" }),
+    setScheduleEnabled: vi.fn(),
+    isEnvironmentConnected: vi.fn().mockReturnValue(true),
   };
 }
 

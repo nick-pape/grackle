@@ -49,6 +49,10 @@ export interface CronManagerDeps {
   getPersona: (id: string) => { id: string; name: string; runtime: string } | undefined;
   /** Look up a task by ID (to pass to startTaskSession). */
   getTask: (id: string) => TaskRow | undefined;
+  /** Enable or disable a schedule, setting or clearing nextRunAt. */
+  setScheduleEnabled: (id: string, enabled: boolean, nextRunAt: string | null) => void;
+  /** Check if an environment is connected. */
+  isEnvironmentConnected: (environmentId: string) => boolean;
 }
 
 /**
@@ -133,25 +137,44 @@ export class CronManager {
 
     let nextRunAt: string;
     try {
-      nextRunAt = computeNextRunAt(schedule.scheduleExpression, now);
+      // Anchor to the schedule's lastRunAt (not current time) to prevent drift
+      nextRunAt = computeNextRunAt(schedule.scheduleExpression, schedule.lastRunAt ?? undefined);
     } catch (err) {
       logger.error(
         { scheduleId: schedule.id, scheduleExpression: schedule.scheduleExpression, err },
-        "CronManager: failed to compute nextRunAt; skipping schedule fire",
+        "CronManager: failed to compute nextRunAt; disabling schedule",
       );
+      // Disable the schedule to prevent error loop on every tick
+      this.deps.setScheduleEnabled(schedule.id, false, null);
       return;
     }
 
     try {
-      // Resolve environment
-      const environmentId = schedule.environmentId || this.resolveEnvironment();
-      if (!environmentId) {
-        logger.warn(
-          { scheduleId: schedule.id },
-          "Schedule fire skipped: no connected environment",
-        );
-        this.deps.advanceSchedule(schedule.id, now, nextRunAt);
-        return;
+      // Resolve environment — check connectivity before creating tasks to avoid orphan tasks
+      let environmentId: string | undefined;
+      if (schedule.environmentId) {
+        // Explicit environment: verify it's connected before creating a task
+        if (!this.deps.isEnvironmentConnected(schedule.environmentId)) {
+          logger.warn(
+            { scheduleId: schedule.id, environmentId: schedule.environmentId },
+            "Schedule fire skipped: specified environment not connected",
+          );
+          this.deps.advanceSchedule(schedule.id, now, nextRunAt);
+          return;
+        }
+        environmentId = schedule.environmentId;
+      } else {
+        // Auto-select first connected environment
+        const env = this.deps.findFirstConnectedEnvironment();
+        if (!env) {
+          logger.warn(
+            { scheduleId: schedule.id },
+            "Schedule fire skipped: no connected environment",
+          );
+          this.deps.advanceSchedule(schedule.id, now, nextRunAt);
+          return;
+        }
+        environmentId = env.id;
       }
 
       // Validate persona exists
