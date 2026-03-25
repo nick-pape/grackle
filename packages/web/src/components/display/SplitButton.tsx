@@ -90,17 +90,19 @@ export function SplitButton({
         className={`${styles.chevronButton} ${variantClass} ${sizeClass}`}
         onClick={() => setOpen((prev) => !prev)}
         aria-label="More options"
+        aria-haspopup="menu"
         aria-expanded={open}
         data-testid={testId ? `${testId}-chevron` : undefined}
       >
         ▾
       </button>
       {open && (
-        <div className={styles.dropdown} data-testid={testId ? `${testId}-menu` : undefined}>
+        <div className={styles.dropdown} role="menu" data-testid={testId ? `${testId}-menu` : undefined}>
           {options.map((opt) => (
             <button
               key={opt.label}
               type="button"
+              role="menuitem"
               className={styles.option}
               onClick={() => {
                 opt.onClick();
