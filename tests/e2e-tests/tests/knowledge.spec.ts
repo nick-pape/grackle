@@ -63,8 +63,9 @@ test.describe("Knowledge Graph", { tag: ["@webui"] }, () => {
     await navigateToKnowledge(appPage);
 
     // Nodes should appear in the sidebar nav (loadRecent fetches all nodes)
-    await expect(appPage.getByText("E2E Auth Flow Design 7x9k")).toBeVisible({ timeout: 15_000 });
-    await expect(appPage.getByText("E2E Database Schema 7x9k")).toBeVisible();
+    const nav = appPage.locator('[data-testid="knowledge-nav"]');
+    await expect(nav.getByText("E2E Auth Flow Design 7x9k")).toBeVisible({ timeout: 15_000 });
+    await expect(nav.getByText("E2E Database Schema 7x9k")).toBeVisible();
 
     // Graph container should be visible
     await expect(appPage.locator('[data-testid="knowledge-graph"]')).toBeVisible();
@@ -85,8 +86,9 @@ test.describe("Knowledge Graph", { tag: ["@webui"] }, () => {
     await navigateToKnowledge(appPage);
 
     // Wait for node to load, then click in the sidebar nav
-    await expect(appPage.getByText("E2E Click Target q3m8")).toBeVisible({ timeout: 15_000 });
-    await appPage.locator('[data-testid="knowledge-nav"]').getByText("E2E Click Target q3m8").click();
+    const nav = appPage.locator('[data-testid="knowledge-nav"]');
+    await expect(nav.getByText("E2E Click Target q3m8")).toBeVisible({ timeout: 15_000 });
+    await nav.getByText("E2E Click Target q3m8").click();
 
     // Detail panel should open with the node's content
     await expect(appPage.locator('[data-testid="knowledge-detail-panel"]')).toBeVisible({ timeout: 5_000 });
@@ -109,7 +111,8 @@ test.describe("Knowledge Graph", { tag: ["@webui"] }, () => {
     await navigateToKnowledge(appPage);
 
     // Wait for initial load
-    await expect(appPage.getByText("E2E Searchable Alpha p4n2")).toBeVisible({ timeout: 15_000 });
+    const nav = appPage.locator('[data-testid="knowledge-nav"]');
+    await expect(nav.getByText("E2E Searchable Alpha p4n2")).toBeVisible({ timeout: 15_000 });
 
     // Search for the unique title
     await appPage.locator('[data-testid="knowledge-search-input"]').fill("Searchable Alpha p4n2");
