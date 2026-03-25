@@ -13,13 +13,21 @@ chown node:node "$GRACKLE_DATA"
 # Detect old layout and migrate.
 if [ -f "/data/grackle.db" ] && [ ! -f "$GRACKLE_DATA/grackle.db" ]; then
   echo "Migrating data from old volume layout..."
+  migrate_error=0
   for f in /data/*; do
     name="$(basename "$f")"
     case "$name" in .grackle|neo4j|.hf-cache|.claude-sdk) continue ;; esac
-    mv "$f" "$GRACKLE_DATA/$name" 2>/dev/null || true
+    if ! mv "$f" "$GRACKLE_DATA/$name"; then
+      echo "WARN: Failed to migrate '$f' to '$GRACKLE_DATA/$name'" >&2
+      migrate_error=1
+    fi
   done
   chown -R node:node "$GRACKLE_DATA"
-  echo "Volume migration complete"
+  if [ "$migrate_error" -eq 0 ]; then
+    echo "Volume migration complete"
+  else
+    echo "Volume migration completed with errors; see warnings above." >&2
+  fi
 fi
 
 # Neo4j data directories (created unconditionally — harmless if Neo4j is disabled)
@@ -72,12 +80,25 @@ fi
 # (excludeFileTokens: true). Runtimes read credential files directly
 # from the filesystem. Missing mounts cause silent auth failure.
 warn_missing() {
-  local path="$1" name="$2" envalt="$3"
-  if [ ! -d "$path" ] && [ ! -f "$path" ]; then
-    echo "WARN: $name not found at $path — mount via -v or set $envalt"
+  local path="$1" name="$2" primary_envalt="$3"
+  shift 3
+
+  # If any of the provided env vars (primary + optional fallbacks) is set,
+  # skip the warning — credentials are already configured via env.
+  local envalt
+  for envalt in "$primary_envalt" "$@"; do
+    if [ -n "${!envalt:-}" ]; then
+      return 0
+    fi
+  done
+
+  # Check for the specific credential file so that an empty bind-mounted
+  # directory still triggers a warning.
+  if [ ! -f "$path" ]; then
+    echo "WARN: $name not found at $path — mount via -v or set $primary_envalt"
   fi
 }
 
-warn_missing "/home/node/.claude" "Claude credentials" "ANTHROPIC_API_KEY"
-warn_missing "/home/node/.copilot" "Copilot credentials" "COPILOT_GITHUB_TOKEN"
-warn_missing "/home/node/.codex" "Codex credentials" "OPENAI_API_KEY"
+warn_missing "/home/node/.claude/.credentials.json" "Claude credentials" "ANTHROPIC_API_KEY"
+warn_missing "/home/node/.copilot/config.json" "Copilot credentials" "COPILOT_GITHUB_TOKEN" "GH_TOKEN" "GITHUB_TOKEN"
+warn_missing "/home/node/.codex/auth.json" "Codex credentials" "OPENAI_API_KEY"
