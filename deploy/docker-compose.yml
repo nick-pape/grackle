@@ -1,0 +1,46 @@
+# Grackle — user-facing Docker Compose for the published GHCR image.
+# Copy this file and .env.example to your deployment directory, then:
+#   cp .env.example .env   # edit as needed
+#   docker compose up -d
+#
+# For the developer compose file (builds from source), see docker/docker-compose.yml.
+
+services:
+  grackle:
+    image: ghcr.io/nick-pape/grackle:${GRACKLE_VERSION:-latest}
+    container_name: grackle
+    ports:
+      - "${GRACKLE_WEB_PORT:-3000}:3000"   # Web UI + WebSocket
+    volumes:
+      - grackle-data:/data                                                      # Persistent DB, Neo4j, API key
+
+      # ── Docker adapter (DooD) ──────────────────────────────────
+      # Uncomment to let Grackle spawn sibling Docker containers for environments.
+      # WARNING: Grants root-equivalent access to the host Docker daemon.
+      # - /var/run/docker.sock:/var/run/docker.sock
+
+      # ── Agent credential mounts ────────────────────────────────
+      # Uncomment the mounts for runtimes you use. As an alternative, you can
+      # set auth via env vars (ANTHROPIC_API_KEY, OPENAI_API_KEY, GH_TOKEN).
+      # - "${HOME}/.claude:/home/node/.claude:ro"                               # Claude Code
+      # - "${HOME}/.copilot:/home/node/.copilot"                                # GitHub Copilot
+      # - "${HOME}/.codex:/home/node/.codex"                                    # OpenAI Codex
+    environment:
+      # GitHub CLI token (for Codespace adapter and private repos):
+      - GH_TOKEN=${GH_TOKEN:-}
+
+      # ── Docker adapter networking ──────────────────────────────
+      # Uncomment if you enabled the Docker socket mount above.
+      # - GRACKLE_DOCKER_NETWORK=grackle
+      # - GRACKLE_DOCKER_HOST=grackle
+
+      # ── Knowledge graph ────────────────────────────────────────
+      # Neo4j runs inside the container by default. Uncomment to use an external Neo4j:
+      # - GRACKLE_NEO4J_URL=bolt://your-neo4j:7687
+      # - GRACKLE_NEO4J_PASSWORD=your-password
+      # To disable the knowledge graph entirely:
+      # - GRACKLE_KNOWLEDGE_ENABLED=false
+    restart: unless-stopped
+
+volumes:
+  grackle-data:
