@@ -84,15 +84,17 @@ export function ChatPage(): JSX.Element {
   const isSessionActive = latestSession !== undefined
     && latestSession.status !== "stopped" && latestSession.status !== "suspended";
 
-  // Auto-send pending message once the session becomes active.
+  const isSessionIdle = latestSession?.status === "idle";
+
+  // Auto-send pending message once the session becomes idle.
   // The user's text is queued by handleStartTask and delivered via sendInput
   // so the first user message is always a follow-up, not baked into the prompt.
   useEffect(() => {
-    if (pendingMessage && isSessionActive) {
-      sendInput(latestSession!.id, pendingMessage);
+    if (pendingMessage && latestSession && isSessionIdle) {
+      sendInput(latestSession.id, pendingMessage);
       setPendingMessage(undefined);
     }
-  }, [pendingMessage, isSessionActive, latestSession?.id, sendInput]);
+  }, [pendingMessage, isSessionIdle, latestSession?.id, sendInput]);
 
   // Intercept start-mode submissions: start the root task without the user's
   // text (the server uses a hardcoded initial prompt) and queue the text for
