@@ -330,7 +330,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       environmentId?: string,
       defaultPersonaId?: string,
       useWorktrees?: boolean,
-      workingDirectory?: string,
+      worktreeBasePath?: string,
       onSuccess?: () => void,
       _onError?: (message: string) => void,
     ) => {
@@ -343,7 +343,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
         repoUrl: repoUrl || "",
         environmentId: environmentId || "",
         status: "active",
-        workingDirectory: workingDirectory || "",
+        worktreeBasePath: worktreeBasePath || "",
         useWorktrees: useWorktrees ?? true,
         defaultPersonaId: defaultPersonaId || "",
         createdAt: new Date().toISOString(),
@@ -854,7 +854,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       loadWorkspaces: () => { console.log("[MockGrackle] loadWorkspaces"); },
       createWorkspace,
       archiveWorkspace,
-      updateWorkspace: (workspaceId: string, fields: { name?: string; description?: string; repoUrl?: string; environmentId?: string; workingDirectory?: string; useWorktrees?: boolean; defaultPersonaId?: string }) => {
+      updateWorkspace: (workspaceId: string, fields: { name?: string; description?: string; repoUrl?: string; environmentId?: string; worktreeBasePath?: string; useWorktrees?: boolean; defaultPersonaId?: string }) => {
         console.log("[MockGrackle] updateWorkspace", { workspaceId, ...fields });
         setWorkspaces((prev) =>
           prev.map((p) => {
@@ -867,7 +867,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
               ...(fields.description !== undefined ? { description: fields.description } : {}),
               ...(fields.repoUrl !== undefined ? { repoUrl: fields.repoUrl } : {}),
               ...(fields.environmentId !== undefined ? { environmentId: fields.environmentId } : {}),
-              ...(fields.workingDirectory !== undefined ? { workingDirectory: fields.workingDirectory } : {}),
+              ...(fields.worktreeBasePath !== undefined ? { worktreeBasePath: fields.worktreeBasePath } : {}),
               ...(fields.useWorktrees !== undefined ? { useWorktrees: fields.useWorktrees } : {}),
               ...(fields.defaultPersonaId !== undefined ? { defaultPersonaId: fields.defaultPersonaId } : {}),
               updatedAt: new Date().toISOString(),
@@ -911,7 +911,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
       workspaceCreating: false,
       taskStartingId: undefined,
       personas,
-      createPersona: (name: string, description: string, systemPrompt: string, runtime?: string, model?: string, maxTurns?: number, type?: string, script?: string) => {
+      createPersona: async (name: string, description: string, systemPrompt: string, runtime?: string, model?: string, maxTurns?: number, type?: string, script?: string) => {
         console.log("[MockGrackle] createPersona", { name });
         const newPersona: PersonaData = {
           id: `mock-persona-${Date.now()}`,
@@ -929,15 +929,17 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
           script: script || "",
         };
         setPersonas((prev) => [...prev, newPersona]);
+        return newPersona;
       },
-      updatePersona: (personaId: string, name?: string, description?: string, systemPrompt?: string, runtime?: string, model?: string, maxTurns?: number, type?: string, script?: string) => {
+      updatePersona: async (personaId: string, name?: string, description?: string, systemPrompt?: string, runtime?: string, model?: string, maxTurns?: number, type?: string, script?: string) => {
         console.log("[MockGrackle] updatePersona", { personaId, name });
+        let updatedPersona: PersonaData | undefined;
         setPersonas((prev) =>
           prev.map((p) => {
             if (p.id !== personaId) {
               return p;
             }
-            return {
+            updatedPersona = {
               ...p,
               ...(name !== undefined ? { name } : {}),
               ...(description !== undefined ? { description } : {}),
@@ -949,10 +951,15 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
               ...(script !== undefined ? { script } : {}),
               updatedAt: new Date().toISOString(),
             };
+            return updatedPersona;
           }),
         );
+        if (!updatedPersona) {
+          throw new Error(`Persona not found: ${personaId}`);
+        }
+        return updatedPersona;
       },
-      deletePersona: (personaId: string) => {
+      deletePersona: async (personaId: string) => {
         console.log("[MockGrackle] deletePersona", personaId);
         setPersonas((prev) => prev.filter((p) => p.id !== personaId));
       },
@@ -961,7 +968,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
         console.log("[MockGrackle] loadTaskSessions", taskId);
       },
       appDefaultPersonaId,
-      setAppDefaultPersonaId: (personaId: string) => {
+      setAppDefaultPersonaId: async (personaId: string) => {
         console.log("[MockGrackle] setAppDefaultPersonaId", personaId);
         setAppDefaultPersonaIdState(personaId);
       },

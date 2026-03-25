@@ -2,7 +2,7 @@
   "changes": [
     {
       "packageName": "@grackle-ai/cli",
-      "comment": "Update the Ui to share components",
+      "comment": "Update the UI to share components",
       "type": "none"
     }
   ],

@@ -186,7 +186,7 @@ export interface UseGrackleSocketResult {
     maxTurns?: number,
     type?: string,
     script?: string,
-  ) => void;
+  ) => Promise<import("./types.js").PersonaData>;
   updatePersona: (
     personaId: string,
     name?: string,
@@ -197,14 +197,14 @@ export interface UseGrackleSocketResult {
     maxTurns?: number,
     type?: string,
     script?: string,
-  ) => void;
-  deletePersona: (personaId: string) => void;
+  ) => Promise<import("./types.js").PersonaData>;
+  deletePersona: (personaId: string) => Promise<void>;
   taskSessions: Record<string, import("./types.js").Session[]>;
   loadTaskSessions: (taskId: string) => void;
   /** The app-level default persona ID (from server settings). */
   appDefaultPersonaId: string;
   /** Set the app-level default persona ID (persisted via server settings). */
-  setAppDefaultPersonaId: (personaId: string) => void;
+  setAppDefaultPersonaId: (personaId: string) => Promise<void>;
   /** Whether the first-run onboarding wizard has been completed. `undefined` until the server responds. */
   onboardingCompleted: boolean | undefined;
   /** Mark onboarding as complete (persisted via server settings). */
@@ -268,11 +268,9 @@ export function useGrackleSocket(url?: string): UseGrackleSocketResult {
   const SETTING_KEY_ONBOARDING_COMPLETED = "onboarding_completed";
 
   const setAppDefaultPersonaId = useCallback(
-    (personaId: string) => {
-      setAppDefaultPersonaIdState(personaId);
-      grackleClient.setSetting({ key: SETTING_KEY_DEFAULT_PERSONA, value: personaId }).catch(
-        () => {},
-      );
+    async (personaId: string): Promise<void> => {
+      const response = await grackleClient.setSetting({ key: SETTING_KEY_DEFAULT_PERSONA, value: personaId });
+      setAppDefaultPersonaIdState(response.value);
     },
     [],
   );

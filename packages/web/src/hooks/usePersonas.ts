@@ -28,7 +28,7 @@ export interface UsePersonasResult {
     maxTurns?: number,
     type?: string,
     script?: string,
-  ) => void;
+  ) => Promise<PersonaData>;
   /** Update an existing persona. */
   updatePersona: (
     personaId: string,
@@ -40,9 +40,9 @@ export interface UsePersonasResult {
     maxTurns?: number,
     type?: string,
     script?: string,
-  ) => void;
+  ) => Promise<PersonaData>;
   /** Delete a persona by ID. */
-  deletePersona: (personaId: string) => void;
+  deletePersona: (personaId: string) => Promise<void>;
   /** Handle a domain event from the event bus. Returns `true` if handled. */
   handleEvent: (event: GrackleEvent) => boolean;
 }
@@ -84,8 +84,8 @@ export function usePersonas(): UsePersonasResult {
       maxTurns?: number,
       type?: string,
       script?: string,
-    ) => {
-      grackleClient.createPersona({
+    ): Promise<PersonaData> => {
+      return grackleClient.createPersona({
         name,
         description,
         systemPrompt,
@@ -94,9 +94,11 @@ export function usePersonas(): UsePersonasResult {
         maxTurns: maxTurns || 0,
         type: type || "agent",
         script: script || "",
-      }).catch(
-        () => {},
-      );
+      }).then((resp) => {
+        const createdPersona = protoToPersona(resp);
+        setPersonas((prev) => [...prev.filter((persona) => persona.id !== createdPersona.id), createdPersona]);
+        return createdPersona;
+      });
     },
     [],
   );
@@ -112,7 +114,7 @@ export function usePersonas(): UsePersonasResult {
       maxTurns?: number,
       type?: string,
       script?: string,
-    ) => {
+    ): Promise<PersonaData> => {
       // Build the request with only defined fields so the server can distinguish
       // "not provided" (keep existing) from "set to empty" (clear).
       const request: Record<string, unknown> = { id: personaId };
@@ -124,18 +126,21 @@ export function usePersonas(): UsePersonasResult {
       if (maxTurns !== undefined) { request.maxTurns = maxTurns; }
       if (type !== undefined) { request.type = type; }
       if (script !== undefined) { request.script = script; }
-      grackleClient.updatePersona(request).catch(
-        () => {},
-      );
+      return grackleClient.updatePersona(request).then((resp) => {
+        const updatedPersona = protoToPersona(resp);
+        setPersonas((prev) => prev.map((persona) => (
+          persona.id === updatedPersona.id ? updatedPersona : persona
+        )));
+        return updatedPersona;
+      });
     },
     [],
   );
 
   const deletePersona = useCallback(
-    (personaId: string) => {
-      grackleClient.deletePersona({ id: personaId }).catch(
-        () => {},
-      );
+    async (personaId: string): Promise<void> => {
+      await grackleClient.deletePersona({ id: personaId });
+      setPersonas((prev) => prev.filter((persona) => persona.id !== personaId));
     },
     [],
   );

@@ -4,10 +4,28 @@ import { useGrackle } from "../../context/GrackleContext.js";
 import { useToast } from "../../context/ToastContext.js";
 import { Breadcrumbs, ConfirmDialog } from "../../components/display/index.js";
 import { Button } from "../../components/display/Button.js";
-import { PERSONAS_URL, useAppNavigate } from "../../utils/navigation.js";
+import { EditableSelect, EditableTextArea, EditableTextField, type SelectOption } from "../../components/editable/index.js";
+import { PERSONAS_URL, SETTINGS_URL, personaUrl, useAppNavigate } from "../../utils/navigation.js";
 import type { BreadcrumbSegment } from "../../utils/breadcrumbs.js";
 import type { PersonaData } from "../../hooks/types.js";
 import styles from "../../components/personas/PersonaManager.module.scss";
+
+const RUNTIME_OPTIONS: SelectOption[] = [
+  { value: "claude-code", label: "claude-code" },
+  { value: "codex", label: "codex" },
+  { value: "copilot", label: "copilot" },
+  { value: "goose", label: "goose" },
+  { value: "stub", label: "stub" },
+  { value: "claude-code-acp", label: "claude-code-acp (experimental)" },
+  { value: "codex-acp", label: "codex-acp (experimental)" },
+  { value: "copilot-acp", label: "copilot-acp (experimental)" },
+];
+
+const SCRIPT_RUNTIME_OPTIONS: SelectOption[] = [
+  { value: "genaiscript", label: "genaiscript" },
+];
+
+const MAX_TURNS_PLACEHOLDER: string = "0";
 
 /** PersonaDetailPage handles both create (/settings/personas/new) and edit (/settings/personas/:personaId). */
 export function PersonaDetailPage(): JSX.Element {
@@ -28,7 +46,7 @@ export function PersonaDetailPage(): JSX.Element {
   }
 
   const breadcrumbs: BreadcrumbSegment[] = [
-    { label: "Settings", url: "/settings" },
+    { label: "Settings", url: SETTINGS_URL },
     { label: "Personas", url: PERSONAS_URL },
     { label: isNew ? "New Persona" : (existing?.name ?? "Persona"), url: undefined },
   ];
@@ -62,12 +80,12 @@ interface PersonaFormProps {
   isNew: boolean;
   appDefaultPersonaId: string;
   onCreatePersona: (name: string, description: string, systemPrompt: string,
-    runtime?: string, model?: string, maxTurns?: number, type?: string, script?: string) => void;
+    runtime?: string, model?: string, maxTurns?: number, type?: string, script?: string) => Promise<PersonaData>;
   onUpdatePersona: (personaId: string, name?: string, description?: string,
     systemPrompt?: string, runtime?: string, model?: string, maxTurns?: number,
-    type?: string, script?: string) => void;
-  onDeletePersona: (personaId: string) => void;
-  onSetAppDefaultPersonaId: (personaId: string) => void;
+    type?: string, script?: string) => Promise<PersonaData>;
+  onDeletePersona: (personaId: string) => Promise<void>;
+  onSetAppDefaultPersonaId: (personaId: string) => Promise<void>;
   onDone: () => void;
   showToast: (message: string, type: "success" | "error") => void;
 }
@@ -88,6 +106,7 @@ function PersonaForm({
   );
   const [script, setScript] = useState(existing?.script ?? "");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [activeFieldId, setActiveFieldId] = useState<string | null>(null);
 
   // Hydrate form when existing persona loads asynchronously
   const [hydrated, setHydrated] = useState(!!isNew);
@@ -121,6 +140,7 @@ function PersonaForm({
     && !isLoadingExisting
     && systemPrompt.trim().length > 0
     && (personaType === "script" ? script.trim().length > 0 : (!!runtime && !!model));
+  const canCreate = isNew && canSubmit;
 
   const isAppDefault = !isNew && appDefaultPersonaId === existing?.id;
 
@@ -128,26 +148,114 @@ function PersonaForm({
   const canSetDefault = !isNew && existing && !isAppDefault
     && personaType === "agent" && !!runtime && !!model;
 
-  const handleSubmit = (e: FormEvent): void => {
+  const validateRequired = (value: string, fieldName: string): string | undefined => {
+    if (!value.trim()) {
+      return `${fieldName} is required`;
+    }
+    return undefined;
+  };
+
+  const handleSubmit = async (e: FormEvent): Promise<void> => {
     e.preventDefault();
     if (isLoadingExisting || !canSubmit) {
       return;
     }
-    if (existing) {
-      onUpdatePersona(existing.id, name, description, systemPrompt, runtime, model, maxTurns, personaType, script);
-      showToast("Persona updated", "success");
-    } else {
-      onCreatePersona(name, description, systemPrompt, runtime, model, maxTurns, personaType, script);
+    try {
+      if (existing) {
+        await onUpdatePersona(existing.id, name, description, systemPrompt, runtime, model, maxTurns, personaType, script);
+        showToast("Persona updated", "success");
+        onDone();
+        return;
+      }
+      const createdPersona = await onCreatePersona(name, description, systemPrompt, runtime, model, maxTurns, personaType, script);
       showToast("Persona created", "success");
+      navigate(personaUrl(createdPersona.id), { replace: true });
+    } catch {
+      showToast("Failed to save persona", "error");
     }
-    onDone();
   };
 
-  const handleDelete = (): void => {
+  const handleDelete = async (): Promise<void> => {
     if (existing) {
-      onDeletePersona(existing.id);
-      showToast("Persona deleted", "success");
-      onDone();
+      try {
+        await onDeletePersona(existing.id);
+        showToast("Persona deleted", "success");
+        onDone();
+      } catch {
+        showToast("Failed to delete persona", "error");
+      }
+    }
+  };
+
+  const saveField = async (
+    saveAction: () => Promise<unknown>,
+    successMessage: string,
+    errorMessage: string,
+  ): Promise<void> => {
+    try {
+      await saveAction();
+      showToast(successMessage, "success");
+    } catch {
+      showToast(errorMessage, "error");
+    }
+  };
+
+  const handleFieldSave = async (field: "name" | "description" | "systemPrompt" | "runtime" | "model" | "maxTurns" | "type" | "script", value: string | number): Promise<void> => {
+    if (!existing) {
+      return;
+    }
+    const nextType = field === "type" ? String(value) : personaType;
+    const nextRuntime = field === "runtime"
+      ? String(value)
+      : field === "type"
+        ? (String(value) === "script" ? "genaiscript" : runtime === "genaiscript" ? "claude-code" : runtime)
+        : runtime;
+    const nextModel = field === "model" ? String(value) : model;
+    const nextMaxTurns = field === "maxTurns" ? Number(value) : maxTurns;
+    const nextSystemPrompt = field === "systemPrompt" ? String(value) : systemPrompt;
+    const nextScript = field === "script" ? String(value) : script;
+
+    await saveField(
+      () => onUpdatePersona(
+        existing.id,
+        field === "name" ? String(value) : name,
+        field === "description" ? String(value) : description,
+        nextSystemPrompt,
+        nextRuntime,
+        nextModel,
+        nextMaxTurns,
+        nextType,
+        nextScript,
+      ),
+      "Persona updated",
+      "Failed to update persona",
+    );
+
+    if (field === "type") {
+      const newType = String(value) === "script" ? "script" : "agent";
+      setPersonaType(newType);
+      setRuntime(nextRuntime);
+    }
+    if (field === "runtime") {
+      setRuntime(String(value));
+    }
+    if (field === "name") {
+      setName(String(value));
+    }
+    if (field === "description") {
+      setDescription(String(value));
+    }
+    if (field === "systemPrompt") {
+      setSystemPrompt(String(value));
+    }
+    if (field === "model") {
+      setModel(String(value));
+    }
+    if (field === "maxTurns") {
+      setMaxTurns(Number(value));
+    }
+    if (field === "script") {
+      setScript(String(value));
     }
   };
 
@@ -158,7 +266,7 @@ function PersonaForm({
           <h3>Edit Persona</h3>
           <p>Loading persona...</p>
         </div>
-      ) : (
+      ) : isNew ? (
       <form onSubmit={handleSubmit} className={styles.form}>
         <h3>{isNew ? "Create Persona" : "Edit Persona"}</h3>
         <div className={styles.typeToggle} data-testid="persona-type-toggle">
@@ -293,7 +401,7 @@ function PersonaForm({
           </>
         )}
         <div className={styles.formActions}>
-          <Button type="submit" variant="primary" size="md" disabled={!canSubmit} data-testid="persona-detail-save">
+          <Button type="submit" variant="primary" size="md" disabled={!canCreate} data-testid="persona-detail-save">
             {existing ? "Save" : "Create"}
           </Button>
           <Button type="button" variant="outline" size="md" onClick={onDone} data-testid="persona-detail-cancel">
@@ -333,6 +441,167 @@ function PersonaForm({
           </p>
         )}
       </form>
+      ) : existing ? (
+        <div className={styles.form}>
+          <h3>Edit Persona</h3>
+          <div className={styles.formActions}>
+            <Button type="button" variant="outline" size="md" onClick={onDone} data-testid="persona-detail-cancel">
+              Back to Personas
+            </Button>
+            {canSetDefault && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="md"
+                onClick={async () => {
+                  try {
+                    await onSetAppDefaultPersonaId(existing.id);
+                    showToast("Set as app default", "success");
+                  } catch {
+                    showToast("Failed to set app default", "error");
+                  }
+                }}
+                data-testid="persona-detail-set-default"
+              >
+                Set as App Default
+              </Button>
+            )}
+            {isAppDefault && (
+              <span className={styles.defaultBadge}>App Default</span>
+            )}
+            <Button
+              type="button"
+              variant="danger"
+              size="md"
+              onClick={() => setShowDeleteConfirm(true)}
+              data-testid="persona-detail-delete"
+            >
+              Delete
+            </Button>
+          </div>
+
+          <div className={styles.editableSection}>
+            <label>
+              Name
+              <EditableTextField
+                value={name}
+                onSave={async (value) => handleFieldSave("name", value)}
+                validate={(value) => validateRequired(value, "Name")}
+                fieldId="persona-name"
+                activeFieldId={activeFieldId}
+                onActivate={setActiveFieldId}
+                ariaLabel="Persona name"
+                data-testid="persona-detail-name"
+              />
+            </label>
+            <label>
+              Description
+              <EditableTextField
+                value={description}
+                onSave={async (value) => handleFieldSave("description", value)}
+                fieldId="persona-description"
+                activeFieldId={activeFieldId}
+                onActivate={setActiveFieldId}
+                placeholder="Brief description..."
+                ariaLabel="Persona description"
+                data-testid="persona-detail-description"
+              />
+            </label>
+            <label>
+              Type
+              <EditableSelect
+                value={personaType}
+                onSave={async (value) => handleFieldSave("type", value)}
+                options={[
+                  { value: "agent", label: "Agent" },
+                  { value: "script", label: "Script" },
+                ]}
+                fieldId="persona-type"
+                activeFieldId={activeFieldId}
+                onActivate={setActiveFieldId}
+                ariaLabel="Persona type"
+                data-testid="persona-type-toggle"
+              />
+            </label>
+            <label>
+              Runtime
+              <EditableSelect
+                value={runtime}
+                onSave={async (value) => handleFieldSave("runtime", value)}
+                options={personaType === "script" ? SCRIPT_RUNTIME_OPTIONS : RUNTIME_OPTIONS}
+                fieldId="persona-runtime"
+                activeFieldId={activeFieldId}
+                onActivate={setActiveFieldId}
+                ariaLabel="Persona runtime"
+                data-testid="persona-runtime"
+              />
+            </label>
+            <label>
+              Model{personaType === "script" ? ` (${"optional"})` : ""}
+              <EditableTextField
+                value={model}
+                onSave={async (value) => handleFieldSave("model", value)}
+                validate={personaType === "agent" ? (value) => validateRequired(value, "Model") : undefined}
+                fieldId="persona-model"
+                activeFieldId={activeFieldId}
+                onActivate={setActiveFieldId}
+                placeholder={personaType === "script" ? "e.g. sonnet (leave empty for script-only)" : "e.g. sonnet"}
+                ariaLabel="Persona model"
+                data-testid="persona-detail-model"
+              />
+            </label>
+            <label>
+              Max Turns
+              <EditableTextField
+                value={String(maxTurns)}
+                onSave={async (value) => handleFieldSave("maxTurns", parseInt(value, 10) || 0)}
+                validate={(value) => (/^\d+$/.test(value.trim()) ? undefined : "Max Turns must be a non-negative integer")}
+                fieldId="persona-max-turns"
+                activeFieldId={activeFieldId}
+                onActivate={setActiveFieldId}
+                placeholder={MAX_TURNS_PLACEHOLDER}
+                ariaLabel="Persona max turns"
+                data-testid="persona-detail-max-turns"
+              />
+            </label>
+            <label>
+              System Prompt
+              <EditableTextArea
+                value={systemPrompt}
+                onSave={async (value) => handleFieldSave("systemPrompt", value)}
+                validate={(value) => validateRequired(value, "System Prompt")}
+                fieldId="persona-system-prompt"
+                activeFieldId={activeFieldId}
+                onActivate={setActiveFieldId}
+                placeholder={personaType === "script" ? "Context for the script..." : "You are a senior frontend engineer..."}
+                ariaLabel="Persona system prompt"
+                data-testid="persona-detail-prompt"
+              />
+            </label>
+            {personaType === "script" && (
+              <label>
+                Script
+                <EditableTextArea
+                  value={script}
+                  onSave={async (value) => handleFieldSave("script", value)}
+                  validate={(value) => validateRequired(value, "Script")}
+                  fieldId="persona-script"
+                  activeFieldId={activeFieldId}
+                  onActivate={setActiveFieldId}
+                  placeholder={'script({ model: "openai:gpt-4o" });\n\nconst grackle = await host.mcpServer({\n  id: "grackle",\n  url: env.vars.GRACKLE_MCP_URL,\n});\n\n$`Summarize the current tasks.`;'}
+                  ariaLabel="Persona script"
+                  data-testid="persona-script-editor"
+                />
+              </label>
+            )}
+          </div>
+
+          {!canSetDefault && !isAppDefault && (
+            <p style={{ fontSize: "var(--font-size-xs)", color: "var(--text-tertiary)", marginTop: "var(--space-xs)" }}>
+              Only agent personas with a runtime and model can be set as app default.
+            </p>
+          )}
+        </div>
       )}
 
       <ConfirmDialog
