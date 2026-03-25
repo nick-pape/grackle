@@ -29,7 +29,7 @@ function makeTask(overrides: Partial<TaskData> & { id: string }): TaskData {
 
 describe("taskStatusToToast", () => {
   it("returns info for working", () => {
-    expect(taskStatusToToast("working")).toEqual({ message: "Task started", variant: "info" });
+    expect(taskStatusToToast("working")).toEqual({ message: "Task is now running", variant: "info" });
   });
 
   it("returns warning for paused", () => {
@@ -37,11 +37,11 @@ describe("taskStatusToToast", () => {
   });
 
   it("returns success for complete", () => {
-    expect(taskStatusToToast("complete")).toEqual({ message: "Task completed", variant: "success" });
+    expect(taskStatusToToast("complete")).toEqual({ message: "Task complete", variant: "success" });
   });
 
   it("returns error for failed", () => {
-    expect(taskStatusToToast("failed")).toEqual({ message: "Task failed", variant: "error" });
+    expect(taskStatusToToast("failed")).toEqual({ message: "Task failed to complete", variant: "error" });
   });
 
   it("returns undefined for not_started", () => {
@@ -76,7 +76,7 @@ describe("diffTasksForToasts", () => {
     const prev = [makeTask({ id: "t1", status: "not_started" })];
     const cur = [makeTask({ id: "t1", status: "working" })];
     expect(diffTasksForToasts(prev, cur)).toEqual([
-      { message: "Task started", variant: "info" },
+      { message: "Task is now running", variant: "info" },
     ]);
   });
 
@@ -92,7 +92,7 @@ describe("diffTasksForToasts", () => {
     const prev = [makeTask({ id: "t1", status: "working" })];
     const cur = [makeTask({ id: "t1", status: "complete" })];
     expect(diffTasksForToasts(prev, cur)).toEqual([
-      { message: "Task completed", variant: "success" },
+      { message: "Task complete", variant: "success" },
     ]);
   });
 
@@ -100,7 +100,7 @@ describe("diffTasksForToasts", () => {
     const prev = [makeTask({ id: "t1", status: "working" })];
     const cur = [makeTask({ id: "t1", status: "failed" })];
     expect(diffTasksForToasts(prev, cur)).toEqual([
-      { message: "Task failed", variant: "error" },
+      { message: "Task failed to complete", variant: "error" },
     ]);
   });
 
@@ -131,8 +131,8 @@ describe("diffTasksForToasts", () => {
     ];
     const result = diffTasksForToasts(prev, cur);
     expect(result).toHaveLength(3);
-    expect(result).toContainEqual({ message: "Task started", variant: "info" });
-    expect(result).toContainEqual({ message: "Task completed", variant: "success" });
+    expect(result).toContainEqual({ message: "Task is now running", variant: "info" });
+    expect(result).toContainEqual({ message: "Task complete", variant: "success" });
     expect(result).toContainEqual({ message: "Task deleted", variant: "info" });
   });
 

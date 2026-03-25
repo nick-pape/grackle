@@ -59,7 +59,7 @@ test.describe("Task State Toast Notifications", { tag: ["@task"] }, () => {
     await injectTaskList(page, [makeInjectedTask({ status: "working" })]);
 
     // Generic started toast should appear
-    await expect(page.getByText("Task started")).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText("Task is now running")).toBeVisible({ timeout: 5_000 });
   });
 
   test("injected task completion shows completed toast", async ({ page }) => {
@@ -77,7 +77,7 @@ test.describe("Task State Toast Notifications", { tag: ["@task"] }, () => {
     await injectTaskList(page, [makeInjectedTask({ status: "complete" })]);
 
     // Generic completed toast should appear
-    await expect(page.getByText("Task completed")).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText("Task complete")).toBeVisible({ timeout: 5_000 });
   });
 
   test("injected task failure shows failed toast", async ({ page }) => {
@@ -95,7 +95,7 @@ test.describe("Task State Toast Notifications", { tag: ["@task"] }, () => {
     await injectTaskList(page, [makeInjectedTask({ status: "failed" })]);
 
     // Generic failed toast should appear
-    await expect(page.getByText("Task failed")).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText("Task failed to complete")).toBeVisible({ timeout: 5_000 });
   });
 
   test("injected task removal shows deleted toast", async ({ page }) => {

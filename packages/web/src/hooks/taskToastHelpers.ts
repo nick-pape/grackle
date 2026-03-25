@@ -9,10 +9,10 @@ export interface TaskToastDescriptor {
 
 /** Maps canonical task status keys to toast descriptors. */
 const TASK_STATUS_TOAST_MAP: Record<string, TaskToastDescriptor> = {
-  working:  { message: "Task started",   variant: "info" },
-  paused:   { message: "Task paused",    variant: "warning" },
-  complete: { message: "Task completed", variant: "success" },
-  failed:   { message: "Task failed",    variant: "error" },
+  working:  { message: "Task is now running",  variant: "info" },
+  paused:   { message: "Task paused",          variant: "warning" },
+  complete: { message: "Task complete",        variant: "success" },
+  failed:   { message: "Task failed to complete", variant: "error" },
 };
 
 /**

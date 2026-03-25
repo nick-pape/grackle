@@ -49,7 +49,7 @@ describe("useTaskToasts", () => {
 
     rerender({ tasks: updated });
 
-    expect(showToast).toHaveBeenCalledWith("Task started", "info");
+    expect(showToast).toHaveBeenCalledWith("Task is now running", "info");
   });
 
   it("fires completed toast on working → complete", () => {
@@ -64,7 +64,7 @@ describe("useTaskToasts", () => {
 
     rerender({ tasks: updated });
 
-    expect(showToast).toHaveBeenCalledWith("Task completed", "success");
+    expect(showToast).toHaveBeenCalledWith("Task complete", "success");
   });
 
   it("fires failed toast on working → failed", () => {
@@ -79,7 +79,7 @@ describe("useTaskToasts", () => {
 
     rerender({ tasks: updated });
 
-    expect(showToast).toHaveBeenCalledWith("Task failed", "error");
+    expect(showToast).toHaveBeenCalledWith("Task failed to complete", "error");
   });
 
   it("fires deleted toast when task is removed from array", () => {
@@ -131,7 +131,7 @@ describe("useTaskToasts", () => {
     rerender({ tasks: updated });
 
     expect(showToast).toHaveBeenCalledTimes(2);
-    expect(showToast).toHaveBeenCalledWith("Task started", "info");
-    expect(showToast).toHaveBeenCalledWith("Task completed", "success");
+    expect(showToast).toHaveBeenCalledWith("Task is now running", "info");
+    expect(showToast).toHaveBeenCalledWith("Task complete", "success");
   });
 });
