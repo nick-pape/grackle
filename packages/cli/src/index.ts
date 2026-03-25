@@ -61,13 +61,11 @@ registerCredentialProviderCommands(program);
 registerPairCommand(program);
 registerConfigCommands(program);
 
-// Print update notice after command execution (non-blocking, with timeout).
+// Print update notice after command execution (non-blocking).
+// checkVersionStatus has its own 5s fetch timeout internally.
 program.hook("postAction", async () => {
   try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 2_000);
     const status = await checkVersionStatus();
-    clearTimeout(timeout);
     const notice = formatVersionNotice(status);
     if (notice) {
       console.error(notice);

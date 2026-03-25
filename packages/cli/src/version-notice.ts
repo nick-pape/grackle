@@ -18,7 +18,7 @@ export function formatVersionNotice(status: VersionStatus): string {
   }
 
   const command = status.isDocker
-    ? `docker pull ghcr.io/nick-pape/grackle:latest`
+    ? `docker pull ghcr.io/nick-pape/grackle:latest && docker restart grackle`
     : `npm install -g @grackle-ai/cli@${status.latestVersion}`;
 
   return chalk.yellow(

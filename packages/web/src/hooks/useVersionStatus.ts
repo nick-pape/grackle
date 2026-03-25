@@ -2,7 +2,7 @@
  * Hook to fetch the server's version status (current vs latest).
  *
  * Calls {@link grackleClient.getVersionStatus} once on mount and returns
- * the result, or `null` if still loading or on error.
+ * the result, or `undefined` if still loading or on error.
  *
  * @module
  */

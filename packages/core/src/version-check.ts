@@ -71,12 +71,11 @@ export async function checkVersionStatus(ttlMs: number = DEFAULT_TTL_MS): Promis
   const currentVersion = getCurrentVersion();
   const isDocker = existsSync("/.dockerenv");
 
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  const controller = new AbortController();
+  const timeout: ReturnType<typeof setTimeout> = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
+  try {
     const response = await fetch(REGISTRY_URL, { signal: controller.signal });
-    clearTimeout(timeout);
 
     if (!response.ok) {
       logger.debug({ status: response.status }, "npm registry returned non-OK status");
@@ -96,6 +95,8 @@ export async function checkVersionStatus(ttlMs: number = DEFAULT_TTL_MS): Promis
   } catch (error) {
     logger.debug({ err: error }, "Failed to check npm registry for updates");
     return cacheAndReturn({ currentVersion, latestVersion: currentVersion, updateAvailable: false, isDocker });
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
