@@ -15,6 +15,7 @@ import { processEventStream } from "./event-processor.js";
 import * as processorRegistry from "./processor-registry.js";
 import { recoverSuspendedSessions } from "./session-recovery.js";
 import { clearReconnectState } from "./auto-reconnect.js";
+import { checkVersionStatus } from "./version-check.js";
 import { join } from "node:path";
 import {
   LOGS_DIR,
@@ -2231,6 +2232,18 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       });
 
       return create(grackle.CreateKnowledgeNodeResponseSchema, { id });
+    },
+
+    // ── Version ──────────────────────────────────────────────
+
+    async getVersionStatus() {
+      const status = await checkVersionStatus();
+      return create(grackle.VersionStatusSchema, {
+        currentVersion: status.currentVersion,
+        latestVersion: status.latestVersion,
+        updateAvailable: status.updateAvailable,
+        isDocker: status.isDocker,
+      });
     },
 
   });

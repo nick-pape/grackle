@@ -28,6 +28,9 @@ export { computeTaskStatus } from "./compute-task-status.js";
 // ─── Knowledge ─────────────────────────────────────────────
 export { isKnowledgeEnabled, initKnowledge } from "./knowledge-init.js";
 
+// ─── Version Check ────────────────────────────────────────
+export { checkVersionStatus, clearVersionCache, type VersionStatus } from "./version-check.js";
+
 // ─── Logger ────────────────────────────────────────────────
 export { logger } from "./logger.js";
 
