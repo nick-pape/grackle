@@ -341,7 +341,7 @@ export function processEventStream(
           // to IPC pipe stream. `waiting_input` is included so that sync pipes
           // unblock when a child goes idle without calling task_complete (#824).
           // publishChildCompletion internally skips waiting_input for async pipes.
-          if (["completed", "killed", "failed", "waiting_input"].includes(event.content)) {
+          if (["completed", "killed", "failed", "terminated", "waiting_input"].includes(event.content)) {
             publishChildCompletion(sessionId, event.content);
           }
 
@@ -366,7 +366,7 @@ export function processEventStream(
           // Broadcast task_updated on status changes so frontend re-fetches computed status.
           // This covers both terminal events (completed/killed/failed) and non-terminal
           // transitions (running, waiting_input) that affect the computed task status.
-          if (ctx.taskId && ["completed", "killed", "failed", "running", "waiting_input"].includes(event.content)) {
+          if (ctx.taskId && ["completed", "killed", "failed", "terminated", "running", "waiting_input"].includes(event.content)) {
             emit("task.updated", { taskId: ctx.taskId, workspaceId: ctx.workspaceId });
           }
         }

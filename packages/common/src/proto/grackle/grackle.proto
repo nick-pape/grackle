@@ -14,6 +14,11 @@ message SessionId {
   string id = 1;
 }
 
+message KillAgentRequest {
+  string id = 1;
+  bool graceful = 2;  // false = SIGKILL (immediate), true = SIGTERM (advisory)
+}
+
 // ─── Enums ──────────────────────────────────────────────────
 
 enum EventType {
@@ -655,7 +660,7 @@ service Grackle {
   rpc SpawnAgent(SpawnRequest) returns (Session);
   rpc ResumeAgent(ResumeRequest) returns (Session);
   rpc SendInput(InputMessage) returns (Empty);
-  rpc KillAgent(SessionId) returns (Empty);
+  rpc KillAgent(KillAgentRequest) returns (Empty);
   rpc ListSessions(SessionFilter) returns (SessionList);
   rpc GetSession(SessionId) returns (Session);
   rpc GetSessionEvents(SessionId) returns (SessionEventList);

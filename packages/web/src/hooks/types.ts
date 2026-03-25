@@ -291,6 +291,7 @@ export function mapSessionStatus(rawStatus: string): string {
     case "killed": return "stopped";
     case "failed": return "stopped";
     case "interrupted": return "stopped";
+    case "terminated": return "stopped";
     default: return rawStatus;
   }
 }
@@ -305,6 +306,7 @@ export function mapEndReason(rawContent: string): string | undefined {
     case "killed": return "killed";
     case "failed": return "interrupted";
     case "interrupted": return "interrupted";
+    case "terminated": return "terminated";
     default: return undefined;
   }
 }

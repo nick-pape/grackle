@@ -97,7 +97,8 @@ function applySchema(): void {
       input_tokens      INTEGER NOT NULL DEFAULT 0,
       output_tokens     INTEGER NOT NULL DEFAULT 0,
       cost_usd          REAL NOT NULL DEFAULT 0,
-      end_reason        TEXT
+      end_reason        TEXT,
+      sigterm_sent_at   TEXT
     );
 
     CREATE TABLE IF NOT EXISTS findings (

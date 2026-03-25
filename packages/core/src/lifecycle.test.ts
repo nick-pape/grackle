@@ -62,7 +62,8 @@ function applySchema(): void {
       input_tokens       INTEGER NOT NULL DEFAULT 0,
       output_tokens      INTEGER NOT NULL DEFAULT 0,
       cost_usd           REAL NOT NULL DEFAULT 0,
-      end_reason         TEXT
+      end_reason         TEXT,
+      sigterm_sent_at    TEXT
     );
   `);
   sqlite.exec("INSERT OR IGNORE INTO environments (id) VALUES ('test-env')");
@@ -163,6 +164,69 @@ describe("lifecycle manager", () => {
     // Now child is orphaned → auto-stopped (idle → completed end reason)
     expect(sessionStore.getSession("child")?.status).toBe("stopped");
     expect(sessionStore.getSession("child")?.endReason).toBe("completed");
+  });
+});
+
+describe("SIGTERM end reason derivation", () => {
+  let mockKill: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    sqlite.exec("DROP TABLE IF EXISTS sessions");
+    sqlite.exec("DROP TABLE IF EXISTS environments");
+    applySchema();
+    vi.clearAllMocks();
+    streamRegistry._resetForTesting();
+    resetLifecycle();
+    initLifecycleManager();
+
+    mockKill = vi.fn().mockResolvedValue({});
+    vi.spyOn(adapterManager, "getConnection").mockReturnValue({
+      client: { kill: mockKill },
+    } as unknown as ReturnType<typeof adapterManager.getConnection>);
+  });
+
+  it("sets endReason to terminated when IDLE session has sigtermSentAt", () => {
+    sessionStore.createSession("sess-sigterm", "test-env", "claude-code", "test", "sonnet", "/tmp/log");
+    sessionStore.updateSessionStatus("sess-sigterm", "idle");
+    sqlite.exec("UPDATE sessions SET sigterm_sent_at = '2026-01-01T00:00:00Z' WHERE id = 'sess-sigterm'");
+
+    const stream = streamRegistry.createStream("lifecycle:sess-sigterm");
+    const sub = streamRegistry.subscribe(stream.id, "sess-sigterm", "rw", "detach", false);
+
+    streamRegistry.unsubscribe(sub.id);
+
+    const session = sessionStore.getSession("sess-sigterm");
+    expect(session?.status).toBe("stopped");
+    expect(session?.endReason).toBe("terminated");
+  });
+
+  it("sets endReason to completed when IDLE session has no sigtermSentAt", () => {
+    sessionStore.createSession("sess-normal", "test-env", "claude-code", "test", "sonnet", "/tmp/log");
+    sessionStore.updateSessionStatus("sess-normal", "idle");
+
+    const stream = streamRegistry.createStream("lifecycle:sess-normal");
+    const sub = streamRegistry.subscribe(stream.id, "sess-normal", "rw", "detach", false);
+
+    streamRegistry.unsubscribe(sub.id);
+
+    const session = sessionStore.getSession("sess-normal");
+    expect(session?.status).toBe("stopped");
+    expect(session?.endReason).toBe("completed");
+  });
+
+  it("sets endReason to killed when RUNNING session has sigtermSentAt", () => {
+    sessionStore.createSession("sess-running", "test-env", "claude-code", "test", "sonnet", "/tmp/log");
+    sessionStore.updateSessionStatus("sess-running", "running");
+    sqlite.exec("UPDATE sessions SET sigterm_sent_at = '2026-01-01T00:00:00Z' WHERE id = 'sess-running'");
+
+    const stream = streamRegistry.createStream("lifecycle:sess-running");
+    const sub = streamRegistry.subscribe(stream.id, "sess-running", "rw", "detach", false);
+
+    streamRegistry.unsubscribe(sub.id);
+
+    const session = sessionStore.getSession("sess-running");
+    expect(session?.status).toBe("stopped");
+    expect(session?.endReason).toBe("killed");
   });
 });
 

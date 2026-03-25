@@ -71,9 +71,11 @@ export function initLifecycleManager(): void {
       return;
     }
 
-    // Determine reason: IDLE sessions completed naturally; others were killed
+    // Determine reason: IDLE sessions completed naturally; others were killed.
+    // If SIGTERM was sent and the session reached IDLE before being orphaned,
+    // use TERMINATED instead of COMPLETED to distinguish graceful shutdowns.
     const reason: EndReason = session.status === SESSION_STATUS.IDLE
-      ? END_REASON.COMPLETED
+      ? (session.sigtermSentAt ? END_REASON.TERMINATED : END_REASON.COMPLETED)
       : END_REASON.KILLED;
 
     logger.info({ sessionId, previousStatus: session.status, reason }, "Session orphaned (no remaining fds) — stopping");

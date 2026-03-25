@@ -115,7 +115,8 @@ function applySchema(): void {
       pipe_mode TEXT NOT NULL DEFAULT '',
       parent_session_id TEXT NOT NULL DEFAULT '',
       pipe_fd INTEGER,
-      end_reason TEXT
+      end_reason TEXT,
+      sigterm_sent_at TEXT
     );
     CREATE TABLE IF NOT EXISTS findings (
       id TEXT PRIMARY KEY,
