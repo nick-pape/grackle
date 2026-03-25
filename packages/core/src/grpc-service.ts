@@ -2007,10 +2007,12 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
     // ─── Schedules ────────────────────────────────────────────
 
     async createSchedule(req: grackle.CreateScheduleRequest) {
-      if (!req.title.trim()) {
+      const title = req.title.trim();
+      const expr = req.scheduleExpression.trim();
+      if (!title) {
         throw new ConnectError("title is required", Code.InvalidArgument);
       }
-      if (!req.scheduleExpression.trim()) {
+      if (!expr) {
         throw new ConnectError("schedule_expression is required", Code.InvalidArgument);
       }
       if (!req.personaId.trim()) {
@@ -2023,7 +2025,7 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       }
       // Validate expression
       try {
-        validateExpression(req.scheduleExpression);
+        validateExpression(expr);
       } catch (err) {
         throw new ConnectError(
           err instanceof Error ? err.message : "Invalid schedule expression",
@@ -2031,12 +2033,12 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
         );
       }
       const id = uuid();
-      const nextRunAt = computeNextRunAt(req.scheduleExpression);
+      const nextRunAt = computeNextRunAt(expr);
       scheduleStore.createSchedule(
         id,
-        req.title.trim(),
+        title,
         req.description,
-        req.scheduleExpression.trim(),
+        expr,
         req.personaId,
         req.environmentId,
         req.workspaceId,
@@ -2090,15 +2092,16 @@ export function registerGrackleRoutes(router: ConnectRouter): void {
       // Handle schedule expression change
       let expressionChanged = false;
       if (req.scheduleExpression !== undefined && req.scheduleExpression !== "") {
+        const expr = req.scheduleExpression.trim();
         try {
-          validateExpression(req.scheduleExpression);
+          validateExpression(expr);
         } catch (err) {
           throw new ConnectError(
             err instanceof Error ? err.message : "Invalid schedule expression",
             Code.InvalidArgument,
           );
         }
-        update.scheduleExpression = req.scheduleExpression;
+        update.scheduleExpression = expr;
         expressionChanged = true;
       }
 

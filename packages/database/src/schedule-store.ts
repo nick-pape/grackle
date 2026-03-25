@@ -78,7 +78,7 @@ export function listSchedules(workspaceId?: string): ScheduleRow[] {
 /** Update mutable fields on a schedule. Only provided fields are changed. */
 export function updateSchedule(id: string, update: ScheduleUpdate): void {
   const sets: Record<string, unknown> = {
-    updatedAt: new Date().toISOString(),
+    updatedAt: sql`datetime('now')`,
   };
   if (update.title !== undefined) {
     sets.title = update.title;
@@ -144,7 +144,7 @@ export function advanceSchedule(
       lastRunAt,
       nextRunAt,
       runCount: sql`run_count + 1`,
-      updatedAt: new Date().toISOString(),
+      updatedAt: sql`datetime('now')`,
     })
     .where(eq(schedules.id, id))
     .run();
@@ -166,7 +166,7 @@ export function setScheduleEnabled(
     .set({
       enabled,
       nextRunAt,
-      updatedAt: new Date().toISOString(),
+      updatedAt: sql`datetime('now')`,
     })
     .where(eq(schedules.id, id))
     .run();

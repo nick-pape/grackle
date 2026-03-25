@@ -107,6 +107,8 @@ export class CronManager {
     this.tickPromise = this.tick();
     try {
       await this.tickPromise;
+    } catch (err) {
+      logger.error({ err }, "CronManager tick failed");
     } finally {
       this.ticking = false;
       this.tickPromise = undefined;
@@ -128,7 +130,17 @@ export class CronManager {
   /** Fire a single schedule: create task, start session, advance. */
   private async fireSchedule(schedule: ScheduleRow): Promise<void> {
     const now = new Date().toISOString();
-    const nextRunAt = computeNextRunAt(schedule.scheduleExpression, now);
+
+    let nextRunAt: string;
+    try {
+      nextRunAt = computeNextRunAt(schedule.scheduleExpression, now);
+    } catch (err) {
+      logger.error(
+        { scheduleId: schedule.id, scheduleExpression: schedule.scheduleExpression, err },
+        "CronManager: failed to compute nextRunAt; skipping schedule fire",
+      );
+      return;
+    }
 
     try {
       // Resolve environment
