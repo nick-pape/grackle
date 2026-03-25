@@ -129,7 +129,13 @@ test.describe("Workpad E2E", { tag: ["@task"] }, () => {
     const taskAfterFirst = await client.getTask({ id: taskId });
     expect(taskAfterFirst.workpad).toBeTruthy();
 
-    // 3. Start retry session on same task
+    // 3. Kill first session to fully release the environment, then start retry
+    await client.killAgent({ id: firstSessionId });
+    await waitForSessionStatus(client, firstSessionId, "stopped", 5_000);
+
+    // Small delay to let lifecycle cleanup complete
+    await new Promise((resolve) => setTimeout(resolve, 1_000));
+
     const retrySessionId = await startTaskStubMcp(client, taskId);
     await waitForSessionStatus(client, retrySessionId, "stopped", 30_000);
 
