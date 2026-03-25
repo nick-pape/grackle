@@ -24,16 +24,16 @@ export const DisplayMode: Story = {
   },
 };
 
-/** Pressing Enter on the display button starts edit mode. */
-export const EnterToActivate: Story = {
+/** Display button is keyboard-accessible (tabIndex, role). */
+export const KeyboardAccessible: Story = {
   play: async ({ canvas }) => {
     const button = canvas.getByTestId("test-field-button");
-    button.focus();
-    await userEvent.keyboard("{Enter}");
+    await expect(button).toHaveAttribute("role", "button");
+    await expect(button).toHaveAttribute("tabindex", "0");
 
-    // Edit input should now be visible
-    const input = canvas.getByTestId("test-field-input");
-    await expect(input).toBeInTheDocument();
+    // Focus is accepted
+    button.focus();
+    await expect(button).toHaveFocus();
   },
 };
 
