@@ -26,7 +26,11 @@ export function WorkpadPanel({ workpad }: WorkpadPanelProps): JSX.Element | unde
 
   let parsed: ParsedWorkpad;
   try {
-    parsed = JSON.parse(workpad) as ParsedWorkpad;
+    const raw: unknown = JSON.parse(workpad);
+    if (raw === undefined || raw === null || typeof raw !== "object" || Array.isArray(raw)) {
+      return undefined;
+    }
+    parsed = raw as ParsedWorkpad;
   } catch {
     return (
       <div className={styles.workpadSection} data-testid="workpad-panel">
